@@ -25,16 +25,18 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +52,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.KiAntwort
+import de.frank.gedankenspeicher.data.Kategorieart
 import de.frank.gedankenspeicher.data.Notiz
 import de.frank.gedankenspeicher.data.Ordner
 import de.frank.gedankenspeicher.data.Sitzung
@@ -62,7 +65,6 @@ import de.frank.gedankenspeicher.ui.einstellungen.EinstellungenBildschirm
 import de.frank.gedankenspeicher.ui.einstellungen.ProfilEditor
 import de.frank.gedankenspeicher.ui.einstellungen.ProfileBildschirm
 import de.frank.gedankenspeicher.ui.ki.KiBlatt
-import de.frank.gedankenspeicher.ui.sitzungen.Abdunklung
 import de.frank.gedankenspeicher.ui.sitzungen.Schublade
 import de.frank.gedankenspeicher.data.Anhangsart
 import de.frank.gedankenspeicher.data.anhaengeAusJson
@@ -92,6 +94,9 @@ private var benachrichtigungGefragt = false
 
 /** Welcher Bildschirm gerade oben liegt. */
 private enum class Ziel { VERLAUF, EINSTELLUNGEN, PROFILE, ANMELDUNG, SUCHE }
+
+/** Was nach der zweistufigen Kategorienwahl mit der neuen Idee geschehen soll. */
+private enum class NeueIdeeAktion { OEFFNEN, SENDEN, AUFNEHMEN }
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 class MainActivity : FragmentActivity() {
@@ -446,10 +451,9 @@ private fun Oberflaeche(
     val driveAn by vm.driveAn.collectAsStateWithLifecycle()
 
     var ziel by remember { mutableStateOf(Ziel.VERLAUF) }
-    // Beim Start steht die Auswahl offen: die App faengt bei den Notizen an, nicht in
-    // einer davon. `rememberSaveable` haelt eine spaeter geschlossene Schublade auch
-    // ueber ein Auf- und Zuklappen des Geraets geschlossen.
-    var schubladeOffen by rememberSaveable { mutableStateOf(true) }
+    // Der Material-Drawer hält seinen Inhalt vor und folgt einer Wischgeste unmittelbar.
+    // Dadurch muss beim ersten Bewegungsframe nicht erst die gesamte Seitenleiste entstehen.
+    val schublade = rememberDrawerState(initialValue = DrawerValue.Open)
     var notizMenue by remember { mutableStateOf<Notiz?>(null) }
     /** Die Notiz, deren Plus-Menü für Anhänge gerade offen ist. */
     var notizAnhangMenue by remember { mutableStateOf<Notiz?>(null) }
@@ -476,6 +480,10 @@ private fun Oberflaeche(
     var ordnerVerwalten by remember { mutableStateOf(false) }
     var ordnerUmbenennen by remember { mutableStateOf<Ordner?>(null) }
     var ordnerLoeschfrage by remember { mutableStateOf<Ordner?>(null) }
+    var neueKategorieArtWahl by remember { mutableStateOf(false) }
+    var neueIdeeOffen by remember { mutableStateOf(false) }
+    var neueIdeeArt by remember { mutableStateOf<Kategorieart?>(null) }
+    var neueIdeeAktion by remember { mutableStateOf(NeueIdeeAktion.OEFFNEN) }
     var papierkorbLeerfrage by remember { mutableStateOf(false) }
     var profilEditor by remember { mutableStateOf<Auswertungsprofil?>(null) }
     val meldungen = remember { SnackbarHostState() }
@@ -524,7 +532,9 @@ private fun Oberflaeche(
         vm.leereSuche()
         ziel = Ziel.VERLAUF
     }
-    BackHandler(enabled = schubladeOffen && ziel == Ziel.VERLAUF) { schubladeOffen = false }
+    BackHandler(enabled = schublade.isOpen && ziel == Ziel.VERLAUF) {
+        bereich.launch { schublade.close() }
+    }
 
     // Die offene Sitzung frisch aus der Liste holen: der Kopf im Zustand ist ein Abzug von
     // vorhin, und ohne das bliebe die Sperre aus, wenn man die gerade offene Notiz eben
@@ -537,19 +547,82 @@ private fun Oberflaeche(
         // breitere Fassung (320 statt 280 dp).
         val breit = maxWidth >= 400.dp
 
-        VerlaufBildschirm(
+        ModalNavigationDrawer(
+            drawerState = schublade,
+            gesturesEnabled = ziel == Ziel.VERLAUF,
+            scrimColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.52f),
+            drawerContent = {
+                Schublade(
+                    sitzungen = verlauf.sitzungen,
+                    ordner = verlauf.ordner,
+                    letzteAktivitaet = verlauf.letzteAktivitaet,
+                    ansicht = verlauf.ansicht,
+                    gewaehlterOrdner = verlauf.gewaehlterOrdner,
+                    freigegebeneSitzung = verlauf.freigegebeneSitzung,
+                    offeneSitzung = verlauf.sitzung?.id,
+                    breit = breit,
+                    beiWahl = { sitzung ->
+                        // Eine geschützte Notiz öffnet sich erst nach dem Fingerabdruck — aus
+                        // jedem Reiter heraus, nicht nur aus „Geschützte Notizen".
+                        if (sitzung.geschuetzt && sitzung.id != verlauf.freigegebeneSitzung) {
+                            beiFingerabdruck("Geschützte Notiz öffnen") {
+                                vm.gibFrei(sitzung.id)
+                                vm.wechsleSitzung(sitzung.id)
+                                bereich.launch { schublade.close() }
+                            }
+                        } else {
+                            vm.wechsleSitzung(sitzung.id)
+                            bereich.launch { schublade.close() }
+                        }
+                    },
+                    beiNeue = {
+                        neueIdeeArt = null
+                        neueIdeeAktion = NeueIdeeAktion.OEFFNEN
+                        neueIdeeOffen = true
+                        bereich.launch { schublade.close() }
+                    },
+                    beiMenue = { sitzungsMenue = it },
+                    beiAnsicht = vm::waehleAnsicht,
+                    beiOrdnerwahl = vm::waehleOrdner,
+                    beiOrdnerVerwalten = { ordnerVerwalten = true },
+                    beiPapierkorbLeeren = { papierkorbLeerfrage = true },
+                    beiEinstellungen = {
+                        bereich.launch { schublade.close() }
+                        ziel = Ziel.EINSTELLUNGEN
+                    },
+                )
+            },
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                VerlaufBildschirm(
             // Solange die Sitzung zu ist, bekommt der Verlauf **keine** Eintraege. Die
             // Sperrschicht darueber ist nur der sichtbare Teil; gaebe es sie einmal nicht,
             // stuende der Inhalt sonst trotzdem da.
             zustand = if (gesperrt) verlauf.copy(eintraege = emptyList()) else verlauf,
             istDunkel = Erscheinung.vonId(erscheinungId).farben.istDunkel,
-            beiSchublade = { schubladeOffen = true },
+            beiSchublade = { bereich.launch { schublade.open() } },
             beiSuche = { ziel = Ziel.SUCHE },
             beiErscheinungUmschalten = vm::erscheinungUmschalten,
             beiEinstellungen = { ziel = Ziel.EINSTELLUNGEN },
             beiEntwurf = vm::setzeEntwurf,
-            beiSenden = vm::sendeEntwurf,
-            beiAufnahme = beiMikrofon,
+            beiSenden = {
+                if (verlauf.sitzung == null) {
+                    neueIdeeArt = null
+                    neueIdeeAktion = NeueIdeeAktion.SENDEN
+                    neueIdeeOffen = true
+                } else {
+                    vm.sendeEntwurf()
+                }
+            },
+            beiAufnahme = {
+                if (verlauf.sitzung == null && !verlauf.nimmtAuf) {
+                    neueIdeeArt = null
+                    neueIdeeAktion = NeueIdeeAktion.AUFNEHMEN
+                    neueIdeeOffen = true
+                } else {
+                    beiMikrofon()
+                }
+            },
             beiKi = vm::oeffneKiBlatt,
             beiVorlesen = vm::lesenUmschalten,
             beiVerbessern = vm::verbessere,
@@ -635,59 +708,7 @@ private fun Oberflaeche(
                 beiOeffnen = {
                     offeneFrisch?.let { s -> beiFingerabdruck("Geschützte Notiz öffnen") { vm.gibFrei(s.id) } }
                 },
-                beiUebersicht = { schubladeOffen = true },
-            )
-        }
-
-        // ---- Schublade (M-02)
-        AnimatedVisibility(
-            visible = schubladeOffen,
-            enter = fadeIn(tween(dauer(Dauern.BLATT), easing = Kurven.blatt)),
-            exit = fadeOut(tween(dauer(Dauern.BLATT), easing = Kurven.blatt)),
-        ) {
-            Abdunklung(staerke = 1f) { schubladeOffen = false }
-        }
-        AnimatedVisibility(
-            visible = schubladeOffen,
-            enter = slideInHorizontally(tween(dauer(Dauern.BLATT), easing = Kurven.blatt)) { -it },
-            exit = slideOutHorizontally(tween(dauer(Dauern.BLATT), easing = Kurven.blatt)) { -it },
-        ) {
-            Schublade(
-                sitzungen = verlauf.sitzungen,
-                ordner = verlauf.ordner,
-                letzteAktivitaet = verlauf.letzteAktivitaet,
-                ansicht = verlauf.ansicht,
-                gewaehlterOrdner = verlauf.gewaehlterOrdner,
-                freigegebeneSitzung = verlauf.freigegebeneSitzung,
-                offeneSitzung = verlauf.sitzung?.id,
-                breit = breit,
-                beiWahl = { sitzung ->
-                    // Eine geschützte Notiz öffnet sich erst nach dem Fingerabdruck — aus
-                    // jedem Reiter heraus, nicht nur aus „Geschützte Notizen".
-                    if (sitzung.geschuetzt && sitzung.id != verlauf.freigegebeneSitzung) {
-                        beiFingerabdruck("Geschützte Notiz öffnen") {
-                            vm.gibFrei(sitzung.id)
-                            vm.wechsleSitzung(sitzung.id)
-                            schubladeOffen = false
-                        }
-                    } else {
-                        vm.wechsleSitzung(sitzung.id)
-                        schubladeOffen = false
-                    }
-                },
-                beiNeue = {
-                    vm.neueSitzung()
-                    schubladeOffen = false
-                },
-                beiMenue = { sitzungsMenue = it },
-                beiAnsicht = vm::waehleAnsicht,
-                beiOrdnerwahl = vm::waehleOrdner,
-                beiOrdnerVerwalten = { ordnerVerwalten = true },
-                beiPapierkorbLeeren = { papierkorbLeerfrage = true },
-                beiEinstellungen = {
-                    schubladeOffen = false
-                    ziel = Ziel.EINSTELLUNGEN
-                },
+                beiUebersicht = { bereich.launch { schublade.open() } },
             )
         }
 
@@ -1059,7 +1080,7 @@ private fun Oberflaeche(
                                 }
                             }
                         }
-                        Menueeintrag("In Ordner verschieben") {
+                        Menueeintrag("Kategorie ändern") {
                             verschiebeSitzung = sitzung
                             sitzungsMenue = null
                         }
@@ -1112,19 +1133,25 @@ private fun Oberflaeche(
                 containerColor = androidx.compose.ui.graphics.Color.Transparent,
                 dragHandle = null,
             ) {
-                MenueBlatt(titel = "In welchen Ordner?") {
-                    Menueeintrag("Kein Ordner", gesperrt = sitzung.ordnerId == null) {
+                MenueBlatt(titel = "In welche Kategorie?") {
+                    Menueeintrag("Keine Kategorie", gesperrt = sitzung.ordnerId == null) {
                         vm.verschiebeInOrdner(sitzung, null)
                         verschiebeSitzung = null
                     }
-                    verlauf.ordner.forEach { einer ->
-                        Menueeintrag(einer.name, gesperrt = sitzung.ordnerId == einer.id) {
-                            vm.verschiebeInOrdner(sitzung, einer.id)
-                            verschiebeSitzung = null
+                    Kategorieart.entries.forEach { art ->
+                        Menueeintrag(
+                            if (art == Kategorieart.MENTAL) "Mentale Kategorien" else "Praktische Kategorien",
+                            gesperrt = true,
+                        ) { }
+                        verlauf.ordner.filter { it.art == art }.forEach { einer ->
+                            Menueeintrag(einer.name, gesperrt = sitzung.ordnerId == einer.id) {
+                                vm.verschiebeInOrdner(sitzung, einer.id)
+                                verschiebeSitzung = null
+                            }
                         }
                     }
                     if (verlauf.ordner.isEmpty()) {
-                        Menueeintrag("Erst einen Ordner anlegen …") {
+                        Menueeintrag("Erst eine Kategorie anlegen …") {
                             verschiebeSitzung = null
                             ordnerVerwalten = true
                         }
@@ -1139,19 +1166,93 @@ private fun Oberflaeche(
                 containerColor = androidx.compose.ui.graphics.Color.Transparent,
                 dragHandle = null,
             ) {
-                MenueBlatt(titel = "Ordner verwalten") {
-                    Menueeintrag("Neuen Ordner anlegen") {
+                MenueBlatt(titel = "Kategorien bearbeiten") {
+                    Menueeintrag("Neue Kategorie anlegen") {
                         ordnerVerwalten = false
-                        ordnerUmbenennen = Ordner(id = 0, name = "", erstelltAm = 0)
+                        neueKategorieArtWahl = true
                     }
-                    verlauf.ordner.forEach { einer ->
-                        Menueeintrag(einer.name + " — umbenennen") { ordnerUmbenennen = einer }
-                        Menueeintrag(einer.name + " — löschen", gefaehrlich = true) {
-                            ordnerLoeschfrage = einer
+                    Kategorieart.entries.forEach { art ->
+                        Menueeintrag(
+                            if (art == Kategorieart.MENTAL) "Mentale Kategorien" else "Praktische Kategorien",
+                            gesperrt = true,
+                        ) { }
+                        verlauf.ordner.filter { it.art == art }.forEach { einer ->
+                            Menueeintrag(einer.name + " — umbenennen") {
+                                ordnerVerwalten = false
+                                ordnerUmbenennen = einer
+                            }
+                            Menueeintrag(einer.name + " — löschen", gefaehrlich = true) {
+                                ordnerLoeschfrage = einer
+                            }
                         }
                     }
                     if (verlauf.ordner.isEmpty()) {
-                        Menueeintrag("Noch kein Ordner angelegt.", gesperrt = true) { }
+                        Menueeintrag("Noch keine Kategorie angelegt.", gesperrt = true) { }
+                    }
+                }
+            }
+        }
+
+        if (neueKategorieArtWahl) {
+            ModalBottomSheet(
+                onDismissRequest = { neueKategorieArtWahl = false },
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                dragHandle = null,
+            ) {
+                MenueBlatt(titel = "Welche Art von Kategorie?") {
+                    Kategorieart.entries.forEach { art ->
+                        Menueeintrag(if (art == Kategorieart.MENTAL) "Mental" else "Praktisch") {
+                            neueKategorieArtWahl = false
+                            ordnerUmbenennen = Ordner(id = 0, name = "", erstelltAm = 0, art = art)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (neueIdeeOffen) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    neueIdeeOffen = false
+                    neueIdeeArt = null
+                },
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                dragHandle = null,
+            ) {
+                val art = neueIdeeArt
+                MenueBlatt(
+                    titel = if (art == null) {
+                        "Ist die neue Idee mental oder praktisch?"
+                    } else {
+                        if (art == Kategorieart.MENTAL) "Welche mentale Kategorie?" else "Welche praktische Kategorie?"
+                    },
+                ) {
+                    if (art == null) {
+                        Menueeintrag("Mental") { neueIdeeArt = Kategorieart.MENTAL }
+                        Menueeintrag("Praktisch") { neueIdeeArt = Kategorieart.PRAKTISCH }
+                    } else {
+                        val passende = verlauf.ordner.filter { it.art == art }
+                        passende.forEach { kategorie ->
+                            Menueeintrag(kategorie.name) {
+                                neueIdeeOffen = false
+                                neueIdeeArt = null
+                                vm.neueSitzung(kategorie.id) {
+                                    when (neueIdeeAktion) {
+                                        NeueIdeeAktion.OEFFNEN -> Unit
+                                        NeueIdeeAktion.SENDEN -> vm.sendeEntwurf()
+                                        NeueIdeeAktion.AUFNEHMEN -> beiMikrofon()
+                                    }
+                                }
+                            }
+                        }
+                        if (passende.isEmpty()) {
+                            Menueeintrag("Zuerst eine Kategorie anlegen …") {
+                                neueIdeeOffen = false
+                                neueIdeeArt = null
+                                ordnerUmbenennen = Ordner(id = 0, name = "", erstelltAm = 0, art = art)
+                            }
+                        }
+                        Menueeintrag("Art zurück") { neueIdeeArt = null }
                     }
                 }
             }
@@ -1188,11 +1289,11 @@ private fun Oberflaeche(
         ordnerUmbenennen?.let { einer ->
             var name by remember(einer.id) { mutableStateOf(einer.name) }
             Eingabefrage(
-                titel = if (einer.id == 0L) "Neuer Ordner" else "Ordner umbenennen",
+                titel = if (einer.id == 0L) "Neue Kategorie" else "Kategorie umbenennen",
                 wert = name,
                 beiAenderung = { name = it },
                 beiJa = {
-                    if (einer.id == 0L) vm.legeOrdnerAn(name) else vm.benenneOrdnerUm(einer, name)
+                    if (einer.id == 0L) vm.legeOrdnerAn(name, einer.art) else vm.benenneOrdnerUm(einer, name)
                     ordnerUmbenennen = null
                 },
                 beiNein = { ordnerUmbenennen = null },
@@ -1201,8 +1302,8 @@ private fun Oberflaeche(
 
         ordnerLoeschfrage?.let { einer ->
             Rueckfrage(
-                titel = "Ordner „" + einer.name + "“ löschen?",
-                text = "Die Notizen darin bleiben erhalten und liegen danach in keinem Ordner.",
+                titel = "Kategorie „" + einer.name + "“ löschen?",
+                text = "Die Notizen darin bleiben erhalten und liegen danach in keiner Kategorie.",
                 bestaetigung = "Löschen",
                 beiJa = {
                     vm.loescheOrdner(einer)
@@ -1256,6 +1357,8 @@ private fun Oberflaeche(
             hostState = meldungen,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp),
         )
+    }
+}
     }
 }
 

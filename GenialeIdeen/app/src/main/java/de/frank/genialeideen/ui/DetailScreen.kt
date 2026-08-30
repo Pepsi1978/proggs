@@ -152,7 +152,9 @@ fun DetailScreen(
                         idee = aktuelle,
                         kategorien = kategorien,
                         aufKategorie = { id -> viewModel.setzeKategorie(aktuelle.id, id) },
-                        aufNeueKategorie = { name, fertig -> viewModel.legeKategorieAn(name, fertig) },
+                        aufNeueKategorie = { name, art, fertig ->
+                            viewModel.legeKategorieAn(name, art, fertig)
+                        },
                         spricht = vorlese.quelle == "detail-${aktuelle.id}",
                         vorleseZustand = vorlese.zustand,
                         aufVorlesen = {
@@ -283,7 +285,7 @@ private fun IdeenKopf(
     idee: IdeeEntity,
     kategorien: List<de.frank.genialeideen.data.local.KategorieEntity>,
     aufKategorie: (Long?) -> Unit,
-    aufNeueKategorie: (String, (Long?) -> Unit) -> Unit,
+    aufNeueKategorie: (String, de.frank.genialeideen.data.local.Kategorieart, (Long?) -> Unit) -> Unit,
     spricht: Boolean,
     vorleseZustand: de.frank.genialeideen.speech.VorleseZustand,
     aufVorlesen: () -> Unit,
@@ -312,8 +314,8 @@ private fun IdeenKopf(
                 kategorien = kategorien,
                 gewaehlt = idee.kategorieId,
                 aufWahl = aufKategorie,
-                aufNeueKategorie = { name, fertig ->
-                    aufNeueKategorie(name) { id ->
+                aufNeueKategorie = { name, art, fertig ->
+                    aufNeueKategorie(name, art) { id ->
                         if (id != null) aufKategorie(id)
                         fertig(id)
                     }

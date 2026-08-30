@@ -44,12 +44,16 @@ data class Sitzung(
     val ordnerId: Long? = null,
 )
 
-/** Ein Ordner der Seitenleiste (Ordner verwalten). */
+/** Die beiden vom Nutzer vergebenen Arten einer Kategorie. */
+enum class Kategorieart { MENTAL, PRAKTISCH }
+
+/** Eine manuell angelegte Kategorie der Seitenleiste. */
 @Entity(tableName = "ordner")
 data class Ordner(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val erstelltAm: Long,
+    val art: Kategorieart = Kategorieart.MENTAL,
 )
 
 /** Der Zustand einer Notiz (`01-FUNKTIONS-SPEC.md` §4). */

@@ -5,6 +5,7 @@ import android.net.Uri
 import de.frank.genialeideen.data.local.GenialeIdeenDatabase
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.KategorieEntity
+import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.data.local.NachrichtEntity
 import de.frank.genialeideen.observability.IdeenLog
 import java.text.SimpleDateFormat
@@ -59,7 +60,8 @@ class Sicherung(
                 JSONObject()
                     .put("id", kategorie.id)
                     .put("name", kategorie.name)
-                    .put("reihenfolge", kategorie.reihenfolge),
+                    .put("reihenfolge", kategorie.reihenfolge)
+                    .put("art", kategorie.art.name),
             )
         }
         val nachrichten = JSONArray()
@@ -126,6 +128,9 @@ class Sicherung(
                 id = eintrag.optLong("id"),
                 name = eintrag.optString("name"),
                 reihenfolge = eintrag.optInt("reihenfolge"),
+                art = runCatching {
+                    Kategorieart.valueOf(eintrag.optString("art", Kategorieart.MENTAL.name))
+                }.getOrDefault(Kategorieart.MENTAL),
             )
         }
         if (faecher.isNotEmpty()) datenbank.kategorienDao().einfuegenAlle(faecher)
@@ -220,7 +225,7 @@ class Sicherung(
     fun standText(): String = BackupStatus.describe(context)
 
     companion object {
-        const val SCHEMA_VERSION = 2
+        const val SCHEMA_VERSION = 3
         private val ZEIT = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
         private val DATEI_ZEIT = SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.GERMANY)
 

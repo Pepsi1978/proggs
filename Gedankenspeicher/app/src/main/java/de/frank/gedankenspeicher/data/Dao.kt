@@ -95,6 +95,13 @@ interface OrdnerDao {
     /** Beim Löschen eines Ordners bleiben die Sitzungen erhalten und landen ausserhalb. */
     @Query("UPDATE sitzung SET ordnerId = NULL WHERE ordnerId = :id")
     suspend fun loeseSitzungen(id: Long)
+
+    /** Zuordnungen und Kategorie verschwinden atomar, die Sitzungen selbst bleiben erhalten. */
+    @Transaction
+    suspend fun loescheMitZuordnungen(id: Long) {
+        loeseSitzungen(id)
+        loeschen(id)
+    }
 }
 
 @Dao

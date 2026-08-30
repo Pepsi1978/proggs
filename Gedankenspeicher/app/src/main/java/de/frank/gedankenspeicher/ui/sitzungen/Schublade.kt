@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.frank.gedankenspeicher.data.Ordner
+import de.frank.gedankenspeicher.data.Kategorieart
 import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.data.Sitzung
 import de.frank.gedankenspeicher.ui.Schubladenansicht
@@ -69,7 +71,7 @@ val Favoritengold = Color(0xFFF5B72A)
  * Verlauf stehen zu lassen — der Text bliebe dann auf Briefmarkenbreite.
  *
  * Sie ist zweigeteilt: oben die Reiter (Alle Notizen, Favoriten, Geschützte Notizen,
- * Papierkorb, Ordner) — das ist die Auswahl. Unter dem Strich die Notizen der gewählten
+ * Papierkorb, Kategorien) — das ist die Auswahl. Unter dem Strich die Notizen der gewählten
  * Ansicht, die neueste zuoberst — das ist der Verlauf.
  *
  * **Was der Schutz verbirgt, ist der Inhalt, nicht der Name.** Eine geschützte Notiz steht
@@ -108,6 +110,11 @@ fun Schublade(
     val geschuetzte = alle.filter { it.geschuetzt }
     val papierkorb = sitzungen.filter { it.geloeschtAm != null }
     val offenerOrdner = ordner.firstOrNull { it.id == gewaehlterOrdner }
+    var kategorieart by rememberSaveable { mutableStateOf(Kategorieart.MENTAL) }
+    LaunchedEffect(offenerOrdner?.art) {
+        offenerOrdner?.let { kategorieart = it.art }
+    }
+    val sichtbareKategorien = ordner.filter { it.art == kategorieart }
 
     val liste = when (ansicht) {
         Schubladenansicht.ALLE -> alle
@@ -122,7 +129,7 @@ fun Schublade(
         Schubladenansicht.FAVORITEN -> "Favoriten"
         Schubladenansicht.GESCHUETZT -> "Geschützte Notizen"
         Schubladenansicht.PAPIERKORB -> "Papierkorb"
-        Schubladenansicht.ORDNER -> offenerOrdner?.name ?: "Ordner"
+        Schubladenansicht.ORDNER -> offenerOrdner?.name ?: "Kategorien"
     }
 
     Column(
@@ -156,7 +163,7 @@ fun Schublade(
         ) {
             Icon(Icons.Outlined.Add, null, Modifier.size(20.dp), tint = farben.akzent)
             Spacer(Modifier.width(8.dp))
-            Text("Neue Sitzung", style = schrift.knopf, color = farben.akzent)
+            Text("Neue Idee", style = schrift.knopf, color = farben.akzent)
         }
 
         Spacer(Modifier.height(12.dp))
@@ -183,10 +190,10 @@ fun Schublade(
         Box(Modifier.fillMaxWidth().height(1.dp).background(farben.rand))
         Spacer(Modifier.height(8.dp))
 
-        // ---- Ordner: aufklappbar, „Ordner verwalten" steht darin an erster Stelle
+        // ---- Kategorien: aufklappbar, erst Art wählen, dann die genaue Kategorie
         Reiter(
             symbol = Icons.Outlined.Folder,
-            beschriftung = "Ordner",
+            beschriftung = "Kategorien",
             anzahl = ordner.size,
             gewaehlt = ansicht == Schubladenansicht.ORDNER,
             nachlauf = {
@@ -204,6 +211,24 @@ fun Schublade(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(Masse.profilRadius))
+                        .border(1.dp, farben.rand, RoundedCornerShape(Masse.profilRadius)),
+                ) {
+                    KategorieartReiter(
+                        text = "Mental",
+                        gewaehlt = kategorieart == Kategorieart.MENTAL,
+                        modifier = Modifier.weight(1f),
+                    ) { kategorieart = Kategorieart.MENTAL }
+                    KategorieartReiter(
+                        text = "Praktisch",
+                        gewaehlt = kategorieart == Kategorieart.PRAKTISCH,
+                        modifier = Modifier.weight(1f),
+                    ) { kategorieart = Kategorieart.PRAKTISCH }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .clip(RoundedCornerShape(Masse.profilRadius))
                         .clickable(onClick = beiOrdnerVerwalten)
                         .padding(horizontal = 10.dp, vertical = 10.dp),
@@ -211,17 +236,21 @@ fun Schublade(
                 ) {
                     Icon(Icons.Outlined.CreateNewFolder, null, Modifier.size(18.dp), tint = farben.akzent)
                     Spacer(Modifier.width(10.dp))
-                    Text("Ordner verwalten", style = schrift.sitzungsname, color = farben.akzent)
+                    Text("Kategorien bearbeiten", style = schrift.sitzungsname, color = farben.akzent)
                 }
-                if (ordner.isEmpty()) {
+                if (sichtbareKategorien.isEmpty()) {
                     Text(
-                        "Noch kein Ordner angelegt.",
+                        if (kategorieart == Kategorieart.MENTAL) {
+                            "Noch keine mentale Kategorie angelegt."
+                        } else {
+                            "Noch keine praktische Kategorie angelegt."
+                        },
                         style = schrift.zeitstempel,
                         color = farben.textSchwach,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                     )
                 }
-                ordner.forEach { einer ->
+                sichtbareKategorien.forEach { einer ->
                     Reiter(
                         symbol = Icons.Outlined.FolderOpen,
                         beschriftung = einer.name,
@@ -303,6 +332,33 @@ fun Schublade(
             Text("Einstellungen", style = schrift.sitzungsname, color = farben.textMittel)
         }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+/** Einer der beiden festen Typ-Reiter innerhalb der Kategorienleiste. */
+@Composable
+private fun KategorieartReiter(
+    text: String,
+    gewaehlt: Boolean,
+    modifier: Modifier = Modifier,
+    beiDruck: () -> Unit,
+) {
+    val farben = Farben
+    val schrift = Schriften
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(Masse.profilRadius))
+            .background(if (gewaehlt) farben.akzentGedeckt else Color.Transparent)
+            .clickable(onClick = beiDruck)
+            .padding(horizontal = 8.dp, vertical = 9.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text,
+            style = schrift.zeitstempel,
+            fontWeight = if (gewaehlt) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (gewaehlt) farben.akzent else farben.textMittel,
+        )
     }
 }
 

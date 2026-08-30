@@ -110,14 +110,17 @@ interface SuchverlaufDao {
 
 @Dao
 interface KategorienDao {
-    @Query("SELECT * FROM kategorien ORDER BY reihenfolge ASC, name ASC")
+    @Query("SELECT * FROM kategorien ORDER BY art ASC, reihenfolge ASC, name ASC")
     fun alle(): Flow<List<KategorieEntity>>
 
-    @Query("SELECT * FROM kategorien ORDER BY reihenfolge ASC, name ASC")
+    @Query("SELECT * FROM kategorien ORDER BY art ASC, reihenfolge ASC, name ASC")
     suspend fun alleEinmal(): List<KategorieEntity>
 
-    @Query("SELECT * FROM kategorien WHERE name = :name COLLATE NOCASE LIMIT 1")
-    suspend fun nachName(name: String): KategorieEntity?
+    @Query("SELECT * FROM kategorien WHERE name = :name COLLATE NOCASE AND art = :art LIMIT 1")
+    suspend fun nachNameUndArt(name: String, art: Kategorieart): KategorieEntity?
+
+    @Query("SELECT * FROM kategorien WHERE id = :id")
+    suspend fun nachId(id: Long): KategorieEntity?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun einfuegen(kategorie: KategorieEntity): Long
@@ -125,9 +128,22 @@ interface KategorienDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun einfuegenAlle(kategorien: List<KategorieEntity>)
 
-    @Query("SELECT COUNT(*) FROM kategorien")
-    suspend fun anzahl(): Int
+    @Query("SELECT COUNT(*) FROM kategorien WHERE art = :art")
+    suspend fun anzahl(art: Kategorieart): Int
+
+    @Query("UPDATE kategorien SET name = :name WHERE id = :id")
+    suspend fun benenneUm(id: Long, name: String)
+
+    @Query("UPDATE ideen SET kategorieId = NULL, geaendertAm = :jetzt WHERE kategorieId = :id")
+    suspend fun loeseIdeen(id: Long, jetzt: Long = System.currentTimeMillis())
 
     @Query("DELETE FROM kategorien WHERE id = :id")
     suspend fun loesche(id: Long)
+
+    /** Ideen und Kategorie werden in einem Schritt getrennt; die Ideen selbst bleiben erhalten. */
+    @Transaction
+    suspend fun loescheMitZuordnungen(id: Long) {
+        loeseIdeen(id)
+        loesche(id)
+    }
 }

@@ -17,11 +17,15 @@ class Wandler {
     @TypeConverter fun quelleHin(v: Notizquelle): String = v.name
     @TypeConverter fun quelleHer(v: String): Notizquelle =
         runCatching { Notizquelle.valueOf(v) }.getOrDefault(Notizquelle.GETIPPT)
+
+    @TypeConverter fun kategorieartHin(v: Kategorieart): String = v.name
+    @TypeConverter fun kategorieartHer(v: String): Kategorieart =
+        runCatching { Kategorieart.valueOf(v) }.getOrDefault(Kategorieart.MENTAL)
 }
 
 @Database(
     entities = [Sitzung::class, Notiz::class, KiAntwort::class, Auswertungsprofil::class, Ordner::class],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 @TypeConverters(Wandler::class)
@@ -41,7 +45,13 @@ abstract class Datenbank : RoomDatabase() {
                 ctx.applicationContext,
                 Datenbank::class.java,
                 DATEINAME,
-            ).addMigrations(WANDERUNG_1_2, WANDERUNG_2_3, WANDERUNG_3_4, WANDERUNG_4_5).build().also { vorhanden = it }
+            ).addMigrations(
+                WANDERUNG_1_2,
+                WANDERUNG_2_3,
+                WANDERUNG_3_4,
+                WANDERUNG_4_5,
+                WANDERUNG_5_6,
+            ).build().also { vorhanden = it }
         }
 
         /** Die Anhänge kamen mit dem Plus-Menü dazu; alte Notizen haben schlicht keine. */
@@ -88,6 +98,13 @@ abstract class Datenbank : RoomDatabase() {
         private val WANDERUNG_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE notiz ADD COLUMN nachtragzeitenJson TEXT NOT NULL DEFAULT '[]'")
+            }
+        }
+
+        /** Bestehende Ordner bleiben erhalten und werden zu mentalen Kategorien. */
+        private val WANDERUNG_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE ordner ADD COLUMN art TEXT NOT NULL DEFAULT 'MENTAL'")
             }
         }
 

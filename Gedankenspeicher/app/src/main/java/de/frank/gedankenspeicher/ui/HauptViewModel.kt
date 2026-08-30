@@ -24,6 +24,7 @@ import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.Datenbank
 import de.frank.gedankenspeicher.data.Sicherung
 import de.frank.gedankenspeicher.data.KiAntwort
+import de.frank.gedankenspeicher.data.Kategorieart
 import de.frank.gedankenspeicher.data.Notiz
 import de.frank.gedankenspeicher.data.Notizzustand
 import de.frank.gedankenspeicher.data.Nachtraege
@@ -331,10 +332,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun neueSitzung() {
+    fun neueSitzung(kategorieId: Long, danach: () -> Unit = {}) {
         val z = _verlauf.value
         if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
-        viewModelScope.launch { beobachteSitzung(repo.neueSitzung()) }
+        viewModelScope.launch {
+            beobachteSitzung(repo.neueSitzung(kategorieId))
+            danach()
+        }
     }
 
     fun benenneSitzungUm(id: Long, titel: String) {
@@ -417,9 +421,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun legeOrdnerAn(name: String) {
+    fun legeOrdnerAn(name: String, art: Kategorieart) {
         if (name.isBlank()) return
-        viewModelScope.launch { repo.legeOrdnerAn(name) }
+        viewModelScope.launch { repo.legeOrdnerAn(name, art) }
     }
 
     fun benenneOrdnerUm(ordner: Ordner, name: String) {
@@ -511,11 +515,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val text = _verlauf.value.entwurf.trim()
         val anhaenge = _verlauf.value.anhaenge
         if (text.isEmpty() && anhaenge.isEmpty()) return
+        val sitzung = _verlauf.value.sitzung
+            ?: return melde("Wähle zuerst eine mentale oder praktische Kategorie.")
         _verlauf.update { it.copy(entwurf = "", anhaenge = emptyList()) }
         viewModelScope.launch {
-            // Wer ohne offene Sitzung lostippt, bekommt eine neue — der leere Anfangs-
-            // bildschirm soll keine Sackgasse sein.
-            val sitzung = _verlauf.value.sitzung ?: repo.neueSitzung().also(::beobachteSitzung)
             val id = repo.legeGetippteNotizAn(sitzung.id, text, anhaenge)
             // Überschrift und Sitzungstitel entstehen aus dem Text; ohne Text gibt es
             // nichts zu benennen — die Anhänge sprechen dann für sich.
@@ -534,12 +537,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (_verlauf.value.nimmtAuf) {
             beendeAufnahme()
         } else if (_verlauf.value.sitzung == null) {
-            // Dasselbe beim Mikrofon: erst eine Sitzung, dann läuft die Aufnahme.
-            viewModelScope.launch {
-                beobachteSitzung(repo.neueSitzung())
-                aufnahmeziel = Aufnahmeziel.VERLAUF
-                starteAufnahme()
-            }
+            melde("Wähle zuerst eine mentale oder praktische Kategorie.")
         } else {
             aufnahmeziel = Aufnahmeziel.VERLAUF
             starteAufnahme()

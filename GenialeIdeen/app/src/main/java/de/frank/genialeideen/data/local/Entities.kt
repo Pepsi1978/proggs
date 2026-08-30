@@ -10,6 +10,9 @@ import androidx.room.PrimaryKey
 /** Offen oder umgesetzt — mehr Zustände gibt es bewusst nicht. */
 enum class IdeenStatus { OFFEN, UMGESETZT }
 
+/** Die vom Nutzer gewählte Art einer Kategorie. */
+enum class Kategorieart { MENTAL, PRAKTISCH }
+
 @Entity(tableName = "ideen")
 data class IdeeEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -30,12 +33,13 @@ data class IdeeEntity(
     @ColumnInfo(defaultValue = "NULL") val kategorieId: Long? = null,
 )
 
-/** Eine Schublade für Ideen. Die Idee bleibt trotzdem in ihrer Liste stehen (Baustein P). */
-@Entity(tableName = "kategorien", indices = [Index(value = ["name"], unique = true)])
+/** Eine manuell angelegte Kategorie. Die Idee bleibt trotzdem in ihrer Liste stehen (Baustein P). */
+@Entity(tableName = "kategorien", indices = [Index(value = ["name", "art"], unique = true)])
 data class KategorieEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val reihenfolge: Int = 0,
+    @ColumnInfo(defaultValue = "'MENTAL'") val art: Kategorieart = Kategorieart.MENTAL,
 )
 
 /** Die Spiegeltabelle für die Volltextsuche (Baustein K). */

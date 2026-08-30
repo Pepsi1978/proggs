@@ -362,5 +362,5 @@ object Sicherung {
     }
 
     /** Muss mit der `version` in [Datenbank] übereinstimmen. */
-    private const val SCHEMA_FASSUNG = 5
+    private const val SCHEMA_FASSUNG = 6
 }

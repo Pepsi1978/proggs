@@ -4,6 +4,7 @@ import de.frank.genialeideen.data.local.GenialeIdeenDatabase
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
+import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.data.local.NachrichtEntity
 import de.frank.genialeideen.data.local.SuchanfrageEntity
 import de.frank.genialeideen.observability.IdeenLog
@@ -26,30 +27,32 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
 
     fun alleKategorien(): Flow<List<KategorieEntity>> = kategorienDao.alle()
 
-    suspend fun kategorienEinmal(): List<KategorieEntity> = kategorienDao.alleEinmal()
-
-    /** Legt die Vorab-Kategorien beim ersten Start an — nur, wenn noch gar keine da ist. */
-    suspend fun legeVorabKategorienAn(namen: List<String>) {
-        if (kategorienDao.anzahl() > 0) return
-        kategorienDao.einfuegenAlle(
-            namen.mapIndexed { index, name -> KategorieEntity(name = name, reihenfolge = index) },
+    /** Ausschließlich eine Nutzeraktion darf diesen manuellen Anlagepfad aufrufen. */
+    suspend fun legeKategorieAn(rohName: String, art: Kategorieart): Long? {
+        val name = rohName.trim().take(60)
+        if (name.isBlank()) return null
+        kategorienDao.nachNameUndArt(name, art)?.let { return it.id }
+        val reihenfolge = kategorienDao.anzahl(art)
+        val id = kategorienDao.einfuegen(
+            KategorieEntity(name = name, reihenfolge = reihenfolge, art = art),
         )
+        return if (id > 0) id else kategorienDao.nachNameUndArt(name, art)?.id
     }
 
-    /** Gibt es die Kategorie schon, kommt ihre Kennung zurück; sonst wird sie angelegt. */
-    suspend fun kategorieAnlegenOderFinden(rohName: String): Long? {
-        val name = rohName.trim()
-        if (name.isBlank()) return null
-        kategorienDao.nachName(name)?.let { return it.id }
-        val reihenfolge = kategorienDao.anzahl()
-        val id = kategorienDao.einfuegen(KategorieEntity(name = name, reihenfolge = reihenfolge))
-        return if (id > 0) id else kategorienDao.nachName(name)?.id
+    suspend fun benenneKategorieUm(id: Long, rohName: String): Boolean {
+        val name = rohName.trim().take(60)
+        if (name.isBlank()) return false
+        val kategorie = kategorienDao.nachId(id) ?: return false
+        val doppelt = kategorienDao.nachNameUndArt(name, kategorie.art)
+        if (doppelt != null && doppelt.id != id) return false
+        kategorienDao.benenneUm(id, name)
+        return true
     }
 
     suspend fun setzeKategorie(ideeId: Long, kategorieId: Long?) =
         ideenDao.setzeKategorie(ideeId, kategorieId)
 
-    suspend fun loescheKategorie(id: Long) = kategorienDao.loesche(id)
+    suspend fun loescheKategorie(id: Long) = kategorienDao.loescheMitZuordnungen(id)
 
     suspend fun lege(
         titel: String,

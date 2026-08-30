@@ -54,10 +54,15 @@ class Repository(
         return neueSitzung()
     }
 
-    suspend fun neueSitzung(): Sitzung {
+    suspend fun neueSitzung(kategorieId: Long? = null): Sitzung {
         val jetzt = System.currentTimeMillis()
         val id = db.sitzungen().einfuegen(
-            Sitzung(erstelltAm = jetzt, zuletztGeoeffnet = jetzt, zuletztGeaendert = jetzt),
+            Sitzung(
+                erstelltAm = jetzt,
+                zuletztGeoeffnet = jetzt,
+                zuletztGeaendert = jetzt,
+                ordnerId = kategorieId,
+            ),
         )
         einstellungen.offeneSitzung = id
         return db.sitzungen().eine(id)!!
@@ -107,17 +112,20 @@ class Repository(
 
     suspend fun verschiebeInOrdner(id: Long, ordnerId: Long?) = db.sitzungen().setzeOrdner(id, ordnerId)
 
-    suspend fun legeOrdnerAn(name: String): Long =
-        db.ordner().einfuegen(Ordner(name = name.trim().take(60).ifBlank { "Neuer Ordner" }, erstelltAm = System.currentTimeMillis()))
+    suspend fun legeOrdnerAn(name: String, art: Kategorieart): Long =
+        db.ordner().einfuegen(
+            Ordner(
+                name = name.trim().take(60).ifBlank { "Neue Kategorie" },
+                erstelltAm = System.currentTimeMillis(),
+                art = art,
+            ),
+        )
 
     suspend fun benenneOrdnerUm(ordner: Ordner, name: String) =
         db.ordner().aendern(ordner.copy(name = name.trim().take(60).ifBlank { ordner.name }))
 
-    /** Löscht den Ordner; die Sitzungen darin bleiben erhalten und liegen danach ausserhalb. */
-    suspend fun loescheOrdner(id: Long) {
-        db.ordner().loeseSitzungen(id)
-        db.ordner().loeschen(id)
-    }
+    /** Löscht die Kategorie; ihre Sitzungen bleiben erhalten und liegen danach ausserhalb. */
+    suspend fun loescheOrdner(id: Long) = db.ordner().loescheMitZuordnungen(id)
 
     /** Die nächste sichtbare Sitzung, wenn die offene weggeräumt oder geschützt wurde. */
     suspend fun naechsteSichtbare(): Sitzung {

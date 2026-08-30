@@ -39,19 +39,23 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.MenuOpen
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
@@ -80,6 +84,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
+import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.speech.VorleseZustand
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.IdeenSchriftDick
@@ -168,7 +173,8 @@ fun ListenScreen(
                     viewModel.waehleKategorie(id)
                     bereichsraum.launch { schublade.close() }
                 },
-                aufNeueKategorie = { name -> viewModel.legeKategorieAn(name) },
+                aufNeueKategorie = { name, art -> viewModel.legeKategorieAn(name, art) },
+                aufUmbenennen = viewModel::benenneKategorieUm,
                 aufLoeschen = { id -> viewModel.loescheKategorie(id) },
             )
         },
@@ -459,12 +465,17 @@ private fun KategorienLeiste(
     anzahlJeKategorie: Map<Long, Int>,
     gesamt: Int,
     aufWahl: (Long?) -> Unit,
-    aufNeueKategorie: (String) -> Unit,
+    aufNeueKategorie: (String, Kategorieart) -> Unit,
+    aufUmbenennen: (Long, String) -> Unit,
     aufLoeschen: (Long) -> Unit,
 ) {
     val gold = LocalGold.current
+    var art by remember { mutableStateOf(Kategorieart.MENTAL) }
     var neuOffen by remember { mutableStateOf(false) }
     var neuerName by remember { mutableStateOf("") }
+    var umbenennen by remember { mutableStateOf<KategorieEntity?>(null) }
+    var loeschen by remember { mutableStateOf<KategorieEntity?>(null) }
+    val sichtbareKategorien = remember(kategorien, art) { kategorien.filter { it.art == art } }
 
     ModalDrawerSheet(
         drawerContainerColor = gold.hintergrund,
@@ -483,27 +494,50 @@ private fun KategorienLeiste(
                 color = gold.primaer,
             )
 
-            LazyColumn(
-                modifier = Modifier.weight(1f),
+            // Alle Zeilen werden vor der Wischgeste aufgebaut. Bei den kleinen manuellen
+            // Kategorienlisten vermeidet das den einmaligen Lazy-Aufbau mitten im Drawer-Drag.
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
-                contentPadding = PaddingValues(bottom = 12.dp),
             ) {
-                item {
-                    KategorieZeile(
-                        name = "Alle Ideen",
-                        anzahl = gesamt,
-                        gewaehlt = gewaehlt == null,
-                        aufTipp = { aufWahl(null) },
-                        aufLoeschen = null,
+                KategorieZeile(
+                    name = "Alle Ideen",
+                    anzahl = gesamt,
+                    gewaehlt = gewaehlt == null,
+                    aufTipp = { aufWahl(null) },
+                )
+                KategorieartWahl(
+                    gewaehlt = art,
+                    aufWahl = {
+                        art = it
+                        neuOffen = false
+                    },
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+                if (sichtbareKategorien.isEmpty()) {
+                    Text(
+                        if (art == Kategorieart.MENTAL) {
+                            "Noch keine mentale Kategorie angelegt."
+                        } else {
+                            "Noch keine praktische Kategorie angelegt."
+                        },
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = gold.textGedaempft,
                     )
                 }
-                items(kategorien, key = KategorieEntity::id) { kategorie ->
+                sichtbareKategorien.forEach { kategorie ->
                     KategorieZeile(
                         name = kategorie.name,
                         anzahl = anzahlJeKategorie[kategorie.id] ?: 0,
                         gewaehlt = gewaehlt == kategorie.id,
                         aufTipp = { aufWahl(kategorie.id) },
-                        aufLoeschen = { aufLoeschen(kategorie.id) },
+                        aufUmbenennen = { umbenennen = kategorie },
+                        aufLoeschen = { loeschen = kategorie },
                     )
                 }
             }
@@ -538,7 +572,7 @@ private fun KategorienLeiste(
                     }
                     Box(
                         modifier = Modifier.size(30.dp).druckEffekt {
-                            if (neuerName.isNotBlank()) aufNeueKategorie(neuerName.trim())
+                            if (neuerName.isNotBlank()) aufNeueKategorie(neuerName.trim(), art)
                             neuerName = ""
                             neuOffen = false
                         },
@@ -572,12 +606,68 @@ private fun KategorienLeiste(
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "Neue Kategorie",
+                    if (art == Kategorieart.MENTAL) "Neue mentale Kategorie" else "Neue praktische Kategorie",
                     style = MaterialTheme.typography.labelLarge,
                     color = gold.primaer,
                 )
             }
         }
+    }
+
+    umbenennen?.let { kategorie ->
+        var name by remember(kategorie.id) { mutableStateOf(kategorie.name) }
+        AlertDialog(
+            onDismissRequest = { umbenennen = null },
+            title = { Text("Kategorie umbenennen") },
+            text = {
+                BasicTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = gold.textPrimaer),
+                    cursorBrush = SolidColor(gold.primaer),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(gold.eingabefeld)
+                        .border(1.dp, gold.primaer, RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        aufUmbenennen(kategorie.id, name)
+                        umbenennen = null
+                    },
+                    enabled = name.isNotBlank(),
+                ) { Text("Speichern") }
+            },
+            dismissButton = {
+                TextButton(onClick = { umbenennen = null }) { Text("Abbrechen") }
+            },
+            containerColor = gold.flaecheErhoeht,
+        )
+    }
+
+    loeschen?.let { kategorie ->
+        AlertDialog(
+            onDismissRequest = { loeschen = null },
+            title = { Text("Kategorie „${kategorie.name}“ löschen?") },
+            text = { Text("Die Ideen darin bleiben erhalten und liegen danach in keiner Kategorie.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        aufLoeschen(kategorie.id)
+                        loeschen = null
+                    },
+                ) { Text("Löschen", color = Semantisch.fehler) }
+            },
+            dismissButton = {
+                TextButton(onClick = { loeschen = null }) { Text("Abbrechen") }
+            },
+            containerColor = gold.flaecheErhoeht,
+        )
     }
 }
 
@@ -587,7 +677,8 @@ private fun KategorieZeile(
     anzahl: Int,
     gewaehlt: Boolean,
     aufTipp: () -> Unit,
-    aufLoeschen: (() -> Unit)?,
+    aufUmbenennen: (() -> Unit)? = null,
+    aufLoeschen: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
     val farbe by animateColorAsState(
@@ -624,6 +715,32 @@ private fun KategorieZeile(
             style = MaterialTheme.typography.labelSmall,
             color = gold.textGedaempft,
         )
+        aufUmbenennen?.let { aktion ->
+            Box(
+                modifier = Modifier.size(34.dp).druckEffekt(aktion),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "$name umbenennen",
+                    tint = gold.textGedaempft,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+        aufLoeschen?.let { aktion ->
+            Box(
+                modifier = Modifier.size(34.dp).druckEffekt(aktion),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "$name löschen",
+                    tint = gold.textGedaempft,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
     }
 }
 
