@@ -725,7 +725,7 @@ class IdeenViewModel(
     fun pruefeGoogleSchluessel(fertig: (String) -> Unit) {
         viewModelScope.launch {
             val ergebnis = runCatching {
-                de.frank.genialeideen.speech.Synthese(getApplication(), settings).synthetisiere("Probe.")
+                de.frank.genialeideen.speech.Synthese(getApplication(), settings).pruefeGoogle()
             }
             fertig(
                 ergebnis.fold(

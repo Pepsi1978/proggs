@@ -49,6 +49,13 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         else -> false
     }
 
+    /**
+     * Prüft den Google-Schlüssel unabhängig von der gerade gewählten Stimme. Ohne diesen Weg
+     * würde die Prüfung über [synthetisiere] laufen und bei einer Edge- oder Alibaba-Stimme
+     * mit "kann nicht vorab erzeugt werden" abbrechen, obwohl der Schlüssel in Ordnung ist.
+     */
+    suspend fun pruefeGoogle(text: String = "Probe."): File = gleichzeitig.withPermit { google(text) }
+
     suspend fun synthetisiere(text: String): File = gleichzeitig.withPermit {
         when (settings.ttsProvider) {
             TtsProvider.GOOGLE_CLOUD.id -> google(text)

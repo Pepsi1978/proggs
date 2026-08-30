@@ -59,3 +59,5 @@ Melde danach kurz:
 12. Wenn der Emulator angefodert wird, Starte den Emulator, immer mit dem Fold 8 Profil über C:\Users\barwa\proggs\Werkzeuge\fold8-emulator
 
 13. Bei Updates von OpenLauncher immer das Updatescript benutzen! Für Windows unter C:\Users\barwa\proggs\OpenLauncher\update-launcher.ps1 und für macOS unter /Users/frank/proggs/OpenLauncherMac/update-launcher.sh
+
+14. Researches im Web erfolgen immer über den Researcher Skill. Der Ablauf den Resercher Skills wird immer eingehalten! Nach dem Research werden Best Parctices und Bug Almanache in den Ordnern C:\Users\barwa\proggs\best-practices und C:\Users\barwa\proggs\bugs gespeichert.
