@@ -34,7 +34,8 @@ namespace ClaudeVoiceOverlay.Services
         // TIME_WAIT freigeben. Statisch geteilt wie bei GeminiClient.SharedHttp
         // ist die kanonische .NET-Loesung. Authorization-Header wird pro Request
         // gesetzt (nicht am Client), daher kein Konflikt bei Sharing.
-        private static readonly HttpClient SharedHttp = new HttpClient
+        private static readonly HttpClient SharedHttp = new HttpClient(
+            ResilientHttp.CreateHandler(TimeSpan.FromMinutes(5)))
         {
             Timeout = TimeSpan.FromSeconds(TransportTimeoutSeconds)
         };

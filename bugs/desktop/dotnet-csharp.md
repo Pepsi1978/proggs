@@ -44,6 +44,7 @@
 | 14 | Memory-Leak bei Events/Timern | Im `Dispose`/`Unloaded` immer `-=` und `Stop()` | §9.1 |
 | 15 | `Process.Start(url)` wirft | `new ProcessStartInfo(url){ UseShellExecute = true }` | §13.8 |
 | 16 | One-Shot-Hotkey haengt nach mehrfacher Nutzung | KeyUp-Debounce-Flag durch zeitbasierten Cooldown ersetzen | §5.8 |
+| 17 | API-Aufruf haengt Minuten, dann Timeout ohne HTTP-Status | `ConnectTimeout` explizit + TCP-Keepalive + realistischer Gesamt-Timeout | §8.3, §8.4 |
 
 ---
 
@@ -523,6 +524,20 @@ Alternativ einzelne Stellen voll qualifizieren (`System.Windows.MessageBox.Show`
 **Versionen:** per Design (`SocketsHttpHandler` ab .NET Core 2.1).
 **FIX:** `SocketsHttpHandler.PooledConnectionLifetime = TimeSpan.FromMinutes(2-5)` → periodische Verbindungserneuerung.
 **Quelle:** https://www.meziantou.net/avoid-dns-issues-with-httpclient-in-dotnet.htm
+
+### 8.3 `ConnectTimeout` ist ab Werk unendlich → Aufruf haengt bis zum Gesamt-Timeout  ⭐ SELBST ERLEBT (Voice-Overlays)
+**Symptom:** Ein API-Aufruf blockiert minutenlang und endet dann mit `TaskCanceledException`: "The request was canceled due to the configured HttpClient.Timeout of N seconds elapsing." **Im Log steht kein HTTP-Status** — es floss nie ein Byte. Derselbe Aufruf laeuft Sekunden spaeter in 3-4 s durch, die Gegenstelle war also gesund.
+**Ursache:** `SocketsHttpHandler.ConnectTimeout` ist per Default `Timeout.InfiniteTimeSpan`. Stallt der TCP-/TLS-Aufbau (halb kaputtes IPv6, WLAN-Wechsel, VPN das gerade aufwacht), wartet der Aufruf bis zum HttpClient-Gesamt-Timeout. Ein grosszuegiger Gesamt-Timeout (120 s "als Puffer") wird so zur Wartehalle.
+**Versionen:** alle .NET-Core-/`SocketsHttpHandler`-Fassungen — per Design.
+**FIX:** `ConnectTimeout` immer explizit setzen (5-10 s). Fuer den Nutzer sichtbare Aufrufe zusaetzlich einen REALISTISCHEN Gesamt-Timeout geben — am gemessenen Median orientiert, nicht am Bauchgefuehl. Faustregel: Median x 5-6. Wo ein Fallback-Pfad existiert, entscheidet der Gesamt-Timeout, wie lange der Nutzer vor einer eingefrorenen Oberflaeche sitzt, bevor der Fallback ueberhaupt anlaeuft.
+**Quelle:** eigener Vorfall 30.08.2026 (TerminalVoiceOverlay: 120 s Gemini-Timeout, Knopf blieb zwei Minuten orange, danach griff der Groq-Fallback in 1 s); https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.connecttimeout
+
+### 8.4 Kein TCP-Keepalive → NAT wirft die stille Verbindung weg, Antwort kommt nie an
+**Symptom:** Wie 8.3, aber der Stall passiert NACH dem Verbindungsaufbau: Request ist raus, die Antwort kommt nie, obwohl der Anbieter sie erzeugt hat.
+**Ursache:** Waehrend der Client auf die Antwort wartet, ist die Verbindung still. NAT-Gateways und Firewalls raeumen idle Verbindungen nach 60-350 s weg, ohne dass eine Seite es merkt (Analogon zu [`apis/api-integration-general.md`](../apis/api-integration-general.md) §E3, dort fuer httpx).
+**Versionen:** alle; `TcpKeepAliveRetryCount` braucht Windows 10 1703+.
+**FIX:** `SocketsHttpHandler.ConnectCallback` setzen und auf dem Socket `SocketOptionName.KeepAlive` + `TcpKeepAliveTime`/`TcpKeepAliveInterval`/`TcpKeepAliveRetryCount` aktivieren. Die `SetSocketOption`-Aufrufe in try/catch — Keepalive ist eine Verbesserung, an der keine Anfrage scheitern darf.
+**Quelle:** eigener Fix 30.08.2026, `Services/ResilientHttp.cs` in TerminalVoiceOverlay-Windows / ClaudeVoiceOverlay-Windows
 
 ---
 
@@ -1122,6 +1137,8 @@ Nuetzlich fuer kleine Tools/Skripte (ersetzt teils Python-Helfer auf Windows).
 - [ ] DPI: `app.manifest` PerMonitorV2? Positionierung ueber physische Pixel? (§3)
 - [ ] Clipboard: Retry-Schleife um jeden Zugriff? (§4.1)
 - [ ] HttpClient: ein statischer Client mit `PooledConnectionLifetime`? (§8)
+- [ ] HttpClient: `ConnectTimeout` explizit gesetzt und Gesamt-Timeout am gemessenen Median statt am Bauchgefuehl? (§8.3)
+- [ ] HttpClient: TCP-Keepalive ueber `ConnectCallback` aktiv, damit NAT die stille Verbindung nicht wegraeumt? (§8.4)
 - [ ] Disposables (Audio, Streams, Timer, Events) in `using`/`Dispose` + `-=`? (§9)
 - [ ] JSON: `PropertyNameCaseInsensitive`/CamelCase fuer API-DTOs? Options als statische Instanz? (§10.1)
 - [ ] WinUI 3: kein Single-File, kein echtes Transparenz-Overlay erwartet? (§12.1, §12.7)

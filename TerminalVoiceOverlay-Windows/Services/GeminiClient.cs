@@ -21,10 +21,8 @@ namespace TerminalVoiceOverlay.Services
         // schnellen Aufnahmen drohen ausgehende TCP-Ports im TIME_WAIT-Zustand
         // zu erschoepfen. Das HttpClient-Objekt selbst haelt keine Auth — die
         // steckt in der URL pro Aufruf — also ist Sharing sicher.
-        private static readonly HttpClient SharedHttp = new HttpClient(new SocketsHttpHandler
-        {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-        })
+        private static readonly HttpClient SharedHttp = new HttpClient(
+            ResilientHttp.CreateHandler(TimeSpan.FromMinutes(5)))
         {
             Timeout = TimeSpan.FromSeconds(15)
         };

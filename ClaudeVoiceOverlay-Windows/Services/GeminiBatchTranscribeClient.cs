@@ -56,12 +56,20 @@ namespace ClaudeVoiceOverlay.Services
         // Geteilter HttpClient (gleicher Grund wie bei GeminiClient.SharedHttp):
         // pro Aufnahme wird eine neue Client-Instanz gebaut, ein privater
         // Socket-Pool je Instanz wuerde Ports im TIME_WAIT anhaeufen.
-        private static readonly HttpClient SharedHttp = new HttpClient(new SocketsHttpHandler
+        private static readonly HttpClient SharedHttp = new HttpClient(
+            ResilientHttp.CreateHandler(TimeSpan.FromMinutes(5)))
         {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-        })
-        {
-            Timeout = TimeSpan.FromSeconds(120)
+            // WARUM 30 s UND NICHT MEHR (Vorfall 30.08.2026): gemessen
+            // braucht dieser Aufruf 3,5-4,7 s, auch bei 1,75 MB Audio — die
+            // Antwortzeit haengt am Modell, kaum an der Laenge der Aufnahme.
+            // Die frueheren 120 s waren daher kein Puffer, sondern eine
+            // Wartehalle: bei einer haengenden Verbindung stand der Knopf zwei
+            // Minuten auf orange, bevor der Groq-Weg ueberhaupt anlief. 30 s
+            // sind das Sechsfache der Messung und lassen echten Serverstau
+            // durch, brechen aber eine tote Verbindung fruehzeitig ab —
+            // zusammen mit dem Groq-Fallback (~1 s) ist der schlimmste Fall
+            // damit halbe Minute statt zwei Minuten.
+            Timeout = TimeSpan.FromSeconds(30)
         };
 
         public GeminiBatchTranscribeClient(string apiKey, string model)

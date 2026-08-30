@@ -34,10 +34,8 @@ namespace TerminalVoiceOverlay.Services
         // TIME_WAIT freigeben. Statisch geteilt wie bei GeminiClient.SharedHttp
         // ist die kanonische .NET-Loesung. Authorization-Header wird pro Request
         // gesetzt (nicht am Client), daher kein Konflikt bei Sharing.
-        private static readonly HttpClient SharedHttp = new HttpClient(new SocketsHttpHandler
-        {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-        })
+        private static readonly HttpClient SharedHttp = new HttpClient(
+            ResilientHttp.CreateHandler(TimeSpan.FromMinutes(5)))
         {
             // Funktionserhaltend: Groq ist heute zeitweise 40-50 s langsam.
             // Ein 20-s-Timeout machte die App zwar schnell wieder gelb, verlor
