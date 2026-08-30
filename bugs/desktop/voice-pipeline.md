@@ -68,6 +68,8 @@
 | 17 | Kurzer Start-/Stoppton kommt Sekunden später oder stottert ⭐⭐ | Output dauerhaft offen halten; PCM puffern; Latenz nicht unter die Treibergrenze drücken | §4.4 |
 | 18 | Stop-Klick friert das Overlay ein, Prozess lebt weiter ⭐⭐ | `StopRecording()` nie auf dem UI-Thread; Stop, Event-Wartezeit und Cleanup separat begrenzen | §3.2 |
 | 19 | Reale Sprechzeit ist viel länger als fertige WAV ⭐⭐ | Kein Datei-I/O im Capture-Callback; FIFO-Writer drainieren; PCM-Dauer gegen Turn-Dauer loggen | §3.4 |
+| 20 | Deploy-Skript steht 10 min still und liefert nichts ⭐⭐ | Offenen Port pruefen: "bietet keinen Status-Server an" ist NICHT "nimmt gerade auf" | §8.1 |
+| 21 | Diktat haengt 2 min, dann kommt der Text doch | `ConnectTimeout` explizit + TCP-Keepalive; Gesamt-Timeout am gemessenen Median | §8.2 |
 
 ---
 
@@ -401,6 +403,31 @@ Basis-Text setzen (still genug, EINE Quelle). Fremdes Feld: Vorschau in ein SEPA
 Zielfeld bleibt bis zur finalen Fassung unberuehrt. Glaetten: kleiner Debounce (~120 ms), finale Woerter
 deckend, interim gedimmt/kursiv optisch trennen.
 **Quelle:** eigener Vorfall 2026-06-24. Gegenseite: `best-practices/desktop/voice-pipeline.md` §9.
+
+## 8. Deployment-Guard & Netzwerk der Overlays (eigene Vorfaelle 30.08.2026)
+
+### 8.1 Deploy-Guard wartet auf einen Status-Port, den es gar nicht geben muss  ⭐⭐ SELBST ERLEBT
+**Symptom:** `rebuild-overlay.ps1 Both` gibt sofort "Status von X ist nicht sicher lesbar. Fail-closed: kein Build und kein Kill." aus — und steht danach **zehn Minuten still**, ohne irgendetwas zu tun, bevor es abbricht. Jeder Rebuild kostet zehn Minuten und liefert nichts.
+**Ursache:** Der Guard fragt das laufende Overlay ueber seinen lokalen Status-Port, ob es idle ist. Antwortet niemand, wird das behandelt wie "koennte gerade aufnehmen" — also wird gewartet, bis der Gesamt-Timeout (600 s) ablaeuft. Die Meldung erscheint dabei nur einmal, danach ist die Ausgabe stumm. Es fehlte die Unterscheidung: **"antwortet nicht" ist nicht dasselbe wie "ist beschaeftigt".**
+Verschaerfend: Der Status-Server der Overlays faellt **absichtlich still aus**, wenn der Port belegt ist oder der `HttpListener` nicht binden darf — die App startet dann trotzdem (siehe `AutoEnterStatusServer`). "Kein Listener" ist also ein **vorgesehener Dauerzustand**, kein Ausnahmefall.
+Zweite Stelle derselben Klasse: die Startup-Verifikation nach dem Build wartete `AddMinutes(10)` pro Versuch auf denselben Port, bei zwei Versuchen also nochmal bis zu 20 Minuten.
+**Versionen:** rebuild-overlay.ps1 ≤ 1.3.0, voice-overlay-deploy-guard.ps1/.sh ≤ 1.0.0.
+**FIX:** Den offenen Port als eigene Dimension pruefen, bevor gewartet wird:
+- **kein Listener** → das Overlay bietet den Schutz nicht an, es gibt nichts zu reservieren → sofort ohne Reservierung fortfahren (nicht warten, nicht abbrechen);
+- **Port offen, aber stumm** → das Overlay haengt wirklich → fail-closed, aber nach Sekunden (Karenz ~10 s), nicht nach Minuten.
+Zusaetzlich: Gesamt-Timeouts an der Realitaet ausrichten (Diktat < 2 min → 180 s statt 600 s) und in **jeder** Warteschleife alle paar Sekunden ein Lebenszeichen mit verstrichener Zeit ausgeben. Verifiziert die Startup-Pruefung ueber die Prozess-Startzeit (faelschungssicher: ein Prozess, der nach dem Build startete, fuehrt zwingend den neuen Code aus), darf ein fehlender Endpunkt sie nicht blockieren — auf die Startzeit zurueckfallen und das ausdruecklich melden.
+**Poka-Yoke:** Der Kontrakt-Test (`voice-overlay-deploy-contract.test.mjs`, Test "no deploy path can stall silently for minutes") verbietet Wartefristen ueber 3 Minuten, verlangt die Port-Pruefung vor jedem fail-closed und Fortschrittsausgabe in jeder Schleife. Vorher zementierte derselbe Test die 10 Minuten sogar per `assert.match`.
+**Messung:** vorher 10 min Stillstand + Abbruch ohne Ergebnis, nachher 35 s bis zum verifizierten Neustart.
+**Quelle:** eigener Vorfall und Fix 30.08.2026.
+
+### 8.2 Overlay-Diktat haengt zwei Minuten, dann kommt der Text doch noch  ⭐⭐ SELBST ERLEBT
+**Symptom:** Nach dem Sprechen bleibt der Knopf orange, nichts wird eingefuegt. Rund zwei Minuten spaeter erscheint der Text auf einmal. Im Diag-Log: `gemini_failed_fallback_groq` mit "The request was canceled due to the configured HttpClient.Timeout of 120 seconds elapsing" — **ohne HTTP-Status**, es floss also nie ein Byte. Dieselbe Aufnahme laeuft direkt danach in 3,5 s durch.
+**Ursache:** Siehe [`dotnet-csharp.md`](dotnet-csharp.md) §8.3 und §8.4 — `SocketsHttpHandler.ConnectTimeout` ist ab Werk unendlich, und ohne TCP-Keepalive raeumt ein NAT-Gateway die stille Verbindung waehrend der Wartezeit weg. Der grosszuegige Gesamt-Timeout (120 s "als Puffer") wird dadurch zur Wartehalle: der Groq-Fallback lief erst nach zwei Minuten an, obwohl er selbst nur 1 s braucht.
+**Versionen:** TerminalVoiceOverlay ≤ 1.11.0, ClaudeVoiceOverlay ≤ 2.4.0.
+**FIX:** Gemeinsame `ResilientHttp.CreateHandler()` fuer alle Netz-Dienste des Overlays: `ConnectTimeout` 10 s und TCP-Keepalive ueber `ConnectCallback`. Gesamt-Timeout der Batch-Transkription am gemessenen Median ausrichten (3,5–4,7 s gemessen → 30 s statt 120 s), damit der Fallback-Pfad schnell greift. **Faustregel: wo ein Fallback existiert, bestimmt der Gesamt-Timeout die Wartezeit des Nutzers, nicht die Geduld des Servers.**
+**Quelle:** eigener Vorfall und Fix 30.08.2026.
+
+---
 
 ## Fix-Status (Stand 2026-06-10, per gh verifiziert)
 

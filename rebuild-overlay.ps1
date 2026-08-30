@@ -1,5 +1,5 @@
 #Requires -Version 7
-# Version 1.3.0 - 17.07.2026, 18:54 Uhr
+# Version 1.4.0 - 30.08.2026, 11:54 Uhr
 <#
 .SYNOPSIS
     Baut ein Voice-Overlay (CVO/TVO) sauber neu und startet es neu — in EINEM Schritt.
@@ -148,7 +148,7 @@ function Stop-Overlay {
 # einmalige Migration alter Binaries wird /recording/status stabil bestaetigt und vor
 # dem Kill ein zweites Mal geprueft.
 function Wait-OverlayIdle {
-    param([hashtable]$O, [int]$TimeoutSeconds = 600)
+    param([hashtable]$O, [int]$TimeoutSeconds = 180)
     return Enter-VoiceOverlayDeploymentWindow -ProcessName $O.Name -Port $O.Port -TimeoutSeconds $TimeoutSeconds
 }
 
@@ -243,7 +243,9 @@ function Get-OverlayProcs {
 function Test-FreshVersion {
     param([hashtable]$O, [datetime]$BuildTime)
     $procs = Get-OverlayProcs -O $O
-    if ($procs.Count -lt 1) { return @{ Ok = $false; Count = 0; Stale = 0; Version = '<keiner>'; Endpoint = $false } }
+    if ($procs.Count -lt 1) {
+        return @{ Ok = $false; Count = 0; Stale = 0; Version = '<keiner>'; Endpoint = $false; PortOpen = $false }
+    }
     $threshold = $BuildTime.AddSeconds(-2)
     $stale = @($procs | Where-Object { $_.StartTime -lt $threshold })
     $exePath = Join-Path $O.Folder "publish\$($O.Exe)"
@@ -253,7 +255,21 @@ function Test-FreshVersion {
         $status = Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:$($O.Port)/recording/status" -TimeoutSec 2
         $endpoint = $null -ne $status.busy
     } catch { }
-    return @{ Ok = ($stale.Count -eq 0 -and $endpoint); Count = $procs.Count; Stale = $stale.Count; Version = $ver; Endpoint = $endpoint }
+    # Lauscht ueberhaupt jemand? Trennt "Status-Server faehrt noch hoch" von
+    # "dieses Overlay bietet gar keinen Status-Server an" — der Status-Server
+    # faellt bewusst still aus, wenn der Port belegt ist oder der HttpListener
+    # nicht binden darf (siehe AutoEnterStatusServer: die App startet dann
+    # trotzdem). Ohne diese Unterscheidung wartet die Verifikation auf etwas,
+    # das nie kommt.
+    $portOpen = $false
+    try {
+        $client = [System.Net.Sockets.TcpClient]::new()
+        $connect = $client.ConnectAsync('127.0.0.1', $O.Port)
+        $portOpen = $connect.Wait(500) -and $client.Connected
+        $client.Close()
+    } catch { }
+    return @{ Ok = ($stale.Count -eq 0 -and $endpoint); Count = $procs.Count; Stale = $stale.Count;
+              Version = $ver; Endpoint = $endpoint; PortOpen = $portOpen }
 }
 
 # --- Hauptablauf ---
@@ -312,11 +328,26 @@ foreach ($t in $targets) {
         continue
     }
     Write-Step 'Schritt 3/3: Overlay neu starten + verifizieren dass die NEUE Version laeuft...'
+    # WARUM DIE WARTEZEITEN SO KURZ SIND (Vorfall 30.08.2026):
+    # Hier standen 10 Minuten pro Versuch, bei zwei Versuchen also bis zu 20
+    # Minuten — und zwar STUMM, mit einer einzigen Zeile am Anfang. Bei einem
+    # Overlay ohne Status-Server (ein vorgesehener Zustand, siehe
+    # AutoEnterStatusServer) lief diese Zeit immer voll ab, ohne dass je etwas
+    # kommen konnte. Ein Overlay, das ueberhaupt starten will, ist in Sekunden
+    # oben; 90 s sind grosszuegig und melden sich unterwegs.
+    $StartupTimeoutSeconds = 90
+    # So lange darf ein Overlay ohne offenen Port als "faehrt noch hoch" gelten,
+    # bevor auf die Verifikation ohne Endpunkt zurueckgefallen wird.
+    $PortGraceSeconds = 20
+
     $verified = $false
     for ($attempt = 1; $attempt -le 2 -and -not $verified; $attempt++) {
         Start-Overlay -O $O
-        $startupDeadline = (Get-Date).AddMinutes(10)
+        $startupStarted = Get-Date
+        $startupDeadline = $startupStarted.AddSeconds($StartupTimeoutSeconds)
         $announcedEndpointWait = $false
+        $lastStartupProgress = $startupStarted
+        $verifiedWithoutEndpoint = $false
         do {
             Start-Sleep -Seconds 2
             $r = Test-FreshVersion -O $O -BuildTime $buildTime
@@ -328,9 +359,30 @@ foreach ($t in $targets) {
             if ($r.Stale -gt 0) {
                 break
             }
+
+            $waited = ((Get-Date) - $startupStarted).TotalSeconds
+
+            # Prozesse laufen, sind alle frisch, aber es lauscht niemand auf dem
+            # Port: dieses Overlay bietet den Status-Server nicht an. Das
+            # faelschungssichere Kernsignal bleibt trotzdem gueltig — ein
+            # Prozess, der NACH dem Build gestartet wurde, fuehrt zwingend den
+            # neuen Code aus. Also verifizieren statt bis zum Timeout warten;
+            # die schwaechere Grundlage wird ausdruecklich gemeldet.
+            if ($r.Count -gt 0 -and -not $r.PortOpen -and $waited -ge $PortGraceSeconds) {
+                Write-Warn "$t bietet keinen Status-Server auf Port $($O.Port) an (niemand lauscht nach $([int]$waited) s)."
+                Write-Ok "$t laeuft wieder ($($r.Count) exe, NEUE Version $($r.Version) VERIFIZIERT ueber die Startzeit; der Aufnahme-Status ist bei diesem Overlay nicht abfragbar)."
+                $verified = $true
+                $verifiedWithoutEndpoint = $true
+                break
+            }
+
             if ($r.Count -gt 0 -and -not $r.Endpoint -and -not $announcedEndpointWait) {
-                Write-Step "$t initialisiert noch; warte fail-closed bis Port $($O.Port) den Aufnahme-Status liefert..."
+                Write-Step "$t initialisiert noch; warte bis zu $StartupTimeoutSeconds s, bis Port $($O.Port) den Aufnahme-Status liefert..."
                 $announcedEndpointWait = $true
+            }
+            if (((Get-Date) - $lastStartupProgress).TotalSeconds -ge 10) {
+                Write-Host "  ... ${t}: seit $([int]$waited) s gestartet — exe=$($r.Count), Port offen=$($r.PortOpen), Status lesbar=$($r.Endpoint)" -ForegroundColor DarkGray
+                $lastStartupProgress = Get-Date
             }
         } while ((Get-Date) -lt $startupDeadline)
 
@@ -342,7 +394,7 @@ foreach ($t in $targets) {
                 Write-Warn "$t scheint NICHT gestartet (0 exe). Versuch $attempt/2."
             }
             else {
-                Write-Warn "$t lieferte innerhalb von 10 Minuten keinen gueltigen Aufnahme-Status auf Port $($O.Port). Versuch $attempt/2."
+                Write-Warn "$t lieferte innerhalb von $StartupTimeoutSeconds s keinen gueltigen Aufnahme-Status auf Port $($O.Port). Versuch $attempt/2."
             }
             Stop-Overlay -O $O
             Start-Sleep -Seconds 2

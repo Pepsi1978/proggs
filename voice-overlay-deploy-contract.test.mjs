@@ -33,7 +33,53 @@ test("all Windows build and update entrypoints reserve before build or kill", as
   assert.match(rebuild, /for \(\$attempt = 1; \$attempt -le 20; \$attempt\+\+\)/)
   assert.match(rebuild, /Stop-ScheduledTask -TaskName \$O\.Task/)
   assert.match(rebuild, /Start-ScheduledTask -TaskName \$O\.Task/)
-  assert.match(rebuild, /\$startupDeadline = \(Get-Date\)\.AddMinutes\(10\)/)
+  assert.match(rebuild, /\$startupDeadline = \$startupStarted\.AddSeconds\(\$StartupTimeoutSeconds\)/)
+})
+
+// Poka-Yoke zum Vorfall 30.08.2026: ein Rebuild stand zehn Minuten still und
+// lieferte nichts, weil zwei Warteschleifen auf einen Status-Port warteten, an
+// dem niemand lauschte — der Guard 600 s, die Startup-Verifikation 10 min pro
+// Versuch. Beide Wartezeiten standen stumm da, und der Test oben verlangte die
+// zehn Minuten sogar ausdruecklich. Dieser Test macht den Fehlertyp
+// strukturell unmoeglich: keine Minutenwartezeit ohne Port-Unterscheidung,
+// und keine Warteschleife ohne Lebenszeichen.
+test("no deploy path can stall silently for minutes", async () => {
+  const guardPs = await read("voice-overlay-deploy-guard.ps1")
+  const guardSh = await read("voice-overlay-deploy-guard.sh")
+  const rebuild = await read("rebuild-overlay.ps1")
+
+  // 1. Bevor irgendwo fail-closed gewartet wird, MUSS der Port unterscheiden,
+  //    ob das Overlay den Schutz ueberhaupt anbietet.
+  assert.match(guardPs, /\$PortProbe/, "PowerShell-Guard braucht die Port-Pruefung")
+  assert.ok(
+    guardPs.indexOf("& $PortProbe $Port") < guardPs.indexOf("das Overlay haengt"),
+    "Der Port muss geprueft werden, BEVOR fail-closed abgebrochen wird",
+  )
+  assert.match(guardSh, /_voice_overlay_port_open/, "macOS-Guard braucht die Port-Pruefung")
+  assert.match(rebuild, /PortOpen/, "Die Startup-Verifikation braucht die Port-Pruefung")
+
+  // 2. Keine Wartefrist laenger als drei Minuten. Ein Diktat dauert kuerzer,
+  //    und ein startendes Overlay ist in Sekunden oben.
+  for (const [name, source] of [["rebuild-overlay.ps1", rebuild], ["voice-overlay-deploy-guard.ps1", guardPs]]) {
+    for (const m of source.matchAll(/\.AddMinutes\((\d+)\)/g)) {
+      assert.ok(Number(m[1]) <= 3, `${name}: Wartefrist von ${m[1]} Minuten ist zu lang`)
+    }
+    for (const m of source.matchAll(/(?:TimeoutSeconds|StartupTimeoutSeconds)\s*=\s*(\d+)/g)) {
+      assert.ok(Number(m[1]) <= 180, `${name}: Timeout von ${m[1]} s ist zu lang`)
+    }
+  }
+  for (const m of guardSh.matchAll(/timeout_seconds="\$\{\d+:-(\d+)\}"/g)) {
+    assert.ok(Number(m[1]) <= 180, `voice-overlay-deploy-guard.sh: Timeout von ${m[1]} s ist zu lang`)
+  }
+
+  // 3. Jede Warteschleife meldet sich unterwegs, statt stumm dazustehen.
+  assert.match(guardPs, /warte seit \$elapsed s auf \$waitingFor/, "PowerShell-Guard braucht Fortschrittsausgabe")
+  assert.match(guardSh, /warte seit \$\(\(SECONDS - started\)\)s/, "macOS-Guard braucht Fortschrittsausgabe")
+  assert.match(rebuild, /seit \$\(\[int\]\$waited\) s gestartet/, "Startup-Verifikation braucht Fortschrittsausgabe")
+
+  // 4. Ein Overlay ohne Status-Server blockiert nichts — es wird ueber die
+  //    Startzeit verifiziert, statt auf einen Endpunkt zu warten, der nie kommt.
+  assert.match(rebuild, /VERIFIZIERT ueber die Startzeit/)
 })
 
 test("both Windows apps atomically reserve idle state and block new recordings", async () => {
