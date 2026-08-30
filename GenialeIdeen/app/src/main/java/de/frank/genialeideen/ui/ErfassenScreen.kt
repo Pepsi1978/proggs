@@ -47,7 +47,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.BackHandler
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,13 +94,56 @@ fun ErfassenScreen(
 
     val kategorien by viewModel.kategorien.collectAsState()
 
-    var titel by remember { mutableStateOf("") }
-    var text by remember { mutableStateOf("") }
-    var kategorieId by remember { mutableStateOf<Long?>(null) }
+    // Wird ein Entwurf weitergeschrieben, stehen seine Felder von Anfang an im Bildschirm.
+    // Bewusst nur einmal gelesen: Danach gehört der Inhalt dem Bildschirm, sonst springt der
+    // Cursor bei jedem Zwischenspeichern zurück.
+    val begonnenerEntwurf = remember { viewModel.entwurf.value }
 
-    // Beim Öffnen läuft die Aufnahme sofort los — dafür ist die App da.
+    var titel by remember { mutableStateOf(begonnenerEntwurf?.titel.orEmpty()) }
+    var text by remember { mutableStateOf(begonnenerEntwurf?.text.orEmpty()) }
+    var kategorieId by remember { mutableStateOf(begonnenerEntwurf?.kategorieId) }
+
+    // Beim Öffnen läuft die Aufnahme sofort los — dafür ist die App da. Beim Weiterschreiben
+    // eines Entwurfs bleibt sie aus: Da will man erst lesen, was schon dasteht.
     LaunchedEffect(mikrofonErlaubt) {
-        if (mikrofonErlaubt && !aufnahme.laeuft && text.isBlank()) viewModel.starteAufnahme()
+        if (begonnenerEntwurf == null && mikrofonErlaubt && !aufnahme.laeuft && text.isBlank()) {
+            viewModel.starteAufnahme()
+        }
+    }
+
+    // Alles, was beim Verlassen gesichert werden muss — immer der neueste Stand, auch wenn der
+    // Lebenszyklus-Beobachter noch von der ersten Zusammensetzung stammt.
+    val standJetzt by rememberUpdatedState(Triple(titel, text, kategorieId))
+    val originalJetzt by rememberUpdatedState(korrektur?.original)
+
+    val sichern = {
+        viewModel.sichereEntwurf(
+            standJetzt.first,
+            standJetzt.second,
+            standJetzt.third,
+            originalJetzt,
+        )
+    }
+
+    // Zurückwischen darf die halbfertige Idee nicht wegwerfen — sie landet in den Entwürfen.
+    val zurueckMitSicherung = {
+        viewModel.brichAufnahmeAb()
+        sichern()
+        viewModel.korrekturVergessen()
+        aufZurueck()
+    }
+
+    BackHandler { zurueckMitSicherung() }
+
+    // Geht die App in den Hintergrund (Startbildschirm, App-Wechsler, Bildschirm aus), wird
+    // ebenfalls gesichert — dort kann der Vorgang jederzeit beendet werden.
+    val lebenszyklus = LocalLifecycleOwner.current
+    DisposableEffect(lebenszyklus) {
+        val beobachter = LifecycleEventObserver { _, ereignis ->
+            if (ereignis == Lifecycle.Event.ON_STOP) sichern()
+        }
+        lebenszyklus.lifecycle.addObserver(beobachter)
+        onDispose { lebenszyklus.lifecycle.removeObserver(beobachter) }
     }
 
     Box(Modifier.fillMaxSize().background(gold.hintergrund)) {
@@ -107,11 +156,10 @@ fun ErfassenScreen(
                 themeWahl = theme,
                 aufEinstellungen = aufEinstellungen,
                 voran = {
-                    KopfKnopf(beschreibung = "Zurück ohne Speichern", aufTipp = {
-                        viewModel.brichAufnahmeAb()
-                        viewModel.korrekturVergessen()
-                        aufZurueck()
-                    }) {
+                    KopfKnopf(
+                        beschreibung = "Zurück — Halbfertiges landet in den Entwürfen",
+                        aufTipp = zurueckMitSicherung,
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
@@ -340,7 +388,7 @@ fun KorrekturKnopf(
 }
 
 @Composable
-private fun EingabeFeld(
+internal fun EingabeFeld(
     beschriftung: String,
     platzhalter: String,
     wert: String,

@@ -46,6 +46,8 @@ class GoogleCloudTtsPlayer(context: Context) {
         voiceName: String,
         speechRate: Float = 1f,
         pitchSemitones: Double = 0.0,
+        /** Bindet den Text an Deutsch — Chirp-3-Stimmen koennen kein SSML und bleiben aussen vor. */
+        erzwingeDeutsch: Boolean = true,
         onPlaybackStart: () -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
@@ -69,7 +71,17 @@ class GoogleCloudTtsPlayer(context: Context) {
         val job = scope.launch(Dispatchers.IO) {
             try {
                 val body = JSONObject().apply {
-                    put("input", JSONObject().put("text", text))
+                    // Chirp 3 HD versteht kein SSML; dort bleibt es beim reinen Text, die
+                    // Sprache steuert allein der languageCode.
+                    val alsSsml = erzwingeDeutsch && !voiceName.contains("Chirp")
+                    put(
+                        "input",
+                        if (alsSsml) {
+                            JSONObject().put("ssml", deutschesSsml(text))
+                        } else {
+                            JSONObject().put("text", text)
+                        },
+                    )
                     put(
                         "voice",
                         JSONObject()

@@ -113,6 +113,15 @@ class SecureSettings(context: Context) : Closeable {
                 ?.apply()
         }
 
+    /**
+     * Erzwingt die deutsche Aussprache, auch wenn der Text englisch aussehende Wörter enthält.
+     * Mehrsprachige Stimmen (Edge-„Multilingual", Google Chirp 3) schalten sonst mitten im Satz
+     * auf Englisch um, was gerade bei Ideentiteln stört.
+     */
+    var immerDeutschVorlesen: Boolean
+        get() = readFlag(Keys.IMMER_DEUTSCH, true)
+        set(value) = writeFlag(Keys.IMMER_DEUTSCH, value)
+
     var favoriteTtsVoices: Set<String>
         get() = preferences?.getStringSet(Keys.FAVORITE_TTS_VOICES, emptySet())?.toSet().orEmpty()
         set(value) {
@@ -237,6 +246,7 @@ class SecureSettings(context: Context) : Closeable {
         const val QWEN_VOICE_NAMES = "qwen_voice_names"
         const val QWEN_VOICE_ORDER = "qwen_voice_order"
         const val TTS_SPEECH_RATE = "tts_speech_rate"
+        const val IMMER_DEUTSCH = "immer_deutsch_vorlesen"
         const val FAVORITE_TTS_VOICES = "favorite_tts_voices"
         const val GROQ_API_KEY = "groq_api_key"
         const val FILTER_VAD = "filter_vad"

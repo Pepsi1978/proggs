@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Base64
 import de.frank.genialeideen.data.settings.SecureSettings
 import de.frank.genialeideen.tts.TtsProvider
+import de.frank.genialeideen.tts.deutschesSsml
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -74,8 +75,18 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             )
         }
         val stimme = settings.googleTtsVoice
+        // Chirp 3 HD versteht kein SSML — dort bleibt es beim reinen Text, die Sprache steuert
+        // allein der languageCode. Alle uebrigen Google-Stimmen werden per <lang> festgenagelt.
+        val alsSsml = settings.immerDeutschVorlesen && !stimme.contains("Chirp")
         val koerper = JSONObject()
-            .put("input", JSONObject().put("text", text))
+            .put(
+                "input",
+                if (alsSsml) {
+                    JSONObject().put("ssml", deutschesSsml(text))
+                } else {
+                    JSONObject().put("text", text)
+                },
+            )
             .put("voice", JSONObject().put("languageCode", "de-DE").put("name", stimme))
             .put(
                 "audioConfig",

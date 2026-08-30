@@ -7,8 +7,11 @@ import androidx.room.Fts4
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** Offen oder umgesetzt — mehr Zustände gibt es bewusst nicht. */
-enum class IdeenStatus { OFFEN, UMGESETZT }
+/**
+ * Offen, umgesetzt — oder ein Entwurf, der beim Verlassen des Erfassen-Bildschirms von allein
+ * gesichert wurde, damit halbfertige Ideen nicht verloren gehen.
+ */
+enum class IdeenStatus { OFFEN, UMGESETZT, ENTWURF }
 
 /** Die vom Nutzer gewählte Art einer Kategorie. */
 enum class Kategorieart { MENTAL, PRAKTISCH }

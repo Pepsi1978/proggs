@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.biometric.BiometricManager
@@ -123,6 +124,24 @@ class MainActivity : FragmentActivity() {
                         ) == PackageManager.PERMISSION_GRANTED
                         // Ohne dieses Recht gibt es beim Vorlesen keine Bedienknöpfe.
                         if (!hat) meldungsAnfrage.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
+
+                // Google verlangt vor dem ersten Drive-Zugriff eine Bestätigung. Ohne diesen
+                // Bildschirm scheiterte jede Sicherung an „Zugriff muss bestätigt werden“.
+                val driveFreigabe = rememberLauncherForActivityResult(
+                    ActivityResultContracts.StartIntentSenderForResult(),
+                ) { ergebnis -> viewModel.driveFreigabeBeantwortet(ergebnis.data) }
+
+                val offeneFreigabe by viewModel.driveFreigabe.collectAsStateWithLifecycle()
+                LaunchedEffect(offeneFreigabe) {
+                    val anfrage = offeneFreigabe ?: return@LaunchedEffect
+                    runCatching {
+                        driveFreigabe.launch(IntentSenderRequest.Builder(anfrage).build())
+                    }.onFailure {
+                        viewModel.driveFreigabeAbgebrochen(
+                            "Der Google-Bildschirm ließ sich nicht öffnen: ${it.message}",
+                        )
                     }
                 }
 

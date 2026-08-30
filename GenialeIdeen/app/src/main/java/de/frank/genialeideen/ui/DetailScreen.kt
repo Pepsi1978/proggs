@@ -35,6 +35,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.QuestionAnswer
 import androidx.compose.material.icons.filled.Label
@@ -57,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -93,6 +95,9 @@ fun DetailScreen(
     val kategorien by viewModel.kategorien.collectAsState()
 
     var eingabe by remember { mutableStateOf("") }
+    // Titel und Text der Idee lassen sich im Nachhinein ändern — solange dieser Schalter steht,
+    // zeigt die Karte Eingabefelder statt Fliesstext.
+    var bearbeiten by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     // Auf welche Nachricht wurde lang gedrückt? Solange sie steht, liegt das Löschblatt oben.
     var gedrueckt by remember { mutableStateOf<NachrichtEntity?>(null) }
@@ -102,7 +107,13 @@ fun DetailScreen(
     }
 
     // Wechselt man die Idee, steht die Karte wieder ganz oben.
-    LaunchedEffect(idee?.id) { listState.scrollToItem(0) }
+    LaunchedEffect(idee?.id) {
+        listState.scrollToItem(0)
+        bearbeiten = false
+    }
+
+    // Beim Bearbeiten führt Zurückwischen erst aus dem Bearbeiten heraus, nicht aus der Idee.
+    BackHandler(enabled = bearbeiten) { bearbeiten = false }
 
     val aktuelle = idee
     if (aktuelle == null) {
@@ -150,6 +161,13 @@ fun DetailScreen(
                 item(key = "ideenkopf") {
                     IdeenKopf(
                         idee = aktuelle,
+                        bearbeiten = bearbeiten,
+                        aufBearbeiten = { bearbeiten = true },
+                        aufAbbrechen = { bearbeiten = false },
+                        aufSpeichern = { neuerTitel, neuerText ->
+                            viewModel.aendere(aktuelle, neuerTitel, neuerText)
+                            bearbeiten = false
+                        },
                         kategorien = kategorien,
                         aufKategorie = { id -> viewModel.setzeKategorie(aktuelle.id, id) },
                         aufNeueKategorie = { name, art, fertig ->
@@ -283,6 +301,10 @@ fun DetailScreen(
 @Composable
 private fun IdeenKopf(
     idee: IdeeEntity,
+    bearbeiten: Boolean,
+    aufBearbeiten: () -> Unit,
+    aufAbbrechen: () -> Unit,
+    aufSpeichern: (String, String) -> Unit,
     kategorien: List<de.frank.genialeideen.data.local.KategorieEntity>,
     aufKategorie: (Long?) -> Unit,
     aufNeueKategorie: (String, de.frank.genialeideen.data.local.Kategorieart, (Long?) -> Unit) -> Unit,
@@ -299,17 +321,73 @@ private fun IdeenKopf(
         erhoeht = true,
     ) {
         Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Text(
-                    idee.text.ifBlank { "Ohne weiteren Text." },
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = gold.textPrimaer,
+            if (bearbeiten) {
+                // Die Felder starten beim aktuellen Stand und gehören ab dann dem Bildschirm.
+                var neuerTitel by remember(idee.id) { mutableStateOf(idee.titel) }
+                var neuerText by remember(idee.id) { mutableStateOf(idee.text) }
+                EingabeFeld(
+                    beschriftung = "Überschrift",
+                    platzhalter = "Höchstens drei Wörter",
+                    wert = neuerTitel,
+                    aufWert = { neuerTitel = it },
+                    einzeilig = true,
                 )
-                Spacer(Modifier.width(8.dp))
-                LautsprecherKnopf(spricht = spricht, zustand = vorleseZustand, aufTipp = aufVorlesen)
+                Spacer(Modifier.height(10.dp))
+                EingabeFeld(
+                    beschriftung = "Die Idee",
+                    platzhalter = "Was steckt dahinter?",
+                    wert = neuerText,
+                    aufWert = { neuerText = it },
+                    minHoehe = 160.dp,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    GoldKnopf(
+                        text = "Übernehmen",
+                        aktiviert = neuerTitel.isNotBlank() || neuerText.isNotBlank(),
+                        hauptKnopf = true,
+                        aufTipp = { aufSpeichern(neuerTitel, neuerText) },
+                    )
+                    Box(
+                        modifier = Modifier.druckEffekt(aufAbbrechen).padding(horizontal = 8.dp, vertical = 10.dp),
+                    ) {
+                        Text(
+                            "Abbrechen",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = gold.textGedaempft,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            } else {
+                Row(verticalAlignment = Alignment.Top) {
+                    Text(
+                        idee.text.ifBlank { "Ohne weiteren Text." },
+                        // Ein Tipp auf den Text öffnet das Bearbeiten — genau dort, wo man
+                        // hinfasst, wenn man etwas ändern will.
+                        modifier = Modifier.weight(1f).druckEffekt(aufBearbeiten),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = gold.textPrimaer,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier.size(38.dp).druckEffekt(aufBearbeiten),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Überschrift und Text ändern",
+                            tint = gold.primaer,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    LautsprecherKnopf(spricht = spricht, zustand = vorleseZustand, aufTipp = aufVorlesen)
+                }
+                Spacer(Modifier.height(12.dp))
             }
-            Spacer(Modifier.height(12.dp))
             KategorieWahl(
                 kategorien = kategorien,
                 gewaehlt = idee.kategorieId,

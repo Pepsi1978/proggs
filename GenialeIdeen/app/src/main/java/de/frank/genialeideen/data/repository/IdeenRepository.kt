@@ -78,8 +78,82 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
 
     suspend fun aendere(idee: IdeeEntity, titel: String, text: String) {
         ideenDao.aktualisieren(
-            idee.copy(titel = titel, text = text, geaendertAm = System.currentTimeMillis()),
+            idee.copy(
+                titel = titel.trim(),
+                text = text.trim(),
+                geaendertAm = System.currentTimeMillis(),
+            ),
         )
+    }
+
+    /**
+     * Legt einen Entwurf an oder schreibt den bestehenden fort. Ein Entwurf braucht weder Titel
+     * noch Kategorie — er soll nur festhalten, was schon dasteht.
+     */
+    suspend fun sichereEntwurf(
+        vorhandene: Long?,
+        titel: String,
+        text: String,
+        kategorieId: Long?,
+        originalText: String? = null,
+    ): Long {
+        val jetzt = System.currentTimeMillis()
+        val bestand = vorhandene?.let { ideenDao.lade(it) }
+        if (bestand != null) {
+            ideenDao.aktualisieren(
+                bestand.copy(
+                    titel = titel.trim(),
+                    text = text.trim(),
+                    kategorieId = kategorieId,
+                    originalText = originalText ?: bestand.originalText,
+                    status = IdeenStatus.ENTWURF.name,
+                    geaendertAm = jetzt,
+                ),
+            )
+            return bestand.id
+        }
+        val oben = ideenDao.naechsteReihenfolgeOben(IdeenStatus.ENTWURF.name)
+        val id = ideenDao.einfuegen(
+            IdeeEntity(
+                titel = titel.trim(),
+                text = text.trim(),
+                status = IdeenStatus.ENTWURF.name,
+                reihenfolge = oben,
+                originalText = originalText,
+                kategorieId = kategorieId,
+            ),
+        )
+        IdeenLog.info("Ideen", "sichereEntwurf", "Entwurf gesichert", mapOf("id" to id))
+        return id
+    }
+
+    /** Aus dem Entwurf wird eine richtige Idee: Sie wandert nach oben in die offene Liste. */
+    suspend fun ausEntwurfUebernehmen(
+        entwurfId: Long,
+        titel: String,
+        text: String,
+        kategorieId: Long,
+        originalText: String?,
+    ) {
+        val bestand = ideenDao.lade(entwurfId) ?: return
+        val oben = ideenDao.naechsteReihenfolgeOben(IdeenStatus.OFFEN.name)
+        ideenDao.aktualisieren(
+            bestand.copy(
+                titel = titel.trim(),
+                text = text.trim(),
+                status = IdeenStatus.OFFEN.name,
+                reihenfolge = oben,
+                kategorieId = kategorieId,
+                originalText = originalText ?: bestand.originalText,
+                geaendertAm = System.currentTimeMillis(),
+            ),
+        )
+    }
+
+    suspend fun loescheEntwurf(id: Long) {
+        ideenDao.lade(id)?.let { entwurf ->
+            if (entwurf.status == IdeenStatus.ENTWURF.name) loesche(entwurf)
+        }
     }
 
     suspend fun setzeStatus(idee: IdeeEntity, status: IdeenStatus) {

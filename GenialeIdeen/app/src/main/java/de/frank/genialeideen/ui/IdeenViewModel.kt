@@ -1,6 +1,8 @@
 package de.frank.genialeideen.ui
 
 import android.app.Application
+import android.app.PendingIntent
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.AndroidViewModel
@@ -14,6 +16,7 @@ import de.frank.genialeideen.auth.CodexAuthException
 import de.frank.genialeideen.auth.CodexModel
 import de.frank.genialeideen.auth.DeviceAuthInfo
 import de.frank.genialeideen.auth.ReasoningEffort
+import de.frank.genialeideen.backup.DriveAuth
 import de.frank.genialeideen.backup.Sicherung
 import de.frank.genialeideen.backup.SicherungsVorschau
 import de.frank.genialeideen.data.local.IdeeEntity
@@ -131,6 +134,17 @@ class IdeenViewModel(
     private val _schriftgroesse = MutableStateFlow(settings.schriftgroesse)
     val schriftgroesse: StateFlow<Float> = _schriftgroesse.asStateFlow()
 
+    /**
+     * Der Freigabe-Bildschirm von Google, sobald Drive ihn verlangt. Die Activity zeigt ihn und
+     * meldet das Ergebnis zurück — ohne diesen Weg endete jede Sicherung bei
+     * „Zugriff auf Google Drive muss bestätigt werden“.
+     */
+    private val _driveFreigabe = MutableStateFlow<PendingIntent?>(null)
+    val driveFreigabe: StateFlow<PendingIntent?> = _driveFreigabe.asStateFlow()
+
+    /** Was nach erteilter Freigabe erneut laufen soll. */
+    private var driveWiederholung: (() -> Unit)? = null
+
     private val _abgestuerzt = MutableStateFlow(IdeenCrashHandler.berichte(application).isNotEmpty())
     val abgestuerzt: StateFlow<Boolean> = _abgestuerzt.asStateFlow()
 
@@ -172,6 +186,14 @@ class IdeenViewModel(
 
     val umgesetzteIdeen: StateFlow<List<IdeeEntity>> = alleIdeen
         .map { liste -> liste.filter { it.status == IdeenStatus.UMGESETZT.name } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Halbfertiges, das beim Verlassen des Erfassen-Bildschirms von allein gesichert wurde. */
+    val entwuerfe: StateFlow<List<IdeeEntity>> = alleIdeen
+        .map { liste ->
+            liste.filter { it.status == IdeenStatus.ENTWURF.name }
+                .sortedByDescending(IdeeEntity::geaendertAm)
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val kategorien: StateFlow<List<KategorieEntity>> = repository.alleKategorien()
@@ -238,8 +260,59 @@ class IdeenViewModel(
         viewModelScope.launch {
             // Auch der Ersatztitel bleibt bei drei Wörtern — sonst sprengt er die Liste.
             val name = titel.trim().ifBlank { ersatzTitel(text) }
-            repository.lege(name, text.trim(), aufnahmePfad, originalText, kategorieId)
+            val entwurf = _entwurf.value
+            if (entwurf != null) {
+                repository.ausEntwurfUebernehmen(entwurf.id, name, text, kategorieId, originalText)
+            } else {
+                repository.lege(name, text.trim(), aufnahmePfad, originalText, kategorieId)
+            }
+            _entwurf.value = null
             zeige(Meldung("Idee gespeichert."))
+        }
+    }
+
+    // ---- Entwürfe ----
+
+    /** Der Entwurf, an dem der Erfassen-Bildschirm gerade hängt — null heisst: eine frische Idee. */
+    private val _entwurf = MutableStateFlow<IdeeEntity?>(null)
+    val entwurf: StateFlow<IdeeEntity?> = _entwurf.asStateFlow()
+
+    /** Der Erfassen-Bildschirm beginnt leer. */
+    fun beginneNeueIdee() {
+        _entwurf.value = null
+    }
+
+    /** Einen gesicherten Entwurf zum Weiterschreiben öffnen. */
+    fun oeffneEntwurf(idee: IdeeEntity) {
+        _entwurf.value = idee
+    }
+
+    /**
+     * Hält fest, was gerade dasteht — beim Zurückwischen, beim Zurück-Knopf und wenn die App in
+     * den Hintergrund geht. Ohne Inhalt passiert nichts, ein leerer Entwurf verschwindet wieder.
+     */
+    fun sichereEntwurf(titel: String, text: String, kategorieId: Long?, originalText: String? = null) {
+        val hatInhalt = titel.isNotBlank() || text.isNotBlank()
+        val bisher = _entwurf.value
+        if (!hatInhalt) {
+            if (bisher != null) {
+                _entwurf.value = null
+                viewModelScope.launch { repository.loescheEntwurf(bisher.id) }
+            }
+            return
+        }
+        viewModelScope.launch {
+            val id = repository.sichereEntwurf(bisher?.id, titel, text, kategorieId, originalText)
+            _entwurf.value = repository.lade(id)
+            if (bisher == null) zeige(Meldung("Als Entwurf gesichert."))
+        }
+    }
+
+    fun verwirfEntwurf(idee: IdeeEntity) {
+        viewModelScope.launch {
+            repository.loescheEntwurf(idee.id)
+            if (_entwurf.value?.id == idee.id) _entwurf.value = null
+            zeige(Meldung("Entwurf verworfen."))
         }
     }
 
@@ -940,8 +1013,12 @@ class IdeenViewModel(
     fun sichereNachDrive() {
         viewModelScope.launch {
             runCatching { sicherung.nachDriveSichern() }
-                .onSuccess { stand -> zeige(Meldung("Bei Google gesichert. $stand")) }
+                .onSuccess { stand ->
+                    driveWiederholung = null
+                    zeige(Meldung("Bei Google gesichert. $stand"))
+                }
                 .onFailure { fehler ->
+                    if (brauchtFreigabe(fehler, ::sichereNachDrive)) return@launch
                     zeige(
                         Meldung(
                             "Die Google-Sicherung ging nicht: ${fehler.message}",
@@ -956,11 +1033,64 @@ class IdeenViewModel(
     fun holeVonDrive(ersetzen: Boolean) {
         viewModelScope.launch {
             runCatching { sicherung.vonDriveHolen(ersetzen) }
-                .onSuccess { anzahl -> zeige(Meldung("$anzahl Ideen aus der Google-Sicherung geholt.")) }
+                .onSuccess { anzahl ->
+                    driveWiederholung = null
+                    zeige(Meldung("$anzahl Ideen aus der Google-Sicherung geholt."))
+                }
                 .onFailure { fehler ->
+                    if (brauchtFreigabe(fehler) { holeVonDrive(ersetzen) }) return@launch
                     zeige(Meldung("Wiederherstellen ging nicht: ${fehler.message}", istFehler = true))
                 }
         }
+    }
+
+    /**
+     * Fängt genau den Fall ab, in dem Google erst eine Bestaetigung sehen will: Statt einer
+     * Fehlermeldung wandert der Freigabe-Bildschirm nach oben, und danach laeuft [wiederholung]
+     * von allein noch einmal.
+     */
+    private fun brauchtFreigabe(fehler: Throwable, wiederholung: () -> Unit): Boolean {
+        val freigabe = fehler as? DriveAuth.NeedsConsent ?: return false
+        driveWiederholung = wiederholung
+        _driveFreigabe.value = freigabe.pendingIntent
+        return true
+    }
+
+    /** Die Activity hat den Freigabe-Bildschirm gezeigt; hier kommt Googles Antwort an. */
+    fun driveFreigabeBeantwortet(daten: Intent?) {
+        _driveFreigabe.value = null
+        val wiederholung = driveWiederholung
+        driveWiederholung = null
+        sicherung.driveFreigabeErgebnis(daten)
+            .onSuccess { erteilt ->
+                if (erteilt) {
+                    wiederholung?.invoke()
+                } else {
+                    zeige(
+                        Meldung(
+                            "Ohne die Bestaetigung kann die App nicht bei Google sichern.",
+                            istFehler = true,
+                            wiederholen = wiederholung,
+                        ),
+                    )
+                }
+            }
+            .onFailure { fehler ->
+                zeige(
+                    Meldung(
+                        fehler.message ?: "Die Freigabe für Google Drive kam nicht zustande.",
+                        istFehler = true,
+                        wiederholen = wiederholung,
+                    ),
+                )
+            }
+    }
+
+    /** Der Freigabe-Bildschirm ließ sich nicht öffnen — dann darf er nicht haengen bleiben. */
+    fun driveFreigabeAbgebrochen(grund: String) {
+        _driveFreigabe.value = null
+        driveWiederholung = null
+        zeige(Meldung(grund, istFehler = true))
     }
 
     fun sicherungsStand(): String = sicherung.standText()

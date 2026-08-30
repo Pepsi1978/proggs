@@ -222,6 +222,13 @@ class Sicherung(
 
     suspend fun driveTrennen() = driveAuth.disconnect()
 
+    /**
+     * Nimmt Googles Antwort auf den Freigabe-Bildschirm entgegen. Erst danach liegt ein Zugang
+     * bereit — der Rueckgabewert der Activity allein sagt darueber nichts aus.
+     */
+    fun driveFreigabeErgebnis(daten: android.content.Intent?): Result<Boolean> =
+        driveAuth.readConsentResult(daten)
+
     fun standText(): String = BackupStatus.describe(context)
 
     companion object {

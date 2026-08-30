@@ -94,6 +94,9 @@ class TtsManager(context: Context) {
         } else {
             0
         }
+        // Standardmaessig an: Ohne diese Bindung sprechen mehrsprachige Stimmen englisch
+        // aussehende Woerter englisch aus.
+        val erzwingeDeutsch = preferences?.getBoolean(PREF_IMMER_DEUTSCH, true) ?: true
         when (providerId) {
             TtsProvider.EDGE.id -> edgePlayer.speak(
                 text = spokenText,
@@ -103,6 +106,7 @@ class TtsManager(context: Context) {
                     ?: TtsCatalog.DEFAULT_EDGE_VOICE,
                 speechRate = speechRate,
                 pitchPercent = pitchPercent,
+                erzwingeDeutsch = erzwingeDeutsch,
                 onPlaybackStart = guardedStart,
                 onComplete = guardedComplete,
                 onError = guardedError,
@@ -118,6 +122,7 @@ class TtsManager(context: Context) {
                     ) ?: TtsCatalog.DEFAULT_GOOGLE_VOICE,
                 speechRate = speechRate,
                 pitchSemitones = toSemitones(pitchPercent),
+                erzwingeDeutsch = erzwingeDeutsch,
                 onPlaybackStart = guardedStart,
                 onComplete = guardedComplete,
                 onError = guardedError,
@@ -243,6 +248,7 @@ class TtsManager(context: Context) {
         const val PREF_GOOGLE_VOICE = "google_tts_voice"
         const val PREF_QWEN_API_KEY = "qwen_tts_api_key"
         const val PREF_QWEN_VOICE_ID = "qwen_tts_voice_id"
+        const val PREF_IMMER_DEUTSCH = "immer_deutsch_vorlesen"
         const val PREF_SPEECH_RATE = "tts_speech_rate"
         const val PREF_FAVORITE_VOICES = "favorite_tts_voices"
         const val PREF_VARY_VOICE = "vary_voice_per_repetition"

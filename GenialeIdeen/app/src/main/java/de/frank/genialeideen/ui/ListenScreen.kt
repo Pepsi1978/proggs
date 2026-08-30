@@ -101,7 +101,8 @@ import androidx.compose.ui.unit.DpSize
 import kotlinx.coroutines.launch
 
 enum class ListenBereich(val titel: String) {
-    OFFEN("Offene Ideen"),
+    OFFEN("Offen"),
+    ENTWURF("Entwürfe"),
     UMGESETZT("Umgesetzt"),
 }
 
@@ -116,6 +117,7 @@ fun ListenScreen(
     val theme by viewModel.theme.collectAsState()
     val offene by viewModel.offeneIdeen.collectAsState()
     val umgesetzte by viewModel.umgesetzteIdeen.collectAsState()
+    val entwuerfe by viewModel.entwuerfe.collectAsState()
     val laedt by viewModel.laedt.collectAsState()
     val suchtext by viewModel.suchtext.collectAsState()
     val treffer by viewModel.suchtreffer.collectAsState()
@@ -135,7 +137,9 @@ fun ListenScreen(
 
     // Die volle Kategorie steht oben: sortiert nach Anzahl, bei Gleichstand nach Name.
     // Beides gemerkt — sonst wird bei jedem Bild neu gezählt und sortiert.
-    val zaehlung = remember(offene, umgesetzte) { alleZaehlung(offene + umgesetzte) }
+    val zaehlung = remember(offene, umgesetzte, entwuerfe) {
+        alleZaehlung(offene + umgesetzte + entwuerfe)
+    }
     val sortierteKategorien = remember(kategorien, zaehlung) {
         kategorien.sortedWith(
             compareByDescending<KategorieEntity> { zaehlung[it.id] ?: 0 }.thenBy { it.name.lowercase() },
@@ -145,7 +149,11 @@ fun ListenScreen(
     // Zurückwischen hebt zuerst die Kategorie auf, erst danach verlässt man die Liste.
     BackHandler(enabled = gewaehlteKategorie != null) { viewModel.waehleKategorie(null) }
 
-    val roheListe = if (bereich == ListenBereich.OFFEN) offene else umgesetzte
+    val roheListe = when (bereich) {
+        ListenBereich.OFFEN -> offene
+        ListenBereich.ENTWURF -> entwuerfe
+        ListenBereich.UMGESETZT -> umgesetzte
+    }
     val liste = if (gewaehlteKategorie == null) {
         roheListe
     } else {
@@ -168,7 +176,7 @@ fun ListenScreen(
                 kategorien = sortierteKategorien,
                 gewaehlt = gewaehlteKategorie,
                 anzahlJeKategorie = zaehlung,
-                gesamt = offene.size + umgesetzte.size,
+                gesamt = offene.size + umgesetzte.size + entwuerfe.size,
                 aufWahl = { id ->
                     viewModel.waehleKategorie(id)
                     bereichsraum.launch { schublade.close() }
@@ -192,7 +200,7 @@ fun ListenScreen(
             aufEinstellungen = aufEinstellungen,
         )
 
-        BereichsWaehler(bereich, offene.size, umgesetzte.size) { bereich = it }
+        BereichsWaehler(bereich, offene.size, entwuerfe.size, umgesetzte.size) { bereich = it }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when {
@@ -212,6 +220,13 @@ fun ListenScreen(
                         "Der Knopf unten nimmt sofort auf.",
                     knopfText = "Erste Idee festhalten",
                     aufKnopf = aufNeueIdee,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+                sortiert.isEmpty() && bereich == ListenBereich.ENTWURF -> Leerzustand(
+                    symbol = "📝",
+                    ueberschrift = "Keine Entwürfe offen",
+                    satz = "Wischst du beim Erfassen zurück, landet die halbfertige Idee hier " +
+                        "statt im Nichts.",
                     modifier = Modifier.align(Alignment.Center),
                 )
                 sortiert.isEmpty() -> Leerzustand(
@@ -249,6 +264,11 @@ fun ListenScreen(
                                 aufTipp = { aufIdee(idee) },
                                 aufVorlesen = {
                                     viewModel.lies("idee-${idee.id}", idee.titel, "${idee.titel}.\n\n${idee.text}")
+                                },
+                                aufVerwerfen = if (bereich == ListenBereich.ENTWURF) {
+                                    { viewModel.verwirfEntwurf(idee) }
+                                } else {
+                                    null
                                 },
                             )
                         }
@@ -760,6 +780,7 @@ private fun hintergrundVerlauf(): Brush {
 private fun BereichsWaehler(
     aktuell: ListenBereich,
     offene: Int,
+    entwuerfe: Int,
     umgesetzte: Int,
     aufWahl: (ListenBereich) -> Unit,
 ) {
@@ -789,11 +810,16 @@ private fun BereichsWaehler(
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val anzahl = if (eintrag == ListenBereich.OFFEN) offene else umgesetzte
+                val anzahl = when (eintrag) {
+                    ListenBereich.OFFEN -> offene
+                    ListenBereich.ENTWURF -> entwuerfe
+                    ListenBereich.UMGESETZT -> umgesetzte
+                }
                 Text(
                     text = "${eintrag.titel} ($anzahl)",
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelSmall,
                     color = if (gewaehlt) gold.aufPrimaer else gold.textGedaempft,
+                    maxLines = 1,
                 )
             }
         }
@@ -809,6 +835,8 @@ private fun IdeenKarte(
     vorleseZustand: VorleseZustand,
     aufTipp: () -> Unit,
     aufVorlesen: () -> Unit,
+    /** Nur bei Entwürfen gesetzt: Der Papierkorb wirft das Halbfertige weg. */
+    aufVerwerfen: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
@@ -863,6 +891,19 @@ private fun IdeenKarte(
                 zustand = vorleseZustand,
                 aufTipp = aufVorlesen,
             )
+            aufVerwerfen?.let { verwerfen ->
+                Box(
+                    modifier = Modifier.size(38.dp).druckEffekt(verwerfen),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Entwurf verwerfen",
+                        tint = gold.textGedaempft,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
         }
     }
 }

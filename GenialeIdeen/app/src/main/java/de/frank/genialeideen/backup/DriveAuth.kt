@@ -49,7 +49,8 @@ class DriveAuth(private val context: Context) {
             tokenFromConsent = null
             return token
         }
-        val result = authorize()
+        val result = runCatching { authorize() }
+            .getOrElse { fehler -> throw IllegalStateException(explain(fehler), fehler) }
         if (result.hasResolution()) {
             val pending = result.pendingIntent
                 ?: throw IllegalStateException("Google verlangt eine Freigabe, liefert aber keinen Dialog.")
@@ -83,8 +84,9 @@ class DriveAuth(private val context: Context) {
                 "Die Anmeldung wurde nicht abgeschlossen."
             CommonStatusCodes.NETWORK_ERROR ->
                 "Keine Verbindung zu Google."
-            CommonStatusCodes.CANCELED, null ->
+            CommonStatusCodes.CANCELED ->
                 "Die Freigabe wurde abgebrochen."
+            null -> error.message ?: "Google hat die Anfrage ohne Grund abgelehnt."
             else -> "Google meldet Fehler $status: ${error.message}"
         }
     }

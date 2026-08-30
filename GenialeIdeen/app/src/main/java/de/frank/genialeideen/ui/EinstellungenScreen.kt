@@ -98,6 +98,7 @@ fun EinstellungenScreen(
     var groqKey by remember { mutableStateOf(settings.groqApiKey) }
     var geminiKey by remember { mutableStateOf(settings.geminiApiKey) }
     var tempo by remember { mutableStateOf(settings.ttsSpeechRate) }
+    var immerDeutsch by remember { mutableStateOf(settings.immerDeutschVorlesen) }
     var sperreAn by remember { mutableStateOf(settings.appLockEnabled) }
     var sperreVerzoegerung by remember { mutableStateOf(settings.appLockDelayMinutes) }
     var kiZugang by remember { mutableStateOf(settings.kiZugang) }
@@ -183,6 +184,18 @@ fun EinstellungenScreen(
                     },
                     valueRange = 0.5f..2.0f,
                     colors = goldRegler(),
+                )
+
+                Spacer(Modifier.height(8.dp))
+                SchalterZeile("Immer auf Deutsch aussprechen", immerDeutsch) {
+                    immerDeutsch = it
+                    settings.immerDeutschVorlesen = it
+                }
+                Text(
+                    "Mehrsprachige Stimmen springen sonst mitten im Satz ins Englische, sobald " +
+                        "ein Wort englisch aussieht. Mit diesem Schalter bleibt alles deutsch.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = gold.textGedaempft,
                 )
 
                 SchluesselFeld(

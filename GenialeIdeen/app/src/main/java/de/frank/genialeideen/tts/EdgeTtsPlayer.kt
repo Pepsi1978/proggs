@@ -49,6 +49,8 @@ class EdgeTtsPlayer(context: Context) {
         voice: String = TtsCatalog.DEFAULT_EDGE_VOICE,
         speechRate: Float = 1f,
         pitchPercent: Int = 0,
+        /** Bindet den Text zusaetzlich an Deutsch, damit mehrsprachige Stimmen nicht umschalten. */
+        erzwingeDeutsch: Boolean = true,
         onPlaybackStart: () -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
@@ -118,13 +120,17 @@ class EdgeTtsPlayer(context: Context) {
                 val formattedRate = if (ratePercent >= 0) "+$ratePercent%" else "$ratePercent%"
                 val boundedPitch = pitchPercent.coerceIn(-20, 20)
                 val formattedPitch = if (boundedPitch >= 0) "+$boundedPitch%" else "$boundedPitch%"
+                // Der <lang>-Rahmen ist der einzige Weg, eine mehrsprachige Stimme bei Deutsch
+                // zu halten: xml:lang am <speak> allein reicht ihr nicht, sie bestimmt die
+                // Sprache sonst je Wort neu und spricht Fremdwoerter englisch aus.
+                val inhalt = if (erzwingeDeutsch) "<lang xml:lang='de-DE'>" + escaped + "</lang>" else escaped
                 val ssml = "X-RequestId:$requestId\r\n" +
                     "Content-Type:application/ssml+xml\r\n" +
                     "Path:ssml\r\n\r\n" +
                     "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' " +
                     "xml:lang='de-DE'><voice name='$voice'>" +
                     "<prosody rate='$formattedRate' pitch='$formattedPitch'>" +
-                    "$escaped</prosody></voice></speak>"
+                    "$inhalt</prosody></voice></speak>"
                 if (!webSocket.send(config) || !webSocket.send(ssml)) {
                     finishError(
                         requestGeneration,

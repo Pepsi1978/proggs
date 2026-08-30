@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.activity.compose.BackHandler
+import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Motion
@@ -99,10 +100,19 @@ fun GenialeIdeenApp(
                 Bildschirm.LISTE -> ListenScreen(
                     viewModel = viewModel,
                     aufIdee = { idee ->
-                        viewModel.oeffne(idee.id)
-                        bildschirm = Bildschirm.DETAIL
+                        // Ein Entwurf wird weitergeschrieben, keine fertige Idee besprochen.
+                        if (idee.status == IdeenStatus.ENTWURF.name) {
+                            viewModel.oeffneEntwurf(idee)
+                            bildschirm = Bildschirm.ERFASSEN
+                        } else {
+                            viewModel.oeffne(idee.id)
+                            bildschirm = Bildschirm.DETAIL
+                        }
                     },
-                    aufNeueIdee = { bildschirm = Bildschirm.ERFASSEN },
+                    aufNeueIdee = {
+                        viewModel.beginneNeueIdee()
+                        bildschirm = Bildschirm.ERFASSEN
+                    },
                     aufEinstellungen = { bildschirm = Bildschirm.EINSTELLUNGEN },
                 )
                 Bildschirm.ERFASSEN -> ErfassenScreen(
