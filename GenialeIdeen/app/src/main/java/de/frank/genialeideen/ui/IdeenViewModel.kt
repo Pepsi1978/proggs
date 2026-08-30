@@ -384,7 +384,13 @@ class IdeenViewModel(
     }
 
     fun aendere(idee: IdeeEntity, titel: String, text: String) {
-        viewModelScope.launch { repository.aendere(idee, titel, text) }
+        viewModelScope.launch {
+            // Ein leerer Titel wuerde die Idee in der Liste unauffindbar machen — dann greift
+            // derselbe Ersatztitel wie beim Anlegen.
+            val name = titel.trim().ifBlank { ersatzTitel(text) }
+            repository.aendere(idee, name, text)
+            zeige(Meldung("Änderung übernommen."))
+        }
     }
 
     fun setzeUmgesetzt(idee: IdeeEntity) {
