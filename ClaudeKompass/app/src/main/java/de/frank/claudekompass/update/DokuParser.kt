@@ -7,6 +7,7 @@ data class GelesenerEintrag(
     val name: String,
     val beschreibung: String,
     val art: String,
+    val kategorie: String = "",
 )
 
 /**
@@ -16,12 +17,27 @@ data class GelesenerEintrag(
  * Modell könnte einen Namen erfinden oder einen echten weglassen. Beim Aktualisieren einer
  * Nachschlage-App wäre beides schlimm — hier zählt Genauigkeit, nicht Sprachgefühl. Erklärt
  * wird später, gelesen wird jetzt.
+ *
+ * Drei Dinge werden dabei streng genommen, weil jedes einzelne schon still danebengegangen ist:
+ *
+ *  1. **Nur die richtige Tabelle.** Die Einstellungsseite enthält dreizehn Tabellen — die
+ *     Übersicht und daneben lauter Unterfeld-Tabellen (`Field | Type | What it does`). Wer
+ *     alle liest, holt sich Namen wie `Bash` als angebliche Einstellung. Deshalb wird die
+ *     Kopfzeile geprüft und nur eine Tabelle mit den erwarteten Spalten ausgewertet.
+ *  2. **Die richtige Spalte.** Die Übersicht hat vier Spalten: `Key | Description | Topic |
+ *     Scope`. Wer einfach die letzte nimmt, bekommt „Any file" als Beschreibung — und schickt
+ *     genau das als Erklärgrundlage an das Modell.
+ *  3. **Maskierte Trennstriche.** In `` `/voice [hold\|tap\|off]` `` steht ein `\|`, das keine
+ *     Spalte trennt. Wer stumpf an `|` teilt, verschiebt alle Spalten dieser Zeile.
  */
 object DokuParser {
 
     /** Findet Zeilen wie `| `/compact` | Built-in | Free up context … |`. */
     private val tabellenZeile = Regex("^\\s*\\|(.+)\\|\\s*$")
     private val trennZeile = Regex("^\\s*\\|?[\\s:|-]{4,}\\|?\\s*$")
+
+    /** Teilt an Trennstrichen, die nicht mit `\` maskiert sind. */
+    private val spaltenTrenner = Regex("(?<!\\\\)\\|")
 
     /** Ein Slash-Befehl steht in Rückstrichen, oft mit Argumenten dahinter. */
     private val slashName = Regex("`/([a-z][a-z0-9-]*)")
@@ -32,62 +48,144 @@ object DokuParser {
     /** Eine Umgebungsvariable ist durchgehend gross geschrieben. */
     private val variablenName = Regex("`([A-Z][A-Z0-9_]{2,60})`")
 
+    /** Eine Tabelle mit ihrer Kopfzeile — erst damit lassen sich Spalten benennen. */
+    private data class Tabelle(val kopf: List<String>, val zeilen: List<List<String>>)
+
     fun leseSlashBefehle(markdown: String): List<GelesenerEintrag> =
-        leseTabellen(markdown) { zellen ->
-            val treffer = slashName.find(zellen.first()) ?: return@leseTabellen null
+        leseSpalten(
+            markdown = markdown,
+            nameSpalten = listOf("Command", "Befehl"),
+            textSpalten = listOf("Purpose", "Description"),
+            zusatzSpalten = listOf("Type", "Kind"),
+        ) { rohName, beschreibung, zusatz ->
+            val treffer = slashName.find(rohName) ?: return@leseSpalten null
             GelesenerEintrag(
                 name = "/" + treffer.groupValues[1],
-                beschreibung = zellen.last().trim(),
-                art = if (zellen.size >= 3) zellen[1].trim() else "",
+                beschreibung = beschreibung,
+                art = (zusatz["Type"] ?: zusatz["Kind"]).orEmpty().ifBlank { "Eingebaut" },
             )
         }.also { melde("Slash-Befehle", it.size) }
 
     fun leseEinstellungen(markdown: String): List<GelesenerEintrag> =
-        leseTabellen(markdown) { zellen ->
-            val treffer = einstellungsName.find(zellen.first()) ?: return@leseTabellen null
+        leseSpalten(
+            markdown = markdown,
+            nameSpalten = listOf("Key", "Setting"),
+            textSpalten = listOf("Description"),
+            zusatzSpalten = listOf("Topic", "Scope"),
+        ) { rohName, beschreibung, zusatz ->
+            val treffer = einstellungsName.find(rohName) ?: return@leseSpalten null
             val name = treffer.groupValues[1]
             // Durchgehend gross geschriebene Namen sind Umgebungsvariablen und gehören in die
             // andere Liste. Ohne diese Trennung stünden sie doppelt in der App.
-            if (name == name.uppercase()) return@leseTabellen null
+            if (name == name.uppercase()) return@leseSpalten null
             GelesenerEintrag(
                 name = name,
-                beschreibung = zellen.last().trim(),
-                art = "settings.json",
+                beschreibung = beschreibung,
+                art = artAusGeltungsbereich(zusatz["Scope"].orEmpty()),
+                kategorie = zusatz["Topic"].orEmpty(),
             )
         }.also { melde("Einstellungen", it.size) }
 
     fun leseVariablen(markdown: String): List<GelesenerEintrag> =
-        leseTabellen(markdown) { zellen ->
-            val treffer = variablenName.find(zellen.first()) ?: return@leseTabellen null
+        leseSpalten(
+            markdown = markdown,
+            nameSpalten = listOf("Variable"),
+            textSpalten = listOf("Purpose", "Description"),
+        ) { rohName, beschreibung, _ ->
+            val treffer = variablenName.find(rohName) ?: return@leseSpalten null
             GelesenerEintrag(
                 name = treffer.groupValues[1],
-                beschreibung = zellen.last().trim(),
+                beschreibung = beschreibung,
                 art = "Umgebungsvariable",
             )
         }.also { melde("Umgebungsvariablen", it.size) }
 
-    private fun leseTabellen(
+    /**
+     * Wo eine Einstellung stehen darf, sagt die Spalte `Scope`. Daraus wird die Angabe, die in
+     * der App unter dem Namen steht — sie beantwortet die erste Frage beim Nachschlagen:
+     * „In welche Datei schreibe ich das?"
+     */
+    private fun artAusGeltungsbereich(geltung: String): String = when {
+        geltung.contains("managed", ignoreCase = true) -> "managed-settings.json"
+        geltung.contains("global config", ignoreCase = true) -> "~/.claude.json"
+        else -> "settings.json"
+    }
+
+    /**
+     * Wertet alle Tabellen aus, deren Kopfzeile die gesuchten Spalten hat.
+     *
+     * Findet sich keine solche Tabelle, kommt eine leere Liste zurück — der Aufrufer erkennt
+     * das an der Untergrenze und bricht ab, statt den Bestand zu leeren.
+     */
+    private fun leseSpalten(
         markdown: String,
-        deute: (List<String>) -> GelesenerEintrag?,
+        nameSpalten: List<String>,
+        textSpalten: List<String>,
+        zusatzSpalten: List<String> = emptyList(),
+        deute: (rohName: String, beschreibung: String, zusatz: Map<String, String>) -> GelesenerEintrag?,
     ): List<GelesenerEintrag> {
         val gefunden = LinkedHashMap<String, GelesenerEintrag>()
-        for (zeile in markdown.lineSequence()) {
-            if (trennZeile.matches(zeile)) continue
-            val treffer = tabellenZeile.find(zeile) ?: continue
-            val zellen = treffer.groupValues[1].split('|').map { saeubere(it) }
-            if (zellen.size < 2) continue
-            val eintrag = deute(zellen) ?: continue
-            if (eintrag.beschreibung.isBlank()) continue
-            // Der erste Fund gewinnt: Die Übersichtstabelle steht vor den Wiederholungen
-            // weiter unten und trägt die knappere, brauchbarere Beschreibung.
-            gefunden.putIfAbsent(eintrag.name, eintrag)
+        for (tabelle in leseTabellen(markdown)) {
+            val nameIndex = findeSpalte(tabelle.kopf, nameSpalten)
+            val textIndex = findeSpalte(tabelle.kopf, textSpalten)
+            if (nameIndex < 0 || textIndex < 0) continue
+
+            val zusatzIndex = zusatzSpalten.associateWith { findeSpalte(tabelle.kopf, listOf(it)) }
+            for (zeile in tabelle.zeilen) {
+                if (zeile.size <= maxOf(nameIndex, textIndex)) continue
+                val beschreibung = zeile[textIndex]
+                if (beschreibung.isBlank()) continue
+                val zusatz = zusatzIndex
+                    .filterValues { it >= 0 && it < zeile.size }
+                    .mapValues { (_, index) -> zeile[index] }
+                val eintrag = deute(zeile[nameIndex], beschreibung, zusatz) ?: continue
+                // Der erste Fund gewinnt: Die Übersichtstabelle steht vor den Wiederholungen
+                // weiter unten und trägt die knappere, brauchbarere Beschreibung.
+                gefunden.putIfAbsent(eintrag.name, eintrag)
+            }
         }
         return gefunden.values.toList()
     }
 
-    /** Nimmt Verweise, Rückstriche und doppelte Leerzeichen aus einer Tabellenzelle. */
+    /** Schneidet das Dokument in Tabellen: Kopfzeile, Trennzeile, Datenzeilen. */
+    private fun leseTabellen(markdown: String): List<Tabelle> {
+        val zeilen = markdown.lines()
+        val tabellen = mutableListOf<Tabelle>()
+        var index = 0
+        while (index < zeilen.size - 1) {
+            val kopfZeile = zeilen[index]
+            val istKopf = tabellenZeile.matches(kopfZeile) &&
+                !trennZeile.matches(kopfZeile) &&
+                trennZeile.matches(zeilen[index + 1])
+            if (!istKopf) {
+                index += 1
+                continue
+            }
+            val kopf = zerlege(kopfZeile)
+            index += 2
+            val datenZeilen = mutableListOf<List<String>>()
+            while (index < zeilen.size && tabellenZeile.matches(zeilen[index])) {
+                if (!trennZeile.matches(zeilen[index])) datenZeilen += zerlege(zeilen[index])
+                index += 1
+            }
+            tabellen += Tabelle(kopf, datenZeilen)
+        }
+        return tabellen
+    }
+
+    /** Sucht eine Spalte über ihren Kopfnamen. -1, wenn die Tabelle sie nicht hat. */
+    private fun findeSpalte(kopf: List<String>, namen: List<String>): Int =
+        kopf.indexOfFirst { zelle -> namen.any { zelle.equals(it, ignoreCase = true) } }
+
+    private fun zerlege(zeile: String): List<String> {
+        val inhalt = tabellenZeile.find(zeile)?.groupValues?.get(1) ?: return emptyList()
+        return inhalt.split(spaltenTrenner).map { saeubere(it) }
+    }
+
+    /** Nimmt Verweise, maskierte Striche und doppelte Leerzeichen aus einer Tabellenzelle. */
     private fun saeubere(zelle: String): String = zelle
         .replace(Regex("\\[([^\\]]+)]\\([^)]*\\)"), "$1")
+        .replace("\\|", "|")
         .replace(Regex("\\s{2,}"), " ")
         .trim()
 

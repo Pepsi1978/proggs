@@ -32,15 +32,34 @@ was es einmal gab, in welcher Version es wegfiel und was seine Aufgabe übernomm
 Oben in der Kopfleiste. Er holt die offiziellen Unterlagen und das Änderungsprotokoll, gleicht
 sie mit dem Bestand ab und spielt die Unterschiede ein.
 
-Zwei Dinge, die dabei bewusst so gebaut sind:
+Vier Dinge, die dabei bewusst so gebaut sind:
 
 - **Namen werden ohne Modell gelesen.** Die Markdown-Tabellen werden direkt ausgewertet. Ein
   Modell könnte einen Befehl erfinden oder einen echten übersehen — beim Nachschlagen wäre
-  beides schlimm. Erklärt wird erst danach.
-- **Eine Untergrenze schützt den Bestand.** Kommen aus den Unterlagen weniger als 40 Einträge
-  zurück, bricht der Lauf ab, statt jeden vorhandenen Eintrag als verschwunden zu behandeln.
-  Das ist die Sicherung gegen einen stillen Totalschaden, wenn sich der Aufbau der Doku-Seiten
-  ändert.
+  beides schlimm. Erklärt wird erst danach. Gelesen wird dabei nur die Übersichtstabelle, an
+  ihrer Kopfzeile erkannt, und daraus die Spalte, die wirklich `Description` heisst: Die
+  Einstellungsseite trägt dreizehn Tabellen und vier Spalten, und wer blind die letzte nimmt,
+  hält „Any file" für eine Beschreibung.
+- **Untergrenzen schützen den Bestand.** Kommen aus einer Unterlage zu wenige Einträge zurück,
+  bricht der Lauf ab, statt jeden vorhandenen Eintrag als verschwunden zu behandeln. Die
+  Grenzen gelten je Quelle — eine gesunde Variablenliste darf eine kaputte Befehlsliste nicht
+  überdecken.
+- **Erklärt wird nur, was noch keine Erklärung hat.** Ein Eintrag, der auf Deutsch dasteht,
+  geht nie wieder ans Modell — auch dann nicht, wenn sich sein englischer Text geändert hat.
+  Der neue Originaltext wird still nachgeführt.
+- **Jeder Zwischenstand wird sofort gespeichert.** Die neuen Namen sind in der Datenbank,
+  bevor die erste Erklärung geschrieben wird, und jede Erklärung wird einzeln gesichert. Ein
+  Abbruch kostet damit höchstens den einen Eintrag, an dem er passierte — nicht den ganzen
+  Lauf.
+
+Stehen mehr als 40 Erklärungen an, fragt die App vorher. Jede Erklärung ist eine Anfrage an
+das Modell; ein Sprung über mehrere Fassungen bringt schnell dreihundert neue Einträge mit.
+Bis die Erklärung da ist, steht der Eintrag mit seinem englischen Originaltext in der Liste
+und ist durchsuchbar; **Mehr** holt die deutsche Fassung einzeln nach.
+
+Zum Schluss zeigt ein **Bericht**, was der Lauf getan hat: welche Slash-Befehle dazukamen,
+welche Einstellungen und Variablen, was aus Claude Code entfernt wurde und wo sich der
+offizielle Text geändert hat — mit Namen, nicht nur mit Zahlen.
 
 Neu dazugekommene Einträge sind golden umrandet und mit **NEU** markiert — bis zum nächsten
 Lauf. Danach gehören sie zum Bestand.

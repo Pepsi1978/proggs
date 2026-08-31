@@ -25,10 +25,14 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,6 +59,7 @@ import de.frank.claudekompass.ui.screens.SucheScreen
 import de.frank.claudekompass.ui.theme.LocalKompassFarben
 import de.frank.claudekompass.ui.theme.Mass
 import de.frank.claudekompass.ui.theme.ThemeModus
+import de.frank.claudekompass.update.LaufFortschritt
 import de.frank.claudekompass.vm.ChatViewModel
 import de.frank.claudekompass.vm.DiktatViewModel
 import de.frank.claudekompass.vm.EinstellungenViewModel
@@ -89,6 +94,11 @@ fun KompassApp(
 
     val lauf by referenz.lauf.collectAsStateWithLifecycle()
     val letzterErfolg by referenz.letzterErfolg.collectAsStateWithLifecycle()
+
+    // Der Bericht erscheint einmal je Lauf. Ein neuer Lauf zeigt ihn wieder — deshalb wird die
+    // Markierung zurückgesetzt, sobald wieder etwas läuft.
+    var berichtVerborgen by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(lauf.laeuft) { if (lauf.laeuft) berichtVerborgen = false }
 
     if (gesperrt) {
         SperrBildschirm(beiEntsperren = beiEntsperren)
@@ -132,7 +142,7 @@ fun KompassApp(
             beiTheme = beiThemeWechsel,
             beiEinstellungen = { zeigeEinstellungen = true },
             beiSuche = { zeigeSuche = true },
-            beiAktualisieren = referenz::aktualisiere,
+            beiAktualisieren = { referenz.aktualisiere() },
             aktualisierungLaeuft = lauf.laeuft,
         )
         Trennlinie()
@@ -147,7 +157,18 @@ fun KompassApp(
                 gesamt = lauf.gesamt,
                 beiAbbrechen = referenz::brichAktualisierungAb,
                 beiSchliessen = referenz::loescheLaufMeldung,
-                beiNochmal = referenz::aktualisiere,
+                beiNochmal = { referenz.aktualisiere() },
+            )
+        }
+
+        if (lauf.fertig && !berichtVerborgen && (lauf.hatAenderungen || lauf.offeneErklaerungen > 0)) {
+            AktualisierungsBericht(
+                lauf = lauf,
+                beiSchliessen = { berichtVerborgen = true },
+                beiErklaerungenHolen = {
+                    berichtVerborgen = true
+                    referenz.holeOffeneErklaerungen()
+                },
             )
         }
 
@@ -270,6 +291,123 @@ private fun BereichsKnopf(
         )
     }
 }
+
+/**
+ * Der Bericht nach einem Aktualisierungslauf.
+ *
+ * Er beantwortet die eine Frage, die man nach dem Tippen auf „Aktualisieren" hat: Was genau
+ * ist jetzt anders? Eine blosse Zahl reicht dafür nicht — erst die Namen machen nachvollziehbar,
+ * ob der Lauf getan hat, was er sollte. Lange Listen werden gekappt, damit der Bericht auf dem
+ * Cover-Display lesbar bleibt.
+ *
+ * Standen sehr viele neue Einträge an, hat der Lauf die Erklärungen bewusst NICHT von selbst
+ * geholt: Jede einzelne ist eine Anfrage an das Modell. Der Knopf hier unten ist die
+ * ausdrückliche Zustimmung dazu.
+ */
+@Composable
+private fun AktualisierungsBericht(
+    lauf: LaufFortschritt,
+    beiSchliessen: () -> Unit,
+    beiErklaerungenHolen: () -> Unit,
+) {
+    val farben = LocalKompassFarben.current
+    val (neueBefehle, neueConfigs) = lauf.neueNamen.partition { it.startsWith("/") }
+
+    AlertDialog(
+        onDismissRequest = beiSchliessen,
+        title = {
+            Text(
+                text = if (lauf.gefundeneVersion.isNotBlank()) {
+                    "Aktualisiert auf ${lauf.gefundeneVersion}"
+                } else {
+                    "Das hat die Aktualisierung gemacht"
+                },
+                style = MaterialTheme.typography.titleMedium,
+            )
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                BerichtsAbschnitt("Neue Slash-Befehle", neueBefehle)
+                BerichtsAbschnitt("Neue Einstellungen und Variablen", neueConfigs)
+                BerichtsAbschnitt("Entfernt aus Claude Code", lauf.entfernteNamen)
+                BerichtsAbschnitt("Offizieller Text geändert", lauf.geaenderteNamen)
+                BerichtsAbschnitt("Fehleinträge bereinigt", lauf.geloeschteNamen)
+
+                if (lauf.erklaertAnzahl > 0) {
+                    BerichtsZeile("Neu auf Deutsch erklärt: ${lauf.erklaertAnzahl}")
+                }
+                if (!lauf.hatAenderungen) {
+                    BerichtsZeile("Am Bestand hat sich nichts geändert.")
+                }
+                if (lauf.offeneErklaerungen > 0) {
+                    Spacer(Modifier.height(Mass.abstandKlein))
+                    Text(
+                        text = "${lauf.offeneErklaerungen} Einträge stehen bisher nur auf Englisch " +
+                            "da. Sie sind schon eingespielt und durchsuchbar — es fehlt nur die " +
+                            "deutsche Erklärung. Jede davon ist eine eigene Anfrage an das Modell, " +
+                            "deshalb wird hier gefragt statt einfach losgelegt.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = farben.textGedaempft,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (lauf.offeneErklaerungen > 0) {
+                TextButton(onClick = beiErklaerungenHolen) {
+                    Text("Alle ${lauf.offeneErklaerungen} jetzt erklären")
+                }
+            } else {
+                TextButton(onClick = beiSchliessen) { Text("Alles klar") }
+            }
+        },
+        dismissButton = {
+            if (lauf.offeneErklaerungen > 0) {
+                TextButton(onClick = beiSchliessen) { Text("Später") }
+            }
+        },
+    )
+}
+
+/** Ein benannter Block im Bericht. Ist die Liste leer, entfällt er ganz. */
+@Composable
+private fun BerichtsAbschnitt(titel: String, namen: List<String>) {
+    if (namen.isEmpty()) return
+    val farben = LocalKompassFarben.current
+    val gezeigt = namen.take(BERICHT_NAMEN_GRENZE)
+    val rest = namen.size - gezeigt.size
+
+    Spacer(Modifier.height(Mass.abstandKlein))
+    Text(
+        text = "$titel (${namen.size})",
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+    )
+    Text(
+        text = gezeigt.joinToString(", ") + if (rest > 0) " … und $rest weitere" else "",
+        style = MaterialTheme.typography.bodySmall,
+        color = farben.textGedaempft,
+    )
+}
+
+@Composable
+private fun BerichtsZeile(text: String) {
+    Spacer(Modifier.height(Mass.abstandKlein))
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = LocalKompassFarben.current.textGedaempft,
+    )
+}
+
+/**
+ * So viele Namen stehen ausgeschrieben im Bericht.
+ *
+ * Bei einem Sprung über mehrere Fassungen kommen schnell dreihundert neue Einträge zusammen.
+ * Die alle aufzulisten würde den Bericht unlesbar machen; die Einträge selbst stehen ohnehin
+ * golden umrandet in der Liste.
+ */
+private const val BERICHT_NAMEN_GRENZE = 25
 
 /**
  * Der Streifen, der den Aktualisierungslauf begleitet.

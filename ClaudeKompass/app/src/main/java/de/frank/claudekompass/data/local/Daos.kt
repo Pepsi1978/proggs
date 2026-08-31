@@ -35,8 +35,32 @@ interface EintragDao {
     @Query("SELECT COUNT(*) FROM eintraege")
     suspend fun anzahl(): Int
 
+    /**
+     * Alle Einträge, die noch keine deutsche Erklärung haben.
+     *
+     * Das ist die Warteschlange des Aktualisierens: Neue Einträge kommen zuerst nur mit ihrem
+     * englischen Text herein, die Erklärung wird danach einzeln nachgezogen. Bricht der Lauf
+     * dazwischen ab, findet der nächste Lauf hier genau die Reste — statt alles noch einmal
+     * von vorn erklären zu lassen.
+     */
+    @Query("SELECT * FROM eintraege WHERE entfernt = 0 AND TRIM(erklaerung) = '' ORDER BY bereich, sortierName ASC")
+    suspend fun ladeUnerklaerte(): List<EintragEntity>
+
+    @Query("SELECT COUNT(*) FROM eintraege WHERE entfernt = 0 AND TRIM(erklaerung) = ''")
+    suspend fun anzahlUnerklaerte(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setze(eintraege: List<EintragEntity>)
+
+    /**
+     * Löscht Einträge endgültig.
+     *
+     * Gedacht für Namen, die ein früherer, fehlerhafter Lauf erfunden hat. Sie als „entfernt"
+     * zu führen wäre falsch: Sie gab es in Claude Code nie, und im Klapp-Bereich „Entfernte
+     * Einträge" würden sie dauerhaft Unsinn behaupten.
+     */
+    @Query("DELETE FROM eintraege WHERE id IN (:ids)")
+    suspend fun loesche(ids: List<String>)
 
     @Update
     suspend fun aktualisiere(eintrag: EintragEntity)

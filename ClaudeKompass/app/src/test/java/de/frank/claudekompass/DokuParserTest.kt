@@ -26,12 +26,32 @@ class DokuParserTest {
         | `/effort [level]` | Built-in | Set the effort level |
     """.trimIndent()
 
+    /**
+     * Nachgebaut nach der echten Einstellungsseite: vier Spalten, die Beschreibung in der
+     * zweiten — und darunter eine der vielen Unterfeld-Tabellen, die NICHT ausgewertet werden
+     * darf. Genau die hat der Parser früher mitgelesen und daraus Einstellungen wie `Bash`
+     * erfunden.
+     */
     private val einstellungenMarkdown = """
-        | Key | Description |
-        | :-- | :---------- |
-        | `autoCompactEnabled` | Turn automatic compaction off or on |
-        | `permissions.deny` | Block listed tool uses |
+        | Key | Description | Topic | Scope |
+        | :-- | :---------- | :---- | :---- |
+        | [`autoCompactEnabled`](#a) | Turn automatic compaction off or on | Memory and context | Any file |
+        | `permissions.deny` | Block listed tool uses | Permission settings | Managed |
+        | `ANTHROPIC_API_KEY` | API key sent as header | Authentication | Any file |
+
+        ## Unterfelder
+
+        | Field | Type | What it does |
+        | :---- | :--- | :----------- |
+        | `Bash` | string | Matches shell commands |
+        | `commit` | string | Change the trailer |
+    """.trimIndent()
+
+    private val variablenMarkdown = """
+        | Variable | Purpose |
+        | :------- | :------ |
         | `ANTHROPIC_API_KEY` | API key sent as header |
+        | `NO_COLOR` | Turn off colored output |
     """.trimIndent()
 
     private val changelog = """
@@ -76,9 +96,64 @@ class DokuParserTest {
         assertTrue(einstellungen.any { it.name == "autoCompactEnabled" })
         assertTrue(einstellungen.any { it.name == "permissions.deny" })
 
-        val variablen = DokuParser.leseVariablen(einstellungenMarkdown)
+        val variablen = DokuParser.leseVariablen(variablenMarkdown)
         assertTrue(variablen.any { it.name == "ANTHROPIC_API_KEY" })
-        assertFalse(variablen.any { it.name == "autoCompactEnabled" })
+        assertTrue(variablen.any { it.name == "NO_COLOR" })
+    }
+
+    @Test
+    fun nimmtDieBeschreibungsSpalteUndNichtDieLetzte() {
+        val einstellungen = DokuParser.leseEinstellungen(einstellungenMarkdown)
+        val eintrag = einstellungen.first { it.name == "autoCompactEnabled" }
+        // Früher stand hier „Any file" — die letzte Spalte. Genau dieser Text ging danach als
+        // Erklärgrundlage ans Modell und galt zugleich als geänderte offizielle Beschreibung.
+        assertEquals("Turn automatic compaction off or on", eintrag.beschreibung)
+        assertEquals("Memory and context", eintrag.kategorie)
+        assertEquals("settings.json", eintrag.art)
+    }
+
+    @Test
+    fun liestNurDieUebersichtsTabelleUndNichtDieUnterfelder() {
+        val einstellungen = DokuParser.leseEinstellungen(einstellungenMarkdown)
+        // `Bash` und `commit` stehen in einer Unterfeld-Tabelle. Sie sind keine Einstellungen.
+        assertFalse(einstellungen.any { it.name == "Bash" })
+        assertFalse(einstellungen.any { it.name == "commit" })
+        assertEquals(2, einstellungen.size)
+    }
+
+    @Test
+    fun leitetDenAblageOrtAusDemGeltungsbereichAb() {
+        val einstellungen = DokuParser.leseEinstellungen(einstellungenMarkdown)
+        assertEquals(
+            "managed-settings.json",
+            einstellungen.first { it.name == "permissions.deny" }.art,
+        )
+    }
+
+    @Test
+    fun maskierteTrennstricheVerschiebenKeineSpalten() {
+        val markdown = """
+            | Command | Purpose |
+            | :------ | :------ |
+            | `/voice [hold\|tap\|off]` | Toggle voice dictation, or enable a specific mode |
+        """.trimIndent()
+        val gelesen = DokuParser.leseSlashBefehle(markdown)
+        assertEquals(1, gelesen.size)
+        // Ohne Rücksicht auf das maskierte `\|` stand hier früher „off]" als Beschreibung.
+        assertEquals("/voice", gelesen.first().name)
+        assertEquals("Toggle voice dictation, or enable a specific mode", gelesen.first().beschreibung)
+    }
+
+    @Test
+    fun tabelleOhnePassendenKopfLiefertNichts() {
+        val markdown = """
+            | Rule | What it matches |
+            | :--- | :-------------- |
+            | `Bash(git:*)` | Any git command |
+        """.trimIndent()
+        assertTrue(DokuParser.leseSlashBefehle(markdown).isEmpty())
+        assertTrue(DokuParser.leseEinstellungen(markdown).isEmpty())
+        assertTrue(DokuParser.leseVariablen(markdown).isEmpty())
     }
 
     @Test

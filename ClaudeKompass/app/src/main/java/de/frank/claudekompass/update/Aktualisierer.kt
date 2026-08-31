@@ -20,23 +20,46 @@ data class LaufFortschritt(
     val neuAnzahl: Int = 0,
     val entferntAnzahl: Int = 0,
     val geaendertAnzahl: Int = 0,
+    val geloeschtAnzahl: Int = 0,
+    val erklaertAnzahl: Int = 0,
+    /** Wie viele Einträge noch auf ihre deutsche Erklärung warten. */
+    val offeneErklaerungen: Int = 0,
+    val neueNamen: List<String> = emptyList(),
+    val entfernteNamen: List<String> = emptyList(),
+    val geaenderteNamen: List<String> = emptyList(),
+    val geloeschteNamen: List<String> = emptyList(),
     val gefundeneVersion: String = "",
     val fehler: String = "",
     val fertig: Boolean = false,
-)
+) {
+    /** Hat sich überhaupt etwas geändert? Entscheidet, ob der Bericht sich zu lesen lohnt. */
+    val hatAenderungen: Boolean
+        get() = neuAnzahl > 0 || entferntAnzahl > 0 || geaendertAnzahl > 0 ||
+            geloeschtAnzahl > 0 || erklaertAnzahl > 0
+}
 
 /**
  * Der Aktualisieren-Knopf.
  *
- * Der Ablauf in fünf Schritten:
+ * Der Ablauf:
  *  1. Die offiziellen Unterlagen und das Änderungsprotokoll holen.
  *  2. Namen und englische Beschreibungen daraus lesen — ohne Beteiligung des Modells, damit
  *     nichts erfunden und nichts übersehen wird.
- *  3. Mit dem Bestand vergleichen: Was ist neu, was ist verschwunden?
- *  4. Für jeden neuen Eintrag eine deutsche Erklärung erzeugen lassen; für jeden
- *     verschwundenen ermitteln, was seine Aufgabe übernommen hat.
- *  5. Einspielen. Neue Einträge tragen die Lauf-Nummer und werden dadurch hervorgehoben;
- *     die Markierungen des vorigen Laufs fallen weg.
+ *  3. Mit dem Bestand vergleichen: Was ist neu, was ist verschwunden, was hat einen neuen
+ *     offiziellen Text?
+ *  4. Die Unterschiede SOFORT einspielen — neue Einträge zunächst mit ihrem englischen Text.
+ *  5. Erst danach die deutschen Erklärungen einzeln nachziehen und jede einzeln speichern.
+ *
+ * Punkt vier und fünf sind die wichtigste Eigenschaft des Ablaufs. Früher lag alles bis zum
+ * Ende des Laufs im Arbeitsspeicher: Ein Abbruch oder ein Netzfehler nach zweihundert
+ * Erklärungen warf jede einzelne davon weg, und der nächste Lauf begann wieder bei null —
+ * dieselben Einträge, dieselben Kosten. Jetzt ist nach jeder Erklärung ein Stand gesichert,
+ * und ein neuer Lauf sammelt die Reste ein, statt sie noch einmal zu bezahlen.
+ *
+ * Erklärt wird ausschliesslich, was noch keine Erklärung hat. Ein Eintrag, der schon auf
+ * Deutsch dasteht, wird nie erneut ans Modell geschickt — auch dann nicht, wenn sich sein
+ * englischer Text geändert hat. Der neue Originaltext wird still nachgeführt; ausführlicher
+ * erklären lässt sich der Eintrag von Hand.
  *
  * Ohne Anmeldung bei Codex läuft der Abgleich trotzdem: Neue Einträge kommen dann mit ihrer
  * englischen Beschreibung herein und lassen sich später einzeln erklären. Ein fehlender
@@ -50,7 +73,13 @@ class Aktualisierer(
 
     private val abruf = DokuAbruf()
 
-    suspend fun fuehreAus(melde: suspend (LaufFortschritt) -> Unit) {
+    /**
+     * Führt einen vollständigen Abgleich aus.
+     *
+     * @param erklaereAlles Übergeht die Rückfrage bei sehr vielen neuen Einträgen. Der Knopf
+     *   „Alle jetzt erklären" im Bericht setzt das.
+     */
+    suspend fun fuehreAus(erklaereAlles: Boolean = false, melde: suspend (LaufFortschritt) -> Unit) {
         val laufId = repository.starteLauf()
         var stand = LaufFortschritt(laeuft = true, schritt = "Unterlagen werden geholt")
         melde(stand)
@@ -85,32 +114,43 @@ class Aktualisierer(
             // --- Schritt 2: auswerten -----------------------------------------------------
             stand = stand.copy(schritt = "Unterlagen werden ausgewertet")
             melde(stand)
-            val gelesen = buildMap<Bereich, List<GelesenerEintrag>> {
-                put(Bereich.SLASH, DokuParser.leseSlashBefehle(befehleMd))
-                put(
-                    Bereich.CONFIG,
-                    DokuParser.leseEinstellungen(einstellungenMd) +
-                        if (variablenMd.isBlank()) emptyList() else DokuParser.leseVariablen(variablenMd),
+
+            val slashGelesen = DokuParser.leseSlashBefehle(befehleMd)
+            val settingsGelesen = DokuParser.leseEinstellungen(einstellungenMd)
+            val variablenGelesen =
+                if (variablenMd.isBlank()) emptyList() else DokuParser.leseVariablen(variablenMd)
+
+            // Eine leere Ausbeute heisst fast sicher: Die Seite hat ihre Form geändert. Dann
+            // gälte JEDER vorhandene Eintrag dieser Art als verschwunden — ein stiller
+            // Totalschaden. Die Grenze gilt bewusst je Quelle: Eine gesunde Variablenliste
+            // darf eine kaputte Befehlsliste nicht überdecken.
+            pruefeAusbeute("Slash-Befehle", slashGelesen.size, MINDEST_SLASH)
+            pruefeAusbeute("Einstellungen", settingsGelesen.size, MINDEST_EINSTELLUNGEN)
+
+            // Kommen zu wenige Variablen zurück, werden sie behandelt wie eine ausgefallene
+            // Liste: übersprungen. Sie deshalb alle als entfernt zu führen wäre falsch.
+            val variablenBrauchbar = variablenGelesen.size >= MINDEST_VARIABLEN
+            if (variablenGelesen.isNotEmpty() && !variablenBrauchbar) {
+                KompassLog.warn(
+                    "Aktualisierer",
+                    "fuehreAus",
+                    "Zu wenige Umgebungsvariablen gelesen — sie bleiben in diesem Lauf aussen vor",
+                    mapOf("anzahl" to variablenGelesen.size),
                 )
             }
 
-            // Eine leere Ausbeute heisst fast sicher: Die Seite hat ihre Form geändert. Dann
-            // gälte JEDER vorhandene Eintrag als verschwunden — das wäre ein stiller Totalschaden.
-            // Deshalb wird hier abgebrochen, statt den Bestand zu leeren.
-            val gesamtGelesen = gelesen.values.sumOf { it.size }
-            if (gesamtGelesen < MINDEST_GELESEN) {
-                throw DokuFehler(
-                    "Aus den Unterlagen kamen nur $gesamtGelesen Einträge zurück. Das ist zu " +
-                        "wenig — wahrscheinlich hat sich der Aufbau der Seiten geändert. " +
-                        "Es wurde nichts verändert.",
-                )
-            }
+            val gelesen = mapOf(
+                Bereich.SLASH to slashGelesen,
+                Bereich.CONFIG to settingsGelesen + if (variablenBrauchbar) variablenGelesen else emptyList(),
+            )
 
             // --- Schritt 3: vergleichen ---------------------------------------------------
             val bestand = repository.ladeKomplett()
+            val seedKennungen = repository.seedKennungen()
             val neueRoh = mutableListOf<RohEintrag>()
             val geaenderte = mutableListOf<EintragEntity>()
             val verschwundene = mutableListOf<EintragEntity>()
+            val erfundene = mutableListOf<EintragEntity>()
 
             for ((bereich, liste) in gelesen) {
                 val bekannt = bestand.filter { it.bereich == bereich.id }.associateBy { it.name }
@@ -127,10 +167,12 @@ class Aktualisierer(
                         neueRoh += RohEintrag(
                             bereich = bereich,
                             name = eintrag.name,
-                            kategorie = "Neu dazugekommen",
+                            kategorie = eintrag.kategorie.ifBlank { "Neu dazugekommen" },
                             art = eintrag.art.ifBlank { if (bereich == Bereich.SLASH) "Eingebaut" else "settings.json" },
                             kurz = eintrag.beschreibung.take(140),
                             englisch = eintrag.beschreibung,
+                            // Bleibt leer: Genau daran erkennt der nächste Schritt, dass hier
+                            // noch eine deutsche Erklärung fehlt.
                             erklaerung = "",
                             seit = seit,
                             seitBeleg = beleg,
@@ -152,6 +194,7 @@ class Aktualisierer(
                     ) {
                         // Die offizielle Beschreibung hat sich geändert. Die eigene deutsche
                         // Erklärung bleibt unangetastet — sie kann per Knopf vertieft werden.
+                        // Das ist der Grund, warum ein Lauf keine Erklärungen wiederholt.
                         geaenderte += vorhanden.copy(
                             quelleEnglisch = eintrag.beschreibung,
                             zuletztGeaendert = System.currentTimeMillis(),
@@ -159,13 +202,21 @@ class Aktualisierer(
                     }
                 }
 
-                verschwundene += bekannt.values.filter { vorhanden ->
+                val fehlend = bekannt.values.filter { vorhanden ->
                     !vorhanden.entfernt &&
                         vorhanden.name !in gelesenNamen &&
                         // Umgebungsvariablen stehen nicht in der Einstellungsliste. Ohne diese
                         // Ausnahme gälten sie bei jedem Lauf als verschwunden.
-                        !(variablenMd.isBlank() && vorhanden.art == "Umgebungsvariable")
+                        !(!variablenBrauchbar && vorhanden.art == "Umgebungsvariable")
                 }
+
+                // Ein fehlender Eintrag, den es in der Auslieferung nie gab, stammt aus einem
+                // früheren, fehlerhaften Lauf — ein Auswertungsfehler hat ihn erfunden. Ihn als
+                // „entfernt" zu führen, würde im Klapp-Bereich dauerhaft Unsinn behaupten und
+                // obendrein für jeden dieser Namen eine Nachfolgersuche kosten.
+                val (echtVerschwunden, nieDagewesen) = fehlend.partition { it.id in seedKennungen }
+                verschwundene += echtVerschwunden
+                erfundene += nieDagewesen
             }
 
             stand = stand.copy(
@@ -173,6 +224,11 @@ class Aktualisierer(
                 neuAnzahl = neueRoh.size,
                 entferntAnzahl = verschwundene.size,
                 geaendertAnzahl = geaenderte.size,
+                geloeschtAnzahl = erfundene.size,
+                neueNamen = neueRoh.map { it.name },
+                entfernteNamen = verschwundene.map { it.name },
+                geaenderteNamen = geaenderte.map { it.name },
+                geloeschteNamen = erfundene.map { it.name },
                 gesamt = neueRoh.size + verschwundene.size,
             )
             melde(stand)
@@ -185,62 +241,90 @@ class Aktualisierer(
                     "neu" to neueRoh.size,
                     "verschwunden" to verschwundene.size,
                     "geaendert" to geaenderte.size,
+                    "erfunden" to erfundene.size,
                 ),
             )
 
-            // --- Schritt 4: erklären lassen ----------------------------------------------
+            // --- Schritt 4: Unterschiede sofort sichern -----------------------------------
+            stand = stand.copy(schritt = "Änderungen werden eingespielt")
+            melde(stand)
+            repository.spieleNeueEin(laufId, neueRoh)
+            geaenderte.forEach { repository.sichereEintrag(it) }
+            repository.loescheEintraege(erfundene.map { it.id })
+            repository.raeumeNeuMarkierungen(laufId)
+
+            // Verschwundene einzeln: die Nachfolgersuche fragt das Modell, und auch dieses
+            // Ergebnis soll einen Abbruch überleben.
             val namensliste = Prompts.namensliste(bestand)
-            val fertigeNeue = mutableListOf<RohEintrag>()
             var erledigt = 0
-
-            for (roh in neueRoh) {
-                stand = stand.copy(
-                    schritt = "Neuer Eintrag wird erklärt: ${roh.name}",
-                    erledigt = erledigt,
-                )
-                melde(stand)
-                fertigeNeue += erklaereNeuen(roh)
-                erledigt += 1
-            }
-
             for (verschwunden in verschwundene) {
                 stand = stand.copy(
                     schritt = "Nachfolger wird gesucht: ${verschwunden.name}",
                     erledigt = erledigt,
                 )
                 melde(stand)
-                geaenderte += markiereAlsEntfernt(verschwunden, version, namensliste)
+                repository.sichereEintrag(markiereAlsEntfernt(verschwunden, version, namensliste))
                 erledigt += 1
             }
 
-            // --- Schritt 5: einspielen ---------------------------------------------------
-            stand = stand.copy(schritt = "Änderungen werden eingespielt", erledigt = erledigt)
-            melde(stand)
-            repository.spieleLaufEin(laufId, fertigeNeue, geaenderte)
+            // --- Schritt 5: fehlende Erklärungen nachziehen -------------------------------
+            val offene = repository.ladeUnerklaerte()
+            if (offene.isEmpty() || !codex.istVerbunden) {
+                if (offene.isNotEmpty()) {
+                    KompassLog.info(
+                        "Aktualisierer",
+                        "fuehreAus",
+                        "Keine Anmeldung bei Codex — Erklärungen bleiben offen",
+                        mapOf("offen" to offene.size),
+                    )
+                }
+                schliesseAb(laufId, version, stand.copy(offeneErklaerungen = offene.size), melde)
+                return
+            }
 
-            val lauf = repository.ladeLauf(laufId)
-            if (lauf != null) {
+            // Bei sehr vielen offenen Erklärungen wird nicht einfach losgelegt: Jede einzelne
+            // ist eine Anfrage an das Modell. Wer 400 neue Einträge geschenkt bekommt, soll
+            // vorher wissen, was das kostet, statt es hinterher an der Abrechnung zu merken.
+            if (offene.size > SCHWELLE_RUECKFRAGE && !erklaereAlles) {
+                KompassLog.info(
+                    "Aktualisierer",
+                    "fuehreAus",
+                    "Viele offene Erklärungen — es wird nachgefragt",
+                    mapOf("offen" to offene.size),
+                )
+                schliesseAb(laufId, version, stand.copy(offeneErklaerungen = offene.size), melde)
+                return
+            }
+
+            val erklaert = erklaereListe(offene) { neuerStand ->
+                stand = stand.copy(
+                    schritt = neuerStand.schritt,
+                    erledigt = neuerStand.erledigt,
+                    gesamt = neuerStand.gesamt,
+                    erklaertAnzahl = neuerStand.erklaertAnzahl,
+                )
+                melde(stand)
+            }
+            schliesseAb(
+                laufId,
+                version,
+                stand.copy(
+                    erklaertAnzahl = erklaert,
+                    offeneErklaerungen = repository.anzahlUnerklaerte(),
+                ),
+                melde,
+            )
+        } catch (abbruch: CancellationException) {
+            // Der Abbrechen-Knopf soll keinen Lauf-Datensatz auf „läuft" stehen lassen.
+            repository.ladeLauf(laufId)?.let {
                 repository.beendeLauf(
-                    lauf.copy(
+                    it.copy(
                         beendetAm = System.currentTimeMillis(),
-                        cliVersion = version,
-                        neuAnzahl = fertigeNeue.size,
-                        entferntAnzahl = verschwundene.size,
-                        geaendertAnzahl = geaenderte.size,
-                        status = "fertig",
-                        meldung = baueMeldung(fertigeNeue.size, verschwundene.size, geaenderte.size),
+                        status = "abgebrochen",
+                        meldung = "Abgebrochen. Was bis dahin eingespielt wurde, ist gespeichert.",
                     ),
                 )
             }
-            melde(
-                stand.copy(
-                    laeuft = false,
-                    fertig = true,
-                    schritt = baueMeldung(fertigeNeue.size, verschwundene.size, geaenderte.size),
-                    neuAnzahl = fertigeNeue.size,
-                ),
-            )
-        } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
             val text = fehler.message ?: "Die Aktualisierung ist fehlgeschlagen."
@@ -254,52 +338,154 @@ class Aktualisierer(
         }
     }
 
-    /** Lässt einen neuen Eintrag erklären. Ohne Zugang bleibt die englische Fassung stehen. */
-    private suspend fun erklaereNeuen(roh: RohEintrag): RohEintrag {
-        if (!codex.istVerbunden) {
-            return roh.copy(
-                erklaerung = "Dieser Eintrag ist neu dazugekommen. Eine deutsche Erklärung fehlt " +
-                    "noch, weil keine Verbindung zu Codex besteht.\n\n" +
-                    "Die offizielle englische Beschreibung lautet:\n${roh.englisch}\n\n" +
-                    "Meld dich in den Einstellungen bei Codex an und tipp dann auf " +
-                    "„Ausführlicher“ — die Erklärung wird dann nachgeholt.",
-            )
-        }
-        return try {
-            val antwort = codex.frage(
-                anweisung = Prompts.neuerEintragAnweisung(roh.bereich.id),
-                eingabe = Prompts.neuerEintragEingabe(roh.name, roh.englisch, roh.seit),
-                modellId = einstellungen.modellId,
-                denktiefe = einstellungen.denktiefe.apiValue,
-            )
-            val json = Prompts.leseJsonObjekt(antwort)
-            if (json == null) {
-                KompassLog.warn(
-                    "Aktualisierer",
-                    "erklaereNeuen",
-                    "Die Antwort war kein gültiges JSON — englische Fassung bleibt stehen",
-                    mapOf("name" to roh.name),
+    /**
+     * Holt die offenen Erklärungen nach, ohne die Unterlagen erneut abzugleichen.
+     *
+     * Das ist der zweite Weg in die Erklär-Schleife: der Knopf im Bericht, wenn beim Lauf
+     * sehr viele neue Einträge zusammenkamen und der Benutzer entscheiden sollte.
+     */
+    suspend fun erklaereOffene(melde: suspend (LaufFortschritt) -> Unit) {
+        var stand = LaufFortschritt(laeuft = true, schritt = "Offene Erklärungen werden geholt")
+        melde(stand)
+        try {
+            if (!codex.istVerbunden) {
+                melde(
+                    stand.copy(
+                        laeuft = false,
+                        fehler = "Dafür braucht es die Anmeldung bei Codex. Du findest sie in " +
+                            "den Einstellungen.",
+                    ),
                 )
-                return roh.copy(erklaerung = roh.englisch)
+                return
             }
-            roh.copy(
-                kurz = json.optString("kurz").takeIf(String::isNotBlank) ?: roh.kurz,
-                kategorie = json.optString("kategorie").takeIf(String::isNotBlank) ?: roh.kategorie,
-                erklaerung = json.optString("erklaerung").takeIf(String::isNotBlank) ?: roh.englisch,
+            val offene = repository.ladeUnerklaerte()
+            if (offene.isEmpty()) {
+                melde(
+                    LaufFortschritt(
+                        laeuft = false,
+                        fertig = true,
+                        schritt = "Es war nichts mehr offen — alle Einträge sind auf Deutsch erklärt.",
+                    ),
+                )
+                return
+            }
+            val erklaert = erklaereListe(offene) { neuerStand ->
+                stand = neuerStand
+                melde(stand)
+            }
+            val restlich = repository.anzahlUnerklaerte()
+            melde(
+                LaufFortschritt(
+                    laeuft = false,
+                    fertig = true,
+                    erklaertAnzahl = erklaert,
+                    offeneErklaerungen = restlich,
+                    schritt = if (restlich == 0) {
+                        "Fertig: ${zaehle(erklaert, "Erklärung", "Erklärungen")} nachgeholt."
+                    } else {
+                        "Fertig: ${zaehle(erklaert, "Erklärung", "Erklärungen")} nachgeholt, " +
+                            "$restlich noch offen."
+                    },
+                ),
             )
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
-            // Ein einzelner missglückter Eintrag darf den Lauf nicht abbrechen. Er kommt mit
-            // seiner englischen Beschreibung herein und lässt sich später nachholen.
+            val text = fehler.message ?: "Die Erklärungen konnten nicht geholt werden."
+            KompassLog.error("Aktualisierer", "erklaereOffene", "Nachholen abgebrochen", mapOf("grund" to text))
+            melde(stand.copy(laeuft = false, fehler = text))
+        }
+    }
+
+    /**
+     * Erklärt eine Liste von Einträgen und speichert jeden einzeln.
+     *
+     * Gibt zurück, wie viele wirklich eine deutsche Erklärung bekommen haben. Reisst die
+     * Verbindung ab, hört die Schleife auf, statt hundertmal in denselben Fehler zu laufen —
+     * das Bisherige ist dann gespeichert und der nächste Anlauf macht dort weiter.
+     */
+    private suspend fun erklaereListe(
+        offene: List<EintragEntity>,
+        melde: suspend (LaufFortschritt) -> Unit,
+    ): Int {
+        var erklaert = 0
+        var fehlerInFolge = 0
+        for ((index, eintrag) in offene.withIndex()) {
+            melde(
+                LaufFortschritt(
+                    laeuft = true,
+                    schritt = "Wird erklärt: ${eintrag.name}",
+                    erledigt = index,
+                    gesamt = offene.size,
+                    erklaertAnzahl = erklaert,
+                ),
+            )
+            val text = erklaereEinen(eintrag)
+            if (text == null) {
+                fehlerInFolge += 1
+                if (fehlerInFolge >= ABBRUCH_NACH_FEHLERN) {
+                    KompassLog.warn(
+                        "Aktualisierer",
+                        "erklaereListe",
+                        "Zu viele Fehlschläge hintereinander — die Schleife hört auf",
+                        mapOf("erklaert" to erklaert, "offen" to (offene.size - index)),
+                    )
+                    break
+                }
+                continue
+            }
+            fehlerInFolge = 0
+            repository.sichereEintrag(text)
+            erklaert += 1
+        }
+        return erklaert
+    }
+
+    /**
+     * Lässt einen Eintrag erklären. Gibt `null` zurück, wenn es nicht geklappt hat — dann
+     * bleibt die Erklärung leer und der Eintrag steht beim nächsten Mal wieder in der Schlange.
+     */
+    private suspend fun erklaereEinen(eintrag: EintragEntity): EintragEntity? = try {
+        val antwort = codex.frage(
+            anweisung = Prompts.neuerEintragAnweisung(eintrag.bereich),
+            eingabe = Prompts.neuerEintragEingabe(
+                eintrag.name,
+                eintrag.quelleEnglisch,
+                eintrag.seitVersion,
+            ),
+            modellId = einstellungen.modellId,
+            denktiefe = einstellungen.denktiefe.apiValue,
+        )
+        val json = Prompts.leseJsonObjekt(antwort)
+        val erklaerung = json?.optString("erklaerung").orEmpty()
+        if (erklaerung.isBlank()) {
             KompassLog.warn(
                 "Aktualisierer",
-                "erklaereNeuen",
-                "Erklärung fehlgeschlagen, englische Fassung bleibt stehen",
-                mapOf("name" to roh.name, "grund" to fehler.message),
+                "erklaereEinen",
+                "Die Antwort enthielt keine Erklärung",
+                mapOf("name" to eintrag.name),
             )
-            roh.copy(erklaerung = roh.englisch)
+            null
+        } else {
+            eintrag.copy(
+                kurz = json?.optString("kurz")?.takeIf(String::isNotBlank) ?: eintrag.kurz,
+                kategorie = json?.optString("kategorie")?.takeIf(String::isNotBlank) ?: eintrag.kategorie,
+                erklaerung = erklaerung,
+                zuletztGeaendert = System.currentTimeMillis(),
+            )
         }
+    } catch (abbruch: CancellationException) {
+        throw abbruch
+    } catch (fehler: Exception) {
+        // Ein einzelner missglückter Eintrag darf den Lauf nicht abbrechen. Er behält seine
+        // englische Beschreibung und kommt beim nächsten Anlauf wieder dran.
+        KompassLog.warn(
+            "Aktualisierer",
+            "erklaereEinen",
+            "Erklärung fehlgeschlagen, englische Fassung bleibt stehen",
+            mapOf("name" to eintrag.name, "grund" to fehler.message),
+        )
+        null
     }
 
     private suspend fun markiereAlsEntfernt(
@@ -341,27 +527,98 @@ class Aktualisierer(
         }
     }
 
-    private fun baueMeldung(neu: Int, weg: Int, geaendert: Int): String = when {
-        neu == 0 && weg == 0 && geaendert == 0 -> "Alles war schon auf dem neuesten Stand."
-        else -> buildString {
-            append("Fertig: ")
-            append(if (neu == 1) "1 neuer Eintrag" else "$neu neue Einträge")
-            append(", ")
-            append(if (weg == 1) "1 entfernter" else "$weg entfernte")
-            append(", ")
-            append(if (geaendert == 1) "1 geänderter" else "$geaendert geänderte")
-            append('.')
+    /** Schreibt den Lauf-Datensatz fest und meldet den fertigen Bericht an die Oberfläche. */
+    private suspend fun schliesseAb(
+        laufId: Long,
+        version: String,
+        stand: LaufFortschritt,
+        melde: suspend (LaufFortschritt) -> Unit,
+    ) {
+        val meldung = baueMeldung(stand)
+        repository.ladeLauf(laufId)?.let {
+            repository.beendeLauf(
+                it.copy(
+                    beendetAm = System.currentTimeMillis(),
+                    cliVersion = version,
+                    neuAnzahl = stand.neuAnzahl,
+                    entferntAnzahl = stand.entferntAnzahl,
+                    geaendertAnzahl = stand.geaendertAnzahl,
+                    status = "fertig",
+                    meldung = meldung,
+                ),
+            )
         }
+        melde(stand.copy(laeuft = false, fertig = true, schritt = meldung))
+    }
+
+    /**
+     * Die Zusammenfassung in einem Satz.
+     *
+     * Die Namen selbst stehen im Bericht, den die Oberfläche daneben zeigt — hier steht nur,
+     * wie viel wovon. Ein Lauf ohne Fund sagt das ausdrücklich, statt kommentarlos zu enden.
+     */
+    private fun baueMeldung(stand: LaufFortschritt): String {
+        val teile = buildList {
+            if (stand.neuAnzahl > 0) add(zaehle(stand.neuAnzahl, "neuer Eintrag", "neue Einträge"))
+            if (stand.entferntAnzahl > 0) {
+                add(zaehle(stand.entferntAnzahl, "entfernter Eintrag", "entfernte Einträge"))
+            }
+            if (stand.geaendertAnzahl > 0) {
+                add(zaehle(stand.geaendertAnzahl, "geänderte Beschreibung", "geänderte Beschreibungen"))
+            }
+            if (stand.geloeschtAnzahl > 0) {
+                add(zaehle(stand.geloeschtAnzahl, "Fehleintrag bereinigt", "Fehleinträge bereinigt"))
+            }
+            if (stand.erklaertAnzahl > 0) {
+                add(zaehle(stand.erklaertAnzahl, "Erklärung geschrieben", "Erklärungen geschrieben"))
+            }
+        }
+        val kern = if (teile.isEmpty()) {
+            "Alles war schon auf dem neuesten Stand."
+        } else {
+            "Fertig: " + teile.joinToString(", ") + "."
+        }
+        return if (stand.offeneErklaerungen > 0) {
+            "$kern Es warten noch ${stand.offeneErklaerungen} Einträge auf ihre deutsche Erklärung."
+        } else {
+            kern
+        }
+    }
+
+    private fun zaehle(anzahl: Int, einzahl: String, mehrzahl: String): String =
+        if (anzahl == 1) "1 $einzahl" else "$anzahl $mehrzahl"
+
+    private fun pruefeAusbeute(was: String, anzahl: Int, grenze: Int) {
+        if (anzahl >= grenze) return
+        throw DokuFehler(
+            "Aus den Unterlagen kamen nur $anzahl Einträge für „$was“ zurück. Das ist zu " +
+                "wenig — wahrscheinlich hat sich der Aufbau der Seiten geändert. Es wurde " +
+                "nichts verändert.",
+        )
     }
 
     fun beende() = abruf.beende()
 
     private companion object {
         /**
-         * Weniger als das kann keine echte Auskunft sein — Claude Code hat weit über hundert
-         * Befehle und Einstellungen. Diese Untergrenze ist die Sicherung gegen einen stillen
-         * Totalschaden, wenn sich der Aufbau der Doku-Seiten ändert.
+         * Weniger als das kann keine echte Auskunft sein. Diese Untergrenzen sind die
+         * Sicherung gegen einen stillen Totalschaden, wenn sich der Aufbau der Doku-Seiten
+         * ändert — und sie gelten je Quelle, damit eine gesunde Liste eine kaputte nicht
+         * überdeckt.
          */
-        const val MINDEST_GELESEN = 40
+        const val MINDEST_SLASH = 40
+        const val MINDEST_EINSTELLUNGEN = 40
+        const val MINDEST_VARIABLEN = 20
+
+        /**
+         * Ab so vielen offenen Erklärungen wird gefragt, statt losgelegt.
+         *
+         * Jede Erklärung ist eine Anfrage an das Modell. Ein Lauf, der vierhundert davon still
+         * abarbeitet, ist die Art Überraschung, die man erst an der Abrechnung bemerkt.
+         */
+        const val SCHWELLE_RUECKFRAGE = 40
+
+        /** So viele Fehlschläge hintereinander gelten als „die Verbindung ist weg". */
+        const val ABBRUCH_NACH_FEHLERN = 5
     }
 }

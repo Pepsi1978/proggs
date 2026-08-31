@@ -317,11 +317,24 @@ private fun EintragKarte(
                 )
                 Spacer(Modifier.height(Mass.abstand))
 
-                Text(
-                    text = eintrag.erklaerung,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                if (eintrag.erklaerung.isBlank()) {
+                    // Ein Eintrag ohne deutsche Erklärung ist kein Fehler, sondern ein
+                    // Zwischenstand: Er kam bei der letzten Aktualisierung neu herein und
+                    // wartet auf seine Erklärung. Ihn hier leer zu lassen, sähe nach einem
+                    // kaputten Eintrag aus — deshalb steht hier, woran es liegt und was hilft.
+                    Text(
+                        text = "Dieser Eintrag ist neu dazugekommen und steht bisher nur auf " +
+                            "Englisch da. Tipp auf „Mehr“, dann wird er auf Deutsch erklärt.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = farben.textGedaempft,
+                    )
+                } else {
+                    Text(
+                        text = eintrag.erklaerung,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
 
                 if (eintrag.entfernt && eintrag.ersatz.isNotBlank()) {
                     Spacer(Modifier.height(Mass.abstand))

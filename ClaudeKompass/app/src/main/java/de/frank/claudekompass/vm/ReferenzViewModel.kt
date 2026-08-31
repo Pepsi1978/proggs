@@ -254,17 +254,49 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
             return
         }
         arbeitetAn.value = arbeitetAn.value + eintrag.id
+        // Ein Eintrag ohne deutsche Erklärung braucht zuerst eine Grundfassung, keine
+        // Vertiefung. Ihn durch die Vertiefen-Anweisung zu schicken hiesse, das Modell zu
+        // bitten, einen leeren Text ausführlicher zu machen — und die Stufe stünde danach auf
+        // eins, obwohl es die erste Fassung ist.
+        val brauchtGrundfassung = eintrag.erklaerung.isBlank()
         viewModelScope.launch {
             try {
                 val antwort = container.codex.frage(
-                    anweisung = Prompts.vertiefeAnweisung(eintrag.stufe),
-                    eingabe = Prompts.vertiefeEingabe(eintrag),
+                    anweisung = if (brauchtGrundfassung) {
+                        Prompts.neuerEintragAnweisung(eintrag.bereich)
+                    } else {
+                        Prompts.vertiefeAnweisung(eintrag.stufe)
+                    },
+                    eingabe = if (brauchtGrundfassung) {
+                        Prompts.neuerEintragEingabe(
+                            eintrag.name,
+                            eintrag.quelleEnglisch,
+                            eintrag.seitVersion,
+                        )
+                    } else {
+                        Prompts.vertiefeEingabe(eintrag)
+                    },
                     modellId = container.einstellungen.modellId,
                     denktiefe = container.einstellungen.denktiefe.apiValue,
                 )
                 val geputzt = antwort.trim()
                 if (geputzt.isBlank()) {
                     fehler.value = "Es kam keine ausführlichere Fassung zurück. Versuch es noch einmal."
+                    return@launch
+                }
+                if (brauchtGrundfassung) {
+                    val json = Prompts.leseJsonObjekt(geputzt)
+                    val erklaerung = json?.optString("erklaerung")?.takeIf(String::isNotBlank) ?: geputzt
+                    repository.sichereEintrag(
+                        eintrag.copy(
+                            kurz = json?.optString("kurz")?.takeIf(String::isNotBlank) ?: eintrag.kurz,
+                            kategorie = json?.optString("kategorie")?.takeIf(String::isNotBlank)
+                                ?: eintrag.kategorie,
+                            erklaerung = erklaerung,
+                            zuletztGeaendert = System.currentTimeMillis(),
+                        ),
+                    )
+                    meldungen.value = "Die deutsche Erklärung steht jetzt da."
                     return@launch
                 }
                 repository.vertiefeErklaerung(eintrag.id, geputzt)
@@ -338,10 +370,23 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
 
     // --- Aktualisieren ----------------------------------------------------------------------
 
-    fun aktualisiere() {
+    fun aktualisiere(erklaereAlles: Boolean = false) {
         if (_lauf.value.laeuft) return
         laufJob = viewModelScope.launch {
-            container.aktualisierer.fuehreAus { fortschritt -> _lauf.value = fortschritt }
+            container.aktualisierer.fuehreAus(erklaereAlles) { fortschritt -> _lauf.value = fortschritt }
+        }
+    }
+
+    /**
+     * Holt die offenen Erklärungen nach, ohne die Unterlagen erneut zu vergleichen.
+     *
+     * Der Weg dorthin ist der Knopf im Bericht: Kommen aus einer neuen Fassung sehr viele
+     * Einträge auf einmal, wird nicht ungefragt für jeden eine Anfrage an das Modell gestellt.
+     */
+    fun holeOffeneErklaerungen() {
+        if (_lauf.value.laeuft) return
+        laufJob = viewModelScope.launch {
+            container.aktualisierer.erklaereOffene { fortschritt -> _lauf.value = fortschritt }
         }
     }
 

@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.map
  */
 class KompassRepository(context: Context) {
 
+    private val appContext = context.applicationContext
     private val datenbank = KompassDatabase.hole(context)
     private val eintraege = datenbank.eintragDao()
     private val erklaerungen = datenbank.erklaerungDao()
@@ -77,6 +78,45 @@ class KompassRepository(context: Context) {
     suspend fun ladeAlle(bereich: Bereich): List<EintragEntity> = eintraege.ladeAlle(bereich.id)
 
     suspend fun ladeKomplett(): List<EintragEntity> = eintraege.ladeKomplett()
+
+    /** Alle Einträge, deren deutsche Erklärung noch aussteht. */
+    suspend fun ladeUnerklaerte(): List<EintragEntity> = eintraege.ladeUnerklaerte()
+
+    suspend fun anzahlUnerklaerte(): Int = eintraege.anzahlUnerklaerte()
+
+    /** Schreibt einen einzelnen Eintrag zurueck und zieht den Suchindex mit. */
+    suspend fun sichereEintrag(eintrag: EintragEntity) {
+        eintraege.aktualisiere(eintrag)
+        indiziereEintraege(listOf(eintrag))
+    }
+
+    /**
+     * Löscht Einträge endgültig und räumt den Suchindex mit auf.
+     *
+     * Gedacht für Namen, die ein früherer, fehlerhafter Lauf erfunden hat.
+     */
+    suspend fun loescheEintraege(ids: List<String>) {
+        if (ids.isEmpty()) return
+        eintraege.loesche(ids)
+        ids.forEach { suche.entferne(it, ART_EINTRAG) }
+        KompassLog.info("Repository", "loescheEintraege", "Einträge entfernt", mapOf("anzahl" to ids.size))
+    }
+
+    /**
+     * Die Kennungen aus der mitgelieferten Wissensbasis.
+     *
+     * Sie beantworten die Frage „Stand dieser Eintrag schon in der Auslieferung?". Nur wer das
+     * weiss, kann einen erfundenen Eintrag aus einem früheren Lauf von einem echten
+     * unterscheiden, der aus Claude Code entfernt wurde.
+     */
+    fun seedKennungen(): Set<String> = zwischengespeicherteSeedKennungen ?: run {
+        val kennungen = SeedLader.ladeAlles(appContext).map { it.id }.toSet()
+        zwischengespeicherteSeedKennungen = kennungen
+        kennungen
+    }
+
+    @Volatile
+    private var zwischengespeicherteSeedKennungen: Set<String>? = null
 
     /**
      * Ersetzt die Erklärung durch eine ausführlichere und hebt die alte für den Zurück-Pfeil auf.
@@ -226,6 +266,24 @@ class KompassRepository(context: Context) {
         eintraege.entferneAlteNeuMarkierungen(laufId)
         indiziereEintraege(neue.map { it.zuEntity(laufId) } + geaenderte)
     }
+
+    /**
+     * Spielt die frisch gefundenen Einträge ein, noch bevor sie erklärt sind.
+     *
+     * Das ist die entscheidende Reihenfolge: Erst sind die Namen sicher in der Datenbank, dann
+     * werden die Erklärungen einzeln nachgezogen. Vorher lag alles bis zum Ende des Laufs im
+     * Arbeitsspeicher — ein Abbruch oder ein Netzfehler nach zweihundert Erklärungen warf jede
+     * einzelne davon weg, und der nächste Lauf fing wieder bei null an.
+     */
+    suspend fun spieleNeueEin(laufId: Long, neue: List<RohEintrag>) {
+        if (neue.isEmpty()) return
+        val entitaeten = neue.map { it.zuEntity(neuImLauf = laufId) }
+        eintraege.setze(entitaeten)
+        indiziereEintraege(entitaeten)
+    }
+
+    /** Nimmt die Hervorhebung von allem, was nicht aus dem laufenden Durchgang stammt. */
+    suspend fun raeumeNeuMarkierungen(laufId: Long) = eintraege.entferneAlteNeuMarkierungen(laufId)
 
     // --- Suche ----------------------------------------------------------------------------
 
