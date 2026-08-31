@@ -10,6 +10,8 @@ import de.frank.claudekompass.data.model.Bereich
 import de.frank.claudekompass.observability.KompassLog
 import de.frank.claudekompass.observability.probe
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 /** Zwischenstand, den die Oberfläche während des Laufs anzeigt. */
 data class LaufFortschritt(
@@ -147,6 +149,7 @@ class Aktualisierer(
             // --- Schritt 3: vergleichen ---------------------------------------------------
             val bestand = repository.ladeKomplett()
             val seedKennungen = repository.seedKennungen()
+            val bereinigeAltlasten = !einstellungen.altlastenBereinigt
             val neueRoh = mutableListOf<RohEintrag>()
             val geaenderte = mutableListOf<EintragEntity>()
             val verschwundene = mutableListOf<EintragEntity>()
@@ -210,13 +213,22 @@ class Aktualisierer(
                         !(!variablenBrauchbar && vorhanden.art == "Umgebungsvariable")
                 }
 
-                // Ein fehlender Eintrag, den es in der Auslieferung nie gab, stammt aus einem
-                // früheren, fehlerhaften Lauf — ein Auswertungsfehler hat ihn erfunden. Ihn als
-                // „entfernt" zu führen, würde im Klapp-Bereich dauerhaft Unsinn behaupten und
-                // obendrein für jeden dieser Namen eine Nachfolgersuche kosten.
-                val (echtVerschwunden, nieDagewesen) = fehlend.partition { it.id in seedKennungen }
-                verschwundene += echtVerschwunden
-                erfundene += nieDagewesen
+                // Beim allerersten Lauf nach dem Auswertungsfehler wird aufgeräumt: Ein
+                // fehlender Eintrag, den es in der Auslieferung nie gab, wurde damals erfunden.
+                // Ihn als entfernt zu führen, würde im Klapp-Bereich dauerhaft Unsinn behaupten
+                // und obendrein für jeden dieser Namen eine Nachfolgersuche kosten.
+                //
+                // Danach gilt die Regel NICHT mehr. Sonst würde jeder Eintrag, der nach der
+                // Auslieferung dazukam und später aus Claude Code verschwindet, stillschweigend
+                // gelöscht statt aufgehoben — der Bereich „Entfernte Einträge" wäre für alles
+                // Neuere blind.
+                if (bereinigeAltlasten) {
+                    val (echtVerschwunden, nieDagewesen) = fehlend.partition { it.id in seedKennungen }
+                    verschwundene += echtVerschwunden
+                    erfundene += nieDagewesen
+                } else {
+                    verschwundene += fehlend
+                }
             }
 
             stand = stand.copy(
@@ -253,9 +265,18 @@ class Aktualisierer(
             repository.loescheEintraege(erfundene.map { it.id })
             repository.raeumeNeuMarkierungen(laufId)
 
+            if (bereinigeAltlasten) {
+                repariereVergifteteErklaerungen(bestand, seedKennungen)
+                einstellungen.altlastenBereinigt = true
+            }
+
             // Verschwundene einzeln: die Nachfolgersuche fragt das Modell, und auch dieses
             // Ergebnis soll einen Abbruch überleben.
-            val namensliste = Prompts.namensliste(bestand)
+            //
+            // Die Namensliste wird bewusst NACH dem Einspielen geholt: Ein Befehl, der durch
+            // einen neuen ersetzt wurde, kann sonst nie auf seinen Nachfolger zeigen — der
+            // stand beim Laden des Bestands ja noch gar nicht in der Datenbank.
+            val namensliste = Prompts.namensliste(repository.ladeKomplett())
             var erledigt = 0
             for (verschwunden in verschwundene) {
                 stand = stand.copy(
@@ -315,15 +336,22 @@ class Aktualisierer(
                 melde,
             )
         } catch (abbruch: CancellationException) {
-            // Der Abbrechen-Knopf soll keinen Lauf-Datensatz auf „läuft" stehen lassen.
-            repository.ladeLauf(laufId)?.let {
-                repository.beendeLauf(
-                    it.copy(
-                        beendetAm = System.currentTimeMillis(),
-                        status = "abgebrochen",
-                        meldung = "Abgebrochen. Was bis dahin eingespielt wurde, ist gespeichert.",
-                    ),
-                )
+            // Der Abbrechen-Knopf soll keinen Lauf-Datensatz auf „laeuft“ stehen lassen.
+            //
+            // NonCancellable ist hier nicht schmückend, sondern nötig: Die Datenbankzugriffe
+            // von Room laufen intern über withContext, und das wirft in einer bereits
+            // abgebrochenen Coroutine sofort beim Eintritt — der Datensatz bliebe unberührt
+            // und stünde für immer auf „laeuft“.
+            withContext(NonCancellable) {
+                repository.ladeLauf(laufId)?.let {
+                    repository.beendeLauf(
+                        it.copy(
+                            beendetAm = System.currentTimeMillis(),
+                            status = "abgebrochen",
+                            meldung = "Abgebrochen. Was bis dahin eingespielt wurde, ist gespeichert.",
+                        ),
+                    )
+                }
             }
             throw abbruch
         } catch (fehler: Exception) {
@@ -486,6 +514,44 @@ class Aktualisierer(
             mapOf("name" to eintrag.name, "grund" to fehler.message),
         )
         null
+    }
+
+    /**
+     * Setzt Erklärungen zurück, die auf einer falsch gelesenen Beschreibung beruhen.
+     *
+     * Bis Fassung 0.3.1 holte die Auswertung auf der Einstellungsseite die letzte Spalte statt
+     * der Beschreibung — als offizieller Text stand dort „Any file" oder „Managed". Wer damals
+     * bei Codex angemeldet war, hat sich auf dieser Grundlage deutsche Erklärungen schreiben
+     * lassen: plausibel klingend und inhaltlich erfunden. Der neue Ablauf würde sie nie
+     * anfassen, weil sie nicht leer sind. Also werden sie hier geleert und landen dadurch in
+     * der Warteschlange.
+     *
+     * Umgebungsvariablen bleiben aussen vor: Ihre Liste hat zwei Spalten, die letzte IST die
+     * Beschreibung. Diese Erklärungen sind in Ordnung; sie zu verwerfen hiesse, dreihundert
+     * Anfragen ohne Gewinn zu wiederholen.
+     */
+    private suspend fun repariereVergifteteErklaerungen(
+        bestand: List<EintragEntity>,
+        seedKennungen: Set<String>,
+    ) {
+        val betroffen = bestand.filter {
+            it.bereich == Bereich.CONFIG.id &&
+                it.art != "Umgebungsvariable" &&
+                it.erklaerung.isNotBlank() &&
+                it.id !in seedKennungen
+        }
+        if (betroffen.isEmpty()) return
+        KompassLog.info(
+            "Aktualisierer",
+            "repariereVergifteteErklaerungen",
+            "Erklärungen aus fehlerhaften Läufen werden verworfen",
+            mapOf("anzahl" to betroffen.size),
+        )
+        betroffen.forEach {
+            repository.sichereEintrag(
+                it.copy(erklaerung = "", stufe = 0, zuletztGeaendert = System.currentTimeMillis()),
+            )
+        }
     }
 
     private suspend fun markiereAlsEntfernt(

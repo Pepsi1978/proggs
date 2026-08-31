@@ -155,6 +155,24 @@ class EinstellungenStore(context: Context) {
         get() = offen.getInt(SCHL_SPERRE_NACH, 60)
         set(wert) = offen.edit().putInt(SCHL_SPERRE_NACH, wert).apply()
 
+    // --- Einmalige Bereinigung ------------------------------------------------------------
+
+    /**
+     * Ob die Altlasten des fehlerhaften Auswertens schon aufgeräumt wurden.
+     *
+     * Bis Fassung 0.3.1 las der Aktualisierer auf der Einstellungsseite die falsche Spalte und
+     * dazu Tabellen, die gar keine Einstellungen auflisten. In der Datenbank können daher zwei
+     * Sorten Müll liegen: erfundene Namen und deutsche Erklärungen, die auf „Any file" oder
+     * „Managed" aufbauen. Der nächste Lauf räumt beides einmalig weg.
+     *
+     * Das Merkzeichen ist wichtig: Ohne es würde die Aufräumregel dauerhaft gelten und jeden
+     * später dazugekommenen Eintrag, den Anthropic wieder entfernt, stillschweigend löschen,
+     * statt ihn unter „Entfernte Einträge" aufzuheben.
+     */
+    var altlastenBereinigt: Boolean
+        get() = offen.getBoolean(SCHL_ALTLASTEN_BEREINIGT, false)
+        set(wert) = offen.edit().putBoolean(SCHL_ALTLASTEN_BEREINIGT, wert).apply()
+
     // --- Schlüssel (nur verschlüsselt) ----------------------------------------------------
 
     var googleSchluessel: String
@@ -197,6 +215,7 @@ class EinstellungenStore(context: Context) {
         const val MIN_TEMPO = 0.5f
         const val MAX_TEMPO = 2.0f
 
+        private const val SCHL_ALTLASTEN_BEREINIGT = "altlasten_bereinigt"
         private const val SCHL_THEME = "theme_modus"
         private const val SCHL_TTS_ANBIETER = "tts_anbieter"
         private const val SCHL_GOOGLE_STIMME = "tts_google_stimme"
