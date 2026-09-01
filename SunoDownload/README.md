@@ -16,22 +16,41 @@ Zielordner: **`C:\Sono Backup`**
 
 ## Bedienung: ein Doppelklick genügt
 
-Doppelklick auf **„Suno Backup"** auf dem Desktop (oder im Startmenü suchen). Das übernimmt alles:
+Doppelklick auf **„Suno Backup"** auf dem Desktop. Das Programm startet, legt einen
+**Einzeiler** in die Zwischenablage und öffnet Suno im Browser.
 
-1. Legt das Auslese-Skript in die Zwischenablage und öffnet Suno im Browser
-2. Du machst **einmal**: `F12` → Reiter **Console** → **Strg+V** → **Enter**
+1. Im Browser: `F12` → Reiter **Console** → **Strg+V** → **Enter**
    *(meckert Chrome, tippe `allow pasting`, Enter, dann nochmal Strg+V)*
-3. Am Ende erscheint der Speichern-Dialog — Downloads-Ordner genügt
-4. Der Rest läuft von allein: neue Songs werden geladen, mit Cover und Titel versehen
+2. Fertig. Songliste, Download-Links, Herunterladen, Cover und Titel laufen von allein.
 
-Beim **ersten Mal** holt es alles, danach **nur noch das Neue**. Das Programm wartet geduldig,
-bis die Songliste da ist.
+Kein Speichern-Dialog, keine Datei hin- und herschieben: Der Browser reicht die Songliste
+direkt an das laufende Programm weiter.
 
-> Warum der Browser-Schritt? Google lässt keine Anmeldung in einem ferngesteuerten Browser zu.
-> Deshalb liest dein eigener, angemeldeter Chrome die Liste aus. Das Herunterladen selbst
-> braucht keine Anmeldung und macht das Programm allein.
+> Warum überhaupt der Browser? Suno lässt keine Anmeldung von außerhalb zu. Der
+> Anmelde-Nachweis bleibt deshalb im Browser — an das Programm gehen nur die Songliste
+> und die von Suno ausgestellten Download-Links.
 
----
+### Warum es jetzt schnell geht
+
+Früher wurde jeder Download-Link einzeln angefordert: 600 ms Pause, dazu bis zu 2,5 s
+Warten, bis Suno den Link aufbereitet hatte. Bei 2400 Songs sind das Stunden.
+
+Gemessen verträgt Suno aber **25 gleichzeitige** Link-Anfragen ohne zu bremsen, und ein
+Link, der beim ersten Abruf noch „wird vorbereitet" meldet, ist beim zweiten Abruf sofort
+da. Daraus wurde: **erst alle anstoßen, dann alle einsammeln** — statt bei jedem Song
+einzeln zu warten. Die Songliste wird über fünf Seiten gleichzeitig gelesen, geladen wird
+mit acht Downloads parallel.
+
+Gemessen: **12 Songs in 14 Sekunden**, samt Cover und Titel.
+
+### Aus der Kommandozeile
+
+```cmd
+node downloader.ts                    ... Zielordner C:\Sono Backup, nur Neues
+node downloader.ts "D:\Musik"
+node downloader.ts --alles            ... ganze Bibliothek prüfen statt nur Neues
+node downloader.ts --limit 15 "D:\Test"   ... Probelauf mit 15 Songs
+```
 
 ## Die Nummerierung bleibt stabil
 
@@ -51,22 +70,20 @@ diese eine Datei wieder — unter demselben Namen.
 
 | Datei | Aufgabe |
 |-------|---------|
-| `Neue-Songs-holen.cmd` | **Der Normalfall.** Erstlauf und Nachladen in einem — hinter dem Desktop-Symbol „Suno Backup" |
-| `icon-erzeugen.py` | Zeichnet `suno-backup.ico` neu (nur nötig, wenn das Symbol geändert werden soll) |
-| `bibliothek-holen.js` | Das Skript für die Chrome-Konsole (liest die Songliste aus) |
-| `aktualisieren.ts` | Erkennt Neues, lädt es, setzt Cover und Titel, pflegt den Bestand |
-| `gemeinsam.ts` | Geteilte Bausteine — Namen, Download, Cover, Titel |
-| `suno-download.ts` | Reiner Download einer Songliste, ohne Bestandsführung |
-| `cover-nachtragen.ts` | Trägt Cover und Titel in vorhandene Dateien nach |
-| `titel-nachtragen.ts` | Holt fehlende Songtitel und benennt Dateien um |
-| `Songs-laden.cmd` | Startet den reinen Download |
+| `Neue-Songs-holen.cmd` | **Der Normalfall.** Hinter dem Desktop-Symbol „Suno Backup" |
+| `downloader.ts` | Das Programm: nimmt die Songliste entgegen, lädt, benennt, taggt |
+| `bruecke.js` | Der Teil, der im Browser läuft — Songliste und Download-Links |
+| `downloader.ps1` | Startet den Downloader mit Protokoll |
+| `gemeinsam.ts` | Geteilte Bausteine — Namen, Nummern, Download, Cover, Titel |
+| `icon-erzeugen.py` | Zeichnet `suno-backup.ico` neu |
+| `Alter-Weg-Songliste.cmd` | Rückfallweg über eine gespeicherte `suno-liste.json` |
+| `aktualisieren.ts`, `bibliothek-holen.js` | Der alte Weg — bleibt als Rückfallebene |
+| `suno-download.ts`, `cover-nachtragen.ts`, `titel-nachtragen.ts` | Einzelwerkzeuge |
 
-### Aus der Kommandozeile
+#### Der alte Weg
 
-```cmd
-node aktualisieren.ts                                  ... findet Liste und Ordner selbst
-node aktualisieren.ts "C:\Sono Backup\suno-liste.json" "D:\Musik"
-```
+Er bleibt vollständig erhalten: `Alter-Weg-Songliste.cmd` speichert die Songliste als
+Datei und lädt daraus. Nötig ist er nur, wenn der neue Weg einmal nicht durchkommt.
 
 ---
 
@@ -130,29 +147,17 @@ $lnk.Save()
 ### Warum es ohne Download-Links nicht geht (HTTP 403)
 
 Suno liefert Songs nicht mehr über `cdn1.suno.ai` aus — jeder direkte Ladeversuch endet in
-`HTTP 403`, bei veröffentlichten Stücken genauso wie bei privaten. In der Songliste steht als
-`audio_url` nur noch der Platzhalter `.../api/forbidden`.
+`HTTP 403`, bei veröffentlichten Stücken genauso wie bei privaten. In der Songliste steht
+als `audio_url` nur noch ein Platzhalter.
 
 Der einzige tragfähige Weg ist der offizielle Endpunkt `/api/download/clip/<id>`: er stellt
-einen zeitlich begrenzten, signierten Link aus. Das Konsolen-Skript holt diese Links beim
-Erstellen der Liste mit und schreibt sie als `download_url` hinein; der Nachlade-Lauf benutzt
-sie zuerst.
+einen zeitlich begrenzten, signierten Link aus. Genau die holt der Browser-Teil — und weil
+sie ablaufen können, bleibt der Tab während des Ladens in Bereitschaft: Fällt ein Link um,
+fordert das Programm von selbst einen frischen an. Der Handgriff `sunoLinks(true)` von
+früher ist damit überflüssig.
 
-Damit das nicht bei jedem Lauf für die ganze Bibliothek passiert, trägt das Start-Skript den
-Zeitstempel des jüngsten bereits gesicherten Songs ein — Links werden nur für neuere Songs
-geholt.
-
-**Wenn ein Lauf `gesperrt — es fehlt ein gültiger Download-Link` meldet**, ist der Link
-abgelaufen oder wurde nie geholt (etwa bei einer Datei, die nachträglich auf der Platte fehlt).
-Dann in der Suno-Konsole:
-
-```js
-await sunoLinks(true); sunoSpeichern();
-```
-
-Das holt Links für **alle** Songs ohne Adresse und speichert die Liste neu. Danach den Lauf
-wiederholen.
+**Der Browser-Tab muss offen bleiben**, bis das Programm fertig meldet.
 
 ---
 
-Version 1.5.1 (01.09.2026, 07:13 Uhr)
+Version 1.6.0 (01.09.2026, 18:43 Uhr)

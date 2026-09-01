@@ -1,0 +1,5 @@
+@echo off
+rem Rueckfallweg: der alte, langsamere Ablauf ueber eine gespeicherte Songliste.
+chcp 65001 >nul
+cd /d "%~dp0"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0aktualisieren.ps1" %*

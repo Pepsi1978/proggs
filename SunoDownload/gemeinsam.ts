@@ -6,7 +6,7 @@
  * implementation of those would silently drift and renumber the user's library.
  */
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -177,6 +177,41 @@ export function ladeBestand(ordner: string): Bestand {
 export function speichereBestand(ordner: string, bestand: Bestand): void {
   bestand.stand = new Date().toISOString();
   writeFileSync(join(ordner, BESTAND_DATEI), JSON.stringify(bestand, null, 2), 'utf8');
+}
+
+/**
+ * Erstlauf: leitet die Nummernliste aus den Dateien ab, die schon auf der Platte liegen.
+ * Die Nummer im Dateinamen entspricht der Stelle in der nach Alter sortierten Liste —
+ * genau so wurden die Dateien seinerzeit benannt.
+ */
+export function erstbefuellung(
+  ziel: string,
+  sortiert: Song[],
+  bestand: Bestand,
+  probe: (bedingung: boolean, msg: string, ctx?: Record<string, unknown>) => void,
+): number {
+  const dateien = readdirSync(ziel).filter((n) => n.toLowerCase().endsWith('.mp3'));
+  let uebernommen = 0;
+
+  for (const datei of dateien) {
+    const treffer = /^(\d+)\s*-/.exec(datei);
+    if (!treffer) continue;
+
+    const nummer = Number(treffer[1]);
+    const song = sortiert[nummer - 1];
+    if (!song) {
+      probe(false, `Zu Nummer ${nummer} gibt es keinen Song in der Liste`, { datei });
+      continue;
+    }
+    bestand.eintraege[song.id] = { nummer, datei, titel: song.title };
+    uebernommen++;
+  }
+
+  probe(uebernommen === dateien.length, 'Nicht jede Datei konnte zugeordnet werden', {
+    dateien: dateien.length,
+    uebernommen,
+  });
+  return uebernommen;
 }
 
 export function hoechsteNummer(bestand: Bestand): number {

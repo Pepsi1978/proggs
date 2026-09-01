@@ -9,7 +9,7 @@
  * Usage:  node aktualisieren.ts [list.json] [folder]
  */
 
-import { existsSync, readdirSync, statSync, renameSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import NodeID3 from 'node-id3';
@@ -18,6 +18,7 @@ import {
   type Bestand,
   type Song,
   dateiName,
+  erstbefuellung,
   holeCover,
   holeTitel,
   hoechsteNummer,
@@ -53,35 +54,6 @@ function findeListe(explizit: string | undefined, ziel: string): string | null {
   return kandidaten.length ? kandidaten[0].pfad : null;
 }
 
-/**
- * First run: derive the registry from the files already on disk. The number in the
- * file name maps to the position in the age-sorted list — exactly how they were named.
- */
-function erstbefuellung(ziel: string, sortiert: Song[], bestand: Bestand): number {
-  const dateien = readdirSync(ziel).filter((n) => n.toLowerCase().endsWith('.mp3'));
-  let uebernommen = 0;
-
-  for (const datei of dateien) {
-    const treffer = /^(\d+)\s*-/.exec(datei);
-    if (!treffer) continue;
-
-    const nummer = Number(treffer[1]);
-    const song = sortiert[nummer - 1];
-    if (!song) {
-      probe(false, `Zu Nummer ${nummer} gibt es keinen Song in der Liste`, { datei });
-      continue;
-    }
-    bestand.eintraege[song.id] = { nummer, datei, titel: song.title };
-    uebernommen++;
-  }
-
-  probe(uebernommen === dateien.length, 'Nicht jede Datei konnte zugeordnet werden', {
-    dateien: dateien.length,
-    uebernommen,
-  });
-  return uebernommen;
-}
-
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const listArg = args.find((a) => a.toLowerCase().endsWith('.json'));
@@ -110,7 +82,7 @@ async function main(): Promise<void> {
   console.log(`  In der Liste: ${songs.length} Songs`);
 
   if (Object.keys(bestand.eintraege).length === 0) {
-    const anzahl = erstbefuellung(ziel, sortiert, bestand);
+    const anzahl = erstbefuellung(ziel, sortiert, bestand, probe);
     speichereBestand(ziel, bestand);
     console.log(`  Bestand    : neu angelegt aus ${anzahl} vorhandenen Dateien`);
   } else {
