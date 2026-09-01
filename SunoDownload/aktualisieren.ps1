@@ -12,8 +12,13 @@ Write-Host "  ================================================================" 
 Write-Host ""
 
 # Gibt es schon eine frische Songliste (juenger als 15 Minuten)?
+# Sie zaehlt nur, wenn sie Download-Links enthaelt - ohne die laesst sich kein Song
+# laden, weil Suno keine direkten Adressen mehr herausgibt.
 $frisch = Get-ChildItem "$env:USERPROFILE\Downloads","$ziel" -Filter "suno-liste*.json" -ErrorAction SilentlyContinue |
-          Where-Object { $_.Name -notlike "*-vorher*" -and $_.LastWriteTime -gt (Get-Date).AddMinutes(-15) } |
+          Where-Object {
+              $_.Name -notlike "*-vorher*" -and $_.LastWriteTime -gt (Get-Date).AddMinutes(-15) -and
+              (Select-String -Path $_.FullName -Pattern '"download_url"' -SimpleMatch -Quiet)
+          } |
           Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if (-not $frisch) {
@@ -66,7 +71,10 @@ if (-not $frisch) {
     while ((Get-Date) -lt $ende -and -not $frisch) {
         Start-Sleep -Seconds 3
         $frisch = Get-ChildItem "$env:USERPROFILE\Downloads","$ziel" -Filter "suno-liste*.json" -ErrorAction SilentlyContinue |
-                  Where-Object { $_.Name -notlike "*-vorher*" -and $_.LastWriteTime -gt $start } |
+                  Where-Object {
+                      $_.Name -notlike "*-vorher*" -and $_.LastWriteTime -gt $start -and
+                      (Select-String -Path $_.FullName -Pattern '"download_url"' -SimpleMatch -Quiet)
+                  } |
                   Sort-Object LastWriteTime -Descending | Select-Object -First 1
     }
 

@@ -135,6 +135,24 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Ohne Download-Links geht nichts: Suno gibt keine direkten Adressen mehr heraus.
+  // Das lieber einmal deutlich sagen, als es an jedem einzelnen Song scheitern zu lassen.
+  const zuHolen = [...fehlende, ...neue];
+  if (zuHolen.length && !zuHolen.some((s) => s.download_url)) {
+    console.log('  ❗ In dieser Songliste steht kein einziger Download-Link.');
+    console.log('');
+    console.log('     Suno liefert Songs nicht mehr über cdn1.suno.ai aus — es braucht');
+    console.log('     signierte Links, die das Konsolen-Skript beim Erstellen der Liste mitholt.');
+    console.log('     Die vorliegende Liste stammt noch aus der Zeit davor.');
+    console.log('');
+    console.log('     Bitte Schritt 1 noch einmal ausführen (Skript in der Suno-Konsole).');
+    console.log('     Sind die Links nur abgelaufen, genügt dort:');
+    console.log('       await sunoLinks(true); sunoSpeichern();');
+    console.log('');
+    log('error', 'Songliste ohne Download-Links', { neue: neue.length, fehlende: fehlende.length });
+    process.exit(1);
+  }
+
   // Fehlende Titel nur für die neuen Songs nachholen
   const ohneTitel = neue.filter((s) => !s.title);
   if (ohneTitel.length) {

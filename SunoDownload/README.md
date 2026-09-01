@@ -155,4 +155,4 @@ wiederholen.
 
 ---
 
-Version 1.5.0 (01.09.2026, 07:10 Uhr)
+Version 1.5.1 (01.09.2026, 07:13 Uhr)
