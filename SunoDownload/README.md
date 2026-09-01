@@ -127,4 +127,24 @@ $lnk.Save()
 
 ---
 
-Version 1.3.1 (14.08.2026, 20:44 Uhr)
+### Private Songs (HTTP 403)
+
+Songs, die in Suno nicht veröffentlicht sind (`is_public = false`), sperrt das Suno-CDN aus —
+ein direkter Ladeversuch endet in `HTTP 403`. Für genau diese Songs holt das Konsolen-Skript
+beim Erstellen der Liste einen signierten Download-Link (`download_url`) über den offiziellen
+Endpunkt `/api/download/clip/<id>` mit, und der Nachlade-Lauf benutzt ihn.
+
+Praktische Folge: Die Liste sollte **kurz vor** dem Ladelauf geholt werden — die signierten
+Links sind zeitlich begrenzt. Meldet ein Lauf
+`HTTP 403 — Song ist privat, es fehlt der Download-Link`, einfach das Konsolen-Skript noch
+einmal ausführen und den Lauf wiederholen.
+
+Nur die Links nachholen, ohne die ganze Bibliothek neu zu lesen:
+
+```js
+await sunoLinks(); sunoSpeichern();
+```
+
+---
+
+Version 1.4.0 (01.09.2026, 06:25 Uhr)

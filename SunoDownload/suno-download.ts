@@ -104,7 +104,7 @@ async function main(): Promise<void> {
 
     process.stdout.write(`${label}  … `);
     try {
-      const groesse = await ladeDatei(song.audio_url, pfad);
+      const groesse = await ladeDatei(song.audio_url, pfad, song.id, song.media_urls, song.download_url);
       console.log(`${(groesse / 1024 / 1024).toFixed(1)} MB ✅`);
       log('info', 'Song geladen', { id: song.id, datei, groesse });
       geladen++;

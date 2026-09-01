@@ -14,6 +14,19 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 export const LOG_DIR = join(HERE, 'logs');
 export const DEFAULT_TARGET = 'C:\\Sono Backup';
 export const COVER_BASE = 'https://cdn1.suno.ai';
+export const AUDIO_BASE = 'https://cdn1.suno.ai';
+/**
+ * Private Songs (is_public = false) sperrt cdn1.suno.ai mit HTTP 403 aus, und die
+ * CloudFront-Auslieferung liefert nur einen verschleierten Datenstrom. Der einzige
+ * tragfähige Weg ist der signierte Link aus /api/download/clip/<id>, den das
+ * Browser-Skript beim Erstellen der Liste mitholt (Feld download_url).
+ */
+export const BROWSER_KOPF = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+  Referer: 'https://suno.com/',
+  Accept: '*/*',
+} as const;
 export const BESTAND_DATEI = '_bestand.json';
 
 export type Song = {
@@ -21,6 +34,10 @@ export type Song = {
   title: string;
   created_at: string | null;
   audio_url: string;
+  /** Alle von Suno gemeldeten Medien-Adressen. */
+  media_urls?: string[];
+  /** Signierter Link aus /api/download/clip/<id> — trägt auch bei privaten Songs. */
+  download_url?: string;
 };
 
 /** id -> assigned number and file name. Once assigned, a number never changes. */
@@ -86,18 +103,50 @@ export function nachAlter(songs: Song[]): Song[] {
   });
 }
 
+/**
+ * Suno liefert seit Kurzem für neuere Songs Platzhalter statt einer echten Adresse
+ * (z. B. .../api/forbidden). Solche Einträge müssen ignoriert werden, sonst endet
+ * jeder Download in einem 403.
+ */
+export function brauchbareAudioUrl(url: unknown): url is string {
+  if (typeof url !== 'string' || !url.startsWith('http')) return false;
+  if (/\/api\//i.test(url)) return false;
+  if (/forbidden|unauthorized|placeholder/i.test(url)) return false;
+  return true;
+}
+
+/** Alle Adressen, unter denen ein Song erreichbar sein kann — beste zuerst. */
+export function audioKandidaten(id: string, url?: string, medien?: string[], signiert?: string): string[] {
+  const liste: string[] = [];
+
+  if (brauchbareAudioUrl(signiert)) liste.push(signiert);
+  for (const m of medien ?? []) {
+    if (brauchbareAudioUrl(m) && /\.mp3(\?|$)/i.test(m)) liste.push(m);
+  }
+  if (brauchbareAudioUrl(url)) liste.push(url);
+  liste.push(`${AUDIO_BASE}/${id}.mp3`);
+
+  return [...new Set(liste)];
+}
+
 export function leseListe(pfad: string): Song[] {
   const raw = JSON.parse(readFileSync(pfad, 'utf8'));
   const list = Array.isArray(raw) ? raw : Array.isArray(raw?.songs) ? raw.songs : [];
 
   const songs: Song[] = [];
   for (const entry of list) {
-    if (entry && typeof entry.id === 'string' && typeof entry.audio_url === 'string') {
+    if (entry && typeof entry.id === 'string') {
       songs.push({
         id: entry.id,
         title: typeof entry.title === 'string' ? entry.title : '',
         created_at: typeof entry.created_at === 'string' ? entry.created_at : null,
-        audio_url: entry.audio_url,
+        audio_url: brauchbareAudioUrl(entry.audio_url) ? entry.audio_url : '',
+        media_urls: Array.isArray(entry.media_urls)
+          ? entry.media_urls
+              .map((m: unknown) => (typeof m === 'string' ? m : (m as { url?: string })?.url))
+              .filter((m: unknown): m is string => typeof m === 'string')
+          : undefined,
+        download_url: typeof entry.download_url === 'string' ? entry.download_url : undefined,
       });
     }
   }
@@ -215,31 +264,76 @@ export async function holeTitel(id: string): Promise<string | null> {
   return null;
 }
 
-export async function ladeDatei(url: string, ziel: string): Promise<number> {
-  const { createWriteStream, renameSync } = await import('node:fs');
+/** Wandelt eine heruntergeladene m4a-Datei in eine MP3 um; ohne ffmpeg schlägt das fehl. */
+async function nachMp3(quelle: string, ziel: string): Promise<void> {
+  const { execFile } = await import('node:child_process');
+  const { promisify } = await import('node:util');
+  await promisify(execFile)(
+    'ffmpeg',
+    ['-y', '-loglevel', 'error', '-i', quelle, '-codec:a', 'libmp3lame', '-q:a', '2', ziel],
+    { windowsHide: true, maxBuffer: 1 << 24 },
+  );
+}
+
+export async function ladeDatei(
+  url: string,
+  ziel: string,
+  id?: string,
+  medien?: string[],
+  signiert?: string,
+): Promise<number> {
+  const { createWriteStream, renameSync, unlinkSync } = await import('node:fs');
   const { Readable } = await import('node:stream');
   const { pipeline } = await import('node:stream/promises');
 
+  const quellen = id ? audioKandidaten(id, url, medien, signiert) : [url];
+  const putz = (pfad: string) => {
+    try {
+      unlinkSync(pfad);
+    } catch {
+      /* nichts zu putzen */
+    }
+  };
+
   let lastError: Error | null = null;
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(180000) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      if (!response.body) throw new Error('Leere Antwort');
+  for (const quelle of quellen) {
+    // Alles, was nicht schon MP3 ist, wird nach dem Laden umgewandelt.
+    const istMp3 = /\.mp3(\?|$)/i.test(quelle) || /audiopipe/i.test(quelle);
+    const roh = istMp3 ? `${ziel}.teil` : `${ziel}.teil.m4a`;
 
-      const temp = `${ziel}.teil`;
-      await pipeline(Readable.fromWeb(response.body as never), createWriteStream(temp));
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await fetch(quelle, { signal: AbortSignal.timeout(180000), headers: BROWSER_KOPF });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.body) throw new Error('Leere Antwort');
 
-      const size = statSync(temp).size;
-      if (size < 1024) throw new Error(`Datei zu klein (${size} Byte)`);
+        await pipeline(Readable.fromWeb(response.body as never), createWriteStream(roh));
 
-      renameSync(temp, ziel); // only a complete file ever gets the final name
-      return size;
-    } catch (error) {
-      lastError = error as Error;
-      if (attempt < 3) await wait(attempt * 2000);
+        if (statSync(roh).size < 1024) throw new Error(`Datei zu klein (${statSync(roh).size} Byte)`);
+
+        if (istMp3) {
+          renameSync(roh, ziel); // nur eine vollständige Datei bekommt den endgültigen Namen
+        } else {
+          const mp3 = `${ziel}.teil`;
+          await nachMp3(roh, mp3);
+          putz(roh);
+          if (statSync(mp3).size < 1024) throw new Error('Umwandlung ergab keine brauchbare Datei');
+          renameSync(mp3, ziel);
+        }
+        return statSync(ziel).size;
+      } catch (error) {
+        lastError = error as Error;
+        putz(roh);
+        putz(`${ziel}.teil`);
+        // 4xx heißt: diese Quelle liefert den Song nicht — sofort die nächste versuchen.
+        if (/HTTP 4\d\d/.test(lastError.message)) break;
+        if (attempt < 3) await wait(attempt * 2000);
+      }
     }
+  }
+  if (lastError && /HTTP 403/.test(lastError.message) && !brauchbareAudioUrl(signiert)) {
+    throw new Error('HTTP 403 — Song ist privat, es fehlt der Download-Link (Liste neu holen)');
   }
   throw lastError ?? new Error('Unbekannter Fehler');
 }

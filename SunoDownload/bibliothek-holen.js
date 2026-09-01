@@ -36,21 +36,36 @@
     }
 
     if (typeof n.id === 'string' && UUID.test(n.id)) {
+      // Suno liefert fuer neuere Songs Platzhalter wie .../api/forbidden statt einer
+      // echten Adresse. Solche Werte fuehren beim Laden zwangslaeufig zu HTTP 403 und
+      // werden darum verworfen — das Ladeprogramm findet den Song ueber seine ID.
+      const echt = (u) => typeof u === 'string' && u.startsWith('http')
+        && !/\/api\//i.test(u) && !/forbidden|unauthorized|placeholder/i.test(u);
       let url = null;
       for (const k of ['audio_url', 'audio_url_mp3', 'mp3_url', 'stream_audio_url']) {
-        if (typeof n[k] === 'string' && n[k].startsWith('http')) { url = n[k]; break; }
+        if (echt(n[k])) { url = n[k]; break; }
       }
-      if (!url && typeof n.title === 'string' && (n.metadata || n.audio_url === '')) {
-        url = 'https://cdn1.suno.ai/' + n.id + '.mp3';
+      if (!url && typeof n.title === 'string') {
+        url = 'https://audiopipe.suno.ai/?item_id=' + n.id;
       }
-      if (url) {
+      // media_urls ist die einzige Quelle, die auch bei privaten Songs traegt —
+      // cdn1.suno.ai sperrt die mit HTTP 403 aus.
+      let medien = [];
+      if (Array.isArray(n.media_urls)) {
+        medien = n.media_urls
+          .map((m) => (typeof m === 'string' ? m : (m && m.url) || null))
+          .filter((m) => typeof m === 'string' && m.startsWith('http'));
+      }
+      if (url || medien.length) {
         zaehler.roh++;
         const alt = songs.get(n.id) || {};
         songs.set(n.id, {
           id: n.id,
           title: (typeof n.title === 'string' && n.title.trim()) ? n.title.trim() : (alt.title || ''),
           created_at: n.created_at || n.createdAt || alt.created_at || null,
-          audio_url: url,
+          audio_url: url || '',
+          media_urls: medien.length ? medien : (alt.media_urls || []),
+          download_url: alt.download_url || undefined,
         });
       }
     }
@@ -103,6 +118,49 @@
     } catch (e) { return { fehler: String(e).slice(0, 60) }; }
   };
 
+  // ------------------------------------------------------- Download-Links holen
+  /**
+   * Private Songs (alles, was nicht veroeffentlicht ist) sperrt das Suno-CDN aus:
+   * jeder Ladeversuch endet in HTTP 403. Nur der offizielle Download-Endpunkt
+   * liefert einen signierten Link. Der wird hier fuer genau diese Songs geholt und
+   * als download_url in die Liste geschrieben.
+   */
+  const echtesMp3 = (u) => typeof u === 'string' && /\.mp3(\?|$)/i.test(u)
+    && !/\/api\//i.test(u) && !/forbidden/i.test(u);
+
+  const linkHolen = async (id) => {
+    for (let versuch = 0; versuch < 12; versuch++) {
+      const a = await hol(HOST + '/api/download/clip/' + id);
+      if (a.fehler === 429) { await warte(8000); continue; }
+      if (a.fehler) return null;
+      if (a.daten && a.daten.download_url) return a.daten.download_url;
+      if (a.daten && a.daten.status === 'processing') { await warte(2500); continue; }
+      return null;
+    }
+    return null;
+  };
+
+  const linkeNachholen = async () => {
+    const offen = [...songs.values()].filter(
+      (s) => !echtesMp3(s.audio_url) && !(s.media_urls || []).some(echtesMp3) && !s.download_url,
+    );
+    if (!offen.length) return 0;
+
+    zeig('🔑 ' + offen.length + ' Songs sind privat — es werden Download-Links geholt …', '#06c');
+    let fertig = 0;
+    for (const song of offen) {
+      const link = await linkHolen(song.id);
+      if (link) { song.download_url = link; fertig++; }
+      if (fertig % 10 === 0) sicherung();
+      console.log('   Link ' + (fertig) + ' von ' + offen.length + (link ? '' : ' — fehlgeschlagen'));
+      await warte(600);
+    }
+    sicherung();
+    zeig('🔑 ' + fertig + ' von ' + offen.length + ' Download-Links geholt.', fertig === offen.length ? '#0a0' : '#c60');
+    return fertig;
+  };
+  window.sunoLinks = linkeNachholen;
+
   // ---------------------------------------------------------------- Hauptlauf
   const lauf = async (startSeite) => {
     let seite = startSeite || 0;
@@ -151,6 +209,7 @@
     }
 
     sicherung();
+    await linkeNachholen();
     speichern();
     if (gesamtLautApi && songs.size < gesamtLautApi) {
       zeig('⚠️ Es fehlen noch ' + (gesamtLautApi - songs.size) + ' Songs.', '#c60');

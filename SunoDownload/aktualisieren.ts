@@ -158,7 +158,7 @@ async function main(): Promise<void> {
     const pfad = join(ziel, datei);
     process.stdout.write(`  ${datei}  … `);
     try {
-      const groesse = await ladeDatei(song.audio_url, pfad);
+      const groesse = await ladeDatei(song.audio_url, pfad, song.id, song.media_urls, song.download_url);
 
       const tags: Record<string, unknown> = { artist: 'Suno' };
       if (song.title) tags.title = song.title;
