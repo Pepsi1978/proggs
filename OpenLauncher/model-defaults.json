@@ -4,7 +4,7 @@
     "WorkModeId": "schnell",
     "ThinkingValue": "high"
   },
-  "anthropic/claude-fable-5[1m]": {
+  "anthropic/claude-fable-5-1[1m]": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
     "ThinkingValue": "high"

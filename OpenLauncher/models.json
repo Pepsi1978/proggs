@@ -10,8 +10,8 @@
         "IsUserDefined": true,
         "ProviderId": "anthropic",
         "ProviderName": "Anthropic",
-        "Slug": "claude-fable-5[1m]",
-        "DisplayName": "Claude Fable 5",
+        "Slug": "claude-fable-5-1[1m]",
+        "DisplayName": "Claude Fable 5.1",
         "IsHidden": false
       },
       {
@@ -39,7 +39,8 @@
       "claude-opus-5[1m]",
       "claude-fable-5[1m]",
       "claude-sonnet-5[1m]",
-      "claude-opus-4-8[1m]"
+      "claude-opus-4-8[1m]",
+      "claude-fable-5-1[1m]"
     ],
     "IsExpanded": true
   },
@@ -127,7 +128,7 @@
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
         "Slug": "z-ai/glm-5.2:free",
-        "DisplayName": "Z.ai: GLM 5.2 (free)",
+        "DisplayName": "Z.ai GLM 5.2 Free",
         "IsHidden": false
       },
       {
@@ -821,15 +822,6 @@
         "IsUserDefined": false,
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
-        "Slug": "qwen/qwen3.8-27b",
-        "DisplayName": "Qwen3.8 27b (lokal)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "lmstudio",
-        "ProviderName": "LM Studio",
         "Slug": "qwen3.8-27b@iq2_xxs",
         "DisplayName": "Qwen3.8 27b@iq2_xxs (lokal)",
         "IsHidden": false
@@ -841,6 +833,15 @@
         "ProviderName": "LM Studio",
         "Slug": "qwen3.8-27b@iq3_xxs",
         "DisplayName": "Qwen3.8 27b@iq3_xxs (lokal)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "lmstudio",
+        "ProviderName": "LM Studio",
+        "Slug": "qwen/qwen3.8-27b",
+        "DisplayName": "Qwen3.8 27b (lokal)",
         "IsHidden": false
       }
     ],

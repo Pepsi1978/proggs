@@ -41,7 +41,7 @@ public sealed class ModelRegistry
     private static readonly (string OldSlug, string NewSlug, string DisplayName)[] AnthropicOneMillionMigrations =
     [
         ("claude-opus-5", ClaudeOpus5Slug, "Claude Opus 5 (1M)"),
-        ("claude-fable-5", "claude-fable-5[1m]", "Claude Fable 5 (1M)"),
+        ("claude-fable-5", "claude-fable-5-1[1m]", "Claude Fable 5.1 (1M)"),
         ("claude-sonnet-5", "claude-sonnet-5[1m]", "Claude Sonnet 5 (1M)"),
         ("claude-opus-4-8", "claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)"),
     ];
@@ -527,7 +527,7 @@ public sealed class ModelRegistry
         CreateGroup("entropic", "Anthropic", "anthropic", "Anthropic", new[]
         {
             Model(ClaudeOpus5Slug, "Claude Opus 5 (1M)", "anthropic", "Anthropic"),
-            Model("claude-fable-5[1m]", "Claude Fable 5 (1M)", "anthropic", "Anthropic"),
+            Model("claude-fable-5-1[1m]", "Claude Fable 5.1 (1M)", "anthropic", "Anthropic"),
             Model("claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)", "anthropic", "Anthropic"),
             Model("claude-sonnet-5[1m]", "Claude Sonnet 5 (1M)", "anthropic", "Anthropic"),
             Model("claude-haiku-4-5", "Claude Haiku 4.5", "anthropic", "Anthropic"),
