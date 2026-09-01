@@ -16,10 +16,11 @@ export const DEFAULT_TARGET = 'C:\\Sono Backup';
 export const COVER_BASE = 'https://cdn1.suno.ai';
 export const AUDIO_BASE = 'https://cdn1.suno.ai';
 /**
- * Private Songs (is_public = false) sperrt cdn1.suno.ai mit HTTP 403 aus, und die
- * CloudFront-Auslieferung liefert nur einen verschleierten Datenstrom. Der einzige
- * tragfähige Weg ist der signierte Link aus /api/download/clip/<id>, den das
- * Browser-Skript beim Erstellen der Liste mitholt (Feld download_url).
+ * cdn1.suno.ai liefert seit Sunos Umstellung keinen Song mehr aus — weder private noch
+ * veröffentlichte, alles endet in HTTP 403 —, und die CloudFront-Auslieferung gibt nur
+ * einen verschleierten Datenstrom heraus. Der einzige tragfähige Weg ist der signierte
+ * Link aus /api/download/clip/<id>, den das Browser-Skript beim Erstellen der Liste
+ * mitholt (Feld download_url). Die alte Adresse bleibt nur als letzter Versuch stehen.
  */
 export const BROWSER_KOPF = {
   'User-Agent':
@@ -38,6 +39,8 @@ export type Song = {
   media_urls?: string[];
   /** Signierter Link aus /api/download/clip/<id> — trägt auch bei privaten Songs. */
   download_url?: string;
+  /** Nicht veröffentlicht — das Suno-CDN sperrt diesen Song aus. */
+  privat?: boolean;
 };
 
 /** id -> assigned number and file name. Once assigned, a number never changes. */
@@ -112,6 +115,8 @@ export function brauchbareAudioUrl(url: unknown): url is string {
   if (typeof url !== 'string' || !url.startsWith('http')) return false;
   if (/\/api\//i.test(url)) return false;
   if (/forbidden|unauthorized|placeholder/i.test(url)) return false;
+  // audiopipe.suno.ai antwortet zwar mit 200, liefert aber einen leeren Datenstrom.
+  if (/audiopipe/i.test(url)) return false;
   return true;
 }
 
@@ -147,6 +152,7 @@ export function leseListe(pfad: string): Song[] {
               .filter((m: unknown): m is string => typeof m === 'string')
           : undefined,
         download_url: typeof entry.download_url === 'string' ? entry.download_url : undefined,
+        privat: entry.privat === true,
       });
     }
   }
@@ -299,7 +305,7 @@ export async function ladeDatei(
 
   for (const quelle of quellen) {
     // Alles, was nicht schon MP3 ist, wird nach dem Laden umgewandelt.
-    const istMp3 = /\.mp3(\?|$)/i.test(quelle) || /audiopipe/i.test(quelle);
+    const istMp3 = /\.mp3(\?|$)/i.test(quelle);
     const roh = istMp3 ? `${ziel}.teil` : `${ziel}.teil.m4a`;
 
     for (let attempt = 1; attempt <= 3; attempt++) {
@@ -332,8 +338,8 @@ export async function ladeDatei(
       }
     }
   }
-  if (lastError && /HTTP 403/.test(lastError.message) && !brauchbareAudioUrl(signiert)) {
-    throw new Error('HTTP 403 — Song ist privat, es fehlt der Download-Link (Liste neu holen)');
+  if (lastError && /HTTP 40\d|zu klein/.test(lastError.message) && !brauchbareAudioUrl(signiert)) {
+    throw new Error('gesperrt — es fehlt ein gültiger Download-Link (Songliste neu holen)');
   }
   throw lastError ?? new Error('Unbekannter Fehler');
 }

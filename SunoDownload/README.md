@@ -127,24 +127,32 @@ $lnk.Save()
 
 ---
 
-### Private Songs (HTTP 403)
+### Warum es ohne Download-Links nicht geht (HTTP 403)
 
-Songs, die in Suno nicht veröffentlicht sind (`is_public = false`), sperrt das Suno-CDN aus —
-ein direkter Ladeversuch endet in `HTTP 403`. Für genau diese Songs holt das Konsolen-Skript
-beim Erstellen der Liste einen signierten Download-Link (`download_url`) über den offiziellen
-Endpunkt `/api/download/clip/<id>` mit, und der Nachlade-Lauf benutzt ihn.
+Suno liefert Songs nicht mehr über `cdn1.suno.ai` aus — jeder direkte Ladeversuch endet in
+`HTTP 403`, bei veröffentlichten Stücken genauso wie bei privaten. In der Songliste steht als
+`audio_url` nur noch der Platzhalter `.../api/forbidden`.
 
-Praktische Folge: Die Liste sollte **kurz vor** dem Ladelauf geholt werden — die signierten
-Links sind zeitlich begrenzt. Meldet ein Lauf
-`HTTP 403 — Song ist privat, es fehlt der Download-Link`, einfach das Konsolen-Skript noch
-einmal ausführen und den Lauf wiederholen.
+Der einzige tragfähige Weg ist der offizielle Endpunkt `/api/download/clip/<id>`: er stellt
+einen zeitlich begrenzten, signierten Link aus. Das Konsolen-Skript holt diese Links beim
+Erstellen der Liste mit und schreibt sie als `download_url` hinein; der Nachlade-Lauf benutzt
+sie zuerst.
 
-Nur die Links nachholen, ohne die ganze Bibliothek neu zu lesen:
+Damit das nicht bei jedem Lauf für die ganze Bibliothek passiert, trägt das Start-Skript den
+Zeitstempel des jüngsten bereits gesicherten Songs ein — Links werden nur für neuere Songs
+geholt.
+
+**Wenn ein Lauf `gesperrt — es fehlt ein gültiger Download-Link` meldet**, ist der Link
+abgelaufen oder wurde nie geholt (etwa bei einer Datei, die nachträglich auf der Platte fehlt).
+Dann in der Suno-Konsole:
 
 ```js
-await sunoLinks(); sunoSpeichern();
+await sunoLinks(true); sunoSpeichern();
 ```
+
+Das holt Links für **alle** Songs ohne Adresse und speichert die Liste neu. Danach den Lauf
+wiederholen.
 
 ---
 
-Version 1.4.0 (01.09.2026, 06:25 Uhr)
+Version 1.5.0 (01.09.2026, 07:10 Uhr)

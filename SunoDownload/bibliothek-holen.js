@@ -17,8 +17,22 @@
   const PFAD = '/api/feed/v2';
   const PAUSE = 900;        // Millisekunden zwischen zwei Abfragen
   const SPEICHER = 'suno-download-stand';
+  // Aendert sich, sobald sich der Aufbau der Eintraege aendert. Ein Zwischenstand aus
+  // einer aelteren Fassung wird dann verworfen statt weitergeschleppt.
+  const FORMAT = 2;
 
   const songs = new Map();
+  /**
+   * Eigener Suno-Name (handle). Er wird aus der ersten Antwort des eigenen Feeds
+   * gelesen — der Clerk-Benutzername taugt nicht, dort steht die E-Mail-Adresse.
+   */
+  let ICH = null;
+  /**
+   * Zeitstempel des juengsten bereits gesicherten Songs. Das Start-Skript traegt ihn
+   * hier ein; Download-Links werden dann nur fuer wirklich neue Songs geholt — sonst
+   * waere der Lauf bei mehreren tausend privaten Songs stundenlang beschaeftigt.
+   */
+  const SEIT = '__SEIT__';
   let gesamtLautApi = null;
 
   const warte = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -36,27 +50,36 @@
     }
 
     if (typeof n.id === 'string' && UUID.test(n.id)) {
-      // Suno liefert fuer neuere Songs Platzhalter wie .../api/forbidden statt einer
+      // Suno liefert fuer private Songs Platzhalter wie .../api/forbidden statt einer
       // echten Adresse. Solche Werte fuehren beim Laden zwangslaeufig zu HTTP 403 und
-      // werden darum verworfen — das Ladeprogramm findet den Song ueber seine ID.
+      // werden darum verworfen — fuer diese Songs wird spaeter ein signierter
+      // Download-Link geholt.
       const echt = (u) => typeof u === 'string' && u.startsWith('http')
-        && !/\/api\//i.test(u) && !/forbidden|unauthorized|placeholder/i.test(u);
+        && !/\/api\//i.test(u) && !/forbidden|unauthorized|placeholder|audiopipe/i.test(u);
+
       let url = null;
       for (const k of ['audio_url', 'audio_url_mp3', 'mp3_url', 'stream_audio_url']) {
         if (echt(n[k])) { url = n[k]; break; }
       }
-      if (!url && typeof n.title === 'string') {
-        url = 'https://audiopipe.suno.ai/?item_id=' + n.id;
-      }
-      // media_urls ist die einzige Quelle, die auch bei privaten Songs traegt —
-      // cdn1.suno.ai sperrt die mit HTTP 403 aus.
+
       let medien = [];
       if (Array.isArray(n.media_urls)) {
         medien = n.media_urls
           .map((m) => (typeof m === 'string' ? m : (m && m.url) || null))
-          .filter((m) => typeof m === 'string' && m.startsWith('http'));
+          .filter(echt);
       }
-      if (url || medien.length) {
+
+      // Nur eigene Songs: in der Antwort haengen auch fremde Stuecke (Aehnliches,
+      // Vorlagen von Coverversionen), und die gehoeren nicht in die eigene Sicherung.
+      // Verglichen wird der handle — der Anzeigename taugt nicht, er lautet anders.
+      const wer = n.handle || (n.user && n.user.handle);
+      const meins = ICH ? (typeof wer === 'string' && wer.toLowerCase() === ICH) : true;
+
+      // Ein Song ist alles, was Audio-Felder mitbringt. Ob eine Adresse brauchbar ist,
+      // entscheidet erst das Ladeprogramm — sonst fielen private Songs hier heraus.
+      const istSong = ('audio_url' in n) || Array.isArray(n.media_urls);
+
+      if (meins && istSong) {
         zaehler.roh++;
         const alt = songs.get(n.id) || {};
         songs.set(n.id, {
@@ -65,6 +88,9 @@
           created_at: n.created_at || n.createdAt || alt.created_at || null,
           audio_url: url || '',
           media_urls: medien.length ? medien : (alt.media_urls || []),
+          // Privat heisst: das CDN sperrt den Song aus, es braucht einen signierten Link.
+          // Erkennbar an is_public — und daran, dass die API keine echte Adresse nennt.
+          privat: typeof n.is_public === 'boolean' ? !n.is_public : (!url || alt.privat || false),
           download_url: alt.download_url || undefined,
         });
       }
@@ -75,12 +101,18 @@
 
   // ---------------------------------------------------------------- sichern
   const sicherung = () => {
-    try { localStorage.setItem(SPEICHER, JSON.stringify([...songs.values()])); } catch (e) { /* voll */ }
+    try {
+      localStorage.setItem(SPEICHER, JSON.stringify({ format: FORMAT, songs: [...songs.values()] }));
+    } catch (e) { /* voll */ }
   };
   try {
-    const alt = JSON.parse(localStorage.getItem(SPEICHER) || '[]');
-    alt.forEach((s) => { if (s && s.id) songs.set(s.id, s); });
-    if (songs.size) zeig('↩️ Frueherer Stand geladen: ' + songs.size + ' Songs', '#666');
+    const alt = JSON.parse(localStorage.getItem(SPEICHER) || 'null');
+    if (alt && alt.format === FORMAT && Array.isArray(alt.songs)) {
+      alt.songs.forEach((s) => { if (s && s.id) songs.set(s.id, s); });
+      if (songs.size) zeig('↩️ Frueherer Stand geladen: ' + songs.size + ' Songs', '#666');
+    } else if (alt) {
+      zeig('↩️ Frueherer Stand stammt aus einer aelteren Fassung — die Bibliothek wird neu gelesen.', '#666');
+    }
   } catch (e) { /* egal */ }
 
   const speichern = () => {
@@ -120,14 +152,11 @@
 
   // ------------------------------------------------------- Download-Links holen
   /**
-   * Private Songs (alles, was nicht veroeffentlicht ist) sperrt das Suno-CDN aus:
-   * jeder Ladeversuch endet in HTTP 403. Nur der offizielle Download-Endpunkt
-   * liefert einen signierten Link. Der wird hier fuer genau diese Songs geholt und
-   * als download_url in die Liste geschrieben.
+   * Das Suno-CDN liefert keine Songs mehr aus — jeder direkte Ladeversuch endet in
+   * HTTP 403, bei privaten wie bei veroeffentlichten Stuecken. Der einzige Weg ist
+   * der offizielle Download-Endpunkt, der einen zeitlich begrenzten, signierten Link
+   * ausstellt. Der wird hier geholt und als download_url in die Liste geschrieben.
    */
-  const echtesMp3 = (u) => typeof u === 'string' && /\.mp3(\?|$)/i.test(u)
-    && !/\/api\//i.test(u) && !/forbidden/i.test(u);
-
   const linkHolen = async (id) => {
     for (let versuch = 0; versuch < 12; versuch++) {
       const a = await hol(HOST + '/api/download/clip/' + id);
@@ -140,19 +169,28 @@
     return null;
   };
 
-  const linkeNachholen = async () => {
-    const offen = [...songs.values()].filter(
-      (s) => !echtesMp3(s.audio_url) && !(s.media_urls || []).some(echtesMp3) && !s.download_url,
-    );
-    if (!offen.length) return 0;
+  const linkeNachholen = async (alle) => {
+    const grenze = (!alle && SEIT && SEIT.indexOf('__') !== 0) ? Date.parse(SEIT) : null;
+    // cdn1/cdn2.suno.ai zaehlen ausdruecklich nicht: die Adressen stehen zwar in der
+    // Antwort, liefern aber seit Sunos Umstellung fuer jeden Song nur noch HTTP 403.
+    const brauchbar = (u) => typeof u === 'string' && /\.mp3(\?|$)/i.test(u)
+      && !/\/api\//i.test(u) && !/cdn\d*\.suno\.ai/i.test(u);
+    const offen = [...songs.values()].filter((s) => {
+      if (s.download_url) return false;
+      if (brauchbar(s.audio_url) || (s.media_urls || []).some(brauchbar)) return false;
+      if (!grenze) return true;
+      const t = s.created_at ? Date.parse(s.created_at) : NaN;
+      return isNaN(t) || t > grenze; // alles Aeltere liegt bereits gesichert auf der Platte
+    });
+    if (!offen.length) { zeig('🔑 Keine neuen Songs — es werden keine Download-Links gebraucht.', '#666'); return 0; }
 
-    zeig('🔑 ' + offen.length + ' Songs sind privat — es werden Download-Links geholt …', '#06c');
+    zeig('🔑 Fuer ' + offen.length + ' neue Songs werden Download-Links geholt …', '#06c');
     let fertig = 0;
-    for (const song of offen) {
-      const link = await linkHolen(song.id);
-      if (link) { song.download_url = link; fertig++; }
-      if (fertig % 10 === 0) sicherung();
-      console.log('   Link ' + (fertig) + ' von ' + offen.length + (link ? '' : ' — fehlgeschlagen'));
+    for (let i = 0; i < offen.length; i++) {
+      const link = await linkHolen(offen[i].id);
+      if (link) { offen[i].download_url = link; fertig++; }
+      if (i % 10 === 0) sicherung();
+      console.log('   Link ' + (i + 1) + ' von ' + offen.length + (link ? '' : ' — fehlgeschlagen'));
       await warte(600);
     }
     sicherung();
@@ -192,6 +230,14 @@
 
       bremsen = 0;
       fehler = 0;
+      if (!ICH && a.daten && Array.isArray(a.daten.clips) && a.daten.clips.length) {
+        const erster = a.daten.clips[0];
+        const wer = erster.handle || (erster.user && erster.user.handle);
+        if (typeof wer === 'string' && wer) {
+          ICH = wer.toLowerCase();
+          console.log('   Eigener Suno-Name: ' + ICH);
+        }
+      }
       const anzahl = ernte(a.daten);
 
       if (anzahl === 0) {
@@ -211,6 +257,7 @@
     sicherung();
     await linkeNachholen();
     speichern();
+    zeig('   Fehlen spaeter Links (Meldung "Song ist privat"), hilft:  await sunoLinks(true); sunoSpeichern()', '#666');
     if (gesamtLautApi && songs.size < gesamtLautApi) {
       zeig('⚠️ Es fehlen noch ' + (gesamtLautApi - songs.size) + ' Songs.', '#c60');
       zeig('   Weitermachen mit:  sunoWeiter(' + seite + ')', '#c60');

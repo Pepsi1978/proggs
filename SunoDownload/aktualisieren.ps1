@@ -17,8 +17,34 @@ $frisch = Get-ChildItem "$env:USERPROFILE\Downloads","$ziel" -Filter "suno-liste
           Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 if (-not $frisch) {
-    # Schritt 1: Skript in die Zwischenablage und Browser oeffnen
-    Get-Content (Join-Path $projekt "bibliothek-holen.js") -Raw -Encoding UTF8 | Set-Clipboard
+    # Schritt 1: Skript in die Zwischenablage und Browser oeffnen.
+    # Vorher wird der Zeitstempel des juengsten bereits gesicherten Songs eingesetzt.
+    # Nur fuer neuere Songs holt das Skript dann Download-Links - private Songs sperrt
+    # das Suno-CDN aus, und bei mehreren tausend Songs waere das sonst endlos.
+    $seit = ""
+    $bestandDatei = Join-Path $ziel "_bestand.json"
+    $alteListe = Get-ChildItem "$env:USERPROFILE\Downloads","$ziel" -Filter "suno-liste*.json" -ErrorAction SilentlyContinue |
+                 Where-Object { $_.Name -notlike "*-vorher*" } |
+                 Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ((Test-Path $bestandDatei) -and $alteListe) {
+        try {
+            $bestand = (Get-Content $bestandDatei -Raw -Encoding UTF8 | ConvertFrom-Json).eintraege
+            $bekannt = @{}
+            foreach ($p in $bestand.PSObject.Properties) { $bekannt[$p.Name] = $true }
+            $juengste = Get-Content $alteListe.FullName -Raw -Encoding UTF8 | ConvertFrom-Json |
+                        Where-Object { $bekannt.ContainsKey($_.id) -and $_.created_at } |
+                        ForEach-Object { [datetime]$_.created_at } |
+                        Sort-Object -Descending | Select-Object -First 1
+            if ($juengste) { $seit = $juengste.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ") }
+        } catch { $seit = "" }
+    }
+
+    $skript = Get-Content (Join-Path $projekt "bibliothek-holen.js") -Raw -Encoding UTF8
+    if ($seit) {
+        $skript = $skript.Replace("__SEIT__", $seit)
+        Write-Host "  Es werden nur Songs nach dem $($juengste.ToLocalTime().ToString('dd.MM.yyyy HH:mm')) als neu behandelt." -ForegroundColor DarkGray
+    }
+    $skript | Set-Clipboard
     Start-Process "https://suno.com/me"
 
     Write-Host "  Schritt 1 von 2 - einmal im Browser:" -ForegroundColor Yellow
