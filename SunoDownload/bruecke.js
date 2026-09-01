@@ -88,9 +88,12 @@
   const hallo = await anDownloader('/start');
   if (!hallo) return;
   const bekannt = new Set(hallo.bekannt || []);
+  // Songs, deren Datei auf der Platte fehlt: sie werden geholt, egal wie alt sie sind.
+  const fehlt = new Set(hallo.fehlt || []);
   const grenze = hallo.neuester ? Date.parse(hallo.neuester) : null;
   const limit = hallo.limit || null;
   zeig('🔗 Mit dem Downloader verbunden. Er kennt bereits ' + bekannt.size + ' Songs.', '#06c');
+  if (fehlt.size) zeig('   ' + fehlt.size + ' Dateien fehlen auf der Platte — sie werden mitgesucht.', '#c60');
   if (limit) zeig('   Probelauf: es werden höchstens ' + limit + ' Songs geholt.', '#666');
 
   // ------------------------------------------------------------- Songliste lesen
@@ -116,7 +119,7 @@
       const wer = c.handle || (c.user && c.user.handle);
       if (ich && typeof wer === 'string' && wer.toLowerCase() !== ich) continue;
       if (bekannt.has(c.id) || gefunden.has(c.id)) continue;
-      if (grenze && c.created_at && Date.parse(c.created_at) <= grenze) continue;
+      if (grenze && c.created_at && Date.parse(c.created_at) <= grenze && !fehlt.has(c.id)) continue;
 
       const medien = Array.isArray(c.media_urls)
         ? c.media_urls.map((m) => (typeof m === 'string' ? m : m && m.url)).filter((u) => typeof u === 'string')
@@ -151,7 +154,10 @@
       console.log('   Seiten bis ' + seite + ' → ' + gefunden.size + ' neue Songs gefunden');
 
       if (alleLeer) break;
-      if (neu === 0) {
+      // Fehlt noch eine Datei aus dem Bestand, wird weitergesucht, bis sie auftaucht —
+      // sie kann irgendwo tief in der Bibliothek liegen. Ebenso bei --alles.
+      const nochGesucht = [...fehlt].some((id) => !gefunden.has(id));
+      if (neu === 0 && !hallo.alles && !nochGesucht) {
         ohneNeues++;
         if (ohneNeues >= GENUG) {
           zeig('🏁 Ab hier ist alles bereits gesichert.', '#06c');

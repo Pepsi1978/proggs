@@ -62,7 +62,8 @@ Nebeneffekt: Ein Song, der nachträglich auftaucht, aber älter ist, landet trot
 der Preis dafür, dass deine Sammlung nie durcheinandergerät.
 
 Wird eine Datei versehentlich gelöscht, merkt das Programm das beim nächsten Lauf und lädt genau
-diese eine Datei wieder — unter demselben Namen.
+diese eine Datei wieder — unter demselben Namen, egal wie alt der Song ist. Dafür sucht es so
+lange weiter, bis es sie in der Bibliothek gefunden hat, auch wenn sonst nichts Neues da ist.
 
 ---
 
@@ -160,4 +161,4 @@ früher ist damit überflüssig.
 
 ---
 
-Version 1.6.0 (01.09.2026, 18:43 Uhr)
+Version 1.6.1 (01.09.2026, 18:52 Uhr)

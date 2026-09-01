@@ -131,10 +131,11 @@ const server = createServer(async (req, res) => {
 
   // Der Browser meldet sich an und erfährt, was schon auf der Platte liegt.
   if (pfad === '/start') {
-    const bekannt = Object.keys(bestand.eintraege).filter((id) => {
-      const e = bestand.eintraege[id];
-      return existsSync(join(ZIEL, e.datei)); // fehlende Dateien gelten als unbekannt
-    });
+    const bekannt: string[] = [];
+    const fehlt: string[] = [];
+    for (const [id, e] of Object.entries(bestand.eintraege)) {
+      (existsSync(join(ZIEL, e.datei)) ? bekannt : fehlt).push(id);
+    }
     let neuester: string | null = null;
     for (const song of Object.values(bestand.eintraege)) void song;
     const listePfad = join(ZIEL, 'suno-liste.json');
@@ -150,8 +151,14 @@ const server = createServer(async (req, res) => {
         /* ohne Zeitstempel wird eben die ganze Bibliothek gelesen */
       }
     }
-    console.log(`  ➜ Browser verbunden. Bekannt: ${bekannt.length} Songs.`);
-    antwort(res, { ok: true, bekannt, neuester: ALLES ? null : neuester, alles: ALLES, limit: LIMIT });
+    console.log(
+      `  ➜ Browser verbunden. Bekannt: ${bekannt.length} Songs` +
+        (fehlt.length ? `, ${fehlt.length} Dateien fehlen auf der Platte.` : '.'),
+    );
+    // fehlt: Songs, die einmal geladen waren und deren Datei verschwunden ist. Sie
+    // müssen auch dann geholt werden, wenn sie älter sind als die Zeitgrenze — sonst
+    // repariert sich eine gelöschte Datei aus dem letzten Jahr nie wieder.
+    antwort(res, { ok: true, bekannt, fehlt, neuester: ALLES ? null : neuester, alles: ALLES, limit: LIMIT });
     return;
   }
 
