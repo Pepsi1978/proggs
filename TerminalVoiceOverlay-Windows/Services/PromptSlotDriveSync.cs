@@ -172,11 +172,9 @@ public sealed class PromptSlotDriveSync
         var cred = new UserCredential(flow, "promptboard-user", token);
         await cred.RefreshTokenAsync(ct).ConfigureAwait(false);
 
-        return new DriveService(new BaseClientService.Initializer
-        {
-            HttpClientInitializer = cred,
-            ApplicationName = "PromptBoard",
-        });
+        // Gehaerteter Client (Verbindungs-Timeout, Keepalive, 30 s Gesamt) fuer
+        // alle Drive-Dienste — siehe DriveHttp (Vorfall 03.09.2026, 100-s-Haenger).
+        return DriveHttp.CreateService(cred);
     }
 
     private static async Task<List<string>> FindAllAsync(

@@ -467,6 +467,31 @@ Zusaetzlich: Gesamt-Timeouts an der Realitaet ausrichten (Diktat < 2 min → 180
 
 ---
 
+### 8.3 Drive-Sync haengt 100 s, Backup und Prompt-Abgleich scheitern still  SELBST ERLEBT 03.09.2026
+
+**Symptom:** Sieben Mal im Diag-Log `GeminiPromptSync cloud sync failed` / `backup upload failed` mit
+`HttpClient.Timeout of 100 seconds elapsing` - auch direkt nach einem frischen Start. Das Diktat lief
+weiter, aber Backup und Sync waren weg, und jeder Start schleppte einen 100-s-Haenger mit.
+
+**Root Cause:** Dieselbe Klasse wie 8.2. Die fuenf Drive-Dienste (Prompt-Sync, Slots, Historie,
+Woerterbuch, Backup) bauten ihren `DriveService` mit Googles Standard-Handler: kein `ConnectTimeout`,
+kein Keepalive, 100 s Gesamt-Timeout. Der gehaertete `ResilientHttp`-Handler galt nur fuer Gemini/Groq.
+
+**Fix (TVO 1.11.4 / CVO 2.4.4):** Eine Fabrik `DriveHttp.CreateService(cred)` fuer alle fuenf Dienste.
+Sie haengt ueber eine eigene `Google.Apis.Http.HttpClientFactory` (`CreateHandler` ueberschrieben) den
+`ResilientHttp`-SocketsHttpHandler ein - mit Googles Vorgaben `AllowAutoRedirect=false`,
+`UseCookies=false`, Dekomprimierung nur bei `args.GZipEnabled` - und setzt `HttpClient.Timeout` auf 30 s.
+
+**Muster-Erkennung:** Jede Bibliothek, die ihren eigenen HttpClient baut (Google.Apis, AWS SDK, Azure SDK),
+umgeht die eigene Handler-Fabrik. Nach `new HttpClient(ResilientHttp...)` immer auch nach `new XyzService(`
+greppen und dort die Fabrik einhaengen.
+
+### 8.4 Status-Server lauscht erst beim ersten Einblenden des Overlays  (03.09.2026)
+
+`AutoEnterStatusServer.Start()` stand in `OnSourceInitialized` - das feuert erst beim ersten `Show()`.
+Bis dahin lauschte niemand auf 5723/5724, der Deploy-Guard konnte die Pipeline nicht reservieren und
+meldete »niemand lauscht« (harmlos dank 8.1, aber unsauber). Fix: `EnsureAutoEnterServerStarted()` am
+Ende des Konstruktors, idempotent; der zweite Aufruf in `OnSourceInitialized` bleibt als Netz.
 ## Fix-Status (Stand 2026-06-10, per gh verifiziert)
 
 | Frueherer Bug | Status | Bezug |

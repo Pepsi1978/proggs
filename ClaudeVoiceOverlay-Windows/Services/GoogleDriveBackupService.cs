@@ -192,11 +192,9 @@ public sealed class GoogleDriveBackupService : IGoogleDriveBackupService
         var cred = new UserCredential(flow, "promptboard-user", token);
         await cred.RefreshTokenAsync(ct);
 
-        return new DriveService(new BaseClientService.Initializer
-        {
-            HttpClientInitializer = cred,
-            ApplicationName = "PromptBoard",
-        });
+        // Gehaerteter Client (Verbindungs-Timeout, Keepalive, 30 s Gesamt) fuer
+        // alle Drive-Dienste — siehe DriveHttp (Vorfall 03.09.2026, 100-s-Haenger).
+        return DriveHttp.CreateService(cred);
     }
 
     /// Lists every non-trashed promptboard-backup.json in the appDataFolder,

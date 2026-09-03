@@ -518,6 +518,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 _pulseBright = !_pulseBright;
                 MicButton.Background = _pulseBright ? BtnRecordingBright : BtnRecording;
+                CollapsedMicButton.Background = MicButton.Background;
             };
 
             // ── Pulse timer: BTW mic (500 ms, #90CAF9 ↔ #1E88E5) ──
@@ -544,7 +545,7 @@ namespace TerminalVoiceOverlay.Views
                 SetMicState(RecordingState.Idle);
                 // Fehler-Tooltip nur zuruecknehmen, wenn das Problem vorbei ist;
                 // ohne Mikrofon soll der Grund am Button stehen bleiben.
-                if (!_noMicEpisode) RestoreButtonTooltip(MicButton);
+                if (!_noMicEpisode) RestoreMainMicTooltip();
             };
 
             // ── Hide-Delay-Timer: 5 s nach Verlassen des Terminals ──
@@ -707,6 +708,13 @@ namespace TerminalVoiceOverlay.Views
             // Cloud-Merge des persoenlichen Vokabular-Woerterbuchs: gleiche Idee.
             _ = TryMergeVocabularyFromCloudAsync();
             GeminiPromptDriveSync.TrySyncFromCloud();   // Prompts + Schalter per Timestamp vom Backup holen
+
+            // Standard-Tooltip der eingeklappten Pille merken (sie haengt nicht
+            // im Tooltip-Wiring der grossen Leiste).
+            if (CollapsedMicButton.ToolTip is string pillTip) _tooltipDefaults[CollapsedMicButton] = pillTip;
+
+            // Status-Server sofort, nicht erst beim ersten Einblenden (03.09.2026).
+            EnsureAutoEnterServerStarted();
         }
 
         // ── Hover animation helper ──
@@ -2041,6 +2049,19 @@ namespace TerminalVoiceOverlay.Views
             var source = HwndSource.FromHwnd(hwnd);
             source?.AddHook(WndProc);
 
+            EnsureAutoEnterServerStarted();
+        }
+
+        /// <summary>
+        /// Startet den AutoEnter-/Deploy-Status-Server genau einmal. Wird am Ende
+        /// des Konstruktors gerufen (Vorfall 03.09.2026: bis zum ersten Einblenden
+        /// des Overlays lauschte niemand auf dem Status-Port, der Deploy-Guard
+        /// konnte die Pipeline nicht reservieren) und sicherheitshalber erneut in
+        /// OnSourceInitialized — der zweite Aufruf ist ein No-op.
+        /// </summary>
+        private void EnsureAutoEnterServerStarted()
+        {
+            if (_autoEnterServer != null) return;
             // ── AutoEnter-Status-HTTP-Server starten ───────────────────────
             // Macht den aktuellen orange/grau-Zustand fuer externe Hardware
             // (Stream Deck Plugin) abfragbar UND erlaubt Toggle-Requests.
@@ -4689,7 +4710,7 @@ namespace TerminalVoiceOverlay.Views
 
             if (btw) SetBtwMicState(RecordingState.Error); else SetMicState(RecordingState.Error);
             _recordingCuePlayer.PlayError();
-            SetButtonTooltipText(btw ? BtwButton : MicButton, text);
+            if (btw) SetButtonTooltipText(BtwButton, text); else SetMainMicTooltip(text);
 
             if (kind == RecordingStartFailure.NoDevice)
             {
@@ -4732,8 +4753,8 @@ namespace TerminalVoiceOverlay.Views
             }
             Console.WriteLine("Aufnahme blockiert: Overlay-Deployment ist reserviert.");
             DiagLog.Write("Deploy", "recording_blocked_by_deployment", ("btw", btw), ("ageSec", (long)age.TotalSeconds));
-            SetButtonTooltipText(btw ? BtwButton : MicButton,
-                "Overlay-Update läuft gerade. Bitte in ein paar Sekunden noch einmal versuchen.");
+            const string blocked = "Overlay-Update läuft gerade. Bitte in ein paar Sekunden noch einmal versuchen.";
+            if (btw) SetButtonTooltipText(BtwButton, blocked); else SetMainMicTooltip(blocked);
             if (btw) { SetBtwMicState(RecordingState.Error); _ = ResetBtwAfterDelayAsync(); }
             else     { SetMicState(RecordingState.Error);    ScheduleReset(); }
             _recordingCuePlayer.PlayError();
@@ -4751,6 +4772,19 @@ namespace TerminalVoiceOverlay.Views
                 else btn.ToolTip = text;
             }
             catch (Exception ex) { Console.WriteLine($"Tooltip set error: {ex.Message}"); }
+        }
+
+        // Grosser Mic-Button und eingeklappte Pille tragen immer denselben Text.
+        private void SetMainMicTooltip(string text)
+        {
+            SetButtonTooltipText(MicButton, text);
+            SetButtonTooltipText(CollapsedMicButton, text);
+        }
+
+        private void RestoreMainMicTooltip()
+        {
+            RestoreButtonTooltip(MicButton);
+            RestoreButtonTooltip(CollapsedMicButton);
         }
 
         private void RestoreButtonTooltip(System.Windows.Controls.Button btn)
@@ -4802,7 +4836,7 @@ namespace TerminalVoiceOverlay.Views
             {
                 _noMicEpisode = false;
                 DiagLog.Write("Audio", "device_available_again", ("inputDevices", devices));
-                RestoreButtonTooltip(MicButton);
+                RestoreMainMicTooltip();
                 RestoreButtonTooltip(BtwButton);
                 if (_micState == RecordingState.Error) SetMicState(RecordingState.Idle);
                 App.ShowTrayBalloon("Mikrofon wieder da", "Das Mikrofon ist wieder verfügbar. Aufnahme ist möglich.",
@@ -4844,7 +4878,7 @@ namespace TerminalVoiceOverlay.Views
                     // Aufnahme laeuft → das Mikrofon ist da. Episode beenden,
                     // Standard-Tooltip zurueck.
                     _noMicEpisode = false;
-                    RestoreButtonTooltip(MicButton);
+                    RestoreMainMicTooltip();
                     break;
                 case RecordingState.Processing:
                     MicButton.Background = BtnProcessing;
@@ -4856,6 +4890,10 @@ namespace TerminalVoiceOverlay.Views
                     MicButton.Background = BtnX;
                     break;
             }
+
+            // Eingeklappte Pille spiegelt jeden Zustand des grossen Mic-Buttons
+            // (03.09.2026: sie blieb immer gelb — auch bei Aufnahme und Fehler).
+            CollapsedMicButton.Background = MicButton.Background;
 
             // Auto-Hide: waehrend einer Aufnahme immer ausgeklappt (Welle
             // sichtbar). Ab Processing sofort einklappen, sobald die Maus die
