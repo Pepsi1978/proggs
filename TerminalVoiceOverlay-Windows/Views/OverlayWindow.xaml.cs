@@ -2815,7 +2815,7 @@ namespace TerminalVoiceOverlay.Views
                 if (started && _mainStopRequestedDuringStart)
                 {
                     _mainStopRequestedDuringStart = false;
-                    Dispatcher.BeginInvoke(new Action(() => BtnMic_Click(MicButton, new RoutedEventArgs())));
+                    _ = Dispatcher.BeginInvoke(new Action(() => BtnMic_Click(MicButton, new RoutedEventArgs())));
                 }
             }
         }
@@ -2990,7 +2990,7 @@ namespace TerminalVoiceOverlay.Views
                 if (started && _btwStopRequestedDuringStart)
                 {
                     _btwStopRequestedDuringStart = false;
-                    Dispatcher.BeginInvoke(new Action(() => BtnBtw_Click(BtwButton, new RoutedEventArgs())));
+                    _ = Dispatcher.BeginInvoke(new Action(() => BtnBtw_Click(BtwButton, new RoutedEventArgs())));
                 }
             }
         }
