@@ -199,6 +199,10 @@
   const linkeHolen = async (ids) => {
     const ergebnis = new Map();
     let offen = ids.slice();
+    // Seit September 2026 antwortet Suno oft mit ok:false / "not_authorized" — dann
+    // gibt es keinen signierten Link, egal wie oft man fragt. Der Downloader nimmt
+    // in dem Fall die m4a aus media_urls; hier wird nur nicht sinnlos gewartet.
+    let verweigert = 0;
     for (let runde = 0; runde < 8 && offen.length; runde++) {
       const naechste = [];
       for (let i = 0; i < offen.length; i += LINKS_GLEICH) {
@@ -206,17 +210,25 @@
         const antworten = await Promise.all(
           schub.map(async (id) => {
             const d = await api('/api/download/clip/' + id, 4);
-            return { id, url: d && d.download_url ? d.download_url : null, laeuft: d && d.status === 'processing' };
+            return {
+              id,
+              url: d && d.download_url ? d.download_url : null,
+              endgueltig: !d || d.ok === false,
+            };
           }),
         );
         for (const a of antworten) {
           if (a.url) ergebnis.set(a.id, a.url);
+          else if (a.endgueltig) verweigert++;
           else naechste.push(a.id);
         }
-        console.log('   Links: ' + ergebnis.size + ' von ' + ids.length);
+        console.log('   Links: ' + ergebnis.size + ' von ' + ids.length + (verweigert ? ' (' + verweigert + ' verweigert)' : ''));
       }
       offen = naechste;
       if (offen.length) await warte(2500); // die Aufbereitung braucht einen Moment
+    }
+    if (verweigert) {
+      zeig('   ' + verweigert + ' Links hat Suno verweigert ("not_authorized") — dafür nimmt der Downloader die m4a-Datei.', '#c60');
     }
     return ergebnis;
   };

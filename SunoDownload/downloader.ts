@@ -199,7 +199,8 @@ const server = createServer(async (req, res) => {
   if (pfad === '/links') {
     const daten = (await körper(req)) as unknown as { links?: Record<string, string> };
     for (const [id, url] of Object.entries(daten.links ?? {})) {
-      if (typeof url === 'string' && url.startsWith('http')) nachschubEingang.set(id, url);
+      // Auch eine leere Antwort wird eingetragen — sonst wartet frischerLink 30 s ins Leere.
+      nachschubEingang.set(id, typeof url === 'string' && url.startsWith('http') ? url : '');
       nachschubOffen.delete(id);
     }
     antwort(res, { ok: true });
@@ -262,7 +263,7 @@ async function frischerLink(id: string): Promise<string | undefined> {
     if (nachschubEingang.has(id)) {
       const url = nachschubEingang.get(id);
       nachschubEingang.delete(id);
-      return url;
+      return url || undefined;
     }
     await new Promise((r) => setTimeout(r, 300));
   }
@@ -429,10 +430,13 @@ async function main(): Promise<void> {
     belegt.add(auftraege[auftraege.length - 1].datei.toLowerCase());
   }
 
+  // Eine Adresse ist auch die m4a aus media_urls — seit Suno den signierten Link
+  // verweigert, ist sie sogar die übliche Quelle.
+  const hatAdresse = (s: Song) => Boolean(s.download_url || s.audio_url || s.media_urls?.length);
   probe(
-    auftraege.every((a) => a.song.download_url || a.song.audio_url),
+    auftraege.every((a) => hatAdresse(a.song)),
     'Aufträge ohne jede Adresse dabei',
-    { ohne: auftraege.filter((a) => !a.song.download_url && !a.song.audio_url).length },
+    { ohne: auftraege.filter((a) => !hatAdresse(a.song)).length },
   );
 
   stand.gesamt = auftraege.length;

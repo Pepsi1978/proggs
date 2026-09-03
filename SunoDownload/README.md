@@ -159,6 +159,12 @@ früher ist damit überflüssig.
 
 **Der Browser-Tab muss offen bleiben**, bis das Programm fertig meldet.
 
+**Stand September 2026:** `/api/download/clip/<id>` antwortet für die meisten Songs nur noch
+mit `ok:false / not_authorized` — es gibt keinen signierten Link mehr. Dafür steht in
+`media_urls` eine m4a-Datei auf CloudFront (`d2lwuy8qc234o3.cloudfront.net`), die ohne
+Anmeldung erreichbar ist. Der Downloader nimmt sie als reguläre Quelle und wandelt sie mit
+`ffmpeg` in MP3 um. Ohne `ffmpeg` im Pfad schlagen diese Downloads fehl.
+
 ---
 
 Version 1.6.1 (01.09.2026, 18:52 Uhr)

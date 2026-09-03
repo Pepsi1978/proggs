@@ -120,14 +120,21 @@ export function brauchbareAudioUrl(url: unknown): url is string {
   return true;
 }
 
-/** Alle Adressen, unter denen ein Song erreichbar sein kann — beste zuerst. */
+/**
+ * Alle Adressen, unter denen ein Song erreichbar sein kann — beste zuerst.
+ *
+ * Seit September 2026 verweigert /api/download/clip den signierten Link
+ * ("not_authorized"), und media_urls enthält nur noch m4a auf CloudFront — die ist
+ * aber ohne Anmeldung erreichbar. Darum zählen m4a-Adressen als vollwertige Quelle;
+ * ladeDatei wandelt sie mit ffmpeg in MP3 um.
+ */
 export function audioKandidaten(id: string, url?: string, medien?: string[], signiert?: string): string[] {
   const liste: string[] = [];
 
   if (brauchbareAudioUrl(signiert)) liste.push(signiert);
-  for (const m of medien ?? []) {
-    if (brauchbareAudioUrl(m) && /\.mp3(\?|$)/i.test(m)) liste.push(m);
-  }
+  const brauchbareMedien = (medien ?? []).filter((m) => brauchbareAudioUrl(m));
+  for (const m of brauchbareMedien) if (/\.mp3(\?|$)/i.test(m)) liste.push(m);
+  for (const m of brauchbareMedien) if (!/\.mp3(\?|$)/i.test(m)) liste.push(m);
   if (brauchbareAudioUrl(url)) liste.push(url);
   liste.push(`${AUDIO_BASE}/${id}.mp3`);
 
