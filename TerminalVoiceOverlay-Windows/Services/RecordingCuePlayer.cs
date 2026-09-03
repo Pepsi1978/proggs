@@ -12,6 +12,9 @@ namespace TerminalVoiceOverlay.Services
         private readonly object _lock = new();
         private readonly byte[] _startPcm = CreatePcm((880, 150));
         private readonly byte[] _stopPcm = CreatePcm((660, 120), (440, 120));
+        // Fehlerton: fallende Terz, deutlich tiefer als Start/Stop — auch fuer
+        // Hotkey-/PTT-Nutzer, die den Button gar nicht sehen (03.09.2026).
+        private readonly byte[] _errorPcm = CreatePcm((392, 110), (262, 260));
         private WaveOutEvent? _output;
         private BufferedWaveProvider? _buffer;
         private bool _playbackHealthy;
@@ -35,6 +38,8 @@ namespace TerminalVoiceOverlay.Services
         public void PlayStart() => Play(_startPcm, "start");
 
         public void PlayStop() => Play(_stopPcm, "stop");
+
+        public void PlayError() => Play(_errorPcm, "error");
 
         private void Play(byte[] pcm, string cue)
         {

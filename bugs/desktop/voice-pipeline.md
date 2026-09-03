@@ -41,6 +41,10 @@
 
 ---
 
+> **Update 2026-09-03:** Eigener TVO-Vorfall ergänzt (§3.5): USB-Mikrofon abgesteckt → `waveInOpen`
+> `BadDeviceId`, Mikrofon-Klick verpuffte stumm. Fix: Geräte-Preflight, klassifizierter Fehlstart mit
+> sichtbarer Rückmeldung, `WM_DEVICECHANGE`-Selbstheilung, Deploy-Riegel mit Verfall (TVO 1.11.2 / CVO 2.4.2).
+
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
 > **Digest-Modell** (`bugs/SYSTEM.md` §11): Dieser Kurzcheck ist die Vorab-Pflichtlektüre
@@ -261,6 +265,39 @@ Wartezeit. Die Capture-Diagnose loggt Turn-, PCM-, Buffer- und Dateigröße sowi
 **Quelle:** eigener TVO-Laufzeitvorfall und `diag.log` vom 2026-07-17.
 
 ---
+
+### 3.5 Kein Aufnahmegerät: `waveInOpen` → `BadDeviceId`, Klick verpufft stumm   [⭐⭐ EIGENER VORFALL 2026-09-03]
+
+**Symptom:** Der Mikrofon-Button reagiert auf Klick scheinbar gar nicht (TVO 1.11.1). Im `diag.log`
+sechs Mal in 45 s: `CaptureWorker start_failed | NAudio.MmException: BadDeviceId calling waveInOpen`
+und `Audio recording_start_not_ready`. Windows (`Get-PnpDevice -Class AudioEndpoint`) kannte nur noch
+den Lautsprecher; das USB-Mikrofon Razer Seiren V3 Mini stand auf `Present = False` (abgesteckt bzw.
+USB-Verbindung weg). Datenschutz-Schalter für das Mikrofon stand auf `Allow` — also kein Rechteproblem.
+
+**Root Cause (5-Warum):** Klick tut nichts → `StartAsync()` liefert false → Worker scheitert an
+`waveInOpen` → Geräte-Index 0 existiert nicht (`waveInGetNumDevs() == 0`) → **kein Preflight auf die
+Geräteanzahl, und der Fehlstart wurde ohne jede Rückmeldung geschluckt** (`if (!started) return;`).
+Der Benutzer hielt die App für kaputt.
+
+**Fix (TVO 1.11.2 / CVO 2.4.2, geteilte Dateien in beiden Overlays):**
+1. Schicht 1 (präventiv): `AudioRecorder.StartCore` prüft `WaveInEvent.DeviceCount` (= `waveInGetNumDevs`,
+   öffnet nichts, crash-sicher im Overlay-Prozess) und bricht mit `RecordingStartFailure.NoDevice` ab.
+2. Schicht 2 (reaktiv, unabhängig): `CaptureWorker` prüft dieselbe Zahl und meldet `ERR NO_MIC`; jede
+   ERR-Zeile wird klassifiziert (`BadDeviceId`/`NoDriver` → kein Gerät, `Allocated` → belegt, sonst
+   Treiber/Timeout/Other) und als deutscher Text in `LastStartFailureText` abgelegt.
+3. UI: `ReportRecordingStartFailure` — roter Button, Fehlerton (`PlayError`), Tooltip mit Grund
+   (ToolTip-Objekt-`Content` mutieren, weil das Wiring die Strings durch Objekte ersetzt hat), EIN
+   Tray-Hinweis pro Episode. Gilt für Haupt-Mic, BTW, Alt+F12 und PTT — alle laufen über `BtnMic_Click`.
+4. Schicht 3 (selbstheilend): `WM_DEVICECHANGE`/`DBT_DEVNODES_CHANGED` (entprellt 900 ms) → Gerät wieder
+   da: Tooltip zurück, Idle, Hinweis. Gerät WÄHREND der Aufnahme weg: sofort regulär stoppen und das
+   Gesprochene verarbeiten. Worker stirbt mitten in der Aufnahme: `RecordingLost`-Event → stoppen.
+5. Nebenbefund derselben Klasse „stummer Riegel“: `_deploymentPending` (HTTP `/deployment/prepare`)
+   blockierte das Mikrofon ohne Anzeige und ohne Verfall → jetzt sichtbar + Verfall nach 3 Minuten.
+
+**Muster-Erkennung:** Liefert eine Start-/Init-Methode nur `bool` und der Aufrufer `return`t bei `false`
+bloß, ist das ein stummer Fehlerpfad — Grund IMMER abfragbar machen und anzeigen. `MmResult.BadDeviceId`
+bei Index 0 heißt praktisch immer „kein Gerät“, nicht „falscher Index“. Zwei `TerminalVoiceOverlay.exe`
+im Task-Manager sind gewollt (Watchdog + Overlay), nicht die Ursache.
 
 ## 4. Turn-Latenz & Pipeline-Architektur (das "live"-Gefuehl)
 

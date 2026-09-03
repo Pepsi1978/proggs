@@ -8,6 +8,27 @@ using System.Threading.Tasks;
 namespace TerminalVoiceOverlay.Services
 {
     /// <summary>
+    /// Warum ein Aufnahme-Start scheiterte — damit die UI dem Benutzer den
+    /// Grund SAGEN kann (Vorfall 03.09.2026: USB-Mikrofon abgesteckt, sechs
+    /// Klicks ohne jede Rueckmeldung, Benutzer hielt den Button fuer kaputt).
+    /// </summary>
+    public enum RecordingStartFailure
+    {
+        None,
+        /// <summary>Kein Aufnahmegeraet vorhanden (abgesteckt/deaktiviert).</summary>
+        NoDevice,
+        /// <summary>Geraet von einer anderen Anwendung exklusiv belegt.</summary>
+        DeviceBusy,
+        /// <summary>Treiber- oder Geraetefehler beim Oeffnen.</summary>
+        Driver,
+        /// <summary>Worker meldete innerhalb der Frist kein READY.</summary>
+        Timeout,
+        /// <summary>Es laeuft bereits eine Aufnahme (State-Drift UI vs. Recorder).</summary>
+        AlreadyRunning,
+        Other
+    }
+
+    /// <summary>
     /// Mikrofon-Aufnahme mit PROZESS-ISOLATION: die eigentliche NAudio/WinMM-
     /// Aufnahme laeuft in einem separaten Kindprozess (<see cref="CaptureWorker"/>,
     /// gestartet mit <c>--capture-worker</c>). Grund: der WinMM-<c>waveIn*</c>-
@@ -53,6 +74,46 @@ namespace TerminalVoiceOverlay.Services
         /// </summary>
         public event Action<float>? LevelChanged;
 
+        /// <summary>
+        /// Der Capture-Worker ist WAEHREND der Aufnahme verschwunden (Crash,
+        /// Geraet abgezogen). Feuert genau einmal pro Session von einem
+        /// Pool-Thread. Der Abonnent soll die Aufnahme regulaer stoppen — die
+        /// bis dahin geschriebene WAV wird dabei normal transkribiert.
+        /// </summary>
+        public event Action<string>? RecordingLost;
+
+        /// <summary>
+        /// Klassifizierter Grund des letzten gescheiterten Starts. Wird bei
+        /// jedem Startversuch zurueckgesetzt. Die UI liest ihn, sobald
+        /// <see cref="StartAsync"/> false liefert — nie mehr stummer Klick.
+        /// </summary>
+        public RecordingStartFailure LastStartFailure { get; private set; } = RecordingStartFailure.None;
+
+        /// <summary>Benutzer-lesbarer Grund (deutsch) zu <see cref="LastStartFailure"/>.</summary>
+        public string? LastStartFailureText { get; private set; }
+
+        public const string NoDeviceText =
+            "Kein Mikrofon gefunden. Bitte Mikrofon anschließen oder in den Windows-Soundeinstellungen aktivieren.";
+
+        /// <summary>
+        /// Anzahl der WinMM-Aufnahmegeraete (<c>waveInGetNumDevs</c>). Reiner
+        /// Zaehl-Aufruf, oeffnet nichts — anders als <c>waveInOpen</c> ist er
+        /// im Overlay-Prozess crash-sicher. -1 = Abfrage selbst gescheitert
+        /// (dann NICHT als "kein Geraet" behandeln, sondern normal starten).
+        /// </summary>
+        public static int InputDeviceCount
+        {
+            get
+            {
+                try { return NAudio.Wave.WaveInEvent.DeviceCount; }
+                catch (Exception ex)
+                {
+                    DiagLog.Write("Audio", "device_count_failed", ("err", ex.Message), ("type", ex.GetType().Name));
+                    return -1;
+                }
+            }
+        }
+
         public bool IsRecording
         {
             get { lock (_stateLock) { return _session != null || _startTask != null; } }
@@ -71,7 +132,11 @@ namespace TerminalVoiceOverlay.Services
             lock (_stateLock)
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);
-                if (_session != null || _startTask != null) return Task.FromResult(false);
+                if (_session != null || _startTask != null)
+                {
+                    SetStartFailure(RecordingStartFailure.AlreadyRunning, "Eine Aufnahme läuft bereits.");
+                    return Task.FromResult(false);
+                }
 
                 var startTask = Task.Run(StartCore);
                 _startTask = startTask;
@@ -103,7 +168,26 @@ namespace TerminalVoiceOverlay.Services
             lock (_stateLock)
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);
-                if (_session != null) return false;
+                if (_session != null)
+                {
+                    SetStartFailure(RecordingStartFailure.AlreadyRunning, "Eine Aufnahme läuft bereits.");
+                    return false;
+                }
+                LastStartFailure = RecordingStartFailure.None;
+                LastStartFailureText = null;
+            }
+
+            // Schicht 1 (praeventiv, Direktive 3): Ohne Aufnahmegeraet den Worker
+            // gar nicht erst starten. waveInOpen liefe sonst in BadDeviceId
+            // (Vorfall 03.09.2026, USB-Mikrofon abgesteckt) und der Benutzer
+            // saehe nur einen stummen Klick. -1 = unbekannt → normal weiter.
+            int inputDevices = InputDeviceCount;
+            if (inputDevices == 0)
+            {
+                SetStartFailure(RecordingStartFailure.NoDevice, NoDeviceText);
+                DiagLog.Warn("Audio", "recording_start_no_device", ("inputDevices", inputDevices), ("path", tempFile));
+                Console.WriteLine("AudioRecorder: " + NoDeviceText);
+                return false;
             }
 
             try
@@ -133,6 +217,7 @@ namespace TerminalVoiceOverlay.Services
                 if (!session.Proc.Start())
                 {
                     LogError("recording_start_process_failed", new InvalidOperationException("Process.Start returned false"), tempFile);
+                    SetStartFailure(RecordingStartFailure.Other, "Der Aufnahme-Prozess konnte nicht gestartet werden.");
                     return false;
                 }
                 session.Proc.BeginOutputReadLine();
@@ -141,6 +226,7 @@ namespace TerminalVoiceOverlay.Services
             catch (Exception ex)
             {
                 LogError("recording_start_failed", ex, tempFile);
+                SetStartFailure(RecordingStartFailure.Other, "Aufnahme konnte nicht gestartet werden: " + ex.Message);
                 return false;
             }
 
@@ -151,6 +237,8 @@ namespace TerminalVoiceOverlay.Services
                 LogError("recording_start_not_ready",
                     new TimeoutException(session.StartError ?? $"Worker meldete kein READY in {ReadyTimeout.TotalSeconds:0}s"),
                     tempFile);
+                var (failureKind, failureText) = ClassifyStartError(session.StartError, ready);
+                SetStartFailure(failureKind, failureText);
                 KillWorker(session);
                 TryDeleteTempFile(tempFile);
                 return false;
@@ -161,6 +249,7 @@ namespace TerminalVoiceOverlay.Services
                 if (_disposed || _session != null)
                 {
                     // Dispose oder ein unerwarteter Parallelstart waehrend READY.
+                    SetStartFailure(RecordingStartFailure.AlreadyRunning, "Eine Aufnahme läuft bereits.");
                     KillWorker(session);
                     TryDeleteTempFile(tempFile);
                     return false;
@@ -346,7 +435,7 @@ namespace TerminalVoiceOverlay.Services
         // Datenstrom versiegt (DataAvailable stumm, §3.1) oder der Worker haengt.
         // Wir loggen das EINMAL pro Session — sichtbar in diag.log, damit der
         // Vorfall in Zukunft nachvollziehbar ist (Observability-first).
-        private static void WatchdogTick(Session session)
+        private void WatchdogTick(Session session)
         {
             try
             {
@@ -355,6 +444,16 @@ namespace TerminalVoiceOverlay.Services
                 if (sinceMs <= 2500) return;
 
                 bool workerAlive = !SafeHasExited(session);
+
+                // Schicht 2 (reaktiv): Worker weg, aber niemand hat STOP gesagt
+                // → die UI wuerde ewig "Aufnahme laeuft" zeigen. Einmalig melden,
+                // damit das Overlay regulaer stoppt und das Gesprochene rettet.
+                if (!workerAlive && Interlocked.Exchange(ref session.LostRaised, 1) == 0)
+                {
+                    DiagLog.Warn("Audio", "capture_worker_gone", ("silentMs", sinceMs), ("path", session.TempFile));
+                    try { RecordingLost?.Invoke("worker_exited"); }
+                    catch (Exception ex) { DiagLog.Write("Audio", "lost_listener_failed", ("err", ex.Message)); }
+                }
                 if (session.StallLogged == 0 && Interlocked.Exchange(ref session.StallLogged, 1) == 0)
                 {
                     DiagLog.Write("Audio", "capture_level_stalled",
@@ -419,6 +518,42 @@ namespace TerminalVoiceOverlay.Services
             catch (Exception ex) { DiagLog.Write("Audio", "recording_temp_delete_failed", ("err", ex.Message), ("path", tempFile)); }
         }
 
+        private void SetStartFailure(RecordingStartFailure kind, string text)
+        {
+            LastStartFailure = kind;
+            LastStartFailureText = text;
+        }
+
+        /// <summary>
+        /// Ordnet die ERR-Zeile des Workers (NAudio/WinMM-Text) einer Fehlerklasse
+        /// und einem deutschen Benutzertext zu. Unbekannte Texte landen in
+        /// <see cref="RecordingStartFailure.Other"/> — mit Originaltext, nie stumm.
+        /// </summary>
+        private static (RecordingStartFailure Kind, string Text) ClassifyStartError(string? workerError, bool ready)
+        {
+            if (!ready && string.IsNullOrEmpty(workerError))
+                return (RecordingStartFailure.Timeout,
+                    $"Das Mikrofon antwortet nicht (kein Aufnahmestart innerhalb von {ReadyTimeout.TotalSeconds:0} Sekunden).");
+
+            string e = workerError ?? "";
+            if (e.Contains("NO_MIC", StringComparison.OrdinalIgnoreCase)
+                || e.Contains("BadDeviceId", StringComparison.OrdinalIgnoreCase)
+                || e.Contains("NoDriver", StringComparison.OrdinalIgnoreCase))
+                return (RecordingStartFailure.NoDevice, NoDeviceText);
+
+            if (e.Contains("Allocated", StringComparison.OrdinalIgnoreCase))
+                return (RecordingStartFailure.DeviceBusy,
+                    "Das Mikrofon ist von einer anderen Anwendung exklusiv belegt.");
+
+            if (e.Contains("NotEnabled", StringComparison.OrdinalIgnoreCase)
+                || e.Contains("InvalidHandle", StringComparison.OrdinalIgnoreCase)
+                || e.Contains("WaveBadFormat", StringComparison.OrdinalIgnoreCase)
+                || e.Contains("MmException", StringComparison.OrdinalIgnoreCase))
+                return (RecordingStartFailure.Driver, "Mikrofon-Treiberfehler: " + e);
+
+            return (RecordingStartFailure.Other, "Aufnahme konnte nicht gestartet werden: " + e);
+        }
+
         private static void LogError(string message, Exception ex, string? path)
         {
             Console.WriteLine($"AudioRecorder: {message}: {ex.Message}");
@@ -450,6 +585,7 @@ namespace TerminalVoiceOverlay.Services
             public int PeakMille;
             public int StopStarted;
             public int StallLogged;
+            public int LostRaised;
             public long LastLevelTicks;
             private Timer? _watchdog;
 

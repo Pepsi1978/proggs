@@ -265,6 +265,10 @@ namespace TerminalVoiceOverlay.NativeMethods
         public const int WM_MOUSEMOVE   = 0x0200;
         public const int WM_RBUTTONUP   = 0x0205;
 
+        // ── Geraetewechsel (USB-Mikrofon an-/abgesteckt) ──
+        public const int WM_DEVICECHANGE      = 0x0219;
+        public const int DBT_DEVNODES_CHANGED = 0x0007;
+
         // ── DPI ──
         [DllImport("shcore.dll")]
         public static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);

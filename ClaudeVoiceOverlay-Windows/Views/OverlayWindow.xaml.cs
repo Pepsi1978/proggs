@@ -86,6 +86,19 @@ namespace ClaudeVoiceOverlay.Views
         private bool _mainStopRequestedDuringStart;
         private bool _btwStopRequestedDuringStart;
         private bool _deploymentPending;
+        // Zeitpunkt der Deployment-Reservierung. Eine Reservierung, die niemand
+        // freigibt (Deploy-Skript abgebrochen), verfaellt nach DeploymentReservationMax —
+        // sonst waere das Mikrofon fuer immer tot, ohne dass irgendwer es sieht.
+        private DateTime _deploymentPendingSince;
+        private static readonly TimeSpan DeploymentReservationMax = TimeSpan.FromMinutes(3);
+
+        // ── Mikrofon-Verfuegbarkeit (Vorfall 03.09.2026) ──
+        // true, solange ein Start am fehlenden Geraet scheiterte und noch kein
+        // Geraet zurueckkam. Steuert: EIN Tray-Hinweis pro Episode (kein
+        // Balloon-Spam) und wann der Fehler-Tooltip wieder zurueckgesetzt wird.
+        private bool _noMicEpisode;
+        private DispatcherTimer? _deviceChangeDebounce;
+        private readonly Dictionary<System.Windows.Controls.Button, string> _tooltipDefaults = new();
         private bool isBtwRecording         = false;
         private bool geminiEnabled          = false;  // Default = Gemini-Korrektur AUS (Whisper-roh), KEIN Profil aktiv (Frank-Wunsch 2026-06-22: beim Start kein Profil voreingestellt). Profil-Klick oder G-Button schaltet Gemini ein. Ohne Gemini-API-Key bleibt es ohnehin false.
         private bool autoEnterEnabled       = true;  // macOS default (was false in Windows)
@@ -494,6 +507,9 @@ namespace ClaudeVoiceOverlay.Views
                 _resetTimer.Stop();
                 if (_micState == RecordingState.Recording) return;
                 SetMicState(RecordingState.Idle);
+                // Fehler-Tooltip nur zuruecknehmen, wenn das Problem vorbei ist;
+                // ohne Mikrofon soll der Grund am Button stehen bleiben.
+                if (!_noMicEpisode) RestoreButtonTooltip(MicButton);
             };
 
             // ── Hide-Delay-Timer: 5 s nach Verlassen des Terminals ──
@@ -598,6 +614,8 @@ namespace ClaudeVoiceOverlay.Views
             // nur zu wenn Recording laeuft (siehe RecordingState-Switch);
             // im Idle-Zustand kommen ohnehin keine Events, weil der
             // WaveInEvent dann gar nicht laeuft.
+            // Worker waehrend der Aufnahme verschwunden → regulaer stoppen (Pool-Thread → Dispatcher).
+            _audioRecorder.RecordingLost += reason => Dispatcher.BeginInvoke(new Action(() => OnRecordingLost(reason)));
             _audioRecorder.LevelChanged += OnAudioLevelChanged;
 
             // ── Hover animations ──
@@ -2056,6 +2074,7 @@ namespace ClaudeVoiceOverlay.Views
         {
             if (IsVoicePipelineBusy()) return false;
             _deploymentPending = true;
+            _deploymentPendingSince = DateTime.UtcNow;
             return true;
         });
 
@@ -2139,6 +2158,15 @@ namespace ClaudeVoiceOverlay.Views
                             PositionPromptPanel();
                         }
                     }
+                    break;
+
+                case Win32.WM_DEVICECHANGE:
+                    // USB-Mikrofon an-/abgesteckt (Vorfall 03.09.2026). Windows
+                    // schickt DBT_DEVNODES_CHANGED an alle Top-Level-Fenster, oft
+                    // mehrfach pro Steckvorgang — darum entprellt. handled bleibt
+                    // false, damit die Standardverarbeitung weiterlaeuft.
+                    if (wParam.ToInt64() == Win32.DBT_DEVNODES_CHANGED)
+                        ScheduleDeviceRecheck();
                     break;
 
                 case Win32.WM_RBUTTONUP:
@@ -2687,11 +2715,7 @@ namespace ClaudeVoiceOverlay.Views
             else
             {
                 // ── Start recording ──
-                if (_deploymentPending)
-                {
-                    Console.WriteLine("Aufnahme blockiert: Overlay-Deployment ist reserviert.");
-                    return;
-                }
+                if (IsDeploymentBlocking(btw: false)) return;
                 // KRITISCH: Reset-Timer aus der vorherigen Aufnahme stoppen.
                 // Sonst feuert er ggf. mitten in der NEUEN Aufnahme und setzt
                 // _micState auf Idle zurueck — UI sieht aus als waere die
@@ -2708,6 +2732,7 @@ namespace ClaudeVoiceOverlay.Views
                     {
                         _pttRecording = false;
                         _pttToggleMode = false;
+                        ReportRecordingStartFailure(btw: false, targetHwnd);
                         return;
                     }
                     _mainRecordingTargetHwnd = targetHwnd;
@@ -2848,18 +2873,18 @@ namespace ClaudeVoiceOverlay.Views
             else
             {
                 // ── Start BTW recording ──
-                if (_deploymentPending)
-                {
-                    Console.WriteLine("BTW-Aufnahme blockiert: Overlay-Deployment ist reserviert.");
-                    return;
-                }
+                if (IsDeploymentBlocking(btw: true)) return;
                 _btwStartInProgress = true;
                 bool started = false;
                 var targetHwnd = _appWatcher.ActiveAppHwnd;
                 try
                 {
                     started = await _audioRecorder.StartAsync();
-                    if (!started) return;
+                    if (!started)
+                    {
+                        ReportRecordingStartFailure(btw: true, targetHwnd);
+                        return;
+                    }
                     isBtwRecording = true;
                     _btwRecordingTargetHwnd = targetHwnd;
                     SetBtwMicState(RecordingState.Recording);
@@ -3063,6 +3088,7 @@ namespace ClaudeVoiceOverlay.Views
             {
                 if (btn.ToolTip is string s)
                 {
+                    _tooltipDefaults[btn] = s;
                     var tip = new System.Windows.Controls.ToolTip { Content = s };
                     var ownerButton = btn; // Closure-Capture
                     tip.Opened += (_, _) => PositionTooltip(tip, ownerButton);
@@ -4570,6 +4596,163 @@ namespace ClaudeVoiceOverlay.Views
             });
         }
 
+        // ── Aufnahme-Start gescheitert: sichtbar, hoerbar, erklaert ──
+        // Direktive 3 (Vorfall 03.09.2026, USB-Mikrofon abgesteckt): Ein Klick
+        // auf das Mikrofon darf NIE stumm verpuffen. Jeder Fehlstart bekommt
+        // (1) roten Button, (2) Fehlerton, (3) Tooltip mit Grund und (4) einen
+        // Tray-Hinweis — bei fehlendem Geraet nur EINMAL pro Episode.
+
+        private void ReportRecordingStartFailure(bool btw, IntPtr targetHwnd)
+        {
+            var kind = _audioRecorder.LastStartFailure;
+            string text = _audioRecorder.LastStartFailureText ?? "Aufnahme konnte nicht gestartet werden.";
+            DiagLog.Warn("VoiceTurn", "start_failed_reported", ("kind", kind.ToString()), ("btw", btw), ("text", text));
+            Console.WriteLine($"Aufnahme-Start gescheitert ({kind}): {text}");
+
+            if (kind == RecordingStartFailure.AlreadyRunning && !btw)
+            {
+                // State-Drift: Recorder laeuft, UI zeigt Idle. Kein Fehler,
+                // sondern die UI auf den echten Zustand ziehen — der naechste
+                // Klick stoppt dann regulaer und transkribiert.
+                if (_audioRecorder.IsRecording && !isBtwRecording)
+                {
+                    _mainRecordingTargetHwnd = targetHwnd;
+                    SetMicState(RecordingState.Recording);
+                    return;
+                }
+            }
+
+            if (btw) SetBtwMicState(RecordingState.Error); else SetMicState(RecordingState.Error);
+            _recordingCuePlayer.PlayError();
+            SetButtonTooltipText(btw ? BtwButton : MicButton, text);
+
+            if (kind == RecordingStartFailure.NoDevice)
+            {
+                if (!_noMicEpisode)
+                {
+                    _noMicEpisode = true;
+                    App.ShowTrayBalloon("Kein Mikrofon", text);
+                }
+            }
+            else
+            {
+                App.ShowTrayBalloon("Aufnahme nicht möglich", text);
+            }
+
+            if (btw) _ = ResetBtwAfterDelayAsync(); else ScheduleReset();
+        }
+
+        private async Task ResetBtwAfterDelayAsync()
+        {
+            await Task.Delay(3000);
+            if (isBtwRecording || _btwStartInProgress) return;
+            SetBtwMicState(RecordingState.Idle);
+            if (!_noMicEpisode) RestoreButtonTooltip(BtwButton);
+        }
+
+        /// <summary>
+        /// true = Aufnahme jetzt blockiert (Overlay-Update reserviert). Zeigt
+        /// das dem Benutzer, statt still zurueckzukehren. Eine Reservierung,
+        /// die niemand freigab, verfaellt nach DeploymentReservationMax.
+        /// </summary>
+        private bool IsDeploymentBlocking(bool btw)
+        {
+            if (!_deploymentPending) return false;
+            var age = DateTime.UtcNow - _deploymentPendingSince;
+            if (age > DeploymentReservationMax)
+            {
+                DiagLog.Warn("Deploy", "reservation_expired", ("ageSec", (long)age.TotalSeconds));
+                _deploymentPending = false;
+                return false;
+            }
+            Console.WriteLine("Aufnahme blockiert: Overlay-Deployment ist reserviert.");
+            DiagLog.Write("Deploy", "recording_blocked_by_deployment", ("btw", btw), ("ageSec", (long)age.TotalSeconds));
+            SetButtonTooltipText(btw ? BtwButton : MicButton,
+                "Overlay-Update läuft gerade. Bitte in ein paar Sekunden noch einmal versuchen.");
+            if (btw) { SetBtwMicState(RecordingState.Error); _ = ResetBtwAfterDelayAsync(); }
+            else     { SetMicState(RecordingState.Error);    ScheduleReset(); }
+            _recordingCuePlayer.PlayError();
+            return true;
+        }
+
+        // Tooltips sind nach dem Wiring ToolTip-OBJEKTE (WPF-Auto-Show ist aus,
+        // die MouseEnter/Leave-Closures halten das Objekt). Darum Content
+        // mutieren, nie ein neues Objekt/String zuweisen.
+        private void SetButtonTooltipText(System.Windows.Controls.Button btn, string text)
+        {
+            try
+            {
+                if (btn.ToolTip is System.Windows.Controls.ToolTip tip) tip.Content = text;
+                else btn.ToolTip = text;
+            }
+            catch (Exception ex) { Console.WriteLine($"Tooltip set error: {ex.Message}"); }
+        }
+
+        private void RestoreButtonTooltip(System.Windows.Controls.Button btn)
+        {
+            if (_tooltipDefaults.TryGetValue(btn, out var s)) SetButtonTooltipText(btn, s);
+        }
+
+        // ── Geraetewechsel: Mikrofon weg / wieder da ──
+
+        private void ScheduleDeviceRecheck()
+        {
+            if (_deviceChangeDebounce == null)
+            {
+                _deviceChangeDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
+                _deviceChangeDebounce.Tick += (_, _) =>
+                {
+                    _deviceChangeDebounce!.Stop();
+                    try { OnAudioDevicesChanged(); }
+                    catch (Exception ex) { DiagLog.Write("Audio", "devices_changed_handler_failed", ("err", ex.Message)); }
+                };
+            }
+            _deviceChangeDebounce.Stop();
+            _deviceChangeDebounce.Start();
+        }
+
+        private void OnAudioDevicesChanged()
+        {
+            int devices = AudioRecorder.InputDeviceCount;
+            DiagLog.Write("Audio", "devices_changed",
+                ("inputDevices", devices), ("noMicEpisode", _noMicEpisode), ("recording", _audioRecorder.IsRecording));
+
+            if (devices == 0)
+            {
+                // Mikrofon WAEHREND einer Aufnahme verschwunden: sofort stoppen
+                // und das bereits Gesprochene verarbeiten, statt mit
+                // eingefrorener Welle weiterzulaufen.
+                if (_audioRecorder.IsRecording && (_micState == RecordingState.Recording || isBtwRecording))
+                {
+                    DiagLog.Warn("Audio", "device_lost_during_recording", ("btw", isBtwRecording));
+                    App.ShowTrayBalloon("Mikrofon getrennt",
+                        "Das Mikrofon wurde während der Aufnahme getrennt. Das bisher Gesprochene wird verarbeitet.");
+                    if (isBtwRecording) BtnBtw_Click(BtwButton, new RoutedEventArgs());
+                    else BtnMic_Click(MicButton, new RoutedEventArgs());
+                }
+                return;
+            }
+
+            if (devices > 0 && _noMicEpisode)
+            {
+                _noMicEpisode = false;
+                DiagLog.Write("Audio", "device_available_again", ("inputDevices", devices));
+                RestoreButtonTooltip(MicButton);
+                RestoreButtonTooltip(BtwButton);
+                if (_micState == RecordingState.Error) SetMicState(RecordingState.Idle);
+                App.ShowTrayBalloon("Mikrofon wieder da", "Das Mikrofon ist wieder verfügbar. Aufnahme ist möglich.",
+                    System.Windows.Forms.ToolTipIcon.Info);
+            }
+        }
+
+        /// <summary>Worker starb waehrend der Aufnahme: regulaer stoppen, WAV retten.</summary>
+        private void OnRecordingLost(string reason)
+        {
+            DiagLog.Warn("VoiceTurn", "recording_lost", ("reason", reason), ("btw", isBtwRecording), ("state", _micState.ToString()));
+            if (isBtwRecording) BtnBtw_Click(BtwButton, new RoutedEventArgs());
+            else if (_micState == RecordingState.Recording) BtnMic_Click(MicButton, new RoutedEventArgs());
+        }
+
         // ── Mic state helpers ──
 
         private void SetMicState(RecordingState state)
@@ -4593,6 +4776,10 @@ namespace ClaudeVoiceOverlay.Views
                 case RecordingState.Recording:
                     MicButton.Background = BtnRecording;
                     _pulseTimer.Start();
+                    // Aufnahme laeuft → das Mikrofon ist da. Episode beenden,
+                    // Standard-Tooltip zurueck.
+                    _noMicEpisode = false;
+                    RestoreButtonTooltip(MicButton);
                     break;
                 case RecordingState.Processing:
                     MicButton.Background = BtnProcessing;

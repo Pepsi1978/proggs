@@ -93,6 +93,18 @@ namespace TerminalVoiceOverlay.Services
 
             try
             {
+                // Schicht 2 (unabhaengig vom Preflight des Parents): ohne
+                // Aufnahmegeraet sofort mit klarer Kennung raus, statt
+                // waveInOpen in BadDeviceId laufen zu lassen (03.09.2026).
+                int inputDevices = WaveInEvent.DeviceCount;
+                if (inputDevices <= 0)
+                {
+                    Log("start_failed", $"NO_MIC: waveInGetNumDevs={inputDevices}");
+                    Emit("ERR NO_MIC: kein Aufnahmegeraet vorhanden");
+                    Environment.Exit(2);
+                    return;
+                }
+
                 var format = new WaveFormat(rate, 16, channels);
                 lock (_writerLock)
                 {
