@@ -63,6 +63,13 @@ const PORT = zahlNach('--port') ?? 8787;
 const ALLES = args.includes('--alles');
 /** Ohne Zwischenablage und ohne Browser zu öffnen — für den Probelauf. */
 const STILL = args.includes('--still');
+/**
+ * Seit September 2026 muss jeder Song vor dem Download bei Suno freigeschaltet werden
+ * (POST /api/download/authorize); das verbraucht einen Download aus dem Monats-
+ * kontingent des Abos. Standard: freischalten, älteste zuerst, bis das Kontingent
+ * erschöpft ist. Mit --nicht-freischalten werden nur schon freigeschaltete geholt.
+ */
+const FREISCHALTEN = !args.includes('--nicht-freischalten');
 const ZIEL = args.find((a) => !a.startsWith('--') && !/^\d+$/.test(a)) ?? DEFAULT_TARGET;
 
 if (!existsSync(ZIEL)) {
@@ -158,7 +165,30 @@ const server = createServer(async (req, res) => {
     // fehlt: Songs, die einmal geladen waren und deren Datei verschwunden ist. Sie
     // müssen auch dann geholt werden, wenn sie älter sind als die Zeitgrenze — sonst
     // repariert sich eine gelöschte Datei aus dem letzten Jahr nie wieder.
-    antwort(res, { ok: true, bekannt, fehlt, neuester: ALLES ? null : neuester, alles: ALLES, limit: LIMIT });
+    antwort(res, {
+      ok: true,
+      bekannt,
+      fehlt,
+      neuester: ALLES ? null : neuester,
+      alles: ALLES,
+      limit: LIMIT,
+      freischalten: FREISCHALTEN,
+    });
+    return;
+  }
+
+  // Die Brücke meldet, wie es um das Download-Kontingent steht.
+  if (pfad === '/kontingent') {
+    const daten = (await körper(req)) as unknown as {
+      frei?: number;
+      gesperrt?: number;
+      freigeschaltet?: number;
+      erneuert?: string;
+      text?: string;
+    };
+    if (daten.text) console.log(`\n  ${daten.text}`);
+    log('info', 'Download-Kontingent', daten);
+    antwort(res, { ok: true });
     return;
   }
 
@@ -430,9 +460,8 @@ async function main(): Promise<void> {
     belegt.add(auftraege[auftraege.length - 1].datei.toLowerCase());
   }
 
-  // Eine Adresse ist auch die m4a aus media_urls — seit Suno den signierten Link
-  // verweigert, ist sie sogar die übliche Quelle.
-  const hatAdresse = (s: Song) => Boolean(s.download_url || s.audio_url || s.media_urls?.length);
+  // Ohne signierten Link geht nichts — die Brücke schickt nur noch Songs mit Link.
+  const hatAdresse = (s: Song) => Boolean(s.download_url || s.audio_url);
   probe(
     auftraege.every((a) => hatAdresse(a.song)),
     'Aufträge ohne jede Adresse dabei',

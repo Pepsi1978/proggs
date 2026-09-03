@@ -70,6 +70,41 @@
     return null;
   };
 
+  /** POST an Suno — liefert immer ein Objekt, bei Fehlern {ok:false, reason}. */
+  const apiPost = async (pfad, body) => {
+    for (let v = 0; v < 4; v++) {
+      try {
+        const r = await fetch(HOST + pfad, {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + (await holeToken()),
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        });
+        if (r.status === 429) {
+          await warte(2000 + v * 2000);
+          continue;
+        }
+        if (r.status === 401) {
+          token = null;
+          continue;
+        }
+        const text = await r.text();
+        try {
+          const d = JSON.parse(text);
+          return typeof d === 'object' && d ? { ...d, ok: d.ok !== false && r.ok } : { ok: r.ok };
+        } catch (e) {
+          return { ok: r.ok, reason: 'http_' + r.status };
+        }
+      } catch (e) {
+        await warte(1500 * (v + 1));
+      }
+    }
+    return { ok: false, reason: 'keine_antwort' };
+  };
+
   const anDownloader = async (pfad, daten) => {
     try {
       const r = await fetch(BASIS + pfad, {
@@ -132,6 +167,8 @@
         media_urls: medien,
         privat: typeof c.is_public === 'boolean' ? !c.is_public : true,
         download_url: undefined,
+        // Seit September 2026: erst freischalten, dann gibt es einen Download-Link.
+        freigeschaltet: c.is_download_unlocked === true,
       });
       neu++;
     }
@@ -188,7 +225,87 @@
     await anDownloader('/fertig', { gesamt: 0 });
     return;
   }
-  zeig('📄 ' + liste.length + ' Songs zu holen. Jetzt die Download-Links …', '#06c');
+  zeig('📄 ' + liste.length + ' Songs zu holen.', '#06c');
+
+  // ------------------------------------------------------------- Freischalten
+  /**
+   * Seit September 2026 gibt /api/download/clip nur noch für freigeschaltete Songs
+   * einen Link ("not_authorized" sonst). Freischalten heißt POST /api/download/authorize
+   * und kostet einen Download aus dem Monatskontingent des Abos (Premier: 60 im Monat
+   * plus gekaufte Zusatz-Downloads). Freigeschaltet wird älteste zuerst — dieselbe
+   * Reihenfolge wie die Nummerierung — bis das Kontingent erschöpft ist. Der Rest
+   * bleibt liegen und wird beim nächsten Lauf nach der Erneuerung geholt.
+   */
+  const kontingent = async () => {
+    const b = await api('/api/billing/info/', 3);
+    const u = b && b.download_usage;
+    if (!u) return null;
+    const frei =
+      Math.max(0, (u.current_period_downloads_limit || 0) - (u.current_period_downloads_used || 0)) +
+      (u.additional_download_remaining || 0);
+    const erneuert = b.period_end || b.renews_on || null;
+    return { frei, erneuert };
+  };
+  const datum = (iso) => {
+    if (!iso) return 'unbekannt';
+    const d = new Date(iso);
+    return isNaN(d) ? String(iso) : d.toLocaleDateString('de-DE');
+  };
+
+  const gesperrt = liste.filter((s) => !s.freigeschaltet);
+  let freigeschaltet = 0;
+  let uebrig = gesperrt.length;
+  if (gesperrt.length && hallo.freischalten !== false) {
+    const k = await kontingent();
+    if (!k) {
+      zeig('❗ Download-Kontingent konnte nicht gelesen werden — es wird trotzdem versucht.', '#c60');
+    } else {
+      zeig('🔓 ' + gesperrt.length + ' Songs sind noch nicht freigeschaltet. Kontingent: ' + k.frei + ' Downloads frei, neues am ' + datum(k.erneuert) + '.', '#06c');
+    }
+    const budget = k ? Math.min(k.frei, gesperrt.length) : gesperrt.length;
+    let erschoepft = false;
+    for (let i = 0; i < budget && !erschoepft; i += 5) {
+      const schub = gesperrt.slice(i, Math.min(i + 5, budget));
+      const antworten = await Promise.all(
+        schub.map((s) => apiPost('/api/download/authorize', { item_id: s.id, item_type: 'clip' })),
+      );
+      for (let j = 0; j < schub.length; j++) {
+        const a = antworten[j];
+        if (a && a.ok) {
+          schub[j].freigeschaltet = true;
+          freigeschaltet++;
+        } else {
+          const grund = (a && (a.reason || a.message)) || 'unbekannt';
+          console.log('   ❗ Freischalten fehlgeschlagen für ' + (schub[j].title || schub[j].id) + ': ' + grund);
+          if (/limit|quota|exceed|insufficient|no_download|remaining/i.test(grund)) erschoepft = true;
+        }
+      }
+      console.log('   Freigeschaltet: ' + freigeschaltet + ' von ' + gesperrt.length);
+    }
+    uebrig = gesperrt.length - freigeschaltet;
+    const text =
+      freigeschaltet + ' Songs freigeschaltet' +
+      (uebrig ? ', ' + uebrig + ' bleiben gesperrt (Kontingent erschöpft — neues am ' + datum(k && k.erneuert) + ')' : '') +
+      '.';
+    zeig((uebrig ? '⚠️ ' : '✅ ') + text, uebrig ? '#c60' : '#0a0');
+    await anDownloader('/kontingent', {
+      frei: k ? k.frei - freigeschaltet : null,
+      gesperrt: uebrig,
+      freigeschaltet,
+      erneuert: k ? k.erneuert : null,
+      text: 'Freischaltung: ' + text,
+    });
+  } else if (gesperrt.length) {
+    zeig('⏭️ ' + gesperrt.length + ' nicht freigeschaltete Songs werden übersprungen (--nicht-freischalten).', '#c60');
+  }
+
+  liste = liste.filter((s) => s.freigeschaltet);
+  if (!liste.length) {
+    zeig('❗ Kein freigeschalteter Song übrig — nichts zu laden.', '#c00');
+    await anDownloader('/fertig', { gesamt: 0 });
+    return;
+  }
+  zeig('🔑 Jetzt die Download-Links für ' + liste.length + ' Songs …', '#06c');
 
   // ------------------------------------------------------------- Links holen
   /**
@@ -241,6 +358,16 @@
   for (const s of liste) {
     const u = links.get(s.id);
     if (u) s.download_url = u;
+  }
+  // Ohne Link würde der Download nur in einem Fehler enden — also gar nicht erst übergeben.
+  const ohneLink = liste.filter((s) => !s.download_url);
+  if (ohneLink.length) {
+    zeig('⚠️ ' + ohneLink.length + ' Songs ohne Link bleiben liegen (beim nächsten Lauf nochmal).', '#c60');
+    liste = liste.filter((s) => s.download_url);
+  }
+  if (!liste.length) {
+    await anDownloader('/fertig', { gesamt: 0 });
+    return;
   }
 
   // ------------------------------------------------------------- übergeben

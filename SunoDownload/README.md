@@ -159,11 +159,17 @@ früher ist damit überflüssig.
 
 **Der Browser-Tab muss offen bleiben**, bis das Programm fertig meldet.
 
-**Stand September 2026:** `/api/download/clip/<id>` antwortet für die meisten Songs nur noch
-mit `ok:false / not_authorized` — es gibt keinen signierten Link mehr. Dafür steht in
-`media_urls` eine m4a-Datei auf CloudFront (`d2lwuy8qc234o3.cloudfront.net`), die ohne
-Anmeldung erreichbar ist. Der Downloader nimmt sie als reguläre Quelle und wandelt sie mit
-`ffmpeg` in MP3 um. Ohne `ffmpeg` im Pfad schlagen diese Downloads fehl.
+**Stand September 2026 — Download-Kontingent:** Suno gibt den signierten Link nur noch für
+*freigeschaltete* Songs aus; für alle anderen antwortet `/api/download/clip/<id>` mit
+`not_authorized`. Freischalten heißt `POST /api/download/authorize` (`item_id`, `item_type:
+"clip"`) und verbraucht einen Download aus dem Monatskontingent des Abos (Premier: 60 pro
+Monat plus gekaufte Zusatz-Downloads; Stand in `/api/billing/info/` → `download_usage`).
+Die Brücke liest das Kontingent, schaltet die ältesten Songs zuerst frei, bis es erschöpft ist,
+und übergibt nur Songs mit Link. Der Rest bleibt liegen und wird beim nächsten Lauf nach der
+Erneuerung geholt. Mit `--nicht-freischalten` werden nur bereits freigeschaltete Songs geladen.
+
+Die m4a aus `media_urls` (CloudFront) ist zwar ohne Anmeldung erreichbar, aber verschlüsselt —
+sie taugt nicht als Quelle.
 
 ---
 
