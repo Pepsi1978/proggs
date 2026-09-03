@@ -74,6 +74,7 @@
 | 19 | Reale Sprechzeit ist viel länger als fertige WAV ⭐⭐ | Kein Datei-I/O im Capture-Callback; FIFO-Writer drainieren; PCM-Dauer gegen Turn-Dauer loggen | §3.4 |
 | 20 | Deploy-Skript steht 10 min still und liefert nichts ⭐⭐ | Offenen Port pruefen: "bietet keinen Status-Server an" ist NICHT "nimmt gerade auf" | §8.1 |
 | 21 | Diktat haengt 2 min, dann kommt der Text doch | `ConnectTimeout` explizit + TCP-Keepalive; Gesamt-Timeout am gemessenen Median | §8.2 |
+| 22 | Mikrofon-Klick verpufft stumm, Log zeigt `BadDeviceId calling waveInOpen` ⭐⭐ | `waveInGetNumDevs`-Preflight VOR dem Start; Fehlstart IMMER sichtbar (rot + Ton + Tooltip + Tray); `WM_DEVICECHANGE` → Gerät weg/wieder da erkennen | §3.5 |
 
 ---
 
