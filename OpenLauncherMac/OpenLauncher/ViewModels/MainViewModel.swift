@@ -249,15 +249,31 @@ final class MainViewModel {
     // ===================== Thinking-/Effort-Stufen =====================
 
     private func loadThinkingOptions(model: ModelEntry, forceRefresh: Bool = false) async {
+        let previousValue = forceRefresh ? selectedThinkingOption?.value : nil
+        thinkingSubtitle = "Prüfe aktuelle Modellfähigkeiten …"
         var levels = OpenCodeVariantCatalog.launcherLevels(for: model)
-        if model.providerId.caseInsensitiveCompare("openrouter") == .orderedSame {
-            let apiLevels = await router.thinkingLevels(slug: model.slug, forceRefresh: forceRefresh)
-            if !apiLevels.isEmpty { levels = apiLevels }
+        var source = "Katalog ohne Stufenangabe · lokale Vorgabe"
+        do {
+            if let current = try await OpenCodeVariantCatalog.currentLevels(providerId: model.providerId, slug: model.slug, forceRefresh: forceRefresh) {
+                levels = current
+                source = "Aktuell aus models.dev"
+            } else if model.providerId.caseInsensitiveCompare("openrouter") == .orderedSame {
+                levels = try await router.thinkingLevels(slug: model.slug, forceRefresh: forceRefresh)
+                source = "Aus OpenRouter-Fähigkeiten abgeleitet"
+            }
+        } catch {
+            if Task.isCancelled { return }
+            Logger.shared.warn("MainViewModel", "loadThinkingOptions", error.localizedDescription)
+            if !thinkingOptions.isEmpty { levels = thinkingOptions.map { $0.value } }
+            source = "Aktualisierung fehlgeschlagen · bisherige/lokale Stufen"
         }
         if Task.isCancelled { return }
 
+        selectedThinkingOption = nil
         thinkingOptions = levels.map(Self.toThinkingOption)
-        selectProfileThinkingOption()
+        selectedThinkingOption = thinkingOptions.first { $0.value == previousValue }
+        if selectedThinkingOption == nil { selectProfileThinkingOption() }
+        thinkingSubtitle = source
         let isClaude = Self.isClaudeCodeModel(model)
         let empty = isClaude ? "Kein Effort für dieses Modell erkannt." : "Kein Thinking für dieses Modell erkannt."
         let prompt = isClaude ? "Effort-Wert wählen." : "Thinking-Wert wählen."

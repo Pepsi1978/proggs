@@ -115,7 +115,7 @@ final class OpenRouterService {
         }
     }
 
-    func thinkingLevels(slug: String, forceRefresh: Bool = false) async -> [String] {
+    func thinkingLevels(slug: String, forceRefresh: Bool = false) async throws -> [String] {
         do {
             let json = try await Self.fetchModelsJson(forceRefresh: forceRefresh)
             guard let data = json.data(using: .utf8),
@@ -130,6 +130,7 @@ final class OpenRouterService {
             }
         } catch {
             Logger.shared.warn("OpenRouterService", "thinkingLevels", "Thinking-Level-Fallback für \(slug): \(error.localizedDescription)")
+            throw error
         }
         return []
     }

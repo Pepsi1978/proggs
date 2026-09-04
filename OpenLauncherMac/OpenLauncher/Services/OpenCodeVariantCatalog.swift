@@ -8,6 +8,39 @@ enum OpenCodeVariantCatalog {
     private static let gpt52Plus = ["none", "low", "medium", "high", "xhigh"]
     private static let gpt5Codex3Plus = ["none", "low", "medium", "high", "xhigh"]
 
+    /// nil means unknown, [] means explicitly no selectable effort levels.
+    static func currentLevels(providerId: String, slug rawSlug: String, forceRefresh: Bool) async throws -> [String]? {
+        var request = URLRequest(url: URL(string: "https://models.dev/api.json")!)
+        request.timeoutInterval = 30
+        request.cachePolicy = forceRefresh ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
+        if forceRefresh { request.setValue("no-cache", forHTTPHeaderField: "Cache-Control") }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try Task.checkCancellation()
+        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        var slug = rawSlug
+        if providerId == "anthropic", slug.hasSuffix("[1m]") { slug = String(slug.dropLast(4)) }
+        guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let provider = root[providerId] as? [String: Any],
+              let models = provider["models"] as? [String: Any],
+              let item = models[slug] as? [String: Any] else { return nil }
+        guard let options = item["reasoning_options"] as? [[String: Any]] else {
+            return (item["reasoning"] as? Bool) == false ? [] : nil
+        }
+        var levels: [String] = []
+        var toggle = false
+        for option in options {
+            if option["type"] as? String == "toggle" { toggle = true }
+            guard option["type"] as? String == "effort", let values = option["values"] as? [String] else { continue }
+            for value in values {
+                let level = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                if !level.isEmpty, !levels.contains(level) { levels.append(level) }
+            }
+        }
+        return levels.isEmpty && toggle ? ["none", "thinking"] : levels
+    }
+
     static func launcherLevels(for model: ModelEntry) -> [String] {
         let provider = model.providerId.lowercased()
         let slug = normalize(model.slug)

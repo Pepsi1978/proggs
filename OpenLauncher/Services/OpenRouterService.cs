@@ -186,6 +186,7 @@ public sealed class OpenRouterService
         catch (Exception ex)
         {
             log.Warn("OpenRouterService", "GetThinkingLevelsAsync", $"Thinking-Level-Fallback für {slug}: {ex.Message}");
+            throw;
         }
 
         return [];

@@ -10,6 +10,50 @@ public sealed class OpenCodeCatalogService
 {
     private const string CatalogUrl = "https://models.dev/api.json";
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private string? _thinkingCatalog;
+    private DateTime _thinkingCatalogAt;
+
+    // null means unknown; an empty list means the catalog explicitly offers no effort choice.
+    public async Task<List<string>?> GetThinkingLevelsAsync(ModelEntry model, CancellationToken ct, bool forceRefresh = false)
+    {
+        if (forceRefresh || _thinkingCatalog == null || DateTime.UtcNow - _thinkingCatalogAt > TimeSpan.FromMinutes(5))
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, CatalogUrl);
+            request.Headers.CacheControl = new() { NoCache = true };
+            using var response = await Http.SendAsync(request, ct).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            _thinkingCatalog = json;
+            _thinkingCatalogAt = DateTime.UtcNow;
+        }
+
+        using var document = JsonDocument.Parse(_thinkingCatalog);
+        var slug = model.Slug;
+        if (model.ProviderId == "anthropic" && slug.EndsWith("[1m]", StringComparison.Ordinal)) slug = slug[..^4];
+        if (!document.RootElement.TryGetProperty(model.ProviderId, out var provider) ||
+            !provider.TryGetProperty("models", out var models) ||
+            !models.TryGetProperty(slug, out var item)) return null;
+        if (!item.TryGetProperty("reasoning_options", out var options))
+            return item.TryGetProperty("reasoning", out var reasoning) && reasoning.ValueKind == JsonValueKind.False ? [] : null;
+        if (options.ValueKind != JsonValueKind.Array) return null;
+
+        var levels = new List<string>();
+        var toggle = false;
+        foreach (var option in options.EnumerateArray())
+        {
+            var type = ReadString(option, "type");
+            if (type == "toggle") toggle = true;
+            if (type != "effort" || !option.TryGetProperty("values", out var values) || values.ValueKind != JsonValueKind.Array) continue;
+            foreach (var value in values.EnumerateArray())
+            {
+                if (value.ValueKind != JsonValueKind.String) continue;
+                var level = value.GetString()?.Trim().ToLowerInvariant();
+                if (!string.IsNullOrWhiteSpace(level) && !levels.Contains(level)) levels.Add(level);
+            }
+        }
+        return levels.Count == 0 && toggle ? ["none", "thinking"] : levels;
+    }
 
     public async Task<List<ModelEntry>> GetFreeZenModelsAsync(CancellationToken ct = default)
     {
