@@ -68,6 +68,8 @@ public static class OpenCodeVariantCatalog
             || slug.Contains("gpt-5.5", StringComparison.Ordinal)
                 ? Gpt5Codex3Plus
                 : WidelySupported;
+        // GPT-6 (Astra u.a.) kennt dieselben Effort-Stufen wie die GPT-5.2+-Generation.
+        if (slug.StartsWith("gpt-6", StringComparison.Ordinal)) return Gpt52Plus;
         if (slug.StartsWith("gpt-5.1", StringComparison.Ordinal)) return ["none", "low", "medium", "high"];
         if (slug.StartsWith("gpt-5.", StringComparison.Ordinal)) return Gpt52Plus;
         if (slug.StartsWith("gpt-5", StringComparison.Ordinal)) return ["minimal", "low", "medium", "high"];
@@ -86,6 +88,7 @@ public static class OpenCodeVariantCatalog
             || local.Contains("gpt-5.5", StringComparison.Ordinal)
                 ? Gpt5Codex3Plus
                 : ["low", "medium", "high", "xhigh"];
+        if (local.StartsWith("gpt-6", StringComparison.Ordinal)) return Gpt52Plus;
         if (local.StartsWith("gpt-5.1", StringComparison.Ordinal)) return ["none", "low", "medium", "high"];
         if (local.StartsWith("gpt-5.", StringComparison.Ordinal)) return Gpt52Plus;
         return OpenAiGeneric;

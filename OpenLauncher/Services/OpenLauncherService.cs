@@ -172,7 +172,11 @@ $env:Path = $pathEntries -join ';'
                 return modelString;
             }
 
-            if (!string.IsNullOrWhiteSpace(thinkingLevel) || usesPriorityServiceTier)
+            // Selbst hinzugefuegte Modelle stehen nicht im OpenCode-Katalog (models.dev). Ohne
+            // eigenen provider.<id>.models.<slug>-Eintrag kennt OpenCode die Modell-ID nicht und
+            // bricht mit "invalid model" ab. Deshalb wird jedes benutzerdefinierte Direktmodell
+            // immer in die Konfig geschrieben -- auch dann, wenn es keine Denkstufe gibt.
+            if (model.IsUserDefined || !string.IsNullOrWhiteSpace(thinkingLevel) || usesPriorityServiceTier)
             {
                 var root = ReadConfig();
                 root = PatchDirectModel(root, model.ProviderId, model.Slug, model.DisplayName, thinkingLevel);

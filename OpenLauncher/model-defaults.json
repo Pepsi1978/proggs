@@ -28,5 +28,10 @@
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
     "ThinkingValue": "high"
+  },
+  "openai/gpt-6-astra": {
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
+    "ThinkingValue": "medium"
   }
 }
