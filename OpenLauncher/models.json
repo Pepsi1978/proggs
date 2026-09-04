@@ -126,6 +126,271 @@
     "IsExpanded": true
   },
   {
+    "Id": "opencode-zen-free",
+    "Title": "OpenCode Zen Free",
+    "ProviderId": "opencode",
+    "ProviderName": "OpenCode Zen",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "muse-spark-1.3-contributor-free",
+        "DisplayName": "Muse Spark 1.3 Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "muse-spark-1.2-contributor-free",
+        "DisplayName": "Muse Spark 1.2 Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "mimo-v2.5-free",
+        "DisplayName": "MiMo V2.5 Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "nemotron-3-ultra-free",
+        "DisplayName": "Nemotron 3 Ultra Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "big-pickle",
+        "DisplayName": "Big Pickle",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "ling-3.0-flash-fin-free",
+        "DisplayName": "Ling 3.0 Flash Fin Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "opencode",
+        "ProviderName": "OpenCode Zen",
+        "Slug": "nemotron-3.5-lightning-free",
+        "DisplayName": "Nemotron 3.5 Lightning Free",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [
+      "big-pickle",
+      "ling-3.0-flash-fin-free",
+      "mimo-v2.5-free",
+      "muse-spark-1.2-contributor-free",
+      "muse-spark-1.3-contributor-free",
+      "nemotron-3-ultra-free",
+      "nemotron-3.5-lightning-free"
+    ],
+    "IsExpanded": true
+  },
+  {
+    "Id": "openrouter-free",
+    "Title": "OpenRouterFree",
+    "ProviderId": "openrouter",
+    "ProviderName": "OpenRouter",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5.2:free",
+        "DisplayName": "Z.ai GLM 5.2 Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m3:free",
+        "DisplayName": "MiniMax MiniMax M3 Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "DisplayName": "NVIDIA Nemotron 3 Ultra Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3.5-lightning:free",
+        "DisplayName": "NVIDIA Nemotron 3.5 Lightning Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "poolside/laguna-xs-2.1:free",
+        "DisplayName": "Poolside Laguna XS 2.1 Free",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3-super-120b-a12b:free",
+        "DisplayName": "NVIDIA Nemotron 3 Super Free",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemma-4-31b-it:free",
+        "DisplayName": "Google Gemma 4 31B Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "poolside/laguna-s-2.1:free",
+        "DisplayName": "Poolside Laguna S 2.1 Free",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "dots-studio/dots-3-note-preview:free",
+        "DisplayName": "Dots Studio Dots3-Note Preview Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "liquid/lfm-2.5-2.6b:free",
+        "DisplayName": "LiquidAI LFM2.5-2.6B Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inclusionai/ling-3.0-flash-fin:free",
+        "DisplayName": "inclusionAI Ling 3.0 Flash Fin Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m2.7:free",
+        "DisplayName": "MiniMax MiniMax M2.7 Free",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "thinkingmachines/inkling:free",
+        "DisplayName": "Thinking Machines Inkling Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "thinkingmachines/inkling-small:free",
+        "DisplayName": "Thinking Machines Inkling Small Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inclusionai/ling-3.0-flash-sante:free",
+        "DisplayName": "inclusionAI Ling 3.0 Flash Sante Free",
+        "IsHidden": false
+      }
+    ],
+    "HiddenModelSlugs": [
+      "cohere/north-mini-code:free",
+      "nvidia/nemotron-3.5-content-safety:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "poolside/laguna-m.1:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "liquid/lfm-2.5-1.2b-thinking:free",
+      "liquid/lfm-2.5-1.2b-instruct:free",
+      "nvidia/nemotron-3-nano-30b-a3b:free",
+      "nvidia/nemotron-nano-12b-v2-vl:free",
+      "qwen/qwen3-next-80b-a3b-instruct:free",
+      "nvidia/nemotron-nano-9b-v2:free",
+      "openai/gpt-oss-20b:free",
+      "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "meta-llama/llama-3.2-3b-instruct:free",
+      "nousresearch/hermes-3-llama-3.1-405b:free"
+    ],
+    "KnownSyncedModelSlugs": [
+      "cohere/north-mini-code:free",
+      "dots-studio/dots-3-note-preview:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "google/gemma-4-31b-it:free",
+      "inclusionai/ling-3.0-flash-fin:free",
+      "inclusionai/ling-3.0-flash-sante:free",
+      "liquid/lfm-2.5-2.6b:free",
+      "minimax/minimax-m2.7:free",
+      "minimax/minimax-m3:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "nvidia/nemotron-3-super-120b-a12b:free",
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "nvidia/nemotron-3.5-content-safety:free",
+      "nvidia/nemotron-3.5-lightning:free",
+      "poolside/laguna-s-2.1:free",
+      "poolside/laguna-xs-2.1:free",
+      "thinkingmachines/inkling:free",
+      "thinkingmachines/inkling-small:free",
+      "z-ai/glm-5.2:free"
+    ],
+    "IsExpanded": true
+  },
+  {
     "Id": "opencode-go",
     "Title": "OpenCode-Go",
     "ProviderId": "opencode-go",
@@ -227,227 +492,6 @@
     "IsExpanded": false
   },
   {
-    "Id": "opencode-zen-free",
-    "Title": "OpenCode Zen Free",
-    "ProviderId": "opencode",
-    "ProviderName": "OpenCode Zen",
-    "Models": [
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode",
-        "ProviderName": "OpenCode Zen",
-        "Slug": "deepseek-v4-flash-free",
-        "DisplayName": "DeepSeek V4 Flash Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode",
-        "ProviderName": "OpenCode Zen",
-        "Slug": "mimo-v2.5-free",
-        "DisplayName": "MiMo V2.5 Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "opencode",
-        "ProviderName": "OpenCode Zen",
-        "Slug": "nemotron-3-ultra-free",
-        "DisplayName": "Nemotron 3 Ultra Free",
-        "IsHidden": false
-      }
-    ],
-    "HiddenModelSlugs": [],
-    "KnownSyncedModelSlugs": [],
-    "IsExpanded": true
-  },
-  {
-    "Id": "openrouter-free",
-    "Title": "OpenRouterFree",
-    "ProviderId": "openrouter",
-    "ProviderName": "OpenRouter",
-    "Models": [
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "z-ai/glm-5.2:free",
-        "DisplayName": "Z.ai GLM 5.2 Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "nvidia/nemotron-3-ultra-550b-a55b:free",
-        "DisplayName": "NVIDIA Nemotron 3 Ultra Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "nvidia/nemotron-3.5-lightning:free",
-        "DisplayName": "NVIDIA Nemotron 3.5 Lightning Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "poolside/laguna-xs-2.1:free",
-        "DisplayName": "Poolside Laguna XS 2.1 Free",
-        "IsHidden": true
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "nvidia/nemotron-3-super-120b-a12b:free",
-        "DisplayName": "NVIDIA Nemotron 3 Super Free",
-        "IsHidden": true
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "google/gemma-4-31b-it:free",
-        "DisplayName": "Google Gemma 4 31B Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "poolside/laguna-s-2.1:free",
-        "DisplayName": "Poolside Laguna S 2.1 Free",
-        "IsHidden": true
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "dots-studio/dots-3-note-preview:free",
-        "DisplayName": "Dots Studio Dots3-Note Preview Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "liquid/lfm-2.5-2.6b:free",
-        "DisplayName": "LiquidAI LFM2.5-2.6B Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "inclusionai/ling-3.0-flash-fin:free",
-        "DisplayName": "inclusionAI Ling 3.0 Flash Fin Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "minimax/minimax-m2.7:free",
-        "DisplayName": "MiniMax MiniMax M2.7 Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "minimax/minimax-m3:free",
-        "DisplayName": "MiniMax MiniMax M3 Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "thinkingmachines/inkling:free",
-        "DisplayName": "Thinking Machines Inkling Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "thinkingmachines/inkling-small:free",
-        "DisplayName": "Thinking Machines Inkling Small Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "inclusionai/ling-3.0-flash-sante:free",
-        "DisplayName": "inclusionAI Ling 3.0 Flash Sante Free",
-        "IsHidden": false
-      }
-    ],
-    "HiddenModelSlugs": [
-      "cohere/north-mini-code:free",
-      "nvidia/nemotron-3.5-content-safety:free",
-      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      "poolside/laguna-m.1:free",
-      "google/gemma-4-26b-a4b-it:free",
-      "liquid/lfm-2.5-1.2b-thinking:free",
-      "liquid/lfm-2.5-1.2b-instruct:free",
-      "nvidia/nemotron-3-nano-30b-a3b:free",
-      "nvidia/nemotron-nano-12b-v2-vl:free",
-      "qwen/qwen3-next-80b-a3b-instruct:free",
-      "nvidia/nemotron-nano-9b-v2:free",
-      "openai/gpt-oss-20b:free",
-      "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "meta-llama/llama-3.2-3b-instruct:free",
-      "nousresearch/hermes-3-llama-3.1-405b:free"
-    ],
-    "KnownSyncedModelSlugs": [
-      "cohere/north-mini-code:free",
-      "dots-studio/dots-3-note-preview:free",
-      "google/gemma-4-26b-a4b-it:free",
-      "google/gemma-4-31b-it:free",
-      "inclusionai/ling-3.0-flash-fin:free",
-      "inclusionai/ling-3.0-flash-sante:free",
-      "liquid/lfm-2.5-2.6b:free",
-      "minimax/minimax-m2.7:free",
-      "minimax/minimax-m3:free",
-      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-      "nvidia/nemotron-3-super-120b-a12b:free",
-      "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "nvidia/nemotron-3.5-content-safety:free",
-      "nvidia/nemotron-3.5-lightning:free",
-      "poolside/laguna-s-2.1:free",
-      "poolside/laguna-xs-2.1:free",
-      "thinkingmachines/inkling:free",
-      "thinkingmachines/inkling-small:free",
-      "z-ai/glm-5.2:free"
-    ],
-    "IsExpanded": true
-  },
-  {
     "Id": "openrouter",
     "Title": "OpenRouter",
     "ProviderId": "openrouter",
@@ -459,7 +503,7 @@
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
         "Slug": "moonshotai/kimi-k3",
-        "DisplayName": "Kimi K3",
+        "DisplayName": "MoonshotAI: Kimi K3",
         "IsHidden": false
       },
       {
@@ -513,7 +557,7 @@
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
         "Slug": "deepseek/deepseek-v4-pro",
-        "DisplayName": "DeepSeek V4 Pro",
+        "DisplayName": "DeepSeek: DeepSeek V4 Pro 0423",
         "IsHidden": false
       },
       {
@@ -522,7 +566,7 @@
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
         "Slug": "deepseek/deepseek-v4-flash",
-        "DisplayName": "DeepSeek V4 Flash",
+        "DisplayName": "DeepSeek: DeepSeek V4 Flash 0423",
         "IsHidden": false
       },
       {
@@ -531,12 +575,4012 @@
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
         "Slug": "xiaomi/mimo-v2.5",
-        "DisplayName": "MiMo-V2.5",
+        "DisplayName": "Xiaomi: MiMo-V2.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "aion-labs/aion-2.0",
+        "DisplayName": "AionLabs: Aion-2.0",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "aion-labs/aion-3.0",
+        "DisplayName": "AionLabs: Aion-3.0",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "aion-labs/aion-3.0-mini",
+        "DisplayName": "AionLabs: Aion-3.0-Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "aion-labs/aion-rp-llama-3.1-8b",
+        "DisplayName": "AionLabs: Aion-RP 1.0 (8B)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "amazon/nova-2-lite-v1",
+        "DisplayName": "Amazon: Nova 2 Lite",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "amazon/nova-lite-v1",
+        "DisplayName": "Amazon: Nova Lite 1.0",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "amazon/nova-micro-v1",
+        "DisplayName": "Amazon: Nova Micro 1.0",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "amazon/nova-premier-v1",
+        "DisplayName": "Amazon: Nova Premier 1.0",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "amazon/nova-pro-v1",
+        "DisplayName": "Amazon: Nova Pro 1.0",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~anthropic/claude-haiku-latest",
+        "DisplayName": "Anthropic Claude Haiku Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~anthropic/claude-sonnet-latest",
+        "DisplayName": "Anthropic Claude Sonnet Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-3-haiku",
+        "DisplayName": "Anthropic: Claude 3 Haiku",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-fable-5",
+        "DisplayName": "Anthropic: Claude Fable 5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-fable-5:batch",
+        "DisplayName": "Anthropic: Claude Fable 5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-fable-5.1",
+        "DisplayName": "Anthropic: Claude Fable 5.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-fable-5.1:batch",
+        "DisplayName": "Anthropic: Claude Fable 5.1 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~anthropic/claude-fable-latest",
+        "DisplayName": "Anthropic: Claude Fable Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-haiku-4.5",
+        "DisplayName": "Anthropic: Claude Haiku 4.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-haiku-4.5:batch",
+        "DisplayName": "Anthropic: Claude Haiku 4.5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4",
+        "DisplayName": "Anthropic: Claude Opus 4",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.1",
+        "DisplayName": "Anthropic: Claude Opus 4.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.1:batch",
+        "DisplayName": "Anthropic: Claude Opus 4.1 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.5",
+        "DisplayName": "Anthropic: Claude Opus 4.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.5:batch",
+        "DisplayName": "Anthropic: Claude Opus 4.5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.6",
+        "DisplayName": "Anthropic: Claude Opus 4.6",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.6:batch",
+        "DisplayName": "Anthropic: Claude Opus 4.6 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.7",
+        "DisplayName": "Anthropic: Claude Opus 4.7",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.7:batch",
+        "DisplayName": "Anthropic: Claude Opus 4.7 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.8",
+        "DisplayName": "Anthropic: Claude Opus 4.8",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-4.8:batch",
+        "DisplayName": "Anthropic: Claude Opus 4.8 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~anthropic/claude-opus-latest",
+        "DisplayName": "Anthropic: Claude Opus Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-sonnet-4",
+        "DisplayName": "Anthropic: Claude Sonnet 4",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-sonnet-4.5",
+        "DisplayName": "Anthropic: Claude Sonnet 4.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-sonnet-4.5:batch",
+        "DisplayName": "Anthropic: Claude Sonnet 4.5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-sonnet-4.6",
+        "DisplayName": "Anthropic: Claude Sonnet 4.6",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-sonnet-4.6:batch",
+        "DisplayName": "Anthropic: Claude Sonnet 4.6 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-sonnet-5",
+        "DisplayName": "Anthropic: Claude Sonnet 5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-sonnet-5:batch",
+        "DisplayName": "Anthropic: Claude Sonnet 5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "arcee-ai/trinity-large-thinking",
+        "DisplayName": "Arcee AI: Trinity Large Thinking",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "auto",
+        "DisplayName": "Auto Router",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "auto-beta",
+        "DisplayName": "Auto Router (Beta)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "baidu/ernie-4.5-vl-424b-a47b",
+        "DisplayName": "Baidu: ERNIE 4.5 VL 424B A47B ",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "bodybuilder",
+        "DisplayName": "Body Builder (beta)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "bytedance-seed/seed-1.6",
+        "DisplayName": "ByteDance Seed: Seed 1.6",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "bytedance-seed/seed-1.6-flash",
+        "DisplayName": "ByteDance Seed: Seed 1.6 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "bytedance-seed/seed-2-1-turbo",
+        "DisplayName": "ByteDance Seed: Seed 2.1 Turbo",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "bytedance-seed/seed-2.0-code",
+        "DisplayName": "ByteDance Seed: Seed-2.0-Code",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "bytedance-seed/seed-2.0-lite",
+        "DisplayName": "ByteDance Seed: Seed-2.0-Lite",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "bytedance-seed/seed-2.0-mini",
+        "DisplayName": "ByteDance Seed: Seed-2.0-Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "bytedance/ui-tars-1.5-7b",
+        "DisplayName": "ByteDance: UI-TARS 7B ",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-5",
+        "DisplayName": "Claude Opus 5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthropic/claude-opus-5:batch",
+        "DisplayName": "Claude Opus 5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "cohere/command-a",
+        "DisplayName": "Cohere: Command A",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "cohere/command-r-08-2024",
+        "DisplayName": "Cohere: Command R (08-2024)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "cohere/command-r-plus-08-2024",
+        "DisplayName": "Cohere: Command R+ (08-2024)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "cohere/command-r7b-12-2024",
+        "DisplayName": "Cohere: Command R7B (12-2024)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~deepseek/deepseek-v4-flash-latest",
+        "DisplayName": "DeepSeek V4 Flash Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-chat",
+        "DisplayName": "DeepSeek: DeepSeek V3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-chat-v3-0324",
+        "DisplayName": "DeepSeek: DeepSeek V3 0324",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-chat-v3.1",
+        "DisplayName": "DeepSeek: DeepSeek V3.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v3.1-terminus",
+        "DisplayName": "DeepSeek: DeepSeek V3.1 Terminus",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v3.2",
+        "DisplayName": "DeepSeek: DeepSeek V3.2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v3.2-exp",
+        "DisplayName": "DeepSeek: DeepSeek V3.2 Exp",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v4-flash-0731",
+        "DisplayName": "DeepSeek: DeepSeek V4 Flash 0731",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v4-flash-0731:batch",
+        "DisplayName": "DeepSeek: DeepSeek V4 Flash 0731 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v4-flash-vision-exp",
+        "DisplayName": "DeepSeek: DeepSeek V4 Flash Vision Exp",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v4-pro-0813",
+        "DisplayName": "DeepSeek: DeepSeek V4 Pro 0813",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-v4-pro-0813:batch",
+        "DisplayName": "DeepSeek: DeepSeek V4 Pro 0813 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-r1",
+        "DisplayName": "DeepSeek: R1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-r1-0528",
+        "DisplayName": "DeepSeek: R1 0528",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "deepseek/deepseek-r1-distill-llama-70b",
+        "DisplayName": "DeepSeek: R1 Distill Llama 70B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "free",
+        "DisplayName": "Free Models Router",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~google/gemini-flash-latest",
+        "DisplayName": "Google Gemini Flash Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~google/gemini-pro-latest",
+        "DisplayName": "Google Gemini Pro Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-2.5-flash",
+        "DisplayName": "Google: Gemini 2.5 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-2.5-flash:batch",
+        "DisplayName": "Google: Gemini 2.5 Flash (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-2.5-flash-lite",
+        "DisplayName": "Google: Gemini 2.5 Flash Lite",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-2.5-flash-lite:batch",
+        "DisplayName": "Google: Gemini 2.5 Flash Lite (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-2.5-pro",
+        "DisplayName": "Google: Gemini 2.5 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-2.5-pro:batch",
+        "DisplayName": "Google: Gemini 2.5 Pro (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-2.5-pro-preview-05-06",
+        "DisplayName": "Google: Gemini 2.5 Pro Preview 05-06",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-2.5-pro-preview",
+        "DisplayName": "Google: Gemini 2.5 Pro Preview 06-05",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3-flash-preview",
+        "DisplayName": "Google: Gemini 3 Flash Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3-flash-preview:batch",
+        "DisplayName": "Google: Gemini 3 Flash Preview (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.1-flash-lite",
+        "DisplayName": "Google: Gemini 3.1 Flash Lite",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.1-flash-lite:batch",
+        "DisplayName": "Google: Gemini 3.1 Flash Lite (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.1-flash-lite-preview",
+        "DisplayName": "Google: Gemini 3.1 Flash Lite Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.1-pro-preview",
+        "DisplayName": "Google: Gemini 3.1 Pro Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.1-pro-preview:batch",
+        "DisplayName": "Google: Gemini 3.1 Pro Preview (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.1-pro-preview-customtools",
+        "DisplayName": "Google: Gemini 3.1 Pro Preview Custom Tools",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.5-flash",
+        "DisplayName": "Google: Gemini 3.5 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.5-flash:batch",
+        "DisplayName": "Google: Gemini 3.5 Flash (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.5-flash-lite",
+        "DisplayName": "Google: Gemini 3.5 Flash Lite",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.5-flash-lite:batch",
+        "DisplayName": "Google: Gemini 3.5 Flash Lite (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.6-flash",
+        "DisplayName": "Google: Gemini 3.6 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.6-flash:batch",
+        "DisplayName": "Google: Gemini 3.6 Flash (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.7-flash",
+        "DisplayName": "Google: Gemini 3.7 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.7-flash:batch",
+        "DisplayName": "Google: Gemini 3.7 Flash (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.8-flash",
+        "DisplayName": "Google: Gemini 3.8 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.8-flash:batch",
+        "DisplayName": "Google: Gemini 3.8 Flash (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemma-2-27b-it",
+        "DisplayName": "Google: Gemma 2 27B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemma-3-12b-it",
+        "DisplayName": "Google: Gemma 3 12B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemma-3-27b-it",
+        "DisplayName": "Google: Gemma 3 27B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemma-3-4b-it",
+        "DisplayName": "Google: Gemma 3 4B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemma-4-26b-a4b-it",
+        "DisplayName": "Google: Gemma 4 26B A4B ",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemma-4-31b-it",
+        "DisplayName": "Google: Gemma 4 31B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemma-4-31b-it:batch",
+        "DisplayName": "Google: Gemma 4 31B (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/lyria-3-clip-preview",
+        "DisplayName": "Google: Lyria 3 Clip Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/lyria-3-pro-preview",
+        "DisplayName": "Google: Lyria 3 Pro Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-2.5-flash-image",
+        "DisplayName": "Google: Nano Banana (Gemini 2.5 Flash Image)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.1-flash-image-preview",
+        "DisplayName": "Google: Nano Banana 2 (Gemini 3.1 Flash Image Preview)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.1-flash-image",
+        "DisplayName": "Google: Nano Banana 2 (Gemini 3.1 Flash Image)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3.1-flash-lite-image",
+        "DisplayName": "Google: Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3-pro-image-preview",
+        "DisplayName": "Google: Nano Banana Pro (Gemini 3 Pro Image Preview)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "google/gemini-3-pro-image",
+        "DisplayName": "Google: Nano Banana Pro (Gemini 3 Pro Image)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "ibm-granite/granite-4.0-h-micro",
+        "DisplayName": "IBM: Granite 4.0 Micro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "ibm-granite/granite-4.2-8b",
+        "DisplayName": "IBM: Granite 4.2 8B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inception/mercury-2",
+        "DisplayName": "Inception: Mercury 2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inception/mercury-2.5-preview",
+        "DisplayName": "Inception: Mercury 2.5 Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inclusionai/ling-3.0-flash",
+        "DisplayName": "inclusionAI: Ling 3.0 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "inclusionai/ling-3.0-flash-fin",
+        "DisplayName": "inclusionAI: Ling 3.0 Flash Fin",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "kwaipilot/kat-coder-pro-v2",
+        "DisplayName": "Kwaipilot: KAT-Coder-Pro V2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "kwaipilot/kat-coder-pro-v2.5",
+        "DisplayName": "Kwaipilot: KAT-Coder-Pro V2.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "anthracite-org/magnum-v4-72b",
+        "DisplayName": "Magnum v4 72B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mancer/weaver",
+        "DisplayName": "Mancer: Weaver (alpha)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meituan/longcat-2.0",
+        "DisplayName": "Meituan: LongCat 2.0",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta-llama/llama-3.1-70b-instruct",
+        "DisplayName": "Meta: Llama 3.1 70B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta-llama/llama-3.1-8b-instruct",
+        "DisplayName": "Meta: Llama 3.1 8B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta-llama/llama-3.2-1b-instruct",
+        "DisplayName": "Meta: Llama 3.2 1B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta-llama/llama-3.2-3b-instruct",
+        "DisplayName": "Meta: Llama 3.2 3B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta-llama/llama-3.3-70b-instruct",
+        "DisplayName": "Meta: Llama 3.3 70B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta-llama/llama-4-maverick",
+        "DisplayName": "Meta: Llama 4 Maverick",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta-llama/llama-4-scout",
+        "DisplayName": "Meta: Llama 4 Scout",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta-llama/llama-guard-4-12b",
+        "DisplayName": "Meta: Llama Guard 4 12B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta/muse-glimmer-30b",
+        "DisplayName": "Meta: Muse Glimmer 30B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta/muse-glimmer-30b:batch",
+        "DisplayName": "Meta: Muse Glimmer 30B (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta/muse-spark-1.1",
+        "DisplayName": "Meta: Muse Spark 1.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta/muse-spark-1.2",
+        "DisplayName": "Meta: Muse Spark 1.2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta/muse-spark-1.2-contributor",
+        "DisplayName": "Meta: Muse Spark 1.2 Contributor",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta/muse-spark-1.3",
+        "DisplayName": "Meta: Muse Spark 1.3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "meta/muse-spark-1.3-contributor",
+        "DisplayName": "Meta: Muse Spark 1.3 Contributor",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "microsoft/phi-4",
+        "DisplayName": "Microsoft: Phi 4",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m1",
+        "DisplayName": "MiniMax: MiniMax M1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m2",
+        "DisplayName": "MiniMax: MiniMax M2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m2-her",
+        "DisplayName": "MiniMax: MiniMax M2-her",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m2.1",
+        "DisplayName": "MiniMax: MiniMax M2.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m2.5",
+        "DisplayName": "MiniMax: MiniMax M2.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m2.7",
+        "DisplayName": "MiniMax: MiniMax M2.7",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-m3:batch",
+        "DisplayName": "MiniMax: MiniMax M3 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "minimax/minimax-01",
+        "DisplayName": "MiniMax: MiniMax-01",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-large",
+        "DisplayName": "Mistral Large",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-large-2407",
+        "DisplayName": "Mistral Large 2407",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/codestral-2508",
+        "DisplayName": "Mistral: Codestral 2508",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/devstral-2512",
+        "DisplayName": "Mistral: Devstral 2 2512",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/ministral-14b-2512",
+        "DisplayName": "Mistral: Ministral 3 14B 2512",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/ministral-3b-2512",
+        "DisplayName": "Mistral: Ministral 3 3B 2512",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/ministral-8b-2512",
+        "DisplayName": "Mistral: Ministral 3 8B 2512",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-large-2512",
+        "DisplayName": "Mistral: Mistral Large 3 2512",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-medium-3",
+        "DisplayName": "Mistral: Mistral Medium 3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-medium-3.1",
+        "DisplayName": "Mistral: Mistral Medium 3.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-medium-3-5",
+        "DisplayName": "Mistral: Mistral Medium 3.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-medium-3-5:batch",
+        "DisplayName": "Mistral: Mistral Medium 3.5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-nemo",
+        "DisplayName": "Mistral: Mistral Nemo",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-small-24b-instruct-2501",
+        "DisplayName": "Mistral: Mistral Small 3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-small-3.1-24b-instruct",
+        "DisplayName": "Mistral: Mistral Small 3.1 24B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-small-3.2-24b-instruct",
+        "DisplayName": "Mistral: Mistral Small 3.2 24B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-small-2603",
+        "DisplayName": "Mistral: Mistral Small 4",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mixtral-8x22b-instruct",
+        "DisplayName": "Mistral: Mixtral 8x22B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/mistral-saba",
+        "DisplayName": "Mistral: Saba",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "mistralai/voxtral-small-24b-2507",
+        "DisplayName": "Mistral: Voxtral Small 24B 2507",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~moonshotai/kimi-latest",
+        "DisplayName": "MoonshotAI Kimi Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moonshotai/kimi-k2",
+        "DisplayName": "MoonshotAI: Kimi K2 0711",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moonshotai/kimi-k2-0905",
+        "DisplayName": "MoonshotAI: Kimi K2 0905",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moonshotai/kimi-k2-thinking",
+        "DisplayName": "MoonshotAI: Kimi K2 Thinking",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moonshotai/kimi-k2.5",
+        "DisplayName": "MoonshotAI: Kimi K2.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moonshotai/kimi-k2.6",
+        "DisplayName": "MoonshotAI: Kimi K2.6",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moonshotai/kimi-k2.7-code",
+        "DisplayName": "MoonshotAI: Kimi K2.7 Code",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "moonshotai/kimi-k3:batch",
+        "DisplayName": "MoonshotAI: Kimi K3 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "morph/morph-v3-fast",
+        "DisplayName": "Morph: Morph V3 Fast",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "morph/morph-v3-large",
+        "DisplayName": "Morph: Morph V3 Large",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "gryphe/mythomax-l2-13b",
+        "DisplayName": "MythoMax 13B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nex-agi/nex-n2-mini",
+        "DisplayName": "Nex AGI: Nex-N2-Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nex-agi/nex-n2-pro",
+        "DisplayName": "Nex AGI: Nex-N2-Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nousresearch/hermes-3-llama-3.1-405b",
+        "DisplayName": "Nous: Hermes 3 405B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nousresearch/hermes-3-llama-3.1-70b",
+        "DisplayName": "Nous: Hermes 3 70B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nousresearch/hermes-4-405b",
+        "DisplayName": "Nous: Hermes 4 405B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nousresearch/hermes-4-70b",
+        "DisplayName": "Nous: Hermes 4 70B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3-nano-30b-a3b",
+        "DisplayName": "NVIDIA: Nemotron 3 Nano 30B A3B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3-super-120b-a12b",
+        "DisplayName": "NVIDIA: Nemotron 3 Super",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3-ultra-550b-a55b",
+        "DisplayName": "NVIDIA: Nemotron 3 Ultra",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3.5-content-safety",
+        "DisplayName": "NVIDIA: Nemotron 3.5 Content Safety",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "nvidia/nemotron-3.5-lightning",
+        "DisplayName": "NVIDIA: Nemotron 3.5 Lightning",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~openai/gpt-latest",
+        "DisplayName": "OpenAI GPT Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~openai/gpt-mini-latest",
+        "DisplayName": "OpenAI GPT Mini Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-audio",
+        "DisplayName": "OpenAI: GPT Audio",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-audio-mini",
+        "DisplayName": "OpenAI: GPT Audio Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-chat-latest",
+        "DisplayName": "OpenAI: GPT Chat Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-3.5-turbo",
+        "DisplayName": "OpenAI: GPT-3.5 Turbo",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-3.5-turbo:batch",
+        "DisplayName": "OpenAI: GPT-3.5 Turbo (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-3.5-turbo-0613",
+        "DisplayName": "OpenAI: GPT-3.5 Turbo (older v0613)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-3.5-turbo-16k",
+        "DisplayName": "OpenAI: GPT-3.5 Turbo 16k",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-3.5-turbo-instruct",
+        "DisplayName": "OpenAI: GPT-3.5 Turbo Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4",
+        "DisplayName": "OpenAI: GPT-4",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4-turbo",
+        "DisplayName": "OpenAI: GPT-4 Turbo",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4-turbo:batch",
+        "DisplayName": "OpenAI: GPT-4 Turbo (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4-turbo-preview",
+        "DisplayName": "OpenAI: GPT-4 Turbo Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4.1",
+        "DisplayName": "OpenAI: GPT-4.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4.1:batch",
+        "DisplayName": "OpenAI: GPT-4.1 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4.1-mini",
+        "DisplayName": "OpenAI: GPT-4.1 Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4.1-mini:batch",
+        "DisplayName": "OpenAI: GPT-4.1 Mini (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4.1-nano",
+        "DisplayName": "OpenAI: GPT-4.1 Nano",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4.1-nano:batch",
+        "DisplayName": "OpenAI: GPT-4.1 Nano (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4o",
+        "DisplayName": "OpenAI: GPT-4o",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4o-2024-05-13",
+        "DisplayName": "OpenAI: GPT-4o (2024-05-13)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4o-2024-08-06",
+        "DisplayName": "OpenAI: GPT-4o (2024-08-06)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4o-2024-11-20",
+        "DisplayName": "OpenAI: GPT-4o (2024-11-20)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4o:batch",
+        "DisplayName": "OpenAI: GPT-4o (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4o-mini",
+        "DisplayName": "OpenAI: GPT-4o-mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4o-mini-2024-07-18",
+        "DisplayName": "OpenAI: GPT-4o-mini (2024-07-18)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-4o-mini:batch",
+        "DisplayName": "OpenAI: GPT-4o-mini (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5",
+        "DisplayName": "OpenAI: GPT-5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5:batch",
+        "DisplayName": "OpenAI: GPT-5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5-image",
+        "DisplayName": "OpenAI: GPT-5 Image",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5-image-mini",
+        "DisplayName": "OpenAI: GPT-5 Image Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5-mini",
+        "DisplayName": "OpenAI: GPT-5 Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5-mini:batch",
+        "DisplayName": "OpenAI: GPT-5 Mini (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5-nano",
+        "DisplayName": "OpenAI: GPT-5 Nano",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5-nano:batch",
+        "DisplayName": "OpenAI: GPT-5 Nano (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5-pro",
+        "DisplayName": "OpenAI: GPT-5 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5-pro:batch",
+        "DisplayName": "OpenAI: GPT-5 Pro (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.1",
+        "DisplayName": "OpenAI: GPT-5.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.1:batch",
+        "DisplayName": "OpenAI: GPT-5.1 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.1-codex",
+        "DisplayName": "OpenAI: GPT-5.1-Codex",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.1-codex-max",
+        "DisplayName": "OpenAI: GPT-5.1-Codex-Max",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.1-codex-mini",
+        "DisplayName": "OpenAI: GPT-5.1-Codex-Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.2",
+        "DisplayName": "OpenAI: GPT-5.2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.2:batch",
+        "DisplayName": "OpenAI: GPT-5.2 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.2-chat",
+        "DisplayName": "OpenAI: GPT-5.2 Chat",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.2-pro",
+        "DisplayName": "OpenAI: GPT-5.2 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.2-pro:batch",
+        "DisplayName": "OpenAI: GPT-5.2 Pro (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.2-codex",
+        "DisplayName": "OpenAI: GPT-5.2-Codex",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.3-codex",
+        "DisplayName": "OpenAI: GPT-5.3-Codex",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.4",
+        "DisplayName": "OpenAI: GPT-5.4",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.4:batch",
+        "DisplayName": "OpenAI: GPT-5.4 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.4-image-2",
+        "DisplayName": "OpenAI: GPT-5.4 Image 2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.4-mini",
+        "DisplayName": "OpenAI: GPT-5.4 Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.4-mini:batch",
+        "DisplayName": "OpenAI: GPT-5.4 Mini (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.4-nano",
+        "DisplayName": "OpenAI: GPT-5.4 Nano",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.4-nano:batch",
+        "DisplayName": "OpenAI: GPT-5.4 Nano (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.4-pro",
+        "DisplayName": "OpenAI: GPT-5.4 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.4-pro:batch",
+        "DisplayName": "OpenAI: GPT-5.4 Pro (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.5",
+        "DisplayName": "OpenAI: GPT-5.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.5:batch",
+        "DisplayName": "OpenAI: GPT-5.5 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.5-pro",
+        "DisplayName": "OpenAI: GPT-5.5 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.5-pro:batch",
+        "DisplayName": "OpenAI: GPT-5.5 Pro (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-luna",
+        "DisplayName": "OpenAI: GPT-5.6 Luna",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-luna:batch",
+        "DisplayName": "OpenAI: GPT-5.6 Luna (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-luna-pro",
+        "DisplayName": "OpenAI: GPT-5.6 Luna Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-luna-pro:batch",
+        "DisplayName": "OpenAI: GPT-5.6 Luna Pro (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-sol",
+        "DisplayName": "OpenAI: GPT-5.6 Sol",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-sol:batch",
+        "DisplayName": "OpenAI: GPT-5.6 Sol (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-sol-pro",
+        "DisplayName": "OpenAI: GPT-5.6 Sol Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-sol-pro:batch",
+        "DisplayName": "OpenAI: GPT-5.6 Sol Pro (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-terra",
+        "DisplayName": "OpenAI: GPT-5.6 Terra",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-terra:batch",
+        "DisplayName": "OpenAI: GPT-5.6 Terra (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-terra-pro",
+        "DisplayName": "OpenAI: GPT-5.6 Terra Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-5.6-terra-pro:batch",
+        "DisplayName": "OpenAI: GPT-5.6 Terra Pro (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-oss-120b",
+        "DisplayName": "OpenAI: gpt-oss-120b",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-oss-120b:batch",
+        "DisplayName": "OpenAI: gpt-oss-120b (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-oss-20b",
+        "DisplayName": "OpenAI: gpt-oss-20b",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-oss-20b:batch",
+        "DisplayName": "OpenAI: gpt-oss-20b (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-oss-safeguard-20b",
+        "DisplayName": "OpenAI: gpt-oss-safeguard-20b",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o1",
+        "DisplayName": "OpenAI: o1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o1-pro",
+        "DisplayName": "OpenAI: o1-pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o3",
+        "DisplayName": "OpenAI: o3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o3:batch",
+        "DisplayName": "OpenAI: o3 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o3-mini",
+        "DisplayName": "OpenAI: o3 Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o3-mini:batch",
+        "DisplayName": "OpenAI: o3 Mini (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o3-mini-high",
+        "DisplayName": "OpenAI: o3 Mini High",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o3-pro",
+        "DisplayName": "OpenAI: o3 Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o4-mini",
+        "DisplayName": "OpenAI: o4 Mini",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o4-mini:batch",
+        "DisplayName": "OpenAI: o4 Mini (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/o4-mini-high",
+        "DisplayName": "OpenAI: o4 Mini High",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "fusion",
+        "DisplayName": "OpenRouter: Fusion",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "pareto-code",
+        "DisplayName": "Pareto Code Router",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "perceptron/perceptron-mk1",
+        "DisplayName": "Perceptron: Perceptron Mk1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "perplexity/sonar",
+        "DisplayName": "Perplexity: Sonar",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "perplexity/sonar-deep-research",
+        "DisplayName": "Perplexity: Sonar Deep Research",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "perplexity/sonar-pro",
+        "DisplayName": "Perplexity: Sonar Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "perplexity/sonar-pro-search",
+        "DisplayName": "Perplexity: Sonar Pro Search",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "perplexity/sonar-reasoning-pro",
+        "DisplayName": "Perplexity: Sonar Reasoning Pro",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "poolside/laguna-s-2.1",
+        "DisplayName": "Poolside: Laguna S 2.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "poolside/laguna-xs-2.1",
+        "DisplayName": "Poolside: Laguna XS 2.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen-2.5-72b-instruct",
+        "DisplayName": "Qwen2.5 72B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen-2.5-coder-32b-instruct",
+        "DisplayName": "Qwen2.5 Coder 32B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen-plus-2025-07-28",
+        "DisplayName": "Qwen: Qwen Plus 0728",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen-plus",
+        "DisplayName": "Qwen: Qwen-Plus",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen-2.5-7b-instruct",
+        "DisplayName": "Qwen: Qwen2.5 7B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen2.5-vl-72b-instruct",
+        "DisplayName": "Qwen: Qwen2.5 VL 72B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-14b",
+        "DisplayName": "Qwen: Qwen3 14B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-235b-a22b",
+        "DisplayName": "Qwen: Qwen3 235B A22B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-235b-a22b-2507",
+        "DisplayName": "Qwen: Qwen3 235B A22B Instruct 2507",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-235b-a22b-thinking-2507",
+        "DisplayName": "Qwen: Qwen3 235B A22B Thinking 2507",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-30b-a3b",
+        "DisplayName": "Qwen: Qwen3 30B A3B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-30b-a3b-instruct-2507",
+        "DisplayName": "Qwen: Qwen3 30B A3B Instruct 2507",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-30b-a3b-thinking-2507",
+        "DisplayName": "Qwen: Qwen3 30B A3B Thinking 2507",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-32b",
+        "DisplayName": "Qwen: Qwen3 32B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-8b",
+        "DisplayName": "Qwen: Qwen3 8B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-coder-30b-a3b-instruct",
+        "DisplayName": "Qwen: Qwen3 Coder 30B A3B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-coder",
+        "DisplayName": "Qwen: Qwen3 Coder 480B A35B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-coder-flash",
+        "DisplayName": "Qwen: Qwen3 Coder Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-coder-next",
+        "DisplayName": "Qwen: Qwen3 Coder Next",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-coder-plus",
+        "DisplayName": "Qwen: Qwen3 Coder Plus",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-max",
+        "DisplayName": "Qwen: Qwen3 Max",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-max-thinking",
+        "DisplayName": "Qwen: Qwen3 Max Thinking",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-next-80b-a3b-instruct",
+        "DisplayName": "Qwen: Qwen3 Next 80B A3B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-next-80b-a3b-thinking",
+        "DisplayName": "Qwen: Qwen3 Next 80B A3B Thinking",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-vl-235b-a22b-instruct",
+        "DisplayName": "Qwen: Qwen3 VL 235B A22B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-vl-235b-a22b-thinking",
+        "DisplayName": "Qwen: Qwen3 VL 235B A22B Thinking",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-vl-30b-a3b-instruct",
+        "DisplayName": "Qwen: Qwen3 VL 30B A3B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-vl-30b-a3b-thinking",
+        "DisplayName": "Qwen: Qwen3 VL 30B A3B Thinking",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-vl-32b-instruct",
+        "DisplayName": "Qwen: Qwen3 VL 32B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-vl-8b-instruct",
+        "DisplayName": "Qwen: Qwen3 VL 8B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3-vl-8b-thinking",
+        "DisplayName": "Qwen: Qwen3 VL 8B Thinking",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.5-397b-a17b",
+        "DisplayName": "Qwen: Qwen3.5 397B A17B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.5-plus-02-15",
+        "DisplayName": "Qwen: Qwen3.5 Plus 2026-02-15",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.5-plus-20260420",
+        "DisplayName": "Qwen: Qwen3.5 Plus 2026-04-20",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.5-122b-a10b",
+        "DisplayName": "Qwen: Qwen3.5-122B-A10B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.5-27b",
+        "DisplayName": "Qwen: Qwen3.5-27B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.5-35b-a3b",
+        "DisplayName": "Qwen: Qwen3.5-35B-A3B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.5-9b",
+        "DisplayName": "Qwen: Qwen3.5-9B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.5-9b:batch",
+        "DisplayName": "Qwen: Qwen3.5-9B (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.5-flash-02-23",
+        "DisplayName": "Qwen: Qwen3.5-Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.6-27b",
+        "DisplayName": "Qwen: Qwen3.6 27B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.6-35b-a3b",
+        "DisplayName": "Qwen: Qwen3.6 35B A3B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.6-flash",
+        "DisplayName": "Qwen: Qwen3.6 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.6-max-preview",
+        "DisplayName": "Qwen: Qwen3.6 Max Preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.6-plus",
+        "DisplayName": "Qwen: Qwen3.6 Plus",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.7-flash",
+        "DisplayName": "Qwen: Qwen3.7 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.7-plus",
+        "DisplayName": "Qwen: Qwen3.7 Plus",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.8-2.4t-a95b",
+        "DisplayName": "Qwen: Qwen3.8 2.4T A95B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.8-2.4t-a95b:batch",
+        "DisplayName": "Qwen: Qwen3.8 2.4T A95B (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.8-27b",
+        "DisplayName": "Qwen: Qwen3.8 27B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.8-flash",
+        "DisplayName": "Qwen: Qwen3.8 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "qwen/qwen3.8-max",
+        "DisplayName": "Qwen: Qwen3.8 Max",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "rekaai/reka-edge",
+        "DisplayName": "Reka Edge",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "rekaai/reka-flash-3",
+        "DisplayName": "Reka Flash 3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "relace/relace-apply-3",
+        "DisplayName": "Relace: Relace Apply 3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "relace/relace-search",
+        "DisplayName": "Relace: Relace Search",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "undi95/remm-slerp-l2-13b",
+        "DisplayName": "ReMM SLERP 13B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "sakana/fugu-ultra",
+        "DisplayName": "Sakana: Fugu Ultra",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "sakana/sakana-namazu",
+        "DisplayName": "Sakana: Sakana Namazu",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "sao10k/l3-lunaris-8b",
+        "DisplayName": "Sao10K: Llama 3 8B Lunaris",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "sao10k/l3.1-euryale-70b",
+        "DisplayName": "Sao10K: Llama 3.1 Euryale 70B v2.2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "sao10k/l3.3-euryale-70b",
+        "DisplayName": "Sao10K: Llama 3.3 Euryale 70B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "x-ai/grok-4.20",
+        "DisplayName": "SpaceXAI: Grok 4.20",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "x-ai/grok-4.20-multi-agent",
+        "DisplayName": "SpaceXAI: Grok 4.20 Multi-Agent",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "x-ai/grok-4.3",
+        "DisplayName": "SpaceXAI: Grok 4.3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "x-ai/grok-4.3:batch",
+        "DisplayName": "SpaceXAI: Grok 4.3 (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "x-ai/grok-4.5",
+        "DisplayName": "SpaceXAI: Grok 4.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "x-ai/grok-4.6",
+        "DisplayName": "SpaceXAI: Grok 4.6",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "x-ai/grok-build-0.1",
+        "DisplayName": "SpaceXAI: Grok Build 0.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "stepfun/step-3.5-flash",
+        "DisplayName": "StepFun: Step 3.5 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "stepfun/step-3.7-flash",
+        "DisplayName": "StepFun: Step 3.7 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "tencent/hunyuan-a13b-instruct",
+        "DisplayName": "Tencent: Hunyuan A13B Instruct",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "tencent/hy-mt2-1.8b",
+        "DisplayName": "Tencent: Hy-MT2-1.8B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "tencent/hy-mt2-30b-a3b",
+        "DisplayName": "Tencent: Hy-MT2-30B-A3B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "tencent/hy-mt2-7b",
+        "DisplayName": "Tencent: Hy-MT2-7B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "tencent/hy3",
+        "DisplayName": "Tencent: Hy3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "tencent/hy3-preview",
+        "DisplayName": "Tencent: Hy3 preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "tencent/hy4-preview",
+        "DisplayName": "Tencent: Hy4 preview",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "thedrummer/cydonia-24b-v4.1",
+        "DisplayName": "TheDrummer: Cydonia 24B V4.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "thedrummer/skyfall-36b-v2",
+        "DisplayName": "TheDrummer: Skyfall 36B V2",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "thedrummer/unslopnemo-12b",
+        "DisplayName": "TheDrummer: UnslopNemo 12B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "thinkingmachines/inkling",
+        "DisplayName": "Thinking Machines: Inkling",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "thinkingmachines/inkling:batch",
+        "DisplayName": "Thinking Machines: Inkling (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "thinkingmachines/inkling-small",
+        "DisplayName": "Thinking Machines: Inkling Small",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "thinkingmachines/inkling-small:batch",
+        "DisplayName": "Thinking Machines: Inkling Small (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "upstage/solar-pro-3",
+        "DisplayName": "Upstage: Solar Pro 3",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "upstage/solar-pro4",
+        "DisplayName": "Upstage: Solar Pro 4",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+        "DisplayName": "Venice: Uncensored",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "microsoft/wizardlm-2-8x22b",
+        "DisplayName": "WizardLM-2 8x22B",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "writer/palmyra-x5",
+        "DisplayName": "Writer: Palmyra X5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~x-ai/grok-latest",
+        "DisplayName": "xAI: Grok Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-4.5",
+        "DisplayName": "Z.ai: GLM 4.5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-4.5-air",
+        "DisplayName": "Z.ai: GLM 4.5 Air",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-4.5v",
+        "DisplayName": "Z.ai: GLM 4.5V",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-4.6",
+        "DisplayName": "Z.ai: GLM 4.6",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-4.6v",
+        "DisplayName": "Z.ai: GLM 4.6V",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-4.7",
+        "DisplayName": "Z.ai: GLM 4.7",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-4.7-flash",
+        "DisplayName": "Z.ai: GLM 4.7 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5",
+        "DisplayName": "Z.ai: GLM 5",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5-turbo",
+        "DisplayName": "Z.ai: GLM 5 Turbo",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5.1",
+        "DisplayName": "Z.ai: GLM 5.1",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5.3-flash",
+        "DisplayName": "Z.ai: GLM 5.3 Flash",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5.3-flash:batch",
+        "DisplayName": "Z.ai: GLM 5.3 Flash (batch)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "z-ai/glm-5v-turbo",
+        "DisplayName": "Z.ai: GLM 5V Turbo",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~z-ai/glm-flash-latest",
+        "DisplayName": "Z.ai: GLM Flash Latest",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "~z-ai/glm-latest",
+        "DisplayName": "Z.ai: GLM Latest",
         "IsHidden": false
       }
     ],
     "HiddenModelSlugs": [],
-    "KnownSyncedModelSlugs": [],
+    "KnownSyncedModelSlugs": [
+      "aion-labs/aion-2.0",
+      "aion-labs/aion-3.0",
+      "aion-labs/aion-3.0-mini",
+      "aion-labs/aion-rp-llama-3.1-8b",
+      "amazon/nova-2-lite-v1",
+      "amazon/nova-lite-v1",
+      "amazon/nova-micro-v1",
+      "amazon/nova-premier-v1",
+      "amazon/nova-pro-v1",
+      "~anthropic/claude-haiku-latest",
+      "~anthropic/claude-sonnet-latest",
+      "anthropic/claude-3-haiku",
+      "anthropic/claude-fable-5",
+      "anthropic/claude-fable-5:batch",
+      "anthropic/claude-fable-5.1",
+      "anthropic/claude-fable-5.1:batch",
+      "~anthropic/claude-fable-latest",
+      "anthropic/claude-haiku-4.5",
+      "anthropic/claude-haiku-4.5:batch",
+      "anthropic/claude-opus-4",
+      "anthropic/claude-opus-4.1",
+      "anthropic/claude-opus-4.1:batch",
+      "anthropic/claude-opus-4.5",
+      "anthropic/claude-opus-4.5:batch",
+      "anthropic/claude-opus-4.6",
+      "anthropic/claude-opus-4.6:batch",
+      "anthropic/claude-opus-4.7",
+      "anthropic/claude-opus-4.7:batch",
+      "anthropic/claude-opus-4.8",
+      "anthropic/claude-opus-4.8:batch",
+      "~anthropic/claude-opus-latest",
+      "anthropic/claude-sonnet-4",
+      "anthropic/claude-sonnet-4.5",
+      "anthropic/claude-sonnet-4.5:batch",
+      "anthropic/claude-sonnet-4.6",
+      "anthropic/claude-sonnet-4.6:batch",
+      "anthropic/claude-sonnet-5",
+      "anthropic/claude-sonnet-5:batch",
+      "arcee-ai/trinity-large-thinking",
+      "auto",
+      "auto-beta",
+      "baidu/ernie-4.5-vl-424b-a47b",
+      "bodybuilder",
+      "bytedance-seed/seed-1.6",
+      "bytedance-seed/seed-1.6-flash",
+      "bytedance-seed/seed-2-1-turbo",
+      "bytedance-seed/seed-2.0-code",
+      "bytedance-seed/seed-2.0-lite",
+      "bytedance-seed/seed-2.0-mini",
+      "bytedance/ui-tars-1.5-7b",
+      "anthropic/claude-opus-5",
+      "anthropic/claude-opus-5:batch",
+      "cohere/command-a",
+      "cohere/command-r-08-2024",
+      "cohere/command-r-plus-08-2024",
+      "cohere/command-r7b-12-2024",
+      "~deepseek/deepseek-v4-flash-latest",
+      "deepseek/deepseek-chat",
+      "deepseek/deepseek-chat-v3-0324",
+      "deepseek/deepseek-chat-v3.1",
+      "deepseek/deepseek-v3.1-terminus",
+      "deepseek/deepseek-v3.2",
+      "deepseek/deepseek-v3.2-exp",
+      "deepseek/deepseek-v4-flash",
+      "deepseek/deepseek-v4-flash-0731",
+      "deepseek/deepseek-v4-flash-0731:batch",
+      "deepseek/deepseek-v4-flash-vision-exp",
+      "deepseek/deepseek-v4-pro",
+      "deepseek/deepseek-v4-pro-0813",
+      "deepseek/deepseek-v4-pro-0813:batch",
+      "deepseek/deepseek-r1",
+      "deepseek/deepseek-r1-0528",
+      "deepseek/deepseek-r1-distill-llama-70b",
+      "free",
+      "~google/gemini-flash-latest",
+      "~google/gemini-pro-latest",
+      "google/gemini-2.5-flash",
+      "google/gemini-2.5-flash:batch",
+      "google/gemini-2.5-flash-lite",
+      "google/gemini-2.5-flash-lite:batch",
+      "google/gemini-2.5-pro",
+      "google/gemini-2.5-pro:batch",
+      "google/gemini-2.5-pro-preview-05-06",
+      "google/gemini-2.5-pro-preview",
+      "google/gemini-3-flash-preview",
+      "google/gemini-3-flash-preview:batch",
+      "google/gemini-3.1-flash-lite",
+      "google/gemini-3.1-flash-lite:batch",
+      "google/gemini-3.1-flash-lite-preview",
+      "google/gemini-3.1-pro-preview",
+      "google/gemini-3.1-pro-preview:batch",
+      "google/gemini-3.1-pro-preview-customtools",
+      "google/gemini-3.5-flash",
+      "google/gemini-3.5-flash:batch",
+      "google/gemini-3.5-flash-lite",
+      "google/gemini-3.5-flash-lite:batch",
+      "google/gemini-3.6-flash",
+      "google/gemini-3.6-flash:batch",
+      "google/gemini-3.7-flash",
+      "google/gemini-3.7-flash:batch",
+      "google/gemini-3.8-flash",
+      "google/gemini-3.8-flash:batch",
+      "google/gemma-2-27b-it",
+      "google/gemma-3-12b-it",
+      "google/gemma-3-27b-it",
+      "google/gemma-3-4b-it",
+      "google/gemma-4-26b-a4b-it",
+      "google/gemma-4-31b-it",
+      "google/gemma-4-31b-it:batch",
+      "google/lyria-3-clip-preview",
+      "google/lyria-3-pro-preview",
+      "google/gemini-2.5-flash-image",
+      "google/gemini-3.1-flash-image-preview",
+      "google/gemini-3.1-flash-image",
+      "google/gemini-3.1-flash-lite-image",
+      "google/gemini-3-pro-image-preview",
+      "google/gemini-3-pro-image",
+      "ibm-granite/granite-4.0-h-micro",
+      "ibm-granite/granite-4.2-8b",
+      "inception/mercury-2",
+      "inception/mercury-2.5-preview",
+      "inclusionai/ling-3.0-flash",
+      "inclusionai/ling-3.0-flash-fin",
+      "kwaipilot/kat-coder-pro-v2",
+      "kwaipilot/kat-coder-pro-v2.5",
+      "anthracite-org/magnum-v4-72b",
+      "mancer/weaver",
+      "meituan/longcat-2.0",
+      "meta-llama/llama-3.1-70b-instruct",
+      "meta-llama/llama-3.1-8b-instruct",
+      "meta-llama/llama-3.2-1b-instruct",
+      "meta-llama/llama-3.2-3b-instruct",
+      "meta-llama/llama-3.3-70b-instruct",
+      "meta-llama/llama-4-maverick",
+      "meta-llama/llama-4-scout",
+      "meta-llama/llama-guard-4-12b",
+      "meta/muse-glimmer-30b",
+      "meta/muse-glimmer-30b:batch",
+      "meta/muse-spark-1.1",
+      "meta/muse-spark-1.2",
+      "meta/muse-spark-1.2-contributor",
+      "meta/muse-spark-1.3",
+      "meta/muse-spark-1.3-contributor",
+      "microsoft/phi-4",
+      "minimax/minimax-m1",
+      "minimax/minimax-m2",
+      "minimax/minimax-m2-her",
+      "minimax/minimax-m2.1",
+      "minimax/minimax-m2.5",
+      "minimax/minimax-m2.7",
+      "minimax/minimax-m3",
+      "minimax/minimax-m3:batch",
+      "minimax/minimax-01",
+      "mistralai/mistral-large",
+      "mistralai/mistral-large-2407",
+      "mistralai/codestral-2508",
+      "mistralai/devstral-2512",
+      "mistralai/ministral-14b-2512",
+      "mistralai/ministral-3b-2512",
+      "mistralai/ministral-8b-2512",
+      "mistralai/mistral-large-2512",
+      "mistralai/mistral-medium-3",
+      "mistralai/mistral-medium-3.1",
+      "mistralai/mistral-medium-3-5",
+      "mistralai/mistral-medium-3-5:batch",
+      "mistralai/mistral-nemo",
+      "mistralai/mistral-small-24b-instruct-2501",
+      "mistralai/mistral-small-3.1-24b-instruct",
+      "mistralai/mistral-small-3.2-24b-instruct",
+      "mistralai/mistral-small-2603",
+      "mistralai/mixtral-8x22b-instruct",
+      "mistralai/mistral-saba",
+      "mistralai/voxtral-small-24b-2507",
+      "~moonshotai/kimi-latest",
+      "moonshotai/kimi-k2",
+      "moonshotai/kimi-k2-0905",
+      "moonshotai/kimi-k2-thinking",
+      "moonshotai/kimi-k2.5",
+      "moonshotai/kimi-k2.6",
+      "moonshotai/kimi-k2.7-code",
+      "moonshotai/kimi-k3",
+      "moonshotai/kimi-k3:batch",
+      "morph/morph-v3-fast",
+      "morph/morph-v3-large",
+      "gryphe/mythomax-l2-13b",
+      "nex-agi/nex-n2-mini",
+      "nex-agi/nex-n2-pro",
+      "nousresearch/hermes-3-llama-3.1-405b",
+      "nousresearch/hermes-3-llama-3.1-70b",
+      "nousresearch/hermes-4-405b",
+      "nousresearch/hermes-4-70b",
+      "nvidia/nemotron-3-nano-30b-a3b",
+      "nvidia/nemotron-3-super-120b-a12b",
+      "nvidia/nemotron-3-ultra-550b-a55b",
+      "nvidia/nemotron-3.5-content-safety",
+      "nvidia/nemotron-3.5-lightning",
+      "~openai/gpt-latest",
+      "~openai/gpt-mini-latest",
+      "openai/gpt-audio",
+      "openai/gpt-audio-mini",
+      "openai/gpt-chat-latest",
+      "openai/gpt-3.5-turbo",
+      "openai/gpt-3.5-turbo:batch",
+      "openai/gpt-3.5-turbo-0613",
+      "openai/gpt-3.5-turbo-16k",
+      "openai/gpt-3.5-turbo-instruct",
+      "openai/gpt-4",
+      "openai/gpt-4-turbo",
+      "openai/gpt-4-turbo:batch",
+      "openai/gpt-4-turbo-preview",
+      "openai/gpt-4.1",
+      "openai/gpt-4.1:batch",
+      "openai/gpt-4.1-mini",
+      "openai/gpt-4.1-mini:batch",
+      "openai/gpt-4.1-nano",
+      "openai/gpt-4.1-nano:batch",
+      "openai/gpt-4o",
+      "openai/gpt-4o-2024-05-13",
+      "openai/gpt-4o-2024-08-06",
+      "openai/gpt-4o-2024-11-20",
+      "openai/gpt-4o:batch",
+      "openai/gpt-4o-mini",
+      "openai/gpt-4o-mini-2024-07-18",
+      "openai/gpt-4o-mini:batch",
+      "openai/gpt-5",
+      "openai/gpt-5:batch",
+      "openai/gpt-5-image",
+      "openai/gpt-5-image-mini",
+      "openai/gpt-5-mini",
+      "openai/gpt-5-mini:batch",
+      "openai/gpt-5-nano",
+      "openai/gpt-5-nano:batch",
+      "openai/gpt-5-pro",
+      "openai/gpt-5-pro:batch",
+      "openai/gpt-5.1",
+      "openai/gpt-5.1:batch",
+      "openai/gpt-5.1-codex",
+      "openai/gpt-5.1-codex-max",
+      "openai/gpt-5.1-codex-mini",
+      "openai/gpt-5.2",
+      "openai/gpt-5.2:batch",
+      "openai/gpt-5.2-chat",
+      "openai/gpt-5.2-pro",
+      "openai/gpt-5.2-pro:batch",
+      "openai/gpt-5.2-codex",
+      "openai/gpt-5.3-codex",
+      "openai/gpt-5.4",
+      "openai/gpt-5.4:batch",
+      "openai/gpt-5.4-image-2",
+      "openai/gpt-5.4-mini",
+      "openai/gpt-5.4-mini:batch",
+      "openai/gpt-5.4-nano",
+      "openai/gpt-5.4-nano:batch",
+      "openai/gpt-5.4-pro",
+      "openai/gpt-5.4-pro:batch",
+      "openai/gpt-5.5",
+      "openai/gpt-5.5:batch",
+      "openai/gpt-5.5-pro",
+      "openai/gpt-5.5-pro:batch",
+      "openai/gpt-5.6-luna",
+      "openai/gpt-5.6-luna:batch",
+      "openai/gpt-5.6-luna-pro",
+      "openai/gpt-5.6-luna-pro:batch",
+      "openai/gpt-5.6-sol",
+      "openai/gpt-5.6-sol:batch",
+      "openai/gpt-5.6-sol-pro",
+      "openai/gpt-5.6-sol-pro:batch",
+      "openai/gpt-5.6-terra",
+      "openai/gpt-5.6-terra:batch",
+      "openai/gpt-5.6-terra-pro",
+      "openai/gpt-5.6-terra-pro:batch",
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-120b:batch",
+      "openai/gpt-oss-20b",
+      "openai/gpt-oss-20b:batch",
+      "openai/gpt-oss-safeguard-20b",
+      "openai/o1",
+      "openai/o1-pro",
+      "openai/o3",
+      "openai/o3:batch",
+      "openai/o3-mini",
+      "openai/o3-mini:batch",
+      "openai/o3-mini-high",
+      "openai/o3-pro",
+      "openai/o4-mini",
+      "openai/o4-mini:batch",
+      "openai/o4-mini-high",
+      "fusion",
+      "pareto-code",
+      "perceptron/perceptron-mk1",
+      "perplexity/sonar",
+      "perplexity/sonar-deep-research",
+      "perplexity/sonar-pro",
+      "perplexity/sonar-pro-search",
+      "perplexity/sonar-reasoning-pro",
+      "poolside/laguna-s-2.1",
+      "poolside/laguna-xs-2.1",
+      "qwen/qwen-2.5-72b-instruct",
+      "qwen/qwen-2.5-coder-32b-instruct",
+      "qwen/qwen-plus-2025-07-28",
+      "qwen/qwen-plus",
+      "qwen/qwen-2.5-7b-instruct",
+      "qwen/qwen2.5-vl-72b-instruct",
+      "qwen/qwen3-14b",
+      "qwen/qwen3-235b-a22b",
+      "qwen/qwen3-235b-a22b-2507",
+      "qwen/qwen3-235b-a22b-thinking-2507",
+      "qwen/qwen3-30b-a3b",
+      "qwen/qwen3-30b-a3b-instruct-2507",
+      "qwen/qwen3-30b-a3b-thinking-2507",
+      "qwen/qwen3-32b",
+      "qwen/qwen3-8b",
+      "qwen/qwen3-coder-30b-a3b-instruct",
+      "qwen/qwen3-coder",
+      "qwen/qwen3-coder-flash",
+      "qwen/qwen3-coder-next",
+      "qwen/qwen3-coder-plus",
+      "qwen/qwen3-max",
+      "qwen/qwen3-max-thinking",
+      "qwen/qwen3-next-80b-a3b-instruct",
+      "qwen/qwen3-next-80b-a3b-thinking",
+      "qwen/qwen3-vl-235b-a22b-instruct",
+      "qwen/qwen3-vl-235b-a22b-thinking",
+      "qwen/qwen3-vl-30b-a3b-instruct",
+      "qwen/qwen3-vl-30b-a3b-thinking",
+      "qwen/qwen3-vl-32b-instruct",
+      "qwen/qwen3-vl-8b-instruct",
+      "qwen/qwen3-vl-8b-thinking",
+      "qwen/qwen3.5-397b-a17b",
+      "qwen/qwen3.5-plus-02-15",
+      "qwen/qwen3.5-plus-20260420",
+      "qwen/qwen3.5-122b-a10b",
+      "qwen/qwen3.5-27b",
+      "qwen/qwen3.5-35b-a3b",
+      "qwen/qwen3.5-9b",
+      "qwen/qwen3.5-9b:batch",
+      "qwen/qwen3.5-flash-02-23",
+      "qwen/qwen3.6-27b",
+      "qwen/qwen3.6-35b-a3b",
+      "qwen/qwen3.6-flash",
+      "qwen/qwen3.6-max-preview",
+      "qwen/qwen3.6-plus",
+      "qwen/qwen3.7-flash",
+      "qwen/qwen3.7-max",
+      "qwen/qwen3.7-plus",
+      "qwen/qwen3.8-2.4t-a95b",
+      "qwen/qwen3.8-2.4t-a95b:batch",
+      "qwen/qwen3.8-27b",
+      "qwen/qwen3.8-flash",
+      "qwen/qwen3.8-max",
+      "rekaai/reka-edge",
+      "rekaai/reka-flash-3",
+      "relace/relace-apply-3",
+      "relace/relace-search",
+      "undi95/remm-slerp-l2-13b",
+      "sakana/fugu-ultra",
+      "sakana/sakana-namazu",
+      "sao10k/l3-lunaris-8b",
+      "sao10k/l3.1-euryale-70b",
+      "sao10k/l3.3-euryale-70b",
+      "x-ai/grok-4.20",
+      "x-ai/grok-4.20-multi-agent",
+      "x-ai/grok-4.3",
+      "x-ai/grok-4.3:batch",
+      "x-ai/grok-4.5",
+      "x-ai/grok-4.6",
+      "x-ai/grok-build-0.1",
+      "stepfun/step-3.5-flash",
+      "stepfun/step-3.7-flash",
+      "tencent/hunyuan-a13b-instruct",
+      "tencent/hy-mt2-1.8b",
+      "tencent/hy-mt2-30b-a3b",
+      "tencent/hy-mt2-7b",
+      "tencent/hy3",
+      "tencent/hy3-preview",
+      "tencent/hy4-preview",
+      "thedrummer/cydonia-24b-v4.1",
+      "thedrummer/skyfall-36b-v2",
+      "thedrummer/unslopnemo-12b",
+      "thinkingmachines/inkling",
+      "thinkingmachines/inkling:batch",
+      "thinkingmachines/inkling-small",
+      "thinkingmachines/inkling-small:batch",
+      "upstage/solar-pro-3",
+      "upstage/solar-pro4",
+      "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+      "microsoft/wizardlm-2-8x22b",
+      "writer/palmyra-x5",
+      "~x-ai/grok-latest",
+      "xiaomi/mimo-v2.5",
+      "xiaomi/mimo-v2.5-pro",
+      "z-ai/glm-4.5",
+      "z-ai/glm-4.5-air",
+      "z-ai/glm-4.5v",
+      "z-ai/glm-4.6",
+      "z-ai/glm-4.6v",
+      "z-ai/glm-4.7",
+      "z-ai/glm-4.7-flash",
+      "z-ai/glm-5",
+      "z-ai/glm-5-turbo",
+      "z-ai/glm-5.1",
+      "z-ai/glm-5.2",
+      "z-ai/glm-5.3",
+      "z-ai/glm-5.3-flash",
+      "z-ai/glm-5.3-flash:batch",
+      "z-ai/glm-5v-turbo",
+      "~z-ai/glm-flash-latest",
+      "~z-ai/glm-latest"
+    ],
     "IsExpanded": false
   },
   {
