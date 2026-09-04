@@ -50,7 +50,7 @@ data class EinstellungenZustand(
     val modellLabel: String = KiModell.standard.label,
     val eigeneModelle: List<String> = emptyList(),
     val denktiefe: Denktiefe = Denktiefe.MEDIUM,
-    val themeModus: ThemeModus = ThemeModus.SYSTEM,
+    val themeModus: ThemeModus = ThemeModus.HELL,
     val appSperre: Boolean = false,
     val sperreNach: Int = 60,
     val codexEmail: String? = null,

@@ -593,7 +593,6 @@ private fun denktiefeHinweis(tiefe: Denktiefe): String = when (tiefe) {
 private fun themeHinweis(modus: ThemeModus): String = when (modus) {
     ThemeModus.HELL -> "immer hell"
     ThemeModus.DUNKEL -> "immer dunkel"
-    ThemeModus.SYSTEM -> "folgt der Einstellung des Ger\u00e4ts"
 }
 
 private val FILTER_TEXTE = listOf(

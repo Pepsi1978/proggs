@@ -1,7 +1,6 @@
 package de.frank.claudekompass.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -19,22 +18,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
-/** Die drei Erscheinungsbild-Modi. Voreinstellung ist `SYSTEM`. */
+/** Die zwei Erscheinungsbild-Modi. Voreinstellung ist `HELL`. */
 enum class ThemeModus(val id: String, val label: String) {
     HELL("hell", "Hell"),
     DUNKEL("dunkel", "Dunkel"),
-    SYSTEM("system", "Systemvorgabe"),
     ;
 
-    /** Reihum: hell -> dunkel -> system -> hell. Das ist die Reihenfolge des Kopfleisten-Knopfs. */
+    /** Reihum: hell -> dunkel -> hell. Das ist die Reihenfolge des Kopfleisten-Knopfs. */
     fun naechster(): ThemeModus = when (this) {
         HELL -> DUNKEL
-        DUNKEL -> SYSTEM
-        SYSTEM -> HELL
+        DUNKEL -> HELL
     }
 
     companion object {
-        fun fromId(value: String): ThemeModus = entries.firstOrNull { it.id == value } ?: SYSTEM
+        fun fromId(value: String): ThemeModus = entries.firstOrNull { it.id == value } ?: HELL
     }
 }
 
@@ -167,7 +164,6 @@ fun ClaudeKompassTheme(
     val istDunkel = when (modus) {
         ThemeModus.HELL -> false
         ThemeModus.DUNKEL -> true
-        ThemeModus.SYSTEM -> isSystemInDarkTheme()
     }
     val schema = if (istDunkel) DunkelSchema else HellSchema
     val zusatz = if (istDunkel) DunkelZusatz else HellZusatz
