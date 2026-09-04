@@ -77,7 +77,7 @@ impl LocalCost {
             }
         }
         if self.offset < metadata.len() {
-            return format!("Kosten ≈${:.2} …", self.usd);
+            return format!("Kosten ≈ ${:.2} …", self.usd);
         }
         if self.prices["models"].is_null() {
             return "Kosten n/v (Preise)".into();
@@ -85,7 +85,7 @@ impl LocalCost {
         if self.incomplete {
             format!("Kosten ≥${:.2} (teilw.)", self.usd)
         } else {
-            format!("Kosten ≈${:.2}", self.usd)
+            format!("Kosten ≈ ${:.2}", self.usd)
         }
     }
 

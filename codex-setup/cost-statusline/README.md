@@ -1,9 +1,9 @@
 # Codex-Kostenanzeige
 
-Version 0.1.1 – 05.09.2026, 00:12 Uhr. Basis: Codex CLI 0.153.2.
+Version 0.1.2 – 05.09.2026, 00:28 Uhr. Basis: Codex CLI 0.153.2.
 
 Die native CLI-Statuszeile zeigt im vorhandenen Feld `estimated-thread-cost`
-die lokale Schätzung `Kosten ≈$12.34`. Kontext, Weekly und Modell bleiben erhalten.
+die lokale Schätzung `Kosten ≈ $12.34`. Kontext, Weekly und Modell bleiben erhalten.
 Das ist ein API-Vergleichswert in US-Dollar, keine Abrechnung des ChatGPT-Abos.
 
 `export-prices.mjs` übernimmt die Modellpreise, Priority-Tarife, Kontextstufen und
@@ -36,16 +36,61 @@ Voraussetzungen: Rust, Node.js, npm und Microsoft C++ Build Tools mit Windows SD
 pwsh -File .\build-install.ps1
 ```
 
-Der Installer lädt den festen Upstream-Tag `rust-v0.153.2` in den lokalen Cache,
+Der Installer erkennt die offizielle Version aus dem installierten npm-Paket und
+lädt den passenden Upstream-Tag `rust-v<VERSION>` in einen eigenen lokalen Cache,
 wendet die kleinen TUI-Anpassungen an und baut `codex.exe`. Anschließend installiert
-er nach `~/.codex/cost-cli/0.1.1/` und stellt den npm-Launcher auf diese Datei um.
-Die Originaldatei `codex.js.before-cost-statusline` bleibt als Sicherung erhalten.
+er nach `~/.codex/cost-cli/<CODEX-VERSION>-cost.0.1.2-<BUILD-ID>/` und stellt den npm-Launcher auf diese Datei um.
+Die Originaldatei `codex.js.before-cost-statusline-<CODEX-VERSION>` bleibt als Sicherung erhalten.
 Die Hilfsprogramme der originalen CLI werden in das Installationsverzeichnis kopiert.
+Der Build wird in einem eigenen Verzeichnis installiert; laufende EXE-Dateien
+werden nicht überschrieben. Identische Builds können wiederverwendet werden.
+
+## Nach einem Codex-Update
+
+Die Installation richtet im npm-Befehlsverzeichnis den Befehl ein:
+
+```powershell
+codex-kosten-update
+```
+
+Er baut die Kostenanzeige für die aktuell installierte offizielle Codex-Version
+neu und aktiviert sie wieder. Um zuerst auch Codex selbst auf den aktuellen
+npm-Release zu aktualisieren:
+
+```powershell
+codex-kosten-update -MitCodexUpdate
+```
+
+Alternativ direkt im Repository: `pwsh -File codex-setup/cost-statusline/update.ps1`.
+Es gibt keinen Hintergrunddienst und keine automatische Änderung ohne Aufruf.
+Fehlen passende Quellcode-Anker oder schlägt der Build fehl, bricht die Installation
+ab. Eine unbekannte neue TUI-Struktur muss dann im Patch angepasst werden; zukünftige
+Codex-Versionen können nicht pauschal als kompatibel garantiert werden. Nach Erfolg
+Codex vollständig neu starten. Die vorhandene Statuszeilen-Konfiguration bleibt erhalten.
+
+## Auf einem anderen Rechner wiederverwenden
+
+Das Paket ist im Repository `Pepsi1978/proggs` unter `codex-setup/cost-statusline`
+versioniert, nicht als eigenständiges npm-Paket veröffentlicht. Für einen anderen
+Windows-PC kann dieser Auftrag verwendet werden:
+
+> Installiere die Codex-Kostenanzeige aus `codex-setup/cost-statusline` im aktuellen
+> Repository `Pepsi1978/proggs`. Lies die README, richte die Build-Voraussetzungen
+> ein und führe `build-install.ps1` aus. Der Installer ermittelt die Codex-Version;
+> bei einem inkompatiblen Quellstand muss der Patch zuerst angepasst werden.
+> Ergänze `estimated-thread-cost` in `tui.status_line` der Codex-Konfiguration,
+> erhalte alle bisherigen Statusanzeigen und verwende den tatsächlichen
+> `CODEX_HOME` des Benutzers. Erkläre danach den vollständigen CLI-Neustart.
+
+Andere CLI-Tools brauchen einen eigenen Adapter für ihre Verbrauchsdaten und ihre
+Anzeige. `local_cost.rs` liest das Codex-Rolloutformat und ist deshalb kein
+universelles Statuszeilen-Plugin. Der mitgelieferte Installer unterstützt Windows;
+für macOS/Linux muss insbesondere der Build- und Installationsweg angepasst werden.
 
 Für die Aktivierung ist ein vollständiger CLI-Neustart nötig; `/new` im laufenden
 Prozess lädt keine neue EXE. Mit `codex resume` kann die bisherige Session fortgesetzt
-werden. Ein npm-Codex-Update kann den Launcher wieder ersetzen; den Patch nur auf
-der passenden Upstream-Version erneut installieren. Rückbau: den gesicherten
+werden. Ein npm-Codex-Update kann den Launcher wieder ersetzen; danach den Updater
+aufrufen. Rückbau: den zur offiziellen Version passenden gesicherten
 npm-Launcher wiederherstellen. Laufende CLI-Prozesse werden nicht beendet.
 
 Quellen: [OpenAI-Tarife](https://developers.openai.com/api/docs/pricing),

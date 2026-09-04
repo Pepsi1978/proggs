@@ -1,8 +1,10 @@
-import { readFile, writeFile, copyFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 const source = process.argv[2];
 if (!source) throw new Error('Quellverzeichnis fehlt');
 const metadata = JSON.parse(await readFile(new URL('package.json', import.meta.url), 'utf8'));
+const upstreamVersion = process.argv[3] ?? '0.153.2';
+if (!/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(upstreamVersion)) throw new Error('Ungültige Codex-Version');
 async function replace(file, before, after) {
   const path = join(source, 'codex-rs', file);
   const text = (await readFile(path, 'utf8')).replaceAll('\r\n', '\n');
@@ -34,8 +36,17 @@ await replace('tui/src/chatwidget/status_surfaces.rs',
                     &self.config.codex_home,
                 ))
             },`);
-await copyFile(new URL('local_cost.rs', import.meta.url), join(source, 'codex-rs/tui/src/chatwidget/local_cost.rs'));
+const modulePath = join(source, 'codex-rs/tui/src/chatwidget/local_cost.rs');
+const moduleText = (await readFile(new URL('local_cost.rs', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
+const installedModule = await readFile(modulePath, 'utf8').catch(() => '');
+if (installedModule.replaceAll('\r\n', '\n') !== moduleText) await writeFile(modulePath, moduleText);
 const manifest = join(source, 'codex-rs/Cargo.toml');
-let cargo = (await readFile(manifest, 'utf8')).replaceAll('\r\n', '\n');
-cargo = cargo.replace(/^version = "0\.153\.2(?:-cost\.[^"]+)?"$/m, `version = "0.153.2-cost.${metadata.version}"`);
-await writeFile(manifest, cargo);
+const cargo = (await readFile(manifest, 'utf8')).replaceAll('\r\n', '\n');
+const workspace = cargo.match(/\[workspace\.package\]([\s\S]*?)(?=\n\[|$)/);
+const version = workspace?.[1].match(/^version = "([^"]+)"$/m)?.[1];
+if (!version || version.replace(/-cost\..*$/, '') !== upstreamVersion) {
+  throw new Error('Die Codex-Quellen passen nicht zur installierten CLI-Version.');
+}
+const updated = cargo.replace(workspace[0], workspace[0].replace(
+  /^version = "[^"]+"$/m, `version = "${upstreamVersion}-cost.${metadata.version}"`));
+if (updated !== cargo) await writeFile(manifest, updated);
