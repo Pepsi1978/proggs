@@ -188,3 +188,24 @@
 - https://gist.github.com/migom6/70ccd3485ea4db9dd8039245cd9dde4a
 - https://kangwooklee.com/blogs/codex_context_compaction.html
 - https://arxiv.org/pdf/2606.17799 · https://github.com/TheLime1/harness-bench
+
+## Lokale Codex-Kostenstatuszeile (05.09.2026)
+
+Codex CLI 0.153.2 bietet für `tui.status_line` fest definierte Felder, keinen
+frei programmierbaren Statuszeilen-Befehl. Für eine eigene API-Kostenrechnung
+muss die native TUI angepasst werden. Die lokale Erweiterung steht unter
+`codex-setup/cost-statusline/` und übernimmt ihre Preise aus der bestehenden
+OpenCode-Seitenleiste einschließlich des dort konfigurierten 20-%-Cache-Read-Aufschlags.
+
+Codex-Input enthält Cache-Tokens; Codex-Output enthält Reasoning. Vor der separaten
+Bepreisung beide Anteile abziehen, damit keine Doppelzählung entsteht. Jeden Aufruf
+mit seinem damaligen Modell, Service-Tier und Kontextpreis summieren; keine ganze
+Session nachträglich mit dem zuletzt ausgewählten Modell bepreisen. Resume aus dem
+Rollout rekonstruieren und doppelte Token-/Quota-Meldungen überspringen. Fehlende
+Tarife und Historie als Teilbetrag kennzeichnen. Schätzung ist API-Vergleich, nicht
+ChatGPT-Aborechnung. Nach einem nativen Build CLI vollständig neu starten.
+
+Primärquellen, direkt mit Codex gelesen:
+- https://developers.openai.com/api/docs/models/gpt-6-astra
+- https://developers.openai.com/api/docs/pricing
+- https://github.com/openai/codex/blob/rust-v0.153.2/codex-rs/tui/src/chatwidget/status_surfaces.rs

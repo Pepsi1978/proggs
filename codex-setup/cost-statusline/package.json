@@ -1,0 +1,8 @@
+{
+  "name": "codex-cost-statusline",
+  "version": "0.1.1",
+  "updated": "05.09.2026, 00:12 Uhr",
+  "private": true,
+  "type": "module",
+  "scripts": { "prices": "node export-prices.mjs" }
+}

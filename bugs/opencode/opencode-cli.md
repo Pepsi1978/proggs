@@ -1240,3 +1240,19 @@ openrouter.ai/docs (prompt-caching, provider-selection, rate-limits).
 **Community/extern (gelabelt):** sanj.dev, builder.io, composio.dev, nxcode.io, glukhov.org,
 hindsight.vectorize.io, truefoundry.com, portkey.ai, developersdigest.tech, deepwiki.com,
 openrouter.zendesk.com, klymentiev.com.
+
+## Codex-Nachbarintegration: leere Dollar-Statusanzeige (05.09.2026)
+
+Version: Codex CLI 0.153.2. `estimated-thread-cost` kann korrekt konfiguriert sein
+und trotzdem leer bleiben. Die native Funktion `thread_usage_is_available` in
+`tui/src/chatwidget/thread_usage.rs` beschränkt die Backend-Abfrage auf Business,
+EnterpriseCbpUsageBased und EnterpriseCbpAutomation. Ein Session-Neustart allein
+behebt diese Kontobeschränkung nicht. Lokale Lösung: API-Vergleichskosten selbst
+berechnen und in die native TUI einbauen (`codex-setup/cost-statusline`).
+
+Nicht einen Claude-Statusline-Hook nachbauen: ein solcher Hook ist in dieser
+Codex-Statuszeile nicht angeschlossen. `/new` tauscht außerdem keine laufende EXE
+gegen einen gerade gebauten CLI-Build aus; dafür ist ein Prozessneustart nötig.
+
+Quelle: https://github.com/openai/codex/blob/rust-v0.153.2/codex-rs/tui/src/chatwidget/thread_usage.rs
+Tarife: https://developers.openai.com/api/docs/pricing

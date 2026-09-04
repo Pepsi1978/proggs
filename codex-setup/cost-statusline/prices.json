@@ -1,0 +1,584 @@
+{
+  "generatedAt": "2026-09-04T22:10:39.411Z",
+  "source": "OpenCode token-cost-sidebar; models.dev; https://developers.openai.com/api/docs/pricing",
+  "cacheReadMarkup": 1.2,
+  "models": {
+    "gpt-5-nano": {
+      "default": {
+        "input": 0.05,
+        "output": 0.4,
+        "cache_read": 0.006
+      }
+    },
+    "gpt-4.1-nano": {
+      "default": {
+        "input": 0.1,
+        "output": 0.4,
+        "cache_read": 0.03
+      }
+    },
+    "gpt-4o-2024-05-13": {
+      "default": {
+        "input": 5,
+        "output": 15
+      }
+    },
+    "gpt-5-pro": {
+      "default": {
+        "input": 15,
+        "output": 120
+      }
+    },
+    "chatgpt-image-latest": {},
+    "gpt-5.6-sol": {
+      "default": {
+        "input": 4,
+        "output": 20,
+        "cache_read": 0.48,
+        "cache_write": 5,
+        "tiers": [
+          {
+            "input": 8,
+            "output": 30,
+            "cache_read": 0.96,
+            "cache_write": 10,
+            "tier": {
+              "type": "context",
+              "size": 272000
+            }
+          }
+        ],
+        "context_over_200k": {
+          "input": 8,
+          "output": 30,
+          "cache_read": 0.8,
+          "cache_write": 10
+        }
+      },
+      "priority": {
+        "input": 10,
+        "output": 60,
+        "cache_read": 1.2,
+        "cache_write": 12.5,
+        "unsupportedAbove": 272000
+      },
+      "fast": {
+        "input": 10,
+        "output": 60,
+        "cache_read": 1.2,
+        "cache_write": 12.5,
+        "unsupportedAbove": 272000
+      }
+    },
+    "gpt-4o-2024-08-06": {
+      "default": {
+        "input": 2.5,
+        "output": 10,
+        "cache_read": 1.5
+      }
+    },
+    "gpt-5.2-pro": {
+      "default": {
+        "input": 21,
+        "output": 168
+      }
+    },
+    "gpt-5.3-codex-spark": {
+      "default": {
+        "input": 1.75,
+        "output": 14,
+        "cache_read": 0.21
+      }
+    },
+    "gpt-4.1-mini": {
+      "default": {
+        "input": 0.4,
+        "output": 1.6,
+        "cache_read": 0.12
+      }
+    },
+    "gpt-5.4": {
+      "default": {
+        "input": 2.5,
+        "output": 15,
+        "cache_read": 0.3,
+        "tiers": [
+          {
+            "input": 5,
+            "output": 22.5,
+            "cache_read": 0.6,
+            "tier": {
+              "type": "context",
+              "size": 272000
+            }
+          }
+        ],
+        "context_over_200k": {
+          "input": 5,
+          "output": 22.5,
+          "cache_read": 0.5
+        }
+      }
+    },
+    "gpt-4-turbo": {
+      "default": {
+        "input": 10,
+        "output": 30
+      }
+    },
+    "gpt-5.1": {
+      "default": {
+        "input": 1.25,
+        "output": 10,
+        "cache_read": 0.15
+      }
+    },
+    "o1": {
+      "default": {
+        "input": 15,
+        "output": 60,
+        "cache_read": 9
+      }
+    },
+    "gpt-4o": {
+      "default": {
+        "input": 2.5,
+        "output": 10,
+        "cache_read": 1.5
+      }
+    },
+    "gpt-5.6-luna": {
+      "default": {
+        "input": 0.2,
+        "output": 1.2,
+        "cache_read": 0.024,
+        "cache_write": 0.25,
+        "tiers": [
+          {
+            "input": 0.4,
+            "output": 1.8,
+            "cache_read": 0.048,
+            "cache_write": 0.5,
+            "tier": {
+              "type": "context",
+              "size": 272000
+            }
+          }
+        ],
+        "context_over_200k": {
+          "input": 0.4,
+          "output": 1.8,
+          "cache_read": 0.04,
+          "cache_write": 0.5
+        }
+      },
+      "priority": {
+        "input": 2,
+        "output": 12,
+        "cache_read": 0.24,
+        "cache_write": 2.5,
+        "unsupportedAbove": 272000
+      },
+      "fast": {
+        "input": 2,
+        "output": 12,
+        "cache_read": 0.24,
+        "cache_write": 2.5,
+        "unsupportedAbove": 272000
+      }
+    },
+    "gpt-5.3-codex": {
+      "default": {
+        "input": 1.75,
+        "output": 14,
+        "cache_read": 0.21
+      }
+    },
+    "gpt-4o-mini": {
+      "default": {
+        "input": 0.15,
+        "output": 0.6,
+        "cache_read": 0.09
+      }
+    },
+    "gpt-image-1.5": {},
+    "o1-pro": {
+      "default": {
+        "input": 150,
+        "output": 600
+      }
+    },
+    "gpt-4.1": {
+      "default": {
+        "input": 2,
+        "output": 8,
+        "cache_read": 0.6
+      }
+    },
+    "text-embedding-ada-002": {
+      "default": {
+        "input": 0.1,
+        "output": 0
+      }
+    },
+    "gpt-image-1": {},
+    "gpt-5.4-nano": {
+      "default": {
+        "input": 0.2,
+        "output": 1.25,
+        "cache_read": 0.024
+      }
+    },
+    "gpt-5.5-pro": {
+      "default": {
+        "input": 30,
+        "output": 180,
+        "tiers": [
+          {
+            "input": 60,
+            "output": 270,
+            "tier": {
+              "type": "context",
+              "size": 272000
+            }
+          }
+        ],
+        "context_over_200k": {
+          "input": 60,
+          "output": 270
+        }
+      }
+    },
+    "gpt-image-1-mini": {},
+    "gpt-5.4-mini": {
+      "default": {
+        "input": 0.75,
+        "output": 4.5,
+        "cache_read": 0.09
+      }
+    },
+    "gpt-image-2": {
+      "default": {
+        "input": 5,
+        "output": 30,
+        "cache_read": 1.5
+      }
+    },
+    "gpt-3.5-turbo": {
+      "default": {
+        "input": 0.5,
+        "output": 1.5,
+        "cache_read": 0
+      }
+    },
+    "gpt-5.6": {
+      "default": {
+        "input": 4,
+        "output": 20,
+        "cache_read": 0.48,
+        "cache_write": 5,
+        "tiers": [
+          {
+            "input": 8,
+            "output": 30,
+            "cache_read": 0.96,
+            "cache_write": 10,
+            "tier": {
+              "type": "context",
+              "size": 272000
+            }
+          }
+        ],
+        "context_over_200k": {
+          "input": 8,
+          "output": 30,
+          "cache_read": 0.8,
+          "cache_write": 10
+        }
+      }
+    },
+    "text-embedding-3-small": {
+      "default": {
+        "input": 0.02,
+        "output": 0
+      }
+    },
+    "gpt-5-mini": {
+      "default": {
+        "input": 0.25,
+        "output": 2,
+        "cache_read": 0.03
+      }
+    },
+    "gpt-5.4-pro": {
+      "default": {
+        "input": 30,
+        "output": 180,
+        "tiers": [
+          {
+            "input": 60,
+            "output": 270,
+            "tier": {
+              "type": "context",
+              "size": 272000
+            }
+          }
+        ],
+        "context_over_200k": {
+          "input": 60,
+          "output": 270
+        }
+      }
+    },
+    "text-embedding-3-large": {
+      "default": {
+        "input": 0.13,
+        "output": 0
+      }
+    },
+    "gpt-5.6-terra": {
+      "default": {
+        "input": 2,
+        "output": 12,
+        "cache_read": 0.24,
+        "cache_write": 2.5,
+        "tiers": [
+          {
+            "input": 4,
+            "output": 18,
+            "cache_read": 0.48,
+            "cache_write": 5,
+            "tier": {
+              "type": "context",
+              "size": 272000
+            }
+          }
+        ],
+        "context_over_200k": {
+          "input": 4,
+          "output": 18,
+          "cache_read": 0.4,
+          "cache_write": 5
+        }
+      },
+      "priority": {
+        "input": 5,
+        "output": 30,
+        "cache_read": 0.6,
+        "cache_write": 6.25,
+        "unsupportedAbove": 272000
+      },
+      "fast": {
+        "input": 5,
+        "output": 30,
+        "cache_read": 0.6,
+        "cache_write": 6.25,
+        "unsupportedAbove": 272000
+      }
+    },
+    "gpt-4": {
+      "default": {
+        "input": 30,
+        "output": 60
+      }
+    },
+    "gpt-5.2": {
+      "default": {
+        "input": 1.75,
+        "output": 14,
+        "cache_read": 0.21
+      }
+    },
+    "gpt-5": {
+      "default": {
+        "input": 1.25,
+        "output": 10,
+        "cache_read": 0.15
+      }
+    },
+    "gpt-5.2-chat-latest": {
+      "default": {
+        "input": 1.75,
+        "output": 14,
+        "cache_read": 0.21
+      }
+    },
+    "o4-mini": {
+      "default": {
+        "input": 1.1,
+        "output": 4.4,
+        "cache_read": 0.33
+      }
+    },
+    "gpt-realtime-2.1": {
+      "default": {
+        "input": 4,
+        "output": 24,
+        "cache_read": 0.48,
+        "input_audio": 32,
+        "output_audio": 64
+      }
+    },
+    "o3-mini": {
+      "default": {
+        "input": 1.1,
+        "output": 4.4,
+        "cache_read": 0.66
+      }
+    },
+    "o3": {
+      "default": {
+        "input": 2,
+        "output": 8,
+        "cache_read": 0.6
+      }
+    },
+    "o3-pro": {
+      "default": {
+        "input": 20,
+        "output": 80
+      }
+    },
+    "gpt-5.3-chat-latest": {
+      "default": {
+        "input": 1.75,
+        "output": 14,
+        "cache_read": 0.21
+      }
+    },
+    "gpt-5.5": {
+      "default": {
+        "input": 5,
+        "output": 30,
+        "cache_read": 0.6,
+        "tiers": [
+          {
+            "input": 10,
+            "output": 45,
+            "cache_read": 1.2,
+            "tier": {
+              "type": "context",
+              "size": 272000
+            }
+          }
+        ],
+        "context_over_200k": {
+          "input": 10,
+          "output": 45,
+          "cache_read": 1
+        }
+      },
+      "priority": {
+        "input": 12.5,
+        "output": 75,
+        "cache_read": 1.5,
+        "unsupportedAbove": 272000
+      },
+      "fast": {
+        "input": 12.5,
+        "output": 75,
+        "cache_read": 1.5,
+        "unsupportedAbove": 272000
+      }
+    },
+    "gpt-4o-2024-11-20": {
+      "default": {
+        "input": 2.5,
+        "output": 10,
+        "cache_read": 1.5
+      }
+    },
+    "gpt-6-astra": {
+      "default": {
+        "input": 10,
+        "output": 50,
+        "cache_read": 1.2,
+        "cache_write": 12.5,
+        "tiers": [
+          {
+            "tier": {
+              "type": "context",
+              "size": 272000
+            },
+            "input": 20,
+            "output": 75,
+            "cache_read": 2.4,
+            "cache_write": 25
+          }
+        ]
+      },
+      "priority": {
+        "input": 20,
+        "output": 100,
+        "cache_read": 2.4,
+        "cache_write": 25,
+        "tiers": [
+          {
+            "tier": {
+              "type": "context",
+              "size": 272000
+            },
+            "input": 40,
+            "output": 150,
+            "cache_read": 4.8,
+            "cache_write": 50
+          }
+        ]
+      },
+      "fast": {
+        "input": 20,
+        "output": 100,
+        "cache_read": 2.4,
+        "cache_write": 25,
+        "tiers": [
+          {
+            "tier": {
+              "type": "context",
+              "size": 272000
+            },
+            "input": 40,
+            "output": 150,
+            "cache_read": 4.8,
+            "cache_write": 50
+          }
+        ]
+      },
+      "flex": {
+        "input": 5,
+        "output": 25,
+        "cache_read": 0.6,
+        "cache_write": 6.25,
+        "tiers": [
+          {
+            "tier": {
+              "type": "context",
+              "size": 272000
+            },
+            "input": 10,
+            "output": 37.5,
+            "cache_read": 1.2,
+            "cache_write": 12.5
+          }
+        ]
+      },
+      "batch": {
+        "input": 5,
+        "output": 25,
+        "cache_read": 0.6,
+        "cache_write": 6.25,
+        "tiers": [
+          {
+            "tier": {
+              "type": "context",
+              "size": 272000
+            },
+            "input": 10,
+            "output": 37.5,
+            "cache_read": 1.2,
+            "cache_write": 12.5
+          }
+        ]
+      }
+    }
+  }
+}
