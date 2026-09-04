@@ -1248,7 +1248,7 @@ und trotzdem leer bleiben. Die native Funktion `thread_usage_is_available` in
 `tui/src/chatwidget/thread_usage.rs` beschränkt die Backend-Abfrage auf Business,
 EnterpriseCbpUsageBased und EnterpriseCbpAutomation. Ein Session-Neustart allein
 behebt diese Kontobeschränkung nicht. Lokale Lösung: API-Vergleichskosten selbst
-berechnen und in die native TUI einbauen (`codex-setup/cost-statusline`).
+berechnen und in die native TUI einbauen (`Statusline-Codex`).
 
 Nicht einen Claude-Statusline-Hook nachbauen: ein solcher Hook ist in dieser
 Codex-Statuszeile nicht angeschlossen. `/new` tauscht außerdem keine laufende EXE

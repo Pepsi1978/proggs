@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises';
-import { withOpenAIPriorityPricing, withOpenAICacheReadMarkup } from '../../opencode-setup/plugins/token-cost-sidebar/dist/pricing.ts';
+import { withOpenAIPriorityPricing, withOpenAICacheReadMarkup } from '../opencode-setup/plugins/token-cost-sidebar/dist/pricing.ts';
 
 const response = await fetch('https://models.dev/api.json');
 if (!response.ok) throw new Error(`Preiskatalog: HTTP ${response.status}`);

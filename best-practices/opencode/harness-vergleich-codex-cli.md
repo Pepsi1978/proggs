@@ -194,7 +194,7 @@
 Codex CLI 0.153.2 bietet für `tui.status_line` fest definierte Felder, keinen
 frei programmierbaren Statuszeilen-Befehl. Für eine eigene API-Kostenrechnung
 muss die native TUI angepasst werden. Die lokale Erweiterung steht unter
-`codex-setup/cost-statusline/` und übernimmt ihre Preise aus der bestehenden
+`Statusline-Codex/` und übernimmt ihre Preise aus der bestehenden
 OpenCode-Seitenleiste einschließlich des dort konfigurierten 20-%-Cache-Read-Aufschlags.
 
 Codex-Input enthält Cache-Tokens; Codex-Output enthält Reasoning. Vor der separaten

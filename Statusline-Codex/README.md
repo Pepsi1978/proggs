@@ -1,6 +1,6 @@
 # Codex-Kostenanzeige
 
-Version 0.1.2 – 05.09.2026, 00:28 Uhr. Basis: Codex CLI 0.153.2.
+Version 0.1.3 – 05.09.2026, 00:50 Uhr. Basis: Codex CLI 0.153.2.
 
 Die native CLI-Statuszeile zeigt im vorhandenen Feld `estimated-thread-cost`
 die lokale Schätzung `Kosten ≈ $12.34`. Kontext, Weekly und Modell bleiben erhalten.
@@ -39,7 +39,7 @@ pwsh -File .\build-install.ps1
 Der Installer erkennt die offizielle Version aus dem installierten npm-Paket und
 lädt den passenden Upstream-Tag `rust-v<VERSION>` in einen eigenen lokalen Cache,
 wendet die kleinen TUI-Anpassungen an und baut `codex.exe`. Anschließend installiert
-er nach `~/.codex/cost-cli/<CODEX-VERSION>-cost.0.1.2-<BUILD-ID>/` und stellt den npm-Launcher auf diese Datei um.
+er nach `~/.codex/cost-cli/<CODEX-VERSION>-cost.0.1.3-<BUILD-ID>/` und stellt den npm-Launcher auf diese Datei um.
 Die Originaldatei `codex.js.before-cost-statusline-<CODEX-VERSION>` bleibt als Sicherung erhalten.
 Die Hilfsprogramme der originalen CLI werden in das Installationsverzeichnis kopiert.
 Der Build wird in einem eigenen Verzeichnis installiert; laufende EXE-Dateien
@@ -61,7 +61,7 @@ npm-Release zu aktualisieren:
 codex-kosten-update -MitCodexUpdate
 ```
 
-Alternativ direkt im Repository: `pwsh -File codex-setup/cost-statusline/update.ps1`.
+Alternativ direkt im Repository: `pwsh -File Statusline-Codex/update.ps1`.
 Es gibt keinen Hintergrunddienst und keine automatische Änderung ohne Aufruf.
 Fehlen passende Quellcode-Anker oder schlägt der Build fehl, bricht die Installation
 ab. Eine unbekannte neue TUI-Struktur muss dann im Patch angepasst werden; zukünftige
@@ -70,11 +70,11 @@ Codex vollständig neu starten. Die vorhandene Statuszeilen-Konfiguration bleibt
 
 ## Auf einem anderen Rechner wiederverwenden
 
-Das Paket ist im Repository `Pepsi1978/proggs` unter `codex-setup/cost-statusline`
+Das Paket ist im Repository `Pepsi1978/proggs` unter `Statusline-Codex`
 versioniert, nicht als eigenständiges npm-Paket veröffentlicht. Für einen anderen
 Windows-PC kann dieser Auftrag verwendet werden:
 
-> Installiere die Codex-Kostenanzeige aus `codex-setup/cost-statusline` im aktuellen
+> Installiere die Codex-Kostenanzeige aus `Statusline-Codex` im aktuellen
 > Repository `Pepsi1978/proggs`. Lies die README, richte die Build-Voraussetzungen
 > ein und führe `build-install.ps1` aus. Der Installer ermittelt die Codex-Version;
 > bei einem inkompatiblen Quellstand muss der Patch zuerst angepasst werden.
