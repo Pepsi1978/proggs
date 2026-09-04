@@ -269,7 +269,7 @@ public sealed class InstructionProfileService
         WriteText(Path.Combine(workDir, "AGENTS.md"), ReadText(EnsureOpenCodeProfileSource(profileId)));
     }
 
-    public OpenCodeProfileSession PrepareOpenCodeSession(string profileId, string workDir)
+    public OpenCodeProfileSession PrepareOpenCodeSession(string profileId, string workDir, bool isLmStudio)
     {
         // Globale ~/.config/opencode/AGENTS.md leer halten: der Profil-Kontext kommt ausschliesslich
         // ueber die Projekt-AGENTS.md (ActivateProjectAgents). So laedt OpenCode (und ein evtl.
@@ -283,9 +283,18 @@ public sealed class InstructionProfileService
         Directory.CreateDirectory(sessionRoot);
         var configPath = Path.Combine(sessionRoot, "opencode-profile.json");
 
-        // Der Regeltext kommt ueber die Projekt-AGENTS.md; die Session-Config braucht KEINE
-        // instructions. Sie existiert nur, weil OPENCODE_CONFIG auf eine gueltige Datei zeigen muss.
-        var config = new Dictionary<string, object> { ["$schema"] = "https://opencode.ai/config.json" };
+        // Chrome-MCPs sind nur fuer lokale LM-Studio-Modelle abgeschaltet. Die explizite
+        // Gegenrichtung verhindert, dass ein alter globaler false-Wert Cloud-Sitzungen lahmlegt.
+        var chromeEnabled = !isLmStudio;
+        var config = new Dictionary<string, object>
+        {
+            ["$schema"] = "https://opencode.ai/config.json",
+            ["mcp"] = new Dictionary<string, object>
+            {
+                ["chrome-devtools"] = new Dictionary<string, bool> { ["enabled"] = chromeEnabled },
+                ["chrome-personal"] = new Dictionary<string, bool> { ["enabled"] = chromeEnabled }
+            }
+        };
         WriteText(configPath, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
         DeleteOldSessions(Path.GetDirectoryName(sessionRoot)!);
 

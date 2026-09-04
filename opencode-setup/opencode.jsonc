@@ -12,11 +12,12 @@
   // Direktive #3 wird bewusst NICHT hier geladen (waere sonst IMMER im Kontext).
   // Stattdessen laedt der Skill "resilient-bugfixing" den Volltext on-demand —
   // nur wenn wirklich ein Bug bearbeitet wird (token-sparend, Frank-Wunsch 2026-06-18).
-  // Nur die AGENTS.md, keine Zusatzregeln (Frank, 2026-08-27): jede Datei hier landet in
-  // JEDEM Prompt. browser-policy.md entfernt, weil die Chrome-MCPs ohnehin abgeschaltet sind.
+  // Browser-Regeln gelten fuer Cloud-Sitzungen. OpenLauncher deaktiviert die Chrome-MCPs
+  // ausschliesslich in der Session-Konfiguration lokaler LM-Studio-Modelle.
   // Die Regeln unter opencode-setup/rules-opencode/ waren nie eingebunden und bleiben es nicht.
   "instructions": [
-    "~/.config/opencode/AGENTS.md"
+    "~/.config/opencode/AGENTS.md",
+    "~/proggs/opencode-setup/browser-policy.md"
   ],
 
   // Punkt 2 — Kontext-Kompaktierung entschaerfen (gegen "nach Compress wieder Englisch"):
@@ -80,10 +81,9 @@
   //  Spart zudem das MCP-Tool-Schema (~15-25k Tok/Prompt, Almanach §8). Keys in
   //  ~/SK/OpenCode/ (firecrawl-api-key.txt, go-api-key.txt) + ~/SK/ClaudeCodeOpenRouter/openrouter.key.
   "mcp": {
-    // Standard: eigener persistenter Chrome, der ohne Benutzerfreigabe gestartet wird.
-    // ABGESCHALTET 2026-08-27 auf Franks Wunsch: 29 Tools / ~6100 Tokens Schema bei JEDEM Prompt.
-    // Lokale Modelle (LM Studio) muessen das jedes Mal neu prefillen -> langes "Processing Prompt".
-    // Fuer Browser-Arbeit hier auf true setzen und OpenCode neu starten.
+    // Standard fuer Cloud-Modelle: eigener persistenter Chrome ohne Benutzerfreigabe.
+    // OpenLauncher setzt enabled nur fuer LM-Studio-Sitzungen prozesslokal auf false, damit lokale
+    // Modelle das Schema nicht prefillen muessen, ohne OpenAI/Anthropic/OpenRouter zu beschneiden.
     "chrome-devtools": {
       "type": "local",
       "command": [
@@ -93,17 +93,14 @@
         "--no-performance-crux",
         "--redact-network-headers"
       ],
-      "enabled": false,
+      "enabled": true,
       "timeout": 120000
     },
 
     // Rueckfall fuer bereits angemeldete Seiten/Tabs im persoenlichen Chrome.
     // Erst bei Werkzeugnutzung verbinden und nur nach Franks ausdruecklicher Bestaetigung verwenden.
-    // ABGESCHALTET 2026-08-27: gemessen 29 Tools / 24402 Zeichen = ~6100 Tokens Schema, die bei
-    // JEDEM Prompt mitgehen — identisch zu chrome-devtools, nur --auto-connect unterscheidet sich.
-    // Lokal (LM Studio) muss dieses Schema jedes Mal neu geprefillt werden: gemessen 21385 Input-
-    // Tokens fuer die Frage "Welches Modell bist du?" (Tokenverbrauch.jsonl, 19:53 Uhr).
-    // Bei Bedarf auf true setzen und OpenCode neu starten.
+    // Fuer Cloud-Modelle aktiv; OpenLauncher deaktiviert es zusammen mit chrome-devtools nur in
+    // LM-Studio-Sitzungen. Gemessen: 29 Tools / 24402 Zeichen = ~6100 Tokens Schema je MCP.
     "chrome-personal": {
       "type": "local",
       "command": [
@@ -114,7 +111,7 @@
         "--no-performance-crux",
         "--redact-network-headers"
       ],
-      "enabled": false,
+      "enabled": true,
       "timeout": 120000
     },
 

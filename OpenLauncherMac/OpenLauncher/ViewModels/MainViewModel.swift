@@ -741,7 +741,11 @@ final class MainViewModel {
             // Projekt-AGENTS.md passend zum Profil setzen (Minimal -> nur minimal.md), BEVOR die
             // Session vorbereitet und OpenCode gestartet wird.
             try profiles.activateProjectAgents(profileId: profile.id, workDir: workDir)
-            let profileSession = try profiles.prepareOpenCodeSession(profileId: profile.id, workDir: workDir)
+            let profileSession = try profiles.prepareOpenCodeSession(
+                profileId: profile.id,
+                workDir: workDir,
+                isLmStudio: model.providerId.caseInsensitiveCompare(LmStudioService.providerId) == .orderedSame
+            )
             let modelString = try launcher.configureProvider(model: model, chosen: provider,
                                                              allProviders: providers, thinkingLevel: thinkingLevel)
             try launcher.launch(modelString: modelString, workDir: workDir, thinkingLevel: thinkingLevel,

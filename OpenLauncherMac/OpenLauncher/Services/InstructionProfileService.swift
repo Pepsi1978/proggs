@@ -253,7 +253,7 @@ final class InstructionProfileService {
         Self.writeText(Paths.readText(source), to: (workDir as NSString).appendingPathComponent("AGENTS.md"))
     }
 
-    func prepareOpenCodeSession(profileId: String, workDir: String) throws -> OpenCodeProfileSession {
+    func prepareOpenCodeSession(profileId: String, workDir: String, isLmStudio: Bool) throws -> OpenCodeProfileSession {
         // Globale ~/.config/opencode/AGENTS.md leer halten: der Profil-Kontext kommt ausschliesslich
         // ueber die Projekt-AGENTS.md (activateProjectAgents). So laedt OpenCode (und ein evtl.
         // `instructions`-Verweis in der globalen opencode.jsonc) hier nichts hinzu.
@@ -265,9 +265,18 @@ final class InstructionProfileService {
         Paths.ensureDirectory(sessionRoot)
         let configPath = (sessionRoot as NSString).appendingPathComponent("opencode-profile.json")
 
-        // Der Regeltext kommt ueber die Projekt-AGENTS.md; die Session-Config braucht KEINE
-        // instructions. Sie existiert nur, weil OPENCODE_CONFIG auf eine gueltige Datei zeigen muss.
-        Self.writeText("{\n  \"$schema\": \"https://opencode.ai/config.json\"\n}", to: configPath)
+        // Chrome-MCPs sind nur fuer lokale LM-Studio-Modelle abgeschaltet. Die explizite
+        // Gegenrichtung verhindert, dass ein alter globaler false-Wert Cloud-Sitzungen lahmlegt.
+        let chromeEnabled = isLmStudio ? "false" : "true"
+        Self.writeText("""
+        {
+          "$schema": "https://opencode.ai/config.json",
+          "mcp": {
+            "chrome-devtools": { "enabled": \(chromeEnabled) },
+            "chrome-personal": { "enabled": \(chromeEnabled) }
+          }
+        }
+        """, to: configPath)
         Self.deleteOldSessions(Paths.sessionsRoot)
 
         return OpenCodeProfileSession(profileId: profileId,

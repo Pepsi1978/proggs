@@ -767,7 +767,11 @@ public sealed partial class MainViewModel : ObservableObject
             // Projekt-AGENTS.md passend zum Profil setzen (Minimal -> nur minimal.md), BEVOR die
             // Session vorbereitet und OpenCode gestartet wird.
             _profiles.ActivateProjectAgents(SelectedProfile.Id, WorkDir);
-            var profileSession = _profiles.PrepareOpenCodeSession(SelectedProfile.Id, WorkDir);
+            var isLmStudio = string.Equals(
+                SelectedModel.ProviderId,
+                LmStudioService.ProviderId,
+                StringComparison.OrdinalIgnoreCase);
+            var profileSession = _profiles.PrepareOpenCodeSession(SelectedProfile.Id, WorkDir, isLmStudio);
             var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers, thinkingLevel);
             _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath, SelectedWorkMode.Id);
             Logger.Instance.Info("MainViewModel", "Start", "OpenCode-Profilsnapshot erstellt", new
