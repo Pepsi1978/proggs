@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Kompassnadel in Gold auf dunklem Grund: Schraegstrich als Anspielung auf /-Befehle. -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M66,30 L58,78 L50,78 L58,30 Z" />
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M54,22 m-26,0 a26,26 0 1,0 52,0 a26,26 0 1,0 -52,0"
+        android:fillAlpha="0" />
+    <path
+        android:strokeColor="#D4AF37"
+        android:strokeWidth="4"
+        android:fillColor="#00000000"
+        android:pathData="M54,54 m-28,0 a28,28 0 1,0 56,0 a28,28 0 1,0 -56,0" />
+</vector>

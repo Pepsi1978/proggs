@@ -1,0 +1,121 @@
+{
+  "bereich": "praxis",
+  "standVersion": "0.153.3",
+  "quellen": [
+    "https://learn.chatgpt.com/docs/developer-commands.md?surface=cli",
+    "https://learn.chatgpt.com/docs/changelog",
+    "https://learn.chatgpt.com/docs/config-file/config-basic"
+  ],
+  "eintraege": [
+    {
+      "name": "Aufgaben verständlich formulieren",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Beschreibe Ergebnis und Grenzen der Aufgabe.",
+      "englisch": "",
+      "erklaerung": "Nenne das konkrete Ergebnis, das du brauchst, und welche Dateien oder Funktionen betroffen sind. Ein Auftrag wie „Erkläre die Anmeldung in dieser Datei“ ist eindeutiger als „Schau mal rein“.\n\nFüge wichtige Randbedingungen gleich hinzu, beispielsweise die gewünschte Sprache und die unterstützten Plattformen. Mit /mention kannst du die passende Datei einbeziehen.",
+      "seit": "",
+      "sortierName": "aufgaben verständlich formulieren",
+      "entfernt": false
+    },
+    {
+      "name": "Befehle und normale Fragen unterscheiden",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Slash-Befehle steuern die CLI; normale Texte beschreiben deine Aufgabe.",
+      "englisch": "",
+      "erklaerung": "Ein Slash-Befehl öffnet eine bestimmte Funktion der Codex CLI. Eine normale Nachricht beschreibt dagegen, was Codex erledigen soll. Schreibe /, um die gerade verfügbaren Befehle zu sehen.\n\nDie Befehlsliste hängt von Version, Betriebssystem und aktivierten Funktionen ab. Die hier dokumentierten CLI-Befehle sind nicht automatisch Befehle der ChatGPT-Weboberfläche.",
+      "seit": "",
+      "sortierName": "befehle und normale fragen unterscheiden",
+      "entfernt": false
+    },
+    {
+      "name": "Berechtigungen passend wählen",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Lass die erlaubten Aktionen zur Aufgabe passen.",
+      "englisch": "",
+      "erklaerung": "Für eine reine Erklärung kann ein lesender Zugriff ausreichen. Wenn Codex Dateien ändern soll, benötigt es passende Berechtigungen. Mit /permissions siehst du die angebotenen Profile.\n\nEin zusätzlicher Ordner und eine Erlaubnis zum Schreiben sind nicht dasselbe. Mit /status kannst du die aktive Arbeitsumgebung nachvollziehen.",
+      "seit": "",
+      "sortierName": "berechtigungen passend wählen",
+      "entfernt": false
+    },
+    {
+      "name": "Ergebnisse nachvollziehen",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Sieh dir Änderungen und Begründungen an.",
+      "englisch": "",
+      "erklaerung": "Mit /diff kannst du die tatsächlich geänderten Stellen im Projekt ansehen. /review bietet eine zusätzliche inhaltliche Beurteilung. Beide Funktionen ergänzen sich.\n\nLass dir außerdem sagen, welche Builds oder Prüfungen tatsächlich gelaufen sind. Eine überzeugende Erklärung beweist allein noch nicht, dass ein Programm funktioniert.",
+      "seit": "",
+      "sortierName": "ergebnisse nachvollziehen",
+      "entfernt": false
+    },
+    {
+      "name": "Gespräche wiederfinden",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Gib längeren Aufgaben aussagekräftige Namen.",
+      "englisch": "",
+      "erklaerung": "Mit /rename benennst du das aktuelle Gespräch so, dass du es später erkennen kannst. Mit /resume öffnest du gespeicherte Sitzungen wieder.\n\nFür erledigte Arbeit, deren Verlauf du behalten möchtest, eignet sich /archive. /delete löscht dagegen dauerhaft und ist keine bloße Aufräumfunktion.",
+      "seit": "",
+      "sortierName": "gespräche wiederfinden",
+      "entfernt": false
+    },
+    {
+      "name": "Kontext bewusst verwalten",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Halte dauerhafte Anforderungen auch in Dateien fest.",
+      "englisch": "",
+      "erklaerung": "Lange Gespräche benötigen viel Kontext. /compact kann frühere Nachrichten zusammenfassen und damit Platz schaffen. Speichere präzise Anforderungen zusätzlich in einer Projektdatei.\n\nFür ein unabhängiges Thema eignet sich /new. Für eine alternative Richtung aus dem bisherigen Verlauf gibt es /fork. Das trennt Gespräche, aber nicht automatisch die bearbeiteten Dateien.",
+      "seit": "",
+      "sortierName": "kontext bewusst verwalten",
+      "entfernt": false
+    },
+    {
+      "name": "Längere Arbeit planen",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Trenne die Planung vom Beginn der Umsetzung.",
+      "englisch": "",
+      "erklaerung": "Mit /plan kannst du zuerst ein Vorgehen ausarbeiten lassen. Das ist hilfreich, wenn mehrere Teile eines Projekts zusammenhängen oder wichtige Entscheidungen offen sind.\n\nEin dauerhaftes Ziel kannst du anschließend über /goal verwalten. Formuliere, woran sich erkennen lässt, dass die Aufgabe erreicht ist. Sehr ausführliche Anforderungen gehören in eine referenzierte Datei.",
+      "seit": "",
+      "sortierName": "längere arbeit planen",
+      "entfernt": false
+    },
+    {
+      "name": "Projektregeln festhalten",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Nutze AGENTS.md für die dauerhaft geltenden Hinweise.",
+      "englisch": "",
+      "erklaerung": "Mit /init kannst du einen Entwurf für AGENTS.md vorbereiten lassen. Überarbeite ihn anhand der tatsächlichen Projektstruktur und der benötigten Arbeitsabläufe.\n\nHalte die Regeln konkret: Wo liegen wichtige Dateien, wie wird gebaut und welche Besonderheiten müssen beachtet werden? Zugangsdaten gehören nicht in diese Anleitung.",
+      "seit": "",
+      "sortierName": "projektregeln festhalten",
+      "entfernt": false
+    },
+    {
+      "name": "Verfügbarkeit richtig einordnen",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Ein fehlender Slash-Befehl ist nicht immer ein Fehler.",
+      "englisch": "",
+      "erklaerung": "Einige Befehle benötigen eine bestimmte Plattform oder Funktion. /setup-default-sandbox erscheint beispielsweise nur in einer bestimmten Windows-Situation. /fast hängt vom Modellangebot ab.\n\nAndere Befehle sind während laufender Arbeit vorübergehend gesperrt. Vergleiche die lokale Codex-Version und die Hinweise beim Eintrag, bevor du von einem Fehler ausgehst.",
+      "seit": "",
+      "sortierName": "verfügbarkeit richtig einordnen",
+      "entfernt": false
+    },
+    {
+      "name": "Werkzeuge gezielt einbeziehen",
+      "kategorie": "Arbeitsweise",
+      "art": "Artikel",
+      "kurz": "Wähle die passende App, den Skill oder die MCP-Verbindung.",
+      "englisch": "",
+      "erklaerung": "Mit /apps wählst du verbundene Apps aus. /skills zeigt aufgabenspezifische Anleitungen und /mcp die konfigurierten externen Werkzeuge. /plugins verwaltet zusätzliche Erweiterungen.\n\nBeschreibe nach der Auswahl weiterhin dein Ziel. Die bloße Auswahl einer Verbindung führt deine fachliche Aufgabe noch nicht aus.",
+      "seit": "",
+      "sortierName": "werkzeuge gezielt einbeziehen",
+      "entfernt": false
+    }
+  ]
+}

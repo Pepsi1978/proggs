@@ -1,0 +1,22 @@
+{
+  "bereich": "config",
+  "standVersion": "0.153.3",
+  "quellen": [
+    "https://learn.chatgpt.com/docs/developer-commands.md?surface=cli",
+    "https://learn.chatgpt.com/docs/changelog",
+    "https://learn.chatgpt.com/docs/config-file/config-basic"
+  ],
+  "eintraege": [
+    {
+      "name": "Konfiguration in Codex CLI",
+      "kategorie": "Orientierung",
+      "art": "Artikel",
+      "kurz": "Codex nutzt config.toml und einzelne Slash-Befehle für Einstellungen.",
+      "englisch": "",
+      "erklaerung": "Ein allgemeiner Slash-Befehl /config ist in der offiziellen CLI-Referenz nicht aufgeführt. Deine persönlichen Vorgaben stehen in ~/.codex/config.toml. Für vertrauenswürdige Projekte gibt es zusätzlich .codex/config.toml im Projekt.\n\nEinige Einstellungen erreichst du direkt, etwa über /model, /permissions, /theme und /statusline. Mit /debug-config erkennst du, welche Konfigurationsebenen wirksam sind. Für einzelne Programmstarts gibt es außerdem -c beziehungsweise --config.\n\nDiese erste Fassung von Codex Kompass enthält den Slash-Befehlskatalog. Ein vollständiges Nachschlagewerk sämtlicher config.toml-Schlüssel ist noch nicht enthalten. Die Einstellungen dieser Android-App mit Stimmen, Anmeldung und Darstellung findest du weiterhin über das Einstellungsmenü.",
+      "seit": "",
+      "sortierName": "konfiguration in codex cli",
+      "entfernt": false
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Baustein J.3: Was in die Systemsicherung darf und was nicht.
+
+  Eingeschlossen sind nur Datenbank und Einstellungen. Der Ordner `files` steht bewusst NICHT
+  darin — dort liegt das Protokoll, das auf einem neuen Geraet keinen Wert hat.
+
+  Ausgeschlossen sind die beiden verschluesselten Ablagen: Ihr Hauptschluessel liegt im
+  Schluesselspeicher des Geraets und wandert nicht mit. Mitgesichert waeren sie auf dem neuen
+  Geraet nur unlesbarer Ballast, der beim Lesen sogar eine Ausnahme wirft.
+-->
+<full-backup-content>
+    <include domain="database" path="." />
+    <include domain="sharedpref" path="." />
+    <exclude domain="sharedpref" path="codex_kompass_secure_prefs.xml" />
+    <exclude domain="sharedpref" path="codex_oauth.xml" />
+</full-backup-content>
