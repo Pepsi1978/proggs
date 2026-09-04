@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.14.7 – 29.08.2026 19:49
+Stand: v1.14.8 – 04.09.2026 21:19
 
 ## Funktionen
 
@@ -34,6 +34,13 @@ Stand: v1.14.7 – 29.08.2026 19:49
   EUR-Umrechnung findet nicht statt.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
   werden auf ihr Basismodell aufgelöst; fehlende Cachepreise werden nicht als Nullpreis erfunden.
+- GPT-6 Astra verwendet lokale offizielle Tarife (Stand 04.09.2026), auch ohne Katalogeintrag:
+  Standard je 1M Tokens Input/Output/Cache-Read/Cache-Write = 10/50/1/12,50 USD;
+  oberhalb von 272.000 Input-Tokens = 20/75/2/25 USD für den gesamten Modellschritt.
+  Fast/Priority verdoppelt diese Tarife; Batch/Flex halbiert sie. Reasoning kostet den Outputtarif.
+  Der bestehende lokale Cache-Read-Aufschlag von 20 % wird anschließend auch auf Astra angewendet.
+  Quelle: https://developers.openai.com/api/docs/pricing . Dies sind API-Vergleichskosten,
+  keine Berechnung des ChatGPT-Abopreises; regionale Zuschläge sind nicht enthalten.
 - OpenAI-Fast-Aliase verwenden den vom Launcher gesetzten Priority-Service-Tier und dessen offiziellen
   Tarif. Bei ChatGPT-OAuth ist das finale Response-Feld laut OpenAI kein verlaesslicher Nachweis des
   serverseitigen Fast-Routings; dort bleibt deshalb die konfigurierte Fast-Auswahl massgeblich und wird

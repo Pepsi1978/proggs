@@ -278,8 +278,33 @@ export function findCatalogModel(catalog: any, providerID?: string, modelID?: st
 }
 
 export function withOpenAIPriorityPricing(model: any, providerID: string, modelID: string, serviceTier?: string): any {
-  if (providerID !== "openai" || serviceTier !== "priority") return model
+  if (providerID !== "openai") return model
   const baseID = modelID.endsWith("-fast") ? modelID.slice(0, -"-fast".length) : modelID
+  // Official OpenAI tariffs, 2026-09-04: keep Astra usable before models.dev catches up.
+  if (baseID === "gpt-6-astra") {
+    const multiplier = serviceTier === "priority" || serviceTier === "fast" ? 2
+      : serviceTier === "batch" || serviceTier === "flex" ? 0.5 : 1
+    return {
+      ...model,
+      cost: {
+        input: 10 * multiplier,
+        output: 50 * multiplier,
+        cache_read: multiplier,
+        cache_write: 12.5 * multiplier,
+        tiers: [{
+          tier: { type: "context", size: 272_000 },
+          input: 20 * multiplier,
+          output: 75 * multiplier,
+          cache_read: 2 * multiplier,
+          cache_write: 25 * multiplier,
+        }],
+      },
+      pricingServiceTier: serviceTier ?? "default",
+      pricingUnsupportedAbove: undefined,
+      pricingCacheReadMarkup: undefined,
+    }
+  }
+  if (serviceTier !== "priority") return model
   const cost = OPENAI_PRIORITY_COST[baseID]
   if (!cost) return model
   return {
