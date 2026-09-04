@@ -31,3 +31,4 @@
 | 17 | Agent ignoriert Retry-After, hammert weiter | Circuit Breaker bei „consecutive 429s > N": 60s open mit exponential reopen | §9 |
 | 18 | Secrets in der Sandbox / Container-Escape | Zero-Secrets-Sandbox (Control-Plane injiziert), Default-Deny-Egress, MicroVM statt nacktem Container (runc-CVEs) | §10 |
 | 19 | „Done!" gemeldet, State ist falsch | State-Changes wirklich pruefen (Kalender/Code/DB); LLM-Judge ist angreifbar → deterministisch wo moeglich | §11 |
+| 20 | Codex/OpenCode-Verbrauch scheint stark verschieden | Cache, Reasoning, ganze Sitzung und Nebenaufrufe normalisieren; gleiche Modelle/Effort vergleichen. Ein Einzeltest liefert keinen allgemeinen Faktor. Stand 04.09.2026 | §12 |

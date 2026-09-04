@@ -31,3 +31,4 @@
 | 18 | API-Rate-Limits / 429 | `Retry-After`-Header bevorzugen; Full-Jitter-Backoff; Retry-Budget ≤10 %; Retry nur 1 Schicht; `max_tokens` setzen | §8 |
 | 19 | Agent laeuft fremden Code aus | Sandbox: Non-Root + `cap-drop ALL`, read-only FS + tmpfs, Default-Deny-Egress, Secrets NIE in der Sandbox, MicroVM (Firecracker/gVisor) | §9 |
 | 20 | „Wann ist fertig?" definieren | 3 Akzeptanz-Dimensionen (Response/Trajectory/**State-Changes**); Capability- vs. Regression-Evals trennen; State wirklich pruefen | §10 |
+| 21 | Codex CLI mit OpenCode vergleichen | Gleiches Modell, Effort, Aufgabe und Erfolgskriterium; gesamten Lauf inklusive Cache, Reasoning und Nebenagenten messen. Einzeltest ist kein allgemeiner Mehrverbrauchsfaktor. Stand 04.09.2026 | §11 |

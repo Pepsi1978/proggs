@@ -43,6 +43,7 @@
 | 18 | API-Rate-Limits / 429 | `Retry-After`-Header bevorzugen; Full-Jitter-Backoff; Retry-Budget ≤10 %; Retry nur 1 Schicht; `max_tokens` setzen | §8 |
 | 19 | Agent laeuft fremden Code aus | Sandbox: Non-Root + `cap-drop ALL`, read-only FS + tmpfs, Default-Deny-Egress, Secrets NIE in der Sandbox, MicroVM (Firecracker/gVisor) | §9 |
 | 20 | „Wann ist fertig?" definieren | 3 Akzeptanz-Dimensionen (Response/Trajectory/**State-Changes**); Capability- vs. Regression-Evals trennen; State wirklich pruefen | §10 |
+| 21 | Codex CLI mit OpenCode vergleichen | Gleiche Aufgabe, Modell, Effort und Erfolgskriterien; vollständige Tokenbilanz statt einzelner Anzeige. Stand 04.09.2026 | §11 |
 
 ---
 
@@ -440,6 +441,41 @@ LangChain/OpenAI/Confident-AI Eval-Guides):
 > Auch in Runde 2 NICHT belegt: **Claude-Agent-SDK-Loop-Primitive** (`maxTurns`, `maxBudgetUsd`,
 > Context-Editing, Memory-Tool) und konkrete **Multi-Agent-Reconciliation** paralleler Arbeit —
 > bei Bedarf direkt aus der Anthropic-Doku / `orchestrator-agent.md` ziehen.
+
+## 11. Codex CLI und OpenCode: Tokenverbrauch pro erfolgreicher Aufgabe
+
+**Geprüft:** 04.09.2026, 21:18 Uhr. Recherche direkt über Firecrawl, ausdrücklich ohne MiniMax. Lokale Versionsanker: Codex CLI 0.153.2, OpenCode 1.18.28. Kein eigener A/B-Benchmark durchgeführt.
+
+### Ergebnis und veröffentlichter Messwert
+
+Codex CLI kann bei gleicher Aufgabe mehr Tokens als OpenCode verbrauchen. Einen universellen Faktor belegen die geprüften Quellen nicht. Modell, Denkaufwand, Systemanweisungen, Werkzeuge, gelesene Dateien, Arbeitsschritte und Kompaktierung beeinflussen den Verbrauch. Cache-Nutzung beeinflusst zusätzlich Kosten und Verarbeitung. `offiziell` [OpenAI: Nutzung und Preise](https://developers.openai.com/codex/pricing), [Reasoning](https://developers.openai.com/api/docs/guides/reasoning), [Prompt Caching](https://developers.openai.com/api/docs/guides/prompt-caching).
+
+Ein vom Durchführenden veröffentlichter Test vom 14.07.2026 verglich Codex 0.144.3 und OpenCode 1.17.20 mit GPT-5.6 Terra, jeweils medium, über zwei Programmieraufträge in derselben fortgeführten Sitzung. Laut Bericht bestanden beide Implementierungen die unabhängigen Prüfungen:
+
+| Input über den gesamten Lauf | Codex | OpenCode |
+|---|---:|---:|
+| Einschließlich Cache | 108.453 | 69.864 |
+| Aus Cache | 88.064 | 60.928 |
+| Ohne Cache | 20.389 | 8.936 |
+
+Codex hatte damit rund 55 % mehr gesamten Input. Das ist ein extern berichteter Einzelversuch mit älteren Versionen und einem anderen Modell, kein repräsentativer Produktbenchmark und keine Messung dieses Rechners. Rohmessungen wurden nicht unabhängig reproduziert. `extern, Primärbericht` [Versuchsaufbau und Ergebnisse](https://github.com/earendil-works/pi/discussions/6646).
+
+### Lokale Konfiguration
+
+- `C:/Users/barwa/.codex/config.toml`: GPT-6 Astra, `model_reasoning_effort = "medium"`; keine explizite Kompaktierungsgrenze und keine MCP-Abschnitte in dieser Datei.
+- `C:/Users/barwa/.config/opencode/opencode.jsonc`: Astra registriert, aber kein globales Modell und kein expliziter Astra-Effort. Tatsächlich ausgewählte Modellvariante bleibt unbekannt. `compaction.auto = true`, `prune = true`, `reserved = 15000`; drei MCP-Server aktiviert. Das beweist nicht, welche Tools tatsächlich an jeden Modellaufruf gehen.
+- Der Projektregeltext ist auf Dateiebene identisch zum OpenLauncher-OpenCode-Minimalprofil. OpenCode referenziert zusätzlich eine Browserregel. Daraus folgt keine vollständige Gleichheit der Modellprompts. Separat gestartete Launcher-Prozesse können andere Argumente oder Umgebungswerte nutzen.
+
+### Sauber messen
+
+1. Identischen Ausgangsstand und Auftrag verwenden, Modell-ID, Denkaufwand, Anbieter/Anmeldeweg und Service-Tier festhalten. Beide Ergebnisse mit denselben Erfolgskriterien prüfen.
+2. Für den Vergleich der Programme möglichst gleiche Regeln und Werkzeuge bereitstellen; für den Alltagsvergleich die realen Profile separat messen. Neue Aufgaben in frischen Sitzungen, Folgeaufträge innerhalb derselben Sitzung ausführen. Mehrere Aufgaben und Wiederholungen verwenden.
+3. Input gesamt, Cache-Anteil, ungecachten Input und erzeugten Output einschließlich Reasoning getrennt erfassen. Cache ist bei OpenAI bereits im Input enthalten; Reasoning ist bereits im API-Output enthalten. Felder vor der Addition nach Provider-Semantik normalisieren. Nebenagenten, Titelgenerierung, Kompaktierung und Wiederholungen berücksichtigen.
+4. Tokenzahl, API-Kosten und Aboverbrauch getrennt auswerten. Cache-Tokens sind nicht kostenlos und eine hohe Cachequote allein beweist keine Effizienz. API-Preise nicht als exakte ChatGPT-Kontingentformel verwenden.
+
+OpenCode bietet `opencode stats` und `opencode export <sessionID>`. Die aktuelle Konfigurationsdokumentation nennt für `compaction.prune` den Default **false**; lokal ist es ausdrücklich aktiviert. Alte Juni-Notizen mit einem behaupteten Default true nicht unverändert übernehmen. `offiziell` [CLI](https://opencode.ai/docs/cli/), [Konfiguration](https://opencode.ai/docs/config/), [MCP-Kontext](https://opencode.ai/docs/mcp-servers/).
+
+**Persistenz:** bestehender Bereich `agents/loop-engineering`; Index erfasst ihn rekursiv, Hint enthält bereits beide Schreibweisen `loop engineering` und `loop-engineering`. Kein neuer Guard-Dateityp nötig: bereichsübergreifende Messmethodik. Keine Hook-Änderung erforderlich.
 
 ## Zusammenspiel mit dem eigenen Harness
 

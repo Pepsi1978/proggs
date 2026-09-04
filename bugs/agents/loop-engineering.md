@@ -41,6 +41,7 @@
 | 17 | Agent ignoriert Retry-After, hammert weiter | Circuit Breaker bei „consecutive 429s > N": 60s open mit exponential reopen | §9 |
 | 18 | Secrets in der Sandbox / Container-Escape | Zero-Secrets-Sandbox (Control-Plane injiziert), Default-Deny-Egress, MicroVM statt nacktem Container (runc-CVEs) | §10 |
 | 19 | „Done!" gemeldet, State ist falsch | State-Changes wirklich pruefen (Kalender/Code/DB); LLM-Judge ist angreifbar → deterministisch wo moeglich | §11 |
+| 20 | Codex/OpenCode-Verbrauch scheint stark verschieden | Cache, Reasoning und gesamte Sitzung normalisieren; gleiche Modelle/Effort vergleichen. Stand 04.09.2026 | §12 |
 
 ---
 
@@ -263,6 +264,24 @@ fool LLM-as-a-judge") und einen Threshold + Kalibrierung braucht; **Infra-Proble
 - **Capability- von Regression-Evals trennen** (~100 % Regression-Gate schuetzt vor Backsliding).
 - **Infra-Probleme zuerst ausschliessen**, bevor ein „Reasoning-Fehler" debuggt wird.
 - **Eindeutiges „done":** „If two experts can't agree on pass/fail, the task needs refinement."
+
+## 12. Messfallen beim Tokenvergleich von Codex CLI und OpenCode
+
+**Stand:** 04.09.2026, 21:18 Uhr. Lokal Codex 0.153.2 / OpenCode 1.18.28. Methodische Fallen, keine Behauptung eines bestätigten Softwaredefekts. Recherche direkt mit Firecrawl, ohne MiniMax.
+
+**Symptom:** Ein Programm erscheint deutlich sparsamer, obwohl nur unterschiedlich definierte Zähler oder ungleiche Aufgabenläufe verglichen wurden.
+
+**Ursachen:** Kontextbelegung eines einzelnen Aufrufs wird mit kumuliertem Verbrauch verwechselt; Cache-Anteile fehlen oder werden doppelt addiert; Reasoning und Nebenagenten fehlen oder werden doppelt gezählt. Unterschiedliche Modellvarianten, Regeln, MCP-Tools und Kompaktierung erzeugen zusätzliche Unterschiede. Auch dieselbe Aufgabe garantiert nicht denselben Lösungsweg.
+
+**Funktionserhaltende Korrektur:** Keine Werkzeuge blind deaktivieren. Zuerst gleiche Modell-ID, Effort, Ausgangsdateien und Erfolgskriterien festlegen. Alle Modellaufrufe einschließlich Hilfsaufgaben erfassen. Input/Cache/Output entsprechend der jeweiligen Provider-Semantik normalisieren. OpenAI-Cache ist eine Teilmenge des Inputs, Reasoning gehört zum API-Output. Kosten und Aboverbrauch getrennt beurteilen. Mehrere erfolgreiche Vergleichsläufe statt eines einzelnen Prozentsatzes verwenden.
+
+**Konkreter Befund:** Ein veröffentlichter Einzelversuch mit Codex 0.144.3 / OpenCode 1.17.20, GPT-5.6 Terra medium, meldet 108.453 versus 69.864 Input-Tokens über zwei Programmieraufträge, also rund 55 % mehr bei Codex. Beide Lösungen bestanden laut Autor die unabhängigen Prüfungen. Diese Messung ist kein Beweis für denselben Faktor bei GPT-6 Astra oder neueren Clients. Kein eigener Benchmark durchgeführt.
+
+**Versionsfalle:** Die am Prüftag abgerufene OpenCode-Konfigurationsdokumentation nennt `compaction.prune` standardmäßig false. Ältere lokale Juni-Notizen behaupten true. Auf diesem Rechner ist true ausdrücklich gesetzt; daraus folgt keine Aussage über andere Installationen.
+
+**Quellen:** `offiziell` [OpenAI Prompt Caching](https://developers.openai.com/api/docs/guides/prompt-caching), [Reasoning](https://developers.openai.com/api/docs/guides/reasoning), [Codex-Nutzung](https://developers.openai.com/codex/pricing), [OpenCode-Konfiguration](https://opencode.ai/docs/config/); `extern, Primärbericht` [Benchmark vom Durchführenden](https://github.com/earendil-works/pi/discussions/6646).
+
+**Hook-Abdeckung:** bestehender kuratierter Bereich `agents/loop-engineering`; rekursiver Index und beide Hint-Schreibweisen vorhanden. Guard-Erweiterung entfällt bei dieser bereichsübergreifenden Messmethodik.
 
 ## 🔗 Bezugs-Tabelle: Bug-Almanach ↔ Best-Practice-Abschnitt
 
