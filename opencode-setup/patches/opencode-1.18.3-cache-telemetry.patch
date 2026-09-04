@@ -136,10 +136,10 @@ diff --git a/packages/opencode/src/session/processor.ts b/packages/opencode/src/
 index 20aa8a8..1073a8a 100644
 --- a/packages/opencode/src/session/processor.ts
 +++ b/packages/opencode/src/session/processor.ts
-@@ -435,10 +435,22 @@ const layer = Layer.effect(
-           case "step-finish": {
-             const completedSnapshot = yield* snapshot.track()
-             yield* Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)
+@@ -435,11 +435,23 @@ const layer = Layer.effect(
+            case "step-finish": {
+              const completedSnapshot = yield* snapshot.track()
+              yield* Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)
 +            const metadataKeys = new Set([
 +              ...Object.keys(value.usage?.providerMetadata ?? {}),
 +              ...Object.keys(value.providerMetadata ?? {}),
@@ -152,22 +152,33 @@ index 20aa8a8..1073a8a 100644
 +                  ]),
 +                )
 +              : undefined
-             const usage = Session.getUsage({
-               model: ctx.model,
-               usage: value.usage ?? new Usage({}),
+             // Anthropic reports thinking blocks it removed before the model saw the
+             // prompt. Prefix mismatches mean opencode changed history behind a signed
+             // block; log them so the churn can be tracked down.
+-            const dropped = isRecord(value.providerMetadata?.anthropic)
+-              ? value.providerMetadata.anthropic.inputTransformations
++            const dropped = isRecord(metadata?.anthropic)
++              ? metadata.anthropic.inputTransformations
+               : undefined
+             if (Array.isArray(dropped) && dropped.length > 0) {
+               yield* Effect.logWarning("thinking blocks dropped by provider", {
+@@ -452,7 +464,7 @@ const layer = Layer.effect(
+              const usage = Session.getUsage({
+                model: ctx.model,
+                usage: value.usage ?? new Usage({}),
 -              metadata: value.providerMetadata,
 +              metadata,
-             })
-             ctx.assistantMessage.finish = value.reason
-             ctx.assistantMessage.cost += usage.cost
-@@ -452,6 +464,7 @@ const layer = Layer.effect(
-               type: "step-finish",
-               tokens: usage.tokens,
-               cost: usage.cost,
+              })
+              ctx.assistantMessage.finish = value.reason
+              ctx.assistantMessage.cost += usage.cost
+@@ -466,6 +478,7 @@ const layer = Layer.effect(
+                type: "step-finish",
+                tokens: usage.tokens,
+                cost: usage.cost,
 +              metadata,
-             })
-             yield* session.updateMessage(ctx.assistantMessage)
-             if (ctx.snapshot) {
+              })
+              yield* session.updateMessage(ctx.assistantMessage)
+              if (ctx.snapshot) {
 diff --git a/packages/schema/src/v1/session.ts b/packages/schema/src/v1/session.ts
 index 75e9282..0f047fc 100644
 --- a/packages/schema/src/v1/session.ts
