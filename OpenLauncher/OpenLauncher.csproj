@@ -11,7 +11,7 @@
     <AssemblyName>OpenLauncher</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
-    <Version>1.24.14</Version>
+    <Version>1.24.15</Version>
     <FileVersion>1.23.1.0</FileVersion>
     <AssemblyVersion>1.23.1.0</AssemblyVersion>
     <Company>Pepsi1978</Company>

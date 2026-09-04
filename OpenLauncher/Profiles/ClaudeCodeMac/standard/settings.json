@@ -8,7 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/emulator-start-guard.sh\"",
+            "command": "bash \"$HOME/proggs/claude-code-setup/hooks/emulator-start-guard.sh\"",
             "timeout": 5
           }
         ]

@@ -10,7 +10,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/emulator-start-guard.ps1\"",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/proggs/claude-code-setup/hooks/emulator-start-guard.ps1\"",
             "timeout": 5
           }
         ]
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -File \"%USERPROFILE%/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.ps1\"",
+            "command": "pwsh -NoProfile -File \"$USERPROFILE/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.ps1\"",
             "timeout": 20
           }
         ]
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -File \"%USERPROFILE%/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.ps1\"",
+            "command": "pwsh -NoProfile -File \"$USERPROFILE/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.ps1\"",
             "timeout": 20
           }
         ]
