@@ -269,6 +269,41 @@ public sealed class InstructionProfileService
         WriteText(Path.Combine(workDir, "AGENTS.md"), ReadText(EnsureOpenCodeProfileSource(profileId)));
     }
 
+    // ===================== Codex CLI =====================
+
+    /// <summary>
+    /// Bereitet den Codex-CLI-Start vor: schreibt Profiltext + Modus-Prompt in die AGENTS.md des
+    /// Arbeitsverzeichnisses. Codex liest diese Datei garantiert ein (Projekt-Dokument im
+    /// Arbeitsverzeichnis bzw. Git-Wurzel) -- damit gilt im Codex CLI exakt dasselbe Profil wie in
+    /// OpenCode, statt der AGENTS.md, die Codex bei der lokalen Installation selbst anlegen wuerde.
+    ///
+    /// Anders als bei OpenCode wird der Modus-Prompt hier MIT in die Datei geschrieben: OpenCode holt
+    /// ihn ueber sein work-mode-Plugin aus Profiles/WorkModes/&lt;id&gt;.md, Codex kennt kein solches
+    /// Plugin. Quelle ist trotzdem dieselbe Datei, damit beide CLIs denselben Text sehen.
+    /// </summary>
+    public string ActivateCodexProjectAgents(string profileId, string workModeId, string workDir)
+    {
+        if (!Directory.Exists(workDir))
+            throw new DirectoryNotFoundException($"Arbeitsverzeichnis nicht gefunden: {workDir}");
+        var target = Path.Combine(workDir, "AGENTS.md");
+        WriteText(target, ComposeCodexContext(profileId, workModeId));
+        return target;
+    }
+
+    /// <summary>
+    /// Inhalt der Codex-AGENTS.md: erst der Profiltext (dieselbe Quelle wie OpenCode:
+    /// Profiles/OpenCode/&lt;id&gt;/AGENTS.md), dahinter der Prompt des gewaehlten Arbeitsmodus.
+    /// Leerer Modus-Prompt (Freimodus) haengt nichts an.
+    /// </summary>
+    public string ComposeCodexContext(string profileId, string workModeId)
+    {
+        var profileText = ReadText(EnsureOpenCodeProfileSource(profileId));
+        var modeText = LoadWorkMode(workModeId).Trim();
+        if (modeText.Length == 0) return profileText;
+        if (profileText.Trim().Length == 0) return modeText + "\n";
+        return profileText.TrimEnd('\n') + "\n\n" + modeText + "\n";
+    }
+
     public OpenCodeProfileSession PrepareOpenCodeSession(string profileId, string workDir, bool isLmStudio)
     {
         // Globale ~/.config/opencode/AGENTS.md leer halten: der Profil-Kontext kommt ausschliesslich

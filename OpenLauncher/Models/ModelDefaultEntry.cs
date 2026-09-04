@@ -15,4 +15,10 @@ public sealed class ModelDefaultEntry
     /// Modell beim Speichern keine Stufe angeboten hat.
     /// </summary>
     public string ThinkingValue { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Ziel-CLI ("opencode" oder "codex"). Nur bei OpenAI-Modellen bedeutsam; leer in alten
+    /// Dateien und bei allen anderen Providern -- dann gilt OpenCode.
+    /// </summary>
+    public string CliTargetId { get; set; } = string.Empty;
 }

@@ -59,6 +59,20 @@ public sealed partial class MainViewModel : ObservableObject
             Description = "Mehr Kontrolle und Absicherung",
             IsEnabled = true
         });
+        // Ziel-CLI: nur bei OpenAI-Modellen sichtbar. Beide CLIs lesen dieselbe Profil-AGENTS.md,
+        // deshalb gelten Minimal/Standard/Strikt und der Arbeitsmodus in beiden gleich.
+        CliTargets.Add(new CliTargetEntry
+        {
+            Id = "opencode",
+            DisplayName = "OpenCode",
+            Description = "Wie bisher: OpenCode-TUI mit Provider-Wahl"
+        });
+        CliTargets.Add(new CliTargetEntry
+        {
+            Id = "codex",
+            DisplayName = "Codex CLI",
+            Description = "Eigenes OpenAI-CLI, Profil aus der AGENTS.md"
+        });
         WorkModes.Add(new WorkModeEntry
         {
             Id = "frei",
@@ -84,6 +98,7 @@ public sealed partial class MainViewModel : ObservableObject
             Description = "Randfälle und Härtung mitprüfen"
         });
         SelectedProfile = Profiles.Single(profile => profile.Id == "minimal");
+        SelectedCliTarget = CliTargets.Single(target => target.Id == "opencode");
         // Freimodus ist die Vorauswahl fuer JEDES Profil und JEDES Modell: der Modellwechsel setzt
         // das Minimalprofil, der Profilwechsel setzt wieder diesen Modus -> ohne aktives Umschalten
         // laeuft jede Session ohne zusaetzlichen Modus-Prompt.
@@ -111,6 +126,7 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<ThinkingOptionEntry> ThinkingOptions { get; } = new();
     public ObservableCollection<InstructionProfileEntry> Profiles { get; } = new();
     public ObservableCollection<WorkModeEntry> WorkModes { get; } = new();
+    public ObservableCollection<CliTargetEntry> CliTargets { get; } = new();
     public ObservableCollection<ModelEntry> HiddenModels { get; } = new();
 
     [ObservableProperty] private ModelEntry? _selectedModel;
@@ -130,6 +146,10 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _hasLastError;
     [ObservableProperty] private InstructionProfileEntry? _selectedProfile;
     [ObservableProperty] private WorkModeEntry? _selectedWorkMode;
+    [ObservableProperty] private CliTargetEntry? _selectedCliTarget;
+    /// <summary>Nur OpenAI-Modelle laufen wahlweise in OpenCode oder im Codex CLI -- sonst ist die
+    /// CLI-Zeile ausgeblendet und es bleibt beim jeweils einzigen Weg.</summary>
+    [ObservableProperty] private bool _hasCliChoice;
     [ObservableProperty] private string _profileContextText = "OpenCode · AGENTS.md";
     [ObservableProperty] private bool _canEditSelectedProfile = true;
     [ObservableProperty] private bool _hasHiddenModels;
@@ -151,25 +171,34 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "minimal");
+            // Ohne gespeicherten Standard startet jedes Modell wieder auf OpenCode -- das bisherige
+            // Verhalten bleibt damit die Vorauswahl.
+            SelectedCliTarget = CliTargets.FirstOrDefault(target => target.Id == "opencode");
             if (_pendingModelDefault != null)
             {
                 SelectedProfile = Profiles.FirstOrDefault(profile =>
                     profile.Id == _pendingModelDefault.ProfileId && profile.IsEnabled) ?? SelectedProfile;
                 SelectedWorkMode = WorkModes.FirstOrDefault(mode => mode.Id == _pendingModelDefault.WorkModeId)
                     ?? SelectedWorkMode;
+                if (IsOpenAiModel(value))
+                {
+                    SelectedCliTarget = CliTargets.FirstOrDefault(target => target.Id == _pendingModelDefault.CliTargetId)
+                        ?? SelectedCliTarget;
+                }
             }
         }
         finally
         {
             _applyingModelDefault = false;
         }
+        HasCliChoice = IsOpenAiModel(value);
         SelectedProvider = null;
         Providers.Clear();
         SelectedThinkingOption = null;
         ThinkingOptions.Clear();
         ThinkingTitle = IsClaudeCodeModel(value) ? "EFFORT" : "THINKING";
         ThinkingSubtitle = IsClaudeCodeModel(value) ? "Claude-Code-Level" : "Reasoning-Level";
-        ProfileContextText = IsClaudeCodeModel(value) ? "Claude Code · Minimal + Standard + Strikt" : "OpenCode · Profil-Snapshots";
+        UpdateProfileContextText();
         UpdateProfileAvailability();
         RefreshModelDefaultState();
         if (value == null)
@@ -194,6 +223,21 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     partial void OnSelectedWorkModeChanged(WorkModeEntry? value) => RefreshModelDefaultState();
+
+    partial void OnSelectedCliTargetChanged(CliTargetEntry? value)
+    {
+        UpdateProfileContextText();
+        RefreshModelDefaultState();
+        if (_applyingModelDefault || value == null || !HasCliChoice) return;
+        StatusText = $"Ziel-CLI für {SelectedModel?.DisplayName}: {value.DisplayName}";
+    }
+
+    /// <summary>Zeigt unter der Ueberschrift, aus welcher Datei das gewaehlte Werkzeug seine Regeln liest.</summary>
+    private void UpdateProfileContextText() => ProfileContextText = IsClaudeCodeModel(SelectedModel)
+        ? "Claude Code · Minimal + Standard + Strikt"
+        : IsCodexCliSelected
+            ? "Codex CLI · Profil + Modus in der AGENTS.md"
+            : "OpenCode · Profil-Snapshots";
 
     private async Task LoadThinkingOptionsAsync(ModelEntry model, bool forceRefresh = false)
     {
@@ -364,7 +408,7 @@ public sealed partial class MainViewModel : ObservableObject
         CanSaveModelDefault = SelectedModel != null && SelectedProfile != null && SelectedWorkMode != null;
         ModelDefaultSummary = stored == null
             ? string.Empty
-            : $"★ Standard: {DescribeProfile(stored.ProfileId)} · {DescribeWorkMode(stored.WorkModeId)} · {DescribeThinking(stored.ThinkingValue)}";
+            : $"★ Standard: {DescribeProfile(stored.ProfileId)} · {DescribeWorkMode(stored.WorkModeId)} · {DescribeThinking(stored.ThinkingValue)}{DescribeCliSuffix(stored.CliTargetId)}";
         ModelDefaultButtonText = MatchesStoredDefault(stored) ? "★ Standard entfernen" : "☆ Standard speichern";
     }
 
@@ -372,7 +416,18 @@ public sealed partial class MainViewModel : ObservableObject
         stored != null &&
         stored.ProfileId == SelectedProfile?.Id &&
         stored.WorkModeId == SelectedWorkMode?.Id &&
-        string.Equals(stored.ThinkingValue, SelectedThinkingOption?.Value ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        string.Equals(stored.ThinkingValue, SelectedThinkingOption?.Value ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
+        // Bei Modellen ohne CLI-Wahl bleibt das Feld leer: dann darf ein alter Eintrag ohne
+        // CliTargetId nicht als "abweichend" gelten.
+        string.Equals(stored.CliTargetId, CurrentCliTargetId, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Zu speichernde Ziel-CLI: leer, wenn das Modell gar keine Wahl anbietet.</summary>
+    private string CurrentCliTargetId => HasCliChoice ? SelectedCliTarget?.Id ?? string.Empty : string.Empty;
+
+    private string DescribeCliSuffix(string cliTargetId) =>
+        string.IsNullOrWhiteSpace(cliTargetId)
+            ? string.Empty
+            : " · " + (CliTargets.FirstOrDefault(target => target.Id == cliTargetId)?.DisplayName ?? cliTargetId);
 
     private string DescribeProfile(string profileId) =>
         Profiles.FirstOrDefault(profile => profile.Id == profileId)?.DisplayName ?? profileId;
@@ -414,17 +469,19 @@ public sealed partial class MainViewModel : ObservableObject
             {
                 ProfileId = SelectedProfile.Id,
                 WorkModeId = SelectedWorkMode.Id,
-                ThinkingValue = SelectedThinkingOption?.Value ?? string.Empty
+                ThinkingValue = SelectedThinkingOption?.Value ?? string.Empty,
+                CliTargetId = CurrentCliTargetId
             };
             _modelDefaults.Save(key, entry);
             _pendingModelDefault = entry;
-            StatusText = $"Standard für {model.DisplayName} gespeichert: {SelectedProfile.DisplayName} · {SelectedWorkMode.DisplayName} · {DescribeThinking(entry.ThinkingValue)}";
+            StatusText = $"Standard für {model.DisplayName} gespeichert: {SelectedProfile.DisplayName} · {SelectedWorkMode.DisplayName} · {DescribeThinking(entry.ThinkingValue)}{DescribeCliSuffix(entry.CliTargetId)}";
             Logger.Instance.Info("MainViewModel", "ToggleModelDefault", "Modell-Standard gespeichert", new
             {
                 key,
                 entry.ProfileId,
                 entry.WorkModeId,
-                entry.ThinkingValue
+                entry.ThinkingValue,
+                entry.CliTargetId
             });
         }
 
@@ -708,7 +765,9 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void Start()
     {
-        if (SelectedModel == null || SelectedProvider == null)
+        // Das Codex CLI spricht immer direkt mit OpenAI -- dort gibt es keine Provider-Wahl, die
+        // Auswahl darf den Start also nicht blockieren.
+        if (SelectedModel == null || (SelectedProvider == null && !IsCodexCliSelected))
         {
             StatusText = "Bitte Modell und Provider wählen.";
             return;
@@ -741,8 +800,8 @@ public sealed partial class MainViewModel : ObservableObject
             Logger.Instance.Info("MainViewModel", "Start", "Vollständige Startauswahl geprüft", new
             {
                 model = SelectedModel.ModelString,
-                provider = SelectedProvider.ProviderName,
-                providerSlug = SelectedProvider.ProviderSlug,
+                provider = SelectedProvider?.ProviderName,
+                providerSlug = SelectedProvider?.ProviderSlug,
                 thinkingLevel,
                 profile = SelectedProfile.Id,
                 workMode = SelectedWorkMode.Id,
@@ -761,6 +820,24 @@ public sealed partial class MainViewModel : ObservableObject
                 StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
                     ? $"Claude Code gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
                     : $"Claude Code gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
+                return;
+            }
+
+            if (IsCodexCliSelected)
+            {
+                // Codex CLI liest keine Plugin-Modi: Profil UND Modus-Prompt wandern zusammen in die
+                // AGENTS.md des Arbeitsverzeichnisses -- dieselbe Profilquelle wie bei OpenCode.
+                var agentsPath = _profiles.ActivateCodexProjectAgents(SelectedProfile.Id, SelectedWorkMode.Id, WorkDir);
+                _launcher.LaunchCodexCli(SelectedModel, WorkDir, thinkingLevel);
+                Logger.Instance.Info("MainViewModel", "Start", "Codex-CLI-Kontext geschrieben", new
+                {
+                    profile = SelectedProfile.Id,
+                    workMode = SelectedWorkMode.Id,
+                    agentsPath
+                });
+                StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
+                    ? $"Codex CLI gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
+                    : $"Codex CLI gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
                 return;
             }
 
@@ -797,8 +874,8 @@ public sealed partial class MainViewModel : ObservableObject
             Logger.Instance.Error("MainViewModel", "Start", ex, new
             {
                 model = SelectedModel.ModelString,
-                provider = SelectedProvider.ProviderName,
-                providerSlug = SelectedProvider.ProviderSlug,
+                provider = SelectedProvider?.ProviderName,
+                providerSlug = SelectedProvider?.ProviderSlug,
                 WorkDir,
                 LastErrorPath
             });
@@ -998,6 +1075,14 @@ public sealed partial class MainViewModel : ObservableObject
 
     private static bool IsClaudeCodeModel(ModelEntry? model) =>
         string.Equals(model?.ProviderId, "anthropic", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Nur direkte OpenAI-Modelle koennen im Codex CLI laufen (OpenRouter-GPTs nicht:
+    /// Codex spricht ausschliesslich mit OpenAI selbst).</summary>
+    private static bool IsOpenAiModel(ModelEntry? model) =>
+        string.Equals(model?.ProviderId, "openai", StringComparison.OrdinalIgnoreCase);
+
+    private bool IsCodexCliSelected =>
+        HasCliChoice && string.Equals(SelectedCliTarget?.Id, "codex", StringComparison.Ordinal);
 
     private static (ModelGroupEntry Group, string Slug, string DisplayName)? ShowAddModelDialog(IEnumerable<ModelGroupEntry> groups, ModelGroupEntry defaultGroup) =>
         ShowModelDialog(groups, defaultGroup, "Neues Modell hinzufügen", "Hinzufügen", string.Empty, string.Empty);

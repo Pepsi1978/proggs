@@ -113,6 +113,20 @@ $env:Path = $pathEntries -join ';'
         new("pink", "#FF1493"),
     ];
 
+    /// <summary>Eigene Palette fuer Codex-CLI-Tabs -- kuehle Toene, damit sie sich auf einen Blick
+    /// von den OpenCode- und den waermeren Claude-Tabs unterscheiden.</summary>
+    private static readonly TerminalTabColor[] CodexTerminalTabColors =
+    [
+        new("teal", "#00897B"),
+        new("mint", "#26C6A2"),
+        new("sky", "#29B6F6"),
+        new("indigo", "#5C6BC0"),
+        new("violet", "#7E57C2"),
+        new("slate", "#607D8B"),
+        new("lime", "#9CCC65"),
+        new("amber", "#FFB300"),
+    ];
+
     private static readonly string ConfigDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".config", "opencode");
@@ -362,6 +376,230 @@ $env:Path = $pathEntries -join ';'
         }
     }
 
+    /// <summary>
+    /// Startet das eigenstaendige Codex CLI (OpenAI) statt OpenCode in einem neuen
+    /// Windows-Terminal-Fenster. Die Profilregeln stehen bereits in der AGENTS.md des
+    /// Arbeitsverzeichnisses (InstructionProfileService.ActivateCodexProjectAgents) -- Codex liest
+    /// sie von dort als Projekt-Dokument ein.
+    /// </summary>
+    public void LaunchCodexCli(ModelEntry model, string workDir, string? effortLevel)
+    {
+        var log = Logger.Instance;
+        var slug = ResolveCodexModelSlug(model.Slug, out var serviceTier);
+        var effort = NormalizeCodexEffort(effortLevel);
+        try
+        {
+            Directory.CreateDirectory(workDir);
+            var wt = ResolveWt();
+            var tabColor = PickCodexTerminalTabColor();
+            var innerScript = BuildCodexStartScript(slug, workDir, effort, serviceTier);
+            var shell = ResolvePowerShellExecutable();
+            var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
+            var title = BuildCodexTitle(tabColor.Name, effort);
+
+            if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
+            {
+                var process = LaunchCodexCliViaRobustPowerShell(wt, robustLauncherScript, shell.Path, innerScript, workDir, title, slug, effort, tabColor, log);
+                log.Info("OpenLauncherService", "LaunchCodexCli", $"robuster Codex-CLI-Launcher gestartet (PID {process?.Id})", new { slug, workDir, effort, serviceTier, tabColor = tabColor.Name });
+                return;
+            }
+
+            var psi = new ProcessStartInfo
+            {
+                UseShellExecute = false,
+                CreateNoWindow = false,
+                WorkingDirectory = workDir,
+            };
+            if (!string.IsNullOrEmpty(wt))
+            {
+                psi.FileName = wt;
+                psi.ArgumentList.Add("new-tab");
+                psi.ArgumentList.Add("--tabColor");
+                psi.ArgumentList.Add(tabColor.Hex);
+                psi.ArgumentList.Add("--title");
+                psi.ArgumentList.Add(title);
+                psi.ArgumentList.Add("--startingDirectory");
+                psi.ArgumentList.Add(workDir);
+                psi.ArgumentList.Add(shell.Path);
+            }
+            else
+            {
+                psi.FileName = shell.Path;
+            }
+            psi.ArgumentList.Add("-NoExit");
+            psi.ArgumentList.Add("-ExecutionPolicy");
+            psi.ArgumentList.Add("Bypass");
+            psi.ArgumentList.Add("-File");
+            psi.ArgumentList.Add(innerScript);
+
+            var p = Process.Start(psi);
+            log.Info("OpenLauncherService", "LaunchCodexCli", $"Codex CLI gestartet (PID {p?.Id})", new { slug, workDir, effort, serviceTier, wtUsed = wt != null });
+        }
+        catch (Exception ex)
+        {
+            log.Error("OpenLauncherService", "LaunchCodexCli", ex, new { model.Slug, workDir, effortLevel });
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Uebersetzt einen Launcher-Slug in die Modell-ID, die das Codex CLI kennt. Die "-fast"-
+    /// Eintraege sind in OpenCode eigene Modelle, im Codex-Katalog dagegen nur eine Geschwindigkeits-
+    /// stufe desselben Modells (service_tier "priority") -- deshalb Suffix abschneiden und den Tarif
+    /// getrennt setzen.
+    /// </summary>
+    private static string ResolveCodexModelSlug(string slug, out string? serviceTier)
+    {
+        var normalized = slug.Trim();
+        if (normalized.EndsWith("-fast", StringComparison.OrdinalIgnoreCase))
+        {
+            serviceTier = "priority";
+            return normalized[..^"-fast".Length];
+        }
+        serviceTier = null;
+        return normalized;
+    }
+
+    /// <summary>
+    /// Codex kennt nur low/medium/high/xhigh/max/ultra als model_reasoning_effort. Die Launcher-
+    /// Stufen "none" und "minimal" gibt es dort nicht -- sie werden weggelassen, dann gilt der
+    /// Standardwert des Modells statt eines abgelehnten Wertes.
+    /// </summary>
+    private static string? NormalizeCodexEffort(string? effortLevel)
+    {
+        var normalized = NormalizeThinkingLevel(effortLevel);
+        return normalized is "low" or "medium" or "high" or "xhigh" or "max" or "ultra" ? normalized : null;
+    }
+
+    private static string BuildCodexTitle(string colorName, string? effort) =>
+        string.IsNullOrWhiteSpace(effort) ? $"Codex-{colorName}" : $"Codex-{colorName}-{effort}";
+
+    private static Process? LaunchCodexCliViaRobustPowerShell(
+        string wtPath,
+        string robustLauncherScript,
+        string powerShellPath,
+        string innerScript,
+        string workDir,
+        string title,
+        string slug,
+        string? effort,
+        TerminalTabColor tabColor,
+        Logger log)
+    {
+        var tabArgs = new[]
+        {
+            "new-tab",
+            "--tabColor", tabColor.Hex,
+            "--title", title,
+            "--startingDirectory", workDir,
+            powerShellPath,
+            "-NoExit",
+            "-ExecutionPolicy", "Bypass",
+            "-File", innerScript
+        };
+        var fallbackArgs = new[]
+        {
+            "-NoExit",
+            "-ExecutionPolicy", "Bypass",
+            "-File", innerScript
+        };
+
+        var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-codex-wt-{Guid.NewGuid():N}.ps1");
+        var script = $$"""
+$ErrorActionPreference = 'Continue'
+. {{PowerShellLiteral(robustLauncherScript)}}
+$tabArgs = @({{PowerShellArrayLiteral(tabArgs)}})
+$fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
+try {
+    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'openlauncher-codex-cli-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
+    if (-not $ok) { exit 2 }
+} finally {
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}
+""";
+        File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = powerShellPath,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = workDir,
+        };
+        psi.ArgumentList.Add("-NoProfile");
+        psi.ArgumentList.Add("-ExecutionPolicy");
+        psi.ArgumentList.Add("Bypass");
+        psi.ArgumentList.Add("-File");
+        psi.ArgumentList.Add(tempScript);
+        log.Info("OpenLauncherService", "LaunchCodexCliViaRobustPowerShell", "Codex-CLI-Start vorbereitet", new { slug, effort, tabColor = tabColor.Name });
+        return Process.Start(psi);
+    }
+
+    /// <summary>
+    /// Temp-Script fuer den Codex-Start. Aufbau wie beim Claude-Weg (-File statt inline -Command,
+    /// damit kein ';' in die Windows-Terminal-Argumentliste geraet).
+    ///
+    /// Wichtige Schalter:
+    ///   -C &lt;workDir&gt;                 Arbeitswurzel = Projektordner, dort liegt die Profil-AGENTS.md.
+    ///   -c project_doc_max_bytes=...  Codex schneidet Projekt-Dokumente sonst bei 32 KiB ab; der
+    ///                                 Modus-Prompt steht am ENDE der Datei und wuerde als Erstes
+    ///                                 stillschweigend wegfallen.
+    ///   -c model_reasoning_effort     Effort-Stufe aus dem Launcher (nur gueltige Codex-Werte).
+    ///   --dangerously-bypass-approvals-and-sandbox  Gegenstueck zu Claudes
+    ///                                 --dangerously-skip-permissions: kein Nachfragen pro Befehl.
+    /// </summary>
+    private static string BuildCodexStartScript(string slug, string workDir, string? effort, string? serviceTier)
+    {
+        var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-codex-cli-{Guid.NewGuid():N}.ps1");
+        var script = $$"""
+$ErrorActionPreference = 'Continue'
+{{ProgrammerProcessPriorityScript}}
+[Console]::Write("`e[?1004l")
+Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
+
+# Aktuellen persistenten Windows-PATH laden, damit codex.exe erreichbar ist.
+{{PersistentPathRefreshScript}}
+
+# Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
+{{InheritedAgentEnvScrubScript}}
+
+$profilePath = Join-Path $HOME 'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
+if (Test-Path $profilePath) {
+    . $profilePath
+}
+
+try {
+    $codexArgs = @(
+        '--dangerously-bypass-approvals-and-sandbox',
+        '-C', {{PowerShellLiteral(workDir)}},
+        '-m', {{PowerShellLiteral(slug)}},
+        '-c', 'project_doc_max_bytes=1048576'
+    )
+    $effort = {{PowerShellLiteral(effort ?? string.Empty)}}
+    if ($effort) {
+        $codexArgs += @('-c', ('model_reasoning_effort="{0}"' -f $effort))
+    }
+    $serviceTier = {{PowerShellLiteral(serviceTier ?? string.Empty)}}
+    if ($serviceTier) {
+        $codexArgs += @('-c', ('service_tier="{0}"' -f $serviceTier))
+    }
+    $agentsFile = Join-Path {{PowerShellLiteral(workDir)}} 'AGENTS.md'
+    if (Test-Path -LiteralPath $agentsFile) {
+        $firstLine = (Get-Content -LiteralPath $agentsFile -TotalCount 1 -ErrorAction SilentlyContinue)
+        Write-Host ("[OpenLauncher] Profil-AGENTS.md aktiv: {0}" -f $firstLine) -ForegroundColor DarkGray
+    } else {
+        Write-Host "[OpenLauncher] Achtung: keine AGENTS.md im Arbeitsverzeichnis - Codex startet ohne Profil." -ForegroundColor Yellow
+    }
+    & codex @codexArgs
+} finally {
+    [Console]::Write("`e[?1004l")
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}
+""";
+        File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return tempScript;
+    }
+
     private static string? ResolveWt()
     {
         try
@@ -411,6 +649,9 @@ $env:Path = $pathEntries -join ';'
 
     private static TerminalTabColor PickClaudeTerminalTabColor() =>
         PickRotatingTabColor(ClaudeTerminalTabColors, ResolveClaudeTabColorStatePath());
+
+    private static TerminalTabColor PickCodexTerminalTabColor() =>
+        PickRotatingTabColor(CodexTerminalTabColors, ResolveCodexTabColorStatePath());
 
     /// <summary>
     /// Zieht eine Farbe aus der Palette, ohne die zuletzt benutzte zu wiederholen, und arbeitet
@@ -476,6 +717,11 @@ $env:Path = $pathEntries -join ';'
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "OpenLauncher",
         "claude-tab-color-state.json");
+
+    private static string ResolveCodexTabColorStatePath() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "OpenLauncher",
+        "codex-tab-color-state.json");
 
     private static string EscapePowerShellSingleQuotedValue(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 
