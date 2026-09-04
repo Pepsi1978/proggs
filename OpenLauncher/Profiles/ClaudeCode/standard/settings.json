@@ -53,5 +53,5 @@
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
-  "advisorModel": "claude-fable-5-1"
+  "advisorModel": "fable"
 }

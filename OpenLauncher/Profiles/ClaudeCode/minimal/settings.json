@@ -46,6 +46,7 @@
   },
   "language": "german",
   "effortLevel": "xhigh",
+  "advisorModel": "fable",
   "askUserQuestionTimeout": "never",
   "skipDangerousModePermissionPrompt": true,
   "claudeMdExcludes": [
@@ -57,6 +58,5 @@
   "preferredNotifChannel": "auto",
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "advisorModel": "claude-fable-5-1"
+  "agentPushNotifEnabled": true
 }
