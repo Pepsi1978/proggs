@@ -550,5 +550,6 @@
         ]
       }
     ]
-  }
+  },
+  "advisorModel": "claude-fable-5-1"
 }

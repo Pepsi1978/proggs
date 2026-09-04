@@ -58,5 +58,6 @@
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "_comment": "macOS-Fassung des Minimal-Profils. 1:1 aus Profiles/ClaudeCode/minimal/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript. Das Profil bleibt regelfrei - die Skills blendet der Launcher per Symlink ein."
+  "_comment": "macOS-Fassung des Minimal-Profils. 1:1 aus Profiles/ClaudeCode/minimal/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript. Das Profil bleibt regelfrei - die Skills blendet der Launcher per Symlink ein.",
+  "advisorModel": "claude-fable-5-1"
 }

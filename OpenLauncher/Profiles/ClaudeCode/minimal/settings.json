@@ -58,5 +58,5 @@
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "advisorModel": "fable"
+  "advisorModel": "claude-fable-5-1"
 }

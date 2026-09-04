@@ -508,5 +508,6 @@
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "_comment_PermissionRequest": "Intentionally removed -- caused bypassPermissions mode reset (2026-03-20)"
+  "_comment_PermissionRequest": "Intentionally removed -- caused bypassPermissions mode reset (2026-03-20)",
+  "advisorModel": "claude-fable-5-1"
 }
