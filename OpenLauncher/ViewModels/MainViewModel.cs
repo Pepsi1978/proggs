@@ -15,6 +15,7 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly ModelRegistry _registry;
     private readonly OpenRouterService _router = new();
+    private readonly OpenCodeCatalogService _openCodeCatalog = new();
     private readonly LmStudioService _lmStudio = new();
     private readonly OpenLauncherService _launcher = new();
     private readonly OpenCodeUpdateService _updater = new();
@@ -335,6 +336,65 @@ public sealed partial class MainViewModel : ObservableObject
         {
             Logger.Instance.Warn("MainViewModel", "RefreshOpenRouterFreeModelsAsync", $"OpenRouterFree bleibt bei Fallback-Liste: {ex.Message}");
         }
+    }
+
+    [RelayCommand]
+    private async Task RefreshModelCatalogAsync()
+    {
+        StatusText = "Aktualisiere Modellkataloge …";
+        var updated = new List<string>();
+        var failed = new List<string>();
+
+        try
+        {
+            var catalog = await _router.GetModelCatalogAsync(forceRefresh: true);
+            _registry.SyncOpenRouterModels(catalog.Models);
+            _registry.SyncOpenRouterFreeModels(catalog.FreeModels);
+            updated.Add($"OpenRouter {catalog.Models.Count}");
+            updated.Add($"OpenRouterFree {catalog.FreeModels.Count}");
+        }
+        catch (Exception ex)
+        {
+            failed.Add("OpenRouter");
+            Logger.Instance.Warn("MainViewModel", "RefreshModelCatalogAsync", $"OpenRouter-Katalog nicht aktualisiert: {ex.Message}");
+        }
+
+        try
+        {
+            var freeZenModels = await _openCodeCatalog.GetFreeZenModelsAsync();
+            if (freeZenModels.Count > 0)
+            {
+                _registry.SyncOpenCodeZenFreeModels(freeZenModels);
+                updated.Add($"OpenCode Zen Free {freeZenModels.Count}");
+            }
+            else
+            {
+                failed.Add("OpenCode Zen Free");
+            }
+        }
+        catch (Exception ex)
+        {
+            failed.Add("OpenCode Zen Free");
+            Logger.Instance.Warn("MainViewModel", "RefreshModelCatalogAsync", $"OpenCode-Zen-Katalog nicht aktualisiert: {ex.Message}");
+        }
+
+        RefreshHiddenModels();
+        if (SelectedModel != null && FindGroupForModel(SelectedModel) == null)
+            SelectedModel = ModelGroups.SelectMany(group => group.Models).FirstOrDefault(model => !model.IsHidden);
+
+        StatusText = updated.Count == 0
+            ? $"Modellaktualisierung fehlgeschlagen: {string.Join(", ", failed)}. Bestehende Listen bleiben erhalten."
+            : failed.Count == 0
+                ? $"Modelle aktualisiert: {string.Join(" · ", updated)}."
+                : $"Modelle teilweise aktualisiert: {string.Join(" · ", updated)}; nicht erreichbar: {string.Join(", ", failed)}.";
+    }
+
+    private void RefreshHiddenModels()
+    {
+        HiddenModels.Clear();
+        foreach (var model in ModelGroups.SelectMany(group => group.Models).Where(model => model.IsHidden))
+            HiddenModels.Add(model);
+        HasHiddenModels = HiddenModels.Count > 0;
     }
 
     /// <summary>

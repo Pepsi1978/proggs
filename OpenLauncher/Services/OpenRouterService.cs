@@ -6,6 +6,8 @@ using OpenLauncher.Models;
 
 namespace OpenLauncher.Services;
 
+public sealed record OpenRouterModelCatalog(List<ModelEntry> Models, List<ModelEntry> FreeModels);
+
 /// <summary>
 /// Ruft die Provider-Liste für ein OpenRouter-Modell ab.
 /// Endpunkt: GET https://openrouter.ai/api/v1/models/{author}/{slug}/endpoints
@@ -115,33 +117,50 @@ public sealed class OpenRouterService
         }
     }
 
-    public async Task<List<ModelEntry>> GetFreeModelsAsync(CancellationToken ct = default)
+    public async Task<OpenRouterModelCatalog> GetModelCatalogAsync(CancellationToken ct = default, bool forceRefresh = false)
     {
         var log = Logger.Instance;
         try
         {
-            var json = await FetchModelsJsonAsync(ct).ConfigureAwait(false);
+            var json = await FetchModelsJsonAsync(ct, forceRefresh).ConfigureAwait(false);
             using var doc = JsonDocument.Parse(json);
             var models = new List<ModelEntry>();
+            var freeModels = new List<ModelEntry>();
 
             if (doc.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
             {
                 foreach (var item in data.EnumerateArray())
                 {
-                    var model = ParseFreeModel(item);
-                    if (model != null) models.Add(model);
+                    var model = ParseModel(item, out var isFree);
+                    if (model == null) continue;
+                    if (isFree)
+                    {
+                        model.DisplayName = NormalizeFreeModelName(model.DisplayName);
+                        freeModels.Add(model);
+                    }
+                    else
+                    {
+                        models.Add(model);
+                    }
                 }
             }
 
             models.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase));
-            log.Info("OpenRouterService", "GetFreeModelsAsync", $"{models.Count} kostenlose OpenRouter-Modelle geladen");
-            return models;
+            freeModels.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase));
+            log.Info("OpenRouterService", "GetModelCatalogAsync", $"{models.Count} regulaere und {freeModels.Count} kostenlose OpenRouter-Modelle geladen");
+            return new OpenRouterModelCatalog(models, freeModels);
         }
         catch (Exception ex)
         {
-            log.Error("OpenRouterService", "GetFreeModelsAsync", $"Free-Modellliste fehlgeschlagen: {ex.Message}", new { ex.GetType().Name });
+            log.Error("OpenRouterService", "GetModelCatalogAsync", $"Modellkatalog fehlgeschlagen: {ex.Message}", new { ex.GetType().Name });
             throw;
         }
+    }
+
+    public async Task<List<ModelEntry>> GetFreeModelsAsync(CancellationToken ct = default)
+    {
+        var catalog = await GetModelCatalogAsync(ct).ConfigureAwait(false);
+        return catalog.FreeModels;
     }
 
     public async Task<List<string>> GetThinkingLevelsAsync(string slug, CancellationToken ct = default, bool forceRefresh = false)
@@ -172,18 +191,20 @@ public sealed class OpenRouterService
         return [];
     }
 
-    private static ModelEntry? ParseFreeModel(JsonElement item)
+    private static ModelEntry? ParseModel(JsonElement item, out bool isFree)
     {
+        isFree = false;
         try
         {
             if (!item.TryGetProperty("id", out var idEl) || idEl.ValueKind != JsonValueKind.String) return null;
             var id = idEl.GetString() ?? string.Empty;
-            if (!id.EndsWith(":free", StringComparison.OrdinalIgnoreCase)) return null;
+            if (string.IsNullOrWhiteSpace(id)) return null;
 
-            if (!item.TryGetProperty("pricing", out var pricing) || pricing.ValueKind != JsonValueKind.Object) return null;
-            var prompt = ParseDouble(pricing, "prompt");
-            var completion = ParseDouble(pricing, "completion");
-            if (prompt != 0 || completion != 0) return null;
+            if (id.EndsWith(":free", StringComparison.OrdinalIgnoreCase) &&
+                item.TryGetProperty("pricing", out var pricing) && pricing.ValueKind == JsonValueKind.Object)
+            {
+                isFree = ParseDouble(pricing, "prompt") == 0 && ParseDouble(pricing, "completion") == 0;
+            }
 
             var name = item.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String
                 ? nameEl.GetString() ?? id
@@ -192,14 +213,14 @@ public sealed class OpenRouterService
             return new ModelEntry
             {
                 Slug = id,
-                DisplayName = NormalizeFreeModelName(name),
+                DisplayName = name,
                 ProviderId = "openrouter",
                 ProviderName = "OpenRouter"
             };
         }
         catch (Exception ex)
         {
-            Logger.Instance.Warn("OpenRouterService", "ParseFreeModel", $"Modell übersprungen: {ex.Message}");
+            Logger.Instance.Warn("OpenRouterService", "ParseModel", $"Modell übersprungen: {ex.Message}");
             return null;
         }
     }

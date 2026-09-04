@@ -229,8 +229,7 @@ public sealed class ModelRegistry
 
         // Der alte Slug darf im OpenRouterFree-Sync nicht wieder auftauchen (gleiche Logik wie beim
         // Entfernen) — sonst legte der naechste Abgleich das umbenannte Modell erneut daneben an.
-        if (!string.Equals(oldSlug, normalized, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(group.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(oldSlug, normalized, StringComparison.OrdinalIgnoreCase) && IsLiveCatalogGroup(group.Id))
         {
             AddUnique(group.HiddenModelSlugs, oldSlug);
             AddUnique(group.KnownSyncedModelSlugs, oldSlug);
@@ -239,7 +238,7 @@ public sealed class ModelRegistry
         if (!ReferenceEquals(group, targetGroup))
         {
             group.Models.RemoveAt(index);
-            if (string.Equals(group.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase))
+            if (IsLiveCatalogGroup(group.Id))
             {
                 AddUnique(group.HiddenModelSlugs, oldSlug);
                 AddUnique(group.KnownSyncedModelSlugs, oldSlug);
@@ -267,7 +266,7 @@ public sealed class ModelRegistry
         if (index < 0 || index >= group.Models.Count) return;
         var m = group.Models[index];
         group.Models.RemoveAt(index);
-        if (string.Equals(group.Id, "openrouter-free", StringComparison.OrdinalIgnoreCase))
+        if (IsLiveCatalogGroup(group.Id))
         {
             AddUnique(group.HiddenModelSlugs, m.Slug);
             AddUnique(group.KnownSyncedModelSlugs, m.Slug);
@@ -355,6 +354,12 @@ public sealed class ModelRegistry
     public void SyncOpenRouterFreeModels(IEnumerable<ModelEntry> remoteModels) =>
         SyncGroupModels("openrouter-free", remoteModels);
 
+    public void SyncOpenRouterModels(IEnumerable<ModelEntry> remoteModels) =>
+        SyncGroupModels("openrouter", remoteModels);
+
+    public void SyncOpenCodeZenFreeModels(IEnumerable<ModelEntry> remoteModels) =>
+        SyncGroupModels("opencode-zen-free", remoteModels);
+
     /// <summary>
     /// Gleicht die Gruppe "LM Studio" mit den Modellen ab, die der lokale LM-Studio-Server
     /// gerade anbietet. Entfernte Modelle wandern in die Ausgeblendet-Liste, eigene Eintraege
@@ -423,6 +428,11 @@ public sealed class ModelRegistry
         group.RefreshHeaderText();
         Logger.Instance.Info("ModelRegistry", "SyncGroupModels", $"{group.Title}: {group.Models.Count} sichtbare, {group.HiddenModelSlugs.Count} ausgeblendete Modelle");
     }
+
+    private static bool IsLiveCatalogGroup(string groupId) =>
+        groupId.Equals("openrouter", StringComparison.OrdinalIgnoreCase) ||
+        groupId.Equals("openrouter-free", StringComparison.OrdinalIgnoreCase) ||
+        groupId.Equals("opencode-zen-free", StringComparison.OrdinalIgnoreCase);
 
     private void RepairAndNormalize()
     {
