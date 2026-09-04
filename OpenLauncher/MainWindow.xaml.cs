@@ -126,6 +126,14 @@ public partial class MainWindow : Window
         };
         RestoreWindowLayout();
         ModelColumn.Width = new GridLength(_layoutSettings.ModelPaneWidth);
+        EffortColumn.Width = new GridLength(_layoutSettings.EffortPaneWidth);
+        // Beide Zeilen zusammen setzen: nur eine anzufassen verschiebt das Verhaeltnis, weil die
+        // andere ihren alten Sternwert behaelt.
+        if (!double.IsNaN(_layoutSettings.ProviderRowShare))
+        {
+            ProviderRow.Height = new GridLength(_layoutSettings.ProviderRowShare, GridUnitType.Star);
+            ProfileRow.Height = new GridLength(1 - _layoutSettings.ProviderRowShare, GridUnitType.Star);
+        }
         ViewModel = new MainViewModel();
         DataContext = ViewModel;
 
@@ -505,6 +513,21 @@ public partial class MainWindow : Window
     private void ModelSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
     {
         _layoutSettings.ModelPaneWidth = ModelColumn.ActualWidth;
+        _layoutSettings.Save();
+    }
+
+    private void EffortSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _layoutSettings.EffortPaneWidth = EffortColumn.ActualWidth;
+        _layoutSettings.Save();
+    }
+
+    private void ProfileSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        var total = ProviderRow.ActualHeight + ProfileRow.ActualHeight;
+        if (total <= 0) return;
+
+        _layoutSettings.ProviderRowShare = ProviderRow.ActualHeight / total;
         _layoutSettings.Save();
     }
 

@@ -554,16 +554,19 @@
 
                 <!-- Rechte Spalte: Provider + Thinking -->
                 <Grid Grid.Column="2">
+                    <!-- Die 14er-Luecken zwischen den Karten sind zugleich die Griffe: senkrecht zwischen
+                         Provider/Profil und Effort, waagerecht zwischen Provider und Profil. Ohne sie liess
+                         sich bei sichtbarer CLI-Zeile (GPT-Modelle) der untere Teil des Profils nicht sehen. -->
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" MinWidth="540"/>
+                        <ColumnDefinition x:Name="RightMainColumn" Width="*" MinWidth="400"/>
                         <ColumnDefinition Width="14"/>
-                        <ColumnDefinition Width="210" MinWidth="190" MaxWidth="260"/>
+                        <ColumnDefinition x:Name="EffortColumn" Width="210" MinWidth="150"/>
                     </Grid.ColumnDefinitions>
 
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition x:Name="ProviderRow" Height="*" MinHeight="120"/>
                         <RowDefinition Height="14"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition x:Name="ProfileRow" Height="*" MinHeight="180"/>
                     </Grid.RowDefinitions>
 
                 <Border Grid.Column="0" Grid.Row="0" Style="{StaticResource Card}" Padding="0">
@@ -678,7 +681,7 @@
                                  Style="{x:Null}"
                                  Background="Transparent"
                                  BorderThickness="0"
-                                 Height="116"
+                                 Height="98"
                                  VerticalAlignment="Top"
                                  ItemsSource="{Binding Profiles}"
                                  SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
@@ -693,7 +696,7 @@
                                 <Style TargetType="ListBoxItem" BasedOn="{StaticResource ModelItem}">
                                     <Setter Property="IsEnabled" Value="{Binding IsEnabled}"/>
                                     <Setter Property="Margin" Value="4"/>
-                                    <Setter Property="Padding" Value="12"/>
+                                    <Setter Property="Padding" Value="12,9"/>
                                     <Setter Property="VerticalContentAlignment" Value="Stretch"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsEnabled}" Value="False">
@@ -835,6 +838,66 @@
                         </Border>
                     </Grid>
                 </Border>
+
+                <!-- Senkrechter Griff: verschiebt die Grenze zwischen Provider/Profil und Effort.
+                     Steht nach den Karten, damit er im Z-Order oben liegt und den Mauszeiger bekommt. -->
+                <GridSplitter Grid.Column="1" Grid.RowSpan="3"
+                              Width="14"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              ResizeDirection="Columns"
+                              ResizeBehavior="PreviousAndNext"
+                              DragCompleted="EffortSplitter_DragCompleted"
+                              Background="Transparent"
+                              Cursor="SizeWE">
+                    <GridSplitter.Template>
+                        <ControlTemplate TargetType="GridSplitter">
+                            <Grid Background="Transparent">
+                                <Border x:Name="GripLine"
+                                        Width="1"
+                                        HorizontalAlignment="Center"
+                                        Background="{DynamicResource BorderBrushStrong}"
+                                        Opacity="0.62"/>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="GripLine" Property="Width" Value="2"/>
+                                    <Setter TargetName="GripLine" Property="Opacity" Value="0.95"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </GridSplitter.Template>
+                </GridSplitter>
+
+                <!-- Waagerechter Griff: verschiebt die Grenze zwischen Provider und Profil. Bewusst ohne
+                     ColumnSpan, sonst laege er unter der Effort-Karte. -->
+                <GridSplitter Grid.Row="1" Grid.Column="0"
+                              Height="14"
+                              HorizontalAlignment="Stretch"
+                              VerticalAlignment="Stretch"
+                              ResizeDirection="Rows"
+                              ResizeBehavior="PreviousAndNext"
+                              DragCompleted="ProfileSplitter_DragCompleted"
+                              Background="Transparent"
+                              Cursor="SizeNS">
+                    <GridSplitter.Template>
+                        <ControlTemplate TargetType="GridSplitter">
+                            <Grid Background="Transparent">
+                                <Border x:Name="GripLine"
+                                        Height="1"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource BorderBrushStrong}"
+                                        Opacity="0.62"/>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="GripLine" Property="Height" Value="2"/>
+                                    <Setter TargetName="GripLine" Property="Opacity" Value="0.95"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </GridSplitter.Template>
+                </GridSplitter>
                 </Grid>
             </Grid>
 
