@@ -176,4 +176,4 @@ sie taugt nicht als Quelle.
 
 ---
 
-Version 1.6.4 (05.09.2026, 11:44 Uhr)
+Version 1.6.5 (05.09.2026, 11:54 Uhr)

@@ -136,6 +136,21 @@
   let ich = null;
   let ende = false;
 
+  // Seit September 2026: Der Feldname für die Freischaltung hat schon gewechselt —
+  // darum mehrere Schreibweisen prüfen und beim ersten Clip alle Kandidaten loggen.
+  let feldLogSchon = false;
+  const istFreigeschaltet = (c) => {
+    if (!feldLogSchon) {
+      feldLogSchon = true;
+      const kandidaten = Object.keys(c || {}).filter((k) => /download|unlock|lock/i.test(k));
+      console.log('   Freischalt-Felder im Feed: ' + (kandidaten.length ? kandidaten.join(', ') : '(keine)') +
+        ' | is_download_unlocked=' + c.is_download_unlocked + ' is_public=' + c.is_public);
+    }
+    return c.is_download_unlocked === true || c.download_unlocked === true ||
+      c.isDownloadUnlocked === true || c.downloadUnlocked === true ||
+      c.is_unlocked === true || c.unlocked === true;
+  };
+
   /** Liest eine Feed-Seite und trägt die eigenen, noch unbekannten Songs ein. */
   const seiteLesen = async (nr) => {
     const daten = await api('/api/feed/v2?page=' + nr + '&page_size=20');
@@ -154,7 +169,10 @@
       const wer = c.handle || (c.user && c.user.handle);
       if (ich && typeof wer === 'string' && wer.toLowerCase() !== ich) continue;
       if (bekannt.has(c.id) || gefunden.has(c.id)) continue;
-      if (grenze && c.created_at && Date.parse(c.created_at) <= grenze && !fehlt.has(c.id)) continue;
+      const frei = istFreigeschaltet(c);
+      // Zeitgrenze gilt nur für noch gesperrte Songs: wer von Hand freigeschaltet hat,
+      // will auch alte Songs holen — die lägen sonst ewig hinter der Grenze.
+      if (!frei && grenze && c.created_at && Date.parse(c.created_at) <= grenze && !fehlt.has(c.id)) continue;
 
       const medien = Array.isArray(c.media_urls)
         ? c.media_urls.map((m) => (typeof m === 'string' ? m : m && m.url)).filter((u) => typeof u === 'string')
@@ -168,7 +186,7 @@
         privat: typeof c.is_public === 'boolean' ? !c.is_public : true,
         download_url: undefined,
         // Seit September 2026: erst freischalten, dann gibt es einen Download-Link.
-        freigeschaltet: c.is_download_unlocked === true,
+        freigeschaltet: frei,
       });
       neu++;
     }
@@ -191,18 +209,7 @@
       console.log('   Seiten bis ' + seite + ' → ' + gefunden.size + ' neue Songs gefunden');
 
       if (alleLeer) break;
-      // Fehlt noch eine Datei aus dem Bestand, wird weitergesucht, bis sie auftaucht —
-      // sie kann irgendwo tief in der Bibliothek liegen. Ebenso bei --alles.
-      const nochGesucht = [...fehlt].some((id) => !gefunden.has(id));
-      if (neu === 0 && !hallo.alles && !nochGesucht) {
-        ohneNeues++;
-        if (ohneNeues >= GENUG) {
-          zeig('🏁 Ab hier ist alles bereits gesichert.', '#06c');
-          break;
-        }
-      } else {
-        ohneNeues = 0;
-      }
+      void neu; void nochGesucht; void ohneNeues;
       if (limit && gefunden.size >= limit) break;
       await warte(250);
     }
@@ -300,6 +307,18 @@
   }
 
   liste = liste.filter((s) => s.freigeschaltet);
+  if (!liste.length && gefunden.size) {
+    // Sicherheitsnetz: Falls Suno den Feldnamen erneut geändert hat und deshalb kein
+    // einziger Song als freigeschaltet erkannt wurde, den Link-Endpunkt entscheiden
+    // lassen statt alles zu verwerfen — gesperrte meldet er mit "not_authorized".
+    zeig('⚠️ Kein Song als freigeschaltet erkannt — versuche Links für alle ' + gefunden.size + ' (Suno entscheidet).', '#c60');
+    liste = [...gefunden.values()].sort((a, b) => {
+      const ta = a.created_at ? Date.parse(a.created_at) : 8.64e15;
+      const tb = b.created_at ? Date.parse(b.created_at) : 8.64e15;
+      return ta === tb ? a.id.localeCompare(b.id) : ta - tb;
+    });
+    if (limit) liste = liste.slice(-limit);
+  }
   if (!liste.length) {
     zeig('❗ Kein freigeschalteter Song übrig — nichts zu laden.', '#c00');
     await anDownloader('/fertig', { gesamt: 0 });
