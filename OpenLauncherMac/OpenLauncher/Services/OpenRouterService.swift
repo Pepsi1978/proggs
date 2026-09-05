@@ -24,31 +24,6 @@ final class OpenRouterService {
         return URLSession(configuration: config)
     }()
 
-    // Die vollstaendige /models-Antwort ist gross und wird sowohl beim Start (Free-Modelle) als
-    // auch bei jedem Modellwechsel (Thinking-Level) gebraucht. Ohne Cache laedt jeder Wechsel die
-    // komplette Liste neu. Kurzlebiger Cache (TTL); der Actor ersetzt die SemaphoreSlim aus C# und
-    // verhindert paralleles Doppel-Laden, ohne in einem async-Kontext zu sperren (NSLock waere dort
-    // in Swift 6 ein Fehler).
-    private static let modelsCacheTtl: TimeInterval = 300
-
-    private actor ModelsCache {
-        static let shared = ModelsCache()
-        private var json: String?
-        private var fetched = Date.distantPast
-
-        /// Liefert den zwischengespeicherten Text oder laedt ihn genau einmal nach. Weitere
-        /// Aufrufer warten am Actor, statt einen zweiten Request zu starten.
-        func value(forceRefresh: Bool, loader: () async throws -> String) async throws -> String {
-            if !forceRefresh, let json, Date().timeIntervalSince(fetched) < OpenRouterService.modelsCacheTtl {
-                return json
-            }
-            let loaded = try await loader()
-            json = loaded
-            fetched = Date()
-            return loaded
-        }
-    }
-
     private static let throughputCacheLock = NSLock()
     nonisolated(unsafe) private static var throughputCache: [String: Double]?
     private static var throughputCachePath: String {
@@ -139,15 +114,9 @@ final class OpenRouterService {
     // ===================== /models mit Cache =====================
 
     private static func fetchModelsJson(forceRefresh: Bool = false) async throws -> String {
-        try await ModelsCache.shared.value(forceRefresh: forceRefresh) {
-            guard let url = URL(string: "\(baseUrl)/models") else { return "" }
-            let (data, response) = try await session.data(from: url)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                throw NSError(domain: "OpenRouter", code: (response as? HTTPURLResponse)?.statusCode ?? -1,
-                              userInfo: [NSLocalizedDescriptionKey: "HTTP-Fehler beim Abruf der Modell-Liste"])
-            }
-            return String(data: data, encoding: .utf8) ?? ""
-        }
+        let data = try await PublicCatalogHttp.shared.get("https://openrouter.ai/api/v1/models", force: forceRefresh)
+        guard let json = String(data: data, encoding: .utf8) else { throw URLError(.cannotParseResponse) }
+        return json
     }
 
     // ===================== Parser =====================

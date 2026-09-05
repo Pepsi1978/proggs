@@ -22,6 +22,13 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly InstructionProfileService _profiles = new();
     private readonly ModelDefaultsService _modelDefaults = new();
     private readonly ThinkingCache _thinkingCache = new();
+    private readonly EffortRefreshService _effortRefresh = new();
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly System.Windows.Threading.DispatcherTimer _effortTimer = new() { Interval = TimeSpan.FromMinutes(1) };
+    private readonly Dictionary<string, (ModelEntry Model, string Access)> _visitedEfforts = new();
+    private bool _periodicBusy;
+    public string ThinkingAccess => IsClaudeCodeModel(SelectedModel) ? "claude-code" :
+        HasCliChoice ? SelectedCliTarget?.Id ?? "opencode" : "opencode";
     private CancellationTokenSource? _loadCts;
     private CancellationTokenSource? _thinkingCts;
 
@@ -110,6 +117,8 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshLmStudioModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
+        _effortTimer.Tick += async (_, _) => await RefreshPeriodicEffortsAsync();
+        _effortTimer.Start();
 
         // Version UND Zeitstempel kommen aus der Assembly: die Uhrzeit setzt MSBuild beim Compile
         // (Target "SetBuildTimestamp"), damit hier nie wieder ein von Hand getippter - und damit
@@ -220,7 +229,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         RefreshModelDefaultState();
         if (SelectedModel == null || value == null) return;
-        _thinkingCache.Save(SelectedModel.ModelString, ThinkingOptions.Select(option => option.Value), value.Value);
+        if (!_applyingModelDefault)
+            _thinkingCache.Save(EffortRefreshService.Key(SelectedModel, ThinkingAccess), ThinkingOptions.Select(option => option.Value), value.Value);
         var label = IsClaudeCodeModel(SelectedModel) ? "Effort" : "Thinking";
         StatusText = $"{label} für {SelectedModel.DisplayName}: {value.DisplayName}";
     }
@@ -233,6 +243,12 @@ public sealed partial class MainViewModel : ObservableObject
         RefreshModelDefaultState();
         if (_applyingModelDefault || value == null || !HasCliChoice) return;
         StatusText = $"Ziel-CLI für {SelectedModel?.DisplayName}: {value.DisplayName}";
+        if (SelectedModel != null)
+        {
+            SelectedThinkingOption = null;
+            ThinkingOptions.Clear();
+            _ = LoadThinkingOptionsAsync(SelectedModel);
+        }
     }
 
     /// <summary>Zeigt unter der Ueberschrift, aus welcher Datei das gewaehlte Werkzeug seine Regeln liest.</summary>
@@ -248,10 +264,14 @@ public sealed partial class MainViewModel : ObservableObject
         _thinkingCts?.Dispose();
         _thinkingCts = new CancellationTokenSource();
         var ct = _thinkingCts.Token;
+        var access = ThinkingAccess;
+        var key = EffortRefreshService.Key(model, access);
+        _visitedEfforts[key] = (model, access);
         if (!forceRefresh)
         {
-            var cached = _thinkingCache.Find(model.ModelString);
-            foreach (var level in cached?.Levels ?? GetStaticThinkingLevels(model).ToList())
+            var cached = _thinkingCache.Find(key) ?? (access == "codex" ? null : _thinkingCache.Find(model.ModelString));
+            var local = access == "codex" ? EffortRefreshService.ReadCodexCache(model) : null;
+            foreach (var level in cached?.Levels ?? local?.Levels ?? GetStaticThinkingLevels(model).ToList())
                 ThinkingOptions.Add(ToThinkingOption(level));
             var selected = _pendingModelDefault?.ThinkingValue ?? cached?.Selected;
             SelectedThinkingOption = ThinkingOptions.FirstOrDefault(option => option.Value == selected);
@@ -262,38 +282,15 @@ public sealed partial class MainViewModel : ObservableObject
 
         try
         {
-            List<string>? currentLevels;
-            string source;
-            if (string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
-            {
-                currentLevels = await _router.GetThinkingLevelsAsync(model.Slug, ct, forceRefresh);
-                source = "Aus OpenRouter-Fähigkeiten abgeleitet";
-            }
-            else
-            {
-                currentLevels = await _openCodeCatalog.GetThinkingLevelsAsync(model, ct, forceRefresh);
-                source = "Aktuell aus models.dev";
-            }
-
+            var snapshot = await _effortRefresh.RefreshAsync(model, access, ct, forceRefresh);
             if (ct.IsCancellationRequested) return;
-            if (currentLevels == null)
+            if (snapshot == null)
             {
-                ThinkingSubtitle = "Katalog ohne Stufenangabe · bisherige Stufen bleiben";
+                ThinkingSubtitle = "Bisherige Stufen bleiben · Quellendetails unter Einstellungen";
+                UpdateThinkingState("Noch kein bestätigter Effort · Quellenbericht unter Einstellungen.");
                 return;
             }
-            var levels = currentLevels;
-            // Read AFTER the await: the user may have selected a level during refresh.
-            var previousValue = SelectedThinkingOption?.Value;
-            SelectedThinkingOption = null;
-            ThinkingOptions.Clear();
-            foreach (var option in levels.Select(ToThinkingOption)) ThinkingOptions.Add(option);
-            SelectedThinkingOption = ThinkingOptions.FirstOrDefault(option => option.Value == previousValue);
-            if (SelectedThinkingOption == null) SelectProfileThinkingOption();
-            _thinkingCache.Save(model.ModelString, levels, SelectedThinkingOption?.Value);
-            ThinkingSubtitle = source;
-            var empty = IsClaudeCodeModel(model) ? "Kein Effort für dieses Modell erkannt." : "Kein Thinking für dieses Modell erkannt.";
-            var prompt = IsClaudeCodeModel(model) ? "Effort-Wert wählen." : "Thinking-Wert wählen.";
-            UpdateThinkingState(levels.Count == 0 ? empty : prompt);
+            ApplyEffortSnapshot(model, access, snapshot);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { /* ok */ }
         catch (Exception ex)
@@ -303,6 +300,70 @@ public sealed partial class MainViewModel : ObservableObject
             ThinkingSubtitle = "Aktualisierung fehlgeschlagen · bisherige/lokale Stufen";
             UpdateThinkingState("Thinking/Effort konnte nicht geprüft werden.");
         }
+    }
+
+    public void ApplyResearchResult(ModelEntry model, string access, EffortResearchResult result)
+    {
+        if (SelectedModel?.ModelString == model.ModelString && ThinkingAccess == access) _thinkingCts?.Cancel();
+        var snapshot = new EffortSnapshot(result.Levels, result.Source, result.CheckedAt, result.ExplicitRemoval);
+        ApplyEffortSnapshot(model, access, snapshot);
+        EffortRefreshService.Record(model, access, snapshot, "Belegte KI-Recherche übernommen; bestehende Stufen geschützt");
+    }
+
+    private void ApplyEffortSnapshot(ModelEntry model, string access, EffortSnapshot snapshot)
+    {
+        if (snapshot.Levels.Any(level => !EffortRefreshService.ValidLevel(level))) return;
+        var key = EffortRefreshService.Key(model, access);
+        var visible = SelectedModel?.ModelString == model.ModelString && ThinkingAccess == access;
+        var saved = _thinkingCache.Find(key);
+        var existing = visible ? ThinkingOptions.Select(x => x.Value).ToList() : saved?.Levels ?? [];
+        var levels = snapshot.CanRemove ? snapshot.Levels.Distinct().ToList() : existing.Union(snapshot.Levels).ToList();
+        var selected = visible ? SelectedThinkingOption?.Value : saved?.Selected;
+        if (visible)
+        {
+            for (var i = ThinkingOptions.Count - 1; i >= 0; i--)
+                if (!levels.Contains(ThinkingOptions[i].Value)) ThinkingOptions.RemoveAt(i);
+            foreach (var level in levels)
+                if (!ThinkingOptions.Any(x => x.Value == level)) ThinkingOptions.Add(ToThinkingOption(level));
+            SelectedThinkingOption = ThinkingOptions.FirstOrDefault(x => x.Value == selected);
+            if (SelectedThinkingOption == null) SelectProfileThinkingOption();
+            selected = SelectedThinkingOption?.Value;
+            ThinkingSubtitle = $"Stand {snapshot.CheckedAt.ToLocalTime():dd.MM. HH:mm} · " +
+                (snapshot.Source.StartsWith("https://models.dev") ? "models.dev" :
+                    snapshot.Source.Contains("\n") ? "belegte KI-Recherche" : snapshot.Source);
+            UpdateThinkingState("Laut Quelle keine auswählbaren Effort-Stufen.");
+        }
+        _thinkingCache.Save(key, levels, levels.Contains(selected ?? "") ? selected : null);
+    }
+
+    private async Task RefreshPeriodicEffortsAsync()
+    {
+        if (_periodicBusy || _lifetime.IsCancellationRequested) return;
+        var settings = ResearchSettingsService.Load();
+        if (settings.Mode != ResearchMode.Periodic) return;
+        _periodicBusy = true;
+        try
+        {
+            var reports = EffortRefreshService.GetReports();
+            foreach (var (key, target) in _visitedEfforts.ToArray())
+            {
+                var last = reports.FirstOrDefault(x => x.Model == key);
+                if (last != null && DateTimeOffset.UtcNow - last.AttemptedAt < TimeSpan.FromHours(settings.PeriodHours)) continue;
+                var result = await _effortRefresh.RefreshAsync(target.Model, target.Access, _lifetime.Token);
+                if (result != null) ApplyEffortSnapshot(target.Model, target.Access, result);
+            }
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception ex) { Logger.Instance.Warn(nameof(MainViewModel), "PeriodicEfforts", ex.Message); }
+        finally { _periodicBusy = false; }
+    }
+
+    public void StopBackgroundUpdates()
+    {
+        _effortTimer.Stop();
+        _lifetime.Cancel();
+        _thinkingCts?.Cancel();
+        _loadCts?.Cancel();
     }
 
     private void UpdateThinkingState(string emptyText)

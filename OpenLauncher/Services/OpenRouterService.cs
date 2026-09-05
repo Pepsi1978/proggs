@@ -61,10 +61,7 @@ public sealed class OpenRouterService
             cached = _modelsJson;
             if (!forceRefresh && cached != null && DateTime.UtcNow - _modelsJsonUtc < ModelsCacheTtl) return cached;
 
-            using var req = new HttpRequestMessage(HttpMethod.Get, $"{BaseUrl}/models");
-            using var resp = await Http.SendAsync(req, ct).ConfigureAwait(false);
-            resp.EnsureSuccessStatusCode();
-            var json = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            var json = await PublicCatalogHttp.GetAsync($"{BaseUrl}/models", ct, forceRefresh).ConfigureAwait(false);
             _modelsJson = json;
             _modelsJsonUtc = DateTime.UtcNow;
             return json;

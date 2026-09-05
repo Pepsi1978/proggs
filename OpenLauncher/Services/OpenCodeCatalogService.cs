@@ -1,5 +1,3 @@
-using System.Net.Http;
-using System.Net;
 using System.Text.Json;
 using OpenLauncher.Models;
 
@@ -10,34 +8,12 @@ namespace OpenLauncher.Services;
 public sealed class OpenCodeCatalogService
 {
     private const string CatalogUrl = "https://models.dev/api.json";
-    private static readonly HttpClient Http = new(new SocketsHttpHandler
-    {
-        AutomaticDecompression = DecompressionMethods.All,
-        ConnectTimeout = TimeSpan.FromSeconds(8),
-        PooledConnectionLifetime = TimeSpan.FromMinutes(5)
-    }) { Timeout = TimeSpan.FromSeconds(30) };
-    private string? _thinkingCatalog;
-    private DateTime _thinkingCatalogAt;
 
     // null means unknown; an empty list means the catalog explicitly offers no effort choice.
     public async Task<List<string>?> GetThinkingLevelsAsync(ModelEntry model, CancellationToken ct, bool forceRefresh = false)
     {
-        if (forceRefresh || _thinkingCatalog == null || DateTime.UtcNow - _thinkingCatalogAt > TimeSpan.FromMinutes(5))
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, CatalogUrl);
-            if (forceRefresh) request.Headers.CacheControl = new() { NoCache = true };
-            using var response = await Http.SendAsync(request, ct).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            using var parsed = JsonDocument.Parse(json);
-            if (parsed.RootElement.ValueKind != JsonValueKind.Object)
-                throw new JsonException("Modellkatalog ist kein JSON-Objekt.");
-            ct.ThrowIfCancellationRequested();
-            _thinkingCatalog = json;
-            _thinkingCatalogAt = DateTime.UtcNow;
-        }
-
-        using var document = JsonDocument.Parse(_thinkingCatalog);
+        var json = await PublicCatalogHttp.GetAsync(CatalogUrl, ct, forceRefresh).ConfigureAwait(false);
+        using var document = JsonDocument.Parse(json);
         var slug = model.Slug;
         if (model.ProviderId == "anthropic" && slug.EndsWith("[1m]", StringComparison.Ordinal)) slug = slug[..^4];
         if (!document.RootElement.TryGetProperty(model.ProviderId, out var provider) ||
@@ -69,11 +45,8 @@ public sealed class OpenCodeCatalogService
 
     public async Task<List<ModelEntry>> GetFreeZenModelsAsync(CancellationToken ct = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, CatalogUrl);
-        using var response = await Http.SendAsync(request, ct).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct).ConfigureAwait(false);
+        var json = await PublicCatalogHttp.GetAsync(CatalogUrl, ct).ConfigureAwait(false);
+        using var document = JsonDocument.Parse(json);
 
         if (!document.RootElement.TryGetProperty("opencode", out var provider) ||
             !provider.TryGetProperty("models", out var modelsElement) ||

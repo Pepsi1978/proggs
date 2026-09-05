@@ -10,15 +10,7 @@ enum OpenCodeVariantCatalog {
 
     /// nil means unknown, [] means explicitly no selectable effort levels.
     static func currentLevels(providerId: String, slug rawSlug: String, forceRefresh: Bool) async throws -> [String]? {
-        var request = URLRequest(url: URL(string: "https://models.dev/api.json")!)
-        request.timeoutInterval = 30
-        request.cachePolicy = forceRefresh ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
-        if forceRefresh { request.setValue("no-cache", forHTTPHeaderField: "Cache-Control") }
-        let (data, response) = try await URLSession.shared.data(for: request)
-        try Task.checkCancellation()
-        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
-            throw URLError(.badServerResponse)
-        }
+        let data = try await PublicCatalogHttp.shared.get("https://models.dev/api.json", force: forceRefresh)
         var slug = rawSlug
         if providerId == "anthropic", slug.hasSuffix("[1m]") { slug = String(slug.dropLast(4)) }
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],

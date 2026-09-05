@@ -141,6 +141,7 @@ public partial class MainWindow : Window
         ThemeManager.ThemeChanged += OnThemeChanged;
         Closed += (_, _) =>
         {
+            ViewModel.StopBackgroundUpdates();
             _layoutSaveTimer.Stop();
             _minimizeStuckTimer.Stop();
             SaveWindowLayout();
@@ -430,6 +431,14 @@ public partial class MainWindow : Window
     }
 
     private void ThemeBtn_Click(object sender, RoutedEventArgs e) => ThemeManager.Toggle();
+
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        var settings = new SettingsWindow(ViewModel) { Owner = this };
+        settings.ResearchCompleted += ViewModel.ApplyResearchResult;
+        settings.ShowDialog();
+        settings.ResearchCompleted -= ViewModel.ApplyResearchResult;
+    }
 
     private void ApplyWindowTheme()
     {

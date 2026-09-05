@@ -33,6 +33,10 @@ SWIFT_FILES=(
     "$SRC_DIR/Services/Theme.swift"
     "$SRC_DIR/Services/LayoutSettings.swift"
     "$SRC_DIR/Services/OpenCodeVariantCatalog.swift"
+    "$SRC_DIR/Services/PublicCatalogHttp.swift"
+    "$SRC_DIR/Services/ResearchSettingsService.swift"
+    "$SRC_DIR/Services/CodexResearchService.swift"
+    "$SRC_DIR/Services/EffortRefreshService.swift"
     "$SRC_DIR/Services/LmStudioService.swift"
     "$SRC_DIR/Services/ModelRegistry.swift"
     "$SRC_DIR/Services/ModelDefaultsService.swift"
@@ -48,6 +52,7 @@ SWIFT_FILES=(
     "$SRC_DIR/Views/PanelViews.swift"
     "$SRC_DIR/Views/Dialogs.swift"
     "$SRC_DIR/Views/MainWindowController.swift"
+    "$SRC_DIR/Views/ResearchSettingsWindowController.swift"
     "$SRC_DIR/AppDelegate.swift"
     "$SRC_DIR/main.swift"
 )
@@ -59,6 +64,7 @@ swiftc \
     -O \
     -framework AppKit \
     -framework Foundation \
+    -framework Security \
     "${SWIFT_FILES[@]}"
 
 cp "$SRC_DIR/OpenLauncher.entitlements" "$APP_BUNDLE/Contents/Resources/"

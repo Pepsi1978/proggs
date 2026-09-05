@@ -44,6 +44,16 @@ final class MainViewModel {
     /// Aufgabe darf ihre spaete Antwort nicht mehr in die Oberflaeche schreiben.
     private var loadProvidersTask: Task<Void, Never>?
     private var loadThinkingTask: Task<Void, Never>?
+    private var periodicEffortTask: Task<Void, Never>?
+    private let effortRefresh = EffortRefreshService()
+    private var visitedEfforts: [String: EffortTarget] = [:]
+    private var effortGenerations: [String: UUID] = [:]
+
+    var thinkingTarget: EffortTarget? {
+        guard let model = selectedModel else { return nil }
+        return EffortTarget(model: model.slug, provider: model.providerId,
+                            access: Self.isClaudeCodeModel(model) ? "claude-code" : "opencode")
+    }
 
     /// Standard des gerade gewaehlten Modells, solange er noch greift. Er ueberstimmt die
     /// profilabhaengige Effort-Vorauswahl - aber nur bis der Nutzer das Profil selbst umstellt;
@@ -179,6 +189,13 @@ final class MainViewModel {
     func activateInitialSelection() {
         onSelectedModelChanged(selectedModel)
         delegate?.selectedModelChanged()
+        periodicEffortTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do { try await Task.sleep(nanoseconds: 60_000_000_000) } catch { return }
+                guard let self else { return }
+                await self.refreshPeriodicEfforts()
+            }
+        }
     }
 
     /// Version UND Zeitstempel kommen aus dem App-Bundle: die Uhrzeit setzt build.sh beim Compile
@@ -230,8 +247,13 @@ final class MainViewModel {
             return
         }
 
-        let cached = UserDefaults.standard.dictionary(forKey: "thinking-levels." + value.modelString)
-        let levels = cached?["levels"] as? [String] ?? OpenCodeVariantCatalog.launcherLevels(for: value)
+        guard let target = thinkingTarget else { return }
+        visitedEfforts[target.key] = target
+        // The old cache only belonged to the existing Claude Code / OpenCode start paths.
+        let cached = EffortStore.cached(target)
+            ?? UserDefaults.standard.dictionary(forKey: "thinking-levels." + value.modelString)
+        let levels = (cached?["levels"] as? [String] ?? OpenCodeVariantCatalog.launcherLevels(for: value))
+            .filter { EffortStore.allowed.contains($0) }
         thinkingOptions = levels.map(Self.toThinkingOption)
         let selected = pendingModelDefault?.thinkingValue ?? cached?["selected"] as? String
         selectedThinkingOption = thinkingOptions.first { $0.value == selected }
@@ -247,9 +269,8 @@ final class MainViewModel {
 
     private func onSelectedThinkingOptionChanged(_ value: ThinkingOptionEntry?) {
         refreshModelDefaultState()
-        guard let model = selectedModel, let value else { return }
-        UserDefaults.standard.set(["levels": thinkingOptions.map { $0.value }, "selected": value.value],
-                                  forKey: "thinking-levels." + model.modelString)
+        guard let model = selectedModel, let target = thinkingTarget, let value else { return }
+        EffortStore.save(target, levels: thinkingOptions.map { $0.value }, selected: value.value)
         let label = Self.isClaudeCodeModel(model) ? "Effort" : "Thinking"
         statusText = "\(label) für \(model.displayName): \(value.displayName)"
     }
@@ -257,42 +278,83 @@ final class MainViewModel {
     // ===================== Thinking-/Effort-Stufen =====================
 
     private func loadThinkingOptions(model: ModelEntry, forceRefresh: Bool = false) async {
-        if Task.isCancelled { return }
+        guard !Task.isCancelled, let target = thinkingTarget else { return }
+        let generation = UUID()
+        effortGenerations[target.key] = generation
         thinkingSubtitle = "Bisherige Stufen auswählbar · Update im Hintergrund …"
         delegate?.thinkingOptionsChanged()
-        var levels = thinkingOptions.map { $0.value }
-        var source = "Katalog ohne Stufenangabe · bisherige Stufen bleiben"
         do {
-            if model.providerId.caseInsensitiveCompare("openrouter") == .orderedSame {
-                if let current = try await router.thinkingLevels(slug: model.slug, forceRefresh: forceRefresh) {
-                    levels = current
-                    source = "Aus OpenRouter-Fähigkeiten abgeleitet"
-                }
-            } else if let current = try await OpenCodeVariantCatalog.currentLevels(providerId: model.providerId, slug: model.slug, forceRefresh: forceRefresh) {
-                levels = current
-                source = "Aktuell aus models.dev"
+            let snapshot = try await effortRefresh.refresh(target, force: forceRefresh)
+            guard !Task.isCancelled, effortGenerations[target.key] == generation, thinkingTarget == target else { return }
+            if let snapshot {
+                applyEffortSnapshot(target, snapshot: snapshot)
+            } else {
+                thinkingSubtitle = "Bisheriger Stand bleibt · Quellenbericht in Einstellungen"
+                updateThinkingState(emptyText: "Noch kein bestätigter Effort · siehe Quellenbericht.")
+                delegate?.thinkingOptionsChanged()
             }
         } catch {
-            if Task.isCancelled { return }
-            Logger.shared.warn("MainViewModel", "loadThinkingOptions", error.localizedDescription)
-            levels = thinkingOptions.map { $0.value }
-            source = "Aktualisierung fehlgeschlagen · bisherige/lokale Stufen"
+            guard !Task.isCancelled, thinkingTarget == target, effortGenerations[target.key] == generation else { return }
+            thinkingSubtitle = "Aktualisierung fehlgeschlagen · bisherige Stufen bleiben"
+            delegate?.thinkingOptionsChanged()
         }
-        if Task.isCancelled { return }
+    }
 
-        let previousValue = selectedThinkingOption?.value
-        selectedThinkingOption = nil
-        thinkingOptions = levels.map(Self.toThinkingOption)
-        selectedThinkingOption = thinkingOptions.first { $0.value == previousValue }
-        if selectedThinkingOption == nil { selectProfileThinkingOption() }
-        UserDefaults.standard.set(["levels": levels, "selected": selectedThinkingOption?.value ?? ""],
-                                  forKey: "thinking-levels." + model.modelString)
-        thinkingSubtitle = source
-        let isClaude = Self.isClaudeCodeModel(model)
-        let empty = isClaude ? "Kein Effort für dieses Modell erkannt." : "Kein Thinking für dieses Modell erkannt."
-        let prompt = isClaude ? "Effort-Wert wählen." : "Thinking-Wert wählen."
-        updateThinkingState(emptyText: levels.isEmpty ? empty : prompt)
-        delegate?.thinkingOptionsChanged()
+    func applyResearchResult(_ target: EffortTarget, snapshot: EffortSnapshot) {
+        effortGenerations[target.key] = UUID()
+        if thinkingTarget == target { loadThinkingTask?.cancel() }
+        applyEffortSnapshot(target, snapshot: snapshot)
+        EffortStore.record(target, snapshot: snapshot, status: "Belegte KI-Recherche übernommen; bestehende Stufen geschützt.")
+    }
+
+    private func applyEffortSnapshot(_ target: EffortTarget, snapshot: EffortSnapshot) {
+        guard snapshot.levels.allSatisfy({ EffortStore.allowed.contains($0) }) else { return }
+        let visible = thinkingTarget == target
+        let saved = EffortStore.cached(target)
+        var levels = visible ? thinkingOptions.map { $0.value } : saved?["levels"] as? [String] ?? []
+        // Only explicit live catalog enumerations may remove levels; AI evidence is additive.
+        if snapshot.canRemove { levels = snapshot.levels }
+        for level in snapshot.levels where !levels.contains(level) { levels.append(level) }
+        var selected = visible ? selectedThinkingOption?.value : saved?["selected"] as? String
+        if visible {
+            thinkingOptions.removeAll { !levels.contains($0.value) }
+            for level in levels where !thinkingOptions.contains(where: { $0.value == level }) {
+                thinkingOptions.append(Self.toThinkingOption(level))
+            }
+            selectedThinkingOption = thinkingOptions.first { $0.value == selected }
+            if selectedThinkingOption == nil { selectProfileThinkingOption() }
+            selected = selectedThinkingOption?.value
+            let stamp = DateFormatter.localizedString(from: snapshot.checkedAt, dateStyle: .short, timeStyle: .short)
+            let source = snapshot.source.contains("\n") ? "belegte KI-Recherche" : snapshot.source
+            thinkingSubtitle = "\(stamp) · \(source)"
+            updateThinkingState(emptyText: "Laut Quelle keine auswählbaren Stufen.")
+            delegate?.thinkingOptionsChanged()
+        }
+        EffortStore.save(target, levels: levels, selected: selected)
+    }
+
+    private func refreshPeriodicEfforts() async {
+        let settings = ResearchSettingsService.load()
+        guard settings.mode == .periodic else { return }
+        for target in Array(visitedEfforts.values) {
+            if Task.isCancelled { return }
+            let last = EffortStore.reports[target.key]?.attemptedAt ?? .distantPast
+            guard Date().timeIntervalSince(last) >= Double(settings.periodHours) * 3600 else { continue }
+            let generation = UUID()
+            effortGenerations[target.key] = generation
+            do {
+                let snapshot = try await effortRefresh.refresh(target)
+                guard !Task.isCancelled else { return }
+                if effortGenerations[target.key] == generation, let snapshot { applyEffortSnapshot(target, snapshot: snapshot) }
+            } catch { if Task.isCancelled { return } }
+        }
+    }
+
+    func stopBackgroundUpdates() {
+        periodicEffortTask?.cancel()
+        periodicEffortTask = nil
+        loadThinkingTask?.cancel()
+        loadProvidersTask?.cancel()
     }
 
     private func updateThinkingState(emptyText: String) {

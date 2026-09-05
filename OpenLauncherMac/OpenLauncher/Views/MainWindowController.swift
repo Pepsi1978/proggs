@@ -38,6 +38,8 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private let providerTitleLabel = UI.label("PROVIDER ", size: 12, weight: .bold, role: .muted)
     private let providerModelLabel = UI.label("—", size: 15, weight: .bold, role: .accent)
     private let refreshButton = StyledButton(style: .ghost, title: "Aktualisieren")
+    private let researchSettingsButton = StyledButton(style: .ghost, title: "")
+    private var researchSettingsWindow: ResearchSettingsWindowController?
 
     private let workDirField = RoundedTextField()
     private let browseButton = StyledButton(style: .ghost, title: "…")
@@ -249,7 +251,13 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         refreshButton.target = self
         refreshButton.action = #selector(refresh)
 
-        let providerHeader = NSStackView(views: [providerTitleLabel, providerModelLabel, UI.spacer(), refreshButton])
+        researchSettingsButton.symbolName = "gearshape"
+        researchSettingsButton.widthAnchor.constraint(equalToConstant: 34).isActive = true
+        researchSettingsButton.toolTip = "Modell-Recherche und Anmeldung"
+        researchSettingsButton.setAccessibilityLabel("Recherche-Einstellungen")
+        researchSettingsButton.target = self
+        researchSettingsButton.action = #selector(showResearchSettings)
+        let providerHeader = NSStackView(views: [providerTitleLabel, providerModelLabel, UI.spacer(), refreshButton, researchSettingsButton])
         providerHeader.orientation = .horizontal
         providerHeader.spacing = 6
         providerHeader.translatesAutoresizingMaskIntoConstraints = false
@@ -428,6 +436,10 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     @objc private func removeModel() { viewModel.removeModel() }
     @objc private func showHiddenModels() { viewModel.showHiddenModels() }
     @objc private func refresh() { viewModel.refresh() }
+    @objc private func showResearchSettings() {
+        if researchSettingsWindow == nil { researchSettingsWindow = ResearchSettingsWindowController(viewModel: viewModel) }
+        researchSettingsWindow?.showWindow(nil)
+    }
     @objc private func browseWorkDir() { viewModel.browseWorkDir() }
     @objc private func showLastError() { viewModel.showLastError() }
     @objc private func openLogFolder() { viewModel.openLogFolder() }
@@ -529,6 +541,8 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     func windowDidMove(_ notification: Notification) { queueSaveWindowLayout() }
 
     func windowWillClose(_ notification: Notification) {
+        viewModel.stopBackgroundUpdates()
+        researchSettingsWindow?.close()
         layoutSaveWorkItem?.cancel()
         saveWindowLayout()
         NSApp.terminate(nil)
