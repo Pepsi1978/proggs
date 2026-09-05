@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -259,7 +261,11 @@ private fun BereichsKnopf(
     val gewaehlt = aktiv == bereich.id
     Column(
         modifier = Modifier
-            .clickable { beiWahl(bereich.id) }
+            .clickable(
+                onClick = { beiWahl(bereich.id) },
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+            )
             .padding(horizontal = 6.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -489,7 +495,11 @@ private fun AktualisierungsStreifen(
             style = MaterialTheme.typography.labelMedium,
             color = farben.textGedaempft,
             modifier = Modifier
-                .clickable(onClick = beiAbbrechen)
+                .clickable(
+                    onClick = beiAbbrechen,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                )
                 .padding(Mass.abstandKlein),
         )
     }
@@ -538,7 +548,11 @@ private fun SperrBildschirm(beiEntsperren: () -> Unit) {
                     MaterialTheme.colorScheme.primary,
                     RoundedCornerShape(Mass.radiusKlein),
                 )
-                .clickable(onClick = beiEntsperren)
+                .clickable(
+                    onClick = beiEntsperren,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                )
                 .padding(horizontal = Mass.rand, vertical = 12.dp),
         ) {
             Text(
