@@ -1,5 +1,5 @@
 ﻿# Nachlade-Lauf: neue Suno-Songs holen, ohne die Nummerierung zu veraendern.
-$projekt = "C:\Users\barwa\proggs\SunoDownload"
+$projekt = $PSScriptRoot   # der Ordner, in dem dieses Skript liegt
 $ziel    = "C:\Suno Backup"
 $log     = Join-Path $ziel "_aktualisieren-log.txt"
 $start   = Get-Date

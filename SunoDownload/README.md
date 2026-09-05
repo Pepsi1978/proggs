@@ -14,6 +14,33 @@ Zielordner: **`C:\Suno Backup`**
 
 ---
 
+## Auf einem neuen Rechner einrichten
+
+```cmd
+git clone <dieses Repository>
+cd proggs\SunoDownload
+Einrichten.cmd
+```
+
+`Einrichten.cmd` prüft Node.js (24 oder neuer), holt die Abhängigkeiten, legt den
+Zielordner an und setzt **beide Desktop-Symbole** — mit dem Pfad, an dem das
+Repository auf diesem Rechner tatsächlich liegt. Gefahrlos wiederholbar: Es löscht
+nichts und überschreibt nur die Verknüpfungen.
+
+```cmd
+Einrichten.cmd                     ... Zielordner C:\Suno Backup
+einrichten.ps1 -Ziel "D:\Musik"    ... anderer Zielordner
+einrichten.ps1 -Still              ... ohne Nachfrage am Ende
+```
+
+Kein Skript enthält einen festen Pfad — alle finden ihren Projektordner über
+`$PSScriptRoot` selbst. Das Repository darf also liegen, wo es will.
+
+Fehlt `adb`, sagt das Skript Bescheid und macht weiter: Songs holen geht auch ohne,
+nur der Handy-Abgleich braucht die Android platform-tools.
+
+---
+
 ## Bedienung: ein Doppelklick genügt
 
 Doppelklick auf **„Suno Backup"** auf dem Desktop. Das Programm startet, legt einen
@@ -110,6 +137,8 @@ lange weiter, bis es sie in der Bibliothek gefunden hat, auch wenn sonst nichts 
 
 | Datei | Aufgabe |
 |-------|---------|
+| `Einrichten.cmd` | **Erster Schritt auf einem neuen Rechner.** Prüft, installiert, legt die Symbole an |
+| `einrichten.ps1` | Die Einrichtung selbst |
 | `Neue-Songs-holen.cmd` | **Der Normalfall.** Hinter dem Desktop-Symbol „Suno Backup" |
 | `downloader.ts` | Das Programm: nimmt die Songliste entgegen, lädt, benennt, taggt |
 | `bruecke.js` | Der Teil, der im Browser läuft — Songliste und Download-Links |
@@ -174,13 +203,14 @@ einzeln anzufordern, hörbar praktisch kein Unterschied. Lohnend nur zum Weiterb
 ### Nicht im Repository
 
 `node_modules/`, `logs/`, `.browser-profil/`, `suno-liste*.json` und alle MP3-Dateien sind per
-`.gitignore` ausgeschlossen.
+`.gitignore` ausgeschlossen. `package-lock.json` liegt dagegen im Repository, damit
+`npm install` auf jedem Rechner dieselben Fassungen installiert.
 
 ---
 
-### Desktop-Symbol neu anlegen
+### Desktop-Symbole neu anlegen
 
-Falls die Verknüpfung einmal verloren geht:
+Normalerweise erledigt das `Einrichten.cmd`. Von Hand geht es so:
 
 ```powershell
 $wsh = New-Object -ComObject WScript.Shell
@@ -260,4 +290,4 @@ sie taugt nicht als Quelle.
 
 ---
 
-Version 1.8.0 (05.09.2026, 13:06 Uhr)
+Version 1.9.0 (05.09.2026, 13:25 Uhr)

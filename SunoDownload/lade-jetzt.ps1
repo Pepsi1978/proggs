@@ -1,6 +1,6 @@
-# Startet den Download der Songliste nach C:\Suno Backup.
+﻿# Startet den Download der Songliste nach C:\Suno Backup.
 $ErrorActionPreference = "Continue"
-$projekt = "C:\Users\barwa\proggs\SunoDownload"
+$projekt = $PSScriptRoot   # der Ordner, in dem dieses Skript liegt
 $ziel    = "C:\Suno Backup"
 $liste   = Join-Path $ziel "suno-liste.json"
 $log     = Join-Path $ziel "_download-log.txt"

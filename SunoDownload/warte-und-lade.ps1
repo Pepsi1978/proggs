@@ -1,6 +1,6 @@
-# Wartet auf suno-liste*.json (Downloads ODER C:\Suno Backup) und startet dann den Download.
+﻿# Wartet auf suno-liste*.json (Downloads ODER C:\Suno Backup) und startet dann den Download.
 $orte     = @("$env:USERPROFILE\Downloads", "C:\Suno Backup", "$env:USERPROFILE\Desktop")
-$projekt  = "C:\Users\barwa\proggs\SunoDownload"
+$projekt  = $PSScriptRoot   # der Ordner, in dem dieses Skript liegt
 $ziel     = "C:\Suno Backup"
 $logdatei = "C:\Suno Backup\_download-log.txt"
 $ende     = (Get-Date).AddMinutes(90)
