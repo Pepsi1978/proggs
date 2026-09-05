@@ -15,6 +15,7 @@ public partial class SettingsWindow : Window
     private readonly CancellationTokenSource _lifetime = new();
     private CancellationTokenSource? _operation;
     private ResearchSettings _settings = new();
+    private string? _researchKey;
     private readonly DispatcherTimer _reportsTimer = new() { Interval = TimeSpan.FromSeconds(2) };
 
     /// <summary>The refresh/cache owner may subscribe to apply a validated manual result.</summary>
@@ -26,9 +27,9 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         ModeBox.ItemsSource = new[] {
             new { Value = ResearchMode.Disabled, Label = "Ausgeschaltet" },
-            new { Value = ResearchMode.Fallback, Label = "Automatisch bei Lücken oder Widersprüchen" },
+            new { Value = ResearchMode.Fallback, Label = "Automatisch bei Bedarf" },
             new { Value = ResearchMode.Manual, Label = "Nur manuell" },
-            new { Value = ResearchMode.Periodic, Label = "Regelmäßig (benutzte Modelle)" } };
+            new { Value = ResearchMode.Periodic, Label = "Regelmäßig" } };
         PeriodBox.ItemsSource = new[] { new { Hours = 1, Label = "Stündlich" }, new { Hours = 6, Label = "Alle 6 Stunden" },
             new { Hours = 12, Label = "Alle 12 Stunden" }, new { Hours = 24, Label = "Täglich" }, new { Hours = 168, Label = "Wöchentlich" } };
         _reportsTimer.Tick += (_, _) => ShowReports();
@@ -110,10 +111,14 @@ public partial class SettingsWindow : Window
         var model = new ModelEntry { Slug = selected.Slug, ProviderId = selected.ProviderId, DisplayName = selected.DisplayName };
         var target = _viewModel.ThinkingAccess;
         await SaveAsync(ct);
+        _researchKey = EffortRefreshService.Key(model, target);
         StatusText.Text = "Web-Recherche läuft …";
         var result = await _service.ResearchAsync(model, target, ct, manual: true);
         if (result != null) ResearchCompleted?.Invoke(model, target, result);
-        StatusText.Text = result == null ? "Kein übernehmbarer Nachweis. Siehe Bericht." : "Belegte Recherche abgeschlossen. Siehe Bericht.";
+        StatusText.Text = result == null
+            ? _service.GetReports().FirstOrDefault(x => x.Model == _researchKey)?.Status.Split('\n')[0] ?? "Keine Recherche-Antwort erhalten."
+            : "Bestätigt: " + string.Join(", ", result.Levels) + ". Quellen siehe Bericht.";
+        _researchKey = null;
         ShowReports();
     });
 
@@ -121,11 +126,13 @@ public partial class SettingsWindow : Window
     {
         TargetText.Text = _viewModel.SelectedModel?.ModelString ?? "Kein Launcher-Modell ausgewählt";
         var reports = _service.GetReports();
+        if (_researchKey != null && reports.FirstOrDefault(x => x.Model == _researchKey) is { } active)
+            StatusText.Text = active.Status.Split('\n')[0];
         var text = reports.Count == 0 ? "Noch keine Recherche in dieser Launcher-Sitzung." : string.Join("\n\n", reports.Select(
             x => $"{x.Model} · {x.CheckedAt.ToLocalTime():dd.MM.yyyy HH:mm}\n{x.Status}"));
         var updates = EffortRefreshService.GetReports();
-        if (updates.Count > 0) text = string.Join("\n\n", updates.Select(x =>
-            $"{x.Model}\n{x.Status}\nLetzter Erfolg: {x.LastSuccess?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "noch keiner"}\nQuelle: {x.Source}")) + "\n\nKI-RECHERCHE\n" + text;
+        if (updates.Count > 0) text += "\n\nKATALOG-ABGLEICHE\n" + string.Join("\n\n", updates.Select(x =>
+            $"{x.Model}\n{x.Status}\nLetzter Erfolg: {x.LastSuccess?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "noch keiner"}\nQuelle: {x.Source}"));
         if (ReportText.Text != text) ReportText.Text = text;
     }
 
@@ -142,6 +149,7 @@ public partial class SettingsWindow : Window
         finally
         {
             _operation = null;
+            _researchKey = null;
             SetBusy(false);
             DeviceText.Clear();
             DeviceText.Visibility = Visibility.Collapsed;

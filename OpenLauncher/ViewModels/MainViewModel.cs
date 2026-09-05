@@ -278,7 +278,9 @@ public sealed partial class MainViewModel : ObservableObject
             if (SelectedThinkingOption == null) SelectProfileThinkingOption();
         }
         UpdateThinkingState("Noch keine gespeicherten Stufen · Aktualisierung läuft.");
-        ThinkingSubtitle = "Bisherige Stufen auswählbar · Update im Hintergrund …";
+        ThinkingSubtitle = forceRefresh
+            ? "Katalog und Webrecherche laufen · bisherige Stufen auswählbar"
+            : "Bisherige Stufen auswählbar · Update im Hintergrund …";
 
         try
         {

@@ -48,8 +48,17 @@ final class EffortRefreshService {
             current = nil
         }
         if conflict { current = nil }
-        if current == nil {
-            do { current = try await CodexResearchService.shared.research(target) }
+        if current == nil || force {
+            do {
+                if var research = try await CodexResearchService.shared.research(target, manual: force) {
+                    if let existing = current, Set(existing.levels) != Set(research.levels) {
+                        problems.append("Webrecherche weicht vom Katalog ab; keine ungeprüfte Zusammenführung")
+                    } else {
+                        research.canRemove = current?.canRemove ?? false
+                        current = research
+                    }
+                }
+            }
             catch {
                 try Task.checkCancellation()
                 problems.append((error as? ResearchFailure)?.localizedDescription ?? "KI-Recherche fehlgeschlagen; keine Übernahme")

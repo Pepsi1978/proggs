@@ -78,10 +78,20 @@ public sealed class EffortRefreshService
             current = null;
         }
         if (conflict) current = null;
-        if (current == null)
+        if (current == null || force)
         {
-            var research = await CodexResearchService.Instance.ResearchAsync(model, access, ct).ConfigureAwait(false);
-            if (research != null) current = new(research.Levels, research.Source, research.CheckedAt, research.ExplicitRemoval);
+            var research = await CodexResearchService.Instance.ResearchAsync(model, access, ct, manual: force).ConfigureAwait(false);
+            if (research != null)
+            {
+                if (current != null && !current.Levels.ToHashSet().SetEquals(research.Levels))
+                    problems.Add("Webrecherche weicht vom Katalog ab; keine ungeprüfte Zusammenführung");
+                else current = new(research.Levels, research.Source, research.CheckedAt, current?.CanRemove ?? research.ExplicitRemoval);
+            }
+            else if (force)
+            {
+                var report = CodexResearchService.Instance.GetReports().FirstOrDefault(x => x.Model == Key(model, access));
+                problems.Add("Webrecherche: " + (report?.Status.Split('\n')[0] ?? "Kein neues Ergebnis"));
+            }
         }
         ct.ThrowIfCancellationRequested();
         if (current != null)

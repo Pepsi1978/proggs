@@ -12,7 +12,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <!-- Let the SDK derive AssemblyVersion and FileVersion from this single version. -->
-    <Version>1.24.24</Version>
+    <Version>1.24.25</Version>
     <Company>Pepsi1978</Company>
     <Product>OpenLauncher</Product>
     <Copyright>© 2026 Pepsi1978</Copyright>

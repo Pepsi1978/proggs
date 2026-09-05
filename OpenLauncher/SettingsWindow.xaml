@@ -45,7 +45,11 @@
                                     </ControlTemplate>
                                 </ToggleButton.Template>
                             </ToggleButton>
-                            <ContentPresenter Margin="12,6,30,6" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
+                            <ContentPresenter Margin="12,6,30,6" IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"/>
                             <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False">
                                 <Border Background="{DynamicResource PanelBg}" BorderBrush="{DynamicResource BorderBrushStrong}" BorderThickness="1" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
                                     <ScrollViewer MaxHeight="260"><ItemsPresenter/></ScrollViewer>
@@ -98,7 +102,7 @@
                         <TextBlock Text="Modus" Margin="0,10,0,5"/>
                         <ComboBox x:Name="ModeBox" DisplayMemberPath="Label" SelectedValuePath="Value"/>
                         <TextBlock Text="Normale Katalogabfragen bleiben aktiv. KI hilft bei Lücken oder Widersprüchen. Regelmäßig: benutzte Modelle werden bei geöffnetem Launcher erneut abgeglichen. KI-Anfragen können dein Kontingent verbrauchen." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource DimBrush}" Margin="0,6,0,12"/>
-                        <TextBlock Text="Recherche-Modell (verfügbare Modelle deines Kontos)" Margin="0,0,0,5"/>
+                        <TextBlock Text="Recherche-Modell" Margin="0,0,0,5"/>
                         <ComboBox x:Name="ModelBox" DisplayMemberPath="Id" SelectionChanged="Model_Changed"/>
                         <Grid Margin="0,12,0,0">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
