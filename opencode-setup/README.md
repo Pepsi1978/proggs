@@ -1,6 +1,6 @@
 # OpenCode-Setup — plattformuebergreifende Umgebung (Windows + macOS)
 
-> Stand: v1.0.5 - 17.07.2026, 18:53 Uhr
+> Stand: v1.0.6 - 05.09.2026, 11:46 Uhr
 
 > Zweck: Damit OpenCode auf JEDEM Rechner (Windows wie macOS) **1:1 dieselbe Umgebung** einliest.
 > Die hier gespiegelten globalen Dateien liegen im echten Betrieb unter `~/.config/opencode/`
@@ -13,6 +13,12 @@
 ---
 
 ## Was OpenCode beim Start einliest (und was das Setup mitbringt)
+
+GPT-6 Astra erhält explizite Reasoning-Varianten: Low, Medium, High, XHigh, Max und
+Ultra (OpenAI-Codex-Modellkatalog vom 04.09.2026). Ohne `reasoning: true` und
+`variants` kann ein manuell ergänztes Modell ohne Effort-Auswahl erscheinen.
+Die globale Konfiguration und diese Vorlage müssen dieselben Modellvarianten enthalten.
+Nach Änderungen OpenCode vollständig neu starten; laufende Sitzungen behalten die alte Konfiguration.
 
 | Ebene | Datei (Betrieb) | Im Repo? | Spiegelung hier | Vom Installer kopiert? |
 |-------|-----------------|----------|-----------------|------------------------|

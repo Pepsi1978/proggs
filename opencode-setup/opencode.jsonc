@@ -148,6 +148,24 @@
   // ACHTUNG: Owl Alpha loggt Prompts/Completions (Training) -> NICHT fuer
   // sensible/private App-Daten (Entropie Reductor, BestJournal-Nutzerdaten).
   "provider": {
+    // Astra fehlt die automatische Reasoning-Erkennung im OpenCode-Katalog.
+    // Stufen aus dem OpenAI-Codex-Modellkatalog vom 04.09.2026, nicht von GPT-5 erben.
+    "openai": {
+      "models": {
+        "gpt-6-astra": {
+          "name": "GPT-6 Astra",
+          "reasoning": true,
+          "variants": {
+            "low": { "reasoningEffort": "low" },
+            "medium": { "reasoningEffort": "medium" },
+            "high": { "reasoningEffort": "high" },
+            "xhigh": { "reasoningEffort": "xhigh" },
+            "max": { "reasoningEffort": "max" },
+            "ultra": { "reasoningEffort": "ultra" }
+          }
+        }
+      }
+    },
     "owl": {
       "npm": "@openrouter/ai-sdk-provider",
       "name": "OpenRouter Owl (Stealth)",
