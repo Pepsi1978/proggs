@@ -59,6 +59,38 @@ node downloader.ts --still                ... ohne Zwischenablage und ohne Brows
 node downloader.ts --alle-pruefen         ... jeden Song einzeln bei Suno nachfragen (langsam)
 ```
 
+---
+
+## Aufs Handy übertragen
+
+Doppelklick auf **„Suno Handy-Abgleich"** auf dem Desktop. Das Skript vergleicht alle
+MP3-Dateien in `C:\Suno Backup` mit dem Ordner `Suno Backup` im internen Speicher des
+Handys und kopiert alles hinüber, was dort fehlt. Gedacht für die Musik im Auto.
+
+```cmd
+Handy-Abgleich.cmd          ... der Normalfall, mit Nachfrage am Ende
+handy-abgleich.ps1 -Still   ... ohne Nachfrage, für automatische Läufe
+```
+
+**Einbahnstraße: PC → Handy.** Auf dem Handy wird **nie** etwas gelöscht. Dateien, die
+nur dort liegen, bleiben unangetastet und werden nur gezählt.
+
+**Nur MP3.** `_bestand.json`, die Protokolldateien und alles andere bleiben auf dem PC —
+im Auto stören sie nur.
+
+**Abgebrochene Übertragungen heilen sich.** Verglichen wird nicht nur der Dateiname,
+sondern auch die Größe: Liegt auf dem Handy ein halber Song, wird er beim nächsten Lauf
+neu übertragen. Meldet das Handy keine Größen, wird nur nach Namen verglichen — das sagt
+das Skript dann auch.
+
+**Voraussetzung:** Handy per USB angeschlossen, entsperrt, USB-Debugging eingeschaltet
+(Einstellungen → Entwickleroptionen). Fehlt etwas davon, sagt das Skript genau was.
+
+Nach dem Kopieren wird das Medienverzeichnis aufgefrischt, damit die neuen Lieder sofort
+in der Musik-App auftauchen und nicht erst nach einem Neustart des Handys.
+
+---
+
 ## Die Nummerierung bleibt stabil
 
 Welche Nummer zu welchem Song gehört, steht in **`_bestand.json`** im Zielordner. Einmal vergebene
@@ -83,7 +115,10 @@ lange weiter, bis es sie in der Bibliothek gefunden hat, auch wenn sonst nichts 
 | `bruecke.js` | Der Teil, der im Browser läuft — Songliste und Download-Links |
 | `downloader.ps1` | Startet den Downloader mit Protokoll |
 | `gemeinsam.ts` | Geteilte Bausteine — Namen, Nummern, Download, Cover, Titel |
+| `Handy-Abgleich.cmd` | **Musik aufs Handy.** Hinter dem Desktop-Symbol „Suno Handy-Abgleich" |
+| `handy-abgleich.ps1` | Der Abgleich selbst — vergleicht und kopiert per `adb push` |
 | `icon-erzeugen.py` | Zeichnet `suno-backup.ico` neu |
+| `icon-handy-erzeugen.py` | Zeichnet `handy-abgleich.ico` neu |
 | `Alter-Weg-Songliste.cmd` | Rückfallweg über eine gespeicherte `suno-liste.json` |
 | `aktualisieren.ts`, `bibliothek-holen.js` | Der alte Weg — bleibt als Rückfallebene |
 | `suno-download.ts`, `cover-nachtragen.ts`, `titel-nachtragen.ts` | Einzelwerkzeuge |
@@ -132,6 +167,7 @@ einzeln anzufordern, hörbar praktisch kein Unterschied. Lohnend nur zum Weiterb
 
 - **Node.js 24+** — führt TypeScript direkt aus, kein Build-Schritt nötig
 - **node-id3** für die MP3-Informationen, **playwright-core** nur für den alten Browser-Weg
+- **adb** (Android platform-tools) für den Handy-Abgleich — wird selbst gesucht, muss nicht im PATH stehen
 - Keine Zugangsdaten im Code, kein gespeichertes Passwort, kein Token auf der Festplatte
 - Das Konsolen-Skript liest ausschließlich und sendet nichts an Dritte
 
@@ -152,6 +188,12 @@ $lnk = $wsh.CreateShortcut("$env:USERPROFILE\Desktop\Suno Backup.lnk")
 $lnk.TargetPath = "C:\Users\barwa\proggs\SunoDownload\Neue-Songs-holen.cmd"
 $lnk.WorkingDirectory = "C:\Users\barwa\proggs\SunoDownload"
 $lnk.IconLocation = "C:\Users\barwa\proggs\SunoDownload\suno-backup.ico,0"
+$lnk.Save()
+
+$lnk = $wsh.CreateShortcut("$env:USERPROFILE\Desktop\Suno Handy-Abgleich.lnk")
+$lnk.TargetPath = "C:\Users\barwa\proggs\SunoDownload\Handy-Abgleich.cmd"
+$lnk.WorkingDirectory = "C:\Users\barwa\proggs\SunoDownload"
+$lnk.IconLocation = "C:\Users\barwa\proggs\SunoDownload\handy-abgleich.ico,0"
 $lnk.Save()
 ```
 
@@ -218,4 +260,4 @@ sie taugt nicht als Quelle.
 
 ---
 
-Version 1.7.1 (05.09.2026, 12:57 Uhr)
+Version 1.8.0 (05.09.2026, 13:06 Uhr)
