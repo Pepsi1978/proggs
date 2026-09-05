@@ -2,7 +2,7 @@
 # Node macht alles selbst; der Browser liefert nur die Songliste und die von Suno
 # ausgestellten Download-Links. Ein Einzeiler in der Konsole genuegt dafuer.
 $projekt = "C:\Users\barwa\proggs\SunoDownload"
-$ziel    = if ($args.Count -gt 0 -and $args[0] -notlike "--*") { $args[0] } else { "C:\Sono Backup" }
+$ziel    = if ($args.Count -gt 0 -and $args[0] -notlike "--*") { $args[0] } else { "C:\Suno Backup" }
 $log     = Join-Path $ziel "_downloader-log.txt"
 
 $Host.UI.RawUI.WindowTitle = "SunoDownload - Songs holen"

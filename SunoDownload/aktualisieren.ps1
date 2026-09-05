@@ -1,6 +1,6 @@
 ﻿# Nachlade-Lauf: neue Suno-Songs holen, ohne die Nummerierung zu veraendern.
 $projekt = "C:\Users\barwa\proggs\SunoDownload"
-$ziel    = "C:\Sono Backup"
+$ziel    = "C:\Suno Backup"
 $log     = Join-Path $ziel "_aktualisieren-log.txt"
 $start   = Get-Date
 

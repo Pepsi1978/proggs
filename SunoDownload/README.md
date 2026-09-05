@@ -10,7 +10,7 @@ mit eingebettetem Cover, sortiert vom **ältesten zum neuesten** Song.
 ...
 ```
 
-Zielordner: **`C:\Sono Backup`**
+Zielordner: **`C:\Suno Backup`**
 
 ---
 
@@ -51,7 +51,7 @@ stillschweigend weg. Ein gebremster Song wird deshalb erneut gefragt, ein gesper
 ### Aus der Kommandozeile
 
 ```cmd
-node downloader.ts                    ... Zielordner C:\Sono Backup, nur Neues
+node downloader.ts                    ... Zielordner C:\Suno Backup, nur Neues
 node downloader.ts "D:\Musik"
 node downloader.ts --limit 15 "D:\Test"   ... Probelauf mit 15 Songs
 node downloader.ts --freischalten         ... zusätzlich selbst freischalten (verbraucht Kontingent)
@@ -218,4 +218,4 @@ sie taugt nicht als Quelle.
 
 ---
 
-Version 1.7.0 (05.09.2026, 12:40 Uhr)
+Version 1.7.1 (05.09.2026, 12:57 Uhr)

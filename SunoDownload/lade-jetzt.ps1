@@ -1,7 +1,7 @@
-# Startet den Download der Songliste nach C:\Sono Backup.
+# Startet den Download der Songliste nach C:\Suno Backup.
 $ErrorActionPreference = "Continue"
 $projekt = "C:\Users\barwa\proggs\SunoDownload"
-$ziel    = "C:\Sono Backup"
+$ziel    = "C:\Suno Backup"
 $liste   = Join-Path $ziel "suno-liste.json"
 $log     = Join-Path $ziel "_download-log.txt"
 

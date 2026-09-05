@@ -1,8 +1,8 @@
-# Wartet auf suno-liste*.json (Downloads ODER C:\Sono Backup) und startet dann den Download.
-$orte     = @("$env:USERPROFILE\Downloads", "C:\Sono Backup", "$env:USERPROFILE\Desktop")
+# Wartet auf suno-liste*.json (Downloads ODER C:\Suno Backup) und startet dann den Download.
+$orte     = @("$env:USERPROFILE\Downloads", "C:\Suno Backup", "$env:USERPROFILE\Desktop")
 $projekt  = "C:\Users\barwa\proggs\SunoDownload"
-$ziel     = "C:\Sono Backup"
-$logdatei = "C:\Sono Backup\_download-log.txt"
+$ziel     = "C:\Suno Backup"
+$logdatei = "C:\Suno Backup\_download-log.txt"
 $ende     = (Get-Date).AddMinutes(90)
 
 Write-Host ""

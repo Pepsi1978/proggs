@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const LOG_DIR = join(HERE, 'logs');
-export const DEFAULT_TARGET = 'C:\\Sono Backup';
+export const DEFAULT_TARGET = 'C:\\Suno Backup';
 export const COVER_BASE = 'https://cdn1.suno.ai';
 export const AUDIO_BASE = 'https://cdn1.suno.ai';
 /**

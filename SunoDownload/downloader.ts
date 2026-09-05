@@ -15,7 +15,7 @@
  * Der Anmelde-Nachweis verlässt den Browser dabei nie.
  *
  * Aufruf:
- *   node downloader.ts                       ... Zielordner C:\Sono Backup
+ *   node downloader.ts                       ... Zielordner C:\Suno Backup
  *   node downloader.ts "D:\Musik"
  *   node downloader.ts --limit 15 "D:\Test"  ... nur die ersten 15 (zum Ausprobieren)
  *   node downloader.ts --freischalten        ... zusätzlich selbst freischalten (Kontingent!)
@@ -83,6 +83,27 @@ const ZIEL = args.find((a) => !a.startsWith('--') && !/^\d+$/.test(a)) ?? DEFAUL
 
 if (!existsSync(ZIEL)) {
   console.error(`❗ Zielordner gibt es nicht: ${ZIEL}`);
+  // Ein umbenannter Ordner ist der wahrscheinlichste Grund — dann steht das Ziel
+  // meist direkt daneben. Es zu nennen erspart die Suche im Quelltext.
+  try {
+    const eltern = dirname(ZIEL);
+    const gesucht = ZIEL.slice(eltern.length + 1).toLowerCase();
+    const aehnlich = readdirSync(eltern, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .filter((n) => {
+        const k = n.toLowerCase();
+        return k !== gesucht && (k.includes('backup') || k.includes('suno') || k.includes('sono'));
+      });
+    if (aehnlich.length) {
+      console.error('   Diese Ordner daneben könnten gemeint sein:');
+      for (const n of aehnlich.slice(0, 5)) console.error(`     ${join(eltern, n)}`);
+      console.error('   Entweder den Ordner zurückbenennen oder den Pfad mitgeben:');
+      console.error(`     node downloader.ts "${join(eltern, aehnlich[0])}"`);
+    }
+  } catch {
+    /* dann eben ohne Vorschlag */
+  }
   process.exit(1);
 }
 

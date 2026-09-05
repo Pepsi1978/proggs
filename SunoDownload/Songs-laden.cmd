@@ -4,7 +4,7 @@ title SunoDownload - Suno-Bibliothek herunterladen
 cd /d "%~dp0"
 
 echo.
-echo  Der Download startet. Die Songs landen in  C:\Sono Backup
+echo  Der Download startet. Die Songs landen in  C:\Suno Backup
 echo.
 
 node suno-download.ts %*
