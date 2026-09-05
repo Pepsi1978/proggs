@@ -5,6 +5,30 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Der Debug-Schluessel liegt in der Schluesselzentrale ~/SK/ClaudeKompass/ und ist auf allen
+// Rechnern derselbe. Ohne ihn signiert jeder Rechner mit seinem eigenen Debug-Schluessel — dann
+// verweigert das Geraet die Aktualisierung („signatures do not match") und die App muesste vor
+// jeder Installation vom anderen Rechner geloescht werden, samt aller eigenen Fragen.
+val skOrdner: File = File(System.getProperty("user.home")).resolve("SK").resolve("ClaudeKompass")
+val debugSchluessel: File = rootProject.file("debug-shared.keystore")
+
+val holeSchluessel = tasks.register("holeSchluesselAusSk") {
+    val quelle = skOrdner.resolve("debug-shared.keystore")
+    val ziel = debugSchluessel
+    doLast {
+        if (!quelle.exists()) {
+            throw GradleException(
+                "Debug-Schluessel fehlt: ${quelle.absolutePath}. " +
+                    "Er wird nicht mitversioniert. Von einem anderen Rechner kopieren oder aus " +
+                    "einem anderen SK-Projekt uebernehmen — es ist ueberall derselbe.",
+            )
+        }
+        quelle.copyTo(ziel, overwrite = true)
+    }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(holeSchluessel) }
+
 android {
     namespace = "de.frank.claudekompass"
     compileSdk = 36
@@ -13,14 +37,23 @@ android {
         applicationId = "de.frank.claudekompass"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.4.2"
+        versionCode = 9
+        versionName = "0.4.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"04.09.2026, 19:49 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"05.09.2026, 11:01 Uhr\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
-        buildConfigField("String", "SEEDED_CLI_VERSION", "\"2.1.251\"")
+        buildConfigField("String", "SEEDED_CLI_VERSION", "\"2.1.261\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            storeFile = debugSchluessel
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {

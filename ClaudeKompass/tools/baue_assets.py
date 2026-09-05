@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Baut die drei JSON-Beigaben der App und traegt die Versionen aus dem Changelog ein."""
+"""Baut die drei JSON-Beigaben der App und traegt die Versionen aus dem Changelog ein.
+
+ACHTUNG — nicht mehr die Quelle der Auslieferung. Die Beigaben stammen seit dem Stand
+2.1.261 aus dem gewachsenen Wissen der App selbst; erzeugt werden sie von
+`assets_aus_datenbank.py`. Dieses Skript hier baut nur noch die alte, handgepflegte
+Grundfassung (Stand 2.1.251) und wuerde die Beigaben beim Ausfuehren zurueckwerfen.
+Es bleibt als Herkunftsnachweis liegen — vor einem Lauf bitte pruefen, ob wirklich der
+alte Stand gewollt ist.
+"""
 import io
 import json
 import os
