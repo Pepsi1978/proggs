@@ -21,6 +21,7 @@ public sealed partial class MainViewModel : ObservableObject
     private readonly OpenCodeUpdateService _updater = new();
     private readonly InstructionProfileService _profiles = new();
     private readonly ModelDefaultsService _modelDefaults = new();
+    private readonly ThinkingCache _thinkingCache = new();
     private CancellationTokenSource? _loadCts;
     private CancellationTokenSource? _thinkingCts;
 
@@ -219,6 +220,7 @@ public sealed partial class MainViewModel : ObservableObject
     {
         RefreshModelDefaultState();
         if (SelectedModel == null || value == null) return;
+        _thinkingCache.Save(SelectedModel.ModelString, ThinkingOptions.Select(option => option.Value), value.Value);
         var label = IsClaudeCodeModel(SelectedModel) ? "Effort" : "Thinking";
         StatusText = $"{label} für {SelectedModel.DisplayName}: {value.DisplayName}";
     }
@@ -246,28 +248,48 @@ public sealed partial class MainViewModel : ObservableObject
         _thinkingCts?.Dispose();
         _thinkingCts = new CancellationTokenSource();
         var ct = _thinkingCts.Token;
-        var previousValue = forceRefresh ? SelectedThinkingOption?.Value : null;
-        ThinkingSubtitle = "Prüfe aktuelle Modellfähigkeiten …";
+        if (!forceRefresh)
+        {
+            var cached = _thinkingCache.Find(model.ModelString);
+            foreach (var level in cached?.Levels ?? GetStaticThinkingLevels(model).ToList())
+                ThinkingOptions.Add(ToThinkingOption(level));
+            var selected = _pendingModelDefault?.ThinkingValue ?? cached?.Selected;
+            SelectedThinkingOption = ThinkingOptions.FirstOrDefault(option => option.Value == selected);
+            if (SelectedThinkingOption == null) SelectProfileThinkingOption();
+        }
+        UpdateThinkingState("Noch keine gespeicherten Stufen · Aktualisierung läuft.");
+        ThinkingSubtitle = "Bisherige Stufen auswählbar · Update im Hintergrund …";
 
         try
         {
-            var levels = GetStaticThinkingLevels(model).ToList();
-            var currentLevels = await _openCodeCatalog.GetThinkingLevelsAsync(model, ct, forceRefresh);
-            var source = currentLevels != null ? "Aktuell aus models.dev" : "Katalog ohne Stufenangabe · lokale Vorgabe";
-            if (currentLevels != null) levels = currentLevels;
-            else if (string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
+            List<string>? currentLevels;
+            string source;
+            if (string.Equals(model.ProviderId, "openrouter", StringComparison.OrdinalIgnoreCase))
             {
-                var apiLevels = await _router.GetThinkingLevelsAsync(model.Slug, ct, forceRefresh);
-                levels = apiLevels;
+                currentLevels = await _router.GetThinkingLevelsAsync(model.Slug, ct, forceRefresh);
                 source = "Aus OpenRouter-Fähigkeiten abgeleitet";
+            }
+            else
+            {
+                currentLevels = await _openCodeCatalog.GetThinkingLevelsAsync(model, ct, forceRefresh);
+                source = "Aktuell aus models.dev";
             }
 
             if (ct.IsCancellationRequested) return;
+            if (currentLevels == null)
+            {
+                ThinkingSubtitle = "Katalog ohne Stufenangabe · bisherige Stufen bleiben";
+                return;
+            }
+            var levels = currentLevels;
+            // Read AFTER the await: the user may have selected a level during refresh.
+            var previousValue = SelectedThinkingOption?.Value;
             SelectedThinkingOption = null;
             ThinkingOptions.Clear();
             foreach (var option in levels.Select(ToThinkingOption)) ThinkingOptions.Add(option);
             SelectedThinkingOption = ThinkingOptions.FirstOrDefault(option => option.Value == previousValue);
             if (SelectedThinkingOption == null) SelectProfileThinkingOption();
+            _thinkingCache.Save(model.ModelString, levels, SelectedThinkingOption?.Value);
             ThinkingSubtitle = source;
             var empty = IsClaudeCodeModel(model) ? "Kein Effort für dieses Modell erkannt." : "Kein Thinking für dieses Modell erkannt.";
             var prompt = IsClaudeCodeModel(model) ? "Effort-Wert wählen." : "Thinking-Wert wählen.";
@@ -278,11 +300,6 @@ public sealed partial class MainViewModel : ObservableObject
         {
             if (ct.IsCancellationRequested) return;
             Logger.Instance.Warn("MainViewModel", "LoadThinkingOptionsAsync", $"Thinking-/Effort-Level nicht geladen: {ex.Message}", new { model.Slug });
-            if (ThinkingOptions.Count == 0)
-            {
-                foreach (var level in GetStaticThinkingLevels(model)) ThinkingOptions.Add(ToThinkingOption(level));
-                SelectProfileThinkingOption();
-            }
             ThinkingSubtitle = "Aktualisierung fehlgeschlagen · bisherige/lokale Stufen";
             UpdateThinkingState("Thinking/Effort konnte nicht geprüft werden.");
         }

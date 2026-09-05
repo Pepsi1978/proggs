@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Net;
 using System.Text.Json;
 using OpenLauncher.Models;
 
@@ -9,7 +10,12 @@ namespace OpenLauncher.Services;
 public sealed class OpenCodeCatalogService
 {
     private const string CatalogUrl = "https://models.dev/api.json";
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly HttpClient Http = new(new SocketsHttpHandler
+    {
+        AutomaticDecompression = DecompressionMethods.All,
+        ConnectTimeout = TimeSpan.FromSeconds(8),
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+    }) { Timeout = TimeSpan.FromSeconds(30) };
     private string? _thinkingCatalog;
     private DateTime _thinkingCatalogAt;
 
@@ -19,10 +25,13 @@ public sealed class OpenCodeCatalogService
         if (forceRefresh || _thinkingCatalog == null || DateTime.UtcNow - _thinkingCatalogAt > TimeSpan.FromMinutes(5))
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, CatalogUrl);
-            request.Headers.CacheControl = new() { NoCache = true };
+            if (forceRefresh) request.Headers.CacheControl = new() { NoCache = true };
             using var response = await Http.SendAsync(request, ct).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            using var parsed = JsonDocument.Parse(json);
+            if (parsed.RootElement.ValueKind != JsonValueKind.Object)
+                throw new JsonException("Modellkatalog ist kein JSON-Objekt.");
             ct.ThrowIfCancellationRequested();
             _thinkingCatalog = json;
             _thinkingCatalogAt = DateTime.UtcNow;
@@ -42,6 +51,7 @@ public sealed class OpenCodeCatalogService
         var toggle = false;
         foreach (var option in options.EnumerateArray())
         {
+            if (option.ValueKind != JsonValueKind.Object) continue;
             var type = ReadString(option, "type");
             if (type == "toggle") toggle = true;
             if (type != "effort" || !option.TryGetProperty("values", out var values) || values.ValueKind != JsonValueKind.Array) continue;
@@ -52,7 +62,9 @@ public sealed class OpenCodeCatalogService
                 if (!string.IsNullOrWhiteSpace(level) && !levels.Contains(level)) levels.Add(level);
             }
         }
-        return levels.Count == 0 && toggle ? ["none", "thinking"] : levels;
+        if (levels.Count > 0) return levels;
+        if (toggle) return ["none", "thinking"];
+        return options.GetArrayLength() == 0 ? [] : null;
     }
 
     public async Task<List<ModelEntry>> GetFreeZenModelsAsync(CancellationToken ct = default)

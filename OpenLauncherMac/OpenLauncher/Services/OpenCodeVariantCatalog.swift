@@ -38,7 +38,9 @@ enum OpenCodeVariantCatalog {
                 if !level.isEmpty, !levels.contains(level) { levels.append(level) }
             }
         }
-        return levels.isEmpty && toggle ? ["none", "thinking"] : levels
+        if !levels.isEmpty { return levels }
+        if toggle { return ["none", "thinking"] }
+        return options.isEmpty ? [] : nil
     }
 
     static func launcherLevels(for model: ModelEntry) -> [String] {
@@ -62,7 +64,7 @@ enum OpenCodeVariantCatalog {
         var slug = rawSlug
         if slug.hasSuffix("[1m]") { slug = String(slug.dropLast("[1m]".count)) }
 
-        if ["claude-opus-5", "claude-fable-5", "claude-opus-4-8", "claude-opus-4-7",
+        if ["claude-opus-5", "claude-fable-5-1", "claude-fable-5", "claude-opus-4-8", "claude-opus-4-7",
             "claude-sonnet-5", "claude-haiku-4-5"].contains(slug) {
             return ["low", "medium", "high", "xhigh", "max"]
         }
@@ -87,6 +89,7 @@ enum OpenCodeVariantCatalog {
     }
 
     private static func openAiLevels(_ slug: String) -> [String] {
+        if slug == "gpt-6-astra" { return ["low", "medium", "high", "xhigh", "max"] }
         if slug.contains("-mini") || slug.contains("-nano") { return [] }
         if slug.contains("-chat") { return ["medium"] }
         if slug.contains("pro") {
@@ -104,6 +107,7 @@ enum OpenCodeVariantCatalog {
 
     private static func openAiCompatibleLevels(_ id: String) -> [String] {
         let local = id.hasPrefix("openai/") ? String(id.dropFirst("openai/".count)) : id
+        if local == "gpt-6-astra" { return ["low", "medium", "high", "xhigh", "max"] }
         if local.contains("-chat") { return ["medium"] }
         if local.contains("pro") {
             return local.contains("gpt-5.") ? ["medium", "high", "xhigh"] : ["high"]

@@ -19,7 +19,12 @@ public sealed class OpenRouterService
 {
     private const string BaseUrl = "https://openrouter.ai/api/v1";
     private const string FrontendBaseUrl = "https://openrouter.ai/api/frontend";
-    private static readonly HttpClient Http = new()
+    private static readonly HttpClient Http = new(new SocketsHttpHandler
+    {
+        AutomaticDecompression = System.Net.DecompressionMethods.All,
+        ConnectTimeout = TimeSpan.FromSeconds(8),
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5)
+    })
     {
         // Ohne Timeout blieben hängende Requests bis zum 100-Sekunden-Default stehen (Start-Load
         // ohne CancellationToken). 30 s sind großzügig für /models und den TPS-HTML-Fallback.
@@ -163,7 +168,7 @@ public sealed class OpenRouterService
         return catalog.FreeModels;
     }
 
-    public async Task<List<string>> GetThinkingLevelsAsync(string slug, CancellationToken ct = default, bool forceRefresh = false)
+    public async Task<List<string>?> GetThinkingLevelsAsync(string slug, CancellationToken ct = default, bool forceRefresh = false)
     {
         var log = Logger.Instance;
         try
@@ -171,12 +176,14 @@ public sealed class OpenRouterService
             var json = await FetchModelsJsonAsync(ct, forceRefresh).ConfigureAwait(false);
             using var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
-                return [];
+                throw new JsonException("OpenRouter-Katalog enthält keine Modellliste.");
 
             foreach (var item in data.EnumerateArray())
             {
                 if (!item.TryGetProperty("id", out var idEl) || idEl.ValueKind != JsonValueKind.String) continue;
                 if (!string.Equals(idEl.GetString(), slug, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!item.TryGetProperty("supported_parameters", out var parameters) || parameters.ValueKind != JsonValueKind.Array)
+                    return null;
 
                 var levels = ParseThinkingLevels(item);
                 log.Info("OpenRouterService", "GetThinkingLevelsAsync", $"slug={slug} -> {levels.Count} Thinking-Level");
@@ -189,7 +196,7 @@ public sealed class OpenRouterService
             throw;
         }
 
-        return [];
+        return null;
     }
 
     private static ModelEntry? ParseModel(JsonElement item, out bool isFree)

@@ -58,6 +58,7 @@ public static class OpenCodeVariantCatalog
 
     private static IReadOnlyList<string> GetOpenAiLevels(string slug)
     {
+        if (slug == "gpt-6-astra") return ["low", "medium", "high", "xhigh", "max"];
         if (slug.Contains("-mini", StringComparison.Ordinal) || slug.Contains("-nano", StringComparison.Ordinal)) return [];
         if (slug.Contains("-chat", StringComparison.Ordinal)) return ["medium"];
         if (slug.Contains("pro", StringComparison.Ordinal)) return slug.Contains("gpt-5.", StringComparison.Ordinal)
@@ -79,6 +80,7 @@ public static class OpenCodeVariantCatalog
     private static IReadOnlyList<string> GetOpenAiCompatibleLevels(string id)
     {
         var local = id.StartsWith("openai/", StringComparison.Ordinal) ? id["openai/".Length..] : id;
+        if (local == "gpt-6-astra") return ["low", "medium", "high", "xhigh", "max"];
         if (local.Contains("-chat", StringComparison.Ordinal)) return ["medium"];
         if (local.Contains("pro", StringComparison.Ordinal)) return local.Contains("gpt-5.", StringComparison.Ordinal)
             ? ["medium", "high", "xhigh"]
@@ -144,6 +146,7 @@ public static class OpenCodeVariantCatalog
     private static bool KnownOpenRouterReasoning(string id)
     {
         return IsGlm52(id)
+            || id.StartsWith("openai/gpt-6", StringComparison.Ordinal)
             || id.StartsWith("openai/gpt-oss", StringComparison.Ordinal)
             || id.StartsWith("openai/gpt-5", StringComparison.Ordinal)
             || id.StartsWith("deepseek/deepseek-v4", StringComparison.Ordinal)

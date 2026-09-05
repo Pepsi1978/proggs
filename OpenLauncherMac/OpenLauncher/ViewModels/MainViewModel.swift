@@ -230,7 +230,13 @@ final class MainViewModel {
             return
         }
 
-        updateThinkingState(emptyText: "Lade Thinking …")
+        let cached = UserDefaults.standard.dictionary(forKey: "thinking-levels." + value.modelString)
+        let levels = cached?["levels"] as? [String] ?? OpenCodeVariantCatalog.launcherLevels(for: value)
+        thinkingOptions = levels.map(Self.toThinkingOption)
+        let selected = pendingModelDefault?.thinkingValue ?? cached?["selected"] as? String
+        selectedThinkingOption = thinkingOptions.first { $0.value == selected }
+        if selectedThinkingOption == nil { selectProfileThinkingOption() }
+        updateThinkingState(emptyText: "Noch keine gespeicherten Stufen · Aktualisierung läuft.")
         delegate?.thinkingOptionsChanged()
 
         loadThinkingTask?.cancel()
@@ -242,6 +248,8 @@ final class MainViewModel {
     private func onSelectedThinkingOptionChanged(_ value: ThinkingOptionEntry?) {
         refreshModelDefaultState()
         guard let model = selectedModel, let value else { return }
+        UserDefaults.standard.set(["levels": thinkingOptions.map { $0.value }, "selected": value.value],
+                                  forKey: "thinking-levels." + model.modelString)
         let label = Self.isClaudeCodeModel(model) ? "Effort" : "Thinking"
         statusText = "\(label) für \(model.displayName): \(value.displayName)"
     }
@@ -249,30 +257,36 @@ final class MainViewModel {
     // ===================== Thinking-/Effort-Stufen =====================
 
     private func loadThinkingOptions(model: ModelEntry, forceRefresh: Bool = false) async {
-        let previousValue = forceRefresh ? selectedThinkingOption?.value : nil
-        thinkingSubtitle = "Prüfe aktuelle Modellfähigkeiten …"
-        var levels = OpenCodeVariantCatalog.launcherLevels(for: model)
-        var source = "Katalog ohne Stufenangabe · lokale Vorgabe"
+        if Task.isCancelled { return }
+        thinkingSubtitle = "Bisherige Stufen auswählbar · Update im Hintergrund …"
+        delegate?.thinkingOptionsChanged()
+        var levels = thinkingOptions.map { $0.value }
+        var source = "Katalog ohne Stufenangabe · bisherige Stufen bleiben"
         do {
-            if let current = try await OpenCodeVariantCatalog.currentLevels(providerId: model.providerId, slug: model.slug, forceRefresh: forceRefresh) {
+            if model.providerId.caseInsensitiveCompare("openrouter") == .orderedSame {
+                if let current = try await router.thinkingLevels(slug: model.slug, forceRefresh: forceRefresh) {
+                    levels = current
+                    source = "Aus OpenRouter-Fähigkeiten abgeleitet"
+                }
+            } else if let current = try await OpenCodeVariantCatalog.currentLevels(providerId: model.providerId, slug: model.slug, forceRefresh: forceRefresh) {
                 levels = current
                 source = "Aktuell aus models.dev"
-            } else if model.providerId.caseInsensitiveCompare("openrouter") == .orderedSame {
-                levels = try await router.thinkingLevels(slug: model.slug, forceRefresh: forceRefresh)
-                source = "Aus OpenRouter-Fähigkeiten abgeleitet"
             }
         } catch {
             if Task.isCancelled { return }
             Logger.shared.warn("MainViewModel", "loadThinkingOptions", error.localizedDescription)
-            if !thinkingOptions.isEmpty { levels = thinkingOptions.map { $0.value } }
+            levels = thinkingOptions.map { $0.value }
             source = "Aktualisierung fehlgeschlagen · bisherige/lokale Stufen"
         }
         if Task.isCancelled { return }
 
+        let previousValue = selectedThinkingOption?.value
         selectedThinkingOption = nil
         thinkingOptions = levels.map(Self.toThinkingOption)
         selectedThinkingOption = thinkingOptions.first { $0.value == previousValue }
         if selectedThinkingOption == nil { selectProfileThinkingOption() }
+        UserDefaults.standard.set(["levels": levels, "selected": selectedThinkingOption?.value ?? ""],
+                                  forKey: "thinking-levels." + model.modelString)
         thinkingSubtitle = source
         let isClaude = Self.isClaudeCodeModel(model)
         let empty = isClaude ? "Kein Effort für dieses Modell erkannt." : "Kein Thinking für dieses Modell erkannt."

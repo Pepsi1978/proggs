@@ -115,15 +115,16 @@ final class OpenRouterService {
         }
     }
 
-    func thinkingLevels(slug: String, forceRefresh: Bool = false) async throws -> [String] {
+    func thinkingLevels(slug: String, forceRefresh: Bool = false) async throws -> [String]? {
         do {
             let json = try await Self.fetchModelsJson(forceRefresh: forceRefresh)
             guard let data = json.data(using: .utf8),
                   let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let items = root["data"] as? [[String: Any]] else { return [] }
+                   let items = root["data"] as? [[String: Any]] else { throw URLError(.cannotParseResponse) }
 
             for item in items {
                 guard let id = item["id"] as? String, id.caseInsensitiveCompare(slug) == .orderedSame else { continue }
+                guard item["supported_parameters"] is [String] else { return nil }
                 let levels = Self.parseThinkingLevels(item)
                 Logger.shared.info("OpenRouterService", "thinkingLevels", "slug=\(slug) -> \(levels.count) Thinking-Level")
                 return levels
@@ -132,7 +133,7 @@ final class OpenRouterService {
             Logger.shared.warn("OpenRouterService", "thinkingLevels", "Thinking-Level-Fallback für \(slug): \(error.localizedDescription)")
             throw error
         }
-        return []
+        return nil
     }
 
     // ===================== /models mit Cache =====================
