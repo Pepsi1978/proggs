@@ -1,12 +1,12 @@
 /**
  * Massen-Downloader: holt die komplette Bibliothek in einem Lauf.
  *
- * Warum es diesen Weg gibt: Das alte Verfahren holte die Download-Links einzeln,
- * nacheinander, mit 600 ms Pause und bis zu 2,5 s Warten pro Song — bei 2400 Songs
- * sind das Stunden. Gemessen verträgt /api/download/clip aber 25 gleichzeitige
- * Anfragen ohne Bremse (429), und ein Link, der beim ersten Abruf noch "processing"
- * meldet, ist beim zweiten Abruf sofort fertig. Daraus wird: erst alle anstoßen,
- * dann alle einsammeln.
+ * Warum es diesen Weg gibt: Die Songliste liegt hinter der Anmeldung, das Laden der
+ * Dateien nicht. Die Bibliothek wird darum im Browser über acht Seiten gleichzeitig
+ * gelesen; die Download-Links dagegen nacheinander, weil Suno dort seit September
+ * 2026 hart bremst (gemessen: 4 gleichzeitige Abrufe → 3-mal "rate_limited",
+ * nacheinander mit 1,5 s Abstand → jeder geht durch). Geladen wird anschließend
+ * wieder mit acht Downloads parallel — dort bremst nichts.
  *
  * Aufbau: Node kann sich bei Suno nicht anmelden — der Anmelde-Nachweis lebt im
  * angemeldeten Chrome. Darum läuft nur die Beschaffung (Songliste + signierte Links)
@@ -19,6 +19,7 @@
  *   node downloader.ts "D:\Musik"
  *   node downloader.ts --limit 15 "D:\Test"  ... nur die ersten 15 (zum Ausprobieren)
  *   node downloader.ts --freischalten        ... zusätzlich selbst freischalten (Kontingent!)
+ *   node downloader.ts --alle-pruefen        ... jeden Song einzeln bei Suno nachfragen (langsam)
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -46,8 +47,8 @@ import {
 const HIER = dirname(fileURLToPath(import.meta.url));
 const { log, probe } = makeLogger('downloader');
 
-/** Gemessen: 25 gleichzeitige Link-Anfragen laufen ohne 429 durch, 12 Feed-Seiten nicht. */
-const GLEICHZEITIG = 8; // Downloads parallel — mehr bringt nichts, die Leitung ist der Engpass
+/** Downloads parallel — mehr bringt nichts, die Leitung ist der Engpass. */
+const GLEICHZEITIG = 8;
 
 // ---------------------------------------------------------------- Argumente
 
@@ -71,6 +72,13 @@ const STILL = args.includes('--still');
  * zusätzlich selbst frei (älteste zuerst, bis das Kontingent erschöpft ist).
  */
 const FREISCHALTEN = args.includes('--freischalten');
+/**
+ * Notweg, falls Suno das Freischalt-Feld in der Songliste einmal wieder umbenennt:
+ * Dann wird für JEDEN fehlenden Song einzeln beim Link-Endpunkt nachgefragt. Das ist
+ * wasserdicht, aber langsam — Suno lässt nur rund einen Abruf je anderthalb Sekunden
+ * durch. Die Brücke schaltet von selbst darauf um, wenn das Feld ganz verschwindet.
+ */
+const ALLE_PRUEFEN = args.includes('--alle-pruefen');
 const ZIEL = args.find((a) => !a.startsWith('--') && !/^\d+$/.test(a)) ?? DEFAULT_TARGET;
 
 if (!existsSync(ZIEL)) {
@@ -164,6 +172,7 @@ const server = createServer(async (req, res) => {
       fehlt,
       limit: LIMIT,
       freischalten: FREISCHALTEN,
+      alleFragen: ALLE_PRUEFEN,
     });
     return;
   }

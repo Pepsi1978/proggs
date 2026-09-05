@@ -35,13 +35,18 @@ direkt an das laufende Programm weiter.
 Früher wurde jeder Download-Link einzeln angefordert: 600 ms Pause, dazu bis zu 2,5 s
 Warten, bis Suno den Link aufbereitet hatte. Bei 2400 Songs sind das Stunden.
 
-Gemessen verträgt Suno aber **25 gleichzeitige** Link-Anfragen ohne zu bremsen, und ein
-Link, der beim ersten Abruf noch „wird vorbereitet" meldet, ist beim zweiten Abruf sofort
-da. Daraus wurde: **erst alle anstoßen, dann alle einsammeln** — statt bei jedem Song
-einzeln zu warten. Die Songliste wird über fünf Seiten gleichzeitig gelesen, geladen wird
-mit acht Downloads parallel.
+Die Songliste wird darum über **acht Seiten gleichzeitig** gelesen (gemessen: über 170
+Seiten kein einziger Fehlschlag), und geladen wird mit **acht Downloads parallel** — dort
+bremst nichts.
 
-Gemessen: **12 Songs in 14 Sekunden**, samt Cover und Titel.
+Bei den Download-Links ist es seit September 2026 umgekehrt: Sie müssen **nacheinander**
+geholt werden. Gemessen ergaben 4 gleichzeitige Abrufe 3-mal `rate_limited`; nacheinander
+mit 1,5 s Abstand ging jeder durch. Die Brücke regelt die Pause selbst nach — sie verlängert
+sie, sobald Suno bremst, und verkürzt sie wieder, wenn es glatt läuft.
+
+**`rate_limited` ist keine Absage.** Suno antwortet darauf mit `ok:false` — genauso wie bei
+`not_authorized`. Wer die beiden nicht auseinanderhält, wirft freigeschaltete Songs
+stillschweigend weg. Ein gebremster Song wird deshalb erneut gefragt, ein gesperrter nicht.
 
 ### Aus der Kommandozeile
 
@@ -51,6 +56,7 @@ node downloader.ts "D:\Musik"
 node downloader.ts --limit 15 "D:\Test"   ... Probelauf mit 15 Songs
 node downloader.ts --freischalten         ... zusätzlich selbst freischalten (verbraucht Kontingent)
 node downloader.ts --still                ... ohne Zwischenablage und ohne Browser zu öffnen
+node downloader.ts --alle-pruefen         ... jeden Song einzeln bei Suno nachfragen (langsam)
 ```
 
 ## Die Nummerierung bleibt stabil
@@ -169,13 +175,17 @@ früher ist damit überflüssig.
 für *freigeschaltete* Songs aus; für alle anderen antwortet `/api/download/clip/<id>` mit
 `not_authorized`.
 
-**Woran erkennt das Programm, ob ein Song freigeschaltet ist? Es rät nicht mehr.** Früher
-wurde dafür ein Feld aus der Songliste gelesen (`is_download_unlocked`). Suno hat diesen
-Feldnamen schon zweimal geändert — und jedes Mal galten schlagartig alle Songs als gesperrt.
-Deshalb wird jetzt die Stelle gefragt, die es sicher weiß: für jeden noch nicht gesicherten
-Song wird `/api/download/clip/<id>` abgerufen. Kommt ein Link zurück, ist der Song
-freigeschaltet und wird geladen; kommt `not_authorized`, bleibt er liegen. Der Abruf des
-Links kostet **nichts** — Kontingent verbraucht allein das Freischalten.
+**Woran erkennt das Programm, ob ein Song freigeschaltet ist?** Am Feld
+`is_download_unlocked` in der Songliste — nachgemessen am 05.09.2026: 10 von 3247 Songs
+standen auf `true`, und eine Gegenprobe an 20 gesperrten Songs quer durch die Bibliothek
+ergab 20-mal `not_authorized`. Das Feld stimmt also.
+
+Es entscheidet aber nicht allein: Das letzte Wort hat der Link-Abruf
+`/api/download/clip/<id>`. Kommt ein Link, wird geladen; kommt `not_authorized`, bleibt der
+Song liegen. Und sollte Suno das Feld einmal wieder umbenennen — das ist schon zweimal
+passiert —, merkt die Brücke, dass gar kein Freischalt-Feld mehr da ist, und fragt
+stattdessen für jeden Song einzeln nach. Erzwingen lässt sich das mit `--alle-pruefen`.
+Der Link-Abruf kostet **nichts**; Kontingent verbraucht allein das Freischalten.
 
 **Freigeschaltet wird von Hand auf suno.com.** Der Downloader schaltet von sich aus **nie**
 etwas frei. Er lädt genau die Songs, die du selbst freigeschaltet hast und die noch nicht auf
@@ -191,12 +201,21 @@ dabei wirklich abgelehnt wurden — älteste zuerst, bis das Kontingent erschöp
 
 **Die ganze Bibliothek wird jedes Mal gelesen, ohne Frühstopp.** Ein Song, den du gestern
 von Hand freigeschaltet hast, kann drei Jahre alt sein und liegt dann tief in der Liste. Ein
-Durchlauf über gut 150 Seiten dauert eine knappe halbe Minute — der Preis dafür, nichts zu
+Durchlauf über gut 160 Seiten dauert eine knappe halbe Minute — der Preis dafür, nichts zu
 verpassen.
+
+**Woher die Songliste kommt — und warum das der eigentliche Fehler war.** Bis Version 1.6.7
+las die Brücke `/api/feed/v2`. Dieser Endpunkt meldete zuletzt `num_total_results: 21`: Er
+zeigt nur die letzten Erzeugungen, nicht die Bibliothek. Von 3247 Songs kannte das Programm
+also 21 — freigeschaltete Songs, die tiefer lagen, konnte es gar nicht finden. Die
+vollständige Bibliothek steht in `/api/project/default`: `clip_count` nennt die Gesamtzahl,
+die Songs stehen als `project_clips[].clip`. Zwei Fallstricke dort: Die Seiten sind
+**eins-basiert** (`page=0` liefert dieselbe Seite wie `page=1`), und `page_size` wird
+ignoriert — es sind immer 20 pro Seite.
 
 Die m4a aus `media_urls` (CloudFront) ist zwar ohne Anmeldung erreichbar, aber verschlüsselt —
 sie taugt nicht als Quelle.
 
 ---
 
-Version 1.6.7 (05.09.2026, 12:15 Uhr)
+Version 1.7.0 (05.09.2026, 12:40 Uhr)

@@ -5,19 +5,38 @@
  * bleibt dabei im Browser — an den Downloader gehen nur Songliste und die von Suno
  * ausgestellten, zeitlich begrenzten Download-Links.
  *
- * Grundregel seit September 2026: Es wird NICHTS selbst freigeschaltet. Wer entscheidet,
- * ob ein Song geladen wird, ist Suno selbst — /api/download/clip/<id> gibt für einen
- * freigeschalteten Song einen signierten Link heraus und für alle anderen
- * "not_authorized". Es wird also nicht mehr geraten, welches Feld im Feed die
- * Freischaltung anzeigt (die Feldnamen haben schon zweimal gewechselt); gefragt wird
- * die Stelle, die es wirklich weiß. Der Abruf des Links kostet nichts — nur
- * /api/download/authorize verbraucht Kontingent, und das läuft nur mit --freischalten.
+ * ---------------------------------------------------------------------------
+ * Gemessen am 05.09.2026 an der echten Bibliothek (3247 Songs). Die Zahlen hier
+ * sind nachgemessen, nicht geschätzt:
  *
- * Der Geschwindigkeitsgewinn steckt in zwei Stellen:
- *  1. Die Songliste wird über mehrere Seiten gleichzeitig gelesen (statt einzeln).
- *  2. Die Download-Links werden in Schüben angefordert: erst alle anstoßen, dann
- *     einsammeln. Suno meldet beim ersten Abruf oft "processing", beim zweiten ist
- *     der Link sofort da — nacheinander zu warten kostete früher Stunden.
+ * 1) WOHER DIE SONGLISTE KOMMT.  /api/feed/v2 meldete "num_total_results: 21" —
+ *    der Feed zeigt nur die letzten Erzeugungen, nicht die Bibliothek. Dort stand
+ *    also nie mehr als ein Bruchteil der Songs. Die vollständige Bibliothek liegt
+ *    in /api/project/default: "clip_count" nennt die Gesamtzahl, die Songs stehen
+ *    als project_clips[].clip. Die Seiten sind EINS-basiert (page=0 liefert
+ *    dieselbe Seite wie page=1), page_size wird ignoriert — es sind immer 20 pro
+ *    Seite. 8 Seiten gleichzeitig liefen über 170 Seiten ohne einen Fehlschlag.
+ *
+ * 2) WORAN MAN DIE FREISCHALTUNG ERKENNT.  is_download_unlocked im Clip stimmt
+ *    (10 von 3247 auf true, darunter genau der vom Benutzer genannte Song). Es
+ *    wird als Vorfilter benutzt, das letzte Wort hat aber der Link-Abruf. Fehlt
+ *    das Feld einmal ganz — Suno hat den Namen schon gewechselt —, schaltet die
+ *    Brücke von selbst auf Nachfragen für jeden Song um.
+ *
+ * 3) WIE STARK SUNO BREMST.  /api/download/clip verträgt KEINE gleichzeitigen
+ *    Abrufe mehr: 4 auf einmal ergaben 3-mal "rate_limited". Nacheinander mit
+ *    1,5 s Abstand ging jeder durch. Darum wird sequenziell und mit selbst
+ *    nachregelnder Pause gefragt. Die drei Antworten sind:
+ *      {ok:true,  download_url, status:"ready"}   → freigeschaltet
+ *      {ok:false, reason:"not_authorized"}        → gesperrt, endgültig
+ *      {ok:false, reason:"rate_limited"}          → zu schnell, WIEDERHOLEN
+ *    Die letzten beiden auseinanderzuhalten ist entscheidend: "rate_limited" als
+ *    Absage zu werten hieße, freigeschaltete Songs stillschweigend liegen zu lassen.
+ * ---------------------------------------------------------------------------
+ *
+ * Freigeschaltet wird nichts von selbst — das macht der Benutzer auf suno.com.
+ * Nur mit --freischalten schaltet die Brücke zusätzlich frei; das verbraucht
+ * Kontingent aus dem Abo.
  *
  * Von Hand jederzeit möglich:
  *   sunoStand()        wie weit ist es
@@ -28,12 +47,15 @@
   const HOST = 'https://studio-api.prod.suno.com';
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  // Gemessen: 5 Feed-Seiten gleichzeitig laufen sauber durch, ab 12 bremst Suno mit 429.
-  const SEITEN_GLEICH = 5;
-  // Gemessen: 25 Link-Anfragen gleichzeitig erzeugen keine einzige Bremse.
-  const LINKS_GLEICH = 25;
-  // Sicherheitsnetz gegen eine endlos antwortende Seite.
-  const MAX_SEITEN = 900;
+  /** Gemessen: 8 Bibliotheks-Seiten gleichzeitig laufen über 170 Seiten fehlerfrei. */
+  const SEITEN_GLEICH = 8;
+  /** Suno liefert immer 20 Songs je Seite; page_size wird ignoriert. */
+  const JE_SEITE = 20;
+  /** Gemessen: unter 1,5 s Abstand antwortet der Link-Endpunkt mit "rate_limited". */
+  const LINK_PAUSE_MIN = 1500;
+  const LINK_PAUSE_MAX = 8000;
+  /** Notbremse gegen eine Bibliothek, die kein Ende meldet. */
+  const MAX_SEITEN = 1200;
 
   const warte = (ms) => new Promise((r) => setTimeout(r, ms));
   const zeig = (t, f) => console.log('%c' + t, 'font-size:15px;font-weight:bold;color:' + (f || '#0a0'));
@@ -70,10 +92,9 @@
           continue;
         }
         if (!r.ok) {
-          // 403/404 heißt bei /api/download/clip: nicht freigeschaltet. Das ist eine
-          // endgültige Antwort und kein Grund, es fünfmal zu wiederholen. Der Grund
-          // aus der Antwort wird mitgenommen, damit man sieht, warum ein Song liegen
-          // bleibt. Für alle anderen Pfade bleibt es beim alten Verhalten (null).
+          // Beim Link-Endpunkt ist ein 4xx eine endgültige Auskunft; der Grund aus der
+          // Antwort wird mitgenommen. Bei der Bibliothek wird dagegen weiter
+          // wiederholt — eine übersprungene Seite wäre eine Lücke in der Songliste.
           if (r.status >= 400 && r.status < 500 && pfad.startsWith('/api/download/clip')) {
             try {
               const d = await r.json();
@@ -157,44 +178,61 @@
   // ------------------------------------------------------------- Songliste lesen
   const gefunden = new Map(); // id -> Song, nur eigene und nur unbekannte
   let ich = null;
+  let gesamtInBibliothek = 0;
 
-  // Der Feldname für die Freischaltung im Feed hat schon zweimal gewechselt und ist
-  // darum keine Entscheidungsgrundlage mehr. Er wird nur noch einmal protokolliert,
-  // damit man sieht, was Suno gerade liefert — entschieden wird über den Link-Abruf.
+  /**
+   * Sagt Sunos Songliste überhaupt etwas über die Freischaltung? Sobald ein Clip das
+   * Feld mitbringt (egal ob true oder false), wird danach vorgefiltert. Fehlt es auf
+   * allen Clips — weil Suno es wieder umbenannt hat —, wird stattdessen für jeden
+   * Song einzeln nachgefragt. So kippt ein Namenswechsel nie den ganzen Lauf.
+   */
+  const UNLOCK_FELDER = [
+    'is_download_unlocked', 'download_unlocked', 'isDownloadUnlocked',
+    'downloadUnlocked', 'is_unlocked', 'unlocked',
+  ];
+  let feldVorhanden = false;
   let feldLogSchon = false;
+
+  const istFrei = (c) => {
+    let frei = false;
+    for (const f of UNLOCK_FELDER) {
+      if (Object.prototype.hasOwnProperty.call(c, f)) {
+        feldVorhanden = true;
+        if (c[f] === true) frei = true;
+      }
+    }
+    return frei;
+  };
+
   const feldHinweis = (c) => {
     if (feldLogSchon) return;
     feldLogSchon = true;
     const kandidaten = Object.keys(c || {}).filter((k) => /download|unlock|lock/i.test(k));
-    console.log(
-      '   (Info) Freischalt-Felder im Feed: ' + (kandidaten.length ? kandidaten.join(', ') : '(keine)') +
-        ' — entschieden wird trotzdem über /api/download/clip.',
-    );
+    console.log('   (Info) Freischalt-Felder in der Songliste: ' + (kandidaten.length ? kandidaten.join(', ') : '(keine)'));
   };
 
-  /** Liest eine Feed-Seite und trägt die eigenen, noch unbekannten Songs ein. */
+  /** Liest eine Bibliotheks-Seite (1-basiert) und trägt die unbekannten Songs ein. */
   const seiteLesen = async (nr) => {
-    const daten = await api('/api/feed/v2?page=' + nr + '&page_size=20');
-    if (!daten || !Array.isArray(daten.clips)) {
+    const daten = await api('/api/project/default?page=' + nr);
+    const eintraege = daten && Array.isArray(daten.project_clips) ? daten.project_clips : null;
+    if (!eintraege) {
       // Eine Seite, die gar nicht durchkam, ist eine Lücke in der Songliste — das
       // muss man sehen, sonst fehlt hinterher unerklärlich ein Song.
       console.log('%c   ⚠️ Seite ' + nr + ' war nicht lesbar — mit sunoWeiter(' + nr + ') nachholen.', 'color:#c60');
-      return { leer: true, neu: 0, weiter: true };
+      return { leer: true, neu: 0 };
     }
-
-    if (!ich && daten.clips.length) {
-      const erster = daten.clips[0];
-      const wer = erster.handle || (erster.user && erster.user.handle);
-      if (typeof wer === 'string' && wer) ich = wer.toLowerCase();
-    }
+    if (daten.clip_count > gesamtInBibliothek) gesamtInBibliothek = daten.clip_count;
 
     let neu = 0;
-    for (const c of daten.clips) {
+    for (const e of eintraege) {
+      const c = e && e.clip;
       if (!c || typeof c.id !== 'string' || !UUID.test(c.id)) continue;
-      // In der Antwort hängen auch fremde Stücke (Vorlagen von Coverversionen).
+      if (c.is_trashed === true) continue; // im Papierkorb — nicht sichern
+      // In der Bibliothek können auch fremde Stücke liegen (Vorlagen von Coverversionen).
       const wer = c.handle || (c.user && c.user.handle);
       if (ich && typeof wer === 'string' && wer.toLowerCase() !== ich) continue;
       feldHinweis(c);
+      const frei = istFrei(c);
       // Alles, was schon als fertige Datei auf der Platte liegt, wird übersprungen.
       // Was fehlt, steckt nicht in "bekannt" und kommt darum hier durch.
       if (bekannt.has(c.id) || gefunden.has(c.id)) continue;
@@ -210,43 +248,65 @@
         media_urls: medien,
         privat: typeof c.is_public === 'boolean' ? !c.is_public : true,
         download_url: undefined,
+        freigeschaltet: frei,
       });
       neu++;
     }
-    return { leer: daten.clips.length === 0, neu, weiter: daten.has_more !== false };
+    return { leer: eintraege.length === 0, neu };
   };
 
   /**
-   * Liest die Bibliothek von vorn bis hinten durch. Es gibt bewusst keinen Frühstopp
-   * mehr: ein Song, den du gestern von Hand freigeschaltet hast, kann drei Jahre alt
-   * sein und liegt dann tief in der Liste. Ein Durchlauf über gut 150 Seiten dauert
-   * eine knappe halbe Minute — das ist der Preis dafür, nichts zu verpassen.
+   * Liest die Bibliothek von vorn bis hinten durch. Es gibt bewusst keinen Frühstopp:
+   * ein Song, den du gestern von Hand freigeschaltet hast, kann drei Jahre alt sein
+   * und liegt dann tief in der Liste.
    */
   const listeLesen = async (abSeite) => {
-    let seite = abSeite || 0;
-    zeig('🔎 Die Songliste wird gelesen …', '#06c');
+    // Seite 1 zuerst allein: sie nennt die Gesamtzahl und legt fest, wessen Songs
+    // gesucht werden. Beides nebenbei aus parallelen Seiten zu ziehen wäre ein
+    // Wettlauf — und träfe die Songliste ins Mark, wenn dabei ein Fremdstück gewinnt.
+    const start = abSeite && abSeite > 1 ? abSeite : 1;
+    if (!ich) {
+      const erste = await api('/api/project/default?page=1');
+      const eintraege = (erste && erste.project_clips) || [];
+      const namen = new Map();
+      for (const e of eintraege) {
+        const wer = e && e.clip && (e.clip.handle || (e.clip.user && e.clip.user.handle));
+        if (typeof wer === 'string' && wer) namen.set(wer.toLowerCase(), (namen.get(wer.toLowerCase()) || 0) + 1);
+      }
+      let beste = 0;
+      for (const [name, n] of namen) {
+        if (n > beste) {
+          beste = n;
+          ich = name;
+        }
+      }
+      if (erste && erste.clip_count) gesamtInBibliothek = erste.clip_count;
+    }
 
-    while (seite < MAX_SEITEN) {
+    const seitenGesamt = gesamtInBibliothek ? Math.ceil(gesamtInBibliothek / JE_SEITE) : MAX_SEITEN;
+    zeig('🔎 Die Bibliothek wird gelesen — ' + (gesamtInBibliothek || '?') + ' Songs auf ' + seitenGesamt + ' Seiten …', '#06c');
+
+    let seite = start;
+    while (seite <= Math.min(seitenGesamt, MAX_SEITEN)) {
       const block = [];
-      for (let i = 0; i < SEITEN_GLEICH; i++) block.push(seite + i);
+      for (let i = 0; i < SEITEN_GLEICH && seite + i <= seitenGesamt; i++) block.push(seite + i);
+      if (!block.length) break;
       const ergebnisse = await Promise.all(block.map(seiteLesen));
-      seite += SEITEN_GLEICH;
+      seite += block.length;
 
-      console.log('   Seiten bis ' + seite + ' → ' + gefunden.size + ' noch nicht gesicherte Songs');
-      await puls('Songliste: Seite ' + seite + ', ' + gefunden.size + ' noch nicht gesichert');
+      console.log('   Seite ' + (seite - 1) + ' von ' + seitenGesamt + ' → ' + gefunden.size + ' noch nicht gesichert');
+      await puls('Bibliothek: Seite ' + (seite - 1) + ' von ' + seitenGesamt + ', ' + gefunden.size + ' noch nicht gesichert');
 
       if (ergebnisse.every((e) => e.leer)) break;
-      // Suno meldet auf der letzten Seite has_more:false — dann ist Schluss.
-      if (ergebnisse.every((e) => e.weiter === false)) break;
       if (limit && gefunden.size >= limit) break;
-      await warte(200);
+      await warte(150);
     }
     return gefunden.size;
   };
   window.sunoWeiter = listeLesen;
   window.sunoStand = () => gefunden.size;
 
-  await listeLesen(0);
+  await listeLesen(1);
 
   const nachAlter = (a, b) => {
     const ta = a.created_at ? Date.parse(a.created_at) : 8.64e15;
@@ -262,72 +322,115 @@
     await anDownloader('/fertig', { gesamt: 0 });
     return;
   }
-  zeig('📄 ' + liste.length + ' Songs sind noch nicht gesichert. Jetzt fragen, welche davon freigeschaltet sind …', '#06c');
+
+  // ------------------------------------------------------------- Vorauswahl
+  /**
+   * Gefragt wird nur für Songs, die überhaupt Aussicht auf einen Link haben. Der
+   * Link-Endpunkt verträgt nur einen Abruf je anderthalb Sekunden — für alle 3200
+   * gesperrten Songs zu fragen dauerte über eine Stunde und liefe fast vollständig
+   * in die Bremse. Sagt die Songliste nichts über die Freischaltung, wird trotzdem
+   * jeder gefragt; dann ist Langsamkeit besser als ein leerer Lauf.
+   */
+  const alleFragen = hallo.alleFragen === true || !feldVorhanden;
+  const kandidaten = alleFragen ? liste : liste.filter((s) => s.freigeschaltet);
+  const vorgefiltert = liste.length - kandidaten.length;
+
+  if (!feldVorhanden) {
+    zeig('⚠️ Die Songliste nennt kein Freischalt-Feld mehr — es wird für jeden Song einzeln nachgefragt.', '#c60');
+  }
+  zeig('📄 ' + liste.length + ' Songs fehlen auf der Platte, davon sind ' + kandidaten.length + ' freigeschaltet.', '#06c');
+  if (vorgefiltert) {
+    console.log('   ' + vorgefiltert + ' gesperrte Songs werden gar nicht erst gefragt (auf suno.com freischalten).');
+  }
+
+  if (!kandidaten.length && hallo.freischalten !== true) {
+    zeig('⏭️ Kein freigeschalteter Song dabei — nichts zu laden.', '#c60');
+    await anDownloader('/kontingent', {
+      gesperrt: liste.length,
+      text: liste.length + ' fehlende Songs sind alle gesperrt. Auf suno.com freischalten, dann erneut starten.',
+    });
+    await anDownloader('/fertig', { gesamt: 0 });
+    return;
+  }
 
   // ------------------------------------------------------------- Links holen
   /**
-   * /api/download/clip/<id> ist die einzige verlässliche Auskunft darüber, ob ein Song
-   * freigeschaltet ist: freigeschaltet → signierter Link, sonst "not_authorized".
-   * Ein Abruf stößt zugleich die Aufbereitung an; kommt "processing" zurück, wird in
-   * der nächsten Runde erneut gefragt. Eine endgültige Absage wird sofort erkannt und
-   * nicht acht Runden lang wiederholt — genau daran hing das ewige Warten.
+   * Sequenziell mit selbst nachregelnder Pause: Bei "rate_limited" wird die Pause
+   * um die Hälfte verlängert, nach mehreren glatten Abrufen wieder verkürzt. So
+   * findet der Lauf die schnellste Geschwindigkeit, die Suno gerade durchlässt,
+   * ohne sich festzufahren.
    */
-  const ENDGUELTIG = /not_?auth|unauthor|forbidden|not_found|no_?access|denied|payment|subscription/i;
+  const GESPERRT = /not_?auth|unauthor|forbidden|no_?access|denied|payment|subscription|not_?found/i;
+  const BREMSE = /rate_?limit|too_?many|slow_?down|throttl/i;
+
+  let pause = LINK_PAUSE_MIN;
   const linkeHolen = async (ids, wortmeldung) => {
-    const ergebnis = new Map();
+    const links = new Map();
     const abgelehnt = new Map(); // id -> Grund
     let offen = ids.slice();
+    let glatt = 0;
 
-    for (let runde = 0; runde < 6 && offen.length; runde++) {
+    for (let runde = 0; runde < 4 && offen.length; runde++) {
       const naechste = [];
-      for (let i = 0; i < offen.length; i += LINKS_GLEICH) {
-        const schub = offen.slice(i, i + LINKS_GLEICH);
-        const antworten = await Promise.all(
-          schub.map(async (id) => {
-            const d = await api('/api/download/clip/' + id, 3);
-            const url = d && typeof d.download_url === 'string' && d.download_url ? d.download_url : null;
-            const grund = String((d && (d.reason || d.detail || d.message || d.error)) || '');
-            return {
-              id,
-              url,
-              // Endgültig heißt: fragen bringt nichts mehr. Entweder sagt Suno das
-              // ausdrücklich (ok:false / not_authorized) oder es kommt gar nichts.
-              endgueltig: !d || d.ok === false || ENDGUELTIG.test(grund),
-              grund: grund || 'nicht freigeschaltet',
-            };
-          }),
-        );
-        for (const a of antworten) {
-          if (a.url) ergebnis.set(a.id, a.url);
-          else if (a.endgueltig) abgelehnt.set(a.id, a.grund);
-          else naechste.push(a.id);
+      for (let i = 0; i < offen.length; i++) {
+        const id = offen[i];
+        const d = await api('/api/download/clip/' + id, 3);
+        const grund = String((d && (d.reason || d.detail || d.message || d.error)) || '');
+
+        if (d && typeof d.download_url === 'string' && d.download_url) {
+          links.set(id, d.download_url);
+          if (++glatt >= 5 && pause > LINK_PAUSE_MIN) {
+            pause = Math.max(LINK_PAUSE_MIN, Math.round(pause * 0.8));
+            glatt = 0;
+          }
+        } else if (BREMSE.test(grund)) {
+          // NICHT als Absage werten — genau hier gingen freigeschaltete Songs verloren.
+          glatt = 0;
+          pause = Math.min(LINK_PAUSE_MAX, Math.round(pause * 1.5));
+          naechste.push(id);
+        } else if (!d || d.ok === false || GESPERRT.test(grund)) {
+          abgelehnt.set(id, grund || 'nicht freigeschaltet');
+        } else {
+          naechste.push(id); // "processing" — die Aufbereitung läuft noch
         }
-        const zeile =
-          '   Links: ' + ergebnis.size + ' von ' + ids.length +
-          (abgelehnt.size ? ' (' + abgelehnt.size + ' nicht freigeschaltet)' : '') +
-          (naechste.length ? ' · ' + naechste.length + ' in Arbeit' : '');
-        console.log(zeile);
-        await puls((wortmeldung || 'Links') + ': ' + ergebnis.size + ' von ' + ids.length);
+
+        if ((i + 1) % 5 === 0 || i + 1 === offen.length) {
+          console.log(
+            '   ' + (wortmeldung || 'Links') + ': ' + links.size + ' von ' + ids.length +
+              (abgelehnt.size ? ' · ' + abgelehnt.size + ' gesperrt' : '') +
+              (naechste.length ? ' · ' + naechste.length + ' noch einmal' : '') +
+              ' (Pause ' + pause + ' ms)',
+          );
+          await puls((wortmeldung || 'Links') + ': ' + links.size + ' von ' + ids.length);
+        }
+        await warte(pause);
       }
       offen = naechste;
-      if (offen.length) await warte(2500); // die Aufbereitung braucht einen Moment
+      if (offen.length) {
+        const wartezeit = (runde + 1) * 10;
+        console.log('   Suno hat gebremst — ' + offen.length + ' Songs werden in ' + wartezeit + ' s erneut gefragt.');
+        for (let w = 0; w < wartezeit; w += 5) {
+          await warte(5000);
+          await puls((wortmeldung || 'Links') + ': warte auf Sunos Bremse …');
+        }
+      }
     }
-    // Was nach der letzten Runde immer noch offen ist, wird wie abgelehnt behandelt —
-    // sonst wartet hier jemand auf etwas, das nicht mehr kommt.
-    for (const id of offen) if (!abgelehnt.has(id)) abgelehnt.set(id, 'kein Link nach 6 Runden');
-    return { links: ergebnis, abgelehnt };
+    for (const id of offen) if (!abgelehnt.has(id)) abgelehnt.set(id, 'Suno bremst dauerhaft');
+    return { links, abgelehnt };
   };
 
   const beginn = Date.now();
-  let { links, abgelehnt } = await linkeHolen(liste.map((s) => s.id), 'Links');
+  const ersteRunde = await linkeHolen(kandidaten.map((s) => s.id), 'Links');
+  const links = ersteRunde.links;
+  const abgelehnt = ersteRunde.abgelehnt;
 
   // ------------------------------------------------------------- Freischalten (nur --freischalten)
   /**
    * Standardweg: Es wird NICHTS freigeschaltet. Freischalten heißt POST
    * /api/download/authorize und kostet einen Download aus dem Monatskontingent des
-   * Abos. Nur mit --freischalten wird das gemacht — und dann ausschließlich für
-   * Songs, für die Suno gerade eben keinen Link herausgerückt hat. So wird nie
-   * Kontingent für einen Song verbrannt, der ohnehin schon frei war.
+   * Abos. Nur mit --freischalten wird das gemacht — und dann erst, nachdem der
+   * Link-Abruf gelaufen ist, damit nie Kontingent für einen Song verbrannt wird,
+   * der ohnehin schon frei war.
    */
   const datum = (iso) => {
     if (!iso) return 'unbekannt';
@@ -335,7 +438,7 @@
     return isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString('de-DE');
   };
 
-  if (hallo.freischalten === true && abgelehnt.size) {
+  if (hallo.freischalten === true) {
     const kontingent = async () => {
       const b = await api('/api/billing/info/', 3);
       const u = b && b.download_usage;
@@ -346,7 +449,8 @@
       return { frei, erneuert: b.period_end || b.renews_on || null };
     };
 
-    const gesperrt = liste.filter((s) => abgelehnt.has(s.id)); // schon nach Alter sortiert
+    // Alles, was keinen Link hat: die vorgefilterten Gesperrten plus die abgelehnten.
+    const gesperrt = liste.filter((s) => !links.has(s.id)); // schon nach Alter sortiert
     const k = await kontingent();
     if (!k) zeig('❗ Download-Kontingent konnte nicht gelesen werden — es wird trotzdem versucht.', '#c60');
     else
@@ -408,28 +512,21 @@
   const ohneLink = liste.filter((s) => !s.download_url);
   liste = liste.filter((s) => s.download_url);
 
-  zeig(
-    '🔑 ' + liste.length + ' von ' + (liste.length + ohneLink.length) + ' Songs sind freigeschaltet (' + dauer + ' s).',
-    ohneLink.length ? '#c60' : '#0a0',
-  );
+  zeig('🔑 ' + liste.length + ' Songs mit Download-Link (' + dauer + ' s).', liste.length ? '#0a0' : '#c60');
 
   if (ohneLink.length) {
     // Der Benutzer soll sehen, WAS er noch von Hand freischalten müsste.
-    zeig(
-      '⏭️ ' + ohneLink.length + ' Songs sind nicht freigeschaltet und bleiben liegen. ' +
-        'Auf suno.com von Hand freischalten, dann beim nächsten Lauf holen.',
-      '#c60',
-    );
+    zeig('⏭️ ' + ohneLink.length + ' Songs bleiben liegen — auf suno.com freischalten, dann beim nächsten Lauf holen.', '#c60');
     for (const s of ohneLink.slice(0, 10)) {
       console.log('      · ' + (s.title || '(ohne Titel)') + '  [' + (abgelehnt.get(s.id) || 'gesperrt') + ']');
     }
     if (ohneLink.length > 10) console.log('      … und ' + (ohneLink.length - 10) + ' weitere.');
-    await anDownloader('/kontingent', {
-      gesperrt: ohneLink.length,
-      text:
-        ohneLink.length + ' Songs sind nicht freigeschaltet und wurden übersprungen ' +
-        '(auf suno.com freischalten, dann erneut starten).',
-    });
+    if (hallo.freischalten !== true) {
+      await anDownloader('/kontingent', {
+        gesperrt: ohneLink.length,
+        text: ohneLink.length + ' Songs sind nicht freigeschaltet und wurden übersprungen.',
+      });
+    }
   }
 
   if (!liste.length) {
@@ -478,7 +575,7 @@
   }
 })().catch(async (fehler) => {
   // Ohne diesen Fang stirbt das Skript still und der Downloader wartet für immer
-  // auf ein Ergebnis, das nie kommt. Genau das war der Fehler "wartet ewig".
+  // auf ein Ergebnis, das nie kommt.
   const text = String((fehler && fehler.stack) || fehler);
   console.log('%c❗ Das Brücken-Skript ist gestolpert — der Downloader wird benachrichtigt.', 'font-size:15px;font-weight:bold;color:#c00');
   console.error(fehler);
