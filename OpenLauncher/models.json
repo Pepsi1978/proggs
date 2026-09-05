@@ -10,8 +10,8 @@
         "IsUserDefined": true,
         "ProviderId": "anthropic",
         "ProviderName": "Anthropic",
-        "Slug": "claude-fable-5[1m]",
-        "DisplayName": "Claude Fable 5",
+        "Slug": "claude-fable-5-1[1m]",
+        "DisplayName": "Claude Fable 5.1",
         "IsHidden": false
       },
       {
@@ -4168,6 +4168,33 @@
         "Slug": "~z-ai/glm-latest",
         "DisplayName": "Z.ai: GLM Latest",
         "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-6-astra",
+        "DisplayName": "OpenAI: GPT-6 Astra",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-6-astra-pro",
+        "DisplayName": "OpenAI: GPT-6 Astra Pro",
+        "IsHidden": true
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "openai/gpt-6-astra:batch",
+        "DisplayName": "OpenAI: GPT-6 Astra (batch)",
+        "IsHidden": true
       }
     ],
     "HiddenModelSlugs": [],
@@ -4443,6 +4470,9 @@
       "openai/gpt-5.6-terra:batch",
       "openai/gpt-5.6-terra-pro",
       "openai/gpt-5.6-terra-pro:batch",
+      "openai/gpt-6-astra",
+      "openai/gpt-6-astra:batch",
+      "openai/gpt-6-astra-pro",
       "openai/gpt-oss-120b",
       "openai/gpt-oss-120b:batch",
       "openai/gpt-oss-20b",
@@ -4884,6 +4914,33 @@
         "IsUserDefined": false,
         "ProviderId": "lmstudio",
         "ProviderName": "LM Studio",
+        "Slug": "qwen/qwen3.8-27b",
+        "DisplayName": "Qwen3.8 27b (lokal)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "lmstudio",
+        "ProviderName": "LM Studio",
+        "Slug": "qwen3.8-27b@iq2_xxs",
+        "DisplayName": "Qwen3.8 27b@iq2_xxs (lokal)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "lmstudio",
+        "ProviderName": "LM Studio",
+        "Slug": "qwen3.8-27b@iq3_xxs",
+        "DisplayName": "Qwen3.8 27b@iq3_xxs (lokal)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "lmstudio",
+        "ProviderName": "LM Studio",
         "Slug": "mimo-v2.5",
         "DisplayName": "Mimo V2.5 (lokal)",
         "IsHidden": false
@@ -4968,50 +5025,13 @@
         "Slug": "gpt-oss-120b",
         "DisplayName": "Gpt Oss 120b (lokal)",
         "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "lmstudio",
-        "ProviderName": "LM Studio",
-        "Slug": "qwen/qwen3.8-27b",
-        "DisplayName": "Qwen3.8 27b (lokal)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "lmstudio",
-        "ProviderName": "LM Studio",
-        "Slug": "qwen3.8-27b@iq2_xxs",
-        "DisplayName": "Qwen3.8 27b@iq2_xxs (lokal)",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "lmstudio",
-        "ProviderName": "LM Studio",
-        "Slug": "qwen3.8-27b@iq3_xxs",
-        "DisplayName": "Qwen3.8 27b@iq3_xxs (lokal)",
-        "IsHidden": false
       }
     ],
     "HiddenModelSlugs": [],
     "KnownSyncedModelSlugs": [
       "qwen3.8-27b@iq2_xxs",
       "qwen3.8-27b@iq3_xxs",
-      "qwen/qwen3.8-27b",
-      "mimo-v2.5",
-      "google/gemma-4-e4b",
-      "google/gemma-4-31b",
-      "google/gemma-4-26b-a4b",
-      "nvidia/nemotron-3-super",
-      "medgemma-1.5-4b-it",
-      "mistralai/devstral-small-2-2512",
-      "mistralai/ministral-3-14b-reasoning",
-      "gpt-oss-20b",
-      "gpt-oss-120b"
+      "qwen/qwen3.8-27b"
     ],
     "IsExpanded": false
   }

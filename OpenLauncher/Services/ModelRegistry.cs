@@ -741,8 +741,20 @@ public sealed class ModelRegistry
             return slug;
         if (slug.StartsWith($"{providerId}/", StringComparison.OrdinalIgnoreCase))
             slug = slug[$"{providerId}/".Length..];
+        if (string.Equals(providerId, "anthropic", StringComparison.OrdinalIgnoreCase))
+            slug = NormalizeAnthropicSlug(slug);
         return slug;
     }
+
+    /// <summary>
+    /// Anthropic schreibt die Nebenversion mit Bindestrich ("claude-fable-5-1"), nicht mit Punkt.
+    /// Ein von Hand eingetragenes "claude-fable-5.1" kennt Claude Code nicht: es meldet "There's an
+    /// issue with the selected model" und startet mit dem Standardmodell (Fable 5) weiter — der
+    /// Fehler faellt also erst im laufenden Terminal auf. Deshalb wird die Punkt-Schreibweise hier
+    /// still auf die gueltige Form gezogen. Das angehaengte "[1m]" bleibt unberuehrt.
+    /// </summary>
+    private static string NormalizeAnthropicSlug(string slug) =>
+        System.Text.RegularExpressions.Regex.Replace(slug, @"^(claude-[a-z]+-\d+)\.(\d+)", "$1-$2");
 
     private static void AddUnique(List<string> values, string value)
     {

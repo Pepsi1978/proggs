@@ -2,36 +2,43 @@
   "anthropic/claude-opus-5[1m]": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
-    "ThinkingValue": "high"
+    "ThinkingValue": "high",
+    "CliTargetId": ""
   },
   "anthropic/claude-fable-5-1[1m]": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
-    "ThinkingValue": "high"
+    "ThinkingValue": "high",
+    "CliTargetId": ""
   },
   "openai/gpt-5.6-sol": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
-    "ThinkingValue": "high"
+    "ThinkingValue": "high",
+    "CliTargetId": ""
   },
   "anthropic/claude-sonnet-5[1m]": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
-    "ThinkingValue": "high"
+    "ThinkingValue": "high",
+    "CliTargetId": ""
   },
   "openai/gpt-5.6-terra": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
-    "ThinkingValue": "high"
+    "ThinkingValue": "high",
+    "CliTargetId": ""
   },
   "openai/gpt-5.6-luna": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
-    "ThinkingValue": "high"
+    "ThinkingValue": "high",
+    "CliTargetId": ""
   },
   "openai/gpt-6-astra": {
     "ProfileId": "minimal",
     "WorkModeId": "schnell",
-    "ThinkingValue": "medium"
+    "ThinkingValue": "medium",
+    "CliTargetId": ""
   }
 }
