@@ -9,9 +9,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.activity.compose.BackHandler
 import de.frank.genialeideen.data.local.IdeenStatus
@@ -42,9 +39,7 @@ fun GenialeIdeenApp(
 ) {
     val gold = LocalGold.current
     val reduziert = LocalBewegungReduziert.current
-    val meldung by viewModel.meldung.collectAsState()
     val vorlese by viewModel.vorleseStand.collectAsState()
-    val abgestuerzt by viewModel.abgestuerzt.collectAsState()
 
     var bildschirm by remember { mutableStateOf(Bildschirm.LISTE) }
 
@@ -53,17 +48,6 @@ fun GenialeIdeenApp(
         vorlese.fehler?.let { text ->
             viewModel.zeige(Meldung(text, istFehler = true, zuEinstellungen = true))
             viewModel.vorlesenFehlerGelesen()
-        }
-    }
-
-    LaunchedEffect(abgestuerzt) {
-        if (abgestuerzt) {
-            viewModel.zeige(
-                Meldung(
-                    "Die App ist beim letzten Mal abgestürzt. Der Bericht steht in der Diagnose.",
-                    istFehler = true,
-                ),
-            )
         }
     }
 
@@ -152,18 +136,5 @@ fun GenialeIdeenApp(
             }
         }
 
-        meldung?.let { aktuelle ->
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding(),
-            ) {
-                MeldungsStreifen(
-                    meldung = aktuelle,
-                    aufSchliessen = viewModel::meldungGelesen,
-                    aufEinstellungen = { bildschirm = Bildschirm.EINSTELLUNGEN },
-                )
-            }
-        }
     }
 }
