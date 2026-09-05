@@ -255,7 +255,7 @@
   const gesperrt = liste.filter((s) => !s.freigeschaltet);
   let freigeschaltet = 0;
   let uebrig = gesperrt.length;
-  if (gesperrt.length && hallo.freischalten !== false) {
+  if (gesperrt.length && hallo.freischalten === true) {
     const k = await kontingent();
     if (!k) {
       zeig('❗ Download-Kontingent konnte nicht gelesen werden — es wird trotzdem versucht.', '#c60');
@@ -296,7 +296,7 @@
       text: 'Freischaltung: ' + text,
     });
   } else if (gesperrt.length) {
-    zeig('⏭️ ' + gesperrt.length + ' nicht freigeschaltete Songs werden übersprungen (--nicht-freischalten).', '#c60');
+    zeig('⏭️ ' + gesperrt.length + ' nicht freigeschaltete Songs werden übersprungen — bitte auf der Suno-Seite von Hand freischalten.', '#c60');
   }
 
   liste = liste.filter((s) => s.freigeschaltet);

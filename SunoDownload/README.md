@@ -50,6 +50,7 @@ node downloader.ts                    ... Zielordner C:\Sono Backup, nur Neues
 node downloader.ts "D:\Musik"
 node downloader.ts --alles            ... ganze Bibliothek prüfen statt nur Neues
 node downloader.ts --limit 15 "D:\Test"   ... Probelauf mit 15 Songs
+node downloader.ts --freischalten          ... zusätzlich selbst freischalten (verbraucht Kontingent)
 ```
 
 ## Die Nummerierung bleibt stabil
@@ -164,13 +165,15 @@ früher ist damit überflüssig.
 `not_authorized`. Freischalten heißt `POST /api/download/authorize` (`item_id`, `item_type:
 "clip"`) und verbraucht einen Download aus dem Monatskontingent des Abos (Premier: 60 pro
 Monat plus gekaufte Zusatz-Downloads; Stand in `/api/billing/info/` → `download_usage`).
-Die Brücke liest das Kontingent, schaltet die ältesten Songs zuerst frei, bis es erschöpft ist,
-und übergibt nur Songs mit Link. Der Rest bleibt liegen und wird beim nächsten Lauf nach der
-Erneuerung geholt. Mit `--nicht-freischalten` werden nur bereits freigeschaltete Songs geladen.
+Die Brücke liest das Kontingent, schaltet aber standardmäßig NICHTS selbst frei: Songs,
+die du auf der Suno-Seite von Hand freigeschaltet hast, werden geladen, der Rest bleibt
+liegen. Nur mit `--freischalten` schaltet die Brücke zusätzlich selbst frei (älteste zuerst,
+bis das Kontingent erschöpft ist) und übergibt nur Songs mit Link. Der Rest bleibt liegen
+und wird beim nächsten Lauf nach der Erneuerung geholt.
 
 Die m4a aus `media_urls` (CloudFront) ist zwar ohne Anmeldung erreichbar, aber verschlüsselt —
 sie taugt nicht als Quelle.
 
 ---
 
-Version 1.6.1 (01.09.2026, 18:52 Uhr)
+Version 1.6.4 (05.09.2026, 11:44 Uhr)

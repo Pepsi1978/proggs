@@ -19,6 +19,7 @@
  *   node downloader.ts "D:\Musik"
  *   node downloader.ts --limit 15 "D:\Test"  ... nur die ersten 15 (zum Ausprobieren)
  *   node downloader.ts --alles               ... ganze Bibliothek prüfen statt nur Neues
+ *   node downloader.ts --freischalten        ... zusätzlich selbst freischalten (Kontingent!)
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -64,12 +65,14 @@ const ALLES = args.includes('--alles');
 /** Ohne Zwischenablage und ohne Browser zu öffnen — für den Probelauf. */
 const STILL = args.includes('--still');
 /**
- * Seit September 2026 muss jeder Song vor dem Download bei Suno freigeschaltet werden
+ * Seit September 2026 muss jeder Song vor dem Download bei Suno freigeschaltet sein
  * (POST /api/download/authorize); das verbraucht einen Download aus dem Monats-
- * kontingent des Abos. Standard: freischalten, älteste zuerst, bis das Kontingent
- * erschöpft ist. Mit --nicht-freischalten werden nur schon freigeschaltete geholt.
+ * kontingent des Abos (60 im Monat). Standard: Es wird NICHT freigeschaltet — der
+ * Benutzer schaltet die gewünschten Songs von Hand auf der Suno-Seite frei, der
+ * Downloader holt nur schon freigeschaltete. Mit --freischalten schaltet die Brücke
+ * zusätzlich selbst frei (älteste zuerst, bis das Kontingent erschöpft ist).
  */
-const FREISCHALTEN = !args.includes('--nicht-freischalten');
+const FREISCHALTEN = args.includes('--freischalten');
 const ZIEL = args.find((a) => !a.startsWith('--') && !/^\d+$/.test(a)) ?? DEFAULT_TARGET;
 
 if (!existsSync(ZIEL)) {
