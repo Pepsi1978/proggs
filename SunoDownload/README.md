@@ -48,9 +48,9 @@ Gemessen: **12 Songs in 14 Sekunden**, samt Cover und Titel.
 ```cmd
 node downloader.ts                    ... Zielordner C:\Sono Backup, nur Neues
 node downloader.ts "D:\Musik"
-node downloader.ts --alles            ... ganze Bibliothek prüfen statt nur Neues
 node downloader.ts --limit 15 "D:\Test"   ... Probelauf mit 15 Songs
-node downloader.ts --freischalten          ... zusätzlich selbst freischalten (verbraucht Kontingent)
+node downloader.ts --freischalten         ... zusätzlich selbst freischalten (verbraucht Kontingent)
+node downloader.ts --still                ... ohne Zwischenablage und ohne Browser zu öffnen
 ```
 
 ## Die Nummerierung bleibt stabil
@@ -107,6 +107,11 @@ Platzhalterbild). Diese Dateien bleiben ohne Bild.
 **Protokolle.** Jeder Lauf schreibt nach `logs/*.jsonl` — dort steht bei einem Fehler die genaue
 Ursache samt Adresse.
 
+**Es wird nie mehr ewig gewartet.** Stolpert das Skript im Browser, meldet es den Fehler an
+den Downloader, der ihn anzeigt und sich beendet. Und solange die Brücke arbeitet, schickt sie
+bei jedem Seitenblock ein Lebenszeichen; bleibt es länger als drei Minuten aus, bricht der
+Downloader mit einem Hinweis auf die Chrome-Konsole ab, statt stumm hängen zu bleiben.
+
 ---
 
 ## Qualität
@@ -160,20 +165,38 @@ früher ist damit überflüssig.
 
 **Der Browser-Tab muss offen bleiben**, bis das Programm fertig meldet.
 
-**Stand September 2026 — Download-Kontingent:** Suno gibt den signierten Link nur noch für
-*freigeschaltete* Songs aus; für alle anderen antwortet `/api/download/clip/<id>` mit
-`not_authorized`. Freischalten heißt `POST /api/download/authorize` (`item_id`, `item_type:
-"clip"`) und verbraucht einen Download aus dem Monatskontingent des Abos (Premier: 60 pro
-Monat plus gekaufte Zusatz-Downloads; Stand in `/api/billing/info/` → `download_usage`).
-Die Brücke liest das Kontingent, schaltet aber standardmäßig NICHTS selbst frei: Songs,
-die du auf der Suno-Seite von Hand freigeschaltet hast, werden geladen, der Rest bleibt
-liegen. Nur mit `--freischalten` schaltet die Brücke zusätzlich selbst frei (älteste zuerst,
-bis das Kontingent erschöpft ist) und übergibt nur Songs mit Link. Der Rest bleibt liegen
-und wird beim nächsten Lauf nach der Erneuerung geholt.
+**Stand September 2026 — nur freigeschaltete Songs:** Suno gibt den signierten Link nur noch
+für *freigeschaltete* Songs aus; für alle anderen antwortet `/api/download/clip/<id>` mit
+`not_authorized`.
+
+**Woran erkennt das Programm, ob ein Song freigeschaltet ist? Es rät nicht mehr.** Früher
+wurde dafür ein Feld aus der Songliste gelesen (`is_download_unlocked`). Suno hat diesen
+Feldnamen schon zweimal geändert — und jedes Mal galten schlagartig alle Songs als gesperrt.
+Deshalb wird jetzt die Stelle gefragt, die es sicher weiß: für jeden noch nicht gesicherten
+Song wird `/api/download/clip/<id>` abgerufen. Kommt ein Link zurück, ist der Song
+freigeschaltet und wird geladen; kommt `not_authorized`, bleibt er liegen. Der Abruf des
+Links kostet **nichts** — Kontingent verbraucht allein das Freischalten.
+
+**Freigeschaltet wird von Hand auf suno.com.** Der Downloader schaltet von sich aus **nie**
+etwas frei. Er lädt genau die Songs, die du selbst freigeschaltet hast und die noch nicht auf
+der Platte liegen. Was gesperrt ist, wird am Ende namentlich aufgezählt (die ersten zehn) —
+so siehst du, was du bei Suno noch freischalten müsstest.
+
+Nur mit `--freischalten` schaltet die Brücke zusätzlich selbst frei: `POST
+/api/download/authorize` (`item_id`, `item_type: "clip"`), das verbraucht je einen Download
+aus dem Monatskontingent des Abos (Premier: 60 pro Monat plus gekaufte Zusatz-Downloads;
+Stand in `/api/billing/info/` → `download_usage`). Auch dann wird kein Kontingent verschenkt:
+freigeschaltet wird erst, nachdem der Link-Abruf gelaufen ist, und nur für die Songs, die
+dabei wirklich abgelehnt wurden — älteste zuerst, bis das Kontingent erschöpft ist.
+
+**Die ganze Bibliothek wird jedes Mal gelesen, ohne Frühstopp.** Ein Song, den du gestern
+von Hand freigeschaltet hast, kann drei Jahre alt sein und liegt dann tief in der Liste. Ein
+Durchlauf über gut 150 Seiten dauert eine knappe halbe Minute — der Preis dafür, nichts zu
+verpassen.
 
 Die m4a aus `media_urls` (CloudFront) ist zwar ohne Anmeldung erreichbar, aber verschlüsselt —
 sie taugt nicht als Quelle.
 
 ---
 
-Version 1.6.5 (05.09.2026, 11:54 Uhr)
+Version 1.6.6 (05.09.2026, 12:11 Uhr)

@@ -13,7 +13,7 @@ Write-Host "  ================================================================" 
 
 if (-not (Test-Path $ziel)) { New-Item -ItemType Directory -Path $ziel -Force | Out-Null }
 
-# Das Ziel steht am Ende genau einmal - die uebrigen Schalter (--limit, --alles) bleiben.
+# Das Ziel steht am Ende genau einmal - die uebrigen Schalter (--limit, --freischalten) bleiben.
 $schalter = @($args | Where-Object { $_ -ne $ziel })
 
 Set-Location $projekt

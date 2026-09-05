@@ -18,7 +18,6 @@
  *   node downloader.ts                       ... Zielordner C:\Sono Backup
  *   node downloader.ts "D:\Musik"
  *   node downloader.ts --limit 15 "D:\Test"  ... nur die ersten 15 (zum Ausprobieren)
- *   node downloader.ts --alles               ... ganze Bibliothek prüfen statt nur Neues
  *   node downloader.ts --freischalten        ... zusätzlich selbst freischalten (Kontingent!)
  */
 
@@ -61,7 +60,6 @@ const zahlNach = (flagge: string): number | null => {
 };
 const LIMIT = zahlNach('--limit');
 const PORT = zahlNach('--port') ?? 8787;
-const ALLES = args.includes('--alles');
 /** Ohne Zwischenablage und ohne Browser zu öffnen — für den Probelauf. */
 const STILL = args.includes('--still');
 /**
@@ -91,6 +89,10 @@ const gemeldet = new Map<string, Song>();
 const nachschubOffen = new Set<string>();
 const nachschubEingang = new Map<string, string>();
 let browserFertig = false;
+/** Gesetzt, wenn das Brücken-Skript im Browser abgestürzt ist. */
+let browserFehler: string | null = null;
+/** Wann sich der Browser zuletzt gemeldet hat — Grundlage für den Wachhund. */
+let letzterKontakt = 0;
 let browserGesamt = 0;
 let ladephaseLaeuft = false;
 let stand = { geladen: 0, fehler: 0, gesamt: 0, aktuell: '' };
@@ -130,6 +132,7 @@ const server = createServer(async (req, res) => {
     return;
   }
   const pfad = (req.url ?? '/').split('?')[0];
+  letzterKontakt = Date.now();
 
   // Das Brücken-Skript selbst — so genügt in der Konsole ein kurzer Einzeiler,
   // statt zehn Kilobyte Text einzufügen.
@@ -146,37 +149,39 @@ const server = createServer(async (req, res) => {
     for (const [id, e] of Object.entries(bestand.eintraege)) {
       (existsSync(join(ZIEL, e.datei)) ? bekannt : fehlt).push(id);
     }
-    let neuester: string | null = null;
-    for (const song of Object.values(bestand.eintraege)) void song;
-    const listePfad = join(ZIEL, 'suno-liste.json');
-    if (existsSync(listePfad)) {
-      try {
-        const alt = JSON.parse(readFileSync(listePfad, 'utf8')) as Song[];
-        for (const s of alt) {
-          if (s?.created_at && bestand.eintraege[s.id] && (!neuester || s.created_at > neuester)) {
-            neuester = s.created_at;
-          }
-        }
-      } catch {
-        /* ohne Zeitstempel wird eben die ganze Bibliothek gelesen */
-      }
-    }
     console.log(
       `  ➜ Browser verbunden. Bekannt: ${bekannt.length} Songs` +
         (fehlt.length ? `, ${fehlt.length} Dateien fehlen auf der Platte.` : '.'),
     );
-    // fehlt: Songs, die einmal geladen waren und deren Datei verschwunden ist. Sie
-    // müssen auch dann geholt werden, wenn sie älter sind als die Zeitgrenze — sonst
-    // repariert sich eine gelöschte Datei aus dem letzten Jahr nie wieder.
+    // Es gibt bewusst keine Zeitgrenze mehr: Ein Song, der gestern von Hand
+    // freigeschaltet wurde, kann drei Jahre alt sein. Die Brücke liest darum immer
+    // die ganze Bibliothek und lässt alles weg, was in "bekannt" steht.
+    // fehlt: Songs, die einmal geladen waren und deren Datei verschwunden ist — sie
+    // stehen nicht in "bekannt" und werden dadurch von selbst wieder geholt.
     antwort(res, {
       ok: true,
       bekannt,
       fehlt,
-      neuester: ALLES ? null : neuester,
-      alles: ALLES,
       limit: LIMIT,
       freischalten: FREISCHALTEN,
     });
+    return;
+  }
+
+  // Lebenszeichen der Brücke, während sie liest — hält den Wachhund ruhig.
+  if (pfad === '/puls') {
+    const daten = (await körper(req)) as unknown as { text?: string };
+    if (daten.text) process.stdout.write(`\r  ${daten.text.slice(0, 74).padEnd(74)}`);
+    antwort(res, { ok: true });
+    return;
+  }
+
+  // Die Brücke ist gestolpert. Ohne diese Meldung würde hier ewig gewartet.
+  if (pfad === '/fehler') {
+    const daten = (await körper(req)) as unknown as { text?: string };
+    browserFehler = daten.text || 'unbekannter Fehler im Browser-Skript';
+    browserFertig = true; // weckt warteAufBrowser
+    antwort(res, { ok: true });
     return;
   }
 
@@ -277,13 +282,42 @@ ${einzeiler}
 
 // ---------------------------------------------------------------- Ladephase
 
-/** Wartet, bis der Browser fertig gemeldet hat — oder der Benutzer abbricht. */
+/**
+ * Wartet, bis der Browser fertig gemeldet hat.
+ *
+ * Mit Wachhund: Solange das Skript noch gar nicht eingefügt wurde, wird beliebig
+ * lange gewartet — der Benutzer braucht seine Zeit. Sobald sich der Browser aber
+ * einmal gemeldet hat, muss innerhalb von STUMM_MAX ein Lebenszeichen kommen; die
+ * Brücke schickt bei jedem Seitenblock und jedem Link-Schub eines. Bleibt es aus,
+ * ist das Skript abgestürzt — dann wird abgebrochen statt für immer zu warten.
+ */
+const STUMM_MAX = 180_000;
+
 function warteAufBrowser(): Promise<void> {
-  return new Promise((fertig) => {
+  return new Promise((fertig, scheitern) => {
+    let gemeckert = false;
     const takt = setInterval(() => {
       if (browserFertig) {
         clearInterval(takt);
         fertig();
+        return;
+      }
+      if (!letzterKontakt) return; // Skript noch nicht eingefügt — geduldig bleiben
+      const stumm = Date.now() - letzterKontakt;
+      if (stumm > STUMM_MAX) {
+        clearInterval(takt);
+        scheitern(
+          new Error(
+            `Der Browser hat sich ${Math.round(stumm / 1000)} s nicht gemeldet. ` +
+              'Bitte in der Chrome-Konsole (F12) nach einer roten Fehlermeldung sehen und neu starten.',
+          ),
+        );
+        return;
+      }
+      if (stumm < 5_000) gemeckert = false;
+      if (stumm > 45_000 && !gemeckert) {
+        gemeckert = true;
+        process.stdout.write('\n  (Der Browser ist seit 45 s still — bitte die Chrome-Konsole prüfen.)\n');
       }
     }, 300);
   });
@@ -373,7 +407,6 @@ async function main(): Promise<void> {
   console.log('════════════════════════════════════════════════════════════════════════════════');
   console.log(`  Ordner : ${ZIEL}`);
   if (LIMIT) console.log(`  Grenze : nur ${LIMIT} Songs (Probelauf)`);
-  if (ALLES) console.log('  Umfang : ganze Bibliothek (nicht nur Neues)');
 
   // Bestand aus vorhandenen Dateien anlegen, falls es ihn noch nicht gibt.
   const mp3s = readdirSync(ZIEL).filter((n) => n.toLowerCase().endsWith('.mp3'));
@@ -400,9 +433,19 @@ async function main(): Promise<void> {
   await warteAufBrowser();
   process.stdout.write('\n');
 
-  let songs = [...gemeldet.values()];
+  if (browserFehler) {
+    console.log('');
+    console.log('  ❗ Das Brücken-Skript im Browser ist abgestürzt:');
+    for (const zeile of browserFehler.split('\n').slice(0, 6)) console.log(`     ${zeile}`);
+    log('error', 'Brücken-Skript abgestürzt', { text: browserFehler });
+    server.close();
+    return;
+  }
+
+  const songs = [...gemeldet.values()];
   if (!songs.length) {
-    console.log('  Der Browser hat keine Songs gemeldet — Abbruch.');
+    console.log('  Nichts zu laden — es sind keine freigeschalteten neuen Songs da.');
+    console.log('  (Auf suno.com die gewünschten Songs von Hand freischalten, dann erneut starten.)');
     server.close();
     return;
   }
@@ -499,7 +542,7 @@ async function main(): Promise<void> {
   console.log('');
 
   // Dem Browser noch einen Moment Zeit, das Ende mitzubekommen.
-  await new Promise((r) => setTimeout(r, 1200));
+  await new Promise((r) => setTimeout(r, 3000));
   server.close();
 }
 
