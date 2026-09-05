@@ -416,6 +416,19 @@ async function main(): Promise<void> {
   }
   console.log('');
 
+  // Ohne diesen Fang endet ein zweiter Start in einem nackten EADDRINUSE-Stapel —
+  // was aussieht, als sei das Programm kaputt, obwohl nur noch ein Fenster offen ist.
+  server.on('error', (fehler: NodeJS.ErrnoException) => {
+    if (fehler.code === 'EADDRINUSE') {
+      console.error(`
+❗ Auf Port ${PORT} läuft schon ein Downloader.`);
+      console.error('   Bitte das alte Fenster schließen und noch einmal starten.');
+    } else {
+      console.error(`
+❗ Der kleine Server auf 127.0.0.1:${PORT} kam nicht hoch: ${fehler.message}`);
+    }
+    process.exit(1);
+  });
   await new Promise<void>((fertig) => server.listen(PORT, '127.0.0.1', fertig));
 
   console.log(`  Schritt 1  Das Auslese-Skript liegt in der Zwischenablage, Suno öffnet sich.`);

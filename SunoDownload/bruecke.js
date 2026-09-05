@@ -71,9 +71,9 @@
         }
         if (!r.ok) {
           // 403/404 heißt bei /api/download/clip: nicht freigeschaltet. Das ist eine
-          // endgültige Antwort und kein Grund, es fünfmal zu wiederholen. Beim Feed
-          // gilt das NICHT — dort wäre ein übersprungener Fehlschlag eine Lücke in
-          // der Songliste, also wird dort weiter wiederholt.
+          // endgültige Antwort und kein Grund, es fünfmal zu wiederholen. Der Grund
+          // aus der Antwort wird mitgenommen, damit man sieht, warum ein Song liegen
+          // bleibt. Für alle anderen Pfade bleibt es beim alten Verhalten (null).
           if (r.status >= 400 && r.status < 500 && pfad.startsWith('/api/download/clip')) {
             try {
               const d = await r.json();

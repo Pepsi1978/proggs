@@ -199,4 +199,4 @@ sie taugt nicht als Quelle.
 
 ---
 
-Version 1.6.6 (05.09.2026, 12:11 Uhr)
+Version 1.6.7 (05.09.2026, 12:15 Uhr)
