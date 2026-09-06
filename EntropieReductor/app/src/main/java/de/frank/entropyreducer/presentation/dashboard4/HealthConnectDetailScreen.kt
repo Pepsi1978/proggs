@@ -241,6 +241,10 @@ fun HealthConnectDetailScreen(
                                 unit = spec.unit,
                                 lowerIsBetter = spec.lowerIsBetter,
                                 onClick = {},
+                                adaptiveYAxis = when (metric) {
+                                    null, BodyMetric.WEIGHT, BodyMetric.BODY_FAT, BodyMetric.LEAN -> false
+                                    else -> true
+                                },
                             )
                         }
                     }

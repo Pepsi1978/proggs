@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -35,6 +36,11 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.log10
+import kotlin.math.pow
 
 /**
  * Interaktiver Linien-Chart mit Y-Achse, X-Achse und Tap-zu-Tooltip.
@@ -75,18 +81,43 @@ fun InteractiveLineChart(
      * die innere pointerInput die Klicks der umgebenden Card frisst.
      */
     onClick: (() -> Unit)? = null,
+    /** Tight, evenly spaced decimal ticks for body metrics with small variations. */
+    adaptiveYAxis: Boolean = false,
 ) {
     val cosmos = LocalCosmos.current
     // Performance-Audit Loop 1 (2026-05-10): alle CPU-/Allokations-intensiven
     // Berechnungen ueber `points` in remember(points) vorberechnen, damit sie
     // nicht bei jeder Recomposition (z.B. durch animateXxxAsState) neu laufen.
     val derived =
-        remember(points) {
+        remember(points, adaptiveYAxis) {
             val safeList = points.filter { it.second.isFinite() }.sortedBy { it.first }
             if (safeList.isEmpty()) ChartDerived.EMPTY
             else {
-                val minVal = safeList.minOf { it.second }
-                val maxVal = safeList.maxOf { it.second }
+                var minVal = safeList.minOf { it.second }
+                var maxVal = safeList.maxOf { it.second }
+                var ticks: List<Double>? = null
+                var tickDecimals = 1
+                if (adaptiveYAxis) {
+                    val span = if (maxVal > minVal) (maxVal - minVal).coerceAtLeast(0.05)
+                        else (abs(minVal) * 0.01).coerceAtLeast(0.1)
+                    val padding = if (maxVal > minVal) span * 0.1 else span / 2.0
+                    val targetStep = (maxVal - minVal + 2.0 * padding) / 6.0
+                    val magnitude = 10.0.pow(floor(log10(targetStep)))
+                    val fraction = targetStep / magnitude
+                    val step = magnitude * when {
+                        fraction <= 1.0 + 1e-9 -> 1.0
+                        fraction <= 2.0 + 1e-9 -> 2.0
+                        fraction <= 5.0 + 1e-9 -> 5.0
+                        else -> 10.0
+                    }
+                    val firstTick = floor((minVal - padding) / step)
+                    val lastTick = ceil((maxVal + padding) / step)
+                    val intervals = (lastTick - firstTick).toInt().coerceAtLeast(1)
+                    minVal = firstTick * step
+                    maxVal = lastTick * step
+                    ticks = (intervals downTo 0).map { (firstTick + it) * step }
+                    tickDecimals = ceil(-log10(step)).toInt().coerceIn(0, 6)
+                }
                 val range = (maxVal - minVal).coerceAtLeast(1.0)
                 val rawValues = safeList.map { it.second }
                 val smaList = computeSma(rawValues, window = 14)
@@ -100,7 +131,9 @@ fun InteractiveLineChart(
                     safe = safeList,
                     minY = minVal,
                     maxY = maxVal,
-                    rangeY = range,
+                    rangeY = if (adaptiveYAxis) maxVal - minVal else range,
+                    ticks = ticks,
+                    tickDecimals = tickDecimals,
                     sma = smaList,
                     smaSlope = smaSlopeVal,
                     rawSlope = rawSlopeVal,
@@ -133,8 +166,8 @@ fun InteractiveLineChart(
     // Sprung von 6h39 auf 9h03 war zu gross, Zwischenwerte fehlten). Reihenfolge
     // ist oben→unten: max, 87.5%, 75%, ..., 12.5%, min.
     val yLabels =
-        remember(minY, maxY, rangeY) {
-            listOf(
+        remember(minY, maxY, rangeY, derived.ticks) {
+            derived.ticks ?: listOf(
                 maxY,
                 minY + rangeY * 0.875,
                 minY + rangeY * 0.75,
@@ -151,6 +184,13 @@ fun InteractiveLineChart(
     // sonst Standard formatY + Einheit anhaengen.
     val format: (Double) -> String =
         valueFormatter ?: { v -> formatY(v) + if (unit.isNotBlank()) " $unit" else "" }
+    val formatTick: (Double) -> String = if (adaptiveYAxis && valueFormatter == null) {
+        { v ->
+            val normalized = if (abs(v) < 0.5 * 10.0.pow(-derived.tickDecimals)) 0.0 else v
+            "%.${derived.tickDecimals}f".format(normalized) +
+                if (unit.isNotBlank()) " $unit" else ""
+        }
+    } else format
 
     val sma = derived.sma
     val smaSlope = derived.smaSlope
@@ -184,7 +224,7 @@ fun InteractiveLineChart(
         ) {
             yLabels.forEach { v ->
                 Text(
-                    text = format(v),
+                    text = formatTick(v),
                     color = cosmos.textSecondary,
                     style = MaterialTheme.typography.labelSmall,
                 )
@@ -194,7 +234,9 @@ fun InteractiveLineChart(
         Box(modifier = Modifier.height(height.dp).fillMaxWidth()) {
             Canvas(
                 modifier =
-                    Modifier.fillMaxWidth().height(height.dp).pointerInput(safe, onClick) {
+                    Modifier.fillMaxWidth().height(height.dp)
+                        .then(if (adaptiveYAxis) Modifier.clipToBounds() else Modifier)
+                        .pointerInput(safe, onClick) {
                         detectTapGestures { tap ->
                             if (onClick != null) {
                                 // Frank-Wunsch 2026-05-09 (Abend): Tap auf irgendeine
@@ -218,8 +260,8 @@ fun InteractiveLineChart(
                 // Frank-Wunsch 2026-05-11: feinere Unterteilung damit grosse Spannen
                 // (z.B. 5h vs. 9h) Zwischenmarken haben.
                 val gridLineColor = gridColor.copy(alpha = 0.3f)
-                for (n in 0..8) {
-                    val yTick = h * (n / 8f)
+                for (n in yLabels.indices) {
+                    val yTick = h * (n.toFloat() / yLabels.lastIndex)
                     drawLine(
                         gridLineColor,
                         Offset(0f, yTick),
@@ -284,7 +326,7 @@ fun InteractiveLineChart(
                 // Punkte
                 val stepX = if (safe.size <= 1) 0f else w / (safe.size - 1).toFloat()
                 safe.forEachIndexed { i, (_, v) ->
-                    val x = i * stepX
+                    val x = if (adaptiveYAxis && safe.size == 1) w / 2f else i * stepX
                     val y = h - ((v - minY) / rangeY * h).toFloat()
                     val isSelected = selectedIndex == i
                     drawCircle(
@@ -373,6 +415,8 @@ private data class ChartDerived(
     val minY: Double,
     val maxY: Double,
     val rangeY: Double,
+    val ticks: List<Double>? = null,
+    val tickDecimals: Int = 1,
     val sma: List<Double>,
     val smaSlope: Double,
     val rawSlope: Double,
