@@ -302,10 +302,8 @@ constructor(
         }
 
         // --- Health-Connect-Werte-Cache (v4+, Frank-Wunsch 2026-05-10 abend) ---
-        // Cross-Device-Sync: was auf dem Fold 6 in HC steht, landet ueber das
-        // Backup auch hier. Insert ist via PrimaryKey (metric, timestampMs)
-        // idempotent — bestehende Werte werden ueberschrieben aber das ist OK
-        // weil HC-Werte immutable sind (selber Timestamp = selber Messwert).
+        // HC-Historie und direkte Zepp-Tageswerte gemeinsam sichern. Zepp-Werte
+        // nur durch spaeter gelesene Werte ersetzen, nicht durch alte Backups.
         if (payload.healthConnectValues.isNotEmpty()) {
             val now = System.currentTimeMillis()
             val entities =
@@ -314,11 +312,10 @@ constructor(
                         metric = it.metric,
                         timestampMs = it.timestampMs,
                         value = it.value,
-                        createdAt = now,
+                        createdAt = if (it.metric.startsWith("zepp_")) it.observedAtMs else now,
                     )
                 }
-            healthConnectValueDao.upsertAll(entities)
-            inserted += entities.size
+            inserted += healthConnectValueDao.restoreValues(entities)
         }
 
         // --- Amazfit-Workouts inkl. Detail-Streams (v5+, Frank-Wunsch 2026-05-11) ---

@@ -238,6 +238,7 @@ constructor(
                         metric = it.metric,
                         timestampMs = it.timestampMs,
                         value = it.value,
+                        observedAtMs = it.createdAt,
                     )
                 }
             // Frank-Wunsch 2026-05-19: Workouts kommen ab jetzt aus der SEPARATEN

@@ -438,7 +438,12 @@ data class WorkoutsBackupPayload(
 )
 
 @Serializable
-data class BackupHealthConnectValue(val metric: String, val timestampMs: Long, val value: Double)
+data class BackupHealthConnectValue(
+    val metric: String,
+    val timestampMs: Long,
+    val value: Double,
+    val observedAtMs: Long = 0L,
+)
 
 /**
  * Vollstaendige Snapshot-Repraesentation eines Amazfit/Zepp-Workouts inkl. aller Detail-Streams.

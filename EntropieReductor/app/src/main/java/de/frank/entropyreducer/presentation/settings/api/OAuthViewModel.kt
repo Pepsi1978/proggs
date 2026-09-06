@@ -55,8 +55,8 @@ class OAuthViewModel @Inject constructor(
     // Frank-Wunsch 2026-05-23: fuer den "Alles neu laden"-Knopf.
     private val whoopRepo: de.frank.entropyreducer.data.repository.WhoopRepository,
     private val ouraRepo: de.frank.entropyreducer.data.repository.OuraRepository,
-    private val healthConnectRepository:
-        de.frank.entropyreducer.data.repository.HealthConnectRepository,
+    private val zeppBodyRepository:
+        de.frank.entropyreducer.data.repository.ZeppBodyRepository,
     private val appSettings: de.frank.entropyreducer.data.settings.AppSettings,
 ) : ViewModel() {
 
@@ -111,18 +111,25 @@ class OAuthViewModel @Inject constructor(
                 runCatching {
                     appSettings.setLastWhoopSync(0L)
                     appSettings.setLastOuraSync(0L)
-                    appSettings.setLastHealthConnectSync(0L)
+                    appSettings.setLastZeppBodySync(0L)
                     appSettings.setLastAmazfitSync(0L)
                 }
                 // Voll synchronisieren (gleiche Reihenfolge wie der App-Start).
-                runCatching { healthConnectRepository.syncToCache() }
+                val bodyResult = runCatching { zeppBodyRepository.syncToCache() }
+                bodyResult.exceptionOrNull()?.let {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                }
                 runCatching {
                     if (oauth.loadWhoopAuthState().isAuthorized) whoopRepo.syncLastDays(365)
                 }
                 runCatching { if (ouraRepo.isTokenConfigured()) ouraRepo.syncLastDays(365) }
                 runCatching { amazfitRepo.mergeFromHealthConnect(days = 60) }
                 _state.update {
-                    it.copy(message = "Alle Daten wurden neu geladen.")
+                    it.copy(message = if (bodyResult.isSuccess) {
+                        "Daten neu geladen. Zepp liefert die letzte Körpermessung; der gespeicherte Verlauf bleibt erhalten."
+                    } else {
+                        "Andere Quellen neu geladen. Körperdaten unverändert: Zepp öffnen und erneut aktualisieren."
+                    })
                 }
             } finally {
                 reloadInProgress = false

@@ -72,9 +72,9 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 36
-        versionCode = 338
-        versionName = "0.29.0"
-        buildConfigField("String", "VERSION_UPDATED_AT", "\"12.08.2026, 12:14 Uhr\"")
+        versionCode = 339
+        versionName = "0.29.1"
+        buildConfigField("String", "VERSION_UPDATED_AT", "\"06.09.2026, 11:22 Uhr\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -257,7 +257,7 @@ dependencies {
     // Reorderable LazyColumn (Drag & Drop fuer Biomarker-Karten — Frank-Wunsch 2026-05-10)
     implementation(libs.reorderable)
 
-    // Health Connect — liest Gewicht aus der Zepp-App-Bruecke (Frank-Wunsch 2026-05-10)
+    // Health Connect bleibt fuer Training; Koerperwerte kommen direkt aus Zepp.
     implementation(libs.health.connect.client)
 
     // Google Maps Compose (Frank-Wunsch 2026-05-17) — Satelliten-Karte mit

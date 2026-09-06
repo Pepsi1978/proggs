@@ -15,6 +15,7 @@
     <!-- Android 11+ Package-Visibility: ohne diese Eintraege ist der Provider
          von BestJournal Frank fuer uns unsichtbar (resolveContentProvider == null). -->
     <queries>
+        <package android:name="com.huami.watch.hmwatchmanager" />
         <provider android:authorities="com.entropyjournal.journalexport" />
         <provider android:authorities="com.entropyjournal.debug.journalexport" />
     </queries>

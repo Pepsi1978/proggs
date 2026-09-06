@@ -1,6 +1,5 @@
 package de.frank.entropyreducer.presentation.dashboard4
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -102,38 +101,8 @@ fun BiomarkerHostScreen(
     // rekomponierte der ganze Screen. Jetzt liest IsolatedThemeToggleIcon den
     // Flow SELBST → nur das Toggle-Icon rekomponiert.
 
-    // Health-Connect-Daten (Frank-Wunsch 2026-05-10): separater State + Launcher
-    // fuer den Permission-Dialog. Permission gilt fuer Weight + BodyFat +
-    // LeanBodyMass — alle drei werden in einem Klick angefordert. Nach
-    // erfolgreichem Grant lesen wir alle Werte neu.
+    // Body measurements require no Health Connect permissions.
     val weightState by vm.weight.collectAsStateWithLifecycle()
-    val weightPermissionLauncher =
-        rememberLauncherForActivityResult(
-            contract =
-                androidx.health.connect.client.PermissionController
-                    .createRequestPermissionResultContract()
-        ) { _ ->
-            vm.refreshWeight()
-        }
-    // Performance 2026-05-23: remember(...) gibt der Lambda eine stabile Identitaet
-    // ueber Recompositions hinweg. Vorher wurde sie bei jeder Screen-Recomposition
-    // neu allokiert und brach damit die Skippability von BiomarkerCardForId — alle
-    // sichtbaren Karten recomponierten mit. Verhalten unveraendert (gleicher Aufruf).
-    val onRequestWeightPermission: () -> Unit =
-        remember(weightPermissionLauncher, vm) {
-            {
-                // Frank-Wunsch 2026-05-10 (dritte Iteration): ALLE Health-Connect-READ-
-                // Permissions in einem Rutsch anfordern, damit zukuenftige Plugins ohne
-                // erneuten Permission-Dialog auskommen. Die Liste kommt direkt aus dem
-                // HealthConnectManager — eine zentrale Stelle, kein Inline-Boilerplate.
-                weightPermissionLauncher.launch(vm.allHealthConnectPermissions())
-            }
-        }
-    // Frank-Wunsch 2026-05-10: Tap auf eine Health-Connect-Mini-Karte triggert
-    // einen Refresh des letzten Werts. Wenn Permission fehlt, soll stattdessen
-    // der Permission-Dialog kommen — die Karten-Logik unten entscheidet je nach
-    // weightState welcher der beiden Handler greift.
-    val onRefreshHealthConnect: () -> Unit = remember(vm) { { vm.refreshWeight() } }
     // Performance 2026-05-23: stabile Identitaet statt Inline-Allokation pro Item
     // (vorher direkt im LazyGrid-Item erzeugt → brach Card-Skippability).
     val onSaveWorkoutOverrides:
@@ -152,11 +121,7 @@ fun BiomarkerHostScreen(
                     tint = cosmos.textPrimary,
                 )
             }
-            // Frank-Wunsch 2026-05-10 (zweite Iteration): direkter Zugang zu
-            // Health Connect aus dem Biomarker-Header — auch wenn alle Mini-
-            // Karten "Tippen" zeigen (= Permissions noch nicht vollstaendig
-            // erteilt). Frank kann hier in HC navigieren und einzelne Permissions
-            // togglen / die fehlende 'Vergangene Daten'-Permission aktivieren.
+            // Health Connect remains accessible for training, not for body measurements.
             IconButton(onClick = vm::openHealthConnectPermissionsEditor) {
                 Icon(
                     imageVector = Icons.Outlined.Tune,
@@ -264,7 +229,7 @@ fun BiomarkerHostScreen(
                             state.lastWhoopSyncMs.takeIf { it > 0L },
                             state.lastOuraSyncMs.takeIf { it > 0L },
                             state.lastAmazfitSyncMs.takeIf { it > 0L },
-                            state.lastHealthConnectSyncMs.takeIf { it > 0L },
+                            state.lastZeppBodySyncMs.takeIf { it > 0L },
                         ).minOrNull() ?: 0L
                     )}",
                         style = MaterialTheme.typography.bodySmall,
@@ -336,7 +301,6 @@ fun BiomarkerHostScreen(
                                     onOpenAllTrainings = onOpenAllTrainings,
                                     onOpenOuraDetail = onOpenOuraDetail,
                                     weightState = weightState,
-                                    onRequestWeightPermission = onRequestWeightPermission,
                                     onOpenHealthConnectDetail = onOpenHealthConnectDetail,
                                     onSaveWorkoutOverrides = onSaveWorkoutOverrides,
                                 )
@@ -589,6 +553,14 @@ fun BiomarkerHostScreen(
                 // Frank-Wunsch 2026-05-17: Permanenter Sync-Status-Footer ganz unten.
                 // Zeigt "wird synchronisiert" mit Spinner solange isRefreshing, sonst
                 // das letzte Sync-Ergebnis mit Datum/Uhrzeit + Anzahl pro Quelle.
+                item("ft_zepp_sync", span = { GridItemSpan(2) }) {
+                    Text(
+                        "Zepp direkt · Zuletzt synchronisiert: " +
+                            formatRelativeSyncTime(state.lastZeppBodySyncMs),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cosmos.textSecondary,
+                    )
+                }
                 state.message?.let { msg ->
                     item("ft_msg", span = { GridItemSpan(2) }) {
                         GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -1322,7 +1294,6 @@ private fun BiomarkerCardForId(
     onOpenAllTrainings: () -> Unit,
     onOpenOuraDetail: (String) -> Unit = {},
     weightState: WeightState = WeightState(),
-    onRequestWeightPermission: () -> Unit = {},
     onOpenHealthConnectDetail: (String) -> Unit = {},
     onSaveWorkoutOverrides:
         (String, de.frank.entropyreducer.presentation.amazfit.ManualWorkoutOverrides) -> Unit =
@@ -1330,6 +1301,15 @@ private fun BiomarkerCardForId(
         },
 ) {
     val cosmos = LocalCosmos.current
+    val bodyMetric = BodyMetric.entries.firstOrNull { it.cardId == id }
+    if (bodyMetric != null) {
+        ZeppBodyMiniCard(
+            weight = weightState,
+            metric = bodyMetric,
+            onClick = { onOpenHealthConnectDetail(bodyMetric.routeKey) },
+        )
+        return
+    }
     Column(modifier = Modifier.fillMaxWidth()) {
         when (id) {
             BiomarkerCardId.GESAMTERHOLUNG -> GesamterholungCard(state, onOpenMetricDetail)
@@ -1346,43 +1326,6 @@ private fun BiomarkerCardForId(
                     // HRV-Verlauf. Vorher fehlte der onClick, dadurch passierte beim Tippen nichts.
                     onClick = { onOpenMetricDetail(MetricKey.RECOVERY) },
                 )
-            BiomarkerCardId.MINI_WEIGHT ->
-                MiniWeightCard(
-                    weight = weightState,
-                    onRequestPermission = onRequestWeightPermission,
-                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.WEIGHT) },
-                )
-            BiomarkerCardId.MINI_BODY_FAT ->
-                MiniBodyFatCard(
-                    weight = weightState,
-                    onRequestPermission = onRequestWeightPermission,
-                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BODY_FAT) },
-                )
-            BiomarkerCardId.MINI_LEAN_BODY_MASS ->
-                MiniLeanBodyMassCard(
-                    weight = weightState,
-                    onRequestPermission = onRequestWeightPermission,
-                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.LEAN_BODY_MASS) },
-                )
-            BiomarkerCardId.MINI_BODY_WATER ->
-                MiniBodyWaterCard(
-                    weight = weightState,
-                    onRequestPermission = onRequestWeightPermission,
-                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BODY_WATER) },
-                )
-            BiomarkerCardId.MINI_BONE_MASS ->
-                MiniBoneMassCard(
-                    weight = weightState,
-                    onRequestPermission = onRequestWeightPermission,
-                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.BONE_MASS) },
-                )
-            BiomarkerCardId.MINI_MUSCLE_MASS ->
-                MiniMuscleMassCard(
-                    weight = weightState,
-                    onRequestPermission = onRequestWeightPermission,
-                    onClick = { onOpenHealthConnectDetail(HealthConnectMetricKey.MUSCLE_MASS) },
-                )
-
             // ============ Mini-Cards (Frank-Wunsch 2026-05-10) ============
             // Vier eigenstaendige Mini-Karten, die im 2-Spalten-Grid liegen und
             // unabhaengig voneinander verschoben werden koennen. Frueher waren sie
@@ -1799,264 +1742,35 @@ private fun MiniVo2MaxCard(state: BiomarkerUiState, onOpenDetail: (String) -> Un
     )
 }
 
-/**
- * Gewichts-Mini-Karte (Frank-Wunsch 2026-05-10) — liest aus Health Connect, das von der Zepp-App
- * mit den Daten der Amazfit Smart Scale befuellt wird.
- *
- * Drei Anzeigemodi:
- * 1. HC nicht verfuegbar -> Hinweis "Health Connect nicht installiert"
- * 2. Permission nicht erteilt -> Tap fordert Permission an
- * 3. Permission erteilt + Daten -> Wert + Delta + Footnote (Standard-Mini-Karte)
- *
- * Hauttemperatur-Logik analog: Bei Gewicht ist NIEDRIGER nicht zwingend besser, aber Frank moechte
- * typisch (z.B. Diaet-Phase) Trend nach unten als positiv sehen — daher deltaPositive = (latestKg <
- * avg30dKg).
- */
 @Composable
-private fun MiniWeightCard(
+private fun ZeppBodyMiniCard(
     weight: WeightState,
-    onRequestPermission: () -> Unit,
+    metric: BodyMetric,
     onClick: () -> Unit,
 ) {
-    HealthConnectMiniCard(
-        weight = weight,
-        label = "Gewicht",
-        latest = weight.latestKg,
-        avg = weight.avg30dKg,
-        history = weight.history30d,
-        unit = "kg",
-        valueFormatter = { "${"%.1f".format(it)} kg" },
-        deltaPositive = (weight.latestKg ?: 0.0) < (weight.avg30dKg ?: 0.0),
-        onRequestPermission = onRequestPermission,
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun MiniBodyFatCard(
-    weight: WeightState,
-    onRequestPermission: () -> Unit,
-    onClick: () -> Unit,
-) {
-    HealthConnectMiniCard(
-        weight = weight,
-        label = "Körperfett",
-        latest = weight.latestBodyFatPercent,
-        avg = weight.avg30dBodyFatPercent,
-        history = weight.bodyFatHistory30d,
-        unit = "%",
-        valueFormatter = { "${"%.1f".format(it)} %" },
-        deltaPositive = (weight.latestBodyFatPercent ?: 0.0) < (weight.avg30dBodyFatPercent ?: 0.0),
-        onRequestPermission = onRequestPermission,
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun MiniLeanBodyMassCard(
-    weight: WeightState,
-    onRequestPermission: () -> Unit,
-    onClick: () -> Unit,
-) {
-    HealthConnectMiniCard(
-        weight = weight,
-        label = "Magermasse",
-        latest = weight.latestLeanBodyMassKg,
-        avg = weight.avg30dLeanBodyMassKg,
-        history = weight.leanBodyMassHistory30d,
-        unit = "kg",
-        valueFormatter = { "${"%.1f".format(it)} kg" },
-        deltaPositive = (weight.latestLeanBodyMassKg ?: 0.0) > (weight.avg30dLeanBodyMassKg ?: 0.0),
-        onRequestPermission = onRequestPermission,
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun MiniBodyWaterCard(
-    weight: WeightState,
-    onRequestPermission: () -> Unit,
-    onClick: () -> Unit,
-) {
-    HealthConnectMiniCard(
-        weight = weight,
-        label = "Wasser",
-        latest = weight.latestBodyWaterMassKg,
-        avg = weight.avg30dBodyWaterMassKg,
-        history = weight.bodyWaterMassHistory30d,
-        unit = "kg",
-        valueFormatter = { "${"%.1f".format(it)} kg" },
-        // Bei Wasser ist hoeher = besser (Hydration). Frank-Vorgabe analog Magermasse.
-        deltaPositive =
-            (weight.latestBodyWaterMassKg ?: 0.0) > (weight.avg30dBodyWaterMassKg ?: 0.0),
-        onRequestPermission = onRequestPermission,
-        onClick = onClick,
-    )
-}
-
-@Composable
-private fun MiniBoneMassCard(
-    weight: WeightState,
-    onRequestPermission: () -> Unit,
-    onClick: () -> Unit,
-) {
-    HealthConnectMiniCard(
-        weight = weight,
-        label = "Knochen",
-        latest = weight.latestBoneMassKg,
-        avg = weight.avg30dBoneMassKg,
-        history = weight.boneMassHistory30d,
-        unit = "kg",
-        valueFormatter = { "${"%.1f".format(it)} kg" },
-        // Bei Knochenmasse ist hoeher = besser (stabile Knochendichte).
-        deltaPositive = (weight.latestBoneMassKg ?: 0.0) > (weight.avg30dBoneMassKg ?: 0.0),
-        onRequestPermission = onRequestPermission,
-        onClick = onClick,
-    )
-}
-
-/**
- * Muskelmasse-Karte (Frank-Wunsch 2026-05-10): Health Connect hat keinen direkten
- * Muscle-Mass-Datentyp. Wir naehern an: Muskelmasse ≈ Magermasse - Knochenmasse. (Magermasse =
- * Muskeln + Wasser + Knochen + Organe → minus Knochen = Muskel + Wasser + Organe.) Wenn
- * Knochenmasse fehlt, fallback auf reine Magermasse.
- *
- * History-Berechnung erfolgt punktweise zwischen den Werten gleicher Zeitstempel.
- */
-@Composable
-private fun MiniMuscleMassCard(
-    weight: WeightState,
-    onRequestPermission: () -> Unit,
-    onClick: () -> Unit,
-) {
-    val latest = computeMuscleMass(weight.latestLeanBodyMassKg, weight.latestBoneMassKg)
-    val avg = computeMuscleMass(weight.avg30dLeanBodyMassKg, weight.avg30dBoneMassKg)
-    val history = computeMuscleMassHistory(weight.leanBodyMassHistory30d, weight.boneMassHistory30d)
-    HealthConnectMiniCard(
-        weight = weight,
-        label = "Muskel",
-        latest = latest,
-        avg = avg,
-        history = history,
-        unit = "kg",
-        valueFormatter = { "${"%.1f".format(it)} kg" },
-        deltaPositive = (latest ?: 0.0) > (avg ?: 0.0),
-        onRequestPermission = onRequestPermission,
-        onClick = onClick,
-    )
-}
-
-private fun computeMuscleMass(leanKg: Double?, boneKg: Double?): Double? {
-    if (leanKg == null) return null
-    return if (boneKg != null) leanKg - boneKg else leanKg
-}
-
-private fun computeMuscleMassHistory(
-    leanHistory: List<Pair<Long, Double>>,
-    boneHistory: List<Pair<Long, Double>>,
-): List<Pair<Long, Double>> {
-    if (leanHistory.isEmpty()) return emptyList()
-    // Zu jedem LeanBodyMass-Zeitstempel den naechsten Bone-Wert finden (gleicher
-    // Tag oder fallback). Wenn kein Bone-Wert da ist, nutzen wir lean direkt.
-    val boneByMs = boneHistory.associate { it.first to it.second }
-    return leanHistory.map { (ts, lean) ->
-        val bone =
-            boneByMs[ts] ?: boneHistory.minByOrNull { kotlin.math.abs(it.first - ts) }?.second
-        ts to (if (bone != null) lean - bone else lean)
+    val latest = weight.latest(metric)
+    val avg = weight.average(metric)
+    val diff = if (latest != null && avg != null) latest - avg else null
+    val unitSuffix = metric.unit.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty()
+    val statusText = when {
+        weight.isLoading -> "Wird aktualisiert …"
+        weight.error != null -> weight.error
+        !weight.zeppAvailable -> "Zepp nicht installiert"
+        latest == null -> "Noch kein Wert · Details öffnen"
+        avg != null -> "vs. 30-Tage-Mittel"
+        else -> "Details + Verlauf"
     }
-}
-
-/**
- * Gemeinsame Implementierung der Health-Connect-Mini-Karten (Gewicht, Koerperfett, Magermasse,
- * Wasser, Knochen). Frank-Wunsch 2026-05-10 (zweite Iteration):
- * - Tap im "Wert vorhanden"-Zustand oeffnet Detail-Screen mit History (analog zu
- *   Readiness/Schlaf-Score)
- * - Footnote zeigt Datum des letzten Werts ("vom 14.01.2026 · vs. 30-Tage-Mittel")
- * - Bei fehlender Permission: Tap startet Permission-Dialog
- * - Bei keinen Daten: Tap oeffnet trotzdem den Detail-Screen, dort kann Refresh ausgeloest werden
- */
-@Composable
-private fun HealthConnectMiniCard(
-    weight: WeightState,
-    label: String,
-    latest: Double?,
-    avg: Double?,
-    history: List<Pair<Long, Double>>,
-    unit: String,
-    valueFormatter: (Double) -> String,
-    deltaPositive: Boolean,
-    onRequestPermission: () -> Unit,
-    onClick: () -> Unit,
-) {
-    when {
-        !weight.healthConnectAvailable -> {
-            MetricMiniCard(
-                modifier = Modifier.fillMaxWidth(),
-                label = label,
-                value = "—",
-                delta = "",
-                deltaPositive = false,
-                footnote = "Health Connect nicht verfuegbar",
-            )
-        }
-        !weight.permissionGranted -> {
-            MetricMiniCard(
-                modifier = Modifier.fillMaxWidth(),
-                label = label,
-                value = "Tippen",
-                delta = "",
-                deltaPositive = false,
-                footnote = "Erlaubnis erforderlich",
-                onClick = onRequestPermission,
-            )
-        }
-        weight.isLoading -> {
-            MetricMiniCard(
-                modifier = Modifier.fillMaxWidth(),
-                label = label,
-                value = "…",
-                delta = "",
-                deltaPositive = false,
-                footnote = "lade aus Health Connect …",
-            )
-        }
-        latest == null -> {
-            MetricMiniCard(
-                modifier = Modifier.fillMaxWidth(),
-                label = label,
-                value = "—",
-                delta = "",
-                deltaPositive = false,
-                footnote = "Tippen für Details + Aktualisieren",
-                onClick = onClick,
-            )
-        }
-        else -> {
-            val deltaText =
-                if (avg != null) {
-                    val diff = latest - avg
-                    val sign = if (diff >= 0) "+" else "−"
-                    "$sign${"%.1f".format(kotlin.math.abs(diff))} $unit"
-                } else {
-                    ""
-                }
-            // Frank-Wunsch 2026-05-10 (zweite Iteration): Datum NEBEN dem Label,
-            // nicht in der Footnote. So sieht Frank auf einen Blick wie alt der
-            // Wert ist ohne nach unten gucken zu muessen.
-            val lastTs = history.maxByOrNull { it.first }?.first
-            val labelSuffix = lastTs?.let { formatMiniDate(it) }
-            MetricMiniCard(
-                modifier = Modifier.fillMaxWidth(),
-                label = label,
-                value = valueFormatter(latest),
-                delta = deltaText,
-                deltaPositive = deltaPositive,
-                footnote = "vs. 30-Tage-Mittel",
-                onClick = onClick,
-                labelSuffix = labelSuffix,
-            )
-        }
-    }
+    // Keep cached values visible during loading, failures and on devices without Zepp.
+    MetricMiniCard(
+        modifier = Modifier.fillMaxWidth(),
+        label = metric.title,
+        value = latest?.let { "%.1f".format(it) + unitSuffix } ?: "—",
+        delta = diff?.let { "%+.1f".format(it) + unitSuffix }.orEmpty(),
+        deltaPositive = diff?.let { if (metric.lowerIsBetter) it < 0 else it > 0 } ?: false,
+        footnote = "Zepp direkt · $statusText",
+        onClick = onClick,
+        labelSuffix = weight.history(metric).lastOrNull()?.first?.let { formatMiniDate(it) },
+    )
 }
 
 // Performance-Audit Loop 9 (2026-05-10): ThreadLocal SimpleDateFormat statt

@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -43,7 +42,8 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Detail-Screen fuer Health-Connect-Body-Composition-Werte (Frank-Wunsch 2026-05-10).
+ * Body composition details from Zepp, including retained HC history.
+ * Screen and route names remain stable for saved navigation state.
  *
  * Tap auf eine der Mini-Karten Gewicht / Koerperfett / Magermasse / Wasser / Knochen oeffnet diesen
  * Screen — analog zum Oura-Detail-Screen. Zeigt:
@@ -51,7 +51,7 @@ import java.util.Locale
  * - Range-Switcher 7T / 30T / 90T / Alle
  * - Linien-Verlauf der gefilterten Werte (InteractiveLineChart)
  * - Vollstaendige Liste aller Werte mit Datum + Plus/Minus zum 30-Tage-Mittel
- * - Refresh-Button im Header (zieht aktuelle Daten aus Health Connect)
+ * - Refresh-Button im Header (zieht aktuelle Daten direkt aus Zepp)
  *
  * Frank-Vorgabe: bei Gewicht/Koerperfett ist niedriger besser (Diaet-Phase), bei
  * Magermasse/Wasser/Knochen ist hoeher besser (Muskelaufbau, Hydration).
@@ -73,52 +73,21 @@ private data class HcMetricSpec(
 )
 
 @Composable
-private fun specFor(metricKey: String): HcMetricSpec =
-    when (metricKey) {
-        HealthConnectMetricKey.WEIGHT ->
-            HcMetricSpec(
-                title = "Gewicht",
-                unit = "kg",
-                accent = LocalCosmos.current.accent,
-                lowerIsBetter = true,
-            )
-        HealthConnectMetricKey.BODY_FAT ->
-            HcMetricSpec(
-                title = "Körperfett",
-                unit = "%",
-                accent = LocalCosmos.current.warn,
-                lowerIsBetter = true,
-            )
-        HealthConnectMetricKey.LEAN_BODY_MASS ->
-            HcMetricSpec(
-                title = "Magermasse",
-                unit = "kg",
-                accent = LocalCosmos.current.ok,
-                lowerIsBetter = false,
-            )
-        HealthConnectMetricKey.BODY_WATER ->
-            HcMetricSpec(
-                title = "Körperwasser",
-                unit = "kg",
-                accent = LocalCosmos.current.accentForscher,
-                lowerIsBetter = false,
-            )
-        HealthConnectMetricKey.BONE_MASS ->
-            HcMetricSpec(
-                title = "Knochenmasse",
-                unit = "kg",
-                accent = LocalCosmos.current.accent,
-                lowerIsBetter = false,
-            )
-        HealthConnectMetricKey.MUSCLE_MASS ->
-            HcMetricSpec(
-                title = "Muskelmasse",
-                unit = "kg",
-                accent = LocalCosmos.current.ok,
-                lowerIsBetter = false,
-            )
-        else -> HcMetricSpec("Health Connect", "", LocalCosmos.current.accent, false)
+private fun specFor(metric: BodyMetric?): HcMetricSpec {
+    val cosmos = LocalCosmos.current
+    val accent = when (metric) {
+        BodyMetric.BODY_FAT, BodyMetric.VISCERAL_FAT -> cosmos.warn
+        BodyMetric.LEAN, BodyMetric.MUSCLE, BodyMetric.SKELETAL_MUSCLE -> cosmos.ok
+        BodyMetric.WATER, BodyMetric.WATER_PERCENT -> cosmos.accentForscher
+        else -> cosmos.accent
     }
+    return HcMetricSpec(
+        metric?.title ?: "Körperdaten",
+        metric?.unit.orEmpty(),
+        accent,
+        metric?.lowerIsBetter ?: false,
+    )
+}
 
 @Composable
 fun HealthConnectDetailScreen(
@@ -128,74 +97,13 @@ fun HealthConnectDetailScreen(
 ) {
     val weight by vm.weight.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
-    val spec = specFor(metricKey)
+    val metric = remember(metricKey) { BodyMetric.entries.firstOrNull { it.routeKey == metricKey } }
+    val spec = specFor(metric)
+    val history = metric?.let { weight.history(it) }.orEmpty()
+    val latest = metric?.let { weight.latest(it) }
+    val avg30 = metric?.let { weight.average(it) }
 
-    // Datenquelle pro Metrik. history30d ist bereits in WeightState verfuegbar —
-    // 30 Tage reichen fuer den Default-Range. Fuer 90T / Alle laden wir on-demand
-    // hier nicht nach (wuerde ein eigenes ViewModel-Feld brauchen) — Frank kriegt
-    // die letzten 30 Tage als Default und kann das spaeter erweitern.
-    //
-    // Performance-Audit Loop 2 (2026-05-10): when-Block + .associate + .map werden
-    // einmalig in remember(metricKey, weight) berechnet statt bei jeder Recomposition
-    // (z.B. bei Range-Filter-Click). Bei MUSCLE_MASS sparen wir O(N) Map-Aufbau +
-    // O(M) List-Transform pro Recomposition.
-    val history: List<Pair<Long, Double>> =
-        remember(metricKey, weight) {
-            when (metricKey) {
-                HealthConnectMetricKey.WEIGHT -> weight.history30d
-                HealthConnectMetricKey.BODY_FAT -> weight.bodyFatHistory30d
-                HealthConnectMetricKey.LEAN_BODY_MASS -> weight.leanBodyMassHistory30d
-                HealthConnectMetricKey.BODY_WATER -> weight.bodyWaterMassHistory30d
-                HealthConnectMetricKey.BONE_MASS -> weight.boneMassHistory30d
-                HealthConnectMetricKey.MUSCLE_MASS -> {
-                    // Muskelmasse-History ≈ LeanBodyMass-History minus BoneMass-History
-                    // mit Zeitstempel-Matching. Wenn keine BoneMass-Werte: fallback Lean.
-                    val boneByMs = weight.boneMassHistory30d.associate { it.first to it.second }
-                    weight.leanBodyMassHistory30d.map { (ts, lean) ->
-                        val bone =
-                            boneByMs[ts]
-                                ?: weight.boneMassHistory30d
-                                    .minByOrNull { kotlin.math.abs(it.first - ts) }
-                                    ?.second
-                        ts to (if (bone != null) lean - bone else lean)
-                    }
-                }
-                else -> emptyList()
-            }
-        }
-    val latest: Double? =
-        when (metricKey) {
-            HealthConnectMetricKey.WEIGHT -> weight.latestKg
-            HealthConnectMetricKey.BODY_FAT -> weight.latestBodyFatPercent
-            HealthConnectMetricKey.LEAN_BODY_MASS -> weight.latestLeanBodyMassKg
-            HealthConnectMetricKey.BODY_WATER -> weight.latestBodyWaterMassKg
-            HealthConnectMetricKey.BONE_MASS -> weight.latestBoneMassKg
-            HealthConnectMetricKey.MUSCLE_MASS -> {
-                val lean = weight.latestLeanBodyMassKg
-                val bone = weight.latestBoneMassKg
-                if (lean == null) null else if (bone != null) lean - bone else lean
-            }
-            else -> null
-        }
-    val avg30: Double? =
-        when (metricKey) {
-            HealthConnectMetricKey.WEIGHT -> weight.avg30dKg
-            HealthConnectMetricKey.BODY_FAT -> weight.avg30dBodyFatPercent
-            HealthConnectMetricKey.LEAN_BODY_MASS -> weight.avg30dLeanBodyMassKg
-            HealthConnectMetricKey.BODY_WATER -> weight.avg30dBodyWaterMassKg
-            HealthConnectMetricKey.BONE_MASS -> weight.avg30dBoneMassKg
-            HealthConnectMetricKey.MUSCLE_MASS -> {
-                val avgLean = weight.avg30dLeanBodyMassKg
-                val avgBone = weight.avg30dBoneMassKg
-                if (avgLean == null) null else if (avgBone != null) avgLean - avgBone else avgLean
-            }
-            else -> null
-        }
-
-    // Frank-Wunsch 2026-05-10 abend: Default-Filter "Alle" statt "30T", damit
-    // der ganze HC-Verlauf sofort sichtbar ist. 30T war frueher der Default
-    // weil HC ohne PERMISSION_READ_HEALTH_DATA_HISTORY nur 30 Tage lieferte —
-    // mit erteilter Permission ist diese Begrenzung weg.
+    // All cached measurements remain available, independently of HC permissions.
     var range by remember { mutableStateOf(HcDetailRange.ALL) }
     val cutoffDays =
         when (range) {
@@ -240,21 +148,10 @@ fun HealthConnectDetailScreen(
             }
         },
         actions = {
-            // Frank-Wunsch 2026-05-10: Einzelne Permissions im Nachhinein
-            // bearbeiten koennen. Dieser Button oeffnet die Health-Connect-
-            // spezifische Permissions-UI fuer unsere App (mit Fallbacks bei
-            // alten HC-Versionen, siehe HealthConnectManager).
-            IconButton(onClick = vm::openHealthConnectPermissionsEditor) {
-                Icon(
-                    imageVector = Icons.Outlined.Tune,
-                    contentDescription = "Berechtigungen verwalten",
-                    tint = cosmos.textPrimary,
-                )
-            }
-            IconButton(onClick = vm::refreshWeight) {
+            IconButton(onClick = vm::refreshWeight, enabled = !weight.isLoading) {
                 Icon(
                     imageVector = Icons.Outlined.Refresh,
-                    contentDescription = "Werte neu laden",
+                    contentDescription = "Körperwerte direkt aus Zepp aktualisieren",
                     tint = cosmos.textPrimary,
                 )
             }
@@ -264,16 +161,7 @@ fun HealthConnectDetailScreen(
         // Gewichts-Detail-Screen. Mapping HC-MetricKey -> CardId fuer die
         // jeweilige Mini-Karte im Uebersichts-Screen.
         val cardColorAccess = rememberCardColors()
-        val targetCardId =
-            when (metricKey) {
-                HealthConnectMetricKey.WEIGHT -> BiomarkerCardId.MINI_WEIGHT
-                HealthConnectMetricKey.BODY_FAT -> BiomarkerCardId.MINI_BODY_FAT
-                HealthConnectMetricKey.LEAN_BODY_MASS -> BiomarkerCardId.MINI_LEAN_BODY_MASS
-                HealthConnectMetricKey.BODY_WATER -> BiomarkerCardId.MINI_BODY_WATER
-                HealthConnectMetricKey.BONE_MASS -> BiomarkerCardId.MINI_BONE_MASS
-                HealthConnectMetricKey.MUSCLE_MASS -> BiomarkerCardId.MINI_MUSCLE_MASS
-                else -> metricKey
-            }
+        val targetCardId = metric?.cardId ?: metricKey
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -295,6 +183,36 @@ fun HealthConnectDetailScreen(
                     unit = spec.unit,
                     lowerIsBetter = spec.lowerIsBetter,
                 )
+            }
+            item("zepp_source") {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Quelle: Zepp direkt", style = MaterialTheme.typography.labelMedium,
+                        color = cosmos.textSecondary)
+                    Text(
+                        "Zepp liefert die letzte Messung mit Datum, ohne Messuhrzeit. " +
+                            "Der Verlauf wird ab jetzt gespeichert; frühere HC-Werte bleiben erhalten.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cosmos.textSecondary,
+                    )
+                    if (metric == BodyMetric.BODY_FAT) {
+                        Text(
+                            "Neue Körperfettwerte sind Näherungswerte aus Gewicht und Magermasse, " +
+                                "auf eine Nachkommastelle gerundet.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = cosmos.textSecondary,
+                        )
+                    }
+                    val statusText = when {
+                        weight.isLoading -> "Körperwerte werden direkt aus Zepp aktualisiert …"
+                        weight.error != null -> weight.error
+                        !weight.zeppAvailable -> "Zepp ist nicht installiert. Gespeicherte Werte bleiben sichtbar."
+                        else -> null
+                    }
+                    if (statusText != null) {
+                        Text(statusText, style = MaterialTheme.typography.bodySmall,
+                            color = if (weight.error != null) cosmos.warn else cosmos.textSecondary)
+                    }
+                }
             }
             item { HcRangeSwitcher(current = range, onChange = { range = it }) }
             if (filtered.isNotEmpty()) {
@@ -362,7 +280,8 @@ fun HealthConnectDetailScreen(
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 text =
-                                    "Tippe oben rechts auf das Refresh-Symbol oder wechsle den Zeitraum.",
+                                    "Zepp öffnen und erneut aktualisieren oder den Zeitraum wechseln. " +
+                                        "Nicht gelieferte Körperwerte bleiben leer.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = cosmos.textSecondary,
                             )

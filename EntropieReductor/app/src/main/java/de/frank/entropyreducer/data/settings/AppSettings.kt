@@ -51,6 +51,7 @@ class AppSettings @Inject constructor(
     val lastOuraSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_OURA_SYNC] ?: 0L }
     val lastAmazfitSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_AMAZFIT_SYNC] ?: 0L }
     val lastHealthConnectSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_HEALTH_CONNECT_SYNC] ?: 0L }
+    val lastZeppBodySyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_ZEPP_BODY_SYNC] ?: 0L }
 
     suspend fun readHealthConnectPermissionSignature(): String =
         ds.data.first()[KEY_HEALTH_CONNECT_PERMISSION_SIGNATURE].orEmpty()
@@ -238,6 +239,9 @@ class AppSettings @Inject constructor(
     /** Reset-/Override-Pfad für bestehende UI-Aktionen; die Permission-Signatur bleibt erhalten. */
     suspend fun setLastHealthConnectSync(value: Long) = ds.edit {
         it[KEY_LAST_HEALTH_CONNECT_SYNC] = value
+    }
+    suspend fun setLastZeppBodySync(value: Long) = ds.edit {
+        it[KEY_LAST_ZEPP_BODY_SYNC] = value
     }
     suspend fun setWorkoutsBackupFingerprint(value: String) =
         ds.edit { it[KEY_WORKOUTS_BACKUP_SHA256] = value }
@@ -524,6 +528,7 @@ class AppSettings @Inject constructor(
         private val KEY_LAST_AMAZFIT_SYNC = longPreferencesKey("last_amazfit_sync_ms")
         private val KEY_DELETED_WORKOUTS = stringSetPreferencesKey("deleted_workout_starts")
         private val KEY_LAST_HEALTH_CONNECT_SYNC = longPreferencesKey("last_health_connect_sync_ms")
+        private val KEY_LAST_ZEPP_BODY_SYNC = longPreferencesKey("last_zepp_body_sync_ms")
         private val KEY_HEALTH_CONNECT_PERMISSION_SIGNATURE =
             stringPreferencesKey("health_connect_body_permission_signature")
         private val KEY_WORKOUTS_BACKUP_SHA256 =

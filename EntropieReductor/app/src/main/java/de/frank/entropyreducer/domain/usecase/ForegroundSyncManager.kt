@@ -6,7 +6,7 @@ import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.data.repository.CalendarRepository
-import de.frank.entropyreducer.data.repository.HealthConnectRepository
+import de.frank.entropyreducer.data.repository.ZeppBodyRepository
 import de.frank.entropyreducer.data.repository.OuraRepository
 import de.frank.entropyreducer.data.repository.WhoopRepository
 import de.frank.entropyreducer.data.settings.AppSettings
@@ -56,7 +56,7 @@ constructor(
     private val oura: OuraRepository,
     private val amazfit: AmazfitRepository,
     private val calendar: CalendarRepository,
-    private val healthConnectRepository: HealthConnectRepository,
+    private val zeppBodyRepository: ZeppBodyRepository,
     private val appSettings: AppSettings,
 ) {
     private val driveMutex = Mutex()
@@ -138,8 +138,8 @@ constructor(
         try {
             Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync START ($reason)")
             val results = coroutineScope {
-                val hcDeferred =
-                    async { runCatchingCancellable { healthConnectRepository.syncToCache() } }
+                val bodyDeferred =
+                    async { runCatchingCancellable { zeppBodyRepository.syncToCache() } }
                 val whoopDeferred =
                     async {
                         if (oauth.loadWhoopAuthState().isAuthorized) {
@@ -170,7 +170,7 @@ constructor(
                         }
                     }
                 listOf(
-                    hcDeferred.await(),
+                    bodyDeferred.await(),
                     whoopDeferred.await(),
                     ouraDeferred.await(),
                     trainingDeferred.await(),
@@ -183,7 +183,7 @@ constructor(
                 Diag.w(DiagnosticArea.APP, "ForegroundSync", "API-Sync unvollständig; 8h-Timer bleibt unverändert", firstFailure)
                 return
             }
-            val (hcCount, whoopCount, ouraCount, trainingCount) = results.take(4).map { it.getOrThrow() }
+            val (bodyCount, whoopCount, ouraCount, trainingCount) = results.take(4).map { it.getOrThrow() }
 
             // "Zuletzt synchronisiert"-Footer setzen (gleiches Format wie der manuelle
             // Aktualisieren-Knopf). Der Zeitstempel dient gleichzeitig als Grundlage
@@ -198,12 +198,12 @@ constructor(
                 )
             val footer =
                 "✓ $footerTs · Whoop $whoopCount · Training $trainingCount · " +
-                    "Oura $ouraCount · Health Connect $hcCount"
+                    "Oura $ouraCount · Zepp $bodyCount"
             appSettings.setLastRefreshFooter(footer, System.currentTimeMillis())
             Diag.i(
                 DiagnosticArea.APP,
                 "ForegroundSync",
-                "API-Sync FERTIG ($reason): Whoop=$whoopCount Training=$trainingCount Oura=$ouraCount HC=$hcCount -> 8h-Timer neu gesetzt",
+                "API-Sync FERTIG ($reason): Whoop=$whoopCount Training=$trainingCount Oura=$ouraCount Zepp=$bodyCount -> 8h-Timer neu gesetzt",
             )
         } finally {
             apiMutex.unlock()

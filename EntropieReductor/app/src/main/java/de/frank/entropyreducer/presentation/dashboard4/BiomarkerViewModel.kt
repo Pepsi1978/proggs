@@ -18,7 +18,7 @@ import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
 import de.frank.entropyreducer.data.remote.drive.SyncCoordinator
 import de.frank.entropyreducer.data.repository.AmazfitRepository
 import de.frank.entropyreducer.data.repository.BiomarkerCardOrderRepository
-import de.frank.entropyreducer.data.repository.HealthConnectRepository
+import de.frank.entropyreducer.data.repository.ZeppBodyRepository
 import de.frank.entropyreducer.data.repository.OuraRepository
 import de.frank.entropyreducer.data.repository.WhoopRepository
 import de.frank.entropyreducer.data.settings.AppSettings
@@ -27,6 +27,7 @@ import de.frank.entropyreducer.domain.status.StatusObserver
 import de.frank.entropyreducer.workers.BackgroundScheduler
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -49,7 +50,7 @@ private data class StatusBundle(
  * Frank-Wunsch 2026-05-10: einheitlicher Sync-Zeitstempel-Pool fuer den 'Zuletzt
  * synchronisiert'-Header. Pro Biomarker-Quelle eigener Wert.
  */
-private data class SyncTimes(val oura: Long, val amazfit: Long, val healthConnect: Long)
+private data class SyncTimes(val oura: Long, val amazfit: Long, val zepp: Long)
 
 /**
  * Whoop-Daten gebuendelt damit der outer combine() unter 5 Flows bleibt. last30 wird NICHT als Flow
@@ -114,7 +115,7 @@ data class BiomarkerUiState(
      */
     val lastOuraSyncMs: Long = 0L,
     val lastAmazfitSyncMs: Long = 0L,
-    val lastHealthConnectSyncMs: Long = 0L,
+    val lastZeppBodySyncMs: Long = 0L,
     /**
      * Alle Whoop-Workouts, juengste zuerst (Frank-Wunsch 2026-05-09: kompletter Workout-Bereich mit
      * Sportart, Strain, HR-Zonen). UI gruppiert nach Tag.
@@ -195,49 +196,19 @@ data class BiomarkerChartData(
     val restorativeSleepAvg30dPercent: Double? = null,
 )
 
-/**
- * Weight-State fuer die Health-Connect-Mini-Karte (Frank-Wunsch 2026-05-10). Wird separat vom
- * Hauptstate gehalten, weil Health Connect kein Flow ist sondern suspend-basiert — der Wert wird
- * beim Init und beim Refresh einmalig gelesen.
- *
- * Mit - permissionGranted=false: Karte zeigt "Tippen um zu erlauben" Mit - permissionGranted=true +
- * latestKg=null: Karte zeigt "Keine Daten in HC" Mit - permissionGranted=true + latestKg!=null:
- * Karte zeigt Wert + Delta
- */
-@androidx.compose.runtime.Immutable
+/** Effective body histories include the retained HC cache and direct Zepp measurements. */
 data class WeightState(
-    val healthConnectAvailable: Boolean = false,
-    /**
-     * True wenn ALLE drei Permissions (Weight, BodyFat, LeanBodyMass) erteilt sind. Wird vom
-     * Permission-Launcher in einem Rutsch angefordert — wenn Frank nur Weight erlaubt aber nicht
-     * BodyFat, ist das hier false. Damit stoppt Frank's Tap-to-Refresh-Loop und zeigt stattdessen
-     * einen Hinweis.
-     */
-    val permissionGranted: Boolean = false,
-    val latestKg: Double? = null,
-    val avg30dKg: Double? = null,
-    val history30d: List<Pair<Long, Double>> = emptyList(),
-    /** Frank-Wunsch 2026-05-10: Koerperfett aus Health Connect (Smart-Scale via Zepp). */
-    val latestBodyFatPercent: Double? = null,
-    val avg30dBodyFatPercent: Double? = null,
-    val bodyFatHistory30d: List<Pair<Long, Double>> = emptyList(),
-    /** Magermasse — alles ausser Fett (Muskeln + Wasser + Knochen). */
-    val latestLeanBodyMassKg: Double? = null,
-    val avg30dLeanBodyMassKg: Double? = null,
-    val leanBodyMassHistory30d: List<Pair<Long, Double>> = emptyList(),
-    /** Koerperwasser in kg (Frank-Wunsch 2026-05-10). */
-    val latestBodyWaterMassKg: Double? = null,
-    val avg30dBodyWaterMassKg: Double? = null,
-    val bodyWaterMassHistory30d: List<Pair<Long, Double>> = emptyList(),
-    /** Knochenmasse in kg. */
-    val latestBoneMassKg: Double? = null,
-    val avg30dBoneMassKg: Double? = null,
-    val boneMassHistory30d: List<Pair<Long, Double>> = emptyList(),
-    /** Zeitstempel des letzten erfolgreichen Reads — fuer User-Feedback bei Tap-Refresh. */
+    val histories: Map<String, List<Pair<Long, Double>>> = emptyMap(),
+    val averages30d: Map<String, Double?> = emptyMap(),
+    val zeppAvailable: Boolean = false,
+    val error: String? = null,
     val lastReadAtMs: Long = 0L,
-    /** True waehrend gerade gelesen wird (zeigt einen Spinner auf der Karte). */
     val isLoading: Boolean = false,
-)
+) {
+    fun history(metric: BodyMetric): List<Pair<Long, Double>> = histories[metric.repositoryKey].orEmpty()
+    fun latest(metric: BodyMetric): Double? = history(metric).lastOrNull()?.second
+    fun average(metric: BodyMetric): Double? = averages30d[metric.repositoryKey]
+}
 
 @HiltViewModel
 class BiomarkerViewModel
@@ -253,9 +224,7 @@ constructor(
     private val healthConnect: HealthConnectManager,
     statusObserver: StatusObserver,
     private val settings: AppSettings,
-    private val hcValueDao: de.frank.entropyreducer.data.local.dao.HealthConnectValueDao,
-    private val healthConnectRepository:
-        de.frank.entropyreducer.data.repository.HealthConnectRepository,
+    private val zeppBodyRepository: ZeppBodyRepository,
     // Frank-Wunsch 2026-06-19 (Sync-Etappe 1.1): API-Sync beim Oeffnen des Biomarker-Tabs.
     private val foregroundSync: de.frank.entropyreducer.domain.usecase.ForegroundSyncManager,
 ) : ViewModel() {
@@ -264,10 +233,26 @@ constructor(
     private val _message = MutableStateFlow<String?>(null)
     private val _selectedDate = MutableStateFlow(java.time.LocalDate.now())
 
-    // Health-Connect-Gewicht: separater State, wird beim Init und nach jedem
-    // erfolgreichen Permission-Grant aktualisiert.
-    private val _weight = MutableStateFlow(WeightState())
-    val weight: StateFlow<WeightState> = _weight
+    val weight: StateFlow<WeightState> = combine(
+        zeppBodyRepository.observeHistories(),
+        zeppBodyRepository.status,
+    ) { histories, status ->
+        val sorted = histories.mapValues { (_, points) -> points.sortedBy { it.first } }
+        val now = System.currentTimeMillis()
+        val cutoff = now - 30L * 24 * 60 * 60 * 1000
+        WeightState(
+            histories = sorted,
+            averages30d = sorted.mapValues { (_, points) ->
+                points.filter { it.first in cutoff..now }.map { it.second }
+                    .takeIf { it.isNotEmpty() }?.average()
+            },
+            zeppAvailable = zeppBodyRepository.isAvailable(),
+            error = status.error?.let { "Zepp öffnen und erneut aktualisieren" },
+            lastReadAtMs = status.lastReadAtMs,
+            isLoading = status.isLoading,
+        )
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WeightState())
 
     /**
      * Frank-Wunsch 2026-05-18: Map cardId -> ColorIndex (0-29). Wird vom
@@ -294,19 +279,13 @@ constructor(
         viewModelScope.launch {
             val savedFooter = settings.lastRefreshFooterFlow.first()
             if (savedFooter.isNotBlank() && _message.value == null) {
-                _message.value = savedFooter
+                // A persisted HC body count is not a successful direct Zepp read.
+                _message.value = savedFooter.split(" · ")
+                    .filterNot { it.startsWith("Health Connect ") }
+                    .joinToString(" · ")
             }
         }
-        // Frank-Wunsch 2026-05-23: KEIN refreshNow() mehr beim Oeffnen des Biomarker-Tabs
-        // (Moment 3 raus). Die Daten-APIs (Whoop/Oura/Kalender) synchronisieren NUR
-        // noch beim frischen App-Start (zentral im StartupViewModel) und beim manuellen
-        // Aktualisieren-Knopf. Der Tab zeigt die bereits in der DB liegenden Daten.
-        //
-        // Gewicht/Koerperwerte werden jetzt — wie Whoop/Oura — in der DB (hc_value_cache)
-        // gehalten. Beim Tab-Oeffnen laden wir sie NUR aus dem Cache (schnell, kein Health-
-        // Connect-Live-Read, kein Sync). Gefuellt wird der Cache beim frischen App-Start
-        // (HealthConnectRepository.syncToCache) und beim manuellen Aktualisieren-Knopf.
-        viewModelScope.launch { loadWeightFromCache() }
+        // Body data is observed from the cache; initialization never calls the Zepp API.
     }
 
     /**
@@ -322,248 +301,20 @@ constructor(
         viewModelScope.launch { foregroundSync.syncApisNow("Biomarker-Tab") }
     }
 
-    /**
-     * Liest Gewicht, Koerperfett und Magermasse aus Health Connect. Setzt waehrend des Lesens
-     * [WeightState.isLoading] = true damit die UI einen Spinner anzeigen kann.
-     *
-     * Frank-Wunsch 2026-05-10: Tap auf eine Mini-Karte ruft genau diese Methode auf — sofortiges
-     * Refresh ohne in die Settings zu gehen. Wenn Permission fehlt, zeigt der Karten-Tap
-     * stattdessen einen Permission- Dialog (siehe Screen-Logik). Permission gilt fuer ALLE drei
-     * Records gleichzeitig — wenn Frank nur eine Permission erteilt, wird permissionGranted
-     * weiterhin false sein und die Karten zeigen "Tippen".
-     */
+    /** Manual body refresh; the repository owns loading, errors and the persistent history. */
     fun refreshWeight() {
-        viewModelScope.launch(Dispatchers.IO) {
-            // Performance-Audit Loop 1 (2026-05-10): 15 parallele HC-Reads auf IO.
-            //
-            // BUGFIX (Frank-Befund 2026-05-10 abend, S23 Ultra): Wenn IRGENDEINER der
-            // 15 async-Reads warf (z.B. SecurityException weil eine Permission auf
-            // dem Geraet anders eingestuft wird, oder ein Read fuer 730 Tage die
-            // Plattform-Grenze ueberschreitet), brach die gesamte Coroutine VOR der
-            // _weight.value = WeightState(...) Zeile ab. UI blieb im isLoading=true
-            // Zustand und Frank dachte "Aktualisieren-Button macht nichts".
-            //
-            // Fix: jeden Read in runCatching wrappen. Exception → null bzw. emptyList()
-            // als Default, plus debug-Log. WeightState wird IMMER gesetzt.
-            val tag = "BiomarkerVM"
-            Diag.i(DiagnosticArea.BIOMARKER, tag, "refreshWeight() start")
-            val available = healthConnect.isAvailable()
-            if (!available) {
-                Diag.i(DiagnosticArea.BIOMARKER, tag, "refreshWeight: HC NOT available")
-                _weight.value = WeightState(healthConnectAvailable = false)
-                return@launch
-            }
-            val weightOk =
-                runCatching { healthConnect.hasWeightReadPermission() }.getOrDefault(false)
-            val bodyFatOk =
-                runCatching { healthConnect.hasBodyFatReadPermission() }.getOrDefault(false)
-            val leanOk =
-                runCatching { healthConnect.hasLeanBodyMassReadPermission() }.getOrDefault(false)
-            val waterOk =
-                runCatching { healthConnect.hasBodyWaterMassReadPermission() }.getOrDefault(false)
-            val boneOk =
-                runCatching { healthConnect.hasBoneMassReadPermission() }.getOrDefault(false)
-            val historyOk =
-                runCatching { healthConnect.hasHistoryReadPermission() }.getOrDefault(false)
-            Diag.i(DiagnosticArea.BIOMARKER, 
-                tag,
-                "refreshWeight perms: weight=$weightOk bf=$bodyFatOk lean=$leanOk water=$waterOk bone=$boneOk hist=$historyOk",
-            )
-            if (!(weightOk && bodyFatOk && leanOk && waterOk && boneOk && historyOk)) {
-                Diag.w(DiagnosticArea.BIOMARKER, 
-                    tag,
-                    "refreshWeight: nicht alle Permissions erteilt — Karten zeigen 'Tippen'",
-                )
-                _weight.value =
-                    WeightState(healthConnectAvailable = true, permissionGranted = false)
-                return@launch
-            }
-            // Loading-State setzen damit die Karten einen Spinner zeigen koennen
-            _weight.value = _weight.value.copy(isLoading = true)
-            // Alle 15 HC-Reads parallel + defensiv mit runCatching. Jeder Read kann
-            // einzeln scheitern ohne dass die anderen ausbleiben und ohne dass die
-            // UI im isLoading-Zustand stecken bleibt.
-            suspend fun <T> safeAsync(
-                label: String,
-                default: T,
-                block: suspend () -> T,
-            ): kotlinx.coroutines.Deferred<T> = async {
-                runCatching { block() }
-                    .onFailure { Diag.w(DiagnosticArea.BIOMARKER, tag, "HC-Read '$label' fehlgeschlagen", it) }
-                    .getOrDefault(default)
-            }
-            val latestKgD =
-                safeAsync("latestKg", null as Double?) { healthConnect.readLatestWeightKg() }
-            val avgKgD = safeAsync("avgKg", null as Double?) { healthConnect.averageWeightKg(730) }
-            val historyKgD =
-                safeAsync("historyKg", emptyList<Pair<Long, Double>>()) {
-                    healthConnect.readWeightHistory(730)
-                }
-            val latestBfD =
-                safeAsync("latestBf", null as Double?) { healthConnect.readLatestBodyFatPercent() }
-            val avgBfD =
-                safeAsync("avgBf", null as Double?) { healthConnect.averageBodyFatPercent(730) }
-            val historyBfD =
-                safeAsync("historyBf", emptyList<Pair<Long, Double>>()) {
-                    healthConnect.readBodyFatHistory(730)
-                }
-            val latestLeanD =
-                safeAsync("latestLean", null as Double?) {
-                    healthConnect.readLatestLeanBodyMassKg()
-                }
-            val avgLeanD =
-                safeAsync("avgLean", null as Double?) { healthConnect.averageLeanBodyMassKg(730) }
-            val historyLeanD =
-                safeAsync("historyLean", emptyList<Pair<Long, Double>>()) {
-                    healthConnect.readLeanBodyMassHistory(730)
-                }
-            val latestWaterD =
-                safeAsync("latestWater", null as Double?) {
-                    healthConnect.readLatestBodyWaterMassKg()
-                }
-            val avgWaterD =
-                safeAsync("avgWater", null as Double?) { healthConnect.averageBodyWaterMassKg(730) }
-            val historyWaterD =
-                safeAsync("historyWater", emptyList<Pair<Long, Double>>()) {
-                    healthConnect.readBodyWaterMassHistory(730)
-                }
-            val latestBoneD =
-                safeAsync("latestBone", null as Double?) { healthConnect.readLatestBoneMassKg() }
-            val avgBoneD =
-                safeAsync("avgBone", null as Double?) { healthConnect.averageBoneMassKg(730) }
-            val historyBoneD =
-                safeAsync("historyBone", emptyList<Pair<Long, Double>>()) {
-                    healthConnect.readBoneMassHistory(730)
-                }
-            val latestKg = latestKgD.await()
-            val avgKg = avgKgD.await()
-            val historyKg = historyKgD.await()
-            val latestBf = latestBfD.await()
-            val avgBf = avgBfD.await()
-            val historyBf = historyBfD.await()
-            val latestLean = latestLeanD.await()
-            val avgLean = avgLeanD.await()
-            val historyLean = historyLeanD.await()
-            val latestWater = latestWaterD.await()
-            val avgWater = avgWaterD.await()
-            val historyWater = historyWaterD.await()
-            val latestBone = latestBoneD.await()
-            val avgBone = avgBoneD.await()
-            val historyBone = historyBoneD.await()
-            Diag.i(DiagnosticArea.BIOMARKER, 
-                tag,
-                "refreshWeight done: latestKg=$latestKg latestBf=$latestBf historyKgCount=${historyKg.size}",
-            )
-            // Cross-Device-Cache (Frank-Wunsch 2026-05-10 abend): alle aus HC
-            // gelesenen Werte zusaetzlich in die DB-Tabelle hc_value_cache
-            // schreiben. Beim Drive-Backup wird die Tabelle mit-exportiert,
-            // beim Restore auf einem anderen Geraet eingespielt. Damit landen
-            // Werte vom Fold 6 auch auf dem S23 Ultra, obwohl Zepp dort nicht
-            // rueckwirkend in HC schreibt.
-            val now = System.currentTimeMillis()
-            val cacheRows = buildList {
-                fun addAll(metric: String, pairs: List<Pair<Long, Double>>) {
-                    pairs.forEach {
-                        add(
-                            de.frank.entropyreducer.data.local.entities.HealthConnectValueEntity(
-                                metric = metric,
-                                timestampMs = it.first,
-                                value = it.second,
-                                createdAt = now,
-                            )
-                        )
-                    }
-                }
-                addAll("weight", historyKg)
-                addAll("body_fat", historyBf)
-                addAll("lean_body_mass", historyLean)
-                addAll("body_water", historyWater)
-                addAll("bone_mass", historyBone)
-            }
-            runCatching { hcValueDao.upsertAll(cacheRows) }
-                .onFailure { Diag.w(DiagnosticArea.BIOMARKER, tag, "HC-Cache-Write fehlgeschlagen", it) }
-
-            // UI-State: HC-Live + Cache mergen. Bei doppeltem Timestamp gewinnt
-            // der HC-Live-Wert (er ist frisch direkt aus der Quelle).
-            val cachedAll = runCatching { hcValueDao.getAll() }.getOrDefault(emptyList())
-            val mergedKg = mergeHcWithCache(historyKg, cachedAll, "weight")
-            val mergedBf = mergeHcWithCache(historyBf, cachedAll, "body_fat")
-            val mergedLean = mergeHcWithCache(historyLean, cachedAll, "lean_body_mass")
-            val mergedWater = mergeHcWithCache(historyWater, cachedAll, "body_water")
-            val mergedBone = mergeHcWithCache(historyBone, cachedAll, "bone_mass")
-            // Latest = juengster aus dem gemergten Verlauf (oder HC-Live falls Cache leer)
-            val effLatestKg = mergedKg.maxByOrNull { it.first }?.second ?: latestKg
-            val effLatestBf = mergedBf.maxByOrNull { it.first }?.second ?: latestBf
-            val effLatestLean = mergedLean.maxByOrNull { it.first }?.second ?: latestLean
-            val effLatestWater = mergedWater.maxByOrNull { it.first }?.second ?: latestWater
-            val effLatestBone = mergedBone.maxByOrNull { it.first }?.second ?: latestBone
-            // Avg-Berechnung jetzt ueber den Merge (mehr Datenpunkte = aussagekraeftiger)
-            val effAvgKg =
-                mergedKg.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgKg
-            val effAvgBf =
-                mergedBf.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgBf
-            val effAvgLean =
-                mergedLean.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgLean
-            val effAvgWater =
-                mergedWater.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgWater
-            val effAvgBone =
-                mergedBone.takeIf { it.isNotEmpty() }?.map { it.second }?.average() ?: avgBone
-
-            _weight.value =
-                WeightState(
-                    healthConnectAvailable = true,
-                    permissionGranted = true,
-                    latestKg = effLatestKg,
-                    avg30dKg = effAvgKg,
-                    history30d = mergedKg,
-                    latestBodyFatPercent = effLatestBf,
-                    avg30dBodyFatPercent = effAvgBf,
-                    bodyFatHistory30d = mergedBf,
-                    latestLeanBodyMassKg = effLatestLean,
-                    avg30dLeanBodyMassKg = effAvgLean,
-                    leanBodyMassHistory30d = mergedLean,
-                    latestBodyWaterMassKg = effLatestWater,
-                    avg30dBodyWaterMassKg = effAvgWater,
-                    bodyWaterMassHistory30d = mergedWater,
-                    latestBoneMassKg = effLatestBone,
-                    avg30dBoneMassKg = effAvgBone,
-                    boneMassHistory30d = mergedBone,
-                    lastReadAtMs = System.currentTimeMillis(),
-                    isLoading = false,
-                )
-            Diag.i(DiagnosticArea.BIOMARKER, 
-                tag,
-                "refreshWeight merged: weight=${mergedKg.size} bodyFat=${mergedBf.size} lean=${mergedLean.size} water=${mergedWater.size} bone=${mergedBone.size}",
-            )
-            // Frank-Wunsch 2026-05-10: einheitlicher Sync-Zeitstempel-Pool fuer
-            // den 'Zuletzt synchronisiert'-Header im Biomarker-Screen.
-            settings.setLastHealthConnectSync(System.currentTimeMillis())
-            // Frank-Wunsch 2026-05-10 abend: nach jedem refresh sofort Backup
-            // triggern damit das andere Geraet die neuen Werte beim naechsten
-            // App-Start sieht.
-            if (cacheRows.isNotEmpty()) {
-                syncCoordinator.requestSync(
-                    "Biomarker: Health-Connect-Werte aktualisiert",
-                    SyncCoordinator.BIOMARKER_DEBOUNCE_MS,
-                )
-            }
-        }
+        viewModelScope.launch(Dispatchers.IO) { syncBody() }
     }
 
-    /**
-     * Frank-Wunsch 2026-05-10 abend: HC-Live-Werte und Cross-Device-Cache mergen. Bei doppeltem
-     * Timestamp gewinnt der HC-Live-Wert. Ergebnis ist sortiert nach Timestamp aufsteigend.
-     */
-    private fun mergeHcWithCache(
-        hcLive: List<Pair<Long, Double>>,
-        cachedAll: List<de.frank.entropyreducer.data.local.entities.HealthConnectValueEntity>,
-        metric: String,
-    ): List<Pair<Long, Double>> {
-        val byTs = hcLive.associate { it.first to it.second }.toMutableMap()
-        cachedAll
-            .filter { it.metric == metric }
-            .forEach { row -> byTs.putIfAbsent(row.timestampMs, row.value) }
-        return byTs.entries.map { it.key to it.value }.sortedBy { it.first }
+    private suspend fun syncBody(): Result<Int> = try {
+        val count = zeppBodyRepository.syncToCache()
+        Result.success(count)
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Diag.w(DiagnosticArea.BIOMARKER, "BiomarkerVM", "Zepp-Körperwerte nicht aktualisiert", error)
+        _message.value = "Zepp öffnen und erneut aktualisieren"
+        Result.failure(error)
     }
 
     /**
@@ -653,7 +404,7 @@ constructor(
                 combine(
                     settings.lastOuraSyncMsFlow,
                     settings.lastAmazfitSyncMsFlow,
-                    settings.lastHealthConnectSyncMsFlow,
+                    settings.lastZeppBodySyncMsFlow,
                 ) { o, a, h ->
                     SyncTimes(o, a, h)
                 },
@@ -812,7 +563,7 @@ constructor(
                     lastWhoopSyncMs = status.lastWhoopSyncMs,
                     lastOuraSyncMs = syncTimes.oura,
                     lastAmazfitSyncMs = syncTimes.amazfit,
-                    lastHealthConnectSyncMs = syncTimes.healthConnect,
+                    lastZeppBodySyncMs = syncTimes.zepp,
                     workouts = workouts,
                     workoutsForSelectedDay = workoutsForDay,
                     restorativeSleepPercent = restorativePct,
@@ -889,74 +640,63 @@ constructor(
     }
 
     fun refreshNow() {
-        // Frank-Wunsch 2026-05-10: Refresh-Button aktualisiert ALLE Datenquellen
-        // (Whoop, Amazfit, Oura, Health Connect) parallel.
-        // Frank-Wunsch 2026-05-17: Permanenter Status-Footer ganz unten —
-        // syncFooterRunning + syncFooterText + Timestamp bleiben dauerhaft im
-        // State erhalten (bis zum naechsten Refresh).
+        if (_refreshing.value) return
         viewModelScope.launch {
             _refreshing.value = true
-            _message.value = "⟳ Wird synchronisiert: Whoop · Training · Oura · Health Connect …"
-
-            val whoopJob = async { repo.syncLastDays(365) }
-            val ouraJob = async {
-                runCatching { ouraRepo.syncLastDays(365) }.getOrElse { Result.failure(it) }
-            }
-            // Frank-Wunsch 2026-07-03: Trainings kommen jetzt aus Health Connect (Strava entfernt).
-            // Die Zepp-/Polar-App schreibt die Sessions in Health Connect; mergeFromHealthConnect
-            // uebernimmt sie inkl. GPS, Puls-/Tempoverlauf, Hoehenmeter, Cadence.
-            val trainingJob = async {
-                runCatching { amazfitRepo.mergeFromHealthConnect(days = 30) }.getOrElse { 0 }
-            }
-            refreshWeight()
-
-            val whoopRes = whoopJob.await()
-            val ouraRes = ouraJob.await()
-            val trainingCount = trainingJob.await()
-            _refreshing.value = false
-
-            // Frank-Wunsch 2026-05-18: Footer aufgeraeumt.
-            // (1) "Training" = Workouts aus Health Connect (frueher Strava).
-            // (2) HC zu "Health Connect" ausgeschrieben.
-            // (3) Bei jeder Quelle "0" statt "✗" wenn keine neuen Werte —
-            //     egal ob der Sync fehlschlug oder einfach nichts Neues kam.
-            val parts = mutableListOf<String>()
-            val whoopCount = whoopRes.getOrNull() ?: 0
-            parts.add("Whoop $whoopCount")
-            parts.add("Training ${trainingCount.coerceAtLeast(0)}")
-            val ouraCount =
-                ouraRes.getOrNull()?.let { m ->
+            _message.value = "Wird synchronisiert: Whoop · Training · Oura · Zepp …"
+            try {
+                val whoopJob = async {
+                    runCatching { repo.syncLastDays(365) }.getOrElse {
+                        if (it is CancellationException) throw it
+                        Result.failure(it)
+                    }
+                }
+                val ouraJob = async {
+                    runCatching { ouraRepo.syncLastDays(365) }.getOrElse {
+                        if (it is CancellationException) throw it
+                        Result.failure(it)
+                    }
+                }
+                // Training remains on Health Connect; only body data switches to Zepp.
+                val trainingJob = async {
+                    runCatching { amazfitRepo.mergeFromHealthConnect(days = 30) }.getOrElse {
+                        if (it is CancellationException) throw it
+                        0
+                    }
+                }
+                val bodyJob = async(Dispatchers.IO) { syncBody() }
+                val whoopRes = whoopJob.await()
+                val ouraRes = ouraJob.await()
+                val trainingCount = trainingJob.await()
+                val bodyRes = bodyJob.await()
+                val ouraCount = ouraRes.getOrNull()?.let { m ->
                     if (m is Map<*, *>) m.values.filterIsInstance<Int>().sum() else 0
                 } ?: 0
-            parts.add("Oura $ouraCount")
-            val hcCount =
-                if (!healthConnect.isAvailable() || !_weight.value.permissionGranted) {
-                    0
-                } else {
-                    _weight.value.history30d.size
+                val bodySummary = bodyRes.fold(
+                    onSuccess = { "Zepp $it" },
+                    onFailure = { "Zepp öffnen und erneut aktualisieren" },
+                )
+                val now = java.time.ZonedDateTime.now()
+                val ts = "%02d.%02d. %02d:%02d".format(
+                    now.dayOfMonth, now.monthValue, now.hour, now.minute,
+                )
+                val summary = "Whoop ${whoopRes.getOrNull() ?: 0} · " +
+                    "Training ${trainingCount.coerceAtLeast(0)} · Oura $ouraCount · $bodySummary"
+                val finalMessage = "$ts · $summary"
+                _message.value = finalMessage
+                runCatching {
+                    settings.setLastRefreshFooter(finalMessage,
+                        if (bodyRes.isSuccess && whoopRes.isSuccess && ouraRes.isSuccess) {
+                            System.currentTimeMillis()
+                        } else settings.lastRefreshFooterAtMsFlow.first())
                 }
-            parts.add("Health Connect $hcCount")
-            val summary = parts.joinToString(" · ")
-            // Frank-Wunsch 2026-05-17: Permanenter Footer mit Datum+Uhrzeit.
-            // Bleibt sichtbar bis zum naechsten Refresh.
-            val now = java.time.ZonedDateTime.now()
-            val ts = "%02d.%02d. %02d:%02d".format(
-                now.dayOfMonth, now.monthValue, now.hour, now.minute,
-            )
-            val finalMessage = "✓ $ts · $summary"
-            _message.value = finalMessage
-            // Frank-Wunsch 2026-05-17: Footer-Text + Zeitstempel in DataStore
-            // persistieren — verschwindet sonst beim naechsten App-Start.
-            runCatching {
-                settings.setLastRefreshFooter(finalMessage, System.currentTimeMillis())
+                syncCoordinator.requestSync(
+                    "Biomarker: Voll-Refresh aller Quellen (Whoop/Oura/Training/Zepp)",
+                    SyncCoordinator.BIOMARKER_DEBOUNCE_MS,
+                )
+            } finally {
+                _refreshing.value = false
             }
-            // Frank-Wunsch 2026-06-19: nach dem Voll-Refresh aller Quellen EINEN Backup-Trigger
-            // mit 5s-Debounce. Erfasst auch Whoop/Oura, die selbst kein requestSync ausloesen;
-            // dirtyDuringUpload sorgt fuer einen zweiten Lauf, falls nach den 5s noch Werte kommen.
-            syncCoordinator.requestSync(
-                "Biomarker: Voll-Refresh aller Quellen (Whoop/Oura/HC)",
-                SyncCoordinator.BIOMARKER_DEBOUNCE_MS,
-            )
         }
     }
 
@@ -964,56 +704,6 @@ constructor(
         _message.value = null
     }
 
-    /**
-     * Frank-Wunsch 2026-05-23: Laedt Gewicht/Koerperwerte NUR aus dem DB-Cache (hc_value_cache)
-     * in den Anzeige-State — ohne Health-Connect-Live-Read. Schnell genug fuer jedes Tab-Oeffnen.
-     * Der Cache wird beim frischen App-Start (HealthConnectRepository.syncToCache) und beim
-     * manuellen Aktualisieren-Knopf (refreshWeight) gefuellt.
-     */
-    fun loadWeightFromCache() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val available = runCatching { healthConnect.isAvailable() }.getOrDefault(false)
-            if (!available) {
-                _weight.value = WeightState(healthConnectAvailable = false)
-                return@launch
-            }
-            val permission =
-                runCatching { healthConnect.hasWeightReadPermission() }.getOrDefault(false)
-            if (!permission) {
-                _weight.value = WeightState(healthConnectAvailable = true, permissionGranted = false)
-                return@launch
-            }
-            val kg = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_WEIGHT)
-            val bf = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_BODY_FAT)
-            val lean = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_LEAN)
-            val water = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_WATER)
-            val bone = healthConnectRepository.cachedHistory(HealthConnectRepository.METRIC_BONE)
-            fun List<Pair<Long, Double>>.avgOrNull(): Double? =
-                takeIf { it.isNotEmpty() }?.map { it.second }?.average()
-            _weight.value =
-                WeightState(
-                    healthConnectAvailable = true,
-                    permissionGranted = true,
-                    latestKg = kg.maxByOrNull { it.first }?.second,
-                    avg30dKg = kg.avgOrNull(),
-                    history30d = kg,
-                    latestBodyFatPercent = bf.maxByOrNull { it.first }?.second,
-                    avg30dBodyFatPercent = bf.avgOrNull(),
-                    bodyFatHistory30d = bf,
-                    latestLeanBodyMassKg = lean.maxByOrNull { it.first }?.second,
-                    avg30dLeanBodyMassKg = lean.avgOrNull(),
-                    leanBodyMassHistory30d = lean,
-                    latestBodyWaterMassKg = water.maxByOrNull { it.first }?.second,
-                    avg30dBodyWaterMassKg = water.avgOrNull(),
-                    bodyWaterMassHistory30d = water,
-                    latestBoneMassKg = bone.maxByOrNull { it.first }?.second,
-                    avg30dBoneMassKg = bone.avgOrNull(),
-                    boneMassHistory30d = bone,
-                    lastReadAtMs = System.currentTimeMillis(),
-                    isLoading = false,
-                )
-        }
-    }
 }
 
 /**

@@ -34,20 +34,18 @@ object BiomarkerCardId {
     const val MINI_SLEEP_TOTAL = "mini_sleep_total"
     const val MINI_SLEEP_PERFORMANCE = "mini_sleep_performance"
 
-    // Gewicht aus Health Connect (Zepp-Bridge, Frank-Wunsch 2026-05-10)
+    // Stable body card IDs; current source is Zepp directly, retaining the old HC history.
     const val MINI_WEIGHT = "mini_weight"
-    // Koerperfett + Magermasse aus Health Connect (Frank-Wunsch 2026-05-10).
-    // Smart-Scales liefern beides zusammen mit dem Gewicht.
     const val MINI_BODY_FAT = "mini_body_fat"
     const val MINI_LEAN_BODY_MASS = "mini_lean_body_mass"
-    // Koerperwasser + Knochenmasse (Frank-Wunsch 2026-05-10, zweite Iteration —
-    // analog zu "Muskelmasse" denkt: Health Connect hat keinen direkten
-    // Muscle-Mass-Datentyp, aber Wasser und Knochen sind verfuegbar).
     const val MINI_BODY_WATER = "mini_body_water"
     const val MINI_BONE_MASS = "mini_bone_mass"
-    // Muskelmasse: berechnet als LeanBodyMass - BoneMass (Annaeherung). Wenn
-    // BoneMass null ist, fallback auf LeanBodyMass.
     const val MINI_MUSCLE_MASS = "mini_muscle_mass"
+    const val MINI_SKELETAL_MUSCLE = "mini_skeletal_muscle"
+    const val MINI_VISCERAL_FAT = "mini_visceral_fat"
+    const val MINI_BMI = "mini_bmi"
+    const val MINI_PROTEIN = "mini_protein"
+    const val MINI_BODY_WATER_PERCENT = "mini_body_water_percent"
 
     // Herzfrequenz-Block
     const val HRV = "hrv"
@@ -129,6 +127,11 @@ object BiomarkerCardId {
             MINI_BODY_WATER,
             MINI_BONE_MASS,
             MINI_MUSCLE_MASS,
+            MINI_SKELETAL_MUSCLE,
+            MINI_VISCERAL_FAT,
+            MINI_BMI,
+            MINI_PROTEIN,
+            MINI_BODY_WATER_PERCENT,
         )
 
     val DEFAULT_ORDER: List<String> =
@@ -140,14 +143,19 @@ object BiomarkerCardId {
             MINI_VO2MAX,
             MINI_SLEEP_TOTAL,
             MINI_SLEEP_PERFORMANCE,
+            AMAZFIT_LAST_HERO,
+            AMAZFIT_TRAININGS,
             MINI_WEIGHT,
             MINI_BODY_FAT,
             MINI_LEAN_BODY_MASS,
             MINI_MUSCLE_MASS,
-            // MINI_BODY_WATER + MINI_BONE_MASS bewusst NICHT mehr in der Werks-Reihenfolge —
-            // Frank-Vorgabe 2026-05-10: 'Wasser und Knochen interessieren mich ueberhaupt nicht'.
-            // Konstanten bleiben erhalten (Backward-Compat) — HIDDEN_CARD_IDS unten filtert
-            // sie zusaetzlich aus bereits gespeicherten Drag&Drop-Reihenfolgen heraus.
+            MINI_BONE_MASS,
+            MINI_SKELETAL_MUSCLE,
+            MINI_VISCERAL_FAT,
+            MINI_BMI,
+            MINI_BODY_WATER,
+            MINI_BODY_WATER_PERCENT,
+            MINI_PROTEIN,
             HRV,
             RHR,
             RESPIRATORY,
@@ -169,8 +177,6 @@ object BiomarkerCardId {
             // WORKOUTS_FOR_DAY: Frank-Vorgabe 2026-05-11 entfernt — die Whoop-Workouts
             // an diesem Tag sind im Biomarker-Screen redundant. Wird zusaetzlich in
             // HIDDEN_CARD_IDS gelistet damit es auch fuer bestehende User verschwindet.
-            AMAZFIT_LAST_HERO,
-            AMAZFIT_TRAININGS,
             OURA_READINESS,
             OURA_SLEEP_SCORE,
             OURA_RESILIENCE,
@@ -196,8 +202,6 @@ object BiomarkerCardId {
         setOf(
             OURA_ACTIVITY,
             OURA_SLEEP_DETAIL,
-            MINI_BODY_WATER,
-            MINI_BONE_MASS,
             WORKOUTS_FOR_DAY,
             CORRELATION,
             SLEEP_RESTORATIVE,
