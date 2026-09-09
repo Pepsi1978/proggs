@@ -19,6 +19,10 @@ ENGINE A (Standard): Firecrawl-API + DeepSeek V4 Flash @ DeepInfra (reasoning hi
   python3 ~/proggs/mm-research.py "<praezise Frage>" [anzahl_quellen]
   -> holt Quellen ueber die Firecrawl-API und wertet sie mit deepseek/deepseek-v4-flash-0731
      (OpenRouter, Anbieter DeepInfra gepinnt) quellentreu aus.
+     RUECKFALL Tavily: faellt Firecrawl aus oder liefert es nichts Brauchbares, sucht das Skript
+     automatisch bei Tavily nach (advanced, 20 Quellen, 3 Chunks/Quelle, Volltext). Jede Quelle ist
+     mit ihrer Herkunft markiert ([Firecrawl]/[Tavily]). MM_TAVILY=always erzwingt beide Wege,
+     MM_TAVILY=off schaltet den Rueckfall ab. Key: ~/SK/Tavily/tavily-api-key.txt.
      Gibt eine kompakte, belegte Antwort auf stdout; Rohdaten/Thinking liegen in ~/.mm-research/.
      Fuer eine gezielte Einzel-Nachsuche einfach eine enge Query nehmen, z.B.
      python3 ~/proggs/mm-research.py "site:developer.mozilla.org backdrop-filter" 3
@@ -29,8 +33,11 @@ ENGINE B (Eskalation — wenn Engine A unsicher/widerspruechlich ist oder die Qu
      andere Suchquelle = mehr Abdeckung. Bis 7 parallel (Engine A nur 2, wegen Firecrawl-Free).
      Bei mehreren Parallel-Laeufen pro Lauf ein eigenes OR_OUTDIR setzen (sonst Ueberschreiben).
 
-ENGINE C (in OpenCode: Schwarm auf dem AKTUELLEN Session-Modell — seit 09.09.2026):
-  In Claude Code ist Stufe C der Sonnet-5-Schwarm. In OpenCode gibt es den nicht — hier bedeutet C:
+ENGINE C (ausserhalb von Claude-Code-auf-Anthropic: Schwarm auf dem AKTUELLEN Session-Modell,
+seit 09.09.2026):
+  Nur wenn CLAUDECODE=1 UND ANTHROPIC_BASE_URL leer/Anthropic ist, ist Stufe C der Sonnet-5-Schwarm.
+  In OpenCode — und auch in Claude Code hinter ANTHROPIC_BASE_URL=https://openrouter.ai/api, also auf
+  einem Fremdmodell — bedeutet C:
   bis 7 parallele Subagenten auf dem Modell, mit dem die Session gerade verbunden ist (z.B. GPT 5.6 Sol).
   Diese Modelle haben eine EIGENE Internet-Anbindung und recherchieren selbststaendig — dafuer wird
   WEDER mm-research.py NOCH or-research.py gebraucht.

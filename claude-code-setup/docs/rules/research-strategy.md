@@ -57,7 +57,7 @@ Kurze Empfehlung (1 Satz Begruendung), welcher Weg fuer GENAU DIESE Recherche-Ar
 
 | Option | Weg | Werkzeug | Parallel | Kosten |
 |--------|-----|----------|----------|--------|
-| **A** | Firecrawl holt volle Seiten → **DeepSeek V4 Flash @ DeepInfra** (effort high) wertet aus — Standard | `mm-research.py` | 2 | Firecrawl-Free (1000/Mon) + ~0,1 ct Modell-Token |
+| **A** | Firecrawl holt volle Seiten (**Rueckfall: Tavily**) → **DeepSeek V4 Flash @ DeepInfra** (effort high) wertet aus — Standard | `mm-research.py` | 2 | Firecrawl-Free (1000/Mon) + ~0,1 ct Modell-Token |
 | **B** | Eskalation: **dasselbe DeepSeek-Modell** mit `:online` (OpenRouter-Websuche, web-Plugin) | `or-research.py … deepseek/deepseek-v4-flash-0731:online` | 7 | pay-per-use (~1 ct/Researcher), kein Monatslimit |
 | **C** | Schwarm auf dem **Host-Modell** — teuer, nur bewusst. Claude Code → **Sonnet-5-Schwarm** (`model:"sonnet"`). OpenCode → **aktuelles Session-Modell** (kein `model:`-Override, eigene Websuche) | Agent-/Task-Tool | 7 | Claude-Sonnet-5-Token bzw. OpenCode-Session-Token |
 | **D** | [automatisches Freitext-Feld] — etwas anderes / erst besprechen | — | — | — |
@@ -69,6 +69,14 @@ kommt von Firecrawl Free, nicht vom Auswerte-Modell.
 - **A UND B laufen IMMER mit max Thinking** (Pflicht): beide gehen jetzt auf OpenRouter
   `/chat/completions` → `reasoning:{effort:"high"}`. Das alte `thinking:{type:"enabled",budget_tokens:N}`
   des Anthropic-`/messages`-Schemas entfaellt mit dem Go-Gateway (`MM_THINK_BUDGET` ist tot).
+- **Engine A hat einen automatischen Tavily-Rueckfall** (seit 09.09.2026): Faellt Firecrawl aus
+  (HTTP-Fehler/Timeout) oder liefert es 0 bzw. nur leere Treffer, sucht `mm-research.py` von selbst bei
+  Tavily nach — mit dessen Maximaleinstellungen (`search_depth="advanced"`, `max_results=20`,
+  `chunks_per_source=3`, Volltext, `include_answer="advanced"`). Quellen werden mit ihrer Herkunft
+  markiert (`[Firecrawl]`/`[Tavily]`) und per URL entdoppelt. Steuerung `MM_TAVILY`:
+  `fallback` (Default) · `always` (immer beide) · `off`. Key: `~/SK/Tavily/tavily-api-key.txt`.
+  Inhaltlich duenne (nicht leere) Firecrawl-Ergebnisse kann das Skript NICHT erkennen — wenn Frank das
+  sagt, den Lauf mit `MM_TAVILY=always` wiederholen.
 - **A UND B pinnen den Anbieter auf DeepInfra** (`provider.order=["deepinfra"]`, `allow_fallbacks=false`).
   Das steht als Default in den Skripten; `MM_PROVIDER=""` bzw. `OR_PROVIDER=""` schaltet den Pin ab,
   falls DeepInfra ausfaellt (dann routet OpenRouter frei — Preis und Verhalten koennen abweichen).
@@ -155,12 +163,17 @@ Recherchen).
 
 **ZUERST feststellen, wo du laeufst** — davon haengt ab, was Engine C ueberhaupt bedeutet:
 
-| Harness | Erkennung | Engine C bedeutet |
-|---------|-----------|-------------------|
-| **Claude Code** | Umgebungsvariable `CLAUDECODE=1` (pruefen: `echo $CLAUDECODE`); geladene Instruktionsdatei ist eine `CLAUDE.md` | **Sonnet-5-Schwarm**: 7 parallele Subagenten, `model:"sonnet"` PFLICHT pro Aufruf |
-| **OpenCode** | `CLAUDECODE` NICHT gesetzt; geladene Instruktionsdatei ist eine `AGENTS.md` (Profil unter `OpenLauncher/Profiles/OpenCode/`) | **Schwarm auf dem AKTUELLEN Session-Modell**: bis 7 parallele Subagenten, **KEIN** `model:`-Override |
+**Zwei Umgebungsvariablen entscheiden:** `echo $CLAUDECODE` und `echo $ANTHROPIC_BASE_URL`
 
-#### Claude Code — `model:"sonnet"` ist PFLICHT
+| Fall | Erkennung | Engine C bedeutet |
+|------|-----------|-------------------|
+| **Claude Code auf Anthropic-Modell** | `CLAUDECODE=1` **und** `ANTHROPIC_BASE_URL` leer/Anthropic | **Sonnet-5-Schwarm**: 7 parallele Subagenten, `model:"sonnet"` PFLICHT pro Aufruf |
+| **Claude Code auf Fremdmodell** (OpenLauncher-Start ueber `claude-openrouter/Start-ClaudeCode-OpenRouter.ps1`, z.B. GPT) | `CLAUDECODE=1`, aber `ANTHROPIC_BASE_URL=https://openrouter.ai/api` | **Schwarm auf dem Session-Modell**, **KEIN** `model:"sonnet"` — der Alias loest hinter der OpenRouter-Basis-URL nicht auf |
+| **OpenCode / jeder andere Harness** | `CLAUDECODE` NICHT gesetzt; geladene Instruktionsdatei ist eine `AGENTS.md` (Profil unter `OpenLauncher/Profiles/OpenCode*/`) | **Schwarm auf dem AKTUELLEN Session-Modell**: bis 7 parallele Subagenten, **KEIN** `model:`-Override |
+
+**Merksatz:** `model:"sonnet"` NUR im ersten Fall.
+
+#### Claude Code auf Anthropic-Modell — `model:"sonnet"` ist PFLICHT
 
 Seit `CLAUDE_CODE_SUBAGENT_MODEL="inherit"` (kein Zwangs-Override mehr) ist bei Stufe-C-Spawns ein
 explizites `model:`-Argument PFLICHT — sonst faellt der Researcher auf ein unbestimmtes Modell zurueck:
@@ -170,9 +183,9 @@ explizites `model:`-Argument PFLICHT — sonst faellt der Researcher auf ein unb
 | `model` | `"sonnet"` | Alias → Sonnet 5 (`claude-sonnet-5`), folgt automatisch dem neuesten Sonnet |
 | Effort | **"high"** (Standard) | erbt den globalen Session-Effort (`effortLevel:"high"`); nichts extra setzen |
 
-#### OpenCode — **kein** `model:`-Override
+#### Ueberall sonst — **kein** `model:`-Override
 
-Genau umgekehrt: in OpenCode ist der Sinn der Stufe C, dass **das Modell recherchiert, mit dem die Session
+Genau umgekehrt: dort ist der Sinn der Stufe C, dass **das Modell recherchiert, mit dem die Session
 gerade verbunden ist** (z.B. GPT 5.6 Sol). Diese Modelle haben eine eigene Internet-Anbindung und koennen
 selbststaendig recherchieren — `mm-research.py`/`or-research.py` werden dafuer NICHT gebraucht. Regeln:
 

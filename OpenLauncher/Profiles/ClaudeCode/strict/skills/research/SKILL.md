@@ -18,6 +18,77 @@ ist die Orchestrierungs-Schicht (das WIE). Die Ausfuehrungs-Schicht sind die Skr
 
 ---
 
+## Block 0.0 — Dieser Skill traegt sich selbst (PFLICHT-Lesung) ⭐
+
+**Warum das hier steht:** Die Profile unter `OpenLauncher/Profiles/` sind unterschiedlich ausgestattet
+(geprueft 09.09.2026). Der Skill ist das EINZIGE, was in jedem Profil vorhanden ist:
+
+| Profil | `rules/` (u.a. `research-strategy.md`) | `research-approval`-Hook | `research`-Skill |
+|--------|---------------------------------------|--------------------------|------------------|
+| ClaudeCode/**minimal** | ✗ keine | ✗ (nachgeruestet 09.09.2026) | ✓ |
+| ClaudeCode/**standard** | ✓ 36 Regeln | ✗ (nachgeruestet 09.09.2026) | ✓ |
+| ClaudeCode/**strict** | ✓ 36 Regeln | ✓ | ✓ |
+| ClaudeCodeMac/standard + strict | ✓ | teilweise | ✓ |
+| OpenCode/OpenCodeMac (alle) | nur `AGENTS.md` | ✗ (Hooks anders) | ✓ (seit 09.09.2026) |
+
+**Folge:** Verlasse dich NIE darauf, dass `research-strategy.md` oder `research-persistence.md` geladen
+sind — in `minimal` sind sie es nicht. Alles Pflichtige steht deshalb HIER im Skill im Wortlaut:
+Frage 1 (Block 0.1), Frage 2 (Schritt 6) und die Persistenz-Checkliste (Schritt 8).
+
+**Gilt in JEDEM Arbeitsmodus — Freimodus, Schnellmodus, Normalmodus, Gruendlichkeitsmodus.**
+Der Schnellmodus sagt "ohne Nachfragen" und "keine Tests, keine Ueberpruefungen". Das meint den
+Umsetzungs-Teil einer Programmieraufgabe. Es hebt **nicht** auf:
+- **Frage 1** (Engine-Wahl) — sie ist eine Kosten-Freigabe, keine Rueckfrage zur Arbeitsweise. Eine
+  Recherche ohne sie kann Firecrawl-Credits und Geld verbrennen, das Frank nicht ausgeben wollte.
+- **die Persistenz** in `best-practices/` + `bugs/` (Schritt 8) und die **Hook-Registrierung** (Schritt 9)
+  — ohne sie ist die Recherche wertlos, sobald die Session endet. Das ist der eigentliche Ertrag.
+Im Schnellmodus wird beides KURZ gehalten (knappe Frage, knappe Eintraege), aber nie weggelassen.
+
+**Gilt bei JEDEM Modell.** Der Skill ist reine Ablauf-Anweisung — er funktioniert gleich, ob die
+Session auf einem Anthropic-Modell, einem OpenAI-Modell oder sonst etwas laeuft. Modellabhaengig ist
+NUR, was Engine C bedeutet (Tabelle in Schritt 3).
+
+---
+
+## Block 0.1 — Frage 1 im Wortlaut (PFLICHT, jedes Mal) ⭐
+
+Drei sichtbare Schritte, in dieser Reihenfolge, VOR jeder Web-Recherche:
+
+**1. Empfehlung** — ein Satz, welcher Weg fuer genau diese Recherche-Art sinnvoll ist:
+
+| Recherche-Art | Empfehlung |
+|---------------|-----------|
+| Schnelle Einzelfrage / 1-2 Quellen reichen | **A** |
+| Grosser Wissensschatz / viele Unterthemen | **A → dann B**, oder direkt **B** bei knappen Firecrawl-Credits |
+| Aktualitaet ueber viele Quellen, Snippets reichen | **B** |
+| Firecrawl-Credits fast leer | **B** |
+| Hoechste Korrektheit / Geld egal | **C** |
+| Unklar / erst besprechen | **D** |
+
+**2. Frage 1** — "Wie soll ich '<thema>' recherchieren?", die empfohlene Option zuerst mit `(Empfohlen)`:
+
+| Option | Weg | Parallel | Kosten |
+|--------|-----|----------|--------|
+| **A** | Firecrawl holt volle Seiten (Rueckfall: Tavily) → DeepSeek V4 Flash @ DeepInfra wertet aus | 2 | Firecrawl-Free + ~0,1 ct |
+| **B** | Dasselbe Modell mit `:online`-Websuche statt Firecrawl | 7 | ~1 ct je Researcher |
+| **C** | Schwarm auf dem Host-Modell (siehe Tabelle Schritt 3) | 7 | teuer — nur wenn ausdruecklich gewaehlt |
+| **D** | Freitext — etwas anderes / erst besprechen | — | — |
+
+**3. Danach** erst Schritt 1 dieses Skills starten.
+
+**Wie gefragt wird — harness-abhaengig:**
+- **`AskUserQuestion` vorhanden** (Claude Code): anklickbar stellen, Header `Engine`, drei Optionen
+  (A/B/C) — das Freitext-Feld "Other" ist das D und kommt automatisch dazu.
+- **Kein `AskUserQuestion`** (OpenCode und alles andere ohne dieses Werkzeug): die vier Optionen als
+  **nummerierte Klartext-Liste** ausgeben und den **Zug beenden**. Auf Franks Antwort warten.
+  NIEMALS die Frage selbst beantworten, sich eine Antwort ausdenken oder die Freigabe-Flag ohne
+  Franks Antwort setzen — das umgeht genau die Kostenkontrolle, fuer die es die Frage gibt.
+
+Eine beilaeufige frueher genannte Engine ("nimm B") ersetzt die Frage NICHT. Ausnahme bleibt eine
+einzelne billige `WebSearch` zur Faktenpruefung mitten in einer anderen Aufgabe.
+
+---
+
 ## Block 0 — Fest eingebettete Pfade (kein Suchen!)
 
 NIEMALS nach den Skripten/Keys suchen — sie liegen fest hier:
@@ -29,6 +100,7 @@ NIEMALS nach den Skripten/Keys suchen — sie liegen fest hier:
 | Continuous-Spawning-Runner (A+B, erzwingt max N parallel) | `~/proggs/research-swarm.py` |
 | Approval-Flag (vom Hook erzwungen) | `$TEMP/research-approved.flag` (Windows) bzw. `$TMPDIR/research-approved.flag` |
 | Firecrawl-Key | `~/SK/OpenCode/firecrawl-api-key.txt` |
+| Tavily-Key (Rueckfall Engine A) | `~/SK/Tavily/tavily-api-key.txt` |
 | OpenRouter-Key | `~/SK/ClaudeCodeOpenRouter/openrouter.key` |
 | Policy-Regel | `~/.claude/rules/research-strategy.md` |
 | Rueckgabe-Schema-Vorlagen | `references/rueckgabe-schemata.md` (in diesem Skill) |
@@ -45,6 +117,15 @@ Aufruf-Konventionen (immer so, nie raten):
 - **Engine A:** `python3 ~/proggs/mm-research.py "<unterthema>" [n]`
   — Firecrawl holt die vollen Seiten, DeepSeek V4 Flash @ DeepInfra wertet aus. Modell/Anbieter/Effort
   stehen als Default im Skript; ueberschreibbar per `MM_MODEL` / `MM_PROVIDER` / `MM_EFFORT`.
+  **Tavily-Rueckfall (seit 09.09.2026, automatisch):** Faellt Firecrawl aus (HTTP-Fehler, Timeout) ODER
+  liefert es 0 bzw. nur leere Treffer, sucht das Skript von selbst bei **Tavily** nach — mit den
+  maximalen Einstellungen, die Tavily hergibt: `search_depth="advanced"`, `max_results=20`,
+  `chunks_per_source=3`, Volltext (`include_raw_content`) und `include_answer="advanced"`.
+  Jede Quelle traegt ihre Herkunft (`### QUELLE n [Firecrawl]` / `[Tavily]`), die stderr-Fusszeile
+  nennt sie ebenfalls — im Zwischenfazit (Schritt 4) mit angeben, woher die Belege kamen.
+  Steuerung per `MM_TAVILY`: `fallback` (Default) · `always` (immer beide, zusammengefuehrt) · `off`.
+  **Wenn Frank sagt, die Ergebnisse seien inhaltlich duenn** — was das Skript nicht messen kann —
+  den Lauf mit `MM_TAVILY=always` wiederholen, bevor auf B eskaliert wird.
 - **Engine B:** `python3 ~/proggs/or-research.py "<unterthema>" deepseek/deepseek-v4-flash-0731:online`
   — das Modell-Suffix `:online` laesst OpenRouter selbst eine Websuche dazuschalten (web-Plugin,
   Such-Engine intern = parallel.ai). **KEINE explizite Engine als 3. Argument** (kein `parallel`/
@@ -165,18 +246,24 @@ Ergebnis in eine eigene Datei + gibt nur eine Kurz-Summary zurueck (kontextschon
 
 **⭐ PFLICHT seit 09.09.2026 — Engine C haengt vom Harness ab. ZUERST feststellen, wo du laeufst:**
 
-| Harness | Erkennung | Was Engine C bedeutet |
-|---------|-----------|------------------------|
-| **Claude Code** | Umgebungsvariable `CLAUDECODE=1` gesetzt (pruefen: `echo $CLAUDECODE`); es ist eine `CLAUDE.md` geladen | **Sonnet-5-Schwarm** wie bisher: Agent-Tool, `subagent_type:general-purpose` + Prompt + **`model:"sonnet"`** (PFLICHT), Effort "high", 7 parallel |
-| **OpenCode** | `CLAUDECODE` NICHT gesetzt; es ist eine `AGENTS.md` geladen (Profil unter `OpenLauncher/Profiles/OpenCode/`) | **Schwarm auf dem AKTUELLEN Session-Modell**: bis 7 parallele Subagenten, **KEIN `model:`-Override** — sie erben das Modell, mit dem die Session gerade verbunden ist (z.B. GPT 5.6 Sol). Diese Modelle haben eine EIGENE Internet-Anbindung und recherchieren selbststaendig; **kein** `mm-`/`or-research.py` noetig |
+**ZUERST pruefen — zwei Umgebungsvariablen entscheiden:** `echo $CLAUDECODE` und `echo $ANTHROPIC_BASE_URL`
 
-**In Claude Code (`CLAUDECODE=1`):** `CLAUDE_CODE_SUBAGENT_MODEL` steht seit der Sonnet-5-Umstellung auf
+| Fall | Erkennung | Was Engine C bedeutet |
+|------|-----------|------------------------|
+| **Claude Code auf Anthropic-Modell** | `CLAUDECODE=1` **und** `ANTHROPIC_BASE_URL` leer oder auf Anthropic zeigend | **Sonnet-5-Schwarm**: Agent-Tool, `subagent_type:general-purpose` + Prompt + **`model:"sonnet"`** (PFLICHT), Effort "high", 7 parallel |
+| **Claude Code auf einem Fremdmodell** (OpenLauncher-Start ueber `claude-openrouter/Start-ClaudeCode-OpenRouter.ps1`, z.B. ein OpenAI-Modell) | `CLAUDECODE=1`, aber `ANTHROPIC_BASE_URL=https://openrouter.ai/api` | **Schwarm auf dem Session-Modell**, **KEIN `model:"sonnet"`** — der Alias loest hinter der OpenRouter-Basis-URL nicht auf und wuerde den Lauf zerlegen. Sonst wie OpenCode (siehe naechste Zeile) |
+| **OpenCode / jeder andere Harness** | `CLAUDECODE` NICHT gesetzt; es ist eine `AGENTS.md` geladen (Profil unter `OpenLauncher/Profiles/OpenCode*/`) | **Schwarm auf dem AKTUELLEN Session-Modell**: bis 7 parallele Subagenten, **KEIN `model:`-Override** — sie erben das Modell, mit dem die Session gerade verbunden ist (z.B. GPT 5.6 Sol). Diese Modelle haben eine EIGENE Internet-Anbindung und recherchieren selbststaendig; **kein** `mm-`/`or-research.py` noetig |
+
+**Merksatz:** `model:"sonnet"` NUR im ersten Fall. In allen anderen Faellen recherchiert das Modell,
+mit dem die Session gerade verbunden ist — genau darum geht es bei Stufe C ausserhalb von Claude Code.
+
+**In Claude Code auf einem Anthropic-Modell:** `CLAUDE_CODE_SUBAGENT_MODEL` steht seit der Sonnet-5-Umstellung auf
 `inherit` (nicht mehr `opus[1m]`) — ohne den expliziten `model`-Parameter wuerden die Researcher auf ein
 unbestimmtes Fallback-Modell laufen statt auf Sonnet 5. **Jeder** Engine-C-Agent-Tool-Aufruf bekommt daher
 `model:"sonnet"` (Alias, loest zu Sonnet 5 auf, natives 1M-Kontext). Effort bleibt "high" (globaler
 Session-Standard `effortLevel: "high"`).
 
-**In OpenCode:** genau UMGEKEHRT — **niemals** ein `model:` mitgeben. Der Sinn ist ja, dass das
+**Ueberall sonst (OpenCode, Claude Code auf Fremdmodell):** genau UMGEKEHRT — **niemals** ein `model:` mitgeben. Der Sinn ist ja, dass das
 Session-Modell selbst recherchiert. Jeder Subagent bekommt den Auftrag "recherchiere <Unterthema> im Web
 mit deinen eigenen Werkzeugen, quellentreu, Quelle pro Aussage" und schreibt in eine eigene Datei.
 Parallelitaet und Continuous-Spawning bleiben identisch (7 gleichzeitig, sofort nachziehen).
@@ -237,9 +324,17 @@ Quellen+Version pro Finding, der "offen/unsicher"-Block und der `nacharbeit_aufr
 
 ### Schritt 6 — Zwei-Stufen-Eskalation
 
-Nach Stufe 1 (Engine A, Firecrawl) kommt die obige Auswertung. Meldet die Auswertung
-"unsicher / widerspruechlich / Quellen reichen nicht" ODER der Benutzer will gruendlicher:
-Eskalation gemaess Policy-Regel anbieten (Frage 2). Stufen:
+Nach Stufe 1 (Engine A, Firecrawl) kommt die obige Auswertung, danach **IMMER Frage 2** — auch wenn
+die Auswertung gut aussieht, und auch im Schnellmodus. Grund: Firecrawl Free hat nur 1000 Seiten/Monat,
+Frank entscheidet pro Recherche bewusst. Wortlaut (anklickbar, sonst als nummerierte Klartext-Liste):
+
+> **"Noch eine zusaetzliche Eskalations-Research?"**
+> · **Nein, fertig** — die Ergebnisse reichen
+> · **Ja, DeepSeek V4 Flash `:online`** — andere Quellenbasis als Firecrawl, bis 7 parallel
+> · **Ja, Host-Modell-Schwarm** — teuerste Stufe
+> · **Freitext**
+
+Entfaellt nur, wenn ohnehin schon Stufe B oder C gewaehlt wurde. Stufen:
 
 ```
 A: Firecrawl-Quellen → DeepSeek V4 Flash @ DeepInfra (mm)  → Standard, Firecrawl-Free-Credits, 2 parallel
@@ -265,12 +360,36 @@ Rueckgabe-Schema zurueck und der Aufrufer macht die fachliche Nacharbeit.
 2. …
 ```
 
-### Schritt 8 — Persistenz (research-persistence-Regel)
+### Schritt 8 — Persistenz: Erkenntnisse speichern (PFLICHT, nicht ueberspringbar) ⭐
 
-Taugen die Ergebnisse als Best Practices / enthalten sie Bugs/Fallen, werden sie ueber
-`persistenz_ziel` in `best-practices/` (+ Bugs in `bugs/`) eingearbeitet — Kurzcheck UND Volltext
-(`~/.claude/rules/research-persistence.md`). Bei Delegation macht das der aufrufende Skill mit dem
-zurueckgegebenen Ergebnis.
+**Das ist der Ertrag der ganzen Recherche.** Ohne diesen Schritt war die Arbeit umsonst, sobald die
+Session endet. Er gilt in **jedem** Arbeitsmodus — auch im Schnellmodus, dort nur kuerzer formuliert.
+Die Regel `research-persistence.md` ist in manchen Profilen (z.B. `minimal`) gar nicht geladen, darum
+steht die Checkliste hier vollstaendig:
+
+**Checkliste — jeden Punkt abhaken, bevor du die Recherche als fertig meldest:**
+
+1. **Tauglichkeit pruefen:** "Ist das ueber diese eine Aufgabe hinaus wiederverwendbar?"
+   TAUGLICH: Patterns/APIs/Architektur, bekannte Bugs + Workarounds, Library-Vergleiche,
+   Plattform-/Policy-Wissen, Harness-Wissen. NICHT: einmalige Faktenabfrage, rein projektspezifisch.
+   **Im Zweifel: einarbeiten.** Ist nichts tauglich, das in EINEM Satz begruenden — nie stillschweigend
+   weglassen.
+2. **Best Practices** → `~/proggs/best-practices/<kategorie>/<bereich>.md`
+   Mit Stand-Datum (echte Systemzeit per Befehl holen!), Versions-Anker, Quellen-URLs, Markierung
+   `offiziell`/`extern`. **Kurzcheck (Stufe A) UND Volltext** — nie nur eines von beiden.
+3. **Bugs/Fallen** → zusaetzlich `~/proggs/bugs/<kategorie>/<bereich>.md`
+   Je Eintrag: Symptom, Ursache, betroffene Versionen, funktionserhaltender Fix, Quelle.
+   Ebenfalls Kurzcheck UND Volltext. Neuer Bereich → Datei anlegen + README-Index ergaenzen.
+   Ein Bug gehoert in den Almanach, **nicht nur** in die Best Practices.
+4. **Committen und pushen** — nur die eigenen Dateien namentlich stagen.
+5. **Schritt 9** (Hook-Registrierung) anschliessen, wenn ein Almanach-Bereich neu war.
+
+**Was das Ergebnis liefern muss, damit Schritt 8 ueberhaupt gehen kann:** Jeder Researcher markiert in
+seiner Antwort `BEST-PRACTICES-KANDIDATEN:` und `BUG-KANDIDATEN:` (mit URLs + Versionen; wenn nichts:
+`KEINE`). Das Einarbeiten macht immer der Hauptagent — nie mehrere Researcher schreiben parallel.
+
+Bei Delegation macht Schritt 8 der aufrufende Skill mit dem zurueckgegebenen Ergebnis; er bekommt die
+Checkliste ueber das `persistenz_ziel`-Feld mitgegeben.
 
 ### Schritt 9 — Hook-Registrierung (PFLICHT, der allerletzte Schritt) ⭐
 
@@ -322,6 +441,11 @@ die Hook-Registrierung der verbindliche Abschluss der gesamten Recherche→Persi
 
 ## Was NIEMALS passieren darf
 
+- ❌ Frage 1 ueberspringen, weil der Schnellmodus/Freimodus aktiv ist — sie ist eine Kosten-Freigabe (Block 0.0)
+- ❌ Frage 1 selbst beantworten oder die `research-approved.flag` ohne Franks Antwort setzen
+- ❌ Ohne `AskUserQuestion` einfach loslaufen, statt die vier Optionen als Klartext zu stellen und zu warten
+- ❌ Schritt 8 (Persistenz) oder Schritt 9 (Hook-Registrierung) weglassen — in KEINEM Arbeitsmodus
+- ❌ Sich darauf verlassen, dass `research-strategy.md`/`research-persistence.md` geladen sind (in `minimal` nicht)
 - ❌ Recherche-Auftrag als Fliesstext annehmen statt ueber das benannte Feld-Schema (Verlustgefahr)
 - ❌ Bei bug/best_practice ohne `version_anker` recherchieren (falsche Fix-Stati)
 - ❌ Auf ganze Wellen warten statt Continuous-Spawning (Zeitverlust — die oberste Regel)
