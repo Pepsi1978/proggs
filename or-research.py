@@ -8,14 +8,16 @@ Dieses Skript nutzt den neuen Weg: `tools:[{"type":"openrouter:web_search", "par
 Das Modell entscheidet selbst, ob/wie oft es sucht (0..N Suchen pro Request, mit max_total_results gedeckelt).
 
 Unterschied zu mm-research.py:
-  - mm-research.py: Firecrawl (Free 1000/Mon, VOLLE Seiten) -> MiniMax M3 (Go-Abo) wertet aus.
+  - mm-research.py: Firecrawl (Free 1000/Mon, VOLLE Seiten) -> DeepSeek V4 Flash @ DeepInfra wertet aus.
   - or-research.py: OpenRouter web_search server tool (Snippets) -> ein Call; Modell sucht + wertet
     selbst aus. Pay-per-use, KEIN Monatslimit. Ideal als Eskalations-Stufe B (1M + Websuche) ODER
     fuer grosse Schwaerme (kein 2-parallel-Limit wie Firecrawl).
 
 Verwendung:
     python3 or-research.py "deine Recherche-Frage" [modell] [engine]
-    Default-Modell: minimax/minimax-m3 (1M, guenstig). Eskalation: z-ai/glm-5.2 (mehr Denkkraft, 1M).
+    Default-Modell: deepseek/deepseek-v4-flash-0731 (1M+, Anbieter DeepInfra gepinnt; seit 09.09.2026).
+    Eskalation: z-ai/glm-5.2 (mehr Denkkraft, 1M).
+    OR_PROVIDER (env) — OpenRouter-Anbieter, Default "deepinfra". LEER = kein Pin (freies Routing).
     Engine (3. Arg oder env OR_ENGINE): parallel (DEFAULT) | exa | auto | perplexity | native | firecrawl.
       - "parallel" = Such-Engine parallel.ai (NICHT parallele Ausfuehrung!), deckelt Kontext total. DEFAULT.
       - "auto" nutzt native Provider-Suche, falls das Modell sie hat, sonst Exa.
@@ -90,7 +92,7 @@ def main():
     if len(sys.argv) < 2:
         return "Bitte eine Recherche-Frage als 1. Argument angeben."
     query = sys.argv[1]
-    model = sys.argv[2] if len(sys.argv) > 2 else "minimax/minimax-m3"
+    model = sys.argv[2] if len(sys.argv) > 2 else "deepseek/deepseek-v4-flash-0731:online"
     engine = sys.argv[3] if len(sys.argv) > 3 else os.environ.get("OR_ENGINE", "parallel")
     max_results = int(os.environ.get("OR_MAX_RESULTS", "5"))
     max_total = int(os.environ.get("OR_MAX_TOTAL", "10"))
@@ -115,9 +117,15 @@ def main():
         "messages": [{"role": "user", "content": prompt}],
         "reasoning": {"effort": "high"},   # max Thinking (ignoriert, falls Modell es nicht unterstuetzt)
     }
+    # Anbieter-Pin (seit 09.09.2026): DeepInfra ist vorgegeben; allow_fallbacks=False, damit nicht
+    # still auf einen anderen Anbieter geroutet wird. OR_PROVIDER="" schaltet den Pin ab.
+    provider = os.environ.get("OR_PROVIDER", "deepinfra")
+    if provider:
+        body["provider"] = {"order": [provider], "allow_fallbacks": False}
     if not is_online:
         body["tools"] = [{"type": "openrouter:web_search", "parameters": web_params}]
-    print(f"[or-research] {model} | {'online-Plugin' if is_online else 'engine=' + engine} | "
+    print(f"[or-research] {model} @ {provider or 'freies Routing'} | "
+          f"{'online-Plugin' if is_online else 'engine=' + engine} | "
           f"max_results={max_results} total={max_total} | retries={RETRIES} — {query!r}", file=sys.stderr)
     hdr = {"Authorization": f"Bearer {key}", "Content-Type": "application/json",
            "HTTP-Referer": "https://github.com/Pepsi1978/proggs", "X-Title": "proggs-or-research"}

@@ -33,14 +33,25 @@ NIEMALS nach den Skripten/Keys suchen — sie liegen fest hier:
 | Policy-Regel | `~/.claude/rules/research-strategy.md` |
 | Rueckgabe-Schema-Vorlagen | `references/rueckgabe-schemata.md` (in diesem Skill) |
 
+**Das Auswerte-Modell fuer A UND B (seit 09.09.2026):** `deepseek/deepseek-v4-flash-0731`,
+Anbieter **DeepInfra** gepinnt, `reasoning effort: high`. A und B benutzen jetzt DASSELBE Modell —
+der Unterschied liegt nur in der Quellenbeschaffung (A = Firecrawl-Vollseiten, B = `:online`-Websuche)
+und in der Parallelitaet (A = 2, B = 7). Verifiziert gegen die OpenRouter-API am 09.09.2026:
+1.048.576 Token Kontext, `reasoning_effort` unterstuetzt, $0.06/$0.18 pro Mio Token.
+Der Pin sitzt in den Skripten (`MM_PROVIDER`/`OR_PROVIDER`, Default `deepinfra`, LEER = kein Pin) —
+nichts von Hand mitgeben.
+
 Aufruf-Konventionen (immer so, nie raten):
 - **Engine A:** `python3 ~/proggs/mm-research.py "<unterthema>" [n]`
-- **Engine B:** `python3 ~/proggs/or-research.py "<unterthema>" minimax/minimax-m3:online`
+  — Firecrawl holt die vollen Seiten, DeepSeek V4 Flash @ DeepInfra wertet aus. Modell/Anbieter/Effort
+  stehen als Default im Skript; ueberschreibbar per `MM_MODEL` / `MM_PROVIDER` / `MM_EFFORT`.
+- **Engine B:** `python3 ~/proggs/or-research.py "<unterthema>" deepseek/deepseek-v4-flash-0731:online`
   — das Modell-Suffix `:online` laesst OpenRouter selbst eine Websuche dazuschalten (web-Plugin,
   Such-Engine intern = parallel.ai). **KEINE explizite Engine als 3. Argument** (kein `parallel`/
   `exa`/`firecrawl`). `:online` ist bei hoher Parallelitaet stabiler als das alte `web_search`-
-  Server-Tool (A/B-getestet 2026-06-21). `reasoning:high` ist im Werkzeug eingebaut. Bei mehreren
-  Parallel-Laeufen pro Lauf ein eigenes `OR_OUTDIR` setzen (sonst ueberschreiben sich die Ausgaben).
+  Server-Tool (A/B-getestet 2026-06-21). `reasoning:high` und der DeepInfra-Pin sind im Werkzeug
+  eingebaut. Bei mehreren Parallel-Laeufen pro Lauf ein eigenes `OR_OUTDIR` setzen (sonst
+  ueberschreiben sich die Ausgaben).
   Eskalations-Modell (mehr Denkkraft): `z-ai/glm-5.2:online`.
 
 **Gezielte Einzel-Nachsuche (Luecken fuellen) — IMMER ueber die Skripte, NIE ueber ein MCP-Tool:**
@@ -114,9 +125,9 @@ konstant so viele gleichzeitig, wie die Engine erlaubt. Kein Wellen-Barrier, kei
 
 | Engine | Max gleichzeitig | Aufruf |
 |--------|------------------|--------|
-| A — Firecrawl (mm) | **2** (hartes Free-Limit) | `mm-research.py` |
-| B — OpenRouter (or), `:online` | **7** (`:online` verteilt selbst auf mehrere Modell-Provider → last-stabil; A/B-Test 2026-06-21: 10 echt-parallel sauber. Der intermittente JSON-Tool-Call-Leak §42 wird vom `or-research.py`-Retry gefangen) | `or-research.py … minimax/minimax-m3:online` |
-| C — Sonnet-5-Schwarm | **7** | Agent-Tool, `subagent_type:general-purpose` + Prompt, **`model:"sonnet"`** (PFLICHT-Parameter, s.u.) |
+| A — Firecrawl (mm) → DeepSeek V4 Flash @ DeepInfra | **2** (hartes Free-Limit) | `mm-research.py` |
+| B — OpenRouter (or), `:online`, dasselbe DeepSeek-Modell | **7** (`:online` verteilt selbst auf mehrere Modell-Provider → last-stabil; A/B-Test 2026-06-21: 10 echt-parallel sauber. Der intermittente JSON-Tool-Call-Leak §42 wird vom `or-research.py`-Retry gefangen) | `or-research.py … deepseek/deepseek-v4-flash-0731:online` |
+| C — Schwarm auf dem **Host-Modell** (harness-abhaengig, s.u.) | **7** | Agent-/Task-Tool |
 
 Praktische Umsetzung — **Continuous-Spawning ist PFLICHT (Zeit nicht verschwenden):** sobald EIN
 Researcher fertig ist, startet SOFORT der naechste, sodass konstant das Engine-Limit gleichzeitig laeuft.
@@ -144,29 +155,40 @@ LLM-/Agent-Reste statt der Windows-SMB-Themen). Der Cleanup fasst NUR die eigene
 Input-Datei `themen.txt` oder fremde Reste anderer Skills (`bp/`, `esc/`, `qdrant/` …). Kein manuelles
 Aufraeumen noetig; fuer Crash-Resume einmalig `RESEARCH_SWARM_RESUME=1` setzen (dann KEIN Cleanup, SKIP-Logik aktiv).
 
-**Engine C (Sonnet-5-Schwarm) — NICHT skriptbar (Agent-Tool-Aufrufe macht der Hauptagent), darum Pattern PFLICHT:**
-Continuous-Spawning HIER von Hand, aber genauso strikt: **erst 7 Agent-Tool-Aufrufe gleichzeitig**
-(`subagent_type:general-purpose` + Prompt + **`model:"sonnet"`**); **sobald EINE Completion-Notification
-kommt, im selben Zug den naechsten wartenden Researcher spawnen** → wieder 7 laufend. NIE auf alle 7
-warten (Wellen-Barrier = Zeitverlust). Jeder Researcher schreibt sein Ergebnis in eine eigene Datei +
-gibt nur eine Kurz-Summary zurueck (kontextschonend, crash-sicher nach `subagent-crash-proofing`).
+**Engine C — NICHT skriptbar (Agent-Tool-Aufrufe macht der Hauptagent), darum Pattern PFLICHT:**
+Continuous-Spawning HIER von Hand, aber genauso strikt: **erst 7 Agent-Tool-Aufrufe gleichzeitig**;
+**sobald EINE Completion-Notification kommt, im selben Zug den naechsten wartenden Researcher spawnen**
+→ wieder 7 laufend. NIE auf alle 7 warten (Wellen-Barrier = Zeitverlust). Jeder Researcher schreibt sein
+Ergebnis in eine eigene Datei + gibt nur eine Kurz-Summary zurueck (kontextschonend, crash-sicher nach
+`subagent-crash-proofing`).
 > laufen 7, einer kommt zurueck → nur noch 6 → SOFORT den 8. spawnen (wieder 7) → … bis alle durch.
 
-**⚡ PFLICHT seit 2026-07-01 — `model:"sonnet"` explizit setzen:** `CLAUDE_CODE_SUBAGENT_MODEL` steht
-seit der Sonnet-5-Umstellung auf `inherit` (nicht mehr `opus[1m]`) — ohne den expliziten `model`-Parameter
-wuerden die Researcher auf ein unbestimmtes Fallback-Modell laufen statt auf Sonnet 5. **Jeder** Engine-C-
-Agent-Tool-Aufruf bekommt daher `model:"sonnet"` (Alias, loest zu Sonnet 5 auf, natives 1M-Kontext).
-Effort bleibt "high" — kein Effort-Parameter am Agent-Tool fuer Ad-hoc-`general-purpose`-Aufrufe noetig,
-das ist bereits der globale Session-Standard (`effortLevel: "high"`). Details/Begruendung:
-`~/.claude/rules/research-strategy.md` §4a.
+**⭐ PFLICHT seit 09.09.2026 — Engine C haengt vom Harness ab. ZUERST feststellen, wo du laeufst:**
+
+| Harness | Erkennung | Was Engine C bedeutet |
+|---------|-----------|------------------------|
+| **Claude Code** | Umgebungsvariable `CLAUDECODE=1` gesetzt (pruefen: `echo $CLAUDECODE`); es ist eine `CLAUDE.md` geladen | **Sonnet-5-Schwarm** wie bisher: Agent-Tool, `subagent_type:general-purpose` + Prompt + **`model:"sonnet"`** (PFLICHT), Effort "high", 7 parallel |
+| **OpenCode** | `CLAUDECODE` NICHT gesetzt; es ist eine `AGENTS.md` geladen (Profil unter `OpenLauncher/Profiles/OpenCode/`) | **Schwarm auf dem AKTUELLEN Session-Modell**: bis 7 parallele Subagenten, **KEIN `model:`-Override** — sie erben das Modell, mit dem die Session gerade verbunden ist (z.B. GPT 5.6 Sol). Diese Modelle haben eine EIGENE Internet-Anbindung und recherchieren selbststaendig; **kein** `mm-`/`or-research.py` noetig |
+
+**In Claude Code (`CLAUDECODE=1`):** `CLAUDE_CODE_SUBAGENT_MODEL` steht seit der Sonnet-5-Umstellung auf
+`inherit` (nicht mehr `opus[1m]`) — ohne den expliziten `model`-Parameter wuerden die Researcher auf ein
+unbestimmtes Fallback-Modell laufen statt auf Sonnet 5. **Jeder** Engine-C-Agent-Tool-Aufruf bekommt daher
+`model:"sonnet"` (Alias, loest zu Sonnet 5 auf, natives 1M-Kontext). Effort bleibt "high" (globaler
+Session-Standard `effortLevel: "high"`).
+
+**In OpenCode:** genau UMGEKEHRT — **niemals** ein `model:` mitgeben. Der Sinn ist ja, dass das
+Session-Modell selbst recherchiert. Jeder Subagent bekommt den Auftrag "recherchiere <Unterthema> im Web
+mit deinen eigenen Werkzeugen, quellentreu, Quelle pro Aussage" und schreibt in eine eigene Datei.
+Parallelitaet und Continuous-Spawning bleiben identisch (7 gleichzeitig, sofort nachziehen).
+Details/Begruendung: `~/.claude/rules/research-strategy.md` §4a.
 
 **Live-Darstellung — jeder Researcher beschriftet mit Engine/Modus + Thema:**
 
 ```
-🔬 Research: "<thema>"  ·  Engine: OpenRouter/:online  ·  Modus: Eskalation  ·  Deckel: 10 Treffer/Researcher
-   Researcher 1 [OpenRouter/:online · Eskalation] — <voller Unterthemen-Satz> … laeuft
-   Researcher 2 [OpenRouter/:online · Eskalation] — <voller Unterthemen-Satz> … ✓ fertig (8 Quellen)
-   Researcher 3 [OpenRouter/:online · Eskalation] — <voller Unterthemen-Satz> … laeuft
+🔬 Research: "<thema>"  ·  Engine: DeepSeek V4 Flash @ DeepInfra/:online  ·  Modus: Eskalation  ·  Deckel: 10 Treffer/Researcher
+   Researcher 1 [DeepSeek/:online · Eskalation] — <voller Unterthemen-Satz> … laeuft
+   Researcher 2 [DeepSeek/:online · Eskalation] — <voller Unterthemen-Satz> … ✓ fertig (8 Quellen)
+   Researcher 3 [DeepSeek/:online · Eskalation] — <voller Unterthemen-Satz> … laeuft
    [aktiv: 7 · fertig: 2/12 · ~0,07 $]
 ```
 
@@ -204,7 +226,7 @@ Was das konkret fuers Projekt bedeutet (1-3 Punkte).
 ## Noch offen / unsicher
 Was die Quellen NICHT hergaben oder widerspruechlich war.
 
-Quellen: 12 · Engine: OpenRouter/:online · Kosten: 0,07 $
+Quellen: 12 · Engine: DeepSeek V4 Flash @ DeepInfra/:online · Kosten: 0,07 $
 ```
 
 Zusaetzlich liefert der Skill das Ergebnis im **`rueckgabe_schema`** des Auftrags (siehe
@@ -220,9 +242,10 @@ Nach Stufe 1 (Engine A, Firecrawl) kommt die obige Auswertung. Meldet die Auswer
 Eskalation gemaess Policy-Regel anbieten (Frage 2). Stufen:
 
 ```
-A: MiniMax M3 auf Firecrawl-Quellen (mm)         → Standard, Free-Credits
-B: MiniMax M3 :online (or, OpenRouter Go)          → pay-per-use, bis 7 parallel (last-stabil + Retry)
-C: Sonnet-5-Schwarm                                → teuer, nur bewusst gewaehlt
+A: Firecrawl-Quellen → DeepSeek V4 Flash @ DeepInfra (mm)  → Standard, Firecrawl-Free-Credits, 2 parallel
+B: DeepSeek V4 Flash :online @ DeepInfra (or)              → pay-per-use, bis 7 parallel (last-stabil + Retry)
+C: Schwarm auf dem Host-Modell                             → Claude Code: Sonnet-5-Schwarm (teuer, nur bewusst
+                                                              gewaehlt) · OpenCode: aktuelles Session-Modell
 ```
 
 Nach JEDER Stufe wieder dieselbe ruhige Auswertung (Schritt 5) → der Benutzer entscheidet ueber
@@ -283,13 +306,17 @@ die Hook-Registrierung der verbindliche Abschluss der gesamten Recherche→Persi
 
 ## Engine-Wahl-Spickzettel (Detail in der Policy-Regel)
 
-- **A (Firecrawl+MiniMax):** volle Seiten, tiefe Einzelrecherche; Free-Credits; **nur 2 parallel**.
-- **B (OpenRouter `:online`):** Snippets, **bis 7 parallel** (Continuous-Spawning; `:online` verteilt
-  selbst auf mehrere Modell-Provider → last-stabil, A/B-Test 2026-06-21: 10 echt-parallel sauber;
-  `or-research.py`-Retry faengt den intermittenten Leak §42), pay-per-use, kein Monatslimit. Modell
-  `minimax/minimax-m3:online` — KEINE explizite Such-Engine angeben. Eskalation: `z-ai/glm-5.2:online`.
-- **C (Sonnet-5-Schwarm):** nur wenn Frank es ausdruecklich waehlt (teuer); 7 parallel, Continuous-Spawning,
-  `model:"sonnet"` PFLICHT pro Aufruf (Details §4a in `research-strategy.md`).
+- **A (Firecrawl + DeepSeek V4 Flash @ DeepInfra):** volle Seiten, tiefe Einzelrecherche; Firecrawl-Free-
+  Credits; **nur 2 parallel** (das Limit kommt von Firecrawl, nicht vom Auswerte-Modell).
+- **B (dasselbe DeepSeek-Modell mit `:online`):** Snippets statt Vollseiten, **bis 7 parallel**
+  (Continuous-Spawning; `:online` verteilt selbst auf mehrere Modell-Provider → last-stabil, A/B-Test
+  2026-06-21: 10 echt-parallel sauber; `or-research.py`-Retry faengt den intermittenten Leak §42),
+  pay-per-use, kein Monatslimit. Modell `deepseek/deepseek-v4-flash-0731:online` — KEINE explizite
+  Such-Engine angeben. Eskalation mit mehr Denkkraft: `z-ai/glm-5.2:online`.
+- **C (Schwarm auf dem Host-Modell):** nur wenn Frank es ausdruecklich waehlt; 7 parallel,
+  Continuous-Spawning. **Claude Code** (`CLAUDECODE=1`) → Sonnet-5-Schwarm, `model:"sonnet"` PFLICHT
+  pro Aufruf. **OpenCode** → Schwarm auf dem aktuellen Session-Modell, **kein** `model:`-Override,
+  die Modelle recherchieren mit ihrer eigenen Internet-Anbindung (Details §4a in `research-strategy.md`).
 
 ---
 
@@ -300,6 +327,9 @@ die Hook-Registrierung der verbindliche Abschluss der gesamten Recherche→Persi
 - ❌ Auf ganze Wellen warten statt Continuous-Spawning (Zeitverlust — die oberste Regel)
 - ❌ Mehr als 2 Firecrawl-Researcher gleichzeitig (Free-Limit → 429)
 - ❌ Bei Engine B eine explizite Such-Engine (`parallel`/`exa`/`firecrawl`) als 3. Argument angeben — `:online` regelt die Suche selbst (Modell-Suffix, kein `tools`-Block)
+- ❌ In OpenCode einen Engine-C-Subagenten mit `model:"sonnet"` spawnen — dort MUSS das Session-Modell selbst recherchieren (kein `model:`-Override)
+- ❌ In Claude Code einen Engine-C-Subagenten OHNE `model:"sonnet"` spawnen — er faellt sonst auf ein unbestimmtes Modell zurueck
+- ❌ Den DeepInfra-Anbieter-Pin von Hand am Aufruf vorbeimogeln — er steht als Default in den Skripten (`MM_PROVIDER`/`OR_PROVIDER`)
 - ❌ Mehrere Engine-B-Parallel-Laeufe ohne eigenes `OR_OUTDIR` je Lauf (sie ueberschreiben sich)
 - ❌ Den Auto-Cleanup in `research-swarm.py` entfernen/umgehen — ohne ihn schlagen alte `run-<i>/answer.json` fehlgeschlagener Researcher als FREMDE Themen durch (Vorfall 2026-06-25)
 - ❌ Selbsttests "ob das System geht" — die Pipeline ist verifiziert

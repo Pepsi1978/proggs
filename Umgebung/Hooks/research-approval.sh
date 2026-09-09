@@ -2,6 +2,8 @@
 # research-approval: Blockt Web-Recherche-Aufrufe bis eine Freigabe-Flag-Datei existiert.
 # Setzt research-strategy.md durch (Frage 1 A/B/C/D muss Frank beantworten, bevor mm/or-research
 # oder die Firecrawl-MCP laufen). Verbraucht sonst still Firecrawl-Credits / teure Tokens.
+# Stand 09.09.2026: A+B werten mit deepseek/deepseek-v4-flash-0731 @ DeepInfra aus;
+# C ist harness-abhaengig (Claude Code = Sonnet-5-Schwarm, OpenCode = Session-Modell).
 # Runs as PreToolUse hook (matcher: Bash | mcp__.*firecrawl.*)
 # stdout -> AI context (nur DENY-JSON), stderr -> user terminal. Platform: macOS/Linux
 
@@ -53,7 +55,7 @@ if [ -f "$flag" ]; then
 fi
 
 # --- Keine Freigabe -> DENY (spec-konform JSON via python3, exit 0; §16.1, §1.6) ---
-reason="RESEARCH-FREIGABE FEHLT (Regel research-strategy.md). Vor jeder Web-Recherche MUSS Frank per AskUserQuestion gefragt werden -- Frage 1: A=Firecrawl+MiniMax M3 (max Thinking), B=MiniMax+parallel (max Thinking), C=Opus-Schwarm, D=Freitext. Nach Wahl A oder B die Freigabe setzen: touch '$flag' (gilt 30 Min), dann den Aufruf erneut starten. Bei C laeuft KEIN mm/or-research (Opus-Researcher stattdessen)."
+reason="RESEARCH-FREIGABE FEHLT (Regel research-strategy.md). Vor jeder Web-Recherche MUSS Frank per AskUserQuestion gefragt werden -- Frage 1: A=Firecrawl-Quellen + DeepSeek V4 Flash @ DeepInfra (2 parallel), B=dasselbe Modell mit :online (7 parallel), C=Schwarm auf dem Host-Modell (Claude Code: Sonnet-5-Schwarm / OpenCode: aktuelles Session-Modell), D=Freitext. Nach Wahl A oder B die Freigabe setzen: touch '$flag' (gilt 30 Min), dann den Aufruf erneut starten. Bei C laeuft KEIN mm/or-research (Subagenten-Schwarm stattdessen)."
 printf '%s' "$reason" | python3 -c 'import sys,json
 reason=sys.stdin.read()
 print(json.dumps({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":reason}}))'

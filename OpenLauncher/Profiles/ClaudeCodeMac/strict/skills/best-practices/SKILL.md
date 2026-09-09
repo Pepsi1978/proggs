@@ -116,11 +116,11 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
 3. **Nichts Relevantes neu?** → "Nichts Neues seit Version X (Stand: Datum)" melden, fertig.
 4. **Delta vorhanden?** → ZUERST den Recherche-Weg per `AskUserQuestion` waehlen lassen
    (Regel `research-strategy.md`, Frage 1 A/B/C/D) — NIE automatisch losrecherchieren:
-   - **A (Standard): Firecrawl + MiniMax M3 (max Thinking)** → `python3 ~/proggs/mm-research.py "<kategorie-frage>" [n]`
+   - **A (Standard): Firecrawl + DeepSeek V4 Flash @ DeepInfra (reasoning high)** → `python3 ~/proggs/mm-research.py "<kategorie-frage>" [n]`
      pro Kategorie. **Firecrawl Free = max 2 GLEICHZEITIG** (2 starten → auf Ergebnis warten → naechste 2;
-     NICHT 7). Nach Abschluss Frage 2 (zusaetzliche Eskalation?). MiniMax liefert die quellentreue
+     NICHT 7). Nach Abschluss Frage 2 (zusaetzliche Eskalation?). Das Auswerte-Modell liefert die quellentreue
      Auswertung; der Hauptagent arbeitet sie in die Kategorie-Dateien ein (Stufe 3 / `research-persistence`).
-   - **B (Eskalation): MiniMax + parallel (max Thinking)** → `python3 ~/proggs/or-research.py "<frage>"`
+   - **B (Eskalation): dasselbe DeepSeek-Modell mit `:online`** → `python3 ~/proggs/or-research.py "<frage>" deepseek/deepseek-v4-flash-0731:online`
      (kein 2-Limit, hoehere Parallelitaet, pay-per-use, kein Monatslimit).
    - **C (Sonnet-5-Schwarm):** NUR auf explizite Wahl → die **Researcher-Regeln** unten (7 parallel, Continuous-Spawning).
    - Der `research-approval`-Hook blockt mm/or-research, bis Frank A/B gewaehlt UND die Freigabe gesetzt ist

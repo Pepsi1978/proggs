@@ -110,14 +110,14 @@ mitnehmen (aber die aktuell installierte bleibt der Hauptanker).
 **ZUERST den Recherche-Weg per `AskUserQuestion` waehlen lassen** (Regel `research-strategy.md`,
 Frage 1 A/B/C/D) — NIE automatisch losrecherchieren (der `research-approval`-Hook blockt mm/or-research,
 bis Frank A/B gewaehlt UND `touch "$TEMP/research-approved.flag"` gesetzt hat):
-- **A (Standard): Firecrawl + MiniMax M3 (max Thinking)** → pro Bug-Aspekt
+- **A (Standard): Firecrawl + DeepSeek V4 Flash @ DeepInfra (reasoning high)** → pro Bug-Aspekt
   `python3 ~/proggs/mm-research.py "<bereich> <aspekt> Bugs/Fallen/Workarounds" [n]`. **Firecrawl Free =
   max 2 GLEICHZEITIG**: 2 Aspekte starten → auf Ergebnis warten → naechste 2, bis alle Aspekte
   (Doku/Issues/Community/Plattform/Mechanik …) durch sind. NIE 7 Firecrawl-Calls auf einmal
-  (Rate-Limit/Credit-Verschwendung). Nach Abschluss Frage 2 (zusaetzliche Eskalation?). MiniMax liefert
+  (Rate-Limit/Credit-Verschwendung). Nach Abschluss Frage 2 (zusaetzliche Eskalation?). Das Auswerte-Modell liefert
   die quellentreue Auswertung; der Hauptagent baut daraus die Almanach-Eintraege (Schritt 4-6) und macht
   die `gh`-Fix-Status-Pruefung weiterhin selbst.
-- **B (Eskalation): MiniMax + parallel (max Thinking)** → `python3 ~/proggs/or-research.py "<frage>"`
+- **B (Eskalation): dasselbe DeepSeek-Modell mit `:online`** → `python3 ~/proggs/or-research.py "<frage>" deepseek/deepseek-v4-flash-0731:online`
   (kein 2-Limit, hoehere Parallelitaet, pay-per-use, kein Monatslimit).
 - **C (Sonnet-5-Schwarm):** NUR auf explizite Wahl → die folgenden 7-parallel-Regeln.
 

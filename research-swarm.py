@@ -9,17 +9,20 @@ Damit muss der Hauptagent die Parallelitaet nicht von Hand orchestrieren und kan
 (`~/.claude/rules/research-strategy.md` §3a) fuer die beiden Skript-Engines.
 
 Harte Engine-Limits (Schutz — werden gedeckelt + gewarnt, NICHT ueberschreibbar nach oben):
-  A (Firecrawl)  : max **2** gleichzeitig (hartes Free-Limit: 2 concurrent, 5 Suchen/Min)
-  B (:online/or) : max **7** gleichzeitig (`:online` last-stabil, A/B-Test 2026-06-21; Retry faengt Leak §42)
+  A (Firecrawl)  : max **2** gleichzeitig (hartes Free-Limit: 2 concurrent, 5 Suchen/Min);
+                 Auswertung seit 09.09.2026 ueber DeepSeek V4 Flash @ DeepInfra (OpenRouter)
+  B (:online/or) : max **7** gleichzeitig (`:online` last-stabil, A/B-Test 2026-06-21; Retry faengt Leak §42);
+                 gleiches Modell wie A, nur mit `:online`-Websuche statt Firecrawl-Quellen
 
-Opus (Engine C) ist NICHT skriptbar (Agent-Tool-Aufrufe macht der Hauptagent) — dort orchestriert
-der research-Skill das Continuous-Spawning mit 7 selbst (Pflicht-Pattern im Skill).
+Engine C ist NICHT skriptbar (Agent-Tool-Aufrufe macht der Hauptagent) — dort orchestriert der
+research-Skill das Continuous-Spawning mit 7 selbst (Pflicht-Pattern im Skill). In Claude Code
+ist C der Sonnet-5-Schwarm, in OpenCode der Schwarm auf dem Session-Modell.
 
 Aufruf:
     python3 research-swarm.py <A|B> <themes_file> [max_parallel] [model]
       themes_file : eine Recherche-Frage pro Zeile (leere Zeilen ignoriert)
       max_parallel: optional; Default A=2, B=7; ein hoeherer Wert wird auf das Engine-Limit gedeckelt
-      model (nur B): Default `minimax/minimax-m3:online`
+      model (nur B): Default `deepseek/deepseek-v4-flash-0731:online` (Anbieter DeepInfra gepinnt)
 
 Output je Researcher: ~/.research-swarm/answer-<i>.txt (stdout) + log-<i>.txt (stderr) + run-<i>/ (Rohdaten,
 eigenes OUTDIR je Lauf -> kein gegenseitiges Ueberschreiben). Wiederaufnahme-sicher (answer-<i>.txt > 500 B
@@ -50,7 +53,7 @@ def run(engine, model, it):
     log = os.path.join(OUT, f"log-{n}.txt")
     if engine == "A":
         cmd = [sys.executable, MM, theme, "5"]
-        env = dict(os.environ, MM_OUTDIR=rundir, MM_THINK_BUDGET="24000")
+        env = dict(os.environ, MM_OUTDIR=rundir)
     else:  # B = :online / or
         cmd = [sys.executable, OR, theme, model]
         env = dict(os.environ, OR_OUTDIR=rundir)
@@ -97,9 +100,9 @@ def main():
         return "Aufruf: research-swarm.py <A|B> <themes_file> [max_parallel] [model]"
     engine = sys.argv[1].upper()
     if engine not in ENGINE_CAP:
-        return f"Unbekannte Engine {engine!r} — nur A (Firecrawl) oder B (:online). Opus (C) ist NICHT skriptbar (Agent-Tool)."
+        return f"Unbekannte Engine {engine!r} — nur A (Firecrawl) oder B (:online). C ist NICHT skriptbar (Agent-Tool)."
     themes_file = os.path.expanduser(sys.argv[2])
-    model = sys.argv[4] if len(sys.argv) > 4 else "minimax/minimax-m3:online"
+    model = sys.argv[4] if len(sys.argv) > 4 else "deepseek/deepseek-v4-flash-0731:online"
     cap = ENGINE_CAP[engine]
     n_par = int(sys.argv[3]) if len(sys.argv) > 3 else cap
     if n_par > cap:
