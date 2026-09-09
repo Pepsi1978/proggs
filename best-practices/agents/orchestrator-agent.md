@@ -295,3 +295,100 @@ Schritt-Sequenz** (Agent darf valide Umwege finden); Konsistenz via pass@k / pas
 - OpenAI: Agents SDK (Orchestration/Handoffs/Guardrails), function-calling, Structured Outputs, Voice-Agents/Realtime.
 - LangGraph: Subgraphs, Short-term-memory, INVALID_CONCURRENT_GRAPH_UPDATE, Checkpointer.
 - OpenTelemetry GenAI Semantic Conventions; OWASP MCP Security Cheat Sheet / Agentic Top 10.
+
+---
+
+## Nachtrag 2026-09-09 — Schwarmgroesse und Parallelitaet (Recherche mit 21 Researchern)
+
+> Quelle dieser Ergaenzung: Recherche vom 2026-09-09 mit drei Engines parallel (7 Firecrawl+Tavily→
+> DeepSeek, 7 DeepSeek `:online`, 7 Sonnet-5). Die Zahlen unten stammen ueberwiegend aus
+> Anthropic-Primaerquellen und arXiv-Papers.
+> Neuer Nachbarbereich: `best-practices/agents/multi-agent-interop.md` (Protokolle, Cross-Vendor).
+
+### Wie viele Agenten parallel? — es gibt kein universelles Optimum `extern`
+
+Die Literatur zeigt ein **umgekehrtes U**: die Leistung steigt zunaechst mit der Agentenzahl, faellt
+ab einem Optimum aber wieder, weil der Koordinationsaufwand dominiert. Tokenkosten steigen dabei
+**quadratisch** mit n.
+
+| Aufgabentyp | Sinnvolle Parallelitaet | Beleg |
+|-------------|------------------------|-------|
+| Reasoning-lastig (Denkaufgaben) | **2-6 Agenten**, danach messbarer Qualitaetsverlust (bis −27,45 % bei 1 vs. 8) | arXiv 2606.00655 |
+| Breit zerlegbare Recherche | 3-5 pro Welle, insgesamt >10 bei komplexen Themen | Anthropic |
+| Massiv-paralleler Fan-out (viele fast identische Kleinschritte) | 100-300 moeglich, wenn Zerlegung/Caching/Fehler-Reassignment automatisiert sind | Sekundaerquelle, unverifiziert |
+
+Kernsatz aus der Literatur: kollektive Intelligenz ist "an emergent property of interaction
+architecture, not an automatic outcome of agent plurality". Mehr Agenten helfen **nur**, wenn
+Zerlegung, Aggregation und Fehlerbehandlung ausdruecklich dafuer gebaut sind.
+
+### Anthropic faehrt Wellen, nicht kontinuierliches Nachziehen `offiziell`
+
+Der Lead-Agent startet **3-5 Subagenten parallel und wartet, bis die Welle fertig ist**, bevor er
+weitermacht — Anthropic benennt das selbst als aktuelle Limitation ihres Systems ("our lead agents
+execute subagents synchronously, waiting for each set of subagents to complete before proceeding").
+Innerhalb einer Welle nutzt ein Subagent bis zu 3+ Tools parallel; das brachte bis zu 90 %
+Zeitersparnis gegenueber sequenzieller Abarbeitung.
+
+**Einordnung fuer eigene Schwaerme:** Kontinuierliches Nachziehen (sobald einer fertig ist, startet
+der naechste) ist gegenueber Wellen zeitlich ueberlegen und in eigenen Skripten leicht zu erzwingen.
+Der Begriff "Continuous-Spawning" ist allerdings **kein etablierter Fachbegriff** — die Literatur
+spricht von synchronen Wellen gegenueber asynchronem Fan-out. Wer danach sucht, findet nichts.
+
+### Effort-Skalierung in den Lead-Prompt schreiben `offiziell`
+
+Anthropic bettet Skalierungsregeln direkt in die Prompts ein, um Overkill zu verhindern:
+- einfache Faktensuche → **1 Agent** mit 3-10 Tool-Calls
+- Vergleiche → **2-4 Subagenten** mit je 10-15 Calls
+- komplexe Recherche → **>10 Subagenten** mit klar getrennten Zustaendigkeiten
+
+Ohne solche Regeln entstehen die von Anthropic selbst berichteten Fehlermodi: "Spawning 50 subagents
+for simple queries", endloses Suchen nach nicht existierenden Quellen, gegenseitiges Ablenken durch
+uebermaessige Statusmeldungen, und Doppelarbeit bei vagen Aufgabenbeschreibungen.
+
+### Kosten und Fehlerraten realistisch ansetzen `offiziell` + `extern`
+
+- Anthropics Multi-Agent-System: **~4x Tokens je Subagent, ~15x fuer das Gesamtsystem** gegenueber
+  einem normalen Chat. Ergebnis dafuer: **+90,2 %** gegenueber Single-Agent auf internem Recherche-Eval.
+  **Der Tokenverbrauch allein erklaert 80 % der Ergebnisvarianz** — mehr Tokens ist der Wirkmechanismus.
+- Modellwahl schlaegt Tokenbudget: "upgrading to Claude Sonnet 4 is a larger performance gain than
+  doubling the token budget on Claude Sonnet 3.7."
+- **MAST-Studie** (UC Berkeley, Cemri et al., arXiv 2503.13657): ueber 1.600 annotierte Traces aus
+  7 Frameworks, Fehlerraten **41-86,7 %**, davon ~37 % Koordinationsfehler. 14 Fehlermodi in drei
+  Kategorien (System-Design, Inter-Agent-Misalignment, Task-Verification), Inter-Annotator-
+  Uebereinstimmung κ=0,88. Taugt als Checkliste vor jeder Multi-Agent-Entscheidung.
+- Eine weitere Arbeit (arXiv 2604.02460) findet, dass Single-Agent-LLMs Multi-Agent-Systeme bei
+  Multi-Hop-Reasoning **unter identischem Tokenbudget** uebertreffen.
+- Multi-Agent rechnet sich laut Anthropic nur bei **hochwertigen Aufgaben** (Legal Due Diligence,
+  Competitive Intelligence, biomedizinische Literaturreviews). Consumer-Q&A traegt den 15x-Multiplikator
+  nicht.
+
+### Die entscheidende Regel: lesen parallel, schreiben einspurig `extern`
+
+Der scheinbare Widerspruch zwischen Anthropic (+90,2 % durch Multi-Agent) und Cognition
+("Don't Build Multi-Agents") loest sich ueber die Aufgabendomaene auf: Anthropic spricht von
+**breadth-first-Recherche** (read-heavy, parallelisierbar), Cognition von **Coding** (write-heavy,
+Konfliktrisiko). Beide Firmen nennen selbst dieselbe Unterscheidung als Erklaerung.
+
+Cognition hat die Position seit Anfang 2026 praezisiert, nicht widerrufen: **"writes stay
+single-threaded"** — mehrere Agenten liefern Intelligenz (Review, Konsultation), aber nur einer
+schreibt. Ihr Code-Review-Loop findet im Schnitt "2 bugs per PR, of which roughly 58 % are severe".
+Wer nur den alten Blogpost zitiert, gibt eine veraltete Position wieder.
+
+**Praxisregel:** Parallelisiere das Lesen und Pruefen. Halte das Schreiben einspurig. Bei
+Bau-/Kreativaufgaben mit impliziten Designentscheidungen gar nicht erst parallelisieren — Cognitions
+Flappy-Bird-Beispiel (ein Subagent baut Mario-Aesthetik, ein anderer inkompatible Assets) zeigt, wie
+sich widerspruechliche Annahmen aufsummieren statt sich aufzuheben.
+
+### Umgang mit einzelnen fehlgeschlagenen Agenten `offiziell`
+
+Anthropic setzt auf **Retry-Logik und regelmaessige Checkpoints** statt Neustart von vorn — Agenten
+setzen "from where the errors occurred" fort. Zusaetzlich hat sich bewaehrt, dem Agenten schlicht
+mitzuteilen, dass ein Werkzeug fehlschlaegt, und ihn selbst adaptieren zu lassen ("letting the agent
+know when a tool is failing and letting it adapt works surprisingly well").
+
+Keine der gefundenen Primaerquellen nennt eine konkrete Fehlerrate fuer einzelne ausgefallene
+Agenten in einem Schwarm — das bleibt eine Luecke in der Literatur.
+
+Quellen: https://www.anthropic.com/engineering/multi-agent-research-system ·
+https://cognition.com/blog/dont-build-multi-agents · https://cognition.com/blog/multi-agents-working ·
+https://arxiv.org/pdf/2503.13657 · https://arxiv.org/html/2606.00655v1 · https://arxiv.org/pdf/2604.02460

@@ -311,3 +311,104 @@ fool LLM-as-a-judge") und einen Threshold + Kalibrierung braucht; **Infra-Proble
 - Portkey / Truefoundry / tianpan.co / dev.to / Maxim AI — Rate-Limit-Resilienz (Retry-Storm, Thundering Herd, Circuit Breaker)
 - Sandbox-Hardening-Guides (runc-CVEs, Zero-Secrets-Sandbox, Default-Deny-Egress, Firecracker/gVisor/E2B)
 - LangChain / OpenAI-Cookbook / Confident-AI — Agent-Evals (State-Changes pruefen, LLM-Judge-Caveats, Regression-Gates)
+
+---
+
+## Nachtrag 2026-09-09 — Endlosschleifen und Selbstkorrektur (Recherche mit 21 Researchern)
+
+> Ergaenzung aus der Recherche vom 2026-09-09 (drei Engines parallel). Neuer Nachbarbereich:
+> `bugs/agents/multi-agent-interop.md` (Protokolle, Cross-Vendor, Schreibkonflikte).
+
+### Endlosschleifen sind kein Randfall — sie sind haeufig
+
+**Studie:** "When Agents Do Not Stop: Uncovering Infinite Agentic Loops in LLM Agents"
+(arXiv 2607.01641) fand **68 bestaetigte Endlosschleifen-Fehler in 47 Projekten** aus 6.549
+durchsuchten Repositories (91,9 % Precision der Analyse).
+
+**Ursachenverteilung:**
+
+| Ursache | Anteil |
+|---------|--------|
+| Tool-gesteuerte Retries ohne Grenze | 41,2 % |
+| Modellgesteuerte Terminierung ohne harten Fallback | 38,2 % |
+| Fehlende Exits | 33,8 % |
+| Ungeprueufte Workflow-Zyklen | 30,9 % |
+
+**Nach Framework:** LangGraph 33,8 %, AutoGen 32,4 %, LlamaIndex 8,8 %, LangChain 7,4 % — zwei
+Drittel aller Faelle entfallen auf die ersten beiden.
+
+**Folgen:** API-Kosten-Exzess (95,6 % der Faelle), faktischer Denial-of-Service (95,6 %),
+Context-Window-Erschoepfung (27,9 %).
+
+**Fix:** Das Abbruchkriterium gehoert **deterministisch in den Code**, nie ins Modell. Konkret:
+- harte `max_iterations` bzw. Recursion-Limit im State, das unabhaengig vom Modell-Output greift
+  ("force return to END no matter what the LLM wants"). Praxis-Default 10-15, LangChain-Default 15.
+  Die Grenze nicht reflexhaft erhoehen, sondern erst pruefen, ob in den letzten Iterationen echter
+  Fortschritt stattfand.
+- Tool-Call-Limiter (z. B. max. 10 gleiche Aufrufe in Folge, 50 gesamt) und Timeout je Ausfuehrung.
+- Stop-Bedingungen **binaer und messbar** formulieren ("Test-Coverage > 80 %", "JSON validiert"),
+  nie subjektiv ("gut genug", "umfassend genug"). Begruendung aus der Praxisliteratur: LLMs wollen
+  hilfsbereit klingen, und "lass uns hier aufhoeren" wirkt nicht wie eine hilfreiche Antwort.
+- Bei Plan-Execute-Replan ein **Bounded-Recovery-Protokoll**: erst Retry, dann lokaler Patch, erst
+  danach vollstaendiges Replanning. Verhindert das Muster, dass ein Modell immer neu plant ohne
+  Fortschritt (arXiv 2603.11445).
+- Als Konvergenz-Heuristik fuer Refine-Loops: Embedding-Aehnlichkeit zwischen aufeinanderfolgenden
+  Ausgaben (~0,92 Schwelle) UND "die Kritik enthaelt keine neuen Punkte mehr". Der finale
+  Kill-Switch muss deterministischer Code sein, nie ein Modellurteil.
+
+### Selbstkorrektur ohne externes Feedback verschlechtert oft
+
+**Symptom:** Ein Agent prueft sein eigenes Ergebnis nach, haelt es faelschlich fuer korrekt — oder
+verschlechtert es sogar.
+
+**Ursache und Beleglage:**
+- Huang et al., "Large Language Models Cannot Self-Correct Reasoning Yet" (arXiv 2310.01798, ICLR
+  2024): "LLMs struggle to self-correct their responses without external feedback, and at times,
+  their performance even degrades after self-correction."
+- Das Problem liegt im **Finden**, nicht im **Beheben**: "LLMs cannot find reasoning errors, but can
+  correct them given the error location" (arXiv 2311.08516). Ein separat trainierter kleiner
+  Klassifikator findet Fehler besser als das grosse Modell per Prompting.
+- Strukturell: wenn Generator und Bewerter dasselbe Modell sind, teilen sie dieselben Fehlermodi —
+  die Selbstbewertung ist dann kein Korrektheitssignal ("when generator and evaluator share failure
+  modes, self-evaluation provides weak evidence of correctness").
+- **Self-Preference-Bias** (arXiv 2410.21819): Bewerter-LLMs bevorzugen systematisch eigene Outputs,
+  korreliert linear mit der Selbst-Erkennungsgenauigkeit und verstaerkt sich durch Fine-Tuning auf
+  Selbst-Diskriminierung. Langes Chain-of-Thought vor dem Urteil reduziert den Bias.
+
+**Fix:** Bewertung strukturell vom Generator trennen — deterministischer Test, externer Kritiker
+oder ein Klassifikator mit anderen Fehlermodi. **Nicht** mehr Runden desselben Modells.
+Ein spezialisiertes Kritiker-Modell brachte in einer Arbeit +46,03 % (Llama-3-70B) gegenueber
+Diskriminator- und Selbstkritik-Baselines (arXiv 2503.16024).
+
+**Wie viele Runden lohnen sich?** Sekundaerquellen zu Self-Refine nennen ein Plateau bei **2-4
+Runden**; das arXiv-Original (2303.17651) liess sich nicht bis zu den Tabellen auslesen, die Zahl ist
+also **nicht primaerquellenverifiziert** und aufgabenabhaengig. Multi-Agent-Debate konvergiert
+typischerweise in **4-8 Runden**; ein adaptives Kriterium (Kolmogorov-Smirnov-Test zwischen den
+Antwortverteilungen aufeinanderfolgender Runden, Schwelle < 0,05 ueber zwei Runden) spart Rechenzeit
+bei −0,13 % bis 0,00 % Genauigkeitsverlust gegenueber fixen 10 Runden (arXiv 2510.12697).
+
+**Gegenlaeufiger Befund, ehrlich vermerkt:** "LLaVA-Critic-R1" (arXiv 2509.00676) findet, dass
+selbstkritik-basiertes Test-Time-Scaling in ihrem Setup die beste Leistung erzielt. Die Diskrepanz
+zum Kritiker-Vorteil ist nicht aufgeloest und vermutlich stark task-/architekturabhaengig.
+
+**Reflexion richtig gebaut:** Reflexion (arXiv 2303.11366) laeuft, "until the Evaluator deems the
+trajectory to be correct" — das Abbruchkriterium ist also ausdruecklich ein **externer Evaluator**,
+nicht das Modell, das sich selbst fuer fertig erklaert.
+
+### Debate laeuft in die Echo-Kammer
+
+**Symptom:** Mehrere Agenten diskutieren und einigen sich auf eine falsche Mehrheitsmeinung.
+
+**Ursache:** "Multi-LLM debates are susceptible to 'echo chamber' effects, where a flawed majority
+opinion arising from shared misconceptions can suppress correct minority viewpoints." Bereits ein
+moderater Anfangs-Bias kann sich durch die Interaktion verstaerken (arXiv 2608.02827).
+
+**Fix:** **Diversitaet ist der Hebel, nicht die Rundenzahl.** "Intrinsic reasoning strength and group
+diversity are the dominant drivers of debate success, while structural parameters such as order or
+confidence visibility offer limited gains." Praktisch: verschiedene Modelle oder verschiedene
+Blickwinkel einsetzen, nicht dasselbe Modell mehrfach befragen.
+
+Quellen: https://arxiv.org/html/2607.01641v1 · https://arxiv.org/abs/2310.01798 ·
+https://arxiv.org/pdf/2311.08516 · https://arxiv.org/abs/2410.21819 · https://arxiv.org/html/2510.12697v1 ·
+https://arxiv.org/pdf/2503.16814 · https://arxiv.org/html/2603.11445v2 · https://arxiv.org/abs/2303.11366 ·
+https://www.mindstudio.ai/blog/agent-loops-verifiable-stop-conditions

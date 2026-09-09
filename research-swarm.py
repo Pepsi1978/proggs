@@ -24,7 +24,7 @@ Aufruf:
       max_parallel: optional; Default A=2, B=7; ein hoeherer Wert wird auf das Engine-Limit gedeckelt
       model (nur B): Default `deepseek/deepseek-v4-flash-0731:online` (Anbieter DeepInfra gepinnt)
 
-Output je Researcher: ~/.research-swarm/answer-<i>.txt (stdout) + log-<i>.txt (stderr) + run-<i>/ (Rohdaten,
+Output je Researcher: $RESEARCH_SWARM_OUT/answer-<i>.txt (Default ~/.research-swarm) (stdout) + log-<i>.txt (stderr) + run-<i>/ (Rohdaten,
 eigenes OUTDIR je Lauf -> kein gegenseitiges Ueberschreiben). Wiederaufnahme-sicher (answer-<i>.txt > 500 B
 -> SKIP). done.flag am Ende. Nur stdlib; Pfade via expanduser (NIE /c/... an Windows-Python).
 """
@@ -36,10 +36,17 @@ import subprocess
 import sys
 
 HOME = os.path.expanduser("~")
-OUT = os.path.join(HOME, ".research-swarm")
+# RESEARCH_SWARM_OUT ueberschreibbar, damit MEHRERE Swarm-Laeufe (z.B. Engine A und B zum Vergleich)
+# gleichzeitig laufen koennen, ohne sich die answer-<i>.txt gegenseitig zu ueberschreiben oder sich
+# beim Start-Cleanup die Ergebnisse wegzuraeumen. Default wie bisher.
+OUT = os.path.expanduser(os.environ.get("RESEARCH_SWARM_OUT", os.path.join(HOME, ".research-swarm")))
 MM = os.path.join(HOME, "proggs", "mm-research.py")
 OR = os.path.join(HOME, "proggs", "or-research.py")
 ENGINE_CAP = {"A": 2, "B": 7}   # harte Obergrenze je Engine (der Schutz)
+# Zeitdeckel je Researcher. 400 s reichen fuer B (Snippets), aber NICHT immer fuer A mit
+# MM_TAVILY=always: Firecrawl-Vollseiten + 20 Tavily-Volltexte + Auswertung koennen laenger
+# brauchen (real getroffen 09.09.2026: 2 von 7 Researchern liefen leer in den Deckel).
+TIMEOUT = int(os.environ.get("RESEARCH_SWARM_TIMEOUT", "400"))
 
 
 def run(engine, model, it):
@@ -60,7 +67,7 @@ def run(engine, model, it):
     try:
         with open(ans, "w", encoding="utf-8", newline="\n") as fo, \
              open(log, "w", encoding="utf-8", newline="\n") as fe:
-            rc = subprocess.run(cmd, stdout=fo, stderr=fe, env=env, timeout=400).returncode
+            rc = subprocess.run(cmd, stdout=fo, stderr=fe, env=env, timeout=TIMEOUT).returncode
         return f"[{n}] rc={rc} bytes={os.path.getsize(ans)}"
     except Exception as e:
         return f"[{n}] ERR {type(e).__name__}: {str(e)[:120]}"

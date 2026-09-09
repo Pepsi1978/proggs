@@ -223,9 +223,15 @@ def main():
 
     # 2) DeepSeek V4 Flash (reasoning high) — Quellen quellentreu auswerten
     print(f"[2/2] {model} @ {PROVIDER or 'freies Routing'} (effort {EFFORT}) wertet aus...", file=sys.stderr)
+    # Gemessen 2026-09-09: "Nenne pro Aussage die Quelle" liess das Modell "(Quelle 3)" schreiben — einen
+    # Verweis in die nummerierte Liste, die nur im Prompt steht. Die Antwort war dann OHNE sources.json
+    # nicht ueberpruefbar (0 URLs in allen 7 Antworten eines Testlaufs, waehrend die Engines B und C
+    # ~37-39 URLs je Antwort lieferten). Siehe bugs/agents/multi-agent-interop.md §9.
     prompt = ("Du bist ein Recherche-Auswerter. Beantworte AUSSCHLIESSLICH auf Basis der folgenden "
               "Quellen die Frage. Wenn etwas NICHT in den Quellen steht oder widerspruechlich ist, "
-              "sage das ausdruecklich — erfinde nichts. Nenne pro Aussage die Quelle.\n\n"
+              "sage das ausdruecklich — erfinde nichts. Nenne pro Aussage die Quelle MIT VOLLER URL "
+              "(nicht nur die Quellennummer) und dahinter die Herkunft [Firecrawl] bzw. [Tavily], "
+              "damit die Antwort ohne die Quellenliste nachpruefbar bleibt.\n\n"
               f"FRAGE: {query}\n\n=== QUELLEN ===\n{sources}")
     body = {"model": model, "max_tokens": 30000,
             "reasoning": {"effort": EFFORT},   # max Thinking auf /chat/completions
