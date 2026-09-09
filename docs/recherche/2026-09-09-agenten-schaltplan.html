@@ -1,0 +1,1611 @@
+<title>Agenten-Schaltplan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+
+<style>
+/* ============================================================
+   Agenten-Schaltplan — Ingenieurs-Handbuch-Ästhetik
+   Tokens vollständig im blanken :root, danach nur Umdefinition.
+   ============================================================ */
+:root {
+  --ground:      #EDEFF1;
+  --surface:     #FBFCFC;
+  --surface-2:   #E3E7EA;
+  --ink:         #151A21;
+  --ink-soft:    #56616F;
+  --ink-faint:   #7C8794;
+  --rule:        #CFD6DC;
+  --rule-strong: #A8B3BD;
+  --signal:      #0F766E;
+  --signal-bg:   #D6EAE7;
+  --amber:       #A84A08;
+  --amber-bg:    #F2E3D4;
+  --shadow:      0 1px 2px rgba(21,26,33,.06), 0 8px 24px -12px rgba(21,26,33,.18);
+
+  --f-display: "Bitter", Georgia, "Times New Roman", serif;
+  --f-body:    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --f-mono:    "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --col:   min(68ch, 100%);
+  --wide:  min(100ch, 100%);
+  --gut:   clamp(1.25rem, 4vw, 3rem);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:      #0D1116;
+    --surface:     #141A21;
+    --surface-2:   #1D242C;
+    --ink:         #E2E7EC;
+    --ink-soft:    #9BA7B4;
+    --ink-faint:   #78848F;
+    --rule:        #2A333C;
+    --rule-strong: #3E4A56;
+    --signal:      #4FD1C5;
+    --signal-bg:   #123A38;
+    --amber:       #E0A052;
+    --amber-bg:    #3A2A17;
+    --shadow:      0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground:      #0D1116;
+  --surface:     #141A21;
+  --surface-2:   #1D242C;
+  --ink:         #E2E7EC;
+  --ink-soft:    #9BA7B4;
+  --ink-faint:   #78848F;
+  --rule:        #2A333C;
+  --rule-strong: #3E4A56;
+  --signal:      #4FD1C5;
+  --signal-bg:   #123A38;
+  --amber:       #E0A052;
+  --amber-bg:    #3A2A17;
+  --shadow:      0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.68;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Grundtypografie ---------- */
+h1, h2, h3, h4 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.22; }
+p  { margin: 0 0 1.1em; }
+a  { color: var(--signal); text-underline-offset: .18em; text-decoration-thickness: 1px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 2px; }
+strong { font-weight: 600; }
+code, .mono { font-family: var(--f-mono); font-size: .9em; }
+:is(p, li) code {
+  background: var(--surface-2); padding: .08em .34em; border-radius: 3px;
+  border: 1px solid var(--rule); font-size: .86em;
+}
+
+/* ---------- Kopf ---------- */
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  background: var(--surface);
+  padding: clamp(2.5rem, 7vw, 5rem) var(--gut) clamp(2rem, 5vw, 3.5rem);
+}
+.masthead__in { max-width: 100ch; margin: 0 auto; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: .72rem; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--signal); margin: 0 0 1.1rem;
+  display: flex; flex-wrap: wrap; gap: .5rem 1.1rem; align-items: baseline;
+}
+.eyebrow span::before { content: "· "; color: var(--rule-strong); }
+.eyebrow span:first-child::before { content: none; }
+h1 {
+  font-size: clamp(2.4rem, 7vw, 4.25rem); font-weight: 700; letter-spacing: -.02em;
+  margin-bottom: .55rem;
+}
+.standfirst {
+  font-size: clamp(1.05rem, 2.2vw, 1.32rem); color: var(--ink-soft);
+  max-width: 62ch; line-height: 1.55; margin-bottom: 2rem;
+}
+.provenance {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+  border-radius: 4px; overflow: hidden;
+}
+.provenance div { background: var(--surface); padding: .85rem 1.1rem; }
+.provenance dt {
+  font-family: var(--f-mono); font-size: .68rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: .28rem;
+}
+.provenance dd { margin: 0; font-size: .95rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* ---------- Gerüst ---------- */
+.shell {
+  max-width: 1240px; margin: 0 auto; padding: 0 var(--gut) 6rem;
+  display: grid; grid-template-columns: 1fr; gap: 0;
+}
+@media (min-width: 1080px) {
+  .shell { grid-template-columns: 15rem 1fr; gap: 3.5rem; padding-top: 3rem; }
+}
+
+/* ---------- Inhaltsverzeichnis ---------- */
+.toc { display: none; }
+@media (min-width: 1080px) {
+  .toc {
+    display: block; position: sticky; top: 2rem; align-self: start;
+    max-height: calc(100vh - 4rem); overflow-y: auto; padding-right: .5rem;
+  }
+  .toc h2 {
+    font-family: var(--f-mono); font-size: .68rem; font-weight: 600; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--ink-faint); margin-bottom: .9rem;
+  }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .1rem; }
+  .toc a {
+    display: grid; grid-template-columns: 2rem 1fr; gap: .15rem;
+    padding: .34rem 0; color: var(--ink-soft); text-decoration: none;
+    font-size: .875rem; line-height: 1.35; border-top: 1px solid transparent;
+  }
+  .toc a:hover { color: var(--signal); }
+  .toc .num { font-family: var(--f-mono); font-size: .72rem; color: var(--ink-faint); padding-top: .12em; }
+}
+
+/* ---------- Abschnitte ---------- */
+main { min-width: 0; }
+section { padding-top: clamp(3rem, 6vw, 4.5rem); scroll-margin-top: 1.5rem; }
+section > * { max-width: var(--col); }
+section > figure, section > .wide, section > .tablewrap { max-width: var(--wide); }
+
+.sec-head { margin-bottom: 1.6rem; max-width: var(--wide); }
+.sec-num {
+  font-family: var(--f-mono); font-size: .72rem; letter-spacing: .13em; color: var(--signal);
+  display: block; margin-bottom: .5rem;
+}
+h2 { font-size: clamp(1.7rem, 3.4vw, 2.35rem); font-weight: 600; letter-spacing: -.015em; }
+.sec-head p {
+  color: var(--ink-soft); font-size: 1.05rem; margin: .7rem 0 0; max-width: 60ch;
+}
+h3 {
+  font-size: 1.2rem; font-weight: 600; margin: 2.4rem 0 .7rem;
+  padding-top: 1.1rem; border-top: 1px solid var(--rule);
+}
+h4 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 .45rem; font-family: var(--f-body); }
+
+ul, ol { padding-left: 1.25rem; margin: 0 0 1.2rem; }
+li { margin-bottom: .45rem; }
+li::marker { color: var(--ink-faint); }
+
+/* ---------- Abbildungen ---------- */
+figure {
+  margin: 2.2rem 0; background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 5px; padding: 1.5rem 1.5rem 1.1rem; box-shadow: var(--shadow);
+  overflow-x: auto;
+}
+figure svg { display: block; width: 100%; max-width: 100%; height: auto; color: var(--ink); }
+figcaption {
+  margin-top: 1.1rem; padding-top: .85rem; border-top: 1px solid var(--rule);
+  font-size: .875rem; color: var(--ink-soft); line-height: 1.55;
+}
+figcaption b { color: var(--ink); font-weight: 600; }
+
+/* ---------- Merksatz ---------- */
+.rule-box {
+  margin: 2rem 0; padding: 1.3rem 1.5rem; border-left: 3px solid var(--signal);
+  background: var(--signal-bg); border-radius: 0 4px 4px 0;
+}
+.rule-box p { margin: 0; }
+.rule-box .lede {
+  font-family: var(--f-display); font-size: 1.22rem; font-weight: 600;
+  line-height: 1.35; margin-bottom: .5rem; letter-spacing: -.01em;
+}
+.rule-box .why { font-size: .93rem; color: var(--ink-soft); }
+
+.warn-box {
+  margin: 2rem 0; padding: 1.3rem 1.5rem; border-left: 3px solid var(--amber);
+  background: var(--amber-bg); border-radius: 0 4px 4px 0;
+}
+.warn-box p { margin: 0; }
+.warn-box .lede { font-weight: 600; margin-bottom: .4rem; }
+.warn-box .why { font-size: .93rem; color: var(--ink-soft); }
+
+/* ---------- Zitat ---------- */
+blockquote {
+  margin: 1.6rem 0; padding: 0 0 0 1.2rem; border-left: 2px solid var(--rule-strong);
+  font-family: var(--f-display); font-style: italic; font-size: 1.03rem;
+  color: var(--ink-soft); line-height: 1.55;
+}
+blockquote cite {
+  display: block; margin-top: .5rem; font-family: var(--f-mono); font-style: normal;
+  font-size: .74rem; letter-spacing: .06em; color: var(--ink-faint);
+}
+
+/* ---------- Tabellen ---------- */
+.tablewrap { overflow-x: auto; margin: 1.8rem 0; border: 1px solid var(--rule); border-radius: 5px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+caption {
+  caption-side: bottom; padding: .8rem 1.1rem; font-size: .84rem; color: var(--ink-soft);
+  text-align: left; border-top: 1px solid var(--rule);
+}
+th, td { padding: .62rem .95rem; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th {
+  font-family: var(--f-mono); font-size: .7rem; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 600; background: var(--surface-2);
+  border-bottom: 1px solid var(--rule-strong); white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+td.num, th.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.win { color: var(--signal); font-weight: 600; }
+td.bad { color: var(--amber); font-weight: 600; }
+tbody th { font-weight: 500; }
+
+/* ---------- Zahlenfelder ---------- */
+.figures {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 1px; background: var(--rule); border: 1px solid var(--rule);
+  border-radius: 5px; overflow: hidden; margin: 1.8rem 0; max-width: var(--wide);
+}
+.figures div { background: var(--surface); padding: 1rem 1.1rem; }
+.figures .v {
+  font-family: var(--f-display); font-size: 1.85rem; font-weight: 700;
+  letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.figures .v.sig { color: var(--signal); }
+.figures .v.amb { color: var(--amber); }
+.figures .k { font-size: .82rem; color: var(--ink-soft); margin-top: .3rem; line-height: 1.4; }
+
+/* ---------- Definitionsliste ---------- */
+.deflist { margin: 1.5rem 0; display: flex; flex-direction: column; gap: 1rem; }
+.deflist > div { display: grid; grid-template-columns: 1fr; gap: .2rem; }
+@media (min-width: 640px) { .deflist > div { grid-template-columns: 11rem 1fr; gap: 1.2rem; } }
+.deflist dt { font-weight: 600; font-size: .95rem; }
+.deflist dd { margin: 0; color: var(--ink-soft); font-size: .95rem; }
+
+/* ---------- Quellenliste ---------- */
+.sources { font-size: .875rem; column-gap: 2.5rem; }
+@media (min-width: 720px) { .sources { columns: 2; } }
+.sources li { break-inside: avoid; margin-bottom: .7rem; color: var(--ink-soft); }
+.sources a { word-break: break-word; }
+
+/* ---------- Fuß ---------- */
+footer {
+  border-top: 1px solid var(--rule); margin-top: 4rem; padding: 2.5rem var(--gut) 3.5rem;
+  background: var(--surface);
+}
+footer .in { max-width: 1240px; margin: 0 auto; color: var(--ink-soft); font-size: .875rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
+
+<header class="masthead">
+  <div class="masthead__in">
+    <p class="eyebrow">
+      <span>Technisches Handbuch</span><span>Stand 09.09.2026</span><span>21 Researcher · 3 Engines</span>
+    </p>
+    <h1>Agenten-Schaltplan</h1>
+    <p class="standfirst">
+      Wie ein KI-Agent innen aussieht, was passiert, wenn man mehrere davon zusammenschaltet,
+      und warum die Verbindung zwischen ihnen 2026 der teuerste und unsicherste Teil des Systems ist.
+    </p>
+    <dl class="provenance">
+      <div><dt>Unterthemen</dt><dd>7, wortgleich an alle Engines</dd></div>
+      <div><dt>Researcher</dt><dd>21 parallel</dd></div>
+      <div><dt>Ausgewertete Domains</dt><dd>141</dd></div>
+      <div><dt>Primärquellen-Anteil</dt><dd>5 % / 11 % / 44 %</dd></div>
+    </dl>
+  </div>
+</header>
+
+<div class="shell">
+
+  <nav class="toc" aria-label="Inhalt">
+    <h2>Inhalt</h2>
+    <ol>
+      <li><a href="#s1"><span class="num">01</span><span>Was ein Agent ist</span></a></li>
+      <li><a href="#s2"><span class="num">02</span><span>Der Loop im Detail</span></a></li>
+      <li><a href="#s3"><span class="num">03</span><span>Einen Agenten bauen</span></a></li>
+      <li><a href="#s4"><span class="num">04</span><span>Mehrere Agenten</span></a></li>
+      <li><a href="#s5"><span class="num">05</span><span>Schleifen und Selbstkritik</span></a></li>
+      <li><a href="#s6"><span class="num">06</span><span>Schwärme</span></a></li>
+      <li><a href="#s7"><span class="num">07</span><span>Über Modellgrenzen hinweg</span></a></li>
+      <li><a href="#s8"><span class="num">08</span><span>Die Messung</span></a></li>
+      <li><a href="#s9"><span class="num">09</span><span>Was daraus folgt</span></a></li>
+      <li><a href="#q"><span class="num">—</span><span>Quellen</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+  <!-- ================= 01 ================= -->
+  <section id="s1">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Was ein Agent ist</h2>
+      <p>Anthropic, OpenAI und Google definieren es strukturell gleich — die Begriffe unterscheiden sich, die Mechanik nicht.</p>
+    </div>
+
+    <p>
+      Ein KI-Agent ist ein Modell, das <strong>selbst</strong> entscheidet, welche Werkzeuge es einsetzt,
+      und dabei in einer Schleife läuft, bis ein Ziel oder eine Abbruchbedingung erreicht ist.
+      Das klingt harmlos, ist aber die ganze Unterscheidung: nicht der Code bestimmt den Weg, sondern das Modell.
+    </p>
+
+    <blockquote>
+      Workflows are systems where LLMs and tools are orchestrated through predefined code paths.
+      Agents, on the other hand, are systems where LLMs dynamically direct their own processes and tool usage.
+      <cite>Anthropic — Building Effective Agents</cite>
+    </blockquote>
+
+    <figure>
+      <svg viewBox="0 0 800 300" role="img" aria-label="Drei Systeme im Vergleich: beim Chatbot antwortet das Modell nur; beim Workflow bestimmt fest verdrahteter Code den Pfad durch die Schritte; beim Agenten wählt das Modell selbst Werkzeuge und wiederholt die Schleife.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,1 9,5 0,9" fill="currentColor"/>
+          </marker>
+          <marker id="ar-sig" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,1 9,5 0,9" fill="#0F766E"/>
+          </marker>
+        </defs>
+
+        <!-- Lane 1: Chatbot -->
+        <text x="0" y="16" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".55" letter-spacing="1">CHATBOT</text>
+        <rect x="0" y="28" width="96" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <text x="48" y="52" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">Mensch</text>
+        <line x1="100" y1="40" x2="188" y2="40" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"/>
+        <line x1="188" y1="56" x2="100" y2="56" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"/>
+        <rect x="192" y="28" width="96" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <text x="240" y="52" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">Modell</text>
+        <text x="308" y="46" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".62">kein Werkzeug, keine Wirkung nach außen</text>
+        <text x="308" y="62" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E">Pfad: der Mensch, Zug um Zug</text>
+
+        <!-- Lane 2: Workflow -->
+        <text x="0" y="116" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".55" letter-spacing="1">WORKFLOW</text>
+        <rect x="0" y="128" width="76" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <text x="38" y="152" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">Schritt 1</text>
+        <line x1="80" y1="147" x2="106" y2="147" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"/>
+        <rect x="110" y="128" width="76" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <text x="148" y="152" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">Schritt 2</text>
+        <line x1="190" y1="147" x2="216" y2="147" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"/>
+        <rect x="220" y="128" width="76" height="38" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <text x="258" y="152" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">Schritt 3</text>
+        <path d="M0 174 L296 174" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".45"/>
+        <text x="0" y="190" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" opacity=".62">Reihenfolge steht im Code</text>
+        <text x="308" y="146" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".62">Modell arbeitet in den Kästen — aber nicht am Pfad</text>
+        <text x="308" y="162" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E">Pfad: der Code</text>
+
+        <!-- Lane 3: Agent -->
+        <text x="0" y="222" font-family="IBM Plex Mono, monospace" font-size="11" fill="currentColor" opacity=".55" letter-spacing="1">AGENT</text>
+        <rect x="0" y="234" width="96" height="44" rx="3" fill="#0F766E" stroke="#0F766E" stroke-width="1.2"/>
+        <text x="48" y="261" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="#FFFFFF" font-weight="600">Modell</text>
+        <line x1="100" y1="246" x2="168" y2="246" stroke="#0F766E" stroke-width="1.4" marker-end="url(#ar-sig)"/>
+        <line x1="168" y1="266" x2="100" y2="266" stroke="#0F766E" stroke-width="1.4" marker-end="url(#ar-sig)"/>
+        <text x="134" y="240" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="#0F766E">wählt</text>
+        <text x="134" y="282" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="#0F766E">Ergebnis</text>
+        <rect x="172" y="228" width="58" height="24" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <text x="201" y="244" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor">Suche</text>
+        <rect x="172" y="256" width="58" height="24" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <text x="201" y="272" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor">Datei</text>
+        <rect x="238" y="242" width="58" height="24" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <text x="267" y="258" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor">Shell</text>
+        <text x="308" y="252" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".62">Modell wählt Werkzeug und Reihenfolge selbst, Runde für Runde</text>
+        <text x="308" y="268" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E">Pfad: das Modell</text>
+      </svg>
+      <figcaption>
+        <b>Die Trennlinie ist die Kontrolle über den Pfad.</b> Ein Chatbot antwortet und wartet.
+        Ein Workflow handelt, aber auf einer im Code festgelegten Strecke. Ein Agent entscheidet
+        selbst, welches Werkzeug als Nächstes dran ist — und genau daraus entstehen alle späteren
+        Probleme dieses Handbuchs.
+      </figcaption>
+    </figure>
+
+    <h3>Dieselben vier Bausteine, drei Vokabulare</h3>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Baustein</th><th>Anthropic</th><th>OpenAI</th><th>Google</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Denkeinheit</th><td>augmented LLM</td><td>Model</td><td>Model — „Brain"</td></tr>
+          <tr><th scope="row">Werkzeuge</th><td>Tools</td><td>Tools</td><td>Tools — „Hands"<br><span class="mono" style="opacity:.7">Extensions · Functions · Data Stores</span></td></tr>
+          <tr><th scope="row">Steuerung</th><td>Retrieval + Memory</td><td>Instructions, Guardrails, Handoffs</td><td>Orchestration Layer — „Nervous System"</td></tr>
+          <tr><th scope="row">Abbruch</th><td>stopping conditions</td><td>finale Antwort · Termination-Tool · Timeout</td><td>Final Answer / stopping point</td></tr>
+        </tbody>
+        <caption>Die Begriffe wandern, die Struktur nicht. Wer bei einem Anbieter versteht, wie der Loop läuft, versteht ihn überall.</caption>
+      </table>
+    </div>
+
+    <div class="rule-box">
+      <p class="lede">Eine Schleife ohne Werkzeuge ist nur ein Chatbot in einem <code>while</code>.</p>
+      <p class="why">„Tools are the primary building blocks of execution for your agent." — Werkzeuge sind nicht das Zubehör des Agenten, sie sind sein einziger Weg, überhaupt etwas zu bewirken.</p>
+    </div>
+  </section>
+
+  <!-- ================= 02 ================= -->
+  <section id="s2">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Der Loop im Detail</h2>
+      <p>Fünf Phasen und ein Ausgang. Der Ausgang ist der Teil, den fast alle falsch bauen.</p>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 800 400" role="img" aria-label="Der Agent-Loop als Ring aus fünf Phasen — Kontext holen, denken, handeln, beobachten, prüfen — mit einem Ausgang zur Abbruchbedingung, die außerhalb des Modells im Code liegt.">
+        <defs>
+          <marker id="ring-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,1 9,5 0,9" fill="#0F766E"/>
+          </marker>
+          <marker id="exit-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <polygon points="0,1 9,5 0,9" fill="#A84A08"/>
+          </marker>
+        </defs>
+
+        <!-- Ring arrows: 5 arcs around a circle centred 250,200 r=130 -->
+        <g fill="none" stroke="#0F766E" stroke-width="1.6">
+          <path d="M 292 84 A 130 130 0 0 1 372 178" marker-end="url(#ring-ar)"/>
+          <path d="M 376 226 A 130 130 0 0 1 297 312" marker-end="url(#ring-ar)"/>
+          <path d="M 250 330 A 130 130 0 0 1 148 305" marker-end="url(#ring-ar)"/>
+          <path d="M 124 288 A 130 130 0 0 1 120 130" marker-end="url(#ring-ar)"/>
+          <path d="M 140 100 A 130 130 0 0 1 206 74" marker-end="url(#ring-ar)"/>
+        </g>
+
+        <!-- Nodes -->
+        <g font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor" text-anchor="middle">
+          <rect x="192" y="46" width="112" height="34" rx="17" fill="var(--surface)" stroke="currentColor" stroke-width="1.3"/>
+          <text x="248" y="68">Kontext holen</text>
+
+          <rect x="352" y="176" width="96" height="34" rx="17" fill="var(--surface)" stroke="currentColor" stroke-width="1.3"/>
+          <text x="400" y="198">Denken</text>
+
+          <rect x="248" y="308" width="104" height="34" rx="17" fill="#0F766E" stroke="#0F766E" stroke-width="1.3"/>
+          <text x="300" y="330" fill="#FFFFFF" font-weight="600">Handeln</text>
+
+          <rect x="76" y="288" width="112" height="34" rx="17" fill="var(--surface)" stroke="currentColor" stroke-width="1.3"/>
+          <text x="132" y="310">Beobachten</text>
+
+          <rect x="60" y="112" width="88" height="34" rx="17" fill="var(--surface)" stroke="currentColor" stroke-width="1.3"/>
+          <text x="104" y="134">Prüfen</text>
+        </g>
+
+        <!-- centre label -->
+        <text x="248" y="192" text-anchor="middle" font-family="Bitter, serif" font-size="15" font-weight="600" fill="currentColor" opacity=".38">Das Modell</text>
+        <text x="248" y="212" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity=".38">steuert diese Runde</text>
+
+        <!-- Exit path -->
+        <line x1="352" y1="325" x2="470" y2="325" stroke="#A84A08" stroke-width="1.8" marker-end="url(#exit-ar)"/>
+        <text x="411" y="316" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#A84A08">Abbruch?</text>
+        <rect x="474" y="300" width="182" height="50" rx="3" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.5"/>
+        <text x="565" y="320" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor" font-weight="600">Abbruchbedingung</text>
+        <text x="565" y="338" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#A84A08">liegt im CODE, nicht im Modell</text>
+
+        <!-- Right-hand annotation -->
+        <g font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">
+          <line x1="474" y1="60" x2="474" y2="268" stroke="currentColor" stroke-width="1" opacity=".28"/>
+          <text x="490" y="66" font-family="IBM Plex Mono, monospace" font-size="10" letter-spacing="1" opacity=".55">WAS IN JEDER PHASE ZÄHLT</text>
+          <text x="490" y="96" font-weight="600">Kontext holen</text>
+          <text x="490" y="114" opacity=".68" font-size="11.5">sparsam laden — grep statt Volltext</text>
+          <text x="490" y="140" font-weight="600">Handeln</text>
+          <text x="490" y="158" opacity=".68" font-size="11.5">Werkzeug ist der einzige Weg nach außen</text>
+          <text x="490" y="184" font-weight="600">Beobachten</text>
+          <text x="490" y="202" opacity=".68" font-size="11.5">echtes Ergebnis zurück — „ground truth"</text>
+          <text x="490" y="228" font-weight="600">Prüfen</text>
+          <text x="490" y="246" opacity=".68" font-size="11.5">Regel, Screenshot oder ein zweites Modell</text>
+        </g>
+      </svg>
+      <figcaption>
+        <b>Der Ring gehört dem Modell, der Ausgang nicht.</b> Innerhalb einer Runde entscheidet das
+        Modell frei. Ob es eine weitere Runde gibt, darf es nicht selbst entscheiden — dazu
+        <a href="#s5">Abschnitt 05</a>. Ohne die Rückgabe echter Ergebnisse in der Beobachtungsphase
+        bewertet der Agent seinen eigenen Plan statt der Wirklichkeit.
+      </figcaption>
+    </figure>
+
+    <div class="rule-box">
+      <p class="lede">Nach jedem Werkzeugaufruf gehört das echte Ergebnis zurück in den Kontext.</p>
+      <p class="why">Anthropic nennt das „ground truth from the environment at each step". Fehlt es, hält der Agent seinen eigenen Plan für den Fortschritt — der häufigste Grund für Agenten, die zufrieden Unsinn melden.</p>
+    </div>
+  </section>
+
+  <!-- ================= 03 ================= -->
+  <section id="s3">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>Einen Agenten bauen</h2>
+      <p>Bevor man über mehrere nachdenkt: der größte Hebel sitzt in den Werkzeugbeschreibungen.</p>
+    </div>
+
+    <h3>Werkzeug-Design ist Prompt-Design</h3>
+    <p>
+      Das ist der wichtigste Einzelbefund der ganzen Recherche. Tool-Namen, Beschreibungen und
+      Parameter sind <strong>Teil des Prompts</strong>, nicht bloß API-Spezifikation. Anthropic hat
+      gemessen, dass kleine Verfeinerungen an Werkzeugbeschreibungen Claude Sonnet 3.5 auf den
+      damaligen SWE-bench-Verified-Bestwert gehoben haben — bei drastisch reduzierter Fehlerrate.
+    </p>
+
+    <dl class="deflist">
+      <div>
+        <dt>Namensräume</dt>
+        <dd>Bei vielen Werkzeugen gruppieren: <code>asana_search</code>, <code>jira_search</code>. Präfix- gegen Suffix-Schema hat messbare Effekte auf die Trefferquote.</dd>
+      </div>
+      <div>
+        <dt>Sprechende Parameter</dt>
+        <dd><code>user_id</code> statt <code>user</code>. Semantische Bezeichner statt roher UUIDs verbessern die Trefferquote deutlich, weil sie Halluzinationen reduzieren.</dd>
+      </div>
+      <div>
+        <dt>Beschreibungen</dt>
+        <dd>„Think of how you would describe your tool to a new hire on your team." Implizites Wissen muss explizit werden.</dd>
+      </div>
+      <div>
+        <dt>Fehlermeldungen</dt>
+        <dd>Sind Lernsignal, kein Protokoll. Statt eines Codes den nächsten sinnvollen Schritt nennen — die Meldung soll den Agenten zur besseren Strategie führen.</dd>
+      </div>
+      <div>
+        <dt>Sparsamkeit</dt>
+        <dd>Paginierung, Kürzung, Filter einbauen, damit der Agent nicht in Rohdaten ertrinkt.</dd>
+      </div>
+    </dl>
+
+    <div class="warn-box">
+      <p class="lede">Der Test für überladene Werkzeugsätze</p>
+      <p class="why">„If a human engineer can't definitively say which tool should be used in a given situation, an AI agent can't be expected to do better." Überlappende Werkzeuge sind laut Anthropic der häufigste Konstruktionsfehler überhaupt.</p>
+    </div>
+
+    <h3>Kontext ist eine Ressource, die sich abnutzt</h3>
+    <p>
+      „Context Rot": je voller das Fenster, desto schlechter der Abruf einzelner Fakten. Ursache ist
+      die quadratische Paarbeziehung der Transformer-Architektur — bei <span class="mono">n</span>
+      Tokens wachsen die Beziehungen mit <span class="mono">n²</span>, und Modelle, die auf kürzeren
+      Sequenzen trainiert wurden, verlieren an Präzision.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 800 216" role="img" aria-label="Vier Eingriffe gegen volle Kontextfenster, nach Härte gestaffelt: Tool-Ergebnisse löschen, kompaktieren, harter Reset, Auslagern an Subagenten.">
+        <defs>
+          <marker id="lad-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,1 9,5 0,9" fill="currentColor"/>
+          </marker>
+        </defs>
+        <line x1="16" y1="182" x2="784" y2="182" stroke="currentColor" stroke-width="1.2" opacity=".4" marker-end="url(#lad-ar)"/>
+        <text x="16" y="204" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" opacity=".55" letter-spacing="1">SANFT</text>
+        <text x="756" y="204" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" opacity=".55" letter-spacing="1">HART</text>
+
+        <g font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor">
+          <rect x="16" y="112" width="168" height="52" rx="3" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="30" y="134" font-weight="600">Tool-Ergebnisse löschen</text>
+          <text x="30" y="152" font-size="11" opacity=".66">nichts geht inhaltlich verloren</text>
+          <line x1="100" y1="164" x2="100" y2="180" stroke="currentColor" stroke-width="1" opacity=".4"/>
+
+          <rect x="204" y="92" width="168" height="72" rx="3" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="218" y="114" font-weight="600">Kompaktieren</text>
+          <text x="218" y="132" font-size="11" opacity=".66">Architektur, offene Bugs</text>
+          <text x="218" y="148" font-size="11" opacity=".66">behalten — Rohdaten weg</text>
+          <line x1="288" y1="164" x2="288" y2="180" stroke="currentColor" stroke-width="1" opacity=".4"/>
+
+          <rect x="392" y="72" width="168" height="92" rx="3" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.4"/>
+          <text x="406" y="94" font-weight="600">Harter Reset</text>
+          <text x="406" y="112" font-size="11" opacity=".78">nötig bei „context anxiety":</text>
+          <text x="406" y="128" font-size="11" opacity=".78">Modell bricht ab, weil es das</text>
+          <text x="406" y="144" font-size="11" opacity=".78">Limit für nah hält</text>
+          <line x1="476" y1="164" x2="476" y2="180" stroke="#A84A08" stroke-width="1" opacity=".6"/>
+
+          <rect x="580" y="52" width="188" height="112" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.4"/>
+          <text x="594" y="74" font-weight="600">An Subagenten auslagern</text>
+          <text x="594" y="92" font-size="11" opacity=".78">eigenes, sauberes Fenster</text>
+          <text x="594" y="108" font-size="11" opacity=".78">zurück kommen nur</text>
+          <text x="594" y="124" font-size="11" opacity=".78">1.000–2.000 Token</text>
+          <text x="594" y="146" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E">löst das Problem, statt es zu verwalten</text>
+          <line x1="674" y1="164" x2="674" y2="180" stroke="#0F766E" stroke-width="1" opacity=".6"/>
+        </g>
+        <text x="16" y="28" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity=".55" letter-spacing="1">GEGEN VOLLE KONTEXTFENSTER — VON SANFT NACH HART</text>
+      </svg>
+      <figcaption>
+        <b>Vier Eingriffe, nach Härte gestaffelt.</b> Der Reset war bei einer Modellgeneration nötig
+        und ließ sich bei der nächsten wieder entfernen — ein gutes Beispiel für die Regel, dass jede
+        Harness-Komponente eine Annahme darüber kodiert, was das Modell nicht allein kann. Mit
+        besseren Modellen darf man Teile wieder <em>abbauen</em>.
+      </figcaption>
+    </figure>
+
+    <h3>Wiederaufnahme braucht Dateien, nicht Kontext</h3>
+    <p>
+      Wenn ein Lauf abbricht, ist der Kontext weg. Anthropics Muster für Agenten, die über mehrere
+      Sitzungen laufen: eine Fortschrittsdatei mit protokollierten Aktionen, eine strukturierte
+      Feature-Liste mit Status (in einem Fall über 200 Einträge, je „passing" oder „failing") und
+      beschreibende Git-Commits. Der Zweck ist ausdrücklich formuliert: der Agent soll beim
+      Wiedereinstieg <em>nicht raten müssen</em>, was vorher geschah. Jede neue Sitzung beginnt mit
+      einem Funktionstest, um Fehler der Vorsitzung zu finden, bevor Neues gebaut wird.
+    </p>
+
+    <h3>Evaluation ist ein eigenes Handwerk</h3>
+    <p>
+      20 bis 50 Aufgaben aus echten Fehlschlägen reichen zum Start. Zwei Prinzipien tragen den Rest:
+    </p>
+    <ul>
+      <li><strong>„Grade what the agent produced, not the path it took."</strong> Den Weg nicht vorschreiben, sonst bestraft man kreative gültige Lösungen.</li>
+      <li><strong>Positive <em>und</em> negative Fälle</strong> testen — ob der Agent sucht, wenn er soll, und eben nicht sucht, wenn er nicht soll.</li>
+    </ul>
+    <p>
+      Wichtig ist die Unterscheidung zweier Metriken, die leicht verwechselt werden:
+      <span class="mono">pass@k</span> fragt, ob <em>mindestens einer</em> von k Versuchen gelingt.
+      <span class="mono">pass^k</span> fragt, ob <em>alle</em> gelingen. Bei 75 % Erfolg je Versuch
+      liegt <span class="mono">pass^3</span> nur noch bei rund 42 %. Wer Verlässlichkeit braucht,
+      misst die zweite Zahl.
+    </p>
+
+    <div class="warn-box">
+      <p class="lede">Zu strenge Prüfer erzeugen Phantomfehler</p>
+      <p class="why">Ein Modell erreichte auf einem Benchmark zunächst nur 42 %, weil „96.12" gegen erwartete „96.124991…" geprüft wurde. Nach Korrektur der Prüfung: 95 %. Wer Evals baut, muss die Fehlschläge stichprobenweise selbst lesen.</p>
+    </div>
+
+    <div class="figures">
+      <div><div class="v">20 Min</div><div class="k">Solo-Agent ohne Harness — 9 $, Kernfunktion kaputt</div></div>
+      <div><div class="v amb">6 Std</div><div class="k">Voller Harness, 3 Agenten — 200 $, funktioniert</div></div>
+      <div><div class="v sig">3:50 Std</div><div class="k">Vereinfachter Harness, neueres Modell — 124,70 $</div></div>
+    </div>
+    <p style="font-size:.9rem;color:var(--ink-soft);margin-top:-.6rem">
+      Dieselbe Aufgabe (eine Tetris-artige App bauen), drei Aufbauten. Die Zeile in der Mitte ist der
+      Preis dafür, dass es überhaupt funktioniert. Die Zeile darunter ist der Gewinn aus einem
+      besseren Modell bei <em>weniger</em> Gerüst.
+    </p>
+  </section>
+
+  <!-- ================= 04 ================= -->
+  <section id="s4">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>Mehrere Agenten</h2>
+      <p>Sechs Topologien, ein berühmter Streit — und eine Regel, die ihn auflöst.</p>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 800 430" role="img" aria-label="Sechs Multi-Agent-Topologien im Vergleich: Orchestrator-Worker, Hierarchie, Peer-to-Peer, Blackboard, Pipeline und Generator-Verifier.">
+        <defs>
+          <marker id="t-ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <polygon points="0,1.5 8.5,5 0,8.5" fill="currentColor"/>
+          </marker>
+          <marker id="t-ar-s" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <polygon points="0,1.5 8.5,5 0,8.5" fill="#0F766E"/>
+          </marker>
+        </defs>
+        <g font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" text-anchor="middle">
+
+          <!-- 1 Orchestrator-Worker -->
+          <text x="10" y="16" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E" letter-spacing=".8">ORCHESTRATOR — WORKER</text>
+          <circle cx="120" cy="52" r="17" fill="#0F766E" stroke="#0F766E"/>
+          <text x="120" y="56" fill="#FFFFFF" font-size="10" font-weight="600">Lead</text>
+          <line x1="108" y1="66" x2="52" y2="98" stroke="currentColor" stroke-width="1.1" marker-end="url(#t-ar)"/>
+          <line x1="120" y1="70" x2="120" y2="96" stroke="currentColor" stroke-width="1.1" marker-end="url(#t-ar)"/>
+          <line x1="132" y1="66" x2="188" y2="98" stroke="currentColor" stroke-width="1.1" marker-end="url(#t-ar)"/>
+          <circle cx="46" cy="108" r="13" fill="none" stroke="currentColor" stroke-width="1.1"/>
+          <circle cx="120" cy="108" r="13" fill="none" stroke="currentColor" stroke-width="1.1"/>
+          <circle cx="194" cy="108" r="13" fill="none" stroke="currentColor" stroke-width="1.1"/>
+          <text x="120" y="142" font-size="10.5" opacity=".66">Produktionsstandard · Lead ist Flaschenhals</text>
+
+          <!-- 2 Hierarchie -->
+          <text x="290" y="16" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity=".7" letter-spacing=".8">HIERARCHIE</text>
+          <circle cx="400" cy="42" r="14" fill="none" stroke="currentColor" stroke-width="1.3"/>
+          <line x1="390" y1="52" x2="358" y2="72" stroke="currentColor" stroke-width="1.1" marker-end="url(#t-ar)"/>
+          <line x1="410" y1="52" x2="442" y2="72" stroke="currentColor" stroke-width="1.1" marker-end="url(#t-ar)"/>
+          <circle cx="352" cy="82" r="12" fill="none" stroke="currentColor" stroke-width="1.1"/>
+          <circle cx="448" cy="82" r="12" fill="none" stroke="currentColor" stroke-width="1.1"/>
+          <line x1="344" y1="92" x2="326" y2="106" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <line x1="360" y1="92" x2="378" y2="106" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <line x1="440" y1="92" x2="422" y2="106" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <line x1="456" y1="92" x2="474" y2="106" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <circle cx="322" cy="114" r="9" fill="none" stroke="currentColor" stroke-width="1"/>
+          <circle cx="382" cy="114" r="9" fill="none" stroke="currentColor" stroke-width="1"/>
+          <circle cx="418" cy="114" r="9" fill="none" stroke="currentColor" stroke-width="1"/>
+          <circle cx="478" cy="114" r="9" fill="none" stroke="currentColor" stroke-width="1"/>
+          <text x="400" y="142" font-size="10.5" opacity=".66">skaliert · aber Verzögerung je Ebene</text>
+
+          <!-- 3 Peer-to-Peer -->
+          <text x="570" y="16" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity=".7" letter-spacing=".8">PEER-TO-PEER / SWARM</text>
+          <circle cx="640" cy="48" r="13" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="700" cy="90" r="13" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="676" cy="122" r="13" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="604" cy="122" r="13" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="580" cy="90" r="13" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M651 56 L690 81" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <path d="M698 103 L686 110" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <path d="M663 124 L617 124" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <path d="M594 111 L584 102" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <path d="M588 79 L628 55" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <text x="640" y="142" font-size="10.5" opacity=".66">weniger Umwege · schwer zu debuggen</text>
+
+          <!-- 4 Blackboard -->
+          <text x="10" y="196" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity=".7" letter-spacing=".8">BLACKBOARD</text>
+          <rect x="60" y="228" width="120" height="34" rx="3" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.3"/>
+          <text x="120" y="250" font-size="11">gemeinsamer Speicher</text>
+          <circle cx="46" cy="290" r="12" fill="none" stroke="currentColor" stroke-width="1.1"/>
+          <circle cx="120" cy="298" r="12" fill="none" stroke="currentColor" stroke-width="1.1"/>
+          <circle cx="194" cy="290" r="12" fill="none" stroke="currentColor" stroke-width="1.1"/>
+          <line x1="52" y1="278" x2="76" y2="264" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <line x1="76" y1="272" x2="52" y2="282" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)" opacity=".5"/>
+          <line x1="120" y1="286" x2="120" y2="266" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <line x1="188" y1="278" x2="164" y2="264" stroke="currentColor" stroke-width="1" marker-end="url(#t-ar)"/>
+          <text x="120" y="330" font-size="10.5" opacity=".66">überlebt Ausfälle · dünne Beleglage</text>
+
+          <!-- 5 Pipeline -->
+          <text x="290" y="196" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity=".7" letter-spacing=".8">PIPELINE</text>
+          <circle cx="318" cy="262" r="14" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <line x1="334" y1="262" x2="372" y2="262" stroke="currentColor" stroke-width="1.1" marker-end="url(#t-ar)"/>
+          <circle cx="388" cy="262" r="14" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <line x1="404" y1="262" x2="442" y2="262" stroke="currentColor" stroke-width="1.1" marker-end="url(#t-ar)"/>
+          <circle cx="458" cy="262" r="14" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <text x="400" y="330" font-size="10.5" opacity=".66">geordnet · keine Parallelität</text>
+
+          <!-- 6 Generator-Verifier -->
+          <text x="570" y="196" text-anchor="start" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E" letter-spacing=".8">GENERATOR — VERIFIER</text>
+          <rect x="574" y="238" width="76" height="34" rx="3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+          <text x="612" y="259" font-size="11">baut</text>
+          <line x1="654" y1="255" x2="686" y2="255" stroke="#0F766E" stroke-width="1.4" marker-end="url(#t-ar-s)"/>
+          <rect x="690" y="238" width="86" height="34" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.4"/>
+          <text x="733" y="259" font-size="11" font-weight="600">prüft</text>
+          <path d="M733 276 L733 292 L612 292 L612 276" fill="none" stroke="#0F766E" stroke-width="1.2" marker-end="url(#t-ar-s)"/>
+          <text x="672" y="308" font-size="10" fill="#0F766E" font-family="IBM Plex Mono, monospace">konkreter Fehler zurück</text>
+          <text x="675" y="330" font-size="10.5" opacity=".66">Prüfer OHNE den Kontext des Bauers</text>
+        </g>
+        <line x1="10" y1="168" x2="790" y2="168" stroke="currentColor" stroke-width="1" opacity=".18"/>
+        <line x1="10" y1="352" x2="790" y2="352" stroke="currentColor" stroke-width="1" opacity=".18"/>
+        <text x="10" y="376" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" opacity=".55" letter-spacing="1">ES GIBT KEINE ANERKANNTE STANDARD-TAXONOMIE — DIE BENENNUNGEN SCHWANKEN JE QUELLE</text>
+        <text x="10" y="398" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity=".68">Der Generator-Verifier ist der einzige, der ohne Parallelität auskommt — und der am besten belegte Gewinn.</text>
+      </svg>
+      <figcaption>
+        <b>Sechs Muster, ein wiederkehrendes Motiv.</b> Wo ein Agent schreibt und ein zweiter prüft,
+        ist der Gewinn gut belegt. Wo mehrere gleichzeitig am selben Artefakt <em>bauen</em>, wird es
+        fragil — und zwar aus einem Grund, der nichts mit der Qualität der Modelle zu tun hat.
+      </figcaption>
+    </figure>
+
+    <h3>Der Streit, den alle zitieren</h3>
+    <p>
+      Zwei prominente Positionen scheinen sich frontal zu widersprechen. Anthropic zeigt für sein
+      Orchestrator-Worker-System <strong>+90,2 %</strong> gegenüber einem Einzelagenten auf einem
+      internen Recherche-Eval. Cognition, das Team hinter Devin, veröffentlicht fast zeitgleich
+      „Don't Build Multi-Agents" und warnt vor genau dieser Architektur.
+    </p>
+    <p>
+      Beide haben recht. Der Unterschied liegt in der Aufgabe, und beide Firmen benennen ihn selbst.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 800 300" role="img" aria-label="Lesen lässt sich parallelisieren, Schreiben nicht: links holen vier Agenten unabhängig Quellen, rechts kollidieren drei gleichzeitig schreibende Agenten an einem Artefakt, unten liefern drei denkende Agenten an einen einzigen Schreiber.">
+        <defs>
+          <marker id="rw-ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1.5 8.5,5 0,8.5" fill="#0F766E"/>
+          </marker>
+          <marker id="rw-ar-a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1.5 8.5,5 0,8.5" fill="#A84A08"/>
+          </marker>
+          <marker id="rw-ar-n" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1.5 8.5,5 0,8.5" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- LEFT: reads -->
+        <text x="8" y="18" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E" letter-spacing="1">LESEN — PARALLEL, KEIN KONFLIKT</text>
+        <g font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" text-anchor="middle">
+          <rect x="8" y="112" width="72" height="34" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <text x="44" y="133">Frage</text>
+          <line x1="82" y1="122" x2="128" y2="52" stroke="#0F766E" stroke-width="1.3" marker-end="url(#rw-ar)"/>
+          <line x1="82" y1="127" x2="128" y2="102" stroke="#0F766E" stroke-width="1.3" marker-end="url(#rw-ar)"/>
+          <line x1="82" y1="134" x2="128" y2="158" stroke="#0F766E" stroke-width="1.3" marker-end="url(#rw-ar)"/>
+          <line x1="82" y1="140" x2="128" y2="208" stroke="#0F766E" stroke-width="1.3" marker-end="url(#rw-ar)"/>
+          <rect x="132" y="34" width="74" height="30" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.2"/>
+          <text x="169" y="53">Quelle A</text>
+          <rect x="132" y="86" width="74" height="30" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.2"/>
+          <text x="169" y="105">Quelle B</text>
+          <rect x="132" y="146" width="74" height="30" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.2"/>
+          <text x="169" y="165">Quelle C</text>
+          <rect x="132" y="196" width="74" height="30" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.2"/>
+          <text x="169" y="215">Quelle D</text>
+          <text x="120" y="258" font-size="11" opacity=".7">Vier Agenten stören einander nicht —</text>
+          <text x="120" y="274" font-size="11" opacity=".7">sie verändern nichts.</text>
+        </g>
+
+        <line x1="264" y1="20" x2="264" y2="286" stroke="currentColor" stroke-width="1" opacity=".2"/>
+
+        <!-- RIGHT TOP: conflicting writes -->
+        <text x="290" y="18" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#A84A08" letter-spacing="1">SCHREIBEN — GLEICHZEITIG</text>
+        <g font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" text-anchor="middle">
+          <circle cx="312" cy="46" r="14" fill="none" stroke="#A84A08" stroke-width="1.2"/>
+          <circle cx="312" cy="86" r="14" fill="none" stroke="#A84A08" stroke-width="1.2"/>
+          <circle cx="312" cy="126" r="14" fill="none" stroke="#A84A08" stroke-width="1.2"/>
+          <line x1="328" y1="50" x2="392" y2="80" stroke="#A84A08" stroke-width="1.3" marker-end="url(#rw-ar-a)"/>
+          <line x1="328" y1="86" x2="392" y2="86" stroke="#A84A08" stroke-width="1.3" marker-end="url(#rw-ar-a)"/>
+          <line x1="328" y1="122" x2="392" y2="94" stroke="#A84A08" stroke-width="1.3" marker-end="url(#rw-ar-a)"/>
+          <rect x="398" y="66" width="104" height="40" rx="3" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.5"/>
+          <text x="450" y="91" font-weight="600">ein Artefakt</text>
+          <path d="M446 44 L470 62 M470 44 L446 62" stroke="#A84A08" stroke-width="2"/>
+          <text x="600" y="66" text-anchor="start" font-size="11" opacity=".78">Jede Aktion trägt eine stille</text>
+          <text x="600" y="82" text-anchor="start" font-size="11" opacity=".78">Entscheidung. Drei Agenten</text>
+          <text x="600" y="98" text-anchor="start" font-size="11" opacity=".78">treffen drei davon — und sie</text>
+          <text x="600" y="114" text-anchor="start" font-size="11" opacity=".78">widersprechen sich.</text>
+        </g>
+
+        <!-- RIGHT BOTTOM: single-threaded writes -->
+        <text x="290" y="182" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E" letter-spacing="1">SCHREIBEN — EINSPURIG</text>
+        <g font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" text-anchor="middle">
+          <circle cx="312" cy="210" r="14" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="312" cy="246" r="14" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="312" cy="282" r="14" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <line x1="328" y1="214" x2="382" y2="240" stroke="currentColor" stroke-width="1.2" marker-end="url(#rw-ar-n)"/>
+          <line x1="328" y1="246" x2="382" y2="246" stroke="currentColor" stroke-width="1.2" marker-end="url(#rw-ar-n)"/>
+          <line x1="328" y1="278" x2="382" y2="254" stroke="currentColor" stroke-width="1.2" marker-end="url(#rw-ar-n)"/>
+          <rect x="388" y="230" width="86" height="34" rx="3" fill="#0F766E" stroke="#0F766E" stroke-width="1.3"/>
+          <text x="431" y="251" fill="#FFFFFF" font-weight="600">ein Schreiber</text>
+          <line x1="478" y1="247" x2="516" y2="247" stroke="#0F766E" stroke-width="1.4" marker-end="url(#rw-ar)"/>
+          <rect x="522" y="230" width="96" height="34" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.3"/>
+          <text x="570" y="251">ein Artefakt</text>
+          <text x="640" y="240" text-anchor="start" font-size="11" opacity=".78">Mehrere Agenten liefern</text>
+          <text x="640" y="256" text-anchor="start" font-size="11" opacity=".78">Intelligenz. Nur einer</text>
+          <text x="640" y="272" text-anchor="start" font-size="11" opacity=".78">verändert etwas.</text>
+        </g>
+      </svg>
+      <figcaption>
+        <b>Recherche ist read-heavy, Programmieren ist write-heavy.</b> Anthropics Gewinn kommt aus
+        paralleler Recherche, Cognitions Warnung aus parallelem Schreiben. Cognition hat die eigene
+        Position 2026 präzisiert statt widerrufen: „writes stay single-threaded". Wer nur den alten
+        Blogpost zitiert, gibt eine überholte Aussage wieder.
+      </figcaption>
+    </figure>
+
+    <div class="rule-box">
+      <p class="lede">Lesen parallel, schreiben einspurig.</p>
+      <p class="why">Die eine Regel, aus der sich fast alle Multi-Agent-Entscheidungen ableiten lassen. Prüfen und Recherchieren darf beliebig breit laufen; sobald zwei Agenten dasselbe Artefakt verändern, summieren sich widersprüchliche Annahmen statt sich auszugleichen.</p>
+    </div>
+
+    <h3>Was das kostet — und wie oft es schiefgeht</h3>
+    <figure>
+      <svg viewBox="0 0 800 210" role="img" aria-label="Token-Multiplikator im Vergleich: ein normaler Chat entspricht 1x, ein einzelner Agent etwa 4x, ein Multi-Agent-System etwa 15x.">
+        <g font-family="IBM Plex Sans, sans-serif" fill="currentColor">
+          <text x="0" y="16" font-family="IBM Plex Mono, monospace" font-size="10.5" opacity=".55" letter-spacing="1">TOKENVERBRAUCH, RELATIV ZU EINEM NORMALEN CHAT</text>
+
+          <!-- scale: 15x = 700px -->
+          <rect x="150" y="38" width="47" height="30" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <text x="0" y="58" font-size="12.5">normaler Chat</text>
+          <text x="207" y="58" font-family="IBM Plex Mono, monospace" font-size="12.5" font-weight="600">1×</text>
+
+          <rect x="150" y="86" width="187" height="30" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <text x="0" y="106" font-size="12.5">ein Agent</text>
+          <text x="347" y="106" font-family="IBM Plex Mono, monospace" font-size="12.5" font-weight="600">4×</text>
+
+          <rect x="150" y="134" width="700" height="30" rx="2" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.4"/>
+          <text x="0" y="154" font-size="12.5">Multi-Agent-System</text>
+          <text x="640" y="154" font-family="IBM Plex Mono, monospace" font-size="12.5" font-weight="600" fill="#A84A08">15×</text>
+          <text x="164" y="154" font-size="11.5" fill="#A84A08">für +90,2 % Ergebnisqualität auf Recherche-Aufgaben</text>
+
+          <line x1="150" y1="30" x2="150" y2="176" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <text x="0" y="196" font-size="11.5" opacity=".7">Der Tokenverbrauch allein erklärt 80 % der Ergebnisvarianz — mehr Tokens <tspan font-style="italic">ist</tspan> der Wirkmechanismus.</text>
+        </g>
+      </svg>
+      <figcaption>
+        <b>Der Balken unten ist auf 700 Pixel abgeschnitten — nicht die Skala.</b> Er reicht bis ans
+        Ende, weil 15× die volle Breite dieser Darstellung ist. Anthropic sagt selbst, dass sich das
+        nur bei hochwertigen Aufgaben rechnet: juristische Prüfungen, Wettbewerbsanalysen,
+        biomedizinische Literaturarbeit. Alltägliche Fragen tragen diesen Faktor nicht.
+      </figcaption>
+    </figure>
+
+    <div class="figures">
+      <div><div class="v amb">41–86,7 %</div><div class="k">Fehlerraten in Multi-Agent-Systemen — 1.600+ ausgewertete Traces aus 7 Frameworks</div></div>
+      <div><div class="v amb">~37 %</div><div class="k">davon reine Koordinationsfehler, nicht schwache Modelle</div></div>
+      <div><div class="v amb">&gt;40 %</div><div class="k">der Agentic-AI-Projekte werden laut Gartner bis Ende 2027 abgebrochen</div></div>
+    </div>
+  </section>
+
+  <!-- ================= 05 ================= -->
+  <section id="s5">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <h2>Schleifen und Selbstkritik</h2>
+      <p>Warum ein Modell, das sich selbst prüft, oft schlechter wird — und warum Endlosschleifen kein Randfall sind.</p>
+    </div>
+
+    <p>
+      Die naheliegende Idee, einen Agenten sein eigenes Ergebnis nachprüfen zu lassen, funktioniert
+      nicht zuverlässig. Das ist gut belegt und der Grund ist präzise benennbar.
+    </p>
+
+    <blockquote>
+      LLMs struggle to self-correct their responses without external feedback,
+      and at times, their performance even degrades after self-correction.
+      <cite>Huang et al. — arXiv:2310.01798, ICLR 2024</cite>
+    </blockquote>
+
+    <figure>
+      <svg viewBox="0 0 800 270" role="img" aria-label="Selbstkritik gegen getrennte Prüfung: teilen sich Erzeuger und Prüfer dieselben blinden Flecken, bleibt der Fehler unentdeckt; ein separater Prüfer mit anderen Fehlermodi deckt ihn auf.">
+        <defs>
+          <marker id="sc-ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1.5 8.5,5 0,8.5" fill="currentColor"/>
+          </marker>
+          <marker id="sc-ar-s" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1.5 8.5,5 0,8.5" fill="#0F766E"/>
+          </marker>
+          <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="6" stroke="#A84A08" stroke-width="2.2"/>
+          </pattern>
+        </defs>
+
+        <!-- Left: self-critique -->
+        <text x="8" y="18" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#A84A08" letter-spacing="1">SELBSTKRITIK</text>
+        <circle cx="140" cy="120" r="66" fill="url(#hatch)" fill-opacity=".22" stroke="#A84A08" stroke-width="1.4"/>
+        <circle cx="196" cy="120" r="66" fill="url(#hatch)" fill-opacity=".22" stroke="#A84A08" stroke-width="1.4"/>
+        <text x="102" y="118" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">erzeugt</text>
+        <text x="234" y="118" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor">prüft</text>
+        <text x="168" y="112" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="#A84A08" font-weight="600">gleiche</text>
+        <text x="168" y="126" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="#A84A08" font-weight="600">blinde</text>
+        <text x="168" y="140" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="#A84A08" font-weight="600">Flecken</text>
+        <text x="168" y="216" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".8">Dasselbe Modell in beiden Rollen.</text>
+        <text x="168" y="234" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".8">Was es nicht sieht, sieht es auch</text>
+        <text x="168" y="252" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".8">beim zweiten Hinsehen nicht.</text>
+
+        <line x1="400" y1="20" x2="400" y2="256" stroke="currentColor" stroke-width="1" opacity=".2"/>
+
+        <!-- Right: separated verifier -->
+        <text x="430" y="18" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E" letter-spacing="1">GETRENNTE PRÜFUNG</text>
+        <circle cx="524" cy="120" r="58" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <circle cx="666" cy="120" r="58" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.6"/>
+        <text x="524" y="116" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor" font-weight="600">Generator</text>
+        <text x="524" y="134" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" opacity=".66">baut</text>
+        <text x="666" y="116" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor" font-weight="600">Verifier</text>
+        <text x="666" y="134" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" opacity=".66">Test · Kritiker · Klassifikator</text>
+        <line x1="584" y1="106" x2="606" y2="106" stroke="currentColor" stroke-width="1.3" marker-end="url(#sc-ar)"/>
+        <line x1="606" y1="140" x2="584" y2="140" stroke="#0F766E" stroke-width="1.5" marker-end="url(#sc-ar-s)"/>
+        <text x="595" y="98" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="currentColor" opacity=".7">Ergebnis</text>
+        <text x="595" y="160" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" fill="#0F766E">Fehlerort</text>
+        <text x="595" y="216" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".8">Andere Fehlermodi, sauberer Kontext.</text>
+        <text x="595" y="234" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".8">Das Modell kann Fehler gut beheben —</text>
+        <text x="595" y="252" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".8">es findet sie nur selbst nicht.</text>
+      </svg>
+      <figcaption>
+        <b>Das Problem liegt im Finden, nicht im Beheben.</b> Sagt man einem Modell, <em>wo</em> der
+        Fehler steckt, korrigiert es ihn zuverlässig. Es findet ihn nur nicht selbst. Ein separat
+        trainierter kleiner Klassifikator schlägt darin das große Modell. Ein spezialisiertes
+        Kritiker-Modell brachte in einer Arbeit +46 % gegenüber Selbstkritik-Baselines.
+      </figcaption>
+    </figure>
+
+    <p style="font-size:.93rem;color:var(--ink-soft)">
+      Ehrlich vermerkt: es gibt einen Gegenbefund. Eine Arbeit zu multimodalen Policy-Modellen findet
+      selbstkritik-basiertes Test-Time-Scaling als beste Variante. Die Diskrepanz ist nicht aufgelöst
+      und vermutlich stark aufgaben- und architekturabhängig.
+    </p>
+
+    <h3>Endlosschleifen sind häufig, nicht selten</h3>
+    <p>
+      Eine systematische Untersuchung fand <strong>68 bestätigte Endlosschleifen-Fehler in 47
+      Projekten</strong> aus 6.549 durchsuchten Repositories. Zwei Drittel aller Fälle entfielen auf
+      zwei verbreitete Frameworks.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 800 230" role="img" aria-label="Ursachen von Endlosschleifen in Agentensystemen: tool-gesteuerte Retries ohne Grenze 41,2 Prozent, modellgesteuerte Terminierung ohne Fallback 38,2 Prozent, fehlende Exits 33,8 Prozent, ungeprüfte Workflow-Zyklen 30,9 Prozent.">
+        <g font-family="IBM Plex Sans, sans-serif" fill="currentColor">
+          <text x="0" y="16" font-family="IBM Plex Mono, monospace" font-size="10.5" opacity=".55" letter-spacing="1">URSACHEN — MEHRFACHNENNUNG MÖGLICH</text>
+
+          <!-- scale: 50% = 500px, x start 300 -->
+          <text x="0" y="52" font-size="12.5">Tool-Retries ohne Grenze</text>
+          <rect x="300" y="36" width="412" height="22" rx="2" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.2"/>
+          <text x="722" y="52" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#A84A08">41,2 %</text>
+
+          <text x="0" y="90" font-size="12.5">Modell entscheidet den Abbruch</text>
+          <rect x="300" y="74" width="382" height="22" rx="2" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.2"/>
+          <text x="692" y="90" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#A84A08">38,2 %</text>
+
+          <text x="0" y="128" font-size="12.5">Fehlende Exits</text>
+          <rect x="300" y="112" width="338" height="22" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <text x="648" y="128" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600">33,8 %</text>
+
+          <text x="0" y="166" font-size="12.5">Ungeprüfte Workflow-Zyklen</text>
+          <rect x="300" y="150" width="309" height="22" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <text x="619" y="166" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600">30,9 %</text>
+
+          <line x1="300" y1="28" x2="300" y2="182" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <line x1="500" y1="176" x2="500" y2="182" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <line x1="700" y1="176" x2="700" y2="182" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <text x="300" y="196" font-family="IBM Plex Mono, monospace" font-size="10" opacity=".5">0</text>
+          <text x="500" y="196" font-family="IBM Plex Mono, monospace" font-size="10" opacity=".5" text-anchor="middle">20 %</text>
+          <text x="700" y="196" font-family="IBM Plex Mono, monospace" font-size="10" opacity=".5" text-anchor="middle">40 %</text>
+
+          <text x="0" y="220" font-size="11.5" opacity=".72">Folgen: Kostenexzess und faktischer Denial-of-Service in je 95,6 % der Fälle · Kontextfenster erschöpft in 27,9 %.</text>
+        </g>
+      </svg>
+      <figcaption>
+        <b>Die beiden oberen Ursachen sind dieselbe Wurzel.</b> In beiden Fällen entscheidet etwas
+        über den Abbruch, das nicht deterministisch ist — mal eine Retry-Mechanik ohne Deckel, mal
+        das Modell selbst.
+      </figcaption>
+    </figure>
+
+    <div class="rule-box">
+      <p class="lede">Das Abbruchkriterium gehört deterministisch in den Code, nie ins Modell.</p>
+      <p class="why">Binär und messbar formulieren („Coverage &gt; 80 %", „JSON validiert"), nie subjektiv („gut genug"). Dazu immer ein hartes Iterationslimit als Netz — Praxis-Default 10 bis 15. Der Grund, warum Modelle schlechte Abbrecher sind, ist banal: sie wollen hilfreich klingen, und „lass uns hier aufhören" wirkt nicht wie eine hilfreiche Antwort.</p>
+    </div>
+
+    <h3>Wie viele Runden lohnen sich?</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Verfahren</th><th>Konvergenz</th><th>Abbruchkriterium</th></tr></thead>
+        <tbody>
+          <tr>
+            <th scope="row">Self-Refine</th>
+            <td>Plateau bei 2–4 Runden<br><span style="font-size:.85em;opacity:.7">nur sekundärbelegt, aufgabenabhängig</span></td>
+            <td>Embedding-Ähnlichkeit ~0,92 <em>und</em> keine neuen Kritikpunkte</td>
+          </tr>
+          <tr>
+            <th scope="row">Multi-Agent-Debate</th>
+            <td>4–8 Runden</td>
+            <td>KS-Test zwischen Antwortverteilungen, Schwelle &lt; 0,05 über zwei Runden</td>
+          </tr>
+          <tr>
+            <th scope="row">Plan-Execute-Replan</th>
+            <td>—</td>
+            <td>Bounded Recovery: erst Retry, dann lokaler Patch, erst dann neu planen</td>
+          </tr>
+          <tr>
+            <th scope="row">Reflexion</th>
+            <td>—</td>
+            <td>ein <em>externer</em> Evaluator erklärt die Trajektorie für korrekt</td>
+          </tr>
+        </tbody>
+        <caption>Es gibt keine einheitliche Konvergenzformel über alle vier Verfahren. Das adaptive Debate-Kriterium spart Rechenzeit bei −0,13 bis 0,00 % Genauigkeitsverlust gegenüber fixen zehn Runden.</caption>
+      </table>
+    </div>
+
+    <div class="warn-box">
+      <p class="lede">Debatte läuft in die Echo-Kammer</p>
+      <p class="why">Eine fehlerhafte Mehrheitsmeinung aus geteilten Fehlvorstellungen unterdrückt korrekte Minderheitspositionen; ein moderater Anfangs-Bias verstärkt sich durch die Interaktion. Der Hebel ist <strong>Diversität</strong> — verschiedene Modelle, verschiedene Blickwinkel —, nicht mehr Runden desselben Modells.</p>
+    </div>
+  </section>
+
+  <!-- ================= 06 ================= -->
+  <section id="s6">
+    <div class="sec-head">
+      <span class="sec-num">06</span>
+      <h2>Schwärme</h2>
+      <p>Mehr Agenten helfen — bis zu einem Punkt, der niedriger liegt, als die meisten annehmen.</p>
+    </div>
+
+    <figure>
+      <svg viewBox="0 0 800 340" role="img" aria-label="Umgekehrtes U: Die Leistung steigt mit der Agentenzahl bis zu einem Optimum zwischen zwei und sechs Agenten und fällt danach, während die Tokenkosten quadratisch weiterwachsen.">
+        <defs>
+          <marker id="ax" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <polygon points="0,1 9,5 0,9" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- optimum band -->
+        <rect x="118" y="40" width="176" height="216" fill="#0F766E" opacity=".08"/>
+        <text x="206" y="34" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E" letter-spacing=".5">OPTIMUM 2–6</text>
+
+        <!-- axes -->
+        <line x1="60" y1="256" x2="768" y2="256" stroke="currentColor" stroke-width="1.3" marker-end="url(#ax)"/>
+        <line x1="60" y1="256" x2="60" y2="40" stroke="currentColor" stroke-width="1.3" marker-end="url(#ax)"/>
+        <text x="768" y="278" text-anchor="end" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity=".7">Zahl der Agenten</text>
+        <text x="60" y="30" text-anchor="start" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity=".7">Leistung / Kosten</text>
+
+        <!-- x ticks: 1..10 across 60..740 -->
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" opacity=".55" text-anchor="middle">
+          <line x1="60"  y1="256" x2="60"  y2="262" stroke="currentColor"/><text x="60"  y="276">1</text>
+          <line x1="136" y1="256" x2="136" y2="262" stroke="currentColor"/><text x="136" y="276">2</text>
+          <line x1="212" y1="256" x2="212" y2="262" stroke="currentColor"/><text x="212" y="276">4</text>
+          <line x1="288" y1="256" x2="288" y2="262" stroke="currentColor"/><text x="288" y="276">6</text>
+          <line x1="364" y1="256" x2="364" y2="262" stroke="currentColor"/><text x="364" y="276">8</text>
+          <line x1="440" y1="256" x2="440" y2="262" stroke="currentColor"/><text x="440" y="276">10</text>
+        </g>
+
+        <!-- performance curve: rises to peak near x=190 then declines -->
+        <path d="M60 210 C 110 128, 160 96, 200 94 C 250 92, 300 118, 364 168 C 430 216, 520 238, 620 246"
+              fill="none" stroke="#0F766E" stroke-width="2.4"/>
+        <circle cx="200" cy="94" r="4.5" fill="#0F766E"/>
+        <text x="212" y="88" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="#0F766E" font-weight="600">Höhepunkt</text>
+
+        <!-- cost curve: quadratic -->
+        <path d="M60 250 C 160 246, 250 226, 340 186 C 430 144, 520 96, 620 56"
+              fill="none" stroke="#A84A08" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="628" y="52" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="#A84A08" font-weight="600">Kosten — quadratisch</text>
+
+        <!-- drop annotation -->
+        <line x1="364" y1="168" x2="364" y2="120" stroke="currentColor" stroke-width="1" opacity=".45"/>
+        <text x="374" y="126" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" opacity=".8">bis −27 % Genauigkeit bei 8 Agenten</text>
+        <text x="374" y="142" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" opacity=".6">(reasoning-lastige Aufgaben)</text>
+
+        <text x="628" y="216" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="#0F766E">Leistung</text>
+
+        <text x="0" y="312" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".78">Kollektive Intelligenz ist „an emergent property of interaction architecture, not an automatic</text>
+        <text x="0" y="330" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".78">outcome of agent plurality" — mehr Agenten helfen nur, wenn Zerlegung und Aggregation dafür gebaut sind.</text>
+      </svg>
+      <figcaption>
+        <b>Der Schnittpunkt der beiden Kurven ist die eigentliche Entscheidung.</b> Die Leistungskurve
+        gilt für reasoning-lastige Aufgaben. Bei breit zerlegbarer Recherche mit wirklich unabhängigen
+        Teilfragen liegt das Optimum deutlich höher — dort empfiehlt Anthropic 3–5 pro Welle und über
+        zehn insgesamt.
+      </figcaption>
+    </figure>
+
+    <h3>Wellen oder kontinuierlich nachziehen?</h3>
+    <p>
+      Eine Überraschung der Recherche: Anthropic fährt <strong>synchrone Wellen von 3 bis 5
+      Subagenten</strong> und wartet, bis eine Welle fertig ist — und nennt das selbst eine
+      Limitation des eigenen Systems.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 800 250" role="img" aria-label="Zeitverlauf im Vergleich: bei Wellen entstehen Leerlaufphasen, weil auf den langsamsten Agenten einer Welle gewartet wird; beim kontinuierlichen Nachziehen laufen konstant gleich viele Agenten ohne Lücken.">
+        <defs>
+          <pattern id="hatch-w" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="6" stroke="#A84A08" stroke-width="2.2"/>
+          </pattern>
+        </defs>
+        <g font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor">
+          <text x="0" y="16" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#A84A08" letter-spacing="1">WELLEN — MIT BARRIERE</text>
+          <!-- wave 1 -->
+          <rect x="60" y="28" width="150" height="16" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <rect x="60" y="48" width="96"  height="16" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <rect x="60" y="68" width="182" height="16" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <!-- idle -->
+          <rect x="156" y="48" width="86" height="16" fill="url(#hatch-w)" fill-opacity=".2" stroke="#A84A08" stroke-width=".8" stroke-dasharray="3 2"/>
+          <rect x="210" y="28" width="32" height="16" fill="url(#hatch-w)" fill-opacity=".2" stroke="#A84A08" stroke-width=".8" stroke-dasharray="3 2"/>
+          <line x1="246" y1="22" x2="246" y2="90" stroke="#A84A08" stroke-width="1.6"/>
+          <text x="252" y="60" font-size="10.5" fill="#A84A08" font-family="IBM Plex Mono, monospace">Barriere</text>
+          <!-- wave 2 -->
+          <rect x="316" y="28" width="140" height="16" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <rect x="316" y="48" width="170" height="16" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <rect x="316" y="68" width="120" height="16" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1"/>
+          <rect x="456" y="28" width="30" height="16" fill="url(#hatch-w)" fill-opacity=".2" stroke="#A84A08" stroke-width=".8" stroke-dasharray="3 2"/>
+          <rect x="436" y="68" width="50" height="16" fill="url(#hatch-w)" fill-opacity=".2" stroke="#A84A08" stroke-width=".8" stroke-dasharray="3 2"/>
+          <line x1="490" y1="22" x2="490" y2="90" stroke="#A84A08" stroke-width="1.6"/>
+          <text x="0" y="106" font-size="11" opacity=".72">Schraffiert = Leerlauf. Alle warten auf den langsamsten der Welle.</text>
+
+          <text x="0" y="152" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E" letter-spacing="1">KONTINUIERLICH NACHZIEHEN</text>
+          <rect x="60" y="164" width="150" height="16" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1"/>
+          <rect x="212" y="164" width="140" height="16" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1"/>
+          <rect x="354" y="164" width="112" height="16" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1"/>
+          <rect x="60" y="184" width="96"  height="16" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1"/>
+          <rect x="158" y="184" width="170" height="16" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1"/>
+          <rect x="330" y="184" width="136" height="16" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1"/>
+          <rect x="60" y="204" width="182" height="16" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1"/>
+          <rect x="244" y="204" width="120" height="16" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1"/>
+          <rect x="366" y="204" width="100" height="16" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1"/>
+          <line x1="468" y1="158" x2="468" y2="226" stroke="#0F766E" stroke-width="1.6"/>
+          <text x="478" y="196" font-size="10.5" fill="#0F766E" font-family="IBM Plex Mono, monospace">früher fertig</text>
+          <text x="0" y="242" font-size="11" opacity=".72">Einer fertig → sofort der nächste. Konstant so viele wie erlaubt, keine Lücken.</text>
+        </g>
+      </svg>
+      <figcaption>
+        <b>Der Begriff „Continuous-Spawning" existiert in der Literatur nicht.</b> Die Fachliteratur
+        spricht von synchronen Wellen gegenüber asynchronem Fan-out. Das Verfahren ist zeitlich
+        überlegen und leicht im Code zu erzwingen — die Bezeichnung ist Hauswortschatz, kein
+        Fachbegriff.
+      </figcaption>
+    </figure>
+
+    <h3>Aufgaben zerlegen, damit sich nichts überschneidet</h3>
+    <p>
+      Anthropic bettet Skalierungsregeln direkt in den Prompt des Lead-Agenten ein, weil vage
+      Beschreibungen zu Doppelarbeit führen — frühe Versionen mit Anweisungen wie „research the
+      semiconductor shortage" ließen mehrere Agenten dieselben Zeiträume untersuchen.
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Aufgabenart</th><th class="num">Agenten</th><th class="num">Tool-Calls je Agent</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Einfache Faktensuche</th><td class="num">1</td><td class="num">3–10</td></tr>
+          <tr><th scope="row">Vergleiche</th><td class="num">2–4</td><td class="num">10–15</td></tr>
+          <tr><th scope="row">Komplexe Recherche</th><td class="num">&gt;10</td><td class="num">klar getrennte Zuständigkeiten</td></tr>
+        </tbody>
+        <caption>Ohne solche Regeln entstehen die von Anthropic selbst berichteten Fehlermodi: „Spawning 50 subagents for simple queries", endloses Suchen nach nicht existierenden Quellen, gegenseitiges Ablenken durch übermäßige Statusmeldungen.</caption>
+      </table>
+    </div>
+
+    <div class="warn-box">
+      <p class="lede">Ein stiller Qualitätsverlust, den keine automatische Prüfung sieht</p>
+      <p class="why">Anthropic fand im eigenen System, dass Subagenten systematisch SEO-optimierte Seiten gegenüber akademischen PDFs bevorzugten. Entdeckt wurde das <em>nur</em> durch menschliches Testen — für einen LLM-als-Richter sieht die Antwort völlig in Ordnung aus. <a href="#s8">Abschnitt 08</a> zeigt, wie stark dieser Effekt in einer eigenen Messung ausfiel.</p>
+    </div>
+  </section>
+
+  <!-- ================= 07 ================= -->
+  <section id="s7">
+    <div class="sec-head">
+      <span class="sec-num">07</span>
+      <h2>Über Modellgrenzen hinweg</h2>
+      <p>Kann ein Claude-Agent mit einem GPT-Agenten arbeiten? Ja — aber nicht so, wie die Protokolllandschaft es verspricht.</p>
+    </div>
+
+    <p>
+      Die verbreitete Vorstellung ist, man „stelle" Agenten an und sie unterhielten sich. Die Realität
+      2026 ist nüchterner: <strong>man legt einen gemeinsamen Arbeitsplatz an.</strong> Um zu
+      verstehen warum, muss man zwei Achsen auseinanderhalten, die ständig verwechselt werden.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 800 330" role="img" aria-label="Zwei Achsen der Agenten-Interoperabilität: MCP verbindet einen Agenten vertikal mit Werkzeugen und Daten, A2A verbindet ihn horizontal mit anderen Agenten. Anthropic ist bei MCP Gründungsmitglied, fehlt aber in der A2A-Trägerliste.">
+        <defs>
+          <marker id="ax-v" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <polygon points="0,1 9,5 0,9" fill="#0F766E"/>
+          </marker>
+          <marker id="ax-h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <polygon points="0,1 9,5 0,9" fill="#A84A08"/>
+          </marker>
+        </defs>
+
+        <!-- centre agent -->
+        <rect x="298" y="112" width="132" height="52" rx="4" fill="var(--surface)" stroke="currentColor" stroke-width="1.8"/>
+        <text x="364" y="136" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13.5" fill="currentColor" font-weight="600">dein Agent</text>
+        <text x="364" y="154" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" opacity=".6">Claude Code</text>
+
+        <!-- vertical MCP -->
+        <line x1="364" y1="168" x2="364" y2="234" stroke="#0F766E" stroke-width="2.2" marker-end="url(#ax-v)"/>
+        <text x="376" y="196" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="#0F766E" font-weight="600">MCP</text>
+        <text x="376" y="212" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#0F766E">vertikal</text>
+        <rect x="270" y="238" width="188" height="44" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.5"/>
+        <text x="364" y="258" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12.5" fill="currentColor" font-weight="600">Werkzeuge · Daten · APIs</text>
+        <text x="364" y="274" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="#0F766E">Spec 2026-07-28 · etabliert</text>
+
+        <!-- horizontal A2A -->
+        <line x1="434" y1="138" x2="556" y2="138" stroke="#A84A08" stroke-width="2.2" marker-end="url(#ax-h)"/>
+        <text x="495" y="128" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11.5" fill="#A84A08" font-weight="600">A2A</text>
+        <text x="495" y="160" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="#A84A08">horizontal</text>
+        <rect x="560" y="112" width="150" height="52" rx="4" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <text x="635" y="136" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="13" fill="currentColor" font-weight="600">fremder Agent</text>
+        <text x="635" y="154" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" fill="currentColor" opacity=".6">GPT · Gemini</text>
+
+        <!-- governance labels -->
+        <text x="0" y="24" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="currentColor" opacity=".55" letter-spacing="1">TRÄGERSCHAFT</text>
+        <rect x="0" y="36" width="264" height="60" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.2"/>
+        <text x="14" y="56" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" font-weight="600">Agentic AI Foundation</text>
+        <text x="14" y="73" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" opacity=".78">Anthropic · OpenAI · Block — seit 09.12.2025</text>
+        <text x="14" y="89" font-family="IBM Plex Mono, monospace" font-size="10" fill="#0F766E">110+ Mio. SDK-Downloads / Monat</text>
+        <line x1="264" y1="66" x2="300" y2="120" stroke="#0F766E" stroke-width="1" opacity=".5"/>
+
+        <rect x="536" y="36" width="264" height="60" rx="3" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.2"/>
+        <text x="550" y="56" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor" font-weight="600">Linux Foundation, eigenes Projekt</text>
+        <text x="550" y="73" font-family="IBM Plex Sans, sans-serif" font-size="11" fill="currentColor" opacity=".78">AWS · Cisco · Google · IBM · Microsoft · SAP …</text>
+        <text x="550" y="89" font-family="IBM Plex Mono, monospace" font-size="10" fill="#A84A08" font-weight="600">Anthropic fehlt in dieser Liste</text>
+        <line x1="620" y1="96" x2="628" y2="110" stroke="#A84A08" stroke-width="1" opacity=".5"/>
+
+        <!-- bottom note -->
+        <line x1="0" y1="300" x2="800" y2="300" stroke="currentColor" stroke-width="1" opacity=".18"/>
+        <text x="0" y="322" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="currentColor" opacity=".8">MCP ist reif, löst aber die falsche Achse. A2A ist die richtige Achse — ohne erkennbare Anthropic-Beteiligung.</text>
+      </svg>
+      <figcaption>
+        <b>Die reife Schiene führt nicht dorthin, wo man hin will.</b> MCP verbindet einen Agenten
+        <em>nach unten</em> mit seinen Werkzeugen. A2A verbindet ihn <em>zur Seite</em> mit anderen
+        Agenten — aber in der Trägerliste der Linux Foundation taucht Anthropic nicht auf, obwohl es
+        bei MCP Gründungsmitglied ist. Wer A2A als Brücke zu einem Claude-Agenten einplant, sollte
+        den aktuellen Stand prüfen statt ihn vorauszusetzen.
+      </figcaption>
+    </figure>
+
+    <div class="warn-box">
+      <p class="lede">Drei Fallen in der Protokolllandschaft</p>
+      <p class="why">
+        <strong>ACP gibt es zweimal</strong> — als Agent <em>Client</em> Protocol von Zed (Agent ↔ Editor)
+        und als Agent <em>Communication</em> Protocol von IBM/BeeAI (Agent ↔ Agent). Selbst ein
+        arXiv-Paper lässt offen, welches es meint.<br><br>
+        <strong>OpenAI-Handoffs sind kein Protokoll</strong>, sondern SDK-intern. Sie bleiben „within a
+        single run", sind linear, und es gibt keine dokumentierte Aussage zu Claude oder Gemini.<br><br>
+        <strong>Verhandeln kann keines.</strong> Ein Governance-Paper findet, dass Abstimmung und
+        Dissens-Erhaltung bei allen fünf untersuchten Protokollen vollständig fehlen. Agenten können
+        sich Aufgaben zuwerfen — sich einigen können sie nicht.
+      </p>
+    </div>
+
+    <h3>Was stattdessen trägt</h3>
+    <p>
+      Der belastbarste Weg 2026 ist unspektakulär: ein gemeinsames Dateisystem mit klaren Regeln. Der
+      entscheidende Baustein ist dabei nicht das Ledger, sondern der <strong>atomare Claim</strong> —
+      und genau den lassen die meisten Anleitungen weg.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 800 300" role="img" aria-label="Wettlauf gegen atomaren Claim: Prüft jeder Agent nur ein Ledger, sehen beide die Aufgabe als frei und bearbeiten sie doppelt. Legt jeder die Claim-Datei exklusiv an, gewinnt genau einer und der zweite erhält einen Fehler und überspringt.">
+        <defs>
+          <marker id="cl-ar" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <polygon points="0,1.5 8.5,5 0,8.5" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- LEFT: race -->
+        <text x="8" y="18" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#A84A08" letter-spacing="1">NUR LEDGER — WETTLAUF</text>
+        <g font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor">
+          <rect x="8" y="40" width="86" height="30" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <text x="51" y="60" text-anchor="middle">Agent 1</text>
+          <rect x="8" y="188" width="86" height="30" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <text x="51" y="208" text-anchor="middle">Agent 2</text>
+
+          <rect x="188" y="106" width="120" height="46" rx="3" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.2"/>
+          <text x="248" y="126" text-anchor="middle" font-size="11.5">Ledger</text>
+          <text x="248" y="143" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10" opacity=".7">Aufgabe 7: frei</text>
+
+          <line x1="98" y1="60" x2="184" y2="112" stroke="currentColor" stroke-width="1.1" marker-end="url(#cl-ar)"/>
+          <line x1="98" y1="198" x2="184" y2="148" stroke="currentColor" stroke-width="1.1" marker-end="url(#cl-ar)"/>
+          <text x="120" y="82" font-family="IBM Plex Mono, monospace" font-size="9.5" opacity=".7">liest: frei</text>
+          <text x="120" y="184" font-family="IBM Plex Mono, monospace" font-size="9.5" opacity=".7">liest: frei</text>
+
+          <line x1="200" y1="160" x2="200" y2="242" stroke="#A84A08" stroke-width="1.3" marker-end="url(#cl-ar)"/>
+          <line x1="296" y1="160" x2="296" y2="242" stroke="#A84A08" stroke-width="1.3" marker-end="url(#cl-ar)"/>
+          <rect x="164" y="246" width="168" height="34" rx="3" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.5"/>
+          <text x="248" y="268" text-anchor="middle" font-weight="600" fill="currentColor">beide bearbeiten sie</text>
+          <text x="340" y="130" font-size="11" opacity=".72">Zwischen Lesen und</text>
+          <text x="340" y="146" font-size="11" opacity=".72">Eintragen liegt ein Fenster.</text>
+        </g>
+
+        <line x1="400" y1="20" x2="400" y2="288" stroke="currentColor" stroke-width="1" opacity=".2"/>
+
+        <!-- RIGHT: atomic -->
+        <text x="428" y="18" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E" letter-spacing="1">ATOMARER CLAIM</text>
+        <g font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="currentColor">
+          <rect x="428" y="40" width="86" height="30" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <text x="471" y="60" text-anchor="middle">Agent 1</text>
+          <rect x="428" y="188" width="86" height="30" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          <text x="471" y="208" text-anchor="middle">Agent 2</text>
+
+          <rect x="590" y="100" width="196" height="58" rx="3" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.5"/>
+          <text x="688" y="120" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#0F766E" font-weight="600">O_CREAT | O_EXCL</text>
+          <text x="688" y="138" text-anchor="middle" font-size="11">nur einer darf anlegen</text>
+          <text x="688" y="152" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" opacity=".7">task-7.claim</text>
+
+          <line x1="518" y1="60" x2="586" y2="108" stroke="#0F766E" stroke-width="1.5" marker-end="url(#cl-ar)"/>
+          <line x1="518" y1="198" x2="586" y2="152" stroke="currentColor" stroke-width="1.2" marker-end="url(#cl-ar)"/>
+          <text x="522" y="84" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="#0F766E" font-weight="600">gewinnt</text>
+          <text x="522" y="184" font-family="IBM Plex Mono, monospace" font-size="9.5" opacity=".8">EEXIST → überspringt</text>
+
+          <line x1="640" y1="166" x2="640" y2="242" stroke="#0F766E" stroke-width="1.5" marker-end="url(#cl-ar)"/>
+          <rect x="556" y="246" width="168" height="34" rx="3" fill="#0F766E" stroke="#0F766E" stroke-width="1.3"/>
+          <text x="640" y="268" text-anchor="middle" font-weight="600" fill="#FFFFFF">genau einer bearbeitet sie</text>
+        </g>
+      </svg>
+      <figcaption>
+        <b>Das Ledger ist der Nachweis, nicht die Koordination.</b> Die Autoren des Musters warnen
+        ausdrücklich, dass ihr eigener Ledger-Ansatz bei Parallelität bricht, wenn nicht zusätzlich
+        atomar geclaimt wird. Dazu gehört ein Existenzcheck der Ausgabedatei, der jeden Schritt
+        idempotent macht — dann überlebt er auch einen Doppelaufruf.
+      </figcaption>
+    </figure>
+
+    <h3>Heterogene CLI-Agenten zusammenschalten</h3>
+    <p>
+      Das dokumentierte Muster ist der <strong>Headless-Subprocess</strong>: die jeweilige CLI im
+      nicht-interaktiven Modus aufrufen (<code>claude -p</code>, <code>codex exec</code>) und
+      strukturierte Ausgabe parsen. Einen offiziellen Anthropic-Adapter für fremde CLI-Agenten gibt
+      es nicht. Das konkreteste Vorbild ist ein Community-Orchestrator, der Aufgaben aus einer
+      SQLite-Queue mit atomaren Claims an Claude Code, Codex, OpenCode und Aider verteilt — und
+      <strong>bewusst ohne Laufzeitkanal</strong> zwischen den Agenten arbeitet. Die Koordination
+      passiert vorher, bei der Zerlegung.
+    </p>
+    <p>
+      Umgekehrt geht es auch: <code>claude mcp serve</code> exponiert die Werkzeuge von Claude Code
+      über MCP, sodass ein anderer MCP-Client Claude Code beauftragen kann.
+    </p>
+
+    <h3>Was die Verbindung kostet und wo sie leckt</h3>
+    <div class="figures">
+      <div><div class="v amb">~3×</div><div class="k">Tokens einer Drei-Agenten-Pipeline gegenüber dem Ein-Agenten-Äquivalent</div></div>
+      <div><div class="v amb">60–80 %</div><div class="k">des Tokenverbrauchs entfallen auf Werkzeug-Schemas bei statischen Toolsets</div></div>
+      <div><div class="v amb">~5,5 %</div><div class="k">von 1.899 untersuchten MCP-Servern waren von Tool Poisoning betroffen</div></div>
+      <div><div class="v amb">43 %</div><div class="k">der getesteten MCP-Server waren für Command Injection anfällig</div></div>
+    </div>
+    <p style="font-size:.93rem;color:var(--ink-soft)">
+      Ein Workflow, der im Test 0,50 $ kostet, kann bei 100.000 Ausführungen im Monat auf 50.000 $
+      gehen — der Orchestrator macht eigene Modellaufrufe für Zerlegung und Aggregation
+      <em>zusätzlich</em> zu jedem Worker-Aufruf. Das fällt im Funktionstest nicht auf, nur im
+      Lasttest. Bei A2A kommt hinzu, dass die Spezifikation kein Autorisierungs-Framework definiert:
+      Scope-Zuschnitt und Token-Ablaufzeiten bleiben jeder Implementierung selbst überlassen.
+    </p>
+  </section>
+
+  <!-- ================= 08 ================= -->
+  <section id="s8">
+    <div class="sec-head">
+      <span class="sec-num">08</span>
+      <h2>Die Messung</h2>
+      <p>Diese Seite entstand aus 21 Researchern über drei Engines. Was dabei über die Engines selbst herauskam, ist der interessanteste Nebenbefund.</p>
+    </div>
+
+    <p>
+      Alle drei Engines bekamen <strong>wortgleich dieselben sieben Unterthemen</strong>. Engine A holt
+      volle Seiten über Firecrawl und Tavily und lässt ein günstiges Modell auswerten. Engine B nutzt
+      dasselbe Modell mit eigener Snippet-Websuche. Engine C ist ein Schwarm aus sieben
+      Sonnet-5-Agenten, die selbst suchen und nachfassen.
+    </p>
+
+    <figure>
+      <svg viewBox="0 0 800 260" role="img" aria-label="Anteil der Primärquellen je Engine: Engine A fünf Prozent, Engine B elf Prozent, Engine C vierundvierzig Prozent. Darunter die Zahl der zitierten URLs je Antwort: Engine A null, Engine B 39, Engine C 36,9.">
+        <g font-family="IBM Plex Sans, sans-serif" fill="currentColor">
+          <text x="0" y="16" font-family="IBM Plex Mono, monospace" font-size="10.5" opacity=".55" letter-spacing="1">ANTEIL PRIMÄRQUELLEN — HERSTELLER-DOKUS, SPEZIFIKATIONEN, ARXIV</text>
+
+          <!-- scale 50% = 620px from x=140 -->
+          <text x="0" y="52" font-size="12.5">Engine A</text>
+          <rect x="140" y="36" width="62" height="24" rx="2" fill="var(--amber-bg)" stroke="#A84A08" stroke-width="1.2"/>
+          <text x="212" y="53" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#A84A08">5 %</text>
+          <text x="252" y="53" font-size="11" opacity=".6">Firecrawl + Tavily → DeepSeek</text>
+
+          <text x="0" y="92" font-size="12.5">Engine B</text>
+          <rect x="140" y="76" width="136" height="24" rx="2" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.1"/>
+          <text x="286" y="93" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600">11 %</text>
+          <text x="330" y="93" font-size="11" opacity=".6">DeepSeek mit eigener Snippet-Suche</text>
+
+          <text x="0" y="132" font-size="12.5">Engine C</text>
+          <rect x="140" y="116" width="546" height="24" rx="2" fill="var(--signal-bg)" stroke="#0F766E" stroke-width="1.5"/>
+          <text x="696" y="133" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="600" fill="#0F766E">44 %</text>
+          <text x="154" y="133" font-size="11" fill="#0F766E">Sonnet-5-Schwarm — sucht mehrfach und folgt Spuren</text>
+
+          <line x1="140" y1="28" x2="140" y2="150" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <line x1="388" y1="144" x2="388" y2="150" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <line x1="636" y1="144" x2="636" y2="150" stroke="currentColor" stroke-width="1" opacity=".3"/>
+          <text x="140" y="164" font-family="IBM Plex Mono, monospace" font-size="10" opacity=".5">0</text>
+          <text x="388" y="164" font-family="IBM Plex Mono, monospace" font-size="10" opacity=".5" text-anchor="middle">20 %</text>
+          <text x="636" y="164" font-family="IBM Plex Mono, monospace" font-size="10" opacity=".5" text-anchor="middle">40 %</text>
+
+          <line x1="0" y1="186" x2="800" y2="186" stroke="currentColor" stroke-width="1" opacity=".18"/>
+          <text x="0" y="210" font-family="IBM Plex Mono, monospace" font-size="10.5" opacity=".55" letter-spacing="1">ZITIERTE URLS JE ANTWORT</text>
+          <text x="0" y="240" font-size="12.5">Engine A</text>
+          <text x="140" y="240" font-family="Bitter, serif" font-size="20" font-weight="700" fill="#A84A08">0</text>
+          <text x="170" y="240" font-size="11.5" opacity=".72">— zitierte „(Quelle 3)" statt der Adresse. Ohne die Quellendatei nicht prüfbar.</text>
+          <text x="596" y="240" font-size="12.5">B</text>
+          <text x="618" y="240" font-family="Bitter, serif" font-size="20" font-weight="700">39,0</text>
+          <text x="686" y="240" font-size="12.5">C</text>
+          <text x="708" y="240" font-family="Bitter, serif" font-size="20" font-weight="700" fill="#0F766E">36,9</text>
+        </g>
+      </svg>
+      <figcaption>
+        <b>Der Abstand ist kein Rundungsfehler.</b> Engine C zitierte fast neunmal so oft
+        Primärquellen wie Engine A. Der Grund ist strukturell: A und B setzen <em>eine</em>
+        Suchanfrage ab und verarbeiten das Ergebnis. C liest an, erkennt „diese Seite zitiert das
+        Original", und holt das Original.
+      </figcaption>
+    </figure>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Kennzahl</th>
+            <th class="num">A — Vollseiten</th>
+            <th class="num">B — Snippets</th>
+            <th class="num">C — Agenten-Schwarm</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Zeichen je Antwort</th><td class="num">10.823</td><td class="num">10.564</td><td class="num win">19.145</td></tr>
+          <tr><th scope="row">URLs je Antwort</th><td class="num bad">0</td><td class="num win">39,0</td><td class="num">36,9</td></tr>
+          <tr><th scope="row">verschiedene Domains</th><td class="num">—</td><td class="num win">15,1</td><td class="num">11,9</td></tr>
+          <tr><th scope="row">Unsicherheits-Marker</th><td class="num">3,1</td><td class="num">3,3</td><td class="num win">11,3</td></tr>
+          <tr><th scope="row">Primärquellen-Anteil</th><td class="num bad">5 %</td><td class="num">11 %</td><td class="num win">44 %</td></tr>
+          <tr><th scope="row">Zeit je Researcher</th><td class="num">400 s+</td><td class="num win">~90 s</td><td class="num">3–4 min</td></tr>
+          <tr><th scope="row">Kosten je Researcher</th><td class="num win">~0,3 ct</td><td class="num">~1,5 ct</td><td class="num bad">Claude-Token</td></tr>
+        </tbody>
+        <caption>„Primärquelle" ist eine Stichwortliste (Hersteller-Domains, offizielle Dokumentationen, arXiv, Spezifikationen). Ein anderer Zuschnitt verschiebt die Prozentzahlen; die Rangfolge dürfte er nicht umdrehen.</caption>
+      </table>
+    </div>
+
+    <div class="warn-box">
+      <p class="lede">B und C teilen 8 von 141 Domains</p>
+      <p class="why">
+        Fast keine Überschneidung — die beiden Engines haben praktisch verschiedene Webs gelesen.
+        Unter den Domains, die <em>nur</em> die Snippet-Suche fand, war ein
+        Übersetzungswörterbuch — in vier von sieben Unterthemen. Das ist genau der Retrieval-Bias,
+        den Anthropic im eigenen System beschreibt: SEO-optimierte Seiten schlagen akademische PDFs,
+        und automatisierte Prüfungen sehen das nicht.
+      </p>
+    </div>
+
+    <h3>Ehrlichkeit lässt sich zählen</h3>
+    <p>
+      Der Schwarm markierte dreimal so oft Stellen mit „das konnte ich nicht belegen", „hier
+      widersprechen sich die Quellen", „diese PDF war nicht lesbar". Das ist kein Geschwätz, sondern
+      der eigentliche Wert. Beim Thema Protokolle hatte Engine A <strong>null</strong>
+      Unsicherheitsmarker — bei einem Feld, das sich vierteljährlich ändert, ist das ein Warnsignal
+      und kein Gütesiegel.
+    </p>
+
+    <h3>Zwei Werkzeugfehler, die der Lauf selbst aufdeckte</h3>
+    <ul>
+      <li><strong>Der Prompt erzeugte unprüfbare Antworten.</strong> Er verlangte „nenne die Quelle" und übergab die Quellen als nummerierte Liste — das Modell antwortete folgerichtig mit der Nummer. Behoben durch die ausdrückliche Forderung nach der vollen Adresse.</li>
+      <li><strong>Der Zeitdeckel saß an der falschen Stelle.</strong> Zwei von sieben Researchern liefen leer in ein 400-Sekunden-Limit. Die Suche brauchte 6 Sekunden; der Flaschenhals war die Auswertung von über 150.000 Zeichen.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 09 ================= -->
+  <section id="s9">
+    <div class="sec-head">
+      <span class="sec-num">09</span>
+      <h2>Was daraus folgt</h2>
+      <p>Neun Sätze, die man sich merken kann, wenn man den Rest vergisst.</p>
+    </div>
+
+    <ol style="font-size:1.02rem">
+      <li><strong>Baue einen Workflow, wenn du kannst.</strong> Ein Agent kostet Latenz, Geld und Fehlerfortpflanzung. Autonomie muss sich lohnen, nicht beeindrucken.</li>
+      <li><strong>Werkzeugbeschreibungen sind Prompt.</strong> Der größte Qualitätshebel bei Einzelagenten sitzt in Namen, Beschreibungen und Fehlermeldungen — nicht im Systemprompt.</li>
+      <li><strong>Gib nach jeder Aktion echtes Ergebnis zurück.</strong> Sonst bewertet der Agent seinen Plan statt der Wirklichkeit.</li>
+      <li><strong>Der Abbruch gehört in den Code.</strong> Binär, messbar, plus hartes Iterationslimit als Netz. 68 dokumentierte Endlosschleifen sind Argument genug.</li>
+      <li><strong>Lass nichts sich selbst prüfen.</strong> Generator und Prüfer teilen sonst dieselben blinden Flecken. Trenne sie — Test, Kritiker oder Klassifikator.</li>
+      <li><strong>Lesen parallel, schreiben einspurig.</strong> Die eine Regel, aus der sich fast alle Multi-Agent-Entscheidungen ableiten.</li>
+      <li><strong>Bleib bei 2–6 Agenten</strong>, außer die Teilaufgaben sind wirklich unabhängig. Kosten wachsen quadratisch, Qualität nicht.</li>
+      <li><strong>Für Modellgrenzen: Dateisystem statt Protokoll.</strong> Atomarer Claim, Existenzcheck, Ledger nur als Nachweis. Unspektakulär, aber es hält.</li>
+      <li><strong>Miss den Overhead im Lasttest.</strong> Der Orchestrator macht eigene Aufrufe zusätzlich zu jedem Worker-Aufruf. Im Funktionstest sieht man das nie.</li>
+    </ol>
+
+    <div class="rule-box">
+      <p class="lede">Erst einfach. Komplexität nur bei belegtem Bedarf.</p>
+      <p class="why">Das ist die Meta-Regel über allem, und sie wird in fast jeder Primärquelle wiederholt. Jede Harness-Komponente kodiert eine Annahme darüber, was das Modell nicht allein kann — mit besseren Modellen darf man Teile wieder abbauen.</p>
+    </div>
+  </section>
+
+  <!-- ================= Quellen ================= -->
+  <section id="q">
+    <div class="sec-head">
+      <span class="sec-num">—</span>
+      <h2>Quellen</h2>
+      <p>Auswahl der Primärquellen. Vollständige Belegketten inklusive der markierten Lücken liegen in den Rohauswertungen der 21 Researcher.</p>
+    </div>
+
+    <h3>Hersteller und Spezifikationen</h3>
+    <ul class="sources">
+      <li><a href="https://www.anthropic.com/engineering/building-effective-agents">Anthropic — Building Effective Agents</a></li>
+      <li><a href="https://www.anthropic.com/engineering/writing-tools-for-agents">Anthropic — Writing Tools for Agents</a></li>
+      <li><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Anthropic — Effective Context Engineering</a></li>
+      <li><a href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents">Anthropic — Harnesses for Long-Running Agents</a></li>
+      <li><a href="https://www.anthropic.com/engineering/harness-design-long-running-apps">Anthropic — Harness Design</a></li>
+      <li><a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents">Anthropic — Demystifying Evals</a></li>
+      <li><a href="https://www.anthropic.com/engineering/multi-agent-research-system">Anthropic — Multi-Agent Research System</a></li>
+      <li><a href="https://modelcontextprotocol.io/specification/2026-07-28/changelog">MCP — Spezifikation 2026-07-28</a></li>
+      <li><a href="https://openai.github.io/openai-agents-python/agents/">OpenAI — Agents SDK, Agents</a></li>
+      <li><a href="https://openai.github.io/openai-agents-python/handoffs/">OpenAI — Agents SDK, Handoffs</a></li>
+      <li><a href="https://code.claude.com/docs/en/sub-agents">Claude Code — Subagents</a></li>
+      <li><a href="https://code.claude.com/docs/en/hooks">Claude Code — Hooks</a></li>
+      <li><a href="https://opencode.ai/docs/agents/">OpenCode — Agents</a></li>
+      <li><a href="https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation">Linux Foundation — Agentic AI Foundation</a></li>
+      <li><a href="https://www.linuxfoundation.org/press/a2a-protocol-surpasses-150-organizations-lands-in-major-cloud-platforms-and-sees-enterprise-production-use-in-first-year">Linux Foundation — A2A, Stand April 2026</a></li>
+      <li><a href="https://zed.dev/blog/acp-registry">Zed — Agent Client Protocol Registry</a></li>
+    </ul>
+
+    <h3>Forschung</h3>
+    <ul class="sources">
+      <li><a href="https://arxiv.org/pdf/2503.13657">arXiv 2503.13657 — Why Do Multi-Agent LLM Systems Fail? (MAST)</a></li>
+      <li><a href="https://arxiv.org/abs/2310.01798">arXiv 2310.01798 — LLMs Cannot Self-Correct Reasoning Yet</a></li>
+      <li><a href="https://arxiv.org/pdf/2311.08516">arXiv 2311.08516 — Fehler finden gegen Fehler beheben</a></li>
+      <li><a href="https://arxiv.org/abs/2410.21819">arXiv 2410.21819 — Self-Preference Bias in LLM-as-a-Judge</a></li>
+      <li><a href="https://arxiv.org/html/2607.01641v1">arXiv 2607.01641 — Infinite Agentic Loops</a></li>
+      <li><a href="https://arxiv.org/html/2510.12697v1">arXiv 2510.12697 — Debate mit adaptivem Stopp-Kriterium</a></li>
+      <li><a href="https://arxiv.org/html/2606.00655v1">arXiv 2606.00655 — Skalierungsverhalten von Multi-Agent-Systemen</a></li>
+      <li><a href="https://arxiv.org/abs/2303.11366">arXiv 2303.11366 — Reflexion</a></li>
+      <li><a href="https://arxiv.org/abs/2606.31498">arXiv 2606.31498 — Governance Gaps in Interoperability Protocols</a></li>
+    </ul>
+
+    <h3>Praxis</h3>
+    <ul class="sources">
+      <li><a href="https://cognition.com/blog/dont-build-multi-agents">Cognition — Don't Build Multi-Agents</a></li>
+      <li><a href="https://cognition.com/blog/multi-agents-working">Cognition — Multi-Agents: What's Actually Working</a></li>
+      <li><a href="https://aws.amazon.com/blogs/storage/orchestrating-multi-agent-ai-architectures-with-amazon-s3-files/">AWS — Multi-Agent-Orchestrierung über Dateien</a></li>
+      <li><a href="https://www.augmentcode.com/guides/multi-agent-cost-compounding">Augment Code — Multi-Agent Cost Compounding</a></li>
+      <li><a href="https://www.practical-devsecops.com/mcp-security-vulnerabilities/">Practical DevSecOps — MCP-Schwachstellen</a></li>
+      <li><a href="https://tyk.io/learning-center/a2a-security-the-developers-complete-guide/">Tyk — A2A Security Guide</a></li>
+      <li><a href="https://github.com/andyrewlee/awesome-agent-orchestrators">Awesome Agent Orchestrators</a></li>
+    </ul>
+  </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="in">
+    <p>
+      <strong>Agenten-Schaltplan</strong> — erstellt am 09.09.2026 aus einer Recherche mit 21 parallelen
+      Researchern über drei Engines, je dieselben sieben Unterthemen.
+    </p>
+    <p style="margin:0">
+      Wo eine Aussage nur sekundär belegt war, steht das im Text. Wo sich Quellen widersprechen, ist der
+      Widerspruch benannt statt aufgelöst. Zahlen ohne Primärquelle sind als solche gekennzeichnet.
+    </p>
+  </div>
+</footer>
