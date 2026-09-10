@@ -4125,41 +4125,47 @@ namespace ClaudeVoiceOverlay.Views
         /// die Liste, lokale Eintraege bleiben erhalten — bei doppelten
         /// IDs gewinnt der lokale Stand (kann frischeren KI-Titel haben).
         /// </summary>
-        public async Task TryMergeHistoryFromCloudAsync()
+        public Task TryMergeHistoryFromCloudAsync()
         {
+            // Laufender Abgleich alle 60 s (wie bei den Slots) — Eintraege vom
+            // Mac kamen sonst erst beim naechsten App-Start an.
+            if (_historySyncTimer is null)
+            {
+                _historySyncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
+                _historySyncTimer.Tick += (_, _) => _ = TrySyncHistoryWithCloudAsync();
+                _historySyncTimer.Start();
+            }
+            return TrySyncHistoryWithCloudAsync();
+        }
+
+        private DispatcherTimer? _historySyncTimer;
+        private readonly SemaphoreSlim _historySyncGate = new(1, 1);
+
+        /// <summary>
+        /// Zwei-Wege-Sync der Historie: Cloud holen -> atomar in den lokalen
+        /// Stand mergen -> nur hochladen, wenn die Cloud danach veraltet ist.
+        /// </summary>
+        private async Task TrySyncHistoryWithCloudAsync()
+        {
+            if (!await _historySyncGate.WaitAsync(0)) return;   // laeuft schon
             try
             {
                 var sync = GetOrCreateSync();
                 if (sync is null) return;
-                string? cloud = await sync.DownloadHistoryAsync();
-                if (cloud is null)
-                {
-                    Console.WriteLine("No cloud history yet — nothing to merge.");
-                    return;
-                }
-                var local = await _historyService.LoadAllAsync();
-                var merged = PromptHistoryDriveSync.MergeEntries(local, cloud);
-                bool unchanged = merged.Count == local.Count && merged
-                    .Zip(local, (cloudEntry, localEntry) =>
-                        string.Equals(cloudEntry.Id, localEntry.Id, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(cloudEntry.Title, localEntry.Title, StringComparison.Ordinal) &&
-                        string.Equals(cloudEntry.Text, localEntry.Text, StringComparison.Ordinal) &&
-                        cloudEntry.Timestamp == localEntry.Timestamp &&
-                        cloudEntry.UpdatedAt == localEntry.UpdatedAt &&
-                        cloudEntry.ArchivedAt == localEntry.ArchivedAt)
-                    .All(equal => equal);
-                if (unchanged)
-                {
-                    Console.WriteLine("Cloud history merge: no changes.");
-                    return;
-                }
-                await _historyService.ReplaceAllAsync(merged);
-                await TryUploadHistoryAsync();
-                Console.WriteLine($"Cloud history merged: {merged.Count - local.Count} new entries or revised content.");
+                string cloud = await sync.DownloadHistoryAsync() ?? "[]";
+                var (merged, changed) = await _historyService.MergeFromCloudAsync(cloud);
+                if (changed && _promptPanel is not null) await _promptPanel.ReloadHistoryAsync();
+                var cloudEntries = PromptHistoryDriveSync.MergeEntries(Array.Empty<PromptHistoryEntry>(), cloud);
+                if (!PromptHistoryDriveSync.SameContent(merged, cloudEntries))
+                    await TryUploadHistoryAsync();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"History cloud merge skipped: {ex.Message}");
+                Console.WriteLine($"History cloud sync skipped: {ex.Message}");
+            }
+            finally
+            {
+                _historySyncGate.Release();
             }
         }
 

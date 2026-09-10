@@ -247,7 +247,9 @@ public sealed class PromptHistoryDriveSync
                     continue;
                 }
 
-                var winner = EffectiveUpdatedAt(e) > EffectiveUpdatedAt(existing) ? e : existing;
+                // 1 ms Toleranz (Mac speichert nur Millisekunden).
+                var winner = (EffectiveUpdatedAt(e).ToUniversalTime() - EffectiveUpdatedAt(existing).ToUniversalTime()).TotalMilliseconds > 1
+                    ? e : existing;
                 var archivedAt = Max(existing.ArchivedAt, e.ArchivedAt);
                 if (archivedAt is not null)
                 {
@@ -272,4 +274,30 @@ public sealed class PromptHistoryDriveSync
 
     private static DateTime? Max(DateTime? left, DateTime? right) =>
         left is null ? right : right is null || left >= right ? left : right;
+
+    /// <summary>
+    /// Gleicher Inhalt (IDs, Texte, Titel, Zeiten auf 2 ms genau)? Der Mac
+    /// speichert Millisekunden, Windows 100 ns — daher die Toleranz. Ein
+    /// fehlendes UpdatedAt (default) und die Mac-Epoche 1970 gelten als gleich.
+    /// </summary>
+    public static bool SameContent(IEnumerable<PromptHistoryEntry> a, IEnumerable<PromptHistoryEntry> b)
+    {
+        static DateTime Norm(DateTime d) =>
+            d == default || d.Year <= 1970 ? DateTime.UnixEpoch : d.ToUniversalTime();
+        static bool Close(DateTime l, DateTime r) => Math.Abs((Norm(l) - Norm(r)).TotalMilliseconds) <= 2;
+
+        var byId = new Dictionary<string, PromptHistoryEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var e in b) if (e is not null && !string.IsNullOrEmpty(e.Id)) byId[e.Id] = e;
+        var x = a.Where(e => e is not null && !string.IsNullOrEmpty(e.Id)).ToList();
+        if (x.Count != byId.Count) return false;
+        foreach (var l in x)
+        {
+            if (!byId.TryGetValue(l.Id, out var r)) return false;
+            if (l.Text != r.Text || l.Title != r.Title) return false;
+            if (!Close(l.Timestamp, r.Timestamp) || !Close(l.UpdatedAt, r.UpdatedAt)) return false;
+            if (l.ArchivedAt.HasValue != r.ArchivedAt.HasValue) return false;
+            if (l.ArchivedAt.HasValue && !Close(l.ArchivedAt.Value, r.ArchivedAt!.Value)) return false;
+        }
+        return true;
+    }
 }

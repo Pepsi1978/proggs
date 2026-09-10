@@ -158,25 +158,7 @@ final class PromptHistoryStore {
         // Cloud-JSON entschluesseln. Bei kaputtem JSON: lokale Liste
         // unveraendert zurueckgeben — Cloud darf den lokalen Stand nie
         // zerstoeren.
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let str = try decoder.singleValueContainer().decode(String.self)
-            if str.hasPrefix("0001-01-01") { return Date(timeIntervalSince1970: 0) }
-            let f1 = ISO8601DateFormatter()
-            f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let d = f1.date(from: str) { return d }
-            let f2 = ISO8601DateFormatter()
-            f2.formatOptions = [.withInternetDateTime]
-            if let d = f2.date(from: str) { return d }
-            throw DecodingError.dataCorruptedError(
-                in: try decoder.singleValueContainer(),
-                debugDescription: "Invalid date: \(str)")
-        }
-        var cloud: [PBHistoryEntry] = []
-        if let data = cloudJson.data(using: .utf8),
-           let parsed = try? decoder.decode([PBHistoryEntry].self, from: data) {
-            cloud = parsed
-        }
+        let cloud = decodeEntries(cloudJson)
         var byId: [String: PBHistoryEntry] = [:]
         for e in local where !e.id.isEmpty { byId[e.id.lowercased()] = e }
         for e in cloud where !e.id.isEmpty {
@@ -190,8 +172,68 @@ final class PromptHistoryStore {
         return byId.values.sorted { $0.timestamp > $1.timestamp }
     }
 
+    /// Dekodiert eine Historie-JSON (Mac oder Windows). Kaputtes JSON -> leer.
+    static func decodeEntries(_ json: String) -> [PBHistoryEntry] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let str = try decoder.singleValueContainer().decode(String.self)
+            if str.hasPrefix("0001-01-01") { return Date(timeIntervalSince1970: 0) }
+            // Toleranter Parser (Windows schreibt 7 Nachkommastellen).
+            if let d = PromptSlotStore.parseDate(str) { return d }
+            throw DecodingError.dataCorruptedError(
+                in: try decoder.singleValueContainer(),
+                debugDescription: "Invalid date: \(str)")
+        }
+        guard let data = json.data(using: .utf8),
+              let parsed = try? decoder.decode([PBHistoryEntry].self, from: data) else { return [] }
+        return parsed
+    }
+
+    /// Gleicher Inhalt (IDs, Texte, Titel, Zeiten auf 2 ms genau)? Der Mac
+    /// speichert Millisekunden, Windows 100 ns — daher die Toleranz.
+    static func sameContent(_ a: [PBHistoryEntry], _ b: [PBHistoryEntry]) -> Bool {
+        func close(_ l: Date?, _ r: Date?) -> Bool {
+            switch (l, r) {
+            case (nil, nil): return true
+            case let (x?, y?): return abs(x.timeIntervalSince(y)) <= 0.002
+            default: return false
+            }
+        }
+        var byId: [String: PBHistoryEntry] = [:]
+        for e in b where !e.id.isEmpty { byId[e.id.lowercased()] = e }
+        let x = a.filter { !$0.id.isEmpty }
+        guard x.count == byId.count else { return false }
+        for l in x {
+            guard let r = byId[l.id.lowercased()],
+                  l.text == r.text, l.title == r.title,
+                  close(l.timestamp, r.timestamp), close(l.updatedAt, r.updatedAt),
+                  close(l.archivedAt, r.archivedAt) else { return false }
+        }
+        return true
+    }
+
+    /// Mergt die Cloud-JSON ATOMAR in den lokalen Stand (innerhalb der seriellen
+    /// Queue — ein gleichzeitiges `append` geht dadurch nicht verloren). Gleiche
+    /// Archiv-Schwellen wie `replaceAll`. `completion` (Main-Thread) bekommt den
+    /// gespeicherten Stand und ob sich lokal etwas geaendert hat.
+    func mergeFromCloud(cloudJson: String, completion: @escaping ([PBHistoryEntry], Bool) -> Void) {
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            let local = self.loadUnlocked()
+            var merged = Self.merge(local: local, cloudJson: cloudJson)
+            let changed = !Self.sameContent(merged, local)
+            if changed {
+                self.archiveOverflowUnlocked(&merged)
+                self.saveUnlocked(merged)
+            }
+            let result = changed ? merged : local
+            DispatchQueue.main.async { completion(result, changed) }
+        }
+    }
+
     private static func mergeRevision(_ left: PBHistoryEntry, _ right: PBHistoryEntry) -> PBHistoryEntry {
-        var winner = effectiveUpdatedAt(right) > effectiveUpdatedAt(left) ? right : left
+        // 1 ms Toleranz, sonst "gewinnt" derselbe Windows-Stand bei jedem Sync erneut.
+        var winner = effectiveUpdatedAt(right).timeIntervalSince(effectiveUpdatedAt(left)) > 0.001 ? right : left
         let archivedAt = [left.archivedAt, right.archivedAt].compactMap { $0 }.max()
         if let archivedAt {
             winner.archivedAt = archivedAt

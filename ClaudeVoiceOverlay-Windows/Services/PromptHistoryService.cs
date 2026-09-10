@@ -184,6 +184,34 @@ public sealed class PromptHistoryService
     }
 
     /// <summary>
+    /// Mergt die Cloud-JSON ATOMAR in den lokalen Stand (innerhalb von Gate +
+    /// Mutex — ein gleichzeitiges AppendAsync geht dadurch nicht verloren).
+    /// Gleiche Archiv-Schwellen wie <see cref="ReplaceAllAsync"/>. Liefert den
+    /// gespeicherten Stand und ob sich lokal etwas geaendert hat.
+    /// </summary>
+    public async Task<(List<PromptHistoryEntry> Merged, bool Changed)> MergeFromCloudAsync(
+        string cloudJson, CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            return WithStoreMutex(ct, () =>
+            {
+                var local = LoadUnlocked(ct);
+                // Eigene Vergleichskopie: MergeEntries setzt ArchivedAt direkt am
+                // lokalen Objekt — ein Vergleich gegen `local` saehe die Aenderung nie.
+                var before = LoadUnlocked(ct);
+                var merged = PromptHistoryDriveSync.MergeEntries(local, cloudJson);
+                if (PromptHistoryDriveSync.SameContent(merged, before)) return (before, false);
+                ArchiveOverflowUnlocked(merged);
+                SaveUnlocked(merged, ct);
+                return (merged, true);
+            });
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>
     /// Aktualisiert den Titel eines bestehenden Eintrags und schreibt die
     /// Historie atomar zurueck. Wird vom OverlayWindow aufgerufen sobald
     /// der KI-Titel von Gemini eingetroffen ist — der Eintrag wurde

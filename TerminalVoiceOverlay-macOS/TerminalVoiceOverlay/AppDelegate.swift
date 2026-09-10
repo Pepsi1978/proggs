@@ -938,33 +938,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// KI-Titel haben). Fehler werden nur in den Debug-Log geschrieben,
     /// niemals dem Benutzer angezeigt — Sync ist Komfort, kein Pflichtkanal.
     private func mergeHistoryFromCloudOnLaunch() {
-        guard GoogleDriveBackupService.shared.isAuthenticated() else {
-            tvoDebug("[App] history cloud merge skipped: drive not connected")
-            return
-        }
-        GoogleDriveBackupService.shared.downloadHistory { [weak self] result in
-            switch result {
-            case .failure(let e):
-                tvoDebug("[App] history cloud download failed: \(e.localizedDescription)")
-            case .success(let cloud):
-                guard let cloudJson = cloud, !cloudJson.isEmpty else {
-                    tvoDebug("[App] no cloud history yet — nothing to merge")
-                    return
-                }
-                PromptHistoryStore.shared.loadAll { local in
-                    let merged = PromptHistoryStore.merge(local: local, cloudJson: cloudJson)
-                    if merged == local {
-                        tvoDebug("[App] cloud history merge: no changes")
-                        return
-                    }
-                    PromptHistoryStore.shared.replaceAll(entries: merged) {
-                        tvoDebug("[App] cloud history merged: +\(merged.count - local.count) entries")
-                        self?.uploadHistoryToCloud()
-                        // Offene Historie-Ansicht direkt aktualisieren.
-                        self?.promptBoardPanel?.reloadHistory()
-                    }
-                }
-            }
+        syncHistoryWithCloud()
+        // Laufender Abgleich (wie bei den Slots): Eintraege vom anderen Geraet
+        // kamen sonst erst beim naechsten App-Start an.
+        historySyncTimer?.invalidate()
+        historySyncTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.syncHistoryWithCloud()
         }
     }
 
@@ -977,21 +956,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             notifyDriveDisconnectedOnce()
             return
         }
-        let json = PromptHistoryStore.shared.rawJsonFromDisk()
-        GoogleDriveBackupService.shared.uploadHistory(json: json) { [weak self] result in
-            switch result {
-            case .success:
-                tvoDebug("[App] history uploaded to cloud")
-                self?.driveDisconnectedNotified = false
-                PromptBoardPanel.recordSyncNow()
-                // Sync-Badge im Promtboard-Header auch fuer Historie-
-                // Uploads aktualisieren — sonst zeigt das Label nur den
-                // letzten Promtboard-Backup, obwohl die Historie laufend
-                // gesynct wird.
-                self?.promptBoardPanel?.markSyncedNow()
-            case .failure(let e):
-                tvoDebug("[App] history upload failed: \(e.localizedDescription)")
+        // Erst Cloud mergen, dann hochladen — nie den lokalen Stand blind drueberschreiben.
+        syncHistoryWithCloud()
+    }
+
+    private var historySyncTimer: Timer?
+    private var historySyncRunning = false
+    private var historySyncPending = false
+
+    /// Zwei-Wege-Sync der Historie: Cloud holen -> atomar in den lokalen Stand
+    /// mergen -> nur hochladen, wenn die Cloud danach veraltet ist. Frueher lud
+    /// der Mac die lokale Datei UNGEMERGT hoch und ueberschrieb Windows-Eintraege.
+    private func syncHistoryWithCloud() {
+        guard GoogleDriveBackupService.shared.isAuthenticated() else {
+            tvoDebug("[App] history sync skipped: drive not connected")
+            return
+        }
+        if historySyncRunning { historySyncPending = true; return }
+        historySyncRunning = true
+        GoogleDriveBackupService.shared.downloadHistory { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch result {
+                case .failure(let e):
+                    tvoDebug("[App] history cloud download failed: \(e.localizedDescription)")
+                    self.finishHistorySync()
+                case .success(let cloud):
+                    let cloudJson = (cloud?.isEmpty == false) ? cloud! : "[]"
+                    PromptHistoryStore.shared.mergeFromCloud(cloudJson: cloudJson) { merged, changed in
+                        if changed {
+                            tvoDebug("[App] cloud history merged")
+                            self.promptBoardPanel?.reloadHistory()
+                        }
+                        if PromptHistoryStore.sameContent(merged, PromptHistoryStore.decodeEntries(cloudJson)) {
+                            self.finishHistorySync()
+                            return
+                        }
+                        let json = PromptHistoryStore.shared.rawJsonFromDisk()
+                        GoogleDriveBackupService.shared.uploadHistory(json: json) { upload in
+                            DispatchQueue.main.async {
+                                switch upload {
+                                case .success:
+                                    tvoDebug("[App] history uploaded to cloud")
+                                    self.driveDisconnectedNotified = false
+                                    PromptBoardPanel.recordSyncNow()
+                                    self.promptBoardPanel?.markSyncedNow()
+                                case .failure(let e):
+                                    tvoDebug("[App] history upload failed: \(e.localizedDescription)")
+                                }
+                                self.finishHistorySync()
+                            }
+                        }
+                    }
+                }
             }
+        }
+    }
+
+    private func finishHistorySync() {
+        historySyncRunning = false
+        if historySyncPending {
+            historySyncPending = false
+            syncHistoryWithCloud()
         }
     }
 

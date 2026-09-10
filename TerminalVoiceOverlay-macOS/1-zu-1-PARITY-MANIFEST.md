@@ -214,6 +214,26 @@ in BEIDEN macOS-Overlays (TVO + CVO) umgesetzt.
 
 ---
 
+## 13. Nachzug-Runde 2026-09-10 (Windows -> macOS, plus Sync auf beiden Seiten)
+
+| Windows | macOS | Art |
+|---------|-------|-----|
+| `GeminiBatchTranscribeClient` Timeout 120 s -> 30 s (23bb8c3cc) | `timeoutIntervalForRequest/Resource = 30` | Haenger fiel erst nach 2 min auf Groq zurueck |
+| `ResilientHttp` (Connect-Timeout, Keepalive) | entfaellt — URLSession hat keinen unendlichen Connect-Timeout | bewusst nicht portiert |
+| `DriveHttp` 30 s fuer alle Drive-Dienste (55cc13d42) | `GoogleDriveBackupService.driveSession` (30 s/Paket, 60 s gesamt) | vorher `URLSession.shared` (60 s / 7 Tage) |
+| Voiced-Timeline einmal fuer Vor- und Nachfilter (edd56bc73) | `GroqWhisperClient.sendRequest` + `hasSpeechContent([Bool]?)` | RMS-Analyse lief doppelt |
+| Status-Server ab Start (55cc13d42) | war schon in `applicationDidFinishLaunching` | bereits vorhanden |
+| Mikrofon weg waehrend Aufnahme -> regulaer stoppen (ea18b7472) | Pegel-Watchdog `onCaptureStalled` (2,5 s) | bereits vorhanden |
+| curl `Expect:`, Gemini-Live-Close, SQLite-Refresh im Hintergrund (edd56bc73) | — | Windows-spezifisch, auf macOS gegenstandslos |
+
+**Sync (beide Plattformen, TVO + CVO):** Slots und Historie laufen jetzt als
+Zwei-Wege-Sync — Cloud holen, atomar im Store mergen, nur bei veralteter Cloud
+hochladen; Slots alle 30 s, Historie alle 60 s. Vorher lud macOS die lokale Datei
+ungemergt hoch (ueberschrieb Windows-Stand) und beide Seiten holten nur beim Start.
+Zeitvergleich mit 1-2 ms Toleranz (macOS speichert ms, Windows 100 ns).
+
+---
+
 ## Verbleibende Punkte
 
 Stand 2026-08-27: die in der Nachzug-Runde gefundenen Luecken sind geschlossen
