@@ -85,10 +85,14 @@ import de.frank.genialeideen.ui.theme.Semantisch
 @Composable
 fun DetailScreen(
     viewModel: IdeenViewModel,
+    vorschau: IdeeEntity?,
     aufZurueck: () -> Unit,
 ) {
     val gold = LocalGold.current
-    val idee by viewModel.aktuelleIdee.collectAsState()
+    val geladen by viewModel.aktuelleIdee.collectAsState()
+    // The tapped idea is shown right away instead of a loading skeleton: the database
+    // answers a few frames late, and the skeleton popping in mid-transition made it stutter.
+    val idee = geladen?.takeIf { vorschau == null || it.id == vorschau.id } ?: vorschau
     val nachrichten by viewModel.nachrichten.collectAsState()
     val ki by viewModel.ki.collectAsState()
     val vorlese by viewModel.vorleseStand.collectAsState()
@@ -105,8 +109,17 @@ fun DetailScreen(
     // Auf welche Nachricht wurde lang gedrückt? Solange sie steht, liegt das Löschblatt oben.
     var gedrueckt by remember { mutableStateOf<NachrichtEntity?>(null) }
 
+    // The first load of the chat jumps without animation — an animated scroll running in
+    // parallel with the screen transition was a main cause of the stutter when opening.
+    val ersteLadung = remember(idee?.id) { booleanArrayOf(true) }
     LaunchedEffect(nachrichten.size, ki.teilAntwort) {
-        if (nachrichten.isNotEmpty()) listState.animateScrollToItem(nachrichten.size)
+        if (nachrichten.isEmpty()) return@LaunchedEffect
+        if (ersteLadung[0]) {
+            ersteLadung[0] = false
+            listState.scrollToItem(nachrichten.size)
+        } else {
+            listState.animateScrollToItem(nachrichten.size)
+        }
     }
 
     // Wechselt man die Idee, steht die Karte wieder ganz oben.

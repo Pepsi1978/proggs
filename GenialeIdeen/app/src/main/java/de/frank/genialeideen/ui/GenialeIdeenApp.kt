@@ -22,7 +22,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.activity.compose.BackHandler
+import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
+import kotlinx.coroutines.delay
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Motion
@@ -46,6 +48,18 @@ fun GenialeIdeenApp(
     val meldung by viewModel.meldung.collectAsState()
 
     var bildschirm by remember { mutableStateOf(Bildschirm.LISTE) }
+    // The idea tapped in the list: the detail screen shows it immediately.
+    var geoeffnet by remember { mutableStateOf<IdeeEntity?>(null) }
+
+    // Close the idea only once the exit transition is over. Clearing it immediately swapped
+    // the sliding-out screen to a loading skeleton and an empty chat, which stuttered.
+    LaunchedEffect(bildschirm) {
+        if (bildschirm != Bildschirm.DETAIL && geoeffnet != null) {
+            delay(Motion.BILDSCHIRM_MS.toLong())
+            viewModel.oeffne(null)
+            geoeffnet = null
+        }
+    }
 
     // Ein Vorlese-Fehler ist ein echter Fehler und darf nicht still bleiben (Baustein L).
     LaunchedEffect(vorlese.fehler) {
@@ -93,6 +107,7 @@ fun GenialeIdeenApp(
                             viewModel.oeffneEntwurf(idee)
                             bildschirm = Bildschirm.ERFASSEN
                         } else {
+                            geoeffnet = idee
                             viewModel.oeffne(idee.id)
                             bildschirm = Bildschirm.DETAIL
                         }
@@ -111,10 +126,8 @@ fun GenialeIdeenApp(
                 )
                 Bildschirm.DETAIL -> DetailScreen(
                     viewModel = viewModel,
-                    aufZurueck = {
-                        viewModel.oeffne(null)
-                        bildschirm = Bildschirm.LISTE
-                    },
+                    vorschau = geoeffnet,
+                    aufZurueck = { bildschirm = Bildschirm.LISTE },
                 )
                 Bildschirm.EINSTELLUNGEN -> EinstellungenScreen(
                     viewModel = viewModel,
