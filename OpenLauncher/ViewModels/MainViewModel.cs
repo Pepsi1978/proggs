@@ -985,7 +985,8 @@ public sealed partial class MainViewModel : ObservableObject
                 var agentsPath = _profiles.ActivateCodexProjectAgents(SelectedProfile.Id, SelectedWorkMode.Id, WorkDir);
                 // Eigenes Codex-Zuhause statt ~/.codex: sonst gaelten zusaetzlich die globale
                 // AGENTS.md, rund 40 Plugins, mehrere MCP-Server, Hooks und eine fremde Statuszeile.
-                var codexHome = _profiles.PrepareCodexHome();
+                // Skills kommen nur aus dem Repo-Profil, ~/.agents/skills wird abgeschaltet.
+                var codexHome = _profiles.PrepareCodexHome(SelectedProfile.Id);
                 _launcher.LaunchCodexCli(SelectedModel, WorkDir, thinkingLevel, codexHome);
                 Logger.Instance.Info("MainViewModel", "Start", "Codex-CLI-Kontext geschrieben", new
                 {

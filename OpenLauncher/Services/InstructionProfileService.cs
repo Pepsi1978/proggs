@@ -348,8 +348,9 @@ public sealed class InstructionProfileService
     /// Das Zuhause ist bewusst PERSISTENT (nicht pro Sitzung): sonst laeuft bei jedem Start das
     /// Onboarding und der Vertrauensdialog erneut, und die Sitzungshistorie waere jedes Mal weg.
     /// </summary>
-    public string PrepareCodexHome()
+    public string PrepareCodexHome(string profileId)
     {
+        ValidateProfileId(profileId);
         var home = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "OpenLauncher", "codex-home");
@@ -370,6 +371,12 @@ public sealed class InstructionProfileService
         // Nur wenn sie hier fehlt oder die Quelle neuer ist: ein im eigenen Zuhause erneuerter
         // Token darf nicht durch einen aelteren ueberschrieben werden.
         MirrorCodexAuth(home);
+
+        // Skills ausschliesslich aus dem Repo-Profil: die Profil-Skills landen in CODEX_HOME/skills,
+        // die alten Kopien in ~/.agents/skills (von Codex selbst immer mitgescannt, per Umgebung
+        // nicht abschaltbar) werden in der config.toml einzeln deaktiviert.
+        MirrorCodexProfileSkills(home, profileId);
+        WriteCodexSkillBlocklist(home);
         return home;
     }
 
@@ -377,7 +384,99 @@ public sealed class InstructionProfileService
 # Von OpenLauncher angelegt. Bewusst minimal: kein Plugin, kein MCP-Server, kein Hook,
 # keine eigene Statuszeile. Die Regeln kommen ausschliesslich aus der Profil-AGENTS.md
 # des Arbeitsverzeichnisses. Codex ergaenzt hier selbst nur seine Vertrauensstufen.
+# Die [[skills.config]]-Eintraege schreibt der Launcher bei jedem Start neu.
 """;
+
+    /// <summary>
+    /// Spiegelt die versionierten Skills des gewaehlten Profils (Profiles/ClaudeCode/&lt;id&gt;/skills)
+    /// nach CODEX_HOME/skills. Minimal traegt keine eigenen Skills (nur eine Junction auf das alte
+    /// ~/.claude/skills) und bekommt deshalb die Standard-Skills aus dem Repo. Kopie statt Junction,
+    /// weil Codex verlinkte Skill-Ordner nicht verlaesslich scannt; bei jedem Start frisch, damit
+    /// Aenderungen im Repo sofort gelten. Der Codex-eigene Ordner .system bleibt unangetastet.
+    /// </summary>
+    private static void MirrorCodexProfileSkills(string home, string profileId)
+    {
+        var profilesRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs", "OpenLauncher", "Profiles", "ClaudeCode");
+        var source = Path.Combine(profilesRoot, profileId == "minimal" ? "standard" : profileId, "skills");
+        var target = Path.Combine(home, "skills");
+        try
+        {
+            if (!Directory.Exists(source))
+            {
+                Logger.Instance.Warn("InstructionProfileService", "MirrorCodexProfileSkills", "Profil-Skills fehlen", new { source });
+                return;
+            }
+            Directory.CreateDirectory(target);
+            foreach (var entry in Directory.EnumerateFileSystemEntries(target))
+            {
+                if (string.Equals(Path.GetFileName(entry), ".system", StringComparison.OrdinalIgnoreCase)) continue;
+                var attributes = File.GetAttributes(entry);
+                if (attributes.HasFlag(FileAttributes.ReparsePoint)) Directory.Delete(entry);
+                else if (attributes.HasFlag(FileAttributes.Directory)) Directory.Delete(entry, recursive: true);
+                else File.Delete(entry);
+            }
+            foreach (var dir in Directory.EnumerateDirectories(source))
+                CopyDirectory(dir, Path.Combine(target, Path.GetFileName(dir)));
+            Logger.Instance.Info("InstructionProfileService", "MirrorCodexProfileSkills", "Profil-Skills gespiegelt", new { source, target });
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "MirrorCodexProfileSkills", $"Profil-Skills nicht gespiegelt: {ex.Message}", new { source, target });
+        }
+    }
+
+    private static void CopyDirectory(string source, string target)
+    {
+        Directory.CreateDirectory(target);
+        foreach (var file in Directory.EnumerateFiles(source))
+            File.Copy(file, Path.Combine(target, Path.GetFileName(file)), overwrite: true);
+        foreach (var dir in Directory.EnumerateDirectories(source))
+            CopyDirectory(dir, Path.Combine(target, Path.GetFileName(dir)));
+    }
+
+    /// <summary>
+    /// Codex scannt ~/.agents/skills immer (Nutzer-Ebene, haengt am Windows-Profilordner, nicht an
+    /// CODEX_HOME). Dort liegen veraltete Kopien (z. B. der alte research-Skill). Jede SKILL.md
+    /// darunter bekommt einen [[skills.config]]-Eintrag mit enabled = false. Alle bisherigen
+    /// [[skills.config]]-Tabellen werden vorher entfernt -- sie stammen ausschliesslich vom Launcher --,
+    /// alles andere (Vertrauensstufen, tui) bleibt erhalten.
+    /// </summary>
+    private static void WriteCodexSkillBlocklist(string home)
+    {
+        var configPath = Path.Combine(home, "config.toml");
+        try
+        {
+            var kept = new List<string>();
+            var inSkillTable = false;
+            foreach (var line in ReadText(configPath).Replace("\r\n", "\n").Split('\n'))
+            {
+                var trimmed = line.Trim();
+                if (trimmed == "[[skills.config]]") { inSkillTable = true; continue; }
+                if (inSkillTable && trimmed.StartsWith('[')) inSkillTable = false;
+                if (inSkillTable) continue;
+                if (trimmed.StartsWith(CodexSkillBlockMarker, StringComparison.Ordinal)) continue;
+                kept.Add(line);
+            }
+
+            var text = new StringBuilder(string.Join("\n", kept).TrimEnd('\n'));
+            var userSkills = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".agents", "skills");
+            if (Directory.Exists(userSkills))
+            {
+                text.Append("\n\n").Append(CodexSkillBlockMarker).Append(" veraltete Skills aus ~/.agents/skills abgeschaltet\n");
+                foreach (var skill in Directory.EnumerateFiles(userSkills, "SKILL.md", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+                    text.Append("[[skills.config]]\npath = '").Append(skill).Append("'\nenabled = false\n\n");
+            }
+            WriteIfChanged(configPath, text.ToString().TrimEnd('\n') + "\n");
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "WriteCodexSkillBlocklist", $"Skill-Sperrliste nicht geschrieben: {ex.Message}", new { configPath });
+        }
+    }
+
+    private const string CodexSkillBlockMarker = "# OpenLauncher-Skills:";
 
     private static void MirrorCodexAuth(string home)
     {
