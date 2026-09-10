@@ -528,17 +528,21 @@ private fun IdeenKopf(
 @Composable
 private fun UmsetzungsKnopf(umgesetzt: Boolean, aufTipp: () -> Unit) {
     val gold = LocalGold.current
-    val farbe = if (umgesetzt) Semantisch.erfolg else gold.primaer
+    // While the idea is still open the button stays greyed out (but tappable); only a
+    // realised idea gets the green, glowing look.
+    val inhalt = if (umgesetzt) gold.aufPrimaer else gold.textGedaempft
+    var zeile = Modifier.druckEffekt(aufTipp)
+    if (umgesetzt) {
+        zeile = zeile.goldSchein(Semantisch.erfolg.copy(alpha = 0.55f), hoehe = 10.dp, radius = 16.dp)
+    }
     Row(
-        modifier = Modifier
-            .druckEffekt(aufTipp)
-            .goldSchein(farbe.copy(alpha = 0.55f), hoehe = 10.dp, radius = 16.dp)
+        modifier = zeile
             .clip(RoundedCornerShape(16.dp))
             .background(
                 if (umgesetzt) {
                     Brush.horizontalGradient(listOf(Semantisch.erfolg, Semantisch.erfolg.copy(alpha = 0.75f)))
                 } else {
-                    Brush.horizontalGradient(listOf(gold.primaer, gold.primaerGedaempft))
+                    SolidColor(gold.textGedaempft.copy(alpha = 0.16f))
                 },
             )
             .padding(horizontal = 18.dp, vertical = 12.dp),
@@ -547,13 +551,13 @@ private fun UmsetzungsKnopf(umgesetzt: Boolean, aufTipp: () -> Unit) {
         Icon(
             imageVector = if (umgesetzt) Icons.Default.Undo else Icons.Default.Check,
             contentDescription = null,
-            tint = gold.aufPrimaer,
+            tint = inhalt,
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.width(8.dp))
         Text(
             if (umgesetzt) "Wieder offen" else "Umgesetzt",
-            color = gold.aufPrimaer,
+            color = inhalt,
             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
         )
     }
