@@ -94,9 +94,9 @@ final class InstructionProfileService {
                        to: (dir as NSString).appendingPathComponent("CLAUDE.md"))
         Self.ensureLoginToken(configDir: dir)
 
-        // Minimal bleibt bewusst regelfrei: es traegt KEINE versionierten Skills, sondern blendet die
-        // echten ~/.claude/skills per Symlink ein. Standard und Strikt haben ihre Skills als echte,
-        // versionierte Kopien im Repo -> dort wird nichts verlinkt.
+        // Minimal bleibt bewusst regelfrei: es traegt KEINE eigenen Skills, sondern blendet die
+        // Repo-Skills des Standard-Profils per Symlink ein. Standard und Strikt haben ihre Skills als
+        // echte, versionierte Kopien im Repo -> dort wird nichts verlinkt.
         if profileId == "minimal" { Self.ensureSkillsSymlink(configDir: dir) }
 
         return dir
@@ -185,14 +185,15 @@ final class InstructionProfileService {
         }
     }
 
-    /// Blendet die echten ~/.claude/skills als Symlink in den Minimal-Config-Ordner ein, damit im
-    /// sonst isolierten Minimal-Profil ALLE Skills verfuegbar sind - OHNE die uebrige
+    /// Blendet die Repo-Skills (Profiles/ClaudeCodeMac/standard/skills) als Symlink in den
+    /// Minimal-Config-Ordner ein - eine einzige Quelle fuer Claude Code, Codex und das globale
+    /// ~/.claude/skills (dort ebenfalls ein Symlink auf diesen Ordner), OHNE die uebrige
     /// ~/.claude-Umgebung (Rules/Hooks/Memory/Agents) hereinzuholen. Auf macOS genuegt ein
     /// gewoehnlicher Symlink (das Windows-Gegenstueck braucht mklink /J, weil Symlinks dort
     /// Admin-Rechte verlangen). Idempotent: korrekter Symlink -> nichts tun; falsches Ziel ->
     /// ersetzen; ein echtes Verzeichnis wird aus Sicherheit nie angefasst.
     private static func ensureSkillsSymlink(configDir: String) {
-        let realSkills = (Paths.claudeHome as NSString).appendingPathComponent("skills")
+        let realSkills = (Paths.macProfilesRoot as NSString).appendingPathComponent("ClaudeCodeMac/standard/skills")
         // Kein echtes Skills-Verzeichnis -> nichts einzublenden (keinen toten Link anlegen).
         guard Paths.directoryExists(realSkills) else { return }
 

@@ -86,9 +86,9 @@ public sealed class InstructionProfileService
         WriteText(Path.Combine(dir, "CLAUDE.md"), ComposeClaudeContext(profileId, workModeId));
         EnsureLoginToken(dir);
 
-        // Minimal bleibt bewusst regelfrei: es traegt KEINE versionierten Skills, sondern blendet
-        // die echten ~/.claude/skills per Junction ein. Standard und Strikt haben ihre Skills als
-        // echte, versionierte Kopien im Repo -> dort wird nichts verlinkt.
+        // Minimal bleibt bewusst regelfrei: es traegt KEINE eigenen Skills, sondern blendet die
+        // Repo-Skills des Standard-Profils per Junction ein -- dieselben, die Codex gespiegelt bekommt.
+        // Standard und Strikt haben ihre Skills als echte, versionierte Kopien -> dort wird nichts verlinkt.
         if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
             EnsureSkillsJunction(dir);
 
@@ -183,17 +183,18 @@ public sealed class InstructionProfileService
     }
 
     /// <summary>
-    /// Blendet die echten ~/.claude/skills als Verzeichnis-Junction in den Minimal-Config-Ordner ein,
-    /// damit im sonst isolierten Minimal-Profil ALLE Skills verfuegbar sind -- OHNE die uebrige
-    /// ~/.claude-Umgebung (Rules/Hooks/Memory/Agents) hereinzuholen. Junction statt Symlink: braucht
-    /// KEINE Admin-Rechte und keinen Developer-Mode. Idempotent: korrekte Junction -> nichts tun;
-    /// falsches Ziel -> ersetzen; ein echtes Verzeichnis wird aus Sicherheit nie angefasst. Die
-    /// Junction bleibt lokal (die .gitignore des Ordners schliesst skills/ NICHT wieder ein).
+    /// Blendet die Repo-Skills (Profiles/ClaudeCode/standard/skills) als Verzeichnis-Junction in den
+    /// Minimal-Config-Ordner ein. Eine einzige Quelle: Claude Code, Codex (MirrorCodexProfileSkills)
+    /// und das globale ~/.claude/skills (dort ebenfalls eine Junction auf diesen Ordner) sehen
+    /// dieselben Skills -- OHNE die uebrige ~/.claude-Umgebung (Rules/Hooks/Memory/Agents)
+    /// hereinzuholen. Junction statt Symlink: braucht KEINE Admin-Rechte und keinen Developer-Mode.
+    /// Idempotent: korrekte Junction -> nichts tun; falsches Ziel -> ersetzen; ein echtes Verzeichnis
+    /// wird aus Sicherheit nie angefasst. Die Junction bleibt lokal (.gitignore des Ordners).
     /// </summary>
     private static void EnsureSkillsJunction(string configDir)
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var realSkills = Path.Combine(home, ".claude", "skills");
+        var realSkills = Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCode", "standard", "skills");
         // Kein echtes Skills-Verzeichnis -> nichts einzublenden (keinen toten Link anlegen).
         if (!Directory.Exists(realSkills)) return;
 
@@ -389,8 +390,8 @@ public sealed class InstructionProfileService
 
     /// <summary>
     /// Spiegelt die versionierten Skills des gewaehlten Profils (Profiles/ClaudeCode/&lt;id&gt;/skills)
-    /// nach CODEX_HOME/skills. Minimal traegt keine eigenen Skills (nur eine Junction auf das alte
-    /// ~/.claude/skills) und bekommt deshalb die Standard-Skills aus dem Repo. Kopie statt Junction,
+    /// nach CODEX_HOME/skills. Minimal traegt keine eigenen Skills (nur eine Junction auf die
+    /// Standard-Skills) und bekommt deshalb wie Claude Code die Standard-Skills aus dem Repo. Kopie statt Junction,
     /// weil Codex verlinkte Skill-Ordner nicht verlaesslich scannt; bei jedem Start frisch, damit
     /// Aenderungen im Repo sofort gelten. Der Codex-eigene Ordner .system bleibt unangetastet.
     /// </summary>

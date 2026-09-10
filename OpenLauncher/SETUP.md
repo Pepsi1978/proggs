@@ -52,7 +52,7 @@ aus `~/.claude/settings.json` ist bewusst NICHT in den Repo-Profilen.
 
 | Profil | Skills / Rules / Agents / Commands | Hooks | Isolation |
 |---|---|---|---|
-| **minimal** | nur **Skills**, per Verzeichnis-Junction `skills → ~/.claude/skills` (Launcher legt sie beim Start via `mklink /J` an, kein Admin nötig) | ❌ | regelfrei — keine Rules/Hooks/Memory |
+| **minimal** | nur **Skills**, per Verzeichnis-Junction `skills → Profiles/ClaudeCode/standard/skills` (Launcher legt sie beim Start via `mklink /J` an, kein Admin nötig) | ❌ | regelfrei — keine Rules/Hooks/Memory |
 | **standard** | **versioniert im Repo** (aus `~/.claude` kopiert, frei bearbeitbar) | ❌ (für eigene Hooks reserviert) | eigener Kontext |
 | **strict** | **versioniert im Repo** | ✅ **Modus A**: `settings.json` aktiviert die `~/.claude/hooks` (laufen aus der lebenden Installation, immer aktuell) | voller Kontext + Absicherung |
 
@@ -65,8 +65,11 @@ Weitere Details:
   bereinigte Hook-Konfiguration (ohne Token, ohne Plugin-Sektionen).
 - **Login:** Der Launcher kopiert `.credentials.json` bei Bedarf **einmalig lokal** aus `~/.claude`
   in den Profil-Ordner (per `.gitignore` nie versioniert) → kein erneutes Anmelden je Profil.
-- **Abhängigkeit:** Minimal braucht `~/.claude/skills`, Strikt braucht `~/.claude/hooks` — beides
-  liefert `claude-code-setup` (Baustein 1).
+- **Skills: eine Quelle.** `Profiles/ClaudeCode/standard/skills` (macOS: `ClaudeCodeMac/standard/skills`)
+  ist die einzige Skill-Quelle. Minimal-Profil (Junction), Codex (Kopie nach `CODEX_HOME/skills` bei jedem
+  Start) und das globale `~/.claude/skills` (einmalig als Junction/Symlink auf diesen Ordner eingerichtet)
+  sehen dieselben Skills. Neue Skills immer dort anlegen.
+- **Abhängigkeit:** Strikt braucht `~/.claude/hooks` — das liefert `claude-code-setup` (Baustein 1).
 
 ### OpenCode-Profile
 
@@ -215,9 +218,11 @@ Weitere Details:
    `$HOME/.claude/...`, plus `claudeMdExcludes: ["**/.claude/rules/**"]`). **Keine Secrets ins Repo.**
    Committen + pushen.
 
-5. **Minimal-Skills auf macOS** — Symlink statt Windows-Junction (nicht versioniert):
+5. **Skills auf macOS aus dem Repo** — Symlinks statt Windows-Junctions (nicht versioniert). Den
+   Minimal-Link legt die App selbst an; das globale `~/.claude/skills` einmalig umstellen:
    ```bash
-   ln -s "$HOME/.claude/skills" ~/proggs/OpenLauncher/Profiles/ClaudeCodeMac/minimal/skills
+   mv ~/.claude/skills ~/.claude/skills.bak
+   ln -s ~/proggs/OpenLauncher/Profiles/ClaudeCodeMac/standard/skills ~/.claude/skills
    ```
 
 6. **Manueller Claude-Start (bis die macOS-App existiert)** — je Profil:
@@ -257,7 +262,7 @@ Weitere Details:
 |---|---|---|
 | Profil-Config-Ordner | `Profiles/ClaudeCode/<id>` | `Profiles/ClaudeCodeMac/<id>` |
 | Home / Env | `C:\Users\<name>` · `$env:USERPROFILE` | `/Users/<name>` · `$HOME` |
-| Skills einblenden (Minimal) | Junction `mklink /J` | Symlink `ln -s "$HOME/.claude/skills" <id>/skills` |
+| Skills einblenden (Minimal) | Junction `mklink /J` auf `ClaudeCode/standard/skills` | Symlink auf `ClaudeCodeMac/standard/skills` |
 | Terminal-Start | Windows Terminal (`wt`) + `pwsh -File` | `Terminal.app`/iTerm2 via `osascript`/`open`, `zsh`/`bash` |
 | Hooks (Strikt) | `pwsh … .ps1`, `$USERPROFILE/.claude/hooks` | `bash/zsh … .sh`, `$HOME/.claude/hooks`; Quelle `claude-code-setup/hooks-macos.json` |
 | Login-Token kopieren | `Copy-Item` | `cp "$HOME/.claude/.credentials.json" …` |
