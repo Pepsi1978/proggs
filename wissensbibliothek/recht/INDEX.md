@@ -5,9 +5,9 @@ Die **aktuelle** Version eines iterativen Audits steht oben, ältere Versionen d
 
 ## Zentrale Wissensbasis (immer als Erstes lesen)
 
-### `rechtssicherheit.md` — Repo-Root
+### `tools/rechtssicherheit.md`
 
-[../../rechtssicherheit.md](../../rechtssicherheit.md)
+[../../tools/rechtssicherheit.md](../../tools/rechtssicherheit.md)
 
 Die zentrale Wissensbasis für rechtliche Anforderungen an unsere Apps.
 Enthält länderspezifische Vorgaben, Pre-Release-Checklisten, Anforderungs-Cluster

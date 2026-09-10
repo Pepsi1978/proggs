@@ -13,7 +13,7 @@ werden müssen.
 
 | Quelle | Was darin steht |
 |--------|----------------|
-| `~/proggs/rechtssicherheit.md` | Zentrale Wissensbasis: Was muss eine App rechtlich erfüllen? Detaillierte Anforderungen pro Land, Pre-Release-Checklisten |
+| `~/proggs/tools/rechtssicherheit.md` | Zentrale Wissensbasis: Was muss eine App rechtlich erfüllen? Detaillierte Anforderungen pro Land, Pre-Release-Checklisten |
 | `~/proggs/BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-*.md` | Iteratives Audit der BestJournal-App, Versionen v2 bis v7. Neueste Version ist immer die aktuellste Wahrheit |
 | `~/proggs/BestJournalAndroid/app-roentgen-AUDIT-2026-05-01.md` | Compliance-Audit nach dem App-Roentgen-Skill: Manifest, Permissions, Architektur, Werbeaussagen |
 | `~/proggs/BestJournalAndroid/app-roentgen-WERBEAUSSAGEN-FIX-2026-05-01.md` | UWG §5 Audit aller Premium-Marketing-Texte mit Korrektur-Vorschlägen |

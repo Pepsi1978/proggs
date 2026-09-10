@@ -40,7 +40,7 @@ auf Originale ohne sie zu kopieren. Enthält:
 
 | Quelle | Inhalt |
 |--------|--------|
-| `rechtssicherheit.md` (Repo-Root) | Zentrale Wissensbasis für rechtliche Anforderungen |
+| `tools/rechtssicherheit.md` | Zentrale Wissensbasis für rechtliche Anforderungen |
 | `BestJournalAndroid/docs/audit/RECHTSSICHERHEIT-AUDIT-*.md` | 8 iterative Compliance-Audits, neueste v7 (2026-04-28) |
 | `BestJournalAndroid/app-roentgen-AUDIT-2026-05-01.md` | App-Röntgen-Compliance-Audit |
 | `BestJournalAndroid/app-roentgen-WERBEAUSSAGEN-FIX-2026-05-01.md` | UWG §5 Werbeaussagen-Audit (führte zu Commit #1950) |

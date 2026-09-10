@@ -99,4 +99,4 @@ Quelle: Google Play Best Practices fuer Mental Health Apps (informell, 2025)
 
 Bei jedem Play-Console-Release (oder mindestens quartalsweise) diese Checkliste abarbeiten.
 Bei Aenderungen der Google Play Policies: Datei aktualisieren und in Referenz-Datei
-`~/proggs/rechtssicherheit.md` verweisen.
+`~/proggs/tools/rechtssicherheit.md` verweisen.

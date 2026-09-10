@@ -369,7 +369,7 @@ Da der Bericht spaeter als juristische Grundlage dienen kann, gilt:
 
 | Skill | Zusammenspiel |
 |-------|--------------|
-| `rechtssicherheit` | Liest Schicht 4b (Wortlaute) + Schicht 7 (Werbeaussagen-Matrix) und prueft gegen die Wissensbasis in `~/proggs/rechtssicherheit.md` |
+| `rechtssicherheit` | Liest Schicht 4b (Wortlaute) + Schicht 7 (Werbeaussagen-Matrix) und prueft gegen die Wissensbasis in `~/proggs/tools/rechtssicherheit.md` |
 | `uebersetzung` | Liest Schicht 4b (Original-Wortlaute) + Schicht 4c (Translation-Context: Slot, Laenge, Plurals, Glossar, Argumente) als Uebersetzungs-Grundlage |
 | `string-extraktor` | Komplementaer zu Schicht 4c — der Extraktor findet hardcoded Strings, der Roentgen-Skill katalogisiert sie inklusive Slot-Zuordnung |
 | `app-monetizer` | Konsumiert die Paywall-Tiefenanalyse (Schicht 5) als Input |
