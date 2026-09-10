@@ -1,36 +1,44 @@
-# Update-Skript hängt bis zum Timeout: modaler Dialog ohne Terminal
+# Update-Skript: Rückfrage fehlt, Aufrufer hängt bis zum Timeout
 
-Festgehalten am 10.09.2026, 11:02 Uhr. Betrifft `OpenLauncher/update-launcher.ps1` und `OpenLauncherMac/update-launcher.sh`.
+Festgehalten am 10.09.2026, 11:02 Uhr. Berichtigt am 10.09.2026, 11:40 Uhr. Betrifft `OpenLauncher/update-launcher.ps1` und `OpenLauncherMac/update-launcher.sh`.
 
-## Falle
+## Falle 1 – Update ohne Freigabe
 
-Das Update-Skript lief scheinbar endlos, obwohl der Build längst durch war. Der Aufrufer wartete bis in sein Timeout.
+Ein Agent (Claude Code, Codex, OpenCode) ruft das Update-Skript auf. Es erscheint kein Ja/Nein-Fenster, der Launcher wird ohne Rückfrage geschlossen und neu gebaut.
 
-## Ursache
+**Ursache:** Der erste Fix (Stand 11:02) hat den Dialog abgeschaltet, sobald die Standardeingabe umgeleitet war (`[Console]::IsInputRedirected` bzw. `[ -t 0 ]`). Bei Agenten-Aufrufen ist sie das immer. Es galt dann still „Ja“. Das war eine falsche Schlussfolgerung: Der Dialog hing damals nicht, weil kein Terminal da war. Er hing, weil die WPF-`MessageBox` eines Hintergrundprozesses hinter anderen Fenstern landete, wo sie niemand sah.
 
-Zwei unabhängige Fehler, die sich addierten:
+**Richtig:**
 
-1. **Modaler Dialog ohne Klickmöglichkeit.** Lief noch ein Launcher, zeigte das Skript `[System.Windows.MessageBox]::Show(...)` (macOS: `osascript display dialog`). Wird das Skript aus einem Agenten oder einer Pipeline gestartet, erscheint dieses Fenster irgendwo im Hintergrund — niemand sieht es, niemand klickt, das Skript blockiert bis zum Timeout des Aufrufers.
-2. **Keine Aktualitätsprüfung.** Ein Build, der Sekunden zuvor mit demselben Quellstand gelaufen war, wurde bedingungslos wiederholt.
+- Die Rückfrage kommt immer. Überspringen nur mit `-Force` bzw. `OPENLAUNCHER_UPDATE_FORCE=1` und nur auf ausdrückliche Ansage des Benutzers.
+- Windows: `MessageBoxTimeoutW` aus user32 mit `MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST`. Das Fenster liegt garantiert ganz oben. Fallback ist `WScript.Shell.Popup` mit denselben Flags.
+- macOS: `display dialog … giving up after N` innerhalb von `tell application "System Events" to activate`.
+- Zeitlimit von 240 s. Kommt kein Klick, gilt „Nein“ (`LAUNCHER_UPDATE_STATUS=no-answer`), nie „Ja“. Damit ist ein Deadlock ausgeschlossen, ohne dass die Freigabe verloren geht.
+- Den Aufruf aus dem Agenten mit 10 Minuten Tool-Timeout starten. Das steht als Regel 13 in allen Profilen.
 
-## Vorgehen
+## Falle 2 – Timeout, obwohl die neue Version längst läuft
 
-**Interaktivität erkennen, statt sie anzunehmen:**
+Das Skript meldet `LAUNCHER_UPDATE_STATUS=started` und ist fertig. Das Werkzeug des Agenten wartet trotzdem, bis sein Timeout abläuft.
+
+**Ursache:** `dotnet build` startet Build-Server: MSBuild-Knoten (node reuse), den MSBuild-Server und den Compiler-Server `VBCSCompiler`. Sie laufen nach dem Build noch minutenlang weiter. Mit `Start-Process -NoNewWindow` erben sie die Ausgabe-Pipe des Aufrufers. Solange einer davon lebt, sieht der Agent kein Dateiende und wartet.
+
+**Richtig:** Keine Build-Server, doppelt abgesichert.
 
 ```powershell
-$interactive = -not $Force -and -not [System.Console]::IsInputRedirected -and [Environment]::UserInteractive
+$env:MSBUILDDISABLENODEREUSE = '1'
+$env:DOTNET_CLI_USE_MSBUILD_SERVER = '0'
+$env:UseSharedCompilation = 'false'
+dotnet build … -nodeReuse:false -p:UseSharedCompilation=false -p:UseRazorBuildServer=false
 ```
 
-```bash
-interaktiv() { [ -t 0 ] && [ "${OPENLAUNCHER_UPDATE_FORCE:-0}" != "1" ]; }
-```
+Den neuen Launcher mit `Start-Process` **ohne** `-NoNewWindow` starten (ShellExecute, keine Handle-Vererbung). Das Skript endet mit `exit 0`.
 
-Ohne Terminal gilt automatisch „Ja" plus eine Zeile auf der Standardausgabe, damit die Entscheidung im Protokoll steht.
+## Aktualitätsprüfung (bleibt gültig)
 
-**Aktualität prüfen, bevor gebaut wird:** Version der gebauten Datei gegen die Projektversion, und kein Quellstand neuer als die gebaute Datei. Ist beides erfüllt und der Launcher läuft bereits, meldet das Skript `LAUNCHER_UPDATE_STATUS=already-current` und ist in unter einer Sekunde fertig.
+Version der gebauten Datei gegen die Projektversion vergleichen. Außerdem darf keine Quelldatei (`.cs`, `.xaml`, `.csproj`) neuer sein als die Exe. Sind beide Bedingungen erfüllt und läuft der Launcher bereits, meldet das Skript ohne Dialog `already-current` und endet sofort. Laufzeitdateien wie `models.json` nicht mitprüfen, sonst gilt der Build sofort wieder als veraltet.
 
-**Wichtiger Fallstrick dabei:** Nur echten Quellcode vergleichen (`.cs`, `.xaml`, `.csproj`). Nimmt man `.json` mit auf, schreibt der Launcher im Betrieb selbst eine Laufzeitdatei (hier `models.json`) neu — der frisch gebaute Stand gilt dann sofort wieder als veraltet, und es wird bei **jedem** Aufruf sinnlos gebaut. Genau dieser Fehler trat beim ersten Anlauf auf und fiel nur durch die Gegenprobe auf.
+## Regeln
 
-## Regel
-
-Jeder Dialog in einem Skript, das auch von Werkzeugen aufgerufen wird, braucht einen Weg an sich vorbei. Ein modaler Dialog ohne Terminal ist kein Warten — er ist ein Deadlock.
+1. Eine Freigabe-Rückfrage darf nie still zu „Ja“ werden. Fehlt die Antwort, gilt „Nein“.
+2. Ein Dialog, der „hängt“, ist meist unsichtbar und nicht blockiert. Er muss nach vorne geholt und zeitlich begrenzt werden, statt entfernt zu werden.
+3. Wer aus einem Skript heraus `dotnet build` aufruft, das ein Agent startet, schaltet die Build-Server ab. Sonst hängt der Agent an der geerbten Pipe.

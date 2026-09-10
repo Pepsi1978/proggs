@@ -58,6 +58,6 @@ Melde danach kurz:
 
 12. Wenn der Emulator angefodert wird, Starte den Emulator, immer mit dem Fold 8 Profil über C:\Users\barwa\proggs\Werkzeuge\fold8-emulator
 
-13. Bei Updates von OpenLauncher immer das Updatescript benutzen! Für Windows unter C:\Users\barwa\proggs\OpenLauncher\update-launcher.ps1 und für macOS unter /Users/frank/proggs/OpenLauncherMac/update-launcher.sh
+13. Bei Updates von OpenLauncher immer das Updatescript benutzen! Für Windows unter C:\Users\barwa\proggs\OpenLauncher\update-launcher.ps1 und für macOS unter /Users/frank/proggs/OpenLauncherMac/update-launcher.sh Nie mit -Force bzw. OPENLAUNCHER_UPDATE_FORCE=1 aufrufen, außer ich sage es ausdrücklich: Das Skript fragt mich immer per Ja/Nein-Fenster. Den Aufruf mit 10 Minuten Tool-Timeout starten und auf meinen Klick warten. Meldet es LAUNCHER_UPDATE_STATUS=cancelled oder no-answer, nicht erneut starten, sondern melden. already-current heißt: ist bereits installiert, fertig.
 
 14. Researches im Web erfolgen immer über den Researcher Skill. Der Ablauf den Resercher Skills wird immer eingehalten! Nach dem Research werden Best Parctices und Bug Almanache in den Ordnern C:\Users\barwa\proggs\best-practices und C:\Users\barwa\proggs\bugs gespeichert.

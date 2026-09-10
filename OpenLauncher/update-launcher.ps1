@@ -1,9 +1,11 @@
 [CmdletBinding()]
 param(
-    # Ueberspringt die Rueckfrage und schliesst einen laufenden Launcher ohne Dialog.
+    # Ueberspringt die Rueckfrage. NUR auf ausdrueckliche Ansage des Benutzers verwenden.
     [switch]$Force,
     # Baut auch dann neu, wenn der vorhandene Build bereits aktuell ist.
-    [switch]$Rebuild
+    [switch]$Rebuild,
+    # Nach dieser Zeit ohne Klick gilt die Rueckfrage als "Nein" -- nie als "Ja".
+    [int]$DialogTimeoutSeconds = 240
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,10 +19,43 @@ if (-not (Test-Path -LiteralPath $projectFile)) {
     throw "Projektdatei nicht gefunden: $projectFile"
 }
 
-# Ohne echtes Terminal (Aufruf aus einem Agenten, einer Pipeline oder einer Verknuepfung mit
-# umgeleiteter Eingabe) darf KEIN modaler Dialog erscheinen: er wartet dort ewig auf einen Klick,
-# den niemand sieht, und der Aufrufer laeuft in sein Timeout. In dem Fall gilt automatisch "Ja".
-$interactive = -not $Force -and -not [System.Console]::IsInputRedirected -and [Environment]::UserInteractive
+# Die Rueckfrage kommt IMMER -- auch wenn ein Agent (Claude Code, Codex, OpenCode) das Skript
+# aufruft. Frueher entfiel sie ohne Terminal und es galt still "Ja": das Update lief dann ohne
+# Freigabe. Dass der Dialog damals "haengen" blieb, lag nicht am fehlenden Terminal, sondern daran,
+# dass die WPF-MessageBox eines Hintergrundprozesses hinter anderen Fenstern landete. Deshalb jetzt:
+# systemmodal + oberstes Fenster + Vordergrund, und ein Zeitlimit, nach dem "Nein" gilt.
+Add-Type -Namespace OpenLauncherUpdate -Name NativeDialog -MemberDefinition @'
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+public static extern int MessageBoxTimeoutW(IntPtr hWnd, string text, string caption, uint type, ushort language, uint milliseconds);
+'@ -ErrorAction SilentlyContinue
+
+<#
+.SYNOPSIS
+    Ja/Nein-Fenster, das garantiert sichtbar ganz oben erscheint. Rueckgabe: yes | no | timeout.
+#>
+function Show-UpdateDialog([bool]$LauncherLaeuft) {
+    $text = if ($LauncherLaeuft) {
+        "Der OpenLauncher läuft noch. Für das Update wird er geschlossen, die neue Version wird gebaut und danach automatisch gestartet.`n`nNicht gespeicherte Eingaben gehen dabei verloren. Jetzt aktualisieren?"
+    } else {
+        "Die neue Version des OpenLauncher wird gebaut und danach gestartet.`n`nJetzt aktualisieren?"
+    }
+    $title = 'OpenLauncher aktualisieren'
+    # MB_YESNO | MB_ICONWARNING | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST
+    $flags = 0x4 -bor 0x30 -bor 0x1000 -bor 0x10000 -bor 0x40000
+    try {
+        $result = [OpenLauncherUpdate.NativeDialog]::MessageBoxTimeoutW([IntPtr]::Zero, $text, $title, $flags, 0, [uint32]($DialogTimeoutSeconds * 1000))
+        if ($result -eq 32000) { return 'timeout' }
+    }
+    catch {
+        # Fallback, falls die native Funktion nicht verfuegbar ist: dieselben Flags, eigenes Zeitlimit.
+        # Write-Host statt Write-Output: sonst landet die Zeile im Rueckgabewert der Funktion.
+        Write-Host "LAUNCHER_UPDATE_INFO=nativer Dialog nicht verfuegbar ($($_.Exception.Message)) -- Ersatzdialog."
+        $result = (New-Object -ComObject WScript.Shell).Popup($text, $DialogTimeoutSeconds, $title, $flags)
+        if ($result -eq -1) { return 'timeout' }
+    }
+    if ($result -eq 6) { return 'yes' }
+    return 'no'
+}
 
 <#
 .SYNOPSIS
@@ -78,24 +113,25 @@ if ($buildAktuell -and $runningLaunchers.Count -gt 0) {
     exit 0
 }
 
-if ($runningLaunchers.Count -gt 0) {
-    if ($interactive) {
-        Add-Type -AssemblyName PresentationFramework
-        $answer = [System.Windows.MessageBox]::Show(
-            "Der OpenLauncher läuft noch. Für das Update wird er geschlossen und danach automatisch mit der neuen Version gestartet.`n`nNicht gespeicherte Eingaben gehen dabei verloren. Jetzt aktualisieren?",
-            'OpenLauncher aktualisieren',
-            [System.Windows.MessageBoxButton]::YesNo,
-            [System.Windows.MessageBoxImage]::Warning
-        )
-        if ($answer -ne [System.Windows.MessageBoxResult]::Yes) {
+# Ohne Freigabe per Klick passiert nichts: kein Schliessen, kein Build, kein Start.
+if ($Force) {
+    Write-Output 'LAUNCHER_UPDATE_INFO=-Force gesetzt: Update ohne Rueckfrage.'
+}
+else {
+    switch (Show-UpdateDialog ($runningLaunchers.Count -gt 0)) {
+        'yes' { Write-Output 'LAUNCHER_UPDATE_INFO=Update per Klick freigegeben.' }
+        'timeout' {
+            Write-Output "LAUNCHER_UPDATE_STATUS=no-answer (kein Klick innerhalb von $DialogTimeoutSeconds Sekunden -- nichts geaendert)"
+            exit 0
+        }
+        default {
             Write-Output 'LAUNCHER_UPDATE_STATUS=cancelled'
             exit 0
         }
     }
-    else {
-        Write-Output 'LAUNCHER_UPDATE_INFO=laufender Launcher wird ohne Rueckfrage geschlossen (keine interaktive Sitzung).'
-    }
+}
 
+if ($runningLaunchers.Count -gt 0) {
     foreach ($launcher in $runningLaunchers) {
         if (-not $launcher.HasExited -and -not $launcher.CloseMainWindow()) {
             throw "Der laufende Launcher konnte nicht kontrolliert geschlossen werden. Bitte schließe ihn manuell und starte das Update erneut."
@@ -117,8 +153,17 @@ if ($buildAktuell) {
     Write-Output "LAUNCHER_UPDATE_INFO=Build ist bereits aktuell ($(Get-ProjectVersion)) -- es wird nur gestartet."
 }
 else {
-    $build = Start-Process -FilePath 'dotnet' -ArgumentList @('build', $projectFile, '-c', 'Release') `
-        -WorkingDirectory $projectRoot -Wait -PassThru -NoNewWindow
+    # Keine Build-Server: MSBuild-Knoten, MSBuild-Server und der Compiler-Server (VBCSCompiler)
+    # bleiben sonst nach dem Build minutenlang am Leben und halten die geerbte Ausgabe-Pipe des
+    # Aufrufers offen. Das Skript ist dann laengst fertig, der Agent wartet aber bis in sein
+    # Timeout. Doppelt abgesichert: Umgebungsvariablen UND Kommandozeilen-Schalter.
+    $env:MSBUILDDISABLENODEREUSE = '1'
+    $env:DOTNET_CLI_USE_MSBUILD_SERVER = '0'
+    $env:UseSharedCompilation = 'false'
+    $build = Start-Process -FilePath 'dotnet' -ArgumentList @(
+        'build', $projectFile, '-c', 'Release',
+        '-nodeReuse:false', '-p:UseSharedCompilation=false', '-p:UseRazorBuildServer=false'
+    ) -WorkingDirectory $projectRoot -Wait -PassThru -NoNewWindow
     if ($build.ExitCode -ne 0) {
         throw "Der Release-Build ist fehlgeschlagen (Exit-Code $($build.ExitCode))."
     }
@@ -134,3 +179,4 @@ if ($newLauncher.HasExited) {
 }
 
 Write-Output "LAUNCHER_UPDATE_STATUS=started VERSION=$(Get-ProjectVersion) PID=$($newLauncher.Id)"
+exit 0

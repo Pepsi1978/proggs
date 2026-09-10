@@ -58,4 +58,4 @@ Melde danach kurz:
 
 12. Wenn der Emulator angefodert wird, Starte den Emulator, immer mit dem Fold 8 Profil über /Users/frank/proggs/Werkzeuge/fold8-emulator
 
-13. Bei Updates von OpenLauncher immer das Updatescript benutzen! Für macOS unter /Users/frank/proggs/OpenLauncherMac/update-launcher.sh und für Windows unter /Users/frank/proggs/OpenLauncher/update-launcher.ps1
+13. Bei Updates von OpenLauncher immer das Updatescript benutzen! Für macOS unter /Users/frank/proggs/OpenLauncherMac/update-launcher.sh und für Windows unter /Users/frank/proggs/OpenLauncher/update-launcher.ps1 Nie mit -Force bzw. OPENLAUNCHER_UPDATE_FORCE=1 aufrufen, außer ich sage es ausdrücklich: Das Skript fragt mich immer per Ja/Nein-Fenster. Den Aufruf mit 10 Minuten Tool-Timeout starten und auf meinen Klick warten. Meldet es LAUNCHER_UPDATE_STATUS=cancelled oder no-answer, nicht erneut starten, sondern melden. already-current heißt: ist bereits installiert, fertig.

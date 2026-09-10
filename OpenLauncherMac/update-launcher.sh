@@ -32,10 +32,26 @@ erfolg() { printf '\033[32m%s\033[0m\n' "$1"; }
 # ---------------------------------------------------------------------------
 laeuft() { pgrep -f "OpenLauncher.app/Contents/MacOS/OpenLauncher" >/dev/null 2>&1; }
 
-# Ohne echtes Terminal (Aufruf aus einem Agenten oder einer Pipeline) darf KEIN Dialog erscheinen:
-# er wartet dort ewig auf einen Klick, den niemand sieht, und der Aufrufer laeuft in sein Timeout.
-# In dem Fall gilt automatisch "Aktualisieren".
-interaktiv() { [ -t 0 ] && [ "${OPENLAUNCHER_UPDATE_FORCE:-0}" != "1" ]; }
+# Die Rueckfrage kommt IMMER -- auch wenn ein Agent (Claude Code, Codex, OpenCode) das Skript
+# aufruft. Frueher entfiel sie ohne Terminal und es galt still "Aktualisieren": das Update lief dann
+# ohne Freigabe. Gegen das unsichtbare Haengen: der Dialog wird aktiviert (Vordergrund) und gibt
+# nach DIALOG_TIMEOUT Sekunden auf -- dann gilt "Nein", nie "Ja".
+# OPENLAUNCHER_UPDATE_FORCE=1 ueberspringt die Frage, NUR auf ausdrueckliche Ansage des Benutzers.
+DIALOG_TIMEOUT="${OPENLAUNCHER_UPDATE_DIALOG_TIMEOUT:-240}"
+
+frage_freigabe() {
+    local frage="$1"
+    osascript - "$frage" "$DIALOG_TIMEOUT" <<'AS' 2>/dev/null || echo "Nein"
+on run argv
+    tell application "System Events"
+        activate
+        set r to display dialog (item 1 of argv) with title "OpenLauncher aktualisieren" buttons {"Nein", "Ja"} default button "Ja" with icon caution giving up after ((item 2 of argv) as integer)
+    end tell
+    if gave up of r then return "TIMEOUT"
+    return button returned of r
+end run
+AS
+}
 
 # Ist der vorhandene Build schon der Quellstand? Dann nicht ein zweites Mal bauen. Verglichen wird
 # der Zeitstempel der gebauten Binaerdatei gegen die neueste Quelldatei (nur echter Quellcode --
@@ -53,25 +69,28 @@ if build_ist_aktuell && laeuft; then
     exit 0
 fi
 
-if laeuft; then
-    if interaktiv; then
-    ANTWORT=$(osascript <<'AS' 2>/dev/null || echo "Nein"
-tell application "System Events"
-    activate
-    set frage to "Der OpenLauncher läuft noch. Für das Update wird er geschlossen und danach automatisch mit der neuen Version gestartet." & return & return & "Nicht gespeicherte Eingaben gehen dabei verloren. Jetzt aktualisieren?"
-    set antwort to button returned of (display dialog frage with title "OpenLauncher aktualisieren" buttons {"Abbrechen", "Aktualisieren"} default button "Aktualisieren" with icon caution)
-end tell
-return antwort
-AS
-)
-        if [ "$ANTWORT" != "Aktualisieren" ]; then
-            echo "LAUNCHER_UPDATE_STATUS=cancelled"
-            exit 0
-        fi
-    else
-        hinweis "Laufender Launcher wird ohne Rueckfrage geschlossen (keine interaktive Sitzung)."
-    fi
+# Ohne Freigabe per Klick passiert nichts: kein Schliessen, kein Build, kein Start.
+if [ "${OPENLAUNCHER_UPDATE_FORCE:-0}" = "1" ]; then
+    hinweis "OPENLAUNCHER_UPDATE_FORCE=1 gesetzt: Update ohne Rueckfrage."
+else
+    if laeuft; then
+        FRAGE="Der OpenLauncher läuft noch. Für das Update wird er geschlossen, die neue Version wird gebaut und danach automatisch gestartet.
 
+Nicht gespeicherte Eingaben gehen dabei verloren. Jetzt aktualisieren?"
+    else
+        FRAGE="Die neue Version des OpenLauncher wird gebaut und danach gestartet.
+
+Jetzt aktualisieren?"
+    fi
+    ANTWORT=$(frage_freigabe "$FRAGE")
+    case "$ANTWORT" in
+        Ja) hinweis "Update per Klick freigegeben." ;;
+        TIMEOUT) echo "LAUNCHER_UPDATE_STATUS=no-answer (kein Klick innerhalb von $DIALOG_TIMEOUT Sekunden -- nichts geaendert)"; exit 0 ;;
+        *) echo "LAUNCHER_UPDATE_STATUS=cancelled"; exit 0 ;;
+    esac
+fi
+
+if laeuft; then
     # Sauber beenden statt abschiessen: die App speichert dabei ihr Fensterlayout.
     osascript -e "tell application id \"$BUNDLE_ID\" to quit" >/dev/null 2>&1 || true
 
