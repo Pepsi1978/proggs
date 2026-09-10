@@ -10,20 +10,20 @@ Ein frisch installiertes Codex CLI fragt beim ersten Start, ob man **68 Hooks** 
 
 `~/.codex` ist kein leeres Zuhause. Dort lagen:
 
-- `hooks.json` mit 30 registrierten Hook-Aufrufen und 62 PowerShell-Skripten in `~/.codex/hooks/` — **byte-identische Kopien** der Claude-Code-Hooks aus `~/.claude/hooks/` (geprüft mit `cmp`: `bash-guard.ps1`, `bug-almanac-guard.ps1`, `redact-secrets.ps1` alle identisch). Die restlichen Hooks bringen die Plugins mit, daher die höhere Zahl in der Abfrage.
+- `hooks.json` mit 30 registrierten Hook-Aufrufen und 62 PowerShell-Skripten in `~/.codex/hooks/` — **byte-identische Kopien** der Claude-Code-Hooks aus `~/.claude/hooks/` (geprüft mit `cmp`: `bash-guard.ps1`, `bug-almanac-guard.ps1`, `redact-secrets.ps1` alle identisch). Die höhere Zahl in der Abfrage entsteht durch zusätzliche Hooks, die die Plugins mitbringen — nicht nachgezählt.
 - Rund 40 Plugins, unter anderem aus `claude-plugins-official`.
 - Vier MCP-Server.
 - Eine 6 KB große globale `AGENTS.md` — inhaltlich die Claude-`CLAUDE.md`, bei der Übernahme wurde stumpf `.claude` durch `.Codex` ersetzt, sodass sie auf nicht existierende Pfade wie `~/.Codex/rules/` verweist.
 - Eine angepasste Statuszeile unter `[tui] status_line`.
 
-Der Übernahmemechanismus steht in `~/.codex/config.toml`:
+Wie diese Dateien dorthin kamen, ist nachträglich nicht mehr beweisbar. In `~/.codex/config.toml` steht ein Schalter, der genau das tut:
 
 ```toml
 external-agent-import-sync-enabled = true
 external-agent-import-sync-item-types = "all"
 ```
 
-Damit importiert die Codex-Desktop-App fremde Agenten-Konfiguration (Claude Code) automatisch und vollständig — ohne Rückfrage.
+Damit importiert die Codex-Desktop-App fremde Agenten-Konfiguration automatisch und ohne Rückfrage. Möglich ist aber auch eine frühere eigene Sitzung: die globale `AGENTS.md` ist die Claude-`CLAUDE.md` mit einem stumpfen Suchen-Ersetzen `claude` → `Codex`, was eher nach einem eigenen Skript aussieht als nach OpenAI. Für die Lösung ist die Herkunft gleichgültig — ein eigenes `CODEX_HOME` sieht beides nicht.
 
 ## Wirkung
 
