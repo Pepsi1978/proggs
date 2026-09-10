@@ -988,27 +988,74 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Stand (pro Nummer gewinnt der juengste `updatedAt` — auch Tombstones).
     /// Fire-and-forget, Fehler nur in den Debug-Log.
     private func mergeSlotsFromCloudOnLaunch() {
+        syncSlotsWithCloud()
+        // Laufender Abgleich: Aenderungen vom anderen Geraet kommen sonst erst
+        // beim naechsten App-Start an.
+        slotSyncTimer?.invalidate()
+        slotSyncTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.syncSlotsWithCloud()
+        }
+    }
+
+    private var slotSyncTimer: Timer?
+    private var slotSyncRunning = false
+    private var slotSyncPending = false
+
+    /// Zwei-Wege-Sync der 30 Slots: Cloud holen -> atomar in den lokalen Stand
+    /// mergen (pro Slot gewinnt der juengste `updatedAt`) -> nur wenn die Cloud
+    /// danach aelter ist als der gemergte Stand, hochladen. Frueher lud der Mac
+    /// die lokale Datei UNGEMERGT hoch und ueberschrieb damit Windows-Aenderungen.
+    private func syncSlotsWithCloud() {
         guard GoogleDriveBackupService.shared.isAuthenticated() else {
-            tvoDebug("[App] slot cloud merge skipped: drive not connected")
+            tvoDebug("[App] slot sync skipped: drive not connected")
             return
         }
+        if slotSyncRunning { slotSyncPending = true; return }
+        slotSyncRunning = true
         GoogleDriveBackupService.shared.downloadSlots { [weak self] result in
-            switch result {
-            case .failure(let e):
-                tvoDebug("[App] slot cloud download failed: \(e.localizedDescription)")
-            case .success(let cloud):
-                guard let cloudJson = cloud, !cloudJson.isEmpty else {
-                    tvoDebug("[App] no cloud slots yet — nothing to merge")
-                    return
-                }
-                PromptSlotStore.shared.loadEntries { local in
-                    let merged = PromptSlotStore.merge(local: local, cloudJson: cloudJson)
-                    PromptSlotStore.shared.replaceAll(entries: merged) {
-                        tvoDebug("[App] cloud slots merged")
-                        self?.promptBoardPanel?.reloadSlots()
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch result {
+                case .failure(let e):
+                    tvoDebug("[App] slot cloud download failed: \(e.localizedDescription)")
+                    self.finishSlotSync()
+                case .success(let cloud):
+                    let cloudJson = (cloud?.isEmpty == false) ? cloud! : "[]"
+                    PromptSlotStore.shared.mergeFromCloud(cloudJson: cloudJson) { merged, changed in
+                        if changed {
+                            tvoDebug("[App] cloud slots merged")
+                            self.promptBoardPanel?.reloadSlots()
+                        }
+                        if PromptSlotStore.sameContent(merged, PromptSlotStore.decodeEntries(cloudJson)) {
+                            self.finishSlotSync()
+                            return
+                        }
+                        let json = PromptSlotStore.shared.rawJsonFromDisk()
+                        GoogleDriveBackupService.shared.uploadSlots(json: json) { upload in
+                            DispatchQueue.main.async {
+                                switch upload {
+                                case .success:
+                                    tvoDebug("[App] slots uploaded to cloud")
+                                    self.driveDisconnectedNotified = false
+                                    PromptBoardPanel.recordSyncNow()
+                                    self.promptBoardPanel?.markSyncedNow()
+                                case .failure(let e):
+                                    tvoDebug("[App] slot upload failed: \(e.localizedDescription)")
+                                }
+                                self.finishSlotSync()
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+
+    private func finishSlotSync() {
+        slotSyncRunning = false
+        if slotSyncPending {
+            slotSyncPending = false
+            syncSlotsWithCloud()
         }
     }
 
@@ -1035,20 +1082,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             notifyDriveDisconnectedOnce()
             return
         }
-        let json = PromptSlotStore.shared.rawJsonFromDisk()
-        GoogleDriveBackupService.shared.uploadSlots(json: json) { [weak self] result in
-            switch result {
-            case .success:
-                tvoDebug("[App] slots uploaded to cloud")
-                self?.driveDisconnectedNotified = false
-                // Sync-Zeitstempel GARANTIERT persistieren (auch wenn das Board
-                // gerade nicht offen/instanziiert ist) + UI refreshen wenn offen.
-                PromptBoardPanel.recordSyncNow()
-                self?.promptBoardPanel?.markSyncedNow()
-            case .failure(let e):
-                tvoDebug("[App] slot upload failed: \(e.localizedDescription)")
-            }
-        }
+        // Erst Cloud mergen, dann hochladen — nie den lokalen Stand blind drueberschreiben.
+        syncSlotsWithCloud()
     }
 
     // ── Persoenliches Vokabular-Woerterbuch (Drive-Sync, non-destruktiv) ──

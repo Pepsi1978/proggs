@@ -377,6 +377,29 @@ public sealed class PromptSlotService
         finally { _gate.Release(); }
     }
 
+    /// <summary>
+    /// Mergt die Cloud-JSON ATOMAR in den aktuellen lokalen Stand (innerhalb von
+    /// Gate + Mutex — ein gleichzeitiges Speichern geht dadurch nicht verloren).
+    /// Liefert den gemergten Stand und ob sich lokal etwas geaendert hat.
+    /// </summary>
+    public async Task<(List<PromptSlotEntry> Merged, bool Changed)> MergeFromCloudAsync(
+        string cloudJson, CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            return WithStoreMutex(ct, () =>
+            {
+                var local = LoadUnlocked(ct);
+                var merged = PromptSlotDriveSync.MergeEntries(local, cloudJson);
+                bool changed = !PromptSlotDriveSync.SameContent(merged, local);
+                if (changed) SaveUnlocked(merged, ct);
+                return (merged, changed);
+            });
+        }
+        finally { _gate.Release(); }
+    }
+
     // ── Interne Helpers (laufen alle innerhalb des Semaphors und Named Mutex) ──
 
     private List<PromptSlotEntry> LoadUnlocked(CancellationToken ct)

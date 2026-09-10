@@ -2,27 +2,27 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key>
-    <string>ClaudeCodexVoiceOverlay</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.frank.ClaudeCodexVoiceOverlay</string>
-    <key>CFBundleVersion</key>
-    <string>1.40</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.42</string>
-    <key>BuildTimestamp</key>
-    <string>29.08.2026, 11:29 Uhr</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleExecutable</key>
-    <string>ClaudeCodexVoiceOverlay</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>ClaudeCodexVoiceOverlay benötigt Zugriff auf das Mikrofon für Spracheingabe.</string>
-    <key>NSAppleEventsUsageDescription</key>
-    <string>ClaudeCodexVoiceOverlay benötigt Zugriff auf System Events für Tastatureingaben.</string>
+	<key>BuildTimestamp</key>
+	<string>10.09.2026, 18:26 Uhr</string>
+	<key>CFBundleExecutable</key>
+	<string>ClaudeCodexVoiceOverlay</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.frank.ClaudeCodexVoiceOverlay</string>
+	<key>CFBundleName</key>
+	<string>ClaudeCodexVoiceOverlay</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.43</string>
+	<key>CFBundleVersion</key>
+	<string>1.41</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>ClaudeCodexVoiceOverlay benötigt Zugriff auf System Events für Tastatureingaben.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ClaudeCodexVoiceOverlay benötigt Zugriff auf das Mikrofon für Spracheingabe.</string>
 </dict>
 </plist>

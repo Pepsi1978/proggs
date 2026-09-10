@@ -234,7 +234,9 @@ public sealed class PromptSlotDriveSync
                 if (e is null || e.Number is < 1 or > PromptSlotService.SlotCount) continue;
                 if (byNumber.TryGetValue(e.Number, out var existing))
                 {
-                    if (e.UpdatedAt > existing.UpdatedAt) byNumber[e.Number] = e;
+                    // 1 ms Toleranz (Mac speichert nur Millisekunden).
+                    if ((e.UpdatedAt.ToUniversalTime() - existing.UpdatedAt.ToUniversalTime()).TotalMilliseconds > 1)
+                        byNumber[e.Number] = e;
                 }
                 else
                 {
@@ -243,5 +245,28 @@ public sealed class PromptSlotDriveSync
             }
         }
         return byNumber.Values.OrderBy(e => e.Number).ToList();
+    }
+
+    /// <summary>
+    /// Gleicher Inhalt (Nummer, Text, Summary, Prioritaet, Zeit auf 2 ms genau)?
+    /// Der Mac speichert Millisekunden, Windows 100 ns — daher die Toleranz.
+    /// </summary>
+    public static bool SameContent(IEnumerable<PromptSlotEntry> a, IEnumerable<PromptSlotEntry> b)
+    {
+        static List<PromptSlotEntry> Norm(IEnumerable<PromptSlotEntry> s) => s
+            .Where(e => e is not null && e.Number is >= 1 and <= PromptSlotService.SlotCount)
+            .OrderBy(e => e.Number).ToList();
+        var x = Norm(a);
+        var y = Norm(b);
+        if (x.Count != y.Count) return false;
+        for (int i = 0; i < x.Count; i++)
+        {
+            var l = x[i]; var r = y[i];
+            if (l.Number != r.Number || l.Text != r.Text || (l.Summary ?? "") != (r.Summary ?? "") || l.Priority != r.Priority)
+                return false;
+            if (Math.Abs((l.UpdatedAt.ToUniversalTime() - r.UpdatedAt.ToUniversalTime()).TotalMilliseconds) > 2)
+                return false;
+        }
+        return true;
     }
 }

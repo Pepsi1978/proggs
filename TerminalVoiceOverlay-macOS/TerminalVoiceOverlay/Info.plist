@@ -2,27 +2,27 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key>
-    <string>TerminalVoiceOverlay</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.frank.TerminalVoiceOverlay</string>
-    <key>CFBundleVersion</key>
-    <string>1.42</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.44</string>
-    <key>BuildTimestamp</key>
-    <string>29.08.2026, 11:29 Uhr</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleExecutable</key>
-    <string>TerminalVoiceOverlay</string>
-    <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-    <key>LSUIElement</key>
-    <true/>
-    <key>NSMicrophoneUsageDescription</key>
-    <string>TerminalVoiceOverlay benötigt Zugriff auf das Mikrofon für Spracheingabe.</string>
-    <key>NSAppleEventsUsageDescription</key>
-    <string>TerminalVoiceOverlay benötigt Zugriff auf System Events für Tastatureingaben.</string>
+	<key>BuildTimestamp</key>
+	<string>10.09.2026, 18:26 Uhr</string>
+	<key>CFBundleExecutable</key>
+	<string>TerminalVoiceOverlay</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.frank.TerminalVoiceOverlay</string>
+	<key>CFBundleName</key>
+	<string>TerminalVoiceOverlay</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.45</string>
+	<key>CFBundleVersion</key>
+	<string>1.43</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>TerminalVoiceOverlay benötigt Zugriff auf System Events für Tastatureingaben.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>TerminalVoiceOverlay benötigt Zugriff auf das Mikrofon für Spracheingabe.</string>
 </dict>
 </plist>

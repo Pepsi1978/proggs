@@ -4190,42 +4190,55 @@ namespace ClaudeVoiceOverlay.Views
         /// jedem Speichern UND jedem Loeschen eines Slots aufgerufen (Frank-
         /// Wunsch: direkt nach Speichern und Loeschen syncen). Fire-and-forget.
         /// </summary>
-        private async Task TryUploadSlotsAsync()
-        {
-            try
-            {
-                var sync = GetOrCreateSlotSync();
-                if (sync is null) return;
-                await sync.UploadSlotsAsync(_slotService.SlotsFilePath);
-                _promptPanel?.MarkSyncedNow();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Slot upload failed: {ex.Message}");
-            }
-        }
+        private Task TryUploadSlotsAsync() => TrySyncSlotsWithCloudAsync();
 
         /// <summary>
-        /// Holt die Cloud-Slots und mergt sie mit dem lokalen Stand (pro Nummer
-        /// gewinnt der juengste UpdatedAt — auch Tombstones). Einmal beim Start.
+        /// Beim Start einmal abgleichen und danach alle 30 s — sonst kamen
+        /// Aenderungen vom Mac erst beim naechsten App-Start an.
         /// </summary>
-        public async Task TryMergeSlotsFromCloudAsync()
+        public Task TryMergeSlotsFromCloudAsync()
         {
+            if (_slotSyncTimer is null)
+            {
+                _slotSyncTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+                _slotSyncTimer.Tick += (_, _) => _ = TrySyncSlotsWithCloudAsync();
+                _slotSyncTimer.Start();
+            }
+            return TrySyncSlotsWithCloudAsync();
+        }
+
+        private DispatcherTimer? _slotSyncTimer;
+        private readonly SemaphoreSlim _slotSyncGate = new(1, 1);
+
+        /// <summary>
+        /// Zwei-Wege-Sync der 30 Slots: Cloud holen -> atomar in den lokalen Stand
+        /// mergen (pro Slot gewinnt der juengste UpdatedAt, auch Tombstones) ->
+        /// nur hochladen, wenn die Cloud danach aelter ist als der gemergte Stand.
+        /// </summary>
+        private async Task TrySyncSlotsWithCloudAsync()
+        {
+            await _slotSyncGate.WaitAsync();
             try
             {
                 var sync = GetOrCreateSlotSync();
                 if (sync is null) return;
-                string? cloud = await sync.DownloadSlotsAsync();
-                if (cloud is null) return;
-                var local = await _slotService.LoadEntriesAsync();
-                var merged = PromptSlotDriveSync.MergeEntries(local, cloud);
-                await _slotService.ReplaceAllAsync(merged);
-                // Offene Eingabe-Leiste sofort aktualisieren.
-                _promptPanel?.ReloadSlots();
+                string cloud = await sync.DownloadSlotsAsync() ?? "[]";
+                var (merged, changed) = await _slotService.MergeFromCloudAsync(cloud);
+                if (changed) _promptPanel?.ReloadSlots();
+                var cloudEntries = PromptSlotDriveSync.MergeEntries(Array.Empty<PromptSlotEntry>(), cloud);
+                if (!PromptSlotDriveSync.SameContent(merged, cloudEntries))
+                {
+                    await sync.UploadSlotsAsync(_slotService.SlotsFilePath);
+                    _promptPanel?.MarkSyncedNow();
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Slot cloud merge skipped: {ex.Message}");
+                Console.WriteLine($"Slot cloud sync failed: {ex.Message}");
+            }
+            finally
+            {
+                _slotSyncGate.Release();
             }
         }
 

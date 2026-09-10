@@ -332,34 +332,73 @@ final class PromptSlotStore {
     /// Text als auch ein neues Loeschen (Tombstone) gegen einen aelteren Stand
     /// durch. Kaputtes Cloud-JSON laesst die lokale Liste unveraendert.
     static func merge(local: [PBSlotEntry], cloudJson: String) -> [PBSlotEntry] {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let str = try decoder.singleValueContainer().decode(String.self)
-            let f1 = ISO8601DateFormatter()
-            f1.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let d = f1.date(from: str) { return d }
-            let f2 = ISO8601DateFormatter()
-            f2.formatOptions = [.withInternetDateTime]
-            if let d = f2.date(from: str) { return d }
-            throw DecodingError.dataCorruptedError(
-                in: try decoder.singleValueContainer(),
-                debugDescription: "Invalid date: \(str)")
-        }
-        var cloud: [PBSlotEntry] = []
-        if let data = cloudJson.data(using: .utf8),
-           let parsed = try? decoder.decode([PBSlotEntry].self, from: data) {
-            cloud = parsed
-        }
+        let cloud = decodeEntries(cloudJson)
         var byNumber: [Int: PBSlotEntry] = [:]
         for e in local where (1...slotCount).contains(e.number) { byNumber[e.number] = e }
         for e in cloud where (1...slotCount).contains(e.number) {
             if let existing = byNumber[e.number] {
-                if e.updatedAt > existing.updatedAt { byNumber[e.number] = e }
+                // 1 ms Toleranz: der Mac speichert Millisekunden, Windows 100 ns.
+                // Ohne Toleranz "gewinnt" derselbe Stand bei jedem Sync erneut.
+                if e.updatedAt.timeIntervalSince(existing.updatedAt) > 0.001 { byNumber[e.number] = e }
             } else {
                 byNumber[e.number] = e
             }
         }
         return byNumber.values.sorted { $0.number < $1.number }
+    }
+
+    /// Dekodiert eine Slots-JSON (Mac oder Windows). Kaputtes JSON -> leer.
+    static func decodeEntries(_ json: String) -> [PBSlotEntry] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let str = try decoder.singleValueContainer().decode(String.self)
+            if let d = parseDate(str) { return d }
+            throw DecodingError.dataCorruptedError(
+                in: try decoder.singleValueContainer(),
+                debugDescription: "Invalid date: \(str)")
+        }
+        guard let data = json.data(using: .utf8),
+              let parsed = try? decoder.decode([PBSlotEntry].self, from: data) else { return [] }
+        return parsed.filter { (1...slotCount).contains($0.number) }
+    }
+
+    /// ISO-8601 tolerant: Windows (System.Text.Json) schreibt 7 Nachkommastellen
+    /// ("…:56.1234567Z") — die werden auf 3 gekuerzt, damit der Parser sie sicher nimmt.
+    static func parseDate(_ str: String) -> Date? {
+        if let d = isoFormatter.date(from: str) { return d }
+        let plain = ISO8601DateFormatter()
+        plain.formatOptions = [.withInternetDateTime]
+        if let d = plain.date(from: str) { return d }
+        let trimmed = str.replacingOccurrences(of: #"(\.\d{3})\d+"#, with: "$1", options: .regularExpression)
+        if trimmed != str, let d = isoFormatter.date(from: trimmed) { return d }
+        return nil
+    }
+
+    /// Gleicher Inhalt (Nummer, Text, Summary, Prioritaet, Zeit auf 2 ms genau)?
+    static func sameContent(_ a: [PBSlotEntry], _ b: [PBSlotEntry]) -> Bool {
+        let x = a.filter { (1...slotCount).contains($0.number) }.sorted { $0.number < $1.number }
+        let y = b.filter { (1...slotCount).contains($0.number) }.sorted { $0.number < $1.number }
+        guard x.count == y.count else { return false }
+        for (l, r) in zip(x, y) {
+            if l.number != r.number || l.text != r.text || l.summary != r.summary || l.priority != r.priority { return false }
+            if abs(l.updatedAt.timeIntervalSince(r.updatedAt)) > 0.002 { return false }
+        }
+        return true
+    }
+
+    /// Mergt die Cloud-JSON ATOMAR in den aktuellen lokalen Stand (innerhalb der
+    /// seriellen Queue — ein gleichzeitiges Speichern geht dadurch nicht verloren).
+    /// `completion` (Main-Thread) bekommt den gemergten Stand und ob sich lokal
+    /// etwas geaendert hat.
+    func mergeFromCloud(cloudJson: String, completion: @escaping ([PBSlotEntry], Bool) -> Void) {
+        queue.async { [weak self] in
+            guard let self = self else { return }
+            let local = self.loadUnlocked()
+            let merged = Self.merge(local: local, cloudJson: cloudJson)
+            let changed = !Self.sameContent(merged, local)
+            if changed { self.saveUnlocked(merged) }
+            DispatchQueue.main.async { completion(merged, changed) }
+        }
     }
 
     // MARK: - Interne Helpers (laufen alle innerhalb der serial queue)
@@ -371,10 +410,7 @@ final class PromptSlotStore {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .custom { decoder in
                 let str = try decoder.singleValueContainer().decode(String.self)
-                if let d = Self.isoFormatter.date(from: str) { return d }
-                let f = ISO8601DateFormatter()
-                f.formatOptions = [.withInternetDateTime]
-                if let d = f.date(from: str) { return d }
+                if let d = Self.parseDate(str) { return d }
                 throw DecodingError.dataCorruptedError(
                     in: try decoder.singleValueContainer(),
                     debugDescription: "Invalid date: \(str)")
