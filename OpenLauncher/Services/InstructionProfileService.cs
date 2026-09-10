@@ -407,8 +407,8 @@ public sealed class InstructionProfileService
         // ersten Start selbst eine an.
         WriteIfChanged(Path.Combine(home, "AGENTS.md"), string.Empty);
 
-        // Minimale config.toml: keine Plugins, keine MCP-Server, keine Hooks, kein notify, keine
-        // eigene Statuszeile. Nur anlegen wenn sie fehlt -- Codex traegt hier selbst seine
+        // Minimale config.toml: keine Plugins, keine MCP-Server, keine Hooks, kein notify, nur die
+        // Statuszeile. Nur anlegen wenn sie fehlt -- Codex traegt hier selbst seine
         // [projects.*]-Vertrauensstufen ein, die bei jedem Neuschreiben verloren gingen (dann kaeme
         // der Vertrauensdialog bei jedem Start zurueck).
         CreateIfMissing(Path.Combine(home, "config.toml"), CodexBaseConfig);
@@ -429,9 +429,13 @@ public sealed class InstructionProfileService
     }
 
     private const string CodexBaseConfig = """
-# Von OpenLauncher angelegt. Bewusst minimal: kein Plugin, kein MCP-Server, kein Hook,
-# keine eigene Statuszeile. Die Regeln kommen ausschliesslich aus der Profil-AGENTS.md
-# des Arbeitsverzeichnisses. Codex ergaenzt hier selbst nur seine Vertrauensstufen.
+# Von OpenLauncher angelegt. Bewusst minimal: kein Plugin, kein MCP-Server, kein Hook.
+# Die Regeln kommen ausschliesslich aus der Profil-AGENTS.md des Arbeitsverzeichnisses.
+# Codex ergaenzt hier selbst nur seine Vertrauensstufen.
+
+# Statuszeile aus Statusline-Codex/status-line.toml
+[tui]
+status_line = ["model-with-reasoning", "current-dir", "permissions", "context-used", "weekly-limit", "run-state", "used-tokens", "codex-version", "estimated-thread-cost", "fast-mode"]
 """;
 
     /// <summary>
