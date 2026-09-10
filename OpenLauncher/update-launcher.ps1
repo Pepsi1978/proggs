@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     # Ueberspringt die Rueckfrage. NUR auf ausdrueckliche Ansage des Benutzers verwenden.
     [switch]$Force,
