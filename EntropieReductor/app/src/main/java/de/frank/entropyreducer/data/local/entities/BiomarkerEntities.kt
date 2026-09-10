@@ -86,3 +86,43 @@ data class SupplementLogEntity(
     val notes: String?,
     val skippedItems: List<String>,
 )
+
+/**
+ * Bug-Fix 2026-09-10 (fehlende Whoop-Tage): fuehrt zwei Staende desselben Whoop-Tages
+ * zusammen. [fresh] gewinnt, [fallback] fuellt nur Felder, die in [fresh] fehlen. Verhindert,
+ * dass ein noch nicht fertig berechneter Whoop-Wert (score_state PENDING_SCORE → score = null)
+ * oder ein aelterer Backup-Stand einen vollstaendigen Tag mit Leerwerten ueberschreibt — solche
+ * Tage fielen sonst aus HRV-, Ruhepuls- und Erholungs-Charts heraus.
+ */
+fun mergeWhoopSnapshot(
+    fresh: BiomarkerSnapshotEntity,
+    fallback: BiomarkerSnapshotEntity,
+): BiomarkerSnapshotEntity {
+    val sleepFromFallback = fresh.sleepPerformance == null && fallback.sleepPerformance != null
+    return fresh.copy(
+        // capturedAt haengt am Schlaf-Ende; kommt der Schlaf aus dem Fallback, auch dessen Zeit.
+        capturedAt = if (sleepFromFallback) fallback.capturedAt else fresh.capturedAt,
+        recoveryScore = fresh.recoveryScore ?: fallback.recoveryScore,
+        hrvMs = fresh.hrvMs ?: fallback.hrvMs,
+        restingHeartRate = fresh.restingHeartRate ?: fallback.restingHeartRate,
+        sleepPerformance = fresh.sleepPerformance ?: fallback.sleepPerformance,
+        sleepTotalMinutes = fresh.sleepTotalMinutes ?: fallback.sleepTotalMinutes,
+        sleepRemMinutes = fresh.sleepRemMinutes ?: fallback.sleepRemMinutes,
+        sleepDeepMinutes = fresh.sleepDeepMinutes ?: fallback.sleepDeepMinutes,
+        sleepLightMinutes = fresh.sleepLightMinutes ?: fallback.sleepLightMinutes,
+        sleepAwakeMinutes = fresh.sleepAwakeMinutes ?: fallback.sleepAwakeMinutes,
+        sleepDisturbances = fresh.sleepDisturbances ?: fallback.sleepDisturbances,
+        dayStrain = fresh.dayStrain ?: fallback.dayStrain,
+        dayKilojoules = fresh.dayKilojoules ?: fallback.dayKilojoules,
+        respiratoryRate = fresh.respiratoryRate ?: fallback.respiratoryRate,
+        sleepConsistencyPercent = fresh.sleepConsistencyPercent ?: fallback.sleepConsistencyPercent,
+        sleepEfficiencyPercent = fresh.sleepEfficiencyPercent ?: fallback.sleepEfficiencyPercent,
+        sleepNeedMinutes = fresh.sleepNeedMinutes ?: fallback.sleepNeedMinutes,
+        sleepDebtMinutes = fresh.sleepDebtMinutes ?: fallback.sleepDebtMinutes,
+        spo2Percent = fresh.spo2Percent ?: fallback.spo2Percent,
+        skinTempCelsius = fresh.skinTempCelsius ?: fallback.skinTempCelsius,
+        averageHeartRate = fresh.averageHeartRate ?: fallback.averageHeartRate,
+        maxHeartRate = fresh.maxHeartRate ?: fallback.maxHeartRate,
+        sleepCycleCount = fresh.sleepCycleCount ?: fallback.sleepCycleCount,
+    )
+}

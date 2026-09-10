@@ -23,6 +23,7 @@ import de.frank.entropyreducer.data.repository.EntryRepository
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
+import de.frank.entropyreducer.data.local.entities.mergeWhoopSnapshot
 import kotlinx.serialization.json.Json
 
 // Live-Sonde (Frank-Wunsch 2026-06-20): jede Restore-Entscheidung fuer Tagebuch/Ideen/Thesen mit
@@ -1088,7 +1089,16 @@ constructor(
         // Whoop Daily Recovery — Performance-Fix 2026-07-03 (#47449): Batch-Upsert in EINER
         // Transaktion statt einer Einzeltransaktion pro Snapshot (vorher ~300 pro App-Start).
         if (payload.whoopSnapshots.isNotEmpty()) {
-            val snaps = payload.whoopSnapshots.map { it.toEntity() }
+            // Bug-Fix 2026-09-10 (fehlende Whoop-Tage): Backup-Zeilen duerfen lokale,
+            // frisch von der Whoop-API geholte Werte nicht mehr blind ueberschreiben. Vorher
+            // ersetzte der Start-Restore gute Tage durch aeltere/leere Backup-Staende (z.B.
+            // PENDING-Recovery ohne HRV) — die Tage verschwanden aus allen Charts. Jetzt:
+            // Feld fuer Feld zusammenfuehren, lokale Werte gewinnen, Backup fuellt nur Luecken.
+            val local = biomarkerSnapshotDao.getAll().first().associateBy { it.id }
+            val snaps = payload.whoopSnapshots.map { backup ->
+                val entity = backup.toEntity()
+                local[entity.id]?.let { mergeWhoopSnapshot(fresh = it, fallback = entity) } ?: entity
+            }
             biomarkerSnapshotDao.upsertAll(snaps)
             count += snaps.size
         }

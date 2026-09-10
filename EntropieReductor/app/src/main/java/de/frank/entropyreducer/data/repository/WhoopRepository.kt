@@ -7,6 +7,7 @@ import de.frank.entropyreducer.data.local.dao.BiomarkerSnapshotDao
 import de.frank.entropyreducer.data.local.dao.WhoopWorkoutDao
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
 import de.frank.entropyreducer.data.local.entities.WhoopWorkoutEntity
+import de.frank.entropyreducer.data.local.entities.mergeWhoopSnapshot
 import de.frank.entropyreducer.data.remote.oauth.OAuthService
 import de.frank.entropyreducer.data.remote.whoop.WhoopApi
 import de.frank.entropyreducer.data.remote.whoop.WhoopCycle
@@ -91,7 +92,7 @@ constructor(
                 // berechnet. Beim ersten Sync (lastSync == 0) das volle [days]-Fenster.
                 // dao.upsert nutzt REPLACE -> der Ueberlapp erzeugt keine Duplikate.
                 val lastWhoopSyncMs = settings.lastWhoopSyncMsFlow.first()
-                val requestedStart =
+                val incrementalStart =
                     if (lastWhoopSyncMs > 0L) {
                         OffsetDateTime.ofInstant(
                             java.time.Instant.ofEpochMilli(lastWhoopSyncMs - INCREMENTAL_OVERLAP_MS),
@@ -99,6 +100,18 @@ constructor(
                         )
                     } else {
                         end.minusDays(days.toLong())
+                    }
+                // Bug-Fix 2026-09-10 (fehlende Whoop-Tage, z.B. 20.–22.08.): der rein
+                // inkrementelle Sync holte Luecken, die vor dem 7-Tage-Ueberlapp lagen, nie
+                // wieder nach. Jetzt reicht das Fenster bis zum fruehesten Tag ohne HRV-Wert
+                // zurueck — Luecken heilen beim naechsten Sync von selbst.
+                val gapStart = earliestGapStart()
+                val requestedStart =
+                    if (gapStart != null && gapStart.isBefore(incrementalStart)) {
+                        Diag.i(DiagnosticArea.WHOOP, TAG, "Whoop-Luecke ab $gapStart — Fenster erweitert")
+                        gapStart
+                    } else {
+                        incrementalStart
                     }
                 // Untergrenze auf Geraete-Kaufdatum clampen: nie davor anfragen.
                 val start =
@@ -180,7 +193,13 @@ constructor(
                 val snapshots = cycles.mapNotNull { cycle ->
                     mapToSnapshot(cycle, recByCycleId[cycle.id], sleepById, sleepByDate)
                 }
-                snapshots.forEach { dao.upsert(it) }
+                // Bug-Fix 2026-09-10: ein noch nicht fertig berechneter Whoop-Wert (score = null)
+                // darf einen vorhandenen vollstaendigen Tag nicht mit Leerwerten ersetzen.
+                val existing = dao.getAll().first().associateBy { it.id }
+                val merged = snapshots.map { snap ->
+                    existing[snap.id]?.let { mergeWhoopSnapshot(fresh = snap, fallback = it) } ?: snap
+                }
+                dao.upsertAll(merged)
 
                 // Workouts persistieren — eigene Tabelle (whoop_workouts), ein
                 // Eintrag pro Training. Manual-Edit-Schutz ist hier nicht noetig —
@@ -297,6 +316,30 @@ constructor(
             maxHeartRate = cycle.score?.maxHeartRate?.toInt(),
             sleepCycleCount = sleepScore?.stageSummary?.sleepCycleCount,
         )
+    }
+
+    /**
+     * Fruehester Kalendertag (ab Kaufdatum bis vorgestern) ohne gespeicherten HRV-Wert, minus
+     * einen Tag Puffer (Cycles starten am Vorabend). null = keine Luecke.
+     */
+    private suspend fun earliestGapStart(): OffsetDateTime? {
+        val zone = ZoneId.systemDefault()
+        val daysWithHrv =
+            dao.getAll()
+                .first()
+                .filter { it.hrvMs != null }
+                .mapTo(HashSet()) { Instant.ofEpochMilli(it.capturedAt).atZone(zone).toLocalDate() }
+        var day = Instant.ofEpochMilli(WHOOP_DATA_START_MS).atZone(zone).toLocalDate().plusDays(1)
+        // Heute und gestern auslassen: dort ist die Recovery evtl. noch nicht berechnet —
+        // diese Tage deckt der 7-Tage-Ueberlapp ohnehin ab.
+        val last = java.time.LocalDate.now(zone).minusDays(2)
+        while (!day.isAfter(last)) {
+            if (day !in daysWithHrv) {
+                return day.minusDays(1).atStartOfDay(zone).toOffsetDateTime()
+            }
+            day = day.plusDays(1)
+        }
+        return null
     }
 
     /**
