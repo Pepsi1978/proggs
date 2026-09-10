@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
+<style>
+  :root, [data-theme="dark"]{
+    --bg:#0B0E14; --surface:#141A23; --raised:#1A2230; --border:#222C3A; --border-soft:#1B2430;
+    --text:#E8EEF6; --muted:#8A98AC; --faint:#5B687C;
+    --iris:#7B7BF5; --mint:#4FD1B0; --amber:#F2B65A; --rose:#F2698E;
+    --audio:#F97316; --improve:#4FD1B0; --danger:#F2698E;
+    --user-bubble:rgba(123,123,245,.20); --user-bord:rgba(123,123,245,.34);
+    --chip:rgba(255,255,255,.05); --chip-bord:#27313F;
+    --field:#0F141C; --field-bord:#26303F;
+    --glow:radial-gradient(125% 75% at 50% -12%, rgba(123,123,245,.20), rgba(123,123,245,0) 58%), radial-gradient(90% 50% at 88% 6%, rgba(79,209,176,.08), transparent 60%);
+    --shadow:0 18px 50px rgba(0,0,0,.55); --shadow-sm:0 8px 24px rgba(0,0,0,.40);
+    --sheet-shadow:0 -20px 60px rgba(0,0,0,.6); --overlay:rgba(5,7,11,.62);
+  }
+  [data-theme="light"]{
+    --bg:#F4F6FB; --surface:#FFFFFF; --raised:#FFFFFF; --border:#E4E8F1; --border-soft:#EDF0F6;
+    --text:#1A2230; --muted:#5C6B82; --faint:#9AA7BC;
+    --iris:#6363E6; --mint:#1FA98A; --amber:#D99327; --rose:#E14C72;
+    --audio:#F2710C; --improve:#1FA98A; --danger:#E14C72;
+    --user-bubble:rgba(99,99,230,.12); --user-bord:rgba(99,99,230,.26);
+    --chip:#F2F4FA; --chip-bord:#E4E8F1;
+    --field:#F7F9FD; --field-bord:#E1E6F0;
+    --glow:radial-gradient(125% 70% at 50% -14%, rgba(99,99,230,.10), transparent 55%), radial-gradient(80% 45% at 90% 4%, rgba(31,169,138,.06), transparent 60%);
+    --shadow:0 16px 40px rgba(30,40,70,.10); --shadow-sm:0 6px 18px rgba(30,40,70,.08);
+    --sheet-shadow:0 -16px 50px rgba(30,40,70,.18); --overlay:rgba(26,34,48,.34);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  .cx-root *{ transition:background-color .4s ease, border-color .4s ease, color .3s ease, fill .3s ease; }
+  .cx-scroll{ overflow-y:auto; scrollbar-width:none; }
+  .cx-scroll::-webkit-scrollbar{ display:none; }
+  .cx-scroll > *{ flex-shrink:0; }
+  .ms{ font-family:'Material Symbols Outlined'; font-weight:normal; font-style:normal; line-height:1; letter-spacing:normal; -webkit-font-feature-settings:'liga'; font-feature-settings:'liga'; -webkit-font-smoothing:antialiased; display:inline-flex; align-items:center; justify-content:center; }
+  textarea.cx-ta, input.cx-in, select.cx-sel{ font-family:inherit; outline:none; }
+  textarea.cx-ta::placeholder, input.cx-in::placeholder{ color:var(--faint); }
+  @keyframes cxpulse{ 0%{ transform:scale(.9); opacity:.7;} 70%{ transform:scale(2.4); opacity:0;} 100%{opacity:0;} }
+  @keyframes cxdot{ 0%,60%,100%{ transform:translateY(0); opacity:.45;} 30%{ transform:translateY(-4px); opacity:1;} }
+  @keyframes cxwave{ 0%,100%{ transform:scaleY(.28);} 50%{ transform:scaleY(1);} }
+  @keyframes cxsheen{ 0%{ background-position:-160% 0;} 100%{ background-position:260% 0;} }
+  @keyframes cxrise{ from{ transform:translateY(9px);} to{ transform:translateY(0);} }
+  @keyframes cxsheet{ from{ transform:translateY(34px);} to{ transform:translateY(0);} }
+  @keyframes cxbreathe{ 0%,100%{ opacity:.5;} 50%{ opacity:.95;} }
+  .cx-fade{ animation:cxrise .42s cubic-bezier(.22,.61,.36,1) both; }
+  @media (prefers-reduced-motion: reduce){
+    .cx-root *, .cx-fade{ animation:none !important; transition:background-color .01s, color .01s !important; }
+  }
+</style>
+</helmet>
+<div class="cx-root" data-theme="{{ theme }}" style="position:relative; width:412px; height:892px; background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; border-radius:38px; overflow:hidden; box-shadow:var(--shadow); display:flex; flex-direction:column;">
+
+  <div style="position:absolute; inset:0; background:var(--glow); pointer-events:none; z-index:0;"></div>
+
+  <!-- STATUS BAR -->
+  <div style="position:relative; z-index:5; display:flex; align-items:center; justify-content:space-between; padding:10px 22px 2px; font-size:13px; font-weight:600; color:var(--text); letter-spacing:.2px;">
+    <span style="font-variant-numeric:tabular-nums;">21:08</span>
+    <span style="display:flex; gap:7px; align-items:center; opacity:.85;">
+      <span class="ms" style="font-size:17px;">signal_cellular_alt</span>
+      <span class="ms" style="font-size:17px;">wifi</span>
+      <span class="ms" style="font-size:18px;">battery_5_bar</span>
+    </span>
+  </div>
+
+  <!-- TOPBAR -->
+  <div style="position:relative; z-index:5; display:flex; align-items:center; gap:10px; padding:8px 14px 12px;">
+    <div style="width:38px; height:38px; border-radius:12px; background:linear-gradient(145deg, color-mix(in oklab,var(--iris) 30%,transparent), color-mix(in oklab,var(--iris) 12%,transparent)); border:1px solid var(--user-bord); display:flex; align-items:center; justify-content:center; font-size:20px; box-shadow:0 0 18px color-mix(in oklab,var(--iris) 30%,transparent);">🧠</div>
+    <div style="display:flex; flex-direction:column; line-height:1.05; margin-right:auto;">
+      <span style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:19px; letter-spacing:.2px;">Cortex</span>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; letter-spacing:2.5px; color:var(--muted); text-transform:uppercase;">zweites gehirn</span>
+    </div>
+
+    <!-- VPN PILL -->
+    <button onClick="{{ onVpn }}" style="display:flex; align-items:center; gap:7px; height:34px; padding:0 13px 0 11px; border-radius:999px; background:{{ vpnBg }}; border:1px solid {{ vpnBorder }}; color:{{ vpnFg }}; box-shadow:{{ vpnGlow }}; cursor:pointer; font-weight:600; font-size:12.5px;">
+      <span style="position:relative; width:9px; height:9px;">
+        <span style="position:absolute; inset:0; border-radius:50%; background:{{ vpnDot }};"></span>
+        <sc-if value="{{ vpnPulse }}" hint-placeholder-val="{{ false }}"><span style="position:absolute; inset:0; border-radius:50%; background:{{ vpnDot }}; animation:cxpulse 1.5s ease-out infinite;"></span></sc-if>
+      </span>
+      <span>{{ vpnLabel }}</span>
+    </button>
+
+    <!-- THEME TOGGLE -->
+    <button onClick="{{ onTheme }}" style="width:34px; height:34px; border-radius:999px; background:var(--chip); border:1px solid var(--chip-bord); color:var(--text); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+      <span class="ms" style="font-size:19px;">{{ themeIcon }}</span>
+    </button>
+  </div>
+
+  <!-- ===================== CONTENT ===================== -->
+  <div style="position:relative; z-index:2; flex:1; min-height:0; display:flex; flex-direction:column;">
+
+    <!-- ============ GESPRÄCH ============ -->
+    <sc-if value="{{ isGespraech }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1; min-height:0; display:flex; flex-direction:column;">
+
+      <!-- thin chat header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:4px 18px 8px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; color:var(--faint); text-transform:uppercase;">Heute</span>
+        <button onClick="{{ onResetChat }}" style="display:flex; align-items:center; gap:5px; background:transparent; border:none; color:var(--muted); font-size:11.5px; font-weight:600; cursor:pointer; font-family:inherit;"><span class="ms" style="font-size:15px;">add_comment</span>Neu</button>
+      </div>
+
+      <!-- messages OR empty -->
+      <sc-if value="{{ isChatEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px 40px; gap:16px;">
+          <div style="font-size:54px; filter:drop-shadow(0 0 24px color-mix(in oklab,var(--iris) 55%,transparent)); animation:cxbreathe 4s ease-in-out infinite;">🧠</div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:21px; font-weight:600; line-height:1.3;">Dein Gehirn hört zu.</div>
+          <div style="color:var(--muted); font-size:14px; line-height:1.55; max-width:250px;">Sag oder tippe etwas — ich lege es ab oder schlage es nach.</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasChat }}" hint-placeholder-val="{{ true }}">
+      <div class="cx-scroll" style="flex:1; min-height:0; padding:6px 16px 14px; display:flex; flex-direction:column; gap:16px;">
+        <sc-for list="{{ messages }}" as="m" hint-placeholder-count="4">
+          <div class="cx-fade" style="display:flex; flex-direction:column; gap:5px; align-items:{{ m.align }};">
+            <sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ false }}">
+              <div style="max-width:80%; padding:11px 14px; border-radius:18px 18px 5px 18px; background:var(--user-bubble); border:1px solid var(--user-bord); color:var(--text); font-size:14.5px; line-height:1.5;">{{ m.text }}</div>
+            </sc-if>
+            <sc-if value="{{ m.isBot }}" hint-placeholder-val="{{ true }}">
+              <div style="max-width:84%; position:relative; padding:12px 14px; border-radius:18px 18px 18px 5px; background:var(--surface); border:1px solid {{ m.botBorder }}; color:var(--text); font-size:14.5px; line-height:1.55; box-shadow:{{ m.botGlow }};">
+                {{ m.text }}
+                <button onClick="{{ m.onSpeak }}" style="position:absolute; bottom:-9px; right:-6px; width:26px; height:26px; border-radius:50%; background:var(--raised); border:1px solid var(--border); color:{{ m.speakColor }}; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:var(--shadow-sm);"><span class="ms" style="font-size:15px; font-variation-settings:'FILL' {{ m.speakFill }};">{{ m.speakIcon }}</span></button>
+              </div>
+              <sc-if value="{{ m.speaking }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex; align-items:center; gap:7px; padding:3px 4px; color:var(--audio); font-size:10.5px; font-family:'JetBrains Mono',monospace; letter-spacing:.5px;">
+                  <span style="display:flex; gap:2px; align-items:flex-end; height:11px;">
+                    <span style="width:2.5px; height:100%; background:var(--audio); border-radius:2px; transform-origin:bottom; animation:cxwave .8s ease-in-out infinite;"></span>
+                    <span style="width:2.5px; height:100%; background:var(--audio); border-radius:2px; transform-origin:bottom; animation:cxwave .8s ease-in-out .15s infinite;"></span>
+                    <span style="width:2.5px; height:100%; background:var(--audio); border-radius:2px; transform-origin:bottom; animation:cxwave .8s ease-in-out .3s infinite;"></span>
+                  </span>
+                  liest vor… <button onClick="{{ m.onStopSpeak }}" style="background:transparent; border:none; color:var(--audio); font-weight:700; cursor:pointer; font-family:inherit; text-decoration:underline;">Stopp</button>
+                </div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ m.meta }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; gap:5px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.3px; color:{{ m.metaColor }};">{{ m.meta }}</div>
+            </sc-if>
+            <sc-if value="{{ m.hasChips }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; gap:8px; margin-top:2px;">
+                <sc-for list="{{ m.chips }}" as="c" hint-placeholder-count="2">
+                  <button onClick="{{ c.onTap }}" style="padding:8px 18px; border-radius:999px; background:color-mix(in oklab,var(--iris) 16%,transparent); border:1px solid var(--user-bord); color:var(--iris); font-weight:600; font-size:13px; cursor:pointer; font-family:inherit;">{{ c.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+
+        <sc-if value="{{ showTyping }}" hint-placeholder-val="{{ false }}">
+          <div class="cx-fade" style="align-self:flex-start; display:flex; gap:4px; padding:14px 16px; border-radius:18px 18px 18px 5px; background:var(--surface); border:1px solid var(--border);">
+            <span style="width:7px; height:7px; border-radius:50%; background:var(--muted); animation:cxdot 1.2s ease-in-out infinite;"></span>
+            <span style="width:7px; height:7px; border-radius:50%; background:var(--muted); animation:cxdot 1.2s ease-in-out .2s infinite;"></span>
+            <span style="width:7px; height:7px; border-radius:50%; background:var(--muted); animation:cxdot 1.2s ease-in-out .4s infinite;"></span>
+          </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <!-- INPUT BLOCK -->
+      <div style="position:relative; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:var(--surface); border-top:1px solid var(--border);">
+        <!-- collapsible title+category row -->
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <span class="ms" style="font-size:18px; color:var(--faint);">title</span>
+          <input class="cx-in" value="{{ titleValue }}" onChange="{{ onTitle }}" placeholder="Titel (optional)" style="flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-size:12.5px;" />
+          <div style="position:relative;">
+            <button onClick="{{ onCatMenu }}" style="display:flex; align-items:center; gap:5px; height:28px; padding:0 8px 0 10px; border-radius:999px; background:var(--chip); border:1px solid {{ catPillBorder }}; color:var(--text); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;">
+              <span style="width:8px; height:8px; border-radius:50%; background:{{ catPillDot }};"></span>{{ catLabel }}<span class="ms" style="font-size:16px; color:var(--muted);">expand_more</span>
+            </button>
+            <sc-if value="{{ catMenuOpen }}" hint-placeholder-val="{{ false }}">
+              <div class="cx-scroll cx-fade" style="position:absolute; bottom:36px; right:0; width:210px; max-height:240px; background:var(--raised); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); padding:6px; z-index:30;">
+                <sc-for list="{{ catMenuItems }}" as="o" hint-placeholder-count="5">
+                  <button onClick="{{ o.onTap }}" style="display:flex; align-items:center; gap:9px; width:100%; padding:9px 10px; border-radius:9px; background:{{ o.bg }}; border:none; color:var(--text); font-size:13px; cursor:pointer; font-family:inherit; text-align:left;">
+                    <span style="width:9px; height:9px; border-radius:50%; background:{{ o.color }}; flex:none;"></span>
+                    <span style="flex:1;">{{ o.name }}</span>
+                    <sc-if value="{{ o.count }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--muted);">{{ o.count }}</span></sc-if>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- textarea -->
+        <textarea class="cx-ta" value="{{ draftValue }}" onChange="{{ onDraft }}" placeholder="Ablegen oder nachschlagen…" rows="1" style="width:100%; resize:none; min-height:44px; max-height:120px; background:var(--field); border:1px solid {{ taBorder }}; border-radius:14px; padding:12px 13px; color:var(--text); font-size:14.5px; line-height:1.5; margin-bottom:9px;"></textarea>
+
+        <!-- action row -->
+        <div style="display:flex; align-items:center; gap:9px;">
+          <button onClick="{{ onClear }}" title="Leeren" style="width:38px; height:38px; border-radius:11px; background:color-mix(in oklab,var(--danger) 13%,transparent); border:1px solid color-mix(in oklab,var(--danger) 28%,transparent); color:var(--danger); display:flex; align-items:center; justify-content:center; cursor:pointer;"><span class="ms" style="font-size:20px;">backspace</span></button>
+          <button onClick="{{ onImprove }}" title="Verbessern" style="width:38px; height:38px; border-radius:11px; background:{{ improveBg }}; border:1px solid color-mix(in oklab,var(--improve) 30%,transparent); color:var(--improve); display:flex; align-items:center; justify-content:center; cursor:pointer; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:18px;">G</button>
+          <div style="flex:1;"></div>
+          <button onClick="{{ onTts }}" title="Vorlesen" style="width:38px; height:38px; border-radius:11px; background:{{ ttsBg }}; border:1px solid {{ ttsBorder }}; color:var(--audio); display:flex; align-items:center; justify-content:center; cursor:pointer;"><span class="ms" style="font-size:21px; font-variation-settings:'FILL' {{ ttsFill }};">{{ ttsIcon }}</span></button>
+          <button onClick="{{ onMic }}" title="Mikrofon" style="width:38px; height:38px; border-radius:11px; background:color-mix(in oklab,var(--audio) 13%,transparent); border:1px solid color-mix(in oklab,var(--audio) 28%,transparent); color:var(--audio); display:flex; align-items:center; justify-content:center; cursor:pointer;"><span class="ms" style="font-size:21px;">mic</span></button>
+          <button onClick="{{ onSend }}" title="Senden" style="width:44px; height:44px; border-radius:13px; background:var(--audio); border:none; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 6px 18px color-mix(in oklab,var(--audio) 45%,transparent);"><span class="ms" style="font-size:22px; font-variation-settings:'FILL' 1;">send</span></button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ DASHBOARD ============ -->
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ false }}">
+    <div class="cx-scroll" style="flex:1; min-height:0; padding:6px 16px 24px; display:flex; flex-direction:column; gap:14px;">
+
+      <!-- spectrum card -->
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:18px 18px 16px; box-shadow:var(--shadow-sm); position:relative; overflow:hidden;">
+        <div style="position:absolute; top:-30px; right:-20px; width:140px; height:140px; background:radial-gradient(circle, color-mix(in oklab,var(--iris) 22%,transparent), transparent 70%); pointer-events:none;"></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:2px; color:var(--muted);">GEDÄCHTNIS-SPEKTRUM</div>
+        <div style="display:flex; align-items:baseline; gap:9px; margin:6px 0 16px;">
+          <span style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:52px; line-height:1; letter-spacing:-1px; font-variant-numeric:tabular-nums;">{{ displayCount }}</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; color:var(--muted); transform:translateY(-4px);">EINTRÄGE<br>GESAMT</span>
+        </div>
+        <!-- stacked bar -->
+        <div style="display:flex; width:100%; height:16px; border-radius:8px; overflow:hidden; gap:2px; background:var(--field);">
+          <sc-for list="{{ spectrum }}" as="s" hint-placeholder-count="8">
+            <button onClick="{{ s.onTap }}" title="{{ s.name }}" style="width:{{ s.w }}%; height:100%; background:linear-gradient(180deg, {{ s.colorLight }}, {{ s.color }}); border:none; cursor:pointer; transition:width .9s cubic-bezier(.22,.61,.36,1); box-shadow:0 0 10px color-mix(in oklab,{{ s.color }} 50%,transparent);"></button>
+          </sc-for>
+        </div>
+        <!-- legend -->
+        <div class="cx-scroll" style="margin-top:14px; max-height:128px; display:flex; flex-direction:column; gap:1px;">
+          <sc-for list="{{ legend }}" as="l" hint-placeholder-count="6">
+            <button onClick="{{ l.onTap }}" style="display:flex; align-items:center; gap:10px; width:100%; padding:7px 6px; border-radius:8px; background:transparent; border:none; cursor:pointer; font-family:inherit;">
+              <span style="width:11px; height:11px; border-radius:3px; background:{{ l.color }}; flex:none; box-shadow:0 0 7px color-mix(in oklab,{{ l.color }} 55%,transparent);"></span>
+              <span style="flex:1; text-align:left; color:var(--text); font-size:13.5px;">{{ l.name }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--muted);">{{ l.count }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- vitals 2x2 -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:11px;">
+        <sc-for list="{{ vitals }}" as="v" hint-placeholder-count="4">
+          <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:13px 14px; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:7px;">
+            <div style="display:flex; align-items:center; gap:7px;">
+              <span class="ms" style="font-size:17px; color:var(--muted);">{{ v.icon }}</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:1px; color:var(--muted); text-transform:uppercase;">{{ v.label }}</span>
+            </div>
+            <div style="display:flex; align-items:baseline; gap:6px;">
+              <sc-if value="{{ v.isStatus }}" hint-placeholder-val="{{ false }}"><span style="width:9px; height:9px; border-radius:50%; background:{{ v.dot }}; box-shadow:0 0 8px {{ v.dot }};"></span></sc-if>
+              <span style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:22px; color:{{ v.valColor }};">{{ v.value }}</span>
+              <sc-if value="{{ v.unit }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px; color:var(--muted);">{{ v.unit }}</span></sc-if>
+            </div>
+            <sc-if value="{{ v.hasMeter }}" hint-placeholder-val="{{ false }}">
+              <div style="height:5px; border-radius:3px; background:var(--field); overflow:hidden;"><div style="height:100%; width:{{ v.meterW }}%; border-radius:3px; background:{{ v.meterColor }}; transition:width .9s cubic-bezier(.22,.61,.36,1);"></div></div>
+            </sc-if>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--faint);">{{ v.sub }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- BROWSE -->
+      <div style="display:flex; align-items:center; gap:9px; margin-top:4px; background:var(--surface); border:1px solid {{ searchBorder }}; border-radius:14px; padding:0 13px; height:46px;">
+        <span class="ms" style="font-size:20px; color:var(--muted);">search</span>
+        <input class="cx-in" value="{{ searchValue }}" onChange="{{ onSearch }}" placeholder="Im Gehirn suchen — z.B. ‚meine Ziele‘…" style="flex:1; min-width:0; background:transparent; border:none; color:var(--text); font-size:13.5px;" />
+        <sc-if value="{{ hasSearch }}" hint-placeholder-val="{{ false }}"><button onClick="{{ onClearSearch }}" style="background:transparent; border:none; color:var(--muted); cursor:pointer; display:flex;"><span class="ms" style="font-size:18px;">close</span></button></sc-if>
+      </div>
+
+      <!-- chips -->
+      <div class="cx-scroll" style="display:flex; gap:8px; overflow-x:auto; padding:1px;">
+        <sc-for list="{{ chips }}" as="c" hint-placeholder-count="6">
+          <button onClick="{{ c.onTap }}" style="flex:none; display:flex; align-items:center; gap:6px; height:32px; padding:0 13px; border-radius:999px; background:{{ c.bg }}; border:1px solid {{ c.border }}; color:{{ c.fg }}; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;">
+            <sc-if value="{{ c.hasDot }}" hint-placeholder-val="{{ false }}"><span style="width:8px; height:8px; border-radius:50%; background:{{ c.color }};"></span></sc-if>
+            {{ c.name }}
+          </button>
+        </sc-for>
+      </div>
+
+      <!-- results -->
+      <sc-if value="{{ browseEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center; padding:30px 20px; color:var(--muted);">
+          <span class="ms" style="font-size:34px; color:var(--faint);">search_off</span>
+          <div style="margin-top:8px; font-size:14px;">Nichts gefunden.</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <sc-for list="{{ browse }}" as="e" hint-placeholder-count="5">
+          <button onClick="{{ e.onTap }}" class="cx-fade" style="display:flex; flex-direction:column; gap:7px; text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px; cursor:pointer; box-shadow:var(--shadow-sm); font-family:inherit;">
+            <div style="display:flex; align-items:center; gap:9px;">
+              <span style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15.5px; color:var(--text); flex:1; line-height:1.25;">{{ e.title }}</span>
+              <sc-if value="{{ e.showScore }}" hint-placeholder-val="{{ false }}"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:500; color:var(--mint);">{{ e.score }}%</span></sc-if>
+            </div>
+            <span style="display:inline-flex; align-self:flex-start; align-items:center; gap:6px; height:22px; padding:0 9px; border-radius:7px; background:{{ e.tagBg }}; color:{{ e.tagColor }}; font-size:11px; font-weight:600;"><span style="width:7px;height:7px;border-radius:50%;background:{{ e.tagColor }};"></span>{{ e.tag }}</span>
+            <span style="color:var(--muted); font-size:13px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">{{ e.snippet }}</span>
+          </button>
+        </sc-for>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <!-- ============ EINSTELLUNGEN ============ -->
+    <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+    <div class="cx-scroll" style="flex:1; min-height:0; padding:6px 16px 24px; display:flex; flex-direction:column; gap:18px;">
+
+      <!-- Verbindung -->
+      <div style="display:flex; flex-direction:column; gap:9px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; color:var(--muted); padding-left:4px;">VERBINDUNG &amp; VPN</div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:12px; padding:14px;">
+            <span class="ms" style="font-size:22px; color:var(--iris);">vpn_key</span>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:600;">WireGuard-Konfiguration</div>
+              <div style="font-size:11.5px; color:{{ wgColor }}; font-family:'JetBrains Mono',monospace; margin-top:2px;">{{ wgStatus }}</div>
+            </div>
+            <button onClick="{{ onImportWg }}" style="display:flex; align-items:center; gap:5px; height:32px; padding:0 12px; border-radius:9px; background:var(--chip); border:1px solid var(--chip-bord); color:var(--text); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;"><span class="ms" style="font-size:16px;">upload_file</span>Import</button>
+          </div>
+          <div style="height:1px; background:var(--border);"></div>
+          <div style="padding:12px 14px;">
+            <textarea class="cx-ta" value="{{ wgConfig }}" onChange="{{ onWgConfig }}" placeholder="…oder Konfiguration hier einfügen" rows="3" style="width:100%; resize:none; background:var(--field); border:1px solid var(--field-bord); border-radius:11px; padding:10px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.5;"></textarea>
+          </div>
+          <div style="height:1px; background:var(--border);"></div>
+          <div style="display:flex; align-items:center; gap:10px; padding:13px 14px;">
+            <span style="font-size:13.5px; color:var(--muted); flex:none; width:96px;">Server-Host</span>
+            <input class="cx-in" value="brain.local.cortex" style="flex:1; min-width:0; background:var(--field); border:1px solid var(--field-bord); border-radius:9px; padding:8px 10px; color:var(--text); font-size:12.5px; font-family:'JetBrains Mono',monospace;" />
+          </div>
+          <div style="display:flex; gap:8px; padding:0 14px 14px;">
+            <input class="cx-in" value="51820" style="flex:1; min-width:0; text-align:center; background:var(--field); border:1px solid var(--field-bord); border-radius:9px; padding:8px; color:var(--text); font-size:12.5px; font-family:'JetBrains Mono',monospace;" />
+            <input class="cx-in" value="8443" style="flex:1; min-width:0; text-align:center; background:var(--field); border:1px solid var(--field-bord); border-radius:9px; padding:8px; color:var(--text); font-size:12.5px; font-family:'JetBrains Mono',monospace;" />
+            <input class="cx-in" value="11434" style="flex:1; min-width:0; text-align:center; background:var(--field); border:1px solid var(--field-bord); border-radius:9px; padding:8px; color:var(--text); font-size:12.5px; font-family:'JetBrains Mono',monospace;" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Schlüssel -->
+      <div style="display:flex; flex-direction:column; gap:9px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; color:var(--muted); padding-left:4px;">SCHLÜSSEL</div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
+          <sc-for list="{{ keys }}" as="k" hint-placeholder-count="3">
+            <div style="display:flex; align-items:center; gap:10px; padding:13px 14px; border-bottom:1px solid {{ k.divider }};">
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:13.5px; font-weight:600;">{{ k.label }}</div>
+                <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ k.display }}</div>
+              </div>
+              <button onClick="{{ k.onToggle }}" style="width:34px; height:34px; border-radius:9px; background:var(--field); border:1px solid var(--field-bord); color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer;"><span class="ms" style="font-size:18px;">{{ k.icon }}</span></button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- Sprache & Stimme -->
+      <div style="display:flex; flex-direction:column; gap:9px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; color:var(--muted); padding-left:4px;">SPRACHE &amp; STIMME</div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
+          <div style="display:flex; align-items:center; gap:12px; padding:14px; border-bottom:1px solid var(--border);">
+            <span class="ms" style="font-size:21px; color:var(--audio);">{{ ttsIcon }}</span>
+            <span style="flex:1; font-size:14px;">Antworten vorlesen</span>
+            <button onClick="{{ onTts }}" style="width:46px; height:27px; border-radius:999px; background:{{ ttsTrack }}; border:none; position:relative; cursor:pointer; padding:0;"><span style="position:absolute; top:3px; left:{{ ttsKnob }}; width:21px; height:21px; border-radius:50%; background:#fff; transition:left .22s ease; box-shadow:0 1px 4px rgba(0,0,0,.3);"></span></button>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; padding:14px; border-bottom:1px solid var(--border);">
+            <span class="ms" style="font-size:20px; color:var(--muted);">record_voice_over</span>
+            <span style="flex:1; font-size:14px;">Stimme</span>
+            <select class="cx-sel" value="{{ voice }}" onChange="{{ onVoice }}" style="background:var(--field); border:1px solid var(--field-bord); border-radius:9px; padding:7px 10px; color:var(--text); font-size:12.5px;">
+              <option>Klara · warm</option><option>Jonas · ruhig</option><option>Mara · hell</option>
+            </select>
+          </div>
+          <div style="padding:14px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;"><span style="font-size:14px;">Sprechtempo</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted);">{{ rateLabel }}×</span></div>
+            <input type="range" min="0.7" max="1.4" step="0.05" value="{{ rate }}" onChange="{{ onRate }}" style="width:100%; accent-color:var(--audio);" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Darstellung -->
+      <div style="display:flex; flex-direction:column; gap:9px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; color:var(--muted); padding-left:4px;">DARSTELLUNG</div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:13px;">
+          <div style="display:flex; gap:8px;">
+            <sc-for list="{{ themeOpts }}" as="t" hint-placeholder-count="3">
+              <button onClick="{{ t.onTap }}" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px 0; border-radius:12px; background:{{ t.bg }}; border:1px solid {{ t.border }}; color:{{ t.fg }}; cursor:pointer; font-family:inherit;">
+                <span class="ms" style="font-size:22px;">{{ t.icon }}</span>
+                <span style="font-size:12px; font-weight:600;">{{ t.name }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <!-- Über -->
+      <div style="display:flex; flex-direction:column; gap:9px;">
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; color:var(--muted); padding-left:4px;">ÜBER</div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px; display:flex; align-items:center; gap:13px;">
+          <div style="width:40px; height:40px; border-radius:12px; background:color-mix(in oklab,var(--iris) 18%,transparent); display:flex; align-items:center; justify-content:center; font-size:21px;">🧠</div>
+          <div style="flex:1;">
+            <div style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px;">Cortex</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-top:2px;">Version 1.4.0 · privat</div>
+          </div>
+          <span style="display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 9px; border-radius:7px; background:color-mix(in oklab,var(--mint) 16%,transparent); color:var(--mint); font-size:11px; font-weight:600;"><span class="ms" style="font-size:14px;">lock</span>lokal</span>
+        </div>
+      </div>
+
+      <button onClick="{{ onSaveSettings }}" style="height:48px; border-radius:14px; background:var(--iris); border:none; color:#fff; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; box-shadow:0 8px 22px color-mix(in oklab,var(--iris) 40%,transparent);">Speichern</button>
+    </div>
+    </sc-if>
+
+    <!-- VPN SLEEPING OVERLAY (over data tabs) -->
+    <sc-if value="{{ isAsleep }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute; inset:0; z-index:18; background:color-mix(in oklab,var(--bg) 78%,transparent); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px; gap:16px;">
+        <div style="width:66px; height:66px; border-radius:20px; background:var(--surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow);"><span class="ms" style="font-size:32px; color:var(--muted);">cloud_off</span></div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600;">Dein Gehirn schläft</div>
+        <div style="color:var(--muted); font-size:13.5px; line-height:1.55; max-width:240px;">VPN aktivieren, um dein Gehirn zu erreichen.</div>
+        <button onClick="{{ onVpn }}" style="display:flex; align-items:center; gap:8px; height:46px; padding:0 22px; border-radius:13px; background:var(--iris); border:none; color:#fff; font-size:14.5px; font-weight:600; cursor:pointer; font-family:inherit; box-shadow:0 8px 22px color-mix(in oklab,var(--iris) 40%,transparent);"><span class="ms" style="font-size:20px;">vpn_lock</span>VPN aktivieren</button>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- ===================== BOTTOM NAV ===================== -->
+  <div style="position:relative; z-index:6; display:flex; padding:6px 16px calc(8px + env(safe-area-inset-bottom)); background:var(--surface); border-top:1px solid var(--border);">
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="3">
+      <button onClick="{{ n.onTap }}" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 0; background:transparent; border:none; cursor:pointer; font-family:inherit;">
+        <span style="display:flex; align-items:center; justify-content:center; width:58px; height:30px; border-radius:999px; background:{{ n.pill }};"><span class="ms" style="font-size:23px; color:{{ n.color }}; font-variation-settings:'FILL' {{ n.fill }};">{{ n.icon }}</span></span>
+        <span style="font-size:11px; font-weight:{{ n.weight }}; color:{{ n.color }};">{{ n.label }}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <!-- ===================== OVERLAYS ===================== -->
+
+  <!-- RECORDING -->
+  <sc-if value="{{ isRecording }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; inset:0; z-index:40; background:var(--overlay); display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding-bottom:36px;" onClick="{{ onStopRec }}">
+      <div class="cx-fade" style="width:340px; background:var(--raised); border:1px solid var(--border); border-radius:24px; padding:26px 24px; box-shadow:var(--shadow); display:flex; flex-direction:column; align-items:center; gap:18px;">
+        <div style="display:flex; align-items:center; gap:7px; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:1.5px; color:var(--audio);"><span style="width:9px;height:9px;border-radius:50%;background:var(--audio);box-shadow:0 0 10px var(--audio);"></span>AUFNAHME</div>
+        <div style="display:flex; align-items:center; gap:4px; height:54px;">
+          <sc-for list="{{ recBars }}" as="b" hint-placeholder-count="13">
+            <span style="width:4px; height:46px; background:linear-gradient(180deg,var(--audio),color-mix(in oklab,var(--audio) 50%,transparent)); border-radius:3px; transform-origin:center; animation:cxwave {{ b.dur }}s ease-in-out {{ b.delay }}s infinite;"></span>
+          </sc-for>
+        </div>
+        <div style="min-height:42px; text-align:center; color:var(--text); font-size:14.5px; line-height:1.45;">{{ recPreview }}<span style="opacity:.5;">▍</span></div>
+        <button onClick="{{ onStopRec }}" style="width:64px; height:64px; border-radius:50%; background:var(--audio); border:none; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 8px 26px color-mix(in oklab,var(--audio) 55%,transparent);"><span class="ms" style="font-size:30px; font-variation-settings:'FILL' 1;">stop</span></button>
+        <span style="font-size:12px; color:var(--muted);">Tippen zum Stoppen</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- NEW CATEGORY DIALOG -->
+  <sc-if value="{{ newCatOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; inset:0; z-index:45; background:var(--overlay); display:flex; align-items:center; justify-content:center; padding:28px;" onClick="{{ onCancelNewCat }}">
+      <div class="cx-fade" onClick="{{ stop }}" style="width:100%; background:var(--raised); border:1px solid var(--border); border-radius:22px; padding:22px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:14px;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:600;">Neue Kategorie</div>
+        <input class="cx-in" value="{{ newCatName }}" onChange="{{ onNewCatName }}" placeholder="Name der neuen Kategorie" style="background:var(--field); border:1px solid var(--field-bord); border-radius:12px; padding:13px; color:var(--text); font-size:14.5px;" />
+        <div style="font-size:12px; color:var(--muted); line-height:1.5;">Tipp: <span style="font-family:'JetBrains Mono',monospace; color:var(--iris);">Haupt/Unter</span> legt eine Unterkategorie an.</div>
+        <div style="display:flex; gap:10px; margin-top:2px;">
+          <button onClick="{{ onCancelNewCat }}" style="flex:1; height:44px; border-radius:12px; background:var(--chip); border:1px solid var(--chip-bord); color:var(--text); font-weight:600; font-size:14px; cursor:pointer; font-family:inherit;">Abbrechen</button>
+          <button onClick="{{ onSaveNewCat }}" style="flex:1; height:44px; border-radius:12px; background:var(--iris); border:none; color:#fff; font-weight:600; font-size:14px; cursor:pointer; font-family:inherit;">Anlegen</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- DETAIL SHEET -->
+  <sc-if value="{{ detailOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; inset:0; z-index:42; background:var(--overlay); display:flex; align-items:flex-end;" onClick="{{ onCloseDetail }}">
+      <div onClick="{{ stop }}" style="width:100%; max-height:82%; background:var(--raised); border-top-left-radius:26px; border-top-right-radius:26px; border-top:1px solid var(--border); box-shadow:var(--sheet-shadow); display:flex; flex-direction:column; animation:cxsheet .34s cubic-bezier(.22,.61,.36,1) both;">
+        <div style="display:flex; justify-content:center; padding:10px 0 4px;"><div style="width:38px; height:4px; border-radius:2px; background:var(--border);"></div></div>
+        <div class="cx-scroll" style="padding:8px 20px 16px; overflow-y:auto;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <span style="display:inline-flex; align-items:center; gap:6px; height:24px; padding:0 10px; border-radius:8px; background:{{ detailTagBg }}; color:{{ detailTagColor }}; font-size:11.5px; font-weight:600;"><span style="width:7px;height:7px;border-radius:50%;background:{{ detailTagColor }};"></span>{{ detailTag }}</span>
+            <span style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted);">{{ detailDate }}</span>
+            <button onClick="{{ onCloseDetail }}" style="width:30px; height:30px; border-radius:50%; background:var(--field); border:1px solid var(--field-bord); color:var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer;"><span class="ms" style="font-size:18px;">close</span></button>
+          </div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:600; line-height:1.25; margin-bottom:14px;">{{ detailTitle }}</div>
+
+          <sc-if value="{{ editing }}" hint-placeholder-val="{{ false }}">
+            <textarea class="cx-ta" value="{{ detailText }}" onChange="{{ onDetailText }}" rows="6" style="width:100%; resize:none; background:var(--field); border:1px solid var(--iris); border-radius:14px; padding:14px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.65;"></textarea>
+          </sc-if>
+          <sc-if value="{{ reading }}" hint-placeholder-val="{{ true }}">
+            <div style="background:var(--field); border:1px solid var(--field-bord); border-radius:14px; padding:15px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.7; color:var(--text); white-space:pre-wrap;">{{ detailText }}</div>
+          </sc-if>
+
+          <!-- delete confirm -->
+          <sc-if value="{{ deleteConfirm }}" hint-placeholder-val="{{ false }}">
+            <div class="cx-fade" style="margin-top:14px; background:color-mix(in oklab,var(--danger) 12%,transparent); border:1px solid color-mix(in oklab,var(--danger) 32%,transparent); border-radius:14px; padding:14px;">
+              <div style="font-size:13.5px; color:var(--text); margin-bottom:11px;">Diesen Eintrag wirklich löschen?</div>
+              <div style="display:flex; gap:9px;">
+                <button onClick="{{ onCancelDelete }}" style="flex:1; height:40px; border-radius:11px; background:var(--chip); border:1px solid var(--chip-bord); color:var(--text); font-weight:600; font-size:13.5px; cursor:pointer; font-family:inherit;">Abbrechen</button>
+                <button onClick="{{ onDoDelete }}" style="flex:1; height:40px; border-radius:11px; background:var(--danger); border:none; color:#fff; font-weight:600; font-size:13.5px; cursor:pointer; font-family:inherit;">Löschen</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <!-- actions -->
+        <sc-if value="{{ showActions }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex; gap:9px; padding:12px 20px calc(16px + env(safe-area-inset-bottom)); border-top:1px solid var(--border);">
+          <button onClick="{{ onToggleEdit }}" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; height:46px; border-radius:13px; background:var(--chip); border:1px solid var(--chip-bord); color:var(--text); font-weight:600; font-size:13.5px; cursor:pointer; font-family:inherit;"><span class="ms" style="font-size:18px;">{{ editIcon }}</span>{{ editLabel }}</button>
+          <button onClick="{{ onChangeCatStart }}" style="width:46px; height:46px; border-radius:13px; background:var(--chip); border:1px solid var(--chip-bord); color:var(--text); display:flex; align-items:center; justify-content:center; cursor:pointer;"><span class="ms" style="font-size:19px;">sell</span></button>
+          <button onClick="{{ onDeleteStart }}" style="width:46px; height:46px; border-radius:13px; background:color-mix(in oklab,var(--danger) 13%,transparent); border:1px solid color-mix(in oklab,var(--danger) 28%,transparent); color:var(--danger); display:flex; align-items:center; justify-content:center; cursor:pointer;"><span class="ms" style="font-size:20px;">delete</span></button>
+        </div>
+        </sc-if>
+
+        <!-- change-category picker -->
+        <sc-if value="{{ catPickerOpen }}" hint-placeholder-val="{{ false }}">
+          <div class="cx-scroll cx-fade" style="max-height:200px; padding:8px 14px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); display:flex; flex-wrap:wrap; gap:8px;">
+            <sc-for list="{{ detailCatItems }}" as="o" hint-placeholder-count="8">
+              <button onClick="{{ o.onTap }}" style="display:flex; align-items:center; gap:6px; height:32px; padding:0 12px; border-radius:999px; background:{{ o.bg }}; border:1px solid {{ o.border }}; color:var(--text); font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit;"><span style="width:8px;height:8px;border-radius:50%;background:{{ o.color }};"></span>{{ o.name }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- TOAST -->
+  <sc-if value="{{ toastShow }}" hint-placeholder-val="{{ false }}">
+    <div class="cx-fade" style="position:absolute; left:50%; bottom:96px; transform:translateX(-50%); z-index:50; display:flex; align-items:center; gap:8px; padding:11px 18px; border-radius:999px; background:var(--raised); border:1px solid var(--border); box-shadow:var(--shadow); font-size:13px; font-weight:600;"><span class="ms" style="font-size:18px; color:var(--mint);">check_circle</span>{{ toastMsg }}</div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:412,&quot;height&quot;:892},&quot;startTheme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Start&quot;},&quot;startTab&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;gespraech&quot;,&quot;dashboard&quot;,&quot;einstellungen&quot;],&quot;default&quot;:&quot;gespraech&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Start&quot;},&quot;startVpn&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;connected&quot;,&quot;connecting&quot;,&quot;disconnected&quot;],&quot;default&quot;:&quot;connected&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Start&quot;}}">
+class Component extends DCLogic {
+  constructor(props){
+    super(props);
+    this.PAL = ['#7B7BF5','#4FD1B0','#F2B65A','#F2698E','#5AB0F2','#B68CF5','#3FD0D6','#9BD05A','#F08A5A','#5AD0A0','#F25AC0','#5A7BF2','#D0C45A'];
+    this.CATS = [
+      ['Ziele',96],['Rezepte',184],['Ideen',142],['Menschen',88],['Technik',73],
+      ['Gesundheit',64],['Reisen',51],['Finanzen',47],['Bücher',119],['Arbeit',156],
+      ['Zitate',38],['Einkauf',92],['Lernen',67]
+    ];
+    this.ENTRIES = [
+      {t:'Sabbatical 2027 planen', c:'Ziele', d:'12. Juni 2026', score:96, x:'Drei Monate Auszeit ab April 2027.\nBudget ~14.000 €, Route grob: Portugal → Marokko → zurück über Andalusien.\nVorher klären: Wohnung untervermieten, Auslandskranken­versicherung, Sabbatical mit Team abstimmen.\nLeitfrage: „Was würde ich tun, wenn Zeit keine Rolle spielt?"'},
+      {t:'Mamas Rinderrouladen', c:'Rezepte', d:'8. Juni 2026', score:91, x:'Pro Person 1 große Roulade.\nFüllung: scharfer Senf, durchwachsener Speck, Gewürzgurke, Zwiebel.\nIn Butterschmalz scharf anbraten, mit Rotwein + Brühe ablöschen.\n90 Min bei kleiner Hitze schmoren. Soße mit kaltem Mehlbutter binden.'},
+      {t:'Kaffeemaschine entkalken', c:'Technik', d:'3. Juni 2026', score:88, x:'Sage Barista Express.\nReinigungstablette in den Siebträger, Reinigungszyklus starten.\nEntkalken alle 2 Monate mit dem mitgelieferten Mittel.\nWasserfilter alle 3 Monate tauschen — Ersatzfilter liegen in der Schublade links.'},
+      {t:'App-Idee: Pflanzen-Tagebuch', c:'Ideen', d:'14. Juni 2026', score:84, x:'Gießintervalle pro Pflanze lernen, statt fixe Erinnerungen.\nFoto machen → Zustand erkennen (Trockenstress, Schädlinge).\nLichtmessung grob über die Kamera-Belichtung.\nKlein anfangen: nur Erinnerungen + Foto-Log.'},
+      {t:'Lukas — Geburtstag & Vorlieben', c:'Menschen', d:'1. Juni 2026', score:79, x:'Geburtstag: 12. März.\nMag Single Malt (Islay, gern rauchig), Klettern, lange Wanderungen.\nHasst Koriander.\nGeschenkidee fürs nächste Mal: Whisky-Tasting-Set oder ein gutes Kletterführer-Buch.'},
+      {t:'Sapiens — Notizen', c:'Bücher', d:'28. Mai 2026', score:82, x:'Kognitive Revolution vor ~70.000 Jahren.\nFiktion (Geld, Nationen, Religion) als kollektiver Klebstoff großer Gruppen.\nLandwirtschaft = „die größte Betrügerei der Geschichte"?\nWeizen hat uns domestiziert, nicht umgekehrt.'},
+      {t:'Q3-Ziele Team', c:'Arbeit', d:'20. Juni 2026', score:90, x:'Onboarding-Flow von 9 auf 4 Schritte halbieren.\nNPS +8 Punkte bis Quartalsende.\nZwei Hires: Senior Product Designer + Researcher.\nWöchentliches Design-Crit fest verankern.'},
+      {t:'Schlaf-Experiment', c:'Gesundheit', d:'18. Juni 2026', score:77, x:'Regeln: kein Koffein nach 14 Uhr, Schlafzimmer auf 19 °C, 200 mg Magnesium abends.\nBildschirme 45 Min vor dem Schlafen aus.\nErgebnis nach 3 Wochen: HRV +12 %, deutlich leichteres Aufwachen.'},
+      {t:'ETF-Sparplan anpassen', c:'Finanzen', d:'10. Juni 2026', score:73, x:'Aufteilung: MSCI World 70 % / Emerging Markets 30 %.\nMonatsrate ab Juli von 450 € auf 600 € erhöhen.\nNotgroschen (3 Monatsausgaben) bleibt auf dem Tagesgeld.\nEinmal jährlich rebalancen, sonst Finger weg.'},
+      {t:'Lissabon — Lieblingsorte', c:'Reisen', d:'5. Juni 2026', score:80, x:'Miradouro da Senhora do Monte bei Sonnenuntergang.\nPastéis de nata bei Manteigaria (warm, mit Zimt).\nTram 28 früh morgens, bevor es voll wird.\nLX Factory am Sonntag für den Flohmarkt.'},
+      {t:'Seneca über Zeit', c:'Zitate', d:'22. Mai 2026', score:71, x:'„Es ist nicht zu wenig Zeit, die wir haben, sondern es ist zu viel Zeit, die wir nicht nutzen."\n— Seneca, Über die Kürze des Lebens.\nErinnerung an mich: nicht der volle Kalender zählt, sondern die bewusste Wahl.'},
+      {t:'Geschenkideen Anna', c:'Einkauf', d:'16. Juni 2026', score:68, x:'Keramik-Workshop (sie wollte schon lange töpfern).\nWirklich gutes Olivenöl, am liebsten aus Sizilien.\nDas Buch über Farben, das sie neulich erwähnt hat.\nKleinigkeit: handgemachte Notizbücher vom Markt.'},
+      {t:'Spanisch — Wochenziel', c:'Lernen', d:'24. Juni 2026', score:86, x:'20 neue Vokabeln (Schwerpunkt: Verben des Alltags).\n2 Podcast-Folgen „Españolistos", einmal mit Transkript.\nEin Tandem-Call mit Mateo, 30 Min, nur Spanisch.\nSubjuntivo wiederholen — sitzt noch nicht.'}
+    ];
+    const seed = [
+      {role:'user', text:'Notiz: Lukas mag Islay-Whisky und hasst Koriander. Geburtstag ist der 12. März.'},
+      {role:'bot', text:'Gespeichert. Ich hab Lukas’ Vorlieben und seinen Geburtstag zu deinem bestehenden Eintrag über ihn ergänzt.', meta:'↳ abgelegt in „Menschen“', metaKind:'store'},
+      {role:'user', text:'Wann wollte ich nochmal mein Sabbatical machen?'},
+      {role:'bot', text:'Du planst ab April 2027 drei Monate Auszeit — grobe Route Portugal → Marokko, Budget rund 14.000 €. Soll ich dir die Checkliste dazu zeigen?', meta:'↳ nachgeschlagen · 3 Treffer', metaKind:'lookup'},
+      {role:'user', text:'Erinnere mich daran, die Kaffeemaschine zu entkalken.'},
+      {role:'bot', text:'Alles klar. Soll ich das als wiederkehrende Erinnerung alle 2 Monate anlegen?', meta:'↳ Rückfrage…', metaKind:'ask', chips:['Ja','Nein']}
+    ];
+    this.state = {
+      theme: props.startTheme || 'dark',
+      vpn: props.startVpn || 'connected',
+      tab: props.startTab || 'gespraech',
+      messages: seed,
+      draft:'', title:'', category:'auto',
+      ttsOn:true, recording:false, recPreview:'', speaking:null, typing:false,
+      catMenuOpen:false, newCatOpen:false, newCatName:'', improveFlash:false,
+      search:'', filter:'Alle',
+      detail:null, editing:false, deleteConfirm:false, catPickerOpen:false,
+      keyShown:{server:false, groq:false, gemini:false},
+      voice:'Klara · warm', rate:1, extraCats:[],
+      displayCount:0, animated:false,
+      toast:'', toastShow:false,
+    };
+    this._mid = 100;
+  }
+  componentDidMount(){ if(this.state.tab==='dashboard') this.startDash(); }
+  reduced(){ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
+  fmt(n){ return Number(n).toLocaleString('de-DE'); }
+  total(){ return this.CATS.reduce((a,c)=>a+c[1],0); }
+  catColor(name){ const i=this.CATS.findIndex(c=>c[0]===name); return i>=0 ? this.PAL[i%13] : this.PAL[(this.allCatNames().indexOf(name))%13] || '#7B7BF5'; }
+  allCatNames(){ return this.CATS.map(c=>c[0]).concat(this.state.extraCats); }
+
+  startDash(){
+    if(this._dashDone) return; this._dashDone=true;
+    const total=this.total();
+    if(this.reduced()){ this.setState({displayCount:total, animated:true}); return; }
+    this.setState({animated:true});
+    const dur=1100, t0=performance.now();
+    const step=(t)=>{ const p=Math.min(1,(t-t0)/dur); const e=1-Math.pow(1-p,3); this.setState({displayCount:Math.round(total*e)}); if(p<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+    clearTimeout(this._countSafe); this._countSafe=setTimeout(()=>this.setState({displayCount:total}), 1300);
+  }
+  setTab(t){ this.setState({tab:t, catMenuOpen:false}); if(t==='dashboard') this.startDash(); }
+
+  // ---- VPN ----
+  onVpn(){
+    const v=this.state.vpn;
+    if(v==='connected'){ this.setState({vpn:'disconnected'}); return; }
+    this.setState({vpn:'connecting'});
+    setTimeout(()=>this.setState({vpn:'connected'}), 1700);
+  }
+
+  // ---- chat ----
+  pushMsg(m){ this.setState(s=>({messages:s.messages.concat([m])})); }
+  autoCat(q){
+    const map=[['kaffee','Technik'],['entkalk','Technik'],['rezept','Rezepte'],['koch','Rezepte'],['ziel','Ziele'],['geburtstag','Menschen'],['lukas','Menschen'],['anna','Einkauf'],['buch','Bücher'],['etf','Finanzen'],['spar','Finanzen'],['reise','Reisen'],['schlaf','Gesundheit'],['idee','Ideen'],['lern','Lernen'],['vokab','Lernen']];
+    const t=q.toLowerCase(); for(const [k,c] of map){ if(t.includes(k)) return c; } return 'Ideen';
+  }
+  send(){
+    const q=this.state.draft.trim(); if(!q) return;
+    this.pushMsg({role:'user', text:q});
+    this.setState({draft:'', title:'', typing:true});
+    setTimeout(()=>{
+      const isQ = /\?\s*$/.test(q) || /^(wann|wo|wie|was|warum|wer|welche|zeig|finde|such)/i.test(q);
+      const id=this._mid++;
+      let m;
+      if(isQ){
+        const n=2+Math.floor(Math.random()*4);
+        m={id, role:'bot', text:'Hier ist, was ich dazu in deinem Gehirn gefunden habe — ich kann tiefer gehen, wenn du willst.', meta:'↳ nachgeschlagen · '+n+' Treffer', metaKind:'lookup'};
+      } else {
+        const cat = this.state.category==='auto' ? this.autoCat(q) : this.state.category;
+        m={id, role:'bot', text:'Gespeichert. Ich hab das als neuen Eintrag abgelegt und passend verschlagwortet.', meta:'↳ abgelegt in „'+cat+'“', metaKind:'store'};
+      }
+      this.setState(s=>({messages:s.messages.concat([m]), typing:false, speaking: s.ttsOn ? id : s.speaking}));
+      if(this.state.ttsOn){ clearTimeout(this._spk); this._spk=setTimeout(()=>this.setState(s=>s.speaking===id?{speaking:null}:{}), 4200); }
+    }, 1300);
+  }
+  answerChip(label){
+    this.setState(s=>({messages:s.messages.map(m=>m.chips?{...m, chips:null}:m)}));
+    setTimeout(()=>{
+      const id=this._mid++;
+      if(label==='Ja') this.pushMsg({id, role:'bot', text:'Erledigt — ich erinnere dich alle 2 Monate ans Entkalken.', meta:'↳ abgelegt in „Technik“', metaKind:'store'});
+      else this.pushMsg({id, role:'bot', text:'Okay, ich hab nichts gespeichert.', meta:'↳ nicht gespeichert', metaKind:'cancel'});
+    }, 500);
+  }
+  speak(id){ this.setState({speaking:id}); clearTimeout(this._spk); this._spk=setTimeout(()=>this.setState(s=>s.speaking===id?{speaking:null}:{}),5000); }
+  stopSpeak(){ clearTimeout(this._spk); this.setState({speaking:null}); }
+  improve(){
+    let t=this.state.draft.trim(); if(!t){ return; }
+    t=t.charAt(0).toUpperCase()+t.slice(1); if(!/[.!?]$/.test(t)) t+='.';
+    this.setState({draft:t, improveFlash:true});
+    setTimeout(()=>this.setState({improveFlash:false}), 600);
+  }
+  startRec(){
+    this.setState({recording:true, recPreview:''});
+    const sample='Erinnere mich, Anna einen Keramik-Workshop zu schenken.';
+    let i=0; clearInterval(this._rec);
+    this._rec=setInterval(()=>{ i+=1; this.setState({recPreview:sample.slice(0,i)}); if(i>=sample.length) clearInterval(this._rec); }, 45);
+  }
+  stopRec(){ clearInterval(this._rec); this.setState(s=>({recording:false, draft: s.recPreview || s.draft})); }
+  resetChat(){ this.setState({messages:[], speaking:null, typing:false}); }
+
+  // ---- categories ----
+  selectCat(name){ this.setState({category:name, catMenuOpen:false}); }
+  saveNewCat(){ const n=this.state.newCatName.trim(); if(!n){ this.setState({newCatOpen:false}); return; } this.setState(s=>({extraCats:s.extraCats.concat([n]), category:n, newCatOpen:false, newCatName:''})); }
+
+  // ---- browse / detail ----
+  openDetail(e){ this.setState({detail:e, editing:false, deleteConfirm:false, catPickerOpen:false}); }
+  closeDetail(){ this.setState({detail:null}); }
+  changeDetailCat(name){ this.setState(s=>({detail:{...s.detail, c:name}, catPickerOpen:false})); }
+  doDelete(){ const d=this.state.detail; this.ENTRIES=this.ENTRIES.filter(e=>e!==d); this.setState({detail:null, deleteConfirm:false}); this.toast('Eintrag gelöscht'); }
+  toast(msg){ this.setState({toast:msg, toastShow:true}); clearTimeout(this._toast); this._toast=setTimeout(()=>this.setState({toastShow:false}),1900); }
+
+  renderVals(){
+    const S=this.state;
+    const t=S.theme;
+    // ---- VPN visuals ----
+    const vpnMap={
+      connected:{label:'Verbunden', dot:'#4FD1B0', fg:'#4FD1B0', bg:'color-mix(in oklab,#4FD1B0 14%,var(--surface))', border:'color-mix(in oklab,#4FD1B0 40%,transparent)', glow:'0 0 16px color-mix(in oklab,#4FD1B0 30%,transparent)', pulse:false},
+      connecting:{label:'Verbinde…', dot:'#F2B65A', fg:'#F2B65A', bg:'color-mix(in oklab,#F2B65A 14%,var(--surface))', border:'color-mix(in oklab,#F2B65A 40%,transparent)', glow:'none', pulse:true},
+      disconnected:{label:'Getrennt', dot:'#F2698E', fg:'var(--muted)', bg:'var(--chip)', border:'var(--chip-bord)', glow:'none', pulse:false},
+    };
+    const vp=vpnMap[S.vpn];
+
+    // ---- messages ----
+    const messages=S.messages.map((m,i)=>{
+      const isUser=m.role==='user';
+      const metaColors={store:'var(--mint)', lookup:'var(--iris)', ask:'var(--amber)', cancel:'var(--faint)'};
+      const sp = !isUser && S.speaking===m.id;
+      return {
+        ...m, isUser, isBot:!isUser, align:isUser?'flex-end':'flex-start',
+        meta:m.meta||null, metaColor: metaColors[m.metaKind]||'var(--faint)',
+        hasChips: !!(m.chips&&m.chips.length), chips:(m.chips||[]).map(c=>({label:c, onTap:()=>this.answerChip(c)})),
+        speaking: sp, speakColor: sp?'var(--audio)':'var(--muted)', speakFill: sp?1:0, speakIcon: sp?'volume_up':'volume_up',
+        botBorder: sp?'color-mix(in oklab,var(--audio) 45%,transparent)':'var(--border)',
+        botGlow: sp?'0 0 22px color-mix(in oklab,var(--audio) 22%,transparent)':'none',
+        onSpeak:()=> sp?this.stopSpeak():this.speak(m.id),
+        onStopSpeak:()=>this.stopSpeak(),
+      };
+    });
+
+    // ---- category menu ----
+    const catMenuItems=[{name:'Auto-Kategorie', color:'var(--muted)', count:'', onTap:()=>this.selectCat('auto'), bg:'transparent'}]
+      .concat(this.allCatNames().map(n=>{ const cnt=(this.CATS.find(c=>c[0]===n)||[])[1]; return {name:n, color:this.catColor(n), count:cnt?this.fmt(cnt):'', onTap:()=>this.selectCat(n), bg: S.category===n?'var(--chip)':'transparent'}; }))
+      .concat([{name:'➕ Neue Kategorie…', color:'var(--iris)', count:'', onTap:()=>this.setState({catMenuOpen:false, newCatOpen:true}), bg:'transparent'}]);
+    const catLabel = S.category==='auto'?'Auto':S.category;
+    const catPillDot = S.category==='auto'?'var(--muted)':this.catColor(S.category);
+
+    // ---- spectrum ----
+    const total=this.total();
+    const spectrum=this.CATS.map(([name,count],i)=>({
+      name, color:this.PAL[i], colorLight:'color-mix(in oklab,'+this.PAL[i]+' 75%,white)',
+      w: S.animated ? (count/total*100) : 0,
+      onTap:()=>this.setState({filter:name, search:''}),
+    }));
+    const legend=this.CATS.map(([name,count],i)=>({name, count:this.fmt(count), color:this.PAL[i], onTap:()=>this.setState({filter:name, search:''})}));
+
+    // ---- vitals ----
+    const meterColor=(p)=> p>=80?'var(--rose)':p>=60?'var(--amber)':'var(--mint)';
+    const a=S.animated;
+    const vitals=[
+      {icon:'smart_toy', label:'Assistent', isStatus:true, dot: S.vpn==='connected'?'#4FD1B0':'#F2698E', value: S.vpn==='connected'?'Bereit':'Offline', valColor:'var(--text)', sub:'gemini-2.0 · 2 Sitzungen', hasMeter:false},
+      {icon:'memory', label:'Prozessor', value:'34', unit:'%', valColor:'var(--text)', hasMeter:true, meterW:a?34:0, meterColor:meterColor(34), sub:'8 Kerne'},
+      {icon:'developer_board', label:'Arbeitsspeicher', value:'61', unit:'%', valColor:'var(--text)', hasMeter:true, meterW:a?61:0, meterColor:meterColor(61), sub:'7,8 / 12,8 GB'},
+      {icon:'hard_drive', label:'Speicherplatz', value:'48', unit:'%', valColor:'var(--text)', hasMeter:true, meterW:a?48:0, meterColor:meterColor(48), sub:'220 / 480 GB'},
+    ];
+
+    // ---- browse ----
+    const q=S.search.trim().toLowerCase();
+    let list=this.ENTRIES.slice();
+    if(S.filter!=='Alle') list=list.filter(e=>e.c===S.filter);
+    if(q) list=list.filter(e=>(e.t+' '+e.x+' '+e.c).toLowerCase().includes(q));
+    const browse=list.map(e=>({
+      title:e.t, tag:e.c, tagColor:this.catColor(e.c), tagBg:'color-mix(in oklab,'+this.catColor(e.c)+' 14%,transparent)',
+      snippet:e.x.replace(/\n/g,' '), showScore:!!q, score:e.score, onTap:()=>this.openDetail(e),
+    }));
+    const chips=[{name:'Alle'}].concat(this.allCatNames().map(n=>({name:n}))).map(c=>{
+      const active=S.filter===c.name; const col=c.name==='Alle'?'var(--iris)':this.catColor(c.name);
+      return {name:c.name, hasDot:c.name!=='Alle', color:col,
+        bg: active?(c.name==='Alle'?'color-mix(in oklab,var(--iris) 16%,transparent)':'color-mix(in oklab,'+col+' 16%,transparent)'):'var(--chip)',
+        border: active?col:'var(--chip-bord)', fg: active?(c.name==='Alle'?'var(--iris)':'var(--text)'):'var(--muted)',
+        onTap:()=>this.setState({filter:c.name})};
+    });
+
+    // ---- detail ----
+    const d=S.detail;
+    const detailCatItems=this.allCatNames().map(n=>({name:n, color:this.catColor(n), bg: d&&d.c===n?'color-mix(in oklab,'+this.catColor(n)+' 16%,transparent)':'var(--chip)', border: d&&d.c===n?this.catColor(n):'var(--chip-bord)', onTap:()=>this.changeDetailCat(n)}));
+
+    // ---- settings keys ----
+    const keyData=[
+      {id:'server', label:'Server-Schlüssel', real:'sk-cx-9f3a-7d21-b4e8-0c5a'},
+      {id:'groq', label:'Groq-Schlüssel (Spracheingabe)', real:'gsk_2kP9xL7vQm4nB8rT1wY6'},
+      {id:'gemini', label:'Gemini-Schlüssel (Vorlesen + Verbessern)', real:'AIzaSyB3-Kd9fLmN2pQ7rX4'},
+    ];
+    const keys=keyData.map((k,i)=>({label:k.label, display: S.keyShown[k.id]?k.real:'••••••••••••••••••••', icon: S.keyShown[k.id]?'visibility_off':'visibility', divider: i===keyData.length-1?'transparent':'var(--border)', onToggle:()=>this.setState(s=>({keyShown:{...s.keyShown,[k.id]:!s.keyShown[k.id]}}))}));
+
+    const themeOpts=[
+      {id:'dark', name:'Dunkel', icon:'dark_mode'},
+      {id:'light', name:'Hell', icon:'light_mode'},
+      {id:'system', name:'System', icon:'contrast'},
+    ].map(o=>({name:o.name, icon:o.icon, onTap:()=>this.setState({theme:o.id==='system'?'dark':o.id}),
+      bg: (S.theme===o.id||(o.id==='dark'&&S.theme==='dark'))&&o.id!=='system'?'color-mix(in oklab,var(--iris) 14%,transparent)': S.theme===o.id?'color-mix(in oklab,var(--iris) 14%,transparent)':'var(--field)',
+      border: S.theme===o.id?'var(--iris)':'var(--field-bord)', fg: S.theme===o.id?'var(--iris)':'var(--text)'}));
+
+    const nav=[
+      {id:'gespraech', icon:'forum', label:'Gespräch'},
+      {id:'dashboard', icon:'graphic_eq', label:'Dashboard'},
+      {id:'einstellungen', icon:'settings', label:'Einstellungen'},
+    ].map(n=>{ const active=S.tab===n.id; return {icon:n.icon, label:n.label, onTap:()=>this.setTab(n.id),
+      color: active?'var(--iris)':'var(--muted)', fill: active?1:0, weight: active?700:500,
+      pill: active?'color-mix(in oklab,var(--iris) 16%,transparent)':'transparent'}; });
+
+    const onData = S.tab==='dashboard';
+    return {
+      theme:t,
+      // vpn
+      onVpn:()=>this.onVpn(), vpnLabel:vp.label, vpnDot:vp.dot, vpnFg:vp.fg, vpnBg:vp.bg, vpnBorder:vp.border, vpnGlow:vp.glow, vpnPulse:vp.pulse,
+      // theme
+      onTheme:()=>this.setState(s=>({theme:s.theme==='dark'?'light':'dark'})), themeIcon: t==='dark'?'light_mode':'dark_mode',
+      // tabs
+      isGespraech:S.tab==='gespraech', isDashboard:S.tab==='dashboard', isSettings:S.tab==='einstellungen',
+      nav,
+      // chat
+      isChatEmpty: S.messages.length===0, hasChat: S.messages.length>0, messages, showTyping:S.typing,
+      onResetChat:()=>this.resetChat(),
+      draftValue:S.draft, onDraft:(e)=>this.setState({draft:e.target.value}),
+      titleValue:S.title, onTitle:(e)=>this.setState({title:e.target.value}),
+      catLabel, catPillDot, catPillBorder: S.category==='auto'?'var(--chip-bord)':'color-mix(in oklab,'+this.catColor(S.category)+' 45%,transparent)',
+      onCatMenu:()=>this.setState(s=>({catMenuOpen:!s.catMenuOpen})), catMenuOpen:S.catMenuOpen, catMenuItems,
+      taBorder: S.draft?'var(--iris)':'var(--field-bord)',
+      onClear:()=>this.setState({draft:''}), onImprove:()=>this.improve(), improveBg: S.improveFlash?'color-mix(in oklab,var(--improve) 30%,transparent)':'color-mix(in oklab,var(--improve) 13%,transparent)',
+      onTts:()=>this.setState(s=>({ttsOn:!s.ttsOn})), ttsOn:S.ttsOn, ttsIcon: S.ttsOn?'volume_up':'volume_off', ttsFill:S.ttsOn?1:0,
+      ttsBg: S.ttsOn?'color-mix(in oklab,var(--audio) 18%,transparent)':'var(--chip)', ttsBorder: S.ttsOn?'color-mix(in oklab,var(--audio) 35%,transparent)':'var(--chip-bord)',
+      ttsTrack: S.ttsOn?'var(--audio)':'var(--field-bord)', ttsKnob: S.ttsOn?'22px':'3px',
+      onMic:()=>this.startRec(), onSend:()=>this.send(),
+      // recording
+      isRecording:S.recording, recPreview:S.recPreview, onStopRec:()=>this.stopRec(),
+      recBars:Array.from({length:13}).map((_,i)=>({dur:(0.6+(i%4)*0.12).toFixed(2), delay:(i*0.07).toFixed(2)})),
+      stop:(e)=>{ e.stopPropagation(); },
+      // new cat
+      newCatOpen:S.newCatOpen, newCatName:S.newCatName, onNewCatName:(e)=>this.setState({newCatName:e.target.value}),
+      onSaveNewCat:()=>this.saveNewCat(), onCancelNewCat:()=>this.setState({newCatOpen:false, newCatName:''}),
+      // dashboard
+      displayCount:this.fmt(S.displayCount), spectrum, legend, vitals,
+      searchValue:S.search, onSearch:(e)=>this.setState({search:e.target.value}), hasSearch:!!S.search, onClearSearch:()=>this.setState({search:''}),
+      searchBorder: S.search?'var(--iris)':'var(--border)',
+      chips, browse, browseEmpty: browse.length===0, hasResults: browse.length>0,
+      // detail
+      detailOpen:!!d, detailTitle:d?d.t:'', detailTag:d?d.c:'', detailTagColor:d?this.catColor(d.c):'#7B7BF5', detailTagBg:d?'color-mix(in oklab,'+this.catColor(d.c)+' 14%,transparent)':'transparent',
+      detailDate:d?d.d:'', detailText:d?d.x:'',
+      editing:S.editing, reading:!S.editing, showActions:!S.catPickerOpen,
+      onToggleEdit:()=>this.setState(s=>{ if(s.editing) this.toast('Gespeichert'); return {editing:!s.editing, catPickerOpen:false}; }),
+      editIcon: S.editing?'check':'edit', editLabel: S.editing?'Fertig':'Bearbeiten',
+      onDetailText:(e)=>this.setState(s=>({detail:{...s.detail, x:e.target.value}})),
+      onCloseDetail:()=>this.closeDetail(),
+      onChangeCatStart:()=>this.setState(s=>({catPickerOpen:!s.catPickerOpen})), catPickerOpen:S.catPickerOpen, detailCatItems,
+      onDeleteStart:()=>this.setState({deleteConfirm:true}), deleteConfirm:S.deleteConfirm, onCancelDelete:()=>this.setState({deleteConfirm:false}), onDoDelete:()=>this.doDelete(),
+      // settings
+      wgStatus: 'Konfiguration vorhanden', wgColor:'var(--mint)', wgConfig:'[Interface]\nPrivateKey = ••••••••••••\nAddress = 10.7.0.2/24', onWgConfig:()=>{}, onImportWg:()=>this.toast('Datei wählen…'),
+      keys, onTts2:()=>this.setState(s=>({ttsOn:!s.ttsOn})),
+      voice:S.voice, onVoice:(e)=>this.setState({voice:e.target.value}),
+      rate:S.rate, rateLabel:S.rate.toFixed(2), onRate:(e)=>this.setState({rate:parseFloat(e.target.value)}),
+      themeOpts, onSaveSettings:()=>this.toast('Einstellungen gespeichert'),
+      // sleep + toast
+      isAsleep: onData && S.vpn!=='connected',
+      toastShow:S.toastShow, toastMsg:S.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

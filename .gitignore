@@ -66,3 +66,14 @@ Experimente/.gradle/
 Experimente/build/
 Experimente/app/build/
 Experimente/local.properties
+
+# Lokale Werkzeug-/Laufzeit-Ordner (nie tracken)
+.vs/
+.playwright-mcp/
+.codex/
+.agents/
+.claude/skills/gitnexus/
+/$TEMP/
+/_dbtmp/
+# Laufende OpenLauncher-Profil-Sperren enthalten Zugangsdaten
+OpenLauncher/Profiles/**/*.lock/

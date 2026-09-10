@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== OpenCode Launcher · Dark (modernisiert) ===== -->
+    <!-- Gleiche Keys wie LightTheme.xaml. Alles via DynamicResource ansprechen. -->
+
+    <SolidColorBrush x:Key="WindowBg"          Color="#141320"/>
+    <SolidColorBrush x:Key="TitleBarBg"        Color="#191826"/>
+    <SolidColorBrush x:Key="CardBg"            Color="#1C1B29"/>
+    <SolidColorBrush x:Key="SurfaceBg"         Color="#232235"/>
+    <SolidColorBrush x:Key="HoverBg"           Color="#2B2A40"/>
+    <SolidColorBrush x:Key="ChipBg"            Color="#302F47"/>
+
+    <SolidColorBrush x:Key="BorderBrushSoft"   Color="#2C2B40"/>
+    <SolidColorBrush x:Key="BorderBrushStrong" Color="#3A3956"/>
+    <SolidColorBrush x:Key="GridLineBrush"     Color="#2C2B40"/>
+
+    <SolidColorBrush x:Key="TextBrush"         Color="#ECEAF6"/>
+    <SolidColorBrush x:Key="MutedBrush"        Color="#9D9BB4"/>
+    <SolidColorBrush x:Key="DimBrush"          Color="#6B6A82"/>
+
+    <SolidColorBrush x:Key="AccentBrush"        Color="#7C6CF5"/>
+    <SolidColorBrush x:Key="AccentHoverBrush"   Color="#8E80FF"/>
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#6455E0"/>
+    <SolidColorBrush x:Key="AccentSoftBg"       Color="#2A2740"/>
+    <SolidColorBrush x:Key="AccentLineBrush"    Color="#3E3A6B"/>
+
+    <SolidColorBrush x:Key="SelectedBg"         Color="#2C2A50"/>
+    <SolidColorBrush x:Key="SelectedBorderBrush" Color="#7C6CF5"/>
+    <SolidColorBrush x:Key="RowSelectedBg"      Color="#262346"/>
+
+    <SolidColorBrush x:Key="StatusOkBg"    Color="#1C3A2E"/>
+    <SolidColorBrush x:Key="StatusOkFg"    Color="#4ADE80"/>
+    <SolidColorBrush x:Key="StatusWarnBg"  Color="#3D3320"/>
+    <SolidColorBrush x:Key="StatusWarnFg"  Color="#FBBF24"/>
+    <SolidColorBrush x:Key="StatusBadBg"   Color="#3D2427"/>
+    <SolidColorBrush x:Key="StatusBadFg"   Color="#F87171"/>
+
+    <SolidColorBrush x:Key="CloseHoverBg"  Color="#E5484D"/>
+
+    <!-- 1 = OS-Titelleiste im Dark-Style (siehe MainWindow.xaml.cs) -->
+    <system:Int32 x:Key="ImmersiveDark" xmlns:system="clr-namespace:System;assembly=mscorlib">1</system:Int32>
+
+</ResourceDictionary>
