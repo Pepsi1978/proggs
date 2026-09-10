@@ -198,6 +198,29 @@ final class InstructionProfileService {
     static func ensureGlobalSkillLinks() {
         ensureSkillsSymlink(link: (Paths.claudeHome as NSString).appendingPathComponent("skills"))
         ensureSkillsSymlink(link: (Paths.home as NSString).appendingPathComponent(".agents/skills"))
+        // OpenCodes eigener globaler Skill-Ordner: alte Kopien dort wuerden die Repo-Skills verdecken.
+        for name in ["skill", "skills"] {
+            backupStaleSkillDir((Paths.home as NSString).appendingPathComponent(".config/opencode/\(name)"))
+        }
+    }
+
+    /// Sichert einen echten, nicht leeren Skill-Ordner als <name>.bak-<Zeitstempel> (nie loeschen),
+    /// damit dort liegende Zweitkopien die Repo-Skills nicht mehr verdecken.
+    private static func backupStaleSkillDir(_ dir: String) {
+        let fm = FileManager.default
+        guard (try? fm.destinationOfSymbolicLink(atPath: dir)) == nil,
+              Paths.directoryExists(dir),
+              let entries = try? fm.contentsOfDirectory(atPath: dir), !entries.isEmpty else { return }
+        let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "")
+        let backup = dir + ".bak-" + stamp
+        do {
+            try fm.moveItem(atPath: dir, toPath: backup)
+            Logger.shared.info("InstructionProfileService", "backupStaleSkillDir", "Alte Skill-Kopien gesichert",
+                               ["dir": dir, "backup": backup])
+        } catch {
+            Logger.shared.warn("InstructionProfileService", "backupStaleSkillDir",
+                               "Alte Skill-Kopien nicht gesichert: \(error.localizedDescription)", ["dir": dir])
+        }
     }
 
     /// Macht `link` zum Symlink auf repoSkillsDir. Auf macOS genuegt ein gewoehnlicher Symlink (das

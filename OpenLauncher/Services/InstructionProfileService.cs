@@ -201,6 +201,29 @@ public sealed class InstructionProfileService
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         EnsureSkillsLink(Path.Combine(home, ".claude", "skills"));
         EnsureSkillsLink(Path.Combine(home, ".agents", "skills"));
+        // OpenCodes eigener globaler Skill-Ordner: alte Kopien dort wuerden die Repo-Skills verdecken.
+        foreach (var name in new[] { "skill", "skills" })
+            BackupStaleSkillDir(Path.Combine(home, ".config", "opencode", name));
+    }
+
+    /// <summary>
+    /// Sichert einen echten, nicht leeren Skill-Ordner als &lt;name&gt;.bak-&lt;Zeitstempel&gt; (nie loeschen),
+    /// damit dort liegende Zweitkopien die Repo-Skills nicht mehr verdecken.
+    /// </summary>
+    private static void BackupStaleSkillDir(string dir)
+    {
+        try
+        {
+            var info = new DirectoryInfo(dir);
+            if (!info.Exists || info.Attributes.HasFlag(FileAttributes.ReparsePoint) || !info.EnumerateFileSystemInfos().Any()) return;
+            var backup = $"{dir}.bak-{DateTime.Now:yyyyMMdd-HHmmss}";
+            Directory.Move(dir, backup);
+            Logger.Instance.Info("InstructionProfileService", "BackupStaleSkillDir", "Alte Skill-Kopien gesichert", new { dir, backup });
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "BackupStaleSkillDir", $"Alte Skill-Kopien nicht gesichert: {ex.Message}", new { dir });
+        }
     }
 
     /// <summary>

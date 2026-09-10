@@ -69,7 +69,8 @@ Weitere Details:
   für Claude Code, Codex und OpenCode, jedes Profil, jeden Modus, Windows UND macOS. Der Launcher legt bei
   jedem Start Verknüpfungen darauf an (Windows Junction, macOS Symlink): `<Profil>/skills` (Minimal, Strikt,
   auf dem Mac auch Standard), `~/.claude/skills` und `~/.agents/skills` (den lesen Codex und OpenCode).
-  Liegt dort noch ein echter Ordner (alte Kopien), wird er als `*.bak-<Zeitstempel>` gesichert, nie gelöscht.
+  Liegt dort noch ein echter Ordner (alte Kopien), wird er als `*.bak-<Zeitstempel>` gesichert, nie gelöscht —
+  ebenso alte Kopien in OpenCodes eigenem `~/.config/opencode/skill(s)`, die sonst die Repo-Skills verdecken.
   Ein neuer Rechner braucht also keinen Handgriff. Skills nur dort bearbeiten, committen, pushen.
   Ausnahme mit Absicht: lokale LM-Studio-Modelle starten OpenCode ohne externe Skills (Kontextgröße).
 - **Abhängigkeit:** Strikt braucht `~/.claude/hooks` — das liefert `claude-code-setup` (Baustein 1).
