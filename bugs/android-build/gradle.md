@@ -875,9 +875,12 @@ apksigner verify --print-certs /tmp/installed.apk     # Cert der INSTALLIERTEN A
 keytool -list -keystore <kandidat>.keystore -storepass android   # Cert der Kandidaten
 ```
 Fingerprints vergleichen — dann ist klar, WELCHER Rechner die installierte App signiert hat.
+**DAUERLÖSUNG seit 10.09.2026:** EIN Debug-Key für alle Apps und Rechner: `~/SK/Android/debug-shared.keystore`
+(SHA-256 `F7:82:13:1C…`), OpenLauncher legt ihn beim Start nach `~/.android/debug.keystore`. Keine Kopien mehr in
+`~/SK/<projekt>/`. Details + Rotations-Rezept: `best-practices/android/debug-signing.md`.
 **FIX (funktionserhaltend, in dieser Reihenfolge):**
-1. Den Keystore der Maschine besorgen, die die installierte App signiert hat → in `~/SK/<projekt>/` ALLER Maschinen ablegen (eine Wahrheit) → normales Update, kein Datenverlust.
-2. NUR wenn der fremde Keystore unerreichbar ist UND die Daten gesichert sind (z.B. Drive-Backup): mit Nutzer-OK deinstallieren + frisch installieren, danach Backup wiederherstellen. NIEMALS reflexhaft `adb uninstall`.
+1. App per APK-Signature-v3-Rotation (`apksigner rotate` + `sign --lineage`, dann `adb install -r`) auf den gemeinsamen Key umziehen — braucht den alten Key (OpenLauncher sichert ihn als `~/.android/debug.keystore.<Rechner>.<Zeit>.bak`). Kein Datenverlust. Am 10.09.2026 so 9 Apps umgezogen.
+2. NUR wenn der alte Keystore unerreichbar ist UND die Daten gesichert sind (z.B. Drive-Backup): mit Nutzer-OK deinstallieren + frisch installieren, danach Backup wiederherstellen. NIEMALS reflexhaft `adb uninstall`.
 **Poka-Yoke:** Nach jedem Keystore-Setup auf einer neuen Maschine: `keytool -list`-Fingerprint mit dem der anderen Maschine vergleichen (muss identisch sein). Vorfall: EntropieReductor 0.13.0, 2026-06-12 (Mac vs. Windows, Handy-App war Windows-signiert).
 **Versionen:** plattformuebergreifend, zeitlos (Android-Signatur-Modell).
 

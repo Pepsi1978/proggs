@@ -221,7 +221,12 @@ Empfohlene Reihenfolge wenn Frank Zeit fuer Cleanup hat:
 
 ---
 
-## ⚠️ PFLICHT für die nächste WINDOWS-Session: Debug-Keystore angleichen (2026-06-12)
+## ~~PFLICHT für die nächste WINDOWS-Session: Debug-Keystore angleichen (2026-06-12)~~ ÜBERHOLT
+
+> **Seit 10.09.2026 überholt — die Schritte unten NICHT mehr ausführen.** Alle Apps und Rechner nutzen
+> EINEN Debug-Key `~/SK/Android/debug-shared.keystore` (SHA-256 `F7:82:13:1C…`). Der hier genannte Mac-Key
+> `BC:5F:72:42…` und `entropiereductor.debug.keystore` sind abgelöst; nie wieder nach SK kopieren oder dort
+> überschreiben. Siehe `best-practices/android/debug-signing.md`. Historie:
 
 **Was passiert ist:** Franks Handy hatte EntropieReductor 0.12.6, signiert mit dem
 Windows-Debug-Keystore (Cert `A7:1F:7E:53…`, CN=Android Debug, C=DE). Der Mac nutzt

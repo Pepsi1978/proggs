@@ -81,12 +81,9 @@ Wenn die App bereits von einem ANDEREN Rechner installiert ist, schlaegt das Upd
 ("signatures do not match"). Loesung: Alte Version deinstallieren, neue installieren.
 Daten gehen verloren — vorher Drive-Backup machen!
 
-```bash
-adb uninstall com.bestjournal.app.debug
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
-
-Alternative: Debug-Keystore vom anderen Rechner kopieren (~/.android/debug.keystore).
+**Seit 10.09.2026 nicht mehr deinstallieren** (Datenverlust): Alle Rechner nutzen denselben Debug-Key
+`~/SK/Android/debug-shared.keystore`, OpenLauncher legt ihn nach `~/.android/debug.keystore`. Tritt der
+Fehler trotzdem auf, per Schlüsselrotation umziehen: `best-practices/android/debug-signing.md`.
 
 ## Firebase-Projekt Details
 

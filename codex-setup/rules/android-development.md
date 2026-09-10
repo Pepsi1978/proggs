@@ -160,8 +160,12 @@ adb shell dumpsys meminfo com.example.app
 
 ## 7. APK Signing
 
-- **Debug:** auto-signed mit debug keystore (`~/.android/debug.keystore`)
-- **Release:** `keytool -genkey -v -keystore release.jks -keyalg RSA -keysize 2048 -validity 10000`
+- **Debug:** auto-signed mit debug keystore (`~/.android/debug.keystore`) — auf allen Rechnern derselbe
+  gemeinsame Key `~/SK/Android/debug-shared.keystore` (OpenLauncher legt ihn dorthin). KEINEN eigenen
+  Debug-Keystore erzeugen, keine Debug-`signingConfig` anlegen (`best-practices/android/debug-signing.md`).
+- **Release:** NUR für Play-Store-Apps ein eigener Upload-Key in `~/SK/<App>/`:
+  `keytool -genkey -v -keystore release.jks -keyalg RSA -keysize 2048 -validity 10000`. Private Apps
+  signieren Release mit der Debug-Config.
 - v2 + v3 + v4 Signing: `apksigner sign --ks keystore.jks --v3-signing-enabled true --v4-signing-enabled true app.apk`
 - NEVER commit keystores oder Signing-Passwoerter
 - Signing-Config in `local.properties` (gitignored)

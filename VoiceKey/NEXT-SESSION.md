@@ -163,7 +163,11 @@ bauen, dass später weitere Ziele hinzukommen können. Start: nur ein fester Ein
 
 ---
 
-## Windows-Followup (2026-06-12): Geteilter Debug-Keystore
+## ~~Windows-Followup (2026-06-12): Geteilter Debug-Keystore~~ ÜBERHOLT
+
+> **Seit 10.09.2026 überholt — nichts mehr kopieren.** VoiceKey liest den gemeinsamen Debug-Key aller Apps
+> aus `~/SK/Android/debug-shared.keystore` (SHA-256 `F7:82:13:1C…`); `~/SK/VoiceKey/` gibt es nicht mehr.
+> Der unten genannte Key `BC:5F:72:42…` ist abgelöst. Siehe `best-practices/android/debug-signing.md`. Historie:
 
 Auf dem Mac eingerichtet: `~/SK/VoiceKey/debug-shared.keystore` (Fingerprint SHA-256
 `BC:5F:72:42:…:23:05`, identisch mit dem Mac-Default und dem EntropieReductor-SK-Keystore).

@@ -66,7 +66,7 @@ Damit das automatische Drive-Backup funktioniert, ist einmalig ein OAuth-Eintrag
 1. Cloud Console → APIs & Dienste → Anmeldedaten → **OAuth-Client-ID erstellen**
 2. Anwendungstyp: **Android**
 3. Paketname: `de.frank.entropyreducer.debug` (Debug) oder `de.frank.entropyreducer` (Release)
-4. SHA-1: aus dem `debug-shared.keystore` in `~/SK/BestJournalAndroid/` (gleicher Keystore wie BestJournalAndroid). Auslesen: `keytool -list -v -keystore ~/SK/BestJournalAndroid/debug-shared.keystore`
+4. SHA-1: aus dem gemeinsamen Debug-Key aller Apps `~/SK/Android/debug-shared.keystore` (`03:03:2C:A7:C1:ED:5F:C2:E0:6C:51:84:59:08:F2:4D:C3:35:9B:FA`). Auslesen: `keytool -list -v -keystore ~/SK/Android/debug-shared.keystore -storepass android`
 5. APIs aktivieren: **Drive API** (`https://www.googleapis.com/auth/drive.appdata` Scope wird automatisch verwendet)
 6. App in der App neu starten → Einstellungen → Datenexport → "Mit Google verbinden"
 

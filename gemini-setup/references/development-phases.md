@@ -133,6 +133,10 @@ Wenn das Projekt KEINE Phase hat (z.B. erstes Mal erwaehnt), MUSS Gemini fragen:
 - Keine Libraries hinzufuegen die nicht zur Grundstruktur gehoeren
 
 ### Keystore-Erstellung (Vorlage)
+> **Nur für Apps, die in den Play Store gehen** (Upload-Key, abzulegen in `~/SK/<App>/`, nie im Repo).
+> Private Apps: KEINEN Keystore erzeugen und keine Debug-`signingConfig` anlegen — Debug (und private
+> Release-Builds) signieren mit dem gemeinsamen Key `~/SK/Android/debug-shared.keystore`
+> (siehe `best-practices/android/debug-signing.md`).
 ```bash
 keytool -genkey -v \
   -keystore [projektname]-release.jks \
