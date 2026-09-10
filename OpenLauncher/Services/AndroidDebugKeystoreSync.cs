@@ -8,8 +8,9 @@ namespace OpenLauncher.Services;
 /// zufaellig erzeugt, deshalb verweigerte das Handy nach einem Rechnerwechsel das Update
 /// (INSTALL_FAILED_UPDATE_INCOMPATIBLE) und nur Deinstallieren (= Datenverlust) half.
 /// Quelle ist ~/SK/Android/debug-shared.keystore (SHA-256 F7:82:13:1C...), Rueckfall Y:\Keystores\Android.
-/// Ein abweichender alter Schluessel wird nie geloescht, sondern nach ~/SK/Android/alt gesichert: nur mit ihm
-/// lassen sich damit signierte Apps spaeter per apksigner-Rotation ohne Deinstallation umziehen.
+/// Ein abweichender alter Schluessel wird nie geloescht, sondern als ~/.android/debug.keystore.&lt;Rechner&gt;.&lt;Zeit&gt;.bak
+/// gesichert: nur mit ihm lassen sich damit signierte Apps spaeter per apksigner-Rotation ohne Deinstallation
+/// umziehen. Bewusst nicht in ~/SK - der SK-Ordner bleibt auf allen Rechnern identisch und aufgeraeumt.
 /// </summary>
 public static class AndroidDebugKeystoreSync
 {
@@ -45,9 +46,7 @@ public static class AndroidDebugKeystoreSync
             {
                 if (File.ReadAllBytes(target).AsSpan().SequenceEqual(shared)) return;
 
-                var altDir = Path.Combine(skDir, "alt");
-                Directory.CreateDirectory(altDir);
-                var backup = Path.Combine(altDir, $"debug-{Environment.MachineName}-{DateTime.Now:yyyyMMdd-HHmmss}.keystore");
+                var backup = Path.Combine(androidDir, $"debug.keystore.{Environment.MachineName}.{DateTime.Now:yyyyMMdd-HHmmss}.bak");
                 File.Copy(target, backup);
                 log.Info("AndroidKeystore", "Run", $"abweichenden Debug-Key gesichert: {backup}");
             }

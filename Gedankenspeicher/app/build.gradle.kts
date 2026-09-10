@@ -14,24 +14,23 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 47
-        versionName = "0.6.4"
+        versionName = "0.6.5"
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"07.09.2026, 14:18 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.09.2026, 13:49 Uhr\"")
     }
 
-    // **Dieselbe Debug-Signatur auf Windows und Mac** — wie bei den anderen Apps, siehe
-    // `keystore-sync/README.md`. Ohne das signiert jeder Rechner mit seinem eigenen
+    // **Dieselbe Debug-Signatur auf allen Rechnern** — wie bei den anderen Apps, siehe
+    // `best-practices/android/debug-signing.md`. Ohne das signiert jeder Rechner mit seinem eigenen
     // Standard-Schlüssel, und eine Installation vom jeweils anderen lehnt Android mit
     // INSTALL_FAILED_UPDATE_INCOMPATIBLE ab: die Notizen wären nur über eine
     // Deinstallation zu retten. Genau daran scheiterte der Mac-Build zuerst.
     //
-    // Der Schlüssel liegt bewusst **nicht** im Git, sondern unter `~/SK/Gedankenspeicher/`
-    // (auf Windows `%USERPROFILE%\SK\Gedankenspeicher\`). Fehlt er, baut Gradle mit dem
-    // Standard-Debug-Schlüssel weiter — dann ist der Build nur auf diesem Rechner nutzbar.
-    val eigenerDebugKeystore = listOf("debug-shared.keystore", "debug.keystore")
-        .map { File(System.getProperty("user.home"), "SK/Gedankenspeicher/$it") }
-        .firstOrNull { it.exists() }
+    // Der gemeinsame Schlüssel liegt bewusst **nicht** im Git, sondern unter `~/SK/Android/`.
+    // Fehlt er, baut Gradle mit `~/.android/debug.keystore` weiter — den setzt OpenLauncher
+    // beim Start auf denselben Schlüssel.
+    val eigenerDebugKeystore = File(System.getProperty("user.home"), "SK/Android/debug-shared.keystore")
+        .takeIf { it.exists() }
 
     signingConfigs {
         getByName("debug") {

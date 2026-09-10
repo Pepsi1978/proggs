@@ -5,11 +5,11 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// Der Debug-Schluessel liegt in der Schluesselzentrale ~/SK/ClaudeKompass/ und ist auf allen
-// Rechnern derselbe. Ohne ihn signiert jeder Rechner mit seinem eigenen Debug-Schluessel — dann
+// Der Debug-Schluessel liegt in der Schluesselzentrale ~/SK/Android/ und ist fuer alle Apps und
+// Rechner derselbe. Ohne ihn signiert jeder Rechner mit seinem eigenen Debug-Schluessel — dann
 // verweigert das Geraet die Aktualisierung („signatures do not match") und die App muesste vor
 // jeder Installation vom anderen Rechner geloescht werden, samt aller eigenen Fragen.
-val skOrdner: File = File(System.getProperty("user.home")).resolve("SK").resolve("ClaudeKompass")
+val skOrdner: File = File(System.getProperty("user.home")).resolve("SK").resolve("Android")
 val debugSchluessel: File = rootProject.file("debug-shared.keystore")
 
 val holeSchluessel = tasks.register("holeSchluesselAusSk") {
@@ -19,8 +19,8 @@ val holeSchluessel = tasks.register("holeSchluesselAusSk") {
         if (!quelle.exists()) {
             throw GradleException(
                 "Debug-Schluessel fehlt: ${quelle.absolutePath}. " +
-                    "Er wird nicht mitversioniert. Von einem anderen Rechner kopieren oder aus " +
-                    "einem anderen SK-Projekt uebernehmen — es ist ueberall derselbe.",
+                    "Er wird nicht mitversioniert. Von Y:\\Keystores\\Android oder einem anderen " +
+                    "Rechner kopieren — es ist ueberall derselbe.",
             )
         }
         quelle.copyTo(ziel, overwrite = true)
@@ -38,9 +38,9 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 11
-        versionName = "0.4.9"
+        versionName = "0.4.10"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"07.09.2026, 14:18 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.09.2026, 13:49 Uhr\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
         buildConfigField("String", "SEEDED_CLI_VERSION", "\"2.1.261\"")

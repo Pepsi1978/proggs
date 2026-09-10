@@ -20,7 +20,9 @@ val syncCopies: List<Pair<File, File>> =
         skBase.resolve("google-services-debug.json") to
             project.file("src/debug/google-services.json"),
         skBase.resolve("google-services-release.json") to project.file("google-services.json"),
-        skBase.resolve("debug-shared.keystore") to rootProject.file("debug-shared.keystore"),
+        // Gemeinsamer Debug-Key aller Apps und Rechner (siehe ~/SK/README.md, Abschnitt Android).
+        File(System.getProperty("user.home"), "SK/Android/debug-shared.keystore") to
+            rootProject.file("debug-shared.keystore"),
         skBase.resolve("release.keystore") to rootProject.file("release.keystore"),
     )
 
@@ -33,7 +35,7 @@ val syncSecretsFromSk =
                 throw GradleException(
                     "SK-Ordner fehlt: ${sk.absolutePath}\n" +
                         "Erwartete Inhalte: google-services-debug.json, google-services-release.json, " +
-                        "debug-shared.keystore, release.keystore, keystore.properties\n" +
+                        "release.keystore, keystore.properties (Debug-Key: ~/SK/Android/debug-shared.keystore)\n" +
                         "Siehe ~/SK/README.md fuer Details."
                 )
             }
@@ -81,7 +83,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 298
-        versionName = "0.21.17"
+        versionName = "0.21.18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

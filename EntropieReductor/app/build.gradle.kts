@@ -9,13 +9,14 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// Secrets liegen ausserhalb des Repos in $HOME/SK/EntropieReductor/.
-// Der syncSecretsFromSk-Task kopiert die Debug-Keystore vor jedem Build in den
-// Projekt-Root (rootProject) als debug-shared.keystore — der dortige Pfad ist in
-// .gitignore ausgeschlossen, kommt also nie ins Git-Repo.
+// Secrets liegen ausserhalb des Repos in $HOME/SK/EntropieReductor/, der gemeinsame
+// Debug-Key aller Apps in $HOME/SK/Android/. Der syncSecretsFromSk-Task kopiert ihn vor
+// jedem Build in den Projekt-Root (rootProject) als debug-shared.keystore — der dortige
+// Pfad ist in .gitignore ausgeschlossen, kommt also nie ins Git-Repo.
 val skBase: JFile = JFile(System.getProperty("user.home"))
     .resolve("SK").resolve("EntropieReductor")
-val skKeystoreSrc: JFile = skBase.resolve("debug-shared.keystore")
+val skKeystoreSrc: JFile = JFile(System.getProperty("user.home"))
+    .resolve("SK").resolve("Android").resolve("debug-shared.keystore")
 val rootKeystoreDst: JFile = rootProject.file("debug-shared.keystore")
 
 // Frank-Wunsch 2026-05-17: Google-Maps-API-Key fuer Satelliten-Karte im
@@ -38,13 +39,6 @@ val syncSecretsFromSk = tasks.register("syncSecretsFromSk") {
     val dst = rootKeystoreDst
     val sk = skBase
     doLast {
-        if (!sk.isDirectory) {
-            throw GradleException(
-                "SK-Ordner fehlt: ${sk.absolutePath}\n" +
-                    "Erwartet: entropiereductor.debug.keystore\n" +
-                    "Siehe ~/SK/EntropieReductor/README.md."
-            )
-        }
         if (!src.exists()) {
             throw GradleException("SK-Datei fehlt: ${src.absolutePath}")
         }
@@ -73,8 +67,8 @@ android {
         minSdk = 28
         targetSdk = 36
         versionCode = 341
-        versionName = "0.29.4"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.09.2026, 12:46 Uhr\"")
+        versionName = "0.29.5"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.09.2026, 13:49 Uhr\"")
         buildConfigField("String", "VERSION_UPDATED_AT", "VERSION_BUMPED_AT")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

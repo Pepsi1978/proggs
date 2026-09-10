@@ -6,9 +6,9 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// SK — Secret Keys Zentrale (cross-platform: $HOME/SK/BestJournalFrank/).
-// Alle Secrets (debug-shared.keystore) liegen dort und werden beim Build kopiert.
-val skBase: File = File(System.getProperty("user.home")).resolve("SK").resolve("BestJournalFrank")
+// SK — Secret Keys Zentrale: gemeinsamer Debug-Key aller Apps und Rechner in $HOME/SK/Android/.
+// Er wird beim Build in den Projekt-Root kopiert.
+val skBase: File = File(System.getProperty("user.home")).resolve("SK").resolve("Android")
 
 val syncCopies: List<Pair<File, File>> =
     listOf(
@@ -46,8 +46,8 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 157
-        versionName = "0.23.3"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"07.09.2026, 14:18 Uhr\"")
+        versionName = "0.23.4"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.09.2026, 13:49 Uhr\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

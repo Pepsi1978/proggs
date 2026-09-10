@@ -5,8 +5,9 @@ import Foundation
 /// signingConfig damit - ein pro Rechner zufaelliger Schluessel liess das Handy Updates nach einem
 /// Rechnerwechsel verweigern (INSTALL_FAILED_UPDATE_INCOMPATIBLE), nur Deinstallieren (= Datenverlust) half.
 /// Quelle ist ~/SK/Android/debug-shared.keystore (SHA-256 F7:82:13:1C...). Ein abweichender alter Schluessel
-/// wird nie geloescht, sondern nach ~/SK/Android/alt gesichert: nur mit ihm lassen sich damit signierte Apps
-/// spaeter per apksigner-Rotation ohne Deinstallation umziehen.
+/// wird nie geloescht, sondern als ~/.android/debug.keystore.<Rechner>.<Zeit>.bak gesichert: nur mit ihm lassen
+/// sich damit signierte Apps spaeter per apksigner-Rotation ohne Deinstallation umziehen. Bewusst nicht in
+/// ~/SK - der SK-Ordner bleibt auf allen Rechnern identisch und aufgeraeumt.
 enum AndroidDebugKeystoreSync {
     static func run() {
         let log = Logger.shared
@@ -25,12 +26,10 @@ enum AndroidDebugKeystoreSync {
         do {
             if let current = try? Data(contentsOf: target) {
                 if current == shared { return }
-                let altDir = skDir.appendingPathComponent("alt")
-                try fm.createDirectory(at: altDir, withIntermediateDirectories: true)
                 let stamp = DateFormatter()
                 stamp.dateFormat = "yyyyMMdd-HHmmss"
                 let host = Host.current().localizedName ?? "mac"
-                let backup = altDir.appendingPathComponent("debug-\(host)-\(stamp.string(from: Date())).keystore")
+                let backup = androidDir.appendingPathComponent("debug.keystore.\(host).\(stamp.string(from: Date())).bak")
                 try current.write(to: backup)
                 log.info("AndroidKeystore", "run", "abweichenden Debug-Key gesichert: \(backup.path)")
             }

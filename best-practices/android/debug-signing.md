@@ -18,11 +18,12 @@ Stand: 10.09.2026
 
 Deinstallieren löscht die App-Daten. Stattdessen den Signierschlüssel per APK-Signature-Scheme-v3-Rotation
 umziehen (Android 9+, auf dem Fold getestet am 10.09.2026). Man braucht den **alten** Key, mit dem die App auf
-dem Handy signiert ist. OpenLauncher sichert abweichende Keys automatisch nach `~/SK/Android/alt/`.
+dem Handy signiert ist. OpenLauncher sichert abweichende Keys automatisch als
+`~/.android/debug.keystore.<Rechner>.<Zeit>.bak` (Passwort `android`).
 
 ```powershell
 $as  = "$env:LOCALAPPDATA\Android\Sdk\build-tools\37.0.0\apksigner.bat"
-$old = "$HOME\SK\Android\alt\<alter-key>.keystore"
+$old = "$HOME\.android\debug.keystore.<Rechner>.<Zeit>.bak"
 $new = "$HOME\SK\Android\debug-shared.keystore"
 # 1. Lineage alt -> neu (einmal pro altem Key)
 & $as rotate --out lineage.bin --old-signer --ks $old --ks-pass pass:android --new-signer --ks $new --ks-pass pass:android
@@ -39,6 +40,8 @@ Welcher Key auf dem Gerät gilt: APK ziehen, `apksigner verify --print-certs`.
 ## Umgezogen am 10.09.2026 (alter CODI-Key `17:10:34:C5…` → gemeinsamer Key)
 
 CodexKompass, StackLaborWerftStudio, GenialeIdeen, KarteikartenLernen, Denknotiz, Experimente, PerfectMoment,
-QwenTtsBench, FisetinBegleiter. Lineage: `~/SK/Android/alt/lineage-171034-to-f782.bin`.
+QwenTtsBench, FisetinBegleiter. Alter Key + Lineage liegen nur noch lokal auf CODI in
+`~/SK-Archiv-20260910/Android/alt/` (nicht in SK, nicht auf Y:).
 Schon vorher auf dem gemeinsamen Key: CortexAndroid, Gedankenspeicher, ClaudeKompass, VoiceKey,
-EntropieReductor, BestJournalFrank, BestJournalAndroid-Debug, NEMS.
+EntropieReductor, BestJournalFrank, BestJournalAndroid-Debug, NEMS. Seit 10.09.2026 lesen alle acht ihn aus
+`~/SK/Android/` statt aus eigenen Kopien in `~/SK/<App>/`.

@@ -17,7 +17,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0.0"
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -28,7 +28,7 @@ android {
         getByName("debug") {
             // Gemeinsamer Debug-Keystore (cross-platform: liegt in ~/SK und auf Laufwerk Y).
             // Faellt auf den lokalen Standard-Keystore zurueck, falls die Datei fehlt.
-            val sharedDebugKeystore = file("${System.getProperty("user.home")}/SK/NEMS/debug-shared.keystore")
+            val sharedDebugKeystore = file("${System.getProperty("user.home")}/SK/Android/debug-shared.keystore")
             if (sharedDebugKeystore.exists()) {
                 storeFile = sharedDebugKeystore
                 storePassword = "android"

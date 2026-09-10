@@ -7,8 +7,8 @@ plugins {
 // Geteilter Debug-Keystore (EINE Signatur auf allen Maschinen): verhindert
 // INSTALL_FAILED_UPDATE_INCOMPATIBLE beim Mac<->Windows-Wechsel (bugs/android-build/gradle.md §13).
 // Fehlt die SK-Datei, faellt der Build auf den Maschinen-Default zurueck (laeuft, aber
-// maschinengebunden) — dann ~/SK/VoiceKey/debug-shared.keystore von der anderen Maschine kopieren.
-val sharedDebugKeystore = File(System.getProperty("user.home"), "SK/VoiceKey/debug-shared.keystore")
+// maschinengebunden) — dann ~/SK/Android/debug-shared.keystore von Y:\Keystores\Android kopieren.
+val sharedDebugKeystore = File(System.getProperty("user.home"), "SK/Android/debug-shared.keystore")
 
 android {
     namespace = "de.frank.voicekey"
@@ -30,8 +30,8 @@ android {
         minSdk = 34
         targetSdk = 36
         versionCode = 13
-        versionName = "0.7.2"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"07.09.2026, 14:18 Uhr\"")
+        versionName = "0.7.3"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.09.2026, 13:49 Uhr\"")
 
         // Vosk liefert native .so — auf die real genutzten ABIs beschraenken (Fold 6 = arm64).
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
