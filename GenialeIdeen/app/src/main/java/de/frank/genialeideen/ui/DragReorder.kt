@@ -1,213 +1,260 @@
 package de.frank.genialeideen.ui
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
- * Das Sortieren per Ziehen — geteilt von den eigenen Sessions und ihren Fragen.
- *
- * Der Zustand liegt bewusst über den Zeilen: Beim Umsortieren wechseln die Zeilen ihren Platz,
- * ein Zustand in der Zeile selbst ginge dabei verloren und die gegriffene Karte fiele mitten im
- * Ziehen an ihren alten Platz zurück. Getauscht wird erst, wenn die gezogene Karte ihre Nachbarin
- * fast ganz verdeckt — so lässt sie sich in Ruhe darüber legen, ohne gleich wegzuspringen.
+ * Finger und Karte bleiben im Koordinatensystem der Liste. Die tatsächlichen Lazy-Item-Plätze
+ * sind die einzige Geometriequelle: keine aufaddierten Höhen, Abstände oder Scrollkorrekturen.
+ * Nach einem Tausch wird erst mit dem neu gemessenen Layout weitergetauscht.
  */
 @Stable
-class ReorderState {
+class ReorderState(private val listState: LazyListState, private val scope: CoroutineScope) {
     var draggedId by mutableStateOf<Long?>(null)
         private set
-
-    /** Wie weit die gegriffene Karte gerade von ihrem Platz weg liegt. */
-    var offsetY by mutableStateOf(0f)
+    var dragging by mutableStateOf(false)
         private set
 
-    private val heights = mutableStateMapOf<Long, Float>()
-    private val tops = mutableStateMapOf<Long, Float>()
-    private var viewportTop = 0f
-    private var viewportBottom = 0f
+    private var fingerY = 0f
+    private var grabOffset = 0f
+    private var visualTop by mutableFloatStateOf(0f)
+    private var landingProgress by mutableFloatStateOf(0f)
+    private var landing: Job? = null
+    private var generation = 0
+    private var viewportOrigin = Offset.Zero
+    private val handles = mutableMapOf<Long, Rect>()
     private var order: () -> List<Long> = { emptyList() }
     private var move: (Int, Int) -> Unit = { _, _ -> }
+    private var drop: () -> Unit = {}
 
     fun isDragging(id: Long): Boolean = draggedId == id
 
-    /** Höhe und Platz einer Zeile — beides vor der Verschiebung, also ihr echter Platz in der Liste. */
-    internal fun measure(id: Long, height: Float, top: Float) {
-        heights[id] = height
-        tops[id] = top
+    internal fun setViewport(origin: Offset) { viewportOrigin = origin }
+    internal fun measureHandle(id: Long, bounds: Rect) { handles[id] = bounds }
+    internal fun removeHandle(id: Long) { handles.remove(id) }
+
+    internal fun handleAt(position: Offset): Long? {
+        val rootPosition = position + viewportOrigin
+        return listState.layoutInfo.visibleItemsInfo.firstOrNull { item ->
+            handles[item.key]?.contains(rootPosition) == true
+        }?.key as? Long
     }
 
-    internal fun setViewport(top: Float, bottom: Float) {
-        viewportTop = top
-        viewportBottom = bottom
-    }
-
-    internal fun start(id: Long, order: () -> List<Long>, move: (Int, Int) -> Unit) {
-        draggedId = id
-        offsetY = 0f
+    internal fun start(
+        id: Long,
+        position: Offset,
+        order: () -> List<Long>,
+        move: (Int, Int) -> Unit,
+        drop: () -> Unit,
+    ): Boolean {
+        val layout = listState.layoutInfo
+        val item = layout.visibleItemsInfo.firstOrNull { it.key == id } ?: return false
+        if (order().getOrNull(item.index) != id) return false
+        val startTop = item.offset + translation(id)
+        generation++
+        landing?.cancel()
         this.order = order
         this.move = move
+        this.drop = drop
+        draggedId = id
+        dragging = true
+        landingProgress = 0f
+        fingerY = position.y + layout.viewportStartOffset
+        grabOffset = fingerY - startTop
+        visualTop = startTop
+        return true
     }
 
     internal fun drag(amountY: Float) {
-        offsetY += amountY
+        if (!dragging) return
+        fingerY += amountY
+        updateVisualTop()
         settle()
     }
 
-    internal fun stop() {
-        draggedId = null
-        offsetY = 0f
+    private fun updateVisualTop() {
+        val layout = listState.layoutInfo
+        val item = layout.visibleItemsInfo.firstOrNull { it.key == draggedId } ?: return
+        // Auch wenn der Finger über die Kopfleiste hinausgeht, bleibt die Karte sichtbar.
+        var minimum = (layout.viewportStartOffset + layout.beforeContentPadding).toFloat()
+        var maximum = (layout.viewportEndOffset - item.size).toFloat().coerceAtLeast(minimum)
+        if (item.index == 0 && !listState.canScrollBackward) minimum = maxOf(minimum, item.offset.toFloat())
+        if (item.index == layout.totalItemsCount - 1 && !listState.canScrollForward) {
+            maximum = minOf(maximum, item.offset.toFloat()).coerceAtLeast(minimum)
+        }
+        visualTop = (fingerY - grabOffset).coerceIn(minimum, maximum)
     }
 
-    /** Tauscht mit den Nachbarn, bis die gezogene Karte wieder über ihrem eigenen Platz liegt. */
+    /** Nur logische Zielplätze vergleichen, niemals die gerade animierten Nachbarkarten. */
     private fun settle() {
         val id = draggedId ?: return
-        while (true) {
-            val current = order()
-            val index = current.indexOf(id)
-            if (index < 0) return
-            val below = current.getOrNull(index + 1)?.let { heights[it] } ?: 0f
-            if (below > 0f && offsetY > below * SWAP_SHARE) {
-                move(index, index + 1)
-                offsetY -= below
-                continue
-            }
-            val above = current.getOrNull(index - 1)?.let { heights[it] } ?: 0f
-            if (above > 0f && offsetY < -above * SWAP_SHARE) {
-                move(index, index - 1)
-                offsetY += above
-                continue
-            }
-            return
+        val current = order()
+        val index = current.indexOf(id)
+        val visible = listState.layoutInfo.visibleItemsInfo
+        val item = visible.firstOrNull { it.key == id } ?: return
+        // Daten geändert, aber Layout noch alt: kein zweiter Tausch mit veralteten Maßen.
+        if (index < 0 || item.index != index) return
+        val above = visible.firstOrNull { it.index == index - 1 && it.key == current.getOrNull(index - 1) }
+        val below = visible.firstOrNull { it.index == index + 1 && it.key == current.getOrNull(index + 1) }
+        val target = when {
+            above != null && visualTop < above.offset + above.size / 2f -> index - 1
+            below != null && visualTop + item.size > below.offset + below.size / 2f -> index + 1
+            else -> return
         }
+        // Sonst folgt LazyColumn dem Key der obersten Karte und verschiebt das ganze Sichtfenster.
+        listState.requestScrollToItem(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset)
+        move(index, target)
     }
 
-    /** Wie weit die Liste mitwandern soll, wenn die Karte an den oberen oder unteren Rand kommt. */
-    private fun edgeScroll(margin: Float, maxStep: Float): Float {
-        val id = draggedId ?: return 0f
-        val top = tops[id] ?: return 0f
-        val height = heights[id] ?: return 0f
-        if (viewportBottom <= viewportTop || margin <= 0f) return 0f
-        val visualTop = top + offsetY
-        val overBottom = visualTop + height - (viewportBottom - margin)
-        if (overBottom > 0f) return (overBottom / margin).coerceAtMost(1f) * maxStep
-        val overTop = viewportTop + margin - visualTop
-        if (overTop > 0f) return -(overTop / margin).coerceAtMost(1f) * maxStep
-        return 0f
+    internal fun translation(id: Long): Float {
+        if (draggedId != id) return 0f
+        val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == id } ?: return 0f
+        return (visualTop - item.offset) * (1f - landingProgress)
     }
 
-    /**
-     * Lässt die Liste mitwandern, solange die Karte am Rand hängt. Was die Liste dabei wegscrollt,
-     * gibt die Karte als Verschiebung zurück — so bleibt sie unter dem Finger liegen.
-     */
-    internal suspend fun followEdges(listState: LazyListState, margin: Float, maxStep: Float) {
-        listState.scroll {
-            while (true) {
+    internal fun stop(reducedMotion: Boolean) {
+        if (!dragging) return
+        dragging = false
+        drop()
+        val releasedGeneration = generation
+        landing = scope.launch {
+            try {
+                // Den letzten Tausch zuerst layouten, dann weich auf genau diesem Platz ablegen.
                 withFrameNanos { }
-                val wanted = edgeScroll(margin, maxStep)
-                if (wanted != 0f) {
-                    offsetY += scrollBy(wanted)
-                    settle()
+                animate(0f, 1f, animationSpec = tween(if (reducedMotion) 0 else 180)) { value, _ ->
+                    landingProgress = value
+                }
+            } finally {
+                // Erneutes Greifen darf nicht vom Ende der vorherigen Ablegeanimation gelöscht werden.
+                if (generation == releasedGeneration) {
+                    draggedId = null
+                    landingProgress = 0f
                 }
             }
         }
     }
 
-    private companion object {
-        /** Wie weit die gezogene Karte ihre Nachbarin verdecken muss, bevor getauscht wird. */
-        const val SWAP_SHARE = 0.92f
+    internal fun dispose() {
+        generation++
+        landing?.cancel()
+        draggedId = null
+        dragging = false
+        handles.clear()
+    }
+
+    /** Randscrollen richtet sich nach dem Finger, mit Geschwindigkeit pro Sekunde statt pro Bild. */
+    internal suspend fun followEdges(margin: Float, maxSpeed: Float) {
+        var previousFrame = withFrameNanos { it }
+        while (dragging) {
+            val frame = withFrameNanos { it }
+            val seconds = ((frame - previousFrame) / 1_000_000_000f).coerceIn(0f, 0.032f)
+            previousFrame = frame
+            val layout = listState.layoutInfo
+            val top = layout.viewportStartOffset.toFloat()
+            val bottom = layout.viewportEndOffset.toFloat()
+            val edge = margin.coerceAtMost((bottom - top) / 3f)
+            if (edge <= 0f) continue
+            val strength = when {
+                fingerY < top + edge -> -((top + edge - fingerY) / edge).coerceIn(0f, 1f)
+                fingerY > bottom - edge -> ((fingerY - bottom + edge) / edge).coerceIn(0f, 1f)
+                else -> 0f
+            }
+            // Kein scroll{} über die ganze Geste: requestScrollToItem darf den Loop nicht abbrechen.
+            if (strength != 0f) listState.dispatchRawDelta(strength * kotlin.math.abs(strength) * maxSpeed * seconds)
+            updateVisualTop()
+            settle()
+        }
     }
 }
 
 @Composable
-fun rememberReorderState(): ReorderState = remember { ReorderState() }
-
-/** Merkt sich den sichtbaren Ausschnitt der Liste — damit am Rand mitgescrollt werden kann. */
-fun Modifier.reorderViewport(state: ReorderState): Modifier = onGloballyPositioned {
-    val top = it.positionInRoot().y
-    state.setViewport(top, top + it.size.height)
+fun rememberReorderState(listState: LazyListState, listKey: Any): ReorderState {
+    val scope = rememberCoroutineScope()
+    val state = remember(listState, listKey) { ReorderState(listState, scope) }
+    DisposableEffect(state) { onDispose { state.dispose() } }
+    return state
 }
 
-/**
- * Hebt die gezogene Zeile über die anderen und legt Höhe und Platz jeder Zeile ab. Das Messen
- * sitzt bewusst vor der Verschiebung, damit der abgelegte Platz der echte Platz in der Liste ist.
- */
+/** Die Geste gehört zum festen Viewport, nicht zum Griff, der beim Tauschen seinen Platz wechselt. */
 @Composable
-fun Modifier.reorderRow(state: ReorderState, id: Long): Modifier {
-    val dragging = state.isDragging(id)
-    val rowAlpha by animateFloatAsState(
-        if (state.draggedId == null || dragging) 1f else 0.5f,
-        label = "Zeile Deckkraft",
-    )
-    val rowScale by animateFloatAsState(if (dragging) 1.04f else 1f, label = "Zeile Größe")
-    // Das gegriffene Element hebt sich an: grösser, leicht geneigt, mit wachsendem Schatten (N.7).
-    val rowTilt by animateFloatAsState(if (dragging) 2f else 0f, label = "Zeile Neigung")
-    val rowShadow by androidx.compose.animation.core.animateDpAsState(
-        if (dragging) 20.dp else 0.dp,
-        label = "Zeile Schatten",
-    )
-    return this
-        .onGloballyPositioned { state.measure(id, it.size.height.toFloat(), it.positionInRoot().y) }
-        .zIndex(if (dragging) 1f else 0f)
-        .graphicsLayer {
-            translationY = if (dragging) state.offsetY else 0f
-            alpha = rowAlpha
-            scaleX = rowScale
-            scaleY = rowScale
-            rotationZ = rowTilt
-            shadowElevation = rowShadow.toPx()
-        }
-}
-
-/** Der Griff: lang drücken, dann zieht die Zeile mit — bis zum Loslassen. */
-fun reorderHandle(
+fun Modifier.reorderViewport(
     state: ReorderState,
-    id: Long,
     order: () -> List<Long>,
     onMove: (Int, Int) -> Unit,
     onDrop: () -> Unit,
-): Modifier = Modifier.pointerInput(id) {
-    detectDragGesturesAfterLongPress(
-        onDragStart = { state.start(id, order, onMove) },
-        onDragEnd = {
-            state.stop()
-            onDrop()
-        },
-        onDragCancel = {
-            state.stop()
-            onDrop()
-        },
-    ) { change, amount ->
-        change.consume()
-        state.drag(amount.y)
-    }
+): Modifier {
+    val currentOrder by rememberUpdatedState(order)
+    val currentMove by rememberUpdatedState(onMove)
+    val currentDrop by rememberUpdatedState(onDrop)
+    val reducedMotion by rememberUpdatedState(LocalBewegungReduziert.current)
+    return onGloballyPositioned { state.setViewport(it.positionInRoot()) }
+        .pointerInput(state) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                val id = state.handleAt(down.position) ?: return@awaitEachGesture
+                val longPress = awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
+                if (!state.start(id, longPress.position, currentOrder, currentMove, currentDrop)) return@awaitEachGesture
+                try {
+                    drag(longPress.id) { change ->
+                        state.drag(change.positionChange().y)
+                        change.consume()
+                    }
+                } finally {
+                    state.stop(reducedMotion)
+                }
+            }
+        }
 }
 
-/** Hält die Liste am Wandern, solange etwas am unteren oder oberen Rand gezogen wird. */
+/** Direkt am Lazy-Item anwenden, damit zIndex auch über den Nachbarkarten liegt. */
+fun Modifier.reorderRow(state: ReorderState, id: Long): Modifier =
+    zIndex(if (state.isDragging(id)) 1f else 0f)
+        .graphicsLayer { translationY = state.translation(id) }
+
 @Composable
-fun ReorderAutoScroll(state: ReorderState, listState: LazyListState) {
+fun reorderHandle(state: ReorderState, id: Long): Modifier {
+    DisposableEffect(state, id) { onDispose { state.removeHandle(id) } }
+    return Modifier.onGloballyPositioned { state.measureHandle(id, it.boundsInRoot()) }
+}
+
+@Composable
+fun ReorderAutoScroll(state: ReorderState) {
     val density = LocalDensity.current
-    val dragged = state.draggedId
-    LaunchedEffect(dragged) {
-        if (dragged == null) return@LaunchedEffect
-        val margin = with(density) { 120.dp.toPx() }
-        val maxStep = with(density) { 8.dp.toPx() }
-        state.followEdges(listState, margin, maxStep)
+    LaunchedEffect(state, state.dragging, density) {
+        if (!state.dragging) return@LaunchedEffect
+        state.followEdges(with(density) { 88.dp.toPx() }, with(density) { 560.dp.toPx() })
     }
 }

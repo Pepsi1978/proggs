@@ -99,7 +99,6 @@ import de.frank.genialeideen.ui.theme.schwebend
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.unit.DpSize
@@ -165,14 +164,23 @@ fun ListenScreen(
         else roheListe.filter { it.kategorieId == gewaehlteKategorie }
     }
     // Die gezogene Reihenfolge lebt lokal, bis der Finger losgelassen wird.
-    var reihenfolge by remember(liste) { mutableStateOf(liste.map(IdeeEntity::id)) }
-    LaunchedEffect(liste) { reihenfolge = liste.map(IdeeEntity::id) }
+    val listState = rememberLazyListState()
+    val zustand = rememberReorderState(listState, bereich to gewaehlteKategorie)
+    var reihenfolge by remember(bereich, gewaehlteKategorie) { mutableStateOf(liste.map(IdeeEntity::id)) }
+    LaunchedEffect(liste) {
+        val ids = liste.map(IdeeEntity::id)
+        reihenfolge = if (zustand.draggedId == null) ids else {
+            // Aktualisierte Ideentexte dürfen eine laufende Sortiergeste nicht zurücksetzen.
+            val vorhanden = ids.toSet()
+            val lokal = reihenfolge.toSet()
+            reihenfolge.filter { it in vorhanden } + ids.filter { it !in lokal }
+        }
+    }
     val nachId = remember(liste) { liste.associateBy(IdeeEntity::id) }
     val sortiert = remember(reihenfolge, nachId) { reihenfolge.mapNotNull(nachId::get) }
 
-    val zustand = rememberReorderState()
-    val listState = rememberLazyListState()
-    ReorderAutoScroll(zustand, listState)
+    val reduziert = LocalBewegungReduziert.current
+    ReorderAutoScroll(zustand)
 
     ModalNavigationDrawer(
         drawerState = schublade,
@@ -279,28 +287,37 @@ fun ListenScreen(
                 )
                 else -> LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize().reorderViewport(zustand),
+                    modifier = Modifier.fillMaxSize().reorderViewport(
+                        state = zustand,
+                        order = { reihenfolge },
+                        onMove = { von, nach ->
+                            reihenfolge = reihenfolge.toMutableList().apply {
+                                add(nach, removeAt(von))
+                            }
+                        },
+                        onDrop = { viewModel.schreibeReihenfolge(reihenfolge) },
+                    ),
                     contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 120.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    // itemsIndexed statt indexOf je Zeile: Das war eine Suche über die
-                    // ganze Liste pro sichtbarem Element, also quadratischer Aufwand.
-                    itemsIndexed(sortiert, key = { _, idee -> idee.id }) { index, idee ->
-                        GestaffeltEinblenden(sichtbar = true, index = index.coerceAtMost(8)) {
+                    items(sortiert, key = { idee -> idee.id }) { idee ->
+                        Box(
+                            Modifier
+                                .reorderRow(zustand, idee.id)
+                                .animateItem(
+                                    fadeInSpec = null,
+                                    fadeOutSpec = null,
+                                    placementSpec = if (zustand.isDragging(idee.id) || reduziert) null
+                                    else androidx.compose.animation.core.spring(
+                                        dampingRatio = 1f,
+                                        stiffness = 450f,
+                                    ),
+                                ),
+                        ) {
                             IdeenKarte(
                                 idee = idee,
-                                modifier = Modifier.reorderRow(zustand, idee.id),
-                                griff = reorderHandle(
-                                    state = zustand,
-                                    id = idee.id,
-                                    order = { reihenfolge },
-                                    onMove = { von, nach ->
-                                        reihenfolge = reihenfolge.toMutableList().apply {
-                                            add(nach, removeAt(von))
-                                        }
-                                    },
-                                    onDrop = { viewModel.schreibeReihenfolge(reihenfolge) },
-                                ),
+                                modifier = Modifier,
+                                griff = reorderHandle(zustand, idee.id),
                                 spricht = vorlese.quelle == "idee-${idee.id}",
                                 vorleseZustand = vorlese.zustand,
                                 aufTipp = { aufIdee(idee) },
@@ -891,7 +908,7 @@ private fun IdeenKarte(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = griff.padding(horizontal = 6.dp),
+                modifier = griff.size(width = 40.dp, height = 48.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
