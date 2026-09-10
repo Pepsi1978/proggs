@@ -61,7 +61,11 @@ final class GeminiBatchTranscribeClient {
 
     private let session: URLSession = {
         let cfg = URLSessionConfiguration.default
-        cfg.timeoutIntervalForRequest = 120
+        // 30 s statt 120 s (Windows-Pendant 30.08.2026): der Aufruf braucht gemessen
+        // 3,5-4,7 s. Eine haengende Verbindung liess den Knopf zwei Minuten orange
+        // stehen, bevor der Groq-Fallback anlief. Resource = harte Gesamtgrenze.
+        cfg.timeoutIntervalForRequest = 30
+        cfg.timeoutIntervalForResource = 30
         return URLSession(configuration: cfg)
     }()
 

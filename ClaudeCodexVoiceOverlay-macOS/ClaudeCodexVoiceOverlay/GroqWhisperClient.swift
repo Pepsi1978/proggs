@@ -380,7 +380,10 @@ final class GroqWhisperClient {
         // gestartet, nichts gesagt"). WICHTIG: .success("") statt .failure — ein .failure wuerde
         // ueber pasteError eine Fehlermeldung ins Terminal schreiben. Leerer Erfolg -> der
         // .success-Leer-Guard im AppDelegate fuegt nichts ein. Nur beim ersten Versuch pruefen.
-        if attempt == 0 && !GroqWhisperClient.hasSpeechContent(audioData) {
+        // Voiced-Timeline EINMAL berechnen und fuer Vorfilter + Nachfilter nutzen
+        // (Windows-Pendant 07.09.2026: vorher lief die RMS-Analyse doppelt).
+        let voiced = GroqWhisperClient.buildVoicedTimeline(audioData)
+        if attempt == 0 && !GroqWhisperClient.hasSpeechContent(voiced) {
             DiagLog.warn("Groq", "prefilter_rejected", [("bytes", audioData.count)])
             completion(.success(""))
             return
@@ -433,8 +436,7 @@ final class GroqWhisperClient {
 
             if (200...299).contains(statusCode), let data = data {
                 let raw = String(data: data, encoding: .utf8) ?? ""
-                // Schicht 3: Voiced-Timeline aus dem aufgenommenen PCM bauen (Segment-Audio-Abgleich).
-                let voiced = GroqWhisperClient.buildVoicedTimeline(audioData)
+                // Schicht 3: dieselbe Voiced-Timeline wie im Vorfilter (Segment-Audio-Abgleich).
                 // Schicht 2 (Confidence-Gate) + Schicht 3 (Audio-Abgleich). Bleibt Text uebrig ->
                 // .success(text). Alles Stille/halluziniert -> leer -> .success("") (Leer-Guard fuegt nichts ein).
                 let filtered = GroqWhisperClient.filterTranscription(raw, voiced)
@@ -627,28 +629,9 @@ final class GroqWhisperClient {
     /// Schicht 1: prueft, ob eine 16-bit-PCM-mono-WAV genug echten Sprachinhalt enthaelt. Misst die
     /// aufsummierte LAUTE Zeit in 20-ms-Frames (RMS > Schwelle); reine Stille bleibt darunter. Liest die
     /// Sample-Rate aus dem WAV-Header (Bytes 24-27); nimmt mono 16-bit an (so nimmt der AudioRecorder auf).
-    private static func hasSpeechContent(_ wav: Data) -> Bool {
-        let bytes = [UInt8](wav)
-        let headerSize = 44
-        guard bytes.count > headerSize + 4 else { return false }
-        let sampleRate = Int(bytes[24]) | (Int(bytes[25]) << 8) | (Int(bytes[26]) << 16) | (Int(bytes[27]) << 24)
-        let rate = sampleRate > 0 ? sampleRate : 16000
-        let frameSamples = max(1, rate * 20 / 1000)
-        let frameBytes = frameSamples * 2
-        var voicedMs = 0.0
-        var i = headerSize
-        while i + frameBytes <= bytes.count {
-            var sumSq = 0.0
-            for s in 0..<frameSamples {
-                let idx = i + s * 2
-                let sample = Int16(bitPattern: UInt16(bytes[idx]) | (UInt16(bytes[idx + 1]) << 8))
-                let f = Double(sample) / 32768.0
-                sumSq += f * f
-            }
-            let rms = (sumSq / Double(frameSamples)).squareRoot()
-            if rms > speechRmsThreshold { voicedMs += 20 }
-            i += frameBytes
-        }
+    private static func hasSpeechContent(_ voiced: [Bool]?) -> Bool {
+        guard let voiced = voiced else { return false }
+        let voicedMs = Double(voiced.filter { $0 }.count * frameMs)
         NSLog("Groq-Vorfilter: laute Zeit %.0f ms (Schwelle %.0f ms) -> %@",
               voicedMs, minSpeechMs, voicedMs >= minSpeechMs ? "senden" : "verworfen")
         DiagLog.write("Groq", "prefilter_measure", [("voicedMs", Int(voicedMs)),

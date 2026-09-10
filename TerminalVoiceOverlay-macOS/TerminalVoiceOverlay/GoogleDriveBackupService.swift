@@ -12,6 +12,16 @@ final class GoogleDriveBackupService {
 
     static let shared = GoogleDriveBackupService()
 
+    // Eigene Session mit harten Grenzen (Windows-Pendant DriveHttp, 03.09.2026):
+    // URLSession.shared wartet bis 60 s pro Paket und 7 Tage insgesamt — ein
+    // haengender Drive-Aufruf blockierte so Backup und Slot-Sync still.
+    private static let driveSession: URLSession = {
+        let cfg = URLSessionConfiguration.default
+        cfg.timeoutIntervalForRequest = 30
+        cfg.timeoutIntervalForResource = 60
+        return URLSession(configuration: cfg)
+    }()
+
     struct ConnectInfo {
         let refreshToken: String
         let email: String?
@@ -195,7 +205,7 @@ final class GoogleDriveBackupService {
         req.httpBody = body.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
             .joined(separator: "&").data(using: .utf8)
 
-        URLSession.shared.dataTask(with: req) { [weak self] data, _, err in
+        Self.driveSession.dataTask(with: req) { [weak self] data, _, err in
             guard let self = self else { return }
             if let err = err { self.authCompletion?(.failure(err)); self.authCompletion = nil; return }
             guard let data = data,
@@ -216,7 +226,7 @@ final class GoogleDriveBackupService {
     private func fetchEmail(accessToken: String, completion: @escaping (String?) -> Void) {
         var req = URLRequest(url: URL(string: "https://www.googleapis.com/oauth2/v2/userinfo")!)
         req.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: req) { data, _, _ in
+        Self.driveSession.dataTask(with: req) { data, _, _ in
             guard let data = data,
                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let email = dict["email"] as? String else {
@@ -246,7 +256,7 @@ final class GoogleDriveBackupService {
         ]
         req.httpBody = body.map { "\($0.key)=\($0.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")" }
             .joined(separator: "&").data(using: .utf8)
-        URLSession.shared.dataTask(with: req) { data, response, err in
+        Self.driveSession.dataTask(with: req) { data, response, err in
             if let err = err { completion(.failure(err)); return }
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
             let bodyText = data.flatMap { String(data: $0, encoding: .utf8) } ?? "<no body>"
@@ -300,7 +310,7 @@ final class GoogleDriveBackupService {
         ]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: req) { data, _, err in
+        Self.driveSession.dataTask(with: req) { data, _, err in
             if let err = err { completion(.failure(err)); return }
             guard let data = data,
                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -332,7 +342,7 @@ final class GoogleDriveBackupService {
             var req = URLRequest(url: URL(string: "https://www.googleapis.com/drive/v3/files/\(id)")!)
             req.httpMethod = "DELETE"
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            URLSession.shared.dataTask(with: req) { _, resp, err in
+            Self.driveSession.dataTask(with: req) { _, resp, err in
                 if let err = err {
                     NSLog("[DriveBackup] duplicate-cleanup delete failed for \(id): \(err.localizedDescription)")
                 } else if let http = resp as? HTTPURLResponse,
@@ -363,7 +373,7 @@ final class GoogleDriveBackupService {
         body.append("--\(boundary)\r\nContent-Type: application/json\r\n\r\n\(json)\r\n--\(boundary)--\r\n".data(using: .utf8)!)
         req.httpBody = body
 
-        URLSession.shared.dataTask(with: req) { _, resp, err in
+        Self.driveSession.dataTask(with: req) { _, resp, err in
             if let err = err { completion(.failure(err)); return }
             if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 completion(.failure(self.errorString("Upload failed: HTTP \(http.statusCode)")))
@@ -380,7 +390,7 @@ final class GoogleDriveBackupService {
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = json.data(using: .utf8)
-        URLSession.shared.dataTask(with: req) { _, resp, err in
+        Self.driveSession.dataTask(with: req) { _, resp, err in
             if let err = err { completion(.failure(err)); return }
             if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 completion(.failure(self.errorString("Upload (replace) failed: HTTP \(http.statusCode)")))
@@ -396,7 +406,7 @@ final class GoogleDriveBackupService {
         comps.queryItems = [URLQueryItem(name: "alt", value: "media")]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: req) { data, _, err in
+        Self.driveSession.dataTask(with: req) { data, _, err in
             if let err = err { completion(.failure(err)); return }
             guard let data = data, let s = String(data: data, encoding: .utf8) else {
                 completion(.success(nil)); return
@@ -642,7 +652,7 @@ final class GoogleDriveBackupService {
         ]
         var req = URLRequest(url: comps.url!)
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        URLSession.shared.dataTask(with: req) { data, _, err in
+        Self.driveSession.dataTask(with: req) { data, _, err in
             if let err = err { completion(.failure(err)); return }
             guard let data = data,
                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -671,7 +681,7 @@ final class GoogleDriveBackupService {
         body.append("--\(boundary)\r\nContent-Type: application/json\r\n\r\n\(json)\r\n--\(boundary)--\r\n".data(using: .utf8)!)
         req.httpBody = body
 
-        URLSession.shared.dataTask(with: req) { _, resp, err in
+        Self.driveSession.dataTask(with: req) { _, resp, err in
             if let err = err { completion(.failure(err)); return }
             if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 completion(.failure(self.errorString("Upload failed: HTTP \(http.statusCode)")))
@@ -688,7 +698,7 @@ final class GoogleDriveBackupService {
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = json.data(using: .utf8)
-        URLSession.shared.dataTask(with: req) { _, resp, err in
+        Self.driveSession.dataTask(with: req) { _, resp, err in
             if let err = err { completion(.failure(err)); return }
             if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 completion(.failure(self.errorString("Upload (replace) failed: HTTP \(http.statusCode)")))
