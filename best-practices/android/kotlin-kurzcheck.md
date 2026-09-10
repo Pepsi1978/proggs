@@ -22,3 +22,4 @@
 | 8 | Annotation-Processing | KSP2 statt KAPT (KSP1 ab 2.3 inkompatibel) | §10 |
 | 9 | Release minifizieren | R8 fullMode, schmale keep-Rules, Release IMMER testen | §10 |
 | 10 | Typsichere IDs / Vorbedingungen | `value class` fuer IDs; `require/check/error`; `!!` vermeiden | §1, §3 |
+| 11 | Drag & Drop / Listen umsortieren in Android-/Kotlin-Apps | Immer Franks bestätigten GenialeIdeen-Standard übernehmen: gerade Karte, weiches Nachrücken, stabile Einfügeplätze und Randscrollen | [Jetpack Compose §5.1](jetpack-compose.md#51-drag--drop--verbindlicher-standard-für-android-kotlin-apps) |

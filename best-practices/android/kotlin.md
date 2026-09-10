@@ -1,6 +1,7 @@
 # Kotlin — Best Practices
 
 **Stand:** 2026-06-02 (Best-Practices-Recherchelauf, 5 Researcher, offizielle Quellen zuerst).
+**Lokale Ergänzung 2026-09-10:** Franks bestätigter Android-Drag-&-Drop-Standard ist in den Kurzcheck verlinkt; keine neue Versionsrecherche.
 **Versions-Anker (live ermittelt):** Kotlin-CLI **2.3.20** (JRE 21), Projekt-Plugin **2.1.0**,
 KSP **2.1.0-1.0.29**, AGP **8.7–8.10**, Compose BOM **2025.01 / 2026.03**, JDK **21**.
 kotlinx.coroutines **1.11.0**, kotlinx.collections.immutable **0.4.x**.
@@ -32,6 +33,7 @@ kotlinx.coroutines **1.11.0**, kotlinx.collections.immutable **0.4.x**.
 | 8 | Annotation-Processing | KSP2 statt KAPT (KSP1 ab 2.3 inkompatibel) | §10 |
 | 9 | Release minifizieren | R8 fullMode, schmale keep-Rules, Release IMMER testen | §10 |
 | 10 | Typsichere IDs / Vorbedingungen | `value class` fuer IDs; `require/check/error`; `!!` vermeiden | §1, §3 |
+| 11 | Drag & Drop / Listen umsortieren in Android-/Kotlin-Apps | Immer Franks bestätigten GenialeIdeen-Standard übernehmen: gerade Karte, weiches Nachrücken, stabile Einfügeplätze und Randscrollen | [Jetpack Compose §5.1](jetpack-compose.md#51-drag--drop--verbindlicher-standard-für-android-kotlin-apps) |
 
 ---
 

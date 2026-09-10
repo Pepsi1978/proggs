@@ -2,6 +2,7 @@
 
 **Stand:** 2026-06-02 (Best-Practices-Recherchelauf, 7 Researcher, offizielle Quellen zuerst).
 **Lokale Ergänzung 2026-09-07:** Zeichenobjekt-Caching und Animationsneutralität in §11; keine neue Web-Recherche oder Versionsaktualisierung.
+**Lokale Ergänzung 2026-09-10, 12:57 Uhr:** Von Frank bestätigter Drag-&-Drop-Standard für Android-/Kotlin-Apps in §5.1; Quelle ist die lokale Referenz GenialeIdeen 1.5.14, keine neue Web-Recherche.
 **Versions-Anker (live ermittelt aus den `libs.versions.toml`):**
 - **BestJournalAndroid:** Compose **BOM 2025.01.01** (UI ~1.7.6, Material3 1.3.1), Kotlin 2.1.0,
   Compose-Compiler-Plugin 2.1.0, navigation-compose 2.8.7, lifecycle-runtime-compose 2.8.7,
@@ -39,6 +40,7 @@
 | 6 | Liste reaktiv halten | `mutableStateListOf` statt `mutableStateOf(list)` | §3 |
 | 7 | Side-Effect waehlen | Richtige API je Fall; Keys = gelesene Werte; kritisch in `viewModelScope` | §4 |
 | 8 | Lazy-Liste / Pager | Stabiler eindeutiger `key`+`contentType`; `fillParentMaxSize()` | §5 |
+| 15 | Drag & Drop / Reihenfolge in Android-/Kotlin-Apps | Franks Standard: gerade, sichtbare Karte; feste Viewport-Geste; reale Layoutplätze; weiche Nachbarn; bidirektionales Randscrollen | §5.1 |
 | 9 | Modifier-Reihenfolge | Layout → `clip`→`background`→`border` → `clickable`; eigene via `Modifier.Node` | §6 |
 | 10 | Theming / Insets | `dynamicColor`+API-Guard; Scaffold-`innerPadding`, keine Doppel-Insets | §7 |
 | 11 | Navigation | type-safe Routes, nur IDs; geteiltes VM am Parent-Entry | §8 |
@@ -61,6 +63,7 @@ funktionserhaltende Loesung; dieser Abschnitt sagt, wie man ihn von vornherein v
 | §3 State & `remember`/`rememberSaveable`/`derivedStateOf` | §2 (2.1–2.11) |
 | §4 Side-Effects | §3 (3.1–3.10); Crash §6.7 (Background-Write) |
 | §5 Lazy-Layouts & Pager | §4 (4.1–4.8); Crash §6.1/§6.2 (nested infinity), §6.6 (SubcomposeLayout) |
+| §5.1 Drag & Drop — verbindlicher Projektstandard | §4.9 (Sprünge, Flattern, falscher Scrollanker beim Umsortieren) |
 | §6 Modifier | §5 (5.1–5.2) |
 | §7 Material3, Theming & Insets | §8 (8.1–8.6) |
 | §8 Navigation-Compose | §7 (7.1–7.9) |
@@ -285,6 +288,135 @@ Parameter (Key) des Effekts — oder per `rememberUpdatedState`."
 - **`PullToRefreshBox`** (Material3 1.3+, in beiden BOMs) statt Accompanist-`SwipeRefresh`
   (deprecated); `PullToRefreshContainer` aus M3 1.2 wurde durch `PullToRefreshBox`/`Modifier.pullToRefresh`
   ersetzt. *(offiziell: material3.pulltorefresh API)*
+
+---
+
+### 5.1 Drag & Drop — verbindlicher Standard für Android-/Kotlin-Apps
+
+**Geltung:** Bei künftigem Implementieren oder Überarbeiten von Drag & Drop zum **Umsortieren von
+Listen** dieses Verhalten standardmäßig übernehmen, sofern Frank nicht ausdrücklich etwas anderes
+vorgibt. Das Interaktionsziel gilt auch für andere Android-UI-Techniken; die folgende konkrete
+Referenz verwendet Kotlin und Jetpack Compose mit einer vertikalen `LazyColumn`. Für Grids,
+horizontale Listen oder appübergreifenden Datentransfer muss die Geometrie entsprechend angepasst
+werden; die vertikale Nachbarlogik ist dafür kein unverändert einsetzbarer Algorithmus.
+
+**Herkunft / Evidenz: lokal, vom Benutzer bestätigt.** Frank am 10.09.2026 nach Installation:
+„Genauso soll Drag & Drop in Android-Apps, in Kotlin-Apps funktionieren.“
+Referenz: **GenialeIdeen 1.5.14**, Fold8 **SM-F971B**, Commit **`0a77c0571`**.
+Optimierter Build und Installation erfolgreich; qualitative Bestätigung durch Frank, keine
+instrumentierte Performance-Messung oder allgemeine Herstellerempfehlung.
+
+#### Gewünschtes sichtbares Verhalten
+
+- **Gerade und in Originalgröße:** keine Neigung, Drehung oder Vergrößerung der gezogenen Karte.
+- **Direkte Fingerführung:** am Griff lang drücken und ziehen. Die Karte folgt ohne künstliche
+  Verzögerung dem Finger; Nachbarkarten rücken weich auseinander und zeigen den Einfügeplatz.
+- **Nachbarn lesbar lassen:** keine pauschale Abdunklung oder Halbtransparenz der anderen Karten.
+  Die darüberliegende Karte bleibt soweit im Sichtfenster vorhanden erkennbar.
+- **Im Listenbereich bleiben:** am Rand die Darstellung begrenzen, während die tatsächliche
+  Fingerposition weiter erfasst wird. Auch bei einem Finger über der Kopfleiste bleibt die
+  gezogene Karte am oberen Listenrand sichtbar. Voraussetzung für vollständige Sichtbarkeit:
+  Die Karte passt in die Höhe des nutzbaren Viewports.
+- **In beide Richtungen scrollen:** am oberen und unteren Rand kontinuierlich weiterscrollen;
+  Zurückziehen und Richtungswechsel funktionieren in derselben Geste. Erster und letzter Platz
+  müssen erreichbar sein. Nach dem Ablegen ist normales Scrollen sofort wieder möglich.
+- **Weiches Ablegen:** auf genau den durch die lokale Reihenfolge bestimmten Platz gleiten,
+  ohne Zurückspringen, Flattern oder erneute Einblend-/Kippanimation.
+
+#### Technische Arbeitsweise — diese Bausteine zusammen übernehmen
+
+1. **Ein Zustand über der Liste:** `ReorderState` hält aktive ID, Fingerposition, Griffversatz,
+   sichtbare Kartenoberkante, Ablegefortschritt und Coroutine-Job. Mit `remember(listState,
+   listKey)` an die Liste bzw. Kategorie binden, nicht an einzelne recycelte Zeilen.
+2. **Stabile IDs:** `items(..., key = { it.id })`; IDs statt Indizes als Identität. Die lokale
+   Reihenfolge lebt oberhalb der Items, wird während des Ziehens unmittelbar aktualisiert und
+   beim Loslassen über ViewModel/Repository transaktional gespeichert. Inhaltsupdates aus Room
+   dürfen die laufende Reihenfolge nicht überschreiben; vorhandene IDs erhalten, gelöschte
+   entfernen und neue aufnehmen. Nicht `remember(liste)` für den aktiven Reorder-State verwenden.
+3. **Geste am festen Viewport:** Der Griff registriert nur seine Trefferfläche. `pointerInput`
+   sitzt an der Liste, nicht an der sich bewegenden Karte. Ablauf: `awaitEachGesture` →
+   `awaitFirstDown` → Griff-Treffertest → `awaitLongPressOrCancellation` → `drag`. Übernommene
+   Bewegungen konsumieren; vor dem langen Drücken normales Scrollen zulassen. Aktuelle
+   Callbacks über `rememberUpdatedState` bereitstellen, ohne den Handler bei jedem Tausch neu
+   zu starten. Griffregistrierungen mit `DisposableEffect` entfernen.
+4. **Eine Geometriequelle:** ausschließlich aktuelle `listState.layoutInfo.visibleItemsInfo`
+   mit `key`, `index`, `offset`, `size` für Tausch und Darstellung nutzen. Keine gespeicherten
+   Root-Y-Werte von Zeilen und keine Summen aus Nachbarhöhen. Dadurch sind reale Abstände,
+   unterschiedliche Kartenhöhen und das aktuelle Scrollen berücksichtigt.
+5. **Koordinaten sauber umrechnen:** In der Referenz ist
+   `fingerY = pointerY + layout.viewportStartOffset` und beim Greifen
+   `grabOffset = fingerY - startTop`. Während des Ziehens:
+   `visualTop = clamp(fingerY - grabOffset, sichtbarerAnfang, sichtbaresEnde - item.size)`.
+   Beim Wiederaufnehmen einer gerade abgelegten Karte deren aktuelle visuelle Position als
+   `startTop` verwenden. Content-Padding und Listenenden in die Grenzen einbeziehen.
+6. **Zeichenversatz statt doppelte Kompensation:**
+   `translationY = (visualTop - item.offset) * (1 - landingProgress)` direkt in
+   `graphicsLayer { ... }` lesen. Während des Ziehens ist `landingProgress = 0`.
+   Scrollbewegungen sind bereits im aktuellen `item.offset` enthalten: NICHT zusätzlich
+   `scrollBy`-Rückgabewerte zum Kartenversatz addieren. Hochfrequente Reads bleiben im Layer.
+7. **Nachbartausch mit Layout-Sperre:** Nach oben tauschen, wenn die Kartenoberkante die Mitte
+   des oberen Nachbarn überschreitet; nach unten, wenn die Kartenunterkante die Mitte des
+   unteren Nachbarn überschreitet. Immer die logischen Layoutplätze vergleichen, nicht die
+   gerade animierten Pixelpositionen. Vor jedem Tausch müssen `item.index` und der Index der
+   aktiven ID in der lokalen Reihenfolge übereinstimmen; auch den Nachbar-Key gegenprüfen.
+   Nach einem Tausch bis zum passenden neuen Layout warten. Keine `while`-Tauschschleife mit
+   alten Messwerten und keine fast vollständige Überdeckung (ehemals 92 %) als Schwelle.
+8. **Sichtfenster beim Tausch erhalten:** Direkt vor der lokalen Listenmutation
+   `listState.requestScrollToItem(firstVisibleItemIndex, firstVisibleItemScrollOffset)`
+   aufrufen. Dadurch bleibt der numerische Scrollanker erhalten, anstatt dass LazyColumn
+   dem umsortierten ersten sichtbaren Key folgt. Nicht bei jedem Tausch an Listenanfang springen.
+9. **Nachbarn animieren, aktive Karte direkt führen:** Auf den äußersten Lazy-Item-Container
+   zuerst `.reorderRow(state, id)`, dann `.animateItem(...)` legen. `zIndex = 1` für die aktive
+   Karte auf dieser Ebene; ein innerer Karten-zIndex reicht nicht über benachbarte Item-Wrapper.
+   `placementSpec = null` für die aktive bzw. gerade abgelegte Karte, sonst die unten stehende
+   gedämpfte Feder. `fadeInSpec = null`, `fadeOutSpec = null`; keine zusätzliche gestaffelte
+   Einblend-/Skalierungsanimation um die sortierbaren Zeilen legen.
+10. **Zeitbasiertes Randscrollen:** Ein per `LaunchedEffect(state, state.dragging, density)`
+    gestarteter `withFrameNanos`-Loop läuft nur während des Ziehens, auch bei stillstehendem
+    Finger. Stärke aus der **ungeklemmten Fingerposition**, nicht aus der begrenzten Karte
+    ermitteln. `delta = strength * abs(strength) * maxSpeedPxPerSecond * deltaSeconds`,
+    Stärke in `[-1, 1]`. Framezeit auf höchstens 32 ms begrenzen, um nach Hängern nicht zu springen.
+    Danach Sichtposition und Tauschziel aktualisieren. Der Referenz-Loop nutzt
+    `dispatchRawDelta`, damit `requestScrollToItem` keinen über die ganze Geste gehaltenen
+    `scroll {}`-Block abbricht. Das ist eine bewusste interne Lösung für diese kontrollierte
+    vertikale Liste: konkurrierende Gesten müssen konsumiert sein. Bei verschachteltem Scrollen,
+    Reverse-Layout oder anderer Scrollarchitektur deren Koordination ausdrücklich anpassen.
+11. **Ablegen und Abbruch bereinigen:** Randloop sofort beenden, Reihenfolge einmal speichern,
+    den letzten Layoutwechsel abwarten, dann `landingProgress` von 0 auf 1 animieren. Erst
+    danach aktive ID und Fortschritt löschen. `finally` räumt auch bei Abbruch auf; ein
+    Generationszähler verhindert, dass eine alte abgebrochene Ablegeanimation eine neue
+    Ziehgeste zurücksetzt. Beim Verlassen der Liste Jobs und Trefferflächen freigeben.
+12. **Bewegungsreduktion respektieren:** Nachbaranimation ausschalten, Ablegedauer auf 0 setzen;
+    direkte Fingerführung und Randscrollen bleiben nutzbar.
+
+#### Bewährte Startwerte aus GenialeIdeen 1.5.14
+
+| Größe | Referenzwert |
+|---|---|
+| Nachbaranimation | `spring(dampingRatio = 1f, stiffness = 450f)` |
+| Ablegen | `tween(180)`; reduziert: `tween(0)` |
+| Randzone | `88.dp`, höchstens ein Drittel der Viewporthöhe |
+| Maximale Scrollgeschwindigkeit | `560.dp` pro Sekunde, quadratischer Anstieg zur Kante |
+| Maximal berücksichtigte Framezeit | `0.032f` Sekunden |
+| Griff-Trefferfläche | `40.dp × 48.dp`, sichtbares Icon `22.dp` |
+| Kartenabstand der Referenz | `12.dp`; aus realem Layout berücksichtigen, nicht hart in den Algorithmus schreiben |
+| Darstellung | `rotationZ = 0`, `scaleX = scaleY = 1`, volle Deckkraft |
+
+**Wiederverwendung:** Die zusammengehörigen Quelldateien vor Umsetzung lesen:
+- [`GenialeIdeen/.../ui/DragReorder.kt`](../../GenialeIdeen/app/src/main/java/de/frank/genialeideen/ui/DragReorder.kt)
+  — Zustand, Viewport-Geste, Griffregistrierung, Randscrollen und Ablegen.
+- [`GenialeIdeen/.../ui/ListenScreen.kt`](../../GenialeIdeen/app/src/main/java/de/frank/genialeideen/ui/ListenScreen.kt)
+  — lokale ID-Reihenfolge, äußere Item-Wrapper, `animateItem`, Griff und Speicherung.
+- Reproduzierbarer Ausgangsstand: Commit `0a77c0571`; neue Anwendungen an ihrer eigenen
+  Compose-Version und Listenarchitektur ausrichten, Interaktionsstandard beibehalten.
+- Fehlerursachen und Prävention: [Bug-Almanach §4.9](../../bugs/android/jetpack-compose.md#49-drag--drop-springt-flattert-oder-verliert-die-karte-am-listenrand).
+
+**Abnahmeszenarien für künftige Umsetzungen:** Mehrere Plätze langsam und schnell verschieben;
+am oberen und unteren Rand halten; innerhalb derselben Geste die Richtung wechseln; auf dem ersten
+und letzten Platz ablegen; unterschiedliche Kartenhöhen; erneut greifen während des Ablegens;
+normales Scrollen danach; Inhaltsupdates während des Ziehens; reduzierte Bewegung. Das beschreibt
+das erforderliche Verhalten und ist keine Behauptung, dass jede Randbedingung der Referenz
+instrumentiert getestet wurde.
 
 ---
 

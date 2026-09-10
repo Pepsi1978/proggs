@@ -14,6 +14,7 @@
 |---|--------------------|--------------|----------|
 | 1 | Endlos-Recompose / ANR / OOM | State nie in Composition schreiben, nur in Events/Effekten | §1.1 |
 | 2 | Lazy-Liste (Insert/Reorder, Item-Anim) | Immer stabiler `key = { it.id }` an `items()` | §4.1 |
+| 23 | Drag & Drop springt/flattert, Karte verschwindet am Rand | Viewport-feste Geste + aktuelle Layoutplätze + Tausch erst nach Layout; Franks Referenzstandard in Best Practices §5.1 übernehmen | §4.9 |
 | 3 | Crash „Key … was already used" | Keys eindeutig machen (`distinctBy`/zusammengesetzt) | §4.2 |
 | 4 | State weg nach Rotation/Recycling | `rememberSaveable` (klein!) oder ViewModel statt `remember` | §2.1 |
 | 5 | Crash `TransactionTooLargeException` | Nur IDs/kleine Werte saven, grosses in ViewModel/Room | §2.7 |

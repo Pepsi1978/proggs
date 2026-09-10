@@ -24,6 +24,7 @@
 > (unbedingt erzeugte InfiniteTransition tickt in jedem Zustand — Energie) — CortexAndroid-Funde.
 > **Ergaenzt 2026-07-20:** §8.8 (gewichteter Langtext-Editor kollabiert bei `adjustResize` + IME).
 > **Ergänzt 2026-09-07:** §10.10 (wiederholter Aufbau von Schattenpfad, Paint und BlurMaskFilter beim Zeichnen; statischer Fund in Experimente).
+> **Ergänzt 2026-09-10:** §4.9 (Drag-&-Drop-Sprünge und Flattern; lokaler GenialeIdeen-Fix 1.5.14, von Frank als zukünftiger Standard bestätigt).
 >
 > **Versions-Horizont (Re-Recherche 2026-06-24):** BOM ist inzwischen bei **2026.06.00** (2026-06-17):
 > Compose UI/foundation/animation/runtime **1.11.3**, **Material3 1.4.0** (stabil), **1.12.0-beta01** in
@@ -57,6 +58,7 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 |---|--------------------|--------------|----------|
 | 1 | Endlos-Recompose / ANR / OOM | State nie in Composition schreiben, nur in Events/Effekten | §1.1 |
 | 2 | Lazy-Liste (Insert/Reorder, Item-Anim) | Immer stabiler `key = { it.id }` an `items()` | §4.1 |
+| 23 | Drag & Drop springt/flattert, Karte verschwindet am Rand | Viewport-feste Geste + aktuelle Layoutplätze + Tausch erst nach Layout; Franks Referenzstandard in Best Practices §5.1 übernehmen | §4.9 |
 | 3 | Crash „Key … was already used" | Keys eindeutig machen (`distinctBy`/zusammengesetzt) | §4.2 |
 | 4 | State weg nach Rotation/Recycling | `rememberSaveable` (klein!) oder ViewModel statt `remember` | §2.1 |
 | 5 | Crash `TransactionTooLargeException` | Nur IDs/kleine Werte saven, grosses in ViewModel/Room | §2.7 |
@@ -335,6 +337,31 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 **Diagnose-Tipp:** Zwei Sonden setzen — eine im State-Holder, eine im Composable, beide mit den ersten 3 Namen. Zeigen BEIDE die neue Reihenfolge und der Bildschirm nicht, ist es die Verankerung und kein State-Problem.
 **Erlebt:** StackLaborWerftStudio 08/2026 — Umschalten fett-/wasserloeslich.
 **Quelle:** developer.android.com/develop/ui/compose/lists (Item-Keys und Scroll-Position)
+
+### 4.9 Drag & Drop springt, flattert oder verliert die Karte am Listenrand
+
+**Symptom:** Karte springt beim Umsortieren, erscheint schräg, Nachbarn flattern oder verdecken sie;
+am oberen Rand verschwindet sie und beim Richtungswechsel scrollt die Liste unzuverlässig.
+**Ursache:** Lokaler Implementierungsfehler: Nachbarhöhen ohne Kartenabstände aufsummiert,
+mit veralteten Messwerten weitergetauscht, Root-Positionen und zusätzliche Scrollkompensation
+vermischt. Pointer-Handler auf dem bewegten Griff statt am festen Viewport. LazyColumn folgt beim
+Tausch dem ersten sichtbaren Key. Innerer zIndex und zusätzliche Dreh-/Skalierungseffekte
+verschärfen die Darstellung; ohne Platzwechselanimation springen Nachbarkarten.
+**Versionen:** GenialeIdeen bis 1.5.13; behoben in 1.5.14, Kotlin 2.1.0 / Compose BOM 2025.01.01.
+Kein nachgewiesener Framework-Bug; ein Bibliotheksupdate ersetzt die Korrektur nicht.
+**FIX:** Geste auf dem Viewport, Trefferfläche am Griff. Aktuelle `visibleItemsInfo` als einzige
+Geometriequelle, `translationY = visualTop - item.offset`, keine doppelte Scrollkompensation.
+Nachbar-Key und Daten-/Layoutindex vor dem Tausch abgleichen; nach einem Tausch auf das neue
+Layout warten. Numerischen Scrollanker per `requestScrollToItem` erhalten. Gerade Karte im
+Viewport begrenzen, volle Deckkraft; äußerer Item-zIndex, gedämpftes `animateItem` nur für
+Nachbarn. Zeitbasiertes Randscrollen aus der ungeklemmten Fingerposition in beide Richtungen;
+sanftes Ablegen und Generationsschutz gegen veraltete Animations-Cleanups. Lokale Reihenfolge
+bei Inhaltsupdates erhalten, bei Drop transaktional speichern.
+**Prävention / genaue Arbeitsweise:** [Best Practices §5.1](../../best-practices/android/jetpack-compose.md#51-drag--drop--verbindlicher-standard-für-android-kotlin-apps)
+enthält den verbindlichen Benutzerstandard einschließlich Formeln, Startwerten und Integrationspunkten.
+**Quelle:** lokal — GenialeIdeen `DragReorder.kt`, `ListenScreen.kt`, `bug-cases.jsonl`, Commit
+`0a77c0571`; optimierter Build und Installation auf Fold8 SM-F971B, anschließend von Frank am
+10.09.2026 bestätigt. Keine neue Web-Recherche oder instrumentierte Performance-Messung.
 
 ### 4.3 Verschachteltes gleichachsiges Scrollen → Crash „infinity constraints"
 **Symptom:** `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints, which is disallowed.` — siehe ausfuehrlich **§6.1** (Crash-Sektion).
@@ -824,6 +851,7 @@ sagt, wie man jeden dieser Bugs von vornherein vermeidet. Pro Bug-Abschnitt der 
 | §2 State & `remember` (2.1–2.13) | §3 State & `remember`/`rememberSaveable`/`derivedStateOf`; §2.12/§2.13 → §1 Architektur & UDF |
 | §3 Side-Effects (3.1–3.10) | §4 Side-Effects (richtige API je Fall) |
 | §4 Lazy-Layouts & Pager (4.1–4.8) | §5 Lazy-Layouts & Pager |
+| §4.9 Drag-&-Drop-Sprünge / Flattern / Scrollanker | §5.1 Drag & Drop — verbindlicher Standard für Android-/Kotlin-Apps |
 | §5 Modifier (5.1–5.2) | §6 Modifier |
 | §6 Crashes (6.1/6.2 nested, 6.6 Subcompose) | §5 Lazy-Layouts; (6.3/6.4/6.5 Context/Owner/Kontext) → §1/§11 |
 | §6.7 Background-Write | §4 Side-Effects |
