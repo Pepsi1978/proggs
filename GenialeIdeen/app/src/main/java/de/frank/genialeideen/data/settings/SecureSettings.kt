@@ -38,6 +38,9 @@ class SecureSettings(context: Context) : Closeable {
     private val _themeFlow = MutableStateFlow(readString(Keys.THEME, Defaults.THEME))
     val themeFlow: StateFlow<String> = _themeFlow.asStateFlow()
 
+    private val _ausrichtungFlow = MutableStateFlow(ausrichtung)
+    val ausrichtungFlow: StateFlow<String> = _ausrichtungFlow.asStateFlow()
+
     private val _appLockEnabledFlow = MutableStateFlow(
         preferences?.getBoolean(Keys.APP_LOCK_ENABLED, Defaults.APP_LOCK_ENABLED)
             ?: Defaults.APP_LOCK_ENABLED,
@@ -46,6 +49,7 @@ class SecureSettings(context: Context) : Closeable {
 
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
         when (key) {
+            Keys.AUSRICHTUNG -> _ausrichtungFlow.value = ausrichtung
             Keys.THEME -> _themeFlow.value = prefs.getString(Keys.THEME, Defaults.THEME) ?: Defaults.THEME
             Keys.APP_LOCK_ENABLED ->
                 _appLockEnabledFlow.value = prefs.getBoolean(Keys.APP_LOCK_ENABLED, Defaults.APP_LOCK_ENABLED)
@@ -185,6 +189,15 @@ class SecureSettings(context: Context) : Closeable {
 
     // ---- Darstellung und Sicherheit ----
 
+    var ausrichtung: String
+        get() = readString(Keys.AUSRICHTUNG, Defaults.AUSRICHTUNG)
+            .takeIf { it in ALLOWED_AUSRICHTUNGEN } ?: Defaults.AUSRICHTUNG
+        set(value) {
+            val normalized = value.takeIf { it in ALLOWED_AUSRICHTUNGEN } ?: Defaults.AUSRICHTUNG
+            writeString(Keys.AUSRICHTUNG, normalized)
+            _ausrichtungFlow.value = normalized
+        }
+
     var theme: String
         get() = readString(Keys.THEME, Defaults.THEME)
         set(value) {
@@ -267,6 +280,7 @@ class SecureSettings(context: Context) : Closeable {
         const val REASONING = "reasoning"
         const val CHAT_GPT_CONNECTED_AT = "chat_gpt_connected_at"
         const val THEME = "theme"
+        const val AUSRICHTUNG = "ausrichtung"
         const val SCHRIFTGROESSE = "schriftgroesse"
         const val APP_LOCK_ENABLED = "app_lock_enabled"
         const val APP_LOCK_DELAY = "app_lock_delay_minutes"
@@ -284,6 +298,7 @@ class SecureSettings(context: Context) : Closeable {
         const val MODEL = "gpt-5.6-terra"
         const val REASONING = "medium"
         const val THEME = "light"
+        const val AUSRICHTUNG = "automatisch"
         const val APP_LOCK_ENABLED = false
         const val APP_LOCK_DELAY = 1
     }
@@ -292,6 +307,7 @@ class SecureSettings(context: Context) : Closeable {
         const val STORE_NAME = "geniale_ideen_secure_prefs"
         /** Genau zwei Modi — die App folgt der Systemvorgabe bewusst nicht (Baustein A). */
         val ALLOWED_THEMES = setOf("light", "dark")
+        val ALLOWED_AUSRICHTUNGEN = setOf("hochformat", "querformat", "automatisch")
         const val MIN_TTS_SPEECH_RATE = 0.5f
         const val MAX_TTS_SPEECH_RATE = 2.0f
     }

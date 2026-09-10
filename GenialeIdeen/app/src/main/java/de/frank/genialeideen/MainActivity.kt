@@ -2,6 +2,7 @@ package de.frank.genialeideen
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -60,11 +61,21 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private fun setzeAusrichtung(wert: String) {
+        val gewuenscht = when (wert) {
+            "hochformat" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            "querformat" -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            else -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        }
+        if (requestedOrientation != gewuenscht) requestedOrientation = gewuenscht
+    }
+
     private var mikrofonErlaubt by mutableStateOf(false)
     private lateinit var sperrPrompt: BiometricPrompt
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setzeAusrichtung(container.settings.ausrichtung)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         mikrofonErlaubt = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
@@ -81,6 +92,8 @@ class MainActivity : FragmentActivity() {
         setContent {
             val theme by viewModel.theme.collectAsStateWithLifecycle()
             val schrift by viewModel.schriftgroesse.collectAsStateWithLifecycle()
+            val ausrichtung by container.settings.ausrichtungFlow.collectAsStateWithLifecycle()
+            LaunchedEffect(ausrichtung) { setzeAusrichtung(ausrichtung) }
             val gesperrt by container.appLockManager.locked.collectAsStateWithLifecycle()
 
             GenialeIdeenTheme(themeWahl = theme, schriftSkalierung = schrift) {

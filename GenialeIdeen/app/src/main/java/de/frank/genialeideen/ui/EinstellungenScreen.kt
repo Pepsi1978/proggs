@@ -83,6 +83,7 @@ fun EinstellungenScreen(
     val gold = LocalGold.current
     val zwischenablage = LocalClipboardManager.current
     val settings = viewModel.settings
+    val ausrichtung by settings.ausrichtungFlow.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val schrift by viewModel.schriftgroesse.collectAsState()
     val anmeldung by viewModel.anmeldung.collectAsState()
@@ -450,7 +451,18 @@ fun EinstellungenScreen(
             }
 
             // ---- Darstellung ----
-            Klappblock("Darstellung", "Hell, dunkel und Schriftgrösse") {
+            Klappblock("Darstellung", "Ausrichtung, Hell, Dunkel und Schriftgröße") {
+                Klappmenue(
+                    beschriftung = "Bildschirmausrichtung",
+                    eintraege = listOf(
+                        KlappEintrag(id = "hochformat", name = "Hochformat", zusatz = "bleibt immer hochkant"),
+                        KlappEintrag(id = "querformat", name = "Querformat", zusatz = "bleibt immer quer"),
+                        KlappEintrag(id = "automatisch", name = "Automatisch", zusatz = "passt sich beim Drehen an"),
+                    ),
+                    gewaehlt = ausrichtung,
+                    aufWahl = { settings.ausrichtung = it },
+                )
+                Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Auswahlchip("Hell", theme == "light") { viewModel.setzeTheme("light") }
                     Auswahlchip("Dunkel", theme == "dark") { viewModel.setzeTheme("dark") }

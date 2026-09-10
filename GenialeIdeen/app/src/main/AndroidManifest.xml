@@ -40,6 +40,10 @@
             android:exported="true"
             android:theme="@style/Theme.GenialeIdeen"
             android:windowSoftInputMode="adjustResize">
+            <!-- Android 16: Auch auf dem aufgeklappten Fold die gewählte Ausrichtung beachten. -->
+            <property
+                android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
+                android:value="true" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
