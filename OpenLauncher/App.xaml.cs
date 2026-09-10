@@ -50,6 +50,9 @@ public partial class App : Application
         base.OnStartup(e);
         Services.Logger.Instance.Info("App", "OnStartup", "OpenLauncher gestartet");
 
+        // Ein Android-Debug-Key fuer alle Rechner, sonst verweigert das Handy Updates nach Rechnerwechsel.
+        AndroidDebugKeystoreSync.Run();
+
         // Gespeichertes Design anwenden, bevor das Hauptfenster gerendert wird (kein Umschalt-Flackern).
         var layout = LayoutSettings.Load();
         var theme = string.Equals(layout.Theme, "Light", StringComparison.OrdinalIgnoreCase)

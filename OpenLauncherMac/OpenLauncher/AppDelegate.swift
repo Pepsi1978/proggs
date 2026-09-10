@@ -29,6 +29,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Logger.shared.info("AppDelegate", "applicationDidFinishLaunching", "OpenLauncher gestartet")
 
+        // Ein Android-Debug-Key fuer alle Rechner, sonst verweigert das Handy Updates nach Rechnerwechsel.
+        AndroidDebugKeystoreSync.run()
+
         // Gespeichertes Design anwenden, BEVOR das Hauptfenster gezeichnet wird (kein Umschalt-Flackern).
         let layout = LayoutSettings.load()
         let theme: AppTheme = layout.theme.caseInsensitiveCompare("Light") == .orderedSame ? .light : .dark
