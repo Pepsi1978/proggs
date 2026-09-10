@@ -71,21 +71,36 @@ final class OpenRouterService {
     }
 
     func freeModels() async throws -> [ModelEntry] {
+        try await modelCatalog().freeModels
+    }
+
+    /// Kompletter OpenRouter-Katalog, getrennt in regulaere und kostenlose (":free") Modelle.
+    /// Gegenstueck zu GetModelCatalogAsync unter Windows.
+    func modelCatalog(forceRefresh: Bool = false) async throws -> (models: [ModelEntry], freeModels: [ModelEntry]) {
         do {
-            let json = try await Self.fetchModelsJson()
+            let json = try await Self.fetchModelsJson(forceRefresh: forceRefresh)
             guard let data = json.data(using: .utf8),
                   let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let items = root["data"] as? [[String: Any]] else { return [] }
+                  let items = root["data"] as? [[String: Any]] else { return ([], []) }
 
             var models: [ModelEntry] = []
+            var freeModels: [ModelEntry] = []
             for item in items {
-                if let model = Self.parseFreeModel(item) { models.append(model) }
+                guard let (model, isFree) = Self.parseModel(item) else { continue }
+                if isFree {
+                    model.displayName = Self.normalizeFreeModelName(model.displayName)
+                    freeModels.append(model)
+                } else {
+                    models.append(model)
+                }
             }
             models.sort { $0.displayName.lowercased() < $1.displayName.lowercased() }
-            Logger.shared.info("OpenRouterService", "freeModels", "\(models.count) kostenlose OpenRouter-Modelle geladen")
-            return models
+            freeModels.sort { $0.displayName.lowercased() < $1.displayName.lowercased() }
+            Logger.shared.info("OpenRouterService", "modelCatalog",
+                               "\(models.count) regulaere und \(freeModels.count) kostenlose OpenRouter-Modelle geladen")
+            return (models, freeModels)
         } catch {
-            Logger.shared.error("OpenRouterService", "freeModels", "Free-Modellliste fehlgeschlagen: \(error.localizedDescription)")
+            Logger.shared.error("OpenRouterService", "modelCatalog", "Modellkatalog fehlgeschlagen: \(error.localizedDescription)")
             throw error
         }
     }
@@ -121,18 +136,15 @@ final class OpenRouterService {
 
     // ===================== Parser =====================
 
-    private static func parseFreeModel(_ item: [String: Any]) -> ModelEntry? {
-        guard let id = item["id"] as? String, id.lowercased().hasSuffix(":free") else { return nil }
-        guard let pricing = item["pricing"] as? [String: Any] else { return nil }
-        let prompt = parseDouble(pricing, "prompt")
-        let completion = parseDouble(pricing, "completion")
-        if prompt != 0 || completion != 0 { return nil }
+    private static func parseModel(_ item: [String: Any]) -> (ModelEntry, Bool)? {
+        guard let id = item["id"] as? String, !id.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        var isFree = false
+        if id.lowercased().hasSuffix(":free"), let pricing = item["pricing"] as? [String: Any] {
+            isFree = parseDouble(pricing, "prompt") == 0 && parseDouble(pricing, "completion") == 0
+        }
 
         let name = (item["name"] as? String) ?? id
-        return ModelEntry(slug: id,
-                          displayName: normalizeFreeModelName(name),
-                          providerId: "openrouter",
-                          providerName: "OpenRouter")
+        return (ModelEntry(slug: id, displayName: name, providerId: "openrouter", providerName: "OpenRouter"), isFree)
     }
 
     private static func parseThinkingLevels(_ item: [String: Any]) -> [String] {

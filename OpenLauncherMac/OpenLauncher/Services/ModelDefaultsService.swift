@@ -40,7 +40,8 @@ final class ModelDefaultsService {
             guard value.isObject else { continue }
             let entry = ModelDefaultEntry(profileId: value["ProfileId"]?.stringValue ?? "",
                                           workModeId: value["WorkModeId"]?.stringValue ?? "",
-                                          thinkingValue: value["ThinkingValue"]?.stringValue ?? "")
+                                          thinkingValue: value["ThinkingValue"]?.stringValue ?? "",
+                                          cliTargetId: value["CliTargetId"]?.stringValue ?? "")
             let lower = key.lowercased()
             if defaults[lower] == nil { insertionOrder.append(lower) }
             defaults[lower] = entry

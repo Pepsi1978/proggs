@@ -338,7 +338,7 @@ final class CodexResearchService {
                url.port == nil || url.port == 443, let host = url.host?.lowercased() else { return false }
         if host.hasPrefix("community.") || host.hasPrefix("forum.") { return false }
         let domains = ["openai": "openai.com", "codex": "openai.com", "anthropic": "anthropic.com",
-                       "openrouter": "openrouter.ai", "opencode": "opencode.ai", "opencode-go": "opencode.ai",
+                       "openrouter": "openrouter.ai", "opencode": "opencode.ai",
                        "nvidia": "nvidia.com", "google": "ai.google.dev"]
         let allowed = ["models.dev", "opencode.ai"] + (domains[provider.lowercased()].map { [$0] } ?? [])
         return allowed.contains { host == $0 || host.hasSuffix("." + $0) }

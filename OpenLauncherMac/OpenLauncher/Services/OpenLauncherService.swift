@@ -242,6 +242,108 @@ final class OpenLauncherService {
         }
     }
 
+    /// Startet das eigenstaendige Codex CLI (OpenAI) statt OpenCode in einem neuen Terminal-Tab.
+    /// Die Profilregeln stehen bereits in der AGENTS.md des Arbeitsverzeichnisses
+    /// (InstructionProfileService.activateCodexProjectAgents).
+    func launchCodexCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, codexHome: String) throws {
+        let (slug, serviceTier) = Self.resolveCodexModelSlug(model.slug)
+        let effort = Self.normalizeCodexEffort(rawEffort)
+        do {
+            Paths.ensureDirectory(workDir)
+            let tabColor = TerminalLauncher.pickCodexColor()
+            let title = effort == nil ? "Codex-\(tabColor.name)" : "Codex-\(tabColor.name)-\(effort!)"
+            let script = try Self.buildCodexStartScript(slug: slug, workDir: workDir, effort: effort,
+                                                        serviceTier: serviceTier, codexHome: codexHome,
+                                                        tabColor: tabColor, title: title)
+            let terminal = TerminalLauncher.openScript(script, workDir: workDir)
+            Logger.shared.info("OpenLauncherService", "launchCodexCli", "Codex CLI gestartet (\(terminal))",
+                               ["slug": slug, "workDir": workDir, "effort": effort ?? "",
+                                "serviceTier": serviceTier ?? "", "tabColor": tabColor.name])
+        } catch {
+            Logger.shared.error("OpenLauncherService", "launchCodexCli", error.localizedDescription,
+                                ["slug": model.slug, "workDir": workDir])
+            throw error
+        }
+    }
+
+    /// Die "-fast"-Eintraege sind in OpenCode eigene Modelle, im Codex-Katalog dagegen nur eine
+    /// Geschwindigkeitsstufe desselben Modells (service_tier "priority").
+    private static func resolveCodexModelSlug(_ slug: String) -> (String, String?) {
+        let normalized = slug.trimmingCharacters(in: .whitespacesAndNewlines)
+        if normalized.lowercased().hasSuffix("-fast") {
+            return (String(normalized.dropLast("-fast".count)), "priority")
+        }
+        return (normalized, nil)
+    }
+
+    /// Codex kennt nur low/medium/high/xhigh/max/ultra als model_reasoning_effort. "none" und
+    /// "minimal" werden weggelassen - dann gilt der Standardwert des Modells.
+    private static func normalizeCodexEffort(_ effortLevel: String?) -> String? {
+        guard let normalized = normalizeThinkingLevel(effortLevel),
+              ["low", "medium", "high", "xhigh", "max", "ultra"].contains(normalized) else { return nil }
+        return normalized
+    }
+
+    /// Wichtige Schalter:
+    ///   -C <workDir>                  Arbeitswurzel = Projektordner, dort liegt die Profil-AGENTS.md.
+    ///   -c project_doc_max_bytes=...  Codex schneidet Projekt-Dokumente sonst bei 32 KiB ab; der
+    ///                                 Modus-Prompt steht am ENDE und fiele als Erstes weg.
+    ///   --dangerously-bypass-approvals-and-sandbox  Gegenstueck zu Claudes --dangerously-skip-permissions.
+    private static func buildCodexStartScript(slug: String, workDir: String, effort: String?, serviceTier: String?,
+                                              codexHome: String, tabColor: TerminalTabColor, title: String) throws -> String {
+        let tempScript = (Paths.tempDir as NSString)
+            .appendingPathComponent("openlauncher-codex-cli-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()).sh")
+        let script = """
+        #!/bin/zsh
+        # Von OpenLauncher (macOS) erzeugtes Startskript. Loescht sich am Ende selbst.
+        SELF=\(Shell.singleQuoted(tempScript))
+        cleanup() { rm -f "$SELF" 2>/dev/null || true; }
+        trap cleanup EXIT INT TERM
+
+        \(processPriorityScript)
+        \(tabColor.tabColorScript)
+        printf '\\033]0;\(title)\\a'
+
+        cd \(Shell.singleQuoted(workDir)) || exit 1
+
+        # Login-Umgebung laden, damit codex erreichbar ist.
+        \(persistentPathRefreshScript)
+        # Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
+        \(inheritedAgentEnvScrubScript)
+
+        # Eigenes Codex-Zuhause: keine globale AGENTS.md, keine Plugins, keine MCP-Server, keine Hooks.
+        export CODEX_HOME=\(Shell.singleQuoted(codexHome))
+
+        codexArgs=(--dangerously-bypass-approvals-and-sandbox -C \(Shell.singleQuoted(workDir)) -m \(Shell.singleQuoted(slug)) -c 'project_doc_max_bytes=1048576')
+        EFFORT=\(Shell.singleQuoted(effort ?? ""))
+        if [ -n "$EFFORT" ]; then
+            codexArgs+=(-c 'model_reasoning_effort="'"$EFFORT"'"')
+        fi
+        SERVICETIER=\(Shell.singleQuoted(serviceTier ?? ""))
+        if [ -n "$SERVICETIER" ]; then
+            codexArgs+=(-c 'service_tier="'"$SERVICETIER"'"')
+        fi
+
+        AGENTSFILE=\(Shell.singleQuoted((workDir as NSString).appendingPathComponent("AGENTS.md")))
+        if [ -f "$AGENTSFILE" ]; then
+            printf '\\033[90m[OpenLauncher] Profil-AGENTS.md aktiv: %s\\033[0m\\n' "$(head -1 "$AGENTSFILE")"
+        else
+            printf '\\033[33m[OpenLauncher] Achtung: keine AGENTS.md im Arbeitsverzeichnis - Codex startet ohne Profil.\\033[0m\\n'
+        fi
+
+        codex "${codexArgs[@]}"
+
+        # Tab offen lassen (Gegenstueck zu -NoExit unter Windows).
+        cleanup
+        trap - EXIT INT TERM
+        exec /bin/zsh -l
+        """
+        guard Paths.writeAtomic(script, to: tempScript) else {
+            throw LauncherError.message("Startskript konnte nicht geschrieben werden: \(tempScript)")
+        }
+        return tempScript
+    }
+
     // ===================== Startskripte =====================
 
     static func buildClaudeCodeStartScript(modelId: String, workDir: String, effortLevel: String?,

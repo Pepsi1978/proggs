@@ -28,7 +28,7 @@ final class ModelRegistry {
     /// damit eine spaetere manuelle Rueckstellung bestehen bleibt.
     private static let anthropicOneMillionMigrations: [(oldSlug: String, newSlug: String, displayName: String)] = [
         ("claude-opus-5", claudeOpus5Slug, "Claude Opus 5 (1M)"),
-        ("claude-fable-5", "claude-fable-5[1m]", "Claude Fable 5 (1M)"),
+        ("claude-fable-5", "claude-fable-5-1[1m]", "Claude Fable 5.1 (1M)"),
         ("claude-sonnet-5", "claude-sonnet-5[1m]", "Claude Sonnet 5 (1M)"),
         ("claude-opus-4-8", "claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)")
     ]
@@ -160,15 +160,14 @@ final class ModelRegistry {
 
         // Der alte Slug darf im OpenRouterFree-Sync nicht wieder auftauchen (gleiche Logik wie beim
         // Entfernen) - sonst legte der naechste Abgleich das umbenannte Modell erneut daneben an.
-        if oldSlug.caseInsensitiveCompare(normalized) != .orderedSame,
-           group.id.caseInsensitiveCompare("openrouter-free") == .orderedSame {
+        if oldSlug.caseInsensitiveCompare(normalized) != .orderedSame, ModelRegistry.isLiveCatalogGroup(group.id) {
             ModelRegistry.addUnique(&group.hiddenModelSlugs, oldSlug)
             ModelRegistry.addUnique(&group.knownSyncedModelSlugs, oldSlug)
         }
 
         if group !== targetGroup {
             group.models.remove(at: index)
-            if group.id.caseInsensitiveCompare("openrouter-free") == .orderedSame {
+            if ModelRegistry.isLiveCatalogGroup(group.id) {
                 ModelRegistry.addUnique(&group.hiddenModelSlugs, oldSlug)
                 ModelRegistry.addUnique(&group.knownSyncedModelSlugs, oldSlug)
             }
@@ -191,7 +190,7 @@ final class ModelRegistry {
     func removeAt(_ group: ModelGroupEntry, index: Int) {
         guard index >= 0 && index < group.models.count else { return }
         let model = group.models.remove(at: index)
-        if group.id.caseInsensitiveCompare("openrouter-free") == .orderedSame {
+        if ModelRegistry.isLiveCatalogGroup(group.id) {
             ModelRegistry.addUnique(&group.hiddenModelSlugs, model.slug)
             ModelRegistry.addUnique(&group.knownSyncedModelSlugs, model.slug)
         }
@@ -253,6 +252,14 @@ final class ModelRegistry {
 
     func syncOpenRouterFreeModels(_ remoteModels: [ModelEntry]) {
         syncGroupModels(groupId: "openrouter-free", remoteModels: remoteModels)
+    }
+
+    func syncOpenRouterModels(_ remoteModels: [ModelEntry]) {
+        syncGroupModels(groupId: "openrouter", remoteModels: remoteModels)
+    }
+
+    func syncOpenCodeZenFreeModels(_ remoteModels: [ModelEntry]) {
+        syncGroupModels(groupId: "opencode-zen-free", remoteModels: remoteModels)
     }
 
     /// Gleicht die Gruppe "LM Studio" mit den Modellen ab, die der lokale LM-Studio-Server gerade
@@ -424,7 +431,7 @@ final class ModelRegistry {
             createGroup("openrouter", "OpenRouter", "openrouter", "OpenRouter", normalizeOpenRouter(openRouterModels)),
             createGroup("entropic", "Anthropic", "anthropic", "Anthropic", [
                 model(claudeOpus5Slug, "Claude Opus 5 (1M)", "anthropic", "Anthropic"),
-                model("claude-fable-5[1m]", "Claude Fable 5 (1M)", "anthropic", "Anthropic"),
+                model("claude-fable-5-1[1m]", "Claude Fable 5.1 (1M)", "anthropic", "Anthropic"),
                 model("claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)", "anthropic", "Anthropic"),
                 model("claude-sonnet-5[1m]", "Claude Sonnet 5 (1M)", "anthropic", "Anthropic"),
                 model("claude-haiku-4-5", "Claude Haiku 4.5", "anthropic", "Anthropic"),
@@ -480,21 +487,6 @@ final class ModelRegistry {
                 model(gpt56TerraFastSlug, "GPT-5.6 Terra Fast", "openai", "OpenAI"),
                 model(gpt56LunaSlug, "GPT-5.6 Luna", "openai", "OpenAI"),
                 model(gpt56LunaFastSlug, "GPT-5.6 Luna Fast", "openai", "OpenAI")
-            ]),
-            createGroup("opencode-go", "OpenCode-Go", "opencode-go", "OpenCode-Go", [
-                model("deepseek-v4-flash", "DeepSeek V4 Flash", "opencode-go", "OpenCode-Go"),
-                model("deepseek-v4-pro", "DeepSeek V4 Pro", "opencode-go", "OpenCode-Go"),
-                model("glm-5.1", "GLM 5.1", "opencode-go", "OpenCode-Go"),
-                model("glm-5.2", "GLM 5.2", "opencode-go", "OpenCode-Go"),
-                model("kimi-k2.6", "Kimi K2.6", "opencode-go", "OpenCode-Go"),
-                model("kimi-k2.7-code", "Kimi K2.7 Code", "opencode-go", "OpenCode-Go"),
-                model("mimo-v2.5", "MiMo V2.5", "opencode-go", "OpenCode-Go"),
-                model("mimo-v2.5-pro", "MiMo V2.5 Pro", "opencode-go", "OpenCode-Go"),
-                model("minimax-m2.7", "MiniMax M2.7", "opencode-go", "OpenCode-Go"),
-                model("minimax-m3", "MiniMax M3", "opencode-go", "OpenCode-Go"),
-                model("qwen3.6-plus", "Qwen3.6 Plus", "opencode-go", "OpenCode-Go"),
-                model("qwen3.7-max", "Qwen3.7 Max", "opencode-go", "OpenCode-Go"),
-                model("qwen3.7-plus", "Qwen3.7 Plus", "opencode-go", "OpenCode-Go")
             ]),
             createGroup("nvidia", "NVIDIA", nvidiaProviderId, nvidiaProviderName, nvidiaFreeModels),
             // Lokale LM-Studio-Modelle. Die Liste kommt beim Start live vom lokalen Server
@@ -606,7 +598,25 @@ final class ModelRegistry {
         if slug.hasPrefix("\(providerId.lowercased())/") {
             slug = String(slug.dropFirst(providerId.count + 1))
         }
+        if providerId.caseInsensitiveCompare("anthropic") == .orderedSame {
+            slug = normalizeAnthropicSlug(slug)
+        }
         return slug
+    }
+
+    /// Anthropic schreibt die Nebenversion mit Bindestrich ("claude-fable-5-1"), nicht mit Punkt.
+    /// Ein von Hand eingetragenes "claude-fable-5.1" kennt Claude Code nicht: es meldet "There's an
+    /// issue with the selected model" und startet mit dem Standardmodell weiter - der Fehler faellt
+    /// also erst im laufenden Terminal auf. Deshalb wird die Punkt-Schreibweise hier still auf die
+    /// gueltige Form gezogen. Das angehaengte "[1m]" bleibt unberuehrt.
+    private static func normalizeAnthropicSlug(_ slug: String) -> String {
+        slug.replacingOccurrences(of: #"^(claude-[a-z]+-\d+)\.(\d+)"#, with: "$1-$2", options: .regularExpression)
+    }
+
+    /// Gruppen, deren Inhalt live aus einem Katalog kommt: entfernte oder umbenannte Slugs muessen
+    /// dort gemerkt werden, sonst legte der naechste Abgleich sie wieder an.
+    private static func isLiveCatalogGroup(_ groupId: String) -> Bool {
+        ["openrouter", "openrouter-free", "opencode-zen-free"].contains { $0.caseInsensitiveCompare(groupId) == .orderedSame }
     }
 
     private static func addUnique(_ values: inout [String], _ value: String) {

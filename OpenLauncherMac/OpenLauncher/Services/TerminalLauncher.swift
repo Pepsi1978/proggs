@@ -99,6 +99,23 @@ enum TerminalLauncher {
         TerminalTabColor(name: "pink", hex: "#FF1493")
     ]
 
+    /// Eigene Palette fuer Codex-CLI-Sitzungen - kuehle Toene, damit sie sich auf einen Blick von
+    /// den OpenCode- und den waermeren Claude-Tabs unterscheiden.
+    static let codexColors: [TerminalTabColor] = [
+        TerminalTabColor(name: "teal", hex: "#00897B"),
+        TerminalTabColor(name: "mint", hex: "#26C6A2"),
+        TerminalTabColor(name: "sky", hex: "#29B6F6"),
+        TerminalTabColor(name: "indigo", hex: "#5C6BC0"),
+        TerminalTabColor(name: "violet", hex: "#7E57C2"),
+        TerminalTabColor(name: "slate", hex: "#607D8B"),
+        TerminalTabColor(name: "lime", hex: "#9CCC65"),
+        TerminalTabColor(name: "amber", hex: "#FFB300")
+    ]
+
+    static func pickCodexColor() -> TerminalTabColor {
+        pickRotating(codexColors, statePath: (Paths.appSupport as NSString).appendingPathComponent("codex-tab-color-state.json"))
+    }
+
     static func pickOpenCodeColor() -> TerminalTabColor {
         pickRotating(openCodeColors, statePath: (Paths.appSupport as NSString).appendingPathComponent("tab-color-state.json"))
     }

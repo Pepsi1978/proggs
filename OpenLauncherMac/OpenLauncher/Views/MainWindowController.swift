@@ -19,8 +19,13 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private let versionChip = SurfaceView(cornerRadius: 8)
     private let versionLabel = UI.label("", size: 12, role: .dim)
     private let themeButton = StyledButton(style: .theme, title: "☀︎")
+    private let catalogButton = StyledButton(style: .theme, title: "↻")
 
     private let splitView = TransparentSplitView()
+    /// Griffe wie unter Windows (GridSplitter): senkrecht zwischen Provider/Profil und Effort,
+    /// waagerecht zwischen Provider und Profil.
+    private let rightSplit = TransparentSplitView()
+    private let columnSplit = TransparentSplitView()
     private let modelCard = CardView()
     private let providerCard = CardView()
     private let profileCard = CardView()
@@ -48,8 +53,8 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private let statusLabel = UI.label("Bereit.", size: 13, role: .dim)
     private let startButton = StyledButton(style: .accent, title: "▶ Start")
 
-    /// Breite der Effort-/Thinking-Spalte (Width="210" in XAML).
-    static let thinkingColumnWidth: CGFloat = 210
+    /// Mindestbreite der Provider-/Profil-Spalte (MinWidth="400" in XAML).
+    static let providerColumnMinWidth: CGFloat = 400
 
     /// Layout-Speicherung wird gebuendelt: Bewegen/Groessenaenderung feuert sehr haeufig - ohne
     /// Verzoegerung loeste jedes Pixel eine JSON-Schreiboperation aus (wie der DispatcherTimer
@@ -148,7 +153,15 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         themeButton.target = self
         themeButton.action = #selector(toggleTheme)
 
-        for view in [badge, appLabel, versionChip, themeButton] as [NSView] {
+        catalogButton.fontSize = 15
+        catalogButton.horizontalPadding = 12
+        catalogButton.verticalPadding = 8
+        catalogButton.toolTip = "Modelle von OpenRouter und OpenCode Zen aktualisieren"
+        catalogButton.setAccessibilityLabel("Modellkataloge aktualisieren")
+        catalogButton.target = self
+        catalogButton.action = #selector(refreshModelCatalog)
+
+        for view in [badge, appLabel, versionChip, catalogButton, themeButton] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             titleBar.addSubview(view)
         }
@@ -169,6 +182,11 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
             versionLabel.trailingAnchor.constraint(equalTo: versionChip.trailingAnchor, constant: -9),
             versionLabel.topAnchor.constraint(equalTo: versionChip.topAnchor, constant: 3),
             versionLabel.bottomAnchor.constraint(equalTo: versionChip.bottomAnchor, constant: -3),
+
+            catalogButton.trailingAnchor.constraint(equalTo: themeButton.leadingAnchor, constant: -8),
+            catalogButton.centerYAnchor.constraint(equalTo: titleBar.centerYAnchor),
+            catalogButton.widthAnchor.constraint(equalToConstant: 42),
+            catalogButton.heightAnchor.constraint(equalToConstant: 33),
 
             themeButton.trailingAnchor.constraint(equalTo: titleBar.trailingAnchor, constant: -18),
             themeButton.centerYAnchor.constraint(equalTo: titleBar.centerYAnchor),
@@ -241,9 +259,6 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         ])
 
         // --- Rechte Seite: Provider (oben), Profil (unten), Thinking (ganze Hoehe rechts) ---
-        let rightContainer = NSView()
-        rightContainer.translatesAutoresizingMaskIntoConstraints = false
-
         providerTableView = ProviderTableView(viewModel: viewModel)
         refreshButton.fontSize = 12
         refreshButton.horizontalPadding = 10
@@ -275,13 +290,24 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         thinkingCard.translatesAutoresizingMaskIntoConstraints = false
         thinkingCard.addSubview(thinkingListView)
 
-        for card in [providerCard, profileCard, thinkingCard] { rightContainer.addSubview(card) }
+        // Alle Fugen sind Trenner derselben (unsichtbaren) Splitter-Art - dadurch bleiben die
+        // Abstaende zwischen allen Karten gleich, und jede Fuge ist zugleich ein Griff.
+        columnSplit.translatesAutoresizingMaskIntoConstraints = false
+        columnSplit.isVertical = false
+        columnSplit.dividerStyle = .thin
+        columnSplit.delegate = self
+        columnSplit.addArrangedSubview(providerCard)
+        columnSplit.addArrangedSubview(profileCard)
 
-        // Alle Karten sollen gleich eng aneinander liegen. Der Abstand zwischen Modell- und
-        // Provider-Karte entsteht durch den Trenner des Splitters - genau dessen Breite wird hier
-        // auch fuer die uebrigen Fugen verwendet, statt einen festen Wert zu raten. So bleiben die
-        // Abstaende auch dann identisch, wenn macOS den Trenner anders zeichnet.
-        let gap = splitView.dividerThickness
+        rightSplit.translatesAutoresizingMaskIntoConstraints = false
+        rightSplit.isVertical = true
+        rightSplit.dividerStyle = .thin
+        rightSplit.delegate = self
+        rightSplit.addArrangedSubview(columnSplit)
+        rightSplit.addArrangedSubview(thinkingCard)
+        // Beim Groessenaendern des Fensters behaelt die Effort-Spalte ihre Breite.
+        rightSplit.setHoldingPriority(.defaultLow, forSubviewAt: 0)
+        rightSplit.setHoldingPriority(NSLayoutConstraint.Priority(260), forSubviewAt: 1)
 
         NSLayoutConstraint.activate([
             providerHeader.topAnchor.constraint(equalTo: providerCard.topAnchor, constant: 15),
@@ -301,28 +327,11 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
             thinkingListView.topAnchor.constraint(equalTo: thinkingCard.topAnchor, constant: 15),
             thinkingListView.leadingAnchor.constraint(equalTo: thinkingCard.leadingAnchor, constant: 12),
             thinkingListView.trailingAnchor.constraint(equalTo: thinkingCard.trailingAnchor, constant: -12),
-            thinkingListView.bottomAnchor.constraint(equalTo: thinkingCard.bottomAnchor, constant: -12),
-
-            // Spalten: Provider/Profil links (flexibel), Thinking rechts mit fester Breite 210
-            // (MinWidth 190, MaxWidth 260 in XAML).
-            providerCard.topAnchor.constraint(equalTo: rightContainer.topAnchor),
-            providerCard.leadingAnchor.constraint(equalTo: rightContainer.leadingAnchor),
-            providerCard.trailingAnchor.constraint(equalTo: thinkingCard.leadingAnchor, constant: -gap),
-
-            profileCard.topAnchor.constraint(equalTo: providerCard.bottomAnchor, constant: gap),
-            profileCard.leadingAnchor.constraint(equalTo: rightContainer.leadingAnchor),
-            profileCard.trailingAnchor.constraint(equalTo: thinkingCard.leadingAnchor, constant: -gap),
-            profileCard.bottomAnchor.constraint(equalTo: rightContainer.bottomAnchor),
-            profileCard.heightAnchor.constraint(equalTo: providerCard.heightAnchor),
-
-            thinkingCard.topAnchor.constraint(equalTo: rightContainer.topAnchor),
-            thinkingCard.trailingAnchor.constraint(equalTo: rightContainer.trailingAnchor),
-            thinkingCard.bottomAnchor.constraint(equalTo: rightContainer.bottomAnchor),
-            thinkingCard.widthAnchor.constraint(equalToConstant: Self.thinkingColumnWidth)
+            thinkingListView.bottomAnchor.constraint(equalTo: thinkingCard.bottomAnchor, constant: -12)
         ])
 
         splitView.addArrangedSubview(modelCard)
-        splitView.addArrangedSubview(rightContainer)
+        splitView.addArrangedSubview(rightSplit)
         // Die endgueltige Position wird erst in showWindow gesetzt: hier steht die Breite des
         // Splitters noch nicht fest, und AppKit wuerde den Wert beim ersten Layout verwerfen.
     }
@@ -436,6 +445,9 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     @objc private func removeModel() { viewModel.removeModel() }
     @objc private func showHiddenModels() { viewModel.showHiddenModels() }
     @objc private func refresh() { viewModel.refresh() }
+    @objc private func refreshModelCatalog() {
+        Task { [weak self] in await self?.viewModel.refreshModelCatalog() }
+    }
     @objc private func showResearchSettings() {
         if researchSettingsWindow == nil { researchSettingsWindow = ResearchSettingsWindowController(viewModel: viewModel) }
         researchSettingsWindow?.showWindow(nil)
@@ -462,6 +474,13 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         DispatchQueue.main.async { [weak self] in
             guard let self, let splitView = self.window != nil ? self.splitView : nil else { return }
             splitView.setPosition(self.layoutSettings.modelPaneWidth, ofDividerAt: 0)
+            self.window?.contentView?.layoutSubtreeIfNeeded()
+            let rightSplit = self.rightSplit
+            rightSplit.setPosition(rightSplit.bounds.width - rightSplit.dividerThickness - self.layoutSettings.effortPaneWidth,
+                                   ofDividerAt: 0)
+            let columnSplit = self.columnSplit
+            let share = self.layoutSettings.providerRowShare.isNaN ? 0.5 : self.layoutSettings.providerRowShare
+            columnSplit.setPosition((columnSplit.bounds.height - columnSplit.dividerThickness) * share, ofDividerAt: 0)
             self.didRestoreSplitPosition = true
         }
     }
@@ -653,15 +672,27 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
 extension MainWindowController: NSSplitViewDelegate {
     func splitView(_ splitView: NSSplitView, constrainMinCoordinate proposedMinimumPosition: CGFloat,
                    ofSubviewAt dividerIndex: Int) -> CGFloat {
-        240   // MinWidth der Modell-Spalte aus XAML
+        if splitView === rightSplit {
+            // Provider/Profil mindestens 400 breit, Effort hoechstens 400 breit.
+            let maxEffortStart = splitView.bounds.width - splitView.dividerThickness - LayoutSettings.maxEffortPaneWidth
+            return Swift.max(Self.providerColumnMinWidth, maxEffortStart)
+        }
+        if splitView === columnSplit { return 120 }   // MinHeight der Provider-Zeile aus XAML
+        return 240   // MinWidth der Modell-Spalte aus XAML
     }
 
     func splitView(_ splitView: NSSplitView, constrainMaxCoordinate proposedMaximumPosition: CGFloat,
                    ofSubviewAt dividerIndex: Int) -> CGFloat {
-        // MaxWidth der Modell-Spalte aus XAML (760) UND die dort ebenfalls gesetzte MinWidth der
-        // Provider-/Profil-Spalte (540). Ohne die zweite Grenze liesse sich die mittlere Spalte
+        if splitView === rightSplit {
+            return splitView.bounds.width - splitView.dividerThickness - LayoutSettings.minEffortPaneWidth
+        }
+        if splitView === columnSplit {
+            return splitView.bounds.height - splitView.dividerThickness - 180   // MinHeight der Profil-Zeile
+        }
+        // MaxWidth der Modell-Spalte aus XAML (760) UND die MinWidth der Provider-/Profil-Spalte
+        // samt aktueller Effort-Breite. Ohne die zweite Grenze liesse sich die mittlere Spalte
         // beliebig schmal ziehen - dann brechen Schalterbeschriftungen und Kacheltexte um.
-        let rightMinimum = 540 + splitView.dividerThickness + Self.thinkingColumnWidth
+        let rightMinimum = Self.providerColumnMinWidth + rightSplit.dividerThickness + thinkingCard.frame.width
         let maximumForRight = splitView.bounds.width - splitView.dividerThickness - rightMinimum
         return Swift.min(760, maximumForRight, proposedMaximumPosition)
     }
@@ -669,8 +700,18 @@ extension MainWindowController: NSSplitViewDelegate {
     func splitViewDidResizeSubviews(_ notification: Notification) {
         // Waehrend des Fensteraufbaus feuert das mehrfach mit Zwischenwerten - die duerfen die
         // gemerkte Position nicht ueberschreiben (siehe didRestoreSplitPosition).
-        guard didRestoreSplitPosition, modelCard.frame.width > 1 else { return }
-        layoutSettings.modelPaneWidth = modelCard.frame.width
+        guard didRestoreSplitPosition, let changed = notification.object as? NSSplitView else { return }
+        if changed === rightSplit {
+            guard thinkingCard.frame.width > 1 else { return }
+            layoutSettings.effortPaneWidth = thinkingCard.frame.width
+        } else if changed === columnSplit {
+            let total = providerCard.frame.height + profileCard.frame.height
+            guard total > 1 else { return }
+            layoutSettings.providerRowShare = providerCard.frame.height / total
+        } else {
+            guard modelCard.frame.width > 1 else { return }
+            layoutSettings.modelPaneWidth = modelCard.frame.width
+        }
         queueSaveWindowLayout()
     }
 }

@@ -42,7 +42,6 @@ enum OpenCodeVariantCatalog {
         switch provider {
         case "openai": return openAiLevels(slug)
         case "opencode": return openCodeZenLevels(slug)
-        case "opencode-go": return openCodeGoLevels(slug)
         case "nvidia": return nvidiaLevels(slug)
         case "anthropic": return anthropicLevels(slug)
         case "openrouter": return openRouterLevels(slug, supportsReasoning: knownOpenRouterReasoning(slug))
@@ -124,21 +123,9 @@ enum OpenCodeVariantCatalog {
         }
     }
 
-    private static func openCodeGoLevels(_ slug: String) -> [String] {
-        if slug.hasPrefix("deepseek-v4-") { return ["low", "medium", "high", "max"] }
-        if slug == "glm-5.2" { return ["high", "max"] }
-        if slug.hasPrefix("glm-") { return [] }
-        if slug.hasPrefix("kimi-") { return [] }
-        if slug.hasPrefix("mimo-v2.5") { return widelySupported }
-        if slug == "minimax-m3" { return ["none", "thinking"] }
-        if slug.hasPrefix("minimax-") { return [] }
-        if slug.hasPrefix("qwen") { return [] }
-        return []
-    }
-
     /// Stufen der kostenlosen NVIDIA-NIM-Modelle, 1:1 aus deren reasoning_options in models.dev:
     /// "effort" liefert die Stufenliste unveraendert, "toggle" kennt nur Denken an/aus (gleiche
-    /// Abbildung wie minimax-m3 im OpenCode-Go-Katalog), ohne reasoning_options gibt es keine Wahl.
+    /// Abbildung fuer Modelle mit einfachem Thinking-Schalter), ohne reasoning_options gibt es keine Wahl.
     private static func nvidiaLevels(_ slug: String) -> [String] {
         switch slug {
         case "stepfun-ai/step-3.7-flash":
@@ -212,21 +199,7 @@ enum OpenCodeModelMetadataCatalog {
         key("opencode", "deepseek-v4-flash-free"): OpenCodeModelMetadata(openRouterSlug: "deepseek/deepseek-v4-flash", contextLength: 1_048_576),
         key("opencode", "mimo-v2.5-free"): OpenCodeModelMetadata(openRouterSlug: "xiaomi/mimo-v2.5", contextLength: 1_048_576),
         key("opencode", "nemotron-3-ultra-free"): OpenCodeModelMetadata(openRouterSlug: "nvidia/nemotron-3-ultra-550b-a55b:free", contextLength: 1_000_000),
-        key("opencode", "north-mini-code-free"): OpenCodeModelMetadata(openRouterSlug: "cohere/north-mini-code:free", contextLength: 256_000),
-
-        key("opencode-go", "deepseek-v4-flash"): OpenCodeModelMetadata(openRouterSlug: "deepseek/deepseek-v4-flash", contextLength: 1_048_576),
-        key("opencode-go", "deepseek-v4-pro"): OpenCodeModelMetadata(openRouterSlug: "deepseek/deepseek-v4-pro", contextLength: 1_048_576),
-        key("opencode-go", "glm-5.1"): OpenCodeModelMetadata(openRouterSlug: "z-ai/glm-5.1", contextLength: 202_752),
-        key("opencode-go", "glm-5.2"): OpenCodeModelMetadata(openRouterSlug: "z-ai/glm-5.2", contextLength: 1_048_576),
-        key("opencode-go", "kimi-k2.6"): OpenCodeModelMetadata(openRouterSlug: "moonshotai/kimi-k2.6", contextLength: 262_144),
-        key("opencode-go", "kimi-k2.7-code"): OpenCodeModelMetadata(openRouterSlug: "moonshotai/kimi-k2.7-code", contextLength: 262_144),
-        key("opencode-go", "mimo-v2.5"): OpenCodeModelMetadata(openRouterSlug: "xiaomi/mimo-v2.5", contextLength: 1_048_576),
-        key("opencode-go", "mimo-v2.5-pro"): OpenCodeModelMetadata(openRouterSlug: "xiaomi/mimo-v2.5-pro", contextLength: 1_048_576),
-        key("opencode-go", "minimax-m2.7"): OpenCodeModelMetadata(openRouterSlug: "minimax/minimax-m2.7", contextLength: 204_800),
-        key("opencode-go", "minimax-m3"): OpenCodeModelMetadata(openRouterSlug: "minimax/minimax-m3", contextLength: 1_048_576),
-        key("opencode-go", "qwen3.6-plus"): OpenCodeModelMetadata(openRouterSlug: "qwen/qwen3.6-plus", contextLength: 1_000_000),
-        key("opencode-go", "qwen3.7-max"): OpenCodeModelMetadata(openRouterSlug: "qwen/qwen3.7-max", contextLength: 1_000_000),
-        key("opencode-go", "qwen3.7-plus"): OpenCodeModelMetadata(openRouterSlug: "qwen/qwen3.7-plus", contextLength: 1_000_000)
+        key("opencode", "north-mini-code-free"): OpenCodeModelMetadata(openRouterSlug: "cohere/north-mini-code:free", contextLength: 256_000)
     ]
 
     static func find(providerId: String, slug: String) -> OpenCodeModelMetadata? {

@@ -6,6 +6,11 @@ final class LayoutSettings: Codable {
     private static let defaultModelPaneWidth: Double = 300
     private static let minModelPaneWidth: Double = 240
     private static let maxModelPaneWidth: Double = 760
+    static let defaultEffortPaneWidth: Double = 210
+    static let minEffortPaneWidth: Double = 150
+    static let maxEffortPaneWidth: Double = 400
+    private static let minProviderRowShare: Double = 0.2
+    private static let maxProviderRowShare: Double = 0.8
     private static let defaultWindowWidth: Double = 1360
     private static let defaultWindowHeight: Double = 860
     static let minWindowWidth: Double = 960
@@ -16,6 +21,14 @@ final class LayoutSettings: Codable {
     }
 
     var modelPaneWidth: Double = LayoutSettings.defaultModelPaneWidth
+
+    /// Breite der Effort-Spalte in Punkten, per senkrechtem Griff verschiebbar.
+    var effortPaneWidth: Double = LayoutSettings.defaultEffortPaneWidth
+
+    /// Anteil der Provider-Karte an der Hoehe von Provider + Profil (0..1), per waagerechtem Griff
+    /// verschiebbar. NaN = noch nie verschoben, dann gilt die gleichmaessige Aufteilung. Als Anteil
+    /// gespeichert, damit die Aufteilung beim Groessenaendern des Fensters erhalten bleibt.
+    var providerRowShare: Double = .nan
 
     // NaN = noch nie gespeichert. Ein numerischer Sentinel wie -1 kollidiert mit echten negativen
     // Fensterkoordinaten (Monitor links/oberhalb des Hauptbildschirms) und wuerde deren
@@ -31,6 +44,8 @@ final class LayoutSettings: Codable {
 
     enum CodingKeys: String, CodingKey {
         case modelPaneWidth = "ModelPaneWidth"
+        case effortPaneWidth = "EffortPaneWidth"
+        case providerRowShare = "ProviderRowShare"
         case windowLeft = "WindowLeft"
         case windowTop = "WindowTop"
         case windowWidth = "WindowWidth"
@@ -44,6 +59,8 @@ final class LayoutSettings: Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         modelPaneWidth = LayoutSettings.decodeDouble(c, .modelPaneWidth) ?? LayoutSettings.defaultModelPaneWidth
+        effortPaneWidth = LayoutSettings.decodeDouble(c, .effortPaneWidth) ?? LayoutSettings.defaultEffortPaneWidth
+        providerRowShare = LayoutSettings.decodeDouble(c, .providerRowShare) ?? .nan
         windowLeft = LayoutSettings.decodeDouble(c, .windowLeft) ?? .nan
         windowTop = LayoutSettings.decodeDouble(c, .windowTop) ?? .nan
         windowWidth = LayoutSettings.decodeDouble(c, .windowWidth) ?? LayoutSettings.defaultWindowWidth
@@ -66,6 +83,8 @@ final class LayoutSettings: Codable {
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(modelPaneWidth, forKey: .modelPaneWidth)
+        try c.encode(effortPaneWidth, forKey: .effortPaneWidth)
+        if providerRowShare.isNaN { try c.encode("NaN", forKey: .providerRowShare) } else { try c.encode(providerRowShare, forKey: .providerRowShare) }
         // NaN ist in reinem JSON nicht darstellbar - wie .NET als benannter String schreiben.
         if windowLeft.isNaN { try c.encode("NaN", forKey: .windowLeft) } else { try c.encode(windowLeft, forKey: .windowLeft) }
         if windowTop.isNaN { try c.encode("NaN", forKey: .windowTop) } else { try c.encode(windowTop, forKey: .windowTop) }
@@ -81,6 +100,8 @@ final class LayoutSettings: Codable {
         do {
             let settings = try JSONDecoder().decode(LayoutSettings.self, from: data)
             settings.modelPaneWidth = clamp(settings.modelPaneWidth)
+            settings.effortPaneWidth = clampEffort(settings.effortPaneWidth)
+            settings.providerRowShare = clampShare(settings.providerRowShare)
             settings.normalizeWindowBounds()
             return settings
         } catch {
@@ -91,6 +112,8 @@ final class LayoutSettings: Codable {
 
     func save() {
         modelPaneWidth = LayoutSettings.clamp(modelPaneWidth)
+        effortPaneWidth = LayoutSettings.clampEffort(effortPaneWidth)
+        providerRowShare = LayoutSettings.clampShare(providerRowShare)
         normalizeWindowBounds()
         Paths.ensureDirectory(Paths.appSupport)
         let encoder = JSONEncoder()
@@ -107,6 +130,17 @@ final class LayoutSettings: Codable {
     private static func clamp(_ value: Double) -> Double {
         if value.isNaN || value.isInfinite { return defaultModelPaneWidth }
         return Swift.min(Swift.max(value, minModelPaneWidth), maxModelPaneWidth)
+    }
+
+    private static func clampEffort(_ value: Double) -> Double {
+        if value.isNaN || value.isInfinite { return defaultEffortPaneWidth }
+        return Swift.min(Swift.max(value, minEffortPaneWidth), maxEffortPaneWidth)
+    }
+
+    // NaN bleibt NaN: das ist der "noch nie verschoben"-Sentinel.
+    private static func clampShare(_ value: Double) -> Double {
+        if value.isNaN || value.isInfinite { return .nan }
+        return Swift.min(Swift.max(value, minProviderRowShare), maxProviderRowShare)
     }
 
     private func normalizeWindowBounds() {

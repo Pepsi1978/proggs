@@ -34,6 +34,7 @@ final class MainViewModel {
 
     private let registry: ModelRegistry
     private let router = OpenRouterService()
+    private let openCodeCatalog = OpenCodeCatalogService()
     private let lmStudio = LmStudioService()
     private let launcher = OpenLauncherService()
     private let updater = OpenCodeUpdateService()
@@ -51,8 +52,10 @@ final class MainViewModel {
 
     var thinkingTarget: EffortTarget? {
         guard let model = selectedModel else { return nil }
-        return EffortTarget(model: model.slug, provider: model.providerId,
-                            access: Self.isClaudeCodeModel(model) ? "claude-code" : "opencode")
+        // Codex CLI hat eigene Effort-Stufen (Kontokatalog), deshalb eigener Zugang je Ziel-CLI.
+        let access = Self.isClaudeCodeModel(model) ? "claude-code"
+            : hasCliChoice ? (selectedCliTarget?.id ?? "opencode") : "opencode"
+        return EffortTarget(model: model.slug, provider: model.providerId, access: access)
     }
 
     /// Standard des gerade gewaehlten Modells, solange er noch greift. Er ueberstimmt die
@@ -70,6 +73,7 @@ final class MainViewModel {
     private(set) var thinkingOptions: [ThinkingOptionEntry] = []
     private(set) var profileList: [InstructionProfileEntry] = []
     private(set) var workModes: [WorkModeEntry] = []
+    private(set) var cliTargets: [CliTargetEntry] = []
     private(set) var hiddenModels: [ModelEntry] = []
 
     // ===================== Zustand =====================
@@ -129,6 +133,20 @@ final class MainViewModel {
         }
     }
 
+    /// Ziel-CLI: nur bei OpenAI-Modellen sichtbar. Beide CLIs lesen dieselbe Profilquelle, deshalb
+    /// gelten Minimal/Standard/Strikt und der Arbeitsmodus in beiden gleich.
+    var selectedCliTarget: CliTargetEntry? {
+        didSet {
+            guard selectedCliTarget !== oldValue else { return }
+            onSelectedCliTargetChanged(selectedCliTarget)
+            delegate?.profileStateChanged()
+        }
+    }
+
+    /// Nur OpenAI-Modelle laufen wahlweise in OpenCode oder im Codex CLI - sonst ist die CLI-Zeile
+    /// ausgeblendet und es bleibt beim jeweils einzigen Weg.
+    private(set) var hasCliChoice = false
+
     private(set) var profileContextText = "OpenCode · AGENTS.md"
     private(set) var canEditSelectedProfile = true
     private(set) var hasHiddenModels = false
@@ -164,7 +182,13 @@ final class MainViewModel {
             WorkModeEntry(id: "gruendlich", displayName: "Gründlichkeitsmodus", descriptionText: "Randfälle und Härtung mitprüfen")
         ]
 
+        cliTargets = [
+            CliTargetEntry(id: "opencode", displayName: "OpenCode", descriptionText: "Wie bisher: OpenCode-TUI mit Provider-Wahl"),
+            CliTargetEntry(id: "codex", displayName: "Codex CLI", descriptionText: "Eigenes OpenAI-CLI, Profil aus der AGENTS.md")
+        ]
+
         selectedProfile = profileList.first { $0.id == "minimal" }
+        selectedCliTarget = cliTargets.first { $0.id == "opencode" }
         // Freimodus ist die Vorauswahl fuer JEDES Profil und JEDES Modell: der Modellwechsel setzt
         // das Minimalprofil, der Profilwechsel setzt wieder diesen Modus -> ohne aktives Umschalten
         // laeuft jede Session ohne zusaetzlichen Modus-Prompt.
@@ -219,11 +243,17 @@ final class MainViewModel {
         pendingModelDefault = value == nil ? nil : modelDefaults.find(value!.modelString)
         applyingModelDefault = true
         selectedProfile = profileList.first { $0.id == "minimal" }
+        // Ohne gespeicherten Standard startet jedes Modell wieder auf OpenCode.
+        selectedCliTarget = cliTargets.first { $0.id == "opencode" }
         if let stored = pendingModelDefault {
             selectedProfile = profileList.first { $0.id == stored.profileId && $0.isEnabled } ?? selectedProfile
             selectedWorkMode = workModes.first { $0.id == stored.workModeId } ?? selectedWorkMode
+            if Self.isOpenAiModel(value) {
+                selectedCliTarget = cliTargets.first { $0.id == stored.cliTargetId } ?? selectedCliTarget
+            }
         }
         applyingModelDefault = false
+        hasCliChoice = Self.isOpenAiModel(value)
 
         selectedProvider = nil
         providers.removeAll()
@@ -233,7 +263,7 @@ final class MainViewModel {
         let isClaude = Self.isClaudeCodeModel(value)
         thinkingTitle = isClaude ? "EFFORT" : "THINKING"
         thinkingSubtitle = isClaude ? "Claude-Code-Level" : "Reasoning-Level"
-        profileContextText = isClaude ? "Claude Code · Minimal + Standard + Strikt" : "OpenCode · Profil-Snapshots"
+        updateProfileContextText()
         updateProfileAvailability()
         refreshModelDefaultState()
         delegate?.providersChanged()
@@ -247,12 +277,23 @@ final class MainViewModel {
             return
         }
 
+        loadThinkingForCurrentTarget(value)
+        loadProvidersTask?.cancel()
+        loadProvidersTask = Task { await loadProviders(model: value) }
+    }
+
+    /// Fuellt die Effort-/Thinking-Liste fuer den aktuellen Zugang (Claude Code, OpenCode oder
+    /// Codex CLI) aus dem Cache und startet die Hintergrund-Aktualisierung.
+    private func loadThinkingForCurrentTarget(_ value: ModelEntry) {
         guard let target = thinkingTarget else { return }
         visitedEfforts[target.key] = target
         // The old cache only belonged to the existing Claude Code / OpenCode start paths.
+        let isCodex = target.access == "codex"
         let cached = EffortStore.cached(target)
-            ?? UserDefaults.standard.dictionary(forKey: "thinking-levels." + value.modelString)
-        let levels = (cached?["levels"] as? [String] ?? OpenCodeVariantCatalog.launcherLevels(for: value))
+            ?? (isCodex ? nil : UserDefaults.standard.dictionary(forKey: "thinking-levels." + value.modelString))
+        let levels = (cached?["levels"] as? [String]
+                      ?? (isCodex ? EffortRefreshService.localCodex(target)?.levels : nil)
+                      ?? OpenCodeVariantCatalog.launcherLevels(for: value))
             .filter { EffortStore.allowed.contains($0) }
         thinkingOptions = levels.map(Self.toThinkingOption)
         let selected = pendingModelDefault?.thinkingValue ?? cached?["selected"] as? String
@@ -263,8 +304,34 @@ final class MainViewModel {
 
         loadThinkingTask?.cancel()
         loadThinkingTask = Task { await loadThinkingOptions(model: value) }
-        loadProvidersTask?.cancel()
-        loadProvidersTask = Task { await loadProviders(model: value) }
+    }
+
+    private func onSelectedCliTargetChanged(_ value: CliTargetEntry?) {
+        updateProfileContextText()
+        refreshModelDefaultState()
+        guard !applyingModelDefault, let value, hasCliChoice, let model = selectedModel else { return }
+        statusText = "Ziel-CLI für \(model.displayName): \(value.displayName)"
+        // Codex CLI und OpenCode haben eigene Effort-Stufen - Liste fuer das neue Ziel neu laden.
+        selectedThinkingOption = nil
+        thinkingOptions.removeAll()
+        loadThinkingForCurrentTarget(model)
+    }
+
+    /// Zeigt unter der Ueberschrift, aus welcher Datei das gewaehlte Werkzeug seine Regeln liest.
+    private func updateProfileContextText() {
+        profileContextText = Self.isClaudeCodeModel(selectedModel)
+            ? "Claude Code · Minimal + Standard + Strikt"
+            : isCodexCliSelected ? "Codex CLI · Profil + Modus in der AGENTS.md" : "OpenCode · Profil-Snapshots"
+    }
+
+    private var isCodexCliSelected: Bool {
+        hasCliChoice && selectedCliTarget?.id == "codex"
+    }
+
+    /// Nur direkte OpenAI-Modelle koennen im Codex CLI laufen (OpenRouter-GPTs nicht: Codex spricht
+    /// ausschliesslich mit OpenAI selbst).
+    static func isOpenAiModel(_ model: ModelEntry?) -> Bool {
+        model?.providerId.caseInsensitiveCompare("openai") == .orderedSame
     }
 
     private func onSelectedThinkingOptionChanged(_ value: ThinkingOptionEntry?) {
@@ -421,6 +488,50 @@ final class MainViewModel {
         delegate?.modelGroupsChanged()
     }
 
+    /// Holt die kompletten Kataloge von OpenRouter und OpenCode Zen neu (Knopf in der Titelleiste).
+    func refreshModelCatalog() async {
+        statusText = "Aktualisiere Modellkataloge …"
+        var updated: [String] = []
+        var failed: [String] = []
+
+        do {
+            let catalog = try await router.modelCatalog(forceRefresh: true)
+            registry.syncOpenRouterModels(catalog.models)
+            registry.syncOpenRouterFreeModels(catalog.freeModels)
+            updated.append("OpenRouter \(catalog.models.count)")
+            updated.append("OpenRouterFree \(catalog.freeModels.count)")
+        } catch {
+            failed.append("OpenRouter")
+            Logger.shared.warn("MainViewModel", "refreshModelCatalog", "OpenRouter-Katalog nicht aktualisiert: \(error.localizedDescription)")
+        }
+
+        do {
+            let freeZen = try await openCodeCatalog.freeZenModels()
+            if freeZen.isEmpty {
+                failed.append("OpenCode Zen Free")
+            } else {
+                registry.syncOpenCodeZenFreeModels(freeZen)
+                updated.append("OpenCode Zen Free \(freeZen.count)")
+            }
+        } catch {
+            failed.append("OpenCode Zen Free")
+            Logger.shared.warn("MainViewModel", "refreshModelCatalog", "OpenCode-Zen-Katalog nicht aktualisiert: \(error.localizedDescription)")
+        }
+
+        modelGroups = registry.groups
+        refreshHiddenModels()
+        delegate?.modelGroupsChanged()
+        if selectedModel != nil && findGroup(for: selectedModel) == nil {
+            selectedModel = modelGroups.flatMap(\.models).first { !$0.isHidden }
+        }
+
+        statusText = updated.isEmpty
+            ? "Modellaktualisierung fehlgeschlagen: \(failed.joined(separator: ", ")). Bestehende Listen bleiben erhalten."
+            : failed.isEmpty
+                ? "Modelle aktualisiert: \(updated.joined(separator: " · "))."
+                : "Modelle teilweise aktualisiert: \(updated.joined(separator: " · ")); nicht erreichbar: \(failed.joined(separator: ", "))."
+    }
+
     private func refreshHiddenModels() {
         hiddenModels = modelGroups.flatMap(\.models).filter(\.isHidden)
         hasHiddenModels = !hiddenModels.isEmpty
@@ -467,7 +578,7 @@ final class MainViewModel {
         hasNoModelDefault = stored == nil
         canSaveModelDefault = selectedModel != nil && selectedProfile != nil && selectedWorkMode != nil
         modelDefaultSummary = stored.map {
-            "★ Standard: \(describeProfile($0.profileId)) · \(describeWorkMode($0.workModeId)) · \(Self.describeThinking($0.thinkingValue))"
+            "★ Standard: \(describeProfile($0.profileId)) · \(describeWorkMode($0.workModeId)) · \(Self.describeThinking($0.thinkingValue))\(describeCliSuffix($0.cliTargetId))"
         } ?? ""
         modelDefaultButtonText = matchesStoredDefault(stored) ? "★ Standard entfernen" : "☆ Standard speichern"
     }
@@ -477,6 +588,17 @@ final class MainViewModel {
         return stored.profileId == selectedProfile?.id
             && stored.workModeId == selectedWorkMode?.id
             && stored.thinkingValue.caseInsensitiveCompare(selectedThinkingOption?.value ?? "") == .orderedSame
+            // Bei Modellen ohne CLI-Wahl bleibt das Feld leer: ein alter Eintrag ohne CliTargetId
+            // darf dann nicht als "abweichend" gelten.
+            && stored.cliTargetId.caseInsensitiveCompare(currentCliTargetId) == .orderedSame
+    }
+
+    /// Zu speichernde Ziel-CLI: leer, wenn das Modell gar keine Wahl anbietet.
+    private var currentCliTargetId: String { hasCliChoice ? selectedCliTarget?.id ?? "" : "" }
+
+    private func describeCliSuffix(_ cliTargetId: String) -> String {
+        cliTargetId.trimmingCharacters(in: .whitespaces).isEmpty
+            ? "" : " · " + (cliTargets.first { $0.id == cliTargetId }?.displayName ?? cliTargetId)
     }
 
     private func describeProfile(_ profileId: String) -> String {
@@ -531,13 +653,15 @@ final class MainViewModel {
         } else {
             let entry = ModelDefaultEntry(profileId: profile.id,
                                           workModeId: workMode.id,
-                                          thinkingValue: selectedThinkingOption?.value ?? "")
+                                          thinkingValue: selectedThinkingOption?.value ?? "",
+                                          cliTargetId: currentCliTargetId)
             modelDefaults.save(key, entry: entry)
             pendingModelDefault = entry
-            statusText = "Standard für \(model.displayName) gespeichert: \(profile.displayName) · \(workMode.displayName) · \(Self.describeThinking(entry.thinkingValue))"
+            statusText = "Standard für \(model.displayName) gespeichert: \(profile.displayName) · \(workMode.displayName) · \(Self.describeThinking(entry.thinkingValue))\(describeCliSuffix(entry.cliTargetId))"
             Logger.shared.info("MainViewModel", "toggleModelDefault", "Modell-Standard gespeichert",
                                ["key": key, "profileId": entry.profileId,
-                                "workModeId": entry.workModeId, "thinkingValue": entry.thinkingValue])
+                                "workModeId": entry.workModeId, "thinkingValue": entry.thinkingValue,
+                                "cliTargetId": entry.cliTargetId])
         }
 
         refreshModelDefaultState()
@@ -779,10 +903,13 @@ final class MainViewModel {
     // ===================== Start =====================
 
     func start() {
-        guard let model = selectedModel, let provider = selectedProvider else {
+        // Das Codex CLI spricht immer direkt mit OpenAI - dort gibt es keine Provider-Wahl, die
+        // Auswahl darf den Start also nicht blockieren.
+        guard let model = selectedModel, selectedProvider != nil || isCodexCliSelected else {
             statusText = "Bitte Modell und Provider wählen."
             return
         }
+        let provider = selectedProvider
         guard let profile = selectedProfile else {
             statusText = "Bitte ein Profil wählen."
             return
@@ -812,8 +939,8 @@ final class MainViewModel {
                                                             profileId: profile.id, workDir: workDir)
             Logger.shared.info("MainViewModel", "start", "Vollständige Startauswahl geprüft", [
                 "model": model.modelString,
-                "provider": provider.providerName,
-                "providerSlug": provider.providerSlug,
+                "provider": provider?.providerName ?? "",
+                "providerSlug": provider?.providerSlug ?? "",
                 "thinkingLevel": thinkingLevel ?? "",
                 "profile": profile.id,
                 "workMode": workMode.id,
@@ -833,6 +960,30 @@ final class MainViewModel {
                     ? "Claude Code gestartet: \(model.displayName) · Profil \(profile.displayName) · Modus \(workMode.displayName)"
                     : "Claude Code gestartet: \(model.displayName) · Effort \(selectedThinkingOption?.displayName ?? "") · Profil \(profile.displayName) · Modus \(workMode.displayName)"
                 statusText += syncHinweis
+                return
+            }
+
+            if isCodexCliSelected {
+                // Codex CLI liest keine Plugin-Modi: Profil UND Modus-Prompt wandern zusammen in die
+                // AGENTS.md des Arbeitsverzeichnisses - dieselbe Profilquelle wie bei OpenCode.
+                let agentsPath = try profiles.activateCodexProjectAgents(profileId: profile.id, workModeId: workMode.id,
+                                                                         workDir: workDir)
+                // Eigenes Codex-Zuhause statt ~/.codex (keine fremden Plugins, MCP-Server, Hooks);
+                // die Statuszeile setzt prepareCodexHome selbst.
+                let codexHome = try profiles.prepareCodexHome(profileId: profile.id)
+                try launcher.launchCodexCli(model: model, workDir: workDir, effortLevel: thinkingLevel, codexHome: codexHome)
+                Logger.shared.info("MainViewModel", "start", "Codex-CLI-Kontext geschrieben",
+                                   ["profile": profile.id, "workMode": workMode.id, "agentsPath": agentsPath,
+                                    "codexHome": codexHome])
+                statusText = (thinkingLevel ?? "").isEmpty
+                    ? "Codex CLI gestartet: \(model.displayName) · Profil \(profile.displayName) · Modus \(workMode.displayName)"
+                    : "Codex CLI gestartet: \(model.displayName) · Effort \(selectedThinkingOption?.displayName ?? "") · Profil \(profile.displayName) · Modus \(workMode.displayName)"
+                statusText += syncHinweis
+                return
+            }
+
+            guard let provider else {
+                statusText = "Bitte einen Provider wählen."
                 return
             }
 
@@ -867,7 +1018,7 @@ final class MainViewModel {
             statusText = "Start fehlgeschlagen. Details gespeichert: \((lastErrorPath as NSString).lastPathComponent)"
             Logger.shared.error("MainViewModel", "start", error.localizedDescription, [
                 "model": model.modelString,
-                "provider": provider.providerName,
+                "provider": provider?.providerName ?? "",
                 "workDir": workDir,
                 "lastErrorPath": lastErrorPath
             ])

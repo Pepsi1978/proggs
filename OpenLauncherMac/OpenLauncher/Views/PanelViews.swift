@@ -14,9 +14,15 @@ final class ProfileSectionView: NSView {
     private let defaultButton = StyledButton(style: .ghost, title: "☆ Standard speichern")
     private let profileRow = NSStackView()
     private let workModeRow = NSStackView()
+    private let cliTitle = UI.label("CLI", size: 12, weight: .bold, role: .muted)
+    private let cliRow = NSStackView()
+    /// Ohne CLI-Wahl endet die Karte unter den Modus-Kacheln, mit CLI-Wahl unter der CLI-Zeile.
+    private var workModeBottom: NSLayoutConstraint!
+    private var cliBottom: NSLayoutConstraint!
 
     private var profileTiles: [(entry: InstructionProfileEntry, view: SelectableRowView)] = []
     private var workModeTiles: [(entry: WorkModeEntry, view: SelectableRowView)] = []
+    private var cliTiles: [(entry: CliTargetEntry, view: SelectableRowView)] = []
 
     init(viewModel: MainViewModel) {
         self.viewModel = viewModel
@@ -64,11 +70,19 @@ final class ProfileSectionView: NSView {
         workModeRow.spacing = 8
         workModeRow.translatesAutoresizingMaskIntoConstraints = false
 
+        cliRow.orientation = .horizontal
+        cliRow.distribution = .fillEqually
+        cliRow.spacing = 8
+        cliRow.translatesAutoresizingMaskIntoConstraints = false
+        cliTitle.translatesAutoresizingMaskIntoConstraints = false
+
         for view in [title, headerRight, contextLabel, defaultSummaryLabel,
-                     profileRow, modeTitle, workModeRow] as [NSView] {
+                     profileRow, modeTitle, workModeRow, cliTitle, cliRow] as [NSView] {
             addSubview(view)
         }
         modeTitle.translatesAutoresizingMaskIntoConstraints = false
+        workModeBottom = workModeRow.bottomAnchor.constraint(equalTo: bottomAnchor)
+        cliBottom = cliRow.bottomAnchor.constraint(equalTo: bottomAnchor)
 
         NSLayoutConstraint.activate([
             title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
@@ -94,7 +108,8 @@ final class ProfileSectionView: NSView {
             // Deutlich flacher als unter Windows (dort 108). Moeglich wird das durch die jetzt
             // erzwungene Mindestbreite der mittleren Spalte: die Beschreibungen brauchen dadurch nur
             // noch zwei Zeilen statt drei.
-            profileRow.heightAnchor.constraint(equalToConstant: 76),
+            // Etwas flacher als frueher (76), damit bei GPT-Modellen die CLI-Zeile noch Platz hat.
+            profileRow.heightAnchor.constraint(equalToConstant: 68),
 
             modeTitle.topAnchor.constraint(equalTo: profileRow.bottomAnchor, constant: 10),
             modeTitle.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
@@ -103,7 +118,15 @@ final class ProfileSectionView: NSView {
             workModeRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
             workModeRow.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
             workModeRow.heightAnchor.constraint(equalToConstant: 64),
-            workModeRow.bottomAnchor.constraint(equalTo: bottomAnchor)
+            workModeBottom,
+
+            // Dritte Zeile: Ziel-CLI, nur bei OpenAI-Modellen sichtbar.
+            cliTitle.topAnchor.constraint(equalTo: workModeRow.bottomAnchor, constant: 10),
+            cliTitle.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            cliRow.topAnchor.constraint(equalTo: cliTitle.bottomAnchor, constant: 4),
+            cliRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            cliRow.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            cliRow.heightAnchor.constraint(equalToConstant: 52)
         ])
 
         buildTiles()
@@ -172,6 +195,29 @@ final class ProfileSectionView: NSView {
             workModeRow.addArrangedSubview(tile)
             workModeTiles.append((entry, tile))
         }
+
+        for entry in viewModel.cliTargets {
+            let tile = SelectableRowView()
+            tile.translatesAutoresizingMaskIntoConstraints = false
+            tile.setAccessibilityLabel("CLI \(entry.displayName)")
+            tile.onClick = { [weak self] in self?.viewModel?.selectedCliTarget = entry }
+
+            let name = UI.label(entry.displayName, size: 13, weight: .semibold)
+            let description = UI.label(entry.descriptionText, size: 10, role: .dim)
+            description.lineBreakMode = .byTruncatingTail
+            tile.addSubview(name)
+            tile.addSubview(description)
+            NSLayoutConstraint.activate([
+                name.topAnchor.constraint(equalTo: tile.topAnchor, constant: 7),
+                name.leadingAnchor.constraint(equalTo: tile.leadingAnchor, constant: 10),
+                name.trailingAnchor.constraint(lessThanOrEqualTo: tile.trailingAnchor, constant: -10),
+                description.topAnchor.constraint(equalTo: name.bottomAnchor, constant: 3),
+                description.leadingAnchor.constraint(equalTo: tile.leadingAnchor, constant: 10),
+                description.trailingAnchor.constraint(equalTo: tile.trailingAnchor, constant: -10)
+            ])
+            cliRow.addArrangedSubview(tile)
+            cliTiles.append((entry, tile))
+        }
     }
 
     func refresh() {
@@ -181,6 +227,19 @@ final class ProfileSectionView: NSView {
         }
         for (entry, view) in workModeTiles {
             view.isSelected = entry === viewModel.selectedWorkMode
+        }
+        for (entry, view) in cliTiles {
+            view.isSelected = entry === viewModel.selectedCliTarget
+        }
+        let showCli = viewModel.hasCliChoice
+        cliTitle.isHidden = !showCli
+        cliRow.isHidden = !showCli
+        if showCli {
+            workModeBottom.isActive = false
+            cliBottom.isActive = true
+        } else {
+            cliBottom.isActive = false
+            workModeBottom.isActive = true
         }
         contextLabel.stringValue = viewModel.profileContextText
         contextLabel.isHidden = viewModel.hasModelDefault

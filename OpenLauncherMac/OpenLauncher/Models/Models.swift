@@ -273,10 +273,15 @@ final class ModelDefaultEntry {
     /// Modell beim Speichern keine Stufe angeboten hat.
     var thinkingValue: String = ""
 
-    init(profileId: String = "", workModeId: String = "", thinkingValue: String = "") {
+    /// Ziel-CLI ("opencode" oder "codex"). Nur bei OpenAI-Modellen bedeutsam; leer in alten
+    /// Dateien und bei allen anderen Providern - dann gilt OpenCode.
+    var cliTargetId: String = ""
+
+    init(profileId: String = "", workModeId: String = "", thinkingValue: String = "", cliTargetId: String = "") {
         self.profileId = profileId
         self.workModeId = workModeId
         self.thinkingValue = thinkingValue
+        self.cliTargetId = cliTargetId
     }
 
     /// Schluesselreihenfolge exakt wie beim Windows-Launcher (siehe ModelEntry.jsonNode).
@@ -285,7 +290,24 @@ final class ModelDefaultEntry {
         node["ProfileId"] = .string(profileId)
         node["WorkModeId"] = .string(workModeId)
         node["ThinkingValue"] = .string(thinkingValue)
+        node["CliTargetId"] = .string(cliTargetId)
         return node
+    }
+}
+
+/// Ziel-CLI einer Sitzung. Nur fuer OpenAI-Modelle waehlbar: dieselben GPT-Modelle laufen
+/// entweder in OpenCode (Standard) oder im eigenstaendigen Codex CLI. Beide lesen ihre Regeln
+/// aus derselben Profilquelle, damit Profil und Arbeitsmodus in beiden CLIs identisch gelten.
+final class CliTargetEntry {
+    /// "opencode" oder "codex".
+    let id: String
+    let displayName: String
+    let descriptionText: String
+
+    init(id: String, displayName: String, descriptionText: String) {
+        self.id = id
+        self.displayName = displayName
+        self.descriptionText = descriptionText
     }
 }
 

@@ -36,6 +36,7 @@ SWIFT_FILES=(
     "$SRC_DIR/Services/LayoutSettings.swift"
     "$SRC_DIR/Services/OpenCodeVariantCatalog.swift"
     "$SRC_DIR/Services/PublicCatalogHttp.swift"
+    "$SRC_DIR/Services/OpenCodeCatalogService.swift"
     "$SRC_DIR/Services/ResearchSettingsService.swift"
     "$SRC_DIR/Services/CodexResearchService.swift"
     "$SRC_DIR/Services/EffortRefreshService.swift"

@@ -336,6 +336,122 @@ final class InstructionProfileService {
                                       configPath: configPath)
     }
 
+    // ===================== Codex CLI =====================
+
+    /// Bereitet den Codex-CLI-Start vor: schreibt Profiltext + Modus-Prompt in die AGENTS.md des
+    /// Arbeitsverzeichnisses. Codex liest diese Datei garantiert ein - damit gilt im Codex CLI exakt
+    /// dasselbe Profil wie in OpenCode. Anders als bei OpenCode steht der Modus-Prompt MIT in der
+    /// Datei: Codex kennt kein work-mode-Plugin. Quelle ist trotzdem dieselbe Modus-Datei.
+    @discardableResult
+    func activateCodexProjectAgents(profileId: String, workModeId: String, workDir: String) throws -> String {
+        guard Paths.directoryExists(workDir) else {
+            throw LauncherError.message("Arbeitsverzeichnis nicht gefunden: \(workDir)")
+        }
+        let target = (workDir as NSString).appendingPathComponent("AGENTS.md")
+        Self.writeText(try composeCodexContext(profileId: profileId, workModeId: workModeId), to: target)
+        return target
+    }
+
+    /// Inhalt der Codex-AGENTS.md: erst der Profiltext (dieselbe Quelle wie OpenCode), dahinter der
+    /// Prompt des gewaehlten Arbeitsmodus. Leerer Modus-Prompt (Freimodus) haengt nichts an.
+    func composeCodexContext(profileId: String, workModeId: String) throws -> String {
+        let profileText = Paths.readText(try Self.ensureOpenCodeProfileSource(profileId))
+        let modeText = try loadWorkMode(workModeId).trimmingCharacters(in: .whitespacesAndNewlines)
+        if modeText.isEmpty { return profileText }
+        if profileText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return modeText + "\n" }
+        var trimmed = profileText
+        while trimmed.hasSuffix("\n") { trimmed.removeLast() }
+        return trimmed + "\n\n" + modeText + "\n"
+    }
+
+    /// Eigenes, PERSISTENTES Codex-Zuhause (CODEX_HOME) statt ~/.codex: sonst gaelten zusaetzlich
+    /// die globale AGENTS.md, Plugins, MCP-Server und Hooks. Persistent, weil sonst bei jedem Start
+    /// Onboarding und Vertrauensdialog wiederkaemen und die Sitzungshistorie weg waere.
+    func prepareCodexHome(profileId: String) throws -> String {
+        try Self.validateProfileId(profileId)
+        let home = (Paths.appSupport as NSString).appendingPathComponent("codex-home")
+        Paths.ensureDirectory(home)
+
+        // Globale Codex-AGENTS.md leer halten - der Profiltext kommt nur ueber die Projekt-AGENTS.md.
+        Self.writeIfChanged("", to: (home as NSString).appendingPathComponent("AGENTS.md"))
+
+        // Minimale config.toml: keine Plugins, keine MCP-Server, keine Hooks, nur die Statuszeile.
+        // Nur anlegen wenn sie fehlt - Codex traegt hier selbst seine Vertrauensstufen ein.
+        Self.createIfMissing((home as NSString).appendingPathComponent("config.toml"), text: Self.codexBaseConfig)
+
+        // Anmeldung aus dem persoenlichen ~/.codex uebernehmen, damit kein zweiter Login noetig ist.
+        Self.mirrorCodexAuth(home)
+
+        // Skills ausschliesslich aus dem Repo: Codex scannt ~/.agents/skills immer mit, und das ist
+        // ein Symlink auf die Repo-Skills. Frueher gespiegelte Kopien und die alte Sperrliste weg.
+        Self.ensureGlobalSkillLinks()
+        Self.removeCodexSkillCopies(home)
+        Self.removeCodexSkillBlocklist(home)
+        return home
+    }
+
+    private static let codexBaseConfig = """
+    # Von OpenLauncher angelegt. Bewusst minimal: kein Plugin, kein MCP-Server, kein Hook.
+    # Die Regeln kommen ausschliesslich aus der Profil-AGENTS.md des Arbeitsverzeichnisses.
+    # Codex ergaenzt hier selbst nur seine Vertrauensstufen.
+
+    # Statuszeile aus Statusline-Codex/status-line.toml
+    [tui]
+    status_line = ["model-with-reasoning", "current-dir", "permissions", "context-used", "weekly-limit", "run-state", "used-tokens", "codex-version", "estimated-thread-cost", "fast-mode"]
+
+    """
+
+    private static let codexSkillBlockMarker = "# OpenLauncher-Skills:"
+
+    private static func mirrorCodexAuth(_ home: String) {
+        let source = (Paths.home as NSString).appendingPathComponent(".codex/auth.json")
+        let target = (home as NSString).appendingPathComponent("auth.json")
+        let fm = FileManager.default
+        guard Paths.fileExists(source) else { return }
+        do {
+            if Paths.fileExists(target),
+               let targetDate = try fm.attributesOfItem(atPath: target)[.modificationDate] as? Date,
+               let sourceDate = try fm.attributesOfItem(atPath: source)[.modificationDate] as? Date,
+               targetDate >= sourceDate { return }
+            if Paths.fileExists(target) { try fm.removeItem(atPath: target) }
+            try fm.copyItem(atPath: source, toPath: target)
+            Logger.shared.info("InstructionProfileService", "mirrorCodexAuth", "Codex-Anmeldung uebernommen", ["home": home])
+        } catch {
+            Logger.shared.warn("InstructionProfileService", "mirrorCodexAuth",
+                               "Codex-Anmeldung nicht uebernommen: \(error.localizedDescription)", ["home": home])
+        }
+    }
+
+    /// Entfernt frueher nach CODEX_HOME/skills gespiegelte Skill-Kopien. Der Codex-eigene Ordner
+    /// .system bleibt unangetastet.
+    private static func removeCodexSkillCopies(_ home: String) {
+        let target = (home as NSString).appendingPathComponent("skills")
+        let fm = FileManager.default
+        guard let entries = try? fm.contentsOfDirectory(atPath: target) else { return }
+        for entry in entries where entry.caseInsensitiveCompare(".system") != .orderedSame {
+            try? fm.removeItem(atPath: (target as NSString).appendingPathComponent(entry))
+        }
+    }
+
+    /// Entfernt die fruehere Sperrliste ([[skills.config]] enabled = false) aus der config.toml -
+    /// sie wuerde jetzt die Repo-Skills abschalten. Alles andere bleibt erhalten.
+    private static func removeCodexSkillBlocklist(_ home: String) {
+        let configPath = (home as NSString).appendingPathComponent("config.toml")
+        var kept: [String] = []
+        var inSkillTable = false
+        for line in normalize(Paths.readText(configPath)).components(separatedBy: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed == "[[skills.config]]" { inSkillTable = true; continue }
+            if inSkillTable && trimmed.hasPrefix("[") { inSkillTable = false }
+            if inSkillTable { continue }
+            if trimmed.hasPrefix(codexSkillBlockMarker) { continue }
+            kept.append(line)
+        }
+        var text = kept.joined(separator: "\n")
+        while text.hasSuffix("\n") { text.removeLast() }
+        writeIfChanged(text + "\n", to: configPath)
+    }
+
     // ===================== Defaults / Helfer =====================
 
     private static func defaultSource(tool: String, profileId: String) -> String {
