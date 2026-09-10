@@ -1,0 +1,14 @@
+# Status Line Codex – gespeichert am 10.09.2026 11:56 Uhr
+[tui]
+status_line = [
+    "model-with-reasoning",
+    "current-dir",
+    "permissions",
+    "context-used",
+    "weekly-limit",
+    "run-state",
+    "used-tokens",
+    "codex-version",
+    "estimated-thread-cost",
+    "fast-mode",
+]

@@ -1,98 +1,39 @@
-# Codex-Kostenanzeige
+# Status Line Codex
 
-Version 0.1.3 – 05.09.2026, 00:50 Uhr. Basis: Codex CLI 0.153.2.
+Version 0.1.4 – 10.09.2026 11:56 Uhr.
 
-Die native CLI-Statuszeile zeigt im vorhandenen Feld `estimated-thread-cost`
-die lokale Schätzung `Kosten ≈ $12.34`. Kontext, Weekly und Modell bleiben erhalten.
-Das ist ein API-Vergleichswert in US-Dollar, keine Abrechnung des ChatGPT-Abos.
+Gesicherte Statuszeilen-Einstellungen aus dem aktuell verwendeten OpenLauncher-Codex-Profil. Die maßgebliche Vorlage ist **[status-line.toml](status-line.toml)**. Dieses Verzeichnis ersetzt die frühere selbst gebaute Kostenanzeige samt Rust-Patch, Preisdateien und Build-/Update-Skripten.
 
-`export-prices.mjs` übernimmt die Modellpreise, Priority-Tarife, Kontextstufen und
-den lokalen Cache-Read-Aufschlag von 20 % direkt aus der OpenCode-Seitenleiste.
-Die exportierten Tarife stehen in `prices.json`; die CLI lädt die installierte
-Kopie aus `CODEX_HOME/cost-prices.json` (normalerweise `~/.codex`).
-Preisaktualisierung: `node export-prices.mjs`, danach die neue JSON-Datei installieren.
-Der Export ist ein datierter Preisschnappschuss, keine permanente Live-Preisabfrage.
+## Anzeige und Reihenfolge
 
-Die Berechnung verarbeitet vollständig geschriebene `token_count`-Zeilen aus dem
-Rollout inkrementell. `thread_settings_applied` liefert Modell, Anbieter und
-Service-Tier; `turn_context` liefert das Modell des Aufrufs. Bei alten Protokollen
-ohne Service-Tier gilt Standard. Reasoning wird aus dem gesamten Output abgezogen
-und separat zum Reasoning-/Outputtarif gerechnet. Cache Read und Write werden
-aus dem gesamten Input abgezogen und separat bepreist. Doppelte Tokenmeldungen
-und reine Absenkungen bei Kompaktierung werden nicht als neue Aufrufe gezählt.
+| Einstellung | Anzeige |
+| --- | --- |
+| `model-with-reasoning` | Modell mit Reasoning-Effort |
+| `current-dir` | Aktuelles Verzeichnis |
+| `permissions` | Berechtigungsmodus, beispielsweise Full Access |
+| `context-used` | Kontextverbrauch, beispielsweise Context 0% Used |
+| `weekly-limit` | Wochenkontingent, beispielsweise Weekly 88% Left |
+| `run-state` | Laufzustand, beispielsweise Ready |
+| `used-tokens` | Verbrauchte Tokens; im Quellprofil zusätzlich konfiguriert |
+| `codex-version` | Version der laufenden Codex CLI |
+| `estimated-thread-cost` | Kostenschätzung; im Quellprofil zusätzlich konfiguriert |
+| `fast-mode` | Fast Off oder Fast On |
 
-Fortgesetzte Sessions werden aus ihrer Historie rekonstruiert. Fehlende Preise,
-unbekannte Anbieter und unvollständige Historie ergeben `≥$… (teilw.)`, niemals
-eine scheinbar vollständige Nullrechnung. Fehlende Dateien zeigen `n/v`.
-Gezählt wird der ausgewählte Thread; eigenständige Subagent-Threads und externe
-Toolgebühren sind nicht in dieser Summe enthalten. Andere OpenAI-Service-Tiers
-ohne belegten eigenen Tarif werden ebenfalls als unvollständig gekennzeichnet.
+Die Vorlage übernimmt alle zehn Einträge unverändert aus der aktiven Konfiguration. Welche Felder tatsächlich erscheinen, hängt von der CLI-Version, verfügbaren Daten und dem Terminal ab. Die Prozentwerte, das Modell, der Effort, das Verzeichnis, Ready und Fast On/Off sind dynamisch und werden nicht als feste Texte gespeichert. `run-state` bezeichnet den Laufzustand, keinen dauerhaft eingestellten Arbeitsmodus. Die Anzeige `permissions` erteilt keine Berechtigungen; `fast-mode` schaltet Fast nicht ein oder aus.
 
-## Bauen und installieren unter Windows
+## Auf einem anderen Rechner einrichten
 
-Voraussetzungen: Rust, Node.js, npm und Microsoft C++ Build Tools mit Windows SDK.
+1. Das tatsächlich von der Ziel-CLI verwendete Konfigurationsverzeichnis ermitteln: gesetztes `CODEX_HOME` verwenden, sonst `~/.codex`. Bei OpenLauncher dessen Codex-Profil verwenden. Nicht versehentlich nur das Standardprofil bearbeiten.
+2. Die dortige `config.toml` vor der Änderung sichern. Falls noch keine vorhanden ist, das Verzeichnis und die Datei anlegen.
+3. Den Inhalt aus `status-line.toml` übernehmen: In einer vorhandenen `[tui]`-Tabelle ausschließlich `status_line` ersetzen beziehungsweise ergänzen. Fehlt `[tui]`, die Tabelle hinzufügen. Keine zweite `[tui]`-Tabelle anlegen und keine gesamte bestehende Konfiguration überschreiben. Andere TUI-Einstellungen, Modelle, Berechtigungen, MCP-Server und Zugangsdaten erhalten.
+4. Codex CLI vollständig neu starten. Auf der Zielinstallation lässt sich über `/statusline` feststellen, welche Felder diese CLI anbietet. Unterstützt sie nicht alle gespeicherten Schlüssel, ist für dieselbe Anzeige eine dazu passende CLI-Version erforderlich. Die Vorlage allein installiert keine zusätzlichen CLI-Funktionen und keinen alten Kosten-Patch.
 
-```powershell
-pwsh -File .\build-install.ps1
-```
+Die TOML-Einstellungen sind unabhängig vom Betriebssystem; dieselbe Vorlage kann unter Windows, macOS und Linux in das jeweils aktive Profil übernommen werden. Auf dem Quellrechner ist diese Konfiguration bereits aktiv; dort ist keine erneute Installation nötig.
 
-Der Installer erkennt die offizielle Version aus dem installierten npm-Paket und
-lädt den passenden Upstream-Tag `rust-v<VERSION>` in einen eigenen lokalen Cache,
-wendet die kleinen TUI-Anpassungen an und baut `codex.exe`. Anschließend installiert
-er nach `~/.codex/cost-cli/<CODEX-VERSION>-cost.0.1.3-<BUILD-ID>/` und stellt den npm-Launcher auf diese Datei um.
-Die Originaldatei `codex.js.before-cost-statusline-<CODEX-VERSION>` bleibt als Sicherung erhalten.
-Die Hilfsprogramme der originalen CLI werden in das Installationsverzeichnis kopiert.
-Der Build wird in einem eigenen Verzeichnis installiert; laufende EXE-Dateien
-werden nicht überschrieben. Identische Builds können wiederverwendet werden.
+## Auftrag zum schnellen Nachrüsten
 
-## Nach einem Codex-Update
+> Richte meine Codex-Statuszeile aus dem Repo-Ordner `Statusline-Codex` (Status Line Codex) ein. Lies dort die README und übernimm die vollständige Reihenfolge aus `status-line.toml` in `tui.status_line` der tatsächlich aktiven Codex-Konfiguration. Ermittle dazu zuerst `CODEX_HOME` beziehungsweise das vom Launcher verwendete Profil. Sichere die Konfigurationsdatei und erhalte alle anderen Einstellungen. Stelle fest, ob die Ziel-CLI die Einträge unterstützt, und melde fehlende Unterstützung ausdrücklich. Die angezeigten Live-Werte bleiben dynamisch. Starte keine alten Kostenanzeige-Builds und ändere weder Berechtigungen noch Fast-Modus nur wegen ihrer Anzeige.
 
-Die Installation richtet im npm-Befehlsverzeichnis den Befehl ein:
+## Umfang der Sicherung
 
-```powershell
-codex-kosten-update
-```
-
-Er baut die Kostenanzeige für die aktuell installierte offizielle Codex-Version
-neu und aktiviert sie wieder. Um zuerst auch Codex selbst auf den aktuellen
-npm-Release zu aktualisieren:
-
-```powershell
-codex-kosten-update -MitCodexUpdate
-```
-
-Alternativ direkt im Repository: `pwsh -File Statusline-Codex/update.ps1`.
-Es gibt keinen Hintergrunddienst und keine automatische Änderung ohne Aufruf.
-Fehlen passende Quellcode-Anker oder schlägt der Build fehl, bricht die Installation
-ab. Eine unbekannte neue TUI-Struktur muss dann im Patch angepasst werden; zukünftige
-Codex-Versionen können nicht pauschal als kompatibel garantiert werden. Nach Erfolg
-Codex vollständig neu starten. Die vorhandene Statuszeilen-Konfiguration bleibt erhalten.
-
-## Auf einem anderen Rechner wiederverwenden
-
-Das Paket ist im Repository `Pepsi1978/proggs` unter `Statusline-Codex`
-versioniert, nicht als eigenständiges npm-Paket veröffentlicht. Für einen anderen
-Windows-PC kann dieser Auftrag verwendet werden:
-
-> Installiere die Codex-Kostenanzeige aus `Statusline-Codex` im aktuellen
-> Repository `Pepsi1978/proggs`. Lies die README, richte die Build-Voraussetzungen
-> ein und führe `build-install.ps1` aus. Der Installer ermittelt die Codex-Version;
-> bei einem inkompatiblen Quellstand muss der Patch zuerst angepasst werden.
-> Ergänze `estimated-thread-cost` in `tui.status_line` der Codex-Konfiguration,
-> erhalte alle bisherigen Statusanzeigen und verwende den tatsächlichen
-> `CODEX_HOME` des Benutzers. Erkläre danach den vollständigen CLI-Neustart.
-
-Andere CLI-Tools brauchen einen eigenen Adapter für ihre Verbrauchsdaten und ihre
-Anzeige. `local_cost.rs` liest das Codex-Rolloutformat und ist deshalb kein
-universelles Statuszeilen-Plugin. Der mitgelieferte Installer unterstützt Windows;
-für macOS/Linux muss insbesondere der Build- und Installationsweg angepasst werden.
-
-Für die Aktivierung ist ein vollständiger CLI-Neustart nötig; `/new` im laufenden
-Prozess lädt keine neue EXE. Mit `codex resume` kann die bisherige Session fortgesetzt
-werden. Ein npm-Codex-Update kann den Launcher wieder ersetzen; danach den Updater
-aufrufen. Rückbau: den zur offiziellen Version passenden gesicherten
-npm-Launcher wiederherstellen. Laufende CLI-Prozesse werden nicht beendet.
-
-Quellen: [OpenAI-Tarife](https://developers.openai.com/api/docs/pricing),
-[GPT-6 Astra](https://developers.openai.com/api/docs/models/gpt-6-astra),
-[Upstream-Statuszeile](https://github.com/openai/codex/blob/rust-v0.153.2/codex-rs/tui/src/chatwidget/status_surfaces.rs).
+Gespeichert wird ausschließlich die Statuszeilen-Konfiguration. Die vollständige persönliche `config.toml`, Zugangsdaten, absolute Benutzerpfade und CLI-Binärdateien gehören nicht zu dieser Sicherung. Die alte Kostenanzeige-Implementierung bleibt bei Bedarf über die Git-Historie auffindbar; im aktuellen Ordner wurde sie entfernt. Bereits lokal installierte CLI-Binärdateien werden durch diese Repository-Änderung nicht verändert.
