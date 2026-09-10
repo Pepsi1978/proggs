@@ -43,9 +43,9 @@ Repo-Ordner uebernommen — sonst hat ein neuer Rechner / eine andere Plattform 
 
 | Komponente | Aktiv (nicht im Repo) | Spiegel hier (`Umgebung/`) | Auch nach `claude-code-setup/` |
 |------------|------------------------|----------------------------|--------------------------------|
-| **Skills** | `~/.claude/skills/<name>/` | `Umgebung/Skills/<name>/` | `claude-code-setup/skills/` |
+| **Skills** | `OpenLauncher/Profiles/ClaudeCode/standard/skills/<name>/` (Quelle) | `Umgebung/Skills/<name>/` | — |
 | **Hooks** (`.ps1` + `.sh`) | `~/.claude/hooks/` | `Umgebung/Hooks/` | `claude-code-setup/hooks/` |
-| **Plugins** (eigene) | Plugin-Quelle | `Umgebung/Plugins/<plugin>/` | `claude-code-setup/Plugins/` |
+| **Plugins** (eigene) | Plugin-Quelle | `Umgebung/Plugins/<plugin>/` | — |
 | **Agents** | `~/.claude/agents/` | — | `claude-code-setup/agents/` |
 | **Commands** | `~/.claude/commands/` | — | `claude-code-setup/commands/` |
 | **Rules** | `~/.claude/rules/` | — | `claude-code-setup/rules/` |

@@ -12,9 +12,9 @@ vergessen). Nicht fertig, bevor beide aktuell + gepusht.
 
 | Komponente | Aktiv | `claude-code-setup/` | `Umgebung/` |
 |------------|-------|----------------------|-------------|
-| Skills | `~/.claude/skills/<n>/` | `skills/<n>/` | `Skills/<n>/` |
+| Skills | `OpenLauncher/Profiles/ClaudeCode/standard/skills/<n>/` (Quelle, `~/.claude/skills` ist Verknüpfung) | — | `Skills/<n>/` |
 | Hooks (`.ps1`+`.sh`) | `~/.claude/hooks/` | `hooks/` | `Hooks/` |
-| Plugins (eigene) | Plugin-Quelle | `Plugins/` | `Plugins/` |
+| Plugins (eigene) | Plugin-Quelle | — | `Plugins/` |
 | Agents/Commands/Rules | `~/.claude/{agents,commands,rules}/` | gleichnamig | — |
 | MCP/Settings | `settings.json`/`.mcp.json` | `mcp-*.json` + 3-Dateien-Regel | — |
 

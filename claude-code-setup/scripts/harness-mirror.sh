@@ -30,9 +30,11 @@ CLAUDE_HOME="${HOME}/.claude"
 SETUP="${PROGGS}/claude-code-setup"
 UMGEBUNG="${PROGGS}/Umgebung"
 
-# label | aktiv | spiegel-1 (claude-code-setup) | spiegel-2 (Umgebung, leer = keiner)
+# label | aktiv | spiegel-1 (claude-code-setup, leer = keiner) | spiegel-2 (Umgebung, leer = keiner)
+# Skills: Quelle ist OpenLauncher/Profiles/ClaudeCode/standard/skills (~/.claude/skills ist Verknuepfung),
+# deshalb kein Spiegel in claude-code-setup.
 COMPONENTS=(
-  "skills|${CLAUDE_HOME}/skills|${SETUP}/skills|${UMGEBUNG}/Skills"
+  "skills|${CLAUDE_HOME}/skills||${UMGEBUNG}/Skills"
   "hooks|${CLAUDE_HOME}/hooks|${SETUP}/hooks|${UMGEBUNG}/Hooks"
   "agents|${CLAUDE_HOME}/agents|${SETUP}/agents|"
   "commands|${CLAUDE_HOME}/commands|${SETUP}/commands|"
@@ -96,11 +98,13 @@ for entry in "${COMPONENTS[@]}"; do
   IFS='|' read -r label active m1 m2 <<< "$entry"
   printf '\n[%s]\n' "$label"
   if [ "$MODE" = "sync" ]; then
-    sync_dir "$active" "$m1"
+    [ -n "$m1" ] && sync_dir "$active" "$m1"
     [ -n "$m2" ] && sync_dir "$active" "$m2"
   else
-    printf ' -> claude-code-setup:\n'
-    compare_dir "$active" "$m1" "$label"
+    if [ -n "$m1" ]; then
+      printf ' -> claude-code-setup:\n'
+      compare_dir "$active" "$m1" "$label"
+    fi
     if [ -n "$m2" ]; then
       printf ' -> Umgebung:\n'
       compare_dir "$active" "$m2" "$label"
@@ -109,7 +113,7 @@ for entry in "${COMPONENTS[@]}"; do
 done
 
 printf '\n[plugins]\n'
-printf '   Hinweis: Eigene Plugins manuell pruefen (claude-code-setup/Plugins, Umgebung/Plugins).\n'
+printf '   Hinweis: Eigene Plugins manuell pruefen (Umgebung/Plugins).\n'
 printf '   ~/.claude/plugins/ enthaelt ueberwiegend FREMDE Plugins — kein Auto-Vergleich.\n'
 
 if [ "$MODE" = "check" ]; then

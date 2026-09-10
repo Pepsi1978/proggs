@@ -264,9 +264,6 @@ git commit -m "#NNN - export: add N ledger entries from {platform} session"
 git push
 ```
 
-If there is old content in `PORTING-LIST.md` that was never migrated, convert it into proper
-ledger entries and then mark `PORTING-LIST.md` as read-only.
-
 ### Schritt 6 - Report
 
 Report to the user in German:

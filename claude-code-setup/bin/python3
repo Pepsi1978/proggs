@@ -1,2 +1,0 @@
-#!/bin/bash
-exec "C:/Users/barwa/AppData/Local/Python/bin/python.exe" "$@"
