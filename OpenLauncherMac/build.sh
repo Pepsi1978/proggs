@@ -29,6 +29,7 @@ SWIFT_FILES=(
     "$SRC_DIR/Services/Paths.swift"
     "$SRC_DIR/Services/Logger.swift"
     "$SRC_DIR/Services/AndroidDebugKeystoreSync.swift"
+    "$SRC_DIR/Services/RepoSync.swift"
     "$SRC_DIR/Services/Shell.swift"
     "$SRC_DIR/Services/JSONValue.swift"
     "$SRC_DIR/Services/Theme.swift"

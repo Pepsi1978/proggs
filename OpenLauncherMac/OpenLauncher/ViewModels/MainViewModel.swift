@@ -801,6 +801,11 @@ final class MainViewModel {
             return
         }
 
+        // Vor jedem Start das Repo mit GitHub abgleichen: Profile, Regeln und Skills kommen von dort, sonst
+        // arbeitet die neue Sitzung mit dem veralteten Stand dieses Rechners. Scheitert es, wird trotzdem gestartet.
+        let sync = RepoSync.pull()
+        let syncHinweis = sync.ok ? "" : " · ⚠ Repo-Abgleich: \(sync.message)"
+
         do {
             let thinkingLevel = selectedThinkingOption?.commandValue
             let profileDocuments = try profiles.loadProfile(isClaudeCode: isClaudeCode,
@@ -827,6 +832,7 @@ final class MainViewModel {
                 statusText = (thinkingLevel ?? "").isEmpty
                     ? "Claude Code gestartet: \(model.displayName) · Profil \(profile.displayName) · Modus \(workMode.displayName)"
                     : "Claude Code gestartet: \(model.displayName) · Effort \(selectedThinkingOption?.displayName ?? "") · Profil \(profile.displayName) · Modus \(workMode.displayName)"
+                statusText += syncHinweis
                 return
             }
 
@@ -851,6 +857,7 @@ final class MainViewModel {
             statusText = (thinkingLevel ?? "").isEmpty
                 ? "OpenCode gestartet: \(model.displayName) via \(provider.providerName) · Profil \(profile.displayName) · Modus \(workMode.displayName)"
                 : "OpenCode gestartet: \(model.displayName) via \(provider.providerName) · Thinking \(selectedThinkingOption?.displayName ?? "") · Profil \(profile.displayName) · Modus \(workMode.displayName)"
+            statusText += syncHinweis
         } catch {
             let details = Self.buildErrorDetails(action: "OpenCode starten", error: error, model: model,
                                                  provider: provider, workDir: workDir, version: version)

@@ -918,7 +918,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Start()
+    private async Task Start()
     {
         // Das Codex CLI spricht immer direkt mit OpenAI -- dort gibt es keine Provider-Wahl, die
         // Auswahl darf den Start also nicht blockieren.
@@ -948,6 +948,13 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText = "Arbeitsverzeichnis existiert nicht.";
             return;
         }
+
+        // Vor jedem Start das Repo mit GitHub abgleichen: Profile, Regeln und Skills kommen von dort, sonst
+        // arbeitet die neue Sitzung mit dem veralteten Stand dieses Rechners. Scheitert es, wird trotzdem gestartet.
+        StatusText = "Gleiche Repo mit GitHub ab …";
+        var sync = await RepoSync.PullAsync();
+        var syncHinweis = sync.Ok ? "" : $" · ⚠ Repo-Abgleich: {sync.Message}";
+
         try
         {
             var thinkingLevel = SelectedThinkingOption?.CommandValue;
@@ -975,6 +982,7 @@ public sealed partial class MainViewModel : ObservableObject
                 StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
                     ? $"Claude Code gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
                     : $"Claude Code gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
+                StatusText += syncHinweis;
                 return;
             }
 
@@ -999,6 +1007,7 @@ public sealed partial class MainViewModel : ObservableObject
                 StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
                     ? $"Codex CLI gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
                     : $"Codex CLI gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
+                StatusText += syncHinweis;
                 return;
             }
 
@@ -1032,6 +1041,7 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
                 ? $"OpenCode gestartet: {SelectedModel.DisplayName} via {provider.ProviderName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
                 : $"OpenCode gestartet: {SelectedModel.DisplayName} via {provider.ProviderName} · Thinking {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
+            StatusText += syncHinweis;
         }
         catch (Exception ex)
         {
