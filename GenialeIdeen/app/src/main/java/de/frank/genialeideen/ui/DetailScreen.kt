@@ -44,7 +44,9 @@ import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -441,34 +443,39 @@ private fun IdeenKopf(
 ) {
     val gold = LocalGold.current
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
+    var frageLoeschen by remember { mutableStateOf(false) }
+    if (frageLoeschen) {
+        AlertDialog(
+            onDismissRequest = { frageLoeschen = false },
+            title = { Text("Idee wirklich löschen?") },
+            text = { Text("„${idee.titel}“ wird endgültig gelöscht.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        frageLoeschen = false
+                        aufLoeschen()
+                    },
+                ) { Text("Ja", color = Semantisch.fehler) }
+            },
+            dismissButton = {
+                TextButton(onClick = { frageLoeschen = false }) { Text("Nein") }
+            },
+            containerColor = gold.flaecheErhoeht,
+        )
+    }
     GoldKarte(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         erhoeht = true,
     ) {
         Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Text(
-                    idee.text.ifBlank { "Ohne weiteren Text." },
-                    // Ein Tipp auf den Text öffnet das Bearbeiten — genau dort, wo man
-                    // hinfasst, wenn man etwas ändern will.
-                    modifier = Modifier.weight(1f).druckEffekt(aufBearbeiten),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = gold.textPrimaer,
-                )
-                Spacer(Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier.size(38.dp).druckEffekt(aufBearbeiten),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Überschrift und Text ändern",
-                        tint = gold.primaer,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                LautsprecherKnopf(spricht = spricht, zustand = vorleseZustand, aufTipp = aufVorlesen)
-            }
+            Text(
+                idee.text.ifBlank { "Ohne weiteren Text." },
+                // Ein Tipp auf den Text öffnet das Bearbeiten — genau dort, wo man
+                // hinfasst, wenn man etwas ändern will.
+                modifier = Modifier.fillMaxWidth().druckEffekt(aufBearbeiten),
+                style = MaterialTheme.typography.bodyMedium,
+                color = gold.textPrimaer,
+            )
             Spacer(Modifier.height(12.dp))
             KategorieWahl(
                 kategorien = kategorien,
@@ -490,7 +497,19 @@ private fun IdeenKopf(
                 UmsetzungsKnopf(umgesetzt = umgesetzt, aufTipp = aufUmgesetzt)
                 Spacer(Modifier.weight(1f))
                 Box(
-                    modifier = Modifier.size(38.dp).druckEffekt(aufLoeschen),
+                    modifier = Modifier.size(38.dp).druckEffekt(aufBearbeiten),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Überschrift und Text ändern",
+                        tint = gold.primaer,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                LautsprecherKnopf(spricht = spricht, zustand = vorleseZustand, aufTipp = aufVorlesen)
+                Box(
+                    modifier = Modifier.size(38.dp).druckEffekt { frageLoeschen = true },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
