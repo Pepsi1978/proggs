@@ -76,7 +76,7 @@ fun SettingsHomeScreen(onBack: () -> Unit, onOpen: (String) -> Unit, onSwitchTab
         ) {
             item {
                 Text(
-                    text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_UPDATED_AT})",
+                    text = "Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_BUMPED_AT})",
                     style = MaterialTheme.typography.labelSmall,
                     color = cosmos.textSecondary,
                     modifier = Modifier.padding(bottom = 4.dp),

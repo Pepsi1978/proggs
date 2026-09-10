@@ -950,3 +950,16 @@ Nur Composite/Modem, kein ADB-Interface → Auto Blocker, kein Treiberproblem.
   `gradle.properties` (lokal) pinnen ODER `kotlin { jvmToolchain(21) }` mit Foojay-Resolver.
   NIE das System-JDK-25 deinstallieren (andere Tools brauchen es) — nur den Build pinnen.
 - **Quelle:** eigener Vorfall 2026-07-12 (Session v8.1-Fixes), Stacktrace verifiziert; vgl. §1.2 JDK-Matrix.
+
+### N2. App zeigt nach Versionssprung den ALTEN `VERSION_BUMPED_AT` — BuildConfig-Alias + inkrementeller Kotlin-Build ⭐ ERLEBT (10.09.2026, EntropieReductor)
+- **Symptom:** Neu gebaut und installiert, `versionName` auf dem Gerät ist neu, aber die App zeigt den
+  Zeitstempel des vorigen Builds. Im APK stehen beide Stempel: der neue in `BuildConfig`, der alte in den
+  dex-Dateien der anzeigenden Screens.
+- **Ursache:** `buildConfigField("String", "VERSION_UPDATED_AT", "VERSION_BUMPED_AT")` — ein Feld, das nur auf
+  ein anderes verweist. Kotlin kopiert `static final String`-Konstanten beim Kompilieren in die Aufrufer. Die
+  Deklaration des Alias-Felds ändert sich beim Bump nie, deshalb übersetzt der inkrementelle Build die Aufrufer
+  nicht neu. Der nächste Build scheiterte danach sogar mit `Unresolved reference` auf existierende Klassen
+  (kaputter IC-Cache).
+- **FIX:** Anzeige direkt aus `BuildConfig.VERSION_BUMPED_AT` lesen, Alias-Feld löschen. Einmal
+  `gradlew clean assembleDebug`, dann `adb install -r` (keine Deinstallation nötig).
+- **Prüfen:** APK vom Gerät ziehen, in `classes*.dex` nach dem alten Stempel-Text suchen. Darf nicht vorkommen.

@@ -67,9 +67,11 @@ android {
         minSdk = 28
         targetSdk = 36
         versionCode = 341
-        versionName = "0.29.5"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.09.2026, 13:49 Uhr\"")
-        buildConfigField("String", "VERSION_UPDATED_AT", "VERSION_BUMPED_AT")
+        versionName = "0.29.6"
+        // Nur dieses eine Feld anzeigen, nie ein Alias darauf: ein Feld `= VERSION_BUMPED_AT` hat eine
+        // unveraenderte Deklaration, Kotlins inkrementeller Build uebersetzt die Anzeige dann nicht neu
+        // und die App zeigt den alten Stempel (Almanach bugs/android-build/gradle.md N2).
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.09.2026, 14:02 Uhr\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

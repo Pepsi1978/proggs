@@ -57,7 +57,7 @@ fun LaunchScreen(onStart: () -> Unit) {
     val cosmos = LocalCosmos.current
     val variantLabel = BuildConfig.VARIANT_LABEL
     val versionName = BuildConfig.VERSION_NAME
-    val versionUpdatedAt = BuildConfig.VERSION_UPDATED_AT
+    val versionUpdatedAt = BuildConfig.VERSION_BUMPED_AT
 
     // Sanfter Atemeffekt am Logo, damit der Bildschirm lebendig wirkt.
     val infinite = rememberInfiniteTransition(label = "launchPulse")
