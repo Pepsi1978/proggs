@@ -1,0 +1,7 @@
+{
+  "name": "claude-code-statusline-settings",
+  "version": "0.1.0",
+  "updated": "10.09.2026 12:00 Uhr",
+  "private": true,
+  "description": "Übertragbare Sicherung der aktiven Claude-Code-Statuszeile samt Installationsskript für Windows"
+}
