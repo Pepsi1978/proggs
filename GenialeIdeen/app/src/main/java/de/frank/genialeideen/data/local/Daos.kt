@@ -29,6 +29,9 @@ interface IdeenDao {
     @Query("SELECT COALESCE(MIN(reihenfolge), 0) - 1 FROM ideen WHERE status = :status")
     suspend fun naechsteReihenfolgeOben(status: String): Int
 
+    @Query("SELECT COALESCE(MAX(reihenfolge), 0) + 1 FROM ideen WHERE status = :status")
+    suspend fun naechsteReihenfolgeUnten(status: String): Int
+
     @Insert
     suspend fun einfuegen(idee: IdeeEntity): Long
 

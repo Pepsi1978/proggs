@@ -61,7 +61,7 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
         originalText: String? = null,
         kategorieId: Long? = null,
     ): Long {
-        val oben = ideenDao.naechsteReihenfolgeOben(IdeenStatus.OFFEN.name)
+        val oben = ideenDao.naechsteReihenfolgeUnten(IdeenStatus.OFFEN.name)
         val id = ideenDao.einfuegen(
             IdeeEntity(
                 titel = titel,
@@ -127,7 +127,7 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
         return id
     }
 
-    /** Aus dem Entwurf wird eine richtige Idee: Sie wandert nach oben in die offene Liste. */
+    /** Aus dem Entwurf wird eine richtige Idee: Sie reiht sich unten in die offene Liste ein. */
     suspend fun ausEntwurfUebernehmen(
         entwurfId: Long,
         titel: String,
@@ -136,7 +136,7 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
         originalText: String?,
     ) {
         val bestand = ideenDao.lade(entwurfId) ?: return
-        val oben = ideenDao.naechsteReihenfolgeOben(IdeenStatus.OFFEN.name)
+        val oben = ideenDao.naechsteReihenfolgeUnten(IdeenStatus.OFFEN.name)
         ideenDao.aktualisieren(
             bestand.copy(
                 titel = titel.trim(),
