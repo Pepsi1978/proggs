@@ -983,12 +983,16 @@ public sealed partial class MainViewModel : ObservableObject
                 // Codex CLI liest keine Plugin-Modi: Profil UND Modus-Prompt wandern zusammen in die
                 // AGENTS.md des Arbeitsverzeichnisses -- dieselbe Profilquelle wie bei OpenCode.
                 var agentsPath = _profiles.ActivateCodexProjectAgents(SelectedProfile.Id, SelectedWorkMode.Id, WorkDir);
-                _launcher.LaunchCodexCli(SelectedModel, WorkDir, thinkingLevel);
+                // Eigenes Codex-Zuhause statt ~/.codex: sonst gaelten zusaetzlich die globale
+                // AGENTS.md, rund 40 Plugins, mehrere MCP-Server, Hooks und eine fremde Statuszeile.
+                var codexHome = _profiles.PrepareCodexHome();
+                _launcher.LaunchCodexCli(SelectedModel, WorkDir, thinkingLevel, codexHome);
                 Logger.Instance.Info("MainViewModel", "Start", "Codex-CLI-Kontext geschrieben", new
                 {
                     profile = SelectedProfile.Id,
                     workMode = SelectedWorkMode.Id,
-                    agentsPath
+                    agentsPath,
+                    codexHome
                 });
                 StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
                     ? $"Codex CLI gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"

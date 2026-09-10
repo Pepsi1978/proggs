@@ -380,19 +380,23 @@ $env:Path = $pathEntries -join ';'
     /// Startet das eigenstaendige Codex CLI (OpenAI) statt OpenCode in einem neuen
     /// Windows-Terminal-Fenster. Die Profilregeln stehen bereits in der AGENTS.md des
     /// Arbeitsverzeichnisses (InstructionProfileService.ActivateCodexProjectAgents) -- Codex liest
-    /// sie von dort als Projekt-Dokument ein.
+    /// sie von dort als Projekt-Dokument ein. <paramref name="codexHome"/> ist das eigene
+    /// Codex-Zuhause des Launchers (InstructionProfileService.PrepareCodexHome): es haelt die
+    /// persoenliche ~/.codex-Umgebung -- globale AGENTS.md, Plugins, MCP-Server, Hooks,
+    /// angepasste Statuszeile -- vollstaendig aus der Sitzung heraus.
     /// </summary>
-    public void LaunchCodexCli(ModelEntry model, string workDir, string? effortLevel)
+    public void LaunchCodexCli(ModelEntry model, string workDir, string? effortLevel, string codexHome)
     {
         var log = Logger.Instance;
         var slug = ResolveCodexModelSlug(model.Slug, out var serviceTier);
         var effort = NormalizeCodexEffort(effortLevel);
+
         try
         {
             Directory.CreateDirectory(workDir);
             var wt = ResolveWt();
             var tabColor = PickCodexTerminalTabColor();
-            var innerScript = BuildCodexStartScript(slug, workDir, effort, serviceTier);
+            var innerScript = BuildCodexStartScript(slug, workDir, effort, serviceTier, codexHome);
             var shell = ResolvePowerShellExecutable();
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
             var title = BuildCodexTitle(tabColor.Name, effort);
@@ -548,7 +552,7 @@ try {
     ///   --dangerously-bypass-approvals-and-sandbox  Gegenstueck zu Claudes
     ///                                 --dangerously-skip-permissions: kein Nachfragen pro Befehl.
     /// </summary>
-    private static string BuildCodexStartScript(string slug, string workDir, string? effort, string? serviceTier)
+    private static string BuildCodexStartScript(string slug, string workDir, string? effort, string? serviceTier, string codexHome)
     {
         var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-codex-cli-{Guid.NewGuid():N}.ps1");
         var script = $$"""
@@ -583,6 +587,10 @@ try {
     if ($serviceTier) {
         $codexArgs += @('-c', ('service_tier="{0}"' -f $serviceTier))
     }
+    # Eigenes Codex-Zuhause: keine globale AGENTS.md, keine Plugins, keine MCP-Server,
+    # keine Hooks, keine fremde Statuszeile -- nur das Profil aus dem Arbeitsverzeichnis.
+    $env:CODEX_HOME = {{PowerShellLiteral(codexHome)}}
+
     $agentsFile = Join-Path {{PowerShellLiteral(workDir)}} 'AGENTS.md'
     if (Test-Path -LiteralPath $agentsFile) {
         $firstLine = (Get-Content -LiteralPath $agentsFile -TotalCount 1 -ErrorAction SilentlyContinue)

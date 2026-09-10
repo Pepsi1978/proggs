@@ -285,10 +285,43 @@ public sealed class InstructionProfileService
     {
         if (!Directory.Exists(workDir))
             throw new DirectoryNotFoundException($"Arbeitsverzeichnis nicht gefunden: {workDir}");
+        var text = ComposeCodexContext(profileId, workModeId);
         var target = Path.Combine(workDir, "AGENTS.md");
-        WriteText(target, ComposeCodexContext(profileId, workModeId));
+        WriteText(target, text);
+        AlignAncestorCodexAgents(workDir, text);
         return target;
     }
+
+    /// <summary>
+    /// Codex liest die AGENTS.md-Kette von der Git-Wurzel bis zum Arbeitsverzeichnis und haengt sie
+    /// aneinander. Liegt das Arbeitsverzeichnis in einem Unterordner, wuerde also eine hoeher
+    /// liegende AGENTS.md VOR dem gewaehlten Profil gelten -- moeglicherweise mit einem anderen
+    /// Profil vom letzten Start. Deshalb werden alle Vorfahren-Dateien, die erkennbar vom Launcher
+    /// stammen, auf denselben Text gezogen. Fremde AGENTS.md bleiben unangetastet.
+    /// </summary>
+    private static void AlignAncestorCodexAgents(string workDir, string text)
+    {
+        try
+        {
+            var dir = Directory.GetParent(Path.GetFullPath(workDir));
+            while (dir != null)
+            {
+                var candidate = Path.Combine(dir.FullName, "AGENTS.md");
+                if (File.Exists(candidate) && IsLauncherProfileText(ReadText(candidate)))
+                    WriteIfChanged(candidate, text);
+                if (Directory.Exists(Path.Combine(dir.FullName, ".git"))) break;
+                dir = dir.Parent;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "AlignAncestorCodexAgents", $"Vorfahren-AGENTS.md nicht angeglichen: {ex.Message}", new { workDir });
+        }
+    }
+
+    /// <summary>Erkennt eine vom Launcher geschriebene Profildatei an ihrer Kopfzeile.</summary>
+    private static bool IsLauncherProfileText(string text) =>
+        text.TrimStart().StartsWith("# Open-Code-Profil:", StringComparison.Ordinal);
 
     /// <summary>
     /// Inhalt der Codex-AGENTS.md: erst der Profiltext (dieselbe Quelle wie OpenCode:
@@ -302,6 +335,66 @@ public sealed class InstructionProfileService
         if (modeText.Length == 0) return profileText;
         if (profileText.Trim().Length == 0) return modeText + "\n";
         return profileText.TrimEnd('\n') + "\n\n" + modeText + "\n";
+    }
+
+    /// <summary>
+    /// Legt das EIGENE Codex-Zuhause des Launchers an und gibt seinen Pfad zurueck. Es wird beim
+    /// Start ueber die Umgebungsvariable CODEX_HOME gesetzt, damit Codex NICHT das persoenliche
+    /// ~/.codex benutzt. Grund: dort liegen eine globale AGENTS.md mit fremden Regeln, rund 40
+    /// Plugins, mehrere MCP-Server, Hooks und eine angepasste Statuszeile -- all das wuerde
+    /// zusaetzlich zum Launcher-Profil gelten. Im eigenen Zuhause gilt ausschliesslich die
+    /// Profil-AGENTS.md des Arbeitsverzeichnisses.
+    ///
+    /// Das Zuhause ist bewusst PERSISTENT (nicht pro Sitzung): sonst laeuft bei jedem Start das
+    /// Onboarding und der Vertrauensdialog erneut, und die Sitzungshistorie waere jedes Mal weg.
+    /// </summary>
+    public string PrepareCodexHome()
+    {
+        var home = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OpenLauncher", "codex-home");
+        Directory.CreateDirectory(home);
+
+        // Globale Codex-AGENTS.md leer halten -- dieselbe Logik wie bei OpenCode: der Profiltext
+        // kommt ausschliesslich ueber die Projekt-AGENTS.md. Codex legt sich hier sonst beim
+        // ersten Start selbst eine an.
+        WriteIfChanged(Path.Combine(home, "AGENTS.md"), string.Empty);
+
+        // Minimale config.toml: keine Plugins, keine MCP-Server, keine Hooks, kein notify, keine
+        // eigene Statuszeile. Nur anlegen wenn sie fehlt -- Codex traegt hier selbst seine
+        // [projects.*]-Vertrauensstufen ein, die bei jedem Neuschreiben verloren gingen (dann kaeme
+        // der Vertrauensdialog bei jedem Start zurueck).
+        CreateIfMissing(Path.Combine(home, "config.toml"), CodexBaseConfig);
+
+        // Anmeldung aus dem persoenlichen ~/.codex uebernehmen, damit kein zweiter Login noetig ist.
+        // Nur wenn sie hier fehlt oder die Quelle neuer ist: ein im eigenen Zuhause erneuerter
+        // Token darf nicht durch einen aelteren ueberschrieben werden.
+        MirrorCodexAuth(home);
+        return home;
+    }
+
+    private const string CodexBaseConfig = """
+# Von OpenLauncher angelegt. Bewusst minimal: kein Plugin, kein MCP-Server, kein Hook,
+# keine eigene Statuszeile. Die Regeln kommen ausschliesslich aus der Profil-AGENTS.md
+# des Arbeitsverzeichnisses. Codex ergaenzt hier selbst nur seine Vertrauensstufen.
+""";
+
+    private static void MirrorCodexAuth(string home)
+    {
+        try
+        {
+            var source = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex", "auth.json");
+            if (!File.Exists(source)) return;
+            var target = Path.Combine(home, "auth.json");
+            if (File.Exists(target) && File.GetLastWriteTimeUtc(target) >= File.GetLastWriteTimeUtc(source)) return;
+            File.Copy(source, target, overwrite: true);
+            Logger.Instance.Info("InstructionProfileService", "MirrorCodexAuth", "Codex-Anmeldung uebernommen", new { home });
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "MirrorCodexAuth", $"Codex-Anmeldung nicht uebernommen: {ex.Message}", new { home });
+        }
     }
 
     public OpenCodeProfileSession PrepareOpenCodeSession(string profileId, string workDir, bool isLmStudio)

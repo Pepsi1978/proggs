@@ -32,7 +32,29 @@ erfolg() { printf '\033[32m%s\033[0m\n' "$1"; }
 # ---------------------------------------------------------------------------
 laeuft() { pgrep -f "OpenLauncher.app/Contents/MacOS/OpenLauncher" >/dev/null 2>&1; }
 
+# Ohne echtes Terminal (Aufruf aus einem Agenten oder einer Pipeline) darf KEIN Dialog erscheinen:
+# er wartet dort ewig auf einen Klick, den niemand sieht, und der Aufrufer laeuft in sein Timeout.
+# In dem Fall gilt automatisch "Aktualisieren".
+interaktiv() { [ -t 0 ] && [ "${OPENLAUNCHER_UPDATE_FORCE:-0}" != "1" ]; }
+
+# Ist der vorhandene Build schon der Quellstand? Dann nicht ein zweites Mal bauen. Verglichen wird
+# der Zeitstempel der gebauten Binaerdatei gegen die neueste Quelldatei (nur echter Quellcode --
+# Laufzeitdateien schreibt der Launcher im Betrieb selbst neu).
+build_ist_aktuell() {
+    [ -f "$BUILD_BINARY" ] || return 1
+    local neueste
+    neueste=$(find "$PROJECT_DIR/OpenLauncher" -type f \( -name '*.swift' -o -name '*.plist' \)         -newer "$BUILD_BINARY" -print -quit 2>/dev/null)
+    [ -z "$neueste" ]
+}
+
+if build_ist_aktuell && laeuft; then
+    VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INSTALLED_APP/Contents/Info.plist" 2>/dev/null || echo "?")
+    erfolg "LAUNCHER_UPDATE_STATUS=already-current VERSION=$VERSION"
+    exit 0
+fi
+
 if laeuft; then
+    if interaktiv; then
     ANTWORT=$(osascript <<'AS' 2>/dev/null || echo "Nein"
 tell application "System Events"
     activate
@@ -42,9 +64,12 @@ end tell
 return antwort
 AS
 )
-    if [ "$ANTWORT" != "Aktualisieren" ]; then
-        echo "LAUNCHER_UPDATE_STATUS=cancelled"
-        exit 0
+        if [ "$ANTWORT" != "Aktualisieren" ]; then
+            echo "LAUNCHER_UPDATE_STATUS=cancelled"
+            exit 0
+        fi
+    else
+        hinweis "Laufender Launcher wird ohne Rueckfrage geschlossen (keine interaktive Sitzung)."
     fi
 
     # Sauber beenden statt abschiessen: die App speichert dabei ihr Fensterlayout.
@@ -63,18 +88,22 @@ fi
 # ---------------------------------------------------------------------------
 # Zeitstempel VOR dem Build merken. Ein Build, der nichts erzeugt, faellt sonst nicht auf:
 # genau daran scheiterte der Weg von Hand (alte Fassung gestartet, neue Version gemeldet).
-STEMPEL_VORHER=0
-[ -f "$BUILD_BINARY" ] && STEMPEL_VORHER=$(stat -f %m "$BUILD_BINARY")
+if build_ist_aktuell; then
+    hinweis "Build ist bereits aktuell - es wird nur installiert und gestartet."
+else
+    STEMPEL_VORHER=0
+    [ -f "$BUILD_BINARY" ] && STEMPEL_VORHER=$(stat -f %m "$BUILD_BINARY")
 
-if ! bash "$PROJECT_DIR/build.sh"; then
-    fehler "Der Build ist fehlgeschlagen. Das Update wurde nicht durchgeführt."
-fi
+    if ! bash "$PROJECT_DIR/build.sh"; then
+        fehler "Der Build ist fehlgeschlagen. Das Update wurde nicht durchgeführt."
+    fi
 
-[ -f "$BUILD_BINARY" ] || fehler "Die aktualisierte Launcher-Datei wurde nicht erzeugt: $BUILD_BINARY"
+    [ -f "$BUILD_BINARY" ] || fehler "Die aktualisierte Launcher-Datei wurde nicht erzeugt: $BUILD_BINARY"
 
-STEMPEL_NACHHER=$(stat -f %m "$BUILD_BINARY")
-if [ "$STEMPEL_NACHHER" -le "$STEMPEL_VORHER" ]; then
-    fehler "Der Build lief durch, hat die Launcher-Datei aber nicht erneuert. Das Update wurde abgebrochen."
+    STEMPEL_NACHHER=$(stat -f %m "$BUILD_BINARY")
+    if [ "$STEMPEL_NACHHER" -le "$STEMPEL_VORHER" ]; then
+        fehler "Der Build lief durch, hat die Launcher-Datei aber nicht erneuert. Das Update wurde abgebrochen."
+    fi
 fi
 
 # ---------------------------------------------------------------------------
