@@ -513,7 +513,7 @@ Umschalter **Abo / eigener Schlüssel** mit Anmeldestatus · bei der Anmeldung d
   `appDataFolder` danach wirklich leer ist), Anzeige von Zeitpunkt und Größe der letzten Sicherung.
 - Automatische Sicherung optional (täglich, nur im WLAN).
 - Vorlagen: `BestJournalAndroid/.../data/remote/googledrive/DriveBackupManager.kt` und
-  `DriveRestoreManager.kt`, dazu `NEMS/.../data/remote/`.
+  `DriveRestoreManager.kt`.
 
 ### J.3 Android-Systemsicherung
 `res/xml/backup_rules.xml` und `data_extraction_rules.xml` pflegen: Datenbank und Einstellungen ja,

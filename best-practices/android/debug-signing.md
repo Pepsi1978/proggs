@@ -39,7 +39,7 @@ Welcher Key auf dem Gerät gilt: APK ziehen, `apksigner verify --print-certs`.
 
 ## Umgezogen am 10.09.2026 (alter CODI-Key `17:10:34:C5…` → gemeinsamer Key)
 
-CodexKompass, StackLaborWerftStudio, GenialeIdeen, KarteikartenLernen, Denknotiz, Experimente, PerfectMoment,
+CodexKompass, StackLabor, GenialeIdeen, KarteikartenLernen, Denknotiz, Experimente, PerfectMoment,
 QwenTtsBench, FisetinBegleiter. Alter Key + Lineage liegen nur noch lokal auf CODI in
 `~/SK-Archiv-20260910/Android/alt/` (nicht in SK, nicht auf Y:).
 Schon vorher auf dem gemeinsamen Key: CortexAndroid, Gedankenspeicher, ClaudeKompass, VoiceKey,

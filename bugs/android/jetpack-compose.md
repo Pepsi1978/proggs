@@ -335,7 +335,7 @@ Dieser Almanach ist die **tiefe, vollstaendige** Quelle fuer **Compose-UI-Bugs**
 **Versionen:** konzeptionell (Foundation 1.x, alle mit Item-Keys).
 **FIX:** Bei einem Wechsel der Sortier-/Filterordnung (nicht bei Drag-and-Drop!) ausdruecklich an den Anfang springen: `LaunchedEffect(sortMode, richtung) { listState.scrollToItem(0) }`. Alternativ die Verankerung aufgeben (Keys weglassen) — kostet aber Item-Animationen und State-Erhalt, ist also die schlechtere Wahl.
 **Diagnose-Tipp:** Zwei Sonden setzen — eine im State-Holder, eine im Composable, beide mit den ersten 3 Namen. Zeigen BEIDE die neue Reihenfolge und der Bildschirm nicht, ist es die Verankerung und kein State-Problem.
-**Erlebt:** StackLaborWerftStudio 08/2026 — Umschalten fett-/wasserloeslich.
+**Erlebt:** StackLabor 08/2026 — Umschalten fett-/wasserloeslich.
 **Quelle:** developer.android.com/develop/ui/compose/lists (Item-Keys und Scroll-Position)
 
 ### 4.9 Drag & Drop springt, flattert oder verliert die Karte am Listenrand
@@ -426,7 +426,7 @@ enthält den verbindlichen Benutzerstandard einschließlich Formeln, Startwerten
 **Ursache:** Ein Sweep-Gradient laeuft EINMAL im Kreis um das Zentrum. Auf einem Rechteck trifft jede Kante einen anderen Winkelbereich, und enthaelt die Stop-Liste `Color.Transparent` oder stark unterschiedliche Alphas, verschwindet der Rand auf genau der Seite, die dieser Stop trifft. Zusaetzlich springt die Farbe an der 0°/360°-Naht hart um, wenn erster und letzter Stop nicht identisch sind.
 **Versionen:** konzeptionell (Compose Foundation 1.x, alle).
 **FIX:** Fuer eine durchgehende Umrandung `Brush.linearGradient` mit AUSSCHLIESSLICH deckenden Stops verwenden (Metall-Optik ueber Helligkeit statt ueber Alpha), z.B. `lerp(accent, White, .5f) → accent → lerp(accent, Black, .2f) → lerp(accent, White, .3f)`. Wird der Sweep bewusst gewollt: erster und letzter Stop identisch setzen UND kein `Color.Transparent` verwenden.
-**Erlebt:** StackLaborWerftStudio 08/2026 — Stack-Karten und Konkurrenz-Karten, behoben durch `metalRim()` in `ui/theme/WerftDecor.kt`.
+**Erlebt:** StackLabor 08/2026 — Stack-Karten und Konkurrenz-Karten, behoben durch `metalRim()` in `ui/theme/WerftDecor.kt`.
 **Quelle:** developer.android.com/reference/kotlin/androidx/compose/ui/graphics/Brush (sweepGradient)
 
 ### 5.4 `drawWithContent` fuer Glanz-/Bevel-Overlay legt sich ueber den Text
@@ -434,7 +434,7 @@ enthält den verbindlichen Benutzerstandard einschließlich Formeln, Startwerten
 **Ursache:** `Modifier.drawWithContent { drawContent(); drawRect(...) }` zeichnet NACH dem Inhalt des Knotens — also auch ueber die Kinder (Text/Icons).
 **Versionen:** konzeptionell.
 **FIX:** `Modifier.drawBehind { … }` DIREKT NACH `.background(…)` einhaengen. Draw-Modifier der Kette zeichnen der Reihe nach, erst danach die Kinder — das Overlay liegt so ueber dem Hintergrund, aber unter dem Text. Fuer die Begrenzung auf runde Ecken muss `.clip(shape)` VOR dem `drawBehind` stehen.
-**Erlebt:** StackLaborWerftStudio 08/2026 (`Modifier.bevel()`).
+**Erlebt:** StackLabor 08/2026 (`Modifier.bevel()`).
 **Quelle:** developer.android.com/develop/ui/compose/graphics/draw/modifiers
 
 ### 5.5 `Modifier.shadow` auf halbdurchsichtiger Flaeche → hartkantiges helles Rechteck IN der Flaeche   ⭐ TÜCKISCH

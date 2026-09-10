@@ -550,7 +550,7 @@ instrumentiert getestet wurde.
   Recomposition-Scope). *(offiziell)*
 - **Teure Arbeit** (`sorted()`/`filter`/Format/Bitmap) mit `remember(key) { ... }` cachen oder ins
   ViewModel auslagern. *(offiziell)*
-- **Eigene Schatten und Oberflächen:** Größenabhängige Pfade, Brushes, Paints und BlurMaskFilter in `drawWithCache` vorbereiten, in `onDrawBehind` weiterverwenden. Ausstanzen halbtransparenter Flächen, Zeichenreihenfolge, Dichte und Layout-Richtung erhalten. Animierte Werte nicht im Cache einfrieren. *(lokal statisch angewendet: Experimente und StackLaborWerftStudio, 07.09.2026; Bug-Almanach §10.10; keine gemessene Beschleunigung)*
+- **Eigene Schatten und Oberflächen:** Größenabhängige Pfade, Brushes, Paints und BlurMaskFilter in `drawWithCache` vorbereiten, in `onDrawBehind` weiterverwenden. Ausstanzen halbtransparenter Flächen, Zeichenreihenfolge, Dichte und Layout-Richtung erhalten. Animierte Werte nicht im Cache einfrieren. *(lokal statisch angewendet: Experimente und StackLabor, 07.09.2026; Bug-Almanach §10.10; keine gemessene Beschleunigung)*
 - **Strikt neutrale Animationsoptimierung:** Ein State-Read kann von Composition nach Layout/Draw/Layer verschoben werden, ohne Laufzeit, Kurve oder Startphase zu ändern. Das bedingte Erzeugen einer bisher dauernd laufenden Transition verändert dagegen ihre Phase beim Wiedereintritt und ist kein automatisch gleichwertiger Ersatz. Ebenso vor einem Eager-/Lazy-Wechsel Fokus, Entwürfe, Effekte und Item-State klären. *(lokale Ableitung aus dem appübergreifenden Lauf vom 07.09.2026)*
 - **Stabile Lazy-Keys + kleine, fokussierte Composables**; Backwards Writes vermeiden (§1.1 Almanach).
   *(offiziell)*
