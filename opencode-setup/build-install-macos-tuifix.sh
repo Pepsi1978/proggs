@@ -20,20 +20,23 @@
 # Ergebnis liegt unter ~/.local/share/opencode-mousefix/ (derselbe Ort wie unter Windows) und wird
 # vom macOS-Launcher ueber current.json -> relativeExe gefunden (OpenLauncherService.resolveOpenCodeExecutable).
 #
-# Aufruf:  bash ~/proggs/opencode-setup/build-install-macos-tuifix.sh [--force] [--version 1.18.23]
+# Aufruf:  bash ~/proggs/opencode-setup/build-install-macos-tuifix.sh [--force] [--version 1.18.30] [--skip-checks]
 #
 # Idempotent: ist die Zielversion schon gebaut und eingehaengt, passiert nichts.
 
 set -euo pipefail
 
-PATCH_REVISION="1"
+# macfix.2 - 10.09.2026 19:16: Modell-API wie unter Windows bis zum Plugin weiterreichen.
+PATCH_REVISION="2"
 VERSION=""
 FORCE=0
+SKIP_CHECKS=0
 INSTALL_ROOT="${OPENCODE_TUIFIX_ROOT:-$HOME/.local/share/opencode-mousefix}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --force) FORCE=1; shift ;;
+    --skip-checks) SKIP_CHECKS=1; shift ;;
     --version) VERSION="${2:-}"; shift 2 ;;
     *) echo "Unbekannte Option: $1" >&2; exit 2 ;;
   esac
@@ -91,10 +94,17 @@ if [ ! -x "$FINAL_EXE" ]; then
   # 1 + 4: die beiden Quelltext-Patches. --check zuerst, damit ein inkompatibler Patch nicht
   # halb angewendet liegen bleibt.
   for patch_file in "$TUI_MODEL_PATCH" "$CACHE_PATCH"; do
-    git apply --check --ignore-space-change "$patch_file" \
+    patch_args=()
+    if [ "$VERSION" = "1.18.23" ] && [ "$patch_file" = "$CACHE_PATCH" ]; then
+      patch_args+=(--exclude=packages/opencode/src/session/processor.ts)
+    fi
+    git apply --check --ignore-space-change "${patch_args[@]}" "$patch_file" \
       || { red "Patch passt nicht zu OpenCode v$VERSION: $(basename "$patch_file")"; exit 1; }
-    git apply --ignore-space-change "$patch_file"
+    git apply --ignore-space-change "${patch_args[@]}" "$patch_file"
   done
+  if [ "$VERSION" = "1.18.23" ]; then
+    git apply --ignore-space-change "$SRC/patches/opencode-1.18.23-cache-processor.patch"
+  fi
   green "OK  Quelltext-Patches angewendet"
 
   bun install --ignore-scripts >/dev/null 2>&1 || { red "Bun-Abhaengigkeiten konnten nicht installiert werden."; exit 1; }
@@ -161,23 +171,27 @@ open(path, "w", encoding="utf-8", newline="\n").write(text.replace(anchor, injec
 PYEOF
   green "OK  TUI-Fehler-Handler"
 
-  for package_name in core plugin tui llm opencode; do
-    bun run --cwd "packages/$package_name" typecheck >/dev/null 2>&1 \
-      || { red "Typecheck fehlgeschlagen: packages/$package_name"; exit 1; }
-  done
-  green "OK  Typecheck (core, plugin, tui, llm, opencode)"
+  if [ "$SKIP_CHECKS" -eq 0 ]; then
+    for package_name in core plugin tui llm opencode; do
+      bun run --cwd "packages/$package_name" typecheck >/dev/null 2>&1 \
+        || { red "Typecheck fehlgeschlagen: packages/$package_name"; exit 1; }
+    done
+    green "OK  Typecheck (core, plugin, tui, llm, opencode)"
 
-  # Die Regressionstests fassen prozessglobale Config-/Temp-Zustaende an und laufen deshalb ohne
-  # geerbte OPENCODE_CONFIG*-Variablen und in getrennten Laeufen.
-  unset OPENCODE_CONFIG OPENCODE_CONFIG_DIR OPENCODE_CONFIG_CONTENT
-  ( cd packages/tui && bun test test/context/local.test.ts test/clipboard.test.ts >/dev/null 2>&1 ) \
-    || { red "TUI-Regressionstests fehlgeschlagen."; exit 1; }
-  for test_file in test/cli/tui/thread.test.ts test/cli/tui/plugin-toggle.test.ts test/plugin/install.test.ts test/config/config.test.ts; do
-    [ -f "packages/opencode/$test_file" ] || continue
-    ( cd packages/opencode && bun test --timeout 30000 "$test_file" >/dev/null 2>&1 ) \
-      || { red "Regressionstest fehlgeschlagen: $test_file"; exit 1; }
-  done
-  green "OK  Regressionstests"
+    # Die Regressionstests fassen prozessglobale Config-/Temp-Zustaende an und laufen deshalb ohne
+    # geerbte OPENCODE_CONFIG*-Variablen und in getrennten Laeufen.
+    unset OPENCODE_CONFIG OPENCODE_CONFIG_DIR OPENCODE_CONFIG_CONTENT
+    ( cd packages/tui && bun test test/context/local.test.ts test/clipboard.test.ts >/dev/null 2>&1 ) \
+      || { red "TUI-Regressionstests fehlgeschlagen."; exit 1; }
+    for test_file in test/cli/tui/thread.test.ts test/cli/tui/plugin-toggle.test.ts test/plugin/install.test.ts test/config/config.test.ts; do
+      [ -f "packages/opencode/$test_file" ] || continue
+      ( cd packages/opencode && bun test --timeout 30000 "$test_file" >/dev/null 2>&1 ) \
+        || { red "Regressionstest fehlgeschlagen: $test_file"; exit 1; }
+    done
+    green "OK  Regressionstests"
+  else
+    yellow "--  Typechecks und Regressionstests ausgelassen (--skip-checks)"
+  fi
 
   OPENCODE_VERSION="$CUSTOM_VERSION" bun run --cwd packages/opencode script/build.ts \
     --single --skip-install --skip-embed-web-ui >/dev/null 2>&1 \
@@ -235,6 +249,7 @@ data = {
         "sourceCommit": commit,
         "capabilities": {
             "tuiModelApi": "present",
+            "tuiVariantControl": "present",
             "fullRepaintRecovery": "present",
             "tuiErrorHandlers": "present",
             "cacheTelemetry": "present",

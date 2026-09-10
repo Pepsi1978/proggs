@@ -1,0 +1,35 @@
+diff --git a/packages/opencode/src/session/processor.ts b/packages/opencode/src/session/processor.ts
+--- a/packages/opencode/src/session/processor.ts
++++ b/packages/opencode/src/session/processor.ts
+@@ -435,10 +435,22 @@
+           case "step-finish": {
+             const completedSnapshot = yield* snapshot.track()
+             yield* Effect.forEach(Object.keys(ctx.reasoningMap), finishReasoning)
++            const metadataKeys = new Set([
++              ...Object.keys(value.usage?.providerMetadata ?? {}),
++              ...Object.keys(value.providerMetadata ?? {}),
++            ])
++            const metadata = metadataKeys.size
++              ? Object.fromEntries(
++                  [...metadataKeys].map((key) => [
++                    key,
++                    { ...value.usage?.providerMetadata?.[key], ...value.providerMetadata?.[key] },
++                  ]),
++                )
++              : undefined
+             const usage = Session.getUsage({
+               model: ctx.model,
+               usage: value.usage ?? new Usage({}),
+-              metadata: value.providerMetadata,
++              metadata,
+             })
+             ctx.assistantMessage.finish = value.reason
+             ctx.assistantMessage.cost += usage.cost
+@@ -452,6 +464,7 @@
+               type: "step-finish",
+               tokens: usage.tokens,
+               cost: usage.cost,
++              metadata,
+             })
+             yield* session.updateMessage(ctx.assistantMessage)
+             if (ctx.snapshot) {

@@ -83,3 +83,14 @@ index fef0ec8..580262a 100644
      route: {
        register(list) {
          return input.routes.register(list)
+diff --git a/packages/opencode/src/plugin/tui/runtime.ts b/packages/opencode/src/plugin/tui/runtime.ts
+--- a/packages/opencode/src/plugin/tui/runtime.ts
++++ b/packages/opencode/src/plugin/tui/runtime.ts
+@@ -617,6 +617,7 @@ function pluginApi(runtime: RuntimeState, plugin: PluginEntry, scope: PluginScope
+     keys: api.keys,
+     keymap,
+     mode: createScopedMode(api.mode, scope),
++    model: api.model,
+     route,
+     ui: api.ui,
+     tuiConfig: api.tuiConfig,
