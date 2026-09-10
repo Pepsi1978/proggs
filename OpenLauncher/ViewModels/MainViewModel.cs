@@ -984,7 +984,8 @@ public sealed partial class MainViewModel : ObservableObject
                 // AGENTS.md des Arbeitsverzeichnisses -- dieselbe Profilquelle wie bei OpenCode.
                 var agentsPath = _profiles.ActivateCodexProjectAgents(SelectedProfile.Id, SelectedWorkMode.Id, WorkDir);
                 // Eigenes Codex-Zuhause statt ~/.codex: sonst gaelten zusaetzlich die globale
-                // AGENTS.md, rund 40 Plugins, mehrere MCP-Server, Hooks und eine fremde Statuszeile.
+                // AGENTS.md, rund 40 Plugins, mehrere MCP-Server und Hooks. Die Statuszeile setzt
+                // PrepareCodexHome selbst (Vorlage: Statusline-Codex/status-line.toml).
                 // Skills kommen aus dem Repo: ~/.agents/skills ist eine Junction auf standard/skills.
                 var codexHome = _profiles.PrepareCodexHome(SelectedProfile.Id);
                 _launcher.LaunchCodexCli(SelectedModel, WorkDir, thinkingLevel, codexHome);
@@ -1001,6 +1002,14 @@ public sealed partial class MainViewModel : ObservableObject
                 return;
             }
 
+            // Die Pruefung oben laesst SelectedProvider nur fuer Codex CLI leer; der Compiler sieht das
+            // ueber den Codex-Zweig hinweg nicht, deshalb hier ausdruecklich.
+            if (SelectedProvider is not { } provider)
+            {
+                StatusText = "Bitte einen Provider wählen.";
+                return;
+            }
+
             // Projekt-AGENTS.md passend zum Profil setzen (Minimal -> nur minimal.md), BEVOR die
             // Session vorbereitet und OpenCode gestartet wird.
             _profiles.ActivateProjectAgents(SelectedProfile.Id, WorkDir);
@@ -1009,7 +1018,7 @@ public sealed partial class MainViewModel : ObservableObject
                 LmStudioService.ProviderId,
                 StringComparison.OrdinalIgnoreCase);
             var profileSession = _profiles.PrepareOpenCodeSession(SelectedProfile.Id, WorkDir, isLmStudio);
-            var modelString = _launcher.ConfigureProvider(SelectedModel, SelectedProvider, Providers, thinkingLevel);
+            var modelString = _launcher.ConfigureProvider(SelectedModel, provider, Providers, thinkingLevel);
             _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath, SelectedWorkMode.Id);
             Logger.Instance.Info("MainViewModel", "Start", "OpenCode-Profilsnapshot erstellt", new
             {
@@ -1021,8 +1030,8 @@ public sealed partial class MainViewModel : ObservableObject
                 profileSession.ConfigPath
             });
             StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
-                ? $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
-                : $"OpenCode gestartet: {SelectedModel.DisplayName} via {SelectedProvider.ProviderName} · Thinking {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
+                ? $"OpenCode gestartet: {SelectedModel.DisplayName} via {provider.ProviderName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
+                : $"OpenCode gestartet: {SelectedModel.DisplayName} via {provider.ProviderName} · Thinking {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
         }
         catch (Exception ex)
         {
