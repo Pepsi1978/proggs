@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +20,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -254,6 +257,140 @@ fun KategorieWahl(
                         tint = gold.primaer,
                         modifier = Modifier.size(20.dp),
                     )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Additional categories of an idea: removable chips plus a button that offers every category
+ * that is not assigned yet (both kinds, so an idea can be mental and practical at once).
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun WeitereKategorien(
+    kategorien: List<KategorieEntity>,
+    hauptKategorie: Long?,
+    weitere: List<Long>,
+    aufAendern: (List<Long>) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val gold = LocalGold.current
+    var offen by remember { mutableStateOf(false) }
+    val zugeordnet = weitere.mapNotNull { id -> kategorien.firstOrNull { it.id == id } }
+    val frei = kategorien.filter { it.id != hauptKategorie && it.id !in weitere }
+
+    Column(modifier) {
+        Text(
+            "Weitere Kategorien",
+            style = MaterialTheme.typography.labelSmall,
+            color = gold.textGedaempft,
+        )
+        Spacer(Modifier.height(6.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            zugeordnet.forEach { kategorie ->
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(gold.primaer.copy(alpha = 0.16f))
+                        .border(1.dp, gold.primaer.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        kategorie.name,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = gold.textPrimaer,
+                        maxLines = 1,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .druckEffekt { aufAendern(weitere.filter { it != kategorie.id }) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Aus Kategorie ${kategorie.name} entfernen",
+                            tint = gold.textGedaempft,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
+            Box {
+                Row(
+                    modifier = Modifier
+                        .druckEffekt { offen = true }
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(gold.flaecheErhoeht)
+                        .border(1.dp, gold.primaer.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        tint = gold.primaer,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "Weitere Kategorie",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = gold.primaer,
+                    )
+                }
+                DropdownMenu(
+                    expanded = offen,
+                    onDismissRequest = { offen = false },
+                    modifier = Modifier
+                        .background(gold.flaecheErhoeht)
+                        .heightIn(max = 420.dp),
+                ) {
+                    if (frei.isEmpty()) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    if (kategorien.isEmpty()) "Noch keine Kategorien angelegt."
+                                    else "Die Idee liegt schon in allen Kategorien.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = gold.textGedaempft,
+                                )
+                            },
+                            onClick = { offen = false },
+                        )
+                    }
+                    Kategorieart.entries.forEach { art ->
+                        val vonArt = frei.filter { it.art == art }
+                        if (vonArt.isNotEmpty()) {
+                            Text(
+                                if (art == Kategorieart.MENTAL) "Mental" else "Praktisch",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = gold.textGedaempft,
+                            )
+                            vonArt.forEach { kategorie ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            kategorie.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = gold.textPrimaer,
+                                        )
+                                    },
+                                    onClick = {
+                                        aufAendern(weitere + kategorie.id)
+                                        offen = false
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

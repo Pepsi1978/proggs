@@ -24,7 +24,7 @@ class DatenWandler {
         SuchanfrageEntity::class,
         KategorieEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(DatenWandler::class)
@@ -65,13 +65,20 @@ abstract class GenialeIdeenDatabase : RoomDatabase() {
             }
         }
 
+        /** Ideas may belong to several categories; existing ones keep their main category. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE ideen ADD COLUMN weitereKategorien TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getInstance(context: Context): GenialeIdeenDatabase =
             instanz ?: synchronized(this) {
                 instanz ?: Room.databaseBuilder(
                     context.applicationContext,
                     GenialeIdeenDatabase::class.java,
                     "geniale_ideen.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instanz = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { instanz = it }
             }
     }
 }

@@ -59,7 +59,8 @@ class Sicherung(
                     .put("geaendertAm", idee.geaendertAm)
                     .put("umgesetztAm", idee.umgesetztAm ?: JSONObject.NULL)
                     .put("originalText", idee.originalText ?: JSONObject.NULL)
-                    .put("kategorieId", idee.kategorieId ?: JSONObject.NULL),
+                    .put("kategorieId", idee.kategorieId ?: JSONObject.NULL)
+                    .put("weitereKategorien", idee.weitereKategorien),
             )
         }
         val kategorien = JSONArray()
@@ -130,6 +131,7 @@ class Sicherung(
                 umgesetztAm = eintrag.opt("umgesetztAm") as? Long,
                 originalText = eintrag.optString("originalText").takeIf(String::isNotBlank),
                 kategorieId = eintrag.optLong("kategorieId").takeIf { it > 0L },
+                weitereKategorien = eintrag.optString("weitereKategorien"),
             )
         }
         datenbank.ideenDao().einfuegenAlle(eingelesen)

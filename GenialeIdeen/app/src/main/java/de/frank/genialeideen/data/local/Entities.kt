@@ -34,7 +34,20 @@ data class IdeeEntity(
     val originalText: String? = null,
     /** Die Kategorie, in der die Idee zusätzlich zu ihrer Liste auftaucht (Baustein P). */
     @ColumnInfo(defaultValue = "NULL") val kategorieId: Long? = null,
+    /** Additional categories besides [kategorieId], stored as comma-separated ids ("3,7"). */
+    @ColumnInfo(defaultValue = "''") val weitereKategorien: String = "",
 )
+
+/** The additional category ids of an idea (without the main category). */
+fun IdeeEntity.weitereKategorieIds(): List<Long> =
+    weitereKategorien.split(',').mapNotNull { it.trim().toLongOrNull() }.distinct()
+
+/** All category ids of an idea: main category first, then the additional ones. */
+fun IdeeEntity.alleKategorieIds(): List<Long> =
+    (listOfNotNull(kategorieId) + weitereKategorieIds()).distinct()
+
+/** Serialises additional category ids for [IdeeEntity.weitereKategorien]. */
+fun weitereKategorienText(ids: List<Long>): String = ids.distinct().joinToString(",")
 
 /** Eine manuell angelegte Kategorie. Die Idee bleibt trotzdem in ihrer Liste stehen (Baustein P). */
 @Entity(tableName = "kategorien", indices = [Index(value = ["name", "art"], unique = true)])

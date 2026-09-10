@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.NachrichtEntity
+import de.frank.genialeideen.data.local.weitereKategorieIds
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -192,6 +193,7 @@ fun DetailScreen(
                         aufBearbeiten = { bearbeiten = true },
                         kategorien = kategorien,
                         aufKategorie = { id -> viewModel.setzeKategorie(aktuelle.id, id) },
+                        aufWeitereKategorien = { ids -> viewModel.setzeWeitereKategorien(aktuelle.id, ids) },
                         aufNeueKategorie = { name, art, fertig ->
                             viewModel.legeKategorieAn(name, art, fertig)
                         },
@@ -447,6 +449,7 @@ private fun IdeenKopf(
     aufBearbeiten: () -> Unit,
     kategorien: List<de.frank.genialeideen.data.local.KategorieEntity>,
     aufKategorie: (Long?) -> Unit,
+    aufWeitereKategorien: (List<Long>) -> Unit,
     aufNeueKategorie: (String, de.frank.genialeideen.data.local.Kategorieart, (Long?) -> Unit) -> Unit,
     spricht: Boolean,
     vorleseZustand: de.frank.genialeideen.speech.VorleseZustand,
@@ -500,6 +503,14 @@ private fun IdeenKopf(
                         fertig(id)
                     }
                 },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(12.dp))
+            WeitereKategorien(
+                kategorien = kategorien,
+                hauptKategorie = idee.kategorieId,
+                weitere = idee.weitereKategorieIds(),
+                aufAendern = aufWeitereKategorien,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(14.dp))

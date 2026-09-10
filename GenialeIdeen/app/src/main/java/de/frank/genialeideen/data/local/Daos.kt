@@ -26,6 +26,17 @@ interface IdeenDao {
     @Query("UPDATE ideen SET kategorieId = :kategorieId, geaendertAm = :jetzt WHERE id = :id")
     suspend fun setzeKategorie(id: Long, kategorieId: Long?, jetzt: Long = System.currentTimeMillis())
 
+    @Query(
+        "UPDATE ideen SET kategorieId = :kategorieId, weitereKategorien = :weitere, " +
+            "geaendertAm = :jetzt WHERE id = :id",
+    )
+    suspend fun setzeKategorien(
+        id: Long,
+        kategorieId: Long?,
+        weitere: String,
+        jetzt: Long = System.currentTimeMillis(),
+    )
+
     @Query("SELECT COALESCE(MIN(reihenfolge), 0) - 1 FROM ideen WHERE status = :status")
     suspend fun naechsteReihenfolgeOben(status: String): Int
 

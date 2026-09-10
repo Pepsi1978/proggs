@@ -315,6 +315,10 @@ class IdeenViewModel(
         viewModelScope.launch { repository.setzeKategorie(ideeId, kategorieId) }
     }
 
+    fun setzeWeitereKategorien(ideeId: Long, weitere: List<Long>) {
+        viewModelScope.launch { repository.setzeWeitereKategorien(ideeId, weitere) }
+    }
+
     /** Legt eine Kategorie nur nach ausdrücklicher Nutzeraktion an. */
     fun legeKategorieAn(name: String, art: Kategorieart, fertig: (Long?) -> Unit = {}) {
         viewModelScope.launch {

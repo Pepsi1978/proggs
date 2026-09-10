@@ -7,6 +7,8 @@ import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.data.local.NachrichtEntity
 import de.frank.genialeideen.data.local.SuchanfrageEntity
+import de.frank.genialeideen.data.local.weitereKategorieIds
+import de.frank.genialeideen.data.local.weitereKategorienText
 import de.frank.genialeideen.observability.IdeenLog
 import java.text.Normalizer
 import kotlinx.coroutines.flow.Flow
@@ -49,10 +51,30 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
         return true
     }
 
-    suspend fun setzeKategorie(ideeId: Long, kategorieId: Long?) =
-        ideenDao.setzeKategorie(ideeId, kategorieId)
+    /** Changes the main category; a category that was additional before is not kept twice. */
+    suspend fun setzeKategorie(ideeId: Long, kategorieId: Long?) {
+        val idee = ideenDao.lade(ideeId) ?: return
+        val weitere = idee.weitereKategorieIds().filter { it != kategorieId }
+        ideenDao.setzeKategorien(ideeId, kategorieId, weitereKategorienText(weitere))
+    }
 
-    suspend fun loescheKategorie(id: Long) = kategorienDao.loescheMitZuordnungen(id)
+    /** Replaces the additional categories of an idea (the main category is never duplicated). */
+    suspend fun setzeWeitereKategorien(ideeId: Long, weitere: List<Long>) {
+        val idee = ideenDao.lade(ideeId) ?: return
+        val bereinigt = weitere.filter { it != idee.kategorieId }
+        ideenDao.setzeKategorien(ideeId, idee.kategorieId, weitereKategorienText(bereinigt))
+    }
+
+    /** Removes the category from every idea (main and additional) and then deletes it. */
+    suspend fun loescheKategorie(id: Long) {
+        ideenDao.alleEinmal()
+            .filter { id in it.weitereKategorieIds() }
+            .forEach { idee ->
+                val rest = idee.weitereKategorieIds().filter { it != id }
+                ideenDao.setzeKategorien(idee.id, idee.kategorieId, weitereKategorienText(rest))
+            }
+        kategorienDao.loescheMitZuordnungen(id)
+    }
 
     suspend fun lege(
         titel: String,

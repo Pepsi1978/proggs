@@ -86,6 +86,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.genialeideen.data.local.IdeeEntity
+import de.frank.genialeideen.data.local.alleKategorieIds
 import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.Kategorieart
@@ -161,7 +162,7 @@ fun ListenScreen(
     }
     val liste = remember(roheListe, gewaehlteKategorie) {
         if (gewaehlteKategorie == null) roheListe
-        else roheListe.filter { it.kategorieId == gewaehlteKategorie }
+        else roheListe.filter { gewaehlteKategorie in it.alleKategorieIds() }
     }
     // Die gezogene Reihenfolge lebt lokal, bis der Finger losgelassen wird.
     val listState = rememberLazyListState()
@@ -536,7 +537,7 @@ private fun SuchFenster(
 
 /** Zählt, wie viele Ideen in jeder Kategorie liegen. */
 private fun alleZaehlung(ideen: List<IdeeEntity>): Map<Long, Int> =
-    ideen.mapNotNull { it.kategorieId }.groupingBy { it }.eachCount()
+    ideen.flatMap { it.alleKategorieIds() }.groupingBy { it }.eachCount()
 
 /** Die Seitenleiste mit allen Kategorien (Baustein P). */
 @Composable
