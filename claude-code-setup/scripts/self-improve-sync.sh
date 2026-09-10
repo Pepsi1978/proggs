@@ -80,7 +80,10 @@ fi
 
 # Skills
 echo "--> Copying skills..."
-if [[ -d "$CLAUDE_DIR/skills" ]]; then
+if [[ -L "$CLAUDE_DIR/skills" ]]; then
+    # Linked to the repo skills (OpenLauncher) -> already versioned there, no copy.
+    echo "    (skipped: skills are linked to the repo)"
+elif [[ -d "$CLAUDE_DIR/skills" ]]; then
     cp -r "$CLAUDE_DIR/skills/" "$SETUP_DIR/skills/" 2>/dev/null || echo "    (skills copy failed)"
 fi
 

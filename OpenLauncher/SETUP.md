@@ -14,7 +14,7 @@ Das Gesamtsystem besteht aus **drei** Teilen, jeder mit eigenem Setup:
 
 1. **Claude-Code-Basis** (`~/.claude`) — via **`~/proggs/claude-code-setup/`**
    (`setup-windows.ps1` / `setup-macos.sh`). Login, Hooks, Skills, Statusline, `settings.json`.
-   **Voraussetzung** für den Launcher (Minimal blendet `~/.claude/skills` ein, Strikt nutzt `~/.claude/hooks`).
+   **Voraussetzung** für den Launcher (Strikt nutzt `~/.claude/hooks`; Skills kommen immer aus dem Repo).
 2. **OpenCode-Basis** — via **`~/proggs/opencode-setup/`** (`install.ps1` / `install.sh`).
    Das OpenCode-CLI, die globale `~/.config/opencode/opencode.jsonc`, die **TUI-Seitenleiste**
    (`token-cost-sidebar`-Plugin), Agents/Skills, Sounds. **Windows zusätzlich:** ein selbst gebautes,
@@ -54,7 +54,7 @@ aus `~/.claude/settings.json` ist bewusst NICHT in den Repo-Profilen.
 |---|---|---|---|
 | **minimal** | nur **Skills**, per Verzeichnis-Junction `skills → Profiles/ClaudeCode/standard/skills` (Launcher legt sie beim Start via `mklink /J` an, kein Admin nötig) | ❌ | regelfrei — keine Rules/Hooks/Memory |
 | **standard** | **versioniert im Repo** (aus `~/.claude` kopiert, frei bearbeitbar) | ❌ (für eigene Hooks reserviert) | eigener Kontext |
-| **strict** | **versioniert im Repo** | ✅ **Modus A**: `settings.json` aktiviert die `~/.claude/hooks` (laufen aus der lebenden Installation, immer aktuell) | voller Kontext + Absicherung |
+| **strict** | Rules/Agents/Commands **versioniert im Repo**, Skills per Junction auf `standard/skills` | ✅ **Modus A**: `settings.json` aktiviert die `~/.claude/hooks` (laufen aus der lebenden Installation, immer aktuell) | voller Kontext + Absicherung |
 
 Weitere Details:
 - **Aktive `CLAUDE.md`:** wird pro Start aus `Profiles/ClaudeCode/sources/<id>.md` in den Profil-Ordner
@@ -65,10 +65,13 @@ Weitere Details:
   bereinigte Hook-Konfiguration (ohne Token, ohne Plugin-Sektionen).
 - **Login:** Der Launcher kopiert `.credentials.json` bei Bedarf **einmalig lokal** aus `~/.claude`
   in den Profil-Ordner (per `.gitignore` nie versioniert) → kein erneutes Anmelden je Profil.
-- **Skills: eine Quelle.** `Profiles/ClaudeCode/standard/skills` (macOS: `ClaudeCodeMac/standard/skills`)
-  ist die einzige Skill-Quelle. Minimal-Profil (Junction), Codex (Kopie nach `CODEX_HOME/skills` bei jedem
-  Start) und das globale `~/.claude/skills` (einmalig als Junction/Symlink auf diesen Ordner eingerichtet)
-  sehen dieselben Skills. Neue Skills immer dort anlegen.
+- **Skills: eine Quelle für alles.** `Profiles/ClaudeCode/standard/skills` ist die einzige Skill-Quelle —
+  für Claude Code, Codex und OpenCode, jedes Profil, jeden Modus, Windows UND macOS. Der Launcher legt bei
+  jedem Start Verknüpfungen darauf an (Windows Junction, macOS Symlink): `<Profil>/skills` (Minimal, Strikt,
+  auf dem Mac auch Standard), `~/.claude/skills` und `~/.agents/skills` (den lesen Codex und OpenCode).
+  Liegt dort noch ein echter Ordner (alte Kopien), wird er als `*.bak-<Zeitstempel>` gesichert, nie gelöscht.
+  Ein neuer Rechner braucht also keinen Handgriff. Skills nur dort bearbeiten, committen, pushen.
+  Ausnahme mit Absicht: lokale LM-Studio-Modelle starten OpenCode ohne externe Skills (Kontextgröße).
 - **Abhängigkeit:** Strikt braucht `~/.claude/hooks` — das liefert `claude-code-setup` (Baustein 1).
 
 ### OpenCode-Profile
@@ -218,12 +221,9 @@ Weitere Details:
    `$HOME/.claude/...`, plus `claudeMdExcludes: ["**/.claude/rules/**"]`). **Keine Secrets ins Repo.**
    Committen + pushen.
 
-5. **Skills auf macOS aus dem Repo** — Symlinks statt Windows-Junctions (nicht versioniert). Den
-   Minimal-Link legt die App selbst an; das globale `~/.claude/skills` einmalig umstellen:
-   ```bash
-   mv ~/.claude/skills ~/.claude/skills.bak
-   ln -s ~/proggs/OpenLauncher/Profiles/ClaudeCodeMac/standard/skills ~/.claude/skills
-   ```
+5. **Skills auf macOS** — kein Handgriff nötig: die App verlinkt bei jedem Start `ClaudeCodeMac/<id>/skills`,
+   `~/.claude/skills` und `~/.agents/skills` per Symlink auf `ClaudeCode/standard/skills` (dieselbe Quelle
+   wie Windows); alte echte Ordner werden als `*.bak-<Zeitstempel>` gesichert.
 
 6. **Manueller Claude-Start (bis die macOS-App existiert)** — je Profil:
    ```bash
@@ -262,7 +262,7 @@ Weitere Details:
 |---|---|---|
 | Profil-Config-Ordner | `Profiles/ClaudeCode/<id>` | `Profiles/ClaudeCodeMac/<id>` |
 | Home / Env | `C:\Users\<name>` · `$env:USERPROFILE` | `/Users/<name>` · `$HOME` |
-| Skills einblenden (Minimal) | Junction `mklink /J` auf `ClaudeCode/standard/skills` | Symlink auf `ClaudeCodeMac/standard/skills` |
+| Skills einblenden (Profile + global) | Junction `mklink /J` auf `ClaudeCode/standard/skills` | Symlink auf `ClaudeCode/standard/skills` |
 | Terminal-Start | Windows Terminal (`wt`) + `pwsh -File` | `Terminal.app`/iTerm2 via `osascript`/`open`, `zsh`/`bash` |
 | Hooks (Strikt) | `pwsh … .ps1`, `$USERPROFILE/.claude/hooks` | `bash/zsh … .sh`, `$HOME/.claude/hooks`; Quelle `claude-code-setup/hooks-macos.json` |
 | Login-Token kopieren | `Copy-Item` | `cp "$HOME/.claude/.credentials.json" …` |

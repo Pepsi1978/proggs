@@ -320,7 +320,12 @@ if (Test-Path $parryPath) {
 Write-Host ""
 Write-Host "[8/8] Custom Skills installieren..." -ForegroundColor Yellow
 
-if (Test-Path $SkillsDir) {
+# Ist ~/.claude/skills mit den Repo-Skills verknuepft (OpenLauncher), wuerde jede Kopie die
+# Repo-Dateien mit den alten Setup-Kopien ueberschreiben -> ueberspringen.
+$skillsLinked = (Get-Item $ClaudeSkillsDir -Force -ErrorAction SilentlyContinue).Attributes -band [IO.FileAttributes]::ReparsePoint
+if ($skillsLinked) {
+    Write-Host "  -- uebersprungen: ~/.claude/skills ist mit den Repo-Skills verknuepft (OpenLauncher)" -ForegroundColor Gray
+} elseif (Test-Path $SkillsDir) {
     # Install directory-based skills (contain SKILL.md)
     $skillFolders = Get-ChildItem -Path $SkillsDir -Directory
 

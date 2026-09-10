@@ -8,7 +8,7 @@ Diese Regeln gelten für jede Programmieraufgabe!
 2. Best Practices und Bug Almanache liegen in den Ordnern C:\Users\barwa\proggs\best-practices und C:\Users\barwa\proggs\bugs
 - Lies den passenden Almanach oder die passenden Best Practices, wenn ein Fehler auftritt oder du in einem Bereich arbeitest, den du in dieser Sitzung noch nicht angefasst hast.
 
-3. Skills liegen im Ordner C:\Users\barwa\proggs\OpenLauncher\Profiles\ClaudeCode\minimal\skills
+3. Skills liegen ausschließlich im Repo-Ordner C:\Users\barwa\proggs\OpenLauncher\Profiles\ClaudeCode\standard\skills – für Claude Code, Codex und OpenCode, in jedem Profil und Modus. ~/.claude/skills, ~/.agents/skills und die Profil-Ordner "skills" sind nur Verknüpfungen dorthin. Skills nur dort bearbeiten, danach committen und pushen.
 
 4. Aufgabentrennung und Ablauf
 ` ; ` (Leerzeichen, Semikolon, Leerzeichen) trennt eigenständige Aufgaben.

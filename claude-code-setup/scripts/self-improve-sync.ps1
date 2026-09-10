@@ -114,7 +114,10 @@ Copy-DirSafe -Source "$ClaudeDir\hooks\prompt-injection-defender" -Dest "$SetupD
 
 # Skills
 Write-Host "--> Copying skills..." -ForegroundColor Gray
-if (Test-Path "$ClaudeDir\skills") {
+if ((Get-Item "$ClaudeDir\skills" -Force -ErrorAction SilentlyContinue).Attributes -band [IO.FileAttributes]::ReparsePoint) {
+    # Linked to the repo skills (OpenLauncher) -> already versioned there, no copy.
+    Write-Host "    (skipped: skills are linked to the repo)"
+} elseif (Test-Path "$ClaudeDir\skills") {
     Copy-DirSafe -Source "$ClaudeDir\skills" -Dest "$SetupDir\skills"
 } else {
     Write-Host "    (skills directory not found)"

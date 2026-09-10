@@ -8,8 +8,8 @@
 !.gitignore
 !README.md
 !settings.json
-!skills/
-!skills/**
+# skills/ ist NICHT versioniert: die App legt es als Symlink auf ClaudeCode/standard/skills an
+# (einzige Skill-Quelle aller Werkzeuge/Profile/Plattformen).
 !rules/
 !rules/**
 !agents/

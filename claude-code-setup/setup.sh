@@ -285,7 +285,11 @@ fi
 echo ""
 echo -e "${YELLOW}[8/8] Custom Skills installieren...${NC}"
 
-if [ -d "$SKILLS_DIR" ]; then
+# Ist ~/.claude/skills mit den Repo-Skills verknuepft (OpenLauncher), wuerde jede Kopie die
+# Repo-Dateien mit den alten Setup-Kopien ueberschreiben -> ueberspringen.
+if [ -L "$CLAUDE_SKILLS_DIR" ]; then
+    echo "  -- übersprungen: ~/.claude/skills ist mit den Repo-Skills verknüpft (OpenLauncher)"
+elif [ -d "$SKILLS_DIR" ]; then
     # Install directory-based skills (contain SKILL.md)
     for SKILL_DIR in "$SKILLS_DIR"/*/; do
         [ -d "$SKILL_DIR" ] || continue

@@ -94,10 +94,10 @@ final class InstructionProfileService {
                        to: (dir as NSString).appendingPathComponent("CLAUDE.md"))
         Self.ensureLoginToken(configDir: dir)
 
-        // Minimal bleibt bewusst regelfrei: es traegt KEINE eigenen Skills, sondern blendet die
-        // Repo-Skills des Standard-Profils per Symlink ein. Standard und Strikt haben ihre Skills als
-        // echte, versionierte Kopien im Repo -> dort wird nichts verlinkt.
-        if profileId == "minimal" { Self.ensureSkillsSymlink(configDir: dir) }
+        // Skills: jedes macOS-Profil verlinkt auf die EINE Repo-Quelle Profiles/ClaudeCode/standard/skills
+        // (dieselbe wie unter Windows); ClaudeCodeMac/*/skills sind nicht mehr versioniert.
+        Self.ensureSkillsSymlink(link: (dir as NSString).appendingPathComponent("skills"))
+        Self.ensureGlobalSkillLinks()
 
         return dir
     }
@@ -185,20 +185,33 @@ final class InstructionProfileService {
         }
     }
 
-    /// Blendet die Repo-Skills (Profiles/ClaudeCodeMac/standard/skills) als Symlink in den
-    /// Minimal-Config-Ordner ein - eine einzige Quelle fuer Claude Code, Codex und das globale
-    /// ~/.claude/skills (dort ebenfalls ein Symlink auf diesen Ordner), OHNE die uebrige
-    /// ~/.claude-Umgebung (Rules/Hooks/Memory/Agents) hereinzuholen. Auf macOS genuegt ein
-    /// gewoehnlicher Symlink (das Windows-Gegenstueck braucht mklink /J, weil Symlinks dort
-    /// Admin-Rechte verlangen). Idempotent: korrekter Symlink -> nichts tun; falsches Ziel ->
-    /// ersetzen; ein echtes Verzeichnis wird aus Sicherheit nie angefasst.
-    private static func ensureSkillsSymlink(configDir: String) {
-        let realSkills = (Paths.macProfilesRoot as NSString).appendingPathComponent("ClaudeCodeMac/standard/skills")
-        // Kein echtes Skills-Verzeichnis -> nichts einzublenden (keinen toten Link anlegen).
+    /// Einzige Skill-Quelle fuer ALLE Werkzeuge (Claude Code, Codex, OpenCode), Profile, Modi und
+    /// Rechner - geteilt mit Windows. Jeder andere Skill-Ort ist nur ein Symlink hierauf, damit eine
+    /// KI, die einen Skill "an Ort und Stelle" verbessert, immer die Repo-Datei aendert.
+    static var repoSkillsDir: String {
+        (Paths.macProfilesRoot as NSString).appendingPathComponent("ClaudeCode/standard/skills")
+    }
+
+    /// Stellt die globalen Skill-Orte auf das Repo um: ~/.claude/skills (Claude Code ohne Profil,
+    /// OpenCode) und ~/.agents/skills (Codex und OpenCode scannen ihn immer). Laeuft bei jedem Start,
+    /// damit auch ein frisch eingerichteter Mac ohne Handgriff umgestellt wird.
+    static func ensureGlobalSkillLinks() {
+        ensureSkillsSymlink(link: (Paths.claudeHome as NSString).appendingPathComponent("skills"))
+        ensureSkillsSymlink(link: (Paths.home as NSString).appendingPathComponent(".agents/skills"))
+    }
+
+    /// Macht `link` zum Symlink auf repoSkillsDir. Auf macOS genuegt ein gewoehnlicher Symlink (das
+    /// Windows-Gegenstueck braucht mklink /J). Idempotent: korrekter Symlink -> nichts tun; falsches
+    /// Ziel -> ersetzen; ein echtes Verzeichnis (alte Skill-Kopien) wird NIE geloescht, sondern als
+    /// <name>.bak-<Zeitstempel> daneben gesichert.
+    private static func ensureSkillsSymlink(link: String) {
+        let realSkills = repoSkillsDir
+        // Kein Repo-Skills-Verzeichnis -> keinen toten Link anlegen.
         guard Paths.directoryExists(realSkills) else { return }
 
-        let link = (configDir as NSString).appendingPathComponent("skills")
+        let configDir = (link as NSString).deletingLastPathComponent
         let fm = FileManager.default
+        try? fm.createDirectory(atPath: configDir, withIntermediateDirectories: true)
 
         if let destination = try? fm.destinationOfSymbolicLink(atPath: link) {
             let resolved = destination.hasPrefix("/") ? destination
@@ -213,8 +226,18 @@ final class InstructionProfileService {
                 return
             }
         } else if fm.fileExists(atPath: link) {
-            // Echtes Verzeichnis: nicht anfassen (koennte bewusst versionierte Skills sein).
-            return
+            // Echtes Verzeichnis (alte Skill-Kopien): nie loeschen, sondern daneben sichern.
+            let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "")
+            let backup = link + ".bak-" + stamp
+            do {
+                try fm.moveItem(atPath: link, toPath: backup)
+                Logger.shared.info("InstructionProfileService", "ensureSkillsSymlink", "Alte Skill-Kopie gesichert",
+                                   ["link": link, "backup": backup])
+            } catch {
+                Logger.shared.warn("InstructionProfileService", "ensureSkillsSymlink",
+                                   "Skill-Ordner nicht umstellbar: \(error.localizedDescription)", ["link": link])
+                return
+            }
         }
 
         do {
@@ -259,6 +282,8 @@ final class InstructionProfileService {
         // ueber die Projekt-AGENTS.md (activateProjectAgents). So laedt OpenCode (und ein evtl.
         // `instructions`-Verweis in der globalen opencode.jsonc) hier nichts hinzu.
         Self.writeIfChanged("", to: Self.openCodeGlobalAgentsPath)
+        // OpenCode liest ~/.claude/skills und ~/.agents/skills -> beide auf die Repo-Skills.
+        Self.ensureGlobalSkillLinks()
         let source = try Self.ensureOpenCodeProfileSource(profileId)
 
         let sessionRoot = (Paths.sessionsRoot as NSString)

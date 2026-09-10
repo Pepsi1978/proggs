@@ -134,6 +134,7 @@ version_of() {
   # Nur lesen wenn echter Pfad in ~/.claude/skills/ (verhindert Symlink-Leak C5)
   case "$real" in
     "$HOME/.claude/skills/"*) : ;;
+    "$HOME/proggs/OpenLauncher/Profiles/ClaudeCode/standard/skills/"*) : ;;
     *) printf ''; return 0 ;;
   esac
   local v

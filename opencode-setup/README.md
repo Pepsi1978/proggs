@@ -27,7 +27,7 @@ Nach Änderungen OpenCode vollständig neu starten; laufende Sitzungen behalten 
 | 2b. Globale Agents | `~/.config/opencode/agents/*.md` | nein (lokal) | **`agents/`** (z.B. `researcher.md`) | ja |
 | 2c. Globale Plugins | `~/.config/opencode/plugins/*.{js,mjs}` + Plugin-Pakete | nein (lokal) | **`plugins/`** (z.B. `tool-first-guard.js`, `token-cost-sidebar/`) | ja |
 | 2c1. TUI-Plugin-Liste | `~/.config/opencode/tui.json` | nein (lokal) | **`tui.json`** | ja |
-| 2c2. Globale Skills | `~/.config/opencode/skill/<name>/SKILL.md` | nein (lokal) | **`skill/`** (z.B. `session-opencode`) | ja |
+| 2c2. Globale Skills | entfällt — OpenCode liest die Repo-Skills `OpenLauncher/Profiles/ClaudeCode/standard/skills` über `~/.claude/skills` und `~/.agents/skills` (Verknüpfungen, legt der OpenLauncher an) | – | **`skill/`** bleibt leer (keine Zweitkopien) | – |
 | 2d. Notifier-Sounds | `~/.config/opencode/sounds/*.wav` | nein (lokal) | **`sounds/`** (complete/error/permission) | ja |
 | 2e. Notifier-Config | `~/.config/opencode/opencode-notifier.json` | nein (lokal) | — (Installer **generiert** sie mit lokalen Pfaden) | ja (erzeugt) |
 | 2f. Windows-Fix-Binary | `~/.local/share/opencode-mousefix/versions/*/opencode.exe` | nein (lokal) | Patch + Buildskript | ja (gebaut) |

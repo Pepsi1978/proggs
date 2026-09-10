@@ -19,6 +19,9 @@
 !settings.json
 !skills/
 !skills/**
+# skills/ ist die EINZIGE Skill-Quelle aller Werkzeuge/Profile/Plattformen. Laufzeitmuell raus:
+skills/.system/
+**/__pycache__/
 !rules/
 !rules/**
 !agents/

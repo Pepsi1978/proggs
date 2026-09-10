@@ -208,6 +208,11 @@ ok "Commands kopiert"
 # ─── Schritt 9: Skills kopieren (Verzeichnisse + Standalone-Dateien) ──────────
 step "9/11" "Skills nach ~/.claude/skills/ kopieren"
 
+# Ist ~/.claude/skills mit den Repo-Skills verknuepft (OpenLauncher), wuerde jede Kopie die
+# Repo-Dateien mit den alten Setup-Kopien ueberschreiben -> ueberspringen.
+if [ -L ~/.claude/skills ]; then
+    ok "übersprungen: ~/.claude/skills ist mit den Repo-Skills verknüpft (OpenLauncher)"
+else
 # Verzeichnis-basierte Skills
 for skill_dir in auto-verify-iterate cross-platform undo-changes; do
     SRC_DIR="$SCRIPT_DIR/skills/$skill_dir"
@@ -226,6 +231,7 @@ for skill_md in "$SCRIPT_DIR/skills/"*.md; do
     cp "$skill_md" ~/.claude/skills/
     ok "$(basename "$skill_md")"
 done
+fi
 
 # ─── Schritt 10: Rules kopieren ───────────────────────────────────────────────
 step "10/11" "Rules nach ~/.claude/rules/ kopieren"

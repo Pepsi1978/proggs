@@ -8,7 +8,7 @@ Diese Regeln gelten für jede Programmieraufgabe!
 2. Best Practices und Bug Almanache liegen in den Ordnern /Users/frank/proggs/best-practices und /Users/frank/proggs/bugs
 - Lies den passenden Almanach oder Best Practices, bevor du in einem neuen Technologiebereich anfängst.
 
-3. Skills liegen im Ordner /Users/frank/proggs/OpenLauncher/Profiles/ClaudeCodeMac/standard/skills
+3. Skills liegen ausschließlich im Repo-Ordner /Users/frank/proggs/OpenLauncher/Profiles/ClaudeCode/standard/skills – für Claude Code, Codex und OpenCode, in jedem Profil und Modus, auf macOS und Windows. ~/.claude/skills, ~/.agents/skills und die Profil-Ordner "skills" sind nur Verknüpfungen dorthin. Skills nur dort bearbeiten, danach committen und pushen.
 
 4. Aufgabentrennung und Ablauf
 ` ; ` (Leerzeichen, Semikolon, Leerzeichen) trennt eigenständige Aufgaben.

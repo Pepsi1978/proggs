@@ -46,7 +46,7 @@ public sealed class InstructionProfileService
     /// sodass sie auf jedem Rechner identisch verfuegbar sind und frei bearbeitet werden koennen. Die
     /// .gitignore jedes Ordners haelt Laufzeit/Secrets (Login-Token, sessions/, cache/) vom Repo fern;
     /// die aktive CLAUDE.md ist bewusst untracked und wird pro Start aus der Profilquelle befuellt.
-    /// Minimal bleibt bewusst regelfrei (Skills nur per Junction, siehe EnsureSkillsJunction).
+    /// Minimal bleibt bewusst regelfrei (Skills nur per Junction, siehe EnsureSkillsLink).
     /// </summary>
     public static string ResolveClaudeConfigDir(string profileId)
     {
@@ -86,11 +86,11 @@ public sealed class InstructionProfileService
         WriteText(Path.Combine(dir, "CLAUDE.md"), ComposeClaudeContext(profileId, workModeId));
         EnsureLoginToken(dir);
 
-        // Minimal bleibt bewusst regelfrei: es traegt KEINE eigenen Skills, sondern blendet die
-        // Repo-Skills des Standard-Profils per Junction ein -- dieselben, die Codex gespiegelt bekommt.
-        // Standard und Strikt haben ihre Skills als echte, versionierte Kopien -> dort wird nichts verlinkt.
-        if (string.Equals(profileId, "minimal", StringComparison.Ordinal))
-            EnsureSkillsJunction(dir);
+        // Skills: Standard IST die Repo-Quelle; Minimal und Strikt verlinken per Junction darauf.
+        // Dazu die globalen Skill-Orte (~/.claude/skills, ~/.agents/skills) -- siehe RepoSkillsDir.
+        if (profileId is "minimal" or "strict")
+            EnsureSkillsLink(Path.Combine(dir, "skills"));
+        EnsureGlobalSkillLinks();
 
         return dir;
     }
@@ -183,39 +183,61 @@ public sealed class InstructionProfileService
     }
 
     /// <summary>
-    /// Blendet die Repo-Skills (Profiles/ClaudeCode/standard/skills) als Verzeichnis-Junction in den
-    /// Minimal-Config-Ordner ein. Eine einzige Quelle: Claude Code, Codex (MirrorCodexProfileSkills)
-    /// und das globale ~/.claude/skills (dort ebenfalls eine Junction auf diesen Ordner) sehen
-    /// dieselben Skills -- OHNE die uebrige ~/.claude-Umgebung (Rules/Hooks/Memory/Agents)
-    /// hereinzuholen. Junction statt Symlink: braucht KEINE Admin-Rechte und keinen Developer-Mode.
-    /// Idempotent: korrekte Junction -> nichts tun; falsches Ziel -> ersetzen; ein echtes Verzeichnis
-    /// wird aus Sicherheit nie angefasst. Die Junction bleibt lokal (.gitignore des Ordners).
+    /// Einzige Skill-Quelle fuer ALLE Werkzeuge (Claude Code, Codex, OpenCode), Profile, Modi und
+    /// Rechner: die versionierten Repo-Skills. Jeder andere Skill-Ort ist nur eine Junction hierauf,
+    /// damit eine KI, die einen Skill "an Ort und Stelle" verbessert, immer die Repo-Datei aendert.
     /// </summary>
-    private static void EnsureSkillsJunction(string configDir)
+    public static string RepoSkillsDir => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "proggs", "OpenLauncher", "Profiles", "ClaudeCode", "standard", "skills");
+
+    /// <summary>
+    /// Stellt die globalen Skill-Orte auf das Repo um: ~/.claude/skills (Claude Code ohne Profil,
+    /// OpenCode) und ~/.agents/skills (Codex und OpenCode scannen ihn immer). Laeuft bei jedem Start
+    /// jedes Werkzeugs, damit auch ein frisch eingerichteter Rechner ohne Handgriff umgestellt wird.
+    /// </summary>
+    public static void EnsureGlobalSkillLinks()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var realSkills = Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCode", "standard", "skills");
-        // Kein echtes Skills-Verzeichnis -> nichts einzublenden (keinen toten Link anlegen).
+        EnsureSkillsLink(Path.Combine(home, ".claude", "skills"));
+        EnsureSkillsLink(Path.Combine(home, ".agents", "skills"));
+    }
+
+    /// <summary>
+    /// Macht <paramref name="link"/> zur Verzeichnis-Junction auf RepoSkillsDir. Junction statt
+    /// Symlink: braucht KEINE Admin-Rechte und keinen Developer-Mode. Idempotent: korrekte Junction ->
+    /// nichts tun; falsches Ziel -> nur den Reparse-Point ersetzen; ein echtes Verzeichnis (alte
+    /// Skill-Kopien) wird NIE geloescht, sondern als &lt;name&gt;.bak-&lt;Zeitstempel&gt; daneben gesichert.
+    /// </summary>
+    private static void EnsureSkillsLink(string link)
+    {
+        var realSkills = RepoSkillsDir;
+        // Kein Repo-Skills-Verzeichnis -> keinen toten Link anlegen.
         if (!Directory.Exists(realSkills)) return;
 
-        var link = Path.Combine(configDir, "skills");
         var info = new DirectoryInfo(link);
-        if (info.Exists)
+        try
         {
-            if (!info.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                return; // echtes Verzeichnis: nicht anfassen (koennte bewusst versionierte Skills sein).
-
-            var current = Path.TrimEndingDirectorySeparator(info.LinkTarget ?? string.Empty);
-            if (string.Equals(current, Path.TrimEndingDirectorySeparator(realSkills), StringComparison.OrdinalIgnoreCase))
-                return; // Junction zeigt bereits korrekt.
-
-            // Falsches Ziel: nur den Reparse-Point entfernen (folgt der Junction NICHT -> Zielinhalt bleibt).
-            try { Directory.Delete(link, recursive: false); }
-            catch (Exception ex)
+            if (info.Exists && info.Attributes.HasFlag(FileAttributes.ReparsePoint))
             {
-                Logger.Instance.Warn("InstructionProfileService", "EnsureSkillsJunction", $"Alte Skills-Junction nicht entfernbar: {ex.Message}", new { link });
-                return;
+                var current = Path.TrimEndingDirectorySeparator(info.LinkTarget ?? string.Empty);
+                if (string.Equals(current, Path.TrimEndingDirectorySeparator(realSkills), StringComparison.OrdinalIgnoreCase))
+                    return; // Junction zeigt bereits korrekt.
+                // Falsches Ziel: nur den Reparse-Point entfernen (folgt der Junction NICHT -> Zielinhalt bleibt).
+                Directory.Delete(link, recursive: false);
             }
+            else if (info.Exists)
+            {
+                var backup = $"{link}.bak-{DateTime.Now:yyyyMMdd-HHmmss}";
+                Directory.Move(link, backup);
+                Logger.Instance.Info("InstructionProfileService", "EnsureSkillsLink", "Alte Skill-Kopie gesichert", new { link, backup });
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(link)!);
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "EnsureSkillsLink", $"Skill-Ordner nicht umstellbar: {ex.Message}", new { link });
+            return;
         }
 
         try
@@ -230,13 +252,13 @@ public sealed class InstructionProfileService
             };
             using var p = Process.Start(psi);
             if (p != null && p.WaitForExit(5000) && p.ExitCode == 0)
-                Logger.Instance.Info("InstructionProfileService", "EnsureSkillsJunction", "Skills-Junction eingerichtet", new { link, target = realSkills });
+                Logger.Instance.Info("InstructionProfileService", "EnsureSkillsLink", "Skills-Junction eingerichtet", new { link, target = realSkills });
             else
-                Logger.Instance.Warn("InstructionProfileService", "EnsureSkillsJunction", "mklink /J nicht erfolgreich", new { link, target = realSkills, exit = p?.ExitCode });
+                Logger.Instance.Warn("InstructionProfileService", "EnsureSkillsLink", "mklink /J nicht erfolgreich", new { link, target = realSkills, exit = p?.ExitCode });
         }
         catch (Exception ex)
         {
-            Logger.Instance.Warn("InstructionProfileService", "EnsureSkillsJunction", $"Skills-Junction fehlgeschlagen: {ex.Message}", new { link, target = realSkills });
+            Logger.Instance.Warn("InstructionProfileService", "EnsureSkillsLink", $"Skills-Junction fehlgeschlagen: {ex.Message}", new { link, target = realSkills });
         }
     }
 
@@ -373,11 +395,13 @@ public sealed class InstructionProfileService
         // Token darf nicht durch einen aelteren ueberschrieben werden.
         MirrorCodexAuth(home);
 
-        // Skills ausschliesslich aus dem Repo-Profil: die Profil-Skills landen in CODEX_HOME/skills,
-        // die alten Kopien in ~/.agents/skills (von Codex selbst immer mitgescannt, per Umgebung
-        // nicht abschaltbar) werden in der config.toml einzeln deaktiviert.
-        MirrorCodexProfileSkills(home, profileId);
-        WriteCodexSkillBlocklist(home);
+        // Skills ausschliesslich aus dem Repo: Codex scannt ~/.agents/skills immer mit, und das ist eine
+        // Junction auf die Repo-Skills (live geprueft: Codex folgt ihr und meldet die Repo-Pfade, Edits
+        // landen also im Repo). CODEX_HOME/skills bleibt ein echter Ordner, weil Codex dort seine
+        // .system-Skills ablegt; frueher gespiegelte Kopien und die alte Sperrliste werden entfernt.
+        EnsureGlobalSkillLinks();
+        RemoveCodexSkillCopies(home);
+        RemoveCodexSkillBlocklist(home);
         return home;
     }
 
@@ -385,30 +409,20 @@ public sealed class InstructionProfileService
 # Von OpenLauncher angelegt. Bewusst minimal: kein Plugin, kein MCP-Server, kein Hook,
 # keine eigene Statuszeile. Die Regeln kommen ausschliesslich aus der Profil-AGENTS.md
 # des Arbeitsverzeichnisses. Codex ergaenzt hier selbst nur seine Vertrauensstufen.
-# Die [[skills.config]]-Eintraege schreibt der Launcher bei jedem Start neu.
 """;
 
     /// <summary>
-    /// Spiegelt die versionierten Skills des gewaehlten Profils (Profiles/ClaudeCode/&lt;id&gt;/skills)
-    /// nach CODEX_HOME/skills. Minimal traegt keine eigenen Skills (nur eine Junction auf die
-    /// Standard-Skills) und bekommt deshalb wie Claude Code die Standard-Skills aus dem Repo. Kopie statt Junction,
-    /// weil Codex verlinkte Skill-Ordner nicht verlaesslich scannt; bei jedem Start frisch, damit
-    /// Aenderungen im Repo sofort gelten. Der Codex-eigene Ordner .system bleibt unangetastet.
+    /// Entfernt die frueher nach CODEX_HOME/skills gespiegelten Skill-Kopien. Codex liest die
+    /// Repo-Skills jetzt ueber die Junction ~/.agents/skills; Kopien hier waeren doppelt, veralteten,
+    /// und eine KI wuerde beim Verbessern die Kopie statt der Repo-Datei aendern. Der Codex-eigene
+    /// Ordner .system bleibt unangetastet.
     /// </summary>
-    private static void MirrorCodexProfileSkills(string home, string profileId)
+    private static void RemoveCodexSkillCopies(string home)
     {
-        var profilesRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs", "OpenLauncher", "Profiles", "ClaudeCode");
-        var source = Path.Combine(profilesRoot, profileId == "minimal" ? "standard" : profileId, "skills");
         var target = Path.Combine(home, "skills");
         try
         {
-            if (!Directory.Exists(source))
-            {
-                Logger.Instance.Warn("InstructionProfileService", "MirrorCodexProfileSkills", "Profil-Skills fehlen", new { source });
-                return;
-            }
-            Directory.CreateDirectory(target);
+            if (!Directory.Exists(target)) return;
             foreach (var entry in Directory.EnumerateFileSystemEntries(target))
             {
                 if (string.Equals(Path.GetFileName(entry), ".system", StringComparison.OrdinalIgnoreCase)) continue;
@@ -417,33 +431,20 @@ public sealed class InstructionProfileService
                 else if (attributes.HasFlag(FileAttributes.Directory)) Directory.Delete(entry, recursive: true);
                 else File.Delete(entry);
             }
-            foreach (var dir in Directory.EnumerateDirectories(source))
-                CopyDirectory(dir, Path.Combine(target, Path.GetFileName(dir)));
-            Logger.Instance.Info("InstructionProfileService", "MirrorCodexProfileSkills", "Profil-Skills gespiegelt", new { source, target });
         }
         catch (Exception ex)
         {
-            Logger.Instance.Warn("InstructionProfileService", "MirrorCodexProfileSkills", $"Profil-Skills nicht gespiegelt: {ex.Message}", new { source, target });
+            Logger.Instance.Warn("InstructionProfileService", "RemoveCodexSkillCopies", $"Alte Skill-Kopien nicht entfernt: {ex.Message}", new { target });
         }
     }
 
-    private static void CopyDirectory(string source, string target)
-    {
-        Directory.CreateDirectory(target);
-        foreach (var file in Directory.EnumerateFiles(source))
-            File.Copy(file, Path.Combine(target, Path.GetFileName(file)), overwrite: true);
-        foreach (var dir in Directory.EnumerateDirectories(source))
-            CopyDirectory(dir, Path.Combine(target, Path.GetFileName(dir)));
-    }
-
     /// <summary>
-    /// Codex scannt ~/.agents/skills immer (Nutzer-Ebene, haengt am Windows-Profilordner, nicht an
-    /// CODEX_HOME). Dort liegen veraltete Kopien (z. B. der alte research-Skill). Jede SKILL.md
-    /// darunter bekommt einen [[skills.config]]-Eintrag mit enabled = false. Alle bisherigen
-    /// [[skills.config]]-Tabellen werden vorher entfernt -- sie stammen ausschliesslich vom Launcher --,
-    /// alles andere (Vertrauensstufen, tui) bleibt erhalten.
+    /// Entfernt die fruehere Sperrliste ([[skills.config]] enabled = false fuer ~/.agents/skills) aus
+    /// der config.toml. Sie waere jetzt schaedlich: ~/.agents/skills zeigt auf die Repo-Skills und
+    /// Codex loest die Pfade auf -- die Eintraege wuerden die Repo-Skills abschalten. Alle
+    /// [[skills.config]]-Tabellen stammen ausschliesslich vom Launcher; alles andere bleibt erhalten.
     /// </summary>
-    private static void WriteCodexSkillBlocklist(string home)
+    private static void RemoveCodexSkillBlocklist(string home)
     {
         var configPath = Path.Combine(home, "config.toml");
         try
@@ -459,21 +460,11 @@ public sealed class InstructionProfileService
                 if (trimmed.StartsWith(CodexSkillBlockMarker, StringComparison.Ordinal)) continue;
                 kept.Add(line);
             }
-
-            var text = new StringBuilder(string.Join("\n", kept).TrimEnd('\n'));
-            var userSkills = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".agents", "skills");
-            if (Directory.Exists(userSkills))
-            {
-                text.Append("\n\n").Append(CodexSkillBlockMarker).Append(" veraltete Skills aus ~/.agents/skills abgeschaltet\n");
-                foreach (var skill in Directory.EnumerateFiles(userSkills, "SKILL.md", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
-                    text.Append("[[skills.config]]\npath = '").Append(skill).Append("'\nenabled = false\n\n");
-            }
-            WriteIfChanged(configPath, text.ToString().TrimEnd('\n') + "\n");
+            WriteIfChanged(configPath, string.Join("\n", kept).TrimEnd('\n') + "\n");
         }
         catch (Exception ex)
         {
-            Logger.Instance.Warn("InstructionProfileService", "WriteCodexSkillBlocklist", $"Skill-Sperrliste nicht geschrieben: {ex.Message}", new { configPath });
+            Logger.Instance.Warn("InstructionProfileService", "RemoveCodexSkillBlocklist", $"Skill-Sperrliste nicht entfernt: {ex.Message}", new { configPath });
         }
     }
 
@@ -503,6 +494,8 @@ public sealed class InstructionProfileService
         // ueber die Projekt-AGENTS.md (ActivateProjectAgents). So laedt OpenCode (und ein evtl.
         // `instructions`-Verweis in der globalen opencode.jsonc) hier nichts hinzu.
         WriteIfChanged(GetOpenCodeGlobalAgentsPath(), string.Empty);
+        // OpenCode liest ~/.claude/skills und ~/.agents/skills -> beide auf die Repo-Skills.
+        EnsureGlobalSkillLinks();
         var source = EnsureOpenCodeProfileSource(profileId);
 
         var sessionRoot = Path.Combine(
