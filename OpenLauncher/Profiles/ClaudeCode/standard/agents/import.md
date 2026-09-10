@@ -35,22 +35,8 @@ mechanism of the target CLI instead of silently dropping it.
 
 ## Zielsystem-Regel
 
-Always write into the current CLI's own workspace and configuration surfaces.
-Never overwrite another CLI's private setup when importing into Codex or Gemini.
-
-| Current CLI | Native target roots |
-|-------------|---------------------|
-| `claude-code` | `~/.claude/`, `claude-code-setup/`, `CLAUDE.md` |
-| `codex` | `~/.codex/`, `codex-setup/`, `AGENTS.md`, Codex-owned memory and scripts |
-| `gemini` | local Gemini config, `Gemini-Setup/`, `GEMINI.md`, Gemini-owned memory and scripts |
-
-Same CLI on another platform:
-- mirror 1:1
-
-Different CLI:
-- implement the same behavior in native files
-- if hooks do not exist, encode the same behavior as rules, commands, or scripts
-- if settings formats differ, translate the exact intent instead of copying foreign JSON blindly
+Always write into Claude Code's own roots: `~/.claude/`, `claude-code-setup/`, `CLAUDE.md`.
+Entries from the other platform are mirrored 1:1 (adapted with the platform table below).
 
 ## Ablauf (7 Schritte)
 
@@ -66,10 +52,7 @@ Map the platform:
 - `Darwin` -> `platform=macos`
 - `MINGW`, `MSYS`, `Windows`, `CYGWIN` -> `platform=windows`
 
-Determine the CLI:
-- Claude Code runtime or `.claude` ownership -> `cli=claude-code`
-- Codex runtime or `codex-setup` ownership -> `cli=codex`
-- Gemini runtime or `Gemini-Setup` ownership -> `cli=gemini`
+The CLI is always `cli=claude-code`.
 
 Your exact platform key is:
 `{platform}/{cli}`
@@ -166,10 +149,7 @@ Required actions:
 3. If a concrete code or config fix is described, apply it too.
 4. Preserve any durable prevention text exactly.
 
-Examples:
-- Claude Code -> `~/.claude/rules/auto-learned/`
-- Codex -> native Codex rule or memory path described by the entry
-- Gemini -> native Gemini rule or memory path described by the entry
+Target: `~/.claude/rules/auto-learned/`
 
 #### Type: `rule`
 
@@ -190,10 +170,7 @@ Required actions:
 2. Update repo copies mentioned by the entry.
 3. Preserve directive priority wording exactly.
 
-Examples:
-- Claude Code -> `CLAUDE.md` plus repo copy
-- Codex -> `AGENTS.md` and Codex-owned mirrors named by the entry
-- Gemini -> `GEMINI.md` and Gemini-owned mirrors named by the entry
+Target: `CLAUDE.md` plus repo copy.
 
 #### Type: `hook`
 

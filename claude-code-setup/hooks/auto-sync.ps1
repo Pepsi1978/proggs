@@ -84,25 +84,6 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Status "Auto-Sync: Git Pull erfolgreich."
 
-# C2 (ported from Gemini): Write cross-CLI delta summary to whiteboard after pull
-# This makes incoming changes visible for /self-improve and future sessions
-try {
-    $codexChanges = git log --oneline "$local..$remote" -- codex-setup/ 2>$null | Measure-Object | Select-Object -ExpandProperty Count
-    $geminiChanges = git log --oneline "$local..$remote" -- Gemini-Setup/ 2>$null | Measure-Object | Select-Object -ExpandProperty Count
-    if ($codexChanges -gt 0 -or $geminiChanges -gt 0) {
-        $parts = @()
-        if ($codexChanges -gt 0) { $parts += "Codex($codexChanges)" }
-        if ($geminiChanges -gt 0) { $parts += "Gemini($geminiChanges)" }
-        $cliSummary = $parts -join ", "
-        $ts = Get-Date -Format "yyyy-MM-dd HH:mm"
-        $entry = "- **[$ts] Cross-CLI Delta:** $cliSummary neue Commits — Bruecke starten fuer Details."
-        Replace-WhiteboardEntry -Section "Forschung & Intelligence" -MatchPattern "Cross-CLI Delta" -Entry $entry
-        Write-Status "Auto-Sync: Cross-CLI Delta erkannt: $cliSummary"
-    }
-} catch {
-    Hook-LogWarn "Cross-CLI delta summary failed: $_"
-}
-
 # --- Sync config files from setup backup to active Claude Code config ---
 
 $synced = @()

@@ -21,8 +21,7 @@ vergessen). Nicht fertig, bevor beide aktuell + gepusht.
 ## Beim Spiegeln beachten
 
 `__pycache__`/leeren `learned/` ausschliessen · LF + UTF-8 ohne BOM · `.mcp.json` plattformspezifisch (NIE
-vereinheitlichen) · nur eigene Dateien · externe Plugins NICHT spiegeln. KEINE Spiegel: `gemini-setup/`,
-`codex-setup/` (eigene CLI-Welten, NICHT anfassen).
+vereinheitlichen) · nur eigene Dateien · externe Plugins NICHT spiegeln.
 
 ## Was NIEMALS
 - Harness aendern ohne BEIDE Spiegelorte · `Umgebung/` vergessen · bei einem Hook nur `.ps1` ODER `.sh`

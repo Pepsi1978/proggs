@@ -202,9 +202,7 @@ done
 # ── 7. Mandatory commands ────────────────────────────────────────────────────
 section "7. Mandatory Commands"
 for f in \
-  "commands/self-improve.md" \
-  "commands/codex-bridge.md" \
-  "commands/gemini-bridge.md"
+  "commands/self-improve.md"
 do
   check_file "$f"
 done

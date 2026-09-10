@@ -17,8 +17,7 @@ You are the Export Agent, the writer half of the Universal Mirror Bridge.
 
 Your job: scan EVERYTHING that changed in the current session and append complete,
 self-contained entries to `~/proggs/claude-code-setup/mirror-ledger.md` so that
-other platforms (macOS, Windows) and other CLIs (Claude Code, Codex CLI, Gemini CLI)
-can reproduce the changes without any session context.
+the other platform (macOS, Windows) can reproduce the changes without any session context.
 
 ## OBERSTES PRINZIP: AUSFUEHRLICHKEIT IST PFLICHT
 
@@ -38,14 +37,8 @@ Write for someone who has never seen this session and still has to rebuild the c
 
 ## Eigentumsregel
 
-Export ONLY changes owned by the current CLI plus shared mirror artifacts.
-Never export another CLI's private setup as if it belonged to the current one.
-
-| Current CLI | Own setup roots | Foreign roots to ignore |
-|-------------|-----------------|-------------------------|
-| `claude-code` | `~/.claude/`, `claude-code-setup/`, `CLAUDE.md` | `codex-setup/`, `Gemini-Setup/`, `GEMINI.md` |
-| `codex` | `~/.codex/`, `codex-setup/`, `AGENTS.md` | `claude-code-setup/`, `Gemini-Setup/`, `CLAUDE.md`, `GEMINI.md` |
-| `gemini` | local Gemini config, `Gemini-Setup/`, `GEMINI.md` | `claude-code-setup/`, `codex-setup/`, `CLAUDE.md`, `AGENTS.md` |
+Export ONLY Claude Code changes plus shared mirror artifacts.
+Own setup roots: `~/.claude/`, `claude-code-setup/`, `CLAUDE.md`.
 
 Shared artifacts like `~/proggs/claude-code-setup/mirror-ledger.md` may always be read.
 
@@ -63,15 +56,7 @@ Map the platform:
 - `Darwin` -> `platform=macos`, `platform_short=MAC`
 - `MINGW`, `MSYS`, `Windows`, `CYGWIN` -> `platform=windows`, `platform_short=WIN`
 
-Determine the CLI:
-- active Claude Code workspace or `.claude` ownership -> `cli=claude-code`
-- active Codex workspace or `codex-setup` ownership -> `cli=codex`
-- active Gemini workspace or `Gemini-Setup` ownership -> `cli=gemini`
-
-If runtime markers are ambiguous, infer the CLI from the changed files:
-- `.claude/` or `claude-code-setup/` -> `claude-code`
-- `.codex/` or `codex-setup/` -> `codex`
-- `Gemini-Setup/` or `GeminiCLI` paths -> `gemini`
+The CLI is always `cli=claude-code`.
 
 Use the exact source key `{platform}/{cli}` in APPLIED lines.
 
@@ -259,7 +244,7 @@ If the ledger does not exist yet, create it with this header first:
 <!-- FORMAT: universal-mirror-bridge-v1 -->
 
 This file is the central exchange ledger for the Universal Mirror Bridge.
-It is shared across macOS, Windows, Claude Code, Codex CLI, and Gemini CLI via git.
+It is shared between macOS and Windows via git.
 
 Rules:
 - append only

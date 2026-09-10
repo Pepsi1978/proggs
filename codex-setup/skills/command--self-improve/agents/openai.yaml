@@ -1,7 +1,0 @@
-interface:
-  display_name: "command--self-improve"
-  short_description: "Systematic self-improvement of the Codex development"
-  default_prompt: "Use $command--self-improve for this task."
-
-policy:
-  allow_implicit_invocation: false

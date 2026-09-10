@@ -41,8 +41,6 @@ TRUSTED_PATH_PREFIXES = [
     "/.claude/",
     # Our setup repo
     "claude-code-setup/",
-    "codex-setup/",
-    "Gemini-Setup/",
     # Common config files
     "CLAUDE.md",
     "package.json",

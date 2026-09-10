@@ -85,21 +85,6 @@ fi
 
 write_status "Auto-Sync: Git Pull erfolgreich."
 
-# C2 (ported from Gemini): Write cross-CLI delta summary to whiteboard after pull
-codex_changes=$(git log --oneline "$local_sha..$remote_sha" -- codex-setup/ 2>/dev/null | wc -l | tr -d ' ')
-gemini_changes=$(git log --oneline "$local_sha..$remote_sha" -- Gemini-Setup/ 2>/dev/null | wc -l | tr -d ' ')
-if [ "$codex_changes" -gt 0 ] 2>/dev/null || [ "$gemini_changes" -gt 0 ] 2>/dev/null; then
-    cli_parts=""
-    [ "$codex_changes" -gt 0 ] 2>/dev/null && cli_parts="Codex($codex_changes)"
-    [ "$gemini_changes" -gt 0 ] 2>/dev/null && cli_parts="$cli_parts Gemini($gemini_changes)"
-    cli_parts=$(echo "$cli_parts" | sed 's/^ //' | sed 's/ /, /')
-    ts=$(date '+%Y-%m-%d %H:%M')
-    source "$SCRIPT_DIR/whiteboard-insert.sh" 2>/dev/null || true
-    if command -v replace_whiteboard_entry &>/dev/null; then
-        replace_whiteboard_entry "Forschung & Intelligence" "Cross-CLI Delta" "- **[$ts] Cross-CLI Delta:** $cli_parts neue Commits — Bruecke starten fuer Details."
-        write_status "Auto-Sync: Cross-CLI Delta erkannt: $cli_parts"
-    fi
-fi
 
 # --- Sync config files from setup backup to active Claude Code config ---
 

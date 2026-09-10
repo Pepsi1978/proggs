@@ -642,7 +642,6 @@ zurueckgemeldet. Mehrere Vorschlaege pro Session sind ausdruecklich erwuenscht (
 
 **Workspace Orchestration** (portiert von Gemini Delta 2026-03-24):
 - **Zentrales Whiteboard:** Das einzige operative Whiteboard ist `~/proggs/.claude/agent-memory/shared/MEMORY.md`.
-- **Cross-Tool-Lernen:** Claude Code darf `codex-setup/` und `Gemini-Setup/` (inkl. deren Whiteboards) als **read-only Vergleichsquellen** lesen.
 - **Direktiven-Schutz:** Die drei Haupt-Direktiven (Superintelligenz, Selbstbeobachtung, Resilient Bugfixing) muessen in Whiteboard, CLAUDE.md und rules/ synchron gehalten werden.
 
 - Kein Python fuer User-Interfaces
