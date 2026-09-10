@@ -14,7 +14,7 @@ Ein Agent (Claude Code, Codex, OpenCode) ruft das Update-Skript auf. Es erschein
 - Windows: `MessageBoxTimeoutW` aus user32 mit `MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST`. Das Fenster liegt garantiert ganz oben. Fallback ist `WScript.Shell.Popup` mit denselben Flags.
 - macOS: `display dialog … giving up after N` innerhalb von `tell application "System Events" to activate`.
 - Zeitlimit von 240 s. Kommt kein Klick, gilt „Nein“ (`LAUNCHER_UPDATE_STATUS=no-answer`), nie „Ja“. Damit ist ein Deadlock ausgeschlossen, ohne dass die Freigabe verloren geht.
-- Den Aufruf aus dem Agenten mit 10 Minuten Tool-Timeout starten. Das steht als Regel 13 in allen Profilen.
+- Der Agent darf das Skript nicht selbst abbrechen, solange der Dialog wartet. Deshalb startet er es mit dem höchsten erlaubten Zeitlimit statt mit dem kurzen Standard (Claude Code: 2 Minuten). Den vollständigen Ablauf beschreibt Regel 13 in allen Profilen (Minimal, Standard, Strikt; Windows und Mac).
 
 ## Falle 2 – Timeout, obwohl die neue Version längst läuft
 
