@@ -389,6 +389,10 @@ final class PromptInputPanel: NSPanel, NSTextViewDelegate {
         root.layer?.borderWidth = 1
         contentView?.addSubview(root)
 
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String ?? "?"
+        let timestamp = info["BuildTimestamp"] as? String ?? "unbekannt"
+        titleLabel.stringValue = "Prompt-Eingabe · v\(version) · \(timestamp)"
         titleLabel.textColor = NSColor(calibratedWhite: 0.8, alpha: 1)
         titleLabel.font = NSFont.boldSystemFont(ofSize: 13)
 
