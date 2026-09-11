@@ -114,8 +114,6 @@ internal fun sortHistorySessions(
     sessions: List<SessionEntity>,
     sort: HistorySort,
 ): List<SessionEntity> {
-    val lastPlayed = sessions.maxWithOrNull(compareBy<SessionEntity> { it.lastPlayedAt }.thenBy { it.id })
-        ?: return emptyList()
     val remainingComparator = when (sort) {
         HistorySort.MOST_USED -> compareByDescending<SessionEntity> { it.playCount }
             .thenByDescending { it.lastPlayedAt }
@@ -125,6 +123,11 @@ internal fun sortHistorySessions(
         HistorySort.A_TO_Z -> compareBy<SessionEntity> { historyDisplayTitle(it).lowercase(Locale.GERMAN) }
             .thenByDescending { it.startedAt }
     }
+    // Nur „Am häufigsten" pinnt den zuletzt gespielten Eintrag oben; jede andere
+    // Sortierung folgt rein ihrem Komparator, sonst bräche der Pin ihre Ordnung.
+    if (sort != HistorySort.MOST_USED) return sessions.sortedWith(remainingComparator)
+    val lastPlayed = sessions.maxWithOrNull(compareBy<SessionEntity> { it.lastPlayedAt }.thenBy { it.id })
+        ?: return emptyList()
     return listOf(lastPlayed) + sessions.filterNot { it.id == lastPlayed.id }.sortedWith(remainingComparator)
 }
 

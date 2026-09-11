@@ -42,7 +42,7 @@ class AutoBackup(
                 listOf(
                     hooks.map { "${it.id}:${it.emoji}:${it.text}:${it.sortIndex}" },
                     skills.map { "${it.id}:${it.name}:${it.text}" },
-                    sessions.map { "${it.id}:${it.topic}:${it.playCount}" },
+                    sessions.map { "${it.id}:${it.topic}:${it.playCount}:${it.questionCount}:${it.lastPlayedAt}:${it.summary}" },
                 ).hashCode()
             }
                 .drop(1) // Der erste Wert ist nur der Ist-Zustand beim Start, keine Änderung.
