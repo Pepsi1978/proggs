@@ -6,7 +6,7 @@
 > gleicher/besserer Qualitaet. Werkzeuge: `~/proggs/mm-research.py`, `or-research.py`, `research-swarm.py`.
 >
 > **Auswerte-Modell seit 09.09.2026:** A UND B nutzen `deepseek/deepseek-v4-flash-0731` ueber OpenRouter,
-> Anbieter **Makora** gepinnt (`provider.order=["makora"]`, `allow_fallbacks=false`), reasoning
+> Anbieter-Kette **Makora → Relace → DeepInfra** (`provider.order=["makora","relace","deepinfra"]`, `allow_fallbacks=false`), reasoning
 > effort **high**. Loest MiniMax M3 (Go-Gateway) ab. Verifiziert 09.09.2026 gegen die OpenRouter-API:
 > Endpunkt Makora vorhanden, `reasoning_effort` unterstuetzt, 1.048.576 Token Kontext,
 > $0.09/$0.195 pro Mio Token. Der Pin steht als Default IN den Skripten (`MM_PROVIDER`/`OR_PROVIDER`,
@@ -77,7 +77,7 @@ kommt von Firecrawl Free, nicht vom Auswerte-Modell.
   `fallback` (Default) · `always` (immer beide) · `off`. Key: `~/SK/Tavily/tavily-api-key.txt`.
   Inhaltlich duenne (nicht leere) Firecrawl-Ergebnisse kann das Skript NICHT erkennen — wenn Frank das
   sagt, den Lauf mit `MM_TAVILY=always` wiederholen.
-- **A UND B pinnen den Anbieter auf Makora** (`provider.order=["makora"]`, `allow_fallbacks=false`).
+- **A UND B nutzen die Anbieter-Kette Makora → Relace → DeepInfra** (`provider.order=["makora","relace","deepinfra"]`, `allow_fallbacks=false`).
   Das steht als Default in den Skripten; `MM_PROVIDER=""` bzw. `OR_PROVIDER=""` schaltet den Pin ab,
   falls Makora ausfaellt (dann routet OpenRouter frei — Preis und Verhalten koennen abweichen).
 - **Option C nur wenn Frank sie ausdruecklich waehlt** — nie Default. Welches Modell C bedeutet, haengt
@@ -115,7 +115,7 @@ durch den teuren Hauptagent-Kontext); der Hauptagent zahlt nur die ~2k-Token-Syn
 
 Engine B nutzt `:online` (NICHT das `web_search`-Server-Tool — `:online` verteilt selbst auf mehrere
 Provider, bei hoher Parallelitaet stabiler). Modell-Default `deepseek/deepseek-v4-flash-0731:online`
-(Anbieter Makora gepinnt), Eskalation mit mehr Denkkraft `z-ai/glm-5.2:online`. Deckel gegen agentische Mehrfachsuche: `max_total_results` (or-research: env
+(Anbieter-Kette Makora → Relace → DeepInfra), Eskalation mit mehr Denkkraft `z-ai/glm-5.2:online`. Deckel gegen agentische Mehrfachsuche: `max_total_results` (or-research: env
 `OR_MAX_TOTAL`, Default 10). Kosten ~<1 Cent/Anfrage (7-Researcher-Lauf ≈ $0.12 vs. Opus-Researcher ≈ $7+).
 
 ---

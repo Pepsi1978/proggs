@@ -14,8 +14,14 @@ sichtbar bleibt, woher ein Beleg stammt.
 
 UMSTELLUNG 09.09.2026: Die Auswertung (Stufe 2) lief frueher ueber MiniMax M3 auf dem
 opencode.ai/zen/go-Gateway (Anthropic-/messages-Schema). Sie laeuft jetzt ueber OpenRouter
-(/chat/completions) mit `deepseek/deepseek-v4-flash-0731`, Anbieter auf **Makora** gepinnt
-(`provider.order=["makora"]`, `allow_fallbacks=False`). Verifiziert 09.09.2026 gegen die
+(/chat/completions) mit `deepseek/deepseek-v4-flash-0731`. Anbieter-Kette seit 11.09.2026:
+**Makora → Relace → DeepInfra** (`provider.order=["makora","relace","deepinfra"]`,
+`allow_fallbacks=False` — OpenRouter probiert die drei der Reihe nach, aber keinen vierten).
+
+FIRECRAWL MAXIMAL TIEF (seit 11.09.2026): /v2/search mit `limit=100` (API-Maximum), jede Seite
+voll gescrapt (Markdown, nur Hauptinhalt, Werbung/Base64-Bilder raus). Kosten ~120 Credits je Suche.
+Scheitert die grosse Suche (Timeout/Fehler), folgt ein zweiter Versuch mit 30 Quellen, erst dann Tavily.
+Verifiziert 09.09.2026 gegen die
 OpenRouter-API: Endpunkt vorhanden, `reasoning_effort` unterstuetzt, 1.048.576 Token Kontext,
 $0.09/$0.195 pro Mio Token (in/out).
 
@@ -25,8 +31,10 @@ bei besserer Ehrlichkeit. Auswerte-Token laufen separat ueber OpenRouter (pay-pe
 
 Verwendung:
     python3 mm-research.py "deine Recherche-Frage" [anzahl_quellen] [modell]
+    anzahl_quellen      — Default 100 (Firecrawl-Maximum), groessere Werte werden auf 100 gekappt.
     MM_MODEL     (env) — Auswerte-Modell, Default `deepseek/deepseek-v4-flash-0731`.
-    MM_PROVIDER  (env) — OpenRouter-Anbieter, Default `makora`. LEER = kein Pin (freies Routing).
+    MM_PROVIDER  (env) — Anbieter-Reihenfolge, kommagetrennt, Default `makora,relace,deepinfra`.
+                         LEER = kein Pin (freies Routing).
     MM_EFFORT    (env) — reasoning effort, Default `high`.
     MM_TAVILY    (env) — `fallback` (Default) | `always` | `off`, siehe oben.
 
@@ -50,7 +58,12 @@ import urllib.request
 import urllib.error
 
 OR_URL = "https://openrouter.ai/api/v1/chat/completions"   # Auswertung (seit 09.09.2026)
-FC_URL = "https://api.firecrawl.dev/v1/search"
+FC_URL = "https://api.firecrawl.dev/v2/search"
+FC_URL_V1 = "https://api.firecrawl.dev/v1/search"          # Rueckfall, falls v2 zickt
+FC_MAX = 100          # hoechstes `limit`, das die Firecrawl-Suche annimmt
+FC_RETRY_LIMIT = 30   # zweiter Versuch, wenn 100 Seiten auf einmal scheitern (Timeout/Fehler)
+MAX_PER_SOURCE = 20000     # Zeichen je Quelle an den Auswerter
+MAX_TOTAL_CHARS = 2000000  # ~500k Token Deckel ueber alle Quellen (Kontext 1M)
 TV_URL = "https://api.tavily.com/search"                   # Rueckfall-Suche (seit 09.09.2026)
 # Wann Tavily einspringt: "fallback" = nur wenn Firecrawl nichts Brauchbares liefert (Default),
 # "always" = immer beide (zusammengefuehrt), "off" = nie. Ein leeres/kaputtes Firecrawl-Ergebnis
@@ -59,10 +72,12 @@ TV_URL = "https://api.tavily.com/search"                   # Rueckfall-Suche (se
 TAVILY_MODE = os.environ.get("MM_TAVILY", "fallback").lower()
 MIN_MARKDOWN = 200   # kuerzer als das gilt ein Treffer als leer (Cookie-Banner/Fehlerseite)
 MODEL = os.environ.get("MM_MODEL", "deepseek/deepseek-v4-flash-0731")
-# Anbieter-Pin: Makora ist vorgegeben. allow_fallbacks=False, damit wirklich Makora bedient
-# und nicht still auf einen anderen Anbieter geroutet wird (Preis/Verhalten waeren sonst andere).
-# MM_PROVIDER="" schaltet den Pin ab, falls Makora mal ausfaellt.
-PROVIDER = os.environ.get("MM_PROVIDER", "makora")
+# Anbieter-Kette: Makora zuerst, dann Relace, dann DeepInfra. allow_fallbacks=False, damit nicht
+# still auf einen vierten Anbieter geroutet wird (Preis/Verhalten waeren sonst andere).
+# MM_PROVIDER="" schaltet den Pin ganz ab (freies Routing).
+PROVIDERS = [p.strip() for p in os.environ.get("MM_PROVIDER", "makora,relace,deepinfra").split(",")
+             if p.strip()]
+PROVIDER = " → ".join(PROVIDERS)
 EFFORT = os.environ.get("MM_EFFORT", "high")
 # MM_OUTDIR ueberschreibbar, damit PARALLELE Laeufe (Continuous-Spawning mit 2, Firecrawl-Free-Limit)
 # je eine eigene sources.json/answer.json/thinking.txt haben (sonst ueberschreiben sie sich — der
@@ -114,19 +129,35 @@ def _post(url, headers, body, timeout):
 def _firecrawl(query, limit, fc_key):
     """Firecrawl-Suche. Gibt (treffer, fehlertext) zurueck — nie eine Exception nach aussen,
     damit der Tavily-Rueckfall auch bei HTTP-Fehlern/Timeouts greift (und nicht nur bei 0 Treffern)."""
+    headers = {"Authorization": f"Bearer {fc_key}", "Content-Type": "application/json"}
+    # Maximal tief: jede gefundene Seite wird voll gescrapt (Markdown, nur Hauptinhalt).
+    scrape = {"formats": ["markdown"], "onlyMainContent": True, "blockAds": True,
+              "removeBase64Images": True}
+    body = {"query": query, "limit": limit, "sources": ["web"], "ignoreInvalidURLs": True,
+            "timeout": 300000, "scrapeOptions": scrape}
     try:
-        fc = _post(FC_URL,
-                   {"Authorization": f"Bearer {fc_key}", "Content-Type": "application/json"},
-                   {"query": query, "limit": limit, "scrapeOptions": {"formats": ["markdown"]}},
-                   timeout=150)
+        fc = _post(FC_URL, headers, body, timeout=330)
     except urllib.error.HTTPError as e:
-        return [], f"HTTP {e.code}: {e.read().decode('utf-8', 'replace')[:200]}"
+        fehler = f"HTTP {e.code}: {e.read().decode('utf-8', 'replace')[:200]}"
+        if e.code not in (400, 404):
+            return [], fehler
+        # v2 lehnt ab -> einmal mit dem alten v1-Schema versuchen
+        try:
+            fc = _post(FC_URL_V1, headers, {"query": query, "limit": limit, "scrapeOptions": scrape},
+                       timeout=330)
+        except Exception as e2:
+            return [], f"{fehler} | v1: {type(e2).__name__}: {str(e2)[:160]}"
     except Exception as e:
         return [], f"{type(e).__name__}: {str(e)[:160]}"
+    data = fc.get("data") or []
+    if isinstance(data, dict):   # v2: {"web": [...], "news": [...]}
+        data = [r for liste in data.values() if isinstance(liste, list) for r in liste]
     out = []
-    for r in (fc.get("data") or []):
-        out.append({"titel": r.get("title", ""), "url": r.get("url", ""),
-                    "text": r.get("markdown") or r.get("content") or "", "woher": "Firecrawl"})
+    for r in data:
+        out.append({"titel": r.get("title") or (r.get("metadata") or {}).get("title", ""),
+                    "url": r.get("url") or (r.get("metadata") or {}).get("sourceURL", ""),
+                    "text": r.get("markdown") or r.get("content") or r.get("description") or "",
+                    "woher": "Firecrawl"})
     return out, None
 
 
@@ -164,7 +195,7 @@ def main():
     if len(sys.argv) < 2:
         return "Bitte eine Recherche-Frage als 1. Argument angeben."
     query = sys.argv[1]
-    limit = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    limit = min(int(sys.argv[2]), FC_MAX) if len(sys.argv) > 2 else FC_MAX
     model = sys.argv[3] if len(sys.argv) > 3 else MODEL
     os.makedirs(OUTDIR, exist_ok=True)
 
@@ -174,6 +205,10 @@ def main():
     # 1) Quellen holen (laufen NICHT durch den Claude-Kontext) — Firecrawl, bei Bedarf Tavily
     print(f"[1/2] Firecrawl-Suche: {query!r} (limit {limit})", file=sys.stderr)
     treffer, fc_fehler = _firecrawl(query, limit, fc_key)
+    if fc_fehler and limit > FC_RETRY_LIMIT:
+        print(f"      Firecrawl-FEHLER bei {limit} Quellen: {fc_fehler} -> neuer Versuch mit "
+              f"{FC_RETRY_LIMIT}", file=sys.stderr)
+        treffer, fc_fehler = _firecrawl(query, FC_RETRY_LIMIT, fc_key)
     if fc_fehler:
         print(f"      Firecrawl-FEHLER: {fc_fehler}", file=sys.stderr)
     else:
@@ -213,10 +248,18 @@ def main():
     with open(os.path.join(OUTDIR, "sources.json"), "w", encoding="utf-8") as fh:
         json.dump(treffer, fh, ensure_ascii=False)
     src = []
+    gesamt = 0
     for i, r in enumerate(treffer):
         # Herkunft mitschreiben: der Auswerter (und Frank) sehen, ob ein Beleg von Firecrawl
         # (volle Seite) oder von Tavily (Rueckfall) kam.
-        src.append(f"### QUELLE {i+1} [{r['woher']}]: {r['titel']} ({r['url']})\n{(r['text'] or '')[:12000]}")
+        stueck = (f"### QUELLE {i+1} [{r['woher']}]: {r['titel']} ({r['url']})\n"
+                  f"{(r['text'] or '')[:MAX_PER_SOURCE]}")
+        if gesamt + len(stueck) > MAX_TOTAL_CHARS:
+            print(f"      Kontext-Deckel erreicht: {len(treffer) - i} Quellen nicht mitgegeben.",
+                  file=sys.stderr)
+            break
+        gesamt += len(stueck)
+        src.append(stueck)
     sources = "\n\n".join(src)
     quellen_engine = "+".join(sorted({t["woher"] for t in treffer}))
     print(f"      {len(treffer)} Quellen gesamt (Herkunft: {quellen_engine}).", file=sys.stderr)
@@ -236,13 +279,13 @@ def main():
     body = {"model": model, "max_tokens": 30000,
             "reasoning": {"effort": EFFORT},   # max Thinking auf /chat/completions
             "messages": [{"role": "user", "content": prompt}]}
-    if PROVIDER:
-        body["provider"] = {"order": [PROVIDER], "allow_fallbacks": False}
+    if PROVIDERS:
+        body["provider"] = {"order": PROVIDERS, "allow_fallbacks": False}
     try:
         d = _post(OR_URL,
                   {"Authorization": f"Bearer {or_key}", "Content-Type": "application/json",
                    "HTTP-Referer": "https://github.com/Pepsi1978/proggs", "X-Title": "proggs-mm-research"},
-                  body, timeout=300)
+                  body, timeout=600)
     except urllib.error.HTTPError as e:
         return f"OpenRouter-Fehler {e.code}: {e.read().decode('utf-8', 'replace')[:300]}"
     if d.get("error"):

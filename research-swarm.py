@@ -46,7 +46,8 @@ ENGINE_CAP = {"A": 2, "B": 7}   # harte Obergrenze je Engine (der Schutz)
 # Zeitdeckel je Researcher. 400 s reichen fuer B (Snippets), aber NICHT immer fuer A mit
 # MM_TAVILY=always: Firecrawl-Vollseiten + 20 Tavily-Volltexte + Auswertung koennen laenger
 # brauchen (real getroffen 09.09.2026: 2 von 7 Researchern liefen leer in den Deckel).
-TIMEOUT = int(os.environ.get("RESEARCH_SWARM_TIMEOUT", "400"))
+# Seit 11.09.2026 holt A bis zu 100 Vollseiten (Firecrawl-Maximum) -> Deckel auf 1200 s.
+TIMEOUT = int(os.environ.get("RESEARCH_SWARM_TIMEOUT", "1200"))
 
 
 def run(engine, model, it):
@@ -59,7 +60,7 @@ def run(engine, model, it):
     os.makedirs(rundir, exist_ok=True)
     log = os.path.join(OUT, f"log-{n}.txt")
     if engine == "A":
-        cmd = [sys.executable, MM, theme, "5"]
+        cmd = [sys.executable, MM, theme]   # ohne Zahl = Firecrawl-Maximum (100 Quellen)
         env = dict(os.environ, MM_OUTDIR=rundir)
     else:  # B = :online / or
         cmd = [sys.executable, OR, theme, model]

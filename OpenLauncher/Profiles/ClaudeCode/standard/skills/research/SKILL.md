@@ -106,17 +106,22 @@ NIEMALS nach den Skripten/Keys suchen — sie liegen fest hier:
 | Rueckgabe-Schema-Vorlagen | `references/rueckgabe-schemata.md` (in diesem Skill) |
 
 **Das Auswerte-Modell fuer A UND B (seit 09.09.2026):** `deepseek/deepseek-v4-flash-0731`,
-Anbieter **Makora** gepinnt, `reasoning effort: high`. A und B benutzen jetzt DASSELBE Modell —
+Anbieter-Kette **Makora → Relace → DeepInfra** (seit 11.09.2026), `reasoning effort: high`. A und B benutzen jetzt DASSELBE Modell —
 der Unterschied liegt nur in der Quellenbeschaffung (A = Firecrawl-Vollseiten, B = `:online`-Websuche)
 und in der Parallelitaet (A = 2, B = 7). Verifiziert gegen die OpenRouter-API am 09.09.2026:
 1.048.576 Token Kontext, `reasoning_effort` unterstuetzt, $0.09/$0.195 pro Mio Token.
-Der Pin sitzt in den Skripten (`MM_PROVIDER`/`OR_PROVIDER`, Default `makora`, LEER = kein Pin) —
+Die Kette sitzt in den Skripten (`MM_PROVIDER`/`OR_PROVIDER`, kommagetrennt, Default
+`makora,relace,deepinfra`, `allow_fallbacks=false`, LEER = kein Pin) —
 nichts von Hand mitgeben.
 
 Aufruf-Konventionen (immer so, nie raten):
 - **Engine A:** `python3 ~/proggs/mm-research.py "<unterthema>" [n]`
   — Firecrawl holt die vollen Seiten, DeepSeek V4 Flash @ Makora wertet aus. Modell/Anbieter/Effort
   stehen als Default im Skript; ueberschreibbar per `MM_MODEL` / `MM_PROVIDER` / `MM_EFFORT`.
+  **Firecrawl maximal tief (seit 11.09.2026):** `[n]` weglassen — Default ist das Firecrawl-Maximum
+  von **100 Quellen** je Suche (`/v2/search`, jede Seite voll gescrapt, nur Hauptinhalt). Kostet
+  ~120 Credits je Suche. Scheitert die 100er-Suche, folgt automatisch ein Versuch mit 30, dann Tavily.
+  An den Auswerter gehen je Quelle max. 20.000 Zeichen, insgesamt max. ~2 Mio Zeichen (~500k Token).
   **Tavily-Rueckfall (seit 09.09.2026, automatisch):** Faellt Firecrawl aus (HTTP-Fehler, Timeout) ODER
   liefert es 0 bzw. nur leere Treffer, sucht das Skript von selbst bei **Tavily** nach — mit den
   maximalen Einstellungen, die Tavily hergibt: `search_depth="advanced"`, `max_results=20`,

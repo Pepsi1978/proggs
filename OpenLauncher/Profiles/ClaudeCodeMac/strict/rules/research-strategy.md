@@ -32,7 +32,7 @@ Engine A holt die Quellen bei Firecrawl; faellt Firecrawl aus oder liefert nicht
 **Tavily** automatisch ein (advanced, 20 Quellen, 3 Chunks/Quelle, Volltext; `MM_TAVILY=always` erzwingt
 beide Wege). Key: `~/SK/Tavily/tavily-api-key.txt`.
 
-A und B nutzen **dasselbe** Modell: `deepseek/deepseek-v4-flash-0731`, Anbieter **Makora** gepinnt,
+A und B nutzen **dasselbe** Modell: `deepseek/deepseek-v4-flash-0731`, Anbieter-Kette **Makora → Relace → DeepInfra**,
 `reasoning effort: high`. Unterschied nur in Quellen (A = Firecrawl-Vollseiten, B = `:online`-Websuche)
 und Parallelitaet (A = 2, B = 7). Pin steht als Default in den Skripten (`MM_PROVIDER`/`OR_PROVIDER`).
 

@@ -17,7 +17,8 @@ Verwendung:
     python3 or-research.py "deine Recherche-Frage" [modell] [engine]
     Default-Modell: deepseek/deepseek-v4-flash-0731 (1M+, Anbieter Makora gepinnt; seit 09.09.2026).
     Eskalation: z-ai/glm-5.2 (mehr Denkkraft, 1M).
-    OR_PROVIDER (env) — OpenRouter-Anbieter, Default "makora". LEER = kein Pin (freies Routing).
+    OR_PROVIDER (env) — Anbieter-Reihenfolge, kommagetrennt, Default "makora,relace,deepinfra".
+                        LEER = kein Pin (freies Routing).
     Engine (3. Arg oder env OR_ENGINE): parallel (DEFAULT) | exa | auto | perplexity | native | firecrawl.
       - "parallel" = Such-Engine parallel.ai (NICHT parallele Ausfuehrung!), deckelt Kontext total. DEFAULT.
       - "auto" nutzt native Provider-Suche, falls das Modell sie hat, sonst Exa.
@@ -117,11 +118,13 @@ def main():
         "messages": [{"role": "user", "content": prompt}],
         "reasoning": {"effort": "high"},   # max Thinking (ignoriert, falls Modell es nicht unterstuetzt)
     }
-    # Anbieter-Pin (seit 09.09.2026): Makora ist vorgegeben; allow_fallbacks=False, damit nicht
-    # still auf einen anderen Anbieter geroutet wird. OR_PROVIDER="" schaltet den Pin ab.
-    provider = os.environ.get("OR_PROVIDER", "makora")
-    if provider:
-        body["provider"] = {"order": [provider], "allow_fallbacks": False}
+    # Anbieter-Kette (seit 11.09.2026): Makora -> Relace -> DeepInfra; allow_fallbacks=False, damit
+    # nicht still auf einen vierten Anbieter geroutet wird. OR_PROVIDER="" schaltet den Pin ab.
+    providers = [p.strip() for p in os.environ.get("OR_PROVIDER", "makora,relace,deepinfra").split(",")
+                 if p.strip()]
+    provider = " → ".join(providers)
+    if providers:
+        body["provider"] = {"order": providers, "allow_fallbacks": False}
     if not is_online:
         body["tools"] = [{"type": "openrouter:web_search", "parameters": web_params}]
     print(f"[or-research] {model} @ {provider or 'freies Routing'} | "
