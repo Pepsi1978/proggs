@@ -12,7 +12,7 @@
 | B6 Benachrichtigung/Lebenszyklus | notify/*, ExperimenteApp.kt, MainActivity.kt, network/* | Plattform/Lebenszyklus | mittel-hoch | Wecker, Boot, Lifecycle, OkHttp |
 | B7 Oberfläche | ui/Navigation.kt, ui/screens/*, ui/components/*, ui/theme/* | Oberfläche | mittel | sechs Hauptbildschirme, Bausteine, Themen |
 | nicht prüfrelevant | build/*, .gradle/, res/font, generierter Code, Fremdbibliotheken | — | — | — |
-3. Loop-Zustand: aktuelle Runde 4, nächste Stufe 4 (Invarianten und Gegenbeweis, Sparmodus: volle Tiefe nur für veränderte/riskante/fundreiche Bereiche B1+B2, Rest Kurzprüfung), Konvergenzzähler 0, nächster Blickwinkel Stufe 5 ungeduldiger Benutzer, offene Fixe 0, ausstehend nichts.
+3. Loop-Zustand: aktuelle Runde 5, nächste Stufe 5 (Blickwinkel ungeduldiger Benutzer; Sparmodus: volle Tiefe für B1+B2, Kurzprüfung B3–B7), Konvergenzzähler 0, danach Blickwinkel Angreifer, offene Fixe 0, ausstehend nichts.
 4. Fundtabelle:
 | ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Kurzbeschreibung |
 |---|---|---|---|---|---|---|---|
@@ -58,4 +58,13 @@ Runde-3-Funde (alle bestätigt, behoben, verifiziert):
 Beweise/Fixe/Verifikation Runde 3:
 - L-12: zweimal schnell „In den Monitor“ (kein Klick-Schutz in Bausteine.kt, plain `clickable`) → Ist: beide Coroutinen sehen `zaehleImMonitor==0` und legen an, trotz „nicht doppelt übernehmbar“ (F-36); Soll: zweiter sieht übernommen. Fix: `Mutex` um Prüfen+Anlegen in `uebernimm`. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Zweitdruck sieht Zähler>0 → null → „steht schon“-Meldung via L-09; (2) Aufrufer VM/`starteSofort` unverändert, keine Sperr-Schachtelung; (3) null-Pfad (Vorschlag weg) unverändert.
 - L-13: zweimal schnell Merken → Ist: beide sehen `zaehleMitTitel==0`, zwei identische Einträge trotz „nicht doppelt merkbar“ (F-05); Soll: zweiter bekommt false. Fix: derselbe `Mutex` in `merke`. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Zweitdruck → false → korrekte Meldung; (2) einziger Aufrufer unverändert; (3) Titel-Vergleich unverändert case-sensitiv wie zuvor.
+
+| 4 | 4 Invarianten/Gegenbeweis (Sparmodus: B1+B2 voll, B3–B7 Kurzprüfung) | ja (B1+B2: Invarianten formuliert+brechversucht, Abläufe schrittverfolgt; B3–B7: 10-Fragen-Kurzprüfung per Suche) | 1/1/0/1/1 | Build grün, keine Tests | 0 |
+
+Runde-4-Fund (bestätigt, behoben, verifiziert):
+| L-14 | 4 | B2 | Ablage.kt:860 | Zustand/Lebenszyklus | mittel | verifiziert | Offline-Nachlauf findet gestartete Karte nicht, Aufgaben fehlen für immer |
+
+Beweis/Fix/Verifikation Runde 4:
+- L-14: eigenes Experiment offline anlegen (EIGENES-Merker, leere Aufgaben) → noch offline starten (`starte` braucht kein Netz) → Netz zurück → Ist: `holeNach` sucht nur in `anstehende()`, findet nichts, löscht Merker, Aufgaben fehlen dauerhaft trotz „beim nächsten Lauf nachgetragen“; Soll: auch laufende durchsuchen. Fix: `anstehende()+laufende()` als Suchraum. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) gestartete Karte wird gefunden und nachgetragen; (2) Aufrufer Startlauf unverändert, ein zusätzlicher DB-Read nur im Nachlauf; (3) karte==null (gelöscht) und nicht-leere Aufgaben wie zuvor.
+- Kurzprüfung B3–B7 ohne Funde, Stufe 4, geprüft: audio/{GroqTranscriber,SpeechAnalyzer,WhisperHallucinationFilter,MicRecorder,GroqModels}, tts/{Vorleser,Absaetze,Absatzabspieler,EdgeTtsPlayer,GoogleCloudTtsPlayer,QwenTtsPlayer,QwenVoiceDirectory,QwenVoiceEnrollment,GeraetTtsPlayer,TtsCatalog,TtsNetz,SpeechLoudness}, ai/{Aufgaben,Kontext}, auth/{CodexZugang,CodexModelle}, notify/{Erinnerungen,ReminderReceiver,BootReceiver}, {ExperimenteApp,MainActivity}, network/OkHttpShutdown, ui/{Navigation,screens(Heute,Monitor,Listen,Auswertung,Gespraech,Anlegeflaeche,Einstellungen),components,theme}. Ergebnis: keine Funde — Fehlerpfade (Transkription→Filter→Störung, TTS→Gerätestimme-Rückfall, Backup-Import→Restore) tragen, Zeitgrenzen (15-Tage-Regel, Wecker morgen/heute) stimmen mit Spec überein.
 6. Klärungsbedarf: (leer)

@@ -857,7 +857,9 @@ class Ablage(
                         // Die Karte steht längst im Monitor — nachzutragen ist ihre
                         // Aufgabenliste, und nur wenn sie noch fehlt.
                         val geschaetzt = aufgabenKi.schaetzeEigenes(text, modellExperimente, effortExperimente)
-                        val karte = db.experimente().anstehende()
+                        // Auch laufende zählen dazu: `starte` braucht kein Netz, die Karte
+                        // kann längst gestartet sein, wenn der Nachlauf sie sucht.
+                        val karte = (db.experimente().anstehende() + db.experimente().laufende())
                             .firstOrNull { it.description == text || it.title == text.lineSequence().first().take(80) }
                         if (karte != null && db.aufgaben().alleZu(karte.id).isEmpty()) {
                             val aufgaben = mutableListOf<Task>()
