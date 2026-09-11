@@ -1893,6 +1893,8 @@ private fun speedLabel(value: Float): String = String.format(Locale.GERMANY, "%.
 
 private fun nextSpeed(current: Float): Float {
     val index = SPEED_STEPS.indexOfFirst { kotlin.math.abs(it - current) < 0.001f }
+    // Unbekannter gespeicherter Wert (z. B. aus älterer Version): zum Nächsten, nicht zum Anfang.
+    if (index < 0) return SPEED_STEPS.minBy { kotlin.math.abs(it - current) }
     return SPEED_STEPS[(index + 1).mod(SPEED_STEPS.size)]
 }
 

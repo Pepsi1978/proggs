@@ -644,32 +644,39 @@ class RoomStackLaborRepository(
             ziel.id to (zielNachText[ziel.text]?.id ?: freieId(ziel.id, zielIds))
         }
         val neueZiele = import.ziele.filter { zielNachText[it.text] == null }.map { it.copy(id = zielMap.getValue(it.id)) }
+        require(import.stackZiele.all { it.stackId in stackMap && it.zielId in zielMap }) { "Der Import enthält Stack-Ziele ohne Stack oder Ziel." }
         val neueStackZiele = import.stackZiele.map {
             it.copy(stackId = stackMap.getValue(it.stackId), zielId = zielMap.getValue(it.zielId))
         }
 
         val frageMap = import.fragen.associate { frage -> frage.id to freieId(frage.id, frageIds) }
+        require(import.fragen.all { it.stackId in stackMap }) { "Der Import enthält Fragen ohne Stack." }
         val neueFragen = import.fragen.map {
             it.copy(id = frageMap.getValue(it.id), stackId = stackMap.getValue(it.stackId))
         }
         val bewertungMap = import.bewertungen.associate { bewertung ->
             bewertung.id to freieId(bewertung.id, bewertungIds)
         }
+        require(import.bewertungen.all { it.stackId == null || it.stackId in stackMap }) { "Der Import enthält Bewertungen ohne Stack." }
         val neueBewertungen = import.bewertungen.map { bewertung ->
             bewertung.copy(
                 id = bewertungMap.getValue(bewertung.id),
                 stackId = bewertung.stackId?.let(stackMap::getValue),
             )
         }
+        require(import.zellen.all { it.bewertungId in bewertungMap && it.zielId in zielMap }) { "Der Import enthält Zellen ohne Bewertung oder Ziel." }
         val neueZellen = import.zellen.map {
             it.copy(bewertungId = bewertungMap.getValue(it.bewertungId), zielId = zielMap.getValue(it.zielId))
         }
+        require(import.konkurrenzen.all { it.bewertungId in bewertungMap }) { "Der Import enthält Konkurrenzen ohne Bewertung." }
         val neueKonkurrenzen = import.konkurrenzen.map {
             it.copy(bewertungId = bewertungMap.getValue(it.bewertungId))
         }
+        require(import.antworten.all { it.bewertungId in bewertungMap && it.frageId in frageMap }) { "Der Import enthält Antworten ohne Bewertung oder Frage." }
         val neueAntworten = import.antworten.map {
             it.copy(bewertungId = bewertungMap.getValue(it.bewertungId), frageId = frageMap.getValue(it.frageId))
         }
+        require(import.sortieransichten.all { it.stackId in stackMap }) { "Der Import enthält Ansichten ohne Stack." }
         val neueSortieransichten = import.sortieransichten.map {
             it.copy(stackId = stackMap.getValue(it.stackId))
         }

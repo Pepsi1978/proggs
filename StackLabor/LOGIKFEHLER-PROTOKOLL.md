@@ -19,9 +19,9 @@
 
 ## Loop-Zustand
 
-- Aktuelle Runde: 4 (Stufe 4, Invarianten und Gegenbeweis) — abgeschlossen
-- Konvergenzzähler: 0 (Runde 4 brachte neue bestätigte Funde)
-- Nächster Schritt per Auftrag: Runde 5 (Blickwinkel: ungeduldiger Benutzer)
+- Aktuelle Runde: 6 (Stufe 5, Blickwinkel: Angreifer) — abgeschlossen
+- Konvergenzzähler: 0 (Runden 5 und 6 brachten neue bestätigte Funde)
+- Nächster Schritt per Auftrag: Runde 7 (Blickwinkel: Wartungsentwickler)
 - Offene Fixe: keine — alle bestätigten Funde behoben und gebaut
 
 ## Funde
@@ -45,6 +45,8 @@
 | F15 | 3 | ViewModel | `StackLaborViewModel.kt: startCodexLogin` | Nebenläufigkeit | niedrig | verifiziert | Doppel-Tap startet parallele Device-Auth-Flows |
 | F16 | 4 | Repository | `StackLaborRepository.kt: entferneStackZiel` | Zustand/Invariante | mittel | verifiziert | Ziel entfernen hinterlässt Ranglücke („Ziel 3“ bei 2 Zielen) |
 | F17 | 4 | Repository | `StackLaborRepository.kt: loescheZiel` | Zustand/Invariante | mittel | verifiziert | Katalog-Löschen hinterlässt Ranglücken in allen Stacks |
+| F18 | 5 | ViewModel | `StackLaborViewModel.kt: nextSpeed` | Zustand | niedrig | verifiziert | Unbekanntes Tempo springt auf 0,70 statt zum Nächsten |
+| F19 | 6 | Repository | `StackLaborRepository.kt: vereinige` | Schnittstellenvertrag | mittel | verifiziert | Restliche getValue-Abstürze bei manipuliertem Import (Ziele/Fragen/Bewertungen/…) |
 
 ### F1 — Beweis/Fix
 - Eingabe: Auswertung schlägt nach Repair fehl → Bewertung mit leeren Zellen gespeichert. Ist: Mittel GRÜN, Sammel GELB. Soll (SPEC §10): Ampeln bleiben grau. Fix: `keineDaten = bewertung == null || zellen.isEmpty()` → überall GRAU, `sammelAmpel(..., !keineDaten)`.
@@ -97,6 +99,12 @@
 ### F17 — Beweis/Fix
 - Gleiche Invariante über Katalog-Löschen: Ziel in 2 Stacks verwendet, im Katalog löschen (Kaskade). Ist: Ranglücken in beiden Stacks. Soll: überall lückenlos. Fix: `loescheZiel` merkt betroffene Stacks vorher und nummeriert sie nach.
 
+### F18 — Beweis/Fix
+- Eingabe: gespeichertes Tempo außerhalb der Schritttabelle (z. B. 1,25 aus älterer Version), Tempo antippen. Ist: `indexOfFirst` = -1, `(0).mod` → Sprung auf 0,70. Soll: zum nächsten Schritt. Fix: bei -1 zum betragsnächsten Schritt.
+
+### F19 — Beweis/Fix
+- Eingabe: manipulierter DAZU-Import (Stack-Ziel ohne Ziel, Frage ohne Stack, Zelle ohne Bewertung …). Ist: `getValue` wirft `NoSuchElementException`. Soll: klare `require`-Meldung wie F5. Fix: sieben weitere `require`-Wachen (Stack-Ziele, Fragen, Bewertungen, Zellen, Konkurrenzen, Antworten, Sortieransichten).
+
 ## Rundenübersicht
 
 | Runde | Stufe | Alle Bereiche geprüft | gemeldet/bestätigt/behoben/verifiziert | Build | Zähler danach |
@@ -105,6 +113,8 @@
 | 2 | 2 Funktion-für-Funktion | ja (Änderungsstellen + Codex/TTS/UI-Rest) | 1/1/1/1 | assembleDebug OK | 1 |
 | 3 | 3 Grenzen/Zustand/Zeit | ja (Aufrufer, Lebenszyklus, Wettläufe, Doppel-Tap, Netzverlust) | 5/4/1 abgelehnt/4/4 | assembleDebug OK | 0 |
 | 4 | 4 Invarianten/Gegenbeweis | ja (volle Tiefe: Repository/ViewModel/Codex; Kurzprüfung: UI/TTS/Netz) | 2/2/0/2/2 | assembleDebug OK | 0 |
+| 5 | 5 Ungeduldiger Benutzer | ja (volle Tiefe: ViewModel-Jobs/Abbruch/Doppel-Tap; Kurzprüfung: Rest) | 1/1/0/1/1 | assembleDebug OK | 0 |
+| 6 | 5 Angreifer | ja (volle Tiefe: Import/Validierung; Kurzprüfung: Rest) | 1/1/0/1/1 | assembleDebug OK | 0 |
 
 ## Klärungsbedarf
 
