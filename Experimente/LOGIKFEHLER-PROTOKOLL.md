@@ -12,7 +12,7 @@
 | B6 Benachrichtigung/Lebenszyklus | notify/*, ExperimenteApp.kt, MainActivity.kt, network/* | Plattform/Lebenszyklus | mittel-hoch | Wecker, Boot, Lifecycle, OkHttp |
 | B7 Oberfläche | ui/Navigation.kt, ui/screens/*, ui/components/*, ui/theme/* | Oberfläche | mittel | sechs Hauptbildschirme, Bausteine, Themen |
 | nicht prüfrelevant | build/*, .gradle/, res/font, generierter Code, Fremdbibliotheken | — | — | — |
-3. Loop-Zustand: aktuelle Runde 3, nächste Stufe 3 (Grenzen, Zustand, Zeit), Konvergenzzähler 0, nächster Blickwinkel Stufe 4 Invarianten/Gegenbeweis, offene Fixe 0, ausstehend nichts.
+3. Loop-Zustand: aktuelle Runde 4, nächste Stufe 4 (Invarianten und Gegenbeweis, Sparmodus: volle Tiefe nur für veränderte/riskante/fundreiche Bereiche B1+B2, Rest Kurzprüfung), Konvergenzzähler 0, nächster Blickwinkel Stufe 5 ungeduldiger Benutzer, offene Fixe 0, ausstehend nichts.
 4. Fundtabelle:
 | ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Kurzbeschreibung |
 |---|---|---|---|---|---|---|---|
@@ -48,4 +48,14 @@ Beweise/Fixe/Verifikation Runde 2:
 - L-09: Vorschlag per Wisch übernommen, dann „Jetzt starten“ auf derselben Karte → Ist: `starteSofort`→`uebernimm`→null→VM meldet DREI_LAUFEN (Heute.kt:412), obwohl z. B. erst eines läuft; Soll: „steht schon im Monitor“. Fix: null-Fall unterscheidet per `stehtImMonitor` zwischen „schon übernommen“ und „voll“. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Fallunterscheidung deckt beide null-Ursachen ab; (2) einziger Aufrufer Heute-Karte zeigt Korrektes; (3) Titel stets gesetzt (KI filtert blanks, Spalte NOT NULL).
 - L-10: Doppelklick auf „Starten“ vor UI-Aktualisierung → Ist: zweiter `starte`-Aufruf sieht LAEUFT→false→DREI_LAUFEN; Soll: No-op-Erfolg. Fix: LAEUFT→true ohne Änderung, MAX-Prüfung bleibt davor. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Zweitdruck kein Fehlschlag mehr; (2) Aufrufer `starteAnstehendes` funkelt statt Falschmeldung; (3) ANSTEHEND/ABGESCHLOSSEN-Pfade unverändert.
 - L-11: DB-Fehler bei F-35-Speichern → Ist: `try/finally` ohne `catch`, Fläche bleibt zu, kein Wort; Soll: Meldung + Text erhalten. Fix: `catch` zeigt Störung und öffnet Fläche mit erhaltenem Text wieder. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Fehler sichtbar, Text nicht verloren; (2) Aufrufer Anlegeflaeche zeigt Feld wieder; (3) `_wartet` via `finally` weiter garantiert null.
+
+| 3 | 3 Grenzen/Zustand/Zeit | ja (Aufrufer-Verträge, Lebenszyklen, Wettläufe; Zeitgrenzen gegen Spec gehalten) | 2/2/0/2/2 | Build grün, keine Tests | 0 |
+
+Runde-3-Funde (alle bestätigt, behoben, verifiziert):
+| L-12 | 3 | B2 | Ablage.kt:250 | Nebenläufigkeit | mittel | verifiziert | Doppelklick Übernehmen legt Vorschlag zweimal in Monitor |
+| L-13 | 3 | B2 | Ablage.kt:220 | Nebenläufigkeit | mittel | verifiziert | Doppelklick Merken legt Vorschlag zweimal auf Merkliste |
+
+Beweise/Fixe/Verifikation Runde 3:
+- L-12: zweimal schnell „In den Monitor“ (kein Klick-Schutz in Bausteine.kt, plain `clickable`) → Ist: beide Coroutinen sehen `zaehleImMonitor==0` und legen an, trotz „nicht doppelt übernehmbar“ (F-36); Soll: zweiter sieht übernommen. Fix: `Mutex` um Prüfen+Anlegen in `uebernimm`. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Zweitdruck sieht Zähler>0 → null → „steht schon“-Meldung via L-09; (2) Aufrufer VM/`starteSofort` unverändert, keine Sperr-Schachtelung; (3) null-Pfad (Vorschlag weg) unverändert.
+- L-13: zweimal schnell Merken → Ist: beide sehen `zaehleMitTitel==0`, zwei identische Einträge trotz „nicht doppelt merkbar“ (F-05); Soll: zweiter bekommt false. Fix: derselbe `Mutex` in `merke`. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Zweitdruck → false → korrekte Meldung; (2) einziger Aufrufer unverändert; (3) Titel-Vergleich unverändert case-sensitiv wie zuvor.
 6. Klärungsbedarf: (leer)

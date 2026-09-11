@@ -24,6 +24,8 @@ import de.frank.experimente.data.local.Suggestion
 import de.frank.experimente.data.local.Task
 import de.frank.experimente.data.local.WatchlistItem
 import de.frank.experimente.data.settings.Einstellungen
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import java.time.Instant
 import java.time.LocalDate
@@ -66,6 +68,13 @@ class Ablage(
          */
         const val MAX_TAGE = 60
     }
+
+    /**
+     * Prüfen-und-Anlegen geschieht in zwei Schritten (zählen, dann einfügen). Zwei schnelle
+     * Drucke liefen parallel und sahen beide „noch nicht da“ — danach stand der Vorschlag
+     * zweimal im Monitor. Die Sperre macht aus beiden Schritten einen unteilbaren.
+     */
+    private val schreibSperre = Mutex()
 
     private val modellExperimente get() = CodexModell.aus(einstellungen.modellExperimente)
     private val effortExperimente get() = Effort.aus(einstellungen.effortExperimente)
@@ -217,8 +226,8 @@ class Ablage(
     // --- F-05 ---------------------------------------------------------------------------
 
     /** F-05 — Vorschlag vollständig auf die Merkliste kopieren. Nicht doppelt merkbar. */
-    suspend fun merke(vorschlag: Suggestion): Boolean {
-        if (db.merkliste().zaehleMitTitel(vorschlag.title) > 0) return false
+    suspend fun merke(vorschlag: Suggestion): Boolean = schreibSperre.withLock {
+        if (db.merkliste().zaehleMitTitel(vorschlag.title) > 0) return@withLock false
         db.merkliste().lege(
             WatchlistItem(
                 title = vorschlag.title,
@@ -230,7 +239,7 @@ class Ablage(
                 createdAt = Instant.now(),
             ),
         )
-        return true
+        true
     }
 
     suspend fun istGemerkt(titel: String): Boolean = db.merkliste().zaehleMitTitel(titel) > 0
@@ -247,9 +256,9 @@ class Ablage(
      *
      * @return die Kennung, oder null wenn der Vorschlag schon im Monitor steht
      */
-    suspend fun uebernimm(vorschlagId: Long): Long? {
-        val vorschlag = db.vorschlaege().einer(vorschlagId) ?: return null
-        if (db.experimente().zaehleImMonitor(vorschlag.title) > 0) return null
+    suspend fun uebernimm(vorschlagId: Long): Long? = schreibSperre.withLock {
+        val vorschlag = db.vorschlaege().einer(vorschlagId) ?: return@withLock null
+        if (db.experimente().zaehleImMonitor(vorschlag.title) > 0) return@withLock null
 
         val id = legeAnstehendAn(
             titel = vorschlag.title,
@@ -261,7 +270,7 @@ class Ablage(
         )
         // Kam der Vorschlag von der Merkliste, wird er dort entfernt.
         if (vorschlag.fromWatchlist) db.merkliste().loescheMitTitel(vorschlag.title)
-        return id
+        id
     }
 
     /**
