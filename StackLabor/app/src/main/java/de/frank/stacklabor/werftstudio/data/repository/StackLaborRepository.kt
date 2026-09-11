@@ -315,7 +315,15 @@ class RoomStackLaborRepository(
     }
 
     override suspend fun loescheZiel(zielId: String) {
-        zielDao.holeZiel(zielId)?.let { zielDao.loescheZiel(it) }
+        database.withTransaction {
+            // Betroffene Stacks vorher merken: die Kaskade reißt dort Lücken in die Ränge.
+            val betroffeneStacks = zielDao.holeAlleStackZiele()
+                .filter { it.zielId == zielId }
+                .map { it.stackId }
+                .distinct()
+            zielDao.holeZiel(zielId)?.let { zielDao.loescheZiel(it) }
+            betroffeneStacks.forEach { stackId -> nummeriereZieleNeu(stackId) }
+        }
     }
 
     override suspend fun setzeStackZiel(stackZiel: StackZiel) {
@@ -323,8 +331,19 @@ class RoomStackLaborRepository(
         zielDao.speichereStackZiel(stackZiel.toEntity())
     }
 
-    override suspend fun entferneStackZiel(stackId: String, zielId: String): Unit =
-        zielDao.loescheStackZiel(stackId, zielId)
+    override suspend fun entferneStackZiel(stackId: String, zielId: String) {
+        database.withTransaction {
+            zielDao.loescheStackZiel(stackId, zielId)
+            nummeriereZieleNeu(stackId)
+        }
+    }
+
+    /** Stellt die Invariante „Ränge 1..n lückenlos“ nach Löschungen wieder her. */
+    private suspend fun nummeriereZieleNeu(stackId: String) {
+        zielDao.holeStackZiele(stackId).sortedBy { it.rang }.forEachIndexed { index, ziel ->
+            zielDao.setzeZielRang(stackId, ziel.zielId, index + 1)
+        }
+    }
 
     override suspend fun speichereFrage(frage: EigeneFrage) {
         require(frage.text.isNotBlank() && frage.text.length <= 300) { "Der Fragetext muss 1 bis 300 Zeichen haben." }

@@ -19,9 +19,9 @@
 
 ## Loop-Zustand
 
-- Aktuelle Runde: 3 (Stufe 3, Grenzen/Zustand/Zeit) — abgeschlossen
-- Konvergenzzähler: 0 (Runde 3 brachte neue bestätigte Funde)
-- Nächster Schritt per Auftrag: Runde 4 (Stufe 4, Invarianten und Gegenbeweis)
+- Aktuelle Runde: 4 (Stufe 4, Invarianten und Gegenbeweis) — abgeschlossen
+- Konvergenzzähler: 0 (Runde 4 brachte neue bestätigte Funde)
+- Nächster Schritt per Auftrag: Runde 5 (Blickwinkel: ungeduldiger Benutzer)
 - Offene Fixe: keine — alle bestätigten Funde behoben und gebaut
 
 ## Funde
@@ -43,6 +43,8 @@
 | F13 | 3 | Codex | `CompetitionCheckCoordinator.kt` | — | — | abgelehnt | Klasse ist ungenutzter Code (kein Aufrufer); kein Ausführungspfad, kein Fehler |
 | F14 | 3 | Persistenz | `StackDao.kt`, Repository, ViewModel `ToggleMedicine` | Nebenläufigkeit | mittel | verifiziert | Doppel-Tap liest zweimal denselben Stand, Toggle wirkt nur einmal |
 | F15 | 3 | ViewModel | `StackLaborViewModel.kt: startCodexLogin` | Nebenläufigkeit | niedrig | verifiziert | Doppel-Tap startet parallele Device-Auth-Flows |
+| F16 | 4 | Repository | `StackLaborRepository.kt: entferneStackZiel` | Zustand/Invariante | mittel | verifiziert | Ziel entfernen hinterlässt Ranglücke („Ziel 3“ bei 2 Zielen) |
+| F17 | 4 | Repository | `StackLaborRepository.kt: loescheZiel` | Zustand/Invariante | mittel | verifiziert | Katalog-Löschen hinterlässt Ranglücken in allen Stacks |
 
 ### F1 — Beweis/Fix
 - Eingabe: Auswertung schlägt nach Repair fehl → Bewertung mit leeren Zellen gespeichert. Ist: Mittel GRÜN, Sammel GELB. Soll (SPEC §10): Ampeln bleiben grau. Fix: `keineDaten = bewertung == null || zellen.isEmpty()` → überall GRAU, `sammelAmpel(..., !keineDaten)`.
@@ -89,6 +91,12 @@
 ### F15 — Beweis/Fix
 - Eingabe: Codex-Anmelden doppelt tippen. Ist: zwei parallele Device-Auth-Flows (doppelte Polls/Meldungen). Soll: zweiter Tap wirkungslos. Fix: `codexLoginJob`-Guard mit Rücksetzung im `finally`.
 
+### F16 — Beweis/Fix
+- Invariante „Zielränge 1..n lückenlos“: 3 Ziele (1,2,3), mittleres entfernen. Ist: Rest zeigt „Ziel 1“ und „Ziel 3“ (Anzeige, Hinweise, Historie). Soll: 1,2. Fix: `entferneStackZiel` nummeriert in derselben Transaktion neu (`nummeriereZieleNeu`).
+
+### F17 — Beweis/Fix
+- Gleiche Invariante über Katalog-Löschen: Ziel in 2 Stacks verwendet, im Katalog löschen (Kaskade). Ist: Ranglücken in beiden Stacks. Soll: überall lückenlos. Fix: `loescheZiel` merkt betroffene Stacks vorher und nummeriert sie nach.
+
 ## Rundenübersicht
 
 | Runde | Stufe | Alle Bereiche geprüft | gemeldet/bestätigt/behoben/verifiziert | Build | Zähler danach |
@@ -96,6 +104,7 @@
 | 1 | 1 Überblick | ja (77 Dateien, Kern gelesen, Rest per Suche) | 9/9/9/9 | assembleDebug OK | 0 |
 | 2 | 2 Funktion-für-Funktion | ja (Änderungsstellen + Codex/TTS/UI-Rest) | 1/1/1/1 | assembleDebug OK | 1 |
 | 3 | 3 Grenzen/Zustand/Zeit | ja (Aufrufer, Lebenszyklus, Wettläufe, Doppel-Tap, Netzverlust) | 5/4/1 abgelehnt/4/4 | assembleDebug OK | 0 |
+| 4 | 4 Invarianten/Gegenbeweis | ja (volle Tiefe: Repository/ViewModel/Codex; Kurzprüfung: UI/TTS/Netz) | 2/2/0/2/2 | assembleDebug OK | 0 |
 
 ## Klärungsbedarf
 
