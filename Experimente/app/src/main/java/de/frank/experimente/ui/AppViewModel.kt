@@ -739,6 +739,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             beendeAufnahme()
             return
         }
+        // Der Stopp der vorigen Aufnahme ist noch unterwegs — ein Neustart jetzt würde
+        // ihren Puffer zurücksetzen und sie verlieren (siehe `beendeAufnahme`).
+        if (stopptAufnahme) return
         val schluessel = einstellungen.groqSchluessel
         if (schluessel.isBlank()) {
             _stoerung.value = "Für die Spracherkennung fehlt der Groq-Schlüssel. Er steht in den Einstellungen."
@@ -785,6 +788,13 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         "Da war nichts zu hören."
     }
 
+    /**
+     * Das Stopp läuft asynchron (`aufnahme.stop()` wartet den Lesefaden ab). Ein sofortiger
+     * Neustart würde davor den Puffer zurücksetzen und die beendete Aufnahme verlieren —
+     * sie käme als „nichts zu hören" zurück. Bis der Stopp durch ist, bleibt der Knopf stumm.
+     */
+    private var stopptAufnahme = false
+
     private fun beendeAufnahme() {
         _nimmtAuf.value = false
         uhr?.cancel()
@@ -792,13 +802,15 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         ruettleDoppelt() // M-03: doppelte Vibration bei Aufnahmeende
         val feld = aufnahmeZiel
         val nachher = aufnahmeNachher
+        stopptAufnahme = true
         viewModelScope.launch {
-            val wav = aufnahme.stop()
-            if (wav == null || wav.isEmpty()) {
-                _stoerung.value = nichtsGehoert()
-                bestimmeZustand()
-                return@launch
-            }
+            try {
+                val wav = aufnahme.stop()
+                if (wav == null || wav.isEmpty()) {
+                    _stoerung.value = nichtsGehoert()
+                    bestimmeZustand()
+                    return@launch
+                }
             _wartet.value = "Ich höre zu …"
             try {
                 val schreiber = GroqTranscriber(einstellungen.groqSchluessel)
@@ -819,6 +831,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
             } finally {
                 _wartet.value = null
                 if (_tagZustand.value == TagZustand.AUFNAHME) bestimmeZustand()
+            }
+            } finally {
+                stopptAufnahme = false
             }
         }
     }

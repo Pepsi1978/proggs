@@ -12,7 +12,7 @@
 | B6 Benachrichtigung/Lebenszyklus | notify/*, ExperimenteApp.kt, MainActivity.kt, network/* | Plattform/Lebenszyklus | mittel-hoch | Wecker, Boot, Lifecycle, OkHttp |
 | B7 Oberfläche | ui/Navigation.kt, ui/screens/*, ui/components/*, ui/theme/* | Oberfläche | mittel | sechs Hauptbildschirme, Bausteine, Themen |
 | nicht prüfrelevant | build/*, .gradle/, res/font, generierter Code, Fremdbibliotheken | — | — | — |
-3. Loop-Zustand: aktuelle Runde 5, nächste Stufe 5 (Blickwinkel ungeduldiger Benutzer; Sparmodus: volle Tiefe für B1+B2, Kurzprüfung B3–B7), Konvergenzzähler 0, danach Blickwinkel Angreifer, offene Fixe 0, ausstehend nichts.
+3. Loop-Zustand: aktuelle Runde 6, nächste Stufe 6 (Blickwinkel Angreifer; Sparmodus: volle Tiefe für B1+B2, Kurzprüfung B3–B7), Konvergenzzähler 0, danach Blickwinkel Wartungsentwickler, offene Fixe 0, ausstehend nichts.
 4. Fundtabelle:
 | ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Kurzbeschreibung |
 |---|---|---|---|---|---|---|---|
@@ -67,4 +67,13 @@ Runde-4-Fund (bestätigt, behoben, verifiziert):
 Beweis/Fix/Verifikation Runde 4:
 - L-14: eigenes Experiment offline anlegen (EIGENES-Merker, leere Aufgaben) → noch offline starten (`starte` braucht kein Netz) → Netz zurück → Ist: `holeNach` sucht nur in `anstehende()`, findet nichts, löscht Merker, Aufgaben fehlen dauerhaft trotz „beim nächsten Lauf nachgetragen“; Soll: auch laufende durchsuchen. Fix: `anstehende()+laufende()` als Suchraum. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) gestartete Karte wird gefunden und nachgetragen; (2) Aufrufer Startlauf unverändert, ein zusätzlicher DB-Read nur im Nachlauf; (3) karte==null (gelöscht) und nicht-leere Aufgaben wie zuvor.
 - Kurzprüfung B3–B7 ohne Funde, Stufe 4, geprüft: audio/{GroqTranscriber,SpeechAnalyzer,WhisperHallucinationFilter,MicRecorder,GroqModels}, tts/{Vorleser,Absaetze,Absatzabspieler,EdgeTtsPlayer,GoogleCloudTtsPlayer,QwenTtsPlayer,QwenVoiceDirectory,QwenVoiceEnrollment,GeraetTtsPlayer,TtsCatalog,TtsNetz,SpeechLoudness}, ai/{Aufgaben,Kontext}, auth/{CodexZugang,CodexModelle}, notify/{Erinnerungen,ReminderReceiver,BootReceiver}, {ExperimenteApp,MainActivity}, network/OkHttpShutdown, ui/{Navigation,screens(Heute,Monitor,Listen,Auswertung,Gespraech,Anlegeflaeche,Einstellungen),components,theme}. Ergebnis: keine Funde — Fehlerpfade (Transkription→Filter→Störung, TTS→Gerätestimme-Rückfall, Backup-Import→Restore) tragen, Zeitgrenzen (15-Tage-Regel, Wecker morgen/heute) stimmen mit Spec überein.
+
+| 5 | 5 ungeduldiger Benutzer (Sparmodus: B1+B2 voll, B3–B7 kurz) | ja (Abbrüche, Doppelklicks, Wegnavigieren während Warten/Aufnahme; B3–B7 Kurzprüfung) | 1/1/0/1/1 | Build grün, keine Tests | 0 |
+
+Runde-5-Fund (bestätigt, behoben, verifiziert):
+| L-15 | 5 | B1 | AppViewModel.kt:795 | Nebenläufigkeit | niedrig | verifiziert | Neustart während Aufnahme-Stopp verliert die beendete Aufnahme |
+
+Beweis/Fix/Verifikation Runde 5:
+- L-15: Aufnahme beenden und sofort neu starten → Ist: `aufnahme.stop()` läuft asynchron im Hintergrund, `start()` setzt davor den Puffer zurück, die beendete Aufnahme geht verloren und meldet „nichts zu hören“; Soll: Knopf bleibt bis Stopp-Ende stumm. Fix: `stopptAufnahme`-Sperre (gesetzt in `beendeAufnahme`, gelöscht im `finally`, `sprechknopf` ignoriert Taps währenddessen). Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Neustart erst nach Puffer-Kopie möglich; (2) Aufrufer Sprechknopf/Gesprächsknopf unverändert, Stopp/Transkription unberührt; (3) `finally` löscht Sperre auch bei leerem WAV und bei Abbruch.
+- Kurzprüfung B3–B7 ohne Funde, Stufe 5, geprüft: dieselbe Dateiliste wie Runde 4 (Fehlerpfade, Import/Export, Wecker, Player, Prompts). Ergebnis: keine Funde — „Weiter“-Knopf nur im TEXT-Zustand (kein Doppel-`werteAus`), Wisch+Knopf-Rennen endet in korrekter „steht schon“-Meldung via L-09.
 6. Klärungsbedarf: (leer)
