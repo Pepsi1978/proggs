@@ -258,8 +258,8 @@ interface SucheDao {
                n.ueberschrift AS ueberschrift, n.text AS text, n.erstelltAm AS erstelltAm,
                0 AS istKiAntwort
         FROM notiz n JOIN sitzung s ON s.id = n.sitzungId
-        WHERE (lower(replace(replace(replace(replace(n.text, 'Ä', 'ä'), 'Ö', 'ö'), 'Ü', 'ü'), 'ẞ', 'ß')) LIKE '%' || :begriff || '%'
-           OR lower(replace(replace(replace(replace(COALESCE(n.ueberschrift, ''), 'Ä', 'ä'), 'Ö', 'ö'), 'Ü', 'ü'), 'ẞ', 'ß')) LIKE '%' || :begriff || '%')
+        WHERE (lower(replace(replace(replace(replace(n.text, 'Ä', 'ä'), 'Ö', 'ö'), 'Ü', 'ü'), 'ẞ', 'ß')) LIKE '%' || :begriff || '%' ESCAPE '\'
+           OR lower(replace(replace(replace(replace(COALESCE(n.ueberschrift, ''), 'Ä', 'ä'), 'Ö', 'ö'), 'Ü', 'ü'), 'ẞ', 'ß')) LIKE '%' || :begriff || '%' ESCAPE '\')
           AND s.geloeschtAm IS NULL
         ORDER BY n.erstelltAm DESC
         LIMIT 200
@@ -273,7 +273,7 @@ interface SucheDao {
                a.rueckfrage AS ueberschrift, a.text AS text, a.erstelltAm AS erstelltAm,
                1 AS istKiAntwort
         FROM ki_antwort a JOIN sitzung s ON s.id = a.sitzungId
-        WHERE lower(replace(replace(replace(replace(a.text, 'Ä', 'ä'), 'Ö', 'ö'), 'Ü', 'ü'), 'ẞ', 'ß')) LIKE '%' || :begriff || '%'
+        WHERE lower(replace(replace(replace(replace(a.text, 'Ä', 'ä'), 'Ö', 'ö'), 'Ü', 'ü'), 'ẞ', 'ß')) LIKE '%' || :begriff || '%' ESCAPE '\'
           AND s.geloeschtAm IS NULL
         ORDER BY a.erstelltAm DESC
         LIMIT 200

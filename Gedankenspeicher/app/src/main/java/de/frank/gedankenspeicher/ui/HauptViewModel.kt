@@ -1150,8 +1150,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 val neu = buildString {
                     Nachtraege.abschnitte(notiz.text).forEachIndexed { nr, abschnitt ->
                         if (nr > 0) append("\n\n")
-                        val verbessert = repo.verbessere(abschnitt.text.trim()).takeIf(String::isNotBlank)
-                            ?: error("Die Verbesserung kam leer zurück — der Text bleibt, wie er war.")
+                        val verbessert = if (abschnitt.text.isBlank()) "" else {
+                            repo.verbessere(abschnitt.text.trim()).takeIf(String::isNotBlank)
+                                ?: error("Die Verbesserung kam leer zurück — der Text bleibt, wie er war.")
+                        }
                         if (abschnitt.nachtragVom != null) {
                             append(Nachtraege.zeileVon(abschnitt.nachtragVom)).append('\n')
                         }
@@ -2055,11 +2057,20 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 val befund = withContext(Dispatchers.IO) {
                     val strom = ctx.contentResolver.openInputStream(uri)
                         ?: throw IllegalStateException("Die Sicherungsdatei liess sich nicht lesen.")
-                    Sicherung.pruefe(strom, arbeitsordner)
+                    Sicherung.pruefe(strom, arbeitsordner, ctx)
                 }
                 if (befund is Sicherung.Befund.Untauglich) {
                     withContext(Dispatchers.IO) { arbeitsordner.deleteRecursively() }
                     return@launch melde(befund.grund)
+                }
+
+                if (befund is Sicherung.Befund.Archiv) {
+                    withContext(Dispatchers.IO) {
+                        File(befund.ordner, Sicherung.EINTRAG_EINSTELLUNGEN).takeIf { it.exists() }
+                            ?.let { einstellungen.pruefeWerte(Sicherung.werteAusJson(it.readText())) }
+                        File(befund.ordner, Sicherung.EINTRAG_CODEX).takeIf { it.exists() }
+                            ?.let { codex.pruefeWerte(Sicherung.werteAusJson(it.readText())) }
+                    }
                 }
 
                 vorleser.halteAn()

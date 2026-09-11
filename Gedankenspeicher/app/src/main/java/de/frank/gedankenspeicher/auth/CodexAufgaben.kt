@@ -378,11 +378,11 @@ internal fun einzeiler(rohtext: String): String {
     // Gültiges JSON ohne brauchbares Feld ergibt leer — nie den rohen JSON-Text.
     val ausJson = json?.let {
         listOf("text", "titel", "frage", "ueberschrift")
-            .firstNotNullOfOrNull { feld -> it.optString(feld).takeIf(String::isNotBlank) }
+            .firstNotNullOfOrNull { feld -> (it.opt(feld) as? String)?.takeIf(String::isNotBlank) }
             .orEmpty()
     }
     val text = (ausJson ?: roh)
-        .replace('\n', ' ')
+        .replace(Regex("[\\r\\n\\u0085\\u2028\\u2029]"), " ")
         .replace(Regex("\\s{2,}"), " ")
         .trim()
     val paare = listOf('„' to '“', '“' to '”', '‚' to '‘', '‘' to '’', '»' to '«', '«' to '»', '›' to '‹', '‹' to '›', '"' to '"', '\'' to '\'')

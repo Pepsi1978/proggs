@@ -196,7 +196,7 @@ object Sicherung {
      * geschlossen und ersetzt und erst danach zeigte sich, ob die gewählte Datei überhaupt
      * etwas taugt. Griff man daneben, war der alte Stand mit fort.
      */
-    fun pruefe(quelle: InputStream, arbeitsordner: File): Befund {
+    fun pruefe(quelle: InputStream, arbeitsordner: File, ctx: Context): Befund {
         arbeitsordner.deleteRecursively()
         arbeitsordner.mkdirs()
 
@@ -205,9 +205,9 @@ object Sicherung {
         if (roh.length() == 0L) return Befund.Untauglich("Die Sicherungsdatei ist leer.")
 
         return when (kopfzeile(roh)) {
-            Kopf.ZIP -> pruefeArchiv(roh, arbeitsordner)
+            Kopf.ZIP -> pruefeArchiv(roh, arbeitsordner, ctx)
             Kopf.SQLITE -> {
-                val fehler = pruefeDatenbank(roh)
+                val fehler = pruefeDatenbank(roh, ctx)
                 if (fehler != null) Befund.Untauglich(fehler) else Befund.NurDatenbank(roh)
             }
             Kopf.UNBEKANNT -> Befund.Untauglich(
@@ -216,7 +216,7 @@ object Sicherung {
         }
     }
 
-    private fun pruefeArchiv(roh: File, arbeitsordner: File): Befund {
+    private fun pruefeArchiv(roh: File, arbeitsordner: File, ctx: Context): Befund {
         val ausgepackt = File(arbeitsordner, "inhalt").apply { mkdirs() }
         runCatching {
             ZipInputStream(roh.inputStream().buffered()).use { zip ->
@@ -241,7 +241,7 @@ object Sicherung {
 
         val db = File(ausgepackt, EINTRAG_DATENBANK)
         if (!db.exists()) return Befund.Untauglich("In der Sicherung fehlt die Datenbank.")
-        pruefeDatenbank(db)?.let { return Befund.Untauglich(it) }
+        pruefeDatenbank(db, ctx)?.let { return Befund.Untauglich(it) }
 
         val steckbrief = File(ausgepackt, EINTRAG_STECKBRIEF)
             .takeIf { it.exists() }
@@ -271,7 +271,7 @@ object Sicherung {
      *
      * @return null, wenn alles stimmt, sonst der Satz, der Frank angezeigt wird
      */
-    private fun pruefeDatenbank(datei: File): String? {
+    private fun pruefeDatenbank(datei: File, ctx: Context): String? {
         if (kopfzeile(datei) != Kopf.SQLITE) return "Die Datei ist keine Datenbank."
         var db: SQLiteDatabase? = null
         try {
@@ -295,6 +295,10 @@ object Sicherung {
             if (fassung > SCHEMA_FASSUNG) {
                 return "Diese Sicherung stammt aus einer neueren Fassung der App."
             }
+            if (fassung < 1) return "Die Sicherung hat keine gültige Schemafassung."
+            db.close()
+            db = null
+            Datenbank.pruefeImport(ctx, datei)
             return null
         } catch (fehler: Exception) {
             return "Die Sicherung liess sich nicht lesen: ${fehler.message}"
@@ -338,21 +342,36 @@ object Sicherung {
         return wurzel.toString()
     }
 
-    fun werteAusJson(roh: String): Map<String, Any> = runCatching {
+    fun werteAusJson(roh: String): Map<String, Any> {
         val wurzel = JSONObject(roh)
-        buildMap {
+        return buildMap {
             wurzel.keys().forEach { schluessel ->
-                val eintrag = wurzel.optJSONObject(schluessel) ?: return@forEach
-                when (eintrag.optString("typ")) {
-                    "boolean" -> put(schluessel, eintrag.optBoolean("wert"))
-                    "int" -> put(schluessel, eintrag.optInt("wert"))
-                    "long" -> put(schluessel, eintrag.optLong("wert"))
-                    "float" -> put(schluessel, eintrag.optDouble("wert").toFloat())
-                    "string" -> put(schluessel, eintrag.optString("wert"))
+                val eintrag = wurzel.getJSONObject(schluessel)
+                val wert = eintrag.get("wert")
+                val ungueltig = "Ungültiger Einstellungswert in der Sicherung: $schluessel"
+                when (eintrag.getString("typ")) {
+                    "boolean" -> put(schluessel, (wert as? Boolean) ?: error(ungueltig))
+                    "int" -> {
+                        require(wert is Int || wert is Long) { ungueltig }
+                        val zahl = (wert as Number).toLong()
+                        require(zahl in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) { ungueltig }
+                        put(schluessel, zahl.toInt())
+                    }
+                    "long" -> {
+                        require(wert is Int || wert is Long) { ungueltig }
+                        put(schluessel, (wert as Number).toLong())
+                    }
+                    "float" -> {
+                        val zahl = (wert as? Number)?.toFloat() ?: error(ungueltig)
+                        require(zahl.isFinite()) { ungueltig }
+                        put(schluessel, zahl)
+                    }
+                    "string" -> put(schluessel, (wert as? String) ?: error(ungueltig))
+                    else -> error(ungueltig)
                 }
             }
         }
-    }.getOrDefault(emptyMap())
+    }
 
     private fun steckbriefAlsJson(s: Steckbrief): String = JSONObject().apply {
         put("format", s.format)

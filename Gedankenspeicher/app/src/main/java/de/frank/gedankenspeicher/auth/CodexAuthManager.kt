@@ -216,6 +216,7 @@ class CodexAuthManager(context: Context) {
 
     /** Spielt eine gesicherte Anmeldung ein. Der Zugriffstoken wird beim nächsten Ruf erneuert. */
     fun uebernimm(werte: Map<String, Any>) {
+        pruefeWerte(werte)
         val schreiber = store.edit()
         werte.forEach { (schluessel, wert) ->
             when (wert) {
@@ -227,6 +228,15 @@ class CodexAuthManager(context: Context) {
             }
         }
         schreiber.commit()
+    }
+
+    fun pruefeWerte(werte: Map<String, Any>) {
+        werte.forEach { (schluessel, wert) ->
+            require(!schluessel.startsWith("__androidx_security_crypto_")) { "Die Sicherung enthält einen reservierten Codex-Einstellungsschlüssel." }
+            require(if (schluessel == KEY_EXPIRES_AT) wert is Long else wert is String) {
+                "Falscher Codex-Einstellungstyp in der Sicherung: $schluessel"
+            }
+        }
     }
 
     suspend fun login(

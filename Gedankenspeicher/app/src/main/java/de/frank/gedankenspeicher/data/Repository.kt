@@ -478,7 +478,8 @@ class Repository(
     suspend fun suche(begriff: String): List<Suchtreffer> {
         val gesucht = begriff.trim().lowercase(Locale.GERMAN)
         if (gesucht.length < 2) return emptyList()
-        return (db.suche().inNotizen(gesucht) + db.suche().inAntworten(gesucht))
+        val muster = gesucht.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        return (db.suche().inNotizen(muster) + db.suche().inAntworten(muster))
             .sortedByDescending { it.erstelltAm }
     }
 

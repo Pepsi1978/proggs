@@ -195,6 +195,7 @@ class Einstellungen(ctx: Context) {
      * nach der Wiederherstellung in einen Ordner, den es hier vielleicht gar nicht gibt.
      */
     fun uebernimm(werte: Map<String, Any>) {
+        pruefeWerte(werte)
         val schreiber = p.edit()
         werte.forEach { (schluessel, wert) ->
             // Auch Zeit und Grösse der letzten Sicherung gehören zu diesem Gerät.
@@ -210,6 +211,20 @@ class Einstellungen(ctx: Context) {
             }
         }
         schreiber.commit()
+    }
+
+    /** Der Typ gehört zum Zielschlüssel, nicht zu einer frei änderbaren Archivangabe. */
+    fun pruefeWerte(werte: Map<String, Any>) {
+        werte.forEach { (schluessel, wert) ->
+            require(!schluessel.startsWith("__androidx_security_crypto_")) { "Die Sicherung enthält einen reservierten Einstellungsschlüssel." }
+            val passt = when (schluessel) {
+                FINGERABDRUCK, DRIVE_AN -> wert is Boolean
+                OFFENE_SITZUNG, DRIVE_ZEIT, DRIVE_GROESSE -> wert is Long
+                SPRECHTEMPO -> wert is Float && wert.isFinite() && wert > 0f
+                else -> wert is String
+            }
+            require(passt) { "Falscher Einstellungstyp in der Sicherung: $schluessel" }
+        }
     }
 
     private companion object {

@@ -47,7 +47,7 @@
 
 ## 3. Loop-Zustand
 
-- **Aktuelle Runde:** 5 abgeschlossen, Auslieferung 0.6.10; danach Runde 6, Stufe 6 (manipulierte Eingaben). Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
+- **Aktuelle Runde:** 6 abgeschlossen, Auslieferung 0.6.11; danach Runde 7, Stufe 7 (Wartungsentwickler/Folgen der Fixe). Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
   - **Bereich 5 – Aufnahme**
     - L-2-5-01 (mittel): MicRecorder, start() während stop() in joinAll → der Puffer der alten Aufnahme wird geleert, das finally des alten Jobs beendet die neue Aufnahme.
   - **Bereich 4 – KI-Anbindung**
@@ -81,7 +81,7 @@
   **Eigene Stufe-2-Prüfung abgeschlossen:** 1A/1B (`MainActivity.kt`, Manifest, drei `res/xml`-Dateien, `app/build.gradle.kts`; Erstlektüre plus gezielte Rückruf-/Sichtbarkeitsgegenprüfung); 3A (`data/Modell.kt`, `Datenbank.kt`, `Dao.kt`, `Repository.kt`, `settings/Einstellungen.kt`, `Nachtraege.kt`); 4A (`auth/CodexAuthManager.kt`, `CodexAufgaben.kt`); 5B (`hintergrund/AuswertungsDienst.kt`, `VorleseDienst.kt`); 6A (`tts/Vorleser.kt`, `Absatzabspieler.kt`, `Absaetze.kt`); 7 (alle sechs Cloud-TTS-Dateien aus der Karte). Die bereits abgeschlossenen Teilprüfungen der Übergabe bleiben gültig.
   **Triage:** Alle 17 Vormeldungen bestätigt, außer L-2-3-01: Klärungsbedarf (Dateizahl statt logischer Anhänge, auch reine Textanhänge betroffen; gewünschte Zählweise offen). (a) bestätigt als L-2-11-3; (b) bestätigt als L-2-6-04; (c) bestätigt als L-2-5-02 für Lesefehler (Zeitlimit wird bereits vom VM überwacht); (d)/(e)/(f)/(h) unter L-2-10-05…08 bestätigt, (g) abgelehnt wie oben. SQLite lower/LIKE ist ohne ICU ASCII-beschränkt; Kleinschreiben allein des Suchbegriffs behebt keine Großumlaute im Bestand.
   **Triage der neuen Prüfermeldungen:** L-2-2-01…14 bestätigt. L-2-9-01/03 bestätigt; L-2-9-02/04 und L-2-10-13 Klärungsbedarf (Layout-/Entwurferhaltung benötigt gezielte Geräteprüfung, im Schnellmodus nicht durchgeführt). L-2-10-05…12 bestätigt. Ein gemeldeter Layoutverdacht wird ohne Geräteprüfung nicht als behoben ausgegeben.
-- **Nächste Tiefenstufe:** 6 (manipulierte Eingaben und unmögliche Zustände)
+- **Nächste Tiefenstufe:** 7 (Wartungsentwickler, Fixfolgen an Aufrufern)
 - **Konvergenzzähler:** 0
 - **Nächster Blickwinkel:** Stufe 2. Die in Runde 1 geänderten Stellen sind als „kürzlich verändert“ markiert
 - **Offene Fixe:** keine
@@ -220,6 +220,7 @@ Stellen relativ zu `app/src/main/java/de/frank/gedankenspeicher/`; VM = `ui/Haup
 | 3 | 3 | Suspend-Grenzen, zeitliche Reihenfolge, Ressourcenlebenszeit | ja, gezielte Vertragsprüfung je Bereich (siehe Abdeckung) | 13 | 13 | 0 | 0 neu | 13 | 13 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 | 4 | 4 | Invarianten und Gegenbeweise, Sparmodus für unveränderte unauffällige Bereiche | ja (Dateiliste Runde 3; Volltiefe 1–10, Kurzprüfung 11/12) | 4 | 4 | 0 | 0 neu | 4 | 4 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 | 5 | 5 | Ungeduldiger Benutzer, schnelle Bedienfolgen | ja (Dateiliste Runde 3; Volltiefe risikoreiche/fundreiche Bereiche, sonst Kurzprüfung) | 4 | 4 | 0 | 0 neu | 4 | 4 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
+| 6 | 6 | Manipulierte Eingaben und Datenverträge | ja (Dateilisten Runde 3; Eingabegrenzen gezielt) | 7 | 7 | 0 | 0 neu | 7 | 7 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 
 ### Runde 2 – verbindliche Endstatus und Fixnachweise
 
@@ -329,6 +330,25 @@ Quellpfade relativ zu `app/src/main/java/de/frank/gedankenspeicher`; bekannte Fu
 ### Runde 4 – Invarianten und Gegenbeweise
 
 ### Runde 5 – schnelle Bedienfolgen (aktuelle Fix-Charge)
+
+### Runde 6 – manipulierte Eingaben
+
+Dateilisten wie Runde 3, Schwerpunkt auf Eingabe-/Serialisierungsverträgen in 2/3/4/8 und deren Aufrufern. SQL-Injection per Suchparameter, Export-Pfadtraversal und ZIP-Pfade verworfen (Parameterbindung bzw. vorhandene Pfadfilter greifen). Keine neuen bestätigten Funde in übrigen Bereichen; bekannte Klärungsfälle nicht erneut gezählt.
+
+| ID | Schwere | Stelle | Beweis | Triage |
+|---|---|---|---|---|
+| L-6-2-01 | mittel | Repository.suche; Dao.inNotizen/inAntworten | Suche 100%/a_b findet 1000/axb ohne wörtlichen Treffer → LIKE-Platzhalter maskieren. | bestätigt |
+| L-6-2-02 | niedrig | HauptViewModel.verbessere; Nachtraege.abschnitte | Leerer erster Nachtrag, danach Text → leere KI-Eingabe liefert leer und bricht gesamte Verbesserung ab → leere Abschnitte erhalten/überspringen. | bestätigt |
+| L-6-3-01 | hoch | Sicherung.pruefeDatenbank:274–298 | SQLite-Datei mit Tabelle notiz, aber falschem Schema wird akzeptiert → App ersetzt DB und scheitert bei Room-Start → komplettes Schema/Migrationsfähigkeit vor Austausch prüfen. | bestätigt |
+| L-6-3-02 | hoch | Sicherung.werteAusJson; Einstellungen.uebernimm | Archiv setzt erscheinung als Boolean oder expires_at als String → Import schreibt falschen Typ, nächster Getter crasht → JSON und Zielschema vor DB-Austausch prüfen. | bestätigt |
+| L-6-3-03 | mittel | data/Anhaenge.kt:83–85; TabellenBlatt:1424 | Importierte Tabellenbreite -1 → negative Compose-Breite beim Öffnen → gespeicherte Breiten auf gültigen Editorbereich begrenzen. | bestätigt |
+| L-6-4-01 | niedrig | CodexAufgaben.einzeiler:381 | JSON text=null/Objekt/Zahl → optString liefert statt leer den Nicht-Text → nur Stringfelder annehmen. | bestätigt |
+| L-6-4-02 | niedrig | CodexAufgaben.einzeiler:385 | Gültiges Stringfeld mit einzelnem CR/Unicode-Zeilentrenner → Ausgabe bleibt mehrzeilig → alle Zeilenenden glätten. | bestätigt |
+
+**Gegenlesen Runde 6:** Fünf IDs bestanden sofort. Importfixe Anlauf 2: Geprüfte/migrierte Kopie nach erfolgreichem Checkpoint und Close zurück in die reine Arbeitsdatei übernehmen, damit ein falscher ursprünglicher Identity-Hash nicht erneut importiert wird; reservierte EncryptedSharedPreferences-Schlüssel schon vor Austausch ablehnen. Archiv selbst und laufende Datenbank bleiben während dieser Prüfung unberührt.
+**Endstatus Runde 6:** Alle sieben IDs behoben und separat statisch verifiziert, je (1) ursprünglicher Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Null/Leer/Grenzen berücksichtigt. L-6-3-01/02 Anlauf 2, andere Anlauf 1. Fixreferenz Runde-6-Commit/0.6.11. Kein Test wegen Schnellmodus. Konvergenzzähler bleibt 0.
+
+#### Runde 5 – Detailnachweise (Fortsetzung)
 
 Bereich 2 vollständig vom einzelnen Leseprüfer, übrige Bereiche gezielt anhand derselben Dateilisten aus Runde 3; zusätzlich Tabellen-/Sprachaufnahmebestätigung und Speichern im Editor verfolgt. Bekannte Layoutverdachte unverändert offen. Doppelsenden, Start/Stopp/Start, doppelte Verbesserung/Auswertung, Schlüsselwechsel/Löschen ohne zusätzliche neue Beweise. Neu bestätigt:
 

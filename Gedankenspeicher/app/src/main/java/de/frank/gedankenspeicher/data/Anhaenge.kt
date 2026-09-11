@@ -81,7 +81,7 @@ fun anhaengeAusJson(roh: String): List<Anhang> = runCatching {
             seiten = eintrag.optInt("seiten"),
             erstelltAm = eintrag.optLong("erstelltAm", System.currentTimeMillis()),
             spaltenbreiten = eintrag.optJSONArray("spaltenbreiten")?.let { feld ->
-                (0 until feld.length()).map(feld::optInt)
+                (0 until feld.length()).map { feld.optInt(it, 132).coerceIn(64, 400) }
             }.orEmpty(),
         )
     }

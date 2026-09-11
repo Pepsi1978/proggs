@@ -121,6 +121,35 @@ abstract class Datenbank : RoomDatabase() {
             vorhanden = null
         }
 
+        /** Validiert und migriert nur eine wegwerfbare Kopie, niemals den laufenden Bestand. */
+        fun pruefeImport(ctx: Context, quelle: java.io.File) {
+            val name = "import-pruefung-${java.util.UUID.randomUUID()}.db"
+            val kopie = ctx.getDatabasePath(name)
+            val probe = Room.databaseBuilder(ctx.applicationContext, Datenbank::class.java, name)
+                .addMigrations(WANDERUNG_1_2, WANDERUNG_2_3, WANDERUNG_3_4, WANDERUNG_4_5, WANDERUNG_5_6)
+                .build()
+            try {
+                quelle.copyTo(kopie, overwrite = true)
+                // Ein mitkopierter oder gefälschter Identity-Hash ersetzt keine Schemaprüfung.
+                android.database.sqlite.SQLiteDatabase.openDatabase(
+                    kopie.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE,
+                ).use { it.execSQL("DROP TABLE IF EXISTS room_master_table") }
+                probe.openHelper.writableDatabase.query("PRAGMA foreign_key_check").use {
+                    check(!it.moveToFirst()) { "Die Sicherung enthält ungültige Datensatzzuordnungen." }
+                }
+                probe.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use {
+                    check(it.moveToFirst() && it.getInt(0) == 0) { "Die geprüfte Datenbank konnte nicht abgeschlossen werden." }
+                }
+                probe.close()
+                // Importiert wird exakt die validierte/migrierte Fassung, nicht ein Original
+                // mit abweichendem Identity-Hash. 'quelle' liegt nur im Restore-Arbeitsordner.
+                kopie.copyTo(quelle, overwrite = true)
+            } finally {
+                probe.close()
+                ctx.deleteDatabase(name)
+            }
+        }
+
         /** Für die Sicherung nach Drive (F-17) — sie kopiert genau diese Datei. */
         const val DATEINAME = "gedankenspeicher.db"
     }
