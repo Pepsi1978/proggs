@@ -83,7 +83,7 @@ object Pruefsumme {
                 checkNotNull(gewaehlt) { "Eintrag ${eintrag.id} hat keine freie Dosis." }
                 token(decimal(gewaehlt.stueckzahl))
                 token(gewaehlt.mengeJeStueck?.let(::decimal).orEmpty())
-                token(gewaehlt.einheitText?.trim() ?: gewaehlt.einheit?.code?.toString().orEmpty())
+                token(gewaehlt.einheitText?.trim()?.takeIf(String::isNotBlank) ?: gewaehlt.einheit?.code?.toString().orEmpty())
                 eintrag.alternationsPartnerMittelIds.sorted().forEach { token(it) }
                 eintrag.mittel.komponenten.sortedBy { it.id }.forEach { komponente ->
                     token(komponente.id)

@@ -272,6 +272,7 @@ class RoomStackLaborRepository(
         database.withTransaction {
             val eintrag = stackDao.holeEintragEntity(eintragId) ?: return@withTransaction
             bewertungDao.loescheZellenFuerStackMittel(eintrag.stackId, eintrag.mittelId)
+            bewertungDao.loescheKonkurrenzenFuerStackMittel(eintrag.stackId, eintrag.mittelId)
             stackDao.loescheEintrag(eintrag)
         }
     }
@@ -296,7 +297,10 @@ class RoomStackLaborRepository(
                 offenerHinweis = null,
                 dosen = eintrag.dosen.map { it.copy(stackEintragId = id) },
             ))
-            if (verschieben) bewertungDao.loescheZellenFuerStackMittel(quellStackId, mittelId)
+            if (verschieben) {
+                bewertungDao.loescheZellenFuerStackMittel(quellStackId, mittelId)
+                bewertungDao.loescheKonkurrenzenFuerStackMittel(quellStackId, mittelId)
+            }
         }
     }
 
@@ -389,9 +393,12 @@ class RoomStackLaborRepository(
         val stackZiele = zielDao.holeStackZiele(stackId).map { it.toDomain() }
         val bewertung = bewertungDao.holeNeueste(BewertungsBereich.STACK, stackId)?.toDomain()
         val zellen = bewertung?.zellen.orEmpty()
+        // Ohne Zellen gibt es nichts zu gewichten: auch Mittel bleiben grau, damit eine
+        // fehlgeschlagene Auswertung (leere Zellen) nicht als grün erscheint.
+        val keineDaten = bewertung == null || zellen.isEmpty()
         val aktiveMittel = eintraege.filter { it.aktiv }.mapTo(mutableSetOf()) { it.mittelId }
         val mittelAmpeln = eintraege.associate { eintrag ->
-            eintrag.mittelId to if (bewertung == null) Ampel.GRAU else AmpelBerechnung.mittelAmpel(
+            eintrag.mittelId to if (keineDaten) Ampel.GRAU else AmpelBerechnung.mittelAmpel(
                 eintrag.mittelId,
                 eintrag.aktiv,
                 stackZiele,
@@ -399,7 +406,7 @@ class RoomStackLaborRepository(
             )
         }
         val zielAmpeln = stackZiele.associate { stackZiel ->
-            stackZiel.zielId to if (bewertung == null) Ampel.GRAU else AmpelBerechnung.zielAmpel(
+            stackZiel.zielId to if (keineDaten) Ampel.GRAU else AmpelBerechnung.zielAmpel(
                 stackZiel.zielId,
                 aktiveMittel,
                 zellen,
@@ -408,7 +415,7 @@ class RoomStackLaborRepository(
         AmpelErgebnis(
             mittelAmpeln,
             zielAmpeln,
-            AmpelBerechnung.sammelAmpel(zielAmpeln.values, bewertung != null),
+            AmpelBerechnung.sammelAmpel(zielAmpeln.values, !keineDaten),
         )
     }
 
@@ -588,8 +595,10 @@ class RoomStackLaborRepository(
         val bewertungIds = vorhanden.bewertungen.mapTo(mutableSetOf()) { it.id }
 
         val neueMittel = import.mittel.filter { mittelIds.add(it.id) }
+        val neueMittelIds = neueMittel.mapTo(mutableSetOf()) { it.id }
+        // Komponenten bereits vorhandener Mittel nicht duplizieren: sie gehören zum Bestand.
         val neueKomponenten = import.komponenten.mapNotNull { komponente ->
-            if (komponente.mittelId !in mittelIds) return@mapNotNull null
+            if (komponente.mittelId !in neueMittelIds) return@mapNotNull null
             val id = freieId(komponente.id, komponentenIds)
             komponente.copy(id = id)
         }
@@ -600,10 +609,13 @@ class RoomStackLaborRepository(
             stack.copy(id = stackMap.getValue(stack.id), sortierung = ersteNeueStackPosition + index)
         }
         val eintragMap = import.eintraege.associate { eintrag -> eintrag.id to freieId(eintrag.id, eintragIds) }
+        require(import.eintraege.all { it.stackId in stackMap }) { "Der Import enthält Einträge ohne Stack." }
         val neueEintraege = import.eintraege.map {
             it.copy(id = eintragMap.getValue(it.id), stackId = stackMap.getValue(it.stackId))
         }
+        require(import.dosen.all { it.stackEintragId in eintragMap }) { "Der Import enthält Dosen ohne Eintrag." }
         val neueDosen = import.dosen.map { it.copy(stackEintragId = eintragMap.getValue(it.stackEintragId)) }
+        require(import.alternationsPartner.all { it.stackEintragId in eintragMap }) { "Der Import enthält Partner ohne Eintrag." }
         val neuePartner = import.alternationsPartner.map { it.copy(stackEintragId = eintragMap.getValue(it.stackEintragId)) }
 
         val zielNachText = vorhanden.ziele.associateBy { it.text }

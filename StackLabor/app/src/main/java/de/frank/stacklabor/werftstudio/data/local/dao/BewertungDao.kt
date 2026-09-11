@@ -80,4 +80,13 @@ interface BewertungDao {
         """,
     )
     suspend fun loescheZellenFuerStackMittel(stackId: String, mittelId: String)
+
+    @Query(
+        """
+        DELETE FROM konkurrenz
+        WHERE (mittelAId = :mittelId OR mittelBId = :mittelId)
+          AND bewertungId IN (SELECT id FROM bewertung WHERE stackId = :stackId)
+        """,
+    )
+    suspend fun loescheKonkurrenzenFuerStackMittel(stackId: String, mittelId: String)
 }

@@ -55,7 +55,7 @@ fun String.toDarreichungsformOrNull(): Darreichungsform? {
 }
 
 fun String.toEinheitOrNull(): Einheit? {
-    val wert = trim().replace("µ", "U").replace("ü", "ue", ignoreCase = true)
+    val wert = trim().replace("µ", "U").replace("μ", "U").replace("ü", "ue", ignoreCase = true)
     return Einheit.entries.firstOrNull { it.name.equals(wert, true) || it.anzeige().equals(trim(), true) }
 }
 

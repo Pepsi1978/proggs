@@ -238,7 +238,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             )
             is StackLaborEvent.FingerprintResult -> fingerprintResult(event.purpose, event.granted, event.message)
             is StackLaborEvent.SaveMedicine -> if (!gesperrtGemeldet(event.stackId)) saveMedicine(event.medicineId, event.stackId)
-            is StackLaborEvent.DeleteMedicine -> launchAction("Mittel gelöscht") { repository.loescheMittel(event.medicineId, bestaetigt = true) }
+            is StackLaborEvent.DeleteMedicine -> deleteMedicine(event.medicineId)
             is StackLaborEvent.AddMedicineToStack -> if (!gesperrtGemeldet(event.stackId)) addMedicineToStack(event.stackId, event.medicineId)
             is StackLaborEvent.AddGoal -> launchAction("Ziel gespeichert") {
                 repository.speichereZiel(Ziel(UUID.randomUUID().toString(), event.text.trim()))
@@ -1254,6 +1254,13 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         undoAction = { repository.importiere(backup, ImportModus.ERSETZEN) }
     }
 
+    /** Katalog-Löschen per Kaskade reißt Stack-Einträge mit — deshalb mit Sicherung und Undo. */
+    private fun deleteMedicine(medicineId: String) = launchAction("Mittel gelöscht") {
+        val backup = repository.exportiere()
+        repository.loescheMittel(medicineId, bestaetigt = true)
+        undoAction = { repository.importiere(backup, ImportModus.ERSETZEN) }
+    }
+
     private fun undo() {
         val action = undoAction ?: return message("Nichts zum Rückgängigmachen")
         undoAction = null
@@ -1766,13 +1773,21 @@ private fun dailyDoses(entries: List<StackEintrag>, medicines: List<Mittel>, sta
             val dose = entry.dosen.firstOrNull { it.variante == variant } ?: entry.dosen.firstOrNull()
             val amount = dose?.mengeJeStueck?.multiply(dose.stueckzahl) ?: BigDecimal.ZERO
             if (entry.frequenzTyp == FrequenzTyp.ALLE_N_TAGE) {
-                amount.divide(BigDecimal.valueOf((entry.alleNTage ?: 1).toLong()), 6, RoundingMode.HALF_UP)
+                amount.divide(BigDecimal.valueOf((entry.alleNTage ?: 2).toLong()), 6, RoundingMode.HALF_UP)
             } else amount
+        }
+        // Stück-Summe ebenfalls als Tagesdurchschnitt (alle N Tage), sonst übertreibt sie.
+        val stueckProTag = grouped.sumOf { entry ->
+            val dose = entry.dosen.firstOrNull { it.variante == variant } ?: entry.dosen.firstOrNull()
+            val stueck = dose?.stueckzahl ?: BigDecimal.ZERO
+            if (entry.frequenzTyp == FrequenzTyp.ALLE_N_TAGE) {
+                stueck.divide(BigDecimal.valueOf((entry.alleNTage ?: 2).toLong()), 6, RoundingMode.HALF_UP)
+            } else stueck
         }
         DoseSummaryUi(
             medicine.name,
             if (total != null && unit != null) "${total.stripTrailingZeros().toPlainString()} $unit"
-            else "${doses.sumOf { it.stueckzahl }.stripTrailingZeros().toPlainString()} ${unit ?: "Stück"}",
+            else "${stueckProTag.stripTrailingZeros().toPlainString()} Stück",
             grouped.mapNotNull { stackById[it.stackId]?.name }.distinct().joinToString(" · "),
         )
     }.sortedBy { it.name }
@@ -1822,7 +1837,13 @@ private fun BewertungMitDetails.toHistoryUi(selected: Boolean): EvaluationRunUi 
     id = bewertung.id,
     date = DateTimeFormatter.ofPattern("dd.MM. · HH:mm", Locale.GERMANY).withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(bewertung.zeitpunktEpochMillis)),
     model = "${bewertung.modell.substringAfterLast('-').replaceFirstChar(Char::uppercase)} · ${bewertung.denkstufe}",
-    counts = zellen.groupBy { it.zielId }.values.map { cells -> if (cells.any { it.wirkung.name == "STOERT" }) Ampel.ROT else Ampel.GRUEN }.toCounts(),
+    counts = zellen.groupBy { it.zielId }.values.map { cells ->
+        when {
+            cells.any { it.wirkung.name == "STOERT" && it.staerke >= 3 } -> Ampel.ROT
+            cells.any { it.wirkung.name == "STOERT" } -> Ampel.GELB
+            else -> Ampel.GRUEN
+        }
+    }.toCounts(),
     selectedForComparison = selected,
 )
 

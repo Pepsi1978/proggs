@@ -130,39 +130,47 @@ object CodexJson {
     fun bestEffortNarrative(raw: String): String = decodeStringFieldPrefix(raw, "gesamt")
 
     internal fun decodeStringFieldPrefix(json: String, key: String): String {
-        val keyIndex = json.indexOf("\"$key\"")
-        if (keyIndex < 0) return ""
-        var index = json.indexOf(':', keyIndex + key.length + 2)
-        if (index < 0) return ""
-        index++
-        while (index < json.length && json[index].isWhitespace()) index++
-        if (index >= json.length || json[index] != '"') return ""
-        index++
-        return buildString {
-            while (index < json.length) {
-                when (val char = json[index++]) {
-                    '"' -> return@buildString
-                    '\\' -> {
-                        if (index >= json.length) return@buildString
-                        when (val escaped = json[index++]) {
-                            '"', '\\', '/' -> append(escaped)
-                            'b' -> append('\b')
-                            'f' -> append('\u000c')
-                            'n' -> append('\n')
-                            'r' -> append('\r')
-                            't' -> append('\t')
-                            'u' -> {
-                                if (index + 4 > json.length) return@buildString
-                                val value = json.substring(index, index + 4).toIntOrNull(16) ?: return@buildString
-                                append(value.toChar())
-                                index += 4
+        var searchFrom = 0
+        while (true) {
+            val keyIndex = json.indexOf("\"$key\"", searchFrom)
+            if (keyIndex < 0) return ""
+            var index = keyIndex + key.length + 2
+            while (index < json.length && json[index].isWhitespace()) index++
+            // Der Treffer zählt nur als Schlüssel, wenn danach ein Doppelpunkt folgt —
+            // sonst stand "gesamt" nur im Fließtext und wir suchen weiter.
+            if (index < json.length && json[index] == ':') {
+                index++
+                while (index < json.length && json[index].isWhitespace()) index++
+                if (index >= json.length || json[index] != '"') return ""
+                index++
+                return buildString {
+                    while (index < json.length) {
+                        when (val char = json[index++]) {
+                            '"' -> return@buildString
+                            '\\' -> {
+                                if (index >= json.length) return@buildString
+                                when (val escaped = json[index++]) {
+                                    '"', '\\', '/' -> append(escaped)
+                                    'b' -> append('\b')
+                                    'f' -> append('\u000c')
+                                    'n' -> append('\n')
+                                    'r' -> append('\r')
+                                    't' -> append('\t')
+                                    'u' -> {
+                                        if (index + 4 > json.length) return@buildString
+                                        val value = json.substring(index, index + 4).toIntOrNull(16) ?: return@buildString
+                                        append(value.toChar())
+                                        index += 4
+                                    }
+                                    else -> return@buildString
+                                }
                             }
-                            else -> return@buildString
+                            else -> append(char)
                         }
                     }
-                    else -> append(char)
                 }
             }
+            searchFrom = keyIndex + 1
         }
     }
 
