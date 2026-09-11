@@ -945,7 +945,7 @@ namespace TerminalVoiceOverlay.Views
                 foreach (Window w in app.Windows)
                 {
                     if (w is null || !w.IsVisible) continue;
-                    if (w is OverlayWindow or PromptBoardPanel or PromptInputWindow or PromptHistoryWindow)
+                    if (w is OverlayWindow or PromptBoardPanel or PromptInputWindow or PromptHistoryWindow or QuickTitleWindow)
                         continue;
                     return true;
                 }
@@ -2416,6 +2416,7 @@ namespace TerminalVoiceOverlay.Views
             try
             {
                 ForceTopmost(this);
+                if (_quickTitleWin is { IsVisible: true } qt) ForceTopmost(qt);
                 if (_promptPanel is { IsVisible: true } pp) ForceTopmost(pp);
                 if (_promptPanel?.InputWindow is { IsVisible: true } iw)
                 {
@@ -2480,6 +2481,7 @@ namespace TerminalVoiceOverlay.Views
         /// </summary>
         private void HideOverlayNow()
         {
+            HideQuickTitle();
             // Floating Children (Eingabe + Historie) ZUERST verstecken —
             // sie sind eigene Top-Level-Windows und werden vom Verstecken
             // des Promtboards nicht automatisch mitgenommen. Wenn wir das
@@ -3478,9 +3480,16 @@ namespace TerminalVoiceOverlay.Views
         // stehen, solange die Maus auf der Zahl ist — auch wenn sie sich dabei
         // bewegt — und verschwindet erst beim Verlassen der Zahl.
         private readonly string?[] _quickTitles = new string?[QuickPromptStore.Count];
-        private System.Windows.Controls.Primitives.Popup? _quickTitlePopup;
+        private QuickTitleWindow? _quickTitleWin;
         private System.Windows.Controls.TextBlock? _quickTitleText;
         private int _quickTitleSlot;
+
+        /// <summary>
+        /// Eigene Fensterklasse fuer die Ueberschrift-Blase, damit
+        /// IsAuxiliaryWindowOpen sie gezielt ausnehmen kann (sonst wuerde
+        /// eine sichtbare Blase das Auto-Hide des Overlays blockieren).
+        /// </summary>
+        private sealed class QuickTitleWindow : Window { }
 
         private void WireQuickPromptHover()
         {
@@ -3494,76 +3503,128 @@ namespace TerminalVoiceOverlay.Views
             }
         }
 
+        // ── Blase als eigenes, vom Overlay BESESSENES Fenster (Bugfix 2026-09-11) ──
+        // Vorher: WPF-Popup. Zwei Ursachen fuer "springt / zu weit links / hinter
+        // dem Overlay":
+        //  1. X wurde aus einer VORAB gemessenen Breite gerechnet und ueber die
+        //     WPF-Popup-Platzierung gesetzt — je nach zuvor gezeigtem Titel kam eine
+        //     andere Breite heraus, die Blase landete mal zu weit links, mal auf
+        //     dem Overlay.
+        //  2. Das Popup-HWND gehoerte niemandem; der 2,5-s-Topmost-Reassert schob
+        //     das Overlay davor.
+        // Jetzt: Owner = Overlay (besessene Fenster liegen per OS-Regel IMMER ueber
+        // ihrem Owner) und Position in Geraetepixeln aus der TATSAECHLICHEN
+        // Fenstergroesse (GetWindowRect nach dem Layout) per SetWindowPos. Rechte
+        // Kante = linke Kante der sichtbaren Pille (FullView) minus TooltipMargin,
+        // vertikal mittig zur Zahl — egal wie lang der Titel ist.
+        private QuickTitleWindow? EnsureQuickTitleWindow()
+        {
+            if (_quickTitleWin != null) return _quickTitleWin;
+            if (new System.Windows.Interop.WindowInteropHelper(this).Handle == IntPtr.Zero) return null;
+
+            _quickTitleText = new System.Windows.Controls.TextBlock
+            {
+                Foreground = System.Windows.Media.Brushes.White,
+                FontSize = 12,
+            };
+            var border = new System.Windows.Controls.Border
+            {
+                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xF0, 0x20, 0x20, 0x20)),
+                BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x55, 0x55, 0x55)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10, 5, 10, 5),
+                Child = _quickTitleText,
+                IsHitTestVisible = false,
+            };
+            var win = new QuickTitleWindow
+            {
+                Owner = this,
+                Content = border,
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = System.Windows.Media.Brushes.Transparent,
+                ShowActivated = false,
+                ShowInTaskbar = false,
+                Focusable = false,
+                IsHitTestVisible = false,
+                ResizeMode = ResizeMode.NoResize,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                Topmost = true,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                Left = -10000,
+                Top = -10000,
+            };
+            // Maus-durchlaessig + nie aktivierend: die Blase darf der Zahl nie die
+            // Maus wegnehmen (sonst MouseLeave/MouseEnter-Flackern).
+            win.SourceInitialized += (_, _) =>
+            {
+                var h = new System.Windows.Interop.WindowInteropHelper(win).Handle;
+                int ex = Win32.GetWindowLong(h, Win32.GWL_EXSTYLE);
+                Win32.SetWindowLong(h, Win32.GWL_EXSTYLE,
+                    ex | Win32.WS_EX_TRANSPARENT | Win32.WS_EX_NOACTIVATE | Win32.WS_EX_TOOLWINDOW);
+            };
+            // Reaktive Schicht: jede Groessenaenderung (neuer Titel, KI-Ueberschrift
+            // kommt waehrend die Blase offen ist) setzt sie sofort neu an die Linie.
+            win.SizeChanged += (_, _) => { if (win.IsVisible && _quickTitleSlot > 0) PlaceQuickTitle(); };
+            _quickTitleWin = win;
+            return win;
+        }
+
         private void ShowQuickTitle(int slot)
         {
-            var btn = ProfileButtons[slot - 1];
-            if (_quickTitlePopup == null)
-            {
-                _quickTitleText = new System.Windows.Controls.TextBlock
-                {
-                    Foreground = System.Windows.Media.Brushes.White,
-                    FontSize = 12,
-                };
-                var border = new System.Windows.Controls.Border
-                {
-                    Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xF0, 0x20, 0x20, 0x20)),
-                    BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x55, 0x55, 0x55)),
-                    BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(6),
-                    Padding = new Thickness(10, 5, 10, 5),
-                    Child = _quickTitleText,
-                    IsHitTestVisible = false,
-                };
-                _quickTitlePopup = new System.Windows.Controls.Primitives.Popup
-                {
-                    Child = border,
-                    AllowsTransparency = true,
-                    Placement = System.Windows.Controls.Primitives.PlacementMode.Absolute,
-                    StaysOpen = true,
-                    Focusable = false,
-                    IsHitTestVisible = false,
-                };
-                // Popup ist ein eigenes HWND: liegt es ueber der Zahl, schluckt es
-                // die Maus -> MouseLeave/MouseEnter im Wechsel -> Flackern.
-                // WS_EX_TRANSPARENT macht das Fenster maus-durchlaessig.
-                _quickTitlePopup.Opened += (_, _) =>
-                {
-                    if (PresentationSource.FromVisual(_quickTitlePopup.Child) is System.Windows.Interop.HwndSource src)
-                    {
-                        int ex = Win32.GetWindowLong(src.Handle, Win32.GWL_EXSTYLE);
-                        Win32.SetWindowLong(src.Handle, Win32.GWL_EXSTYLE, ex | 0x20 /*WS_EX_TRANSPARENT*/ | Win32.WS_EX_NOACTIVATE);
-                    }
-                };
-            }
+            var win = EnsureQuickTitleWindow();
+            if (win == null) return;
 
             _quickTitleSlot = slot;
             _quickTitleText!.Text = _quickTitles[slot - 1] ?? $"Prompt {slot}";
 
-            var source = PresentationSource.FromVisual(this);
-            if (source?.CompositionTarget == null) return;
-            var child = (FrameworkElement)_quickTitlePopup.Child;
-            // Border UND TextBlock als ungueltig markieren: sonst liefert Measure die
-            // gecachte Groesse des VORHER gezeigten Titels -> falsche X-Position.
-            _quickTitleText!.InvalidateMeasure();
-            child.InvalidateMeasure();
-            child.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+            // Unsichtbar zeigen, Layout erzwingen, DANN an die Linie setzen und
+            // einblenden — kein Aufblitzen an der alten Stelle.
+            win.Opacity = 0;
+            if (!win.IsVisible) win.Show();
+            win.UpdateLayout();
+            PlaceQuickTitle();
+            win.Opacity = 1;
+        }
 
-            // Absolut in Bildschirm-DIPs: rechte Popup-Kante immer TooltipMargin
-            // links vom Overlay, vertikal mittig zur Zahl. Keine Placement=Left-
-            // Logik mehr, die bei kurzen Titeln auf das Overlay umklappen kann.
-            var fromDevice = source.CompositionTarget.TransformFromDevice;
-            var winTopLeft = fromDevice.Transform(PointToScreen(new System.Windows.Point(0, 0)));
-            var btnTopLeft = fromDevice.Transform(btn.PointToScreen(new System.Windows.Point(0, 0)));
-            _quickTitlePopup.IsOpen = false;
-            _quickTitlePopup.HorizontalOffset = winTopLeft.X - TooltipMargin - child.DesiredSize.Width;
-            _quickTitlePopup.VerticalOffset = btnTopLeft.Y + (btn.ActualHeight - child.DesiredSize.Height) / 2.0;
-            _quickTitlePopup.IsOpen = true;
+        private void PlaceQuickTitle()
+        {
+            var win = _quickTitleWin;
+            int slot = _quickTitleSlot;
+            if (win == null || slot <= 0) return;
+            var btn = ProfileButtons[slot - 1];
+            try
+            {
+                var hwnd = new System.Windows.Interop.WindowInteropHelper(win).Handle;
+                var source = PresentationSource.FromVisual(this);
+                if (hwnd == IntPtr.Zero || source?.CompositionTarget == null || !btn.IsVisible) return;
+
+                double scale = source.CompositionTarget.TransformToDevice.M11;
+                // Alles in Geraetepixeln direkt von Windows: keine DIP/px-Mischung,
+                // keine WPF-Platzierungslogik, keine veraltete Vorab-Messung.
+                var anchor = FullView.PointToScreen(new System.Windows.Point(0, 0));
+                var centre = btn.PointToScreen(new System.Windows.Point(0, btn.ActualHeight / 2.0));
+                Win32.GetWindowRect(hwnd, out var r);
+                int tipW = r.Right - r.Left;
+                int tipH = r.Bottom - r.Top;
+                int x = (int)Math.Round(anchor.X - TooltipMargin * scale) - tipW;
+                int y = (int)Math.Round(centre.Y - tipH / 2.0);
+                Win32.SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0,
+                    Win32.SWP_NOSIZE | Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
+                DiagLog.Write("QuickTitle", "place", ("slot", slot), ("anchorX", anchor.X), ("centreY", centre.Y),
+                    ("tipW", tipW), ("tipH", tipH), ("x", x), ("y", y), ("scale", scale));
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Write("QuickTitle", "place-error", ("slot", slot), ("err", ex.Message));
+            }
         }
 
         private void HideQuickTitle()
         {
             _quickTitleSlot = 0;
-            if (_quickTitlePopup != null) _quickTitlePopup.IsOpen = false;
+            _quickTitleWin?.Hide();
         }
 
         private async Task GenerateQuickPromptSummaryAsync(int slot)
