@@ -12,7 +12,7 @@
 | B6 Benachrichtigung/Lebenszyklus | notify/*, ExperimenteApp.kt, MainActivity.kt, network/* | Plattform/Lebenszyklus | mittel-hoch | Wecker, Boot, Lifecycle, OkHttp |
 | B7 Oberfläche | ui/Navigation.kt, ui/screens/*, ui/components/*, ui/theme/* | Oberfläche | mittel | sechs Hauptbildschirme, Bausteine, Themen |
 | nicht prüfrelevant | build/*, .gradle/, res/font, generierter Code, Fremdbibliotheken | — | — | — |
-3. Loop-Zustand: aktuelle Runde 6, nächste Stufe 6 (Blickwinkel Angreifer; Sparmodus: volle Tiefe für B1+B2, Kurzprüfung B3–B7), Konvergenzzähler 0, danach Blickwinkel Wartungsentwickler, offene Fixe 0, ausstehend nichts.
+3. Loop-Zustand: aktuelle Runde 7, nächste Stufe 7 (Blickwinkel Wartungsentwickler; Sparmodus: volle Tiefe für B1+B2, Kurzprüfung B3–B7), Konvergenzzähler 1, danach mögliche Schlussrunde (Vollrunde), offene Fixe 0, ausstehend nichts.
 4. Fundtabelle:
 | ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Kurzbeschreibung |
 |---|---|---|---|---|---|---|---|
@@ -76,4 +76,11 @@ Runde-5-Fund (bestätigt, behoben, verifiziert):
 Beweis/Fix/Verifikation Runde 5:
 - L-15: Aufnahme beenden und sofort neu starten → Ist: `aufnahme.stop()` läuft asynchron im Hintergrund, `start()` setzt davor den Puffer zurück, die beendete Aufnahme geht verloren und meldet „nichts zu hören“; Soll: Knopf bleibt bis Stopp-Ende stumm. Fix: `stopptAufnahme`-Sperre (gesetzt in `beendeAufnahme`, gelöscht im `finally`, `sprechknopf` ignoriert Taps währenddessen). Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Neustart erst nach Puffer-Kopie möglich; (2) Aufrufer Sprechknopf/Gesprächsknopf unverändert, Stopp/Transkription unberührt; (3) `finally` löscht Sperre auch bei leerem WAV und bei Abbruch.
 - Kurzprüfung B3–B7 ohne Funde, Stufe 5, geprüft: dieselbe Dateiliste wie Runde 4 (Fehlerpfade, Import/Export, Wecker, Player, Prompts). Ergebnis: keine Funde — „Weiter“-Knopf nur im TEXT-Zustand (kein Doppel-`werteAus`), Wisch+Knopf-Rennen endet in korrekter „steht schon“-Meldung via L-09.
+
+| 6 | 6 Angreifer (Sparmodus: B1+B2 voll, B3–B7 kurz) | ja | 0/0/0/0/0 | Build grün, keine Tests | 1 |
+
+Runde 6 ohne Funde (Zähler 1):
+- B1+B2 voll, Stufe 6, geprüft: ui/AppViewModel.kt (Eingabe→DB→KI-Pfade, Tages-/Dauergrenzen), data/repo/Ablage.kt (Merker-Formate, Suchräume, Nachtrag), data/local/{Daos,Einheiten,ExperimenteDatenbank}, data/settings/Einstellungen.kt (Import nur bekannter Schlüssel), data/backup/BackupVerwaltung.kt (Prüfsumme, Schema-Gleichheit, Restore). Ergebnis: keine Funde — Dauer überall `coerceIn(1,MAX_TAGE)`, Merker mit `|`-Texten trennen am ersten Trenner, `ausJson`/Aufgaben-Parsing per `runCatching`/Blank-Filter, Backup-Import mit Transaktion+Restore, Empfänger-Extras mit sicherem Standard.
+- B3–B7 kurz (10-Fragen-Liste per Suche), Stufe 6, geprüft: Dateiliste wie Runde 4. Ergebnis: keine Funde.
+- Abgelehnt (kein Fund): KI liefert `aufgabenJeTag`-Länge ≠ `tage` → leere Tage ohne Nachlauf — hypothetisch ohne konkreten Pfad (Schema/Prompt fordern Gleichheit, kein Beleg für Abweichung), daher kein Fund nach Beweisregel.
 6. Klärungsbedarf: (leer)
