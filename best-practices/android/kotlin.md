@@ -1,6 +1,7 @@
 # Kotlin — Best Practices
 
 **Stand:** 2026-06-02 (Best-Practices-Recherchelauf, 5 Researcher, offizielle Quellen zuerst).
+**Lokale Ergänzung 11.09.2026:** Generationen, vollständige Abbruch-Ownership und Dateiübergaben aus Gedankenspeicher (Build und statisches Gegenlesen; keine Web-Recherche).
 **Lokale Ergänzung 2026-09-10:** Franks bestätigter Android-Drag-&-Drop-Standard ist in den Kurzcheck verlinkt; keine neue Versionsrecherche.
 **Versions-Anker (live ermittelt):** Kotlin-CLI **2.3.20** (JRE 21), Projekt-Plugin **2.1.0**,
 KSP **2.1.0-1.0.29**, AGP **8.7–8.10**, Compose BOM **2025.01 / 2026.03**, JDK **21**.
@@ -109,6 +110,9 @@ passenden Loesung springen:
   startet keine Arbeit. *(offiziell: Android)*
 - **`CancellationException` ist heilig:** nie breit `catch (e: Exception)` ohne Re-Throw —
   `if (e is CancellationException) throw e`. *(offiziell: exception-handling)*
+- **Ergebnis-Ownership:** Blatt-/Freigabe-/Schlüsselgeneration vor Suspension erfassen und beim Schreiben erneut prüfen; persistente KI-Ergebnisse atomar gegen den Eingabetext vergleichen. IDs allein schützen nicht gegen Schließen/Wiederöffnen desselben Blatts. *(lokaler Fall: Gedankenspeicher; Almanach §2.10)*
+- **Stilllegung vollständig gestalten:** Für DB-Austausch alle Produzenten einschließlich extern aufgerufener suspend-Operationen und Room-Flow-Sammler besitzen; native blockierende Quellen vor `cancelAndJoin` stoppen. Eigener Arbeitsjob nur mit Lebenszeit-Parent; neue Aufträge vor UI-Seiteneffekten sperren. *(lokaler Fall: Gedankenspeicher; Almanach §2.11)*
+- **Dateiübergabe unter Cancellation:** Dateireferenz außerhalb `withContext(IO)` halten, bis das Ergebnis dem Aufrufer gehört; auch verworfene Rückkehr aufräumen. Bei Vorsynthese erst Jobs stoppen/abwarten, dann sämtliche erzeugten Dateien löschen. *(lokaler Fall: Gedankenspeicher; Almanach §2.12)*
 - **Lange Schleifen kooperativ:** `ensureActive()`/`yield()`/`isActive`, sonst ignoriert CPU-Arbeit ein `cancel()`. *(offiziell)*
 - **`async` → try-catch um `await()`**; `CoroutineExceptionHandler` nur am Root-`launch`; unabhaengige
   Geschwister via `supervisorScope {}`. `viewModelScope.launch{}` braucht eigene Fehlerbehandlung (kein Default-Handler). *(offiziell + extern: Android-Community)*

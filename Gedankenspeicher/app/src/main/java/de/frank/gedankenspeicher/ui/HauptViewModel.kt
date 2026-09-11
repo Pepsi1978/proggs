@@ -6,7 +6,7 @@ import android.net.ConnectivityManager
 import android.net.Uri
 import android.net.NetworkCapabilities
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewModelScope as lebenszeit
 import de.frank.gedankenspeicher.audio.AufnahmeDienst
 import de.frank.gedankenspeicher.audio.AufnahmeFernbedienung
 import de.frank.gedankenspeicher.audio.MicRecorder
@@ -46,9 +46,15 @@ import de.frank.gedankenspeicher.ui.verlauf.Reichtext
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -66,11 +72,15 @@ import kotlinx.coroutines.Dispatchers
  */
 class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
+    // Alle bisherigen Datenarbeiter bleiben Kinder des ViewModels, können aber vor einem
+    // Restore gemeinsam beendet werden. Nur der Restore selbst läuft in der Lebenszeit.
+    private val arbeitsJob = SupervisorJob(lebenszeit.coroutineContext[Job])
+    private val viewModelScope = CoroutineScope(lebenszeit.coroutineContext + arbeitsJob)
     private val ctx: Context = app.applicationContext
     val einstellungen = Einstellungen(ctx)
     private val db = Datenbank.hole(ctx)
     val codex = CodexAuthManager(ctx)
-    val repo = Repository(ctx, db, einstellungen, codex)
+    private val repo = Repository(ctx, db, einstellungen, codex)
 
     private val mikrofon = MicRecorder(ctx)
     val vorleser = Vorleser(ctx, einstellungen)
@@ -169,7 +179,14 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     val neustartNoetig: StateFlow<Boolean> = _neustartNoetig
 
     /** Die sechs Profile (F-10). */
-    val profile = repo.profile
+    val profile = repo.profile.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val notizzahlen = mutableMapOf<Long, StateFlow<Int>>()
+
+    fun notizzahl(id: Long): StateFlow<Int> = notizzahlen.getOrPut(id) {
+        repo.notizzahl(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    }
+
+    suspend fun holeNotiz(id: Long): Notiz? = viewModelScope.async { repo.notiz(id) }.await()
 
     private var verlaufJob: Job? = null
     private var aufnahmeJob: Job? = null
@@ -178,6 +195,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private var bearbeitungsGeneration = 0
     private var initialisiert = false
     private var wiederherstellungLaeuft = false
+    private var freigabeGeneration = 0
+    private var sitzungswechselLaeuft = false
+    private var aufnahmeSitzung: Sitzung? = null
+    private val antwortTranskriptSperre = Mutex()
+    private var stimmenGeneration = 0
+    private var stimmenNachladen = false
 
     // Nachreichen und Sicherung dürfen nie doppelt nebeneinander laufen.
     private val nachreichSperre = Mutex()
@@ -221,8 +244,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             // geschützten Sitzung hiess das: der erste Bildschirm ist eine Fingerabdruck-
             // Abfrage für etwas, das man vielleicht gar nicht wollte. Jetzt steht die
             // Auswahl offen, und die Sitzung sucht sich Frank selbst aus.
-            _verlauf.update { it.copy(sitzung = null, laedt = false, eintraege = emptyList()) }
+            _verlauf.update { if (it.sitzung == null) it.copy(laedt = false) else it }
             initialisiert = true
+            if (einstellungen.groqSchluessel.isNotBlank()) holeLiegengebliebeneNach()
             reicheWartendeNach()
             holeFehlendeUeberschriften()
         }
@@ -363,17 +387,25 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val z = _verlauf.value
         if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
         if (z.wertetAus) return melde("Die Auswertung läuft noch.")
+        if (sitzungswechselLaeuft || !arbeitsJob.isActive) return
+        sitzungswechselLaeuft = true
         viewModelScope.launch {
-            repo.oeffneSitzung(id)
-            repo.offeneSitzung().let(::beobachteSitzung)
+            try {
+                repo.oeffneSitzung(id)
+                repo.offeneSitzung().let(::beobachteSitzung)
+            } finally { sitzungswechselLaeuft = false }
         }
     }
 
     fun neueSitzung(kategorieId: Long, danach: () -> Unit = {}) {
         val z = _verlauf.value
         if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
+        if (sitzungswechselLaeuft || !arbeitsJob.isActive) return
+        sitzungswechselLaeuft = true
         viewModelScope.launch {
-            beobachteSitzung(repo.neueSitzung(kategorieId))
+            try {
+                beobachteSitzung(repo.neueSitzung(kategorieId))
+            } finally { sitzungswechselLaeuft = false }
             danach()
         }
     }
@@ -410,12 +442,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * Augen dessen zuzusperren, der sie eben geschützt hat.
      */
     fun setzeSchutz(sitzung: Sitzung, geschuetzt: Boolean) {
+        val generation = freigabeGeneration
         viewModelScope.launch {
             repo.setzeSchutz(sitzung.id, geschuetzt)
             frischeOffeneSitzung(sitzung.id)
             // Wer gerade den Fingerabdruck gegeben hat, um zu schuetzen, soll nicht im
             // selben Augenblick vor seiner eigenen Notiz stehen.
-            if (geschuetzt) _verlauf.update { it.copy(freigegebeneSitzung = sitzung.id) }
+            if (geschuetzt && generation == freigabeGeneration) _verlauf.update { it.copy(freigegebeneSitzung = sitzung.id) }
             melde(
                 if (geschuetzt) {
                     "Geschützt. Ab dem nächsten Öffnen braucht sie den Fingerabdruck."
@@ -552,6 +585,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sendeEntwurf() {
+        if (wiederherstellungLaeuft || !arbeitsJob.isActive) return melde("Die Wiederherstellung läuft noch.")
         val text = _verlauf.value.entwurf.trim()
         val anhaenge = _verlauf.value.anhaenge
         if (text.isEmpty() && anhaenge.isEmpty()) return
@@ -625,6 +659,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun starteAufnahme() {
+        if (sitzungswechselLaeuft) return melde("Die Sitzung wird noch geöffnet.")
         if (_verlauf.value.sitzung == null) return
         // Es gibt nur ein Mikrofon. Läuft gerade eine Stimmprobe, hat sie Vorrang — sonst
         // landete sie als Notiz im Verlauf.
@@ -643,10 +678,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         _verlauf.update { it.copy(nimmtAuf = true, aufnahmeDauerMs = 0) }
+        aufnahmeSitzung = _verlauf.value.sitzung
         aufnahmeJob = viewModelScope.launch {
-            val begonnen = System.currentTimeMillis()
+            val begonnen = android.os.SystemClock.elapsedRealtime()
             while (_verlauf.value.nimmtAuf) {
-                val gelaufen = System.currentTimeMillis() - begonnen
+                val gelaufen = android.os.SystemClock.elapsedRealtime() - begonnen
                 _verlauf.update { it.copy(aufnahmeDauerMs = gelaufen) }
                 if (gelaufen >= HOECHSTDAUER_MS) {
                     // Zehn Minuten sind die Grenze; danach wird von selbst beendet und
@@ -662,7 +698,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     /** Beendet die Aufnahme und legt die Karte an — auch wenn nichts brauchbar war. */
     fun beendeAufnahme() {
         if (!_verlauf.value.nimmtAuf) return
-        val sitzung = _verlauf.value.sitzung ?: return
+        val sitzung = aufnahmeSitzung ?: _verlauf.value.sitzung ?: return
         AufnahmeDienst.beende(ctx)
         _verlauf.update { it.copy(nimmtAuf = false, aufnahmeDauerMs = 0) }
         _bearbeitung.update { it.copy(nimmtAuf = false) }
@@ -686,7 +722,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             if (ziel == Aufnahmeziel.KI_BLATT) {
-                schreibeInsAntwortfeld(wav, blattGeneration)
+                antwortTranskriptSperre.withLock { schreibeInsAntwortfeld(wav, blattGeneration) }
                 return@launch
             }
             if (ziel == Aufnahmeziel.BEARBEITUNG) {
@@ -760,7 +796,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             }
             repo.aendereAktuell(notizId) { it.copy(text = text, zustand = Notizzustand.FERTIG, audioPfad = null) }
             datei?.let { runCatching { it.delete() } }
-            versorgeNeueNotiz(notizId, sitzungId, text)
+            val aktuell = repo.notiz(notizId) ?: return
+            versorgeNeueNotiz(notizId, aktuell.sitzungId, text)
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
@@ -1017,7 +1054,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
             }
-            runCatching { repo.setzeTitelWennNochKeiner(sitzungId, text) }
+            runCatching {
+                repo.notiz(notizId)?.let { aktuell ->
+                    repo.setzeTitelWennNochKeiner(aktuell.sitzungId, text, notizId)
+                }
+            }
         }
     }
 
@@ -1168,11 +1209,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val z = _bearbeitung.value
         if (z.nimmtAuf || z.transkribiert) return melde("Erst das Diktat abschließen.")
         val notiz = z.notiz ?: return
+        val generation = bearbeitungsGeneration
         viewModelScope.launch {
             // Vor jeden frischen Nachtrag kommt seine Überschriftenzeile.
             val (text, zeiten) = Nachtraege.setzeZeilenEin(z.text, z.nachtragsStellen)
             repo.bearbeiteNotiz(notiz, z.ueberschrift, text, neueNachtragZeiten = zeiten)
-            schliesseBearbeitung()
+            if (generation == bearbeitungsGeneration) schliesseBearbeitung()
         }
     }
 
@@ -1279,6 +1321,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         val websuche = blatt.websuche || blatt.websucheKiEntscheidet
         val rueckfrage = blatt.rueckfrage
+        val modell = einstellungen.codexModell
+        val effort = einstellungen.codexEffort
         schliesseKiBlatt()
         _verlauf.update { it.copy(wertetAus = true) }
         // Eine gründliche Auswertung dauert Minuten. Ohne Vordergrunddienst friert Android
@@ -1300,6 +1344,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                         profilAnweisung = profil?.anweisung.orEmpty(),
                         websuche = websuche,
                         websucheErzwingen = blatt.websuche && !blatt.websucheKiEntscheidet,
+                        modellId = modell,
+                        effortId = effort,
                     ),
                 )
                 if (text.isBlank()) {
@@ -1314,8 +1360,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                         antwortDesNutzers = antwort,
                         text = text,
                         profilName = profil?.name.orEmpty(),
-                        modell = einstellungen.codexModell,
-                        effort = einstellungen.codexEffort,
+                        modell = modell,
+                        effort = effort,
                         websucheAn = websuche,
                         ganzeSitzung = true,
                     ),
@@ -1372,11 +1418,15 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
             if (z.wertetAus) return melde("Die Auswertung läuft noch.")
         }
+        if (sitzungswechselLaeuft || !arbeitsJob.isActive) return
+        sitzungswechselLaeuft = true
         viewModelScope.launch {
-            if (sitzungId != _verlauf.value.sitzung?.id) {
-                repo.oeffneSitzung(sitzungId)
-                repo.offeneSitzung().let(::beobachteSitzung)
-            }
+            try {
+                if (sitzungId != _verlauf.value.sitzung?.id) {
+                    repo.oeffneSitzung(sitzungId)
+                    repo.offeneSitzung().let(::beobachteSitzung)
+                }
+            } finally { sitzungswechselLaeuft = false }
             _verlauf.update { it.copy(hebeHervor = kennung) }
             delay(1200)
             _verlauf.update { if (it.hebeHervor == kennung) it.copy(hebeHervor = null) else it }
@@ -1411,10 +1461,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     // --- Export (F-16) ---------------------------------------------------------------------------------
 
     /** Bereitet die Datei vor; das Teilen selbst löst die Oberfläche aus (sie hat die Activity). */
-    suspend fun exportdatei(sitzung: Sitzung): File {
+    suspend fun exportdatei(sitzung: Sitzung): File = viewModelScope.async {
         val eintraege = repo.verlaufEinmal(sitzung.id)
-        return repo.exportdatei(sitzung, repo.alsMarkdown(sitzung, eintraege))
-    }
+        repo.exportdatei(sitzung, repo.alsMarkdown(sitzung, eintraege))
+    }.await()
 
     // --- Codex-Anmeldung (F-11) ----------------------------------------------------------------
 
@@ -1520,6 +1570,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setzeQwenSchluessel(wert: String) {
+        stimmenGeneration++
         einstellungen.qwenSchluessel = wert.trim()
         _qwen.value = wert.trim()
         // Mit dem Schlüssel kommen die Stimmen: sonst müsste Frank raten, ob er richtig ist,
@@ -1582,13 +1633,18 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             _eigeneStimmen.value = emptyList()
             return
         }
-        if (_stimmenLaden.value) return
+        if (_stimmenLaden.value) {
+            stimmenNachladen = true
+            return
+        }
+        stimmenNachladen = false
+        val generation = stimmenGeneration
         _stimmenLaden.value = true
         viewModelScope.launch {
             val verzeichnis = QwenVoiceDirectory()
             try {
                 val liste = verzeichnis.list(schluessel)
-                if (schluessel != einstellungen.qwenSchluessel) return@launch
+                if (schluessel != einstellungen.qwenSchluessel || generation != stimmenGeneration) return@launch
                 _eigeneStimmen.value = liste
                 // Steht noch keine Stimme fest, wird die jüngste vorbelegt — sonst zeigt die
                 // Auswahl eine leere Kennung, obwohl Stimmen vorhanden sind.
@@ -1606,7 +1662,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 verzeichnis.shutdown()
                 _stimmenLaden.value = false
-                if (schluessel != einstellungen.qwenSchluessel) ladeEigeneStimmen()
+                if (arbeitsJob.isActive && (stimmenNachladen || generation != stimmenGeneration || schluessel != einstellungen.qwenSchluessel)) ladeEigeneStimmen()
             }
         }
     }
@@ -1649,10 +1705,16 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             val enrollment = QwenVoiceEnrollment()
+            val schluessel = einstellungen.qwenSchluessel
             var angelegt = false
             try {
                 _stimmenLaden.value = true
-                val kennung = enrollment.create(einstellungen.qwenSchluessel, STIMMNAME, wav)
+                val kennung = enrollment.create(schluessel, STIMMNAME, wav)
+                if (schluessel != einstellungen.qwenSchluessel) {
+                    melde("Die Stimme wurde im vorherigen Konto angelegt. Die aktuelle Auswahl bleibt erhalten.")
+                    return@launch
+                }
+                stimmenGeneration++
                 // Erst der Anbieter, dann die Stimme — sonst landet sie im Platz des vorigen.
                 setzeTtsAnbieter(TtsProvider.QWEN_CLONE.id)
                 setzeTtsStimme(kennung)
@@ -1665,6 +1727,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 enrollment.shutdown()
                 _stimmenLaden.value = false
+                if (stimmenNachladen && arbeitsJob.isActive) ladeEigeneStimmen()
             }
             // Erst nach dem finally: solange `_stimmenLaden` steht, kehrte das Laden sofort um.
             if (angelegt) ladeEigeneStimmen()
@@ -1678,6 +1741,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             val enrollment = QwenVoiceEnrollment()
             try {
                 enrollment.delete(einstellungen.qwenSchluessel, kennung)
+                stimmenGeneration++
                 if (einstellungen.stimmeQwen == kennung) {
                     // Ausdrücklich die Qwen-Stimme, nicht „die Stimme des gewählten
                     // Anbieters": beides fällt nur zufällig zusammen.
@@ -1698,7 +1762,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     // --- Profile (F-10) ---------------------------------------------------------------------------
 
-    suspend fun aktiviereProfil(profil: Auswertungsprofil): Boolean = repo.aktiviereProfil(profil)
+    suspend fun aktiviereProfil(profil: Auswertungsprofil): Boolean =
+        viewModelScope.async { repo.aktiviereProfil(profil) }.await()
 
     /** „Ohne Profil": die Auswertung läuft allein mit dem Grundauftrag. */
     fun deaktiviereProfile() {
@@ -1928,7 +1993,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         _sucheSicherungsdatei.value = false
         if (wiederherstellungLaeuft) return
         wiederherstellungLaeuft = true
-        viewModelScope.launch {
+        _verlauf.update { it.copy(stelltWiederHer = true) }
+        lebenszeit.launch {
             var datenbankZu = false
             try {
                 val arbeitsordner = File(ctx.cacheDir, "wiederherstellung")
@@ -1952,9 +2018,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 }
 
                 vorleser.halteAn()
-                if (_verlauf.value.nimmtAuf) beendeAufnahme()
-                auswertungJob?.cancel()
-                verlaufJob?.cancel()
+                // Keine alten oder neu gestarteten Arbeiter dürfen die ersetzte DB anfassen.
+                // Nach dem Abbruch bleiben auch neue launches dieses Arbeitsbereichs wirkungslos.
+                mikrofon.release()
+                arbeitsJob.cancelAndJoin()
+                AufnahmeDienst.beende(ctx)
 
                 val ziel = repo.datenbankdatei()
                 val bericht = withContext(Dispatchers.IO) {
@@ -2038,9 +2106,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 android.util.Log.w("Sicherung", "Wiederherstellung fehlgeschlagen", fehler)
                 melde(fehler.message ?: "Die Wiederherstellung ist fehlgeschlagen.")
                 // Ist die Datenbank schon zu, kann die App ohne Neustart nicht weiterarbeiten.
-                if (datenbankZu) _neustartNoetig.value = true
+                if (datenbankZu || !arbeitsJob.isActive) _neustartNoetig.value = true
             } finally {
                 wiederherstellungLaeuft = false
+                _verlauf.update { it.copy(stelltWiederHer = false) }
             }
         }
     }
@@ -2085,6 +2154,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * läuft weiter — sie hängt am ViewModel, nicht am Bildschirm.
      */
     fun inDenHintergrund() {
+        freigabeGeneration++
         // Der Schutz schliesst sich wieder, sobald die App aus dem Blick ist. Ohne das
         // gälte ein einziger Fingerabdruck bis zum nächsten Neustart der App.
         _verlauf.update { it.copy(freigegebeneSitzung = null) }

@@ -18,6 +18,8 @@
 > Gradle-9.5-Kompat). `kotlinx.coroutines` ist bei **1.11.0**. Euer Pin (Kotlin 2.1.0) bleibt gueltig —
 > der Anker ist projekt-gepinnt. Beim geplanten Kotlin-2.3/2.4-Sprung §1.10 beachten.
 
+> **Lokale Ergänzung 11.09.2026:** §2.10–2.12 aus Gedankenspeicher, Runden 2/3. Statisch getrennt gegengelesen und gebaut, keine neue Web-Recherche oder Laufzeitmessung.
+
 ---
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
@@ -40,6 +42,9 @@
 | 10 | KSP `too old`-Fehler | KSP-Version exakt zur Kotlin-Version; KSP1 endet ab Kotlin 2.3 | §10.1 |
 | 11 | Compose-Build-Konflikt | Compose-Compiler ist Gradle-Plugin, `composeOptions` entfernen | §10.2 |
 | 12 | JVM-Target inkonsistent | `kotlin { jvmToolchain(17) }` statt source/targetCompatibility | §10.4 |
+| 13 | Spätes Ergebnis nach Blatt-/Schlüssel-/Freigabewechsel | Generation und Datensatzversion beim Übernehmen prüfen; nur HTTP canceln reicht nicht | §2.10 |
+| 14 | DB-Restore/Recorder-Abbruch | Erst native blockierende Quelle stoppen, dann alle besitzenden Jobs abwarten; externe Aufrufer und Flow-Sammler gehören dazu | §2.11 |
+| 15 | Datei entsteht in `withContext(IO)` | Auch die verworfene Rückkehr auf Main braucht Aufräumen; fertige Vorsynthesen besitzen und nach Join löschen | §2.12 |
 
 ---
 
@@ -170,6 +175,23 @@ Euer Pin (2.1.0) nutzt noch keine Context-Parameter → erst beim 2.3/2.4-Sprung
 **FIX:** kein Wrapping; auf main-safe-Konvention vertrauen.
 
 ---
+
+### 2.10 Späte Rückrufe überschreiben neueren Zustand (lokaler Fund)
+**Beweis:** KI liest Text A, Nutzer speichert B, KI schreibt Ergebnis A über B; oder Blatt A wird geschlossen und gleichnamiges Blatt A neu geöffnet. Eine gleiche Datensatz-ID ist kein gleicher Bearbeitungsvorgang.
+**Ursache:** Auftragsidentität wird nur beim Start geprüft; HTTP-Abbruch erfasst weder Retry-Pausen noch bereits gelieferte Ergebnisse.
+**Fix:** Den ganzen Auftragsjob besitzen/abbrechen; Generation vor erster Suspension erfassen, nach jeder asynchronen Grenze bei Erfolg/Fehler/Finally vergleichen. Persistente Übernahme als atomarer Vergleich gegen den Eingabetext oder eine Revision. Schlüssel, Modell und Berechtigungsfreigabe sind ebenfalls Auftragsdaten.
+**Lokale Referenz:** Gedankenspeicher L-2-2-02/06/07/11, L-3-2-03/07/09/12; Gegenprüfung in `Gedankenspeicher/LOGIKFEHLER-PROTOKOLL.md`.
+
+### 2.11 Abbruch ist keine vollständige Stilllegung (lokaler Fund)
+**Beweis:** Restore cancelt nur benannte Jobs, während ein Compose-Scope noch Profile schreibt; oder `cancelAndJoin` wartet auf ein blockierendes AudioRecord.read, das erst stop/release weckt.
+**Fix:** Ressourcen-Ownership vollständig erfassen, auch extern aufgerufene suspend-Funktionen und Room-Flow-Produzenten. Einen an die ViewModel-Lebenszeit gebundenen Arbeitsjob vor dem Austausch stilllegen; Restore selbst als Geschwisterjob ausführen. Native Quelle vor Join stoppen. Neue UI-Aufträge sperren, bevor sie Entwürfe leeren; Repository nicht direkt aus der UI exponieren. Nach irreversibler Stilllegung bei Fehlern explizit neu starten.
+**Nicht verwechseln:** Ein nacktes SupervisorJob ohne Parent wäre der Fehler aus §2.6; der verwendete Arbeitsjob hat ausdrücklich den Lebenszeitjob als Parent.
+**Lokale Referenz:** Gedankenspeicher L-2-5-01/02, L-3-2-01, bis zu drei getrennte Gegenleseanläufe.
+
+### 2.12 Erfolgreich erzeugte Datei geht bei Cancellation verloren (lokaler Fund)
+**Beweis:** IO kopiert einen Anhang oder rendert PNG erfolgreich; vor Rückkehr wird das Blatt geschlossen, `withContext` verwirft das Ergebnis. Ein catch nur im IO-Block sieht diesen Abbruch nicht.
+**Fix:** Dateireferenz außerhalb des Dispatcherblocks halten und bei fehlgeschlagener Rückkehr aufräumen; Cancellation erneut werfen. Bei Vorsynthese alle erzeugten Dateien auftragseigen erfassen und erst nach Abbruch plus Join der Produzenten löschen. Keine Live-Referenzliste zum Bereinigen eines älteren DB-Backups verwenden: dessen Dateireferenzen können abweichen.
+**Lokale Referenz:** Gedankenspeicher L-2-3-02, L-2-6-04, L-2-8-1/2; zurückgenommener Filter L-2-3-03.
 
 ## 3. Null-Safety
 

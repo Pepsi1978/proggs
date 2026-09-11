@@ -359,17 +359,20 @@ class Repository(
         profilAnweisung: String,
         websuche: Boolean,
         websucheErzwingen: Boolean = false,
-    ): String = codex.werteAus(notizen, rueckfrage, antwort, profilAnweisung, websuche, modell(), effort(), websucheErzwingen)
+        modellId: String = einstellungen.codexModell,
+        effortId: String = einstellungen.codexEffort,
+    ): String = codex.werteAus(notizen, rueckfrage, antwort, profilAnweisung, websuche,
+        CodexModel.fromLabel(modellId), ReasoningEffort.fromLabel(effortId), websucheErzwingen)
 
     /**
      * Setzt den Sitzungstitel aus der ersten Notiz — aber nur, wenn er noch der
      * Auslieferungstitel ist. Ein von Hand vergebener bleibt stehen (F-12).
      */
-    suspend fun setzeTitelWennNochKeiner(sitzungId: Long, ersteNotiz: String) {
+    suspend fun setzeTitelWennNochKeiner(sitzungId: Long, ersteNotiz: String, notizId: Long? = null) {
         val sitzung = db.sitzungen().eine(sitzungId) ?: return
         if (sitzung.titelVonHand || sitzung.titel != "Neue Sitzung") return
         val titel = holeSitzungstitel(ersteNotiz).takeIf(String::isNotBlank) ?: return
-        db.sitzungen().setzeKiTitel(sitzungId, titel)
+        db.sitzungen().setzeKiTitel(sitzungId, titel, notizId)
     }
 
     // --- Der Auswertungs-Kontext (F-09, Schritt 1) ------------------------------------------

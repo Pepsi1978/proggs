@@ -61,8 +61,8 @@ interface SitzungDao {
     @Query("UPDATE sitzung SET titel = :titel, titelVonHand = :vonHand WHERE id = :id")
     suspend fun setzeTitel(id: Long, titel: String, vonHand: Boolean)
 
-    @Query("UPDATE sitzung SET titel = :titel WHERE id = :id AND titelVonHand = 0 AND titel = 'Neue Sitzung'")
-    suspend fun setzeKiTitel(id: Long, titel: String)
+    @Query("UPDATE sitzung SET titel = :titel WHERE id = :id AND titelVonHand = 0 AND titel = 'Neue Sitzung' AND (:notizId IS NULL OR EXISTS (SELECT 1 FROM notiz WHERE id = :notizId AND sitzungId = :id))")
+    suspend fun setzeKiTitel(id: Long, titel: String, notizId: Long?)
 
     @Query("UPDATE sitzung SET favorit = CASE favorit WHEN 1 THEN 0 ELSE 1 END WHERE id = :id")
     suspend fun favoritUmschalten(id: Long)
@@ -147,7 +147,7 @@ interface NotizDao {
     /** Notizen ohne Überschrift, die eine bekommen sollen (F-05, Fehlerfall: beim nächsten Start). */
     @Query(
         "SELECT * FROM notiz WHERE zustand = 'FERTIG' AND ueberschrift IS NULL " +
-            "AND ueberschriftVonHand = 0 ORDER BY erstelltAm ASC LIMIT 20",
+            "AND ueberschriftVonHand = 0 AND length(trim(text)) > 0 ORDER BY erstelltAm ASC LIMIT 20",
     )
     suspend fun ohneUeberschrift(): List<Notiz>
 

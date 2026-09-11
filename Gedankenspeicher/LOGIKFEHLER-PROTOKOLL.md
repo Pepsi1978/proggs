@@ -47,7 +47,7 @@
 
 ## 3. Loop-Zustand
 
-- **Aktuelle Runde:** 2 abgeschlossen, Auslieferung 0.6.7; danach Runde 3, Stufe 3. Alle offenen Teilprüfungen wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
+- **Aktuelle Runde:** 3 abgeschlossen, Auslieferung 0.6.8; danach Runde 4, Stufe 4. Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
   - **Bereich 5 – Aufnahme**
     - L-2-5-01 (mittel): MicRecorder, start() während stop() in joinAll → der Puffer der alten Aufnahme wird geleert, das finally des alten Jobs beendet die neue Aufnahme.
   - **Bereich 4 – KI-Anbindung**
@@ -81,7 +81,7 @@
   **Eigene Stufe-2-Prüfung abgeschlossen:** 1A/1B (`MainActivity.kt`, Manifest, drei `res/xml`-Dateien, `app/build.gradle.kts`; Erstlektüre plus gezielte Rückruf-/Sichtbarkeitsgegenprüfung); 3A (`data/Modell.kt`, `Datenbank.kt`, `Dao.kt`, `Repository.kt`, `settings/Einstellungen.kt`, `Nachtraege.kt`); 4A (`auth/CodexAuthManager.kt`, `CodexAufgaben.kt`); 5B (`hintergrund/AuswertungsDienst.kt`, `VorleseDienst.kt`); 6A (`tts/Vorleser.kt`, `Absatzabspieler.kt`, `Absaetze.kt`); 7 (alle sechs Cloud-TTS-Dateien aus der Karte). Die bereits abgeschlossenen Teilprüfungen der Übergabe bleiben gültig.
   **Triage:** Alle 17 Vormeldungen bestätigt, außer L-2-3-01: Klärungsbedarf (Dateizahl statt logischer Anhänge, auch reine Textanhänge betroffen; gewünschte Zählweise offen). (a) bestätigt als L-2-11-3; (b) bestätigt als L-2-6-04; (c) bestätigt als L-2-5-02 für Lesefehler (Zeitlimit wird bereits vom VM überwacht); (d)/(e)/(f)/(h) unter L-2-10-05…08 bestätigt, (g) abgelehnt wie oben. SQLite lower/LIKE ist ohne ICU ASCII-beschränkt; Kleinschreiben allein des Suchbegriffs behebt keine Großumlaute im Bestand.
   **Triage der neuen Prüfermeldungen:** L-2-2-01…14 bestätigt. L-2-9-01/03 bestätigt; L-2-9-02/04 und L-2-10-13 Klärungsbedarf (Layout-/Entwurferhaltung benötigt gezielte Geräteprüfung, im Schnellmodus nicht durchgeführt). L-2-10-05…12 bestätigt. Ein gemeldeter Layoutverdacht wird ohne Geräteprüfung nicht als behoben ausgegeben.
-- **Nächste Tiefenstufe:** 3 (Grenzen, Zustand, Zeit und Aufrufer)
+- **Nächste Tiefenstufe:** 4 (Invarianten und Gegenbeweise)
 - **Konvergenzzähler:** 0
 - **Nächster Blickwinkel:** Stufe 2. Die in Runde 1 geänderten Stellen sind als „kürzlich verändert“ markiert
 - **Offene Fixe:** keine
@@ -217,6 +217,7 @@ Stellen relativ zu `app/src/main/java/de/frank/gedankenspeicher/`; VM = `ui/Haup
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 1 | Überblick; Zweitprüfer für die Bereiche 2 und 3 | ja (14 Prüfer, alle Dateilisten da) | ~70 (61 nach Zusammenführung) | 59 | 1 | 2 (L-1-3-7, L-1-10-5 nach Rücknahme) | 58 | 58 | Build grün, 13/13 Unit-Tests grün (Basislinie 0) | 0 |
 | 2 | 2 | Funktionsverträge und Randfälle; einzelne Lesehelfer | ja (Dateilisten in Abschnitt 3) | 50 + Beobachtung (g) | 46 | 1 Beobachtung | 5 inkl. Rücknahme | 45 | 45 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
+| 3 | 3 | Suspend-Grenzen, zeitliche Reihenfolge, Ressourcenlebenszeit | ja, gezielte Vertragsprüfung je Bereich (siehe Abdeckung) | 13 | 13 | 0 | 0 neu | 13 | 13 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 
 ### Runde 2 – verbindliche Endstatus und Fixnachweise
 
@@ -277,6 +278,51 @@ Alle Beweise/Stellen stehen in den Eingangsmeldungen und der Triage oben. **Veri
 | Beobachtung (g) | abgelehnt | Sitzungswechsel leert Einträge atomar mit dem Kopf; behaupteter Altlistenpfad nicht belegt. |
 
 ## 6. Klärungsbedarf
+
+### Runde 3 – laufende Prüfung, Funde sofort erfasst
+
+Bereich 2 (VM und Zustand) auf Stufe 3 vollständig vom einzelnen Leseprüfer gelesen; Aufrufer aus MainActivity, Repository/DAO, Aufnahme, KI-Blatt und Stimmen gezielt verfolgt. Alle folgenden Meldungen vom Koordinator an den angegebenen Funktionen gegen die oben gelesenen Verträge triagiert: bestätigt. Die Erstfundzeilen beziehen sich auf 0.6.7.
+
+| ID | Schwere | Stelle | Beweis (Zustand → Ist → Soll) | Status |
+|---|---|---|---|---|
+| L-3-2-01 | hoch | HauptViewModel.kt:1954–1962 | Restore während DB-Arbeit → geschlossene/ausgetauschte DB wird weiter benutzt → Arbeiter vollständig stilllegen. | bestätigt |
+| L-3-2-02 | mittel | HauptViewModel.kt:761–763,1007 | Transkription A→B verschoben → Titel in A → Titel für aktuelle Zuordnung. | bestätigt |
+| L-3-2-03 | hoch | HauptViewModel.kt:412–418,2090 | Hintergrund während Schutz-SQL → alter Rückruf gibt wieder frei → Freigabegeneration beachten. | bestätigt |
+| L-3-2-04 | hoch | HauptViewModel.kt:215–225 | Früher Sitzungswechsel/Aufnahme vor Init-Ende → Init setzt Sitzung null → aktiven Zustand erhalten. | bestätigt |
+| L-3-2-05 | mittel | HauptViewModel.kt:363–368,665 | Aufnahme startet während bereits angestoßenem Sitzungswechsel → Stopp speichert in B → Übergang reservieren/Aufnahmeziel fixieren. | bestätigt |
+| L-3-2-06 | mittel | HauptViewModel.kt:667–689,802 | Diktate A/B im selben Blatt → B antwortet schneller und steht vor A → Aufnahmefolge erhalten. | bestätigt |
+| L-3-2-07 | mittel | HauptViewModel.kt:1167–1175 | Speichern A läuft, Blatt B geöffnet → Abschluss A schließt B → Speicherrückruf generationsgebunden. | bestätigt |
+| L-3-2-08 | mittel | HauptViewModel.kt:1487–1513 | Prozesstod nach Schlüssel-Commit vor Entprellung → KEIN_SCHLUESSEL bleibt trotz Schlüssel → beim Start nachholen. | bestätigt |
+| L-3-2-09 | mittel | HauptViewModel.kt:1654–1670 | Stimme mit Schlüssel A angelegt, inzwischen B → A-ID in B-Auswahl → Ergebnisschlüssel prüfen. | bestätigt |
+| L-3-2-10 | mittel | HauptViewModel.kt:1585–1609,1680 | Löschen während Listenabruf → veraltete Liste setzt gelöschte Stimme zurück → Liste invalidieren und Nachladen vormerken. | bestätigt |
+| L-3-2-11 | mittel | HauptViewModel.kt:647–654 | Uhr eine Stunde vorgestellt → Aufnahme sofort beendet → monotone Dauer. | bestätigt |
+| L-3-2-12 | niedrig | HauptViewModel.kt:1295–1318 | Modell während Auswertung geändert → falsche Metadaten gespeichert → Anfrage-/Ergebniskonfiguration gemeinsam erfassen. | bestätigt |
+| L-3-2-13 | mittel | Dao.kt:148–152 | 20 leere Anhangsnotizen vor Textnotizen → LIMIT verhindert Titel-Nachholen dauerhaft → leere Texte vor LIMIT ausschließen. | bestätigt |
+
+**Gegenlesen Runde 3, Anlauf 1:** zwölf IDs bestanden. L-3-2-01 erforderte Nachbesserung: externe Profilaktivierung und Export an denselben Arbeitsjob binden; Mikrofon vor Join freigeben; während Wiederherstellung Eingaben modal sperren und Entwurf vor dem Leeren zusätzlich prüfen. Diese drei Restpfade gehören zum vollständigen Restore-Vertrag, keine separaten Fundzahlen. Anlauf 2 umgesetzt. Build der ersten Charge grün, Tests nicht ausgeführt.
+**L-3-2-01, Anlauf 3:** Direkte Notizabfragen aus Compose ebenfalls in den Arbeitsjob verschoben; Profil-/Notizzahl-Flows werden darin gesammelt. Repository ist nun privat, damit die Oberfläche keine unverwalteten DB-Zugriffe mehr starten kann. Nach erneut negativem Gegenlesen ist dieser Fix zurückzunehmen.
+**Endstatus Runde 3:** L-3-2-01…13 sind behoben und getrennt statisch verifiziert, jeweils (1) Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Null/Leer/Grenzen berücksichtigt. L-3-2-01 bestand Anlauf 3, übrige Anlauf 1. Fixreferenz: Runde-3-Commit/0.6.8. Kein Regressionstest wegen aktivem Schnellmodus; kein Laufzeitbeweis behauptet.
+
+### Abdeckung Runde 3 (Dateiliste und geprüfte Verträge)
+
+Quellpfade relativ zu `app/src/main/java/de/frank/gedankenspeicher`; bekannte Funde gelten als bekannt, erneutes Lesen nur gezielt. Ressourcen/Builddateien relativ zum Projekt.
+
+| Bereich | Dateiliste | Stufe-3-Blick / Ergebnis |
+|---|---|---|
+| 1 | `MainActivity.kt`, `app/src/main/AndroidManifest.xml`, `app/src/main/res/xml/backup_rules.xml`, `data_extraction_rules.xml`, `dateipfade.xml`, `app/build.gradle.kts` | Rückrufe, modal überlagerte Inhalte, externe DB-Aufrufe; Funde unter 2. |
+| 2 | `ui/HauptViewModel.kt`, `ui/Zustand.kt` | Vollständige Stufe-3-Lektüre durch einzelnen Prüfer, 13 bestätigte Funde. |
+| 3 | `data/Modell.kt`, `Datenbank.kt`, `Dao.kt`, `Repository.kt`, `Nachtraege.kt`, `Anhaenge.kt`, `Sicherung.kt`, `settings/Einstellungen.kt` | Schreibreihenfolge/Read-Modify-Write, Titelzuordnung, Wiederanlauf; Funde unter 2. Sicherungsbereinigung bleibt Klärung. |
+| 4 | `auth/CodexAuthManager.kt`, `CodexAufgaben.kt`, `CodexModels.kt`, `DeviceCodeFormat.kt`, `ActiveCallTracker.kt`, `IntroQuestionPolicy.kt`, `QuestionResponseValidator.kt`, `StreamingQuestionDecoder.kt`, `network/OkHttpShutdown.kt` | Anfragekonfiguration, Abbruch, SSE-Abschluss, ungenutzte Fragenlistenpfade abgegrenzt; Metadatenfund unter 2, keine weiteren bestätigten Funde. |
+| 5 | `audio/AufnahmeDienst.kt`, `MicRecorder.kt`, `GroqTranscriber.kt`, `GroqModels.kt`, `SpeechAnalyzer.kt`, `WhisperHallucinationFilter.kt`, `hintergrund/AuswertungsDienst.kt`, `VorleseDienst.kt` | WAV-Rate/Größe, Read-Abbruch/Join, gespeicherte Folgeaufträge und Zeit; Funde unter 2. |
+| 6 | `tts/Vorleser.kt`, `Absaetze.kt`, `Absatzabspieler.kt`, `GeraetTtsPlayer.kt`, `SpeechLoudness.kt`, `TtsCatalog.kt` | Absatzreihenfolge, Pause, Datei-Ownership, Geräte-Rückrufe; keine neuen bestätigten Funde. |
+| 7 | `tts/EdgeTtsPlayer.kt`, `GoogleCloudTtsPlayer.kt`, `QwenTtsPlayer.kt`, `QwenVoiceDirectory.kt`, `QwenVoiceEnrollment.kt`, `TtsNetz.kt` | Schlüssel-/Modellbindung, Antworten/Abbruch/Dateiübergabe; Stimmenfunde unter 2. |
+| 8 | `ui/verlauf/Anhaenge.kt` | Abbruch während Kopieren/Zeichnen, Eigentümer des Zielblatts, interner Haftnotizdialog; bekannte Fixe, keine weiteren bestätigten Funde. |
+| 9 | `ui/verlauf/VerlaufBildschirm.kt`, `Notizkarte.kt`, `BearbeitenBlatt.kt`, `AntwortBearbeitenBlatt.kt` | Scrollschlüssel, Diktat/Speichern und Wiederöffnung; Speicherabschlussfund unter 2, Layoutfragen bleiben offen. |
+| 10 | `ui/verlauf/Reichtext.kt`, `KiKarte.kt`, `ui/ki/KiBlatt.kt`, `ui/einstellungen/ProfileBildschirm.kt` | Text-/Absatz-/Tabellenkontrakte, Modellmetadaten, Profilaktivierung; Funde unter 2, Quellenblock/Layouts bleiben Klärung. |
+| 11 | `ui/sitzungen/Schublade.kt`, `ui/suche/SucheBildschirm.kt`, `ui/einstellungen/EinstellungenBildschirm.kt`, `AnmeldungBildschirm.kt` | Filter/Suchschlüssel, veraltete Einstellungen/Listen; Stimmenfunde unter 2, keine zusätzlichen bestätigten Funde. |
+| 12 | `ui/theme/Theme.kt`, `Farben.kt`, `Type.kt`, `Motion.kt`, `Bausteine.kt`, `ui/Dialoge.kt`, `ui/verlauf/Bildspeicher.kt`, `Zwischenspeicher.kt` | Zustands-/Cache-Schlüssel, reaktive Eingaben, konstante Designwerte; keine neuen bestätigten Funde. |
+
+**Vormerkung Runde 4:** Zeitzonenwechsel bei den gecachten `SimpleDateFormat`-Werten von Repository/Nachtraege prüfen: Formate halten die bei Erzeugung gültige Zone fest. Noch kein bestätigter Fund.
 
 - **L-1-10-5 – Quellenblöcke in KI-Auswertungen (nach 3 Anläufen zurückgenommen).** `ohneQuellen` erkennt nur Zeilen, die mit „Quellen:“ beginnen. „**Quellen:**“, „## Quellen“ und die darunter stehende Linkliste bleiben stehen.
   - Deutung A: Nur die einzeilige „Quelle: …“-Zeile soll weg. Dann ist nichts zu tun.

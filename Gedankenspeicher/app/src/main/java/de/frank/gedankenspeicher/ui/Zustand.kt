@@ -58,6 +58,7 @@ data class Verlaufszustand(
     /** Notiz-Kennungen, an denen der Verbessern-Vorgang gerade läuft (F-07). */
     val verbessertGerade: Set<Long> = emptySet(),
     val wertetAus: Boolean = false,
+    val stelltWiederHer: Boolean = false,
     val meldung: String? = null,
     /** Sprungziel aus der Suche: diese Notiz leuchtet einmal auf (M-11). */
     val hebeHervor: String? = null,

@@ -440,7 +440,7 @@ private fun Oberflaeche(
     val suche by vm.suche.collectAsStateWithLifecycle()
     val bearbeitung by vm.bearbeitung.collectAsStateWithLifecycle()
     val anmeldung by vm.anmeldung.collectAsStateWithLifecycle()
-    val profile by vm.profile.collectAsStateWithLifecycle(emptyList())
+    val profile by vm.profile.collectAsStateWithLifecycle()
     val erscheinungId by vm.erscheinung.collectAsStateWithLifecycle()
     val liestVor by vm.vorleser.laeuft.collectAsStateWithLifecycle()
     val vorleseQuelle by vm.vorleser.quelle.collectAsStateWithLifecycle()
@@ -963,7 +963,7 @@ private fun Oberflaeche(
                 beiZeichnung = {
                     notizAnhangMenue = null
                     bereich.launch {
-                        vm.repo.notiz(id)?.let { notiz ->
+                        vm.holeNotiz(id)?.let { notiz ->
                             zeichnungFuer = notiz
                             zeichenblattOffen = true
                         }
@@ -972,7 +972,7 @@ private fun Oberflaeche(
                 beiTabelle = {
                     notizAnhangMenue = null
                     bereich.launch {
-                        vm.repo.notiz(id)?.let { notiz -> tabellenBearbeitung = notiz to null }
+                        vm.holeNotiz(id)?.let { notiz -> tabellenBearbeitung = notiz to null }
                     }
                 },
             )
@@ -1298,7 +1298,7 @@ private fun Oberflaeche(
         }
 
         sitzungLoeschfrage?.let { sitzung ->
-            val anzahl by vm.repo.notizzahl(sitzung.id).collectAsStateWithLifecycle(0)
+            val anzahl by vm.notizzahl(sitzung.id).collectAsStateWithLifecycle()
             Rueckfrage(
                 titel = "Sitzung mit $anzahl ${if (anzahl == 1) "Notiz" else "Notizen"} löschen?",
                 text = "Das lässt sich nicht rückgängig machen.",
@@ -1411,6 +1411,16 @@ private fun Oberflaeche(
                         bereich.launch { schublade.open() }
                     },
                 )
+            }
+        }
+        if (verlauf.stelltWiederHer) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+                androidx.compose.material3.Surface {
+                    androidx.compose.foundation.layout.Column(Modifier.padding(24.dp)) {
+                        androidx.compose.material3.CircularProgressIndicator()
+                        androidx.compose.material3.Text("Die Sicherung wird wiederhergestellt …")
+                    }
+                }
             }
         }
     }
