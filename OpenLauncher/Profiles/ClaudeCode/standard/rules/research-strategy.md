@@ -11,7 +11,7 @@
 Vor JEDER Web-Recherche MUSS Frank per `AskUserQuestion` (anklickbar) gefragt werden, WIE recherchiert
 wird — nie automatisch. Drei sichtbare Schritte:
 1. **Empfehlung** (welcher Weg, 1 Satz).
-2. **Frage 1**: **A** Firecrawl-Quellen + DeepSeek V4 Flash @ DeepInfra (`mm-research.py`, Firecrawl-Free,
+2. **Frage 1**: **A** Firecrawl-Quellen + DeepSeek V4 Flash @ Makora (`mm-research.py`, Firecrawl-Free,
    2 parallel) · **B** dasselbe Modell mit `:online` (`or-research.py`, pay-per-use, 7 parallel) ·
    **C** Schwarm auf dem Host-Modell (Claude Code: Sonnet-5-Schwarm mit `model:"sonnet"`, teuer;
    OpenCode: aktuelles Session-Modell, kein `model:`-Override) · **D** Freitext.
@@ -32,7 +32,7 @@ Engine A holt die Quellen bei Firecrawl; faellt Firecrawl aus oder liefert nicht
 **Tavily** automatisch ein (advanced, 20 Quellen, 3 Chunks/Quelle, Volltext; `MM_TAVILY=always` erzwingt
 beide Wege). Key: `~/SK/Tavily/tavily-api-key.txt`.
 
-A und B nutzen **dasselbe** Modell: `deepseek/deepseek-v4-flash-0731`, Anbieter **DeepInfra** gepinnt,
+A und B nutzen **dasselbe** Modell: `deepseek/deepseek-v4-flash-0731`, Anbieter **Makora** gepinnt,
 `reasoning effort: high`. Unterschied nur in Quellen (A = Firecrawl-Vollseiten, B = `:online`-Websuche)
 und Parallelitaet (A = 2, B = 7). Pin steht als Default in den Skripten (`MM_PROVIDER`/`OR_PROVIDER`).
 

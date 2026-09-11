@@ -10,7 +10,7 @@ Damit muss der Hauptagent die Parallelitaet nicht von Hand orchestrieren und kan
 
 Harte Engine-Limits (Schutz — werden gedeckelt + gewarnt, NICHT ueberschreibbar nach oben):
   A (Firecrawl)  : max **2** gleichzeitig (hartes Free-Limit: 2 concurrent, 5 Suchen/Min);
-                 Auswertung seit 09.09.2026 ueber DeepSeek V4 Flash @ DeepInfra (OpenRouter)
+                 Auswertung seit 09.09.2026 ueber DeepSeek V4 Flash @ Makora (OpenRouter)
   B (:online/or) : max **7** gleichzeitig (`:online` last-stabil, A/B-Test 2026-06-21; Retry faengt Leak §42);
                  gleiches Modell wie A, nur mit `:online`-Websuche statt Firecrawl-Quellen
 
@@ -22,7 +22,7 @@ Aufruf:
     python3 research-swarm.py <A|B> <themes_file> [max_parallel] [model]
       themes_file : eine Recherche-Frage pro Zeile (leere Zeilen ignoriert)
       max_parallel: optional; Default A=2, B=7; ein hoeherer Wert wird auf das Engine-Limit gedeckelt
-      model (nur B): Default `deepseek/deepseek-v4-flash-0731:online` (Anbieter DeepInfra gepinnt)
+      model (nur B): Default `deepseek/deepseek-v4-flash-0731:online` (Anbieter Makora gepinnt)
 
 Output je Researcher: $RESEARCH_SWARM_OUT/answer-<i>.txt (Default ~/.research-swarm) (stdout) + log-<i>.txt (stderr) + run-<i>/ (Rohdaten,
 eigenes OUTDIR je Lauf -> kein gegenseitiges Ueberschreiben). Wiederaufnahme-sicher (answer-<i>.txt > 500 B

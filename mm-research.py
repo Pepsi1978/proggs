@@ -14,10 +14,10 @@ sichtbar bleibt, woher ein Beleg stammt.
 
 UMSTELLUNG 09.09.2026: Die Auswertung (Stufe 2) lief frueher ueber MiniMax M3 auf dem
 opencode.ai/zen/go-Gateway (Anthropic-/messages-Schema). Sie laeuft jetzt ueber OpenRouter
-(/chat/completions) mit `deepseek/deepseek-v4-flash-0731`, Anbieter auf **DeepInfra** gepinnt
-(`provider.order=["deepinfra"]`, `allow_fallbacks=False`). Verifiziert 09.09.2026 gegen die
+(/chat/completions) mit `deepseek/deepseek-v4-flash-0731`, Anbieter auf **Makora** gepinnt
+(`provider.order=["makora"]`, `allow_fallbacks=False`). Verifiziert 09.09.2026 gegen die
 OpenRouter-API: Endpunkt vorhanden, `reasoning_effort` unterstuetzt, 1.048.576 Token Kontext,
-$0.06 / $0.18 pro Mio Token (in/out).
+$0.09/$0.195 pro Mio Token (in/out).
 
 Der Clou: Die Roh-Quellen laufen NIE durch den teuren Claude-Kontext (Firecrawl -> hier -> DeepSeek).
 Gemessen 2026-06-20: ~2.400 Claude-Token statt ~249.000 bei einem Opus-Researcher (~100x weniger),
@@ -26,7 +26,7 @@ bei besserer Ehrlichkeit. Auswerte-Token laufen separat ueber OpenRouter (pay-pe
 Verwendung:
     python3 mm-research.py "deine Recherche-Frage" [anzahl_quellen] [modell]
     MM_MODEL     (env) — Auswerte-Modell, Default `deepseek/deepseek-v4-flash-0731`.
-    MM_PROVIDER  (env) — OpenRouter-Anbieter, Default `deepinfra`. LEER = kein Pin (freies Routing).
+    MM_PROVIDER  (env) — OpenRouter-Anbieter, Default `makora`. LEER = kein Pin (freies Routing).
     MM_EFFORT    (env) — reasoning effort, Default `high`.
     MM_TAVILY    (env) — `fallback` (Default) | `always` | `off`, siehe oben.
 
@@ -59,10 +59,10 @@ TV_URL = "https://api.tavily.com/search"                   # Rueckfall-Suche (se
 TAVILY_MODE = os.environ.get("MM_TAVILY", "fallback").lower()
 MIN_MARKDOWN = 200   # kuerzer als das gilt ein Treffer als leer (Cookie-Banner/Fehlerseite)
 MODEL = os.environ.get("MM_MODEL", "deepseek/deepseek-v4-flash-0731")
-# Anbieter-Pin: DeepInfra ist vorgegeben. allow_fallbacks=False, damit wirklich DeepInfra bedient
+# Anbieter-Pin: Makora ist vorgegeben. allow_fallbacks=False, damit wirklich Makora bedient
 # und nicht still auf einen anderen Anbieter geroutet wird (Preis/Verhalten waeren sonst andere).
-# MM_PROVIDER="" schaltet den Pin ab, falls DeepInfra mal ausfaellt.
-PROVIDER = os.environ.get("MM_PROVIDER", "deepinfra")
+# MM_PROVIDER="" schaltet den Pin ab, falls Makora mal ausfaellt.
+PROVIDER = os.environ.get("MM_PROVIDER", "makora")
 EFFORT = os.environ.get("MM_EFFORT", "high")
 # MM_OUTDIR ueberschreibbar, damit PARALLELE Laeufe (Continuous-Spawning mit 2, Firecrawl-Free-Limit)
 # je eine eigene sources.json/answer.json/thinking.txt haben (sonst ueberschreiben sie sich — der

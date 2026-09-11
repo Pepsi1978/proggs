@@ -6,10 +6,10 @@
 > gleicher/besserer Qualitaet. Werkzeuge: `~/proggs/mm-research.py`, `or-research.py`, `research-swarm.py`.
 >
 > **Auswerte-Modell seit 09.09.2026:** A UND B nutzen `deepseek/deepseek-v4-flash-0731` ueber OpenRouter,
-> Anbieter **DeepInfra** gepinnt (`provider.order=["deepinfra"]`, `allow_fallbacks=false`), reasoning
+> Anbieter **Makora** gepinnt (`provider.order=["makora"]`, `allow_fallbacks=false`), reasoning
 > effort **high**. Loest MiniMax M3 (Go-Gateway) ab. Verifiziert 09.09.2026 gegen die OpenRouter-API:
-> Endpunkt DeepInfra vorhanden, `reasoning_effort` unterstuetzt, 1.048.576 Token Kontext,
-> $0.06 / $0.18 pro Mio Token. Der Pin steht als Default IN den Skripten (`MM_PROVIDER`/`OR_PROVIDER`,
+> Endpunkt Makora vorhanden, `reasoning_effort` unterstuetzt, 1.048.576 Token Kontext,
+> $0.09/$0.195 pro Mio Token. Der Pin steht als Default IN den Skripten (`MM_PROVIDER`/`OR_PROVIDER`,
 > leer = kein Pin).
 >
 > **Engine C haengt seit 09.09.2026 vom Harness ab** (§4a): Claude Code → Sonnet-5-Schwarm
@@ -57,7 +57,7 @@ Kurze Empfehlung (1 Satz Begruendung), welcher Weg fuer GENAU DIESE Recherche-Ar
 
 | Option | Weg | Werkzeug | Parallel | Kosten |
 |--------|-----|----------|----------|--------|
-| **A** | Firecrawl holt volle Seiten (**Rueckfall: Tavily**) → **DeepSeek V4 Flash @ DeepInfra** (effort high) wertet aus — Standard | `mm-research.py` | 2 | Firecrawl-Free (1000/Mon) + ~0,1 ct Modell-Token |
+| **A** | Firecrawl holt volle Seiten (**Rueckfall: Tavily**) → **DeepSeek V4 Flash @ Makora** (effort high) wertet aus — Standard | `mm-research.py` | 2 | Firecrawl-Free (1000/Mon) + ~0,1 ct Modell-Token |
 | **B** | Eskalation: **dasselbe DeepSeek-Modell** mit `:online` (OpenRouter-Websuche, web-Plugin) | `or-research.py … deepseek/deepseek-v4-flash-0731:online` | 7 | pay-per-use (~1 ct/Researcher), kein Monatslimit |
 | **C** | Schwarm auf dem **Host-Modell** — teuer, nur bewusst. Claude Code → **Sonnet-5-Schwarm** (`model:"sonnet"`). OpenCode → **aktuelles Session-Modell** (kein `model:`-Override, eigene Websuche) | Agent-/Task-Tool | 7 | Claude-Sonnet-5-Token bzw. OpenCode-Session-Token |
 | **D** | [automatisches Freitext-Feld] — etwas anderes / erst besprechen | — | — | — |
@@ -77,9 +77,9 @@ kommt von Firecrawl Free, nicht vom Auswerte-Modell.
   `fallback` (Default) · `always` (immer beide) · `off`. Key: `~/SK/Tavily/tavily-api-key.txt`.
   Inhaltlich duenne (nicht leere) Firecrawl-Ergebnisse kann das Skript NICHT erkennen — wenn Frank das
   sagt, den Lauf mit `MM_TAVILY=always` wiederholen.
-- **A UND B pinnen den Anbieter auf DeepInfra** (`provider.order=["deepinfra"]`, `allow_fallbacks=false`).
+- **A UND B pinnen den Anbieter auf Makora** (`provider.order=["makora"]`, `allow_fallbacks=false`).
   Das steht als Default in den Skripten; `MM_PROVIDER=""` bzw. `OR_PROVIDER=""` schaltet den Pin ab,
-  falls DeepInfra ausfaellt (dann routet OpenRouter frei — Preis und Verhalten koennen abweichen).
+  falls Makora ausfaellt (dann routet OpenRouter frei — Preis und Verhalten koennen abweichen).
 - **Option C nur wenn Frank sie ausdruecklich waehlt** — nie Default. Welches Modell C bedeutet, haengt
   seit 09.09.2026 vom Harness ab, siehe §4a.
 
@@ -96,7 +96,7 @@ bewusst (Feature, kein Reibungsverlust).
 
 ```
 Stufe 1 HOLEN:      Firecrawl holt die Quellen (Firecrawl-Credits)
-Stufe 2 AUSWERTEN:  DeepSeek V4 Flash @ DeepInfra (effort high) filtert + bewertet   ← mm-research.py
+Stufe 2 AUSWERTEN:  DeepSeek V4 Flash @ Makora (effort high) filtert + bewertet   ← mm-research.py
                     quellentreu (Rohdaten + Reasoning landen in ~/.mm-research/,
                     NIE im teuren Hauptagent-Kontext)
 Stufe 3 EINARBEITEN: Hauptagent synthetisiert (~2k Token) + arbeitet in Almanach/Best-Practices ein
@@ -110,12 +110,12 @@ durch den teuren Hauptagent-Kontext); der Hauptagent zahlt nur die ~2k-Token-Syn
 
 | Werkzeug | Suche | Auswertung | Inhalt | Kosten | Parallel | Wann |
 |----------|-------|-----------|--------|--------|----------|------|
-| `mm-research.py` | Firecrawl | DeepSeek V4 Flash @ DeepInfra | **volle Seiten** | Free **1000/Mon** + ~$0.001 Token | **max 2** | tiefe Einzelrecherche, solange Credits da |
+| `mm-research.py` | Firecrawl | DeepSeek V4 Flash @ Makora | **volle Seiten** | Free **1000/Mon** + ~$0.001 Token | **max 2** | tiefe Einzelrecherche, solange Credits da |
 | `or-research.py … :online` | OpenRouter `:online` (web-Plugin, Engine intern parallel.ai) | dasselbe Modell | **Top-N Snippets** | **$0.005/Suche** + Token, **kein Monatslimit** | **bis 7** | Eskalation, Continuous-Spawning |
 
 Engine B nutzt `:online` (NICHT das `web_search`-Server-Tool — `:online` verteilt selbst auf mehrere
 Provider, bei hoher Parallelitaet stabiler). Modell-Default `deepseek/deepseek-v4-flash-0731:online`
-(Anbieter DeepInfra gepinnt), Eskalation mit mehr Denkkraft `z-ai/glm-5.2:online`. Deckel gegen agentische Mehrfachsuche: `max_total_results` (or-research: env
+(Anbieter Makora gepinnt), Eskalation mit mehr Denkkraft `z-ai/glm-5.2:online`. Deckel gegen agentische Mehrfachsuche: `max_total_results` (or-research: env
 `OR_MAX_TOTAL`, Default 10). Kosten ~<1 Cent/Anfrage (7-Researcher-Lauf ≈ $0.12 vs. Opus-Researcher ≈ $7+).
 
 ---
@@ -132,7 +132,7 @@ ganze Welle warten.** Konstant so viele gleichzeitig, wie die Engine erlaubt:
 
 | Engine | Konstant gleichzeitig | Nachschub |
 |--------|----------------------|-----------|
-| A — Firecrawl (mm) → DeepSeek @ DeepInfra | **2** (hartes Firecrawl-Free-Limit) | einer fertig → sofort der naechste |
+| A — Firecrawl (mm) → DeepSeek @ Makora | **2** (hartes Firecrawl-Free-Limit) | einer fertig → sofort der naechste |
 | B — `:online` (or), dasselbe DeepSeek-Modell | **7** (last-stabil) | einer fertig → sofort der naechste |
 | C — Host-Modell-Schwarm (Sonnet 5 bzw. Session-Modell) | **7** | einer fertig → sofort der 7. neu (nie auf alle 7 warten) |
 
@@ -148,8 +148,8 @@ von Hand (erst 7, bei jeder Completion sofort den naechsten).
 Meldet die MiniMax-Auswertung "unsicher/widerspruechlich/Quellen reichen nicht" ODER will Frank gruendlicher:
 
 ```
-A: Firecrawl-Quellen → DeepSeek V4 Flash @ DeepInfra   ← Standard (mm-research.py), Firecrawl-Free, 2 parallel
-B: DeepSeek V4 Flash :online @ DeepInfra               ← or-research.py … :online, pay-per-use, bis 7 parallel
+A: Firecrawl-Quellen → DeepSeek V4 Flash @ Makora   ← Standard (mm-research.py), Firecrawl-Free, 2 parallel
+B: DeepSeek V4 Flash :online @ Makora               ← or-research.py … :online, pay-per-use, bis 7 parallel
 C: Schwarm auf dem Host-Modell (Agent-Tool)            ← teuerste Stufe, nur Hard-Cases
      Claude Code → Sonnet-5-Schwarm, model:"sonnet"
      OpenCode    → aktuelles Session-Modell, KEIN model:-Override

@@ -8,16 +8,16 @@ Dieses Skript nutzt den neuen Weg: `tools:[{"type":"openrouter:web_search", "par
 Das Modell entscheidet selbst, ob/wie oft es sucht (0..N Suchen pro Request, mit max_total_results gedeckelt).
 
 Unterschied zu mm-research.py:
-  - mm-research.py: Firecrawl (Free 1000/Mon, VOLLE Seiten) -> DeepSeek V4 Flash @ DeepInfra wertet aus.
+  - mm-research.py: Firecrawl (Free 1000/Mon, VOLLE Seiten) -> DeepSeek V4 Flash @ Makora wertet aus.
   - or-research.py: OpenRouter web_search server tool (Snippets) -> ein Call; Modell sucht + wertet
     selbst aus. Pay-per-use, KEIN Monatslimit. Ideal als Eskalations-Stufe B (1M + Websuche) ODER
     fuer grosse Schwaerme (kein 2-parallel-Limit wie Firecrawl).
 
 Verwendung:
     python3 or-research.py "deine Recherche-Frage" [modell] [engine]
-    Default-Modell: deepseek/deepseek-v4-flash-0731 (1M+, Anbieter DeepInfra gepinnt; seit 09.09.2026).
+    Default-Modell: deepseek/deepseek-v4-flash-0731 (1M+, Anbieter Makora gepinnt; seit 09.09.2026).
     Eskalation: z-ai/glm-5.2 (mehr Denkkraft, 1M).
-    OR_PROVIDER (env) — OpenRouter-Anbieter, Default "deepinfra". LEER = kein Pin (freies Routing).
+    OR_PROVIDER (env) — OpenRouter-Anbieter, Default "makora". LEER = kein Pin (freies Routing).
     Engine (3. Arg oder env OR_ENGINE): parallel (DEFAULT) | exa | auto | perplexity | native | firecrawl.
       - "parallel" = Such-Engine parallel.ai (NICHT parallele Ausfuehrung!), deckelt Kontext total. DEFAULT.
       - "auto" nutzt native Provider-Suche, falls das Modell sie hat, sonst Exa.
@@ -117,9 +117,9 @@ def main():
         "messages": [{"role": "user", "content": prompt}],
         "reasoning": {"effort": "high"},   # max Thinking (ignoriert, falls Modell es nicht unterstuetzt)
     }
-    # Anbieter-Pin (seit 09.09.2026): DeepInfra ist vorgegeben; allow_fallbacks=False, damit nicht
+    # Anbieter-Pin (seit 09.09.2026): Makora ist vorgegeben; allow_fallbacks=False, damit nicht
     # still auf einen anderen Anbieter geroutet wird. OR_PROVIDER="" schaltet den Pin ab.
-    provider = os.environ.get("OR_PROVIDER", "deepinfra")
+    provider = os.environ.get("OR_PROVIDER", "makora")
     if provider:
         body["provider"] = {"order": [provider], "allow_fallbacks": False}
     if not is_online:
