@@ -70,6 +70,14 @@ class ChatViewModel(private val container: KompassContainer) : ViewModel() {
         _zustand.value = _zustand.value.copy(aktiveSitzung = id, fehler = "", listeOffen = false)
     }
 
+    /** Sprung aus der Suche: das Gespräch öffnen, in dem die gefundene Nachricht steht. */
+    fun oeffneNachricht(nachrichtId: Long) {
+        viewModelScope.launch {
+            val nachricht = repository.ladeNachricht(nachrichtId) ?: return@launch
+            waehleSitzung(nachricht.sitzungId)
+        }
+    }
+
     fun legeSitzungAn() {
         viewModelScope.launch {
             val id = repository.legeSitzung(NEUER_TITEL)

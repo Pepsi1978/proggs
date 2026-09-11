@@ -1,6 +1,8 @@
 package de.frank.kompass.data
 
 import android.content.Context
+import kotlinx.coroutines.flow.first
+import org.json.JSONObject
 import de.frank.kompass.data.local.AktualisierungEntity
 import de.frank.kompass.data.local.ChatNachrichtEntity
 import de.frank.kompass.data.local.ChatSitzungEntity
@@ -18,6 +20,30 @@ import de.frank.kompass.observability.KompassLog
 import de.frank.kompass.observability.probe
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+
+/** Was beim Einspielen einer Sicherung dazukam und was schon da war. */
+data class EinspielBericht(
+    val erklaerungen: Int,
+    val eintraege: Int,
+    val fragen: Int,
+    val gespraeche: Int,
+    val uebersprungen: Int,
+) {
+    fun alsText(): String {
+        val teile = buildList {
+            if (erklaerungen > 0) add("$erklaerungen Erklärungen")
+            if (eintraege > 0) add("$eintraege Einträge")
+            if (fragen > 0) add("$fragen Fragen")
+            if (gespraeche > 0) add("$gespraeche Gespräche")
+        }
+        val kern = if (teile.isEmpty()) {
+            "Sicherung eingespielt: Es war schon alles da."
+        } else {
+            "Sicherung eingespielt: " + teile.joinToString(", ") + " neu."
+        }
+        return if (uebersprungen > 0) "$kern $uebersprungen schon vorhanden oder übersprungen." else kern
+    }
+}
 
 /**
  * Die eine Stelle, an der Daten gelesen und geschrieben werden.
@@ -426,6 +452,165 @@ class KompassRepository(context: Context) {
                 )
             },
         )
+    }
+
+    suspend fun ladeFrage(id: Long): FrageEntity? = fragen.lade(id)
+
+    suspend fun ladeNachricht(id: Long): ChatNachrichtEntity? = chat.ladeNachricht(id)
+
+    // --- Sicherung einspielen -------------------------------------------------------------
+
+    /**
+     * Führt eine Sicherung mit dem Bestand zusammen — beliebig oft, ohne zu verdoppeln.
+     *
+     * Erklärungen werden direkt mit ihrer Stufe gesetzt (die alte Fassung wandert in die
+     * Historie), nicht über „vertiefen“: das hob die Stufe bei jedem Einspielen um eins.
+     * Fragen und Gespräche, die es inhaltsgleich schon gibt, werden übersprungen. Einträge,
+     * die erst per Aktualisieren kamen, legt die Sicherung selbst an, damit ihre Fragen einen
+     * Platz haben.
+     */
+    suspend fun spieleSicherungEin(json: JSONObject): EinspielBericht {
+        val jetzt = System.currentTimeMillis()
+        var erklaerungenNeu = 0
+        var eintraegeNeu = 0
+        var fragenNeu = 0
+        var gespraecheNeu = 0
+        var uebersprungen = 0
+
+        json.optJSONArray("eintraege")?.let { feld ->
+            for (index in 0 until feld.length()) {
+                val objekt = feld.optJSONObject(index) ?: continue
+                val id = objekt.optString("id")
+                val text = objekt.optString("erklaerung")
+                if (id.isBlank()) {
+                    uebersprungen += 1
+                    continue
+                }
+                val vorhanden = eintraege.lade(id)
+                if (vorhanden == null) {
+                    val name = objekt.optString("name")
+                    val bereich = objekt.optString("bereich")
+                    if (name.isBlank() || bereich.isBlank()) {
+                        uebersprungen += 1
+                        continue
+                    }
+                    eintraege.setze(
+                        listOf(
+                            EintragEntity(
+                                id = id,
+                                bereich = bereich,
+                                name = name,
+                                kurz = objekt.optString("kurz"),
+                                erklaerung = text,
+                                stufe = objekt.optInt("stufe", 0),
+                                seitVersion = objekt.optString("seitVersion"),
+                                kategorie = objekt.optString("kategorie"),
+                                art = objekt.optString("art"),
+                                entfernt = objekt.optBoolean("entfernt", false),
+                                entferntInVersion = objekt.optString("entferntInVersion"),
+                                ersatz = objekt.optString("ersatz"),
+                                quelleEnglisch = objekt.optString("quelleEnglisch"),
+                                sortierName = objekt.optString("sortierName")
+                                    .ifBlank { name.removePrefix("/").lowercase() },
+                            ),
+                        ),
+                    )
+                    eintraegeNeu += 1
+                    continue
+                }
+                if (text.isBlank() || text == vorhanden.erklaerung) {
+                    uebersprungen += 1
+                    continue
+                }
+                if (vorhanden.erklaerung.isNotBlank()) {
+                    erklaerungen.sichere(
+                        ErklaerungHistorieEntity(eintragId = id, stufe = vorhanden.stufe, text = vorhanden.erklaerung),
+                    )
+                }
+                eintraege.aktualisiere(
+                    vorhanden.copy(
+                        erklaerung = text,
+                        stufe = objekt.optInt("stufe", vorhanden.stufe),
+                        zuletztGeaendert = jetzt,
+                    ),
+                )
+                erklaerungenNeu += 1
+            }
+        }
+
+        json.optJSONArray("fragen")?.let { feld ->
+            val bekannt = fragen.beobachteAlle().first()
+                .map { Triple(it.eintragId, it.frage, it.antwort) }
+                .toMutableSet()
+            for (index in 0 until feld.length()) {
+                val objekt = feld.optJSONObject(index) ?: continue
+                val eintragId = objekt.optString("eintragId")
+                val frageText = objekt.optString("frage")
+                val antwort = objekt.optString("antwort")
+                val schluessel = Triple(eintragId, frageText, antwort)
+                // Nur zu Einträgen, die es hier gibt — sonst würde der Fremdschlüssel greifen.
+                if (eintragId.isBlank() || frageText.isBlank() || schluessel in bekannt ||
+                    eintraege.lade(eintragId) == null
+                ) {
+                    uebersprungen += 1
+                    continue
+                }
+                fragen.fuegeEin(
+                    FrageEntity(
+                        eintragId = eintragId,
+                        frage = frageText,
+                        antwort = antwort,
+                        erstelltAm = objekt.optLong("erstelltAm", jetzt),
+                    ),
+                )
+                bekannt += schluessel
+                fragenNeu += 1
+            }
+        }
+
+        json.optJSONArray("sitzungen")?.let { feld ->
+            // Ein Gespräch gilt als vorhanden, wenn es eines mit genau denselben Nachrichten gibt.
+            val bekannt = chat.ladeAlleNachrichten()
+                .groupBy { it.sitzungId }
+                .values
+                .map { liste -> liste.map { it.rolle to it.text } }
+                .toMutableSet()
+            for (index in 0 until feld.length()) {
+                val objekt = feld.optJSONObject(index) ?: continue
+                val nachrichten = objekt.optJSONArray("nachrichten")
+                val inhalt = (0 until (nachrichten?.length() ?: 0)).mapNotNull { nummer ->
+                    nachrichten?.optJSONObject(nummer)
+                }
+                val kennung = inhalt.map { it.optString("rolle") to it.optString("text") }
+                if (kennung.isEmpty() || kennung in bekannt) {
+                    uebersprungen += 1
+                    continue
+                }
+                val sitzungId = chat.lege(
+                    ChatSitzungEntity(
+                        titel = objekt.optString("titel").ifBlank { "Eingespielt" },
+                        erstelltAm = objekt.optLong("erstelltAm", jetzt),
+                    ),
+                )
+                inhalt.forEach { nachricht ->
+                    chat.fuegeEin(
+                        ChatNachrichtEntity(
+                            sitzungId = sitzungId,
+                            rolle = nachricht.optString("rolle"),
+                            text = nachricht.optString("text"),
+                            erstelltAm = nachricht.optLong("erstelltAm", jetzt),
+                        ),
+                    )
+                }
+                bekannt += kennung
+                gespraecheNeu += 1
+            }
+        }
+
+        baueSuchIndexNeu()
+        val bericht = EinspielBericht(erklaerungenNeu, eintraegeNeu, fragenNeu, gespraecheNeu, uebersprungen)
+        KompassLog.info("Repository", "spieleSicherungEin", "Sicherung eingespielt", mapOf("bericht" to bericht.toString()))
+        return bericht
     }
 
     companion object {

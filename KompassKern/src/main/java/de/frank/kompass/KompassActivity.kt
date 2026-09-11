@@ -140,7 +140,14 @@ open class KompassActivity : FragmentActivity() {
                     val fragenListe = container.repository.beobachteAlleFragen().first()
                     val sitzungen = container.repository.beobachteSitzungen().first()
                     val nachrichten = sitzungen.flatMap { container.repository.ladeNachrichten(it.id) }
-                    Sicherung.schreibe(eintraege, fragenListe, sitzungen, nachrichten, zeitstempel())
+                    Sicherung.schreibe(
+                        eintraege,
+                        fragenListe,
+                        sitzungen,
+                        nachrichten,
+                        zeitstempel(),
+                        container.repository.seedKennungen(),
+                    )
                 }
                 withContext(Dispatchers.IO) {
                     contentResolver.openOutputStream(ziel)?.use { strom ->
@@ -177,8 +184,10 @@ open class KompassActivity : FragmentActivity() {
                         "${vorschau.sitzungen} Gespräche, ${vorschau.eintraege} vertiefte " +
                         "Erklärungen werden ergänzt.",
                 )
-                withContext(Dispatchers.IO) { spieleEin(json) }
-                zeige("Sicherung eingespielt.")
+                val bericht = withContext(Dispatchers.IO) {
+                    container.repository.spieleSicherungEin(json)
+                }
+                zeige(bericht.alsText())
             } catch (fehler: Exception) {
                 zeige(fehler.message ?: "Die Sicherung liess sich nicht einlesen.")
                 KompassLog.error(
@@ -189,51 +198,6 @@ open class KompassActivity : FragmentActivity() {
                 )
             }
         }
-    }
-
-    private suspend fun spieleEin(json: JSONObject) {
-        val repository = container.repository
-
-        json.optJSONArray("eintraege")?.let { feld ->
-            for (index in 0 until feld.length()) {
-                val eintrag = feld.optJSONObject(index) ?: continue
-                val id = eintrag.optString("id")
-                val text = eintrag.optString("erklaerung")
-                if (id.isNotBlank() && text.isNotBlank()) {
-                    repository.vertiefeErklaerung(id, text)
-                }
-            }
-        }
-
-        json.optJSONArray("fragen")?.let { feld ->
-            for (index in 0 until feld.length()) {
-                val frage = feld.optJSONObject(index) ?: continue
-                val eintragId = frage.optString("eintragId")
-                val frageText = frage.optString("frage")
-                if (eintragId.isBlank() || frageText.isBlank()) continue
-                // Nur zu Einträgen, die es hier gibt — sonst würde der Fremdschlüssel greifen.
-                if (repository.ladeEintrag(eintragId) == null) continue
-                val id = repository.starteFrage(eintragId, frageText)
-                repository.beendeFrage(id, frage.optString("antwort"))
-            }
-        }
-
-        json.optJSONArray("sitzungen")?.let { feld ->
-            for (index in 0 until feld.length()) {
-                val sitzung = feld.optJSONObject(index) ?: continue
-                val id = repository.legeSitzung(sitzung.optString("titel").ifBlank { "Eingespielt" })
-                val nachrichten = sitzung.optJSONArray("nachrichten") ?: continue
-                for (nummer in 0 until nachrichten.length()) {
-                    val nachricht = nachrichten.optJSONObject(nummer) ?: continue
-                    repository.fuegeNachrichtEin(
-                        id,
-                        nachricht.optString("rolle"),
-                        nachricht.optString("text"),
-                    )
-                }
-            }
-        }
-        repository.baueSuchIndexNeu()
     }
 
     private fun zeigeLog() {

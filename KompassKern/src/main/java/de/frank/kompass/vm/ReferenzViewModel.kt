@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.frank.kompass.KompassContainer
 import de.frank.kompass.ai.Prompts
+import de.frank.kompass.data.KompassRepository
 import de.frank.kompass.data.local.EintragEntity
 import de.frank.kompass.data.local.FrageEntity
 import de.frank.kompass.data.local.SuchTreffer
@@ -28,6 +29,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+/** Schlüssel für den Klapp-Bereich „Entfernte Einträge“ in der Menge der aufgeklappten. */
+const val SCHLUESSEL_ENTFERNT = "__entfernt__"
 
 /** Ein Eintrag mit allem, was die Liste für ihn braucht. */
 data class ListenEintrag(
@@ -213,6 +217,41 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
         val meldung: String,
         val fehler: String,
     )
+
+    // --- Sprung aus der Suche -----------------------------------------------------------------
+
+    private val _sprungZiel = MutableStateFlow<String?>(null)
+
+    /** Eintrag, zu dem die Liste scrollen soll; die Liste setzt es nach dem Sprung zurück. */
+    val sprungZiel: StateFlow<String?> = _sprungZiel.asStateFlow()
+
+    /**
+     * Klappt den getroffenen Eintrag auf und merkt ihn als Sprungziel. Bei einem Fragen-Treffer
+     * geht es zum Eintrag der Frage, mit offener Fragenliste; ein entfernter Eintrag öffnet
+     * zusätzlich den Klapp-Bereich, sonst wäre er nach dem Sprung unsichtbar.
+     */
+    fun springeZuTreffer(treffer: SuchTreffer) {
+        viewModelScope.launch {
+            val eintragId = when (treffer.quelleArt) {
+                KompassRepository.ART_EINTRAG -> treffer.quelleId
+                KompassRepository.ART_FRAGE ->
+                    treffer.quelleId.toLongOrNull()?.let { repository.ladeFrage(it)?.eintragId }
+                else -> null
+            } ?: return@launch
+            val eintrag = repository.ladeEintrag(eintragId) ?: return@launch
+            var offen = ausgeklappt.value + eintragId
+            if (eintrag.entfernt) offen = offen + SCHLUESSEL_ENTFERNT
+            ausgeklappt.value = offen
+            if (treffer.quelleArt == KompassRepository.ART_FRAGE) {
+                fragenOffen.value = fragenOffen.value + eintragId
+            }
+            _sprungZiel.value = eintragId
+        }
+    }
+
+    fun sprungErledigt() {
+        _sprungZiel.value = null
+    }
 
     fun schalteAusgeklappt(id: String) {
         ausgeklappt.value = ausgeklappt.value.let { if (id in it) it - id else it + id }
@@ -407,7 +446,14 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
     fun brichAktualisierungAb() {
         laufJob?.cancel()
         laufJob = null
-        _lauf.value = LaufFortschritt(schritt = "Abgebrochen.")
+        // Den Stand behalten statt ihn zu leeren: Neue Einträge sind zu diesem Zeitpunkt schon
+        // eingespielt. Ohne ihre Namen im Bericht erführe man nie davon — der nächste Lauf
+        // hält sie für bekannt und nimmt ihnen auch noch die Hervorhebung.
+        _lauf.value = _lauf.value.copy(
+            laeuft = false,
+            fertig = true,
+            schritt = "Abgebrochen. Was bis dahin eingespielt wurde, ist gespeichert.",
+        )
     }
 
     fun loescheLaufMeldung() {

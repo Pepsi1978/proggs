@@ -44,10 +44,12 @@ object Sicherung {
         sitzungen: List<ChatSitzungEntity>,
         nachrichten: List<ChatNachrichtEntity>,
         erstelltAm: String,
+        seedKennungen: Set<String> = emptySet(),
     ): String {
-        // Nur Einträge mit eigenem Zutun. Ein unveränderter Eintrag steht identisch in der
-        // App und muss nicht mitgeschleppt werden.
-        val eigene = eintraege.filter { it.stufe > 0 }
+        // Einträge mit eigenem Zutun und alle, die erst per Aktualisieren dazukamen. Letztere
+        // stehen nicht in der App: Ohne sie fehlten auf einem neuen Gerät der Eintrag selbst,
+        // seine Erklärung und — über den Fremdschlüssel — jede Frage dazu.
+        val eigene = eintraege.filter { it.stufe > 0 || it.id !in seedKennungen }
         val json = JSONObject()
             .put("schema", SCHEMA_VERSION)
             .put("erstelltAm", erstelltAm)
@@ -56,12 +58,25 @@ object Sicherung {
                 "eintraege",
                 JSONArray().apply {
                     eigene.forEach { eintrag ->
-                        put(
-                            JSONObject()
-                                .put("id", eintrag.id)
-                                .put("erklaerung", eintrag.erklaerung)
-                                .put("stufe", eintrag.stufe),
-                        )
+                        val objekt = JSONObject()
+                            .put("id", eintrag.id)
+                            .put("erklaerung", eintrag.erklaerung)
+                            .put("stufe", eintrag.stufe)
+                        if (eintrag.id !in seedKennungen) {
+                            objekt
+                                .put("bereich", eintrag.bereich)
+                                .put("name", eintrag.name)
+                                .put("kurz", eintrag.kurz)
+                                .put("kategorie", eintrag.kategorie)
+                                .put("art", eintrag.art)
+                                .put("quelleEnglisch", eintrag.quelleEnglisch)
+                                .put("seitVersion", eintrag.seitVersion)
+                                .put("sortierName", eintrag.sortierName)
+                                .put("entfernt", eintrag.entfernt)
+                                .put("entferntInVersion", eintrag.entferntInVersion)
+                                .put("ersatz", eintrag.ersatz)
+                        }
+                        put(objekt)
                     }
                 },
             )

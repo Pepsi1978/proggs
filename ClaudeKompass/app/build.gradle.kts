@@ -38,9 +38,9 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 11
-        versionName = "0.4.12"
+        versionName = "0.4.13"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 14:46 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 14:52 Uhr\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
         buildConfigField("String", "SEEDED_CLI_VERSION", "\"2.1.261\"")
@@ -133,4 +133,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation("org.json:json:20240303")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }

@@ -120,9 +120,16 @@ fun KompassApp(
     if (zeigeSuche) {
         SucheScreen(
             viewModel = referenz,
-            beiTreffer = { getroffenerBereich, _ ->
-                bereich = getroffenerBereich.id
+            beiTreffer = { treffer ->
+                bereich = Bereich.fromId(treffer.bereich).id
                 zeigeSuche = false
+                // Nicht nur den Reiter wechseln: den Treffer aufklappen und hinscrollen bzw.
+                // das Gespräch öffnen, in dem die Nachricht steht.
+                if (treffer.quelleArt == de.frank.kompass.data.KompassRepository.ART_CHAT) {
+                    treffer.quelleId.toLongOrNull()?.let(chat::oeffneNachricht)
+                } else {
+                    referenz.springeZuTreffer(treffer)
+                }
             },
             beiZurueck = { zeigeSuche = false },
         )

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import de.frank.kompass.vm.SCHLUESSEL_ENTFERNT
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -79,10 +80,31 @@ fun ReferenzScreen(
     val vorlesen by viewModel.vorleseZustand.collectAsStateWithLifecycle()
     val diktatZustand by diktat.zustand.collectAsStateWithLifecycle()
     val listenZustand = rememberLazyListState()
+    val sprungZiel by viewModel.sprungZiel.collectAsStateWithLifecycle()
 
     // Wechselt der Bereich, springt die Liste an den Anfang. Ohne das steht man nach dem
-    // Wechsel mitten in einer anderen Liste auf einer zufälligen Position.
-    LaunchedEffect(bereich) { listenZustand.scrollToItem(0) }
+    // Wechsel mitten in einer anderen Liste auf einer zufälligen Position. Kommt der Wechsel
+    // aus der Suche, gewinnt der Sprung zum Treffer.
+    LaunchedEffect(bereich) {
+        if (viewModel.sprungZiel.value == null) listenZustand.scrollToItem(0)
+    }
+
+    // Sprung zum Suchtreffer, sobald die Liste da ist und der Eintrag darin steht.
+    LaunchedEffect(sprungZiel, zustand.laedt, zustand.ausgeklappt, zustand.aktive.size) {
+        val ziel = sprungZiel ?: return@LaunchedEffect
+        if (zustand.laedt) return@LaunchedEffect
+        val aktivIndex = zustand.aktive.indexOfFirst { it.eintrag.id == ziel }
+        val index = when {
+            aktivIndex >= 0 -> aktivIndex
+            SCHLUESSEL_ENTFERNT in zustand.ausgeklappt ->
+                zustand.entfernte.indexOfFirst { it.eintrag.id == ziel }
+                    .takeIf { it >= 0 }
+                    ?.let { zustand.aktive.size + 1 + it }
+            else -> null
+        } ?: return@LaunchedEffect
+        listenZustand.animateScrollToItem(index)
+        viewModel.sprungErledigt()
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (zustand.fehler.isNotBlank() || vorlesen.fehler.isNotBlank()) {
@@ -175,7 +197,6 @@ fun ReferenzScreen(
     }
 }
 
-private const val SCHLUESSEL_ENTFERNT = "__entfernt__"
 
 @Composable
 private fun EntfernteUeberschrift(anzahl: Int, offen: Boolean, beiKlick: () -> Unit) {

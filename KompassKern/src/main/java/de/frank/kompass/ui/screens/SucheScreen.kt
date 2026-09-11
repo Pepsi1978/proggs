@@ -63,7 +63,7 @@ import de.frank.kompass.vm.ReferenzViewModel
 @Composable
 fun SucheScreen(
     viewModel: ReferenzViewModel,
-    beiTreffer: (Bereich, String) -> Unit,
+    beiTreffer: (SuchTreffer) -> Unit,
     beiZurueck: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -254,7 +254,7 @@ private fun VerlaufsListe(
 }
 
 @Composable
-private fun TrefferListe(treffer: List<SuchTreffer>, beiTreffer: (Bereich, String) -> Unit) {
+private fun TrefferListe(treffer: List<SuchTreffer>, beiTreffer: (SuchTreffer) -> Unit) {
     val farben = LocalKompassFarben.current
     val gruppiert = remember(treffer) { treffer.groupBy { it.quelleArt } }
     LazyColumn(
@@ -282,7 +282,7 @@ private fun TrefferListe(treffer: List<SuchTreffer>, beiTreffer: (Bereich, Strin
                         .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(Mass.radiusKlein))
                         .border(1.dp, farben.rahmen, RoundedCornerShape(Mass.radiusKlein))
                         .clickable {
-                            beiTreffer(Bereich.fromId(einzel.bereich), einzel.quelleId)
+                            beiTreffer(einzel)
                         }
                         .padding(Mass.abstand),
                     verticalAlignment = Alignment.CenterVertically,
