@@ -9,6 +9,7 @@ import android.media.MediaPlayer
 import android.os.Build
 import de.frank.genialeideen.data.settings.SecureSettings
 import de.frank.genialeideen.observability.IdeenLog
+import de.frank.genialeideen.tts.SpeechLoudness
 import de.frank.genialeideen.tts.TtsManager
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -77,6 +78,10 @@ class Vorleser(
     /** Wurde wegen eines Anrufs pausiert — danach wird von allein fortgesetzt. */
     private var pausiertDurchFokus = false
 
+    /** Angehalten — gilt auch für den nächsten Absatz, nicht nur für den laufenden Player. */
+    @Volatile private var pausiert = false
+    private var zustandVorPause = VorleseZustand.SPRICHT
+
     fun sprich(quelle: String, titel: String, rohText: String, wiederholen: Boolean = false) {
         if (_stand.value.quelle == quelle && _stand.value.zustand != VorleseZustand.AUS) {
             stopp()
@@ -139,7 +144,7 @@ class Vorleser(
 
     /** Google und die eigene Stimme können vorab erzeugen — hier greift die Vorausschau. */
     private suspend fun pipelineMitVorausschau(absaetze: List<String>) = coroutineScope {
-        val inArbeit = HashMap<Int, Deferred<File>>()
+        val inArbeit = HashMap<Int, Deferred<List<File>>>()
         // Bewusst aus diesem Bereich, nicht aus dem langlebigen: So brechen die vorausgeschickten
         // Auftraege mit ab, sobald auf eine andere Idee gewechselt wird. Aus dem App-Bereich
         // heraus liefen sie weiter und schrieben in einen Ordner, den niemand mehr las.
@@ -152,9 +157,10 @@ class Vorleser(
         (0..VORAUSSCHAU).forEach(::beauftrage)
 
         absaetze.indices.forEach { index ->
-            val datei = inArbeit.remove(index)?.await()
+            val dateien = inArbeit.remove(index)?.await()
                 ?: withContext(Dispatchers.IO) { synthetisiereMitTeilung(absaetze[index]) }
             beauftrage(index + VORAUSSCHAU + 1)
+            warteSolangePausiert()
             _stand.value = _stand.value.copy(
                 zustand = VorleseZustand.SPRICHT,
                 absatzNummer = index + 1,
@@ -167,33 +173,49 @@ class Vorleser(
                 absaetze.size,
                 pausiert = false,
             )
-            spieleDatei(datei)
-            datei.delete()
+            dateien.forEach { datei ->
+                warteSolangePausiert()
+                spieleDatei(datei)
+                datei.delete()
+            }
             if (index < absaetze.lastIndex) delay(ABSATZ_PAUSE_MS)
         }
     }
 
     /**
      * Fällt ein Absatz beim Dienst durch, wird er halbiert und erneut geschickt
-     * (Retry-Split, Baustein D 4.4).
+     * (Retry-Split, Baustein D 4.4). Hier wird nur erzeugt, nie abgespielt — die Vorausschau
+     * läuft nebenher, und ein Abspielen von hier spräche mitten in den laufenden Absatz.
      */
-    private suspend fun synthetisiereMitTeilung(absatz: String): File = try {
-        synthese.synthetisiere(absatz)
+    private suspend fun synthetisiereMitTeilung(absatz: String): List<File> = try {
+        listOf(synthese.synthetisiere(absatz))
     } catch (fehler: SyntheseFehler) {
         val mitte = absatz.length / 2
         val schnitt = absatz.lastIndexOf(' ', mitte).takeIf { it > 0 } ?: mitte
         IdeenLog.warn("Vorleser", "synthetisiereMitTeilung", "Absatz halbiert", mapOf("chars" to absatz.length))
         val ersteHaelfte = synthese.synthetisiere(absatz.substring(0, schnitt).trim())
         // Die zweite Hälfte wird nach der ersten geholt; ein zweiter Fehlschlag zählt als echt.
-        val zweiteHaelfte = synthese.synthetisiere(absatz.substring(schnitt).trim())
-        spieleDatei(ersteHaelfte)
-        ersteHaelfte.delete()
-        zweiteHaelfte
+        val zweiteHaelfte = try {
+            synthese.synthetisiere(absatz.substring(schnitt).trim())
+        } catch (zweiter: Exception) {
+            ersteHaelfte.delete()
+            throw zweiter
+        }
+        listOf(ersteHaelfte, zweiteHaelfte)
+    }
+
+    /** Zwischen den Absätzen hält eine Pause an, bevor der nächste beginnt. */
+    private suspend fun warteSolangePausiert() {
+        while (pausiert) delay(PAUSE_PRUEF_MS)
     }
 
     /** Rückfall für Microsoft Edge: Absatz für Absatz über den vorhandenen Player. */
     private suspend fun reihum(absaetze: List<String>) {
+        // Auch hier den Tonfokus holen — sonst liest Edge während eines Anrufs einfach weiter.
+        fordereFokusAn()
+        var fehlgeschlagen = 0
         absaetze.forEachIndexed { index, absatz ->
+            warteSolangePausiert()
             _stand.value = _stand.value.copy(
                 zustand = VorleseZustand.SPRICHT,
                 absatzNummer = index + 1,
@@ -208,6 +230,7 @@ class Vorleser(
                     onComplete = { if (fortsetzung.isActive) fortsetzung.resume(Unit) },
                     onError = { fehler ->
                         if (fortsetzung.isActive) {
+                            fehlgeschlagen++
                             fortsetzung.resume(Unit)
                             IdeenLog.warn("Vorleser", "reihum", "Absatz übersprungen", mapOf("art" to fehler.javaClass.simpleName))
                         }
@@ -216,21 +239,21 @@ class Vorleser(
             }
             if (index < absaetze.lastIndex) delay(ABSATZ_PAUSE_MS)
         }
+        // Kam kein einziger Absatz durch, darf das nicht als stilles „fertig“ enden.
+        if (fehlgeschlagen == absaetze.size) {
+            error("Das Vorlesen kam nicht durch. Prüf die Internetverbindung.")
+        }
     }
 
     private suspend fun spieleDatei(datei: File) {
         fordereFokusAn()
-        var player: MediaPlayer? = null
+        // Zuerst anlegen und merken — wirft prepare(), wird der Player trotzdem freigegeben.
+        val neuerPlayer = MediaPlayer()
+        spieler = neuerPlayer
         try {
             suspendCancellableCoroutine { fortsetzung ->
-                val neuerPlayer = MediaPlayer().apply {
-                    setAudioAttributes(
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_MEDIA)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                            .build(),
-                    )
-                    setDataSource(datei.absolutePath)
+                neuerPlayer.apply {
+                    setAudioAttributes(SpeechLoudness.attributes)
                     setOnCompletionListener { if (fortsetzung.isActive) fortsetzung.resume(Unit) }
                     setOnErrorListener { _, was, extra ->
                         IdeenLog.warn(
@@ -242,24 +265,31 @@ class Vorleser(
                         if (fortsetzung.isActive) fortsetzung.resume(Unit)
                         true
                     }
+                    setDataSource(datei.absolutePath)
                     prepare()
-                    start()
+                    // Dieselbe Lautstärke wie in den Playern der Anbieter.
+                    SpeechLoudness.boost(this)
+                    if (!pausiert) start()
                 }
-                player = neuerPlayer
-                spieler = neuerPlayer
                 fortsetzung.invokeOnCancellation { runCatching { neuerPlayer.stop() } }
             }
         } finally {
-            player?.let { alter ->
-                runCatching { alter.release() }
-                if (spieler === alter) spieler = null
-            }
+            SpeechLoudness.release(neuerPlayer)
+            runCatching { neuerPlayer.release() }
+            if (spieler === neuerPlayer) spieler = null
         }
     }
 
+    /**
+     * Wirkt auch zwischen zwei Absätzen und im Edge-Weg, wo gerade kein eigener Player läuft:
+     * Das Merkzeichen hält den nächsten Absatz an.
+     */
     fun pause() {
-        val player = spieler ?: return
-        runCatching { player.pause() }
+        if (pausiert || _stand.value.zustand == VorleseZustand.AUS) return
+        pausiert = true
+        zustandVorPause = _stand.value.zustand
+        spieler?.let { runCatching { it.pause() } }
+        ttsManager.pause()
         _stand.value = _stand.value.copy(zustand = VorleseZustand.PAUSIERT)
         VorleseDienst.aktualisiere(
             appContext,
@@ -271,9 +301,11 @@ class Vorleser(
     }
 
     fun weiter() {
-        val player = spieler ?: return
-        runCatching { player.start() }
-        _stand.value = _stand.value.copy(zustand = VorleseZustand.SPRICHT)
+        if (!pausiert) return
+        pausiert = false
+        spieler?.let { runCatching { it.start() } }
+        ttsManager.resume()
+        _stand.value = _stand.value.copy(zustand = zustandVorPause)
         VorleseDienst.aktualisiere(
             appContext,
             _stand.value.titel,
@@ -294,6 +326,7 @@ class Vorleser(
         laufNummer.incrementAndGet()
         laufenderJob?.cancel()
         laufenderJob = null
+        pausiert = false
         ttsManager.stop()
         spieler?.let { player ->
             runCatching { player.stop() }
@@ -320,7 +353,9 @@ class Vorleser(
             when (aenderung) {
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK,
-                -> if (_stand.value.zustand == VorleseZustand.SPRICHT) {
+                -> if (_stand.value.zustand == VorleseZustand.SPRICHT ||
+                    _stand.value.zustand == VorleseZustand.LAEDT
+                ) {
                     pausiertDurchFokus = true
                     pause()
                 }
@@ -364,6 +399,9 @@ class Vorleser(
 
         /** Hörbarer Atem zwischen zwei Absätzen, kein Loch. */
         const val ABSATZ_PAUSE_MS = 1000L
+
+        /** Wie oft während einer Pause nachgesehen wird, ob es weitergeht. */
+        private const val PAUSE_PRUEF_MS = 150L
 
         /** Der Vorleser lebt so lange wie die App — der Dienst hält ihn am Leben. */
         @Volatile private var geteilt: Vorleser? = null

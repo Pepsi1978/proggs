@@ -53,6 +53,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -113,14 +114,24 @@ fun DetailScreen(
     // The first load of the chat jumps without animation — an animated scroll running in
     // parallel with the screen transition was a main cause of the stutter when opening.
     val ersteLadung = remember(idee?.id) { booleanArrayOf(true) }
-    LaunchedEffect(nachrichten.size, ki.teilAntwort) {
+    // Die laufende Antwort gehört nur zu der Idee, bei der sie gestellt wurde.
+    val kiHier = ki.ideeId == null || ki.ideeId == idee?.id
+    val laeuftHier = kiHier && (ki.antwortet || ki.teilAntwort.isNotBlank())
+    LaunchedEffect(nachrichten.size, laeuftHier, ki.teilAntwort.isBlank()) {
         if (nachrichten.isEmpty()) return@LaunchedEffect
+        // Index 0 ist der Ideenkopf: Die letzte Nachricht liegt bei n, die einlaufende bei n+1.
+        val ziel = nachrichten.size + if (laeuftHier) 1 else 0
         if (ersteLadung[0]) {
             ersteLadung[0] = false
-            listState.scrollToItem(nachrichten.size)
+            listState.scrollToItem(ziel)
         } else {
-            listState.animateScrollToItem(nachrichten.size)
+            listState.animateScrollToItem(ziel)
         }
+    }
+
+    // Wer die Idee verlässt, lässt kein Mikrofon laufen.
+    DisposableEffect(Unit) {
+        onDispose { if (viewModel.aufnahme.value.laeuft) viewModel.brichAufnahmeAb() }
     }
 
     // Wechselt man die Idee, steht die Karte wieder ganz oben.
@@ -220,7 +231,7 @@ fun DetailScreen(
                     )
                 }
 
-                if (nachrichten.isEmpty() && ki.teilAntwort.isBlank() && !ki.antwortet) {
+                if (nachrichten.isEmpty() && !laeuftHier) {
                     item(key = "leer") {
                         Leerzustand(
                             symbol = "💬",
@@ -253,7 +264,7 @@ fun DetailScreen(
                         aufLangdruck = { gedrueckt = nachricht },
                     )
                 }
-                if (ki.teilAntwort.isNotBlank()) {
+                if (kiHier && ki.teilAntwort.isNotBlank()) {
                     item(key = "stroemend") {
                         StroemendeAntwort(
                             text = ki.teilAntwort,
@@ -261,7 +272,7 @@ fun DetailScreen(
                         )
                     }
                 }
-                if (ki.antwortet && ki.teilAntwort.isBlank()) {
+                if (kiHier && ki.antwortet && ki.teilAntwort.isBlank()) {
                     item(key = "denkt") {
                         DenktNach(modifier = Modifier.padding(horizontal = 16.dp))
                     }
@@ -300,12 +311,15 @@ fun DetailScreen(
             aufSenden = {
                 viewModel.frage(aktuelle, eingabe)
                 eingabe = ""
+                // Sonst holte „Rückgängig“ später das Original der schon gesendeten Frage zurück.
+                viewModel.korrekturVergessen()
             },
             aufAbbrechen = viewModel::brichKiAb,
             aufMikrofon = {
                 if (aufnahme.laeuft) {
                     viewModel.beendeAufnahme { text ->
                         eingabe = if (eingabe.isBlank()) text else "$eingabe $text"
+                        viewModel.korrekturVergessen()
                     }
                 } else {
                     viewModel.starteAufnahme()

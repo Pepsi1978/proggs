@@ -45,6 +45,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Kurze Rückmeldungen, die als Streifen erscheinen (Baustein L). */
 data class Meldung(
@@ -70,6 +72,8 @@ data class KorrekturStand(
 
 data class KiStand(
     val antwortet: Boolean = false,
+    /** Zu welcher Idee die laufende Antwort gehört — sonst erschiene sie bei jeder geöffneten. */
+    val ideeId: Long? = null,
     val teilAntwort: String = "",
     val fehler: String? = null,
 )
@@ -91,6 +95,7 @@ class IdeenViewModel(
     private val vorleser = container.vorleser
     private val codex = container.codexAuthManager
     private val sicherung = Sicherung(application, container.database)
+    val appSperreAktiv: StateFlow<Boolean> = container.appLockManager.aktiv
     private val recorder = MicRecorder(application)
     private val verzeichnis = QwenVoiceDirectory()
     private val stimmAnmeldung = QwenVoiceEnrollment()
@@ -180,8 +185,9 @@ class IdeenViewModel(
     /** Halbfertiges, das beim Verlassen des Erfassen-Bildschirms von allein gesichert wurde. */
     val entwuerfe: StateFlow<List<IdeeEntity>> = alleIdeen
         .map { liste ->
+            // Nach der gezogenen Reihenfolge wie die anderen Listen — neue Entwürfe kommen
+            // ohnehin oben hinein. Nach geaendertAm sortiert, sprang jedes Ziehen zurück.
             liste.filter { it.status == IdeenStatus.ENTWURF.name }
-                .sortedByDescending(IdeeEntity::geaendertAm)
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -246,16 +252,26 @@ class IdeenViewModel(
         originalText: String? = null,
         kategorieId: Long,
     ) {
+        val sitzung = entwurfSitzung
+        val schnappschuss = _entwurf.value
         viewModelScope.launch {
-            // Auch der Ersatztitel bleibt bei drei Wörtern — sonst sprengt er die Liste.
-            val name = titel.trim().ifBlank { ersatzTitel(text) }
-            val entwurf = _entwurf.value
-            if (entwurf != null) {
-                repository.ausEntwurfUebernehmen(entwurf.id, name, text, kategorieId, originalText)
-            } else {
-                repository.lege(name, text.trim(), aufnahmePfad, originalText, kategorieId)
+            entwurfSperre.withLock {
+                // Auch der Ersatztitel bleibt bei drei Wörtern — sonst sprengt er die Liste.
+                val name = titel.trim().ifBlank { ersatzTitel(text) }
+                // Ein gerade noch laufendes Zwischensichern hat den Entwurf evtl. erst angelegt.
+                val aktuell = sitzung == entwurfSitzung
+                val entwurf = if (aktuell) _entwurf.value else schnappschuss
+                if (entwurf != null) {
+                    repository.ausEntwurfUebernehmen(entwurf.id, name, text, kategorieId, originalText)
+                } else {
+                    repository.lege(name, text.trim(), aufnahmePfad, originalText, kategorieId)
+                }
+                // Nur den übernommenen Entwurf lösen — ein inzwischen geöffneter anderer bleibt.
+                if (aktuell) {
+                    entwurfSitzung++
+                    _entwurf.value = null
+                }
             }
-            _entwurf.value = null
             zeige(Meldung("Idee gespeichert."))
         }
     }
@@ -266,13 +282,23 @@ class IdeenViewModel(
     private val _entwurf = MutableStateFlow<IdeeEntity?>(null)
     val entwurf: StateFlow<IdeeEntity?> = _entwurf.asStateFlow()
 
+    /**
+     * Zählt jedes Öffnen des Erfassen-Bildschirms. Ein spät fertiges Sichern aus einer früheren
+     * Sitzung schreibt dadurch nie in die jetzige hinein; die Sperre reiht alle Schreibvorgänge
+     * hintereinander, damit zwei schnelle Sicherungen nicht zwei Entwürfe anlegen.
+     */
+    private var entwurfSitzung = 0
+    private val entwurfSperre = Mutex()
+
     /** Der Erfassen-Bildschirm beginnt leer. */
     fun beginneNeueIdee() {
+        entwurfSitzung++
         _entwurf.value = null
     }
 
     /** Einen gesicherten Entwurf zum Weiterschreiben öffnen. */
     fun oeffneEntwurf(idee: IdeeEntity) {
+        entwurfSitzung++
         _entwurf.value = idee
     }
 
@@ -282,18 +308,27 @@ class IdeenViewModel(
      */
     fun sichereEntwurf(titel: String, text: String, kategorieId: Long?, originalText: String? = null) {
         val hatInhalt = titel.isNotBlank() || text.isNotBlank()
-        val bisher = _entwurf.value
-        if (!hatInhalt) {
-            if (bisher != null) {
-                _entwurf.value = null
-                viewModelScope.launch { repository.loescheEntwurf(bisher.id) }
-            }
-            return
-        }
+        val sitzung = entwurfSitzung
+        val schnappschuss = _entwurf.value
         viewModelScope.launch {
-            val id = repository.sichereEntwurf(bisher?.id, titel, text, kategorieId, originalText)
-            _entwurf.value = repository.lade(id)
-            if (bisher == null) zeige(Meldung("Als Entwurf gesichert."))
+            var neuAngelegt = false
+            entwurfSperre.withLock {
+                val aktuell = sitzung == entwurfSitzung
+                val bisher = if (aktuell) _entwurf.value else schnappschuss
+                if (!hatInhalt) {
+                    if (bisher != null) {
+                        if (aktuell) _entwurf.value = null
+                        repository.loescheEntwurf(bisher.id)
+                    }
+                    return@withLock
+                }
+                val id = repository.sichereEntwurf(bisher?.id, titel, text, kategorieId, originalText)
+                // Nur in die eigene Sitzung zurückschreiben — sonst überschreibt die nächste
+                // Idee diesen Entwurf.
+                if (aktuell) _entwurf.value = repository.lade(id)
+                neuAngelegt = bisher == null
+            }
+            if (neuAngelegt) zeige(Meldung("Als Entwurf gesichert."))
         }
     }
 
@@ -428,6 +463,7 @@ class IdeenViewModel(
     }
 
     fun leereSuche() {
+        suchJob?.cancel()
         _suchtext.value = ""
         _suchtreffer.value = emptyList()
     }
@@ -466,6 +502,9 @@ class IdeenViewModel(
 
     fun starteAufnahme(): Boolean {
         if (_aufnahme.value.laeuft) return true
+        // Solange das vorige Diktat noch übertragen wird, keine zweite Aufnahme starten — deren
+        // Anzeige würde beim Ende der Übertragung auf „aus“ springen.
+        if (_aufnahme.value.wirdUebertragen) return false
         val gestartet = recorder.start(viewModelScope)
         if (!gestartet) {
             zeige(
@@ -486,13 +525,25 @@ class IdeenViewModel(
         if (!_aufnahme.value.laeuft) return
         _aufnahme.value = _aufnahme.value.copy(laeuft = false, wirdUebertragen = true)
         aufnahmeJob = viewModelScope.launch {
+            val wav = try {
+                recorder.stop()
+            } catch (fehler: Exception) {
+                if (fehler is kotlinx.coroutines.CancellationException) throw fehler
+                null
+            }
+            if (wav == null || wav.size < 2_000) {
+                _aufnahme.value = AufnahmeStand()
+                zeige(Meldung("Die Aufnahme war zu kurz — es kam kein Ton an.", istFehler = true))
+                return@launch
+            }
+            uebertrage(wav, fertig)
+        }
+    }
+
+    /** Schickt die fertige Aufnahme zur Erkennung. „Wiederholen“ nimmt dieselbe Aufnahme noch einmal. */
+    private suspend fun uebertrage(wav: ByteArray, fertig: (String) -> Unit) {
+        _aufnahme.value = AufnahmeStand(wirdUebertragen = true)
             try {
-                val wav = recorder.stop()
-                if (wav == null || wav.size < 2_000) {
-                    _aufnahme.value = AufnahmeStand()
-                    zeige(Meldung("Die Aufnahme war zu kurz — es kam kein Ton an.", istFehler = true))
-                    return@launch
-                }
                 val schluessel = settings.groqApiKey
                 if (schluessel.isBlank()) {
                     _aufnahme.value = AufnahmeStand()
@@ -503,14 +554,14 @@ class IdeenViewModel(
                             zuEinstellungen = true,
                         ),
                     )
-                    return@launch
+                    return
                 }
                 val diktat = Diktat(GroqTranscriber(schluessel))
                 val ergebnis = diktat.transkribiere(wav)
                 _aufnahme.value = AufnahmeStand()
                 if (ergebnis.text.isBlank()) {
                     zeige(Meldung("Es war nichts Verständliches zu hören.", istFehler = true))
-                    return@launch
+                    return
                 }
                 if (ergebnis.teileFehlend > 0) {
                     zeige(
@@ -524,16 +575,20 @@ class IdeenViewModel(
                 fertig(ergebnis.text)
             } catch (fehler: Exception) {
                 _aufnahme.value = AufnahmeStand()
+                if (fehler is kotlinx.coroutines.CancellationException) throw fehler
                 IdeenLog.error("Diktat", "beendeAufnahme", "Übertragung fehlgeschlagen", mapOf("art" to fehler.javaClass.simpleName))
                 zeige(
                     Meldung(
                         fehler.message ?: "Die Aufnahme konnte nicht übertragen werden.",
                         istFehler = true,
-                        wiederholen = { beendeAufnahme(fertig) },
+                        wiederholen = {
+                            if (!_aufnahme.value.laeuft && !_aufnahme.value.wirdUebertragen) {
+                                aufnahmeJob = viewModelScope.launch { uebertrage(wav, fertig) }
+                            }
+                        },
                     ),
                 )
             }
-        }
     }
 
     fun brichAufnahmeAb() {
@@ -546,13 +601,14 @@ class IdeenViewModel(
 
     fun frage(idee: IdeeEntity, eingabe: String) {
         if (eingabe.isBlank() || _ki.value.antwortet) return
+        // Sofort sperren — ein Doppeltipp startete sonst zwei Fragen und zwei Streams.
+        _ki.value = KiStand(antwortet = true, ideeId = idee.id)
         kiJob = viewModelScope.launch {
-            repository.ergaenzeNachricht(idee.id, "user", eingabe.trim())
-            _ki.value = KiStand(antwortet = true)
-            val verlauf = nachrichten.value.map { ChatTurn(it.rolle, it.text) } +
-                ChatTurn("user", eingabe.trim())
             val puffer = StringBuilder()
             try {
+                repository.ergaenzeNachricht(idee.id, "user", eingabe.trim())
+                // Frisch aus der Datenbank: Die neue Frage steht dort genau einmal.
+                val verlauf = repository.nachrichtenEinmal(idee.id).map { ChatTurn(it.rolle, it.text) }
                 val antwort = codex.streamChat(
                     instructions = anweisung(idee),
                     turns = verlauf,
@@ -567,13 +623,16 @@ class IdeenViewModel(
                 _ki.value = KiStand()
             } catch (abbruch: kotlinx.coroutines.CancellationException) {
                 // Das bereits Empfangene bleibt erhalten und wird als unvollständig gekennzeichnet.
+                // NonCancellable: In der abgebrochenen Coroutine würfe Room sonst sofort.
                 if (puffer.isNotEmpty()) {
-                    repository.ergaenzeNachricht(
-                        idee.id,
-                        "assistant",
-                        UmlautKorrektur.korrigiere(puffer.toString()),
-                        unvollstaendig = true,
-                    )
+                    withContext(kotlinx.coroutines.NonCancellable) {
+                        repository.ergaenzeNachricht(
+                            idee.id,
+                            "assistant",
+                            UmlautKorrektur.korrigiere(puffer.toString()),
+                            unvollstaendig = true,
+                        )
+                    }
                 }
                 _ki.value = KiStand()
                 throw abbruch
@@ -919,6 +978,8 @@ class IdeenViewModel(
                     }
                 }
                 .onFailure { fehler ->
+                    // Ein abgelöster Ladevorgang ist kein Fehler — er darf die neue Liste nicht leeren.
+                    if (fehler is CancellationException) throw fehler
                     _eigeneStimmen.value = emptyList()
                     // Der Fehlschlag einer Engine leert das Menü nicht — die betroffene Gruppe
                     // zeigt eine eigene Zeile, alle anderen bleiben bedienbar (Kapitel 4.6).
@@ -960,6 +1021,8 @@ class IdeenViewModel(
                     if (settings.qwenTtsVoiceId == id) {
                         settings.qwenTtsVoiceId = ""
                         _gewaehlteEigeneStimme.value = ""
+                        // Die aktive Stimme ist weg — auf eine vorhandene zurückfallen.
+                        pruefeGemerkteStimme()
                     }
                     zeige(Meldung("Stimme gelöscht."))
                 }
@@ -1085,13 +1148,21 @@ class IdeenViewModel(
     private suspend fun zeigeVorschau(quelle: Uri, name: String) {
         runCatching { sicherung.vorschauVon(quelle) }
             .onSuccess { vorschau ->
+                val schonDa = vorschau.ideen - vorschau.neu
                 zeige(
-                    Meldung(
-                        "$name: ${vorschau.ideen} Ideen vom ${vorschau.erstelltAm}. Deine " +
-                            "${vorschau.bestehende} bestehenden bleiben stehen. " +
-                            "Zum Einspielen noch einmal tippen.",
-                        wiederholen = { spieleEin(quelle) },
-                    ),
+                    if (vorschau.neu == 0) {
+                        Meldung(
+                            "$name vom ${vorschau.erstelltAm}: Alle ${vorschau.ideen} Ideen sind " +
+                                "schon in der App. Es gibt nichts wiederherzustellen.",
+                        )
+                    } else {
+                        Meldung(
+                            "$name vom ${vorschau.erstelltAm}: ${vorschau.neu} Ideen fehlen in der App " +
+                                "und werden wiederhergestellt, $schonDa sind schon da und bleiben " +
+                                "unverändert. Zum Einspielen auf „Wiederholen“ tippen.",
+                            wiederholen = { spieleEin(quelle) },
+                        )
+                    },
                 )
             }
             .onFailure { fehler ->
@@ -1107,11 +1178,45 @@ class IdeenViewModel(
     private fun spieleEin(quelle: Uri) {
         viewModelScope.launch {
             runCatching { sicherung.stelleWiederHerAus(quelle, ersetzen = false) }
-                .onSuccess { anzahl -> zeige(Meldung("$anzahl Ideen eingespielt.")) }
+                .onSuccess { ergebnis ->
+                    zeige(
+                        Meldung(
+                            "${ergebnis.neu} Ideen wiederhergestellt, ${ergebnis.schonDa} waren schon da.",
+                        ),
+                    )
+                }
                 .onFailure { fehler ->
+                    if (fehler is CancellationException) throw fehler
                     zeige(Meldung("Einspielen ging nicht: ${fehler.message}", istFehler = true))
                 }
         }
+    }
+
+    /** Legt Ideen mit gleichem Titel und Text zusammen — erst nach der Bestätigung. */
+    fun entferneDoppelte() {
+        zeige(
+            Meldung(
+                "Ideen mit gleichem Titel und Text zu einer zusammenlegen? Gespräche und " +
+                    "Kategorien bleiben erhalten. Zum Bestätigen auf „Wiederholen“ tippen.",
+                wiederholen = {
+                    viewModelScope.launch {
+                        runCatching { sicherung.entferneDoppelte() }
+                            .onSuccess { anzahl ->
+                                zeige(
+                                    Meldung(
+                                        if (anzahl == 0) "Keine doppelten Ideen gefunden."
+                                        else "$anzahl doppelte Ideen entfernt.",
+                                    ),
+                                )
+                            }
+                            .onFailure { fehler ->
+                                if (fehler is CancellationException) throw fehler
+                                zeige(Meldung("Aufräumen ging nicht: ${fehler.message}", istFehler = true))
+                            }
+                    }
+                },
+            ),
+        )
     }
 
     /** Trennt den gemerkten Ordner — die Sicherungen darin bleiben liegen. */

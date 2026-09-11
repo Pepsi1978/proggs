@@ -29,11 +29,15 @@ class Diktat(private val transcriber: GroqTranscriber) {
         }
         val stuecke = mutableListOf<String>()
         var fehlend = 0
+        var ersterFehler: Throwable? = null
         teile.forEach { teil ->
             runCatching { transcriber.transcribe(teil) }
                 .onSuccess { text -> if (text.isNotBlank()) stuecke += text.trim() }
                 .onFailure { fehler ->
+                    // Ein Abbruch durch den Nutzer ist kein Übertragungsfehler.
+                    if (fehler is kotlinx.coroutines.CancellationException) throw fehler
                     fehlend++
+                    if (ersterFehler == null) ersterFehler = fehler
                     IdeenLog.warn(
                         "Diktat",
                         "transkribiere",
@@ -43,7 +47,8 @@ class Diktat(private val transcriber: GroqTranscriber) {
                 }
         }
         if (stuecke.isEmpty() && fehlend > 0) {
-            throw GroqTranscriptionException(
+            // Den echten Grund weitergeben (Netz, 429, 500 …) statt pauschal den Schlüssel zu verdächtigen.
+            throw ersterFehler ?: GroqTranscriptionException(
                 "Die Aufnahme konnte nicht übertragen werden. Prüf den Groq-Schlüssel in den Einstellungen.",
             )
         }

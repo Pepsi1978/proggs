@@ -58,12 +58,24 @@ interface IdeenDao {
     @Query("DELETE FROM ideen")
     suspend fun alleLoeschen()
 
-    @Query("UPDATE ideen SET reihenfolge = :reihenfolge, geaendertAm = :jetzt WHERE id = :id")
-    suspend fun setzeReihenfolge(id: Long, reihenfolge: Int, jetzt: Long = System.currentTimeMillis())
+    /** Umsortieren ist keine inhaltliche Änderung — geaendertAm bleibt stehen. */
+    @Query("UPDATE ideen SET reihenfolge = :reihenfolge WHERE id = :id")
+    suspend fun setzeReihenfolge(id: Long, reihenfolge: Int)
 
+    @Query("SELECT reihenfolge FROM ideen WHERE id IN (:ids)")
+    suspend fun reihenfolgeVon(ids: List<Long>): List<Int>
+
+    /**
+     * Vergibt die bisherigen Plätze der gezogenen Ideen neu. Ist die Liste gefiltert, bleiben
+     * die ausgeblendeten Ideen dadurch an ihrer Stelle, statt mit 0…n-1 zu kollidieren.
+     */
     @Transaction
     suspend fun schreibeReihenfolge(ids: List<Long>) {
-        ids.forEachIndexed { index, id -> setzeReihenfolge(id, index) }
+        val plaetze = reihenfolgeVon(ids).sorted().toMutableList()
+        for (index in 1 until plaetze.size) {
+            if (plaetze[index] <= plaetze[index - 1]) plaetze[index] = plaetze[index - 1] + 1
+        }
+        ids.zip(plaetze).forEach { (id, platz) -> setzeReihenfolge(id, platz) }
     }
 
     @Query(
@@ -108,6 +120,9 @@ interface NachrichtenDao {
 
     @Query("DELETE FROM nachrichten")
     suspend fun alleLoeschen()
+
+    @Query("UPDATE nachrichten SET ideeId = :neu WHERE ideeId = :alt")
+    suspend fun verschiebe(alt: Long, neu: Long)
 }
 
 @Dao

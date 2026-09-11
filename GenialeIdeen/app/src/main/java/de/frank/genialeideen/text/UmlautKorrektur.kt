@@ -82,8 +82,13 @@ object UmlautKorrektur {
 
     /** Wortbestandteile, die auch am Wortanfang oder -ende einer Zusammensetzung greifen. */
     private val ZUSAMMENSETZUNG = Regex(
-        """(?i)\b\p{L}*(""" + WORTLISTE.keys.joinToString("|") + """)\p{L}*\b""",
+        // Längste Schlüssel zuerst, sonst gewinnt „ueber“ gegen „ueberpruefen“.
+        """(?i)\b\p{L}*(""" + WORTLISTE.keys.sortedByDescending { it.length }.joinToString("|") +
+            """)\p{L}*\b""",
     )
+
+    /** Ein Durchgang ersetzt je Wort einen Bestandteil — Zusammensetzungen brauchen mehrere. */
+    private const val MAX_DURCHGAENGE = 4
 
     /**
      * Korrigiert [text] und meldet über [onErsetzung], was verändert wurde.
@@ -91,6 +96,16 @@ object UmlautKorrektur {
      */
     fun korrigiere(text: String, onErsetzung: (Ersetzung) -> Unit = {}): String {
         if (text.isEmpty()) return text
+        var stand = text
+        repeat(MAX_DURCHGAENGE) {
+            val neu = durchgang(stand, onErsetzung)
+            if (neu == stand) return neu
+            stand = neu
+        }
+        return stand
+    }
+
+    private fun durchgang(text: String, onErsetzung: (Ersetzung) -> Unit): String {
         return ZUSAMMENSETZUNG.replace(text) { treffer ->
             val ganzesWort = treffer.value
             val teil = treffer.groupValues[1]

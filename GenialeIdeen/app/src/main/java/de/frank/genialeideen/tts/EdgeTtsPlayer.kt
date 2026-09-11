@@ -111,7 +111,7 @@ class EdgeTtsPlayer(context: Context) {
                     webSocket.cancel()
                     return
                 }
-                startWatchdog(webSocket, requestGeneration, callbacks, WATCHDOG_INITIAL_MS)
+                startWatchdog(webSocket, requestGeneration, callbacks, WATCHDOG_INITIAL_MS, keineAntwort = true)
                 val config = "Content-Type:application/json; charset=utf-8\r\n" +
                     "Path:speech.config\r\n\r\n" +
                     """{"context":{"synthesis":{"audio":{"metadataOptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-96kbitrate-mono-mp3"}}}}"""
@@ -304,13 +304,23 @@ class EdgeTtsPlayer(context: Context) {
         requestGeneration: Long,
         callbacks: PlaybackCallbacks,
         timeoutMs: Long,
+        keineAntwort: Boolean = false,
     ) {
         val job = scope.launch {
             delay(timeoutMs)
             if (requestGeneration == generation.get() && !callbacks.terminal.get()) {
                 logger.warning("Edge TTS watchdog fired after $timeoutMs ms")
-                // A watchdog timeout is a completed attempt so the session can advance.
-                finishComplete(requestGeneration, callbacks)
+                if (keineAntwort) {
+                    // Nicht ein Byte Ton kam an (kein Netz) — das ist ein Fehlschlag, kein „fertig“.
+                    finishError(
+                        requestGeneration,
+                        callbacks,
+                        TtsPlaybackException("Edge TTS did not answer within $timeoutMs ms."),
+                    )
+                } else {
+                    // A watchdog timeout after audio arrived is a completed attempt so the session can advance.
+                    finishComplete(requestGeneration, callbacks)
+                }
                 socket.cancel()
             }
         }

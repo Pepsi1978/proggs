@@ -154,6 +154,8 @@ fun ListenScreen(
 
     // Zurückwischen hebt zuerst die Kategorie auf, erst danach verlässt man die Liste.
     BackHandler(enabled = gewaehlteKategorie != null) { viewModel.waehleKategorie(null) }
+    // Später registriert, greift also zuerst: Eine offene Schublade schliesst, statt die App zu beenden.
+    BackHandler(enabled = schublade.isOpen) { bereichsraum.launch { schublade.close() } }
 
     val roheListe = when (bereich) {
         ListenBereich.OFFEN -> offene

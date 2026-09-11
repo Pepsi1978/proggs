@@ -2,11 +2,16 @@ package de.frank.genialeideen.backup
 
 import android.content.Context
 import android.net.Uri
+import androidx.room.withTransaction
 import de.frank.genialeideen.data.local.GenialeIdeenDatabase
 import de.frank.genialeideen.data.local.IdeeEntity
+import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.data.local.NachrichtEntity
+import de.frank.genialeideen.data.local.alleKategorieIds
+import de.frank.genialeideen.data.local.weitereKategorieIds
+import de.frank.genialeideen.data.local.weitereKategorienText
 import de.frank.genialeideen.observability.IdeenLog
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -19,10 +24,22 @@ import org.json.JSONObject
 /** Was beim Einlesen drinsteckt — für die Vorschau vor dem Überschreiben. */
 data class SicherungsVorschau(
     val ideen: Int,
+    /** So viele Ideen der Sicherung fehlen gerade in der App — nur sie werden eingespielt. */
+    val neu: Int,
     val nachrichten: Int,
     val bestehende: Int,
     val erstelltAm: String,
 )
+
+/** Was das Einspielen bewirkt hat. */
+data class Ergebnis(val neu: Int, val schonDa: Int)
+
+/** Titel und Text ohne Unterschiede in Gross-/Kleinschreibung und Leerraum. */
+private fun inhaltsSchluessel(idee: IdeeEntity): String {
+    fun glatt(text: String) = text.trim().replace(Regex("""\s+"""), " ").lowercase()
+    // Zeilenumbruch als Trenner: glatt() lässt keinen übrig, Titel und Text vermischen sich nie.
+    return glatt(idee.titel) + "\n" + glatt(idee.text)
+}
 
 /**
  * Die Sicherung: ein Abzug des ganzen Bestands als Datei in einem selbst gewählten Ordner
@@ -95,70 +112,159 @@ class Sicherung(
             .toString(2)
     }
 
-    private suspend fun spieleEin(json: JSONObject, ersetzen: Boolean): Int {
-        if (ersetzen) {
-            datenbank.nachrichtenDao().alleLoeschen()
-            datenbank.ideenDao().alleLoeschen()
+    /** Eine Idee aus der Sicherung, noch mit den Kennungen der Sicherung. */
+    private class GesicherteIdee(val alteId: Long, val idee: IdeeEntity)
+
+    private fun liesIdeen(json: JSONObject): List<GesicherteIdee> {
+        val ideen = json.optJSONArray("ideen") ?: JSONArray()
+        val gueltig = IdeenStatus.entries.map { it.name }.toSet()
+        val jetzt = System.currentTimeMillis()
+        return (0 until ideen.length()).mapNotNull { index ->
+            val eintrag = ideen.optJSONObject(index) ?: return@mapNotNull null
+            GesicherteIdee(
+                alteId = eintrag.optLong("id"),
+                idee = IdeeEntity(
+                    titel = eintrag.optString("titel"),
+                    text = eintrag.optString("text"),
+                    status = eintrag.optString("status").takeIf { it in gueltig } ?: IdeenStatus.OFFEN.name,
+                    reihenfolge = eintrag.optInt("reihenfolge"),
+                    angelegtAm = eintrag.optLong("angelegtAm", jetzt),
+                    geaendertAm = eintrag.optLong("geaendertAm", jetzt),
+                    umgesetztAm = if (eintrag.isNull("umgesetztAm")) null else eintrag.optLong("umgesetztAm"),
+                    originalText = if (eintrag.isNull("originalText")) {
+                        null
+                    } else {
+                        eintrag.optString("originalText").takeIf(String::isNotBlank)
+                    },
+                    kategorieId = if (eintrag.isNull("kategorieId")) null else eintrag.optLong("kategorieId").takeIf { it > 0L },
+                    weitereKategorien = eintrag.optString("weitereKategorien"),
+                ),
+            )
         }
-        // Die Kategorien zuerst — die Ideen zeigen mit ihrer Kennung auf sie.
+    }
+
+    /**
+     * Wer schon da ist, kommt nicht noch einmal dazu: gleicher Anlagezeitpunkt (dieselbe Idee,
+     * auch wenn sie seither bearbeitet wurde) oder gleicher Titel und Text.
+     */
+    private class Abgleich(bestehende: List<IdeeEntity>) {
+        private val zeitpunkte = bestehende.map { it.angelegtAm }.toMutableSet()
+        private val inhalte = bestehende.map { inhaltsSchluessel(it) }.toMutableSet()
+
+        fun istNeu(idee: IdeeEntity): Boolean =
+            idee.angelegtAm !in zeitpunkte && inhaltsSchluessel(idee) !in inhalte
+
+        fun merke(idee: IdeeEntity) {
+            zeitpunkte += idee.angelegtAm
+            inhalte += inhaltsSchluessel(idee)
+        }
+    }
+
+    private suspend fun spieleEin(json: JSONObject, ersetzen: Boolean): Ergebnis = datenbank.withTransaction {
+        val ideenDao = datenbank.ideenDao()
+        val kategorienDao = datenbank.kategorienDao()
+        val nachrichtenDao = datenbank.nachrichtenDao()
+        if (ersetzen) {
+            nachrichtenDao.alleLoeschen()
+            ideenDao.alleLoeschen()
+        }
+
+        // Die Kategorien zuerst und über Name + Art zugeordnet — die Kennungen der Sicherung
+        // passen auf einem anderen Gerät (oder nach dem Umbenennen) nicht zu den eigenen.
+        val kategorieZuordnung = mutableMapOf<Long, Long>()
         val kategorien = json.optJSONArray("kategorien") ?: JSONArray()
-        val faecher = mutableListOf<KategorieEntity>()
         for (index in 0 until kategorien.length()) {
             val eintrag = kategorien.optJSONObject(index) ?: continue
-            faecher += KategorieEntity(
-                id = eintrag.optLong("id"),
-                name = eintrag.optString("name"),
-                reihenfolge = eintrag.optInt("reihenfolge"),
-                art = runCatching {
-                    Kategorieart.valueOf(eintrag.optString("art", Kategorieart.MENTAL.name))
-                }.getOrDefault(Kategorieart.MENTAL),
-            )
+            val name = eintrag.optString("name").trim()
+            if (name.isBlank()) continue
+            val art = runCatching {
+                Kategorieart.valueOf(eintrag.optString("art", Kategorieart.MENTAL.name))
+            }.getOrDefault(Kategorieart.MENTAL)
+            val vorhanden = kategorienDao.nachNameUndArt(name, art)?.id
+                ?: kategorienDao.einfuegen(
+                    KategorieEntity(name = name, reihenfolge = kategorienDao.anzahl(art), art = art),
+                ).takeIf { it > 0 }
+                ?: kategorienDao.nachNameUndArt(name, art)?.id
+                ?: continue
+            kategorieZuordnung[eintrag.optLong("id")] = vorhanden
         }
-        if (faecher.isNotEmpty()) datenbank.kategorienDao().einfuegenAlle(faecher)
 
-        val ideen = json.optJSONArray("ideen") ?: JSONArray()
-        val eingelesen = mutableListOf<IdeeEntity>()
-        for (index in 0 until ideen.length()) {
-            val eintrag = ideen.optJSONObject(index) ?: continue
-            eingelesen += IdeeEntity(
-                id = if (ersetzen) eintrag.optLong("id") else 0L,
-                titel = eintrag.optString("titel"),
-                text = eintrag.optString("text"),
-                status = eintrag.optString("status"),
-                reihenfolge = eintrag.optInt("reihenfolge"),
-                angelegtAm = eintrag.optLong("angelegtAm", System.currentTimeMillis()),
-                geaendertAm = eintrag.optLong("geaendertAm", System.currentTimeMillis()),
-                umgesetztAm = eintrag.opt("umgesetztAm") as? Long,
-                originalText = eintrag.optString("originalText").takeIf(String::isNotBlank),
-                kategorieId = eintrag.optLong("kategorieId").takeIf { it > 0L },
-                weitereKategorien = eintrag.optString("weitereKategorien"),
-            )
-        }
-        datenbank.ideenDao().einfuegenAlle(eingelesen)
-
-        if (ersetzen) {
-            val nachrichten = json.optJSONArray("nachrichten") ?: JSONArray()
-            val liste = mutableListOf<NachrichtEntity>()
-            for (index in 0 until nachrichten.length()) {
-                val eintrag = nachrichten.optJSONObject(index) ?: continue
-                liste += NachrichtEntity(
-                    id = eintrag.optLong("id"),
-                    ideeId = eintrag.optLong("ideeId"),
-                    rolle = eintrag.optString("rolle"),
-                    text = eintrag.optString("text"),
-                    zeitpunkt = eintrag.optLong("zeitpunkt", System.currentTimeMillis()),
-                    unvollstaendig = eintrag.optBoolean("unvollstaendig"),
-                )
+        val abgleich = Abgleich(ideenDao.alleEinmal())
+        val ideenZuordnung = mutableMapOf<Long, Long>()
+        var uebersprungen = 0
+        // In der Reihenfolge der Sicherung unten an die jeweilige Liste anhängen.
+        val gesichert = liesIdeen(json).sortedBy { it.idee.reihenfolge }
+        for (eintrag in gesichert) {
+            val idee = eintrag.idee
+            if (!abgleich.istNeu(idee)) {
+                uebersprungen++
+                continue
             }
-            datenbank.nachrichtenDao().einfuegenAlle(liste)
+            abgleich.merke(idee)
+            val haupt = idee.kategorieId?.let(kategorieZuordnung::get)
+            val weitere = idee.weitereKategorieIds().mapNotNull(kategorieZuordnung::get).filter { it != haupt }
+            val neueId = ideenDao.einfuegen(
+                idee.copy(
+                    reihenfolge = ideenDao.naechsteReihenfolgeUnten(idee.status),
+                    kategorieId = haupt,
+                    weitereKategorien = weitereKategorienText(weitere),
+                ),
+            )
+            ideenZuordnung[eintrag.alteId] = neueId
         }
+
+        // Gespräche nur für die Ideen, die gerade neu dazugekommen sind.
+        val nachrichten = json.optJSONArray("nachrichten") ?: JSONArray()
+        val liste = mutableListOf<NachrichtEntity>()
+        for (index in 0 until nachrichten.length()) {
+            val eintrag = nachrichten.optJSONObject(index) ?: continue
+            val ideeId = ideenZuordnung[eintrag.optLong("ideeId")] ?: continue
+            liste += NachrichtEntity(
+                ideeId = ideeId,
+                rolle = eintrag.optString("rolle"),
+                text = eintrag.optString("text"),
+                zeitpunkt = eintrag.optLong("zeitpunkt", System.currentTimeMillis()),
+                unvollstaendig = eintrag.optBoolean("unvollstaendig"),
+            )
+        }
+        if (liste.isNotEmpty()) nachrichtenDao.einfuegenAlle(liste)
+
         IdeenLog.info(
             "Sicherung",
             "importiere",
             "Sicherung eingespielt",
-            mapOf("ideen" to eingelesen.size, "ersetzt" to ersetzen),
+            mapOf("neu" to ideenZuordnung.size, "schonDa" to uebersprungen, "ersetzt" to ersetzen),
         )
-        return eingelesen.size
+        Ergebnis(neu = ideenZuordnung.size, schonDa = uebersprungen)
+    }
+
+    /**
+     * Räumt Doppel auf, die frühere Wiederherstellungen hinterlassen haben: Ideen mit gleichem
+     * Titel und Text werden zu der ältesten zusammengelegt. Gespräche und Kategorien der Doppel
+     * wandern zu ihr, es geht nichts verloren. Bearbeitete Kopien bleiben stehen.
+     */
+    suspend fun entferneDoppelte(): Int = datenbank.withTransaction {
+        val ideenDao = datenbank.ideenDao()
+        val nachrichtenDao = datenbank.nachrichtenDao()
+        var entfernt = 0
+        ideenDao.alleEinmal()
+            .groupBy { it.status + " " + inhaltsSchluessel(it) }
+            .values
+            .filter { it.size > 1 }
+            .forEach { gruppe ->
+                val bleibt = gruppe.minBy { it.id }
+                val doppel = gruppe.filter { it.id != bleibt.id }
+                val haupt = bleibt.kategorieId ?: doppel.firstNotNullOfOrNull { it.kategorieId }
+                val weitere = gruppe.flatMap { it.alleKategorieIds() }.distinct().filter { it != haupt }
+                ideenDao.setzeKategorien(bleibt.id, haupt, weitereKategorienText(weitere))
+                doppel.forEach { kopie ->
+                    nachrichtenDao.verschiebe(kopie.id, bleibt.id)
+                    ideenDao.loeschen(kopie)
+                    entfernt++
+                }
+            }
+        IdeenLog.info("Sicherung", "entferneDoppelte", "Doppelte Ideen zusammengelegt", mapOf("anzahl" to entfernt))
+        entfernt
     }
 
     /** Eine unbekannte, höhere Fassung wird abgelehnt statt halb eingelesen. */
@@ -191,7 +297,7 @@ class Sicherung(
     /** Wie viele Sicherungen gerade im Ordner liegen. */
     suspend fun anzahlSicherungen(): Int = datei.sicherungen().size
 
-    suspend fun stelleWiederHerAus(quelle: Uri, ersetzen: Boolean): Int {
+    suspend fun stelleWiederHerAus(quelle: Uri, ersetzen: Boolean): Ergebnis {
         val json = JSONObject(datei.lies(quelle))
         pruefeSchema(json)
         return spieleEin(json, ersetzen)
@@ -201,10 +307,17 @@ class Sicherung(
     suspend fun vorschauVon(quelle: Uri): SicherungsVorschau = withContext(Dispatchers.IO) {
         val json = JSONObject(datei.lies(quelle))
         pruefeSchema(json)
+        val bestehende = datenbank.ideenDao().alleEinmal()
+        val abgleich = Abgleich(bestehende)
+        val gesichert = liesIdeen(json)
+        val neu = gesichert.count { eintrag ->
+            abgleich.istNeu(eintrag.idee).also { if (it) abgleich.merke(eintrag.idee) }
+        }
         SicherungsVorschau(
-            ideen = json.optJSONArray("ideen")?.length() ?: 0,
+            ideen = gesichert.size,
+            neu = neu,
             nachrichten = json.optJSONArray("nachrichten")?.length() ?: 0,
-            bestehende = datenbank.ideenDao().alleEinmal().size,
+            bestehende = bestehende.size,
             erstelltAm = json.optString("erstelltAm"),
         )
     }

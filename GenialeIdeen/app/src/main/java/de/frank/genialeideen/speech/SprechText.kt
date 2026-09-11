@@ -20,7 +20,8 @@ object SprechText {
     private val INLINE_CODE = Regex("`([^`]*)`")
     private val URL = Regex("""(?i)\b(?:https?://|www\.)\S+""")
     private val EMAIL = Regex("""\b[\w.-]+@[\w.-]+\.\w{2,}\b""")
-    private val DATEIPFAD = Regex("""(?:[A-Za-z]:\\|/)[\w./\\-]{4,}""")
+    // Kein Wortzeichen davor und mindestens ein zweiter Trenner — sonst würde „und/oder“ ein Pfad.
+    private val DATEIPFAD = Regex("""(?<![\w])(?:[A-Za-z]:\\|/)[\w.\\-]+[/\\][\w./\\-]+""")
 
     /** Quellenangaben: (vgl. Meier 2020), (S. 12), [3], [Quelle: …]. */
     private val QUELLE = Regex(
@@ -30,10 +31,17 @@ object SprechText {
     )
 
     /** Aufzählungszeichen am Zeilenanfang — die Zeile wird ein eigener Satz. */
-    private val AUFZAEHLUNG = Regex("""(?m)^\s{0,6}(?:[-*•·+]|\d{1,2}[.)])\s+""")
+    /** Ein Datum wie „3. Oktober“ am Zeilenanfang ist keine Aufzählung. */
+    private val AUFZAEHLUNG = Regex(
+        """(?m)^\s{0,6}(?:[-*•·+]|\d{1,2}[.)](?!\s*(?:Januar|Februar|März|April|Mai|Juni|Juli|""" +
+            """August|September|Oktober|November|Dezember)\b))\s+""",
+    )
 
-    /** Markdown-Auszeichnung, die sonst als Zeichen gesprochen würde. */
-    private val MARKDOWN_ZEICHEN = Regex("""[*_~>#]""")
+    /**
+     * Markdown-Auszeichnung, die sonst als Zeichen gesprochen würde. Ein einzelnes „>“ oder „~“
+     * mitten im Text bleibt stehen — dafür hat [ERSATZ] ein gesprochenes Wort.
+     */
+    private val MARKDOWN_ZEICHEN = Regex("""[*_#]|~~|(?m:^[ \t]*>+)""")
 
     /** Zeichen, die ausgesprochen statt buchstabiert werden. */
     private val ERSATZ = linkedMapOf(
@@ -181,8 +189,9 @@ object SprechText {
 
     private fun schreibeAbkuerzungenAus(roh: String): String {
         var text = roh
+        // Nur am Wortanfang — sonst wird aus „Termin.“ ein „Termindestens“.
         ABKUERZUNGEN.forEach { (kurz, lang) ->
-            text = text.replace(kurz, lang, ignoreCase = false)
+            text = Regex("(?<!\\p{L})" + Regex.escape(kurz)).replace(text, Regex.escapeReplacement(lang))
         }
         return text
     }

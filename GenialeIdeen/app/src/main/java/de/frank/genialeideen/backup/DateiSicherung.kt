@@ -102,8 +102,9 @@ class DateiSicherung(private val context: Context) {
             throw fehler
         }
 
-        raeumeAuf(bisherige)
+        // Die Sicherung steht — ab hier zählt sie, auch wenn das Aufräumen danach hakt.
         BackupStatus.markBackedUp(context)
+        raeumeAuf(bisherige)
         Sicherungsdatei(datei, name, System.currentTimeMillis())
     }
 
@@ -133,6 +134,7 @@ class DateiSicherung(private val context: Context) {
                     DocumentsContract.Document.COLUMN_DOCUMENT_ID,
                     DocumentsContract.Document.COLUMN_DISPLAY_NAME,
                     DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+                    DocumentsContract.Document.COLUMN_SIZE,
                 ),
                 null,
                 null,
@@ -141,6 +143,9 @@ class DateiSicherung(private val context: Context) {
                 while (zeiger.moveToNext()) {
                     val name = zeiger.getString(1) ?: continue
                     if (!name.startsWith(PRAEFIX) || !name.endsWith(".json")) continue
+                    // Eine leer gebliebene Datei (Schreiben abgebrochen) ist keine Sicherung —
+                    // sonst gälte sie als „die davor“ und die gute würde weggeräumt.
+                    if (!zeiger.isNull(3) && zeiger.getLong(3) == 0L) continue
                     gefunden += Sicherungsdatei(
                         uri = DocumentsContract.buildDocumentUriUsingTree(baum, zeiger.getString(0)),
                         name = name,
@@ -149,14 +154,23 @@ class DateiSicherung(private val context: Context) {
                 }
             } ?: error("Der Sicherungsordner konnte nicht aufgelistet werden. Bestehende Sicherungen bleiben erhalten.")
         // Alte Namen enthalten zusätzlich "sicherung-". Nur den Zeitstempel vergleichen,
-        // sonst gewinnt die alte Datei alphabetisch gegen jede neue Sicherung.
+        // sonst gewinnt die alte Datei alphabetisch gegen jede neue Sicherung. Verglichen wird
+        // der echte Zeitpunkt: Neue Namen stehen in UTC (mit "Z"), alte in Ortszeit — sonst
+        // bekäme nach der Umstellung auf Winterzeit die neuere Sicherung den kleineren Namen.
         return gefunden.sortedWith(
-            compareByDescending<Sicherungsdatei> {
-                ZEIT_IM_NAMEN.find(it.name)?.value?.replace("-", "")?.padEnd(17, '0')
-                    ?: SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.GERMANY).format(Date(it.geaendertAm))
-            }
+            compareByDescending<Sicherungsdatei> { zeitpunktAusNamen(it.name) ?: it.geaendertAm }
                 .thenByDescending { it.geaendertAm },
         )
+    }
+
+    private fun zeitpunktAusNamen(name: String): Long? {
+        val treffer = ZEIT_IM_NAMEN.find(name) ?: return null
+        val ziffern = treffer.groupValues[1].replace("-", "").padEnd(17, '0')
+        val format = SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.GERMANY).apply {
+            if (treffer.groupValues[2] == "Z") timeZone = UTC
+            isLenient = false
+        }
+        return runCatching { format.parse(ziffern)?.time }.getOrNull()
     }
 
     private fun raeumeAuf(bisherige: List<Sicherungsdatei>) {
@@ -169,6 +183,7 @@ class DateiSicherung(private val context: Context) {
                 }
             }
                 .onFailure {
+                    // Die neue Sicherung ist geschrieben — eine liegen gebliebene alte ist kein Fehlschlag.
                     IdeenLog.warn(
                         "DateiSicherung",
                         "raeumeAuf",
@@ -176,7 +191,6 @@ class DateiSicherung(private val context: Context) {
                         mapOf("art" to it.javaClass.simpleName),
                     )
                 }
-                .getOrThrow()
         }
         if (zuLoeschen.isNotEmpty()) {
             IdeenLog.info(
@@ -195,7 +209,9 @@ class DateiSicherung(private val context: Context) {
     }.getOrNull()
 
     private fun neuerName(bisherige: List<Sicherungsdatei>): String {
-        val basis = "$PRAEFIX${SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.GERMANY).format(Date())}"
+        // UTC mit "Z": Zeitumstellung und Zeitzonenwechsel bringen die Reihenfolge nicht durcheinander.
+        val zeit = SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.GERMANY).apply { timeZone = UTC }.format(Date())
+        val basis = "$PRAEFIX${zeit}Z"
         val namen = bisherige.map { it.name }.toSet()
         var name = "$basis.json"
         var nummer = 2
@@ -210,6 +226,7 @@ class DateiSicherung(private val context: Context) {
         private const val PREFS = "pm_backup_status"
         private const val KEY_ORDNER = "sicherungs_ordner"
         private const val PRAEFIX = "geniale-ideen-"
-        private val ZEIT_IM_NAMEN = Regex("\\d{4}-\\d{2}-\\d{2}-\\d{4}(?:\\d{2}-\\d{3})?")
+        private val ZEIT_IM_NAMEN = Regex("(\\d{4}-\\d{2}-\\d{2}-\\d{4}(?:\\d{2}-\\d{3})?)(Z?)")
+        private val UTC = java.util.TimeZone.getTimeZone("UTC")
     }
 }

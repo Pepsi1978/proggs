@@ -104,7 +104,8 @@ fun EinstellungenScreen(
     // einen Ordner geliefert hat.
     val ordnerAnzeige by viewModel.sicherungsOrdner.collectAsState()
     val sicherungsStatus by viewModel.sicherungsStatus.collectAsState()
-    var sperreAn by remember { mutableStateOf(settings.appLockEnabled) }
+    // Folgt dem echten Zustand: Wird die Bestätigung abgebrochen, springt der Schalter nicht an.
+    val sperreAn by viewModel.appSperreAktiv.collectAsState()
     var sperreVerzoegerung by remember { mutableStateOf(settings.appLockDelayMinutes) }
     var kiZugang by remember { mutableStateOf(settings.kiZugang) }
     var modell by remember { mutableStateOf(settings.model) }
@@ -484,7 +485,6 @@ fun EinstellungenScreen(
             // ---- Sicherheit ----
             Klappblock("Sicherheit", "App-Sperre per Fingerabdruck") {
                 SchalterZeile("App-Sperre", sperreAn) { an ->
-                    sperreAn = an
                     aufAppSperreUmschalten(an)
                 }
                 if (sperreAn) {
@@ -545,6 +545,10 @@ fun EinstellungenScreen(
                             viewModel.vergissSicherungsOrdner()
                         }
                     }
+                }
+                Spacer(Modifier.height(10.dp))
+                Auswahlchip("Doppelte entfernen", false) {
+                    viewModel.entferneDoppelte()
                 }
             }
 

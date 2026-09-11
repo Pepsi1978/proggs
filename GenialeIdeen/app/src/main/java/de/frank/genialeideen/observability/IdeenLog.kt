@@ -23,7 +23,8 @@ data class LogZeile(
     val kontext: Map<String, Any?> = emptyMap(),
 ) {
     fun alsJson(): String = JSONObject()
-        .put("ts", ZEIT_FORMAT.format(Date(zeitpunkt)))
+        // SimpleDateFormat ist nicht threadsicher, protokolliert wird aber aus mehreren Threads.
+        .put("ts", synchronized(ZEIT_FORMAT) { ZEIT_FORMAT.format(Date(zeitpunkt)) })
         .put("level", stufe.name)
         .put("module", modul)
         .put("fn", funktion)

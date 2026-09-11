@@ -227,13 +227,19 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
     suspend fun suche(rohAnfrage: String): List<IdeeEntity> {
         val anfrage = rohAnfrage.trim()
         if (anfrage.length < 2) return emptyList()
-        val varianten = linkedSetOf(anfrage.lowercase(), entumlaute(anfrage), umlaute(anfrage))
-            .filter { it.isNotBlank() }
-        val ausdruck = varianten.joinToString(" OR ") { variante ->
-            variante.split(Regex("""\s+""")).filter(String::isNotBlank).joinToString(" ") { wort ->
-                "${wort.replace("\"", "")}*"
+        // Je Wort eine ODER-Gruppe, die Wörter untereinander UND: In FTS bindet OR stärker als
+        // das Leerzeichen, "a b OR c d" hiesse sonst a UND (b ODER c) UND d.
+        // Der Standard-Tokenizer senkt nur ASCII — "Übersicht" findet nur die grosse Variante.
+        val ausdruck = anfrage.split(Regex("""[^\p{L}\p{N}]+"""))
+            .filter(String::isNotBlank)
+            .joinToString(" ") { wort ->
+                val varianten = linkedSetOf(wort.lowercase(), entumlaute(wort), umlaute(wort))
+                    .filter(String::isNotBlank)
+                (varianten + varianten.map { it.replaceFirstChar(Char::uppercaseChar) })
+                    .distinct()
+                    .joinToString(" OR ") { "$it*" }
             }
-        }
+        if (ausdruck.isBlank()) return emptyList()
         return runCatching { ideenDao.suche(ausdruck) }
             .onFailure { IdeenLog.warn("Suche", "suche", "FTS-Ausdruck abgelehnt", mapOf("laenge" to anfrage.length)) }
             .getOrDefault(emptyList())

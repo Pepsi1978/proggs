@@ -20,6 +20,10 @@ class AppLockManager(private val settings: SecureSettings) : DefaultLifecycleObs
     private val _locked = MutableStateFlow(settings.appLockEnabled)
     val locked: StateFlow<Boolean> = _locked.asStateFlow()
 
+    /** Ob die Sperre wirklich eingeschaltet ist — erst nach der Bestätigung, nicht beim Antippen. */
+    private val _aktiv = MutableStateFlow(settings.appLockEnabled)
+    val aktiv: StateFlow<Boolean> = _aktiv.asStateFlow()
+
     private var imHintergrundSeit = 0L
 
     fun start() {
@@ -49,6 +53,7 @@ class AppLockManager(private val settings: SecureSettings) : DefaultLifecycleObs
     fun finishAuthentication(success: Boolean) {
         val enabling = promptEnablesLock.getAndSet(false)
         promptActive.set(false)
+        _aktiv.value = settings.appLockEnabled || (success && enabling)
         if (success && enabling) {
             settings.appLockEnabled = true
             _locked.value = false
@@ -63,5 +68,6 @@ class AppLockManager(private val settings: SecureSettings) : DefaultLifecycleObs
         promptEnablesLock.set(false)
         settings.appLockEnabled = false
         _locked.value = false
+        _aktiv.value = false
     }
 }

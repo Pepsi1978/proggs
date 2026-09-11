@@ -124,8 +124,12 @@ fun ErfassenScreen(
         )
     }
 
+    // Gespeichert oder schon gesichert verlassen — dann sichert das Verlassen nicht noch einmal.
+    var erledigt by remember { mutableStateOf(false) }
+
     // Zurückwischen darf die halbfertige Idee nicht wegwerfen — sie landet in den Entwürfen.
     val zurueckMitSicherung = {
+        erledigt = true
         viewModel.brichAufnahmeAb()
         sichern()
         viewModel.korrekturVergessen()
@@ -143,6 +147,15 @@ fun ErfassenScreen(
         }
         lebenszyklus.lifecycle.addObserver(beobachter)
         onDispose { lebenszyklus.lifecycle.removeObserver(beobachter) }
+    }
+
+    // Jeder andere Weg hinaus (etwa „Einstellungen“ in einer Meldung) sichert ebenfalls und
+    // stoppt ein noch laufendes Mikrofon.
+    DisposableEffect(Unit) {
+        onDispose {
+            if (!erledigt) sichern()
+            if (viewModel.aufnahme.value.laeuft) viewModel.brichAufnahmeAb()
+        }
     }
 
     Box(Modifier.fillMaxSize().background(gold.hintergrund)) {
@@ -327,6 +340,7 @@ fun ErfassenScreen(
                         hauptKnopf = true,
                         aufTipp = {
                             val gewaehlteKategorie = kategorieId ?: return@GoldKnopf
+                            erledigt = true
                             viewModel.legeAn(
                                 titel,
                                 text,

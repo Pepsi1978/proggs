@@ -55,7 +55,7 @@ fun DiagnoseScreen(
     val theme by viewModel.theme.collectAsState()
     val zeilen by IdeenLog.zeilen.collectAsState()
     var stufe by remember { mutableStateOf<LogStufe?>(null) }
-    val berichte = remember { viewModel.absturzberichte() }
+    var berichte by remember { mutableStateOf(viewModel.absturzberichte()) }
 
     val gefiltert = remember(zeilen, stufe) { zeilen.filter { stufe == null || it.stufe == stufe } }
     val datei = IdeenLog.logDatei()
@@ -138,7 +138,10 @@ fun DiagnoseScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                StufenChip("Berichte verwerfen", false) { viewModel.verwerfeAbstuerze() }
+                StufenChip("Berichte verwerfen", false) {
+                    viewModel.verwerfeAbstuerze()
+                    berichte = viewModel.absturzberichte()
+                }
             }
         }
 
