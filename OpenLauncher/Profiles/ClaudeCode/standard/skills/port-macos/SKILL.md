@@ -1,6 +1,6 @@
 ---
 name: port-macos
-description: Portiert eine Windows-App aus dem Monorepo ~/proggs funktionsgleich nach macOS — gemeinsamer Code-Stand, direkt auf main, eigener GitHub-Actions-Workflow mit Windows- und macOS-Job, Fehlerschleife mit gh bis beide grün sind, Abschlussbericht in PORTING.md und ein fertiger Übergabe-Prompt MAC-PROMPT.md für den Mac-Test. Nutze diesen Skill IMMER wenn der Benutzer sagt "port-macos", "/port-macos", "portiere nach macOS", "App nach macOS portieren", "Mac-Portierung", "Mac-Version bauen", "mach die App Mac-fähig", "macOS-Port starten". Argument: der App-Ordnername in ~/proggs (z. B. "/port-macos GenialeIdeen"); ohne Argument die App aus dem aktuellen Arbeitsordner nehmen.
+description: Portiert ein Windows-Desktop-Programm aus dem Monorepo ~/proggs funktionsgleich nach macOS — erkennt zuerst, ob es ein Desktop-Programm (→ macOS) oder eine Handy-/Tablet-App (→ iOS/iPadOS, derzeit nur Hinweis und Stopp) ist; Weg A gemeinsamer Code-Stand oder Weg B native Swift/SwiftUI-Version <App>Mac, direkt auf main, eigener GitHub-Actions-Workflow mit Windows- und macOS-Job, Fehlerschleife mit gh bis beide grün sind, Abschlussbericht in PORTING.md und ein fertiger Übergabe-Prompt MAC-PROMPT.md für den Mac-Test. Nutze diesen Skill IMMER wenn der Benutzer sagt "port-macos", "/port-macos", "portiere nach macOS", "App nach macOS portieren", "Mac-Portierung", "Mac-Version bauen", "mach die App Mac-fähig", "macOS-Port starten". Argument: der App-Ordnername in ~/proggs (z. B. "/port-macos <Ordnername>"); ohne Argument die App aus dem aktuellen Arbeitsordner nehmen.
 ---
 
 # port-macos
@@ -9,8 +9,12 @@ description: Portiert eine Windows-App aus dem Monorepo ~/proggs funktionsgleich
 
 1. **App bestimmen:** `<App>` = das Argument (Ordnername unter `~/proggs`). Ohne Argument: der oberste Ordner unter `~/proggs`, in dem der aktuelle Arbeitsordner liegt. Ist beides nicht eindeutig, frag nach dem App-Namen — nie raten.
 2. Prüfen, dass `~/proggs/<App>` existiert. `<app>` = `<App>` in Kleinbuchstaben (für den Workflow-Dateinamen).
-3. `gh auth status` kurz prüfen. Fehlt die Anmeldung oder der Scope `workflow`: dem Benutzer `! gh auth login` bzw. `! gh auth refresh -s workflow` nennen und anhalten.
-4. Danach den folgenden Auftrag mit eingesetztem `<App>`/`<app>` vollständig ausführen. Er hat Vorrang vor dem aktiven Arbeitsmodus (auch vor dem Schnellmodus).
+3. **Plattform-Art erkennen** — anhand der Projektdateien, bevor irgendetwas geändert wird:
+   - **Desktop-Programm für Windows** (z. B. `.csproj`/`.sln` mit WPF, WinForms oder `net*-windows`, Electron, Tauri, Python-/Java-/Node-Programm mit Fenster, Konsolenprogramm) → **macOS-Portierung**: weiter mit dem Auftrag unten.
+   - **Mobile App für Handy oder Tablet** (z. B. `build.gradle(.kts)` mit `com.android.application` und `AndroidManifest.xml`, Kotlin/Compose, Flutter, React Native) → Ziel wäre **iOS/iPadOS**, NICHT macOS. Den Auftrag unten NICHT ausführen. Stattdessen melden: „<App> ist eine Android-App; eine Portierung ginge nach iOS/iPadOS und ist derzeit nicht vorgesehen (kein iPhone/iPad vorhanden).“ Dazu kurz nennen, was dafür nötig wäre (Mac mit Xcode, Apple-Developer-Konto für Geräte-Installation, Weg: Kotlin/Compose Multiplatform oder native SwiftUI-App, iOS-Simulator-Test in der CI) und anhalten. Nur wenn der Benutzer ausdrücklich eine iOS-Portierung verlangt, den Auftrag sinngemäß auf iOS/iPadOS übertragen (Workflow-Job `macos-latest` mit iOS-Simulator statt .app-Paket).
+   - **Schon eine Mac-App, Web-App oder nicht eindeutig** → nachfragen, nicht raten.
+4. `gh auth status` kurz prüfen. Fehlt die Anmeldung oder der Scope `workflow`: dem Benutzer `! gh auth login` bzw. `! gh auth refresh -s workflow` nennen und anhalten.
+5. Danach den folgenden Auftrag mit eingesetztem `<App>`/`<app>` vollständig ausführen. Er hat Vorrang vor dem aktiven Arbeitsmodus (auch vor dem Schnellmodus).
 
 Die kopierbare Fassung dieses Auftrags liegt zusätzlich in `~/proggs/Prompts/port-macos-prompt.md` — beide Texte gleich halten, wenn einer geändert wird.
 
@@ -18,7 +22,7 @@ Die kopierbare Fassung dieses Auftrags liegt zusätzlich in `~/proggs/Prompts/po
 
 ## Auftrag
 
-Aufgabe: Portiere die App <App> (Ordner ~/proggs/<App>) funktionsgleich nach macOS. Ein gemeinsamer Code-Stand für beide Plattformen – die Windows-Version muss danach weiterhin exakt so funktionieren wie jetzt.
+Aufgabe: Portiere die Windows-Desktop-App <App> (Ordner ~/proggs/<App>) funktionsgleich nach macOS, sodass sie auf dem Mac als normale Programm-App läuft. Bevorzugt ein gemeinsamer Code-Stand für beide Plattformen (Weg A), sonst eine native Mac-Version (Weg B, siehe Abschnitt 1) – die Windows-Version muss danach weiterhin exakt so funktionieren wie jetzt.
 
 ### 0. Rahmen (gilt für den ganzen Auftrag)
 - Monorepo: Die App liegt im Repo https://github.com/Pepsi1978/proggs (öffentlich), Branch `main`, Ordner `<App>/`. Alle anderen Apps im Repo bleiben unberührt.
@@ -32,17 +36,21 @@ Aufgabe: Portiere die App <App> (Ordner ~/proggs/<App>) funktionsgleich nach mac
 - Stelle fest: Sprache, Framework, Build-System, Paketmanager, Zielarchitektur.
 - Liste alle Windows-spezifischen Stellen auf: Win32-/Windows-only-APIs, Registry, Pfade mit Backslash oder Laufwerksbuchstaben, %APPDATA% und andere Umgebungsvariablen, Autostart, Tray-Icon, globale Hotkeys, Benachrichtigungen, Dateidialoge, Schriftarten, DPI-Skalierung, Aufrufe von cmd/PowerShell, Zeilenenden, Groß-/Kleinschreibung von Dateinamen, native Abhängigkeiten (DLLs).
 - Schreibe daraus eine kurze Portierungsanalyse in `<App>/PORTING.md`: Was wird wie abstrahiert, was hat auf macOS kein Gegenstück und wie wird es ersetzt (z. B. Ctrl → Cmd, %APPDATA% → ~/Library/Application Support/<App>, Autostart → Login Item, Tray-Icon → Menüleisten-Icon).
-- Läuft das UI-Framework nicht auf macOS (z. B. WPF oder WinForms), ist ein gemeinsamer Code-Stand nur mit einem Framework-Wechsel möglich (z. B. Avalonia). Das ist die Entscheidung des Benutzers: Nach der Analyse anhalten, PORTING.md committen und pushen, die Optionen mit Aufwand und Empfehlung nennen und auf die Antwort warten.
+- Läuft das Framework schon auf macOS (z. B. .NET ohne WPF/WinForms, Avalonia, Electron, Tauri, Python, Java, Node), gilt Weg A ohne Rückfrage.
+- Läuft das UI-Framework nicht auf macOS (z. B. WPF oder WinForms), ist das die Entscheidung des Benutzers: Nach der Analyse anhalten, PORTING.md committen und pushen, beide Wege mit Aufwand und Empfehlung nennen und auf die Antwort warten:
+  - Weg A – Framework-Wechsel (z. B. Avalonia): ein gemeinsamer Code-Stand für beide Plattformen.
+  - Weg B – native Mac-Version in Swift/SwiftUI als eigenes Projekt `<App>Mac/` neben `<App>/`, nach dem Muster OpenLauncher/OpenLauncherMac und dem Skill `cross-platform`. Die Windows-Version bleibt unverändert; die Funktionsgleichheit sichert eine Paritätsliste in PORTING.md.
 
 ### 2. Umsetzung
 - Kleine, klar benannte Commits direkt auf `main`, damit jeder Schritt einzeln rückgängig gemacht werden kann. Jeder Commit baut auf Windows grün.
-- Plattformabhängiger Code kommt hinter eine gemeinsame Schnittstelle. Keine kopierte zweite App, keine Sonderversion.
+- Weg A: Plattformabhängiger Code kommt hinter eine gemeinsame Schnittstelle. Keine kopierte zweite App, keine Sonderversion.
+- Weg B: Die Mac-Version bildet jede Funktion der Windows-Version nach; jeder Punkt der Paritätsliste in PORTING.md wird abgehakt. Gemeinsam genutzte Daten, Dateiformate und Einstellungen bleiben zwischen beiden Versionen kompatibel.
 - Keine Funktion still weglassen. Was auf macOS wirklich nicht machbar ist, wird im Bericht unter „Nicht portiert“ genannt – nicht auskommentiert.
 - Zielarchitektur: Apple Silicon (arm64); Universal-Build nur, wenn das Build-System das ohne Mehraufwand hergibt.
 
 ### 3. GitHub Actions
 - Workflows liegen im Monorepo immer unter `~/proggs/.github/workflows/`. Dort gibt es bereits `build-macos.yml` und `build-windows.yml`. Prüfe zuerst, ob diese <App> schon bauen. Keine doppelten Läufe, bestehende Workflows nicht umbauen.
-- Lege einen eigenen Workflow `.github/workflows/<app>-build.yml` an (Name kleingeschrieben) mit Matrix `windows-latest` + `macos-latest` und Pfadfilter `paths: ['<App>/**', '.github/workflows/<app>-build.yml']`, damit er nur bei Änderungen an dieser App läuft. Beide Jobs müssen grün werden – der Windows-Job ist der Beweis, dass nichts kaputtgegangen ist.
+- Lege einen eigenen Workflow `.github/workflows/<app>-build.yml` an (Name kleingeschrieben) mit Matrix `windows-latest` + `macos-latest` und Pfadfilter `paths: ['<App>/**', '.github/workflows/<app>-build.yml']`, damit er nur bei Änderungen an dieser App läuft (bei Weg B zusätzlich `'<App>Mac/**'`; der macOS-Job baut dann `<App>Mac/`). Beide Jobs müssen grün werden – der Windows-Job ist der Beweis, dass nichts kaputtgegangen ist.
 - Der macOS-Job muss: Abhängigkeiten installieren, kompilieren, alle vorhandenen Tests ausführen, wenn möglich einen Headless-Starttest (App startet und beendet sich sauber) und ein installierbares Paket (.app als .zip oder .dmg) als Workflow-Artefakt hochladen.
 - Code-Signierung und Notarisierung nur, wenn Apple-Secrets im Repo vorhanden sind (`gh api repos/Pepsi1978/proggs/actions/secrets --jq '.secrets[].name'`; Stand 11.09.2026: nur `CLAUDE_CODE_OAUTH_TOKEN`). Sonst unsigniert bauen und im Bericht erklären, wie man die App trotzdem öffnet.
 
@@ -64,7 +72,7 @@ Aufgabe: Portiere die App <App> (Ordner ~/proggs/<App>) funktionsgleich nach mac
 Ganz zum Schluss einen zweiten, eigenständigen Prompt erzeugen, den der Benutzer auf dem Mac in Claude Code einfügt. Speichern als `<App>/MAC-PROMPT.md` (committen und pushen) und zusätzlich als allerletzte Ausgabe im Chat in EINEM einzigen Codeblock ausgeben, der komplett kopierbar ist.
 
 Regeln für diesen Prompt:
-- Die Mac-Sitzung kennt nichts aus diesem Gespräch. Der Prompt muss allein ausreichen: Repository-URL https://github.com/Pepsi1978/proggs, Branch `main`, Repo-Ordner auf dem Mac `/Users/frank/proggs`, App-Ordner `/Users/frank/proggs/<App>`, Sprache/Framework, benötigte Werkzeuge mit Versionen, die exakten Befehle. Keine Platzhalter – alles konkret ausgefüllt.
+- Die Mac-Sitzung kennt nichts aus diesem Gespräch. Der Prompt muss allein ausreichen: Repository-URL https://github.com/Pepsi1978/proggs, Branch `main`, Repo-Ordner auf dem Mac `/Users/frank/proggs`, App-Ordner `/Users/frank/proggs/<App>` (bei Weg B `/Users/frank/proggs/<App>Mac`), Sprache/Framework, benötigte Werkzeuge mit Versionen, die exakten Befehle. Keine Platzhalter – alles konkret ausgefüllt.
 - Die komplette Checkliste aus Teil B ist wörtlich enthalten.
 - Auf Deutsch, nummerierte Abschnitte, gleicher Stil wie dieser Auftrag.
 
