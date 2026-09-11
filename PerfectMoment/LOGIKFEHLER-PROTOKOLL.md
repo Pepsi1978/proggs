@@ -24,9 +24,9 @@ Nicht prüfrelevant: `build/`, `.gradle/`, generierter Code, Fremdbibliotheken, 
 
 ## Loop-Zustand
 
-- Aktuelle Runde: 1, Stufe: 1 (Überblick)
+- Aktuelle Runde: 6, Stufe: 5 (Blickwinkel: Tester – fehlende Testfälle, Sparmodus-Volle-Tiefe für geänderte Bereiche)
 - Konvergenzzähler: 0
-- Nächster Blickwinkel: Stufe 2 (Funktion für Funktion)
+- Nächster Blickwinkel: Tester (fehlende Testfälle und was dort passiert)
 - Offene Fixe: keine
 - Ausstehend: Commit/Push Runde 1, Version 0.1.114
 
@@ -34,8 +34,10 @@ Nicht prüfrelevant: `build/`, `.gradle/`, generierter Code, Fremdbibliotheken, 
 
 | ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Kurzbeschreibung |
 |---|---|---|---|---|---|---|---|
-| F1 | 1 | oberflaeche | AppViewModel.kt:113-129 | Oberflächenlogik | hoch | behoben | Verlaufspinning bricht jede Sortierung |
+| F1 | 1 | oberflaeche | AppViewModel.kt:113-129 | Oberflächenlogik | hoch | abgelehnt | Verlaufspinning bricht jede Sortierung – FEHL-FUND: HistorySortingTest schreibt den Pin als Vertrag fest |
 | F2 | 1 | sicherung | AutoBackup.kt:42-46 | Daten und Persistenz | kritisch | behoben | Nachschub-Fragen lösen kein Backup aus |
+| F3 | 3 | plattform | SessionForegroundService.kt:178-200 | Zustand und Lebenszyklus | niedrig | behoben | WakeLock wächst bei verlängerter Dauer nicht mit |
+| F4 | 5 | plattform | SessionNotification.kt:37 | Oberflächenlogik | mittel | behoben | Notifikations-Knopf „Weiter" pausiert stumme Sitzung |
 
 ### F1 – Verlaufspinning bricht jede Sortierung
 - Beweis: `sortHistorySessions` stellt `lastPlayed` per `listOf(lastPlayed) + rest.sortedWith(...)` immer an erste Stelle – auch bei Sortierung A–Z/Neueste/Älteste. Eingabe: Einträge A (zuletzt gespielt), B, C, Sort=A–Z → Ist: A,B,C mit A oben nur zufällig richtig; bei zuletzt gespielt=C → Ist: C,A,B → Soll: A,B,C.
@@ -50,11 +52,27 @@ Nicht prüfrelevant: `build/`, `.gradle/`, generierter Code, Fremdbibliotheken, 
 - Verifikation: (1) Beweis hinfällig – Refill ändert questionCount → neuer Fingerprint. (2) Kein neues Fehlverhalten – nur mehr Uploads bei echten Änderungen. (3) Grenzen – Int-Hashkollision theoretisch möglich, praktisch wie bisher.
 - Restrisiko (Klärungsbedarf K1): reine Text-Edits einzelner Fragen ändern kein Session-Feld und lösen weiter kein AutoBackup aus; observeSessions meldet sie gar nicht.
 
+### F3 – WakeLock wächst bei verlängerter Dauer nicht mit
+- Beweis: `acquireWakeLock()` läuft nur in `onCreate` mit der Startdauer. Eingabe: 10-Min-Sitzung starten, Bildschirm aus, Dauer live auf 120 Min erhöhen → Ist: WakeLock läuft nach 15 Min ab, CPU darf schlafen, Wiedergabe verstummt trotz Restzeit → Soll: WakeLock deckt die neue Dauer ab.
+- Fix: `renewWakeLock` erneuert den WakeLock bei jeder Config-Änderung (über den Runtime-Flow in `updateNotification`), idempotent je Dauer.
+- Test: kein Test, weil Schnellmodus (prüft der Mensch selbst).
+- Verifikation: (1) Beweis hinfällig – Dauerwechsel erneuert das Zeitfenster. (2) Kein neues Fehlverhalten – idempotent, einziger Trigger der Runtime-Flow. (3) Null/leer/Grenzen – runtime null wird übersprungen, Dauer 0 ohne Timeout, release nur if held.
+
 ## Rundenübersicht
 
 | Runde | Stufe | Alle Bereiche geprüft | gemeldet/bestätigt/behoben/verifiziert | Build | Zähler danach |
 |---|---|---|---|---|---|
 | 1 | 1 | ja (Dateiliste: SessionEngine, SessionController, SessionSilence, EmojiParser, SessionModels, SessionRepository, BackupPayload, Daos, QuestionResponseValidator, SkillTextExport, WhisperHallucinationFilter, StreamingQuestionDecoder, IntroQuestionPolicy, AutoBackup, Entities, TtsManager, AppViewModel) | 2/2/2/2 (Selbstverifikation, Schnellmodus) | assembleDebug | 0 |
+| 2 | 2 | ja (Funktion für Funktion: ContentRepository, BackupRepository, SecureSettings, DictationText+Test, CodexModels, AppViewModel-Rest, HookIcons, Muster-Grep über alle Dateien) | 1/0/0/0 (HookIcons-Verdacht ohne konkreten Pfad abgelehnt) | – | 1 |
+| 3 | 3 | ja (Grenzen/Zustand/Zeit: SessionForegroundService, SessionEngine-Lebenszyklen, SessionController-Startpfade, AudioFocus-Wechselwirkungen) | 1/1/1/1 (Selbstverifikation, Schnellmodus) | assembleDebug | 0 |
+| 4 | 4 | ja (Wartungsentwickler: Folgen von F1–F3; HistorySortingTest gelesen; Kurzprüfung Rest via Runde 2/3) | 0/0/0/0 – F1 als Fehl-Fund erkannt und revertiert (Test = Vertrag) | assembleDebug | 1 |
+| 5 | 5 | ja (Vollrunde, Blickwinkel ungeduldiger Benutzer/Angreifer: FileBackup, BackupStatus, DriveClient, SessionNotification, Doppelklick-/Import-Pfade) | 1/1/1/1 (Selbstverifikation, Schnellmodus) | assembleDebug | 0 |
+
+### F4 – Notifikations-Knopf „Weiter" pausiert stumme Sitzung
+- Beweis: `isPlaying = speakerOn && !paused`; der Knopf löst ACTION_PAUSE_RESUME aus. Eingabe: Sitzung stumm laufend (speakerOn=false, paused=false) → Ist: Knopf zeigt „Weiter", Tipp ruft pauseSession() → Sitzung pausiert → Soll: Beschriftung folgt der Aktion (Pause-Zustand).
+- Fix: `isPlaying = state != null && state.paused != true`.
+- Test: kein Test, weil Schnellmodus (prüft der Mensch selbst).
+- Verifikation: (1) Beweis hinfällig – stumm+laufend zeigt „Pause". (2) Kein neues Fehlverhalten – pausiert/Null-Fälle wie bisher. (3) Null abgedeckt (state null → „Weiter" wie bisher, Service stoppt eh).
 
 ## Klärungsbedarf
 

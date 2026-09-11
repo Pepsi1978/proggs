@@ -30,6 +30,7 @@ class SessionForegroundService : Service() {
     private var stateJob: Job? = null
     private var resumeAfterFocusGain = false
     private var wakeLock: PowerManager.WakeLock? = null
+    private var wakeLockDurationMs: Long? = null
     private var silence: SessionSilence? = null
 
     override fun onCreate() {
@@ -154,6 +155,7 @@ class SessionForegroundService : Service() {
     }
 
     private fun updateNotification(runtime: SessionRuntime?, state: SessionState?) {
+        runtime?.config?.durationMs?.let(::renewWakeLock)
         val playbackState = when {
             state?.phase == Phase.ENDED -> PlaybackState.STATE_STOPPED
             state?.paused == true -> PlaybackState.STATE_PAUSED
@@ -176,7 +178,18 @@ class SessionForegroundService : Service() {
     }
 
     private fun acquireWakeLock() {
-        val sessionDurationMs = controller.runtime.value?.config?.durationMs ?: MAX_SESSION_DURATION_MS
+        renewWakeLock(controller.runtime.value?.config?.durationMs ?: MAX_SESSION_DURATION_MS)
+    }
+
+    /**
+     * Die Dauer kann während einer laufenden Sitzung verlängert werden — der WakeLock muss dann
+     * mitwachsen, sonst verstummt die Sitzung nach Ablauf des alten Zeitfensters bei
+     * ausgeschaltetem Bildschirm, obwohl noch Restzeit übrig ist.
+     */
+    private fun renewWakeLock(sessionDurationMs: Long) {
+        if (sessionDurationMs == wakeLockDurationMs) return
+        wakeLockDurationMs = sessionDurationMs
+        wakeLock?.takeIf { it.isHeld }?.release()
         wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:session")
             .apply {

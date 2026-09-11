@@ -34,7 +34,10 @@ object SessionNotification {
         runtime: SessionRuntime?,
         state: SessionState?,
     ): Notification {
-        val isPlaying = state?.speakerOn == true && state.paused != true
+        // Der Knopf schaltet Pause/Fortsetzen um, darum folgt seine Beschriftung dem
+        // Pause-Zustand — nicht dem Lautsprecher: Eine stumm laufende Sitzung zeigte sonst
+        // „Weiter", pausierte aber beim Tippen.
+        val isPlaying = state != null && state.paused != true
         val toggleIntent = serviceIntent(context, SessionForegroundService.ACTION_PAUSE_RESUME, 1)
         val stopIntent = serviceIntent(context, SessionForegroundService.ACTION_STOP, 2)
         val openIntent = PendingIntent.getActivity(
