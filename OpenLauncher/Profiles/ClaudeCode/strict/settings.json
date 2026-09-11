@@ -223,7 +223,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/research-approval.ps1\"",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/proggs/claude-code-setup/hooks/research-approval.ps1\"",
             "timeout": 8
           }
         ]

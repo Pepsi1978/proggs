@@ -11,17 +11,19 @@ starten, pro Researcher sofort ein Zwischenfazit zeigen, ruhig auswerten und kon
 Umsetz-Aufgaben ableiten. Alle anderen Research-Skills/Agenten **delegieren** hierher, damit
 ihre Recherche-Arbeit konsistent und vollstaendig laeuft — ohne dass das "WIE" 8x dupliziert wird.
 
-**Policy-Schicht (bleibt getrennt):** Die Regel `~/.claude/rules/research-strategy.md` entscheidet
-das OB/WOMIT (Empfehlung + Frage 1 A/B/C/D + Eskalations-Frage 2 + Kostenkontrolle). Dieser Skill
-ist die Orchestrierungs-Schicht (das WIE). Die Ausfuehrungs-Schicht sind die Skripte
-`mm-research.py` / `or-research.py` bzw. der Sonnet-5-Schwarm.
+**Schichten:** Die Regel `research-strategy.md` beschreibt das OB/WOMIT (Frage 1 A/B/C/D, Frage 2,
+Kostenkontrolle) — sie ist aber nicht in jedem Profil geladen, darum steht alles Pflichtige auch hier
+(Block 0.0/0.1). Dieser Skill ist die Orchestrierungs-Schicht (das WIE). Die Ausfuehrungs-Schicht sind
+die Skripte `mm-research.py` / `or-research.py` / `research-swarm.py` bzw. der Host-Modell-Schwarm (C).
 
 ---
 
 ## Block 0.0 — Dieser Skill traegt sich selbst (PFLICHT-Lesung) ⭐
 
 **Warum das hier steht:** Die Profile unter `OpenLauncher/Profiles/` sind unterschiedlich ausgestattet
-(geprueft 09.09.2026). Der Skill ist das EINZIGE, was in jedem Profil vorhanden ist:
+(geprueft 11.09.2026). Der Skill ist das EINZIGE, was in jedem Profil vorhanden ist. Alle Claude-Profile
+rufen den Hook direkt aus dem Repo (`~/proggs/claude-code-setup/hooks/`) auf, damit ein `git pull` ihn
+auf jedem Rechner aktualisiert:
 
 | Profil | `rules/` (u.a. `research-strategy.md`) | `research-approval`-Hook | `research`-Skill |
 |--------|---------------------------------------|--------------------------|------------------|
