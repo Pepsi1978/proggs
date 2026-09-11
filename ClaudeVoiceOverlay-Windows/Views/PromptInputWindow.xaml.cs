@@ -88,13 +88,24 @@ public partial class PromptInputWindow : Window
         // Prompt-Zwischenspeicher-Leiste (1…15) unten aufbauen.
         BuildSlotBar();
 
-        // Sichtbare Versionsanzeige (Frank-Wunsch 2026-06-16): zeigt im Kopf der
-        // Eingabe, welche EXE-Version live ist — damit nie unklar ist, ob ein
-        // Update angekommen ist. Quelle: Assembly-Version (= csproj <Version>).
+        // Version und Update-Zeitpunkt aus den Build-Metadaten sichtbar machen.
         try
         {
-            var asmV = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            if (asmV is not null) TitleLabel.Text = $"Prompt-Eingabe \u00b7 v{asmV.Major}.{asmV.Minor}.{asmV.Build}";
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var asmV = assembly.GetName().Version;
+            var info = assembly
+                .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+                .FirstOrDefault()?.InformationalVersion;
+            int timestampStart = info?.IndexOf('(') ?? -1;
+            int timestampEnd = timestampStart >= 0 ? info!.IndexOf(')', timestampStart + 1) : -1;
+            if (asmV is not null)
+            {
+                string version = $"v{asmV.Major}.{asmV.Minor}.{asmV.Build}";
+                TitleLabel.Text = timestampEnd > timestampStart
+                    ? $"Prompt-Eingabe \u00b7 {version} \u00b7 {info![(timestampStart + 1)..timestampEnd]}"
+                    : $"Prompt-Eingabe \u00b7 {version}";
+            }
         }
         catch { /* Versionsanzeige ist optional */ }
         DiagLog.Write("SlotPriority", "input window built", ("slotMenus", PromptSlotService.SlotCount.ToString()));
