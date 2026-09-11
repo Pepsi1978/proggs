@@ -75,8 +75,8 @@
   // Punkt 7 — Web-Recherche laeuft ueber die API-Pipeline, NICHT ueber einen Firecrawl-MCP.
   //  Firecrawl-MCP am 2026-06-26 entfernt (Frank: alles ueber API, genau wie in Claude Code).
   //  Recherche-Weg: der research-Skill / der researcher-Agent ruft per Bash
-  //    ~/proggs/mm-research.py "<thema>" [n]                 (Engine A: Firecrawl-API + MiniMax M3)
-  //    ~/proggs/or-research.py "<thema>" minimax/minimax-m3:online  (Engine B: MiniMax M3 + OpenRouter-Websuche)
+  //    ~/proggs/mm-research.py "<thema>"   (Engine A: Firecrawl-API, 100 Vollseiten + DeepSeek V4 Flash @ Makora→Relace→DeepInfra)
+  //    ~/proggs/or-research.py "<thema>" deepseek/deepseek-v4-flash-0731:online  (Engine B: dasselbe Modell + OpenRouter-Websuche)
   //  Auch gezielte Einzel-Nachsuchen laufen so (NIE ueber ein firecrawl_*-Tool — gibt es hier nicht mehr).
   //  Spart zudem das MCP-Tool-Schema (~15-25k Tok/Prompt, Almanach §8). Keys in
   //  ~/SK/OpenCode/ (firecrawl-api-key.txt, go-api-key.txt) + ~/SK/ClaudeCodeOpenRouter/openrouter.key.

@@ -116,7 +116,7 @@ startet mit einer kurzen Ueberschrift; Eintraege kommen erst beim Recherchieren 
 3. **Nichts Relevantes neu?** → "Nichts Neues seit Version X (Stand: Datum)" melden, fertig.
 4. **Delta vorhanden?** → ZUERST den Recherche-Weg per `AskUserQuestion` waehlen lassen
    (Regel `research-strategy.md`, Frage 1 A/B/C/D) — NIE automatisch losrecherchieren:
-   - **A (Standard): Firecrawl (Rueckfall: Tavily) + DeepSeek V4 Flash @ DeepInfra (reasoning high)** → `python3 ~/proggs/mm-research.py "<kategorie-frage>" [n]`
+   - **A (Standard): Firecrawl (Rueckfall: Tavily) + DeepSeek V4 Flash @ Makora→Relace→DeepInfra (reasoning high)** → `python3 ~/proggs/mm-research.py "<kategorie-frage>" [n]`
      pro Kategorie. **Firecrawl Free = max 2 GLEICHZEITIG** (2 starten → auf Ergebnis warten → naechste 2;
      NICHT 7). Nach Abschluss Frage 2 (zusaetzliche Eskalation?). Das Auswerte-Modell liefert die quellentreue
      Auswertung; der Hauptagent arbeitet sie in die Kategorie-Dateien ein (Stufe 3 / `research-persistence`).

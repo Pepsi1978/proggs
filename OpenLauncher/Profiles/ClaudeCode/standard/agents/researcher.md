@@ -15,7 +15,7 @@ tools:
 
 ## Recherche-Strategie — dieser Agent ist die Opus-Stufe (Option C)
 > Regel `research-strategy.md`: Der token-sparende STANDARD ist NICHT dieser Agent, sondern die
-> Pipeline `mm-research.py` (Firecrawl -> DeepSeek V4 Flash @ DeepInfra = Option A) bzw. `or-research.py` (dasselbe Modell `:online`
+> Pipeline `mm-research.py` (Firecrawl -> DeepSeek V4 Flash @ Makora→Relace→DeepInfra = Option A) bzw. `or-research.py` (dasselbe Modell `:online`
 > = Option B) — vom Orchestrator per Bash ausgefuehrt (~100x weniger Opus-Token; Rohquellen laufen NIE
 > durch den Opus-Kontext). Vor JEDER Web-Recherche stellt der Orchestrator Frage 1 (A/B/C/D via
 > AskUserQuestion). **Dieser `researcher` ist die Opus-Web-Stufe (Option C)** — nur gespawnt, wenn Frank
@@ -67,7 +67,7 @@ BUG-KANDIDATEN:
 > auslagern** und nur eine kompakte Summary + Pfad zurueckgeben — so geht nichts verloren UND der
 > Kontext bleibt schlank.
 >
-> **BEOBACHTEN (Frank, seit 09.09.2026):** Wir arbeiten mit OpenRouter-Modellen (deepseek-v4-flash-0731 @ DeepInfra, Eskalation glm-5.2),
+> **BEOBACHTEN (Frank, seit 09.09.2026):** Wir arbeiten mit OpenRouter-Modellen (deepseek-v4-flash-0731 @ Makora→Relace→DeepInfra, Eskalation glm-5.2),
 > deren Praxis-Limits wir noch nicht kennen. Falls Researcher OHNE den Cap bei sehr grossen
 > Ergebnismengen ueber OpenRouter doch scheitern (Kontext-Ueberlauf/Timeout), den Cap gezielt wieder
 > einfuehren. Bis dahin: kein Cap, aber wachsam bleiben (siehe `lossless-context-principle.md`).

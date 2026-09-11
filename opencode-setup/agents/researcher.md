@@ -1,5 +1,5 @@
 ---
-description: Web-Recherche-Agent. Recherchiert ueber die API-Pipeline (Firecrawl + DeepSeek V4 Flash @ DeepInfra via mm-research.py, Eskalation or-research.py :online) — KEIN MCP. Holt Quellen, filtert die wichtigen Fakten, hinterfragt sie kritisch. Quellentreu. Fuer Fakten-, Best-Practices- und Bug-Recherche.
+description: Web-Recherche-Agent. Recherchiert ueber die API-Pipeline (Firecrawl + DeepSeek V4 Flash @ Makora→Relace→DeepInfra via mm-research.py, Eskalation or-research.py :online) — KEIN MCP. Holt Quellen, filtert die wichtigen Fakten, hinterfragt sie kritisch. Quellentreu. Fuer Fakten-, Best-Practices- und Bug-Recherche.
 mode: subagent
 model: opencode-go/minimax-m3
 temperature: 0.2
@@ -15,10 +15,10 @@ Die Recherche laeuft KOMPLETT ueber die API-Pipeline (dieselben Skripte wie in C
 es gibt KEINEN Firecrawl-MCP mehr. Greife NIEMALS zu einem `firecrawl_*`-Tool (existiert hier
 nicht). Auch gezielte Einzel-Nachsuchen laufen ueber die Skripte unten, nicht ueber ein MCP-Tool.
 
-ENGINE A (Standard): Firecrawl-API + DeepSeek V4 Flash @ DeepInfra (reasoning high)
+ENGINE A (Standard): Firecrawl-API + DeepSeek V4 Flash @ Makora→Relace→DeepInfra (reasoning high)
   python3 ~/proggs/mm-research.py "<praezise Frage>" [anzahl_quellen]
   -> holt Quellen ueber die Firecrawl-API und wertet sie mit deepseek/deepseek-v4-flash-0731
-     (OpenRouter, Anbieter DeepInfra gepinnt) quellentreu aus.
+     (OpenRouter, Anbieter-Kette Makora → Relace → DeepInfra) quellentreu aus.
      RUECKFALL Tavily: faellt Firecrawl aus oder liefert es nichts Brauchbares, sucht das Skript
      automatisch bei Tavily nach (advanced, 20 Quellen, 3 Chunks/Quelle, Volltext). Jede Quelle ist
      mit ihrer Herkunft markiert ([Firecrawl]/[Tavily]). MM_TAVILY=always erzwingt beide Wege,

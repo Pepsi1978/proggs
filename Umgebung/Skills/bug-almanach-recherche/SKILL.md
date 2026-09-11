@@ -110,7 +110,7 @@ mitnehmen (aber die aktuell installierte bleibt der Hauptanker).
 **ZUERST den Recherche-Weg per `AskUserQuestion` waehlen lassen** (Regel `research-strategy.md`,
 Frage 1 A/B/C/D) — NIE automatisch losrecherchieren (der `research-approval`-Hook blockt mm/or-research,
 bis Frank A/B gewaehlt UND `touch "$TEMP/research-approved.flag"` gesetzt hat):
-- **A (Standard): Firecrawl (Rueckfall: Tavily) + DeepSeek V4 Flash @ DeepInfra (reasoning high)** → pro Bug-Aspekt
+- **A (Standard): Firecrawl (Rueckfall: Tavily) + DeepSeek V4 Flash @ Makora→Relace→DeepInfra (reasoning high)** → pro Bug-Aspekt
   `python3 ~/proggs/mm-research.py "<bereich> <aspekt> Bugs/Fallen/Workarounds" [n]`. **Firecrawl Free =
   max 2 GLEICHZEITIG**: 2 Aspekte starten → auf Ergebnis warten → naechste 2, bis alle Aspekte
   (Doku/Issues/Community/Plattform/Mechanik …) durch sind. NIE 7 Firecrawl-Calls auf einmal
