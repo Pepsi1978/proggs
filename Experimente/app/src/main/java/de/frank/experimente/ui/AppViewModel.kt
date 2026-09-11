@@ -568,6 +568,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 gehe(Ziel.MONITOR)
                 lassFunkeln(id)
                 melde("Steht jetzt unter „Steht an“ — $tage ${if (tage == 1) "Tag" else "Tage"}.")
+            } catch (fehler: Exception) {
+                _anlegenOffen.value = true
+                _stoerung.value = fehler.freundlich()
             } finally {
                 _wartet.value = null
             }
@@ -606,12 +609,16 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun starteSofort(vorschlag: Suggestion) {
         viewModelScope.launch {
             val id = ablage.starteSofort(vorschlag.id, heute)
-            if (id == null) {
-                melde(DREI_LAUFEN)
-            } else {
+            if (id != null) {
                 gehe(Ziel.MONITOR)
                 lassFunkeln(id)
                 ruettleAufsteigend()
+            } else if (ablage.stehtImMonitor(vorschlag.title)) {
+                // `starteSofort` meldet auch „schon übernommen" als null — dann stimmt
+                // der Drei-Satz nicht, der Vorschlag wartet unter „Steht an".
+                melde("„${vorschlag.title}“ steht schon im Monitor unter „Steht an“.")
+            } else {
+                melde(DREI_LAUFEN)
             }
         }
     }

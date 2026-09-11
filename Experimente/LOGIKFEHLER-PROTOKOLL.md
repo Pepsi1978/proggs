@@ -12,7 +12,7 @@
 | B6 Benachrichtigung/Lebenszyklus | notify/*, ExperimenteApp.kt, MainActivity.kt, network/* | Plattform/Lebenszyklus | mittel-hoch | Wecker, Boot, Lifecycle, OkHttp |
 | B7 Oberfläche | ui/Navigation.kt, ui/screens/*, ui/components/*, ui/theme/* | Oberfläche | mittel | sechs Hauptbildschirme, Bausteine, Themen |
 | nicht prüfrelevant | build/*, .gradle/, res/font, generierter Code, Fremdbibliotheken | — | — | — |
-3. Loop-Zustand: aktuelle Runde 2, nächste Stufe 2 (Funktion für Funktion), Konvergenzzähler 0, nächster Blickwinkel Stufe 3 Grenzen/Zustand/Zeit, offene Fixe 0, ausstehend nichts.
+3. Loop-Zustand: aktuelle Runde 3, nächste Stufe 3 (Grenzen, Zustand, Zeit), Konvergenzzähler 0, nächster Blickwinkel Stufe 4 Invarianten/Gegenbeweis, offene Fixe 0, ausstehend nichts.
 4. Fundtabelle:
 | ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Kurzbeschreibung |
 |---|---|---|---|---|---|---|---|
@@ -37,4 +37,15 @@ Beweise/Fixe/Verifikation Runde 1:
 5. Rundenübersicht:
 | Runde | Stufe | alle Bereiche geprüft | gemeldet/bestätigt/abgelehnt/behoben/verifiziert | Build/Tests | Zähler danach |
 | 1 | 1 Überblick | ja (B1 per Helfer+Selbst-Triage, B2–B7 selbst gelesen/gesucht) | 8/8/0/8/8 | Build grün, keine Tests | 0 |
+| 2 | 2 Funktion-für-Funktion | ja (alle Bereiche: Verträge gegen Code gehalten, Randfälle leer/null/0/negativ/Max/Duplikat) | 3/3/0/3/3 | Build grün, keine Tests | 0 |
+
+Runde-2-Funde (alle bestätigt, behoben, verifiziert):
+| L-09 | 2 | B1 | AppViewModel.kt:606 | Schnittstellenvertrag | mittel | verifiziert | starteSofort meldet „Drei laufen“ auch bei „schon übernommen“ |
+| L-10 | 2 | B2 | Ablage.kt:348 | Kontrollfluss | niedrig | verifiziert | Doppelklick auf Starten → falsche Drei-Meldung statt No-op |
+| L-11 | 2 | B1 | AppViewModel.kt:554 | Fehlerbehandlung | niedrig | verifiziert | legeEigenesImMonitorAn: Fehler schließt Fläche still, ohne Meldung |
+
+Beweise/Fixe/Verifikation Runde 2:
+- L-09: Vorschlag per Wisch übernommen, dann „Jetzt starten“ auf derselben Karte → Ist: `starteSofort`→`uebernimm`→null→VM meldet DREI_LAUFEN (Heute.kt:412), obwohl z. B. erst eines läuft; Soll: „steht schon im Monitor“. Fix: null-Fall unterscheidet per `stehtImMonitor` zwischen „schon übernommen“ und „voll“. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Fallunterscheidung deckt beide null-Ursachen ab; (2) einziger Aufrufer Heute-Karte zeigt Korrektes; (3) Titel stets gesetzt (KI filtert blanks, Spalte NOT NULL).
+- L-10: Doppelklick auf „Starten“ vor UI-Aktualisierung → Ist: zweiter `starte`-Aufruf sieht LAEUFT→false→DREI_LAUFEN; Soll: No-op-Erfolg. Fix: LAEUFT→true ohne Änderung, MAX-Prüfung bleibt davor. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Zweitdruck kein Fehlschlag mehr; (2) Aufrufer `starteAnstehendes` funkelt statt Falschmeldung; (3) ANSTEHEND/ABGESCHLOSSEN-Pfade unverändert.
+- L-11: DB-Fehler bei F-35-Speichern → Ist: `try/finally` ohne `catch`, Fläche bleibt zu, kein Wort; Soll: Meldung + Text erhalten. Fix: `catch` zeigt Störung und öffnet Fläche mit erhaltenem Text wieder. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Fehler sichtbar, Text nicht verloren; (2) Aufrufer Anlegeflaeche zeigt Feld wieder; (3) `_wartet` via `finally` weiter garantiert null.
 6. Klärungsbedarf: (leer)

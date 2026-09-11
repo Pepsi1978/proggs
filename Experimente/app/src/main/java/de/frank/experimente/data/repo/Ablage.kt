@@ -348,6 +348,10 @@ class Ablage(
     suspend fun starte(experimentId: Long, tag: LocalDate = LocalDate.now()): Boolean {
         if (db.experimente().anzahlLaufende() >= MAX_LAUFEND) return false
         val experiment = db.experimente().einer(experimentId) ?: return false
+        // Ein zweiter Druck auf „Starten" (Doppelklick vor der UI-Aktualisierung) ist kein
+        // Fehlschlag: es läuft bereits, es gibt nichts zu tun — und erst recht keine
+        // Drei-laufen-schon-Meldung.
+        if (experiment.state == ExperimentZustand.LAEUFT) return true
         if (experiment.state != ExperimentZustand.ANSTEHEND) return false
         // Das frisch Gestartete kommt oben im Abschnitt „Läuft“ an — sonst stünde es an der
         // Stelle, die es unter „Steht an“ hatte, also irgendwo mittendrin.
