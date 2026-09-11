@@ -145,14 +145,10 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Karte: Gemini-Korrektur-Prompts -->
+                    <!-- Karte: Always-On-Prompts -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource CardHeader}" Text="Gemini-Korrektur-Prompts"/>
-                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8"
-                                       Text="Bearbeite die Vorlagen (Profil 1–10), die an Gemini geschickt werden — inklusive der Position deines gesprochenen Texts und des Wörterbuchs."/>
-                            <Button x:Name="BtnEditPrompts" Style="{StaticResource SecondaryButton}"
-                                    Content="Gemini-Prompts bearbeiten…" HorizontalAlignment="Left" Margin="0,0,0,14"/>
+                            <TextBlock Style="{StaticResource CardHeader}" Text="Always-On-Prompts"/>
                             <TextBlock Style="{StaticResource FieldLabel}" Text="Trennzeichen zwischen Always-On-Prompts"/>
                             <TextBox x:Name="SeparatorBox" Style="{StaticResource DarkBox}"/>
                         </StackPanel>

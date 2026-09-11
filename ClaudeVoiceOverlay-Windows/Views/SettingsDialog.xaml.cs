@@ -92,7 +92,6 @@ public partial class SettingsDialog : Window
                 HorizontalCheck.IsChecked == true ? "horizontal" : "vertical");
             Close();
         };
-        BtnEditPrompts.Click += (_, _) => GeminiPromptListDialog.Show(this);
         BtnGoogleConnect.Click += async (_, _) => await ConnectGoogleAsync();
         BtnGoogleDisconnect.Click += async (_, _) => await DisconnectGoogleAsync();
     }

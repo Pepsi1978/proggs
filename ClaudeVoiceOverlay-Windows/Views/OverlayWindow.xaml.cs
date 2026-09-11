@@ -2201,7 +2201,7 @@ namespace ClaudeVoiceOverlay.Views
                             // kein Drag, also Profil ohne Re-Correct aktivieren.
                             int p = _pendingProfileTileClick;
                             _pendingProfileTileClick = 0;
-                            SwitchProfileWithoutReCorrect(p);
+                            Dispatcher.BeginInvoke(new Action(() => ShowQuickPromptMenu(p)));
                         }
                         else
                         {
@@ -2646,7 +2646,7 @@ namespace ClaudeVoiceOverlay.Views
                         Console.WriteLine($"Gemini correction (profile {_activeProfile})...");
                         try
                         {
-                            finalText = await activeGemini.CorrectTextAsync(transcript, _activeProfile);
+                            finalText = await activeGemini.CorrectTextAsync(transcript, 1);
                             Console.WriteLine($"Corrected: {SafeLogPreview(finalText)}");
                         }
                         catch (Exception ex)
@@ -2831,7 +2831,7 @@ namespace ClaudeVoiceOverlay.Views
                         Console.WriteLine($"BTW Gemini correction (profile {_activeProfile})...");
                         try
                         {
-                            finalText = await btwGemini.CorrectTextAsync(transcript, _activeProfile);
+                            finalText = await btwGemini.CorrectTextAsync(transcript, 1);
                             Console.WriteLine($"BTW corrected: {SafeLogPreview(finalText)}");
                         }
                         catch (Exception ex)
@@ -3031,7 +3031,7 @@ namespace ClaudeVoiceOverlay.Views
         {
             _activeProfile = profile;
             var buttons = ProfileButtons;
-            bool showActiveTile = geminiEnabled;
+            bool showActiveTile = false; // Kacheln 1-10 sind Schnell-Prompts, kein Profil-Highlight mehr
             for (int i = 0; i < buttons.Length; i++)
             {
                 bool isActive = showActiveTile && (i + 1) == profile;
@@ -3126,6 +3126,8 @@ namespace ClaudeVoiceOverlay.Views
                     btn.MouseLeave += (_, _) => CancelTooltipShow(tip);
                 }
             }
+
+            RefreshQuickPromptTooltips();
         }
 
         /// <summary>
@@ -3220,16 +3222,16 @@ namespace ClaudeVoiceOverlay.Views
             tooltip.VerticalOffset = (target.ActualHeight - tooltipHeight) / 2.0;
         }
 
-        private async void BtnProfile1_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(1);
-        private async void BtnProfile2_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(2);
-        private async void BtnProfile3_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(3);
-        private async void BtnProfile4_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(4);
-        private async void BtnProfile5_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(5);
-        private async void BtnProfile6_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(6);
-        private async void BtnProfile7_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(7);
-        private async void BtnProfile8_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(8);
-        private async void BtnProfile9_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(9);
-        private async void BtnProfile10_Click(object sender, RoutedEventArgs e) => await SwitchProfileAsync(10);
+        private async void BtnProfile1_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(1);
+        private async void BtnProfile2_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(2);
+        private async void BtnProfile3_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(3);
+        private async void BtnProfile4_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(4);
+        private async void BtnProfile5_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(5);
+        private async void BtnProfile6_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(6);
+        private async void BtnProfile7_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(7);
+        private async void BtnProfile8_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(8);
+        private async void BtnProfile9_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(9);
+        private async void BtnProfile10_Click(object sender, RoutedEventArgs e) => await InsertQuickPromptAsync(10);
 
         // ── RECHTSKLICK auf Profil-Tile ──
         // Aktiviert das Profil ohne den Cache durch Gemini zu schicken. Die
@@ -3256,7 +3258,7 @@ namespace ClaudeVoiceOverlay.Views
         private void HandleProfileRightClick(int profile, MouseButtonEventArgs e)
         {
             if (e.ChangedButton != MouseButton.Right) return;
-            SwitchProfileWithoutReCorrect(profile);
+            ShowQuickPromptMenu(profile);
             e.Handled = true;
         }
 
@@ -3316,139 +3318,65 @@ namespace ClaudeVoiceOverlay.Views
             return 0;
         }
 
-        /// <summary>
-        /// RECHTSKLICK-Variante: aktiviert Gemini falls aus, setzt das aktive
-        /// Profil — fuehrt aber KEINEN Re-Correct durch. Der Whisper-Cache
-        /// bleibt unveraendert und kann spaeter per Linksklick auf irgendein
-        /// Profil-Tile noch durchgeschickt werden.
-        /// </summary>
-        private void SwitchProfileWithoutReCorrect(int newProfile)
+        // ── Zahlen-Kacheln 1-10 = Schnell-Prompts (Frank-Wunsch 2026-09-11) ──
+        // Linksklick fuegt den gespeicherten Prompt in die Befehlszeile ein
+        // (ohne Enter). Ist die Kachel noch leer, oeffnet sich direkt der
+        // Editor. Rechtsklick -> Kontextmenue "Prompt bearbeiten". Die Gemini-
+        // Korrektur haengt nicht mehr an den Kacheln, sie nutzt immer Profil 1.
+        private async Task InsertQuickPromptAsync(int slot)
         {
-            Interlocked.Increment(ref _reCorrectGeneration);
-            if (!geminiEnabled && _geminiClient != null)
+            var text = QuickPromptStore.Load(slot);
+            if (string.IsNullOrWhiteSpace(text))
             {
-                geminiEnabled = true;
-                GButton.Background = ToggleOn;
-                WButton.Background = ToggleOff;
-                Console.WriteLine("Gemini auto-eingeschaltet durch Profil-Rechtsklick");
+                EditQuickPrompt(slot);
+                return;
             }
-            SetActiveProfile(newProfile);
-            Console.WriteLine($"Profil {newProfile} aktiv (Rechtsklick — kein Re-Correct)");
-        }
-
-        /// <summary>
-        /// LINKSKLICK auf Profil-Tile: aktiviert das Profil UND schickt — falls
-        /// der zuletzt transkribierte Whisper-Text noch im Cache liegt — diesen
-        /// Text durch das neue Profil. Die alte Eingabezeile wird dabei voll-
-        /// staendig geloescht (auch mehrzeilig per ClearAllInput), danach wird
-        /// der frisch korrigierte Text reingepastet, mit Auto-Submit wenn der
-        /// Enter-Toggle aktiv ist.
-        ///
-        /// Re-Correct laeuft wenn:
-        /// - Roh-Whisper-Text liegt im Cache (_lastCorrectableRaw)
-        /// - Gemini ist aktiviert (sonst gibt es nichts zu korrigieren)
-        /// - Aufnahme laeuft NICHT gerade (sonst stoeren wir die laufende UI)
-        ///
-        /// Kein Zeitlimit mehr: der Cache bleibt erhalten bis eine neue
-        /// Aufnahme ihn ueberschreibt. Wer das Profil ohne Re-Correct setzen
-        /// will, nutzt den Rechtsklick (SwitchProfileWithoutReCorrect).
-        ///
-        /// Bewusst KEINE Aenderung am Mic-State: das wuerde die Aufnahme-
-        /// Anzeige ueberschreiben. Stattdessen wird das geklickte Profil-Tile
-        /// kurz orange als visueller Indikator, dass Re-Correct laeuft.
-        /// </summary>
-        private async Task SwitchProfileAsync(int newProfile)
-        {
-            long generation = Interlocked.Increment(ref _reCorrectGeneration);
-            int oldProfile = _activeProfile;
-
-            // Auto-Aktivierung: Linksklick zeigt klare Absicht, Gemini-
-            // Korrektur zu wollen. Falls G gerade aus war (W-Modus, Default
-            // seit Whisper-First), schalten wir Gemini automatisch ein.
-            bool didAutoEnableGemini = false;
-            if (!geminiEnabled && _geminiClient != null)
-            {
-                geminiEnabled = true;
-                didAutoEnableGemini = true;
-                GButton.Background = ToggleOn;
-                WButton.Background = ToggleOff;
-                Console.WriteLine("Gemini auto-eingeschaltet durch Profil-Klick");
-            }
-
-            SetActiveProfile(newProfile);
-
-            // Wenn gerade aufgenommen wird: nur Profil setzen, sonst nichts.
-            if (_micState == RecordingState.Recording) return;
-            // Gleiches Profil = no-op — AUSSER Gemini wurde gerade auto-
-            // aktiviert. Dann ist es der Erst-Klick im Whisper-Mode und der
-            // Re-Correct soll trotzdem laufen.
-            if (!didAutoEnableGemini && newProfile == oldProfile) return;
-            if (!geminiEnabled) return;
-            if (string.IsNullOrEmpty(_lastCorrectableRaw)) return;
-
-            var rawText = _lastCorrectableRaw;
-            var targetHwnd = _appWatcher.ActiveAppHwnd;
-            // Geklicktes Profile-Tile aus dem Array holen (Index = profile - 1).
-            // Profile 1-10 erlaubt, alles andere wird ignoriert.
-            var buttons = ProfileButtons;
-            var clickedTile = (newProfile >= 1 && newProfile <= buttons.Length)
-                ? buttons[newProfile - 1]
-                : null;
-
+            var tile = ProfileButtons[slot - 1];
+            tile.Background = BtnProcessing;
             try
             {
-                var gemini = await GetActiveGeminiClientAsync();
-                if (gemini == null) return;
-
-                Console.WriteLine($"Re-Correct: profile {oldProfile} -> {newProfile}");
-                // Visueller Indikator: das geklickte Tile waehrend der Re-
-                // Correct-Phase orange faerben (Processing-Look). Nach Erfolg
-                // setzen wir es zurueck auf den aktiven goldgelben Look.
-                if (clickedTile != null) clickedTile.Background = BtnProcessing;
-
-                string corrected = await gemini.CorrectTextAsync(rawText, newProfile);
-                if (Interlocked.Read(ref _reCorrectGeneration) != generation) return;
-
-                // Wrappers (Pre/Post-Prompts) wieder anwenden, falls aktiv —
-                // sonst geht der always-on-Kontext beim Re-Correct verloren.
-                var (preFix, postFix) = await BuildAlwaysOnWrappersAsync();
-                if (!string.IsNullOrEmpty(preFix)) corrected = preFix + corrected;
-                if (!string.IsNullOrEmpty(postFix)) corrected = corrected + postFix;
-                corrected = corrected + " ; ";
-
-                // Eingabezeile vollstaendig loeschen (mehrzeilig sicher) und
-                // dann den neu korrigierten Text reinpaten. AutoEnter wird
-                // respektiert: ist der Enter-Toggle aktiv, wird die Frage
-                // direkt abgeschickt — sonst nur in die Befehlszeile kopiert.
-                await _reCorrectApplyGate.WaitAsync();
-                try
-                {
-                    if (Interlocked.Read(ref _reCorrectGeneration) != generation) return;
-                    if (!await AppController.ClearAllInputAsync(targetHwnd)) return;
-                    await Task.Delay(120);
-                    if (!await AppController.PasteTextAsync(corrected, targetHwnd, autoEnterEnabled)) return;
-                }
-                finally
-                {
-                    _reCorrectApplyGate.Release();
-                }
-
-                hasPastedText = true;
-                Console.WriteLine($"Re-Correct ok ({corrected.Length} chars)");
+                bool ok = await AppController.PasteTextAsync(text, _appWatcher.ActiveAppHwnd, autoEnter: false);
+                if (ok) hasPastedText = true;
+                DiagLog.Write("QuickPrompt", "inserted", ("slot", slot), ("chars", text.Length), ("ok", ok));
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Re-Correct error: {ex.Message}");
+                Console.WriteLine($"QuickPrompt insert error: {ex.Message}");
             }
             finally
             {
-                // Tile zurueck auf aktiven Look (goldgelb) — egal ob Erfolg
-                // oder Fehler. Nutzt SetActiveProfile damit Foreground-Farbe
-                // (Schrift) konsistent zum Background bleibt.
-                if (clickedTile != null) SetActiveProfile(_activeProfile);
+                tile.Background = ToggleOff;
             }
         }
 
+        private void ShowQuickPromptMenu(int slot)
+        {
+            var item = new System.Windows.Controls.MenuItem { Header = $"Prompt {slot} bearbeiten" };
+            item.Click += (_, _) => EditQuickPrompt(slot);
+            var menu = new System.Windows.Controls.ContextMenu
+            {
+                PlacementTarget = ProfileButtons[slot - 1],
+                Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint,
+            };
+            menu.Items.Add(item);
+            menu.IsOpen = true;
+        }
+
+        private void EditQuickPrompt(int slot)
+        {
+            if (QuickPromptEditDialog.Ask(slot)) RefreshQuickPromptTooltips();
+        }
+
+        private void RefreshQuickPromptTooltips()
+        {
+            var buttons = ProfileButtons;
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                var s = QuickPromptStore.Preview(i + 1);
+                _tooltipDefaults[buttons[i]] = s;
+                SetButtonTooltipText(buttons[i], s);
+            }
+        }
         /// <summary>Enter button — toggle auto-enter.
         /// ON→OFF: button goes dark.
         /// OFF→ON: button goes orange AND fires Return immediately.</summary>
