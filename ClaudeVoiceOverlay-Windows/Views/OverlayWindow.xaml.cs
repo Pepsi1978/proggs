@@ -140,7 +140,6 @@ namespace ClaudeVoiceOverlay.Views
         private string? _lastCorrectableRaw = null;
         private IntPtr _mainRecordingTargetHwnd;
         private IntPtr _btwRecordingTargetHwnd;
-        private long _reCorrectGeneration;
         private readonly SemaphoreSlim _reCorrectApplyGate = new(1, 1);
 
         // PromptBoard integration: on-demand prefix lookup + side panel.
@@ -672,7 +671,9 @@ namespace ClaudeVoiceOverlay.Views
 
             // Cloud-Merge des persoenlichen Vokabular-Woerterbuchs: gleiche Idee.
             _ = TryMergeVocabularyFromCloudAsync();
+            GeminiPromptDriveSync.CloudApplied += () => Dispatcher.BeginInvoke(new Action(RefreshQuickPromptTooltips));
             GeminiPromptDriveSync.TrySyncFromCloud();   // Prompts + Schalter per Timestamp vom Backup holen
+            RefreshQuickPromptTooltips();   // Kurzbeschreibungen der Schnell-Prompts nachziehen, falls welche fehlen
 
             // Standard-Tooltip der eingeklappten Pille merken (sie haengt nicht
             // im Tooltip-Wiring der grossen Leiste).
@@ -3364,17 +3365,59 @@ namespace ClaudeVoiceOverlay.Views
 
         private void EditQuickPrompt(int slot)
         {
-            if (QuickPromptEditDialog.Ask(slot)) RefreshQuickPromptTooltips();
+            if (!QuickPromptEditDialog.Ask(slot)) return;
+            GeminiPromptDriveSync.TryUpload();   // sofort ins Google-Drive-Backup
+            RefreshQuickPromptTooltips();
         }
+
+        // Tooltip jeder Zahl = Gemini-Kurzbeschreibung des Prompts (max. 10
+        // Woerter), bis die da ist eine Textvorschau. Der Tooltip steht wie alle
+        // Overlay-Tooltips links neben dem Overlay, auf Hoehe der Zahl, immer im
+        // gleichen Abstand (PositionTooltip) — er ueberdeckt das Overlay nie.
+        private readonly HashSet<int> _quickSummaryInFlight = new();
 
         private void RefreshQuickPromptTooltips()
         {
             var buttons = ProfileButtons;
             for (int i = 0; i < buttons.Length; i++)
             {
-                var s = QuickPromptStore.Preview(i + 1);
-                _tooltipDefaults[buttons[i]] = s;
-                SetButtonTooltipText(buttons[i], s);
+                int slot = i + 1;
+                var summary = QuickPromptStore.LoadSummary(slot);
+                SetQuickPromptTooltip(slot, summary ?? QuickPromptStore.Preview(slot));
+                if (summary == null && !string.IsNullOrWhiteSpace(QuickPromptStore.Load(slot)))
+                    _ = GenerateQuickPromptSummaryAsync(slot);
+            }
+        }
+
+        private void SetQuickPromptTooltip(int slot, string text)
+        {
+            var btn = ProfileButtons[slot - 1];
+            _tooltipDefaults[btn] = text;
+            SetButtonTooltipText(btn, text);
+        }
+
+        private async Task GenerateQuickPromptSummaryAsync(int slot)
+        {
+            if (!_quickSummaryInFlight.Add(slot)) return;
+            try
+            {
+                var gemini = await GetActiveGeminiClientAsync();
+                if (gemini == null) return;
+                var text = QuickPromptStore.Load(slot);
+                var summary = await gemini.GenerateQuickPromptSummaryAsync(text);
+                if (string.IsNullOrWhiteSpace(summary)) return;
+                QuickPromptStore.SaveSummary(slot, text, summary);
+                GeminiPromptDriveSync.TryUpload();
+                SetQuickPromptTooltip(slot, summary);
+                DiagLog.Write("QuickPrompt", "summary", ("slot", slot), ("summary", summary));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"QuickPrompt summary error: {ex.Message}");
+            }
+            finally
+            {
+                _quickSummaryInFlight.Remove(slot);
             }
         }
         /// <summary>Enter button — toggle auto-enter.

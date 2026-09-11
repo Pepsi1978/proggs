@@ -212,6 +212,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setGeminiEnabled(geminiEnabled)
         panel.setAutoEnterEnabled(autoEnterEnabled)
         panel.setActiveProfile(activeProfile)
+        refreshQuickPromptTooltips()
+        NotificationCenter.default.addObserver(forName: QuickPromptStore.changedNotification,
+                                               object: nil, queue: .main) { [weak self] _ in
+            self?.refreshQuickPromptTooltips()
+        }
 
         // HTTP-Server fuer Stream-Deck-XL-Polling starten (Port 5723).
         autoEnterServer.statusProvider = { [weak self] in
@@ -396,8 +401,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         panel.onScreenshotClicked = { [weak self] in self?.takeScreenshot() }
         panel.onInsertScreenshotClicked = { [weak self] in self?.insertLastScreenshot() }
-        panel.onProfileClicked = { [weak self] profile in self?.switchProfile(profile) }
-        panel.onProfileRightClicked = { [weak self] profile in self?.switchProfileWithoutReCorrect(profile) }
+        panel.onProfileClicked = { [weak self] profile in self?.insertQuickPrompt(profile) }
+        panel.onProfileRightClicked = { [weak self] profile in DispatchQueue.main.async { self?.showQuickPromptMenu(profile) } }
 
         setupStatusItem()
         setupGlobalHotkeys()
@@ -763,7 +768,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleTranscript(_ transcript: String, wasBtw: Bool) {
         if geminiEnabled, let geminiClient = geminiClient {
-            geminiClient.correctText(transcript, profile: activeProfile) { [weak self] result in
+            geminiClient.correctText(transcript, profile: 1) { [weak self] result in
                 DispatchQueue.main.async {
                     guard let self = self else { return }
                     switch result {
@@ -1518,7 +1523,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             completion(nil)
             return
         }
-        gemini.correctText(text, profile: activeProfile) { result in
+        gemini.correctText(text, profile: 1) { result in
             switch result {
             case .success(let corrected):
                 completion(corrected)
@@ -1540,95 +1545,76 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // das gespeicherte aktive Profil wieder goldgelb.
     }
 
-    /// Wechselt das aktive Korrektur-Profil. Schaltet Gemini auto-ein wenn
-    /// es gerade aus war (klare Absicht durch Profil-Klick). Wenn der
-    /// zuletzt gediktierte Whisper-Text noch frisch im Cache liegt
-    /// (max. 2 Minuten), wird er per Re-Correct durch das neue Profil
-    /// geschickt: alte Eingabezeile via clearAllInput leeren, neue
-    /// Korrektur einfuegen.
-    ///
-    /// Wichtige Regel: NICHT aktiv wenn gerade aufgenommen wird — das wuerde
-    /// die Aufnahme-Anzeige stoeren. Der Mic-State wird waehrend des Re-
-    /// Correct NICHT veraendert; stattdessen wird das geklickte Tile kurz
-    /// orange als visueller Indikator (analog Windows #1956).
-    private func switchProfile(_ newProfile: Int) {
-        let oldProfile = activeProfile
+    // MARK: - Schnell-Prompts (Zahlen-Kacheln 1-10, Frank-Wunsch 2026-09-11)
+    // Linksklick fuegt den gespeicherten Prompt in die Eingabezeile ein (ohne
+    // Enter). Ist die Kachel noch leer, oeffnet sich direkt der Editor.
+    // Rechtsklick -> Menue "Prompt bearbeiten". Die Gemini-Korrektur haengt nicht
+    // mehr an den Kacheln, sie nutzt immer Profil 1. Pendant zu Windows.
 
-        // Auto-Aktivierung: Klick auf ein Profil-Tile zeigt klare Absicht,
-        // Gemini-Korrektur zu wollen. Falls G aus war, schalten wir es ein.
-        var didAutoEnableGemini = false
-        if !geminiEnabled, geminiClient != nil {
-            geminiEnabled = true
-            didAutoEnableGemini = true
-            panel.setGeminiEnabled(geminiEnabled)
-            tvoDebug("[App] Gemini auto-eingeschaltet durch Profil-Klick")
+    private var quickSummaryInFlight = Set<Int>()
+
+    private func insertQuickPrompt(_ slot: Int) {
+        let text = QuickPromptStore.load(slot)
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            editQuickPrompt(slot)
+            return
         }
+        panel.flashProfileTile(slot, processing: true)
+        TerminalController.pasteText(text, autoEnter: false) { [weak self] _ in
+            DispatchQueue.main.async { self?.panel.flashProfileTile(slot, processing: false) }
+        }
+        hasPastedText = true
+        tvoDebug("[App] Schnell-Prompt \(slot) eingefuegt (\(text.count) Zeichen)")
+    }
 
-        activeProfile = newProfile
-        panel.setActiveProfile(newProfile)
+    private func showQuickPromptMenu(_ slot: Int) {
+        let menu = NSMenu()
+        let item = NSMenuItem(title: "Prompt \(slot) bearbeiten",
+                              action: #selector(quickPromptMenuEdit(_:)), keyEquivalent: "")
+        item.target = self
+        item.tag = slot
+        menu.addItem(item)
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+    }
 
-        // Wenn gerade aufgenommen wird: nur Profil setzen, sonst nichts.
-        if isRecording { return }
-        // Gleiches Profil = no-op — AUSSER Gemini wurde gerade auto-aktiviert.
-        if !didAutoEnableGemini && newProfile == oldProfile { return }
-        guard geminiEnabled, let gemini = geminiClient else { return }
-        guard let rawText = lastCorrectableRaw, !rawText.isEmpty else { return }
+    @objc private func quickPromptMenuEdit(_ sender: NSMenuItem) {
+        editQuickPrompt(sender.tag)
+    }
 
-        // Visueller Indikator: das geklickte Tile waehrend des Re-Correct
-        // orange faerben.
-        panel.flashProfileTile(newProfile, processing: true)
+    private func editQuickPrompt(_ slot: Int) {
+        guard QuickPromptEditDialog.ask(slot: slot) else { return }
+        GeminiPromptSync.tryUpload()   // sofort ins Google-Drive-Backup
+        refreshQuickPromptTooltips()
+    }
 
-        gemini.correctText(rawText, profile: newProfile) { [weak self] result in
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                switch result {
-                case .success(let corrected):
-                    var finalText = corrected
-                    // Always-On-Wrappers wieder anwenden falls aktiv.
-                    if self.alwaysOnActive {
-                        let pre = AlwaysOnPrefixService.buildPre()
-                        let post = AlwaysOnPrefixService.buildPost()
-                        if !pre.isEmpty { finalText = pre + finalText }
-                        if !post.isEmpty { finalText = finalText + post }
-                    }
-                    finalText += " ; "
-
-                    // Eingabezeile vollstaendig loeschen, neuen Text paten.
-                    // AutoEnter wird respektiert: ist der Enter-Toggle aktiv,
-                    // wird die Frage direkt abgeschickt — sonst nur in die
-                    // Befehlszeile kopiert.
-                    let shouldAutoEnter = self.autoEnterEnabled
-                    DispatchQueue.global(qos: .userInitiated).async {
-                        TerminalController.clearAllInput()
-                        usleep(120_000)
-                        TerminalController.pasteText(finalText, autoEnter: shouldAutoEnter)
-                    }
-                    self.hasPastedText = !shouldAutoEnter
-                    tvoDebug("[App] Re-Correct ok (\(finalText.count) chars, profile \(newProfile))")
-                case .failure(let error):
-                    tvoDebug("[App] Re-Correct error: \(error.localizedDescription)")
+    /// Tooltip jeder Zahl = Gemini-Kurzbeschreibung des Prompts (max. 10 Woerter),
+    /// bis die da ist eine Textvorschau. Der Tooltip steht wie alle Overlay-
+    /// Tooltips links neben dem Overlay auf Hoehe der Zahl, immer im gleichen
+    /// Abstand (TooltipPanel.showText) — er ueberdeckt das Overlay nie.
+    private func refreshQuickPromptTooltips() {
+        for slot in 1...QuickPromptStore.count {
+            if let summary = QuickPromptStore.loadSummary(slot) {
+                panel.setProfileTooltip(slot, text: summary)
+                continue
+            }
+            panel.setProfileTooltip(slot, text: QuickPromptStore.preview(slot))
+            let text = QuickPromptStore.load(slot)
+            guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  let gemini = geminiClient,
+                  !quickSummaryInFlight.contains(slot) else { continue }
+            quickSummaryInFlight.insert(slot)
+            gemini.generateQuickPromptSummary(text) { [weak self] summary in
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    self.quickSummaryInFlight.remove(slot)
+                    guard !summary.isEmpty else { return }
+                    QuickPromptStore.saveSummary(slot, sourceText: text, summary: summary)
+                    GeminiPromptSync.tryUpload()
+                    self.panel.setProfileTooltip(slot, text: summary)
                 }
-                // Tile zurueck auf Standard-Look.
-                self.panel.flashProfileTile(newProfile, processing: false)
             }
         }
     }
-
-    /// Rechtsklick auf ein Profil-Tile: aktiviert Gemini falls aus, setzt
-    /// das aktive Profil — fuehrt aber KEINEN Re-Correct durch. Der Whisper-
-    /// Cache bleibt unveraendert und kann spaeter per Linksklick auf irgend-
-    /// ein Profil-Tile noch durchgeschickt werden.
-    private func switchProfileWithoutReCorrect(_ newProfile: Int) {
-        if !geminiEnabled, geminiClient != nil {
-            geminiEnabled = true
-            panel.setGeminiEnabled(geminiEnabled)
-            tvoDebug("[App] Gemini auto-eingeschaltet durch Profil-Rechtsklick")
-        }
-        activeProfile = newProfile
-        panel.setActiveProfile(newProfile)
-        tvoDebug("[App] Profil \(newProfile) aktiv (Rechtsklick — kein Re-Correct)")
-    }
-
     // MARK: - Auto-Enter Toggle & Manual Enter
 
     private func handleEnterClick() {

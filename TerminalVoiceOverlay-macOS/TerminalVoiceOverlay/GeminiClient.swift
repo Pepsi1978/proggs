@@ -464,7 +464,33 @@ final class GeminiClient {
         }
     }
 
-    static func sanitizeSummary(_ raw: String) -> String {
+    /// Kurzbeschreibung eines Schnell-Prompts (Zahlen-Kachel 1-10) in hoechstens
+    /// 10 deutschen Woertern — Tooltip links neben der Zahl. Pendant zu Windows
+    /// GenerateQuickPromptSummaryAsync. Leer bei Fehler.
+    func generateQuickPromptSummary(_ text: String, completion: @escaping (String) -> Void) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { completion(""); return }
+
+        let prompt = """
+        Beschreibe in höchstens 10 deutschen Wörtern, was der folgende \
+        Prompt bewirkt bzw. wofür er da ist. STRENGE REGELN: maximal 10 Wörter. \
+        Keine Anführungszeichen. Kein Punkt am Ende. Kein Präfix wie \
+        'Zusammenfassung:'. Nur die nackte Wortgruppe zurückgeben.
+
+        PROMPT:
+        \(trimmed)
+        """
+
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+            self.sendRequest(prompt: prompt, attempt: 0) { result in
+                switch result {
+                case .success(let raw): completion(GeminiClient.sanitizeSummary(raw, maxWords: 10))
+                case .failure: completion("")
+                }
+            }
+        }
+    }
+    static func sanitizeSummary(_ raw: String, maxWords: Int = 8) -> String {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let strip: Set<Character> = ["\"", "'", "“", "”", "‚", "‘"]
         s = String(s.filter { !strip.contains($0) })
@@ -472,7 +498,7 @@ final class GeminiClient {
         s = s.trimmingCharacters(in: .whitespaces)
         let words = s.split(whereSeparator: { $0.isWhitespace }).map(String.init)
         guard !words.isEmpty else { return "" }
-        return Array(words.prefix(8)).joined(separator: " ")
+        return Array(words.prefix(maxWords)).joined(separator: " ")
     }
 
     private func sendRequest(prompt: String, attempt: Int, completion: @escaping (Result<String, Error>) -> Void) {
@@ -581,5 +607,81 @@ final class GeminiClient {
             case .noTextInResponse: return "Kein Text in Gemini-Antwort"
             }
         }
+    }
+}
+
+// MARK: - Schnell-Prompts (Zahlen-Kacheln 1-10, Frank-Wunsch 2026-09-11)
+
+/// Die 10 Schnell-Prompts hinter den Zahlen-Kacheln. Linksklick fuegt den Prompt
+/// in die Eingabezeile ein, Rechtsklick -> "Prompt bearbeiten". Pendant zum
+/// Windows QuickPromptStore: gleiche Dateinamen in ~/SK/VoiceOverlays und gleicher
+/// Fingerabdruck, damit beide Overlays und das Drive-Bundle dieselben Prompts teilen.
+/// Zu jedem Prompt gehoert eine Gemini-Kurzbeschreibung (max. 10 Woerter) fuer den
+/// Tooltip; sie steht mit dem Fingerabdruck des Prompt-Texts in
+/// quick-prompt-XX-summary.txt und wird neu erzeugt, sobald sich der Prompt aendert.
+enum QuickPromptStore {
+    static let count = 10
+    static let changedNotification = Notification.Name("QuickPromptsChanged")
+
+    private static var dir: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("SK/VoiceOverlays")
+    }
+
+    private static func fileName(_ slot: Int) -> String { String(format: "quick-prompt-%02d.txt", slot) }
+    private static func summaryFileName(_ slot: Int) -> String { String(format: "quick-prompt-%02d-summary.txt", slot) }
+
+    /// Alle Dateinamen fuer das Drive-Bundle (Prompts + Kurzbeschreibungen).
+    static var fileNames: [String] {
+        (1...count).flatMap { [fileName($0), summaryFileName($0)] }
+    }
+
+    static func load(_ slot: Int) -> String {
+        (try? String(contentsOf: dir.appendingPathComponent(fileName(slot)), encoding: .utf8)) ?? ""
+    }
+
+    static func save(_ slot: Int, text: String) {
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? text.write(to: dir.appendingPathComponent(fileName(slot)), atomically: true, encoding: .utf8)
+    }
+
+    /// FNV-1a 64 ueber den normalisierten Text — identisch zu Windows.
+    private static func fingerprint(_ text: String) -> String {
+        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in normalized.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(format: "%016llx", hash)
+    }
+
+    /// Kurzbeschreibung, wenn sie zum aktuellen Prompt-Text passt; sonst nil.
+    static func loadSummary(_ slot: Int) -> String? {
+        let text = load(slot)
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let raw = try? String(contentsOf: dir.appendingPathComponent(summaryFileName(slot)),
+                                    encoding: .utf8) else { return nil }
+        let parts = raw.replacingOccurrences(of: "\r\n", with: "\n")
+            .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
+        guard parts.count == 2,
+              String(parts[0]).trimmingCharacters(in: .whitespaces) == fingerprint(text) else { return nil }
+        let summary = String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+        return summary.isEmpty ? nil : summary
+    }
+
+    static func saveSummary(_ slot: Int, sourceText: String, summary: String) {
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let content = fingerprint(sourceText) + "\n" + summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        try? content.write(to: dir.appendingPathComponent(summaryFileName(slot)), atomically: true, encoding: .utf8)
+    }
+
+    /// Textvorschau fuer den Tooltip, solange keine Kurzbeschreibung da ist.
+    static func preview(_ slot: Int) -> String {
+        let text = load(slot).trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+        if text.isEmpty { return "Prompt \(slot): leer — Rechtsklick → Prompt bearbeiten" }
+        return text.count > 80 ? "Prompt \(slot): \(text.prefix(80))…" : "Prompt \(slot): \(text)"
     }
 }

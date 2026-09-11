@@ -737,6 +737,7 @@ enum GeminiPromptSync {
         names.append("gemini-correction-prompt.txt")  // Legacy-Sammeldatei
         names.append("vocabulary-enabled.txt")        // Woerterbuch-Schalter
         names.append("vocabulary-preamble.txt")       // Woerterbuch-Einleitungstext
+        names.append(contentsOf: QuickPromptStore.fileNames)   // Schnell-Prompts 1-10 + Kurzbeschreibungen
         return names
     }
 
@@ -801,6 +802,9 @@ enum GeminiPromptSync {
                 try? content.write(to: skDir.appendingPathComponent(safe), atomically: true, encoding: .utf8)
             }
             writeMarker(savedAt)
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: QuickPromptStore.changedNotification, object: nil)
+            }
         }
     }
 }

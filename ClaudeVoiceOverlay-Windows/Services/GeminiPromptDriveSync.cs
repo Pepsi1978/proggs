@@ -59,6 +59,7 @@ public sealed class GeminiPromptDriveSync
         yield return "gemini-correction-prompt.txt"; // Legacy-Sammeldatei
         yield return "vocabulary-enabled.txt";       // Woerterbuch-Schalter
         yield return "vocabulary-preamble.txt";      // Woerterbuch-Einleitungstext
+        foreach (var name in QuickPromptStore.FileNames()) yield return name; // Schnell-Prompts 1-10 + Kurzbeschreibungen
     }
 
     private sealed class Bundle
@@ -221,7 +222,12 @@ public sealed class GeminiPromptDriveSync
 
         ApplyCloudFiles(cloud.files);
         WriteMarker(cloud.savedAt);
+        CloudApplied?.Invoke();
     }
+
+    /// <summary>Wird nach dem Anwenden eines neueren Cloud-Bundles gefeuert (vom
+    /// Background-Thread) — das Overlay frischt damit die Schnell-Prompt-Tooltips auf.</summary>
+    public static event Action? CloudApplied;
 
     private static void ApplyCloudFiles(Dictionary<string, string> files)
     {
@@ -267,8 +273,11 @@ public sealed class GeminiPromptDriveSync
                     if (File.Exists(target)) File.Replace(temp, target, destinationBackupFileName: null);
                     else File.Move(temp, target);
                 }
-                else
+                else if (!QuickPromptStore.IsQuickPromptFile(name))
                 {
+                    // Schnell-Prompts nie loeschen, nur weil ein Bundle von einer
+                    // aelteren Overlay-Version sie noch nicht kennt. Leeren geht
+                    // ueber eine leere Datei, die sehr wohl im Bundle steht.
                     File.Delete(target);
                 }
             }

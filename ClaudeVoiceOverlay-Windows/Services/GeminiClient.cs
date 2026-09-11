@@ -423,18 +423,44 @@ Der zu verarbeitende Whisper-Text folgt nun:
         }
 
         /// <summary>
+        /// Kurzbeschreibung eines Schnell-Prompts (Zahlen-Kachel 1-10) in
+        /// hoechstens 10 deutschen Woertern — steht als Tooltip links neben der
+        /// Zahl. Leer bei Fehler; der Tooltip zeigt dann eine Textvorschau.
+        /// </summary>
+        public async Task<string> GenerateQuickPromptSummaryAsync(string text)
+        {
+            string trimmed = (text ?? string.Empty).Trim();
+            if (trimmed.Length == 0) return string.Empty;
+
+            const string summaryPrompt =
+                "Beschreibe in höchstens 10 deutschen Wörtern, was der folgende " +
+                "Prompt bewirkt bzw. wofür er da ist. STRENGE REGELN: maximal 10 Wörter. " +
+                "Keine Anführungszeichen. Kein Punkt am Ende. Kein Präfix wie " +
+                "'Zusammenfassung:'. Nur die nackte Wortgruppe zurückgeben.\n\nPROMPT:\n";
+            try
+            {
+                string raw = await SendWithRetry(summaryPrompt + trimmed, 0);
+                return SanitizeSummary(raw, 10);
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
         /// Saeubert die Gemini-Antwort fuer die Slot-Summary: trimmt
         /// Anfuehrungszeichen und Schlusspunkt, klemmt auf maximal 8 Woerter.
         /// Liefert leer wenn nichts Brauchbares uebrig bleibt.
         /// </summary>
-        private static string SanitizeSummary(string raw)
+        private static string SanitizeSummary(string raw, int maxWords = 8)
         {
             string s = (raw ?? string.Empty).Trim().Trim('"', '\'', '“', '”', '‚', '‘');
             if (s.EndsWith(".")) s = s.Substring(0, s.Length - 1).Trim();
             var words = s.Split(new[] { ' ', '\t', '\n', '\r' },
                                 StringSplitOptions.RemoveEmptyEntries);
             if (words.Length == 0) return string.Empty;
-            if (words.Length > 8) words = words[..8];
+            if (words.Length > maxWords) words = words[..maxWords];
             return string.Join(" ", words);
         }
 

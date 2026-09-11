@@ -294,14 +294,28 @@ final class TooltipManager {
 
     /// Registriert einen Tooltip fuer einen Button. mouseEntered/mouseExited-
     /// Hooks werden gesetzt, alte Hooks werden ueberschrieben.
+    /// Aktueller Text pro Button — per setText aenderbar (Schnell-Prompt-Kurzbeschreibungen).
+    private var texts: [ObjectIdentifier: String] = [:]
+
     func register(_ button: RoundButton, text: String) {
         entries.append((button, text))
+        texts[ObjectIdentifier(button)] = text
         button.onMouseEnteredHook = { [weak self, weak button] in
             guard let self = self, let button = button else { return }
-            self.startHover(on: button, text: text)
+            self.startHover(on: button, text: self.texts[ObjectIdentifier(button)] ?? text)
         }
         button.onMouseExitedHook = { [weak self] in
             self?.cancelHover()
+        }
+    }
+
+    /// Aendert den Tooltip-Text eines registrierten Buttons; ein offener
+    /// Tooltip dieses Buttons zeigt den neuen Text sofort.
+    func setText(_ text: String, for button: RoundButton) {
+        texts[ObjectIdentifier(button)] = text
+        if pendingButton === button {
+            pendingText = text
+            if tooltipPanel.isVisible { fire() }
         }
     }
 
@@ -398,12 +412,10 @@ final class OverlayPanel: NSPanel {
     var onScreenshotClicked: (() -> Void)?
     var onInsertScreenshotClicked: (() -> Void)?
     /// Linksklick auf eines der zehn Profil-Tiles. Index 1...10.
-    /// Der AppDelegate fuehrt damit den Re-Correct mit der letzten
-    /// Whisper-Nachricht durch.
+    /// Der AppDelegate fuegt damit den Schnell-Prompt ein.
     var onProfileClicked: ((Int) -> Void)?
     /// Rechtsklick auf eines der zehn Profil-Tiles. Index 1...10.
-    /// Setzt nur das Profil ohne Re-Correct — der Whisper-Cache bleibt
-    /// unangetastet, kann spaeter per Linksklick noch genutzt werden.
+    /// Oeffnet das Menue "Prompt bearbeiten".
     /// Hit-Test laeuft im rightMouseDown-Handler unten, BEVOR die Drag-
     /// Logik greift, damit Right-Clicks auf Tiles nicht versehentlich
     /// das Pillar verschieben.
@@ -695,11 +707,17 @@ final class OverlayPanel: NSPanel {
         mgr.register(insertScreenshotButton, text: "Screenshots einfügen")
         mgr.register(enterButton,      text: "Auto-Enter")
 
-        mgr.register(profileButtons[0], text: "Standard")
-        mgr.register(profileButtons[1], text: "Programmierung")
-        mgr.register(profileButtons[2], text: "Meta-Intelligenz")
-        for n in 4...10 {
-            mgr.register(profileButtons[n - 1], text: "Profil \(n) (frei belegbar)")
+        // Zahlen 1-10 = Schnell-Prompts; der AppDelegate setzt die Kurzbeschreibungen.
+        for n in 1...10 {
+            mgr.register(profileButtons[n - 1], text: "Prompt \(n)")
+        }
+    }
+
+    /// Tooltip-Text einer Zahlen-Kachel (Schnell-Prompt-Kurzbeschreibung).
+    func setProfileTooltip(_ slot: Int, text: String) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, slot >= 1, slot <= self.profileButtons.count else { return }
+            self.tooltipManager?.setText(text, for: self.profileButtons[slot - 1])
         }
     }
 
@@ -829,7 +847,7 @@ final class OverlayPanel: NSPanel {
     }
 
     private func refreshProfileTiles() {
-        let showActive = geminiOn
+        let showActive = false // Kacheln 1-10 sind Schnell-Prompts, kein Profil-Highlight mehr
         for (idx, tile) in profileButtons.enumerated() {
             let isActive = showActive && (idx + 1) == activeProfile
             // Aktives Profile = goldenrod (Windows starGold #DAA520), inaktiv
