@@ -19,9 +19,9 @@
 
 ## Loop-Zustand
 
-- Aktuelle Runde: 6 (Stufe 5, Blickwinkel: Angreifer) — abgeschlossen
-- Konvergenzzähler: 0 (Runden 5 und 6 brachten neue bestätigte Funde)
-- Nächster Schritt per Auftrag: Runde 7 (Blickwinkel: Wartungsentwickler)
+- Aktuelle Runde: 7 (Stufe 5, Blickwinkel: Wartungsentwickler) — abgeschlossen
+- Konvergenzzähler: 0 (Runde 7 brachte einen bestätigten Fund)
+- Nächster Schritt per Auftrag: Runde 8 = MAX_RUNDEN (Blickwinkel: Tester, Vollrunde für alle Bereiche)
 - Offene Fixe: keine — alle bestätigten Funde behoben und gebaut
 
 ## Funde
@@ -47,6 +47,7 @@
 | F17 | 4 | Repository | `StackLaborRepository.kt: loescheZiel` | Zustand/Invariante | mittel | verifiziert | Katalog-Löschen hinterlässt Ranglücken in allen Stacks |
 | F18 | 5 | ViewModel | `StackLaborViewModel.kt: nextSpeed` | Zustand | niedrig | verifiziert | Unbekanntes Tempo springt auf 0,70 statt zum Nächsten |
 | F19 | 6 | Repository | `StackLaborRepository.kt: vereinige` | Schnittstellenvertrag | mittel | verifiziert | Restliche getValue-Abstürze bei manipuliertem Import (Ziele/Fragen/Bewertungen/…) |
+| F20 | 7 | Repository | `StackLaborRepository.kt: vereinige` | Daten/Persistenz | niedrig | verifiziert | Zellen/Konkurrenzen mit unbekannter Mittel-ID passieren den Import (leere Konkurrenz-Zeilen) |
 
 ### F1 — Beweis/Fix
 - Eingabe: Auswertung schlägt nach Repair fehl → Bewertung mit leeren Zellen gespeichert. Ist: Mittel GRÜN, Sammel GELB. Soll (SPEC §10): Ampeln bleiben grau. Fix: `keineDaten = bewertung == null || zellen.isEmpty()` → überall GRAU, `sammelAmpel(..., !keineDaten)`.
@@ -105,6 +106,9 @@
 ### F19 — Beweis/Fix
 - Eingabe: manipulierter DAZU-Import (Stack-Ziel ohne Ziel, Frage ohne Stack, Zelle ohne Bewertung …). Ist: `getValue` wirft `NoSuchElementException`. Soll: klare `require`-Meldung wie F5. Fix: sieben weitere `require`-Wachen (Stack-Ziele, Fragen, Bewertungen, Zellen, Konkurrenzen, Antworten, Sortieransichten).
 
+### F20 — Beweis/Fix
+- Eingabe: DAZU-Import, Konkurrenz verweist auf unbekannte Mittel-ID (kein Absturz, da Mittel-IDs nicht umgeschrieben werden). Ist: verwaiste Konkurrenz wird gespeichert, Anzeige zeigt leere/halbe Konkurrenz-Zeile. Soll: saubere Ablehnung. Fix: `require` für Zellen- und Konkurrenz-Mittel gegen Bestands- plus Import-Mittel. Geprüft ohne Befund: übrige F19-Folgen (Ampel-Aufrufer, Toggle-Aufrufer, Rangstellen, Import-Gültigkeit) verhalten sich korrekt.
+
 ## Rundenübersicht
 
 | Runde | Stufe | Alle Bereiche geprüft | gemeldet/bestätigt/behoben/verifiziert | Build | Zähler danach |
@@ -115,6 +119,7 @@
 | 4 | 4 Invarianten/Gegenbeweis | ja (volle Tiefe: Repository/ViewModel/Codex; Kurzprüfung: UI/TTS/Netz) | 2/2/0/2/2 | assembleDebug OK | 0 |
 | 5 | 5 Ungeduldiger Benutzer | ja (volle Tiefe: ViewModel-Jobs/Abbruch/Doppel-Tap; Kurzprüfung: Rest) | 1/1/0/1/1 | assembleDebug OK | 0 |
 | 6 | 5 Angreifer | ja (volle Tiefe: Import/Validierung; Kurzprüfung: Rest) | 1/1/0/1/1 | assembleDebug OK | 0 |
+| 7 | 5 Wartungsentwickler | ja (volle Tiefe: alle Fix-Folgen; Kurzprüfung: Rest) | 1/1/0/1/1 | assembleDebug OK | 0 |
 
 ## Klärungsbedarf
 

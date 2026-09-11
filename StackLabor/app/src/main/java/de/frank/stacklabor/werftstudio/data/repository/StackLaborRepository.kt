@@ -665,10 +665,12 @@ class RoomStackLaborRepository(
             )
         }
         require(import.zellen.all { it.bewertungId in bewertungMap && it.zielId in zielMap }) { "Der Import enthält Zellen ohne Bewertung oder Ziel." }
+        require(import.zellen.all { it.mittelId in mittelIds }) { "Der Import enthält Zellen ohne Mittel." }
         val neueZellen = import.zellen.map {
             it.copy(bewertungId = bewertungMap.getValue(it.bewertungId), zielId = zielMap.getValue(it.zielId))
         }
         require(import.konkurrenzen.all { it.bewertungId in bewertungMap }) { "Der Import enthält Konkurrenzen ohne Bewertung." }
+        require(import.konkurrenzen.all { it.mittelAId in mittelIds && it.mittelBId in mittelIds }) { "Der Import enthält Konkurrenzen ohne Mittel." }
         val neueKonkurrenzen = import.konkurrenzen.map {
             it.copy(bewertungId = bewertungMap.getValue(it.bewertungId))
         }
