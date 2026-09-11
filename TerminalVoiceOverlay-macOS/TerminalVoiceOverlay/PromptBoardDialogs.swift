@@ -1440,12 +1440,14 @@ final class QuickPromptEditDialog: NSWindowController, NSWindowDelegate {
     private let slot: Int
     private let textView = NSTextView()
     private let scroll = NSScrollView()
+    private let titleField = NSTextField()
+    private var initialTitle = ""
     private var saved = false
 
     init(slot: Int) {
         self.slot = slot
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 520),
             styleMask: [.titled, .closable],
             backing: .buffered, defer: false)
         window.title = "Prompt \(slot) bearbeiten"
@@ -1459,8 +1461,20 @@ final class QuickPromptEditDialog: NSWindowController, NSWindowDelegate {
         header.textColor = .white
         header.drawsBackground = false
 
+        let titleHint = NSTextField(wrappingLabelWithString:
+            "Überschrift — steht links neben der Zahl, wenn du mit der Maus darüberfährst. Leer lassen: die KI vergibt eine Überschrift.")
+        titleHint.font = .systemFont(ofSize: 11)
+        titleHint.textColor = PBDarkTheme.textSecondary
+        titleHint.drawsBackground = false
+
+        initialTitle = QuickPromptStore.loadSummary(slot) ?? ""
+        titleField.stringValue = initialTitle
+        titleField.placeholderString = "Leer lassen: die KI vergibt eine Überschrift"
+        titleField.font = .systemFont(ofSize: 13)
+        titleField.translatesAutoresizingMaskIntoConstraints = false
+
         let hint = NSTextField(wrappingLabelWithString:
-            "Dieser Text wird beim Linksklick auf die Zahl in die Eingabezeile eingefügt. Leer lassen, um den Platz frei zu machen.")
+            "Prompt — wird beim Linksklick auf die Zahl in die Eingabezeile eingefügt. Leer lassen, um den Platz frei zu machen.")
         hint.font = .systemFont(ofSize: 11)
         hint.textColor = PBDarkTheme.textSecondary
         hint.drawsBackground = false
@@ -1494,7 +1508,7 @@ final class QuickPromptEditDialog: NSWindowController, NSWindowDelegate {
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 8
 
-        let stack = NSStackView(views: [header, hint, scroll, buttonRow])
+        let stack = NSStackView(views: [header, titleHint, titleField, hint, scroll, buttonRow])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
@@ -1506,6 +1520,8 @@ final class QuickPromptEditDialog: NSWindowController, NSWindowDelegate {
             stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -16),
             stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 16),
             stack.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor, constant: -16),
+            titleHint.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            titleField.widthAnchor.constraint(equalTo: stack.widthAnchor),
             hint.widthAnchor.constraint(equalTo: stack.widthAnchor),
             scroll.widthAnchor.constraint(equalTo: stack.widthAnchor),
             scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 280),
@@ -1518,6 +1534,16 @@ final class QuickPromptEditDialog: NSWindowController, NSWindowDelegate {
 
     @objc private func saveDlg() {
         QuickPromptStore.save(slot, text: textView.string)
+        // Eigene Ueberschrift bleibt fest stehen; leeres Feld = die KI vergibt
+        // (wieder) eine. Unveraenderte KI-Ueberschrift bleibt KI-Ueberschrift
+        // und wird bei geaendertem Prompt neu erzeugt.
+        let title = titleField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if title.isEmpty {
+            QuickPromptStore.clearSummary(slot)
+        } else if title != initialTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                    || QuickPromptStore.isManualTitle(slot) {
+            QuickPromptStore.saveManualTitle(slot, title: title)
+        }
         saved = true
         window?.close()
     }

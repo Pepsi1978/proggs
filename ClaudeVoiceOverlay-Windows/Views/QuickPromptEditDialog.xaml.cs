@@ -21,6 +21,8 @@ public partial class QuickPromptEditDialog : Window
         _slot = slot;
         HeaderText.Text = $"Prompt {slot} bearbeiten";
         PromptBox.Text = QuickPromptStore.Load(slot);
+        string initialTitle = QuickPromptStore.LoadSummary(slot) ?? string.Empty;
+        TitleBox.Text = initialTitle;
 
         MouseLeftButtonDown += (_, e) => { if (e.ButtonState == MouseButtonState.Pressed) DragMove(); };
         Loaded += (_, _) => { Activate(); PromptBox.Focus(); PromptBox.CaretIndex = PromptBox.Text.Length; };
@@ -30,6 +32,14 @@ public partial class QuickPromptEditDialog : Window
             try
             {
                 QuickPromptStore.Save(_slot, PromptBox.Text);
+                // Eigene Ueberschrift bleibt fest stehen; leeres Feld = die KI
+                // vergibt (wieder) eine. Unveraenderte KI-Ueberschrift bleibt
+                // KI-Ueberschrift und wird bei geaendertem Prompt neu erzeugt.
+                string title = TitleBox.Text.Trim();
+                if (title.Length == 0)
+                    QuickPromptStore.ClearSummary(_slot);
+                else if (title != initialTitle.Trim() || QuickPromptStore.IsManualTitle(_slot))
+                    QuickPromptStore.SaveManualTitle(_slot, title);
                 Saved = true;
                 Close();
             }

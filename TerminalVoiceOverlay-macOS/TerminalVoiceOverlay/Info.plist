@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>BuildTimestamp</key>
-	<string>11.09.2026, 15:39 Uhr</string>
+	<string>11.09.2026, 15:43 Uhr</string>
 	<key>CFBundleExecutable</key>
 	<string>TerminalVoiceOverlay</string>
 	<key>CFBundleIdentifier</key>
@@ -13,9 +13,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.49</string>
+	<string>1.50</string>
 	<key>CFBundleVersion</key>
-	<string>1.47</string>
+	<string>1.48</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>LSUIElement</key>

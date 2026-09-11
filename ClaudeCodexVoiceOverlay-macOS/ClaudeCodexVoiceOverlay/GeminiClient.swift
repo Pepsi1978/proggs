@@ -363,18 +363,18 @@ final class GeminiClient {
         }
     }
 
-    /// Kurzbeschreibung eines Schnell-Prompts (Zahlen-Kachel 1-10) in hoechstens
-    /// 10 deutschen Woertern — Tooltip links neben der Zahl. Pendant zu Windows
-    /// GenerateQuickPromptSummaryAsync. Leer bei Fehler.
+    /// Ueberschrift eines Schnell-Prompts (Zahlen-Kachel 1-10), kurz und praegnant,
+    /// hoechstens 10 Woerter — Tooltip links neben der Zahl, bis der Benutzer eine
+    /// eigene vergibt. Pendant zu Windows GenerateQuickPromptSummaryAsync. Leer bei Fehler.
     func generateQuickPromptSummary(_ text: String, completion: @escaping (String) -> Void) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { completion(""); return }
 
         let prompt = """
-        Beschreibe in höchstens 10 deutschen Wörtern, was der folgende \
-        Prompt bewirkt bzw. wofür er da ist. STRENGE REGELN: maximal 10 Wörter. \
-        Keine Anführungszeichen. Kein Punkt am Ende. Kein Präfix wie \
-        'Zusammenfassung:'. Nur die nackte Wortgruppe zurückgeben.
+        Formuliere eine kurze, prägnante deutsche Überschrift für den folgenden \
+        Prompt, an der man sofort erkennt, worum es geht. STRENGE REGELN: 2 bis 6 Wörter, \
+        niemals mehr als 10. Keine Anführungszeichen. Kein Punkt am Ende. Kein Präfix wie \
+        'Überschrift:'. Nur die nackte Überschrift zurückgeben.
 
         PROMPT:
         \(trimmed)
@@ -553,32 +553,61 @@ enum QuickPromptStore {
         return String(format: "%016llx", hash)
     }
 
-    /// Kurzbeschreibung, wenn sie zum aktuellen Prompt-Text passt; sonst nil.
-    static func loadSummary(_ slot: Int) -> String? {
-        let text = load(slot)
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let raw = try? String(contentsOf: dir.appendingPathComponent(summaryFileName(slot)),
+    // Erste Zeile der Ueberschriften-Datei: Fingerabdruck des Prompts (KI-
+    // Ueberschrift, gilt nur solange der Prompt gleich bleibt) oder "manual"
+    // (vom Benutzer vergeben, gilt immer und wird nie von der KI ersetzt).
+    private static let manualMarker = "manual"
+
+    private static func readSummaryParts(_ slot: Int) -> [String]? {
+        guard let raw = try? String(contentsOf: dir.appendingPathComponent(summaryFileName(slot)),
                                     encoding: .utf8) else { return nil }
         let parts = raw.replacingOccurrences(of: "\r\n", with: "\n")
             .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: false)
-        guard parts.count == 2,
-              String(parts[0]).trimmingCharacters(in: .whitespaces) == fingerprint(text) else { return nil }
-        let summary = String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+            .map(String.init)
+        return parts.count == 2 ? parts : nil
+    }
+
+    /// Gueltige Ueberschrift (eigene oder zum Prompt passende KI-Ueberschrift); sonst nil.
+    static func loadSummary(_ slot: Int) -> String? {
+        let text = load(slot)
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let parts = readSummaryParts(slot) else { return nil }
+        let head = parts[0].trimmingCharacters(in: .whitespaces)
+        guard head == manualMarker || head == fingerprint(text) else { return nil }
+        let summary = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
         return summary.isEmpty ? nil : summary
     }
 
-    static func saveSummary(_ slot: Int, sourceText: String, summary: String) {
+    /// true, wenn der Benutzer die Ueberschrift selbst vergeben hat.
+    static func isManualTitle(_ slot: Int) -> Bool {
+        readSummaryParts(slot)?[0].trimmingCharacters(in: .whitespaces) == manualMarker
+    }
+
+    private static func writeSummaryFile(_ slot: Int, _ content: String) {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let content = fingerprint(sourceText) + "\n" + summary.trimmingCharacters(in: .whitespacesAndNewlines)
         try? content.write(to: dir.appendingPathComponent(summaryFileName(slot)), atomically: true, encoding: .utf8)
     }
 
-    /// Textvorschau fuer den Tooltip, solange keine Kurzbeschreibung da ist.
+    /// KI-Ueberschrift speichern (an den Prompt-Text gebunden).
+    static func saveSummary(_ slot: Int, sourceText: String, summary: String) {
+        writeSummaryFile(slot, fingerprint(sourceText) + "\n" + summary.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    /// Eigene Ueberschrift speichern — bleibt, bis der Benutzer sie aendert oder leert.
+    static func saveManualTitle(_ slot: Int, title: String) {
+        writeSummaryFile(slot, manualMarker + "\n" + title.trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    /// Ueberschrift verwerfen — die KI vergibt beim naechsten Auffrischen eine neue.
+    /// Leere Datei statt Loeschen, damit das Drive-Bundle den Stand mitnimmt.
+    static func clearSummary(_ slot: Int) {
+        writeSummaryFile(slot, "")
+    }
+
+    /// Tooltip, solange keine Ueberschrift da ist.
     static func preview(_ slot: Int) -> String {
-        let text = load(slot).trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "\r", with: " ")
-            .replacingOccurrences(of: "\n", with: " ")
-        if text.isEmpty { return "Prompt \(slot): leer — Rechtsklick → Prompt bearbeiten" }
-        return text.count > 80 ? "Prompt \(slot): \(text.prefix(80))…" : "Prompt \(slot): \(text)"
+        load(slot).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "Prompt \(slot): leer — Rechtsklick → Prompt bearbeiten"
+            : "Prompt \(slot)"
     }
 }

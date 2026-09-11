@@ -3405,7 +3405,8 @@ namespace ClaudeVoiceOverlay.Views
                 if (gemini == null) return;
                 var text = QuickPromptStore.Load(slot);
                 var summary = await gemini.GenerateQuickPromptSummaryAsync(text);
-                if (string.IsNullOrWhiteSpace(summary)) return;
+                // Inzwischen eigene Ueberschrift vergeben? Dann gewinnt die.
+                if (string.IsNullOrWhiteSpace(summary) || QuickPromptStore.IsManualTitle(slot)) return;
                 QuickPromptStore.SaveSummary(slot, text, summary);
                 GeminiPromptDriveSync.TryUpload();
                 SetQuickPromptTooltip(slot, summary);

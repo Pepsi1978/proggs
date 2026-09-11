@@ -1607,7 +1607,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 DispatchQueue.main.async {
                     guard let self = self else { return }
                     self.quickSummaryInFlight.remove(slot)
-                    guard !summary.isEmpty else { return }
+                    // Inzwischen eigene Ueberschrift vergeben? Dann gewinnt die.
+                    guard !summary.isEmpty, !QuickPromptStore.isManualTitle(slot) else { return }
                     QuickPromptStore.saveSummary(slot, sourceText: text, summary: summary)
                     GeminiPromptSync.tryUpload()
                     self.panel.setProfileTooltip(slot, text: summary)

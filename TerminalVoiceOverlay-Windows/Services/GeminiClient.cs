@@ -495,9 +495,9 @@ Der zu verarbeitende Whisper-Text folgt nun:
         }
 
         /// <summary>
-        /// Kurzbeschreibung eines Schnell-Prompts (Zahlen-Kachel 1-10) in
-        /// hoechstens 10 deutschen Woertern — steht als Tooltip links neben der
-        /// Zahl. Leer bei Fehler; der Tooltip zeigt dann eine Textvorschau.
+        /// Ueberschrift eines Schnell-Prompts (Zahlen-Kachel 1-10), kurz und
+        /// praegnant, hoechstens 10 Woerter — steht als Tooltip links neben der
+        /// Zahl, bis der Benutzer eine eigene vergibt. Leer bei Fehler.
         /// </summary>
         public async Task<string> GenerateQuickPromptSummaryAsync(string text)
         {
@@ -505,10 +505,10 @@ Der zu verarbeitende Whisper-Text folgt nun:
             if (trimmed.Length == 0) return string.Empty;
 
             const string summaryPrompt =
-                "Beschreibe in höchstens 10 deutschen Wörtern, was der folgende " +
-                "Prompt bewirkt bzw. wofür er da ist. STRENGE REGELN: maximal 10 Wörter. " +
-                "Keine Anführungszeichen. Kein Punkt am Ende. Kein Präfix wie " +
-                "'Zusammenfassung:'. Nur die nackte Wortgruppe zurückgeben.\n\nPROMPT:\n";
+                "Formuliere eine kurze, prägnante deutsche Überschrift für den folgenden " +
+                "Prompt, an der man sofort erkennt, worum es geht. STRENGE REGELN: 2 bis 6 Wörter, " +
+                "niemals mehr als 10. Keine Anführungszeichen. Kein Punkt am Ende. Kein Präfix wie " +
+                "'Überschrift:'. Nur die nackte Überschrift zurückgeben.\n\nPROMPT:\n";
             try
             {
                 string raw = await SendWithRetry(summaryPrompt + trimmed, 0);

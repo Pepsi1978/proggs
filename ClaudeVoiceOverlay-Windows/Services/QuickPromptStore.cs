@@ -70,23 +70,44 @@ public static class QuickPromptStore
         return hash.ToString("x16");
     }
 
-    /// <summary>Kurzbeschreibung, wenn sie zum aktuellen Prompt-Text passt; sonst null.</summary>
+    // Erste Zeile der Ueberschriften-Datei: Fingerabdruck des Prompts (KI-
+    // Ueberschrift, gilt nur solange der Prompt gleich bleibt) oder "manual"
+    // (vom Benutzer vergeben, gilt immer und wird nie von der KI ersetzt).
+    private const string ManualMarker = "manual";
+
+    private static string[]? ReadSummaryParts(int slot)
+    {
+        var p = Path.Combine(Dir, SummaryFileName(slot));
+        if (!File.Exists(p)) return null;
+        var parts = File.ReadAllText(p).Replace("\r\n", "\n").Split('\n', 2);
+        return parts.Length == 2 ? parts : null;
+    }
+
+    /// <summary>Gueltige Ueberschrift (eigene oder zum Prompt passende KI-Ueberschrift); sonst null.</summary>
     public static string? LoadSummary(int slot)
     {
         try
         {
             var text = Load(slot);
             if (string.IsNullOrWhiteSpace(text)) return null;
-            var p = Path.Combine(Dir, SummaryFileName(slot));
-            if (!File.Exists(p)) return null;
-            var parts = File.ReadAllText(p).Replace("\r\n", "\n").Split('\n', 2);
-            if (parts.Length != 2 || parts[0].Trim() != Fingerprint(text)) return null;
+            var parts = ReadSummaryParts(slot);
+            if (parts == null) return null;
+            var head = parts[0].Trim();
+            if (head != ManualMarker && head != Fingerprint(text)) return null;
             var summary = parts[1].Trim();
             return summary.Length == 0 ? null : summary;
         }
         catch { return null; }
     }
 
+    /// <summary>True, wenn der Benutzer die Ueberschrift selbst vergeben hat.</summary>
+    public static bool IsManualTitle(int slot)
+    {
+        try { return ReadSummaryParts(slot)?[0].Trim() == ManualMarker; }
+        catch { return false; }
+    }
+
+    /// <summary>KI-Ueberschrift speichern (an den Prompt-Text gebunden).</summary>
     public static void SaveSummary(int slot, string sourceText, string summary)
     {
         Directory.CreateDirectory(Dir);
@@ -94,11 +115,25 @@ public static class QuickPromptStore
             Fingerprint(sourceText) + "\n" + (summary ?? string.Empty).Trim());
     }
 
-    /// <summary>Textvorschau fuer den Tooltip, solange keine Kurzbeschreibung da ist.</summary>
-    public static string Preview(int slot)
+    /// <summary>Eigene Ueberschrift speichern — bleibt, bis der Benutzer sie aendert oder leert.</summary>
+    public static void SaveManualTitle(int slot, string title)
     {
-        var text = Load(slot).Trim().Replace("\r", " ").Replace("\n", " ");
-        if (text.Length == 0) return $"Prompt {slot}: leer — Rechtsklick → Prompt bearbeiten";
-        return text.Length > 80 ? $"Prompt {slot}: {text[..80]}…" : $"Prompt {slot}: {text}";
+        Directory.CreateDirectory(Dir);
+        File.WriteAllText(Path.Combine(Dir, SummaryFileName(slot)),
+            ManualMarker + "\n" + (title ?? string.Empty).Trim());
     }
+
+    /// <summary>Ueberschrift verwerfen — die KI vergibt beim naechsten Auffrischen eine neue.
+    /// Leere Datei statt Loeschen, damit das Drive-Bundle den Stand mitnimmt.</summary>
+    public static void ClearSummary(int slot)
+    {
+        Directory.CreateDirectory(Dir);
+        File.WriteAllText(Path.Combine(Dir, SummaryFileName(slot)), string.Empty);
+    }
+
+    /// <summary>Tooltip, solange keine Ueberschrift da ist.</summary>
+    public static string Preview(int slot) =>
+        string.IsNullOrWhiteSpace(Load(slot))
+            ? $"Prompt {slot}: leer — Rechtsklick → Prompt bearbeiten"
+            : $"Prompt {slot}";
 }
