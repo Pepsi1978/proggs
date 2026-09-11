@@ -692,14 +692,17 @@ class Ablage(
                 grund.trim().takeIf { it.isNotBlank() }?.let { "\nGrund: $it" }.orEmpty(),
             tag,
         )
-        val aufgaben = db.aufgaben().tagesaufgaben(experimentId, 1)
+        val jeTag = db.aufgaben().alleZu(experimentId)
+            .groupBy { it.dayIndex }
+            .toSortedMap()
+            .map { (_, aufgaben) -> aufgaben.sortedBy { it.order }.map { it.text } }
         db.merkliste().lege(
             WatchlistItem(
                 title = experiment.title,
                 description = experiment.description,
                 days = experiment.days,
                 level = experiment.level,
-                tasksJson = alsJson(listOf(aufgaben.map { it.text })),
+                tasksJson = alsJson(jeTag),
                 source = Quelle.NICHT_UMGESETZT,
                 note = grund.trim().takeIf { it.isNotBlank() },
                 createdAt = Instant.now(),

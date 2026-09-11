@@ -12,18 +12,29 @@
 | B6 Benachrichtigung/Lebenszyklus | notify/*, ExperimenteApp.kt, MainActivity.kt, network/* | Plattform/Lebenszyklus | mittel-hoch | Wecker, Boot, Lifecycle, OkHttp |
 | B7 Oberfläche | ui/Navigation.kt, ui/screens/*, ui/components/*, ui/theme/* | Oberfläche | mittel | sechs Hauptbildschirme, Bausteine, Themen |
 | nicht prüfrelevant | build/*, .gradle/, res/font, generierter Code, Fremdbibliotheken | — | — | — |
-3. Loop-Zustand: aktuelle Runde 1, nächste Stufe 1 (Überblick), Konvergenzzähler 0, nächster Blickwinkel Stufe 2 Funktion-für-Funktion, offene Fixe 8 (L-01–L-08), ausstehend Phase-0-Commit.
+3. Loop-Zustand: aktuelle Runde 2, nächste Stufe 2 (Funktion für Funktion), Konvergenzzähler 0, nächster Blickwinkel Stufe 3 Grenzen/Zustand/Zeit, offene Fixe 0, ausstehend nichts.
 4. Fundtabelle:
 | ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Kurzbeschreibung |
 |---|---|---|---|---|---|---|---|
-| L-01 | 1 | B2 | Ablage.kt:695 | Daten/Persistenz | hoch | gemeldet | nichtUmgesetzt übernimmt nur Tag-1-Aufgaben auf Merkliste |
-| L-02 | 1 | B1 | AppViewModel.kt:201-205 | Zustand | mittel | gemeldet | Rückweg räumt Kreise nicht ab (Kommentar vs. Code) |
-| L-03 | 1 | B1 | AppViewModel.kt:1187-1189 | Zustand | mittel | gemeldet | letzterTagErreicht reagiert nicht auf Tageswechsel |
-| L-04 | 1 | B1 | AppViewModel.kt:1142-1145 | Zustand/Oberfläche | mittel | gemeldet | waehleAuswertung lässt alte Einschätzung stehen |
-| L-05 | 1 | B1 | AppViewModel.kt:1256-1274 | Fehlerbehandlung | hoch | gemeldet | schliesseAb meldet Erfolg auch bei Fehler/null |
-| L-06 | 1 | B1 | AppViewModel.kt:1292-1303 | Fehlerbehandlung | mittel | gemeldet | nichtUmgesetzt ohne try/catch, stiller Abbruch |
-| L-07 | 1 | B1 | AppViewModel.kt:1791-1799 | Lebenszyklus | mittel | gemeldet | beimVerlassen lässt Uhr/Zustand weiterlaufen |
-| L-08 | 1 | B1 | AppViewModel.kt:1365-1371 | Oberfläche | niedrig | gemeldet | lies() startet Einschätzung nie bei Fremdwiedergabe |
+| L-01 | 1 | B2 | Ablage.kt:695 | Daten/Persistenz | hoch | verifiziert | nichtUmgesetzt übernimmt nur Tag-1-Aufgaben auf Merkliste |
+| L-02 | 1 | B1 | AppViewModel.kt:201-205 | Zustand | mittel | verifiziert | Rückweg räumt Kreise nicht ab (Kommentar vs. Code) |
+| L-03 | 1 | B1 | AppViewModel.kt:1187-1189 | Zustand | mittel | verifiziert | letzterTagErreicht reagiert nicht auf Tageswechsel |
+| L-04 | 1 | B1 | AppViewModel.kt:1142-1145 | Zustand/Oberfläche | mittel | verifiziert | waehleAuswertung lässt alte Einschätzung stehen |
+| L-05 | 1 | B1 | AppViewModel.kt:1256-1274 | Fehlerbehandlung | hoch | verifiziert | schliesseAb meldet Erfolg auch bei Fehler/null |
+| L-06 | 1 | B1 | AppViewModel.kt:1292-1303 | Fehlerbehandlung | mittel | verifiziert | nichtUmgesetzt ohne try/catch, stiller Abbruch |
+| L-07 | 1 | B1 | AppViewModel.kt:1791-1799 | Lebenszyklus | mittel | verifiziert | beimVerlassen lässt Uhr/Zustand weiterlaufen |
+| L-08 | 1 | B1 | AppViewModel.kt:1365-1371 | Oberfläche | niedrig | verifiziert | lies() startet Einschätzung nie bei Fremdwiedergabe |
+
+Beweise/Fixe/Verifikation Runde 1:
+- L-01: mehrtägiges laufendes Experiment (Tage 1–3 mit Aufgaben) → „Nicht umgesetzt“ → Ist: Merkliste enthält nur Tag 1 (`tagesaufgaben(id,1)`), Tage 2–3 verloren; Soll: alle Tage wie bei `nimmAusMonitor`. Fix: `alleZu` gruppiert nach `dayIndex` (Commit Runde 1). Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Beweis hinfällig, volle Liste drin; (2) einziger Aufrufer VM-`nichtUmgesetzt` zeigt jetzt Vollständiges; (3) leere Aufgaben → `"[]"` wie zuvor.
+- L-02: A→B→A → Ist: `(_rueckweg+jetzt).takeLast(8)` behält Ziel doppelt, Kreis möglich; Soll laut Kommentar: enthaltenes Ziel bis Stelle abräumen. Fix: `take(indexOf(ziel))` vor dem Drauflegen. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Kreis A→B→A ergibt `[B]`; (2) `zurueck()`/`wische()` unverändert nutzbar; (3) Tiefe 8 und Leeren bei Hauptbildschirm bleiben.
+- L-03: B-03 offen über Mitternacht → Ist: `.map{..._heute.value}` feuert nur bei Experimentwechsel; Soll: Tageswechsel dreht Abschlussfrage. Fix: `combine(ausgewertetes,_heute)`. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) reagiert auf beide Quellen; (2) einziger Leser Auswertung.kt:85 zeigt Korrektes; (3) null → false.
+- L-04: Antwort liegt vor, dann Auswahlwechsel → Ist: alte `_einschaetzung`/ANTWORT bleibt; Soll wie `oeffneAuswertung` räumen. Fix: Liste leeren, Zustand AUFNAHME. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) alte Antwort weg; (2) Aufrufer Monitor-Auswahl zeigt Neues; (3) leere Liste/zulässiger Zustand.
+- L-05: `_wertetAus==null` oder `schliesseAb` wirft → Ist: trotzdem Blüte + MONITOR + „Abgeschlossen“; Soll: nur bei Erfolg. Fix: null→Störung+Return, Fehler→Störung+Return, Blüte/Navigation nur bei Erfolg. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Erfolgsmeldung nur bei Erfolg; (2) B-03-Knopf bleibt bei Fehler stehen; (3) null und Exception abgedeckt.
+- L-06: `ablage.nichtUmgesetzt` wirft → Ist: unbehandelter Abbruch ohne Störung; Soll: catch+Störung wie `werteAus`. Fix: try/catch mit `freundlich()`. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Fehler sichtbar; (2) kein neues Fehlverhalten, Feld bleibt; (3) Erfolgs-/Fehlerpfad getrennt.
+- L-07: Aufnahme läuft + `onStop` → Ist: `uhr`-Job zählt weiter, Zustand AUFNAHME; Soll wie `beendeAufnahme` stoppen+neu bestimmen. Fix: `uhr?.cancel()`, `stop()`, `bestimmeZustand()` bei AUFNAHME. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) kein Timer-Leak; (2) Aufrufer MainActivity.onStop korrekt; (3) Nicht-Aufnahme-Fall unverändert.
+- L-08: Fremdtext läuft + `lies(einschaetzung)` → Ist: `umschalten()` stoppt Fremdes, Return, Einschätzung startet nie; Soll: wechseln via `liesVor`. Fix: gleiche Kennung→toggeln, fremde→`halteAn()`+durchstarten. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Einschätzung startet; (2) B-03-Lautsprecher konsistent mit `liesVor`; (3) blanker Text weiter via `liesVor`-Meldung.
 5. Rundenübersicht:
 | Runde | Stufe | alle Bereiche geprüft | gemeldet/bestätigt/abgelehnt/behoben/verifiziert | Build/Tests | Zähler danach |
+| 1 | 1 Überblick | ja (B1 per Helfer+Selbst-Triage, B2–B7 selbst gelesen/gesucht) | 8/8/0/8/8 | Build grün, keine Tests | 0 |
 6. Klärungsbedarf: (leer)

@@ -202,7 +202,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         val jetzt = _ziel.value
         if (ziel == jetzt) return
         if (ziel in MERKT_HERKUNFT) {
-            _rueckweg.value = (_rueckweg.value + jetzt).takeLast(RUECKWEG_TIEFE)
+            val stapel = _rueckweg.value
+            val gestutzt = stapel.indexOf(ziel).let { if (it >= 0) stapel.take(it) else stapel }
+            _rueckweg.value = (gestutzt + jetzt).takeLast(RUECKWEG_TIEFE)
         } else {
             // Ein Hauptbildschirm ist immer ein Neuanfang — von dort führt der Rückweg
             // nirgendwo hin, und alte Zwischenstationen wären nur Ballast.
@@ -1142,6 +1144,8 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun waehleAuswertung(experiment: Experiment) {
         _wertetAus.value = experiment.id
         _auswertungsFeld.value = Feld()
+        _einschaetzung.value = emptyList()
+        _auswertungsZustand.value = AuswertungZustand.AUFNAHME
     }
 
     /** F-10 Schritt 3 und F-11: nach dem Eintrag läuft die KI-Auswertung. */
@@ -1184,9 +1188,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
      * Steht das Experiment an seinem letzten Tag? Dann fragt B-03 nach dem Abschluss —
      * **fragt**, und beendet nicht von selbst.
      */
-    val letzterTagErreicht: StateFlow<Boolean> = ausgewertetes
-        .map { it != null && ablage.istLetzterTag(it, _heute.value) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    val letzterTagErreicht: StateFlow<Boolean> = combine(ausgewertetes, _heute) { experiment, heute ->
+        experiment != null && ablage.istLetzterTag(experiment, heute)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     /**
      * „Weiterführen" auf die Abschlussfrage: das Experiment läuft mit mehr Tagen weiter.
@@ -1255,15 +1259,23 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
      */
     fun schliesseAb() {
         val id = _wertetAus.value
+        if (id == null) {
+            zeigeStoerung("Zu welchem Experiment gehört das? Öffne es im Monitor.")
+            return
+        }
         viewModelScope.launch {
+            val gespeichert = runCatching { ablage.schliesseAb(id, heute) }.fold(
+                onSuccess = { true },
+                onFailure = {
+                    _stoerung.value = "Der Abschluss ließ sich nicht speichern."
+                    false
+                },
+            )
+            if (!gespeichert) return@launch
             _bluete.value = true
             ruettleLangWeich()
             // Hier wird der Abschluss wirklich vollzogen — vorher verließ sich diese
             // Funktion darauf, dass die Auswertung ihn nebenbei erledigt hatte.
-            if (id != null) {
-                runCatching { ablage.schliesseAb(id, heute) }
-                    .onFailure { _stoerung.value = "Der Abschluss ließ sich nicht speichern." }
-            }
             kotlinx.coroutines.delay(Bewegung.BLUETE.toLong())
             _bluete.value = false
             _auswertungsFeld.value = Feld()
@@ -1291,7 +1303,12 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
      */
     fun nichtUmgesetzt(experiment: Experiment) {
         viewModelScope.launch {
-            ablage.nichtUmgesetzt(experiment.id, _auswertungsFeld.value.text, heute)
+            try {
+                ablage.nichtUmgesetzt(experiment.id, _auswertungsFeld.value.text, heute)
+            } catch (fehler: Exception) {
+                _stoerung.value = fehler.freundlich()
+                return@launch
+            }
             _auswertungsFeld.value = Feld()
             _einschaetzung.value = emptyList()
             _auswertungsZustand.value = AuswertungZustand.AUFNAHME
@@ -1364,10 +1381,14 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
      */
     fun lies(text: String) {
         if (app.vorleser.laeuft.value) {
-            app.vorleser.umschalten()
-            _mitlese.value = -1
+            if (_liestKennung.value == KENNUNG_EINSCHAETZUNG) {
+                app.vorleser.umschalten()
+                _mitlese.value = -1
+                _liestKennung.value = null
+                return
+            }
+            app.vorleser.halteAn()
             _liestKennung.value = null
-            return
         }
         // Über denselben Weg wie alle anderen Lautsprecher — sonst wüsste dieser Knopf
         // nichts davon, wenn nebenan etwas anderes vorgelesen wird.
@@ -1791,7 +1812,12 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun beimVerlassen() {
         if (_nimmtAuf.value) {
             _nimmtAuf.value = false
-            viewModelScope.launch { aufnahme.stop() }
+            uhr?.cancel()
+            uhr = null
+            viewModelScope.launch {
+                aufnahme.stop()
+                if (_tagZustand.value == TagZustand.AUFNAHME) bestimmeZustand()
+            }
         }
         app.vorleser.halteAn()
         // Dritte Schicht für F-21: was im Selbstbild-Feld steht, überlebt auch das
