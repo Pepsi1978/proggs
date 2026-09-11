@@ -19,9 +19,9 @@
 
 ## Loop-Zustand
 
-- Aktuelle Runde: 2 (Stufe 2, Funktion-für-Funktion) — abgeschlossen
-- Konvergenzzähler: steht auf 1 (Runde 2 brachte 1 neuen Fund F10 gegenüber Runde 1)
-- Nächster Schritt per Auftrag: Runde 3 (Stufe 3, Grenzen/Zustand/Zeit). Im Schnellmodus auf Wunsch.
+- Aktuelle Runde: 3 (Stufe 3, Grenzen/Zustand/Zeit) — abgeschlossen
+- Konvergenzzähler: 0 (Runde 3 brachte neue bestätigte Funde)
+- Nächster Schritt per Auftrag: Runde 4 (Stufe 4, Invarianten und Gegenbeweis)
 - Offene Fixe: keine — alle bestätigten Funde behoben und gebaut
 
 ## Funde
@@ -38,6 +38,11 @@
 | F8 | 1 | Anzeige | `DeutscheAnzeigen.kt: toEinheitOrNull` | Randfall Unicode | niedrig | verifiziert | Griechisches μ (U+03BC) nicht erkannt |
 | F9 | 1 | Prüfsumme | `Pruefsumme.kt: berechnen` | Standardwerte | niedrig | verifiziert | Blank-einheitText ohne takeIf, inkonsistent zur Anzeige |
 | F10 | 2 | Codex | `CodexJson.kt: decodeStringFieldPrefix` | Schnittstellenvertrag | mittel | verifiziert | `"gesamt"` im Fließtext wird als Schlüssel missdeutet |
+| F11 | 3 | ViewModel | `StackLaborViewModel.kt: applyGlobal` | Zustand/Lebenszyklus | hoch | verifiziert | Gelöschter Stack bleibt ausgewählt (Geister-Anzeige) |
+| F12 | 3 | ViewModel | `StackLaborViewModel.kt: scheduleCompetitionCheck` | Fehlerbehandlung | mittel | verifiziert | Catch-Block stürzt bei gelöschtem Stack ab |
+| F13 | 3 | Codex | `CompetitionCheckCoordinator.kt` | — | — | abgelehnt | Klasse ist ungenutzter Code (kein Aufrufer); kein Ausführungspfad, kein Fehler |
+| F14 | 3 | Persistenz | `StackDao.kt`, Repository, ViewModel `ToggleMedicine` | Nebenläufigkeit | mittel | verifiziert | Doppel-Tap liest zweimal denselben Stand, Toggle wirkt nur einmal |
+| F15 | 3 | ViewModel | `StackLaborViewModel.kt: startCodexLogin` | Nebenläufigkeit | niedrig | verifiziert | Doppel-Tap startet parallele Device-Auth-Flows |
 
 ### F1 — Beweis/Fix
 - Eingabe: Auswertung schlägt nach Repair fehl → Bewertung mit leeren Zellen gespeichert. Ist: Mittel GRÜN, Sammel GELB. Soll (SPEC §10): Ampeln bleiben grau. Fix: `keineDaten = bewertung == null || zellen.isEmpty()` → überall GRAU, `sammelAmpel(..., !keineDaten)`.
@@ -69,12 +74,28 @@
 ### F10 — Beweis/Fix
 - Eingabe: Rohtext, in dem `"gesamt"` im Fließtext vorkommt, bevor der echte Schlüssel steht. Ist: Prefix-Decoder nimmt ersten Treffer. Soll: nur Treffer mit nachfolgendem Doppelpunkt. Fix: Schleife mit Doppelpunkt-Prüfung, sonst weitersuchen.
 
+### F11 — Beweis/Fix
+- Eingabe: gewählten Stack löschen. Ist: `selectedStackId` zeigt weiter auf die gelöschte ID, `applySelected` bricht mit `?: return` ab — Kopf, Mittel und Ziele bleiben als Geist stehen. Soll: auf ersten übrigen (oder keinen) wechseln. Fix: in `applyGlobal` fehlende Auswahl zurücksetzen.
+
+### F12 — Beweis/Fix
+- Eingabe: Mittel hinzufügen, Stack innerhalb von 3 s löschen. Ist: Catch-Block ruft `ladeStackInhalt` auf, das erneut wirft — uncaught im Scope. Soll: still aufgeben. Fix: `runCatching` um den Hinweis-Fallback.
+
+### F13 — abgelehnt
+- Vermuteter Catch-Absturz im `CompetitionCheckCoordinator` — bei Prüfung per Suche (grep): die Klasse wird nirgends instanziiert (Aufrufer: keine), die lebende Prüfung steht in `StackLaborViewModel.scheduleCompetitionCheck` (siehe F12). Ohne Ausführungspfad kein Logikfehler.
+
+### F14 — Beweis/Fix
+- Eingabe: Häkchen doppelt tippen, bevor der Flow neu emittiert. Ist: beide Taps lesen `aktiv=true`, beide schreiben `false` — Ende `false` statt `true`. Soll: zwei Taps heben sich auf. Fix: neue DAO-Anweisung `UPDATE … SET aktiv = NOT aktiv`, Repository `schalteEintragAktivUm`, Toggle nutzt sie.
+
+### F15 — Beweis/Fix
+- Eingabe: Codex-Anmelden doppelt tippen. Ist: zwei parallele Device-Auth-Flows (doppelte Polls/Meldungen). Soll: zweiter Tap wirkungslos. Fix: `codexLoginJob`-Guard mit Rücksetzung im `finally`.
+
 ## Rundenübersicht
 
 | Runde | Stufe | Alle Bereiche geprüft | gemeldet/bestätigt/behoben/verifiziert | Build | Zähler danach |
 |---|---|---|---|---|---|
 | 1 | 1 Überblick | ja (77 Dateien, Kern gelesen, Rest per Suche) | 9/9/9/9 | assembleDebug OK | 0 |
 | 2 | 2 Funktion-für-Funktion | ja (Änderungsstellen + Codex/TTS/UI-Rest) | 1/1/1/1 | assembleDebug OK | 1 |
+| 3 | 3 Grenzen/Zustand/Zeit | ja (Aufrufer, Lebenszyklus, Wettläufe, Doppel-Tap, Netzverlust) | 5/4/1 abgelehnt/4/4 | assembleDebug OK | 0 |
 
 ## Klärungsbedarf
 

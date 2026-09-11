@@ -136,6 +136,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     private var currentEvaluation: BewertungMitDetails? = null
     private var tagEvaluation: BewertungMitDetails? = null
     private var evaluationJob: Job? = null
+    private var codexLoginJob: Job? = null
     private var clonedVoicesJob: Job? = null
     private var goalInputJob: Job? = null
     private var solubilityJob: Job? = null
@@ -188,8 +189,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             }
             is StackLaborEvent.ChangeSearch -> mutableState.update { it.copy(searchQuery = event.query) }
             is StackLaborEvent.ToggleMedicine -> if (!gesperrtGemeldet(event.stackId)) launchAction {
+                // Atomar in der Datenbank umschalten statt gelesen-negiert zu schreiben:
+                // zwei schnelle Taps heben sich sonst nicht auf (beide lesen denselben Stand).
                 currentEntries.firstOrNull { it.stackId == event.stackId && it.mittelId == event.medicineId }?.let {
-                    repository.setzeEintragAktiv(it.id, !it.aktiv)
+                    repository.schalteEintragAktivUm(it.id)
                 }
             }
             is StackLaborEvent.RemoveMedicineFromStack -> if (!gesperrtGemeldet(event.stackId)) removeMedicineFromStack(event.stackId, event.medicineId)
@@ -316,6 +319,11 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         medicines = snapshot.catalog.second
         settings = snapshot.catalog.third
         if (selectedStackId.value == null && stacks.isNotEmpty()) selectedStackId.value = stacks.first().id
+        // Der gewählte Stack kann inzwischen gelöscht sein — dann nicht als Geist anzeigen,
+        // sondern auf den ersten übrigen (oder keinen) wechseln.
+        if (selectedStackId.value != null && stacks.none { it.id == selectedStackId.value }) {
+            selectedStackId.value = stacks.firstOrNull()?.id
+        }
         val ampeln = stacks.associate { stack -> stack.id to repository.berechneAmpeln(stack.id) }
         val summaries = stacks.map { stack ->
             val result = ampeln.getValue(stack.id)
@@ -1198,9 +1206,12 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                repository.ladeStackInhalt(stackId).eintraege
-                    .filter { it.mittelId in checkedIds }
-                    .forEach { repository.setzeOffenenHinweis(it.id, "Konkurrenzprüfung nicht möglich — beim nächsten Auswerten") }
+                // Der Stack kann inzwischen gelöscht sein — dann still aufgeben statt abzustürzen.
+                runCatching {
+                    repository.ladeStackInhalt(stackId).eintraege
+                        .filter { it.mittelId in checkedIds }
+                        .forEach { repository.setzeOffenenHinweis(it.id, "Konkurrenzprüfung nicht möglich — beim nächsten Auswerten") }
+                }
             } finally {
                 pendingCompetitionIds.remove(stackId)
                 competitionJobs.remove(stackId)
@@ -1378,7 +1389,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private fun startCodexLogin() {
-        viewModelScope.launch {
+        if (codexLoginJob?.isActive == true) return
+        codexLoginJob = viewModelScope.launch {
             mutableState.update { it.copy(codexLoginState = CodexLoginState.Waiting, codexDeviceCode = "") }
             try {
                 val session = container.oauth.startDeviceAuthorization()
@@ -1396,6 +1408,8 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
             } catch (error: Exception) { // no-cancellation-rethrow (CancellationException rethrown above)
                 mutableState.update { it.copy(codexLoginState = CodexLoginState.NetworkError) }
                 message(error.message ?: "Codex ist nicht erreichbar")
+            } finally {
+                codexLoginJob = null
             }
         }
     }

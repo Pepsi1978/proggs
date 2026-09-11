@@ -94,6 +94,10 @@ interface StackDao {
     @Query("UPDATE stack_eintrag SET aktiv = :aktiv WHERE id = :eintragId")
     suspend fun setzeAktiv(eintragId: String, aktiv: Boolean)
 
+    /** Atomarer Wechsel ohne Lese-Zwischenschritt — zwei schnelle Taps heben sich korrekt auf. */
+    @Query("UPDATE stack_eintrag SET aktiv = NOT aktiv WHERE id = :eintragId")
+    suspend fun schalteAktivUm(eintragId: String)
+
     @Query("UPDATE stack_eintrag SET offenerHinweis = :hinweis WHERE id = :eintragId")
     suspend fun setzeOffenenHinweis(eintragId: String, hinweis: String?)
 

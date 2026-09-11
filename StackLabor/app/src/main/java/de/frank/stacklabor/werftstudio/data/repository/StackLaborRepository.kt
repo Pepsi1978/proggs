@@ -81,6 +81,7 @@ interface StackLaborRepository {
     suspend fun loescheEintrag(eintragId: String)
     suspend fun uebertrageMittel(quellStackId: String, zielStackId: String, mittelId: String, verschieben: Boolean)
     suspend fun setzeEintragAktiv(eintragId: String, aktiv: Boolean)
+    suspend fun schalteEintragAktivUm(eintragId: String)
     suspend fun setzeOffenenHinweis(eintragId: String, hinweis: String?)
     suspend fun speichereZiel(ziel: Ziel)
     suspend fun loescheZiel(zielId: String)
@@ -305,6 +306,7 @@ class RoomStackLaborRepository(
     }
 
     override suspend fun setzeEintragAktiv(eintragId: String, aktiv: Boolean): Unit = stackDao.setzeAktiv(eintragId, aktiv)
+    override suspend fun schalteEintragAktivUm(eintragId: String): Unit = stackDao.schalteAktivUm(eintragId)
     override suspend fun setzeOffenenHinweis(eintragId: String, hinweis: String?): Unit = stackDao.setzeOffenenHinweis(eintragId, hinweis)
 
     override suspend fun speichereZiel(ziel: Ziel) {
