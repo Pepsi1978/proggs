@@ -23,7 +23,7 @@
 | 3 | Nachfilter Confidence | UND: `no_speech_prob>0.6` UND `avg_logprob<-1.0`; `compression_ratio>2.4` | §3 |
 | 4 | Letzter Filter | Mehrsprachige Floskel-Blocklist nur bei kurz + Stille-Kontext | §3 |
 | 5 | Modell waehlen | `whisper-large-v3-turbo` als Default; `v3` nur fuer max. Genauigkeit/Translation | §2 |
-| 6 | Request-Params | `language="de"` (ISO-639-1), `temperature=0`, `prompt` nur Eigennamen | §2 |
+| 6 | Request-Params | `language="de"` (ISO-639-1), `temperature=0`, `prompt` = kurzer interpunktierter DE-Satz + Eigennamen (Stil-Vorgabe, keine Befehle) | §2 |
 | 7 | Audio aufnehmen | 16 kHz mono PCM16, KEIN Denoise/AGC/Normalisierung; WAV=Latenz | §1 |
 | 8 | .NET HTTP-Resilienz | Statischer `HttpClient`+`SocketsHttpHandler`; Upload-POST NICHT retryen; `retry-after` lesen | §5 |
 | 9 | JSON-DTOs | System.Text.Json Source-Gen, snake_case via `[JsonPropertyName]` | §6 |

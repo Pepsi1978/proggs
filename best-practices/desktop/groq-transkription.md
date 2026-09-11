@@ -26,7 +26,7 @@ Client-Kontext: Always-On-Voice-App VoiceAgent (.NET 10, WPF, NAudio, 16 kHz mon
 | 3 | Nachfilter Confidence | UND: `no_speech_prob>0.6` UND `avg_logprob<-1.0`; `compression_ratio>2.4` | §3 |
 | 4 | Letzter Filter | Mehrsprachige Floskel-Blocklist nur bei kurz + Stille-Kontext | §3 |
 | 5 | Modell waehlen | `whisper-large-v3-turbo` als Default; `v3` nur fuer max. Genauigkeit/Translation | §2 |
-| 6 | Request-Params | `language="de"` (ISO-639-1), `temperature=0`, `prompt` nur Eigennamen | §2 |
+| 6 | Request-Params | `language="de"` (ISO-639-1), `temperature=0`, `prompt` = kurzer interpunktierter DE-Satz + Eigennamen (Stil-Vorgabe, keine Befehle) | §2 |
 | 7 | Audio aufnehmen | 16 kHz mono PCM16, KEIN Denoise/AGC/Normalisierung; WAV=Latenz | §1 |
 | 8 | .NET HTTP-Resilienz | Statischer `HttpClient`+`SocketsHttpHandler`; Upload-POST NICHT retryen; `retry-after` lesen | §5 |
 | 9 | JSON-DTOs | System.Text.Json Source-Gen, snake_case via `[JsonPropertyName]` | §6 |
@@ -100,6 +100,9 @@ Gegenstueck (Fehlermodi jeder Schicht): [`bugs/desktop/groq-transkription.md`](.
 - **`temperature=0`** als Basis (verhindert Stille-Halluzination NICHT allein, aber sinnvoll). `offiziell`
 - **`language="de"`** (ISO-639-1, nicht `de-DE`/`german`) — bessere Accuracy UND Latenz (kein Auto-Detect-Overhead). `offiziell`
 - **`prompt`** (max 224 Tokens) NUR fuer Eigennamen/Schreibweisen, keine Anweisungen (sonst Leakage).
+  **Stand 11.09.2026:** Den Prompt IMMER als **sauber interpunktierten deutschen Satz** schreiben
+  (Grossschreibung, Kommas, Punkt) — Whisper uebernimmt den Stil. Ohne Prompt kippt turbo bei langen
+  Diktaten fensterweise in „klein, ohne Satzzeichen" (Almanach §3.2). Quelle: [openai/whisper Disc#557](https://github.com/openai/whisper/discussions/557) `extern`
   Beispiel (DE): `"Transkript eines Entwickler-Diktats. Eigennamen: Frank, Claude Code, BestJournal, Entropie Reductor, Groq, Whisper, WPF."` `offiziell`
 - **Nur dokumentierte Parameter** senden — Whisper-interne Schwellen (`no_speech_threshold`,
   `condition_on_previous_text` …) gibt es bei Groq NICHT → client-seitig ueber `verbose_json` filtern (§3). `offiziell`

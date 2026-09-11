@@ -221,13 +221,13 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 		const blob = await (await fetch(audioDataUrl)).blob();
 		const form = new FormData();
 		form.append("file", blob, "recording.webm");
-		// Volles large-v3 statt turbo: turbo verliert bei laengerem deutschem Diktat
-		// oft Gross-/Kleinschreibung und Satzzeichen (klein, ohne Punkt und Komma).
-		const m = model && model !== "whisper-large-v3-turbo" ? model : "whisper-large-v3";
-		form.append("model", m);
+		form.append("model", model || "whisper-large-v3-turbo");
 		form.append("language", lang || "de");
-		// Stil-Prompt: nur Schreibweise/Vokabular, keine Befehle (sonst Leakage),
-		// siehe bugs/desktop/groq-transkription.md §1.3.
+		// Stil-Prompt: Whisper (auch turbo) setzt Satzzeichen/Grossschreibung nicht
+		// zuverlaessig von selbst — jedes 30-s-Fenster richtet sich nach dem vorigen
+		// Text. Ein sauber interpunktierter deutscher Prompt gibt den Stil vor, sonst
+		// kippen ganze Passagen in "klein, ohne Punkt und Komma". Nur Stil/Vokabular,
+		// keine Befehle (Leakage), siehe bugs/desktop/groq-transkription.md §1.3/§3.2.
 		if ((lang || "de") === "de")
 			form.append(
 				"prompt",

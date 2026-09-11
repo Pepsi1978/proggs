@@ -39,6 +39,7 @@
 | 10 | Extra-Parameter senden | Nur dokumentierte Groq-Felder (sonst 400) | §3.6 |
 | 11 | 429 Rate-Limit | `retry-after`-Header lesen; 413/422 NICHT retryen | §4.2, §4.5 |
 | 12 | Viele kurze Clips | Min-Abrechnung 10 s/Clip — buendeln/Vorfilter | §4.1 |
+| 14 | Langes Diktat teils klein + ohne Satzzeichen | Kein Prompt → Stil kippt je 30-s-Fenster; interpunktierten DE-`prompt` mitschicken | §3.2 |
 | 13 | Windows-Diktat wartet vor/nach Upload | Voiced-Timeline einmal berechnen; curl-Expect-Wartephase vermeiden, Ausgabepipes gleichzeitig lesen | §3.7 |
 
 ---
@@ -210,11 +211,26 @@ verursachen **keine** Mehrlatenz/-kosten; nur `timestamp_granularities=["word"]`
 `whisper-large-v3` — $0.111/h, WER ~10,3 %, kann auch Translation. Fuer deutsches Diktat ohne
 Uebersetzung ist turbo ideal (VoiceAgent-Default). **Falle:** turbos `translation` geht nicht —
 fuer non-EN→EN `whisper-large-v3` nehmen.
-**⭐ Falle (beobachtet 11.09.2026, overlays):** Bei laengerem deutschem Diktat (> ~30 s) liefert turbo
-ganze Passagen komplett **klein und ohne Satzzeichen**, gemischt mit korrekt geschriebenen Saetzen —
-wirkt wie „unkorrigierter Rohtext". Whisper hat KEINEN separaten Korrekturschritt; die Schreibweise
-kommt allein aus dem Modell. **FIX:** fuer Diktat mit Anspruch an Rechtschreibung `whisper-large-v3`
-nehmen und einen kurzen, sauber interpunktierten deutschen `prompt` mitschicken (Stil-Lenkung §1.3).
+**⭐ Falle (beobachtet 11.09.2026, overlays, Groq `whisper-large-v3-turbo`, ohne `prompt`):** Bei
+laengerem deutschem Diktat (> ~30 s) kommen manchmal ganze Passagen komplett **klein und ohne
+Satzzeichen**, gemischt mit korrekt geschriebenen Saetzen; andere lange Diktate sind einwandfrei.
+Wirkt wie „unkorrigierter Rohtext" — Whisper hat aber KEINEN separaten Korrekturschritt, die
+Schreibweise kommt allein aus dem Decoder.
+**Ursache (Quellenlage, nicht Groq-offiziell):** Whisper setzt Satzzeichen ohne Prompt nicht
+zuverlaessig (Nutzerbeobachtung: nur large-v3 tut es standardmaessig, kleinere/abgeleitete Modelle
+brauchen einen Prompt). Lange Audios laufen in 30-s-Fenstern, jedes Fenster wird mit dem Text des
+vorigen konditioniert — kippt ein Fenster in „ohne Satzzeichen", kann der Stil weiterdriften; an
+Fenstergrenzen sind Punkt/Grossschreibung ohnehin unsicher. Groq dokumentiert sein internes
+Chunking nicht.
+**FIX (Modell bleibt turbo):** immer einen kurzen, **sauber interpunktierten deutschen `prompt`**
+mitschicken (korrekte Gross-/Kleinschreibung, Kommas, Punkt + Fachbegriffe) — Whisper uebernimmt den
+Stil des Prompts. Keine Befehle im Prompt (Leakage §1.3). Wirkt das nicht genug: clientseitig an
+Sprechpausen in ≤ 30-s-Stuecke schneiden und je Stueck den interpunktierten Vortext als `prompt`
+mitgeben. Nachkorrektur per LLM nur mit Schutz gegen „Prompt beantworten statt korrigieren".
+**Quellen:** [openai/whisper Disc#557 „No Punctuation"](https://github.com/openai/whisper/discussions/557) ·
+[openai/whisper Disc#440 Chunk-Grenzen](https://github.com/openai/whisper/discussions/440) ·
+[openai/whisper Disc#525 condition_on_previous_text](https://github.com/openai/whisper/discussions/525) ·
+[spokenly Whisper-Prompting](https://spokenly.app/docs/whisper-prompting)
 **Quelle:** [Groq Turbo-Blog](https://groq.com/blog/whisper-large-v3-turbo-now-available-on-groq-combining-speed-quality-for-speech-recognition)
 
 ### 3.3 Audio-Aufbereitung: 16 kHz mono WAV

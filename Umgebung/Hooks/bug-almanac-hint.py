@@ -25,7 +25,8 @@ import tempfile
 AREAS = {
     "web/chrome-extensions":        ("Chrome-Erweiterungen", ["manifest v3", "manifest_version", "chrome extension", "chrome-erweiterung", "content script", "service worker", "chrome.storage", "chrome.runtime"]),
     "desktop/wake-word":            ("Wake-Word",            ["wake word", "wakeword", "wake-word", "keyword spotter", "sherpa-onnx", "porcupine"]),
-    "desktop/voice-pipeline":       ("Voice-Pipeline",       ["voice pipeline", "endpointing", "barge-in", "wachfenster", "vad-"]),
+    "desktop/groq-transkription":   ("Groq-Transkription",   ["groq whisper", "groq-whisper", "whisper-large-v3", "whisper large v3", "whisper turbo", "whisper-turbo", "groq transkription", "groq-transkription"]),
+    "desktop/voice-pipeline":       ("Voice-Pipeline",      ["voice pipeline", "endpointing", "barge-in", "wachfenster", "vad-"]),
     "android/jetpack-compose":      ("Jetpack Compose",      ["jetpack compose", "recomposition", "@composable", "compose state", "remembersaveable"]),
     "android/room":                 ("Room-DB",              ["room database", "room dao", "room entity", "@dao", "@entity", "roomdatabase"]),
     "android-build/r8":             ("R8/ProGuard",          ["proguard", "keep rule", "r8 minify", "minifyenabled", "shrinkresources"]),
