@@ -11,10 +11,14 @@ hunderte Eintraege nachziehen, was lange dauert.
 Dieses Werkzeug dreht die Richtung um: Es nimmt den gewachsenen Stand aus der
 Datenbank und macht ihn zur neuen Auslieferung.
 
-Benutzung:
+Gilt fuer beide Kompass-Apps (liegt deshalb in KompassKern/tools).
+
+Benutzung, hier fuer ClaudeKompass (CodexKompass: codexkompass / codex-kompass.db):
     adb exec-out "run-as de.frank.claudekompass cat databases/claude-kompass.db" > db
     (dazu auch die Dateien db-wal und db-shm ziehen, sonst fehlen die letzten Aenderungen)
-    python tools/assets_aus_datenbank.py <db-pfad> [ziel-ordner]
+    python KompassKern/tools/assets_aus_datenbank.py <db-pfad> ClaudeKompass/app/src/main/assets
+
+Danach SEEDED_CLI_VERSION in app/build.gradle.kts auf den ausgegebenen Stand setzen.
 
 Der Changelog-Beleg (`seitBeleg`) steht nicht in der Datenbank — die App speichert ihn
 nicht. Er wird deshalb aus den vorhandenen Beigaben uebernommen, soweit der Name passt.
@@ -26,7 +30,8 @@ import sqlite3
 import sys
 
 HIER = os.path.dirname(os.path.abspath(__file__))
-STANDARD_ZIEL = os.path.join(HIER, "..", "app", "src", "main", "assets")
+# Kein sinnvoller Standard mehr: das Werkzeug bedient zwei Apps. Ohne Ziel bricht es ab.
+STANDARD_ZIEL = None
 
 DATEIEN = (
     ("slash", "slash_befehle.json"),
@@ -65,7 +70,9 @@ def lese_datenbank(pfad):
 
 def main():
     db_pfad = sys.argv[1]
-    ziel = os.path.abspath(sys.argv[2] if len(sys.argv) > 2 else STANDARD_ZIEL)
+    if len(sys.argv) < 3:
+        raise SystemExit("Bitte den Ziel-Ordner angeben, z. B. CodexKompass/app/src/main/assets")
+    ziel = os.path.abspath(sys.argv[2])
     zeilen, stand_aus_db = lese_datenbank(db_pfad)
     stand = sys.argv[3] if len(sys.argv) > 3 else stand_aus_db
     if not stand:

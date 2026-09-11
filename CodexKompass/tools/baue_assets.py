@@ -1,5 +1,10 @@
 """Erzeugt die deutsche Offline-Referenz aus offiziellen Quellen und redaktionellen Texten.
 
+ACHTUNG — nicht mehr die Quelle der Auslieferung. Seit Stand 0.154.0 kommen die Beigaben
+aus der gewachsenen App-Datenbank (KompassKern/tools/assets_aus_datenbank.py). Die
+Changelog-Seite unten führt außerdem keine CLI-Versionen mehr, der Lauf bricht dort ab.
+Das Skript bleibt als Herkunftsnachweis liegen.
+
 Aufruf: python tools/baue_assets.py --quellen <Ordner mit commands.md und changelog.html>
 Ohne --quellen werden ausschließlich die unten genannten OpenAI-Seiten abgerufen.
 """

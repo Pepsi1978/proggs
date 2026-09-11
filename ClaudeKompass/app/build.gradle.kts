@@ -5,30 +5,8 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// Der Debug-Schluessel liegt in der Schluesselzentrale ~/SK/Android/ und ist fuer alle Apps und
-// Rechner derselbe. Ohne ihn signiert jeder Rechner mit seinem eigenen Debug-Schluessel — dann
-// verweigert das Geraet die Aktualisierung („signatures do not match") und die App muesste vor
-// jeder Installation vom anderen Rechner geloescht werden, samt aller eigenen Fragen.
-val skOrdner: File = File(System.getProperty("user.home")).resolve("SK").resolve("Android")
-val debugSchluessel: File = rootProject.file("debug-shared.keystore")
-
-val holeSchluessel = tasks.register("holeSchluesselAusSk") {
-    val quelle = skOrdner.resolve("debug-shared.keystore")
-    val ziel = debugSchluessel
-    doLast {
-        if (!quelle.exists()) {
-            throw GradleException(
-                "Debug-Schluessel fehlt: ${quelle.absolutePath}. " +
-                    "Er wird nicht mitversioniert. Von Y:\\Keystores\\Android oder einem anderen " +
-                    "Rechner kopieren — es ist ueberall derselbe.",
-            )
-        }
-        quelle.copyTo(ziel, overwrite = true)
-    }
-}
-
-tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(holeSchluessel) }
-
+// Keine eigene Debug-Signatur: OpenLauncher legt den gemeinsamen Schlüssel aus ~/SK/Android
+// nach ~/.android/debug.keystore, den Gradle ohnehin nimmt — wie bei CodexKompass.
 android {
     namespace = "de.frank.claudekompass"
     compileSdk = 36
@@ -38,22 +16,13 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 11
-        versionName = "0.4.13"
+        versionName = "0.4.14"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 14:52 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 15:02 Uhr\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
-        buildConfigField("String", "SEEDED_CLI_VERSION", "\"2.1.261\"")
+        buildConfigField("String", "SEEDED_CLI_VERSION", "\"2.1.268\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
-    }
-
-    signingConfigs {
-        getByName("debug") {
-            storeFile = debugSchluessel
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
     }
 
     buildTypes {

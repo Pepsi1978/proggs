@@ -50,8 +50,21 @@ class UmlautTest {
         "individuell", "manuell", "virtuell", "eventuell",
         "request", "requests", "response", "true", "false", "value", "values",
         "continue", "queue", "source", "sources", "issue", "issues",
-        "askuserquestiontimeout",
+        "askuserquestiontimeout", "askuserquestion", "truecolor", "issuer",
     )
+
+    /**
+     * Nimmt Buchstabenfolgen heraus, in denen `ue` an einer Silbengrenze steht und nie ein
+     * Umlaut gemeint ist: `eue`/`aue` (neu-e, Steu-er, ge-nau-en, Dau-er), `que` (Quel-le,
+     * be-quem) und `uell` hinter t/n/d (ak-tu-ell, ma-nu-ell, in-di-vi-du-ell).
+     *
+     * Eine Regel statt einer immer längeren Wortliste: Zusammensetzungen wie
+     * „Modussteuerung“ oder „Gültigkeitsdauer“ tauchten sonst bei jedem neuen Eintrag als
+     * Fehlalarm auf. Echte Ersatzschreibung bleibt sichtbar — „fuer“, „Gebaeude“ und
+     * „Haeuser“ enthalten keine dieser Folgen.
+     */
+    private fun silbenGrenzenRaus(wort: String): String =
+        wort.replace(Regex("[ea]ue|que|(?<=[tnd])uell"), "·")
 
     /**
      * Schreibweisen, die ein Eszett brauchen — als Liste, nicht als Regel.
@@ -115,7 +128,7 @@ class UmlautTest {
             for (wort in wortMuster.findAll(text).map { it.value }) {
                 val klein = wort.lowercase()
                 if (klein in erlaubt) continue
-                if (!Regex("ae|oe|ue").containsMatchIn(klein)) continue
+                if (!Regex("ae|oe|ue").containsMatchIn(silbenGrenzenRaus(klein))) continue
                 funde += "$datei / $name: $wort"
             }
         }
@@ -145,6 +158,9 @@ class UmlautTest {
         for ((datei, name, text) in ladeTexte()) {
             for (wort in wortMuster.findAll(text).map { it.value }) {
                 if (wort.lowercase() in gewollteMorphemgrenzen) continue
+                // Zusammensetzungen mit „Änderung“ oder „öffnen“ (Codeänderungen, geöffnet)
+                // haben den Umlaut zu Recht hinter einem Vokal.
+                if (Regex("(?i)[aeiou](änder|öffn)").containsMatchIn(wort)) continue
                 if (!Regex("[aeiouAEIOUqQ][äöüÄÖÜ]").containsMatchIn(wort)) continue
                 funde += "$datei / $name: $wort"
             }

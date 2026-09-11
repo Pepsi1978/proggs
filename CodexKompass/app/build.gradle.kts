@@ -14,12 +14,12 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 14
-        versionName = "0.4.13"
+        versionName = "0.4.14"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 14:52 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 15:02 Uhr\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
-        buildConfigField("String", "SEEDED_CLI_VERSION", "\"0.153.3\"")
+        buildConfigField("String", "SEEDED_CLI_VERSION", "\"0.154.0\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
