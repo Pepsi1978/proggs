@@ -15,6 +15,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell|mcp__.*firecrawl.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$USERPROFILE/.claude/hooks/research-approval.ps1\"",
+            "timeout": 8
+          }
+        ]
       }
     ],
     "SessionStart": [

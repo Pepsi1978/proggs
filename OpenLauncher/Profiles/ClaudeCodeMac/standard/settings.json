@@ -12,6 +12,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Bash|mcp__.*firecrawl.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/proggs/claude-code-setup/hooks/research-approval.sh\"",
+            "timeout": 8
+          }
+        ]
       }
     ],
     "SessionStart": [

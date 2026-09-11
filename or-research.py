@@ -3,9 +3,13 @@
 "openrouter:web_search"). Ein 1M-Kontext-Modell sucht SELBST im Web und wertet aus; Claude/Opus
 bekommt nur die kompakte, quellengestuetzte Antwort.
 
-WICHTIG (Stand 2026-06-20): Das alte ":online"-Plugin / `plugins:[{id:"web"}]` ist DEPRECATED.
-Dieses Skript nutzt den neuen Weg: `tools:[{"type":"openrouter:web_search", "parameters":{...}}]`.
-Das Modell entscheidet selbst, ob/wie oft es sucht (0..N Suchen pro Request, mit max_total_results gedeckelt).
+ZWEI WEGE (Stand 11.09.2026):
+  - Modell mit Suffix ":online" (STANDARD des research-Skills, Engine B): OpenRouter schaltet die
+    Websuche selbst dazu. Kein tools-Block -> OR_ENGINE / OR_MAX_RESULTS / OR_MAX_TOTAL wirken hier NICHT.
+    Obwohl OpenRouter ":online" 2026-06 als veraltet markiert hat, war es im A/B-Test 2026-06-21 bei
+    hoher Parallelitaet stabiler als das Server-Tool — darum bleibt es der Standard.
+  - Modell ohne ":online": Server-Tool `tools:[{"type":"openrouter:web_search", ...}]`; das Modell
+    entscheidet selbst, wie oft es sucht (mit max_total_results gedeckelt).
 
 Unterschied zu mm-research.py:
   - mm-research.py: Firecrawl (Free 1000/Mon, VOLLE Seiten) -> DeepSeek V4 Flash @ Makora wertet aus.

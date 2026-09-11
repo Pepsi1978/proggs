@@ -57,7 +57,7 @@ Kurze Empfehlung (1 Satz Begruendung), welcher Weg fuer GENAU DIESE Recherche-Ar
 
 | Option | Weg | Werkzeug | Parallel | Kosten |
 |--------|-----|----------|----------|--------|
-| **A** | Firecrawl holt volle Seiten (**Rueckfall: Tavily**) → **DeepSeek V4 Flash @ Makora** (effort high) wertet aus — Standard | `mm-research.py` | 2 | Firecrawl-Free (1000/Mon) + ~0,1 ct Modell-Token |
+| **A** | Firecrawl holt volle Seiten (**Rueckfall: Tavily**) → **DeepSeek V4 Flash @ Makora** (effort high) wertet aus — Standard | `mm-research.py` | 2 | ~120 Firecrawl-Credits je Suche (100 Vollseiten, `MM_LIMIT` senkt das) + ~5 ct Modell-Token |
 | **B** | Eskalation: **dasselbe DeepSeek-Modell** mit `:online` (OpenRouter-Websuche, web-Plugin) | `or-research.py … deepseek/deepseek-v4-flash-0731:online` | 7 | pay-per-use (~1 ct/Researcher), kein Monatslimit |
 | **C** | Schwarm auf dem **Host-Modell** — teuer, nur bewusst. Claude Code → **Sonnet-5-Schwarm** (`model:"sonnet"`). OpenCode → **aktuelles Session-Modell** (kein `model:`-Override, eigene Websuche) | Agent-/Task-Tool | 7 | Claude-Sonnet-5-Token bzw. OpenCode-Session-Token |
 | **D** | [automatisches Freitext-Feld] — etwas anderes / erst besprechen | — | — | — |

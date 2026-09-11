@@ -2,9 +2,10 @@
 # research-approval: Blockt Web-Recherche-Aufrufe bis eine Freigabe-Flag-Datei existiert.
 # Setzt research-strategy.md durch (Frage 1 A/B/C/D muss Frank beantworten, bevor mm/or-research
 # oder die Firecrawl-MCP laufen). Verbraucht sonst still Firecrawl-Credits / teure Tokens.
-# Stand 09.09.2026: A+B werten mit deepseek/deepseek-v4-flash-0731 @ DeepInfra aus;
+# Stand 11.09.2026: A+B werten mit deepseek/deepseek-v4-flash-0731 @ Makora -> Relace -> DeepInfra aus;
+# Erfasst auch research-swarm.py (der Pflicht-Weg fuer A+B startet mm/or-research per Subprozess).
 # C ist harness-abhaengig (Claude Code = Sonnet-5-Schwarm, OpenCode = Session-Modell).
-# Runs as PreToolUse hook (matcher: Bash | mcp__.*firecrawl.*)
+# Runs as PreToolUse hook (matcher: Bash|PowerShell|mcp__.*firecrawl.*)
 # stdout -> AI context (nur DENY-JSON), stderr -> user terminal. Platform: macOS/Linux
 
 set -euo pipefail
@@ -22,7 +23,7 @@ raw_lower="$(printf '%s' "$raw" | tr '[:upper:]' '[:lower:]')"
 # (sonst wuerden git add / grep / cat / py_compile auf den Dateinamen faelschlich blockiert).
 # KEIN jq (umgeht §16.2-Control-Char-Bypass). POSIX-ERE ohne \b (BSD-libc-portabel).
 is_research=0
-if [[ "$raw_lower" =~ python[0-9.]*[[:space:]]+(-[a-z][^[:space:]]*[[:space:]]+)*[^[:space:]]*(mm|or)-research\.py ]]; then
+if [[ "$raw_lower" =~ python[0-9.]*(\.exe)?[[:space:]]+(-[a-z][^[:space:]]*[[:space:]]+)*[^[:space:]]*((mm|or)-research|research-swarm)\.py ]]; then
   is_research=1   # python ... <pfad>mm/or-research.py  (NICHT 'python -m py_compile datei.py')
 elif [[ "$raw_lower" =~ (^|[[:space:]])(bash|sh)[[:space:]]+[^[:space:]]*(mm|or)-research\.sh ]] \
   || [[ "$raw_lower" =~ (^|[[:space:]])\./[^[:space:]]*(mm|or)-research\.sh ]]; then
@@ -55,7 +56,7 @@ if [ -f "$flag" ]; then
 fi
 
 # --- Keine Freigabe -> DENY (spec-konform JSON via python3, exit 0; §16.1, §1.6) ---
-reason="RESEARCH-FREIGABE FEHLT (Regel research-strategy.md). Vor jeder Web-Recherche MUSS Frank per AskUserQuestion gefragt werden -- Frage 1: A=Firecrawl-Quellen + DeepSeek V4 Flash @ DeepInfra (2 parallel), B=dasselbe Modell mit :online (7 parallel), C=Schwarm auf dem Host-Modell (Claude Code: Sonnet-5-Schwarm / OpenCode: aktuelles Session-Modell), D=Freitext. Nach Wahl A oder B die Freigabe setzen: touch '$flag' (gilt 30 Min), dann den Aufruf erneut starten. Bei C laeuft KEIN mm/or-research (Subagenten-Schwarm stattdessen)."
+reason="RESEARCH-FREIGABE FEHLT (Regel research-strategy.md). Vor jeder Web-Recherche MUSS Frank per AskUserQuestion gefragt werden -- Frage 1: A=Firecrawl (bis 100 Vollseiten, ~120 Credits je Suche) + DeepSeek V4 Flash @ Makora-Kette (2 parallel), B=dasselbe Modell mit :online (7 parallel), C=Schwarm auf dem Host-Modell (Claude Code: Sonnet-5-Schwarm / OpenCode: aktuelles Session-Modell), D=Freitext. Nach Wahl A oder B die Freigabe setzen: touch '$flag' (gilt 30 Min), dann den Aufruf erneut starten. Das gilt auch fuer research-swarm.py. Bei C laeuft KEIN mm/or-research (Subagenten-Schwarm stattdessen)."
 printf '%s' "$reason" | python3 -c 'import sys,json
 reason=sys.stdin.read()
 print(json.dumps({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":reason}}))'

@@ -46,8 +46,10 @@ ENGINE_CAP = {"A": 2, "B": 7}   # harte Obergrenze je Engine (der Schutz)
 # Zeitdeckel je Researcher. 400 s reichen fuer B (Snippets), aber NICHT immer fuer A mit
 # MM_TAVILY=always: Firecrawl-Vollseiten + 20 Tavily-Volltexte + Auswertung koennen laenger
 # brauchen (real getroffen 09.09.2026: 2 von 7 Researchern liefen leer in den Deckel).
-# Seit 11.09.2026 holt A bis zu 100 Vollseiten (Firecrawl-Maximum) -> Deckel auf 1200 s.
-TIMEOUT = int(os.environ.get("RESEARCH_SWARM_TIMEOUT", "1200"))
+# Seit 11.09.2026 holt A bis zu 100 Vollseiten (Firecrawl-Maximum). Schlimmstfall in mm-research.py:
+# Firecrawl 330 + 180 s, Tavily 180 s, Auswertung 2 x 600 s ~ 1900 s -> Deckel 2100 s, damit der
+# Researcher nicht mitten in der Auswertung abgewuergt wird (die Credits waeren dann schon weg).
+TIMEOUT = int(os.environ.get("RESEARCH_SWARM_TIMEOUT", "2100"))
 
 
 def run(engine, model, it):
@@ -60,7 +62,7 @@ def run(engine, model, it):
     os.makedirs(rundir, exist_ok=True)
     log = os.path.join(OUT, f"log-{n}.txt")
     if engine == "A":
-        cmd = [sys.executable, MM, theme]   # ohne Zahl = Firecrawl-Maximum (100 Quellen)
+        cmd = [sys.executable, MM, theme]   # ohne Zahl = MM_LIMIT bzw. Firecrawl-Maximum (100)
         env = dict(os.environ, MM_OUTDIR=rundir)
     else:  # B = :online / or
         cmd = [sys.executable, OR, theme, model]
@@ -126,9 +128,12 @@ def main():
     cleanup_previous()   # PFLICHT: alte Output-Reste weg, BEVOR gestartet wird (sonst Fremd-Themen-Leak, s.o.)
     print(f"[research-swarm] Engine {engine} | {len(themes)} Themen | KONSTANT {n_par} parallel "
           f"(Continuous-Spawning: einer fertig -> sofort der naechste)", file=sys.stderr)
+    # as_completed statt map: jede Zeile erscheint, SOBALD ihr Researcher fertig ist (nicht erst,
+    # wenn alle vor ihm fertig sind) -> der Hauptagent kann sofort das Zwischenfazit zeigen.
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_par) as ex:
-        for res in ex.map(lambda it: run(engine, model, it), enumerate(themes)):
-            print(res, flush=True)
+        futs = [ex.submit(run, engine, model, it) for it in enumerate(themes)]
+        for fut in concurrent.futures.as_completed(futs):
+            print(fut.result(), flush=True)
     with open(os.path.join(OUT, "done.flag"), "w", encoding="utf-8") as fh:
         fh.write("done\n")
     print("ALL DONE", flush=True)

@@ -31,7 +31,11 @@ bei besserer Ehrlichkeit. Auswerte-Token laufen separat ueber OpenRouter (pay-pe
 
 Verwendung:
     python3 mm-research.py "deine Recherche-Frage" [anzahl_quellen] [modell]
-    anzahl_quellen      — Default 100 (Firecrawl-Maximum), groessere Werte werden auf 100 gekappt.
+    anzahl_quellen      — Default MM_LIMIT bzw. 100 (Firecrawl-Maximum, verifiziert 11.09.2026:
+                          limit > 100 lehnt die API ab). Groessere Werte werden auf 100 gekappt.
+    MM_LIMIT     (env) — Quellen je Suche, wenn kein 2. Argument (so steuert auch research-swarm.py
+                         die Tiefe). Eine 1-Seiten-Probe kostete 3 Credits -> 100 Seiten ~120 Credits.
+    MM_RETRIES   (env) — Versuche fuer die Auswertung bei OpenRouter, Default 2.
     MM_MODEL     (env) — Auswerte-Modell, Default `deepseek/deepseek-v4-flash-0731`.
     MM_PROVIDER  (env) — Anbieter-Reihenfolge, kommagetrennt, Default `makora,relace,deepinfra`.
                          LEER = kein Pin (freies Routing).
@@ -54,6 +58,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 import urllib.error
 
@@ -79,6 +84,12 @@ PROVIDERS = [p.strip() for p in os.environ.get("MM_PROVIDER", "makora,relace,dee
              if p.strip()]
 PROVIDER = " → ".join(PROVIDERS)
 EFFORT = os.environ.get("MM_EFFORT", "high")
+# Wiederholung der Auswertung: OpenRouter liefert unter Last gelegentlich leere Antworten/Timeouts
+# (Almanach bugs/apis/openrouter-api.md #41). Hier besonders wichtig, weil die Firecrawl-Credits zu
+# diesem Zeitpunkt schon verbraucht sind. Zeitbudget im Schlimmstfall: Firecrawl 330 s + 30er-Versuch
+# 180 s + Tavily 180 s + 2 x 600 s Auswertung ~ 1900 s -> research-swarm.py deckelt bei 2100 s.
+OR_RETRIES = max(1, int(os.environ.get("MM_RETRIES", "2")))
+OR_TIMEOUT = 600
 # MM_OUTDIR ueberschreibbar, damit PARALLELE Laeufe (Continuous-Spawning mit 2, Firecrawl-Free-Limit)
 # je eine eigene sources.json/answer.json/thinking.txt haben (sonst ueberschreiben sie sich — der
 # Grund, warum bei der Second-Brain-Recherche R5 abgeschnitten zurueckkam). Default wie bisher.
@@ -133,10 +144,11 @@ def _firecrawl(query, limit, fc_key):
     # Maximal tief: jede gefundene Seite wird voll gescrapt (Markdown, nur Hauptinhalt).
     scrape = {"formats": ["markdown"], "onlyMainContent": True, "blockAds": True,
               "removeBase64Images": True}
+    wartezeit = 330 if limit > FC_RETRY_LIMIT else 180   # Sekunden; Firecrawl bekommt 30 s weniger
     body = {"query": query, "limit": limit, "sources": ["web"], "ignoreInvalidURLs": True,
-            "timeout": 300000, "scrapeOptions": scrape}
+            "timeout": (wartezeit - 30) * 1000, "scrapeOptions": scrape}
     try:
-        fc = _post(FC_URL, headers, body, timeout=330)
+        fc = _post(FC_URL, headers, body, timeout=wartezeit)
     except urllib.error.HTTPError as e:
         fehler = f"HTTP {e.code}: {e.read().decode('utf-8', 'replace')[:200]}"
         if e.code not in (400, 404):
@@ -144,7 +156,7 @@ def _firecrawl(query, limit, fc_key):
         # v2 lehnt ab -> einmal mit dem alten v1-Schema versuchen
         try:
             fc = _post(FC_URL_V1, headers, {"query": query, "limit": limit, "scrapeOptions": scrape},
-                       timeout=330)
+                       timeout=wartezeit)
         except Exception as e2:
             return [], f"{fehler} | v1: {type(e2).__name__}: {str(e2)[:160]}"
     except Exception as e:
@@ -195,7 +207,8 @@ def main():
     if len(sys.argv) < 2:
         return "Bitte eine Recherche-Frage als 1. Argument angeben."
     query = sys.argv[1]
-    limit = min(int(sys.argv[2]), FC_MAX) if len(sys.argv) > 2 else FC_MAX
+    limit_arg = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("MM_LIMIT", str(FC_MAX))
+    limit = max(1, min(int(limit_arg), FC_MAX))
     model = sys.argv[3] if len(sys.argv) > 3 else MODEL
     os.makedirs(OUTDIR, exist_ok=True)
 
@@ -281,15 +294,36 @@ def main():
             "messages": [{"role": "user", "content": prompt}]}
     if PROVIDERS:
         body["provider"] = {"order": PROVIDERS, "allow_fallbacks": False}
-    try:
-        d = _post(OR_URL,
-                  {"Authorization": f"Bearer {or_key}", "Content-Type": "application/json",
-                   "HTTP-Referer": "https://github.com/Pepsi1978/proggs", "X-Title": "proggs-mm-research"},
-                  body, timeout=600)
-    except urllib.error.HTTPError as e:
-        return f"OpenRouter-Fehler {e.code}: {e.read().decode('utf-8', 'replace')[:300]}"
-    if d.get("error"):
-        return f"OpenRouter-Fehler: {json.dumps(d.get('error'))[:300]}"
+    hdr = {"Authorization": f"Bearer {or_key}", "Content-Type": "application/json",
+           "HTTP-Referer": "https://github.com/Pepsi1978/proggs", "X-Title": "proggs-mm-research"}
+    d = None
+    fehler = "?"
+    for versuch in range(1, OR_RETRIES + 1):
+        try:
+            antwort = _post(OR_URL, hdr, body, timeout=OR_TIMEOUT)
+        except urllib.error.HTTPError as e:
+            fehler = f"HTTP {e.code}: {e.read().decode('utf-8', 'replace')[:300]}"
+            if e.code not in (408, 409, 425, 429, 500, 502, 503, 504):
+                break   # z.B. 400/401/402: ein neuer Versuch aendert nichts
+        except (urllib.error.URLError, json.JSONDecodeError, ValueError, TimeoutError,
+                ConnectionError, OSError) as e:
+            fehler = f"{type(e).__name__}: {str(e)[:160]}"
+        else:
+            inhalt = (((antwort.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
+            if antwort.get("error"):
+                fehler = json.dumps(antwort.get("error"))[:300]
+            elif not inhalt.strip():
+                fehler = "leerer content"
+            else:
+                d = antwort
+                break
+        if versuch < OR_RETRIES:
+            print(f"      Auswertung Versuch {versuch}/{OR_RETRIES} fehlgeschlagen ({fehler}) — "
+                  f"neuer Versuch in {5 * versuch} s", file=sys.stderr)
+            time.sleep(5 * versuch)
+    if d is None:
+        return (f"OpenRouter-Fehler nach {OR_RETRIES} Versuch(en): {fehler} "
+                f"(die Quellen liegen trotzdem in {OUTDIR}/sources.json)")
 
     msg = (d.get("choices") or [{}])[0].get("message", {}) or {}
     text = msg.get("content") or ""

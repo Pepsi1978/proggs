@@ -219,7 +219,7 @@
         ]
       },
       {
-        "matcher": "Bash|mcp__.*firecrawl.*",
+        "matcher": "Bash|PowerShell|mcp__.*firecrawl.*",
         "hooks": [
           {
             "type": "command",
