@@ -208,7 +208,7 @@ class Repository(
         sitzungId: Long,
         text: String,
         anhaenge: List<Anhang> = emptyList(),
-    ): Long =
+    ): Long = db.withTransaction {
         db.notizen().einfuegen(
             Notiz(
                 sitzungId = sitzungId,
@@ -219,9 +219,10 @@ class Repository(
                 anhaengeJson = anhaenge.alsJson(),
             ),
         ).also { merkeAenderung(sitzungId) }
+    }
 
     /** Die Karte entsteht sofort nach dem Aufnahmeende — noch ohne Text (F-01, Schritt 4). */
-    suspend fun legeGesprocheneNotizAn(sitzungId: Long, zustand: Notizzustand, audioPfad: String?): Long =
+    suspend fun legeGesprocheneNotizAn(sitzungId: Long, zustand: Notizzustand, audioPfad: String?): Long = db.withTransaction {
         db.notizen().einfuegen(
             Notiz(
                 sitzungId = sitzungId,
@@ -231,6 +232,7 @@ class Repository(
                 audioPfad = audioPfad,
             ),
         ).also { merkeAenderung(sitzungId) }
+    }
 
     suspend fun notiz(id: Long): Notiz? = db.notizen().eine(id)
 
@@ -380,7 +382,7 @@ class Repository(
         val sitzung = db.sitzungen().eine(sitzungId) ?: return
         if (sitzung.titelVonHand || sitzung.titel != "Neue Sitzung") return
         val titel = holeSitzungstitel(ersteNotiz).takeIf(String::isNotBlank) ?: return
-        db.sitzungen().setzeKiTitel(sitzungId, titel, notizId)
+        db.sitzungen().setzeKiTitel(sitzungId, titel, notizId, ersteNotiz)
     }
 
     // --- Der Auswertungs-Kontext (F-09, Schritt 1) ------------------------------------------

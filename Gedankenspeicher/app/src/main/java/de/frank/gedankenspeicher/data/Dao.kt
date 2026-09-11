@@ -61,8 +61,8 @@ interface SitzungDao {
     @Query("UPDATE sitzung SET titel = :titel, titelVonHand = :vonHand WHERE id = :id")
     suspend fun setzeTitel(id: Long, titel: String, vonHand: Boolean)
 
-    @Query("UPDATE sitzung SET titel = :titel WHERE id = :id AND titelVonHand = 0 AND titel = 'Neue Sitzung' AND (:notizId IS NULL OR EXISTS (SELECT 1 FROM notiz WHERE id = :notizId AND sitzungId = :id))")
-    suspend fun setzeKiTitel(id: Long, titel: String, notizId: Long?)
+    @Query("UPDATE sitzung SET titel = :titel WHERE id = :id AND titelVonHand = 0 AND titel = 'Neue Sitzung' AND (:notizId IS NULL OR EXISTS (SELECT 1 FROM notiz WHERE id = :notizId AND sitzungId = :id AND text = :notiztext))")
+    suspend fun setzeKiTitel(id: Long, titel: String, notizId: Long?, notiztext: String)
 
     @Query("UPDATE sitzung SET favorit = CASE favorit WHEN 1 THEN 0 ELSE 1 END WHERE id = :id")
     suspend fun favoritUmschalten(id: Long)

@@ -1,5 +1,7 @@
 # Logikfehler-Protokoll – Gedankenspeicher
 
+> **Endstand: MAX_RUNDEN=8 erreicht, keine Konvergenz.** Runde 2 wurde wiederaufgenommen, nicht neu gestartet. Runden 2–8: **77 weitere Fehler/Fundklassen behoben**, insgesamt einschließlich Runde 1 **135**. Konvergenzzähler **0**; keine neunte Runde. Aktuelle Fassung **0.6.13 (55)**. Neue Fixe sind separat **statisch** gegengelesen und gebaut, nicht durch automatisierte Tests oder Hardwaretests verifiziert. Sieben Klärungs-/Prüfpunkte bleiben offen (Abschnitt 6).
+
 ## 1. Kopf
 
 - **Software:** Gedankenspeicher (Android, Kotlin, Jetpack Compose, Room, OkHttp), `de.frank.gedankenspeicher`, Version 0.6.5 (versionCode 47)
@@ -47,7 +49,7 @@
 
 ## 3. Loop-Zustand
 
-- **Aktuelle Runde:** 7 abgeschlossen, Auslieferung 0.6.12; danach Runde 8, Stufe 8 (Tester), letzte zulässige Runde. Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
+- **Aktuelle Runde:** 8 abgeschlossen, Stufe 8 (Tester). **STOPP wegen MAX_RUNDEN=8**, keine Konvergenz. Fassung 0.6.13. Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Die folgenden Eingangs- und Zwischenmeldungen sind historisch; verbindlich sind die jeweiligen Endstatus. Historischer Eingang der zuvor unterbrochenen Runde:
   - **Bereich 5 – Aufnahme**
     - L-2-5-01 (mittel): MicRecorder, start() während stop() in joinAll → der Puffer der alten Aufnahme wird geleert, das finally des alten Jobs beendet die neue Aufnahme.
   - **Bereich 4 – KI-Anbindung**
@@ -81,9 +83,9 @@
   **Eigene Stufe-2-Prüfung abgeschlossen:** 1A/1B (`MainActivity.kt`, Manifest, drei `res/xml`-Dateien, `app/build.gradle.kts`; Erstlektüre plus gezielte Rückruf-/Sichtbarkeitsgegenprüfung); 3A (`data/Modell.kt`, `Datenbank.kt`, `Dao.kt`, `Repository.kt`, `settings/Einstellungen.kt`, `Nachtraege.kt`); 4A (`auth/CodexAuthManager.kt`, `CodexAufgaben.kt`); 5B (`hintergrund/AuswertungsDienst.kt`, `VorleseDienst.kt`); 6A (`tts/Vorleser.kt`, `Absatzabspieler.kt`, `Absaetze.kt`); 7 (alle sechs Cloud-TTS-Dateien aus der Karte). Die bereits abgeschlossenen Teilprüfungen der Übergabe bleiben gültig.
   **Triage:** Alle 17 Vormeldungen bestätigt, außer L-2-3-01: Klärungsbedarf (Dateizahl statt logischer Anhänge, auch reine Textanhänge betroffen; gewünschte Zählweise offen). (a) bestätigt als L-2-11-3; (b) bestätigt als L-2-6-04; (c) bestätigt als L-2-5-02 für Lesefehler (Zeitlimit wird bereits vom VM überwacht); (d)/(e)/(f)/(h) unter L-2-10-05…08 bestätigt, (g) abgelehnt wie oben. SQLite lower/LIKE ist ohne ICU ASCII-beschränkt; Kleinschreiben allein des Suchbegriffs behebt keine Großumlaute im Bestand.
   **Triage der neuen Prüfermeldungen:** L-2-2-01…14 bestätigt. L-2-9-01/03 bestätigt; L-2-9-02/04 und L-2-10-13 Klärungsbedarf (Layout-/Entwurferhaltung benötigt gezielte Geräteprüfung, im Schnellmodus nicht durchgeführt). L-2-10-05…12 bestätigt. Ein gemeldeter Layoutverdacht wird ohne Geräteprüfung nicht als behoben ausgegeben.
-- **Nächste Tiefenstufe:** 8 (Tester, letzte zulässige Runde)
+- **Nächste Tiefenstufe:** keine in diesem Auftrag; MAX_RUNDEN erreicht.
 - **Konvergenzzähler:** 0
-- **Nächster Blickwinkel:** Stufe 2. Die in Runde 1 geänderten Stellen sind als „kürzlich verändert“ markiert
+- **Nächster Blickwinkel:** erst nach neuem Auftrag; vorrangig reale Geräte-/Fehlerfallprüfung und offene Klärungen.
 - **Offene Fixe:** keine
 - **Gegenlesen Runde 2:** erster Build grün; separater Leseverifizierer hat die gesamte Charge samt Aufrufern gelesen (keine Tests). Nachbesserung 2: L-2-2-01 auch Haftnotiz-Plusdialog schützen; L-2-5-02 Recording-Job bis zum wirklichen Ende behalten; L-2-2-03 Versuchszähler ≥3 bei Start auf FEHLGESCHLAGEN statt unerreichbarem WARTET setzen. L-2-3-03 zurückgenommen: Live-Pfadfilter und DB-Dateistand können auseinanderlaufen; zunächst zusätzliche Dateien erhalten. Keine Daten löschen.
 - **Neu beim Gegenlesen, nächste Runde:** L-3-2-01 (hoch) Wiederherstellung wartet laufende Sicherung/Nachreichen und übrige DB-Schreiber nicht ab (`HauptViewModel.kt:1954–1962` im Zwischenstand); L-3-2-02 (mittel) Transkription nach Verschieben erhält B, versorgt aber noch Titel von A (`transkribiere/versorgeNeueNotiz`). Beweise: Austausch bei laufendem Job → Zugriff auf geschlossene DB; Aufnahme A→B während Netzaufruf → Sitzungstitel aus Text in A. Nicht nebenbei gefixt.
@@ -222,6 +224,7 @@ Stellen relativ zu `app/src/main/java/de/frank/gedankenspeicher/`; VM = `ui/Haup
 | 5 | 5 | Ungeduldiger Benutzer, schnelle Bedienfolgen | ja (Dateiliste Runde 3; Volltiefe risikoreiche/fundreiche Bereiche, sonst Kurzprüfung) | 4 | 4 | 0 | 0 neu | 4 | 4 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 | 6 | 6 | Manipulierte Eingaben und Datenverträge | ja (Dateilisten Runde 3; Eingabegrenzen gezielt) | 7 | 7 | 0 | 0 neu | 7 | 7 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 | 7 | 7 | Wartungsentwickler, Fixfolgen an verbleibenden Schreibern | ja (Dateilisten Runde 3; alle betroffenen Aufrufer) | 1 zusammengeführte Restklasse | 1 | 0 | 0 neu | 1 | 1 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
+| 8 | 8 | Tester: Erstpersistenz, Dateifehler, Abbruch nach Commit | ja (Dateilisten Runde 3; vollständige Bereichsabdeckung mit gezielten Fehlerpfaden) | 3 | 3 | 0 | 0 neu | 3 | 3 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0; MAX_RUNDEN |
 
 ### Runde 2 – verbindliche Endstatus und Fixnachweise
 
@@ -281,7 +284,7 @@ Alle Beweise/Stellen stehen in den Eingangsmeldungen und der Triage oben. **Veri
 | L-2-12-01 | verifiziert (statisch) | Reduzierte Bewegung frisch lesen statt permanent merken. |
 | Beobachtung (g) | abgelehnt | Sitzungswechsel leert Einträge atomar mit dem Kopf; behaupteter Altlistenpfad nicht belegt. |
 
-## 6. Klärungsbedarf
+### Weitere Rundennachweise
 
 ### Runde 3 – laufende Prüfung, Funde sofort erfasst
 
@@ -328,11 +331,19 @@ Quellpfade relativ zu `app/src/main/java/de/frank/gedankenspeicher`; bekannte Fu
 
 **Vormerkung Runde 4:** Zeitzonenwechsel bei den gecachten `SimpleDateFormat`-Werten von Repository/Nachtraege prüfen: Formate halten die bei Erzeugung gültige Zone fest. Noch kein bestätigter Fund.
 
-### Runde 4 – Invarianten und Gegenbeweise
+### Runde 8 – abschließender Testerblick (MAX_RUNDEN)
 
-### Runde 5 – schnelle Bedienfolgen (aktuelle Fix-Charge)
+Alle Bereiche anhand der vollständigen Dateilisten aus Runde 3 mit Fehler-/Abbruchfällen betrachtet; Bereich 2 durch einzelnen Leseprüfer, übrige Eingabe-, Persistenz-, Audio-, UI- und Konfigurationsverträge gezielt durch Koordinator. Neue Funde:
 
-### Runde 6 – manipulierte Eingaben
+| ID | Schwere | Stelle | Beweis | Triage |
+|---|---|---|---|---|
+| L-8-2-01 | mittel | HauptViewModel.kt:1020–1025,1070–1075 | Retry reserviert TRANSKRIBIERT_GERADE, danach readBytes wirft → unbehandelte Ausnahme und Beschäftigtzustand ohne Auftrag → Datei vor Reservierung kontrolliert lesen. | bestätigt |
+| L-8-2-02 | mittel | HauptViewModel.kt:1094,1100–1102; SitzungDao.setzeKiTitel | Notiztext während Überschriften-/Titelanfrage geändert → Sitzungstitel aus altem Text → aktuelle Textfassung lesen und beim Titel-Update atomar prüfen. | bestätigt |
+| L-8-2-03 | hoch | HauptViewModel.sendeEntwurf/beendeAufnahme/puffere | Voller Speicher lässt erstes Schreiben/Insert werfen → ungesicherter Entwurf bzw. WAV verloren und unbehandelte Coroutine-Ausnahme → Eingabe für erneutes Speichern behalten und Fehler kontrolliert melden. | bestätigt |
+
+Da auch diese Runde neue bestätigte Funde hat, ist Konvergenzzähler 2 innerhalb MAX_RUNDEN=8 nicht mehr erreichbar. Nach Abschluss dieser Fix-Charge endet der Auftrag mit der vorgeschriebenen Notbremse, ohne eine neunte Runde zu starten.
+**Gegenlesen Runde 8:** Retry-Lesen und Titeltext bestanden im ersten Anlauf. Erstpersistenz Anlauf 2: Bei Cancellation nach möglicherweise erfolgtem DB-Commit die WAV-Datei nicht löschen; Ursprungssitzung einer laufenden/noch ungesicherten Aufnahme gegen Löschen/Papierkorb schützen, damit ein Speicherversuch nicht dauerhaft am fehlenden Fremdschlüssel scheitert. Snapshot der Aufnahmesitzung wird nach Stop bzw. Verwerfen freigegeben.
+**Endstatus Runde 8:** Alle drei IDs behoben und durch separaten Leseverifizierer statisch verifiziert: jeweils (1) Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Null/Leer/Grenzen berücksichtigt. L-8-2-03 Anlauf 2, andere Anlauf 1. Fixreferenz Abschlusscommit/0.6.13. Kein Test wegen Schnellmodus. Bei vollem Speicher gehaltene WAVs überleben ausdrücklich nur das laufende ViewModel, keinen Prozessverlust; die App nennt diese Grenze und bietet über den Mikrofonknopf erneutes Speichern an.
 
 ### Runde 7 – Wartungsentwickler und Fixfolgen
 
@@ -346,7 +357,7 @@ Verwandte Quellen derselben Klasse: Anhänge hinzufügen/ändern, beide Übersch
 **Endstatus Runde 7:** L-7-2-01 behoben und separat statisch verifiziert, erster Anlauf: (1) Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Grenzen berücksichtigt. Fixreferenz Runde-7-Commit/0.6.12. Kein Test wegen Schnellmodus.
 **Vormeldungen Runde 8 aus Gegenlesen:** L-8-2-01 (mittel), Datei-Lesefehler nach Retry-Reservierung erreicht `transkribiere`-Catch nicht, Status bleibt beschäftigt (`HauptViewModel.kt:1020–1025,1070–1075`); L-8-2-02 (mittel), nach verworfener Überschrift verwendet der Sitzungstitel weiterhin alten Text, trotz veränderter Notiz (`:1094,1100–1102`). Noch zu triagieren, nicht nebenbei gefixt.
 
-#### Runde 6 – Detailnachweise (Fortsetzung)
+### Runde 6 – manipulierte Eingaben
 
 Dateilisten wie Runde 3, Schwerpunkt auf Eingabe-/Serialisierungsverträgen in 2/3/4/8 und deren Aufrufern. SQL-Injection per Suchparameter, Export-Pfadtraversal und ZIP-Pfade verworfen (Parameterbindung bzw. vorhandene Pfadfilter greifen). Keine neuen bestätigten Funde in übrigen Bereichen; bekannte Klärungsfälle nicht erneut gezählt.
 
@@ -363,7 +374,7 @@ Dateilisten wie Runde 3, Schwerpunkt auf Eingabe-/Serialisierungsverträgen in 2
 **Gegenlesen Runde 6:** Fünf IDs bestanden sofort. Importfixe Anlauf 2: Geprüfte/migrierte Kopie nach erfolgreichem Checkpoint und Close zurück in die reine Arbeitsdatei übernehmen, damit ein falscher ursprünglicher Identity-Hash nicht erneut importiert wird; reservierte EncryptedSharedPreferences-Schlüssel schon vor Austausch ablehnen. Archiv selbst und laufende Datenbank bleiben während dieser Prüfung unberührt.
 **Endstatus Runde 6:** Alle sieben IDs behoben und separat statisch verifiziert, je (1) ursprünglicher Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Null/Leer/Grenzen berücksichtigt. L-6-3-01/02 Anlauf 2, andere Anlauf 1. Fixreferenz Runde-6-Commit/0.6.11. Kein Test wegen Schnellmodus. Konvergenzzähler bleibt 0.
 
-#### Runde 5 – Detailnachweise (Fortsetzung)
+### Runde 5 – schnelle Bedienfolgen
 
 Bereich 2 vollständig vom einzelnen Leseprüfer, übrige Bereiche gezielt anhand derselben Dateilisten aus Runde 3; zusätzlich Tabellen-/Sprachaufnahmebestätigung und Speichern im Editor verfolgt. Bekannte Layoutverdachte unverändert offen. Doppelsenden, Start/Stopp/Start, doppelte Verbesserung/Auswertung, Schlüsselwechsel/Löschen ohne zusätzliche neue Beweise. Neu bestätigt:
 
@@ -377,7 +388,7 @@ Bereich 2 vollständig vom einzelnen Leseprüfer, übrige Bereiche gezielt anhan
 **Gegenlesen Runde 5:** L-5-2-01 und L-5-8-01/02 bestanden sofort. L-5-2-02 Anlauf 2: bereits vorgemerktes Wunschziel überspringt die Zwischenanzeige des automatischen Nachfolgers; dessen Freigabe wird dadurch nicht versehentlich entzogen. Echte Hintergrundfreigabe bleibt weiterhin ungültig.
 **Endstatus Runde 5:** Alle vier IDs behoben und getrennt statisch verifiziert, je (1) Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Randfälle berücksichtigt. Fixreferenz Runde-5-Commit/0.6.10. Kein Test wegen Schnellmodus. Keine weiteren bestätigten Funde in den übrigen Bereichen laut Dateiliste Runde 3.
 
-#### Runde 4 – Detailnachweise (Fortsetzung)
+### Runde 4 – Invarianten und Gegenbeweise
 
 Bereich 2 vollständig durch einen einzelnen Leseprüfer, übrige Bereiche entlang derselben Dateiliste aus Runde 3 gezielt geprüft. Invarianten: genau ein Aufnahmeziel und aktueller Notizstand; genau eine Profilaktivierung; unbekannter Schutzstatus ist keine Freigabe; keine DB-Arbeit nach Stilllegung; Formatierung hängt von der aktuellen Zeitzone ab. In unveränderten unauffälligen Oberflächenbereichen Kurzprüfung gemäß Sparmodus. Keine weiteren neuen bestätigten Funde in 1/4/5/6/7/8/9/10/11/12; berührte Aufrufer gehören zu den folgenden Funden.
 
@@ -391,6 +402,14 @@ Bereich 2 vollständig durch einen einzelnen Leseprüfer, übrige Bereiche entla
 **Gegenlesen:** Drei Fixe bestanden im ersten Anlauf. L-4-2-01 im zweiten Anlauf um expliziten Fehler bei gelöschtem Datensatz ergänzt; ansonsten schloss der Editor trotz nicht gespeichertem Entwurf. Kein automatischer Test (Schnellmodus).
 **Endstatus:** Alle vier IDs behoben und durch separaten Leseverifizierer statisch verifiziert: je (1) Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Null/Leer/Grenzen berücksichtigt. L-4-2-01 Anlauf 2, andere Anlauf 1. Fixreferenz Runde-4-Commit/0.6.9. Textspeicherung bewahrt aktuelle fremde Felder und meldet Konflikte statt Entwurfverlust; unbekannte Sitzung niemals freigegeben; ungültige Diktate vor Netzwerk übersprungen; Zeitzone Bestandteil des Cache-Vertrags.
 
+## 6. Offener Klärungs- und Prüfbedarf
+
+- **L-2-3-01:** Logische Anhänge oder physische Dateien im Sicherungssteckbrief zählen? Empfehlung: logische Anhänge einschließlich Textanhängen; Vorschauen nicht extra zählen.
+- **L-2-3-03:** Zusätzliche wartend-Dateien nach Restore. Der Live-Referenzfilter wurde zurückgenommen, weil er zum DB-Dateischnappschuss nicht konsistent war. Empfehlung: konsistenten Backup-Schnappschuss als Voraussetzung der Bereinigung festlegen; bis dahin Daten erhalten.
+- **L-2-9-02:** Mikrofonzeile bei sehr langem Notiztext am Gerät prüfen; ohne Messung nicht als sicherer Layoutfehler gefixt.
+- **L-2-9-04:** Entwürfe von Antwort-/Profilblättern nach Activity-Neuaufbau. Erwarteten Lebenszyklus festlegen und mit Schriftgrößenwechsel/Prozessende prüfen.
+- **L-2-10-13:** Erreichbarkeit von Speichern/Zurücksetzen bei sehr langer Profilanweisung am Gerät prüfen.
+
 - **L-1-10-5 – Quellenblöcke in KI-Auswertungen (nach 3 Anläufen zurückgenommen).** `ohneQuellen` erkennt nur Zeilen, die mit „Quellen:“ beginnen. „**Quellen:**“, „## Quellen“ und die darunter stehende Linkliste bleiben stehen.
   - Deutung A: Nur die einzeilige „Quelle: …“-Zeile soll weg. Dann ist nichts zu tun.
   - Deutung B: Ganze Quellenblöcke (Überschrift + Liste) sollen weg. Dann braucht es eine sauber abgegrenzte Regel, die Inhaltslisten unter einzeiligen Quellenangaben nicht mitnimmt.
@@ -399,3 +418,13 @@ Bereich 2 vollständig durch einen einzelnen Leseprüfer, übrige Bereiche entla
   - Deutung A: profilübergreifendes Wiederherstellen ist kein unterstützter Fall. Dann ist nichts zu tun.
   - Deutung B: es soll gehen. Dann müssen die Pfade relativ gespeichert oder beim Lesen gegen `filesDir` aufgelöst werden.
   - **Empfehlung:** B, beim Lesen über den Dateinamen auflösen. Das ist aber ein Umbau an einer zentralen Datenstelle, deshalb nicht ohne Freigabe.
+
+## 7. Abschluss wegen Rundenlimit
+
+- **Technischer Abschluss:** `assembleDebug` für 0.6.13 erfolgreich; `adb -s R3GL7073MLM install -r` erfolgreich auf **SM-F971B**; App-Start per `am start` angefordert. Keine anschließende Funktions-/Crashprüfung im Schnellmodus. Protokoll und Wissenseinträge gehören zum selben Abschlusscommit wie der Versionsbump.
+- **Abbruchgrund:** Jede Runde bis einschließlich 8 hatte neue bestätigte Funde. Zwei aufeinanderfolgende fundfreie Runden wurden nicht erreicht. Die App wird nicht als fehlerfrei bezeichnet.
+- **Ergebnis:** 135 behobene Fund-IDs/Fundklassen insgesamt, davon 77 in dieser Wiederaufnahme. Ein zusammengeführter Fund kann mehrere gleichartige Schreibpfade umfassen. Alle Beweise, Rücknahmen und statischen Gegenlesen stehen oben; sieben Klärungs-/Prüfpunkte bleiben offen.
+- **Auslieferungen:** Runde 2 `24638dec0` (0.6.7), Runde 3 `bf236290f` (0.6.8), Runde 4 `5e82b127d` (0.6.9), Runde 5 `f637a14db` (0.6.10), Runde 6 `1bc3bf571` (0.6.11), Runde 7 `6cd3eebde` (0.6.12), Runde 8 Abschlusscommit (0.6.13). Alle direkt auf main; keine Verwendung des veralteten Worktrees.
+- **Prüfgrenze:** Keine Unit-/Instrumented-Tests in dieser Wiederaufnahme ausgeführt (aktiver Schnellmodus). Die 13 grünen Unit-Tests aus Runde 1 sind historische Basislinie, kein aktuelles Testergebnis. Kein simulierter Speicher-/Netzausfall, keine Biometrie-/Layoutprüfung auf Hardware.
+- **Fehleranfälligste Bereiche:** Zentraler Zustand und Persistenz, weil verspätete Ergebnisse, mehrere Schreibpfade und Lifecycle-Ereignisse zusammenwirken; danach Audio-/Anhangs-Ownership und Backup/Restore.
+- **Empfehlung:** Zuerst auf dem Handy Aufnahme→Stopp→Nachtrag→Verbesserung→Rückgängig, geschützte Blätter nach Hintergrund und Wiederherstellung einer entbehrlichen Sicherung prüfen. Danach die sieben offenen Punkte entscheiden; weitere Jagd nur mit neuem Rundenbudget.

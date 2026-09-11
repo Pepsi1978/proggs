@@ -75,7 +75,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     // Alle bisherigen Datenarbeiter bleiben Kinder des ViewModels, können aber vor einem
     // Restore gemeinsam beendet werden. Nur der Restore selbst läuft in der Lebenszeit.
     private val arbeitsJob = SupervisorJob(lebenszeit.coroutineContext[Job])
-    private val viewModelScope = CoroutineScope(lebenszeit.coroutineContext + arbeitsJob)
+    private val viewModelScope = CoroutineScope(lebenszeit.coroutineContext + arbeitsJob +
+        kotlinx.coroutines.CoroutineExceptionHandler { _, fehler ->
+            android.util.Log.e("Gedankenspeicher", "Datenauftrag fehlgeschlagen", fehler)
+            melde(fehler.message ?: "Der Datenauftrag ist fehlgeschlagen.")
+        })
     private val ctx: Context = app.applicationContext
     val einstellungen = Einstellungen(ctx)
     private val db = Datenbank.hole(ctx)
@@ -204,6 +208,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private var stimmenNachladen = false
     private var papierkorbWechselLaeuft = false
     private var sitzungNachPapierkorb: Long? = null
+    private var sendetEntwurf = false
+    private var ungesicherteAufnahme: Pair<Long, ByteArray>? = null
+    private var speichertAufnahme = false
 
     // Nachreichen und Sicherung dürfen nie doppelt nebeneinander laufen.
     private val nachreichSperre = Mutex()
@@ -431,6 +438,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loescheSitzung(sitzung: Sitzung) {
+        if (ungesicherteAufnahme?.first == sitzung.id || aufnahmeSitzung?.id == sitzung.id) {
+            return melde("Erst die Aufnahme dieser Sitzung vollständig speichern.")
+        }
         viewModelScope.launch {
             val naechste = repo.loescheSitzung(sitzung)
             if (sitzung.id == _verlauf.value.sitzung?.id) beobachteSitzung(naechste)
@@ -470,6 +480,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun inPapierkorb(sitzung: Sitzung) {
+        if (ungesicherteAufnahme?.first == sitzung.id || aufnahmeSitzung?.id == sitzung.id) {
+            return melde("Erst die Aufnahme dieser Sitzung vollständig speichern.")
+        }
         val z = _verlauf.value
         if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
         if (z.wertetAus) return melde("Die Auswertung läuft noch.")
@@ -508,6 +521,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun leerePapierkorb() {
+        if (ungesicherteAufnahme != null || aufnahmeSitzung != null) {
+            return melde("Erst die noch ungesicherte Aufnahme abschließen.")
+        }
         viewModelScope.launch {
             repo.leerePapierkorb()
             melde("Der Papierkorb ist geleert.")
@@ -618,17 +634,32 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sendeEntwurf() {
         if (wiederherstellungLaeuft || !arbeitsJob.isActive) return melde("Die Wiederherstellung läuft noch.")
-        val text = _verlauf.value.entwurf.trim()
+        if (sendetEntwurf) return melde("Der vorige Entwurf wird noch gespeichert.")
+        val entwurf = _verlauf.value.entwurf
+        val text = entwurf.trim()
         val anhaenge = _verlauf.value.anhaenge
         if (text.isEmpty() && anhaenge.isEmpty()) return
         val sitzung = _verlauf.value.sitzung
             ?: return melde("Wähle zuerst eine mentale oder praktische Kategorie.")
+        sendetEntwurf = true
         _verlauf.update { it.copy(entwurf = "", anhaenge = emptyList()) }
         viewModelScope.launch {
-            val id = repo.legeGetippteNotizAn(sitzung.id, text, anhaenge)
+            try {
+                val id = repo.legeGetippteNotizAn(sitzung.id, text, anhaenge)
             // Überschrift und Sitzungstitel entstehen aus dem Text; ohne Text gibt es
             // nichts zu benennen — die Anhänge sprechen dann für sich.
-            if (text.isNotEmpty()) versorgeNeueNotiz(id, sitzung.id, text)
+                if (text.isNotEmpty()) versorgeNeueNotiz(id, sitzung.id, text)
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                _verlauf.update { jetzt ->
+                    jetzt.copy(
+                        entwurf = if (jetzt.entwurf.isEmpty()) entwurf else listOf(entwurf, jetzt.entwurf).filter(String::isNotEmpty).joinToString("\n\n"),
+                        anhaenge = (anhaenge + jetzt.anhaenge).distinctBy { it.id },
+                    )
+                }
+                melde("Nicht gespeichert: ${fehler.message ?: "Speicherfehler"}. Der Entwurf bleibt erhalten.")
+            } finally { sendetEntwurf = false }
         }
     }
 
@@ -640,6 +671,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Ein Tipp startet, ein zweiter beendet — es wird nicht gehalten (F-01, Auslöser). */
     fun aufnahmeUmschalten() {
+        ungesicherteAufnahme?.let { ausstehend ->
+            if (!speichertAufnahme && arbeitsJob.isActive) viewModelScope.launch { sichereAufnahme(ausstehend) }
+            return
+        }
         if (_verlauf.value.nimmtAuf) {
             beendeAufnahme()
         } else if (_verlauf.value.sitzung == null) {
@@ -692,6 +727,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun starteAufnahme() {
+        if (ungesicherteAufnahme != null) return melde("Erst die vorige Aufnahme über den Notiz-Mikrofonknopf erneut speichern.")
         if (sitzungswechselLaeuft) return melde("Die Sitzung wird noch geöffnet.")
         if (_verlauf.value.sitzung == null) return
         // Es gibt nur ein Mikrofon. Läuft gerade eine Stimmprobe, hat sie Vorrang — sonst
@@ -744,6 +780,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (ziel == Aufnahmeziel.BEARBEITUNG) _bearbeitung.update { it.copy(transkribiert = true) }
         viewModelScope.launch {
             val wav = mikrofon.stop()
+            aufnahmeSitzung = null
             if (wav == null || wav.size < MINDESTGROESSE_WAV) {
                 if (ziel == Aufnahmeziel.BEARBEITUNG) {
                     if (editGeneration == bearbeitungsGeneration) {
@@ -762,15 +799,44 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 schreibeInsBearbeitungsfeld(wav, editGeneration)
                 return@launch
             }
-            val datei = puffere(wav)
-            if (!hatNetz()) {
-                // F-04: die Aufnahme wandert in den dauerhaften Speicher, die Karte entsteht
-                // trotzdem. Der Cache reichte nicht — Android räumt ihn ohne Vorwarnung weg.
-                repo.legeGesprocheneNotizAn(sitzung.id, Notizzustand.WARTET_AUF_TRANSKRIPTION, datei.absolutePath)
-                return@launch
+            val ausstehend = sitzung.id to wav
+            ungesicherteAufnahme = ausstehend
+            sichereAufnahme(ausstehend)
+        }
+    }
+
+    /** Bei vollem Speicher bleibt das WAV bis zum erneuten Speichern im laufenden ViewModel. */
+    private suspend fun sichereAufnahme(ausstehend: Pair<Long, ByteArray>) {
+        if (speichertAufnahme) return
+        speichertAufnahme = true
+        var datei: File? = null
+        var gespeichert = false
+        var abgebrochen = false
+        try {
+            val wav = ausstehend.second
+            val puffer = puffere(wav).also { datei = it }
+            val online = hatNetz()
+            val id = repo.legeGesprocheneNotizAn(ausstehend.first,
+                if (online) Notizzustand.TRANSKRIBIERT_GERADE else Notizzustand.WARTET_AUF_TRANSKRIPTION,
+                puffer.absolutePath)
+            gespeichert = true
+            if (ungesicherteAufnahme === ausstehend) ungesicherteAufnahme = null
+            speichertAufnahme = false
+            if (online) transkribiere(id, ausstehend.first, wav, puffer)
+        } catch (abbruch: CancellationException) {
+            abgebrochen = true
+            throw abbruch
+        } catch (fehler: Exception) {
+            android.util.Log.w("Gedankenspeicher", "Aufnahme konnte nicht abgeschlossen werden", fehler)
+            melde(if (gespeichert) "Die Aufnahme ist gespeichert, die Verarbeitung ist fehlgeschlagen."
+                else "Nicht gespeichert. Die Aufnahme bleibt nur solange die App läuft im Speicher. Platz schaffen und das Notiz-Mikrofon erneut tippen.")
+        } finally {
+            if (!gespeichert) {
+                // Room kann bereits committet haben, obwohl die Rückgabe verworfen wurde.
+                // Bei Abbruch lieber eine zusätzliche Datei behalten als referenziertes Audio löschen.
+                if (!abgebrochen) datei?.delete()
+                speichertAufnahme = false
             }
-            val id = repo.legeGesprocheneNotizAn(sitzung.id, Notizzustand.TRANSKRIBIERT_GERADE, datei.absolutePath)
-            transkribiere(id, sitzung.id, wav, datei)
         }
     }
 
@@ -783,6 +849,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun verwirfAufnahme() {
         if (!_verlauf.value.nimmtAuf) return
+        aufnahmeSitzung = null
         AufnahmeDienst.beende(ctx)
         _verlauf.update { it.copy(nimmtAuf = false, aufnahmeDauerMs = 0) }
         _bearbeitung.update { it.copy(nimmtAuf = false) }
@@ -794,7 +861,14 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun puffere(wav: ByteArray): File {
         val ordner = File(ctx.filesDir, "wartend").apply { mkdirs() }
-        return File(ordner, "aufnahme-${System.currentTimeMillis()}.wav").apply { writeBytes(wav) }
+        val datei = File(ordner, "aufnahme-${java.util.UUID.randomUUID()}.wav")
+        try {
+            datei.writeBytes(wav)
+            return datei
+        } catch (fehler: Exception) {
+            datei.delete()
+            throw fehler
+        }
     }
 
     // --- Transkription (F-03) --------------------------------------------------------------------
@@ -1017,13 +1091,24 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 melde("Die Aufnahme ist nicht mehr da.")
                 return@launch
             }
+            val wav = leseAufnahmeDatei(datei) ?: return@launch
             val begonnen = repo.aendereAktuell(notiz.id, inhalt = false) { aktuell ->
                 if (aktuell.zustand == Notizzustand.TRANSKRIBIERT_GERADE || aktuell.zustand == Notizzustand.FERTIG) aktuell
                 else aktuell.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE)
             }
             if (!begonnen) return@launch
-            transkribiere(notiz.id, notiz.sitzungId, datei.readBytes(), datei)
+            transkribiere(notiz.id, notiz.sitzungId, wav, datei)
         }
+    }
+
+    private suspend fun leseAufnahmeDatei(datei: File): ByteArray? = try {
+        withContext(Dispatchers.IO) { datei.readBytes() }
+    } catch (abbruch: CancellationException) {
+        throw abbruch
+    } catch (fehler: Exception) {
+        android.util.Log.w("Gedankenspeicher", "Aufnahmedatei nicht lesbar", fehler)
+        melde("Die Aufnahme konnte nicht gelesen werden: ${fehler.message ?: "Dateifehler"}.")
+        null
     }
 
     /**
@@ -1067,12 +1152,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                             }
                             return@forEach
                         }
+                        val wav = leseAufnahmeDatei(datei) ?: return@forEach
                         val begonnen = repo.aendereAktuell(notiz.id, inhalt = false) { aktuell ->
                             if (aktuell.zustand == Notizzustand.WARTET_AUF_TRANSKRIPTION) aktuell.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE)
                             else aktuell
                         }
                         if (!begonnen) return@forEach
-                        transkribiere(notiz.id, notiz.sitzungId, datei.readBytes(), datei)
+                        transkribiere(notiz.id, notiz.sitzungId, wav, datei)
                     }
                 } while (nochmalNachreichen)
             } finally {
@@ -1099,7 +1185,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             }
             runCatching {
                 repo.notiz(notizId)?.let { aktuell ->
-                    repo.setzeTitelWennNochKeiner(aktuell.sitzungId, text, notizId)
+                    repo.setzeTitelWennNochKeiner(aktuell.sitzungId, aktuell.text, notizId)
                 }
             }
         }

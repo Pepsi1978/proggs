@@ -181,6 +181,7 @@ Euer Pin (2.1.0) nutzt noch keine Context-Parameter → erst beim 2.3/2.4-Sprung
 **Ursache:** Auftragsidentität wird nur beim Start geprüft; HTTP-Abbruch erfasst weder Retry-Pausen noch bereits gelieferte Ergebnisse.
 **Fix:** Den ganzen Auftragsjob besitzen/abbrechen; Generation vor erster Suspension erfassen, nach jeder asynchronen Grenze bei Erfolg/Fehler/Finally vergleichen. Persistente Übernahme als atomarer Vergleich gegen den Eingabetext oder eine Revision. Schlüssel, Modell und Berechtigungsfreigabe sind ebenfalls Auftragsdaten.
 **Lokale Referenz:** Gedankenspeicher L-2-2-02/06/07/11, L-3-2-03/07/09/12; Gegenprüfung in `Gedankenspeicher/LOGIKFEHLER-PROTOKOLL.md`.
+**Ergänzung Runden 4/7:** Auch die Gegenrichtung prüfen: Ein alter Editor oder Metadatenschreiber kann ein bereits atomar gespeichertes KI-Ergebnis zurücksetzen. ALLE Notizschreiber müssen Feldänderungen auf derselben aktuellen Transaktionsversion ausführen; ein einzelner atomarer Schreiber schützt nicht gegen andere Ganzzeilen-Updates. Fremde unveränderte Felder erhalten, echte Textkonflikte melden und den Entwurf behalten.
 
 ### 2.11 Abbruch ist keine vollständige Stilllegung (lokaler Fund)
 **Beweis:** Restore cancelt nur benannte Jobs, während ein Compose-Scope noch Profile schreibt; oder `cancelAndJoin` wartet auf ein blockierendes AudioRecord.read, das erst stop/release weckt.
@@ -192,6 +193,7 @@ Euer Pin (2.1.0) nutzt noch keine Context-Parameter → erst beim 2.3/2.4-Sprung
 **Beweis:** IO kopiert einen Anhang oder rendert PNG erfolgreich; vor Rückkehr wird das Blatt geschlossen, `withContext` verwirft das Ergebnis. Ein catch nur im IO-Block sieht diesen Abbruch nicht.
 **Fix:** Dateireferenz außerhalb des Dispatcherblocks halten und bei fehlgeschlagener Rückkehr aufräumen; Cancellation erneut werfen. Bei Vorsynthese alle erzeugten Dateien auftragseigen erfassen und erst nach Abbruch plus Join der Produzenten löschen. Keine Live-Referenzliste zum Bereinigen eines älteren DB-Backups verwenden: dessen Dateireferenzen können abweichen.
 **Lokale Referenz:** Gedankenspeicher L-2-3-02, L-2-6-04, L-2-8-1/2; zurückgenommener Filter L-2-3-03.
+**Wichtige Grenze bei DB-Commit (Runde 8):** Ein suspendierender Insert kann bereits committet haben, obwohl Cancellation seine Rückgabe verwirft. Ein lokales `gespeichert=false` beweist keinen Rollback; die zugehörige Datei im Cancellation-finally nicht blind löschen. Erstpersistierung mit lokalem Fehlerhandling und wiederholbarem Entwurf/WAV absichern; bei Speicherknappheit reine RAM-Rettung ausdrücklich als nur prozesslebenslang kennzeichnen.
 
 ## 3. Null-Safety
 
