@@ -18,8 +18,6 @@ import org.json.JSONArray
  */
 object Nachtraege {
 
-    private val zeitformat = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMAN)
-
     /**
      * Erkennt eine Nachtragszeile und fängt das Datum dahinter ein. Am Ende nur Leerzeichen
      * und Tabs: `\s*` schluckte mit MULTILINE einen Umbruch, und Zeile + Abschnittstext
@@ -30,7 +28,7 @@ object Nachtraege {
         RegexOption.MULTILINE,
     )
 
-    fun zeitpunkt(zeit: Long): String = zeitformat.format(Date(zeit))
+    fun zeitpunkt(zeit: Long): String = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMAN).format(Date(zeit))
 
     /** Die Überschriftenzeile, wie sie in den Text eingesetzt wird. */
     fun zeile(zeit: Long): String = "— Nachtrag vom ${zeitpunkt(zeit)} —"

@@ -194,6 +194,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private var frageJob: Job? = null
     private var bearbeitungsGeneration = 0
     private var initialisiert = false
+    private var sitzungenGeladen = false
     private var wiederherstellungLaeuft = false
     private var freigabeGeneration = 0
     private var sitzungswechselLaeuft = false
@@ -252,8 +253,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             repo.sitzungen.collectLatest { liste ->
+                val ersteListe = !sitzungenGeladen
+                sitzungenGeladen = true
                 _verlauf.update { z -> z.copy(sitzungen = liste, sitzung = liste.firstOrNull { it.id == z.sitzung?.id }) }
                 _suche.update { it.copy(treffer = ohneGesperrte(it.treffer)) }
+                if (ersteListe && _suche.value.begriff.trim().length >= 2) setzeSuchbegriff(_suche.value.begriff)
             }
         }
         viewModelScope.launch {
@@ -828,6 +832,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * soll nicht sein Getipptes verlieren.
      */
     private suspend fun schreibeInsAntwortfeld(wav: ByteArray, blattGeneration: Int) {
+        if (kiBlattGeneration != blattGeneration) return
         val transkriber = repo.transkriber()
         if (!transkriber.isConfigured) {
             if (kiBlattGeneration == blattGeneration) {
@@ -1213,8 +1218,16 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             // Vor jeden frischen Nachtrag kommt seine Überschriftenzeile.
             val (text, zeiten) = Nachtraege.setzeZeilenEin(z.text, z.nachtragsStellen)
-            repo.bearbeiteNotiz(notiz, z.ueberschrift, text, neueNachtragZeiten = zeiten)
-            if (generation == bearbeitungsGeneration) schliesseBearbeitung()
+            try {
+                repo.bearbeiteNotiz(notiz, z.ueberschrift, text, neueNachtragZeiten = zeiten)
+                if (generation == bearbeitungsGeneration) schliesseBearbeitung()
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                if (generation == bearbeitungsGeneration) {
+                    _bearbeitung.update { it.copy(fehler = fehler.message ?: "Die Notiz konnte nicht gespeichert werden.") }
+                }
+            }
         }
     }
 
@@ -1402,11 +1415,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun ohneGesperrte(treffer: List<Suchtreffer>): List<Suchtreffer> {
         val z = _verlauf.value
-        val gesperrt = z.sitzungen
-            .filter { it.geschuetzt && it.id != z.freigegebeneSitzung }
+        val sichtbar = z.sitzungen
+            .filter { it.geloeschtAm == null && (!it.geschuetzt || it.id == z.freigegebeneSitzung) }
             .map { it.id }
             .toSet()
-        return treffer.filterNot { it.sitzungId in gesperrt }
+        return treffer.filter { it.sitzungId in sichtbar }
     }
 
     /** Sprung aus der Suche: Sitzung öffnen und die Notiz einmal aufleuchten lassen (M-11). */

@@ -47,7 +47,7 @@
 
 ## 3. Loop-Zustand
 
-- **Aktuelle Runde:** 3 abgeschlossen, Auslieferung 0.6.8; danach Runde 4, Stufe 4. Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
+- **Aktuelle Runde:** 4 abgeschlossen, Auslieferung 0.6.9; danach Runde 5, Stufe 5 (ungeduldiger Benutzer). Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
   - **Bereich 5 – Aufnahme**
     - L-2-5-01 (mittel): MicRecorder, start() während stop() in joinAll → der Puffer der alten Aufnahme wird geleert, das finally des alten Jobs beendet die neue Aufnahme.
   - **Bereich 4 – KI-Anbindung**
@@ -81,7 +81,7 @@
   **Eigene Stufe-2-Prüfung abgeschlossen:** 1A/1B (`MainActivity.kt`, Manifest, drei `res/xml`-Dateien, `app/build.gradle.kts`; Erstlektüre plus gezielte Rückruf-/Sichtbarkeitsgegenprüfung); 3A (`data/Modell.kt`, `Datenbank.kt`, `Dao.kt`, `Repository.kt`, `settings/Einstellungen.kt`, `Nachtraege.kt`); 4A (`auth/CodexAuthManager.kt`, `CodexAufgaben.kt`); 5B (`hintergrund/AuswertungsDienst.kt`, `VorleseDienst.kt`); 6A (`tts/Vorleser.kt`, `Absatzabspieler.kt`, `Absaetze.kt`); 7 (alle sechs Cloud-TTS-Dateien aus der Karte). Die bereits abgeschlossenen Teilprüfungen der Übergabe bleiben gültig.
   **Triage:** Alle 17 Vormeldungen bestätigt, außer L-2-3-01: Klärungsbedarf (Dateizahl statt logischer Anhänge, auch reine Textanhänge betroffen; gewünschte Zählweise offen). (a) bestätigt als L-2-11-3; (b) bestätigt als L-2-6-04; (c) bestätigt als L-2-5-02 für Lesefehler (Zeitlimit wird bereits vom VM überwacht); (d)/(e)/(f)/(h) unter L-2-10-05…08 bestätigt, (g) abgelehnt wie oben. SQLite lower/LIKE ist ohne ICU ASCII-beschränkt; Kleinschreiben allein des Suchbegriffs behebt keine Großumlaute im Bestand.
   **Triage der neuen Prüfermeldungen:** L-2-2-01…14 bestätigt. L-2-9-01/03 bestätigt; L-2-9-02/04 und L-2-10-13 Klärungsbedarf (Layout-/Entwurferhaltung benötigt gezielte Geräteprüfung, im Schnellmodus nicht durchgeführt). L-2-10-05…12 bestätigt. Ein gemeldeter Layoutverdacht wird ohne Geräteprüfung nicht als behoben ausgegeben.
-- **Nächste Tiefenstufe:** 4 (Invarianten und Gegenbeweise)
+- **Nächste Tiefenstufe:** 5 (ungeduldiger Benutzer)
 - **Konvergenzzähler:** 0
 - **Nächster Blickwinkel:** Stufe 2. Die in Runde 1 geänderten Stellen sind als „kürzlich verändert“ markiert
 - **Offene Fixe:** keine
@@ -218,6 +218,7 @@ Stellen relativ zu `app/src/main/java/de/frank/gedankenspeicher/`; VM = `ui/Haup
 | 1 | 1 | Überblick; Zweitprüfer für die Bereiche 2 und 3 | ja (14 Prüfer, alle Dateilisten da) | ~70 (61 nach Zusammenführung) | 59 | 1 | 2 (L-1-3-7, L-1-10-5 nach Rücknahme) | 58 | 58 | Build grün, 13/13 Unit-Tests grün (Basislinie 0) | 0 |
 | 2 | 2 | Funktionsverträge und Randfälle; einzelne Lesehelfer | ja (Dateilisten in Abschnitt 3) | 50 + Beobachtung (g) | 46 | 1 Beobachtung | 5 inkl. Rücknahme | 45 | 45 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 | 3 | 3 | Suspend-Grenzen, zeitliche Reihenfolge, Ressourcenlebenszeit | ja, gezielte Vertragsprüfung je Bereich (siehe Abdeckung) | 13 | 13 | 0 | 0 neu | 13 | 13 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
+| 4 | 4 | Invarianten und Gegenbeweise, Sparmodus für unveränderte unauffällige Bereiche | ja (Dateiliste Runde 3; Volltiefe 1–10, Kurzprüfung 11/12) | 4 | 4 | 0 | 0 neu | 4 | 4 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 
 ### Runde 2 – verbindliche Endstatus und Fixnachweise
 
@@ -323,6 +324,20 @@ Quellpfade relativ zu `app/src/main/java/de/frank/gedankenspeicher`; bekannte Fu
 | 12 | `ui/theme/Theme.kt`, `Farben.kt`, `Type.kt`, `Motion.kt`, `Bausteine.kt`, `ui/Dialoge.kt`, `ui/verlauf/Bildspeicher.kt`, `Zwischenspeicher.kt` | Zustands-/Cache-Schlüssel, reaktive Eingaben, konstante Designwerte; keine neuen bestätigten Funde. |
 
 **Vormerkung Runde 4:** Zeitzonenwechsel bei den gecachten `SimpleDateFormat`-Werten von Repository/Nachtraege prüfen: Formate halten die bei Erzeugung gültige Zone fest. Noch kein bestätigter Fund.
+
+### Runde 4 – Invarianten und Gegenbeweise
+
+Bereich 2 vollständig durch einen einzelnen Leseprüfer, übrige Bereiche entlang derselben Dateiliste aus Runde 3 gezielt geprüft. Invarianten: genau ein Aufnahmeziel und aktueller Notizstand; genau eine Profilaktivierung; unbekannter Schutzstatus ist keine Freigabe; keine DB-Arbeit nach Stilllegung; Formatierung hängt von der aktuellen Zeitzone ab. In unveränderten unauffälligen Oberflächenbereichen Kurzprüfung gemäß Sparmodus. Keine weiteren neuen bestätigten Funde in 1/4/5/6/7/8/9/10/11/12; berührte Aufrufer gehören zu den folgenden Funden.
+
+| ID | Schwere | Stelle | Beweis | Triage |
+|---|---|---|---|---|
+| L-4-2-01 | hoch | Repository.kt:280–302; HauptViewModel.kt:1208 | Editor geöffnet → KI verbessert danach → nur Überschrift im alten Editor speichern setzt Verbesserung und Original zurück → unveränderte Felder aus aktuellem Datensatz erhalten, echten Textkonflikt anzeigen. | bestätigt |
+| L-4-2-02 | mittel | HauptViewModel.kt:724,830 | Antwortdiktat B wartet hinter A, Blatt geschlossen → B startet trotz ungültiger Generation und blockiert Diktat C des neuen Blatts → Generation vor Netzaufruf prüfen. | bestätigt |
+| L-4-2-03 | hoch | HauptViewModel.kt:1382–1409 | Suche liefert vor erster Sitzungslistenemission geschützten Treffer → leere Sperrliste lässt Klartext passieren → nur bekannte freigegebene Sitzungen zulassen. | bestätigt |
+| L-4-3-01 | mittel | Repository.kt:526–545; Nachtraege.kt:21,33 | Zeitzone im laufenden Prozess ändern → derselbe neue/alte Zeitpunkt wird weiter in der alten Zone angezeigt → Formatter und Cache müssen aktuelle Zone berücksichtigen. | bestätigt |
+
+**Gegenlesen:** Drei Fixe bestanden im ersten Anlauf. L-4-2-01 im zweiten Anlauf um expliziten Fehler bei gelöschtem Datensatz ergänzt; ansonsten schloss der Editor trotz nicht gespeichertem Entwurf. Kein automatischer Test (Schnellmodus).
+**Endstatus:** Alle vier IDs behoben und durch separaten Leseverifizierer statisch verifiziert: je (1) Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Null/Leer/Grenzen berücksichtigt. L-4-2-01 Anlauf 2, andere Anlauf 1. Fixreferenz Runde-4-Commit/0.6.9. Textspeicherung bewahrt aktuelle fremde Felder und meldet Konflikte statt Entwurfverlust; unbekannte Sitzung niemals freigegeben; ungültige Diktate vor Netzwerk übersprungen; Zeitzone Bestandteil des Cache-Vertrags.
 
 - **L-1-10-5 – Quellenblöcke in KI-Auswertungen (nach 3 Anläufen zurückgenommen).** `ohneQuellen` erkennt nur Zeilen, die mit „Quellen:“ beginnen. „**Quellen:**“, „## Quellen“ und die darunter stehende Linkliste bleiben stehen.
   - Deutung A: Nur die einzeilige „Quelle: …“-Zeile soll weg. Dann ist nichts zu tun.

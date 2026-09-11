@@ -241,9 +241,13 @@ class Repository(
     }
 
     /** Liest und verändert denselben aktuellen Datensatz atomar, ohne fremde Felder zurückzusetzen. */
-    suspend fun aendereAktuell(id: Long, inhalt: Boolean = true, aenderung: (Notiz) -> Notiz): Boolean =
+    suspend fun aendereAktuell(id: Long, inhalt: Boolean = true, mussExistieren: Boolean = false, aenderung: (Notiz) -> Notiz): Boolean =
         db.withTransaction {
-            val vorher = db.notizen().eine(id) ?: return@withTransaction false
+            val vorher = db.notizen().eine(id)
+            if (vorher == null) {
+                check(!mussExistieren) { "Diese Notiz wurde inzwischen gelöscht. Dein Entwurf bleibt hier erhalten." }
+                return@withTransaction false
+            }
             val nachher = aenderung(vorher)
             if (nachher == vorher) return@withTransaction false
             aendere(nachher, inhalt)
@@ -284,22 +288,26 @@ class Repository(
         nachgetragen: Boolean = false,
         neueNachtragZeiten: List<Long> = emptyList(),
     ) {
-        merkeAenderung(notiz.sitzungId)
-        db.notizen().aendern(
-            notiz.copy(
-                text = text.trim(),
-                ueberschrift = ueberschrift.trim().takeIf(String::isNotBlank),
+        aendereAktuell(notiz.id, mussExistieren = true) { aktuell ->
+            val textGeaendert = text.trim() != notiz.text.trim()
+            check(!textGeaendert || aktuell.text == notiz.text) {
+                "Die Notiz wurde inzwischen geändert. Bitte den aktuellen Text neu öffnen; dein Entwurf bleibt hier erhalten."
+            }
+            val titelGeaendert = ueberschrift.trim() != notiz.ueberschrift.orEmpty().trim()
+            aktuell.copy(
+                text = if (textGeaendert) text.trim() else aktuell.text,
+                ueberschrift = if (titelGeaendert) ueberschrift.trim().takeIf(String::isNotBlank) else aktuell.ueberschrift,
                 // Wer die Überschrift anfasst, hat sie ab jetzt selbst in der Hand.
-                ueberschriftVonHand = ueberschrift.trim() != notiz.ueberschrift?.trim(),
+                ueberschriftVonHand = aktuell.ueberschriftVonHand || titelGeaendert,
                 nachtragzeitenJson = if (neueNachtragZeiten.isEmpty()) {
-                    notiz.nachtragzeitenJson
+                    aktuell.nachtragzeitenJson
                 } else {
                     Nachtraege.zeitenAlsJson(
-                        Nachtraege.zeitenAusJson(notiz.nachtragzeitenJson) + neueNachtragZeiten,
+                        Nachtraege.zeitenAusJson(aktuell.nachtragzeitenJson) + neueNachtragZeiten,
                     )
                 },
-            ),
-        )
+            )
+        }
     }
 
     suspend fun angefangeneAufraeumen() {
@@ -533,15 +541,23 @@ class Repository(
         // Jede Karte im Verlauf formatiert ihren Zeitstempel bei jedem Neuaufbau neu, und
         // beim Scrollen ist das ständig. Dieselbe Millisekunde ergibt immer denselben Text,
         // also wird er behalten statt erneut aus einem `Calendar` zusammengesetzt.
-        private val gemerkt = object : android.util.LruCache<Long, String>(512) {}
+        private val gemerkt = object : android.util.LruCache<String, String>(512) {}
 
-        fun zeitpunkt(ms: Long): String = gemerkt.get(ms)
-            ?: zeitformat.get()!!.format(Date(ms)).also { gemerkt.put(ms, it) }
+        fun zeitpunkt(ms: Long): String {
+            val zone = java.util.TimeZone.getDefault()
+            val schluessel = "$ms:${zone.id}:${zone.getOffset(ms)}"
+            return gemerkt.get(schluessel) ?: zeitformat.get()!!.apply { timeZone = zone }
+                .format(Date(ms)).also { gemerkt.put(schluessel, it) }
+        }
 
-        private val gemerkteUhrzeit = object : android.util.LruCache<Long, String>(256) {}
+        private val gemerkteUhrzeit = object : android.util.LruCache<String, String>(256) {}
 
         /** Der Platzhalter, der steht, bis die KI-Überschrift da ist (F-05, Schritt 1). */
-        fun uhrzeit(ms: Long): String = gemerkteUhrzeit.get(ms)
-            ?: uhrzeitformat.get()!!.format(Date(ms)).also { gemerkteUhrzeit.put(ms, it) }
+        fun uhrzeit(ms: Long): String {
+            val zone = java.util.TimeZone.getDefault()
+            val schluessel = "$ms:${zone.id}:${zone.getOffset(ms)}"
+            return gemerkteUhrzeit.get(schluessel) ?: uhrzeitformat.get()!!.apply { timeZone = zone }
+                .format(Date(ms)).also { gemerkteUhrzeit.put(schluessel, it) }
+        }
     }
 }
