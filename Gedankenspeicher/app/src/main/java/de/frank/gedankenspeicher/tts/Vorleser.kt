@@ -103,11 +103,15 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
      */
     fun lies(text: String, beiFehler: (String) -> Unit) {
         if (text.isBlank()) return
-        halteAn()
+        val absaetze = Absaetze.teile(text)
+        if (absaetze.isEmpty()) {
+            halteAn()
+            return
+        }
+        // Nicht halteAn(): „läuft" darf zwischen altem und neuem Vorgang nicht kurz abfallen.
+        stoppeLaufendes()
         val anbieter = einstellungen.ttsAnbieter
         val tempo = einstellungen.sprechtempo
-        val absaetze = Absaetze.teile(text)
-        if (absaetze.isEmpty()) return
 
         // Verteilt wird über den Katalog, nicht über lose Zeichenketten. Vorher stand hier
         // ein `when` mit Literalen und einem `else`, das alles Unbekannte an Edge gab —
@@ -173,6 +177,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
         }
 
         vorlesejob = bereich.launch {
+            val ich = coroutineContext[Job]
             _laeuft.value = true
             _pausiert.value = false
             var geschafft = 0
@@ -182,14 +187,16 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
                     derzeit = TtsProvider.GERAET
                     liesMitGeraet(absaetze, tempo)
                 } else if (synthese != null) {
-                    geschafft = liesInAbsaetzen(absaetze, synthese)
+                    // Gezählt wird je gespieltem Absatz — auch wenn danach etwas wirft.
+                    liesInAbsaetzen(absaetze, synthese) { geschafft++ }
                 } else {
                     liesMitGeraet(absaetze, tempo)
                 }
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
-                if (weg == TtsProvider.GERAET) {
+                // Auch die Gerätestimme im fehlgrund-Zweig ist schon der letzte Weg.
+                if (weg == TtsProvider.GERAET || derzeit == TtsProvider.GERAET) {
                     beiFehler(verstaendlich(fehler, TtsProvider.GERAET))
                 } else if (geschafft == 0) {
                     // Noch kein Ton: der ganze Text geht an die Rückfallebene.
@@ -208,11 +215,15 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
                     beiFehler(verstaendlich(fehler, weg))
                 }
             } finally {
-                _laeuft.value = false
-                _pausiert.value = false
-                _absatzNr.value = -1
-                _quelle.value = null
-                derzeit = null
+                // Hat inzwischen ein neuer Vorgang übernommen, gehört ihm der Zustand.
+                if (vorlesejob == null || vorlesejob === ich) {
+                    if (vorlesejob === ich) vorlesejob = null
+                    _quelle.value = null
+                    _absatzNr.value = -1
+                    _pausiert.value = false
+                    derzeit = null
+                    _laeuft.value = false
+                }
             }
         }
     }
@@ -222,32 +233,34 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
      * [Absaetze.VORAUS] schon synthetisiert werden — nie mehr, sonst bekäme die Sprach-KI
      * wieder den ganzen Text auf einmal.
      *
-     * @return wie viele Absätze wirklich gesprochen wurden
+     * @param beiGesprochen wird nach jedem wirklich gesprochenen Absatz gerufen
      */
     private suspend fun liesInAbsaetzen(
         absaetze: List<String>,
         synthese: suspend (String) -> File,
-    ): Int = coroutineScope {
-        val offen = mutableMapOf<Int, Deferred<File>>()
+        beiGesprochen: () -> Unit,
+    ): Unit = coroutineScope {
+        // Ein Fehler der Vorsynthese wird erst beim Abholen geworfen — sonst bräche er den
+        // ganzen Scope ab, auch den Absatz, der gerade klingt.
+        val offen = mutableMapOf<Int, Deferred<Result<File>>>()
 
         fun reihEin(nr: Int) {
             if (nr in absaetze.indices && offen[nr] == null) {
-                offen[nr] = async(Dispatchers.IO) { synthese(absaetze[nr]) }
+                offen[nr] = async(Dispatchers.IO) { runCatching { synthese(absaetze[nr]) } }
             }
         }
 
         repeat(minOf(Absaetze.VORAUS + 1, absaetze.size)) { reihEin(it) }
-        var gesprochen = 0
         try {
             absaetze.indices.forEach { nr ->
-                val datei = offen.remove(nr)?.await() ?: return@forEach
+                val datei = offen.remove(nr)?.await()?.getOrThrow() ?: return@forEach
                 // Erst nachladen, dann spielen: so läuft die Synthese des übernächsten
                 // Absatzes über die volle Spieldauer des laufenden.
                 reihEin(nr + Absaetze.VORAUS + 1)
                 try {
                     _absatzNr.value = nr
                     abspieler.spieleUndWarte(datei)
-                    gesprochen++
+                    beiGesprochen()
                 } finally {
                     datei.delete()
                 }
@@ -258,7 +271,6 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
             offen.values.forEach { it.cancel() }
             offen.clear()
         }
-        gesprochen
     }
 
     /**
@@ -347,6 +359,13 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
 
     /** Beim Wechsel in den Hintergrund wird eine laufende Wiedergabe gestoppt (§6). */
     fun halteAn() {
+        stoppeLaufendes()
+        _laeuft.value = false
+        derzeit = null
+    }
+
+    /** Bricht den laufenden Vorgang ab, lässt „läuft" aber stehen — für den nahtlosen Wechsel. */
+    private fun stoppeLaufendes() {
         // Zuerst der laufende Vorgang: er würde sonst den nächsten Absatz nachschieben.
         vorlesejob?.cancel()
         vorlesejob = null
@@ -357,9 +376,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
         // Nur anhalten, wenn die Rückfallebene überhaupt schon eingerichtet wurde — sonst
         // würde allein das Beenden der App Androids Sprachdienst hochfahren.
         if (geraetEingerichtet) geraet.stop()
-        _laeuft.value = false
         _pausiert.value = false
-        derzeit = null
     }
 
     fun schliesse() {

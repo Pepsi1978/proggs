@@ -47,7 +47,9 @@ class QwenVoiceDirectory {
                 val text = response.body?.string().orEmpty()
                 if (!response.isSuccessful) {
                     android.util.Log.e(TAG, "list failed ${response.code}: ${text.take(300)}")
-                    return@withContext emptyList()
+                    throw IllegalStateException(
+                        "Die Stimmen liessen sich nicht laden (HTTP ${response.code}).",
+                    )
                 }
                 val list = JSONObject(text)
                     .optJSONObject("output")
@@ -64,9 +66,13 @@ class QwenVoiceDirectory {
                     )
                 }
             }
+        } catch (error: IllegalStateException) {
+            // Die eigene Meldung oben (und ein Abbruch) geht unverändert an den Aufrufer.
+            throw error
         } catch (error: Exception) {
+            // Kein Netz oder kaputtes JSON: der Aufrufer braucht eine Meldung, keine leere Liste.
             android.util.Log.e(TAG, "list failed: ${error.message}", error)
-            emptyList()
+            throw IllegalStateException("Die Stimmen liessen sich nicht laden.", error)
         }
     }
 

@@ -46,6 +46,9 @@ class MicRecorder(context: Context) {
     /** The rate the running capture actually got, which the WAV header has to match. */
     private var activeSampleRate = SAMPLE_RATE
 
+    /** Pufferobergrenze (10 Minuten) für die tatsächlich verwendete Rate, gesetzt in [start]. */
+    private var maxPufferBytes = SAMPLE_RATE * 2 * 60 * 10
+
     /**
      * Starts capturing.
      *
@@ -82,6 +85,7 @@ class MicRecorder(context: Context) {
             logger.warning("$requestedSampleRate Hz unavailable, recording at $sampleRate Hz")
         }
         activeSampleRate = sampleRate
+        maxPufferBytes = sampleRate * 2 * 60 * 10
 
         val activeRecorder = try {
             AudioRecord(
@@ -130,7 +134,7 @@ class MicRecorder(context: Context) {
                     when {
                         read > 0 -> synchronized(bufferLock) {
                             _pegel.value = pegelVon(readBuffer, read)
-                            if (pcmBuffer.size() + read <= MAX_BUFFER_BYTES) {
+                            if (pcmBuffer.size() + read <= maxPufferBytes) {
                                 pcmBuffer.write(readBuffer, 0, read)
                             } else {
                                 logger.warning("Maximum recording buffer reached")
@@ -276,7 +280,6 @@ class MicRecorder(context: Context) {
         private const val CHANNEL_COUNT = 1
         private const val BITS_PER_SAMPLE = 16
         private const val WAV_HEADER_BYTES = 44
-        private const val MAX_BUFFER_BYTES = SAMPLE_RATE * 2 * 60 * 10
         private const val STOP_JOIN_TIMEOUT_MS = 1_500L
         private val logger = Logger.getLogger(MicRecorder::class.java.name)
     }

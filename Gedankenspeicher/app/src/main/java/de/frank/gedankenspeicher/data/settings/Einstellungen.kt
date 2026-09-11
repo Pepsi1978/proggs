@@ -197,7 +197,10 @@ class Einstellungen(ctx: Context) {
     fun uebernimm(werte: Map<String, Any>) {
         val schreiber = p.edit()
         werte.forEach { (schluessel, wert) ->
-            if (schluessel == DRIVE_ORDNER) return@forEach
+            // Auch Zeit und Grösse der letzten Sicherung gehören zu diesem Gerät.
+            if (schluessel == DRIVE_ORDNER || schluessel == DRIVE_ZEIT || schluessel == DRIVE_GROESSE) {
+                return@forEach
+            }
             when (wert) {
                 is Boolean -> schreiber.putBoolean(schluessel, wert)
                 is Int -> schreiber.putInt(schluessel, wert)

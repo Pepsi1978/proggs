@@ -91,7 +91,14 @@ class Repository(
      * neue — die App steht nie ohne Sitzung da.
      */
     suspend fun loescheSitzung(sitzung: Sitzung): Sitzung {
+        val notizen = db.notizen().alleAusSitzung(sitzung.id)
         db.sitzungen().loeschen(sitzung)
+        raeumeDateienWeg(notizen)
+        // War die gelöschte gar nicht die offene (etwa aus dem Papierkorb), bleibt die offene.
+        val offen = einstellungen.offeneSitzung
+        if (sitzung.id != offen) {
+            db.sitzungen().eine(offen)?.takeIf { it.geloeschtAm == null }?.let { return it }
+        }
         if (db.sitzungen().anzahl() == 0) return neueSitzung()
         val naechste = db.sitzungen().zuletztGeoeffnete()!!
         einstellungen.offeneSitzung = naechste.id
@@ -108,7 +115,20 @@ class Repository(
     suspend fun setzePapierkorb(id: Long, drin: Boolean) =
         db.sitzungen().setzePapierkorb(id, if (drin) System.currentTimeMillis() else null)
 
-    suspend fun leerePapierkorb() = db.sitzungen().leerePapierkorb()
+    suspend fun leerePapierkorb() {
+        val notizen = db.notizen().imPapierkorb()
+        db.sitzungen().leerePapierkorb()
+        raeumeDateienWeg(notizen)
+    }
+
+    /** Aufnahme- und Anhangsdateien gelöschter Notizen — CASCADE räumt nur die Zeilen weg. */
+    private fun raeumeDateienWeg(notizen: List<Notiz>) {
+        val speicher = Anhangsspeicher(ctx)
+        notizen.forEach { n ->
+            n.audioPfad?.let { runCatching { File(it).delete() } }
+            speicher.loesche(anhaengeAusJson(n.anhaengeJson))
+        }
+    }
 
     suspend fun verschiebeInOrdner(id: Long, ordnerId: Long?) = db.sitzungen().setzeOrdner(id, ordnerId)
 
@@ -213,9 +233,10 @@ class Repository(
 
     suspend fun notiz(id: Long): Notiz? = db.notizen().eine(id)
 
-    suspend fun aendere(notiz: Notiz) {
+    /** [inhalt] = false bei reinen Zustandswechseln — die heben die Sitzung nicht an. */
+    suspend fun aendere(notiz: Notiz, inhalt: Boolean = true) {
         db.notizen().aendern(notiz)
-        merkeAenderung(notiz.sitzungId)
+        if (inhalt) merkeAenderung(notiz.sitzungId)
     }
 
     suspend fun loescheNotiz(notiz: Notiz) {

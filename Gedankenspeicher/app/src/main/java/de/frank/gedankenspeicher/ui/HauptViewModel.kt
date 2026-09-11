@@ -52,6 +52,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 
@@ -172,6 +174,25 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private var verlaufJob: Job? = null
     private var aufnahmeJob: Job? = null
     private var auswertungJob: Job? = null
+
+    // Nachreichen und Sicherung dürfen nie doppelt nebeneinander laufen.
+    private val nachreichSperre = Mutex()
+    private val sicherungsSperre = Mutex()
+
+    /** Wurde während eines Nachreich-Durchlaufs erneut angestoßen? (nur auf Main gelesen und gesetzt) */
+    private var nochmalNachreichen = false
+
+    /** Kam ein neuer Schlüssel? Dann gilt „schon versucht“ nicht mehr (nur auf Main). */
+    private var versuchtVergessen = false
+
+    /** Entprellt die Eingabe des Groq-Schlüssels — sonst liefe jeder Tastendruck los. */
+    private var schluesselJob: Job? = null
+
+    /** Dasselbe für den Alibaba-Schlüssel — ein Teilschlüssel brächte nur einen 401. */
+    private var qwenSchluesselJob: Job? = null
+
+    /** Zählt jedes Öffnen und Schließen des KI-Blattes — ein spätes Transkript erkennt daran, ob sein Blatt noch offen ist. */
+    private var kiBlattGeneration = 0
 
     /**
      * Wohin das nächste Transkript geht.
@@ -503,9 +524,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * Karte. Dieselbe Technik wie beim Entwurf: die Datei liegt im App-Speicher, die Notiz
      * merkt sich nur ihre Beschreibung.
      */
-    fun fuegeAnhangZuNotiz(notiz: Notiz, anhang: Anhang) {
+    fun fuegeAnhangZuNotiz(notiz: Notiz, anhang: Anhang) = fuegeAnhangZuNotizMitId(notiz.id, anhang)
+
+    /** Dasselbe allein über die id — für das Plus-Menü, das auch ohne offene Sitzung besteht. */
+    fun fuegeAnhangZuNotizMitId(notizId: Long, anhang: Anhang) {
         viewModelScope.launch {
-            val vorhanden = repo.notiz(notiz.id) ?: return@launch
+            val vorhanden = repo.notiz(notizId) ?: return@launch
             val neue = anhaengeAusJson(vorhanden.anhaengeJson) + anhang
             repo.aendere(vorhanden.copy(anhaengeJson = neue.alsJson()))
         }
@@ -624,6 +648,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         aufnahmeJob?.cancel()
         val ziel = aufnahmeziel
         aufnahmeziel = Aufnahmeziel.VERLAUF
+        val blattGeneration = kiBlattGeneration
         viewModelScope.launch {
             val wav = mikrofon.stop()
             if (wav == null || wav.size < MINDESTGROESSE_WAV) {
@@ -635,7 +660,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             if (ziel == Aufnahmeziel.KI_BLATT) {
-                schreibeInsAntwortfeld(wav)
+                schreibeInsAntwortfeld(wav, blattGeneration)
                 return@launch
             }
             if (ziel == Aufnahmeziel.BEARBEITUNG) {
@@ -682,7 +707,14 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val notiz = repo.notiz(notizId) ?: return
         val transkriber = repo.transkriber()
         if (!transkriber.isConfigured) {
-            repo.aendere(notiz.copy(zustand = Notizzustand.KEIN_SCHLUESSEL, audioPfad = datei?.absolutePath))
+            // Auch eine Online-Aufnahme wird gepuffert — sonst wäre sie ohne Schlüssel verloren.
+            repo.aendere(
+                notiz.copy(
+                    zustand = Notizzustand.KEIN_SCHLUESSEL,
+                    audioPfad = datei?.absolutePath ?: puffere(wav).absolutePath,
+                ),
+                inhalt = false,
+            )
             return
         }
         try {
@@ -705,12 +737,20 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
+            // Bis zur Höchstzahl an Versuchen wartet die Notiz wieder und wird von selbst
+            // nachgereicht; erst danach gilt sie als fehlgeschlagen.
+            val versuche = notiz.versucheTranskription + 1
             repo.aendere(
                 notiz.copy(
-                    zustand = Notizzustand.TRANSKRIPTION_FEHLGESCHLAGEN,
+                    zustand = if (versuche < Repository.HOECHSTVERSUCHE) {
+                        Notizzustand.WARTET_AUF_TRANSKRIPTION
+                    } else {
+                        Notizzustand.TRANSKRIPTION_FEHLGESCHLAGEN
+                    },
                     audioPfad = datei?.absolutePath ?: puffere(wav).absolutePath,
-                    versucheTranskription = notiz.versucheTranskription + 1,
+                    versucheTranskription = versuche,
                 ),
+                inhalt = false,
             )
         } finally {
             transkriber.shutdown()
@@ -723,14 +763,19 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * Angehängt, nicht ersetzt: wer schon etwas getippt hat und dann noch etwas nachspricht,
      * soll nicht sein Getipptes verlieren.
      */
-    private suspend fun schreibeInsAntwortfeld(wav: ByteArray) {
+    private suspend fun schreibeInsAntwortfeld(wav: ByteArray, blattGeneration: Int) {
         val transkriber = repo.transkriber()
         if (!transkriber.isConfigured) {
-            _kiBlatt.update { it.copy(fehler = "Für die Transkription fehlt der Groq-Schlüssel.") }
+            if (kiBlattGeneration == blattGeneration) {
+                _kiBlatt.update { it.copy(fehler = "Für die Transkription fehlt der Groq-Schlüssel.") }
+            }
             return
         }
         try {
             val text = transkriber.transcribe(wav)
+            // Wurde das Blatt inzwischen geschlossen oder neu geöffnet, gehört das
+            // Transkript nicht mehr hinein.
+            if (kiBlattGeneration != blattGeneration) return
             if (text.isBlank()) {
                 _kiBlatt.update { it.copy(fehler = "Nichts verstanden — versuch es noch einmal.") }
                 return
@@ -745,7 +790,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
-            _kiBlatt.update { it.copy(fehler = fehler.message ?: "Die Transkription ist nicht durchgekommen.") }
+            if (kiBlattGeneration == blattGeneration) {
+                _kiBlatt.update { it.copy(fehler = fehler.message ?: "Die Transkription ist nicht durchgekommen.") }
+            }
         } finally {
             transkriber.shutdown()
         }
@@ -759,33 +806,41 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * sich auch das Einfügen aus der Zwischenablage.
      */
     private suspend fun schreibeInsBearbeitungsfeld(wav: ByteArray) {
-        if (_bearbeitung.value.notiz == null) return
+        val notizId = _bearbeitung.value.notiz?.id ?: return
         val transkriber = repo.transkriber()
         if (!transkriber.isConfigured) {
-            _bearbeitung.update { it.copy(fehler = "Für die Transkription fehlt der Groq-Schlüssel.") }
+            _bearbeitung.update {
+                if (it.notiz?.id == notizId) it.copy(fehler = "Für die Transkription fehlt der Groq-Schlüssel.") else it
+            }
             return
         }
         _bearbeitung.update { it.copy(transkribiert = true, fehler = null) }
         try {
             val text = transkriber.transcribe(wav)
             if (text.isBlank()) {
-                _bearbeitung.update { it.copy(fehler = "Nichts verstanden — versuch es noch einmal.") }
+                _bearbeitung.update {
+                    if (it.notiz?.id == notizId) it.copy(fehler = "Nichts verstanden — versuch es noch einmal.") else it
+                }
                 return
             }
             _bearbeitung.update { z ->
-                // Das Blatt kann zwischenzeitlich geschlossen worden sein; dann gibt es
-                // keine Stelle mehr, an die etwas gehört.
-                if (z.notiz == null) return@update z
+                // Das Blatt kann zwischenzeitlich geschlossen oder für eine andere Notiz
+                // geöffnet worden sein; dann gibt es keine Stelle mehr, an die etwas gehört.
+                if (z.notiz?.id != notizId) return@update z
                 setzeEin(z, text)
             }
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
             _bearbeitung.update {
-                it.copy(fehler = fehler.message ?: "Die Transkription ist nicht durchgekommen.")
+                if (it.notiz?.id == notizId) {
+                    it.copy(fehler = fehler.message ?: "Die Transkription ist nicht durchgekommen.")
+                } else {
+                    it
+                }
             }
         } finally {
-            _bearbeitung.update { it.copy(transkribiert = false) }
+            _bearbeitung.update { if (it.notiz?.id == notizId) it.copy(transkribiert = false) else it }
             transkriber.shutdown()
         }
     }
@@ -821,8 +876,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             if (!nachtrag && rest.isNotEmpty() && !rest.first().isWhitespace()) append(' ')
         }
         val cursor = kopf.length + fuege.length
+        val neuerText = kopf + fuege + rest
+        // Die bisherigen Nachtragsstellen rücken mit, wenn davor etwas eingesetzt wird.
+        val bisherigeStellen = Nachtraege.verschiebeStellen(z.nachtragsStellen, z.text, neuerText)
         return z.copy(
-            text = kopf + fuege + rest,
+            text = neuerText,
             auswahlStart = cursor,
             auswahlEnde = cursor,
             einfuegeMarke = z.einfuegeMarke + 1,
@@ -833,9 +891,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             // daraus entsteht beim Speichern seine eigene Überschriftenzeile.
             nachtragsStellen =
                 if (nachtrag) {
-                    z.nachtragsStellen + (kopf.length + 2 to System.currentTimeMillis())
+                    // Ein zurückgelöschter Nachtrag hinterließ seine Stelle; an derselben
+                    // Position gilt nur der neue.
+                    val neueStelle = kopf.length + 2
+                    bisherigeStellen.filterNot { it.first == neueStelle } +
+                        (neueStelle to System.currentTimeMillis())
                 } else {
-                    z.nachtragsStellen
+                    bisherigeStellen
                 },
             fehler = null,
         )
@@ -854,7 +916,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 melde("Die Aufnahme ist nicht mehr da.")
                 return@launch
             }
-            repo.aendere(notiz.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE))
+            repo.aendere(notiz.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE), inhalt = false)
             transkribiere(notiz.id, notiz.sitzungId, datei.readBytes(), datei)
         }
     }
@@ -866,15 +928,45 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun reicheWartendeNach() {
         if (!hatNetz()) return
         viewModelScope.launch {
-            repo.wartendeNotizen().forEach { notiz ->
-                val pfad = notiz.audioPfad ?: return@forEach
-                val datei = File(pfad)
-                if (!datei.exists()) {
-                    repo.aendere(notiz.copy(zustand = Notizzustand.TRANSKRIPTION_FEHLGESCHLAGEN, audioPfad = null))
-                    return@forEach
-                }
-                repo.aendere(notiz.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE))
-                transkribiere(notiz.id, notiz.sitzungId, datei.readBytes(), datei)
+            // Immer nur ein Durchlauf zugleich: Start, Netz-Rückkehr und Schlüsseleingabe
+            // stoßen ihn unabhängig voneinander an. Wer zu spät kommt, stellt sich nicht an,
+            // sondern lässt den laufenden Durchlauf noch einmal nachsehen.
+            if (!nachreichSperre.tryLock()) {
+                nochmalNachreichen = true
+                return@launch
+            }
+            try {
+                // Was in diesem Durchlauf schon versucht wurde, kommt nicht sofort wieder dran —
+                // sonst wären alle Versuche einer gerade gescheiterten Notiz in Sekunden verbraucht.
+                val versucht = mutableSetOf<Long>()
+                do {
+                    nochmalNachreichen = false
+                    // Mit einem neuen Schlüssel darf auch das gerade Gescheiterte wieder dran.
+                    if (versuchtVergessen) {
+                        versucht.clear()
+                        versuchtVergessen = false
+                    }
+                    repo.wartendeNotizen().filterNot { it.id in versucht }.forEach { vorher ->
+                        versucht += vorher.id
+                        // Frisch lesen: ein alter Schnappschuss überschriebe sonst ein inzwischen
+                        // fertiges Ergebnis.
+                        val notiz = repo.notiz(vorher.id) ?: return@forEach
+                        if (notiz.zustand != Notizzustand.WARTET_AUF_TRANSKRIPTION) return@forEach
+                        val pfad = notiz.audioPfad ?: return@forEach
+                        val datei = File(pfad)
+                        if (!datei.exists()) {
+                            repo.aendere(
+                                notiz.copy(zustand = Notizzustand.TRANSKRIPTION_FEHLGESCHLAGEN, audioPfad = null),
+                                inhalt = false,
+                            )
+                            return@forEach
+                        }
+                        repo.aendere(notiz.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE), inhalt = false)
+                        transkribiere(notiz.id, notiz.sitzungId, datei.readBytes(), datei)
+                    }
+                } while (nochmalNachreichen)
+            } finally {
+                nachreichSperre.unlock()
             }
         }
     }
@@ -907,7 +999,14 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 if (notiz.text.isBlank()) return@forEach
                 runCatching {
                     val u = repo.holeUeberschrift(notiz.text)
-                    if (u.isNotBlank()) repo.aendere(notiz.copy(ueberschrift = u))
+                    if (u.isNotBlank()) {
+                        // Frisch lesen: hat Frank inzwischen selbst eine vergeben, gewinnt seine.
+                        repo.notiz(notiz.id)?.let { aktuell ->
+                            if (!aktuell.ueberschriftVonHand && aktuell.ueberschrift == null) {
+                                repo.aendere(aktuell.copy(ueberschrift = u))
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -949,7 +1048,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                         val verbessert = runCatching { repo.verbessere(abschnitt.text.trim()) }
                             .getOrNull()
                             ?.takeIf(String::isNotBlank)
-                            ?: abschnitt.text
+                            ?: abschnitt.text.trim()
                         if (abschnitt.nachtragVom != null) {
                             append(Nachtraege.zeileVon(abschnitt.nachtragVom)).append('\n')
                         }
@@ -1016,7 +1115,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     /** Meldet jede Änderung im Textfeld samt Cursorstelle (B-08, Nachsprechen). */
     fun setzeBearbeitungText(text: String, auswahlStart: Int, auswahlEnde: Int) =
         _bearbeitung.update {
-            it.copy(text = text, auswahlStart = auswahlStart, auswahlEnde = auswahlEnde)
+            it.copy(
+                text = text,
+                auswahlStart = auswahlStart,
+                auswahlEnde = auswahlEnde,
+                // Wird vor einem Nachtrag getippt, rückt seine Stelle mit.
+                nachtragsStellen = Nachtraege.verschiebeStellen(it.nachtragsStellen, it.text, text),
+            )
         }
 
     fun schliesseBearbeitung() {
@@ -1030,20 +1135,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val z = _bearbeitung.value
         val notiz = z.notiz ?: return
         viewModelScope.launch {
-            // Vor jeden frischen Nachtrag kommt seine Überschriftenzeile. Von hinten nach
-            // vorn einsetzen, damit die gemerkten Stellen beim Einfügen nicht verrutschen.
-            var text = z.text
-            val zeiten = mutableListOf<Long>()
-            for ((stelle, zeit) in z.nachtragsStellen.sortedByDescending { it.first }) {
-                if (stelle > text.length) continue
-                // Nur wenn wirklich etwas dasteht: ein leerer Nachtrag bekommt keine Zeile.
-                val naechste = z.nachtragsStellen.map { it.first }.filter { it < stelle }.maxOrNull()
-                    ?: text.length
-                if (text.substring(stelle, naechste.coerceAtMost(text.length)).isBlank()) continue
-                text = text.substring(0, stelle) + Nachtraege.zeile(zeit) + "\n" +
-                    text.substring(stelle)
-                zeiten += zeit
-            }
+            // Vor jeden frischen Nachtrag kommt seine Überschriftenzeile.
+            val (text, zeiten) = Nachtraege.setzeZeilenEin(z.text, z.nachtragsStellen)
             repo.bearbeiteNotiz(notiz, z.ueberschrift, text, neueNachtragZeiten = zeiten)
             schliesseBearbeitung()
         }
@@ -1055,10 +1148,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val sitzung = _verlauf.value.sitzung ?: return
         if (_verlauf.value.wertetAus) return
         val grund = Websuche.vonId(einstellungen.websucheGrundhaltung)
+        kiBlattGeneration++
         _kiBlatt.value = KiBlattzustand(
             offen = true,
             websuche = grund == Websuche.IMMER,
             websucheKiEntscheidet = grund == Websuche.KI_ENTSCHEIDET,
+            grundhaltungKi = grund == Websuche.KI_ENTSCHEIDET,
             codexFehlt = !codex.isConnected,
         )
         viewModelScope.launch {
@@ -1071,6 +1166,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         // Vor der Antwort geschlossen: nichts wird gespeichert, die Notizen bleiben
         // unausgewertet (F-09, Fehlerfall). Genau so ist es gewollt.
         codex.cancelQuestionGeneration()
+        kiBlattGeneration++
         // Eine laufende Antwort-Aufnahme endet mit dem Blatt — sonst liefe das Mikrofon
         // weiter und ihr Transkript käme in ein Feld, das es nicht mehr gibt.
         if (_verlauf.value.nimmtAuf && aufnahmeziel == Aufnahmeziel.KI_BLATT) {
@@ -1084,7 +1180,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun setzeWebsucheKiEntscheidet() =
         _kiBlatt.update { it.copy(websucheKiEntscheidet = true, websuche = false) }
 
-    fun setzeKiAntwort(text: String) = _kiBlatt.update { it.copy(antwort = text) }
+    // Wer weitertippt, hat einen Antwort-Fehler gesehen — ein Fehler der Rückfrage selbst
+    // (dann ist sie leer) bleibt dagegen stehen.
+    fun setzeKiAntwort(text: String) = _kiBlatt.update {
+        if (it.rueckfrage.isNotEmpty()) it.copy(antwort = text, fehler = null) else it.copy(antwort = text)
+    }
 
     private suspend fun ladeKontextUndFrage(sitzungId: Long) {
         val eintraege = repo.kontextEintraege(sitzungId)
@@ -1214,6 +1314,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Sprung aus der Suche: Sitzung öffnen und die Notiz einmal aufleuchten lassen (M-11). */
     fun springeZu(sitzungId: Long, notizId: Long) {
+        // Dieselben Sperren wie beim Sitzungswechsel (F-13, Fehlerfall).
+        if (sitzungId != _verlauf.value.sitzung?.id) {
+            val z = _verlauf.value
+            if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
+            if (z.wertetAus) return melde("Die Auswertung läuft noch.")
+        }
         viewModelScope.launch {
             if (sitzungId != _verlauf.value.sitzung?.id) {
                 repo.oeffneSitzung(sitzungId)
@@ -1329,8 +1435,15 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun setzeGroqSchluessel(wert: String) {
         einstellungen.groqSchluessel = wert.trim()
         _groq.value = wert.trim()
-        // Was am fehlenden Schlüssel gescheitert ist, bekommt jetzt seine zweite Chance.
-        if (wert.isNotBlank()) holeLiegengebliebeneNach()
+        // Was am fehlenden Schlüssel gescheitert ist, bekommt jetzt seine zweite Chance —
+        // aber erst, wenn die Eingabe zur Ruhe gekommen ist, nicht mit einem Teilschlüssel.
+        schluesselJob?.cancel()
+        if (wert.isNotBlank()) {
+            schluesselJob = viewModelScope.launch {
+                delay(1500)
+                holeLiegengebliebeneNach()
+            }
+        }
     }
 
     /**
@@ -1340,10 +1453,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private fun holeLiegengebliebeneNach() {
         viewModelScope.launch {
             val offene = repo.notizenOhneSchluessel()
-            if (offene.isEmpty()) return@launch
             offene.forEach { notiz ->
-                repo.aendere(notiz.copy(zustand = Notizzustand.WARTET_AUF_TRANSKRIPTION))
+                repo.aendere(notiz.copy(zustand = Notizzustand.WARTET_AUF_TRANSKRIPTION), inhalt = false)
             }
+            // Immer nachreichen — auch was nach einem Fehlversuch mit einem Teilschlüssel wartet.
+            versuchtVergessen = true
             reicheWartendeNach()
         }
     }
@@ -1358,7 +1472,14 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         _qwen.value = wert.trim()
         // Mit dem Schlüssel kommen die Stimmen: sonst müsste Frank raten, ob er richtig ist,
         // bis er das nächste Mal etwas vorlesen lässt.
-        if (wert.isNotBlank()) ladeEigeneStimmen()
+        // Erst wenn die Eingabe zur Ruhe gekommen ist, nicht bei jedem Tastendruck.
+        qwenSchluesselJob?.cancel()
+        if (wert.isNotBlank()) {
+            qwenSchluesselJob = viewModelScope.launch {
+                delay(1500)
+                ladeEigeneStimmen()
+            }
+        }
     }
 
     fun setzeTtsAnbieter(id: String) {
@@ -1386,10 +1507,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Der Probe-Knopf in B-04. Läuft schon eine Probe, hält derselbe Knopf sie an. */
     fun spieleProbe() {
-        if (vorleser.laeuft.value) {
+        if (vorleser.laeuft.value && vorleser.quelle.value == "probe") {
             vorleser.halteAn()
             return
         }
+        // Eine laufende Notiz-Vorlesung endet hier; ihre Markierung darf nicht stehen bleiben.
+        _verlauf.update { it.copy(liestVor = null, vorleseAbsatz = -1) }
         vorleser.merkeQuelle("probe")
         vorleser.lies(PROBESATZ) { fehler -> melde(fehler) }
     }
@@ -1415,8 +1538,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 _eigeneStimmen.value = liste
                 // Steht noch keine Stimme fest, wird die jüngste vorbelegt — sonst zeigt die
                 // Auswahl eine leere Kennung, obwohl Stimmen vorhanden sind.
+                // Ausdrücklich der Qwen-Platz, nicht der des gerade gewählten Anbieters.
                 if (einstellungen.stimmeQwen.isBlank() && liste.isNotEmpty()) {
-                    setzeTtsStimme(liste.first().id)
+                    einstellungen.stimmeQwen = liste.first().id
+                    if (einstellungen.ttsAnbieter == TtsProvider.QWEN_CLONE.id) {
+                        _ttsStimme.value = liste.first().id
+                    }
                 }
             } catch (abbruch: CancellationException) {
                 throw abbruch
@@ -1467,13 +1594,15 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             val enrollment = QwenVoiceEnrollment()
+            var angelegt = false
             try {
                 _stimmenLaden.value = true
                 val kennung = enrollment.create(einstellungen.qwenSchluessel, STIMMNAME, wav)
-                setzeTtsStimme(kennung)
+                // Erst der Anbieter, dann die Stimme — sonst landet sie im Platz des vorigen.
                 setzeTtsAnbieter(TtsProvider.QWEN_CLONE.id)
+                setzeTtsStimme(kennung)
                 melde("Deine Stimme ist angelegt.")
-                ladeEigeneStimmen()
+                angelegt = true
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
@@ -1482,6 +1611,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 enrollment.shutdown()
                 _stimmenLaden.value = false
             }
+            // Erst nach dem finally: solange `_stimmenLaden` steht, kehrte das Laden sofort um.
+            if (angelegt) ladeEigeneStimmen()
         }
     }
 
@@ -1593,79 +1724,82 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * kann sich nichts anhäufen: es wird immer in dieselben zwei Dateien geschrieben.
      */
     private suspend fun fuehreSicherungAus(ordner: Uri, still: Boolean = false) {
-        try {
-            val baum = DocumentFile.fromTreeUri(ctx, ordner)
-            if (baum == null || !baum.canWrite()) {
-                if (!still) melde("Auf den Sicherungsordner kann nicht zugegriffen werden.")
-                return
-            }
-
-            val steckbrief = withContext(Dispatchers.IO) {
-                // **Erst vollstaendig danebenlegen, dann erst die alte Sicherung anfassen.**
-                //
-                // Vorher wurde die bestehende Sicherung sofort verschoben und ueberschrieben
-                // und erst dabei zeigte sich, ob das Schreiben ueberhaupt durchkommt. Riss es
-                // ab, war die alte Sicherung schon fort und die neue halb — beide unbrauchbar.
-                // Jetzt entsteht die Sicherung zuerst im Zwischenspeicher der App, wird dort
-                // geprueft, und nur eine geprueft heile Datei wandert in den Ordner.
-                val entwurf = File(ctx.cacheDir, "sicherung-entwurf.zip")
-                entwurf.delete()
-                val brief = entwurf.outputStream().use { aus ->
-                    Sicherung.packe(ctx, db, einstellungen, codex.alleWerte(), aus)
+        // Immer nur eine Sicherung zugleich: alle teilen sich denselben Entwurf im Zwischenspeicher.
+        sicherungsSperre.withLock {
+            try {
+                val baum = DocumentFile.fromTreeUri(ctx, ordner)
+                if (baum == null || !baum.canWrite()) {
+                    if (!still) melde("Auf den Sicherungsordner kann nicht zugegriffen werden.")
+                    return
                 }
-                if (entwurf.length() == 0L) throw IllegalStateException("Die Sicherung blieb leer.")
 
-                try {
-                    // Die bisherige Sicherung rutscht eine Stelle nach hinten — aber nur,
-                    // wenn das auch wirklich gelingt. Schlaegt es fehl, bleibt alles stehen
-                    // wie es war, statt beide Staende zu verlieren.
-                    val bisher = baum.findFile(SICHERUNG_AKTUELL)
-                    if (bisher != null && bisher.length() > 0) {
-                        val vorher = baum.findFile(SICHERUNG_VORHER)
-                            ?: baum.createFile("application/octet-stream", SICHERUNG_VORHER)
-                        if (vorher != null) {
-                            val kopiert = schreibe(vorher.uri) { aus ->
-                                ctx.contentResolver.openInputStream(bisher.uri)?.use { ein ->
-                                    ein.copyTo(aus)
-                                } ?: throw IllegalStateException(
-                                    "Die bisherige Sicherung liess sich nicht lesen.",
-                                )
-                            }
-                            if (kopiert != bisher.length()) {
-                                throw IllegalStateException(
-                                    "Die bisherige Sicherung liess sich nicht zur Seite legen.",
-                                )
+                val steckbrief = withContext(Dispatchers.IO) {
+                    // **Erst vollstaendig danebenlegen, dann erst die alte Sicherung anfassen.**
+                    //
+                    // Vorher wurde die bestehende Sicherung sofort verschoben und ueberschrieben
+                    // und erst dabei zeigte sich, ob das Schreiben ueberhaupt durchkommt. Riss es
+                    // ab, war die alte Sicherung schon fort und die neue halb — beide unbrauchbar.
+                    // Jetzt entsteht die Sicherung zuerst im Zwischenspeicher der App, wird dort
+                    // geprueft, und nur eine geprueft heile Datei wandert in den Ordner.
+                    val entwurf = File(ctx.cacheDir, "sicherung-entwurf.zip")
+                    entwurf.delete()
+                    val brief = entwurf.outputStream().use { aus ->
+                        Sicherung.packe(ctx, db, einstellungen, codex.alleWerte(), aus)
+                    }
+                    if (entwurf.length() == 0L) throw IllegalStateException("Die Sicherung blieb leer.")
+
+                    try {
+                        // Die bisherige Sicherung rutscht eine Stelle nach hinten — aber nur,
+                        // wenn das auch wirklich gelingt. Schlaegt es fehl, bleibt alles stehen
+                        // wie es war, statt beide Staende zu verlieren.
+                        val bisher = baum.findFile(SICHERUNG_AKTUELL)
+                        if (bisher != null && bisher.length() > 0) {
+                            val vorher = baum.findFile(SICHERUNG_VORHER)
+                                ?: baum.createFile("application/octet-stream", SICHERUNG_VORHER)
+                            if (vorher != null) {
+                                val kopiert = schreibe(vorher.uri) { aus ->
+                                    ctx.contentResolver.openInputStream(bisher.uri)?.use { ein ->
+                                        ein.copyTo(aus)
+                                    } ?: throw IllegalStateException(
+                                        "Die bisherige Sicherung liess sich nicht lesen.",
+                                    )
+                                }
+                                if (kopiert != bisher.length()) {
+                                    throw IllegalStateException(
+                                        "Die bisherige Sicherung liess sich nicht zur Seite legen.",
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    val ziel = bisher
-                        ?: baum.createFile("application/octet-stream", SICHERUNG_AKTUELL)
-                        ?: throw IllegalStateException("Die Sicherungsdatei liess sich nicht anlegen.")
-                    val geschrieben = schreibe(ziel.uri) { aus ->
-                        entwurf.inputStream().use { ein -> ein.copyTo(aus) }
+                        val ziel = bisher
+                            ?: baum.createFile("application/octet-stream", SICHERUNG_AKTUELL)
+                            ?: throw IllegalStateException("Die Sicherungsdatei liess sich nicht anlegen.")
+                        val geschrieben = schreibe(ziel.uri) { aus ->
+                            entwurf.inputStream().use { ein -> ein.copyTo(aus) }
+                        }
+                        // Nachgezaehlt, nicht gehofft: eine abgerissene Uebertragung in den
+                        // Drive-Ordner sah bisher wie eine gelungene Sicherung aus.
+                        if (geschrieben != entwurf.length()) {
+                            throw IllegalStateException(
+                                "Die Sicherung kam unvollstaendig an (${geschrieben} von ${entwurf.length()} Bytes).",
+                            )
+                        }
+                        einstellungen.letzteSicherungGroesse = entwurf.length()
+                    } finally {
+                        entwurf.delete()
                     }
-                    // Nachgezaehlt, nicht gehofft: eine abgerissene Uebertragung in den
-                    // Drive-Ordner sah bisher wie eine gelungene Sicherung aus.
-                    if (geschrieben != entwurf.length()) {
-                        throw IllegalStateException(
-                            "Die Sicherung kam unvollstaendig an (${geschrieben} von ${entwurf.length()} Bytes).",
-                        )
-                    }
-                    einstellungen.letzteSicherungGroesse = entwurf.length()
-                } finally {
-                    entwurf.delete()
+                    brief
                 }
-                brief
-            }
 
-            einstellungen.letzteSicherungZeit = System.currentTimeMillis()
-            if (!still) melde("Gesichert: ${steckbrief.beschreibung()}.")
-        } catch (abbruch: CancellationException) {
-            throw abbruch
-        } catch (fehler: Exception) {
-            android.util.Log.w("Sicherung", "fehlgeschlagen", fehler)
-            if (!still) melde(fehler.message ?: "Die Sicherung ist fehlgeschlagen.")
+                einstellungen.letzteSicherungZeit = System.currentTimeMillis()
+                if (!still) melde("Gesichert: ${steckbrief.beschreibung()}.")
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                android.util.Log.w("Sicherung", "fehlgeschlagen", fehler)
+                if (!still) melde(fehler.message ?: "Die Sicherung ist fehlgeschlagen.")
+            }
         }
     }
 
@@ -1738,6 +1872,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun stelleWiederHerAus(uri: Uri) {
         _sucheSicherungsdatei.value = false
         viewModelScope.launch {
+            var datenbankZu = false
             try {
                 val arbeitsordner = File(ctx.cacheDir, "wiederherstellung")
 
@@ -1768,6 +1903,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 val bericht = withContext(Dispatchers.IO) {
                     try {
                         Datenbank.schliesse()
+                        datenbankZu = true
                         // `-wal` und `-shm` muessen weg: bleiben sie von der alten Datenbank
                         // stehen, haelt SQLite sie fuer den gueltigen juengsten Stand und
                         // ueberschreibt die wiederhergestellte Datei damit — die
@@ -1778,9 +1914,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
                         when (befund) {
                             is Sicherung.Befund.NurDatenbank -> {
-                                befund.datei.inputStream().use { ein ->
-                                    ziel.outputStream().use { aus -> ein.copyTo(aus) }
-                                }
+                                ersetzeDatenbank(befund.datei, ziel)
                                 // Eine Sicherung aus der Zeit vor dem vollstaendigen Format:
                                 // die Anhaenge dieses Geraets bleiben stehen, denn sie sind
                                 // alles, was es davon noch gibt.
@@ -1788,19 +1922,38 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                             }
 
                             is Sicherung.Befund.Archiv -> {
-                                File(befund.ordner, Sicherung.EINTRAG_DATENBANK).inputStream().use { ein ->
-                                    ziel.outputStream().use { aus -> ein.copyTo(aus) }
-                                }
-
                                 // Die Anhaenge gehoeren zur Datenbank: bleiben alte stehen,
                                 // zeigen sie auf Notizen, die es nicht mehr gibt, und die
-                                // wiederhergestellten fehlten. Deshalb komplett ersetzt.
+                                // wiederhergestellten fehlten. Deshalb komplett ersetzt —
+                                // aber erst vollständig daneben kopiert, bevor irgendetwas
+                                // Bestehendes angefasst wird. Ein Kopierfehler bricht ab.
                                 val anhangziel = File(ctx.filesDir, Anhangsspeicher.ORDNER)
+                                val anhangneu = File(ctx.filesDir, Anhangsspeicher.ORDNER + ".neu")
                                 val anhangquelle = File(befund.ordner, Sicherung.ORDNER_ANHAENGE)
-                                anhangziel.deleteRecursively()
-                                anhangziel.mkdirs()
+                                anhangneu.deleteRecursively()
+                                anhangneu.mkdirs()
+                                if (!anhangneu.isDirectory) {
+                                    throw IllegalStateException("Die Anhänge liessen sich nicht vorbereiten.")
+                                }
                                 anhangquelle.listFiles()?.forEach { datei ->
-                                    runCatching { datei.copyTo(File(anhangziel, datei.name), overwrite = true) }
+                                    datei.copyTo(File(anhangneu, datei.name), overwrite = true)
+                                }
+
+                                // Die Offline-Aufnahmen, die noch aufs Nachreichen warten. Die
+                                // wartenden Dateien dieses Geräts bleiben stehen — deshalb zerstört
+                                // das Kopieren nichts und kommt vor dem Ersetzen der Datenbank.
+                                File(befund.ordner, Sicherung.ORDNER_WARTEND).listFiles()?.let { dateien ->
+                                    val wartend = File(ctx.filesDir, "wartend").apply { mkdirs() }
+                                    dateien.forEach { datei ->
+                                        datei.copyTo(File(wartend, datei.name), overwrite = true)
+                                    }
+                                }
+
+                                ersetzeDatenbank(File(befund.ordner, Sicherung.EINTRAG_DATENBANK), ziel)
+
+                                anhangziel.deleteRecursively()
+                                if (!anhangneu.renameTo(anhangziel)) {
+                                    throw IllegalStateException("Die Anhänge liessen sich nicht einsetzen.")
                                 }
 
                                 File(befund.ordner, Sicherung.EINTRAG_EINSTELLUNGEN)
@@ -1827,7 +1980,30 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             } catch (fehler: Exception) {
                 android.util.Log.w("Sicherung", "Wiederherstellung fehlgeschlagen", fehler)
                 melde(fehler.message ?: "Die Wiederherstellung ist fehlgeschlagen.")
+                // Ist die Datenbank schon zu, kann die App ohne Neustart nicht weiterarbeiten.
+                if (datenbankZu) _neustartNoetig.value = true
             }
+        }
+    }
+
+    /**
+     * Ersetzt die Datenbankdatei in einem Zug: erst vollständig daneben kopieren, dann
+     * umbenennen. Riss das Kopieren ab, stand vorher schon eine halbe Datenbank da.
+     */
+    private fun ersetzeDatenbank(quelle: File, ziel: File) {
+        val neu = File(ziel.path + ".neu")
+        try {
+            quelle.inputStream().use { ein ->
+                neu.outputStream().use { aus -> ein.copyTo(aus) }
+            }
+        } catch (fehler: Exception) {
+            // Keine halbe Kopie liegen lassen.
+            neu.delete()
+            throw fehler
+        }
+        if (!neu.renameTo(ziel)) {
+            neu.delete()
+            throw IllegalStateException("Die Datenbank liess sich nicht ersetzen.")
         }
     }
 

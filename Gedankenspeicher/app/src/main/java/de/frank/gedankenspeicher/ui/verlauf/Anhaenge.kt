@@ -73,6 +73,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
@@ -171,7 +172,8 @@ fun Anhangsknopf(
     var menue by remember { mutableStateOf(false) }
     var haftnotiz by remember { mutableStateOf(false) }
     var sprachaufnahme by remember { mutableStateOf(false) }
-    var kameradatei by remember { mutableStateOf<File?>(null) }
+    // Nur der Pfad, und der übersteht auch einen Prozesstod, während die Kamera-App offen ist.
+    var kamerapfad by rememberSaveable { mutableStateOf<String?>(null) }
     var erkenntGerade by remember { mutableStateOf(false) }
 
     fun uebernimm(uri: Uri?, art: Anhangsart) {
@@ -184,13 +186,13 @@ fun Anhangsknopf(
     }
 
     /** Aus einem Bild wird der reine Text — das ist der Sinn des Dokumentenscans. */
-    fun erkenneText(quellen: List<Uri>) {
+    fun erkenneText(quellen: List<Uri>, nachher: () -> Unit = {}) {
         if (quellen.isEmpty()) return
         erkenntGerade = true
         bereich.launch {
             try {
-                val seiten = quellen.mapIndexedNotNull { nummer, uri ->
-                    val text = runCatching { leseText(ctx, uri) }.getOrNull().orEmpty().trim()
+                val erkannt = quellen.map { uri -> runCatching { leseText(ctx, uri) }.getOrNull().orEmpty().trim() }
+                val seiten = erkannt.mapIndexedNotNull { nummer, text ->
                     if (text.isBlank()) null else if (quellen.size > 1) "— Seite ${nummer + 1} —\n$text" else text
                 }
                 if (seiten.isEmpty()) {
@@ -200,7 +202,9 @@ fun Anhangsknopf(
                     beiAnhang(
                         Anhang(
                             art = Anhangsart.SCAN,
-                            name = text.lineSequence().first { it.isNotBlank() }.take(40).ifBlank { "Dokumentenscan" },
+                            // Der Name aus dem Seitentext, nicht aus der „— Seite 1 —"-Marke.
+                            name = erkannt.first { it.isNotBlank() }.lineSequence().first { it.isNotBlank() }
+                                .take(40).ifBlank { "Dokumentenscan" },
                             text = text,
                             seiten = quellen.size,
                         ),
@@ -208,6 +212,7 @@ fun Anhangsknopf(
                 }
             } finally {
                 erkenntGerade = false
+                nachher()
             }
         }
     }
@@ -222,8 +227,8 @@ fun Anhangsknopf(
         uebernimm(it, Anhangsart.AUDIO)
     }
     val kamera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { geklappt ->
-        val datei = kameradatei
-        kameradatei = null
+        val datei = kamerapfad?.let(::File)
+        kamerapfad = null
         if (geklappt && datei != null && datei.length() > 0) {
             beiAnhang(speicher.beschreibe(datei, Anhangsart.BILD, "Kameraaufnahme"))
         } else {
@@ -232,12 +237,13 @@ fun Anhangsknopf(
     }
     // Ersatzweg für den Dokumentenscan: wenn der Scanner nicht startet, wird die Vorlage
     // schlicht abfotografiert und daraus derselbe Text gelesen.
-    var scandatei by remember { mutableStateOf<File?>(null) }
+    var scanpfad by rememberSaveable { mutableStateOf<String?>(null) }
     val scanKamera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { geklappt ->
-        val datei = scandatei
-        scandatei = null
+        val datei = scanpfad?.let(::File)
+        scanpfad = null
         if (geklappt && datei != null && datei.length() > 0) {
-            erkenneText(listOf(Uri.fromFile(datei)))
+            // Das Foto war nur Vorlage — nach dem Lesen fliegt es aus dem Anhangsordner.
+            erkenneText(listOf(Uri.fromFile(datei))) { datei.delete() }
         } else {
             datei?.delete()
         }
@@ -276,22 +282,22 @@ fun Anhangsknopf(
                 },
                 beiKamera = {
                     val datei = speicher.neueDatei(".jpg")
-                    kameradatei = datei
+                    kamerapfad = datei.absolutePath
                     runCatching {
                         kamera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.dateien", datei))
                     }.onFailure {
-                        kameradatei = null; datei.delete(); beiFehler("Es wurde keine Kamera-App gefunden.")
+                        kamerapfad = null; datei.delete(); beiFehler("Es wurde keine Kamera-App gefunden.")
                     }
                 },
                 beiScan = {
                     val activity = ctx.findeActivity()
                     val ersatzweg = {
                         val datei = speicher.neueDatei("-scan.jpg")
-                        scandatei = datei
+                        scanpfad = datei.absolutePath
                         runCatching {
                             scanKamera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.dateien", datei))
                         }.onFailure {
-                            scandatei = null; datei.delete()
+                            scanpfad = null; datei.delete()
                             beiFehler("Der Dokumentenscan ist auf diesem Gerät nicht verfügbar.")
                         }
                         Unit
@@ -415,7 +421,8 @@ fun NotizAnhangsmenue(
     val speicher = remember(ctx) { Anhangsspeicher(ctx.applicationContext) }
     val bereich = rememberCoroutineScope()
     var haftnotiz by remember { mutableStateOf(false) }
-    var kameradatei by remember { mutableStateOf<File?>(null) }
+    // Nur der Pfad, und der übersteht auch einen Prozesstod, während die Kamera-App offen ist.
+    var kamerapfad by rememberSaveable { mutableStateOf<String?>(null) }
     var erkenntGerade by remember { mutableStateOf(false) }
 
     /** Ein Fehler wird gemeldet **und** macht das Menü zu — hier gibt es nichts mehr zu holen. */
@@ -434,13 +441,13 @@ fun NotizAnhangsmenue(
     }
 
     /** Aus einem Bild wird der reine Text — das ist der Sinn des Dokumentenscans. */
-    fun erkenneText(quellen: List<Uri>) {
+    fun erkenneText(quellen: List<Uri>, nachher: () -> Unit = {}) {
         if (quellen.isEmpty()) return
         erkenntGerade = true
         bereich.launch {
             try {
-                val seiten = quellen.mapIndexedNotNull { nummer, uri ->
-                    val text = runCatching { leseText(ctx, uri) }.getOrNull().orEmpty().trim()
+                val erkannt = quellen.map { uri -> runCatching { leseText(ctx, uri) }.getOrNull().orEmpty().trim() }
+                val seiten = erkannt.mapIndexedNotNull { nummer, text ->
                     if (text.isBlank()) null else if (quellen.size > 1) "— Seite ${nummer + 1} —\n$text" else text
                 }
                 if (seiten.isEmpty()) {
@@ -450,7 +457,9 @@ fun NotizAnhangsmenue(
                     beiAnhang(
                         Anhang(
                             art = Anhangsart.SCAN,
-                            name = text.lineSequence().first { it.isNotBlank() }.take(40).ifBlank { "Dokumentenscan" },
+                            // Der Name aus dem Seitentext, nicht aus der „— Seite 1 —"-Marke.
+                            name = erkannt.first { it.isNotBlank() }.lineSequence().first { it.isNotBlank() }
+                                .take(40).ifBlank { "Dokumentenscan" },
                             text = text,
                             seiten = quellen.size,
                         ),
@@ -458,6 +467,7 @@ fun NotizAnhangsmenue(
                 }
             } finally {
                 erkenntGerade = false
+                nachher()
             }
         }
     }
@@ -472,8 +482,8 @@ fun NotizAnhangsmenue(
         uebernimm(it, Anhangsart.AUDIO)
     }
     val kamera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { geklappt ->
-        val datei = kameradatei
-        kameradatei = null
+        val datei = kamerapfad?.let(::File)
+        kamerapfad = null
         if (geklappt && datei != null && datei.length() > 0) {
             beiAnhang(speicher.beschreibe(datei, Anhangsart.BILD, "Kameraaufnahme"))
         } else {
@@ -482,12 +492,13 @@ fun NotizAnhangsmenue(
     }
     // Ersatzweg für den Dokumentenscan: wenn der Scanner nicht startet, wird die Vorlage
     // schlicht abfotografiert und daraus derselbe Text gelesen.
-    var scandatei by remember { mutableStateOf<File?>(null) }
+    var scanpfad by rememberSaveable { mutableStateOf<String?>(null) }
     val scanKamera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { geklappt ->
-        val datei = scandatei
-        scandatei = null
+        val datei = scanpfad?.let(::File)
+        scanpfad = null
         if (geklappt && datei != null && datei.length() > 0) {
-            erkenneText(listOf(Uri.fromFile(datei)))
+            // Das Foto war nur Vorlage — nach dem Lesen fliegt es aus dem Anhangsordner.
+            erkenneText(listOf(Uri.fromFile(datei))) { datei.delete() }
         } else {
             datei?.delete()
         }
@@ -517,22 +528,22 @@ fun NotizAnhangsmenue(
         },
         beiKamera = {
             val datei = speicher.neueDatei(".jpg")
-            kameradatei = datei
+            kamerapfad = datei.absolutePath
             runCatching {
                 kamera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.dateien", datei))
             }.onFailure {
-                kameradatei = null; datei.delete(); meld("Es wurde keine Kamera-App gefunden.")
+                kamerapfad = null; datei.delete(); meld("Es wurde keine Kamera-App gefunden.")
             }
         },
         beiScan = {
             val activity = ctx.findeActivity()
             val ersatzweg = {
                 val datei = speicher.neueDatei("-scan.jpg")
-                scandatei = datei
+                scanpfad = datei.absolutePath
                 runCatching {
                     scanKamera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.dateien", datei))
                 }.onFailure {
-                    scandatei = null; datei.delete()
+                    scanpfad = null; datei.delete()
                     meld("Der Dokumentenscan ist auf diesem Gerät nicht verfügbar.")
                 }
                 Unit
@@ -764,7 +775,11 @@ private fun Pdfanhang(anhang: Anhang, beiOeffnen: () -> Unit) {
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    if (anhang.seiten > 0) "${anhang.seiten} Seiten · zum Öffnen tippen" else "Zum Öffnen tippen",
+                    when {
+                        anhang.seiten == 1 -> "1 Seite · zum Öffnen tippen"
+                        anhang.seiten > 0 -> "${anhang.seiten} Seiten · zum Öffnen tippen"
+                        else -> "Zum Öffnen tippen"
+                    },
                     style = Schriften.zeitstempel, color = farben.textSchwach,
                 )
             }
@@ -784,7 +799,9 @@ private fun Tonanhang(anhang: Anhang, beiTitel: ((Anhang, String) -> Unit)?) {
     var schiebtGerade by remember { mutableStateOf(false) }
     var titelBlatt by remember { mutableStateOf(false) }
     val spieler = remember { mutableStateOf<MediaPlayer?>(null) }
-    val gesamt = anhang.dauerMs.coerceAtLeast(1L).toFloat()
+    // Ohne Metadaten (dauerMs == 0) wird die Dauer nach prepare() vom Spieler übernommen.
+    var dauer by remember { mutableStateOf(anhang.dauerMs) }
+    val gesamt = dauer.coerceAtLeast(1L).toFloat()
 
     DisposableEffect(anhang.id) {
         onDispose { spieler.value?.release(); spieler.value = null }
@@ -832,6 +849,7 @@ private fun Tonanhang(anhang: Anhang, beiTitel: ((Anhang, String) -> Unit)?) {
                                             runCatching { seekTo(0) }
                                         }
                                         prepare()
+                                        if (dauer <= 0) dauer = duration.toLong()
                                         if (stelle > 0f) seekTo(stelle.toInt())
                                         start()
                                     }
@@ -887,7 +905,7 @@ private fun Tonanhang(anhang: Anhang, beiTitel: ((Anhang, String) -> Unit)?) {
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(laufzeitText(stelle.toLong()), style = Schriften.zeitstempel, color = farben.textSchwach)
-            Text(laufzeitText(anhang.dauerMs), style = Schriften.zeitstempel, color = farben.textSchwach)
+            Text(laufzeitText(dauer), style = Schriften.zeitstempel, color = farben.textSchwach)
         }
     }
 

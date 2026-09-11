@@ -318,7 +318,8 @@ class EdgeTtsPlayer(context: Context) {
                 }
                 if (erledigt.compareAndSet(false, true)) {
                     webSocket.close(1000, null)
-                    fortsetzung.resume(datei)
+                    // Kam der Abbruch dazwischen, bleibt die MP3 nicht im Cache liegen.
+                    fortsetzung.resume(datei) { _: Throwable -> datei.delete() }
                 }
             }
 

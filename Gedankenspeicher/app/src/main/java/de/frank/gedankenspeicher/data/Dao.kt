@@ -142,8 +142,19 @@ interface NotizDao {
     suspend fun ohneSchluessel(): List<Notiz>
 
     /** Notizen ohne Überschrift, die eine bekommen sollen (F-05, Fehlerfall: beim nächsten Start). */
-    @Query("SELECT * FROM notiz WHERE zustand = 'FERTIG' AND ueberschrift IS NULL ORDER BY erstelltAm ASC LIMIT 20")
+    @Query(
+        "SELECT * FROM notiz WHERE zustand = 'FERTIG' AND ueberschrift IS NULL " +
+            "AND ueberschriftVonHand = 0 ORDER BY erstelltAm ASC LIMIT 20",
+    )
     suspend fun ohneUeberschrift(): List<Notiz>
+
+    /** Alle Notizen einer Sitzung, einmalig — zum Wegräumen ihrer Dateien vor dem Löschen. */
+    @Query("SELECT * FROM notiz WHERE sitzungId = :sitzungId")
+    suspend fun alleAusSitzung(sitzungId: Long): List<Notiz>
+
+    /** Alle Notizen aus Sitzungen im Papierkorb — zum Wegräumen ihrer Dateien vor dem Leeren. */
+    @Query("SELECT * FROM notiz WHERE sitzungId IN (SELECT id FROM sitzung WHERE geloeschtAm IS NOT NULL)")
+    suspend fun imPapierkorb(): List<Notiz>
 
     @Insert
     suspend fun einfuegen(notiz: Notiz): Long
@@ -238,8 +249,9 @@ interface SucheDao {
                n.ueberschrift AS ueberschrift, n.text AS text, n.erstelltAm AS erstelltAm,
                0 AS istKiAntwort
         FROM notiz n JOIN sitzung s ON s.id = n.sitzungId
-        WHERE lower(n.text) LIKE '%' || :begriff || '%'
-           OR lower(COALESCE(n.ueberschrift, '')) LIKE '%' || :begriff || '%'
+        WHERE (lower(n.text) LIKE '%' || :begriff || '%'
+           OR lower(COALESCE(n.ueberschrift, '')) LIKE '%' || :begriff || '%')
+          AND s.geloeschtAm IS NULL
         ORDER BY n.erstelltAm DESC
         LIMIT 200
         """,
@@ -253,6 +265,7 @@ interface SucheDao {
                1 AS istKiAntwort
         FROM ki_antwort a JOIN sitzung s ON s.id = a.sitzungId
         WHERE lower(a.text) LIKE '%' || :begriff || '%'
+          AND s.geloeschtAm IS NULL
         ORDER BY a.erstelltAm DESC
         LIMIT 200
         """,

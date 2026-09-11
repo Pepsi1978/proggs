@@ -146,7 +146,7 @@ class VorleseDienst : Service() {
         return NotificationCompat.Builder(this, KANAL)
             .setSmallIcon(R.drawable.ic_vorlesen)
             .setContentTitle(if (pausiert) "Vorlesen angehalten" else "Der Gedankenspeicher liest vor")
-            .setContentText(if (pausiert) "Zum Weiterhören hier tippen." else "Läuft weiter, auch in anderen Apps.")
+            .setContentText(if (pausiert) "Zum Weiterhören auf „Weiter“ tippen." else "Läuft weiter, auch in anderen Apps.")
             .setContentIntent(oeffnen)
             .addAction(R.drawable.ic_vorlesen, if (pausiert) "Weiter" else "Anhalten", umschalten)
             .addAction(R.drawable.ic_vorlesen, "Beenden", beenden)

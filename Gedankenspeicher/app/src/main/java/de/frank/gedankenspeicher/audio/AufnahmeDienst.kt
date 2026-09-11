@@ -94,7 +94,7 @@ class AufnahmeDienst : Service() {
         return NotificationCompat.Builder(this, KANAL)
             .setSmallIcon(R.drawable.ic_mikrofon)
             .setContentTitle("Der Gedankenspeicher hört zu")
-            .setContentText("Sprich weiter — zum Beenden hier tippen.")
+            .setContentText("Sprich weiter — zum Beenden auf „Beenden“ tippen.")
             .setContentIntent(oeffnen)
             .addAction(R.drawable.ic_mikrofon, "Beenden", beenden)
             .setOngoing(true)

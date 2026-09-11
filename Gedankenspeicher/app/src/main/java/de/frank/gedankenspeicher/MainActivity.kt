@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +50,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.viewModels
 import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.KiAntwort
 import de.frank.gedankenspeicher.data.Kategorieart
@@ -101,7 +102,9 @@ private enum class NeueIdeeAktion { OEFFNEN, SENDEN, AUFNEHMEN }
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 class MainActivity : FragmentActivity() {
 
-    private lateinit var modell: HauptViewModel
+    // Nicht lateinit: Activity-Ergebnisse können nach einem Prozesstod vor der ersten
+    // Komposition eintreffen.
+    private val modell: HauptViewModel by viewModels()
 
     private val mikrofonFrage = registerForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt ->
         if (erlaubt) {
@@ -212,8 +215,7 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            val vm: HauptViewModel = viewModel()
-            modell = vm
+            val vm = modell
             val erscheinungId by vm.erscheinung.collectAsStateWithLifecycle()
 
             GedankenspeicherTheme(erscheinung = Erscheinung.vonId(erscheinungId)) {
@@ -239,13 +241,13 @@ class MainActivity : FragmentActivity() {
         super.onPause()
         // Aufnahme, Vorlesen und Auswertung laufen im Hintergrund weiter — jedes über
         // seinen eigenen Vordergrunddienst. Hier fällt nur der Fingerabdruck-Schutz zu.
-        if (::modell.isInitialized) modell.inDenHintergrund()
+        modell.inDenHintergrund()
     }
 
     override fun onResume() {
         super.onResume()
         // F-04: wartende Aufnahmen nachreichen, sobald die App wieder vorn ist.
-        if (::modell.isInitialized) modell.reicheWartendeNach()
+        modell.reicheWartendeNach()
         frageBenachrichtigungsrechtWennNoetig()
     }
 
@@ -339,6 +341,14 @@ class MainActivity : FragmentActivity() {
                 pruefer.canAuthenticate(BiometricManager.Authenticators.DEVICE_CREDENTIAL) ==
                 BiometricManager.BIOMETRIC_SUCCESS ->
                 bauer.setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+            // API 26-29: DEVICE_CREDENTIAL geht dort nur zusammen mit BIOMETRIC_WEAK.
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.R &&
+                pruefer.canAuthenticate(
+                    BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL,
+                ) == BiometricManager.BIOMETRIC_SUCCESS ->
+                bauer.setAllowedAuthenticators(
+                    BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL,
+                )
             else -> {
                 modell.melde("Auf diesem Gerät ist kein Fingerabdruck und keine Bildschirmsperre eingerichtet.")
                 return
@@ -455,8 +465,11 @@ private fun Oberflaeche(
     // Dadurch muss beim ersten Bewegungsframe nicht erst die gesamte Seitenleiste entstehen.
     val schublade = rememberDrawerState(initialValue = DrawerValue.Open)
     var notizMenue by remember { mutableStateOf<Notiz?>(null) }
-    /** Die Notiz, deren Plus-Menü für Anhänge gerade offen ist. */
-    var notizAnhangMenue by remember { mutableStateOf<Notiz?>(null) }
+    /**
+     * Die id der Notiz, deren Plus-Menü für Anhänge gerade offen ist. Saveable, damit das
+     * Menü (und mit ihm der Launcher der Kopie) einen Prozesstod übersteht.
+     */
+    var notizAnhangMenue by rememberSaveable { mutableStateOf<Long?>(null) }
     /**
      * Der offene Tabelleneditor: links die Notiz (null = neue Tabelle für den Entwurf),
      * rechts die Vorlage (null = leere Tabelle). `null` als Ganzes heisst: zu.
@@ -652,7 +665,7 @@ private fun Oberflaeche(
                 vm.melde("Text kopiert.")
             },
             beiLoeschen = { loeschfrage = it },
-            beiAnhangPlus = { notizAnhangMenue = it },
+            beiAnhangPlus = { notizAnhangMenue = it.id },
         )
 
         // ---- Die Vollbild-Blätter: Zeichnung und Tabelle
@@ -934,22 +947,31 @@ private fun Oberflaeche(
 
         // Das Plus-Menü an einer fertigen Notiz: dieselben Anhänge wie im Entwurf, nur
         // ohne Sprachaufnahme — das Mikrofon steht an der Karte ohnehin daneben.
-        notizAnhangMenue?.let { notiz ->
+        // Das Menü hängt allein an der id: nach einem Prozesstod ist keine Sitzung offen, die
+        // Notiz stünde nicht im Verlauf — und ohne Menü käme die Kopie nie an. Die Notiz
+        // wird erst in den Rückrufen frisch geholt; ist sie nicht mehr da, passiert nichts.
+        notizAnhangMenue?.let { id ->
             NotizAnhangsmenue(
                 beiSchliessen = { notizAnhangMenue = null },
                 beiAnhang = {
-                    vm.fuegeAnhangZuNotiz(notiz, it)
+                    vm.fuegeAnhangZuNotizMitId(id, it)
                     notizAnhangMenue = null
                 },
                 beiFehler = vm::meldeFehler,
                 beiZeichnung = {
-                    zeichnungFuer = notiz
-                    zeichenblattOffen = true
                     notizAnhangMenue = null
+                    bereich.launch {
+                        vm.repo.notiz(id)?.let { notiz ->
+                            zeichnungFuer = notiz
+                            zeichenblattOffen = true
+                        }
+                    }
                 },
                 beiTabelle = {
-                    tabellenBearbeitung = notiz to null
                     notizAnhangMenue = null
+                    bereich.launch {
+                        vm.repo.notiz(id)?.let { notiz -> tabellenBearbeitung = notiz to null }
+                    }
                 },
             )
         }
@@ -977,7 +999,7 @@ private fun Oberflaeche(
                         vm.oeffneBearbeitung(notiz)
                         notizMenue = null
                     }
-                    Menueeintrag("In andere Sitzung verschieben", gesperrt = verlauf.sitzungen.size < 2) {
+                    Menueeintrag("In andere Sitzung verschieben", gesperrt = verlauf.sitzungen.count { it.geloeschtAm == null } < 2) {
                         verschiebeNotiz = notiz
                         notizMenue = null
                     }
@@ -1117,7 +1139,8 @@ private fun Oberflaeche(
                 dragHandle = null,
             ) {
                 MenueBlatt(titel = "In welche Sitzung?") {
-                    verlauf.sitzungen.forEach { s ->
+                    // Sitzungen im Papierkorb sind kein Ziel: beim Leeren ginge die Notiz verloren.
+                    verlauf.sitzungen.filter { it.geloeschtAm == null }.forEach { s ->
                         Menueeintrag(s.titel, gesperrt = s.id == notiz.sitzungId) {
                             vm.verschiebeNotiz(notiz, s.id)
                             verschiebeNotiz = null

@@ -118,7 +118,9 @@ fun VerlaufBildschirm(
     // **Ausser** nach einem Sprung aus der Suche: dann gilt das Sprungziel. Ohne diese
     // Ausnahme überfuhr der Auto-Scroll den Treffer und landete wieder oben — die Karte
     // leuchtete auf, aber ausserhalb des Bildes.
-    LaunchedEffect(zustand.eintraege.size, zustand.sitzung?.id, zustand.hebeHervor) {
+    // hebeHervor ist bewusst kein Schlüssel: fällt es nach dem Aufleuchten auf null, darf
+    // die Liste nicht nach oben zurückspringen.
+    LaunchedEffect(zustand.eintraege.size, zustand.sitzung?.id) {
         if (zustand.eintraege.isEmpty()) return@LaunchedEffect
         val ziel = zustand.hebeHervor
         if (ziel != null) {
@@ -126,11 +128,26 @@ fun VerlaufBildschirm(
                 it is Verlaufseintrag.NotizEintrag && it.notiz.id == ziel
             }
             if (stelle >= 0) {
-                listenzustand.animateScrollToItem(stelle)
+                // Der Platzhalter der laufenden Auswertung steht als erstes item davor.
+                listenzustand.animateScrollToItem(stelle + if (zustand.wertetAus) 1 else 0)
                 return@LaunchedEffect
             }
         }
         listenzustand.animateScrollToItem(0)
+    }
+
+    // Ein neues Sprungziel bei unveränderter Liste: nur hin zum Treffer, nie zurück.
+    LaunchedEffect(zustand.hebeHervor) {
+        val ziel = zustand.hebeHervor ?: return@LaunchedEffect
+        val stelle = zustand.eintraege.indexOfFirst {
+            it is Verlaufseintrag.NotizEintrag && it.notiz.id == ziel
+        }
+        if (stelle >= 0) listenzustand.animateScrollToItem(stelle + if (zustand.wertetAus) 1 else 0)
+    }
+
+    // Der Platzhalter der Auswertung erscheint oben — steht man dort, soll er auch ins Bild.
+    LaunchedEffect(zustand.wertetAus) {
+        if (zustand.wertetAus && listenzustand.firstVisibleItemIndex <= 1) listenzustand.animateScrollToItem(0)
     }
 
     Column(Modifier.fillMaxSize().background(farben.hintergrund)) {
@@ -192,6 +209,11 @@ fun VerlaufBildschirm(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Masse.kartenAbstand),
                 ) {
+                    // Neueste oben: die entstehende Auswertung gehört an den Anfang.
+                    if (zustand.wertetAus) {
+                        item(key = "auswertung-laeuft") { KiKarteEntsteht() }
+                    }
+
                     items(
                         items = zustand.eintraege,
                         key = { eintrag ->
@@ -253,10 +275,6 @@ fun VerlaufBildschirm(
                                 )
                             }
                         }
-                    }
-
-                    if (zustand.wertetAus) {
-                        item(key = "auswertung-laeuft") { KiKarteEntsteht() }
                     }
                 }
             }
@@ -323,7 +341,7 @@ fun VerlaufBildschirm(
                 Aufnahmeknopf(
                     nimmtAuf = zustand.nimmtAuf,
                     hatText = zustand.entwurf.isNotBlank() || zustand.anhaenge.isNotEmpty(),
-                    gesperrt = zustand.mikrofonAbgelehnt && zustand.entwurf.isBlank(),
+                    gesperrt = zustand.mikrofonAbgelehnt && zustand.entwurf.isBlank() && zustand.anhaenge.isEmpty(),
                     pegel = zustand.pegel,
                     beiDruck = {
                         if (zustand.entwurf.isNotBlank() || zustand.anhaenge.isNotEmpty()) beiSenden() else beiAufnahme()

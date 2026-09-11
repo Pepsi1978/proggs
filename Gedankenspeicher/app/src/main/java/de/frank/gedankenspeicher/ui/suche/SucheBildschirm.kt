@@ -62,7 +62,7 @@ fun SucheBildschirm(
     val farben = Farben
     val schrift = Schriften
     val fokus = remember { FocusRequester() }
-    val gruppen = remember(zustand.treffer) { zustand.treffer.groupBy { it.sitzungstitel } }
+    val gruppen = remember(zustand.treffer) { zustand.treffer.groupBy { it.sitzungId } }
 
     // Das Suchfeld bekommt den Fokus sofort — sonst kostet jede Suche einen Extra-Tipp.
     LaunchedEffect(Unit) { runCatching { fokus.requestFocus() } }
@@ -118,8 +118,11 @@ fun SucheBildschirm(
             ) {
                 // Nach Sitzung gruppiert, damit man sieht, aus welchem Zusammenhang ein
                 // Treffer stammt (`02-UI-SPEC.md` B-07).
-                gruppen.forEach { (titel, treffer) ->
-                    item(key = "kopf-$titel", contentType = "kopf") {
+                // Gruppiert nach Sitzungskennung, nicht nach Titel: zwei „Neue Sitzung"
+                // verschmelzen sonst zu einer Gruppe.
+                gruppen.forEach { (sitzungId, treffer) ->
+                    val titel = treffer.first().sitzungstitel
+                    item(key = "kopf-$sitzungId", contentType = "kopf") {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,

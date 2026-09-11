@@ -22,7 +22,8 @@ internal suspend fun Call.warteAufAntwort(): Response =
             }
 
             override fun onResponse(call: Call, response: Response) {
-                fortsetzung.resume(response)
+                // Kam der Abbruch dazwischen, wird die Antwort geschlossen statt liegen gelassen.
+                fortsetzung.resume(response) { _: Throwable -> response.close() }
             }
         })
     }

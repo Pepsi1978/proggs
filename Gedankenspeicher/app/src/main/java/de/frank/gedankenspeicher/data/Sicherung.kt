@@ -42,6 +42,9 @@ object Sicherung {
     const val EINTRAG_STECKBRIEF = "steckbrief.json"
     const val ORDNER_ANHAENGE = "anhaenge/"
 
+    /** Noch nicht transkribierte Aufnahmen aus `files/wartend`. */
+    const val ORDNER_WARTEND = "wartend/"
+
     /** Die Fassung des Sicherungsformats. Steigt sie, weiss eine ältere App Bescheid. */
     const val FORMAT = 1
 
@@ -90,6 +93,7 @@ object Sicherung {
 
         val anhangordner = File(ctx.filesDir, Anhangsspeicher.ORDNER)
         val anhangdateien = anhangordner.listFiles()?.filter { it.isFile }.orEmpty()
+        val wartenddateien = File(ctx.filesDir, "wartend").listFiles()?.filter { it.isFile }.orEmpty()
         val einstellungswerte = einstellungen.alleWerte()
 
         val steckbrief = Steckbrief(
@@ -125,9 +129,18 @@ object Sicherung {
                 zip.closeEntry()
             }
 
+            // Erst öffnen, dann eintragen: eine inzwischen gelöschte Datei wird übersprungen.
             anhangdateien.forEach { datei ->
+                val strom = runCatching { datei.inputStream() }.getOrNull() ?: return@forEach
                 zip.putNextEntry(ZipEntry(ORDNER_ANHAENGE + datei.name))
-                datei.inputStream().use { it.copyTo(zip) }
+                strom.use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+
+            wartenddateien.forEach { datei ->
+                val strom = runCatching { datei.inputStream() }.getOrNull() ?: return@forEach
+                zip.putNextEntry(ZipEntry(ORDNER_WARTEND + datei.name))
+                strom.use { it.copyTo(zip) }
                 zip.closeEntry()
             }
         }
@@ -142,11 +155,20 @@ object Sicherung {
      * jede Sicherung um die zuletzt geschriebenen Einträge ärmer.
      */
     fun checkpoint(datenbank: Datenbank) {
-        runCatching {
-            datenbank.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { es ->
-                es.moveToFirst()
-            }
+        // Spalte 0 = busy: 1 heisst, der Checkpoint blieb unvollständig. Nur echte
+        // Ausführungsfehler bleiben still (0), ein Dauer-busy wird gemeldet.
+        repeat(5) { versuch ->
+            val busy = runCatching {
+                datenbank.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { es ->
+                    if (es.moveToFirst()) es.getInt(0) else 0
+                }
+            }.getOrDefault(0)
+            if (busy == 0) return
+            if (versuch < 4) Thread.sleep(100)
         }
+        throw IllegalStateException(
+            "Die Datenbank ist gerade beschäftigt — die Sicherung wird beim nächsten Mal nachgeholt.",
+        )
     }
 
     private fun zaehle(datenbank: Datenbank, tabelle: String): Int = runCatching {

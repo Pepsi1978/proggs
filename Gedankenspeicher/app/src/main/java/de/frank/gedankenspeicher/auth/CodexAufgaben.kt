@@ -372,14 +372,17 @@ internal fun einzeiler(rohtext: String): String {
         .removeSuffix("```")
         .trim()
     if (roh.isEmpty()) return ""
-    val ausJson = runCatching { JSONObject(roh) }.getOrNull()?.let { json ->
+    val json = runCatching { JSONObject(roh) }.getOrNull()
+    // Gültiges JSON ohne brauchbares Feld ergibt leer — nie den rohen JSON-Text.
+    val ausJson = json?.let {
         listOf("text", "titel", "frage", "ueberschrift")
-            .firstNotNullOfOrNull { json.optString(it).takeIf(String::isNotBlank) }
+            .firstNotNullOfOrNull { feld -> it.optString(feld).takeIf(String::isNotBlank) }
+            .orEmpty()
     }
     return (ausJson ?: roh)
         .replace('\n', ' ')
         .replace(Regex("\\s{2,}"), " ")
         .trim()
-        .trim('„', '“', '"', '\'')
+        .trim('„', '“', '”', '‘', '’', '‚', '»', '«', '›', '‹', '"', '\'')
         .trim()
 }

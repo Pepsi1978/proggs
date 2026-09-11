@@ -86,6 +86,14 @@ fun AnmeldungBildschirm(
                         .schimmer(farben, RoundedCornerShape(Masse.profilRadius)),
                 )
 
+                // Gescheitert, während der Code noch steht: der Fehler zählt, nicht der tote Code.
+                zustand.fehler != null && !zustand.abgelaufen -> Text(
+                    zustand.fehler,
+                    style = schrift.notiztext,
+                    color = farben.fehler,
+                    textAlign = TextAlign.Center,
+                )
+
                 zustand.code.isNotBlank() -> Text(
                     // Vier Zeichen, Trennstrich, fünf — die Gruppierung bestimmt der Server,
                     // nicht die App: eine feste Länge würde einen längeren Code abschneiden.
@@ -114,7 +122,7 @@ fun AnmeldungBildschirm(
                 )
                 Spacer(Modifier.height(24.dp))
 
-                if (zustand.abgelaufen) {
+                if (zustand.abgelaufen || zustand.fehler != null) {
                     GefuellterKnopf("Neuen Code holen", beiNeuerCode)
                 } else {
                     GefuellterKnopf("Im Browser öffnen", beiOeffnen)

@@ -20,9 +20,13 @@ object Nachtraege {
 
     private val zeitformat = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMAN)
 
-    /** Erkennt eine Nachtragszeile und fängt das Datum dahinter ein. */
+    /**
+     * Erkennt eine Nachtragszeile und fängt das Datum dahinter ein. Am Ende nur Leerzeichen
+     * und Tabs: `\s*` schluckte mit MULTILINE einen Umbruch, und Zeile + Abschnittstext
+     * ergäben nicht mehr den Originaltext.
+     */
     val zeilenMuster = Regex(
-        "^\\s*—\\s*Nachtrag vom (\\d{2}\\.\\d{2}\\.\\d{4}, \\d{2}:\\d{2})\\s*—\\s*$",
+        "^\\s*—\\s*Nachtrag vom (\\d{2}\\.\\d{2}\\.\\d{4}, \\d{2}:\\d{2})\\s*—[ \\t]*$",
         RegexOption.MULTILINE,
     )
 
@@ -33,6 +37,53 @@ object Nachtraege {
 
     /** Die Überschriftenzeile aus einem bereits formatierten Datum — zum Wiederzusammensetzen. */
     fun zeileVon(zeitpunktText: String): String = "— Nachtrag vom $zeitpunktText —"
+
+    /**
+     * Setzt vor jeden nicht-leeren Nachtrag seine Überschriftenzeile.
+     *
+     * Von hinten nach vorn, damit die gemerkten Stellen beim Einfügen nicht verrutschen.
+     * Ein Nachtrag reicht bis zur nächstgrößeren Stelle oder bis zum Textende. Liefert den
+     * neuen Text und die Zeitpunkte der Nachträge, die wirklich eine Zeile bekommen haben.
+     */
+    fun setzeZeilenEin(text: String, stellen: List<Pair<Int, Long>>): Pair<String, List<Long>> {
+        var neu = text
+        val zeiten = mutableListOf<Long>()
+        val alle = stellen.map { it.first }
+        for ((stelle, zeit) in stellen.sortedByDescending { it.first }) {
+            if (stelle < 0 || stelle > text.length) continue
+            val ende = alle.filter { it > stelle }.minOrNull() ?: text.length
+            // Nur wenn wirklich etwas dasteht: ein leerer Nachtrag bekommt keine Zeile.
+            if (text.substring(stelle, ende.coerceAtMost(text.length)).isBlank()) continue
+            neu = neu.substring(0, stelle) + zeile(zeit) + "\n" + neu.substring(stelle)
+            zeiten += zeit
+        }
+        return neu to zeiten
+    }
+
+    /**
+     * Zieht die gemerkten Nachtragsstellen mit, wenn sich der Text von [alt] zu [neu] ändert.
+     *
+     * Per gemeinsamem Anfang und Ende: was vor der Änderung liegt, bleibt stehen, was
+     * dahinter liegt, rückt um die Längendifferenz mit, und was mitten im geänderten Stück
+     * lag, landet an dessen Ende.
+     */
+    fun verschiebeStellen(stellen: List<Pair<Int, Long>>, alt: String, neu: String): List<Pair<Int, Long>> {
+        if (stellen.isEmpty() || alt == neu) return stellen
+        val grenze = minOf(alt.length, neu.length)
+        var p = 0
+        while (p < grenze && alt[p] == neu[p]) p++
+        var q = 0
+        while (q < grenze - p && alt[alt.length - 1 - q] == neu[neu.length - 1 - q]) q++
+        val differenz = neu.length - alt.length
+        return stellen.map { (stelle, zeit) ->
+            val verschoben = when {
+                stelle <= p -> stelle
+                stelle >= alt.length - q -> stelle + differenz
+                else -> neu.length - q
+            }
+            verschoben to zeit
+        }
+    }
 
     // --- Die rohen Zeitpunkte als JSON-Feld -------------------------------------------------
 

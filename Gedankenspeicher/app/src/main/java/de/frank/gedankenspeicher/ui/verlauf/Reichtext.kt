@@ -98,10 +98,19 @@ object Reichtext {
     // --- Quellenangaben ---------------------------------------------------------------------
 
     private val markdownLink = Regex("\\[([^\\]\\n]*)]\\((?:https?://|www\\.)[^)\\s]*\\)")
-    private val nackteAdresse = Regex("(?<![\\w\"'(=])(?:https?://|www\\.)\\S+")
+    // Die Adresse endet vor ) und ] und vor abschlie\u00dfenden Satzzeichen; `url(` bleibt gesch\u00fctzt.
+    // Eine ausgeglichene Klammergruppe geh\u00f6rt dazu: \u2026/wiki/Merkur_(Planet).
+    private val nackteAdresse =
+        Regex(
+            "(?<![\\w\"'=])(?<!url\\()(?:https?://|www\\.)(?:[^\\s()\\[\\]]|\\([^\\s()]*\\))*" +
+                "(?:[^\\s()\\[\\].,;:!?'\"]|\\([^\\s()]*\\))",
+        )
     private val klammerRest = Regex("\\(\\s*[,;\u00b7\u2022\\s]*\\)")
     private val fussnote = Regex("\u3010[^\u3011]*\u3011|\\[\\^[^\\]]*]")
+
     private val quellzeile = Regex("(?im)^\\s*(quellen?|sources?|belege?|referenzen)\\s*:.*$")
+    private val mehrfachLeerraumInZeile = Regex("(?<=\\S)[ \\t]{2,}")
+    private val codeZaun = Regex("(?m)^[ \\t]*```.*$")
 
     /**
      * **Streicht jede Quellenangabe.**
@@ -113,9 +122,18 @@ object Reichtext {
      * `url(#…)`-Verweise, die die Grafik zerstörten, nähme man sie weg.
      */
     fun ohneQuellen(text: String): String {
-        val teile = zerlegeAnGrafiken(text)
-        return teile.joinToString("") { (istGrafik, stueck) ->
-            if (istGrafik) stueck else saeubere(stueck)
+        // Erst an Code-Zäunen, dann an Zeichnungen: sonst trennt ein ```svg-Block seinen
+        // schließenden Zaun ab, und der Rest gälte bis zum Ende als offener Codeblock.
+        val teile = zerlegeAnCode(text)
+        return teile.joinToString("") { (istCode, stueck) ->
+            if (istCode) {
+                // Codeblöcke bleiben wie Zeichnungen unberührt: `print()` ist keine leere Quellenklammer.
+                stueck
+            } else {
+                zerlegeAnGrafiken(stueck).joinToString("") { (istGrafik, teil) ->
+                    if (istGrafik) teil else saeubere(teil)
+                }
+            }
         }.replace(Regex("\n{3,}"), "\n\n").trim()
     }
 
@@ -125,8 +143,25 @@ object Reichtext {
         .replace(nackteAdresse, "")
         .replace(quellzeile, "")
         .replace(klammerRest, "")
-        .replace(Regex("[ \t]{2,}"), " ")
+        .replace(mehrfachLeerraumInZeile, " ")
         .replace(Regex("[ \t]+([.,;:!?])"), "$1")
+
+    /** Teilt den Text in abwechselnd „außerhalb eines Codeblocks" und „Codeblock (``` … ```)". */
+    private fun zerlegeAnCode(text: String): List<Pair<Boolean, String>> {
+        val ergebnis = mutableListOf<Pair<Boolean, String>>()
+        var pos = 0
+        while (true) {
+            val auf = codeZaun.find(text, pos) ?: break
+            // Ohne schließenden Zaun reicht der Block bis zum Ende — wie in [zerlege].
+            val zu = codeZaun.find(text, auf.range.last + 1)
+            val ende = zu?.range?.last?.plus(1) ?: text.length
+            ergebnis += false to text.substring(pos, auf.range.first)
+            ergebnis += true to text.substring(auf.range.first, ende)
+            pos = ende
+        }
+        ergebnis += false to text.substring(pos)
+        return ergebnis
+    }
 
     /** Teilt den Text in abwechselnd „außerhalb einer Zeichnung" und „Zeichnung". */
     private fun zerlegeAnGrafiken(text: String): List<Pair<Boolean, String>> {
@@ -535,7 +570,8 @@ private fun Tabellenansicht(tabelle: Baustein.Tabelle, hervorhebung: Modifier) {
                 }
             }
             tabelle.zeilen.forEachIndexed { nr, zeile ->
-                Box(Modifier.fillMaxWidth().height(1.dp).background(farben.rand))
+                // Unter horizontalScroll ist fillMaxWidth 0 dp breit — daher die Summe der Spalten.
+                Box(Modifier.width(breite * tabelle.kopf.size).height(1.dp).background(farben.rand))
                 Row(
                     Modifier.background(
                         if (nr % 2 == 1) farben.hintergrundErhoben.copy(alpha = 0.5f) else Color.Transparent,
@@ -790,7 +826,8 @@ private fun baueInline(roh: String, akzent: Color): AnnotatedString = buildAnnot
     while (i < roh.length) {
         val rest = roh.length - i
         when {
-            roh[i] == '\\' && rest > 1 -> {
+            // Escape nur außerhalb von Code und nur vor einem ASCII-Satzzeichen (`C:\Users` bleibt).
+            roh[i] == '\\' && rest > 1 && !code && roh[i + 1].let { it.code in 33..126 && !it.isLetterOrDigit() } -> {
                 puffer.append(roh[i + 1]); i += 2
             }
 
@@ -806,7 +843,9 @@ private fun baueInline(roh: String, akzent: Color): AnnotatedString = buildAnnot
                 leere(); code = !code; i++
             }
 
-            roh[i] == '*' && !code -> {
+            // Kein Kursiv mitten im Wort („Nutzer*innen“) und nicht freistehend („4 * 5“).
+            roh[i] == '*' && !code && grenzt(roh, i) &&
+                !(roh.getOrNull(i - 1)?.isWhitespace() != false && roh.getOrNull(i + 1)?.isWhitespace() != false) -> {
                 leere(); kursiv = !kursiv; i++
             }
 

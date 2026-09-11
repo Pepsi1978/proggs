@@ -69,6 +69,8 @@ data class KiBlattzustand(
     val kontextzahl: Int = 0,
     val websuche: Boolean = false,
     val websucheKiEntscheidet: Boolean = false,
+    /** Steht die Grundhaltung in den Einstellungen auf „KI entscheidet“? */
+    val grundhaltungKi: Boolean = false,
     val profil: Auswertungsprofil? = null,
     val holtFrage: Boolean = false,
     val rueckfrage: String = "",

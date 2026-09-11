@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- allowBackup=false schaltet ab targetSdk 31 den Gerät-zu-Gerät-Transfer nicht ab. Ohne
+     diese Regeln wanderten die EncryptedSharedPreferences ohne ihren Keystore-Schlüssel mit,
+     und die App stürzte auf dem neuen Gerät bei jedem Start ab. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

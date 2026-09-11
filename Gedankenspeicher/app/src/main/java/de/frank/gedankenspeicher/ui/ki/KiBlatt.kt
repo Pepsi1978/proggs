@@ -125,15 +125,17 @@ fun KiBlatt(
 
         // Steht die Grundhaltung auf „KI entscheidet", zeigt die Zeile drei Wahlfelder statt
         // eines Schalters (`02-UI-SPEC.md` B-03, Punkt 3).
-        if (zustand.websucheKiEntscheidet) {
+        // Maßgeblich ist die Grundhaltung, nicht die aktuelle Wahl — sonst verschwände
+        // „KI entscheidet" nach dem ersten Tipp auf „aus" oder „immer".
+        if (zustand.grundhaltungKi) {
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
                 Text("Websuche", style = schrift.einstellung, color = farben.textMittel, modifier = Modifier.weight(1f))
-                Wahlfeld("aus", gewaehlt = false) { beiWebsuche(false) }
+                Wahlfeld("aus", gewaehlt = !zustand.websuche && !zustand.websucheKiEntscheidet) { beiWebsuche(false) }
                 Spacer(Modifier.width(6.dp))
-                Wahlfeld("immer", gewaehlt = false) { beiWebsuche(true) }
+                Wahlfeld("immer", gewaehlt = zustand.websuche && !zustand.websucheKiEntscheidet) { beiWebsuche(true) }
                 Spacer(Modifier.width(6.dp))
-                Wahlfeld("KI entscheidet", gewaehlt = true) { beiWebsucheKi() }
+                Wahlfeld("KI entscheidet", gewaehlt = zustand.websucheKiEntscheidet) { beiWebsucheKi() }
             }
         } else {
             Schalterzeile(beschriftung = "Websuche", an = zustand.websuche, beiAenderung = beiWebsuche)
@@ -173,7 +175,8 @@ fun KiBlatt(
                 Text("Die KI liest deine Notizen …", style = schrift.zeitstempel, color = farben.textSchwach)
             }
 
-            zustand.fehler != null -> Column {
+            // Steht eine Rückfrage, darf ein Antwort-Fehler sie nicht verdrängen.
+            zustand.fehler != null && zustand.rueckfrage.isBlank() -> Column {
                 Text(zustand.fehler, style = schrift.notiztext, color = farben.fehler)
                 TextButton(onClick = beiErneut) {
                     Text("Nochmal versuchen", style = schrift.knopf, color = farben.akzent)
@@ -188,6 +191,12 @@ fun KiBlatt(
                 ),
                 color = farben.textStark,
             )
+        }
+
+        // Fehler zur Antwort: unter der Rückfrage, ohne Wiederholen — die Frage bleibt stehen.
+        if (zustand.fehler != null && zustand.rueckfrage.isNotBlank() && !zustand.codexFehlt && !zustand.holtFrage) {
+            Spacer(Modifier.height(8.dp))
+            Text(zustand.fehler, style = schrift.notiztext, color = farben.fehler)
         }
 
         if (zustand.rueckfrage.isNotBlank() && !zustand.codexFehlt) {

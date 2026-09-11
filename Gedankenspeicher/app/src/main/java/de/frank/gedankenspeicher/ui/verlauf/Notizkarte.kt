@@ -150,7 +150,12 @@ fun Notizkarte(
 
                 Notizzustand.WARTET_AUF_TRANSKRIPTION -> HinweisZeile(
                     symbol = { Icon(Icons.Outlined.CloudOff, null, Modifier.size(16.dp), tint = farben.textSchwach) },
-                    text = "Wartet auf Netz",
+                    // Nach einem gescheiterten Versuch liegt es nicht (nur) am Netz.
+                    text = if (notiz.versucheTranskription > 0) {
+                        "Nicht durchgekommen — ein neuer Versuch folgt"
+                    } else {
+                        "Wartet auf Netz"
+                    },
                     farbe = farben.textSchwach,
                 )
 
@@ -330,6 +335,9 @@ private fun NachtragsAbschnitte(
     var zaehler = 0
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         abschnitte.forEach { abschnitt ->
+            val absaetze = remember(abschnitt.text) {
+                Zwischenspeicher.absaetze.hole(abschnitt.text, Absaetze::teile)
+            }
             if (abschnitt.nachtragVom != null) {
                 Column {
                     Spacer(Modifier.height(4.dp))
@@ -350,11 +358,11 @@ private fun NachtragsAbschnitte(
                     Spacer(Modifier.height(4.dp))
                     Box(Modifier.fillMaxWidth().height(1.dp).background(farben.rand))
                 }
-                // Die Überschriftenzeile ist für den Vorleser ein eigener Absatz.
-                zaehler += 1
-            }
-            val absaetze = remember(abschnitt.text) {
-                Zwischenspeicher.absaetze.hole(abschnitt.text, Absaetze::teile)
+                // Die Überschriftenzeile hängt meist nur mit einfachem Umbruch am ersten
+                // Nachtragsabsatz — dann sind beide für den Vorleser ein Absatz. Ob sie
+                // allein zählt (leerer oder ungetrimmter Nachtrag), zeigt dieselbe Zerlegung.
+                zaehler += Absaetze.teile(Nachtraege.zeileVon(abschnitt.nachtragVom) + abschnitt.text).size -
+                    absaetze.size
             }
             AbsatzText(
                 text = abschnitt.text,

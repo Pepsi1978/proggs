@@ -114,6 +114,8 @@ class GeraetTtsPlayer(context: Context) {
         onError: (Exception) -> Unit,
     ) {
         val kennung = UUID.randomUUID().toString()
+        // Je Auftrag genau eine Rückmeldung — auch wenn Android onError ohne onStart liefert.
+        val erledigt = AtomicBoolean(false)
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {
                 if (utteranceId == kennung) {
@@ -123,32 +125,42 @@ class GeraetTtsPlayer(context: Context) {
             }
 
             override fun onDone(utteranceId: String?) {
-                if (utteranceId == kennung && laeuftGerade.compareAndSet(true, false)) onComplete()
+                if (utteranceId == kennung && erledigt.compareAndSet(false, true)) {
+                    laeuftGerade.set(false)
+                    onComplete()
+                }
             }
 
             @Deprecated("Von der Plattform vorgegeben", ReplaceWith(""))
             override fun onError(utteranceId: String?) {
-                if (utteranceId == kennung && laeuftGerade.compareAndSet(true, false)) {
+                if (utteranceId == kennung && erledigt.compareAndSet(false, true)) {
+                    laeuftGerade.set(false)
                     onError(TtsPlaybackException("Die Sprachausgabe des Geräts brach ab."))
                 }
             }
 
             override fun onError(utteranceId: String?, errorCode: Int) {
-                if (utteranceId == kennung && laeuftGerade.compareAndSet(true, false)) {
+                if (utteranceId == kennung && erledigt.compareAndSet(false, true)) {
+                    laeuftGerade.set(false)
                     onError(TtsPlaybackException("Die Sprachausgabe des Geräts brach ab ($errorCode)."))
                 }
             }
 
             override fun onStop(utteranceId: String?, interrupted: Boolean) {
                 // Ein Abbruch von unserer Seite ist kein Fehler — er meldet nur das Ende.
-                if (utteranceId == kennung && laeuftGerade.compareAndSet(true, false)) onComplete()
+                if (utteranceId == kennung && erledigt.compareAndSet(false, true)) {
+                    laeuftGerade.set(false)
+                    onComplete()
+                }
             }
         })
         tts.setSpeechRate(speechRate.coerceIn(0.5f, 2.0f))
         val ergebnis = tts.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle(), kennung)
         if (ergebnis != TextToSpeech.SUCCESS) {
             laeuftGerade.set(false)
-            onError(TtsPlaybackException("Die Sprachausgabe des Geräts liess sich nicht starten."))
+            if (erledigt.compareAndSet(false, true)) {
+                onError(TtsPlaybackException("Die Sprachausgabe des Geräts liess sich nicht starten."))
+            }
         }
     }
 

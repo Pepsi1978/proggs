@@ -183,6 +183,8 @@ class CodexAuthManager(context: Context) {
     private val appContext = context.applicationContext
     private val connectivityManager = appContext.getSystemService(ConnectivityManager::class.java)
     private val refreshMutex = Mutex()
+    // Schützt Prüfung + Zurückschreiben im Refresh gegen ein gleichzeitiges logout().
+    private val tokenSperre = Any()
     private val loginMutex = Mutex()
     private val activeLoginJob = AtomicReference<Job?>()
     private val activeQuestionCall = ActiveCallTracker()
@@ -251,7 +253,7 @@ class CodexAuthManager(context: Context) {
     }
 
     fun logout() {
-        store.edit().clear().apply()
+        synchronized(tokenSperre) { store.edit().clear().apply() }
     }
 
     // ---------------------------------------------------------------------------------
@@ -305,7 +307,8 @@ class CodexAuthManager(context: Context) {
         effort: ReasoningEffort,
     ): String = withContext(Dispatchers.IO) {
         if (notizen.isBlank()) return@withContext ""
-        einzeiler(requestCodexResponse(rueckfragePayload(notizen, model, effort), false))
+        // Nur die Rückfrage hängt am KI-Blatt und darf mit ihm abgebrochen werden.
+        einzeiler(requestCodexResponse(rueckfragePayload(notizen, model, effort), false, abbrechbar = true))
     }
 
     /** F-09, zweiter Schritt: die Auswertung selbst. */
@@ -450,15 +453,21 @@ class CodexAuthManager(context: Context) {
             val idToken = json.optString("id_token").takeIf(String::isNotBlank)
             val foundEmail = idToken?.let(::jwtEmail) ?: jwtEmail(newAccessToken)
             val foundAccountId = jwtAccountId(newAccessToken) ?: idToken?.let(::jwtAccountId)
-            store.edit()
-                .putString(KEY_ACCESS_TOKEN, newAccessToken)
-                .putLong(KEY_EXPIRES_AT, expiryTime(json))
-                .apply {
-                    if (newRefreshToken != null) putString(KEY_REFRESH_TOKEN, newRefreshToken)
-                    if (foundEmail != null) putString(KEY_EMAIL, foundEmail)
-                    if (foundAccountId != null) putString(KEY_ACCOUNT_ID, foundAccountId)
+            // Während der Erneuerung abgemeldet: nichts zurückschreiben.
+            synchronized(tokenSperre) {
+                if (store.getString(KEY_REFRESH_TOKEN, null) != refreshToken) {
+                    throw CodexAuthException(AuthErrorKind.REAUTH, "Bitte zuerst bei OpenAI anmelden.")
                 }
-                .apply()
+                store.edit()
+                    .putString(KEY_ACCESS_TOKEN, newAccessToken)
+                    .putLong(KEY_EXPIRES_AT, expiryTime(json))
+                    .apply {
+                        if (newRefreshToken != null) putString(KEY_REFRESH_TOKEN, newRefreshToken)
+                        if (foundEmail != null) putString(KEY_EMAIL, foundEmail)
+                        if (foundAccountId != null) putString(KEY_ACCOUNT_ID, foundAccountId)
+                    }
+                    .apply()
+            }
             newAccessToken
         }
     }
@@ -488,9 +497,9 @@ class CodexAuthManager(context: Context) {
     private suspend fun executeWithDnsRetry(client: OkHttpClient, request: Request): Response =
         withDnsRetry { client.newCall(request).awaitResponse() }
 
-    private suspend fun executeQuestionRequest(request: Request): TrackedResponse = withDnsRetry {
+    private suspend fun executeQuestionRequest(request: Request, abbrechbar: Boolean): TrackedResponse = withDnsRetry {
         val call = RESPONSES_HTTP_CLIENT.newCall(request)
-        activeQuestionCall.track(call)
+        if (abbrechbar) activeQuestionCall.track(call)
         try {
             TrackedResponse(call, call.awaitResponse())
         } catch (error: Throwable) {
@@ -510,13 +519,14 @@ class CodexAuthManager(context: Context) {
     internal suspend fun requestCodexResponse(
         payload: JSONObject,
         decodeQuestions: Boolean,
+        abbrechbar: Boolean = false,
         onQuestion: suspend (String) -> Unit = {},
     ): String {
         var attempt = 0
         while (true) {
             var deliveredQuestion = false
             try {
-                return requestCodexResponseOnce(payloadForAttempt(payload, attempt), decodeQuestions) { question ->
+                return requestCodexResponseOnce(payloadForAttempt(payload, attempt), decodeQuestions, abbrechbar) { question ->
                     deliveredQuestion = true
                     onQuestion(question)
                 }
@@ -542,6 +552,7 @@ class CodexAuthManager(context: Context) {
     private suspend fun requestCodexResponseOnce(
         payload: JSONObject,
         decodeQuestions: Boolean,
+        abbrechbar: Boolean,
         onQuestion: suspend (String) -> Unit,
     ): String {
         val token = validAccessToken()
@@ -561,7 +572,7 @@ class CodexAuthManager(context: Context) {
             .header("ChatGPT-Account-ID", requestAccountId)
             .build()
         val accumulator = CodexSseAccumulator(decodeQuestions)
-        val trackedResponse = executeQuestionRequest(httpRequest)
+        val trackedResponse = executeQuestionRequest(httpRequest, abbrechbar)
         try {
             trackedResponse.response.use { response ->
                 val responseBody = response.body
