@@ -192,6 +192,14 @@
 - **FIX:** `WM_GETMINMAXINFO` per `HwndSource.AddHook` abfangen, `MonitorFromWindow(MONITOR_DEFAULTTONEAREST)`+`GetMonitorInfo`, `ptMaxPosition`/`ptMaxSize` auf `rcWork` (NICHT `rcMonitor`) des aktuellen Monitors setzen. WindowStyle nicht zur Laufzeit togglen.
 - **Quelle:** https://github.com/dotnet/wpf/issues/3766 · https://github.com/dotnet/wpf/issues/2242 (extern)
 
+### A21. Selbst positionierte Hover-Blase neben Topmost-Overlay springt / liegt dahinter / flackert ⭐ EIGENER FALL (TVO/CVO, 11.09.2026)
+- **Symptom:** Hover-Blase (WPF-`Popup`) links neben dem Overlay sitzt je nach zuvor gezeigtem Titel mal zu weit links, mal auf dem Overlay; liegt sie auf dem Auslöser, flackert sie (MouseLeave/MouseEnter im Wechsel); nach ein paar Sekunden rutscht sie hinter das Overlay.
+- **Ursache (3 Schichten):** (1) X aus einer VORAB gemessenen Breite berechnet (`child.Measure` auf einem Element außerhalb des Visual-Trees liefert u.a. die gecachte Größe des vorigen Inhalts; auch `InvalidateMeasure` hat es nicht zuverlässig behoben) und dann der WPF-Popup-Platzierung übergeben. (2) Popup-HWND fängt die Maus, wenn es über dem Auslöser liegt. (3) Popup-HWND ist unbesessen → der periodische `SetWindowPos(HWND_TOPMOST)`-Reassert des Overlays schiebt das Overlay davor (vgl. A13).
+- **Versionen:** alle WPF.
+- **FIX (Poka-Yoke Stufe 3):** Kein `Popup`, sondern eigener `Window`-Subtyp mit `Owner = overlay` (besessene Fenster liegen per OS-Regel immer über dem Owner), `SizeToContent`, `WS_EX_TRANSPARENT|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW`. Position NACH dem Layout in Gerätepixeln: `GetWindowRect(tip)` für die echte Größe, Anker = `sichtbaresElement.PointToScreen`, dann `SetWindowPos(SWP_NOSIZE|SWP_NOZORDER|SWP_NOACTIVATE)`; `SizeChanged` → neu platzieren. Anzeigen mit `Opacity=0` → `Show` → `UpdateLayout` → platzieren → `Opacity=1`. Falle: Owned Windows verstecken sich NICHT mit dem Owner → im Hide-Pfad mit verstecken; Fenster-Aufzählungen („ist ein Hilfsdialog offen?“) müssen den Subtyp ausnehmen.
+- **Muster-Erkennung:** Jede Stelle, die ein `Popup` per `HorizontalOffset` aus einer vorab berechneten Größe neben ein Topmost-Fenster setzt → auf besessenes Fenster + Pixel-`SetWindowPos` umbauen. Positionsfehler zuerst im Diagnose-Log messen (TVO/CVO: `diag.log`, `ctx:"QuickTitle"`), nicht raten.
+- **Quelle:** eigener Fall, `TerminalVoiceOverlay-Windows`/`ClaudeVoiceOverlay-Windows` `OverlayWindow.xaml.cs` `ShowQuickTitle`/`PlaceQuickTitle` (TVO 1.11.16, CVO 2.4.16).
+
 ---
 
 ## C) Click-through / Transparenz / Layered
