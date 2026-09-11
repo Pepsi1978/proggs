@@ -3518,29 +3518,41 @@ namespace TerminalVoiceOverlay.Views
                 {
                     Child = border,
                     AllowsTransparency = true,
-                    Placement = System.Windows.Controls.Primitives.PlacementMode.Left,
+                    Placement = System.Windows.Controls.Primitives.PlacementMode.Absolute,
                     StaysOpen = true,
                     Focusable = false,
                     IsHitTestVisible = false,
+                };
+                // Popup ist ein eigenes HWND: liegt es ueber der Zahl, schluckt es
+                // die Maus -> MouseLeave/MouseEnter im Wechsel -> Flackern.
+                // WS_EX_TRANSPARENT macht das Fenster maus-durchlaessig.
+                _quickTitlePopup.Opened += (_, _) =>
+                {
+                    if (PresentationSource.FromVisual(_quickTitlePopup.Child) is System.Windows.Interop.HwndSource src)
+                    {
+                        int ex = Win32.GetWindowLong(src.Handle, Win32.GWL_EXSTYLE);
+                        Win32.SetWindowLong(src.Handle, Win32.GWL_EXSTYLE, ex | 0x20 /*WS_EX_TRANSPARENT*/ | Win32.WS_EX_NOACTIVATE);
+                    }
                 };
             }
 
             _quickTitleSlot = slot;
             _quickTitleText!.Text = _quickTitles[slot - 1] ?? $"Prompt {slot}";
 
-            System.Windows.Point origin;
-            try { origin = btn.TranslatePoint(new System.Windows.Point(0, 0), this); }
-            catch { return; }
+            var source = PresentationSource.FromVisual(this);
+            if (source?.CompositionTarget == null) return;
             var child = (FrameworkElement)_quickTitlePopup.Child;
             child.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
 
-            // Placement=Left: rechte Popup-Kante an der linken Zahl-Kante. Um die
-            // X-Position der Zahl im Fenster weiter nach links schieben -> rechte
-            // Kante immer TooltipMargin links vom Overlay, vertikal mittig zur Zahl.
+            // Absolut in Bildschirm-DIPs: rechte Popup-Kante immer TooltipMargin
+            // links vom Overlay, vertikal mittig zur Zahl. Keine Placement=Left-
+            // Logik mehr, die bei kurzen Titeln auf das Overlay umklappen kann.
+            var fromDevice = source.CompositionTarget.TransformFromDevice;
+            var winTopLeft = fromDevice.Transform(PointToScreen(new System.Windows.Point(0, 0)));
+            var btnTopLeft = fromDevice.Transform(btn.PointToScreen(new System.Windows.Point(0, 0)));
             _quickTitlePopup.IsOpen = false;
-            _quickTitlePopup.PlacementTarget = btn;
-            _quickTitlePopup.HorizontalOffset = -TooltipMargin - origin.X;
-            _quickTitlePopup.VerticalOffset = (btn.ActualHeight - child.DesiredSize.Height) / 2.0;
+            _quickTitlePopup.HorizontalOffset = winTopLeft.X - TooltipMargin - child.DesiredSize.Width;
+            _quickTitlePopup.VerticalOffset = btnTopLeft.Y + (btn.ActualHeight - child.DesiredSize.Height) / 2.0;
             _quickTitlePopup.IsOpen = true;
         }
 
