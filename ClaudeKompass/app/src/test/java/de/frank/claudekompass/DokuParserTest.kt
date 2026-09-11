@@ -1,6 +1,6 @@
 package de.frank.claudekompass
 
-import de.frank.claudekompass.update.DokuParser
+import de.frank.kompass.update.DokuParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

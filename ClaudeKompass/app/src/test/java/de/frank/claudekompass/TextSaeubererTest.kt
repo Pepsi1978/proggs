@@ -1,6 +1,6 @@
 package de.frank.claudekompass
 
-import de.frank.claudekompass.tts.TextSaeuberer
+import de.frank.kompass.tts.TextSaeuberer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -1,9 +1,9 @@
 package de.frank.claudekompass
 
-import de.frank.claudekompass.ai.geraeteCodeGruppen
-import de.frank.claudekompass.audio.WavSchneider
-import de.frank.claudekompass.data.local.baueSuchAnfrage
-import de.frank.claudekompass.data.local.normalisiereFuerSuche
+import de.frank.kompass.ai.geraeteCodeGruppen
+import de.frank.kompass.audio.WavSchneider
+import de.frank.kompass.data.local.baueSuchAnfrage
+import de.frank.kompass.data.local.normalisiereFuerSuche
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

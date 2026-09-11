@@ -14,9 +14,9 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 14
-        versionName = "0.4.11"
+        versionName = "0.4.12"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 14:29 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 14:46 Uhr\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
         buildConfigField("String", "SEEDED_CLI_VERSION", "\"0.153.3\"")
@@ -32,6 +32,13 @@ android {
                 "proguard-rules.pro",
             )
         }
+    }
+
+    // Gemeinsamer Code beider Kompass-Apps. Nur update/ und AppProfil liegen pro App.
+    sourceSets {
+        getByName("main").java.srcDir(rootProject.file("../KompassKern/src/main/java"))
+        getByName("test").java.srcDir(rootProject.file("../KompassKern/src/test/java"))
+        getByName("androidTest").java.srcDir(rootProject.file("../KompassKern/src/androidTest/java"))
     }
 
     compileOptions {

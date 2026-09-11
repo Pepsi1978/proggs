@@ -4,8 +4,8 @@
 -keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*
 
 # Room-Generate + Entities werden reflektiv angefasst.
--keep class de.frank.claudekompass.data.local.** { *; }
--keep class de.frank.claudekompass.data.model.** { *; }
+-keep class de.frank.kompass.data.local.** { *; }
+-keep class de.frank.kompass.data.model.** { *; }
 
 # OkHttp/Okio bringen eigene Regeln mit; die folgenden Warnungen sind bekannt und harmlos.
 -dontwarn okhttp3.internal.platform.**

@@ -1,10 +1,10 @@
 package de.frank.claudekompass
 
-import de.frank.claudekompass.audio.FilterSchalter
-import de.frank.claudekompass.audio.GroqAbschnitt
-import de.frank.claudekompass.audio.GroqAntwort
-import de.frank.claudekompass.audio.HalluzinationsFilter
-import de.frank.claudekompass.audio.SprachAnalyse
+import de.frank.kompass.audio.FilterSchalter
+import de.frank.kompass.audio.GroqAbschnitt
+import de.frank.kompass.audio.GroqAntwort
+import de.frank.kompass.audio.HalluzinationsFilter
+import de.frank.kompass.audio.SprachAnalyse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
