@@ -98,6 +98,9 @@ import de.frank.genialeideen.ui.theme.Motion
 import de.frank.genialeideen.ui.theme.Semantisch
 import de.frank.genialeideen.ui.theme.schwebend
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.verticalScroll
@@ -393,8 +396,11 @@ fun ListenScreen(
             treffer = treffer,
             letzteAnfragen = letzteAnfragen,
             aufText = viewModel::suche,
+            aufAbschicken = viewModel::merkeSuche,
             aufIdee = { idee ->
                 suchOffen = false
+                // Erst eine gewählte Idee macht die Anfrage zu einer, die sich zu merken lohnt.
+                viewModel.merkeSuche()
                 viewModel.leereSuche()
                 aufIdee(idee)
             },
@@ -419,6 +425,7 @@ private fun SuchFenster(
     treffer: List<IdeeEntity>,
     letzteAnfragen: List<String>,
     aufText: (String) -> Unit,
+    aufAbschicken: () -> Unit,
     aufIdee: (IdeeEntity) -> Unit,
     aufSchliessen: () -> Unit,
     aufVerlaufLeeren: () -> Unit,
@@ -472,6 +479,8 @@ private fun SuchFenster(
                             value = text,
                             onValueChange = aufText,
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { aufAbschicken() }),
                             textStyle = MaterialTheme.typography.bodyMedium.copy(color = gold.textPrimaer),
                             cursorBrush = SolidColor(gold.primaer),
                             modifier = Modifier.fillMaxWidth().focusRequester(feld),

@@ -411,13 +411,15 @@ class IdeenViewModel(
         }
     }
 
-    fun aendere(idee: IdeeEntity, titel: String, text: String) {
+    /** [still]: Zwischensichern beim Verlassen — ohne Meldung, der Nutzer bearbeitet ja weiter. */
+    fun aendere(idee: IdeeEntity, titel: String, text: String, still: Boolean = false) {
         viewModelScope.launch {
             // Ein leerer Titel wuerde die Idee in der Liste unauffindbar machen — dann greift
             // derselbe Ersatztitel wie beim Anlegen.
             val name = titel.trim().ifBlank { ersatzTitel(text) }
-            repository.aendere(idee, name, text)
-            zeige(Meldung("Änderung übernommen."))
+            // Frisch laden: Beim wiederholten Zwischensichern ist das übergebene Objekt veraltet.
+            repository.aendere(repository.lade(idee.id) ?: idee, name, text)
+            if (!still) zeige(Meldung("Änderung übernommen."))
         }
     }
 
@@ -458,8 +460,16 @@ class IdeenViewModel(
         suchJob = viewModelScope.launch {
             kotlinx.coroutines.delay(250) // Entprellung beim Tippen
             _suchtreffer.value = repository.suche(text)
-            repository.merkeSuchanfrage(text)
         }
+    }
+
+    /**
+     * Merkt die Anfrage im Verlauf — nur beim Abschicken oder beim Öffnen eines Treffers, nicht
+     * jeden Zwischenstand beim Tippen („ab“, „abc“ …).
+     */
+    fun merkeSuche() {
+        val text = _suchtext.value
+        viewModelScope.launch { repository.merkeSuchanfrage(text) }
     }
 
     fun leereSuche() {

@@ -59,7 +59,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -158,6 +162,9 @@ fun DetailScreen(
             aufSpeichern = { neuerTitel, neuerText ->
                 viewModel.aendere(aktuelle, neuerTitel, neuerText)
                 bearbeiten = false
+            },
+            aufZwischenspeichern = { neuerTitel, neuerText ->
+                viewModel.aendere(aktuelle, neuerTitel, neuerText, still = true)
             },
             aufVerwerfen = { bearbeiten = false },
         )
@@ -349,6 +356,7 @@ private fun IdeeBearbeiten(
     idee: IdeeEntity,
     themeWahl: String,
     aufSpeichern: (String, String) -> Unit,
+    aufZwischenspeichern: (String, String) -> Unit,
     aufVerwerfen: () -> Unit,
 ) {
     val gold = LocalGold.current
@@ -357,10 +365,40 @@ private fun IdeeBearbeiten(
     val geaendert = neuerTitel != idee.titel || neuerText != idee.text
     val darfSpeichern = neuerTitel.isNotBlank() || neuerText.isNotBlank()
 
+    // Geht die App in den Hintergrund oder verlässt man den Bildschirm auf anderem Weg (etwa
+    // über eine Meldung), wird das Getippte still gesichert. Nach „Übernehmen“ oder
+    // „Verwerfen“ nicht mehr — Verworfenes soll verworfen bleiben.
+    var erledigt by remember(idee.id) { mutableStateOf(false) }
+    val standJetzt by rememberUpdatedState(Triple(neuerTitel, neuerText, geaendert && darfSpeichern))
+    val zwischenspeichernJetzt by rememberUpdatedState(aufZwischenspeichern)
+    val sichereStill = {
+        val (t, x, noetig) = standJetzt
+        if (noetig && !erledigt) zwischenspeichernJetzt(t, x)
+    }
+    val lebenszyklus = LocalLifecycleOwner.current
+    DisposableEffect(lebenszyklus) {
+        val beobachter = LifecycleEventObserver { _, ereignis ->
+            if (ereignis == Lifecycle.Event.ON_STOP) sichereStill()
+        }
+        lebenszyklus.lifecycle.addObserver(beobachter)
+        onDispose {
+            lebenszyklus.lifecycle.removeObserver(beobachter)
+            sichereStill()
+        }
+    }
+    val uebernehmen = { t: String, x: String ->
+        erledigt = true
+        aufSpeichern(t, x)
+    }
+    val verwerfen = {
+        erledigt = true
+        aufVerwerfen()
+    }
+
     // Zurückwischen wirft das Getippte nicht weg, sondern übernimmt es — nichts soll
     // unterwegs verloren gehen.
     BackHandler {
-        if (geaendert && darfSpeichern) aufSpeichern(neuerTitel, neuerText) else aufVerwerfen()
+        if (geaendert && darfSpeichern) uebernehmen(neuerTitel, neuerText) else verwerfen()
     }
 
     Box(
@@ -377,9 +415,9 @@ private fun IdeeBearbeiten(
                     Box(
                         modifier = Modifier.size(38.dp).druckEffekt {
                             if (geaendert && darfSpeichern) {
-                                aufSpeichern(neuerTitel, neuerText)
+                                uebernehmen(neuerTitel, neuerText)
                             } else {
-                                aufVerwerfen()
+                                verwerfen()
                             }
                         },
                         contentAlignment = Alignment.Center,
@@ -437,7 +475,7 @@ private fun IdeeBearbeiten(
         ) {
             Box(
                 modifier = Modifier
-                    .druckEffekt(aufVerwerfen)
+                    .druckEffekt(verwerfen)
                     .padding(horizontal = 8.dp, vertical = 10.dp),
             ) {
                 Text(
@@ -451,7 +489,7 @@ private fun IdeeBearbeiten(
                 text = "Übernehmen",
                 aktiviert = darfSpeichern,
                 hauptKnopf = true,
-                aufTipp = { aufSpeichern(neuerTitel, neuerText) },
+                aufTipp = { uebernehmen(neuerTitel, neuerText) },
             )
         }
     }
