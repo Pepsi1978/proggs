@@ -75,10 +75,10 @@ private fun encodeRoute(route: StackLaborRoute): String = when (route) {
     is StackLaborRoute.History -> "history|${route.stackId}|${route.origin.name}"
 }
 
-private fun decodeRoute(encoded: String): StackLaborRoute {
+private fun decodeRoute(encoded: String): StackLaborRoute = runCatching {
     val parts = encoded.split('|')
     fun origin(index: Int) = Origin.valueOf(parts[index])
-    return when (parts.first()) {
+    when (parts.first()) {
         "stack" -> StackLaborRoute.StackDetail(parts[1])
         "goalCatalog" -> StackLaborRoute.GoalCatalog(origin(1))
         "stackGoals" -> StackLaborRoute.StackGoals(parts[1], origin(2))
@@ -95,4 +95,5 @@ private fun decodeRoute(encoded: String): StackLaborRoute {
         "history" -> StackLaborRoute.History(parts[1], origin(2))
         else -> StackLaborRoute.Home
     }
-}
+    // Gespeicherte Wege können von einer älteren Version stammen — dann lieber Start als Absturz.
+}.getOrElse { StackLaborRoute.Home }

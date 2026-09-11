@@ -19,9 +19,9 @@
 
 ## Loop-Zustand
 
-- Aktuelle Runde: 7 (Stufe 5, Blickwinkel: Wartungsentwickler) — abgeschlossen
-- Konvergenzzähler: 0 (Runde 7 brachte einen bestätigten Fund)
-- Nächster Schritt per Auftrag: Runde 8 = MAX_RUNDEN (Blickwinkel: Tester, Vollrunde für alle Bereiche)
+- Aktuelle Runde: 8 = MAX_RUNDEN (Stufe 5, Blickwinkel: Tester, Vollrunde) — abgeschlossen
+- Konvergenzzähler: 0 (Runde 8 brachte einen bestätigten Fund)
+- Ergebnis per Abschnitt 9 (Notbremse): MAX_RUNDEN erreicht, Zähler nicht auf 2 — Auftrag angehalten, kein stiller Abbruch
 - Offene Fixe: keine — alle bestätigten Funde behoben und gebaut
 
 ## Funde
@@ -48,6 +48,7 @@
 | F18 | 5 | ViewModel | `StackLaborViewModel.kt: nextSpeed` | Zustand | niedrig | verifiziert | Unbekanntes Tempo springt auf 0,70 statt zum Nächsten |
 | F19 | 6 | Repository | `StackLaborRepository.kt: vereinige` | Schnittstellenvertrag | mittel | verifiziert | Restliche getValue-Abstürze bei manipuliertem Import (Ziele/Fragen/Bewertungen/…) |
 | F20 | 7 | Repository | `StackLaborRepository.kt: vereinige` | Daten/Persistenz | niedrig | verifiziert | Zellen/Konkurrenzen mit unbekannter Mittel-ID passieren den Import (leere Konkurrenz-Zeilen) |
+| F21 | 8 | Navigation | `StackLaborNavigation.kt: decodeRoute` | Zustand/Lebenszyklus | niedrig | verifiziert | Veralteter Navigationsstand (App-Update) lässt Start abstürzen statt Home |
 
 ### F1 — Beweis/Fix
 - Eingabe: Auswertung schlägt nach Repair fehl → Bewertung mit leeren Zellen gespeichert. Ist: Mittel GRÜN, Sammel GELB. Soll (SPEC §10): Ampeln bleiben grau. Fix: `keineDaten = bewertung == null || zellen.isEmpty()` → überall GRAU, `sammelAmpel(..., !keineDaten)`.
@@ -109,6 +110,9 @@
 ### F20 — Beweis/Fix
 - Eingabe: DAZU-Import, Konkurrenz verweist auf unbekannte Mittel-ID (kein Absturz, da Mittel-IDs nicht umgeschrieben werden). Ist: verwaiste Konkurrenz wird gespeichert, Anzeige zeigt leere/halbe Konkurrenz-Zeile. Soll: saubere Ablehnung. Fix: `require` für Zellen- und Konkurrenz-Mittel gegen Bestands- plus Import-Mittel. Geprüft ohne Befund: übrige F19-Folgen (Ampel-Aufrufer, Toggle-Aufrufer, Rangstellen, Import-Gültigkeit) verhalten sich korrekt.
 
+### F21 — Beweis/Fix
+- Eingabe: vom OS wiederhergestellter Navigationsstand einer älteren Version (unbekanntes Segment, gekürzte Teile, umbenanntes Origin). Ist: `parts[1..3]`/`Origin.valueOf` werfen beim Start → Absturz nach Update (das vorhandene `else -> Home` zeigt: Fallback war beabsichtigt, aber lückenhaft). Soll: Home. Fix: `runCatching` um den Decoder, Fallback Home. Geprüft ohne Befund (Vollrunde): Screens-Signale, Reorder-Semantik, SpeechAnalyzer-Grenzen, OAuth-Refresh (Mutex-Doppelprüfung), TTS-Anbieterwahl, Einstellungs-Defaults.
+
 ## Rundenübersicht
 
 | Runde | Stufe | Alle Bereiche geprüft | gemeldet/bestätigt/behoben/verifiziert | Build | Zähler danach |
@@ -120,6 +124,7 @@
 | 5 | 5 Ungeduldiger Benutzer | ja (volle Tiefe: ViewModel-Jobs/Abbruch/Doppel-Tap; Kurzprüfung: Rest) | 1/1/0/1/1 | assembleDebug OK | 0 |
 | 6 | 5 Angreifer | ja (volle Tiefe: Import/Validierung; Kurzprüfung: Rest) | 1/1/0/1/1 | assembleDebug OK | 0 |
 | 7 | 5 Wartungsentwickler | ja (volle Tiefe: alle Fix-Folgen; Kurzprüfung: Rest) | 1/1/0/1/1 | assembleDebug OK | 0 |
+| 8 | 5 Tester (Vollrunde) | ja (alle Bereiche: Screens, Navigation, Dienste, Prefs, Import) | 1/1/0/1/1 | assembleDebug OK | 0 |
 
 ## Klärungsbedarf
 
