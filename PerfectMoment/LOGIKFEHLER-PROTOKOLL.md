@@ -24,9 +24,8 @@ Nicht prüfrelevant: `build/`, `.gradle/`, generierter Code, Fremdbibliotheken, 
 
 ## Loop-Zustand
 
-- Aktuelle Runde: 6, Stufe: 5 (Blickwinkel: Tester – fehlende Testfälle, Sparmodus-Volle-Tiefe für geänderte Bereiche)
-- Konvergenzzähler: 0
-- Nächster Blickwinkel: Tester (fehlende Testfälle und was dort passiert)
+- Status: abgeschlossen (Konvergenzzähler 2 nach Runde 7)
+- Konvergenzzähler: 2
 - Offene Fixe: keine
 - Ausstehend: Commit/Push Runde 1, Version 0.1.114
 
@@ -67,6 +66,8 @@ Nicht prüfrelevant: `build/`, `.gradle/`, generierter Code, Fremdbibliotheken, 
 | 3 | 3 | ja (Grenzen/Zustand/Zeit: SessionForegroundService, SessionEngine-Lebenszyklen, SessionController-Startpfade, AudioFocus-Wechselwirkungen) | 1/1/1/1 (Selbstverifikation, Schnellmodus) | assembleDebug | 0 |
 | 4 | 4 | ja (Wartungsentwickler: Folgen von F1–F3; HistorySortingTest gelesen; Kurzprüfung Rest via Runde 2/3) | 0/0/0/0 – F1 als Fehl-Fund erkannt und revertiert (Test = Vertrag) | assembleDebug | 1 |
 | 5 | 5 | ja (Vollrunde, Blickwinkel ungeduldiger Benutzer/Angreifer: FileBackup, BackupStatus, DriveClient, SessionNotification, Doppelklick-/Import-Pfade) | 1/1/1/1 (Selbstverifikation, Schnellmodus) | assembleDebug | 0 |
+| 6 | 5 | ja (Sparmodus, Blickwinkel Tester: volle Tiefe für F2/F3/F4-Bereiche, Kurzprüfung Rest per 10-Fragen-Checkliste) | 0/0/0/0 | – | 1 |
+| 7 | 5 | ja (Schluss-Vollrunde, Blickwinkel Angreifer: Migrationen 1–14 + Seed, EdgeTts-Byte-Parsing, SpeechAnalyzer-OOB, CodexAuthManager-API/Guards, JSON-Import, DAO-Guards) | 0/0/0/0 | assembleDebug | 2 |
 
 ### F4 – Notifikations-Knopf „Weiter" pausiert stumme Sitzung
 - Beweis: `isPlaying = speakerOn && !paused`; der Knopf löst ACTION_PAUSE_RESUME aus. Eingabe: Sitzung stumm laufend (speakerOn=false, paused=false) → Ist: Knopf zeigt „Weiter", Tipp ruft pauseSession() → Sitzung pausiert → Soll: Beschriftung folgt der Aktion (Pause-Zustand).

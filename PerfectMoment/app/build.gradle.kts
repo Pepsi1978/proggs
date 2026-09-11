@@ -14,9 +14,9 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 107
-        versionName = "0.1.117"
+        versionName = "0.1.118"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 23:37 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 23:39 Uhr\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
