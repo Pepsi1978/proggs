@@ -47,6 +47,7 @@
 | 27 | Push-to-Talk-DLL fehlt im Release (SharpHook) | Expliziter RID, native Lib mit-entpacken | H10 |
 | 28 | Trimming/NativeAOT → WPF startet nicht | Trimming/AOT für WPF nicht nutzen; SingleFile ohne Trim | P7 |
 | 29 | Topmost verschwindet bei Win+D / virt. Desktop / Monitor-Sleep | eigenes HWND-Topmost / `IVirtualDesktopManager` / `WM_DISPLAYCHANGE` | A14, A15, A16 |
+| 30 | Hover-Blase neben dem Overlay springt / zu weit links / flackert / rutscht dahinter | KEIN `Popup`: besessenes Fenster (`Owner=overlay`) + Pixel-`SetWindowPos` aus `GetWindowRect` nach dem Layout; Rezept: best-practices `windows-overlay.md` „Hover-Blase“ | A21 |
 
 ---
 

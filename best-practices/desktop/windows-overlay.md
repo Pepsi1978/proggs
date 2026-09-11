@@ -32,6 +32,7 @@
 | 18 | „Unsichtbar", aber Klicks sollen ankommen | Alpha **1**/255, nicht 0 (bei 0 nimmt das Fenster keine Maustaste an); Farbschluessel taugt nicht — dort fallen Klicks durch | §5 |
 | 19 | Sichtbare Linie ueber halbdurchsichtiger Flaeche | Nicht auf der Flaeche zeichnen (wird blass) — eigenes Farbschluessel-Fenster darueber | §5 |
 | 20 | Pruefen, ob Durchsichtigkeit wirklich sitzt | `GetLayeredWindowAttributes` je HWND fragen; Bildschirmfoto beweist es NICHT | §5 |
+| 21 | Hover-Blase/Beschriftung neben dem Overlay, immer an derselben Linie | KEIN `Popup`: eigener `Window`-Subtyp mit `Owner=overlay`, nach `UpdateLayout` per `GetWindowRect` + `SetWindowPos` in Pixeln an die Kante; Rezept in §11 | §11 |
 
 ---
 
@@ -356,10 +357,55 @@ Quellen: [SetWindowPos](https://learn.microsoft.com/en-us/windows/win32/api/winu
 
 ---
 
+## §11 Hover-Blase neben dem Overlay — immer an derselben Linie (Rezept, erprobt 11.09.2026)
+
+**Ziel:** Kleine Beschriftungs-Blase (z. B. Überschrift eines Schnell-Prompts), die beim Überfahren
+eines Knopfs sofort erscheint, mit ihrer **rechten Kante immer an derselben gedachten Linie links neben
+dem Overlay** andockt, vertikal mittig zum Knopf steht — egal wie lang der Text ist und welcher Knopf
+vorher dran war — und nie hinter das Overlay rutscht oder flackert.
+
+**Warum nicht `Popup`/`ToolTip`** (hat in TVO/CVO drei Runden gekostet, Almanach A21):
+1. Position aus **vorab** gemessener Breite (`Measure` außerhalb des Visual-Trees → teils gecachte Größe
+   des vorigen Inhalts) + WPF-Platzierungslogik → Blase springt je nach vorigem Titel.
+2. Das Popup-HWND fängt die Maus, sobald es über dem Knopf liegt → MouseLeave/MouseEnter-Flackern.
+3. Popup-HWND gehört niemandem → ein `SetWindowPos(HWND_TOPMOST)`-Reassert des Overlays legt das Overlay
+   darüber.
+
+**Rezept (alle Punkte gehören zusammen):**
+
+| # | Baustein | Warum |
+|---|----------|-------|
+| 1 | Eigener Subtyp `sealed class TipWindow : Window {}`, **`Owner = overlay`**, lazy beim ersten Hover (Owner-HWND muss existieren) | Besessene Fenster liegen per OS-Regel **immer über** ihrem Owner — der Topmost-Reassert nimmt sie mit |
+| 2 | `WindowStyle=None`, `AllowsTransparency=true`, `Background=Transparent`, `SizeToContent=WidthAndHeight`, `ShowActivated=false`, `ShowInTaskbar=false`, `Topmost=true`, `WindowStartupLocation=Manual` | Randlos, nimmt die Breite des Texts an, klaut keinen Fokus |
+| 3 | In `SourceInitialized`: `WS_EX_TRANSPARENT \| WS_EX_NOACTIVATE \| WS_EX_TOOLWINDOW` | Maus geht durch die Blase → kein Flackern, selbst wenn sie mal über dem Knopf läge |
+| 4 | Anzeigen: Text setzen → `Opacity=0` → `Show()` → `UpdateLayout()` → **platzieren** → `Opacity=1` | Erst die echte Größe, dann die Position — kein Aufblitzen an der alten Stelle |
+| 5 | Platzieren **nur in Gerätepixeln**: Anker-X = `sichtbarePille.PointToScreen(0,0).X`, Knopf-Mitte-Y = `btn.PointToScreen(0, h/2).Y`, Blasen-Größe = `GetWindowRect(tipHwnd)`, Abstand = `margin * TransformToDevice.M11`; dann `x = ankerX − abstand − tipW`, `y = mitteY − tipH/2` → `SetWindowPos(SWP_NOSIZE\|SWP_NOZORDER\|SWP_NOACTIVATE)` | Keine DIP/Pixel-Mischung, keine WPF-Platzierungslogik, keine Vorab-Messung — die Breite ist die **tatsächlich gezeichnete** |
+| 6 | `tip.SizeChanged += …` → neu platzieren (nur wenn sichtbar) | Text ändert sich bei offener Blase (z. B. KI-Überschrift kommt nach) → rechte Kante bleibt an der Linie |
+| 7 | Anker ist das **sichtbare** Element (z. B. `FullView`), nicht die Fensterkante | Bleibt richtig, falls das Fenster später transparenten Rand bekommt |
+| 8 | Ausblenden mit `Hide()` (Fenster wiederverwenden) im MouseLeave **und** im Hide-Pfad des Overlays | Besessene Fenster verstecken sich **nicht** automatisch mit dem Owner |
+| 9 | Fenster-Aufzählungen („ist ein Hilfsdialog offen?“, Auto-Hide) den Subtyp **ausnehmen** | Sonst blockiert die sichtbare Blase das Auto-Hide |
+| 10 | Zweite Z-Schicht: im Topmost-Reassert nach dem Overlay auch die sichtbare Blase `ForceTopmost` | Defense in Depth |
+| 11 | Pro Platzierung eine Diagnose-Zeile (Slot, ankerX, tipW, x, y, Skalierung) | Bei „sitzt falsch“ **messen statt raten** (TVO/CVO: `diag.log`, `ctx:"QuickTitle"`) |
+
+**Referenz-Implementierung:** `TerminalVoiceOverlay-Windows` / `ClaudeVoiceOverlay-Windows`,
+`Views/OverlayWindow.xaml.cs` → `EnsureQuickTitleWindow`, `ShowQuickTitle`, `PlaceQuickTitle`,
+`HideQuickTitle` (ab TVO 1.11.16 / CVO 2.4.16).
+
+**Prüfschritte nach dem Bau:** zwischen weit entfernten Knöpfen hin- und herfahren (z. B. 10 → 9 → 6 →
+10); mehrere Sekunden auf einem Knopf bleiben (über den Reassert-Takt hinaus); einen sehr langen und einen
+sehr kurzen Titel vergeben → die rechte Kante darf sich nicht bewegen.
+
+**Offener Rand-Fall:** Erster Show bei `Left/Top=-10000` → auf Multi-Monitor mit gemischter DPI ist beim
+allerersten Anzeigen ein Ein-Frame-Aufblitzen denkbar (WM_DPICHANGED → Resize → `SizeChanged` korrigiert).
+Falls beobachtet: Startposition aus `overlay.Left/Top` ableiten.
+
+---
+
 ## 🔗 Bezug zum Bug-Almanach (Kopplung)
 
 | Best-Practice-Abschnitt | Bug-Almanach-Abschnitt (`bugs/desktop/windows-overlay.md`) |
 |-------------------------|------------------------------------------------------------|
+| §11 (Hover-Blase neben dem Overlay) | A21 (Popup-Vorab-Breite/Maus-Fang/unbesessenes HWND hinter Topmost-Reassert) |
 | §2 (Always-on-top), §10 (Z-Order) | A1–A20 (Win11-Z-Order/ShowInTaskbar/NOACTIVATE/SetForegroundWindow/Topmost-vs-Topmost/Popup/Win+D/virt.Desktop/Monitor-Sleep/Secure-Desktop/Maximize) |
 | §3 (Click-through), §5 (Transparenz) | C1–C16 (TRANSPARENT/LAYERED/Touch/Hover/Airspace/Blitz/runde Ecken/IsHitTestVisible/DropShadow/Window-Sharing/RDP/Resize) |
 | §4 (Globale Hotkeys) | H1–H16 (RegisterHotKey/NOREPEAT/LL-Hook-GC/Timeout/UIPI/Push-to-Talk/SharpHook-Deploy/Multi-Window/Anti-Cheat/AltGr/NHotkey) |

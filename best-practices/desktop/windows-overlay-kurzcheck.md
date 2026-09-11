@@ -28,3 +28,4 @@
 | 18 | „Unsichtbar", aber Klicks sollen ankommen | Alpha **1**/255, nicht 0 (bei 0 nimmt das Fenster keine Maustaste an); Farbschluessel taugt nicht — dort fallen Klicks durch | §5 |
 | 19 | Sichtbare Linie ueber halbdurchsichtiger Flaeche | Nicht auf der Flaeche zeichnen (wird blass) — eigenes Farbschluessel-Fenster darueber | §5 |
 | 20 | Pruefen, ob Durchsichtigkeit wirklich sitzt | `GetLayeredWindowAttributes` je HWND fragen; Bildschirmfoto beweist es NICHT | §5 |
+| 21 | Hover-Blase/Beschriftung neben dem Overlay, immer an derselben Linie | KEIN `Popup`: eigener `Window`-Subtyp mit `Owner=overlay`, `SizeToContent`, `WS_EX_TRANSPARENT\|NOACTIVATE\|TOOLWINDOW`; nach `UpdateLayout` per `GetWindowRect` + `SetWindowPos` in Pixeln an die Kante setzen, `SizeChanged` → neu setzen; in Hide-Pfad und Hilfsfenster-Zählung berücksichtigen | §11 |
