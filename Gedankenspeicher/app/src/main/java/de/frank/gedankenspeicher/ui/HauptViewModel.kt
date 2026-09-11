@@ -590,11 +590,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun aendereAnhang(notiz: Notiz, anhang: Anhang) {
         viewModelScope.launch {
-            val vorhanden = repo.notiz(notiz.id) ?: return@launch
-            val neue = anhaengeAusJson(vorhanden.anhaengeJson).map { einer ->
-                if (einer.id == anhang.id) anhang else einer
+            repo.aendereAktuell(notiz.id) { vorhanden ->
+                val neue = anhaengeAusJson(vorhanden.anhaengeJson).map { einer ->
+                    if (einer.id == anhang.id) anhang else einer
+                }
+                vorhanden.copy(anhaengeJson = neue.alsJson())
             }
-            repo.aendere(vorhanden.copy(anhaengeJson = neue.alsJson()))
         }
     }
 
@@ -608,9 +609,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     /** Dasselbe allein über die id — für das Plus-Menü, das auch ohne offene Sitzung besteht. */
     fun fuegeAnhangZuNotizMitId(notizId: Long, anhang: Anhang) {
         viewModelScope.launch {
-            val vorhanden = repo.notiz(notizId) ?: return@launch
-            val neue = anhaengeAusJson(vorhanden.anhaengeJson) + anhang
-            repo.aendere(vorhanden.copy(anhaengeJson = neue.alsJson()))
+            repo.aendereAktuell(notizId) { vorhanden ->
+                val neue = anhaengeAusJson(vorhanden.anhaengeJson) + anhang
+                vorhanden.copy(anhaengeJson = neue.alsJson())
+            }
         }
     }
 
@@ -802,13 +804,13 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val transkriber = repo.transkriber()
         if (!transkriber.isConfigured) {
             // Auch eine Online-Aufnahme wird gepuffert — sonst wäre sie ohne Schlüssel verloren.
-            repo.aendere(
-                notiz.copy(
+            val pfad = datei?.absolutePath ?: puffere(wav).absolutePath
+            repo.aendereAktuell(notizId, inhalt = false) { aktuell ->
+                aktuell.copy(
                     zustand = Notizzustand.KEIN_SCHLUESSEL,
-                    audioPfad = datei?.absolutePath ?: puffere(wav).absolutePath,
-                ),
-                inhalt = false,
-            )
+                    audioPfad = pfad,
+                )
+            }
             return
         }
         try {
@@ -1015,7 +1017,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 melde("Die Aufnahme ist nicht mehr da.")
                 return@launch
             }
-            repo.aendere(notiz.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE), inhalt = false)
+            val begonnen = repo.aendereAktuell(notiz.id, inhalt = false) { aktuell ->
+                if (aktuell.zustand == Notizzustand.TRANSKRIBIERT_GERADE || aktuell.zustand == Notizzustand.FERTIG) aktuell
+                else aktuell.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE)
+            }
+            if (!begonnen) return@launch
             transkribiere(notiz.id, notiz.sitzungId, datei.readBytes(), datei)
         }
     }
@@ -1054,13 +1060,18 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                         val pfad = notiz.audioPfad ?: return@forEach
                         val datei = File(pfad)
                         if (!datei.exists()) {
-                            repo.aendere(
-                                notiz.copy(zustand = Notizzustand.TRANSKRIPTION_FEHLGESCHLAGEN, audioPfad = null),
-                                inhalt = false,
-                            )
+                            repo.aendereAktuell(notiz.id, inhalt = false) { aktuell ->
+                                if (aktuell.zustand == Notizzustand.WARTET_AUF_TRANSKRIPTION) {
+                                    aktuell.copy(zustand = Notizzustand.TRANSKRIPTION_FEHLGESCHLAGEN, audioPfad = null)
+                                } else aktuell
+                            }
                             return@forEach
                         }
-                        repo.aendere(notiz.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE), inhalt = false)
+                        val begonnen = repo.aendereAktuell(notiz.id, inhalt = false) { aktuell ->
+                            if (aktuell.zustand == Notizzustand.WARTET_AUF_TRANSKRIPTION) aktuell.copy(zustand = Notizzustand.TRANSKRIBIERT_GERADE)
+                            else aktuell
+                        }
+                        if (!begonnen) return@forEach
                         transkribiere(notiz.id, notiz.sitzungId, datei.readBytes(), datei)
                     }
                 } while (nochmalNachreichen)
@@ -1078,11 +1089,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             runCatching {
                 val ueberschrift = repo.holeUeberschrift(text)
                 if (ueberschrift.isNotBlank()) {
-                    repo.notiz(notizId)?.let { aktuell ->
+                    repo.aendereAktuell(notizId) { aktuell ->
                         // Hat Frank in der Zwischenzeit selbst eine vergeben, gewinnt seine.
-                        if (!aktuell.ueberschriftVonHand && aktuell.ueberschrift == null) {
-                            repo.aendere(aktuell.copy(ueberschrift = ueberschrift))
-                        }
+                        if (!aktuell.ueberschriftVonHand && aktuell.ueberschrift == null && aktuell.text == text) {
+                            aktuell.copy(ueberschrift = ueberschrift)
+                        } else aktuell
                     }
                 }
             }
@@ -1104,10 +1115,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                     val u = repo.holeUeberschrift(notiz.text)
                     if (u.isNotBlank()) {
                         // Frisch lesen: hat Frank inzwischen selbst eine vergeben, gewinnt seine.
-                        repo.notiz(notiz.id)?.let { aktuell ->
-                            if (!aktuell.ueberschriftVonHand && aktuell.ueberschrift == null) {
-                                repo.aendere(aktuell.copy(ueberschrift = u))
-                            }
+                        repo.aendereAktuell(notiz.id) { aktuell ->
+                            if (!aktuell.ueberschriftVonHand && aktuell.ueberschrift == null && aktuell.text == notiz.text) {
+                                aktuell.copy(ueberschrift = u)
+                            } else aktuell
                         }
                     }
                 }
@@ -1188,7 +1199,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     fun macheVerbesserungRueckgaengig(notiz: Notiz) {
         val original = notiz.textOriginal ?: return
         viewModelScope.launch {
-            repo.aendere(notiz.copy(text = original, textOriginal = null, istVerbessert = false))
+            repo.aendereAktuell(notiz.id) { aktuell ->
+                if (aktuell.textOriginal == original) aktuell.copy(text = original, textOriginal = null, istVerbessert = false)
+                else aktuell
+            }
         }
     }
 
@@ -1603,7 +1617,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val offene = repo.notizenOhneSchluessel()
             offene.forEach { notiz ->
-                repo.aendere(notiz.copy(zustand = Notizzustand.WARTET_AUF_TRANSKRIPTION), inhalt = false)
+                repo.aendereAktuell(notiz.id, inhalt = false) { aktuell ->
+                    if (aktuell.zustand == Notizzustand.KEIN_SCHLUESSEL) aktuell.copy(zustand = Notizzustand.WARTET_AUF_TRANSKRIPTION)
+                    else aktuell
+                }
             }
             // Immer nachreichen — auch was nach einem Fehlversuch mit einem Teilschlüssel wartet.
             versuchtVergessen = true

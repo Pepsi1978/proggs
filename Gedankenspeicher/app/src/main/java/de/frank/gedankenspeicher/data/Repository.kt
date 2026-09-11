@@ -235,7 +235,7 @@ class Repository(
     suspend fun notiz(id: Long): Notiz? = db.notizen().eine(id)
 
     /** [inhalt] = false bei reinen Zustandswechseln — die heben die Sitzung nicht an. */
-    suspend fun aendere(notiz: Notiz, inhalt: Boolean = true) {
+    private suspend fun aendere(notiz: Notiz, inhalt: Boolean = true) {
         db.notizen().aendern(notiz)
         if (inhalt) merkeAenderung(notiz.sitzungId)
     }

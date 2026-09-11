@@ -47,7 +47,7 @@
 
 ## 3. Loop-Zustand
 
-- **Aktuelle Runde:** 6 abgeschlossen, Auslieferung 0.6.11; danach Runde 7, Stufe 7 (Wartungsentwickler/Folgen der Fixe). Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
+- **Aktuelle Runde:** 7 abgeschlossen, Auslieferung 0.6.12; danach Runde 8, Stufe 8 (Tester), letzte zulässige Runde. Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
   - **Bereich 5 – Aufnahme**
     - L-2-5-01 (mittel): MicRecorder, start() während stop() in joinAll → der Puffer der alten Aufnahme wird geleert, das finally des alten Jobs beendet die neue Aufnahme.
   - **Bereich 4 – KI-Anbindung**
@@ -81,7 +81,7 @@
   **Eigene Stufe-2-Prüfung abgeschlossen:** 1A/1B (`MainActivity.kt`, Manifest, drei `res/xml`-Dateien, `app/build.gradle.kts`; Erstlektüre plus gezielte Rückruf-/Sichtbarkeitsgegenprüfung); 3A (`data/Modell.kt`, `Datenbank.kt`, `Dao.kt`, `Repository.kt`, `settings/Einstellungen.kt`, `Nachtraege.kt`); 4A (`auth/CodexAuthManager.kt`, `CodexAufgaben.kt`); 5B (`hintergrund/AuswertungsDienst.kt`, `VorleseDienst.kt`); 6A (`tts/Vorleser.kt`, `Absatzabspieler.kt`, `Absaetze.kt`); 7 (alle sechs Cloud-TTS-Dateien aus der Karte). Die bereits abgeschlossenen Teilprüfungen der Übergabe bleiben gültig.
   **Triage:** Alle 17 Vormeldungen bestätigt, außer L-2-3-01: Klärungsbedarf (Dateizahl statt logischer Anhänge, auch reine Textanhänge betroffen; gewünschte Zählweise offen). (a) bestätigt als L-2-11-3; (b) bestätigt als L-2-6-04; (c) bestätigt als L-2-5-02 für Lesefehler (Zeitlimit wird bereits vom VM überwacht); (d)/(e)/(f)/(h) unter L-2-10-05…08 bestätigt, (g) abgelehnt wie oben. SQLite lower/LIKE ist ohne ICU ASCII-beschränkt; Kleinschreiben allein des Suchbegriffs behebt keine Großumlaute im Bestand.
   **Triage der neuen Prüfermeldungen:** L-2-2-01…14 bestätigt. L-2-9-01/03 bestätigt; L-2-9-02/04 und L-2-10-13 Klärungsbedarf (Layout-/Entwurferhaltung benötigt gezielte Geräteprüfung, im Schnellmodus nicht durchgeführt). L-2-10-05…12 bestätigt. Ein gemeldeter Layoutverdacht wird ohne Geräteprüfung nicht als behoben ausgegeben.
-- **Nächste Tiefenstufe:** 7 (Wartungsentwickler, Fixfolgen an Aufrufern)
+- **Nächste Tiefenstufe:** 8 (Tester, letzte zulässige Runde)
 - **Konvergenzzähler:** 0
 - **Nächster Blickwinkel:** Stufe 2. Die in Runde 1 geänderten Stellen sind als „kürzlich verändert“ markiert
 - **Offene Fixe:** keine
@@ -221,6 +221,7 @@ Stellen relativ zu `app/src/main/java/de/frank/gedankenspeicher/`; VM = `ui/Haup
 | 4 | 4 | Invarianten und Gegenbeweise, Sparmodus für unveränderte unauffällige Bereiche | ja (Dateiliste Runde 3; Volltiefe 1–10, Kurzprüfung 11/12) | 4 | 4 | 0 | 0 neu | 4 | 4 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 | 5 | 5 | Ungeduldiger Benutzer, schnelle Bedienfolgen | ja (Dateiliste Runde 3; Volltiefe risikoreiche/fundreiche Bereiche, sonst Kurzprüfung) | 4 | 4 | 0 | 0 neu | 4 | 4 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 | 6 | 6 | Manipulierte Eingaben und Datenverträge | ja (Dateilisten Runde 3; Eingabegrenzen gezielt) | 7 | 7 | 0 | 0 neu | 7 | 7 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
+| 7 | 7 | Wartungsentwickler, Fixfolgen an verbleibenden Schreibern | ja (Dateilisten Runde 3; alle betroffenen Aufrufer) | 1 zusammengeführte Restklasse | 1 | 0 | 0 neu | 1 | 1 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 
 ### Runde 2 – verbindliche Endstatus und Fixnachweise
 
@@ -332,6 +333,20 @@ Quellpfade relativ zu `app/src/main/java/de/frank/gedankenspeicher`; bekannte Fu
 ### Runde 5 – schnelle Bedienfolgen (aktuelle Fix-Charge)
 
 ### Runde 6 – manipulierte Eingaben
+
+### Runde 7 – Wartungsentwickler und Fixfolgen
+
+Bereich 2 mit vollständigem Schreibpfadinventar (VM/Zustand, Repository/DAO und Aufrufer); übrige Bereiche nach Dateiliste Runde 3 auf Folgen der bisherigen Fixe geprüft. Leere Ausgabe, LIKE-Escaping, Importkopie/Typprüfung, Stop/Join, Dateiübergabe und Parserverträge ohne weiteren bestätigten Fund. Ein neuer zusammengeführter Fund:
+
+| ID | Schwere | Stelle | Beweis | Status |
+|---|---|---|---|---|
+| L-7-2-01 | hoch | HauptViewModel.kt:591–613,1081–1109; Repository.aendere | Anhangs-/Überschriftenjob liest N0 → KI oder Editor schreibt atomar N1 → Metadatenjob schreibt ganze alte Zeile N0 zurück → alle verbleibenden Notiz-Metadatenschreiber müssen dieselbe atomare Feldänderung benutzen. | bestätigt |
+
+Verwandte Quellen derselben Klasse: Anhänge hinzufügen/ändern, beide Überschriftenwege, Undo, manueller/automatischer Retry, fehlender Schlüssel und Nachholen. Der alte Ganzzeilenschreiber wird privat, damit die Ursache nicht erneut an einem Aufrufer entsteht.
+**Endstatus Runde 7:** L-7-2-01 behoben und separat statisch verifiziert, erster Anlauf: (1) Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Grenzen berücksichtigt. Fixreferenz Runde-7-Commit/0.6.12. Kein Test wegen Schnellmodus.
+**Vormeldungen Runde 8 aus Gegenlesen:** L-8-2-01 (mittel), Datei-Lesefehler nach Retry-Reservierung erreicht `transkribiere`-Catch nicht, Status bleibt beschäftigt (`HauptViewModel.kt:1020–1025,1070–1075`); L-8-2-02 (mittel), nach verworfener Überschrift verwendet der Sitzungstitel weiterhin alten Text, trotz veränderter Notiz (`:1094,1100–1102`). Noch zu triagieren, nicht nebenbei gefixt.
+
+#### Runde 6 – Detailnachweise (Fortsetzung)
 
 Dateilisten wie Runde 3, Schwerpunkt auf Eingabe-/Serialisierungsverträgen in 2/3/4/8 und deren Aufrufern. SQL-Injection per Suchparameter, Export-Pfadtraversal und ZIP-Pfade verworfen (Parameterbindung bzw. vorhandene Pfadfilter greifen). Keine neuen bestätigten Funde in übrigen Bereichen; bekannte Klärungsfälle nicht erneut gezählt.
 
