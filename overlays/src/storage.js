@@ -20,7 +20,7 @@
 		geminiKey: "",
 		geminiModel: "",
 		autoGeminiCorrection: true,
-		whisperModel: "whisper-large-v3-turbo",
+		whisperModel: "whisper-large-v3",
 		whisperLang: "de",
 		ovDisabledHosts: [],
 		ovCustomHosts: [],

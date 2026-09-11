@@ -355,7 +355,7 @@
 			res = await chrome.runtime.sendMessage({
 				type: "groqTranscribe",
 				audioDataUrl,
-				model: OV.storage.get("whisperModel", "whisper-large-v3-turbo"),
+				model: OV.storage.get("whisperModel", "whisper-large-v3"),
 				lang: OV.storage.get("whisperLang", "de"),
 			});
 		} catch (e) {

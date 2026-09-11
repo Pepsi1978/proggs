@@ -210,6 +210,11 @@ verursachen **keine** Mehrlatenz/-kosten; nur `timestamp_granularities=["word"]`
 `whisper-large-v3` — $0.111/h, WER ~10,3 %, kann auch Translation. Fuer deutsches Diktat ohne
 Uebersetzung ist turbo ideal (VoiceAgent-Default). **Falle:** turbos `translation` geht nicht —
 fuer non-EN→EN `whisper-large-v3` nehmen.
+**⭐ Falle (beobachtet 11.09.2026, overlays):** Bei laengerem deutschem Diktat (> ~30 s) liefert turbo
+ganze Passagen komplett **klein und ohne Satzzeichen**, gemischt mit korrekt geschriebenen Saetzen —
+wirkt wie „unkorrigierter Rohtext". Whisper hat KEINEN separaten Korrekturschritt; die Schreibweise
+kommt allein aus dem Modell. **FIX:** fuer Diktat mit Anspruch an Rechtschreibung `whisper-large-v3`
+nehmen und einen kurzen, sauber interpunktierten deutschen `prompt` mitschicken (Stil-Lenkung §1.3).
 **Quelle:** [Groq Turbo-Blog](https://groq.com/blog/whisper-large-v3-turbo-now-available-on-groq-combining-speed-quality-for-speech-recognition)
 
 ### 3.3 Audio-Aufbereitung: 16 kHz mono WAV

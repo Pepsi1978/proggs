@@ -221,8 +221,18 @@ async function groqTranscribe({ audioDataUrl, model, lang }) {
 		const blob = await (await fetch(audioDataUrl)).blob();
 		const form = new FormData();
 		form.append("file", blob, "recording.webm");
-		form.append("model", model || "whisper-large-v3-turbo");
+		// Volles large-v3 statt turbo: turbo verliert bei laengerem deutschem Diktat
+		// oft Gross-/Kleinschreibung und Satzzeichen (klein, ohne Punkt und Komma).
+		const m = model && model !== "whisper-large-v3-turbo" ? model : "whisper-large-v3";
+		form.append("model", m);
 		form.append("language", lang || "de");
+		// Stil-Prompt: nur Schreibweise/Vokabular, keine Befehle (sonst Leakage),
+		// siehe bugs/desktop/groq-transkription.md §1.3.
+		if ((lang || "de") === "de")
+			form.append(
+				"prompt",
+				"Das ist ein sauber geschriebenes Diktat auf Deutsch, mit korrekter Groß- und Kleinschreibung, Kommas und Punkten. Begriffe: Claude Code, Kotlin, Swift, C++, Prompt, Agent, Orchestrator, Groq.",
+			);
 		// verbose_json liefert pro Segment no_speech_prob/avg_logprob/compression_ratio
 		// (bei Groq ohne Mehrkosten/-latenz vs. text) -> Confidence-Gate moeglich.
 		// temperature=0 als sinnvolle Basis. Siehe bugs/desktop/groq-transkription.md §2.3/§3.1.
