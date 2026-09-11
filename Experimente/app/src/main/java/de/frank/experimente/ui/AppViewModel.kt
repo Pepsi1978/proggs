@@ -985,6 +985,11 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
         }
     }
 
+    /** F-04 — einen einzelnen Vorschlag per Wisch verwerfen. */
+    fun verwerfeVorschlag(vorschlag: Suggestion) {
+        viewModelScope.launch { ablage.verwerfeVorschlag(vorschlag.id) }
+    }
+
     // --- F-05 / F-06 ----------------------------------------------------------------------
 
     fun merke(vorschlag: Suggestion) {
@@ -1223,6 +1228,12 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
     fun fuehreFort(zusaetzlicheTage: Int) {
         val experiment = ausgewertetes.value ?: return
         val neu = (experiment.days + zusaetzlicheTage).coerceIn(1, Ablage.MAX_TAGE)
+        if (neu == experiment.days) {
+            // An der 60-Tage-Schranke kommt nichts dazu — dann darf auch keine
+            // Erfolgsmeldung etwas anderes behaupten.
+            melde("Bleibt bei $neu ${if (neu == 1) "Tag" else "Tagen"} — länger geht es nicht.")
+            return
+        }
         viewModelScope.launch {
             _wartet.value = "Ich plane die weiteren Tage …"
             try {
@@ -1294,6 +1305,9 @@ class AppViewModel(anwendung: Application) : AndroidViewModel(anwendung) {
                 },
             )
             if (!gespeichert) return@launch
+            // Der Abend-Zustand hängt an der Zahl der laufenden: ist es das letzte, wäre
+            // B-01 sonst morgen noch „Abend" mit „0 Experimente warten".
+            bestimmeZustand()
             _bluete.value = true
             ruettleLangWeich()
             // Hier wird der Abschluss wirklich vollzogen — vorher verließ sich diese

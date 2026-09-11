@@ -446,7 +446,10 @@ fun Auswertungsklappe(
 private fun Verlaengern(jetzigeTage: Int, beiWahl: (Int) -> Unit, beiSchliessen: () -> Unit) {
     val farben = LocalFarben.current
     val schriften = LocalSchriften.current
-    var zusaetzlich by remember { mutableStateOf(3) }
+    val groesstes = 60 - jetzigeTage.coerceAtMost(59)
+    // Bei 60 Tagen wäre die Vorauswahl 3 über dem Größten — und das Bestätigen liefe
+    // wirkungslos ins Leere.
+    var zusaetzlich by remember { mutableStateOf(minOf(3, groesstes)) }
 
     AlertDialog(
         onDismissRequest = beiSchliessen,
@@ -466,7 +469,7 @@ private fun Verlaengern(jetzigeTage: Int, beiWahl: (Int) -> Unit, beiSchliessen:
                     tage = zusaetzlich,
                     beiAenderung = { zusaetzlich = it },
                     beschriftung = "Zusätzliche Tage",
-                    groesstes = 60 - jetzigeTage.coerceAtMost(59),
+                    groesstes = groesstes,
                 )
                 Text(
                     text = "Danach läuft es ${jetzigeTage + zusaetzlich} Tage. " +

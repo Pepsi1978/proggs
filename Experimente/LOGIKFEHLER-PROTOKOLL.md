@@ -12,7 +12,7 @@
 | B6 Benachrichtigung/Lebenszyklus | notify/*, ExperimenteApp.kt, MainActivity.kt, network/* | Plattform/Lebenszyklus | mittel-hoch | Wecker, Boot, Lifecycle, OkHttp |
 | B7 Oberfläche | ui/Navigation.kt, ui/screens/*, ui/components/*, ui/theme/* | Oberfläche | mittel | sechs Hauptbildschirme, Bausteine, Themen |
 | nicht prüfrelevant | build/*, .gradle/, res/font, generierter Code, Fremdbibliotheken | — | — | — |
-3. Loop-Zustand: aktuelle Runde 7, nächste Stufe 7 (Blickwinkel Wartungsentwickler; Sparmodus: volle Tiefe für B1+B2, Kurzprüfung B3–B7), Konvergenzzähler 1, danach mögliche Schlussrunde (Vollrunde), offene Fixe 0, ausstehend nichts.
+3. Loop-Zustand: aktuelle Runde 8 (letzte nach MAX_RUNDEN), nächste Stufe 8 (Blickwinkel Tester; Sparmodus: volle Tiefe für B1+B2+B5-Rest, Kurzprüfung Übrige), Konvergenzzähler 0, offene Fixe 0, ausstehend nichts.
 4. Fundtabelle:
 | ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Kurzbeschreibung |
 |---|---|---|---|---|---|---|---|
@@ -83,4 +83,19 @@ Runde 6 ohne Funde (Zähler 1):
 - B1+B2 voll, Stufe 6, geprüft: ui/AppViewModel.kt (Eingabe→DB→KI-Pfade, Tages-/Dauergrenzen), data/repo/Ablage.kt (Merker-Formate, Suchräume, Nachtrag), data/local/{Daos,Einheiten,ExperimenteDatenbank}, data/settings/Einstellungen.kt (Import nur bekannter Schlüssel), data/backup/BackupVerwaltung.kt (Prüfsumme, Schema-Gleichheit, Restore). Ergebnis: keine Funde — Dauer überall `coerceIn(1,MAX_TAGE)`, Merker mit `|`-Texten trennen am ersten Trenner, `ausJson`/Aufgaben-Parsing per `runCatching`/Blank-Filter, Backup-Import mit Transaktion+Restore, Empfänger-Extras mit sicherem Standard.
 - B3–B7 kurz (10-Fragen-Liste per Suche), Stufe 6, geprüft: Dateiliste wie Runde 4. Ergebnis: keine Funde.
 - Abgelehnt (kein Fund): KI liefert `aufgabenJeTag`-Länge ≠ `tage` → leere Tage ohne Nachlauf — hypothetisch ohne konkreten Pfad (Schema/Prompt fordern Gleichheit, kein Beleg für Abweichung), daher kein Fund nach Beweisregel.
+
+| 7 | 7 Wartungsentwickler (VOLLRUNDE: alle Bereiche volle Tiefe, Helfer für B7) | ja (B1–B7 vollständig gelesen; 13 Helfer-Hinweise einzeln triagiert) | 13/4/9/4/4 | Build grün, keine Tests | 0 |
+
+Runde-7-Funde (bestätigt, behoben, verifiziert):
+| L-16 | 7 | B7 | Heute.kt:290 | Oberflächenlogik | mittel | verifiziert | Aufnahme-Timer zeigt ab 60 s „00:75“ statt „01:15“ |
+| L-17 | 7 | B7 | Heute.kt:332 | Kontrollfluss | mittel | verifiziert | Wisch links zeigt VERWORFEN, verwirft aber nichts |
+| L-18 | 7 | B1 | AppViewModel.kt:1260 | Zustand | niedrig | verifiziert | Abend-Zustand bleibt nach letztem Abschluss („0 Experimente“) |
+| L-19 | 7 | B7 | Auswertung.kt:446 | Oberflächenlogik | niedrig | verifiziert | Verlängern bei 60 Tagen: Vorauswahl über Maximum, Meldung ohne Wirkung |
+
+Beweise/Fixe/Verifikation Runde 7:
+- L-16: Aufnahme läuft 75 s → Ist: `"00:%02d"` zeigt „00:75“ (Heute.kt:290); Soll (Entwurf „00:07“, mm:ss): „01:15“. Fix: `"%02d:%02d".format(sekunden/60, sekunden%60)`. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) 75→„01:15“, 7→„00:07“; (2) einziger Leser LageErfragen; (3) Sekunden ≥0 per VM (Start 0, +1/s).
+- L-17: Vorschlag nach links über Schwelle → Ist: `onDragEnd` behandelt nur rechts (`uebernimm`), links resettet trotz VERWORFEN-Etikett und Doku „nach links verworfen“; Soll: verwerfen via F-04-Mechanik. Fix: `VorschlaegeDao.verwerfe(id)` + `Ablage.verwerfeVorschlag` + `VM.verwerfeVorschlag` + Wisch-Ast. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) Karte verschwindet, Titel bis Mitternacht ausgeschlossen; (2) Aufrufer Heute-Wisch, idempotent (`IS NULL`-Schutz); (3) Leerer Restzustand trägt „Andere Vorschläge“-Knopf.
+- L-18: letzten laufenden abends abschließen → MONITOR → zurück auf HEUTE → Ist: `_tagZustand` noch ABEND, „0 Experimente warten“ (kein `bestimmeZustand` in `schliesseAb`); Soll: Tageszustand neu. Fix: `bestimmeZustand()` im Erfolgspfad. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) ABEND nur noch bei laufenden; (2) Aufrufer B-03-Abschluss; (3) Fehler/null-Pfad unverändert.
+- L-19: 60-Tage-Experiment → „Weiterführen“ → Ist: Vorauswahl 3 über `groesstes`=1, Bestätigen wirkungslos mit „Läuft weiter — jetzt 60 Tage“; Soll: gültige Vorauswahl + ehrliche Meldung. Fix: `minOf(3, groesstes)` + „Bleibt bei … — länger geht es nicht“ bei No-op. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) kein ungültiger Startwert, keine Falschmeldung; (2) Aufrufer Dialog/VM; (3) `groesstes`≥1 per `coerceAtMost(59)`.
+- Abgelehnt (9, je ein Satz): Merken-Icon bei fromWatchlist startet leer — Tap-Meldung korrekt („liegt schon“), kein falsches Tun. VORSCHLAEGE-Leerzustand ohne Karten — ohne Einzel-Verwerfen unerreichbar, danach mit „Andere Vorschläge“-Erholung. Gespräch ohne Experiment — kein Pfad (Navigation setzt stets Kennung, Import navigiert weg), Fehlerpfad zeigt Störung. Gesprächs-Entwurf übersteht Wechsel — Text bleibt = kein Verlust, wie B-03-Design. Senden während Denken — jede Sendung wird beantwortet, nichts geht verloren. B-03 ohne Experiment — null-Pfade bewacht (Störung/stilles Return, kein Absturz). Listen-Gruppen-Reset — Beweis falsch (`remember` mit Schlüssel rechnet bei Wechsel neu). Merklisten-Blatt schließt bei Fehler — Meldung sichtbar, Text erhalten und wiederherstellbar, Schließzeitpunkt Design. Monitor ohne To-Do-Kopf — leere Liste heißt nichts zu tun, kein Soll verletzt.
 6. Klärungsbedarf: (leer)

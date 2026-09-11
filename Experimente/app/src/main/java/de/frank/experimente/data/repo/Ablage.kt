@@ -223,6 +223,14 @@ class Ablage(
         return true
     }
 
+    /**
+     * F-04 — einen einzelnen Vorschlag verwerfen. Er verschwindet aus der Anzeige und geht
+     * beim nächsten „Andere Vorschläge" als gesehen und verworfen in die Anfrage ein.
+     */
+    suspend fun verwerfeVorschlag(vorschlagId: Long, jetzt: Instant = Instant.now()) {
+        db.vorschlaege().verwerfe(vorschlagId, jetzt)
+    }
+
     // --- F-05 ---------------------------------------------------------------------------
 
     /** F-05 — Vorschlag vollständig auf die Merkliste kopieren. Nicht doppelt merkbar. */

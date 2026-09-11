@@ -91,6 +91,10 @@ interface VorschlaegeDao {
 
     @Query("UPDATE vorschlaege SET discardedAt = :jetzt WHERE date = :tag AND discardedAt IS NULL")
     suspend fun verwerfeAlle(tag: LocalDate, jetzt: java.time.Instant)
+
+    /** F-04 — einen einzelnen Vorschlag verwerfen; er bleibt bis Mitternacht ausgeschlossen. */
+    @Query("UPDATE vorschlaege SET discardedAt = :jetzt WHERE id = :id AND discardedAt IS NULL")
+    suspend fun verwerfe(id: Long, jetzt: java.time.Instant)
 }
 
 @Dao

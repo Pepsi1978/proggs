@@ -287,7 +287,8 @@ private fun LageErfragen(modell: AppViewModel, nimmtAuf: Boolean) {
             if (nimmtAuf) {
                 Wellenform(Modifier.padding(top = 2.dp))
                 Text(
-                    text = "00:%02d".format(sekunden),
+                    // Ab einer Minute zweistellig zweigeteilt — „00:75" wäre keine Zeit.
+                    text = "%02d:%02d".format(sekunden / 60, sekunden % 60),
                     style = schriften.daten,
                     color = farben.gedaempft,
                     modifier = Modifier.padding(top = 10.dp),
@@ -330,7 +331,11 @@ private fun Vorschlagskarte(vorschlag: Suggestion, modell: AppViewModel, istVoll
                 if (!stufe.parallaxe) Modifier else Modifier.pointerInput(vorschlag.id) {
                     detectHorizontalDragGestures(
                         onDragEnd = {
+                            // Rechts in den Monitor (F-36), links verwerfen: der einzelne
+                            // Vorschlag geht als „gesehen" in die Anfrage ein und bleibt bis
+                            // Mitternacht ausgeschlossen (F-04).
                             if (wischweg > schwelle) modell.uebernimm(vorschlag)
+                            else if (wischweg < -schwelle) modell.verwerfeVorschlag(vorschlag)
                             wischweg = 0f
                         },
                         onDragCancel = { wischweg = 0f },
