@@ -1,5 +1,5 @@
 #Requires -Version 7
-# Version 1.4.0 - 30.08.2026, 11:54 Uhr
+# Version 1.5.0 - 11.09.2026, 14:18 Uhr
 <#
 .SYNOPSIS
     Baut ein Voice-Overlay (CVO/TVO) sauber neu und startet es neu — in EINEM Schritt.
@@ -33,13 +33,24 @@
     pwsh -File rebuild-overlay.ps1 Both
 .EXAMPLE
     pwsh -File rebuild-overlay.ps1 CVO -NoStart
+
+.NOTES
+    Vor jedem Update erscheint ein Ja/Nein-Fenster (wie bei update-launcher.ps1). Ohne Klick
+    auf "Ja" wird nichts beendet und nichts gebaut — so wird keine laufende Spracheingabe
+    abgeschossen. Rueckmeldung als Zeile OVERLAY_UPDATE_STATUS=cancelled | no-answer.
+    Nach DialogTimeoutSeconds ohne Klick gilt "Nein", nie "Ja".
 #>
 param(
     [Parameter(Mandatory, Position = 0)]
     [ValidateSet('CVO', 'TVO', 'Both')]
     [string]$Target,
 
-    [switch]$NoStart
+    [switch]$NoStart,
+
+    # Ueberspringt die Rueckfrage. NUR auf ausdrueckliche Ansage des Benutzers verwenden.
+    [switch]$Force,
+
+    [int]$DialogTimeoutSeconds = 240
 )
 
 $ErrorActionPreference = 'Stop'
@@ -272,9 +283,55 @@ function Test-FreshVersion {
               Version = $ver; Endpoint = $endpoint; PortOpen = $portOpen }
 }
 
+# Ja/Nein-Fenster, garantiert sichtbar ganz oben (systemmodal + topmost + Vordergrund) —
+# gleiche Technik wie update-launcher.ps1. Rueckgabe: yes | no | timeout.
+Add-Type -Namespace OverlayUpdate -Name NativeDialog -MemberDefinition @'
+[DllImport("user32.dll", CharSet = CharSet.Unicode)]
+public static extern int MessageBoxTimeoutW(IntPtr hWnd, string text, string caption, uint type, ushort language, uint milliseconds);
+'@ -ErrorAction SilentlyContinue
+
+function Show-UpdateDialog {
+    param([string[]]$Names)
+    $liste = ($Names | ForEach-Object { "• $_" }) -join "`n"
+    $text = "Update für:`n$liste`n`nDas Overlay wird beendet, neu gebaut und danach automatisch neu gestartet. Solange ist keine Spracheingabe möglich.`n`nBitte erst bestätigen, wenn du gerade nicht sprichst. Jetzt aktualisieren?"
+    $title = 'Spracheingabe aktualisieren'
+    # MB_YESNO | MB_ICONWARNING | MB_SYSTEMMODAL | MB_SETFOREGROUND | MB_TOPMOST
+    $flags = 0x4 -bor 0x30 -bor 0x1000 -bor 0x10000 -bor 0x40000
+    try {
+        $result = [OverlayUpdate.NativeDialog]::MessageBoxTimeoutW([IntPtr]::Zero, $text, $title, $flags, 0, [uint32]($DialogTimeoutSeconds * 1000))
+        if ($result -eq 32000) { return 'timeout' }
+    }
+    catch {
+        Write-Host "OVERLAY_UPDATE_INFO=nativer Dialog nicht verfuegbar ($($_.Exception.Message)) -- Ersatzdialog."
+        $result = (New-Object -ComObject WScript.Shell).Popup($text, $DialogTimeoutSeconds, $title, $flags)
+        if ($result -eq -1) { return 'timeout' }
+    }
+    if ($result -eq 6) { return 'yes' }
+    return 'no'
+}
+
 # --- Hauptablauf ---
 $targets = if ($Target -eq 'Both') { @('CVO', 'TVO') } else { @($Target) }
 $failed = @()
+
+# Ohne Freigabe per Klick passiert nichts: kein Beenden, kein Build, kein Start.
+if ($Force) {
+    Write-Host 'OVERLAY_UPDATE_INFO=-Force gesetzt: Update ohne Rueckfrage.'
+}
+else {
+    $names = @($targets | ForEach-Object { "$($Overlays[$_].Name) ($_, $($Overlays[$_].Label))" })
+    switch (Show-UpdateDialog -Names $names) {
+        'yes' { Write-Host 'OVERLAY_UPDATE_INFO=Update per Klick freigegeben.' }
+        'timeout' {
+            Write-Host "OVERLAY_UPDATE_STATUS=no-answer (kein Klick innerhalb von $DialogTimeoutSeconds Sekunden -- nichts geaendert)"
+            exit 0
+        }
+        default {
+            Write-Host 'OVERLAY_UPDATE_STATUS=cancelled (nichts geaendert)'
+            exit 0
+        }
+    }
+}
 
 foreach ($t in $targets) {
     $O = $Overlays[$t]

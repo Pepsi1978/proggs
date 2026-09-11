@@ -33,6 +33,12 @@ This kills watcher + exe (by process NAME), builds `publish`, restarts via `watc
 and verifies the process count. Order: edit -> version bump -> commit -> push ->
 **rebuild-overlay.ps1** -> status. If the change touches a file SHARED with
 TerminalVoiceOverlay, use `Both` instead of `CVO`.
+
+**Confirmation dialog:** the script first shows Frank a Yes/No window (like
+`update-launcher.ps1`). Nothing is killed or built before he clicks Yes. Start it with the
+HIGHEST allowed timeout (600000 ms) and never abort it while the window waits. Output
+`OVERLAY_UPDATE_STATUS=cancelled` (No) or `=no-answer` (4 min without click) → do NOT retry,
+report to Frank. Never pass `-Force` unless Frank explicitly says so.
 (Source: memory `feedback_overlay_auto_rebuild_after_commit`.)
 
 ## Architecture
