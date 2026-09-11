@@ -122,7 +122,7 @@ namespace ClaudeVoiceOverlay.Services
                 ("len", text.Length), ("autoEnter", autoEnter));
 
             // 1. Zwischenablage setzen (STA-Thread → direkter Clipboard-Zugriff) + verifizieren
-            if (!SetClipboardText(text, out IDataObject? previous, out uint ownedClipboardSequence))
+            if (!SetClipboardText(text, out IDataObject? previous, out bool previousHadContent, out uint ownedClipboardSequence))
             {
                 DiagLog.Write("Paste", "ABBRUCH: Clipboard.SetText fehlgeschlagen");
                 return false;
@@ -163,7 +163,7 @@ namespace ClaudeVoiceOverlay.Services
             {
                 // Chromium muss den Clipboard-Inhalt vor der Wiederherstellung konsumieren.
                 if (pasteSent) Thread.Sleep(600);
-                RestoreClipboard(previous, ownedClipboardSequence);
+                RestoreClipboard(previous, previousHadContent, ownedClipboardSequence);
             }
         }
 
@@ -576,15 +576,16 @@ namespace ClaudeVoiceOverlay.Services
 
         // ── Zwischenablage (auf STA-Thread, mit Retry gegen CLIPBRD_E_CANT_OPEN) ──
 
-        private static bool SetClipboardText(string text, out IDataObject? previous, out uint ownedSequence)
+        private static bool SetClipboardText(string text, out IDataObject? previous, out bool previousHadContent, out uint ownedSequence)
         {
             previous = null;
+            previousHadContent = false;
             ownedSequence = 0;
             for (int attempt = 1; attempt <= 6; attempt++)
             {
                 try
                 {
-                    previous = Clipboard.GetDataObject();
+                    previous = ClipboardSnapshot.Capture(out previousHadContent);
                     // copy:true → OLE-Flush, Inhalt bleibt nach Tool-Ende erhalten
                     Clipboard.SetDataObject(text, true);
                     ownedSequence = Win32.GetClipboardSequenceNumber();
@@ -604,7 +605,7 @@ namespace ClaudeVoiceOverlay.Services
             return false;
         }
 
-        private static void RestoreClipboard(IDataObject? previous, uint ownedSequence)
+        private static void RestoreClipboard(IDataObject? previous, bool previousHadContent, uint ownedSequence)
         {
             for (int attempt = 1; attempt <= 6; attempt++)
             {
@@ -617,7 +618,10 @@ namespace ClaudeVoiceOverlay.Services
                     }
 
                     if (previous == null)
-                        Clipboard.Clear();
+                    {
+                        if (!previousHadContent)
+                            Clipboard.Clear();
+                    }
                     else
                         Clipboard.SetDataObject(previous, true);
                     return;

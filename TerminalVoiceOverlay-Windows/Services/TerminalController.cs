@@ -136,6 +136,7 @@ namespace TerminalVoiceOverlay.Services
                 DiagLog.Write("Paste", "start", ("chars", text.Length), ("autoEnter", autoEnter), ("hwnd", $"0x{terminalHwnd.ToInt64():X}"));
 
                 IDataObject? previousClipboard = null;
+                bool previousHadContent = false;
                 uint ownedClipboardSequence = 0;
                 bool clipboardSet = false;
                 bool pasteSent = false;
@@ -146,7 +147,7 @@ namespace TerminalVoiceOverlay.Services
                     var clipboardSw = Stopwatch.StartNew();
                     clipboardSet = TryRunOnUiThread(() =>
                     {
-                        previousClipboard = Clipboard.GetDataObject();
+                        previousClipboard = ClipboardSnapshot.Capture(out previousHadContent);
                         Clipboard.SetText(text);
                         ownedClipboardSequence = GetClipboardSequenceNumber();
                     });
@@ -222,7 +223,10 @@ namespace TerminalVoiceOverlay.Services
                             }
 
                             if (previousClipboard is null)
-                                Clipboard.Clear();
+                            {
+                                if (!previousHadContent)
+                                    Clipboard.Clear();
+                            }
                             else
                                 Clipboard.SetDataObject(previousClipboard, true);
                         });
