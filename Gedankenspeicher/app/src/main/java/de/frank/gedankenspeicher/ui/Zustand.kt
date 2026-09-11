@@ -60,7 +60,7 @@ data class Verlaufszustand(
     val wertetAus: Boolean = false,
     val meldung: String? = null,
     /** Sprungziel aus der Suche: diese Notiz leuchtet einmal auf (M-11). */
-    val hebeHervor: Long? = null,
+    val hebeHervor: String? = null,
 )
 
 /** Der Zustand des KI-Blattes (B-03). */

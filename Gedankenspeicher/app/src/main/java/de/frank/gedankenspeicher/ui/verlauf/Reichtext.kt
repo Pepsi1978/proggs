@@ -97,7 +97,7 @@ object Reichtext {
 
     // --- Quellenangaben ---------------------------------------------------------------------
 
-    private val markdownLink = Regex("\\[([^\\]\\n]*)]\\((?:https?://|www\\.)[^)\\s]*\\)")
+    private val markdownLink = Regex("\\[([^\\]\\n]*)]\\((?:https?://|www\\.)")
     // Die Adresse endet vor ) und ] und vor abschlie\u00dfenden Satzzeichen; `url(` bleibt gesch\u00fctzt.
     // Eine ausgeglichene Klammergruppe geh\u00f6rt dazu: \u2026/wiki/Merkur_(Planet).
     private val nackteAdresse =
@@ -105,7 +105,7 @@ object Reichtext {
             "(?<![\\w\"'=])(?<!url\\()(?:https?://|www\\.)(?:[^\\s()\\[\\]]|\\([^\\s()]*\\))*" +
                 "(?:[^\\s()\\[\\].,;:!?'\"]|\\([^\\s()]*\\))",
         )
-    private val klammerRest = Regex("\\(\\s*[,;\u00b7\u2022\\s]*\\)")
+    private val klammerRest = Regex("\\(\\s*(?:(?:siehe|vgl\\.?)[ \\t]*)?[,;\u00b7\u2022\\s]*\\)", RegexOption.IGNORE_CASE)
     private val fussnote = Regex("\u3010[^\u3011]*\u3011|\\[\\^[^\\]]*]")
 
     private val quellzeile = Regex("(?im)^\\s*(quellen?|sources?|belege?|referenzen)\\s*:.*$")
@@ -134,17 +134,40 @@ object Reichtext {
                     if (istGrafik) teil else saeubere(teil)
                 }
             }
-        }.replace(Regex("\n{3,}"), "\n\n").trim()
+        }.trim()
     }
 
     private fun saeubere(text: String): String = text
         .replace(fussnote, "")
-        .replace(markdownLink) { it.groupValues[1] }
+        .let(::entferneMarkdownLinks)
         .replace(nackteAdresse, "")
         .replace(quellzeile, "")
         .replace(klammerRest, "")
         .replace(mehrfachLeerraumInZeile, " ")
-        .replace(Regex("[ \t]+([.,;:!?])"), "$1")
+        .replace(Regex("(?<=\\S)[ \t]+([.,;:!?])"), "$1")
+        .replace(Regex("\n{3,}"), "\n\n")
+
+    /** Klammern im URL-Pfad gehören zum Linkziel, nicht zum folgenden Fließtext. */
+    private fun entferneMarkdownLinks(text: String): String = buildString {
+        var pos = 0
+        for (treffer in markdownLink.findAll(text)) {
+            if (treffer.range.first < pos) continue
+            var ende = treffer.range.last + 1
+            var tiefe = 1
+            while (ende < text.length && !text[ende].isWhitespace() && tiefe > 0) {
+                when (text[ende]) {
+                    '(' -> tiefe++
+                    ')' -> tiefe--
+                }
+                ende++
+            }
+            if (tiefe != 0) continue
+            append(text, pos, treffer.range.first)
+            append(treffer.groupValues[1])
+            pos = ende
+        }
+        append(text, pos, text.length)
+    }
 
     /** Teilt den Text in abwechselnd „außerhalb eines Codeblocks" und „Codeblock (``` … ```)". */
     private fun zerlegeAnCode(text: String): List<Pair<Boolean, String>> {
@@ -204,7 +227,7 @@ object Reichtext {
                         i++
                     }
                     if (i < zeilen.size) i++
-                    val text = inhalt.toString().trim()
+                    val text = inhalt.toString().removeSuffix("\n")
                     if (text.isNotEmpty()) bausteine += umschlossenerBlock(sprache, text)
                 }
 
@@ -226,7 +249,7 @@ object Reichtext {
 
                 ueberschrift.matches(kurz) -> {
                     val treffer = ueberschrift.find(kurz)!!
-                    val text = treffer.groupValues[2].trim().trimEnd('#').trim()
+                    val text = treffer.groupValues[2].trim().replace(Regex("\\s+#+$"), "")
                     if (text.isNotEmpty()) {
                         bausteine += Baustein.Ueberschrift(treffer.groupValues[1].length, text)
                     }
@@ -327,8 +350,29 @@ object Reichtext {
             zeilen[i + 1].contains('|') &&
             tabellenTrenner.matches(zeilen[i + 1])
 
-    private fun zellen(zeile: String): List<String> =
-        zeile.trim().removePrefix("|").removeSuffix("|").split('|').map { it.trim() }
+    private fun zellen(zeile: String): List<String> {
+        val text = zeile.trim().removePrefix("|")
+        val zellen = mutableListOf<String>()
+        val zelle = StringBuilder()
+        var i = 0
+        while (i < text.length) {
+            when {
+                text[i] == '\\' && i + 1 < text.length -> {
+                    if (text[i + 1] == '|') zelle.append('|')
+                    else zelle.append(text[i]).append(text[i + 1])
+                    i += 2
+                }
+                text[i] == '|' -> {
+                    zellen += zelle.toString().trim()
+                    zelle.setLength(0)
+                    i++
+                }
+                else -> { zelle.append(text[i]); i++ }
+            }
+        }
+        if (zelle.isNotEmpty() || !text.endsWith('|')) zellen += zelle.toString().trim()
+        return zellen
+    }
 
     private fun angleichen(zeile: List<String>, spalten: Int): List<String> =
         if (zeile.size >= spalten) zeile.take(spalten) else zeile + List(spalten - zeile.size) { "" }

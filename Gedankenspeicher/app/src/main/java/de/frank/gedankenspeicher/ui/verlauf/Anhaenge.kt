@@ -181,7 +181,10 @@ fun Anhangsknopf(
         bereich.launch {
             runCatching { speicher.uebernimm(uri, art) }
                 .onSuccess(beiAnhang)
-                .onFailure { beiFehler(it.message ?: "Der Anhang konnte nicht übernommen werden.") }
+                .onFailure {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    beiFehler(it.message ?: "Der Anhang konnte nicht übernommen werden.")
+                }
         }
     }
 
@@ -436,7 +439,10 @@ fun NotizAnhangsmenue(
         bereich.launch {
             runCatching { speicher.uebernimm(uri, art) }
                 .onSuccess(beiAnhang)
-                .onFailure { meld(it.message ?: "Der Anhang konnte nicht übernommen werden.") }
+                .onFailure {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    meld(it.message ?: "Der Anhang konnte nicht übernommen werden.")
+                }
         }
     }
 
@@ -1111,6 +1117,7 @@ fun ZeichenBlatt(
     var farbe by remember { mutableStateOf(Stiftfarben.first()) }
     var staerke by remember { mutableStateOf(6f) }
     var flaeche by remember { mutableStateOf(IntSize.Zero) }
+    var speichert by remember { mutableStateOf(false) }
     val bereich = rememberCoroutineScope()
 
     VollbildBlatt(
@@ -1160,18 +1167,26 @@ fun ZeichenBlatt(
                     Spacer(Modifier.height(10.dp))
                     Blattknoepfe(
                         beiAbbruch = beiAbbruch,
-                        bestaetigungAktiv = true,
+                        bestaetigungAktiv = !speichert,
                         beiBestaetigen = {
+                            if (speichert) return@Blattknoepfe
                             if (striche.isEmpty() || flaeche.width == 0) {
                                 beiAbbruch()
                             } else {
                                 val fertig = striche.toList()
                                 val breite = flaeche.width
                                 val hoehe = flaeche.height
+                                speichert = true
                                 bereich.launch {
-                                    runCatching { speichereZeichnung(speicher, fertig, breite, hoehe) }
-                                        .onSuccess(beiFertig)
-                                        .onFailure { beiFehler(it.message ?: "Die Zeichnung konnte nicht gespeichert werden.") }
+                                    try {
+                                        beiFertig(speichereZeichnung(speicher, fertig, breite, hoehe))
+                                    } catch (abbruch: kotlinx.coroutines.CancellationException) {
+                                        throw abbruch
+                                    } catch (fehler: Exception) {
+                                        beiFehler(fehler.message ?: "Die Zeichnung konnte nicht gespeichert werden.")
+                                    } finally {
+                                        speichert = false
+                                    }
                                 }
                             }
                         },
@@ -1219,7 +1234,10 @@ private suspend fun speichereZeichnung(
     striche: List<Strich>,
     breite: Int,
     hoehe: Int,
-): Anhang = withContext(Dispatchers.IO) {
+): Anhang {
+    var erzeugt: File? = null
+    return try {
+        withContext(Dispatchers.IO) {
     val bild = android.graphics.Bitmap.createBitmap(breite, hoehe, android.graphics.Bitmap.Config.ARGB_8888)
     val leinwand = android.graphics.Canvas(bild)
     leinwand.drawColor(android.graphics.Color.WHITE)
@@ -1247,10 +1265,20 @@ private suspend fun speichereZeichnung(
             leinwand.drawPath(pfad, stift)
         }
     }
-    val datei = speicher.neueDatei("-zeichnung.png")
-    FileOutputStream(datei).use { aus -> bild.compress(android.graphics.Bitmap.CompressFormat.PNG, 95, aus) }
-    bild.recycle()
+    val datei = speicher.neueDatei("-zeichnung.png").also { erzeugt = it }
+    try {
+        FileOutputStream(datei).use { aus ->
+            check(bild.compress(android.graphics.Bitmap.CompressFormat.PNG, 95, aus)) { "Die Zeichnung konnte nicht gespeichert werden." }
+        }
+    } finally {
+        bild.recycle()
+    }
     speicher.beschreibe(datei, Anhangsart.ZEICHNUNG, "Zeichnung")
+        }
+    } catch (fehler: Exception) {
+        erzeugt?.delete()
+        throw fehler
+    }
 }
 
 // ---------------------------------------------------------------------- Haftnotiz

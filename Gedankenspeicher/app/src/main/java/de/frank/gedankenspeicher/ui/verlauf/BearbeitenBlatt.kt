@@ -105,9 +105,9 @@ fun BearbeitenBlatt(
                 "Speichern",
                 style = schrift.knopf,
                 // Ist nichts geändert, ist Speichern ausgegraut und wirkungslos.
-                color = if (zustand.geaendert) farben.akzent else farben.textSchwach,
+                color = if (zustand.geaendert && !zustand.nimmtAuf && !zustand.transkribiert) farben.akzent else farben.textSchwach,
                 modifier = Modifier
-                    .clickable(enabled = zustand.geaendert, onClick = beiSpeichern)
+                    .clickable(enabled = zustand.geaendert && !zustand.nimmtAuf && !zustand.transkribiert, onClick = beiSpeichern)
                     .padding(vertical = 8.dp),
             )
         }
@@ -158,7 +158,7 @@ private fun Textfeld(zustand: Bearbeitungszustand, beiText: (String, Int, Int) -
     val farben = Farben
     val schrift = Schriften
     var feld by remember(zustand.notiz?.id) {
-        mutableStateOf(TextFieldValue(zustand.text, TextRange(zustand.text.length)))
+        mutableStateOf(TextFieldValue(zustand.text, TextRange(zustand.auswahlStart, zustand.auswahlEnde)))
     }
     LaunchedEffect(zustand.einfuegeMarke) {
         if (zustand.einfuegeMarke > 0) {

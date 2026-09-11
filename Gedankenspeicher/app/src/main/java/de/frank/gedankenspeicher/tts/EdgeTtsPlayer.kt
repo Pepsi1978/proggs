@@ -23,6 +23,8 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -234,6 +236,14 @@ class EdgeTtsPlayer(context: Context) {
         voice: String = TtsCatalog.DEFAULT_EDGE_VOICE,
         speechRate: Float = 1f,
         pitchPercent: Int = 0,
+    ): File = try {
+        withTimeout(90_000L) { synthetisiereAbsatz(text, voice, speechRate, pitchPercent) }
+    } catch (fehler: TimeoutCancellationException) {
+        throw TtsPlaybackException("Die Edge-Stimme antwortet nicht rechtzeitig.", fehler)
+    }
+
+    private suspend fun synthetisiereAbsatz(
+        text: String, voice: String, speechRate: Float, pitchPercent: Int,
     ): File = suspendCancellableCoroutine { fortsetzung ->
         val requestId = UUID.randomUUID().toString().replace("-", "")
         val connectionId = UUID.randomUUID().toString().replace("-", "")

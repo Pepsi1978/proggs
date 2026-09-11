@@ -8,7 +8,6 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
 /**
@@ -56,16 +55,7 @@ object Dauern {
  * alle Dauern halbiert.
  */
 @Composable
-fun bewegungReduziert(): Boolean {
-    val ctx = LocalContext.current
-    return remember(ctx) {
-        Settings.Global.getFloat(
-            ctx.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            1f,
-        ) == 0f
-    }
-}
+fun bewegungReduziert(): Boolean = bewegungReduziertJetzt()
 
 /**
  * Gibt die Dauer zurück, die wirklich laufen soll — halbiert, wenn das System weniger

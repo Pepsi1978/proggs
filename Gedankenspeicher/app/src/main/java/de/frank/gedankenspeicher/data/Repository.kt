@@ -1,6 +1,7 @@
 package de.frank.gedankenspeicher.data
 
 import android.content.Context
+import androidx.room.withTransaction
 import de.frank.gedankenspeicher.audio.GroqTranscriber
 import de.frank.gedankenspeicher.auth.CodexAuthManager
 import de.frank.gedankenspeicher.auth.CodexModel
@@ -239,6 +240,16 @@ class Repository(
         if (inhalt) merkeAenderung(notiz.sitzungId)
     }
 
+    /** Liest und verändert denselben aktuellen Datensatz atomar, ohne fremde Felder zurückzusetzen. */
+    suspend fun aendereAktuell(id: Long, inhalt: Boolean = true, aenderung: (Notiz) -> Notiz): Boolean =
+        db.withTransaction {
+            val vorher = db.notizen().eine(id) ?: return@withTransaction false
+            val nachher = aenderung(vorher)
+            if (nachher == vorher) return@withTransaction false
+            aendere(nachher, inhalt)
+            true
+        }
+
     suspend fun loescheNotiz(notiz: Notiz) {
         notiz.audioPfad?.let { runCatching { File(it).delete() } }
         // Mit der Notiz verschwinden auch ihre Anhangsdateien — sonst bleiben Bilder,
@@ -250,7 +261,7 @@ class Repository(
 
     /** Verschieben lässt den Zeitstempel unangetastet (F-08) — die Notiz bleibt, wann sie war. */
     suspend fun verschiebeNotiz(notiz: Notiz, zielSitzung: Long) {
-        db.notizen().aendern(notiz.copy(sitzungId = zielSitzung))
+        aendereAktuell(notiz.id, inhalt = false) { it.copy(sitzungId = zielSitzung) }
         // Beide Sitzungen haben sich geändert: der einen fehlt die Notiz, die andere hat
         // sie dazubekommen.
         merkeAenderung(notiz.sitzungId)
@@ -296,6 +307,7 @@ class Repository(
         // weg, die Karte wäre eine leere Hülle. A-13 verlangt, dass keine solche stehenbleibt.
         db.notizen().angefangene().forEach { it.audioPfad?.let { pfad -> runCatching { File(pfad).delete() } } }
         db.notizen().raeumeAngefangeneWeg()
+        db.notizen().repariereUnterbrocheneTranskriptionen()
     }
 
     // --- Transkription (F-03, F-04) --------------------------------------------------------
@@ -346,7 +358,8 @@ class Repository(
         antwort: String,
         profilAnweisung: String,
         websuche: Boolean,
-    ): String = codex.werteAus(notizen, rueckfrage, antwort, profilAnweisung, websuche, modell(), effort())
+        websucheErzwingen: Boolean = false,
+    ): String = codex.werteAus(notizen, rueckfrage, antwort, profilAnweisung, websuche, modell(), effort(), websucheErzwingen)
 
     /**
      * Setzt den Sitzungstitel aus der ersten Notiz — aber nur, wenn er noch der
@@ -356,7 +369,7 @@ class Repository(
         val sitzung = db.sitzungen().eine(sitzungId) ?: return
         if (sitzung.titelVonHand || sitzung.titel != "Neue Sitzung") return
         val titel = holeSitzungstitel(ersteNotiz).takeIf(String::isNotBlank) ?: return
-        db.sitzungen().setzeTitel(sitzungId, titel, vonHand = false)
+        db.sitzungen().setzeKiTitel(sitzungId, titel)
     }
 
     // --- Der Auswertungs-Kontext (F-09, Schritt 1) ------------------------------------------
@@ -432,7 +445,8 @@ class Repository(
      */
     suspend fun deaktiviereProfile() = db.profile().alleAbwaehlen()
 
-    suspend fun speichereProfil(profil: Auswertungsprofil) = db.profile().aendern(profil)
+    suspend fun speichereProfil(profil: Auswertungsprofil) =
+        db.profile().aendereText(profil.nummer, profil.name, profil.anweisung, profil.anweisung.isBlank())
 
     /**
      * Stellt den Auslieferungstext wieder her — behält aber, ob dieses Profil gerade aktiv
@@ -440,7 +454,7 @@ class Repository(
      */
     suspend fun setzeProfilZurueck(nummer: Int, warAktiv: Boolean) {
         val vorlage = Auslieferungsprofile.vorlage(nummer)
-        db.profile().aendern(vorlage.copy(istAktiv = warAktiv && vorlage.anweisung.isNotBlank()))
+        speichereProfil(vorlage)
     }
 
     suspend fun legeProfileAnWennNoetig() {

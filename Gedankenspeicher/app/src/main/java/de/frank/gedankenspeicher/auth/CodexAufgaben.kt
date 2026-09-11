@@ -328,6 +328,7 @@ internal fun auswertungsPayload(
     websuche: Boolean,
     model: CodexModel,
     effort: ReasoningEffort,
+    websucheErzwingen: Boolean = false,
 ): JSONObject {
     val auftrag = buildString {
         append(AUSWERTUNG_GRUNDAUFTRAG)
@@ -354,6 +355,7 @@ internal fun auswertungsPayload(
         .put("reasoning", JSONObject().put("effort", model.normalizeEffort(effort).apiValue))
     if (websuche) {
         payload.put("tools", JSONArray().put(JSONObject().put("type", "web_search")))
+        if (websucheErzwingen) payload.put("tool_choice", "required")
     }
     return payload
 }
@@ -379,10 +381,12 @@ internal fun einzeiler(rohtext: String): String {
             .firstNotNullOfOrNull { feld -> it.optString(feld).takeIf(String::isNotBlank) }
             .orEmpty()
     }
-    return (ausJson ?: roh)
+    val text = (ausJson ?: roh)
         .replace('\n', ' ')
         .replace(Regex("\\s{2,}"), " ")
         .trim()
-        .trim('„', '“', '”', '‘', '’', '‚', '»', '«', '›', '‹', '"', '\'')
-        .trim()
+    val paare = listOf('„' to '“', '“' to '”', '‚' to '‘', '‘' to '’', '»' to '«', '«' to '»', '›' to '‹', '‹' to '›', '"' to '"', '\'' to '\'')
+    return if (text.length >= 2 && paare.any { (auf, zu) -> text.first() == auf && text.last() == zu }) {
+        text.substring(1, text.lastIndex).trim()
+    } else text
 }

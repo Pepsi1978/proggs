@@ -112,7 +112,7 @@ fun AnmeldungBildschirm(
                 )
             }
 
-            if (zustand.code.isNotBlank() && !zustand.erfolgreich) {
+            if ((zustand.code.isNotBlank() || zustand.fehler != null) && !zustand.erfolgreich) {
                 Spacer(Modifier.height(16.dp))
                 Text(
                     zustand.adresse,

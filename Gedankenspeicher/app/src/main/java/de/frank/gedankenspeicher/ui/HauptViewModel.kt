@@ -174,6 +174,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private var verlaufJob: Job? = null
     private var aufnahmeJob: Job? = null
     private var auswertungJob: Job? = null
+    private var frageJob: Job? = null
+    private var bearbeitungsGeneration = 0
+    private var initialisiert = false
+    private var wiederherstellungLaeuft = false
 
     // Nachreichen und Sicherung dürfen nie doppelt nebeneinander laufen.
     private val nachreichSperre = Mutex()
@@ -218,11 +222,15 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             // Abfrage für etwas, das man vielleicht gar nicht wollte. Jetzt steht die
             // Auswahl offen, und die Sitzung sucht sich Frank selbst aus.
             _verlauf.update { it.copy(sitzung = null, laedt = false, eintraege = emptyList()) }
+            initialisiert = true
             reicheWartendeNach()
             holeFehlendeUeberschriften()
         }
         viewModelScope.launch {
-            repo.sitzungen.collectLatest { liste -> _verlauf.update { it.copy(sitzungen = liste) } }
+            repo.sitzungen.collectLatest { liste ->
+                _verlauf.update { z -> z.copy(sitzungen = liste, sitzung = liste.firstOrNull { it.id == z.sitzung?.id }) }
+                _suche.update { it.copy(treffer = ohneGesperrte(it.treffer)) }
+            }
         }
         viewModelScope.launch {
             repo.letzteAktivitaeten.collectLatest { zeiten ->
@@ -234,6 +242,14 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             mikrofon.pegel.collectLatest { p -> _verlauf.update { it.copy(pegel = p) } }
+        }
+        viewModelScope.launch {
+            mikrofon.beendet.collect { beendet ->
+                if (beendet) {
+                    if (_nimmtStimmeAuf.value) beendeStimmaufnahme()
+                    else if (_verlauf.value.nimmtAuf) beendeAufnahme()
+                }
+            }
         }
         viewModelScope.launch {
             vorleser.absatzNr.collectLatest { nr -> _verlauf.update { it.copy(vorleseAbsatz = nr) } }
@@ -575,11 +591,16 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * stünde die Antwort auf eine Auswertung selbst wieder als auszuwertende Notiz da.
      */
     fun antwortAufnahmeUmschalten() {
+        if (!_kiBlatt.value.offen) return
+        if (_verlauf.value.nimmtAuf && aufnahmeziel != Aufnahmeziel.KI_BLATT) {
+            return melde("Erst die Notiz-Aufnahme beenden.")
+        }
         if (_verlauf.value.nimmtAuf) {
             beendeAufnahme()
         } else {
             aufnahmeziel = Aufnahmeziel.KI_BLATT
             starteAufnahme()
+            _kiBlatt.update { it.copy(nimmtAntwortAuf = _verlauf.value.nimmtAuf) }
         }
     }
 
@@ -645,15 +666,20 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         AufnahmeDienst.beende(ctx)
         _verlauf.update { it.copy(nimmtAuf = false, aufnahmeDauerMs = 0) }
         _bearbeitung.update { it.copy(nimmtAuf = false) }
+        _kiBlatt.update { it.copy(nimmtAntwortAuf = false) }
         aufnahmeJob?.cancel()
         val ziel = aufnahmeziel
         aufnahmeziel = Aufnahmeziel.VERLAUF
         val blattGeneration = kiBlattGeneration
+        val editGeneration = bearbeitungsGeneration
+        if (ziel == Aufnahmeziel.BEARBEITUNG) _bearbeitung.update { it.copy(transkribiert = true) }
         viewModelScope.launch {
             val wav = mikrofon.stop()
             if (wav == null || wav.size < MINDESTGROESSE_WAV) {
                 if (ziel == Aufnahmeziel.BEARBEITUNG) {
-                    _bearbeitung.update { it.copy(fehler = "Zu kurz — dabei ist nichts angekommen.") }
+                    if (editGeneration == bearbeitungsGeneration) {
+                        _bearbeitung.update { it.copy(transkribiert = false, fehler = "Zu kurz — dabei ist nichts angekommen.") }
+                    }
                 } else {
                     melde("Zu kurz — dabei ist nichts angekommen.")
                 }
@@ -664,18 +690,18 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             if (ziel == Aufnahmeziel.BEARBEITUNG) {
-                schreibeInsBearbeitungsfeld(wav)
+                schreibeInsBearbeitungsfeld(wav, editGeneration)
                 return@launch
             }
+            val datei = puffere(wav)
             if (!hatNetz()) {
                 // F-04: die Aufnahme wandert in den dauerhaften Speicher, die Karte entsteht
                 // trotzdem. Der Cache reichte nicht — Android räumt ihn ohne Vorwarnung weg.
-                val datei = puffere(wav)
                 repo.legeGesprocheneNotizAn(sitzung.id, Notizzustand.WARTET_AUF_TRANSKRIPTION, datei.absolutePath)
                 return@launch
             }
-            val id = repo.legeGesprocheneNotizAn(sitzung.id, Notizzustand.TRANSKRIBIERT_GERADE, null)
-            transkribiere(id, sitzung.id, wav, null)
+            val id = repo.legeGesprocheneNotizAn(sitzung.id, Notizzustand.TRANSKRIBIERT_GERADE, datei.absolutePath)
+            transkribiere(id, sitzung.id, wav, datei)
         }
     }
 
@@ -691,6 +717,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         AufnahmeDienst.beende(ctx)
         _verlauf.update { it.copy(nimmtAuf = false, aufnahmeDauerMs = 0) }
         _bearbeitung.update { it.copy(nimmtAuf = false) }
+        _kiBlatt.update { it.copy(nimmtAntwortAuf = false) }
         aufnahmeziel = Aufnahmeziel.VERLAUF
         aufnahmeJob?.cancel()
         viewModelScope.launch { mikrofon.stop() }
@@ -722,17 +749,17 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             if (text.isBlank()) {
                 // Alle vier Schichten haben nichts durchgelassen. Es wird ausdrücklich
                 // **nichts erfunden** (F-01, Fehlerfall): die Karte sagt, dass nichts ankam.
-                repo.aendere(
-                    notiz.copy(
+                repo.aendereAktuell(notizId) { aktuell ->
+                    aktuell.copy(
                         zustand = Notizzustand.NICHTS_VERSTANDEN,
                         audioPfad = datei?.absolutePath,
-                        versucheTranskription = notiz.versucheTranskription + 1,
-                    ),
-                )
+                        versucheTranskription = aktuell.versucheTranskription + 1,
+                    )
+                }
                 return
             }
+            repo.aendereAktuell(notizId) { it.copy(text = text, zustand = Notizzustand.FERTIG, audioPfad = null) }
             datei?.let { runCatching { it.delete() } }
-            repo.aendere(notiz.copy(text = text, zustand = Notizzustand.FERTIG, audioPfad = null))
             versorgeNeueNotiz(notizId, sitzungId, text)
         } catch (abbruch: CancellationException) {
             throw abbruch
@@ -740,18 +767,18 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             // Bis zur Höchstzahl an Versuchen wartet die Notiz wieder und wird von selbst
             // nachgereicht; erst danach gilt sie als fehlgeschlagen.
             val versuche = notiz.versucheTranskription + 1
-            repo.aendere(
-                notiz.copy(
+            val pfad = datei?.absolutePath ?: puffere(wav).absolutePath
+            repo.aendereAktuell(notizId, inhalt = false) { aktuell ->
+                aktuell.copy(
                     zustand = if (versuche < Repository.HOECHSTVERSUCHE) {
                         Notizzustand.WARTET_AUF_TRANSKRIPTION
                     } else {
                         Notizzustand.TRANSKRIPTION_FEHLGESCHLAGEN
                     },
-                    audioPfad = datei?.absolutePath ?: puffere(wav).absolutePath,
+                    audioPfad = pfad,
                     versucheTranskription = versuche,
-                ),
-                inhalt = false,
-            )
+                )
+            }
         } finally {
             transkriber.shutdown()
         }
@@ -805,12 +832,15 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * ergänzen. Steht etwas ausgewählt, ersetzt das Gesprochene die Auswahl — so verhält
      * sich auch das Einfügen aus der Zwischenablage.
      */
-    private suspend fun schreibeInsBearbeitungsfeld(wav: ByteArray) {
+    private suspend fun schreibeInsBearbeitungsfeld(wav: ByteArray, generation: Int) {
+        if (generation != bearbeitungsGeneration) return
         val notizId = _bearbeitung.value.notiz?.id ?: return
         val transkriber = repo.transkriber()
         if (!transkriber.isConfigured) {
             _bearbeitung.update {
-                if (it.notiz?.id == notizId) it.copy(fehler = "Für die Transkription fehlt der Groq-Schlüssel.") else it
+                if (it.notiz?.id == notizId && generation == bearbeitungsGeneration) {
+                    it.copy(transkribiert = false, fehler = "Für die Transkription fehlt der Groq-Schlüssel.")
+                } else it
             }
             return
         }
@@ -819,28 +849,28 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             val text = transkriber.transcribe(wav)
             if (text.isBlank()) {
                 _bearbeitung.update {
-                    if (it.notiz?.id == notizId) it.copy(fehler = "Nichts verstanden — versuch es noch einmal.") else it
+                    if (it.notiz?.id == notizId && generation == bearbeitungsGeneration) it.copy(fehler = "Nichts verstanden — versuch es noch einmal.") else it
                 }
                 return
             }
             _bearbeitung.update { z ->
                 // Das Blatt kann zwischenzeitlich geschlossen oder für eine andere Notiz
                 // geöffnet worden sein; dann gibt es keine Stelle mehr, an die etwas gehört.
-                if (z.notiz?.id != notizId) return@update z
+                if (z.notiz?.id != notizId || generation != bearbeitungsGeneration) return@update z
                 setzeEin(z, text)
             }
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
             _bearbeitung.update {
-                if (it.notiz?.id == notizId) {
+                if (it.notiz?.id == notizId && generation == bearbeitungsGeneration) {
                     it.copy(fehler = fehler.message ?: "Die Transkription ist nicht durchgekommen.")
                 } else {
                     it
                 }
             }
         } finally {
-            _bearbeitung.update { if (it.notiz?.id == notizId) it.copy(transkribiert = false) else it }
+            _bearbeitung.update { if (it.notiz?.id == notizId && generation == bearbeitungsGeneration) it.copy(transkribiert = false) else it }
             transkriber.shutdown()
         }
     }
@@ -858,8 +888,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun setzeEin(z: Bearbeitungszustand, einschub: String): Bearbeitungszustand {
         val laenge = z.text.length
-        val von = z.auswahlStart.coerceIn(0, laenge)
-        val bis = z.auswahlEnde.coerceIn(von, laenge)
+        val von = minOf(z.auswahlStart, z.auswahlEnde).coerceIn(0, laenge)
+        val bis = maxOf(z.auswahlStart, z.auswahlEnde).coerceIn(von, laenge)
         val davor = z.text.substring(0, von)
         val danach = z.text.substring(bis)
         // Nachtrag: hinter der Stelle steht nichts mehr (auch kein blosser Leerraum). Das
@@ -926,7 +956,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * Entstehung. Jede Karte füllt sich an ihrer Stelle — sie springt nicht ans Ende.
      */
     fun reicheWartendeNach() {
-        if (!hatNetz()) return
+        if (!initialisiert || wiederherstellungLaeuft || _neustartNoetig.value || !hatNetz()) return
         viewModelScope.launch {
             // Immer nur ein Durchlauf zugleich: Start, Netz-Rückkehr und Schlüsseleingabe
             // stoßen ihn unabhängig voneinander an. Wer zu spät kommt, stellt sich nicht an,
@@ -1019,6 +1049,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * (F-06, Schritte 1 und 2).
      */
     fun lesenUmschalten(kennung: String, text: String) {
+        if (_verlauf.value.nimmtAuf || _nimmtStimmeAuf.value) return melde("Erst die Aufnahme beenden.")
         if (_verlauf.value.liestVor == kennung) {
             vorleser.halteAn()
             _verlauf.update { it.copy(liestVor = null, vorleseAbsatz = -1) }
@@ -1033,6 +1064,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     // --- Verbessern (F-07) ------------------------------------------------------------------------
 
     fun verbessere(notiz: Notiz) {
+        if (notiz.id in _verlauf.value.verbessertGerade) return
         if (notiz.istVerbessert) return
         if (notiz.text.isBlank()) return
         _verlauf.update { it.copy(verbessertGerade = it.verbessertGerade + notiz.id) }
@@ -1045,10 +1077,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 val neu = buildString {
                     Nachtraege.abschnitte(notiz.text).forEachIndexed { nr, abschnitt ->
                         if (nr > 0) append("\n\n")
-                        val verbessert = runCatching { repo.verbessere(abschnitt.text.trim()) }
-                            .getOrNull()
-                            ?.takeIf(String::isNotBlank)
-                            ?: abschnitt.text.trim()
+                        val verbessert = repo.verbessere(abschnitt.text.trim()).takeIf(String::isNotBlank)
+                            ?: error("Die Verbesserung kam leer zurück — der Text bleibt, wie er war.")
                         if (abschnitt.nachtragVom != null) {
                             append(Nachtraege.zeileVon(abschnitt.nachtragVom)).append('\n')
                         }
@@ -1059,16 +1089,17 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                     melde("Die Verbesserung kam leer zurück — der Text bleibt, wie er war.")
                     return@launch
                 }
-                val aktuell = repo.notiz(notiz.id) ?: return@launch
-                repo.aendere(
+                val uebernommen = repo.aendereAktuell(notiz.id) { aktuell ->
+                    if (aktuell.text != notiz.text || aktuell.istVerbessert) return@aendereAktuell aktuell
                     aktuell.copy(
                         // Nur setzen, wenn noch nichts drinsteht: `textOriginal` ist der
                         // wirklich gesprochene Wortlaut und darf nie überschrieben werden.
                         textOriginal = aktuell.textOriginal ?: aktuell.text,
                         text = neu,
                         istVerbessert = true,
-                    ),
-                )
+                    )
+                }
+                if (!uebernommen) melde("Der Text wurde inzwischen geändert. Bitte die Verbesserung erneut starten.")
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
@@ -1098,6 +1129,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun oeffneBearbeitung(notiz: Notiz) {
+        bearbeitungsGeneration++
         _bearbeitung.value = Bearbeitungszustand(
             notiz = notiz,
             ueberschrift = notiz.ueberschrift ?: "",
@@ -1125,6 +1157,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
 
     fun schliesseBearbeitung() {
+        bearbeitungsGeneration++
         // Eine laufende Aufnahme endet mit dem Blatt — sonst liefe das Mikrofon weiter und
         // ihr Transkript käme in ein Feld, das es nicht mehr gibt.
         if (_verlauf.value.nimmtAuf && aufnahmeziel == Aufnahmeziel.BEARBEITUNG) verwirfAufnahme()
@@ -1133,6 +1166,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun speichereBearbeitung() {
         val z = _bearbeitung.value
+        if (z.nimmtAuf || z.transkribiert) return melde("Erst das Diktat abschließen.")
         val notiz = z.notiz ?: return
         viewModelScope.launch {
             // Vor jeden frischen Nachtrag kommt seine Überschriftenzeile.
@@ -1149,6 +1183,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (_verlauf.value.wertetAus) return
         val grund = Websuche.vonId(einstellungen.websucheGrundhaltung)
         kiBlattGeneration++
+        frageJob?.cancel()
+        val generation = kiBlattGeneration
         _kiBlatt.value = KiBlattzustand(
             offen = true,
             websuche = grund == Websuche.IMMER,
@@ -1156,9 +1192,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             grundhaltungKi = grund == Websuche.KI_ENTSCHEIDET,
             codexFehlt = !codex.isConnected,
         )
-        viewModelScope.launch {
-            _kiBlatt.update { it.copy(profil = repo.holeAktivesProfil()) }
-            ladeKontextUndFrage(sitzung.id)
+        frageJob = viewModelScope.launch {
+            val profil = repo.holeAktivesProfil()
+            if (generation != kiBlattGeneration) return@launch
+            _kiBlatt.update { it.copy(profil = profil) }
+            ladeKontextUndFrage(sitzung.id, generation)
         }
     }
 
@@ -1166,6 +1204,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         // Vor der Antwort geschlossen: nichts wird gespeichert, die Notizen bleiben
         // unausgewertet (F-09, Fehlerfall). Genau so ist es gewollt.
         codex.cancelQuestionGeneration()
+        frageJob?.cancel()
+        frageJob = null
         kiBlattGeneration++
         // Eine laufende Antwort-Aufnahme endet mit dem Blatt — sonst liefe das Mikrofon
         // weiter und ihr Transkript käme in ein Feld, das es nicht mehr gibt.
@@ -1186,8 +1226,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         if (it.rueckfrage.isNotEmpty()) it.copy(antwort = text, fehler = null) else it.copy(antwort = text)
     }
 
-    private suspend fun ladeKontextUndFrage(sitzungId: Long) {
+    private suspend fun ladeKontextUndFrage(sitzungId: Long, generation: Int) {
         val eintraege = repo.kontextEintraege(sitzungId)
+        if (generation != kiBlattGeneration) return
         _kiBlatt.update {
             it.copy(
                 kontextzahl = eintraege.size,
@@ -1203,10 +1244,15 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         _kiBlatt.update { it.copy(holtFrage = true, codexFehlt = false) }
         try {
             val frage = repo.holeRueckfrage(repo.alsKontext(eintraege))
-            _kiBlatt.update { it.copy(rueckfrage = frage, holtFrage = false) }
+            if (generation != kiBlattGeneration) return
+            _kiBlatt.update {
+                it.copy(rueckfrage = frage, holtFrage = false,
+                    fehler = if (frage.isBlank()) "Die Rückfrage kam leer zurück. Bitte erneut versuchen." else null)
+            }
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
+            if (generation != kiBlattGeneration) return
             _kiBlatt.update {
                 it.copy(holtFrage = false, fehler = fehler.message ?: "Die Rückfrage kam nicht durch.")
             }
@@ -1215,11 +1261,15 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun holeRueckfrageErneut() {
         val sitzung = _verlauf.value.sitzung ?: return
-        viewModelScope.launch { ladeKontextUndFrage(sitzung.id) }
+        if (!_kiBlatt.value.offen) return
+        frageJob?.cancel()
+        val generation = kiBlattGeneration
+        frageJob = viewModelScope.launch { ladeKontextUndFrage(sitzung.id, generation) }
     }
 
     /** Der Knopf „Auswerten" — ab hier läuft es im Verlauf weiter, das Blatt schließt sich. */
     fun werteAus() {
+        if (_verlauf.value.wertetAus || !_kiBlatt.value.offen) return
         val sitzung = _verlauf.value.sitzung ?: return
         val blatt = _kiBlatt.value
         val antwort = blatt.antwort.trim()
@@ -1229,7 +1279,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         }
         val websuche = blatt.websuche || blatt.websucheKiEntscheidet
         val rueckfrage = blatt.rueckfrage
-        _kiBlatt.value = KiBlattzustand()
+        schliesseKiBlatt()
         _verlauf.update { it.copy(wertetAus = true) }
         // Eine gründliche Auswertung dauert Minuten. Ohne Vordergrunddienst friert Android
         // den Prozess ein, sobald Frank in eine andere App wechselt, und schneidet die
@@ -1249,6 +1299,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                         antwort = antwort,
                         profilAnweisung = profil?.anweisung.orEmpty(),
                         websuche = websuche,
+                        websucheErzwingen = blatt.websuche && !blatt.websucheKiEntscheidet,
                     ),
                 )
                 if (text.isBlank()) {
@@ -1313,7 +1364,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Sprung aus der Suche: Sitzung öffnen und die Notiz einmal aufleuchten lassen (M-11). */
-    fun springeZu(sitzungId: Long, notizId: Long) {
+    fun springeZu(sitzungId: Long, notizId: Long, istKiAntwort: Boolean = false) {
+        val kennung = if (istKiAntwort) "antwort:$notizId" else "notiz:$notizId"
         // Dieselben Sperren wie beim Sitzungswechsel (F-13, Fehlerfall).
         if (sitzungId != _verlauf.value.sitzung?.id) {
             val z = _verlauf.value
@@ -1325,9 +1377,9 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 repo.oeffneSitzung(sitzungId)
                 repo.offeneSitzung().let(::beobachteSitzung)
             }
-            _verlauf.update { it.copy(hebeHervor = notizId) }
+            _verlauf.update { it.copy(hebeHervor = kennung) }
             delay(1200)
-            _verlauf.update { if (it.hebeHervor == notizId) it.copy(hebeHervor = null) else it }
+            _verlauf.update { if (it.hebeHervor == kennung) it.copy(hebeHervor = null) else it }
         }
     }
 
@@ -1507,6 +1559,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Der Probe-Knopf in B-04. Läuft schon eine Probe, hält derselbe Knopf sie an. */
     fun spieleProbe() {
+        if (_verlauf.value.nimmtAuf || _nimmtStimmeAuf.value) return melde("Erst die Aufnahme beenden.")
         if (vorleser.laeuft.value && vorleser.quelle.value == "probe") {
             vorleser.halteAn()
             return
@@ -1535,6 +1588,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             val verzeichnis = QwenVoiceDirectory()
             try {
                 val liste = verzeichnis.list(schluessel)
+                if (schluessel != einstellungen.qwenSchluessel) return@launch
                 _eigeneStimmen.value = liste
                 // Steht noch keine Stimme fest, wird die jüngste vorbelegt — sonst zeigt die
                 // Auswahl eine leere Kennung, obwohl Stimmen vorhanden sind.
@@ -1548,10 +1602,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
-                melde(fehler.message ?: "Die Stimmen liessen sich nicht laden.")
+                if (schluessel == einstellungen.qwenSchluessel) melde(fehler.message ?: "Die Stimmen liessen sich nicht laden.")
             } finally {
                 verzeichnis.shutdown()
                 _stimmenLaden.value = false
+                if (schluessel != einstellungen.qwenSchluessel) ladeEigeneStimmen()
             }
         }
     }
@@ -1656,7 +1711,6 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
             // Wird dem aktiven Profil der Text genommen, hat es der KI nichts mehr zu
             // sagen — dann steht die Auswertung eben ohne Profil da.
             if (profil.istAktiv && profil.anweisung.isBlank()) {
-                repo.deaktiviereProfile()
                 melde("Ein Profil ohne Text kann nicht aktiv sein — die KI hat jetzt freie Hand.")
             }
         }
@@ -1726,6 +1780,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun fuehreSicherungAus(ordner: Uri, still: Boolean = false) {
         // Immer nur eine Sicherung zugleich: alle teilen sich denselben Entwurf im Zwischenspeicher.
         sicherungsSperre.withLock {
+            if (_sucheSicherungsdatei.value || wiederherstellungLaeuft || _neustartNoetig.value) return
             try {
                 val baum = DocumentFile.fromTreeUri(ctx, ordner)
                 if (baum == null || !baum.canWrite()) {
@@ -1871,6 +1926,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun stelleWiederHerAus(uri: Uri) {
         _sucheSicherungsdatei.value = false
+        if (wiederherstellungLaeuft) return
+        wiederherstellungLaeuft = true
         viewModelScope.launch {
             var datenbankZu = false
             try {
@@ -1982,6 +2039,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 melde(fehler.message ?: "Die Wiederherstellung ist fehlgeschlagen.")
                 // Ist die Datenbank schon zu, kann die App ohne Neustart nicht weiterarbeiten.
                 if (datenbankZu) _neustartNoetig.value = true
+            } finally {
+                wiederherstellungLaeuft = false
             }
         }
     }
@@ -2029,6 +2088,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         // Der Schutz schliesst sich wieder, sobald die App aus dem Blick ist. Ohne das
         // gälte ein einziger Fingerabdruck bis zum nächsten Neustart der App.
         _verlauf.update { it.copy(freigegebeneSitzung = null) }
+        _suche.update { it.copy(treffer = ohneGesperrte(it.treffer)) }
         // B-09: die Notiz-Aufnahme läuft bewusst weiter. Wer etwas nachschlagen geht, während
         // er spricht, soll weitersprechen können; beendet wird sie in der App oder über die
         // Benachrichtigung. Der Vordergrunddienst hält das Mikrofon so lange offen.
@@ -2042,7 +2102,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         // F-17: die Sicherung läuft beim Schliessen, sofern sie eingeschaltet ist und ein
         // Ordner feststeht. Ohne diesen Aufruf war der Schalter eine blosse Absichtserklärung
         // — gesichert wurde nur auf ausdrücklichen Knopfdruck.
-        if (einstellungen.driveSicherungAn && einstellungen.sicherungsordner.isNotBlank()) {
+        if (!_sucheSicherungsdatei.value && !wiederherstellungLaeuft && !_neustartNoetig.value &&
+            einstellungen.driveSicherungAn && einstellungen.sicherungsordner.isNotBlank()) {
             viewModelScope.launch { fuehreSicherungAus(Uri.parse(einstellungen.sicherungsordner), still = true) }
         }
     }

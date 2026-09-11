@@ -9,12 +9,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 
@@ -205,6 +209,8 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
                     derzeit = TtsProvider.GERAET
                     try {
                         liesMitGeraet(absaetze, tempo)
+                    } catch (abbruch: CancellationException) {
+                        throw abbruch
                     } catch (letzter: Exception) {
                         beiFehler(verstaendlich(letzter, TtsProvider.GERAET))
                     }
@@ -243,32 +249,46 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
         // Ein Fehler der Vorsynthese wird erst beim Abholen geworfen — sonst bräche er den
         // ganzen Scope ab, auch den Absatz, der gerade klingt.
         val offen = mutableMapOf<Int, Deferred<Result<File>>>()
+        val dateien = java.util.concurrent.ConcurrentHashMap.newKeySet<File>()
 
         fun reihEin(nr: Int) {
             if (nr in absaetze.indices && offen[nr] == null) {
-                offen[nr] = async(Dispatchers.IO) { runCatching { synthese(absaetze[nr]) } }
+                offen[nr] = async(Dispatchers.IO) {
+                    try {
+                        Result.success(synthese(absaetze[nr]).also { dateien.add(it) })
+                    } catch (abbruch: CancellationException) {
+                        throw abbruch
+                    } catch (fehler: Exception) {
+                        Result.failure(fehler)
+                    }
+                }
             }
         }
 
         repeat(minOf(Absaetze.VORAUS + 1, absaetze.size)) { reihEin(it) }
         try {
             absaetze.indices.forEach { nr ->
-                val datei = offen.remove(nr)?.await()?.getOrThrow() ?: return@forEach
+                val datei = offen[nr]?.await()?.getOrThrow() ?: return@forEach
+                offen.remove(nr)
                 // Erst nachladen, dann spielen: so läuft die Synthese des übernächsten
                 // Absatzes über die volle Spieldauer des laufenden.
                 reihEin(nr + Absaetze.VORAUS + 1)
                 try {
+                    _pausiert.first { !it }
                     _absatzNr.value = nr
                     abspieler.spieleUndWarte(datei)
                     beiGesprochen()
                 } finally {
                     datei.delete()
+                    dateien.remove(datei)
                 }
             }
         } finally {
             // Was noch in Arbeit ist, wird nicht mehr gebraucht — sonst wartet
             // `coroutineScope` auf Anfragen, die niemand mehr hört.
             offen.values.forEach { it.cancel() }
+            withContext(NonCancellable) { offen.values.toList().joinAll() }
+            dateien.forEach { it.delete() }
             offen.clear()
         }
     }
@@ -280,6 +300,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
     private suspend fun liesMitGeraet(absaetze: List<String>, tempo: Float) {
         derzeit = TtsProvider.GERAET
         absaetze.forEachIndexed { nr, absatz ->
+            _pausiert.first { !it }
             _absatzNr.value = nr
             val fehler: Exception? = suspendCancellableCoroutine { fortsetzung ->
                 geraet.speak(
@@ -351,9 +372,11 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
             return
         }
         if (_pausiert.value) {
-            if (abspieler.fortsetzen()) _pausiert.value = false
+            abspieler.fortsetzen()
+            _pausiert.value = false
         } else {
-            if (abspieler.pause()) _pausiert.value = true
+            abspieler.pause()
+            _pausiert.value = true
         }
     }
 
@@ -377,6 +400,7 @@ class Vorleser(context: Context, private val einstellungen: Einstellungen) {
         // würde allein das Beenden der App Androids Sprachdienst hochfahren.
         if (geraetEingerichtet) geraet.stop()
         _pausiert.value = false
+        _absatzNr.value = -1
     }
 
     fun schliesse() {

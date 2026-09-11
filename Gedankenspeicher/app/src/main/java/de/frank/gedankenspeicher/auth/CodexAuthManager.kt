@@ -320,9 +320,10 @@ class CodexAuthManager(context: Context) {
         websuche: Boolean,
         model: CodexModel,
         effort: ReasoningEffort,
+        websucheErzwingen: Boolean = false,
     ): String = withContext(Dispatchers.IO) {
         requestCodexResponse(
-            auswertungsPayload(notizen, rueckfrage, antwort, profilAnweisung, websuche, model, effort),
+            auswertungsPayload(notizen, rueckfrage, antwort, profilAnweisung, websuche, model, effort, websucheErzwingen),
             false,
         ).trim()
     }

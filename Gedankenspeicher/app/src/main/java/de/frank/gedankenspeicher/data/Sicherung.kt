@@ -155,14 +155,12 @@ object Sicherung {
      * jede Sicherung um die zuletzt geschriebenen Einträge ärmer.
      */
     fun checkpoint(datenbank: Datenbank) {
-        // Spalte 0 = busy: 1 heisst, der Checkpoint blieb unvollständig. Nur echte
-        // Ausführungsfehler bleiben still (0), ein Dauer-busy wird gemeldet.
+        // Spalte 0 = busy: ein SQL-Fehler ist niemals ein erfolgreicher Checkpoint.
         repeat(5) { versuch ->
-            val busy = runCatching {
-                datenbank.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { es ->
-                    if (es.moveToFirst()) es.getInt(0) else 0
-                }
-            }.getOrDefault(0)
+            val busy = datenbank.openHelper.writableDatabase.query("PRAGMA wal_checkpoint(TRUNCATE)").use { es ->
+                check(es.moveToFirst()) { "Der Datenbank-Checkpoint lieferte kein Ergebnis." }
+                es.getInt(0)
+            }
             if (busy == 0) return
             if (versuch < 4) Thread.sleep(100)
         }

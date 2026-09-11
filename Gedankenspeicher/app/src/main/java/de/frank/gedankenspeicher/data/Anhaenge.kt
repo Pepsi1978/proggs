@@ -99,14 +99,24 @@ class Anhangsspeicher(private val ctx: Context) {
 
     fun neueDatei(endung: String): File = File(ordner, "${UUID.randomUUID()}$endung")
 
-    suspend fun uebernimm(uri: Uri, art: Anhangsart): Anhang = withContext(Dispatchers.IO) {
-        val anzeigename = anzeigename(uri)
-        val endung = "." + (anzeigename.substringAfterLast('.', "").ifBlank { standardEndung(art) })
-        val ziel = neueDatei(endung)
-        ctx.contentResolver.openInputStream(uri)?.use { quelle ->
-            FileOutputStream(ziel).use(quelle::copyTo)
-        } ?: error("Die Datei ist nicht erreichbar.")
-        beschreibe(ziel, art, anzeigename.ifBlank { standardName(art) })
+    suspend fun uebernimm(uri: Uri, art: Anhangsart): Anhang {
+        var ziel: File? = null
+        var anhang: Anhang? = null
+        try {
+            return withContext(Dispatchers.IO) {
+                val anzeigename = anzeigename(uri)
+                val endung = "." + (anzeigename.substringAfterLast('.', "").ifBlank { standardEndung(art) })
+                val datei = neueDatei(endung).also { ziel = it }
+                ctx.contentResolver.openInputStream(uri)?.use { quelle ->
+                    FileOutputStream(datei).use(quelle::copyTo)
+                } ?: error("Die Datei ist nicht erreichbar.")
+                beschreibe(datei, art, anzeigename.ifBlank { standardName(art) }).also { anhang = it }
+            }
+        } catch (fehler: Exception) {
+            anhang?.let { loesche(listOf(it)) }
+            ziel?.delete()
+            throw fehler
+        }
     }
 
     /** Ergänzt eine fertige Datei um Vorschau, Seitenzahl beziehungsweise Laufzeit. */

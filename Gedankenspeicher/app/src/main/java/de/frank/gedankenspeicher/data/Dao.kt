@@ -61,6 +61,9 @@ interface SitzungDao {
     @Query("UPDATE sitzung SET titel = :titel, titelVonHand = :vonHand WHERE id = :id")
     suspend fun setzeTitel(id: Long, titel: String, vonHand: Boolean)
 
+    @Query("UPDATE sitzung SET titel = :titel WHERE id = :id AND titelVonHand = 0 AND titel = 'Neue Sitzung'")
+    suspend fun setzeKiTitel(id: Long, titel: String)
+
     @Query("UPDATE sitzung SET favorit = CASE favorit WHEN 1 THEN 0 ELSE 1 END WHERE id = :id")
     suspend fun favoritUmschalten(id: Long)
 
@@ -170,6 +173,9 @@ interface NotizDao {
 
     @Query("DELETE FROM notiz WHERE zustand = 'AUFNEHMEND'")
     suspend fun raeumeAngefangeneWeg()
+
+    @Query("UPDATE notiz SET zustand = CASE WHEN audioPfad IS NULL OR versucheTranskription >= 3 THEN 'TRANSKRIPTION_FEHLGESCHLAGEN' ELSE 'WARTET_AUF_TRANSKRIPTION' END WHERE zustand = 'TRANSKRIBIERT_GERADE'")
+    suspend fun repariereUnterbrocheneTranskriptionen()
 }
 
 @Dao
@@ -216,6 +222,9 @@ interface ProfilDao {
     @Update
     suspend fun aendern(profil: Auswertungsprofil)
 
+    @Query("UPDATE auswertungsprofil SET name = :name, anweisung = :anweisung, istAktiv = CASE WHEN :leer THEN 0 ELSE istAktiv END WHERE nummer = :nummer")
+    suspend fun aendereText(nummer: Int, name: String, anweisung: String, leer: Boolean)
+
     /**
      * Setzt das Häkchen auf genau ein Profil.
      *
@@ -231,7 +240,7 @@ interface ProfilDao {
     @Query("UPDATE auswertungsprofil SET istAktiv = 0")
     suspend fun alleAbwaehlen()
 
-    @Query("UPDATE auswertungsprofil SET istAktiv = 1 WHERE nummer = :nummer")
+    @Query("UPDATE auswertungsprofil SET istAktiv = 1 WHERE nummer = :nummer AND trim(anweisung) != ''")
     suspend fun waehleAus(nummer: Int)
 }
 
@@ -249,8 +258,8 @@ interface SucheDao {
                n.ueberschrift AS ueberschrift, n.text AS text, n.erstelltAm AS erstelltAm,
                0 AS istKiAntwort
         FROM notiz n JOIN sitzung s ON s.id = n.sitzungId
-        WHERE (lower(n.text) LIKE '%' || :begriff || '%'
-           OR lower(COALESCE(n.ueberschrift, '')) LIKE '%' || :begriff || '%')
+        WHERE (lower(replace(replace(replace(replace(n.text, 'Ä', 'ä'), 'Ö', 'ö'), 'Ü', 'ü'), 'ẞ', 'ß')) LIKE '%' || :begriff || '%'
+           OR lower(replace(replace(replace(replace(COALESCE(n.ueberschrift, ''), 'Ä', 'ä'), 'Ö', 'ö'), 'Ü', 'ü'), 'ẞ', 'ß')) LIKE '%' || :begriff || '%')
           AND s.geloeschtAm IS NULL
         ORDER BY n.erstelltAm DESC
         LIMIT 200
@@ -264,7 +273,7 @@ interface SucheDao {
                a.rueckfrage AS ueberschrift, a.text AS text, a.erstelltAm AS erstelltAm,
                1 AS istKiAntwort
         FROM ki_antwort a JOIN sitzung s ON s.id = a.sitzungId
-        WHERE lower(a.text) LIKE '%' || :begriff || '%'
+        WHERE lower(replace(replace(replace(replace(a.text, 'Ä', 'ä'), 'Ö', 'ö'), 'Ü', 'ü'), 'ẞ', 'ß')) LIKE '%' || :begriff || '%'
           AND s.geloeschtAm IS NULL
         ORDER BY a.erstelltAm DESC
         LIMIT 200

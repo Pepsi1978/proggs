@@ -125,7 +125,10 @@ fun VerlaufBildschirm(
         val ziel = zustand.hebeHervor
         if (ziel != null) {
             val stelle = zustand.eintraege.indexOfFirst {
-                it is Verlaufseintrag.NotizEintrag && it.notiz.id == ziel
+                when (it) {
+                    is Verlaufseintrag.NotizEintrag -> "notiz:${it.notiz.id}" == ziel
+                    is Verlaufseintrag.AntwortEintrag -> "antwort:${it.antwort.id}" == ziel
+                }
             }
             if (stelle >= 0) {
                 // Der Platzhalter der laufenden Auswertung steht als erstes item davor.
@@ -140,7 +143,10 @@ fun VerlaufBildschirm(
     LaunchedEffect(zustand.hebeHervor) {
         val ziel = zustand.hebeHervor ?: return@LaunchedEffect
         val stelle = zustand.eintraege.indexOfFirst {
-            it is Verlaufseintrag.NotizEintrag && it.notiz.id == ziel
+            when (it) {
+                is Verlaufseintrag.NotizEintrag -> "notiz:${it.notiz.id}" == ziel
+                is Verlaufseintrag.AntwortEintrag -> "antwort:${it.antwort.id}" == ziel
+            }
         }
         if (stelle >= 0) listenzustand.animateScrollToItem(stelle + if (zustand.wertetAus) 1 else 0)
     }
@@ -242,7 +248,7 @@ fun VerlaufBildschirm(
                                     liestVor = zustand.liestVor == kennung,
                                     vorleseAbsatz = zustand.vorleseAbsatz,
                                     verbessertGerade = notiz.id in zustand.verbessertGerade,
-                                    hervorgehoben = zustand.hebeHervor == notiz.id,
+                                    hervorgehoben = zustand.hebeHervor == kennung,
                                     beiVorlesen = { beiVorlesen(kennung, notiz.text) },
                                     beiVerbessern = { beiVerbessern(notiz) },
                                     beiAnhangTitel = { anhang -> beiAnhangTitel(notiz, anhang) },
@@ -263,6 +269,7 @@ fun VerlaufBildschirm(
                                 val kennung = "antwort:${antwort.id}"
                                 KiKarte(
                                     antwort = antwort,
+                                    hervorgehoben = zustand.hebeHervor == kennung,
                                     liestVor = zustand.liestVor == kennung,
                                     vorleseAbsatz = zustand.vorleseAbsatz,
                                     // Vorgelesen wird, was gesprochen werden kann: Tabellen

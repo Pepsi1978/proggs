@@ -80,6 +80,7 @@ fun KiKarte(
     vorleseAbsatz: Int,
     beiVorlesen: () -> Unit,
     beiMenue: () -> Unit,
+    hervorgehoben: Boolean = false,
 ) {
     val farben = Farben
     val schrift = Schriften
@@ -97,7 +98,7 @@ fun KiKarte(
             .schwebendeKarte(
                 farben = farben,
                 radius = Masse.karteRadius,
-                randfarbe = farben.kiKarteRand,
+                randfarbe = if (hervorgehoben) farben.akzent else farben.kiKarteRand,
                 randstaerke = 1.5.dp,
                 grundfarbe = farben.kiKarte,
             )

@@ -37,6 +37,9 @@ class MicRecorder(context: Context) {
      */
     private val _pegel = MutableStateFlow(0f)
     val pegel: StateFlow<Float> = _pegel
+    private val _beendet = MutableStateFlow(false)
+    val beendet: StateFlow<Boolean> = _beendet
+    private var stopping = false
 
     @Volatile
     private var recorder: AudioRecord? = null
@@ -57,7 +60,9 @@ class MicRecorder(context: Context) {
      * back to the 16 kHz that dictation has always used rather than failing the recording.
      */
     fun start(scope: CoroutineScope, requestedSampleRate: Int = SAMPLE_RATE): Boolean = synchronized(lifecycleLock) {
+        if (stopping || (!recording.get() && recordingJob?.isCompleted == false)) return false
         if (!recording.compareAndSet(false, true)) return true
+        _beendet.value = false
         if (!scope.isActive) {
             recording.set(false)
             logger.warning("Recording scope is not active")
@@ -151,7 +156,6 @@ class MicRecorder(context: Context) {
                 if (recording.get() && !isActive && recording.compareAndSet(true, false)) {
                     synchronized(lifecycleLock) {
                         if (recorder === activeRecorder) recorder = null
-                        if (recordingJob === coroutineContext[Job]) recordingJob = null
                     }
                     stopAndRelease(activeRecorder)
                 } else if (recording.get()) {
@@ -159,9 +163,10 @@ class MicRecorder(context: Context) {
                     // the bytes collected so far.
                     synchronized(lifecycleLock) {
                         if (recorder === activeRecorder) recorder = null
-                        if (recordingJob === coroutineContext[Job]) recordingJob = null
                     }
                     stopAndRelease(activeRecorder)
+                    _pegel.value = 0f
+                    _beendet.value = true
                 }
             }
         }
@@ -173,13 +178,14 @@ class MicRecorder(context: Context) {
         val activeJob: Job?
         synchronized(lifecycleLock) {
             if (!recording.compareAndSet(true, false)) return null
+            stopping = true
             _pegel.value = 0f
             activeRecorder = recorder
             activeJob = recordingJob
             recorder = null
-            recordingJob = null
         }
 
+        try {
         // AudioRecord.stop() wakes a blocking read. The bounded join keeps vendor-specific
         // AudioRecord implementations from deadlocking the caller if they fail to wake it.
         stopAndRelease(activeRecorder)
@@ -198,6 +204,9 @@ class MicRecorder(context: Context) {
                 "${System.currentTimeMillis() - startedAtMs} ms",
         )
         return pcm.takeIf { it.isNotEmpty() }?.let(::pcmToWav)
+        } finally {
+            synchronized(lifecycleLock) { stopping = false }
+        }
     }
 
     fun isRecording(): Boolean = recording.get()

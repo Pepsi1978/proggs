@@ -4,7 +4,7 @@
 
 - **Software:** Gedankenspeicher (Android, Kotlin, Jetpack Compose, Room, OkHttp), `de.frank.gedankenspeicher`, Version 0.6.5 (versionCode 47)
 - **Start:** 11.09.2026 19:41
-- **Zweig:** `logikfehler-jagd/2026-09-11` in eigenem git-Worktree `C:\Users\barwa\proggs-logikfehler-jagd` (sparse checkout nur `Gedankenspeicher/`). Der gemeinsame Checkout `~/proggs` (main) bleibt unberührt.
+- **Zweig:** Wiederaufnahme direkt auf `main` in `C:\Users\barwa\proggs`; der frühere Jagd-Worktree ist veraltet. Nach jeder abgeschlossenen Runde Commit, Rebase, Push und `adb install -r`.
 - **Build:** `.\gradlew.bat assembleDebug` (im Ordner `Gedankenspeicher`)
 - **Tests:** `.\gradlew.bat testDebugUnitTest` (JUnit ist als Abhängigkeit vorhanden, `app/src/test` gab es bei Start nicht)
 - **Basislinie:** Build grün (nur SDK-XML-Warnung), 0 Unit-Tests, 0 Instrumented-Tests. Kein Gerät angeschlossen.
@@ -47,7 +47,7 @@
 
 ## 3. Loop-Zustand
 
-- **Aktuelle Runde:** 2 UNTERBROCHEN am 11.09.2026 (Nutzer: Token-Limit). Fertig geprüft: Bereiche 3B, 4B, 5A, 6B, 8, 10A, 11, 12. Abgebrochen und neu zu prüfen: 1A, 1B, 2A, 2B, 3A, 4A, 5B, 6A, 7, 9, 10B. Die bisher gemeldeten Funde (noch NICHT triagiert) sind:
+- **Aktuelle Runde:** 2 abgeschlossen, Auslieferung 0.6.7; danach Runde 3, Stufe 3. Alle offenen Teilprüfungen wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
   - **Bereich 5 – Aufnahme**
     - L-2-5-01 (mittel): MicRecorder, start() während stop() in joinAll → der Puffer der alten Aufnahme wird geleert, das finally des alten Jobs beendet die neue Aufnahme.
   - **Bereich 4 – KI-Anbindung**
@@ -74,11 +74,19 @@
     - L-2-10-03 (niedrig): Das KI-Blatt hält eine Notiz-Aufnahme für die Antwort-Aufnahme.
     - L-2-10-04 (mittel): Websuche „immer“ und „KI entscheidet“ erzeugen denselben Request.
 
-  Nächster Schritt: diese Funde triagieren, die abgebrochenen Bereiche neu prüfen, dann fixen.
-- **Nächste Tiefenstufe:** 2 (Datei für Datei, Verträge und Randfälle)
+  **Wiederaufnahme:** Repo synchronisiert, Ausgangscommit `a177c58ff`; keine bestehenden Änderungen im Projekt. Aktiver Schnellmodus: keine automatischen Testläufe; neue Fixe deshalb nicht als laufzeitverifiziert ausgeben.
+  **Zusätzlich vollständig geprüft:** 2A/2B (`ui/HauptViewModel.kt`, `ui/Zustand.kt`, einzelner Leseprüfer; Verträge und Aufrufer-Gegenperspektive). Neue Meldungen unten, noch zu triagieren.
+  **Zusätzlich vollständig geprüft:** 9/10B (`ui/verlauf/VerlaufBildschirm.kt`, `Notizkarte.kt`, `BearbeitenBlatt.kt`, `AntwortBearbeitenBlatt.kt`, `Reichtext.kt`, `KiKarte.kt`, `ui/einstellungen/ProfileBildschirm.kt`; einzelner Leseprüfer, einschließlich `data/Nachtraege.kt` und `tts/Absaetze.kt`). (g) abgelehnt: Sitzungswechsel leert die Liste atomar mit dem Sitzungskopf; der behauptete Altlistenpfad ist nicht belegt.
+  Nächster Schritt: verbleibende Bereiche fertig prüfen, sämtliche Meldungen triagieren, dann fixen.
+  **Eigene Stufe-2-Prüfung abgeschlossen:** 1A/1B (`MainActivity.kt`, Manifest, drei `res/xml`-Dateien, `app/build.gradle.kts`; Erstlektüre plus gezielte Rückruf-/Sichtbarkeitsgegenprüfung); 3A (`data/Modell.kt`, `Datenbank.kt`, `Dao.kt`, `Repository.kt`, `settings/Einstellungen.kt`, `Nachtraege.kt`); 4A (`auth/CodexAuthManager.kt`, `CodexAufgaben.kt`); 5B (`hintergrund/AuswertungsDienst.kt`, `VorleseDienst.kt`); 6A (`tts/Vorleser.kt`, `Absatzabspieler.kt`, `Absaetze.kt`); 7 (alle sechs Cloud-TTS-Dateien aus der Karte). Die bereits abgeschlossenen Teilprüfungen der Übergabe bleiben gültig.
+  **Triage:** Alle 17 Vormeldungen bestätigt, außer L-2-3-01: Klärungsbedarf (Dateizahl statt logischer Anhänge, auch reine Textanhänge betroffen; gewünschte Zählweise offen). (a) bestätigt als L-2-11-3; (b) bestätigt als L-2-6-04; (c) bestätigt als L-2-5-02 für Lesefehler (Zeitlimit wird bereits vom VM überwacht); (d)/(e)/(f)/(h) unter L-2-10-05…08 bestätigt, (g) abgelehnt wie oben. SQLite lower/LIKE ist ohne ICU ASCII-beschränkt; Kleinschreiben allein des Suchbegriffs behebt keine Großumlaute im Bestand.
+  **Triage der neuen Prüfermeldungen:** L-2-2-01…14 bestätigt. L-2-9-01/03 bestätigt; L-2-9-02/04 und L-2-10-13 Klärungsbedarf (Layout-/Entwurferhaltung benötigt gezielte Geräteprüfung, im Schnellmodus nicht durchgeführt). L-2-10-05…12 bestätigt. Ein gemeldeter Layoutverdacht wird ohne Geräteprüfung nicht als behoben ausgegeben.
+- **Nächste Tiefenstufe:** 3 (Grenzen, Zustand, Zeit und Aufrufer)
 - **Konvergenzzähler:** 0
 - **Nächster Blickwinkel:** Stufe 2. Die in Runde 1 geänderten Stellen sind als „kürzlich verändert“ markiert
 - **Offene Fixe:** keine
+- **Gegenlesen Runde 2:** erster Build grün; separater Leseverifizierer hat die gesamte Charge samt Aufrufern gelesen (keine Tests). Nachbesserung 2: L-2-2-01 auch Haftnotiz-Plusdialog schützen; L-2-5-02 Recording-Job bis zum wirklichen Ende behalten; L-2-2-03 Versuchszähler ≥3 bei Start auf FEHLGESCHLAGEN statt unerreichbarem WARTET setzen. L-2-3-03 zurückgenommen: Live-Pfadfilter und DB-Dateistand können auseinanderlaufen; zunächst zusätzliche Dateien erhalten. Keine Daten löschen.
+- **Neu beim Gegenlesen, nächste Runde:** L-3-2-01 (hoch) Wiederherstellung wartet laufende Sicherung/Nachreichen und übrige DB-Schreiber nicht ab (`HauptViewModel.kt:1954–1962` im Zwischenstand); L-3-2-02 (mittel) Transkription nach Verschieben erhält B, versorgt aber noch Titel von A (`transkribiere/versorgeNeueNotiz`). Beweise: Austausch bei laufendem Job → Zugriff auf geschlossene DB; Aufnahme A→B während Netzaufruf → Sitzungstitel aus Text in A. Nicht nebenbei gefixt.
 - **Arbeitsweise ab Runde 2 (Vorgabe des Nutzers vom 11.09.2026):** keine Workflow-Läufe, nur einzelne Agenten (Typ `logik-pruefer`, effort high; sonst general-purpose). Orchestrator höchstens xhigh
 - **Vorgemeldet für die Triage in Runde 2** (Beobachtungen der Fixer und Verifizierer aus Runde 1, noch nicht triagiert):
   - (a) Anmeldung: Scheitert schon der erste Code-Abruf (Code leer, fehler gesetzt), gibt es keinen Knopf „Neuen Code holen“ (AnmeldungBildschirm).
@@ -165,9 +173,108 @@ Kompaktes Tabellenformat. Die Spalten entsprechen dem Fund-Format aus Abschnitt 
 
 ## 5. Rundenübersicht
 
+### Wiederaufnahme Runde 2 – Eingangsmeldungen (historischer Meldestatus; Endstatus siehe folgende Tabelle)
+
+Stellen relativ zu `app/src/main/java/de/frank/gedankenspeicher/`; VM = `ui/HauptViewModel.kt`.
+
+| ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Beweis: Zustand → Ist → Soll |
+|---|---|---|---|---|---|---|---|
+| L-2-2-01 | 2 | 2/1 | VM:1294,2031 | Sichtbarkeit | hoch | gemeldet | Geschützte Suche/Bearbeitung offen, Hintergrund → Klartext trotz entzogener Freigabe → alle Inhaltsflächen sperren. |
+| L-2-2-02 | 2 | 2 | VM:1045–1069 | Nebenläufigkeit | hoch | gemeldet | Nachtrag während KI-Verbesserung → altes Ergebnis überschreibt neuen Text → Textversion abgleichen. |
+| L-2-2-03 | 2 | 2 | VM:213,677–678,954 | Persistenz | hoch | gemeldet | Prozesstod bei Online-Transkription → dauerhafter Beschäftigtzustand ohne Audio → Audio sichern und Startzustand reparieren. |
+| L-2-2-04 | 2 | 2 | VM:1755–1779,1854,2045 | Sicherung | hoch | gemeldet | Wiederherstellungswähler öffnet → onPause überschreibt vorherige Sicherung → Auswahlphase schützen. |
+| L-2-2-05 | 2 | 2 | VM:861–864 | Grenzen | mittel | gemeldet | Rückwärtsauswahl 8→3 und Diktat → Einfügung hinter Auswahl → Bereich min/max ersetzen. |
+| L-2-2-06 | 2 | 2 | VM:809,829,1100–1131 | Lebenszyklus | mittel | gemeldet | Diktat läuft, dieselbe Notiz neu öffnen → altes Ergebnis gelangt ins neue Blatt → Generation prüfen. |
+| L-2-2-07 | 2 | 2 | VM:1159–1212 | Nebenläufigkeit | mittel | gemeldet | Fragejob zwischen HTTP-Versuchen, Blatt neu öffnen → alte Frage überschreibt neue → Job und Generation binden. |
+| L-2-2-08 | 2 | 2 | VM:722–731,907 | Daten | mittel | gemeldet | Leere Online-Transkription, Wiederholen → Audio fehlt → für Wiederholung erhalten. |
+| L-2-2-09 | 2 | 2 | VM:1048–1069 | Fehlerbehandlung | mittel | gemeldet | KI-Verbesserung scheitert → trotzdem istVerbessert=true → Fehler melden, Wiederholung ermöglichen. |
+| L-2-2-10 | 2 | 2/3 | VM:707,735 | Persistenz | mittel | gemeldet | Verschieben während Transkription → alter Datensatz stellt ursprüngliche Sitzung wieder her → aktuelle Metadaten erhalten. |
+| L-2-2-11 | 2 | 2 | VM:1476–1480,1532–1545 | Nebenläufigkeit | mittel | gemeldet | Schlüsselwechsel während Stimmenabruf → neue Anfrage verworfen, alte Liste übernommen → Anfrage an Schlüssel binden. |
+| L-2-2-12 | 2 | 2/1/9 | VM:1316–1328 | UI-Vertrag | mittel | gemeldet | KI-Suchtreffer → Sprung sucht nur Notiz-ID → Eintragsart erhalten. |
+| L-2-2-13 | 2 | 2 | VM:225,990 | Zustand | niedrig | gemeldet | Automatischer Titel → offener Sitzungskopf bleibt alt → Kopf aktualisieren. |
+| L-2-2-14 | 2 | 2 | VM:1021–1030,1509–1517 | Audiozustand | mittel | gemeldet | Aufnahme läuft, Vorlesen/Probe → beides gleichzeitig → gegenseitigen Ausschluss durchsetzen. |
+| L-2-9-01 | 2 | 9 | ui/verlauf/BearbeitenBlatt.kt:108 | Zustand | mittel | gemeldet | Überschrift geändert, Diktat läuft, Speichern → Aufnahme verworfen → Speichern bis Aufnahmeabschluss sperren. |
+| L-2-9-02 | 2 | 9 | ui/verlauf/BearbeitenBlatt.kt:123–203 | UI | mittel | gemeldet | Langer Text → Mikrofonzeile außerhalb des erreichbaren Bereichs → Editor begrenzen. |
+| L-2-9-03 | 2 | 9 | ui/verlauf/BearbeitenBlatt.kt:160 | Zustand | mittel | gemeldet | Activity-Neuaufbau nach Cursorwahl → sichtbare und gespeicherte Auswahl verschieden → Auswahl synchron halten. |
+| L-2-9-04 | 2 | 9/1 | ui/verlauf/AntwortBearbeitenBlatt.kt:58; MainActivity.kt:486,501 | Lebenszyklus | mittel | gemeldet | Antwort/Profil bearbeiten, Activity neu aufgebaut → Entwurf verloren → Entwurf erhalten. |
+| L-2-10-05 | 2 | 10 | ui/verlauf/Reichtext.kt:137 | Daten | mittel | gemeldet | (d) Drei Leerzeilen in Code → global gekürzt → Code unverändert. |
+| L-2-10-06 | 2 | 10 | ui/verlauf/Reichtext.kt:108,143 | Daten | niedrig | gemeldet | (e) Quellenklammer → (siehe ) bleibt → leeren Verweis entfernen. |
+| L-2-10-07 | 2 | 10 | ui/verlauf/Reichtext.kt:147 | Daten | niedrig | gemeldet | (f) Eingerückte !-Fortsetzung → Einrückung entfernt → Listenzugehörigkeit erhalten. |
+| L-2-10-08 | 2 | 10 | ui/verlauf/Reichtext.kt:100 | Daten | niedrig | gemeldet | (h) Markdown-Link mit geklammertem Pfad → zusätzliches ) → nur Linktext. |
+| L-2-10-09 | 2 | 10 | ui/verlauf/Reichtext.kt:207 | Daten | mittel | gemeldet | Erste Codezeile eingerückt → trim entfernt Einrückung → Code erhalten. |
+| L-2-10-10 | 2 | 10 | ui/verlauf/Reichtext.kt:330 | Daten | mittel | gemeldet | Tabellenzelle mit maskiertem Strich → falsche Trennung und letzte Zelle verloren → Maskierung respektieren. |
+| L-2-10-11 | 2 | 10 | ui/verlauf/Reichtext.kt:229 | Daten | niedrig | gemeldet | Überschrift C# → C → Wort-Raute erhalten. |
+| L-2-10-12 | 2 | 10/3 | data/Repository.kt:435; data/Dao.kt:216 | Persistenz | hoch | gemeldet | Veraltetes aktives Profil B speichern, nachdem A aktiviert → zwei aktive Profile → Aktivstatus beim Textspeichern erhalten. |
+| L-2-10-13 | 2 | 10 | ui/einstellungen/ProfileBildschirm.kt:283–320 | UI | mittel | gemeldet | Lange Profilanweisung → Speichern unerreichbar → Editor begrenzen. |
+| L-2-11-3 | 2 | 11 | ui/einstellungen/AnmeldungBildschirm.kt:115 | Fehlerbehandlung | mittel | bestätigt | (a) Erster Codeabruf scheitert → kein Wiederholenknopf → neuen Abruf anbieten. |
+| L-2-6-04 | 2 | 6 | tts/Vorleser.kt:245–272 | Ressourcen | niedrig | bestätigt | (b) Vorsynthese fertig, Abbruch → fertige Dateien bleiben → alle erzeugten Absatzdateien aufräumen. |
+| L-2-5-02 | 2 | 5 | audio/MicRecorder.kt:144–165 | Zustand | mittel | bestätigt | (c) read<0 → Aufnahme-/Pegelanzeige läuft bis Zeitlimit → Aufnahmeende signalisieren und Restdaten erhalten. |
+| L-2-3-04 | 2 | 3 | data/Repository.kt:355–359 | Nebenläufigkeit | hoch | bestätigt | Manueller Titel während KI-Anfrage → KI überschreibt ihn → Schreibbedingung atomar prüfen. |
+| L-2-3-05 | 2 | 3 | data/Sicherung.kt:161–165 | Fehlerbehandlung | hoch | bestätigt | Checkpoint wirft → als busy=0 gewertet, Sicherung läuft trotzdem → Fehler weitergeben. |
+| L-2-7-01 | 2 | 7 | tts/EdgeTtsPlayer.kt:237–350 | Netzwerk | mittel | bestätigt | WebSocket offen, kein turn.end/Close → suspend wartet unbegrenzt, Vorlesen hängt → Synthesezeit begrenzen und Socket abbrechen. |
+
 | Runde | Stufe | Blickwinkel | Alle Bereiche | gemeldet | bestätigt | abgelehnt | Klärung | behoben | verifiziert | Build/Tests | Zähler danach |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 1 | Überblick; Zweitprüfer für die Bereiche 2 und 3 | ja (14 Prüfer, alle Dateilisten da) | ~70 (61 nach Zusammenführung) | 59 | 1 | 2 (L-1-3-7, L-1-10-5 nach Rücknahme) | 58 | 58 | Build grün, 13/13 Unit-Tests grün (Basislinie 0) | 0 |
+| 2 | 2 | Funktionsverträge und Randfälle; einzelne Lesehelfer | ja (Dateilisten in Abschnitt 3) | 50 + Beobachtung (g) | 46 | 1 Beobachtung | 5 inkl. Rücknahme | 45 | 45 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
+
+### Runde 2 – verbindliche Endstatus und Fixnachweise
+
+Alle Beweise/Stellen stehen in den Eingangsmeldungen und der Triage oben. **Verifikation ist ausschließlich statisch**, durch einen vom Fixer getrennten Leseverifizierer. Für jede folgende behobene ID: (1) ursprünglicher Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Null/Leer/Grenzen berücksichtigt. Erster Gegenleselauf erforderte drei Nachbesserungen; zweiter gezielter Gegenleselauf bestand. Höchstens zwei Fixanläufe, keine automatischen Tests und keine Behauptung eines Gerätetests. Für alle: kein Regressionstest, weil der aktive Schnellmodus Testläufe ausschließt. Fixreferenz: Runde-2-Commit, Version 0.6.7.
+
+| ID | Endstatus | Fix / Begründung |
+|---|---|---|
+| L-2-2-01 | verifiziert (statisch), Anlauf 2 | Modale Sperre auch über Inhalts- und Haftnotizdialogen; Suchtreffer nach Freigabeentzug filtern. |
+| L-2-2-02 | verifiziert (statisch) | Atomare Textprüfung vor KI-Übernahme. |
+| L-2-2-03 | verifiziert (statisch), Anlauf 2 | Audio vor Online-Auftrag speichern; unterbrochene Zustände reparieren, Versuchslimit beachten. |
+| L-2-2-04 | verifiziert (statisch) | Automatische Sicherung während Dateiauswahl/Restore sperren. |
+| L-2-2-05 | verifiziert (statisch) | Auswahlgrenzen mit min/max normalisieren. |
+| L-2-2-06 | verifiziert (statisch) | Bearbeitungsgeneration vor dem Mikrofon-Stopp erfassen und bis Ergebnis/Fehler/Finally prüfen. |
+| L-2-2-07 | verifiziert (statisch) | Ganzen Fragejob abbrechen und Generation prüfen. |
+| L-2-2-08 | verifiziert (statisch) | Auch bei leerem Online-Transkript existiert die Wiederholungsdatei. |
+| L-2-2-09 | verifiziert (statisch) | Verbesserungsfehler weitergeben statt unveränderten Text als Erfolg speichern. |
+| L-2-2-10 | verifiziert (statisch) | Transkript mit aktuellen Metadaten atomar schreiben; Verschieben ebenfalls aktuell. |
+| L-2-2-11 | verifiziert (statisch) | Stimmenresultat an Schlüssel binden und nach Wechsel neu laden. |
+| L-2-2-12 | verifiziert (statisch) | Typisierte Kennung bis Scrollziel und Kartenhervorhebung. |
+| L-2-2-13 | verifiziert (statisch) | Offenen Sitzungskopf aus frischer Sitzungsliste aktualisieren. |
+| L-2-2-14 | verifiziert (statisch) | Vorlesen/Probe bei aktiver Aufnahme sperren. |
+| L-2-3-01 | Klärungsbedarf | Dateianzahl zählt Vorschauen mit, Textanhänge nicht; gewünschte logische Zählweise festlegen. |
+| L-2-3-02 | verifiziert (statisch) | Halbe Kopie und Vorschau auch bei Rückkehr-Cancellation entfernen. |
+| L-2-3-03 | zurückgenommen → Klärungsbedarf | Live-Pfadfilter passt nicht sicher zum DB-Dateischnappschuss; zusätzliche Audiodateien erhalten, Bereinigungsstrategie offen. |
+| L-2-3-04 | verifiziert (statisch) | KI-Titel per bedingtem SQL-Update, manueller Titel gewinnt. |
+| L-2-3-05 | verifiziert (statisch) | Checkpoint-Ausnahme oder fehlendes Ergebnis bricht Sicherung ab. |
+| L-2-4-01 | verifiziert (statisch) | Nur passende umschließende Anführungszeichenpaare entfernen. |
+| L-2-5-01 | verifiziert (statisch) | Mikrofonstart während Stop/Join sowie vor tatsächlichem Jobende sperren. |
+| L-2-5-02 | verifiziert (statisch), Anlauf 2 | Ende/Nullpegel signalisieren; alten Aufnahmejob bis zum Ende als Startbarriere behalten. |
+| L-2-6-01 | verifiziert (statisch) | Cancellation auch im Geräte-Rückfall weitergeben. |
+| L-2-6-02 | verifiziert (statisch) | Absatzindex beim Wechsel zurücksetzen. |
+| L-2-6-03 | verifiziert (statisch) | Pause unabhängig vom gerade vorhandenen Player halten; nächster Absatz wartet. |
+| L-2-6-04 | verifiziert (statisch) | Erzeugte Vorsynthesedateien registrieren, Jobs abbrechen/abwarten, Dateien entfernen. |
+| L-2-7-01 | verifiziert (statisch) | Edge-Synthese nach 90 Sekunden begrenzen, Socket aufräumen, Fehler an Geräte-Rückfall. |
+| L-2-8-1 | verifiziert (statisch) | Zeichenbestätigung gegen Doppeltipp sperren; Abbruch räumt Datei auf und meldet keinen Fehler. |
+| L-2-8-2 | verifiziert (statisch) | Kopier-Cancellation weiterreichen und Anhangsdatei außerhalb IO-Rückkehr aufräumen. |
+| L-2-9-01 | verifiziert (statisch) | Speichern während Aufnahme/Transkription in UI und VM sperren. |
+| L-2-9-02 | Klärungsbedarf | Layoutverdacht ohne Geräteprüfung nicht abschließend bestätigt. |
+| L-2-9-03 | verifiziert (statisch) | Sichtbaren TextFieldValue mit gespeicherter Auswahl initialisieren. |
+| L-2-9-04 | Klärungsbedarf | Entwurferhaltung über Activity-Neuaufbau für Antwort/Profil separat festlegen und am Gerät prüfen. |
+| L-2-10-01 | verifiziert (statisch) | Leere Rückfrage erzeugt Fehlermeldung mit bestehendem Wiederholenweg. |
+| L-2-10-02 | verifiziert (statisch) | Auswertung schließt über den vollständigen Blatt-Abbruchweg. |
+| L-2-10-03 | verifiziert (statisch) | Antwortaufnahme eigener Zustand, fremde Aufnahme wird nicht beendet. |
+| L-2-10-04 | verifiziert (statisch) | IMMER reicht tool_choice=required durch; KI entscheidet bleibt optional. |
+| L-2-10-05 | verifiziert (statisch) | Leerzeilen ausschließlich außerhalb Code/SVG bereinigen. |
+| L-2-10-06 | verifiziert (statisch) | Leere siehe-/vgl.-Quellenklammer entfernen. |
+| L-2-10-07 | verifiziert (statisch) | Satzzeichenbereinigung verlangt ein vorheriges Nicht-Leerzeichen. |
+| L-2-10-08 | verifiziert (statisch) | URL-Klammern beim Entfernen von Markdown-Links zählen. |
+| L-2-10-09 | verifiziert (statisch) | Codeblock nur vom angehängten Zeilenende befreien, Einrückung erhalten. |
+| L-2-10-10 | verifiziert (statisch) | Maskierte Tabellenstriche beim Zellaufteilen berücksichtigen. |
+| L-2-10-11 | verifiziert (statisch) | Abschließende Überschriftenrauten nur nach Leerraum entfernen. |
+| L-2-10-12 | verifiziert (statisch) | Profiltext per SQL ohne veralteten Aktivstatus speichern; leeres Profil deaktiviert nur sich selbst. |
+| L-2-10-13 | Klärungsbedarf | Layoutverdacht ohne Geräteprüfung nicht abschließend bestätigt. |
+| L-2-11-1 | verifiziert (statisch) | Deutsche Großumlaute/ẞ vor SQLite-lower normalisieren. |
+| L-2-11-2 | verifiziert (statisch) | Probebeschriftung benötigt Quelle=probe. |
+| L-2-11-3 | verifiziert (statisch) | Wiederholenknopf auch ohne jemals erhaltenen Gerätecode. |
+| L-2-12-01 | verifiziert (statisch) | Reduzierte Bewegung frisch lesen statt permanent merken. |
+| Beobachtung (g) | abgelehnt | Sitzungswechsel leert Einträge atomar mit dem Kopf; behaupteter Altlistenpfad nicht belegt. |
 
 ## 6. Klärungsbedarf
 

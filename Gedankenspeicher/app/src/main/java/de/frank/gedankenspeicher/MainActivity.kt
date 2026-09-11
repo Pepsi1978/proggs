@@ -380,6 +380,7 @@ class MainActivity : FragmentActivity() {
                 }
                 vm.anmeldungErfolgreich(ergebnis.email)
             } catch (fehler: Exception) {
+                if (fehler is kotlinx.coroutines.CancellationException) throw fehler
                 vm.anmeldungFehlgeschlagen(fehler.message ?: "Die Anmeldung ist fehlgeschlagen.")
             }
         }
@@ -442,6 +443,7 @@ private fun Oberflaeche(
     val profile by vm.profile.collectAsStateWithLifecycle(emptyList())
     val erscheinungId by vm.erscheinung.collectAsStateWithLifecycle()
     val liestVor by vm.vorleser.laeuft.collectAsStateWithLifecycle()
+    val vorleseQuelle by vm.vorleser.quelle.collectAsStateWithLifecycle()
     val codexVerbunden by vm.codexVerbunden.collectAsStateWithLifecycle()
     val codexKonto by vm.codexKonto.collectAsStateWithLifecycle()
     val codexModell by vm.codexModell.collectAsStateWithLifecycle()
@@ -746,7 +748,7 @@ private fun Oberflaeche(
                 eigeneStimmen = eigeneStimmen,
                 stimmenLaden = stimmenLaden,
                 nimmtStimmeAuf = nimmtStimmeAuf,
-                probeLaeuft = liestVor,
+                probeLaeuft = liestVor && vorleseQuelle == "probe",
                 fingerabdruckAn = verlauf.fingerabdruckAn,
                 driveAn = driveAn,
                 letzteSicherung = vm.einstellungen.letzteSicherungZeit,
@@ -836,7 +838,7 @@ private fun Oberflaeche(
                 zustand = suche,
                 beiBegriff = vm::setzeSuchbegriff,
                 beiTreffer = { treffer ->
-                    vm.springeZu(treffer.sitzungId, treffer.notizId)
+                    vm.springeZu(treffer.sitzungId, treffer.notizId, treffer.istKiAntwort)
                     vm.leereSuche()
                     ziel = Ziel.VERLAUF
                 },
@@ -857,7 +859,7 @@ private fun Oberflaeche(
             ) {
                 KiBlatt(
                     zustand = kiBlatt,
-                    nimmtAntwortAuf = verlauf.nimmtAuf,
+                    nimmtAntwortAuf = kiBlatt.nimmtAntwortAuf,
                     codexModell = codexModell,
                     codexEffort = codexEffort,
                     beiWebsuche = vm::setzeWebsuche,
@@ -1380,6 +1382,37 @@ private fun Oberflaeche(
             hostState = meldungen,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp),
         )
+        // Auch Inhaltsblätter verlangen nach dem Hintergrundwechsel erneut die Freigabe.
+        // Die Entwürfe bleiben unter dem modalen Schutz erhalten.
+        if (gesperrt && (kiBlatt.offen || bearbeitung.notiz != null || antwortBearbeiten != null ||
+                notizMenue != null || antwortMenue != null || notizAnhangMenue != null || tabellenBearbeitung != null || zeichenblattOffen)) {
+            androidx.compose.ui.window.Dialog(
+                onDismissRequest = {},
+                properties = androidx.compose.ui.window.DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn,
+                ),
+            ) {
+                Sperrschicht(
+                    titel = offeneFrisch?.titel.orEmpty(),
+                    beiOeffnen = {
+                        offeneFrisch?.let { s -> beiFingerabdruck("Geschützte Notiz öffnen") { vm.gibFrei(s.id) } }
+                    },
+                    beiUebersicht = {
+                        vm.schliesseBearbeitung()
+                        vm.schliesseKiBlatt()
+                        antwortBearbeiten = null
+                        notizMenue = null
+                        notizAnhangMenue = null
+                        antwortMenue = null
+                        tabellenBearbeitung = null
+                        zeichenblattOffen = false
+                        ziel = Ziel.VERLAUF
+                        bereich.launch { schublade.open() }
+                    },
+                )
+            }
+        }
     }
 }
     }
