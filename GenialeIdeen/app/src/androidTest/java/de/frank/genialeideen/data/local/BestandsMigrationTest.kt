@@ -11,12 +11,12 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class BestandsMigrationTest {
     @Test
-    fun datenbankIstAufVersionDreiMitKategoriearten() {
+    fun datenbankIstAufVersionVierMitMehrfachKategorien() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val datenbank = GenialeIdeenDatabase.getInstance(context)
         val sqlite = datenbank.openHelper.writableDatabase
 
-        assertEquals(3, sqlite.version)
+        assertEquals(4, sqlite.version)
 
         val spalten = mutableMapOf<String, String>()
         sqlite.query("PRAGMA table_info(kategorien)").use { cursor ->
@@ -40,5 +40,12 @@ class BestandsMigrationTest {
                 assertTrue(cursor.getString(0) in Kategorieart.entries.map(Kategorieart::name))
             }
         }
+
+        val ideenSpalten = mutableSetOf<String>()
+        sqlite.query("PRAGMA table_info(ideen)").use { cursor ->
+            val nameIndex = cursor.getColumnIndexOrThrow("name")
+            while (cursor.moveToNext()) ideenSpalten += cursor.getString(nameIndex)
+        }
+        assertTrue("weitereKategorien" in ideenSpalten)
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -72,6 +73,9 @@ fun StimmeScreen(
     val gewaehlt by viewModel.gewaehlteEigeneStimme.collectAsState()
 
     val recorder = remember { MicRecorder(context) }
+    // Wer den Bildschirm verlässt, nimmt kein laufendes Mikrofon mit — sonst liefe die
+    // Aufnahme im Hintergrund weiter und der nächste Start fände einen belegten Recorder.
+    DisposableEffect(recorder) { onDispose { recorder.release() } }
 
     var laeuftAufnahme by remember { mutableStateOf(false) }
     var aufgenommen by remember { mutableStateOf<ByteArray?>(null) }

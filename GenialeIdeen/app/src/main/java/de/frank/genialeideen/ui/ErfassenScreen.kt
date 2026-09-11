@@ -48,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.setValue
 import androidx.activity.compose.BackHandler
@@ -98,9 +99,11 @@ fun ErfassenScreen(
     // Cursor bei jedem Zwischenspeichern zurück.
     val begonnenerEntwurf = remember { viewModel.entwurf.value }
 
-    var titel by remember { mutableStateOf(begonnenerEntwurf?.titel.orEmpty()) }
-    var text by remember { mutableStateOf(begonnenerEntwurf?.text.orEmpty()) }
-    var kategorieId by remember { mutableStateOf(begonnenerEntwurf?.kategorieId) }
+    // Saveable statt flüchtig: Bei einer Drehung sichert das System den Hintergrund asynchron —
+    // der neu aufgebaute Bildschirm läse sonst den alten Entwurf und überschriebe das Gesicherte.
+    var titel by rememberSaveable { mutableStateOf(begonnenerEntwurf?.titel.orEmpty()) }
+    var text by rememberSaveable { mutableStateOf(begonnenerEntwurf?.text.orEmpty()) }
+    var kategorieId by rememberSaveable { mutableStateOf(begonnenerEntwurf?.kategorieId) }
 
     // Beim Öffnen läuft die Aufnahme sofort los — dafür ist die App da. Beim Weiterschreiben
     // eines Entwurfs bleibt sie aus: Da will man erst lesen, was schon dasteht.
@@ -125,7 +128,7 @@ fun ErfassenScreen(
     }
 
     // Gespeichert oder schon gesichert verlassen — dann sichert das Verlassen nicht noch einmal.
-    var erledigt by remember { mutableStateOf(false) }
+    var erledigt by rememberSaveable { mutableStateOf(false) }
 
     // Zurückwischen darf die halbfertige Idee nicht wegwerfen — sie landet in den Entwürfen.
     val zurueckMitSicherung = {

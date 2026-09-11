@@ -60,6 +60,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -360,15 +361,17 @@ private fun IdeeBearbeiten(
     aufVerwerfen: () -> Unit,
 ) {
     val gold = LocalGold.current
-    var neuerTitel by remember(idee.id) { mutableStateOf(idee.titel) }
-    var neuerText by remember(idee.id) { mutableStateOf(idee.text) }
+    // Saveable: Eine Drehung sichert im Hintergrund asynchron — der Neuaufbau fände sonst
+    // den alten Stand und überschriebe das gerade Gesicherte mit Veraltetem.
+    var neuerTitel by rememberSaveable(idee.id) { mutableStateOf(idee.titel) }
+    var neuerText by rememberSaveable(idee.id) { mutableStateOf(idee.text) }
     val geaendert = neuerTitel != idee.titel || neuerText != idee.text
     val darfSpeichern = neuerTitel.isNotBlank() || neuerText.isNotBlank()
 
     // Geht die App in den Hintergrund oder verlässt man den Bildschirm auf anderem Weg (etwa
     // über eine Meldung), wird das Getippte still gesichert. Nach „Übernehmen“ oder
     // „Verwerfen“ nicht mehr — Verworfenes soll verworfen bleiben.
-    var erledigt by remember(idee.id) { mutableStateOf(false) }
+    var erledigt by rememberSaveable(idee.id) { mutableStateOf(false) }
     val standJetzt by rememberUpdatedState(Triple(neuerTitel, neuerText, geaendert && darfSpeichern))
     val zwischenspeichernJetzt by rememberUpdatedState(aufZwischenspeichern)
     val sichereStill = {
@@ -715,9 +718,10 @@ private fun StroemendeAntwort(text: String, modifier: Modifier = Modifier) {
     val gold = LocalGold.current
     val reduziert = LocalBewegungReduziert.current
     val uebergang = rememberInfiniteTransition(label = "cursor")
+    // Bei reduzierter Bewegung steht der Cursor sichtbar still statt zu blinken.
     val blinken by uebergang.animateFloat(
-        initialValue = 0f,
-        targetValue = if (reduziert) 1f else 1f,
+        initialValue = if (reduziert) 1f else 0f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
         label = "blinkwert",
     )

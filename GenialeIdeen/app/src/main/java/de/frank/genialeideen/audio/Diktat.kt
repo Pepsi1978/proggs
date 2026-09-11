@@ -106,6 +106,8 @@ class Diktat(private val transcriber: GroqTranscriber) {
             position += RAHMEN_BYTES
         }
         // Der Schnitt liegt immer auf einer geraden Byte-Grenze, sonst zerfällt das 16-Bit-Muster.
+        // Ein Rest unter zwei Byte lässt keinen Schnitt mehr zu — er bleibt am Stück.
+        if (maxEnde - anfang < 2) return maxEnde
         return (bestesEnde - bestesEnde % 2).coerceIn(anfang + 2, maxEnde)
     }
 

@@ -128,8 +128,10 @@ class Sicherung(
                     text = eintrag.optString("text"),
                     status = eintrag.optString("status").takeIf { it in gueltig } ?: IdeenStatus.OFFEN.name,
                     reihenfolge = eintrag.optInt("reihenfolge"),
-                    angelegtAm = eintrag.optLong("angelegtAm", jetzt),
-                    geaendertAm = eintrag.optLong("geaendertAm", jetzt),
+                    // Ohne eigenen Zeitpunkt bekäme jede Idee dasselbe „jetzt“ und der Abgleich
+                    // hielte alle bis auf die erste für schon vorhanden — darum je Eintrag einer.
+                    angelegtAm = eintrag.optLong("angelegtAm", -1L).takeIf { it > 0 } ?: (jetzt + index),
+                    geaendertAm = eintrag.optLong("geaendertAm", -1L).takeIf { it > 0 } ?: (jetzt + index),
                     umgesetztAm = if (eintrag.isNull("umgesetztAm")) null else eintrag.optLong("umgesetztAm"),
                     originalText = if (eintrag.isNull("originalText")) {
                         null

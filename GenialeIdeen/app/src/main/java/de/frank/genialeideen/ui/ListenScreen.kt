@@ -747,7 +747,7 @@ private fun KategorienLeiste(
         AlertDialog(
             onDismissRequest = { loeschen = null },
             title = { Text("Kategorie „${kategorie.name}“ löschen?") },
-            text = { Text("Die Ideen darin bleiben erhalten und liegen danach in keiner Kategorie.") },
+            text = { Text("Die Ideen selbst bleiben erhalten; nur die Zuordnung zu dieser Kategorie wird überall entfernt.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1081,8 +1081,14 @@ private fun SuchErgebnisse(
                             maxLines = 3,
                         )
                         Spacer(Modifier.height(6.dp))
+                        // Die Suche läuft über alle Listen — ein Entwurf ist kein „Offen“.
+                        val stand = when (idee.status) {
+                            IdeenStatus.UMGESETZT.name -> "Umgesetzt"
+                            IdeenStatus.ENTWURF.name -> "Entwurf"
+                            else -> "Offen"
+                        }
                         Text(
-                            if (idee.status == IdeenStatus.UMGESETZT.name) "Umgesetzt" else "Offen",
+                            stand,
                             style = MaterialTheme.typography.labelSmall,
                             color = if (idee.status == IdeenStatus.UMGESETZT.name) {
                                 Semantisch.erfolg

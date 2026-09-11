@@ -22,6 +22,10 @@ import org.json.JSONObject
 class GroqTranscriber(
     private val apiKey: String,
     private val model: String = DEFAULT_MODEL,
+    private val filterStille: Boolean = true,
+    private val filterMetriken: Boolean = true,
+    private val filterZeitstempel: Boolean = true,
+    private val filterFloskeln: Boolean = true,
 ) {
     private val analyzer = SpeechAnalyzer()
     private val filter = WhisperHallucinationFilter()
@@ -43,7 +47,7 @@ class GroqTranscriber(
         }
 
         val analysis = analyzer.analyze(wav)
-        if (analysis != null && analysis.voicedMs < SpeechAnalyzer.MIN_SPEECH_MS) {
+        if (filterStille && analysis != null && analysis.voicedMs < SpeechAnalyzer.MIN_SPEECH_MS) {
             logger.info("Layer 1: recording rejected before upload (${analysis.voicedMs} ms voiced)")
             return@withContext ""
         }
@@ -70,7 +74,7 @@ class GroqTranscriber(
             val parsed = runCatching { parseResponse(responseBody) }.getOrElse { error ->
                 throw GroqTranscriptionException("Groq hat eine ungueltige Antwort geliefert.", error)
             }
-            filter.filter(parsed, analysis)
+            filter.filter(parsed, analysis, filterMetriken, filterZeitstempel, filterFloskeln)
         }
     }
 

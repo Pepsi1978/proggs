@@ -400,7 +400,13 @@ class IdeenViewModel(
                 alle.take(stelle).lastOrNull { it.rolle == "user" }?.let { ids += it.id }
             }
             repository.loescheNachrichten(ids)
-            zeige(Meldung("Frage und Antwort gelöscht."))
+            zeige(
+                Meldung(
+                    if (ids.size > 1) "Frage und Antwort gelöscht."
+                    else if (nachricht.rolle == "user") "Frage gelöscht."
+                    else "Antwort gelöscht.",
+                ),
+            )
         }
     }
 
@@ -566,7 +572,15 @@ class IdeenViewModel(
                     )
                     return
                 }
-                val diktat = Diktat(GroqTranscriber(schluessel))
+                val diktat = Diktat(
+                    GroqTranscriber(
+                        schluessel,
+                        filterStille = settings.filterStilleVorabAn,
+                        filterMetriken = settings.filterSegmentmetrikenAn,
+                        filterZeitstempel = settings.filterZeitstempelAn,
+                        filterFloskeln = settings.filterFloskelnAn,
+                    ),
+                )
                 val ergebnis = diktat.transkribiere(wav)
                 _aufnahme.value = AufnahmeStand()
                 if (ergebnis.text.isBlank()) {
@@ -616,7 +630,13 @@ class IdeenViewModel(
         kiJob = viewModelScope.launch {
             val puffer = StringBuilder()
             try {
-                repository.ergaenzeNachricht(idee.id, "user", eingabe.trim())
+                val frageText = eingabe.trim()
+                // Nach einem Fehlschlag steht die Frage schon da — „Wiederholen“ darf sie
+                // nicht verdoppeln, sonst stapeln sich dieselben Fragen im Verlauf.
+                val letzte = repository.nachrichtenEinmal(idee.id).lastOrNull()
+                if (letzte?.rolle != "user" || letzte.text != frageText) {
+                    repository.ergaenzeNachricht(idee.id, "user", frageText)
+                }
                 // Frisch aus der Datenbank: Die neue Frage steht dort genau einmal.
                 val verlauf = repository.nachrichtenEinmal(idee.id).map { ChatTurn(it.rolle, it.text) }
                 val antwort = codex.streamChat(
@@ -1322,9 +1342,19 @@ class IdeenViewModel(
         else -> fehler.message ?: "Da ist etwas schiefgegangen."
     }
 
-    /** Eine winzige, gültige WAV-Datei aus Stille — nur für den Schlüssel-Test. */
+    /**
+     * Eine halbe Sekunde Ton (440 Hz) als gültige WAV-Datei — nur für den Schlüssel-Test.
+     * Stille ginge nicht: Die Stille-Erkennung würfe sie vor dem Upload weg und jeder
+     * Schlüssel gälte als angenommen, ohne je geprüft worden zu sein.
+     */
     private fun stilleWav(): ByteArray {
-        val daten = ByteArray(3_200)
+        val rate = 16_000
+        val daten = ByteArray(rate) // eine halbe Sekunde, 16 Bit mono
+        for (i in 0 until rate / 2) {
+            val wert = (8_000.0 * kotlin.math.sin(2.0 * Math.PI * 440.0 * i / rate)).toInt().toShort()
+            daten[i * 2] = (wert.toInt() and 0xFF).toByte()
+            daten[i * 2 + 1] = ((wert.toInt() shr 8) and 0xFF).toByte()
+        }
         val kopf = ByteArray(44)
         "RIFF".toByteArray().copyInto(kopf, 0)
         "WAVEfmt ".toByteArray().copyInto(kopf, 8)
@@ -1333,6 +1363,8 @@ class IdeenViewModel(
         kopf[22] = 1
         kopf[24] = 0x80.toByte()
         kopf[25] = 0x3E
+        kopf[28] = 0x00.toByte()
+        kopf[29] = 0x7D.toByte()
         kopf[32] = 2
         kopf[34] = 16
         "data".toByteArray().copyInto(kopf, 36)
@@ -1340,8 +1372,12 @@ class IdeenViewModel(
         val groesse = gesamt.size - 8
         gesamt[4] = (groesse and 0xFF).toByte()
         gesamt[5] = ((groesse shr 8) and 0xFF).toByte()
+        gesamt[6] = ((groesse shr 16) and 0xFF).toByte()
+        gesamt[7] = ((groesse shr 24) and 0xFF).toByte()
         gesamt[40] = (daten.size and 0xFF).toByte()
         gesamt[41] = ((daten.size shr 8) and 0xFF).toByte()
+        gesamt[42] = ((daten.size shr 16) and 0xFF).toByte()
+        gesamt[43] = ((daten.size shr 24) and 0xFF).toByte()
         return gesamt
     }
 

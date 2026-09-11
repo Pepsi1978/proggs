@@ -4,9 +4,15 @@ import java.util.Locale
 import java.util.logging.Logger
 
 class WhisperHallucinationFilter {
-    fun filter(result: GroqTranscriptionResponse, analysis: SpeechAnalysis?): String {
-        val segments = result.segments
-        if (segments.isNullOrEmpty()) return blockIfFloskel(result.text.trim(), analysis)
+    fun filter(
+        result: GroqTranscriptionResponse,
+        analysis: SpeechAnalysis?,
+        metrikenAn: Boolean = true,
+        zeitstempelAn: Boolean = true,
+        floskelnAn: Boolean = true,
+    ): String {
+        val segments = if (metrikenAn) result.segments else null
+        if (segments.isNullOrEmpty()) return blockIfFloskel(result.text.trim(), analysis, floskelnAn)
 
         val confident = segments.filter { segment ->
             val drop = isHallucination(segment)
@@ -29,7 +35,7 @@ class WhisperHallucinationFilter {
             return ""
         }
 
-        val aligned = if (analysis == null) {
+        val aligned = if (analysis == null || !zeitstempelAn) {
             confident
         } else {
             confident.filter { segment ->
@@ -64,6 +70,7 @@ class WhisperHallucinationFilter {
         return blockIfFloskel(
             kept.joinToString(" ") { it.text?.trim().orEmpty() }.trim(),
             analysis,
+            floskelnAn,
         )
     }
 
@@ -80,8 +87,8 @@ class WhisperHallucinationFilter {
             noSpeech > NO_SPEECH_THRESHOLD
     }
 
-    private fun blockIfFloskel(text: String, analysis: SpeechAnalysis?): String {
-        if (!isBlocklistedFloskel(text, analysis)) return text
+    private fun blockIfFloskel(text: String, analysis: SpeechAnalysis?, floskelnAn: Boolean): String {
+        if (!floskelnAn || !isBlocklistedFloskel(text, analysis)) return text
         logger.info(
             String.format(
                 Locale.ROOT,
