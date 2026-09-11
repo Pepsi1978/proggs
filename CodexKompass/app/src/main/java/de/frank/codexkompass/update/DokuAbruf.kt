@@ -51,6 +51,8 @@ class DokuAbruf {
 
     companion object {
         const val URL_BEFEHLE = "https://learn.chatgpt.com/docs/developer-commands.md?surface=cli"
-        const val URL_CHANGELOG = "https://learn.chatgpt.com/docs/changelog"
+        /** GitHub-Releases der Codex-CLI; zwei Seiten, weil Alpha-Fassungen die Liste fluten. */
+        const val URL_RELEASES_1 = "https://api.github.com/repos/openai/codex/releases?per_page=100&page=1"
+        const val URL_RELEASES_2 = "https://api.github.com/repos/openai/codex/releases?per_page=100&page=2"
     }
 }

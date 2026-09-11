@@ -87,8 +87,11 @@ class Aktualisierer(
 
         try {
             // --- Schritt 1: Unterlagen holen ---------------------------------------------
-            val changelog = abruf.hole(DokuAbruf.URL_CHANGELOG)
-            val version = DokuParser.leseNeuesteVersion(changelog)
+            val releases = DokuParser.leseReleases(
+                abruf.hole(DokuAbruf.URL_RELEASES_1),
+                runCatching { abruf.hole(DokuAbruf.URL_RELEASES_2) }.getOrDefault("[]"),
+            )
+            val version = DokuParser.leseNeuesteVersion(releases)
             if (version.isBlank()) throw DokuFehler("Die Codex-Versionsnummer konnte nicht gelesen werden. Der Bestand bleibt erhalten.")
             stand = stand.copy(schritt = "Fassung $version gefunden", gefundeneVersion = version)
             melde(stand)
@@ -99,7 +102,7 @@ class Aktualisierer(
             val slashGelesen = DokuParser.leseSlashBefehle(befehleMd)
             pruefeAusbeute("Slash-Befehle", slashGelesen.size, MINDEST_SLASH)
             val gelesen = mapOf(Bereich.SLASH to
-                (slashGelesen + DokuParser.ergaenzeAusChangelog(changelog))
+                (slashGelesen + DokuParser.ergaenzeAusReleases(releases))
                     .distinctBy { it.name })
 
             // --- Schritt 3: vergleichen ---------------------------------------------------
@@ -116,11 +119,7 @@ class Aktualisierer(
                 for (eintrag in liste) {
                     val vorhanden = bekannt[eintrag.name]
                     if (vorhanden == null) {
-                        val (seit, beleg) = DokuParser.findeEinzug(
-                            changelog,
-                            eintrag.name,
-                            bereich == Bereich.SLASH,
-                        )
+                        val (seit, beleg) = DokuParser.findeEinzug(releases, eintrag.name)
                         neueRoh += RohEintrag(
                             bereich = bereich,
                             name = eintrag.name,
