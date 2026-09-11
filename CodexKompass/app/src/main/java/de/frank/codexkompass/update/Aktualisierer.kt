@@ -101,6 +101,7 @@ class Aktualisierer(
             melde(stand)
             val slashGelesen = DokuParser.leseSlashBefehle(befehleMd)
             pruefeAusbeute("Slash-Befehle", slashGelesen.size, MINDEST_SLASH)
+            val dokuNamen = slashGelesen.map { it.name }.toSet()
             val gelesen = mapOf(Bereich.SLASH to
                 (slashGelesen + DokuParser.ergaenzeAusReleases(releases))
                     .distinctBy { it.name })
@@ -143,16 +144,22 @@ class Aktualisierer(
                         geaenderte += vorhanden.copy(
                             entfernt = false,
                             entferntInVersion = "",
+                            ersatz = "",
                             zuletztGeaendert = System.currentTimeMillis(),
                         )
-                    } else if (vorhanden.quelleEnglisch != eintrag.beschreibung &&
-                        eintrag.beschreibung.isNotBlank()
+                    } else if (eintrag.name in dokuNamen &&
+                        eintrag.beschreibung.isNotBlank() &&
+                        (vorhanden.quelleEnglisch != eintrag.beschreibung ||
+                            vorhanden.art == DokuParser.ART_RELEASE)
                     ) {
                         // Die offizielle Beschreibung hat sich geändert. Die eigene deutsche
                         // Erklärung bleibt unangetastet — sie kann per Knopf vertieft werden.
                         // Das ist der Grund, warum ein Lauf keine Erklärungen wiederholt.
+                        // Nur die Doku-Tabelle zählt: Eine Release-Zeile wechselt mit jeder
+                        // Fassung und wäre sonst bei jedem Lauf eine „geänderte Beschreibung“.
                         geaenderte += vorhanden.copy(
                             quelleEnglisch = eintrag.beschreibung,
+                            art = if (vorhanden.art == DokuParser.ART_RELEASE) eintrag.art else vorhanden.art,
                             zuletztGeaendert = System.currentTimeMillis(),
                         )
                     }
@@ -160,6 +167,7 @@ class Aktualisierer(
 
                 val fehlend = bekannt.values.filter { vorhanden ->
                     !vorhanden.entfernt &&
+                        vorhanden.art != DokuParser.ART_RELEASE &&
                         vorhanden.name !in gelesenNamen &&
                         vorhanden.name !in DokuParser.changelogNamen
                 }
@@ -178,7 +186,7 @@ class Aktualisierer(
                 entfernteNamen = verschwundene.map { it.name },
                 geaenderteNamen = geaenderte.map { it.name },
                 geloeschteNamen = erfundene.map { it.name },
-                gesamt = neueRoh.size + verschwundene.size,
+                gesamt = verschwundene.size,
             )
             melde(stand)
             KompassLog.info(
@@ -198,7 +206,21 @@ class Aktualisierer(
             stand = stand.copy(schritt = "Änderungen werden eingespielt")
             melde(stand)
             repository.spieleNeueEin(laufId, neueRoh)
-            geaenderte.forEach { repository.sichereEintrag(it) }
+            // Frisch laden und nur die Abgleich-Felder übernehmen: Wer während des Laufs eine
+            // Erklärung vertieft, soll sie nicht durch die Kopie vom Laufbeginn verlieren.
+            geaenderte.forEach { geaendert ->
+                val frisch = repository.ladeEintrag(geaendert.id) ?: return@forEach
+                repository.sichereEintrag(
+                    frisch.copy(
+                        entfernt = geaendert.entfernt,
+                        entferntInVersion = geaendert.entferntInVersion,
+                        ersatz = geaendert.ersatz,
+                        quelleEnglisch = geaendert.quelleEnglisch,
+                        art = geaendert.art,
+                        zuletztGeaendert = geaendert.zuletztGeaendert,
+                    ),
+                )
+            }
             repository.loescheEintraege(erfundene.map { it.id })
             repository.raeumeNeuMarkierungen(laufId)
 
@@ -427,9 +449,12 @@ class Aktualisierer(
             )
             null
         } else {
-            eintrag.copy(
-                kurz = json?.optString("kurz")?.takeIf(String::isNotBlank) ?: eintrag.kurz,
-                kategorie = json?.optString("kategorie")?.takeIf(String::isNotBlank) ?: eintrag.kategorie,
+            // Frisch laden: Hat jemand den Eintrag inzwischen selbst erklären lassen, bleibt es dabei.
+            val frisch = repository.ladeEintrag(eintrag.id)?.takeIf { it.erklaerung.isBlank() }
+                ?: return null
+            frisch.copy(
+                kurz = json?.optString("kurz")?.takeIf(String::isNotBlank) ?: frisch.kurz,
+                kategorie = json?.optString("kategorie")?.takeIf(String::isNotBlank) ?: frisch.kategorie,
                 erklaerung = erklaerung,
                 zuletztGeaendert = System.currentTimeMillis(),
             )
@@ -453,7 +478,7 @@ class Aktualisierer(
         version: String,
         namensliste: String,
     ): EintragEntity {
-        val grundfassung = eintrag.copy(
+        val grundfassung = (repository.ladeEintrag(eintrag.id) ?: eintrag).copy(
             entfernt = true,
             entferntInVersion = version,
             ersatz = "Zu diesem Eintrag ist kein Nachfolger bekannt.",
@@ -471,7 +496,9 @@ class Aktualisierer(
             val json = Prompts.leseJsonObjekt(antwort) ?: return grundfassung
             grundfassung.copy(
                 ersatz = json.optString("ersatz").takeIf(String::isNotBlank) ?: grundfassung.ersatz,
-                erklaerung = json.optString("erklaerung").takeIf(String::isNotBlank)
+                // Eine selbst vertiefte Erklärung (Stufe > 0) wird nicht durch den Wegfall-Text
+                // ersetzt — sie ginge sonst ohne Eintrag in der Historie verloren.
+                erklaerung = json.optString("erklaerung").takeIf { it.isNotBlank() && grundfassung.stufe == 0 }
                     ?: grundfassung.erklaerung,
             )
         } catch (abbruch: CancellationException) {

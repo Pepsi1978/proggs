@@ -23,6 +23,15 @@ object DokuParser {
         "/opt", "/mnt", "/root", "/lib", "/private", "/workspace", "/users", "/volumes",
     )
 
+    private val wegfallWorte = Regex("\\b(remove[sd]?|deprecat\\w*|drop(ped|s)?|no longer)\\b", RegexOption.IGNORE_CASE)
+
+    /**
+     * Art eines Befehls, den bisher nur die Release-Notes nennen. Solche Einträge gelten nie als
+     * entfernt, nur weil sie aus dem Release-Fenster rutschen; nimmt die Doku sie auf, bekommen
+     * sie deren Art.
+     */
+    const val ART_RELEASE = "Eingebaut (Release-Notes)"
+
     /** Befehle, die nur im Änderungsprotokoll stehen und nie als entfernt gelten sollen. */
     val changelogNamen = setOf("/cd", "/pwd", "/cwd", "/export", "/recap", "/worktree")
 
@@ -101,6 +110,8 @@ object DokuParser {
             for (zeile in release.text.lineSequence()) {
                 val sauber = zeile.trim()
                 if (!sauber.startsWith("- ") && !sauber.startsWith("* ")) continue
+                // „Removed `/foo`“ belegt gerade nicht, dass es den Befehl gibt.
+                if (wegfallWorte.containsMatchIn(sauber)) continue
                 val istPrTitel = sauber.drop(2).startsWith("#")
                 for (name in slash.findAll(sauber).map { it.groupValues[1] }) {
                     if (name in keineBefehle) continue
@@ -112,7 +123,12 @@ object DokuParser {
             }
         }
         return gefunden.map { (name, wert) ->
-            GelesenerEintrag(name, wert.first, "Eingebaut", "Neu dazugekommen")
+            GelesenerEintrag(
+                name,
+                wert.first,
+                if (name in festeTexte) "Eingebaut" else ART_RELEASE,
+                "Neu dazugekommen",
+            )
         }
     }
 

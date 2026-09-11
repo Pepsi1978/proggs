@@ -381,7 +381,10 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
     // --- Aktualisieren ----------------------------------------------------------------------
 
     fun aktualisiere(erklaereAlles: Boolean = false) {
-        if (_lauf.value.laeuft) return
+        if (_lauf.value.laeuft || laufJob?.isActive == true) return
+        // Sofort sperren: Ein zweiter Tipp vor dem ersten Fortschritt startete sonst einen
+        // zweiten Lauf, der die Einträge des ersten wieder auf „unerklärt“ setzt.
+        _lauf.value = LaufFortschritt(laeuft = true, schritt = "Wird gestartet")
         laufJob = viewModelScope.launch {
             container.aktualisierer.fuehreAus(erklaereAlles) { fortschritt -> _lauf.value = fortschritt }
         }
@@ -394,7 +397,8 @@ class ReferenzViewModel(private val container: KompassContainer) : ViewModel() {
      * Einträge auf einmal, wird nicht ungefragt für jeden eine Anfrage an das Modell gestellt.
      */
     fun holeOffeneErklaerungen() {
-        if (_lauf.value.laeuft) return
+        if (_lauf.value.laeuft || laufJob?.isActive == true) return
+        _lauf.value = LaufFortschritt(laeuft = true, schritt = "Wird gestartet")
         laufJob = viewModelScope.launch {
             container.aktualisierer.erklaereOffene { fortschritt -> _lauf.value = fortschritt }
         }

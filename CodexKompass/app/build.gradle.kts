@@ -14,9 +14,9 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 14
-        versionName = "0.4.10"
+        versionName = "0.4.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 14:13 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"11.09.2026, 14:29 Uhr\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
         buildConfigField("String", "SEEDED_CLI_VERSION", "\"0.153.3\"")
