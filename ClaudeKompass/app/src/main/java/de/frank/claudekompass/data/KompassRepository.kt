@@ -46,7 +46,11 @@ class KompassRepository(context: Context) {
      * — ausführlichere Erklärungen, gestellte Fragen — auf keinen Fall überschreiben.
      */
     suspend fun befuelleWennLeer(context: Context): Boolean {
-        if (eintraege.anzahl() > 0) return false
+        if (eintraege.anzahl() > 0) {
+            ergaenzeFehlendeAusSeed(context)
+            raeumeSuchIndexAuf()
+            return false
+        }
         val roh = SeedLader.ladeAlles(context)
         if (roh.isEmpty()) {
             KompassLog.error("Repository", "befuelleWennLeer", "Keine Wissensbasis gefunden — die App bliebe leer")
@@ -63,6 +67,25 @@ class KompassRepository(context: Context) {
         )
         KompassLog.info("Repository", "befuelleWennLeer", "Wissensbasis eingespielt", mapOf("eintraege" to roh.size))
         return true
+    }
+
+    /**
+     * Nach einem App-Update: Einträge, die der neue Seed kennt, die Datenbank aber nicht,
+     * kommen dazu. Vorhandene Einträge bleiben unberührt — eigene Erklärungen gehen vor.
+     */
+    private suspend fun ergaenzeFehlendeAusSeed(context: Context) {
+        val vorhanden = eintraege.ladeKomplett().map { it.id }.toSet()
+        val fehlend = SeedLader.ladeAlles(context).filter { it.id !in vorhanden }
+        if (fehlend.isEmpty()) return
+        val entitaeten = fehlend.map { it.zuEntity() }
+        eintraege.setze(entitaeten)
+        indiziereEintraege(entitaeten)
+        KompassLog.info("Repository", "ergaenzeFehlendeAusSeed", "Seed-Einträge ergänzt", mapOf("anzahl" to fehlend.size))
+    }
+
+    /** Ältere Fassungen haben Indexzeilen verdoppelt; einmal neu aufbauen, wenn das vorliegt. */
+    private suspend fun raeumeSuchIndexAuf() {
+        if (suche.anzahlDoppelte() > 0) baueSuchIndexNeu()
     }
 
     // --- Einträge -------------------------------------------------------------------------
@@ -229,8 +252,10 @@ class KompassRepository(context: Context) {
     }
 
     suspend fun fuegeNachrichtEin(sitzungId: Long, rolle: String, text: String): Long {
-        val id = chat.fuegeEin(ChatNachrichtEntity(sitzungId = sitzungId, rolle = rolle, text = text))
+        val nachricht = ChatNachrichtEntity(sitzungId = sitzungId, rolle = rolle, text = text)
+        val id = chat.fuegeEin(nachricht)
         chat.beruehre(sitzungId)
+        if (text.isNotBlank()) indiziereNachricht(nachricht.copy(id = id))
         return id
     }
 
@@ -296,7 +321,9 @@ class KompassRepository(context: Context) {
     suspend fun suche(eingabe: String): List<SuchTreffer> {
         val anfrage = baueSuchAnfrage(eingabe)
         if (anfrage.isBlank()) return emptyList()
-        return runCatching { suche.suche(anfrage) }.getOrElse { fehler ->
+        return runCatching {
+            suche.suche(anfrage).distinctBy { it.quelleArt to it.quelleId }
+        }.getOrElse { fehler ->
             KompassLog.warn("Repository", "suche", "Suche fehlgeschlagen", mapOf("grund" to fehler.message))
             emptyList()
         }
@@ -327,7 +354,7 @@ class KompassRepository(context: Context) {
 
     private suspend fun indiziereEintraege(liste: List<EintragEntity>) {
         if (liste.isEmpty()) return
-        suche.indiziere(
+        suche.ersetze(
             liste.map { eintrag ->
                 SucheFtsEntity(
                     quelleId = eintrag.id,
@@ -350,7 +377,7 @@ class KompassRepository(context: Context) {
     }
 
     private suspend fun indiziereFrage(frage: FrageEntity) {
-        suche.indiziere(
+        suche.ersetze(
             listOf(
                 SucheFtsEntity(
                     quelleId = frage.id.toString(),
@@ -364,7 +391,7 @@ class KompassRepository(context: Context) {
     }
 
     private suspend fun indiziereNachricht(nachricht: ChatNachrichtEntity) {
-        suche.indiziere(
+        suche.ersetze(
             listOf(
                 SucheFtsEntity(
                     quelleId = nachricht.id.toString(),

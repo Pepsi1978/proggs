@@ -62,7 +62,10 @@ object DokuParser {
             GelesenerEintrag(
                 name = "/" + treffer.groupValues[1],
                 beschreibung = beschreibung,
-                art = (zusatz["Type"] ?: zusatz["Kind"]).orEmpty().ifBlank { "Eingebaut" },
+                // Die Tabelle hat keine Type-Spalte mehr; Skills stehen als „**Skill.**“ vorn.
+                art = (zusatz["Type"] ?: zusatz["Kind"]).orEmpty().ifBlank {
+                    if (beschreibung.trimStart().startsWith("**Skill")) "Mitgelieferter Skill" else "Eingebaut"
+                },
             )
         }.also { melde("Slash-Befehle", it.size) }
 
@@ -208,7 +211,8 @@ object DokuParser {
      */
     fun findeEinzug(changelog: String, name: String, istSlash: Boolean): Pair<String, String> {
         val muster = if (istSlash) {
-            Regex("`?/" + Regex.escape(name.removePrefix("/")) + "(?![a-zA-Z0-9-])")
+            // Linke Grenze: Pfade wie „docs/en/memory“ oder „~/.claude/skills“ sind keine Befehle.
+            Regex("(?<![A-Za-z0-9._~/-])`?/" + Regex.escape(name.removePrefix("/")) + "(?![a-zA-Z0-9-])")
         } else {
             Regex("`" + Regex.escape(name) + "`")
         }

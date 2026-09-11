@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 /** Ein Treffer, so wie ihn die Ergebnisliste braucht. */
@@ -37,6 +38,22 @@ interface SucheDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun indiziere(eintraege: List<SucheFtsEntity>)
+
+    /**
+     * Ersetzt die Indexzeilen dieser Quellen.
+     *
+     * FTS-Tabellen haben keinen fachlichen Schlüssel: Mit `rowId = 0` vergibt SQLite bei jedem
+     * Einfügen eine neue rowid, REPLACE greift nie. Ohne vorheriges Löschen entstünde bei jedem
+     * Speichern eine weitere Zeile — doppelte Treffer und ein Absturz der Trefferliste.
+     */
+    @Transaction
+    suspend fun ersetze(eintraege: List<SucheFtsEntity>) {
+        eintraege.forEach { entferne(it.quelleId, it.quelleArt) }
+        indiziere(eintraege)
+    }
+
+    @Query("SELECT COUNT(*) - COUNT(DISTINCT quelleArt || '|' || quelleId) FROM suche_fts")
+    suspend fun anzahlDoppelte(): Int
 
     @Query("DELETE FROM suche_fts WHERE quelleArt = :art")
     suspend fun leereArt(art: String)
