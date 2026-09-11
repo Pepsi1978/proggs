@@ -12,7 +12,7 @@
 | B6 Benachrichtigung/Lebenszyklus | notify/*, ExperimenteApp.kt, MainActivity.kt, network/* | Plattform/Lebenszyklus | mittel-hoch | Wecker, Boot, Lifecycle, OkHttp |
 | B7 Oberfläche | ui/Navigation.kt, ui/screens/*, ui/components/*, ui/theme/* | Oberfläche | mittel | sechs Hauptbildschirme, Bausteine, Themen |
 | nicht prüfrelevant | build/*, .gradle/, res/font, generierter Code, Fremdbibliotheken | — | — | — |
-3. Loop-Zustand: aktuelle Runde 8 (letzte nach MAX_RUNDEN), nächste Stufe 8 (Blickwinkel Tester; Sparmodus: volle Tiefe für B1+B2+B5-Rest, Kurzprüfung Übrige), Konvergenzzähler 0, offene Fixe 0, ausstehend nichts.
+3. Loop-Zustand: BEENDET am Rundenlimit (Abschnitt 9, MAX_RUNDEN 8 ohne Zähler 2). Konvergenzzähler 1. Keine offenen Fixe, kein ausstehender Commit/Push, keine ausstehende Auslieferung. Nächster Schritt bei Fortsetzung: Runde 9 als Vollrunde (Tester), danach Konvergenzentscheidung.
 4. Fundtabelle:
 | ID | Runde | Bereich | Stelle | Kategorie | Schwere | Status | Kurzbeschreibung |
 |---|---|---|---|---|---|---|---|
@@ -98,4 +98,11 @@ Beweise/Fixe/Verifikation Runde 7:
 - L-18: letzten laufenden abends abschließen → MONITOR → zurück auf HEUTE → Ist: `_tagZustand` noch ABEND, „0 Experimente warten“ (kein `bestimmeZustand` in `schliesseAb`); Soll: Tageszustand neu. Fix: `bestimmeZustand()` im Erfolgspfad. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) ABEND nur noch bei laufenden; (2) Aufrufer B-03-Abschluss; (3) Fehler/null-Pfad unverändert.
 - L-19: 60-Tage-Experiment → „Weiterführen“ → Ist: Vorauswahl 3 über `groesstes`=1, Bestätigen wirkungslos mit „Läuft weiter — jetzt 60 Tage“; Soll: gültige Vorauswahl + ehrliche Meldung. Fix: `minOf(3, groesstes)` + „Bleibt bei … — länger geht es nicht“ bei No-op. Test: kein Test, weil keine Testinfrastruktur. Verifikation: (1) kein ungültiger Startwert, keine Falschmeldung; (2) Aufrufer Dialog/VM; (3) `groesstes`≥1 per `coerceAtMost(59)`.
 - Abgelehnt (9, je ein Satz): Merken-Icon bei fromWatchlist startet leer — Tap-Meldung korrekt („liegt schon“), kein falsches Tun. VORSCHLAEGE-Leerzustand ohne Karten — ohne Einzel-Verwerfen unerreichbar, danach mit „Andere Vorschläge“-Erholung. Gespräch ohne Experiment — kein Pfad (Navigation setzt stets Kennung, Import navigiert weg), Fehlerpfad zeigt Störung. Gesprächs-Entwurf übersteht Wechsel — Text bleibt = kein Verlust, wie B-03-Design. Senden während Denken — jede Sendung wird beantwortet, nichts geht verloren. B-03 ohne Experiment — null-Pfade bewacht (Störung/stilles Return, kein Absturz). Listen-Gruppen-Reset — Beweis falsch (`remember` mit Schlüssel rechnet bei Wechsel neu). Merklisten-Blatt schließt bei Fehler — Meldung sichtbar, Text erhalten und wiederherstellbar, Schließzeitpunkt Design. Monitor ohne To-Do-Kopf — leere Liste heißt nichts zu tun, kein Soll verletzt.
+
+| 8 | 8 Tester (Sparmodus: B1+B2 voll, Rest kurz+gezielt) | ja | 0/0/0/0/0 | Build grün, keine Tests | 1 |
+
+Runde 8 ohne Funde (Zähler 1, Rundenlimit erreicht):
+- B1+B2 voll, Stufe 8, geprüft: Fix-Folgen aller Runden 1–7 an den Aufrufern (keine Sperr-Schachtelung, keine geänderten Verträge, Erfolgs-/Fehlerpfade getrennt). Ergebnis: keine Funde.
+- B3–B7 gezielt+kurz, Stufe 8, geprüft: auth/CodexZugang.kt vollständig (Wiederholung, Token-Auffrischung mit Mutex, Ereignisstrom, DNS-Geduld, Fehlerarten), tts/{QwenVoiceEnrollment,QwenVoiceDirectory,GeraetTtsPlayer,TtsNetz}, ui/screens/Einstellungen.kt (Anbieter-IDs aus Katalog, Modell-/Effort-Normierung, Auswahl-Platzhalter bei Fremdwert). Ergebnis: keine Funde — Wiederholungszähler begrenzt, Auffrischung doppelt geprüft, Auswahl zeigt Platzhalter statt Falschem.
+- Abschluss: letzter Build grün, finale APK auf Gerät R3GL7073MLM installiert (Success).
 6. Klärungsbedarf: (leer)
