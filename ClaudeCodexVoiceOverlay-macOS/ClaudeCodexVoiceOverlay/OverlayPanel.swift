@@ -296,10 +296,13 @@ final class TooltipManager {
     /// Hooks werden gesetzt, alte Hooks werden ueberschrieben.
     /// Aktueller Text pro Button — per setText aenderbar (Schnell-Prompt-Kurzbeschreibungen).
     private var texts: [ObjectIdentifier: String] = [:]
+    /// Buttons, deren Tooltip ohne Hover-Verzoegerung erscheint (Zahlen-Kacheln).
+    private var immediateButtons = Set<ObjectIdentifier>()
 
-    func register(_ button: RoundButton, text: String) {
+    func register(_ button: RoundButton, text: String, immediate: Bool = false) {
         entries.append((button, text))
         texts[ObjectIdentifier(button)] = text
+        if immediate { immediateButtons.insert(ObjectIdentifier(button)) }
         button.onMouseEnteredHook = { [weak self, weak button] in
             guard let self = self, let button = button else { return }
             self.startHover(on: button, text: self.texts[ObjectIdentifier(button)] ?? text)
@@ -323,6 +326,10 @@ final class TooltipManager {
         cancelHover()
         pendingButton = button
         pendingText = text
+        if immediateButtons.contains(ObjectIdentifier(button)) {
+            fire()   // Zahlen-Kacheln: Ueberschrift sofort, bleibt bis mouseExited
+            return
+        }
         pendingTimer = Timer.scheduledTimer(withTimeInterval: TooltipManager.hoverDelay,
                                             repeats: false) { [weak self] _ in
             self?.fire()
@@ -709,7 +716,7 @@ final class OverlayPanel: NSPanel {
 
         // Zahlen 1-10 = Schnell-Prompts; der AppDelegate setzt die Kurzbeschreibungen.
         for n in 1...10 {
-            mgr.register(profileButtons[n - 1], text: "Prompt \(n)")
+            mgr.register(profileButtons[n - 1], text: "Prompt \(n)", immediate: true)
         }
     }
 

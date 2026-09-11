@@ -673,7 +673,8 @@ namespace ClaudeVoiceOverlay.Views
             _ = TryMergeVocabularyFromCloudAsync();
             GeminiPromptDriveSync.CloudApplied += () => Dispatcher.BeginInvoke(new Action(RefreshQuickPromptTooltips));
             GeminiPromptDriveSync.TrySyncFromCloud();   // Prompts + Schalter per Timestamp vom Backup holen
-            RefreshQuickPromptTooltips();   // Kurzbeschreibungen der Schnell-Prompts nachziehen, falls welche fehlen
+            WireQuickPromptHover();
+            RefreshQuickPromptTooltips();   // Ueberschriften der Schnell-Prompts nachziehen, falls welche fehlen
 
             // Standard-Tooltip der eingeklappten Pille merken (sie haengt nicht
             // im Tooltip-Wiring der grossen Leiste).
@@ -3370,10 +3371,9 @@ namespace ClaudeVoiceOverlay.Views
             RefreshQuickPromptTooltips();
         }
 
-        // Tooltip jeder Zahl = Gemini-Kurzbeschreibung des Prompts (max. 10
-        // Woerter), bis die da ist eine Textvorschau. Der Tooltip steht wie alle
-        // Overlay-Tooltips links neben dem Overlay, auf Hoehe der Zahl, immer im
-        // gleichen Abstand (PositionTooltip) — er ueberdeckt das Overlay nie.
+        // Ueberschrift jeder Zahl (eigene oder von Gemini vergebene). Sie steht
+        // in einem eigenen Popup links neben dem Overlay, auf Hoehe der Zahl,
+        // immer im gleichen Abstand — es ueberdeckt das Overlay nie.
         private readonly HashSet<int> _quickSummaryInFlight = new();
 
         private void RefreshQuickPromptTooltips()
@@ -3391,9 +3391,87 @@ namespace ClaudeVoiceOverlay.Views
 
         private void SetQuickPromptTooltip(int slot, string text)
         {
+            _quickTitles[slot - 1] = text;
+            if (_quickTitleSlot == slot && _quickTitleText != null) _quickTitleText.Text = text;
+        }
+
+        // ── Hover-Anzeige der Ueberschrift (Frank-Wunsch 2026-09-11) ──
+        // WPF-Tooltips sind app-weit abgeschaltet (App.xaml.cs faengt jedes
+        // ToolTipOpening ab, #47774). Darum ein eigenes Popup NUR fuer die
+        // Zahlen: erscheint sofort beim Hineinfahren (kein Hover-Timer), bleibt
+        // stehen, solange die Maus auf der Zahl ist — auch wenn sie sich dabei
+        // bewegt — und verschwindet erst beim Verlassen der Zahl.
+        private readonly string?[] _quickTitles = new string?[QuickPromptStore.Count];
+        private System.Windows.Controls.Primitives.Popup? _quickTitlePopup;
+        private System.Windows.Controls.TextBlock? _quickTitleText;
+        private int _quickTitleSlot;
+
+        private void WireQuickPromptHover()
+        {
+            var buttons = ProfileButtons;
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                int slot = i + 1;
+                buttons[i].ToolTip = null;
+                buttons[i].MouseEnter += (_, _) => ShowQuickTitle(slot);
+                buttons[i].MouseLeave += (_, _) => HideQuickTitle();
+            }
+        }
+
+        private void ShowQuickTitle(int slot)
+        {
             var btn = ProfileButtons[slot - 1];
-            _tooltipDefaults[btn] = text;
-            SetButtonTooltipText(btn, text);
+            if (_quickTitlePopup == null)
+            {
+                _quickTitleText = new System.Windows.Controls.TextBlock
+                {
+                    Foreground = System.Windows.Media.Brushes.White,
+                    FontSize = 12,
+                };
+                var border = new System.Windows.Controls.Border
+                {
+                    Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xF0, 0x20, 0x20, 0x20)),
+                    BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x55, 0x55, 0x55)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(10, 5, 10, 5),
+                    Child = _quickTitleText,
+                    IsHitTestVisible = false,
+                };
+                _quickTitlePopup = new System.Windows.Controls.Primitives.Popup
+                {
+                    Child = border,
+                    AllowsTransparency = true,
+                    Placement = System.Windows.Controls.Primitives.PlacementMode.Left,
+                    StaysOpen = true,
+                    Focusable = false,
+                    IsHitTestVisible = false,
+                };
+            }
+
+            _quickTitleSlot = slot;
+            _quickTitleText!.Text = _quickTitles[slot - 1] ?? $"Prompt {slot}";
+
+            System.Windows.Point origin;
+            try { origin = btn.TranslatePoint(new System.Windows.Point(0, 0), this); }
+            catch { return; }
+            var child = (FrameworkElement)_quickTitlePopup.Child;
+            child.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+
+            // Placement=Left: rechte Popup-Kante an der linken Zahl-Kante. Um die
+            // X-Position der Zahl im Fenster weiter nach links schieben -> rechte
+            // Kante immer TooltipMargin links vom Overlay, vertikal mittig zur Zahl.
+            _quickTitlePopup.IsOpen = false;
+            _quickTitlePopup.PlacementTarget = btn;
+            _quickTitlePopup.HorizontalOffset = -TooltipMargin - origin.X;
+            _quickTitlePopup.VerticalOffset = (btn.ActualHeight - child.DesiredSize.Height) / 2.0;
+            _quickTitlePopup.IsOpen = true;
+        }
+
+        private void HideQuickTitle()
+        {
+            _quickTitleSlot = 0;
+            if (_quickTitlePopup != null) _quickTitlePopup.IsOpen = false;
         }
 
         private async Task GenerateQuickPromptSummaryAsync(int slot)
