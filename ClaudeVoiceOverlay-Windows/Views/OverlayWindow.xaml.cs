@@ -3466,6 +3466,10 @@ namespace ClaudeVoiceOverlay.Views
             var source = PresentationSource.FromVisual(this);
             if (source?.CompositionTarget == null) return;
             var child = (FrameworkElement)_quickTitlePopup.Child;
+            // Border UND TextBlock als ungueltig markieren: sonst liefert Measure die
+            // gecachte Groesse des VORHER gezeigten Titels -> falsche X-Position.
+            _quickTitleText!.InvalidateMeasure();
+            child.InvalidateMeasure();
             child.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
 
             // Absolut in Bildschirm-DIPs: rechte Popup-Kante immer TooltipMargin
