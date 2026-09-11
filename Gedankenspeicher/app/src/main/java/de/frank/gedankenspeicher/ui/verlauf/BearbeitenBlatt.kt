@@ -105,9 +105,9 @@ fun BearbeitenBlatt(
                 "Speichern",
                 style = schrift.knopf,
                 // Ist nichts geändert, ist Speichern ausgegraut und wirkungslos.
-                color = if (zustand.geaendert && !zustand.nimmtAuf && !zustand.transkribiert) farben.akzent else farben.textSchwach,
+                color = if (zustand.geaendert && !zustand.nimmtAuf && !zustand.transkribiert && !zustand.speichert) farben.akzent else farben.textSchwach,
                 modifier = Modifier
-                    .clickable(enabled = zustand.geaendert && !zustand.nimmtAuf && !zustand.transkribiert, onClick = beiSpeichern)
+                    .clickable(enabled = zustand.geaendert && !zustand.nimmtAuf && !zustand.transkribiert && !zustand.speichert, onClick = beiSpeichern)
                     .padding(vertical = 8.dp),
             )
         }
@@ -117,6 +117,7 @@ fun BearbeitenBlatt(
             wert = zustand.ueberschrift,
             platzhalter = "Überschrift",
             einzeilig = true,
+            aktiv = !zustand.speichert,
             beiAenderung = { beiAenderung(it, zustand.text) },
         )
         Spacer(Modifier.height(10.dp))
@@ -192,6 +193,7 @@ private fun Textfeld(zustand: Bearbeitungszustand, beiText: (String, Int, Int) -
         }
         BasicTextField(
             value = feld,
+            readOnly = zustand.speichert,
             onValueChange = {
                 feld = it
                 beiText(it.text, it.selection.start, it.selection.end)
@@ -239,7 +241,7 @@ private fun Mikrofonzeile(zustand: Bearbeitungszustand, beiEinsprechen: () -> Un
                         if (zustand.nimmtAuf) farben.akzent else farben.rand,
                         RoundedCornerShape(50),
                     )
-                    .clickable(enabled = !zustand.transkribiert, onClick = beiEinsprechen),
+                    .clickable(enabled = !zustand.transkribiert && !zustand.speichert, onClick = beiEinsprechen),
                 contentAlignment = Alignment.Center,
             ) {
                 if (zustand.transkribiert) {
@@ -262,7 +264,7 @@ private fun Mikrofonzeile(zustand: Bearbeitungszustand, beiEinsprechen: () -> Un
 }
 
 @Composable
-private fun Feld(wert: String, platzhalter: String, einzeilig: Boolean, beiAenderung: (String) -> Unit) {
+private fun Feld(wert: String, platzhalter: String, einzeilig: Boolean, aktiv: Boolean = true, beiAenderung: (String) -> Unit) {
     val farben = Farben
     val schrift = Schriften
     Box(
@@ -278,6 +280,7 @@ private fun Feld(wert: String, platzhalter: String, einzeilig: Boolean, beiAende
         }
         BasicTextField(
             value = wert,
+            readOnly = !aktiv,
             onValueChange = beiAenderung,
             textStyle = schrift.eingabefeld.copy(color = farben.textStark),
             cursorBrush = SolidColor(farben.akzent),

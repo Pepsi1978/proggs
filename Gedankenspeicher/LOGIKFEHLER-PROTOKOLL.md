@@ -47,7 +47,7 @@
 
 ## 3. Loop-Zustand
 
-- **Aktuelle Runde:** 4 abgeschlossen, Auslieferung 0.6.9; danach Runde 5, Stufe 5 (ungeduldiger Benutzer). Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
+- **Aktuelle Runde:** 5 abgeschlossen, Auslieferung 0.6.10; danach Runde 6, Stufe 6 (manipulierte Eingaben). Alle offenen Teilprüfungen aus Runde 2 wurden abgeschlossen (Dateilisten unten). Historischer Eingang der zuvor unterbrochenen Runde:
   - **Bereich 5 – Aufnahme**
     - L-2-5-01 (mittel): MicRecorder, start() während stop() in joinAll → der Puffer der alten Aufnahme wird geleert, das finally des alten Jobs beendet die neue Aufnahme.
   - **Bereich 4 – KI-Anbindung**
@@ -81,7 +81,7 @@
   **Eigene Stufe-2-Prüfung abgeschlossen:** 1A/1B (`MainActivity.kt`, Manifest, drei `res/xml`-Dateien, `app/build.gradle.kts`; Erstlektüre plus gezielte Rückruf-/Sichtbarkeitsgegenprüfung); 3A (`data/Modell.kt`, `Datenbank.kt`, `Dao.kt`, `Repository.kt`, `settings/Einstellungen.kt`, `Nachtraege.kt`); 4A (`auth/CodexAuthManager.kt`, `CodexAufgaben.kt`); 5B (`hintergrund/AuswertungsDienst.kt`, `VorleseDienst.kt`); 6A (`tts/Vorleser.kt`, `Absatzabspieler.kt`, `Absaetze.kt`); 7 (alle sechs Cloud-TTS-Dateien aus der Karte). Die bereits abgeschlossenen Teilprüfungen der Übergabe bleiben gültig.
   **Triage:** Alle 17 Vormeldungen bestätigt, außer L-2-3-01: Klärungsbedarf (Dateizahl statt logischer Anhänge, auch reine Textanhänge betroffen; gewünschte Zählweise offen). (a) bestätigt als L-2-11-3; (b) bestätigt als L-2-6-04; (c) bestätigt als L-2-5-02 für Lesefehler (Zeitlimit wird bereits vom VM überwacht); (d)/(e)/(f)/(h) unter L-2-10-05…08 bestätigt, (g) abgelehnt wie oben. SQLite lower/LIKE ist ohne ICU ASCII-beschränkt; Kleinschreiben allein des Suchbegriffs behebt keine Großumlaute im Bestand.
   **Triage der neuen Prüfermeldungen:** L-2-2-01…14 bestätigt. L-2-9-01/03 bestätigt; L-2-9-02/04 und L-2-10-13 Klärungsbedarf (Layout-/Entwurferhaltung benötigt gezielte Geräteprüfung, im Schnellmodus nicht durchgeführt). L-2-10-05…12 bestätigt. Ein gemeldeter Layoutverdacht wird ohne Geräteprüfung nicht als behoben ausgegeben.
-- **Nächste Tiefenstufe:** 5 (ungeduldiger Benutzer)
+- **Nächste Tiefenstufe:** 6 (manipulierte Eingaben und unmögliche Zustände)
 - **Konvergenzzähler:** 0
 - **Nächster Blickwinkel:** Stufe 2. Die in Runde 1 geänderten Stellen sind als „kürzlich verändert“ markiert
 - **Offene Fixe:** keine
@@ -219,6 +219,7 @@ Stellen relativ zu `app/src/main/java/de/frank/gedankenspeicher/`; VM = `ui/Haup
 | 2 | 2 | Funktionsverträge und Randfälle; einzelne Lesehelfer | ja (Dateilisten in Abschnitt 3) | 50 + Beobachtung (g) | 46 | 1 Beobachtung | 5 inkl. Rücknahme | 45 | 45 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 | 3 | 3 | Suspend-Grenzen, zeitliche Reihenfolge, Ressourcenlebenszeit | ja, gezielte Vertragsprüfung je Bereich (siehe Abdeckung) | 13 | 13 | 0 | 0 neu | 13 | 13 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 | 4 | 4 | Invarianten und Gegenbeweise, Sparmodus für unveränderte unauffällige Bereiche | ja (Dateiliste Runde 3; Volltiefe 1–10, Kurzprüfung 11/12) | 4 | 4 | 0 | 0 neu | 4 | 4 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
+| 5 | 5 | Ungeduldiger Benutzer, schnelle Bedienfolgen | ja (Dateiliste Runde 3; Volltiefe risikoreiche/fundreiche Bereiche, sonst Kurzprüfung) | 4 | 4 | 0 | 0 neu | 4 | 4 statisch | Build grün; Tests nicht ausgeführt (Schnellmodus) | 0 |
 
 ### Runde 2 – verbindliche Endstatus und Fixnachweise
 
@@ -326,6 +327,22 @@ Quellpfade relativ zu `app/src/main/java/de/frank/gedankenspeicher`; bekannte Fu
 **Vormerkung Runde 4:** Zeitzonenwechsel bei den gecachten `SimpleDateFormat`-Werten von Repository/Nachtraege prüfen: Formate halten die bei Erzeugung gültige Zone fest. Noch kein bestätigter Fund.
 
 ### Runde 4 – Invarianten und Gegenbeweise
+
+### Runde 5 – schnelle Bedienfolgen (aktuelle Fix-Charge)
+
+Bereich 2 vollständig vom einzelnen Leseprüfer, übrige Bereiche gezielt anhand derselben Dateilisten aus Runde 3; zusätzlich Tabellen-/Sprachaufnahmebestätigung und Speichern im Editor verfolgt. Bekannte Layoutverdachte unverändert offen. Doppelsenden, Start/Stopp/Start, doppelte Verbesserung/Auswertung, Schlüsselwechsel/Löschen ohne zusätzliche neue Beweise. Neu bestätigt:
+
+| ID | Schwere | Stelle | Beweis | Status |
+|---|---|---|---|---|
+| L-5-2-01 | hoch | HauptViewModel.kt:1213–1223; BearbeitenBlatt.kt:108–126 | Im selben Blatt während DB-Speichern weitertippen/diktieren → Abschluss verwirft jüngere Eingabe → Editor während Speichern sperren. | bestätigt |
+| L-5-2-02 | mittel | HauptViewModel.kt:466–472; Repository.kt:152 | Papierkorb-Nachfolge A→C wartet, später B öffnen → alter Nachfolger setzt wieder C → spätere Wahl vormerken und nach Übergang anwenden. | bestätigt |
+| L-5-8-01 | hoch | ui/verlauf/Anhaenge.kt:1635–1646 | Sprachaufnahme zweimal schnell beenden → erster Rückruf übernimmt Datei, zweiter sieht Recorder=null und löscht sie → terminale Bestätigung nur einmal ausführen. | bestätigt |
+| L-5-8-02 | niedrig | ui/verlauf/Anhaenge.kt:1598–1601 | Aufnahmeblatt wird ohne Übernahme aus Composition entfernt → onDispose lässt unzugeordnete m4a zurück → nicht übernommene Datei aufräumen. | bestätigt |
+
+**Gegenlesen Runde 5:** L-5-2-01 und L-5-8-01/02 bestanden sofort. L-5-2-02 Anlauf 2: bereits vorgemerktes Wunschziel überspringt die Zwischenanzeige des automatischen Nachfolgers; dessen Freigabe wird dadurch nicht versehentlich entzogen. Echte Hintergrundfreigabe bleibt weiterhin ungültig.
+**Endstatus Runde 5:** Alle vier IDs behoben und getrennt statisch verifiziert, je (1) Beweis hinfällig, (2) kein neuer Aufruferfehler im gelesenen Pfad, (3) Randfälle berücksichtigt. Fixreferenz Runde-5-Commit/0.6.10. Kein Test wegen Schnellmodus. Keine weiteren bestätigten Funde in den übrigen Bereichen laut Dateiliste Runde 3.
+
+#### Runde 4 – Detailnachweise (Fortsetzung)
 
 Bereich 2 vollständig durch einen einzelnen Leseprüfer, übrige Bereiche entlang derselben Dateiliste aus Runde 3 gezielt geprüft. Invarianten: genau ein Aufnahmeziel und aktueller Notizstand; genau eine Profilaktivierung; unbekannter Schutzstatus ist keine Freigabe; keine DB-Arbeit nach Stilllegung; Formatierung hängt von der aktuellen Zeitzone ab. In unveränderten unauffälligen Oberflächenbereichen Kurzprüfung gemäß Sparmodus. Keine weiteren neuen bestätigten Funde in 1/4/5/6/7/8/9/10/11/12; berührte Aufrufer gehören zu den folgenden Funden.
 

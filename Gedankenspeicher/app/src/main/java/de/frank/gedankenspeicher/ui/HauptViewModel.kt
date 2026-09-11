@@ -202,6 +202,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private val antwortTranskriptSperre = Mutex()
     private var stimmenGeneration = 0
     private var stimmenNachladen = false
+    private var papierkorbWechselLaeuft = false
+    private var sitzungNachPapierkorb: Long? = null
 
     // Nachreichen und Sicherung dürfen nie doppelt nebeneinander laufen.
     private val nachreichSperre = Mutex()
@@ -386,6 +388,10 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         sitzung != null && sitzung.geschuetzt && _verlauf.value.freigegebeneSitzung != sitzung.id
 
     fun wechsleSitzung(id: Long) {
+        if (papierkorbWechselLaeuft) {
+            sitzungNachPapierkorb = id
+            return
+        }
         // Während einer Aufnahme oder Auswertung ist der Wechsel gesperrt (F-13, Fehlerfall):
         // ein halb aufgenommener Gedanke landete sonst in der falschen Sitzung.
         val z = _verlauf.value
@@ -467,10 +473,30 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         val z = _verlauf.value
         if (z.nimmtAuf) return melde("Erst die Aufnahme beenden.")
         if (z.wertetAus) return melde("Die Auswertung läuft noch.")
+        val wechselt = sitzung.id == z.sitzung?.id
+        if (wechselt && (sitzungswechselLaeuft || !arbeitsJob.isActive)) return
+        if (wechselt) {
+            papierkorbWechselLaeuft = true
+            sitzungswechselLaeuft = true
+        }
         viewModelScope.launch {
-            repo.setzePapierkorb(sitzung.id, true)
-            if (sitzung.id == _verlauf.value.sitzung?.id) beobachteSitzung(repo.naechsteSichtbare())
-            melde("Die Notiz liegt im Papierkorb.")
+            try {
+                repo.setzePapierkorb(sitzung.id, true)
+                if (sitzung.id == _verlauf.value.sitzung?.id) {
+                    val nachfolger = repo.naechsteSichtbare()
+                    // Keine Zwischenanzeige, die eine bereits erteilte Freigabe des Wunschziels verwirft.
+                    if (sitzungNachPapierkorb == null) beobachteSitzung(nachfolger)
+                }
+                melde("Die Notiz liegt im Papierkorb.")
+            } finally {
+                if (wechselt) {
+                    papierkorbWechselLaeuft = false
+                    sitzungswechselLaeuft = false
+                    val ziel = sitzungNachPapierkorb
+                    sitzungNachPapierkorb = null
+                    if (ziel != null && arbeitsJob.isActive) wechsleSitzung(ziel)
+                }
+            }
         }
     }
 
@@ -651,6 +677,7 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
      * hingehört.
      */
     fun bearbeitungsAufnahmeUmschalten() {
+        if (_bearbeitung.value.speichert) return
         if (_bearbeitung.value.notiz == null) return
         if (_verlauf.value.nimmtAuf) {
             beendeAufnahme()
@@ -1188,11 +1215,12 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setzeBearbeitung(ueberschrift: String, text: String) =
-        _bearbeitung.update { it.copy(ueberschrift = ueberschrift, text = text) }
+        _bearbeitung.update { if (it.speichert) it else it.copy(ueberschrift = ueberschrift, text = text) }
 
     /** Meldet jede Änderung im Textfeld samt Cursorstelle (B-08, Nachsprechen). */
     fun setzeBearbeitungText(text: String, auswahlStart: Int, auswahlEnde: Int) =
         _bearbeitung.update {
+            if (it.speichert) return@update it
             it.copy(
                 text = text,
                 auswahlStart = auswahlStart,
@@ -1212,9 +1240,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     fun speichereBearbeitung() {
         val z = _bearbeitung.value
+        if (z.speichert) return
         if (z.nimmtAuf || z.transkribiert) return melde("Erst das Diktat abschließen.")
         val notiz = z.notiz ?: return
         val generation = bearbeitungsGeneration
+        _bearbeitung.update { it.copy(speichert = true) }
         viewModelScope.launch {
             // Vor jeden frischen Nachtrag kommt seine Überschriftenzeile.
             val (text, zeiten) = Nachtraege.setzeZeilenEin(z.text, z.nachtragsStellen)
@@ -1227,6 +1257,8 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
                 if (generation == bearbeitungsGeneration) {
                     _bearbeitung.update { it.copy(fehler = fehler.message ?: "Die Notiz konnte nicht gespeichert werden.") }
                 }
+            } finally {
+                if (generation == bearbeitungsGeneration) _bearbeitung.update { it.copy(speichert = false) }
             }
         }
     }

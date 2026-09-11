@@ -1576,6 +1576,7 @@ private fun AufnahmeBlatt(
     val geraet = remember { mutableStateOf<MediaRecorder?>(null) }
     var sekunden by remember { mutableStateOf(0) }
     var laeuft by remember { mutableStateOf(false) }
+    var uebernommen by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         val aufnahme = runCatching {
@@ -1598,6 +1599,7 @@ private fun AufnahmeBlatt(
         onDispose {
             geraet.value?.let { runCatching { it.stop() }; runCatching { it.release() } }
             geraet.value = null
+            if (!uebernommen) datei.delete()
         }
     }
     LaunchedEffect(laeuft) {
@@ -1620,6 +1622,7 @@ private fun AufnahmeBlatt(
                     style = Schriften.knopf,
                     color = farben.textMittel,
                     modifier = Modifier.clip(RoundedCornerShape(50)).clickable {
+                        if (!laeuft) return@clickable
                         laeuft = false
                         geraet.value?.let { runCatching { it.stop() }; runCatching { it.release() } }
                         geraet.value = null
@@ -1633,12 +1636,14 @@ private fun AufnahmeBlatt(
                         .background(farben.akzentGedeckt)
                         .border(1.5.dp, farben.akzent, RoundedCornerShape(50))
                         .clickable {
+                            if (!laeuft) return@clickable
                             laeuft = false
                             val aufnahme = geraet.value
                             geraet.value = null
                             val geklappt = aufnahme != null && runCatching { aufnahme.stop() }.isSuccess
                             aufnahme?.let { runCatching { it.release() } }
                             if (geklappt && datei.length() > 0) {
+                                uebernommen = true
                                 beiFertig(speicher.beschreibe(datei, Anhangsart.SPRACHAUFNAHME, "Sprachaufnahme"))
                             } else {
                                 datei.delete()

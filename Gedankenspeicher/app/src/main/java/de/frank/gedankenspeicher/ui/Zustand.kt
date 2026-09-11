@@ -128,6 +128,7 @@ data class Bearbeitungszustand(
     val nimmtAuf: Boolean = false,
     /** Läuft gerade die Transkription des Gesprochenen? */
     val transkribiert: Boolean = false,
+    val speichert: Boolean = false,
     val fehler: String? = null,
 ) {
     val geaendert: Boolean
