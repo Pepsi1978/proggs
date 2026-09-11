@@ -47,7 +47,34 @@
 
 ## 3. Loop-Zustand
 
-- **Aktuelle Runde:** 1 abgeschlossen (Commit „Runde 1“). Als Nächstes Runde 2
+- **Aktuelle Runde:** 2 UNTERBROCHEN am 11.09.2026 (Nutzer: Token-Limit). Fertig geprüft: Bereiche 3B, 4B, 5A, 6B, 8, 10A, 11, 12. Abgebrochen und neu zu prüfen: 1A, 1B, 2A, 2B, 3A, 4A, 5B, 6A, 7, 9, 10B. Die bisher gemeldeten Funde (noch NICHT triagiert) sind:
+  - **Bereich 5 – Aufnahme**
+    - L-2-5-01 (mittel): MicRecorder, start() während stop() in joinAll → der Puffer der alten Aufnahme wird geleert, das finally des alten Jobs beendet die neue Aufnahme.
+  - **Bereich 4 – KI-Anbindung**
+    - L-2-4-01 (niedrig): einzeiler trimmt Anführungszeichen einzeln statt paarweise („Buchtipp „Momo“ → „Buchtipp „Momo“).
+  - **Bereich 12 – Oberfläche/Motion**
+    - L-2-12-01 (niedrig): bewegungReduziert() liest per remember einen veralteten Wert, dauer() liest frisch.
+  - **Bereich 3 – Sicherung**
+    - L-2-3-01 (niedrig): Der Steckbrief zählt PDF-Vorschaubilder als Anhänge mit.
+    - L-2-3-02 (niedrig): Anhangsspeicher.uebernimm hinterlässt bei einem Kopierfehler eine halbe Datei.
+    - L-2-3-03 (niedrig, durch L-1-3-1b): wartend-Dateien ohne Notiz nach einer Wiederherstellung wandern in jede Sicherung.
+  - **Bereich 11 – Suche und Einstellungen**
+    - L-2-11-1 (hoch, Plattformverhalten prüfen): SQLite lower() setzt Ä/Ö/Ü womöglich nicht klein, dann findet die Suche keine Wörter mit großem Umlaut.
+    - L-2-11-2 (mittel): Der Probe-Knopf zeigt „Probe anhalten“ bei jeder Vorlesung.
+  - **Bereich 6 – Vorlesen**
+    - L-2-6-01 (mittel): Vorleser: der innere catch im Geräte-Rückfall fängt eine CancellationException und meldet einen Fehler.
+    - L-2-6-02 (niedrig, durch L-1-2-07b): stoppeLaufendes setzt _absatzNr nicht zurück → Absatz 0 der neuen Vorlesung wird nicht hervorgehoben.
+    - L-2-6-03 (niedrig): „Anhalten“ in der Lücke zwischen zwei Absätzen hat keine Wirkung.
+  - **Bereich 8 – Anhänge**
+    - L-2-8-1 (mittel): Zeichenblatt „Übernehmen“ doppelt getippt → runCatching fängt die CancellationException, es erscheint eine Fehlermeldung und die PNG bleibt verwaist liegen.
+    - L-2-8-2 (niedrig): Das NotizAnhangsmenue wird beim Kopieren weggetippt → dieselbe Meldung „cancelled“, verwaiste Datei.
+  - **Bereich 10 – KI-Blatt**
+    - L-2-10-01 (mittel): Eine leere Rückfrage lässt das KI-Blatt ohne Frage, Fehler und Knopf zurück.
+    - L-2-10-02 (mittel): werteAus verwirft keine laufende Antwort-Aufnahme und zählt kiBlattGeneration nicht hoch.
+    - L-2-10-03 (niedrig): Das KI-Blatt hält eine Notiz-Aufnahme für die Antwort-Aufnahme.
+    - L-2-10-04 (mittel): Websuche „immer“ und „KI entscheidet“ erzeugen denselben Request.
+
+  Nächster Schritt: diese Funde triagieren, die abgebrochenen Bereiche neu prüfen, dann fixen.
 - **Nächste Tiefenstufe:** 2 (Datei für Datei, Verträge und Randfälle)
 - **Konvergenzzähler:** 0
 - **Nächster Blickwinkel:** Stufe 2. Die in Runde 1 geänderten Stellen sind als „kürzlich verändert“ markiert
