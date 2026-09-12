@@ -126,6 +126,8 @@ fun GenialeIdeenApp(
                 Bildschirm.DETAIL -> DetailScreen(
                     viewModel = viewModel,
                     vorschau = geoeffnet,
+                    mikrofonErlaubt = mikrofonErlaubt,
+                    aufMikrofonFragen = aufMikrofonFragen,
                     aufZurueck = { bildschirm = Bildschirm.LISTE },
                 )
                 Bildschirm.EINSTELLUNGEN -> EinstellungenScreen(

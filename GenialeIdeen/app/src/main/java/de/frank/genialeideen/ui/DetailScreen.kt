@@ -93,6 +93,8 @@ import de.frank.genialeideen.ui.theme.Semantisch
 fun DetailScreen(
     viewModel: IdeenViewModel,
     vorschau: IdeeEntity?,
+    mikrofonErlaubt: Boolean,
+    aufMikrofonFragen: () -> Unit,
     aufZurueck: () -> Unit,
 ) {
     val gold = LocalGold.current
@@ -159,7 +161,10 @@ fun DetailScreen(
     if (bearbeiten) {
         IdeeBearbeiten(
             idee = aktuelle,
+            viewModel = viewModel,
             themeWahl = theme,
+            mikrofonErlaubt = mikrofonErlaubt,
+            aufMikrofonFragen = aufMikrofonFragen,
             aufSpeichern = { neuerTitel, neuerText ->
                 viewModel.aendere(aktuelle, neuerTitel, neuerText)
                 bearbeiten = false
@@ -355,12 +360,18 @@ fun DetailScreen(
 @Composable
 private fun IdeeBearbeiten(
     idee: IdeeEntity,
+    viewModel: IdeenViewModel,
     themeWahl: String,
+    mikrofonErlaubt: Boolean,
+    aufMikrofonFragen: () -> Unit,
     aufSpeichern: (String, String) -> Unit,
     aufZwischenspeichern: (String, String) -> Unit,
     aufVerwerfen: () -> Unit,
 ) {
     val gold = LocalGold.current
+    val aufnahme by viewModel.aufnahme.collectAsState()
+    val ki by viewModel.ki.collectAsState()
+    val korrektur by viewModel.korrektur.collectAsState()
     // Saveable: Eine Drehung sichert im Hintergrund asynchron — der Neuaufbau fände sonst
     // den alten Stand und überschriebe das gerade Gesicherte mit Veraltetem.
     var neuerTitel by rememberSaveable(idee.id) { mutableStateOf(idee.titel) }
@@ -378,6 +389,10 @@ private fun IdeeBearbeiten(
         val (t, x, noetig) = standJetzt
         if (noetig && !erledigt) zwischenspeichernJetzt(t, x)
     }
+    // Wer das Bearbeiten verlässt, lässt kein Mikrofon laufen.
+    DisposableEffect(Unit) {
+        onDispose { if (viewModel.aufnahme.value.laeuft) viewModel.brichAufnahmeAb() }
+    }
     val lebenszyklus = LocalLifecycleOwner.current
     DisposableEffect(lebenszyklus) {
         val beobachter = LifecycleEventObserver { _, ereignis ->
@@ -391,10 +406,12 @@ private fun IdeeBearbeiten(
     }
     val uebernehmen = { t: String, x: String ->
         erledigt = true
+        viewModel.korrekturVergessen()
         aufSpeichern(t, x)
     }
     val verwerfen = {
         erledigt = true
+        viewModel.korrekturVergessen()
         aufVerwerfen()
     }
 
@@ -453,11 +470,33 @@ private fun IdeeBearbeiten(
                 )
                 EingabeFeld(
                     beschriftung = "Die Idee",
-                    platzhalter = "Was steckt dahinter?",
+                    platzhalter = "Sprich sie ein oder tipp sie hier",
                     wert = neuerText,
-                    aufWert = { neuerText = it },
+                    aufWert = {
+                        neuerText = it
+                        // Von Hand geändert heisst: Die Korrektur ist nicht mehr rücknehmbar.
+                        if (korrektur != null && it != korrektur?.korrigiert) {
+                            viewModel.korrekturVergessen()
+                        }
+                    },
                     minHoehe = 200.dp,
                 )
+
+                AnimatedVisibility(visible = korrektur != null) {
+                    Text(
+                        "In gutes Deutsch gebracht — dein Original liegt bereit.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = gold.textGedaempft,
+                    )
+                }
+
+                AnimatedVisibility(visible = aufnahme.wirdUebertragen) {
+                    Text(
+                        "Das Gesprochene wird gerade zu Text …",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = gold.textGedaempft,
+                    )
+                }
                 // Platz für die Fussleiste, damit sie nichts verdeckt.
                 Spacer(Modifier.height(96.dp))
             }
@@ -474,12 +513,50 @@ private fun IdeeBearbeiten(
                 .navigationBarsPadding()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // Nachträglich einsprechen: Das Erkannte hängt sich hinter das letzte Wort.
+            AufnahmeKnopfMitPegel(
+                laeuft = aufnahme.laeuft,
+                pegel = aufnahme.pegel,
+                aufTipp = {
+                    if (aufnahme.laeuft) {
+                        viewModel.beendeAufnahme { erkannt ->
+                            neuerText = if (neuerText.isBlank()) {
+                                erkannt
+                            } else {
+                                "${neuerText.trimEnd()} $erkannt"
+                            }
+                            viewModel.korrekturVergessen()
+                        }
+                    } else if (mikrofonErlaubt) {
+                        viewModel.starteAufnahme()
+                    } else {
+                        aufMikrofonFragen()
+                    }
+                },
+            )
+
+            // Derselbe Knopf wie beim Erfassen: Er bringt den gesamten Text — samt frisch
+            // Eingesprochenem — in gutes Deutsch und wird danach zum Rückgängig-Knopf.
+            if (neuerText.isNotBlank()) {
+                KorrekturKnopf(
+                    korrigiert = korrektur != null,
+                    laeuft = ki.antwortet,
+                    aufKorrigieren = {
+                        viewModel.korrigiereText(neuerText) { neu -> neuerText = neu }
+                    },
+                    aufZuruecknehmen = {
+                        viewModel.korrekturZuruecknehmen { alt -> neuerText = alt }
+                    },
+                )
+            }
+
+            Spacer(Modifier.weight(1f))
             Box(
                 modifier = Modifier
                     .druckEffekt(verwerfen)
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                    .padding(horizontal = 4.dp, vertical = 10.dp),
             ) {
                 Text(
                     "Verwerfen",
@@ -487,7 +564,6 @@ private fun IdeeBearbeiten(
                     color = gold.textGedaempft,
                 )
             }
-            Spacer(Modifier.weight(1f))
             GoldKnopf(
                 text = "Übernehmen",
                 aktiviert = darfSpeichern,
