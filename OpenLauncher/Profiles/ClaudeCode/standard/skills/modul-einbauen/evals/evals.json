@@ -1,0 +1,90 @@
+{
+  "skill": "modul-einbauen",
+  "hinweis": "Testprompts für die Auslöse- und Ablaufprüfung. Noch nicht ausgeführt — ungetestet, bis der erste echte Einbau läuft.",
+  "faelle": [
+    {
+      "id": "einbau-nummer",
+      "soll_ausloesen": true,
+      "prompt": "Bau bitte M1.1 in KarteikartenLernen ein.",
+      "erwartet": [
+        "liest Module/INDEX.md, dann MODUL.md und BEISPIEL.md",
+        "prüft Plattform, Mindestversion, Kollision und ob das Modul selbst sauber ist",
+        "legt die Dreiertabelle vor, bevor er kopiert",
+        "fragt NUR nach Spalte 3, nicht nach Farben",
+        "kopiert die Modulkopie byte-identisch, erzeugt Anbindung.kt daneben",
+        "setzt Farben und Schrift aus dem Theme von KarteikartenLernen, nicht von GenialeIdeen",
+        "prüft mit diff, dass die Kopie identisch ist, und baut durch",
+        "trägt KarteikartenLernen in die Konsumententabelle ein"
+      ]
+    },
+    {
+      "id": "einbau-anzeigename",
+      "soll_ausloesen": true,
+      "prompt": "Nimm das Drag & Drop Modul und setz es in Denknotiz ein.",
+      "erwartet": [
+        "findet das Modul über den Anzeigenamen, nicht nur über die Nummer",
+        "fragt nicht nach der Nummer, die steht im Index"
+      ]
+    },
+    {
+      "id": "klaerfall-sicherung",
+      "soll_ausloesen": true,
+      "prompt": "Bau das Sicherungsmodul in BestJournalAndroid ein.",
+      "erwartet": [
+        "stuft Menüfluss, Auswahllogik, Fortschritt und Fehlerbehandlung als 1:1 ein",
+        "stuft Farben und Schrift als 'Aussehen aus der App' ein, fragt dazu nicht",
+        "erkennt, dass die sicherbaren Datenarten app-eigen sind, und fragt MIT Vorschlag nach",
+        "setzt die Schnittstelle in Anbindung.kt um, nicht in der Modulkopie"
+      ]
+    },
+    {
+      "id": "mehrere-module",
+      "soll_ausloesen": true,
+      "prompt": "Nimm die Module M1.1 bis M1.3 und bau sie in die neue App ein.",
+      "erwartet": [
+        "arbeitet jedes Modul einzeln durch Phase 1 bis 4",
+        "macht am Ende EINEN Build, EINEN Versions-Bump und EINEN Commit",
+        "überspringt bei einem Prüffehler nur das eine Modul und meldet es"
+      ]
+    },
+    {
+      "id": "nachziehen-alle",
+      "soll_ausloesen": true,
+      "prompt": "Zieh M1.1 überall nach, ich habe den Ruckler gefixt.",
+      "erwartet": [
+        "liest die Konsumententabelle aus MODUL.md als verbindliche Liste",
+        "überschreibt nur die Modulkopie, NICHT die Anbindung",
+        "baut jede App einzeln und macht pro App einen eigenen Commit",
+        "meldet am Ende, welche Apps gehoben wurden und welche nicht"
+      ]
+    },
+    {
+      "id": "nachziehen-eine-app",
+      "soll_ausloesen": true,
+      "prompt": "Zieh M1.1 nur in GenialeIdeen nach.",
+      "erwartet": [
+        "hebt genau eine App, lässt die anderen auf ihrem Stand",
+        "behandelt den Rückstand der anderen nicht als Fehler"
+      ]
+    },
+    {
+      "id": "modul-unsauber",
+      "soll_ausloesen": true,
+      "prompt": "Bau M1.1 in PerfectMoment ein.",
+      "kontext": "Die Moduldatei greift noch direkt auf MaterialTheme.colorScheme zu.",
+      "erwartet": [
+        "bricht in Phase 1 ab, statt zu kopieren",
+        "verweist auf modul-erstellen zum Nachschneiden und Version +1",
+        "passt die Modulkopie NICHT still an"
+      ]
+    },
+    {
+      "id": "negativ-erstellen",
+      "soll_ausloesen": false,
+      "prompt": "Mach aus dem Drag-and-Drop von GenialeIdeen bitte ein Modul.",
+      "erwartet": [
+        "triggert NICHT — das ist modul-erstellen"
+      ]
+    }
+  ]
+}

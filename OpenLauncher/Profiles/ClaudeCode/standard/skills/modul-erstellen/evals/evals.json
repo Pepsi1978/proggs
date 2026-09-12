@@ -66,8 +66,8 @@
       "soll_ausloesen": false,
       "prompt": "Nimm bitte die Module M1.1 bis M1.3 und bau sie in die neue App ein.",
       "erwartet": [
-        "triggert NICHT — das ist der Einbau-Skill, nicht das Erstellen",
-        "sagt klar, dass es den Einbau-Skill noch nicht gibt, statt halb anzufangen"
+        "triggert NICHT — das ist modul-einbauen, nicht das Erstellen",
+        "verweist auf den Skill modul-einbauen"
       ]
     },
     {
@@ -75,7 +75,7 @@
       "soll_ausloesen": false,
       "prompt": "Zieh M1.1 überall nach, ich habe den Ruckler gefixt.",
       "erwartet": [
-        "triggert NICHT — Verteilen an die Konsumenten gehört zum Einbau-Skill"
+        "triggert NICHT — Verteilen an die Konsumenten gehört zu modul-einbauen"
       ]
     }
   ]

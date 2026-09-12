@@ -1,6 +1,6 @@
 ---
 name: modul-erstellen
-description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/Mx.y-Name/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Ebenso bei Sätzen, die gleich einen Namen mitgeben — "bau daraus ein Modul und nenn es X", "erstelle ein Modul mit dem Namen X", "mach daraus das X-Modul", "speicher das als X ab". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Der Skill übernimmt den genannten Namen wörtlich als Anzeigenamen und fragt danach, wenn keiner genannt wurde, vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Einbau-Skill zuständig.
+description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/Mx.y-Name/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Ebenso bei Sätzen, die gleich einen Namen mitgeben — "bau daraus ein Modul und nenn es X", "erstelle ein Modul mit dem Namen X", "mach daraus das X-Modul", "speicher das als X ab". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Der Skill übernimmt den genannten Namen wörtlich als Anzeigenamen und fragt danach, wenn keiner genannt wurde, vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Skill modul-einbauen zuständig.
 ---
 
 # Modul erstellen
@@ -21,7 +21,7 @@ Moduldateien. Kein `srcDir`, kein Paket-Server, keine Projektreferenz auf den
 Modulordner. Grund: Jeder App-Ordner bleibt allein baubar — auch wenn der
 Modulordner fehlt, das Netz weg ist oder nur diese eine App ausgecheckt wurde.
 Der Preis ist, dass ein Fix mehrfach verteilt werden muss; das erledigt später
-der Einbau-Skill auf Ansage.
+der Skill `modul-einbauen` auf Ansage.
 
 **2 — Die Kopie ist byte-identisch mit der Quelle.** Deshalb steht der
 Herkunfts-Kopf in der *Moduldatei selbst*, nicht erst in der App-Kopie. Dann
@@ -144,7 +144,7 @@ wirklich zählen:
 - **Mindestens** — Compose-, .NET- oder Swift-Version. Ein Modul, das eine neue
   API benutzt, bricht sonst stillschweigend in einer älteren App.
 - **Konsumenten** — App, Stand und **Pfad der Kopie**. Das ist die Liste, die
-  der Einbau-Skill später abarbeitet.
+  der Skill `modul-einbauen` später abarbeitet.
 
 Schreib zusätzlich `BEISPIEL.md` mit dem echten Aufrufcode aus der Quell-App —
 meist nur wenige Zeilen. Das ist beim nächsten Einbau mehr wert als jede
@@ -184,5 +184,5 @@ sagen, welche App hinterherhinkt.
 ## Was dieser Skill nicht tut
 
 Ein bestehendes Modul in eine weitere App einbauen, oder eine Modul-Änderung an
-alle Konsumenten verteilen. Beides ist Sache des Einbau-Skills. Kommt so eine
+alle Konsumenten verteilen. Beides ist Sache des Skills `modul-einbauen`. Kommt so eine
 Bitte herein, sag das und bau nichts Halbes.

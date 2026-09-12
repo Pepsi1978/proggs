@@ -1,7 +1,11 @@
 # Modul-Bibliothek
 
 Wiederverwendbare Code-Bausteine, aus fertigen Apps herausgelöst.
-Angelegt und gepflegt vom Skill `modul-erstellen`.
+
+| Skill | Wofür |
+|---|---|
+| `modul-erstellen` | App-Code → neues Modul in dieser Bibliothek |
+| `modul-einbauen` | Modul → App, und Änderungen an alle Konsumenten verteilen |
 
 ## Nummernkreise
 
