@@ -143,7 +143,7 @@ class DateiSicherung(private val context: Context) {
             )?.use { zeiger ->
                 while (zeiger.moveToNext()) {
                     val name = zeiger.getString(1) ?: continue
-                    if (!name.startsWith(PRAEFIX) || !name.endsWith(".json")) continue
+                    if (!gehoertDazu(name)) continue
                     // Eine leer gebliebene Datei (Schreiben abgebrochen) ist keine Sicherung —
                     // sonst gälte sie als „die davor“ und die gute würde weggeräumt.
                     if (!zeiger.isNull(3) && zeiger.getLong(3) == 0L) continue
@@ -154,18 +154,34 @@ class DateiSicherung(private val context: Context) {
                     )
                 }
             } ?: error("Der Sicherungsordner konnte nicht aufgelistet werden. Bestehende Sicherungen bleiben erhalten.")
-        // Alte Namen enthalten zusätzlich "sicherung-". Nur den Zeitstempel vergleichen,
-        // sonst gewinnt die alte Datei alphabetisch gegen jede neue Sicherung. Verglichen wird
-        // der echte Zeitpunkt: Neue Namen stehen in UTC (mit "Z"), alte in Ortszeit — sonst
-        // bekäme nach der Umstellung auf Winterzeit die neuere Sicherung den kleineren Namen.
+        // Verglichen wird der Zeitpunkt aus dem Namen, nie der Name selbst: Beim heutigen
+        // Muster steht der Tag vorn, also ordnet die Schreibweise nichts — der 01.10. käme vor
+        // dem 20.03. Erst die gelesene Zeit bringt die Reihenfolge, und nur die entscheidet,
+        // welche Sicherung als "die davor" stehen bleibt.
         return gefunden.sortedWith(
             compareByDescending<Sicherungsdatei> { zeitpunktAusNamen(it.name) ?: it.geaendertAm }
                 .thenByDescending { it.geaendertAm },
         )
     }
 
+    /**
+     * Gehört die Datei zu DIESER App?
+     *
+     * Zwei Muster: das heutige `20-03-2026-1346-opencode-kompass.json` und das frühere
+     * `opencode-kompass-2026-03-20-1346Z.json`. Das alte bleibt lesbar, damit eine vor der
+     * Umstellung geschriebene Sicherung weiter gefunden und wiederhergestellt werden kann.
+     * Fremde Dateien im Ordner bleiben in beiden Fällen unangetastet.
+     */
+    private fun gehoertDazu(name: String): Boolean =
+        name.endsWith(".json") &&
+            (NEUES_MUSTER.containsMatchIn(name) || name.startsWith(ALTES_PRAEFIX))
+
     private fun zeitpunktAusNamen(name: String): Long? {
-        val treffer = ZEIT_IM_NAMEN.find(name) ?: return null
+        NEUES_MUSTER.find(name)?.let { treffer ->
+            val format = SimpleDateFormat("dd-MM-yyyy-HHmm", Locale.GERMANY).apply { isLenient = false }
+            return runCatching { format.parse(treffer.groupValues[1])?.time }.getOrNull()
+        }
+        val treffer = ALTES_MUSTER.find(name) ?: return null
         val ziffern = treffer.groupValues[1].replace("-", "").padEnd(17, '0')
         val format = SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.GERMANY).apply {
             if (treffer.groupValues[2] == "Z") timeZone = UTC
@@ -209,10 +225,18 @@ class DateiSicherung(private val context: Context) {
         }
     }.getOrNull()
 
+    /**
+     * Der Name einer neuen Sicherung: `20-03-2026-1346-opencode-kompass.json`.
+     *
+     * Zeitpunkt in Ortszeit und in der Reihenfolge, in der man ein Datum liest — der Name soll
+     * im Dateiwähler ohne Umrechnen zu erkennen sein. Dass sich damit nicht mehr alphabetisch
+     * sortieren lässt, kostet nichts: Die Reihenfolge kommt aus dem gelesenen Zeitpunkt.
+     * Der App-Name steht hinten und trennt die Sicherungen der drei Kompass-Apps im selben
+     * Ordner voneinander.
+     */
     private fun neuerName(bisherige: List<Sicherungsdatei>): String {
-        // UTC mit "Z": Zeitumstellung und Zeitzonenwechsel bringen die Reihenfolge nicht durcheinander.
-        val zeit = SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.GERMANY).apply { timeZone = UTC }.format(Date())
-        val basis = "$PRAEFIX${zeit}Z"
+        val zeit = SimpleDateFormat("dd-MM-yyyy-HHmm", Locale.GERMANY).format(Date())
+        val basis = "$zeit-${AppProfil.DATEI_PRAEFIX}"
         val namen = bisherige.map { it.name }.toSet()
         var name = "$basis.json"
         var nummer = 2
@@ -226,8 +250,13 @@ class DateiSicherung(private val context: Context) {
 
         private const val PREFS = "kompass_backup_status"
         private const val KEY_ORDNER = "sicherungs_ordner"
-        private val PRAEFIX = "${AppProfil.DATEI_PRAEFIX}-"
-        private val ZEIT_IM_NAMEN = Regex("(\\d{4}-\\d{2}-\\d{2}-\\d{4}(?:\\d{2}-\\d{3})?)(Z?)")
+        /** `20-03-2026-1346-opencode-kompass.json` — Zeitpunkt vorn, App-Name hinten. */
+        private val NEUES_MUSTER =
+            Regex("^(\\d{2}-\\d{2}-\\d{4}-\\d{4})-${Regex.escape(AppProfil.DATEI_PRAEFIX)}\\b")
+
+        /** Das frühere Muster `opencode-kompass-2026-03-20-1346Z.json`, nur noch zum Lesen. */
+        private val ALTES_PRAEFIX = "${AppProfil.DATEI_PRAEFIX}-"
+        private val ALTES_MUSTER = Regex("(\\d{4}-\\d{2}-\\d{2}-\\d{4}(?:\\d{2}-\\d{3})?)(Z?)")
         private val UTC = java.util.TimeZone.getTimeZone("UTC")
     }
 }

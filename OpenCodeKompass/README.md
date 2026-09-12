@@ -58,5 +58,5 @@ gemeinsam in `app/build.gradle.kts` und werden im Einstellungsbildschirm angezei
 Die Sicherung schreibt in einen einmal gewählten Ordner — in der Praxis ein Google-Drive-Ordner.
 Nach der einmaligen Freigabe schreibt „Jetzt sichern" ohne weitere Rückfrage dorthin; es liegen
 immer nur die aktuelle Sicherung und die eine davor darin. Der Dateiname trägt den Zeitpunkt:
-`opencode-kompass-2026-09-12-1224Z.json`. Das Modul liegt im gemeinsamen Kern und gilt damit für
+`12-09-2026-1224-opencode-kompass.json`. Das Modul liegt im gemeinsamen Kern und gilt damit für
 alle drei Kompass-Apps.

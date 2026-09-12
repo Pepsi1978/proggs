@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -93,6 +95,7 @@ import de.frank.kompass.vm.PruefErgebnis
  * Sicherheit, Sicherung, Über. Jeder Schlüssel hat einen Prüfknopf, der einen echten Aufruf
  * macht — ein gefülltes Feld beweist noch nicht, dass es funktioniert.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EinstellungenScreen(
     viewModel: EinstellungenViewModel,
@@ -585,27 +588,36 @@ fun EinstellungenScreen(
                 }
 
                 Spacer(Modifier.height(Mass.abstandKlein))
-                Row {
-                    Aktionsknopf("Jetzt sichern", laedt = zustand.sicherungLaeuft) {
-                        viewModel.sichereJetzt(beiOrdnerWaehlen)
-                    }
-                    Spacer(Modifier.width(Mass.abstandKlein))
+                Aktionsknopf("Jetzt sichern", laedt = zustand.sicherungLaeuft) {
+                    viewModel.sichereJetzt(beiOrdnerWaehlen)
+                }
+                Spacer(Modifier.height(Mass.abstandKlein))
+                // FlowRow statt Row: Die beiden Beschriftungen sind lang und passen auf dem
+                // Cover-Display nicht nebeneinander — dort rutscht der zweite Knopf eine Zeile
+                // tiefer, statt am Rand abgeschnitten zu werden.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
+                    verticalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
+                ) {
+                    // Erst die Wahl von Hand, dann die Abkürzung: Wer wiederherstellt, sucht
+                    // meist eine bestimmte Sicherung. "Neueste" nimmt ungefragt die jüngste.
+                    Aktionsknopf("Wiederherstellen", zurueckhaltend = true) { beiSicherungWaehlen() }
                     Aktionsknopf("Neueste wiederherstellen", zurueckhaltend = true) {
                         viewModel.stelleNeuesteWiederHer()
                     }
                 }
                 Spacer(Modifier.height(Mass.abstandKlein))
-                Row {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
+                    verticalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
+                ) {
                     Aktionsknopf("Ordner wählen", zurueckhaltend = true) {
                         viewModel.waehleSicherungsOrdner(beiOrdnerWaehlen)
                     }
-                    Spacer(Modifier.width(Mass.abstandKlein))
-                    Aktionsknopf("Datei wählen", zurueckhaltend = true) { beiSicherungWaehlen() }
-                }
-                if (zustand.sicherungsOrdner != null) {
-                    Spacer(Modifier.height(Mass.abstandKlein))
-                    Aktionsknopf("Ordner vergessen", zurueckhaltend = true) {
-                        viewModel.vergissSicherungsOrdner()
+                    if (zustand.sicherungsOrdner != null) {
+                        Aktionsknopf("Ordner vergessen", zurueckhaltend = true) {
+                            viewModel.vergissSicherungsOrdner()
+                        }
                     }
                 }
             }
