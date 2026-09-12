@@ -14,10 +14,10 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 56
-        versionName = "0.6.14"
+        versionName = "0.6.15"
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"12.09.2026, 17:31 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"12.09.2026, 21:48 Uhr\"")
     }
 
     // **Dieselbe Debug-Signatur auf allen Rechnern** — wie bei den anderen Apps, siehe

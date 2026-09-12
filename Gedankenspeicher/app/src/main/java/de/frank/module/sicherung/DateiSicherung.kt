@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v3
+// Modul M1.1 — Sicherung · Stand v7
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -64,9 +64,26 @@ class DateiSicherung(
     private val prefs
         get() = context.applicationContext.getSharedPreferences(namen.einstellungenDatei, Context.MODE_PRIVATE)
 
+    /**
+     * Der geparste Ordner — einmal gelesen, danach gemerkt.
+     *
+     * `null` heisst „noch nicht nachgesehen", nicht „kein Ordner"; das steht im Wert darin.
+     * Die selbsttätige Sicherung fragt bei JEDER Datenbankänderung nach dem Ordner, und jede
+     * Frage hiess vorher: Ablage aufschlagen, Zeichenkette holen, Adresse neu zergliedern.
+     */
+    @Volatile
+    private var gemerkterOrdner: Optional? = null
+
+    /** Ein gemerkter Wert, der auch „nichts" sein kann — `null` steht schon für „ungelesen". */
+    private class Optional(val wert: Uri?)
+
     /** Der gemerkte Sicherungsordner, oder null solange keiner gewählt wurde. */
     val ordner: Uri?
-        get() = prefs.getString(namen.ordnerSchluessel, null)?.let(Uri::parse)
+        get() = (
+            gemerkterOrdner
+                ?: Optional(prefs.getString(namen.ordnerSchluessel, null)?.let(Uri::parse))
+                    .also { gemerkterOrdner = it }
+            ).wert
 
     /**
      * Der zuletzt ermittelte Ordnername.
@@ -88,6 +105,7 @@ class DateiSicherung(
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
         )
         prefs.edit().putString(namen.ordnerSchluessel, uri.toString()).apply()
+        gemerkterOrdner = null
         gemerkterName = null
     }
 
@@ -101,6 +119,7 @@ class DateiSicherung(
             }
         }
         prefs.edit().remove(namen.ordnerSchluessel).apply()
+        gemerkterOrdner = null
         gemerkterName = null
     }
 
@@ -161,6 +180,32 @@ class DateiSicherung(
         }
 
         Sicherungsdatei(datei, name, System.currentTimeMillis()) to bisherige
+    }
+
+    /**
+     * Wirft eine frisch geschriebene Datei weg, die sich nicht zurücklesen liess.
+     *
+     * Sie bliebe sonst liegen — und weil ihr Name den jüngsten Zeitpunkt trägt, gälte sie beim
+     * nächsten Mal als „die aktuelle". Der nächste geglückte Lauf räumte dann die letzte gute
+     * Sicherung weg und behielte die unlesbare als Rückfallebene. Bis dahin böte das
+     * Wiederherstellen sie als neueste an, und der Benutzer bekäme „beschädigt" zu lesen,
+     * während eine heile Datei danebenliegt.
+     *
+     * Geht das Löschen nicht, bleibt sie liegen; ein zweiter Fehlschlag hintereinander ändert
+     * nichts daran, dass die Sicherung davor unangetastet dasteht.
+     */
+    suspend fun verwirf(datei: Sicherungsdatei) = withContext(Dispatchers.IO) {
+        runCatching {
+            check(DocumentsContract.deleteDocument(context.contentResolver, datei.uri))
+        }.onFailure {
+            protokoll.warn(
+                "DateiSicherung",
+                "verwirf",
+                "Ungeprüfte Sicherung blieb liegen",
+                mapOf("name" to datei.name, "art" to it.javaClass.simpleName),
+            )
+        }
+        Unit
     }
 
     /**

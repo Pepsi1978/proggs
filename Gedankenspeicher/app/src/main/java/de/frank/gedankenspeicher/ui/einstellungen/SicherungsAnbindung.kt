@@ -92,7 +92,11 @@ class SicherungsAnbindung(
         einstellungen.beobachteSicherungsdaten(einstellungsBeobachter)
         codex.beobachteSicherungsdaten(einstellungsBeobachter)
         ProcessLifecycleOwner.get().lifecycle.addObserver(auto)
-        scope.launch { aktualisiere(); auto.melde("App geöffnet") }
+        // Kein `melde` beim Öffnen mehr: Das behauptete bei jedem Start eine Änderung, die es
+        // nicht gab, und erzwang zwei Minuten später eine Sicherung des unveränderten Bestands.
+        // Seit M1.1 v4 holt das Modul in `onStart` von selbst nach, was beim letzten Mal
+        // ungesichert liegen geblieben ist — dafür braucht es keine erfundene Änderung.
+        scope.launch { aktualisiere() }
     }
 
     private fun umfang(): Set<SpeicherTeil> {
@@ -117,7 +121,11 @@ class SicherungsAnbindung(
         _zustand.update { it.copy(automatisch = an) }
         if (an && dienst.sicherungsOrdner == null) {
             autoNachOrdner = true; waehleOrdner()
-        } else if (an) auto.melde("Autosicherung eingeschaltet")
+        } else if (an) {
+            // Sofort sichern, nicht erst in zwei Minuten: Wer den Schalter umlegt, will jetzt
+            // wissen, dass es geht, und nicht übermorgen erfahren, dass es nie ging.
+            sichereJetzt()
+        }
     }
 
     fun waehleOrdner() { if (!_zustand.value.laeuft) ordnerWaehlen() }
