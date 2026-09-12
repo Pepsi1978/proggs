@@ -189,6 +189,15 @@ class Einstellungen(ctx: Context) {
      */
     fun alleWerte(): Map<String, Any?> = runCatching { p.all.toMap() }.getOrDefault(emptyMap())
 
+    fun beobachteSicherungsdaten(listener: SharedPreferences.OnSharedPreferenceChangeListener) = p.registerOnSharedPreferenceChangeListener(listener)
+    fun entferneSicherungsbeobachter(listener: SharedPreferences.OnSharedPreferenceChangeListener) = p.unregisterOnSharedPreferenceChangeListener(listener)
+
+    fun entferneSicherungswerte(schluessel: Set<String>) {
+        val editor = p.edit()
+        schluessel.forEach { if (!it.startsWith("__androidx_security_crypto_") && it !in setOf(DRIVE_ORDNER, DRIVE_ZEIT, DRIVE_GROESSE)) editor.remove(it) }
+        check(editor.commit()) { "Einstellungen konnten nicht zurückgenommen werden." }
+    }
+
     /**
      * Spielt gesicherte Einstellungen ein. Der Sicherungsordner bleibt, was er ist: er
      * gehört zu **diesem** Gerät, nicht zum gesicherten Stand — sonst schriebe die App

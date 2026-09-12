@@ -59,10 +59,12 @@ object Sicherung {
         val anhaenge: Int,
         val hatEinstellungen: Boolean,
         val hatCodex: Boolean,
+        val hatBestand: Boolean = true,
     ) {
         /** Ein Satz für die Rückfrage vor dem Wiederherstellen. */
         fun beschreibung(): String = buildString {
-            append("$notizen Notizen, $sitzungen Sitzungen, $antworten Auswertungen")
+            if (hatBestand) append("$notizen Notizen, $sitzungen Sitzungen, $antworten Auswertungen")
+            else append("Teilweise Sicherung")
             if (anhaenge > 0) append(", $anhaenge Anhänge")
             if (hatEinstellungen) append(", Einstellungen")
             if (hatCodex) append(", Codex-Anmeldung")
@@ -85,27 +87,32 @@ object Sicherung {
         einstellungen: Einstellungen,
         codexWerte: Map<String, Any?>,
         ziel: OutputStream,
+        bestand: Boolean = true,
+        mitEinstellungen: Boolean = true,
+        mitCodex: Boolean = true,
     ): Steckbrief {
-        checkpoint(datenbank)
+        if (bestand) checkpoint(datenbank)
 
         val db = ctx.getDatabasePath(Datenbank.DATEINAME)
         require(db.exists() && db.length() > 0) { "Die Datenbank ist leer." }
 
         val anhangordner = File(ctx.filesDir, Anhangsspeicher.ORDNER)
-        val anhangdateien = anhangordner.listFiles()?.filter { it.isFile }.orEmpty()
-        val wartenddateien = File(ctx.filesDir, "wartend").listFiles()?.filter { it.isFile }.orEmpty()
-        val einstellungswerte = einstellungen.alleWerte()
+        val anhangdateien = if (bestand) anhangordner.listFiles()?.filter { it.isFile }.orEmpty() else emptyList()
+        val wartenddateien = if (bestand) File(ctx.filesDir, "wartend").listFiles()?.filter { it.isFile }.orEmpty() else emptyList()
+        val einstellungswerte = if (mitEinstellungen) einstellungen.alleWerte() else emptyMap()
+        val anmeldung = if (mitCodex) codexWerte else emptyMap()
 
         val steckbrief = Steckbrief(
             format = FORMAT,
             erstelltAm = System.currentTimeMillis(),
-            notizen = zaehle(datenbank, "notiz"),
-            sitzungen = zaehle(datenbank, "sitzung"),
-            antworten = zaehle(datenbank, "ki_antwort"),
-            profile = zaehle(datenbank, "auswertungsprofil"),
+            notizen = if (bestand) zaehle(datenbank, "notiz") else 0,
+            sitzungen = if (bestand) zaehle(datenbank, "sitzung") else 0,
+            antworten = if (bestand) zaehle(datenbank, "ki_antwort") else 0,
+            profile = if (bestand) zaehle(datenbank, "auswertungsprofil") else 0,
             anhaenge = anhangdateien.size,
             hatEinstellungen = einstellungswerte.isNotEmpty(),
-            hatCodex = codexWerte.isNotEmpty(),
+            hatCodex = anmeldung.isNotEmpty(),
+            hatBestand = bestand,
         )
 
         ZipOutputStream(ziel.buffered()).use { zip ->
@@ -113,9 +120,11 @@ object Sicherung {
             zip.write(steckbriefAlsJson(steckbrief).toByteArray())
             zip.closeEntry()
 
-            zip.putNextEntry(ZipEntry(EINTRAG_DATENBANK))
-            db.inputStream().use { it.copyTo(zip) }
-            zip.closeEntry()
+            if (bestand) {
+                zip.putNextEntry(ZipEntry(EINTRAG_DATENBANK))
+                db.inputStream().use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
 
             if (einstellungswerte.isNotEmpty()) {
                 zip.putNextEntry(ZipEntry(EINTRAG_EINSTELLUNGEN))
@@ -123,9 +132,9 @@ object Sicherung {
                 zip.closeEntry()
             }
 
-            if (codexWerte.isNotEmpty()) {
+            if (anmeldung.isNotEmpty()) {
                 zip.putNextEntry(ZipEntry(EINTRAG_CODEX))
-                zip.write(werteAlsJson(codexWerte).toByteArray())
+                zip.write(werteAlsJson(anmeldung).toByteArray())
                 zip.closeEntry()
             }
 
@@ -240,8 +249,6 @@ object Sicherung {
         }.onFailure { return Befund.Untauglich("Die Sicherung liess sich nicht öffnen.") }
 
         val db = File(ausgepackt, EINTRAG_DATENBANK)
-        if (!db.exists()) return Befund.Untauglich("In der Sicherung fehlt die Datenbank.")
-        pruefeDatenbank(db, ctx)?.let { return Befund.Untauglich(it) }
 
         val steckbrief = File(ausgepackt, EINTRAG_STECKBRIEF)
             .takeIf { it.exists() }
@@ -258,6 +265,14 @@ object Sicherung {
                 hatCodex = File(ausgepackt, EINTRAG_CODEX).exists(),
             )
 
+        if (steckbrief.hatBestand) {
+            if (!db.exists()) return Befund.Untauglich("In der Sicherung fehlt die Datenbank.")
+            pruefeDatenbank(db, ctx)?.let { return Befund.Untauglich(it) }
+        }
+        if (steckbrief.hatEinstellungen && !File(ausgepackt, EINTRAG_EINSTELLUNGEN).exists())
+            return Befund.Untauglich("In der Sicherung fehlen die Einstellungen.")
+        if (steckbrief.hatCodex && !File(ausgepackt, EINTRAG_CODEX).exists())
+            return Befund.Untauglich("In der Sicherung fehlt die Codex-Anmeldung.")
         if (steckbrief.format > FORMAT) {
             return Befund.Untauglich(
                 "Diese Sicherung stammt aus einer neueren Fassung der App.",
@@ -383,6 +398,7 @@ object Sicherung {
         put("anhaenge", s.anhaenge)
         put("hatEinstellungen", s.hatEinstellungen)
         put("hatCodex", s.hatCodex)
+        put("hatBestand", s.hatBestand)
     }.toString()
 
     private fun steckbriefAusJson(roh: String): Steckbrief {
@@ -397,6 +413,7 @@ object Sicherung {
             anhaenge = o.optInt("anhaenge"),
             hatEinstellungen = o.optBoolean("hatEinstellungen"),
             hatCodex = o.optBoolean("hatCodex"),
+            hatBestand = o.optBoolean("hatBestand", true),
         )
     }
 

@@ -93,6 +93,7 @@ anderer Name heißt: Der Benutzer hat seine Einstellung verloren, ohne Meldung.
 | CodexKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
 | OCodeKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
 | GenialeIdeen | v3 | `GenialeIdeen/app/src/main/java/de/frank/module/sicherung/` |
+| Gedankenspeicher | v3 | `Gedankenspeicher/app/src/main/java/de/frank/module/sicherung/` |
 
 > **Sonderfall:** Die drei Apps teilen sich `KompassKern` per `sourceSets.srcDir`.
 > Die Modulkopie und die Anbindung liegen deshalb **einmal** dort, nicht dreimal

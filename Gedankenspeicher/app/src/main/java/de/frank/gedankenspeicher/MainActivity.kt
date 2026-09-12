@@ -460,7 +460,7 @@ private fun Oberflaeche(
     val eigeneStimmen by vm.eigeneStimmen.collectAsStateWithLifecycle()
     val stimmenLaden by vm.stimmenLaden.collectAsStateWithLifecycle()
     val nimmtStimmeAuf by vm.nimmtStimmeAuf.collectAsStateWithLifecycle()
-    val driveAn by vm.driveAn.collectAsStateWithLifecycle()
+    val sicherung = vm.sicherung
 
     var ziel by remember { mutableStateOf(Ziel.VERLAUF) }
     // Der Material-Drawer hält seinen Inhalt vor und folgt einer Wischgeste unmittelbar.
@@ -750,9 +750,7 @@ private fun Oberflaeche(
                 nimmtStimmeAuf = nimmtStimmeAuf,
                 probeLaeuft = liestVor && vorleseQuelle == "probe",
                 fingerabdruckAn = verlauf.fingerabdruckAn,
-                driveAn = driveAn,
-                letzteSicherung = vm.einstellungen.letzteSicherungZeit,
-                letzteGroesse = vm.einstellungen.letzteSicherungGroesse,
+                sicherung = sicherung,
                 beiErscheinung = vm::setzeErscheinung,
                 beiVerbinden = {
                     ziel = Ziel.ANMELDUNG
@@ -788,9 +786,6 @@ private fun Oberflaeche(
                     if (an) beiFingerabdruck("Fingerabdruck einrichten") { vm.setzeFingerabdruck(true) }
                     else beiFingerabdruck("Fingerabdruck abschalten") { vm.setzeFingerabdruck(false) }
                 },
-                beiDrive = vm::setzeDrive,
-                beiJetztSichern = vm::sichereJetzt,
-                beiWiederherstellen = vm::stelleWiederHer,
                 beiZurueck = { ziel = Ziel.VERLAUF },
             )
         }

@@ -59,7 +59,6 @@ import de.frank.gedankenspeicher.auth.ReasoningEffort
 import de.frank.gedankenspeicher.auth.VERBESSERUNG_AUFTRAG
 import de.frank.gedankenspeicher.data.Auslieferungsprofile
 import de.frank.gedankenspeicher.data.Auswertungsprofil
-import de.frank.gedankenspeicher.data.Repository
 import de.frank.gedankenspeicher.data.settings.Websuche
 import de.frank.gedankenspeicher.tts.ClonedVoice
 import de.frank.gedankenspeicher.tts.TtsCatalog
@@ -103,9 +102,7 @@ fun EinstellungenBildschirm(
     nimmtStimmeAuf: Boolean,
     probeLaeuft: Boolean,
     fingerabdruckAn: Boolean,
-    driveAn: Boolean,
-    letzteSicherung: Long,
-    letzteGroesse: Long,
+    sicherung: SicherungsAnbindung,
     beiErscheinung: (String) -> Unit,
     beiVerbinden: () -> Unit,
     beiTrennen: () -> Unit,
@@ -129,9 +126,6 @@ fun EinstellungenBildschirm(
     beiStimmeLoeschen: (String) -> Unit,
     beiProbe: () -> Unit,
     beiFingerabdruck: (Boolean) -> Unit,
-    beiDrive: (Boolean) -> Unit,
-    beiJetztSichern: () -> Unit,
-    beiWiederherstellen: () -> Unit,
     beiZurueck: () -> Unit,
 ) {
     val farben = Farben
@@ -474,45 +468,7 @@ fun EinstellungenBildschirm(
             }
 
             // 6 — Sicherung (F-17)
-            Gruppe("Sicherung") {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("In einen Ordner sichern", style = schrift.einstellung, color = farben.textMittel)
-                        Text(
-                            if (letzteSicherung > 0) {
-                                "zuletzt ${Repository.zeitpunkt(letzteSicherung)} · ${letzteGroesse / 1024} kB"
-                            } else {
-                                "noch nie gesichert"
-                            },
-                            style = schrift.einstellungErklaerung,
-                            color = farben.textSchwach,
-                        )
-                    }
-                    Switch(
-                        checked = driveAn,
-                        onCheckedChange = beiDrive,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = farben.hintergrund,
-                            checkedTrackColor = farben.akzent,
-                            uncheckedThumbColor = farben.textSchwach,
-                            uncheckedTrackColor = farben.hintergrundErhoben,
-                            uncheckedBorderColor = farben.rand,
-                        ),
-                    )
-                }
-                if (driveAn) {
-                    Erklaerung(
-                        "Wähle beim ersten Sichern deinen Google-Drive-Ordner — dann liegt die Sicherung " +
-                            "dort. Im Ordner stehen immer genau zwei Dateien: die neueste Sicherung und " +
-                            "die davor. Jede neue überschreibt die ältere von beiden.",
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        GeranderterKnopf("Jetzt sichern", beiJetztSichern)
-                        GeranderterKnopf("Wiederherstellen", beiWiederherstellen, farbe = farben.fehler)
-                    }
-                }
-            }
+            SicherungsBereich(sicherung, dunkel = erscheinung.contains("dunkel", ignoreCase = true))
 
             // 7 — Über
             Gruppe("Über") {

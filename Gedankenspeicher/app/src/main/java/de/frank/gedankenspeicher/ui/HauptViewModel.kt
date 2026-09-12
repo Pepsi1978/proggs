@@ -15,14 +15,13 @@ import de.frank.gedankenspeicher.hintergrund.AuswertungsFernbedienung
 import de.frank.gedankenspeicher.hintergrund.VorleseAnzeige
 import de.frank.gedankenspeicher.hintergrund.VorleseDienst
 import de.frank.gedankenspeicher.hintergrund.VorleseFernbedienung
-import androidx.documentfile.provider.DocumentFile
 import de.frank.gedankenspeicher.data.Anhang
 import de.frank.gedankenspeicher.data.Anhangsspeicher
 import de.frank.gedankenspeicher.data.alsJson
 import de.frank.gedankenspeicher.data.anhaengeAusJson
 import de.frank.gedankenspeicher.data.Auswertungsprofil
 import de.frank.gedankenspeicher.data.Datenbank
-import de.frank.gedankenspeicher.data.Sicherung
+import de.frank.gedankenspeicher.ui.einstellungen.SicherungsAnbindung
 import de.frank.gedankenspeicher.data.KiAntwort
 import de.frank.gedankenspeicher.data.Kategorieart
 import de.frank.gedankenspeicher.data.Notiz
@@ -167,9 +166,6 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
     private val _qwen = MutableStateFlow(einstellungen.qwenSchluessel)
     val qwenSchluessel: StateFlow<String> = _qwen
 
-    private val _drive = MutableStateFlow(einstellungen.driveSicherungAn)
-    val driveAn: StateFlow<Boolean> = _drive
-
     /** Meldet der Oberfläche, dass sie den Ordner-Wähler öffnen soll (F-17). */
     private val _sicherungsordnerFehlt = MutableStateFlow(false)
     val sicherungsordnerFehlt: StateFlow<Boolean> = _sicherungsordnerFehlt
@@ -214,7 +210,6 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     // Nachreichen und Sicherung dürfen nie doppelt nebeneinander laufen.
     private val nachreichSperre = Mutex()
-    private val sicherungsSperre = Mutex()
 
     /** Wurde während eines Nachreich-Durchlaufs erneut angestoßen? (nur auf Main gelesen und gesetzt) */
     private var nochmalNachreichen = false
@@ -1954,344 +1949,43 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
 
     // --- Sicherung (F-17) --------------------------------------------------------------------------
 
-    fun setzeDrive(an: Boolean) {
-        einstellungen.driveSicherungAn = an
-        _drive.value = an
+    val sicherung by lazy {
+        SicherungsAnbindung(ctx, db, einstellungen, codex, lebenszeit,
+            ordnerWaehlen = { _sicherungsordnerFehlt.value = true },
+            dateiWaehlen = { _sucheSicherungsdatei.value = true },
+            melde = ::melde, nachEinspielen = ::sicherungswerteNeuLaden)
     }
 
-    /**
-     * Sichert die Datenbankdatei in den gewählten Ordner.
-     *
-     * Kein Zugriff über die Google-Drive-Schnittstelle, sondern über den Ordner, den Android
-     * bereitstellt: wählt Frank dort den Drive-Ordner, landet die Sicherung in Drive — ohne
-     * dass die App eine zweite Anmeldung und ein zweites Zugriffsrecht braucht.
-     */
-    fun sichereJetzt() {
-        val ordner = einstellungen.sicherungsordner
-        if (ordner.isBlank()) {
-            _sicherungsordnerFehlt.value = true
-            return
-        }
-        viewModelScope.launch { fuehreSicherungAus(Uri.parse(ordner)) }
-    }
-
-    fun ordnerwahlErledigt() { _sicherungsordnerFehlt.value = false }
-
-    fun merkeSicherungsordner(uri: Uri) {
-        einstellungen.sicherungsordner = uri.toString()
+    fun ordnerwahlErledigt(abgebrochen: Boolean = true) {
         _sicherungsordnerFehlt.value = false
-        viewModelScope.launch { fuehreSicherungAus(uri) }
+        if (abgebrochen) sicherung.ordnerAbgebrochen()
     }
-
-    /**
-     * Es gibt genau **zwei** Sicherungen: die neueste und die davor.
-     *
-     * Beide haben einen festen Namen. Ein Zeitstempel im Namen hiesse, dass jede Sicherung
-     * eine neue Datei anlegt und der Bestand nur durch nachträgliches Löschen begrenzt bleibt
-     * — und weil die Sicherung bei jedem Schliessen der App läuft, häuften sich die Dateien
-     * genau dann, wenn das Löschen im Drive-Ordner einmal nicht durchkam. Mit festen Namen
-     * kann sich nichts anhäufen: es wird immer in dieselben zwei Dateien geschrieben.
-     */
-    private suspend fun fuehreSicherungAus(ordner: Uri, still: Boolean = false) {
-        // Immer nur eine Sicherung zugleich: alle teilen sich denselben Entwurf im Zwischenspeicher.
-        sicherungsSperre.withLock {
-            if (_sucheSicherungsdatei.value || wiederherstellungLaeuft || _neustartNoetig.value) return
-            try {
-                val baum = DocumentFile.fromTreeUri(ctx, ordner)
-                if (baum == null || !baum.canWrite()) {
-                    if (!still) melde("Auf den Sicherungsordner kann nicht zugegriffen werden.")
-                    return
-                }
-
-                val steckbrief = withContext(Dispatchers.IO) {
-                    // **Erst vollstaendig danebenlegen, dann erst die alte Sicherung anfassen.**
-                    //
-                    // Vorher wurde die bestehende Sicherung sofort verschoben und ueberschrieben
-                    // und erst dabei zeigte sich, ob das Schreiben ueberhaupt durchkommt. Riss es
-                    // ab, war die alte Sicherung schon fort und die neue halb — beide unbrauchbar.
-                    // Jetzt entsteht die Sicherung zuerst im Zwischenspeicher der App, wird dort
-                    // geprueft, und nur eine geprueft heile Datei wandert in den Ordner.
-                    val entwurf = File(ctx.cacheDir, "sicherung-entwurf.zip")
-                    entwurf.delete()
-                    val brief = entwurf.outputStream().use { aus ->
-                        Sicherung.packe(ctx, db, einstellungen, codex.alleWerte(), aus)
-                    }
-                    if (entwurf.length() == 0L) throw IllegalStateException("Die Sicherung blieb leer.")
-
-                    try {
-                        // Die bisherige Sicherung rutscht eine Stelle nach hinten — aber nur,
-                        // wenn das auch wirklich gelingt. Schlaegt es fehl, bleibt alles stehen
-                        // wie es war, statt beide Staende zu verlieren.
-                        val bisher = baum.findFile(SICHERUNG_AKTUELL)
-                        if (bisher != null && bisher.length() > 0) {
-                            val vorher = baum.findFile(SICHERUNG_VORHER)
-                                ?: baum.createFile("application/octet-stream", SICHERUNG_VORHER)
-                            if (vorher != null) {
-                                val kopiert = schreibe(vorher.uri) { aus ->
-                                    ctx.contentResolver.openInputStream(bisher.uri)?.use { ein ->
-                                        ein.copyTo(aus)
-                                    } ?: throw IllegalStateException(
-                                        "Die bisherige Sicherung liess sich nicht lesen.",
-                                    )
-                                }
-                                if (kopiert != bisher.length()) {
-                                    throw IllegalStateException(
-                                        "Die bisherige Sicherung liess sich nicht zur Seite legen.",
-                                    )
-                                }
-                            }
-                        }
-
-                        val ziel = bisher
-                            ?: baum.createFile("application/octet-stream", SICHERUNG_AKTUELL)
-                            ?: throw IllegalStateException("Die Sicherungsdatei liess sich nicht anlegen.")
-                        val geschrieben = schreibe(ziel.uri) { aus ->
-                            entwurf.inputStream().use { ein -> ein.copyTo(aus) }
-                        }
-                        // Nachgezaehlt, nicht gehofft: eine abgerissene Uebertragung in den
-                        // Drive-Ordner sah bisher wie eine gelungene Sicherung aus.
-                        if (geschrieben != entwurf.length()) {
-                            throw IllegalStateException(
-                                "Die Sicherung kam unvollstaendig an (${geschrieben} von ${entwurf.length()} Bytes).",
-                            )
-                        }
-                        einstellungen.letzteSicherungGroesse = entwurf.length()
-                    } finally {
-                        entwurf.delete()
-                    }
-                    brief
-                }
-
-                einstellungen.letzteSicherungZeit = System.currentTimeMillis()
-                if (!still) melde("Gesichert: ${steckbrief.beschreibung()}.")
-            } catch (abbruch: CancellationException) {
-                throw abbruch
-            } catch (fehler: Exception) {
-                android.util.Log.w("Sicherung", "fehlgeschlagen", fehler)
-                if (!still) melde(fehler.message ?: "Die Sicherung ist fehlgeschlagen.")
-            }
-        }
+    fun merkeSicherungsordner(uri: Uri) {
+        _sicherungsordnerFehlt.value = false
+        sicherung.merkeOrdner(uri)
     }
-
-    /**
-     * Schreibt in eine bestehende Datei — mit `"wt"`, also **abschneidend**.
-     *
-     * Der blosse Modus `"w"` kürzt bei manchen Anbietern nicht: wird eine kleinere Datenbank
-     * über eine grössere geschrieben, bliebe der Rest der alten am Ende stehen. Die Sicherung
-     * sähe heil aus und wäre beim Wiederherstellen unbrauchbar.
-     */
-    private fun schreibe(ziel: Uri, inhalt: (java.io.OutputStream) -> Unit): Long {
-        val strom = ctx.contentResolver.openOutputStream(ziel, "wt")
-            ?: ctx.contentResolver.openOutputStream(ziel)
-            ?: throw IllegalStateException("In die Sicherungsdatei liess sich nicht schreiben.")
-        // Mitgezaehlt wird beim Schreiben, nicht hinterher abgefragt: `DocumentFile.length()`
-        // kommt bei Drive erst mit Verzoegerung nach und meldete eine halbe Datei als heil.
-        val zaehler = ZaehlenderStrom(strom)
-        zaehler.use(inhalt)
-        return zaehler.gezaehlt
-    }
-
-    /** Zaehlt mit, wie viel wirklich durchging. */
-    private class ZaehlenderStrom(private val darunter: java.io.OutputStream) : java.io.OutputStream() {
-        var gezaehlt = 0L
-            private set
-
-        override fun write(b: Int) {
-            darunter.write(b)
-            gezaehlt++
-        }
-
-        override fun write(b: ByteArray, off: Int, len: Int) {
-            darunter.write(b, off, len)
-            gezaehlt += len
-        }
-
-        override fun flush() = darunter.flush()
-
-        override fun close() {
-            runCatching { darunter.flush() }
-            darunter.close()
-        }
-    }
-
-    // Das frühere `raeumeAlteSicherungenWeg` ist ersatzlos gestrichen. Es löschte **jede**
-    // Datei im Sicherungsordner, deren Name mit `gedankenspeicher-` begann und nicht einer
-    // der beiden festen war — auch eine von Hand danebengelegte Kopie. Genau die will man
-    // aber behalten, wenn eine Sicherung einmal nicht stimmt. Die Aufräumarbeit von damals
-    // ist längst getan; das Risiko blieb.
-
-    /** Der Knopf „Wiederherstellen" — er öffnet den Datei-Wähler. */
-    fun stelleWiederHer() {
-        _sucheSicherungsdatei.value = true
-    }
-
     fun dateiwahlErledigt() { _sucheSicherungsdatei.value = false }
-
-    /**
-     * Ersetzt den gesamten Datenbestand durch die gewählte Sicherung.
-     *
-     * Der Ablauf ist unbequem, aber der einzige sichere: alles anhalten, die Datenbank
-     * schliessen, die Dateien austauschen, die App neu starten lassen. Room hält offene
-     * Verbindungen und einen Journal-Puffer; würde man die Datei unter der laufenden
-     * Datenbank tauschen, schriebe Room seinen alten Puffer in die neue Datei.
-     *
-     * Auch `-wal` und `-shm` müssen weg: bleiben sie von der alten Datenbank stehen, hält
-     * SQLite sie für den gültigen jüngsten Stand und überschreibt die wiederhergestellte
-     * Datei damit — die Wiederherstellung sähe dann aus, als wäre nichts passiert.
-     */
     fun stelleWiederHerAus(uri: Uri) {
         _sucheSicherungsdatei.value = false
-        if (wiederherstellungLaeuft) return
-        wiederherstellungLaeuft = true
-        _verlauf.update { it.copy(stelltWiederHer = true) }
-        lebenszeit.launch {
-            var datenbankZu = false
-            try {
-                val arbeitsordner = File(ctx.cacheDir, "wiederherstellung")
-
-                // **Erst pruefen, dann anfassen.**
-                //
-                // Vorher wurde die laufende Datenbank geschlossen und ersetzt und erst
-                // danach zeigte sich, ob die gewaehlte Datei ueberhaupt etwas taugt. Griff
-                // man daneben — eine leere Datei, ein halber Download, die falsche Datei —,
-                // war der bisherige Stand mit fort. Jetzt wird die Sicherung ausgepackt,
-                // als SQLite geoeffnet und von ihr selbst auf Unversehrtheit geprueft,
-                // bevor irgendetwas ersetzt wird.
-                val befund = withContext(Dispatchers.IO) {
-                    val strom = ctx.contentResolver.openInputStream(uri)
-                        ?: throw IllegalStateException("Die Sicherungsdatei liess sich nicht lesen.")
-                    Sicherung.pruefe(strom, arbeitsordner, ctx)
-                }
-                if (befund is Sicherung.Befund.Untauglich) {
-                    withContext(Dispatchers.IO) { arbeitsordner.deleteRecursively() }
-                    return@launch melde(befund.grund)
-                }
-
-                if (befund is Sicherung.Befund.Archiv) {
-                    withContext(Dispatchers.IO) {
-                        File(befund.ordner, Sicherung.EINTRAG_EINSTELLUNGEN).takeIf { it.exists() }
-                            ?.let { einstellungen.pruefeWerte(Sicherung.werteAusJson(it.readText())) }
-                        File(befund.ordner, Sicherung.EINTRAG_CODEX).takeIf { it.exists() }
-                            ?.let { codex.pruefeWerte(Sicherung.werteAusJson(it.readText())) }
-                    }
-                }
-
-                vorleser.halteAn()
-                // Keine alten oder neu gestarteten Arbeiter dürfen die ersetzte DB anfassen.
-                // Nach dem Abbruch bleiben auch neue launches dieses Arbeitsbereichs wirkungslos.
-                mikrofon.release()
-                arbeitsJob.cancelAndJoin()
-                AufnahmeDienst.beende(ctx)
-
-                val ziel = repo.datenbankdatei()
-                val bericht = withContext(Dispatchers.IO) {
-                    try {
-                        Datenbank.schliesse()
-                        datenbankZu = true
-                        // `-wal` und `-shm` muessen weg: bleiben sie von der alten Datenbank
-                        // stehen, haelt SQLite sie fuer den gueltigen juengsten Stand und
-                        // ueberschreibt die wiederhergestellte Datei damit — die
-                        // Wiederherstellung saehe dann aus, als waere nichts passiert.
-                        listOf("-wal", "-shm").forEach { anhang ->
-                            runCatching { File(ziel.absolutePath + anhang).delete() }
-                        }
-
-                        when (befund) {
-                            is Sicherung.Befund.NurDatenbank -> {
-                                ersetzeDatenbank(befund.datei, ziel)
-                                // Eine Sicherung aus der Zeit vor dem vollstaendigen Format:
-                                // die Anhaenge dieses Geraets bleiben stehen, denn sie sind
-                                // alles, was es davon noch gibt.
-                                "Wiederhergestellt — eine aeltere Sicherung ohne Anhaenge und Einstellungen."
-                            }
-
-                            is Sicherung.Befund.Archiv -> {
-                                // Die Anhaenge gehoeren zur Datenbank: bleiben alte stehen,
-                                // zeigen sie auf Notizen, die es nicht mehr gibt, und die
-                                // wiederhergestellten fehlten. Deshalb komplett ersetzt —
-                                // aber erst vollständig daneben kopiert, bevor irgendetwas
-                                // Bestehendes angefasst wird. Ein Kopierfehler bricht ab.
-                                val anhangziel = File(ctx.filesDir, Anhangsspeicher.ORDNER)
-                                val anhangneu = File(ctx.filesDir, Anhangsspeicher.ORDNER + ".neu")
-                                val anhangquelle = File(befund.ordner, Sicherung.ORDNER_ANHAENGE)
-                                anhangneu.deleteRecursively()
-                                anhangneu.mkdirs()
-                                if (!anhangneu.isDirectory) {
-                                    throw IllegalStateException("Die Anhänge liessen sich nicht vorbereiten.")
-                                }
-                                anhangquelle.listFiles()?.forEach { datei ->
-                                    datei.copyTo(File(anhangneu, datei.name), overwrite = true)
-                                }
-
-                                // Die Offline-Aufnahmen, die noch aufs Nachreichen warten. Die
-                                // wartenden Dateien dieses Geräts bleiben stehen — deshalb zerstört
-                                // das Kopieren nichts und kommt vor dem Ersetzen der Datenbank.
-                                File(befund.ordner, Sicherung.ORDNER_WARTEND).listFiles()?.let { dateien ->
-                                    val wartend = File(ctx.filesDir, "wartend").apply { mkdirs() }
-                                    dateien.forEach { datei ->
-                                        datei.copyTo(File(wartend, datei.name), overwrite = true)
-                                    }
-                                }
-
-                                ersetzeDatenbank(File(befund.ordner, Sicherung.EINTRAG_DATENBANK), ziel)
-
-                                anhangziel.deleteRecursively()
-                                if (!anhangneu.renameTo(anhangziel)) {
-                                    throw IllegalStateException("Die Anhänge liessen sich nicht einsetzen.")
-                                }
-
-                                File(befund.ordner, Sicherung.EINTRAG_EINSTELLUNGEN)
-                                    .takeIf { it.exists() }
-                                    ?.let { einstellungen.uebernimm(Sicherung.werteAusJson(it.readText())) }
-
-                                File(befund.ordner, Sicherung.EINTRAG_CODEX)
-                                    .takeIf { it.exists() }
-                                    ?.let { codex.uebernimm(Sicherung.werteAusJson(it.readText())) }
-
-                                "Wiederhergestellt: ${befund.steckbrief.beschreibung()}."
-                            }
-
-                            is Sicherung.Befund.Untauglich -> error("schon oben behandelt")
-                        }
-                    } finally {
-                        arbeitsordner.deleteRecursively()
-                    }
-                }
-                melde(bericht)
-                _neustartNoetig.value = true
-            } catch (abbruch: CancellationException) {
-                throw abbruch
-            } catch (fehler: Exception) {
-                android.util.Log.w("Sicherung", "Wiederherstellung fehlgeschlagen", fehler)
-                melde(fehler.message ?: "Die Wiederherstellung ist fehlgeschlagen.")
-                // Ist die Datenbank schon zu, kann die App ohne Neustart nicht weiterarbeiten.
-                if (datenbankZu || !arbeitsJob.isActive) _neustartNoetig.value = true
-            } finally {
-                wiederherstellungLaeuft = false
-                _verlauf.update { it.copy(stelltWiederHer = false) }
-            }
-        }
+        sicherung.waehleSicherung(uri)
     }
-
-    /**
-     * Ersetzt die Datenbankdatei in einem Zug: erst vollständig daneben kopieren, dann
-     * umbenennen. Riss das Kopieren ab, stand vorher schon eine halbe Datenbank da.
-     */
-    private fun ersetzeDatenbank(quelle: File, ziel: File) {
-        val neu = File(ziel.path + ".neu")
-        try {
-            quelle.inputStream().use { ein ->
-                neu.outputStream().use { aus -> ein.copyTo(aus) }
-            }
-        } catch (fehler: Exception) {
-            // Keine halbe Kopie liegen lassen.
-            neu.delete()
-            throw fehler
-        }
-        if (!neu.renameTo(ziel)) {
-            neu.delete()
-            throw IllegalStateException("Die Datenbank liess sich nicht ersetzen.")
-        }
+    private fun sicherungswerteNeuLaden() {
+        _erscheinung.value = einstellungen.erscheinung
+        _groq.value = einstellungen.groqSchluessel
+        _google.value = einstellungen.googleTtsSchluessel
+        _qwen.value = einstellungen.qwenSchluessel
+        _codexModell.value = einstellungen.codexModell
+        _codexEffort.value = einstellungen.codexEffort
+        _verbesserungModell.value = einstellungen.verbesserungModell
+        _verbesserungEffort.value = einstellungen.verbesserungEffort
+        _verbesserungPrompt.value = einstellungen.verbesserungPrompt
+        _websucheGrundhaltung.value = einstellungen.websucheGrundhaltung
+        _ttsAnbieter.value = einstellungen.ttsAnbieter
+        _ttsStimme.value = stimmeZu(einstellungen.ttsAnbieter)
+        _codexVerbunden.value = codex.isConnected
+        _codexKonto.value = codex.email
+        _verlauf.update { it.copy(fingerabdruckAn = einstellungen.fingerabdruckAn, freigegebeneSitzung = null) }
+        reicheWartendeNach()
     }
 
     // --- Kleinkram -------------------------------------------------------------------------------------
@@ -2328,16 +2022,11 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         // Auswertung etwas nachschlägt, soll den Faden nicht mitten im Satz verlieren;
         // beendet wird es in der App oder über die Benachrichtigung. Der Vordergrunddienst
         // (`VorleseDienst`) hält die Wiedergabe so lange offen.
-        // F-17: die Sicherung läuft beim Schliessen, sofern sie eingeschaltet ist und ein
-        // Ordner feststeht. Ohne diesen Aufruf war der Schalter eine blosse Absichtserklärung
-        // — gesichert wurde nur auf ausdrücklichen Knopfdruck.
-        if (!_sucheSicherungsdatei.value && !wiederherstellungLaeuft && !_neustartNoetig.value &&
-            einstellungen.driveSicherungAn && einstellungen.sicherungsordner.isNotBlank()) {
-            viewModelScope.launch { fuehreSicherungAus(Uri.parse(einstellungen.sicherungsordner), still = true) }
-        }
+        // M1.1 beobachtet den Prozess-Lifecycle und sichert offene Änderungen beim Verlassen.
     }
 
     override fun onCleared() {
+        sicherung.beende()
         netzWaechter?.let { waechter ->
             runCatching {
                 ctx.getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(waechter)
@@ -2369,8 +2058,5 @@ class HauptViewModel(app: Application) : AndroidViewModel(app) {
         /** Unter etwa 0,4 s bei 16 kHz Mono ist nichts Verwertbares dabei (F-01, Fehlerfall). */
         const val MINDESTGROESSE_WAV = 44 + 16_000 * 2 * 4 / 10
 
-        /** F-17: die beiden Sicherungen — die neueste und die davor. Mehr werden es nie. */
-        const val SICHERUNG_AKTUELL = "gedankenspeicher-aktuell.db"
-        const val SICHERUNG_VORHER = "gedankenspeicher-vorher.db"
     }
 }

@@ -214,6 +214,15 @@ class CodexAuthManager(context: Context) {
      */
     fun alleWerte(): Map<String, Any?> = runCatching { store.all.toMap() }.getOrDefault(emptyMap())
 
+    fun beobachteSicherungsdaten(listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener) = store.registerOnSharedPreferenceChangeListener(listener)
+    fun entferneSicherungsbeobachter(listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener) = store.unregisterOnSharedPreferenceChangeListener(listener)
+
+    fun entferneSicherungswerte(schluessel: Set<String>) {
+        val editor = store.edit()
+        schluessel.forEach { if (!it.startsWith("__androidx_security_crypto_")) editor.remove(it) }
+        check(editor.commit()) { "Codex-Anmeldung konnte nicht zurückgenommen werden." }
+    }
+
     /** Spielt eine gesicherte Anmeldung ein. Der Zugriffstoken wird beim nächsten Ruf erneuert. */
     fun uebernimm(werte: Map<String, Any>) {
         pruefeWerte(werte)
