@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -69,6 +71,7 @@ import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Semantisch
 import de.frank.module.sicherung.IdeenTeil
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EinstellungenScreen(
     viewModel: IdeenViewModel,
@@ -103,11 +106,14 @@ fun EinstellungenScreen(
     // Kommt aus dem ViewModel, damit die Anzeige sofort steht, nachdem der Systemwähler
     // einen Ordner geliefert hat.
     val ordnerAnzeige by viewModel.sicherungsOrdner.collectAsState()
-    val sicherungsStatus by viewModel.sicherungsStatus.collectAsState()
+    val sicherungsStand by viewModel.sicherungsStand.collectAsState()
+    val sicherungGeprueft by viewModel.sicherungGeprueft.collectAsState()
     val sicherungsUmfang by viewModel.sicherungsUmfang.collectAsState()
+    val naechsteSicherung by viewModel.naechsteSicherung.collectAsState()
     val autoSicherungAn by viewModel.autoSicherungAn.collectAsState()
-    val sicherungsliste by viewModel.sicherungsliste.collectAsState()
-    val listeOffen by viewModel.listeOffen.collectAsState()
+    val sicherungsAuswahl by viewModel.sicherungsAuswahl.collectAsState()
+    val sicherungsVorschau by viewModel.sicherungsVorschau.collectAsState()
+    val zurueckNehmenText by viewModel.zurueckNehmenText.collectAsState()
     // Folgt dem echten Zustand: Wird die Bestätigung abgebrochen, springt der Schalter nicht an.
     val sperreAn by viewModel.appSperreAktiv.collectAsState()
     var sperreVerzoegerung by remember { mutableStateOf(settings.appLockDelayMinutes) }
@@ -511,73 +517,118 @@ fun EinstellungenScreen(
             }
 
             // ---- Sicherung ----
+            // Der Aufbau folgt dem Gerüst aus Module/Android/M1.1-Sicherung/BEISPIEL.md,
+            // gezeichnet mit den Bausteinen dieser App. Reihenfolge und Zeilen sind
+            // übernommen; „Doppelte entfernen" ist app-eigen und steht deshalb hinten.
             Klappblock("Sicherung", "Eine Datei in deinem Ordner") {
+                // 1 — Was gesichert wird: je Punkt Titel und Erklärung.
                 Text(
-                    "Wähle einmal einen Ordner und erlaube den Zugriff. „Jetzt sichern“ schreibt " +
-                        "danach direkt dorthin, ohne erneute Ordnerfreigabe. Es liegen immer nur zwei " +
-                        "Sicherungen dort: die aktuelle und die davor.",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Was gesichert wird",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = gold.textPrimaer,
+                )
+                Spacer(Modifier.height(8.dp))
+                IdeenTeil.entries.forEach { teil ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Auswahlchip(teil.titel, teil in sicherungsUmfang) {
+                            viewModel.schalteSicherungsteil(teil)
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            teil.erklaerung,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = gold.textGedaempft,
+                        )
+                    }
+                }
+
+                // 2 — Was ausdrücklich nicht mitgeht.
+                Text(
+                    "Nicht in der Sicherung: Schlüssel, Anmeldung und die Einstellungen dieser App.",
+                    style = MaterialTheme.typography.labelSmall,
                     color = gold.textGedaempft,
                 )
+
+                // 3 — Von allein sichern, mit Erklärung darunter.
+                Spacer(Modifier.height(6.dp))
+                SchalterZeile("Von allein sichern", autoSicherungAn) { an ->
+                    viewModel.setzeAutoSicherung(an, aufOrdnerWaehlen)
+                }
+                Text(
+                    if (autoSicherungAn && ordnerAnzeige == null) {
+                        "Es fehlt noch ein Ordner — bis dahin wird nichts geschrieben."
+                    } else {
+                        "Sichert zwei Minuten nach der letzten Änderung — und beim Verlassen der App sofort."
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = gold.textGedaempft,
+                )
+
+                // 4 — Der gemerkte Ordner.
                 Spacer(Modifier.height(10.dp))
                 Text(
                     ordnerAnzeige ?: "Noch kein Ordner gewählt",
                     style = MaterialTheme.typography.labelSmall,
                     color = if (ordnerAnzeige == null) gold.textGedaempft else gold.primaer,
                 )
-                Text(
-                    sicherungsStatus?.text ?: viewModel.sicherungsStand(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (sicherungsStatus?.istFehler == true) Semantisch.fehler else gold.textGedaempft,
-                )
 
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    "Was gesichert wird",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = gold.primaer,
-                )
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    IdeenTeil.entries.forEach { teil ->
-                        Auswahlchip(teil.titel, teil in sicherungsUmfang) {
-                            viewModel.schalteSicherungsteil(teil)
-                        }
+                // 5 — Haken und Stand. Der Haken steht für „zurückgelesen", nicht für „geschrieben".
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (sicherungGeprueft) {
+                        Text(
+                            "✓",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Semantisch.erfolg,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(
+                        sicherungsStand,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (sicherungGeprueft) Semantisch.erfolg else gold.textGedaempft,
+                    )
+                }
+
+                // 6 — Der Umfang der nächsten Sicherung steht von allein da.
+                if (naechsteSicherung.isNotBlank()) {
+                    Text(
+                        "Nächste Sicherung: $naechsteSicherung",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = gold.textGedaempft,
+                    )
+                }
+
+                // 7 — Die Rückfrage vor dem Einspielen.
+                if (sicherungsVorschau.isNotBlank()) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        sicherungsVorschau,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = gold.textPrimaer,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Auswahlchip("Jetzt einspielen", true) { viewModel.spieleSicherungEin() }
+                        Auswahlchip("Abbrechen", false) { viewModel.verwirfSicherungsVorschau() }
                     }
                 }
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    sicherungsUmfang.joinToString(" ") { (it as IdeenTeil).erklaerung },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = gold.textGedaempft,
-                )
 
+                // 8 — Sichern und Ordner. Nebeneinander, umbrechend bei schmalem Schirm.
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     Auswahlchip("Jetzt sichern", false) {
                         viewModel.sichereJetzt(aufOrdnerWaehlen)
                     }
-                    Auswahlchip("Umfang zeigen", false) {
-                        viewModel.zeigeVoraussichtlich()
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                Auswahlchip("Von allein sichern", autoSicherungAn) {
-                    viewModel.setzeAutoSicherung(!autoSicherungAn, aufOrdnerWaehlen)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    if (autoSicherungAn) {
-                        "Sichert zwei Minuten nach der letzten Änderung und beim Verlassen der App."
-                    } else {
-                        "Aus — es wird nur gesichert, wenn du „Jetzt sichern“ tippst."
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = gold.textGedaempft,
-                )
-
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Auswahlchip("Ordner wählen", false) {
                         viewModel.waehleSicherungsOrdner(aufOrdnerWaehlen)
                     }
@@ -588,26 +639,68 @@ fun EinstellungenScreen(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
-                Auswahlchip("Wiederherstellen", listeOffen) {
-                    viewModel.schalteSicherungsliste()
-                }
-                if (listeOffen) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "Tipp auf eine Sicherung — du siehst erst, was drinsteckt, und bestätigst dann.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = gold.textGedaempft,
-                    )
-                    sicherungsliste.forEach { datei ->
-                        Spacer(Modifier.height(6.dp))
-                        Auswahlchip(datei.name.removeSuffix(".json"), false) {
-                            viewModel.stelleWiederHer(datei.uri)
-                        }
+                // 9 — Wiederherstellen: erst die Wahl von Hand, dann die Abkürzung.
+                Spacer(Modifier.height(8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Auswahlchip("Wiederherstellen", sicherungsAuswahl.isNotEmpty()) {
+                        viewModel.zeigeSicherungsAuswahl()
+                    }
+                    Auswahlchip("Neueste wiederherstellen", false) {
+                        viewModel.stelleNeuesteWiederHer()
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                // 10 — Rückgängig, solange sich das letzte Einspielen zurücknehmen lässt.
+                if (zurueckNehmenText.isNotBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Auswahlchip("↶  Rückgängig", false) { viewModel.nimmEinspielenZurueck() }
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            zurueckNehmenText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = gold.textGedaempft,
+                        )
+                    }
+                }
+
+                // 11 — Die Auswahlliste, eingebettet statt im Dateiwähler.
+                if (sicherungsAuswahl.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Welche Sicherung?",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = gold.textPrimaer,
+                    )
+                    sicherungsAuswahl.forEach { eintrag ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 44.dp)
+                                .druckEffekt { viewModel.stelleWiederHer(eintrag.uri) }
+                                .padding(vertical = 6.dp),
+                        ) {
+                            Text(
+                                eintrag.name.removeSuffix(".json"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = gold.primaer,
+                            )
+                            Text(
+                                "geschrieben am ${sicherungsZeit(eintrag.geaendertAm)} Uhr",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = gold.textGedaempft,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Auswahlchip("Abbrechen", false) { viewModel.verwirfSicherungsAuswahl() }
+                }
+
+                // App-eigen, deshalb hinter dem Gerüst der Vorlage.
+                Spacer(Modifier.height(12.dp))
                 Auswahlchip("Doppelte entfernen", false) {
                     viewModel.entferneDoppelte()
                 }
@@ -888,3 +981,8 @@ private fun goldRegler() = LocalGold.current.let { gold ->
         inactiveTickColor = gold.textGedaempft,
     )
 }
+
+/** „12.09.2026, 16:35" — der Zeitpunkt, zu dem die Datei zuletzt geschrieben wurde. */
+private fun sicherungsZeit(zeitpunkt: Long): String =
+    java.text.SimpleDateFormat("dd.MM.yyyy, HH:mm", java.util.Locale.GERMANY)
+        .format(java.util.Date(zeitpunkt))

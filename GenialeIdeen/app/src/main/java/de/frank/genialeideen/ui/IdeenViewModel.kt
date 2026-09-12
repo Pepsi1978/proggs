@@ -1092,18 +1092,30 @@ class IdeenViewModel(
     }
 
     // ---- Sicherung (Baustein J) — Modul M1.1 ----
+    //
+    // Der Aufbau folgt der Vorlage aus Module/Android/M1.1-Sicherung/BEISPIEL.md
+    // („Das Gerüst der Bedienung"), gezeichnet mit den Bausteinen dieser App.
 
     /** Der Name des gemerkten Sicherungsordners — null, solange keiner gewählt wurde. */
     private val _sicherungsOrdner = MutableStateFlow(sicherung.ordnerName())
     val sicherungsOrdner: StateFlow<String?> = _sicherungsOrdner.asStateFlow()
 
     val sicherungsOrdnerUri: Uri? get() = sicherung.sicherungsOrdner
-    private val _sicherungsStatus = MutableStateFlow<Meldung?>(null)
-    val sicherungsStatus: StateFlow<Meldung?> = _sicherungsStatus.asStateFlow()
 
-    /** Was angehakt ist. Nichts gemerkt heisst „alles“ — siehe `gewaehlteTeile`. */
+    private val _sicherungsStand = MutableStateFlow(sicherung.standText())
+    val sicherungsStand: StateFlow<String> = _sicherungsStand.asStateFlow()
+
+    /** Der Haken steht für „zurückgelesen und geprüft", nicht bloß für „geschrieben". */
+    private val _sicherungGeprueft = MutableStateFlow(sicherung.istGeprueft())
+    val sicherungGeprueft: StateFlow<Boolean> = _sicherungGeprueft.asStateFlow()
+
+    /** Was angehakt ist. Nichts gemerkt heisst „alles" — siehe `gewaehlteTeile`. */
     private val _sicherungsUmfang = MutableStateFlow(gewaehlteTeile(settings.sicherungsTeile))
     val sicherungsUmfang: StateFlow<Set<SicherungsTeil>> = _sicherungsUmfang.asStateFlow()
+
+    /** „12 Ideen, 5 Kategorien — etwa 8 KB". Steht von allein da, es gibt keinen Knopf dafür. */
+    private val _naechsteSicherung = MutableStateFlow("")
+    val naechsteSicherung: StateFlow<String> = _naechsteSicherung.asStateFlow()
 
     private val _autoSicherungAn = MutableStateFlow(settings.autoBackupEnabled)
     val autoSicherungAn: StateFlow<Boolean> = _autoSicherungAn.asStateFlow()
@@ -1111,17 +1123,52 @@ class IdeenViewModel(
     /**
      * Die Auswahlliste zum Wiederherstellen.
      *
-     * Die App zeichnet sie selbst, statt den Dateiwähler von Android zu öffnen — aus dem führt
-     * die Zurück-Geste Ordner für Ordner heraus statt zurück in die App.
+     * Die App zeichnet sie selbst und eingebettet, statt den Dateiwähler von Android zu öffnen —
+     * aus dem führt die Zurück-Geste Ordner für Ordner heraus statt zurück in die App.
      */
-    private val _sicherungsliste = MutableStateFlow<List<Sicherungsdatei>>(emptyList())
-    val sicherungsliste: StateFlow<List<Sicherungsdatei>> = _sicherungsliste.asStateFlow()
-    private val _listeOffen = MutableStateFlow(false)
-    val listeOffen: StateFlow<Boolean> = _listeOffen.asStateFlow()
+    private val _sicherungsAuswahl = MutableStateFlow<List<Sicherungsdatei>>(emptyList())
+    val sicherungsAuswahl: StateFlow<List<Sicherungsdatei>> = _sicherungsAuswahl.asStateFlow()
+
+    /** Was in der gewählten Datei steckt — solange das gefüllt ist, steht die Rückfrage offen. */
+    private val _sicherungsVorschau = MutableStateFlow("")
+    val sicherungsVorschau: StateFlow<String> = _sicherungsVorschau.asStateFlow()
+    private var vorschauQuelle: Uri? = null
+
+    private val _zurueckNehmenText = MutableStateFlow("")
+    val zurueckNehmenText: StateFlow<String> = _zurueckNehmenText.asStateFlow()
+    private var letzteSpur: Einspielspur? = null
 
     private var nachOrdnerWahlSichern = false
     private var nachOrdnerWahlAutoAn = false
     private var sicherungLaeuft = false
+
+    init {
+        rechneNaechsteSicherung()
+    }
+
+    /** Wie viel die nächste Sicherung umfasst — ohne etwas zu schreiben. */
+    private fun rechneNaechsteSicherung() {
+        viewModelScope.launch {
+            runCatching { sicherung.voraussichtlich() }
+                .onSuccess { (zahlen, bytes) ->
+                    val teile = zahlen.anzahl.filterValues { it > 0 }.entries
+                        .joinToString(", ") { (art, wieViele) -> "$wieViele ${benenne(art, wieViele)}" }
+                    _naechsteSicherung.value =
+                        if (teile.isBlank()) "" else "$teile — etwa ${groesse(bytes)}"
+                }
+                .onFailure { fehler -> if (fehler is CancellationException) throw fehler }
+        }
+    }
+
+    private fun benenne(art: String, anzahl: Int): String = when (art) {
+        "ideen" -> if (anzahl == 1) "Idee" else "Ideen"
+        "kategorien" -> if (anzahl == 1) "Kategorie" else "Kategorien"
+        "nachrichten" -> if (anzahl == 1) "Gesprächsbeitrag" else "Gesprächsbeiträge"
+        else -> art
+    }
+
+    private fun groesse(bytes: Long): String =
+        if (bytes >= 1_000_000) "${bytes / 1_000_000} MB" else "${(bytes / 1000).coerceAtLeast(1)} KB"
 
     /**
      * Hakt einen Teil an oder ab.
@@ -1138,6 +1185,7 @@ class IdeenViewModel(
         val neu = if (teil in jetzt) jetzt - teil else jetzt + teil
         _sicherungsUmfang.value = neu
         settings.sicherungsTeile = neu.map { it.id }.toSet()
+        rechneNaechsteSicherung()
     }
 
     /**
@@ -1154,15 +1202,6 @@ class IdeenViewModel(
         }
         settings.autoBackupEnabled = an
         _autoSicherungAn.value = an
-        zeige(
-            Meldung(
-                if (an) {
-                    "Es wird von allein gesichert — zwei Minuten nach der letzten Änderung."
-                } else {
-                    "Die selbsttätige Sicherung ist aus. „Jetzt sichern“ geht weiterhin."
-                },
-            ),
-        )
     }
 
     /** Die gespeicherte Freigabe reicht aus; nur beim ersten Mal einen Ordner wählen. */
@@ -1174,22 +1213,24 @@ class IdeenViewModel(
             return
         }
         sicherungLaeuft = true
-        _sicherungsStatus.value = Meldung("Wird gesichert …")
+        _sicherungsStand.value = "Wird gesichert …"
         viewModelScope.launch {
             try {
                 val stand = sicherung.sichere()
-                val meldung = Meldung("Sicherung erfolgt. $stand")
-                _sicherungsStatus.value = meldung
-                zeige(meldung)
+                _sicherungsStand.value = stand
+                _sicherungGeprueft.value = sicherung.istGeprueft()
+                zeige(Meldung("Sicherung erfolgt. $stand"))
             } catch (fehler: CancellationException) {
                 throw fehler
             } catch (fehler: Exception) {
-                val meldung = Meldung(
-                    "Sicherung fehlgeschlagen: ${fehler.message}. Wähle bei fehlendem Zugriff den Ordner erneut.",
-                    istFehler = true,
+                _sicherungsStand.value = sicherung.standText()
+                _sicherungGeprueft.value = sicherung.istGeprueft()
+                zeige(
+                    Meldung(
+                        "Sicherung fehlgeschlagen: ${fehler.message}. Wähle bei fehlendem Zugriff den Ordner erneut.",
+                        istFehler = true,
+                    ),
                 )
-                _sicherungsStatus.value = meldung
-                zeige(meldung)
                 IdeenLog.warn(
                     "Sicherung", "sichereJetzt", "Sicherung fehlgeschlagen",
                     mapOf("art" to fehler.javaClass.simpleName),
@@ -1199,33 +1240,6 @@ class IdeenViewModel(
             }
         }
     }
-
-    /** Was die nächste Sicherung ungefähr umfasst — ohne etwas zu schreiben. */
-    fun zeigeVoraussichtlich() {
-        viewModelScope.launch {
-            runCatching { sicherung.voraussichtlich() }
-                .onSuccess { (zahlen, bytes) ->
-                    val teile = zahlen.anzahl.filterValues { it > 0 }
-                        .map { (art, wieViele) -> "$wieViele $art" }
-                    zeige(
-                        Meldung(
-                            if (teile.isEmpty()) {
-                                "Es gibt noch nichts zu sichern."
-                            } else {
-                                "Die nächste Sicherung umfasst ${teile.joinToString(", ")} — etwa ${groesse(bytes)}."
-                            },
-                        ),
-                    )
-                }
-                .onFailure { fehler ->
-                    if (fehler is CancellationException) throw fehler
-                    zeige(Meldung("Der Umfang liess sich nicht ermitteln: ${fehler.message}", istFehler = true))
-                }
-        }
-    }
-
-    private fun groesse(bytes: Long): String =
-        if (bytes >= 1_000_000) "${bytes / 1_000_000} MB" else "${(bytes / 1000).coerceAtLeast(1)} KB"
 
     fun waehleSicherungsOrdner(ordnerWaehlen: () -> Unit) {
         if (sicherungLaeuft) return
@@ -1255,47 +1269,66 @@ class IdeenViewModel(
             }
                 .onSuccess { name ->
                     _sicherungsOrdner.value = name
-                    val meldung = Meldung("Ordner gespeichert. Mit „Jetzt sichern“ sicherst du alle Ideen.")
-                    _sicherungsStatus.value = meldung
                     when {
                         danachSichern -> sichereJetzt {}
                         danachAutoAn -> setzeAutoSicherung(true) {}
-                        else -> zeige(meldung)
+                        else -> zeige(Meldung("Ordner gespeichert."))
                     }
                 }
                 .onFailure { fehler ->
                     if (fehler is CancellationException) throw fehler
                     if (danachAutoAn) _autoSicherungAn.value = settings.autoBackupEnabled
-                    val meldung = Meldung(
-                        "Der Ordner konnte nicht dauerhaft freigegeben werden: ${fehler.message}",
-                        istFehler = true,
+                    zeige(
+                        Meldung(
+                            "Der Ordner konnte nicht dauerhaft freigegeben werden: ${fehler.message}",
+                            istFehler = true,
+                        ),
                     )
-                    _sicherungsStatus.value = meldung
-                    zeige(meldung)
                 }
         }
     }
 
     /** Zieht die Auswahlliste auf oder schliesst sie wieder. */
-    fun schalteSicherungsliste() {
-        if (_listeOffen.value) {
-            _listeOffen.value = false
+    fun zeigeSicherungsAuswahl() {
+        if (_sicherungsAuswahl.value.isNotEmpty()) {
+            verwirfSicherungsAuswahl()
             return
         }
         if (sicherung.sicherungsOrdner == null) {
             zeige(Meldung("Wähl zuerst einen Sicherungsordner."))
             return
         }
-        _listeOffen.value = true
         viewModelScope.launch {
             runCatching { sicherung.sicherungen() }
                 .onSuccess { liste ->
-                    _sicherungsliste.value = liste
+                    _sicherungsAuswahl.value = liste
                     if (liste.isEmpty()) zeige(Meldung("In dem Ordner liegt noch keine Sicherung."))
                 }
                 .onFailure { fehler ->
                     if (fehler is CancellationException) throw fehler
-                    _listeOffen.value = false
+                    zeige(Meldung("Der Ordner liess sich nicht lesen: ${fehler.message}", istFehler = true))
+                }
+        }
+    }
+
+    fun verwirfSicherungsAuswahl() {
+        _sicherungsAuswahl.value = emptyList()
+    }
+
+    /** Nimmt ungefragt die jüngste Sicherung — aber zeigt auch sie erst als Vorschau. */
+    fun stelleNeuesteWiederHer() {
+        if (sicherung.sicherungsOrdner == null) {
+            zeige(Meldung("Wähl zuerst einen Sicherungsordner."))
+            return
+        }
+        viewModelScope.launch {
+            runCatching { sicherung.neuesteSicherung() }
+                .onSuccess { datei ->
+                    if (datei == null) zeige(Meldung("In dem Ordner liegt noch keine Sicherung."))
+                    else stelleWiederHer(datei.uri)
+                }
+                .onFailure { fehler ->
+                    if (fehler is CancellationException) throw fehler
                     zeige(Meldung("Der Ordner liess sich nicht lesen: ${fehler.message}", istFehler = true))
                 }
         }
@@ -1310,16 +1343,13 @@ class IdeenViewModel(
                 .onSuccess { vorschau ->
                     val neu = vorschau.zahlen.anzahl["neu"] ?: 0
                     val zusammen = sicherungsInhalt.fasseZusammen(vorschau)
-                    zeige(
-                        if (neu == 0) {
-                            Meldung("$zusammen. Alles davon ist schon in der App — es gibt nichts einzuspielen.")
-                        } else {
-                            Meldung(
-                                "$zusammen. $neu davon fehlen in der App. Zum Einspielen auf „Wiederholen“ tippen.",
-                                wiederholen = { spieleEin(quelle) },
-                            )
-                        },
-                    )
+                    vorschauQuelle = quelle
+                    _sicherungsAuswahl.value = emptyList()
+                    _sicherungsVorschau.value = if (neu == 0) {
+                        "$zusammen. Alles davon ist schon in der App — es gibt nichts einzuspielen."
+                    } else {
+                        "$zusammen. $neu davon fehlen in der App und kommen dazu; alles Übrige bleibt unverändert."
+                    }
                 }
                 .onFailure { fehler ->
                     if (fehler is CancellationException) throw fehler
@@ -1329,22 +1359,26 @@ class IdeenViewModel(
         }
     }
 
-    private fun spieleEin(quelle: Uri) {
+    fun verwirfSicherungsVorschau() {
+        _sicherungsVorschau.value = ""
+        vorschauQuelle = null
+    }
+
+    fun spieleSicherungEin() {
+        val quelle = vorschauQuelle ?: return
         if (sicherungLaeuft) return
         sicherungLaeuft = true
+        verwirfSicherungsVorschau()
         viewModelScope.launch {
             runCatching { sicherung.stelleWiederHerAus(quelle) }
                 .onSuccess { ergebnis ->
                     val bericht = container.letzterEinspielbericht()
                     val neu = bericht?.neu ?: 0
-                    val spur = ergebnis.spur.takeIf { neu > 0 }
-                    zeige(
-                        Meldung(
-                            "$neu Ideen wiederhergestellt, ${bericht?.schonDa ?: 0} waren schon da." +
-                                if (spur != null) " Zum Zurücknehmen auf „Wiederholen“ tippen." else "",
-                            wiederholen = spur?.let { { nimmEinspielenZurueck(it) } },
-                        ),
-                    )
+                    letzteSpur = ergebnis.spur.takeIf { neu > 0 }
+                    _zurueckNehmenText.value =
+                        if (neu > 0) "$neu eingespielte Ideen lassen sich wieder entfernen." else ""
+                    zeige(Meldung("$neu Ideen wiederhergestellt, ${bericht?.schonDa ?: 0} waren schon da."))
+                    rechneNaechsteSicherung()
                 }
                 .onFailure { fehler ->
                     if (fehler is CancellationException) throw fehler
@@ -1354,10 +1388,13 @@ class IdeenViewModel(
         }
     }
 
-    private fun nimmEinspielenZurueck(spur: Einspielspur) {
+    fun nimmEinspielenZurueck() {
+        val spur = letzteSpur ?: return
         viewModelScope.launch {
             runCatching { sicherung.nimmZurueck(spur) }
                 .onSuccess { anzahl ->
+                    letzteSpur = null
+                    _zurueckNehmenText.value = ""
                     zeige(
                         Meldung(
                             if (anzahl == 0) {
@@ -1367,6 +1404,7 @@ class IdeenViewModel(
                             },
                         ),
                     )
+                    rechneNaechsteSicherung()
                 }
                 .onFailure { fehler ->
                     if (fehler is CancellationException) throw fehler
@@ -1394,6 +1432,7 @@ class IdeenViewModel(
                                         },
                                     ),
                                 )
+                                rechneNaechsteSicherung()
                             }
                             .onFailure { fehler ->
                                 if (fehler is CancellationException) throw fehler
@@ -1410,9 +1449,8 @@ class IdeenViewModel(
         if (sicherungLaeuft) return
         sicherung.vergissOrdner()
         _sicherungsOrdner.value = null
-        _sicherungsStatus.value = null
-        _sicherungsliste.value = emptyList()
-        _listeOffen.value = false
+        _sicherungsAuswahl.value = emptyList()
+        verwirfSicherungsVorschau()
         // Ohne Ordner kann nichts von allein geschrieben werden — der Schalter würde sonst „an“
         // behaupten, ohne dass je etwas passiert.
         if (settings.autoBackupEnabled) {
@@ -1421,8 +1459,6 @@ class IdeenViewModel(
         }
         zeige(Meldung("Der Sicherungsordner ist vergessen. Die Dateien bleiben liegen."))
     }
-
-    fun sicherungsStand(): String = sicherung.standText()
 
     // ---- Diagnose (Baustein P) ----
 
