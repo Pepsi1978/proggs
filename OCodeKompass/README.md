@@ -1,4 +1,4 @@
-# OpenCode Kompass
+# OCode Kompass
 
 Eigenständige Android-Variante von Claude Kompass und Codex Kompass: gleiche Oberfläche,
 Navigation und App-Einstellungen, mit einer deutschen Referenz für die OpenCode CLI.
@@ -13,7 +13,7 @@ Navigation und App-Einstellungen, mit einer deutschen Referenz für die OpenCode
   App-Sperre und Sicherung wie in den Schwester-Apps.
 
 Der gemeinsame Code liegt in `../KompassKern`. Eigen sind nur `update/`, `AppProfil` und die
-Beigaben. Paketkennung: `de.frank.opencodekompass`. Alle drei Apps können nebeneinander
+Beigaben. Paketkennung: `de.frank.opencodekompass` (unverändert, damit Datenbank und Ablagen erhalten bleiben). Alle drei Apps können nebeneinander
 installiert sein; Datenbank, Ablagen und Sicherungen sind anhand der App-Kennung getrennt.
 
 Die KI-Funktionen (Vertiefen, Rückfragen, Erklärungen nachziehen) laufen wie in den Schwester-Apps
@@ -62,5 +62,5 @@ ergänzt, was fehlt — Vorhandenes bleibt unverändert.
 Die Sicherung schreibt in einen einmal gewählten Ordner — in der Praxis ein Google-Drive-Ordner.
 Nach der einmaligen Freigabe schreibt „Jetzt sichern" ohne weitere Rückfrage dorthin; es liegen
 immer nur die aktuelle Sicherung und die eine davor darin. Der Dateiname trägt den Zeitpunkt:
-`12-09-2026-1224-opencode-kompass.json`. Das Modul liegt im gemeinsamen Kern und gilt damit für
+`12-09-2026-1224-ocode-kompass.json`. Das Modul liegt im gemeinsamen Kern und gilt damit für
 alle drei Kompass-Apps.

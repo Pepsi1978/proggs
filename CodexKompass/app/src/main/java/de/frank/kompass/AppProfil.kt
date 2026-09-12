@@ -18,6 +18,12 @@ object AppProfil {
     const val OFFENE_ABLAGE = "codex_kompass_prefs"
     const val GEHEIME_ABLAGE = "codex_kompass_secure_prefs"
     const val DATEI_PRAEFIX = "codex-kompass"
+    /** Fruehere Namen dieser App — hier keine; die Liste haelt den Kern einheitlich. */
+    val FRUEHERE_NAMEN = emptySet<String>()
+
+    /** Fruehere Dateinamen-Teile — hier keine. */
+    val FRUEHERE_DATEI_PRAEFIXE = emptyList<String>()
+
     const val VERSION_NAME = BuildConfig.VERSION_NAME
     const val VERSION_BUMPED_AT = BuildConfig.VERSION_BUMPED_AT
     const val SEEDED_CLI_VERSION = BuildConfig.SEEDED_CLI_VERSION

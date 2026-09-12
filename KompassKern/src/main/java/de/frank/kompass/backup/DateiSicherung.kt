@@ -190,10 +190,10 @@ class DateiSicherung(private val context: Context) {
      */
     private fun gehoertDazu(name: String): Boolean =
         name.endsWith(".json") &&
-            (NEUES_MUSTER.containsMatchIn(name) || name.startsWith(ALTES_PRAEFIX))
+            (MUSTER.any { it.containsMatchIn(name) } || ALTE_PRAEFIXE.any(name::startsWith))
 
     private fun zeitpunktAusNamen(name: String): Long? {
-        NEUES_MUSTER.find(name)?.let { treffer ->
+        MUSTER.firstNotNullOfOrNull { it.find(name) }?.let { treffer ->
             val format = SimpleDateFormat(ZEIT_MUSTER, Locale.GERMANY).apply { isLenient = false }
             return runCatching { format.parse(treffer.groupValues[1])?.time }.getOrNull()
         }
@@ -219,7 +219,8 @@ class DateiSicherung(private val context: Context) {
      * wiederhergestellt; ein misslungener Schreibvorgang darf keine Sicherung verlieren.
      */
     private fun benenneUm(datei: Sicherungsdatei): Sicherungsdatei {
-        if (NEUES_MUSTER.containsMatchIn(datei.name)) return datei
+        // Schon im heutigen Muster UND unter dem heutigen Namen? Dann ist nichts zu tun.
+        if (HEUTIGES_MUSTER.containsMatchIn(datei.name)) return datei
         val zeitpunkt = zeitpunktAusNamen(datei.name) ?: datei.geaendertAm
         val zeit = SimpleDateFormat(ZEIT_MUSTER, Locale.GERMANY).format(Date(zeitpunkt))
         val neuerName = "$zeit-${AppProfil.DATEI_PRAEFIX}.json"
@@ -308,12 +309,23 @@ class DateiSicherung(private val context: Context) {
         /** Der Zeitpunkt im Dateinamen, in Ortszeit und in Lesereihenfolge. */
         private const val ZEIT_MUSTER = "dd-MM-yyyy-HHmm"
 
-        /** `20-03-2026-1346-opencode-kompass.json` — Zeitpunkt vorn, App-Name hinten. */
-        private val NEUES_MUSTER =
-            Regex("^(\\d{2}-\\d{2}-\\d{4}-\\d{4})-${Regex.escape(AppProfil.DATEI_PRAEFIX)}\\b")
+        private fun muster(praefix: String) =
+            Regex("^(\\d{2}-\\d{2}-\\d{4}-\\d{4})-${Regex.escape(praefix)}\\b")
 
-        /** Das frühere Muster `opencode-kompass-2026-03-20-1346Z.json`, nur noch zum Lesen. */
-        private val ALTES_PRAEFIX = "${AppProfil.DATEI_PRAEFIX}-"
+        /** `20-03-2026-1346-ocode-kompass.json` — Zeitpunkt vorn, App-Name hinten. */
+        private val HEUTIGES_MUSTER = muster(AppProfil.DATEI_PRAEFIX)
+
+        /**
+         * Das heutige Muster und die unter früheren App-Namen geschriebenen.
+         *
+         * Eine Umbenennung der App darf keine Sicherung entwerten: Wer gestern unter dem alten
+         * Namen gesichert hat, muss die Datei heute noch finden und einspielen können.
+         */
+        private val MUSTER = listOf(HEUTIGES_MUSTER) + AppProfil.FRUEHERE_DATEI_PRAEFIXE.map(::muster)
+
+        /** Das älteste Muster `ocode-kompass-2026-03-20-1346Z.json`, nur noch zum Lesen. */
+        private val ALTE_PRAEFIXE =
+            (listOf(AppProfil.DATEI_PRAEFIX) + AppProfil.FRUEHERE_DATEI_PRAEFIXE).map { "$it-" }
         private val ALTES_MUSTER = Regex("(\\d{4}-\\d{2}-\\d{2}-\\d{4}(?:\\d{2}-\\d{3})?)(Z?)")
         private val UTC = java.util.TimeZone.getTimeZone("UTC")
     }

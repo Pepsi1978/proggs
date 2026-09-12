@@ -30,7 +30,7 @@ class DokuAbruf {
         val anfrage = Request.Builder()
             .url(adresse)
             .header("Accept", "text/plain, text/markdown, */*")
-            .header("User-Agent", "OpenCodeKompass/1.0 (Android)")
+            .header("User-Agent", "OCodeKompass/1.0 (Android)")
             .build()
         client.newCall(anfrage).awaitAntwort().use { antwort ->
             if (!antwort.isSuccessful) {

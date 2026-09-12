@@ -459,7 +459,9 @@ object Sicherung {
     }
 
     private fun pruefeKopf(schema: Int, app: String, roomVersion: Int) {
-        if (app.isNotBlank() && app != AppProfil.PRODUKT) {
+        // Auch unter einem früheren Namen geschriebene Sicherungen gehören zu dieser App.
+        // Ohne das hätte jede Umbenennung sämtliche bis dahin geschriebenen Dateien entwertet.
+        if (app.isNotBlank() && app != AppProfil.PRODUKT && app !in AppProfil.FRUEHERE_NAMEN) {
             throw SicherungsFehler("Diese Sicherung gehört nicht zu ${AppProfil.PRODUKT}.")
         }
         if (schema < 0) {

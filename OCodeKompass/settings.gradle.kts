@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OpenCodeKompass"
+rootProject.name = "OCodeKompass"
 include(":app")
