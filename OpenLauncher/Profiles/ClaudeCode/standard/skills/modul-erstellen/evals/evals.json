@@ -89,7 +89,7 @@
     {
       "id": "braucht-module-erkennen",
       "soll_ausloesen": true,
-      "prompt": "Mach aus dem Kartenstapel in Denknotiz ein Modul namens Kartenstapel.",
+      "prompt": "Mach aus dem Kartenstapel in Gedankenspeicher ein Modul namens Kartenstapel.",
       "kontext": "Der Bereich importiert de.frank.module.dragreorder aus M1.1.",
       "erwartet": [
         "behandelt den Modul-Import NICHT als Nabelschnur zum Durchschneiden",

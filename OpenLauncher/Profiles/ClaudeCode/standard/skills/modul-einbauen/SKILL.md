@@ -131,7 +131,7 @@ in einer Datei, die noch gar nicht existiert.
 
 **Leg die Liste vor, bevor du anfängst:**
 
-> „M1.5 braucht M1.2, und das fehlt in Denknotiz. Ich baue beide ein, M1.2
+> „M1.5 braucht M1.2, und das fehlt in Gedankenspeicher. Ich baue beide ein, M1.2
 >  zuerst."
 
 Das ist eine Mitteilung, keine Freigabe — im Schnellmodus also sagen und

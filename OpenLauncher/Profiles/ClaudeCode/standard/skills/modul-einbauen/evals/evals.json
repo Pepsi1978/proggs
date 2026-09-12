@@ -20,7 +20,7 @@
     {
       "id": "einbau-anzeigename",
       "soll_ausloesen": true,
-      "prompt": "Nimm das Drag & Drop Modul und setz es in Denknotiz ein.",
+      "prompt": "Nimm das Drag & Drop Modul und setz es in Gedankenspeicher ein.",
       "erwartet": [
         "findet das Modul über den Anzeigenamen, nicht nur über die Nummer",
         "fragt nicht nach der Nummer, die steht im Index"
@@ -70,7 +70,7 @@
     {
       "id": "abloesung-ohne-daten",
       "soll_ausloesen": true,
-      "prompt": "Denknotiz hat schon eine eigene Sortierung. Bau trotzdem M1.1 ein und ersetz die alte.",
+      "prompt": "Gedankenspeicher hat schon eine eigene Sortierung. Bau trotzdem M1.1 ein und ersetz die alte.",
       "kontext": "Die alte Sortierung hält die Reihenfolge nur im Speicher, nichts wird gespeichert.",
       "erwartet": [
         "sucht aktiv nach der vorhandenen Eigenumsetzung, nicht nur nach dem Modulnamen",
@@ -131,8 +131,8 @@
     {
       "id": "abhaengigkeit-reihenfolge",
       "soll_ausloesen": true,
-      "prompt": "Bau M1.5 in Denknotiz ein.",
-      "kontext": "MODUL.md von M1.5 nennt unter 'Braucht Module' das Modul M1.2, das in Denknotiz fehlt.",
+      "prompt": "Bau M1.5 in Gedankenspeicher ein.",
+      "kontext": "MODUL.md von M1.5 nennt unter 'Braucht Module' das Modul M1.2, das in Gedankenspeicher fehlt.",
       "erwartet": [
         "liest das Feld 'Braucht Module' und erkennt die Lücke VOR dem Kopieren",
         "baut M1.2 zuerst ein, dann M1.5",

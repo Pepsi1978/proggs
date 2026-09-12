@@ -401,7 +401,7 @@ App-Kopie — die ist eine Abschrift und wird beim nächsten Nachziehen ersetzt.
 Modul über Nummer oder Anzeigenamen finden, `MODUL.md` lesen und die
 Konsumenten **zählen und aussprechen**:
 
-> „M1.1 steht bei v3 und hat 3 Konsumenten — GenialeIdeen, Denknotiz,
+> „M1.1 steht bei v3 und hat 3 Konsumenten — GenialeIdeen, Gedankenspeicher,
 >  KarteikartenLernen. Die Änderung betrifft alle drei."
 
 Das ist keine Höflichkeit: Wer nicht weiß, dass er drei Apps anfasst, ändert

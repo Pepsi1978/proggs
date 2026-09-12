@@ -4,7 +4,7 @@
 
 Installierte eigene Android-Pakete per ADB dem lokalen Quellcode zugeordnet. BestJournalAndroid einschließlich seiner Debug-Installation bleibt ausgeschlossen. BestJournalFrank wurde nach ausdrücklicher Ergänzung des Nutzers aufgenommen.
 
-14 Apps wurden gezielt im UI-/Rendering-Code optimiert, versioniert, erfolgreich gebaut und per `adb -s R3GL7073MLM install -r` auf Samsung SM_F971B aktualisiert. Keine Deinstallation, kein Clear und keine Datenmigration. BestJournalFrank wurde anschließend gestartet. Die anderen Apps wurden nicht für einen Laufzeittest geöffnet.
+13 Apps wurden gezielt im UI-/Rendering-Code optimiert, versioniert, erfolgreich gebaut und per `adb -s R3GL7073MLM install -r` auf Samsung SM_F971B aktualisiert. Keine Deinstallation, kein Clear und keine Datenmigration. BestJournalFrank wurde anschließend gestartet. Die anderen Apps wurden nicht für einen Laufzeittest geöffnet.
 
 Die Befunde sind statisch hergeleitet. Im Schnellmodus wurden keine Funktions-/UI-Tests, Screenshotvergleiche oder Performance-Messungen ausgeführt. Der erfolgreiche Build und die Installation belegen weder Ruckelfreiheit noch vollständige Funktions- oder Pixelgleichheit. AGP führte bei Entropies Performance-Build automatisch LintVital aus.
 
@@ -16,7 +16,6 @@ Die Befunde sind statisch hergeleitet. Im Schnellmodus wurden keine Funktions-/U
 | ClaudeKompass | 0.4.9 | Debug | Suchgruppen und Stimmenauswahl gecacht; Nachrichten-Flow nur bei Sitzungswechsel neu abonniert |
 | CodexKompass | 0.4.9 | Debug | Suchgruppen und Stimmenauswahl gecacht; Suchlisten-Recycling typisiert |
 | CortexAndroid | 0.10.13 | Debug | VPN-Puls-Reads in Draw/Layer; Dashboard-Elementtypen getrennt |
-| Denknotiz | 0.1.9 | Debug | Bibliotheksfilter und Ordnerzählung gecacht, Ordnerindex; Theme-Formen wiederverwendet |
 | EntropieReductor | 0.29.3 | Benchmark/Performance | Mikrofon, Briefing, Markdown, vier Verlaufskarten, Trainings-/Journal-/Settingslisten, Triggerdialog und Diagnosezeitstempel entlastet |
 | Experimente | 0.17.2 | Debug | Puls/Swipe/Denkanzeige entlastet; Auswertungstext und Theme gecacht; Vorschlagsindex direkt; Glasschatten-Zeichenobjekte gecacht |
 | FisetinBegleiter | 1.0.28 | Debug | Hintergrund, Buttons und Schalter entlastet; Zutaten-/Stackgruppen, Theme und Listen-Recycling optimiert |
@@ -53,7 +52,6 @@ Diese Funde wurden nicht als Teil der ausgelieferten Änderungen umgesetzt:
 
 - Cortex: Tippindikator/Leerlaufanimation und Prompt-Titelaufbereitung in `ChatScreen.kt`.
 - Gedankenspeicher: Bildzoom-Reads in `Anhaenge.kt`, Karten-Vorleseindex, Anhangs-JSON im Menü, stabiler Notizzahl-Flow sowie Nachtragszeit-Parsing bei Sortierungen.
-- Denknotiz: JSON-Aufbereitung in `EntryCard` und Snapshot-Fehlerfilter in `DenknotizApp.kt`.
 - GenialeIdeen: Suchhervorhebung und Detail-Streaming-/Denkpunkte; animierter Schrift-Brush der Kopfleiste bleibt compositiongetrieben.
 - Kompass-Apps: Sitzungsabbildung und weitere heterogene Chat-/Referenzlisten; Claude-Referenzaufbereitung bei Bedienzustandswechseln.
 - Experimente: weitere `indexOf`-Schleifen in `Listen.kt`, Animationsreads in großen Komponenten/Settings; Sensorzustand erst nach expliziter reaktiver Aufgabenanbindung aus Composition lösen.
