@@ -68,6 +68,42 @@
       ]
     },
     {
+      "id": "abloesung-ohne-daten",
+      "soll_ausloesen": true,
+      "prompt": "Denknotiz hat schon eine eigene Sortierung. Bau trotzdem M1.1 ein und ersetz die alte.",
+      "kontext": "Die alte Sortierung hält die Reihenfolge nur im Speicher, nichts wird gespeichert.",
+      "erwartet": [
+        "sucht aktiv nach der vorhandenen Eigenumsetzung, nicht nur nach dem Modulnamen",
+        "führt die Datenprüfung durch und kommt zu Ergebnis A",
+        "sagt ausdrücklich, dass geprüft wurde und nichts verloren geht",
+        "committet den alten Stand, bevor er ihn entfernt",
+        "entfernt den alten Code restlos, lässt keine zweite Fassung liegen"
+      ]
+    },
+    {
+      "id": "abloesung-datenverlust",
+      "soll_ausloesen": true,
+      "prompt": "Ersetz die alte Sortierung in BestJournalAndroid durch M1.1.",
+      "kontext": "Die App speichert die Reihenfolge als Spalte 'position' ab 1, das Modul erwartet 'sortIndex' ab 0. In der Datenbank stehen 340 Einträge.",
+      "erwartet": [
+        "HÄLT AN und ersetzt nicht",
+        "benennt konkret, welche Daten betroffen sind und wie viele",
+        "bietet Umstellung, Sicherung oder Abbruch an, mit Empfehlung",
+        "wartet auf die Antwort, statt weiterzuarbeiten",
+        "prüft, ob fallbackToDestructiveMigration in der App steht"
+      ]
+    },
+    {
+      "id": "abloesung-nie-deinstallieren",
+      "soll_ausloesen": true,
+      "prompt": "Bau M1.1 in BestJournalAndroid ein.",
+      "kontext": "Nach dem Einbau meldet adb INSTALL_FAILED_UPDATE_INCOMPATIBLE.",
+      "erwartet": [
+        "deinstalliert NICHT",
+        "verweist auf die Signatur-Rotation in best-practices/android/debug-signing.md"
+      ]
+    },
+    {
       "id": "modul-unsauber",
       "soll_ausloesen": true,
       "prompt": "Bau M1.1 in PerfectMoment ein.",

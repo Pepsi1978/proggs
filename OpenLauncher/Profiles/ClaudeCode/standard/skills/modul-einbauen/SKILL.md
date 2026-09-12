@@ -1,6 +1,6 @@
 ---
 name: modul-einbauen
-description: Baut ein fertiges Modul aus ~/proggs/Module/ in eine App ein — Funktionen 1:1, Aussehen an die Ziel-App angepasst — und verteilt Modul-Änderungen an alle Apps, die das Modul bereits benutzen. Nutze diesen Skill IMMER wenn der Benutzer sagt "bau M1.1 ein", "baue das Modul X ein", "Modul einbauen", "nimm M1.1 bis M1.7 und bau sie ein", "setz das Drag-and-Drop-Modul in App Y ein", "das Modul aus der Bibliothek in die neue App", "benutze Modul Mx.y", "zieh M1.1 nach", "zieh das Modul überall nach", "verteile die Modul-Änderung", "bring App Y auf den neuen Modulstand", "welche Apps hinken beim Modul hinterher". Der Benutzer darf das Modul über die Nummer ODER über seinen Anzeigenamen nennen ("bau das Drag & Drop Modul ein") — beides nachschlagen in Module/INDEX.md. Der Skill prüft Versionsverträglichkeit, kopiert das Modul byte-identisch, erzeugt eine app-eigene Anbindungsdatei für Aussehen und app-spezifische Inhalte, legt vor, was 1:1 übernommen wird und was geklärt werden muss, und nimmt erst nach grünem Build ab. NICHT nutzen, wenn aus bestehendem App-Code erst ein neues Modul entstehen soll ("mach daraus ein Modul", "als Modul abspeichern", "extrahiere X als Modul") — dafür ist der Skill modul-erstellen zuständig.
+description: Baut ein fertiges Modul aus ~/proggs/Module/ in eine App ein — Funktionen 1:1, Aussehen an die Ziel-App angepasst — und verteilt Modul-Änderungen an alle Apps, die das Modul bereits benutzen. Nutze diesen Skill IMMER wenn der Benutzer sagt "bau M1.1 ein", "baue das Modul X ein", "Modul einbauen", "nimm M1.1 bis M1.7 und bau sie ein", "setz das Drag-and-Drop-Modul in App Y ein", "das Modul aus der Bibliothek in die neue App", "benutze Modul Mx.y", "zieh M1.1 nach", "zieh das Modul überall nach", "verteile die Modul-Änderung", "bring App Y auf den neuen Modulstand", "welche Apps hinken beim Modul hinterher". Der Benutzer darf das Modul über die Nummer ODER über seinen Anzeigenamen nennen ("bau das Drag & Drop Modul ein") — beides nachschlagen in Module/INDEX.md. Ebenso wenn ein vorhandener Eigenbau abgelöst werden soll — "ersetz die alte Sortierung durch das Modul", "die App hat sowas schon, ersetz es", "tausch das gegen das Modul aus", "bau das Modul ein und wirf die alte Lösung raus". Der Skill sucht dann aktiv nach einer ähnlichen Eigenumsetzung, prüft VOR dem Ersetzen, ob dabei Nutzerdaten verloren gehen (Datenbank-Schema, Einstellungsschlüssel, Sicherungsdateien, Sortierfelder), und hält an, wenn die Datenform nicht passt. Der Skill prüft Versionsverträglichkeit, kopiert das Modul byte-identisch, erzeugt eine app-eigene Anbindungsdatei für Aussehen und app-spezifische Inhalte, legt vor, was 1:1 übernommen wird und was geklärt werden muss, und nimmt erst nach grünem Build ab. NICHT nutzen, wenn aus bestehendem App-Code erst ein neues Modul entstehen soll ("mach daraus ein Modul", "als Modul abspeichern", "extrahiere X als Modul") — dafür ist der Skill modul-erstellen zuständig.
 ---
 
 # Modul einbauen
@@ -57,6 +57,8 @@ bevor irgendeine Datei kopiert wird**:
    irreführenden Meldung — lieber jetzt melden.
 3. **Kollision?** Existiert `…/module/<kurzname>/` in der Ziel-App schon? Dann
    ist das kein Einbau, sondern ein Nachziehen — wechsle den Modus.
+   Gibt es stattdessen eine **eigene, ähnliche Umsetzung** in der App, geht es
+   in Phase 1b weiter.
 4. **Ist das Modul selbst sauber?** Durchsuch den Modulcode nach direkten
    Theme- und Ressourcenzugriffen (`MaterialTheme.`, `R.string`, `R.color`,
    `StaticResource`, `Color("…")`, ein CompositionLocal der Ursprungs-App).
@@ -64,6 +66,91 @@ bevor irgendeine Datei kopiert wird**:
    anpassen, weil das Aussehen fest verdrahtet ist. Das ist kein
    Einbau-Problem, sondern eine übersehene Nabelschnur — zurück zu
    `modul-erstellen`, Modul-Version +1, danach einbauen.
+
+## Phase 1b — Ähnliches in der App ablösen
+
+Häufiger Fall: Die App hat die Sache **schon**, nur selbstgebaut — eine eigene
+Sortierung, eine eigene Sicherung. Der Benutzer will sie dann durch das Modul
+ersetzt haben, nicht daneben gestellt. Zwei Umsetzungen desselben nebeneinander
+sind der schlechteste aller Zustände.
+
+**Such aktiv danach**, bevor du kopierst. Nicht nach dem Namen des Moduls
+suchen — die App nennt ihre Fassung anders. Such nach der *Fähigkeit*: bei
+einem Sortiermodul nach Ziehgesten und Reihenfolge-Feldern, bei einem
+Sicherungsmodul nach Export, Sicherung, Zip, Datei schreiben.
+
+| Gefunden | Vorgehen |
+|---|---|
+| Nichts | normaler Einbau, weiter mit Phase 2 |
+| Exakte Modulkopie | Nachziehen, nicht Einbauen |
+| **Eigene, ähnliche Umsetzung** | **Ablösung — erst die Datenprüfung unten** |
+
+### Die Datenprüfung — vor jeder Ablösung
+
+**Verlorener Code ist kein Problem: Git holt ihn zurück. Verlorene Nutzerdaten
+sind endgültig** — die liegen auf dem Gerät, nicht im Repo. Genau darum geht es
+hier.
+
+Stell fest, welchen gespeicherten Zustand die alte Umsetzung besitzt:
+
+| Wo | Woran erkennbar | Gefahr |
+|---|---|---|
+| Datenbank | `@Entity`-Felder, Migrationen, Spaltennamen | Schema passt nicht → Daten weg |
+| Einstellungen | `SharedPreferences`, `UserDefaults`, `Settings` | Anderer Schlüsselname → Wert stillschweigend verloren |
+| Dateien | Export-, Sicherungs- oder Zwischenstandsdateien | Altes Format nicht mehr lesbar |
+| Sortierung | Reihenfolge-Feld (`position`, `sortIndex`) | Anderer Name oder Zählbeginn → Reihenfolge zerschossen |
+
+Daraus folgt genau eines von drei Ergebnissen:
+
+**A — Kein gespeicherter Zustand.** Ablösen ohne Umstände. Sag es kurz dazu,
+damit klar ist, dass geprüft wurde.
+
+**B — Zustand vorhanden, Form passt.** Gleiche Schlüssel, gleiche Spalten,
+gleiche Bedeutung. Ablösen, Daten laufen weiter. Sag ausdrücklich, was
+weiterläuft.
+
+**C — Zustand vorhanden, Form passt nicht.** **Halt an.** Nicht ersetzen, nicht
+„erstmal probieren". Melde genau das:
+
+> ⚠️ In BestJournal liegt die Reihenfolge als `position` (ab 1) in der
+> Datenbank, das Modul erwartet `sortIndex` (ab 0). Ohne Umstellung ist die
+> Sortierung aller 340 Einträge nach dem Update verloren.
+>
+> Drei Wege:
+> 1. Umstellung mitschreiben (empfohlen) — Daten bleiben, etwas mehr Aufwand
+> 2. Vorher sichern und danach neu sortieren
+> 3. Abbrechen und die eigene Umsetzung behalten
+>
+> Wie soll ich vorgehen?
+
+**Warte auf die Antwort.** Das ist die eine Stelle in diesem Skill, an der
+nicht weitergearbeitet werden darf, weil ein falscher Schritt nicht
+zurückholbar ist.
+
+### Zwei Fallen, die dazugehören
+
+- **Zerstörende Datenbank-Umstellung.** Ein geändertes Schema ohne Migration
+  löscht auf Android die Datenbank restlos, wenn
+  `fallbackToDestructiveMigration` gesetzt ist — ohne Fehlermeldung, ohne
+  Nachfrage. Vor jeder Ablösung prüfen, ob das in der App steht.
+- **Neu installieren ist keine Lösung.** Meldet `adb` nach dem Einbau
+  `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, wird **nie** deinstalliert — das
+  löscht alle Daten des Benutzers. Stattdessen die Signatur rotieren, siehe
+  `best-practices/android/debug-signing.md`.
+
+### Ablösen
+
+Ist die Datenfrage geklärt:
+
+1. **Zuerst committen**, was da ist — der alte Stand muss in der Historie
+   liegen, bevor er verschwindet. Ein Rückzieher braucht keinen Mut, wenn der
+   Commit existiert.
+2. Modul einbauen (Phase 2 bis 4).
+3. **Alten Code restlos entfernen** — Datei, Aufrufstellen, jetzt unbenutzte
+   Hilfsfunktionen, verwaiste Zeichenketten. Eine zurückgelassene zweite
+   Fassung wird später versehentlich weitergepflegt.
+4. Im Commit ausdrücklich nennen, was abgelöst wurde und was mit den Daten
+   geschehen ist.
 
 ## Phase 2 — Klassifikation vorlegen
 
