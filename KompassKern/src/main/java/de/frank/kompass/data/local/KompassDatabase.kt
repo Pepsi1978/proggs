@@ -18,7 +18,7 @@ import androidx.room.RoomDatabase
         SucheFtsEntity::class,
         SuchVerlaufEntity::class,
     ],
-    version = 1,
+    version = KompassDatabase.VERSION,
     exportSchema = true,
 )
 abstract class KompassDatabase : RoomDatabase() {
@@ -31,6 +31,13 @@ abstract class KompassDatabase : RoomDatabase() {
     abstract fun sucheDao(): SucheDao
 
     companion object {
+        /**
+         * Die Fassung des Datenmodells — steht in jeder Sicherung und wird beim Einspielen
+         * geprüft. Das Dateiformat der Sicherung hat eine eigene Zählung: Es kann gleich
+         * bleiben, während hier eine Spalte dazukommt, und umgekehrt.
+         */
+        const val VERSION = 1
+
         @Volatile
         private var instanz: KompassDatabase? = null
 

@@ -74,7 +74,7 @@ class DateiSicherung(private val context: Context) {
      * Schreibt eine neue Sicherung und räumt danach auf: Es bleiben nur die aktuelle und die
      * eine davor stehen.
      */
-    suspend fun schreibe(json: String): Sicherungsdatei = withContext(Dispatchers.IO) {
+    suspend fun schreibe(fuelle: suspend (java.io.Writer) -> Unit): Sicherungsdatei = withContext(Dispatchers.IO) {
         val baum = ordner ?: error("Es ist noch kein Sicherungsordner gewählt.")
         val bisherige = listeAuf(baum, benenneAlteUm = true)
         val name = neuerName(bisherige)
@@ -90,8 +90,9 @@ class DateiSicherung(private val context: Context) {
         }) { "Der Speicheranbieter hat keine neue Datei angelegt. Die bestehende Sicherung bleibt unverändert." }
 
         try {
+            // Gepuffert und satzweise: Der Inhalt wird nie als eine grosse Zeichenkette gebaut.
             context.contentResolver.openOutputStream(datei, "wt")?.use { strom ->
-                strom.write(json.toByteArray(Charsets.UTF_8))
+                strom.bufferedWriter(Charsets.UTF_8).use { schreiber -> fuelle(schreiber) }
             } ?: error("Die Sicherung ließ sich nicht schreiben. Wähl den Ordner neu aus.")
         } catch (fehler: Exception) {
             runCatching {
@@ -104,7 +105,7 @@ class DateiSicherung(private val context: Context) {
         }
 
         // Die Sicherung steht — ab hier zählt sie, auch wenn das Aufräumen danach hakt.
-        BackupStatus.markBackedUp(context)
+        // Ob sie auch lesbar ist, entscheidet der Aufrufer nach dem Zurücklesen.
         raeumeAuf(bisherige)
         Sicherungsdatei(datei, name, System.currentTimeMillis())
     }
@@ -115,9 +116,16 @@ class DateiSicherung(private val context: Context) {
         listeAuf(baum, benenneAlteUm = true)
     }
 
-    suspend fun lies(quelle: Uri): String = withContext(Dispatchers.IO) {
+    /**
+     * Öffnet die Datei und reicht sie satzweise an [verarbeite] weiter.
+     *
+     * Bewusst kein `String` als Rückgabe: Eine Sicherung von über einem Megabyte als eine
+     * Zeichenkette im Speicher zu halten, nur um sie gleich darauf zu zerlegen, ist genau die
+     * Stelle, die bei einem grossen Bestand als erste kippt.
+     */
+    suspend fun <T> lies(quelle: Uri, verarbeite: suspend (java.io.Reader) -> T): T = withContext(Dispatchers.IO) {
         context.contentResolver.openInputStream(quelle)?.use { strom ->
-            strom.readBytes().toString(Charsets.UTF_8)
+            strom.bufferedReader(Charsets.UTF_8).use { leser -> verarbeite(leser) }
         } ?: error("Die Sicherung konnte nicht gelesen werden. Wähl den Ordner neu aus.")
     }
 

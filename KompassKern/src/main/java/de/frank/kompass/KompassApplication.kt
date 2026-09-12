@@ -6,6 +6,7 @@ import de.frank.kompass.ai.CodexClient
 import de.frank.kompass.audio.GroqTranskribierer
 import de.frank.kompass.audio.FilterSchalter
 import de.frank.kompass.audio.Mikrofon
+import de.frank.kompass.backup.AutoSicherung
 import de.frank.kompass.backup.SicherungsDienst
 import de.frank.kompass.data.EinstellungenStore
 import de.frank.kompass.data.KompassRepository
@@ -39,6 +40,7 @@ class KompassContainer(context: Context) {
     val stimmVerwaltung = QwenStimmVerwaltung { einstellungen.alibabaSchluessel }
     val appSperre = AppSperre(einstellungen)
     val sicherung = SicherungsDienst(appContext, repository) { einstellungen.sicherungsTeile() }
+    val autoSicherung = AutoSicherung(sicherung) { einstellungen.autoSicherung }
 
     val transkribierer = GroqTranskribierer(
         schluesselGeber = { einstellungen.groqSchluessel },
@@ -56,6 +58,7 @@ class KompassContainer(context: Context) {
     val aktualisierer = Aktualisierer(repository, codex, einstellungen)
 
     fun beende() {
+        autoSicherung.beende()
         vorlesen.beende()
         mikrofon.gibFrei()
         transkribierer.beende()
@@ -91,6 +94,10 @@ class KompassApplication : Application() {
         container = KompassContainer(this)
         container.appSperre.beobachte()
         container.appSperre.beimKaltstart()
+        // Am Lebenszyklus des Vorgangs, nicht an einem Bildschirm: Was aussteht, muss auch
+        // dann noch geschrieben werden, wenn die App gerade in den Hintergrund geht.
+        androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(container.autoSicherung)
+        container.repository.beiAenderung = container.autoSicherung::melde
 
         // Die Erstbefüllung läuft im Hintergrund. Die Oberfläche zeigt so lange ihren
         // Ladezustand und wird durch den Datenfluss von selbst gefüllt, sobald es fertig ist.

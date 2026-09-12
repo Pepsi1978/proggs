@@ -32,6 +32,22 @@ interface EintragDao {
     @Query("SELECT * FROM eintraege ORDER BY bereich, sortierName ASC")
     suspend fun ladeKomplett(): List<EintragEntity>
 
+    /**
+     * Eine Seite der Einträge gewählter Bereiche — für die Sicherung.
+     *
+     * Seitenweise statt auf einmal: Der ganze Bestand sind bei Claude Kompass über zweitausend
+     * Einträge mit langen Texten. Die lagen bisher vollständig im Speicher, gleichzeitig mit der
+     * fertigen JSON-Zeichenkette. Das trägt heute und ist genau die Stelle, die als erste kippt.
+     */
+    @Query(
+        "SELECT * FROM eintraege WHERE bereich IN (:bereiche) " +
+            "ORDER BY bereich, sortierName ASC LIMIT :grenze OFFSET :versatz",
+    )
+    suspend fun ladeSeite(bereiche: List<String>, grenze: Int, versatz: Int): List<EintragEntity>
+
+    @Query("SELECT COUNT(*) FROM eintraege WHERE bereich IN (:bereiche)")
+    suspend fun anzahlIn(bereiche: List<String>): Int
+
     @Query("SELECT COUNT(*) FROM eintraege")
     suspend fun anzahl(): Int
 
@@ -106,6 +122,13 @@ interface FrageDao {
     @Query("SELECT * FROM fragen ORDER BY eintragId, id ASC")
     fun beobachteAlle(): Flow<List<FrageEntity>>
 
+    /** Eine Seite der Fragen — für die Sicherung, siehe [EintragDao.ladeSeite]. */
+    @Query("SELECT * FROM fragen ORDER BY eintragId, id ASC LIMIT :grenze OFFSET :versatz")
+    suspend fun ladeSeite(grenze: Int, versatz: Int): List<FrageEntity>
+
+    @Query("SELECT COUNT(*) FROM fragen")
+    suspend fun anzahl(): Int
+
     @Insert
     suspend fun fuegeEin(frage: FrageEntity): Long
 
@@ -124,6 +147,13 @@ interface ChatDao {
 
     @Query("SELECT * FROM chat_sitzungen ORDER BY zuletztAm DESC")
     fun beobachteSitzungen(): Flow<List<ChatSitzungEntity>>
+
+    /** Alle Gespräche ohne Fluss — für die Sicherung. */
+    @Query("SELECT * FROM chat_sitzungen ORDER BY id ASC")
+    suspend fun ladeSitzungen(): List<ChatSitzungEntity>
+
+    @Query("SELECT COUNT(*) FROM chat_nachrichten")
+    suspend fun anzahlNachrichten(): Int
 
     @Query("SELECT * FROM chat_nachrichten WHERE sitzungId = :sitzungId ORDER BY id ASC")
     fun beobachteNachrichten(sitzungId: Long): Flow<List<ChatNachrichtEntity>>

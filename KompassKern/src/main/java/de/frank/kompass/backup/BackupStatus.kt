@@ -20,16 +20,29 @@ object BackupStatus {
 
     private const val PREFS = "kompass_backup_status"
     private const val KEY_LAST_BACKUP = "zuletzt_gesichert"
+    private const val KEY_GEPRUEFT = "zuletzt_geprueft"
 
     private val format = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
 
-    fun markBackedUp(context: Context) {
+    /**
+     * Stempelt den Zeitpunkt — und ob die geschriebene Datei danach fehlerfrei gelesen wurde.
+     *
+     * Die beiden sind nicht dasselbe: Eine Datei kann angelegt und trotzdem unbrauchbar sein.
+     * Nur der Prüfvermerk rechtfertigt das grüne Häkchen.
+     */
+    fun markBackedUp(context: Context, geprueft: Boolean) {
         context.applicationContext
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putLong(KEY_LAST_BACKUP, System.currentTimeMillis())
+            .putBoolean(KEY_GEPRUEFT, geprueft)
             .apply()
     }
+
+    fun istGeprueft(context: Context): Boolean =
+        context.applicationContext
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_GEPRUEFT, false)
 
     private fun lastBackupAt(context: Context): Long =
         context.applicationContext
@@ -39,11 +52,9 @@ object BackupStatus {
     /** Behauptet nie eine Sicherung, die es nicht gab. */
     fun describe(context: Context): String {
         val last = lastBackupAt(context)
-        return if (last == 0L) {
-            "Noch nicht gesichert"
-        } else {
-            "Zuletzt: ${format.format(Date(last))} Uhr"
-        }
+        if (last == 0L) return "Noch nicht gesichert"
+        val zeit = "Zuletzt: ${format.format(Date(last))} Uhr"
+        return if (istGeprueft(context)) "$zeit — geprüft" else "$zeit — UNGEPRÜFT"
     }
 
     fun hasBackup(context: Context): Boolean = lastBackupAt(context) > 0L

@@ -84,6 +84,15 @@ data class EinstellungenZustand(
     val sicherungsAuswahlLaeuft: Boolean = false,
     /** Was beim nächsten Sichern in die Datei kommt. */
     val sicherungsUmfang: Set<SicherungsTeil> = SicherungsTeil.ALLE,
+    /** Wurde die letzte geschriebene Datei danach fehlerfrei zurückgelesen? */
+    val sicherungGeprueft: Boolean = false,
+    /** Sichert die App von allein, sobald sich etwas geändert hat? */
+    val autoSicherung: Boolean = false,
+    /** Was die nächste Sicherung umfassen würde — leer, solange noch nicht gezählt. */
+    val sicherungsVorschauUmfang: String = "",
+    /** Solange gesetzt, lässt sich das letzte Einspielen mit einem Griff zurücknehmen. */
+    val kannZurueckNehmen: Boolean = false,
+    val zurueckNehmenText: String = "",
     val schluesselAblageFehler: String? = null,
 )
 
@@ -132,6 +141,8 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         sicherungsOrdner = container.sicherung.ordnerName(),
         sicherungsStand = container.sicherung.standText(),
         sicherungsUmfang = store.sicherungsTeile(),
+        sicherungGeprueft = container.sicherung.istGeprueft(),
+        autoSicherung = store.autoSicherung,
         schluesselAblageFehler = if (store.geheimVerfuegbar) {
             null
         } else {
@@ -154,6 +165,9 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
             sicherungVorschauText = _zustand.value.sicherungVorschauText,
             sicherungsAuswahl = _zustand.value.sicherungsAuswahl,
             sicherungsAuswahlLaeuft = _zustand.value.sicherungsAuswahlLaeuft,
+            sicherungsVorschauUmfang = _zustand.value.sicherungsVorschauUmfang,
+            kannZurueckNehmen = _zustand.value.kannZurueckNehmen,
+            zurueckNehmenText = _zustand.value.zurueckNehmenText,
         )
     }
 
@@ -538,6 +552,9 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     private val sicherung get() = container.sicherung
     private var nachOrdnerWahlSichern = false
 
+    /** Was das letzte Einspielen angelegt hat — nur dafür gilt der Zurück-Pfeil. */
+    private var letzteSpur: de.frank.kompass.data.Einspielspur? = null
+
     /**
      * Schaltet einen Teil der Sicherung an oder ab.
      *
@@ -553,6 +570,43 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         }
         store.setzeSicherungsTeil(teil, aktiv)
         _zustand.value = _zustand.value.copy(sicherungsUmfang = store.sicherungsTeile(), fehler = "")
+        zaehleVoraussichtlichenUmfang()
+    }
+
+    /**
+     * Sagt vorab, wie viel die nächste Sicherung umfasst und wie gross sie etwa wird.
+     *
+     * Ohne diese Zeile tippt man auf „Jetzt sichern“ und weiß hinterher nicht, ob gerade drei
+     * Kilobyte oder zwei Megabyte in die Cloud gewandert sind.
+     */
+    fun zaehleVoraussichtlichenUmfang() {
+        viewModelScope.launch {
+            runCatching { sicherung.voraussichtlich() }
+                .onSuccess { (anzahl, bytes) ->
+                    val teile = buildList {
+                        if (anzahl.eintraege > 0) add("${anzahl.eintraege} Einträge")
+                        if (anzahl.fragen > 0) add("${anzahl.fragen} Fragen")
+                        if (anzahl.sitzungen > 0) add("${anzahl.sitzungen} Gespräche")
+                    }
+                    _zustand.value = _zustand.value.copy(
+                        sicherungsVorschauUmfang = if (teile.isEmpty()) {
+                            "Nichts ausgewählt."
+                        } else {
+                            teile.joinToString(", ") + " — etwa ${lesbareGroesse(bytes)}"
+                        },
+                    )
+                }
+                .onFailure { fehler ->
+                    if (fehler is CancellationException) throw fehler
+                    _zustand.value = _zustand.value.copy(sicherungsVorschauUmfang = "")
+                }
+        }
+    }
+
+    private fun lesbareGroesse(bytes: Long): String = when {
+        bytes < 1024 -> "$bytes Byte"
+        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+        else -> String.format(java.util.Locale.GERMANY, "%.1f MB", bytes / 1024.0 / 1024.0)
     }
 
     /** Der gemerkte Ordner als Adresse — der Dateiwaehler startet darin. */
@@ -576,8 +630,9 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
                 .onSuccess { stand ->
                     _zustand.value = _zustand.value.copy(
                         sicherungLaeuft = false,
-                        meldung = "Sicherung geschrieben. $stand",
+                        meldung = "Sicherung geschrieben und geprüft. $stand",
                         sicherungsStand = stand,
+                        sicherungGeprueft = sicherung.istGeprueft(),
                         sicherungsOrdner = sicherung.ordnerName(),
                     )
                 }
@@ -591,6 +646,8 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
                     )
                     _zustand.value = _zustand.value.copy(
                         sicherungLaeuft = false,
+                        sicherungsStand = sicherung.standText(),
+                        sicherungGeprueft = sicherung.istGeprueft(),
                         fehler = "Sicherung fehlgeschlagen: ${fehler.message}. " +
                             "Wähl bei fehlendem Zugriff den Ordner erneut.",
                     )
@@ -715,6 +772,24 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         }
     }
 
+    /**
+     * Schaltet die selbsttätige Sicherung um.
+     *
+     * Ohne gemerkten Ordner hätte sie nichts, wohin sie schreiben könnte — dann wird zuerst
+     * danach gefragt, statt den Schalter still wirkungslos zu lassen.
+     */
+    fun schalteAutoSicherung(an: Boolean, ordnerWaehlen: () -> Unit) {
+        store.autoSicherung = an
+        _zustand.value = _zustand.value.copy(autoSicherung = an, fehler = "")
+        if (an && sicherung.sicherungsOrdner == null) {
+            nachOrdnerWahlSichern = false
+            _zustand.value = _zustand.value.copy(
+                meldung = "Wähl noch einen Ordner — dorthin wird dann von allein gesichert.",
+            )
+            ordnerWaehlen()
+        }
+    }
+
     fun verwirfSicherungsAuswahl() {
         _zustand.value = _zustand.value.copy(sicherungsAuswahl = emptyList())
     }
@@ -763,10 +838,14 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         )
         viewModelScope.launch {
             runCatching { sicherung.stelleWiederHerAus(quelle) }
-                .onSuccess { bericht ->
+                .onSuccess { ergebnis ->
+                    letzteSpur = ergebnis.spur
                     _zustand.value = _zustand.value.copy(
                         sicherungLaeuft = false,
-                        meldung = bericht.alsText(),
+                        meldung = ergebnis.bericht.alsText(),
+                        // Der Pfeil erscheint nur, wenn es auch etwas zurückzunehmen gibt.
+                        kannZurueckNehmen = !ergebnis.spur.leer,
+                        zurueckNehmenText = "Eingespielt: " + ergebnis.bericht.alsKurztext(),
                     )
                 }
                 .onFailure { fehler ->
@@ -780,6 +859,37 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
                     _zustand.value = _zustand.value.copy(
                         sicherungLaeuft = false,
                         fehler = "Einspielen ging nicht: ${fehler.message}",
+                    )
+                }
+        }
+    }
+
+    /**
+     * Nimmt das letzte Einspielen zurück.
+     *
+     * Möglich, weil das Einspielen nur ergänzt: Entfernt wird genau das, was dabei entstand.
+     * Die Spur gilt nur für das zuletzt Eingespielte — danach ist der Pfeil wieder weg, damit
+     * niemand glaubt, er könne beliebig weit zurück.
+     */
+    fun nimmEinspielenZurueck() {
+        val spur = letzteSpur ?: return
+        _zustand.value = _zustand.value.copy(sicherungLaeuft = true, kannZurueckNehmen = false)
+        viewModelScope.launch {
+            runCatching { sicherung.nimmZurueck(spur) }
+                .onSuccess { anzahl ->
+                    letzteSpur = null
+                    _zustand.value = _zustand.value.copy(
+                        sicherungLaeuft = false,
+                        zurueckNehmenText = "",
+                        meldung = "Zurückgenommen: $anzahl Einträge wieder entfernt.",
+                    )
+                }
+                .onFailure { fehler ->
+                    if (fehler is CancellationException) throw fehler
+                    _zustand.value = _zustand.value.copy(
+                        sicherungLaeuft = false,
+                        kannZurueckNehmen = true,
+                        fehler = "Zurücknehmen ging nicht: ${fehler.message}",
                     )
                 }
         }

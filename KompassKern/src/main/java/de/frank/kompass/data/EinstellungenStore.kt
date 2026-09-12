@@ -125,6 +125,24 @@ class EinstellungenStore(context: Context) {
     fun sicherungsTeilAktiv(teil: SicherungsTeil): Boolean =
         offen.getBoolean("sicherung_teil_${teil.id}", true)
 
+    /**
+     * Sichert die App von allein, sobald sich etwas geändert hat?
+     *
+     * Standard: aus. Selbsttätig in einen Ordner zu schreiben, den der Benutzer noch gar nicht
+     * gewählt hat, wäre übergriffig — der Schalter gehört ihm.
+     */
+    var autoSicherung: Boolean
+        get() = offen.getBoolean(SCHL_AUTO_SICHERUNG, false)
+        set(wert) {
+            offen.edit().putBoolean(SCHL_AUTO_SICHERUNG, wert).apply()
+            KompassLog.info(
+                "EinstellungenStore",
+                "autoSicherung",
+                "Selbsttätige Sicherung umgeschaltet",
+                mapOf("aktiv" to wert),
+            )
+        }
+
     fun sicherungsTeile(): Set<SicherungsTeil> =
         SicherungsTeil.entries.filter(::sicherungsTeilAktiv).toSet()
 
@@ -261,6 +279,7 @@ class EinstellungenStore(context: Context) {
         private const val SCHL_MODELL_LABEL = "ki_modell_label"
         private const val SCHL_DENKTIEFE = "ki_denktiefe"
         private const val SCHL_EIGENE_MODELLE = "ki_eigene_modelle"
+        private const val SCHL_AUTO_SICHERUNG = "sicherung_automatisch"
         private const val SCHL_APP_SPERRE = "app_sperre"
         private const val SCHL_SPERRE_NACH = "app_sperre_nach"
         private const val SCHL_GOOGLE_KEY = "google_api_key"

@@ -44,6 +44,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -107,6 +108,8 @@ fun EinstellungenScreen(
 ) {
     val zustand by viewModel.zustand.collectAsStateWithLifecycle()
     val vorlesen by viewModel.vorleseZustand.collectAsStateWithLifecycle()
+    // Einmal beim Öffnen zählen, damit die Grössenangabe dasteht, bevor jemand tippt.
+    LaunchedEffect(Unit) { viewModel.zaehleVoraussichtlichenUmfang() }
     val kontext = LocalContext.current
     val activity = kontext as? FragmentActivity
 
@@ -563,6 +566,13 @@ fun EinstellungenScreen(
                     "Nicht in der Sicherung: Schlüssel, Anmeldung, eigene Stimmen und die " +
                         "Einstellungen dieser App.",
                 )
+                Schalterzeile(
+                    titel = "Von allein sichern",
+                    erklaerung = "Nach jeder Änderung wird im Hintergrund gesichert, sobald " +
+                        "zwei Minuten Ruhe war — und beim Verlassen der App sofort.",
+                    an = zustand.autoSicherung,
+                    beiWechsel = { an -> viewModel.schalteAutoSicherung(an, beiOrdnerWaehlen) },
+                )
                 Spacer(Modifier.height(Mass.abstandKlein))
                 Text(
                     text = zustand.sicherungsOrdner ?: "Noch kein Ordner gewählt",
@@ -573,7 +583,30 @@ fun EinstellungenScreen(
                         MaterialTheme.colorScheme.primary
                     },
                 )
-                Zeilentext(zustand.sicherungsStand)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (zustand.sicherungGeprueft) {
+                        // Der Haken steht für mehr als „geschrieben“: Die Datei wurde danach
+                        // einmal zurückgelesen und ihre Prüfsumme ging auf.
+                        Text(
+                            text = "\u2713",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LocalKompassFarben.current.erfolg,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = zustand.sicherungsStand,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (zustand.sicherungGeprueft) {
+                            LocalKompassFarben.current.erfolg
+                        } else {
+                            LocalKompassFarben.current.textGedaempft
+                        },
+                    )
+                }
+                if (zustand.sicherungsVorschauUmfang.isNotBlank()) {
+                    Zeilentext("Nächste Sicherung: ${zustand.sicherungsVorschauUmfang}")
+                }
 
                 if (zustand.sicherungVorschauText.isNotBlank()) {
                     Spacer(Modifier.height(Mass.abstandKlein))
@@ -625,6 +658,21 @@ fun EinstellungenScreen(
                     ) { viewModel.zeigeSicherungsAuswahl(beiSicherungWaehlen) }
                     Aktionsknopf("Neueste wiederherstellen", zurueckhaltend = true) {
                         viewModel.stelleNeuesteWiederHer()
+                    }
+                }
+
+                if (zustand.kannZurueckNehmen) {
+                    Spacer(Modifier.height(Mass.abstandKlein))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Aktionsknopf("↶  Rückgängig", zurueckhaltend = true) {
+                            viewModel.nimmEinspielenZurueck()
+                        }
+                        Spacer(Modifier.width(Mass.abstandKlein))
+                        Text(
+                            text = zustand.zurueckNehmenText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LocalKompassFarben.current.textGedaempft,
+                        )
                     }
                 }
 

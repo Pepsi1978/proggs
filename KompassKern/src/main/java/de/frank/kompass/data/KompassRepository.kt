@@ -2,7 +2,6 @@ package de.frank.kompass.data
 
 import android.content.Context
 import kotlinx.coroutines.flow.first
-import org.json.JSONObject
 import de.frank.kompass.data.local.AktualisierungEntity
 import de.frank.kompass.data.local.ChatNachrichtEntity
 import de.frank.kompass.data.local.ChatSitzungEntity
@@ -20,6 +19,23 @@ import de.frank.kompass.observability.KompassLog
 import de.frank.kompass.observability.probe
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+
+/**
+ * Was ein Einspielen angelegt hat — die Grundlage fürs Zurücknehmen.
+ *
+ * Weil das Einspielen nur ergänzt und nie überschreibt, reicht diese Liste aus, um es
+ * vollständig rückgängig zu machen: Was vorher dastand, wurde nie angefasst.
+ */
+class Einspielspur {
+    val neueEintraege = mutableSetOf<String>()
+    val gefuellteErklaerungen = mutableSetOf<String>()
+    val neueFragen = mutableListOf<Long>()
+    val neueSitzungen = mutableListOf<Long>()
+
+    val leer: Boolean
+        get() = neueEintraege.isEmpty() && gefuellteErklaerungen.isEmpty() &&
+            neueFragen.isEmpty() && neueSitzungen.isEmpty()
+}
 
 /** Was beim Einspielen einer Sicherung dazukam und was schon da war. */
 data class EinspielBericht(
@@ -43,6 +59,14 @@ data class EinspielBericht(
         }
         return if (uebersprungen > 0) "$kern $uebersprungen schon vorhanden oder übersprungen." else kern
     }
+
+    /** Dieselbe Bilanz in kurz — für die Zeile neben dem Zurück-Pfeil. */
+    fun alsKurztext(): String = buildList {
+        if (eintraege > 0) add("$eintraege Einträge")
+        if (erklaerungen > 0) add("$erklaerungen Erklärungen")
+        if (fragen > 0) add("$fragen Fragen")
+        if (gespraeche > 0) add("$gespraeche Gespräche")
+    }.joinToString(", ").ifEmpty { "nichts" }
 }
 
 /**
@@ -137,6 +161,7 @@ class KompassRepository(context: Context) {
     suspend fun sichereEintrag(eintrag: EintragEntity) {
         eintraege.aktualisiere(eintrag)
         indiziereEintraege(listOf(eintrag))
+        beiAenderung("Erklärung geändert")
     }
 
     /**
@@ -241,6 +266,8 @@ class KompassRepository(context: Context) {
         val fertig = vorhandene.copy(antwort = antwort, laeuft = false, fehler = fehler)
         fragen.aktualisiere(fertig)
         indiziereFrage(fertig)
+        // Erst die fertige Antwort meldet sich, nicht jedes Teilstück beim Schreiben.
+        if (fehler.isBlank()) beiAenderung("Frage beantwortet")
     }
 
     suspend fun aktualisiereFrageText(id: Long, text: String) {
@@ -282,6 +309,7 @@ class KompassRepository(context: Context) {
         val id = chat.fuegeEin(nachricht)
         chat.beruehre(sitzungId)
         if (text.isNotBlank()) indiziereNachricht(nachricht.copy(id = id))
+        beiAenderung("Neue Nachricht")
         return id
     }
 
@@ -458,7 +486,36 @@ class KompassRepository(context: Context) {
 
     suspend fun ladeNachricht(id: Long): ChatNachrichtEntity? = chat.ladeNachricht(id)
 
-    // --- Sicherung einspielen -------------------------------------------------------------
+    // --- Sicherung: Quelle und Senke ---------------------------------------------------
+
+    /**
+     * Wird gerufen, wenn etwas Eigenes entstanden ist — daran hängt die selbsttätige Sicherung.
+     *
+     * Als Haken statt als feste Abhängigkeit: Das Repository soll nichts über Ordner, Dateien
+     * und Sicherungen wissen müssen. Wer nicht sichert, setzt ihn nicht.
+     */
+    var beiAenderung: (String) -> Unit = {}
+
+        /** Woher die Sätze beim Sichern kommen — seitenweise, nie der ganze Bestand auf einmal. */
+    val sicherungsQuelle = object : Sicherung.Quelle {
+        override suspend fun eintraegeSeite(bereiche: List<String>, versatz: Int) =
+            eintraege.ladeSeite(bereiche, Sicherung.SEITE, versatz)
+
+        override suspend fun fragenSeite(versatz: Int) = fragen.ladeSeite(Sicherung.SEITE, versatz)
+
+        override suspend fun sitzungen() = chat.ladeSitzungen()
+
+        override suspend fun nachrichten(sitzungId: Long) = chat.ladeNachrichten(sitzungId)
+    }
+
+    /** Wie viel eine Sicherung dieses Umfangs enthalten würde — ohne sie zu schreiben. */
+    suspend fun sicherungsUmfangZaehlen(bereiche: List<String>, mitFragen: Boolean, mitGespraechen: Boolean) =
+        SicherungsAnzahl(
+            eintraege = if (bereiche.isEmpty()) 0 else eintraege.anzahlIn(bereiche),
+            fragen = if (mitFragen) fragen.anzahl() else 0,
+            sitzungen = if (mitGespraechen) chat.ladeSitzungen().size else 0,
+            nachrichten = if (mitGespraechen) chat.anzahlNachrichten() else 0,
+        )
 
     /**
      * Führt eine Sicherung mit dem Bestand zusammen — beliebig oft, ohne zu verdoppeln.
@@ -469,154 +526,173 @@ class KompassRepository(context: Context) {
      *
      * Das ist bewusst strenger als früher: Bis dahin ersetzte jede eingespielte Erklärung die
      * vorhandene (die alte wanderte in die Historie). Wer nach der Sicherung weitergearbeitet
-     * hatte, fand seine neuere Fassung danach nur noch im Verlauf wieder. Eine Wiederherstellung
-     * soll ergänzen, nicht zurückdrehen.
+     * hatte, fand seine neuere Fassung danach nur noch im Verlauf wieder.
      *
-     * Fragen und Gespräche, die es inhaltsgleich schon gibt, werden übersprungen. Einträge,
-     * die erst per Aktualisieren kamen, legt die Sicherung selbst an, damit ihre Fragen einen
-     * Platz haben.
+     * Alles, was dabei entsteht, wird mitgeschrieben — daraus wird das Zurücknehmen.
      */
-    suspend fun spieleSicherungEin(json: JSONObject): EinspielBericht {
-        val jetzt = System.currentTimeMillis()
-        var erklaerungenNeu = 0
-        var eintraegeNeu = 0
-        var fragenNeu = 0
-        var gespraecheNeu = 0
+    inner class EinspielSenke : Sicherung.Senke {
+        private val jetzt = System.currentTimeMillis()
+        val spur = Einspielspur()
         var uebersprungen = 0
+            private set
 
-        json.optJSONArray("eintraege")?.let { feld ->
-            for (index in 0 until feld.length()) {
-                val objekt = feld.optJSONObject(index) ?: continue
-                val id = objekt.optString("id")
-                val text = objekt.optString("erklaerung")
-                if (id.isBlank()) {
+        override suspend fun eintrag(werte: Map<String, String>) {
+            val id = werte["id"].orEmpty()
+            val text = werte["erklaerung"].orEmpty()
+            if (id.isBlank()) {
+                uebersprungen += 1
+                return
+            }
+            val vorhanden = eintraege.lade(id)
+            if (vorhanden == null) {
+                val name = werte["name"].orEmpty()
+                val bereich = werte["bereich"].orEmpty()
+                if (name.isBlank() || bereich.isBlank()) {
                     uebersprungen += 1
-                    continue
+                    return
                 }
-                val vorhanden = eintraege.lade(id)
-                if (vorhanden == null) {
-                    val name = objekt.optString("name")
-                    val bereich = objekt.optString("bereich")
-                    if (name.isBlank() || bereich.isBlank()) {
-                        uebersprungen += 1
-                        continue
-                    }
-                    eintraege.setze(
-                        listOf(
-                            EintragEntity(
-                                id = id,
-                                bereich = bereich,
-                                name = name,
-                                kurz = objekt.optString("kurz"),
-                                erklaerung = text,
-                                stufe = objekt.optInt("stufe", 0),
-                                seitVersion = objekt.optString("seitVersion"),
-                                kategorie = objekt.optString("kategorie"),
-                                art = objekt.optString("art"),
-                                entfernt = objekt.optBoolean("entfernt", false),
-                                entferntInVersion = objekt.optString("entferntInVersion"),
-                                ersatz = objekt.optString("ersatz"),
-                                quelleEnglisch = objekt.optString("quelleEnglisch"),
-                                sortierName = objekt.optString("sortierName")
-                                    .ifBlank { name.removePrefix("/").lowercase() },
-                            ),
+                eintraege.setze(
+                    listOf(
+                        EintragEntity(
+                            id = id,
+                            bereich = bereich,
+                            name = name,
+                            kurz = werte["kurz"].orEmpty(),
+                            erklaerung = text,
+                            stufe = werte["stufe"]?.toIntOrNull() ?: 0,
+                            seitVersion = werte["seitVersion"].orEmpty(),
+                            kategorie = werte["kategorie"].orEmpty(),
+                            art = werte["art"].orEmpty(),
+                            entfernt = werte["entfernt"] == "true",
+                            entferntInVersion = werte["entferntInVersion"].orEmpty(),
+                            ersatz = werte["ersatz"].orEmpty(),
+                            quelleEnglisch = werte["quelleEnglisch"].orEmpty(),
+                            sortierName = werte["sortierName"].orEmpty()
+                                .ifBlank { name.removePrefix("/").lowercase() },
                         ),
-                    )
-                    eintraegeNeu += 1
-                    continue
-                }
-                // Vorhandenes bleibt stehen. Nur eine Lücke wird gefüllt: ein Eintrag ohne
-                // jede Erklärung bekommt die aus der Sicherung. Alles andere — ein anderer
-                // Text, eine andere Stufe, geänderte Angaben — wird übergangen.
-                if (text.isBlank() || vorhanden.erklaerung.isNotBlank()) {
-                    uebersprungen += 1
-                    continue
-                }
-                eintraege.aktualisiere(
-                    vorhanden.copy(
-                        erklaerung = text,
-                        stufe = objekt.optInt("stufe", vorhanden.stufe),
-                        zuletztGeaendert = jetzt,
                     ),
                 )
-                erklaerungenNeu += 1
+                spur.neueEintraege += id
+                return
             }
+            // Vorhandenes bleibt stehen. Nur eine Lücke wird gefüllt: ein Eintrag ohne jede
+            // Erklärung bekommt die aus der Sicherung. Alles andere wird übergangen.
+            if (text.isBlank() || vorhanden.erklaerung.isNotBlank()) {
+                uebersprungen += 1
+                return
+            }
+            eintraege.aktualisiere(
+                vorhanden.copy(
+                    erklaerung = text,
+                    stufe = werte["stufe"]?.toIntOrNull() ?: vorhanden.stufe,
+                    zuletztGeaendert = jetzt,
+                ),
+            )
+            spur.gefuellteErklaerungen += id
         }
 
-        json.optJSONArray("fragen")?.let { feld ->
-            val bekannt = fragen.beobachteAlle().first()
-                .map { Triple(it.eintragId, it.frage, it.antwort) }
-                .toMutableSet()
-            for (index in 0 until feld.length()) {
-                val objekt = feld.optJSONObject(index) ?: continue
-                val eintragId = objekt.optString("eintragId")
-                val frageText = objekt.optString("frage")
-                val antwort = objekt.optString("antwort")
-                val schluessel = Triple(eintragId, frageText, antwort)
-                // Nur zu Einträgen, die es hier gibt — sonst würde der Fremdschlüssel greifen.
-                if (eintragId.isBlank() || frageText.isBlank() || schluessel in bekannt ||
-                    eintraege.lade(eintragId) == null
-                ) {
-                    uebersprungen += 1
-                    continue
-                }
-                fragen.fuegeEin(
-                    FrageEntity(
-                        eintragId = eintragId,
-                        frage = frageText,
-                        antwort = antwort,
-                        erstelltAm = objekt.optLong("erstelltAm", jetzt),
-                    ),
-                )
-                bekannt += schluessel
-                fragenNeu += 1
+        override suspend fun frage(eintragId: String, frage: String, antwort: String, erstelltAm: Long) {
+            // Nur zu Einträgen, die es hier gibt — sonst würde der Fremdschlüssel greifen.
+            if (eintragId.isBlank() || frage.isBlank() || eintraege.lade(eintragId) == null) {
+                uebersprungen += 1
+                return
             }
+            val schonDa = fragen.beobachteAlle().first()
+                .any { it.eintragId == eintragId && it.frage == frage && it.antwort == antwort }
+            if (schonDa) {
+                uebersprungen += 1
+                return
+            }
+            val id = fragen.fuegeEin(
+                FrageEntity(
+                    eintragId = eintragId,
+                    frage = frage,
+                    antwort = antwort,
+                    erstelltAm = erstelltAm.takeIf { it > 0 } ?: jetzt,
+                ),
+            )
+            spur.neueFragen += id
         }
 
-        json.optJSONArray("sitzungen")?.let { feld ->
+        override suspend fun sitzung(
+            titel: String,
+            erstelltAm: Long,
+            nachrichten: List<Triple<String, String, Long>>,
+        ) {
+            if (nachrichten.isEmpty()) {
+                uebersprungen += 1
+                return
+            }
             // Ein Gespräch gilt als vorhanden, wenn es eines mit genau denselben Nachrichten gibt.
-            val bekannt = chat.ladeAlleNachrichten()
+            val kennung = nachrichten.map { it.first to it.second }
+            val schonDa = chat.ladeAlleNachrichten()
                 .groupBy { it.sitzungId }
                 .values
-                .map { liste -> liste.map { it.rolle to it.text } }
-                .toMutableSet()
-            for (index in 0 until feld.length()) {
-                val objekt = feld.optJSONObject(index) ?: continue
-                val nachrichten = objekt.optJSONArray("nachrichten")
-                val inhalt = (0 until (nachrichten?.length() ?: 0)).mapNotNull { nummer ->
-                    nachrichten?.optJSONObject(nummer)
-                }
-                val kennung = inhalt.map { it.optString("rolle") to it.optString("text") }
-                if (kennung.isEmpty() || kennung in bekannt) {
-                    uebersprungen += 1
-                    continue
-                }
-                val sitzungId = chat.lege(
-                    ChatSitzungEntity(
-                        titel = objekt.optString("titel").ifBlank { "Eingespielt" },
-                        erstelltAm = objekt.optLong("erstelltAm", jetzt),
+                .any { liste -> liste.map { it.rolle to it.text } == kennung }
+            if (schonDa) {
+                uebersprungen += 1
+                return
+            }
+            val sitzungId = chat.lege(
+                ChatSitzungEntity(
+                    titel = titel.ifBlank { "Eingespielt" },
+                    erstelltAm = erstelltAm.takeIf { it > 0 } ?: jetzt,
+                ),
+            )
+            nachrichten.forEach { (rolle, text, wann) ->
+                chat.fuegeEin(
+                    ChatNachrichtEntity(
+                        sitzungId = sitzungId,
+                        rolle = rolle,
+                        text = text,
+                        erstelltAm = wann.takeIf { it > 0 } ?: jetzt,
                     ),
                 )
-                inhalt.forEach { nachricht ->
-                    chat.fuegeEin(
-                        ChatNachrichtEntity(
-                            sitzungId = sitzungId,
-                            rolle = nachricht.optString("rolle"),
-                            text = nachricht.optString("text"),
-                            erstelltAm = nachricht.optLong("erstelltAm", jetzt),
-                        ),
-                    )
-                }
-                bekannt += kennung
-                gespraecheNeu += 1
             }
+            spur.neueSitzungen += sitzungId
         }
 
-        baueSuchIndexNeu()
-        val bericht = EinspielBericht(erklaerungenNeu, eintraegeNeu, fragenNeu, gespraecheNeu, uebersprungen)
-        KompassLog.info("Repository", "spieleSicherungEin", "Sicherung eingespielt", mapOf("bericht" to bericht.toString()))
-        return bericht
+        fun bericht() = EinspielBericht(
+            erklaerungen = spur.gefuellteErklaerungen.size,
+            eintraege = spur.neueEintraege.size,
+            fragen = spur.neueFragen.size,
+            gespraeche = spur.neueSitzungen.size,
+            uebersprungen = uebersprungen,
+        )
     }
+
+    /**
+     * Nimmt ein Einspielen wieder zurück.
+     *
+     * Entfernt genau das, was dabei entstanden ist — nicht mehr. Weil das Einspielen nur
+     * ergänzt und nie überschreibt, genügt das: Was vorher dastand, wurde nie angefasst.
+     */
+    suspend fun nimmEinspielenZurueck(spur: Einspielspur): Int {
+        var zurueck = 0
+        spur.neueSitzungen.forEach { id ->
+            chat.loescheSitzung(id)
+            zurueck += 1
+        }
+        spur.neueFragen.forEach { id ->
+            fragen.loesche(id)
+            zurueck += 1
+        }
+        spur.gefuellteErklaerungen.forEach { id ->
+            eintraege.lade(id)?.let { eintrag ->
+                eintraege.aktualisiere(eintrag.copy(erklaerung = "", stufe = 0))
+                zurueck += 1
+            }
+        }
+        if (spur.neueEintraege.isNotEmpty()) {
+            eintraege.loesche(spur.neueEintraege.toList())
+            zurueck += spur.neueEintraege.size
+        }
+        baueSuchIndexNeu()
+        KompassLog.info("Repository", "nimmEinspielenZurueck", "Einspielen zurückgenommen", mapOf("anzahl" to zurueck))
+        return zurueck
+    }
+
+    suspend fun schliesseEinspielenAb() = baueSuchIndexNeu()
 
     companion object {
         const val ART_EINTRAG = "eintrag"
