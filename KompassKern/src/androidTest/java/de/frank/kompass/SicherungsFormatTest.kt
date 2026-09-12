@@ -2,7 +2,9 @@ package de.frank.kompass
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.frank.kompass.data.Sicherung
-import de.frank.kompass.data.SicherungsFehler
+import de.frank.module.sicherung.KompassSicherungsInhalt
+import de.frank.module.sicherung.SicherungsFehler
+import de.frank.module.sicherung.Sicherungsrahmen
 import de.frank.kompass.data.local.ChatNachrichtEntity
 import de.frank.kompass.data.local.ChatSitzungEntity
 import de.frank.kompass.data.local.EintragEntity
@@ -92,16 +94,19 @@ class SicherungsFormatTest {
             sortierName = name.removePrefix("/").lowercase(),
         )
 
+    /** Der Inhalt der App, ohne Datenbank — nur mit den erfundenen Sätzen von oben. */
+    private fun inhalt(senke: Sicherung.Senke? = null) = KompassSicherungsInhalt(
+        quelle = quelle,
+        zaehler = { _, _, _ -> de.frank.kompass.data.SicherungsAnzahl() },
+        senkeGeber = { senke },
+    )
+
+    private fun rahmen(senke: Sicherung.Senke? = null) = Sicherungsrahmen(inhalt(senke))
+
     private fun schreibe(umfang: Set<SicherungsTeil>): String {
         val ziel = StringWriter()
         runBlocking {
-            Sicherung.schreibe(
-                ziel = ziel,
-                quelle = quelle,
-                erstelltAm = "12.09.2026, 14:30",
-                umfang = umfang,
-                roomVersion = KompassDatabase.VERSION,
-            )
+            rahmen().schreibe(ziel = ziel, erstelltAm = "12.09.2026, 14:30", umfang = umfang)
         }
         return ziel.toString()
     }
@@ -110,18 +115,18 @@ class SicherungsFormatTest {
     @Test
     fun vollerUmfangGehtDurchDiePruefung() {
         val text = schreibe(SicherungsTeil.ALLE)
-        val vorschau = runBlocking { Sicherung.pruefe(StringReader(text)) }
+        val vorschau = runBlocking { rahmen().pruefe(StringReader(text)) }
 
-        assertEquals(5, vorschau.anzahl.eintraege)
-        assertEquals(2, vorschau.anzahl.fragen)
-        assertEquals(2, vorschau.anzahl.sitzungen)
-        assertEquals(3, vorschau.anzahl.nachrichten)
-        assertEquals(Sicherung.SCHEMA_VERSION, vorschau.schema)
-        assertEquals(KompassDatabase.VERSION, vorschau.roomVersion)
-        assertEquals(SicherungsTeil.ALLE, vorschau.umfang)
-        assertEquals(3, vorschau.jeBereich[SicherungsTeil.SLASH])
-        assertEquals(1, vorschau.jeBereich[SicherungsTeil.CONFIG])
-        assertEquals(1, vorschau.jeBereich[SicherungsTeil.PRAXIS])
+        assertEquals(5, vorschau.zahlen.anzahl["eintraege"])
+        assertEquals(2, vorschau.zahlen.anzahl["fragen"])
+        assertEquals(2, vorschau.zahlen.anzahl["sitzungen"])
+        assertEquals(3, vorschau.zahlen.anzahl["nachrichten"])
+        assertEquals(Sicherungsrahmen.SCHEMA_VERSION, vorschau.schema)
+        assertEquals(KompassDatabase.VERSION, vorschau.datenmodellVersion)
+        assertEquals(SicherungsTeil.ALLE.map { it.id }.toSet(), vorschau.umfang)
+        assertEquals(3, vorschau.zahlen.jeBereich[SicherungsTeil.SLASH.bereich?.id])
+        assertEquals(1, vorschau.zahlen.jeBereich[SicherungsTeil.CONFIG.bereich?.id])
+        assertEquals(1, vorschau.zahlen.jeBereich[SicherungsTeil.PRAXIS.bereich?.id])
     }
 
     /** Jede Teilmenge muss für sich aufgehen — auch die ohne Einträge oder ohne Gespräche. */
@@ -136,8 +141,8 @@ class SicherungsFormatTest {
         )
         proben.forEach { umfang ->
             val text = schreibe(umfang)
-            val vorschau = runBlocking { Sicherung.pruefe(StringReader(text)) }
-            assertEquals("Umfang $umfang", umfang, vorschau.umfang)
+            val vorschau = runBlocking { rahmen().pruefe(StringReader(text)) }
+            assertEquals("Umfang $umfang", umfang.map { it.id }.toSet(), vorschau.umfang)
         }
     }
 
@@ -149,28 +154,25 @@ class SicherungsFormatTest {
         val geleseneFragen = mutableListOf<Triple<String, String, String>>()
         val geleseneSitzungen = mutableListOf<Pair<String, Int>>()
 
-        runBlocking {
-            Sicherung.spieleEin(
-                StringReader(text),
-                object : Sicherung.Senke {
-                    override suspend fun eintrag(werte: Map<String, String>) {
-                        gelesen += werte
-                    }
+        val senke = object : Sicherung.Senke {
+            override suspend fun eintrag(werte: Map<String, String>) {
+                gelesen += werte
+            }
 
-                    override suspend fun frage(eintragId: String, frage: String, antwort: String, erstelltAm: Long) {
-                        geleseneFragen += Triple(eintragId, frage, antwort)
-                    }
+            override suspend fun frage(eintragId: String, frage: String, antwort: String, erstelltAm: Long) {
+                geleseneFragen += Triple(eintragId, frage, antwort)
+            }
 
-                    override suspend fun sitzung(
-                        titel: String,
-                        erstelltAm: Long,
-                        nachrichten: List<Triple<String, String, Long>>,
-                    ) {
-                        geleseneSitzungen += titel to nachrichten.size
-                    }
-                },
-            )
+            override suspend fun sitzung(
+                titel: String,
+                erstelltAm: Long,
+                nachrichten: List<Triple<String, String, Long>>,
+            ) {
+                geleseneSitzungen += titel to nachrichten.size
+            }
         }
+
+        runBlocking { rahmen(senke).spieleEin(StringReader(text)) }
 
         assertEquals(5, gelesen.size)
         val sonder = gelesen.first { it["id"] == "slash:/sonder" }
@@ -186,7 +188,7 @@ class SicherungsFormatTest {
     fun veraenderterInhaltFaelltAuf() {
         val text = schreibe(SicherungsTeil.ALLE).replace("Zeigt die Hilfe.", "Zeigt etwas anderes.")
         try {
-            runBlocking { Sicherung.pruefe(StringReader(text)) }
+            runBlocking { rahmen().pruefe(StringReader(text)) }
             fail("Eine veränderte Sicherung wurde als heil angesehen.")
         } catch (fehler: SicherungsFehler) {
             assertTrue(fehler.message.orEmpty(), fehler.message.orEmpty().contains("Prüfsumme"))
@@ -198,7 +200,7 @@ class SicherungsFormatTest {
     fun abgeschnitteneDateiFaelltAuf() {
         val text = schreibe(SicherungsTeil.ALLE)
         try {
-            runBlocking { Sicherung.pruefe(StringReader(text.take(text.length / 2))) }
+            runBlocking { rahmen().pruefe(StringReader(text.take(text.length / 2))) }
             fail("Eine abgeschnittene Sicherung wurde als heil angesehen.")
         } catch (fehler: SicherungsFehler) {
             assertTrue(fehler.message.orEmpty(), fehler.message.orEmpty().isNotBlank())
@@ -211,7 +213,7 @@ class SicherungsFormatTest {
         val text = schreibe(SicherungsTeil.ALLE)
             .replace("\"roomVersion\": ${KompassDatabase.VERSION}", "\"roomVersion\": 99")
         try {
-            runBlocking { Sicherung.pruefe(StringReader(text)) }
+            runBlocking { rahmen().pruefe(StringReader(text)) }
             fail("Eine Sicherung aus einer neueren Datenbank wurde angenommen.")
         } catch (fehler: SicherungsFehler) {
             assertTrue(fehler.message.orEmpty(), fehler.message.orEmpty().contains("neueren Datenbank"))
@@ -224,7 +226,7 @@ class SicherungsFormatTest {
         val text = schreibe(SicherungsTeil.ALLE)
             .replace("\"${AppProfil.PRODUKT}\"", "\"Irgendeine andere App\"")
         try {
-            runBlocking { Sicherung.pruefe(StringReader(text)) }
+            runBlocking { rahmen().pruefe(StringReader(text)) }
             fail("Die Sicherung einer fremden App wurde angenommen.")
         } catch (fehler: SicherungsFehler) {
             assertTrue(fehler.message.orEmpty(), fehler.message.orEmpty().contains("gehört nicht"))

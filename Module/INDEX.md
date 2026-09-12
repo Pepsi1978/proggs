@@ -55,4 +55,4 @@ schlichtes `diff`, ob eine App noch aktuell ist, und ein Nachziehen ist reines
 - **M1.1** DragReorder — Kurzbeschreibung. Braucht: Compose ≥1.7. Konsumenten: 1
 -->
 
-_Noch keine Module angelegt._
+- **M1.1** Sicherung — Sicherung des Bestands als Datei in einen selbst gewählten Ordner: Auswahl was gesichert wird, Autosicherung nach Ruhezeit, Vorschau vor dem Einspielen, Zurücknehmen. Braucht: androidx.lifecycle, kotlinx.coroutines. Konsumenten: 3

@@ -1,8 +1,15 @@
-package de.frank.kompass.backup
+// ──────────────────────────────────────────────────────────────────────
+// Modul M1.1 — Sicherung · Stand v1
+// Quelle: Module/Android/M1.1-Sicherung/
+//
+// Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
+// und danach mit "zieh M1.1 nach" an die Konsumenten verteilen —
+// sonst driftet diese App still von der Bibliothek weg.
+// ──────────────────────────────────────────────────────────────────────
+package de.frank.module.sicherung
 
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import de.frank.kompass.observability.KompassLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,6 +42,7 @@ import kotlinx.coroutines.sync.withLock
 class AutoSicherung(
     private val dienst: SicherungsDienst,
     private val istAn: () -> Boolean,
+    private val protokoll: SicherungsProtokoll = StillesProtokoll,
 ) : DefaultLifecycleObserver {
 
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -106,12 +114,12 @@ class AutoSicherung(
             offen = false
             runCatching { dienst.sichere() }
                 .onSuccess {
-                    KompassLog.info("AutoSicherung", "sichere", "Selbsttätig gesichert", mapOf("grund" to grund))
+                    protokoll.info("AutoSicherung", "sichere", "Selbsttätig gesichert", mapOf("grund" to grund))
                 }
                 .onFailure { fehler ->
                     // Wieder offen: Der nächste Anlass soll es erneut versuchen.
                     offen = true
-                    KompassLog.warn(
+                    protokoll.warn(
                         "AutoSicherung",
                         "sichere",
                         "Selbsttätige Sicherung fehlgeschlagen",

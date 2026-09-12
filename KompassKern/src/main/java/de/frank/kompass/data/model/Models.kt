@@ -21,7 +21,11 @@ enum class Bereich(val id: String, val titel: String) {
  * einen neueren Stand in der Datenbank als in der mitgelieferten Wissensbasis der App — auf
  * einem zweiten Gerät stand ohne das wieder nur der Auslieferungsstand.
  */
-enum class SicherungsTeil(val id: String, val titel: String, val erklaerung: String) {
+enum class SicherungsTeil(
+    override val id: String,
+    override val titel: String,
+    override val erklaerung: String,
+) : de.frank.module.sicherung.SicherungsTeil {
     SLASH("slash", "Slash-Befehle", "Der ganze Befehlskatalog mit allen Erklärungen."),
     CONFIG("config", "Config-Einstellungen", "Alle Einträge des Config-Bereichs."),
     PRAXIS("praxis", "Best Practices", "Alle Praxisartikel."),

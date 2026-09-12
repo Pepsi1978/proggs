@@ -553,7 +553,7 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     private var nachOrdnerWahlSichern = false
 
     /** Was das letzte Einspielen angelegt hat — nur dafür gilt der Zurück-Pfeil. */
-    private var letzteSpur: de.frank.kompass.data.Einspielspur? = null
+    private var letzteSpur: de.frank.module.sicherung.Einspielspur? = null
 
     /**
      * Schaltet einen Teil der Sicherung an oder ab.
@@ -582,11 +582,11 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     fun zaehleVoraussichtlichenUmfang() {
         viewModelScope.launch {
             runCatching { sicherung.voraussichtlich() }
-                .onSuccess { (anzahl, bytes) ->
+                .onSuccess { (zahlen, bytes) ->
                     val teile = buildList {
-                        if (anzahl.eintraege > 0) add("${anzahl.eintraege} Einträge")
-                        if (anzahl.fragen > 0) add("${anzahl.fragen} Fragen")
-                        if (anzahl.sitzungen > 0) add("${anzahl.sitzungen} Gespräche")
+                        zahlen.anzahl["eintraege"]?.takeIf { it > 0 }?.let { add("$it Einträge") }
+                        zahlen.anzahl["fragen"]?.takeIf { it > 0 }?.let { add("$it Fragen") }
+                        zahlen.anzahl["sitzungen"]?.takeIf { it > 0 }?.let { add("$it Gespräche") }
                     }
                     _zustand.value = _zustand.value.copy(
                         sicherungsVorschauUmfang = if (teile.isEmpty()) {
@@ -811,7 +811,7 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
                     sicherungBereit = quelle,
                     fehler = "",
                     meldung = "",
-                    sicherungVorschauText = vorschau.alsText(),
+                    sicherungVorschauText = container.sicherungsInhalt.fasseZusammen(vorschau),
                 )
             }
             .onFailure { fehler ->
@@ -840,12 +840,15 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
             runCatching { sicherung.stelleWiederHerAus(quelle) }
                 .onSuccess { ergebnis ->
                     letzteSpur = ergebnis.spur
+                    val bericht = container.sicherungsRuecknahme.bericht()
+                    val spur = (ergebnis.spur as? de.frank.module.sicherung.KompassRuecknahme.Spur)?.innen
                     _zustand.value = _zustand.value.copy(
                         sicherungLaeuft = false,
-                        meldung = ergebnis.bericht.alsText(),
+                        meldung = bericht?.alsText()
+                            ?: container.sicherungsInhalt.fasseZusammen(ergebnis.vorschau),
                         // Der Pfeil erscheint nur, wenn es auch etwas zurückzunehmen gibt.
-                        kannZurueckNehmen = !ergebnis.spur.leer,
-                        zurueckNehmenText = "Eingespielt: " + ergebnis.bericht.alsKurztext(),
+                        kannZurueckNehmen = spur?.leer == false,
+                        zurueckNehmenText = bericht?.let { "Eingespielt: " + it.alsKurztext() }.orEmpty(),
                     )
                 }
                 .onFailure { fehler ->

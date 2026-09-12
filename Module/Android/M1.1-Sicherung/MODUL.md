@@ -71,7 +71,14 @@ während sich das Aussehen der jeweiligen App anpasst.
 
 | App | Stand | Pfad der Kopie |
 |---|---|---|
-| _noch keine — die Umverdrahtung von KompassKern steht aus_ | | |
+| ClaudeKompass | v1 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
+| CodexKompass | v1 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
+| OCodeKompass | v1 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
+
+> **Sonderfall:** Die drei Apps teilen sich `KompassKern` per `sourceSets.srcDir`.
+> Die Modulkopie und die Anbindung liegen deshalb **einmal** dort, nicht dreimal
+> unter `app/src/`. Beim Nachziehen wird dieser eine Pfad überschrieben und
+> danach werden alle drei Apps gebaut.
 
 ## Änderungen
 

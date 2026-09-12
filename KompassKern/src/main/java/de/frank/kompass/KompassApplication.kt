@@ -6,8 +6,13 @@ import de.frank.kompass.ai.CodexClient
 import de.frank.kompass.audio.GroqTranskribierer
 import de.frank.kompass.audio.FilterSchalter
 import de.frank.kompass.audio.Mikrofon
-import de.frank.kompass.backup.AutoSicherung
-import de.frank.kompass.backup.SicherungsDienst
+import de.frank.module.sicherung.AutoSicherung
+import de.frank.module.sicherung.KOMPASS_SICHERUNGSNAMEN
+import de.frank.module.sicherung.KompassProtokoll
+import de.frank.module.sicherung.KompassRuecknahme
+import de.frank.module.sicherung.KompassSicherungsInhalt
+import de.frank.module.sicherung.KompassUmfangSpeicher
+import de.frank.module.sicherung.SicherungsDienst
 import de.frank.kompass.data.EinstellungenStore
 import de.frank.kompass.data.KompassRepository
 import de.frank.kompass.observability.KompassCrashHandler
@@ -39,8 +44,20 @@ class KompassContainer(context: Context) {
     val mikrofon = Mikrofon(appContext)
     val stimmVerwaltung = QwenStimmVerwaltung { einstellungen.alibabaSchluessel }
     val appSperre = AppSperre(einstellungen)
-    val sicherung = SicherungsDienst(appContext, repository) { einstellungen.sicherungsTeile() }
-    val autoSicherung = AutoSicherung(sicherung) { einstellungen.autoSicherung }
+    // Modul M1.1 Sicherung: Das Modul kennt keine Kompass-Klasse — was es braucht, liefert
+    // die Anbindung daneben (de.frank.module.sicherung.Anbindung.kt).
+    val sicherungsRuecknahme = KompassRuecknahme(repository)
+    val sicherungsInhalt = KompassSicherungsInhalt(repository, sicherungsRuecknahme)
+    val sicherungsSpeicher = KompassUmfangSpeicher(einstellungen)
+    val sicherung = SicherungsDienst(
+        context = appContext,
+        inhalt = sicherungsInhalt,
+        namen = KOMPASS_SICHERUNGSNAMEN,
+        ruecknahme = sicherungsRuecknahme,
+        protokoll = KompassProtokoll,
+        umfangGeber = { einstellungen.sicherungsTeile() },
+    )
+    val autoSicherung = AutoSicherung(sicherung, { einstellungen.autoSicherung }, KompassProtokoll)
 
     val transkribierer = GroqTranskribierer(
         schluesselGeber = { einstellungen.groqSchluessel },

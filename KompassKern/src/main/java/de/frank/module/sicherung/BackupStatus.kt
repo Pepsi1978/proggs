@@ -1,4 +1,12 @@
-package de.frank.kompass.backup
+// ──────────────────────────────────────────────────────────────────────
+// Modul M1.1 — Sicherung · Stand v1
+// Quelle: Module/Android/M1.1-Sicherung/
+//
+// Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
+// und danach mit "zieh M1.1 nach" an die Konsumenten verteilen —
+// sonst driftet diese App still von der Bibliothek weg.
+// ──────────────────────────────────────────────────────────────────────
+package de.frank.module.sicherung
 
 import android.content.Context
 import java.text.SimpleDateFormat
@@ -29,6 +37,9 @@ object BackupStatus {
      * geteilte Instanz liefert bei gleichzeitigem Zugriff stillschweigend falsche Zeiten.
      */
     private fun format() = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
+
+    /** Ein Zeitpunkt, wie er in der Sicherungsliste steht. */
+    fun formatiere(zeitpunkt: Long): String = format().format(java.util.Date(zeitpunkt))
 
     /**
      * Stempelt den Zeitpunkt — und ob die geschriebene Datei danach fehlerfrei gelesen wurde.

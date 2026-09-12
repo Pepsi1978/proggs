@@ -1,11 +1,17 @@
-package de.frank.kompass.backup
+// ──────────────────────────────────────────────────────────────────────
+// Modul M1.1 — Sicherung · Stand v1
+// Quelle: Module/Android/M1.1-Sicherung/
+//
+// Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
+// und danach mit "zieh M1.1 nach" an die Konsumenten verteilen —
+// sonst driftet diese App still von der Bibliothek weg.
+// ──────────────────────────────────────────────────────────────────────
+package de.frank.module.sicherung
 
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
-import de.frank.kompass.AppProfil
-import de.frank.kompass.observability.KompassLog
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -30,14 +36,37 @@ data class Sicherungsdatei(val uri: Uri, val name: String, val geaendertAm: Long
  * Es liegen immer höchstens [BEHALTEN] Sicherungen im Ordner: die aktuelle und die davor.
  * Ältere räumt jede Sicherung selbst weg, damit sich dort nichts ansammelt.
  */
-class DateiSicherung(private val context: Context) {
+class DateiSicherung(
+    private val context: Context,
+    private val namen: SicherungsNamen,
+    private val protokoll: SicherungsProtokoll = StillesProtokoll,
+) {
+
+    // Aus den Namen abgeleitet. Früher standen diese Muster im companion object und wurden aus
+    // einem fest verdrahteten App-Profil gebaut — als Modul müssen sie zur Instanz gehören,
+    // weil jede App ihr eigenes Präfix mitbringt.
+
+    /** `20-03-2026-1346-ocode-kompass.json` — Zeitpunkt vorn, App-Name hinten. */
+    private val HEUTIGES_MUSTER = muster(namen.dateiPraefix)
+
+    /**
+     * Das heutige Muster und die unter früheren App-Namen geschriebenen.
+     *
+     * Eine Umbenennung der App darf keine Sicherung entwerten: Wer gestern unter dem alten
+     * Namen gesichert hat, muss die Datei heute noch finden und einspielen können.
+     */
+    private val MUSTER = listOf(HEUTIGES_MUSTER) + namen.fruehere.map(::muster)
+
+    /** Das älteste Muster `ocode-kompass-2026-03-20-1346Z.json`, nur noch zum Lesen. */
+    private val ALTE_PRAEFIXE =
+        (listOf(namen.dateiPraefix) + namen.fruehere).map { "$it-" }
 
     private val prefs
-        get() = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        get() = context.applicationContext.getSharedPreferences(namen.einstellungenDatei, Context.MODE_PRIVATE)
 
     /** Der gemerkte Sicherungsordner, oder null solange keiner gewählt wurde. */
     val ordner: Uri?
-        get() = prefs.getString(KEY_ORDNER, null)?.let(Uri::parse)
+        get() = prefs.getString(namen.ordnerSchluessel, null)?.let(Uri::parse)
 
     /**
      * Der zuletzt ermittelte Ordnername.
@@ -58,7 +87,7 @@ class DateiSicherung(private val context: Context) {
             uri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
         )
-        prefs.edit().putString(KEY_ORDNER, uri.toString()).apply()
+        prefs.edit().putString(namen.ordnerSchluessel, uri.toString()).apply()
         gemerkterName = null
     }
 
@@ -71,7 +100,7 @@ class DateiSicherung(private val context: Context) {
                 )
             }
         }
-        prefs.edit().remove(KEY_ORDNER).apply()
+        prefs.edit().remove(namen.ordnerSchluessel).apply()
         gemerkterName = null
     }
 
@@ -125,7 +154,7 @@ class DateiSicherung(private val context: Context) {
             runCatching {
                 check(DocumentsContract.deleteDocument(context.contentResolver, datei))
             }.onFailure {
-                KompassLog.warn("DateiSicherung", "schreibe", "Unvollständige Datei blieb liegen",
+                protokoll.warn("DateiSicherung", "schreibe", "Unvollständige Datei blieb liegen",
                     mapOf("art" to it.javaClass.simpleName))
             }
             throw fehler
@@ -272,12 +301,12 @@ class DateiSicherung(private val context: Context) {
         if (HEUTIGES_MUSTER.containsMatchIn(datei.name)) return datei
         val zeitpunkt = zeitpunktAusNamen(datei.name) ?: datei.geaendertAm
         val zeit = SimpleDateFormat(ZEIT_MUSTER, Locale.GERMANY).format(Date(zeitpunkt))
-        val neuerName = "$zeit-${AppProfil.DATEI_PRAEFIX}.json"
+        val neuerName = "$zeit-${namen.dateiPraefix}.json"
         if (neuerName == datei.name) return datei
         return runCatching {
             val adresse = DocumentsContract.renameDocument(context.contentResolver, datei.uri, neuerName)
                 ?: return@runCatching datei
-            KompassLog.info(
+            protokoll.info(
                 "DateiSicherung",
                 "benenneUm",
                 "Sicherung auf das heutige Namensmuster gehoben",
@@ -285,7 +314,7 @@ class DateiSicherung(private val context: Context) {
             )
             datei.copy(uri = adresse, name = neuerName)
         }.getOrElse { fehler ->
-            KompassLog.warn(
+            protokoll.warn(
                 "DateiSicherung",
                 "benenneUm",
                 "Sicherung behielt ihren alten Namen",
@@ -304,7 +333,7 @@ class DateiSicherung(private val context: Context) {
             }
                 .onFailure {
                     // Die neue Sicherung ist geschrieben — eine liegen gebliebene alte ist kein Fehlschlag.
-                    KompassLog.warn(
+                    protokoll.warn(
                         "DateiSicherung",
                         "raeumeAuf",
                         "Alte Sicherung blieb liegen",
@@ -313,7 +342,7 @@ class DateiSicherung(private val context: Context) {
                 }
         }
         if (zuLoeschen.isNotEmpty()) {
-            KompassLog.info(
+            protokoll.info(
                 "DateiSicherung",
                 "raeumeAuf",
                 "Alte Sicherungen entfernt",
@@ -339,7 +368,7 @@ class DateiSicherung(private val context: Context) {
      */
     private fun neuerName(bisherige: List<Sicherungsdatei>): String {
         val zeit = SimpleDateFormat(ZEIT_MUSTER, Locale.GERMANY).format(Date())
-        val basis = "$zeit-${AppProfil.DATEI_PRAEFIX}"
+        val basis = "$zeit-${namen.dateiPraefix}"
         val namen = bisherige.map { it.name }.toSet()
         var name = "$basis.json"
         var nummer = 2
@@ -351,28 +380,12 @@ class DateiSicherung(private val context: Context) {
         /** Die aktuelle Sicherung und die eine davor — mehr sammelt sich nie an. */
         const val BEHALTEN = 2
 
-        private const val PREFS = "kompass_backup_status"
-        private const val KEY_ORDNER = "sicherungs_ordner"
         /** Der Zeitpunkt im Dateinamen, in Ortszeit und in Lesereihenfolge. */
         private const val ZEIT_MUSTER = "dd-MM-yyyy-HHmm"
 
         private fun muster(praefix: String) =
             Regex("^(\\d{2}-\\d{2}-\\d{4}-\\d{4})-${Regex.escape(praefix)}\\b")
 
-        /** `20-03-2026-1346-ocode-kompass.json` — Zeitpunkt vorn, App-Name hinten. */
-        private val HEUTIGES_MUSTER = muster(AppProfil.DATEI_PRAEFIX)
-
-        /**
-         * Das heutige Muster und die unter früheren App-Namen geschriebenen.
-         *
-         * Eine Umbenennung der App darf keine Sicherung entwerten: Wer gestern unter dem alten
-         * Namen gesichert hat, muss die Datei heute noch finden und einspielen können.
-         */
-        private val MUSTER = listOf(HEUTIGES_MUSTER) + AppProfil.FRUEHERE_DATEI_PRAEFIXE.map(::muster)
-
-        /** Das älteste Muster `ocode-kompass-2026-03-20-1346Z.json`, nur noch zum Lesen. */
-        private val ALTE_PRAEFIXE =
-            (listOf(AppProfil.DATEI_PRAEFIX) + AppProfil.FRUEHERE_DATEI_PRAEFIXE).map { "$it-" }
         private val ALTES_MUSTER = Regex("(\\d{4}-\\d{2}-\\d{2}-\\d{4}(?:\\d{2}-\\d{3})?)(Z?)")
         private val UTC = java.util.TimeZone.getTimeZone("UTC")
     }
