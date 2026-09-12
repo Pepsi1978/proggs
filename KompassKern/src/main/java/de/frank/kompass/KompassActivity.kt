@@ -12,7 +12,6 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -50,25 +49,35 @@ open class KompassActivity : FragmentActivity() {
      */
     private val ordnerWahl = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree(),
-    ) { ordner -> einstellungenModell?.sicherungsOrdnerGewaehlt(ordner, ::oeffneOrdnerWahl) }
+    ) { ordner -> einstellungenModell.sicherungsOrdnerGewaehlt(ordner, ::oeffneOrdnerWahl) }
 
     private val sicherungsWahl = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { ergebnis ->
         if (ergebnis.resultCode == RESULT_OK) {
-            ergebnis.data?.data?.let { quelle -> einstellungenModell?.stelleWiederHer(quelle) }
+            ergebnis.data?.data?.let { quelle -> einstellungenModell.stelleWiederHer(quelle) }
         }
     }
 
     /**
-     * Das Einstellungs-Modell, sobald die Oberfläche steht. Die Launcher werden vor
-     * `setContent` angemeldet — Android verlangt das —, brauchen das Modell aber erst beim
-     * Ergebnis, also lange danach.
+     * Das Einstellungs-Modell, an das die Launcher ihr Ergebnis geben.
+     *
+     * Bewusst über den ViewModelProvider und nicht aus der Komposition heraus gemerkt: Der
+     * Dateiwähler kann diesen Vorgang verdrängen, und nach dem Neustart trifft sein Ergebnis
+     * ein, BEVOR das erste Mal gezeichnet wurde. Ein aus der Komposition gemerktes Modell wäre
+     * dann noch leer — der gewählte Ordner wäre still verloren und man hätte die Wahl
+     * scheinbar grundlos noch einmal zu treffen. Der Schlüssel ist derselbe, den
+     * `viewModel(factory = fabrik)` vergibt, also ist es dieselbe Instanz.
      */
-    private var einstellungenModell: de.frank.kompass.vm.EinstellungenViewModel? = null
+    private val einstellungenModell: de.frank.kompass.vm.EinstellungenViewModel by lazy {
+        ViewModelProvider(
+            this,
+            KompassViewModelFactory(container),
+        )[de.frank.kompass.vm.EinstellungenViewModel::class.java]
+    }
 
     private fun oeffneOrdnerWahl() {
-        runCatching { ordnerWahl.launch(einstellungenModell?.sicherungsOrdnerUri) }
+        runCatching { ordnerWahl.launch(einstellungenModell.sicherungsOrdnerUri) }
             .onFailure { zeige("Die Ordnerauswahl liess sich nicht öffnen: ${it.message}") }
     }
 
@@ -79,7 +88,7 @@ open class KompassActivity : FragmentActivity() {
                 addCategory(android.content.Intent.CATEGORY_OPENABLE)
                 type = "*/*"
                 addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                einstellungenModell?.sicherungsOrdnerUri?.let { ordner ->
+                einstellungenModell.sicherungsOrdnerUri?.let { ordner ->
                     putExtra(
                         android.provider.DocumentsContract.EXTRA_INITIAL_URI,
                         android.provider.DocumentsContract.buildDocumentUriUsingTree(
@@ -113,16 +122,10 @@ open class KompassActivity : FragmentActivity() {
 
             KompassTheme(modus = themeModus) {
                 val fabrik = KompassViewModelFactory(container)
-                val einstellungenModell: de.frank.kompass.vm.EinstellungenViewModel =
-                    viewModel(factory = fabrik)
-                // Die Launcher liefern ihr Ergebnis an dieses Modell; ohne die Merkung
-                // käme die Ordnerwahl zurück und niemand wüsste, wohin damit. Als
-                // Nebenwirkung NACH der Komposition, nicht mittendrin.
-                SideEffect { this@KompassActivity.einstellungenModell = einstellungenModell }
                 KompassApp(
                     referenz = viewModel(factory = fabrik),
                     chat = viewModel(factory = fabrik),
-                    einstellungen = einstellungenModell,
+                    einstellungen = viewModel(factory = fabrik),
                     diktat = viewModel(factory = fabrik),
                     gesperrt = gesperrt,
                     beiEntsperren = ::entsperre,
