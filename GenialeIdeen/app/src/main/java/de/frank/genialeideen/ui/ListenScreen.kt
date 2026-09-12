@@ -63,6 +63,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -71,7 +72,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -142,7 +143,9 @@ fun ListenScreen(
     val kategorien by viewModel.kategorien.collectAsState()
     val gewaehlteKategorie by viewModel.gewaehlteKategorie.collectAsState()
 
-    var bereich by remember { mutableStateOf(ListenBereich.OFFEN) }
+    // Der Host bewahrt diesen Zustand und rememberLazyListState beim Bildschirmwechsel
+    // auf, damit auch ein tiefer Listenplatz nach dem Lesen wiederhergestellt wird.
+    var bereich by rememberSaveable { mutableStateOf(ListenBereich.OFFEN) }
     var suchOffen by remember { mutableStateOf(false) }
 
     val schublade = rememberDrawerState(DrawerValue.Closed)
@@ -312,7 +315,7 @@ fun ListenScreen(
                     contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 120.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(sortiert, key = { idee -> idee.id }) { idee ->
+                    items(sortiert, key = { idee -> idee.id }, contentType = { "idee" }) { idee ->
                         Box(reorderItem(zustand, idee.id, reduziert)) {
                             IdeenKarte(
                                 idee = idee,
@@ -907,6 +910,10 @@ private fun IdeenKarte(
 ) {
     val gold = LocalGold.current
     val umgesetzt = idee.status == IdeenStatus.UMGESETZT.name
+    // maxLines begrenzt nur die Ausgabe, nicht das Einlesen/Shape-Layout langer Texte.
+    // Die Liste braucht lediglich einen großzügigen Vorschau-Ausschnitt; Detail/Vorlesen
+    // erhalten weiterhin den vollständigen Originaltext.
+    val vorschau = remember(idee.text) { idee.text.take(1024) }
     // Kein kippbar: Der Kipp-Effekt fängt Zieh-Gesten ab und liesse die Liste haken.
     GoldKarte(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -941,10 +948,10 @@ private fun IdeenKarte(
                     textAlign = TextAlign.Center,
                     maxLines = 2,
                 )
-                if (idee.text.isNotBlank()) {
+                if (vorschau.isNotBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        idee.text,
+                        vorschau,
                         modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall,
                         color = gold.textGedaempft,
@@ -985,17 +992,24 @@ fun LautsprecherKnopf(
 ) {
     val gold = LocalGold.current
     val reduziert = LocalBewegungReduziert.current
-    val uebergang = rememberInfiniteTransition(label = "atem")
-    val atem by uebergang.animateFloat(
-        initialValue = 1f,
-        targetValue = if (spricht && zustand == VorleseZustand.SPRICHT && !reduziert) 1.12f else 1f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-        label = "atemwert",
-    )
+    // Inaktive Karten brauchen keine eigene dauernd tickende Animationsuhr.
+    val atem = if (spricht && zustand == VorleseZustand.SPRICHT && !reduziert) {
+        val uebergang = rememberInfiniteTransition(label = "atem")
+        uebergang.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.12f,
+            animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+            label = "atemwert",
+        )
+    } else null
     Box(
         modifier = modifier
             .size(38.dp)
-            .scale(if (spricht) atem else 1f)
+            .graphicsLayer {
+                val faktor = atem?.value ?: 1f
+                scaleX = faktor
+                scaleY = faktor
+            }
             .druckEffekt(aufTipp)
             .clip(CircleShape)
             .background(if (spricht) gold.primaer.copy(alpha = 0.20f) else Color.Transparent)
@@ -1007,7 +1021,7 @@ fun LautsprecherKnopf(
         contentAlignment = Alignment.Center,
     ) {
         AnimatedContent(
-            targetState = spricht to zustand,
+            targetState = spricht to if (spricht) zustand else VorleseZustand.AUS,
             transitionSpec = { fadeIn(tween(Motion.MIKRO_MS)) togetherWith fadeOut(tween(Motion.MIKRO_MS)) },
             label = "lautsprecher",
         ) { (aktiv, stand) ->

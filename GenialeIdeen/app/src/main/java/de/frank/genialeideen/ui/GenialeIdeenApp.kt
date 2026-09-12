@@ -19,8 +19,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.activity.compose.BackHandler
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
@@ -49,6 +51,7 @@ fun GenialeIdeenApp(
     var bildschirm by remember { mutableStateOf(Bildschirm.LISTE) }
     // The idea tapped in the list: the detail screen shows it immediately.
     var geoeffnet by remember { mutableStateOf<IdeeEntity?>(null) }
+    val bildschirmZustaende = rememberSaveableStateHolder()
 
     // Close the idea only once the exit transition is over. Clearing it immediately swapped
     // the sliding-out screen to a loading skeleton and an empty chat, which stuttered.
@@ -84,7 +87,7 @@ fun GenialeIdeenApp(
                     fadeIn(tween(0)) togetherWith fadeOut(tween(0))
                 } else {
                     val vorwaerts = targetState.ordinal > initialState.ordinal
-                    (
+                    ((
                         slideInHorizontally(tween(Motion.BILDSCHIRM_MS)) { breite ->
                             if (vorwaerts) breite / 4 else -breite / 4
                         } + fadeIn(tween(Motion.BILDSCHIRM_MS))
@@ -92,13 +95,17 @@ fun GenialeIdeenApp(
                         slideOutHorizontally(tween(Motion.BILDSCHIRM_MS)) { breite ->
                             if (vorwaerts) -breite / 6 else breite / 6
                         } + fadeOut(tween(Motion.BILDSCHIRM_MS))
-                        )
+                        )).using(null)
                 }
             },
             label = "bildschirm",
         ) { ziel ->
+            // Feste Bildschirmgröße und eigene Zeichenebene: Beim Verschieben müssen
+            // unveränderte Kinder nicht nochmals gezeichnet werden.
+            Box(Modifier.fillMaxSize().graphicsLayer()) {
             when (ziel) {
-                Bildschirm.LISTE -> ListenScreen(
+                Bildschirm.LISTE -> bildschirmZustaende.SaveableStateProvider("ideenliste") {
+                    ListenScreen(
                     viewModel = viewModel,
                     aufIdee = { idee ->
                         // Ein Entwurf wird weitergeschrieben, keine fertige Idee besprochen.
@@ -116,7 +123,8 @@ fun GenialeIdeenApp(
                         bildschirm = Bildschirm.ERFASSEN
                     },
                     aufEinstellungen = { bildschirm = Bildschirm.EINSTELLUNGEN },
-                )
+                    )
+                }
                 Bildschirm.ERFASSEN -> ErfassenScreen(
                     viewModel = viewModel,
                     mikrofonErlaubt = mikrofonErlaubt,
@@ -150,6 +158,7 @@ fun GenialeIdeenApp(
                     aufMikrofonFragen = aufMikrofonFragen,
                     aufZurueck = { bildschirm = Bildschirm.EINSTELLUNGEN },
                 )
+            }
             }
         }
         meldung?.let {

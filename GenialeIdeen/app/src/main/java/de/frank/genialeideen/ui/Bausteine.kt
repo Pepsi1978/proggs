@@ -102,12 +102,11 @@ fun IdeenKopfleiste(
         voran?.invoke()
         Text(
             text = titel,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).wanderndesGlanzlicht(),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.SemiBold,
-                // Verlaufsschrift mit wanderndem Glanz (N.6, N.7).
-                brush = wanderndesGlanzlicht(),
             ),
+            color = gold.primaer,
             maxLines = 1,
         )
         if (aufSuche != null) {

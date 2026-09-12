@@ -23,11 +23,14 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PointMode
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -274,24 +277,30 @@ fun Modifier.koernung(deckung: Float = 0.04f): Modifier = drawWithCache {
         y += schritt
         zaehler++
     }
-    val farbe = Color.White.copy(alpha = deckung * 0.85f)
+    // Compose drawPoints(List<Offset>) kopiert auf Android bei jedem Draw alle Punkte
+    // in ein neues FloatArray. Rohkoordinaten und Paint stattdessen einmal vorbereiten.
+    val koordinaten = FloatArray(punkte.size * 2)
+    punkte.forEachIndexed { index, punkt ->
+        koordinaten[index * 2] = punkt.x
+        koordinaten[index * 2 + 1] = punkt.y
+    }
+    val stift = Paint().apply {
+        color = Color.White.copy(alpha = deckung * 0.85f)
+        strokeWidth = 1.2f
+        strokeCap = StrokeCap.Round
+    }
     onDrawWithContent {
         drawContent()
-        if (punkte.isNotEmpty()) {
-            drawPoints(
-                points = punkte,
-                pointMode = PointMode.Points,
-                color = farbe,
-                strokeWidth = 1.2f,
-                cap = StrokeCap.Round,
-            )
+        if (koordinaten.isNotEmpty()) {
+            drawIntoCanvas { canvas ->
+                canvas.drawRawPoints(androidx.compose.ui.graphics.PointMode.Points, koordinaten, stift)
+            }
         }
     }
 }
 
 /** Wandernder Glanz über wichtige Karten und Überschriften (N.7). */
-@Composable
-fun wanderndesGlanzlicht(breite: Float = 900f): Brush {
+fun Modifier.wanderndesGlanzlicht(breite: Float = 900f): Modifier = composed {
     val gold = LocalGold.current
     val reduziert = LocalBewegungReduziert.current
     val uebergang = rememberInfiniteTransition(label = "glanz")
@@ -308,9 +317,21 @@ fun wanderndesGlanzlicht(breite: Float = 900f): Brush {
         ),
         label = "glanzversatz",
     )
-    return Brush.linearGradient(
-        colors = listOf(gold.primaer, gold.primaer.heller(0.55f), gold.akzentWarm, gold.primaer),
-        start = Offset(versatz, 0f),
-        end = Offset(versatz + breite / 2f, 120f),
-    )
+    val farben = remember(gold) {
+        listOf(gold.primaer, gold.primaer.heller(0.55f), gold.akzentWarm, gold.primaer)
+    }
+    // Nur die Schriftmaske neu einfärben. Ein animierter Brush im TextStyle invalidiert
+    // dagegen pro Frame die gesamte Kopfleiste inklusive Glastextur und Textlayout.
+    graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            drawRect(
+                brush = Brush.linearGradient(
+                    colors = farben,
+                    start = Offset(versatz, 0f),
+                    end = Offset(versatz + breite / 2f, 120f),
+                ),
+                blendMode = BlendMode.SrcIn,
+            )
+        }
 }
