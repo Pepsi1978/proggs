@@ -33,6 +33,17 @@ interface EintragDao {
     suspend fun ladeKomplett(): List<EintragEntity>
 
     /**
+     * Eine Seite über ALLE Bereiche — für den Neuaufbau des Suchindex.
+     *
+     * Wie [ladeSeite], nur ohne Bereichsfilter: Der Neuaufbau geht über den ganzen Bestand.
+     * Er hatte ihn bisher mit [ladeKomplett] auf einmal im Speicher, gleichzeitig mit der
+     * daraus abgeleiteten Indexliste — bei über zweitausend Einträgen mit langen Texten
+     * zweimal derselbe Text. Seitenweise bleibt immer nur ein Block liegen.
+     */
+    @Query("SELECT * FROM eintraege WHERE id > :nachId ORDER BY id ASC LIMIT :grenze")
+    suspend fun ladeSeiteAlle(nachId: String, grenze: Int): List<EintragEntity>
+
+    /**
      * Eine Seite der Einträge gewählter Bereiche — für die Sicherung.
      *
      * Seitenweise statt auf einmal: Der ganze Bestand sind bei Claude Kompass über zweitausend
@@ -197,6 +208,10 @@ interface ChatDao {
     /** Alle Nachrichten aller Gespräche — für den Neuaufbau des Suchindex. */
     @Query("SELECT * FROM chat_nachrichten ORDER BY id ASC")
     suspend fun ladeAlleNachrichten(): List<ChatNachrichtEntity>
+
+    /** Eine Seite der Nachrichten — für den blockweisen Neuaufbau des Suchindex. */
+    @Query("SELECT * FROM chat_nachrichten WHERE id > :nachId ORDER BY id ASC LIMIT :grenze")
+    suspend fun ladeNachrichtenSeite(nachId: Long, grenze: Int): List<ChatNachrichtEntity>
 
     @Insert
     suspend fun lege(sitzung: ChatSitzungEntity): Long

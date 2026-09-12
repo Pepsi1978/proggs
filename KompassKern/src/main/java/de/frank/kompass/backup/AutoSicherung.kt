@@ -44,14 +44,47 @@ class AutoSicherung(
     @Volatile
     private var offen = false
 
-    /** Meldet, dass sich etwas geändert hat, das gesichert gehört. */
+    /** Wann zuletzt etwas gemeldet wurde — daran hängt die Ruhezeit. */
+    @Volatile
+    private var letzteMeldung = 0L
+
+    /**
+     * Meldet, dass sich etwas geändert hat, das gesichert gehört.
+     *
+     * Es läuft immer höchstens ein wartender Auftrag. Eine weitere Meldung schiebt nur den
+     * Zeitpunkt nach hinten, den der wartende Auftrag abliest — sie wirft ihn nicht weg und
+     * setzt keinen neuen auf. Vorher geschah genau das: Ein Aktualisieren-Lauf mit
+     * vierhundert Einträgen legte vierhundert Aufträge an und brach neunundneunzig Prozent
+     * davon sofort wieder ab. Das Verhalten nach aussen bleibt dasselbe — gesichert wird
+     * [RUHE_MS] nach der letzten Meldung.
+     */
     fun melde(grund: String) {
         if (!istAn() || dienst.sicherungsOrdner == null) return
         offen = true
-        wartend?.cancel()
-        wartend = bereich.launch {
-            delay(RUHE_MS)
+        letzteMeldung = System.currentTimeMillis()
+        if (wartend?.isActive == true) return
+        wartend = bereich.launch { warteUndSichere(grund) }
+    }
+
+    /**
+     * Wartet, bis seit der letzten Meldung [RUHE_MS] Ruhe war, und sichert dann.
+     *
+     * Die Schleife ist nötig, weil eine Meldung während des Wartens den Zeitpunkt nach hinten
+     * schiebt: Dann wird die verbleibende Zeit neu gerechnet und weitergewartet. Nach dem
+     * Sichern geht es nur dann noch einmal von vorn los, wenn währenddessen etwas Neues
+     * gemeldet wurde — sonst endet der Auftrag. Ein Fehlschlag allein startet keinen neuen
+     * Versuch; das bliebe sonst bei fehlendem WLAN endlos im Kreis.
+     */
+    private suspend fun warteUndSichere(grund: String) {
+        while (true) {
+            val rest = RUHE_MS - (System.currentTimeMillis() - letzteMeldung)
+            if (rest > 0) {
+                delay(rest)
+                continue
+            }
+            val standVorher = letzteMeldung
             sichere(grund)
+            if (letzteMeldung == standVorher) return
         }
     }
 

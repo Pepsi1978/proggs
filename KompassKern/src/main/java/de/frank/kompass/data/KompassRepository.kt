@@ -396,52 +396,93 @@ class KompassRepository(context: Context) {
 
     suspend fun loescheSuchAnfrage(anfrage: String) = suche.loescheAnfrage(anfrage)
 
-    /** Baut den Index vollständig neu — der Notausgang, wenn er nicht mehr stimmt. */
+    /**
+     * Baut den Index vollständig neu — der Notausgang, wenn er nicht mehr stimmt.
+     *
+     * Blockweise, nicht auf einen Schlag: Vorher lag der ganze Bestand als Liste im Speicher
+     * und gleichzeitig die daraus gebaute Indexliste — bei über zweitausend Einträgen mit
+     * langen Erklärungen derselbe Text zweimal. Jetzt geht immer nur ein Block von
+     * [INDEX_BLOCK] Sätzen durch; der vorige ist dann schon wieder freigegeben.
+     *
+     * Eingefügt wird mit `indiziere`, nicht mit `ersetze`: Die Art wurde gerade geleert, also
+     * ist das Löschen je Satz, das `ersetze` mitbringt, zweitausendmal nichts zu tun.
+     *
+     * Die Fragen werden dabei mitgezählt. Vorher wurde ihre Art geleert und nie wieder
+     * gefüllt — nach jedem Neuaufbau, also nach jedem Einspielen einer Sicherung, fand die
+     * Suche keine einzige eigene Frage mehr. Gerade die sind das, was man wiederfinden will.
+     */
     suspend fun baueSuchIndexNeu() {
         suche.leereArt(ART_EINTRAG)
         suche.leereArt(ART_FRAGE)
         suche.leereArt(ART_CHAT)
-        indiziereEintraege(eintraege.ladeKomplett())
+        val eintraegeZahl = indiziereEintraegeNeu()
+        indiziereFragenNeu()
         neuIndiziereChat()
-        KompassLog.info("Repository", "baueSuchIndexNeu", "Suchindex neu aufgebaut", mapOf("eintraege" to suche.anzahl()))
+        KompassLog.info(
+            "Repository",
+            "baueSuchIndexNeu",
+            "Suchindex neu aufgebaut",
+            mapOf("eintraege" to eintraegeZahl, "zeilen" to suche.anzahl()),
+        )
     }
+
+    /** Die Einträge blockweise in den frisch geleerten Index schreiben. */
+    private suspend fun indiziereEintraegeNeu(): Int {
+        var nachId = ""
+        var gesamt = 0
+        while (true) {
+            val seite = eintraege.ladeSeiteAlle(nachId, INDEX_BLOCK)
+            if (seite.isEmpty()) break
+            suche.indiziere(seite.map(::alsIndexzeile))
+            nachId = seite.last().id
+            gesamt += seite.size
+        }
+        return gesamt
+    }
+
+    /** Die eigenen Fragen blockweise in den frisch geleerten Index schreiben. */
+    private suspend fun indiziereFragenNeu() {
+        var nachId = 0L
+        while (true) {
+            val seite = fragen.ladeSeite(nachId, INDEX_BLOCK)
+            if (seite.isEmpty()) break
+            suche.indiziere(seite.map(::alsIndexzeile))
+            nachId = seite.last().id
+        }
+    }
+
+    private fun alsIndexzeile(eintrag: EintragEntity) = SucheFtsEntity(
+        quelleId = eintrag.id,
+        quelleArt = ART_EINTRAG,
+        bereich = eintrag.bereich,
+        titel = eintrag.name,
+        suchtext = normalisiereFuerSuche(
+            listOf(
+                eintrag.name,
+                eintrag.kurz,
+                eintrag.erklaerung,
+                eintrag.kategorie,
+                eintrag.quelleEnglisch,
+                eintrag.ersatz,
+            ).joinToString(" "),
+        ),
+    )
+
+    private fun alsIndexzeile(frage: FrageEntity) = SucheFtsEntity(
+        quelleId = frage.id.toString(),
+        quelleArt = ART_FRAGE,
+        bereich = frage.eintragId.substringBefore(':'),
+        titel = frage.frage,
+        suchtext = normalisiereFuerSuche("${frage.frage} ${frage.antwort}"),
+    )
 
     private suspend fun indiziereEintraege(liste: List<EintragEntity>) {
         if (liste.isEmpty()) return
-        suche.ersetze(
-            liste.map { eintrag ->
-                SucheFtsEntity(
-                    quelleId = eintrag.id,
-                    quelleArt = ART_EINTRAG,
-                    bereich = eintrag.bereich,
-                    titel = eintrag.name,
-                    suchtext = normalisiereFuerSuche(
-                        listOf(
-                            eintrag.name,
-                            eintrag.kurz,
-                            eintrag.erklaerung,
-                            eintrag.kategorie,
-                            eintrag.quelleEnglisch,
-                            eintrag.ersatz,
-                        ).joinToString(" "),
-                    ),
-                )
-            },
-        )
+        suche.ersetze(liste.map(::alsIndexzeile))
     }
 
     private suspend fun indiziereFrage(frage: FrageEntity) {
-        suche.ersetze(
-            listOf(
-                SucheFtsEntity(
-                    quelleId = frage.id.toString(),
-                    quelleArt = ART_FRAGE,
-                    bereich = frage.eintragId.substringBefore(':'),
-                    titel = frage.frage,
-                    suchtext = normalisiereFuerSuche("${frage.frage} ${frage.antwort}"),
-                ),
-            ),
-        )
+        suche.ersetze(listOf(alsIndexzeile(frage)))
     }
 
     private suspend fun indiziereNachricht(nachricht: ChatNachrichtEntity) {
@@ -467,19 +508,24 @@ class KompassRepository(context: Context) {
      */
     private suspend fun neuIndiziereChat() {
         suche.leereArt(ART_CHAT)
-        val nachrichten = chat.ladeAlleNachrichten()
-        if (nachrichten.isEmpty()) return
-        suche.indiziere(
-            nachrichten.map { nachricht ->
-                SucheFtsEntity(
-                    quelleId = nachricht.id.toString(),
-                    quelleArt = ART_CHAT,
-                    bereich = Bereich.CHAT.id,
-                    titel = nachricht.text.take(80),
-                    suchtext = normalisiereFuerSuche(nachricht.text),
-                )
-            },
-        )
+        // Blockweise wie bei den Einträgen: Gesprächsverläufe sind das, was am längsten wird.
+        var nachId = 0L
+        while (true) {
+            val seite = chat.ladeNachrichtenSeite(nachId, INDEX_BLOCK)
+            if (seite.isEmpty()) break
+            suche.indiziere(
+                seite.map { nachricht ->
+                    SucheFtsEntity(
+                        quelleId = nachricht.id.toString(),
+                        quelleArt = ART_CHAT,
+                        bereich = Bereich.CHAT.id,
+                        titel = nachricht.text.take(80),
+                        suchtext = normalisiereFuerSuche(nachricht.text),
+                    )
+                },
+            )
+            nachId = seite.last().id
+        }
     }
 
     suspend fun ladeFrage(id: Long): FrageEntity? = fragen.lade(id)
@@ -776,6 +822,14 @@ class KompassRepository(context: Context) {
     companion object {
         const val ART_EINTRAG = "eintrag"
         const val ART_FRAGE = "frage"
+
+        /**
+         * So viele Sätze gehen beim Neuaufbau des Suchindex auf einmal durch.
+         *
+         * Zweihundert: klein genug, dass nie mehr als ein Block Text im Speicher liegt, gross
+         * genug, dass die Zahl der Abfragen nicht ins Gewicht fällt.
+         */
+        private const val INDEX_BLOCK = 200
         const val ART_CHAT = "chat"
     }
 }
