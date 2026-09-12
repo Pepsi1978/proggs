@@ -89,9 +89,9 @@ anderer Name heißt: Der Benutzer hat seine Einstellung verloren, ohne Meldung.
 
 | App | Stand | Pfad der Kopie |
 |---|---|---|
-| ClaudeKompass | v2 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
-| CodexKompass | v2 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
-| OCodeKompass | v2 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
+| ClaudeKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
+| CodexKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
+| OCodeKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
 | GenialeIdeen | v3 | `GenialeIdeen/app/src/main/java/de/frank/module/sicherung/` |
 
 > **Sonderfall:** Die drei Apps teilen sich `KompassKern` per `sourceSets.srcDir`.

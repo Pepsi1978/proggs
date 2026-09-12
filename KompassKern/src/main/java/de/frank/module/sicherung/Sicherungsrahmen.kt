@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v2
+// Modul M1.1 — Sicherung · Stand v3
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -135,7 +135,12 @@ class Sicherungsrahmen(
         try {
             leser.beginObject()
             while (leser.hasNext()) {
-                when (val feld = leser.nextName()) {
+                // Der Alias greift, bevor entschieden wird, ob ein Feld zum Kopf oder zur
+                // Nutzlast gehört: Ein früher anders benanntes Kopf-Feld muss als Kopf-Feld
+                // ankommen, sonst fehlt am Ende die Schema-Angabe und die Datei gilt als
+                // unbrauchbar, obwohl sie vollständig ist.
+                val gelesenesFeld = leser.nextName()
+                when (val feld = inhalt.kopfAliase[gelesenesFeld] ?: gelesenesFeld) {
                     "schema" -> schema = leser.nextInt()
                     "app" -> app = leser.nextString()
                     "erstelltAm" -> erstelltAm = leser.nextString()
