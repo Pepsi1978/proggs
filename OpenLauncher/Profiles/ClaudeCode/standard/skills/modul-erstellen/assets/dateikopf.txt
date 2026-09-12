@@ -1,0 +1,21 @@
+Dieser Kopf steht am Anfang JEDER Moduldatei — in der Quelle unter Module/,
+und damit automatisch auch in jeder App-Kopie. Genau deshalb ist die Kopie
+byte-identisch mit der Quelle, und ein diff beantwortet ohne Nachdenken die
+Frage, ob eine App noch auf dem aktuellen Stand ist.
+
+Kommentarzeichen: // bei Kotlin, C# und Swift.
+
+────────────────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────
+// Modul {{NUMMER}} — {{NAME}} · Stand v{{N}}
+// Quelle: Module/{{PLATTFORM}}/{{NUMMER}}-{{NAME}}/
+//
+// Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
+// und danach mit "zieh {{NUMMER}} nach" an die Konsumenten verteilen —
+// sonst driftet diese App still von der Bibliothek weg.
+// ──────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────────
+
+Beim Anheben der Version wird "Stand vN" in allen Dateien des Moduls und in
+MODUL.md gemeinsam hochgezählt. Bleibt eine Datei zurück, zeigt der Kopf einen
+Stand an, den es nicht gibt — und die Konsumententabelle wird wertlos.

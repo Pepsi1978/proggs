@@ -1,0 +1,40 @@
+# {{NUMMER}} — {{NAME}}
+
+{{EIN_SATZ_WAS_ES_TUT}}
+
+- **Stand:** v1
+- **Plattform:** {{PLATTFORM}}
+- **Angelegt:** {{DD.MM.YYYY HH:MM}}
+
+## Herkunft
+
+- **App:** {{QUELL_APP}}
+- **Commit:** {{COMMIT_HASH}}
+- **Dateien:**
+  - `{{urspruenglicher/pfad/Datei.kt}}`
+
+## Was drin ist
+
+{{Kurz: welche Typen und Funktionen das Modul nach außen anbietet.
+Nur die öffentliche Schnittstelle, keine Innereien.}}
+
+## Host muss liefern
+
+{{Jede Nabelschnür, die nicht zum Parameter wurde. Leer lassen, wenn das Modul
+vollständig über Parameter versorgt wird — das ist der Idealfall.}}
+
+- —
+
+## Mindestens
+
+- {{z. B. Compose BOM 2025.04, Kotlin 2.1 — bzw. .NET 8 / macOS 14}}
+
+## Konsumenten
+
+| App | Stand | Pfad der Kopie |
+|---|---|---|
+| {{QUELL_APP}} | v1 | `{{app/src/main/java/de/frank/module/xyz/}}` |
+
+## Änderungen
+
+- **v1** ({{DD.MM.YYYY}}) — aus {{QUELL_APP}} herausgelöst.
