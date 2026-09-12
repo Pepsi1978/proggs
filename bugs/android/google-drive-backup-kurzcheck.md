@@ -44,3 +44,5 @@
 | 28 | `HiltWorker`-Crash nach Prozess-Tod | Default-WM-Initializer entfernen + `Configuration.Provider` (Property!) | WM1 |
 | 29 | FGS-Crash Android 14/15 | Service-Typ im Manifest mergen; `onTimeout`/StopReason behandeln | WM4, WM6 |
 | 30 | Backup „aktiviert" aber tot | Zeitstempel des letzten ERFOLGREICHEN Backups zeigen + warnen | INC1, INC2 |
+| 31 | Auto-Backup verschluckt sporadisch die letzte Änderung | „Steht aus"-Merker persistieren (`commit()`) + in `onStart` nachholen; `onStop` bricht laufendes Schreiben NICHT ab; späteste Frist neben der Ruhezeit | INC13 |
+| 32 | Statuszeile zeigt alte Uhrzeit, obwohl auto-gesichert wurde | Stand als `StateFlow` aus dem Dienst, nicht einmalig beim ViewModel-Aufbau lesen | INC13 |

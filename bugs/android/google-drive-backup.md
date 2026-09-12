@@ -1126,6 +1126,23 @@
 - **FIX:** Überall: in Temp schreiben → verifizieren → atomar umschalten → Altes erst danach entfernen.
 - **Quelle:** Synthese der Vorfälle INC1–INC11.
 
+### INC13. Auto-Backup: offener Stand nur im RAM → Vorgangstod verschluckt die letzte Änderung ⭐ EIGENER VORFALL 2026-09-12
+
+- **Symptom:** Benutzer ändert etwas, verlässt die App, beim nächsten Öffnen ist die Änderung nicht in der Sicherung. Sporadisch, nicht reproduzierbar, „Auto-Backup ist an" steht sauber da. Belegt im App-Protokoll (GenialeIdeen, Modul M1.1 v3): `21:07:38 setzeStatus UMGESETZT` → `21:08:25 App onCreate` (frischer Vorgang) → **keine** Sicherungszeile dazwischen.
+- **Ursache:** Das Entprell-Muster (2 min Ruhe + „beim Verlassen sofort" über `ProcessLifecycleOwner.onStop`) hält den „steht noch aus"-Merker **nur im Arbeitsspeicher**. Beendet Android den Vorgang, bevor die in `onStop` gestartete Coroutine mit dem SAF-/Drive-Schreibvorgang durch ist (Task-Swipe, Freeze, Low-Memory), stirbt der Merker mit. Beim nächsten Start weiss niemand mehr, dass etwas aussteht — die Änderung bleibt ungesichert, bis zufällig die nächste kommt. `onStop` ist **keine** Zusage, dass die Arbeit fertig wird.
+- **Zweiter Fehler am selben Ort:** `onStop` brach den wartenden Entprell-Auftrag ab (`job.cancel()`), ohne zu unterscheiden, ob der gerade wartet oder gerade **schreibt**. Traf der Abbruch das Schreiben, löschte der Catch die halbe Datei und fing von vorn an — ausgerechnet in der Sekunde vor dem Einfrieren. Siehe INC9.
+- **Dritter Fehler:** Die Statuszeile („Zuletzt: … — geprüft") wurde nur nach dem Knopf „Jetzt sichern" nachgeführt, nicht nach einer selbsttätigen Sicherung. Sie stand auf dem Wert vom App-Start fest. Eine lebende Sicherung sah aus wie eine tote — der Spiegelfall zu INC1/INC2.
+- **Versionen:** per Design, alle Android-Versionen; verschärft ab Android 12 (App-Freeze im Hintergrund) und bei Cloud-SAF-Anbietern (Drive-Schreibvorgang mit Netz).
+- **FIX (funktionserhaltend):**
+  1. Offenen Stand **persistieren** — `SharedPreferences` mit `commit()`, nicht `apply()`: Genau der Fall, um den es geht (Vorgang stirbt), ist der, in dem `apply()` es nicht mehr auf die Platte schafft. Aufrufe kommen ohnehin aus dem Hintergrund.
+  2. **Nachholen in `onStart`** desselben `DefaultLifecycleObserver` — steht der Merker, wird sofort gesichert. Kein zusätzliches Anbinden in der App nötig.
+  3. In `onStop` den laufenden Auftrag **nicht abbrechen**. Mutex + Merker sorgen ohnehin dafür, dass nur einer schreibt; der Wartende wacht später auf, findet nichts Offenes und endet still.
+  4. **Späteste Frist** (z. B. 10 min seit der ERSTEN offenen Änderung) neben der Ruhezeit — sonst setzt ununterbrochenes Arbeiten die Entprellung beliebig lange zurück und gerade die lange Sitzung bleibt ungesichert.
+  5. Statuszeile als `StateFlow` aus dem Sicherungsdienst, nicht als einmalige Abfrage beim Aufbau des ViewModels.
+  6. Belastbarer als alles davor: die Sicherung in einen **WorkManager**-Auftrag legen (U9/U10, WM1–WM6). Er überlebt den Vorgangstod und wiederholt selbst. Die Punkte 1–5 sind die Fassung ohne neue Abhängigkeit; sie schliessen das Loch, garantieren aber nicht das Fertigwerden eines einzelnen Laufs.
+- **Prüfmuster für den Verdacht:** App-Protokoll nebeneinanderlegen — letzte inhaltliche Änderung, letzte Sicherungszeile, nächstes `onCreate`. Liegt ein `onCreate` zwischen Änderung und Sicherung, ist es dieser Fehler.
+- **Quelle:** eigener Vorfall GenialeIdeen/Modul M1.1 (Commit `30fe3d631`, Modul v3→v4) · https://developer.android.com/topic/libraries/architecture/workmanager · INC1, INC2, INC9, U9, U10
+
 ---
 
 ## ✅ Fix-Status (was ist in neueren Versionen behoben?)
