@@ -1,5 +1,6 @@
 package de.frank.kompass.vm
 
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,6 +66,14 @@ data class EinstellungenZustand(
     val pruefungen: Map<String, PruefErgebnis> = emptyMap(),
     val meldung: String = "",
     val fehler: String = "",
+    /** Name des gemerkten Sicherungsordners — null, solange keiner gewählt wurde. */
+    val sicherungsOrdner: String? = null,
+    /** Wann zuletzt wirklich geschrieben wurde. Behauptet nie eine Sicherung, die es nicht gab. */
+    val sicherungsStand: String = "",
+    val sicherungLaeuft: Boolean = false,
+    /** Eine geprüfte Sicherung wartet hier, bis das Einspielen ausdrücklich zugesagt ist. */
+    val sicherungBereit: Uri? = null,
+    val sicherungVorschauText: String = "",
     val schluesselAblageFehler: String? = null,
 )
 
@@ -110,6 +119,8 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         sperreNach = store.sperreNachSekunden,
         codexEmail = container.codex.email,
         codexVerbunden = container.codex.istVerbunden,
+        sicherungsOrdner = container.sicherung.ordnerName(),
+        sicherungsStand = container.sicherung.standText(),
         schluesselAblageFehler = if (store.geheimVerfuegbar) {
             null
         } else {
@@ -127,6 +138,9 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
             geraeteCode = _zustand.value.geraeteCode,
             meldeAnLaeuft = _zustand.value.meldeAnLaeuft,
             pruefungen = _zustand.value.pruefungen,
+            sicherungLaeuft = _zustand.value.sicherungLaeuft,
+            sicherungBereit = _zustand.value.sicherungBereit,
+            sicherungVorschauText = _zustand.value.sicherungVorschauText,
         )
     }
 
@@ -504,6 +518,190 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
                 _zustand.value = _zustand.value.copy(fehler = meldung)
             },
         )
+    }
+
+    // ---- Sicherung ----------------------------------------------------------------------
+
+    private val sicherung get() = container.sicherung
+    private var nachOrdnerWahlSichern = false
+
+    /** Der gemerkte Ordner als Adresse — der Dateiwaehler startet darin. */
+    val sicherungsOrdnerUri: Uri? get() = sicherung.sicherungsOrdner
+
+    /** Die gespeicherte Freigabe reicht aus; nur beim ersten Mal einen Ordner wählen. */
+    fun sichereJetzt(ordnerWaehlen: () -> Unit) {
+        if (_zustand.value.sicherungLaeuft) return
+        if (sicherung.sicherungsOrdner == null) {
+            nachOrdnerWahlSichern = true
+            ordnerWaehlen()
+            return
+        }
+        _zustand.value = _zustand.value.copy(
+            sicherungLaeuft = true,
+            meldung = "Deine Fragen, Erklärungen und Gespräche werden gesichert …",
+            fehler = "",
+        )
+        viewModelScope.launch {
+            runCatching { sicherung.sichere() }
+                .onSuccess { stand ->
+                    _zustand.value = _zustand.value.copy(
+                        sicherungLaeuft = false,
+                        meldung = "Sicherung geschrieben. $stand",
+                        sicherungsStand = stand,
+                        sicherungsOrdner = sicherung.ordnerName(),
+                    )
+                }
+                .onFailure { fehler ->
+                    if (fehler is CancellationException) throw fehler
+                    KompassLog.warn(
+                        "EinstellungenViewModel",
+                        "sichereJetzt",
+                        "Sicherung fehlgeschlagen",
+                        mapOf("grund" to fehler.message),
+                    )
+                    _zustand.value = _zustand.value.copy(
+                        sicherungLaeuft = false,
+                        fehler = "Sicherung fehlgeschlagen: ${fehler.message}. " +
+                            "Wähl bei fehlendem Zugriff den Ordner erneut.",
+                    )
+                }
+        }
+    }
+
+    /** Nur den Ordner wechseln, ohne gleich zu sichern. */
+    fun waehleSicherungsOrdner(ordnerWaehlen: () -> Unit) {
+        if (_zustand.value.sicherungLaeuft) return
+        nachOrdnerWahlSichern = false
+        ordnerWaehlen()
+    }
+
+    /** Reine Ordnerwahl schreibt keine Sicherung, insbesondere nicht vor einem Einspielen. */
+    fun sicherungsOrdnerGewaehlt(ordner: Uri?, ordnerWaehlen: () -> Unit) {
+        val danachSichern = nachOrdnerWahlSichern
+        nachOrdnerWahlSichern = false
+        if (ordner == null) return
+        runCatching { sicherung.merkeOrdner(ordner) }
+            .onSuccess {
+                _zustand.value = _zustand.value.copy(
+                    sicherungsOrdner = sicherung.ordnerName(),
+                    sicherungsStand = sicherung.standText(),
+                    meldung = if (danachSichern) "" else "Ordner gemerkt. Ab jetzt schreibt „Jetzt sichern“ ohne Rückfrage dorthin.",
+                    fehler = "",
+                )
+                if (danachSichern) sichereJetzt(ordnerWaehlen)
+            }
+            .onFailure { fehler ->
+                _zustand.value = _zustand.value.copy(
+                    fehler = "Der Ordner liess sich nicht dauerhaft freigeben: ${fehler.message}",
+                )
+            }
+    }
+
+    /** Trennt den gemerkten Ordner — die Sicherungen darin bleiben liegen. */
+    fun vergissSicherungsOrdner() {
+        if (_zustand.value.sicherungLaeuft) return
+        sicherung.vergissOrdner()
+        _zustand.value = _zustand.value.copy(
+            sicherungsOrdner = null,
+            sicherungBereit = null,
+            sicherungVorschauText = "",
+            meldung = "Der Sicherungsordner ist vergessen. Die Dateien bleiben liegen.",
+        )
+    }
+
+    /** Nimmt die jüngste Sicherung aus dem gemerkten Ordner und zeigt zuerst ihre Vorschau. */
+    fun stelleNeuesteWiederHer() {
+        if (_zustand.value.sicherungLaeuft) return
+        if (sicherung.sicherungsOrdner == null) {
+            _zustand.value = _zustand.value.copy(fehler = "Es ist noch kein Sicherungsordner gewählt.")
+            return
+        }
+        viewModelScope.launch {
+            runCatching { sicherung.neuesteSicherung() }
+                .onSuccess { datei ->
+                    if (datei == null) {
+                        _zustand.value = _zustand.value.copy(
+                            fehler = "Im gemerkten Ordner liegt keine Sicherung dieser App.",
+                        )
+                    } else {
+                        zeigeVorschau(datei.uri)
+                    }
+                }
+                .onFailure { fehler ->
+                    if (fehler is CancellationException) throw fehler
+                    _zustand.value = _zustand.value.copy(
+                        fehler = "Der Sicherungsordner liess sich nicht lesen: ${fehler.message}",
+                    )
+                }
+        }
+    }
+
+    /** Eine ausdrücklich gewählte Datei — auch sie wird erst geprüft und gezeigt. */
+    fun stelleWiederHer(quelle: Uri) {
+        viewModelScope.launch { zeigeVorschau(quelle) }
+    }
+
+    /**
+     * Vorschau VOR dem Einspielen (Referenz, Baustein J.1): Erst steht da, was in der Datei
+     * steckt, danach erst wird eingespielt. Zusammengeführt wird, nicht ersetzt.
+     */
+    private suspend fun zeigeVorschau(quelle: Uri) {
+        runCatching { sicherung.vorschauVon(quelle) }
+            .onSuccess { vorschau ->
+                _zustand.value = _zustand.value.copy(
+                    sicherungBereit = quelle,
+                    fehler = "",
+                    meldung = "",
+                    sicherungVorschauText = "Sicherung vom ${vorschau.erstelltAm}: " +
+                        "${vorschau.fragen} Fragen, ${vorschau.sitzungen} Gespräche, " +
+                        "${vorschau.eintraege} vertiefte Erklärungen werden ergänzt. " +
+                        "Vorhandenes bleibt unverändert.",
+                )
+            }
+            .onFailure { fehler ->
+                if (fehler is CancellationException) throw fehler
+                _zustand.value = _zustand.value.copy(
+                    sicherungBereit = null,
+                    sicherungVorschauText = "",
+                    fehler = "Die Sicherung liess sich nicht lesen: ${fehler.message}",
+                )
+            }
+    }
+
+    fun verwirfSicherungsVorschau() {
+        _zustand.value = _zustand.value.copy(sicherungBereit = null, sicherungVorschauText = "")
+    }
+
+    /** Spielt die vorher gezeigte Sicherung ein — erst nach der ausdrücklichen Zusage. */
+    fun spieleSicherungEin() {
+        val quelle = _zustand.value.sicherungBereit ?: return
+        _zustand.value = _zustand.value.copy(
+            sicherungLaeuft = true,
+            sicherungBereit = null,
+            sicherungVorschauText = "",
+        )
+        viewModelScope.launch {
+            runCatching { sicherung.stelleWiederHerAus(quelle) }
+                .onSuccess { bericht ->
+                    _zustand.value = _zustand.value.copy(
+                        sicherungLaeuft = false,
+                        meldung = bericht.alsText(),
+                    )
+                }
+                .onFailure { fehler ->
+                    if (fehler is CancellationException) throw fehler
+                    KompassLog.error(
+                        "EinstellungenViewModel",
+                        "spieleSicherungEin",
+                        "Einspielen fehlgeschlagen",
+                        mapOf("grund" to fehler.message),
+                    )
+                    _zustand.value = _zustand.value.copy(
+                        sicherungLaeuft = false,
+                        fehler = "Einspielen ging nicht: ${fehler.message}",
+                    )
+                }
+        }
     }
 
     fun loescheMeldungen() {

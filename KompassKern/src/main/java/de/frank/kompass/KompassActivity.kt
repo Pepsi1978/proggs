@@ -1,7 +1,6 @@
 package de.frank.kompass
 
 import android.Manifest
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -13,26 +12,16 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import de.frank.kompass.data.Sicherung
-import de.frank.kompass.data.SicherungsFehler
 import de.frank.kompass.observability.KompassLog
 import de.frank.kompass.ui.KompassApp
 import de.frank.kompass.ui.theme.KompassTheme
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
 
 /**
  * Der einzige Bildschirm der App.
@@ -55,13 +44,54 @@ open class KompassActivity : FragmentActivity() {
         }
     }
 
-    private val exportZiel = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json"),
-    ) { adresse -> adresse?.let { schreibeSicherung(it) } }
+    /**
+     * Ein Ordner statt einer einzelnen Datei: Nur so kann die App die vorige Sicherung stehen
+     * lassen und alles Ältere selbst wegräumen — ohne bei jedem Sichern nachzufragen.
+     */
+    private val ordnerWahl = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { ordner -> einstellungenModell?.sicherungsOrdnerGewaehlt(ordner, ::oeffneOrdnerWahl) }
 
-    private val importQuelle = registerForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { adresse -> adresse?.let { leseSicherung(it) } }
+    private val sicherungsWahl = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { ergebnis ->
+        if (ergebnis.resultCode == RESULT_OK) {
+            ergebnis.data?.data?.let { quelle -> einstellungenModell?.stelleWiederHer(quelle) }
+        }
+    }
+
+    /**
+     * Das Einstellungs-Modell, sobald die Oberfläche steht. Die Launcher werden vor
+     * `setContent` angemeldet — Android verlangt das —, brauchen das Modell aber erst beim
+     * Ergebnis, also lange danach.
+     */
+    private var einstellungenModell: de.frank.kompass.vm.EinstellungenViewModel? = null
+
+    private fun oeffneOrdnerWahl() {
+        runCatching { ordnerWahl.launch(einstellungenModell?.sicherungsOrdnerUri) }
+            .onFailure { zeige("Die Ordnerauswahl liess sich nicht öffnen: ${it.message}") }
+    }
+
+    /** Eine bestimmte Sicherungsdatei wählen — der Wähler startet im gemerkten Ordner. */
+    private fun oeffneSicherungsWahl() {
+        runCatching {
+            val absicht = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                einstellungenModell?.sicherungsOrdnerUri?.let { ordner ->
+                    putExtra(
+                        android.provider.DocumentsContract.EXTRA_INITIAL_URI,
+                        android.provider.DocumentsContract.buildDocumentUriUsingTree(
+                            ordner,
+                            android.provider.DocumentsContract.getTreeDocumentId(ordner),
+                        ),
+                    )
+                }
+            }
+            sicherungsWahl.launch(absicht)
+        }.onFailure { zeige("Die Dateiauswahl liess sich nicht öffnen: ${it.message}") }
+    }
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,15 +113,21 @@ open class KompassActivity : FragmentActivity() {
 
             KompassTheme(modus = themeModus) {
                 val fabrik = KompassViewModelFactory(container)
+                val einstellungenModell: de.frank.kompass.vm.EinstellungenViewModel =
+                    viewModel(factory = fabrik)
+                // Die Launcher liefern ihr Ergebnis an dieses Modell; ohne die Merkung
+                // käme die Ordnerwahl zurück und niemand wüsste, wohin damit. Als
+                // Nebenwirkung NACH der Komposition, nicht mittendrin.
+                SideEffect { this@KompassActivity.einstellungenModell = einstellungenModell }
                 KompassApp(
                     referenz = viewModel(factory = fabrik),
                     chat = viewModel(factory = fabrik),
-                    einstellungen = viewModel(factory = fabrik),
+                    einstellungen = einstellungenModell,
                     diktat = viewModel(factory = fabrik),
                     gesperrt = gesperrt,
                     beiEntsperren = ::entsperre,
-                    beiExport = { exportZiel.launch(Sicherung.baueDateiname(zeitstempel())) },
-                    beiImport = { importQuelle.launch(arrayOf("application/json", "*/*")) },
+                    beiOrdnerWaehlen = ::oeffneOrdnerWahl,
+                    beiSicherungWaehlen = ::oeffneSicherungsWahl,
                     beiLogAnsehen = ::zeigeLog,
                     // Ab mittlerer Breite ist Platz für zwei Spalten. Auf dem Cover-Display des
                     // Fold ist das nicht der Fall — dort wird die Gesprächsliste überlagert.
@@ -131,75 +167,6 @@ open class KompassActivity : FragmentActivity() {
         }
     }
 
-    private fun schreibeSicherung(ziel: Uri) {
-        lifecycleScope.launch {
-            try {
-                val inhalt = withContext(Dispatchers.IO) {
-                    val eintraege = container.repository.ladeKomplett()
-                    // Die Flüsse werden einmalig ausgelesen; für eine Momentaufnahme genügt das.
-                    val fragenListe = container.repository.beobachteAlleFragen().first()
-                    val sitzungen = container.repository.beobachteSitzungen().first()
-                    val nachrichten = sitzungen.flatMap { container.repository.ladeNachrichten(it.id) }
-                    Sicherung.schreibe(
-                        eintraege,
-                        fragenListe,
-                        sitzungen,
-                        nachrichten,
-                        zeitstempel(),
-                        container.repository.seedKennungen(),
-                    )
-                }
-                withContext(Dispatchers.IO) {
-                    contentResolver.openOutputStream(ziel)?.use { strom ->
-                        strom.write(inhalt.toByteArray(Charsets.UTF_8))
-                    } ?: throw SicherungsFehler("Die Datei liess sich nicht zum Schreiben öffnen.")
-                }
-                zeige("Sicherung geschrieben.")
-                KompassLog.info("MainActivity", "schreibeSicherung", "Sicherung geschrieben")
-            } catch (fehler: Exception) {
-                zeige(fehler.message ?: "Die Sicherung ist fehlgeschlagen.")
-                KompassLog.error(
-                    "MainActivity",
-                    "schreibeSicherung",
-                    "Sicherung fehlgeschlagen",
-                    mapOf("grund" to fehler.message),
-                )
-            }
-        }
-    }
-
-    private fun leseSicherung(quelle: Uri) {
-        lifecycleScope.launch {
-            try {
-                val text = withContext(Dispatchers.IO) {
-                    contentResolver.openInputStream(quelle)?.bufferedReader(Charsets.UTF_8)
-                        ?.use { it.readText() }
-                        ?: throw SicherungsFehler("Die Datei liess sich nicht öffnen.")
-                }
-                val (vorschau, json) = Sicherung.lies(text)
-                // Vorschau vor dem Einspielen (Referenz, Baustein J.1). Zusammengeführt wird,
-                // nicht ersetzt: Vorhandenes bleibt in jedem Fall erhalten.
-                zeige(
-                    "Sicherung vom ${vorschau.erstelltAm}: ${vorschau.fragen} Fragen, " +
-                        "${vorschau.sitzungen} Gespräche, ${vorschau.eintraege} vertiefte " +
-                        "Erklärungen werden ergänzt.",
-                )
-                val bericht = withContext(Dispatchers.IO) {
-                    container.repository.spieleSicherungEin(json)
-                }
-                zeige(bericht.alsText())
-            } catch (fehler: Exception) {
-                zeige(fehler.message ?: "Die Sicherung liess sich nicht einlesen.")
-                KompassLog.error(
-                    "MainActivity",
-                    "leseSicherung",
-                    "Einspielen fehlgeschlagen",
-                    mapOf("grund" to fehler.message),
-                )
-            }
-        }
-    }
-
     private fun zeigeLog() {
         val pfad = KompassLog.path
         if (pfad == null) {
@@ -214,9 +181,6 @@ open class KompassActivity : FragmentActivity() {
     private fun zeige(text: String) {
         Toast.makeText(this, text, Toast.LENGTH_LONG).show()
     }
-
-    private fun zeitstempel(): String =
-        SimpleDateFormat("yyyy-MM-dd-HHmm", Locale.GERMANY).format(Date())
 
     override fun onDestroy() {
         if (isFinishing) container.vorlesen.stoppe()

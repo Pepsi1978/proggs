@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!--
+      Geschweifte Klammern mit drei Punkten dazwischen: Quelltext, der offen liegt.
+      Bewusst weder Kompassring (Claude Kompass) noch Eingabepfeil (Codex Kompass) - die drei
+      Startsymbole muessen sich im Startbildschirm auf einen Blick unterscheiden, auch einfarbig.
+    -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#F5A524"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M42,30 C34,30 34,50 26,54 C34,58 34,78 42,78" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#F5A524"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M66,30 C74,30 74,50 82,54 C74,58 74,78 66,78" />
+    <path
+        android:fillColor="#7DE0B0"
+        android:pathData="M54,48 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="#7DE0B0"
+        android:pathData="M54,64 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+</vector>

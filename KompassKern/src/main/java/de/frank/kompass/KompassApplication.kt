@@ -6,6 +6,7 @@ import de.frank.kompass.ai.CodexClient
 import de.frank.kompass.audio.GroqTranskribierer
 import de.frank.kompass.audio.FilterSchalter
 import de.frank.kompass.audio.Mikrofon
+import de.frank.kompass.backup.SicherungsDienst
 import de.frank.kompass.data.EinstellungenStore
 import de.frank.kompass.data.KompassRepository
 import de.frank.kompass.observability.KompassCrashHandler
@@ -37,6 +38,7 @@ class KompassContainer(context: Context) {
     val mikrofon = Mikrofon(appContext)
     val stimmVerwaltung = QwenStimmVerwaltung { einstellungen.alibabaSchluessel }
     val appSperre = AppSperre(einstellungen)
+    val sicherung = SicherungsDienst(appContext, repository)
 
     val transkribierer = GroqTranskribierer(
         schluesselGeber = { einstellungen.groqSchluessel },

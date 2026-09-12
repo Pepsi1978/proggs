@@ -85,8 +85,8 @@ fun KompassApp(
     diktat: DiktatViewModel,
     gesperrt: Boolean,
     beiEntsperren: () -> Unit,
-    beiExport: (String) -> Unit,
-    beiImport: () -> Unit,
+    beiOrdnerWaehlen: () -> Unit,
+    beiSicherungWaehlen: () -> Unit,
     beiLogAnsehen: () -> Unit,
     breitGenugFuerZweiSpalten: Boolean,
     themeModus: ThemeModus,
@@ -147,8 +147,8 @@ fun KompassApp(
             Trennlinie()
             EinstellungenScreen(
                 viewModel = einstellungen,
-                beiExport = beiExport,
-                beiImport = beiImport,
+                beiOrdnerWaehlen = beiOrdnerWaehlen,
+                beiSicherungWaehlen = beiSicherungWaehlen,
                 beiLogAnsehen = beiLogAnsehen,
                 modifier = Modifier.weight(1f),
             )

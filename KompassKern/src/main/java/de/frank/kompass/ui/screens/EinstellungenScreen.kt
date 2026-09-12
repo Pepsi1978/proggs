@@ -96,8 +96,8 @@ import de.frank.kompass.vm.PruefErgebnis
 @Composable
 fun EinstellungenScreen(
     viewModel: EinstellungenViewModel,
-    beiExport: (String) -> Unit,
-    beiImport: () -> Unit,
+    beiOrdnerWaehlen: () -> Unit,
+    beiSicherungWaehlen: () -> Unit,
     beiLogAnsehen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -546,15 +546,67 @@ fun EinstellungenScreen(
         item {
             Block("Sicherung") {
                 Zeilentext(
+                    "Wähl einmal einen Ordner — in der Praxis einen Google-Drive-Ordner — und " +
+                        "erlaub den Zugriff. „Jetzt sichern“ schreibt danach ohne erneute Nachfrage " +
+                        "dorthin. Es liegen immer nur zwei Sicherungen darin: die aktuelle und die davor.",
+                )
+                Spacer(Modifier.height(Mass.abstandKlein))
+                Zeilentext(
                     "Gesichert werden deine Fragen samt Antworten, die vertieften Erklärungen " +
                         "und die Gespräche. Schlüssel kommen ausdrücklich NICHT mit in die " +
                         "Datei — die landet schnell in einer Cloud.",
                 )
                 Spacer(Modifier.height(Mass.abstandKlein))
+                Text(
+                    text = zustand.sicherungsOrdner ?: "Noch kein Ordner gewählt",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (zustand.sicherungsOrdner == null) {
+                        LocalKompassFarben.current.textGedaempft
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                )
+                Zeilentext(zustand.sicherungsStand)
+
+                if (zustand.sicherungVorschauText.isNotBlank()) {
+                    Spacer(Modifier.height(Mass.abstandKlein))
+                    HinweisStreifen(
+                        text = zustand.sicherungVorschauText,
+                        beiSchliessen = viewModel::verwirfSicherungsVorschau,
+                    )
+                    Spacer(Modifier.height(Mass.abstandKlein))
+                    Row {
+                        Aktionsknopf("Jetzt einspielen") { viewModel.spieleSicherungEin() }
+                        Spacer(Modifier.width(Mass.abstandKlein))
+                        Aktionsknopf("Abbrechen", zurueckhaltend = true) {
+                            viewModel.verwirfSicherungsVorschau()
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(Mass.abstandKlein))
                 Row {
-                    Aktionsknopf("Exportieren") { beiExport("") }
+                    Aktionsknopf("Jetzt sichern", laedt = zustand.sicherungLaeuft) {
+                        viewModel.sichereJetzt(beiOrdnerWaehlen)
+                    }
                     Spacer(Modifier.width(Mass.abstandKlein))
-                    Aktionsknopf("Importieren", zurueckhaltend = true) { beiImport() }
+                    Aktionsknopf("Neueste wiederherstellen", zurueckhaltend = true) {
+                        viewModel.stelleNeuesteWiederHer()
+                    }
+                }
+                Spacer(Modifier.height(Mass.abstandKlein))
+                Row {
+                    Aktionsknopf("Ordner wählen", zurueckhaltend = true) {
+                        viewModel.waehleSicherungsOrdner(beiOrdnerWaehlen)
+                    }
+                    Spacer(Modifier.width(Mass.abstandKlein))
+                    Aktionsknopf("Datei wählen", zurueckhaltend = true) { beiSicherungWaehlen() }
+                }
+                if (zustand.sicherungsOrdner != null) {
+                    Spacer(Modifier.height(Mass.abstandKlein))
+                    Aktionsknopf("Ordner vergessen", zurueckhaltend = true) {
+                        viewModel.vergissSicherungsOrdner()
+                    }
                 }
             }
         }
