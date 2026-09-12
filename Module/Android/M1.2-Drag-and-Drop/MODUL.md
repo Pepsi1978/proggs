@@ -31,7 +31,7 @@ Eine Datei, `DragReorder.kt`. Nach außen:
 | `rememberReorderState(listState, listKey)` | Erzeugt den Zustand. `listKey` setzt ihn zurück, wenn die Liste wechselt (bei GenialeIdeen: Bereich und Kategorie) |
 | `Modifier.reorderViewport(state, order, onMove, onDrop, reducedMotion)` | Die Geste. Gehört an die `LazyColumn`, **nicht** an den Griff |
 | `LazyItemScope.reorderItem(state, id, reducedMotion)` | Der Modifier für die Zeile: Hochsetzen, Mitziehen **und** das weiche Ausweichen der Nachbarn. Der Normalfall |
-| `Modifier.reorderRow(state, id)` | Nur Hochsetzen und Mitziehen, ohne Ausweich-Animation. Für Listen, die keine `LazyColumn` sind |
+| `Modifier.reorderRow(state, id)` | Nur Hochsetzen und Mitziehen, ohne die Ausweich-Animation. Für Apps, die diese selbst setzen wollen oder keine wollen |
 | `reorderHandle(state, id)` | Der Modifier für die Greiffläche. Die App entscheidet, welcher Bereich der Karte das ist |
 | `ReorderAutoScroll(state)` | Das Randscrollen. Einmal neben die Liste setzen |
 
@@ -58,9 +58,15 @@ Ziehen auch bei unterschiedlich hohen Karten, bei laufendem Randscrollen und
 
 ## Host muss liefern
 
-Nichts. Alles läuft über Parameter.
+Nichts — alles läuft über Parameter. Zwei Dinge muss die App aber **lassen**:
 
-- —
+| Nicht tun | Warum |
+|---|---|
+| Der Karte einen eigenen Zeige-Effekt per `pointerInput` geben (Kippen, Neigen, Drücken) | Der fängt die Zieh-Geste ab, und die Liste hakt. In GenialeIdeen ist `IdeenKarte` deshalb ausdrücklich **nicht** kippbar |
+| Eine andere Liste als `LazyColumn` benutzen | Das Modul rechnet über `LazyListState` und nur senkrecht. Waagerecht oder `LazyVerticalGrid` geht nicht |
+
+Der `key` der `LazyColumn` **muss** derselbe `Long` sein, den `order` liefert —
+darüber findet das Modul die Karte.
 
 ## Gespeicherter Zustand
 

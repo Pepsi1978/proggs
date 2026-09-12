@@ -87,6 +87,15 @@ findet die Karte über den Lazy-Item-Key.
 `reorderItem` ist kein `Modifier.`-Aufruf: Der Empfänger ist der `LazyItemScope`,
 deshalb steht es ohne Präfix da.
 
-Den `griff`-Modifier legt die App auf die Fläche, die gegriffen werden soll — bei
-GenialeIdeen ein Griffsymbol am Rand der Karte. Wer die ganze Karte greifbar
-machen will, setzt ihn auf die Karte selbst.
+Den `griff`-Modifier legt die App auf die Fläche, die gegriffen werden soll. Bei
+GenialeIdeen ist das eine 40×48 dp große Box links in der Karte mit
+`Icons.Default.DragIndicator` darin (`ListenScreen.kt:917`). Wer die ganze Karte
+greifbar machen will, setzt ihn auf die Karte selbst.
+
+**Eine Falle:** Die Karte darf keinen eigenen Zeige-Effekt per `pointerInput`
+haben — Kippen, Neigen, Drücken. Der fängt die Zieh-Geste ab, und die Liste
+hakt. In GenialeIdeen steht deshalb über `GoldKarte`:
+
+```kotlin
+// Kein kippbar: Der Kipp-Effekt fängt Zieh-Gesten ab und liesse die Liste haken.
+```
