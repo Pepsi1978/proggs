@@ -76,7 +76,7 @@ class DateiSicherung(private val context: Context) {
      */
     suspend fun schreibe(json: String): Sicherungsdatei = withContext(Dispatchers.IO) {
         val baum = ordner ?: error("Es ist noch kein Sicherungsordner gewählt.")
-        val bisherige = listeAuf(baum)
+        val bisherige = listeAuf(baum, benenneAlteUm = true)
         val name = neuerName(bisherige)
         val datei = DocumentsContract.createDocument(
             context.contentResolver,
@@ -112,7 +112,7 @@ class DateiSicherung(private val context: Context) {
     /** Alle Sicherungen im Ordner, die jüngste zuerst. */
     suspend fun sicherungen(): List<Sicherungsdatei> = withContext(Dispatchers.IO) {
         val baum = ordner ?: return@withContext emptyList()
-        listeAuf(baum)
+        listeAuf(baum, benenneAlteUm = true)
     }
 
     suspend fun lies(quelle: Uri): String = withContext(Dispatchers.IO) {
@@ -126,8 +126,14 @@ class DateiSicherung(private val context: Context) {
         DocumentsContract.getTreeDocumentId(baum),
     )
 
-    /** Nur die eigenen Sicherungen zählen — fremde Dateien im Ordner bleiben unangetastet. */
-    private fun listeAuf(baum: Uri): List<Sicherungsdatei> {
+    /**
+     * Nur die eigenen Sicherungen zählen — fremde Dateien im Ordner bleiben unangetastet.
+     *
+     * Mit [benenneAlteUm] bekommt dabei jede Datei aus dem früheren Namensmuster ihren heutigen
+     * Namen. Das geschieht beim Sichern und beim Auflisten, nicht als eigener Knopf: Die
+     * Umbenennung ist reine Formsache und soll niemandem auffallen müssen.
+     */
+    private fun listeAuf(baum: Uri, benenneAlteUm: Boolean = false): List<Sicherungsdatei> {
         val gefunden = mutableListOf<Sicherungsdatei>()
         context.contentResolver.query(
                 kinderUri(baum),
@@ -147,11 +153,13 @@ class DateiSicherung(private val context: Context) {
                     // Eine leer gebliebene Datei (Schreiben abgebrochen) ist keine Sicherung —
                     // sonst gälte sie als „die davor“ und die gute würde weggeräumt.
                     if (!zeiger.isNull(3) && zeiger.getLong(3) == 0L) continue
-                    gefunden += Sicherungsdatei(
-                        uri = DocumentsContract.buildDocumentUriUsingTree(baum, zeiger.getString(0)),
+                    val adresse = DocumentsContract.buildDocumentUriUsingTree(baum, zeiger.getString(0))
+                    val gefundene = Sicherungsdatei(
+                        uri = adresse,
                         name = name,
                         geaendertAm = zeiger.getLong(2),
                     )
+                    gefunden += if (benenneAlteUm) benenneUm(gefundene) else gefundene
                 }
             } ?: error("Der Sicherungsordner konnte nicht aufgelistet werden. Bestehende Sicherungen bleiben erhalten.")
         // Verglichen wird der Zeitpunkt aus dem Namen, nie der Name selbst: Beim heutigen
@@ -178,7 +186,7 @@ class DateiSicherung(private val context: Context) {
 
     private fun zeitpunktAusNamen(name: String): Long? {
         NEUES_MUSTER.find(name)?.let { treffer ->
-            val format = SimpleDateFormat("dd-MM-yyyy-HHmm", Locale.GERMANY).apply { isLenient = false }
+            val format = SimpleDateFormat(ZEIT_MUSTER, Locale.GERMANY).apply { isLenient = false }
             return runCatching { format.parse(treffer.groupValues[1])?.time }.getOrNull()
         }
         val treffer = ALTES_MUSTER.find(name) ?: return null
@@ -188,6 +196,45 @@ class DateiSicherung(private val context: Context) {
             isLenient = false
         }
         return runCatching { format.parse(ziffern)?.time }.getOrNull()
+    }
+
+    /**
+     * Hebt eine Sicherung aus dem früheren Namensmuster auf das heutige.
+     *
+     * Aus `opencode-kompass-2026-03-20-1346Z.json` wird `20-03-2026-1446-opencode-kompass.json`
+     * — der alte Name stand in UTC, der neue in Ortszeit, deshalb wird der Zeitpunkt gelesen
+     * und neu geschrieben statt die Ziffern umzusortieren. Sonst sähe eine umbenannte Sicherung
+     * eine oder zwei Stunden älter aus, als sie ist.
+     *
+     * Geht das Umbenennen nicht — schreibgeschützter Anbieter, Name schon vergeben —, bleibt
+     * die Datei unter ihrem alten Namen liegen. Sie wird weiterhin erkannt und
+     * wiederhergestellt; ein misslungener Schreibvorgang darf keine Sicherung verlieren.
+     */
+    private fun benenneUm(datei: Sicherungsdatei): Sicherungsdatei {
+        if (NEUES_MUSTER.containsMatchIn(datei.name)) return datei
+        val zeitpunkt = zeitpunktAusNamen(datei.name) ?: datei.geaendertAm
+        val zeit = SimpleDateFormat(ZEIT_MUSTER, Locale.GERMANY).format(Date(zeitpunkt))
+        val neuerName = "$zeit-${AppProfil.DATEI_PRAEFIX}.json"
+        if (neuerName == datei.name) return datei
+        return runCatching {
+            val adresse = DocumentsContract.renameDocument(context.contentResolver, datei.uri, neuerName)
+                ?: return@runCatching datei
+            KompassLog.info(
+                "DateiSicherung",
+                "benenneUm",
+                "Sicherung auf das heutige Namensmuster gehoben",
+                mapOf("vorher" to datei.name, "nachher" to neuerName),
+            )
+            datei.copy(uri = adresse, name = neuerName)
+        }.getOrElse { fehler ->
+            KompassLog.warn(
+                "DateiSicherung",
+                "benenneUm",
+                "Sicherung behielt ihren alten Namen",
+                mapOf("name" to datei.name, "art" to fehler.javaClass.simpleName),
+            )
+            datei
+        }
     }
 
     private fun raeumeAuf(bisherige: List<Sicherungsdatei>) {
@@ -235,7 +282,7 @@ class DateiSicherung(private val context: Context) {
      * Ordner voneinander.
      */
     private fun neuerName(bisherige: List<Sicherungsdatei>): String {
-        val zeit = SimpleDateFormat("dd-MM-yyyy-HHmm", Locale.GERMANY).format(Date())
+        val zeit = SimpleDateFormat(ZEIT_MUSTER, Locale.GERMANY).format(Date())
         val basis = "$zeit-${AppProfil.DATEI_PRAEFIX}"
         val namen = bisherige.map { it.name }.toSet()
         var name = "$basis.json"
@@ -250,6 +297,9 @@ class DateiSicherung(private val context: Context) {
 
         private const val PREFS = "kompass_backup_status"
         private const val KEY_ORDNER = "sicherungs_ordner"
+        /** Der Zeitpunkt im Dateinamen, in Ortszeit und in Lesereihenfolge. */
+        private const val ZEIT_MUSTER = "dd-MM-yyyy-HHmm"
+
         /** `20-03-2026-1346-opencode-kompass.json` — Zeitpunkt vorn, App-Name hinten. */
         private val NEUES_MUSTER =
             Regex("^(\\d{2}-\\d{2}-\\d{4}-\\d{4})-${Regex.escape(AppProfil.DATEI_PRAEFIX)}\\b")

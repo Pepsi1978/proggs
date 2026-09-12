@@ -588,13 +588,26 @@ fun EinstellungenScreen(
                 }
 
                 Spacer(Modifier.height(Mass.abstandKlein))
-                Aktionsknopf("Jetzt sichern", laedt = zustand.sicherungLaeuft) {
-                    viewModel.sichereJetzt(beiOrdnerWaehlen)
+                // FlowRow statt Row: Manche Beschriftungen sind lang und passen auf dem
+                // Cover-Display nicht nebeneinander — dort rutscht der nächste Knopf eine Zeile
+                // tiefer, statt am Rand abgeschnitten zu werden.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
+                    verticalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
+                ) {
+                    Aktionsknopf("Jetzt sichern", laedt = zustand.sicherungLaeuft) {
+                        viewModel.sichereJetzt(beiOrdnerWaehlen)
+                    }
+                    Aktionsknopf("Ordner wählen", zurueckhaltend = true) {
+                        viewModel.waehleSicherungsOrdner(beiOrdnerWaehlen)
+                    }
+                    if (zustand.sicherungsOrdner != null) {
+                        Aktionsknopf("Ordner vergessen", zurueckhaltend = true) {
+                            viewModel.vergissSicherungsOrdner()
+                        }
+                    }
                 }
                 Spacer(Modifier.height(Mass.abstandKlein))
-                // FlowRow statt Row: Die beiden Beschriftungen sind lang und passen auf dem
-                // Cover-Display nicht nebeneinander — dort rutscht der zweite Knopf eine Zeile
-                // tiefer, statt am Rand abgeschnitten zu werden.
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
                     verticalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
@@ -604,20 +617,6 @@ fun EinstellungenScreen(
                     Aktionsknopf("Wiederherstellen", zurueckhaltend = true) { beiSicherungWaehlen() }
                     Aktionsknopf("Neueste wiederherstellen", zurueckhaltend = true) {
                         viewModel.stelleNeuesteWiederHer()
-                    }
-                }
-                Spacer(Modifier.height(Mass.abstandKlein))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
-                    verticalArrangement = Arrangement.spacedBy(Mass.abstandKlein),
-                ) {
-                    Aktionsknopf("Ordner wählen", zurueckhaltend = true) {
-                        viewModel.waehleSicherungsOrdner(beiOrdnerWaehlen)
-                    }
-                    if (zustand.sicherungsOrdner != null) {
-                        Aktionsknopf("Ordner vergessen", zurueckhaltend = true) {
-                            viewModel.vergissSicherungsOrdner()
-                        }
                     }
                 }
             }
