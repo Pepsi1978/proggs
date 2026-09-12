@@ -71,6 +71,14 @@ class SicherungsDienst(
         return BackupStatus.describe(context)
     }
 
+    /**
+     * Alle Sicherungen im gemerkten Ordner, die jüngste zuerst.
+     *
+     * Damit zeigt die App die Auswahl selbst an, statt den Dateiwähler von Android zu öffnen —
+     * aus dem führt die Zurück-Geste Ordner für Ordner heraus statt zurück in die App.
+     */
+    suspend fun sicherungen(): List<Sicherungsdatei> = datei.sicherungen()
+
     /** Die jüngste Sicherung im Ordner — sie wird beim Wiederherstellen genommen. */
     suspend fun neuesteSicherung(): Sicherungsdatei? = datei.sicherungen().firstOrNull()
 

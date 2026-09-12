@@ -614,9 +614,42 @@ fun EinstellungenScreen(
                 ) {
                     // Erst die Wahl von Hand, dann die Abkürzung: Wer wiederherstellt, sucht
                     // meist eine bestimmte Sicherung. "Neueste" nimmt ungefragt die jüngste.
-                    Aktionsknopf("Wiederherstellen", zurueckhaltend = true) { beiSicherungWaehlen() }
+                    Aktionsknopf(
+                        "Wiederherstellen",
+                        zurueckhaltend = true,
+                        laedt = zustand.sicherungsAuswahlLaeuft,
+                    ) { viewModel.zeigeSicherungsAuswahl(beiSicherungWaehlen) }
                     Aktionsknopf("Neueste wiederherstellen", zurueckhaltend = true) {
                         viewModel.stelleNeuesteWiederHer()
+                    }
+                }
+
+                if (zustand.sicherungsAuswahl.isNotEmpty()) {
+                    Spacer(Modifier.height(Mass.abstandKlein))
+                    Untertitel("Welche Sicherung?")
+                    zustand.sicherungsAuswahl.forEach { eintrag ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = Mass.tippflaeche)
+                                .clickable { viewModel.stelleWiederHer(eintrag.quelle) }
+                                .padding(vertical = 6.dp),
+                        ) {
+                            Text(
+                                text = eintrag.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                text = "geschrieben am ${eintrag.geschriebenAm} Uhr",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = LocalKompassFarben.current.textGedaempft,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(Mass.abstandKlein))
+                    Aktionsknopf("Abbrechen", zurueckhaltend = true) {
+                        viewModel.verwirfSicherungsAuswahl()
                     }
                 }
             }

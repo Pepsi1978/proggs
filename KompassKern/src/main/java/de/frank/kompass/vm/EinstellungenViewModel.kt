@@ -12,6 +12,7 @@ import de.frank.kompass.observability.KompassLog
 import de.frank.kompass.tts.GeklonteStimme
 import de.frank.kompass.tts.TtsCatalog
 import de.frank.kompass.ui.theme.ThemeModus
+import java.util.Date
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,9 @@ data class PruefErgebnis(
 ) {
     val hatErgebnis: Boolean get() = text.isNotBlank()
 }
+
+/** Eine Sicherung im gemerkten Ordner, wie sie in der Auswahl steht. */
+data class SicherungsEintrag(val quelle: Uri, val name: String, val geschriebenAm: String)
 
 /** Zustand des Einstellungs-Bildschirms. */
 data class EinstellungenZustand(
@@ -74,6 +78,9 @@ data class EinstellungenZustand(
     /** Eine geprüfte Sicherung wartet hier, bis das Einspielen ausdrücklich zugesagt ist. */
     val sicherungBereit: Uri? = null,
     val sicherungVorschauText: String = "",
+    /** Die Sicherungen im gemerkten Ordner, solange die Auswahl offen steht. */
+    val sicherungsAuswahl: List<SicherungsEintrag> = emptyList(),
+    val sicherungsAuswahlLaeuft: Boolean = false,
     val schluesselAblageFehler: String? = null,
 )
 
@@ -141,6 +148,8 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
             sicherungLaeuft = _zustand.value.sicherungLaeuft,
             sicherungBereit = _zustand.value.sicherungBereit,
             sicherungVorschauText = _zustand.value.sicherungVorschauText,
+            sicherungsAuswahl = _zustand.value.sicherungsAuswahl,
+            sicherungsAuswahlLaeuft = _zustand.value.sicherungsAuswahlLaeuft,
         )
     }
 
@@ -605,6 +614,7 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
             sicherungsOrdner = null,
             sicherungBereit = null,
             sicherungVorschauText = "",
+            sicherungsAuswahl = emptyList(),
             meldung = "Der Sicherungsordner ist vergessen. Die Dateien bleiben liegen.",
         )
     }
@@ -612,6 +622,7 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     /** Nimmt die jüngste Sicherung aus dem gemerkten Ordner und zeigt zuerst ihre Vorschau. */
     fun stelleNeuesteWiederHer() {
         if (_zustand.value.sicherungLaeuft) return
+        _zustand.value = _zustand.value.copy(sicherungsAuswahl = emptyList())
         if (sicherung.sicherungsOrdner == null) {
             _zustand.value = _zustand.value.copy(fehler = "Es ist noch kein Sicherungsordner gewählt.")
             return
@@ -636,8 +647,60 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         }
     }
 
+    /**
+     * Zeigt die Sicherungen des gemerkten Ordners in der App selbst.
+     *
+     * Der Dateiwähler von Android wäre der naheliegende Weg, taugt hier aber nicht: Er öffnet
+     * tief in der Ordnerstruktur des Speicheranbieters, und die Zurück-Geste führt dort Ebene
+     * für Ebene wieder heraus — aus einem Drive-Ordner sind das ein halbes Dutzend Wischer, bis
+     * man wieder in den Einstellungen steht. Die App kennt den Ordner ohnehin und kann seine
+     * Sicherungen selbst auflisten; dann bleibt man die ganze Zeit im Einstellungsbildschirm.
+     *
+     * Ohne gemerkten Ordner gibt es nichts aufzulisten — dann bleibt nur [beiSystemwahl].
+     */
+    fun zeigeSicherungsAuswahl(beiSystemwahl: () -> Unit) {
+        if (_zustand.value.sicherungLaeuft) return
+        if (sicherung.sicherungsOrdner == null) {
+            beiSystemwahl()
+            return
+        }
+        _zustand.value = _zustand.value.copy(sicherungsAuswahlLaeuft = true, fehler = "", meldung = "")
+        viewModelScope.launch {
+            runCatching { sicherung.sicherungen() }
+                .onSuccess { dateien ->
+                    _zustand.value = _zustand.value.copy(
+                        sicherungsAuswahlLaeuft = false,
+                        sicherungsAuswahl = dateien.map { datei ->
+                            SicherungsEintrag(
+                                quelle = datei.uri,
+                                name = datei.name,
+                                geschriebenAm = GESCHRIEBEN_AM.format(Date(datei.geaendertAm)),
+                            )
+                        },
+                        fehler = if (dateien.isEmpty()) {
+                            "Im gemerkten Ordner liegt keine Sicherung dieser App."
+                        } else {
+                            ""
+                        },
+                    )
+                }
+                .onFailure { fehler ->
+                    if (fehler is CancellationException) throw fehler
+                    _zustand.value = _zustand.value.copy(
+                        sicherungsAuswahlLaeuft = false,
+                        fehler = "Der Sicherungsordner liess sich nicht lesen: ${fehler.message}",
+                    )
+                }
+        }
+    }
+
+    fun verwirfSicherungsAuswahl() {
+        _zustand.value = _zustand.value.copy(sicherungsAuswahl = emptyList())
+    }
+
     /** Eine ausdrücklich gewählte Datei — auch sie wird erst geprüft und gezeigt. */
     fun stelleWiederHer(quelle: Uri) {
+        _zustand.value = _zustand.value.copy(sicherungsAuswahl = emptyList())
         viewModelScope.launch { zeigeVorschau(quelle) }
     }
 
@@ -710,6 +773,9 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     }
 
     companion object {
+        /** Der Zeitpunkt, den die Auswahl neben jeder Sicherung zeigt. */
+        private val GESCHRIEBEN_AM = java.text.SimpleDateFormat("dd.MM.yyyy, HH:mm", java.util.Locale.GERMANY)
+
         const val SCHLUESSEL_GOOGLE = "google"
         const val SCHLUESSEL_ALIBABA = "alibaba"
         const val SCHLUESSEL_GROQ = "groq"
