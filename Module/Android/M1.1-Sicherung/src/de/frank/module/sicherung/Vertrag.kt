@@ -45,27 +45,98 @@ interface SicherungsInhalt {
     /** Alles, was diese App sichern kann. Die Reihenfolge ist die Reihenfolge im Menü. */
     val teile: List<SicherungsTeil>
 
+    /** Der Produktname, wie er im Kopf der Datei steht. */
+    val produkt: String
+
+    /**
+     * Frühere Produktnamen dieser App.
+     *
+     * Eine Umbenennung darf keine Sicherung entwerten: Eine unter altem Namen geschriebene
+     * Datei gehört weiterhin zu dieser App und muss einspielbar bleiben.
+     */
+    val fruehereNamen: List<String> get() = emptyList()
+
     /**
      * Die Fassung des Datenmodells dieser App. Steht im Kopf der Datei, damit beim Einspielen
-     * erkennbar ist, aus welcher Zeit sie stammt.
+     * erkennbar ist, aus welcher Zeit sie stammt. Eine Datei aus einer neueren Fassung wird
+     * abgelehnt — sie könnte Felder mitbringen, die hier niemand einordnen kann.
      */
     val datenmodellVersion: Int
 
     /**
-     * Schreibt alle Sätze von [teil] nach [ziel] und gibt zurück, wie viele es waren.
+     * Schreibt die Nutzlast — die benannten Felder zwischen Kopf und Fußzeile.
      *
-     * Das Modul hat den umgebenden JSON-Aufbau bereits geöffnet; hier kommt nur die Nutzlast
-     * hinein. Jeder geschriebene Wert gehört über [pruefsumme] mitgerechnet.
+     * Das Modul hat das umgebende Objekt geöffnet und den Kopf geschrieben. Hier kommen die
+     * eigenen Felder der App hinein, etwa `eintraege`, `fragen`, `sitzungen`. **Die Feldnamen
+     * bestimmt die App** — dadurch bleibt eine bestehende Datei Byte für Byte wie bisher.
+     *
+     * Jeder geschriebene Wert gehört über [pruefsumme] mitgerechnet, sonst schlägt die
+     * Vollständigkeitsprüfung beim Einspielen fehl.
      */
-    suspend fun schreibe(teil: SicherungsTeil, ziel: JsonWriter, pruefsumme: Inhaltspruefsumme): Int
+    suspend fun schreibeNutzlast(
+        schreiber: JsonWriter,
+        umfang: Set<SicherungsTeil>,
+        pruefsumme: Inhaltspruefsumme,
+    ): Nutzlastzahlen
 
     /**
-     * Liest die Sätze von [teil] aus [quelle] und legt sie an. Zurück kommt die Anzahl.
+     * Liest ein Nutzlast-Feld, das das Modul nicht kennt.
      *
-     * **Ergänzen, nicht überschreiben:** Was schon vorhanden ist, bleibt unverändert. Diese
-     * Entscheidung gehört der App, weil nur sie weiß, wann zwei Sätze derselbe sind.
+     * Kommt `null` zurück, überspringt das Modul das Feld — so bleibt eine Datei aus einer
+     * neueren Fassung lesbar, statt an einem unbekannten Feld zu scheitern.
+     *
+     * Ist [einspielen] falsch, wird nur gezählt und geprüft (die Vorschau). Sonst werden die
+     * Sätze angelegt — **ergänzend**: Was schon da ist, bleibt unverändert. Diese Entscheidung
+     * gehört der App, weil nur sie weiß, wann zwei Sätze derselbe sind.
      */
-    suspend fun lies(teil: SicherungsTeil, quelle: JsonReader, pruefsumme: Inhaltspruefsumme): Int
+    suspend fun liesNutzlast(
+        feld: String,
+        leser: JsonReader,
+        pruefsumme: Inhaltspruefsumme,
+        einspielen: Boolean,
+    ): Nutzlastzahlen?
+
+    /**
+     * Wie viele Sätze [umfang] umfassen würde — **ohne** zu schreiben.
+     *
+     * Damit zeigt die Oberfläche vorab an, was die nächste Sicherung enthält. Eine Zählung ist
+     * billig, ein Probelauf wäre es nicht.
+     */
+    suspend fun zaehle(umfang: Set<SicherungsTeil>): Nutzlastzahlen
+
+    /**
+     * Wie groß die Datei daraus etwa wird, in Bytes.
+     *
+     * Ein Erfahrungswert je Satzart, keine Rechnung. Die Angabe soll die Größenordnung zeigen —
+     * „ein paar Kilobyte" gegen „über ein Megabyte" —, nicht auf das Byte genau sein. Wie
+     * schwer ein Satz wiegt, weiß nur die App.
+     */
+    fun schaetzeGroesse(zahlen: Nutzlastzahlen): Long
+
+    /** Ein Satz für die Oberfläche: was in dieser Datei steckt. */
+    fun fasseZusammen(vorschau: SicherungsVorschau): String
+}
+
+/**
+ * Was beim Schreiben oder Lesen der Nutzlast zusammengekommen ist.
+ *
+ * Beides sind Zuordnungen statt fester Felder, weil die Schlüssel von App zu App verschieden
+ * sind. In der Datei stehen sie unverändert unter `anzahl` und `jeBereich` — genau wie bisher.
+ */
+data class Nutzlastzahlen(
+    val anzahl: Map<String, Int> = emptyMap(),
+    val jeBereich: Map<String, Int> = emptyMap(),
+) {
+    operator fun plus(weitere: Nutzlastzahlen) = Nutzlastzahlen(
+        anzahl = verschmelze(anzahl, weitere.anzahl),
+        jeBereich = verschmelze(jeBereich, weitere.jeBereich),
+    )
+
+    private fun verschmelze(a: Map<String, Int>, b: Map<String, Int>): Map<String, Int> =
+        buildMap {
+            putAll(a)
+            b.forEach { (schluessel, wert) -> put(schluessel, (get(schluessel) ?: 0) + wert) }
+        }
 }
 
 /**

@@ -50,25 +50,55 @@ kompass-eigen sind. Den Satz „Nächste Sicherung: …" formt die Anbindung.
 2. **Die Dateinamensmuster** — auch die früheren Präfixe, sonst werden alte
    Sicherungen im Ordner nicht mehr gefunden.
 
-## Fertig
+## Fertig — das Modul ist vollständig
 
-| Datei | Zeilen | Entkopplung |
-|---|---|---|
-| `Vertrag.kt` | ~120 | neu: `SicherungsTeil`, `SicherungsInhalt`, `SicherungsRuecknahme`, `SicherungsProtokoll`, `SicherungsNamen`, `Einspielspur` |
-| `BackupStatus.kt` | 98 | keine nötig — war schon frei |
-| `AutoSicherung.kt` | 138 | `KompassLog` → `protokoll` (Vorgabe: still) |
-| `DateiSicherung.kt` | 379 | `AppProfil` → `namen`; Muster aus `companion` in die Instanz |
+| Datei | Zeilen |
+|---|---|
+| `Vertrag.kt` | 198 |
+| `Sicherungsrahmen.kt` | 285 |
+| `DateiSicherung.kt` | 392 |
+| `SicherungsDienst.kt` | 192 |
+| `SicherungsSteuerung.kt` | 296 |
+| `AutoSicherung.kt` | 146 |
+| `BackupStatus.kt` | 109 |
+| **gesamt** | **1.618** |
 
-## Offen
+Gegenprobe: `grep` nach `de.frank.kompass`, `KompassLog`, `AppProfil`,
+`KompassDatabase`, `Entity` im Modulordner — **kein Treffer**.
+
+### Die Oberfläche: bewusst ohne Compose
+
+Der UI-Block in `EinstellungenScreen.kt` benutzt Kompass-eigene Bausteine
+(`Block`, `Mehrfachauswahl`, `Schalterzeile`, `LocalKompassFarben`). Sie ins
+Modul zu ziehen hätte das ganze Gestaltungssystem mitgeschleppt.
+
+Stattdessen liefert `SicherungsSteuerung` den Zustand und die Aktionen, und
+**jede App zeichnet mit ihren eigenen Bausteinen**. Das erfüllt die Vorgabe
+unmittelbar: Funktionen 1:1, Aussehen passt sich an.
+
+## Zwischenfall: parallele Änderung am Quellcode
+
+Während der Herauslösung hat eine andere Sitzung `5a67dc8e5` committet
+(„acht Leistungsbremsen im Sicherungsmodul beseitigt") und dabei
+`BackupStatus.kt`, `DateiSicherung.kt` und `SicherungsDienst.kt` geändert.
+Außerdem wurde `OpenCodeKompass` zu `OCodeKompass` umbenannt.
+
+**Geprüft:** Die Modulkopien stammen vom Stand *nach* diesem Commit. Ein
+normalisierter Vergleich gegen den heutigen `KompassKern` zeigt 39 abweichende
+Zeilen — alle davon eigene Entkopplungen (Konstruktorparameter, aus dem
+`companion` gezogene Muster, Protokoll). Es fehlt nichts.
+
+## Offen — Phase 5 und 6
 
 | Schritt | Umfang |
 |---|---|
-| `Sicherungsrahmen.kt` — Kopf/Fußzeile/Prüfsumme aus `Sicherung.kt` | ~250 Zeilen |
-| `SicherungsDienst.kt` — `KompassRepository` → `SicherungsInhalt` | 192 Zeilen |
-| `SicherungsOberflaeche.kt` — aus `EinstellungenScreen.kt` herauslösen | ~170 Zeilen |
-| Anbindung in `KompassKern` — Satz-Serialisierung, Teile, Einspielen | ~400 Zeilen |
-| Alten Code entfernen, Aufrufstellen ziehen | — |
+| Anbindung in `KompassKern`: `SicherungsInhalt` mit der Satz-Serialisierung | ~350 Zeilen |
+| `EinstellungenViewModel` auf `SicherungsSteuerung` umstellen | ~127 Zeilen |
+| `EinstellungenScreen` auf den neuen Zustand ziehen | ~170 Zeilen |
+| `KompassRepository`: `EinspielSenke` → `SicherungsRuecknahme` | — |
+| Alten Code entfernen | 5 Dateien |
 | **Abnahme:** drei Apps bauen **und** eine alte Sicherungsdatei einspielen | — |
+| `BEISPIEL.md`, `INDEX.md`, Konsumententabelle, Regel 9 | — |
 
 ## Zustand des Repos
 

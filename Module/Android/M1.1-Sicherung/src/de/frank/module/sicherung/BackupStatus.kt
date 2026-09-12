@@ -38,6 +38,9 @@ object BackupStatus {
      */
     private fun format() = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
 
+    /** Ein Zeitpunkt, wie er in der Sicherungsliste steht. */
+    fun formatiere(zeitpunkt: Long): String = format().format(java.util.Date(zeitpunkt))
+
     /**
      * Stempelt den Zeitpunkt — und ob die geschriebene Datei danach fehlerfrei gelesen wurde.
      *
