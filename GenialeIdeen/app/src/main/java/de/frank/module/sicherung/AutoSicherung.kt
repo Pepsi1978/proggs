@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v4
+// Modul M1.1 — Sicherung · Stand v5
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -8,6 +8,7 @@
 // ──────────────────────────────────────────────────────────────────────
 package de.frank.module.sicherung
 
+import android.os.SystemClock
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.CoroutineScope
@@ -78,11 +79,21 @@ class AutoSicherung(
     @Volatile
     private var offen = dienst.istOffen()
 
-    /** Wann zuletzt etwas gemeldet wurde — daran hängt die Ruhezeit. */
+    /**
+     * Wann zuletzt etwas gemeldet wurde — daran hängt die Ruhezeit.
+     *
+     * Gemessen mit [SystemClock.elapsedRealtime], **nicht** mit der Wanduhr. Die Wanduhr springt:
+     * Zeitumstellung, ein Abgleich mit der Funkzeit, ein von Hand verstelltes Datum. Springt sie
+     * rückwärts, rechnet sich die verbleibende Ruhezeit auf den Sprung auf, und es wird eine
+     * halbe Stunde lang nicht gesichert; springt sie vorwärts, wird mitten im Tippen gesichert.
+     * Hier werden ausschliesslich Zeitspannen gebraucht, und dafür ist die Wanduhr das falsche
+     * Werkzeug. `0L` steht für „noch nichts gemeldet" — die Laufzeituhr steht nach dem Hochfahren
+     * nie wieder auf null, also ist das ein gefahrloses Kennzeichen.
+     */
     @Volatile
     private var letzteMeldung = 0L
 
-    /** Wann die ÄLTESTE noch offene Änderung kam — daran hängt die späteste Frist. */
+    /** Wann die ÄLTESTE noch offene Änderung kam — daran hängt die späteste Frist. Laufzeituhr. */
     @Volatile
     private var ersteMeldung = 0L
 
@@ -98,7 +109,7 @@ class AutoSicherung(
      */
     fun melde(grund: String) {
         if (!istAn() || dienst.sicherungsOrdner == null) return
-        val jetzt = System.currentTimeMillis()
+        val jetzt = SystemClock.elapsedRealtime()
         if (!offen || ersteMeldung == 0L) ersteMeldung = jetzt
         setzeOffen(true)
         letzteMeldung = jetzt
@@ -118,7 +129,7 @@ class AutoSicherung(
      */
     private suspend fun warteUndSichere(grund: String) {
         while (true) {
-            val jetzt = System.currentTimeMillis()
+            val jetzt = SystemClock.elapsedRealtime()
             val ruhe = RUHE_MS - (jetzt - letzteMeldung)
             val seitErster = ersteMeldung.takeIf { it > 0L } ?: jetzt
             val frist = SPAETESTENS_MS - (jetzt - seitErster)
@@ -141,13 +152,17 @@ class AutoSicherung(
      * bliebe die Änderung ungesichert, bis zufällig die nächste kommt.
      */
     override fun onStart(owner: LifecycleOwner) {
-        if (!offen || !istAn() || dienst.sicherungsOrdner == null) return
+        // Geprüft wird hier nur der Merker im Speicher. Ob die Sicherung überhaupt an ist und ob
+        // ein Ordner dasteht, fragt [sichere] gleich noch einmal — im Hintergrundfaden, wo die
+        // Antwort herkommt: aus einer Datei und aus einer entschlüsselten Ablage. Beides gehört
+        // nicht auf den Hauptfaden, schon gar nicht im Start- und Verlassen-Pfad.
+        if (!offen) return
         ausDemLebenslauf = bereich.launch { sichere("Nachgeholt nach Neustart") }
     }
 
     /** Die App geht in den Hintergrund — was aussteht, wird jetzt geschrieben. */
     override fun onStop(owner: LifecycleOwner) {
-        if (!offen || !istAn() || dienst.sicherungsOrdner == null) return
+        if (!offen) return
         // Der wartende Auftrag wird NICHT abgebrochen. Er könnte gerade mitten im Schreiben
         // stecken; ein Abbruch löschte die halb geschriebene Datei und finge von vorn an —
         // ausgerechnet in dem Augenblick, in dem Android den Vorgang gleich einfriert. Das
@@ -164,16 +179,33 @@ class AutoSicherung(
             // Wer in der Zeit den Schalter umgelegt oder den Ordner vergessen hat, will keine
             // Sicherung mehr — der wartende Auftrag darf sich darüber nicht hinwegsetzen.
             if (!offen || !istAn() || dienst.sicherungsOrdner == null) return
-            setzeOffen(false)
+
+            // Der Merker wird ERST GELÖSCHT, WENN GESCHRIEBEN UND GEPRÜFT IST — nie vorher.
+            // Vorher gelöscht hiesse: Genau während des Schreibens, also in der einen Phase, um
+            // derentwillen es diesen Merker überhaupt gibt, stünde in der Ablage „es steht
+            // nichts aus". Stirbt der Vorgang dort — und dort stirbt er —, holt der nächste
+            // Start nichts nach, und die Änderung ist endgültig weg. Scheitert es, bleibt der
+            // Merker unangetastet stehen; es ist nichts zurückzunehmen.
+            val standVorher = letzteMeldung
             runCatching { dienst.sichere() }
                 .onSuccess {
-                    ersteMeldung = 0L
+                    if (letzteMeldung == standVorher) {
+                        // Seit dem Anstoss kam nichts Neues — es steht wirklich nichts mehr aus.
+                        ersteMeldung = 0L
+                        setzeOffen(false)
+                    } else {
+                        // Während des Schreibens kam etwas dazu. Das ist noch offen, und die
+                        // späteste Frist zählt ab JETZT. Die alte Frist ist mit dieser Sicherung
+                        // erfüllt; bliebe sie stehen, liefe sofort eine zweite hinterher — und
+                        // `letzteMeldung` taugt dafür nicht: Kam die Meldung früh im Schreiben
+                        // und hat das Schreiben lange gedauert, ist auch sie schon abgelaufen.
+                        ersteMeldung = SystemClock.elapsedRealtime()
+                    }
                     protokoll.info("AutoSicherung", "sichere", "Selbsttätig gesichert", mapOf("grund" to grund))
                 }
                 .onFailure { fehler ->
-                    // Wieder offen: Der nächste Anlass soll es erneut versuchen — und weil das
-                    // auch in der Ablage steht, tut es das spätestens beim nächsten Start.
-                    setzeOffen(true)
+                    // Kein Zurücksetzen nötig: Der Merker stand die ganze Zeit auf „offen".
+                    // Der nächste Anlass versucht es erneut — spätestens der nächste Start.
                     protokoll.warn(
                         "AutoSicherung",
                         "sichere",

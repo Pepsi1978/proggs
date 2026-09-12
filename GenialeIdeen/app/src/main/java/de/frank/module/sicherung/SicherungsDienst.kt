@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v4
+// Modul M1.1 — Sicherung · Stand v5
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -13,6 +13,7 @@ import android.net.Uri
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -122,7 +123,25 @@ class SicherungsDienst(
      * auf: Es bleiben nur die aktuelle Sicherung und die eine davor.
      */
     suspend fun sichere(): String = withContext(Dispatchers.IO) {
-        ordnerSchloss.withLock { sichereGeschuetzt() }
+        ordnerSchloss.withLock {
+            try {
+                sichereGeschuetzt()
+            } catch (abbruch: CancellationException) {
+                // Kein Fehlschlag, sondern ein Abbruch von aussen — nichts zu vermerken.
+                throw abbruch
+            } catch (fehler: Exception) {
+                // Vorher wurde nur der Fehlschlag beim ZURÜCKLESEN vermerkt. Scheitert es aber
+                // schon davor — die Freigabe für den Ordner ist weg, der Speicheranbieter legt
+                // keine Datei an, das Schreiben bricht ab —, blieb das unsichtbar: Die Anzeige
+                // nannte weiter brav die letzte geglückte Sicherung von vor drei Wochen, ohne
+                // ein Wort darüber, dass seither jeder Versuch scheitert. Bei der selbsttätigen
+                // Sicherung, die niemanden fragt und nichts einblendet, ist diese Anzeige das
+                // Einzige, woran eine tote Sicherung überhaupt zu erkennen ist.
+                stand.markGescheitert(context)
+                meldeStand()
+                throw fehler
+            }
+        }
     }
 
     private suspend fun sichereGeschuetzt(): String {
@@ -139,7 +158,12 @@ class SicherungsDienst(
         // Sofort zurücklesen: Erst wenn die Datei einmal fehlerfrei gelesen und ihre Prüfsumme
         // nachgerechnet wurde, gilt sie als Sicherung. Ein Schreibfehler, der erst im Ernstfall
         // auffällt, ist schlimmer als gar keine Sicherung — dann weiß man wenigstens Bescheid.
-        val geprueft = runCatching { datei.lies(geschrieben.uri) { quelle -> rahmen.pruefe(quelle) } }
+        val geprueft = runCatching {
+            // PRUEFEN, nicht VORSCHAU: Hier wird nur nachgerechnet. Die Frage „wie viel davon
+            // fehlt mir?" stellt niemand — sie kostete einen zweiten vollständigen Durchlauf
+            // durch den eigenen Bestand, bei jeder selbsttätigen Sicherung.
+            datei.lies(geschrieben.uri) { quelle -> rahmen.pruefe(quelle, Lesezweck.PRUEFEN) }
+        }
         if (geprueft.isFailure) {
             val fehler = geprueft.exceptionOrNull()
             protokoll.warn(
@@ -151,8 +175,8 @@ class SicherungsDienst(
             // Weder aufräumen noch stempeln: Die alten Stände bleiben stehen, und der
             // Zeitpunkt der letzten geglückten Sicherung wird nicht überschrieben. Sonst
             // stünde da eine frische Uhrzeit für eine Datei, die niemand lesen kann.
-            stand.markGescheitert(context)
-            meldeStand()
+            // Vermerkt und angezeigt wird der Fehlschlag im Fänger von [sichere] — einmal für
+            // alle Wege, auf denen ein Lauf scheitern kann.
             throw fehler ?: IllegalStateException("Die geschriebene Sicherung ließ sich nicht prüfen.")
         }
 
@@ -208,7 +232,7 @@ class SicherungsDienst(
             // Datei — prüfte man erst beim Einspielen, wäre bei einer beschädigten Datei längst
             // alles in der Datenbank, bevor der Fehler auffällt. Der zweite Durchlauf kostet
             // wenig; eine halb eingespielte Sicherung käme teuer.
-            datei.lies(quelle) { rahmen.pruefe(it) }
+            datei.lies(quelle) { rahmen.pruefe(it, Lesezweck.PRUEFEN) }
             val spur = ruecknahme?.beginne()
             val vorschau = datei.lies(quelle) { rahmen.spieleEin(it) }
             spur?.let { ruecknahme?.schliesseAb(it) }

@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v4
+// Modul M1.1 — Sicherung · Stand v5
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -49,13 +49,19 @@ class BackupStatus(
      * Nur der Prüfvermerk rechtfertigt das grüne Häkchen.
      */
     fun markBackedUp(context: Context, geprueft: Boolean) {
+        // `commit()`, nicht `apply()`: Beides hier wird am Ende eines Laufs geschrieben, der
+        // typischerweise beim Verlassen der App stattfindet — also kurz bevor Android den
+        // Vorgang beendet. Ein `apply()` schreibt später auf einem eigenen Faden und kommt dann
+        // womöglich nicht mehr dazu. Dann steht in der Anzeige weiter die alte Uhrzeit, obwohl
+        // längst gesichert wurde: genau die Lüge, gegen die es diesen Stempel gibt. Beide
+        // Aufrufe kommen aus dem Hintergrund, blockieren also niemanden.
         context.applicationContext
             .getSharedPreferences(prefsDatei, Context.MODE_PRIVATE)
             .edit()
             .putLong(KEY_LAST_BACKUP, System.currentTimeMillis())
             .putBoolean(KEY_GEPRUEFT, geprueft)
             .putBoolean(KEY_GESCHEITERT, false)
-            .apply()
+            .commit()
     }
 
     /**
@@ -70,7 +76,7 @@ class BackupStatus(
             .getSharedPreferences(prefsDatei, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(KEY_GESCHEITERT, true)
-            .apply()
+            .commit()
     }
 
     private fun istGescheitert(context: Context): Boolean =

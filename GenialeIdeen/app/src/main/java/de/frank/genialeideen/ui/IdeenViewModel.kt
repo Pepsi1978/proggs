@@ -1207,6 +1207,11 @@ class IdeenViewModel(
         }
         settings.autoBackupEnabled = an
         _autoSicherungAn.value = an
+        // Beim Einschalten sofort einmal sichern. Sonst passiert bis zur nächsten Änderung
+        // nichts, und darunter steht weiter „Noch nicht gesichert" — ein Schalter auf „an" über
+        // einer Anzeige, die das Gegenteil behauptet. Wer den Haken setzt, will genau jetzt
+        // wissen, dass es geht, und nicht erst übermorgen erfahren, dass es nie ging.
+        if (an) sichereJetzt {}
     }
 
     /** Die gespeicherte Freigabe reicht aus; nur beim ersten Mal einen Ordner wählen. */

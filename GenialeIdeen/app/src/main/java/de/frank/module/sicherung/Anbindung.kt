@@ -329,26 +329,45 @@ class IdeenSicherungsInhalt(
     // ---- Lesen -------------------------------------------------------------------------
 
     /**
-     * Der Bestand zum Zeitpunkt der Vorschau — einmal geladen, nicht je Satz.
+     * Die Fassung ohne Zweck — sie liest wie eine Vorschau.
      *
-     * Er beantwortet die einzige Frage, die vor dem Einspielen wirklich zählt: Wie viel davon
-     * fehlt in der App überhaupt? Ohne sie stünde da „42 Ideen", und niemand wüsste, ob danach
-     * 42 dazukommen oder null.
+     * Das Modul ruft sie nicht mehr; sie steht nur noch da, weil der Vertrag sie verlangt.
      */
-    private var vorschauAbgleich: Abgleich? = null
-
     override suspend fun liesNutzlast(
         feld: String,
         leser: JsonReader,
         pruefsumme: Inhaltspruefsumme,
         einspielen: Boolean,
+    ): Nutzlastzahlen? = liesNutzlast(
+        feld,
+        leser,
+        pruefsumme,
+        if (einspielen) Lesezweck.EINSPIELEN else Lesezweck.VORSCHAU,
+    )
+
+    /**
+     * Der Bestand daneben wird nur für die **Vorschau** geladen.
+     *
+     * Er beantwortet die einzige Frage, die vor dem Einspielen wirklich zählt: Wie viel davon
+     * fehlt in der App überhaupt? Ohne sie stünde da „42 Ideen", und niemand wüsste, ob danach
+     * 42 dazukommen oder null.
+     *
+     * Beim blossen Nachrechnen einer frisch geschriebenen Datei fragt das niemand — und genau
+     * das lief vorher bei **jeder selbsttätigen Sicherung** mit: alle Ideen ein zweites Mal aus
+     * der Datenbank, dazu zwei Mengen darüber, deren Ergebnis niemand ansah.
+     */
+    override suspend fun liesNutzlast(
+        feld: String,
+        leser: JsonReader,
+        pruefsumme: Inhaltspruefsumme,
+        zweck: Lesezweck,
     ): Nutzlastzahlen? {
-        val senke = if (einspielen) senkeGeber() else null
+        val senke = if (zweck == Lesezweck.EINSPIELEN) senkeGeber() else null
         return when (feld) {
             "ideen" -> {
                 var anzahl = 0
                 var neu = 0
-                val abgleich = if (einspielen) null else vorschauAbgleichHolen()
+                val abgleich = if (zweck == Lesezweck.VORSCHAU) vorschauAbgleichHolen() else null
                 leser.beginArray()
                 while (leser.hasNext()) {
                     val werte = Sicherungsrahmen.liesFelder(leser)
@@ -411,8 +430,7 @@ class IdeenSicherungsInhalt(
         }
     }
 
-    private suspend fun vorschauAbgleichHolen(): Abgleich =
-        Abgleich(datenbank.ideenDao().alleEinmal()).also { vorschauAbgleich = it }
+    private suspend fun vorschauAbgleichHolen(): Abgleich = Abgleich(datenbank.ideenDao().alleEinmal())
 
     // ---- Anzeige -----------------------------------------------------------------------
 
