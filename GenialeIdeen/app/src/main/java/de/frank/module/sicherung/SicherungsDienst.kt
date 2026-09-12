@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v3
+// Modul M1.1 — Sicherung · Stand v4
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -14,6 +14,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -72,6 +75,37 @@ class SicherungsDienst(
 
     fun istGeprueft(): Boolean = stand.istGeprueft(context)
 
+    private val _standFluss = MutableStateFlow(stand.describe(context))
+
+    /**
+     * Der angezeigte Stand, laufend nachgeführt.
+     *
+     * Vorher las die Oberfläche den Stand EINMAL beim Aufbau und danach nur noch nach einem
+     * Druck auf „Jetzt sichern". Eine selbsttätige Sicherung änderte die Anzeige nicht — dort
+     * stand weiter die Uhrzeit von vorhin, obwohl längst neu gesichert war. Wer daraufhin
+     * schliesst, die selbsttätige Sicherung sei tot, hat recht gehandelt und unrecht gehabt:
+     * Eine Anzeige, die eine tote Sicherung vortäuscht, ist so schädlich wie eine, die eine
+     * lebende vortäuscht.
+     */
+    val standFluss: StateFlow<String> = _standFluss.asStateFlow()
+
+    private val _geprueftFluss = MutableStateFlow(stand.istGeprueft(context))
+
+    /** Ob die zuletzt geschriebene Sicherung auch fehlerfrei zurückgelesen wurde. */
+    val geprueftFluss: StateFlow<Boolean> = _geprueftFluss.asStateFlow()
+
+    /** Nach jedem Lauf — geglückt oder nicht — die Anzeige nachziehen. */
+    private fun meldeStand() {
+        _standFluss.value = stand.describe(context)
+        _geprueftFluss.value = stand.istGeprueft(context)
+    }
+
+    /** Merkt über den Vorgangstod hinweg, dass noch eine Änderung ungesichert aussteht. */
+    fun merkeOffen(offen: Boolean) = stand.merkeOffen(context, offen)
+
+    /** Ob beim letzten Mal eine Änderung ungesichert liegen geblieben ist. */
+    fun istOffen(): Boolean = stand.istOffen(context)
+
     /**
      * Wie viel die nächste Sicherung umfassen würde und wie groß sie etwa wird.
      *
@@ -118,10 +152,12 @@ class SicherungsDienst(
             // Zeitpunkt der letzten geglückten Sicherung wird nicht überschrieben. Sonst
             // stünde da eine frische Uhrzeit für eine Datei, die niemand lesen kann.
             stand.markGescheitert(context)
+            meldeStand()
             throw fehler ?: IllegalStateException("Die geschriebene Sicherung ließ sich nicht prüfen.")
         }
 
         stand.markBackedUp(context, geprueft = true)
+        meldeStand()
         // Erst jetzt: Eine gute Sicherung gegen eine ungeprüfte einzutauschen wäre der
         // Fehler, gegen den das Zurücklesen überhaupt schützt.
         datei.raeumeAlteWeg(vorherige)

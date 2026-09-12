@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v3
+// Modul M1.1 — Sicherung · Stand v4
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -108,9 +108,33 @@ class BackupStatus(
 
     fun hasBackup(context: Context): Boolean = lastBackupAt(context) > 0L
 
+    /**
+     * Merkt sich, dass eine Änderung noch ungesichert ist — über den Vorgangstod hinweg.
+     *
+     * Bewusst `commit()` und nicht `apply()`: `apply()` schreibt später auf einem eigenen Faden.
+     * Genau der Fall, um den es hier geht — Android beendet den Vorgang, während die Sicherung
+     * noch läuft —, ist auch der Fall, in dem ein `apply()` es nicht mehr auf die Platte
+     * schafft. Dann stünde beim nächsten Start nichts Offenes da, und die Änderung wäre
+     * endgültig ungesichert. Die Aufrufe kommen aus dem Hintergrund, nicht vom Hauptfaden.
+     */
+    fun merkeOffen(context: Context, offen: Boolean) {
+        context.applicationContext
+            .getSharedPreferences(prefsDatei, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_OFFEN, offen)
+            .commit()
+    }
+
+    /** Steht seit dem letzten Mal noch eine ungesicherte Änderung aus? */
+    fun istOffen(context: Context): Boolean =
+        context.applicationContext
+            .getSharedPreferences(prefsDatei, Context.MODE_PRIVATE)
+            .getBoolean(KEY_OFFEN, false)
+
     private companion object {
         private const val KEY_LAST_BACKUP = "zuletzt_gesichert"
         private const val KEY_GEPRUEFT = "zuletzt_geprueft"
         private const val KEY_GESCHEITERT = "letzter_versuch_gescheitert"
+        private const val KEY_OFFEN = "aenderung_offen"
     }
 }

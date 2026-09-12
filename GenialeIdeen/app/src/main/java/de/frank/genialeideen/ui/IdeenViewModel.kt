@@ -1144,6 +1144,11 @@ class IdeenViewModel(
 
     init {
         rechneNaechsteSicherung()
+        // Der Stand kommt vom Dienst, nicht aus einer einmaligen Abfrage beim Aufbau. Sonst
+        // stünde nach einer selbsttätigen Sicherung weiter die Uhrzeit von vorhin da, und die
+        // lebende Sicherung sähe aus wie eine tote.
+        viewModelScope.launch { sicherung.standFluss.collect { _sicherungsStand.value = it } }
+        viewModelScope.launch { sicherung.geprueftFluss.collect { _sicherungGeprueft.value = it } }
     }
 
     /** Wie viel die nächste Sicherung umfasst — ohne etwas zu schreiben. */

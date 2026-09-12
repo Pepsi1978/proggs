@@ -4,10 +4,10 @@ Sicherung des eigenen Bestands als Datei in einen selbst gewählten Ordner — m
 Auswahl, was gesichert wird, selbsttätiger Sicherung nach Ruhezeit, Vorschau vor
 dem Einspielen und Zurücknehmen.
 
-- **Stand:** v3
+- **Stand:** v4
 - **Plattform:** Android (Kotlin, Jetpack Compose)
 - **Angelegt:** 12.09.2026 15:11
-- **Zuletzt geändert:** 12.09.2026 16:23
+- **Zuletzt geändert:** 12.09.2026 21:15
 - **Ordner:** `Module/Android/M1.1-Sicherung/`
 - **Kurzname:** `sicherung` — steckt im Namensraum `de.frank.module.sicherung`
 
@@ -28,8 +28,8 @@ dem Einspielen und Zurücknehmen.
 | `Sicherungsrahmen.kt` | Kopf, Fußzeile, Prüfsumme, Vollständigkeit, satzweises Streamen |
 | `DateiSicherung.kt` | Ordner merken (SAF), schreiben, lesen, alte Dateien wegräumen |
 | `SicherungsDienst.kt` | Der Ablauf: sichern, zurücklesen, prüfen, einspielen, zurücknehmen |
-| `AutoSicherung.kt` | Selbsttätig nach zwei Minuten Ruhe, beim Verlassen sofort |
-| `BackupStatus.kt` | Wann zuletzt, geprüft oder gescheitert |
+| `AutoSicherung.kt` | Selbsttätig nach zwei Minuten Ruhe, spätestens nach zehn, beim Verlassen sofort, beim nächsten Start nachgeholt |
+| `BackupStatus.kt` | Wann zuletzt, geprüft oder gescheitert, und ob noch etwas aussteht |
 
 ## Der Schnitt
 
@@ -92,7 +92,7 @@ anderer Name heißt: Der Benutzer hat seine Einstellung verloren, ohne Meldung.
 | ClaudeKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
 | CodexKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
 | OCodeKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
-| GenialeIdeen | v3 | `GenialeIdeen/app/src/main/java/de/frank/module/sicherung/` |
+| GenialeIdeen | **v4** | `GenialeIdeen/app/src/main/java/de/frank/module/sicherung/` |
 | Gedankenspeicher | v3 | `Gedankenspeicher/app/src/main/java/de/frank/module/sicherung/` |
 
 > **Sonderfall:** Die drei Apps teilen sich `KompassKern` per `sourceSets.srcDir`.
@@ -112,3 +112,4 @@ andere Module auf diesem auf, hier ebenfalls nennen.
 | v1 | 12.09.2026 | aus KompassKern herausgelöst | — | — |
 | v2 | 12.09.2026 | `SicherungsSteuerung` entfernt — kein Konsument hat sie je aufgerufen. Mit ihr fallen `SicherungsZustand`, `SicherungsEintrag`, `UmfangSpeicher`, `BackupStatus.formatiere` und `SicherungsDienst.kannZurueckNehmen`. Die Knopflogik liegt bewiesen im `EinstellungenViewModel` und wird beim zweiten Konsumenten von dort gehoben. | — (nichts davon wurde benutzt) | `11aa92a90` |
 | v3 | 12.09.2026 | `BackupStatus` nimmt die `SharedPreferences`-Datei aus `SicherungsNamen`, statt `kompass_backup_status` fest verdrahtet zu haben — eine übersehene Nabelschnur zur Ursprungs-App. Neu: `SicherungsInhalt.kopfAliase`, damit eine App ihre früher anders benannten Kopf-Felder abbilden kann und vor dem Modul geschriebene Sicherungen einspielbar bleiben. | — (beides nach aussen unverändert; `BackupStatus` wird nur vom `SicherungsDienst` benutzt, `kopfAliase` hat einen Vorgabewert) | — |
+| v4 | 12.09.2026 | **Drei Fehler in der selbsttätigen Sicherung.** (1) Der offene Stand lag nur im Arbeitsspeicher: Beendete Android den Vorgang, bevor die Sicherung beim Verlassen durch war, war die Änderung endgültig ungesichert — belegt im Protokoll von Geniale Ideen (21:07:38 Statuswechsel, 21:08:25 Neustart, keine Sicherung dazwischen). Jetzt steht er in der Ablage und wird in `onStart` nachgeholt. (2) `onStop` brach den wartenden Auftrag ab, auch wenn der gerade mitten im Schreiben steckte — die halbe Datei wurde gelöscht und von vorn begonnen, ausgerechnet kurz vor dem Einfrieren des Vorgangs. (3) Der angezeigte Stand wurde nur nach „Jetzt sichern" nachgeführt; nach einer selbsttätigen Sicherung stand dort weiter die Uhrzeit von vorhin, die lebende Sicherung sah aus wie eine tote. Neu dafür `SicherungsDienst.standFluss`/`geprueftFluss`. Ausserdem: `SPAETESTENS_MS` (10 min) — wer ununterbrochen arbeitet, setzte die Ruhezeit sonst beliebig lange zurück. | — (nur Ergänzungen: `standFluss`, `geprueftFluss`, `merkeOffen`, `istOffen`; Konstruktor und alle bisherigen Aufrufe unverändert) | — |
