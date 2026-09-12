@@ -16,6 +16,8 @@ nach der Überschrift.
 
 - **App:** {{QUELL_APP}}
 - **Commit:** {{COMMIT_HASH}}
+- **Quellstand:** {{Hash aus Phase 3, genommen VOR dem ersten Kopieren —
+  daran prüft Phase 5, ob unterwegs jemand anders dieselben Dateien geändert hat}}
 - **Dateien:**
   - `{{urspruenglicher/pfad/Datei.kt}}`
 
@@ -28,6 +30,16 @@ Nur die öffentliche Schnittstelle, keine Innereien.}}
 
 {{Jede Nabelschnur, die nicht zum Parameter wurde. Leer lassen, wenn das Modul
 vollständig über Parameter versorgt wird — das ist der Idealfall.}}
+
+- —
+
+## Gespeicherter Zustand
+
+{{Was das Modul liest oder schreibt und den Neustart überlebt: Dateinamen und
+-format, Einstellungsschlüssel, Datenbankspalten. Diese Namen werden in einer
+bestehenden App **unverändert übernommen** — ein umbenannter Schlüssel löscht
+die Einstellung des Benutzers, ohne dass ihm etwas angezeigt wird. Steht hier
+nichts, ist das Modul zustandslos.}}
 
 - —
 

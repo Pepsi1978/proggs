@@ -27,6 +27,27 @@ byte-identisch und der Ordnerbaum trotzdem sauber. Kotlin verlangt keine
 Übereinstimmung von Paket und Ordner, aber Werkzeuge und Menschen lesen sich
 leichter, wenn beides zusammenpasst.
 
+### Sonderfall: mehrere Apps teilen sich einen Quellordner
+
+Bindet mehr als eine App denselben Ordner über `sourceSets.srcDir` ein — bei
+diesem Benutzer `KompassKern` für ClaudeKompass, CodexKompass und OCodeKompass —
+dann liegen Kopie **und** Anbindung dort, nicht je App:
+
+| | Pfad |
+|---|---|
+| Kopie in der App | `KompassKern/src/main/java/de/frank/module/<kurzname>/` |
+| Anbindung | derselbe Ordner, `Anbindung.kt` |
+
+In der Konsumententabelle steht **eine Zeile je App**, alle mit demselben Pfad.
+Beim Nachziehen wird dieser eine Pfad einmal überschrieben und danach werden
+alle beteiligten Apps gebaut.
+
+Erkennen lässt sich der Fall so:
+
+```bash
+grep -rn "srcDir" --include=build.gradle.kts ~/proggs | grep -v "/build/"
+```
+
 ## Typische Nabelschnüre
 
 | Was | Woran erkennbar | Empfohlener Schnitt |
@@ -58,6 +79,15 @@ Kopieren.
 
 ```bash
 cd <App-Ordner> && ./gradlew :app:assembleDebug
+```
+
+Bei geteiltem Quellordner **jede** beteiligte App bauen — ein Fehler dort trifft
+alle gleichzeitig:
+
+```bash
+for a in ClaudeKompass CodexKompass OCodeKompass; do
+  (cd ~/proggs/$a && ./gradlew :app:assembleDebug) || echo "ROT: $a"
+done
 ```
 
 Grün heißt: Modul steht. Danach Regel 9 für die App — Version bumpen

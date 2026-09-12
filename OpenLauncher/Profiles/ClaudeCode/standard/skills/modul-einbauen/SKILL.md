@@ -377,6 +377,27 @@ Auslöser: „zieh M1.1 nach", „zieh M1.1 nach in GenialeIdeen", „verteile d
    Rückfrage warten und welche unverändert blieben. Eine still übersprungene
    App hinkt sonst monatelang hinterher, ohne dass es jemand merkt.
 
+### Mehrere Zeilen mit demselben Pfad
+
+Stehen in der Konsumententabelle mehrere Apps mit **identischem Pfad**, teilen
+sie sich den Quellordner (`sourceSets.srcDir`; bei diesem Benutzer `KompassKern`
+für die drei Kompass-Apps). Dann gilt Schritt 4 **je Pfad**, nicht je App:
+
+| | |
+|---|---|
+| Abweichungsprüfung | einmal |
+| Überschreiben | einmal |
+| Bauen und installieren | **jede** dieser Apps |
+| Konsumententabelle | **alle** diese Zeilen heben |
+| Commit | **einer** für die ganze Gruppe |
+
+Sonst wird dieselbe Datei dreimal überschrieben — die zweite Abweichungsprüfung
+schlägt an, weil sie die eigene Arbeit von eben sieht — oder es wird nur eine
+App gebaut, während die anderen mit demselben Code ungeprüft bleiben.
+
+Die Regel „die Buchführung wandert mit der App" bleibt damit unangetastet: Sie
+gilt je **Kopie**, und hier gibt es nur eine.
+
 ### Abhängige Module kommen zuerst
 
 Bricht die Signatur, sind womöglich nicht nur Apps betroffen, sondern auch

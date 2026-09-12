@@ -94,6 +94,27 @@ kann, falls er zu sperrig gerät:
 
 > „Wird M1.8-Drag-und-Drop-Modul, Namensraum `de.frank.module.dragunddropmodul`."
 
+### Datenformat — die zweite Treueachse
+
+**Schreibt oder liest der Bereich etwas, das den Neustart überlebt?** Dateien,
+Datenbankspalten, Einstellungsschlüssel, ein Exportformat. Dann hat das Modul
+nicht nur Code-Treue zu wahren, sondern auch **Treue zum gespeicherten Zustand**:
+Was auf dem Gerät liegt, muss danach noch lesbar sein.
+
+Das ist eine **Halt-Frage**, keine Mitteilung:
+
+> „Das Sicherungsmodul schreibt Dateien. Liegen auf dem Gerät welche, die
+>  danach noch einspielbar sein müssen?"
+
+Warte auf die Antwort. Lautet sie ja, ist das Format ab hier unantastbar —
+Feldnamen, Reihenfolge, Schlüsselnamen — und der Abnahmetest heißt nicht „baut
+grün", sondern „alte Datei lässt sich einspielen".
+
+Trag die betroffenen Namen ins Manifest unter **Gespeicherter Zustand** ein, mit
+dem Hinweis, dass sie unverändert zu übernehmen sind. Ein umbenannter
+Einstellungsschlüssel löscht die Einstellung des Benutzers, ohne dass ihm etwas
+angezeigt wird.
+
 **Namensdopplung.** Gibt es den Namen im Kreis schon: abbrechen und nachfragen,
 ob das bestehende Modul erweitert werden soll. Eine zweite Nummer für dieselbe
 Sache macht den Index unbrauchbar.
@@ -108,6 +129,46 @@ Verdächtigen stehen in der passenden Referenzdatei:
 - Windows → `references/windows.md`
 - macOS → `references/macos.md`
 - iOS → `references/ios.md`
+
+### Den Schnitt finden, nicht Importe zählen
+
+Die Importe zeigen, **dass** gekoppelt ist — nicht, **wo** die Grenze liegt. Wer
+nur Importe abarbeitet, zieht am Ende die Datentypen der App ins Modul und hat
+eine verschobene App-Datei statt eines Moduls.
+
+Die bessere Frage: **Wo beginnt die app-eigene Form der Daten?**
+
+> Alles davor ist **Umschlag** und gehört ins Modul.
+> Alles ab dort ist **Inhalt** und bleibt in der App.
+
+Beim Sicherungsmodul lag die Grenze mitten in einer Datei: Kopf, Prüfsumme und
+Fußzeile sind Umschlag; welche Feldnamen ein Satz hat, ist Inhalt. Der erste
+Anlauf hatte die Grenze eine Ebene zu tief gezogen und wollte die
+Datenbank-Entitäten mitnehmen — das wäre kein Modul geworden.
+
+### Liegt der Bereich in geteiltem Code?
+
+Prüf, ob der Ordner von mehreren Apps über `sourceSets.srcDir` eingebunden wird
+(bei diesem Benutzer: `KompassKern` für die drei Kompass-Apps). Dann gilt:
+
+| | |
+|---|---|
+| Modulkopie und Anbindung | **einmal** in den geteilten Ordner, nicht je App |
+| Konsumententabelle | **eine Zeile je App**, alle mit demselben Pfad |
+| Abnahme | **alle** beteiligten Apps bauen |
+
+Und sag es dem Benutzer vorher: Ein Fehler trifft hier **alle Apps
+gleichzeitig**. Deshalb gilt in Phase 5 zwingend erst bauen, dann den alten Code
+entfernen.
+
+### Gibt es schon Tests für den Bereich?
+
+Such danach, bevor du schneidest. Ein vorhandener Test ist der Abnahmetest, den
+niemand erst schreiben muss — und bei einem Datenformat der einzige, der die
+Treue wirklich beweist. Er wird mitgezogen und auf das Modul umgestellt.
+
+Findest du keinen, vermerk das im Manifest: „Abnahme nur Build, kein Test." Dann
+weiß der nächste, worauf er sich nicht verlassen kann.
 
 Für jede Nabelschnur gibt es drei Wege — **Parameter** (kleinste Kopplung,
 Standardwahl), **eigener Mechanismus im Modul**, oder **dokumentierte
@@ -129,6 +190,17 @@ Normalfall und das Ziel.
 
 ### Phase 3 — Herauslösen
 
+**Halt den Quellstand fest, bevor du die erste Datei anfasst:**
+
+```
+git rev-parse --short HEAD
+```
+
+Der Hash kommt ins Manifest (Phase 4, Feld `Quellstand`). Er muss **jetzt**
+genommen werden, nicht später: Läuft während der Arbeit ein fremder Commit ein
+und du notierst den Hash erst hinterher, zeigt der Vergleich in Phase 5 nichts
+an — der Schutz wäre genau in dem Fall blind, für den es ihn gibt.
+
 Lege `Module/<Plattform>/<Ordnername>/src/` an und **kopiere** die Dateien
 dorthin — noch nicht verschieben. Der alte Code in der Quell-App bleibt
 vorerst stehen und wird erst in Phase 5 entfernt, wenn die Bibliotheksfassung
@@ -145,6 +217,40 @@ Dabei:
   fügt Fehler hinzu, ohne einen echten zweiten Anwendungsfall zu kennen.
   Verallgemeinert wird, wenn der zweite Konsument es wirklich braucht.
 
+**Verschieben, nicht umschreiben.** Das ist die wichtigste Regel dieser Phase.
+Der Modulcode entsteht durch **Ausschneiden** aus der Quelldatei. Neue Zeilen
+gibt es nur für den Herkunfts-Kopf, für Konstruktorparameter und für den Aufruf
+der Rückruf-Grenze. Jede andere Zeile muss sich im Vergleich als *bewegt*
+wiederfinden lassen, nicht als *neu*.
+
+Der Grund ist eine Erfahrung aus dem ersten echten Lauf: Beim Sicherungsmodul
+wurde eine Leseschleife neu geschrieben, statt den bestehenden Verzweigungsblock
+zu behalten und nur die Nutzlast-Zweige nach außen zu geben. Dabei rutschte die
+Kopfprüfung ans Ende — die App hätte Sätze einer **fremden** App erst in die
+Datenbank geschrieben und danach abgelehnt. Der Build war grün, alle Tests
+liefen. Ein Build prüft, **ob** etwas passiert, nicht **wann**.
+
+Muss ein Block wirklich neu geschrieben werden, ist das keine Fleißarbeit,
+sondern eine **Frage an den Benutzer** — mit dem Vorschlag, was sich dabei
+ändert.
+
+**Reihenfolge der Wirkungen ist Verhalten.** Prüfungen, Abbrüche und
+Schreibzugriffe müssen danach in derselben Reihenfolge stehen wie vorher. Geh
+die verschobenen Stellen einmal ausdrücklich daraufhin durch: *Was passiert
+zuerst, was danach?* Ein Build beantwortet diese Frage nie.
+
+**Die Testbarkeit prüft den Schnitt.** Lässt sich die Anbindung ohne Datenbank
+und ohne Android-`Context` bauen? Wenn nicht, ist der Schnitt zu grob — dann
+nimmt die Anbindung die Bausteine einzeln entgegen (Quelle, Zähler, Senke)
+statt das ganze Repository. Das ist keine Schönheit: Ohne diesen Konstruktor
+lässt sich das Dateiformat nicht prüfen, und beim Sicherungsmodul war genau
+dieser Test der einzige echte Beweis der Treue.
+
+**Kein Gestaltungssystem im Modul.** Benutzt der Bereich die eigenen Bausteine
+der App — `Block`, `Schalterzeile`, eigene Farb-Objekte, ein eigenes Theme —
+bleiben die draußen. Das Modul liefert **Zustand und Aktionen**, gezeichnet wird
+in der App. Genau das erfüllt die Zusage „gleiche Funktionen, eigenes Aussehen".
+
 ### Phase 4 — Manifest
 
 Schreib `MODUL.md` nach der Vorlage `assets/MODUL.md.template`. Die Felder, die
@@ -152,6 +258,11 @@ wirklich zählen:
 
 - **Herkunft** — App, Dateipfade, Commit-Hash. Damit ist später nachvollziehbar,
   gegen welchen Stand das Modul geschnitten wurde.
+- **Quellstand** — der Hash aus Phase 3, *vor* dem ersten Kopieren genommen.
+  Phase 5 prüft damit, ob unterwegs jemand anders dieselben Dateien geändert hat.
+- **Gespeicherter Zustand** — Dateinamen, Einstellungsschlüssel und Spalten aus
+  der Datenformat-Prüfung in Phase 1. Sie werden in einer bestehenden App
+  unverändert übernommen.
 - **Host muss liefern** — die Nabelschnüre aus Phase 2, die nicht zu Parametern
   wurden. Ohne diese Liste scheitert der Einbau in die nächste App.
 - **Braucht Module** — andere Module aus der Bibliothek, auf die dieses
@@ -171,18 +282,75 @@ Prosa-Beschreibung.
 
 Ein Modul, das nur herauskopiert wurde, ist ungetestet. Deshalb:
 
-1. Alten Code in der Quell-App **löschen**.
-2. Die Moduldateien **byte-identisch** in den App-Baum kopieren, an den in der
+**0. Hat sich die Quelle unterwegs geändert?** Vergleich den zu Beginn von
+Phase 3 genommenen Quellstand mit dem jetzigen:
+
+```
+git diff <Quellstand>..HEAD -- <die Pfade aus der Herkunft>
+```
+
+Kommt etwas zurück, hat jemand anders — womöglich eine parallel laufende
+Sitzung — dieselben Dateien angefasst. Dann **erst klären**, ob deine Kopie den
+Fix schon enthält, bevor du den alten Code löschst. Genau das ist im ersten
+echten Lauf passiert: Acht Leistungsverbesserungen liefen mitten in der
+Herauslösung ein. Nach dem Löschen wäre nicht mehr feststellbar gewesen, ob sie
+in der Kopie stecken.
+
+1. Die Moduldateien **byte-identisch** in den App-Baum kopieren, an den in der
    Referenzdatei genannten Ort.
-3. **Anbindungsdatei anlegen**, sobald es überhaupt etwas App-Eigenes gibt —
+2. **Anbindungsdatei anlegen**, sobald es überhaupt etwas App-Eigenes gibt —
    `Anbindung.<ext>` neben der Kopie, mit den Theme-Werten und Texten, die der
    Bereich vorher fest verdrahtet hatte. Vorlage:
    `modul-einbauen/assets/anbindung-vorlage.md`.
    Dadurch ist die Quell-App ein ganz normaler Konsument und beim Nachziehen
    kein Sonderfall. Deckt das Modul alles über Vorgabewerte ab, bleibt die
    Datei weg — eine leere Anbindung anzulegen wäre nur Ballast.
-4. Importe an den Aufrufstellen auf den neuen Namensraum ziehen.
-5. **Durchbauen.** Erst wenn die Quell-App grün baut, existiert das Modul.
+3. Importe an den Aufrufstellen auf den neuen Namensraum ziehen.
+4. **Durchbauen** — und *erst dann* den alten Code in der Quell-App löschen.
+   Nie umgekehrt. Bei geteiltem Quellordner (siehe Phase 2) ist das zwingend:
+   Ein roter Zwischenstand legt dort alle beteiligten Apps gleichzeitig lahm.
+5. **Vorhandene Tests mitziehen, nicht wegwerfen.** Der Test aus Phase 2 wird
+   auf das Modul umgestellt und **muss laufen**, bevor abgenommen wird. Er ist
+   der einzige Beweis, dass ein Datenformat unverändert geblieben ist. Ihn zu
+   löschen, weil er nicht mehr kompiliert, macht die Abnahme wertlos.
+6. Bei geteiltem Quellordner: **alle** beteiligten Apps bauen, nicht nur eine.
+
+**Jeder Teil des Moduls muss benutzt werden — von der App oder vom Modul
+selbst.** Geh am Ende jede öffentliche Klasse und Funktion durch und such die
+Aufrufstelle:
+
+```bash
+# Alle Top-Level-Deklarationen des Moduls einsammeln …
+grep -hoE "^(class|data class|interface|object|enum class|fun|val) [A-Za-z]+"   <Modulordner>/*.kt | awk '{print $NF}' | sort -u > /tmp/decls.txt
+
+# … und je Name fragen: ruft irgendwer außerhalb der Moduldateien auf?
+while read n; do
+  c=$(grep -rn --include=*.kt "$n" <App-Quellwurzel>       | grep -v "<Modulordner>/" | grep -c "")
+  a=$(grep -c "$n" <Modulordner>/Anbindung.kt)
+  [ "$c" -eq 0 ] && [ "$a" -eq 0 ] && echo "OHNE AUFRUFER: $n"
+done < /tmp/decls.txt
+```
+
+Zwei Dinge dabei beachten, sonst meldet der Lauf lauter Fehlalarme:
+
+- Die **Anbindungsdatei** liegt im Modulordner, gehört aber der App — sie zählt
+  als Aufrufer, darf also nicht mit ausgeschlossen werden.
+- Die **Testquellen** liegen in einem eigenen Quellbaum; nimm die App-Wurzel
+  weit genug, dass sie mit durchsucht werden.
+- **Modulintern benutzt zählt auch.** Ein Baustein, den nur der Dienst aufruft,
+  ist über den Ablauf mit bewiesen. Gemeint sind Teile, die **niemand** aufruft.
+
+Was übrig bleibt, ist **unbewiesen** — es hat nie laufen müssen. Dann gilt:
+entweder die Quell-App darauf umstellen, oder den Teil aus dem Modul nehmen und
+beim zweiten Konsumenten bauen, wenn er wirklich gebraucht wird. Etwas
+Ungeprüftes liegen zu lassen ist die schlechteste der drei Möglichkeiten — der
+nächste Einbau verlässt sich darauf.
+
+> Im ersten echten Lauf fiel genau hier eine ganze Datei durch: Eine
+> Steuerungsklasse war beim Herauslösen **neu geschrieben** statt verschoben
+> worden, blieb hinter dem ViewModel der App zurück (ein Knopf fehlte, die
+> Meldungstexte fehlten) und wurde deshalb nie angeschlossen. Sie sah brauchbar
+> aus und wäre beim nächsten Einbau als fertig genommen worden.
 
 Bricht der Build, ist das kein Rückschlag, sondern genau die Information, für
 die dieser Schritt da ist: Eine Nabelschnur wurde übersehen. Zurück zu Phase 2.
