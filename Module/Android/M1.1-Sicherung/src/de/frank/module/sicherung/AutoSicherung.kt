@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v6
+// Modul M1.1 — Sicherung · Stand v7
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -114,13 +114,22 @@ class AutoSicherung(
      * vierhundert Einträgen legte vierhundert Aufträge an und brach neunundneunzig Prozent
      * davon sofort wieder ab. Das Verhalten nach aussen bleibt dasselbe — gesichert wird
      * [RUHE_MS] nach der letzten Meldung.
+     *
+     * Unter demselben Riegel wie [quittiere] und [setzeOffen]. Sonst überschneiden sich Prüfen
+     * und Setzen: [quittiere] liest „seither kam nichts", dazwischen meldet dieser Faden eine
+     * Änderung und schreibt „offen" in die Ablage — und der Schreibvorgang aus [quittiere] kommt
+     * danach an und überschreibt ihn mit „nichts offen". Im Speicher stünde dann das eine, in
+     * der Ablage das andere, und ein Vorgangstod machte aus der Änderung endgültig nichts. Das
+     * Warten kostet die Dauer eines Ablage-Schreibvorgangs, wenige Millisekunden, und trifft
+     * nie den Hauptfaden.
      */
+    @Synchronized
     fun melde(grund: String) {
         if (!istAn() || dienst.sicherungsOrdner == null) return
         val jetzt = SystemClock.elapsedRealtime()
         if (!offen || ersteMeldung == 0L) ersteMeldung = jetzt
-        setzeOffen(true)
         letzteMeldung = jetzt
+        setzeOffen(true)
         if (wartend?.isActive == true) return
         wartend = bereich.launch { warteUndSichere(grund) }
     }
@@ -226,6 +235,7 @@ class AutoSicherung(
      * bleibt offen — lieber einmal zu viel gesichert als eine Änderung stillschweigend als
      * erledigt abgehakt.
      */
+    @Synchronized
     private fun quittiere(begonnenAm: Long) {
         if (letzteMeldung <= begonnenAm) {
             ersteMeldung = 0L
@@ -245,6 +255,7 @@ class AutoSicherung(
      * Ablage wird mit `commit()` geschrieben. Ohne den Vergleich stünde in einer Import-Schleife
      * ein blockierender Schreibvorgang je Satz.
      */
+    @Synchronized
     private fun setzeOffen(neu: Boolean) {
         if (offen == neu) return
         offen = neu

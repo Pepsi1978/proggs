@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v6
+// Modul M1.1 — Sicherung · Stand v7
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -196,9 +196,15 @@ class SicherungsDienst(
                 "Geschriebene Sicherung ließ sich nicht lesen",
                 mapOf("name" to geschrieben.name, "grund" to fehler?.message),
             )
-            // Weder aufräumen noch stempeln: Die alten Stände bleiben stehen, und der
-            // Zeitpunkt der letzten geglückten Sicherung wird nicht überschrieben. Sonst
-            // stünde da eine frische Uhrzeit für eine Datei, die niemand lesen kann.
+            // Die ALTEN Stände bleiben unangetastet, und der Zeitpunkt der letzten geglückten
+            // Sicherung wird nicht überschrieben. Sonst stünde da eine frische Uhrzeit für eine
+            // Datei, die niemand lesen kann.
+            //
+            // Weg muss dagegen die eben geschriebene: Ihr Name trägt den jüngsten Zeitpunkt,
+            // sie gälte also ab sofort als „die aktuelle". Der nächste geglückte Lauf räumte
+            // dann die letzte gute Sicherung als „die überzählige" weg und behielte die
+            // unlesbare als Rückfallebene.
+            datei.verwirf(geschrieben)
             // Vermerkt und angezeigt wird der Fehlschlag im Fänger von [sichere] — einmal für
             // alle Wege, auf denen ein Lauf scheitern kann.
             throw fehler ?: IllegalStateException("Die geschriebene Sicherung ließ sich nicht prüfen.")

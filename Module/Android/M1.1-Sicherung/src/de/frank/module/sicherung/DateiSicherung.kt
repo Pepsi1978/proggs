@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v6
+// Modul M1.1 — Sicherung · Stand v7
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -180,6 +180,32 @@ class DateiSicherung(
         }
 
         Sicherungsdatei(datei, name, System.currentTimeMillis()) to bisherige
+    }
+
+    /**
+     * Wirft eine frisch geschriebene Datei weg, die sich nicht zurücklesen liess.
+     *
+     * Sie bliebe sonst liegen — und weil ihr Name den jüngsten Zeitpunkt trägt, gälte sie beim
+     * nächsten Mal als „die aktuelle". Der nächste geglückte Lauf räumte dann die letzte gute
+     * Sicherung weg und behielte die unlesbare als Rückfallebene. Bis dahin böte das
+     * Wiederherstellen sie als neueste an, und der Benutzer bekäme „beschädigt" zu lesen,
+     * während eine heile Datei danebenliegt.
+     *
+     * Geht das Löschen nicht, bleibt sie liegen; ein zweiter Fehlschlag hintereinander ändert
+     * nichts daran, dass die Sicherung davor unangetastet dasteht.
+     */
+    suspend fun verwirf(datei: Sicherungsdatei) = withContext(Dispatchers.IO) {
+        runCatching {
+            check(DocumentsContract.deleteDocument(context.contentResolver, datei.uri))
+        }.onFailure {
+            protokoll.warn(
+                "DateiSicherung",
+                "verwirf",
+                "Ungeprüfte Sicherung blieb liegen",
+                mapOf("name" to datei.name, "art" to it.javaClass.simpleName),
+            )
+        }
+        Unit
     }
 
     /**
