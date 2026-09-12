@@ -317,7 +317,10 @@ Zwei Prüfungen, beide zwingend:
 
 - **`MODUL.md`**: Zeile in der Konsumententabelle ergänzen — App, Stand, Pfad
   der Kopie. Ohne diesen Eintrag findet das spätere Nachziehen die App nicht.
-- **`INDEX.md`**: Konsumentenzähler erhöhen.
+- **`INDEX.md`**: Konsumentenzähler erhöhen und den Klammerzusatz nachführen —
+  stehen danach alle Apps auf dem Bibliotheksstand, heißt er `(alle auf vN)`,
+  sonst `(2 auf v3)` mit der Zahl der Nachzügler. Beim **Nachziehen** ändert
+  sich nur der Klammerzusatz, nicht der Zähler.
 - **Regel 9 für die Ziel-App**: bauen, Version bumpen mit echter Systemzeit,
   committen, pushen, installieren.
 - **Ein Commit** für App, `MODUL.md` **und** `INDEX.md` zusammen — die
@@ -338,6 +341,7 @@ muss, gilt eine feste Rangfolge:
 |---|---|---|
 | Auf welchem Stand ist App X? | **Konsumententabelle** in `MODUL.md` | der `Stand vN` im Dateikopf |
 | Wie viele Konsumenten hat das Modul? | **Konsumententabelle** | der Zähler in `INDEX.md` |
+| Hinkt eine App hinterher? | **Konsumententabelle** | der Klammerzusatz in `INDEX.md` |
 
 Der Dateikopf ist Bequemlichkeit für den Lesenden, nicht die Buchführung.
 Weichen beide voneinander ab, wird die **Tabelle** korrigiert und nachgezogen —
@@ -429,13 +433,32 @@ Repo, er ist also immer greifbar. `modul-erstellen` schreibt jeden Modul-Commit
 in der festen Form `Module: <Nummer> v<N> — <was>`, deshalb ist der Stand
 eindeutig auffindbar:
 
-```
+```bash
 git log --oneline -- Module/<Plattform>/<Ordnername>/ | grep "M1.1 v3"
-git show <Commit>:Module/<Plattform>/<Ordnername>/src/<Datei>
+
+# Den alten Stand NEBEN den Baum legen, nie in ihn hinein:
+ALT=$(mktemp -d)
+git ls-tree --name-only <Commit>:Module/<Plattform>/<Ordnername>/src/<Paketpfad>   | while read f; do
+      git show <Commit>:Module/<Plattform>/<Ordnername>/src/<Paketpfad>/$f > "$ALT/$f"
+    done
+
+diff -r --exclude="Anbindung.*" "$ALT" <Pfad der App-Kopie>
 ```
 
 Steht im Änderungsprotokoll schon ein Commit-Hash, nimm ihn direkt — dann
 sparst du dir die Suche.
+
+> ⚠️ **Niemals `git stash`, `git checkout <commit>` oder `git restore` benutzen,
+> um den alten Stand herzustellen.** Alle drei schreiben in den Arbeitsbaum: Sie
+> machen deine noch nicht committete Arbeit unsichtbar, und beim Zurückholen
+> normalisiert Git die Zeilenenden — danach meldet `diff` **jede Zeile jeder
+> Datei** als geändert, und die Prüfung ist wertlos. `git show` schreibt nichts
+> und lässt den Arbeitsbaum in Ruhe. (Genau dieser Fehler ist beim ersten echten
+> Nachziehen passiert.)
+
+Kommt der Vergleich trotz `git show` mit lauter Vollzeilen-Unterschieden zurück,
+sind es fast immer die Zeilenenden. Dann `diff --strip-trailing-cr` nehmen und
+das Ergebnis erneut ansehen, statt einen Fix zu vermuten, den es nicht gibt.
 
 Findest du den Stand ausnahmsweise nicht zweifelsfrei — etwa bei einem Modul
 aus der Zeit vor dieser Regel —, **rate nicht**. Dann ist die

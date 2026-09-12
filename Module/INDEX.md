@@ -45,6 +45,11 @@ Jede App bekommt eine **1:1-Kopie** der Moduldateien in ihren eigenen Baum.
 Kein `srcDir`-Link, keine Paketabhängigkeit — jeder App-Ordner bleibt allein
 baubar, auch ohne Netz und ohne diesen Ordner.
 
+Der **fette Modulstand** hinter dem Namen ist der Stand der Bibliothek. Steht
+dahinter „alle auf vN", hinkt keine App hinterher; sonst zeigt der Klammerzusatz,
+wo noch Arbeit liegt — dann sagt man „zieh M1.1 nach". Die verbindliche Liste je
+App steht im Manifest, nicht hier.
+
 Die Kopie ist **byte-identisch** mit der Quelle hier. Dadurch zeigt ein
 schlichtes `diff`, ob eine App noch aktuell ist, und ein Nachziehen ist reines
 Überschreiben. Verteilt wird nur auf Ansage: *„zieh M1.1 nach"*.
@@ -52,7 +57,7 @@ schlichtes `diff`, ob eine App noch aktuell ist, und ein Nachziehen ist reines
 ## Module
 
 <!-- Eine Zeile pro Modul. Format:
-- **M1.1** DragReorder — Kurzbeschreibung. Braucht: Compose ≥1.7. Konsumenten: 1
+- **M1.1** DragReorder **v3** — Kurzbeschreibung. Braucht: Compose ≥1.7. Konsumenten: 1 (alle auf v3)
 -->
 
-- **M1.1** Sicherung — Sicherung des Bestands als Datei in einen selbst gewählten Ordner: Auswahl was gesichert wird, Autosicherung nach Ruhezeit, Vorschau vor dem Einspielen, Zurücknehmen. Braucht: androidx.lifecycle, kotlinx.coroutines. Konsumenten: 3
+- **M1.1** Sicherung **v2** — Sicherung des Bestands als Datei in einen selbst gewählten Ordner: Auswahl was gesichert wird, Autosicherung nach Ruhezeit, Vorschau vor dem Einspielen, Zurücknehmen. Braucht: androidx.lifecycle, kotlinx.coroutines. Konsumenten: 3 (alle auf v2)

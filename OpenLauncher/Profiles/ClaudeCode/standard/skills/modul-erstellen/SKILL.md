@@ -1,6 +1,6 @@
 ---
 name: modul-erstellen
-description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/<Ordnername>/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Ebenso bei Sätzen, die gleich einen Namen mitgeben — "bau daraus ein Modul und nenn es X", "erstelle ein Modul mit dem Namen X", "mach daraus das X-Modul", "speicher das als X ab". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Dieser Skill pflegt AUSSERDEM bestehende Module — nutze ihn ebenso bei "fixe M1.1", "ändere das Modul X", "M1.1 soll jetzt auch Y können", "bessere das Modul nach", "hebe den Fix aus App Z ins Modul", "neue Modulversion", "Modul-Version anheben", "das Modul hat einen Fehler". Änderungen an einem Modul passieren IMMER in der Bibliothek, nie in einer App-Kopie. Der Skill übernimmt den genannten Namen wörtlich als Anzeigenamen und fragt danach, wenn keiner genannt wurde, vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Skill modul-einbauen zuständig.
+description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/<Ordnername>/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Ebenso bei Sätzen, die gleich einen Namen mitgeben — "bau daraus ein Modul und nenn es X", "erstelle ein Modul mit dem Namen X", "mach daraus das X-Modul", "speicher das als X ab". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Dieser Skill pflegt AUSSERDEM bestehende Module — nutze ihn ebenso bei "fixe M1.1", "ändere das Modul X", "M1.1 soll jetzt auch Y können", "bessere das Modul nach", "hebe den Fix aus App Z ins Modul", "neue Modulversion", "Modul-Version anheben", "das Modul hat einen Fehler". Änderungen an einem Modul passieren IMMER in der Bibliothek, nie in einer App-Kopie. Dieser Skill prüft AUSSERDEM die Bibliothek auf stille Drift — nutze ihn bei "prüf die Modul-Bibliothek", "ist bei den Modulen alles sauber", "Modul-Check", "prüf M1.1 durch", "welche Apps hinken bei den Modulen hinterher", "stimmen die Modulstände noch": er meldet abweichende Dateiköpfe, einen veralteten INDEX.md, App-Kopien mit Direktänderungen und Modulteile ohne Aufrufer, ändert dabei aber nichts von allein. Der Skill übernimmt den genannten Namen wörtlich als Anzeigenamen und fragt danach, wenn keiner genannt wurde, vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Skill modul-einbauen zuständig.
 ---
 
 # Modul erstellen
@@ -475,9 +475,18 @@ mindestens ein Konsument nachgezogen wurde.** Sag das klar:
 Zieh **nicht selbst** nach. Das ist `modul-einbauen`, und der Benutzer
 entscheidet, wann seine Apps angefasst werden.
 
-Bei geänderter Beschreibung oder Mindestversion auch die Zeile in `INDEX.md`
-anpassen. Den Konsumentenzähler dort **nicht** anfassen — der ändert sich nur
-beim Ein- und Ausbau.
+**Die Zeile in `INDEX.md` mitziehen.** Der fette Modulstand dort ist jetzt `vN+1`,
+und der Klammerzusatz hinter den Konsumenten zeigt an, wer hinterherhinkt:
+
+```
+- **M1.1** Sicherung **v4** — … Konsumenten: 3 (3 auf v3)
+```
+
+Solange niemand nachgezogen hat, stehen also alle drei auf dem alten Stand — und
+genau das soll man beim Überfliegen des Index sehen. Bei geänderter Beschreibung
+oder Mindestversion auch diese anpassen. Den Konsumenten**zähler** dagegen
+**nicht** anfassen — die Zahl ändert sich nur beim Ein- und Ausbau, nur der
+Klammerzusatz wandert.
 
 ### 7. Committen und pushen
 
@@ -512,6 +521,51 @@ die Version. Sag das ausdrücklich, statt den Bump stillschweigend wegzulassen.
 Ohne diesen Schritt steht die neue Fassung auf keinem anderen Rechner zur
 Verfügung, und das erste Nachziehen dort zöge auf einen Stand, den es im Repo
 gar nicht gibt.
+
+---
+
+# Modus „Bibliothek prüfen"
+
+Auslöser: „prüf die Modul-Bibliothek", „ist bei den Modulen alles sauber",
+„welche Apps hinken hinterher", „Modul-Check", „prüf M1.1 durch".
+
+Die Bibliothek hat keinen Build und keine Tests. Nichts fällt also von allein
+auf, wenn etwas auseinanderläuft — ein Dateikopf, der auf einem Stand stehen
+blieb, ein Index, der eine alte Zahl nennt, eine App-Kopie, in der jemand direkt
+gearbeitet hat. Dieser Modus sucht genau danach.
+
+```bash
+bash assets/bibliothek-pruefen.sh          # alle Module
+bash assets/bibliothek-pruefen.sh M1.1     # nur eines
+```
+
+Das Skript **ändert nichts**. Es meldet vier Arten von Befund:
+
+| Befund | Was dahintersteckt |
+|---|---|
+| Dateiköpfe weichen vom Manifest ab | eine Version wurde gehoben und eine Datei vergessen |
+| `INDEX.md` nennt anderen Stand oder andere Zahl | der Index wurde beim letzten Mal nicht mitgezogen |
+| App steht auf dem Stand, weicht aber ab | jemand hat **direkt in der Modulkopie** gearbeitet |
+| im Modul selbst nie benutzt | ein Teil ohne Aufrufer — der Sweep aus Phase 5 |
+
+Der dritte ist der wichtigste: Er ist derselbe Fall, den die Abweichungsprüfung
+beim Nachziehen abfängt — nur findet ihn dieser Lauf, **bevor** jemand
+überschreibt. Dann gilt dasselbe Vorgehen: den Unterschied zeigen, nicht
+stillschweigend verwerfen, und den Fix nach Weg 1 zuerst ins Modul heben.
+
+Den vierten Befund nicht blind glauben: Das Skript sieht nur die Moduldateien.
+Ein gemeldeter Name kann sehr wohl in einer App aufgerufen werden — such die
+Aufrufstelle in den Konsumenten, bevor du etwas entfernst. Findet sich keine,
+greift die Regel aus Phase 5.
+
+Zeilen mit `·` statt `⚠` sind kein Befund, sondern die Arbeitsanzeige: Die App
+hinkt hinterher, und das ist erlaubt. Wenn der Benutzer sie heben will, sagt er
+„zieh nach" — das ist `modul-einbauen`, nicht dieser Skill.
+
+**Reparieren nur auf Ansage.** Der Lauf meldet, der Benutzer entscheidet. Ein
+Befund kann der Rest einer bewussten Entscheidung sein, und ein Skript, das
+ungefragt Dateiköpfe umschreibt, wäre genau die stille Drift, gegen die es
+gebaut wurde.
 
 ## Was dieser Skill nicht tut
 
