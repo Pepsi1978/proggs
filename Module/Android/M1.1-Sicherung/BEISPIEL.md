@@ -110,6 +110,37 @@ Was dort drinsteht und beim Nachbauen leicht vergessen wird:
 | `laeuft`-Wächter an jedem Knopf | zwei gleichzeitige Läufe schreiben sich gegenseitig kaputt |
 | `CancellationException` weiterwerfen | sonst verschluckt `runCatching` den Abbruch des Bereichs |
 
+### Das Gerüst der Bedienung
+
+So ist der Bereich in der Vorlage aufgebaut, von oben nach unten. **Diese
+Reihenfolge wird übernommen**, gezeichnet mit den Bausteinen der jeweiligen App
+— deren Knöpfe, deren Schrift, deren Abstände. Zusätzliches der App darf
+dahinter, nicht dazwischen.
+
+| # | Was | Anmerkung |
+|---|---|---|
+| 1 | Mehrfachauswahl „Was gesichert wird" | je Punkt Titel **und** Erklärung aus `SicherungsTeil` |
+| 2 | Hinweiszeile, was **nicht** in der Sicherung steckt | app-eigener Text |
+| 3 | Schalter „Von allein sichern" mit Erklärung darunter | die Erklärung wechselt, solange kein Ordner gewählt ist |
+| 4 | Ordnername | gedämpft, solange keiner gewählt ist |
+| 5 | Zeile: Haken (nur wenn geprüft) + Stand der letzten Sicherung | der Haken steht für „zurückgelesen", nicht für „geschrieben" |
+| 6 | Zeile „Nächste Sicherung: …" | steht **von allein** da, kein Knopf |
+| 7 | Vorschau-Streifen + „Jetzt einspielen" · „Abbrechen" | nur, solange eine Vorschau offen ist |
+| 8 | Knopfzeile, umbrechend: **Jetzt sichern · Ordner wählen · Ordner vergessen** | der letzte nur, wenn ein Ordner gemerkt ist |
+| 9 | Knopfzeile, umbrechend: **Wiederherstellen · Neueste wiederherstellen** | |
+| 10 | Rückgängig-Zeile + Text daneben | nur nach einem Einspielen |
+| 11 | Auswahlliste „Welche Sicherung?" + „Abbrechen" | **eingebettet** im selben Bereich, kein Dialog und kein Dateiwähler |
+
+Drei Dinge, die beim Nachbauen regelmäßig danebengehen:
+
+- Die Knöpfe stehen **nebeneinander in einer umbrechenden Zeile**, nicht
+  untereinander. Untereinander wird der Bereich doppelt so lang, und man sieht
+  den Stand nicht mehr, ohne zu scrollen.
+- Punkt 6 ist eine **Zeile, kein Knopf.** Wer daraus „Umfang zeigen" macht,
+  versteckt die einzige Angabe, die vor dem Sichern interessiert.
+- **Kein einleitender Absatz.** Was der Schalter tut, steht am Schalter. Ein
+  Absatz darüber wiederholt es nur und bläht den Bereich auf.
+
 Der Aufruf selbst ist kurz:
 
 ```kotlin

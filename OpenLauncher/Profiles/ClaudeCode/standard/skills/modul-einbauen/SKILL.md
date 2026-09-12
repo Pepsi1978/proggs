@@ -231,8 +231,8 @@ Ist die Datenfrage geklärt:
 1. **Zuerst committen**, was da ist — der alte Stand muss in der Historie
    liegen, bevor er verschwindet. Ein Rückzieher braucht keinen Mut, wenn der
    Commit existiert.
-2. Modul einbauen: Phase 2 und 3 (Klassifikation, Kopieren, Anbinden,
-   Aufrufstelle) — **noch nicht bauen**.
+2. Modul einbauen: Phase 2 und 3 (Klassifikation samt Gerüstliste, Kopieren,
+   Anbinden, Aufrufstelle, Oberfläche) — **noch nicht bauen**.
 3. **Alten Code restlos entfernen** — Datei, Aufrufstellen, jetzt unbenutzte
    Hilfsfunktionen, verwaiste Zeichenketten. Eine zurückgelassene zweite
    Fassung wird später versehentlich weitergepflegt.
@@ -252,8 +252,8 @@ die Tabelle dem Benutzer vor, bevor du schreibst**:
 
 | Einstufung | Woran erkennbar | Behandlung |
 |---|---|---|
-| **1:1 übernehmen** | die gesamte Logik; Parameter mit sinnvollem Vorgabewert | ohne Rückfrage übernehmen |
-| **Aussehen aus der App** | Farbe, Schrift, Abstand, Radius, Animationsdauer | ohne Rückfrage aus dem Theme der Ziel-App setzen |
+| **1:1 übernehmen** | die gesamte Logik; **der Aufbau der Bedienung**; Parameter mit sinnvollem Vorgabewert | ohne Rückfrage übernehmen |
+| **Aussehen aus der App** | Farbe, Schrift, Größe, Abstand, Radius, Animationsdauer — und **womit** gezeichnet wird | ohne Rückfrage aus dem Theme und den Bausteinen der Ziel-App |
 | **App-eigen — klären** | Schnittstellen, Listen, Datentypen ohne sinnvollen Vorgabewert; alles unter „Host muss liefern" | **nachfragen**, mit Vorschlag |
 
 Die Trennlinie zwischen Spalte 2 und 3 ist praktisch: **Aussehen hat immer einen
@@ -266,14 +266,116 @@ und Schrift → Spalte 2. Aber *welche Daten* eine App überhaupt sichern kann,
 weiß nur diese App → Spalte 3, und das Modul nimmt sie über eine Schnittstelle
 entgegen, die in der Anbindung umgesetzt wird.
 
-**Teile, die diese App nicht braucht, bleiben trotzdem liegen.** Nichts aus der
-Modulkopie herauskürzen — der Compiler entfernt ungenutzten Code ohnehin, und
-jede Kürzung würde die Byte-Identität zerstören.
+**Code der Modulkopie, den diese App nicht braucht, bleibt trotzdem liegen.**
+Nichts herauskürzen — der Compiler entfernt ungenutzten Code ohnehin, und jede
+Kürzung würde die Byte-Identität zerstören.
 
 Frag nur nach Spalte 3 — und nicht als offene Frage, sondern mit Vorschlag:
 
 > „Was soll die App sichern? Ich sehe Notizen, Kategorien und Einstellungen —
 >  nehme ich alle drei?"
+
+### Der Aufbau gehört zur Funktion, nicht zum Aussehen
+
+Das ist die Stelle, an der die Klassifikation am häufigsten falsch gelesen
+wird. „Aussehen aus der App" verführt dazu, die Oberfläche frei neu zu
+erfinden — und heraus kommt ein Bereich, der zwar dieselben Knöpfe hat, aber
+anders aufgebaut ist als überall sonst. Genau das will der Benutzer nicht: Er
+will das Modul **wiedererkennen** und trotzdem seine App sehen.
+
+**Gleiches Gerüst, eigene Bausteine.**
+
+| Gehört zum Gerüst → Spalte 1 | Gehört zum Baustein → Spalte 2 |
+|---|---|
+| **welche** Bedienelemente es gibt | mit welcher Komponente sie gezeichnet werden |
+| ihre **Reihenfolge** von oben nach unten | Schriftgröße, Farbe, Radius, Höhe |
+| was **nebeneinander** in einer Zeile steht | wie breit die Zeile ist, welcher Abstand dazwischen |
+| was nur **unter einer Bedingung** erscheint | wie es ein- und ausblendet |
+| was **von allein** dasteht statt auf Knopfdruck | ob es fett, gedämpft oder farbig dasteht |
+| welcher Text **welche Rolle** hat (Erklärung am Schalter, Warnung, Stand) | wie dieser Text formuliert und gesetzt ist |
+
+Daraus folgen drei harte Regeln:
+
+1. **Was in der Vorlage steht, steht auch hier — an derselben Stelle, in
+   derselben Zeile.** Stehen dort „Jetzt sichern", „Ordner wählen" und „Ordner
+   vergessen" nebeneinander in einer umbrechenden Zeile, dann stehen sie auch
+   in der Ziel-App nebeneinander in einer umbrechenden Zeile, nicht
+   untereinander.
+   **Zusätzliches darf dazu**, wenn diese App es wirklich braucht — ans Ende
+   derjenigen Zeile, zu der es sachlich gehört, sonst hinter das Gerüst. Nie vor
+   ein Element der Vorlage und nie an dessen Stelle. Ein Extraknopf am Ende
+   einer Zeile stört das Wiedererkennen nicht; einer zwischen zwei Knöpfen der
+   Vorlage schon.
+2. **Was die Vorlage von allein anzeigt, bekommt keinen Knopf.** Steht dort
+   „Nächste Sicherung: 12 Einträge" einfach als Zeile, dann ist ein Knopf
+   „Umfang zeigen" kein gleichwertiger Ersatz, sondern ein anderer Aufbau.
+3. **Erklärtexte haben Anzahl, Platz und Rolle aus der Vorlage — es kommt
+   keiner dazu.** Der Wortlaut darf in die Tonlage der Ziel-App, das ist
+   Spalte 2. Aber was dort am Schalter steht, bleibt am Schalter, und ein
+   einleitender Absatz, den die Vorlage nicht hat, kommt nicht dazu: Er bläht
+   den Bereich auf und erklärt, was der Schalter daneben schon sagt.
+
+**Ein Knopf der Ziel-App bleibt derselbe Knopf.** Er wird mit deren Komponente
+gezeichnet und wächst oder schrumpft mit deren Schriftgröße, Abständen und
+Tippflächen — aber er behält Beschriftung, Platz und Bedingung aus der Vorlage.
+
+### Wo steht das Gerüst, wenn das Modul keine Oberfläche hat?
+
+Viele Module enthalten bewusst kein Compose, kein XAML, kein SwiftUI — sie
+bieten nur den Dienst an und lassen die Bedienung der App. Dann ist die in
+`BEISPIEL.md` genannte **Referenz-Umsetzung der Quell-App verbindlich**, nicht
+bloß eine Anregung. Sie ist der einzige Ort, an dem das Gerüst überhaupt steht.
+
+Nennt `BEISPIEL.md` keine Referenz-Umsetzung, ist die Ursprungs-App aus dem
+Herkunfts-Kopf der Modulkopie die Vorlage — aus ihr wurde das Modul
+herausgelöst, dort steht die Bedienung noch. Gibt es auch die nicht, gibt es
+kein Gerüst: Das ist eine Sachfrage, kurz und mit Vorschlag, bevor eine Zeile
+Oberfläche entsteht.
+
+**Lies sie und schreib sie als Gerüstliste ab, bevor du eine Zeile Oberfläche
+baust** — Element für Element, in der Reihenfolge der Vorlage. Die Liste gehört
+zusammen mit der Klassifikationstabelle vorgelegt; sie ist eine Mitteilung, kein
+Warten. Für M1.1 sieht sie so aus — für jedes andere Modul entsteht sie neu aus
+dessen eigener Vorlage:
+
+```
+1. Mehrfachauswahl "Was gesichert wird" — je Punkt Titel + Erklärung
+2. Hinweiszeile, was NICHT in der Sicherung steckt
+3. Schalter "Von allein sichern" + Erklärung darunter
+   (Erklärung wechselt, solange kein Ordner gewählt ist)
+4. Ordnername, gedämpft solange keiner gewählt ist
+5. Zeile: Haken (nur wenn geprüft) + Stand der letzten Sicherung
+6. Zeile "Nächste Sicherung: …" — steht von allein da, kein Knopf
+7. Knopfzeile, umbrechend: Jetzt sichern · Ordner wählen · Ordner vergessen
+   (der letzte nur, wenn ein Ordner gemerkt ist)
+8. Knopfzeile, umbrechend: Wiederherstellen · Neueste wiederherstellen
+9. Rückgängig-Zeile — nur nach einem Einspielen
+10. Auswahlliste "Welche Sicherung?" + Abbrechen — nur wenn aufgezogen
+```
+
+Diese Liste ist danach die Prüfliste aus Phase 4. Ohne sie merkt niemand, dass
+Punkt 6 fehlt und dafür ein Knopf dasteht, den es nirgends sonst gibt.
+
+**Etwas weglassen ist erlaubt — aber nur bewusst und mit Ansage.** Kann die
+Ziel-App einen Punkt nicht (es gibt keine Rücknahme, also auch keine
+Rückgängig-Zeile), fällt er weg, und das wird in der Abschlussmeldung genannt.
+Still verschwinden darf nichts.
+
+### Aufklappen, Listen und andere Behälter
+
+Zeigt die Vorlage eine Auswahl **eingebettet** — die Liste erscheint im selben
+Bereich, sobald man sie aufzieht, und verschwindet wieder —, dann wird sie auch
+in der Ziel-App eingebettet gezeigt. Kein Dialog, kein zweites Klappmenü im
+Klappmenü, kein Dateiwähler des Betriebssystems **an dieser Stelle**: Das sind
+andere Aufbauten mit anderem Verhalten beim Zurückgehen, und genau daran merkt
+der Benutzer, dass hier etwas nachgebaut statt übernommen wurde. Was die Vorlage
+selbst über einen Systemdialog löst — etwa „Ordner wählen" —, bleibt
+selbstverständlich ein Systemdialog.
+
+Umgekehrt gilt das auch für den Rahmen: Steckt der ganze Bereich in der
+Ziel-App schon in einem Klappblock, während er in der Vorlage offen liegt, ist
+das **kein** Verstoß — der Rahmen gehört der App, das Innere der Vorlage. Nur
+darf der App-Rahmen dieses Innere nicht umsortieren.
 
 ## Phase 3 — Kopieren und anbinden
 
@@ -284,6 +386,10 @@ Frag nur nach Spalte 3 — und nicht als offene Frage, sondern mit Vorschlag:
    Sprache und Tonlage der Ziel-App.
 3. **Aufrufstelle** einbauen — `BEISPIEL.md` des Moduls ist die Vorlage, aber
    der Aufruf gehört an die Stelle, an der er in *dieser* App Sinn ergibt.
+4. **Oberfläche nach der Gerüstliste bauen**, Punkt für Punkt in der Reihenfolge
+   der Vorlage — gezeichnet mit den Bausteinen der Ziel-App. Fehlt der Ziel-App
+   eine Entsprechung (kein Schalter, keine umbrechende Knopfzeile), nimm den
+   nächstliegenden eigenen Baustein; erfinde keinen anderen Aufbau.
 
 Plattform-Eigenheiten stehen in `references/` — vor dem Kopieren die passende
 lesen:
@@ -299,7 +405,7 @@ ausdrückliches `<Compile Include=…>`.
 
 ## Phase 4 — Abnahme
 
-Zwei Prüfungen, beide zwingend:
+Drei Prüfungen, alle zwingend:
 
 1. **`diff` zwischen Bibliothek und App-Kopie ist leer** — **ohne** die
    Anbindungsdatei, die es in der Bibliothek gar nicht gibt:
@@ -311,7 +417,14 @@ Zwei Prüfungen, beide zwingend:
    Ohne diese Ausnahme meldet der Vergleich immer einen Unterschied, und die
    Prüfung wäre wertlos. Ist er darüber hinaus nicht leer, hast du am falschen
    Ort angepasst — die Änderung gehört in die Anbindung.
-2. **Die Ziel-App baut grün.** Vorher gilt der Einbau nicht als erledigt.
+2. **Die Gerüstliste aus Phase 2 stimmt** — sofern die Oberfläche hier entstand;
+   bringt das Modul seine eigene mit, gibt es keine Liste. Geh sie Punkt für Punkt durch und
+   halte jeden gegen das, was du gebaut hast: vorhanden, an derselben Stelle,
+   in derselben Zeile, unter derselben Bedingung. Ein grüner Build sagt darüber
+   nichts — eine Oberfläche, die anders aufgebaut ist, kompiliert tadellos.
+   Weicht etwas ab, ist das zu beheben und nicht zu begründen; einzige Ausnahme
+   ist ein bewusst weggelassener Punkt, und der gehört in die Abschlussmeldung.
+3. **Die Ziel-App baut grün.** Vorher gilt der Einbau nicht als erledigt.
 
 ## Phase 5 — Buchführung und Abschluss
 
