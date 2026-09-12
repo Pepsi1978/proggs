@@ -51,4 +51,9 @@ nichts, ist das Modul eigenständig; das ist der Normalfall und das Ziel.}}
 
 ## Änderungen
 
+Eine Zeile je Version. Ändert sich eine öffentliche Funktion, ein Parameter
+oder eine Schnittstelle, **muss** „bricht Anbindung" dabeistehen — daran
+erkennt `modul-einbauen`, dass Nachziehen mehr ist als Überschreiben. Bauen
+andere Module auf diesem auf, hier ebenfalls nennen.
+
 - **v1** ({{DD.MM.YYYY}}) — aus {{QUELL_APP}} herausgelöst.

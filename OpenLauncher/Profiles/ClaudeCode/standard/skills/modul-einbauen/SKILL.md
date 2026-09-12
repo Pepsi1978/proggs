@@ -1,6 +1,6 @@
 ---
 name: modul-einbauen
-description: Baut ein fertiges Modul aus ~/proggs/Module/ in eine App ein — Funktionen 1:1, Aussehen an die Ziel-App angepasst — und verteilt Modul-Änderungen an alle Apps, die das Modul bereits benutzen. Nutze diesen Skill IMMER wenn der Benutzer sagt "bau M1.1 ein", "baue das Modul X ein", "Modul einbauen", "nimm M1.1 bis M1.7 und bau sie ein", "setz das Drag-and-Drop-Modul in App Y ein", "das Modul aus der Bibliothek in die neue App", "benutze Modul Mx.y", "zieh M1.1 nach", "zieh das Modul überall nach", "verteile die Modul-Änderung", "bring App Y auf den neuen Modulstand", "welche Apps hinken beim Modul hinterher". Der Benutzer darf das Modul über die Nummer ODER über seinen Anzeigenamen nennen ("bau das Drag & Drop Modul ein") — beides nachschlagen in Module/INDEX.md. Ebenso wenn ein vorhandener Eigenbau abgelöst werden soll — "ersetz die alte Sortierung durch das Modul", "die App hat sowas schon, ersetz es", "tausch das gegen das Modul aus", "bau das Modul ein und wirf die alte Lösung raus". Der Skill sucht dann aktiv nach einer ähnlichen Eigenumsetzung, prüft VOR dem Ersetzen, ob dabei Nutzerdaten verloren gehen (Datenbank-Schema, Einstellungsschlüssel, Sicherungsdateien, Sortierfelder), und hält an, wenn die Datenform nicht passt. Der Skill prüft Versionsverträglichkeit, kopiert das Modul byte-identisch, erzeugt eine app-eigene Anbindungsdatei für Aussehen und app-spezifische Inhalte, legt vor, was 1:1 übernommen wird und was geklärt werden muss, und nimmt erst nach grünem Build ab. NICHT nutzen, wenn aus bestehendem App-Code erst ein neues Modul entstehen soll ("mach daraus ein Modul", "als Modul abspeichern", "extrahiere X als Modul") — dafür ist der Skill modul-erstellen zuständig.
+description: Baut ein fertiges Modul aus ~/proggs/Module/ in eine App ein — Funktionen 1:1, Aussehen an die Ziel-App angepasst — und verteilt Modul-Änderungen an alle Apps, die das Modul bereits benutzen. Nutze diesen Skill IMMER wenn der Benutzer sagt "bau M1.1 ein", "baue das Modul X ein", "Modul einbauen", "nimm M1.1 bis M1.7 und bau sie ein", "setz das Drag-and-Drop-Modul in App Y ein", "das Modul aus der Bibliothek in die neue App", "benutze Modul Mx.y", "zieh M1.1 nach", "zieh das Modul überall nach", "verteile die Modul-Änderung", "bring App Y auf den neuen Modulstand", "welche Apps hinken beim Modul hinterher". Der Benutzer darf das Modul über die Nummer ODER über seinen Anzeigenamen nennen ("bau das Drag & Drop Modul ein") — beides nachschlagen in Module/INDEX.md. Ebenso wenn ein vorhandener Eigenbau abgelöst werden soll — "ersetz die alte Sortierung durch das Modul", "die App hat sowas schon, ersetz es", "tausch das gegen das Modul aus", "bau das Modul ein und wirf die alte Lösung raus". Der Skill sucht dann aktiv nach einer ähnlichen Eigenumsetzung, prüft VOR dem Ersetzen, ob dabei Nutzerdaten verloren gehen (Datenbank-Schema, Einstellungsschlüssel, Sicherungsdateien, Sortierfelder), und hält an, wenn die Datenform nicht passt. Der Skill prüft Versionsverträglichkeit, kopiert das Modul byte-identisch, erzeugt eine app-eigene Anbindungsdatei für Aussehen und app-spezifische Inhalte, legt vor, was 1:1 übernommen wird und was geklärt werden muss, und nimmt erst nach grünem Build ab. NICHT nutzen, wenn aus bestehendem App-Code erst ein neues Modul entstehen soll ("mach daraus ein Modul", "als Modul abspeichern", "extrahiere X als Modul") oder wenn das Modul selbst geändert werden soll ("fixe M1.1", "ändere das Modul", "M1.1 soll auch X können", "neue Modulversion") — beides gehört zum Skill modul-erstellen, der die Bibliothek besitzt. Dieser Skill verteilt nur, was dort steht.
 ---
 
 # Modul einbauen
@@ -78,11 +78,8 @@ bevor irgendeine Datei kopiert wird**:
    ist das kein Einbau, sondern ein Nachziehen — wechsle den Modus.
    Gibt es stattdessen eine **eigene, ähnliche Umsetzung** in der App, geht es
    in Phase 1b weiter.
-4. **Braucht das Modul andere Module?** Das Feld `Braucht Module:` im Manifest
-   nennt sie. Fehlt eines davon in der Ziel-App, baue es **zuerst** ein —
-   sonst bricht der Build mit „unresolved reference", und die Ursache steht in
-   einer Datei, die noch gar nicht da ist. Nennt das Manifest nichts, ist das
-   Modul eigenständig.
+4. **Braucht das Modul andere Module?** Siehe den eigenen Abschnitt direkt
+   unter dieser Liste — das ist mehr als ein Blick ins Manifest.
 5. **Ist das Modul selbst sauber?** Durchsuch den Modulcode nach direkten
    Theme- und Ressourcenzugriffen (`MaterialTheme.`, `R.string`, `R.color`,
    `StaticResource`, `Color("…")`, ein CompositionLocal der Ursprungs-App).
@@ -90,6 +87,36 @@ bevor irgendeine Datei kopiert wird**:
    anpassen, weil das Aussehen fest verdrahtet ist. Das ist kein
    Einbau-Problem, sondern eine übersehene Nabelschnur — zurück zu
    `modul-erstellen`, Modul-Version +1, danach einbauen.
+
+### Abhängigkeiten auflösen
+
+Ein Modul kann auf anderen aufbauen. Das Feld `Braucht Module:` im Manifest
+nennt sie — aber ein einzelner Blick reicht nicht, denn die genannten Module
+können ihrerseits welche brauchen.
+
+**Folge der Kette bis zum Ende.** M1.5 braucht M1.2, M1.2 braucht M1.0 → alle
+drei gehören eingebaut. Prüf für jedes, ob es in der Ziel-App schon liegt; nur
+die fehlenden kommen dazu.
+
+**Reihenfolge: das Benötigte zuerst.** Also M1.0, dann M1.2, dann M1.5 — nie
+nach Nummer, nie in der Reihenfolge, in der der Benutzer sie aufgezählt hat.
+Andersherum bricht der Build mit „unresolved reference", und die Ursache steht
+in einer Datei, die noch gar nicht existiert.
+
+**Leg die Liste vor, bevor du anfängst:**
+
+> „M1.5 braucht M1.2, und das fehlt in Denknotiz. Ich baue beide ein, M1.2
+>  zuerst."
+
+Das ist eine Mitteilung, keine Freigabe — im Schnellmodus also sagen und
+weiterarbeiten, nicht warten.
+
+**Kreis in der Kette?** Braucht M1.5 das Modul M1.2 und M1.2 wiederum M1.5,
+**brich ab**. Das ist ein Fehler in der Bibliothek, nicht im Einbau: Zwei
+Module, die sich gegenseitig brauchen, sind in Wahrheit eines. Melde es und
+verweise auf `modul-erstellen` zum Zusammenlegen.
+
+Nennt ein Manifest nichts, ist das Modul eigenständig — der Normalfall.
 
 ## Phase 1b — Ähnliches in der App ablösen
 
@@ -245,6 +272,24 @@ Nachziehen einer pro App (App + die gehobene Zeile *dieser* App). So ist jeder
 Commit für sich zurücknehmbar, und `MODUL.md` sagt zu keinem Zeitpunkt etwas
 Falsches.
 
+### Wer sagt die Wahrheit, wenn zwei Angaben sich widersprechen
+
+Denselben Sachverhalt gibt es an mehreren Stellen. Damit nie geraten werden
+muss, gilt eine feste Rangfolge:
+
+| Frage | Maßgeblich | Nachrangig |
+|---|---|---|
+| Auf welchem Stand ist App X? | **Konsumententabelle** in `MODUL.md` | der `Stand vN` im Dateikopf |
+| Wie viele Konsumenten hat das Modul? | **Konsumententabelle** | der Zähler in `INDEX.md` |
+
+Der Dateikopf ist Bequemlichkeit für den Lesenden, nicht die Buchführung.
+Weichen beide voneinander ab, wird die **Tabelle** korrigiert und nachgezogen —
+nie umgekehrt.
+
+Der Zähler in `INDEX.md` wird aus der Tabelle abgeleitet und nur beim **Ein-
+und Ausbau** angefasst. **Nachziehen ändert ihn nie** — die Anzahl der
+Konsumenten bleibt dabei ja gleich.
+
 ---
 
 # Modus „Nachziehen"
@@ -253,10 +298,14 @@ Auslöser: „zieh M1.1 nach", „zieh M1.1 nach in GenialeIdeen", „verteile d
 Änderung". Ohne Zusatz sind **alle** Konsumenten gemeint.
 
 1. Konsumententabelle in `MODUL.md` lesen — sie ist die verbindliche Liste.
-2. **Gewachsene Anforderungen prüfen.** Ist `Host muss liefern` gegenüber dem
-   Stand der App länger geworden, braucht deren Anbindung eine Ergänzung. Das
-   ist erwartete Arbeit, kein Baufehler — nenn es vorher, statt es später als
-   Fehler zu melden.
+2. **Änderungsprotokoll lesen.** Steht bei einer der übersprungenen Versionen
+   **„bricht Anbindung"**, ist klar, dass jede Anbindung angepasst werden muss —
+   das ist dann die eigentliche Arbeit, nicht das Kopieren. Ebenso prüfen, ob
+   `Host muss liefern` gegenüber dem Stand der App länger geworden ist. Nenn
+   beides **vorher**, statt es später als Baufehler zu melden.
+   Bricht die Signatur, prüf außerdem, ob **andere Module** auf diesem
+   aufbauen — die müssen dann mitgezogen werden. Das Änderungsprotokoll nennt
+   sie.
 3. **Abweichungsprüfung — vor jedem Überschreiben.** Siehe unten.
 4. Pro App: **nur die Modulkopie** überschreiben, Anbindung unangetastet lassen.
 5. Pro App bauen.

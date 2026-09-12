@@ -151,6 +151,49 @@
       ]
     },
     {
+      "id": "abhaengigkeit-transitiv",
+      "soll_ausloesen": true,
+      "prompt": "Bau M1.5 in die neue App ein.",
+      "kontext": "M1.5 braucht M1.2, M1.2 braucht M1.0. Keines liegt in der App.",
+      "erwartet": [
+        "folgt der Kette bis zum Ende, bleibt nicht bei M1.2 stehen",
+        "baut in der Reihenfolge M1.0, M1.2, M1.5 ein",
+        "legt die Liste vor, wartet aber nicht auf Freigabe",
+        "macht am Ende einen Build, einen Bump, einen Commit"
+      ]
+    },
+    {
+      "id": "abhaengigkeit-kreis",
+      "soll_ausloesen": true,
+      "prompt": "Bau M1.5 ein.",
+      "kontext": "M1.5 braucht M1.2, und M1.2 braucht laut Manifest wiederum M1.5.",
+      "erwartet": [
+        "bricht ab, statt in eine Endlosschleife zu laufen",
+        "nennt es einen Fehler in der Bibliothek, nicht im Einbau",
+        "verweist auf modul-erstellen zum Zusammenlegen"
+      ]
+    },
+    {
+      "id": "nachziehen-bricht-anbindung",
+      "soll_ausloesen": true,
+      "prompt": "Zieh M1.1 überall nach.",
+      "kontext": "Im Änderungsprotokoll steht bei v4 'bricht Anbindung'.",
+      "erwartet": [
+        "liest das Änderungsprotokoll und kündigt die Anbindungsarbeit VORHER an",
+        "behandelt den roten Build danach nicht als Überraschung",
+        "repariert die Anbindung, niemals die Modulkopie",
+        "prüft, ob andere Module auf M1.1 aufbauen"
+      ]
+    },
+    {
+      "id": "negativ-modul-aendern",
+      "soll_ausloesen": false,
+      "prompt": "Fixe den Ruckler in M1.1.",
+      "erwartet": [
+        "triggert NICHT — Ändern der Bibliothek gehört zu modul-erstellen"
+      ]
+    },
+    {
       "id": "negativ-erstellen",
       "soll_ausloesen": false,
       "prompt": "Mach aus dem Drag-and-Drop von GenialeIdeen bitte ein Modul.",

@@ -62,6 +62,41 @@
       ]
     },
     {
+      "id": "modul-aendern",
+      "soll_ausloesen": true,
+      "prompt": "Fixe bitte den Ruckler in M1.1.",
+      "kontext": "M1.1 steht auf v3 und hat 3 Konsumenten.",
+      "erwartet": [
+        "nennt Stand und Konsumenten, bevor er ändert",
+        "ändert NUR in der Bibliothek, nie in einer App-Kopie",
+        "prüft, ob die Signatur sich ändert, und vermerkt ggf. 'bricht Anbindung'",
+        "hebt die Version in ALLEN Dateiköpfen und in MODUL.md gleichzeitig auf v4",
+        "schreibt eine Zeile ins Änderungsprotokoll mit echtem Datum",
+        "zieht NICHT selbst nach, sondern sagt, dass 3 Konsumenten auf v3 stehen",
+        "erklärt, dass die Änderung erst mit dem ersten Nachziehen geprüft ist"
+      ]
+    },
+    {
+      "id": "fix-aus-app-heben",
+      "soll_ausloesen": true,
+      "prompt": "Hebe den Fix aus GenialeIdeen ins Modul M1.1.",
+      "erwartet": [
+        "übernimmt den Unterschied, macht NICHT die App-Kopie zur neuen Quelle",
+        "hebt die Version und schreibt das Protokoll",
+        "verweist danach auf modul-einbauen zum Verteilen"
+      ]
+    },
+    {
+      "id": "braucht-module-erkennen",
+      "soll_ausloesen": true,
+      "prompt": "Mach aus dem Kartenstapel in Denknotiz ein Modul namens Kartenstapel.",
+      "kontext": "Der Bereich importiert de.frank.module.dragreorder aus M1.1.",
+      "erwartet": [
+        "behandelt den Modul-Import NICHT als Nabelschnur zum Durchschneiden",
+        "trägt M1.1 unter 'Braucht Module' ins Manifest ein"
+      ]
+    },
+    {
       "id": "negativ-einbau",
       "soll_ausloesen": false,
       "prompt": "Nimm bitte die Module M1.1 bis M1.3 und bau sie in die neue App ein.",

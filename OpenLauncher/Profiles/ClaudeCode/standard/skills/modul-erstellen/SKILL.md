@@ -1,6 +1,6 @@
 ---
 name: modul-erstellen
-description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/Mx.y-Name/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Ebenso bei Sätzen, die gleich einen Namen mitgeben — "bau daraus ein Modul und nenn es X", "erstelle ein Modul mit dem Namen X", "mach daraus das X-Modul", "speicher das als X ab". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Der Skill übernimmt den genannten Namen wörtlich als Anzeigenamen und fragt danach, wenn keiner genannt wurde, vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Skill modul-einbauen zuständig.
+description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/Mx.y-Name/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Ebenso bei Sätzen, die gleich einen Namen mitgeben — "bau daraus ein Modul und nenn es X", "erstelle ein Modul mit dem Namen X", "mach daraus das X-Modul", "speicher das als X ab". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Dieser Skill pflegt AUSSERDEM bestehende Module — nutze ihn ebenso bei "fixe M1.1", "ändere das Modul X", "M1.1 soll jetzt auch Y können", "bessere das Modul nach", "hebe den Fix aus App Z ins Modul", "neue Modulversion", "Modul-Version anheben", "das Modul hat einen Fehler". Änderungen an einem Modul passieren IMMER in der Bibliothek, nie in einer App-Kopie. Der Skill übernimmt den genannten Namen wörtlich als Anzeigenamen und fragt danach, wenn keiner genannt wurde, vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Skill modul-einbauen zuständig.
 ---
 
 # Modul erstellen
@@ -117,6 +117,13 @@ Ressourcen zählen immer als Nabelschnur: Ein Modul darf keine `R.string`,
 einer fremden App gibt es die nicht. Texte und Farben kommen als Parameter
 herein oder stehen unter „Host muss liefern".
 
+**Ein Sonderfall ist keine Nabelschnur:** Zeigt ein Import auf
+`de.frank.module.*`, benutzt der Bereich ein **anderes Modul** aus der
+Bibliothek. Das wird nicht durchgeschnitten, sondern unter `Braucht Module:`
+ins Manifest eingetragen. `modul-einbauen` sorgt dann dafür, dass es vorher in
+der Ziel-App liegt. Bleibt das Feld leer, ist das Modul eigenständig — der
+Normalfall und das Ziel.
+
 ### Phase 3 — Herauslösen
 
 Lege `Module/<Plattform>/Mx.y-Name/src/` an und verschiebe die Dateien dorthin.
@@ -161,8 +168,13 @@ Ein Modul, das nur herauskopiert wurde, ist ungetestet. Deshalb:
 1. Alten Code in der Quell-App **löschen**.
 2. Die Moduldateien **byte-identisch** in den App-Baum kopieren, an den in der
    Referenzdatei genannten Ort.
-3. Importe an den Aufrufstellen auf den neuen Namensraum ziehen.
-4. **Durchbauen.** Erst wenn die Quell-App grün baut, existiert das Modul.
+3. **Anbindungsdatei anlegen** — `Anbindung.<ext>` neben der Kopie, mit den
+   Theme-Werten und Texten, die der Bereich vorher fest verdrahtet hatte.
+   Vorlage: `modul-einbauen/assets/anbindung-vorlage.md`.
+   Dadurch ist die Quell-App ein ganz normaler Konsument und beim Nachziehen
+   kein Sonderfall — genau wie jede App, die das Modul später bekommt.
+4. Importe an den Aufrufstellen auf den neuen Namensraum ziehen.
+5. **Durchbauen.** Erst wenn die Quell-App grün baut, existiert das Modul.
 
 Bricht der Build, ist das kein Rückschlag, sondern genau die Information, für
 die dieser Schritt da ist: Eine Nabelschnur wurde übersehen. Zurück zu Phase 2.
@@ -184,6 +196,81 @@ Die Version ist eine ganze Zahl: `v1` beim Anlegen, `+1` bei jeder Änderung am
 Modul. Sie steht an zwei Stellen — im Dateikopf und in `MODUL.md`. Ohne sie ist
 der Eintrag `Konsumenten: GenialeIdeen (Stand v3)` wertlos, und niemand kann
 sagen, welche App hinterherhinkt.
+
+---
+
+# Modus „Modul ändern"
+
+Auslöser: „fixe M1.1", „ändere das Modul", „M1.1 soll jetzt auch X können",
+„hebe den Fix aus GenialeIdeen ins Modul".
+
+**Jede Änderung an einem Modul passiert in der Bibliothek.** Niemals in einer
+App-Kopie — die ist eine Abschrift und wird beim nächsten Nachziehen ersetzt.
+
+### 1. Lage feststellen und nennen
+
+Modul über Nummer oder Anzeigenamen finden, `MODUL.md` lesen und die
+Konsumenten **zählen und aussprechen**:
+
+> „M1.1 steht bei v3 und hat 3 Konsumenten — GenialeIdeen, Denknotiz,
+>  KarteikartenLernen. Die Änderung betrifft alle drei."
+
+Das ist keine Höflichkeit: Wer nicht weiß, dass er drei Apps anfasst, ändert
+leichtfertiger als nötig.
+
+### 2. Ändern — in der Bibliothek
+
+Kommt der Fix aus einer App (der Abweichungsfall aus `modul-einbauen`),
+übernimm den **Unterschied**. Mach nicht die App-Kopie zur neuen Quelle — sie
+enthält womöglich noch mehr, das nur für diese App gilt.
+
+### 3. Signaturprüfung — bricht die Änderung die Anbindungen?
+
+Ändern sich öffentliche Funktionen, Parameter, Schnittstellen oder Datentypen?
+
+| | Folge |
+|---|---|
+| Nur innen geändert | Nachziehen ist reines Überschreiben |
+| **Signatur geändert** | Jede Anbindung muss angepasst werden |
+
+Im zweiten Fall im Änderungsprotokoll ausdrücklich **„bricht Anbindung"**
+vermerken. Genau diese Angabe braucht `modul-einbauen` später, um nicht
+blind loszulaufen.
+
+**Abhängige Module mitdenken.** Andere Module können auf diesem aufbauen:
+
+```
+grep -l "Mx.y" ~/proggs/Module/*/*/MODUL.md
+```
+
+Treffer gehören ins Änderungsprotokoll — sie müssen bei einer Signaturänderung
+ebenfalls nachgezogen werden.
+
+### 4. Version anheben
+
+`vN` → `vN+1`, **gleichzeitig in allen Dateiköpfen und in `MODUL.md`**. Bleibt
+eine Datei zurück, zeigt ihr Kopf einen Stand an, den es nicht gibt, und die
+Konsumententabelle wird wertlos.
+
+### 5. Änderungsprotokoll
+
+Eine Zeile in `MODUL.md` unter **Änderungen**: Version, echtes Datum, was
+geändert wurde, und ob es die Anbindung bricht.
+
+### 6. Abschluss — und warum hier nicht gebaut wird
+
+Die Bibliothek hat keinen Build. **Die Änderung ist deshalb erst geprüft, wenn
+mindestens ein Konsument nachgezogen wurde.** Sag das klar:
+
+> „v4 steht. 3 Konsumenten sind noch auf v3 — sag ‚zieh M1.1 nach', dann wird
+>  es gebaut und geprüft."
+
+Zieh **nicht selbst** nach. Das ist `modul-einbauen`, und der Benutzer
+entscheidet, wann seine Apps angefasst werden.
+
+Bei geänderter Beschreibung oder Mindestversion auch die Zeile in `INDEX.md`
+anpassen. Den Konsumentenzähler dort **nicht** anfassen — der ändert sich nur
+beim Ein- und Ausbau.
 
 ## Was dieser Skill nicht tut
 
