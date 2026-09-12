@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v2
+// Modul M1.1 — Sicherung · Stand v3
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -24,12 +24,16 @@ import java.util.Locale
  * Bewusst in der offenen Ablage: Das ist eine örtliche Tatsache über dieses Gerät und hat in der
  * Sicherungsdatei selbst nichts verloren.
  */
-object BackupStatus {
-
-    private const val PREFS = "kompass_backup_status"
-    private const val KEY_LAST_BACKUP = "zuletzt_gesichert"
-    private const val KEY_GEPRUEFT = "zuletzt_geprueft"
-    private const val KEY_GESCHEITERT = "letzter_versuch_gescheitert"
+class BackupStatus(
+    /**
+     * Die `SharedPreferences`-Datei, in der der Stand liegt.
+     *
+     * Kommt von aussen, weil jede App ihre eigene hat. Stand hier ein fester Name, trüge jede
+     * fremde App die Ablage der Ursprungs-App mit sich herum — und eine bestehende App verlöre
+     * beim Umstieg auf das Modul ihren bisherigen Zeitstempel, ohne dass es jemandem auffällt.
+     */
+    private val prefsDatei: String,
+) {
 
     /**
      * Je Aufruf eine eigene Instanz: SimpleDateFormat ist nicht threadsicher, und [describe]
@@ -46,7 +50,7 @@ object BackupStatus {
      */
     fun markBackedUp(context: Context, geprueft: Boolean) {
         context.applicationContext
-            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getSharedPreferences(prefsDatei, Context.MODE_PRIVATE)
             .edit()
             .putLong(KEY_LAST_BACKUP, System.currentTimeMillis())
             .putBoolean(KEY_GEPRUEFT, geprueft)
@@ -63,7 +67,7 @@ object BackupStatus {
      */
     fun markGescheitert(context: Context) {
         context.applicationContext
-            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getSharedPreferences(prefsDatei, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(KEY_GESCHEITERT, true)
             .apply()
@@ -71,17 +75,17 @@ object BackupStatus {
 
     private fun istGescheitert(context: Context): Boolean =
         context.applicationContext
-            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getSharedPreferences(prefsDatei, Context.MODE_PRIVATE)
             .getBoolean(KEY_GESCHEITERT, false)
 
     fun istGeprueft(context: Context): Boolean =
         context.applicationContext
-            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getSharedPreferences(prefsDatei, Context.MODE_PRIVATE)
             .getBoolean(KEY_GEPRUEFT, false)
 
     private fun lastBackupAt(context: Context): Long =
         context.applicationContext
-            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getSharedPreferences(prefsDatei, Context.MODE_PRIVATE)
             .getLong(KEY_LAST_BACKUP, 0L)
 
     /** Behauptet nie eine Sicherung, die es nicht gab. */
@@ -103,4 +107,10 @@ object BackupStatus {
     }
 
     fun hasBackup(context: Context): Boolean = lastBackupAt(context) > 0L
+
+    private companion object {
+        private const val KEY_LAST_BACKUP = "zuletzt_gesichert"
+        private const val KEY_GEPRUEFT = "zuletzt_geprueft"
+        private const val KEY_GESCHEITERT = "letzter_versuch_gescheitert"
+    }
 }

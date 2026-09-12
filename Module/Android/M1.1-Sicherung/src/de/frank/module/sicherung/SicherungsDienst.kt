@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v2
+// Modul M1.1 — Sicherung · Stand v3
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -43,6 +43,9 @@ class SicherungsDienst(
     private val umfangGeber: () -> Set<SicherungsTeil> = { inhalt.teile.toSet() },
 ) {
     private val datei = DateiSicherung(context, namen, protokoll)
+
+    /** Der Stand liegt in der Ablage DIESER App — siehe [SicherungsNamen.einstellungenDatei]. */
+    private val stand = BackupStatus(namen.einstellungenDatei)
     private val rahmen = Sicherungsrahmen(inhalt, protokoll)
 
     /**
@@ -65,9 +68,9 @@ class SicherungsDienst(
 
     fun vergissOrdner() = datei.vergissOrdner()
 
-    fun standText(): String = BackupStatus.describe(context)
+    fun standText(): String = stand.describe(context)
 
-    fun istGeprueft(): Boolean = BackupStatus.istGeprueft(context)
+    fun istGeprueft(): Boolean = stand.istGeprueft(context)
 
     /**
      * Wie viel die nächste Sicherung umfassen würde und wie groß sie etwa wird.
@@ -114,11 +117,11 @@ class SicherungsDienst(
             // Weder aufräumen noch stempeln: Die alten Stände bleiben stehen, und der
             // Zeitpunkt der letzten geglückten Sicherung wird nicht überschrieben. Sonst
             // stünde da eine frische Uhrzeit für eine Datei, die niemand lesen kann.
-            BackupStatus.markGescheitert(context)
+            stand.markGescheitert(context)
             throw fehler ?: IllegalStateException("Die geschriebene Sicherung ließ sich nicht prüfen.")
         }
 
-        BackupStatus.markBackedUp(context, geprueft = true)
+        stand.markBackedUp(context, geprueft = true)
         // Erst jetzt: Eine gute Sicherung gegen eine ungeprüfte einzutauschen wäre der
         // Fehler, gegen den das Zurücklesen überhaupt schützt.
         datei.raeumeAlteWeg(vorherige)
@@ -132,7 +135,7 @@ class SicherungsDienst(
                 zahlen.anzahl.forEach { (art, wieViele) -> put(art, wieViele) }
             },
         )
-        return BackupStatus.describe(context)
+        return stand.describe(context)
     }
 
     /**

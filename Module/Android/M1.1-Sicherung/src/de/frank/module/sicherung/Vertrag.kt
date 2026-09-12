@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v2
+// Modul M1.1 — Sicherung · Stand v3
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -55,6 +55,19 @@ interface SicherungsInhalt {
      * Datei gehört weiterhin zu dieser App und muss einspielbar bleiben.
      */
     val fruehereNamen: List<String> get() = emptyList()
+
+    /**
+     * Frühere Namen von Kopf-Feldern dieser App: alter Name → heutiger Name.
+     *
+     * Eine App, die vor dem Modul schon gesichert hat, hat ihren Kopf womöglich anders benannt —
+     * etwa `schemaVersion` statt `schema`. Ohne diese Zuordnung liefe ein solches Feld in die
+     * Nutzlast, der Kopf bliebe leer und die Datei würde als „ohne Schema-Angabe" abgelehnt: Alle
+     * bis dahin geschriebenen Sicherungen wären auf einen Schlag wertlos.
+     *
+     * **Das Modul kennt die Vergangenheit keiner App** — es nimmt hier nur entgegen, was die
+     * jeweilige App über ihre eigene mitteilt. Vorbelegt mit „nichts umzubenennen".
+     */
+    val kopfAliase: Map<String, String> get() = emptyMap()
 
     /**
      * Die Fassung des Datenmodells dieser App. Steht im Kopf der Datei, damit beim Einspielen

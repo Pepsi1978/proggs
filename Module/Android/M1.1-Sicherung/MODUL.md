@@ -4,9 +4,10 @@ Sicherung des eigenen Bestands als Datei in einen selbst gewählten Ordner — m
 Auswahl, was gesichert wird, selbsttätiger Sicherung nach Ruhezeit, Vorschau vor
 dem Einspielen und Zurücknehmen.
 
-- **Stand:** v2
+- **Stand:** v3
 - **Plattform:** Android (Kotlin, Jetpack Compose)
 - **Angelegt:** 12.09.2026 15:11
+- **Zuletzt geändert:** 12.09.2026 16:23
 - **Ordner:** `Module/Android/M1.1-Sicherung/`
 - **Kurzname:** `sicherung` — steckt im Namensraum `de.frank.module.sicherung`
 
@@ -53,6 +54,7 @@ Als Vorlage für die Knopflogik dient der Sicherungsanteil von
 |---|---|
 | `SicherungsInhalt` | Welche Teile es gibt, wie ein Satz geschrieben und gelesen wird, Produktname, Datenmodell-Fassung, Größenschätzung, Zusammenfassung |
 | `SicherungsNamen` | Dateipräfix, frühere Präfixe, **Name der `SharedPreferences` und des Ordner-Schlüssels** |
+| `kopfAliase` | Optional. Früher anders benannte Kopf-Felder dieser App, alter Name → heutiger (`"schemaVersion" to "schema"`). Ohne das gilt eine vor dem Modul geschriebene Datei als „ohne Schema-Angabe" und wird abgelehnt |
 | `umfangGeber` | Rückruf: was gerade angehakt ist. Vorbelegt mit „alles" |
 | `SicherungsRuecknahme` | Optional. Fehlt sie, entfällt das Zurücknehmen |
 | `SicherungsProtokoll` | Optional. Vorbelegt mit `StillesProtokoll` |
@@ -73,7 +75,7 @@ anderer Name heißt: Der Benutzer hat seine Einstellung verloren, ohne Meldung.
 
 | Was | Bei Kompass |
 |---|---|
-| `SharedPreferences`-Datei | `kompass_backup_status` |
+| `SharedPreferences`-Datei (Ordner **und** Stand) | `kompass_backup_status` |
 | Schlüssel des Sicherungsordners | `sicherungs_ordner` |
 | Dateiformat | JSON mit Kopf, benannten Nutzlast-Feldern, Prüfsumme und Fußzeile |
 | Dateiname | `<dateiPraefix>-JJJJ-MM-TT-HHMMSS.json`, frühere Präfixe werden mitgelesen |
@@ -107,3 +109,4 @@ andere Module auf diesem auf, hier ebenfalls nennen.
 |---|---|---|---|---|
 | v1 | 12.09.2026 | aus KompassKern herausgelöst | — | — |
 | v2 | 12.09.2026 | `SicherungsSteuerung` entfernt — kein Konsument hat sie je aufgerufen. Mit ihr fallen `SicherungsZustand`, `SicherungsEintrag`, `UmfangSpeicher`, `BackupStatus.formatiere` und `SicherungsDienst.kannZurueckNehmen`. Die Knopflogik liegt bewiesen im `EinstellungenViewModel` und wird beim zweiten Konsumenten von dort gehoben. | — (nichts davon wurde benutzt) | `11aa92a90` |
+| v3 | 12.09.2026 | `BackupStatus` nimmt die `SharedPreferences`-Datei aus `SicherungsNamen`, statt `kompass_backup_status` fest verdrahtet zu haben — eine übersehene Nabelschnur zur Ursprungs-App. Neu: `SicherungsInhalt.kopfAliase`, damit eine App ihre früher anders benannten Kopf-Felder abbilden kann und vor dem Modul geschriebene Sicherungen einspielbar bleiben. | — (beides nach aussen unverändert; `BackupStatus` wird nur vom `SicherungsDienst` benutzt, `kopfAliase` hat einen Vorgabewert) | — |
