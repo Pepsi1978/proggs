@@ -1,11 +1,21 @@
-package de.frank.genialeideen.ui
+// ──────────────────────────────────────────────────────────────────────
+// Modul M1.2 — Drag-and-Drop · Stand v1
+// Quelle: Module/Android/M1.2-Drag-and-Drop/
+//
+// Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
+// und danach mit "zieh M1.2 nach" an die Konsumenten verteilen —
+// sonst driftet diese App still von der Bibliothek weg.
+// ──────────────────────────────────────────────────────────────────────
+package de.frank.module.draganddrop
 
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -31,7 +41,6 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -215,11 +224,12 @@ fun Modifier.reorderViewport(
     order: () -> List<Long>,
     onMove: (Int, Int) -> Unit,
     onDrop: () -> Unit,
+    reducedMotion: Boolean,
 ): Modifier {
     val currentOrder by rememberUpdatedState(order)
     val currentMove by rememberUpdatedState(onMove)
     val currentDrop by rememberUpdatedState(onDrop)
-    val reducedMotion by rememberUpdatedState(LocalBewegungReduziert.current)
+    val currentReducedMotion by rememberUpdatedState(reducedMotion)
     return onGloballyPositioned { state.setViewport(it.positionInRoot()) }
         .pointerInput(state) {
             awaitEachGesture {
@@ -233,7 +243,7 @@ fun Modifier.reorderViewport(
                         change.consume()
                     }
                 } finally {
-                    state.stop(reducedMotion)
+                    state.stop(currentReducedMotion)
                 }
             }
         }
@@ -243,6 +253,20 @@ fun Modifier.reorderViewport(
 fun Modifier.reorderRow(state: ReorderState, id: Long): Modifier =
     zIndex(if (state.isDragging(id)) 1f else 0f)
         .graphicsLayer { translationY = state.translation(id) }
+
+/**
+ * Die Zeile mit der weichen Platzwechsel-Animation der Nachbarkarten — genau das macht das
+ * Verschieben flüssig. Die Karte am Finger bleibt davon ausgenommen, sie folgt der Geste.
+ */
+fun LazyItemScope.reorderItem(state: ReorderState, id: Long, reducedMotion: Boolean): Modifier =
+    Modifier
+        .reorderRow(state, id)
+        .animateItem(
+            fadeInSpec = null,
+            fadeOutSpec = null,
+            placementSpec = if (state.isDragging(id) || reducedMotion) null
+            else spring(dampingRatio = 1f, stiffness = 450f),
+        )
 
 @Composable
 fun reorderHandle(state: ReorderState, id: Long): Modifier {

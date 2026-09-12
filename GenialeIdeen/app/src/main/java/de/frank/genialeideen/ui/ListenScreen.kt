@@ -91,6 +91,11 @@ import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.speech.VorleseZustand
+import de.frank.module.draganddrop.ReorderAutoScroll
+import de.frank.module.draganddrop.rememberReorderState
+import de.frank.module.draganddrop.reorderHandle
+import de.frank.module.draganddrop.reorderItem
+import de.frank.module.draganddrop.reorderViewport
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.IdeenSchriftDick
 import de.frank.genialeideen.ui.theme.LocalGold
@@ -302,24 +307,13 @@ fun ListenScreen(
                             }
                         },
                         onDrop = { viewModel.schreibeReihenfolge(reihenfolge) },
+                        reducedMotion = reduziert,
                     ),
                     contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 120.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(sortiert, key = { idee -> idee.id }) { idee ->
-                        Box(
-                            Modifier
-                                .reorderRow(zustand, idee.id)
-                                .animateItem(
-                                    fadeInSpec = null,
-                                    fadeOutSpec = null,
-                                    placementSpec = if (zustand.isDragging(idee.id) || reduziert) null
-                                    else androidx.compose.animation.core.spring(
-                                        dampingRatio = 1f,
-                                        stiffness = 450f,
-                                    ),
-                                ),
-                        ) {
+                        Box(reorderItem(zustand, idee.id, reduziert)) {
                             IdeenKarte(
                                 idee = idee,
                                 modifier = Modifier,

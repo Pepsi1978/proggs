@@ -61,3 +61,4 @@ schlichtes `diff`, ob eine App noch aktuell ist, und ein Nachziehen ist reines
 -->
 
 - **M1.1** Sicherung **v3** — Sicherung des Bestands als Datei in einen selbst gewählten Ordner: Auswahl was gesichert wird, Autosicherung nach Ruhezeit, Vorschau vor dem Einspielen, Zurücknehmen. Braucht: androidx.lifecycle, kotlinx.coroutines. Konsumenten: 5 (alle auf v3)
+- **M1.2** Drag-and-Drop **v1** — Karten einer Liste per Langdruck greifen und mit dem Finger umsortieren: Nachbarn weichen weich aus, am Rand scrollt die Liste mit, beim Loslassen legt sich die Karte sanft ab. Braucht: Compose BOM 2025.01.01, Kotlin 2.1.0. Konsumenten: 1 (alle auf v1)
