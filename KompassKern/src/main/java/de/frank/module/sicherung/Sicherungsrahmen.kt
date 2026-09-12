@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v3
+// Modul M1.1 — Sicherung · Stand v7
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -113,12 +113,13 @@ class Sicherungsrahmen(
      * zugleich die Prüfung, ob die Datei heil angekommen ist: Eine abgebrochene Übertragung
      * fällt hier auf und nicht erst mitten im Einspielen.
      */
-    suspend fun pruefe(quelle: Reader): SicherungsVorschau = lies(quelle, einspielen = false)
+    suspend fun pruefe(quelle: Reader, zweck: Lesezweck = Lesezweck.VORSCHAU): SicherungsVorschau =
+        lies(quelle, zweck)
 
     /** Liest die Datei und legt die Sätze über [SicherungsInhalt] an. Prüft dasselbe wie [pruefe]. */
-    suspend fun spieleEin(quelle: Reader): SicherungsVorschau = lies(quelle, einspielen = true)
+    suspend fun spieleEin(quelle: Reader): SicherungsVorschau = lies(quelle, Lesezweck.EINSPIELEN)
 
-    private suspend fun lies(quelle: Reader, einspielen: Boolean): SicherungsVorschau {
+    private suspend fun lies(quelle: Reader, zweck: Lesezweck): SicherungsVorschau {
         val leser = JsonReader(quelle)
         var schema = -1
         var app = ""
@@ -166,7 +167,7 @@ class Sicherungsrahmen(
                             pruefeKopf(schema, app, datenmodellVersion)
                             kopfGeprueft = true
                         }
-                        val daraus = inhalt.liesNutzlast(feld, leser, pruefsumme, einspielen)
+                        val daraus = inhalt.liesNutzlast(feld, leser, pruefsumme, zweck)
                         if (daraus == null) {
                             protokoll.info("Sicherung", "lies", "Unbekanntes Feld übergangen", mapOf("feld" to feld))
                             leser.skipValue()

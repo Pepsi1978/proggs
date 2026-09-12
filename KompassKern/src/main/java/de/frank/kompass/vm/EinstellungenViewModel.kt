@@ -117,6 +117,23 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     private var anmeldeJob: Job? = null
     private var aufnahmeJob: Job? = null
 
+    init {
+        // Der Stand der Sicherung kommt vom Dienst, nicht aus einer einmaligen Abfrage beim
+        // Aufbau. Vorher wurde er nur nach einem Druck auf „Jetzt sichern" nachgeführt: Nach
+        // einer selbsttätigen Sicherung stand dort weiter die Uhrzeit von vorhin, und die
+        // lebende Sicherung sah aus wie eine tote.
+        viewModelScope.launch {
+            sicherung.standFluss.collect { stand ->
+                _zustand.value = _zustand.value.copy(sicherungsStand = stand)
+            }
+        }
+        viewModelScope.launch {
+            sicherung.geprueftFluss.collect { geprueft ->
+                _zustand.value = _zustand.value.copy(sicherungGeprueft = geprueft)
+            }
+        }
+    }
+
     private fun lieAlles() = EinstellungenZustand(
         ttsAnbieter = store.ttsAnbieter,
         googleStimme = store.googleStimme,
@@ -787,6 +804,12 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
                 meldung = "Wähl noch einen Ordner — dorthin wird dann von allein gesichert.",
             )
             ordnerWaehlen()
+        } else if (an) {
+            // Beim Einschalten sofort einmal sichern. Sonst passiert bis zur nächsten Änderung
+            // nichts, und darunter steht weiter der alte Stand — ein Schalter auf „an" über
+            // einer Anzeige, die das Gegenteil behauptet. Wer den Haken setzt, will jetzt
+            // wissen, dass es geht, und nicht übermorgen erfahren, dass es nie ging.
+            sichereJetzt(ordnerWaehlen)
         }
     }
 

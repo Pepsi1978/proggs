@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v3
+// Modul M1.1 — Sicherung · Stand v7
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -21,6 +21,30 @@ import android.util.JsonWriter
  *
  * Ohne diese Grenze müsste das Modul die Tabellen der App kennen, und dann wäre es keines mehr.
  */
+
+/**
+ * Wozu eine Sicherungsdatei gelesen wird.
+ *
+ * Der Unterschied ist keine Formsache. **Vorschau** heißt: Ein Mensch schaut gleich darauf und
+ * will wissen, wie viel davon ihm fehlt — dafür darf die App ihren Bestand danebenlegen.
+ * **Prüfen** heißt: Die Datei wurde gerade geschrieben und wird nur zurückgelesen, um Prüfsumme
+ * und Zählwerk nachzurechnen; die Frage „was davon ist neu" stellt niemand.
+ *
+ * Vorher gab es nur „einspielen ja/nein", und beide Fälle liefen als „nein". Dadurch lud **jede
+ * selbsttätige Sicherung** den gesamten Bestand ein zweites Mal aus der Datenbank und baute
+ * Vergleichsmengen darüber auf, deren Ergebnis niemand ansah. Bei zwölf Ideen fällt das nicht
+ * auf, bei zweitausend schon.
+ */
+enum class Lesezweck {
+    /** Ein Mensch schaut gleich darauf: zählen, prüfen, und mit dem Bestand vergleichen. */
+    VORSCHAU,
+
+    /** Frisch geschrieben, wird nur nachgerechnet: zählen und prüfen, sonst nichts. */
+    PRUEFEN,
+
+    /** Die Sätze werden angelegt. */
+    EINSPIELEN,
+}
 
 /** Ein anhakbarer Teil der Sicherung. Die App zählt auf, was sie zu sichern hat. */
 interface SicherungsTeil {
@@ -85,6 +109,12 @@ interface SicherungsInhalt {
      *
      * Jeder geschriebene Wert gehört über [pruefsumme] mitgerechnet, sonst schlägt die
      * Vollständigkeitsprüfung beim Einspielen fehl.
+     *
+     * ⚠️ **In die Prüfsumme dürfen nur Werte, die nie `null` sind.** Beim Schreiben rechnet die
+     * Summe mit `"null"`, beim Lesen liefert [Sicherungsrahmen.liesFelder] für ein JSON-`null`
+     * aber `""`. Beide Seiten kämen auf verschiedene Summen, und **jede** Sicherung scheiterte
+     * beim Zurücklesen — mit der Meldung, die Datei sei beschädigt, obwohl sie in Ordnung ist.
+     * Nullbare Felder gehören in die Datei, nur nicht in die Prüfsumme.
      */
     suspend fun schreibeNutzlast(
         schreiber: JsonWriter,
@@ -108,6 +138,22 @@ interface SicherungsInhalt {
         pruefsumme: Inhaltspruefsumme,
         einspielen: Boolean,
     ): Nutzlastzahlen?
+
+    /**
+     * Dasselbe, aber mit dem [Lesezweck] statt nur „einspielen ja/nein".
+     *
+     * **Das Modul ruft immer diese Fassung.** Vorbelegt gibt sie den Zweck auf die Fassung
+     * darüber zurück — eine App, die den Unterschied nicht braucht, muss nichts tun und
+     * verhält sich wie bisher. Wer beim Lesen etwas Teures tut, das nur die Vorschau braucht
+     * (den eigenen Bestand laden, um „wie viel davon fehlt mir" zu beantworten), überschreibt
+     * sie und lässt es bei [Lesezweck.PRUEFEN] weg.
+     */
+    suspend fun liesNutzlast(
+        feld: String,
+        leser: JsonReader,
+        pruefsumme: Inhaltspruefsumme,
+        zweck: Lesezweck,
+    ): Nutzlastzahlen? = liesNutzlast(feld, leser, pruefsumme, zweck == Lesezweck.EINSPIELEN)
 
     /**
      * Wie viele Sätze [umfang] umfassen würde — **ohne** zu schreiben.
