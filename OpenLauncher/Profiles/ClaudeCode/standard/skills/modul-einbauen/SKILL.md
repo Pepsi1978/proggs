@@ -30,9 +30,9 @@ In die Anbindung kommt alles, was von App zu App verschieden ist: Farben,
 Schriften, Abstände, Texte, die Umsetzung von Schnittstellen und die
 Aufrufstelle. Die Modulkopie bleibt unberührt.
 
-Der Gewinn: `diff` zwischen Bibliothek und App-Kopie bleibt aussagekräftig,
-Nachziehen ist reines Überschreiben — und die App sieht trotzdem aus wie sie
-selbst. Würde stattdessen die Modulkopie angepasst, wäre nach dem zweiten
+Der Gewinn: `diff` zwischen Bibliothek und App-Kopie bleibt aussagekräftig —
+darauf beruht die Abweichungsprüfung beim Nachziehen — und die App sieht
+trotzdem aus wie sie selbst. Würde stattdessen die Modulkopie angepasst, wäre nach dem zweiten
 Einbau nicht mehr feststellbar, welche App welchen Stand hat.
 
 > **Beim Nachziehen wird die Anbindung nie überschrieben.** Sie ist das
@@ -40,22 +40,33 @@ Einbau nicht mehr feststellbar, welche App welchen Stand hat.
 
 ## Was in jedem Arbeitsmodus gilt
 
-Dieser Skill stellt genau **zwei** Fragen, bei denen angehalten und gewartet
-wird — die Datenfrage (Phase 1b, Fall C) und die Abweichungsfrage beim
-Nachziehen. Beide gelten **auch im Schnellmodus**.
+Der Skill kennt drei Arten von Rückfragen. Nur die erste hält an.
 
-Der Schnellmodus streicht Rückfragen zur *Arbeitsweise* — er streicht keine
-Freigabe für etwas Unwiederbringliches. Bei allem anderen gilt er
-uneingeschränkt: keine Zwischenberichte, keine Bestätigungen, direkt bauen,
-installieren, committen, pushen.
+| Art | Beispiele | Im Schnellmodus |
+|---|---|---|
+| **Halt-Frage** — etwas ist unwiederbringlich | Datenfrage (Phase 1b, Fall C), Abweichungsfrage beim Nachziehen | **wird gestellt, es wird gewartet** |
+| **Sachfrage** — es gibt keinen Vorgabewert | Spalte 3 der Klassifikation, mehrdeutiger Modulname | wird gestellt, kurz und mit Vorschlag |
+| **Mitteilung** — nur Information | Abhängigkeitsliste, „bricht Anbindung" | sagen und weiterarbeiten |
+
+Der Schnellmodus streicht Rückfragen zur *Arbeitsweise* — er streicht weder
+eine Freigabe für etwas Unwiederbringliches noch eine Tatsache, die niemand
+erraten kann. Ansonsten gilt er uneingeschränkt: keine Zwischenberichte, keine
+Bestätigungen, direkt bauen, installieren, committen, pushen.
 
 ### Wenn es schiefgeht
 
-Bleibt die App nach einer Ablösung rot und der Fehler ist nicht in ein, zwei
-Schritten behoben: **nicht weiterprobieren.** Der Commit aus Schritt 1 der
-Ablösung ist der Rückweg — melde den roten Stand mit der Fehlermeldung und
-sag, dass ein `git revert` dieses Commits den alten Zustand zurückholt. Die
-Entscheidung, ob zurückgegangen oder weitergesucht wird, gehört dem Benutzer.
+Bleibt die App rot und der Fehler ist nicht in ein, zwei Schritten behoben:
+**nicht weiterprobieren.** Melde den roten Stand mit der Fehlermeldung und nenn
+den Rückweg:
+
+| Lage | Rückweg |
+|---|---|
+| Ablösung | `git revert` des Commits aus Schritt 1 der Ablösung |
+| Einbau ohne Ablösung | die hinzugefügten Dateien wieder entfernen — es wurde nichts überschrieben |
+| Nachziehen | `git revert` des Commits dieser App; die anderen Apps sind nicht betroffen |
+
+Die Entscheidung, ob zurückgegangen oder weitergesucht wird, gehört dem
+Benutzer.
 
 ## Phase 1 — Modul finden und Vorabprüfung
 
@@ -75,18 +86,31 @@ bevor irgendeine Datei kopiert wird**:
    App darunter, bricht der Build erst beim Kompilieren mit einer
    irreführenden Meldung — lieber jetzt melden.
 3. **Kollision?** Existiert `…/module/<kurzname>/` in der Ziel-App schon? Dann
-   ist das kein Einbau, sondern ein Nachziehen — wechsle den Modus.
+   ist das kein Einbau, sondern ein Nachziehen — wechsle den Modus, aber **nur
+   für diese eine App**. Der Benutzer hat nach einem Einbau gefragt, nicht nach
+   einer Verteilung an alle Konsumenten; sag ihm, dass das Modul schon liegt
+   und du es stattdessen auf den aktuellen Stand hebst.
    Gibt es stattdessen eine **eigene, ähnliche Umsetzung** in der App, geht es
    in Phase 1b weiter.
 4. **Braucht das Modul andere Module?** Siehe den eigenen Abschnitt direkt
    unter dieser Liste — das ist mehr als ein Blick ins Manifest.
-5. **Ist das Modul selbst sauber?** Durchsuch den Modulcode nach direkten
-   Theme- und Ressourcenzugriffen (`MaterialTheme.`, `R.string`, `R.color`,
-   `StaticResource`, `Color("…")`, ein CompositionLocal der Ursprungs-App).
-   Findest du welche, **brich ab**: Das Modul lässt sich nicht per Anbindung
-   anpassen, weil das Aussehen fest verdrahtet ist. Das ist kein
-   Einbau-Problem, sondern eine übersehene Nabelschnur — zurück zu
-   `modul-erstellen`, Modul-Version +1, danach einbauen.
+5. **Ist das Modul selbst sauber?** Durchsuch den Modulcode nach Theme- und
+   Ressourcenzugriffen — aber unterscheide dabei genau, **wo** sie stehen:
+
+   | Fundstelle | Urteil |
+   |---|---|
+   | Als **Vorgabewert eines Parameters**, z. B. `farbe: Color = MaterialTheme.colorScheme.surface` | **in Ordnung** — die App kann ihn überschreiben, genau so ist es gedacht |
+   | **Fest im Code**, mitten in der Logik oder im Aufbau der Oberfläche | **Abbruch** |
+   | `R.string`, `R.color`, `StaticResource`, `Color("…")`, ein CompositionLocal der Ursprungs-App — an **jeder** Stelle | **Abbruch**, diese Bezeichner gibt es in einer fremden App nicht |
+
+   Der Unterschied ist entscheidend: Ein Vorgabewert aus dem Theme ist gutes
+   Modulhandwerk und die Grundlage für Spalte 2 der Klassifikation. Würde
+   jeder Fund von `MaterialTheme.` zum Abbruch führen, scheiterten genau die
+   Module, die richtig gebaut wurden.
+
+   Beim Abbruch: Das ist kein Einbau-Problem, sondern eine übersehene
+   Nabelschnur — zurück zu `modul-erstellen`, Modul-Version +1, danach
+   einbauen.
 
 ### Abhängigkeiten auflösen
 
@@ -196,11 +220,16 @@ Ist die Datenfrage geklärt:
 1. **Zuerst committen**, was da ist — der alte Stand muss in der Historie
    liegen, bevor er verschwindet. Ein Rückzieher braucht keinen Mut, wenn der
    Commit existiert.
-2. Modul einbauen (Phase 2 bis 4).
+2. Modul einbauen: Phase 2 und 3 (Klassifikation, Kopieren, Anbinden,
+   Aufrufstelle) — **noch nicht bauen**.
 3. **Alten Code restlos entfernen** — Datei, Aufrufstellen, jetzt unbenutzte
    Hilfsfunktionen, verwaiste Zeichenketten. Eine zurückgelassene zweite
    Fassung wird später versehentlich weitergepflegt.
-4. Im Commit ausdrücklich nennen, was abgelöst wurde und was mit den Daten
+4. **Erst jetzt Phase 4** — bauen. Die Reihenfolge ist wichtig: Solange beide
+   Fassungen nebeneinander liegen, kann der Build an doppelten Bezeichnern
+   oder mehrdeutigen Aufrufen scheitern, und man sucht den Fehler im neuen
+   Modul statt im alten Rest.
+5. Im Commit ausdrücklich nennen, was abgelöst wurde und was mit den Daten
    geschehen ist.
 
 ## Phase 2 — Klassifikation vorlegen
@@ -252,8 +281,16 @@ Zielmitgliedschaft der häufigste Stolperstein, bei WPF ein ausdrückliches
 
 Zwei Prüfungen, beide zwingend:
 
-1. **`diff` zwischen Bibliothek und App-Kopie ist leer.** Ist er es nicht, hast
-   du am falschen Ort angepasst — die Änderung gehört in die Anbindung.
+1. **`diff` zwischen Bibliothek und App-Kopie ist leer** — **ohne** die
+   Anbindungsdatei, die es in der Bibliothek gar nicht gibt:
+
+   ```
+   diff -r <Bibliothek>/src/… <App>/…/module/<kurzname> --exclude=Anbindung.*
+   ```
+
+   Ohne diese Ausnahme meldet der Vergleich immer einen Unterschied, und die
+   Prüfung wäre wertlos. Ist er darüber hinaus nicht leer, hast du am falschen
+   Ort angepasst — die Änderung gehört in die Anbindung.
 2. **Die Ziel-App baut grün.** Vorher gilt der Einbau nicht als erledigt.
 
 ## Phase 5 — Buchführung und Abschluss
@@ -263,8 +300,8 @@ Zwei Prüfungen, beide zwingend:
 - **`INDEX.md`**: Konsumentenzähler erhöhen.
 - **Regel 9 für die Ziel-App**: bauen, Version bumpen mit echter Systemzeit,
   committen, pushen, installieren.
-- **Ein Commit** für App und `MODUL.md` zusammen — die Buchführung darf nicht
-  getrennt von dem stehen, was sie beschreibt.
+- **Ein Commit** für App, `MODUL.md` **und** `INDEX.md` zusammen — die
+  Buchführung darf nicht getrennt von dem stehen, was sie beschreibt.
 
 **Die Commit-Regel in einem Satz:** Die Buchführung wandert mit der App. Beim
 Einbau ist das ein Commit (App + neue Zeile in der Konsumententabelle), beim
@@ -297,22 +334,39 @@ Konsumenten bleibt dabei ja gleich.
 Auslöser: „zieh M1.1 nach", „zieh M1.1 nach in GenialeIdeen", „verteile die
 Änderung". Ohne Zusatz sind **alle** Konsumenten gemeint.
 
-1. Konsumententabelle in `MODUL.md` lesen — sie ist die verbindliche Liste.
+### Ablauf
+
+1. **Konsumententabelle lesen** — sie ist die verbindliche Liste, wer das Modul
+   hat und auf welchem Stand.
 2. **Änderungsprotokoll lesen.** Steht bei einer der übersprungenen Versionen
-   **„bricht Anbindung"**, ist klar, dass jede Anbindung angepasst werden muss —
-   das ist dann die eigentliche Arbeit, nicht das Kopieren. Ebenso prüfen, ob
+   **„bricht Anbindung"**, muss jede Anbindung angepasst werden — das ist dann
+   die eigentliche Arbeit, nicht das Kopieren. Ebenso prüfen, ob
    `Host muss liefern` gegenüber dem Stand der App länger geworden ist. Nenn
    beides **vorher**, statt es später als Baufehler zu melden.
-   Bricht die Signatur, prüf außerdem, ob **andere Module** auf diesem
-   aufbauen — die müssen dann mitgezogen werden. Das Änderungsprotokoll nennt
-   sie.
-3. **Abweichungsprüfung — vor jedem Überschreiben.** Siehe unten.
-4. Pro App: **nur die Modulkopie** überschreiben, Anbindung unangetastet lassen.
-5. Pro App bauen.
-6. Pro App Regel 9 und **ein eigener Commit**, der auch gleich **die Zeile
-   dieser App** in der Konsumententabelle hebt. Nicht am Ende gesammelt —
-   sonst behauptet `MODUL.md` zwischendurch etwas Falsches, und ein einzelner
-   Rückzieher nimmt die Buchführung nicht mit.
+3. **Abhängige Module prüfen** (siehe unten) — sie kommen vor den Apps.
+4. **Je App:** Abweichungsprüfung (siehe unten) → nur die Modulkopie
+   überschreiben, Anbindung unangetastet lassen → bauen → Regel 9 → **ein
+   Commit**, der auch die Zeile *dieser* App in der Konsumententabelle hebt.
+   Nicht am Ende gesammelt, sonst behauptet `MODUL.md` zwischendurch etwas
+   Falsches und ein einzelner Rückzieher nimmt die Buchführung nicht mit.
+5. **Abschließend melden**, welche Apps gehoben wurden, welche auf eine
+   Rückfrage warten und welche unverändert blieben. Eine still übersprungene
+   App hinkt sonst monatelang hinterher, ohne dass es jemand merkt.
+
+### Abhängige Module kommen zuerst
+
+Bricht die Signatur, sind womöglich nicht nur Apps betroffen, sondern auch
+**andere Module**, die auf diesem aufbauen. Das Änderungsprotokoll nennt sie.
+
+Diese Module kann dieser Skill **nicht** reparieren — eine Änderung an einem
+Modul gehört in die Bibliothek und damit zu `modul-erstellen`. Also:
+
+> „M1.2 bricht die Anbindung, und M1.5 baut darauf auf. M1.5 muss zuerst in der
+>  Bibliothek nachgezogen werden — das macht `modul-erstellen`. Erst danach
+>  ergibt das Verteilen an die Apps Sinn."
+
+Wird trotzdem zuerst an die Apps verteilt, bauen genau die Apps nicht mehr, die
+beide Module haben — und die Ursache liegt in einem dritten Ort.
 
 ### Abweichungsprüfung — der Code-Zwilling der Datenprüfung
 
@@ -322,7 +376,12 @@ trotzdem passieren — jemand fixt schnell etwas an Ort und Stelle. Blindes
 
 Deshalb **vor** dem Überschreiben vergleichen: App-Kopie gegen den
 Bibliotheksstand **der Version, die die App laut Konsumententabelle hat** (nicht
-gegen den neuen — sonst siehst du nur die Modul-Änderung selbst).
+gegen den neuen — sonst siehst du nur die Modul-Änderung selbst). Die
+Anbindungsdatei bleibt dabei außen vor, wie in Phase 4.
+
+Den alten Stand holst du aus der Historie, etwa mit
+`git show <Commit-von-vN>:<Pfad>` — die Bibliothek liegt im selben Repo, der
+Stand ist also immer greifbar.
 
 | Ergebnis | Vorgehen |
 |---|---|
@@ -334,7 +393,8 @@ Bei einem Unterschied den Unterschied **zeigen** und zur Wahl stellen:
 > ⚠️ Die Kopie in GenialeIdeen weicht vom Stand v3 ab — dort wurde direkt in
 > der Modulkopie etwas geändert (3 Zeilen in `settle()`).
 >
-> 1. Diese Änderung zuerst ins Modul heben (empfohlen) — v4, dann überall nachziehen
+> 1. Diese Änderung zuerst ins Modul heben (empfohlen) — `modul-erstellen`
+>    macht daraus v5, danach ziehe ich überall nach
 > 2. Verwerfen und mit dem Bibliotheksstand überschreiben
 >
 > Wie soll ich vorgehen?
@@ -347,16 +407,10 @@ Der Fall „App hat lokal gefixt **und** die Bibliothek ist weitergezogen" ist
 kein Sonderfall, sondern genau Weg 1: erst den Fix hochheben, dann nachziehen.
 Ein Drei-Wege-Abgleich ist dafür nicht nötig, nur das Anhalten.
 
-7. Am Ende melden, welche Apps gehoben wurden, welche auf Rückfrage warten und
-   welche unverändert blieben.
-
-**Wenn eine App nicht mehr baut**, ist das die Information, für die dieser
-Schritt existiert: Die Modulsignatur hat sich geändert und die Anbindung dieser
-App passt nicht mehr. Repariere die **Anbindung**, niemals die Modulkopie.
-
-Melde am Ende ausdrücklich, welche Apps gehoben wurden und welche nicht — eine
-still übersprungene App hinkt sonst monatelang hinterher, ohne dass es jemand
-merkt.
+**Wenn eine App nach dem Überschreiben nicht mehr baut**, ist das die
+Information, für die dieser Ablauf existiert: Die Modulsignatur hat sich
+geändert und die Anbindung dieser App passt nicht mehr. Repariere die
+**Anbindung**, niemals die Modulkopie.
 
 ## Wenn der Benutzer mehrere Module nennt
 

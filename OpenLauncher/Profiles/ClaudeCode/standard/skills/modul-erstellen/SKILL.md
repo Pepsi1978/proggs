@@ -1,6 +1,6 @@
 ---
 name: modul-erstellen
-description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/Mx.y-Name/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Ebenso bei Sätzen, die gleich einen Namen mitgeben — "bau daraus ein Modul und nenn es X", "erstelle ein Modul mit dem Namen X", "mach daraus das X-Modul", "speicher das als X ab". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Dieser Skill pflegt AUSSERDEM bestehende Module — nutze ihn ebenso bei "fixe M1.1", "ändere das Modul X", "M1.1 soll jetzt auch Y können", "bessere das Modul nach", "hebe den Fix aus App Z ins Modul", "neue Modulversion", "Modul-Version anheben", "das Modul hat einen Fehler". Änderungen an einem Modul passieren IMMER in der Bibliothek, nie in einer App-Kopie. Der Skill übernimmt den genannten Namen wörtlich als Anzeigenamen und fragt danach, wenn keiner genannt wurde, vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Skill modul-einbauen zuständig.
+description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/<Ordnername>/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Ebenso bei Sätzen, die gleich einen Namen mitgeben — "bau daraus ein Modul und nenn es X", "erstelle ein Modul mit dem Namen X", "mach daraus das X-Modul", "speicher das als X ab". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Dieser Skill pflegt AUSSERDEM bestehende Module — nutze ihn ebenso bei "fixe M1.1", "ändere das Modul X", "M1.1 soll jetzt auch Y können", "bessere das Modul nach", "hebe den Fix aus App Z ins Modul", "neue Modulversion", "Modul-Version anheben", "das Modul hat einen Fehler". Änderungen an einem Modul passieren IMMER in der Bibliothek, nie in einer App-Kopie. Der Skill übernimmt den genannten Namen wörtlich als Anzeigenamen und fragt danach, wenn keiner genannt wurde, vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Skill modul-einbauen zuständig.
 ---
 
 # Modul erstellen
@@ -9,7 +9,8 @@ Ein Modul entsteht nicht aus dem Nichts, sondern aus Code, der sich in einer
 echten App bereits bewährt hat. Dieser Skill hebt so einen Bereich heraus,
 ohne ihn dabei zu verschlimmbessern.
 
-**Ablageort:** `~/proggs/Module/<Plattform>/Mx.y-Kurzname/`
+**Ablageort:** `~/proggs/Module/<Plattform>/<Ordnername>/src/`
+(`<Ordnername>` = `Mx.y-Anzeigename`, werkzeugfest gemacht — siehe Phase 1.)
 **Index:** `~/proggs/Module/INDEX.md` — Nummernkreise und Modulliste stehen dort.
 
 ## Die drei Grundsätze
@@ -25,8 +26,10 @@ der Skill `modul-einbauen` auf Ansage.
 
 **2 — Die Kopie ist byte-identisch mit der Quelle.** Deshalb steht der
 Herkunfts-Kopf in der *Moduldatei selbst*, nicht erst in der App-Kopie. Dann
-beantwortet ein `diff` die Frage „ist diese App aktuell?" ohne Nachdenken, und
-Nachziehen ist schlichtes Überschreiben.
+beantwortet ein `diff` die Frage „ist diese App aktuell?" ohne Nachdenken.
+Genau darauf baut `modul-einbauen` beim Nachziehen auf: Es vergleicht zuerst und
+überschreibt nur, wenn die Kopie unverändert ist — sonst hält es an. Ohne die
+Byte-Identität wäre dieser Schutz nicht möglich.
 
 **3 — Die Modulgrenze ist die Schnittstelle, nicht die Schicht.** Nicht
 „Frontend oder Backend" fragen, sondern: Alles oberhalb der Rückruf-Grenze
@@ -126,7 +129,10 @@ Normalfall und das Ziel.
 
 ### Phase 3 — Herauslösen
 
-Lege `Module/<Plattform>/Mx.y-Name/src/` an und verschiebe die Dateien dorthin.
+Lege `Module/<Plattform>/<Ordnername>/src/` an und **kopiere** die Dateien
+dorthin — noch nicht verschieben. Der alte Code in der Quell-App bleibt
+vorerst stehen und wird erst in Phase 5 entfernt, wenn die Bibliotheksfassung
+vollständig ist. So gibt es zu keinem Zeitpunkt einen Stand ohne beides.
 Dabei:
 
 - **Namensraum umbenennen** auf den Modul-Namensraum der Plattform (siehe
@@ -168,11 +174,13 @@ Ein Modul, das nur herauskopiert wurde, ist ungetestet. Deshalb:
 1. Alten Code in der Quell-App **löschen**.
 2. Die Moduldateien **byte-identisch** in den App-Baum kopieren, an den in der
    Referenzdatei genannten Ort.
-3. **Anbindungsdatei anlegen** — `Anbindung.<ext>` neben der Kopie, mit den
-   Theme-Werten und Texten, die der Bereich vorher fest verdrahtet hatte.
-   Vorlage: `modul-einbauen/assets/anbindung-vorlage.md`.
+3. **Anbindungsdatei anlegen**, sobald es überhaupt etwas App-Eigenes gibt —
+   `Anbindung.<ext>` neben der Kopie, mit den Theme-Werten und Texten, die der
+   Bereich vorher fest verdrahtet hatte. Vorlage:
+   `modul-einbauen/assets/anbindung-vorlage.md`.
    Dadurch ist die Quell-App ein ganz normaler Konsument und beim Nachziehen
-   kein Sonderfall — genau wie jede App, die das Modul später bekommt.
+   kein Sonderfall. Deckt das Modul alles über Vorgabewerte ab, bleibt die
+   Datei weg — eine leere Anbindung anzulegen wäre nur Ballast.
 4. Importe an den Aufrufstellen auf den neuen Namensraum ziehen.
 5. **Durchbauen.** Erst wenn die Quell-App grün baut, existiert das Modul.
 
@@ -193,9 +201,21 @@ die dieser Schritt da ist: Eine Nabelschnur wurde übersehen. Zurück zu Phase 2
 ## Modul-Versionen
 
 Die Version ist eine ganze Zahl: `v1` beim Anlegen, `+1` bei jeder Änderung am
-Modul. Sie steht an zwei Stellen — im Dateikopf und in `MODUL.md`. Ohne sie ist
-der Eintrag `Konsumenten: GenialeIdeen (Stand v3)` wertlos, und niemand kann
-sagen, welche App hinterherhinkt.
+Modul.
+
+Zwei Angaben werden leicht verwechselt:
+
+| Angabe | Wo | Bedeutet |
+|---|---|---|
+| **Modulstand** | Kopf jeder Moduldatei, Kopf von `MODUL.md` | wie weit die Bibliothek ist |
+| **Konsumentenstand** | Konsumententabelle, je Zeile | wie weit *diese App* ist |
+
+Beide dürfen auseinanderlaufen — genau das heißt „die App hinkt hinterher".
+Steht die Bibliothek auf v4 und eine App auf v3, ist das kein Fehler, sondern
+die Arbeitsanzeige für das nächste Nachziehen.
+
+Maßgeblich für den Stand einer App ist immer die **Konsumententabelle**, nie
+der Kopf in ihrer Kopie.
 
 ---
 
@@ -217,6 +237,10 @@ Konsumenten **zählen und aussprechen**:
 
 Das ist keine Höflichkeit: Wer nicht weiß, dass er drei Apps anfasst, ändert
 leichtfertiger als nötig.
+
+Hat das Modul **keine** Konsumenten, sag auch das — dann ist die Änderung
+folgenlos und darf mutiger ausfallen. Das ist der einzige Fall, in dem auch
+die Signatur ohne Weiteres umgebaut werden kann.
 
 ### 2. Ändern — in der Bibliothek
 
@@ -240,11 +264,21 @@ blind loszulaufen.
 **Abhängige Module mitdenken.** Andere Module können auf diesem aufbauen:
 
 ```
-grep -l "Mx.y" ~/proggs/Module/*/*/MODUL.md
+grep -lF "M1.1" ~/proggs/Module/*/*/MODUL.md
 ```
 
-Treffer gehören ins Änderungsprotokoll — sie müssen bei einer Signaturänderung
-ebenfalls nachgezogen werden.
+Zwei Stolpersteine dabei:
+
+- **`-F` nicht vergessen.** Ohne das ist der Punkt ein Platzhalter, und `M1.1`
+  findet auch `M111`.
+- **Das eigene Manifest steht immer mit drin**, weil dort die eigene Nummer in
+  der Überschrift steht. Dieser Treffer wird übergangen — gemeint sind nur die
+  *anderen* Module.
+
+Echte Treffer gehören ins Änderungsprotokoll: Sie müssen bei einer
+Signaturänderung ebenfalls angepasst werden, und zwar **hier**, in diesem
+Modus — ein Modul zieht kein anderes Modul nach, das wäre wieder eine
+Bibliotheksänderung.
 
 ### 4. Version anheben
 
@@ -271,6 +305,20 @@ entscheidet, wann seine Apps angefasst werden.
 Bei geänderter Beschreibung oder Mindestversion auch die Zeile in `INDEX.md`
 anpassen. Den Konsumentenzähler dort **nicht** anfassen — der ändert sich nur
 beim Ein- und Ausbau.
+
+### 7. Committen und pushen
+
+Die Änderung liegt bis hierher nur auf der Platte. **Ein Commit** über alles,
+was zum Modul gehört — Quelldateien, `MODUL.md`, gegebenenfalls `INDEX.md` —
+und anschließend pushen.
+
+Keine App-Version wird dabei gebumpt: Es hat sich kein App-Code geändert, und
+die Bibliothek hat keine eigene App-Version. Der Modulstand `vN` **ist** hier
+die Version. Sag das ausdrücklich, statt den Bump stillschweigend wegzulassen.
+
+Ohne diesen Schritt steht die neue Fassung auf keinem anderen Rechner zur
+Verfügung, und das erste Nachziehen dort zöge auf einen Stand, den es im Repo
+gar nicht gibt.
 
 ## Was dieser Skill nicht tut
 
