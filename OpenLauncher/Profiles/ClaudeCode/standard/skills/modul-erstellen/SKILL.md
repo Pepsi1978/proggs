@@ -292,10 +292,9 @@ Konsumententabelle wird wertlos.
 Eine Zeile in `MODUL.md` unter **Änderungen**: Version, echtes Datum, was
 geändert wurde, und ob es die Anbindung bricht.
 
-**Trag den Commit-Kurzhash nach**, sobald Schritt 7 committet hat. Das ist
-keine Formsache: `modul-einbauen` braucht beim Nachziehen den alten Stand aus
-der Historie, um die Abweichungsprüfung zu machen. Ohne den Hash muss er ihn
-über die Ordner-Historie suchen — mit ihm ist er in einem Griff da.
+Den Commit-Kurzhash kannst du danach eintragen, musst es aber nicht — die
+Version allein genügt, weil die Commit-Nachricht in Schritt 7 fest vorgegeben
+ist und den Stand auffindbar macht.
 
 ### 6. Abschluss — und warum hier nicht gebaut wird
 
@@ -317,6 +316,26 @@ beim Ein- und Ausbau.
 Die Änderung liegt bis hierher nur auf der Platte. **Ein Commit** über alles,
 was zum Modul gehört — Quelldateien, `MODUL.md`, gegebenenfalls `INDEX.md` —
 und anschließend pushen.
+
+**Die erste Zeile der Commit-Nachricht hat eine feste Form:**
+
+```
+Module: M1.1 v4 — Ruckler beim Randscrollen behoben
+```
+
+Also `Module: <Nummer> v<N> — <was>`. Das ist keine Kosmetik: `modul-einbauen`
+muss beim Nachziehen den **alten** Bibliotheksstand aus der Historie holen, um
+die Abweichungsprüfung zu machen. Mit dieser Form findet er ihn in einem Griff:
+
+```
+git log --oneline -- Module/<Plattform>/<Ordnername>/ | grep "M1.1 v3"
+```
+
+Ohne die feste Form stehen dort nur fünf gleich aussehende Commits, und niemand
+kann sagen, welcher v3 war — dann hält die Abweichungsprüfung an und das
+Nachziehen kommt nicht voran. Dasselbe gilt sinngemäß für Phase 6 beim Anlegen:
+dort lautet die Zeile `Module: M1.1 v1 — aus GenialeIdeen herausgelöst`,
+zusammen mit der Quell-App im selben Commit.
 
 Keine App-Version wird dabei gebumpt: Es hat sich kein App-Code geändert, und
 die Bibliothek hat keine eigene App-Version. Der Modulstand `vN` **ist** hier

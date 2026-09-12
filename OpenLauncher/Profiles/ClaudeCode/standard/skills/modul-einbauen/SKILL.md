@@ -10,6 +10,7 @@ Zwei Aufgaben, ein Skill — beide bewegen Code **aus** der Bibliothek **in** Ap
 | Modus | Auslöser | Was passiert |
 |---|---|---|
 | **Einbauen** | „bau M1.1 ein" | Modul kommt neu in eine App, Anbindung wird erzeugt |
+| **Ablösen** | „ersetz die alte Sortierung durch M1.1" | Eigenbau raus, Modul rein — **erst die Datenprüfung** (Phase 1b) |
 | **Nachziehen** | „zieh M1.1 nach" | Bestehende Kopien werden auf den neuen Stand gehoben |
 
 **Bibliothek:** `~/proggs/Module/` · **Index:** `~/proggs/Module/INDEX.md`
@@ -64,6 +65,7 @@ den Rückweg:
 | Ablösung | `git revert` des Commits aus Schritt 1 der Ablösung |
 | Einbau ohne Ablösung | die hinzugefügten Dateien wieder entfernen — es wurde nichts überschrieben |
 | Nachziehen | `git revert` des Commits dieser App; die anderen Apps sind nicht betroffen |
+| Sammelbestellung | der Sicherungscommit vom Anfang — alle Module fallen gemeinsam zurück; einzelne Ordner von Hand zu entfernen reicht hier nicht |
 
 Die Entscheidung, ob zurückgegangen oder weitergesucht wird, gehört dem
 Benutzer.
@@ -402,15 +404,20 @@ gegen den neuen — sonst siehst du nur die Modul-Änderung selbst). Die
 Anbindungsdatei bleibt dabei außen vor, wie in Phase 4.
 
 Den alten Stand holst du aus der Historie — die Bibliothek liegt im selben
-Repo, er ist also immer greifbar. Steht im Änderungsprotokoll der Commit zu
-`vN`, nimm ihn direkt; sonst such ihn über die Historie des Modulordners:
+Repo, er ist also immer greifbar. `modul-erstellen` schreibt jeden Modul-Commit
+in der festen Form `Module: <Nummer> v<N> — <was>`, deshalb ist der Stand
+eindeutig auffindbar:
 
 ```
-git log --oneline -- Module/<Plattform>/<Ordnername>/
+git log --oneline -- Module/<Plattform>/<Ordnername>/ | grep "M1.1 v3"
 git show <Commit>:Module/<Plattform>/<Ordnername>/src/<Datei>
 ```
 
-Findest du den Stand nicht mehr zweifelsfrei, **rate nicht**. Dann ist die
+Steht im Änderungsprotokoll schon ein Commit-Hash, nimm ihn direkt — dann
+sparst du dir die Suche.
+
+Findest du den Stand ausnahmsweise nicht zweifelsfrei — etwa bei einem Modul
+aus der Zeit vor dieser Regel —, **rate nicht**. Dann ist die
 Abweichungsprüfung nicht durchführbar, und das ist selbst ein Grund
 anzuhalten und nachzufragen.
 
