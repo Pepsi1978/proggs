@@ -106,4 +106,4 @@ andere Module auf diesem auf, hier ebenfalls nennen.
 | Version | Datum | Was | Bricht Anbindung | Commit |
 |---|---|---|---|---|
 | v1 | 12.09.2026 | aus KompassKern herausgelöst | — | — |
-| v2 | 12.09.2026 | `SicherungsSteuerung` entfernt — kein Konsument hat sie je aufgerufen. Mit ihr fallen `SicherungsZustand`, `SicherungsEintrag`, `UmfangSpeicher`, `BackupStatus.formatiere` und `SicherungsDienst.kannZurueckNehmen`. Die Knopflogik liegt bewiesen im `EinstellungenViewModel` und wird beim zweiten Konsumenten von dort gehoben. | — (nichts davon wurde benutzt) | `b757cbe6d` |
+| v2 | 12.09.2026 | `SicherungsSteuerung` entfernt — kein Konsument hat sie je aufgerufen. Mit ihr fallen `SicherungsZustand`, `SicherungsEintrag`, `UmfangSpeicher`, `BackupStatus.formatiere` und `SicherungsDienst.kannZurueckNehmen`. Die Knopflogik liegt bewiesen im `EinstellungenViewModel` und wird beim zweiten Konsumenten von dort gehoben. | — (nichts davon wurde benutzt) | `11aa92a90` |
