@@ -141,6 +141,10 @@ wirklich zählen:
   gegen welchen Stand das Modul geschnitten wurde.
 - **Host muss liefern** — die Nabelschnüre aus Phase 2, die nicht zu Parametern
   wurden. Ohne diese Liste scheitert der Einbau in die nächste App.
+- **Braucht Module** — andere Module aus der Bibliothek, auf die dieses
+  aufbaut. Meist leer, und das ist auch das Ziel: Ein eigenständiges Modul
+  lässt sich überall einsetzen. Baut es doch auf einem anderen auf, muss das
+  hier stehen, sonst bricht der Einbau mit „unresolved reference".
 - **Mindestens** — Compose-, .NET- oder Swift-Version. Ein Modul, das eine neue
   API benutzt, bricht sonst stillschweigend in einer älteren App.
 - **Konsumenten** — App, Stand und **Pfad der Kopie**. Das ist die Liste, die

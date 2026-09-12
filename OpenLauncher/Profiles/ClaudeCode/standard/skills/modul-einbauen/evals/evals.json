@@ -115,6 +115,42 @@
       ]
     },
     {
+      "id": "nachziehen-lokal-abgewichen",
+      "soll_ausloesen": true,
+      "prompt": "Zieh M1.1 überall nach.",
+      "kontext": "In GenialeIdeen wurde direkt in der Modulkopie gefixt, sie weicht vom Stand v3 ab.",
+      "erwartet": [
+        "vergleicht vor dem Überschreiben gegen den Stand v3, nicht gegen den neuen",
+        "HÄLT bei GenialeIdeen an und überschreibt nicht",
+        "zeigt den Unterschied konkret",
+        "bietet an, den Fix zuerst ins Modul zu heben (empfohlen) oder zu verwerfen",
+        "verwirft NIEMALS stillschweigend",
+        "zieht die anderen Apps trotzdem nach und meldet am Ende, welche warten"
+      ]
+    },
+    {
+      "id": "abhaengigkeit-reihenfolge",
+      "soll_ausloesen": true,
+      "prompt": "Bau M1.5 in Denknotiz ein.",
+      "kontext": "MODUL.md von M1.5 nennt unter 'Braucht Module' das Modul M1.2, das in Denknotiz fehlt.",
+      "erwartet": [
+        "liest das Feld 'Braucht Module' und erkennt die Lücke VOR dem Kopieren",
+        "baut M1.2 zuerst ein, dann M1.5",
+        "läuft nicht in einen unresolved-reference-Build"
+      ]
+    },
+    {
+      "id": "schnellmodus-haelt-trotzdem-an",
+      "soll_ausloesen": true,
+      "prompt": "Ersetz die alte Sortierung in BestJournalAndroid durch M1.1.",
+      "kontext": "Arbeitsmodus ist Schnellmodus. Die Datenform passt nicht.",
+      "erwartet": [
+        "hält trotz Schnellmodus an und fragt",
+        "begründet, dass der Schnellmodus Rückfragen zur Arbeitsweise streicht, nicht Freigaben für Unwiederbringliches",
+        "arbeitet ansonsten ohne Zwischenberichte"
+      ]
+    },
+    {
       "id": "negativ-erstellen",
       "soll_ausloesen": false,
       "prompt": "Mach aus dem Drag-and-Drop von GenialeIdeen bitte ein Modul.",

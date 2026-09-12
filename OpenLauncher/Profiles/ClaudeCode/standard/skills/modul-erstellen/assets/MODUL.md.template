@@ -31,6 +31,14 @@ vollständig über Parameter versorgt wird — das ist der Idealfall.}}
 
 - —
 
+## Braucht Module
+
+{{Andere Module aus der Bibliothek, auf die dieses aufbaut — mit Nummer. Der
+Einbau-Skill baut sie vorher ein und bestimmt daraus die Reihenfolge. Steht hier
+nichts, ist das Modul eigenständig; das ist der Normalfall und das Ziel.}}
+
+- —
+
 ## Mindestens
 
 - {{z. B. Compose BOM 2025.04, Kotlin 2.1 — bzw. .NET 8 / macOS 14}}
