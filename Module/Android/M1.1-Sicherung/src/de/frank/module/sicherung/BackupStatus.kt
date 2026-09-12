@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v1
+// Modul M1.1 — Sicherung · Stand v2
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -37,9 +37,6 @@ object BackupStatus {
      * geteilte Instanz liefert bei gleichzeitigem Zugriff stillschweigend falsche Zeiten.
      */
     private fun format() = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
-
-    /** Ein Zeitpunkt, wie er in der Sicherungsliste steht. */
-    fun formatiere(zeitpunkt: Long): String = format().format(java.util.Date(zeitpunkt))
 
     /**
      * Stempelt den Zeitpunkt — und ob die geschriebene Datei danach fehlerfrei gelesen wurde.

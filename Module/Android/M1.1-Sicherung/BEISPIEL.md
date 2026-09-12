@@ -70,9 +70,9 @@ val sicherung = SicherungsDienst(
     namen = SicherungsNamen(dateiPraefix = "meine-app"),
     ruecknahme = ruecknahme,
     protokoll = MeinProtokoll,                        // optional, Vorgabe: still
-    umfangGeber = { speicher.teile() },
+    umfangGeber = { einstellungen.sicherungsTeile() },   // der eigene Einstellungsspeicher
 )
-val autoSicherung = AutoSicherung(sicherung, { speicher.autoSicherung() }, MeinProtokoll)
+val autoSicherung = AutoSicherung(sicherung, { einstellungen.autoSicherung }, MeinProtokoll)
 ```
 
 Bei einer **bestehenden** App zusätzlich die alten Namen mitgeben, sonst ist der
@@ -86,29 +86,40 @@ SicherungsNamen(
 )
 ```
 
-## 3. Oberfläche
+## 3. Knöpfe und Oberfläche
 
-Das Modul liefert Zustand und Aktionen, **gezeichnet wird mit den eigenen
-Bausteinen** — so sieht es aus wie der Rest der App:
+Das Modul hört beim `SicherungsDienst` auf. **Was die Knöpfe tun und wie sie
+aussehen, gehört der App** — genau dadurch sind die Funktionen überall dieselben,
+während sich das Aussehen anpasst.
+
+Die Vorlage dafür ist kein ausgedachtes Muster, sondern laufender Code in drei
+Apps: der Sicherungsanteil von
+`KompassKern/src/main/java/de/frank/kompass/vm/EinstellungenViewModel.kt`
+(Zeilen ~550–900) und der zugehörige Abschnitt in
+`ui/screens/EinstellungenScreen.kt`. Abschreiben und die Texte anpassen.
+
+Was dort drinsteht und beim Nachbauen leicht vergessen wird:
+
+| | |
+|---|---|
+| Kein Haken entfernbar, wenn es der letzte ist | sonst entsteht eine leere Datei, die aussieht wie eine Sicherung |
+| Ohne gemerkten Ordner erst fragen, dann sichern | ein Schalter auf „an" ohne Ordner schreibt nie etwas |
+| Ordnerwahl abgebrochen → Schalter zurückstellen | sonst wartet man auf Sicherungen, die nicht kommen |
+| Auswahlliste selbst zeichnen, nicht den Dateiwähler öffnen | aus dem führt die Zurück-Geste Ordner für Ordner heraus |
+| Vor dem Einspielen immer erst die Vorschau | nie ungefragt in die Datenbank |
+| `laeuft`-Wächter an jedem Knopf | zwei gleichzeitige Läufe schreiben sich gegenseitig kaputt |
+| `CancellationException` weiterwerfen | sonst verschluckt `runCatching` den Abbruch des Bereichs |
+
+Der Aufruf selbst ist kurz:
 
 ```kotlin
-val steuerung = SicherungsSteuerung(sicherung, speicher, inhalt, viewModelScope)
-val zustand by steuerung.zustand.collectAsState()
-
-MeineMehrfachauswahl(
-    punkte = steuerung.teile.map { it.titel to it.erklaerung },
-    aktiv = zustand.umfang,
-    beiWechsel = steuerung::schalteTeil,
-)
-MeinSchalter("Von allein sichern", zustand.autoSicherung) {
-    steuerung.schalteAutoSicherung(it, ordnerWaehlen)
-}
-MeinKnopf("Jetzt sichern") { steuerung.sichereJetzt(ordnerWaehlen) }
+val zahlen = dienst.voraussichtlich()          // „12 Einträge, 3 Fragen — etwa 40 KB"
+val stand  = dienst.sichere()                  // schreibt und prüft
+val liste  = dienst.sicherungen()              // für die eigene Auswahlliste
+val sicht  = dienst.vorschauVon(quelle)        // ansehen
+val erg    = dienst.stelleWiederHerAus(quelle) // einspielen, erg.spur für das Zurücknehmen
+dienst.nimmZurueck(erg.spur!!)
 ```
-
-`KompassKern` geht hier einen eigenen Weg: Dort steuert weiterhin das bestehende
-`EinstellungenViewModel`, das den `SicherungsDienst` direkt aufruft. Für eine
-**neue** App ist `SicherungsSteuerung` der kürzere Weg.
 
 ## 4. Android-Rahmen
 
@@ -120,4 +131,4 @@ ProcessLifecycleOwner.get().lifecycle.addObserver(autoSicherung)
 ```
 
 Den Ordner wählt Android über `ACTION_OPEN_DOCUMENT_TREE`; die Adresse kommt in
-`steuerung.ordnerGewaehlt(uri)` bzw. `sicherung.merkeOrdner(uri)`.
+`sicherung.merkeOrdner(uri)`.

@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v1
+// Modul M1.1 — Sicherung · Stand v2
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -68,9 +68,6 @@ class SicherungsDienst(
     fun standText(): String = BackupStatus.describe(context)
 
     fun istGeprueft(): Boolean = BackupStatus.istGeprueft(context)
-
-    /** Ob das Zurücknehmen eines Einspielvorgangs angeboten wird. */
-    val kannZurueckNehmen: Boolean get() = ruecknahme != null
 
     /**
      * Wie viel die nächste Sicherung umfassen würde und wie groß sie etwa wird.

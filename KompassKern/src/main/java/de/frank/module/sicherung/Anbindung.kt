@@ -14,7 +14,6 @@ import android.util.JsonReader
 import android.util.JsonWriter
 import de.frank.kompass.AppProfil
 import de.frank.kompass.data.EinspielBericht
-import de.frank.kompass.data.EinstellungenStore
 import de.frank.kompass.data.KompassRepository
 import de.frank.kompass.data.Sicherung
 import de.frank.kompass.data.SicherungsAnzahl
@@ -44,14 +43,6 @@ object KompassProtokoll : SicherungsProtokoll {
 
     override fun warn(stelle: String, was: String, meldung: String, felder: Map<String, Any?>) =
         KompassLog.warn(stelle, was, meldung, felder)
-}
-
-/** Wo sich merkt, was angehakt ist. */
-class KompassUmfangSpeicher(private val store: EinstellungenStore) : UmfangSpeicher {
-    override fun teile(): Set<SicherungsTeil> = store.sicherungsTeile()
-    override fun setze(teil: SicherungsTeil, aktiv: Boolean) = store.setzeSicherungsTeil(teil as KompassTeil, aktiv)
-    override fun autoSicherung(): Boolean = store.autoSicherung
-    override fun setzeAutoSicherung(an: Boolean) { store.autoSicherung = an }
 }
 
 /** Das Zurücknehmen eines Einspielvorgangs — die Spur gehört dem Repository. */

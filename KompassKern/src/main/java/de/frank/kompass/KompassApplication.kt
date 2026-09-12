@@ -11,7 +11,6 @@ import de.frank.module.sicherung.KOMPASS_SICHERUNGSNAMEN
 import de.frank.module.sicherung.KompassProtokoll
 import de.frank.module.sicherung.KompassRuecknahme
 import de.frank.module.sicherung.KompassSicherungsInhalt
-import de.frank.module.sicherung.KompassUmfangSpeicher
 import de.frank.module.sicherung.SicherungsDienst
 import de.frank.kompass.data.EinstellungenStore
 import de.frank.kompass.data.KompassRepository
@@ -48,7 +47,6 @@ class KompassContainer(context: Context) {
     // die Anbindung daneben (de.frank.module.sicherung.Anbindung.kt).
     val sicherungsRuecknahme = KompassRuecknahme(repository)
     val sicherungsInhalt = KompassSicherungsInhalt(repository, sicherungsRuecknahme)
-    val sicherungsSpeicher = KompassUmfangSpeicher(einstellungen)
     val sicherung = SicherungsDienst(
         context = appContext,
         inhalt = sicherungsInhalt,
