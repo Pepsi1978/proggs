@@ -24,6 +24,18 @@ Die Dateien werden über den üblichen Glob des SDK-Projekts automatisch
 mitkompiliert — nur wenn die `.csproj` ein ausdrückliches `<Compile Include=…>`
 benutzt, muss dort ein Eintrag ergänzt werden. Erst nachsehen, dann handeln.
 
+## XAML-Dateien
+
+WPF-Module bringen fast immer eine `.xaml` mit ihrer `.xaml.cs` mit. Beide
+gehören ins Modul, und **beide bekommen den Herkunfts-Kopf** — in der `.xaml`
+als `<!-- … -->` statt `//`. Ohne das ist die Byte-Identität für M2-Module nur
+zur Hälfte durchgehalten, und ein `diff` beantwortet die Stand-Frage nicht mehr
+zuverlässig.
+
+Der `x:Class`-Wert in der `.xaml` muss zum Namensraum der `.xaml.cs` passen —
+beim Umbenennen also an beiden Stellen ziehen, sonst bricht der Build mit einer
+irreführenden Meldung über eine fehlende partielle Klasse.
+
 ## Typische Nabelschnüre
 
 | Was | Woran erkennbar | Empfohlener Schnitt |

@@ -1,6 +1,6 @@
 {
   "skill": "modul-erstellen",
-  "hinweis": "Testprompts fuer die Ausloese- und Ablaufpruefung. Noch nicht ausgefuehrt — der M1.1-Pilot ist der erste echte Lauf.",
+  "hinweis": "Testprompts für die Auslöse- und Ablaufprüfung. Noch nicht ausgeführt — der M1.1-Pilot ist der erste echte Lauf.",
   "faelle": [
     {
       "id": "android-dragdrop",
@@ -8,24 +8,25 @@
       "prompt": "Bau bitte aus der GenialeIdeen-App das Drag-and-Drop von der Startseite als Modul.",
       "erwartet": [
         "vergibt M1.1, weil Android und der Kreis noch leer ist",
-        "nennt LocalBewegungReduziert als Nabelschnur und schlaegt einen Parameter vor",
+        "nennt LocalBewegungReduziert als Nabelschnur und schlägt einen Parameter vor",
         "fragt nach, bevor er schneidet",
         "legt Module/Android/M1.1-DragReorder/ mit src, MODUL.md und BEISPIEL.md an",
         "benennt das Paket auf de.frank.module.dragreorder um",
-        "loescht den alten Code in GenialeIdeen und kopiert byte-identisch zurueck",
+        "löscht den alten Code in GenialeIdeen und kopiert byte-identisch zurück",
         "baut GenialeIdeen durch, bevor er fertig meldet",
-        "traegt die Zeile in Module/INDEX.md ein"
+        "trägt die Zeile in Module/INDEX.md ein"
       ]
     },
     {
       "id": "windows-sprachvariante",
       "soll_ausloesen": true,
-      "prompt": "Das schwebende Fenster vom TerminalVoiceOverlay gefaellt mir, das will ich als Modul abspeichern.",
+      "prompt": "Das schwebende Fenster vom TerminalVoiceOverlay gefällt mir, das will ich als Modul abspeichern.",
       "erwartet": [
         "erkennt Windows und vergibt M2.1",
         "liest references/windows.md statt zu raten",
-        "prueft, ob die .csproj einen ausdruecklichen Compile-Eintrag braucht",
-        "nennt Zugriffe auf App.Current und StaticResource als Nabelschnuere"
+        "prüft, ob die .csproj einen ausdrücklichen Compile-Eintrag braucht",
+        "setzt den Herkunfts-Kopf auch in die .xaml",
+        "nennt Zugriffe auf App.Current und StaticResource als Nabelschnüre"
       ]
     },
     {
@@ -40,9 +41,9 @@
     {
       "id": "negativ-nachziehen",
       "soll_ausloesen": false,
-      "prompt": "Zieh M1.1 ueberall nach, ich habe den Ruckler gefixt.",
+      "prompt": "Zieh M1.1 überall nach, ich habe den Ruckler gefixt.",
       "erwartet": [
-        "triggert NICHT — Verteilen an Konsumenten gehoert zum Einbau-Skill"
+        "triggert NICHT — Verteilen an die Konsumenten gehört zum Einbau-Skill"
       ]
     }
   ]
