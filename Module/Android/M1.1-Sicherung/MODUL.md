@@ -4,10 +4,10 @@ Sicherung des eigenen Bestands als Datei in einen selbst gewählten Ordner — m
 Auswahl, was gesichert wird, selbsttätiger Sicherung nach Ruhezeit, Vorschau vor
 dem Einspielen und Zurücknehmen.
 
-- **Stand:** v5
+- **Stand:** v6
 - **Plattform:** Android (Kotlin, Jetpack Compose)
 - **Angelegt:** 12.09.2026 15:11
-- **Zuletzt geändert:** 12.09.2026 21:31
+- **Zuletzt geändert:** 12.09.2026 21:36
 - **Ordner:** `Module/Android/M1.1-Sicherung/`
 - **Kurzname:** `sicherung` — steckt im Namensraum `de.frank.module.sicherung`
 
@@ -92,7 +92,7 @@ anderer Name heißt: Der Benutzer hat seine Einstellung verloren, ohne Meldung.
 | ClaudeKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
 | CodexKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
 | OCodeKompass | v3 | `KompassKern/src/main/java/de/frank/module/sicherung/` |
-| GenialeIdeen | **v5** | `GenialeIdeen/app/src/main/java/de/frank/module/sicherung/` |
+| GenialeIdeen | **v6** | `GenialeIdeen/app/src/main/java/de/frank/module/sicherung/` |
 | Gedankenspeicher | v3 | `Gedankenspeicher/app/src/main/java/de/frank/module/sicherung/` |
 
 > **Sonderfall:** Die drei Apps teilen sich `KompassKern` per `sourceSets.srcDir`.
@@ -114,3 +114,4 @@ andere Module auf diesem auf, hier ebenfalls nennen.
 | v3 | 12.09.2026 | `BackupStatus` nimmt die `SharedPreferences`-Datei aus `SicherungsNamen`, statt `kompass_backup_status` fest verdrahtet zu haben — eine übersehene Nabelschnur zur Ursprungs-App. Neu: `SicherungsInhalt.kopfAliase`, damit eine App ihre früher anders benannten Kopf-Felder abbilden kann und vor dem Modul geschriebene Sicherungen einspielbar bleiben. | — (beides nach aussen unverändert; `BackupStatus` wird nur vom `SicherungsDienst` benutzt, `kopfAliase` hat einen Vorgabewert) | — |
 | v4 | 12.09.2026 | **Drei Fehler in der selbsttätigen Sicherung.** (1) Der offene Stand lag nur im Arbeitsspeicher: Beendete Android den Vorgang, bevor die Sicherung beim Verlassen durch war, war die Änderung endgültig ungesichert — belegt im Protokoll von Geniale Ideen (21:07:38 Statuswechsel, 21:08:25 Neustart, keine Sicherung dazwischen). Jetzt steht er in der Ablage und wird in `onStart` nachgeholt. (2) `onStop` brach den wartenden Auftrag ab, auch wenn der gerade mitten im Schreiben steckte — die halbe Datei wurde gelöscht und von vorn begonnen, ausgerechnet kurz vor dem Einfrieren des Vorgangs. (3) Der angezeigte Stand wurde nur nach „Jetzt sichern" nachgeführt; nach einer selbsttätigen Sicherung stand dort weiter die Uhrzeit von vorhin, die lebende Sicherung sah aus wie eine tote. Neu dafür `SicherungsDienst.standFluss`/`geprueftFluss`. Ausserdem: `SPAETESTENS_MS` (10 min) — wer ununterbrochen arbeitet, setzte die Ruhezeit sonst beliebig lange zurück. | — (nur Ergänzungen: `standFluss`, `geprueftFluss`, `merkeOffen`, `istOffen`; Konstruktor und alle bisherigen Aufrufe unverändert) | — |
 | v5 | 12.09.2026 | **Zweiter Durchgang über dieselbe Ecke — darunter ein Fehler in v4 selbst.** (1) v4 löschte den offenen Merker VOR dem Schreiben und setzte ihn bei Fehlschlag zurück. Damit stand ausgerechnet während des Schreibens „es steht nichts aus“ in der Ablage — in genau der Phase, um derentwillen es den Merker gibt. Jetzt wird er erst gelöscht, wenn geschrieben UND geprüft ist. (2) Nur der Fehlschlag beim Zurücklesen wurde gestempelt; scheiterte schon das Schreiben (Freigabe weg, Anbieter legt nichts an), blieb die tote Sicherung unsichtbar. Jetzt stempelt jeder Weg. (3) `markBackedUp`/`markGescheitert` schrieben mit `apply()` — beim Verlassen der App kommt das womöglich nicht mehr auf die Platte, und die Anzeige nennt weiter die alte Uhrzeit. Jetzt `commit()`. (4) Die Entprellung rechnete mit der Wanduhr; ein Sprung (Funkzeit, Zeitumstellung) verschob die Sicherung um den Sprung. Jetzt `SystemClock.elapsedRealtime()`. (5) `onStart`/`onStop` fragten Ablage und verschlüsselte Einstellungen auf dem Hauptfaden ab — jetzt nur noch den Merker im Speicher. (6) Neuer `Lesezweck`: Das Zurücklesen nach dem Schreiben lief als „Vorschau“ und liess die App bei JEDER selbsttätigen Sicherung ihren gesamten Bestand ein zweites Mal laden. (7) Der Ordner-`Uri` wird gemerkt statt bei jeder Datenbankänderung neu zergliedert. (8) Warnung im Vertrag: keine nullbaren Werte in die Prüfsumme. | — (`Lesezweck`-Überladung hat einen Vorgabe-Rumpf, `pruefe` einen Vorgabewert; alle bisherigen Aufrufe unverändert) | — |
+| v6 | 12.09.2026 | **Dritter Durchgang, zwei Funde.** (1) Eine von Hand angestossene Sicherung quittierte den offenen Merker nicht. Wer auf „Jetzt sichern“ drückte, hatte alles gesichert — und zwei Minuten später schrieb die selbsttätige Sicherung dieselbe Datei ein zweites Mal, weil ihr Merker noch auf „steht aus“ stand; in der Ablage stand er ebenfalls, also holte auch der nächste Start etwas nach, das längst dastand. Neu `SicherungsDienst.beiGeglueckterSicherung`: Der Dienst meldet JEDEN geglückten Lauf samt seinem Beginn, die selbsttätige Sicherung hakt daraufhin ab, was bis dahin gemeldet war. (2) `runCatching` um den Sicherungslauf fing auch den Abbruch von aussen und lief danach weiter, als wäre nichts gewesen — `CancellationException` wird jetzt weitergereicht. | — (der Rückruf ist zusätzlich und muss nicht angemeldet werden) | — |

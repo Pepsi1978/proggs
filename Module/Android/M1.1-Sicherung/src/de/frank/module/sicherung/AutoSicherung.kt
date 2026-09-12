@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v5
+// Modul M1.1 — Sicherung · Stand v6
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -11,6 +11,7 @@ package de.frank.module.sicherung
 import android.os.SystemClock
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -78,6 +79,13 @@ class AutoSicherung(
      */
     @Volatile
     private var offen = dienst.istOffen()
+
+    init {
+        // Auch eine von Hand angestossene Sicherung erledigt, was aussteht. Ohne das schriebe
+        // die selbsttätige Sicherung zwei Minuten nach jedem Druck auf „Jetzt sichern" dieselbe
+        // Datei ein zweites Mal — und der nächste Start holte etwas nach, das längst dasteht.
+        dienst.beiGeglueckterSicherung(::quittiere)
+    }
 
     /**
      * Wann zuletzt etwas gemeldet wurde — daran hängt die Ruhezeit.
@@ -186,24 +194,17 @@ class AutoSicherung(
             // nichts aus". Stirbt der Vorgang dort — und dort stirbt er —, holt der nächste
             // Start nichts nach, und die Änderung ist endgültig weg. Scheitert es, bleibt der
             // Merker unangetastet stehen; es ist nichts zurückzunehmen.
-            val standVorher = letzteMeldung
+            // Gelöscht wird der Merker nicht hier, sondern in [quittiere] — das ruft der Dienst
+            // am Ende jedes geglückten Laufs, gleich wer ihn angestossen hat.
             runCatching { dienst.sichere() }
                 .onSuccess {
-                    if (letzteMeldung == standVorher) {
-                        // Seit dem Anstoss kam nichts Neues — es steht wirklich nichts mehr aus.
-                        ersteMeldung = 0L
-                        setzeOffen(false)
-                    } else {
-                        // Während des Schreibens kam etwas dazu. Das ist noch offen, und die
-                        // späteste Frist zählt ab JETZT. Die alte Frist ist mit dieser Sicherung
-                        // erfüllt; bliebe sie stehen, liefe sofort eine zweite hinterher — und
-                        // `letzteMeldung` taugt dafür nicht: Kam die Meldung früh im Schreiben
-                        // und hat das Schreiben lange gedauert, ist auch sie schon abgelaufen.
-                        ersteMeldung = SystemClock.elapsedRealtime()
-                    }
                     protokoll.info("AutoSicherung", "sichere", "Selbsttätig gesichert", mapOf("grund" to grund))
                 }
                 .onFailure { fehler ->
+                    // Ein Abbruch von aussen ist kein Fehlschlag und gehört weitergereicht.
+                    // `runCatching` fängt auch ihn, und die Coroutine liefe sonst weiter, als
+                    // wäre nichts gewesen.
+                    if (fehler is CancellationException) throw fehler
                     // Kein Zurücksetzen nötig: Der Merker stand die ganze Zeit auf „offen".
                     // Der nächste Anlass versucht es erneut — spätestens der nächste Start.
                     protokoll.warn(
@@ -213,6 +214,27 @@ class AutoSicherung(
                         mapOf("grund" to grund, "fehler" to fehler.message),
                     )
                 }
+        }
+    }
+
+    /**
+     * Eine Sicherung ist geglückt — was bis zu ihrem Beginn gemeldet war, steht jetzt in ihr.
+     *
+     * Gerufen vom Dienst, für **jeden** geglückten Lauf: den selbsttätigen wie den von Hand
+     * angestossenen. [begonnenAm] ist der Zeitpunkt, zu dem der Lauf anfing, aus der Datenbank
+     * zu lesen. Alles, was danach gemeldet wurde, steckt nicht mehr sicher in der Datei und
+     * bleibt offen — lieber einmal zu viel gesichert als eine Änderung stillschweigend als
+     * erledigt abgehakt.
+     */
+    private fun quittiere(begonnenAm: Long) {
+        if (letzteMeldung <= begonnenAm) {
+            ersteMeldung = 0L
+            setzeOffen(false)
+        } else {
+            // Während des Schreibens kam etwas dazu. Die späteste Frist zählt ab JETZT: Die
+            // alte ist mit dieser Sicherung erfüllt; bliebe sie stehen, liefe sofort eine
+            // zweite hinterher.
+            ersteMeldung = SystemClock.elapsedRealtime()
         }
     }
 

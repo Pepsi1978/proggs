@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────
-// Modul M1.1 — Sicherung · Stand v5
+// Modul M1.1 — Sicherung · Stand v6
 // Quelle: Module/Android/M1.1-Sicherung/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
@@ -10,6 +10,7 @@ package de.frank.module.sicherung
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -101,6 +102,26 @@ class SicherungsDienst(
         _geprueftFluss.value = stand.istGeprueft(context)
     }
 
+    @Volatile
+    private var beiErfolg: ((Long) -> Unit)? = null
+
+    /**
+     * Wer hier zuhört, erfährt von **jeder** geglückten Sicherung — auch von einer, die der
+     * Benutzer selbst angestossen hat.
+     *
+     * Die selbsttätige Sicherung braucht das. Ohne sie wusste sie nur von ihren eigenen Läufen:
+     * Wer auf „Jetzt sichern" drückte, hatte alles gesichert — und zwei Minuten später schrieb
+     * sie die zweite, gleiche Datei, weil ihr Merker noch auf „steht aus" stand. Schlimmer noch
+     * stand der auch in der Ablage, also holte der nächste Start etwas nach, das längst
+     * gesichert war.
+     *
+     * Mitgegeben wird der Zeitpunkt, zu dem der Lauf **begonnen** hat (Laufzeituhr): Nur wer
+     * seither nichts Neues gemeldet bekommen hat, darf sich für erledigt halten.
+     */
+    fun beiGeglueckterSicherung(zuhoerer: (begonnenAm: Long) -> Unit) {
+        beiErfolg = zuhoerer
+    }
+
     /** Merkt über den Vorgangstod hinweg, dass noch eine Änderung ungesichert aussteht. */
     fun merkeOffen(offen: Boolean) = stand.merkeOffen(context, offen)
 
@@ -145,6 +166,9 @@ class SicherungsDienst(
     }
 
     private suspend fun sichereGeschuetzt(): String {
+        // Vor dem ersten Lesen aus der Datenbank: Was danach gemeldet wird, steckt nicht mehr
+        // sicher in dieser Datei und gilt weiter als offen.
+        val begonnenAm = SystemClock.elapsedRealtime()
         val umfang = umfangGeber()
         var zahlen = Nutzlastzahlen()
         val (geschrieben, vorherige) = datei.schreibe { ausgabe ->
@@ -182,6 +206,7 @@ class SicherungsDienst(
 
         stand.markBackedUp(context, geprueft = true)
         meldeStand()
+        beiErfolg?.invoke(begonnenAm)
         // Erst jetzt: Eine gute Sicherung gegen eine ungeprüfte einzutauschen wäre der
         // Fehler, gegen den das Zurücklesen überhaupt schützt.
         datei.raeumeAlteWeg(vorherige)
