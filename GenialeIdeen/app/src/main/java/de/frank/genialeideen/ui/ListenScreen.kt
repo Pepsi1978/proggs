@@ -116,6 +116,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 enum class ListenBereich(val titel: String) {
+    ALLE("Alle"),
     OFFEN("Offen"),
     ENTWURF("Entwürfe"),
     UMGESETZT("Umgesetzt"),
@@ -146,16 +147,34 @@ fun ListenScreen(
     // Der Host bewahrt diesen Zustand und rememberLazyListState beim Bildschirmwechsel
     // auf, damit auch ein tiefer Listenplatz nach dem Lesen wiederhergestellt wird.
     var bereich by rememberSaveable { mutableStateOf(ListenBereich.OFFEN) }
+    // Die Sammelkategorie „Umgesetzt“ ist keine echte Kategorie, sondern ein Filter auf die
+    // Art der Stammkategorie — deshalb liegt sie hier und nicht in der Datenbank.
+    var umgesetztArt by rememberSaveable { mutableStateOf<Kategorieart?>(null) }
     var suchOffen by remember { mutableStateOf(false) }
 
     val schublade = rememberDrawerState(DrawerValue.Closed)
     val bereichsraum = rememberCoroutineScope()
     val kategorieName = kategorien.firstOrNull { it.id == gewaehlteKategorie }?.name
 
+    // „Alle Ideen“ nimmt die umgesetzten mit, „Offene Ideen“ lässt sie weg. Der Reiter in der
+    // Schublade folgt dem, was die Liste dahinter gerade zeigt.
+    val umfangAlle = bereich == ListenBereich.ALLE || umgesetztArt != null
+
     // Die volle Kategorie steht oben: sortiert nach Anzahl, bei Gleichstand nach Name.
-    // Beides gemerkt — sonst wird bei jedem Bild neu gezählt und sortiert.
-    val zaehlung = remember(offene, umgesetzte, entwuerfe) {
-        alleZaehlung(offene + umgesetzte + entwuerfe)
+    // Gezählt wird genau das, was ein Tipp auf die Zeile zeigen würde.
+    val zaehlbasis = remember(offene, umgesetzte, entwuerfe, umfangAlle) {
+        if (umfangAlle) offene + umgesetzte + entwuerfe else offene + entwuerfe
+    }
+    val zaehlung = remember(zaehlbasis) { alleZaehlung(zaehlbasis) }
+    // Zu welcher Art gehört eine umgesetzte Idee? Nach ihrer Stammkategorie. Ohne Kategorie
+    // (etwa nach deren Löschung) zählt sie als mental, damit sie nirgends verschwindet.
+    val artNachKategorie = remember(kategorien) {
+        kategorien.associate { it.id to it.art }
+    }
+    fun artVon(idee: IdeeEntity): Kategorieart =
+        artNachKategorie[idee.kategorieId] ?: Kategorieart.MENTAL
+    val umgesetztJeArt = remember(umgesetzte, artNachKategorie) {
+        umgesetzte.groupingBy(::artVon).eachCount()
     }
     val sortierteKategorien = remember(kategorien, zaehlung) {
         kategorien.sortedWith(
@@ -164,14 +183,20 @@ fun ListenScreen(
     }
 
     // Zurückwischen hebt zuerst die Kategorie auf, erst danach verlässt man die Liste.
-    BackHandler(enabled = gewaehlteKategorie != null) { viewModel.waehleKategorie(null) }
+    BackHandler(enabled = gewaehlteKategorie != null || umgesetztArt != null) {
+        viewModel.waehleKategorie(null)
+        umgesetztArt = null
+    }
     // Später registriert, greift also zuerst: Eine offene Schublade schliesst, statt die App zu beenden.
     BackHandler(enabled = schublade.isOpen) { bereichsraum.launch { schublade.close() } }
 
-    val roheListe = when (bereich) {
-        ListenBereich.OFFEN -> offene
-        ListenBereich.ENTWURF -> entwuerfe
-        ListenBereich.UMGESETZT -> umgesetzte
+    val roheListe = when {
+        // Die Sammelkategorie zeigt nur Umgesetztes der jeweiligen Art.
+        umgesetztArt != null -> umgesetzte.filter { artVon(it) == umgesetztArt }
+        bereich == ListenBereich.ALLE -> offene + umgesetzte
+        bereich == ListenBereich.ENTWURF -> entwuerfe
+        bereich == ListenBereich.UMGESETZT -> umgesetzte
+        else -> offene
     }
     val liste = remember(roheListe, gewaehlteKategorie) {
         if (gewaehlteKategorie == null) roheListe
@@ -179,8 +204,10 @@ fun ListenScreen(
     }
     // Die gezogene Reihenfolge lebt lokal, bis der Finger losgelassen wird.
     val listState = rememberLazyListState()
-    val zustand = rememberReorderState(listState, bereich to gewaehlteKategorie)
-    var reihenfolge by remember(bereich, gewaehlteKategorie) { mutableStateOf(liste.map(IdeeEntity::id)) }
+    val zustand = rememberReorderState(listState, Triple(bereich, gewaehlteKategorie, umgesetztArt))
+    var reihenfolge by remember(bereich, gewaehlteKategorie, umgesetztArt) {
+        mutableStateOf(liste.map(IdeeEntity::id))
+    }
     LaunchedEffect(liste) {
         val ids = liste.map(IdeeEntity::id)
         reihenfolge = if (zustand.draggedId == null) ids else {
@@ -240,8 +267,31 @@ fun ListenScreen(
                 kategorien = sortierteKategorien,
                 gewaehlt = gewaehlteKategorie,
                 anzahlJeKategorie = zaehlung,
-                gesamt = offene.size + umgesetzte.size + entwuerfe.size,
+                offeneAnzahl = offene.size + entwuerfe.size,
+                alleAnzahl = offene.size + umgesetzte.size + entwuerfe.size,
+                umfangAlle = umfangAlle,
+                umgesetztJeArt = umgesetztJeArt,
+                gewaehltUmgesetzt = umgesetztArt,
+                aufOffene = {
+                    umgesetztArt = null
+                    bereich = ListenBereich.OFFEN
+                    viewModel.waehleKategorie(null)
+                    bereichsraum.launch { schublade.close() }
+                },
+                aufAlle = {
+                    umgesetztArt = null
+                    bereich = ListenBereich.ALLE
+                    viewModel.waehleKategorie(null)
+                    bereichsraum.launch { schublade.close() }
+                },
+                aufUmgesetzt = { gewaehlteArt ->
+                    umgesetztArt = gewaehlteArt
+                    bereich = ListenBereich.UMGESETZT
+                    viewModel.waehleKategorie(null)
+                    bereichsraum.launch { schublade.close() }
+                },
                 aufWahl = { id ->
+                    umgesetztArt = null
                     viewModel.waehleKategorie(id)
                     bereichsraum.launch { schublade.close() }
                 },
@@ -257,27 +307,39 @@ fun ListenScreen(
         modifier = Modifier.fillMaxSize(),
     ) {
         IdeenKopfleiste(
-            titel = kategorieName ?: "Geniale Ideen",
+            titel = when (umgesetztArt) {
+                Kategorieart.MENTAL -> "Umgesetzt · mental"
+                Kategorieart.PRAKTISCH -> "Umgesetzt · praktisch"
+                null -> kategorieName ?: "Geniale Ideen"
+            },
             themeWahl = theme,
             aufThemeTipp = viewModel::themeWeiterschalten,
             aufSuche = { suchOffen = true },
             aufEinstellungen = aufEinstellungen,
         )
 
-        BereichsWaehler(bereich, offene.size, entwuerfe.size, umgesetzte.size) { bereich = it }
+        BereichsWaehler(bereich, offene.size, entwuerfe.size, umgesetzte.size) {
+            umgesetztArt = null
+            bereich = it
+        }
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             when {
                 laedt -> SchimmerGeruest(zeilen = 4, modifier = Modifier.padding(16.dp))
-                sortiert.isEmpty() && gewaehlteKategorie != null -> Leerzustand(
+                sortiert.isEmpty() && (gewaehlteKategorie != null || umgesetztArt != null) -> Leerzustand(
                     symbol = "🗂",
                     ueberschrift = "Hier liegt noch nichts",
                     satz = "In dieser Kategorie steht in dieser Liste noch keine Idee.",
                     knopfText = "Alle Ideen zeigen",
-                    aufKnopf = { viewModel.waehleKategorie(null) },
+                    aufKnopf = {
+                        viewModel.waehleKategorie(null)
+                        umgesetztArt = null
+                        bereich = ListenBereich.ALLE
+                    },
                     modifier = Modifier.align(Alignment.Center),
                 )
-                sortiert.isEmpty() && bereich == ListenBereich.OFFEN -> Leerzustand(
+                sortiert.isEmpty() &&
+                    (bereich == ListenBereich.OFFEN || bereich == ListenBereich.ALLE) -> Leerzustand(
                     symbol = "💡",
                     ueberschrift = "Noch keine Idee festgehalten",
                     satz = "Sprich sie einfach ein, bevor sie wieder weg ist. " +
@@ -309,7 +371,13 @@ fun ListenScreen(
                                 add(nach, removeAt(von))
                             }
                         },
-                        onDrop = { viewModel.schreibeReihenfolge(reihenfolge) },
+                        onDrop = {
+                            // In der gemischten Ansicht „Alle“ nicht schreiben: Die Plätze
+                            // gelten je Status, ein Mischen verwürfelte beide Listen.
+                            if (bereich != ListenBereich.ALLE) {
+                                viewModel.schreibeReihenfolge(reihenfolge)
+                            }
+                        },
                         reducedMotion = reduziert,
                     ),
                     contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 120.dp),
@@ -553,7 +621,14 @@ private fun KategorienLeiste(
     kategorien: List<KategorieEntity>,
     gewaehlt: Long?,
     anzahlJeKategorie: Map<Long, Int>,
-    gesamt: Int,
+    offeneAnzahl: Int,
+    alleAnzahl: Int,
+    umfangAlle: Boolean,
+    umgesetztJeArt: Map<Kategorieart, Int>,
+    gewaehltUmgesetzt: Kategorieart?,
+    aufOffene: () -> Unit,
+    aufAlle: () -> Unit,
+    aufUmgesetzt: (Kategorieart) -> Unit,
     aufWahl: (Long?) -> Unit,
     aufNeueKategorie: (String, Kategorieart) -> Unit,
     aufUmbenennen: (Long, String) -> Unit,
@@ -594,11 +669,19 @@ private fun KategorienLeiste(
                     .padding(bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
+                // Der Umfang steht vor den Kategorien: „Offene Ideen“ ist der Normalfall,
+                // „Alle Ideen“ holt das schon Umgesetzte dazu.
+                KategorieZeile(
+                    name = "Offene Ideen",
+                    anzahl = offeneAnzahl,
+                    gewaehlt = !umfangAlle && gewaehlt == null,
+                    aufTipp = aufOffene,
+                )
                 KategorieZeile(
                     name = "Alle Ideen",
-                    anzahl = gesamt,
-                    gewaehlt = gewaehlt == null,
-                    aufTipp = { aufWahl(null) },
+                    anzahl = alleAnzahl,
+                    gewaehlt = umfangAlle && gewaehlt == null && gewaehltUmgesetzt == null,
+                    aufTipp = aufAlle,
                 )
                 KategorieartWahl(
                     gewaehlt = art,
@@ -628,6 +711,16 @@ private fun KategorienLeiste(
                         aufTipp = { aufWahl(kategorie.id) },
                         aufUmbenennen = { umbenennen = kategorie },
                         aufLoeschen = { loeschen = kategorie },
+                    )
+                }
+                // Die Sammelkategorie steht nur unter „Alle Ideen“ — bei den offenen Ideen
+                // hat Umgesetztes nichts verloren. Sie lässt sich weder umbenennen noch löschen.
+                if (umfangAlle) {
+                    KategorieZeile(
+                        name = "Umgesetzt",
+                        anzahl = umgesetztJeArt[art] ?: 0,
+                        gewaehlt = gewaehltUmgesetzt == art,
+                        aufTipp = { aufUmgesetzt(art) },
                     )
                 }
             }
@@ -881,6 +974,7 @@ private fun BereichsWaehler(
                 contentAlignment = Alignment.Center,
             ) {
                 val anzahl = when (eintrag) {
+                    ListenBereich.ALLE -> offene + umgesetzte
                     ListenBereich.OFFEN -> offene
                     ListenBereich.ENTWURF -> entwuerfe
                     ListenBereich.UMGESETZT -> umgesetzte
