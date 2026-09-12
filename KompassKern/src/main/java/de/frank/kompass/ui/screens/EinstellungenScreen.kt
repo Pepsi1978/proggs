@@ -549,12 +549,6 @@ fun EinstellungenScreen(
         item {
             Block("Sicherung") {
                 Zeilentext(
-                    "Wähl einmal einen Ordner — in der Praxis einen Google-Drive-Ordner — und " +
-                        "erlaub den Zugriff. „Jetzt sichern“ schreibt danach ohne erneute Nachfrage " +
-                        "dorthin. Es liegen immer nur zwei Sicherungen darin: die aktuelle und die davor.",
-                )
-                Spacer(Modifier.height(Mass.abstandKlein))
-                Zeilentext(
                     "Gesichert werden deine Fragen samt Antworten, die vertieften Erklärungen " +
                         "und die Gespräche. Schlüssel kommen ausdrücklich NICHT mit in die " +
                         "Datei — die landet schnell in einer Cloud.",
