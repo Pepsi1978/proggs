@@ -8,6 +8,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import de.frank.kompass.data.model.Denktiefe
 import de.frank.kompass.data.model.KiModell
+import de.frank.kompass.data.model.SicherungsTeil
 import de.frank.kompass.data.model.TtsAnbieter
 import de.frank.kompass.observability.KompassLog
 import de.frank.kompass.tts.TtsCatalog
@@ -115,6 +116,28 @@ class EinstellungenStore(context: Context) {
         set(wert) = offen.edit().putString(SCHL_GROQ_MODELL, wert).apply()
 
     /** Die vier Halluzinations-Schichten sind einzeln abschaltbar; Voreinstellung: alle an. */
+    /**
+     * Welche Teile in eine Sicherung kommen. Ohne eigene Wahl: alle.
+     *
+     * Der Standard steht bewusst auf „allem“: Eine Sicherung, der still etwas fehlt, merkt man
+     * erst, wenn man sie braucht.
+     */
+    fun sicherungsTeilAktiv(teil: SicherungsTeil): Boolean =
+        offen.getBoolean("sicherung_teil_${teil.id}", true)
+
+    fun sicherungsTeile(): Set<SicherungsTeil> =
+        SicherungsTeil.entries.filter(::sicherungsTeilAktiv).toSet()
+
+    fun setzeSicherungsTeil(teil: SicherungsTeil, aktiv: Boolean) {
+        offen.edit().putBoolean("sicherung_teil_${teil.id}", aktiv).apply()
+        KompassLog.info(
+            "EinstellungenStore",
+            "setzeSicherungsTeil",
+            "Umfang der Sicherung geändert",
+            mapOf("teil" to teil.id, "aktiv" to aktiv),
+        )
+    }
+
     fun filterSchichtAktiv(schicht: Int): Boolean = offen.getBoolean(schlFilter(schicht), true)
 
     fun setzeFilterSchicht(schicht: Int, aktiv: Boolean) {

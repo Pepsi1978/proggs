@@ -463,8 +463,15 @@ class KompassRepository(context: Context) {
     /**
      * Führt eine Sicherung mit dem Bestand zusammen — beliebig oft, ohne zu verdoppeln.
      *
-     * Erklärungen werden direkt mit ihrer Stufe gesetzt (die alte Fassung wandert in die
-     * Historie), nicht über „vertiefen“: das hob die Stufe bei jedem Einspielen um eins.
+     * Ergänzt wird nur, was hier fehlt. Ein Eintrag, den es schon gibt, bleibt unangetastet:
+     * weder sein Text noch seine Angaben werden überschrieben. Der einzige Zusatz ist eine
+     * Erklärung für einen Eintrag, der noch gar keine hat — dort geht nichts verloren.
+     *
+     * Das ist bewusst strenger als früher: Bis dahin ersetzte jede eingespielte Erklärung die
+     * vorhandene (die alte wanderte in die Historie). Wer nach der Sicherung weitergearbeitet
+     * hatte, fand seine neuere Fassung danach nur noch im Verlauf wieder. Eine Wiederherstellung
+     * soll ergänzen, nicht zurückdrehen.
+     *
      * Fragen und Gespräche, die es inhaltsgleich schon gibt, werden übersprungen. Einträge,
      * die erst per Aktualisieren kamen, legt die Sicherung selbst an, damit ihre Fragen einen
      * Platz haben.
@@ -518,14 +525,12 @@ class KompassRepository(context: Context) {
                     eintraegeNeu += 1
                     continue
                 }
-                if (text.isBlank() || text == vorhanden.erklaerung) {
+                // Vorhandenes bleibt stehen. Nur eine Lücke wird gefüllt: ein Eintrag ohne
+                // jede Erklärung bekommt die aus der Sicherung. Alles andere — ein anderer
+                // Text, eine andere Stufe, geänderte Angaben — wird übergangen.
+                if (text.isBlank() || vorhanden.erklaerung.isNotBlank()) {
                     uebersprungen += 1
                     continue
-                }
-                if (vorhanden.erklaerung.isNotBlank()) {
-                    erklaerungen.sichere(
-                        ErklaerungHistorieEntity(eintragId = id, stufe = vorhanden.stufe, text = vorhanden.erklaerung),
-                    )
                 }
                 eintraege.aktualisiere(
                     vorhanden.copy(

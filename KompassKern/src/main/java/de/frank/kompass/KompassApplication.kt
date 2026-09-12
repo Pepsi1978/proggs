@@ -38,7 +38,7 @@ class KompassContainer(context: Context) {
     val mikrofon = Mikrofon(appContext)
     val stimmVerwaltung = QwenStimmVerwaltung { einstellungen.alibabaSchluessel }
     val appSperre = AppSperre(einstellungen)
-    val sicherung = SicherungsDienst(appContext, repository)
+    val sicherung = SicherungsDienst(appContext, repository) { einstellungen.sicherungsTeile() }
 
     val transkribierer = GroqTranskribierer(
         schluesselGeber = { einstellungen.groqSchluessel },

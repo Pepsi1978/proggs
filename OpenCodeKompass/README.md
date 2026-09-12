@@ -55,6 +55,10 @@ gemeinsam in `app/build.gradle.kts` und werden im Einstellungsbildschirm angezei
 
 ## Sicherung
 
+Was in die Sicherung kommt, wird im Einstellungsbildschirm angehakt: die drei Wissensbereiche
+jeweils vollständig, dazu die eigenen Fragen und die Gespräche. Beim Wiederherstellen wird nur
+ergänzt, was fehlt — Vorhandenes bleibt unverändert.
+
 Die Sicherung schreibt in einen einmal gewählten Ordner — in der Praxis ein Google-Drive-Ordner.
 Nach der einmaligen Freigabe schreibt „Jetzt sichern" ohne weitere Rückfrage dorthin; es liegen
 immer nur die aktuelle Sicherung und die eine davor darin. Der Dateiname trägt den Zeitpunkt:

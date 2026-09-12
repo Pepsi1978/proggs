@@ -13,6 +13,38 @@ enum class Bereich(val id: String, val titel: String) {
     }
 }
 
+/**
+ * Was in eine Sicherung kommt — jeder Punkt einzeln abwählbar.
+ *
+ * Die drei Wissensbereiche werden VOLLSTÄNDIG gesichert, nicht nur der selbst erarbeitete
+ * Anteil. Das ist der Unterschied zu früher: Wer den Aktualisieren-Knopf benutzt hat, trägt
+ * einen neueren Stand in der Datenbank als in der mitgelieferten Wissensbasis der App — auf
+ * einem zweiten Gerät stand ohne das wieder nur der Auslieferungsstand.
+ */
+enum class SicherungsTeil(val id: String, val titel: String, val erklaerung: String) {
+    SLASH("slash", "Slash-Befehle", "Der ganze Befehlskatalog mit allen Erklärungen."),
+    CONFIG("config", "Config-Einstellungen", "Alle Einträge des Config-Bereichs."),
+    PRAXIS("praxis", "Best Practices", "Alle Praxisartikel."),
+    FRAGEN("fragen", "Eigene Fragen", "Die selbst gestellten Fragen samt Antworten."),
+    GESPRAECHE("gespraeche", "Gespräche", "Die Chats mit ihren Nachrichten."),
+    ;
+
+    /** Der Wissensbereich dahinter, oder null bei den eigenen Inhalten. */
+    val bereich: Bereich? get() = when (this) {
+        SLASH -> Bereich.SLASH
+        CONFIG -> Bereich.CONFIG
+        PRAXIS -> Bereich.PRAXIS
+        FRAGEN, GESPRAECHE -> null
+    }
+
+    companion object {
+        fun fromId(value: String): SicherungsTeil? = entries.firstOrNull { it.id == value }
+
+        /** Ohne eigene Wahl kommt alles mit — eine halbe Sicherung überrascht sonst später. */
+        val ALLE: Set<SicherungsTeil> get() = entries.toSet()
+    }
+}
+
 /** Anbieter, der einen Text vorliest. */
 enum class TtsAnbieter(val id: String, val label: String) {
     GOOGLE("google", "Google Chirp 3 HD"),

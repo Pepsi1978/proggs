@@ -69,6 +69,7 @@ import de.frank.kompass.audio.GroqTranskribierer
 import de.frank.kompass.data.model.Denktiefe
 import de.frank.kompass.data.model.Geschlecht
 import de.frank.kompass.data.model.KiModell
+import de.frank.kompass.data.model.SicherungsTeil
 import de.frank.kompass.data.model.Stimme
 import de.frank.kompass.data.model.TtsAnbieter
 import de.frank.kompass.security.AppSperre
@@ -548,10 +549,19 @@ fun EinstellungenScreen(
         // --- Sicherung --------------------------------------------------------------------
         item {
             Block("Sicherung") {
+                Mehrfachauswahl(
+                    beschriftung = "Was gesichert wird",
+                    punkte = SicherungsTeil.entries.map { teil ->
+                        AuswahlPunkt(teil.ordinal, teil.titel, teil.erklaerung)
+                    },
+                    aktiv = zustand.sicherungsUmfang.map { it.ordinal }.toSet(),
+                    beiWechsel = { nummer, an ->
+                        viewModel.schalteSicherungsTeil(SicherungsTeil.entries[nummer], an)
+                    },
+                )
                 Zeilentext(
-                    "Gesichert werden deine Fragen samt Antworten, die vertieften Erklärungen " +
-                        "und die Gespräche. Schlüssel kommen ausdrücklich NICHT mit in die " +
-                        "Datei — die landet schnell in einer Cloud.",
+                    "Nicht in der Sicherung: Schlüssel, Anmeldung, eigene Stimmen und die " +
+                        "Einstellungen dieser App.",
                 )
                 Spacer(Modifier.height(Mass.abstandKlein))
                 Text(

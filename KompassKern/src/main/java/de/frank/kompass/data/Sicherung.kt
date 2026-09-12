@@ -6,6 +6,7 @@ import de.frank.kompass.data.local.ChatNachrichtEntity
 import de.frank.kompass.data.local.ChatSitzungEntity
 import de.frank.kompass.data.local.EintragEntity
 import de.frank.kompass.data.local.FrageEntity
+import de.frank.kompass.data.model.SicherungsTeil
 import de.frank.kompass.observability.KompassLog
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,21 +21,46 @@ data class SicherungsVorschau(
     val fragen: Int,
     val sitzungen: Int,
     val nachrichten: Int,
-)
+    /** Wie viele Einträge je Wissensbereich in der Datei stehen. */
+    val jeBereich: Map<SicherungsTeil, Int> = emptyMap(),
+    /** Was beim Sichern angehakt war. Leer bei Dateien aus der Zeit vor der Auswahl. */
+    val umfang: Set<SicherungsTeil> = emptySet(),
+) {
+    /** Ein Satz, der sagt, was in der Datei steckt — vor dem Einspielen. */
+    fun alsText(): String {
+        val teile = buildList {
+            SicherungsTeil.entries.forEach { teil ->
+                jeBereich[teil]?.takeIf { it > 0 }?.let { add("$it ${teil.titel}") }
+            }
+            if (fragen > 0) add("$fragen Fragen")
+            if (sitzungen > 0) add("$sitzungen Gespräche")
+        }
+        val kern = if (teile.isEmpty()) "Die Datei enthält keine Einträge." else teile.joinToString(", ")
+        return "Sicherung vom $erstelltAm: $kern. " +
+            "Ergänzt wird nur, was hier fehlt — Vorhandenes bleibt unverändert."
+    }
+}
 
 /**
- * Sichert die eigenen Inhalte und spielt sie wieder ein (Referenz, Baustein J.1).
+ * Sichert die Inhalte und spielt sie wieder ein (Referenz, Baustein J.1).
  *
- * Gesichert wird nur, was sich nicht wiederherstellen lässt: die selbst gestellten Fragen samt
- * Antworten, die vertieften Erklärungen und die Gespräche. Die mitgelieferte Wissensbasis
- * bleibt draussen — sie steckt ohnehin in der App und würde die Datei nur aufblähen.
+ * Was hineinkommt, bestimmt der Umfang: die drei Wissensbereiche jeweils VOLLSTÄNDIG, dazu die
+ * selbst gestellten Fragen und die Gespräche. Die Wissensbereiche vollständig zu sichern ist der
+ * Unterschied zu früher: Wer den Aktualisieren-Knopf benutzt hat, trägt einen neueren Stand in
+ * der Datenbank als in der mitgelieferten Wissensbasis — ohne ihn stand auf einem zweiten Gerät
+ * wieder nur der Auslieferungsstand.
  *
- * API-Schlüssel gehören ausdrücklich NICHT in die Sicherung. Eine Sicherungsdatei landet
- * schnell in einer Cloud oder in einem Chat; ein Schlüssel darin wäre offengelegt.
+ * API-Schlüssel, die Anmeldung und die Einstellungen der App gehören ausdrücklich NICHT hinein.
  */
 object Sicherung {
 
-    const val SCHEMA_VERSION = 1
+    /**
+     * 1: nur der selbst erarbeitete Anteil. 2: wählbarer Umfang, Wissensbereiche vollständig.
+     *
+     * Dateien nach Schema 1 bleiben lesbar. Sie tragen kein Feld „umfang"; für sie gilt, was
+     * damals drinstand — eigene Beiträge, Fragen und Gespräche.
+     */
+    const val SCHEMA_VERSION = 2
 
     fun baueDateiname(zeitstempel: String): String = "${AppProfil.DATEI_PRAEFIX}-sicherung-$zeitstempel.json"
 
@@ -44,26 +70,29 @@ object Sicherung {
         sitzungen: List<ChatSitzungEntity>,
         nachrichten: List<ChatNachrichtEntity>,
         erstelltAm: String,
-        seedKennungen: Set<String> = emptySet(),
+        umfang: Set<SicherungsTeil> = SicherungsTeil.ALLE,
     ): String {
-        // Einträge mit eigenem Zutun und alle, die erst per Aktualisieren dazukamen. Letztere
-        // stehen nicht in der App: Ohne sie fehlten auf einem neuen Gerät der Eintrag selbst,
-        // seine Erklärung und — über den Fremdschlüssel — jede Frage dazu.
-        val eigene = eintraege.filter { it.stufe > 0 || it.id !in seedKennungen }
+        val bereiche = umfang.mapNotNull { it.bereich?.id }.toSet()
+        val gewaehlte = eintraege.filter { it.bereich in bereiche }
+        val eigeneFragen = if (SicherungsTeil.FRAGEN in umfang) fragen else emptyList()
+        val eigeneSitzungen = if (SicherungsTeil.GESPRAECHE in umfang) sitzungen else emptyList()
+
         val json = JSONObject()
             .put("schema", SCHEMA_VERSION)
             .put("erstelltAm", erstelltAm)
-            .put("app", "${AppProfil.PRODUKT}")
+            .put("app", AppProfil.PRODUKT)
+            .put("umfang", JSONArray().apply { umfang.forEach { put(it.id) } })
             .put(
                 "eintraege",
                 JSONArray().apply {
-                    eigene.forEach { eintrag ->
-                        val objekt = JSONObject()
-                            .put("id", eintrag.id)
-                            .put("erklaerung", eintrag.erklaerung)
-                            .put("stufe", eintrag.stufe)
-                        if (eintrag.id !in seedKennungen) {
-                            objekt
+                    // Vollständig, mit allen Angaben: Auf einem neuen Gerät muss der Eintrag
+                    // allein aus der Datei entstehen können, ohne die Wissensbasis der App.
+                    gewaehlte.forEach { eintrag ->
+                        put(
+                            JSONObject()
+                                .put("id", eintrag.id)
+                                .put("erklaerung", eintrag.erklaerung)
+                                .put("stufe", eintrag.stufe)
                                 .put("bereich", eintrag.bereich)
                                 .put("name", eintrag.name)
                                 .put("kurz", eintrag.kurz)
@@ -74,16 +103,15 @@ object Sicherung {
                                 .put("sortierName", eintrag.sortierName)
                                 .put("entfernt", eintrag.entfernt)
                                 .put("entferntInVersion", eintrag.entferntInVersion)
-                                .put("ersatz", eintrag.ersatz)
-                        }
-                        put(objekt)
+                                .put("ersatz", eintrag.ersatz),
+                        )
                     }
                 },
             )
             .put(
                 "fragen",
                 JSONArray().apply {
-                    fragen.forEach { frage ->
+                    eigeneFragen.forEach { frage ->
                         put(
                             JSONObject()
                                 .put("eintragId", frage.eintragId)
@@ -97,7 +125,7 @@ object Sicherung {
             .put(
                 "sitzungen",
                 JSONArray().apply {
-                    sitzungen.forEach { sitzung ->
+                    eigeneSitzungen.forEach { sitzung ->
                         val eigeneNachrichten = nachrichten.filter { it.sitzungId == sitzung.id }
                         put(
                             JSONObject()
@@ -125,9 +153,10 @@ object Sicherung {
             "schreibe",
             "Sicherung erstellt",
             mapOf(
-                "eintraege" to eigene.size,
-                "fragen" to fragen.size,
-                "sitzungen" to sitzungen.size,
+                "umfang" to umfang.joinToString(",") { it.id },
+                "eintraege" to gewaehlte.size,
+                "fragen" to eigeneFragen.size,
+                "sitzungen" to eigeneSitzungen.size,
             ),
         )
         return json.toString(1)
@@ -143,7 +172,7 @@ object Sicherung {
         val json = runCatching { JSONObject(inhalt) }.getOrElse {
             throw SicherungsFehler("Die Datei ist keine gültige Sicherung von ${AppProfil.PRODUKT}.", it)
         }
-        if (json.optString("app") != "${AppProfil.PRODUKT}") {
+        if (json.optString("app") != AppProfil.PRODUKT) {
             throw SicherungsFehler("Diese Sicherung gehört nicht zu ${AppProfil.PRODUKT}.")
         }
         val schema = json.optInt("schema", -1)
@@ -162,13 +191,29 @@ object Sicherung {
         for (index in 0 until sitzungen.length()) {
             nachrichten += sitzungen.optJSONObject(index)?.optJSONArray("nachrichten")?.length() ?: 0
         }
+
+        val eintraege = json.optJSONArray("eintraege") ?: JSONArray()
+        val jeBereich = mutableMapOf<SicherungsTeil, Int>()
+        for (index in 0 until eintraege.length()) {
+            val bereich = eintraege.optJSONObject(index)?.optString("bereich") ?: continue
+            val teil = SicherungsTeil.entries.firstOrNull { it.bereich?.id == bereich } ?: continue
+            jeBereich[teil] = (jeBereich[teil] ?: 0) + 1
+        }
+
+        // Schema 1 kennt kein Feld „umfang". Dort stand immer dasselbe drin.
+        val umfang = json.optJSONArray("umfang")?.let { feld ->
+            (0 until feld.length()).mapNotNull { SicherungsTeil.fromId(feld.optString(it)) }.toSet()
+        } ?: setOf(SicherungsTeil.FRAGEN, SicherungsTeil.GESPRAECHE)
+
         val vorschau = SicherungsVorschau(
             schema = schema,
             erstelltAm = json.optString("erstelltAm"),
-            eintraege = json.optJSONArray("eintraege")?.length() ?: 0,
+            eintraege = eintraege.length(),
             fragen = json.optJSONArray("fragen")?.length() ?: 0,
             sitzungen = sitzungen.length(),
             nachrichten = nachrichten,
+            jeBereich = jeBereich,
+            umfang = umfang,
         )
         return vorschau to json
     }

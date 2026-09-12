@@ -6,6 +6,7 @@ import de.frank.kompass.data.EinspielBericht
 import de.frank.kompass.data.KompassRepository
 import de.frank.kompass.data.Sicherung
 import de.frank.kompass.data.SicherungsVorschau
+import de.frank.kompass.data.model.SicherungsTeil
 import de.frank.kompass.observability.KompassLog
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -30,6 +31,7 @@ import kotlinx.coroutines.withContext
 class SicherungsDienst(
     private val context: Context,
     private val repository: KompassRepository,
+    private val umfangGeber: () -> Set<SicherungsTeil> = { SicherungsTeil.ALLE },
 ) {
     private val datei = DateiSicherung(context)
 
@@ -44,7 +46,7 @@ class SicherungsDienst(
 
     fun standText(): String = BackupStatus.describe(context)
 
-    /** Der Abzug des eigenen Bestands als JSON — dasselbe Format wie bisher. */
+    /** Der Abzug als JSON — enthält, was im Umfang angehakt ist. */
     suspend fun alsJson(): String = withContext(Dispatchers.IO) {
         val eintraege = repository.ladeKomplett()
         // Die Flüsse werden einmalig ausgelesen; für eine Momentaufnahme genügt das.
@@ -57,7 +59,7 @@ class SicherungsDienst(
             sitzungen,
             nachrichten,
             ZEIT.format(Date()),
-            repository.seedKennungen(),
+            umfangGeber(),
         )
     }
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import de.frank.kompass.KompassContainer
 import de.frank.kompass.data.model.Denktiefe
 import de.frank.kompass.data.model.KiModell
+import de.frank.kompass.data.model.SicherungsTeil
 import de.frank.kompass.data.model.TtsAnbieter
 import de.frank.kompass.observability.KompassLog
 import de.frank.kompass.tts.GeklonteStimme
@@ -81,6 +82,8 @@ data class EinstellungenZustand(
     /** Die Sicherungen im gemerkten Ordner, solange die Auswahl offen steht. */
     val sicherungsAuswahl: List<SicherungsEintrag> = emptyList(),
     val sicherungsAuswahlLaeuft: Boolean = false,
+    /** Was beim nächsten Sichern in die Datei kommt. */
+    val sicherungsUmfang: Set<SicherungsTeil> = SicherungsTeil.ALLE,
     val schluesselAblageFehler: String? = null,
 )
 
@@ -128,6 +131,7 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
         codexVerbunden = container.codex.istVerbunden,
         sicherungsOrdner = container.sicherung.ordnerName(),
         sicherungsStand = container.sicherung.standText(),
+        sicherungsUmfang = store.sicherungsTeile(),
         schluesselAblageFehler = if (store.geheimVerfuegbar) {
             null
         } else {
@@ -534,6 +538,23 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     private val sicherung get() = container.sicherung
     private var nachOrdnerWahlSichern = false
 
+    /**
+     * Schaltet einen Teil der Sicherung an oder ab.
+     *
+     * Der letzte Haken lässt sich nicht entfernen: Eine Sicherung ohne Inhalt wäre eine Datei,
+     * die aussieht wie eine Sicherung und keine ist — das fällt erst auf, wenn man sie braucht.
+     */
+    fun schalteSicherungsTeil(teil: SicherungsTeil, aktiv: Boolean) {
+        if (!aktiv && _zustand.value.sicherungsUmfang.size <= 1) {
+            _zustand.value = _zustand.value.copy(
+                fehler = "Mindestens ein Punkt muss gesichert werden.",
+            )
+            return
+        }
+        store.setzeSicherungsTeil(teil, aktiv)
+        _zustand.value = _zustand.value.copy(sicherungsUmfang = store.sicherungsTeile(), fehler = "")
+    }
+
     /** Der gemerkte Ordner als Adresse — der Dateiwaehler startet darin. */
     val sicherungsOrdnerUri: Uri? get() = sicherung.sicherungsOrdner
 
@@ -715,10 +736,7 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
                     sicherungBereit = quelle,
                     fehler = "",
                     meldung = "",
-                    sicherungVorschauText = "Sicherung vom ${vorschau.erstelltAm}: " +
-                        "${vorschau.fragen} Fragen, ${vorschau.sitzungen} Gespräche, " +
-                        "${vorschau.eintraege} vertiefte Erklärungen werden ergänzt. " +
-                        "Vorhandenes bleibt unverändert.",
+                    sicherungVorschauText = vorschau.alsText(),
                 )
             }
             .onFailure { fehler ->
