@@ -496,12 +496,16 @@ class KompassRepository(context: Context) {
      */
     var beiAenderung: (String) -> Unit = {}
 
-        /** Woher die Sätze beim Sichern kommen — seitenweise, nie der ganze Bestand auf einmal. */
-    val sicherungsQuelle = object : Sicherung.Quelle {
-        override suspend fun eintraegeSeite(bereiche: List<String>, versatz: Int) =
-            eintraege.ladeSeite(bereiche, Sicherung.SEITE, versatz)
+    // Die Senke des Einspielens meldet sich hier bewusst NICHT: Eine selbsttätige Sicherung
+    // gleich nach dem Einspielen würde genau die Datei überschreiben, aus der eben gelesen
+    // wurde — und mit ihr die Möglichkeit, das Einspielen zurückzunehmen.
 
-        override suspend fun fragenSeite(versatz: Int) = fragen.ladeSeite(Sicherung.SEITE, versatz)
+    /** Woher die Sätze beim Sichern kommen — seitenweise, nie der ganze Bestand auf einmal. */
+    val sicherungsQuelle = object : Sicherung.Quelle {
+        override suspend fun eintraegeSeite(bereiche: List<String>, nachId: String) =
+            eintraege.ladeSeite(bereiche, nachId, Sicherung.SEITE)
+
+        override suspend fun fragenSeite(nachId: Long) = fragen.ladeSeite(nachId, Sicherung.SEITE)
 
         override suspend fun sitzungen() = chat.ladeSitzungen()
 
@@ -513,7 +517,8 @@ class KompassRepository(context: Context) {
         SicherungsAnzahl(
             eintraege = if (bereiche.isEmpty()) 0 else eintraege.anzahlIn(bereiche),
             fragen = if (mitFragen) fragen.anzahl() else 0,
-            sitzungen = if (mitGespraechen) chat.ladeSitzungen().size else 0,
+            // Zählen statt laden: Es geht nur um die Zahl für die Anzeige.
+            sitzungen = if (mitGespraechen) chat.anzahlSitzungen() else 0,
             nachrichten = if (mitGespraechen) chat.anzahlNachrichten() else 0,
         )
 
@@ -535,6 +540,29 @@ class KompassRepository(context: Context) {
         val spur = Einspielspur()
         var uebersprungen = 0
             private set
+
+        /**
+         * Was schon da ist — einmal geladen und danach fortgeschrieben.
+         *
+         * Vorher fragte jede einzelne Frage die ganze Tabelle ab und jedes Gespräch sämtliche
+         * Nachrichten aller Gespräche. Bei ein paar hundert Sätzen wird daraus ein Lauf, der
+         * quadratisch wächst und die App zum Stehen bringt — ausgerechnet beim Einspielen,
+         * also dann, wenn ohnehin gerade etwas schiefgegangen ist.
+         */
+        private var bekannteFragen: MutableSet<Triple<String, String, String>>? = null
+        private var bekannteGespraeche: MutableSet<List<Pair<String, String>>>? = null
+
+        private suspend fun fragenSchluessel(): MutableSet<Triple<String, String, String>> =
+            bekannteFragen ?: fragen.beobachteAlle().first()
+                .mapTo(mutableSetOf()) { Triple(it.eintragId, it.frage, it.antwort) }
+                .also { bekannteFragen = it }
+
+        private suspend fun gespraechsSchluessel(): MutableSet<List<Pair<String, String>>> =
+            bekannteGespraeche ?: chat.ladeAlleNachrichten()
+                .groupBy { it.sitzungId }
+                .values
+                .mapTo(mutableSetOf()) { liste -> liste.map { it.rolle to it.text } }
+                .also { bekannteGespraeche = it }
 
         override suspend fun eintrag(werte: Map<String, String>) {
             val id = werte["id"].orEmpty()
@@ -597,12 +625,13 @@ class KompassRepository(context: Context) {
                 uebersprungen += 1
                 return
             }
-            val schonDa = fragen.beobachteAlle().first()
-                .any { it.eintragId == eintragId && it.frage == frage && it.antwort == antwort }
-            if (schonDa) {
+            val bekannt = fragenSchluessel()
+            val schluessel = Triple(eintragId, frage, antwort)
+            if (schluessel in bekannt) {
                 uebersprungen += 1
                 return
             }
+            bekannt += schluessel
             val id = fragen.fuegeEin(
                 FrageEntity(
                     eintragId = eintragId,
@@ -624,15 +653,13 @@ class KompassRepository(context: Context) {
                 return
             }
             // Ein Gespräch gilt als vorhanden, wenn es eines mit genau denselben Nachrichten gibt.
+            val bekannt = gespraechsSchluessel()
             val kennung = nachrichten.map { it.first to it.second }
-            val schonDa = chat.ladeAlleNachrichten()
-                .groupBy { it.sitzungId }
-                .values
-                .any { liste -> liste.map { it.rolle to it.text } == kennung }
-            if (schonDa) {
+            if (kennung in bekannt) {
                 uebersprungen += 1
                 return
             }
+            bekannt += kennung
             val sitzungId = chat.lege(
                 ChatSitzungEntity(
                     titel = titel.ifBlank { "Eingespielt" },
@@ -673,6 +700,8 @@ class KompassRepository(context: Context) {
             chat.loescheSitzung(id)
             zurueck += 1
         }
+        // Zuerst die eingespielten Fragen. Danach hängen an den eingespielten Einträgen nur
+        // noch Fragen, die inzwischen selbst gestellt wurden.
         spur.neueFragen.forEach { id ->
             fragen.loesche(id)
             zurueck += 1
@@ -684,8 +713,25 @@ class KompassRepository(context: Context) {
             }
         }
         if (spur.neueEintraege.isNotEmpty()) {
-            eintraege.loesche(spur.neueEintraege.toList())
-            zurueck += spur.neueEintraege.size
+            // An einem Eintrag hängen die Fragen mit CASCADE. Ihn zu löschen nähme jede Frage
+            // mit — auch eine, die nach dem Einspielen selbst gestellt wurde. Ein
+            // Zurücknehmen darf nichts wegnehmen, was nicht aus der Sicherung kam; solche
+            // Einträge bleiben deshalb stehen.
+            val alle = spur.neueEintraege.toList()
+            val behalten = fragen.eintraegeMitFragen(alle).toSet()
+            val loeschbar = alle.filterNot { it in behalten }
+            if (loeschbar.isNotEmpty()) {
+                eintraege.loesche(loeschbar)
+                zurueck += loeschbar.size
+            }
+            if (behalten.isNotEmpty()) {
+                KompassLog.info(
+                    "Repository",
+                    "nimmEinspielenZurueck",
+                    "Einträge blieben stehen, weil eigene Fragen daran hängen",
+                    mapOf("anzahl" to behalten.size),
+                )
+            }
         }
         baueSuchIndexNeu()
         KompassLog.info("Repository", "nimmEinspielenZurueck", "Einspielen zurückgenommen", mapOf("anzahl" to zurueck))

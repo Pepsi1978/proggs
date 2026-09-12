@@ -568,8 +568,14 @@ fun EinstellungenScreen(
                 )
                 Schalterzeile(
                     titel = "Von allein sichern",
-                    erklaerung = "Nach jeder Änderung wird im Hintergrund gesichert, sobald " +
-                        "zwei Minuten Ruhe war — und beim Verlassen der App sofort.",
+                    // Ohne Ordner geschieht nichts — das muss dastehen, sonst steht der
+                    // Schalter auf "an" und niemand ahnt, dass nie etwas geschrieben wird.
+                    erklaerung = if (zustand.autoSicherung && zustand.sicherungsOrdner == null) {
+                        "Es fehlt noch ein Ordner — bis dahin wird nichts geschrieben."
+                    } else {
+                        "Nach jeder Änderung wird im Hintergrund gesichert, sobald zwei Minuten " +
+                            "Ruhe war — und beim Verlassen der App sofort."
+                    },
                     an = zustand.autoSicherung,
                     beiWechsel = { an -> viewModel.schalteAutoSicherung(an, beiOrdnerWaehlen) },
                 )

@@ -15,6 +15,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /** Was beim Einspielen herauskam — samt der Spur, mit der es sich zurücknehmen lässt. */
@@ -39,6 +41,17 @@ class SicherungsDienst(
     private val umfangGeber: () -> Set<SicherungsTeil> = { SicherungsTeil.ALLE },
 ) {
     private val datei = DateiSicherung(context)
+
+    /**
+     * Nur ein Zugriff auf den Ordner zur Zeit.
+     *
+     * Der Knopf „Jetzt sichern“ und die selbsttätige Sicherung können sich überschneiden —
+     * etwa wenn während eines Aktualisieren-Laufs von Hand gesichert wird. Beide legen dann
+     * eine Datei an und räumen danach auf; die eine könnte die frische Datei der anderen als
+     * „die überzählige“ wegräumen. Auch das Einspielen gehört hierhin: Es darf nicht aus
+     * einer Datei lesen, die gerade weggeräumt wird.
+     */
+    private val ordnerSchloss = Mutex()
 
     /** Der gemerkte Sicherungsordner — null, solange keiner gewählt wurde. */
     val sicherungsOrdner: Uri? get() = datei.ordner
@@ -75,6 +88,10 @@ class SicherungsDienst(
      * auf: Es bleiben nur die aktuelle Sicherung und die eine davor.
      */
     suspend fun sichere(): String = withContext(Dispatchers.IO) {
+        ordnerSchloss.withLock { sichereGeschuetzt() }
+    }
+
+    private suspend fun sichereGeschuetzt(): String {
         val umfang = umfangGeber()
         var anzahl = SicherungsAnzahl()
         val geschrieben = datei.schreibe { ausgabe ->
@@ -91,27 +108,34 @@ class SicherungsDienst(
         // nachgerechnet wurde, gilt sie als Sicherung. Ein Schreibfehler, der erst im Ernstfall
         // auffällt, ist schlimmer als gar keine Sicherung — dann weiss man wenigstens Bescheid.
         val geprueft = runCatching { datei.lies(geschrieben.uri) { quelle -> Sicherung.pruefe(quelle) } }
-        geprueft.onFailure { fehler ->
+        if (geprueft.isFailure) {
+            val fehler = geprueft.exceptionOrNull()
             KompassLog.error(
                 "SicherungsDienst",
                 "sichere",
                 "Geschriebene Sicherung liess sich nicht lesen",
-                mapOf("name" to geschrieben.name, "grund" to fehler.message),
+                mapOf("name" to geschrieben.name, "grund" to fehler?.message),
             )
+            // Weder aufräumen noch stempeln: Die alten Stände bleiben stehen, und der
+            // Zeitpunkt der letzten geglückten Sicherung wird nicht überschrieben. Sonst
+            // stünde da eine frische Uhrzeit für eine Datei, die niemand lesen kann.
+            BackupStatus.markGescheitert(context)
+            throw fehler ?: IllegalStateException("Die geschriebene Sicherung liess sich nicht prüfen.")
         }
-        BackupStatus.markBackedUp(context, geprueft.isSuccess)
+
+
+        BackupStatus.markBackedUp(context, geprueft = true)
+        // Erst jetzt: Eine gute Sicherung gegen eine ungeprüfte einzutauschen wäre der
+        // Fehler, gegen den das Zurücklesen überhaupt schützt.
+        datei.raeumeAlteWeg()
 
         KompassLog.info(
             "SicherungsDienst",
             "sichere",
-            "Sicherung geschrieben",
-            mapOf("name" to geschrieben.name, "eintraege" to anzahl.eintraege, "geprueft" to geprueft.isSuccess),
+            "Sicherung geschrieben und geprüft",
+            mapOf("name" to geschrieben.name, "eintraege" to anzahl.eintraege),
         )
-        if (geprueft.isFailure) {
-            throw geprueft.exceptionOrNull()
-                ?: IllegalStateException("Die geschriebene Sicherung liess sich nicht prüfen.")
-        }
-        BackupStatus.describe(context)
+        return BackupStatus.describe(context)
     }
 
     /**
@@ -120,13 +144,14 @@ class SicherungsDienst(
      * Damit zeigt die App die Auswahl selbst an, statt den Dateiwähler von Android zu öffnen —
      * aus dem führt die Zurück-Geste Ordner für Ordner heraus statt zurück in die App.
      */
-    suspend fun sicherungen(): List<Sicherungsdatei> = datei.sicherungen()
+    suspend fun sicherungen(): List<Sicherungsdatei> = ordnerSchloss.withLock { datei.sicherungen() }
 
     /** Die jüngste Sicherung im Ordner — sie wird beim Wiederherstellen genommen. */
-    suspend fun neuesteSicherung(): Sicherungsdatei? = datei.sicherungen().firstOrNull()
+    suspend fun neuesteSicherung(): Sicherungsdatei? =
+        ordnerSchloss.withLock { datei.sicherungen().firstOrNull() }
 
     /** Wie viele Sicherungen gerade im Ordner liegen. */
-    suspend fun anzahlSicherungen(): Int = datei.sicherungen().size
+    suspend fun anzahlSicherungen(): Int = ordnerSchloss.withLock { datei.sicherungen().size }
 
     /**
      * Was in der Sicherung steckt — für die Rückfrage VOR dem Einspielen.
@@ -135,15 +160,24 @@ class SicherungsDienst(
      * beschädigte Datei fällt hier auf, bevor irgendetwas in die Datenbank gelangt.
      */
     suspend fun vorschauVon(quelle: Uri): SicherungsVorschau = withContext(Dispatchers.IO) {
-        datei.lies(quelle) { Sicherung.pruefe(it) }
+        // Auch das Lesen gehört unter den Riegel: Die Datei, aus der hier gelesen wird, könnte
+        // sonst gerade von der selbsttätigen Sicherung weggeräumt werden.
+        ordnerSchloss.withLock { datei.lies(quelle) { Sicherung.pruefe(it) } }
     }
 
     /** Spielt ein, was in der App fehlt. Vorhandenes bleibt in jedem Fall erhalten. */
     suspend fun stelleWiederHerAus(quelle: Uri): EinspielErgebnis = withContext(Dispatchers.IO) {
+        ordnerSchloss.withLock {
+        // Erst ein Durchlauf ohne Senke. Prüfsumme und Zählwerk stehen am ENDE der Datei —
+        // prüfte man erst beim Einspielen, wäre bei einer beschädigten Datei längst alles in
+        // der Datenbank, bevor der Fehler auffällt. Der zweite Durchlauf kostet wenig; eine
+        // halb eingespielte Sicherung käme teuer.
+        datei.lies(quelle) { Sicherung.pruefe(it) }
         val senke = repository.EinspielSenke()
         datei.lies(quelle) { Sicherung.spieleEin(it, senke) }
         repository.schliesseEinspielenAb()
         EinspielErgebnis(senke.bericht(), senke.spur)
+        }
     }
 
     /** Nimmt ein Einspielen zurück — entfernt genau das, was dabei entstanden ist. */

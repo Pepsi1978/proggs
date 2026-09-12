@@ -74,6 +74,13 @@ class DateiSicherung(private val context: Context) {
      * Schreibt eine neue Sicherung und räumt danach auf: Es bleiben nur die aktuelle und die
      * eine davor stehen.
      */
+    /**
+     * Schreibt eine neue Sicherung. Aufgeräumt wird erst später, über [raeumeAlteWeg].
+     *
+     * Die Trennung ist wichtig: Aufzuräumen, bevor die frische Datei einmal fehlerfrei gelesen
+     * wurde, hiesse eine gute Sicherung gegen eine ungeprüfte einzutauschen. Geht beim
+     * Zurücklesen etwas schief, stehen so wenigstens noch die beiden alten Stände da.
+     */
     suspend fun schreibe(fuelle: suspend (java.io.Writer) -> Unit): Sicherungsdatei = withContext(Dispatchers.IO) {
         val baum = ordner ?: error("Es ist noch kein Sicherungsordner gewählt.")
         val bisherige = listeAuf(baum, benenneAlteUm = true)
@@ -104,10 +111,16 @@ class DateiSicherung(private val context: Context) {
             throw fehler
         }
 
-        // Die Sicherung steht — ab hier zählt sie, auch wenn das Aufräumen danach hakt.
-        // Ob sie auch lesbar ist, entscheidet der Aufrufer nach dem Zurücklesen.
-        raeumeAuf(bisherige)
         Sicherungsdatei(datei, name, System.currentTimeMillis())
+    }
+
+    /**
+     * Räumt alles bis auf die [BEHALTEN] jüngsten weg — aufzurufen, NACHDEM die frische
+     * Sicherung geprüft ist.
+     */
+    suspend fun raeumeAlteWeg() = withContext(Dispatchers.IO) {
+        val baum = ordner ?: return@withContext
+        raeumeAuf(listeAuf(baum).drop(BEHALTEN))
     }
 
     /** Alle Sicherungen im Ordner, die jüngste zuerst. */
@@ -246,9 +259,7 @@ class DateiSicherung(private val context: Context) {
         }
     }
 
-    private fun raeumeAuf(bisherige: List<Sicherungsdatei>) {
-        // Die frisch geschriebene zählt schon als eine der beiden — vom Rest bleibt genau eine.
-        val zuLoeschen = bisherige.drop(BEHALTEN - 1)
+    private fun raeumeAuf(zuLoeschen: List<Sicherungsdatei>) {
         zuLoeschen.forEach { datei ->
             runCatching {
                 check(DocumentsContract.deleteDocument(context.contentResolver, datei.uri)) {

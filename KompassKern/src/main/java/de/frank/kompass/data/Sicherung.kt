@@ -105,10 +105,15 @@ object Sicherung {
 
     // ---- Schreiben ---------------------------------------------------------------------
 
-    /** Woher die Sätze kommen. Jede Seite wird geholt, geschrieben und wieder freigegeben. */
+    /**
+     * Woher die Sätze kommen. Jede Seite wird geholt, geschrieben und wieder freigegeben.
+     *
+     * Weitergereicht wird die Kennung des zuletzt gelesenen Satzes, nicht die Zahl der schon
+     * gelesenen: Kommt während des Laufs etwas dazu, verschiebt das sonst das Fenster.
+     */
     interface Quelle {
-        suspend fun eintraegeSeite(bereiche: List<String>, versatz: Int): List<EintragEntity>
-        suspend fun fragenSeite(versatz: Int): List<FrageEntity>
+        suspend fun eintraegeSeite(bereiche: List<String>, nachId: String): List<EintragEntity>
+        suspend fun fragenSeite(nachId: Long): List<FrageEntity>
         suspend fun sitzungen(): List<ChatSitzungEntity>
         suspend fun nachrichten(sitzungId: Long): List<ChatNachrichtEntity>
     }
@@ -145,9 +150,9 @@ object Sicherung {
 
         schreiber.name("eintraege").beginArray()
         if (bereiche.isNotEmpty()) {
-            var versatz = 0
+            var nachId = ""
             while (true) {
-                val seite = quelle.eintraegeSeite(bereiche, versatz)
+                val seite = quelle.eintraegeSeite(bereiche, nachId)
                 if (seite.isEmpty()) break
                 seite.forEach { eintrag ->
                     // Vollständig, mit allen Angaben: Auf einem neuen Gerät muss der Eintrag
@@ -172,16 +177,16 @@ object Sicherung {
                     jeBereich[eintrag.bereich] = (jeBereich[eintrag.bereich] ?: 0) + 1
                     eintraege += 1
                 }
-                versatz += seite.size
+                nachId = seite.last().id
             }
         }
         schreiber.endArray()
 
         schreiber.name("fragen").beginArray()
         if (SicherungsTeil.FRAGEN in umfang) {
-            var versatz = 0
+            var nachId = 0L
             while (true) {
-                val seite = quelle.fragenSeite(versatz)
+                val seite = quelle.fragenSeite(nachId)
                 if (seite.isEmpty()) break
                 seite.forEach { frage ->
                     schreiber.beginObject()
@@ -193,7 +198,7 @@ object Sicherung {
                     pruefsumme.nimm(frage.eintragId, frage.frage, frage.antwort)
                     fragen += 1
                 }
-                versatz += seite.size
+                nachId = seite.last().id
             }
         }
         schreiber.endArray()
@@ -380,7 +385,13 @@ object Sicherung {
                             leser.beginObject()
                             while (leser.hasNext()) {
                                 when (leser.nextName()) {
-                                    "titel" -> titel = leser.nextString()
+                                    "titel" -> {
+                                        titel = leser.nextString()
+                                        // Genau hier, nicht später: Der Schreiber nimmt den
+                                        // Titel VOR den Nachrichten auf, und die Reihenfolge
+                                        // geht in die Summe ein.
+                                        pruefsumme.nimm(titel)
+                                    }
                                     "erstelltAm" -> wann = leser.nextLong()
                                     "nachrichten" -> {
                                         leser.beginArray()
@@ -402,8 +413,6 @@ object Sicherung {
                                 }
                             }
                             leser.endObject()
-                            // Die Prüfsumme nimmt den Titel NACH den Nachrichten nicht auf —
-                            // beim Schreiben stand er davor, und die Reihenfolge zählt.
                             sitzungen += 1
                             senke?.sitzung(titel, wann, inhalt)
                         }

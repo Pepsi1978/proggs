@@ -21,6 +21,7 @@ object BackupStatus {
     private const val PREFS = "kompass_backup_status"
     private const val KEY_LAST_BACKUP = "zuletzt_gesichert"
     private const val KEY_GEPRUEFT = "zuletzt_geprueft"
+    private const val KEY_GESCHEITERT = "letzter_versuch_gescheitert"
 
     private val format = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
 
@@ -36,8 +37,29 @@ object BackupStatus {
             .edit()
             .putLong(KEY_LAST_BACKUP, System.currentTimeMillis())
             .putBoolean(KEY_GEPRUEFT, geprueft)
+            .putBoolean(KEY_GESCHEITERT, false)
             .apply()
     }
+
+    /**
+     * Vermerkt einen Fehlschlag, ohne den Zeitpunkt der letzten geglückten Sicherung zu
+     * überschreiben.
+     *
+     * Sonst stünde nach einem gescheiterten Lauf eine frische Uhrzeit da — für eine Datei,
+     * die niemand lesen kann. Die alte Angabe ist die ehrlichere.
+     */
+    fun markGescheitert(context: Context) {
+        context.applicationContext
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_GESCHEITERT, true)
+            .apply()
+    }
+
+    private fun istGescheitert(context: Context): Boolean =
+        context.applicationContext
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_GESCHEITERT, false)
 
     fun istGeprueft(context: Context): Boolean =
         context.applicationContext
@@ -52,9 +74,19 @@ object BackupStatus {
     /** Behauptet nie eine Sicherung, die es nicht gab. */
     fun describe(context: Context): String {
         val last = lastBackupAt(context)
-        if (last == 0L) return "Noch nicht gesichert"
+        if (last == 0L) {
+            return if (istGescheitert(context)) {
+                "Noch keine Sicherung — der letzte Versuch schlug fehl"
+            } else {
+                "Noch nicht gesichert"
+            }
+        }
         val zeit = "Zuletzt: ${format.format(Date(last))} Uhr"
-        return if (istGeprueft(context)) "$zeit — geprüft" else "$zeit — UNGEPRÜFT"
+        val stand = if (istGeprueft(context)) "$zeit — geprüft" else "$zeit — UNGEPRÜFT"
+        // Der letzte Versuch und die letzte geglückte Sicherung sind zwei verschiedene Dinge.
+        // Ein Fehlschlag darf den Haken an der guten Sicherung davor nicht entwerten — aber
+        // er muss sichtbar sein, sonst hält man den alten Stand für den aktuellen.
+        return if (istGescheitert(context)) "$stand; der letzte Versuch schlug fehl" else stand
     }
 
     fun hasBackup(context: Context): Boolean = lastBackupAt(context) > 0L

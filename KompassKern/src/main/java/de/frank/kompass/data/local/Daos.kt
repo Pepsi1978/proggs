@@ -38,12 +38,18 @@ interface EintragDao {
      * Seitenweise statt auf einmal: Der ganze Bestand sind bei Claude Kompass über zweitausend
      * Einträge mit langen Texten. Die lagen bisher vollständig im Speicher, gleichzeitig mit der
      * fertigen JSON-Zeichenkette. Das trägt heute und ist genau die Stelle, die als erste kippt.
+     *
+     * Weitergezählt wird über die zuletzt gelesene Kennung, nicht über OFFSET. Mit OFFSET
+     * verschiebt jeder Eintrag, der während des Laufs dazukommt, das Fenster: Ein
+     * Aktualisieren-Lauf und eine selbsttätige Sicherung überschneiden sich leicht, und dann
+     * fällt ein Eintrag heraus oder steht zweimal in der Datei. Über die Kennung kann das nicht
+     * passieren — sie ist der Primärschlüssel und ändert sich nie.
      */
     @Query(
-        "SELECT * FROM eintraege WHERE bereich IN (:bereiche) " +
-            "ORDER BY bereich, sortierName ASC LIMIT :grenze OFFSET :versatz",
+        "SELECT * FROM eintraege WHERE bereich IN (:bereiche) AND id > :nachId " +
+            "ORDER BY id ASC LIMIT :grenze",
     )
-    suspend fun ladeSeite(bereiche: List<String>, grenze: Int, versatz: Int): List<EintragEntity>
+    suspend fun ladeSeite(bereiche: List<String>, nachId: String, grenze: Int): List<EintragEntity>
 
     @Query("SELECT COUNT(*) FROM eintraege WHERE bereich IN (:bereiche)")
     suspend fun anzahlIn(bereiche: List<String>): Int
@@ -123,11 +129,21 @@ interface FrageDao {
     fun beobachteAlle(): Flow<List<FrageEntity>>
 
     /** Eine Seite der Fragen — für die Sicherung, siehe [EintragDao.ladeSeite]. */
-    @Query("SELECT * FROM fragen ORDER BY eintragId, id ASC LIMIT :grenze OFFSET :versatz")
-    suspend fun ladeSeite(grenze: Int, versatz: Int): List<FrageEntity>
+    @Query("SELECT * FROM fragen WHERE id > :nachId ORDER BY id ASC LIMIT :grenze")
+    suspend fun ladeSeite(nachId: Long, grenze: Int): List<FrageEntity>
 
     @Query("SELECT COUNT(*) FROM fragen")
     suspend fun anzahl(): Int
+
+    /**
+     * Welche dieser Einträge tragen (noch) eine Frage?
+     *
+     * Gebraucht beim Zurücknehmen eines Einspielens: Am Eintrag hängen die Fragen per
+     * Fremdschlüssel mit CASCADE. Ihn zu löschen würde jede Frage mitnehmen — auch eine, die
+     * erst nach dem Einspielen selbst gestellt wurde.
+     */
+    @Query("SELECT DISTINCT eintragId FROM fragen WHERE eintragId IN (:ids)")
+    suspend fun eintraegeMitFragen(ids: List<String>): List<String>
 
     @Insert
     suspend fun fuegeEin(frage: FrageEntity): Long
@@ -151,6 +167,9 @@ interface ChatDao {
     /** Alle Gespräche ohne Fluss — für die Sicherung. */
     @Query("SELECT * FROM chat_sitzungen ORDER BY id ASC")
     suspend fun ladeSitzungen(): List<ChatSitzungEntity>
+
+    @Query("SELECT COUNT(*) FROM chat_sitzungen")
+    suspend fun anzahlSitzungen(): Int
 
     @Query("SELECT COUNT(*) FROM chat_nachrichten")
     suspend fun anzahlNachrichten(): Int

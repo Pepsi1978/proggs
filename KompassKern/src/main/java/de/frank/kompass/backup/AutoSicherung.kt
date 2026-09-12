@@ -66,7 +66,10 @@ class AutoSicherung(
         // Nur eine zur Zeit: Zwei gleichzeitige Läufe legen zwei Dateien an und räumen sich
         // gegenseitig die jeweils andere weg.
         schloss.withLock {
-            if (!offen) return
+            // Noch einmal fragen: Zwischen dem Anstoss und diesem Punkt liegen zwei Minuten.
+            // Wer in der Zeit den Schalter umgelegt oder den Ordner vergessen hat, will keine
+            // Sicherung mehr — der wartende Auftrag darf sich darüber nicht hinwegsetzen.
+            if (!offen || !istAn() || dienst.sicherungsOrdner == null) return
             offen = false
             runCatching { dienst.sichere() }
                 .onSuccess {
