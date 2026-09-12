@@ -1,5 +1,6 @@
 package de.frank.genialeideen.data.repository
 
+import androidx.room.withTransaction
 import de.frank.genialeideen.data.local.GenialeIdeenDatabase
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
@@ -7,6 +8,8 @@ import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.data.local.NachrichtEntity
 import de.frank.genialeideen.data.local.SuchanfrageEntity
+import de.frank.genialeideen.data.local.alleKategorieIds
+import de.frank.genialeideen.data.local.inhaltsSchluessel
 import de.frank.genialeideen.data.local.weitereKategorieIds
 import de.frank.genialeideen.data.local.weitereKategorienText
 import de.frank.genialeideen.observability.IdeenLog
@@ -251,6 +254,36 @@ class IdeenRepository(private val datenbank: GenialeIdeenDatabase) {
     }
 
     suspend fun leereSuchverlauf() = suchverlaufDao.leeren()
+
+    /**
+     * Räumt Doppel auf, die frühere Wiederherstellungen hinterlassen haben: Ideen mit gleichem
+     * Titel und Text werden zu der ältesten zusammengelegt. Gespräche und Kategorien der Doppel
+     * wandern zu ihr, es geht nichts verloren. Bearbeitete Kopien bleiben stehen.
+     *
+     * Steht hier und nicht bei der Sicherung: Das ist ein Aufräumen des eigenen Bestands, kein
+     * Teil des Sicherungsablaufs — nur der Anlass kam von dort.
+     */
+    suspend fun entferneDoppelte(): Int = datenbank.withTransaction {
+        var entfernt = 0
+        ideenDao.alleEinmal()
+            .groupBy { it.status + " " + it.inhaltsSchluessel() }
+            .values
+            .filter { it.size > 1 }
+            .forEach { gruppe ->
+                val bleibt = gruppe.minBy { it.id }
+                val doppel = gruppe.filter { it.id != bleibt.id }
+                val haupt = bleibt.kategorieId ?: doppel.firstNotNullOfOrNull { it.kategorieId }
+                val weitere = gruppe.flatMap { it.alleKategorieIds() }.distinct().filter { it != haupt }
+                ideenDao.setzeKategorien(bleibt.id, haupt, weitereKategorienText(weitere))
+                doppel.forEach { kopie ->
+                    nachrichtenDao.verschiebe(kopie.id, bleibt.id)
+                    ideenDao.loeschen(kopie)
+                    entfernt++
+                }
+            }
+        IdeenLog.info("Ideen", "entferneDoppelte", "Doppelte Ideen zusammengelegt", mapOf("anzahl" to entfernt))
+        entfernt
+    }
 
     private fun entumlaute(text: String): String = text.lowercase()
         .replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")

@@ -232,6 +232,16 @@ class SecureSettings(context: Context) : Closeable {
         get() = readFlag(Keys.AUTO_BACKUP, false)
         set(value) = writeFlag(Keys.AUTO_BACKUP, value)
 
+    /**
+     * Was die nächste Sicherung umfassen soll — die Kennungen der angehakten Teile.
+     *
+     * Leer gespeichert heißt „noch nie etwas abgewählt"; dann gilt alles. So bekommt niemand
+     * durch ein Update stillschweigend eine kleinere Sicherung als vorher.
+     */
+    var sicherungsTeile: Set<String>
+        get() = readString(Keys.SICHERUNGS_TEILE, "").split(',').filter(String::isNotBlank).toSet()
+        set(value) = writeString(Keys.SICHERUNGS_TEILE, value.joinToString(","))
+
     var letzteSicherungAm: Long
         get() = preferences?.getLong(Keys.LETZTE_SICHERUNG, 0L) ?: 0L
         set(value) {
@@ -286,6 +296,7 @@ class SecureSettings(context: Context) : Closeable {
         const val APP_LOCK_DELAY = "app_lock_delay_minutes"
         const val AUTO_BACKUP = "auto_backup"
         const val LETZTE_SICHERUNG = "letzte_sicherung"
+        const val SICHERUNGS_TEILE = "sicherungs_teile"
     }
 
     object Defaults {

@@ -58,6 +58,13 @@ interface IdeenDao {
     @Query("DELETE FROM ideen")
     suspend fun alleLoeschen()
 
+    @Query("SELECT COUNT(*) FROM ideen")
+    suspend fun anzahl(): Int
+
+    /** Für das Zurücknehmen eines Einspielvorgangs: Die Gespräche gehen per CASCADE mit. */
+    @Query("DELETE FROM ideen WHERE id IN (:ids)")
+    suspend fun loescheMehrere(ids: List<Long>): Int
+
     /** Umsortieren ist keine inhaltliche Änderung — geaendertAm bleibt stehen. */
     @Query("UPDATE ideen SET reihenfolge = :reihenfolge WHERE id = :id")
     suspend fun setzeReihenfolge(id: Long, reihenfolge: Int)
@@ -121,6 +128,9 @@ interface NachrichtenDao {
     @Query("DELETE FROM nachrichten")
     suspend fun alleLoeschen()
 
+    @Query("SELECT COUNT(*) FROM nachrichten")
+    suspend fun anzahl(): Int
+
     @Query("UPDATE nachrichten SET ideeId = :neu WHERE ideeId = :alt")
     suspend fun verschiebe(alt: Long, neu: Long)
 }
@@ -159,6 +169,9 @@ interface KategorienDao {
 
     @Query("SELECT COUNT(*) FROM kategorien WHERE art = :art")
     suspend fun anzahl(art: Kategorieart): Int
+
+    @Query("SELECT COUNT(*) FROM kategorien")
+    suspend fun anzahlGesamt(): Int
 
     @Query("UPDATE kategorien SET name = :name WHERE id = :id")
     suspend fun benenneUm(id: Long, name: String)

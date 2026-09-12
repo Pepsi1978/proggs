@@ -67,6 +67,7 @@ import de.frank.genialeideen.tts.VoiceGender
 import de.frank.genialeideen.ui.theme.IdeenSchriftFest
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Semantisch
+import de.frank.module.sicherung.IdeenTeil
 
 @Composable
 fun EinstellungenScreen(
@@ -76,7 +77,6 @@ fun EinstellungenScreen(
     aufEigeneStimme: () -> Unit,
     aufAnmelden: () -> Unit,
     aufOrdnerWaehlen: () -> Unit,
-    aufSicherungWaehlen: () -> Unit,
     aufAppSperreUmschalten: (Boolean) -> Unit,
     aufSeiteOeffnen: (String?) -> Unit,
 ) {
@@ -104,6 +104,10 @@ fun EinstellungenScreen(
     // einen Ordner geliefert hat.
     val ordnerAnzeige by viewModel.sicherungsOrdner.collectAsState()
     val sicherungsStatus by viewModel.sicherungsStatus.collectAsState()
+    val sicherungsUmfang by viewModel.sicherungsUmfang.collectAsState()
+    val autoSicherungAn by viewModel.autoSicherungAn.collectAsState()
+    val sicherungsliste by viewModel.sicherungsliste.collectAsState()
+    val listeOffen by viewModel.listeOffen.collectAsState()
     // Folgt dem echten Zustand: Wird die Bestätigung abgebrochen, springt der Schalter nicht an.
     val sperreAn by viewModel.appSperreAktiv.collectAsState()
     var sperreVerzoegerung by remember { mutableStateOf(settings.appLockDelayMinutes) }
@@ -510,7 +514,7 @@ fun EinstellungenScreen(
             Klappblock("Sicherung", "Eine Datei in deinem Ordner") {
                 Text(
                     "Wähle einmal einen Ordner und erlaube den Zugriff. „Jetzt sichern“ schreibt " +
-                        "danach alle Ideen direkt dorthin, ohne erneute Ordnerfreigabe. Es liegen immer nur zwei " +
+                        "danach direkt dorthin, ohne erneute Ordnerfreigabe. Es liegen immer nur zwei " +
                         "Sicherungen dort: die aktuelle und die davor.",
                     style = MaterialTheme.typography.bodySmall,
                     color = gold.textGedaempft,
@@ -526,16 +530,53 @@ fun EinstellungenScreen(
                     style = MaterialTheme.typography.labelSmall,
                     color = if (sicherungsStatus?.istFehler == true) Semantisch.fehler else gold.textGedaempft,
                 )
+
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    "Was gesichert wird",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = gold.primaer,
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    IdeenTeil.entries.forEach { teil ->
+                        Auswahlchip(teil.titel, teil in sicherungsUmfang) {
+                            viewModel.schalteSicherungsteil(teil)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    sicherungsUmfang.joinToString(" ") { (it as IdeenTeil).erklaerung },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = gold.textGedaempft,
+                )
+
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Auswahlchip("Jetzt sichern", false) {
                         viewModel.sichereJetzt(aufOrdnerWaehlen)
                     }
-                    Auswahlchip("Wiederherstellen", false) {
-                        aufSicherungWaehlen()
+                    Auswahlchip("Umfang zeigen", false) {
+                        viewModel.zeigeVoraussichtlich()
                     }
                 }
                 Spacer(Modifier.height(10.dp))
+                Auswahlchip("Von allein sichern", autoSicherungAn) {
+                    viewModel.setzeAutoSicherung(!autoSicherungAn, aufOrdnerWaehlen)
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    if (autoSicherungAn) {
+                        "Sichert zwei Minuten nach der letzten Änderung und beim Verlassen der App."
+                    } else {
+                        "Aus — es wird nur gesichert, wenn du „Jetzt sichern“ tippst."
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = gold.textGedaempft,
+                )
+
+                Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Auswahlchip("Ordner wählen", false) {
                         viewModel.waehleSicherungsOrdner(aufOrdnerWaehlen)
@@ -546,6 +587,26 @@ fun EinstellungenScreen(
                         }
                     }
                 }
+
+                Spacer(Modifier.height(10.dp))
+                Auswahlchip("Wiederherstellen", listeOffen) {
+                    viewModel.schalteSicherungsliste()
+                }
+                if (listeOffen) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Tipp auf eine Sicherung — du siehst erst, was drinsteckt, und bestätigst dann.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = gold.textGedaempft,
+                    )
+                    sicherungsliste.forEach { datei ->
+                        Spacer(Modifier.height(6.dp))
+                        Auswahlchip(datei.name.removeSuffix(".json"), false) {
+                            viewModel.stelleWiederHer(datei.uri)
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(10.dp))
                 Auswahlchip("Doppelte entfernen", false) {
                     viewModel.entferneDoppelte()

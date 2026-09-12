@@ -145,14 +145,6 @@ class MainActivity : FragmentActivity() {
                     ActivityResultContracts.OpenDocumentTree(),
                 ) { ordner: Uri? -> viewModel.sicherungsOrdnerGewaehlt(ordner) }
 
-                val sicherungsWahl = rememberLauncherForActivityResult(
-                    ActivityResultContracts.StartActivityForResult(),
-                ) { ergebnis ->
-                    if (ergebnis.resultCode == RESULT_OK) {
-                        ergebnis.data?.data?.let(viewModel::stelleWiederHer)
-                    }
-                }
-
                 if (gesperrt) {
                     SperrBildschirm(aufEntsperren = ::frageSperreAb)
                     LaunchedEffect(Unit) { frageSperreAb() }
@@ -174,29 +166,6 @@ class MainActivity : FragmentActivity() {
                                 }
                         },
                         aufAppSperreUmschalten = ::schalteAppSperre,
-                        aufSicherungWaehlen = {
-                            runCatching {
-                                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                                    addCategory(Intent.CATEGORY_OPENABLE)
-                                    type = "*/*"
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    viewModel.sicherungsOrdnerUri?.let { ordner ->
-                                        putExtra(
-                                            DocumentsContract.EXTRA_INITIAL_URI,
-                                            DocumentsContract.buildDocumentUriUsingTree(
-                                                ordner, DocumentsContract.getTreeDocumentId(ordner),
-                                            ),
-                                        )
-                                    }
-                                }
-                                sicherungsWahl.launch(intent)
-                            }.onFailure {
-                                viewModel.zeige(Meldung(
-                                    "Die Dateiauswahl ließ sich nicht öffnen: ${it.message}",
-                                    istFehler = true,
-                                ))
-                            }
-                        },
                         aufSeiteOeffnen = ::oeffneSeite,
                     )
                 }

@@ -35,6 +35,14 @@ abstract class GenialeIdeenDatabase : RoomDatabase() {
     abstract fun kategorienDao(): KategorienDao
 
     companion object {
+        /**
+         * Die Fassung des Datenmodells — dieselbe Zahl wie in `@Database(version = ...)`.
+         *
+         * Sie steht im Kopf jeder Sicherung, damit beim Einspielen erkennbar ist, aus welcher
+         * Zeit die Datei stammt. Bei einer Migration hier mit anheben.
+         */
+        const val VERSION = 4
+
         @Volatile private var instanz: GenialeIdeenDatabase? = null
 
         /** Kategorien kommen dazu; die Ideen bleiben unangetastet und bekommen nur ein Fach. */
