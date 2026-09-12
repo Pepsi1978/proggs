@@ -194,9 +194,10 @@ die dieser Schritt da ist: Eine Nabelschnur wurde übersehen. Zurück zu Phase 2
   echter Systemzeit, committen, pushen, auf dem Gerät installieren.
 - Das Modul selbst hat keinen eigenen Build und keine App-Version — sag das
   ausdrücklich, statt den Schritt stillschweigend zu überspringen.
-- **Ein Commit** für beides, Modul und Quell-App. Sie gehören zusammen; getrennt
-  committet gäbe es einen Stand, in dem die App auf ein Modul verweist, das es
-  noch nicht gibt.
+- **Ein Commit** über alles: Modulordner, `INDEX.md` und Quell-App. Sie gehören
+  zusammen; getrennt committet gäbe es einen Stand, in dem die App auf ein Modul
+  verweist, das es noch nicht gibt — oder einen Index, der ein Modul listet, das
+  im Repo fehlt.
 
 ## Modul-Versionen
 
@@ -254,7 +255,7 @@ enthält womöglich noch mehr, das nur für diese App gilt.
 
 | | Folge |
 |---|---|
-| Nur innen geändert | Nachziehen ist reines Überschreiben |
+| Nur innen geändert | Nachziehen kommt ohne Anbindungsarbeit aus (die Abweichungsprüfung läuft trotzdem) |
 | **Signatur geändert** | Jede Anbindung muss angepasst werden |
 
 Im zweiten Fall im Änderungsprotokoll ausdrücklich **„bricht Anbindung"**
@@ -290,6 +291,11 @@ Konsumententabelle wird wertlos.
 
 Eine Zeile in `MODUL.md` unter **Änderungen**: Version, echtes Datum, was
 geändert wurde, und ob es die Anbindung bricht.
+
+**Trag den Commit-Kurzhash nach**, sobald Schritt 7 committet hat. Das ist
+keine Formsache: `modul-einbauen` braucht beim Nachziehen den alten Stand aus
+der Historie, um die Abweichungsprüfung zu machen. Ohne den Hash muss er ihn
+über die Ordner-Historie suchen — mit ihm ist er in einem Griff da.
 
 ### 6. Abschluss — und warum hier nicht gebaut wird
 

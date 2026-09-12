@@ -56,4 +56,6 @@ oder eine Schnittstelle, **muss** „bricht Anbindung" dabeistehen — daran
 erkennt `modul-einbauen`, dass Nachziehen mehr ist als Überschreiben. Bauen
 andere Module auf diesem auf, hier ebenfalls nennen.
 
-- **v1** ({{DD.MM.YYYY}}) — aus {{QUELL_APP}} herausgelöst.
+| Version | Datum | Was | Bricht Anbindung | Commit |
+|---|---|---|---|---|
+| v1 | {{DD.MM.YYYY}} | aus {{QUELL_APP}} herausgelöst | — | {{kurzhash}} |

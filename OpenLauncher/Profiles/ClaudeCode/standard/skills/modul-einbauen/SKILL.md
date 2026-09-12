@@ -90,8 +90,8 @@ bevor irgendeine Datei kopiert wird**:
    für diese eine App**. Der Benutzer hat nach einem Einbau gefragt, nicht nach
    einer Verteilung an alle Konsumenten; sag ihm, dass das Modul schon liegt
    und du es stattdessen auf den aktuellen Stand hebst.
-   Gibt es stattdessen eine **eigene, ähnliche Umsetzung** in der App, geht es
-   in Phase 1b weiter.
+   Liegt dort **keine** Modulkopie, geht es nach diesen Prüfungen in Phase 1b
+   weiter — dort wird gesucht, ob die App die Sache bereits selbstgebaut hat.
 4. **Braucht das Modul andere Module?** Siehe den eigenen Abschnitt direkt
    unter dieser Liste — das ist mehr als ein Blick ins Manifest.
 5. **Ist das Modul selbst sauber?** Durchsuch den Modulcode nach Theme- und
@@ -157,8 +157,10 @@ Sicherungsmodul nach Export, Sicherung, Zip, Datei schreiben.
 | Gefunden | Vorgehen |
 |---|---|
 | Nichts | normaler Einbau, weiter mit Phase 2 |
-| Exakte Modulkopie | Nachziehen, nicht Einbauen |
 | **Eigene, ähnliche Umsetzung** | **Ablösung — erst die Datenprüfung unten** |
+
+(Eine exakte Modulkopie ist hier nicht mehr möglich — die hätte schon Prüfung 3
+abgefangen.)
 
 ### Die Datenprüfung — vor jeder Ablösung
 
@@ -198,6 +200,13 @@ weiterläuft.
 >
 > Wie soll ich vorgehen?
 
+Fällt die Wahl auf Weg 1: **Die Umstellung gehört der App, nicht dem Modul.**
+Eine Datenbank-Migration, ein Umschreiben von Einstellungsschlüsseln, ein
+Umrechnen alter Werte — all das kommt in den App-Code oder in die Anbindung,
+niemals in die Modulkopie. Das Modul kennt die Vergangenheit dieser einen App
+nicht und darf sie auch nicht kennen, sonst schleppt es sie in jede weitere
+App mit.
+
 **Warte auf die Antwort.** Das ist die eine Stelle in diesem Skill, an der
 nicht weitergearbeitet werden darf, weil ein falscher Schritt nicht
 zurückholbar ist.
@@ -229,8 +238,10 @@ Ist die Datenfrage geklärt:
    Fassungen nebeneinander liegen, kann der Build an doppelten Bezeichnern
    oder mehrdeutigen Aufrufen scheitern, und man sucht den Fehler im neuen
    Modul statt im alten Rest.
-5. Im Commit ausdrücklich nennen, was abgelöst wurde und was mit den Daten
-   geschehen ist.
+5. **Weiter mit Phase 5** — Buchführung und Abschluss. Es gibt nur *einen*
+   Abschluss-Commit, den aus Phase 5; hier wird keiner zusätzlich gemacht.
+   In dessen Nachricht ausdrücklich nennen, was abgelöst wurde und was mit den
+   Daten geschehen ist.
 
 ## Phase 2 — Klassifikation vorlegen
 
@@ -272,10 +283,17 @@ Frag nur nach Spalte 3 — und nicht als offene Frage, sondern mit Vorschlag:
 3. **Aufrufstelle** einbauen — `BEISPIEL.md` des Moduls ist die Vorlage, aber
    der Aufruf gehört an die Stelle, an der er in *dieser* App Sinn ergibt.
 
-Plattform-Eigenheiten stehen in `references/android.md`, `windows.md`,
-`macos.md`, `ios.md` — vor dem Kopieren die passende lesen. Bei Xcode ist die
-Zielmitgliedschaft der häufigste Stolperstein, bei WPF ein ausdrückliches
-`<Compile Include=…>`.
+Plattform-Eigenheiten stehen in `references/` — vor dem Kopieren die passende
+lesen:
+
+| Kreis | Datei |
+|---|---|
+| M1 Android | `references/android.md` |
+| M2 Windows | `references/windows.md` |
+| M3 macOS und M4 iOS | `references/macos.md` (deckt beide ab) |
+
+Bei Xcode ist die Zielmitgliedschaft der häufigste Stolperstein, bei WPF ein
+ausdrückliches `<Compile Include=…>`.
 
 ## Phase 4 — Abnahme
 
@@ -343,6 +361,10 @@ Auslöser: „zieh M1.1 nach", „zieh M1.1 nach in GenialeIdeen", „verteile d
    die eigentliche Arbeit, nicht das Kopieren. Ebenso prüfen, ob
    `Host muss liefern` gegenüber dem Stand der App länger geworden ist. Nenn
    beides **vorher**, statt es später als Baufehler zu melden.
+   Und prüf, ob **`Braucht Module` gewachsen** ist: Stützt sich das Modul seit
+   der neuen Fassung auf ein weiteres Modul, muss dieses in jeder Konsumenten-App
+   zuerst eingebaut werden — sonst bricht der Build dort mit „unresolved
+   reference", obwohl an der App nichts falsch ist.
 3. **Abhängige Module prüfen** (siehe unten) — sie kommen vor den Apps.
 4. **Je App:** Abweichungsprüfung (siehe unten) → nur die Modulkopie
    überschreiben, Anbindung unangetastet lassen → bauen → Regel 9 → **ein
@@ -379,9 +401,18 @@ Bibliotheksstand **der Version, die die App laut Konsumententabelle hat** (nicht
 gegen den neuen — sonst siehst du nur die Modul-Änderung selbst). Die
 Anbindungsdatei bleibt dabei außen vor, wie in Phase 4.
 
-Den alten Stand holst du aus der Historie, etwa mit
-`git show <Commit-von-vN>:<Pfad>` — die Bibliothek liegt im selben Repo, der
-Stand ist also immer greifbar.
+Den alten Stand holst du aus der Historie — die Bibliothek liegt im selben
+Repo, er ist also immer greifbar. Steht im Änderungsprotokoll der Commit zu
+`vN`, nimm ihn direkt; sonst such ihn über die Historie des Modulordners:
+
+```
+git log --oneline -- Module/<Plattform>/<Ordnername>/
+git show <Commit>:Module/<Plattform>/<Ordnername>/src/<Datei>
+```
+
+Findest du den Stand nicht mehr zweifelsfrei, **rate nicht**. Dann ist die
+Abweichungsprüfung nicht durchführbar, und das ist selbst ein Grund
+anzuhalten und nachzufragen.
 
 | Ergebnis | Vorgehen |
 |---|---|
@@ -419,13 +450,22 @@ Module durch, sammle sämtliche Rückfragen und stell sie **in einem Zug**. Sons
 muss der Benutzer siebenmal hintereinander etwas entscheiden, jedes Mal mit
 Wartezeit dazwischen.
 
+**Der Sicherungscommit vor einer Ablösung wird nur einmal gemacht**, ganz am
+Anfang, auch wenn mehrere der Module einen Eigenbau ablösen. Er sichert den
+Stand der App vor dem ganzen Arbeitsgang — ein Commit je Ablösung würde der
+Regel „ein Commit für die App" widersprechen und die Historie zerfasern.
+
 **Reihenfolge nach Abhängigkeit, nicht nach Nummer.** Braucht M1.5 das Modul
 M1.2, kommt M1.2 zuerst — auch wenn der Benutzer sie anders aufgezählt hat. Das
 Feld `Braucht Module:` in den Manifesten gibt die Reihenfolge vor.
 
-Danach jedes Modul vollständig durch Phase 2–4. Gemeinsam ist nur der
-Abschluss — **ein** Build, **ein** Versions-Bump, **ein** Commit für die App.
+Danach jedes Modul durch Phase 2 und 3. Phase 4 und 5 laufen **einmal
+gemeinsam** am Ende: ein Build, ein Versions-Bump, ein Commit für die App —
+in dem dann alle Konsumentenzeilen und alle Zählerstände auf einmal stehen.
 Sieben Bumps für einen Arbeitsgang wären Lärm.
+
+Die `diff`-Prüfung aus Phase 4 gilt dabei **je Modul**, nicht einmal pauschal:
+Jede Kopie wird einzeln gegen ihre Bibliotheksfassung gehalten.
 
 Bricht ein Modul die Prüfung in Phase 1, überspring **nur dieses** und bau die
 übrigen fertig — außer ein anderes Modul hängt davon ab, dann fällt es mit.
