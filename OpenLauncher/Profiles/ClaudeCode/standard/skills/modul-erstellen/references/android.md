@@ -12,8 +12,15 @@ fern, damit eine Kopie in einer fremden App nie mit deren Paketen kollidiert.
 
 | | Pfad |
 |---|---|
-| Modul | `Module/Android/M1.y-Name/src/de/frank/module/<kurzname>/` |
+| Modul | `Module/Android/<Ordnername>/src/de/frank/module/<kurzname>/` |
 | Kopie in der App | `app/src/main/java/de/frank/module/<kurzname>/` |
+
+`<Ordnername>` ist `Mx.y-Anzeigename` in werkzeugfester Fassung, `<kurzname>`
+der kleingeschriebene ASCII-Rest ohne Trennzeichen — beides entsteht in Phase 1
+aus dem Namen, den der Benutzer vergeben hat.
+
+**Beispiel:** Anzeigename `Drag & Drop Modul` →
+Ordner `M1.8-Drag-und-Drop-Modul`, Paket `de.frank.module.dragunddropmodul`.
 
 Der Pfad in der App spiegelt den Namensraum, dadurch bleibt die Datei
 byte-identisch und der Ordnerbaum trotzdem sauber. Kotlin verlangt keine

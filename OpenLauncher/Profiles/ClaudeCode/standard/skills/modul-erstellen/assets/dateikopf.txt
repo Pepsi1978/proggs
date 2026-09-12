@@ -7,8 +7,8 @@ Kommentarzeichen: // bei Kotlin, C# und Swift.
 
 ────────────────────────────────────────────────────────────────────────────
 // ──────────────────────────────────────────────────────────────────────
-// Modul {{NUMMER}} — {{NAME}} · Stand v{{N}}
-// Quelle: Module/{{PLATTFORM}}/{{NUMMER}}-{{NAME}}/
+// Modul {{NUMMER}} — {{ANZEIGENAME}} · Stand v{{N}}
+// Quelle: Module/{{PLATTFORM}}/{{ORDNERNAME}}/
 //
 // Diese Datei ist eine 1:1-Kopie. Änderungen bitte NUR im Modul vornehmen
 // und danach mit "zieh {{NUMMER}} nach" an die Konsumenten verteilen —

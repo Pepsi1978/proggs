@@ -30,6 +30,38 @@
       ]
     },
     {
+      "id": "name-mitgegeben",
+      "soll_ausloesen": true,
+      "prompt": "Erstelle aus dem Drag-and-Drop von GenialeIdeen ein eigenes Modul mit dem Namen Drag & Drop Modul.",
+      "erwartet": [
+        "übernimmt 'Drag & Drop Modul' wörtlich als Anzeigenamen, kürzt oder erfindet nichts",
+        "legt den Ordner als M1.x-Drag-und-Drop-Modul an (& wird und, Leerzeichen werden Bindestriche)",
+        "leitet den Namensraum de.frank.module.dragunddropmodul ab",
+        "zeigt Nummer und Namensraum, bevor er anlegt",
+        "fragt NICHT nach dem Namen, der wurde ja genannt"
+      ]
+    },
+    {
+      "id": "name-fehlt",
+      "soll_ausloesen": true,
+      "prompt": "Mach aus der Wischgeste in PerfectMoment bitte ein Modul.",
+      "erwartet": [
+        "fragt nach dem Namen, bevor irgendein Ordner entsteht",
+        "nennt dabei schon die vorgesehene Nummer",
+        "denkt sich KEINEN Namen aus dem Code aus"
+      ]
+    },
+    {
+      "id": "nummer-nach-luecke",
+      "soll_ausloesen": true,
+      "prompt": "Bau daraus ein Modul, nenn es Kartenstapel.",
+      "kontext": "Im Kreis M1 ist bereits bis M1.7 vergeben.",
+      "erwartet": [
+        "vergibt M1.8, nicht M1.1",
+        "belegt keine frei gewordene Lücke nach"
+      ]
+    },
+    {
       "id": "negativ-einbau",
       "soll_ausloesen": false,
       "prompt": "Nimm bitte die Module M1.1 bis M1.3 und bau sie in die neue App ein.",

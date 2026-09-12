@@ -12,8 +12,28 @@ Angelegt und gepflegt vom Skill `modul-erstellen`.
 | M3.x  | macOS     | Swift / SwiftUI                | `Module/macOS/`   |
 | M4.x  | iOS       | Swift / SwiftUI                | `Module/iOS/`     |
 
-Ordnername ist autoritativ: `Mx.y-Kurzname`. Die nächste freie Nummer ergibt
-sich aus der höchsten vorhandenen im jeweiligen Kreis, plus eins.
+Ordnername ist autoritativ: `Mx.y-Anzeigename`. Die nächste freie Nummer ergibt
+sich aus der höchsten vorhandenen im jeweiligen Kreis, plus eins — Lücken werden
+nicht nachbelegt.
+
+## Namensgebung
+
+**Den Namen vergibt Frank, die Nummer der Skill.** Gesagt wird zum Beispiel
+„bau daraus ein Modul und nenn es Drag & Drop Modul"; fällt kein Name, fragt der
+Skill nach, statt sich einen auszudenken.
+
+Der gesprochene Name bleibt als **Anzeigename** erhalten und steht in dieser
+Liste und im Manifest. Für Ordner und Namensraum wird er werkzeugfest gemacht:
+`&` → `und`, Leerzeichen → `-`, Pfad-Sonderzeichen entfallen.
+
+| | |
+|---|---|
+| Anzeigename | `Drag & Drop Modul` |
+| Ordner | `M1.8-Drag-und-Drop-Modul` |
+| Namensraum | `de.frank.module.dragunddropmodul` |
+
+Bei einem Namen ohne Leerzeichen und Sonderzeichen passiert dabei nichts — aus
+`DragReorder` wird schlicht `M1.1-DragReorder`.
 
 ## Grundsatz: Kopie, nicht Verdrahtung
 

@@ -1,6 +1,6 @@
 ---
 name: modul-erstellen
-description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/Mx.y-Name/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Der Skill vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Einbau-Skill zuständig.
+description: Löst einen gut funktionierenden Bereich aus einer fertigen App heraus und legt ihn als wiederverwendbares Modul unter ~/proggs/Module/<Plattform>/Mx.y-Name/ ab — plattformübergreifend für Android (Kotlin/Compose), Windows (C#/WPF), macOS und iOS (Swift/SwiftUI). Nutze diesen Skill IMMER wenn der Benutzer sagt "mach daraus ein Modul", "als Modul abspeichern", "speicher das als Modul", "extrahiere X als Modul", "bau aus App Y das X-Modul", "das gefällt mir, das will ich wiederverwenden", "als M1.x speichern", "neues Modul anlegen", "Modul erstellen", "Modul-Skill", "in die Modul-Bibliothek aufnehmen", "das Drag-and-Drop als Modul", "herauslösen und ablegen". Ebenso bei Sätzen, die gleich einen Namen mitgeben — "bau daraus ein Modul und nenn es X", "erstelle ein Modul mit dem Namen X", "mach daraus das X-Modul", "speicher das als X ab". Auch bei Spracherkennungs-Varianten wie "Zwift" (= Swift), "Dreck-and-Drop" (= Drag-and-Drop) oder "Modul abspeichern aus der App". Der Skill übernimmt den genannten Namen wörtlich als Anzeigenamen und fragt danach, wenn keiner genannt wurde, vergibt die nächste freie M-Nummer, schneidet die Abhängigkeiten zur Ursprungs-App sauber durch, schreibt das Manifest MODUL.md, verdrahtet die Ursprungs-App auf die Kopie um und baut sie zur Abnahme durch. NICHT nutzen, wenn ein bestehendes Modul in eine App eingebaut werden soll ("bau M1.1 ein", "nimm M1.1 bis M1.7", "Modul einbauen") oder wenn eine Änderung an alle Konsumenten verteilt werden soll ("zieh M1.1 nach") — dafür ist der Einbau-Skill zuständig.
 ---
 
 # Modul erstellen
@@ -39,13 +39,61 @@ hineinfressen.
 
 ### Phase 1 — Nummer und Name
 
-Lies `~/proggs/Module/INDEX.md`. Bestimme den Nummernkreis aus der Plattform
-(M1 Android, M2 Windows, M3 macOS, M4 iOS) und nimm die nächste freie Nummer.
+**Die Nummer kommt von dir, der Name vom Benutzer.** Das ist die Arbeitsteilung,
+auf die der Skill ausgelegt ist: Der Benutzer sagt „bau daraus ein Modul und
+nenn es Drag & Drop Modul", und alles Weitere ergibt sich daraus.
 
-Der Kurzname ist ein Begriff, kein Satz: `DragReorder`, nicht
-`DragAndDropUmsortierenFuerListen`. Gibt es den Namen im Kreis schon: abbrechen
-und nachfragen, ob das bestehende Modul erweitert werden soll — eine zweite
-Nummer für dieselbe Sache macht den Index unbrauchbar.
+**Nummer.** Lies `~/proggs/Module/INDEX.md`, bestimme den Nummernkreis aus der
+Plattform (M1 Android, M2 Windows, M3 macOS, M4 iOS) und nimm die nächste freie
+Nummer im Kreis — also die höchste vorhandene plus eins. Ist M1.7 die höchste,
+wird das neue Modul M1.8. Lücken werden **nicht** nachbelegt: Eine Nummer, die
+einmal vergeben war, bleibt verbraucht, sonst zeigen alte Notizen und
+Commit-Nachrichten irgendwann auf das falsche Modul.
+
+**Name.** Nimm den Namen, den der Benutzer nennt, wörtlich als Anzeigenamen —
+auch wenn er lang ist, Leerzeichen hat oder auf „Modul" endet. Er hat ihn sich
+so gemerkt, und in einem halben Jahr sucht er danach.
+
+Nennt er **keinen** Namen, frag nach, bevor du irgendetwas anlegst:
+
+> „Wie soll das Modul heißen? Die Nummer wird M1.8."
+
+Erfinde keinen Namen aus dem Code heraus. Ein selbst ausgedachter Name findet
+sich später nicht wieder, weil der Benutzer nach seinem eigenen Wort sucht.
+
+**Aus dem Anzeigenamen werden drei Dinge abgeleitet:**
+
+| | Beispiel | Regel |
+|---|---|---|
+| Anzeigename | `Drag & Drop Modul` | wörtlich, kommt in `MODUL.md` und `INDEX.md` |
+| Ordnername | `M1.8-Drag-und-Drop-Modul` | Nummer, Bindestrich, Name werkzeugfest gemacht |
+| Technischer Kurzname | `dragunddropmodul` | für Namensraum und Ordner in der App |
+
+Die Umformung zum Ordnernamen ist bewusst winzig und vorhersehbar:
+
+1. `&` wird zu `und`
+2. Leerzeichen werden zu `-`
+3. Zeichen, die in Pfaden nicht vorkommen dürfen (`/ \ : * ? " < > |`), fallen weg
+
+Bei einem Namen ohne Leerzeichen und Sonderzeichen passiert dadurch gar nichts —
+aus `DragReorder` wird schlicht `M1.1-DragReorder`.
+
+Der Grund für Schritt 1 und 2: Ein `&` im Pfad ist in PowerShell der
+Aufrufoperator und in `cmd` ein Befehlstrenner. Ein Ordner mit `&` oder
+Leerzeichen zwingt jeden späteren Befehl in Anführungszeichen, und genau das
+wird irgendwann vergessen. Der Anzeigename bleibt davon unberührt — verloren
+geht nichts, es steht nur an zwei Stellen leicht verschieden.
+
+Der technische Kurzname ist kleingeschrieben, nur ASCII (Umlaute werden
+umschrieben), ohne Trennzeichen — Namensräume vertragen nichts anderes. Zeig ihn
+dem Benutzer zusammen mit der Nummer, damit er ihn in einem Satz korrigieren
+kann, falls er zu sperrig gerät:
+
+> „Wird M1.8-Drag-und-Drop-Modul, Namensraum `de.frank.module.dragunddropmodul`."
+
+**Namensdopplung.** Gibt es den Namen im Kreis schon: abbrechen und nachfragen,
+ob das bestehende Modul erweitert werden soll. Eine zweite Nummer für dieselbe
+Sache macht den Index unbrauchbar.
 
 ### Phase 2 — Bereich finden und Nabelschnüre vorlegen
 

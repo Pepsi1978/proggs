@@ -1,10 +1,16 @@
-# {{NUMMER}} — {{NAME}}
+# {{NUMMER}} — {{ANZEIGENAME}}
 
 {{EIN_SATZ_WAS_ES_TUT}}
 
 - **Stand:** v1
 - **Plattform:** {{PLATTFORM}}
 - **Angelegt:** {{DD.MM.YYYY HH:MM}}
+- **Ordner:** `Module/{{PLATTFORM}}/{{ORDNERNAME}}/`
+- **Kurzname:** `{{kurzname}}` — steckt im Namensraum und im Ordner der App-Kopie
+
+Der Anzeigename in der Überschrift ist der Name, den der Benutzer vergeben hat.
+Ordner- und Kurzname sind daraus abgeleitet; wer nach dem Modul sucht, sucht
+nach der Überschrift.
 
 ## Herkunft
 
