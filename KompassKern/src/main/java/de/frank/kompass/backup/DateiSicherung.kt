@@ -39,6 +39,19 @@ class DateiSicherung(private val context: Context) {
     val ordner: Uri?
         get() = prefs.getString(KEY_ORDNER, null)?.let(Uri::parse)
 
+    /**
+     * Der zuletzt ermittelte Ordnername.
+     *
+     * [ordnerName] fragt den Speicheranbieter — bei einem Drive-Ordner also die Drive-App —
+     * über den ContentResolver. Der Einstellungs-Bildschirm liest seinen Zustand bei JEDER
+     * Änderung neu ein, vom Schieberegler bis zum Schalter, und tut das auf dem Hauptfaden.
+     * Eine solche Abfrage dort kostet im ungünstigen Fall hunderte Millisekunden und lässt die
+     * Oberfläche stocken. Der Name ändert sich nur, wenn ein anderer Ordner gewählt wird —
+     * genau dann wird er verworfen.
+     */
+    @Volatile
+    private var gemerkterName: String? = null
+
     /** Ordner merken und die Schreibberechtigung über Neustarts hinweg behalten. */
     fun merkeOrdner(uri: Uri) {
         context.contentResolver.takePersistableUriPermission(
@@ -46,6 +59,7 @@ class DateiSicherung(private val context: Context) {
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
         )
         prefs.edit().putString(KEY_ORDNER, uri.toString()).apply()
+        gemerkterName = null
     }
 
     fun vergissOrdner() {
@@ -58,16 +72,20 @@ class DateiSicherung(private val context: Context) {
             }
         }
         prefs.edit().remove(KEY_ORDNER).apply()
+        gemerkterName = null
     }
 
     /** Der Name des Ordners, wie ihn der Dateiwähler zeigt — für die Anzeige in den Einstellungen. */
     fun ordnerName(): String? {
         val baum = ordner ?: return null
+        gemerkterName?.let { return it }
         val kennung = runCatching { DocumentsContract.getTreeDocumentId(baum) }.getOrNull()
             ?: return baum.lastPathSegment
         val dokument = DocumentsContract.buildDocumentUriUsingTree(baum, kennung)
-        return spalte(dokument, DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+        val name = spalte(dokument, DocumentsContract.Document.COLUMN_DISPLAY_NAME)
             ?: kennung.substringAfterLast(':').substringAfterLast('/')
+        gemerkterName = name
+        return name
     }
 
     /**
@@ -81,7 +99,9 @@ class DateiSicherung(private val context: Context) {
      * wurde, hiesse eine gute Sicherung gegen eine ungeprüfte einzutauschen. Geht beim
      * Zurücklesen etwas schief, stehen so wenigstens noch die beiden alten Stände da.
      */
-    suspend fun schreibe(fuelle: suspend (java.io.Writer) -> Unit): Sicherungsdatei = withContext(Dispatchers.IO) {
+    suspend fun schreibe(
+        fuelle: suspend (java.io.Writer) -> Unit,
+    ): Pair<Sicherungsdatei, List<Sicherungsdatei>> = withContext(Dispatchers.IO) {
         val baum = ordner ?: error("Es ist noch kein Sicherungsordner gewählt.")
         val bisherige = listeAuf(baum, benenneAlteUm = true)
         val name = neuerName(bisherige)
@@ -111,16 +131,21 @@ class DateiSicherung(private val context: Context) {
             throw fehler
         }
 
-        Sicherungsdatei(datei, name, System.currentTimeMillis())
+        Sicherungsdatei(datei, name, System.currentTimeMillis()) to bisherige
     }
 
     /**
      * Räumt alles bis auf die [BEHALTEN] jüngsten weg — aufzurufen, NACHDEM die frische
      * Sicherung geprüft ist.
+     *
+     * [vorherige] ist der Stand von vor dem Schreiben; die frisch geschriebene Datei kommt
+     * dazu. Damit entfällt eine zweite Abfrage des Ordners — beim Speicheranbieter eines
+     * Cloud-Dienstes ist das keine billige Auskunft. Nichts kann sich dazwischen geändert
+     * haben: Der ganze Vorgang läuft unter demselben Riegel.
      */
-    suspend fun raeumeAlteWeg() = withContext(Dispatchers.IO) {
-        val baum = ordner ?: return@withContext
-        raeumeAuf(listeAuf(baum).drop(BEHALTEN))
+    suspend fun raeumeAlteWeg(vorherige: List<Sicherungsdatei>) = withContext(Dispatchers.IO) {
+        // Die frisch geschriebene zählt als die jüngste — vom Rest bleiben BEHALTEN-1 stehen.
+        raeumeAuf(vorherige.drop(BEHALTEN - 1))
     }
 
     /** Alle Sicherungen im Ordner, die jüngste zuerst. */
@@ -187,10 +212,15 @@ class DateiSicherung(private val context: Context) {
         // Muster steht der Tag vorn, also ordnet die Schreibweise nichts — der 01.10. käme vor
         // dem 20.03. Erst die gelesene Zeit bringt die Reihenfolge, und nur die entscheidet,
         // welche Sicherung als "die davor" stehen bleibt.
-        return gefunden.sortedWith(
-            compareByDescending<Sicherungsdatei> { zeitpunktAusNamen(it.name) ?: it.geaendertAm }
-                .thenByDescending { it.geaendertAm },
-        )
+        // Den Zeitpunkt je Datei EINMAL lesen. Als Vergleichsschlüssel würde er bei jedem
+        // Vergleich neu aus dem Namen geparst — samt frisch gebautem Datumsformat.
+        return gefunden
+            .map { datei -> datei to (zeitpunktAusNamen(datei.name) ?: datei.geaendertAm) }
+            .sortedWith(
+                compareByDescending<Pair<Sicherungsdatei, Long>> { it.second }
+                    .thenByDescending { it.first.geaendertAm },
+            )
+            .map { it.first }
     }
 
     /**
@@ -205,6 +235,12 @@ class DateiSicherung(private val context: Context) {
         name.endsWith(".json") &&
             (MUSTER.any { it.containsMatchIn(name) } || ALTE_PRAEFIXE.any(name::startsWith))
 
+    /**
+     * SimpleDateFormat ist nicht threadsicher — deshalb je Aufruf eine eigene Instanz statt
+     * einer geteilten. Die Aufrufe kommen aus der Oberfläche und aus der selbsttätigen
+     * Sicherung, also aus verschiedenen Fäden; eine geteilte Instanz liefert dann stillschweigend
+     * falsche Zeiten.
+     */
     private fun zeitpunktAusNamen(name: String): Long? {
         MUSTER.firstNotNullOfOrNull { it.find(name) }?.let { treffer ->
             val format = SimpleDateFormat(ZEIT_MUSTER, Locale.GERMANY).apply { isLenient = false }

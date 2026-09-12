@@ -551,6 +551,16 @@ class KompassRepository(context: Context) {
          */
         private var bekannteFragen: MutableSet<Triple<String, String, String>>? = null
         private var bekannteGespraeche: MutableSet<List<Pair<String, String>>>? = null
+        private var bekannteEintraege: MutableSet<String>? = null
+        private var eintraegeOhneErklaerung: MutableSet<String>? = null
+
+        /** Wie [bekannteFragen], nur für die Einträge: zwei Abfragen statt zweitausend. */
+        private suspend fun eintragsKennungen(): MutableSet<String> =
+            bekannteEintraege ?: eintraege.alleKennungen().toMutableSet().also { bekannteEintraege = it }
+
+        private suspend fun luecken(): MutableSet<String> =
+            eintraegeOhneErklaerung
+                ?: eintraege.kennungenOhneErklaerung().toMutableSet().also { eintraegeOhneErklaerung = it }
 
         private suspend fun fragenSchluessel(): MutableSet<Triple<String, String, String>> =
             bekannteFragen ?: fragen.beobachteAlle().first()
@@ -571,8 +581,8 @@ class KompassRepository(context: Context) {
                 uebersprungen += 1
                 return
             }
-            val vorhanden = eintraege.lade(id)
-            if (vorhanden == null) {
+            val kennungen = eintragsKennungen()
+            if (id !in kennungen) {
                 val name = werte["name"].orEmpty()
                 val bereich = werte["bereich"].orEmpty()
                 if (name.isBlank() || bereich.isBlank()) {
@@ -600,12 +610,19 @@ class KompassRepository(context: Context) {
                         ),
                     ),
                 )
+                kennungen += id
                 spur.neueEintraege += id
                 return
             }
             // Vorhandenes bleibt stehen. Nur eine Lücke wird gefüllt: ein Eintrag ohne jede
             // Erklärung bekommt die aus der Sicherung. Alles andere wird übergangen.
-            if (text.isBlank() || vorhanden.erklaerung.isNotBlank()) {
+            if (text.isBlank() || id !in luecken()) {
+                uebersprungen += 1
+                return
+            }
+            // Erst hier den ganzen Eintrag holen — das betrifft nur die wenigen echten Lücken.
+            val vorhanden = eintraege.lade(id)
+            if (vorhanden == null || vorhanden.erklaerung.isNotBlank()) {
                 uebersprungen += 1
                 return
             }
@@ -616,6 +633,7 @@ class KompassRepository(context: Context) {
                     zuletztGeaendert = jetzt,
                 ),
             )
+            luecken() -= id
             spur.gefuellteErklaerungen += id
         }
 
@@ -733,12 +751,27 @@ class KompassRepository(context: Context) {
                 )
             }
         }
-        baueSuchIndexNeu()
+        // Nur wenn wirklich etwas verschwunden ist. Der Neuaufbau lädt den GANZEN Bestand —
+        // bei Claude Kompass über zweitausend Einträge mit langen Texten — und indiziert ihn
+        // von vorn. Wurde nichts zurückgenommen, stimmt der Index unverändert.
+        if (zurueck > 0) baueSuchIndexNeu()
         KompassLog.info("Repository", "nimmEinspielenZurueck", "Einspielen zurückgenommen", mapOf("anzahl" to zurueck))
         return zurueck
     }
 
-    suspend fun schliesseEinspielenAb() = baueSuchIndexNeu()
+    /**
+     * Nach dem Einspielen: den Suchindex nachziehen — aber nur, wenn wirklich etwas ankam.
+     *
+     * Der häufigste Fall beim Wiederherstellen ist, dass schon alles da ist: Man spielt dieselbe
+     * Sicherung ein zweites Mal ein oder gleicht zwei Geräte ab, die kaum auseinanderliegen.
+     * Dann steht am Ende eine leere Spur — und ein Neuaufbau, der den ganzen Bestand lädt und
+     * neu indiziert, wäre Arbeit ohne Wirkung. Sichtbar wird das als sekundenlanges Warten nach
+     * einem Einspielen, das nichts getan hat.
+     */
+    suspend fun schliesseEinspielenAb(spur: Einspielspur) {
+        if (spur.leer) return
+        baueSuchIndexNeu()
+    }
 
     companion object {
         const val ART_EINTRAG = "eintrag"

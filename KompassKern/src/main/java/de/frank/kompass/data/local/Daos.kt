@@ -54,6 +54,20 @@ interface EintragDao {
     @Query("SELECT COUNT(*) FROM eintraege WHERE bereich IN (:bereiche)")
     suspend fun anzahlIn(bereiche: List<String>): Int
 
+    /**
+     * Nur die Kennungen — für das Einspielen einer Sicherung.
+     *
+     * Vorher wurde je Eintrag der Sicherung ein `lade(id)` abgesetzt. Bei einer Sicherung mit
+     * der ganzen Wissensbasis sind das über zweitausend einzelne Abfragen, von denen fast alle
+     * dasselbe ergeben: "kenne ich schon". Zwei Abfragen vorab beantworten dieselbe Frage.
+     */
+    @Query("SELECT id FROM eintraege")
+    suspend fun alleKennungen(): List<String>
+
+    /** Die Kennungen der Einträge ohne jede Erklärung — nur dort füllt eine Sicherung eine Lücke. */
+    @Query("SELECT id FROM eintraege WHERE TRIM(erklaerung) = ''")
+    suspend fun kennungenOhneErklaerung(): List<String>
+
     @Query("SELECT COUNT(*) FROM eintraege")
     suspend fun anzahl(): Int
 

@@ -94,11 +94,11 @@ class SicherungsDienst(
     private suspend fun sichereGeschuetzt(): String {
         val umfang = umfangGeber()
         var anzahl = SicherungsAnzahl()
-        val geschrieben = datei.schreibe { ausgabe ->
+        val (geschrieben, vorherige) = datei.schreibe { ausgabe ->
             anzahl = Sicherung.schreibe(
                 ziel = ausgabe,
                 quelle = repository.sicherungsQuelle,
-                erstelltAm = ZEIT.format(Date()),
+                erstelltAm = zeit().format(Date()),
                 umfang = umfang,
                 roomVersion = KompassDatabase.VERSION,
             )
@@ -127,7 +127,7 @@ class SicherungsDienst(
         BackupStatus.markBackedUp(context, geprueft = true)
         // Erst jetzt: Eine gute Sicherung gegen eine ungeprüfte einzutauschen wäre der
         // Fehler, gegen den das Zurücklesen überhaupt schützt.
-        datei.raeumeAlteWeg()
+        datei.raeumeAlteWeg(vorherige)
 
         KompassLog.info(
             "SicherungsDienst",
@@ -175,7 +175,7 @@ class SicherungsDienst(
         datei.lies(quelle) { Sicherung.pruefe(it) }
         val senke = repository.EinspielSenke()
         datei.lies(quelle) { Sicherung.spieleEin(it, senke) }
-        repository.schliesseEinspielenAb()
+        repository.schliesseEinspielenAb(senke.spur)
         EinspielErgebnis(senke.bericht(), senke.spur)
         }
     }
@@ -186,6 +186,7 @@ class SicherungsDienst(
     }
 
     private companion object {
-        private val ZEIT = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
+        /** Je Aufruf neu: SimpleDateFormat ist nicht threadsicher. */
+        private fun zeit() = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
     }
 }

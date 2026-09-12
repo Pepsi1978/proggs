@@ -752,7 +752,7 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
                             SicherungsEintrag(
                                 quelle = datei.uri,
                                 name = datei.name,
-                                geschriebenAm = GESCHRIEBEN_AM.format(Date(datei.geaendertAm)),
+                                geschriebenAm = geschriebenAm().format(Date(datei.geaendertAm)),
                             )
                         },
                         fehler = if (dateien.isEmpty()) {
@@ -901,8 +901,15 @@ class EinstellungenViewModel(private val container: KompassContainer) : ViewMode
     }
 
     companion object {
-        /** Der Zeitpunkt, den die Auswahl neben jeder Sicherung zeigt. */
-        private val GESCHRIEBEN_AM = java.text.SimpleDateFormat("dd.MM.yyyy, HH:mm", java.util.Locale.GERMANY)
+        /**
+         * Der Zeitpunkt, den die Auswahl neben jeder Sicherung zeigt.
+         *
+         * Je Aufruf eine eigene Instanz: SimpleDateFormat ist nicht threadsicher, und die
+         * Auswahl wird aus dem Modell-Bereich gebaut, während anderswo dasselbe Format für
+         * den Stand gelesen wird.
+         */
+        private fun geschriebenAm() =
+            java.text.SimpleDateFormat("dd.MM.yyyy, HH:mm", java.util.Locale.GERMANY)
 
         const val SCHLUESSEL_GOOGLE = "google"
         const val SCHLUESSEL_ALIBABA = "alibaba"

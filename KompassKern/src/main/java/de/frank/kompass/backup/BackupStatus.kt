@@ -23,7 +23,12 @@ object BackupStatus {
     private const val KEY_GEPRUEFT = "zuletzt_geprueft"
     private const val KEY_GESCHEITERT = "letzter_versuch_gescheitert"
 
-    private val format = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
+    /**
+     * Je Aufruf eine eigene Instanz: SimpleDateFormat ist nicht threadsicher, und [describe]
+     * wird sowohl aus der Oberfläche als auch aus der selbsttätigen Sicherung gerufen. Eine
+     * geteilte Instanz liefert bei gleichzeitigem Zugriff stillschweigend falsche Zeiten.
+     */
+    private fun format() = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY)
 
     /**
      * Stempelt den Zeitpunkt — und ob die geschriebene Datei danach fehlerfrei gelesen wurde.
@@ -81,7 +86,7 @@ object BackupStatus {
                 "Noch nicht gesichert"
             }
         }
-        val zeit = "Zuletzt: ${format.format(Date(last))} Uhr"
+        val zeit = "Zuletzt: ${format().format(Date(last))} Uhr"
         val stand = if (istGeprueft(context)) "$zeit — geprüft" else "$zeit — UNGEPRÜFT"
         // Der letzte Versuch und die letzte geglückte Sicherung sind zwei verschiedene Dinge.
         // Ein Fehlschlag darf den Haken an der guten Sicherung davor nicht entwerten — aber
