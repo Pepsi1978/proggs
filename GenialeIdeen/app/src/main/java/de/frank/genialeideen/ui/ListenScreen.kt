@@ -958,7 +958,8 @@ private fun BereichsWaehler(
             .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        ListenBereich.entries.forEach { eintrag ->
+        // „Alle“ ist kein Reiter, sondern der Umfang aus der Seitenleiste — hier bleibt er weg.
+        ListenBereich.entries.filter { it != ListenBereich.ALLE }.forEach { eintrag ->
             val gewaehlt = eintrag == aktuell
             val farbe by animateColorAsState(
                 if (gewaehlt) gold.primaer else Color.Transparent,
