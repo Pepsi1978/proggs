@@ -44,6 +44,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -148,6 +152,8 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
 private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Unit, onEdit: (Alarm) -> Unit,
     onDelete: (Alarm) -> Unit, onSettings: () -> Unit, onIdeas: () -> Unit) {
     val gold = LocalGold.current
+    // Nur für diese Listenansicht merken: neue Wecker und eine neu geöffnete Liste sind kompakt.
+    var expandedIds by remember { mutableStateOf(emptySet<String>()) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(1000) } }
     val next = alarms.flatMap { alarm -> listOfNotNull(alarm.nextAt.takeIf { alarm.enabled && it > now }, alarm.snoozeUntil.takeIf { it > now }) }.minOrNull()
@@ -176,36 +182,53 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                 Leerzustand("☀", "Ein Morgen nach deinen Wünschen", "Musik, Gedanken und Erinnerungen – in deiner Reihenfolge. Lege deinen ersten Wecker an.")
             }
             items(alarms, key = { it.id }) { alarm ->
+                val expanded = alarm.id in expandedIds
+                val toggleDetails = {
+                    expandedIds = if (expanded) expandedIds - alarm.id else expandedIds + alarm.id
+                }
                 GoldKarte(Modifier.fillMaxWidth().animateItem(), kippbar = true) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f).clickable { onEdit(alarm) }) {
+                    Column(Modifier.padding(18.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Switch(alarm.enabled, { vm.toggle(alarm, it) }, Modifier.semantics {
+                                contentDescription = "Wecker aktivieren: ${alarm.name}"
+                            })
+                            Column(Modifier.weight(1f).clickable(onClick = toggleDetails)) {
                                 Text(alarm.timeLabel, fontFamily = IdeenSchriftBetont, fontSize = 44.sp, color = if (alarm.enabled) gold.primaer else gold.textGedaempft)
-                                Text(alarm.name, style = MaterialTheme.typography.titleMedium)
+                                Text(alarm.name, style = MaterialTheme.typography.titleMedium,
+                                    maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Switch(alarm.enabled, { vm.toggle(alarm, it) })
-                        }
-                        Text(scheduleLabel(alarm), color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall)
-                        Text(alarm.steps.joinToString(" → ") { it.title }, color = gold.primaer, style = MaterialTheme.typography.bodySmall)
-                        if (alarm.snoozeUntil > 0) Text("Schlummert bis ${formatAt(alarm.snoozeUntil)}", color = gold.primaer)
-                        if (alarm.enabled && alarm.nextAt > 0) Text(formatAt(alarm.nextAt), style = MaterialTheme.typography.bodySmall)
-                        Text("Lautstärke ${alarm.volume} %${if (alarm.photoRequired) " · Foto-Aufgabe" else ""}", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
-                        if (alarm.needsSpeech) {
-                            val status = when {
-                                alarm.preparationError.isNotBlank() -> "Vorbereitung offen: ${alarm.preparationError}"
-                                alarm.preparedAt == 0L -> "Sprachausgabe noch nicht offline bereit"
-                                else -> "${alarm.voiceVariants.size.takeIf { it > 0 } ?: 1} Stimmvarianten offline bereit · ${formatAt(alarm.preparedAt)}"
+                            IconButton(onClick = toggleDetails, modifier = Modifier.semantics {
+                                stateDescription = if (expanded) "Aufgeklappt" else "Zugeklappt"
+                            }) {
+                                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Weckerdetails ${if (expanded) "zuklappen" else "aufklappen"}: ${alarm.name}",
+                                    tint = gold.primaer)
                             }
-                            Text(status, style = MaterialTheme.typography.bodySmall,
-                                color = if (alarm.preparationError.isNotBlank() || alarm.preparedAt == 0L) Semantisch.warnung else Semantisch.erfolg)
                         }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            StillerKnopf("Bearbeiten", { onEdit(alarm) }, hervorgehoben = true)
-                            StillerKnopf("Testwecken", { vm.test(alarm) })
-                            if (alarm.needsSpeech) StillerKnopf("Audio vorbereiten", { vm.prepare(alarm) })
-                            StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0)) })
-                            if (alarm.enabled && alarm.repeats) StillerKnopf("Nächstes auslassen", { vm.skip(alarm) })
-                            StillerKnopf("Löschen", { onDelete(alarm) })
+                        if (expanded) {
+                            Text(scheduleLabel(alarm), color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall)
+                            Text(alarm.steps.joinToString(" → ") { it.title }, color = gold.primaer, style = MaterialTheme.typography.bodySmall)
+                            if (alarm.snoozeUntil > 0) Text("Schlummert bis ${formatAt(alarm.snoozeUntil)}", color = gold.primaer)
+                            if (alarm.enabled && alarm.nextAt > 0) Text(formatAt(alarm.nextAt), style = MaterialTheme.typography.bodySmall)
+                            Text("Lautstärke ${alarm.volume} %${if (alarm.photoRequired) " · Foto-Aufgabe" else ""}", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                            if (alarm.needsSpeech) {
+                                val status = when {
+                                    alarm.preparationError.isNotBlank() -> "Vorbereitung offen: ${alarm.preparationError}"
+                                    alarm.preparedAt == 0L -> "Sprachausgabe noch nicht offline bereit"
+                                    else -> "${alarm.voiceVariants.size.takeIf { it > 0 } ?: 1} Stimmvarianten offline bereit · ${formatAt(alarm.preparedAt)}"
+                                }
+                                Text(status, style = MaterialTheme.typography.bodySmall,
+                                    color = if (alarm.preparationError.isNotBlank() || alarm.preparedAt == 0L) Semantisch.warnung else Semantisch.erfolg)
+                            }
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                StillerKnopf("Bearbeiten", { onEdit(alarm) }, hervorgehoben = true)
+                                StillerKnopf("Testwecken", { vm.test(alarm) })
+                                if (alarm.needsSpeech) StillerKnopf("Audio vorbereiten", { vm.prepare(alarm) })
+                                StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0)) })
+                                if (alarm.enabled && alarm.repeats) StillerKnopf("Nächstes auslassen", { vm.skip(alarm) })
+                                StillerKnopf("Löschen", { onDelete(alarm) })
+                            }
                         }
                     }
                 }

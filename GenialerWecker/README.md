@@ -11,7 +11,10 @@ entwickelt. Kotlin / Jetpack Compose, Android 8 oder neuer, Ziel-SDK 36.
 3. Die optionalen Karten aufklappen: Weckablauf, Musik, Lautstärke/Schlummern, Foto-Aufgabe.
 4. Über den feststehenden Knopf **Wecker speichern** sichern. Der Wecker wird dabei
    **immer aktiviert**. Die Audio-Vorbereitung läuft anschließend unabhängig weiter;
-   währenddessen lassen sich weitere Wecker anlegen.
+    währenddessen lassen sich weitere Wecker anlegen.
+5. Gespeicherte Wecker erscheinen **standardmäßig zugeklappt**: Aktivierungsschalter links,
+   Uhrzeit und Titel daneben, Aufklapppfeil rechts. Der Pfeil oder die Uhrzeit/Titel-Zeile öffnet
+   alle Details und Aktionen. Der Schalter schaltet ausschließlich den jeweiligen Wecker.
 
 Für einen 35-Tage-Schichtplan: **alle X Tage → 35 Tage**, den ersten tatsächlichen
 Nachtschichttag und die gewünschte Uhrzeit einstellen. Die Folgetermine bleiben an diesem
@@ -67,7 +70,7 @@ Anschließend ist die Stimmenauswahl im Wecker unabhängig von Geniale Ideen.
   Eine neue Synthese garantiert nicht bei jedem Anbieter automatisch eine neue Betonung.
 - Beim ersten Durchlauf werden alle Ideen/Texte in Variante 1 abgespielt, dann in Variante 2,
   bis Variante 6 und wieder 1. Der nächste lokale Absatz wird während des laufenden Absatzes
-   vorbereitet und bei direkten Absatzübergängen über `MediaPlayer.setNextMediaPlayer` übergeben.
+  vorbereitet und bei direkten Absatzübergängen über `MediaPlayer.setNextMediaPlayer` übergeben.
 - Nach jedem vollständigen eigenen Text folgen **2 Sekunden Pause**, nach jeder vollständigen
   Idee **1,5 Sekunden** – auch beim Übergang in die nächste Variante und von Variante 6 zurück
   zu 1. Innerhalb einer langen Idee entstehen keine zusätzlichen Absatzpausen. Die Pausen
@@ -162,3 +165,15 @@ Geräteneustart mit anschließendem Alarm vor der ersten Entsperrung.
 - Auch Änderungen während eines laufenden Speichervorgangs bleiben als neuerer Entwurf
   erhalten. Wird ein Text während seiner Audio-Vorbereitung erneut gespeichert, wird die
   vorherige Vorbereitung sauber beendet und die aktuelle Fassung vorbereitet.
+
+### Nachbesserung: Vorlesepausen und kompakte Weckerkarten
+
+- 23 JVM-Prüfungen bestanden, einschließlich Textlauf-Pausen, Ideengrenzen über mehrere
+  Absätze und deren Speicherung für alle sechs Varianten.
+- Drei gezielte Geräteprüfungen bestanden: 2-Sekunden- und 1,5-Sekunden-Pause bei doppeltem
+  Sprechtempo sowie Stoppen während der Pause ohne verspäteten Neustart.
+- Der vollständige Variantenzyklus 1 → 2 → 3 → 4 → 5 → 6 → 1 läuft auch mit Pausen durch.
+- Weckerkarten auf Außen- und Innendisplay in Hell/Dunkel geprüft: links schalten, rechts
+  unabhängig aufklappen, alle bisherigen Aktionen im aufgeklappten Bereich. Ein über die
+  Oberfläche neu angelegter Testwecker war sofort aktiviert und zugeklappt. Ausschalten öffnet
+  keine Details. Der Testwecker wurde anschließend wieder gelöscht.
