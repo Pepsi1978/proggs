@@ -34,6 +34,7 @@ class AlarmActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        hideStatusBar()
         if (android.os.Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(true); setTurnScreenOn(true)
         } else {
@@ -113,6 +114,10 @@ class AlarmActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideStatusBar()
     }
     private fun command(action: String, id: String? = null) {
         startService(Intent(this, AlarmService::class.java).setAction(action).putExtra("id", id))

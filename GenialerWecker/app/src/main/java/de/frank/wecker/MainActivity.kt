@@ -11,6 +11,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
@@ -19,6 +22,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        hideStatusBar()
         setContent { WeckerApp(model, this) }
         lifecycleScope.launch {
             AlarmService.state.collect { state ->
@@ -32,9 +36,20 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         if (AlarmService.state.value.alarm != null) startActivity(Intent(this, AlarmActivity::class.java))
     }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideStatusBar()
+    }
     override fun onStop() {
         if (model.recording.value) model.stopRecording()
         model.stopPreview()
         super.onStop()
+    }
+}
+
+internal fun ComponentActivity.hideStatusBar() {
+    WindowCompat.getInsetsController(window, window.decorView).apply {
+        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        hide(WindowInsetsCompat.Type.statusBars())
     }
 }
