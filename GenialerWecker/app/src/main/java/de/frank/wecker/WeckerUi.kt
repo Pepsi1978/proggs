@@ -21,6 +21,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -186,14 +187,19 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                 val toggleDetails = {
                     expandedIds = if (expanded) expandedIds - alarm.id else expandedIds + alarm.id
                 }
-                GoldKarte(Modifier.fillMaxWidth().animateItem(), kippbar = true) {
+                GoldKarte(Modifier.fillMaxWidth().animateItem().clickable(
+                    interactionSource = remember { MutableInteractionSource() }, indication = null,
+                    enabled = !expanded, onClickLabel = "Wecker bearbeiten",
+                    onClick = { onEdit(alarm) })) {
                     Column(Modifier.padding(18.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Switch(alarm.enabled, { vm.toggle(alarm, it) }, Modifier.semantics {
                                 contentDescription = "Wecker aktivieren: ${alarm.name}"
                             })
-                            Column(Modifier.weight(1f).clickable(onClick = toggleDetails)) {
+                            Column(Modifier.weight(1f).clickable(
+                                interactionSource = remember { MutableInteractionSource() }, indication = null,
+                                onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) })) {
                                 Text(alarm.timeLabel, fontFamily = IdeenSchriftBetont, fontSize = 44.sp, color = if (alarm.enabled) gold.primaer else gold.textGedaempft)
                                 Text(alarm.name, style = MaterialTheme.typography.titleMedium,
                                     maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)

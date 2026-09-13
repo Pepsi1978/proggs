@@ -13,8 +13,9 @@ entwickelt. Kotlin / Jetpack Compose, Android 8 oder neuer, Ziel-SDK 36.
    **immer aktiviert**. Die Audio-Vorbereitung läuft anschließend unabhängig weiter;
     währenddessen lassen sich weitere Wecker anlegen.
 5. Gespeicherte Wecker erscheinen **standardmäßig zugeklappt**: Aktivierungsschalter links,
-   Uhrzeit und Titel daneben, Aufklapppfeil rechts. Der Pfeil oder die Uhrzeit/Titel-Zeile öffnet
-   alle Details und Aktionen. Der Schalter schaltet ausschließlich den jeweiligen Wecker.
+   Uhrzeit und Titel daneben, Aufklapppfeil rechts. Tippen auf die kompakte Karte oder die
+   Uhrzeit/Titel-Zeile öffnet direkt den Editor, auch bei ausgeschalteten Weckern. Nur der Pfeil
+   öffnet die Details und Aktionen. Der Schalter schaltet ausschließlich den jeweiligen Wecker.
 
 Für einen 35-Tage-Schichtplan: **alle X Tage → 35 Tage**, den ersten tatsächlichen
 Nachtschichttag und die gewünschte Uhrzeit einstellen. Die Folgetermine bleiben an diesem
