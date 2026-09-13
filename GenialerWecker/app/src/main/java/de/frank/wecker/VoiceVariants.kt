@@ -3,10 +3,11 @@ package de.frank.wecker
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class PreparedAudio(val path: String, val speed: Float = 1f, val provider: String = "", val fallback: Boolean = false) {
-    fun json() = JSONObject().put("path", path).put("speed", speed).put("provider", provider).put("fallback", fallback)
+data class PreparedAudio(val path: String, val speed: Float = 1f, val provider: String = "", val fallback: Boolean = false,
+    val endOfIdea: Boolean = false) {
+    fun json() = JSONObject().put("path", path).put("speed", speed).put("provider", provider).put("fallback", fallback).put("endOfIdea", endOfIdea)
     companion object {
-        fun from(j: JSONObject) = PreparedAudio(j.getString("path"), j.optDouble("speed", 1.0).toFloat(), j.optString("provider"), j.optBoolean("fallback"))
+        fun from(j: JSONObject) = PreparedAudio(j.getString("path"), j.optDouble("speed", 1.0).toFloat(), j.optString("provider"), j.optBoolean("fallback"), j.optBoolean("endOfIdea"))
     }
 }
 
@@ -44,7 +45,8 @@ object VoiceVariations {
             repeat(COUNT) { variation ->
                 group.paragraphs.forEachIndexed { part, text ->
                     progress(groupIndex + 1, groups.size, variation + 1, part + 1, group.paragraphs.size)
-                    variants[variation].getOrPut(group.step) { mutableListOf() }.add(render(text, variation))
+                    variants[variation].getOrPut(group.step) { mutableListOf() }.add(render(text, variation).copy(
+                        endOfIdea = group.step == Step.IDEAS.name && part == group.paragraphs.lastIndex))
                 }
             }
         }

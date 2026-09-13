@@ -67,7 +67,13 @@ Anschließend ist die Stimmenauswahl im Wecker unabhängig von Geniale Ideen.
   Eine neue Synthese garantiert nicht bei jedem Anbieter automatisch eine neue Betonung.
 - Beim ersten Durchlauf werden alle Ideen/Texte in Variante 1 abgespielt, dann in Variante 2,
   bis Variante 6 und wieder 1. Der nächste lokale Absatz wird während des laufenden Absatzes
-  vorbereitet und über `MediaPlayer.setNextMediaPlayer` übergeben.
+   vorbereitet und bei direkten Absatzübergängen über `MediaPlayer.setNextMediaPlayer` übergeben.
+- Nach jedem vollständigen eigenen Text folgen **2 Sekunden Pause**, nach jeder vollständigen
+  Idee **1,5 Sekunden** – auch beim Übergang in die nächste Variante und von Variante 6 zurück
+  zu 1. Innerhalb einer langen Idee entstehen keine zusätzlichen Absatzpausen. Die Pausen
+  behalten ihre Dauer unabhängig vom Sprechtempo; Stoppen/Schlummern bricht auch die Pause ab.
+  Alte Ideen-Audios erhalten die neuen Ideengrenzen bei der nächsten Audio-Vorbereitung;
+  vorhandene passende Sprachdateien werden dabei weiterverwendet.
 - Erst ein vollständig erzeugter Satz von Dateien ersetzt die vorherige Fassung. Die Oberfläche
   zeigt Idee/Text, Variante und Absatz. Vorhandene Ein-Varianten-Wecker bleiben abspielbar.
 - Änderungen an offenen Ideen stoßen eine Hintergrundvorbereitung an; zusätzlich läuft

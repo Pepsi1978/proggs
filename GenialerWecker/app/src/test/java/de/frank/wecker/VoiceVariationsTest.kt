@@ -5,6 +5,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class VoiceVariationsTest {
+    @Test fun ideaBoundariesSurviveStorageAndOnlySeparateWholeIdeas() = runBlocking {
+        val variants = VoiceVariations.buildGroups(listOf(
+            SpeechGroup("IDEAS", listOf("erste Idee Absatz 1", "erste Idee Absatz 2")),
+            SpeechGroup("IDEAS", listOf("zweite Idee")),
+            SpeechGroup("TEXT", listOf("Erinnerung"))), { text, _ -> PreparedAudio(text, speed = 1.3f) })
+        val alarm = Alarm.from(Alarm(steps = listOf(Step.IDEAS, Step.TEXT), voiceVariants = variants).json())
+        val clips = AlarmPlaylist.build(alarm, mapOf("classic" to "tone")) { true }
+        assertEquals(List(6) { listOf(0L, 1500L, 1500L, 2000L) }.flatten(), clips.map { it.pauseAfterMillis })
+        assertEquals(listOf(false, true, true), alarm.voiceVariants.first().steps.getValue("IDEAS").map { it.endOfIdea })
+        assertFalse(PreparedAudio.from(org.json.JSONObject().put("path", "legacy")).endOfIdea)
+    }
     @Test fun reminderPausesOnlyAfterTheWholeTextInEveryVariantIncludingTheWrap() {
         val alarm = Alarm(steps = listOf(Step.TEXT, Step.MUSIC), music = "song",
             voiceVariants = List(6) { VoiceVariant(mapOf("TEXT" to listOf(PreparedAudio("first"), PreparedAudio("last")))) })

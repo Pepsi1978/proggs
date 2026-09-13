@@ -47,7 +47,11 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                 val signature = hash(voiceKey(voice) + JSONArray(groups.map { JSONObject().put("step", it.step).put("paragraphs", JSONArray(it.paragraphs)) }).toString())
                 val latest = store.get(alarm.id) ?: return@withContext
                 val cached = latest.voiceVariants
+                // Alte Varianten besitzen noch keine Ideengrenzen. In diesem Fall die Gruppen
+                // erneut zusammensetzen; render() verwendet vorhandene Audiodateien weiter.
+                val ideaCount = groups.count { it.step == Step.IDEAS.name && it.paragraphs.isNotEmpty() }
                 if (latest.preparedSignature == signature && cached.size == VoiceVariations.COUNT &&
+                    cached.all { variant -> variant.steps[Step.IDEAS.name].orEmpty().count { it.endOfIdea } == ideaCount } &&
                     cached.flatMap { it.steps.values.flatten() }.all { File(it.path).length() > 44 } &&
                     (cached.none { it.steps.values.flatten().any(PreparedAudio::fallback) } || System.currentTimeMillis() - latest.preparedAt < 15 * 60_000)) {
                     if (cached.none { it.steps.values.flatten().any(PreparedAudio::fallback) }) store.update(alarm.id) { current ->

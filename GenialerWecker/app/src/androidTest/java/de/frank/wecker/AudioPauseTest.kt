@@ -15,7 +15,7 @@ class AudioPauseTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
 
-    private fun withQueue(check: (LinkedBlockingQueue<Long>, AlarmAudioQueue) -> Unit) {
+    private fun withQueue(pause: Long = 2000, check: (LinkedBlockingQueue<Long>, AlarmAudioQueue) -> Unit) {
         val audio = context.getSystemService(AudioManager::class.java)
         val volume = audio.getStreamVolume(AudioManager.STREAM_ALARM)
         val starts = LinkedBlockingQueue<Long>()
@@ -25,7 +25,7 @@ class AudioPauseTest {
         try {
             audio.setStreamVolume(AudioManager.STREAM_ALARM, 1, 0)
             instrumentation.runOnMainSync {
-                queue = AlarmAudioQueue(context, listOf(AlarmClip("Test", clip, pauseAfterMillis = 2000)),
+                queue = AlarmAudioQueue(context, listOf(AlarmClip("Test", clip, pauseAfterMillis = pause)),
                     onPlaying = { starts.offer(SystemClock.elapsedRealtime()) }, onFailure = { errors.offer(it) })
                 queue.start()
             }
@@ -53,5 +53,11 @@ class AudioPauseTest {
         SystemClock.sleep(1700)
         instrumentation.runOnMainSync { queue.close() }
         assertNull("Nach dem Stoppen darf kein vorgeladener Absatz anlaufen", starts.poll(2500, TimeUnit.MILLISECONDS))
+    }
+
+    @Test fun ideaPauseLastsOneAndAHalfSecondsAtDoubleSpeed() = withQueue(pause = 1500) { starts, _ ->
+        val first = starts.poll(5, TimeUnit.SECONDS) ?: error("Kein Audiostart")
+        val next = starts.poll(5, TimeUnit.SECONDS) ?: error("Kein Start nach der Ideenpause")
+        assertTrue("Abstand der Starts: ${next - first} ms", next - first in 2400..3800)
     }
 }

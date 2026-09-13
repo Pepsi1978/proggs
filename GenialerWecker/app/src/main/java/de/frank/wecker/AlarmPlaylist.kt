@@ -19,7 +19,11 @@ object AlarmPlaylist {
                 }
                 audio.mapIndexed { part, clip ->
                     AlarmClip(step.title, if (available(clip.path)) clip else emergency, index + 1,
-                        pauseAfterMillis = if (step == Step.TEXT && part == audio.lastIndex) 2000 else 0)
+                        pauseAfterMillis = when {
+                            step == Step.TEXT && part == audio.lastIndex -> 2000
+                            step == Step.IDEAS && (clip.endOfIdea || part == audio.lastIndex) -> 1500
+                            else -> 0
+                        })
                 }
             }
         }.ifEmpty { listOf(AlarmClip("Ersatzweckton", emergency)) }
