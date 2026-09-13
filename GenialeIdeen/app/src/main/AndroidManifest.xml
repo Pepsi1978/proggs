@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <permission android:name="de.frank.genialeideen.permission.WECKER" android:protectionLevel="signature" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -54,6 +55,12 @@
             android:name=".speech.VorleseDienst"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <provider
+            android:name=".bridge.WeckerProvider"
+            android:authorities="de.frank.genialeideen.wecker"
+            android:permission="de.frank.genialeideen.permission.WECKER"
+            android:exported="true" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
