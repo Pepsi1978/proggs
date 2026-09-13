@@ -4,8 +4,10 @@ import android.content.Context
 import android.media.MediaPlayer
 import android.media.PlaybackParams
 import android.os.PowerManager
+import android.os.Handler
+import android.os.Looper
 
-/** Ein aktiver und ein fertig vorbereiteter Absatz. Android übernimmt den direkten Übergang. */
+/** Ein aktiver und ein vorgeladener Absatz; bewusste Pausen gelten unabhängig vom Sprechtempo. */
 class AlarmAudioQueue(
     private val context: Context,
     private val clips: List<AlarmClip>,
@@ -16,6 +18,7 @@ class AlarmAudioQueue(
     private var current: Slot? = null
     private var queued: Slot? = null
     private var closed = false
+    private val handler = Handler(Looper.getMainLooper())
 
     fun start() {
         check(clips.isNotEmpty())
@@ -32,16 +35,24 @@ class AlarmAudioQueue(
                 if (!closed) try {
                     slot.ready = true
                     if (current === slot) play(slot)
-                    else if (queued === slot && current?.ready == true) current?.player?.setNextMediaPlayer(player)
+                    else if (queued === slot && current?.ready == true && clips[current!!.index].pauseAfterMillis == 0L)
+                        current?.player?.setNextMediaPlayer(player)
                 } catch (e: Exception) { fail(e) }
             }
             player.setOnCompletionListener {
                 if (!closed && current === slot) {
                     val next = queued
-                    queued = null; current = next
+                    current = null
                     player.release()
-                    if (next == null) current = create((index + 1) % clips.size)
-                    else if (next.ready) try { play(next) } catch (e: Exception) { fail(e) }
+                    // Der nächste Absatz bleibt während der Pause vorbereitet, startet aber noch nicht.
+                    // close() entfernt diesen Übergang auch beim Stoppen/Schlummern in der Pause.
+                    handler.postDelayed({
+                        if (!closed) {
+                            queued = null; current = next
+                            if (next == null) current = create((index + 1) % clips.size)
+                            else if (next.ready) try { play(next) } catch (e: Exception) { fail(e) }
+                        }
+                    }, clips[index].pauseAfterMillis)
                 }
             }
             player.setOnErrorListener { _, what, extra -> fail(IllegalStateException("Audio-Wiedergabe fehlgeschlagen ($what/$extra)")); true }
@@ -69,6 +80,7 @@ class AlarmAudioQueue(
     override fun close() {
         if (closed) return
         closed = true
+        handler.removeCallbacksAndMessages(null)
         current?.player?.release(); queued?.player?.release()
         current = null; queued = null
     }

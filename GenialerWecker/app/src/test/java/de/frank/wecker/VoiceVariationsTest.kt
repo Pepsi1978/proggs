@@ -5,6 +5,14 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class VoiceVariationsTest {
+    @Test fun reminderPausesOnlyAfterTheWholeTextInEveryVariantIncludingTheWrap() {
+        val alarm = Alarm(steps = listOf(Step.TEXT, Step.MUSIC), music = "song",
+            voiceVariants = List(6) { VoiceVariant(mapOf("TEXT" to listOf(PreparedAudio("first"), PreparedAudio("last")))) })
+        val clips = AlarmPlaylist.build(alarm, mapOf("classic" to "tone")) { true }
+        assertEquals(List(6) { listOf(0L, 2000L, 0L) }.flatten(), clips.map { it.pauseAfterMillis })
+        val legacy = AlarmPlaylist.build(Alarm(steps = listOf(Step.TEXT), prepared = mapOf("TEXT" to listOf("old"))), mapOf("classic" to "tone")) { true }
+        assertEquals(2000L, legacy.single().pauseAfterMillis)
+    }
     @Test fun eachIdeaIsFinishedInSixVariantsBeforeTheNextIdea() = runBlocking {
         val calls = mutableListOf<Pair<String, Int>>()
         val result = VoiceVariations.buildGroups(listOf(SpeechGroup("IDEAS", listOf("Idee 1 Absatz 1", "Idee 1 Absatz 2")), SpeechGroup("IDEAS", listOf("Idee 2"))), { text, variant ->
