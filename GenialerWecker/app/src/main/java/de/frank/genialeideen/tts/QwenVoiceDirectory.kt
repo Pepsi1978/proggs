@@ -75,6 +75,8 @@ class QwenVoiceDirectory {
                     )
                 }
             }
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
         } catch (error: QwenVoiceListException) {
             throw error
         } catch (error: Exception) {

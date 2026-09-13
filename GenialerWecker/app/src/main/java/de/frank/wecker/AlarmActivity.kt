@@ -89,6 +89,7 @@ class AlarmActivity : ComponentActivity() {
                         Text(alarm?.timeLabel ?: "Wecker", fontFamily = IdeenSchriftBetont, fontSize = 76.sp, color = LocalGold.current.primaer)
                         Text(alarm?.name ?: "Der Wecker wird geöffnet …", style = MaterialTheme.typography.headlineMedium)
                         Text(state.step, color = LocalGold.current.textGedaempft)
+                        if (alarm?.voiceVariants?.isNotEmpty() == true) Text("Stimmvariante ${state.variation} von ${alarm.voiceVariants.size}", style = MaterialTheme.typography.bodySmall)
                         if (state.message.isNotBlank()) Text(state.message, color = Semantisch.warnung)
                         if (message.isNotBlank()) Text(message)
                         if (alarm != null) {

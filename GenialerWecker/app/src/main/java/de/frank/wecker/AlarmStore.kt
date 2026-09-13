@@ -19,6 +19,10 @@ class AlarmStore private constructor(context: Context) {
     }
     @Synchronized fun all() = state.value
     @Synchronized fun get(id: String) = state.value.find { it.id == id }
+    @Synchronized fun insertNew(alarm: Alarm) {
+        check(get(alarm.id) == null) { "Dieser neue Wecker hat bereits eine Kennung. Öffne bitte einen neuen Entwurf." }
+        put(alarm)
+    }
     @Synchronized fun put(alarm: Alarm) {
         val list = state.value.toMutableList()
         val index = list.indexOfFirst { it.id == alarm.id }

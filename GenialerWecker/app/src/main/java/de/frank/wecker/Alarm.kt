@@ -45,6 +45,7 @@ data class Alarm(
     val color: String = "none",
     val colorPercent: Int = 20,
     val prepared: Map<String, List<String>> = emptyMap(),
+    val voiceVariants: List<VoiceVariant> = emptyList(),
     val preparedAt: Long = 0,
     val preparedSpeed: Float = 1f,
     val preparedSignature: String = "",
@@ -78,6 +79,7 @@ data class Alarm(
         put("photoRequired", photoRequired); put("photoTolerance", photoTolerance)
         put("minBrightness", minBrightness); put("color", color); put("colorPercent", colorPercent)
         put("prepared", JSONObject().apply { prepared.forEach { (key, files) -> put(key, JSONArray(files)) } })
+        put("voiceVariants", JSONArray(voiceVariants.map { it.json() }))
         put("preparedAt", preparedAt); put("preparedSpeed", preparedSpeed); put("preparedSignature", preparedSignature); put("preparationError", preparationError)
     }
     companion object {
@@ -97,6 +99,7 @@ data class Alarm(
             prepared = j.optJSONObject("prepared")?.let { p -> p.keys().asSequence().associateWith { key ->
                 p.getJSONArray(key).let { a -> (0 until a.length()).map { a.getString(it) } }
             } }.orEmpty(), preparedAt = j.optLong("preparedAt"), preparedSpeed = j.optDouble("preparedSpeed", 1.0).toFloat(), preparedSignature = j.optString("preparedSignature"),
+            voiceVariants = j.optJSONArray("voiceVariants")?.let { a -> (0 until a.length()).map { VoiceVariant.from(a.getJSONObject(it)) } }.orEmpty(),
             preparationError = j.optString("preparationError"),
         )
     }

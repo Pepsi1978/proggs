@@ -33,16 +33,26 @@ class SyntheseFehler(message: String, cause: Throwable? = null) : Exception(mess
  * Erzeugt Audio, ohne es abzuspielen — die Voraussetzung für die Vorausschau der
  * Absatz-Pipeline (Baustein D 4.2, Schritt 3).
  */
-class Synthese(context: Context, private val settings: SecureSettings) {
+class SyntheseStimme(
+    val ttsProvider: String, val googleTtsApiKey: String, val googleTtsVoice: String,
+    val qwenTtsApiKey: String, val qwenTtsVoiceId: String, val qwenStandardVoice: String,
+    val ttsSpeechRate: Float, val immerDeutschVorlesen: Boolean, val edgeTtsVoice: String,
+) {
+    constructor(s: SecureSettings) : this(s.ttsProvider, s.googleTtsApiKey, s.googleTtsVoice, s.qwenTtsApiKey,
+        s.qwenTtsVoiceId, s.qwenStandardVoice, s.ttsSpeechRate, s.immerDeutschVorlesen, s.edgeTtsVoice)
+    fun withRate(rate: Float) = SyntheseStimme(ttsProvider, googleTtsApiKey, googleTtsVoice, qwenTtsApiKey,
+        qwenTtsVoiceId, qwenStandardVoice, rate, immerDeutschVorlesen, edgeTtsVoice)
+    fun edgeFallback() = SyntheseStimme(TtsProvider.EDGE.id, "", googleTtsVoice, "", "", "", ttsSpeechRate, immerDeutschVorlesen, edgeTtsVoice)
+    val playbackSpeed: Float get() = if (ttsProvider in setOf(TtsProvider.QWEN.id, TtsProvider.QWEN_CLONE.id)) ttsSpeechRate else 1f
+}
+
+class Synthese(context: Context, private val settings: SyntheseStimme) {
+    constructor(context: Context, settings: SecureSettings) : this(context, SyntheseStimme(settings))
     private val appContext = context.applicationContext
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(90, TimeUnit.SECONDS)
-        .callTimeout(120, TimeUnit.SECONDS)
-        .build()
+    private val client get() = CLIENT
 
     /** Begrenzt die Gleichzeitigkeit, sonst laufen die Dienste ins Rate-Limit (Baustein D 4.4). */
-    private val gleichzeitig = Semaphore(2)
+    private val gleichzeitig get() = GLEICHZEITIG
 
     /** Ob die gewählte Engine vorab synthetisieren kann. Edge spricht über den WebSocket-Player. */
     fun kannVorausschauen(): Boolean = when (settings.ttsProvider) {
@@ -219,6 +229,9 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     }
 
     private companion object {
+        val CLIENT = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(90, TimeUnit.SECONDS).callTimeout(120, TimeUnit.SECONDS).build()
+        val GLEICHZEITIG = Semaphore(2)
         const val GOOGLE_URL = "https://texttospeech.googleapis.com/v1/text:synthesize"
         const val QWEN_URL =
             "https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"

@@ -43,9 +43,12 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
     val settings = vm.settings
     val recording by vm.recording.collectAsStateWithLifecycle()
     val voices by vm.clonedVoices.collectAsStateWithLifecycle()
+    val voicesLoading by vm.voicesLoading.collectAsStateWithLifecycle()
+    val voiceError by vm.voiceLoadError.collectAsStateWithLifecycle()
     val sample by vm.hasVoiceSample.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
     val code by vm.loginCode.collectAsStateWithLifecycle()
+    val permissions = rememberReadiness()
     var voiceName by rememberSaveable { mutableStateOf("") }
     var removeVoice by remember { mutableStateOf<ClonedVoice?>(null) }
     var copySettings by remember { mutableStateOf(false) }
@@ -60,6 +63,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         else -> settings.edgeTtsVoice
     }) }
     var rate by remember(revision) { mutableFloatStateOf(settings.ttsSpeechRate) }
+    LaunchedEffect(Unit) { vm.loadVoices() }
     val microphone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
         if (allowed) vm.startRecording(true) else vm.message.value = "Für deine Stimmprobe wird die Mikrofonberechtigung benötigt."
     }
@@ -69,9 +73,10 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             .onFailure { vm.message.value = "Diese Einstellungsseite ist auf dem Gerät nicht verfügbar. Öffne die Android-App-Einstellungen." }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        ReadinessCard(onSettings = { vm.settingsRevision.value++ })
         Section("Zuverlässig wecken") {
             Text("Für das Wecken werden genaue Alarme und der Android-Weckkanal verwendet. Auch bei gesperrtem Bildschirm und ohne Internet.")
-            readiness(activity).forEach { (name, ready) -> Text("${if (ready) "✓" else "○"} $name", color = if (ready) Semantisch.erfolg else Semantisch.warnung) }
+            permissions.forEach { (name, ready) -> Text("${if (ready) "✓" else "○"} $name", color = if (ready) Semantisch.erfolg else Semantisch.warnung) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 StillerKnopf("Genaue Alarme", { if (Build.VERSION.SDK_INT >= 31) launch(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, true) })
                 StillerKnopf("Benachrichtigungen", {
@@ -95,10 +100,10 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }
         Section("Vorlesen · Stimmen & Tempo") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TtsProvider.entries.forEach { item ->
+                listOf(TtsProvider.QWEN_CLONE, TtsProvider.GOOGLE_CLOUD, TtsProvider.EDGE).forEach { item ->
                     FilterChip(provider == item.id, {
                         settings.ttsProvider = item.id; provider = item.id; vm.settingsChanged()
-                    }, { Text(item.label) })
+                    }, { Text(if (item == TtsProvider.QWEN_CLONE) "Meine Stimmen" else item.label) })
                 }
             }
             when (provider) {
@@ -108,14 +113,13 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
             val catalog = when (provider) {
                 TtsProvider.GOOGLE_CLOUD.id -> TtsCatalog.googleVoices
-                TtsProvider.QWEN.id -> TtsCatalog.qwenVoices
                 TtsProvider.QWEN_CLONE.id -> emptyList()
                 else -> TtsCatalog.edgeVoices
             }
             val available = if (provider == TtsProvider.QWEN_CLONE.id) voices.map {
                 it.id to (settings.qwenVoiceNames[it.id] ?: it.name)
             } else catalog.map { it.id to "${it.name} · ${if (it.gender == VoiceGender.FEMALE) "weiblich" else "männlich"}" }
-            GoldKnopf(available.find { it.first == selected }?.second ?: "Stimme auswählen", { showVoices = !showVoices }, Modifier.fillMaxWidth())
+            GoldKnopf(available.find { it.first == selected }?.second ?: settings.qwenVoiceNames[selected] ?: "Stimme auswählen", { showVoices = !showVoices }, Modifier.fillMaxWidth())
             if (showVoices) {
             OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("Stimmen suchen") }, singleLine = true)
             Toggle("Nur Favoriten anzeigen", onlyFavorites) { onlyFavorites = it }
@@ -125,7 +129,6 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                         selected = id
                         when (provider) {
                             TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice = id
-                            TtsProvider.QWEN.id -> settings.qwenStandardVoice = id
                             TtsProvider.QWEN_CLONE.id -> settings.qwenTtsVoiceId = id
                             else -> settings.edgeTtsVoice = id
                         }
@@ -140,7 +143,12 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 }
             }
             }
-            if (provider == TtsProvider.QWEN_CLONE.id) GoldKnopf("Meine Stimmen laden", vm::loadVoices)
+            if (provider == TtsProvider.QWEN_CLONE.id) {
+                if (voicesLoading) Text("Deine hochgeladenen Stimmen werden geladen …")
+                if (voiceError.isNotBlank()) Text(voiceError, color = Semantisch.warnung)
+                Text("${voices.size} eigene Stimmen", style = MaterialTheme.typography.bodySmall)
+                GoldKnopf("Meine Stimmen aktualisieren", { vm.loadVoices(force = true) }, aktiviert = !voicesLoading)
+            }
             Text("Sprechtempo: ${"%.2f".format(rate)}×")
             Slider(rate, { rate = it }, valueRange = .5f..2f, onValueChangeFinished = { settings.ttsSpeechRate = rate; vm.settingsChanged() })
             var german by remember(revision) { mutableStateOf(settings.immerDeutschVorlesen) }
@@ -149,7 +157,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 GoldKnopf("Stimme anhören", vm::previewVoice, aktiviert = busy.isBlank())
                 StillerKnopf("Stoppen", vm::stopPreview)
             }
-            Text("Nach Änderungen werden aktive Wecker neu vorbereitet. Bereits fertiges Audio bleibt bis zum erfolgreichen Abschluss verfügbar.", style = MaterialTheme.typography.bodySmall)
+            Text("Beim Speichern werden sechs Varianten derselben Stimme erzeugt, mit behutsamen Tempo-Unterschieden. Beim Wecken läuft Variante 1 bis 6, dann wieder 1. Absätze werden vorgeladen. Bereits fertiges Audio bleibt bis zum erfolgreichen Abschluss verfügbar.", style = MaterialTheme.typography.bodySmall)
         }
         Section("Sprachschlüssel", collapsible = true, summary = "Google · Alibaba · Groq") {
                 SecretField("Google / Chirp-3-HD-Schlüssel", settings.googleTtsApiKey) { settings.googleTtsApiKey = it; vm.settingsChanged() }
@@ -167,7 +175,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                     else microphone.launch(Manifest.permission.RECORD_AUDIO)
                 }, aktiviert = busy.isBlank())
                 GoldKnopf("Stimme erstellen", { vm.createVoice(voiceName) }, aktiviert = sample && !recording && busy.isBlank())
-                StillerKnopf("Stimmen aktualisieren", vm::loadVoices)
+                StillerKnopf("Stimmen aktualisieren", { vm.loadVoices(force = true) })
             }
             voices.forEach { voice ->
                 Row(verticalAlignment = Alignment.CenterVertically) {

@@ -31,12 +31,22 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     private val recorder = MicRecorder(application)
     private var preview: MediaPlayer? = null
     private val _draft = MutableStateFlow(store.prefs.getString("draft", null)?.let { runCatching { Alarm.from(JSONObject(it)) }.getOrNull() })
+    private var draftIsNew = _draft.value?.let { store.get(it.id) == null } ?: true
+    val isNewDraft: Boolean get() = draftIsNew
     val draft = _draft.asStateFlow()
     val busy = MutableStateFlow("")
+    val audioBusy = MutableStateFlow("")
+    private val preparationJobs = mutableMapOf<String, Job>()
+    private val preparationProgress = mutableMapOf<String, String>()
     val message = MutableStateFlow("")
     val recording = MutableStateFlow(false)
     val voiceRecording = MutableStateFlow(false)
     val clonedVoices = MutableStateFlow<List<ClonedVoice>>(emptyList())
+    val voicesLoading = MutableStateFlow(false)
+    val voiceLoadError = MutableStateFlow("")
+    private var voiceJob: Job? = null
+    private var requestedVoiceAccount = ""
+    private var voiceGeneration = 0
     val settingsRevision = MutableStateFlow(0)
     val loginCode = MutableStateFlow<DeviceAuthInfo?>(null)
     val ideas = MutableStateFlow(IdeasBridge(application).cached())
@@ -45,16 +55,30 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     private var actionJob: Job? = null
 
     init {
+        if (settings.ttsProvider == TtsProvider.QWEN.id) settings.ttsProvider = TtsProvider.QWEN_CLONE.id
+        restoreVoiceCache()
+        loadVoices()
         scheduler.restore()
         viewModelScope.launch(Dispatchers.IO) { Tones.names.keys.forEach { Tones.file(store.files, it) } }
         PreparationWorker.enqueue(app)
     }
-    fun edit(alarm: Alarm) { stopPreview(); change(alarm) }
-    fun change(alarm: Alarm) {
+    fun newAlarm() = edit(Alarm(id = UUID.randomUUID().toString()))
+    fun edit(alarm: Alarm) {
+        stopPreview()
+        draftIsNew = store.get(alarm.id) == null
         _draft.value = alarm
-        store.prefs.edit().putString("draft", alarm.json().toString()).apply()
+        persistDraft(alarm)
     }
-    fun closeEditor() { _draft.value = null; store.prefs.edit().remove("draft").apply() }
+    fun change(alarm: Alarm) {
+        if (_draft.value?.id != alarm.id) {
+            android.util.Log.w("WeckerEditor", "Veraltetes Bearbeitungsereignis verworfen")
+            return
+        }
+        _draft.value = alarm
+        persistDraft(alarm)
+    }
+    private fun persistDraft(alarm: Alarm) { store.prefs.edit().putString("draft", alarm.json().toString()).putBoolean("draft_is_new", draftIsNew).apply() }
+    fun closeEditor() { _draft.value = null; store.prefs.edit().remove("draft").remove("draft_is_new").apply() }
     fun runAction(label: String, action: suspend () -> Unit) {
         if (actionJob?.isActive == true) { message.value = "Bitte warte auf den laufenden Vorgang."; return }
         actionJob = viewModelScope.launch {
@@ -65,17 +89,24 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             finally { busy.value = "" }
         }
     }
-    fun cancelAction() { actionJob?.cancel(); auth.cancelChat(); auth.cancelLogin() }
+    fun cancelAction() {
+        if (actionJob?.isActive == true) actionJob?.cancel() else preparationJobs.values.toList().forEach { it.cancel() }
+        auth.cancelChat(); auth.cancelLogin()
+    }
     fun save(done: () -> Unit) {
-        val alarm = _draft.value ?: return
+        val source = _draft.value ?: return
+        val alarm = source.copy(enabled = true)
+        val create = draftIsNew
         runAction("Wecker speichern …") {
-            withContext(Dispatchers.IO) { scheduler.save(alarm) }
-            closeEditor(); done()
-            message.value = "${alarm.name} gespeichert."
+            withContext(Dispatchers.IO) { scheduler.save(alarm, create = create) }
+            if (_draft.value == source) { closeEditor(); done() }
+            else if (_draft.value?.id == alarm.id && create) {
+                draftIsNew = false
+                _draft.value?.let(::persistDraft)
+            }
+            message.value = "${alarm.name} gespeichert und aktiviert."
             if (alarm.needsSpeech) {
-                message.value = "Weckzeit gespeichert. Die Sprachausgabe wird jetzt für den Offline-Betrieb vorbereitet."
-                SpeechPreparation(app, settings).prepare(store.get(alarm.id)!!) { busy.value = it }
-                message.value = "Wecker und vollständige Sprachausgabe sind offline bereit."
+                prepare(store.get(alarm.id)!!)
             }
         }
     }
@@ -84,6 +115,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         if (enabled && alarm.needsSpeech) PreparationWorker.enqueue(app)
     }
     fun delete(alarm: Alarm) = runAction("Wecker löschen …") {
+        preparationJobs[alarm.id]?.cancelAndJoin()
         withContext(Dispatchers.IO) {
             require(alarm.id !in store.ringing()) { "Stoppe zuerst den klingelnden Wecker." }
             scheduler.cancel(alarm.id); store.delete(alarm.id)
@@ -96,10 +128,28 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             store.put(updated); scheduler.schedule(updated)
         }
     }
-    fun prepare(alarm: Alarm) = runAction("Offline-Audio vorbereiten …") {
-        SpeechPreparation(app, settings).prepare(alarm) { busy.value = it }
-        ideas.value = IdeasBridge(app).cached()
-        message.value = "Die Sprachausgabe ist offline bereit."
+    fun prepare(alarm: Alarm) {
+        val previous = preparationJobs[alarm.id]
+        preparationJobs[alarm.id] = viewModelScope.launch {
+            fun progress(text: String?) {
+                if (text == null) preparationProgress.remove(alarm.id) else preparationProgress[alarm.id] = text
+                audioBusy.value = preparationProgress.values.firstOrNull().orEmpty()
+            }
+            try {
+                previous?.cancelAndJoin()
+                progress("${alarm.name}: Audio-Vorbereitung …")
+                SpeechPreparation(app, settings).prepare(alarm) { text -> withContext(Dispatchers.Main) { progress("${alarm.name}: $text") } }
+                ideas.value = IdeasBridge(app).cached()
+                if (store.get(alarm.id)?.let { it.text == alarm.text && it.steps == alarm.steps && it.voiceVariants.size == VoiceVariations.COUNT } == true)
+                    message.value = "${alarm.name}: Die Sprachvarianten sind offline bereit."
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { message.value = "${alarm.name}: ${e.message ?: "Audio-Vorbereitung fehlgeschlagen"}" }
+            finally {
+                if (preparationJobs[alarm.id] === coroutineContext[Job]) {
+                    progress(null); preparationJobs.remove(alarm.id)
+                }
+            }
+        }
     }
     fun syncIdeas() = runAction("Offene Ideen lesen …") {
         ideas.value = IdeasBridge(app).refresh()
@@ -111,7 +161,12 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         settingsChanged()
         message.value = "Stimme, Sprechtempo und Sprachschlüssel aus Geniale Ideen übernommen."
     }
-    fun settingsChanged() { settingsRevision.value++; PreparationWorker.enqueue(app) }
+    fun settingsChanged() {
+        if (settings.ttsProvider == TtsProvider.QWEN.id) settings.ttsProvider = TtsProvider.QWEN_CLONE.id
+        settingsRevision.value++
+        if (requestedVoiceAccount != voiceAccount()) { restoreVoiceCache(); loadVoices(force = true) }
+        PreparationWorker.enqueue(app)
+    }
     fun importMusic(uri: Uri) = runAction("Song vollständig auf dem Gerät speichern …") {
         val alarmId = _draft.value?.id ?: return@runAction
         val result = withContext(Dispatchers.IO) {
@@ -189,10 +244,49 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             settingsRevision.value++
         } finally { loginCode.value = null }
     }
-    fun loadVoices() = runAction("Eigene Stimmen laden …") { loadVoicesNow() }
+    private fun voiceAccount() = SpeechPreparation.hash(settings.qwenTtsApiKey.filterNot(Char::isWhitespace))
+    private fun restoreVoiceCache() {
+        clonedVoices.value = runCatching {
+            val cache = JSONObject(settings.clonedVoiceCache)
+            if (cache.optString("account") != voiceAccount()) emptyList() else {
+                val array = cache.getJSONArray("voices")
+                (0 until array.length()).map { array.getJSONObject(it).let { j -> ClonedVoice(j.getString("id"), j.getString("name"), j.optString("created")) } }
+            }
+        }.getOrDefault(emptyList())
+    }
+    fun loadVoices(force: Boolean = false) {
+        if (settings.qwenTtsApiKey.isBlank()) {
+            voiceLoadError.value = "Trage deinen Alibaba-Schlüssel ein, um deine hochgeladenen Stimmen zu laden."
+            return
+        }
+        if (voiceJob?.isActive == true && !force) return
+        val generation = ++voiceGeneration
+        requestedVoiceAccount = voiceAccount()
+        voiceJob?.cancel()
+        voiceJob = viewModelScope.launch {
+            voicesLoading.value = true; voiceLoadError.value = ""
+            try { loadVoicesNow() }
+            catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                voiceLoadError.value = e.message ?: "Eigene Stimmen konnten nicht geladen werden."
+                android.util.Log.w("WeckerVoices", "Stimmenliste nicht erreichbar", e)
+            } finally { if (generation == voiceGeneration) voicesLoading.value = false }
+        }
+    }
     private suspend fun loadVoicesNow() {
+        val key = settings.qwenTtsApiKey
+        val account = voiceAccount()
         val directory = QwenVoiceDirectory()
-        try { clonedVoices.value = directory.list(settings.qwenTtsApiKey) } finally { directory.shutdown() }
+        try {
+            val voices = directory.list(key)
+            if (key != settings.qwenTtsApiKey) return
+            clonedVoices.value = voices
+            settings.clonedVoiceCache = JSONObject().put("account", account).put("voices", org.json.JSONArray(voices.map {
+                JSONObject().put("id", it.id).put("name", it.name).put("created", it.createdAt)
+            })).toString()
+            if (voices.isEmpty()) voiceLoadError.value = "In diesem Alibaba-Konto wurden keine eigenen Stimmen gefunden."
+            settingsRevision.value++
+        } finally { directory.shutdown() }
     }
     fun createVoice(name: String) = runAction("Eigene Stimme anlegen …") {
         require(name.isNotBlank()) { "Gib der Stimme einen Namen." }

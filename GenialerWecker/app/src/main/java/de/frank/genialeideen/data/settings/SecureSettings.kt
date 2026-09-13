@@ -110,6 +110,11 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.QWEN_VOICE_ORDER, "").split('\n').filter(String::isNotBlank)
         set(value) = writeString(Keys.QWEN_VOICE_ORDER, value.filter(String::isNotBlank).joinToString("\n"))
 
+    /** Kontogebundene Liste der eigenen Stimmen, auch ohne Netz sichtbar. */
+    var clonedVoiceCache: String
+        get() = readString("wecker_cloned_voice_cache", "")
+        set(value) = writeString("wecker_cloned_voice_cache", value)
+
     var ttsSpeechRate: Float
         get() = preferences?.getFloat(Keys.TTS_SPEECH_RATE, Defaults.TTS_SPEECH_RATE)
             ?.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) ?: Defaults.TTS_SPEECH_RATE

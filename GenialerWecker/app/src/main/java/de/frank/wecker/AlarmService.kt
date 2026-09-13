@@ -23,14 +23,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import kotlin.math.roundToInt
 
-data class RingState(val alarm: Alarm? = null, val step: String = "", val message: String = "", val test: Boolean = false, val playing: Boolean = false)
+data class RingState(val alarm: Alarm? = null, val step: String = "", val message: String = "", val test: Boolean = false, val playing: Boolean = false, val variation: Int = 1)
 
 /** Beim Wecken ausschließlich lokale Wiedergabe. Der Dienst hält auch ohne Activity den Alarm. */
 class AlarmService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var store: AlarmStore
     private lateinit var audio: AudioManager
-    private var player: MediaPlayer? = null
+    private var playback: AlarmAudioQueue? = null
     private var wake: PowerManager.WakeLock? = null
     private var focus: AudioFocusRequest? = null
     private var current: Alarm? = null
@@ -42,6 +42,7 @@ class AlarmService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        trace("create")
         store = AlarmStore.get(this)
         audio = getSystemService(AudioManager::class.java)
         startForeground(NOTIFICATION, notification(null))
@@ -56,6 +57,7 @@ class AlarmService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        trace("command=${intent?.action} current=${current != null} test=$test")
         when (intent?.action) {
             "TEST" -> {
                 // Eine Vorschau darf einen bereits klingelnden echten Alarm niemals ersetzen.
@@ -93,7 +95,7 @@ class AlarmService : Service() {
         generation++
         val token = generation
         loop?.cancel()
-        player?.release(); player = null
+        playback?.close(); playback = null
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification(alarm))
         _state.value = RingState(alarm, "Wecken", test = test)
         if (alarm.vibrate) getSystemService(Vibrator::class.java).vibrate(
@@ -107,23 +109,8 @@ class AlarmService : Service() {
                 delay(500)
             }
         }
-        val clips = buildList<Pair<String, String>> {
-            alarm.steps.forEach { step ->
-                when (step) {
-                    Step.TONE -> add(step.title to Tones.file(store.files, alarm.cue).absolutePath)
-                    Step.MUSIC -> add(step.title to alarm.music.ifBlank { Tones.file(store.files, alarm.tone).absolutePath })
-                    Step.IDEAS, Step.TEXT -> {
-                        val prepared = alarm.prepared[step.name].orEmpty().filter { File(it).isFile && File(it).length() > 44 }
-                        if (prepared.isNotEmpty()) prepared.forEach { add(step.title to it) }
-                        else {
-                            _state.value = _state.value.copy(message = "${step.title}: noch kein Offline-Audio. Der Ersatzweckton läuft.")
-                            add(step.title to Tones.file(store.files, alarm.tone).absolutePath)
-                        }
-                    }
-                }
-            }
-        }.ifEmpty { listOf("Weckton" to Tones.file(store.files, "classic").absolutePath) }
-        play(clips, 0, token)
+        val tones = Tones.names.keys.associateWith { Tones.file(store.files, it).absolutePath }
+        play(AlarmPlaylist.build(alarm, tones), token)
     }
 
     private fun setVolume(percent: Int) {
@@ -133,40 +120,29 @@ class AlarmService : Service() {
             .onFailure { _state.value = _state.value.copy(message = "Android blockiert die Lautstärke. Bitte Wecker unter Nicht stören zulassen.") }
     }
 
-    private fun play(clips: List<Pair<String, String>>, index: Int, token: Int) {
+    private fun play(clips: List<AlarmClip>, token: Int) {
         if (token != generation || current == null) return
-        player?.release()
-        val clip = clips[index % clips.size]
-        _state.value = _state.value.copy(step = clip.first, playing = false)
-        val next = MediaPlayer()
-        player = next
-        fun failed() {
-            if (token != generation) return
-            fallbackFailures++
-            _state.value = _state.value.copy(message = "Audio nicht abspielbar. Der lokale Ersatzweckton wird verwendet.")
-            scope.launch {
-                delay(if (fallbackFailures > 2) 2000 else 100)
-                if (token == generation) play(listOf("Ersatzweckton" to Tones.file(store.files, "classic").absolutePath), 0, token)
-            }
-        }
-        try {
-            next.setAudioAttributes(attributes)
-            next.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK)
-            if (clip.second.startsWith("content:")) next.setDataSource(this, Uri.parse(clip.second))
-            else next.setDataSource(clip.second)
-            next.setOnPreparedListener {
-                if (token == generation) {
-                    if (clip.first == Step.IDEAS.title || clip.first == Step.TEXT.title) {
-                        runCatching { it.playbackParams = android.media.PlaybackParams().setSpeed(current?.preparedSpeed ?: 1f) }
-                    }
-                    it.start()
-                    _state.value = _state.value.copy(playing = true)
+        playback?.close()
+        playback = AlarmAudioQueue(this, clips, onPlaying = { clip ->
+            trace("play variant=${clip.variation} fallback=${clip.audio.fallback}")
+            if (token == generation) _state.value = _state.value.copy(step = clip.step, playing = true, variation = clip.variation,
+                message = when {
+                    clip.audio.fallback && clip.audio.provider == "local" -> "Kein gültiges Sprach-Audio verfügbar. Der lokale Ersatzweckton läuft."
+                    clip.audio.fallback -> "Die vorbereitete Edge-Notfallstimme wird verwendet."
+                    else -> ""
+                })
+        }, onFailure = { error ->
+            if (token == generation) {
+                android.util.Log.w("WeckerPlayback", "Wiedergabe wird durch lokalen Ersatzweckton abgesichert", error)
+                trace("failure=${error.javaClass.simpleName}:${error.message}")
+                fallbackFailures++
+                _state.value = _state.value.copy(message = "Audio nicht abspielbar. Der lokale Ersatzweckton wird verwendet.", playing = false)
+                scope.launch {
+                    delay(if (fallbackFailures > 2) 2000 else 100)
+                    if (token == generation) play(listOf(AlarmClip("Ersatzweckton", PreparedAudio(Tones.file(store.files, "classic").absolutePath, fallback = true, provider = "local"))), token)
                 }
             }
-            next.setOnCompletionListener { if (token == generation) play(clips, index + 1, token) }
-            next.setOnErrorListener { _, _, _ -> failed(); true }
-            next.prepareAsync()
-        } catch (_: Exception) { failed() }
+        }).also { it.start() }
     }
 
     private fun finishCurrent(snooze: Boolean) {
@@ -183,7 +159,7 @@ class AlarmService : Service() {
         }
         generation++
         loop?.cancel()
-        player?.release(); player = null
+        playback?.close(); playback = null
         getSystemService(Vibrator::class.java).cancel()
         if (!test) store.ringing(store.ringing().filterNot { it == alarm.id })
         current = null
@@ -210,8 +186,9 @@ class AlarmService : Service() {
     private fun action(name: String, code: Int) = PendingIntent.getService(this, code, Intent(this, AlarmService::class.java).setAction(name), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onDestroy() {
+        trace("destroy")
         generation++; current = null
-        scope.cancel(); player?.release(); player = null
+        scope.cancel(); playback?.close(); playback = null
         getSystemService(Vibrator::class.java).cancel()
         focus?.let(audio::abandonAudioFocusRequest)
         runCatching { if (originalVolume >= 0) audio.setStreamVolume(AudioManager.STREAM_ALARM, originalVolume, 0) }
@@ -221,6 +198,13 @@ class AlarmService : Service() {
         super.onDestroy()
     }
     companion object {
+        private val events = ArrayDeque<String>()
+        @Synchronized private fun trace(event: String) {
+            if (events.size >= 40) events.removeFirst()
+            events.addLast("${android.os.SystemClock.elapsedRealtime()} $event")
+            android.util.Log.d("WeckerLifecycle", event)
+        }
+        @Synchronized internal fun diagnosticEvents() = events.joinToString("\n")
         const val CHANNEL = "alarm_ring_v1"
         const val NOTIFICATION = 1001
         val attributes: AudioAttributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)

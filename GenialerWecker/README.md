@@ -9,7 +9,9 @@ entwickelt. Kotlin / Jetpack Compose, Android 8 oder neuer, Ziel-SDK 36.
 2. Unter **Wann soll er wecken?** einmalig, Wochentage, einen Kalendertag oder
    **Schichtwecker · alle X Tage** auswählen.
 3. Die optionalen Karten aufklappen: Weckablauf, Musik, Lautstärke/Schlummern, Foto-Aufgabe.
-4. Über den feststehenden Knopf **Wecker speichern** sichern.
+4. Über den feststehenden Knopf **Wecker speichern** sichern. Der Wecker wird dabei
+   **immer aktiviert**. Die Audio-Vorbereitung läuft anschließend unabhängig weiter;
+   währenddessen lassen sich weitere Wecker anlegen.
 
 Für einen 35-Tage-Schichtplan: **alle X Tage → 35 Tage**, den ersten tatsächlichen
 Nachtschichttag und die gewünschte Uhrzeit einstellen. Die Folgetermine bleiben an diesem
@@ -27,8 +29,10 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
   Gerätespeicher kopiert. Geräte-Wecktöne und vier eigens erzeugte Signale sind auswählbar.
 - Pro Wecker eigene Lautstärke, optionales Anschwellen und Vibration. Wiedergabe über
   `USAGE_ALARM` / `STREAM_ALARM`; die frühere Lautstärke wird anschließend wiederhergestellt.
-- Schlüssellose Edge-Stimmen, Google Chirp 3 HD, Alibaba-Standardstimmen und eigene
-  Alibaba-Stimmen samt Aufnahme, Erstellung, Auswahl, Favoriten und Löschung.
+- Schlüssellose Edge-Stimmen, Google Chirp 3 HD und **Meine Stimmen** aus Alibaba samt
+  Aufnahme, Erstellung, Auswahl, Favoriten und Löschung. Die hochgeladenen Stimmen werden
+  beim Start und beim Öffnen der Einstellungen automatisch geladen und kontogebunden
+  zwischengespeichert. Alibaba-Standardstimmen sind nicht mehr in der Auswahl.
 - Groq-Diktat mit Whisper Large V3 Turbo und den vier Filterschichten aus Geniale Ideen.
   Textverbesserung über dessen ChatGPT-Anmeldung und Modellauswahl; Originaltext zurückholbar.
 - Foto zum Stoppen: Referenzmotiv, Mindesthelligkeit und/oder vorherrschende Farbe mit
@@ -36,6 +40,8 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
 - Gold-/Glasgestaltung, echte plastische Knöpfe, animierte Lichtreflexe, schwebender Hintergrund,
   Hell-/Dunkelmodus. Breite Displays zeigen die Weckkarten zweispaltig.
 - Persistenter Bearbeitungsentwurf. Ein App-Neustart verliert keinen begonnenen Wecker.
+- Die Berechtigungskarte erscheint auf der Startseite nur bei fehlenden Freigaben.
+  Oben in den Einstellungen steht der vollständige Status mit grünem Schutzsymbol.
 
 ## Ideenbrücke
 
@@ -51,13 +57,28 @@ Anschließend ist die Stimmenauswahl im Wecker unabhängig von Geniale Ideen.
 
 ## Offline und Android-Freigaben
 
-- Beim Speichern werden Cloud-Stimmen in kleine, Unicode-sichere Abschnitte zerlegt,
-  vorab erzeugt und dauerhaft gespeichert. Erst ein vollständig erzeugter Satz von
-  Dateien ersetzt die vorherige Fassung. Die Oberfläche zeigt den Vorbereitungsstand.
+- Beim Speichern werden **sechs Varianten derselben Stimme** erzeugt und dauerhaft gespeichert.
+  **Jede Idee wird einzeln vollständig in sechs Varianten vorbereitet, erst dann die nächste.**
+  Kein Request enthält die ganze Ideenliste. Sehr lange Ideen werden zusätzlich an Absatz-
+  und bei Bedarf Satz-/Wortgrenzen geteilt (höchstens 900 Zeichen je Request).
+  Vollständige Absätze sind die Einheiten nach dem Cortex-Prinzip.
+- Die Varianten verwenden getrennte TTS-Requests und behutsam unterschiedliche Sprechtempi.
+  Es wird keine abweichende Stimme gewählt. Die tatsächliche Betonung entscheidet der Anbieter.
+  Eine neue Synthese garantiert nicht bei jedem Anbieter automatisch eine neue Betonung.
+- Beim ersten Durchlauf werden alle Ideen/Texte in Variante 1 abgespielt, dann in Variante 2,
+  bis Variante 6 und wieder 1. Der nächste lokale Absatz wird während des laufenden Absatzes
+  vorbereitet und über `MediaPlayer.setNextMediaPlayer` übergeben.
+- Erst ein vollständig erzeugter Satz von Dateien ersetzt die vorherige Fassung. Die Oberfläche
+  zeigt Idee/Text, Variante und Absatz. Vorhandene Ein-Varianten-Wecker bleiben abspielbar.
 - Änderungen an offenen Ideen stoßen eine Hintergrundvorbereitung an; zusätzlich läuft
   ein netzgebundener WorkManager-Abgleich. Beim Auslösen selbst gibt es keinen Netzaufruf.
 - Ohne fertiges Sprach-Audio erklingt ein lokaler Ersatzweckton. Eine fehlgeschlagene
   Vorbereitung darf niemals einen stummen Wecker ergeben.
+- Schlägt Google oder die eigene Alibaba-Stimme beim Vorbereiten fehl, wird nur für diesen
+  Fehlerfall Edge verwendet und der abweichende Anbieter sichtbar markiert. Pro Vorbereitungs-
+  lauf wird ein ausgefallener Anbieter nicht für jeden einzelnen Absatz erneut belastet.
+- Beim Wecken wird **kein Internet eingeschaltet und keine neue Cloud-Synthese gestartet**.
+  Die Sechs-Varianten-Vorbereitung ersetzt die zwischenzeitlich erwogene Zwei-Minuten-Vorbereitung.
 - Weckdaten und Audiodateien liegen im Device-Protected Storage. Die Receiver planen
   nach Neustart, App-Update und Uhrzeitänderung erneut. Vor der ersten Entsperrung werden
   weder verschlüsselte API-Schlüssel noch WorkManager geöffnet.
@@ -117,3 +138,21 @@ dann den Wecker installieren. Bestehende Apps niemals für ein Signaturproblem d
 Nicht als live verifiziert ausgegeben: kostenpflichtige Google-/Alibaba-Aufrufe,
 Groq-Diktat und ChatGPT-Anmeldung ohne eingerichteten Nutzerzugang sowie ein tatsächlicher
 Geräteneustart mit anschließendem Alarm vor der ersten Entsperrung.
+
+### Nachbesserung: mehrere Wecker und sechs Varianten
+
+- 21 JVM-Prüfungen bestanden (12 Termin-/Persistenzprüfungen plus 9 Varianten-/Absatzprüfungen).
+- 13 Geräteprüfungen bestanden, einschließlich der zuvor fehlgeschlagenen Editor-Regressionen,
+  automatischem Laden eigener Alibaba-Stimmen, zwei unabhängigen gleichzeitigen Alarmen,
+  sechs real erzeugten Audiodateien und Wiedergabe 1 → 2 → 3 → 4 → 5 → 6 → 1.
+- Die vollständige MP3-Wiedergabe wurde zusätzlich nach Wechsel zum Android-Startbildschirm
+  geprüft. Zwei zunächst unterbrochene Bedienungstests wurden nach Abstimmung mit dem Nutzer
+  gezielt wiederholt und bestanden.
+- Auf dem Gerät geprüft: Bei vollständigen Freigaben keine Berechtigungskarte auf der
+  Startseite; in den Einstellungen steht sie ganz oben mit dem Bereitschaftsstatus.
+- Reproduzierbare Fehlerklasse: Ein verspätetes Ereignis eines alten Editors ersetzte den
+  neuen Entwurf. Jetzt gelten getrennte Entwurfs-IDs, veraltete Ereignisse werden verworfen,
+  und das Anlegen besitzt einen eigenen kollisionsgeschützten Schreibpfad.
+- Auch Änderungen während eines laufenden Speichervorgangs bleiben als neuerer Entwurf
+  erhalten. Wird ein Text während seiner Audio-Vorbereitung erneut gespeichert, wird die
+  vorherige Vorbereitung sauber beendet und die aktuelle Fassung vorbereitet.

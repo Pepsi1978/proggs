@@ -53,6 +53,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import de.frank.genialeideen.BuildConfig
 import de.frank.genialeideen.audio.VoiceSampleScript
 import de.frank.genialeideen.auth.CodexModel
@@ -77,6 +78,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
     val draft by vm.draft.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
+    val audioBusy by vm.audioBusy.collectAsStateWithLifecycle()
     val recording by vm.recording.collectAsStateWithLifecycle()
     val view = LocalView.current
     SideEffect {
@@ -97,15 +99,15 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
             BewegterHintergrund()
             Column(Modifier.fillMaxSize().imePadding()) {
                 IdeenKopfleiste(
-                    titel = when (page) { "edit" -> "Wecker gestalten"; "settings" -> "Einstellungen"; "ideas" -> "Offene Ideen"; else -> "Genialer Wecker" },
+                    titel = when (page) { "edit" -> if (vm.isNewDraft) "Neuer Wecker" else "Wecker bearbeiten"; "settings" -> "Einstellungen"; "ideas" -> "Offene Ideen"; else -> "Genialer Wecker" },
                     themeWahl = theme,
                     aufThemeTipp = { vm.settings.theme = if (theme == "dark") "light" else "dark" },
                     aufEinstellungen = if (page == "settings") null else ({ page = "settings" }),
                     voran = if (page != "alarms") ({ StillerKnopf("‹", { vm.stopPreview(); page = "alarms" }); Spacer(Modifier.width(8.dp)) }) else null,
                 )
-                if (busy.isNotBlank()) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (busy.isNotBlank() || audioBusy.isNotBlank()) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Text(busy, Modifier.weight(1f).padding(horizontal = 10.dp), style = MaterialTheme.typography.bodySmall)
+                    Text(busy.ifBlank { audioBusy }, Modifier.weight(1f).padding(horizontal = 10.dp), style = MaterialTheme.typography.bodySmall)
                     StillerKnopf("Abbrechen", vm::cancelAction)
                 }
                 if (message.isNotBlank()) GoldKarte(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -117,7 +119,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                 AnimatedContent(page, Modifier.weight(1f), label = "Bildschirmwechsel") { current ->
                     when (current) {
                         "edit" -> draft?.let { alarm -> Column(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(1f)) { AlarmEditor(vm, alarm, activity) }
+                            Box(Modifier.weight(1f)) { key(alarm.id) { AlarmEditor(vm, alarm, activity) } }
                             Box(Modifier.fillMaxWidth().background(gold.flaeche.copy(alpha = .85f)).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
                                 GoldKnopf("Wecker speichern", {
                                     if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -129,7 +131,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                         "settings" -> SettingsPage(vm, activity)
                         "ideas" -> IdeasPage(vm)
                         else -> AlarmList(alarms, vm,
-                            onNew = { vm.edit(Alarm()); page = "edit" },
+                            onNew = { vm.newAlarm(); page = "edit" },
                             onEdit = { vm.edit(it); page = "edit" }, onDelete = { delete = it },
                             onSettings = { page = "settings" }, onIdeas = { page = "ideas" })
                     }
@@ -169,7 +171,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                     }
                 }
             }
-            item(span = { GridItemSpan(maxLineSpan) }) { ReadinessCard(onSettings) }
+            item(span = { GridItemSpan(maxLineSpan) }) { ReadinessCard(onSettings, hideWhenReady = true) }
             if (alarms.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
                 Leerzustand("☀", "Ein Morgen nach deinen Wünschen", "Musik, Gedanken und Erinnerungen – in deiner Reihenfolge. Lege deinen ersten Wecker an.")
             }
@@ -192,7 +194,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             val status = when {
                                 alarm.preparationError.isNotBlank() -> "Vorbereitung offen: ${alarm.preparationError}"
                                 alarm.preparedAt == 0L -> "Sprachausgabe noch nicht offline bereit"
-                                else -> "Offline-Audio bereit · ${formatAt(alarm.preparedAt)}"
+                                else -> "${alarm.voiceVariants.size.takeIf { it > 0 } ?: 1} Stimmvarianten offline bereit · ${formatAt(alarm.preparedAt)}"
                             }
                             Text(status, style = MaterialTheme.typography.bodySmall,
                                 color = if (alarm.preparationError.isNotBlank() || alarm.preparedAt == 0L) Semantisch.warnung else Semantisch.erfolg)
@@ -256,7 +258,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             }
             OutlinedTextField(alarm.name, { vm.change(alarm.copy(name = it)) }, Modifier.fillMaxWidth(), label = { Text("Name des Weckers") }, singleLine = true)
             RepeatEditor(alarm, activity, vm::change)
-            Toggle("Wecker eingeschaltet", alarm.enabled) { vm.change(alarm.copy(enabled = it)) }
+            Text("Beim Speichern wird dieser Wecker automatisch aktiviert.", style = MaterialTheme.typography.bodySmall)
         }
         Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }) {
             Text("Wähle die Bausteine und ihre Reihenfolge. Der gesamte Ablauf wiederholt sich bis zum Stoppen; Songs laufen vollständig durch.", style = MaterialTheme.typography.bodySmall)
@@ -340,7 +342,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 Text("Schlummern bleibt entsprechend deinem Limit möglich. Der normale Stoppknopf wird durch die Foto-Aufgabe ersetzt.", style = MaterialTheme.typography.bodySmall)
             }
         }
-        Text("Dein Entwurf wird automatisch gespeichert. Cloud-Stimmen werden beim Speichern als lokale Audiodateien vorbereitet.", style = MaterialTheme.typography.bodySmall)
+        Text("Dein Entwurf wird automatisch gespeichert. Beim Speichern werden sechs Stimmvarianten vorbereitet. Beim Wecken folgen sie offline aufeinander.", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(16.dp))
     }
 }
@@ -455,16 +457,9 @@ private fun IdeasPage(vm: WeckerViewModel) {
 }
 
 @Composable
-fun ReadinessCard(onSettings: () -> Unit) {
-    val context = LocalContext.current
-    var revision by remember { mutableIntStateOf(0) }
-    val lifecycle = LocalLifecycleOwner.current
-    DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) revision++ }
-        lifecycle.lifecycle.addObserver(observer)
-        onDispose { lifecycle.lifecycle.removeObserver(observer) }
-    }
-    val state = remember(revision) { readiness(context) }
+fun ReadinessCard(onSettings: () -> Unit, hideWhenReady: Boolean = false) {
+    val state = rememberReadiness()
+    if (hideWhenReady && state.all { it.second }) return
     GoldKarte {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(if (state.all { it.second }) Icons.Default.VerifiedUser else Icons.Default.NotificationsActive,
@@ -476,6 +471,24 @@ fun ReadinessCard(onSettings: () -> Unit) {
             StillerKnopf("Prüfen", onSettings)
         }
     }
+}
+
+@Composable
+fun rememberReadiness(): List<Pair<String, Boolean>> {
+    val context = LocalContext.current
+    var revision by remember { mutableIntStateOf(0) }
+    val lifecycle = LocalLifecycleOwner.current
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) revision++ }
+        lifecycle.lifecycle.addObserver(observer)
+        onDispose { lifecycle.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(lifecycle) {
+        lifecycle.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) { revision++; delay(2000) }
+        }
+    }
+    return remember(revision) { readiness(context) }
 }
 
 fun readiness(context: Context): List<Pair<String, Boolean>> {

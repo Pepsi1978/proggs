@@ -52,11 +52,11 @@ class AlarmScheduler(private val context: Context) {
             schedule(updated)
         }
     }
-    fun save(alarm: Alarm) {
+    fun save(alarm: Alarm, create: Boolean = false) {
         alarm.validate()
         require(allowed() || !alarm.enabled) { "Erlaube zuerst genaue Weckzeiten in den Einstellungen." }
         val updated = alarm.copy(nextAt = if (alarm.enabled) AlarmTime.next(alarm) else 0, snoozeUntil = 0, snoozes = 0)
-        store.put(updated)
+        if (create) store.insertNew(updated) else store.put(updated)
         if (allowed()) schedule(updated) else cancel(updated.id)
     }
     fun accept(id: String, snooze: Boolean, at: Long): Boolean {
