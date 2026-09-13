@@ -140,7 +140,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 progress("${alarm.name}: Audio-Vorbereitung …")
                 SpeechPreparation(app, settings).prepare(alarm) { text -> withContext(Dispatchers.Main) { progress("${alarm.name}: $text") } }
                 ideas.value = IdeasBridge(app).cached()
-                if (store.get(alarm.id)?.let { it.text == alarm.text && it.steps == alarm.steps && it.voiceVariants.size == VoiceVariations.COUNT } == true)
+                if (store.get(alarm.id)?.let { it.sameSpeechAs(alarm) && it.voiceVariants.size == VoiceVariations.COUNT } == true)
                     message.value = "${alarm.name}: Die Sprachvarianten sind offline bereit."
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) { message.value = "${alarm.name}: ${e.message ?: "Audio-Vorbereitung fehlgeschlagen"}" }

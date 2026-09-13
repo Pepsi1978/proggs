@@ -33,6 +33,10 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
   Gerätespeicher kopiert. Geräte-Wecktöne und vier eigens erzeugte Signale sind auswählbar.
 - Pro Wecker eigene Lautstärke, optionales Anschwellen und Vibration. Wiedergabe über
   `USAGE_ALARM` / `STREAM_ALARM`; die frühere Lautstärke wird anschließend wiederhergestellt.
+- Bei einem Ablauf mit offenen Ideen oder eigenem Text zeigt der Editor die Stimmauswahl und
+  direkt darunter den Sprechgeschwindigkeitsregler. Beide Werte können unabhängig pro Wecker
+  festgelegt oder auf dem globalen Standard belassen werden. Die Auswahl bleibt im Entwurf und
+  im gespeicherten Wecker erhalten und gilt auch für die sechs offline vorbereiteten Varianten.
 - Schlüssellose Edge-Stimmen, Google Chirp 3 HD und **Meine Stimmen** aus Alibaba samt
   Aufnahme, Erstellung, Auswahl, Favoriten und Löschung. Die hochgeladenen Stimmen werden
   beim Start und beim Öffnen der Einstellungen automatisch geladen und kontogebunden

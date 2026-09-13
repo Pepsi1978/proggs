@@ -308,6 +308,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             }
             if (Step.IDEAS in alarm.steps) Text("Die offenen Ideen werden in ihrer Reihenfolge aus Geniale Ideen gelesen. Bei bestehender Verbindung bereitet die App Änderungen automatisch vor.", style = MaterialTheme.typography.bodySmall)
         }
+        if (alarm.needsSpeech) AlarmSpeechEditor(vm, alarm)
         if (Step.MUSIC in alarm.steps || Step.TONE in alarm.steps) Section("Musik & Klingelzeichen", collapsible = true, summary = alarm.musicName) {
             if (Step.TONE in alarm.steps) Choice("Klingelzeichen vor dem Text", alarm.cue, Tones.names.toList()) { vm.change(alarm.copy(cue = it)) }
             Text(alarm.musicName, style = MaterialTheme.typography.bodyMedium)
@@ -373,6 +374,54 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
         }
         Text("Dein Entwurf wird automatisch gespeichert. Beim Speichern werden sechs Stimmvarianten vorbereitet. Beim Wecken folgen sie offline aufeinander.", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
+    val revision by vm.settingsRevision.collectAsStateWithLifecycle()
+    val voices by vm.clonedVoices.collectAsStateWithLifecycle()
+    val loading by vm.voicesLoading.collectAsStateWithLifecycle()
+    val error by vm.voiceLoadError.collectAsStateWithLifecycle()
+    val defaults = remember(revision) { de.frank.genialeideen.speech.SyntheseStimme(vm.settings) }
+    val effective = alarm.resolveVoice(defaults)
+    val available = voices.map {
+        "${TtsProvider.QWEN_CLONE.id}|${it.id}" to "${vm.settings.qwenVoiceNames[it.id] ?: it.name} · Meine Stimmen"
+    } + TtsCatalog.googleVoices.map {
+        "${TtsProvider.GOOGLE_CLOUD.id}|${it.id}" to "${it.name} · Google"
+    } + TtsCatalog.edgeVoices.map {
+        "${TtsProvider.EDGE.id}|${it.id}" to "${it.name} · Edge"
+    }
+    val defaultId = when (defaults.ttsProvider) {
+        TtsProvider.GOOGLE_CLOUD.id -> defaults.googleTtsVoice
+        TtsProvider.QWEN_CLONE.id -> defaults.qwenTtsVoiceId
+        TtsProvider.QWEN.id -> defaults.qwenStandardVoice
+        else -> defaults.edgeTtsVoice
+    }
+    val defaultLabel = available.find { it.first == "${defaults.ttsProvider}|$defaultId" }?.second
+        ?: vm.settings.qwenVoiceNames[defaultId] ?: defaultId.ifBlank { "Noch keine Stimme eingerichtet" }
+    val selected = if (alarm.voiceProvider.isBlank()) "" else "${alarm.voiceProvider}|${alarm.voiceId}"
+    val options = listOf("" to "Standard aus Einstellungen · $defaultLabel") + available +
+        if (selected.isNotBlank() && available.none { it.first == selected })
+            listOf(selected to "${vm.settings.qwenVoiceNames[alarm.voiceId] ?: alarm.voiceId} · gespeicherte Auswahl")
+        else emptyList()
+    LaunchedEffect(Unit) { vm.loadVoices() }
+    Section("Stimme & Sprechgeschwindigkeit") {
+        Choice("Stimme für diesen Wecker", selected, options) { chosen ->
+            vm.change(alarm.copy(voiceProvider = chosen.substringBefore('|'), voiceId = chosen.substringAfter('|', "")))
+        }
+        Text("Sprechgeschwindigkeit: ${"%.2f".format(effective.ttsSpeechRate)}×" +
+            if (alarm.speechRate == null) " · Standard aus Einstellungen" else " · nur dieser Wecker")
+        Slider(effective.ttsSpeechRate, { vm.change(alarm.copy(speechRate = it)) }, valueRange = .5f..2f)
+        if (alarm.speechRate != null) StillerKnopf("Standard-Sprechgeschwindigkeit verwenden", {
+            vm.change(alarm.copy(speechRate = null))
+        })
+        Text("Ohne eigene Auswahl gelten Stimme und Sprechgeschwindigkeit aus den Einstellungen. Jede Änderung hier gilt nur für diesen Wecker.", style = MaterialTheme.typography.bodySmall)
+        if (loading) Text("Deine hochgeladenen Stimmen werden geladen …", style = MaterialTheme.typography.bodySmall)
+        if (error.isNotBlank() && vm.settings.qwenTtsApiKey.isNotBlank()) {
+            Text(error, color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)
+            StillerKnopf("Meine Stimmen erneut laden", { vm.loadVoices(force = true) })
+        }
     }
 }
 

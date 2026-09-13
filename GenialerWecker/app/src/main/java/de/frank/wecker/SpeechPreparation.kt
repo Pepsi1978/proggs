@@ -43,9 +43,10 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                         .ifEmpty { listOf(SpeechGroup(Step.IDEAS.name, listOf("Es sind keine offenen Ideen vorhanden."))) }
                 }
                 if (Step.TEXT in alarm.steps) groups += SpeechGroup(Step.TEXT.name, chunks(alarm.text))
-                val voice = voiceFactory()
+                val voice = alarm.resolveVoice(voiceFactory())
                 val signature = hash(voiceKey(voice) + JSONArray(groups.map { JSONObject().put("step", it.step).put("paragraphs", JSONArray(it.paragraphs)) }).toString())
                 val latest = store.get(alarm.id) ?: return@withContext
+                if (!latest.sameSpeechAs(alarm)) return@withContext
                 val cached = latest.voiceVariants
                 // Alte Varianten besitzen noch keine Ideengrenzen. In diesem Fall die Gruppen
                 // erneut zusammensetzen; render() verwendet vorhandene Audiodateien weiter.
@@ -55,14 +56,14 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                     cached.flatMap { it.steps.values.flatten() }.all { File(it.path).length() > 44 } &&
                     (cached.none { it.steps.values.flatten().any(PreparedAudio::fallback) } || System.currentTimeMillis() - latest.preparedAt < 15 * 60_000)) {
                     if (cached.none { it.steps.values.flatten().any(PreparedAudio::fallback) }) store.update(alarm.id) { current ->
-                        if (current.text == alarm.text && current.steps == alarm.steps) current.copy(preparationError = "") else current
+                        if (current.sameSpeechAs(alarm)) current.copy(preparationError = "") else current
                     }
                     return@withContext
                 }
                 var primaryFailed = false
                 var primaryReason = ""
                 store.update(alarm.id) { current ->
-                    if (current.text == alarm.text && current.steps == alarm.steps) current.copy(preparationError = "Audio-Vorbereitung läuft …") else current
+                    if (current.sameSpeechAs(alarm)) current.copy(preparationError = "Audio-Vorbereitung läuft …") else current
                 }
                 val variants = VoiceVariations.buildGroups(groups, render = { text, index ->
                     ensureActive()
@@ -79,9 +80,9 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                         }
                     } else render(text, chosen.edgeFallback(), index).copy(fallback = true)
                 }, progress = { group, groupTotal, variation, part, total -> progress("Text/Idee $group/$groupTotal · Variante $variation/6 · Absatz $part/$total") })
-                check(voiceKey(voice) == voiceKey(voiceFactory())) { "Die Stimme wurde während der Vorbereitung geändert. Bitte erneut vorbereiten." }
+                check(voiceKey(voice) == voiceKey(alarm.resolveVoice(voiceFactory()))) { "Die Stimme wurde während der Vorbereitung geändert. Bitte erneut vorbereiten." }
                 store.update(alarm.id) { current ->
-                    if (current.text != alarm.text || current.steps != alarm.steps) current
+                    if (!current.sameSpeechAs(alarm)) current
                     else current.copy(voiceVariants = variants,
                         prepared = variants.first().steps.mapValues { (_, clips) -> clips.map(PreparedAudio::path) },
                         preparedAt = System.currentTimeMillis(), preparedSpeed = voice.playbackSpeed, preparedSignature = signature,
@@ -89,12 +90,14 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                 }
             } catch (e: CancellationException) {
                 store.update(alarm.id) { current ->
-                    if (current.text == alarm.text && current.steps == alarm.steps) current.copy(preparationError = "Audio-Vorbereitung abgebrochen.") else current
+                    if (current.sameSpeechAs(alarm)) current.copy(preparationError = "Audio-Vorbereitung abgebrochen.") else current
                 }
                 throw e
             }
             catch (e: Exception) {
-                store.update(alarm.id) { it.copy(preparationError = e.message ?: "Vorbereitung fehlgeschlagen") }
+                store.update(alarm.id) { current ->
+                    if (current.sameSpeechAs(alarm)) current.copy(preparationError = e.message ?: "Vorbereitung fehlgeschlagen") else current
+                }
                 throw e
             }
         }
