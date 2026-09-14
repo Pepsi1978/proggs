@@ -1,6 +1,6 @@
 ---
 name: ins-terminal-einfuegen
-description: Übergibt Text an geöffnete Agenten-Terminals in Codex unter Windows. Nutzen bei „ins Terminal einfügen“, „an die CLI übergeben“, „bei Claude reinschreiben“, „an OpenCode schicken“ oder „mit Enter abschicken“. Auch bei besprochenen Verbesserungen an einer laufenden App mit bekanntem Terminal rechts oder unten die Übergabe anbieten; erst nach konkreter Zustimmung senden. Keine dauerhafte Überwachung.
+description: Koordiniert Sprachaufträge, Codeprüfung und schnelle Textübergaben an laufende Agenten-Terminals in Codex unter Windows. Nutzen bei „ins Terminal einfügen“, „an die CLI übergeben“, „bei Claude reinschreiben“, „an OpenCode schicken“, „mit Enter abschicken“ oder beauftragtem Dialog mit der CLI. Bei besprochenen App-Verbesserungen die Übergabe anbieten; konkrete Zustimmung beachten. Keine dauerhafte Überwachung.
 ---
 
 # Ins Terminal einfügen
@@ -26,6 +26,7 @@ Wenn die erforderlichen Werkzeugbeschreibungen bereits bekannt sind und die Comp
 - Neue vollständige Nutzerbeiträge an jeder verfügbaren Unterbrechungsstelle vor dem nächsten Prompt berücksichtigen. Im flüchtigen Arbeitskontext aktuelles Ziel, neueste Ergänzungen, offene Fragen und zuletzt gesendeten Auftrag knapp halten. Zusammenhängende Ergänzungen zusammenführen; alte Vorgaben nur ändern, wenn die neue Aussage sie tatsächlich ersetzt. Den Nutzer bei Satzfragmenten oder Denkpausen ausreden lassen.
 - Während die CLI arbeitet, aus vollständigen Nutzerangaben bereits den nächsten Entwurf vorbereiten und zugängliche relevante Änderungen lesen. Dafür nicht auf deren Antwort warten. Den Entwurf nach der Antwort mit dem tatsächlichen Ergebnis abgleichen. Nur die nötige Ergänzung übergeben, nicht jedes Mal den gesamten bekannten Verlauf. Ein vorhandener Absendeauftrag gilt innerhalb seines konkreten Umfangs weiter; neue bloße Ideen werden nicht durch ein früheres Ja automatisch freigegeben.
 - Dem Nutzer neue entscheidende Erkenntnisse knapp mitteilen: konkrete Abweichung, Hindernis, nötige Entscheidung oder geprüftes Ergebnis. Weder jede gelesene Zeile vorlesen noch mit einer relevanten Warnung auf die vollständige Analyse warten. CLI-Aussage, eigene Beobachtung und eigenständig verifiziertes Ergebnis klar unterscheiden.
+- Für umfangreichere Programmierübergaben bei Bedarf eine knappe Rückmeldung der CLI zu vier Punkten anfordern: verstandener Auftrag, tatsächliche Änderung mit Fundstelle, Prüfbeleg mit Ergebnis, offene Punkte bzw. nicht berücksichtigte neue Wünsche. Alle vier auf relevante Abweichungen prüfen; Belege nicht erst bei offensichtlichen Fehlern lesen. Bei kleinen Dialogfragen reicht eine direkte kurze Antwort, kein starres Formular. Fundstellen ermöglichen die eigene Prüfung; auch eine strukturierte CLI-Meldung ist noch kein unabhängiger Nachweis.
 - Vor Texteingabe und nochmals vor Enter prüfen, ob inzwischen eine Korrektur oder ein Stopp eingetroffen ist. Einen überholten noch nicht gesendeten eigenen Entwurf anpassen; fremden Eingabetext nicht überschreiben. Bereits abgesendete Nachrichten lassen sich nicht rückwirkend ändern: eine nötige Korrektur klar als Folgeauftrag formulieren, ohne zu behaupten, der alte Auftrag sei nie angekommen.
 - „Stopp“ beendet die weitere Übergabeschleife. Eine bereits laufende CLI-Arbeit nur dann abbrechen, wenn der Nutzer diesen Abbruch ebenfalls meint; nicht reflexartig Escape oder Strg+C in fremde Arbeit senden.
 - Modell-, Thinking- und Effort-Auswahl respektieren und nicht zur Beschleunigung heruntersetzen. Die in Codex gewählte Denkstufe und diejenige der fremden CLI sind getrennte Einstellungen; keine automatische Gleichheit behaupten. Schneller werden durch weniger unnötige Aufrufe, kurze gezielte Übergaben und zügiges Lesen. Erforderliche inhaltliche Prüfung und Nutzervorgaben erhalten; keine feste Denkzeit oder Erkennungszeit versprechen.
@@ -89,10 +90,10 @@ globalThis.terminalInsertState = await sky.get_window_state({
   include_text: true,
 });
 globalThis.terminalInsertWindow = terminalInsertState.window;
-nodeRepl.write(String(terminalInsertState.accessibility?.focused_element || ''));
 ```
 
 - Bei unveränderter, sichtbar fokussierter Eingabe direkt mit Texteingabe und Sichtprüfung fortfahren. Je Aktion die folgende Zustandsprüfung in dieselbe Node-Zelle aufnehmen; Beobachtung und die darauf basierende nächste Aktion bleiben getrennt. Den Terminalpuffer erst zur Ergebnisprüfung abrufen, wenn der erste Screenshot Programm und Eingabebereitschaft bereits eindeutig zeigt.
+- Fokusmetadaten beim Vorbereiten einer Texteingabe zusammen mit dem Screenshot erfassen; eine bekannte nichtssagende Dokument-Fokuszeile nicht zusätzlich ausgeben. Bei reiner Ergebnisprüfung genügt der Screenshot ohne Accessibility-Text, sofern er das Ergebnis eindeutig zeigt. Das reduziert unnötigen Ausgabetext; eine messbare Laufzeitersparnis ist dadurch allein nicht belegt.
 - Bei fehlendem Node-Zustand einmal regulär initialisieren. Die Kaltstartzeit und die blaue Aktivitätsanzeige des Computer-Use-Runtimes lassen sich durch diesen Skill nicht abschalten. Keine Zusage fester Reaktionszeiten und keine Umgehung des sichtbaren Computer-Use-Modus.
 
 ### Eingeben und prüfen
