@@ -51,7 +51,7 @@ test('failed refresh after Enter never enables a duplicate send, even after re-o
   assert.equal(f.calls.filter(([kind]) => kind === 'key').length, 1);
 });
 
-test('failed refresh after typing neither sends nor retries typing', async () => {
+test('failed typing call performs no automatic retry and blocks immediate send', async () => {
   const f = fixture();
   await f.helper.observe();
   f.failCapture();
