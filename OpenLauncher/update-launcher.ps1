@@ -172,7 +172,23 @@ else {
     }
 }
 
-$newLauncher = Start-Process -FilePath $launcherExe -PassThru
+# Nur die Umgebung des neuen Launchers bereinigen, nicht die aufrufende Sitzung
+# oder persistente Windows-Einstellungen. Sonst erbt jeder neue Terminalprozess
+# die Farbabschaltung aus einem Agenten, selbst bei korrekt ausgeführtem Updater.
+$launcherStart = [System.Diagnostics.ProcessStartInfo]::new()
+$launcherStart.FileName = $launcherExe
+$launcherStart.WorkingDirectory = $projectRoot
+$launcherStart.UseShellExecute = $false
+foreach ($colorOverride in @('NO_COLOR', 'FORCE_COLOR', 'CLICOLOR', 'CLICOLOR_FORCE')) {
+    $launcherStart.EnvironmentVariables.Remove($colorOverride)
+}
+if ($launcherStart.EnvironmentVariables['TERM'] -eq 'dumb') {
+    $launcherStart.EnvironmentVariables.Remove('TERM')
+}
+if ([string]::IsNullOrWhiteSpace($launcherStart.EnvironmentVariables['COLORTERM'])) {
+    $launcherStart.EnvironmentVariables.Remove('COLORTERM')
+}
+$newLauncher = [System.Diagnostics.Process]::Start($launcherStart)
 Start-Sleep -Seconds 1
 if ($newLauncher.HasExited) {
     throw 'Der aktualisierte Launcher wurde gestartet, aber sofort wieder beendet.'

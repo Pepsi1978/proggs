@@ -61,6 +61,14 @@ Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
 foreach ($staleName in @('NO_COLOR', 'FORCE_COLOR', 'CLICOLOR', 'CLICOLOR_FORCE', 'AI_AGENT', 'GIT_TERMINAL_PROMPT')) {
     Remove-Item -LiteralPath "Env:$staleName" -ErrorAction SilentlyContinue
 }
+# Codex-Werkzeugprozesse verwenden TERM=dumb. In einer echten interaktiven Konsole
+# verhindert dieser geerbte Wert die Farberkennung trotz entferntem NO_COLOR.
+if ($env:TERM -eq 'dumb') {
+    Remove-Item -LiteralPath 'Env:TERM' -ErrorAction SilentlyContinue
+}
+if ([string]::IsNullOrWhiteSpace($env:COLORTERM)) {
+    Remove-Item -LiteralPath 'Env:COLORTERM' -ErrorAction SilentlyContinue
+}
 foreach ($staleClaude in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'CLAUDE*' -and $_.Name -ne 'CLAUDE_CONFIG_DIR' })) {
     Remove-Item -LiteralPath "Env:$($staleClaude.Name)" -ErrorAction SilentlyContinue
 }
