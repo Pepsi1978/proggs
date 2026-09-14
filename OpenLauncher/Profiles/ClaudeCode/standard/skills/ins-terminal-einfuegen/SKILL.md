@@ -25,6 +25,8 @@ Der Helfer verkürzt wiederholten Aufrufcode, bewertet aber weder Screenshots no
 
 ## Antworten zügig mitlesen
 
+Bei begleitender Codeprüfung bereits während der Arbeit die gespeicherten Änderungen ansehen; nicht grundsätzlich bis zum Antwortende warten. Terminalausgabe liefert Hinweise, der bestätigte Arbeitsordner liefert den tatsächlichen Dateistand. Für den sparsamen Vergleich und optionale Sitzungslogs [references/live-mitlesen.md](references/live-mitlesen.md) lesen. Das ist eine Folge von Momentaufnahmen, kein lückenloser Livestream.
+
 - Für die Ausgabe zuerst `mcp__codex_app__read_thread_terminal` nutzen; Computer Use ist zum reinen Lesen nicht jedes Mal nötig. Den letzten Rohpuffer und bereits gelesene Antwort nur flüchtig in der laufenden Sitzung behalten. Bei identischem Puffer keine erneute Analyse ausgeben.
 - ANSI-Farb- und Steuersequenzen für die Textsicht entfernen, lange Spinner-/Statusaktualisierungen nicht als neue Antwort behandeln. Die Ausgabe ist ein begrenzter Strom von Terminalaktualisierungen: bloßes Entfernen von ANSI rekonstruiert keine Bildschirmgeometrie und garantiert keinen vollständigen Text. Bei zerstückelten Sätzen, fehlendem Antwortanfang oder abgeschnittenem Puffer einen aktuellen Screenshot zur Klärung verwenden, statt Inhalte zu erraten.
 - Bei diesem ausdrücklich beauftragten interaktiven Dialog während einer erwarteten Antwort kurze, unterbrechbare Warteintervalle von etwa 3–5 Sekunden verwenden; bei längeren unveränderten Denkphasen auf 10–15 Sekunden verlängern. Keine feste Zusatzpause, wenn die fertige Antwort schon vorliegt. Keine dauerhafte Automation allein durch diesen Skill einrichten.

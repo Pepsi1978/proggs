@@ -1,5 +1,9 @@
 # Beobachtungen und Messungen vom 14.09.2026
 
+Im anschließenden erneuten Dialog wurde der gespeicherte Eingabehelfer nach explizitem Fokus auf die Terminalzeile erfolgreich für drei Diskussionsnachrichten eingesetzt: Text war jeweils im richtigen Terminal sichtbar, Enter wurde separat ausgeführt und Claude antwortete. Auch das Lesen über den Terminalpuffer funktionierte; ANSI-Neuzeichnen zerstückelte teilweise die Textsicht. Damit sind Eingeben, Absenden und Mitlesen praktisch erprobt. Ein neuer Geschwindigkeitsvergleich und die begleitende Prüfung tatsächlicher Codeänderungen wurden dabei nicht gemessen bzw. ausgeführt.
+
+Die Diskussion über Live-Mitlesen ergab einen kombinierten Ablauf aus Pufferhinweisen und gezielten Dateivergleichen. Zwei Empfehlungen wurden korrigiert: Erst nach Antwortabschluss zu prüfen verfehlt die gewünschte frühe Sicht; gleiche Diff-Statistik schließt weitere Inhaltsänderungen nicht aus. Die neueste Sitzungslogdatei kann außerdem zu einer anderen Sitzung gehören. Die daraus abgeleiteten Regeln stehen in `live-mitlesen.md`; ein Logleser wurde nicht implementiert oder live validiert.
+
 ## Beobachtete Besonderheit des eingebauten Terminals
 
 Bei zwei erfolgreichen manuellen Ablaufprüfungen am 14.09.2026 erkannte die Accessibility-Schnittstelle `Terminal input`, meldete den Fokus aber nur als Dokument. Ein Klick über dessen Elementindex scheiterte mit `coordinate input geometry is unavailable`. Die funktionierende Alternative war ein Klick in die sichtbare Eingabezeile anhand des frischen Screenshots. Der folgende Screenshot bestätigte den eingegebenen Text am Terminal-Cursor; danach funktionierte Enter. Bei der zweiten Nachricht war kein erneuter Klick nötig.
