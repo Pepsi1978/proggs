@@ -1,6 +1,7 @@
 package de.frank.kompass.update
 
 import org.json.JSONArray
+import org.json.JSONObject
 
 data class GelesenerEintrag(
     val name: String,
@@ -66,6 +67,119 @@ object DokuParser {
      * Sie bleibt stehen, damit ein später nachgetragener Sonderfall hier seinen Platz hat.
      */
     val changelogNamen = emptySet<String>()
+
+    /** So verweist ein JSON-Schema auf einen seiner eigenen Bausteine. */
+    private const val VERWEIS_VORSILBE = "#/\$defs/"
+
+    /**
+     * Wie tief die Schlüsselpfade gelesen werden.
+     *
+     * Zwei Ebenen sind die Grenze, an der die Angaben aufhören zu helfen: `server.port` sucht
+     * man, das Bauteil der dritten Ebene darunter nicht. Ausserdem verweisen die Bausteine des
+     * Schemas teilweise auf sich selbst — ohne Grenze liefe die Auflösung im Kreis.
+     */
+    private const val MAX_TIEFE = 2
+
+    /**
+     * Liest die Einstellungen aus dem offiziellen JSON-Schema von `opencode.json`.
+     *
+     * **Warum das Schema und nicht die Doku-Seite.** `config.mdx` erklärt die Einstellungen an
+     * Beispielblöcken: ein Stück JSON, darunter ein Absatz Fliesstext. Daraus lässt sich keine
+     * verlässliche Schlüsselliste gewinnen — ein Beispiel zeigt, was eine Einstellung kann,
+     * nicht welche es gibt. Das Schema dagegen ist die Datei, gegen die OpenCode selbst prüft.
+     * Es ist die Wahrheit, es trägt die Beschreibungen mit, und es ist mit 39 KB klein.
+     *
+     * Bis Fassung 0.6.8 war der Config-Bereich an gar keine Quelle angeschlossen: Der Abgleich
+     * kannte nur `Bereich.SLASH`. `URL_CONFIG` stand zwar in der Abruf-Klasse, wurde aber nie
+     * aufgerufen. Die Einstellungsliste blieb deshalb auf ihrem Auslieferungsstand stehen.
+     *
+     * Gelesen wird zwei Ebenen tief. Das ist keine Willkür, sondern die Grenze, an der die
+     * Angaben aufhören, beim Nachschlagen zu helfen: `server.port` ist eine Einstellung, die
+     * man sucht; die dritte Ebene darunter ist Bauteil einer Struktur. Ausserdem verweisen die
+     * Bausteine des Schemas teilweise auf sich selbst — ohne Grenze liefe die Auflösung im
+     * Kreis.
+     *
+     * Wo das Schema einen freien Namen erlaubt (`additionalProperties`), steht `<name>` im
+     * Pfad — so wie es auch die Referenz von Codex schreibt: `command.<name>.template`.
+     */
+    fun leseEinstellungen(schemaJson: String): List<GelesenerEintrag> {
+        val wurzel = runCatching { JSONObject(schemaJson) }.getOrNull() ?: return emptyList()
+        val bausteine = wurzel.optJSONObject("\$defs") ?: JSONObject()
+        val gefunden = linkedMapOf<String, GelesenerEintrag>()
+
+        fun loese(knoten: JSONObject?): JSONObject? {
+            if (knoten == null) return null
+            val verweis = knoten.optString("\$ref")
+            if (!verweis.startsWith(VERWEIS_VORSILBE)) return knoten
+            return bausteine.optJSONObject(verweis.removePrefix(VERWEIS_VORSILBE))
+        }
+
+        fun gehe(knoten: JSONObject?, praefix: String, tiefe: Int) {
+            if (tiefe > MAX_TIEFE) return
+            val ziel = loese(knoten) ?: return
+            val eigenschaften = ziel.optJSONObject("properties")
+            if (eigenschaften != null) {
+                for (name in eigenschaften.keys()) {
+                    // Der Schema-Verweis ist eine Angabe für den Editor, keine Einstellung.
+                    if (name == "\$schema") continue
+                    val kind = eigenschaften.optJSONObject(name) ?: continue
+                    val pfad = praefix + name
+                    val aufgeloest = loese(kind)
+                    val text = kind.optString("description")
+                        .ifBlank { aufgeloest?.optString("description").orEmpty() }
+                    gefunden.putIfAbsent(
+                        pfad,
+                        GelesenerEintrag(
+                            name = pfad,
+                            beschreibung = beschreibungOderHinweis(pfad, text, typVon(aufgeloest ?: kind)),
+                            art = "opencode.json",
+                        ),
+                    )
+                    gehe(kind, "$pfad.", tiefe + 1)
+                }
+            }
+            val freieNamen = ziel.optJSONObject("additionalProperties")
+            if (freieNamen != null && tiefe < MAX_TIEFE) {
+                gehe(freieNamen, praefix + "<name>.", tiefe + 1)
+            }
+        }
+
+        gehe(wurzel, "", 0)
+        return gefunden.values.toList()
+    }
+
+    /**
+     * Macht aus einem Schlüssel ohne Beschreibung einen ehrlichen Text.
+     *
+     * Rund die Hälfte der Unterfelder trägt im Schema keinen erklärenden Satz. Sie deshalb
+     * wegzulassen wäre falsch — es sind gültige Einstellungen, und wer sie sucht, soll sie
+     * finden. Sie mit einem erfundenen Satz zu füllen wäre schlimmer. Also steht dort, was
+     * sicher stimmt: wohin der Schlüssel gehört, welchen Typ er hat, und dass die offizielle
+     * Beschreibung an dieser Stelle fehlt.
+     */
+    private fun beschreibungOderHinweis(pfad: String, text: String, typ: String): String {
+        val typteil = if (typ.isBlank()) "" else " (Typ: $typ)"
+        if (text.isNotBlank()) return text.replace(Regex("\\s{2,}"), " ").trim() + typteil
+        val eltern = pfad.substringBeforeLast('.', "")
+        val herkunft = if (eltern.isBlank()) "Schlüssel in `opencode.json`" else "Teil der Einstellung `$eltern`"
+        return "$herkunft$typteil. Das offizielle Schema führt zu diesem Schlüssel keinen " +
+            "erklärenden Satz."
+    }
+
+    /** Der Typ, so wie ihn das Schema angibt. Mehrere erlaubte Formen werden benannt, nicht geraten. */
+    private fun typVon(knoten: JSONObject): String {
+        knoten.opt("type")?.let { wert ->
+            if (wert is String) return wert
+            if (wert is JSONArray) {
+                return (0 until wert.length()).joinToString(" | ") { wert.optString(it) }
+            }
+        }
+        knoten.optJSONArray("enum")?.let { werte ->
+            return (0 until minOf(werte.length(), 6)).joinToString(" | ") { werte.optString(it) }
+        }
+        if (knoten.has("anyOf") || knoten.has("oneOf")) return "mehrere Formen"
+        return ""
+    }
 
     fun leseSlashBefehle(markdown: String): List<GelesenerEintrag> {
         val abschnitt = markdown.substringAfter("\n## Commands", "").substringBefore("\n## ")

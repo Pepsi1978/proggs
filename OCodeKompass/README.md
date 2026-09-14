@@ -7,7 +7,7 @@ Navigation und App-Einstellungen, mit einer deutschen Referenz für die OpenCode
 
 - 23 dokumentierte Slash-Einträge einschließlich Aliasnamen, Stand OpenCode 1.18.30.
 - Deutsche Erklärungen, Beispiele und Hinweise zur Bedienung, sofort offline lesbar.
-- Config-Bereich mit 27 Einträgen zu `opencode.json`, `tui.json` und den Umgebungsvariablen.
+- Config-Bereich mit dem vollständigen Schlüssel-Katalog aus dem offiziellen JSON-Schema von `opencode.json` — über zweihundert Schlüssel, zwei Ebenen tief, jeder mit seinem Typ.
 - 10 auf OpenCode zugeschnittene Praxisartikel.
 - Vorlesen, Rückfragen, Vertiefen und Zurücknehmen, mehrere Chats, Suche, Hell-/Dunkelmodus,
   App-Sperre und Sicherung wie in den Schwester-Apps.
@@ -23,7 +23,7 @@ der Anbieterwahl innerhalb der OpenCode CLI nichts zu tun.
 ## Quellen und Grenzen
 
 - [Befehle in der TUI](https://opencode.ai/docs/tui/) — Quelldatei `packages/web/src/content/docs/tui.mdx`
-- [Konfiguration](https://opencode.ai/docs/config/) — Quelldatei `config.mdx`
+- [Konfiguration](https://opencode.ai/config.json) — das JSON-Schema, gegen das OpenCode selbst prüft
 - [Fassungen](https://github.com/anomalyco/opencode/releases)
 
 Dokumentiert sind die eingebauten Befehle. Eigene Befehle aus dem Ordner `commands/` oder aus dem
@@ -64,3 +64,17 @@ Nach der einmaligen Freigabe schreibt „Jetzt sichern" ohne weitere Rückfrage 
 immer nur die aktuelle Sicherung und die eine davor darin. Der Dateiname trägt den Zeitpunkt:
 `12-09-2026-1224-ocode-kompass.json`. Das Modul liegt im gemeinsamen Kern und gilt damit für
 alle drei Kompass-Apps.
+
+## Der Config-Bereich
+
+Bis Fassung 0.6.8 hing er an gar keiner Quelle: Der Abgleich kannte nur den Befehlsbereich, und die Adresse der Konfigurationsseite stand zwar in der Abruf-Klasse, wurde aber nie aufgerufen. Die Einstellungsliste blieb deshalb auf ihrem Auslieferungsstand stehen — 27 Einträge, von denen zwei nicht einmal Schlüssel waren, sondern Überschriften.
+
+Gelesen wird jetzt das JSON-Schema statt der Doku-Seite. `config.mdx` erklärt die Einstellungen an Beispielblöcken; ein Beispiel zeigt aber, was eine Einstellung kann, nicht welche es gibt. Das Schema ist die Datei, gegen die OpenCode selbst prüft.
+
+Drei Entscheidungen dabei:
+
+- **Zwei Ebenen tief.** `server.port` sucht man, das Bauteil der dritten Ebene darunter nicht. Ausserdem verweisen die Bausteine des Schemas teilweise auf sich selbst — ohne Grenze liefe die Auflösung im Kreis.
+- **Kein erfundener Text.** Rund die Hälfte der Unterfelder trägt im Schema keinen erklärenden Satz. Dort steht, was sicher stimmt: wohin der Schlüssel gehört, welchen Typ er hat, und dass die offizielle Beschreibung an dieser Stelle fehlt. Weglassen wäre falsch — es sind gültige Einstellungen; einen Satz erfinden wäre schlimmer.
+- **Keine Angabe „seit Fassung X“.** Das Release-Fenster reicht nur ein Stück zurück; ein Schlüssel wie `model` ist weit älter. Die Angabe hiesse dann nicht „seit wann gibt es das“, sondern „wann wurde es zuletzt erwähnt“.
+
+Unter achtzig gelesenen Schlüsseln bricht der Lauf ab, statt den Bestand zu leeren.

@@ -70,14 +70,30 @@ class Aktualisierer(
             melde(stand)
 
             val befehleMd = abruf.hole(DokuAbruf.URL_BEFEHLE)
-            stand = stand.copy(schritt = "OpenCode-Slash-Befehle werden ausgewertet")
+            stand = stand.copy(schritt = "Befehle und Einstellungen werden ausgewertet")
             melde(stand)
             val slashGelesen = DokuParser.leseSlashBefehle(befehleMd)
             pruefeAusbeute("Slash-Befehle", slashGelesen.size, MINDEST_SLASH)
-            val dokuNamen = slashGelesen.map { it.name }.toSet()
-            val gelesen = mapOf(Bereich.SLASH to
-                (slashGelesen + DokuParser.ergaenzeAusReleases(releases))
-                    .distinctBy { it.name })
+
+            // Der Config-Bereich hing bis Fassung 0.6.8 an keiner Quelle: Der Abgleich kannte
+            // nur `Bereich.SLASH`. Die Adresse des Schemas stand zwar in der Abruf-Klasse, wurde
+            // aber nie aufgerufen — die Einstellungsliste blieb auf ihrem Auslieferungsstand.
+            val configJson = abruf.hole(DokuAbruf.URL_CONFIG)
+            val configGelesen = DokuParser.leseEinstellungen(configJson)
+            pruefeAusbeute("Einstellungen", configGelesen.size, MINDEST_CONFIG)
+
+            val dokuNamen = slashGelesen.map { it.name }.toSet() + configGelesen.map { it.name }
+            val gelesen = mapOf(
+                Bereich.SLASH to (slashGelesen + DokuParser.ergaenzeAusReleases(releases))
+                    .distinctBy { it.name },
+                Bereich.CONFIG to configGelesen,
+            )
+            KompassLog.info(
+                "Aktualisierer",
+                "fuehreAus",
+                "Unterlagen ausgewertet",
+                mapOf("slash" to slashGelesen.size, "config" to configGelesen.size),
+            )
 
             // --- Schritt 3: vergleichen ---------------------------------------------------
             val bestand = repository.ladeKomplett()
@@ -93,12 +109,22 @@ class Aktualisierer(
                 for (eintrag in liste) {
                     val vorhanden = bekannt[eintrag.name]
                     if (vorhanden == null) {
-                        val (seit, beleg) = DokuParser.findeEinzug(releases, eintrag.name)
+                        // Die „seit"-Angabe wird nur für Befehle gesucht. Ein Schlüssel wie
+                        // `model` kommt in fast jeder Release-Notiz vor, das Fenster reicht
+                        // aber nur ein Stück zurück. Die Angabe wäre dann nicht „seit wann
+                        // gibt es das", sondern „wann wurde es zuletzt erwähnt".
+                        val (seit, beleg) = if (bereich == Bereich.SLASH) {
+                            DokuParser.findeEinzug(releases, eintrag.name)
+                        } else {
+                            "" to ""
+                        }
                         neueRoh += RohEintrag(
                             bereich = bereich,
                             name = eintrag.name,
                             kategorie = eintrag.kategorie.ifBlank { "Neu dazugekommen" },
-                            art = eintrag.art.ifBlank { if (bereich == Bereich.SLASH) "Eingebaut" else "config.toml" },
+                            // `opencode.json`, nicht `config.toml`: Das war ein Rest aus der
+                            // Schwester-App für Codex, der hier nie gestimmt hat.
+                            art = eintrag.art.ifBlank { if (bereich == Bereich.SLASH) "Eingebaut" else "opencode.json" },
                             kurz = eintrag.beschreibung.take(140),
                             englisch = eintrag.beschreibung,
                             // Bleibt leer: Genau daran erkennt der nächste Schritt, dass hier
@@ -145,8 +171,17 @@ class Aktualisierer(
                         vorhanden.name !in DokuParser.changelogNamen
                 }
 
-                verschwundene += fehlend
-
+                // Ein Name mit Leerzeichen war nie ein Schlüssel in `opencode.json`. Solche
+                // Einträge — „Konfiguration in OpenCode", „Umgebungsvariablen" — stammen aus
+                // der Zeit, als der Bereich an keiner Quelle hing und mit Überschriften statt
+                // mit Schlüsseln gefüllt war. Sie als „entfernt" zu führen hiesse, im
+                // Klapp-Bereich dauerhaft etwas Falsches zu behaupten, und kostete für jeden
+                // von ihnen eine Nachfolgersuche beim Modell.
+                val (echtVerschwunden, nieEinSchluessel) = fehlend.partition { eintrag ->
+                    bereich != Bereich.CONFIG || !eintrag.name.contains(' ')
+                }
+                verschwundene += echtVerschwunden
+                erfundene += nieEinSchluessel
             }
 
             stand = stand.copy(
@@ -567,6 +602,13 @@ class Aktualisierer(
          * überdeckt.
          */
         const val MINDEST_SLASH = 10
+
+        /**
+         * Das Schema fuehrt ueber zweihundert Schluessel. Kommen weniger als achtzig zurueck,
+         * hat es seinen Aufbau geaendert — dann wird nichts eingespielt, statt den Bestand als
+         * verschwunden zu behandeln.
+         */
+        const val MINDEST_CONFIG = 80
 
         /**
          * Ab so vielen offenen Erklärungen wird gefragt, statt losgelegt.

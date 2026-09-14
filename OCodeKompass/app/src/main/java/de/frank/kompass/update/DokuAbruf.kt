@@ -57,8 +57,17 @@ class DokuAbruf {
         /** Die Seite mit dem Abschnitt „Commands" — dort stehen alle eingebauten Slash-Befehle. */
         const val URL_BEFEHLE = "$BASIS/tui.mdx"
 
-        /** Die Konfigurationsseite; aus ihr kommen die Einstellungen von opencode.json. */
-        const val URL_CONFIG = "$BASIS/config.mdx"
+        /**
+         * Das offizielle JSON-Schema von `opencode.json` — die Quelle der Einstellungen.
+         *
+         * Bis Fassung 0.6.8 zeigte diese Angabe auf `config.mdx`, und dorthin wurde sie nie
+         * abgerufen: Der Abgleich kannte nur den Befehlsbereich. Beides ist jetzt behoben, und
+         * zwar mit der besseren Quelle. `config.mdx` erklärt die Einstellungen an
+         * Beispielblöcken; ein Beispiel zeigt aber, was eine Einstellung kann, nicht welche es
+         * gibt. Das Schema ist die Datei, gegen die OpenCode selbst prüft — es trägt jeden
+         * Schlüssel, die meisten mit Beschreibung, und ist dabei klein.
+         */
+        const val URL_CONFIG = "https://opencode.ai/config.json"
 
         /** Die Fassungen des Projekts; zwei Seiten, weil sehr haeufig veroeffentlicht wird. */
         const val URL_RELEASES_1 = "https://api.github.com/repos/anomalyco/opencode/releases?per_page=100&page=1"
