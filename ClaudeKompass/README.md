@@ -12,8 +12,8 @@ gestaltet wird; aufgeklappt wird der Gesprächsbereich zweispaltig.
 
 | Bereich | Was drinsteht |
 |---|---|
-| **Slash-Befehle** | 91 Befehle, alphabetisch, je mit ausführlicher Erklärung und der Version, in der sie dazukamen |
-| **Config** | 186 Einträge: Einstellungen aus `settings.json` und Umgebungsvariablen |
+| **Slash-Befehle** | Alle Befehle, alphabetisch, je mit ausführlicher Erklärung und der Version, in der sie dazukamen |
+| **Config** | Einstellungen aus `settings.json` und Umgebungsvariablen |
 | **Best Practices** | 26 Artikel zur Arbeitsweise mit der aktuellen Fassung |
 | **Chat** | Mehrere Gespräche nebeneinander; Antworten beziehen Befehle und Einstellungen mit ein |
 
@@ -32,8 +32,19 @@ was es einmal gab, in welcher Version es wegfiel und was seine Aufgabe übernomm
 Oben in der Kopfleiste. Er holt die offiziellen Unterlagen und das Änderungsprotokoll, gleicht
 sie mit dem Bestand ab und spielt die Unterschiede ein.
 
-Vier Dinge, die dabei bewusst so gebaut sind:
+Fünf Dinge, die dabei bewusst so gebaut sind:
 
+- **Zwei Quellen, nicht eine.** Die offiziellen Übersichtsseiten sind nicht vollständig:
+  `/output-style` kam in 2.1.269 zurück und steht bis heute in keiner Zeile der
+  Befehlstabelle, `bashEditDiffEnabled` und `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS`
+  fehlen ebenso in ihren Listen. Solange die Tabellen die einzige Quelle waren, konnte kein
+  noch so oft gedrückter Knopf sie finden. Deshalb wird zusätzlich das Änderungsprotokoll
+  geerntet — streng: ein Befehl gilt nur, wenn er unmittelbar hinter `Added` steht, eine
+  Einstellung nur mit ihrem Signalwort daneben, eine Variable nur mit eigener Vorsilbe.
+  Sonst stünden Pfade aus einer Fehlerbehebung (`/etc`, `/tmp`) als Befehle in der App.
+  Die Doku behält den Vorrang; die Ernte ergänzt nur, was dort fehlt. Gelesen wird immer die
+  ganze Historie — ein Zeitfenster hätte `/output-style` beim nächsten Lauf wieder
+  herausfallen lassen, und er wäre fälschlich als entfernt erschienen.
 - **Namen werden ohne Modell gelesen.** Die Markdown-Tabellen werden direkt ausgewertet. Ein
   Modell könnte einen Befehl erfinden oder einen echten übersehen — beim Nachschlagen wäre
   beides schlimm. Erklärt wird erst danach. Gelesen wird dabei nur die Übersichtstabelle, an
@@ -70,7 +81,7 @@ Die mitgelieferten Daten stehen in `app/src/main/assets/`. Sie werden aus den Qu
 `tools/` erzeugt; die Angabe „seit Version X" stammt aus dem offiziellen Änderungsprotokoll und
 trägt die Belegzeile mit, auf die sie sich stützt.
 
-Auslieferungsstand: **Claude Code 2.1.251**.
+Auslieferungsstand: **Claude Code 2.1.268**. Neuere Fassungen holt der Aktualisieren-Knopf.
 
 ## Sprache und Ton
 

@@ -90,33 +90,84 @@ class Aktualisierer(
             stand = stand.copy(schritt = "Unterlagen werden ausgewertet")
             melde(stand)
 
-            val slashGelesen = DokuParser.leseSlashBefehle(befehleMd)
-            val settingsGelesen = DokuParser.leseEinstellungen(einstellungenMd)
-            val variablenGelesen =
+            val slashAusDoku = DokuParser.leseSlashBefehle(befehleMd)
+            val settingsAusDoku = DokuParser.leseEinstellungen(einstellungenMd)
+            val variablenAusDoku =
                 if (variablenMd.isBlank()) emptyList() else DokuParser.leseVariablen(variablenMd)
 
             // Eine leere Ausbeute heisst fast sicher: Die Seite hat ihre Form geändert. Dann
             // gälte JEDER vorhandene Eintrag dieser Art als verschwunden — ein stiller
             // Totalschaden. Die Grenze gilt bewusst je Quelle: Eine gesunde Variablenliste
             // darf eine kaputte Befehlsliste nicht überdecken.
-            pruefeAusbeute("Slash-Befehle", slashGelesen.size, MINDEST_SLASH)
-            pruefeAusbeute("Einstellungen", settingsGelesen.size, MINDEST_EINSTELLUNGEN)
+            // Geprüft wird ausdrücklich die Ausbeute der Doku-Tabellen, nicht die Summe mit dem
+            // Änderungsprotokoll. Sonst könnte eine umgebaute Doku-Seite hinter der Ernte aus
+            // dem Protokoll verschwinden — und genau dagegen ist diese Grenze da.
+            pruefeAusbeute("Slash-Befehle", slashAusDoku.size, MINDEST_SLASH)
+            pruefeAusbeute("Einstellungen", settingsAusDoku.size, MINDEST_EINSTELLUNGEN)
 
             // Kommen zu wenige Variablen zurück, werden sie behandelt wie eine ausgefallene
             // Liste: übersprungen. Sie deshalb alle als entfernt zu führen wäre falsch.
-            val variablenBrauchbar = variablenGelesen.size >= MINDEST_VARIABLEN
-            if (variablenGelesen.isNotEmpty() && !variablenBrauchbar) {
+            val variablenBrauchbar = variablenAusDoku.size >= MINDEST_VARIABLEN
+            if (variablenAusDoku.isNotEmpty() && !variablenBrauchbar) {
                 KompassLog.warn(
                     "Aktualisierer",
                     "fuehreAus",
                     "Zu wenige Umgebungsvariablen gelesen — sie bleiben in diesem Lauf aussen vor",
-                    mapOf("anzahl" to variablenGelesen.size),
+                    mapOf("anzahl" to variablenAusDoku.size),
                 )
             }
 
+            // --- Zweite Quelle: das Änderungsprotokoll -----------------------------------
+            // Die Übersichtstabellen sind nicht vollständig. `/output-style` kam in 2.1.269
+            // zurück und steht in keiner Zeile der Befehlstabelle; `bashEditDiffEnabled` und
+            // `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` fehlen ebenso in ihren Listen.
+            // Solange die Tabellen die einzige Quelle waren, konnte kein noch so oft gedrückter
+            // Knopf sie finden. Das Protokoll schliesst diese Lücke.
+            //
+            // Die Doku behält den Vorrang: Steht ein Name in beiden Quellen, gilt ihr Text.
+            // Die Ernte ergänzt nur, was dort fehlt — sie ersetzt nie etwas.
+            val slashAusProtokoll = ProtokollErnte.leseSlashBefehle(changelog)
+            val settingsAusProtokoll = ProtokollErnte.leseEinstellungen(changelog)
+            val variablenAusProtokoll = ProtokollErnte.leseVariablen(changelog)
+
+            // Eine leere Ernte heisst: Das Protokoll hat seine Form geändert. Das darf den Lauf
+            // nicht stoppen — die Doku-Tabellen tragen ihn weiter —, aber es darf auch nicht
+            // still bleiben, sonst fehlt die zweite Quelle unbemerkt wieder.
+            probe(
+                slashAusProtokoll.isNotEmpty() && settingsAusProtokoll.isNotEmpty(),
+                "Aus dem Änderungsprotokoll kam keine Ernte — hat es seine Form geändert?",
+                "Aktualisierer",
+                "fuehreAus",
+                mapOf(
+                    "slash" to slashAusProtokoll.size,
+                    "einstellungen" to settingsAusProtokoll.size,
+                    "variablen" to variablenAusProtokoll.size,
+                ),
+            )
+
+            val slashGelesen = ergaenze(slashAusDoku, slashAusProtokoll)
+            val settingsGelesen = ergaenze(settingsAusDoku, settingsAusProtokoll)
+            val variablenGelesen = ergaenze(
+                if (variablenBrauchbar) variablenAusDoku else emptyList(),
+                variablenAusProtokoll,
+            )
+
             val gelesen = mapOf(
                 Bereich.SLASH to slashGelesen,
-                Bereich.CONFIG to settingsGelesen + if (variablenBrauchbar) variablenGelesen else emptyList(),
+                Bereich.CONFIG to settingsGelesen + variablenGelesen,
+            )
+            KompassLog.info(
+                "Aktualisierer",
+                "fuehreAus",
+                "Quellen zusammengeführt",
+                mapOf(
+                    "slashDoku" to slashAusDoku.size,
+                    "slashGesamt" to slashGelesen.size,
+                    "settingsDoku" to settingsAusDoku.size,
+                    "settingsGesamt" to settingsGelesen.size,
+                    "variablenDoku" to variablenAusDoku.size,
+                    "variablenGesamt" to variablenGelesen.size,
+                ),
             )
 
             // --- Schritt 3: vergleichen ---------------------------------------------------
@@ -649,6 +700,27 @@ class Aktualisierer(
         } else {
             kern
         }
+    }
+
+    /**
+     * Legt die Ernte aus dem Änderungsprotokoll unter die Doku-Liste.
+     *
+     * Der Vorrang ist Absicht: Die Tabelle einer offiziellen Seite ist die bessere Auskunft —
+     * sie beschreibt, was ein Eintrag tut. Eine Protokollzeile beschreibt, was sich an ihm
+     * geändert hat. Nur wenn die Tabelle den Namen gar nicht kennt, ist die Zeile die einzige
+     * Auskunft, die es gibt — und dann ist sie besser als gar keine.
+     *
+     * Wichtig ist ausserdem, dass die ergänzten Namen wirklich in dieser Liste landen: Der
+     * Abgleich behandelt jeden Bestandseintrag, der in keiner gelesenen Liste steht, als aus
+     * Claude Code verschwunden. Ein Eintrag, den nur das Protokoll kennt, würde sonst bei
+     * jedem Lauf neu angelegt und im nächsten als entfernt geführt.
+     */
+    private fun ergaenze(
+        ausDoku: List<GelesenerEintrag>,
+        ausProtokoll: List<GelesenerEintrag>,
+    ): List<GelesenerEintrag> {
+        val bekannt = ausDoku.map { it.name }.toSet()
+        return ausDoku + ausProtokoll.filter { it.name !in bekannt }
     }
 
     private fun zaehle(anzahl: Int, einzahl: String, mehrzahl: String): String =
