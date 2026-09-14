@@ -1,0 +1,15 @@
+# Beobachtungen und Messungen vom 14.09.2026
+
+## Beobachtete Besonderheit des eingebauten Terminals
+
+Bei zwei erfolgreichen manuellen Ablaufprüfungen am 14.09.2026 erkannte die Accessibility-Schnittstelle `Terminal input`, meldete den Fokus aber nur als Dokument. Ein Klick über dessen Elementindex scheiterte mit `coordinate input geometry is unavailable`. Die funktionierende Alternative war ein Klick in die sichtbare Eingabezeile anhand des frischen Screenshots. Der folgende Screenshot bestätigte den eingegebenen Text am Terminal-Cursor; danach funktionierte Enter. Bei der zweiten Nachricht war kein erneuter Klick nötig.
+
+Das sind Beobachtungen dieser Version, keine universellen Garantien. Nach fehlgeschlagenem Klick zuerst neu beobachten. Nach unklarem Schreib- oder Absendeergebnis niemals blind wiederholen: Screenshot und Terminalausgabe auf bereits eingefügten oder gesendeten Text prüfen. Bleibt Ziel oder Ergebnis unklar, anhalten und die konkrete Unsicherheit nennen.
+
+Beim anschließenden Optimierungsdialog erschien ein langer Text verzögert als `[Pasted text #1]`; der unmittelbar folgende Screenshot hatte zunächst noch die leere Eingabe gezeigt. Daher bei scheinbar fehlendem Text zuerst erneut beobachten, statt erneut zu tippen oder vorschnell einen Fokusfehler anzunehmen. Ein zusätzlicher Klick bewies hier keinen Fokusfehler. Der Nutzer wünscht ausdrücklich, einen eindeutig neu erschienenen Paste-Block direkt abzusenden, ohne ihn vorher aufzuklappen. Sichtprüfung des richtigen Empfängers und getrennte Enter-Aktion bleiben erhalten.
+
+Eine warme Einzelmessung dieses Dialogs ergab etwa 22 Sekunden vom Beginn des ersten Zustandsabrufs bis zum Ende des Enter-Zustandsabrufs. Der erste Zustandsabruf selbst dauerte 138 ms, Texteingabe samt Zustandsabruf 303 ms; zwischen dessen Ende und Beginn der Enter-Aktion lagen etwa 9,6 Sekunden. Das zeigt für diesen Lauf vor allem Latenz zwischen Werkzeugaufrufen, nicht langsame Texteingabe. Kein allgemeiner Benchmark, kein Nachweis einer prozentualen Beschleunigung und keine Kaltstartmessung. Aus den kurzen einzelnen Werkzeugzeiten niemals eine entsprechend kurze Gesamtzeit ableiten. Die geforderte Denkstufe bleibt erhalten.
+
+Nach mehreren verzögerten Darstellungen wurde derselbe Ablauf mit 250 ms Renderwartezeit erprobt: Texteingabe, Wartezeit und Screenshot dauerten zusammen 481 ms; der Text war im ersten Bild sichtbar. Auch nach Enter war die gesendete Nachricht mit derselben Wartezeit im ersten Bild erkennbar. Das ist ein erfolgreicher Einzelversuch, kein Beweis einer optimalen Wartezeit oder allgemeinen Zuverlässigkeit. Bei weiterhin unklarem Bild erneut beobachten und die Darstellung prüfen.
+
+Eine weitere Gesamtmessung mit Renderwartezeit benötigte rund 27 Sekunden, davon etwa 14 Sekunden zwischen Textbeobachtung und Enter. Damit ist trotz vermiedener zusätzlicher Screenshot-Runden keine Verbesserung der Gesamtzeit gegenüber dem ersten 22-Sekunden-Lauf belegt. Die Zeit zwischen Modell-/Werkzeugrunden schwankt; erfolgreiche Darstellung und Gesamtgeschwindigkeit getrennt bewerten.
