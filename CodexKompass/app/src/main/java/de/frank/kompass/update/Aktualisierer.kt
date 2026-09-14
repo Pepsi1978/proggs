@@ -177,7 +177,7 @@ class Aktualisierer(
                 // führen hiesse, im Klapp-Bereich dauerhaft etwas Falsches zu behaupten — und
                 // für jeden von ihnen eine Nachfolgersuche beim Modell zu bezahlen.
                 val (echtVerschwunden, nieEinSchluessel) = fehlend.partition { eintrag ->
-                    bereich != Bereich.CONFIG || !eintrag.name.contains(' ')
+                    bereich != Bereich.CONFIG || istEinSchluessel(eintrag.name)
                 }
                 verschwundene += echtVerschwunden
                 erfundene += nieEinSchluessel
@@ -579,6 +579,22 @@ class Aktualisierer(
             kern
         }
     }
+
+
+    /**
+     * Sieht dieser Name nach einem Konfigurationsschlüssel aus?
+     *
+     * Zwei Merkmale reichen, und beide sind hart: Ein Schlüssel hat kein Leerzeichen, und er
+     * beginnt klein — das gilt für jeden Schlüssel beider Quellen. „Konfiguration in OpenCode"
+     * scheitert am Leerzeichen, „Umgebungsvariablen" am grossen Anfangsbuchstaben. Beides sind
+     * Überschriften aus der Zeit, als der Bereich an keiner Quelle hing.
+     *
+     * Die Unterscheidung ist nötig, weil solche Einträge sonst als „entfernt" im Klapp-Bereich
+     * landen und dort dauerhaft etwas Falsches behaupten — und weil für jeden von ihnen eine
+     * Nachfolgersuche beim Modell bezahlt würde.
+     */
+    private fun istEinSchluessel(name: String): Boolean =
+        name.isNotBlank() && !name.contains(' ') && !name.first().isUpperCase()
 
     private fun zaehle(anzahl: Int, einzahl: String, mehrzahl: String): String =
         if (anzahl == 1) "1 $einzahl" else "$anzahl $mehrzahl"
