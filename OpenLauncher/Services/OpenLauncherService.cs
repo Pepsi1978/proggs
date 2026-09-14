@@ -865,14 +865,22 @@ try {
         return Process.Start(psi);
     }
 
-    private static string BuildClaudeCodeStartScript(string modelId, string workDir, string? effortLevel, string colorName, string? claudeConfigDir)
+    public string PrepareClaudeCodeTerminalCommand(string modelId, string workDir, string? effortLevel, string? claudeConfigDir)
+    {
+        var script = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, string.Empty, claudeConfigDir, embeddedTerminal: true);
+        // Ein Kindprozess bleibt im vorhandenen Terminal und isoliert Profil/Umgebung von dessen Shell.
+        return $"& {PowerShellLiteral(ResolvePowerShellExecutable().Path)} -NoLogo -NoProfile -ExecutionPolicy Bypass -File {PowerShellLiteral(script)}";
+    }
+
+    private static string BuildClaudeCodeStartScript(string modelId, string workDir, string? effortLevel, string colorName, string? claudeConfigDir, bool embeddedTerminal = false)
     {
         effortLevel = NormalizeThinkingLevel(effortLevel);
         var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-claude-code-{Guid.NewGuid():N}.ps1");
         var tempSettings = BuildClaudeCodeSessionSettings(modelId, effortLevel);
         var script = $$"""
 $ErrorActionPreference = 'Continue'
-{{ProgrammerProcessPriorityScript}}
+{{(embeddedTerminal ? string.Empty : ProgrammerProcessPriorityScript)}}
+$embeddedTerminal = {{(embeddedTerminal ? "$true" : "$false")}}
 [Console]::Write("`e[?1004l")
 Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
 
@@ -888,7 +896,7 @@ if (Test-Path $profilePath) {
 }
 
 $focusKiller = $null
-if (Get-Command Start-ThreadJob -ErrorAction SilentlyContinue) {
+if (-not $embeddedTerminal -and (Get-Command Start-ThreadJob -ErrorAction SilentlyContinue)) {
     $focusKiller = Start-ThreadJob -ScriptBlock {
         $esc = [char]0x1B
         while ($true) {
@@ -925,12 +933,28 @@ try {
         $claudeArgs += @('--effort', $effort)
     }
     $colorName = {{PowerShellLiteral(colorName)}}
-    if ($colorName) {
+    if ($embeddedTerminal) {
+        # Vorhandene native Installation bevorzugen: fnm-Shims koennen auf fehlende bin/claude.exe zeigen.
+        $claudeCandidates = @(
+            (Join-Path $env:USERPROFILE '.local/bin/claude.exe'),
+            (Join-Path $env:APPDATA 'npm/node_modules/@anthropic-ai/claude-code/bin/claude.exe')
+        )
+        $claudeCandidates += @(Get-Command claude.exe -All -ErrorAction SilentlyContinue | ForEach-Object Source)
+        foreach ($shim in @(Get-Command claude -All -ErrorAction SilentlyContinue)) {
+            if ($shim.Source -and (Test-Path -LiteralPath $shim.Source -PathType Leaf)) {
+                $claudeCandidates += Join-Path (Split-Path $shim.Source -Parent) 'node_modules/@anthropic-ai/claude-code/bin/claude.exe'
+            }
+        }
+        $claudeExecutable = $claudeCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+        if (-not $claudeExecutable) { throw 'Keine funktionsfähige Claude-Installation gefunden. Bitte Claude Code reparieren oder installieren.' }
+        & $claudeExecutable @claudeArgs
+    } elseif ($colorName) {
         $claudeArgs += "/color $colorName"
+        & claude @claudeArgs
     } else {
         $claudeArgs += '/color'
+        & claude @claudeArgs
     }
-    & claude @claudeArgs
 } finally {
     if ($focusKiller) {
         Stop-Job $focusKiller -ErrorAction SilentlyContinue

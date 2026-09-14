@@ -175,6 +175,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {
+        StartCodexCommand.NotifyCanExecuteChanged();
         // Gespeicherter Standard des Modells zuerst holen: er bestimmt Profil, Modus und (spaeter,
         // sobald die Stufen geladen sind) den Effort. Ohne Standard bleibt es beim Minimalprofil.
         _pendingModelDefault = value == null ? null : _modelDefaults.Find(value.ModelString);
@@ -918,8 +919,30 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task Start()
+    private Task Start() => StartCore(copyForCodex: false);
+
+    private bool CanStartCodex() => IsClaudeCodeModel(SelectedModel);
+
+    [RelayCommand(CanExecute = nameof(CanStartCodex))]
+    private Task StartCodex() => StartCore(copyForCodex: true);
+
+    private bool _startInProgress;
+
+    private async Task StartCore(bool copyForCodex)
     {
+        if (_startInProgress) return;
+        _startInProgress = true;
+        try { await PrepareAndStart(copyForCodex); }
+        finally { _startInProgress = false; }
+    }
+
+    private async Task PrepareAndStart(bool copyForCodex)
+    {
+        if (copyForCodex && !IsClaudeCodeModel(SelectedModel))
+        {
+            StatusText = "Für Start (Codex) bitte ein Claude-Code-Modell wählen.";
+            return;
+        }
         // Das Codex CLI spricht immer direkt mit OpenAI -- dort gibt es keine Provider-Wahl, die
         // Auswahl darf den Start also nicht blockieren.
         if (SelectedModel == null || (SelectedProvider == null && !IsCodexCliSelected))
@@ -978,6 +1001,20 @@ public sealed partial class MainViewModel : ObservableObject
                 // Der Modus-Prompt haengt hinter dem Profil in der aktiven CLAUDE.md -> er gilt fuer
                 // die ganze Session, genau wie bei OpenCode.
                 var claudeConfigDir = _profiles.EnsureClaudeConfigDir(SelectedProfile.Id, SelectedWorkMode.Id);
+                if (copyForCodex)
+                {
+                    var command = _launcher.PrepareClaudeCodeTerminalCommand(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir);
+                    for (var attempt = 0; ; attempt++)
+                    {
+                        try { Clipboard.SetDataObject(command, copy: true); break; }
+                        catch (System.Runtime.InteropServices.COMException) when (attempt < 4)
+                        {
+                            await Task.Delay(100);
+                        }
+                    }
+                    StatusText = $"Startbefehl kopiert – im Codex-Terminal einfügen und Enter drücken · {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}" + syncHinweis;
+                    return;
+                }
                 _launcher.LaunchClaudeCode(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir);
                 StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
                     ? $"Claude Code gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"

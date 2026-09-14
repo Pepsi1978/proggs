@@ -903,28 +903,53 @@
                 </Grid>
             </Grid>
 
-            <!-- Fußleiste: Arbeitsverzeichnis + Start + Version -->
+            <!-- Fußleiste: kompaktes Arbeitsverzeichnis, lesbarer Status und beide Startwege -->
             <Border x:Name="FooterBorder" Grid.Row="2" Background="{DynamicResource TitleBarBg}" BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0" Padding="16,14" CornerRadius="0,0,8,8">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="180"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="Arbeitsverzeichnis" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBox Grid.Column="1" x:Name="WorkDirBox" Style="{StaticResource RoundedTextBox}" Text="{Binding WorkDir, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0"/>
+                    <Grid Grid.Column="1" x:Name="WorkDirField" Margin="0,0,8,0" ToolTip="{Binding WorkDir}">
+                        <TextBox x:Name="WorkDirBox" Style="{StaticResource RoundedTextBox}" Text="{Binding WorkDir, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center"/>
+                        <!-- Zum Bearbeiten wird der normale TextBox-Inhalt sichtbar. -->
+                        <Border Background="{DynamicResource SurfaceBg}" CornerRadius="8" Margin="1" Padding="10,7" IsHitTestVisible="False">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsKeyboardFocusWithin, ElementName=WorkDirBox}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <local:MarqueeText Text="{Binding WorkDir}" IsActive="{Binding IsMouseOver, ElementName=WorkDirField}"/>
+                        </Border>
+                    </Grid>
                     <Button Grid.Column="2" Style="{StaticResource GhostBtn}" Content="…" Margin="0,0,8,0" Padding="14,6" Click="BrowseWorkDir_Click"/>
                     <Button Grid.Column="3" Style="{StaticResource GhostBtn}" Content="Fehlerdetails" Padding="12,7" Margin="0,0,8,0" IsEnabled="{Binding HasLastError}"
                             Command="{Binding ShowLastErrorCommand}"/>
                     <Button Grid.Column="4" Style="{StaticResource GhostBtn}" Content="Logs" Padding="12,7" Margin="0,0,8,0"
                             Command="{Binding OpenLogFolderCommand}"/>
-                    <TextBlock Grid.Column="5" x:Name="StatusBlock" Text="{Binding StatusText}" Foreground="{DynamicResource DimBrush}" VerticalAlignment="Center" Margin="0,0,16,0" TextTrimming="CharacterEllipsis" MaxWidth="360"/>
-                    <Button Grid.Column="6" Style="{StaticResource AccentBtn}" Content="▶ Start" Padding="26,10" FontSize="14"
-                            Command="{Binding StartCommand}"/>
+                    <local:MarqueeText Grid.Column="5" x:Name="StatusBlock" Text="{Binding StatusText}" TextElement.Foreground="{DynamicResource DimBrush}" Margin="0,0,16,0" ToolTip="{Binding StatusText}"/>
+                    <StackPanel Grid.Column="6" Orientation="Horizontal">
+                        <Button Style="{StaticResource GhostBtn}" Padding="18,5" Margin="0,0,8,0" FontSize="14"
+                                ToolTip="Claude-Startbefehl kopieren, dann im Codex-Terminal einfügen und Enter drücken. Modell, Profil und Modus werden übernommen."
+                                ToolTipService.ShowOnDisabled="True" Command="{Binding StartCodexCommand}">
+                            <StackPanel>
+                                <TextBlock Text="Start" HorizontalAlignment="Center"/>
+                                <TextBlock Text="(Codex)" FontSize="11" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource AccentBtn}" Content="▶ Start" Padding="26,10" FontSize="14"
+                                Command="{Binding StartCommand}"/>
+                    </StackPanel>
                 </Grid>
             </Border>
             </Grid>
