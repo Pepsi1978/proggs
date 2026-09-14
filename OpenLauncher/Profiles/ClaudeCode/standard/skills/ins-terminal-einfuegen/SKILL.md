@@ -1,11 +1,24 @@
 ---
 name: ins-terminal-einfuegen
-description: Trägt auf Nutzerauftrag Text in eine bereits geöffnete Terminal-Sitzung der Codex-Desktop-App unter Windows ein und sendet ihn bei beauftragtem Absenden mit Enter. Für laufende Claude-Code-, OpenCode- oder Shell-Eingaben; kein Start neuer Sitzungen und keine dauerhafte Überwachung.
+description: Übergibt beauftragten Text an geöffnete Terminal-Sitzungen der Codex-Desktop-App unter Windows. Erkennt bei Gesprächen über laufende App-Entwicklung ein Terminal rechts oder unten als möglichen Empfänger, bietet konkrete Verbesserungsideen proaktiv als Auftrag an und sendet nach Zustimmung. Keine dauerhafte Überwachung.
 ---
 
 # Ins Terminal einfügen
 
 Nutze den vorhandenen Terminal-Tab des Nutzers. Ein frisch gestarteter Shell-Prozess ist kein Ersatz für dessen laufende Sitzung. Eine Bitte um Einfügen allein bedeutet nicht automatisch Absenden; „abschicken“, „absenden“ oder „mit Enter ausführen“ schließt Enter ein. Nutze den zuletzt eindeutig festgelegten Text und sende ihn genau einmal.
+
+## Ideen aus dem Gespräch übergeben
+
+- Der Skillname muss nicht ausgesprochen werden. Ein Gespräch über die aktuell entwickelte App zusammen mit einem erkennbar geöffneten Agenten-Terminal ist ein Anlass, diesen Ablauf anzuwenden. Bereits vorhandenen aktuellen Bildschirmkontext nutzen; bei einem neuen oder unklaren Bildschirmbezug im Sprachmodus zuerst `capture_screen_context`, danach nur bei Bedarf den Windows-Fensterzustand lesen. Die App-Abfrage erfasst den unteren Bereich nicht immer vollständig: fehlende rechte Tabs allein beweisen kein geschlossenes Terminal. Terminaltitel, laufendes Programm und Arbeitsordner abgleichen. Rechts und unten sind gleichermaßen mögliche Positionen; niemals ausschließlich nach feststehenden Koordinaten suchen.
+- Ein offenes Terminal allein löst weder Eingaben noch Vorschläge aus. Erst ein relevanter Gesprächsinhalt oder besprochener Befund zur dortigen Aufgabe führt zum Übergabeangebot. Keine ständige Bildschirmbeobachtung behaupten: Die Erkennung erfolgt bei verfügbaren aktuellen Beobachtungen im Gespräch; regelmäßige Kontrollen sind ein eigener Auftrag.
+- Wenn der Nutzer eine konkrete Verbesserung zur gerade besprochenen Arbeit einer zugänglichen Programmiersitzung entwickelt oder einen entsprechenden Prüfbefund bespricht, die Übergabe von dir aus anbieten. Bloß allgemeine Ideen ohne Bezug zu einer laufenden Sitzung benötigen kein CLI-Angebot. Dieser Gesprächsablauf startet keine Hintergrundüberwachung.
+- Den Nutzer zuerst ausreden lassen. Satzfragmente, Denkpausen und Selbstkorrekturen nicht als fertigen Auftrag behandeln; insbesondere bei „warte“ oder „lass mich ausreden“ noch keinen Vorschlag dazwischenschieben.
+- Vor der Zustimmungsfrage einen konkreten, überprüfbaren Auftrag formulieren: betroffene Seite/Funktion, gewünschtes Verhalten und bekannte Vorgaben bzw. ein knappes Erfolgskriterium. Den ursprünglichen Arbeitsauftrag erhalten und nur die besprochene Ergänzung hinzufügen. Keine zusätzlichen Funktionen, Architekturwechsel oder pauschalen Commit-/Deploy-Aufträge erfinden.
+- Den wesentlichen Inhalt und das Ziel der Übergabe kurz nennen; beispielsweise die vorgeschlagene Änderung an der gerade laufenden Claude-Sitzung erläutern und fragen, ob dieser Auftrag dort jetzt eingefügt und abgeschickt werden soll. Bei längeren Aufträgen den genauen Entwurf auf einer geeigneten sichtbaren Fläche bereitstellen, statt ihn im Sprachmodus vollständig vorzulesen. Ausgabevorgaben des jeweiligen Gesprächsmodus beachten.
+- Ein eindeutiges Ja zu diesem konkreten Übergabeangebot autorisiert Einfügen UND Absenden. Ohne erneute gleichlautende Rückfrage den unten beschriebenen Eingabeablauf ausführen. Allgemeines Lob, ein Ja zu einer anderen Frage oder Schweigen gelten nicht als Zustimmung. Der Nutzer darf den Auftrag vor dem Absenden noch ändern.
+- Bei bereits ausdrücklich beauftragter Übergabe nicht erst nochmals fragen. Bei unklarer Ziel-Sitzung oder einer fehlenden entscheidenden Anforderung nur die nötige Klärung einholen. Eine Aufforderung zur Änderung ist an die Agenteneingabe gerichtet, kein PowerShell-Befehl.
+- Vor dem Senden den aktuellen Zielzustand prüfen. Eine laufende Generierung nicht ungefragt abbrechen und keine offene Berechtigungsabfrage mit Enter bestätigen. Wenn die betreffende CLI nachweislich Eingaben während der Arbeit als Folgeauftrag annimmt, ist diese Eingabe möglich; andernfalls auf eine eindeutige Eingabebereitschaft warten oder die Einschränkung nennen.
+- Nach dem Senden knapp bestätigen, welcher Auftrag in welcher Sitzung angekommen ist. Die Ausführung der Änderung erst nach eigener Prüfung als erledigt melden. Die allgemeine Einrichtung dieses Skills ist keine Zustimmung zu künftigen einzelnen Aufträgen.
 
 ## Zugang
 
