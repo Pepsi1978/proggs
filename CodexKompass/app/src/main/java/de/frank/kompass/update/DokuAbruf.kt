@@ -49,6 +49,21 @@ class DokuAbruf {
 
     companion object {
         const val URL_BEFEHLE = "https://learn.chatgpt.com/docs/developer-commands.md?surface=cli"
+
+        /**
+         * Die vollständige Referenz aller Schlüssel aus `config.toml` und `requirements.toml`.
+         *
+         * Bis Fassung 0.6.9 wurde der Config-Bereich beim Aktualisieren überhaupt nicht
+         * angefasst — er stand mit einem einzigen Platzhalter-Eintrag da, während die Referenz
+         * über vierhundert Schlüssel führt. Kein Fehler im Abgleich: Der Bereich war schlicht
+         * nie an eine Quelle angeschlossen.
+         *
+         * Die Markdown-Fassung wird genommen, weil sie die kuratierte Auswahl mit
+         * Beschreibungen trägt. Das JSON-Schema daneben kennt zwar noch ein paar interne
+         * Schlüssel mehr, aber ohne erklärenden Text — für eine Nachschlage-App ist die
+         * Referenz die bessere Auskunft.
+         */
+        const val URL_CONFIG = "https://developers.openai.com/codex/config-reference.md"
         /** GitHub-Releases der Codex-CLI; zwei Seiten, weil Alpha-Fassungen die Liste fluten. */
         const val URL_RELEASES_1 = "https://api.github.com/repos/openai/codex/releases?per_page=100&page=1"
         const val URL_RELEASES_2 = "https://api.github.com/repos/openai/codex/releases?per_page=100&page=2"

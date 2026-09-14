@@ -25,6 +25,25 @@ object DokuParser {
 
     private val wegfallWorte = Regex("\\b(remove[sd]?|deprecat\\w*|drop(ped|s)?|no longer)\\b", RegexOption.IGNORE_CASE)
 
+    /** Eine Zeichenkette im Objektliteral — in doppelten oder in einfachen Anführungszeichen. */
+    private const val ZEICHENKETTE = "(?:\"((?:[^\"\\\\]|\\\\.)*)\"|'((?:[^'\\\\]|\\\\.)*)')"
+
+    /**
+     * Ein Eintrag der Konfigurations-Referenz: `{ key: …, type: …, description: … }`.
+     * `DOT_MATCHES_ALL`, weil die Beschreibung oft erst in der nächsten Zeile beginnt.
+     */
+    private val configEintrag = Regex(
+        "\\{\\s*key:\\s*$ZEICHENKETTE\\s*,\\s*type:\\s*$ZEICHENKETTE\\s*,\\s*description:\\s*$ZEICHENKETTE",
+        RegexOption.DOT_MATCHES_ALL,
+    )
+
+    private const val SCHLUESSEL_GRUPPE = 1
+    private const val TYP_GRUPPE = 3
+    private const val TEXT_GRUPPE = 5
+
+    /** Ab hier beschreibt die Seite die zweite Datei. */
+    private const val REQUIREMENTS_UEBERSCHRIFT = "## `requirements.toml`"
+
     /**
      * Art eines Befehls, den bisher nur die Release-Notes nennen. Solche Einträge gelten nie als
      * entfernt, nur weil sie aus dem Release-Fenster rutschen; nimmt die Doku sie auf, bekommen
@@ -66,6 +85,65 @@ object DokuParser {
         }
         return ergebnis.values.toList()
     }
+
+    /**
+     * Liest die Schlüssel aus der Konfigurations-Referenz.
+     *
+     * Die Seite trägt ihre Schlüssel nicht in einer Markdown-Tabelle, sondern in einer
+     * Oberflächen-Komponente: `<ConfigTable options={[ { key, type, description }, … ]} />`.
+     * Das ist ein JavaScript-Objektliteral, und daraus folgen zwei Dinge, die eine naive
+     * Auswertung übersieht:
+     *
+     *  1. **Beide Anführungszeichen kommen vor.** Steht in einem Typ selbst ein `"`, weicht
+     *     die Seite auf `'…'` aus — `type: 'boolean | { context_size = "low|medium|high" }'`.
+     *     Wer nur doppelte Anführungszeichen liest, verliert genau die Schlüssel mit den
+     *     interessantesten Typen, darunter `tools.web_search` und `web_search`.
+     *  2. **Der Text steht oft in der nächsten Zeile.** Nach `description:` bricht die Seite
+     *     um, wenn der Satz lang ist. Deshalb wird über Zeilengrenzen hinweg gelesen.
+     *
+     * Die Seite führt zwei Dateien hintereinander auf: erst `config.toml`, dann
+     * `requirements.toml`. Welcher Abschnitt gerade läuft, wird mitgeführt und landet als Art
+     * am Eintrag — das beantwortet beim Nachschlagen die erste Frage: „In welche Datei
+     * schreibe ich das?"
+     */
+    fun leseEinstellungen(markdown: String): List<GelesenerEintrag> {
+        val grenze = markdown.indexOf(REQUIREMENTS_UEBERSCHRIFT)
+        val gefunden = linkedMapOf<String, GelesenerEintrag>()
+        for (treffer in configEintrag.findAll(markdown)) {
+            val name = feld(treffer, SCHLUESSEL_GRUPPE)
+            if (name.isBlank()) continue
+            val typ = feld(treffer, TYP_GRUPPE)
+            val text = feld(treffer, TEXT_GRUPPE)
+            if (text.isBlank()) continue
+            val ausRequirements = grenze >= 0 && treffer.range.first > grenze
+            gefunden.putIfAbsent(
+                name,
+                GelesenerEintrag(
+                    name = name,
+                    // Der Typ gehört mit in den Text: Ohne ihn weiss man beim Nachschlagen
+                    // nicht, ob dort eine Zahl, ein Wort oder eine Liste hingehört.
+                    beschreibung = if (typ.isBlank()) saeubereText(text) else "${saeubereText(text)} (Typ: $typ)",
+                    art = if (ausRequirements) "requirements.toml" else "config.toml",
+                ),
+            )
+        }
+        return gefunden.values.toList()
+    }
+
+    /** Holt eine der beiden Fassungen einer Zeichenkette — mit `"` oder mit `'` geschrieben. */
+    private fun feld(treffer: MatchResult, gruppe: Int): String {
+        val doppelt = treffer.groupValues.getOrNull(gruppe).orEmpty()
+        val einfach = treffer.groupValues.getOrNull(gruppe + 1).orEmpty()
+        return doppelt.ifBlank { einfach }
+    }
+
+    /** Nimmt Maskierungen und Zeilenumbrüche aus einem Beschreibungstext. */
+    private fun saeubereText(text: String): String = text
+        .replace("\\\"", "\"")
+        .replace("\\'", "'")
+        .replace("\\n", " ")
+        .replace(Regex("\\s{2,}"), " ")
+        .trim()
 
     /**
      * Liest die stabilen CLI-Fassungen aus der GitHub-Releases-API.

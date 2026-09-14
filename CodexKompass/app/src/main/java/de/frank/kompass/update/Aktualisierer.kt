@@ -70,14 +70,31 @@ class Aktualisierer(
             melde(stand)
 
             val befehleMd = abruf.hole(DokuAbruf.URL_BEFEHLE)
-            stand = stand.copy(schritt = "Codex-Slash-Befehle werden ausgewertet")
+            stand = stand.copy(schritt = "Befehle und Einstellungen werden ausgewertet")
             melde(stand)
             val slashGelesen = DokuParser.leseSlashBefehle(befehleMd)
             pruefeAusbeute("Slash-Befehle", slashGelesen.size, MINDEST_SLASH)
-            val dokuNamen = slashGelesen.map { it.name }.toSet()
-            val gelesen = mapOf(Bereich.SLASH to
-                (slashGelesen + DokuParser.ergaenzeAusReleases(releases))
-                    .distinctBy { it.name })
+
+            // Der Config-Bereich hing bis Fassung 0.6.9 an keiner Quelle: Der Abgleich kannte
+            // nur `Bereich.SLASH`, und so stand die Einstellungsliste mit einem einzigen
+            // Platzhalter da, während die Referenz über vierhundert Schlüssel führt. Nicht der
+            // Abgleich war kaputt — der Bereich war nie angeschlossen.
+            val configMd = abruf.hole(DokuAbruf.URL_CONFIG)
+            val configGelesen = DokuParser.leseEinstellungen(configMd)
+            pruefeAusbeute("Einstellungen", configGelesen.size, MINDEST_CONFIG)
+
+            val dokuNamen = slashGelesen.map { it.name }.toSet() + configGelesen.map { it.name }
+            val gelesen = mapOf(
+                Bereich.SLASH to (slashGelesen + DokuParser.ergaenzeAusReleases(releases))
+                    .distinctBy { it.name },
+                Bereich.CONFIG to configGelesen,
+            )
+            KompassLog.info(
+                "Aktualisierer",
+                "fuehreAus",
+                "Unterlagen ausgewertet",
+                mapOf("slash" to slashGelesen.size, "config" to configGelesen.size),
+            )
 
             // --- Schritt 3: vergleichen ---------------------------------------------------
             val bestand = repository.ladeKomplett()
@@ -93,7 +110,16 @@ class Aktualisierer(
                 for (eintrag in liste) {
                     val vorhanden = bekannt[eintrag.name]
                     if (vorhanden == null) {
-                        val (seit, beleg) = DokuParser.findeEinzug(releases, eintrag.name)
+                        // Die „seit"-Angabe wird nur für Befehle gesucht. Ein Schlüssel wie
+                        // `model` kommt in fast jeder Release-Notiz vor; das Fenster reicht
+                        // aber nur ein Dutzend Fassungen zurück. Die Angabe wäre also nicht
+                        // „seit wann gibt es das", sondern „wann wurde es zuletzt erwähnt" —
+                        // eine Behauptung, die beim Nachschlagen in die Irre führt.
+                        val (seit, beleg) = if (bereich == Bereich.SLASH) {
+                            DokuParser.findeEinzug(releases, eintrag.name)
+                        } else {
+                            "" to ""
+                        }
                         neueRoh += RohEintrag(
                             bereich = bereich,
                             name = eintrag.name,
@@ -145,7 +171,16 @@ class Aktualisierer(
                         vorhanden.name !in DokuParser.changelogNamen
                 }
 
-                verschwundene += fehlend
+                // Ein Name mit Leerzeichen war nie ein Konfigurationsschlüssel. Solche Einträge
+                // stammen aus der Zeit, als der Config-Bereich an keiner Quelle hing und mit
+                // einer Überschrift statt mit Schlüsseln gefüllt war. Sie als „entfernt" zu
+                // führen hiesse, im Klapp-Bereich dauerhaft etwas Falsches zu behaupten — und
+                // für jeden von ihnen eine Nachfolgersuche beim Modell zu bezahlen.
+                val (echtVerschwunden, nieEinSchluessel) = fehlend.partition { eintrag ->
+                    bereich != Bereich.CONFIG || !eintrag.name.contains(' ')
+                }
+                verschwundene += echtVerschwunden
+                erfundene += nieEinSchluessel
 
             }
 
@@ -567,6 +602,13 @@ class Aktualisierer(
          * überdeckt.
          */
         const val MINDEST_SLASH = 35
+
+        /**
+         * Die Referenz führt über vierhundert Schlüssel. Kommen weniger als zweihundert
+         * zurück, hat die Seite ihren Aufbau geändert — dann wird nichts eingespielt, statt
+         * den halben Bestand als verschwunden zu behandeln.
+         */
+        const val MINDEST_CONFIG = 200
 
         /**
          * Ab so vielen offenen Erklärungen wird gefragt, statt losgelegt.

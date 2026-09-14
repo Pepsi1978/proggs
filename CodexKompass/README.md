@@ -6,7 +6,7 @@ Eigenständige Android-Variante von Claude Kompass: gleiche Oberfläche, Navigat
 
 - 59 dokumentierte Slash-Einträge einschließlich Aliasnamen, Stand Codex CLI 0.153.3.
 - Deutsche Erklärungen, Beispiele und Hinweise zur Verfügbarkeit, sofort offline lesbar.
-- Config-Bereich mit Orientierung zu config.toml. Noch kein vollständiger Schlüssel-Katalog.
+- Config-Bereich mit dem vollständigen Schlüssel-Katalog aus der offiziellen Konfigurations-Referenz — über vierhundert Schlüssel aus `config.toml` und `requirements.toml`, jeder mit seinem Typ.
 - 10 auf Codex zugeschnittene Praxisartikel.
 - Vorlesen, Rückfragen, Vertiefen und Zurücknehmen, mehrere Chats, Suche, Hell-/Dunkelmodus, App-Sperre und Sicherung wie in Claude Kompass.
 
@@ -25,6 +25,8 @@ Die Übersicht dokumentiert nicht alle neuen Befehle sofort. /cd, /pwd, /cwd, /e
 ## Aktualisierung
 
 Der Aktualisieren-Knopf ruft ausschließlich OpenAI-Unterlagen ab. Er liest den abgegrenzten Abschnitt „Built-in slash commands“ samt Aliasnamen deterministisch aus. Bei einer unlesbaren Version oder weniger als 35 Tabelleneinträgen bricht er vor der Bestandsänderung ab. Neue Namen und jede nachgeholte Erklärung werden einzeln gespeichert. Die bekannten Ergänzungen aus Release Notes werden nicht allein wegen ihrer Abwesenheit in der Übersicht als entfernt markiert.
+
+Seit Fassung 0.6.9 gleicht derselbe Lauf auch die Einstellungen ab. Vorher kannte der Abgleich nur den Befehlsbereich: Die Einstellungsliste hing an gar keiner Quelle und stand mit einem einzigen Platzhalter da, während die Referenz über vierhundert Schlüssel führt. Gelesen wird die Komponente `<ConfigTable>` der Referenzseite — mit beiden Sorten Anführungszeichen, weil ein Typ mit einem Anführungszeichen darin die Seite auf einfache ausweichen lässt, und über Zeilengrenzen hinweg, weil lange Beschreibungen umbrechen. Unter zweihundert gelesenen Schlüsseln bricht der Lauf ab, statt den Bestand zu leeren. Eine Angabe „seit Fassung X“ bekommen Einstellungen bewusst nicht: Das Release-Fenster reicht nur ein Dutzend Fassungen zurück, ein Schlüssel wie `model` ist weit älter.
 
 Eine neue, nur im Änderungsprotokoll erwähnte Ergänzung muss redaktionell ergänzt werden, solange OpenAI sie noch nicht in die Übersicht aufgenommen hat. Die App behauptet daher keine automatische Vollständigkeit gegenüber undokumentierten oder internen Debug-Befehlen. Die deutsche Ausgangserklärung bleibt beim Quellenabgleich erhalten; geänderte englische Angaben werden nachgeführt, wie in der Vorlage.
 
