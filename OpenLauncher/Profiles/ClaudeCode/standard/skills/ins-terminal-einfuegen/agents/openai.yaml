@@ -1,0 +1,6 @@
+interface:
+  display_name: "Ins Terminal einfügen"
+  short_description: "Text in eine laufende Terminal-Sitzung einfügen"
+  default_prompt: "Nutze $ins-terminal-einfuegen, um meinen angegebenen Text in die geöffnete Terminal-Sitzung einzutragen und wie beauftragt abzusenden."
+policy:
+  allow_implicit_invocation: true
