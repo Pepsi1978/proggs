@@ -32,6 +32,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
         <local:ReferenceEqualsConverter x:Key="ReferenceEqualsConverter"/>
+        <local:SelectionSummaryConverter x:Key="SelectionSummaryConverter"/>
 
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource PanelBg}"/>
@@ -937,7 +938,19 @@
                             Command="{Binding ShowLastErrorCommand}"/>
                     <Button Grid.Column="4" Style="{StaticResource GhostBtn}" Content="Logs" Padding="12,7" Margin="0,0,8,0"
                             Command="{Binding OpenLogFolderCommand}"/>
-                    <local:MarqueeText Grid.Column="5" x:Name="StatusBlock" Text="{Binding StatusText}" TextElement.Foreground="{DynamicResource DimBrush}" Margin="0,0,16,0" ToolTip="{Binding StatusText}"/>
+                    <local:MarqueeText Grid.Column="5" x:Name="StatusBlock" TextElement.Foreground="{DynamicResource DimBrush}" Margin="0,0,16,0" ToolTip="{Binding StatusText}">
+                        <local:MarqueeText.Text>
+                            <MultiBinding Converter="{StaticResource SelectionSummaryConverter}" Mode="OneWay">
+                                <Binding Path="SelectedModel.DisplayName"/>
+                                <Binding Path="SelectedProfile.DisplayName"/>
+                                <Binding Path="SelectedWorkMode.DisplayName"/>
+                                <Binding Path="HasCliChoice"/>
+                                <Binding Path="SelectedCliTarget.DisplayName"/>
+                                <Binding Path="SelectedThinkingOption.DisplayName"/>
+                                <Binding Path="ThinkingTitle"/>
+                            </MultiBinding>
+                        </local:MarqueeText.Text>
+                    </local:MarqueeText>
                     <StackPanel Grid.Column="6" Orientation="Horizontal">
                         <Button Style="{StaticResource GhostBtn}" Padding="18,5" Margin="0,0,8,0" FontSize="14"
                                 ToolTip="Claude-Startbefehl kopieren, dann im Codex-Terminal einfügen und Enter drücken. Modell, Profil und Modus werden übernommen."
