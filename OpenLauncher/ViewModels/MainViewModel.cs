@@ -974,13 +974,16 @@ public sealed partial class MainViewModel : ObservableObject
 
         // Vor jedem Start das Repo mit GitHub abgleichen: Profile, Regeln und Skills kommen von dort, sonst
         // arbeitet die neue Sitzung mit dem veralteten Stand dieses Rechners. Scheitert es, wird trotzdem gestartet.
-        StatusText = "Gleiche Repo mit GitHub ab …";
         var sync = await RepoSync.PullAsync();
-        var syncHinweis = sync.Ok ? "" : $" · ⚠ Repo-Abgleich: {sync.Message}";
+        if (!sync.Ok) Logger.Instance.Warn("MainViewModel", "Start", $"Repo-Abgleich: {sync.Message}");
 
         try
         {
             var thinkingLevel = SelectedThinkingOption?.CommandValue;
+            // Beide Startbuttons und alle CLIs zeigen dieselbe tatsächlich vorbereitete Auswahl.
+            var launchStatus = SelectedModel.DisplayName
+                + (string.IsNullOrWhiteSpace(thinkingLevel) ? string.Empty : $" · Effort {SelectedThinkingOption?.DisplayName}")
+                + $" · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
             var profileDocuments = _profiles.LoadProfile(isClaudeCode, SelectedProfile.Id, WorkDir);
             Logger.Instance.Info("MainViewModel", "Start", "Vollständige Startauswahl geprüft", new
             {
@@ -1012,14 +1015,11 @@ public sealed partial class MainViewModel : ObservableObject
                             await Task.Delay(100);
                         }
                     }
-                    StatusText = $"Startbefehl kopiert – im Codex-Terminal einfügen und Enter drücken · {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}" + syncHinweis;
+                    StatusText = launchStatus;
                     return;
                 }
                 _launcher.LaunchClaudeCode(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir);
-                StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
-                    ? $"Claude Code gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
-                    : $"Claude Code gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
-                StatusText += syncHinweis;
+                StatusText = launchStatus;
                 return;
             }
 
@@ -1041,10 +1041,7 @@ public sealed partial class MainViewModel : ObservableObject
                     agentsPath,
                     codexHome
                 });
-                StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
-                    ? $"Codex CLI gestartet: {SelectedModel.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
-                    : $"Codex CLI gestartet: {SelectedModel.DisplayName} · Effort {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
-                StatusText += syncHinweis;
+                StatusText = launchStatus;
                 return;
             }
 
@@ -1075,10 +1072,7 @@ public sealed partial class MainViewModel : ObservableObject
                 profileSession.ProjectSnapshotPath,
                 profileSession.ConfigPath
             });
-            StatusText = string.IsNullOrWhiteSpace(thinkingLevel)
-                ? $"OpenCode gestartet: {SelectedModel.DisplayName} via {provider.ProviderName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
-                : $"OpenCode gestartet: {SelectedModel.DisplayName} via {provider.ProviderName} · Thinking {SelectedThinkingOption?.DisplayName} · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
-            StatusText += syncHinweis;
+            StatusText = launchStatus;
         }
         catch (Exception ex)
         {
