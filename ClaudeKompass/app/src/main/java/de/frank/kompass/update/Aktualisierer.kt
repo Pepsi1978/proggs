@@ -147,10 +147,14 @@ class Aktualisierer(
 
             val slashGelesen = ergaenze(slashAusDoku, slashAusProtokoll)
             val settingsGelesen = ergaenze(settingsAusDoku, settingsAusProtokoll)
-            val variablenGelesen = ergaenze(
-                if (variablenBrauchbar) variablenAusDoku else emptyList(),
-                variablenAusProtokoll,
-            )
+            // Fällt die Variablenliste aus, bleibt auch die Ernte draussen. Sonst wäre sie für
+            // jede dort dokumentierte Variable die einzige Quelle und würde deren Doku-Text
+            // durch eine Protokollzeile ersetzen — dreihundert „geänderte Beschreibungen", die
+            // der nächste gesunde Lauf wieder zurückdreht. Die Variablen, die nur im Protokoll
+            // stehen, kommen dann eben beim nächsten Lauf; verloren geht dabei nichts, denn der
+            // Bestand ist in diesem Fall ohnehin vor der Verschwunden-Regel geschützt.
+            val variablenGelesen =
+                if (variablenBrauchbar) ergaenze(variablenAusDoku, variablenAusProtokoll) else emptyList()
 
             val gelesen = mapOf(
                 Bereich.SLASH to slashGelesen,
