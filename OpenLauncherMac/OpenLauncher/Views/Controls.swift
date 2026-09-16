@@ -579,3 +579,78 @@ class ThemedLabel: NSTextField {
         }
     }
 }
+
+// MARK: - Lauftext
+
+/// Zeigt langen Text vollstaendig, mit Lesepausen und gleichmaessiger Bewegung
+/// (Gegenstueck zu MarqueeText.cs unter Windows).
+final class MarqueeLabel: NSView {
+    let label: ThemedLabel
+    private var timer: Timer?
+    private var phaseStart = Date()
+
+    var text: String {
+        get { label.stringValue }
+        set {
+            guard newValue != label.stringValue else { return }
+            label.stringValue = newValue
+            refresh()
+        }
+    }
+
+    init(size: CGFloat = 13, role: UI.TextRole = .dim) {
+        label = UI.label("", size: size, role: role)
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.masksToBounds = true
+        label.translatesAutoresizingMaskIntoConstraints = true
+        label.lineBreakMode = .byClipping
+        addSubview(label)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) wird nicht verwendet") }
+
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: NSView.noIntrinsicMetric, height: label.intrinsicContentSize.height)
+    }
+
+    override func layout() {
+        super.layout()
+        refresh()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        refresh()
+    }
+
+    private var overflow: CGFloat { label.intrinsicContentSize.width - bounds.width }
+
+    private func refresh() {
+        let size = label.intrinsicContentSize
+        label.frame = NSRect(x: 0, y: (bounds.height - size.height) / 2, width: size.width, height: size.height)
+        phaseStart = Date()
+        guard window != nil, overflow > 1 else {
+            timer?.invalidate()
+            timer = nil
+            return
+        }
+        if timer == nil {
+            let t = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in self?.tick() }
+            RunLoop.main.add(t, forMode: .common)
+            timer = t
+        }
+    }
+
+    private func tick() {
+        let over = overflow
+        guard over > 1 else { label.frame.origin.x = 0; return }
+        // 28 pt pro Sekunde: lange Texte bleiben unabhaengig von ihrer Laenge lesbar.
+        let start = 1.5, travel = Double(over) / 28, cycle = start + travel + 2
+        let t = Date().timeIntervalSince(phaseStart).truncatingRemainder(dividingBy: cycle)
+        let x: Double = t < start ? 0 : (t < start + travel ? -Double(over) * (t - start) / travel : -Double(over))
+        label.frame.origin.x = CGFloat(x)
+    }
+
+    deinit { timer?.invalidate() }
+}

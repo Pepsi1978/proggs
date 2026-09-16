@@ -50,6 +50,10 @@ final class OpenLauncherService {
     for staleName in NO_COLOR FORCE_COLOR CLICOLOR CLICOLOR_FORCE AI_AGENT GIT_TERMINAL_PROMPT; do
         unset "$staleName" 2>/dev/null || true
     done
+    # Codex-Werkzeugprozesse verwenden TERM=dumb. In einer echten interaktiven Konsole verhindert
+    # dieser geerbte Wert die Farberkennung trotz entferntem NO_COLOR.
+    if [ "$TERM" = "dumb" ]; then export TERM=xterm-256color; fi
+    if [ -z "$COLORTERM" ]; then unset COLORTERM 2>/dev/null || true; fi
     for staleClaude in $(env | sed -n 's/^\\(CLAUDE[A-Za-z0-9_]*\\)=.*/\\1/p'); do
         if [ "$staleClaude" != "CLAUDE_CONFIG_DIR" ]; then
             unset "$staleClaude" 2>/dev/null || true
@@ -242,6 +246,20 @@ final class OpenLauncherService {
         }
     }
 
+    /// Gegenstueck zu PrepareClaudeCodeTerminalCommand (Windows): erzeugt das Startskript fuer ein
+    /// bereits offenes Terminal (z. B. im Codex-Terminal) und liefert den einzufuegenden Befehl.
+    /// Ein Kindprozess bleibt im vorhandenen Terminal und isoliert Profil/Umgebung von dessen Shell.
+    func prepareClaudeCodeTerminalCommand(modelId: String, workDir: String, effortLevel rawEffort: String?,
+                                          claudeConfigDir: String?) throws -> String {
+        let effortLevel = Self.normalizeThinkingLevel(rawEffort)
+        Paths.ensureDirectory(workDir)
+        let script = try Self.buildClaudeCodeStartScript(modelId: modelId, workDir: workDir,
+                                                         effortLevel: effortLevel, colorName: "",
+                                                         claudeConfigDir: claudeConfigDir,
+                                                         tabColor: nil, title: nil, embeddedTerminal: true)
+        return "/bin/zsh \(Shell.singleQuoted(script))"
+    }
+
     /// Startet das eigenstaendige Codex CLI (OpenAI) statt OpenCode in einem neuen Terminal-Tab.
     /// Die Profilregeln stehen bereits in der AGENTS.md des Arbeitsverzeichnisses
     /// (InstructionProfileService.activateCodexProjectAgents).
@@ -348,7 +366,8 @@ final class OpenLauncherService {
 
     static func buildClaudeCodeStartScript(modelId: String, workDir: String, effortLevel: String?,
                                                    colorName: String, claudeConfigDir: String?,
-                                                   tabColor: TerminalTabColor, title: String) throws -> String {
+                                                   tabColor: TerminalTabColor?, title: String?,
+                                                   embeddedTerminal: Bool = false) throws -> String {
         let tempScript = (Paths.tempDir as NSString)
             .appendingPathComponent("openlauncher-claude-code-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()).sh")
         let tempSettings = try buildClaudeCodeSessionSettings(modelId: modelId, effortLevel: effortLevel)
@@ -361,9 +380,9 @@ final class OpenLauncherService {
         cleanup() { rm -f "$SELF" "$SETTINGS" 2>/dev/null || true; }
         trap cleanup EXIT INT TERM
 
-        \(processPriorityScript)
-        \(tabColor.tabColorScript)
-        printf '\\033]0;\(title)\\a'
+        \(embeddedTerminal ? "" : processPriorityScript)
+        \(tabColor?.tabColorScript ?? "")
+        \(title.map { "printf '\\033]0;\($0)\\a'" } ?? "")
 
         cd \(Shell.singleQuoted(workDir)) || exit 1
 
@@ -399,19 +418,22 @@ final class OpenLauncherService {
             # ueberstimmt den /effort-Befehl zur Laufzeit, sodass jede Aenderung still zurueckspringt.
             claudeArgs+=(--effort "$EFFORT")
         fi
+        \(embeddedTerminal ? "" : """
         COLORNAME=\(Shell.singleQuoted(colorName))
         if [ -n "$COLORNAME" ]; then
             claudeArgs+=("/color $COLORNAME")
         else
             claudeArgs+=("/color")
         fi
+        """)
 
         claude "${claudeArgs[@]}"
 
         # Tab offen lassen (Gegenstueck zu -NoExit unter Windows) und Temp-Dateien vorher raeumen.
+        # Im vorhandenen Terminal kehrt der Kindprozess stattdessen einfach in dessen Shell zurueck.
         cleanup
         trap - EXIT INT TERM
-        exec /bin/zsh -l
+        \(embeddedTerminal ? "" : "exec /bin/zsh -l")
         """
         guard Paths.writeAtomic(script, to: tempScript) else {
             throw LauncherError.message("Startskript konnte nicht geschrieben werden: \(tempScript)")

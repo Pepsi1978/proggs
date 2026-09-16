@@ -902,7 +902,34 @@ final class MainViewModel {
 
     // ===================== Start =====================
 
-    func start() {
+    func start() { startCore(copyForCodex: false) }
+
+    /// Start (Codex): kopiert den Claude-Startbefehl fuer ein vorhandenes Terminal in die Zwischenablage.
+    func startCodex() { startCore(copyForCodex: true) }
+
+    var canStartCodex: Bool { Self.isClaudeCodeModel(selectedModel) }
+
+    /// Fasst die aktuelle Auswahl zusammen, unabhaengig von Betriebs- und Statusmeldungen
+    /// (Gegenstueck zu SelectionSummaryConverter unter Windows).
+    var selectionSummary: String {
+        guard let model = selectedModel, !model.displayName.trimmingCharacters(in: .whitespaces).isEmpty else {
+            return "Modell wählen."
+        }
+        var parts = [model.displayName]
+        if let p = selectedProfile?.displayName, !p.isEmpty { parts.append("Profil \(p)") }
+        if let m = selectedWorkMode?.displayName, !m.isEmpty { parts.append("Modus \(m)") }
+        if hasCliChoice, let c = selectedCliTarget?.displayName, !c.isEmpty { parts.append("CLI \(c)") }
+        if let t = selectedThinkingOption?.displayName, !t.isEmpty {
+            parts.append("\(thinkingTitle.caseInsensitiveCompare("EFFORT") == .orderedSame ? "Effort" : "Thinking") \(t)")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func startCore(copyForCodex: Bool) {
+        if copyForCodex && !Self.isClaudeCodeModel(selectedModel) {
+            statusText = "Für Start (Codex) bitte ein Claude-Code-Modell wählen."
+            return
+        }
         // Das Codex CLI spricht immer direkt mit OpenAI - dort gibt es keine Provider-Wahl, die
         // Auswahl darf den Start also nicht blockieren.
         guard let model = selectedModel, selectedProvider != nil || isCodexCliSelected else {
@@ -931,10 +958,14 @@ final class MainViewModel {
         // Vor jedem Start das Repo mit GitHub abgleichen: Profile, Regeln und Skills kommen von dort, sonst
         // arbeitet die neue Sitzung mit dem veralteten Stand dieses Rechners. Scheitert es, wird trotzdem gestartet.
         let sync = RepoSync.pull()
-        let syncHinweis = sync.ok ? "" : " · ⚠ Repo-Abgleich: \(sync.message)"
+        if !sync.ok { Logger.shared.warn("MainViewModel", "start", "Repo-Abgleich: \(sync.message)") }
 
         do {
             let thinkingLevel = selectedThinkingOption?.commandValue
+            // Beide Startbuttons und alle CLIs zeigen dieselbe tatsaechlich vorbereitete Auswahl.
+            let launchStatus = model.displayName
+                + ((thinkingLevel ?? "").isEmpty ? "" : " · Effort \(selectedThinkingOption?.displayName ?? "")")
+                + " · Profil \(profile.displayName) · Modus \(workMode.displayName)"
             let profileDocuments = try profiles.loadProfile(isClaudeCode: isClaudeCode,
                                                             profileId: profile.id, workDir: workDir)
             Logger.shared.info("MainViewModel", "start", "Vollständige Startauswahl geprüft", [
@@ -954,12 +985,18 @@ final class MainViewModel {
                 // (Skills per Symlink). Der Modus-Prompt haengt hinter dem Profil in der aktiven
                 // CLAUDE.md -> er gilt fuer die ganze Session, genau wie bei OpenCode.
                 let claudeConfigDir = try profiles.ensureClaudeConfigDir(profileId: profile.id, workModeId: workMode.id)
+                if copyForCodex {
+                    let command = try launcher.prepareClaudeCodeTerminalCommand(modelId: model.slug, workDir: workDir,
+                                                                                effortLevel: thinkingLevel,
+                                                                                claudeConfigDir: claudeConfigDir)
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(command, forType: .string)
+                    statusText = launchStatus
+                    return
+                }
                 try launcher.launchClaudeCode(modelId: model.slug, workDir: workDir,
                                               effortLevel: thinkingLevel, claudeConfigDir: claudeConfigDir)
-                statusText = (thinkingLevel ?? "").isEmpty
-                    ? "Claude Code gestartet: \(model.displayName) · Profil \(profile.displayName) · Modus \(workMode.displayName)"
-                    : "Claude Code gestartet: \(model.displayName) · Effort \(selectedThinkingOption?.displayName ?? "") · Profil \(profile.displayName) · Modus \(workMode.displayName)"
-                statusText += syncHinweis
+                statusText = launchStatus
                 return
             }
 
@@ -975,10 +1012,7 @@ final class MainViewModel {
                 Logger.shared.info("MainViewModel", "start", "Codex-CLI-Kontext geschrieben",
                                    ["profile": profile.id, "workMode": workMode.id, "agentsPath": agentsPath,
                                     "codexHome": codexHome])
-                statusText = (thinkingLevel ?? "").isEmpty
-                    ? "Codex CLI gestartet: \(model.displayName) · Profil \(profile.displayName) · Modus \(workMode.displayName)"
-                    : "Codex CLI gestartet: \(model.displayName) · Effort \(selectedThinkingOption?.displayName ?? "") · Profil \(profile.displayName) · Modus \(workMode.displayName)"
-                statusText += syncHinweis
+                statusText = launchStatus
                 return
             }
 
@@ -1005,10 +1039,7 @@ final class MainViewModel {
                 "globalSnapshotPath": profileSession.globalSnapshotPath,
                 "configPath": profileSession.configPath
             ])
-            statusText = (thinkingLevel ?? "").isEmpty
-                ? "OpenCode gestartet: \(model.displayName) via \(provider.providerName) · Profil \(profile.displayName) · Modus \(workMode.displayName)"
-                : "OpenCode gestartet: \(model.displayName) via \(provider.providerName) · Thinking \(selectedThinkingOption?.displayName ?? "") · Profil \(profile.displayName) · Modus \(workMode.displayName)"
-            statusText += syncHinweis
+            statusText = launchStatus
         } catch {
             let details = Self.buildErrorDetails(action: "OpenCode starten", error: error, model: model,
                                                  provider: provider, workDir: workDir, version: version)

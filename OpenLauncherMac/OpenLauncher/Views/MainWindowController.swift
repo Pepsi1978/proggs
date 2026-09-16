@@ -50,7 +50,8 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private let browseButton = StyledButton(style: .ghost, title: "…")
     private let errorDetailsButton = StyledButton(style: .ghost, title: "Fehlerdetails")
     private let logsButton = StyledButton(style: .ghost, title: "Logs")
-    private let statusLabel = UI.label("Bereit.", size: 13, role: .dim)
+    private let statusLabel = MarqueeLabel(size: 13, role: .dim)
+    private let startCodexButton = StyledButton(style: .ghost, title: "Start (Codex)")
     private let startButton = StyledButton(style: .accent, title: "▶ Start")
 
     /// Mindestbreite der Provider-/Profil-Spalte (MinWidth="400" in XAML).
@@ -367,15 +368,21 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         startButton.target = self
         startButton.action = #selector(start)
 
-        statusLabel.lineBreakMode = .byTruncatingTail
+        startCodexButton.fontSize = 14
+        startCodexButton.horizontalPadding = 18
+        startCodexButton.verticalPadding = 10
+        startCodexButton.target = self
+        startCodexButton.action = #selector(startCodex)
+        startCodexButton.toolTip = "Claude-Startbefehl kopieren, dann im Codex-Terminal einfügen und Enter drücken. Modell, Profil und Modus werden übernommen."
 
-        for view in [caption, workDirField, browseButton, errorDetailsButton, logsButton, statusLabel, startButton] as [NSView] {
+        // Kompaktes Arbeitsverzeichnis wie unter Windows: fester Platz, voller Pfad im Tooltip.
+        (workDirField.cell as? NSTextFieldCell)?.lineBreakMode = .byTruncatingHead
+
+        for view in [caption, workDirField, browseButton, errorDetailsButton, logsButton, statusLabel, startCodexButton, startButton] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             footer.addSubview(view)
         }
 
-        let statusMaxWidth = statusLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 360)
-        statusMaxWidth.priority = .defaultHigh
 
         NSLayoutConstraint.activate([
             caption.leadingAnchor.constraint(equalTo: footer.leadingAnchor, constant: 16),
@@ -383,27 +390,32 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
 
             workDirField.leadingAnchor.constraint(equalTo: caption.trailingAnchor, constant: 10),
             workDirField.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
-            workDirField.trailingAnchor.constraint(equalTo: browseButton.leadingAnchor, constant: -8),
+            workDirField.widthAnchor.constraint(equalToConstant: 180),
 
-            browseButton.trailingAnchor.constraint(equalTo: errorDetailsButton.leadingAnchor, constant: -8),
+            browseButton.leadingAnchor.constraint(equalTo: workDirField.trailingAnchor, constant: 8),
             browseButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
 
-            errorDetailsButton.trailingAnchor.constraint(equalTo: logsButton.leadingAnchor, constant: -8),
+            errorDetailsButton.leadingAnchor.constraint(equalTo: browseButton.trailingAnchor, constant: 8),
+
+            logsButton.leadingAnchor.constraint(equalTo: errorDetailsButton.trailingAnchor, constant: 8),
             errorDetailsButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
 
-            logsButton.trailingAnchor.constraint(equalTo: statusLabel.leadingAnchor, constant: -8),
             logsButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
 
-            statusLabel.trailingAnchor.constraint(equalTo: startButton.leadingAnchor, constant: -16),
+            statusLabel.leadingAnchor.constraint(equalTo: logsButton.trailingAnchor, constant: 8),
+            statusLabel.trailingAnchor.constraint(equalTo: startCodexButton.leadingAnchor, constant: -16),
             statusLabel.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
-            statusMaxWidth,
+            statusLabel.heightAnchor.constraint(equalToConstant: 20),
+
+            startCodexButton.trailingAnchor.constraint(equalTo: startButton.leadingAnchor, constant: -8),
+            startCodexButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
 
             startButton.trailingAnchor.constraint(equalTo: footer.trailingAnchor, constant: -16),
             startButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor)
         ])
 
-        workDirField.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        workDirField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        statusLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return footer
     }
 
@@ -456,6 +468,14 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     @objc private func showLastError() { viewModel.showLastError() }
     @objc private func openLogFolder() { viewModel.openLogFolder() }
     @objc private func start() { viewModel.start() }
+    @objc private func startCodex() { viewModel.startCodex() }
+
+    /// Die Laufleiste zeigt dauerhaft die vollstaendige Auswahl; Betriebsmeldungen stehen im Tooltip.
+    private func refreshSelectionSummary() {
+        statusLabel.text = viewModel.selectionSummary
+        statusLabel.toolTip = viewModel.statusText
+        startCodexButton.isEnabled = viewModel.canStartCodex
+    }
     @objc private func workDirEdited() { viewModel.workDir = workDirField.stringValue }
 
     // MARK: - Fenster-Layout
@@ -576,6 +596,7 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     func selectedModelChanged() {
         modelListView.refreshSelection()
         providerModelLabel.stringValue = viewModel.selectedModel?.displayName ?? "—"
+        refreshSelectionSummary()
     }
 
     func providersChanged() {
@@ -585,15 +606,17 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     func thinkingOptionsChanged() {
         thinkingListView.reload()
         profileSectionView.refresh()
+        refreshSelectionSummary()
     }
 
     func profileStateChanged() {
         profileSectionView.refresh()
         thinkingListView.refreshSelection()
+        refreshSelectionSummary()
     }
 
     func statusChanged() {
-        statusLabel.stringValue = viewModel.statusText
+        refreshSelectionSummary()
         errorDetailsButton.isEnabled = viewModel.hasLastError
     }
 
@@ -604,6 +627,7 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
 
     func workDirChanged() {
         if workDirField.stringValue != viewModel.workDir { workDirField.stringValue = viewModel.workDir }
+        workDirField.toolTip = viewModel.workDir
     }
 
     func askModelDialog(groups: [ModelGroupEntry], defaultGroup: ModelGroupEntry, title: String,
