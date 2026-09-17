@@ -119,7 +119,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
             SichtbarerHintergrund()
             Column(Modifier.fillMaxSize().imePadding()) {
                 IdeenKopfleiste(
-                    titel = when (page) { "edit" -> if (vm.isNewDraft) "Neuer Wecker" else "Wecker bearbeiten"; "settings" -> "Einstellungen"; "ideas" -> "Offene Ideen"; else -> "Genialer Wecker" },
+                    titel = when (page) { "edit" -> if (vm.isNewDraft) "Neuer Wecker" else "Wecker bearbeiten"; "settings" -> "Einstellungen"; else -> "Genialer Wecker" },
                     themeWahl = theme,
                     aufThemeTipp = { vm.settings.theme = if (theme == "dark") "light" else "dark" },
                     aufEinstellungen = if (page == "settings") null else ({ vm.stopPreview(); settingsFrom = page; page = "settings" }),
@@ -152,11 +152,10 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                             }
                         } } ?: Box(Modifier.fillMaxSize())
                         "settings" -> SettingsPage(vm, activity)
-                        "ideas" -> IdeasPage(vm)
                         else -> AlarmList(alarms, vm,
                             onNew = { openDraft { vm.newAlarm() } },
                             onEdit = { alarm -> if (draft?.id == alarm.id) page = "edit" else openDraft { vm.edit(alarm) } }, onDelete = { delete = it },
-                            onSettings = { settingsFrom = "alarms"; page = "settings" }, onIdeas = { page = "ideas" },
+                            onSettings = { settingsFrom = "alarms"; page = "settings" },
                             openDraft = draft?.takeIf { vm.draftChanged() }, onResumeDraft = { page = "edit" })
                     }
                 }
@@ -183,7 +182,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
 
 @Composable
 private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Unit, onEdit: (Alarm) -> Unit,
-    onDelete: (Alarm) -> Unit, onSettings: () -> Unit, onIdeas: () -> Unit, openDraft: Alarm?, onResumeDraft: () -> Unit) {
+    onDelete: (Alarm) -> Unit, onSettings: () -> Unit, openDraft: Alarm?, onResumeDraft: () -> Unit) {
     val gold = LocalGold.current
     // Nur für diese Listenansicht merken: neue Wecker und eine neu geöffnete Liste sind kompakt.
     var expandedIds by remember { mutableStateOf(emptySet<String>()) }
@@ -212,12 +211,15 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                                 } else {
                                     RingLegende(now, next, nextIsSnooze)
                                     Text("in ${remainingLong(next - now)}", style = MaterialTheme.typography.bodyMedium, color = gold.primaer)
+                                    // Separate from the ring: only for the regular alarm shown, never for a snooze.
+                                    if (!nextIsSnooze) alarms.firstOrNull { it.enabled && it.nextAt == next && it.sleepMinutes > 0 }?.let { target ->
+                                        SchlafZeile(Schlaf.hinweis(target.nextAt, target.sleepMinutes, now))
+                                    }
                                 }
                             }
                         }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             GoldKnopf("＋ Wecker", onNew, hauptKnopf = true)
-                            StillerKnopf("Offene Ideen", onIdeas)
                         }
                     }
                 }
@@ -283,6 +285,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             StillerKnopf("Schlummern beenden", { vm.endSnooze(alarm) }, hervorgehoben = true)
                         }
                         // One compact line tells when it rings, without opening the card.
+                        if (alarm.enabled && alarm.nextAt > 0 && alarm.sleepMinutes > 0) SchlafZeile(Schlaf.hinweis(alarm.nextAt, alarm.sleepMinutes, now))
                         if (!expanded) Text(if (alarm.enabled && alarm.nextAt > 0) "${scheduleLabel(alarm)} · ${formatAt(alarm.nextAt)}" else "${scheduleLabel(alarm)} · ausgeschaltet",
                             color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (expanded) {
@@ -322,11 +325,16 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
 }
 
 @Composable
-fun Section(title: String, collapsible: Boolean = false, summary: String = "", error: String? = null, content: @Composable ColumnScope.() -> Unit) {
-    var expanded by rememberSaveable(title) { mutableStateOf(!collapsible) }
+fun Section(title: String, collapsible: Boolean = false, summary: String = "", error: String? = null,
+    initiallyExpanded: Boolean = !collapsible, content: @Composable ColumnScope.() -> Unit) {
+    // Only visibility is remembered here; all values live in the draft in the ViewModel.
+    var expanded by rememberSaveable(title) { mutableStateOf(initiallyExpanded || !collapsible) }
     GoldKarte(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(18.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(Modifier.fillMaxWidth().then(if (collapsible) Modifier.clickable { expanded = !expanded } else Modifier), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).then(if (collapsible) Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button,
+                onClickLabel = if (expanded) "$title zuklappen" else "$title aufklappen") { expanded = !expanded }
+                .semantics { stateDescription = if (expanded) "Aufgeklappt" else "Zugeklappt" } else Modifier),
+                verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.titleMedium, color = LocalGold.current.primaer)
                     if (!expanded && summary.isNotBlank()) Text(summary, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
@@ -336,9 +344,8 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
                         Text(error, Modifier.padding(start = 6.dp), color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                if (collapsible) StillerKnopf(if (expanded) "⌃" else "⌄", { expanded = !expanded }, Modifier.semantics {
-                    contentDescription = "$title ${if (expanded) "zuklappen" else "aufklappen"}"
-                })
+                if (collapsible) Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null,
+                    tint = LocalGold.current.primaer, modifier = Modifier.padding(start = 8.dp).size(28.dp))
             }
             if (expanded) content()
         }
@@ -372,7 +379,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                     Modifier.padding(start = 12.dp), color = Semantisch.warnung, style = MaterialTheme.typography.bodyMedium)
             }
         }
-        Section("Deine Weckzeit") {
+        Section("Deine Weckzeit", collapsible = true, initiallyExpanded = true,
+            summary = listOfNotNull(alarm.timeLabel, alarm.name.ifBlank { null }, scheduleLabel(alarm),
+                if (alarm.sleepMinutes > 0) "Schlafdauer ${Schlaf.dauer(alarm.sleepMinutes)}" else null).joinToString(" · ")) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val pickTime = { TimePickerDialog(activity, { _, hour, minute -> vm.change(alarm.copy(hour = hour, minute = minute)) }, alarm.hour, alarm.minute, true).show() }
                 Text(alarm.timeLabel, Modifier.weight(1f).clickable(onClickLabel = "Uhrzeit ändern", onClick = pickTime), fontSize = 52.sp, fontFamily = IdeenSchriftBetont, color = LocalGold.current.primaer)
@@ -380,26 +389,37 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             }
             OutlinedTextField(alarm.name, { vm.change(alarm.copy(name = it)) }, Modifier.fillMaxWidth(), label = { Text("Name des Weckers") }, singleLine = true)
             RepeatEditor(alarm, activity, vm::change)
+            SchlafdauerEingabe(alarm, vm::change)
         }
         Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }.ifBlank { "Kein Schritt gewählt" },
             error = if (alarm.steps.isEmpty()) "Wähle mindestens einen Weckschritt." else null) {
-            Text("Wähle die Bausteine und ihre Reihenfolge. Der gesamte Ablauf wiederholt sich bis zum Stoppen; Songs laufen vollständig durch.", style = MaterialTheme.typography.bodySmall)
+            Text("Der gesamte Ablauf wiederholt sich bis zum Stoppen; Songs laufen vollständig durch.", style = MaterialTheme.typography.bodySmall)
+            Text("Bausteine auswählen", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             Step.entries.forEach { step -> Toggle(step.title, step in alarm.steps) { checked ->
                 vm.change(alarm.copy(steps = if (checked) alarm.steps + step else alarm.steps - step))
             } }
+            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            Text("Reihenfolge beim Wecken", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+            if (alarm.steps.isEmpty()) Text("Noch kein Baustein ausgewählt.", style = MaterialTheme.typography.bodySmall)
             alarm.steps.forEachIndexed { index, step ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("${index + 1}. ${step.title}", Modifier.weight(1f))
-                    if (index > 0) StillerKnopf("↑", modifier = Modifier.semantics { contentDescription = "${step.title} nach oben" }, aufTipp = {
-                        val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index - 1); vm.change(alarm.copy(steps = list))
-                    })
-                    Spacer(Modifier.width(8.dp))
-                    if (index < alarm.steps.lastIndex) StillerKnopf("↓", modifier = Modifier.semantics { contentDescription = "${step.title} nach unten" }, aufTipp = {
-                        val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index + 1); vm.change(alarm.copy(steps = list))
-                    })
+                    // ↑ above ↓ in one fixed 48 dp column; empty slots keep the same size, so arrows align across rows.
+                    Column(Modifier.width(48.dp)) {
+                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                            if (index > 0) IconButton({
+                                val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index - 1); vm.change(alarm.copy(steps = list))
+                            }) { Icon(Icons.Default.KeyboardArrowUp, "${step.title} nach oben", tint = LocalGold.current.primaer) }
+                        }
+                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                            if (index < alarm.steps.lastIndex) IconButton({
+                                val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index + 1); vm.change(alarm.copy(steps = list))
+                            }) { Icon(Icons.Default.KeyboardArrowDown, "${step.title} nach unten", tint = LocalGold.current.primaer) }
+                        }
+                    }
                 }
             }
-            if (Step.IDEAS in alarm.steps) Text("Die offenen Ideen werden in ihrer Reihenfolge aus Geniale Ideen gelesen. Bei bestehender Verbindung bereitet die App Änderungen automatisch vor.", style = MaterialTheme.typography.bodySmall)
+            if (Step.IDEAS in alarm.steps) Text("Die offenen Ideen werden in ihrer Reihenfolge aus Geniale Ideen gelesen. Bei bestehender Verbindung bereitet die App Änderungen automatisch vor. Ansehen und abgleichen: Einstellungen → Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
         }
         if (alarm.needsSpeech) AlarmSpeechEditor(vm, alarm)
         if (Step.MUSIC in alarm.steps || Step.TONE in alarm.steps) Section("Musik & Klingelzeichen", collapsible = true, summary = listOfNotNull(
@@ -428,7 +448,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             StillerKnopf("Vorschau stoppen", vm::stopPreview)
             Text("Das Erinnerungszeichen dauert 2 Sekunden, die anderen eingebauten Signale 6 Sekunden. Der Musikschritt spielt die ganze Datei ab. Alle eingebauten Signale wurden eigens für diese App erzeugt.", style = MaterialTheme.typography.bodySmall)
         }
-        if (Step.TEXT in alarm.steps) Section("Deine Erinnerung", error = if (alarm.text.isBlank()) "Der Erinnerungstext fehlt." else null) {
+        if (Step.TEXT in alarm.steps) Section("Deine Erinnerung", collapsible = true, initiallyExpanded = alarm.text.isBlank(),
+            summary = alarm.text.trim().replace('\n', ' ').let { if (it.length > 50) "„${it.take(50)}…“" else if (it.isNotBlank()) "„$it“" else "" },
+            error = if (alarm.text.isBlank()) "Der Erinnerungstext fehlt." else null) {
             OutlinedTextField(alarm.text, { vm.change(alarm.copy(text = it)) }, Modifier.fillMaxWidth().heightIn(min = 160.dp), label = { Text("Text, der vorgelesen werden soll") })
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 GoldKnopf(if (recording) "■ Diktat abschließen" else "● Diktieren", {
@@ -516,7 +538,10 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
             listOf(selected to "${vm.settings.qwenVoiceNames[alarm.voiceId] ?: alarm.voiceId} · gespeicherte Auswahl")
         else emptyList()
     LaunchedEffect(Unit) { vm.loadVoices() }
-    Section("Stimme & Sprechgeschwindigkeit") {
+    Section("Stimme & Sprechgeschwindigkeit", collapsible = true, summary = listOf(
+        options.find { it.first == selected }?.second ?: "Stimme wählen",
+        "Tempo ${"%.2f".format(effective.ttsSpeechRate)}× ${if (alarm.speechRate == null) "(Standard)" else "(nur dieser Wecker)"}",
+    ).joinToString(" · ")) {
         Choice("Stimme für diesen Wecker", selected, options) { chosen ->
             vm.change(alarm.copy(voiceProvider = chosen.substringBefore('|'), voiceId = chosen.substringAfter('|', "")))
         }
@@ -755,6 +780,40 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
     }
 }
 
+/** Bedtime line with a moon symbol, visually separate from the ring and its legend. */
+@Composable
+private fun SchlafZeile(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Bedtime, null, tint = LocalGold.current.textGedaempft, modifier = Modifier.size(18.dp))
+        Text(text, Modifier.padding(start = 6.dp), style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer)
+    }
+}
+
+/** Optional sleep duration per alarm: Aus/7/8/9 chips plus a 30-minute stepper from 30 minutes to 24 hours. */
+@Composable
+private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
+    val sleep = alarm.sleepMinutes
+    Text("Gewünschte Schlafdauer", style = MaterialTheme.typography.labelLarge)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FilterChip(sleep == 0, { if (sleep != 0) change(alarm.copy(sleepMinutes = 0)) }, { Text("Aus") })
+        listOf(7, 8, 9).forEach { hours ->
+            FilterChip(sleep == hours * 60, { if (sleep != hours * 60) change(alarm.copy(sleepMinutes = hours * 60)) }, { Text("$hours Std.") })
+        }
+    }
+    if (sleep > 0) Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton({ change(alarm.copy(sleepMinutes = (sleep - Schlaf.STEP).coerceAtLeast(Schlaf.MIN))) }, enabled = sleep > Schlaf.MIN) {
+            Icon(Icons.Default.Remove, "Schlafdauer um 30 Minuten verringern", tint = LocalGold.current.primaer)
+        }
+        Text(Schlaf.dauer(sleep), Modifier.widthIn(min = 72.dp).semantics { contentDescription = "Schlafdauer ${Schlaf.dauer(sleep)}" },
+            style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        IconButton({ change(alarm.copy(sleepMinutes = (sleep + Schlaf.STEP).coerceAtMost(Schlaf.MAX))) }, enabled = sleep < Schlaf.MAX) {
+            Icon(Icons.Default.Add, "Schlafdauer um 30 Minuten erhöhen", tint = LocalGold.current.primaer)
+        }
+    }
+    Text(if (sleep == 0) "Ohne Angabe wird keine Schlafenszeit angezeigt." else "Zeigt die ungefähre Schlafenszeit vor dem nächsten Termin. Kein Tracking, keine Erinnerung.",
+        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+}
+
 /** What saving will do: switched on, and the term it will then ring. Not a claim that it is already planned. */
 @Composable
 private fun SpeicherVorschau(alarm: Alarm) {
@@ -763,7 +822,10 @@ private fun SpeicherVorschau(alarm: Alarm) {
     if (next != null) Text("Nach dem Speichern eingeschaltet · klingelt dann ${formatAt(next)} (in ${remainingLong(next - minute)})",
         Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer,
         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-    else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+    if (next != null && alarm.sleepMinutes > 0) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        SchlafZeile("Nach dem Speichern: " + Schlaf.hinweis(next, alarm.sleepMinutes, minute))
+    }
+    if (next == null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Default.Warning, null, tint = Semantisch.warnung, modifier = Modifier.size(18.dp))
         Text("Nach dem Speichern gäbe es keinen zukünftigen Termin – ändere Datum oder Uhrzeit.", Modifier.padding(start = 6.dp),
             style = MaterialTheme.typography.bodySmall, color = Semantisch.warnung)
@@ -772,20 +834,6 @@ private fun SpeicherVorschau(alarm: Alarm) {
 
 fun remaining(ms: Long): String { val minutes = ZeitRing.ceilMinutes(ms); return "${minutes / 60} Std. ${minutes % 60} Min." }
 
-@Composable
-private fun IdeasPage(vm: WeckerViewModel) {
-    val ideas by vm.ideas.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { vm.syncIdeas() }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { Section("Die Brücke zu Geniale Ideen") {
-            Text("Nur offene Ideen, in derselben Reihenfolge. Die Originale bleiben in Geniale Ideen. Dein Wecker erhält eine lokale Lesekopie.")
-            GoldKnopf("Jetzt abgleichen", vm::syncIdeas)
-            vm.store.prefs.getLong("ideasAt", 0).takeIf { it > 0 }?.let { Text("Stand: ${formatAt(it)}", style = MaterialTheme.typography.bodySmall) }
-        } }
-        items(ideas, key = { it.id }) { idea -> Section(idea.title) { Text(idea.text) } }
-        if (ideas.isEmpty()) item { Leerzustand("✧", "Noch keine offenen Ideen", "Öffne Geniale Ideen und lege dort eine offene Idee an. Beide Apps benötigen den aktuellen Stand.") }
-    }
-}
 
 @Composable
 fun ReadinessCard(onSettings: () -> Unit, hideWhenReady: Boolean = false) {

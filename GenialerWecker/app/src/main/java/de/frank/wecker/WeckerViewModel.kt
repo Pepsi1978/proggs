@@ -52,6 +52,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     val settingsRevision = MutableStateFlow(0)
     val loginCode = MutableStateFlow<DeviceAuthInfo?>(null)
     val ideas = MutableStateFlow(IdeasBridge(application).cached())
+    /** Time of the last successful sync; separate from [ideas], which suppresses identical lists. */
+    val ideasAt = MutableStateFlow(store.prefs.getLong("ideasAt", 0))
     private var voiceSample: ByteArray? = null
     val hasVoiceSample = MutableStateFlow(false)
     private var actionJob: Job? = null
@@ -73,8 +75,16 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         store.prefs.edit().putString("draft_base", draftBaseline).apply()
         persistDraft(alarm)
     }
-    /** Neue Kopien gelten immer als ungespeichert; sonst zählt jede Abweichung vom geöffneten Stand. */
-    fun draftChanged(): Boolean = _draft.value?.let { it.json().toString() != draftBaseline } ?: false
+    /**
+     * New copies always count as unsaved (no baseline); otherwise any difference from the opened state counts.
+     * Compared as objects, so fields added by an update (e.g. sleepMinutes) do not mark an untouched draft as changed.
+     * A missing or unreadable baseline counts conservatively as changed.
+     */
+    fun draftChanged(): Boolean {
+        val current = _draft.value ?: return false
+        val baseline = draftBaseline?.let { runCatching { Alarm.from(JSONObject(it)) }.getOrNull() } ?: return true
+        return current != baseline
+    }
     fun change(alarm: Alarm) {
         if (_draft.value?.id != alarm.id) {
             android.util.Log.w("WeckerEditor", "Veraltetes Bearbeitungsereignis verworfen")
@@ -161,6 +171,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 progress("${alarm.name}: Audio-Vorbereitung …")
                 SpeechPreparation(app, settings).prepare(alarm) { text -> withContext(Dispatchers.Main) { progress("${alarm.name}: $text") } }
                 ideas.value = IdeasBridge(app).cached()
+                // Preparation may have synced the ideas as well.
+                ideasAt.value = store.prefs.getLong("ideasAt", 0)
                 if (store.get(alarm.id)?.let { it.sameSpeechAs(alarm) && it.voiceVariants.size == VoiceVariations.COUNT } == true)
                     message.value = "${alarm.name}: Die Sprachvarianten sind offline bereit."
             } catch (e: CancellationException) { throw e }
@@ -174,6 +186,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun syncIdeas() = runAction("Offene Ideen lesen …") {
         ideas.value = IdeasBridge(app).refresh()
+        ideasAt.value = store.prefs.getLong("ideasAt", 0)
         message.value = "${ideas.value.size} offene Ideen in Originalreihenfolge übernommen."
         PreparationWorker.enqueue(app)
     }

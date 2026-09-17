@@ -54,6 +54,8 @@ data class Alarm(
     val preparedSpeed: Float = 1f,
     val preparedSignature: String = "",
     val preparationError: String = "",
+    /** Gewünschte Schlafdauer in Minuten (30-Minuten-Schritte, 30 bis 1440); 0 = keine Angabe. */
+    val sleepMinutes: Int = 0,
 ) {
     val timeLabel: String get() = "%02d:%02d".format(hour, minute)
     val needsSpeech: Boolean get() = steps.any { it == Step.IDEAS || it == Step.TEXT }
@@ -70,6 +72,7 @@ data class Alarm(
         require(intervalDays == 0 || startDate.isNotBlank()) { "Wähle den ersten Schichttag." }
         require(startDate.isBlank() || days.isEmpty()) { "Wähle entweder Wochentage oder einen Datumsplan." }
         if (startDate.isNotBlank()) LocalDate.parse(startDate)
+        require(Schlaf.valid(sleepMinutes)) { "Die Schlafdauer muss zwischen 30 Minuten und 24 Stunden liegen." }
         require(volume in 1..100) { "Die Wecklautstärke muss größer als null sein." }
         require(speechRate == null || speechRate in .5f..2f) { "Das Sprechtempo muss zwischen 0,5× und 2× liegen." }
         require(voiceProvider.isBlank() == voiceId.isBlank()) { "Wähle eine Stimme oder den globalen Standard." }
@@ -93,6 +96,7 @@ data class Alarm(
         put("prepared", JSONObject().apply { prepared.forEach { (key, files) -> put(key, JSONArray(files)) } })
         put("voiceVariants", JSONArray(voiceVariants.map { it.json() }))
         put("preparedAt", preparedAt); put("preparedSpeed", preparedSpeed); put("preparedSignature", preparedSignature); put("preparationError", preparationError)
+        put("sleepMinutes", sleepMinutes)
     }
     companion object {
         fun from(j: JSONObject) = Alarm(
@@ -115,6 +119,8 @@ data class Alarm(
             } }.orEmpty(), preparedAt = j.optLong("preparedAt"), preparedSpeed = j.optDouble("preparedSpeed", 1.0).toFloat(), preparedSignature = j.optString("preparedSignature"),
             voiceVariants = j.optJSONArray("voiceVariants")?.let { a -> (0 until a.length()).map { VoiceVariant.from(a.getJSONObject(it)) } }.orEmpty(),
             preparationError = j.optString("preparationError"),
+            // Older entries have no field; an invalid stored value falls back to "no sleep duration".
+            sleepMinutes = j.optInt("sleepMinutes", 0).takeIf(Schlaf::valid) ?: 0,
         )
     }
 }

@@ -53,6 +53,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
     val busy by vm.busy.collectAsStateWithLifecycle()
     val code by vm.loginCode.collectAsStateWithLifecycle()
     val permissions = rememberReadiness()
+    val ideas by vm.ideas.collectAsStateWithLifecycle()
     var voiceName by rememberSaveable { mutableStateOf("") }
     var removeVoice by remember { mutableStateOf<ClonedVoice?>(null) }
     var copySettings by remember { mutableStateOf(false) }
@@ -185,11 +186,23 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
             Text("Beim Speichern werden sechs Varianten derselben Stimme erzeugt, mit behutsamen Tempo-Unterschieden. Beim Wecken läuft Variante 1 bis 6, dann wieder 1. Absätze werden vorgeladen. Bereits fertiges Audio bleibt bis zum erfolgreichen Abschluss verfügbar.", style = MaterialTheme.typography.bodySmall)
         }
-        Section("Verbindung zu Geniale Ideen", collapsible = true, summary = "Offene Ideen und Spracheinstellungen übernehmen") {
-            Text("Die offenen Ideen werden lokal übernommen. Beide Apps müssen mit demselben Schlüssel signiert sein.", style = MaterialTheme.typography.bodySmall)
+        val ideasAt by vm.ideasAt.collectAsStateWithLifecycle()
+        Section("Geniale Ideen · Offene Ideen", collapsible = true,
+            summary = "${ideas.size} offene ${if (ideas.size == 1) "Idee" else "Ideen"} · ${if (ideasAt > 0) "Stand ${formatAt(ideasAt)}" else "noch nicht abgeglichen"}") {
+            // Opening the section syncs, like opening the former ideas page did.
+            LaunchedEffect(Unit) { vm.syncIdeas() }
+            Text("Nur offene Ideen, in derselben Reihenfolge. Die Originale bleiben in Geniale Ideen. Dein Wecker erhält eine lokale Lesekopie. Beide Apps müssen mit demselben Schlüssel signiert sein.", style = MaterialTheme.typography.bodySmall)
+            GoldKnopf("Jetzt abgleichen", vm::syncIdeas)
+            if (ideasAt > 0) Text("Stand: ${formatAt(ideasAt)}", style = MaterialTheme.typography.bodySmall)
+            if (ideas.isEmpty()) Leerzustand("✧", "Noch keine offenen Ideen", "Öffne Geniale Ideen und lege dort eine offene Idee an. Beide Apps benötigen den aktuellen Stand.")
+            ideas.forEachIndexed { index, idea ->
+                if (index > 0) HorizontalDivider(color = LocalGold.current.textGedaempft.copy(alpha = .3f))
+                Text(idea.title, style = MaterialTheme.typography.titleSmall, color = LocalGold.current.textPrimaer)
+                Text(idea.text, style = MaterialTheme.typography.bodySmall)
+            }
+            HorizontalDivider(color = LocalGold.current.primaer.copy(alpha = .4f))
             GoldKnopf("Spracheinstellungen übernehmen", { copySettings = true })
             Text("Übernimmt die dort gewählte Stimme, das Tempo sowie Google-, Alibaba- und Groq-Schlüssel. Danach kannst du die Stimme im Wecker unabhängig auswählen.", style = MaterialTheme.typography.bodySmall)
-            StillerKnopf("Offene Ideen aktualisieren", vm::syncIdeas)
         }
         Section("Sprachschlüssel", collapsible = true, summary = listOf("Google" to settings.googleTtsApiKey, "Alibaba" to settings.qwenTtsApiKey, "Groq" to settings.groqApiKey)
             .joinToString(" · ") { (name, key) -> "$name ${if (key.isBlank()) "fehlt" else "✓"}" }) {
