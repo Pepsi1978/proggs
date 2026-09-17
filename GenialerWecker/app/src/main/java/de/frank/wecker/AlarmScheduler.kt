@@ -109,9 +109,17 @@ class AlarmScheduler(private val context: Context) {
                 if (now - updated.snoozeUntil < AlarmClaim.STALE_MS) updated.copy(snoozeUntil = now + 2000)
                 else updated.copy(snoozeUntil = 0).also { store.issue(alarm.id, "Eine Schlummerpause vom ${formatMissed(alarm.snoozeUntil)} wurde verpasst und nicht nachgeholt.") }
         }
-        if (updated != alarm) store.put(updated)
-        scheduleSafely(updated)
-        if (updated.snoozeUntil > now && ringingEntry == null) SnoozeNotice.show(context, updated) else SnoozeNotice.cancel(context, updated.id)
+        // Compare-and-set against the current store: a parallel save is never overwritten with the snapshot, and an alarm
+        // deleted meanwhile is not revived. This fixes the stored data only.
+        // REMAINING RACE: the planning below is deliberately NOT under the store lock (SchlafErinnerung takes that lock the
+        // other way round, so holding it here could deadlock). A parallel save may therefore finish ITS planning first and
+        // this call then arms the older occurrence — the AlarmManager slot keeps whichever set() ran last, not the newest
+        // stored state. Only a ringing or the next restore corrects that.
+        val persisted = if (updated == alarm) store.get(alarm.id)
+            else store.update(alarm.id) { current -> if (current == alarm) updated else current }
+        if (persisted == null) { cancel(alarm.id); return }
+        scheduleSafely(persisted)
+        if (persisted.snoozeUntil > now && ringingEntry == null) SnoozeNotice.show(context, persisted) else SnoozeNotice.cancel(context, persisted.id)
     }
     private fun formatMissed(at: Long) = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
         .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM. HH:mm"))
