@@ -122,10 +122,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun toggle(alarm: Alarm, enabled: Boolean) = runAction("Weckzeit ändern …", silent = true) {
         val planned = withContext(Dispatchers.IO) { scheduler.setEnabled(alarm.id, enabled) }
+        // Success stays silent: the next-alarm card already shows date, time and remaining time.
         if (!planned) message.value = "${alarm.name}: ${store.issues.value[alarm.id] ?: "Die Weckzeit konnte nicht geplant werden."}"
-        else if (enabled) store.get(alarm.id)?.nextAt?.takeIf { it > 0 }?.let {
-            message.value = "${alarm.name} klingelt ${formatAt(it)} (in ${remaining(it - System.currentTimeMillis())})."
-        }
         if (enabled && alarm.needsSpeech) PreparationWorker.enqueue(app)
     }
     fun delete(alarm: Alarm) = runAction("Wecker löschen …") {
@@ -150,7 +148,6 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun endSnooze(alarm: Alarm) = runAction("Schlummerpause beenden …", silent = true) {
         withContext(Dispatchers.IO) { scheduler.endSnooze(alarm.id) }
-        message.value = "Schlummerpause von ${alarm.name} beendet."
     }
     fun prepare(alarm: Alarm) {
         val previous = preparationJobs[alarm.id]
