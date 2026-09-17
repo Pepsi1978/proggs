@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -193,7 +194,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
     val next = listOfNotNull(nextRegular, nextSnooze).minOrNull()
     val nextIsSnooze = next != null && next == nextSnooze
     BoxWithConstraints {
-        val ringSize = if (maxWidth < 360.dp) 72.dp else 84.dp
+        val ringSize = if (maxWidth < 360.dp) 88.dp else 104.dp
         LazyVerticalGrid(columns = GridCells.Fixed(if (maxWidth >= 680.dp) 2 else 1),
             contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -209,9 +210,8 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                                     Text("Kein Wecker aktiv", style = MaterialTheme.typography.titleMedium, color = gold.textPrimaer)
                                     Text("Schalte einen Wecker ein oder lege einen neuen an.", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
                                 } else {
-                                    Text(if (nextIsSnooze) "Schlummert bis ${formatClock(next)}" else "Nächster Wecker: ${formatAt(next)}",
-                                        style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
-                                    Text("in ${remainingLong(next - now)}", style = MaterialTheme.typography.bodySmall, color = gold.primaer)
+                                    RingLegende(now, next, nextIsSnooze)
+                                    Text("in ${remainingLong(next - now)}", style = MaterialTheme.typography.bodyMedium, color = gold.primaer)
                                 }
                             }
                         }
@@ -643,7 +643,7 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Ala
 }
 /** Like [remaining], but switches to days beyond 24 hours. */
 fun remainingLong(ms: Long): String {
-    val minutes = (ms / 60_000).coerceAtLeast(0)
+    val minutes = ZeitRing.ceilMinutes(ms)
     val days = minutes / (24 * 60)
     return if (days == 0L) remaining(ms) else "$days ${if (days == 1L) "Tag" else "Tagen"} ${minutes / 60 % 24} Std."
 }
@@ -657,44 +657,101 @@ private fun StatusZeile(icon: androidx.compose.ui.graphics.vector.ImageVector, t
     }
 }
 
+/** Marker exactly as drawn on the ring: now is hollow, the alarm is filled. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.ringMarker(at: androidx.compose.ui.geometry.Offset, hollow: Boolean,
+    color: androidx.compose.ui.graphics.Color, surface: androidx.compose.ui.graphics.Color) {
+    if (hollow) {
+        drawCircle(surface, 4.5f.dp.toPx(), at)
+        drawCircle(color, 4.5f.dp.toPx(), at, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+    } else drawCircle(color, 5.5f.dp.toPx(), at)
+}
+
+@Composable
+private fun LegendenMarker(hollow: Boolean, color: androidx.compose.ui.graphics.Color) {
+    val surface = LocalGold.current.flaecheErhoeht
+    androidx.compose.foundation.Canvas(Modifier.size(14.dp)) { ringMarker(center, hollow, color, surface) }
+}
+
+/** „○ jetzt 00:00 → ● Wecker 09:00“ with the same markers as the ring; the weekday is added when it is not today. */
+@Composable
+private fun RingLegende(now: Long, target: Long, snooze: Boolean) {
+    val gold = LocalGold.current
+    val accent = if (snooze) Semantisch.info else gold.primaer
+    val zone = ZoneId.systemDefault()
+    val sameDay = Instant.ofEpochMilli(now).atZone(zone).toLocalDate() == Instant.ofEpochMilli(target).atZone(zone).toLocalDate()
+    // Not today: the concrete date, e.g. "Fr, 18.09. · 09:00".
+    val targetText = if (sameDay) formatClock(target) else formatAt(target)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        // Marker and label stay together when the line wraps.
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            LegendenMarker(hollow = true, color = gold.textPrimaer)
+            Text("jetzt ${formatClock(now)}", style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
+            Text("→", style = MaterialTheme.typography.bodyMedium, color = gold.textGedaempft)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            LegendenMarker(hollow = false, color = accent)
+            Text("${if (snooze) "Schlummern bis" else "Wecker"} $targetText", style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
+        }
+    }
+}
+
 /**
- * 24-Stunden-Zifferblatt, 0 Uhr oben, im Uhrzeigersinn. Heller Punkt = jetzt, farbiger Punkt = Termin,
- * Bogen dazwischen = verbleibende Zeit. Ohne Bogen, wenn der Termin mehr als 24 Stunden entfernt ist oder
- * dazwischen eine Zeitumstellung liegt; dann gilt allein der Text. Für TalkBack stumm.
+ * Normale 12-Stunden-Uhr: 12 oben, 3 rechts, 6 unten, 9 links. Bogen im Uhrzeigersinn von jetzt (hohler Punkt)
+ * bis zum Wecker (gefüllter Punkt), nur wenn eindeutig (siehe [ZeitRing]); sonst kurze Kennzeichnung in der Mitte.
+ * Für TalkBack stumm, der Text daneben ist maßgeblich.
  */
 @Composable
 private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Modifier = Modifier) {
     val gold = LocalGold.current
     val accent = if (snooze) Semantisch.info else gold.primaer
-    val zone = ZoneId.systemDefault()
-    fun angle(time: Long): Float {
-        val local = Instant.ofEpochMilli(time).atZone(zone).toLocalTime()
-        return local.toSecondOfDay() / 86_400f * 360f - 90f
-    }
-    val showArc = target != null && target - now in 1 until 86_400_000L &&
-        zone.rules.getOffset(Instant.ofEpochMilli(now)) == zone.rules.getOffset(Instant.ofEpochMilli(target))
+    val geometry = target?.let { ZeitRing.berechne(now, it) }
+    val nowAngle = ZeitRing.angle(now, ZoneId.systemDefault())
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val numberStyle = MaterialTheme.typography.labelSmall.copy(color = gold.textGedaempft, fontSize = 10.sp)
+    val centerStyle = MaterialTheme.typography.labelMedium.copy(color = accent, fontWeight = FontWeight.SemiBold,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+    val surface = gold.flaecheErhoeht
     androidx.compose.foundation.Canvas(modifier) {
         val stroke = 5.dp.toPx()
         val radius = size.minDimension / 2f - stroke
         val topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius)
         val arcSize = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+        fun point(angleDeg: Float, r: Float = radius) = Math.toRadians(angleDeg.toDouble()).let {
+            center + androidx.compose.ui.geometry.Offset((r * Math.cos(it)).toFloat(), (r * Math.sin(it)).toFloat())
+        }
         drawCircle(gold.textGedaempft.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
-        repeat(4) { i ->
-            val a = Math.toRadians(i * 90.0 - 90.0)
-            val inner = radius - 6.dp.toPx()
-            drawLine(gold.textGedaempft.copy(alpha = .6f),
-                center + androidx.compose.ui.geometry.Offset((inner * Math.cos(a)).toFloat(), (inner * Math.sin(a)).toFloat()),
-                center + androidx.compose.ui.geometry.Offset((radius * Math.cos(a)).toFloat(), (radius * Math.sin(a)).toFloat()), 1.5f.dp.toPx())
+        repeat(12) { hour ->
+            val a = hour * 30f - 90f
+            val long = hour % 3 == 0
+            drawLine(gold.textGedaempft.copy(alpha = if (long) .8f else .45f), point(a, radius - (if (long) 7 else 4).dp.toPx()), point(a, radius), 1.5f.dp.toPx())
         }
-        fun point(angleDeg: Float) = Math.toRadians(angleDeg.toDouble()).let {
-            center + androidx.compose.ui.geometry.Offset((radius * Math.cos(it)).toFloat(), (radius * Math.sin(it)).toFloat())
+        listOf(0 to "12", 3 to "3", 6 to "6", 9 to "9").forEach { (hour, label) ->
+            val layout = measurer.measure(label, numberStyle)
+            val at = point(hour * 30f - 90f, radius - 15.dp.toPx())
+            drawText(layout, topLeft = at - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
         }
-        if (showArc && target != null) {
-            drawArc(accent, angle(now), (target - now) / 86_400_000f * 360f, useCenter = false, topLeft = topLeft, size = arcSize,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        val sweep = geometry?.sweep
+        if (geometry != null && sweep != null) drawArc(accent, geometry.nowAngle, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        geometry?.centerLabel?.let { label ->
+            // Fit inside the space the 12/3/6/9 numbers leave free: shrink, then try two lines, never paint over them.
+            val numberRadius = radius - 15.dp.toPx()
+            val maxWidth = 2 * (numberRadius - measurer.measure("3", numberStyle).size.width / 2f - 2.dp.toPx())
+            val maxHeight = 2 * (numberRadius - measurer.measure("12", numberStyle).size.height / 2f - 2.dp.toPx())
+            val twoLines = when {
+                label == "Umstellung" -> "Um-\nstellung"
+                ' ' in label -> label.replaceFirst(' ', '\n')
+                else -> label
+            }
+            val layout = listOf(11, 10, 9, 8).asSequence().flatMap { size -> sequenceOf(label, twoLines).map { it to size } }
+                .map { (text, size) -> measurer.measure(text, centerStyle.copy(fontSize = size.sp)) }
+                .firstOrNull { it.size.width <= maxWidth && it.size.height <= maxHeight }
+                ?: measurer.measure(twoLines, centerStyle.copy(fontSize = 8.sp),
+                    constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidth.toInt().coerceAtLeast(1)))
+            drawText(layout, topLeft = center - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
         }
-        drawCircle(gold.textPrimaer, 3.5f.dp.toPx(), point(angle(now)))
-        if (target != null) drawCircle(accent, 5.5f.dp.toPx(), point(angle(target)))
+        if (geometry != null) ringMarker(point(geometry.targetAngle), hollow = false, color = accent, surface = surface)
+        ringMarker(point(nowAngle), hollow = true, color = gold.textPrimaer, surface = surface)
     }
 }
 
@@ -713,7 +770,7 @@ private fun SpeicherVorschau(alarm: Alarm) {
     }
 }
 
-fun remaining(ms: Long): String { val minutes = (ms / 60_000).coerceAtLeast(0); return "${minutes / 60} Std. ${minutes % 60} Min." }
+fun remaining(ms: Long): String { val minutes = ZeitRing.ceilMinutes(ms); return "${minutes / 60} Std. ${minutes % 60} Min." }
 
 @Composable
 private fun IdeasPage(vm: WeckerViewModel) {
