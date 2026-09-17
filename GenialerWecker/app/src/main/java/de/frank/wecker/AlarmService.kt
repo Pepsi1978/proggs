@@ -27,9 +27,10 @@ import kotlin.math.roundToInt
  * Bestätigtes Ergebnis einer Bedienaktion. Der Weckbildschirm zeigt Erfolg nur nach diesem Signal,
  * nie schon nach dem bloßen Tippen. [seq] steigt mit jedem Ergebnis, auch bei gleicher Aktion.
  */
-data class RingResult(val seq: Long, val id: String, val action: String, val ok: Boolean, val snoozeUntil: Long = 0)
+data class RingResult(val seq: Long, val id: String, val ringId: Long, val action: String, val ok: Boolean, val snoozeUntil: Long = 0)
 
-data class RingState(val alarm: Alarm? = null, val step: String = "", val message: String = "", val test: Boolean = false, val playing: Boolean = false, val variation: Int = 1)
+/** [ringId] identifies one ringing instance; the same alarm id rings again with a new ringId. */
+data class RingState(val ringId: Long = 0, val alarm: Alarm? = null, val step: String = "", val message: String = "", val test: Boolean = false, val playing: Boolean = false, val variation: Int = 1)
 
 /** Beim Wecken ausschließlich lokale Wiedergabe. Der Dienst hält auch ohne Activity den Alarm. */
 class AlarmService : Service() {
@@ -53,6 +54,14 @@ class AlarmService : Service() {
     private var quiet = false
     private var foregroundId = 0
     private fun Intent.targetsCurrent() = getStringExtra("id")?.let { it == current?.id } ?: true
+    /** An explicit ring id must match the ringing instance, so stale screens or notifications never act on a newer ring. */
+    private fun Intent.targetsRing() = targetsCurrent() && (!hasExtra("ring") || getLongExtra("ring", 0) == ringId)
+    private var ringId = 0L
+    /** Failures are attributed to the ring the request was meant for. */
+    private fun Intent.reject(action: String) {
+        val id = getStringExtra("id") ?: return
+        report(id, action, false, getLongExtra("ring", 0))
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -88,16 +97,14 @@ class AlarmService : Service() {
                     store.get(intent.getStringExtra("id").orEmpty())?.let { begin(it.copy(snoozes = snoozes, snoozeUntil = 0)) } ?: stopSelf()
                 }
             }
-            "STOP" -> if (intent.targetsCurrent() && current?.photoRequired != true) finishCurrent(false)
-                else intent.getStringExtra("id")?.let { report(it, "STOP", false) }
+            "STOP" -> if (intent.targetsRing() && current?.photoRequired != true) finishCurrent(false) else intent.reject("STOP")
             // Only a test may be ended without its photo task (back gesture), so nobody gets stuck in a test.
-            "TEST_END" -> if (test) finishCurrent(false)
+            "TEST_END" -> if (test && intent.targetsRing()) finishCurrent(false) else intent.reject("STOP")
             "PHOTO_OK" -> {
                 // Nur die nicht exportierte AlarmActivity liefert dieses interne Kommando.
-                if (intent.getStringExtra("id") == current?.id) finishCurrent(false)
+                if (intent.getStringExtra("id") == current?.id && intent.targetsRing()) finishCurrent(false) else intent.reject("STOP")
             }
-            "SNOOZE" -> if (intent.targetsCurrent()) finishCurrent(true)
-                else intent.getStringExtra("id")?.let { report(it, "SNOOZE", false) }
+            "SNOOZE" -> if (intent.targetsRing()) finishCurrent(true) else intent.reject("SNOOZE")
             else -> {
                 // A real alarm always wins over a test, including a test that is currently snoozing.
                 TestSnooze.cancel(this)
@@ -124,13 +131,14 @@ class AlarmService : Service() {
     private fun begin(alarm: Alarm) {
         AlarmRinging.cancelFallback(this)
         current = alarm
+        ringId = android.os.SystemClock.elapsedRealtimeNanos()
         fallbackFailures = 0
         generation++
         val token = generation
         loop?.cancel()
         playback?.close(); playback = null
         showForeground(alarm, quiet)
-        _state.value = RingState(alarm, "Wecken", test = test)
+        _state.value = RingState(ringId, alarm, "Wecken", test = test)
         if (alarm.vibrate) vibrateAsAlarm()
         loop = scope.launch {
             val start = System.currentTimeMillis()
@@ -187,23 +195,24 @@ class AlarmService : Service() {
 
     private fun finishCurrent(snooze: Boolean) {
         val alarm = current ?: return
+        val ring = ringId
         var snoozeUntil = 0L
         if (snooze && !test) {
             val latest = store.get(alarm.id) ?: alarm
             if (latest.snoozes >= latest.snoozeLimit) {
                 _state.value = _state.value.copy(message = "Alle Schlummerpausen sind aufgebraucht.")
-                report(alarm.id, "SNOOZE", false)
+                report(alarm.id, "SNOOZE", false, ring)
                 return
             }
             val updated = latest.copy(snoozeUntil = System.currentTimeMillis() + latest.snoozeMinutes * 60_000, snoozes = latest.snoozes + 1)
             // Persist first: a snooze alarm that fires must find its matching snoozeUntil. Roll back if planning fails.
             try { store.put(updated) }
-            catch (_: Exception) { _state.value = _state.value.copy(message = "Schlummern konnte nicht gespeichert werden. Der Wecker läuft weiter."); report(alarm.id, "SNOOZE", false); return }
+            catch (_: Exception) { _state.value = _state.value.copy(message = "Schlummern konnte nicht gespeichert werden. Der Wecker läuft weiter."); report(alarm.id, "SNOOZE", false, ring); return }
             try { AlarmScheduler(this).schedule(updated) }
             catch (_: Exception) {
                 runCatching { store.put(latest) }
                 _state.value = _state.value.copy(message = "Schlummern konnte nicht geplant werden. Der Wecker läuft weiter.")
-                report(alarm.id, "SNOOZE", false)
+                report(alarm.id, "SNOOZE", false, ring)
                 return
             }
             SnoozeNotice.show(this, updated)
@@ -213,14 +222,14 @@ class AlarmService : Service() {
             if (!snooze) TestSnooze.cancel(this)
             else if (alarm.snoozes >= alarm.snoozeLimit) {
                 _state.value = _state.value.copy(message = "Alle Schlummerpausen sind aufgebraucht.")
-                report(alarm.id, "SNOOZE", false)
+                report(alarm.id, "SNOOZE", false, ring)
                 return
             } else try {
                 snoozeUntil = System.currentTimeMillis() + alarm.snoozeMinutes * 60_000L
                 TestSnooze.start(this, alarm.id, alarm.snoozes + 1, snoozeUntil)
             } catch (_: Exception) {
                 _state.value = _state.value.copy(message = "Schlummern konnte nicht geplant werden. Der Wecker läuft weiter.")
-                report(alarm.id, "SNOOZE", false)
+                report(alarm.id, "SNOOZE", false, ring)
                 return
             }
         }
@@ -240,12 +249,12 @@ class AlarmService : Service() {
         test = false
         quiet = false
         // Confirmed before the next pending alarm begins, so a new alarm always replaces this feedback.
-        report(alarm.id, if (snooze) "SNOOZE" else "STOP", true, snoozeUntil)
+        report(alarm.id, if (snooze) "SNOOZE" else "STOP", true, ring, snoozeUntil)
         nextAlarm()
     }
 
-    private fun report(id: String, action: String, ok: Boolean, snoozeUntil: Long = 0) {
-        _result.value = RingResult((_result.value?.seq ?: 0) + 1, id, action, ok, snoozeUntil)
+    private fun report(id: String, action: String, ok: Boolean, ring: Long, snoozeUntil: Long = 0) {
+        _result.value = RingResult((_result.value?.seq ?: 0) + 1, id, ring, action, ok, snoozeUntil)
     }
 
     /**
@@ -281,11 +290,14 @@ class AlarmService : Service() {
         builder.setSmallIcon(R.drawable.ic_wecker)
             .setContentTitle(alarm?.name ?: "Genialer Wecker").setContentText("Zum Wecker öffnen")
             .setOngoing(true).setContentIntent(open).setOnlyAlertOnce(true)
-        if (alarm != null && alarm.snoozeLimit > alarm.snoozes) builder.addAction(0, "Schlummern", action("SNOOZE", 2))
-        if (alarm != null && !alarm.photoRequired) builder.addAction(0, "Beenden", action("STOP", 3))
+        if (alarm != null && alarm.snoozeLimit > alarm.snoozes) builder.addAction(0, "Schlummern", action("SNOOZE", 2, alarm))
+        if (alarm != null && !alarm.photoRequired) builder.addAction(0, "Beenden", action("STOP", 3, alarm))
         return builder.build()
     }
-    private fun action(name: String, code: Int) = PendingIntent.getService(this, code, Intent(this, AlarmService::class.java).setAction(name), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    /** The ring id is part of the intent identity (data URI), so an old notification can never be redirected to a newer ring. */
+    private fun action(name: String, code: Int, alarm: Alarm) = PendingIntent.getService(this, code, Intent(this, AlarmService::class.java).setAction(name)
+        .setData(android.net.Uri.parse("wecker://ring/$ringId/$name")).putExtra("id", alarm.id).putExtra("ring", ringId),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onDestroy() {
         trace("destroy")

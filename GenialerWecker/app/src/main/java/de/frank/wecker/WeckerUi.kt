@@ -115,7 +115,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
         val gold = LocalGold.current
         BackHandler(page != "alarms") { back() }
         Box(Modifier.fillMaxSize().background(gold.hintergrund)) {
-            BewegterHintergrund()
+            SichtbarerHintergrund()
             Column(Modifier.fillMaxSize().imePadding()) {
                 IdeenKopfleiste(
                     titel = when (page) { "edit" -> if (vm.isNewDraft) "Neuer Wecker" else "Wecker bearbeiten"; "settings" -> "Einstellungen"; "ideas" -> "Offene Ideen"; else -> "Genialer Wecker" },
@@ -184,8 +184,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
     // Nur für diese Listenansicht merken: neue Wecker und eine neu geöffnete Liste sind kompakt.
     var expandedIds by remember { mutableStateOf(emptySet<String>()) }
     val issues by vm.store.issues.collectAsState()
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(1000) } }
+    val now = rememberNow()
     val next = alarms.flatMap { alarm -> listOfNotNull(alarm.nextAt.takeIf { alarm.enabled && it > now }, alarm.snoozeUntil.takeIf { it > now }) }.minOrNull()
     BoxWithConstraints {
         LazyVerticalGrid(columns = GridCells.Fixed(if (maxWidth >= 680.dp) 2 else 1),

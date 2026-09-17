@@ -49,7 +49,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /** A tapped action waiting for the service's confirmation. [afterSeq] ignores results that existed before the tap. */
-private data class PendingAction(val id: String, val action: String, val afterSeq: Long)
+private data class PendingAction(val id: String, val ringId: Long, val action: String, val afterSeq: Long)
 
 class AlarmActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,7 +67,7 @@ class AlarmActivity : ComponentActivity() {
             val state by AlarmService.state.collectAsStateWithLifecycle()
             val scope = rememberCoroutineScope()
             var photoPath by rememberSaveable { mutableStateOf("") }
-            var photoAlarmId by rememberSaveable { mutableStateOf("") }
+            var photoRingId by rememberSaveable { mutableLongStateOf(0L) }
             var message by rememberSaveable { mutableStateOf("") }
             var checking by remember { mutableStateOf(false) }
             var seenAlarm by rememberSaveable { mutableStateOf(false) }
@@ -78,21 +78,23 @@ class AlarmActivity : ComponentActivity() {
             var endWiggle by remember { mutableStateOf<Int?>(null) }
 
             /** Sends immediately; success is shown only once the service confirms this exact action. */
-            fun send(action: String, id: String, commandName: String = action) {
+            fun send(action: String, id: String, ring: Long, commandName: String = action) {
                 if (pending != null || feedback != null) return
-                pending = PendingAction(id, action, AlarmService.result.value?.seq ?: 0)
-                command(commandName, id)
+                pending = PendingAction(id, ring, action, AlarmService.result.value?.seq ?: 0)
+                command(commandName, id, ring)
             }
             val photo = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
                 if (success && photoPath.isNotBlank()) scope.launch {
                     checking = true
                     try {
-                        val alarm = AlarmService.state.value.alarm
-                        if (alarm == null || alarm.id != photoAlarmId) return@launch
+                        val ringing = AlarmService.state.value
+                        val alarm = ringing.alarm ?: return@launch
+                        // A photo taken for an earlier ring is discarded, never applied to the current one.
+                        if (ringing.ringId != photoRingId) { message = "Das Foto gehört zu einem früheren Klingeln und wurde verworfen."; return@launch }
                         val result = withContext(Dispatchers.IO) { PhotoCheck.check(File(photoPath), alarm) }
                         message = result.message
                         // The photo success is confirmed only by the service after PHOTO_OK.
-                        if (result.accepted) send("STOP", alarm.id, "PHOTO_OK")
+                        if (result.accepted) send("STOP", alarm.id, photoRingId, "PHOTO_OK")
                     } catch (e: Exception) { message = e.message ?: "Das Foto konnte nicht geprüft werden." }
                     finally { checking = false; File(photoPath).delete() }
                 } else message = "Fotoaufnahme abgebrochen. Der Wecker läuft weiter."
@@ -100,7 +102,7 @@ class AlarmActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 AlarmService.result.collect { result ->
                     val waiting = pending ?: return@collect
-                    if (result == null || result.seq <= waiting.afterSeq || result.id != waiting.id || result.action != waiting.action) return@collect
+                    if (result == null || result.seq <= waiting.afterSeq || result.id != waiting.id || result.ringId != waiting.ringId || result.action != waiting.action) return@collect
                     pending = null
                     if (result.ok) feedback = result
                     else if (result.action == "SNOOZE") snoozeWiggle = (snoozeWiggle ?: 0) + 1
@@ -109,20 +111,20 @@ class AlarmActivity : ComponentActivity() {
             }
             // A confirmation that never arrives must not lock the buttons.
             LaunchedEffect(pending) { if (pending != null) { delay(4000); pending = null } }
-            LaunchedEffect(state.alarm) {
+            LaunchedEffect(state.alarm, state.ringId) {
                 val alarm = state.alarm ?: return@LaunchedEffect
                 seenAlarm = true
                 shownAlarm = alarm
-                // A newly arriving alarm has priority: drop feedback or waiting actions of another alarm.
-                if (feedback != null && feedback?.id != alarm.id) feedback = null
-                if (pending != null && pending?.id != alarm.id) pending = null
+                // A new ring has priority, even for the same alarm id: drop feedback or waiting actions of another ring.
+                if (feedback != null && feedback?.ringId != state.ringId) feedback = null
+                if (pending != null && pending?.ringId != state.ringId) pending = null
             }
-            LaunchedEffect(feedback, state.alarm?.id, pending) {
+            LaunchedEffect(feedback, state.ringId, state.alarm == null, pending) {
                 val done = feedback
                 if (done != null) {
                     delay(350)
-                    val now = AlarmService.state.value.alarm
-                    if (now == null || now.id == done.id) finish()
+                    val now = AlarmService.state.value
+                    if (now.alarm == null || now.ringId == done.ringId) finish()
                 } else if (state.alarm == null && seenAlarm && pending == null) finish()
             }
             // Im Direct Boot stehen verschlüsselte Einstellungen noch nicht zur Verfügung.
@@ -139,18 +141,17 @@ class AlarmActivity : ComponentActivity() {
             GenialeIdeenTheme(theme) {
                 val alarm = state.alarm ?: shownAlarm.takeIf { feedback != null }
                 BackHandler {
-                    if (state.test) command("TEST_END")
+                    if (state.test) command("TEST_END", state.alarm?.id, state.ringId)
                     else message = "Der Wecker läuft weiter. Nutze Schlummern oder erfülle die Stopp-Aufgabe."
                 }
                 Box(Modifier.fillMaxSize().background(LocalGold.current.hintergrund)) {
-                    BewegterHintergrund()
+                    SichtbarerHintergrund()
                     Column(Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
                         Spacer(Modifier.height(8.dp))
                         Text("GUTEN MORGEN", color = LocalGold.current.primaer, letterSpacing = 3.sp)
                         // Show the live clock, not the alarm time, so the user always sees the current time.
-                        var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-                        LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(1000) } }
+                        val now = rememberNow()
                         Box(Modifier.widthIn(max = 320.dp).fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) {
                             WeckPuls(ringing = alarm != null, leaving = feedback != null, modifier = Modifier.matchParentSize())
                             Text(formatClock(now), fontFamily = IdeenSchriftBetont, fontSize = 76.sp, color = LocalGold.current.primaer)
@@ -174,13 +175,13 @@ class AlarmActivity : ComponentActivity() {
                             }
                             // Identical for test and real alarms; the photo task can never be bypassed here.
                             WeckTasten(alarm, checking, feedback?.action, snoozeWiggle, endWiggle,
-                                onSnooze = { send("SNOOZE", alarm.id) }, onEnd = {
+                                onSnooze = { send("SNOOZE", alarm.id, state.ringId) }, onEnd = {
                                     if (pending != null || feedback != null) return@WeckTasten
                                     if (alarm.photoRequired) {
                                         val file = newPhoto(this@AlarmActivity)
-                                        photoPath = file.absolutePath; photoAlarmId = alarm.id
+                                        photoPath = file.absolutePath; photoRingId = state.ringId
                                         photo.launch(FileProvider.getUriForFile(this@AlarmActivity, "$packageName.photos", file))
-                                    } else send("STOP", alarm.id)
+                                    } else send("STOP", alarm.id, state.ringId)
                                 })
                         } else StillerKnopf("Zurück zur App", { finish() })
                         // The only visible difference between a test and a real alarm.
@@ -201,8 +202,8 @@ class AlarmActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideStatusBar()
     }
-    private fun command(action: String, id: String? = null) {
-        startService(Intent(this, AlarmService::class.java).setAction(action).putExtra("id", id))
+    private fun command(action: String, id: String?, ring: Long) {
+        startService(Intent(this, AlarmService::class.java).setAction(action).putExtra("id", id).putExtra("ring", ring))
     }
 }
 
@@ -214,8 +215,7 @@ class AlarmActivity : ComponentActivity() {
 private fun WeckPuls(ringing: Boolean, leaving: Boolean, modifier: Modifier = Modifier) {
     val gold = LocalGold.current.primaer
     val reduced = LocalBewegungReduziert.current
-    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
-    val animate = ringing && !leaving && !reduced && lifecycle.isAtLeast(Lifecycle.State.RESUMED)
+    val animate = ringing && !leaving && !reduced && rememberResumed()
     var elapsed by remember { mutableLongStateOf(0L) }
     LaunchedEffect(animate) {
         if (!animate) return@LaunchedEffect
