@@ -442,7 +442,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                         RadioButton(alarm.music.isBlank() && alarm.tone == id, null)
                         Text(title, Modifier.padding(start = 8.dp))
                     }
-                    StillerKnopf("Anhören", { vm.playPreview(Tones.file(vm.store.files, id)) })
+                    StillerKnopf("Anhören", { vm.playTone(id) })
                 }
             }
             StillerKnopf("Vorschau stoppen", vm::stopPreview)

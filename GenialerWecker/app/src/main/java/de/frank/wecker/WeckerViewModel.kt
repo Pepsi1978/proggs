@@ -57,6 +57,12 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     private var voiceSample: ByteArray? = null
     val hasVoiceSample = MutableStateFlow(false)
     private var actionJob: Job? = null
+    /** Owner of the busy banner; a cancelled older action must not clear the banner of a newer one. */
+    private var busyOwner: Any? = null
+    /** Incremented by every stop or new preview; late preparations, callbacks and errors of older generations are dropped. */
+    private var previewGeneration = 0L
+    /** Only the preview's own preparation job, never a foreign action job. */
+    private var previewJob: Job? = null
 
     init {
         if (settings.ttsProvider == TtsProvider.QWEN.id) settings.ttsProvider = TtsProvider.QWEN_CLONE.id
@@ -97,12 +103,16 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     fun closeEditor() { _draft.value = null; draftBaseline = null; store.prefs.edit().remove("draft").remove("draft_is_new").remove("draft_base").apply() }
     fun runAction(label: String, silent: Boolean = false, action: suspend () -> Unit) {
         if (actionJob?.isActive == true) { message.value = "Bitte warte auf den laufenden Vorgang."; return }
+        val owner = Any()
+        busyOwner = owner
+        // Owner is set before launch, so even a synchronously finishing action (Main.immediate) clears only its own banner.
         actionJob = viewModelScope.launch {
-            if (!silent) busy.value = label
+            // A silent action also clears a stale banner left by a cancelled older action.
+            busy.value = if (silent) "" else label
             try { action() }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) { message.value = e.message ?: "Der Vorgang ist fehlgeschlagen." }
-            finally { busy.value = "" }
+            finally { if (busyOwner === owner) { busy.value = ""; busyOwner = null } }
         }
     }
     fun cancelAction() {
@@ -337,23 +347,99 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         if (settings.qwenTtsVoiceId == id) { settings.qwenTtsVoiceId = ""; settings.ttsProvider = TtsProvider.EDGE.id }
         settingsChanged(); loadVoicesNow()
     }
-    fun previewVoice() = runAction("Stimmprobe vorbereiten …") {
-        val prep = SpeechPreparation(app, settings)
-        val file = prep.audio("Guten Morgen! Es ist Zeit für deine genialen Ideen. Dein Wecker ist bereit.")
-        playPreview(file, prep.playbackSpeed)
-    }
-    fun playPreview(file: File, speed: Float = 1f) {
+    fun previewVoice() {
         stopPreview()
-        preview = MediaPlayer().apply {
-            setAudioAttributes(android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build())
-            setDataSource(file.absolutePath)
-            setOnPreparedListener { it.playbackParams = android.media.PlaybackParams().setSpeed(speed); it.start() }
-            setOnCompletionListener { stopPreview() }
-            setOnErrorListener { _, _, _ -> message.value = "Die Vorschau konnte nicht abgespielt werden."; stopPreview(); true }
-            prepareAsync()
+        val generation = previewGeneration
+        runAction("Stimmprobe vorbereiten …") {
+            // The job is captured inside the action, so a refused runAction can never register a foreign job.
+            val job = currentCoroutineContext()[Job]
+            if (generation != previewGeneration) return@runAction
+            previewJob = job
+            try {
+                val prep = SpeechPreparation(app, settings)
+                val file = prep.audio("Guten Morgen! Es ist Zeit für deine genialen Ideen. Dein Wecker ist bereit.")
+                if (generation != previewGeneration) return@runAction
+                // Hand over without stopPreview(): that would cancel this very job.
+                if (previewJob === job) previewJob = null
+                startPlayer(file, prep.playbackSpeed, generation)
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                // An error of an outdated preview is dropped instead of overwriting newer messages.
+                if (generation == previewGeneration) throw e
+            } finally { if (previewJob === job) previewJob = null }
         }
     }
-    fun stopPreview() { preview?.release(); preview = null }
+    /** Plays a built-in tone; creating the file runs on IO, playback on Main, both bound to the current generation. */
+    fun playTone(id: String) {
+        stopPreview()
+        val generation = previewGeneration
+        previewJob = viewModelScope.launch {
+            val job = currentCoroutineContext()[Job]
+            try {
+                val file = try { withContext(Dispatchers.IO) { Tones.file(store.files, id) } }
+                catch (e: CancellationException) { throw e }
+                catch (e: Exception) {
+                    android.util.Log.w("WeckerPreview", "Ton konnte nicht vorbereitet werden", e)
+                    if (generation == previewGeneration) message.value = "Der Ton konnte nicht vorbereitet werden."
+                    return@launch
+                }
+                if (generation != previewGeneration) return@launch
+                if (previewJob === job) previewJob = null
+                startPlayer(file, 1f, generation)
+            } finally {
+                // Released only by its own identity, also after file errors or cancellation.
+                if (previewJob === job) previewJob = null
+            }
+        }
+    }
+    /** Local player until it is prepared successfully; every failure releases it and never throws into the UI. */
+    private fun startPlayer(file: File, speed: Float, generation: Long) {
+        releasePlayer()
+        // Construction can fail natively; that must not escape as an unhandled coroutine exception.
+        val player = try { MediaPlayer() } catch (e: Exception) {
+            android.util.Log.w("WeckerPreview", "MediaPlayer konnte nicht erzeugt werden", e)
+            if (generation == previewGeneration) message.value = "Die Vorschau konnte nicht abgespielt werden."
+            return
+        }
+        try {
+            player.setAudioAttributes(android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            player.setDataSource(file.absolutePath)
+            player.setOnPreparedListener { prepared ->
+                if (preview !== prepared || generation != previewGeneration) return@setOnPreparedListener
+                // Tempo is optional: if the device rejects it, play at normal speed.
+                try { prepared.playbackParams = android.media.PlaybackParams().setSpeed(speed) }
+                catch (e: Exception) { android.util.Log.w("WeckerPreview", "Tempo nicht unterstützt", e) }
+                // No second start after a real start failure.
+                try { if (!prepared.isPlaying) prepared.start() } catch (e: Exception) { failPlayer(prepared, generation, e) }
+            }
+            player.setOnCompletionListener { done -> if (preview === done) releasePlayer() }
+            player.setOnErrorListener { failed, what, extra ->
+                // A stale callback neither stops the current player nor overwrites newer messages.
+                if (preview === failed) failPlayer(failed, generation, IllegalStateException("MediaPlayer-Fehler $what/$extra"))
+                true
+            }
+            preview = player
+            player.prepareAsync()
+        } catch (e: Exception) {
+            if (preview === player) preview = null
+            player.release()
+            android.util.Log.w("WeckerPreview", "Vorschau konnte nicht gestartet werden", e)
+            if (generation == previewGeneration) message.value = "Die Vorschau konnte nicht abgespielt werden."
+        }
+    }
+    private fun failPlayer(player: MediaPlayer, generation: Long, error: Exception) {
+        android.util.Log.w("WeckerPreview", "Vorschau abgebrochen", error)
+        if (preview === player) preview = null
+        player.release()
+        if (generation == previewGeneration) message.value = "Die Vorschau konnte nicht abgespielt werden."
+    }
+    private fun releasePlayer() { val player = preview; preview = null; player?.release() }
+    /** Stops playback and cancels only the preview's own preparation; every later result of it is discarded. */
+    fun stopPreview() {
+        previewGeneration++
+        previewJob?.let { job -> previewJob = null; job.cancel() }
+        releasePlayer()
+    }
     fun test(alarm: Alarm) {
         stopPreview()
         app.startForegroundService(Intent(app, AlarmService::class.java).setAction("TEST").putExtra("id", alarm.id).putExtra("quiet", true))
