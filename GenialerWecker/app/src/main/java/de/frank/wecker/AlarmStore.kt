@@ -16,9 +16,21 @@ class AlarmStore private constructor(context: Context) {
     private val issueState = MutableStateFlow(readIssues())
     /** Sichtbare Zuverlässigkeitshinweise je Wecker, z. B. eine fehlgeschlagene Folgeplanung. */
     val issues = issueState.asStateFlow()
+    /**
+     * Ein einzelner unlesbarer Eintrag darf weder den App-Start blockieren noch die übrigen Wecker
+     * verdecken. Vor dem ersten Überschreiben wird der Rohstand einmalig gesichert.
+     */
     private fun read(): List<Alarm> {
-        val array = JSONArray(prefs.getString("alarms", "[]"))
-        return (0 until array.length()).map { Alarm.from(array.getJSONObject(it)) }
+        val raw = prefs.getString("alarms", "[]") ?: "[]"
+        val array = runCatching { JSONArray(raw) }.getOrElse { backupRaw(raw, it); return emptyList() }
+        return (0 until array.length()).mapNotNull { index ->
+            runCatching { Alarm.from(array.getJSONObject(index)) }
+                .onFailure { backupRaw(raw, it) }.getOrNull()
+        }
+    }
+    private fun backupRaw(raw: String, error: Throwable) {
+        android.util.Log.e("WeckerStore", "Unlesbarer Weckereintrag; Rohstand wird gesichert", error)
+        if (!prefs.contains("alarms_unreadable_backup")) prefs.edit().putString("alarms_unreadable_backup", raw).commit()
     }
     @Synchronized fun all() = state.value
     @Synchronized fun get(id: String) = state.value.find { it.id == id }

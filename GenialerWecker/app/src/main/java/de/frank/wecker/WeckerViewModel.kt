@@ -32,6 +32,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     private var preview: MediaPlayer? = null
     private val _draft = MutableStateFlow(store.prefs.getString("draft", null)?.let { runCatching { Alarm.from(JSONObject(it)) }.getOrNull() })
     private var draftIsNew = _draft.value?.let { store.get(it.id) == null } ?: true
+    /** Stand beim Öffnen des Editors; nur echte Änderungen lösen die Rückfrage beim Verlassen aus. */
+    private var draftBaseline = store.prefs.getString("draft_base", null)
     val isNewDraft: Boolean get() = draftIsNew
     val draft = _draft.asStateFlow()
     val busy = MutableStateFlow("")
@@ -67,8 +69,12 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         stopPreview()
         draftIsNew = store.get(alarm.id) == null
         _draft.value = alarm
+        draftBaseline = if (draftIsNew && alarm.name.endsWith("– Kopie")) null else alarm.json().toString()
+        store.prefs.edit().putString("draft_base", draftBaseline).apply()
         persistDraft(alarm)
     }
+    /** Neue Kopien gelten immer als ungespeichert; sonst zählt jede Abweichung vom geöffneten Stand. */
+    fun draftChanged(): Boolean = _draft.value?.let { it.json().toString() != draftBaseline } ?: false
     fun change(alarm: Alarm) {
         if (_draft.value?.id != alarm.id) {
             android.util.Log.w("WeckerEditor", "Veraltetes Bearbeitungsereignis verworfen")
@@ -78,7 +84,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         persistDraft(alarm)
     }
     private fun persistDraft(alarm: Alarm) { store.prefs.edit().putString("draft", alarm.json().toString()).putBoolean("draft_is_new", draftIsNew).apply() }
-    fun closeEditor() { _draft.value = null; store.prefs.edit().remove("draft").remove("draft_is_new").apply() }
+    fun closeEditor() { _draft.value = null; draftBaseline = null; store.prefs.edit().remove("draft").remove("draft_is_new").remove("draft_base").apply() }
     fun runAction(label: String, silent: Boolean = false, action: suspend () -> Unit) {
         if (actionJob?.isActive == true) { message.value = "Bitte warte auf den laufenden Vorgang."; return }
         actionJob = viewModelScope.launch {
@@ -93,25 +99,36 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         if (actionJob?.isActive == true) actionJob?.cancel() else preparationJobs.values.toList().forEach { it.cancel() }
         auth.cancelChat(); auth.cancelLogin()
     }
-    fun save(done: () -> Unit) {
+    fun save(notificationsDenied: Boolean = false, done: () -> Unit) {
         val source = _draft.value ?: return
         val alarm = source.copy(enabled = true)
         val create = draftIsNew
         runAction("Wecker speichern …") {
-            withContext(Dispatchers.IO) { scheduler.save(alarm, create = create) }
+            val planned = try { withContext(Dispatchers.IO) { scheduler.save(alarm, create = create) } }
+            finally {
+                // Once stored, a retry must update the entry instead of failing on the existing id.
+                if (create && store.get(alarm.id) != null) { draftIsNew = false; _draft.value?.let(::persistDraft) }
+            }
             if (_draft.value == source) { closeEditor(); done() }
             else if (_draft.value?.id == alarm.id && create) {
                 draftIsNew = false
                 _draft.value?.let(::persistDraft)
             }
-            message.value = "${alarm.name} gespeichert und aktiviert."
+            val nextAt = store.get(alarm.id)?.nextAt ?: 0
+            message.value = if (!planned) "${alarm.name} gespeichert, aber nicht geplant: ${store.issues.value[alarm.id].orEmpty()}"
+                else if (notificationsDenied) "${alarm.name} gespeichert. Ohne Benachrichtigungen fehlen Vollbild und Sperrbildschirm-Tasten – bitte in den Einstellungen erlauben."
+                else if (nextAt > 0) "${alarm.name} gespeichert · klingelt ${formatAt(nextAt)} (in ${remaining(nextAt - System.currentTimeMillis())})."
+                else "${alarm.name} gespeichert und aktiviert."
             if (alarm.needsSpeech) {
                 prepare(store.get(alarm.id)!!)
             }
         }
     }
     fun toggle(alarm: Alarm, enabled: Boolean) = runAction("Weckzeit ändern …", silent = true) {
-        withContext(Dispatchers.IO) { scheduler.save(alarm.copy(enabled = enabled)) }
+        withContext(Dispatchers.IO) { scheduler.setEnabled(alarm.id, enabled) }
+        if (enabled) store.get(alarm.id)?.nextAt?.takeIf { it > 0 }?.let {
+            message.value = "${alarm.name} klingelt ${formatAt(it)} (in ${remaining(it - System.currentTimeMillis())})."
+        }
         if (enabled && alarm.needsSpeech) PreparationWorker.enqueue(app)
     }
     fun delete(alarm: Alarm) = runAction("Wecker löschen …") {
@@ -119,14 +136,22 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         withContext(Dispatchers.IO) {
             require(alarm.id !in store.ringing()) { "Stoppe zuerst den klingelnden Wecker." }
             scheduler.cancel(alarm.id); store.delete(alarm.id)
+            SnoozeNotice.cancel(app, alarm.id)
         }
+        if (_draft.value?.id == alarm.id) closeEditor()
+        message.value = "„${alarm.name}“ gelöscht."
     }
     fun skip(alarm: Alarm) = runAction("Nächste Weckzeit auslassen …") {
-        require(alarm.repeats) { "Einmalige Wecker kannst du ausschalten." }
-        withContext(Dispatchers.IO) {
-            val updated = alarm.copy(nextAt = AlarmTime.next(alarm, java.time.Instant.ofEpochMilli(alarm.nextAt + 1000)))
-            store.put(updated); scheduler.schedule(updated)
-        }
+        val updated = withContext(Dispatchers.IO) { scheduler.skipNext(alarm.id) }
+        message.value = "Nächster Termin ausgelassen. ${updated.name} klingelt wieder ${formatAt(updated.nextAt)}."
+    }
+    fun unskip(alarm: Alarm) = runAction("Auslassen rückgängig machen …") {
+        val updated = withContext(Dispatchers.IO) { scheduler.unskip(alarm.id) }
+        message.value = "${updated.name} klingelt wieder ${formatAt(updated.nextAt)}."
+    }
+    fun endSnooze(alarm: Alarm) = runAction("Schlummerpause beenden …", silent = true) {
+        withContext(Dispatchers.IO) { scheduler.endSnooze(alarm.id) }
+        message.value = "Schlummerpause von ${alarm.name} beendet."
     }
     fun prepare(alarm: Alarm) {
         val previous = preparationJobs[alarm.id]

@@ -21,6 +21,8 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -95,11 +97,18 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
     var page by rememberSaveable { mutableStateOf(if (draft != null) "edit" else "alarms") }
     var delete by remember { mutableStateOf<Alarm?>(null) }
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
-        if (allowed) vm.save { page = "alarms" } else vm.message.value = "Erlaube Benachrichtigungen, damit der Wecker auf dem Sperrbildschirm bedienbar ist."
+        // A refusal must never block saving: the alarm still rings, only the lock-screen controls are missing.
+        vm.save(notificationsDenied = !allowed) { page = "alarms" }
+    }
+    var leaveEditor by remember { mutableStateOf(false) }
+    fun back() {
+        vm.stopPreview()
+        if (page == "edit" && draft != null && vm.draftChanged()) leaveEditor = true
+        else { if (page == "edit") vm.closeEditor(); page = "alarms" }
     }
     GenialeIdeenTheme(theme) {
         val gold = LocalGold.current
-        BackHandler(page != "alarms") { vm.stopPreview(); page = "alarms" }
+        BackHandler(page != "alarms") { back() }
         Box(Modifier.fillMaxSize().background(gold.hintergrund)) {
             BewegterHintergrund()
             Column(Modifier.fillMaxSize().imePadding()) {
@@ -108,7 +117,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                     themeWahl = theme,
                     aufThemeTipp = { vm.settings.theme = if (theme == "dark") "light" else "dark" },
                     aufEinstellungen = if (page == "settings") null else ({ page = "settings" }),
-                    voran = if (page != "alarms") ({ StillerKnopf("‹", { vm.stopPreview(); page = "alarms" }); Spacer(Modifier.width(8.dp)) }) else null,
+                    voran = if (page != "alarms") ({ StillerKnopf("‹", { back() }, Modifier.semantics { contentDescription = "Zurück zur Weckerliste" }); Spacer(Modifier.width(8.dp)) }) else null,
                 )
                 if (busy.isNotBlank() || audioBusy.isNotBlank()) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -143,6 +152,14 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                 }
             }
         }
+        if (leaveEditor) AlertDialog(onDismissRequest = { leaveEditor = false },
+            title = { Text("Änderungen speichern?") },
+            text = { Text("Du hast diesen Wecker geändert, aber noch nicht gespeichert.") },
+            confirmButton = { GoldKnopf("Speichern", { leaveEditor = false; vm.save { page = "alarms" } }) },
+            dismissButton = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StillerKnopf("Verwerfen", { leaveEditor = false; vm.closeEditor(); page = "alarms" })
+                StillerKnopf("Weiter bearbeiten", { leaveEditor = false })
+            } })
         delete?.let { alarm -> Confirm("Wecker löschen?", "„${alarm.name}“ wird entfernt.", {
             vm.delete(alarm); delete = null
         }, { delete = null }) }
@@ -216,11 +233,20 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                         }
                         // Reliability warnings stay visible even on collapsed cards.
                         issues[alarm.id]?.let { Text(it, color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall) }
+                        if (alarm.snoozeUntil > now) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Snooze, null, tint = gold.primaer, modifier = Modifier.size(20.dp))
+                            Text("Schlummert bis ${formatClock(alarm.snoozeUntil)}", Modifier.weight(1f).padding(horizontal = 8.dp), color = gold.primaer)
+                            StillerKnopf("Schlummern beenden", { vm.endSnooze(alarm) }, hervorgehoben = true)
+                        }
+                        // One compact line tells when it rings, without opening the card.
+                        if (!expanded) Text(if (alarm.enabled && alarm.nextAt > 0) "${scheduleLabel(alarm)} · ${formatAt(alarm.nextAt)}" else "${scheduleLabel(alarm)} · ausgeschaltet",
+                            color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (expanded) {
                             Text(scheduleLabel(alarm), color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall)
                             Text(alarm.steps.joinToString(" → ") { it.title }, color = gold.primaer, style = MaterialTheme.typography.bodySmall)
-                            if (alarm.snoozeUntil > 0) Text("Schlummert bis ${formatAt(alarm.snoozeUntil)}", color = gold.primaer)
-                            if (alarm.enabled && alarm.nextAt > 0) Text(formatAt(alarm.nextAt), style = MaterialTheme.typography.bodySmall)
+                            val skipped = alarm.enabled && alarm.repeats && alarm.nextAt > 0 &&
+                                runCatching { alarm.nextAt > AlarmTime.next(alarm, Instant.ofEpochMilli(now)) }.getOrDefault(false)
+                            if (alarm.enabled && alarm.nextAt > 0) Text("Nächster Termin: ${formatAt(alarm.nextAt)}${if (skipped) " · ein Termin ausgelassen" else ""}", style = MaterialTheme.typography.bodySmall)
                             Text("Lautstärke ${alarm.volume} %${if (alarm.photoRequired) " · Foto-Aufgabe" else ""}", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
                             if (alarm.needsSpeech) {
                                 val status = when {
@@ -234,9 +260,12 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 StillerKnopf("Bearbeiten", { onEdit(alarm) }, hervorgehoben = true)
                                 StillerKnopf("Testwecken", { vm.test(alarm) })
+                                if (alarm.enabled && alarm.repeats) {
+                                    if (skipped) StillerKnopf("Auslassen rückgängig", { vm.unskip(alarm) })
+                                    else StillerKnopf("Nächsten Termin auslassen", { vm.skip(alarm) })
+                                }
                                 if (alarm.needsSpeech) StillerKnopf("Audio vorbereiten", { vm.prepare(alarm) })
-                                StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0)) })
-                                if (alarm.enabled && alarm.repeats) StillerKnopf("Nächstes auslassen", { vm.skip(alarm) })
+                                StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0, snoozes = 0)) })
                                 StillerKnopf("Löschen", { onDelete(alarm) })
                             }
                         }
@@ -257,7 +286,9 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", c
                     Text(title, style = MaterialTheme.typography.titleMedium, color = LocalGold.current.primaer)
                     if (!expanded && summary.isNotBlank()) Text(summary, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
                 }
-                if (collapsible) StillerKnopf(if (expanded) "⌃" else "⌄", { expanded = !expanded })
+                if (collapsible) StillerKnopf(if (expanded) "⌃" else "⌄", { expanded = !expanded }, Modifier.semantics {
+                    contentDescription = "$title ${if (expanded) "zuklappen" else "aufklappen"}"
+                })
             }
             if (expanded) content()
         }
@@ -284,10 +315,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Section("Deine Weckzeit") {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(alarm.timeLabel, Modifier.weight(1f), fontSize = 52.sp, fontFamily = IdeenSchriftBetont, color = LocalGold.current.primaer)
-                GoldKnopf("Uhrzeit", {
-                    TimePickerDialog(activity, { _, hour, minute -> vm.change(alarm.copy(hour = hour, minute = minute)) }, alarm.hour, alarm.minute, true).show()
-                })
+                val pickTime = { TimePickerDialog(activity, { _, hour, minute -> vm.change(alarm.copy(hour = hour, minute = minute)) }, alarm.hour, alarm.minute, true).show() }
+                Text(alarm.timeLabel, Modifier.weight(1f).clickable(onClickLabel = "Uhrzeit ändern", onClick = pickTime), fontSize = 52.sp, fontFamily = IdeenSchriftBetont, color = LocalGold.current.primaer)
+                GoldKnopf("Uhrzeit ändern", pickTime)
             }
             OutlinedTextField(alarm.name, { vm.change(alarm.copy(name = it)) }, Modifier.fillMaxWidth(), label = { Text("Name des Weckers") }, singleLine = true)
             RepeatEditor(alarm, activity, vm::change)
@@ -301,11 +331,11 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             alarm.steps.forEachIndexed { index, step ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("${index + 1}. ${step.title}", Modifier.weight(1f))
-                    if (index > 0) StillerKnopf("↑", {
+                    if (index > 0) StillerKnopf("↑", modifier = Modifier.semantics { contentDescription = "${step.title} nach oben" }, aufTipp = {
                         val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index - 1); vm.change(alarm.copy(steps = list))
                     })
                     Spacer(Modifier.width(8.dp))
-                    if (index < alarm.steps.lastIndex) StillerKnopf("↓", {
+                    if (index < alarm.steps.lastIndex) StillerKnopf("↓", modifier = Modifier.semantics { contentDescription = "${step.title} nach unten" }, aufTipp = {
                         val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index + 1); vm.change(alarm.copy(steps = list))
                     })
                 }
@@ -326,8 +356,11 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             }
             Tones.names.forEach { (id, title) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(alarm.music.isBlank() && alarm.tone == id, { vm.change(alarm.copy(tone = id, music = "", musicName = title)) })
-                    Text(title, Modifier.weight(1f))
+                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(alarm.music.isBlank() && alarm.tone == id, role = androidx.compose.ui.semantics.Role.RadioButton) {
+                        vm.change(alarm.copy(tone = id, music = "", musicName = title)) }, verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(alarm.music.isBlank() && alarm.tone == id, null)
+                        Text(title, Modifier.padding(start = 8.dp))
+                    }
                     StillerKnopf("Anhören", { vm.playPreview(Tones.file(vm.store.files, id)) })
                 }
             }
@@ -431,15 +464,17 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
 
 @Composable
 fun Toggle(label: String, value: Boolean, change: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f)); Switch(value, change, colors = SchalterFarben())
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = change),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.weight(1f)); Switch(value, null, colors = SchalterFarben())
     }
 }
 
 @Composable
 fun ValueSlider(label: String, value: Int, range: IntRange, unit: String, change: (Int) -> Unit) {
     Text("$label: $value $unit", style = MaterialTheme.typography.bodyMedium)
-    Slider(value.toFloat(), { change(it.roundToInt()) }, valueRange = range.first.toFloat()..range.last.toFloat())
+    Slider(value.toFloat(), { change(it.roundToInt()) }, Modifier.semantics { contentDescription = label; stateDescription = "$value $unit" },
+        valueRange = range.first.toFloat()..range.last.toFloat())
 }
 
 @Composable
@@ -449,7 +484,7 @@ fun Choice(label: String, selected: String, options: List<Pair<String, String>>,
     GoldKnopf(options.find { it.first == selected }?.second ?: "Auswählen", { open = true }, Modifier.fillMaxWidth())
     if (open) AlertDialog(onDismissRequest = { open = false }, title = { Text(label) },
         text = { LazyColumn { items(options, key = { it.first }) { option ->
-            Row(Modifier.fillMaxWidth().clickable { choose(option.first); open = false }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(option.first == selected, role = androidx.compose.ui.semantics.Role.RadioButton) { choose(option.first); open = false }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(option.first == selected, null); Text(option.second, Modifier.padding(start = 8.dp))
             }
         } } }, confirmButton = { StillerKnopf("Schließen", { open = false }) })
@@ -472,7 +507,7 @@ fun Confirm(title: String, text: String, yes: () -> Unit, no: () -> Unit) {
 
 fun newPhoto(context: Context): File = File(context.cacheDir, "photos").apply { mkdirs() }.let { File(it, "${UUID.randomUUID()}.jpg") }
 fun formatAt(time: Long): String = Instant.ofEpochMilli(time).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE, dd.MM. · HH:mm", java.util.Locale.GERMAN))
-fun dayLabel(days: Set<Int>): String = if (days.isEmpty()) "Einmalig" else if (days.size == 7) "Jeden Tag" else days.sorted().joinToString(" · ") { listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")[it - 1] }
+fun dayLabel(days: Set<Int>): String = if (days.isEmpty()) "Einmalig" else if (days.size == 7) "Täglich" else if (days == setOf(1, 2, 3, 4, 5)) "Mo–Fr" else days.sorted().joinToString(" · ") { listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")[it - 1] }
 fun scheduleLabel(alarm: Alarm): String = when {
     alarm.intervalDays > 0 -> "Alle ${alarm.intervalDays} Tage · ab ${dateLabel(alarm.startDate)}"
     alarm.startDate.isNotBlank() -> "Einmalig am ${dateLabel(alarm.startDate)}"
@@ -483,19 +518,25 @@ private fun dateLabel(date: String) = java.time.LocalDate.parse(date).format(Dat
 @Composable
 private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Alarm) -> Unit) {
     val today = java.time.LocalDate.now()
-    val mode = when { alarm.intervalDays > 0 -> "interval"; alarm.startDate.isNotBlank() -> "date"; alarm.days.isNotEmpty() -> "weekdays"; else -> "once" }
-    Choice("Wann soll er wecken?", mode, listOf("once" to "Einmalig", "weekdays" to "An Wochentagen", "date" to "In X Tagen / an einem Datum", "interval" to "Schichtwecker · alle X Tage")) { chosen ->
+    val mode = when { alarm.intervalDays > 0 -> "interval"; alarm.startDate.isNotBlank() -> "date"; alarm.days.size == 7 -> "daily"; alarm.days.isNotEmpty() -> "weekdays"; else -> "once" }
+    Choice("Wann soll er wecken?", mode, listOf("once" to "Einmalig", "daily" to "Täglich", "weekdays" to "An bestimmten Wochentagen", "date" to "In X Tagen / an einem Datum", "interval" to "Schichtwecker · alle X Tage")) { chosen ->
         change(when (chosen) {
+            "daily" -> alarm.copy(days = (1..7).toSet(), startDate = "", intervalDays = 0)
             "weekdays" -> alarm.copy(days = setOf(1, 2, 3, 4, 5), startDate = "", intervalDays = 0)
             "date" -> alarm.copy(days = emptySet(), startDate = today.plusDays(1).toString(), intervalDays = 0)
             "interval" -> alarm.copy(days = emptySet(), startDate = today.plusDays(1).toString(), intervalDays = 35)
             else -> alarm.copy(days = emptySet(), startDate = "", intervalDays = 0)
         })
     }
-    if (mode == "weekdays") FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So").forEachIndexed { index, name ->
-            val day = index + 1
-            FilterChip(day in alarm.days, { change(alarm.copy(days = if (day in alarm.days) alarm.days - day else alarm.days + day)) }, { Text(name) })
+    if (mode == "weekdays") {
+        val names = listOf("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So").forEachIndexed { index, name ->
+                val day = index + 1
+                // Removing the last day keeps the weekday mode instead of silently turning into a one-off alarm.
+                FilterChip(day in alarm.days, { if (day !in alarm.days || alarm.days.size > 1) change(alarm.copy(days = if (day in alarm.days) alarm.days - day else alarm.days + day)) },
+                    { Text(name) }, Modifier.semantics { contentDescription = names[index] })
+            }
         }
     }
     if (mode == "date" || mode == "interval") {
@@ -521,7 +562,7 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Ala
     val next = runCatching { AlarmTime.next(alarm) }.getOrNull()
     Text(next?.let { "Nächster Termin: ${formatAt(it)}" } ?: "Bitte einen zukünftigen Termin wählen.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.primaer)
 }
-private fun remaining(ms: Long): String { val minutes = (ms / 60_000).coerceAtLeast(0); return "${minutes / 60} Std. ${minutes % 60} Min." }
+fun remaining(ms: Long): String { val minutes = (ms / 60_000).coerceAtLeast(0); return "${minutes / 60} Std. ${minutes % 60} Min." }
 
 @Composable
 private fun IdeasPage(vm: WeckerViewModel) {

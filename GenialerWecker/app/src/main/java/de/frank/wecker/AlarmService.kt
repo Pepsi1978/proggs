@@ -123,8 +123,7 @@ class AlarmService : Service() {
         playback?.close(); playback = null
         showForeground(alarm, quiet)
         _state.value = RingState(alarm, "Wecken", test = test)
-        if (alarm.vibrate) getSystemService(Vibrator::class.java).vibrate(
-            VibrationEffect.createWaveform(longArrayOf(0, 400, 300, 400, 1200), 0))
+        if (alarm.vibrate) vibrateAsAlarm()
         loop = scope.launch {
             val start = System.currentTimeMillis()
             while (isActive) {
@@ -136,6 +135,14 @@ class AlarmService : Service() {
         }
         val tones = Tones.names.keys.associateWith { Tones.file(store.files, it).absolutePath }
         play(AlarmPlaylist.build(alarm, tones), token)
+    }
+
+    /** Alarm usage lets the vibration pass silent mode and Do Not Disturb like the sound does. */
+    private fun vibrateAsAlarm() = runCatching {
+        val vibrator = getSystemService(Vibrator::class.java)
+        val effect = VibrationEffect.createWaveform(longArrayOf(0, 400, 300, 400, 1200), 0)
+        if (android.os.Build.VERSION.SDK_INT >= 33) vibrator.vibrate(effect, android.os.VibrationAttributes.createForUsage(android.os.VibrationAttributes.USAGE_ALARM))
+        else @Suppress("DEPRECATION") vibrator.vibrate(effect, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build())
     }
 
     private fun setVolume(percent: Int) {
@@ -188,6 +195,7 @@ class AlarmService : Service() {
                 _state.value = _state.value.copy(message = "Schlummern konnte nicht geplant werden. Der Wecker läuft weiter.")
                 return
             }
+            SnoozeNotice.show(this, updated)
         }
         if (test) {
             if (!snooze) TestSnooze.cancel(this)
@@ -227,7 +235,8 @@ class AlarmService : Service() {
         val id = if (quietMode) TEST_NOTIFICATION else NOTIFICATION
         val manager = getSystemService(NotificationManager::class.java)
         if (id == foregroundId) { manager.notify(id, notification(alarm, quietMode)); return }
-        startForeground(id, notification(alarm, quietMode))
+        androidx.core.app.ServiceCompat.startForeground(this, id, notification(alarm, quietMode),
+            if (android.os.Build.VERSION.SDK_INT >= 29) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK else 0)
         if (foregroundId != 0) manager.cancel(foregroundId)
         foregroundId = id
     }

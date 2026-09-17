@@ -13,8 +13,8 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 14
-        versionName = "1.1.14"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.09.2026, 16:37 Uhr\"")
+        versionName = "1.1.15"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"17.09.2026, 17:07 Uhr\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {

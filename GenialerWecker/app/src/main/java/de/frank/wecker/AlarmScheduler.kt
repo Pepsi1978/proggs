@@ -92,16 +92,60 @@ class AlarmScheduler(private val context: Context) {
         }
         if (updated != alarm) store.put(updated)
         scheduleSafely(updated)
+        if (updated.snoozeUntil > now && ringingEntry == null) SnoozeNotice.show(context, updated) else SnoozeNotice.cancel(context, updated.id)
     }
     private fun formatMissed(at: Long) = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
         .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM. HH:mm"))
-    fun save(alarm: Alarm, create: Boolean = false) {
+    /** Speichert und plant. Liefert false, wenn gespeichert, aber nicht geplant wurde; der Hinweis steht dann am Wecker. */
+    fun save(alarm: Alarm, create: Boolean = false): Boolean {
         alarm.validate()
+        // A ringing occurrence advances when it ends; an edit now would race its follow-up planning and snooze counter.
+        require(alarm.id !in store.ringing()) { "Dieser Wecker klingelt gerade. Beende ihn zuerst." }
         require(allowed() || !alarm.enabled) { "Erlaube zuerst genaue Weckzeiten in den Einstellungen." }
-        val updated = alarm.copy(nextAt = if (alarm.enabled) AlarmTime.next(alarm) else 0, snoozeUntil = 0, snoozes = 0)
+        // Keep audio prepared while the editor was open; a stale draft must not discard it.
+        val stored = if (create) null else store.get(alarm.id)
+        val base = if (stored != null && stored.sameSpeechAs(alarm)) alarm.copy(prepared = stored.prepared, voiceVariants = stored.voiceVariants,
+            preparedAt = stored.preparedAt, preparedSpeed = stored.preparedSpeed, preparedSignature = stored.preparedSignature,
+            preparationError = stored.preparationError) else alarm
+        val updated = base.copy(nextAt = if (alarm.enabled) AlarmTime.next(alarm) else 0, snoozeUntil = 0, snoozes = 0)
         if (create) store.insertNew(updated) else store.put(updated)
-        if (allowed()) schedule(updated) else cancel(updated.id)
+        SnoozeNotice.cancel(context, updated.id)
         store.issue(updated.id, null)
+        if (!allowed()) { cancel(updated.id); return true }
+        return scheduleSafely(updated)
+    }
+
+    /** Schaltet nur den Aktivierungszustand um, auf dem aktuellen gespeicherten Stand statt auf einer UI-Kopie. */
+    fun setEnabled(id: String, enabled: Boolean): Boolean {
+        val latest = store.get(id) ?: error("Dieser Wecker existiert nicht mehr.")
+        return save(latest.copy(enabled = enabled))
+    }
+
+    /** Lässt das nächste Vorkommen aus. Die Schichtfolge bleibt am Startdatum verankert. */
+    fun skipNext(id: String): Alarm {
+        val latest = store.get(id) ?: error("Dieser Wecker existiert nicht mehr.")
+        require(latest.repeats) { "Einmalige Wecker kannst du ausschalten." }
+        require(latest.enabled && latest.nextAt > 0) { "Schalte den Wecker zuerst ein." }
+        require(id !in store.ringing()) { "Dieser Wecker klingelt gerade. Beende ihn zuerst." }
+        val base = maxOf(latest.nextAt, System.currentTimeMillis())
+        val updated = store.update(id) { it.copy(nextAt = AlarmTime.next(it, java.time.Instant.ofEpochMilli(base + 1000))) }!!
+        scheduleSafely(updated)
+        return updated
+    }
+
+    /** Macht ein Auslassen rückgängig: wieder der regulär nächste Termin ab jetzt. */
+    fun unskip(id: String): Alarm {
+        require(id !in store.ringing()) { "Dieser Wecker klingelt gerade. Beende ihn zuerst." }
+        val updated = store.update(id) { it.copy(nextAt = AlarmTime.next(it)) } ?: error("Dieser Wecker existiert nicht mehr.")
+        scheduleSafely(updated)
+        return updated
+    }
+
+    /** Beendet eine laufende Schlummerpause, ohne den Wecker selbst oder seine Wiederholung auszuschalten. */
+    fun endSnooze(id: String) {
+        val updated = store.update(id) { it.copy(snoozeUntil = 0, snoozes = 0) } ?: return
+        SnoozeNotice.cancel(context, id)
+        scheduleSafely(updated)
     }
 
     /**
@@ -145,7 +189,13 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra("id") ?: return
         val scheduler = AlarmScheduler(context)
-        val claimed = scheduler.claim(id, intent.getBooleanExtra("snooze", false), intent.getLongExtra("at", 0)) ?: return
+        if (intent.action == SnoozeNotice.ACTION_END) {
+            runCatching { scheduler.endSnooze(id) }.onFailure { Log.e("WeckerScheduler", "Schlummerpause konnte nicht beendet werden", it) }
+            return
+        }
+        val snooze = intent.getBooleanExtra("snooze", false)
+        val claimed = scheduler.claim(id, snooze, intent.getLongExtra("at", 0)) ?: return
+        if (snooze) SnoozeNotice.cancel(context, id)
         // Ringing is requested before any follow-up planning, so a planning failure can never silence this alarm.
         AlarmRinging.start(context, id)
         if (claimed.persisted) claimed.next?.let(scheduler::scheduleSafely)
