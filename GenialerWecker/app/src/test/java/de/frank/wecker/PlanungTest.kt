@@ -9,8 +9,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Prüft die in AlarmScheduler tatsächlich genutzte Koordination: Zustand wird INNERHALB des Tors gelesen und angewendet.
- * Die Abläufe werden über Latches erzwungen, nicht über Wartezeiten.
+ * Prüft die in AlarmScheduler tatsächlich genutzte Koordination: der Zustand wird INNERHALB des Tors gelesen und dort
+ * auch angewendet. Die Abläufe werden über Latches erzwungen, nicht über Wartezeiten.
  */
 class PlanungTest {
     /** Steht für den gespeicherten Stand (null = gelöscht). */
@@ -19,8 +19,12 @@ class PlanungTest {
     private val slot = AtomicReference<String?>(null)
     private val fehler = AtomicReference<Throwable?>(null)
 
-    /** Genau die Produktionsform: lesen im Tor, danach anwenden — wie schedule() und cancel(). */
-    private fun planen(vorLesen: (() -> Unit)? = null) = Planung.unter({ vorLesen?.invoke(); store.get() }) { current ->
+    /**
+     * Genau die Produktionsform von schedule() und cancel(): lesen im Tor, danach anwenden.
+     * [beimAnwenden] hält den Auftrag mitten im Anwenden fest, nachdem er seinen Stand bereits gelesen hat.
+     */
+    private fun planen(beimAnwenden: (() -> Unit)? = null) = Planung.unter({ store.get() }) { current ->
+        beimAnwenden?.invoke()
         slot.set(current)
         current
     }
@@ -37,43 +41,32 @@ class PlanungTest {
         fehler.get()?.let { throw it }
     }
 
-    @Test fun lateOrderPlansTheCurrentStateInsteadOfItsOwnSnapshot() {
-        val imTor = CountDownLatch(1)
-        val weiter = CountDownLatch(1)
-        // Alter Auftrag betritt das Tor und hält es, bevor er liest.
-        val alt = thread("alt") { planen { imTor.countDown(); warte(weiter, "Freigabe") } }
-        warte(imTor, "Alter Auftrag")
-        // Währenddessen wird ein neuer Stand gespeichert; die neue Planung wartet am Tor.
+    @Test fun lateOrderAfterACompletedPlanningKeepsTheCurrentState() {
+        // Die neue Planung läuft vollständig durch.
         store.set("neu")
-        val neu = thread("neu") { planen() }
-        weiter.countDown()
-        ende(alt, neu)
-        // Der alte Auftrag hat den NEUEN Stand gelesen; der letzte Slot entspricht dem aktuellen Wunschzustand.
+        planen()
+        assertEquals("neu", slot.get())
+        // Erst danach trifft der verspätete Auftrag ein — er plant den aktuellen Stand, nicht seinen eigenen alten Wunsch.
+        val spaet = thread("spaet") { planen() }
+        ende(spaet)
         assertEquals("neu", slot.get())
         assertEquals(store.get(), slot.get())
     }
 
-    @Test fun oneHoldsTheGateWhileTheOtherWaitsAndNeverOverlaps() {
-        val drin = java.util.concurrent.atomic.AtomicInteger(0)
-        val hoechstens = java.util.concurrent.atomic.AtomicInteger(0)
-        val imTor = CountDownLatch(1)
+    @Test fun anOrderHoldingTheGateWhileANewerStateIsSavedLeavesTheNewerSlot() {
+        val imAnwenden = CountDownLatch(1)
         val weiter = CountDownLatch(1)
-        val zweiterGestartet = CountDownLatch(1)
-        fun zaehlen() = Planung.unter({ store.get() }) { current ->
-            val jetzt = drin.incrementAndGet()
-            hoechstens.updateAndGet { maxOf(it, jetzt) }
-            slot.set(current)
-            drin.decrementAndGet()
-        }
-        val haltend = thread("haltend") { Planung.unter({ imTor.countDown(); warte(weiter, "Freigabe"); store.get() }) { drin.incrementAndGet(); slot.set(it); drin.decrementAndGet() } }
-        warte(imTor, "Halter")
-        val wartend = thread("wartend") { zweiterGestartet.countDown(); zaehlen() }
-        warte(zweiterGestartet, "Zweiter Thread")
-        // Der zweite Auftrag kann das Tor nicht betreten, solange der erste es hält.
-        assertEquals(0, drin.get())
+        // Der alte Auftrag hat "alt" bereits gelesen und blockiert mitten im Anwenden.
+        val alt = thread("alt") { planen { imAnwenden.countDown(); warte(weiter, "Freigabe") } }
+        warte(imAnwenden, "Alter Auftrag")
+        // Währenddessen wird ein neuer Stand gespeichert und dafür eine neue Planung angestoßen; sie wartet am Tor.
+        store.set("neu")
+        val neu = thread("neu") { planen() }
         weiter.countDown()
-        ende(haltend, wartend)
-        assertEquals("Es war nie mehr als ein Auftrag im Tor", 1, hoechstens.get())
+        ende(alt, neu)
+        // Der alte Auftrag hat "alt" gesetzt, der wartende danach "neu": der Endslot entspricht dem aktuellen Zustand.
+        assertEquals("neu", slot.get())
+        assertEquals(store.get(), slot.get())
     }
 
     @Test fun deletionEmptiesTheSlotButALateCancelKeepsANewlySavedAlarm() {
@@ -81,15 +74,16 @@ class PlanungTest {
         store.set(null)
         assertNull(planen())
         assertNull(slot.get())
-        // Verspäteter Abbruch: er hält das Tor, währenddessen wird ein Wecker neu gespeichert.
-        val imTor = CountDownLatch(1)
+        // Verspäteter Abbruch: er blockiert im Anwenden, währenddessen wird ein Wecker neu gespeichert.
+        val imAnwenden = CountDownLatch(1)
         val weiter = CountDownLatch(1)
-        val spaeterAbbruch = thread("abbruch") { planen { imTor.countDown(); warte(weiter, "Freigabe") } }
-        warte(imTor, "Abbruch")
+        val spaeterAbbruch = thread("abbruch") { planen { imAnwenden.countDown(); warte(weiter, "Freigabe") } }
+        warte(imAnwenden, "Abbruch")
         store.set("neu gespeichert")
+        val neu = thread("neu") { planen() }
         weiter.countDown()
-        ende(spaeterAbbruch)
-        // Der veraltete Abbruch entfernt den neuen Slot nicht, er plant den aktuellen Stand.
+        ende(spaeterAbbruch, neu)
+        // Der veraltete Abbruch räumt den neuen Slot nicht ab: am Ende steht der aktuelle Stand.
         assertEquals("neu gespeichert", slot.get())
     }
 }

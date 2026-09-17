@@ -208,22 +208,25 @@ object SchlafErinnerung {
      * Replaces the plan of one alarm from the CURRENT stored state (the argument only names the alarm), then aligns
      * visible reminders. A deleted alarm is cancelled, so a stale call can never re-register it.
      */
-    fun sync(context: Context, alarm: Alarm) = synchronized(lock) {
+    fun sync(context: Context, alarm: Alarm) = sync(context, alarm.id)
+
+    /** Wie oben, aber nur mit der Kennung: der Stand wird ohnehin frisch gelesen. */
+    fun sync(context: Context, alarmId: String) = synchronized(lock) {
         try {
-            val current = AlarmStore.get(context).get(alarm.id)
+            val current = AlarmStore.get(context).get(alarmId)
             val occurrence = current?.let { SchlafPlan.next(it, System.currentTimeMillis(), enabled(context)) }
-            if (occurrence == null) cancelPlan(context, alarm.id)
+            if (occurrence == null) cancelPlan(context, alarmId)
             else {
                 val manager = context.getSystemService(AlarmManager::class.java)
-                val pending = operation(context, alarm.id) { putExtra("wakeAt", occurrence.wakeAt); putExtra("sleep", occurrence.sleepMinutes) }
+                val pending = operation(context, alarmId) { putExtra("wakeAt", occurrence.wakeAt); putExtra("sleep", occurrence.sleepMinutes) }
                 // Without the exact-alarm grant an inexact reminder is still better than none; the settings name the possible delay.
                 if (exaktFehlt(context)) manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, occurrence.trigger, pending)
                 else manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, occurrence.trigger, pending)
             }
-            setPlanIssue(context, alarm.id, null)
+            setPlanIssue(context, alarmId, null)
         } catch (e: Exception) {
-            Log.w(TAG, "Erinnerung nicht geplant für ${alarm.id}", e)
-            setPlanIssue(context, alarm.id, "Schlafenszeit-Erinnerung nicht geplant (${e.javaClass.simpleName}).")
+            Log.w(TAG, "Erinnerung nicht geplant für ${alarmId}", e)
+            setPlanIssue(context, alarmId, "Schlafenszeit-Erinnerung nicht geplant (${e.javaClass.simpleName}).")
         }
         abgleichen(context, excludeId = null)
     }

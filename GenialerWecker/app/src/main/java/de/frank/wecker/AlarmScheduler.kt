@@ -33,16 +33,20 @@ class AlarmScheduler(private val context: Context) {
         Planung.unter({ store.get(alarm.id) }) { current -> anwenden(alarm.id, current) }
     }
 
-    /** Setzt den Slot eines Weckers auf den übergebenen Stand; ohne Eintrag bleibt er leer. Nur unter [Planung] aufrufen. */
+    /**
+     * Setzt den Slot eines Weckers auf den übergebenen Stand; ohne Eintrag bleibt er leer. Nur unter [Planung] aufrufen.
+     * Die Freigabe wird geprüft, BEVOR etwas gelöscht wird: sonst wäre der alte Slot weg und der Aufruf meldete Erfolg,
+     * obwohl die nötige Planung inzwischen nicht mehr erlaubt ist. Ohne zu planenden Eintrag darf immer bereinigt werden.
+     */
     private fun anwenden(id: String, current: Alarm?) {
-        cancelRing(id)
-        if (current == null) return
         // An overdue occurrence that is still ringing is advanced when the ringing ends, never re-fired here.
-        val overdueRinging = current.nextAt <= System.currentTimeMillis() && id in store.ringing()
-        if (allowed()) {
-            if (current.enabled && current.nextAt > 0 && !overdueRinging) set(id, false, current.nextAt)
-            if (current.snoozeUntil > 0) set(id, true, current.snoozeUntil)
-        }
+        val overdueRinging = current != null && current.nextAt <= System.currentTimeMillis() && id in store.ringing()
+        val weckt = current != null && current.enabled && current.nextAt > 0 && !overdueRinging
+        val schlummert = current != null && current.snoozeUntil > 0
+        if (weckt || schlummert) require(allowed()) { "Die Freigabe für genaue Weckzeiten fehlt." }
+        cancelRing(id)
+        if (weckt) set(id, false, current!!.nextAt)
+        if (schlummert) set(id, true, current!!.snoozeUntil)
     }
     /** Plant ohne Exception nach außen; Fehler werden sichtbar am Wecker vermerkt. */
     fun scheduleSafely(alarm: Alarm): Boolean = try {
@@ -66,8 +70,11 @@ class AlarmScheduler(private val context: Context) {
      * Wecker treffen würde) plant stattdessen den aktuellen Stand. Sichtbare Meldungen bleiben unberührt.
      */
     fun cancel(id: String) {
-        val current = Planung.unter({ store.get(id) }) { current -> anwenden(id, current); current }
-        if (current == null) SchlafErinnerung.entferneWecker(context, id) else SchlafErinnerung.sync(context, current)
+        Planung.unter({ store.get(id) }) { current -> anwenden(id, current) }
+        // Die Erinnerung wird immer über die frisch lesende Synchronisation nachgezogen: sie entfernt den Plan selbst,
+        // wenn der Wecker weg ist. Eine Entscheidung auf dem oben gelesenen Stand könnte die Erinnerung eines inzwischen
+        // neu gespeicherten Weckers löschen.
+        SchlafErinnerung.sync(context, id)
     }
     fun restore(clockChanged: Boolean = false, onlyIds: Set<String>? = null) {
         // Reminders are replanned even without the exact-alarm grant (they fall back to inexact timing).
@@ -131,10 +138,10 @@ class AlarmScheduler(private val context: Context) {
         }
         // Compare-and-set against the current store: a parallel save is never overwritten with the snapshot, and an alarm
         // deleted meanwhile is not revived. This fixes the stored data only.
-        // REMAINING RACE: the planning below is deliberately NOT under the store lock (SchlafErinnerung takes that lock the
-        // other way round, so holding it here could deadlock). A parallel save may therefore finish ITS planning first and
-        // this call then arms the older occurrence — the AlarmManager slot keeps whichever set() ran last, not the newest
-        // stored state. Only a ringing or the next restore corrects that.
+        // Die Planung darunter läuft bewusst ohne Store-Sperre (SchlafErinnerung nimmt sie andersherum, das könnte
+        // verklemmen) — sie liest den Stand aber unter dem Planungstor selbst neu. Ein paralleles Speichern kann deshalb
+        // höchstens dazu führen, dass derselbe neuere Stand zweimal geplant wird; ein älteres Vorkommen wird nie mehr
+        // scharfgeschaltet.
         val persisted = if (updated == alarm) store.get(alarm.id)
             else store.update(alarm.id) { current -> if (current == alarm) updated else current }
         if (persisted == null) { cancel(alarm.id); return }
