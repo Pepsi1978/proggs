@@ -17,7 +17,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -68,41 +72,59 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         if (allowed) vm.startRecording(true) else vm.message.value = "Für deine Stimmprobe wird die Mikrofonberechtigung benötigt."
     }
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.settingsRevision.value++ }
-    fun launch(action: String, packageUri: Boolean = false) {
-        runCatching { activity.startActivity(Intent(action).apply { if (packageUri) data = Uri.parse("package:${activity.packageName}") }) }
+    fun launch(action: String, packageUri: Boolean = false, extraPackage: Boolean = false) {
+        runCatching { activity.startActivity(Intent(action).apply {
+            if (packageUri) data = Uri.parse("package:${activity.packageName}")
+            if (extraPackage) putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
+        }) }
             .onFailure { vm.message.value = "Diese Einstellungsseite ist auf dem Gerät nicht verfügbar. Öffne die Android-App-Einstellungen." }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ReadinessCard(onSettings = { vm.settingsRevision.value++ })
-        Section("Zuverlässig wecken") {
-            Text("Für das Wecken werden genaue Alarme und der Android-Weckkanal verwendet. Auch bei gesperrtem Bildschirm und ohne Internet.")
-            permissions.forEach { (name, ready) -> Text("${if (ready) "✓" else "○"} $name", color = if (ready) Semantisch.erfolg else Semantisch.warnung) }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                StillerKnopf("Genaue Alarme", { if (Build.VERSION.SDK_INT >= 31) launch(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, true) })
-                StillerKnopf("Benachrichtigungen", {
-                    if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
-                        notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    else activity.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName))
-                })
-                StillerKnopf("Vollbild-Wecker", { if (Build.VERSION.SDK_INT >= 34) launch(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, true) })
-                StillerKnopf("Nicht-stören-Zugriff", { launch(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS) })
-                StillerKnopf("Wecker in Nicht stören", { launch("android.settings.ZEN_MODE_SETTINGS") })
-                StillerKnopf("Akku uneingeschränkt", {
-                    if (activity.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(activity.packageName))
-                        launch(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, true)
-                    else launch(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, true)
-                })
+        val missing = permissions.count { !it.second }
+        // Every requirement sits next to the one button that fixes it; nothing to search for.
+        val fix: Map<String, () -> Unit> = mapOf(
+            "Genaue Weckzeiten" to { if (Build.VERSION.SDK_INT >= 31) launch(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, true) },
+            "Benachrichtigungen" to {
+                if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                    notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                else launch(Settings.ACTION_APP_NOTIFICATION_SETTINGS, extraPackage = true)
+            },
+            "Vollbild-Wecker" to { if (Build.VERSION.SDK_INT >= 34) launch(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, true) },
+            "Wecker bei Nicht stören" to {
+                if (!activity.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted) launch(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                else launch("android.settings.ZEN_MODE_SETTINGS")
+            },
+            "Akku uneingeschränkt" to {
+                if (activity.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(activity.packageName))
+                    launch(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, true)
+                else launch(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, true)
+            },
+        )
+        Section("Weckbereitschaft") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(if (missing == 0) Icons.Default.VerifiedUser else Icons.Default.NotificationsActive, null,
+                    tint = if (missing == 0) Semantisch.erfolg else Semantisch.warnung)
+                Text(if (missing == 0) "Alles bereit: Der Wecker klingelt auch gesperrt und ohne Internet."
+                    else "$missing ${if (missing == 1) "Freigabe fehlt" else "Freigaben fehlen"}. Tippe jeweils auf „Erlauben“.",
+                    Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyMedium)
             }
-            Text("Wichtig: In Androids Nicht-stören-Modus müssen Wecker zugelassen sein. Eine App kann einen vom System vollständig gesperrten Weckkanal nicht zuverlässig übergehen. Erlaube Wecker in allen verwendeten Modi und Routinen.", style = MaterialTheme.typography.bodySmall)
-            Text("Unter Akku die App bei Bedarf auf „Uneingeschränkt“ stellen. Nach einem erzwungenen Stopp muss sie wieder geöffnet werden. Ein ausgeschaltetes Telefon kann nicht wecken.", style = MaterialTheme.typography.bodySmall)
+            permissions.forEach { (name, ready) ->
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (ready) "✓" else "○", color = if (ready) Semantisch.erfolg else Semantisch.warnung)
+                    Text(name, Modifier.weight(1f).padding(start = 10.dp), color = if (ready) LocalGold.current.textPrimaer else Semantisch.warnung)
+                    if (ready) Text("erteilt", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                    else StillerKnopf("Erlauben", { fix[name]?.invoke() }, Modifier.semantics { contentDescription = "$name erlauben" }, hervorgehoben = true)
+                }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StillerKnopf("Nicht-stören-Modi öffnen", { launch("android.settings.ZEN_MODE_SETTINGS") })
+                StillerKnopf("App-Info öffnen", { launch(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, true) })
+            }
+            Text("Erlaube Wecker in allen verwendeten Nicht-stören-Modi und Routinen. Nach „Stopp erzwingen“ die App einmal öffnen. Ein ausgeschaltetes Telefon kann nicht wecken.", style = MaterialTheme.typography.bodySmall)
         }
-        Section("Verbindung zu Geniale Ideen") {
-            Text("Die offenen Ideen werden lokal übernommen. Beide Apps müssen mit demselben Schlüssel signiert sein.", style = MaterialTheme.typography.bodySmall)
-            GoldKnopf("Spracheinstellungen übernehmen", { copySettings = true })
-            Text("Übernimmt die dort gewählte Stimme, das Tempo sowie Google-, Alibaba- und Groq-Schlüssel. Danach kannst du die Stimme im Wecker unabhängig auswählen.", style = MaterialTheme.typography.bodySmall)
-            StillerKnopf("Offene Ideen aktualisieren", vm::syncIdeas)
-        }
-        Section("Vorlesen · Stimmen & Tempo") {
+        Section("Vorlesen · Stimmen & Tempo", collapsible = true, summary = "${when (provider) {
+            TtsProvider.GOOGLE_CLOUD.id -> "Google"; TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"; else -> "Edge"
+        }} · Tempo ${"%.2f".format(rate)}× · gilt für alle Wecker ohne eigene Stimme") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(TtsProvider.QWEN_CLONE, TtsProvider.GOOGLE_CLOUD, TtsProvider.EDGE).forEach { item ->
                     FilterChip(provider == item.id, {
@@ -163,7 +185,14 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
             Text("Beim Speichern werden sechs Varianten derselben Stimme erzeugt, mit behutsamen Tempo-Unterschieden. Beim Wecken läuft Variante 1 bis 6, dann wieder 1. Absätze werden vorgeladen. Bereits fertiges Audio bleibt bis zum erfolgreichen Abschluss verfügbar.", style = MaterialTheme.typography.bodySmall)
         }
-        Section("Sprachschlüssel", collapsible = true, summary = "Google · Alibaba · Groq") {
+        Section("Verbindung zu Geniale Ideen", collapsible = true, summary = "Offene Ideen und Spracheinstellungen übernehmen") {
+            Text("Die offenen Ideen werden lokal übernommen. Beide Apps müssen mit demselben Schlüssel signiert sein.", style = MaterialTheme.typography.bodySmall)
+            GoldKnopf("Spracheinstellungen übernehmen", { copySettings = true })
+            Text("Übernimmt die dort gewählte Stimme, das Tempo sowie Google-, Alibaba- und Groq-Schlüssel. Danach kannst du die Stimme im Wecker unabhängig auswählen.", style = MaterialTheme.typography.bodySmall)
+            StillerKnopf("Offene Ideen aktualisieren", vm::syncIdeas)
+        }
+        Section("Sprachschlüssel", collapsible = true, summary = listOf("Google" to settings.googleTtsApiKey, "Alibaba" to settings.qwenTtsApiKey, "Groq" to settings.groqApiKey)
+            .joinToString(" · ") { (name, key) -> "$name ${if (key.isBlank()) "fehlt" else "✓"}" }) {
                 SecretField("Google / Chirp-3-HD-Schlüssel", settings.googleTtsApiKey) { settings.googleTtsApiKey = it; vm.settingsChanged() }
                 SecretField("Alibaba / DashScope-Schlüssel", settings.qwenTtsApiKey) { settings.qwenTtsApiKey = it; vm.settingsChanged() }
                 SecretField("Groq-Schlüssel", settings.groqApiKey) { settings.groqApiKey = it; vm.settingsChanged() }
