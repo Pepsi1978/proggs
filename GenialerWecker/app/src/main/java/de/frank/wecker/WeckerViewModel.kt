@@ -107,13 +107,9 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             val planned = try { withContext(Dispatchers.IO) { scheduler.save(alarm, create = create) } }
             finally {
                 // Once stored, a retry must update the entry instead of failing on the existing id.
-                if (create && store.get(alarm.id) != null) { draftIsNew = false; _draft.value?.let(::persistDraft) }
+                if (create && store.get(alarm.id) != null && _draft.value?.id == alarm.id) { draftIsNew = false; _draft.value?.let(::persistDraft) }
             }
             if (_draft.value == source) { closeEditor(); done() }
-            else if (_draft.value?.id == alarm.id && create) {
-                draftIsNew = false
-                _draft.value?.let(::persistDraft)
-            }
             val nextAt = store.get(alarm.id)?.nextAt ?: 0
             message.value = if (!planned) "${alarm.name} gespeichert, aber nicht geplant: ${store.issues.value[alarm.id].orEmpty()}"
                 else if (notificationsDenied) "${alarm.name} gespeichert. Ohne Benachrichtigungen fehlen Vollbild und Sperrbildschirm-Tasten – bitte in den Einstellungen erlauben."
@@ -125,8 +121,9 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     fun toggle(alarm: Alarm, enabled: Boolean) = runAction("Weckzeit ändern …", silent = true) {
-        withContext(Dispatchers.IO) { scheduler.setEnabled(alarm.id, enabled) }
-        if (enabled) store.get(alarm.id)?.nextAt?.takeIf { it > 0 }?.let {
+        val planned = withContext(Dispatchers.IO) { scheduler.setEnabled(alarm.id, enabled) }
+        if (!planned) message.value = "${alarm.name}: ${store.issues.value[alarm.id] ?: "Die Weckzeit konnte nicht geplant werden."}"
+        else if (enabled) store.get(alarm.id)?.nextAt?.takeIf { it > 0 }?.let {
             message.value = "${alarm.name} klingelt ${formatAt(it)} (in ${remaining(it - System.currentTimeMillis())})."
         }
         if (enabled && alarm.needsSpeech) PreparationWorker.enqueue(app)
@@ -142,12 +139,14 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         message.value = "„${alarm.name}“ gelöscht."
     }
     fun skip(alarm: Alarm) = runAction("Nächste Weckzeit auslassen …") {
-        val updated = withContext(Dispatchers.IO) { scheduler.skipNext(alarm.id) }
-        message.value = "Nächster Termin ausgelassen. ${updated.name} klingelt wieder ${formatAt(updated.nextAt)}."
+        val (updated, planned) = withContext(Dispatchers.IO) { scheduler.skipNext(alarm.id) }
+        message.value = if (planned) "Nächster Termin ausgelassen. ${updated.name} klingelt wieder ${formatAt(updated.nextAt)}."
+            else "${updated.name}: ${store.issues.value[alarm.id] ?: "Die Weckzeit konnte nicht geplant werden."}"
     }
     fun unskip(alarm: Alarm) = runAction("Auslassen rückgängig machen …") {
-        val updated = withContext(Dispatchers.IO) { scheduler.unskip(alarm.id) }
-        message.value = "${updated.name} klingelt wieder ${formatAt(updated.nextAt)}."
+        val (updated, planned) = withContext(Dispatchers.IO) { scheduler.unskip(alarm.id) }
+        message.value = if (planned) "${updated.name} klingelt wieder ${formatAt(updated.nextAt)}."
+            else "${updated.name}: ${store.issues.value[alarm.id] ?: "Die Weckzeit konnte nicht geplant werden."}"
     }
     fun endSnooze(alarm: Alarm) = runAction("Schlummerpause beenden …", silent = true) {
         withContext(Dispatchers.IO) { scheduler.endSnooze(alarm.id) }

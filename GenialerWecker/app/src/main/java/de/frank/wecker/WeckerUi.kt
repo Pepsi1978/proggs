@@ -101,9 +101,14 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
         vm.save(notificationsDenied = !allowed) { page = "alarms" }
     }
     var leaveEditor by remember { mutableStateOf(false) }
+    var settingsFrom by rememberSaveable { mutableStateOf("alarms") }
+    var pendingOpen by remember { mutableStateOf<(() -> Unit)?>(null) }
+    /** Opening another draft while unsaved changes exist asks first instead of overwriting them. */
+    fun openDraft(open: () -> Unit) { if (draft != null && vm.draftChanged()) pendingOpen = open else { open(); page = "edit" } }
     fun back() {
         vm.stopPreview()
         if (page == "edit" && draft != null && vm.draftChanged()) leaveEditor = true
+        else if (page == "settings" && settingsFrom == "edit" && draft != null) page = "edit"
         else { if (page == "edit") vm.closeEditor(); page = "alarms" }
     }
     GenialeIdeenTheme(theme) {
@@ -116,7 +121,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                     titel = when (page) { "edit" -> if (vm.isNewDraft) "Neuer Wecker" else "Wecker bearbeiten"; "settings" -> "Einstellungen"; "ideas" -> "Offene Ideen"; else -> "Genialer Wecker" },
                     themeWahl = theme,
                     aufThemeTipp = { vm.settings.theme = if (theme == "dark") "light" else "dark" },
-                    aufEinstellungen = if (page == "settings") null else ({ page = "settings" }),
+                    aufEinstellungen = if (page == "settings") null else ({ vm.stopPreview(); settingsFrom = page; page = "settings" }),
                     voran = if (page != "alarms") ({ StillerKnopf("‹", { back() }, Modifier.semantics { contentDescription = "Zurück zur Weckerliste" }); Spacer(Modifier.width(8.dp)) }) else null,
                 )
                 if (busy.isNotBlank() || audioBusy.isNotBlank()) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -145,9 +150,10 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                         "settings" -> SettingsPage(vm, activity)
                         "ideas" -> IdeasPage(vm)
                         else -> AlarmList(alarms, vm,
-                            onNew = { vm.newAlarm(); page = "edit" },
-                            onEdit = { vm.edit(it); page = "edit" }, onDelete = { delete = it },
-                            onSettings = { page = "settings" }, onIdeas = { page = "ideas" })
+                            onNew = { openDraft { vm.newAlarm() } },
+                            onEdit = { alarm -> if (draft?.id == alarm.id) page = "edit" else openDraft { vm.edit(alarm) } }, onDelete = { delete = it },
+                            onSettings = { settingsFrom = "alarms"; page = "settings" }, onIdeas = { page = "ideas" },
+                            openDraft = draft?.takeIf { vm.draftChanged() }, onResumeDraft = { page = "edit" })
                     }
                 }
             }
@@ -160,6 +166,11 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                 StillerKnopf("Verwerfen", { leaveEditor = false; vm.closeEditor(); page = "alarms" })
                 StillerKnopf("Weiter bearbeiten", { leaveEditor = false })
             } })
+        pendingOpen?.let { open -> AlertDialog(onDismissRequest = { pendingOpen = null },
+            title = { Text("Ungespeicherten Entwurf verwerfen?") },
+            text = { Text("„${draft?.name.orEmpty()}“ hat noch ungespeicherte Änderungen.") },
+            confirmButton = { GoldKnopf("Entwurf fortsetzen", { pendingOpen = null; page = "edit" }) },
+            dismissButton = { StillerKnopf("Verwerfen", { pendingOpen = null; vm.closeEditor(); open(); page = "edit" }) }) }
         delete?.let { alarm -> Confirm("Wecker löschen?", "„${alarm.name}“ wird entfernt.", {
             vm.delete(alarm); delete = null
         }, { delete = null }) }
@@ -168,7 +179,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
 
 @Composable
 private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Unit, onEdit: (Alarm) -> Unit,
-    onDelete: (Alarm) -> Unit, onSettings: () -> Unit, onIdeas: () -> Unit) {
+    onDelete: (Alarm) -> Unit, onSettings: () -> Unit, onIdeas: () -> Unit, openDraft: Alarm?, onResumeDraft: () -> Unit) {
     val gold = LocalGold.current
     // Nur für diese Listenansicht merken: neue Wecker und eine neu geöffnete Liste sind kompakt.
     var expandedIds by remember { mutableStateOf(emptySet<String>()) }
@@ -198,6 +209,18 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) { ReadinessCard(onSettings, hideWhenReady = true) }
+            if (openDraft != null) item(span = { GridItemSpan(maxLineSpan) }) {
+                GoldKarte {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Edit, null, tint = gold.primaer)
+                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                            Text("Ungespeicherter Entwurf", style = MaterialTheme.typography.titleSmall)
+                            Text("${openDraft.timeLabel} · ${openDraft.name}", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        StillerKnopf("Weiter bearbeiten", onResumeDraft, hervorgehoben = true)
+                    }
+                }
+            }
             if (alarms.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
                 Leerzustand("☀", "Ein Morgen nach deinen Wünschen", "Musik, Gedanken und Erinnerungen – in deiner Reihenfolge. Lege deinen ersten Wecker an.")
             }

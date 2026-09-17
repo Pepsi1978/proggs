@@ -122,23 +122,21 @@ class AlarmScheduler(private val context: Context) {
     }
 
     /** Lässt das nächste Vorkommen aus. Die Schichtfolge bleibt am Startdatum verankert. */
-    fun skipNext(id: String): Alarm {
+    fun skipNext(id: String): Pair<Alarm, Boolean> {
         val latest = store.get(id) ?: error("Dieser Wecker existiert nicht mehr.")
         require(latest.repeats) { "Einmalige Wecker kannst du ausschalten." }
         require(latest.enabled && latest.nextAt > 0) { "Schalte den Wecker zuerst ein." }
         require(id !in store.ringing()) { "Dieser Wecker klingelt gerade. Beende ihn zuerst." }
         val base = maxOf(latest.nextAt, System.currentTimeMillis())
         val updated = store.update(id) { it.copy(nextAt = AlarmTime.next(it, java.time.Instant.ofEpochMilli(base + 1000))) }!!
-        scheduleSafely(updated)
-        return updated
+        return updated to scheduleSafely(updated)
     }
 
     /** Macht ein Auslassen rückgängig: wieder der regulär nächste Termin ab jetzt. */
-    fun unskip(id: String): Alarm {
+    fun unskip(id: String): Pair<Alarm, Boolean> {
         require(id !in store.ringing()) { "Dieser Wecker klingelt gerade. Beende ihn zuerst." }
         val updated = store.update(id) { it.copy(nextAt = AlarmTime.next(it)) } ?: error("Dieser Wecker existiert nicht mehr.")
-        scheduleSafely(updated)
-        return updated
+        return updated to scheduleSafely(updated)
     }
 
     /** Beendet eine laufende Schlummerpause, ohne den Wecker selbst oder seine Wiederholung auszuschalten. */
