@@ -443,8 +443,10 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             OutlinedTextField(alarm.name, { vm.change(alarm.copy(name = it)) }, Modifier.fillMaxWidth(), label = { Text("Name des Weckers") }, singleLine = true)
             SchlafdauerEingabe(alarm, vm::change)
         }
+        // Kept outside the section: its content is removed while collapsed, the remembered date must survive that.
+        var gemerktesDatum by rememberSaveable(alarm.id) { mutableStateOf(alarm.startDate) }
         Section("Wiederholung", collapsible = true, summary = scheduleLabel(alarm)) {
-            RepeatEditor(alarm, activity, vm::change)
+            RepeatEditor(alarm, activity, gemerktesDatum, { gemerktesDatum = it }, vm::change)
         }
         Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }.ifBlank { "Kein Schritt gewählt" },
             error = if (alarm.steps.isEmpty()) "Wähle mindestens einen Weckschritt." else null) {
@@ -672,7 +674,7 @@ fun scheduleLabel(alarm: Alarm): String = when {
 private fun dateLabel(date: String) = java.time.LocalDate.parse(date).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
 
 @Composable
-private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Alarm) -> Unit) {
+private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, gemerktesDatum: String, merke: (String) -> Unit, change: (Alarm) -> Unit) {
     val today = java.time.LocalDate.now()
     val mode = when {
         alarm.repeatUnit == Alarm.MONTHLY -> "month"
@@ -682,11 +684,13 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Ala
         alarm.days.isNotEmpty() -> "weekdays"
         else -> "once"
     }
-    // A date already chosen is kept when switching, it is the start anchor of every dated kind.
-    val anchor = alarm.startDate.ifBlank { today.plusDays(1).toString() }
+    // The current date wins; only when the alarm carries none (daily and weekdays clear it) the remembered one applies.
+    val anchor = alarm.startDate.ifBlank { gemerktesDatum }.ifBlank { today.plusDays(1).toString() }
     fun changeMode(chosen: String) {
         // Tapping the active mode again changes nothing, so date, weekdays or interval are never reset.
         if (chosen == mode) return
+        // Saved synchronously with the switch, not through an effect, so the date cannot be lost in between.
+        if (alarm.startDate.isNotBlank()) merke(alarm.startDate)
         change(when (chosen) {
             "daily" -> alarm.copy(days = (1..7).toSet(), startDate = "", intervalDays = 0, repeatUnit = "", repeatEvery = 0)
             "weekdays" -> alarm.copy(days = alarm.days.takeIf { it.isNotEmpty() && it.size < 7 } ?: setOf(1, 2, 3, 4, 5),
@@ -718,6 +722,7 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Ala
     if (mode == "once") {
         // One-off with optional date: without a date the alarm rings at the next matching time.
         Toggle("An einem bestimmten Datum", alarm.startDate.isNotBlank()) { dated ->
+            if (!dated && alarm.startDate.isNotBlank()) merke(alarm.startDate)
             change(alarm.copy(startDate = if (dated) anchor else ""))
         }
         if (alarm.startDate.isBlank()) Text("Ohne Datum weckt er beim nächsten Erreichen der Uhrzeit.", style = MaterialTheme.typography.bodySmall)
