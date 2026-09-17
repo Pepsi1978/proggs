@@ -87,7 +87,10 @@ class AlarmActivity : ComponentActivity() {
                         Spacer(Modifier.height(24.dp))
                         Text(if (state.test) "TESTWECKEN" else "GUTEN MORGEN", color = LocalGold.current.primaer, letterSpacing = 3.sp)
                         val alarm = state.alarm
-                        Text(alarm?.timeLabel ?: "Wecker", fontFamily = IdeenSchriftBetont, fontSize = 76.sp, color = LocalGold.current.primaer)
+                        // Show the live clock, not the alarm time, so the user always sees the current time.
+                        var now by remember { androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis()) }
+                        LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); kotlinx.coroutines.delay(1000) } }
+                        Text(java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")), fontFamily = IdeenSchriftBetont, fontSize = 76.sp, color = LocalGold.current.primaer)
                         Text(alarm?.name ?: "Der Wecker wird geöffnet …", style = MaterialTheme.typography.headlineMedium)
                         Text(state.step, color = LocalGold.current.textGedaempft)
                         if (alarm?.voiceVariants?.isNotEmpty() == true) Text("Stimmvariante ${state.variation} von ${alarm.voiceVariants.size}", style = MaterialTheme.typography.bodySmall)

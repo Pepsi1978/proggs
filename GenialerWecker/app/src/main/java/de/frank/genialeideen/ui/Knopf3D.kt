@@ -217,28 +217,10 @@ fun StillerKnopf(
     Box(
         modifier = modifier
             .graphicsLayer { scaleX = skalierung; scaleY = skalierung }
-            .then(
-                if (hervorgehoben) {
-                    Modifier.tiefenSchatten(gold.primaer, Hoehe.karte, form)
-                } else {
-                    Modifier
-                },
-            )
+            // One consistent flat look for every secondary button; `hervorgehoben` stays for API compatibility.
             .clip(form)
-            .background(
-                if (hervorgehoben) {
-                    koerperVerlauf(gold.primaer.copy(alpha = 0.22f))
-                } else {
-                    // Vertieft: oben dunkler, unten heller — die Umkehrung des Knopfkörpers.
-                    Brush.verticalGradient(
-                        listOf(
-                            gold.flaecheErhoeht.dunkler(0.10f),
-                            gold.flaecheErhoeht,
-                        ),
-                    )
-                },
-            )
-            .border(1.dp, if (hervorgehoben) lichtKante() else lichtKante(gedrueckt = true, staerke = 0.20f), form)
+            .background(gold.flaecheErhoeht)
+            .border(1.dp, gold.rahmen, form)
             .clickable(interactionSource = quelle, indication = null) {
                 haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 aufTipp()
@@ -249,7 +231,7 @@ fun StillerKnopf(
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
-            color = if (hervorgehoben) gold.primaer else gold.textGedaempft,
+            color = gold.textPrimaer,
         )
     }
 }
