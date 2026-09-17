@@ -62,14 +62,27 @@ data class Alarm(
      * Auslassung nicht verliert. Leer = keine Marke (auch bei älteren Einträgen).
      */
     val skippedThrough: String = "",
+    /** "" = wie bisher (einmalig, täglich, Wochentage, alle X Tage), "month" = monatlich, "year" = jährlich. */
+    val repeatUnit: String = "",
+    /** Nur bei "month" (1–12) und "year" (1–5): jeden N-ten Monat bzw. jedes N-te Jahr ab dem Startdatum. */
+    val repeatEvery: Int = 0,
 ) {
     val timeLabel: String get() = "%02d:%02d".format(hour, minute)
     val needsSpeech: Boolean get() = steps.any { it == Step.IDEAS || it == Step.TEXT }
-    val repeats: Boolean get() = days.isNotEmpty() || intervalDays > 0
+    val repeats: Boolean get() = days.isNotEmpty() || intervalDays > 0 || repeatUnit.isNotBlank()
+    /** Monate zwischen zwei Terminen bei monatlicher oder jährlicher Wiederholung, sonst 0. */
+    val repeatMonths: Int get() = when (repeatUnit) {
+        MONTHLY -> repeatEvery.coerceAtLeast(1)
+        YEARLY -> repeatEvery.coerceAtLeast(1) * 12
+        else -> 0
+    }
     /** The skip mark as date, only for repeating alarms; an unreadable value counts as no mark. */
     val skipDate: LocalDate? get() = if (!repeats || skippedThrough.isBlank()) null else runCatching { LocalDate.parse(skippedThrough) }.getOrNull()
-    /** A one-off alarm on a fixed date whose time has already passed; it cannot be switched on unchanged. */
-    fun isExpiredOnce(now: Instant = Instant.now()): Boolean = startDate.isNotBlank() && intervalDays == 0 &&
+    /**
+     * A one-off alarm on a fixed date whose time has already passed; it cannot be switched on unchanged.
+     * Only a genuinely one-off alarm can expire; monthly and yearly alarms repeat from their anchor.
+     */
+    fun isExpiredOnce(now: Instant = Instant.now()): Boolean = startDate.isNotBlank() && intervalDays == 0 && repeatUnit.isBlank() &&
         runCatching { AlarmTime.next(this, now) }.isFailure
     fun sameSpeechAs(other: Alarm): Boolean = text == other.text && steps == other.steps &&
         voiceProvider == other.voiceProvider && voiceId == other.voiceId && speechRate == other.speechRate
@@ -77,6 +90,14 @@ data class Alarm(
         require(hour in 0..23 && minute in 0..59) { "Ungültige Uhrzeit" }
         require(days.all { it in 1..7 }) { "Ungültiger Wochentag" }
         require(intervalDays in 0..365) { "Der Abstand muss zwischen 1 und 365 Tagen liegen." }
+        require(repeatUnit.isBlank() || repeatUnit == MONTHLY || repeatUnit == YEARLY) { "Unbekannte Wiederholung." }
+        if (repeatUnit.isBlank()) require(repeatEvery == 0) { "Ohne Monats- oder Jahresrhythmus gibt es keinen Abstand." } else {
+            require(startDate.isNotBlank()) { "Wähle zuerst das Startdatum." }
+            require(days.isEmpty() && intervalDays == 0) { "Wähle entweder Wochentage, Tagesabstand, Monate oder Jahre." }
+            require(repeatEvery in 1..(if (repeatUnit == MONTHLY) 12 else 5)) {
+                if (repeatUnit == MONTHLY) "Der Abstand muss zwischen 1 und 12 Monaten liegen." else "Der Abstand muss zwischen 1 und 5 Jahren liegen."
+            }
+        }
         require(intervalDays == 0 || startDate.isNotBlank()) { "Wähle den ersten Schichttag." }
         require(startDate.isBlank() || days.isEmpty()) { "Wähle entweder Wochentage oder einen Datumsplan." }
         if (startDate.isNotBlank()) LocalDate.parse(startDate)
@@ -106,9 +127,30 @@ data class Alarm(
         put("preparedAt", preparedAt); put("preparedSpeed", preparedSpeed); put("preparedSignature", preparedSignature); put("preparationError", preparationError)
         put("sleepMinutes", sleepMinutes)
         put("skippedThrough", skippedThrough)
+        put("repeatUnit", repeatUnit); put("repeatEvery", repeatEvery)
     }
     companion object {
-        fun from(j: JSONObject) = Alarm(
+        const val MONTHLY = "month"
+        const val YEARLY = "year"
+        /**
+         * Reads an entry. The new monthly/yearly fields are checked strictly: an unknown unit, a missing or unreadable
+         * start date, a conflicting combination or an out-of-range interval make this entry invalid. It is then rejected,
+         * so the existing AlarmStore path (raw backup, skip the entry) applies. Older entries keep their former meaning.
+         */
+        fun from(j: JSONObject): Alarm {
+            val alarm = read(j)
+            val unit = alarm.repeatUnit
+            require(unit.isBlank() || unit == MONTHLY || unit == YEARLY) { "Unbekannte Wiederholung: $unit" }
+            if (unit.isBlank()) require(alarm.repeatEvery == 0) { "Wiederholungsabstand ohne Einheit" }
+            else {
+                require(alarm.days.isEmpty() && alarm.intervalDays == 0) { "Widersprüchliche Wiederholung" }
+                require(alarm.startDate.isNotBlank() && runCatching { LocalDate.parse(alarm.startDate) }.isSuccess) { "Startdatum fehlt" }
+                require(alarm.repeatEvery in 1..(if (unit == MONTHLY) 12 else 5)) { "Abstand außerhalb des Bereichs" }
+            }
+            return alarm
+        }
+
+        private fun read(j: JSONObject) = Alarm(
             id = j.getString("id"), name = j.optString("name", "Wecker"), hour = j.getInt("hour"), minute = j.getInt("minute"),
             days = j.getJSONArray("days").let { a -> (0 until a.length()).map { a.getInt(it) }.toSet() },
             startDate = j.optString("startDate"), intervalDays = j.optInt("intervalDays"),
@@ -131,6 +173,9 @@ data class Alarm(
             // Older entries have no field; an invalid stored value falls back to "no sleep duration".
             sleepMinutes = j.optInt("sleepMinutes", 0).takeIf(Schlaf::valid) ?: 0,
             skippedThrough = j.optString("skippedThrough", "").takeIf { raw -> raw.isBlank() || runCatching { LocalDate.parse(raw) }.isSuccess } ?: "",
+            // Taken as stored; from() checks them and rejects an invalid entry instead of reinterpreting it.
+            repeatUnit = j.optString("repeatUnit", ""),
+            repeatEvery = j.optInt("repeatEvery", 0),
         )
     }
 }
@@ -151,6 +196,18 @@ object AlarmTime {
         val today = now.atZone(zone).toLocalDate()
         if (alarm.startDate.isNotBlank()) {
             val first = LocalDate.parse(alarm.startDate)
+            val months = alarm.repeatMonths
+            if (months > 0) {
+                // Always counted from the anchor, never from the previous occurrence: no drift, and a missing 29th/30th/31st
+                // falls back to the last day of that month while the anchor day returns in the next month that has it.
+                val elapsed = java.time.temporal.ChronoUnit.MONTHS.between(java.time.YearMonth.from(first), java.time.YearMonth.from(today)).coerceAtLeast(0)
+                val start = elapsed / months
+                return (start..start + 2).asSequence()
+                    .map { step -> first.plusMonths(step * months) }
+                    .filter { !it.isBefore(first) }
+                    .map { it.atTime(alarm.hour, alarm.minute).atZone(zone).toInstant() }
+                    .first { it > now }.toEpochMilli()
+            }
             if (alarm.intervalDays == 0) {
                 val once = first.atTime(alarm.hour, alarm.minute).atZone(zone).toInstant()
                 require(once > now) { "Diese Weckzeit liegt in der Vergangenheit. Wähle ein späteres Datum oder eine spätere Uhrzeit." }

@@ -433,7 +433,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             }
         }
         Section("Deine Weckzeit", collapsible = true, initiallyExpanded = true,
-            summary = listOfNotNull(alarm.timeLabel, alarm.name.ifBlank { null }, scheduleLabel(alarm),
+            summary = listOfNotNull(alarm.timeLabel, alarm.name.ifBlank { null },
                 if (alarm.sleepMinutes > 0) "Schlafdauer ${Schlaf.dauer(alarm.sleepMinutes)}" else null).joinToString(" · ")) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val pickTime = { TimePickerDialog(activity, { _, hour, minute -> vm.change(alarm.copy(hour = hour, minute = minute)) }, alarm.hour, alarm.minute, true).show() }
@@ -441,8 +441,10 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 GoldKnopf("Uhrzeit ändern", pickTime)
             }
             OutlinedTextField(alarm.name, { vm.change(alarm.copy(name = it)) }, Modifier.fillMaxWidth(), label = { Text("Name des Weckers") }, singleLine = true)
-            RepeatEditor(alarm, activity, vm::change)
             SchlafdauerEingabe(alarm, vm::change)
+        }
+        Section("Wiederholung", collapsible = true, summary = scheduleLabel(alarm)) {
+            RepeatEditor(alarm, activity, vm::change)
         }
         Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }.ifBlank { "Kein Schritt gewählt" },
             error = if (alarm.steps.isEmpty()) "Wähle mindestens einen Weckschritt." else null) {
@@ -652,6 +654,17 @@ fun newPhoto(context: Context): File = File(context.cacheDir, "photos").apply { 
 fun formatAt(time: Long): String = Instant.ofEpochMilli(time).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE, dd.MM. · HH:mm", java.util.Locale.GERMAN))
 fun dayLabel(days: Set<Int>): String = if (days.isEmpty()) "Einmalig" else if (days.size == 7) "Täglich" else if (days == setOf(1, 2, 3, 4, 5)) "Mo–Fr" else days.sorted().joinToString(" · ") { listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")[it - 1] }
 fun scheduleLabel(alarm: Alarm): String = when {
+    alarm.repeatUnit == Alarm.MONTHLY -> {
+        val day = java.time.LocalDate.parse(alarm.startDate).dayOfMonth
+        (if (alarm.repeatEvery <= 1) "Monatlich am $day." else "Alle ${alarm.repeatEvery} Monate am $day.") +
+            (if (day > 28) " · sonst Monatsletzter" else "") + " · ab ${dateLabel(alarm.startDate)}"
+    }
+    alarm.repeatUnit == Alarm.YEARLY -> {
+        val date = java.time.LocalDate.parse(alarm.startDate)
+        (if (alarm.repeatEvery <= 1) "Jährlich am " else "Alle ${alarm.repeatEvery} Jahre am ") +
+            "%02d.%02d.".format(date.dayOfMonth, date.monthValue) +
+            (if (date.monthValue == 2 && date.dayOfMonth == 29) " · sonst 28.02." else "") + " · ab ${dateLabel(alarm.startDate)}"
+    }
     alarm.intervalDays > 0 -> "Alle ${alarm.intervalDays} Tage · ab ${dateLabel(alarm.startDate)}"
     alarm.startDate.isNotBlank() -> "Einmalig am ${dateLabel(alarm.startDate)}"
     else -> dayLabel(alarm.days)
@@ -661,21 +674,33 @@ private fun dateLabel(date: String) = java.time.LocalDate.parse(date).format(Dat
 @Composable
 private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Alarm) -> Unit) {
     val today = java.time.LocalDate.now()
-    val mode = when { alarm.intervalDays > 0 -> "interval"; alarm.startDate.isNotBlank() -> "date"; alarm.days.size == 7 -> "daily"; alarm.days.isNotEmpty() -> "weekdays"; else -> "once" }
+    val mode = when {
+        alarm.repeatUnit == Alarm.MONTHLY -> "month"
+        alarm.repeatUnit == Alarm.YEARLY -> "year"
+        alarm.intervalDays > 0 -> "interval"
+        alarm.days.size == 7 -> "daily"
+        alarm.days.isNotEmpty() -> "weekdays"
+        else -> "once"
+    }
+    // A date already chosen is kept when switching, it is the start anchor of every dated kind.
+    val anchor = alarm.startDate.ifBlank { today.plusDays(1).toString() }
     fun changeMode(chosen: String) {
-        // Tapping the active mode again changes nothing, so a chosen date or individual weekdays are never reset.
+        // Tapping the active mode again changes nothing, so date, weekdays or interval are never reset.
         if (chosen == mode) return
         change(when (chosen) {
-            "daily" -> alarm.copy(days = (1..7).toSet(), startDate = "", intervalDays = 0)
-            "weekdays" -> alarm.copy(days = setOf(1, 2, 3, 4, 5), startDate = "", intervalDays = 0)
-            "date" -> alarm.copy(days = emptySet(), startDate = today.plusDays(1).toString(), intervalDays = 0)
-            "interval" -> alarm.copy(days = emptySet(), startDate = today.plusDays(1).toString(), intervalDays = 35)
-            else -> alarm.copy(days = emptySet(), startDate = "", intervalDays = 0)
+            "daily" -> alarm.copy(days = (1..7).toSet(), startDate = "", intervalDays = 0, repeatUnit = "", repeatEvery = 0)
+            "weekdays" -> alarm.copy(days = alarm.days.takeIf { it.isNotEmpty() && it.size < 7 } ?: setOf(1, 2, 3, 4, 5),
+                startDate = "", intervalDays = 0, repeatUnit = "", repeatEvery = 0)
+            "interval" -> alarm.copy(days = emptySet(), startDate = anchor, intervalDays = alarm.intervalDays.takeIf { it > 0 } ?: 35, repeatUnit = "", repeatEvery = 0)
+            "month" -> alarm.copy(days = emptySet(), startDate = anchor, intervalDays = 0, repeatUnit = Alarm.MONTHLY, repeatEvery = alarm.repeatEvery.coerceIn(1, 12))
+            "year" -> alarm.copy(days = emptySet(), startDate = anchor, intervalDays = 0, repeatUnit = Alarm.YEARLY, repeatEvery = alarm.repeatEvery.coerceIn(1, 5))
+            else -> alarm.copy(days = emptySet(), intervalDays = 0, repeatUnit = "", repeatEvery = 0)
         })
     }
     Text("Wann soll er wecken?", style = MaterialTheme.typography.labelLarge)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        listOf("once" to "Einmalig", "daily" to "Täglich", "weekdays" to "An Wochentagen", "date" to "An einem Datum", "interval" to "Schicht · alle X Tage").forEach { (id, label) ->
+        listOf("once" to "Einmalig", "daily" to "Täglich", "weekdays" to "An Wochentagen",
+            "interval" to "Alle X Tage", "month" to "Monatlich", "year" to "Jährlich").forEach { (id, label) ->
             FilterChip(mode == id, { changeMode(id) }, { Text(label) })
         }
     }
@@ -690,15 +715,39 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Ala
             }
         }
     }
-    if (mode == "date" || mode == "interval") {
-        if (mode == "interval") {
-            ValueSlider("Alle wie viele Tage?", alarm.intervalDays, 1..60, "Tage") { change(alarm.copy(intervalDays = it)) }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(4, 5, 8, 35).forEach { days -> FilterChip(alarm.intervalDays == days, { change(alarm.copy(intervalDays = days)) }, { Text("$days Tage") }) }
-            }
+    if (mode == "once") {
+        // One-off with optional date: without a date the alarm rings at the next matching time.
+        Toggle("An einem bestimmten Datum", alarm.startDate.isNotBlank()) { dated ->
+            change(alarm.copy(startDate = if (dated) anchor else ""))
         }
+        if (alarm.startDate.isBlank()) Text("Ohne Datum weckt er beim nächsten Erreichen der Uhrzeit.", style = MaterialTheme.typography.bodySmall)
+    }
+    if (mode == "interval") {
+        // Existing values above 60 days stay untouched; the slider grows instead of cutting them down.
+        ValueSlider("Alle wie viele Tage?", alarm.intervalDays, 1..maxOf(60, alarm.intervalDays), "Tage") { change(alarm.copy(intervalDays = it)) }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(4, 5, 8, 35).forEach { days -> FilterChip(alarm.intervalDays == days, { change(alarm.copy(intervalDays = days)) }, { Text("$days Tage") }) }
+        }
+    }
+    if (mode == "month") {
+        ValueSlider("Alle wie viele Monate?", alarm.repeatEvery.coerceIn(1, 12), 1..12, "Monate") { change(alarm.copy(repeatEvery = it)) }
+        val day = java.time.LocalDate.parse(anchor).dayOfMonth
+        val takt = if (alarm.repeatEvery > 1) "jeden ${alarm.repeatEvery}. Monat" else "jeden Monat"
+        Text("Ab ${dateLabel(anchor)} $takt am $day. um ${alarm.timeLabel}." +
+            if (day > 28) " Fehlt der Tag in einem Monat, weckt er am letzten Tag; danach wieder am $day." else "",
+            style = MaterialTheme.typography.bodySmall)
+    }
+    if (mode == "year") {
+        ValueSlider("Alle wie viele Jahre?", alarm.repeatEvery.coerceIn(1, 5), 1..5, "Jahre") { change(alarm.copy(repeatEvery = it)) }
+        val date = java.time.LocalDate.parse(anchor)
+        val taktJahr = if (alarm.repeatEvery > 1) "jedes ${alarm.repeatEvery}. Jahr" else "jedes Jahr"
+        Text("Ab ${dateLabel(anchor)} $taktJahr am %02d.%02d. um ${alarm.timeLabel}.".format(date.dayOfMonth, date.monthValue) +
+            if (date.monthValue == 2 && date.dayOfMonth == 29) " Ohne 29.02. weckt er am 28.02., im Schaltjahr wieder am 29.02." else "",
+            style = MaterialTheme.typography.bodySmall)
+    }
+    if (alarm.startDate.isNotBlank()) {
         val ahead = java.time.temporal.ChronoUnit.DAYS.between(today, java.time.LocalDate.parse(alarm.startDate)).toInt()
-        Text(if (mode == "interval") "Erster Schichtalarm: ${dateLabel(alarm.startDate)}" else "Am ${dateLabel(alarm.startDate)} um ${alarm.timeLabel}")
+        Text(if (mode == "once") "Am ${dateLabel(alarm.startDate)} um ${alarm.timeLabel}" else "Startdatum: ${dateLabel(alarm.startDate)}")
         ValueSlider("Schnellwahl: in", ahead.coerceIn(0, 60), 0..60, "Tagen") {
             change(alarm.copy(startDate = today.plusDays(it.toLong()).toString()))
         }
@@ -711,6 +760,7 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Ala
         if (mode == "interval") Text("Der Rhythmus bleibt am Startdatum verankert. Schlummern oder das Auslassen eines Termins verschiebt deine Schichtfolge nicht.", style = MaterialTheme.typography.bodySmall)
     }
 }
+
 /** Like [remaining], but switches to days beyond 24 hours. */
 fun remainingLong(ms: Long): String {
     val minutes = ZeitRing.ceilMinutes(ms)
