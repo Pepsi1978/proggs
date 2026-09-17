@@ -58,7 +58,7 @@ class AlarmIntegrationTest {
                 assertEquals(original, audio.getStreamVolume(AudioManager.STREAM_ALARM))
             } finally {
                 command("STOP")
-                AlarmScheduler(context).cancel(alarm.id); store.delete(alarm.id)
+                store.delete(alarm.id); AlarmScheduler(context).cancel(alarm.id)
                 if (wifi == "1") shell("svc wifi enable")
                 if (data == "1") shell("svc data enable")
                 shell("cmd notification set_dnd " + when (originalFilter) { 2 -> "priority"; 3 -> "none"; 4 -> "alarms"; else -> "all" })
@@ -107,7 +107,7 @@ class AlarmIntegrationTest {
                 assertEquals(alarm.startDate, updated.startDate)
             } finally {
                 command("PHOTO_OK", alarm.id)
-                AlarmScheduler(context).cancel(alarm.id); store.delete(alarm.id); store.ringing(store.ringing().filterNot { it == alarm.id })
+                store.delete(alarm.id); AlarmScheduler(context).cancel(alarm.id); store.ringing(store.ringing().filterNot { it == alarm.id })
             }
         }
     }
@@ -188,7 +188,7 @@ class AlarmIntegrationTest {
                 assertTrue(alarms.all { store.get(it.id) != null })
             } finally {
                 command("STOP")
-                alarms.forEach { AlarmScheduler(context).cancel(it.id); store.delete(it.id) }
+                alarms.forEach { store.delete(it.id); AlarmScheduler(context).cancel(it.id) }
                 store.ringing(store.ringing().filterNot { id -> alarms.any { it.id == id } })
             }
         }

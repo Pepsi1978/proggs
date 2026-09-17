@@ -46,7 +46,7 @@ class AlarmClaimIntegrationTest {
         AlarmService.state.value.alarm?.id?.takeIf { it in ids }?.let { command("STOP", it) }
         waitFor("Test-Dienst muss enden") { AlarmService.state.value.alarm?.id !in ids }
         if (TestSnooze.pendingForTest()?.id in ids) TestSnooze.cancel(context)
-        ids.forEach { scheduler.cancel(it); store.delete(it) }
+        ids.forEach { store.delete(it); scheduler.cancel(it) }
         store.ringing(store.ringing().filterNot { it in ids })
     }
 

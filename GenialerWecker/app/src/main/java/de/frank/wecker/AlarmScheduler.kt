@@ -19,17 +19,30 @@ class AlarmScheduler(private val context: Context) {
             .putExtra("id", id).putExtra("snooze", snooze).putExtra("at", at),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
+    /**
+     * Plant unter dem gemeinsamen Tor IMMER den aktuellen gespeicherten Stand; [alarm] dient nur noch als Kennung.
+     * Ein verspäteter Auftrag kann damit kein älteres Vorkommen mehr scharfschalten. Hinweis: SchlafErinnerung.sync
+     * schreibt Einstellungen und kann Benachrichtigungen abgleichen, ist also kein reiner AlarmManager-Aufruf.
+     */
     fun schedule(alarm: Alarm) {
         // Separate, caught path first: a reminder problem never fails the alarm, and it also runs without the exact-alarm grant.
         SchlafErinnerung.sync(context, alarm)
         // Check the permission first so a refusal never removes alarms that are already planned.
         require(allowed()) { "Die Freigabe für genaue Weckzeiten fehlt." }
         if (alarm.id == failScheduleForTestId) throw IllegalStateException("Testfehler bei der Folgeplanung")
-        cancelRing(alarm.id)
+        Planung.unter({ store.get(alarm.id) }) { current -> anwenden(alarm.id, current) }
+    }
+
+    /** Setzt den Slot eines Weckers auf den übergebenen Stand; ohne Eintrag bleibt er leer. Nur unter [Planung] aufrufen. */
+    private fun anwenden(id: String, current: Alarm?) {
+        cancelRing(id)
+        if (current == null) return
         // An overdue occurrence that is still ringing is advanced when the ringing ends, never re-fired here.
-        val overdueRinging = alarm.nextAt <= System.currentTimeMillis() && alarm.id in store.ringing()
-        if (alarm.enabled && alarm.nextAt > 0 && !overdueRinging) set(alarm.id, false, alarm.nextAt)
-        if (alarm.snoozeUntil > 0) set(alarm.id, true, alarm.snoozeUntil)
+        val overdueRinging = current.nextAt <= System.currentTimeMillis() && id in store.ringing()
+        if (allowed()) {
+            if (current.enabled && current.nextAt > 0 && !overdueRinging) set(id, false, current.nextAt)
+            if (current.snoozeUntil > 0) set(id, true, current.snoozeUntil)
+        }
     }
     /** Plant ohne Exception nach außen; Fehler werden sichtbar am Wecker vermerkt. */
     fun scheduleSafely(alarm: Alarm): Boolean = try {
@@ -47,8 +60,15 @@ class AlarmScheduler(private val context: Context) {
         manager.setAlarmClock(AlarmManager.AlarmClockInfo(at.coerceAtLeast(System.currentTimeMillis() + 1000), show), operation(id, snooze, at))
     }
     private fun cancelRing(id: String) { manager.cancel(operation(id, false)); manager.cancel(operation(id, true)) }
-    /** Cancels ringing, snooze and the planned sleep reminder; visible notifications are not touched. */
-    fun cancel(id: String) { cancelRing(id); SchlafErinnerung.entferneWecker(context, id) }
+    /**
+     * Räumt Klingeln, Schlummern und die geplante Schlafenszeit-Erinnerung ab — aber nur, wenn der Wecker im aktuellen
+     * Stand wirklich weg ist. Ein verspäteter Abbruch (Löschen oder Ausschalten, das einen inzwischen neu gespeicherten
+     * Wecker treffen würde) plant stattdessen den aktuellen Stand. Sichtbare Meldungen bleiben unberührt.
+     */
+    fun cancel(id: String) {
+        val current = Planung.unter({ store.get(id) }) { current -> anwenden(id, current); current }
+        if (current == null) SchlafErinnerung.entferneWecker(context, id) else SchlafErinnerung.sync(context, current)
+    }
     fun restore(clockChanged: Boolean = false, onlyIds: Set<String>? = null) {
         // Reminders are replanned even without the exact-alarm grant (they fall back to inexact timing).
         if (!allowed()) {

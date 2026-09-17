@@ -50,7 +50,7 @@ class EditorRegressionTest {
             assertTrue(vm.store.get(second.id)!!.enabled)
             assertEquals(idsBefore + setOf(first.id, second.id), vm.store.all().map { it.id }.toSet())
         } finally {
-            listOf(first, second).forEach { vm.scheduler.cancel(it.id); vm.store.delete(it.id) }
+            listOf(first, second).forEach { vm.store.delete(it.id); vm.scheduler.cancel(it.id) }
         }
     }
     @Test fun uploadedOwnVoicesLoadWithoutPressingRefresh() = withModel { vm ->
@@ -80,6 +80,6 @@ class EditorRegressionTest {
             InstrumentationRegistry.getInstrumentation().runOnMainSync { vm.save { saved.countDown() } }
             assertTrue(saved.await(10, TimeUnit.SECONDS))
             assertEquals("Änderung während des Speicherns", vm.store.get(alarm.id)?.name)
-        } finally { vm.scheduler.cancel(alarm.id); vm.store.delete(alarm.id) }
+        } finally { vm.store.delete(alarm.id); vm.scheduler.cancel(alarm.id) }
     }
 }
