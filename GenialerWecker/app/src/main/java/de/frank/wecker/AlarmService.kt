@@ -67,17 +67,24 @@ class AlarmService : Service() {
             "TEST" -> {
                 // Eine Vorschau darf einen bereits klingelnden echten Alarm niemals ersetzen.
                 if (pending().isEmpty()) {
+                    // Same UI and audio path as a real alarm; the snooze counter lives only in memory.
+                    TestSnooze.cancel(this)
                     test = true
-                    store.get(intent.getStringExtra("id").orEmpty())?.let(::begin) ?: stopSelf()
+                    val snoozes = intent.getIntExtra("testSnoozes", 0)
+                    store.get(intent.getStringExtra("id").orEmpty())?.let { begin(it.copy(snoozes = snoozes, snoozeUntil = 0)) } ?: stopSelf()
                 }
             }
-            "STOP" -> if (intent.targetsCurrent() && (current?.photoRequired != true || test)) finishCurrent(false)
+            "STOP" -> if (intent.targetsCurrent() && current?.photoRequired != true) finishCurrent(false)
+            // Only a test may be ended without its photo task (back gesture), so nobody gets stuck in a test.
+            "TEST_END" -> if (test) finishCurrent(false)
             "PHOTO_OK" -> {
                 // Nur die nicht exportierte AlarmActivity liefert dieses interne Kommando.
                 if (intent.getStringExtra("id") == current?.id) finishCurrent(false)
             }
             "SNOOZE" -> if (intent.targetsCurrent()) finishCurrent(true)
             else -> {
+                // A real alarm always wins over a test, including a test that is currently snoozing.
+                TestSnooze.cancel(this)
                 intent?.getStringExtra("id")?.let { id -> if (id !in store.ringing() && store.get(id) != null) volatileRinging += id }
                 if (test && pending().isNotEmpty()) { test = false; current = null }
                 if (current == null) nextAlarm()
@@ -170,6 +177,18 @@ class AlarmService : Service() {
             try { AlarmScheduler(this).schedule(updated) }
             catch (_: Exception) {
                 runCatching { store.put(latest) }
+                _state.value = _state.value.copy(message = "Schlummern konnte nicht geplant werden. Der Wecker läuft weiter.")
+                return
+            }
+        }
+        if (test) {
+            if (!snooze) TestSnooze.cancel(this)
+            else if (alarm.snoozes >= alarm.snoozeLimit) {
+                _state.value = _state.value.copy(message = "Alle Schlummerpausen sind aufgebraucht.")
+                return
+            } else try {
+                TestSnooze.start(this, alarm.id, alarm.snoozes + 1, System.currentTimeMillis() + alarm.snoozeMinutes * 60_000L)
+            } catch (_: Exception) {
                 _state.value = _state.value.copy(message = "Schlummern konnte nicht geplant werden. Der Wecker läuft weiter.")
                 return
             }

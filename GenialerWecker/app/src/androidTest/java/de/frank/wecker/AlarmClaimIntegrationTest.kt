@@ -45,6 +45,7 @@ class AlarmClaimIntegrationTest {
         AlarmScheduler.failScheduleForTestId = null; AlarmRinging.failStartForTestId = null; AlarmStore.failRingingWriteForTestId = null
         AlarmService.state.value.alarm?.id?.takeIf { it in ids }?.let { command("STOP", it) }
         waitFor("Test-Dienst muss enden") { AlarmService.state.value.alarm?.id !in ids }
+        if (TestSnooze.pendingForTest()?.id in ids) TestSnooze.cancel(context)
         ids.forEach { scheduler.cancel(it); store.delete(it) }
         store.ringing(store.ringing().filterNot { it in ids })
     }
@@ -178,6 +179,31 @@ class AlarmClaimIntegrationTest {
             assertTrue("Die Entfernung wird beim nächsten Schreibversuch nachgeholt", "claim-stop-persist" !in store.ringing())
             SystemClock.sleep(2500)
             assertNull(AlarmService.state.value.alarm)
+        }
+    }
+
+    @Test fun testRingUsesRealPathWithVolatileSnoozeAndNeverTouchesStoredAlarm() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            val before = alarm("test-one-to-one", System.currentTimeMillis() + 6 * 60 * 60_000L)
+            context.startForegroundService(Intent(context, AlarmService::class.java).setAction("TEST").putExtra("id", before.id))
+            waitFor("Test muss wie echt klingeln") { AlarmService.state.value.let { it.test && it.playing && it.alarm?.id == before.id } }
+            command("SNOOZE", before.id)
+            waitFor("Test-Schlummern muss wie echt beenden") { AlarmService.state.value.alarm == null }
+            val pending = TestSnooze.pendingForTest()!!
+            assertEquals(1, pending.snoozes)
+            assertEquals("Gespeicherter Wecker darf sich nicht ändern", before, store.get(before.id))
+            assertTrue(store.ringing().isEmpty())
+            TestSnoozeReceiver().onReceive(context, Intent().putExtra("token", pending.token))
+            waitFor("Test muss nach der Pause mit flüchtigem Zähler zurückkommen") {
+                AlarmService.state.value.let { it.test && it.playing && it.alarm?.snoozes == 1 }
+            }
+            command("STOP", before.id)
+            waitFor("Test muss enden") { AlarmService.state.value.alarm == null }
+            assertNull(TestSnooze.pendingForTest())
+            TestSnoozeReceiver().onReceive(context, Intent().putExtra("token", pending.token))
+            SystemClock.sleep(1500)
+            assertNull("Ein verbrauchter Test-Weckruf darf nicht erneut klingeln", AlarmService.state.value.alarm)
+            assertEquals(before, store.get(before.id))
         }
     }
 }

@@ -39,6 +39,7 @@
         <service android:name="de.frank.wecker.AlarmService" android:exported="false"
             android:directBootAware="true" android:foregroundServiceType="mediaPlayback" />
         <receiver android:name="de.frank.wecker.AlarmReceiver" android:exported="false" android:directBootAware="true" />
+        <receiver android:name="de.frank.wecker.TestSnoozeReceiver" android:exported="false" />
         <receiver android:name="de.frank.wecker.IdeasChangedReceiver" android:exported="true"
             android:permission="de.frank.genialeideen.permission.WECKER" />
         <receiver android:name="de.frank.wecker.RestoreReceiver" android:exported="true" android:directBootAware="true">

@@ -79,13 +79,16 @@ class AlarmActivity : ComponentActivity() {
                 }
             }
             GenialeIdeenTheme(theme) {
-                BackHandler { message = "Der Wecker läuft weiter. Nutze Schlummern oder erfülle die Stopp-Aufgabe." }
+                BackHandler {
+                    if (state.test) command("TEST_END")
+                    else message = "Der Wecker läuft weiter. Nutze Schlummern oder erfülle die Stopp-Aufgabe."
+                }
                 Box(Modifier.fillMaxSize().background(LocalGold.current.hintergrund)) {
                     BewegterHintergrund()
                     Column(Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
                         Spacer(Modifier.height(24.dp))
-                        Text(if (state.test) "TESTWECKEN" else "GUTEN MORGEN", color = LocalGold.current.primaer, letterSpacing = 3.sp)
+                        Text("GUTEN MORGEN", color = LocalGold.current.primaer, letterSpacing = 3.sp)
                         val alarm = state.alarm
                         // Show the live clock, not the alarm time, so the user always sees the current time.
                         var now by remember { androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis()) }
@@ -97,10 +100,10 @@ class AlarmActivity : ComponentActivity() {
                         if (state.message.isNotBlank()) Text(state.message, color = Semantisch.warnung)
                         if (message.isNotBlank()) Text(message)
                         if (alarm != null) {
-                            if (alarm.snoozeLimit > alarm.snoozes && !state.test) GoldKnopf(
+                            if (alarm.snoozeLimit > alarm.snoozes) GoldKnopf(
                                 "Schlummern · ${alarm.snoozeMinutes} Min. (${alarm.snoozeLimit - alarm.snoozes} übrig)",
                                 { command("SNOOZE") }, Modifier.fillMaxWidth())
-                            if (alarm.photoRequired && !state.test) {
+                            if (alarm.photoRequired) {
                                 Section("Deine Foto-Aufgabe") {
                                     if (alarm.reference.isNotBlank()) PhotoPreview(File(alarm.reference))
                                     if (alarm.minBrightness > 0) Text("Mindestens ${alarm.minBrightness} % Helligkeit")
@@ -111,8 +114,10 @@ class AlarmActivity : ComponentActivity() {
                                         photo.launch(FileProvider.getUriForFile(this@AlarmActivity, "$packageName.photos", file))
                                     }, Modifier.fillMaxWidth(), aktiviert = !checking, hauptKnopf = true)
                                 }
-                            } else GoldKnopf(if (state.test) "Test beenden" else "Wecker stoppen", { command("STOP") }, Modifier.fillMaxWidth(), hauptKnopf = true)
+                            } else GoldKnopf("Wecker stoppen", { command("STOP") }, Modifier.fillMaxWidth(), hauptKnopf = true)
                         } else StillerKnopf("Zurück zur App", { finish() })
+                        // The only visible difference between a test and a real alarm.
+                        if (state.test) Text("(Test)", style = MaterialTheme.typography.labelSmall, color = LocalGold.current.textGedaempft)
                     }
                 }
             }
