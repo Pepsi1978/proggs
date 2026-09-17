@@ -223,7 +223,7 @@ class AlarmService : Service() {
             .setOngoing(true).setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setContentIntent(open)
             .setFullScreenIntent(open, true).setOnlyAlertOnce(true)
         if (alarm != null && alarm.snoozeLimit > alarm.snoozes) builder.addAction(0, "Schlummern", action("SNOOZE", 2))
-        if (alarm != null && !alarm.photoRequired) builder.addAction(0, "Stoppen", action("STOP", 3))
+        if (alarm != null && !alarm.photoRequired) builder.addAction(0, "Beenden", action("STOP", 3))
         return builder.build()
     }
     private fun action(name: String, code: Int) = PendingIntent.getService(this, code, Intent(this, AlarmService::class.java).setAction(name), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
