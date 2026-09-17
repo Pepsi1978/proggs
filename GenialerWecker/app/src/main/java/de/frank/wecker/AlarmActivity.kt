@@ -84,19 +84,24 @@ class AlarmActivity : ComponentActivity() {
                 command(commandName, id, ring)
             }
             val photo = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-                if (success && photoPath.isNotBlank()) scope.launch {
+                val path = photoPath
+                val ring = photoRingId
+                if (success && path.isNotBlank()) scope.launch {
                     checking = true
+                    // True only while the ring the photo was taken for is still the live one.
+                    fun stillSameRing() = AlarmService.state.value.let { it.alarm != null && it.ringId == ring }
                     try {
-                        val ringing = AlarmService.state.value
-                        val alarm = ringing.alarm ?: return@launch
+                        val alarm = AlarmService.state.value.alarm
                         // A photo taken for an earlier ring is discarded, never applied to the current one.
-                        if (ringing.ringId != photoRingId) { message = "Das Foto gehört zu einem früheren Klingeln und wurde verworfen."; return@launch }
-                        val result = withContext(Dispatchers.IO) { PhotoCheck.check(File(photoPath), alarm) }
+                        if (alarm == null || !stillSameRing()) { message = "Das Foto gehört zu einem früheren Klingeln und wurde verworfen."; return@launch }
+                        val result = withContext(Dispatchers.IO) { PhotoCheck.check(File(path), alarm) }
+                        // Re-check after the slow check: a new ring must never see or receive this old result.
+                        if (!stillSameRing()) return@launch
                         message = result.message
                         // The photo success is confirmed only by the service after PHOTO_OK.
-                        if (result.accepted) send("STOP", alarm.id, photoRingId, "PHOTO_OK")
-                    } catch (e: Exception) { message = e.message ?: "Das Foto konnte nicht geprüft werden." }
-                    finally { checking = false; File(photoPath).delete() }
+                        if (result.accepted) send("STOP", alarm.id, ring, "PHOTO_OK")
+                    } catch (e: Exception) { if (stillSameRing()) message = e.message ?: "Das Foto konnte nicht geprüft werden." }
+                    finally { checking = false; File(path).delete() }
                 } else message = "Fotoaufnahme abgebrochen. Der Wecker läuft weiter."
             }
             LaunchedEffect(Unit) {

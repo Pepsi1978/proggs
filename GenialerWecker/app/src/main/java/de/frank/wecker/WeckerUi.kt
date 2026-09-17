@@ -184,22 +184,34 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
     // Nur für diese Listenansicht merken: neue Wecker und eine neu geöffnete Liste sind kompakt.
     var expandedIds by remember { mutableStateOf(emptySet<String>()) }
     val issues by vm.store.issues.collectAsState()
-    val now = rememberNow()
-    val next = alarms.flatMap { alarm -> listOfNotNull(alarm.nextAt.takeIf { alarm.enabled && it > now }, alarm.snoozeUntil.takeIf { it > now }) }.minOrNull()
+    val now = rememberNow(60_000)
+    val nextRegular = alarms.mapNotNull { alarm -> alarm.nextAt.takeIf { alarm.enabled && it > now } }.minOrNull()
+    val nextSnooze = alarms.mapNotNull { alarm -> alarm.snoozeUntil.takeIf { it > now } }.minOrNull()
+    val next = listOfNotNull(nextRegular, nextSnooze).minOrNull()
+    val nextIsSnooze = next != null && next == nextSnooze
     BoxWithConstraints {
+        val ringSize = if (maxWidth < 360.dp) 72.dp else 84.dp
         LazyVerticalGrid(columns = GridCells.Fixed(if (maxWidth >= 680.dp) 2 else 1),
             contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 GoldKarte(erhoeht = true) {
-                    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("DEIN TAG BEGINNT MIT EINER IDEE", style = MaterialTheme.typography.labelSmall, color = gold.textGedaempft, letterSpacing = 2.sp)
-                        Text(Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")),
-                            fontFamily = IdeenSchriftBetont, fontSize = 72.sp, color = gold.primaer)
-                        Text(if (next == null) "Zeit für einen guten Morgen." else "Nächster Wecker: ${formatAt(next)}", color = gold.textGedaempft)
-                        // Always reserve the line so toggling a switch never changes the card height.
-                        Text(if (next != null) "In ${remaining(next - now)}" else " ", style = MaterialTheme.typography.bodySmall, color = gold.primaer)
-                        Spacer(Modifier.height(18.dp))
+                    Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            RestzeitRing(now, next, nextIsSnooze, Modifier.size(ringSize))
+                            // No maxLines: with large system fonts the lines wrap instead of being cut off.
+                            Column(Modifier.weight(1f)) {
+                                Text(formatClock(now), fontFamily = IdeenSchriftBetont, fontSize = 56.sp, color = gold.primaer)
+                                if (next == null) {
+                                    Text("Kein Wecker aktiv", style = MaterialTheme.typography.titleMedium, color = gold.textPrimaer)
+                                    Text("Schalte einen Wecker ein oder lege einen neuen an.", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                                } else {
+                                    Text(if (nextIsSnooze) "Schlummert bis ${formatClock(next)}" else "Nächster Wecker: ${formatAt(next)}",
+                                        style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
+                                    Text("in ${remainingLong(next - now)}", style = MaterialTheme.typography.bodySmall, color = gold.primaer)
+                                }
+                            }
+                        }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             GoldKnopf("＋ Wecker", onNew, hauptKnopf = true)
                             StillerKnopf("Offene Ideen", onIdeas)
@@ -241,7 +253,10 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             Column(Modifier.weight(1f).clickable(
                                 interactionSource = remember { MutableInteractionSource() }, indication = null,
                                 onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) })) {
-                                Text(alarm.timeLabel, fontFamily = IdeenSchriftBetont, fontSize = 44.sp, color = if (alarm.enabled) gold.primaer else gold.textGedaempft)
+                                val reduced = LocalBewegungReduziert.current
+                                val timeColor by androidx.compose.animation.animateColorAsState(if (alarm.enabled) gold.primaer else gold.textGedaempft,
+                                    if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(250), label = "weckzeitFarbe")
+                                Text(alarm.timeLabel, fontFamily = IdeenSchriftBetont, fontSize = 44.sp, color = timeColor)
                                 Text(alarm.name, style = MaterialTheme.typography.titleMedium,
                                     maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
                             }
@@ -254,7 +269,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             }
                         }
                         // Reliability warnings stay visible even on collapsed cards.
-                        issues[alarm.id]?.let { Text(it, color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall) }
+                        issues[alarm.id]?.let { StatusZeile(Icons.Default.Warning, it, Semantisch.warnung) }
                         if (alarm.snoozeUntil > now) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Snooze, null, tint = gold.primaer, modifier = Modifier.size(20.dp))
                             Text("Schlummert bis ${formatClock(alarm.snoozeUntil)}", Modifier.weight(1f).padding(horizontal = 8.dp), color = gold.primaer)
@@ -268,7 +283,8 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             Text(alarm.steps.joinToString(" → ") { it.title }, color = gold.primaer, style = MaterialTheme.typography.bodySmall)
                             val skipped = alarm.enabled && alarm.repeats && alarm.nextAt > 0 &&
                                 runCatching { alarm.nextAt > AlarmTime.next(alarm, Instant.ofEpochMilli(now)) }.getOrDefault(false)
-                            if (alarm.enabled && alarm.nextAt > 0) Text("Nächster Termin: ${formatAt(alarm.nextAt)}${if (skipped) " · ein Termin ausgelassen" else ""}", style = MaterialTheme.typography.bodySmall)
+                            if (alarm.enabled && alarm.nextAt > 0) StatusZeile(Icons.Default.Alarm, "Nächster Termin: ${formatAt(alarm.nextAt)}", gold.textPrimaer)
+                            if (skipped) StatusZeile(Icons.Default.SkipNext, "Ein Termin wird ausgelassen", gold.primaer)
                             Text("Lautstärke ${alarm.volume} %${if (alarm.photoRequired) " · Foto-Aufgabe" else ""}", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
                             if (alarm.needsSpeech) {
                                 val status = when {
@@ -584,6 +600,63 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Ala
     val next = runCatching { AlarmTime.next(alarm) }.getOrNull()
     Text(next?.let { "Nächster Termin: ${formatAt(it)}" } ?: "Bitte einen zukünftigen Termin wählen.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.primaer)
 }
+/** Like [remaining], but switches to days beyond 24 hours. */
+fun remainingLong(ms: Long): String {
+    val minutes = (ms / 60_000).coerceAtLeast(0)
+    val days = minutes / (24 * 60)
+    return if (days == 0L) remaining(ms) else "$days ${if (days == 1L) "Tag" else "Tagen"} ${minutes / 60 % 24} Std."
+}
+
+/** Symbol plus text, so a status is never conveyed by color alone. */
+@Composable
+private fun StatusZeile(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, color: androidx.compose.ui.graphics.Color) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
+        Text(text, Modifier.padding(start = 8.dp), color = color, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/**
+ * 24-Stunden-Zifferblatt, 0 Uhr oben, im Uhrzeigersinn. Heller Punkt = jetzt, farbiger Punkt = Termin,
+ * Bogen dazwischen = verbleibende Zeit. Ohne Bogen, wenn der Termin mehr als 24 Stunden entfernt ist oder
+ * dazwischen eine Zeitumstellung liegt; dann gilt allein der Text. Für TalkBack stumm.
+ */
+@Composable
+private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Modifier = Modifier) {
+    val gold = LocalGold.current
+    val accent = if (snooze) Semantisch.info else gold.primaer
+    val zone = ZoneId.systemDefault()
+    fun angle(time: Long): Float {
+        val local = Instant.ofEpochMilli(time).atZone(zone).toLocalTime()
+        return local.toSecondOfDay() / 86_400f * 360f - 90f
+    }
+    val showArc = target != null && target - now in 1 until 86_400_000L &&
+        zone.rules.getOffset(Instant.ofEpochMilli(now)) == zone.rules.getOffset(Instant.ofEpochMilli(target))
+    androidx.compose.foundation.Canvas(modifier) {
+        val stroke = 5.dp.toPx()
+        val radius = size.minDimension / 2f - stroke
+        val topLeft = androidx.compose.ui.geometry.Offset(center.x - radius, center.y - radius)
+        val arcSize = androidx.compose.ui.geometry.Size(radius * 2, radius * 2)
+        drawCircle(gold.textGedaempft.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+        repeat(4) { i ->
+            val a = Math.toRadians(i * 90.0 - 90.0)
+            val inner = radius - 6.dp.toPx()
+            drawLine(gold.textGedaempft.copy(alpha = .6f),
+                center + androidx.compose.ui.geometry.Offset((inner * Math.cos(a)).toFloat(), (inner * Math.sin(a)).toFloat()),
+                center + androidx.compose.ui.geometry.Offset((radius * Math.cos(a)).toFloat(), (radius * Math.sin(a)).toFloat()), 1.5f.dp.toPx())
+        }
+        fun point(angleDeg: Float) = Math.toRadians(angleDeg.toDouble()).let {
+            center + androidx.compose.ui.geometry.Offset((radius * Math.cos(it)).toFloat(), (radius * Math.sin(it)).toFloat())
+        }
+        if (showArc && target != null) {
+            drawArc(accent, angle(now), (target - now) / 86_400_000f * 360f, useCenter = false, topLeft = topLeft, size = arcSize,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        }
+        drawCircle(gold.textPrimaer, 3.5f.dp.toPx(), point(angle(now)))
+        if (target != null) drawCircle(accent, 5.5f.dp.toPx(), point(angle(target)))
+    }
+}
+
 fun remaining(ms: Long): String { val minutes = (ms / 60_000).coerceAtLeast(0); return "${minutes / 60} Std. ${minutes % 60} Min." }
 
 @Composable
