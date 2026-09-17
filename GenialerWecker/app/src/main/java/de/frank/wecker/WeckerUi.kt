@@ -804,11 +804,21 @@ private fun AufnahmeLeiste(vm: WeckerViewModel) {
                 StillerKnopf("■ Stoppen", vm::stopRecording, Modifier.semantics { contentDescription = "Aufnahme stoppen" }, hervorgehoben = true)
             }
         }
-        open != null -> Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Mic, null, tint = gold.primaer, modifier = Modifier.size(20.dp))
-            Text("Offenes Diktat für „${open?.draftName.orEmpty()}“${if ((open?.missing ?: 0) > 0) " (unvollständig)" else ""} – im Wecker einfügen oder verwerfen.", Modifier.weight(1f).padding(horizontal = 10.dp),
-                style = MaterialTheme.typography.bodySmall)
-            StillerKnopf("Verwerfen", vm::discardOpenDictation)
+        // Text on top with full width, buttons below and wrapping: readable on narrow screens and with large fonts.
+        open != null -> Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val waiting = open ?: return@Column
+            val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Mic, null, tint = gold.primaer, modifier = Modifier.size(20.dp))
+                Text("Offenes Diktat für „${waiting.draftName}“${if (waiting.createdAt > 0) " vom ${formatAt(waiting.createdAt)}" else ""}" +
+                    "${if (waiting.missing > 0) " (unvollständig)" else ""} – im Wecker einfügen, kopieren oder verwerfen.", Modifier.weight(1f).padding(start = 10.dp),
+                    style = MaterialTheme.typography.bodySmall)
+            }
+            // Copy is always reachable, also for dictations whose draft no longer exists.
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StillerKnopf("Text kopieren", { clipboard.setText(androidx.compose.ui.text.AnnotatedString(waiting.text)); vm.message.value = "Diktattext kopiert." })
+                StillerKnopf("Verwerfen", vm::discardOpenDictation)
+            }
         }
     }
 }
@@ -824,8 +834,10 @@ private fun OffenesDiktatKarte(vm: WeckerViewModel, alarm: Alarm) {
             Text("„${dictation.text.take(160)}${if (dictation.text.length > 160) "…" else ""}“", style = MaterialTheme.typography.bodySmall)
             // Never shown as complete when parts were not transcribed.
             if (dictation.missing > 0) StatusZeile(Icons.Default.Warning, "Unvollständig: ${dictation.missing} Abschnitte fehlen.", Semantisch.warnung)
+            val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 GoldKnopf("In „Deine Erinnerung“ einfügen", vm::insertOpenDictation)
+                StillerKnopf("Text kopieren", { clipboard.setText(androidx.compose.ui.text.AnnotatedString(dictation.text)); vm.message.value = "Diktattext kopiert." })
                 StillerKnopf("Verwerfen", vm::discardOpenDictation)
             }
         }

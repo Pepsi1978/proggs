@@ -22,7 +22,22 @@ import java.util.UUID
 
 enum class RecordingKind { DIKTAT, STIMMPROBE }
 data class RecordingSession(val kind: RecordingKind, val draftId: String?, val draftName: String, val editorGeneration: Long, val startedAt: Long)
-data class OpenDictation(val draftId: String, val draftName: String, val text: String, val missing: Int)
+data class OpenDictation(val draftId: String, val draftName: String, val text: String, val missing: Int, val createdAt: Long = 0) {
+    fun json(): String = JSONObject().put("v", 1).put("draftId", draftId).put("draftName", draftName)
+        .put("text", text).put("missing", missing).put("createdAt", createdAt).toString()
+    companion object {
+        const val KEY = "open_dictation"
+        const val UNREADABLE_KEY = "open_dictation_unreadable"
+        /** Strict: anything unexpected throws, so a damaged entry is kept aside instead of being half-loaded. */
+        fun parse(raw: String): OpenDictation {
+            val j = JSONObject(raw)
+            require(j.getInt("v") == 1) { "Unbekannte Version" }
+            val value = OpenDictation(j.getString("draftId"), j.getString("draftName"), j.getString("text"), j.getInt("missing"), j.getLong("createdAt"))
+            require(value.draftId.isNotBlank() && value.text.isNotBlank() && value.missing >= 0) { "Ungültiges offenes Diktat" }
+            return value
+        }
+    }
+}
 
 class WeckerViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application
@@ -87,6 +102,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         restoreVoiceCache()
         loadVoices()
         scheduler.restore()
+        restoreOpenDictation()
         viewModelScope.launch(Dispatchers.IO) { Tones.names.keys.forEach { Tones.file(store.files, it) } }
         PreparationWorker.enqueue(app)
     }
@@ -377,20 +393,58 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             message.value = "Diktat eingefügt.$incomplete"
             return
         }
-        openDictation.value = OpenDictation(session.draftId.orEmpty(), session.draftName, text, missing)
-        message.value = (if (sameEditor) "Der Baustein „Eigener Text“ ist nicht mehr aktiv. Das Diktat wartet oben im Editor zum bewussten Einfügen."
+        val saved = persistOpenDictation(OpenDictation(session.draftId.orEmpty(), session.draftName, text, missing, System.currentTimeMillis()))
+        message.value = (if (saved) "" else "Das offene Diktat konnte nicht dauerhaft gesichert werden. ") + (if (sameEditor) "Der Baustein „Eigener Text“ ist nicht mehr aktiv. Das Diktat wartet oben im Editor zum bewussten Einfügen."
             else "Das Diktat für „${session.draftName}“ wurde nicht eingefügt, weil dieser Entwurf nicht mehr offen ist. Öffne den Wecker, um es bewusst einzufügen.") + incomplete
     }
 
-    /** Conscious insert into the matching open draft; adds the text step so the text is actually used. */
+    /** Keeps the open dictation in memory in any case; returns whether it was also stored durably. */
+    private fun persistOpenDictation(value: OpenDictation): Boolean {
+        openDictation.value = value
+        return runCatching { store.prefs.edit().putString(OpenDictation.KEY, value.json()).commit() }
+            .onFailure { android.util.Log.w("WeckerRecording", "Offenes Diktat nicht gesichert", it) }.getOrDefault(false)
+    }
+
+    /** Restores a stored open dictation for a conscious insert; a damaged entry is moved aside, never deleted. */
+    private fun restoreOpenDictation() {
+        val raw = store.prefs.getString(OpenDictation.KEY, null) ?: return
+        try { openDictation.value = OpenDictation.parse(raw) }
+        catch (e: Exception) {
+            android.util.Log.w("WeckerRecording", "Gesichertes Diktat unlesbar; wird aufbewahrt", e)
+            val edit = store.prefs.edit().remove(OpenDictation.KEY)
+            if (!store.prefs.contains(OpenDictation.UNREADABLE_KEY)) edit.putString(OpenDictation.UNREADABLE_KEY, raw)
+            else edit.putString(OpenDictation.UNREADABLE_KEY + "_" + System.currentTimeMillis(), raw)
+            val moved = runCatching { edit.commit() }.getOrDefault(false)
+            message.value = if (moved) "Ein gesichertes Diktat war unlesbar. Es wurde zur Prüfung aufbewahrt, nicht gelöscht."
+                else "Ein gesichertes Diktat ist unlesbar und bleibt unverändert gespeichert."
+        }
+    }
+
+    /**
+     * Conscious insert into the matching open draft; adds the text step so the text is actually used.
+     * Draft and removal of the open dictation are written in ONE commit; only then both flows change.
+     */
     fun insertOpenDictation() {
         val open = openDictation.value ?: return
         val draft = _draft.value?.takeIf { it.id == open.draftId } ?: return
-        change(draft.copy(text = (draft.text + "\n" + open.text).trim(), steps = if (Step.TEXT in draft.steps) draft.steps else draft.steps + Step.TEXT))
+        val updated = draft.copy(text = (draft.text + "\n" + open.text).trim(), steps = if (Step.TEXT in draft.steps) draft.steps else draft.steps + Step.TEXT)
+        val written = runCatching {
+            store.prefs.edit().putString("draft", updated.json().toString()).putBoolean("draft_is_new", draftIsNew)
+                .remove(OpenDictation.KEY).commit()
+        }.getOrDefault(false)
+        if (!written) { message.value = "Das Diktat konnte nicht eingefügt werden, weil der Speicher nicht geschrieben werden konnte. Es bleibt offen."; return }
+        _draft.value = updated
         openDictation.value = null
         message.value = if (open.missing > 0) "Diktat eingefügt, aber unvollständig: ${open.missing} Abschnitte fehlen." else "Diktat eingefügt."
     }
-    fun discardOpenDictation() { openDictation.value = null }
+
+    /** Removes the open dictation only after the removal was stored. */
+    fun discardOpenDictation() {
+        if (openDictation.value == null) return
+        val removed = runCatching { store.prefs.edit().remove(OpenDictation.KEY).commit() }.getOrDefault(false)
+        if (!removed) { message.value = "Das offene Diktat konnte nicht verworfen werden. Es bleibt erhalten."; return }
+        openDictation.value = null
+    }
 
     fun improve() {
         val source = _draft.value ?: return
