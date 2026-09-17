@@ -87,7 +87,11 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 StillerKnopf("Vollbild-Wecker", { if (Build.VERSION.SDK_INT >= 34) launch(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, true) })
                 StillerKnopf("Nicht-stören-Zugriff", { launch(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS) })
                 StillerKnopf("Wecker in Nicht stören", { launch("android.settings.ZEN_MODE_SETTINGS") })
-                StillerKnopf("Akku-Einstellungen", { launch(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, true) })
+                StillerKnopf("Akku uneingeschränkt", {
+                    if (activity.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(activity.packageName))
+                        launch(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, true)
+                    else launch(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, true)
+                })
             }
             Text("Wichtig: In Androids Nicht-stören-Modus müssen Wecker zugelassen sein. Eine App kann einen vom System vollständig gesperrten Weckkanal nicht zuverlässig übergehen. Erlaube Wecker in allen verwendeten Modi und Routinen.", style = MaterialTheme.typography.bodySmall)
             Text("Unter Akku die App bei Bedarf auf „Uneingeschränkt“ stellen. Nach einem erzwungenen Stopp muss sie wieder geöffnet werden. Ein ausgeschaltetes Telefon kann nicht wecken.", style = MaterialTheme.typography.bodySmall)

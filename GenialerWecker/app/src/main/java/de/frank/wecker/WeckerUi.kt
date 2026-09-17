@@ -612,9 +612,9 @@ fun ReadinessCard(onSettings: () -> Unit, hideWhenReady: Boolean = false) {
                 null, tint = if (state.all { it.second }) Semantisch.erfolg else Semantisch.warnung)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(if (state.all { it.second }) "Weckberechtigungen bereit" else "Wecken einrichten", style = MaterialTheme.typography.titleSmall)
-                Text(state.filterNot { it.second }.joinToString(" · ") { it.first }.ifBlank { "Genaue Zeit · Sperrbildschirm · Nicht stören" }, style = MaterialTheme.typography.bodySmall)
+                Text(state.filterNot { it.second }.joinToString(" · ") { "Fehlt: ${it.first}" }.ifBlank { "Genaue Zeit · Sperrbildschirm · Nicht stören · Akku" }, style = MaterialTheme.typography.bodySmall)
             }
-            StillerKnopf("Prüfen", onSettings)
+            StillerKnopf(if (state.all { it.second }) "Prüfen" else "Beheben", onSettings, hervorgehoben = !state.all { it.second })
         }
     }
 }
@@ -644,5 +644,7 @@ fun readiness(context: Context): List<Pair<String, Boolean>> {
     return listOf("Genaue Weckzeiten" to AlarmScheduler(context).allowed(),
         "Benachrichtigungen" to manager.areNotificationsEnabled(),
         "Vollbild-Wecker" to (Build.VERSION.SDK_INT < 34 || manager.canUseFullScreenIntent()),
-        "Wecker bei Nicht stören" to (manager.isNotificationPolicyAccessGranted && allowsAlarms && manager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_NONE))
+        "Wecker bei Nicht stören" to (manager.isNotificationPolicyAccessGranted && allowsAlarms && manager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_NONE),
+        // Samsung puts optimized apps to sleep; unrestricted battery keeps restore and preparation alive.
+        "Akku uneingeschränkt" to context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName))
 }
