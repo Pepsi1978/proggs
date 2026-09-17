@@ -941,28 +941,27 @@ try {
         $claudeArgs += @('--effort', $effort)
     }
     $colorName = {{PowerShellLiteral(colorName)}}
-    if ($embeddedTerminal) {
-        # Vorhandene native Installation bevorzugen: fnm-Shims koennen auf fehlende bin/claude.exe zeigen.
-        $claudeCandidates = @(
-            (Join-Path $env:USERPROFILE '.local/bin/claude.exe'),
-            (Join-Path $env:APPDATA 'npm/node_modules/@anthropic-ai/claude-code/bin/claude.exe')
-        )
-        $claudeCandidates += @(Get-Command claude.exe -All -ErrorAction SilentlyContinue | ForEach-Object Source)
-        foreach ($shim in @(Get-Command claude -All -ErrorAction SilentlyContinue)) {
-            if ($shim.Source -and (Test-Path -LiteralPath $shim.Source -PathType Leaf)) {
-                $claudeCandidates += Join-Path (Split-Path $shim.Source -Parent) 'node_modules/@anthropic-ai/claude-code/bin/claude.exe'
-            }
+    # Für beide Terminalarten dieselbe Installation auflösen: fnm-Shims können auf fehlende Dateien zeigen.
+    $claudeCandidates = @(
+        (Join-Path $env:USERPROFILE '.local/bin/claude.exe'),
+        (Join-Path $env:APPDATA 'npm/node_modules/@anthropic-ai/claude-code/bin/claude.exe')
+    )
+    $claudeCandidates += @(Get-Command claude.exe -All -ErrorAction SilentlyContinue | ForEach-Object Source)
+    foreach ($shim in @(Get-Command claude -All -ErrorAction SilentlyContinue)) {
+        if ($shim.Source -and (Test-Path -LiteralPath $shim.Source -PathType Leaf)) {
+            $claudeCandidates += Join-Path (Split-Path $shim.Source -Parent) 'node_modules/@anthropic-ai/claude-code/bin/claude.exe'
         }
-        $claudeExecutable = $claudeCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
-        if (-not $claudeExecutable) { throw 'Keine funktionsfähige Claude-Installation gefunden. Bitte Claude Code reparieren oder installieren.' }
-        & $claudeExecutable @claudeArgs
-    } elseif ($colorName) {
-        $claudeArgs += "/color $colorName"
-        & claude @claudeArgs
-    } else {
-        $claudeArgs += '/color'
-        & claude @claudeArgs
     }
+    $claudeExecutable = $claudeCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+    if (-not $claudeExecutable) { throw 'Keine funktionsfähige Claude-Installation gefunden. Bitte Claude Code reparieren oder installieren.' }
+    if (-not $embeddedTerminal) {
+        if ($colorName) {
+            $claudeArgs += "/color $colorName"
+        } else {
+            $claudeArgs += '/color'
+        }
+    }
+    & $claudeExecutable @claudeArgs
 } finally {
     if ($focusKiller) {
         Stop-Job $focusKiller -ErrorAction SilentlyContinue
