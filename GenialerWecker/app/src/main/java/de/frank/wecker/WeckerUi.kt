@@ -55,7 +55,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -276,13 +278,8 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                                 Text(alarm.name, style = MaterialTheme.typography.titleMedium,
                                     maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
                             }
-                            IconButton(onClick = toggleDetails, modifier = Modifier.semantics {
-                                stateDescription = if (expanded) "Aufgeklappt" else "Zugeklappt"
-                            }) {
-                                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = "Weckerdetails ${if (expanded) "zuklappen" else "aufklappen"}: ${alarm.name}",
-                                    tint = gold.primaer)
-                            }
+                            KlappKnopf(expanded, toggleDetails,
+                                beschreibung = "Weckerdetails ${if (expanded) "zuklappen" else "aufklappen"}: ${alarm.name}")
                         }
                         // Reliability warnings stay visible even on collapsed cards.
                         issues[alarm.id]?.let { StatusZeile(Icons.Default.Warning, it, Semantisch.warnung) }
@@ -351,8 +348,8 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
                         Text(error, Modifier.padding(start = 6.dp), color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                if (collapsible) Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, contentDescription = null,
-                    tint = LocalGold.current.primaer, modifier = Modifier.padding(start = 8.dp).size(28.dp))
+                // The header row already announces this action; the button itself stays silent for TalkBack.
+                if (collapsible) KlappKnopf(expanded, { expanded = !expanded }, beschreibung = null, modifier = Modifier.padding(start = 8.dp))
             }
             if (expanded) content()
         }
@@ -409,20 +406,26 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             Text("Reihenfolge beim Wecken", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             if (alarm.steps.isEmpty()) Text("Noch kein Baustein ausgewählt.", style = MaterialTheme.typography.bodySmall)
-            alarm.steps.forEachIndexed { index, step ->
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${index + 1}. ${step.title}", Modifier.weight(1f))
-                    // ↑ above ↓ in one fixed 48 dp column; empty slots keep the same size, so arrows align across rows.
-                    Column(Modifier.width(48.dp)) {
-                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                            if (index > 0) IconButton({
-                                val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index - 1); vm.change(alarm.copy(steps = list))
-                            }) { Icon(Icons.Default.KeyboardArrowUp, "${step.title} nach oben", tint = LocalGold.current.primaer) }
-                        }
-                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                            if (index < alarm.steps.lastIndex) IconButton({
-                                val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index + 1); vm.change(alarm.copy(steps = list))
-                            }) { Icon(Icons.Default.KeyboardArrowDown, "${step.title} nach unten", tint = LocalGold.current.primaer) }
+            // Own compact column: 4 dp between rows instead of the section's 12 dp.
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                alarm.steps.forEachIndexed { index, step ->
+                    fun move(by: Int) {
+                        val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index + by); vm.change(alarm.copy(steps = list))
+                    }
+                    val canUp = index > 0
+                    val canDown = index < alarm.steps.lastIndex
+                    // Minimum height only: with large fonts the title wraps and the row grows instead of clipping.
+                    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).semantics {
+                        customActions = listOfNotNull(
+                            if (canUp) androidx.compose.ui.semantics.CustomAccessibilityAction("${step.title} nach oben verschieben") { move(-1); true } else null,
+                            if (canDown) androidx.compose.ui.semantics.CustomAccessibilityAction("${step.title} nach unten verschieben") { move(1); true } else null,
+                        )
+                    }, verticalAlignment = Alignment.CenterVertically) {
+                        Text("${index + 1}. ${step.title}", Modifier.weight(1f).padding(end = 8.dp))
+                        // ▲ above ▼ on one vertical line; border arrows stay in place, disabled instead of leaving a gap.
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            ReihenfolgePfeil(Icons.Default.KeyboardArrowUp, "${step.title} nach oben", canUp) { move(-1) }
+                            ReihenfolgePfeil(Icons.Default.KeyboardArrowDown, "${step.title} nach unten", canDown) { move(1) }
                         }
                     }
                 }
@@ -566,6 +569,25 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
             Text(error, color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)
             StillerKnopf("Meine Stimmen erneut laden", { vm.loadVoices(force = true) })
         }
+    }
+}
+
+/** The former raised StillerKnopf (⌃/⌄) as fold button; small body, touch target extended to 48 dp. */
+@Composable
+fun KlappKnopf(expanded: Boolean, onToggle: () -> Unit, beschreibung: String?, modifier: Modifier = Modifier) {
+    StillerKnopf(if (expanded) "⌃" else "⌄", onToggle, modifier.minimumInteractiveComponentSize().then(
+        if (beschreibung == null) Modifier.clearAndSetSemantics {}
+        else Modifier.semantics { contentDescription = beschreibung; stateDescription = if (expanded) "Aufgeklappt" else "Zugeklappt" }))
+}
+
+/** Small plastic arrow: body and touch area exactly 48 × 28 dp, no inner padding inflating it. Disabled at the ends. */
+@Composable
+private fun ReihenfolgePfeil(icon: androidx.compose.ui.graphics.vector.ImageVector, beschreibung: String, enabled: Boolean, onClick: () -> Unit) {
+    val gold = LocalGold.current
+    Knopf3D(onClick, Modifier.size(width = 48.dp, height = 28.dp), grundfarbe = gold.flaecheErhoeht,
+        form = RoundedCornerShape(8.dp), hoehe = 3.dp, aktiviert = enabled, innenAbstandWaagerecht = 0.dp, innenAbstandSenkrecht = 0.dp,
+        beschreibung = if (enabled) beschreibung else null) {
+        Icon(icon, null, tint = if (enabled) gold.primaer else gold.textGedaempft, modifier = Modifier.size(20.dp))
     }
 }
 
