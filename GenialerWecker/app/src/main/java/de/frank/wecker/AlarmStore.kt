@@ -46,8 +46,12 @@ class AlarmStore private constructor(context: Context) {
     }
     @Synchronized fun update(id: String, transform: (Alarm) -> Alarm): Alarm? = get(id)?.let { transform(it).also(::put) }
     @Synchronized fun delete(id: String) { write(state.value.filterNot { it.id == id }); issue(id, null) }
+    /** Rejected writes are rolled back in the preferences RAM too, so a later commit of another key cannot persist them. */
+    private fun commitOrRestore(keys: Collection<String>, change: (android.content.SharedPreferences.Editor) -> Unit): Boolean =
+        PrefsCommit.commitOrRestore(prefs, keys, { android.util.Log.w("WeckerStore", "Abgewiesene Änderung nicht zurückgesetzt", it) }, change)
+
     private fun write(list: List<Alarm>) {
-        check(prefs.edit().putString("alarms", JSONArray(list.map { it.json() }).toString()).commit()) {
+        check(commitOrRestore(listOf("alarms")) { it.putString("alarms", JSONArray(list.map { a -> a.json() }).toString()) }) {
             "Der Wecker konnte nicht gespeichert werden. Prüfe den freien Speicher."
         }
         state.value = list
@@ -63,7 +67,7 @@ class AlarmStore private constructor(context: Context) {
             // Only a write that changes the test alarm's own entry fails; other alarms are never affected.
             if (ringingEntries().any { it.id == testId } != entries.any { it.id == testId }) throw IllegalStateException("Testfehler beim Speichern des Klingelauftrags")
         }
-        check(prefs.edit().putString("ringing", RingEntry.ids(entries)).putString("ringingMeta", RingEntry.meta(entries)).commit())
+        check(commitOrRestore(listOf("ringing", "ringingMeta")) { it.putString("ringing", RingEntry.ids(entries)).putString("ringingMeta", RingEntry.meta(entries)) })
     }
 
     /**
@@ -76,12 +80,16 @@ class AlarmStore private constructor(context: Context) {
         if (decision !is AlarmClaim.Accepted) return decision
         val entries = ringing.filterNot { it.id == id } + decision.entry
         val list = decision.next?.let { next -> state.value.map { if (it.id == id) next else it } }
-        val edit = prefs.edit().putString("ringing", RingEntry.ids(entries)).putString("ringingMeta", RingEntry.meta(entries))
-        if (list != null) edit.putString("alarms", JSONArray(list.map { it.json() }).toString())
-        if (decision.error.isNotBlank()) edit.putString("alarmIssues", issuesWith(id, decision.error).toString())
-        check(edit.commit()) { "Der Weckauftrag konnte nicht gespeichert werden." }
+        val issues = if (decision.error.isNotBlank()) issuesWith(id, decision.error).toString() else null
+        // One commit as before; on failure exactly the touched keys are rolled back.
+        val keys = listOfNotNull("ringing", "ringingMeta", if (list != null) "alarms" else null, if (issues != null) "alarmIssues" else null)
+        check(commitOrRestore(keys) { edit ->
+            edit.putString("ringing", RingEntry.ids(entries)).putString("ringingMeta", RingEntry.meta(entries))
+            if (list != null) edit.putString("alarms", JSONArray(list.map { it.json() }).toString())
+            if (issues != null) edit.putString("alarmIssues", issues)
+        }) { "Der Weckauftrag konnte nicht gespeichert werden." }
         if (list != null) state.value = list
-        if (decision.error.isNotBlank()) issueState.value = readIssues()
+        if (decision.error.isNotBlank()) issueState.value = issueState.value + (id to decision.error)
         return decision
     }
 
@@ -95,8 +103,10 @@ class AlarmStore private constructor(context: Context) {
     /** Setzt oder löscht einen Hinweis. Schreibfehler dürfen den Weckpfad nie unterbrechen. */
     @Synchronized fun issue(id: String, message: String?) {
         if (issueState.value[id] == message) return
-        runCatching { prefs.edit().putString("alarmIssues", issuesWith(id, message).toString()).commit() }
-        issueState.value = readIssues().let { if (message == null) it - id else it + (id to message) }
+        runCatching { commitOrRestore(listOf("alarmIssues")) { it.putString("alarmIssues", issuesWith(id, message).toString()) } }
+        // Best effort as before: built from the visible state, so a hint that could not be stored (and was rolled back in the
+        // preferences RAM) stays shown, also when another alarm's hint changes later.
+        issueState.value = issueState.value.let { if (message == null) it - id else it + (id to message) }
     }
     companion object {
         @androidx.annotation.VisibleForTesting @Volatile var failRingingWriteForTestId: String? = null
