@@ -79,10 +79,10 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     private fun persistDraft(alarm: Alarm) { store.prefs.edit().putString("draft", alarm.json().toString()).putBoolean("draft_is_new", draftIsNew).apply() }
     fun closeEditor() { _draft.value = null; store.prefs.edit().remove("draft").remove("draft_is_new").apply() }
-    fun runAction(label: String, action: suspend () -> Unit) {
+    fun runAction(label: String, silent: Boolean = false, action: suspend () -> Unit) {
         if (actionJob?.isActive == true) { message.value = "Bitte warte auf den laufenden Vorgang."; return }
         actionJob = viewModelScope.launch {
-            busy.value = label
+            if (!silent) busy.value = label
             try { action() }
             catch (e: CancellationException) { throw e }
             catch (e: Exception) { message.value = e.message ?: "Der Vorgang ist fehlgeschlagen." }
@@ -110,7 +110,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
-    fun toggle(alarm: Alarm, enabled: Boolean) = runAction("Weckzeit ändern …") {
+    fun toggle(alarm: Alarm, enabled: Boolean) = runAction("Weckzeit ändern …", silent = true) {
         withContext(Dispatchers.IO) { scheduler.save(alarm.copy(enabled = enabled)) }
         if (enabled && alarm.needsSpeech) PreparationWorker.enqueue(app)
     }

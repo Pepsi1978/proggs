@@ -169,7 +169,8 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                         Text(Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm")),
                             fontFamily = IdeenSchriftBetont, fontSize = 72.sp, color = gold.primaer)
                         Text(if (next == null) "Zeit für einen guten Morgen." else "Nächster Wecker: ${formatAt(next)}", color = gold.textGedaempft)
-                        if (next != null) Text("In ${remaining(next - now)}", style = MaterialTheme.typography.bodySmall, color = gold.primaer)
+                        // Always reserve the line so toggling a switch never changes the card height.
+                        Text(if (next != null) "In ${remaining(next - now)}" else " ", style = MaterialTheme.typography.bodySmall, color = gold.primaer)
                         Spacer(Modifier.height(18.dp))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             GoldKnopf("＋ Wecker", onNew, hauptKnopf = true)
