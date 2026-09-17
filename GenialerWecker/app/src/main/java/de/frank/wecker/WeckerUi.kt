@@ -140,11 +140,14 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                         "edit" -> draft?.let { alarm -> Column(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(1f)) { key(alarm.id) { AlarmEditor(vm, alarm, activity) } }
                             Box(Modifier.fillMaxWidth().background(gold.flaeche.copy(alpha = .85f)).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                                GoldKnopf("Wecker speichern", {
-                                    if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                                        notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    } else vm.save { page = "alarms" }
-                                }, Modifier.fillMaxWidth(), aktiviert = busy.isBlank() && !recording, hauptKnopf = true)
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    GoldKnopf("Wecker speichern", {
+                                        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                            notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        } else vm.save { page = "alarms" }
+                                    }, Modifier.fillMaxWidth(), aktiviert = busy.isBlank() && !recording, hauptKnopf = true)
+                                    SpeicherVorschau(alarm)
+                                }
                             }
                         } } ?: Box(Modifier.fillMaxSize())
                         "settings" -> SettingsPage(vm, activity)
@@ -319,7 +322,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
 }
 
 @Composable
-fun Section(title: String, collapsible: Boolean = false, summary: String = "", content: @Composable ColumnScope.() -> Unit) {
+fun Section(title: String, collapsible: Boolean = false, summary: String = "", error: String? = null, content: @Composable ColumnScope.() -> Unit) {
     var expanded by rememberSaveable(title) { mutableStateOf(!collapsible) }
     GoldKarte(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(18.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -327,6 +330,11 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", c
                 Column(Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.titleMedium, color = LocalGold.current.primaer)
                     if (!expanded && summary.isNotBlank()) Text(summary, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                    // A missing required input is shown in its own card, also while collapsed.
+                    if (error != null) Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, null, tint = Semantisch.warnung, modifier = Modifier.size(18.dp))
+                        Text(error, Modifier.padding(start = 6.dp), color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
                 if (collapsible) StillerKnopf(if (expanded) "⌃" else "⌄", { expanded = !expanded }, Modifier.semantics {
                     contentDescription = "$title ${if (expanded) "zuklappen" else "aufklappen"}"
@@ -372,9 +380,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             }
             OutlinedTextField(alarm.name, { vm.change(alarm.copy(name = it)) }, Modifier.fillMaxWidth(), label = { Text("Name des Weckers") }, singleLine = true)
             RepeatEditor(alarm, activity, vm::change)
-            Text("Beim Speichern wird dieser Wecker automatisch aktiviert.", style = MaterialTheme.typography.bodySmall)
         }
-        Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }) {
+        Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }.ifBlank { "Kein Schritt gewählt" },
+            error = if (alarm.steps.isEmpty()) "Wähle mindestens einen Weckschritt." else null) {
             Text("Wähle die Bausteine und ihre Reihenfolge. Der gesamte Ablauf wiederholt sich bis zum Stoppen; Songs laufen vollständig durch.", style = MaterialTheme.typography.bodySmall)
             Step.entries.forEach { step -> Toggle(step.title, step in alarm.steps) { checked ->
                 vm.change(alarm.copy(steps = if (checked) alarm.steps + step else alarm.steps - step))
@@ -394,7 +402,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             if (Step.IDEAS in alarm.steps) Text("Die offenen Ideen werden in ihrer Reihenfolge aus Geniale Ideen gelesen. Bei bestehender Verbindung bereitet die App Änderungen automatisch vor.", style = MaterialTheme.typography.bodySmall)
         }
         if (alarm.needsSpeech) AlarmSpeechEditor(vm, alarm)
-        if (Step.MUSIC in alarm.steps || Step.TONE in alarm.steps) Section("Musik & Klingelzeichen", collapsible = true, summary = alarm.musicName) {
+        if (Step.MUSIC in alarm.steps || Step.TONE in alarm.steps) Section("Musik & Klingelzeichen", collapsible = true, summary = listOfNotNull(
+            if (Step.TONE in alarm.steps) "Klingelzeichen: ${Tones.names[alarm.cue] ?: alarm.cue}" else null,
+            if (Step.MUSIC in alarm.steps) "Musik: ${alarm.musicName}" else null).joinToString(" · ")) {
             if (Step.TONE in alarm.steps) Choice("Klingelzeichen vor dem Text", alarm.cue, Tones.names.toList()) { vm.change(alarm.copy(cue = it)) }
             Text(alarm.musicName, style = MaterialTheme.typography.bodyMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -418,7 +428,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             StillerKnopf("Vorschau stoppen", vm::stopPreview)
             Text("Das Erinnerungszeichen dauert 2 Sekunden, die anderen eingebauten Signale 6 Sekunden. Der Musikschritt spielt die ganze Datei ab. Alle eingebauten Signale wurden eigens für diese App erzeugt.", style = MaterialTheme.typography.bodySmall)
         }
-        if (Step.TEXT in alarm.steps) Section("Deine Erinnerung") {
+        if (Step.TEXT in alarm.steps) Section("Deine Erinnerung", error = if (alarm.text.isBlank()) "Der Erinnerungstext fehlt." else null) {
             OutlinedTextField(alarm.text, { vm.change(alarm.copy(text = it)) }, Modifier.fillMaxWidth().heightIn(min = 160.dp), label = { Text("Text, der vorgelesen werden soll") })
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 GoldKnopf(if (recording) "■ Diktat abschließen" else "● Diktieren", {
@@ -431,7 +441,12 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             }
             Text("Groq · Whisper Large V3 Turbo. Die KI-Textverbesserung nutzt dieselbe ChatGPT-Anmeldung und Modellauswahl wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
         }
-        Section("Lautstärke & Schlummern", collapsible = true, summary = "${alarm.volume} % Lautstärke · ${alarm.snoozeMinutes} Min. schlummern") {
+        Section("Lautstärke & Schlummern", collapsible = true, summary = listOf(
+            "${alarm.volume} % Lautstärke",
+            if (alarm.fadeSeconds > 0) "Anschwellen ${alarm.fadeSeconds} Sek." else "ohne Anschwellen",
+            if (alarm.vibrate) "Vibration an" else "Vibration aus",
+            if (alarm.snoozeLimit == 0) "Schlummern deaktiviert" else "Schlummern ${alarm.snoozeMinutes} Min., bis ${alarm.snoozeLimit}×",
+        ).joinToString(" · ")) {
             ValueSlider("Wecklautstärke", alarm.volume, 1..100, "%") { vm.change(alarm.copy(volume = it)) }
             Text("Diese Lautstärke gilt beim Wecken unabhängig von der bisherigen Lautstärke. Android setzt sie auf die nächste unterstützte Lautstärkestufe. Danach wird der vorherige Wert wiederhergestellt.", style = MaterialTheme.typography.bodySmall)
             ValueSlider("Sanftes Anschwellen", alarm.fadeSeconds, 0..120, "Sek.") { vm.change(alarm.copy(fadeSeconds = it)) }
@@ -439,7 +454,14 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             ValueSlider("Schlummerdauer", alarm.snoozeMinutes, 1..60, "Min.") { vm.change(alarm.copy(snoozeMinutes = it)) }
             ValueSlider("Erlaubte Schlummerpausen", alarm.snoozeLimit, 0..20, "") { vm.change(alarm.copy(snoozeLimit = it)) }
         }
-        Section("Aufstehen zum Ausschalten", collapsible = true, summary = if (alarm.photoRequired) "Foto-Aufgabe aktiv" else "Normaler Stoppknopf") {
+        Section("Aufstehen zum Ausschalten", collapsible = true,
+            summary = if (!alarm.photoRequired) "Normaler Stoppknopf" else listOfNotNull(
+                if (alarm.reference.isNotBlank()) "Referenzmotiv ab ${alarm.photoTolerance} % Ähnlichkeit" else null,
+                if (alarm.minBrightness > 0) "Helligkeit ab ${alarm.minBrightness} %" else null,
+                if (alarm.color != "none") "${PhotoCheck.colors[alarm.color]} ab ${alarm.colorPercent} %" else null,
+            ).joinToString(" · ", prefix = "Foto-Aufgabe: ").removeSuffix("Foto-Aufgabe: ").ifBlank { "Foto-Aufgabe ohne Bedingung" },
+            error = if (alarm.photoRequired && alarm.reference.isBlank() && alarm.color == "none" && alarm.minBrightness == 0)
+                "Lege ein Referenzfoto, eine Mindesthelligkeit oder eine Farbe fest." else null) {
             Toggle("Foto-Aufgabe aktivieren", alarm.photoRequired) { vm.change(alarm.copy(photoRequired = it)) }
             if (alarm.photoRequired) {
                 Text("Zum Stoppen muss ein neues Kamerafoto die ausgewählten Bedingungen erfüllen. Die Prüfung läuft vollständig auf dem Gerät. Mehrere Bedingungen müssen gemeinsam erfüllt sein.", style = MaterialTheme.typography.bodySmall)
@@ -570,7 +592,9 @@ private fun dateLabel(date: String) = java.time.LocalDate.parse(date).format(Dat
 private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Alarm) -> Unit) {
     val today = java.time.LocalDate.now()
     val mode = when { alarm.intervalDays > 0 -> "interval"; alarm.startDate.isNotBlank() -> "date"; alarm.days.size == 7 -> "daily"; alarm.days.isNotEmpty() -> "weekdays"; else -> "once" }
-    Choice("Wann soll er wecken?", mode, listOf("once" to "Einmalig", "daily" to "Täglich", "weekdays" to "An bestimmten Wochentagen", "date" to "In X Tagen / an einem Datum", "interval" to "Schichtwecker · alle X Tage")) { chosen ->
+    fun changeMode(chosen: String) {
+        // Tapping the active mode again changes nothing, so a chosen date or individual weekdays are never reset.
+        if (chosen == mode) return
         change(when (chosen) {
             "daily" -> alarm.copy(days = (1..7).toSet(), startDate = "", intervalDays = 0)
             "weekdays" -> alarm.copy(days = setOf(1, 2, 3, 4, 5), startDate = "", intervalDays = 0)
@@ -578,6 +602,12 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Ala
             "interval" -> alarm.copy(days = emptySet(), startDate = today.plusDays(1).toString(), intervalDays = 35)
             else -> alarm.copy(days = emptySet(), startDate = "", intervalDays = 0)
         })
+    }
+    Text("Wann soll er wecken?", style = MaterialTheme.typography.labelLarge)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        listOf("once" to "Einmalig", "daily" to "Täglich", "weekdays" to "An Wochentagen", "date" to "An einem Datum", "interval" to "Schicht · alle X Tage").forEach { (id, label) ->
+            FilterChip(mode == id, { changeMode(id) }, { Text(label) })
+        }
     }
     if (mode == "weekdays") {
         val names = listOf("Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag")
@@ -610,8 +640,6 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, change: (Ala
         })
         if (mode == "interval") Text("Der Rhythmus bleibt am Startdatum verankert. Schlummern oder das Auslassen eines Termins verschiebt deine Schichtfolge nicht.", style = MaterialTheme.typography.bodySmall)
     }
-    val next = runCatching { AlarmTime.next(alarm) }.getOrNull()
-    Text(next?.let { "Nächster Termin: ${formatAt(it)}" } ?: "Bitte einen zukünftigen Termin wählen.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.primaer)
 }
 /** Like [remaining], but switches to days beyond 24 hours. */
 fun remainingLong(ms: Long): String {
@@ -667,6 +695,21 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
         }
         drawCircle(gold.textPrimaer, 3.5f.dp.toPx(), point(angle(now)))
         if (target != null) drawCircle(accent, 5.5f.dp.toPx(), point(angle(target)))
+    }
+}
+
+/** What saving will do: switched on, and the term it will then ring. Not a claim that it is already planned. */
+@Composable
+private fun SpeicherVorschau(alarm: Alarm) {
+    val minute = rememberNow(60_000)
+    val next = remember(alarm, minute) { runCatching { AlarmTime.next(alarm, Instant.ofEpochMilli(minute)) }.getOrNull() }
+    if (next != null) Text("Nach dem Speichern eingeschaltet · klingelt dann ${formatAt(next)} (in ${remainingLong(next - minute)})",
+        Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+    else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Warning, null, tint = Semantisch.warnung, modifier = Modifier.size(18.dp))
+        Text("Nach dem Speichern gäbe es keinen zukünftigen Termin – ändere Datum oder Uhrzeit.", Modifier.padding(start = 6.dp),
+            style = MaterialTheme.typography.bodySmall, color = Semantisch.warnung)
     }
 }
 
