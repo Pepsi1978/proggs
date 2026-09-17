@@ -58,6 +58,9 @@ data class Alarm(
     val timeLabel: String get() = "%02d:%02d".format(hour, minute)
     val needsSpeech: Boolean get() = steps.any { it == Step.IDEAS || it == Step.TEXT }
     val repeats: Boolean get() = days.isNotEmpty() || intervalDays > 0
+    /** A one-off alarm on a fixed date whose time has already passed; it cannot be switched on unchanged. */
+    fun isExpiredOnce(now: Instant = Instant.now()): Boolean = startDate.isNotBlank() && intervalDays == 0 &&
+        runCatching { AlarmTime.next(this, now) }.isFailure
     fun sameSpeechAs(other: Alarm): Boolean = text == other.text && steps == other.steps &&
         voiceProvider == other.voiceProvider && voiceId == other.voiceId && speechRate == other.speechRate
     fun validate() {

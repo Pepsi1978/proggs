@@ -247,7 +247,11 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                     Column(Modifier.padding(18.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Switch(alarm.enabled, { vm.toggle(alarm, it) }, Modifier.semantics {
+                            Switch(alarm.enabled, { on ->
+                                // A one-off date that has passed cannot ring: open the editor to pick a new date instead of failing.
+                                val latest = vm.store.get(alarm.id) ?: alarm
+                                if (on && latest.isExpiredOnce()) onEdit(latest) else vm.toggle(alarm, on)
+                            }, Modifier.semantics {
                                 contentDescription = "Wecker aktivieren: ${alarm.name}"
                             }, colors = SchalterFarben())
                             Column(Modifier.weight(1f).clickable(
@@ -351,6 +355,15 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
         if (allowed) vm.startRecording() else vm.message.value = "Für das Diktat wird die Mikrofonberechtigung benötigt."
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Derived from this draft only, so it disappears once corrected and never carries over to another draft.
+        val minute = rememberNow(60_000)
+        if (remember(alarm, minute) { alarm.isExpiredOnce() }) GoldKarte(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.EventBusy, null, tint = Semantisch.warnung)
+                Text("Dieses Datum liegt in der Vergangenheit. Wähle einen neuen Termin – beim Speichern wird der Wecker eingeschaltet.",
+                    Modifier.padding(start = 12.dp), color = Semantisch.warnung, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
         Section("Deine Weckzeit") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val pickTime = { TimePickerDialog(activity, { _, hour, minute -> vm.change(alarm.copy(hour = hour, minute = minute)) }, alarm.hour, alarm.minute, true).show() }
