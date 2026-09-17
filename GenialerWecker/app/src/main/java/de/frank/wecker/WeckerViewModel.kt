@@ -22,6 +22,9 @@ import java.util.UUID
 
 enum class RecordingKind { DIKTAT, STIMMPROBE }
 data class RecordingSession(val kind: RecordingKind, val draftId: String?, val draftName: String, val editorGeneration: Long, val startedAt: Long)
+/** One saved-and-closed editor; [generation] makes every save a distinct event. */
+data class SavedEvent(val id: String, val generation: Long)
+
 data class OpenDictation(val draftId: String, val draftName: String, val text: String, val missing: Int, val createdAt: Long = 0) {
     fun json(): String = JSONObject().put("v", 1).put("draftId", draftId).put("draftName", draftName)
         .put("text", text).put("missing", missing).put("createdAt", createdAt).toString()
@@ -87,6 +90,9 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     /** Processing text after a recording, e.g. while stopping or transcribing. */
     val recordingStatus = MutableStateFlow("")
     val openDictation = MutableStateFlow<OpenDictation?>(null)
+    /** Confirmation shown on the saved card instead of a success banner. */
+    val lastSaved = MutableStateFlow<SavedEvent?>(null)
+    private var savedGeneration = 0L
     val recordingLevel = recorder.pegel
     private var stopping = false
     private var dictationJob: Job? = null
@@ -166,17 +172,26 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 // Once stored, a retry must update the entry instead of failing on the existing id.
                 if (create && store.get(alarm.id) != null && _draft.value?.id == alarm.id) { draftIsNew = false; _draft.value?.let(::persistDraft) }
             }
-            if (_draft.value == source) { closeEditor(); done() }
+            val closed = _draft.value == source
+            if (closed) { closeEditor(); done() }
             val nextAt = store.get(alarm.id)?.nextAt ?: 0
-            message.value = if (!planned) "${alarm.name} gespeichert, aber nicht geplant: ${store.issues.value[alarm.id].orEmpty()}"
-                else if (notificationsDenied) "${alarm.name} gespeichert. Ohne Benachrichtigungen fehlen Vollbild und Sperrbildschirm-Tasten – bitte in den Einstellungen erlauben."
-                else if (nextAt > 0) "${alarm.name} gespeichert · klingelt ${formatAt(nextAt)} (in ${remaining(nextAt - System.currentTimeMillis())})."
-                else "${alarm.name} gespeichert und aktiviert."
+            when {
+                // Real warnings stay visible as messages.
+                !planned -> message.value = "${alarm.name} gespeichert, aber nicht geplant: ${store.issues.value[alarm.id].orEmpty()}"
+                notificationsDenied -> message.value = "${alarm.name} gespeichert. Ohne Benachrichtigungen fehlen Vollbild und Sperrbildschirm-Tasten – bitte in den Einstellungen erlauben."
+                // Success with the unchanged source draft closed: the list confirms on the card itself, no banner.
+                closed -> lastSaved.value = SavedEvent(alarm.id, ++savedGeneration)
+                // Editor stays open because the draft changed meanwhile: there is no card to show, so keep the message.
+                nextAt > 0 -> message.value = "${alarm.name} gespeichert · klingelt ${formatAt(nextAt)} (in ${remaining(nextAt - System.currentTimeMillis())})."
+                else -> message.value = "${alarm.name} gespeichert und aktiviert."
+            }
             if (alarm.needsSpeech) {
                 prepare(store.get(alarm.id)!!)
             }
         }
     }
+    /** Clears only the event of this generation; an older confirmation ending never removes a newer one. */
+    fun consumeSaved(generation: Long) { if (lastSaved.value?.generation == generation) lastSaved.value = null }
     fun toggle(alarm: Alarm, enabled: Boolean) = runAction("Weckzeit ändern …", silent = true) {
         val planned = withContext(Dispatchers.IO) { scheduler.setEnabled(alarm.id, enabled) }
         // Success stays silent: the next-alarm card already shows date, time and remaining time.

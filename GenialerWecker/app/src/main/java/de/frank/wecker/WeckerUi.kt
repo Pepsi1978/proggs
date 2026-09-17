@@ -17,6 +17,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -201,9 +206,36 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
     val nextSnooze = alarms.mapNotNull { alarm -> alarm.snoozeUntil.takeIf { it > now } }.minOrNull()
     val next = listOfNotNull(nextRegular, nextSnooze).minOrNull()
     val nextIsSnooze = next != null && next == nextSnooze
+    val gridState = rememberLazyGridState()
+    val saved by vm.lastSaved.collectAsStateWithLifecycle()
+    val resumed = rememberResumed()
+    val reducedMotion = LocalBewegungReduziert.current
+    val glow = remember { androidx.compose.animation.core.Animatable(0f) }
+    var glowFor by remember { mutableStateOf<SavedEvent?>(null) }
+    LaunchedEffect(saved, resumed, reducedMotion) {
+        val event = saved ?: return@LaunchedEffect
+        if (!resumed) return@LaunchedEffect
+        val alarmIndex = alarms.indexOfFirst { it.id == event.id }
+        if (alarmIndex >= 0) {
+            // Header and readiness are always items; the open-draft card only when shown.
+            val index = 2 + (if (openDraft != null) 1 else 0) + alarmIndex
+            val visible = gridState.layoutInfo.visibleItemsInfo.any { it.key == event.id }
+            // Never fight the user: no scroll while they scroll, and their gesture may interrupt ours.
+            if (!visible && !gridState.isScrollInProgress) try {
+                if (reducedMotion) gridState.scrollToItem(index) else gridState.animateScrollToItem(index)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                if (!currentCoroutineContext().isActive) throw e
+            }
+            glowFor = event
+            if (reducedMotion) { glow.snapTo(.6f); delay(2000); glow.snapTo(0f) }
+            else { glow.snapTo(0f); glow.animateTo(.6f, androidx.compose.animation.core.tween(300)); glow.animateTo(0f, androidx.compose.animation.core.tween(600)) }
+            if (glowFor == event) glowFor = null
+        }
+        vm.consumeSaved(event.generation)
+    }
     BoxWithConstraints {
         val ringSize = if (maxWidth < 360.dp) 88.dp else 104.dp
-        LazyVerticalGrid(columns = GridCells.Fixed(if (maxWidth >= 680.dp) 2 else 1),
+        LazyVerticalGrid(columns = GridCells.Fixed(if (maxWidth >= 680.dp) 2 else 1), state = gridState,
             contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -251,11 +283,15 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                 val toggleDetails = {
                     expandedIds = if (expanded) expandedIds - alarm.id else expandedIds + alarm.id
                 }
-                GoldKarte(Modifier.fillMaxWidth().animateItem().clickable(
+                val glowAlpha = if (glowFor?.id == alarm.id) glow.value else 0f
+                GoldKarte(Modifier.fillMaxWidth().animateItem()
+                    .then(if (glowAlpha > 0f) Modifier.border(2.dp, gold.primaer.copy(alpha = glowAlpha), RoundedCornerShape(20.dp)) else Modifier)
+                    .clickable(
                     interactionSource = remember { MutableInteractionSource() }, indication = null,
                     enabled = !expanded, onClickLabel = "Wecker bearbeiten",
                     onClick = { onEdit(alarm) })) {
-                    Column(Modifier.padding(18.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // No animateContentSize here: the detail block animates its own size, never two size animations at once.
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Switch(alarm.enabled, { on ->
@@ -287,9 +323,16 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                         }
                         // One compact line tells when it rings, without opening the card.
                         if (alarm.enabled && alarm.nextAt > 0 && alarm.sleepMinutes > 0) SchlafZeile(Schlaf.hinweis(alarm.nextAt, alarm.sleepMinutes, now))
-                        if (!expanded) Text(if (alarm.enabled && alarm.nextAt > 0) "${scheduleLabel(alarm)} · ${formatAt(alarm.nextAt)}" else "${scheduleLabel(alarm)} · ausgeschaltet",
-                            color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (expanded) {
+                        // Without RESUMED or with reduced motion the details switch instantly.
+                        val detailEnter = if (reducedMotion || !resumed) androidx.compose.animation.EnterTransition.None
+                            else androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(200)) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200))
+                        val detailExit = if (reducedMotion || !resumed) androidx.compose.animation.ExitTransition.None
+                            else androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(200)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
+                        AnimatedVisibility(!expanded, enter = detailEnter, exit = detailExit) {
+                            Text(if (alarm.enabled && alarm.nextAt > 0) "${scheduleLabel(alarm)} · ${formatAt(alarm.nextAt)}" else "${scheduleLabel(alarm)} · ausgeschaltet",
+                                color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        AnimatedVisibility(expanded, enter = detailEnter, exit = detailExit) { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(scheduleLabel(alarm), color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall)
                             Text(alarm.steps.joinToString(" → ") { it.title }, color = gold.primaer, style = MaterialTheme.typography.bodySmall)
                             val skipped = alarm.enabled && alarm.repeats && alarm.nextAt > 0 &&
@@ -306,6 +349,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                                 Text(status, style = MaterialTheme.typography.bodySmall,
                                     color = if (alarm.preparationError.isNotBlank() || alarm.preparedAt == 0L) Semantisch.warnung else Semantisch.erfolg)
                             }
+                            // Frequent actions first.
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 StillerKnopf("Bearbeiten", { onEdit(alarm) }, hervorgehoben = true)
                                 StillerKnopf("Testwecken", { vm.test(alarm) })
@@ -313,11 +357,18 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                                     if (skipped) StillerKnopf("Auslassen rückgängig", { vm.unskip(alarm) })
                                     else StillerKnopf("Nächsten Termin auslassen", { vm.skip(alarm) })
                                 }
+                            }
+                            // Rare actions second.
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 if (alarm.needsSpeech) StillerKnopf("Audio vorbereiten", { vm.prepare(alarm) })
                                 StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0, snoozes = 0)) })
+                            }
+                            // Delete separated by a divider and its own end-aligned row, without a fixed width.
+                            HorizontalDivider(color = gold.textGedaempft.copy(alpha = .3f))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                                 StillerKnopf("Löschen", { onDelete(alarm) })
                             }
-                        }
+                        } }
                     }
                 }
             }
