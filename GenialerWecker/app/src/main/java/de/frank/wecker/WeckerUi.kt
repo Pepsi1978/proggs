@@ -335,8 +335,8 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                         AnimatedVisibility(expanded, enter = detailEnter, exit = detailExit) { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(scheduleLabel(alarm), color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall)
                             Text(alarm.steps.joinToString(" → ") { it.title }, color = gold.primaer, style = MaterialTheme.typography.bodySmall)
-                            val skipped = alarm.enabled && alarm.repeats && alarm.nextAt > 0 &&
-                                runCatching { alarm.nextAt > AlarmTime.next(alarm, Instant.ofEpochMilli(now)) }.getOrDefault(false)
+                            // Skip mark when present; entries without a mark keep the former nextAt comparison.
+                            val skipped = AlarmTime.isSkipping(alarm, Instant.ofEpochMilli(now))
                             if (alarm.enabled && alarm.nextAt > 0) StatusZeile(Icons.Default.Alarm, "Nächster Termin: ${formatAt(alarm.nextAt)}", gold.textPrimaer)
                             if (skipped) StatusZeile(Icons.Default.SkipNext, "Ein Termin wird ausgelassen", gold.primaer)
                             Text("Lautstärke ${alarm.volume} %${if (alarm.photoRequired) " · Foto-Aufgabe" else ""}", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
@@ -361,7 +361,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             // Rare actions second.
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 if (alarm.needsSpeech) StillerKnopf("Audio vorbereiten", { vm.prepare(alarm) })
-                                StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0, snoozes = 0)) })
+                                StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0, snoozes = 0, skippedThrough = "")) })
                             }
                             // Delete separated by a divider and its own end-aligned row, without a fixed width.
                             HorizontalDivider(color = gold.textGedaempft.copy(alpha = .3f))

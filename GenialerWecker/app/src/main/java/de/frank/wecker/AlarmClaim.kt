@@ -48,8 +48,9 @@ object AlarmClaim {
         }
         if (!alarm.enabled || alarm.nextAt != at) return Rejected
         return try {
-            Accepted(alarm.copy(enabled = alarm.repeats, snoozes = 0,
-                nextAt = if (alarm.repeats) AlarmTime.next(alarm, Instant.ofEpochMilli(maxOf(at, now) + 1000), zone) else 0), entry)
+            // The follow-up respects the skip mark; once passed, the mark is cleared in the same write (tidy-up only).
+            Accepted(alarm.copy(enabled = alarm.repeats, snoozes = 0, skippedThrough = "",
+                nextAt = if (alarm.repeats) AlarmTime.nextRespectingSkip(alarm, Instant.ofEpochMilli(maxOf(at, now) + 1000), zone) else 0), entry)
         } catch (e: RuntimeException) {
             Accepted(null, entry, "Der Folgetermin konnte nicht berechnet werden (${e.message ?: e.javaClass.simpleName}).")
         }
@@ -62,7 +63,8 @@ object AlarmClaim {
      */
     fun recomputeNextAt(alarm: Alarm, now: Long, zone: ZoneId = ZoneId.systemDefault()): Alarm {
         if (!alarm.enabled) return alarm
-        return try { alarm.copy(nextAt = AlarmTime.next(alarm, Instant.ofEpochMilli(now), zone)) }
+        // A skip mark is a local date, so it survives clock and zone changes.
+        return try { alarm.copy(nextAt = AlarmTime.nextRespectingSkip(alarm, Instant.ofEpochMilli(now), zone)) }
         catch (_: IllegalArgumentException) { alarm.copy(enabled = false, nextAt = 0) }
     }
 
@@ -74,7 +76,7 @@ object AlarmClaim {
         if (!alarm.enabled || alarm.nextAt !in 1..now) return alarm to ""
         if (!alarm.repeats) return alarm.copy(enabled = false, nextAt = 0) to ""
         return try {
-            alarm.copy(nextAt = AlarmTime.next(alarm, Instant.ofEpochMilli(maxOf(alarm.nextAt, now) + 1000), zone)) to ""
+            alarm.copy(skippedThrough = "", nextAt = AlarmTime.nextRespectingSkip(alarm, Instant.ofEpochMilli(maxOf(alarm.nextAt, now) + 1000), zone)) to ""
         } catch (e: RuntimeException) {
             alarm.copy(enabled = false, nextAt = 0) to "Die Wiederholung konnte nicht berechnet werden. Der Wecker wurde ausgeschaltet; bitte neu speichern."
         }

@@ -56,10 +56,18 @@ data class Alarm(
     val preparationError: String = "",
     /** Gewünschte Schlafdauer in Minuten (30-Minuten-Schritte, 30 bis 1440); 0 = keine Angabe. */
     val sleepMinutes: Int = 0,
+    /**
+     * Auslassungsmarke als lokales ISO-Datum ("2026-09-19"), nur für wiederholende Wecker: ALLE Termine bis einschließlich
+     * dieses Kalendertags gelten als ausgelassen. Ortszeit statt Zeitpunkt, damit ein Uhr- oder Zeitzonenwechsel die
+     * Auslassung nicht verliert. Leer = keine Marke (auch bei älteren Einträgen).
+     */
+    val skippedThrough: String = "",
 ) {
     val timeLabel: String get() = "%02d:%02d".format(hour, minute)
     val needsSpeech: Boolean get() = steps.any { it == Step.IDEAS || it == Step.TEXT }
     val repeats: Boolean get() = days.isNotEmpty() || intervalDays > 0
+    /** The skip mark as date, only for repeating alarms; an unreadable value counts as no mark. */
+    val skipDate: LocalDate? get() = if (!repeats || skippedThrough.isBlank()) null else runCatching { LocalDate.parse(skippedThrough) }.getOrNull()
     /** A one-off alarm on a fixed date whose time has already passed; it cannot be switched on unchanged. */
     fun isExpiredOnce(now: Instant = Instant.now()): Boolean = startDate.isNotBlank() && intervalDays == 0 &&
         runCatching { AlarmTime.next(this, now) }.isFailure
@@ -97,6 +105,7 @@ data class Alarm(
         put("voiceVariants", JSONArray(voiceVariants.map { it.json() }))
         put("preparedAt", preparedAt); put("preparedSpeed", preparedSpeed); put("preparedSignature", preparedSignature); put("preparationError", preparationError)
         put("sleepMinutes", sleepMinutes)
+        put("skippedThrough", skippedThrough)
     }
     companion object {
         fun from(j: JSONObject) = Alarm(
@@ -121,6 +130,7 @@ data class Alarm(
             preparationError = j.optString("preparationError"),
             // Older entries have no field; an invalid stored value falls back to "no sleep duration".
             sleepMinutes = j.optInt("sleepMinutes", 0).takeIf(Schlaf::valid) ?: 0,
+            skippedThrough = j.optString("skippedThrough", "").takeIf { raw -> raw.isBlank() || runCatching { LocalDate.parse(raw) }.isSuccess } ?: "",
         )
     }
 }
@@ -162,4 +172,28 @@ object AlarmTime {
             }
         }.filter { it > now }.minOrNull()!!.toEpochMilli()
     }
+
+    /**
+     * Like [next], but no candidate on or before the skip date. The search starts one nanosecond before the start of the
+     * following day, so a 00:00 alarm on that day is kept; one candidate per calendar day makes a date mark sufficient.
+     */
+    fun nextRespectingSkip(alarm: Alarm, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): Long {
+        val skip = alarm.skipDate ?: return next(alarm, now, zone)
+        val afterSkip = skip.plusDays(1).atStartOfDay(zone).toInstant().minusNanos(1)
+        return next(alarm, if (afterSkip > now) afterSkip else now, zone)
+    }
+
+    /**
+     * Whether the card shows "skipped": with a mark, the regular next occurrence lies on or before the mark date; without
+     * a mark (entries from before the mark existed) the former nextAt comparison stays as fallback.
+     */
+    fun isSkipping(alarm: Alarm, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): Boolean {
+        if (!alarm.enabled || !alarm.repeats || alarm.nextAt <= 0) return false
+        val regular = runCatching { next(alarm, now, zone) }.getOrNull() ?: return false
+        val skip = alarm.skipDate ?: return alarm.nextAt > regular
+        return !Instant.ofEpochMilli(regular).atZone(zone).toLocalDate().isAfter(skip)
+    }
+
+    /** Local calendar date of an instant, used to set the skip mark. */
+    fun localDate(time: Long, zone: ZoneId = ZoneId.systemDefault()): LocalDate = Instant.ofEpochMilli(time).atZone(zone).toLocalDate()
 }

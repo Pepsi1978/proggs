@@ -103,7 +103,7 @@ class AlarmScheduler(private val context: Context) {
             else if (updated.enabled && updated.nextAt < now) {
                 updated = if (now - updated.nextAt < AlarmClaim.STALE_MS) updated.copy(nextAt = now + 2000)
                 else if (!updated.repeats) updated.copy(enabled = false, nextAt = 0)
-                else updated.copy(nextAt = AlarmTime.next(updated))
+                else updated.copy(nextAt = AlarmTime.nextRespectingSkip(updated))
             }
             if (updated.snoozeUntil in 1 until now) updated =
                 if (now - updated.snoozeUntil < AlarmClaim.STALE_MS) updated.copy(snoozeUntil = now + 2000)
@@ -126,7 +126,8 @@ class AlarmScheduler(private val context: Context) {
         val base = if (stored != null && stored.sameSpeechAs(alarm)) alarm.copy(prepared = stored.prepared, voiceVariants = stored.voiceVariants,
             preparedAt = stored.preparedAt, preparedSpeed = stored.preparedSpeed, preparedSignature = stored.preparedSignature,
             preparationError = stored.preparationError) else alarm
-        val updated = base.copy(nextAt = if (alarm.enabled) AlarmTime.next(alarm) else 0, snoozeUntil = 0, snoozes = 0)
+        // Saving or toggling recomputes from now and clears the skip mark, as before.
+        val updated = base.copy(nextAt = if (alarm.enabled) AlarmTime.next(alarm) else 0, snoozeUntil = 0, snoozes = 0, skippedThrough = "")
         if (create) store.insertNew(updated) else store.put(updated)
         SnoozeNotice.cancel(context, updated.id)
         store.issue(updated.id, null)
@@ -146,15 +147,27 @@ class AlarmScheduler(private val context: Context) {
         require(latest.repeats) { "Einmalige Wecker kannst du ausschalten." }
         require(latest.enabled && latest.nextAt > 0) { "Schalte den Wecker zuerst ein." }
         require(id !in store.ringing()) { "Dieser Wecker klingelt gerade. Beende ihn zuerst." }
-        val base = maxOf(latest.nextAt, System.currentTimeMillis())
-        val updated = store.update(id) { it.copy(nextAt = AlarmTime.next(it, java.time.Instant.ofEpochMilli(base + 1000))) }!!
+        val updated = store.update(id) { current ->
+            // Checked again under the store lock: a parallel switch-off or ringing start in between is never skipped over.
+            require(current.repeats) { "Einmalige Wecker kannst du ausschalten." }
+            require(current.enabled && current.nextAt > 0) { "Schalte den Wecker zuerst ein." }
+            require(id !in store.ringing()) { "Dieser Wecker klingelt gerade. Beende ihn zuerst." }
+            // Mark the calendar day of the skipped occurrence (all days up to and including it); repeated skips raise the mark.
+            val marked = current.copy(skippedThrough = AlarmTime.localDate(current.nextAt).toString())
+            marked.copy(nextAt = AlarmTime.nextRespectingSkip(marked, java.time.Instant.ofEpochMilli(maxOf(current.nextAt, System.currentTimeMillis()))))
+        }!!
         return updated to scheduleSafely(updated)
     }
 
     /** Macht ein Auslassen rückgängig: wieder der regulär nächste Termin ab jetzt. */
     fun unskip(id: String): Pair<Alarm, Boolean> {
         require(id !in store.ringing()) { "Dieser Wecker klingelt gerade. Beende ihn zuerst." }
-        val updated = store.update(id) { it.copy(nextAt = AlarmTime.next(it)) } ?: error("Dieser Wecker existiert nicht mehr.")
+        // Undo removes all skips: clear the mark and return to the regular next occurrence.
+        val updated = store.update(id) { current ->
+            // Checked again under the store lock, so a ringing that started in between keeps its occurrence.
+            require(id !in store.ringing()) { "Dieser Wecker klingelt gerade. Beende ihn zuerst." }
+            current.copy(skippedThrough = "").let { cleared -> cleared.copy(nextAt = AlarmTime.next(cleared)) }
+        } ?: error("Dieser Wecker existiert nicht mehr.")
         return updated to scheduleSafely(updated)
     }
 
