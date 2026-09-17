@@ -17,6 +17,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -130,6 +136,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                     Text(busy.ifBlank { audioBusy }, Modifier.weight(1f).padding(horizontal = 10.dp), style = MaterialTheme.typography.bodySmall)
                     StillerKnopf("Abbrechen", vm::cancelAction)
                 }
+                AufnahmeLeiste(vm)
                 if (message.isNotBlank()) GoldKarte(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(message, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
@@ -372,6 +379,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // Derived from this draft only, so it disappears once corrected and never carries over to another draft.
         val minute = rememberNow(60_000)
+        OffenesDiktatKarte(vm, alarm)
         if (remember(alarm, minute) { alarm.isExpiredOnce() }) GoldKarte(Modifier.fillMaxWidth()) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.EventBusy, null, tint = Semantisch.warnung)
@@ -457,7 +465,8 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                     if (recording) vm.stopRecording()
                     else if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.startRecording()
                     else microphone.launch(Manifest.permission.RECORD_AUDIO)
-                }, aktiviert = busy.isBlank())
+                // Stop is always possible; start only while nothing else runs.
+                }, aktiviert = recording || busy.isBlank())
                 StillerKnopf("Text verbessern", vm::improve)
                 if (alarm.originalText.isNotBlank()) StillerKnopf("Original zurückholen", { vm.change(alarm.copy(text = alarm.originalText, originalText = "")) })
             }
@@ -777,6 +786,72 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
         }
         if (geometry != null) ringMarker(point(geometry.targetAngle), hollow = false, color = accent, surface = surface)
         ringMarker(point(nowAngle), hollow = true, color = gold.textPrimaer, surface = surface)
+    }
+}
+
+/**
+ * Global recording bar below the header, on every page and independent of collapsed sections: duration, the real
+ * input level as a simple bar, and a 48 dp stop button. After stopping it shows the processing status instead.
+ */
+@Composable
+private fun AufnahmeLeiste(vm: WeckerViewModel) {
+    val session by vm.recordingSession.collectAsStateWithLifecycle()
+    val status by vm.recordingStatus.collectAsStateWithLifecycle()
+    val open by vm.openDictation.collectAsStateWithLifecycle()
+    val gold = LocalGold.current
+    val current = session
+    when {
+        // Processing status wins: while stopping, the bar no longer claims an active recording.
+        status.isNotBlank() -> Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+            Text(status, Modifier.weight(1f).padding(horizontal = 10.dp), style = MaterialTheme.typography.bodySmall)
+            if (status == "Diktat wird transkribiert …") StillerKnopf("Abbrechen", vm::cancelDictation)
+        }
+        current != null -> Row(Modifier.fillMaxWidth().background(gold.flaeche.copy(alpha = .9f)).padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            val animate = !LocalBewegungReduziert.current && rememberResumed()
+            val pulse = if (animate) rememberInfiniteTransition(label = "aufnahmePuls").animateFloat(.45f, 1f,
+                infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "aufnahmePunkt").value else 1f
+            Box(Modifier.size(12.dp).graphicsLayer { alpha = pulse }.background(Semantisch.fehler, androidx.compose.foundation.shape.CircleShape))
+            Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                val seconds = ((rememberNow(1000) - current.startedAt) / 1000).coerceAtLeast(0)
+                val label = if (current.kind == RecordingKind.DIKTAT) "Diktat für „${current.draftName}“" else "Stimmprobe"
+                Text("$label · ${seconds / 60}:${"%02d".format(seconds % 60)}", style = MaterialTheme.typography.bodySmall, color = gold.textPrimaer)
+                // Real input level, collected only while resumed.
+                val level by vm.recordingLevel.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.RESUMED)
+                Box(Modifier.padding(top = 4.dp).fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(gold.textGedaempft.copy(alpha = .25f))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(level.coerceIn(0f, 1f)).background(gold.primaer))
+                }
+            }
+            Box(Modifier.heightIn(min = 48.dp), contentAlignment = Alignment.Center) {
+                StillerKnopf("■ Stoppen", vm::stopRecording, Modifier.semantics { contentDescription = "Aufnahme stoppen" }, hervorgehoben = true)
+            }
+        }
+        open != null -> Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Mic, null, tint = gold.primaer, modifier = Modifier.size(20.dp))
+            Text("Offenes Diktat für „${open?.draftName.orEmpty()}“${if ((open?.missing ?: 0) > 0) " (unvollständig)" else ""} – im Wecker einfügen oder verwerfen.", Modifier.weight(1f).padding(horizontal = 10.dp),
+                style = MaterialTheme.typography.bodySmall)
+            StillerKnopf("Verwerfen", vm::discardOpenDictation)
+        }
+    }
+}
+
+/** Offers a waiting dictation only in the editor of its original alarm, for a conscious insert. */
+@Composable
+private fun OffenesDiktatKarte(vm: WeckerViewModel, alarm: Alarm) {
+    val open by vm.openDictation.collectAsStateWithLifecycle()
+    val dictation = open?.takeIf { it.draftId == alarm.id } ?: return
+    GoldKarte(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Offenes Diktat", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+            Text("„${dictation.text.take(160)}${if (dictation.text.length > 160) "…" else ""}“", style = MaterialTheme.typography.bodySmall)
+            // Never shown as complete when parts were not transcribed.
+            if (dictation.missing > 0) StatusZeile(Icons.Default.Warning, "Unvollständig: ${dictation.missing} Abschnitte fehlen.", Semantisch.warnung)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                GoldKnopf("In „Deine Erinnerung“ einfügen", vm::insertOpenDictation)
+                StillerKnopf("Verwerfen", vm::discardOpenDictation)
+            }
+        }
     }
 }
 

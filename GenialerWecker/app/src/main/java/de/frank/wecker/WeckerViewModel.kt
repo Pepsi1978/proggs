@@ -20,6 +20,10 @@ import org.json.JSONObject
 import java.io.File
 import java.util.UUID
 
+enum class RecordingKind { DIKTAT, STIMMPROBE }
+data class RecordingSession(val kind: RecordingKind, val draftId: String?, val draftName: String, val editorGeneration: Long, val startedAt: Long)
+data class OpenDictation(val draftId: String, val draftName: String, val text: String, val missing: Int)
+
 class WeckerViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application
     val store = AlarmStore.get(application)
@@ -63,6 +67,20 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     private var previewGeneration = 0L
     /** Only the preview's own preparation job, never a foreign action job. */
     private var previewJob: Job? = null
+    /** Recording currently running; bound to kind and original editor session at start. */
+    val recordingSession = MutableStateFlow<RecordingSession?>(null)
+    /** Processing text after a recording, e.g. while stopping or transcribing. */
+    val recordingStatus = MutableStateFlow("")
+    val openDictation = MutableStateFlow<OpenDictation?>(null)
+    val recordingLevel = recorder.pegel
+    private var stopping = false
+    private var dictationJob: Job? = null
+    /** Increments per transcription and on cancel; guards against late results of an older job. */
+    private var dictationGeneration = 0L
+    /** Whether the WAV of the current transcription was saved successfully. */
+    private var dictationSaved = false
+    /** Changes whenever an editor is opened or closed; the same alarm id reopened is a new editor session. */
+    private var editorGeneration = 0L
 
     init {
         if (settings.ttsProvider == TtsProvider.QWEN.id) settings.ttsProvider = TtsProvider.QWEN_CLONE.id
@@ -75,6 +93,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     fun newAlarm() = edit(Alarm(id = UUID.randomUUID().toString()))
     fun edit(alarm: Alarm) {
         stopPreview()
+        stopDictationForEditorChange()
+        editorGeneration++
         draftIsNew = store.get(alarm.id) == null
         _draft.value = alarm
         draftBaseline = if (draftIsNew && alarm.name.endsWith("– Kopie")) null else alarm.json().toString()
@@ -100,7 +120,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         persistDraft(alarm)
     }
     private fun persistDraft(alarm: Alarm) { store.prefs.edit().putString("draft", alarm.json().toString()).putBoolean("draft_is_new", draftIsNew).apply() }
-    fun closeEditor() { _draft.value = null; draftBaseline = null; store.prefs.edit().remove("draft").remove("draft_is_new").remove("draft_base").apply() }
+    private fun stopDictationForEditorChange() { if (recordingSession.value?.kind == RecordingKind.DIKTAT) stopRecording() }
+    fun closeEditor() { stopDictationForEditorChange(); editorGeneration++; _draft.value = null; draftBaseline = null; store.prefs.edit().remove("draft").remove("draft_is_new").remove("draft_base").apply() }
     fun runAction(label: String, silent: Boolean = false, action: suspend () -> Unit) {
         if (actionJob?.isActive == true) { message.value = "Bitte warte auf den laufenden Vorgang."; return }
         val owner = Any()
@@ -246,29 +267,131 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         _draft.value?.takeIf { it.id == alarm.id }?.let { change(it.copy(reference = saved.absolutePath, photoRequired = true)) }
     }
     fun startRecording(forVoice: Boolean = false) {
-        if (recording.value) return
-        if (recorder.start(viewModelScope)) { recording.value = true; voiceRecording.value = forVoice }
-        else message.value = "Das Mikrofon konnte nicht gestartet werden. Prüfe die Berechtigung."
+        val kind = if (forVoice) RecordingKind.STIMMPROBE else RecordingKind.DIKTAT
+        // Start stays blocked while anything of an earlier recording is unfinished, so no result is overwritten silently.
+        when {
+            recordingSession.value != null || stopping -> return
+            actionJob?.isActive == true -> { message.value = "Bitte warte auf den laufenden Vorgang."; return }
+            dictationJob?.isActive == true -> { message.value = "Das letzte Diktat wird noch transkribiert."; return }
+            kind == RecordingKind.DIKTAT && openDictation.value != null ->
+                { message.value = "Füge zuerst das offene Diktat ein oder verwirf es."; return }
+        }
+        val draft = _draft.value
+        if (kind == RecordingKind.DIKTAT && draft == null) return
+        // The speaker must not be recorded: end our own audio preview before the microphone starts.
+        stopPreview()
+        if (!recorder.start(viewModelScope)) { message.value = "Das Mikrofon konnte nicht gestartet werden. Prüfe die Berechtigung."; return }
+        // Kind and original draft (including the editor session) are bound at start, never read again at stop.
+        recordingSession.value = RecordingSession(kind, draft?.id, draft?.name.orEmpty(), editorGeneration, System.currentTimeMillis())
+        recording.value = true; voiceRecording.value = forVoice
     }
+
+    /** Hardware stop independent of any other action. A second call while stopping does nothing. */
     fun stopRecording() {
-        if (!recording.value) return
-        val forVoice = voiceRecording.value
-        recording.value = false
-        val alarmId = _draft.value?.id
-        runAction(if (forVoice) "Stimmprobe speichern …" else "Diktat mit Groq transkribieren …") {
-            val bytes = recorder.stop() ?: error("Die Aufnahme war leer.")
-            if (forVoice) { voiceSample = bytes; hasVoiceSample.value = true; message.value = "Stimmprobe aufgenommen." }
-            else {
-                withContext(Dispatchers.IO) { File(app.filesDir, "letztes_diktat.wav").writeBytes(bytes) }
+        val session = recordingSession.value ?: return
+        if (stopping) return
+        stopping = true
+        recordingStatus.value = "Aufnahme wird beendet …"
+        // UNDISPATCHED: recorder.stop() releases the AudioRecord before its first suspension, i.e. within this call.
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            var bytes: ByteArray? = null
+            try { bytes = recorder.stop() }
+            catch (e: CancellationException) { throw e }
+            catch (e: Exception) { android.util.Log.w("WeckerRecording", "Aufnahme nicht sauber beendet", e) }
+            finally {
+                // Only now the recording is really over; the state never claims recording while it is not.
+                recordingSession.value = null
+                recording.value = false; voiceRecording.value = false
+                stopping = false
+                if (recordingStatus.value == "Aufnahme wird beendet …") recordingStatus.value = ""
+            }
+            val data = bytes
+            when {
+                data == null -> message.value = "Die Aufnahme war leer."
+                session.kind == RecordingKind.STIMMPROBE -> { voiceSample = data; hasVoiceSample.value = true; message.value = "Stimmprobe aufgenommen." }
+                else -> transcribe(session, data)
+            }
+        }
+    }
+
+    /**
+     * Own job, parallel to other actions; only [cancelDictation] cancels it. The WAV is saved first and not cancellable,
+     * so every later message can state truthfully whether the recording is kept.
+     */
+    private fun transcribe(session: RecordingSession, bytes: ByteArray) {
+        val generation = ++dictationGeneration
+        dictationSaved = false
+        recordingStatus.value = "Diktat wird gesichert …"
+        dictationJob = viewModelScope.launch {
+            val job = currentCoroutineContext()[Job]
+            // Owner check: after cancelDictation or a newer dictation, this job may neither deliver nor report.
+            fun owns() = dictationGeneration == generation && dictationJob === job
+            val saved = try {
+                withContext(NonCancellable + Dispatchers.IO) { File(app.filesDir, "letztes_diktat.wav").writeBytes(bytes) }
+                true
+            } catch (e: Exception) {
+                android.util.Log.w("WeckerRecording", "Diktat-WAV nicht gespeichert", e)
+                false
+            }
+            if (owns()) { dictationSaved = saved; recordingStatus.value = "Diktat wird transkribiert …" }
+            val kept = if (saved) " Die Aufnahme liegt als letztes Diktat vor." else " Die Aufnahme konnte nicht gesichert werden."
+            try {
+                currentCoroutineContext().ensureActive()
                 val transcriber = GroqTranscriber(settings.groqApiKey, filterStille = settings.filterStilleVorabAn,
                     filterMetriken = settings.filterSegmentmetrikenAn, filterZeitstempel = settings.filterZeitstempelAn,
                     filterFloskeln = settings.filterFloskelnAn)
                 val result = try { Diktat(transcriber).transkribiere(bytes) } finally { transcriber.shutdown() }
-                _draft.value?.takeIf { it.id == alarmId }?.let { change(it.copy(text = (it.text + "\n" + result.text).trim())) }
-                message.value = if (result.teileFehlend == 0) "Diktat eingefügt." else "${result.teileFehlend} Abschnitte fehlen. Die Originalaufnahme bleibt gespeichert."
+                // A late, non-cooperative network result of a cancelled or replaced job is dropped silently.
+                currentCoroutineContext().ensureActive()
+                if (!owns()) return@launch
+                deliverDictation(session, result.text, result.teileFehlend, saved)
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                if (owns()) message.value = "Das Diktat konnte nicht transkribiert werden (${e.message ?: e.javaClass.simpleName}).$kept"
+            } finally {
+                if (owns()) { dictationJob = null; recordingStatus.value = "" }
             }
         }
     }
+
+    fun cancelDictation() {
+        val job = dictationJob ?: return
+        dictationGeneration++
+        dictationJob = null
+        recordingStatus.value = ""
+        job.cancel()
+        message.value = "Transkription abgebrochen." + if (dictationSaved) " Die Aufnahme liegt als letztes Diktat vor." else " Die Aufnahme konnte nicht gesichert werden."
+    }
+
+    /**
+     * Automatic insert only into the very editor session it was recorded in, and only while the text step is still
+     * active; otherwise it waits as an open dictation for a conscious insert.
+     */
+    private fun deliverDictation(session: RecordingSession, text: String, missing: Int, saved: Boolean) {
+        if (text.isBlank()) { message.value = "Im Diktat wurde kein Text erkannt." + if (saved) " Die Aufnahme liegt als letztes Diktat vor." else ""; return }
+        val incomplete = if (missing > 0) " $missing Abschnitte fehlen." + if (saved) " Die Originalaufnahme bleibt gespeichert." else "" else ""
+        val draft = _draft.value
+        val sameEditor = draft != null && draft.id == session.draftId && editorGeneration == session.editorGeneration
+        if (sameEditor && draft != null && Step.TEXT in draft.steps) {
+            change(draft.copy(text = (draft.text + "\n" + text).trim()))
+            message.value = "Diktat eingefügt.$incomplete"
+            return
+        }
+        openDictation.value = OpenDictation(session.draftId.orEmpty(), session.draftName, text, missing)
+        message.value = (if (sameEditor) "Der Baustein „Eigener Text“ ist nicht mehr aktiv. Das Diktat wartet oben im Editor zum bewussten Einfügen."
+            else "Das Diktat für „${session.draftName}“ wurde nicht eingefügt, weil dieser Entwurf nicht mehr offen ist. Öffne den Wecker, um es bewusst einzufügen.") + incomplete
+    }
+
+    /** Conscious insert into the matching open draft; adds the text step so the text is actually used. */
+    fun insertOpenDictation() {
+        val open = openDictation.value ?: return
+        val draft = _draft.value?.takeIf { it.id == open.draftId } ?: return
+        change(draft.copy(text = (draft.text + "\n" + open.text).trim(), steps = if (Step.TEXT in draft.steps) draft.steps else draft.steps + Step.TEXT))
+        openDictation.value = null
+        message.value = if (open.missing > 0) "Diktat eingefügt, aber unvollständig: ${open.missing} Abschnitte fehlen." else "Diktat eingefügt."
+    }
+    fun discardOpenDictation() { openDictation.value = null }
+
     fun improve() {
         val source = _draft.value ?: return
         if (source.text.isBlank()) { message.value = "Gib zuerst einen Text ein."; return }
@@ -347,7 +470,14 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         if (settings.qwenTtsVoiceId == id) { settings.qwenTtsVoiceId = ""; settings.ttsProvider = TtsProvider.EDGE.id }
         settingsChanged(); loadVoicesNow()
     }
+    /** No preview while the microphone records; nothing else is cancelled for that. */
+    private fun rejectPreviewWhileRecording(): Boolean {
+        if (recordingSession.value == null && !stopping) return false
+        message.value = "Während einer Aufnahme ist keine Vorschau möglich."
+        return true
+    }
     fun previewVoice() {
+        if (rejectPreviewWhileRecording()) return
         stopPreview()
         val generation = previewGeneration
         runAction("Stimmprobe vorbereiten …") {
@@ -371,6 +501,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     /** Plays a built-in tone; creating the file runs on IO, playback on Main, both bound to the current generation. */
     fun playTone(id: String) {
+        if (rejectPreviewWhileRecording()) return
         stopPreview()
         val generation = previewGeneration
         previewJob = viewModelScope.launch {
@@ -442,6 +573,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun test(alarm: Alarm) {
         stopPreview()
+        stopRecording()
         app.startForegroundService(Intent(app, AlarmService::class.java).setAction("TEST").putExtra("id", alarm.id).putExtra("quiet", true))
         // The app is in the foreground: open the shared alarm screen directly instead of relying on a full-screen notification.
         app.startActivity(Intent(app, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

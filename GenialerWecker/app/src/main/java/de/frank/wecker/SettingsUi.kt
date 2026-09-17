@@ -219,7 +219,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                     if (recording) vm.stopRecording()
                     else if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.startRecording(true)
                     else microphone.launch(Manifest.permission.RECORD_AUDIO)
-                }, aktiviert = busy.isBlank())
+                }, aktiviert = recording || busy.isBlank())
                 GoldKnopf("Stimme erstellen", { vm.createVoice(voiceName) }, aktiviert = sample && !recording && busy.isBlank())
                 StillerKnopf("Stimmen aktualisieren", { vm.loadVoices(force = true) })
             }
