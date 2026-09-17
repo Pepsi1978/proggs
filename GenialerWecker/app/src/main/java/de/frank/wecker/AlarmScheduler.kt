@@ -51,7 +51,23 @@ class AlarmScheduler(private val context: Context) {
     fun cancel(id: String) { cancelRing(id); SchlafErinnerung.entferneWecker(context, id) }
     fun restore(clockChanged: Boolean = false, onlyIds: Set<String>? = null) {
         // Reminders are replanned even without the exact-alarm grant (they fall back to inexact timing).
-        if (!allowed()) { SchlafErinnerung.syncAll(context); return }
+        if (!allowed()) {
+            // Nothing can be scheduled, but after a clock or zone change the stored wall-clock times must still follow,
+            // otherwise a later grant would arm the old instant and the sleep reminder would be computed from it.
+            if (clockChanged) {
+                val ringing = store.ringing().toSet()
+                store.all().filter { (onlyIds == null || it.id in onlyIds) && it.id !in ringing }.forEach { alarm ->
+                    val updated = AlarmClaim.recomputeNextAt(alarm, System.currentTimeMillis())
+                    if (updated == alarm) return@forEach
+                    // Compare-and-set under the store lock: a parallel save or toggle is never overwritten, and a ringing
+                    // that started after the snapshot above keeps its nextAt (settled when the ringing ends).
+                    try { store.update(alarm.id) { current -> if (current == alarm && alarm.id !in store.ringing()) updated else current } }
+                    catch (e: Exception) { Log.w(TAG, "Weckzeit nach Uhrwechsel nicht gespeichert für ${alarm.id}", e) }
+                }
+            }
+            SchlafErinnerung.syncAll(context)
+            return
+        }
         val all = store.ringingEntries().filter { onlyIds == null || it.id in onlyIds }
         val ringing = all.filterNot(AlarmService::wasStopped)
         // An occurrence stopped in this process whose removal could not be saved must never be re-fired.
@@ -82,10 +98,8 @@ class AlarmScheduler(private val context: Context) {
             }
         }
         if (ringingEntry == null) {
-            if (updated.enabled && (clockChanged || updated.nextAt == 0L)) {
-                updated = try { updated.copy(nextAt = AlarmTime.next(updated)) }
-                catch (_: IllegalArgumentException) { updated.copy(enabled = false, nextAt = 0) }
-            }
+            // Unchanged condition: recompute on a clock change and also whenever nextAt is missing.
+            if (updated.enabled && (clockChanged || updated.nextAt == 0L)) updated = AlarmClaim.recomputeNextAt(updated, now)
             else if (updated.enabled && updated.nextAt < now) {
                 updated = if (now - updated.nextAt < AlarmClaim.STALE_MS) updated.copy(nextAt = now + 2000)
                 else if (!updated.repeats) updated.copy(enabled = false, nextAt = 0)

@@ -56,6 +56,17 @@ object AlarmClaim {
     }
 
     /**
+     * Maps the wall-clock time of an enabled alarm to the current clock and zone. Deliberately without a nextAt guard:
+     * callers decide when to recompute (clock change, or nextAt == 0). A passed one-off date disables the alarm as before.
+     * The snooze slot is an absolute instant and stays untouched; ringing alarms must not be passed in.
+     */
+    fun recomputeNextAt(alarm: Alarm, now: Long, zone: ZoneId = ZoneId.systemDefault()): Alarm {
+        if (!alarm.enabled) return alarm
+        return try { alarm.copy(nextAt = AlarmTime.next(alarm, Instant.ofEpochMilli(now), zone)) }
+        catch (_: IllegalArgumentException) { alarm.copy(enabled = false, nextAt = 0) }
+    }
+
+    /**
      * Nach dem Ende eines Klingelns: Ein Vorkommen, das bei der Annahme nicht weitergerückt werden
      * konnte, wird jetzt rhythmustreu weitergerückt. Schlummerzähler bleiben unverändert.
      */
