@@ -155,6 +155,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
     val gold = LocalGold.current
     // Nur für diese Listenansicht merken: neue Wecker und eine neu geöffnete Liste sind kompakt.
     var expandedIds by remember { mutableStateOf(emptySet<String>()) }
+    val issues by vm.store.issues.collectAsState()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(1000) } }
     val next = alarms.flatMap { alarm -> listOfNotNull(alarm.nextAt.takeIf { alarm.enabled && it > now }, alarm.snoozeUntil.takeIf { it > now }) }.minOrNull()
@@ -213,6 +214,8 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                                     tint = gold.primaer)
                             }
                         }
+                        // Reliability warnings stay visible even on collapsed cards.
+                        issues[alarm.id]?.let { Text(it, color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall) }
                         if (expanded) {
                             Text(scheduleLabel(alarm), color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall)
                             Text(alarm.steps.joinToString(" → ") { it.title }, color = gold.primaer, style = MaterialTheme.typography.bodySmall)

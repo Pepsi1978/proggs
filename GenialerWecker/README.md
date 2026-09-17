@@ -182,3 +182,21 @@ Geräteneustart mit anschließendem Alarm vor der ersten Entsperrung.
   unabhängig aufklappen, alle bisherigen Aktionen im aufgeklappten Bereich. Ein über die
   Oberfläche neu angelegter Testwecker war sofort aktiviert und zugeklappt. Ausschalten öffnet
   keine Details. Der Testwecker wurde anschließend wieder gelöscht.
+
+### Zuverlässige Weckannahme (1.1.11)
+
+- Ein ausgelöster Termin wird geprüft (`at` muss zum gespeicherten Vorkommen passen) und dann
+  **in einem einzigen Speichervorgang** angenommen: Folgezustand und Klingelauftrag samt Zeitmetadaten
+  (`ringingMeta`: Vorkommen und Annahmezeitpunkt). Ältere Einträge ohne Metadaten bleiben gültig.
+- Der Weckdienst wird **vor** der Folgeplanung gestartet. Scheitert die Planung, klingelt der aktuelle
+  Wecker trotzdem; die Karte zeigt den Hinweis, ein neuer Versuch folgt nach dem Klingeln bzw. beim App-Start.
+- Doppelte Broadcasts klingeln nicht doppelt. Wiederherstellung holt ein unterbrochenes Klingeln genau
+  einmal über den Schlummer-Slot nach und verschiebt `nextAt` dabei nicht; nur ein **bekannt** über
+  12 Stunden altes Klingeln wird verworfen und sichtbar gemeldet.
+- Schlummern speichert zuerst und nimmt den Zustand zurück, wenn die Planung scheitert.
+- Stoppen bleibt im laufenden Prozess wirksam, auch wenn das Entfernen des Auftrags nicht gespeichert werden kann.
+- Lehnt Android den Dienststart ab, folgt ein begrenztes Ersatzsignal (System-Weckton, max. 10 Minuten,
+  endet mit dem echten Dienst). Best effort: verweigerte Benachrichtigungen, gesperrter Kanal, Nicht stören,
+  erzwungenes Beenden oder ein ausgeschaltetes Gerät kann die App nicht umgehen.
+- Tests: `AlarmClaimTest` (11 JVM) und `AlarmClaimIntegrationTest` (6 Geräteprüfungen, nicht invasiv,
+  Fehlerinjektion nur für die eigene Test-ID).

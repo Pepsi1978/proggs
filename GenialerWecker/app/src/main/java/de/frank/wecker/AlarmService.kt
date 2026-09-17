@@ -39,6 +39,11 @@ class AlarmService : Service() {
     private var generation = 0
     private var test = false
     private var fallbackFailures = 0
+    /** Klingelaufträge, deren Speicherung fehlschlug. Sie klingeln trotzdem, solange dieser Prozess lebt. */
+    private val volatileRinging = linkedSetOf<String>()
+    private fun pending(): List<String> = (store.ringingEntries().filterNot(::wasStopped).map { it.id } + volatileRinging).distinct()
+    /** Commands from notifications carry no id; an explicit id must match the current alarm. */
+    private fun Intent.targetsCurrent() = getStringExtra("id")?.let { it == current?.id } ?: true
 
     override fun onCreate() {
         super.onCreate()
@@ -61,35 +66,40 @@ class AlarmService : Service() {
         when (intent?.action) {
             "TEST" -> {
                 // Eine Vorschau darf einen bereits klingelnden echten Alarm niemals ersetzen.
-                if (store.ringing().isEmpty()) {
+                if (pending().isEmpty()) {
                     test = true
                     store.get(intent.getStringExtra("id").orEmpty())?.let(::begin) ?: stopSelf()
                 }
             }
-            "STOP" -> if (current?.photoRequired != true || test) finishCurrent(false)
+            "STOP" -> if (intent.targetsCurrent() && (current?.photoRequired != true || test)) finishCurrent(false)
             "PHOTO_OK" -> {
                 // Nur die nicht exportierte AlarmActivity liefert dieses interne Kommando.
                 if (intent.getStringExtra("id") == current?.id) finishCurrent(false)
             }
-            "SNOOZE" -> finishCurrent(true)
+            "SNOOZE" -> if (intent.targetsCurrent()) finishCurrent(true)
             else -> {
-                if (test && store.ringing().isNotEmpty()) { test = false; current = null }
+                intent?.getStringExtra("id")?.let { id -> if (id !in store.ringing() && store.get(id) != null) volatileRinging += id }
+                if (test && pending().isNotEmpty()) { test = false; current = null }
                 if (current == null) nextAlarm()
                 else getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification(current))
             }
         }
-        if (current == null && store.ringing().isEmpty()) stopSelf()
+        if (current == null && pending().isEmpty()) stopSelf()
         return START_STICKY
     }
 
     private fun nextAlarm() {
-        val ids = store.ringing().filter { store.get(it) != null }
-        store.ringing(ids)
-        val alarm = ids.firstOrNull()?.let(store::get)
+        val entries = store.ringingEntries()
+        // Stopped occurrences stay stopped in this process even if removing them from storage failed; retry the removal.
+        val live = entries.filter { store.get(it.id) != null && !wasStopped(it) }
+        if (live.size != entries.size) runCatching { store.writeRinging(live) }
+        volatileRinging.retainAll { store.get(it) != null }
+        val alarm = (live.map { it.id } + volatileRinging).distinct().firstOrNull()?.let(store::get)
         if (alarm == null) stopSelf() else begin(alarm)
     }
 
     private fun begin(alarm: Alarm) {
+        AlarmRinging.cancelFallback(this)
         current = alarm
         fallbackFailures = 0
         generation++
@@ -154,14 +164,28 @@ class AlarmService : Service() {
                 return
             }
             val updated = latest.copy(snoozeUntil = System.currentTimeMillis() + latest.snoozeMinutes * 60_000, snoozes = latest.snoozes + 1)
-            try { AlarmScheduler(this).schedule(updated); store.put(updated) }
-            catch (_: Exception) { _state.value = _state.value.copy(message = "Schlummern konnte nicht geplant werden. Der Wecker läuft weiter."); return }
+            // Persist first: a snooze alarm that fires must find its matching snoozeUntil. Roll back if planning fails.
+            try { store.put(updated) }
+            catch (_: Exception) { _state.value = _state.value.copy(message = "Schlummern konnte nicht gespeichert werden. Der Wecker läuft weiter."); return }
+            try { AlarmScheduler(this).schedule(updated) }
+            catch (_: Exception) {
+                runCatching { store.put(latest) }
+                _state.value = _state.value.copy(message = "Schlummern konnte nicht geplant werden. Der Wecker läuft weiter.")
+                return
+            }
         }
         generation++
         loop?.cancel()
         playback?.close(); playback = null
         getSystemService(Vibrator::class.java).cancel()
-        if (!test) store.ringing(store.ringing().filterNot { it == alarm.id })
+        AlarmRinging.cancelFallback(this)
+        if (!test) {
+            store.ringingEntries().find { it.id == alarm.id }?.let(::markStopped)
+            runCatching { store.ringing(store.ringing().filterNot { it == alarm.id }) }
+            volatileRinging -= alarm.id
+            // Advance an occurrence that could not be advanced at claim time and retry failed planning once.
+            AlarmScheduler(this).settleAfterRing(alarm.id)
+        }
         current = null
         test = false
         nextAlarm()
@@ -205,6 +229,10 @@ class AlarmService : Service() {
             android.util.Log.d("WeckerLifecycle", event)
         }
         @Synchronized internal fun diagnosticEvents() = events.joinToString("\n")
+        private val stopped = mutableMapOf<String, Long>()
+        @Synchronized private fun markStopped(entry: RingEntry) { stopped[entry.id] = entry.at }
+        /** True for an occurrence already stopped in this process. A newly claimed occurrence has another `at`. */
+        @Synchronized internal fun wasStopped(entry: RingEntry) = stopped[entry.id] == entry.at
         const val CHANNEL = "alarm_ring_v1"
         const val NOTIFICATION = 1001
         val attributes: AudioAttributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
