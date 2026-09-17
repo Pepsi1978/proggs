@@ -202,7 +202,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         preparationJobs[alarm.id]?.cancelAndJoin()
         withContext(Dispatchers.IO) {
             require(alarm.id !in store.ringing()) { "Stoppe zuerst den klingelnden Wecker." }
-            scheduler.cancel(alarm.id); store.delete(alarm.id)
+            // Delete from the store first: a parallel reminder sync then sees the alarm as gone and cannot plan it again.
+            store.delete(alarm.id); scheduler.cancel(alarm.id)
             SnoozeNotice.cancel(app, alarm.id)
         }
         if (_draft.value?.id == alarm.id) closeEditor()

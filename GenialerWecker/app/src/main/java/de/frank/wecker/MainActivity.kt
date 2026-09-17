@@ -34,6 +34,8 @@ class MainActivity : ComponentActivity() {
     }
     override fun onResume() {
         super.onResume()
+        // Returning from system notification settings or after a long pause: replan the sleep reminders.
+        SchlafErinnerung.syncAll(this)
         if (AlarmService.state.value.alarm != null) startActivity(Intent(this, AlarmActivity::class.java))
     }
     override fun onWindowFocusChanged(hasFocus: Boolean) {

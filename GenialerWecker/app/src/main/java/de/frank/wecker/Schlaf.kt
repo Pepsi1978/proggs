@@ -8,7 +8,7 @@ import java.util.Locale
 
 /**
  * Gewünschte Schlafdauer je Wecker: ungefähre Schlafenszeit = geplante Weckzeit minus echte Dauer. Rein informativ,
- * kein Tracking und keine Erinnerung. Über eine Zeitumstellung bleibt die tatsächliche Schlafdauer erhalten.
+ * kein Tracking. Die optionale Erinnerung 15 Minuten vorher plant SchlafErinnerung. Über eine Zeitumstellung bleibt die tatsächliche Schlafdauer erhalten.
  */
 object Schlaf {
     const val STEP = 30

@@ -20,10 +20,12 @@ class AlarmScheduler(private val context: Context) {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
     fun schedule(alarm: Alarm) {
+        // Separate, caught path first: a reminder problem never fails the alarm, and it also runs without the exact-alarm grant.
+        SchlafErinnerung.sync(context, alarm)
         // Check the permission first so a refusal never removes alarms that are already planned.
         require(allowed()) { "Die Freigabe für genaue Weckzeiten fehlt." }
         if (alarm.id == failScheduleForTestId) throw IllegalStateException("Testfehler bei der Folgeplanung")
-        cancel(alarm.id)
+        cancelRing(alarm.id)
         // An overdue occurrence that is still ringing is advanced when the ringing ends, never re-fired here.
         val overdueRinging = alarm.nextAt <= System.currentTimeMillis() && alarm.id in store.ringing()
         if (alarm.enabled && alarm.nextAt > 0 && !overdueRinging) set(alarm.id, false, alarm.nextAt)
@@ -44,9 +46,12 @@ class AlarmScheduler(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         manager.setAlarmClock(AlarmManager.AlarmClockInfo(at.coerceAtLeast(System.currentTimeMillis() + 1000), show), operation(id, snooze, at))
     }
-    fun cancel(id: String) { manager.cancel(operation(id, false)); manager.cancel(operation(id, true)) }
+    private fun cancelRing(id: String) { manager.cancel(operation(id, false)); manager.cancel(operation(id, true)) }
+    /** Cancels ringing, snooze and the planned sleep reminder; visible notifications are not touched. */
+    fun cancel(id: String) { cancelRing(id); SchlafErinnerung.entferneWecker(context, id) }
     fun restore(clockChanged: Boolean = false, onlyIds: Set<String>? = null) {
-        if (!allowed()) return
+        // Reminders are replanned even without the exact-alarm grant (they fall back to inexact timing).
+        if (!allowed()) { SchlafErinnerung.syncAll(context); return }
         val all = store.ringingEntries().filter { onlyIds == null || it.id in onlyIds }
         val ringing = all.filterNot(AlarmService::wasStopped)
         // An occurrence stopped in this process whose removal could not be saved must never be re-fired.

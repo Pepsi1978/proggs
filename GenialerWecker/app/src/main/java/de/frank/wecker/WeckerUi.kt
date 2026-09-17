@@ -925,7 +925,7 @@ private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
             Icon(Icons.Default.Add, "Schlafdauer um 30 Minuten erhöhen", tint = LocalGold.current.primaer)
         }
     }
-    Text(if (sleep == 0) "Ohne Angabe wird keine Schlafenszeit angezeigt." else "Zeigt die ungefähre Schlafenszeit vor dem nächsten Termin. Kein Tracking, keine Erinnerung.",
+    Text(if (sleep == 0) "Ohne Angabe wird keine Schlafenszeit angezeigt." else "Zeigt die ungefähre Schlafenszeit. Erinnerung 15 Min. vorher, wenn sie in den Einstellungen eingeschaltet ist. Kein Tracking.",
         style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
 }
 

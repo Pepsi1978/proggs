@@ -123,6 +123,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
             Text("Erlaube Wecker in allen verwendeten Nicht-stören-Modi und Routinen. Nach „Stopp erzwingen“ die App einmal öffnen. Ein ausgeschaltetes Telefon kann nicht wecken.", style = MaterialTheme.typography.bodySmall)
         }
+        BenachrichtigungenKarte(vm, activity)
         Section("Vorlesen · Stimmen & Tempo", collapsible = true, summary = "${when (provider) {
             TtsProvider.GOOGLE_CLOUD.id -> "Google"; TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"; else -> "Edge"
         }} · Tempo ${"%.2f".format(rate)}× · gilt für alle Wecker ohne eigene Stimme") {
@@ -286,4 +287,68 @@ private fun SecretField(label: String, initial: String, save: (String) -> Unit) 
 private fun SettingToggle(label: String, initial: Boolean, save: (Boolean) -> Unit) {
     var value by remember { mutableStateOf(initial) }
     Toggle(label, value) { value = it; save(it) }
+}
+
+/** One switch per notification type; for now only the sleep reminder. No master switch. */
+@Composable
+private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActivity) {
+    val context = activity
+    // Explicit refresh instead of polling: resume (e.g. back from system settings), permission result and switch.
+    var refresh by remember { mutableIntStateOf(0) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event -> if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) refresh++ }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    val alarms by vm.alarms.collectAsStateWithLifecycle()
+    val on = remember(refresh) { SchlafErinnerung.enabled(context) }
+    val blocked = remember(refresh) { SchlafErinnerung.blockiert(context) }
+    val inexact = remember(refresh) { SchlafErinnerung.exaktFehlt(context) }
+    val problems = remember(refresh, alarms) { SchlafErinnerung.statusFehler(context) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        SchlafErinnerung.syncAll(context); refresh++
+    }
+    fun open(intent: Intent) {
+        try { activity.startActivity(intent) }
+        catch (e: Exception) { vm.message.value = "Die Android-Einstellung konnte nicht geöffnet werden (${e.javaClass.simpleName})." }
+    }
+    Section("Benachrichtigungen", collapsible = true, initiallyExpanded = false,
+        summary = "Schlafenszeit-Erinnerung ${if (on) "an" else "aus"}${if (on && blocked != null) " · gesperrt" else ""}",
+        error = if (on && blocked != null) "Die Erinnerung ist eingeschaltet, wird von Android aber nicht angezeigt." else null) {
+        Toggle("Schlafenszeit-Erinnerung", on) { checked ->
+            // The switch shows the stored state only; a failed write keeps the old state and says so.
+            val stored = SchlafErinnerung.setEnabled(context, checked)
+            if (!stored) vm.message.value = "Die Einstellung konnte nicht gespeichert werden. Der bisherige Stand gilt weiter."
+            refresh++
+            if (stored && checked && Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+                permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        Text("15 Minuten vor der berechneten Schlafenszeit, nur für aktive Wecker mit Schlafdauer.", style = MaterialTheme.typography.bodySmall)
+        if (on) {
+            when (blocked) {
+                "app" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Benachrichtigungen der App sind ausgeschaltet.", Modifier.weight(1f), color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)
+                    StillerKnopf("Erlauben", {
+                        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+                            activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        else open(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName))
+                    }, hervorgehoben = true)
+                }
+                "kanal" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Der Kanal „Schlafenszeit-Erinnerung“ ist gesperrt.", Modifier.weight(1f), color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)
+                    StillerKnopf("Kanal öffnen", {
+                        open(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName).putExtra(Settings.EXTRA_CHANNEL_ID, SchlafErinnerung.CHANNEL))
+                    }, hervorgehoben = true)
+                }
+                else -> if (alarms.none { it.enabled && it.sleepMinutes > 0 })
+                    Text("Noch kein aktiver Wecker mit Schlafdauer.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+            }
+            if (inexact) Text("Ohne Freigabe für genaue Zeiten kann die Erinnerung einige Minuten verspätet kommen.",
+                style = MaterialTheme.typography.bodySmall, color = Semantisch.warnung)
+        }
+        problems.forEach { Text(it, color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall) }
+    }
 }
