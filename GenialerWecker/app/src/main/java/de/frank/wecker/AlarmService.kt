@@ -43,6 +43,9 @@ class AlarmService : Service() {
     private val volatileRinging = linkedSetOf<String>()
     private fun pending(): List<String> = (store.ringingEntries().filterNot(::wasStopped).map { it.id } + volatileRinging).distinct()
     /** Commands from notifications carry no id; an explicit id must match the current alarm. */
+    /** A test started from the app button: silent notification, the app opens the alarm screen itself. */
+    private var quiet = false
+    private var foregroundId = 0
     private fun Intent.targetsCurrent() = getStringExtra("id")?.let { it == current?.id } ?: true
 
     override fun onCreate() {
@@ -50,19 +53,23 @@ class AlarmService : Service() {
         trace("create")
         store = AlarmStore.get(this)
         audio = getSystemService(AudioManager::class.java)
-        startForeground(NOTIFICATION, notification(null))
         originalVolume = store.prefs.getInt("volumeBeforeRing", -1).takeIf { it >= 0 }
             ?: audio.getStreamVolume(AudioManager.STREAM_ALARM)
         store.prefs.edit().putInt("volumeBeforeRing", originalVolume).commit()
         wake = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:alarm").apply { acquire(12 * 60 * 60_000L) }
-        focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
-            .setAudioAttributes(attributes).setOnAudioFocusChangeListener { change ->
-                if (change == AudioManager.AUDIOFOCUS_GAIN) current?.let { setVolume(it.volume) }
-            }.build().also { audio.requestAudioFocus(it) }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         trace("command=${intent?.action} current=${current != null} test=$test")
+        // Decided per first command, so the button test never flashes the loud full-screen notification.
+        if (foregroundId == 0) {
+            showForeground(null, intent?.action == "TEST" && intent.getBooleanExtra("quiet", false) && pending().isEmpty())
+            // Request audio focus only once the service is in the foreground (required for background starts on Android 15+).
+            focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+                .setAudioAttributes(attributes).setOnAudioFocusChangeListener { change ->
+                    if (change == AudioManager.AUDIOFOCUS_GAIN) current?.let { setVolume(it.volume) }
+                }.build().also { audio.requestAudioFocus(it) }
+        }
         when (intent?.action) {
             "TEST" -> {
                 // Eine Vorschau darf einen bereits klingelnden echten Alarm niemals ersetzen.
@@ -70,6 +77,7 @@ class AlarmService : Service() {
                     // Same UI and audio path as a real alarm; the snooze counter lives only in memory.
                     TestSnooze.cancel(this)
                     test = true
+                    quiet = intent.getBooleanExtra("quiet", false)
                     val snoozes = intent.getIntExtra("testSnoozes", 0)
                     store.get(intent.getStringExtra("id").orEmpty())?.let { begin(it.copy(snoozes = snoozes, snoozeUntil = 0)) } ?: stopSelf()
                 }
@@ -86,9 +94,9 @@ class AlarmService : Service() {
                 // A real alarm always wins over a test, including a test that is currently snoozing.
                 TestSnooze.cancel(this)
                 intent?.getStringExtra("id")?.let { id -> if (id !in store.ringing() && store.get(id) != null) volatileRinging += id }
-                if (test && pending().isNotEmpty()) { test = false; current = null }
+                if (test && pending().isNotEmpty()) { test = false; quiet = false; current = null }
                 if (current == null) nextAlarm()
-                else getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification(current))
+                else showForeground(current, quiet)
             }
         }
         if (current == null && pending().isEmpty()) stopSelf()
@@ -113,7 +121,7 @@ class AlarmService : Service() {
         val token = generation
         loop?.cancel()
         playback?.close(); playback = null
-        getSystemService(NotificationManager::class.java).notify(NOTIFICATION, notification(alarm))
+        showForeground(alarm, quiet)
         _state.value = RingState(alarm, "Wecken", test = test)
         if (alarm.vibrate) getSystemService(Vibrator::class.java).vibrate(
             VibrationEffect.createWaveform(longArrayOf(0, 400, 300, 400, 1200), 0))
@@ -207,21 +215,42 @@ class AlarmService : Service() {
         }
         current = null
         test = false
+        quiet = false
         nextAlarm()
     }
 
-    private fun notification(alarm: Alarm?): Notification {
+    /**
+     * Real alarms and the silent button test use different notification ids: a real alarm arriving during a
+     * test gets a fresh notification and therefore its full-screen alert despite setOnlyAlertOnce.
+     */
+    private fun showForeground(alarm: Alarm?, quietMode: Boolean) {
+        val id = if (quietMode) TEST_NOTIFICATION else NOTIFICATION
         val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, "Aktiver Wecker", NotificationManager.IMPORTANCE_HIGH).apply {
-            setSound(null, null); enableVibration(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            setBypassDnd(true)
-        })
+        if (id == foregroundId) { manager.notify(id, notification(alarm, quietMode)); return }
+        startForeground(id, notification(alarm, quietMode))
+        if (foregroundId != 0) manager.cancel(foregroundId)
+        foregroundId = id
+    }
+
+    private fun notification(alarm: Alarm?, quietMode: Boolean): Notification {
+        val manager = getSystemService(NotificationManager::class.java)
         val open = PendingIntent.getActivity(this, 1, Intent(this, AlarmActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val builder = NotificationCompat.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_wecker)
+        val builder = if (quietMode) {
+            manager.createNotificationChannel(NotificationChannel(TEST_CHANNEL, "Testwecken", NotificationManager.IMPORTANCE_LOW).apply {
+                setSound(null, null); enableVibration(false); setShowBadge(false)
+            })
+            NotificationCompat.Builder(this, TEST_CHANNEL).setPriority(NotificationCompat.PRIORITY_LOW).setSilent(true)
+        } else {
+            manager.createNotificationChannel(NotificationChannel(CHANNEL, "Aktiver Wecker", NotificationManager.IMPORTANCE_HIGH).apply {
+                setSound(null, null); enableVibration(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                setBypassDnd(true)
+            })
+            NotificationCompat.Builder(this, CHANNEL).setCategory(NotificationCompat.CATEGORY_ALARM).setPriority(NotificationCompat.PRIORITY_MAX)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setFullScreenIntent(open, true)
+        }
+        builder.setSmallIcon(R.drawable.ic_wecker)
             .setContentTitle(alarm?.name ?: "Genialer Wecker").setContentText("Zum Wecker öffnen")
-            .setCategory(NotificationCompat.CATEGORY_ALARM).setPriority(NotificationCompat.PRIORITY_MAX)
-            .setOngoing(true).setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setContentIntent(open)
-            .setFullScreenIntent(open, true).setOnlyAlertOnce(true)
+            .setOngoing(true).setContentIntent(open).setOnlyAlertOnce(true)
         if (alarm != null && alarm.snoozeLimit > alarm.snoozes) builder.addAction(0, "Schlummern", action("SNOOZE", 2))
         if (alarm != null && !alarm.photoRequired) builder.addAction(0, "Beenden", action("STOP", 3))
         return builder.build()
@@ -254,6 +283,8 @@ class AlarmService : Service() {
         @Synchronized internal fun wasStopped(entry: RingEntry) = stopped[entry.id] == entry.at
         const val CHANNEL = "alarm_ring_v1"
         const val NOTIFICATION = 1001
+        const val TEST_CHANNEL = "alarm_test_v1"
+        const val TEST_NOTIFICATION = 1003
         val attributes: AudioAttributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
         private val _state = MutableStateFlow(RingState())

@@ -45,9 +45,12 @@ object TestSnooze {
 class TestSnoozeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val next = TestSnooze.take(intent.getLongExtra("token", -1)) ?: return
+        // App visible: same silent path as the test button. In the background Android needs the alarm notification.
+        val visible = androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
         runCatching {
             ContextCompat.startForegroundService(context, Intent(context, AlarmService::class.java).setAction("TEST")
-                .putExtra("id", next.id).putExtra("testSnoozes", next.snoozes))
+                .putExtra("id", next.id).putExtra("testSnoozes", next.snoozes).putExtra("quiet", visible))
+            if (visible) context.startActivity(Intent(context, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }.onFailure { Log.w("WeckerTest", "Test-Schlummerpause konnte nicht fortgesetzt werden", it) }
     }
 }

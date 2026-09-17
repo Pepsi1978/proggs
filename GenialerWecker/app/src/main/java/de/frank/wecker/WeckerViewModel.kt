@@ -322,7 +322,9 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     fun stopPreview() { preview?.release(); preview = null }
     fun test(alarm: Alarm) {
         stopPreview()
-        app.startForegroundService(Intent(app, AlarmService::class.java).setAction("TEST").putExtra("id", alarm.id))
+        app.startForegroundService(Intent(app, AlarmService::class.java).setAction("TEST").putExtra("id", alarm.id).putExtra("quiet", true))
+        // The app is in the foreground: open the shared alarm screen directly instead of relying on a full-screen notification.
+        app.startActivity(Intent(app, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
     override fun onCleared() {
         recorder.release(); stopPreview(); settings.close(); auth.cancelLogin(); auth.cancelChat()
