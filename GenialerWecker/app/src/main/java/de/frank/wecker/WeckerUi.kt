@@ -213,17 +213,17 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             RestzeitRing(now, next, nextIsSnooze, Modifier.size(ringSize))
                             // No maxLines: with large system fonts the lines wrap instead of being cut off.
                             Column(Modifier.weight(1f)) {
-                                Text(formatClock(now), fontFamily = IdeenSchriftBetont, fontSize = 56.sp, color = gold.primaer)
+                                // The current time appears exactly once; the hollow marker next to it explains the hollow dot on the ring.
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text(formatClock(now), fontFamily = IdeenSchriftBetont, fontSize = 56.sp, color = gold.primaer)
+                                    if (next != null) LegendenMarker(hollow = true, color = gold.textPrimaer)
+                                }
                                 if (next == null) {
                                     Text("Kein Wecker aktiv", style = MaterialTheme.typography.titleMedium, color = gold.textPrimaer)
                                     Text("Schalte einen Wecker ein oder lege einen neuen an.", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
                                 } else {
-                                    RingLegende(now, next, nextIsSnooze)
+                                    TerminZeile(now, next, nextIsSnooze)
                                     Text("in ${remainingLong(next - now)}", style = MaterialTheme.typography.bodyMedium, color = gold.primaer)
-                                    // Separate from the ring: only for the regular alarm shown, never for a snooze.
-                                    if (!nextIsSnooze) alarms.firstOrNull { it.enabled && it.nextAt == next && it.sleepMinutes > 0 }?.let { target ->
-                                        SchlafZeile(Schlaf.hinweis(target.nextAt, target.sleepMinutes, now))
-                                    }
                                 }
                             }
                         }
@@ -404,32 +404,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 vm.change(alarm.copy(steps = if (checked) alarm.steps + step else alarm.steps - step))
             } }
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
-            Text("Reihenfolge beim Wecken", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+            Text("Reihenfolge beim Wecken (verschieben per Drag-and-drop)", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             if (alarm.steps.isEmpty()) Text("Noch kein Baustein ausgewählt.", style = MaterialTheme.typography.bodySmall)
-            // Own compact column: 4 dp between rows instead of the section's 12 dp.
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                alarm.steps.forEachIndexed { index, step ->
-                    fun move(by: Int) {
-                        val list = alarm.steps.toMutableList(); java.util.Collections.swap(list, index, index + by); vm.change(alarm.copy(steps = list))
-                    }
-                    val canUp = index > 0
-                    val canDown = index < alarm.steps.lastIndex
-                    // Minimum height only: with large fonts the title wraps and the row grows instead of clipping.
-                    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).semantics {
-                        customActions = listOfNotNull(
-                            if (canUp) androidx.compose.ui.semantics.CustomAccessibilityAction("${step.title} nach oben verschieben") { move(-1); true } else null,
-                            if (canDown) androidx.compose.ui.semantics.CustomAccessibilityAction("${step.title} nach unten verschieben") { move(1); true } else null,
-                        )
-                    }, verticalAlignment = Alignment.CenterVertically) {
-                        Text("${index + 1}. ${step.title}", Modifier.weight(1f).padding(end = 8.dp))
-                        // ▲ above ▼ on one vertical line; border arrows stay in place, disabled instead of leaving a gap.
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            ReihenfolgePfeil(Icons.Default.KeyboardArrowUp, "${step.title} nach oben", canUp) { move(-1) }
-                            ReihenfolgePfeil(Icons.Default.KeyboardArrowDown, "${step.title} nach unten", canDown) { move(1) }
-                        }
-                    }
-                }
-            }
+            else de.frank.module.draganddrop.WeckReihenfolgeListe(alarm, vm::change)
             if (Step.IDEAS in alarm.steps) Text("Die offenen Ideen werden in ihrer Reihenfolge aus Geniale Ideen gelesen. Bei bestehender Verbindung bereitet die App Änderungen automatisch vor. Ansehen und abgleichen: Einstellungen → Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
         }
         if (alarm.needsSpeech) AlarmSpeechEditor(vm, alarm)
@@ -580,17 +557,6 @@ fun KlappKnopf(expanded: Boolean, onToggle: () -> Unit, beschreibung: String?, m
         else Modifier.semantics { contentDescription = beschreibung; stateDescription = if (expanded) "Aufgeklappt" else "Zugeklappt" }))
 }
 
-/** Small plastic arrow: body and touch area exactly 48 × 28 dp, no inner padding inflating it. Disabled at the ends. */
-@Composable
-private fun ReihenfolgePfeil(icon: androidx.compose.ui.graphics.vector.ImageVector, beschreibung: String, enabled: Boolean, onClick: () -> Unit) {
-    val gold = LocalGold.current
-    Knopf3D(onClick, Modifier.size(width = 48.dp, height = 28.dp), grundfarbe = gold.flaecheErhoeht,
-        form = RoundedCornerShape(8.dp), hoehe = 3.dp, aktiviert = enabled, innenAbstandWaagerecht = 0.dp, innenAbstandSenkrecht = 0.dp,
-        beschreibung = if (enabled) beschreibung else null) {
-        Icon(icon, null, tint = if (enabled) gold.primaer else gold.textGedaempft, modifier = Modifier.size(20.dp))
-    }
-}
-
 @Composable
 fun Toggle(label: String, value: Boolean, change: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = change),
@@ -728,26 +694,18 @@ private fun LegendenMarker(hollow: Boolean, color: androidx.compose.ui.graphics.
     androidx.compose.foundation.Canvas(Modifier.size(14.dp)) { ringMarker(center, hollow, color, surface) }
 }
 
-/** „○ jetzt 00:00 → ● Wecker 09:00“ with the same markers as the ring; the weekday is added when it is not today. */
+/** The alarm term with the same filled marker as on the ring; the weekday and date are added when it is not today. */
 @Composable
-private fun RingLegende(now: Long, target: Long, snooze: Boolean) {
+private fun TerminZeile(now: Long, target: Long, snooze: Boolean) {
     val gold = LocalGold.current
     val accent = if (snooze) Semantisch.info else gold.primaer
     val zone = ZoneId.systemDefault()
     val sameDay = Instant.ofEpochMilli(now).atZone(zone).toLocalDate() == Instant.ofEpochMilli(target).atZone(zone).toLocalDate()
     // Not today: the concrete date, e.g. "Fr, 18.09. · 09:00".
     val targetText = if (sameDay) formatClock(target) else formatAt(target)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        // Marker and label stay together when the line wraps.
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            LegendenMarker(hollow = true, color = gold.textPrimaer)
-            Text("jetzt ${formatClock(now)}", style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
-            Text("→", style = MaterialTheme.typography.bodyMedium, color = gold.textGedaempft)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            LegendenMarker(hollow = false, color = accent)
-            Text("${if (snooze) "Schlummern bis" else "Wecker"} $targetText", style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
-        }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        LegendenMarker(hollow = false, color = accent)
+        Text("${if (snooze) "Schlummern bis" else "Wecker"} $targetText", style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
     }
 }
 

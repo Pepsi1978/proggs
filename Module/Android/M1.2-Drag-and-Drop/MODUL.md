@@ -105,6 +105,7 @@ eine zweite App wirklich andere Werte, wird daraus v2.
 | App | Stand | Pfad der Kopie |
 |---|---|---|
 | GenialeIdeen | v1 | `GenialeIdeen/app/src/main/java/de/frank/module/draganddrop/` |
+| GenialerWecker | v1 | `GenialerWecker/app/src/main/java/de/frank/module/draganddrop/` |
 
 ## Abnahme
 
