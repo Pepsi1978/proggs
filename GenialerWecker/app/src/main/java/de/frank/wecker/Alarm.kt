@@ -125,7 +125,17 @@ data class Alarm(
     }
 }
 
-/** Kalenderbasierte Weckzeiten: Schichtabstände bleiben auch bei Zeitumstellungen erhalten. */
+/**
+ * Kalenderbasierte Weckzeiten: Schichtabstände bleiben auch bei Zeitumstellungen erhalten.
+ *
+ * Regel für Sommer-/Winterzeit (für alle Arten gleich: täglich, Wochentage, Datum, alle X Tage):
+ * - Jeder Termin wird aus Datum + Wanduhrzeit berechnet; 07:00 bleibt 07:00 Ortszeit.
+ * - Frühjahrslücke: eine Uhrzeit, die es nicht gibt (z. B. 02:30), klingelt um die Lückenlänge später, also 03:30 Sommerzeit.
+ * - Doppelte Herbststunde: es gilt nur das erste Vorkommen (02:30 Sommerzeit). Pro Kalendertag gibt es genau einen Kandidaten;
+ *   die Folgeplanung rechnet ab dem geklingelten Zeitpunkt weiter, daher klingelt das zweite 02:30 (Winterzeit) nicht erneut.
+ * - Schlafdauer und Erinnerung rechnen dagegen in echter verstrichener Zeit (siehe Schlaf, SchlafPlan).
+ * Abgesichert durch DstBerlinTest.
+ */
 object AlarmTime {
     fun next(alarm: Alarm, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): Long {
         val today = now.atZone(zone).toLocalDate()
