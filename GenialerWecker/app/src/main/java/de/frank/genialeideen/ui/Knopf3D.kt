@@ -217,10 +217,12 @@ fun StillerKnopf(
     Box(
         modifier = modifier
             .graphicsLayer { scaleX = skalierung; scaleY = skalierung }
-            // One consistent flat look for every secondary button; `hervorgehoben` stays for API compatibility.
+            // One consistent raised 3D look for every secondary button (opaque body, so the shadow
+            // never shows through); only pressing sinks it in. `hervorgehoben` stays for API compatibility.
+            .tiefenSchatten(Color.Black, 4.dp, form, gedrueckt = gedrueckt)
             .clip(form)
-            .background(gold.flaecheErhoeht)
-            .border(1.dp, gold.rahmen, form)
+            .background(koerperVerlauf(gold.flaecheErhoeht, gedrueckt = gedrueckt))
+            .border(1.dp, lichtKante(gedrueckt = gedrueckt, staerke = 0.35f), form)
             .clickable(interactionSource = quelle, indication = null) {
                 haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 aufTipp()
