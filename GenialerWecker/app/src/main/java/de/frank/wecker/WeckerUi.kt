@@ -213,11 +213,8 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             RestzeitRing(now, next, nextIsSnooze, Modifier.size(ringSize))
                             // No maxLines: with large system fonts the lines wrap instead of being cut off.
                             Column(Modifier.weight(1f)) {
-                                // The current time appears exactly once; the hollow marker next to it explains the hollow dot on the ring.
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    Text(formatClock(now), fontFamily = IdeenSchriftBetont, fontSize = 56.sp, color = gold.primaer)
-                                    if (next != null) LegendenMarker(hollow = true, color = gold.textPrimaer)
-                                }
+                                // The current time appears exactly once.
+                                Text(formatClock(now), fontFamily = IdeenSchriftBetont, fontSize = 56.sp, color = gold.primaer)
                                 if (next == null) {
                                     Text("Kein Wecker aktiv", style = MaterialTheme.typography.titleMedium, color = gold.textPrimaer)
                                     Text("Schalte einen Wecker ein oder lege einen neuen an.", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
