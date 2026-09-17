@@ -23,6 +23,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import kotlin.math.roundToInt
 
+/**
+ * Bestätigtes Ergebnis einer Bedienaktion. Der Weckbildschirm zeigt Erfolg nur nach diesem Signal,
+ * nie schon nach dem bloßen Tippen. [seq] steigt mit jedem Ergebnis, auch bei gleicher Aktion.
+ */
+data class RingResult(val seq: Long, val id: String, val action: String, val ok: Boolean, val snoozeUntil: Long = 0)
+
 data class RingState(val alarm: Alarm? = null, val step: String = "", val message: String = "", val test: Boolean = false, val playing: Boolean = false, val variation: Int = 1)
 
 /** Beim Wecken ausschließlich lokale Wiedergabe. Der Dienst hält auch ohne Activity den Alarm. */
@@ -83,6 +89,7 @@ class AlarmService : Service() {
                 }
             }
             "STOP" -> if (intent.targetsCurrent() && current?.photoRequired != true) finishCurrent(false)
+                else intent.getStringExtra("id")?.let { report(it, "STOP", false) }
             // Only a test may be ended without its photo task (back gesture), so nobody gets stuck in a test.
             "TEST_END" -> if (test) finishCurrent(false)
             "PHOTO_OK" -> {
@@ -90,6 +97,7 @@ class AlarmService : Service() {
                 if (intent.getStringExtra("id") == current?.id) finishCurrent(false)
             }
             "SNOOZE" -> if (intent.targetsCurrent()) finishCurrent(true)
+                else intent.getStringExtra("id")?.let { report(it, "SNOOZE", false) }
             else -> {
                 // A real alarm always wins over a test, including a test that is currently snoozing.
                 TestSnooze.cancel(this)
@@ -179,33 +187,40 @@ class AlarmService : Service() {
 
     private fun finishCurrent(snooze: Boolean) {
         val alarm = current ?: return
+        var snoozeUntil = 0L
         if (snooze && !test) {
             val latest = store.get(alarm.id) ?: alarm
             if (latest.snoozes >= latest.snoozeLimit) {
                 _state.value = _state.value.copy(message = "Alle Schlummerpausen sind aufgebraucht.")
+                report(alarm.id, "SNOOZE", false)
                 return
             }
             val updated = latest.copy(snoozeUntil = System.currentTimeMillis() + latest.snoozeMinutes * 60_000, snoozes = latest.snoozes + 1)
             // Persist first: a snooze alarm that fires must find its matching snoozeUntil. Roll back if planning fails.
             try { store.put(updated) }
-            catch (_: Exception) { _state.value = _state.value.copy(message = "Schlummern konnte nicht gespeichert werden. Der Wecker läuft weiter."); return }
+            catch (_: Exception) { _state.value = _state.value.copy(message = "Schlummern konnte nicht gespeichert werden. Der Wecker läuft weiter."); report(alarm.id, "SNOOZE", false); return }
             try { AlarmScheduler(this).schedule(updated) }
             catch (_: Exception) {
                 runCatching { store.put(latest) }
                 _state.value = _state.value.copy(message = "Schlummern konnte nicht geplant werden. Der Wecker läuft weiter.")
+                report(alarm.id, "SNOOZE", false)
                 return
             }
             SnoozeNotice.show(this, updated)
+            snoozeUntil = updated.snoozeUntil
         }
         if (test) {
             if (!snooze) TestSnooze.cancel(this)
             else if (alarm.snoozes >= alarm.snoozeLimit) {
                 _state.value = _state.value.copy(message = "Alle Schlummerpausen sind aufgebraucht.")
+                report(alarm.id, "SNOOZE", false)
                 return
             } else try {
-                TestSnooze.start(this, alarm.id, alarm.snoozes + 1, System.currentTimeMillis() + alarm.snoozeMinutes * 60_000L)
+                snoozeUntil = System.currentTimeMillis() + alarm.snoozeMinutes * 60_000L
+                TestSnooze.start(this, alarm.id, alarm.snoozes + 1, snoozeUntil)
             } catch (_: Exception) {
                 _state.value = _state.value.copy(message = "Schlummern konnte nicht geplant werden. Der Wecker läuft weiter.")
+                report(alarm.id, "SNOOZE", false)
                 return
             }
         }
@@ -224,7 +239,13 @@ class AlarmService : Service() {
         current = null
         test = false
         quiet = false
+        // Confirmed before the next pending alarm begins, so a new alarm always replaces this feedback.
+        report(alarm.id, if (snooze) "SNOOZE" else "STOP", true, snoozeUntil)
         nextAlarm()
+    }
+
+    private fun report(id: String, action: String, ok: Boolean, snoozeUntil: Long = 0) {
+        _result.value = RingResult((_result.value?.seq ?: 0) + 1, id, action, ok, snoozeUntil)
     }
 
     /**
@@ -297,6 +318,8 @@ class AlarmService : Service() {
         val attributes: AudioAttributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
         private val _state = MutableStateFlow(RingState())
+        private val _result = MutableStateFlow<RingResult?>(null)
+        val result = _result.asStateFlow()
         val state = _state.asStateFlow()
     }
 }
