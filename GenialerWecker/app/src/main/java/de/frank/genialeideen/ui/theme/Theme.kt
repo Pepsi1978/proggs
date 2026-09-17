@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -142,6 +143,7 @@ fun GenialeIdeenTheme(
     }
     }
     val schrift = remember(schriftSkalierung) { typografie(schriftSkalierung) }
+
     CompositionLocalProvider(
         LocalGold provides palette,
         LocalBewegungReduziert provides reduziert,
@@ -153,4 +155,31 @@ fun GenialeIdeenTheme(
             content = content,
         )
     }
+}
+
+/**
+ * Schalterfarben für beide Modi: Der ausgeschaltete Zustand bleibt auf der Karte
+ * klar erkennbar — deutlich abgesetzte Schiene, kräftiger Rand, hoher Daumen-Kontrast.
+ */
+@Composable
+fun SchalterFarben(): SwitchColors {
+    val gold = LocalGold.current
+    return SwitchColors(
+        checkedThumbColor = gold.aufPrimaer,
+        checkedTrackColor = gold.primaer,
+        checkedBorderColor = gold.primaerGedaempft,
+        checkedIconColor = gold.aufPrimaer,
+        uncheckedThumbColor = gold.textPrimaer,
+        uncheckedTrackColor = if (gold.istDunkel) Color(0xFF3B352B) else Color(0xFFE8E0CE),
+        uncheckedBorderColor = if (gold.istDunkel) Color(0xFF8F8168) else gold.primaerGedaempft,
+        uncheckedIconColor = gold.textPrimaer,
+        disabledCheckedThumbColor = gold.textGedaempft,
+        disabledCheckedTrackColor = gold.flaecheErhoeht,
+        disabledCheckedBorderColor = gold.rahmen,
+        disabledCheckedIconColor = gold.textGedaempft,
+        disabledUncheckedThumbColor = gold.textGedaempft,
+        disabledUncheckedTrackColor = gold.flaecheErhoeht,
+        disabledUncheckedBorderColor = gold.rahmen,
+        disabledUncheckedIconColor = gold.textGedaempft,
+    )
 }

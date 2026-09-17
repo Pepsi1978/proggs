@@ -196,7 +196,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Switch(alarm.enabled, { vm.toggle(alarm, it) }, Modifier.semantics {
                                 contentDescription = "Wecker aktivieren: ${alarm.name}"
-                            })
+                            }, colors = SchalterFarben())
                             Column(Modifier.weight(1f).clickable(
                                 interactionSource = remember { MutableInteractionSource() }, indication = null,
                                 onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) })) {
@@ -428,7 +428,7 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
 @Composable
 fun Toggle(label: String, value: Boolean, change: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f)); Switch(value, change)
+        Text(label, Modifier.weight(1f)); Switch(value, change, colors = SchalterFarben())
     }
 }
 
