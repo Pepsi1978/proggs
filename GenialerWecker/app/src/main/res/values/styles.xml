@@ -7,4 +7,11 @@
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:colorAccent">#8B6914</item>
     </style>
+    <!-- Nur das Startfenster des Weckbildschirms: Bis Compose zeichnet, blendet sonst die helle
+         Material-Vorlage auf, gerade wenn der Alarm den Bildschirm nachts einschaltet. Die Oberfläche
+         selbst folgt weiterhin der gewählten Hell-/Dunkel-Einstellung. -->
+    <style name="Theme.Wecker.Alarm" parent="Theme.Wecker">
+        <item name="android:windowBackground">#FF121212</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>

@@ -24,6 +24,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         hideStatusBar()
         setContent { WeckerApp(model, this) }
+        // Die gewählte Ausrichtung folgt der Einstellung; nur eine echte Abweichung wird gesetzt,
+        // damit daraus keine Kette aus Neukonfigurationen entsteht.
+        lifecycleScope.launch {
+            model.settings.ausrichtungFlow.collect { Ausrichtung.anwenden(this@MainActivity, it) }
+        }
         lifecycleScope.launch {
             AlarmService.state.collect { state ->
                 if (state.alarm != null && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {

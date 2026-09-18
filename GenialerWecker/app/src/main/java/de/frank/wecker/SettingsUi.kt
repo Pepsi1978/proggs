@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlin.math.roundToInt
 import de.frank.genialeideen.BuildConfig
 import de.frank.genialeideen.audio.VoiceSampleScript
 import de.frank.genialeideen.auth.CodexModel
@@ -132,6 +134,19 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             Text("Erlaube Wecker in allen verwendeten Nicht-stören-Modi und Routinen. Nach „Stopp erzwingen“ die App einmal öffnen. Ein ausgeschaltetes Telefon kann nicht wecken.", style = MaterialTheme.typography.bodySmall)
         }
         BenachrichtigungenKarte(vm, activity)
+        var ausrichtung by remember(revision) { mutableStateOf(settings.ausrichtung) }
+        Section("Darstellung", collapsible = true, initiallyExpanded = false,
+            summary = "Ausrichtung: ${Ausrichtung.optionen.find { it.first == ausrichtung }?.second ?: "Automatisch"}") {
+            Choice("Ausrichtung", ausrichtung, Ausrichtung.optionen) {
+                ausrichtung = it
+                settings.ausrichtung = it
+                Ausrichtung.anwenden(activity, it)
+                vm.settingsRevision.value++
+            }
+            Text("Gilt für die Weckerliste und den Weckbildschirm. „Automatisch“ überlässt die Wahl wie bisher dem Gerät. " +
+                "Android kann die Ausrichtung in geteilten Fenstern oder auf großen Displays vorgeben.",
+                style = MaterialTheme.typography.bodySmall)
+        }
         Section("Vorlesen · Stimmen & Tempo", collapsible = true, summary = "${when (provider) {
             TtsProvider.GOOGLE_CLOUD.id -> "Google"; TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"; else -> "Edge"
         }} · Tempo ${"%.2f".format(rate)}× · gilt für alle Wecker ohne eigene Stimme") {
@@ -372,7 +387,8 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
         catch (e: Exception) { vm.message.value = "Die Android-Einstellung konnte nicht geöffnet werden (${e.javaClass.simpleName})." }
     }
     Section("Benachrichtigungen", collapsible = true, initiallyExpanded = false,
-        summary = "Schlafenszeit-Erinnerung ${if (on) "an" else "aus"}${if (on && blocked != null) " · gesperrt" else ""}",
+        summary = "Schlafenszeit-Erinnerung ${if (on) SchlafErinnerung.leadMinutes(context).let { if (it == 0) "zur Schlafenszeit" else "$it Min. vorher" } else "aus"}" +
+            "${if (on && blocked != null) " · gesperrt" else ""}",
         error = if (on && blocked != null) "Die Erinnerung ist eingeschaltet, wird von Android aber nicht angezeigt." else null) {
         Toggle("Schlafenszeit-Erinnerung", on) { checked ->
             // The switch shows the stored state only; a failed write keeps the old state and says so.
@@ -383,8 +399,27 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
                 ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
                 permission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-        Text("15 Minuten vor der berechneten Schlafenszeit, nur für aktive Wecker mit Schlafdauer.", style = MaterialTheme.typography.bodySmall)
+        Text("Vor der berechneten Schlafenszeit, nur für aktive Wecker mit Schlafdauer.", style = MaterialTheme.typography.bodySmall)
         if (on) {
+            // Beim Ziehen nur die Anzeige; gespeichert und neu geplant wird erst am Ende der Geste.
+            var vorlauf by remember(refresh) { mutableIntStateOf(SchlafErinnerung.leadMinutes(context)) }
+            Text(if (vorlauf == 0) "Vorlauf: zur Schlafenszeit" else "Vorlauf: $vorlauf Min. vorher",
+                style = MaterialTheme.typography.titleMedium, color = LocalGold.current.primaer)
+            Slider(vorlauf.toFloat(), { vorlauf = it.roundToInt() },
+                Modifier.semantics {
+                    contentDescription = "Vorlauf der Schlafenszeit-Erinnerung"
+                    stateDescription = if (vorlauf == 0) "zur Schlafenszeit" else "$vorlauf Minuten vorher"
+                },
+                valueRange = 0f..SchlafPlan.LEAD_MAX_MINUTES.toFloat(), steps = SchlafPlan.LEAD_MAX_MINUTES - 1,
+                onValueChangeFinished = {
+                    if (!SchlafErinnerung.setLeadMinutes(context, vorlauf)) {
+                        vm.message.value = "Der Vorlauf konnte nicht gespeichert werden. Der bisherige Stand gilt weiter."
+                        vorlauf = SchlafErinnerung.leadMinutes(context)
+                    }
+                    refresh++
+                })
+            Text("0 Minuten erinnert genau zur Schlafenszeit. Ausgeschaltet wird die Erinnerung allein über den Schalter.",
+                style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
             when (blocked) {
                 "app" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Benachrichtigungen der App sind ausgeschaltet.", Modifier.weight(1f), color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)

@@ -83,7 +83,7 @@ class MonthlyYearlyTest {
         val alarm = monthly("2026-09-23").copy(nextAt = at("2026-09-23T07:00:00+02:00"), sleepMinutes = 480)
         val plan = SchlafPlan.next(alarm, at("2026-09-22T12:00:00+02:00"), true, berlin)!!
         assertEquals(at("2026-09-22T23:00:00+02:00"), plan.bedtime)
-        assertEquals(at("2026-09-22T22:45:00+02:00"), plan.trigger)
+        assertEquals(at("2026-09-22T22:45:00+02:00"), plan.trigger(SchlafPlan.leadMs(SchlafPlan.LEAD_DEFAULT_MINUTES)))
     }
 
     @Test fun jsonStaysCompatibleAndConflictsAreRejected() {

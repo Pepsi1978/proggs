@@ -59,9 +59,55 @@ import androidx.compose.animation.togetherWith
 private data class PendingAction(val id: String, val ringId: Long, val action: String, val afterSeq: Long)
 
 class AlarmActivity : ComponentActivity() {
+    /** Erst nach der ersten Entsperrung geöffnet; davor gibt es keine verschlüsselten Einstellungen. */
+    private var settings: SecureSettings? = null
+
+    /**
+     * Die aktuelle Wahl, jedes Mal frisch gelesen. Ist der verschlüsselte Speicher nicht zu öffnen, gilt
+     * dunkel – nicht der Vorgabewert „light": ein weckender Bildschirm mitten in der Nacht darf nicht
+     * wegen eines Lesefehlers hell aufblenden. Eine ausdrücklich gewählte helle Oberfläche bleibt hell.
+     */
+    private fun leseTheme(): String {
+        if (!getSystemService(android.os.UserManager::class.java).isUserUnlocked) return "dark"
+        val offen = settings ?: runCatching { SecureSettings(this) }.getOrNull()
+        if (offen == null) {
+            android.util.Log.w("WeckerAlarmUi", "Einstellungen nicht zu öffnen; Weckbildschirm bleibt dunkel")
+            return "dark"
+        }
+        if (!offen.verfuegbar) {
+            // Nicht behalten: eine einmal leer gebliebene Instanz hielte den Fehlschlag dauerhaft fest und
+            // kein späteres Resume käme je an die echte Wahl. Verwerfen, beim nächsten Mal neu versuchen.
+            runCatching { offen.close() }
+            settings = null
+            android.util.Log.w("WeckerAlarmUi", "Verschlüsselte Einstellungen nicht lesbar; Weckbildschirm bleibt dunkel")
+            return "dark"
+        }
+        settings = offen
+        return runCatching { offen.theme }.getOrDefault("dark")
+    }
+
+    /** Hier ist „automatisch" der richtige Rückfall: er entspricht dem Verhalten ohne Einstellung. */
+    private fun leseAusrichtung(): String {
+        val offen = settings ?: return Ausrichtung.AUTOMATISCH
+        return runCatching { if (offen.verfuegbar) offen.ausrichtung else Ausrichtung.AUTOMATISCH }
+            .getOrDefault(Ausrichtung.AUTOMATISCH)
+    }
+
+    override fun onDestroy() {
+        // Der eigene Wrapper meldet seinen Listener wieder ab; die Instanz des ViewModels bleibt unberührt.
+        runCatching { settings?.close() }
+        settings = null
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        val start = leseTheme()
+        // Ausdrückliche, durchsichtige Ränder: der Vorgabewert setzt auf älteren Versionen einen hellen
+        // Scrim hinter die Navigationsleiste, der nicht zur gewählten Oberfläche passen muss.
+        val rand = if (start == "dark") androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+            else androidx.activity.SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = rand, navigationBarStyle = rand)
         hideStatusBar()
         if (android.os.Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(true); setTurnScreenOn(true)
@@ -150,11 +196,22 @@ class AlarmActivity : ComponentActivity() {
                     if (now.alarm == null || now.ringId == done.ringId) finish()
                 } else if (state.alarm == null && seenAlarm && pending == null) finish()
             }
-            // Im Direct Boot stehen verschlüsselte Einstellungen noch nicht zur Verfügung.
-            val theme = remember {
-                if (getSystemService(android.os.UserManager::class.java).isUserUnlocked)
-                    SecureSettings(this).use { it.theme } else "dark"
+            // Kein Flow, sondern ein ausdrückliches neues Lesen bei jedem ON_RESUME: diese Activity ist
+            // singleTask und wird für ein weiteres Klingeln über onNewIntent wiederverwendet, eine einmalige
+            // Momentaufnahme bekäme eine zwischenzeitliche Änderung nie mit. Ein eigener Wrapper hat eigene
+            // Listenerlisten und erhielte Änderungen aus dem ViewModel nicht zuverlässig als Ereignis.
+            var theme by remember { mutableStateOf(leseTheme()) }
+            // Die gewählte Ausrichtung gilt auch hier; Android kann sie auf großen Displays übergehen.
+            var ausrichtung by remember { mutableStateOf(leseAusrichtung()) }
+            val darstellung = LocalLifecycleOwner.current.lifecycle
+            DisposableEffect(darstellung) {
+                val beobachter = androidx.lifecycle.LifecycleEventObserver { _, ereignis ->
+                    if (ereignis == Lifecycle.Event.ON_RESUME) { theme = leseTheme(); ausrichtung = leseAusrichtung() }
+                }
+                darstellung.addObserver(beobachter)
+                onDispose { darstellung.removeObserver(beobachter) }
             }
+            LaunchedEffect(ausrichtung) { Ausrichtung.anwenden(this@AlarmActivity, ausrichtung) }
             SideEffect {
                 androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
                     isAppearanceLightStatusBars = theme != "dark"

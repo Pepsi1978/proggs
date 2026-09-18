@@ -35,6 +35,13 @@ class SecureSettings(context: Context) : Closeable {
         }
     }
 
+    /**
+     * Ob der verschlüsselte Speicher wirklich geöffnet werden konnte. Ohne ihn liefert jeder Lesezugriff
+     * stillschweigend den Vorgabewert — Aufrufer, für die ein falscher Vorgabewert teuer ist
+     * (z. B. ein hell startender Weckbildschirm), können das damit unterscheiden.
+     */
+    val verfuegbar: Boolean get() = preferences != null
+
     private val _themeFlow = MutableStateFlow(readString(Keys.THEME, Defaults.THEME))
     val themeFlow: StateFlow<String> = _themeFlow.asStateFlow()
 

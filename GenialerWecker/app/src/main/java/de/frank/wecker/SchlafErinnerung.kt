@@ -22,18 +22,32 @@ import java.util.Locale
 
 /** Reine Planung der Schlafenszeit-Erinnerung, ohne Android. */
 object SchlafPlan {
-    const val LEAD_MS = 15 * 60_000L
+    /** Vorgabe und Grenzen des Vorlaufs in Minuten. 0 heißt „zur Schlafenszeit“, nicht „aus“. */
+    const val LEAD_DEFAULT_MINUTES = 15
+    const val LEAD_MAX_MINUTES = 60
+    /**
+     * Ohne Vorlauf fallen Auslösung und Schlafenszeit auf dieselbe Millisekunde. Jede noch so kleine
+     * Zustellverzögerung von Android würde die Erinnerung sonst stumm verwerfen, deshalb diese begrenzte
+     * Karenz – und nur für diesen Fall, damit die Verfallsregeln bei echtem Vorlauf unverändert bleiben.
+     */
+    const val KARENZ_OHNE_VORLAUF_MS = 60_000L
     /** Bounded search: enough for a 24 h sleep duration before a daily alarm, never an endless loop. */
     private const val MAX_OCCURRENCES = 8
 
-    /** One reminder occurrence; [key] is its fingerprint (alarm, wake time, sleep duration). */
+    /**
+     * One reminder occurrence; [key] is its fingerprint (alarm, wake time, sleep duration).
+     * Der Vorlauf gehört bewusst NICHT dazu: Fingerabdruck und Gruppe bleiben über eine Vorlaufänderung
+     * hinweg stabil, damit eine bereits zugestellte Erinnerung nicht erneut ertönt.
+     */
     data class Vorkommen(val alarmId: String, val wakeAt: Long, val sleepMinutes: Int) {
         val bedtime: Long get() = Schlaf.bedtime(wakeAt, sleepMinutes)
-        val trigger: Long get() = bedtime - LEAD_MS
+        fun trigger(leadMs: Long): Long = bedtime - leadMs
         val key: String get() = "$alarmId|$wakeAt|$sleepMinutes"
         /** Same bedtime minute = one shared notification. */
         val group: Long get() = bedtime / 60_000L
     }
+
+    fun leadMs(minutes: Int): Long = minutes.coerceIn(0, LEAD_MAX_MINUTES) * 60_000L
 
     /** Wake times from the stored nextAt (which already reflects a skipped occurrence) onwards. */
     fun wakeTimes(alarm: Alarm, zone: ZoneId = ZoneId.systemDefault()): List<Long> {
@@ -51,15 +65,24 @@ object SchlafPlan {
     private fun occurrences(alarm: Alarm, zone: ZoneId) = wakeTimes(alarm, zone).asSequence().map { Vorkommen(alarm.id, it, alarm.sleepMinutes) }
 
     /** First occurrence whose reminder still lies in the future; a missed reminder is never caught up. */
-    fun next(alarm: Alarm, now: Long, enabledSetting: Boolean, zone: ZoneId = ZoneId.systemDefault()): Vorkommen? =
-        if (!enabledSetting) null else occurrences(alarm, zone).firstOrNull { it.trigger > now }
+    fun next(alarm: Alarm, now: Long, enabledSetting: Boolean, zone: ZoneId = ZoneId.systemDefault(), leadMinutes: Int = LEAD_DEFAULT_MINUTES): Vorkommen? =
+        if (!enabledSetting) null else leadMs(leadMinutes).let { lead -> occurrences(alarm, zone).firstOrNull { it.trigger(lead) > now } }
 
-    /** A delivery is shown only if its fingerprint is still planned and now lies between reminder and bedtime, both inclusive. */
-    fun gueltig(alarm: Alarm?, wakeAt: Long, sleepMinutes: Int, now: Long, enabledSetting: Boolean, zone: ZoneId = ZoneId.systemDefault()): Vorkommen? {
+    /**
+     * A delivery is shown only if its fingerprint is still planned and now lies between reminder and bedtime,
+     * both inclusive. Ohne Vorlauf fallen beide Grenzen zusammen; dann verlängert [KARENZ_OHNE_VORLAUF_MS] das
+     * Fenster um bis zu eine Minute, höchstens jedoch bis zur Weckzeit. Bei Vorlauf über 0 bleibt es beim
+     * bisherigen Fenster bis zur Schlafenszeit.
+     */
+    fun gueltig(alarm: Alarm?, wakeAt: Long, sleepMinutes: Int, now: Long, enabledSetting: Boolean,
+        zone: ZoneId = ZoneId.systemDefault(), leadMinutes: Int = LEAD_DEFAULT_MINUTES): Vorkommen? {
         if (alarm == null || !enabledSetting || alarm.sleepMinutes != sleepMinutes) return null
         if (wakeAt !in wakeTimes(alarm, zone)) return null
         val occurrence = Vorkommen(alarm.id, wakeAt, sleepMinutes)
-        return occurrence.takeIf { now >= occurrence.trigger && now <= occurrence.bedtime }
+        val lead = leadMs(leadMinutes)
+        // Nur ohne Vorlauf greift die Karenz, und nie über die Weckzeit hinaus.
+        val spaetestens = if (lead == 0L) minOf(occurrence.bedtime + KARENZ_OHNE_VORLAUF_MS, wakeAt) else occurrence.bedtime
+        return occurrence.takeIf { now >= occurrence.trigger(lead) && now <= spaetestens }
     }
 
     /** Whether an alarm still belongs to a visible group: same bedtime minute, planned, wake time not yet passed. */
@@ -96,13 +119,15 @@ object SchlafPlan {
 }
 
 /**
- * Schlafenszeit-Erinnerung 15 Minuten vor der Schlafenszeit. Strikt getrennt vom Wecken: eigener Receiver,
+ * Schlafenszeit-Erinnerung mit dem eingestellten Vorlauf vor der Schlafenszeit (0 bis 60 Minuten, Vorgabe 15;
+ * 0 erinnert genau zur Schlafenszeit). Strikt getrennt vom Wecken: eigener Receiver,
  * eigene data-URI, eigener Kanal. Fehler landen nur im eigenen Status, nie an einem Wecker.
  * All read-modify-write of switch, marks and status runs under [lock]; receiver (Main) and scheduler (IO) may run in parallel.
  */
 object SchlafErinnerung {
     private const val TAG = "WeckerSchlaf"
     const val SETTING_KEY = "notify_bedtime"
+    const val LEAD_KEY = "notify_bedtime_lead_minutes"
     private const val MARKS_KEY = "sleep_reminder_marks"
     private const val PLAN_ISSUES_KEY = "sleep_reminder_plan_issues"
     private const val DELIVERY_ISSUE_KEY = "sleep_reminder_delivery_issue"
@@ -116,9 +141,40 @@ object SchlafErinnerung {
     private fun prefs(context: Context) = AlarmStore.get(context).prefs
     /** Confirmed switch value; loaded once, changed only after a successful commit. */
     private var confirmedEnabled: Boolean? = null
+    /** Ebenso bestätigt wie der Schalter: nur ein erfolgreiches commit() ändert den geltenden Vorlauf. */
+    private var confirmedLead: Int? = null
     fun enabled(context: Context): Boolean = synchronized(lock) {
         confirmedEnabled ?: (try { prefs(context).getBoolean(SETTING_KEY, true) }
             catch (e: Exception) { Log.w(TAG, "Schalter unlesbar", e); true }).also { confirmedEnabled = it }
+    }
+
+    /** Vorlauf in ganzen Minuten, 0..60. 0 heißt „zur Schlafenszeit“ – die Aktivierung entscheidet allein der Schalter. */
+    fun leadMinutes(context: Context): Int = synchronized(lock) {
+        confirmedLead ?: (try { prefs(context).getInt(LEAD_KEY, SchlafPlan.LEAD_DEFAULT_MINUTES) }
+            catch (e: Exception) { Log.w(TAG, "Vorlauf unlesbar", e); SchlafPlan.LEAD_DEFAULT_MINUTES })
+            .coerceIn(0, SchlafPlan.LEAD_MAX_MINUTES).also { confirmedLead = it }
+    }
+
+    /**
+     * Speichert den Vorlauf und plant danach alles um. Liefert false, wenn nicht dauerhaft gespeichert werden
+     * konnte; dann gilt der bisherige Wert weiter – auch im Arbeitsspeicher, weil ein gescheitertes commit()
+     * die Voreinstellungen im Speicher trotzdem verändert.
+     */
+    fun setLeadMinutes(context: Context, minutes: Int): Boolean = synchronized(lock) {
+        val ziel = minutes.coerceIn(0, SchlafPlan.LEAD_MAX_MINUTES)
+        val previous = leadMinutes(context)
+        if (ziel == previous) return@synchronized true
+        val stored = try { prefs(context).edit().putInt(LEAD_KEY, ziel).commit() }
+            catch (e: Exception) { Log.w(TAG, "Vorlauf nicht gespeichert", e); false }
+        if (!stored) {
+            try { prefs(context).edit().putInt(LEAD_KEY, previous).commit() }
+            catch (e: Exception) { Log.w(TAG, "Vorlauf nicht zurückgesetzt", e) }
+            return@synchronized false
+        }
+        confirmedLead = ziel
+        // Alle bestehenden Auftraege bekommen ihren neuen Zeitpunkt; derselbe PendingIntent ersetzt den alten.
+        syncAll(context)
+        true
     }
 
     // ---------- status, per path (best effort: never throws into scheduling or the UI) ----------
@@ -177,7 +233,7 @@ object SchlafErinnerung {
     fun ensureChannel(context: Context) {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL, "Schlafenszeit-Erinnerung", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "15 Minuten vor der berechneten Schlafenszeit."
+                description = "Zum eingestellten Vorlauf vor der berechneten Schlafenszeit."
             })
     }
 
@@ -214,14 +270,16 @@ object SchlafErinnerung {
     fun sync(context: Context, alarmId: String) = synchronized(lock) {
         try {
             val current = AlarmStore.get(context).get(alarmId)
-            val occurrence = current?.let { SchlafPlan.next(it, System.currentTimeMillis(), enabled(context)) }
+            val vorlauf = leadMinutes(context)
+            val occurrence = current?.let { SchlafPlan.next(it, System.currentTimeMillis(), enabled(context), leadMinutes = vorlauf) }
             if (occurrence == null) cancelPlan(context, alarmId)
             else {
                 val manager = context.getSystemService(AlarmManager::class.java)
                 val pending = operation(context, alarmId) { putExtra("wakeAt", occurrence.wakeAt); putExtra("sleep", occurrence.sleepMinutes) }
                 // Without the exact-alarm grant an inexact reminder is still better than none; the settings name the possible delay.
-                if (exaktFehlt(context)) manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, occurrence.trigger, pending)
-                else manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, occurrence.trigger, pending)
+                val zeitpunkt = occurrence.trigger(SchlafPlan.leadMs(vorlauf))
+                if (exaktFehlt(context)) manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, zeitpunkt, pending)
+                else manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, zeitpunkt, pending)
             }
             setPlanIssue(context, alarmId, null)
         } catch (e: Exception) {
@@ -304,7 +362,9 @@ object SchlafErinnerung {
             synchronized(lock) {
                 val now = System.currentTimeMillis()
                 val setting = enabled(context)
-                val occurrence = SchlafPlan.gueltig(store.get(alarmId), wakeAt, sleepMinutes, now, setting) ?: return
+                // Gegen das mit dem aktuellen Vorlauf gültige Zeitfenster geprüft: Ausgeliefertes, das nicht mehr
+                // hineinfällt, wird verworfen. Eine Vorlaufänderung allein macht eine Auslieferung nicht ungültig.
+                val occurrence = SchlafPlan.gueltig(store.get(alarmId), wakeAt, sleepMinutes, now, setting, leadMinutes = leadMinutes(context)) ?: return
                 val marks = SchlafPlan.Marken.parse(store.prefs.getString(MARKS_KEY, null)).bereinigt(now)
                 val memoryKey = "${occurrence.group}|${occurrence.key}"
                 if (marks.enthaelt(occurrence) || memoryKey in memoryMarks) return

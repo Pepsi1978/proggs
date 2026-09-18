@@ -105,6 +105,44 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
   und „Übernehmen" statt eines allgemeinen „Bestätigen". Titel, Warntexte und „Abbrechen" sind
   unverändert, es kam kein zusätzlicher Dialog hinzu.
 
+### Darstellung (1.1.49)
+
+- **Weckbildschirm folgt der Hell-/Dunkel-Wahl.** Behoben wurden vier belegte Fehlerwege – welcher
+  davon im beobachteten Fall überwog, ist **nicht** am Gerät nachgewiesen:
+  1. Bei nicht lesbarem verschlüsseltem Speicher lieferte jeder Lesezugriff stillschweigend den
+     Vorgabewert `"light"`. Der Weckbildschirm unterscheidet das jetzt über `SecureSettings.verfuegbar`
+     und nimmt in diesem Fehlerfall dunkel. Eine ausdrücklich gewählte helle Oberfläche bleibt hell.
+  2. Die Wahl wurde einmalig beim Aufbau gelesen. Da die Activity `singleTask` ist und ein weiteres
+     Klingeln sie über `onNewIntent` wiederverwendet, gilt sie jetzt ab jedem `ON_RESUME` neu.
+  3. Das Startfenster erbte die helle Material-Vorlage. `Theme.Wecker.Alarm` setzt dafür einen dunklen
+     `windowBackground`, bis Compose zeichnet; die Oberfläche selbst folgt weiter der Einstellung.
+  4. `enableEdgeToEdge()` ohne Argumente setzt Systemleisten-Scrims nach der Systemkonfiguration.
+     Sie werden jetzt ausdrücklich passend zur Wahl und durchsichtig gesetzt.
+  Vor der ersten Entsperrung wird weiterhin nichts Verschlüsseltes geöffnet; dort gilt dunkel.
+- **Neue Einstellung „Darstellung → Ausrichtung"** mit Hochformat, Querformat und Automatisch.
+  Automatisch ist der Vorgabewert und entspricht dem bisherigen Verhalten. Sie gilt für die
+  Weckerliste und den Weckbildschirm und nutzt die bereits vorhandene Speicherung. **Grenze:**
+  Android kann die Ausrichtung in geteilten Fenstern oder auf großen Displays vorgeben – ab einer
+  kleinsten Fensterbreite von 600 dp wird `setRequestedOrientation()` ignoriert. Das befristete
+  App-Opt-out `PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY` steht im Manifest und läuft mit
+  targetSdk 37 aus; die Layouts bleiben adaptiv. Eine Garantie ist das nicht.
+- **Nächster Termin oben:** heute nur die Uhrzeit, morgen „07:00 · morgen", ab übermorgen zuerst das
+  Datum („So, 20.09. · 07:00"), bei einem anderen Jahr mit Jahreszahl. Entschieden wird nach
+  lokalen Kalendertagen, nicht nach Stundenabstand. Der Weckername bleibt darunter stehen.
+- **Vorlauf der Schlafenszeit-Erinnerung frei wählbar:** Regler von 0 bis 60 Minuten in ganzen
+  Minuten, sichtbar nur bei eingeschaltetem Schalter. 15 Minuten bleiben die Vorgabe, auch für
+  vorhandene Daten. **0 bedeutet „genau zur Schlafenszeit", nicht „aus"** – ausgeschaltet wird
+  allein über den Schalter. Beim Ziehen wandert nur die Anzeige mit; gespeichert und umgeplant wird
+  am Ende der Geste über denselben bestätigten Speicherpfad wie beim Schalter. Scheitert das
+  Speichern, gilt der bisherige Wert weiter und die App sagt es.
+  Ein bereits zugestellter Hinweis ertönt nach einer Vorlaufänderung nicht erneut: Fingerabdruck und
+  Gruppe der Erinnerung hängen bewusst nicht vom Vorlauf ab. Jede Auslieferung wird gegen das mit dem
+  aktuellen Vorlauf gültige Zeitfenster geprüft; was nicht mehr hineinfällt, wird verworfen. Eine
+  Vorlaufänderung allein macht eine Auslieferung nicht ungültig. Bei 0 Minuten gilt eine Karenz von bis
+  zu 60 Sekunden nach der Schlafenszeit, nie über die Weckzeit hinaus – ohne sie würde jede noch so
+  kleine Zustellverzögerung von Android die Erinnerung stumm verwerfen. Bei einem Vorlauf über 0
+  bleiben die bisherigen Verfallsregeln unverändert. Weck- und Schlummerplanung sind nicht berührt.
+
 ## Ideenbrücke
 
 Geniale Ideen benötigt das mitgelieferte Update mit `bridge/WeckerProvider.kt`.

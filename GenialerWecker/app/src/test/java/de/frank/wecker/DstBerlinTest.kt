@@ -83,12 +83,12 @@ class DstBerlinTest {
         assertEquals(Instant.parse("2027-03-28T05:00:00Z").toEpochMilli(), springWake)
         val springPlan = SchlafPlan.next(daily(7, 0, springWake).copy(sleepMinutes = 480), ms(springDay.minusDays(1), "12:00", cet), true, berlin)!!
         assertEquals(ms(springDay.minusDays(1), "22:00", cet), springPlan.bedtime)
-        assertEquals(ms(springDay.minusDays(1), "21:45", cet), springPlan.trigger)
+        assertEquals(ms(springDay.minusDays(1), "21:45", cet), springPlan.trigger(SchlafPlan.leadMs(SchlafPlan.LEAD_DEFAULT_MINUTES)))
         // Autumn: 07:00 CET (06:00 UTC) − 8 h = 00:00 CEST, reminder 23:45 CEST the evening before.
         val autumnWake = ms(autumnDay, "07:00", cet)
         assertEquals(Instant.parse("2026-10-25T06:00:00Z").toEpochMilli(), autumnWake)
         val autumnPlan = SchlafPlan.next(daily(7, 0, autumnWake).copy(sleepMinutes = 480), ms(autumnDay.minusDays(1), "12:00", cest), true, berlin)!!
         assertEquals(ms(autumnDay, "00:00", cest), autumnPlan.bedtime)
-        assertEquals(ms(autumnDay.minusDays(1), "23:45", cest), autumnPlan.trigger)
+        assertEquals(ms(autumnDay.minusDays(1), "23:45", cest), autumnPlan.trigger(SchlafPlan.leadMs(SchlafPlan.LEAD_DEFAULT_MINUTES)))
     }
 }

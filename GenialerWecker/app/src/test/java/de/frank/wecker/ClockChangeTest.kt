@@ -20,7 +20,7 @@ class ClockChangeTest {
         val updated = AlarmClaim.recomputeNextAt(daily, now, newYork)
         assertEquals(at("2026-09-19T07:00:00-04:00"), updated.nextAt)
         // The sleep reminder follows the corrected wake time: 07:00 − 8 h − 15 min New York time.
-        assertEquals(at("2026-09-18T22:45:00-04:00"), SchlafPlan.next(updated, now, true, newYork)!!.trigger)
+        assertEquals(at("2026-09-18T22:45:00-04:00"), SchlafPlan.next(updated, now, true, newYork)!!.trigger(SchlafPlan.leadMs(SchlafPlan.LEAD_DEFAULT_MINUTES)))
     }
 
     @Test fun missingNextAtIsStillRecomputedWithoutClockChange() {

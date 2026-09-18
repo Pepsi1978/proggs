@@ -17,7 +17,7 @@ class SchlafErinnerungTest {
 
     @Test fun reminderIsFifteenMinutesBeforeBedtime() {
         val plan = SchlafPlan.next(daily("2026-09-19T07:00:00+02:00", 480), at("2026-09-18T20:00:00+02:00"), true, berlin)!!
-        assertEquals(at("2026-09-18T22:45:00+02:00"), plan.trigger)
+        assertEquals(at("2026-09-18T22:45:00+02:00"), plan.trigger(SchlafPlan.leadMs(SchlafPlan.LEAD_DEFAULT_MINUTES)))
     }
 
     @Test fun missedOneOffReminderIsSkipped() {
@@ -36,7 +36,7 @@ class SchlafErinnerungTest {
         // Daily 07:00, 24 h sleep: tomorrow's reminder (today 06:45) lies before today's ringing at 07:00.
         val plan = SchlafPlan.next(daily("2026-09-18T07:00:00+02:00", 1440), at("2026-09-18T05:00:00+02:00"), true, berlin)!!
         assertEquals(at("2026-09-19T07:00:00+02:00"), plan.wakeAt)
-        assertEquals(at("2026-09-18T06:45:00+02:00"), plan.trigger)
+        assertEquals(at("2026-09-18T06:45:00+02:00"), plan.trigger(SchlafPlan.leadMs(SchlafPlan.LEAD_DEFAULT_MINUTES)))
         // And the delivery of that occurrence is valid although it is not nextAt.
         assertNotNull(SchlafPlan.gueltig(daily("2026-09-18T07:00:00+02:00", 1440), plan.wakeAt, 1440, at("2026-09-18T06:46:00+02:00"), true, berlin))
     }
@@ -99,6 +99,6 @@ class SchlafErinnerungTest {
         // 25.10.2026 fall back: 07:00 CET minus 8 h minus 15 min = 23:45 CEST the evening before.
         val alarm = daily("2026-10-25T07:00:00+01:00", 480)
         val plan = SchlafPlan.next(alarm, at("2026-10-24T20:00:00+02:00"), true, berlin)!!
-        assertEquals(at("2026-10-24T23:45:00+02:00"), plan.trigger)
+        assertEquals(at("2026-10-24T23:45:00+02:00"), plan.trigger(SchlafPlan.leadMs(SchlafPlan.LEAD_DEFAULT_MINUTES)))
     }
 }

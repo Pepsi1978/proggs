@@ -867,9 +867,17 @@ private fun TerminZeile(now: Long, target: Long, snooze: Boolean) {
     val gold = LocalGold.current
     val accent = if (snooze) Semantisch.info else gold.primaer
     val zone = ZoneId.systemDefault()
-    val sameDay = Instant.ofEpochMilli(now).atZone(zone).toLocalDate() == Instant.ofEpochMilli(target).atZone(zone).toLocalDate()
-    // Not today: the concrete date, e.g. "Fr, 18.09. · 09:00".
-    val targetText = if (sameDay) formatClock(target) else formatAt(target)
+    // Nach Kalendertagen entschieden, nicht nach Abstand in Stunden: heute die reine Uhrzeit, morgen die
+    // Uhrzeit mit Zusatz, ab übermorgen das Datum zuerst. Bei einem anderen Jahr kommt das Jahr dazu.
+    // Nur hier; die elf übrigen Aufrufe von formatAt bleiben unverändert.
+    val heute = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    val tag = Instant.ofEpochMilli(target).atZone(zone).toLocalDate()
+    val targetText = when {
+        tag == heute -> formatClock(target)
+        tag == heute.plusDays(1) -> "${formatClock(target)} · morgen"
+        else -> Instant.ofEpochMilli(target).atZone(zone).format(DateTimeFormatter.ofPattern(
+            if (tag.year != heute.year) "EEE, dd.MM.yyyy · HH:mm" else "EEE, dd.MM. · HH:mm", java.util.Locale.GERMAN))
+    }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LegendenMarker(hollow = false, color = accent)
         Text("${if (snooze) "Schlummern bis" else "Wecker"} $targetText", style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
@@ -1044,7 +1052,7 @@ private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
             Icon(Icons.Default.Add, "Schlafdauer um 30 Minuten erhöhen", tint = LocalGold.current.primaer)
         }
     }
-    Text(if (sleep == 0) "Ohne Angabe wird keine Schlafenszeit angezeigt." else "Zeigt die ungefähre Schlafenszeit. Erinnerung 15 Min. vorher, wenn sie in den Einstellungen eingeschaltet ist. Kein Tracking.",
+    Text(if (sleep == 0) "Ohne Angabe wird keine Schlafenszeit angezeigt." else "Zeigt die ungefähre Schlafenszeit. Die Erinnerung kommt mit dem in den Einstellungen gewählten Vorlauf, wenn sie dort eingeschaltet ist. Kein Tracking.",
         style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
 }
 
