@@ -1,0 +1,227 @@
+/* B — Morgenruhe: der Tag als vertikaler Ablauf. Schlafenszeit, Weckzeit und Folgetermine
+   liegen als Stationen an einer Achse; Karten sind Haltepunkte, keine Kästen in einer Liste.
+   Salbei/Creme am Tag, Tannengrün in der Nacht, Terrakotta als Akzent. */
+
+:root[data-theme="dunkel"] {
+  --grund: #131c18;
+  --flaeche: #1b2721;
+  --flaeche-hoch: #23312a;
+  --linie: #32453b;
+  --text: #ecf1ea;
+  --gedaempft: #9db0a4;
+  --akzent: #d98b63;
+  --akzent-weich: #3a2f28;
+  --auf-akzent: #1a1009;
+  --achse: #35493e;
+}
+:root[data-theme="hell"] {
+  --grund: #f2f1e7;
+  --flaeche: #ffffff;
+  --flaeche-hoch: #e8ece1;
+  --linie: #d3d9cb;
+  --text: #22302a;
+  --gedaempft: #61735f;
+  --akzent: #b8562f;
+  --akzent-weich: #f6e5dc;
+  --auf-akzent: #fffaf6;
+  --achse: #c6d0c0;
+}
+
+body {
+  background: var(--grund);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.huelle { max-width: 520px; margin: 0 auto; padding: 24px 18px 110px; }
+:root[data-breite="360"] .huelle { padding: 20px 14px 110px; }
+:root[data-breite="840"] .huelle { max-width: 760px; padding: 34px 28px 110px; }
+
+.gruss { font-size: 15px; color: var(--gedaempft); }
+.jetzt {
+  font-size: clamp(56px, 18vw, 82px);
+  font-weight: 300;
+  letter-spacing: -.02em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  margin: 2px 0 20px;
+}
+
+/* Die Achse: eine durchgehende Linie, an der alle Stationen hängen. */
+.achse { position: relative; padding-left: 34px; }
+.achse::before {
+  content: "";
+  position: absolute;
+  left: 11px; top: 8px; bottom: 8px;
+  width: 2px;
+  background: var(--achse);
+  border-radius: 2px;
+}
+.station { position: relative; padding: 0 0 22px; }
+.station::before {
+  content: "";
+  position: absolute;
+  left: -29px; top: 16px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--grund);
+  border: 2px solid var(--achse);
+}
+.station[data-ton="akzent"]::before { border-color: var(--akzent); background: var(--akzent); }
+.station-marke {
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gedaempft);
+  padding-top: 12px;
+}
+
+.karte {
+  background: var(--flaeche);
+  border-radius: 22px;
+  padding: 18px;
+  margin-top: 8px;
+  border: 1px solid var(--linie);
+}
+.karte.weich { background: var(--flaeche-hoch); }
+
+.karte-kopf { display: flex; align-items: center; gap: 14px; }
+.karte .zeit {
+  font-size: 40px;
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.karte .name { font-size: 17px; font-weight: 500; }
+.karte .takt { font-size: 14px; color: var(--gedaempft); margin-top: 2px; }
+.karte[data-aus="true"] .zeit { color: var(--gedaempft); }
+
+.schalter {
+  width: 52px; height: 32px; border-radius: 999px;
+  background: var(--flaeche-hoch); border: 1px solid var(--linie);
+  position: relative; flex: none; margin-left: auto;
+}
+.schalter::after {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--gedaempft); transition: transform .2s ease, background .2s ease;
+}
+.schalter[aria-checked="true"] { background: var(--akzent-weich); border-color: var(--akzent); }
+.schalter[aria-checked="true"]::after { transform: translateX(20px); background: var(--akzent); }
+
+.hinweis { font-size: 14px; color: var(--gedaempft); display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+
+.asset.bett {
+  aspect-ratio: 1;
+  width: 132px;
+  margin: 12px 0 0;
+  border: 1px solid var(--linie);
+  border-radius: 20px;
+}
+.asset.bett[data-leer="true"] {
+  background:
+    radial-gradient(120% 90% at 50% 120%, color-mix(in srgb, var(--akzent) 22%, transparent), transparent 70%),
+    var(--flaeche-hoch);
+  color: var(--gedaempft);
+}
+
+.knopf-haupt {
+  width: 100%;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--akzent);
+  color: var(--auf-akzent);
+  font-size: 17px;
+  font-weight: 600;
+  min-height: 52px;
+}
+.knopf-still {
+  padding: 13px 18px;
+  border-radius: 14px;
+  background: var(--flaeche-hoch);
+  border: 1px solid var(--linie);
+  min-height: 48px;
+}
+
+.gruppe { margin-top: 26px; }
+.gruppe > h2 {
+  font-size: 13px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gedaempft);
+  font-weight: 600;
+  margin: 0 0 10px 2px;
+}
+
+.feld { margin-bottom: 14px; }
+.feld-marke { font-size: 14px; color: var(--gedaempft); }
+.feld-wert { font-size: 30px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.chips button {
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--flaeche-hoch);
+  border: 1px solid var(--linie);
+  font-size: 14px;
+  color: var(--gedaempft);
+  min-height: 44px;
+}
+.chips button[aria-pressed="true"] { background: var(--akzent-weich); border-color: var(--akzent); color: var(--text); font-weight: 600; }
+
+.ablauf { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ablauf li {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--flaeche-hoch);
+  border: 1px solid var(--linie);
+  border-radius: 14px;
+  padding: 13px 15px;
+  font-size: 16px;
+}
+.ablauf li .griff { color: var(--gedaempft); font-size: 15px; letter-spacing: .1em; }
+
+.fussleiste {
+  position: sticky; bottom: 0;
+  margin-top: 26px; padding: 14px 0 20px;
+  background: linear-gradient(to top, var(--grund) 74%, transparent);
+}
+.vorschau { font-size: 14px; color: var(--gedaempft); text-align: center; margin-top: 10px; }
+
+.status { display: flex; align-items: center; gap: 10px; padding: 12px 15px; border-radius: 14px; background: var(--flaeche); border: 1px solid var(--linie); margin-bottom: 8px; font-size: 15px; }
+.status .haken { color: var(--akzent); }
+.status .rest-text { margin-left: auto; font-size: 13px; color: var(--gedaempft); }
+
+.reglerwert { font-size: 20px; font-weight: 600; color: var(--akzent); }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; background: transparent; margin-top: 6px; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: var(--flaeche-hoch); border: 1px solid var(--linie); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 26px; height: 26px; margin-top: -11px; border-radius: 50%;
+  background: var(--akzent); border: 4px solid var(--grund);
+}
+
+.alarm {
+  min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between;
+  padding: 50px 20px 32px; text-align: center; background: var(--grund);
+}
+.alarm-gruss { font-size: 13px; letter-spacing: .24em; text-transform: uppercase; color: var(--akzent); }
+.alarm-uhr { font-size: clamp(76px, 25vw, 116px); font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; margin: 16px 0 6px; }
+.alarm-name { font-size: 25px; font-weight: 500; }
+.alarm-schritte { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.alarm-schritte span { font-size: 13px; padding: 8px 14px; border-radius: 999px; background: var(--flaeche); border: 1px solid var(--linie); color: var(--gedaempft); }
+.alarm-schritte span[data-aktiv="true"] { background: var(--akzent-weich); border-color: var(--akzent); color: var(--text); }
+.alarm-variante { font-size: 13px; color: var(--gedaempft); margin-top: 14px; }
+
+.alarm-tasten { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }
+.taste {
+  min-height: 72px; border-radius: 22px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: 19px; font-weight: 600;
+}
+.taste small { font-size: 13px; font-weight: 400; opacity: .85; }
+.taste-schlummer { background: var(--flaeche); border: 1px solid var(--linie); color: var(--text); }
+.taste-stopp { background: var(--akzent); color: var(--auf-akzent); min-height: 92px; font-size: 22px; }
+
+.demoleiste { background: color-mix(in srgb, var(--flaeche) 90%, transparent); border: 1px solid var(--linie); }
+.demoleiste button[aria-current="page"] { background: var(--akzent); color: var(--auf-akzent); }

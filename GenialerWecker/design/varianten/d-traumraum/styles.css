@@ -1,0 +1,230 @@
+/* D — Traumraum: skulptural. Überlappende geschwungene Flächen, zentrierte Komposition,
+   Editor als Bottom-Sheet statt Formularliste. Pflaume/Rosé/Perlmutt, kräftige runde Typo.
+   Keine Emojis als Gestaltungsmittel — die Formen selbst tragen. */
+
+:root[data-theme="dunkel"] {
+  --grund: #171029;
+  --kuppel: #241a3d;
+  --flaeche: #2c2049;
+  --flaeche-hoch: #3a2b5e;
+  --linie: #453466;
+  --text: #f4ecff;
+  --gedaempft: #b0a1c9;
+  --akzent: #f0a6bd;
+  --akzent-tief: #d5799a;
+  --auf-akzent: #2a0f1d;
+  --perle: #e8d9c4;
+}
+:root[data-theme="hell"] {
+  --grund: #f7f0f3;
+  --kuppel: #f0e3ea;
+  --flaeche: #ffffff;
+  --flaeche-hoch: #f6eef2;
+  --linie: #e4d3dc;
+  --text: #2c1b33;
+  --gedaempft: #7b6482;
+  --akzent: #a8446b;
+  --akzent-tief: #8b2f53;
+  --auf-akzent: #fff4f8;
+  --perle: #8a6f52;
+}
+
+body { background: var(--grund); color: var(--text); font-size: 16px; line-height: 1.55; }
+
+.raum { position: relative; max-width: 500px; margin: 0 auto; padding: 0 0 116px; overflow: hidden; }
+:root[data-breite="840"] .raum { max-width: 720px; }
+
+/* Die Kuppel: eine große geschwungene Fläche, die den Kopfbereich trägt. */
+.kuppel {
+  position: relative;
+  background: var(--kuppel);
+  border-radius: 0 0 46% 46% / 0 0 22% 22%;
+  padding: 40px 24px 42px;
+  text-align: center;
+}
+.kuppel::after {
+  content: "";
+  position: absolute;
+  left: 50%; bottom: -74px;
+  transform: translateX(-50%);
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--akzent) 30%, transparent), transparent 64%);
+  pointer-events: none;
+}
+:root[data-breite="360"] .kuppel { padding: 32px 18px 36px; }
+
+.gruss { font-size: 14px; letter-spacing: .16em; text-transform: uppercase; color: var(--akzent); }
+.jetzt {
+  font-size: clamp(64px, 21vw, 94px);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  margin: 10px 0 0;
+}
+.untertitel { font-size: 15px; color: var(--gedaempft); margin-top: 6px; }
+
+/* Die Perle: rundes Objekt, in dem der nächste Termin sitzt. */
+.perle {
+  position: relative;
+  margin: -34px auto 0;
+  width: min(300px, 82%);
+  background: var(--flaeche);
+  border-radius: 40px;
+  padding: 24px 22px;
+  text-align: center;
+  border: 1px solid var(--linie);
+  z-index: 2;
+}
+.perle .marke { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--akzent); }
+.perle .termin { font-size: 25px; font-weight: 700; margin-top: 8px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.perle .name { font-size: 17px; margin-top: 4px; }
+.perle .rest { font-size: 14px; color: var(--gedaempft); margin-top: 6px; }
+
+.inhalt { padding: 26px 20px 0; }
+:root[data-breite="360"] .inhalt { padding: 22px 15px 0; }
+
+.asset.kissen {
+  width: 148px; aspect-ratio: 1;
+  margin: 18px auto 0;
+  border-radius: 46% 54% 52% 48% / 52% 46% 54% 48%;
+  border: 1px solid var(--linie);
+}
+.asset.kissen[data-leer="true"] {
+  background:
+    radial-gradient(circle at 40% 34%, color-mix(in srgb, var(--perle) 52%, transparent), transparent 66%),
+    radial-gradient(circle at 68% 72%, color-mix(in srgb, var(--akzent) 34%, transparent), transparent 62%),
+    var(--flaeche-hoch);
+}
+.asset.kissen[data-leer="true"]::after { content: ""; }
+
+.knopf-haupt {
+  display: block; width: 100%;
+  padding: 18px; border-radius: 999px;
+  background: var(--akzent); color: var(--auf-akzent);
+  font-size: 18px; font-weight: 700; letter-spacing: -.01em;
+  min-height: 56px;
+}
+.knopf-still {
+  padding: 14px 20px; border-radius: 999px;
+  background: var(--flaeche); border: 1px solid var(--linie);
+  font-weight: 600; min-height: 48px;
+}
+
+.gruppe { margin-top: 28px; }
+.gruppe > h2 { font-size: 20px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 12px 4px; }
+
+/* Weckerkarten als weiche, leicht überlappende Blöcke. */
+.blase {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: 32px;
+  padding: 20px 22px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.blase .zeit { font-size: 42px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+.blase .name { font-size: 17px; font-weight: 600; }
+.blase .takt { font-size: 14px; color: var(--gedaempft); margin-top: 2px; }
+.blase[data-aus="true"] .zeit { color: var(--gedaempft); }
+
+.schalter {
+  width: 56px; height: 34px; border-radius: 999px;
+  background: var(--flaeche-hoch); border: 1px solid var(--linie);
+  position: relative; flex: none; margin-left: auto;
+}
+.schalter::after {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--gedaempft); transition: transform .22s cubic-bezier(.4,1.3,.5,1), background .2s ease;
+}
+.schalter[aria-checked="true"] { background: color-mix(in srgb, var(--akzent) 26%, var(--flaeche-hoch)); border-color: var(--akzent); }
+.schalter[aria-checked="true"]::after { transform: translateX(22px); background: var(--akzent); }
+
+/* Editor als Bottom-Sheet: oben abgerundet, sitzt optisch über dem Raum. */
+.sheet {
+  background: var(--flaeche);
+  border-radius: 38px 38px 0 0;
+  border: 1px solid var(--linie);
+  border-bottom: none;
+  padding: 10px 22px 26px;
+  margin-top: 22px;
+}
+.sheet::before {
+  content: "";
+  display: block;
+  width: 46px; height: 5px; border-radius: 999px;
+  background: var(--linie);
+  margin: 6px auto 20px;
+}
+.sheet h2 { font-size: 22px; font-weight: 700; margin: 0 0 16px; letter-spacing: -.02em; }
+
+.feld { margin-bottom: 20px; }
+.feld-marke { font-size: 14px; color: var(--gedaempft); }
+.feld-wert { font-size: 38px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.chips button {
+  padding: 11px 18px; border-radius: 999px;
+  background: var(--flaeche-hoch); border: 1px solid var(--linie);
+  font-size: 14px; font-weight: 600; color: var(--gedaempft);
+  min-height: 46px;
+}
+.chips button[aria-pressed="true"] { background: var(--akzent); border-color: var(--akzent); color: var(--auf-akzent); }
+
+.ablauf { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ablauf li {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--flaeche-hoch); border: 1px solid var(--linie);
+  border-radius: 22px; padding: 14px 18px; font-size: 16px; font-weight: 500;
+}
+.ablauf li .griff { margin-left: auto; color: var(--gedaempft); letter-spacing: .12em; }
+
+.fussleiste { position: sticky; bottom: 0; margin-top: 22px; padding: 14px 0 20px; background: linear-gradient(to top, var(--grund) 76%, transparent); }
+.vorschau { font-size: 14px; color: var(--gedaempft); text-align: center; margin-top: 10px; }
+
+.status { display: flex; align-items: center; gap: 12px; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 22px; padding: 14px 18px; margin-bottom: 10px; font-size: 15px; }
+.status .haken { color: var(--akzent); font-weight: 700; }
+.status .rest-text { margin-left: auto; font-size: 13px; color: var(--gedaempft); }
+
+.reglerwert { font-size: 22px; font-weight: 700; color: var(--akzent); }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 38px; background: transparent; margin-top: 4px; }
+input[type="range"]::-webkit-slider-runnable-track { height: 10px; border-radius: 999px; background: var(--flaeche-hoch); border: 1px solid var(--linie); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 30px; height: 30px; margin-top: -11px; border-radius: 50%;
+  background: var(--akzent); border: 5px solid var(--flaeche);
+}
+
+.alarm {
+  min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between;
+  padding: 0 0 30px; text-align: center; background: var(--grund);
+}
+.alarm-kuppel {
+  background: var(--kuppel);
+  border-radius: 0 0 50% 50% / 0 0 26% 26%;
+  padding: 56px 24px 54px;
+}
+.alarm-gruss { font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: var(--akzent); }
+.alarm-uhr { font-size: clamp(80px, 26vw, 120px); font-weight: 700; line-height: 1; letter-spacing: -.045em; font-variant-numeric: tabular-nums; margin: 14px 0 4px; }
+.alarm-name { font-size: 26px; font-weight: 600; }
+.alarm-schritte { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding: 0 20px; }
+.alarm-schritte span { font-size: 13px; font-weight: 600; padding: 8px 15px; border-radius: 999px; background: var(--flaeche); border: 1px solid var(--linie); color: var(--gedaempft); }
+.alarm-schritte span[data-aktiv="true"] { background: var(--akzent); border-color: var(--akzent); color: var(--auf-akzent); }
+.alarm-variante { font-size: 13px; color: var(--gedaempft); margin-top: 16px; }
+
+.alarm-tasten { display: flex; gap: 18px; justify-content: center; align-items: flex-end; padding: 0 22px; margin-top: 26px; }
+.taste {
+  border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-size: 17px; font-weight: 700;
+}
+.taste small { font-size: 12px; font-weight: 500; opacity: .85; }
+.taste-schlummer { width: 104px; height: 104px; background: var(--flaeche); border: 1px solid var(--linie); color: var(--text); }
+.taste-stopp { width: 136px; height: 136px; background: var(--akzent); color: var(--auf-akzent); font-size: 20px; }
+
+.demoleiste { background: color-mix(in srgb, var(--flaeche) 92%, transparent); border: 1px solid var(--linie); }
+.demoleiste button[aria-current="page"] { background: var(--akzent); color: var(--auf-akzent); }

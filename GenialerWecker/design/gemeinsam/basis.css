@@ -1,0 +1,147 @@
+/* Gemeinsame Grundlage aller vier Entwürfe: Schriften, Reset, Seitenumschaltung.
+   Enthält bewusst KEINEN Variantenlook — Farben, Raster und Hierarchie liegen je Variante. */
+
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/inter.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Newsreader";
+  src: url("fonts/newsreader.ttf") format("truetype");
+  font-weight: 200 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("fonts/jetbrains_mono.ttf") format("truetype");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+input, select { font: inherit; color: inherit; }
+img { max-width: 100%; display: block; }
+
+/* Seitenumschaltung: nur die aktive Seite ist sichtbar. */
+[data-seite] { display: none; }
+[data-seite].aktiv { display: block; }
+
+/* Platzhalter, solange ein Bildasset noch nicht geliefert ist. */
+.asset {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+}
+.asset img { width: 100%; height: 100%; object-fit: cover; }
+.asset[data-leer="true"]::after {
+  content: attr(data-hinweis);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: .04em;
+  opacity: .55;
+}
+
+/* Bedienleiste der Einzelansicht (in der Galerie ausgeblendet). */
+.demoleiste {
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 50;
+  /* Nie über den Rand hinaus: auch bei 360 px bleiben alle sechs Schaltflächen erreichbar. */
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  font-size: 12px;
+}
+.demoleiste button {
+  padding: 9px 12px;
+  border-radius: 14px;
+  white-space: nowrap;
+  min-height: 40px;
+  flex: 0 0 auto;
+}
+body[data-eingebettet="true"] .demoleiste { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+/* Kurze Rückmeldung der Vorschau — macht sichtbar, dass ein Knopf reagiert,
+   ohne irgendetwas zu planen oder zu speichern. */
+.demomeldung {
+  position: fixed;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%) translateY(10px);
+  z-index: 60;
+  max-width: min(92%, 360px);
+  padding: 10px 16px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+  background: rgba(20, 20, 24, .94);
+  color: #f2f3f6;
+  border: 1px solid rgba(255, 255, 255, .16);
+}
+.demomeldung.sichtbar { opacity: 1; transform: translateX(-50%) translateY(0); }
+body[data-eingebettet="true"] .demomeldung { bottom: 20px; }
+
+/* Die Leiste kann zweizeilig werden; der Inhalt bekommt darunter genug Luft.
+   Im eingebetteten Vergleich ist sie ausgeblendet, dort genügt der Grundabstand. */
+body:not([data-eingebettet="true"]) { padding-bottom: 48px; }
+body:not([data-eingebettet="true"]) .demomeldung { bottom: 118px; }
+
+/* Hinweis auf die feste Momentaufnahme — steht in jedem Entwurf an derselben Stelle. */
+.momentaufnahme {
+  font-size: 11px;
+  line-height: 1.45;
+  letter-spacing: .04em;
+  opacity: .62;
+  padding: 10px 0 0;
+}
+
+/* Beispielleiste: zeigt eine Regel an mehreren Fällen, ohne echten Zustand zu behaupten. */
+.beispiele { margin-top: 10px; }
+.beispiele .marke {
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  opacity: .62;
+}
+.beispiele ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.beispiele li { display: flex; gap: 10px; font-size: 13px; }
+.beispiele li b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.beispiele li span { opacity: .62; }

@@ -1,0 +1,99 @@
+/* Rahmen der Vergleichsgalerie — bewusst neutral, damit die vier Entwürfe für sich sprechen. */
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/inter.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+* , *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, sans-serif;
+  background: #15161a;
+  color: #e9eaee;
+  line-height: 1.55;
+}
+
+.kopf { padding: 26px 24px 14px; max-width: 1600px; margin: 0 auto; }
+.kopf h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -.01em; }
+.unter { margin: 6px 0 0; color: #9ba0ad; font-size: 14px; }
+
+.steuerung {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding: 12px 24px;
+  background: rgba(21, 22, 26, .94);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #2a2c33;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+.satz { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.marke { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #8b909c; }
+.wahl { display: flex; gap: 4px; flex-wrap: wrap; }
+.wahl button {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #32353e;
+  background: #1d1f25;
+  color: #c9ccd5;
+  cursor: pointer;
+  min-height: 40px;
+}
+.wahl button:hover { border-color: #4a4e5a; }
+.wahl button.aktiv { background: #e9eaee; color: #15161a; border-color: #e9eaee; font-weight: 600; }
+
+#galerie {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 22px;
+  padding: 22px 24px 40px;
+  max-width: 1600px;
+  margin: 0 auto;
+  align-items: start;
+}
+@media (max-width: 900px) { #galerie { grid-template-columns: 1fr; } }
+
+.variante {
+  background: #1b1d22;
+  border: 1px solid #2a2c33;
+  border-radius: 16px;
+  padding: 16px;
+}
+.variante h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.variante .beschreibung { font-size: 13px; color: #9ba0ad; margin: 4px 0 14px; }
+.variante .oeffnen {
+  font-size: 12px;
+  color: #a8c7ff;
+  text-decoration: none;
+  border: 1px solid #32353e;
+  border-radius: 8px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+.variante .titelzeile { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+
+.paar { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+.seite { flex: none; }
+.seite .etikett { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #8b909c; margin: 0 0 6px 2px; }
+.rahmen {
+  border: 1px solid #2a2c33;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+}
+/* Breite und Höhe setzt galerie.js; der iframe behält seine echte Viewport-Breite
+   und wird nur optisch verkleinert, damit das responsive CSS die wahre Breite sieht. */
+.rahmen iframe { border: 0; display: block; }
+
+.fuss { max-width: 1600px; margin: 0 auto; padding: 0 24px 50px; color: #8b909c; font-size: 13px; }
+.fuss b { color: #c9ccd5; font-weight: 600; }
+.fuss p { margin: 6px 0; }

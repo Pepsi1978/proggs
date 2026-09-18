@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Genialer Wecker · vier Designentwürfe</title>
+<link rel="stylesheet" href="gemeinsam/galerie.css">
+</head>
+<body>
+
+<header class="kopf">
+  <div>
+    <h1>Genialer Wecker · vier Designentwürfe</h1>
+    <p class="unter">Hell und dunkel nebeneinander. Nichts davon ist in die App übernommen — die native Oberfläche bleibt unverändert.</p>
+  </div>
+</header>
+
+<nav class="steuerung" aria-label="Ansicht">
+  <div class="satz">
+    <span class="marke">Seite</span>
+    <div class="wahl" data-gruppe="seite">
+      <button data-wert="start" class="aktiv">Startseite</button>
+      <button data-wert="editor">Editor</button>
+      <button data-wert="einstellungen">Einstellungen</button>
+      <button data-wert="alarm">Alarmbildschirm</button>
+    </div>
+  </div>
+  <div class="satz">
+    <span class="marke">Breite</span>
+    <div class="wahl" data-gruppe="breite">
+      <button data-wert="360">Fold außen · 360</button>
+      <button data-wert="412" class="aktiv">Handy · 412</button>
+      <button data-wert="840">Fold innen · 840</button>
+    </div>
+  </div>
+</nav>
+
+<main id="galerie"></main>
+
+<footer class="fuss">
+  <p>Vier Richtungen mit unterschiedlichem Strukturprinzip, nicht nur unterschiedlichen Farben:
+    <b>A</b> redaktionell einspaltig · <b>B</b> Tagesablauf an einer Achse ·
+    <b>C</b> Instrumententafel im Raster · <b>D</b> skulptural mit Bottom-Sheet.</p>
+  <p>Alle Bedienelemente sind echte HTML-Elemente. Rasterbilder dienen nur als Illustration; fehlt eine
+    Bilddatei, zeigt der Platz eine gezeichnete Ersatzfläche. Keine Netzwerkzugriffe, keine Wetterinhalte,
+    keine echten Wecker- oder Geräteaktionen.</p>
+</footer>
+
+<script src="gemeinsam/galerie.js"></script>
+</body>
+</html>

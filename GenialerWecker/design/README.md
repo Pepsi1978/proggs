@@ -1,0 +1,84 @@
+# Designentwürfe · Genialer Wecker
+
+Vier Entwürfe für eine moderne Wecker- und Schlaf-App, jeder in Hell und Dunkel.
+**Nichts davon ist in die App übernommen.** Die installierte Version zeigt unverändert das
+bisherige Gold-/Glasdesign; diese Seiten sind reine Entscheidungsgrundlage.
+
+Öffnen: `design/index.html` im Browser, oder über den lokalen Vorschauserver.
+
+## Die vier Richtungen
+
+Sie unterscheiden sich im **Strukturprinzip**, nicht nur in der Farbe — jeder Entwurf bliebe auch
+in Graustufen als eigener erkennbar.
+
+| | Richtung | Aufbau | Typografie | Farbwelt |
+|---|---|---|---|---|
+| **A** | Nachtatelier | redaktionell, einspaltig, Haarlinien statt Kästen | Newsreader (Serif) für Zeit und Titel | Marineblau / Elfenbein / Kupfer |
+| **B** | Morgenruhe | der Tag als vertikale Achse, Karten als Stationen | Inter, große Zeilenhöhe | Salbei / Creme / Tannengrün / Terrakotta |
+| **C** | Orbit | Instrumententafel im festen Raster, Ring-Countdown, tabellarische Weckerzeilen | JetBrains Mono für alle Zahlen | Fast-Schwarz / Eisblau / Limette |
+| **D** | Traumraum | skulptural: Kuppel, runde Perle, Editor als Bottom-Sheet | Inter, kräftig und rund | Pflaume / Rosé / Perlmutt |
+
+Der Hellmodus von A ist bewusst elfenbein-dominant und nicht das invertierte Dunkel, damit A und C
+nicht als dasselbe gelesen werden.
+
+## Je Entwurf vier Seiten
+
+Startseite · Editor · Einstellungen · Alarmbildschirm. Umschaltbar über die Leiste unten in der
+Einzelansicht und über die Auswahl oben in der Vergleichsgalerie.
+
+Die Inhalte verwenden die **echten Bezeichnungen der App** in Version 1.1.49 — „＋ Wecker",
+„Wecker speichern", „Dein Weckablauf", „Alle X Tage", „Gewünschte Schlafdauer", „Weckbereitschaft",
+„Vorlauf: 15 Min. vorher", „Ausrichtung", „Schlummern" / „Beenden", „Stimmvariante 3 von 6".
+
+## Feste Momentaufnahme
+
+Alle vier Entwürfe zeigen **denselben stillstehenden Moment**, damit Uhrzeit, Datum, Restzeit und
+Weckerkarten zusammenpassen. Bewusst **keine** lebende Uhr neben statischen Beispieldaten.
+
+- **Jetzt:** Freitag, 18.09.2026, 22:41
+- **Frühschicht** · 07:00 · alle 35 Tage ab 29.03.2026 → nächster Termin **So, 20.09. · 07:00**,
+  das sind 32 Std. 19 Min., in der Schreibweise der App „in 1 Tag 8 Std."
+  Schlafenszeit bei 8 Std. Schlaf: Sa 23:00
+- **Werktags** · 06:30 · Mo–Fr → nächster Termin **Mo, 21.09. · 06:30** (Freitag 06:30 ist vorbei),
+  Schlafenszeit So 22:30
+- **Wochenende** · 09:15 · Sa · So → ausgeschaltet
+- Der **Alarmbildschirm** ist ausdrücklich ein anderer Moment und als Beispielmoment beschriftet.
+
+Die Regel für die Zeitangabe oben (heute nur Uhrzeit, morgen Uhrzeit zuerst, ab übermorgen Datum
+zuerst, bei anderem Jahr mit Jahreszahl) steht in den Einstellungen als **Beispielleiste** — sie
+behauptet keinen aktuellen Zustand.
+
+## Bedienung der Vorschau
+
+Knöpfe reagieren, lösen aber nichts aus: „＋ Wecker" und „Einstellungen" wechseln die Demoseite,
+„Wecker speichern", „Schlummern" und „Beenden" zeigen eine kurze Rückmeldung, die ausdrücklich
+„Vorschau" sagt. Schalter und Regler ändern nur ihre Darstellung. **Keine echten Wecker-,
+Benachrichtigungs- oder Geräteaktionen.**
+
+## Technik
+
+Reines lokales HTML/CSS/JS, kein CDN, kein Netzwerkzugriff, keine package.json, kein Build.
+Die drei Schriften liegen als Kopien aus `app/src/main/res/font/` unter `gemeinsam/fonts/`.
+Die Galerie bindet die Varianten als `<iframe>` ein und steuert sie ausschließlich über
+URL-Parameter (`?seite=…&theme=…&breite=…`), weil unter `file://` kein Skriptzugriff über
+iframe-Grenzen möglich ist.
+
+Breiten zum Vergleich: **360** (Fold außen), **412** (Handy), **840** (Fold innen).
+
+## Bildmotive
+
+Vier dekorative PNG unter `assets/`, erstellt mit `imagegen`; die Prompts und die Herkunft stehen
+in `assets/PROMPTS.md`. Sie sind **ausschließlich Illustration neben Text** — jedes Bedienelement
+ist echtes HTML. Alle vier sind quadratisch komponiert und werden als kleines, zurückhaltend
+gerahmtes Motivfeld gezeigt; im Hellmodus bleibt ein dunkles Motiv als Feld stehen. Fehlt eine
+Datei, zeichnet CSS eine Ersatzfläche, damit das Layout trotzdem beurteilbar ist.
+
+## Offen
+
+- **Keine Variante ist gewählt.** Vor einer nativen Übernahme entscheidet der Nutzer; bis dahin
+  bleibt das App-Design unverändert.
+- **Bekannter Anzeigefehler in 1.1.49, noch nicht behoben:** Bei einem Monatswecker am 23. mit
+  Start 23.09.2026, 15:45 bleibt oben nur „15:45" stehen, obwohl der Termin später als morgen liegt
+  und nach der Regel mit dem Datum zuerst erscheinen müsste. Vermutet wird der **Kartentitel**, nicht
+  der globale Kopfbereich. Ausdrücklich für direkt nach der Designrunde vorgemerkt — **nicht**
+  behoben und nicht als behoben zu melden.

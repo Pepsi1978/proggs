@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dunkel" data-breite="412">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D · Traumraum · Genialer Wecker</title>
+<link rel="stylesheet" href="../../gemeinsam/basis.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="d">
+
+<main data-seite="start">
+  <div class="raum">
+    <header class="kuppel">
+      <p class="gruss">Gute Nacht</p>
+      <p class="jetzt">22:41</p>
+      <p class="untertitel">Freitag, 18. September</p>
+    </header>
+
+    <div class="perle">
+      <p class="marke">Nächster Wecker</p>
+      <p class="termin">So, 20.09. · 07:00</p>
+      <p class="name">Frühschicht</p>
+      <p class="rest">in 1 Tag 8 Std.</p>
+    </div>
+
+    <div class="asset kissen" data-hinweis="Kissen- und Mondobjekt">
+      <img src="../../assets/d-traumraum/kissen.png" alt="Weiches Kissen- und Mondobjekt">
+    </div>
+
+    <div class="inhalt">
+      <div class="gruppe">
+        <h2>Deine Wecker</h2>
+
+        <div class="blase">
+          <p class="zeit">07:00</p>
+          <div>
+            <p class="name">Frühschicht</p>
+            <p class="takt">Alle 35 Tage · ab 29.03.2026</p>
+          </div>
+          <button class="schalter" data-schalter aria-checked="true" aria-label="Frühschicht aktivieren"></button>
+        </div>
+
+        <div class="blase">
+          <p class="zeit">06:30</p>
+          <div>
+            <p class="name">Werktags</p>
+            <p class="takt">Mo–Fr · Mo, 21.09. · 06:30</p>
+          </div>
+          <button class="schalter" data-schalter aria-checked="true" aria-label="Werktags aktivieren"></button>
+        </div>
+
+        <div class="blase" data-aus="true">
+          <p class="zeit">09:15</p>
+          <div>
+            <p class="name">Wochenende</p>
+            <p class="takt">Sa · So · ausgeschaltet</p>
+          </div>
+          <button class="schalter" data-schalter aria-checked="false" aria-label="Wochenende aktivieren"></button>
+        </div>
+      </div>
+
+      <p class="momentaufnahme">Vorschau mit einer festen Momentaufnahme: Freitag, 18.09.2026, 22:41 Uhr. Uhrzeit, Restzeit und Termine stehen still und gehören zusammen; es wird nichts geplant oder ausgelöst.</p>
+
+      <div class="fussleiste">
+        <button class="knopf-haupt" data-zu-seite="editor">＋ Wecker</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<main data-seite="editor">
+  <div class="raum">
+    <header class="kuppel" style="padding-bottom:30px">
+      <p class="gruss">Wecker bearbeiten</p>
+      <p class="jetzt" style="font-size:60px">06:30</p>
+      <p class="untertitel">Werktags</p>
+    </header>
+
+    <section class="sheet">
+      <h2>Wann soll er wecken?</h2>
+      <div class="chips" data-wahl>
+        <button aria-pressed="false">Einmalig</button><button aria-pressed="false">Täglich</button>
+        <button aria-pressed="true">An Wochentagen</button><button aria-pressed="false">Alle X Tage</button>
+        <button aria-pressed="false">Monatlich</button><button aria-pressed="false">Jährlich</button>
+      </div>
+      <div class="chips" data-wahl style="margin-top:10px">
+        <button aria-pressed="true">Mo</button><button aria-pressed="true">Di</button>
+        <button aria-pressed="true">Mi</button><button aria-pressed="true">Do</button>
+        <button aria-pressed="true">Fr</button><button aria-pressed="false">Sa</button>
+        <button aria-pressed="false">So</button>
+      </div>
+
+      <div class="feld" style="margin-top:24px">
+        <p class="feld-marke">Gewünschte Schlafdauer</p>
+        <p class="feld-wert">8 Std.</p>
+        <div class="chips" data-wahl>
+          <button aria-pressed="false">Aus</button><button aria-pressed="false">7 Std.</button>
+          <button aria-pressed="true">8 Std.</button><button aria-pressed="false">9 Std.</button>
+        </div>
+      </div>
+
+      <h2 style="margin-top:26px">Dein Weckablauf</h2>
+      <ol class="ablauf">
+        <li>Klingelzeichen<span class="griff">⋮⋮</span></li>
+        <li>Offene Ideen<span class="griff">⋮⋮</span></li>
+        <li>Eigener Text<span class="griff">⋮⋮</span></li>
+        <li>Musik<span class="griff">⋮⋮</span></li>
+      </ol>
+
+      <div class="fussleiste">
+        <button class="knopf-haupt" data-demo="Vorschau: Hier würde der Wecker gespeichert und eingeschaltet. In dieser Ansicht passiert nichts.">Wecker speichern</button>
+        <p class="vorschau">Nach dem Speichern eingeschaltet · klingelt dann Mo, 21.09. · 06:30</p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<main data-seite="einstellungen">
+  <div class="raum">
+    <header class="kuppel" style="padding-bottom:30px">
+      <p class="gruss">Einstellungen</p>
+      <p class="jetzt" style="font-size:44px">Alles bereit</p>
+      <p class="untertitel">Der Wecker klingelt auch gesperrt und ohne Internet.</p>
+    </header>
+
+    <section class="sheet">
+      <h2>Weckbereitschaft</h2>
+      <div class="status"><span class="haken">✓</span><span>Genaue Weckzeiten</span><span class="rest-text">erteilt</span></div>
+      <div class="status"><span class="haken">✓</span><span>Benachrichtigungen</span><span class="rest-text">erteilt</span></div>
+      <div class="status"><span class="haken">✓</span><span>Vollbild-Wecker</span><span class="rest-text">erteilt</span></div>
+      <div class="status"><span class="haken">✓</span><span>Wecker bei Nicht stören</span><span class="rest-text">erteilt</span></div>
+      <div class="status"><span class="haken">✓</span><span>Akku uneingeschränkt</span><span class="rest-text">erteilt</span></div>
+
+      <h2 style="margin-top:28px">Benachrichtigungen</h2>
+      <div class="status">
+        <span>Schlafenszeit-Erinnerung</span>
+        <button class="schalter" data-schalter aria-checked="true" aria-label="Schlafenszeit-Erinnerung" style="margin-left:auto"></button>
+      </div>
+      <p class="reglerwert" id="d-vorlauf" style="margin-top:16px">Vorlauf: 15 Min. vorher</p>
+      <input type="range" min="0" max="60" step="1" value="15" data-regler="d-vorlauf" aria-label="Vorlauf der Schlafenszeit-Erinnerung">
+      <p style="font-size:14px;color:var(--gedaempft);margin-top:4px">0 Minuten erinnert genau zur Schlafenszeit. Ausgeschaltet wird die Erinnerung allein über den Schalter.</p>
+
+      <h2 style="margin-top:28px">Darstellung</h2>
+      <p class="feld-marke">Ausrichtung</p>
+      <div class="chips" data-wahl>
+        <button aria-pressed="true">Automatisch</button>
+        <button aria-pressed="false">Hochformat</button>
+        <button aria-pressed="false">Querformat</button>
+      </div>
+      <p style="font-size:14px;color:var(--gedaempft);margin-top:10px">Android kann die Ausrichtung in geteilten Fenstern oder auf großen Displays vorgeben.</p>
+      <div class="beispiele">
+  <p class="marke">Beispiele der Zeitangabe oben</p>
+  <ul>
+    <li><b>18:30</b><span>heute — nur die Uhrzeit</span></li>
+    <li><b>07:00 · morgen</b><span>morgen — Uhrzeit zuerst</span></li>
+    <li><b>So, 20.09. · 07:00</b><span>ab übermorgen — Datum zuerst</span></li>
+    <li><b>Sa, 20.02.2027 · 07:00</b><span>anderes Jahr — mit Jahreszahl</span></li>
+  </ul>
+</div>
+
+      <h2 style="margin-top:28px">Vorlesen · Stimmen &amp; Tempo</h2>
+      <p style="font-size:17px">Seraphina · Edge · weiblich</p>
+      <p style="font-size:14px;color:var(--gedaempft);margin-top:4px">Tempo 1,00× · gilt für alle Wecker ohne eigene Stimme</p>
+    </section>
+  </div>
+</main>
+
+<main data-seite="alarm">
+  <div class="alarm">
+    <header class="alarm-kuppel">
+      <p class="alarm-gruss">Guten Morgen</p>
+      <p class="alarm-uhr">06:30</p>
+      <p class="alarm-name">Werktags</p>
+    </header>
+    <div>
+      <div class="alarm-schritte">
+        <span>Klingelzeichen</span><span data-aktiv="true">Offene Ideen</span>
+        <span>Eigener Text</span><span>Musik</span>
+      </div>
+      <p class="alarm-variante">Stimmvariante 3 von 6</p>
+      <p class="momentaufnahme" style="text-align:center">Beispielmoment: der Wecker „Werktags“ klingelt um 06:30.</p>
+    </div>
+    <div class="alarm-tasten">
+      <button class="taste taste-schlummer" data-demo="Vorschau: Der Wecker würde bis 06:40 schlummern. Es klingelt hier nichts.">Schlummern<small>noch 3</small></button>
+      <button class="taste taste-stopp" data-demo="Vorschau: Der Wecker würde jetzt beendet. Es klingelt hier nichts.">Beenden<small>Mit Foto</small></button>
+    </div>
+  </div>
+</main>
+
+<nav class="demoleiste" aria-label="Entwurfsnavigation">
+  <button data-zu-seite="start">Start</button>
+  <button data-zu-seite="editor">Editor</button>
+  <button data-zu-seite="einstellungen">Einstellungen</button>
+  <button data-zu-seite="alarm">Alarm</button>
+  <button data-zu-theme="hell">Hell</button>
+  <button data-zu-theme="dunkel">Dunkel</button>
+</nav>
+<script src="../../gemeinsam/seiten.js"></script>
+</body>
+</html>

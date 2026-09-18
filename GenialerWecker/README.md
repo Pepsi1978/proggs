@@ -143,6 +143,18 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
   kleine Zustellverzögerung von Android die Erinnerung stumm verwerfen. Bei einem Vorlauf über 0
   bleiben die bisherigen Verfallsregeln unverändert. Weck- und Schlummerplanung sind nicht berührt.
 
+### Designentwürfe (1.1.50)
+
+- Unter `design/` liegen **vier Designkonzepte** als lokale HTML-Vorschau, jeweils hell und dunkel,
+  mit Startseite, Editor, Einstellungen und Alarmbildschirm: A Nachtatelier (redaktionell),
+  B Morgenruhe (Tagesablauf an einer Achse), C Orbit (Instrumententafel), D Traumraum (skulptural).
+  Vergleichsgalerie: `design/index.html`, Breiten 360 / 412 / 840. Einzelheiten in `design/README.md`.
+- **Die native Oberfläche ist unverändert.** Diese Version bringt ausschließlich die Entwürfe als
+  Entscheidungsgrundlage; es wurde kein Designkonzept übernommen. Die App sieht aus wie in 1.1.49.
+- **Weiterhin offen:** Bei einem Monatswecker am 23. mit Start 23.09.2026, 15:45 bleibt oben nur
+  „15:45" stehen, obwohl der Termin später als morgen liegt und nach der Regel mit dem Datum zuerst
+  erscheinen müsste. Vermutet wird der Kartentitel, nicht der globale Kopfbereich. Nicht behoben.
+
 ## Ideenbrücke
 
 Geniale Ideen benötigt das mitgelieferte Update mit `bridge/WeckerProvider.kt`.

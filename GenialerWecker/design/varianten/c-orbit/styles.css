@@ -1,0 +1,220 @@
+/* C — Orbit: Instrumententafel. Festes Raster, Ring-Countdown als Hauptobjekt,
+   Monospace für alle Zahlen, dichte einzeilige Weckerzeilen mit tabellarischer Ausrichtung.
+   Keine Sonnen- oder Wolkenformen, keine Gradzahlen, kein Ortsname — bewusst kein Wetterbild. */
+
+:root[data-theme="dunkel"] {
+  --grund: #08090c;
+  --flaeche: #101319;
+  --flaeche-hoch: #171b23;
+  --linie: #262c38;
+  --text: #e9edf4;
+  --gedaempft: #79839a;
+  --akzent: #6fd3e8;
+  --signal: #c6f24a;
+  --auf-akzent: #05171c;
+}
+:root[data-theme="hell"] {
+  --grund: #eceef2;
+  --flaeche: #ffffff;
+  --flaeche-hoch: #f4f6fa;
+  --linie: #d2d7e0;
+  --text: #11151d;
+  --gedaempft: #5c6578;
+  --akzent: #0f6d85;
+  --signal: #4d7a05;
+  --auf-akzent: #f2fbff;
+}
+
+body { background: var(--grund); color: var(--text); font-size: 15px; line-height: 1.5; }
+.zahl { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+.tafel { max-width: 540px; margin: 0 auto; padding: 16px 14px 104px; }
+:root[data-breite="360"] .tafel { padding: 14px 10px 104px; }
+:root[data-breite="840"] .tafel { max-width: 820px; padding: 24px 22px 104px; }
+
+.leiste {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--gedaempft);
+  padding: 8px 4px 14px;
+}
+.leiste .punkt { color: var(--signal); }
+
+/* Hauptmodul: Ring links, Datenblock rechts. */
+.modul {
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: 6px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 18px;
+  align-items: center;
+}
+:root[data-breite="360"] .modul { grid-template-columns: 108px 1fr; gap: 14px; padding: 14px; }
+:root[data-breite="840"] .modul { grid-template-columns: 172px 1fr; }
+
+.ring { position: relative; aspect-ratio: 1; display: grid; place-items: center; }
+.ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .bahn { fill: none; stroke: var(--linie); stroke-width: 6; }
+.ring .fortschritt { fill: none; stroke: var(--akzent); stroke-width: 6; stroke-linecap: round; }
+.ring .mitte {
+  position: relative;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 15px;
+  letter-spacing: .04em;
+  color: var(--akzent);
+  text-align: center;
+}
+.ring .mitte b { display: block; font-size: 25px; font-weight: 600; color: var(--text); }
+
+.jetzt { font-family: "JetBrains Mono", monospace; font-size: clamp(42px, 13vw, 58px); font-weight: 600; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.zeilepaar { display: flex; justify-content: space-between; gap: 10px; border-top: 1px solid var(--linie); padding: 7px 0; font-size: 13px; }
+.zeilepaar dt { color: var(--gedaempft); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.zeilepaar dd { margin: 0; font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+.datenblock { min-width: 0; }
+.datenblock dl { margin: 12px 0 0; }
+
+.balken { display: flex; gap: 8px; margin-top: 16px; }
+.knopf-haupt {
+  flex: 1; padding: 13px; border-radius: 4px;
+  background: var(--signal); color: var(--auf-akzent);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  min-height: 48px;
+}
+.knopf-still {
+  padding: 13px 16px; border-radius: 4px;
+  background: var(--flaeche-hoch); border: 1px solid var(--linie);
+  font-family: "JetBrains Mono", monospace; font-size: 13px; letter-spacing: .06em;
+  min-height: 48px;
+}
+
+.tabellenkopf {
+  display: grid;
+  grid-template-columns: 46px 74px 1fr auto;
+  gap: 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--gedaempft);
+  padding: 20px 10px 6px;
+}
+:root[data-breite="360"] .tabellenkopf { grid-template-columns: 40px 66px 1fr auto; }
+
+/* Dichte Weckerzeilen — eine Zeile je Wecker, alles auf Achse. */
+.zeile {
+  display: grid;
+  grid-template-columns: 46px 74px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: 4px;
+  padding: 11px 10px;
+  margin-bottom: 6px;
+}
+:root[data-breite="360"] .zeile { grid-template-columns: 40px 66px 1fr auto; }
+.zeile .zeit { font-family: "JetBrains Mono", monospace; font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.zeile .name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zeile .takt { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--gedaempft); letter-spacing: .04em; }
+.zeile[data-aus="true"] .zeit, .zeile[data-aus="true"] .name { color: var(--gedaempft); }
+
+.schalter {
+  width: 44px; height: 24px; border-radius: 3px;
+  background: var(--flaeche-hoch); border: 1px solid var(--linie);
+  position: relative; flex: none;
+}
+.schalter::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 2px;
+  background: var(--gedaempft); transition: transform .15s linear, background .15s linear;
+}
+.schalter[aria-checked="true"] { border-color: var(--signal); }
+.schalter[aria-checked="true"]::after { transform: translateX(20px); background: var(--signal); }
+
+.gruppe { margin-top: 22px; }
+.gruppe > h2 {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--gedaempft);
+  margin: 0 0 8px 2px; font-weight: 500;
+}
+.feldblock { background: var(--flaeche); border: 1px solid var(--linie); border-radius: 6px; padding: 14px; margin-bottom: 8px; }
+.feld-marke { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--gedaempft); }
+.feld-wert { font-family: "JetBrains Mono", monospace; font-size: 27px; font-weight: 600; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chips button {
+  padding: 9px 12px; border-radius: 3px;
+  background: var(--flaeche-hoch); border: 1px solid var(--linie);
+  font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--gedaempft);
+  min-height: 44px;
+}
+.chips button[aria-pressed="true"] { border-color: var(--akzent); color: var(--text); background: color-mix(in srgb, var(--akzent) 16%, var(--flaeche-hoch)); }
+
+.ablauf { list-style: none; margin: 10px 0 0; padding: 0; }
+.ablauf li {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center;
+  border: 1px solid var(--linie); border-radius: 4px; background: var(--flaeche-hoch);
+  padding: 10px 12px; margin-bottom: 6px; font-size: 14px;
+}
+.ablauf li .nr { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--akzent); }
+.ablauf li .griff { color: var(--gedaempft); font-family: "JetBrains Mono", monospace; font-size: 12px; }
+
+.asset.bahn {
+  aspect-ratio: 1;
+  width: 116px;
+  border: 1px solid var(--linie);
+  border-radius: 6px;
+  margin-top: 14px;
+}
+.asset.bahn[data-leer="true"] {
+  background:
+    radial-gradient(1px 1px at 18% 34%, var(--text), transparent),
+    radial-gradient(1px 1px at 62% 22%, var(--text), transparent),
+    radial-gradient(1px 1px at 81% 66%, var(--text), transparent),
+    radial-gradient(1px 1px at 36% 74%, var(--text), transparent),
+    radial-gradient(140% 120% at 50% 130%, color-mix(in srgb, var(--akzent) 26%, transparent), transparent 66%),
+    var(--flaeche);
+  color: var(--gedaempft);
+}
+
+.fussleiste { position: sticky; bottom: 0; margin-top: 20px; padding: 12px 0 18px; background: linear-gradient(to top, var(--grund) 76%, transparent); }
+.vorschau { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--gedaempft); text-align: center; margin-top: 8px; letter-spacing: .03em; }
+
+.status { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: center; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 4px; padding: 11px 12px; margin-bottom: 5px; font-size: 14px; }
+.status .haken { color: var(--signal); font-family: "JetBrains Mono", monospace; }
+.status .rest-text { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--gedaempft); letter-spacing: .1em; text-transform: uppercase; }
+
+.reglerwert { font-family: "JetBrains Mono", monospace; font-size: 18px; font-weight: 600; color: var(--akzent); }
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 30px; background: transparent; margin-top: 6px; }
+input[type="range"]::-webkit-slider-runnable-track { height: 3px; background: var(--linie); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 26px; margin-top: -12px; border-radius: 3px;
+  background: var(--akzent); border: 2px solid var(--grund);
+}
+
+.alarm { min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 30px 16px 26px; background: var(--grund); }
+.alarm-kopf { display: flex; justify-content: space-between; font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--signal); }
+.alarm-mitte { text-align: center; }
+.alarm-uhr { font-family: "JetBrains Mono", monospace; font-size: clamp(72px, 24vw, 112px); font-weight: 700; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.alarm-name { font-size: 22px; font-weight: 500; margin-top: 4px; }
+.alarm-schritte { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+.alarm-schritte span { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .08em; padding: 7px 11px; border: 1px solid var(--linie); border-radius: 3px; color: var(--gedaempft); text-transform: uppercase; }
+.alarm-schritte span[data-aktiv="true"] { border-color: var(--akzent); color: var(--text); background: color-mix(in srgb, var(--akzent) 18%, transparent); }
+.alarm-variante { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--gedaempft); margin-top: 12px; letter-spacing: .06em; }
+
+.alarm-tasten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 24px; }
+.taste {
+  min-height: 104px; border-radius: 5px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 16px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
+.taste small { font-size: 11px; font-weight: 400; letter-spacing: .04em; text-transform: none; opacity: .85; }
+.taste-schlummer { background: var(--flaeche); border: 1px solid var(--linie); color: var(--text); }
+.taste-stopp { background: var(--signal); color: var(--auf-akzent); }
+
+.demoleiste { background: color-mix(in srgb, var(--flaeche) 92%, transparent); border: 1px solid var(--linie); font-family: "JetBrains Mono", monospace; }
+.demoleiste button { border-radius: 3px; }
+.demoleiste button[aria-current="page"] { background: var(--akzent); color: var(--auf-akzent); }
