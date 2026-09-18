@@ -35,3 +35,11 @@ Kontrollierter Vergleich gegen den Helfer aus Commit `d0b0352a8`, auf demselben 
 Zusätzliche lokale Beobachtungen: `read --wait 1` lieferte nach 1,123 Sekunden 122 Byte; privater Cancel-Marker nach 0,25 Sekunden wurde bis 0,334 Sekunden erkannt. Vollständiger Test-Submit einschließlich Helferstart dauerte 0,204 Sekunden. Zwei vorherige echte Diskussionsübergaben mit derselben lokalen Prüffolge dauerten 0,331 beziehungsweise 0,332 Sekunden Paste-bis-Enter. Diese Zeitwerte sind Einzelbeobachtungen, keine Latenzgarantie.
 
 Bytegenauer Mehrzeiler-/Sonderzeichen-Transport, separates internes Enter, veraltete Tokens ohne verbrauchte Kennung, Duplikat-/Identitäts-/Fremdentwurfschutz und abbrechbares Warten wurden lokal geprüft. Die eng verankerte Normalisierung erhält gleichlautenden Antworttext sowie Preisänderungen. Reproduzierbarer Smokecheck: `python3 <Skillordner>/tests/check_bridge.py`; er nutzt ausschließlich einen eigenen temporären tmux-Server und keinen Modellaufruf. Messwerte schwanken mit Version, Fensterinhalt und Host; JSON-Bytes sind weder Modelltoken noch Konto-Kontingent.
+
+## Fassung 1.1.1 — 18.09.2026, 12:20 Uhr
+
+Nutzerwunsch und Diskussionsrunde O4 dauerhaft übernommen: verständliche deutsche Phasenberichte, belegter aktueller Stand, eigene Arbeit gegenüber Arbeit anderer Aufgaben und passivem Warten unterscheiden, kurze Berichte an den autorisierten Sprach-/Ursprungskanal, keine erfundene Tätigkeit und kein Versprechen, technische Warteanzeigen zu steuern.
+
+Korrelationsgrenze konkretisiert: ein fachlich aktiver Umsetzungsauftrag, Zwischenfragen lokal beantworten. Claudes Vorschlag eines Pasteblock-Ankers wurde anhand der tatsächlichen Darstellung verworfen: Die Blocknummer verschwand nach Enter zugunsten des ausgeschriebenen Auftrags. Keine automatische Abtrennung hinter der letzten Kennungsfundstelle. Kein zusätzlicher Ack-Modellaufruf eingeführt.
+
+Der neue `submit`-Helfer hat die echte Diskussionsnachricht O5 in derselben bestätigten Claude-Sitzung als `enter_sent` übergeben; gemessene Helferlaufzeit 0,206 Sekunden. Die Antwort steht zum Zeitpunkt dieses Dokumentationsschritts noch aus. Diese Fassung ändert nur Anweisungen; keine erneuten Transporttests erforderlich.

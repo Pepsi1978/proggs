@@ -2,8 +2,8 @@
 name: ins-macos-terminal-einfuegen
 description: "Für „ins macOS Terminal einfügen“, „bei Claude reinschreiben“, Sprachaufträge aus Codex/Astra und beauftragten Dialog mit derselben sichtbaren Claude-Code-Sitzung in tmux: sicher zuordnen, Text übergeben, relevante Antworten lesen und reale Dateien prüfen. Gilt im Codex-Terminal und in Terminal.app, ohne Computer Use."
 metadata:
-  version: "1.1.0"
-  updated_at: "18.09.2026 12:16"
+  version: "1.1.1"
+  updated_at: "18.09.2026 12:20"
 ---
 
 # Ins macOS Terminal einfügen
@@ -32,11 +32,21 @@ Lies bei beauftragtem Dialog einmal [Puffer sparsam lesen](references/puffer-les
 
 > Auftrag C17: [konkretes Ziel und Grenzen]. Zum Abschluss bitte `C17 fertig`, `C17 blockiert` oder `C17 rückfrage`, dazu betroffene Dateien und tatsächlicher Prüfstatus. Wenn für eine Entscheidung etwas fehlt, frage gezielt.
 
+Halte die aktuelle Auftragskennung und den zuletzt gelesenen Antwortstand im flüchtigen Kontext. Standardmäßig ein fachlich aktiver Umsetzungsauftrag; Nutzerzwischenfragen lokal sofort beantworten und Ergänzungen sammeln. Keine zweite Umsetzung in die laufende Generation senden. Ein sichtbarer Pasteblock `#N` bleibt nach Enter nicht zwingend erhalten und ist kein belastbarer Antwortanker. Keine Inhalte automatisch hinter der letzten Kennungsfundstelle abschneiden: Diese kann zu einem Prompt-Echo, Zitat oder einer neuen Rückfrage gehören.
+
 Ein Marker zählt nur als neue, zum aktuellen Auftrag gehörende **Claude-Antwort**, nicht als Echo des gerade eingefügten Prompts. Ein Selbstbericht ist noch kein Beweis für korrekten Code. Gleicher Hash, stiller Puffer, ein Prompt oder Zeitablauf sind keine Fertigsignale.
 
 Bei beauftragter Codebegleitung den bestätigten Worktree, dessen Ausgangsstand und fremde Änderungen berücksichtigen. Zu Dateimeilensteinen relevante Dateien und staged/unstaged Diffs lesen; neue Dateien separat öffnen. Gegen den zuletzt gelesenen Inhalt vergleichen, nicht immer den gesamten HEAD-Diff als neu behandeln. Gelegentlich einen kleinen `git status`-Überblick nehmen, um neue/gelöschte Dateien und HEAD-Wechsel zu bemerken. Ein unveränderter Dateiname, Status oder eine Dateigröße beweist keinen unveränderten Inhalt. Keine vollständigen Repo-Scans pro Pufferabfrage.
 
 Sende nur neue Nutzerwünsche, benötigte Antworten oder belegte Probleme mit Datei/Fundstelle und Auswirkung. Einen gerade unvollständigen Umbau nicht voreilig als Bug melden. Claude implementiert weiter; ohne separaten Auftrag nicht parallel dieselben Dateien ändern. Nach Abschluss den tatsächlich erreichten Stand und die vorhandenen Prüfbelege nennen. Ein beobachteter Build-Erfolg ersetzt keine fachliche Prüfung.
+
+## Verständliche Fortschrittskommunikation
+
+Melde bei **substanziellen Phasenwechseln** kurz auf Deutsch den belegten Stand: Auftrag tatsächlich abgesendet; neue Claude-Ausgabe gelesen; eigene Änderung am Helfer/Skill begonnen; Prüfung läuft; Commit/Push läuft; tatsächliches Warten oder eine konkrete Nutzerentscheidung. Unterscheide eigene Arbeit, Arbeit einer anderen Aufgabe und passives Warten. Nicht „ich arbeite daran“ sagen, wenn ausschließlich Claudes Antwort aussteht. Ein Spinner erlaubt höchstens „Claude zeigt laufende Ausgabe“, keine Behauptung über unsichtbare Denkarbeit oder neue Dateien.
+
+Beispiele: „Claude hat den Auftrag angenommen; ich warte auf seine Antwort.“ — „Ich ändere jetzt den Helfer anhand des besprochenen Befunds.“ — „Der lokale Transporttest ist erfolgreich; der Push läuft.“ Nur mit entsprechendem aktuellem Beleg verwenden. Bei älterer Beobachtung sagen „zuletzt gesehen …“, bis der Stand aufgefrischt ist.
+
+Bei längerem Schweigen nach einem sinnvollen Leseabruf knapp den tatsächlichen neuen Stand oder den konkreten Wartegrund nennen. Keine sekündlichen Statusmeldungen und keine zusätzlichen Modellrunden nur für Fortschrittsbestätigungen. Wenn eine Ursprungsaufgabe oder ein Sprachkanal beteiligt ist, dorthin autorisierte kurze Meilensteinberichte schicken: Befund, nächster Schritt, läuft/wartet/blockiert. Nicht behaupten, die technische Anzeige „wartet auf …“ der App verändern zu können. Nutzer sollen aus dem kurzen Bericht verstehen, ob gearbeitet wird, eine Antwort fehlt oder ihre Entscheidung nötig ist.
 
 ## Stopp, Aufwand und Grenzen
 
