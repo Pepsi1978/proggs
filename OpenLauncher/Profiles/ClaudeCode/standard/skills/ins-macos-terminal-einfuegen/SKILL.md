@@ -2,13 +2,27 @@
 name: ins-macos-terminal-einfuegen
 description: "Für „ins macOS Terminal einfügen“, „bei Claude reinschreiben“, Sprachaufträge aus Codex/Astra und beauftragten Dialog mit derselben sichtbaren Claude-Code-Sitzung in tmux: sicher zuordnen, Text übergeben, relevante Antworten lesen und reale Dateien prüfen. Gilt im Codex-Terminal und in Terminal.app, ohne Computer Use."
 metadata:
-  version: "1.2.1"
-  updated_at: "18.09.2026 12:49"
+  version: "1.2.2"
+  updated_at: "18.09.2026 12:54"
 ---
 
 # Ins macOS Terminal einfügen
 
 Übernimm den vollständigen Sprachauftrag in **dieselbe bereits sichtbare Claude-Code-Sitzung in tmux**. Claude implementiert; Codex/Astra bündelt Nutzerwünsche, liest Antworten und prüft gezielt reale Dateien. Behalte Modell, Effort, Profil und Rechte bei. Der Skill startet weder eine Ersatzsitzung noch einen Hintergrunddienst.
+
+## Dreierdialog als aktive Zusammenarbeit
+
+Die normale Rollenverteilung im **beauftragten Dreierdialog** ist: Der Nutzer spricht mit Codex/Astra und steuert das Ziel; Codex/Astra liest bei Claude mit, bündelt neue Wünsche, diskutiert begründete Vorschläge und prüft reale Ergebnisse; dieselbe sichtbare Claude-Sitzung programmiert und führt die Abschlusskette aus. Kein paralleles Implementieren derselben Dateien durch den Koordinator.
+
+Steige bei einem aktiven fortlaufenden Dialog nach einem abgeschlossenen Update nicht automatisch aus. Prüfe das nächste sinnvolle Teilziel innerhalb des beauftragten Ziels, diskutiere konkrete Befunde und Risiken mit Claude und lasse nach begründetem Konsens einen begrenzten, zusammenhängenden Änderungssatz umsetzen. Begleite ihn mit tatsächlichen Datei-/Diff-Nachweisen durch die vollständige Abschlusskette; danach folgt das nächste sinnvolle Teilziel. Bündele mehrere passende Verbesserungen pro Update. Erfinde keine kosmetischen Änderungen, nur um den Dialog fortzusetzen. Fehlt weiterer belegbarer Nutzen oder eine wesentliche Produktentscheidung, melde die konkrete Sättigung beziehungsweise offene Frage ehrlich.
+
+Der Nutzer kann jederzeit neue Sprachwünsche, Korrekturen oder Stopp einbringen. Fasse Fragmente zusammen, entferne nur doppelte Inhalte, priorisiere die neueste Steuerung und halte den tatsächlichen Claude-Stand aktuell. Melde knapp Diskussion, Umsetzung, Review, Build und Commit/Push, damit der Nutzer die Rollen und den Fortschritt versteht. Eine Zwischenfrage beendet den aktiven Auftrag nicht.
+
+Halte dafür einen kompakten Arbeitsstand im aktuellen Kontext beziehungsweise privaten temporären Dialogzustand: **Hauptziel, aktuelle Runde, verbindliche Einschränkungen und Entscheidungen, letzter tatsächlich gesendeter Auftrag, offene Punkte und neue Nutzeränderungen**. Schreibe dafür keine dauerhaften persönlichen Erinnerungen. Behandle neue Nachrichten standardmäßig als Steuerung oder Ergänzung desselben Ziels; ersetze das Hauptziel nur bei klarem Zielwechsel. Beantworte Statusfragen kurz und setze die Arbeit fort, priorisiere dagegen „Stopp“ und „Warten“ unmittelbar. Gleiche neue Wünsche mit bereits erledigten Änderungen ab, löse eindeutige Widersprüche anhand der neuesten Nutzerentscheidung und frage nur bei einer wesentlichen verbleibenden Unklarheit gezielt nach. Keine neue Bestätigungsrunde für jede Zwischenbemerkung.
+
+Übergebe an Claude nur relevante, konsolidierte Änderungen an einem konkreten sicheren Meilenstein; wiederhole weder Transkriptdopplungen noch bereits erledigte Arbeit. Berücksichtige dringende Zielkorrekturen vor der nächsten eigenen Änderung oder Übergabe und prüfe den tatsächlichen Claude-Zustand, bevor du steuerst. Keine blinden Tastendrücke oder neue Umsetzungsanweisung in eine laufende Generation; nutze bei verlangtem Abbruch die Stopp-Regel. Bewahre den Arbeitsstand für den gesamten aktiven Auftrag und gleiche ihn nach Kontextverdichtung oder Verbindungsproblemen mit echten Dateien und der sicher zugeordneten Sitzung ab. Versprich keine technisch unterbrechungsfreie Verbindung.
+
+Diese Fortsetzung erweitert keinen einfachen Einzelauftrag zum Einfügen und auch keinen begrenzten Implementierungsauftrag automatisch zum unbegrenzten Umbau. Maßgeblich bleibt der ausdrücklich beauftragte Umfang. Ein autorisierter Verbesserungsloop gilt nur während des aktiven Chats; richte dafür keinen Dauerdaemon oder geplante Automation ein und verspreche keine Arbeit nach Chat-Ende. Bei Stopp oder bekanntem Chat-Ende keine neue Runde oder Übergabe starten; Stoppsignal und Umgang mit laufender Claude-Arbeit richten sich nach „Stopp, Aufwand und Grenzen“ unten.
 
 ## Einstieg und Zielbindung
 

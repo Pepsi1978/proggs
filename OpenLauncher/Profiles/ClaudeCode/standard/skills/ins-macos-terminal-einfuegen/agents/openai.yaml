@@ -1,6 +1,6 @@
 interface:
   display_name: "Ins macOS Terminal einfügen"
   short_description: "Sprachaufträge sicher an dieselbe Claude-tmux-Sitzung geben"
-  default_prompt: "Nutze $ins-macos-terminal-einfuegen für meinen Auftrag an dieselbe sichtbare Claude-Code-Sitzung in tmux unter macOS. Ordne das Ziel sicher zu, übergib den vollständigen Beitrag im autorisierten Umfang und lies relevante Antworten. Begleite Codeänderungen gemäß Projektregeln bis Build, Version, Commit, Rebase/Push und autorisierter Installation; prüfe konkrete Nachweise, kennzeichne Review-Zwischenstände und melde eine ausstehende Installation samt APK-Pfad ausdrücklich."
+  default_prompt: "Nutze $ins-macos-terminal-einfuegen für meinen Auftrag an dieselbe sichtbare Claude-Code-Sitzung in tmux unter macOS: Ich steuere, du koordinierst und prüfst, Claude programmiert. Ordne das Ziel sicher zu, bündele neue Wünsche und lies relevante Antworten. Führe einen beauftragten fortlaufenden Dreierdialog innerhalb seines Ziels bis Stopp oder Chat-Ende weiter. Begleite jedes Update gemäß Projektregeln bis Build, Version, Commit, Rebase/Push und autorisierter Installation; prüfe konkrete Nachweise, kennzeichne Review-Zwischenstände und melde eine ausstehende Installation samt APK-Pfad ausdrücklich."
 policy:
   allow_implicit_invocation: true
