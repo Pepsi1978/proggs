@@ -1,9 +1,13 @@
 ---
 name: ins-terminal-einfuegen
-description: Koordiniert Sprachaufträge, Codeprüfung und schnelle Textübergaben an laufende Agenten-Terminals in Codex unter Windows. Nutzen bei „ins Terminal einfügen“, „an die CLI übergeben“, „bei Claude reinschreiben“, „an OpenCode schicken“, „mit Enter abschicken“ oder beauftragtem Dialog mit der CLI. Bei besprochenen App-Verbesserungen die Übergabe anbieten; konkrete Zustimmung beachten. Keine dauerhafte Überwachung.
+description: Koordiniert Sprachaufträge, Codeprüfung und Textübergaben an laufende Agenten-Terminals in Codex. Unter macOS zum kompakten Skill ins-macos-terminal-einfuegen wechseln; Windows-Ablauf hier. Nutzen bei „ins Terminal einfügen“, „bei Claude reinschreiben“, „an OpenCode schicken“, „mit Enter abschicken“ oder beauftragtem CLI-Dialog. Keine dauerhafte Überwachung.
 ---
 
 # Ins Terminal einfügen
+
+## Plattform zuerst wählen
+
+Unter **macOS** direkt [Ins macOS Terminal einfügen](../ins-macos-terminal-einfuegen/SKILL.md) lesen und dessen Ablauf verwenden. Die folgenden Fenstersteuerungs- und Eingabehelfer sind für **Windows mit `@oai/sky`**; sie sind kein getesteter macOS-Schreibweg. Auf macOS nicht zusätzlich die Windows-Initialisierung oder historischen Windows-Messnotizen laden. Bei eindeutigem macOS-Auftrag künftig unmittelbar den macOS-Skill auswählen.
 
 Nutze den vorhandenen Terminal-Tab des Nutzers. Ein frisch gestarteter Shell-Prozess ist kein Ersatz für dessen laufende Sitzung. Eine Bitte um Einfügen allein bedeutet nicht automatisch Absenden; „abschicken“, „absenden“ oder „mit Enter ausführen“ schließt Enter ein. Nutze den zuletzt eindeutig festgelegten Text und sende ihn genau einmal.
 
