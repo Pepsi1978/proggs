@@ -174,7 +174,9 @@ und gilt für Weckerliste, Editor, Einstellungen und Weckbildschirm.
   Termin und Restzeit in einer runden **Perle**, stark gerundete Flächen, runde Alarmtasten.
 - **Orbit** — Fast-Schwarz mit Eisblau und Limette. **Instrumententafel**: kantige Module, eigene
   Kopfzeile mit fester Schrift, alle großen Zahlen in Monospace, Wecker als dichte Zeilen mit
-  Termin auf einer Achse, zwei gleich große Alarmmodule, **Sternbahn** als Motiv.
+  Termin auf einer Achse, zwei gleich große Alarmmodule. Im Kopfmodul steht die **freigestellte
+  Sternbahn** an der Stelle des Zwölfstundenrings; Uhrzeit und nächster Termin bleiben daneben
+  unverändert. Das Bild ist durchsichtig hinterlegt und trägt sich auf heller wie dunkler Fläche.
 
 Nachtatelier (A) ist bewusst **nicht** übernommen und bleibt nur als Entwurf unter `design/`.
 

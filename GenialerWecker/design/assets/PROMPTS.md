@@ -17,3 +17,12 @@ Use case: stylized-concept. Asset type: abstract decorative sleep/alarm illustra
 ## D · Traumraum — `d-traumraum/kissen.png`
 
 Use case: stylized-concept. Asset type: decorative sleep illustration for a warm welcoming modern alarm app concept called Traumraum. A charming but sophisticated sculptural pair: a plush pearl-colored pillow gently supporting a small dusty-rose ceramic crescent moon, two small champagne-colored four-point star objects floating discreetly above. Beautiful contemporary clay-render design, smooth rounded forms, subtle woven pillow texture, warm peach rim light, soft grounded shadows. Deep muted plum solid background. Centered compact arrangement in square composition with generous negative space. Quiet, cozy and premium, not childish. No faces, people, clouds, sun/weather, text, numbers, buttons, UI, logos or watermark. This decorates real HTML and must not contain a rendered interface.
+
+
+## Orbit – freigestelltes Motiv für den nativen Uhrkopf
+
+Datei: `c-orbit/sternbahn-freigestellt.png`. Bearbeitet mit dem integrierten ImageGen-Werkzeug; Referenz: `c-orbit/sternbahn.png`. Das Original bleibt erhalten.
+
+Exakter Bearbeitungsauftrag:
+
+> Use case: background-extraction. Asset type: transparent decorative PNG for the native Android alarm app's Orbit design. Edit the supplied image: remove the entire black rectangular background and ground/background shading, making all space surrounding and inside the orbital wire loops genuinely transparent (real alpha channel, not painted checkerboard and not black). Preserve the beautiful recognizable icy blue crescent sculpture, metallic orbital wires, small lime sphere, three tiny stars, and its compact dark display base, maintaining their position, proportions and premium 3D materials. Keep natural clean anti-aliased edges and subtle object shading. The result must blend directly onto BOTH pure white/light gray and dark navy-charcoal UI surfaces, so avoid a dark halo or matte rectangle. Center the complete object on a square transparent canvas with narrow safe padding, no cropping. No text, numerals, UI, border, background plate, checkerboard, or new objects. This is the same existing Orbit motif extracted for placement where a round twelve-hour clock used to be.

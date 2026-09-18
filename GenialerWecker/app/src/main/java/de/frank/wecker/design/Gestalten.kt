@@ -146,13 +146,17 @@ object OrbitGestalt : WeckerGestalt {
         ) { inhalt() }
     }
 
+    /**
+     * Das freigestellte Objekt steht für sich: keine Platte, kein Rahmen, kein Beschnitt. Die Größe
+     * gibt der Aufrufer vor, damit es genau den Platz des früheren Rings einnimmt. Der dunkle Sockel
+     * gehört zum Objekt und bleibt; die Fläche ringsum ist durchsichtig und trägt jede Oberfläche.
+     */
     @Composable override fun Motiv(modifier: Modifier) {
-        val gold = LocalGold.current
         Image(
-            painter = painterResource(R.drawable.design_sternbahn),
+            painter = painterResource(R.drawable.design_sternbahn_frei),
             contentDescription = null,
-            modifier = modifier.size(116.dp).clip(RoundedCornerShape(6.dp)).border(1.dp, gold.rahmen, RoundedCornerShape(6.dp)),
-            contentScale = ContentScale.Crop,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
         )
     }
 

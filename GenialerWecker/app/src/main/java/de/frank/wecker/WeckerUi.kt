@@ -486,7 +486,9 @@ private fun OrbitKopf(now: Long, next: Long?, nextIsSnooze: Boolean, ringSize: a
         LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
             Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                RestzeitRing(now, next, nextIsSnooze, Modifier.size(ringSize))
+                // Orbit zeigt an dieser Stelle sein freigestelltes Motiv statt des Zwölfstundenrings;
+                // Uhrzeit und der nächste Termin daneben bleiben unverändert.
+                LocalGestalt.current.Motiv(Modifier.size(ringSize))
                 Column(Modifier.weight(1f)) {
                     Text(formatClock(now), fontFamily = IdeenSchriftFest, fontWeight = FontWeight.SemiBold, fontSize = 44.sp, color = gold.primaer)
                     HorizontalDivider(Modifier.padding(vertical = 6.dp), color = gold.rahmen)
@@ -497,7 +499,6 @@ private fun OrbitKopf(now: Long, next: Long?, nextIsSnooze: Boolean, ringSize: a
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             GoldKnopf("＋ WECKER", onNew, hauptKnopf = true)
             StillerKnopf("EINSTELLUNGEN", onSettings)
-            LocalGestalt.current.Motiv(Modifier)
         }
     }
 }
