@@ -51,16 +51,17 @@ body {
 .wahl button:hover { border-color: #4a4e5a; }
 .wahl button.aktiv { background: #e9eaee; color: #15161a; border-color: #e9eaee; font-weight: 600; }
 
+/* Eine Variante je Zeile über die volle Breite — sonst quetscht auto-fit drei Varianten
+   nebeneinander und das Hell/Dunkel-Paar sowie die 840-px-Vorschau werden unsichtbar. */
 #galerie {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  grid-template-columns: 1fr;
   gap: 22px;
   padding: 22px 24px 40px;
   max-width: 1600px;
   margin: 0 auto;
   align-items: start;
 }
-@media (max-width: 900px) { #galerie { grid-template-columns: 1fr; } }
 
 .variante {
   background: #1b1d22;
@@ -81,7 +82,10 @@ body {
 }
 .variante .titelzeile { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 
-.paar { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+/* Am Desktop nebeneinander, auf schmalen Fenstern umgebrochen und notfalls waagerecht scrollbar.
+   Keine max-width auf Spalte oder Rahmen: zusammen mit overflow:hidden würde der feste
+   iframe-Viewport sonst beschnitten statt erreichbar zu bleiben. */
+.paar { display: flex; flex-wrap: wrap; gap: 14px; overflow-x: auto; padding-bottom: 6px; }
 .seite { flex: none; }
 .seite .etikett { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #8b909c; margin: 0 0 6px 2px; }
 .rahmen {

@@ -320,7 +320,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                                 val reduced = LocalBewegungReduziert.current
                                 val timeColor by androidx.compose.animation.animateColorAsState(if (alarm.enabled) gold.primaer else gold.textGedaempft,
                                     if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(250), label = "weckzeitFarbe")
-                                Text(alarm.timeLabel, fontFamily = IdeenSchriftBetont, fontSize = 44.sp, color = timeColor)
+                                WeckzeitUeberschrift(alarm, now, timeColor)
                                 Text(alarm.name, style = MaterialTheme.typography.titleMedium,
                                     maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
                             }
@@ -342,7 +342,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                         val detailExit = if (reducedMotion || !resumed) androidx.compose.animation.ExitTransition.None
                             else androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(200)) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200))
                         AnimatedVisibility(!expanded, enter = detailEnter, exit = detailExit) {
-                            Text(if (alarm.enabled && alarm.nextAt > 0) "${scheduleLabel(alarm)} · ${formatAt(alarm.nextAt)}" else "${scheduleLabel(alarm)} · ausgeschaltet",
+                            Text(if (alarm.enabled && alarm.nextAt > 0) "${scheduleLabel(alarm)} · ${terminAnzeige(now, alarm.nextAt).einzeilig}" else "${scheduleLabel(alarm)} · ausgeschaltet",
                                 color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         AnimatedVisibility(expanded, enter = detailEnter, exit = detailExit) { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -350,7 +350,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                             Text(alarm.steps.joinToString(" → ") { it.title }, color = gold.primaer, style = MaterialTheme.typography.bodySmall)
                             // Skip mark when present; entries without a mark keep the former nextAt comparison.
                             val skipped = AlarmTime.isSkipping(alarm, Instant.ofEpochMilli(now))
-                            if (alarm.enabled && alarm.nextAt > 0) StatusZeile(Icons.Default.Alarm, "Nächster Termin: ${formatAt(alarm.nextAt)}", gold.textPrimaer)
+                            if (alarm.enabled && alarm.nextAt > 0) StatusZeile(Icons.Default.Alarm, "Nächster Termin: ${terminAnzeige(now, alarm.nextAt).einzeilig}", gold.textPrimaer)
                             if (skipped) StatusZeile(Icons.Default.SkipNext, "Ein Termin wird ausgelassen", gold.primaer)
                             Text("Lautstärke ${alarm.volume} %${if (alarm.photoRequired) " · Foto-Aufgabe" else ""}", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
                             if (alarm.needsSpeech) {
@@ -707,6 +707,32 @@ fun Confirm(title: String, text: String, aktion: String, yes: () -> Unit, no: ()
 }
 
 fun newPhoto(context: Context): File = File(context.cacheDir, "photos").apply { mkdirs() }.let { File(it, "${UUID.randomUUID()}.jpg") }
+/**
+ * Ein tatsächlicher Termin, zerlegt für die Anzeige: heute nur die Uhrzeit, morgen die Uhrzeit mit
+ * Zusatz, ab übermorgen das lokale Kalenderdatum zuerst und die Uhrzeit danach, bei einem anderen
+ * Jahr mit Jahreszahl. Entschieden wird nach Kalendertagen, nicht nach Stundenabstand.
+ * Reine Darstellung — Planung, AlarmTime und Scheduler bleiben unberührt.
+ */
+data class TerminAnzeige(val datum: String?, val uhrzeit: String, val zusatz: String?) {
+    /** Eine Zeile wie im Kopfbereich: 18:30 · 07:00 · morgen · So, 20.09. · 07:00 */
+    val einzeilig: String get() = listOfNotNull(datum, uhrzeit, zusatz).joinToString(" · ")
+}
+
+fun terminAnzeige(now: Long, target: Long, zone: ZoneId = ZoneId.systemDefault()): TerminAnzeige {
+    val heute = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    val ziel = Instant.ofEpochMilli(target).atZone(zone)
+    val tag = ziel.toLocalDate()
+    // Aus derselben Zone wie das Datum, damit Uhrzeit und Tag nie auseinanderfallen.
+    val uhrzeit = ziel.format(DateTimeFormatter.ofPattern("HH:mm", java.util.Locale.GERMAN))
+    return when {
+        tag == heute -> TerminAnzeige(null, uhrzeit, null)
+        tag == heute.plusDays(1) -> TerminAnzeige(null, uhrzeit, "morgen")
+        else -> TerminAnzeige(ziel.format(DateTimeFormatter.ofPattern(
+            if (tag.year != heute.year) "EEE, dd.MM.yyyy" else "EEE, dd.MM.", java.util.Locale.GERMAN)),
+            uhrzeit, null)
+    }
+}
+
 fun formatAt(time: Long): String = Instant.ofEpochMilli(time).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEE, dd.MM. · HH:mm", java.util.Locale.GERMAN))
 fun dayLabel(days: Set<Int>): String = if (days.isEmpty()) "Einmalig" else if (days.size == 7) "Täglich" else if (days == setOf(1, 2, 3, 4, 5)) "Mo–Fr" else days.sorted().joinToString(" · ") { listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")[it - 1] }
 fun scheduleLabel(alarm: Alarm): String = when {
@@ -861,23 +887,37 @@ private fun LegendenMarker(hollow: Boolean, color: androidx.compose.ui.graphics.
     androidx.compose.foundation.Canvas(Modifier.size(14.dp)) { ringMarker(center, hollow, color, surface) }
 }
 
+/**
+ * Große Überschrift einer Weckerkarte. Ein AKTIVER Wecker zeigt den tatsächlich geplanten nächsten
+ * Termin aus Alarm.nextAt — bei einem Monats-, Jahres- oder Intervallplan liegt der Tage entfernt,
+ * und dann gehört das Datum davor. Ein ausgeschalteter Wecker zeigt weiterhin seine konfigurierte
+ * Weckzeit, denn genau die bearbeitet der Editor.
+ *
+ * Datum und Uhrzeit dürfen umbrechen: auf schmalen Anzeigen und bei großer Systemschrift wird lieber
+ * zweizeilig gesetzt als verkleinert oder abgeschnitten.
+ */
+@Composable
+private fun WeckzeitUeberschrift(alarm: Alarm, now: Long, farbe: androidx.compose.ui.graphics.Color) {
+    val anzeige = remember(alarm.enabled, alarm.nextAt, alarm.timeLabel, now) {
+        if (alarm.enabled && alarm.nextAt > 0) terminAnzeige(now, alarm.nextAt) else null
+    }
+    anzeige?.datum?.let { datum ->
+        Text(datum, style = MaterialTheme.typography.titleMedium, color = farbe, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(anzeige?.uhrzeit ?: alarm.timeLabel, fontFamily = IdeenSchriftBetont, fontSize = 44.sp, color = farbe)
+        anzeige?.zusatz?.let { zusatz ->
+            Text(zusatz, Modifier.padding(top = 16.dp), style = MaterialTheme.typography.titleMedium, color = farbe)
+        }
+    }
+}
+
 /** The alarm term with the same filled marker as on the ring; the weekday and date are added when it is not today. */
 @Composable
 private fun TerminZeile(now: Long, target: Long, snooze: Boolean) {
     val gold = LocalGold.current
     val accent = if (snooze) Semantisch.info else gold.primaer
-    val zone = ZoneId.systemDefault()
-    // Nach Kalendertagen entschieden, nicht nach Abstand in Stunden: heute die reine Uhrzeit, morgen die
-    // Uhrzeit mit Zusatz, ab übermorgen das Datum zuerst. Bei einem anderen Jahr kommt das Jahr dazu.
-    // Nur hier; die elf übrigen Aufrufe von formatAt bleiben unverändert.
-    val heute = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
-    val tag = Instant.ofEpochMilli(target).atZone(zone).toLocalDate()
-    val targetText = when {
-        tag == heute -> formatClock(target)
-        tag == heute.plusDays(1) -> "${formatClock(target)} · morgen"
-        else -> Instant.ofEpochMilli(target).atZone(zone).format(DateTimeFormatter.ofPattern(
-            if (tag.year != heute.year) "EEE, dd.MM.yyyy · HH:mm" else "EEE, dd.MM. · HH:mm", java.util.Locale.GERMAN))
-    }
+    val targetText = terminAnzeige(now, target).einzeilig
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LegendenMarker(hollow = false, color = accent)
         Text("${if (snooze) "Schlummern bis" else "Wecker"} $targetText", style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
@@ -1075,7 +1115,7 @@ private fun SpeicherVorschau(alarm: Alarm) {
         // Die Fehlermeldung kommt sonst erst nach dem Tippen auf „Wecker speichern“.
         fehler != null -> Warnung(fehler)
         next != null -> {
-            Text("Nach dem Speichern eingeschaltet · klingelt dann ${formatAt(next)} (in ${remainingLong(next - minute)})",
+            Text("Nach dem Speichern eingeschaltet · klingelt dann ${terminAnzeige(minute, next).einzeilig} (in ${remainingLong(next - minute)})",
                 Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             if (alarm.sleepMinutes > 0) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

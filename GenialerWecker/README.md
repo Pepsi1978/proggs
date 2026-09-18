@@ -149,11 +149,29 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
   mit Startseite, Editor, Einstellungen und Alarmbildschirm: A Nachtatelier (redaktionell),
   B Morgenruhe (Tagesablauf an einer Achse), C Orbit (Instrumententafel), D Traumraum (skulptural).
   Vergleichsgalerie: `design/index.html`, Breiten 360 / 412 / 840. Einzelheiten in `design/README.md`.
-- **Die native Oberfläche ist unverändert.** Diese Version bringt ausschließlich die Entwürfe als
-  Entscheidungsgrundlage; es wurde kein Designkonzept übernommen. Die App sieht aus wie in 1.1.49.
-- **Weiterhin offen:** Bei einem Monatswecker am 23. mit Start 23.09.2026, 15:45 bleibt oben nur
-  „15:45" stehen, obwohl der Termin später als morgen liegt und nach der Regel mit dem Datum zuerst
-  erscheinen müsste. Vermutet wird der Kartentitel, nicht der globale Kopfbereich. Nicht behoben.
+- **Entschieden und beauftragt:** Einstellungen → Darstellung bekommt vier dauerhaft wählbare
+  Designs — **Schlicht** (genau das heutige Erscheinungsbild, Vorgabe für bestehende und neue
+  Nutzer), **Morgenruhe** (B), **Traumraum** (D) und **Orbit** (C). **Nachtatelier (A) wird nicht
+  übernommen** und bleibt nur als Entwurf erhalten. Die Wahl gilt über Startseite, Editor,
+  Einstellungen und Alarmbildschirm, nativ in Compose, unabhängig von Hell/Dunkel und Ausrichtung.
+- **In 1.1.51 ist die native Optik noch unverändert.** Die Umsetzung folgt in einer eigenen Runde;
+  bis dahin sieht die App aus wie bisher.
+
+### Termin-Anzeige auf den Weckerkarten (1.1.51)
+
+- Behoben: Die **große Überschrift einer Weckerkarte** zeigte immer die konfigurierte Weckzeit. Bei
+  einem Monats-, Jahres- oder Intervallplan — etwa monatlich am 23., Start 23.09.2026, 15:45 — stand
+  dort nur „15:45", obwohl der Termin Tage entfernt liegt. 1.1.49 hatte die Regel nur im globalen
+  Kopfbereich eingeführt, die Karte blieb ausgelassen.
+- Ein **aktiver** Wecker zeigt jetzt den tatsächlich geplanten nächsten Termin aus `nextAt`: heute nur
+  die Uhrzeit, morgen die Uhrzeit mit dem Zusatz „morgen", ab übermorgen das lokale Kalenderdatum
+  zuerst und die Uhrzeit danach, bei einem anderen Jahr mit Jahreszahl. Datum und Uhrzeit dürfen
+  zweizeilig stehen, statt verkleinert oder abgeschnitten zu werden.
+- Ein **ausgeschalteter** Wecker zeigt weiterhin seine konfigurierte Weckzeit — genau die bearbeitet
+  der Editor. Schlummerhinweis, Weckername und das Uhrzeitfeld im Editor sind unverändert.
+- Kopfbereich, zugeklappte und aufgeklappte Karte sowie die Speichervorschau nutzen jetzt **denselben
+  Anzeigehelfer**, damit dieselbe Zeit überall gleich geschrieben wird. Planung, `AlarmTime` und
+  Scheduler sind unangetastet; die Berechnung des Termins wurde nicht verändert.
 
 ## Ideenbrücke
 
