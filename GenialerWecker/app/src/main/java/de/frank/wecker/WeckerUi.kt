@@ -566,6 +566,8 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
 @Composable
 private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     val revision by vm.settingsRevision.collectAsStateWithLifecycle()
+    val busy by vm.busy.collectAsStateWithLifecycle()
+    val recording by vm.recording.collectAsStateWithLifecycle()
     val voices by vm.clonedVoices.collectAsStateWithLifecycle()
     val loading by vm.voicesLoading.collectAsStateWithLifecycle()
     val error by vm.voiceLoadError.collectAsStateWithLifecycle()
@@ -605,6 +607,12 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
         if (alarm.speechRate != null) StillerKnopf("Standard-Sprechgeschwindigkeit verwenden", {
             vm.change(alarm.copy(speechRate = null))
         })
+        // Genau diese Stimme mit genau diesem Tempo, ohne die globalen Einstellungen anzufassen.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            GoldKnopf("Stimme anhören", { vm.previewVoice(alarm) }, aktiviert = busy.isBlank() && !recording)
+            // Stoppen bleibt immer möglich, auch während etwas anderes läuft.
+            StillerKnopf("Stoppen", vm::stopPreview)
+        }
         Text("Ohne eigene Auswahl gelten Stimme und Sprechgeschwindigkeit aus den Einstellungen. Jede Änderung hier gilt nur für diesen Wecker.", style = MaterialTheme.typography.bodySmall)
         if (loading) Text("Deine hochgeladenen Stimmen werden geladen …", style = MaterialTheme.typography.bodySmall)
         if (error.isNotBlank() && vm.settings.qwenTtsApiKey.isNotBlank()) {
@@ -1033,17 +1041,29 @@ private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
 @Composable
 private fun SpeicherVorschau(alarm: Alarm) {
     val minute = rememberNow(60_000)
-    val next = remember(alarm, minute) { runCatching { AlarmTime.next(alarm, Instant.ofEpochMilli(minute)) }.getOrNull() }
-    if (next != null) Text("Nach dem Speichern eingeschaltet · klingelt dann ${formatAt(next)} (in ${remainingLong(next - minute)})",
-        Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer,
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-    if (next != null && alarm.sleepMinutes > 0) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        SchlafZeile("Nach dem Speichern: " + Schlaf.hinweis(next, alarm.sleepMinutes, minute))
+    // Dieselbe reine Prüfung, die AlarmScheduler.save() als erstes ausführt: Was dort scheitern würde,
+    // darf hier nicht als Erfolg angekündigt werden. Keine zweite Regel, kein Eingriff ins Speichern.
+    val fehler = remember(alarm) {
+        runCatching { alarm.validate() }.exceptionOrNull()
+            ?.let { it.message?.takeIf { text -> text.isNotBlank() } ?: "Diese Eingaben ergeben noch keinen gültigen Wecker." }
     }
-    if (next == null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+    val next = remember(alarm, minute) { runCatching { AlarmTime.next(alarm, Instant.ofEpochMilli(minute)) }.getOrNull() }
+    @Composable fun Warnung(text: String) = Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Default.Warning, null, tint = Semantisch.warnung, modifier = Modifier.size(18.dp))
-        Text("Nach dem Speichern gäbe es keinen zukünftigen Termin – ändere Datum oder Uhrzeit.", Modifier.padding(start = 6.dp),
-            style = MaterialTheme.typography.bodySmall, color = Semantisch.warnung)
+        Text(text, Modifier.padding(start = 6.dp), style = MaterialTheme.typography.bodySmall, color = Semantisch.warnung)
+    }
+    when {
+        // Die Fehlermeldung kommt sonst erst nach dem Tippen auf „Wecker speichern“.
+        fehler != null -> Warnung(fehler)
+        next != null -> {
+            Text("Nach dem Speichern eingeschaltet · klingelt dann ${formatAt(next)} (in ${remainingLong(next - minute)})",
+                Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textPrimaer,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            if (alarm.sleepMinutes > 0) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                SchlafZeile("Nach dem Speichern: " + Schlaf.hinweis(next, alarm.sleepMinutes, minute))
+            }
+        }
+        else -> Warnung("Nach dem Speichern gäbe es keinen zukünftigen Termin – ändere Datum oder Uhrzeit.")
     }
 }
 

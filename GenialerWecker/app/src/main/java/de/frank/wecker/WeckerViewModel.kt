@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import de.frank.genialeideen.audio.*
 import de.frank.genialeideen.auth.*
 import de.frank.genialeideen.data.settings.SecureSettings
+import de.frank.genialeideen.speech.SyntheseStimme
 import de.frank.genialeideen.tts.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -546,17 +547,24 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         message.value = "Während einer Aufnahme ist keine Vorschau möglich."
         return true
     }
-    fun previewVoice() {
+    /**
+     * Hört die Stimme ab. Ohne [alarm] gilt der globale Standard, mit [alarm] dessen eigene Auswahl
+     * samt eigenem Tempo. Die globalen Einstellungen werden dabei nie verändert.
+     */
+    fun previewVoice(alarm: Alarm? = null) {
         if (rejectPreviewWhileRecording()) return
         stopPreview()
         val generation = previewGeneration
+        // Ein Schnappschuss für den gesamten Vorgang: Audio und Abspieltempo stammen garantiert aus
+        // derselben Stimme, auch wenn die Einstellungen währenddessen geändert werden.
+        val voice = SyntheseStimme(settings).let { defaults -> alarm?.resolveVoice(defaults) ?: defaults }
         runAction("Stimmprobe vorbereiten …") {
             // The job is captured inside the action, so a refused runAction can never register a foreign job.
             val job = currentCoroutineContext()[Job]
             if (generation != previewGeneration) return@runAction
             previewJob = job
             try {
-                val prep = SpeechPreparation(app, settings)
+                val prep = SpeechPreparation(app, settings) { voice }
                 val file = prep.audio("Guten Morgen! Es ist Zeit für deine genialen Ideen. Dein Wecker ist bereit.")
                 if (generation != previewGeneration) return@runAction
                 // Hand over without stopPreview(): that would cancel this very job.

@@ -190,7 +190,8 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             var german by remember(revision) { mutableStateOf(settings.immerDeutschVorlesen) }
             Toggle("Deutsche Aussprache beibehalten", german) { german = it; settings.immerDeutschVorlesen = it; vm.settingsChanged() }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                GoldKnopf("Stimme anhören", vm::previewVoice, aktiviert = busy.isBlank())
+                // Ohne Wecker: der globale Standard, genau wie bisher.
+                GoldKnopf("Stimme anhören", { vm.previewVoice() }, aktiviert = busy.isBlank())
                 StillerKnopf("Stoppen", vm::stopPreview)
             }
             Text("Beim Speichern werden sechs Varianten derselben Stimme erzeugt, mit behutsamen Tempo-Unterschieden. Beim Wecken läuft Variante 1 bis 6, dann wieder 1. Absätze werden vorgeladen. Bereits fertiges Audio bleibt bis zum erfolgreichen Abschluss verfügbar.", style = MaterialTheme.typography.bodySmall)
@@ -279,16 +280,30 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
     }, { removeVoice = null }) }
 }
 
+/**
+ * Der Schlüssel wird ausschließlich hier im Feld gehalten und erst auf ausdrückliches Speichern abgelegt –
+ * nie im SavedState, nie im Log, kein automatisches Speichern bei Fokusverlust. Verglichen wird der
+ * normalisierte Wert, weil auch getrimmt gespeichert wird.
+ */
 @Composable
 private fun SecretField(label: String, initial: String, save: (String) -> Unit) {
     var text by remember(label, initial) { mutableStateOf(initial) }
     var visible by remember { mutableStateOf(false) }
+    val tastatur = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val geaendert = text.trim() != initial.trim()
+    fun speichern() { save(text.trim()); tastatur?.hide() }
     OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), label = { Text(label) }, singleLine = true,
-        visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation())
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { if (geaendert) speichern() else tastatur?.hide() }))
+    // Umbrechend: auf schmaler Breite und mit großer Schrift bleiben beide Knöpfe sichtbar.
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         StillerKnopf(if (visible) "Verbergen" else "Anzeigen", { visible = !visible })
-        GoldKnopf("Speichern", { save(text.trim()) })
+        // Nur eine echte Änderung lässt sich speichern; ein unverändertes (auch leeres) Feld bleibt still.
+        GoldKnopf("Speichern", { speichern() }, aktiviert = geaendert)
     }
+    // Eigene Zeile, damit der Hinweis auch bei großer Schrift vollständig lesbar bleibt.
+    if (geaendert) Text("Noch nicht gespeichert", style = MaterialTheme.typography.bodySmall, color = Semantisch.warnung)
 }
 
 @Composable

@@ -64,6 +64,21 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
   hohe Fläche; der Favoritenstern liegt daneben, hat einen sprechenden Namen für TalkBack
   und wählt die Stimme nicht aus.
 
+### Bedienkomfort (1.1.46)
+
+- Im Wecker-Editor lässt sich die **weckereigene Stimme mit dem weckereigenen Tempo** anhören.
+  Die Vorschau nimmt beim Start einen festen Stimm-Schnappschuss, damit Ton und Abspieltempo
+  zusammenpassen, und verändert die globalen Einstellungen nicht. Während einer Aufnahme oder
+  eines laufenden Vorgangs ist das Anhören gesperrt; Stoppen bleibt möglich.
+- Die Vorschau im festen Speicherbereich kündigt keinen Termin mehr an, wenn der Wecker die
+  Prüfung beim Speichern gar nicht bestehen würde. Sie zeigt stattdessen genau die Meldung, die
+  sonst erst nach dem Tippen käme. Das Speichern selbst ist unverändert.
+- Bei den Sprachschlüsseln ist „Speichern“ nur bei einer echten Änderung aktiv, daneben steht
+  dann „Noch nicht gespeichert“; die Eingabetaste speichert ausdrücklich. Ein Schlüssel wird
+  weiterhin nur auf ausdrückliches Speichern abgelegt. **Hinweis:** Wer die Karte zuklappt oder
+  die Einstellungen verlässt, verliert eine ungespeicherte Eingabe weiterhin – der Zustand ist
+  jetzt nur sichtbar, bevor es passiert.
+
 ## Ideenbrücke
 
 Geniale Ideen benötigt das mitgelieferte Update mit `bridge/WeckerProvider.kt`.
