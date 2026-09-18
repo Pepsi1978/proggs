@@ -329,6 +329,67 @@ class AlarmActivity : ComponentActivity() {
     }
 }
 
+/** Kleinste Größe, die für die große Uhr überhaupt noch versucht wird. */
+private const val KLEINSTE_UHR = 8f
+
+/**
+ * Ein Textstil für die große Uhr. Zurückgegeben wird **nur eine Größe, die gemessen in [maxBreite]
+ * gepasst hat** — ein Abbruch der Suche gilt ausdrücklich nicht als Treffer.
+ *
+ * Gemessen und gezeichnet wird **derselbe** Stil: er entsteht aus dem geerbten [LocalTextStyle] und
+ * bekommt Schrift, Gewicht und Farbe aufgesetzt. Damit misst niemand mit anderen Werten, als später
+ * auf dem Bildschirm stehen — auch Zeichenabstand und sonstige geerbte Merkmale gehen ein.
+ *
+ * Die breiteste Ziffer wird ermittelt statt behauptet: alle zehn werden einmal gemessen, die
+ * breiteste bildet das Muster „XX:XX". Passt schon [hoechstens], bleibt es dabei. Sonst wird
+ * zwischen einer **nachweislich passenden** Unterseite und der zu großen Oberseite halbiert; das
+ * Ergebnis ist immer die zuletzt bestätigte Unterseite.
+ *
+ * Dokumentierter Sonderfall: Ist die Breite unbekannt oder so klein, dass selbst [KLEINSTE_UHR]
+ * nicht hineinpasst, wird diese Größe zurückgegeben — **ohne** Zusicherung, dass sie passt. Dann ist
+ * schlicht kein Platz vorhanden; die Uhr bricht wegen `softWrap = false` trotzdem nicht um.
+ *
+ * Gerechnet wird in einem [remember], dessen Schlüssel nur an Breite, Höchstgröße, Stil und Dichte
+ * hängen — nicht an der Uhrzeit. Keine Schleife über Frames, kein zusätzlicher Zustand.
+ */
+@Composable
+private fun uhrStil(
+    maxBreite: androidx.compose.ui.unit.Dp,
+    hoechstens: Float,
+    familie: androidx.compose.ui.text.font.FontFamily,
+    gewicht: androidx.compose.ui.text.font.FontWeight?,
+    farbe: androidx.compose.ui.graphics.Color,
+): androidx.compose.ui.text.TextStyle {
+    val messer = androidx.compose.ui.text.rememberTextMeasurer()
+    val dichte = androidx.compose.ui.platform.LocalDensity.current
+    val basis = LocalTextStyle.current.merge(
+        androidx.compose.ui.text.TextStyle(fontFamily = familie, fontWeight = gewicht, color = farbe),
+    )
+    return remember(messer, maxBreite, hoechstens, basis, dichte.density, dichte.fontScale) {
+        val grenze = with(dichte) { maxBreite.toPx() }
+        // Sonderfall ohne bekannte Breite: nichts zu messen, es gilt die Höchstgröße.
+        if (grenze <= 0f) return@remember basis.copy(fontSize = hoechstens.sp)
+        fun breiteVon(text: String, sp: Float) =
+            messer.measure(text, basis.copy(fontSize = sp.sp)).size.width.toFloat()
+        val breiteste = (0..9).maxByOrNull { breiteVon(it.toString(), hoechstens) } ?: 0
+        val muster = "$breiteste$breiteste:$breiteste$breiteste"
+        // Reicht der Platz schon für die Höchstgröße, bleibt die gewohnte Darstellung unverändert.
+        if (breiteVon(muster, hoechstens) <= grenze) return@remember basis.copy(fontSize = hoechstens.sp)
+        // Sonderfall zu wenig Platz: auch die kleinste Größe passt nicht. Sie wird ausdrücklich
+        // ohne Zusicherung zurückgegeben — ein Abbruch der Suche gilt nicht als Treffer.
+        if (breiteVon(muster, KLEINSTE_UHR) > grenze) return@remember basis.copy(fontSize = KLEINSTE_UHR.sp)
+        // Begrenzte Halbierung zwischen bestätigter Unterseite und zu großer Oberseite.
+        var passt = KLEINSTE_UHR
+        var zuGross = hoechstens
+        repeat(8) {
+            val mitte = (passt + zuGross) / 2f
+            if (breiteVon(muster, mitte) <= grenze) passt = mitte else zuGross = mitte
+        }
+        // `passt` wurde in jedem Fall gemessen und hat gepasst.
+        basis.copy(fontSize = passt.sp)
+    }
+}
+
 /**
  * Der dekorative Kopf des Weckbildschirms je Design — und nur er. Schritte, Meldungen, Foto-Aufgabe,
  * Tasten und die gesamte Zustandslogik liegen außerhalb und sind in allen Designs identisch.
@@ -351,8 +412,10 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
             Column(Modifier.fillMaxWidth().clip(form).background(gold.flaecheErhoeht).padding(vertical = 30.dp, horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("GUTEN MORGEN", color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
-                Text(formatClock(now), fontFamily = zahlSchrift(), fontSize = 88.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = gold.primaer)
+                // Genau der Stil, mit dem gemessen wurde — dadurch passt die Uhrzeit nachweislich.
+                Text(formatClock(now), maxLines = 1, softWrap = false,
+                    style = uhrStil(contentWidth - 40.dp, 88f, zahlSchrift(),
+                        androidx.compose.ui.text.font.FontWeight.Bold, gold.primaer))
                 Text(name, style = MaterialTheme.typography.headlineSmall,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -362,8 +425,9 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("GUTEN MORGEN", color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
-                Text(formatClock(now), fontFamily = zahlSchrift(), fontSize = 76.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Light, color = gold.primaer)
+                Text(formatClock(now), maxLines = 1, softWrap = false,
+                    style = uhrStil(contentWidth, 76f, zahlSchrift(),
+                        androidx.compose.ui.text.font.FontWeight.Light, gold.primaer))
                 Text(name, style = MaterialTheme.typography.headlineSmall,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
@@ -377,8 +441,9 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
                         style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp)
                 }
                 HorizontalDivider(color = gold.rahmen)
-                Text(formatClock(now), fontFamily = zahlSchrift(), fontSize = 80.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = gold.primaer)
+                Text(formatClock(now), maxLines = 1, softWrap = false,
+                    style = uhrStil(contentWidth, 80f, zahlSchrift(),
+                        androidx.compose.ui.text.font.FontWeight.SemiBold, gold.primaer))
                 Text(name, style = MaterialTheme.typography.titleLarge)
             }
         }

@@ -274,7 +274,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                 when (LocalDesignTokens.current.design) {
                     // Traumraum: geschwungene Kuppel mit zentrierter Uhr, darunter überlappend die Perle.
                     Design.TRAUMRAUM -> TraumraumKopf(now, terminBlock, onNew)
-                    // Orbit: Instrumentenmodul aus Ring links und Datenblock rechts, darunter die Aktionen.
+                    // Orbit: Instrumentenmodul aus freigestelltem Motiv links und Datenblock rechts.
                     Design.ORBIT -> OrbitKopf(now, next, nextIsSnooze, ringSize, terminBlock, onNew, onSettings)
                     else -> LocalGestalt.current.Flaeche(Modifier, erhoeht = true) {
                         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -435,11 +435,19 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
 @Composable
 fun DesignBlatt(inhalt: @Composable ColumnScope.() -> Unit) {
     val gold = LocalGold.current
-    if (LocalDesignTokens.current.design != Design.TRAUMRAUM) { Column(content = inhalt); return }
+    val traum = LocalDesignTokens.current.design == Design.TRAUMRAUM
     val form = RoundedCornerShape(topStart = 38.dp, topEnd = 38.dp)
-    Column(Modifier.fillMaxWidth().padding(top = 10.dp).clip(form).background(gold.flaeche)
-        .border(1.dp, gold.rahmen, form).padding(horizontal = 4.dp, vertical = 10.dp)) {
-        Box(Modifier.fillMaxWidth().padding(bottom = 14.dp), contentAlignment = Alignment.Center) {
+    // Genau eine Aufrufstelle für Column und für den Inhalt: nur der Modifier und der Griff hängen
+    // am Design. Ein Wechsel zu oder von Traumraum lässt damit die Zusammensetzung stehen, statt den
+    // Unterbaum zu verwerfen — aufgeklappte Karten bleiben offen.
+    Column(
+        Modifier.fillMaxWidth().then(
+            if (traum) Modifier.padding(top = 10.dp).clip(form).background(gold.flaeche)
+                .border(1.dp, gold.rahmen, form).padding(horizontal = 4.dp, vertical = 10.dp)
+            else Modifier,
+        ),
+    ) {
+        if (traum) Box(Modifier.fillMaxWidth().padding(bottom = 14.dp), contentAlignment = Alignment.Center) {
             Box(Modifier.width(46.dp).height(5.dp).clip(RoundedCornerShape(50)).background(gold.rahmen))
         }
         inhalt()
@@ -470,8 +478,8 @@ private fun TraumraumKopf(now: Long, terminBlock: @Composable ColumnScope.() -> 
 }
 
 /**
- * Orbit: das Kopfmodul einer Instrumententafel — Ring links, Datenblock rechts, darunter die
- * Aktionszeile. Gleiche Werte wie überall, nur in fester Schrift und auf einer Achse.
+ * Orbit: das Kopfmodul einer Instrumententafel — das freigestellte Motiv links, der Datenblock
+ * rechts, darunter die Aktionszeile. Gleiche Werte wie überall, nur in fester Schrift auf einer Achse.
  */
 @Composable
 private fun OrbitKopf(now: Long, next: Long?, nextIsSnooze: Boolean, ringSize: androidx.compose.ui.unit.Dp,
@@ -581,8 +589,10 @@ private fun DesignKopfleiste(
         Column(Modifier.fillMaxWidth().background(gold.flaeche).statusBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 voran?.invoke()
+                // Versalien mit Sperrung brauchen mehr Platz als die sonstige Kopfzeile; zwei Zeilen
+                // verhindern, dass „WECKER BEARBEITEN" bei großer Schrift früh gekürzt wird.
                 Text(titel.uppercase(java.util.Locale.GERMAN), Modifier.weight(1f), fontFamily = IdeenSchriftFest,
-                    style = MaterialTheme.typography.labelLarge, color = gold.primaer, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    style = MaterialTheme.typography.labelLarge, color = gold.primaer, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 aufThemeTipp?.let { StillerKnopf(if (themeWahl == "dark") "☀" else "☾", it,
                     Modifier.semantics { contentDescription = if (themeWahl == "dark") "Zur hellen Ansicht wechseln" else "Zur dunklen Ansicht wechseln" }) }
                 aufEinstellungen?.let { StillerKnopf("⚙", it, Modifier.semantics { contentDescription = "Einstellungen öffnen" }) }

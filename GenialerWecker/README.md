@@ -157,6 +157,33 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
 - **In 1.1.51 ist die native Optik noch unverändert.** Die Umsetzung folgt in einer eigenen Runde;
   bis dahin sieht die App aus wie bisher.
 
+### Bedienkomfort der Designs (1.1.54)
+
+- **Der Designwechsel lässt aufgeklappte Karten offen.** `DesignBlatt` hatte zwei getrennte
+  `Column`-Aufrufstellen; ein Wechsel zu oder von Traumraum verwarf damit den ganzen Unterbaum, und
+  jede Karte fiel auf ihren Ausgangszustand zurück. Jetzt gibt es genau eine Aufrufstelle, nur
+  Modifier und Griffbalken hängen am Design. Die vier Abschnittsstile und das erneute Maskieren der
+  Sprachschlüssel bleiben unverändert; die Schlüsselentwürfe liegen weiterhin ausschließlich im
+  Arbeitsspeicher der Einstellungsseite, nie im SavedState und nie auf der Platte.
+- **Die große Uhr auf dem Weckbildschirm passt sich der Breite an.** Bei Morgenruhe, Traumraum und
+  Orbit wird die Schriftgröße **gemessen** statt geraten. Messung und Darstellung benutzen denselben
+  Textstil — aus dem geerbten Stil plus Schrift, Gewicht und Farbe —, sodass auch Zeichenabstand und
+  Systemskalierung eingehen. Die breiteste Ziffer wird ermittelt, nicht angenommen: alle zehn werden
+  einmal gemessen und bilden das Muster „XX:XX". Von der Höchstgröße wird linear auf die verfügbare
+  Breite gesucht: zwischen einer **nachweislich passenden** Unterseite und der zu großen Oberseite
+  wird begrenzt halbiert, und zurückgegeben wird immer die zuletzt bestätigte Unterseite. Ein
+  Abbruch der Suche gilt ausdrücklich **nicht** als Treffer.
+  Bei genügend Platz bleibt es bei 76, 80 beziehungsweise 88 sp; bei Traumraum zählt die Breite
+  abzüglich des Kuppelrands. Gerechnet wird einmal je Konfiguration, nicht je Minute.
+  **Was zugesichert ist:** Die gewählte Größe wurde gemessen und passte für das Muster „XX:XX" in die
+  berechnete Breite; die Uhr bricht nicht um und wird nicht mit Auslassungszeichen gekürzt.
+  **Dokumentierter Sonderfall:** Ist die Breite unbekannt oder so klein, dass selbst 8 sp nicht
+  hineinpassen, wird diese Größe ohne Zusicherung gesetzt — dann ist schlicht kein Platz vorhanden.
+  Die Systemschriftgröße bleibt für alles andere wirksam. **Schlicht rechnet unverändert wie bisher.**
+  Eine Abnahme auf dem Gerät oder über Gerätekombinationen hinweg ist damit nicht behauptet.
+- Der Titel der Orbit-Kopfzeile darf zwei Zeilen belegen, damit „Wecker bearbeiten" in Versalien
+  nicht früh gekürzt wird; Zurück, Hell/Dunkel und Zahnrad bleiben erreichbar.
+
 ### Vier Designs (1.1.52)
 
 Unter **Einstellungen → Darstellung → Design** stehen vier dauerhaft wählbare Erscheinungsbilder.
