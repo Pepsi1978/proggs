@@ -17,13 +17,13 @@ Den verfügbaren flüchtigen Gesprächszustand klein halten: gebundenes Ziel, ak
 Ein beauftragter Dialog oder eine begleitete Programmierung enthält einen aktiven Beobachtungszyklus. Nach Absenden weiter lesen, relevante Aussagen/Rückfragen verarbeiten und Dateien an Meilensteinen prüfen. Nach einer Antwort nicht sofort aufhören, solange der konkrete Dialogauftrag weiterläuft. Keine neuen Prompts in laufende Generierung geben; keine überlappenden Umsetzungen ohne ausdrücklichen Auftrag.
 
 ```sh
-python3 "$BRIDGE" read --state "$BRIDGE_RUN/target.json" \
+python3 "$BRIDGE" read --run "$BRIDGE_RUN" \
   --wait 3 --cancel-file "$BRIDGE_RUN/cancel-aktueller-aufruf"
 ```
 
 `--wait` akzeptiert 0–10 Sekunden lokale Wartezeit. Bei Änderung oder Zustandswechsel kehrt der Aufruf zurück; andernfalls liefert er nach Ablauf `unchanged` und `waited_ms`. Lokal wird ungefähr alle 250 ms geprüft, einschließlich Identität. Es gibt keinen Hintergrundprozess und keine Fertigerkennung. Lokale Unterprozesse brauchen zusätzliche Laufzeit und besitzen eigene Timeouts; die Warteangabe ist keine Garantie einer millisekundengenauen Gesamtdauer.
 
-Für den äußeren Werkzeugaufruf kurze Yield-Zeit verwenden (beispielsweise 1 Sekunde), sodass neue Nutzersteuerung vor dem Abschluss verarbeitet werden kann. Während ein `read --wait` läuft, keine zweite Zustellung starten. Bei Stopp die aktuelle private Cancel-Datei erzeugen oder den eindeutig zugehörigen eigenen Leseprozess abbrechen. Abbruch wird zwischen lokalen Prüfschritten erkannt, nicht während eines blockierenden Betriebssystemaufrufs. Pro Aufruf neuen Cancel-Dateinamen verwenden; keinen alten Abbruchmarker löschen und dann unbemerkt weitermachen.
+Für den äußeren Werkzeugaufruf kurze Yield-Zeit verwenden (beispielsweise 1 Sekunde), sodass neue Nutzersteuerung vor dem Abschluss verarbeitet werden kann. Während ein `read --wait` läuft, keine zweite Zustellung starten. Bei Stopp `STOP` im selben Dialogordner erzeugen; zusätzlich kann die aktuelle private Cancel-Datei gesetzt oder der eindeutig zugehörige eigene Leseprozess abgebrochen werden. `STOP` bleibt auch für nachfolgende Aufrufe wirksam, bis der Nutzer ausdrücklich fortsetzen lässt. Abbruch wird zwischen lokalen Prüfschritten erkannt, nicht während eines blockierenden Betriebssystemaufrufs. Pro Aufruf neuen Cancel-Dateinamen verwenden; keinen alten Abbruchmarker löschen und dann unbemerkt weitermachen.
 
 Zunächst 2–3 Sekunden, bei wiederholt unverändertem Stand 5–10 Sekunden wählen. Nach relevanter Aktivität wieder kürzer reagieren. Spinner/Zähler können weiterhin Änderungen auslösen: keine pauschalen Filter, die Fehler/Rückfragen verschlucken. Nur die exakt erkannte numerische Launcher-Laufzeit im Footer wird beim Vergleich normalisiert; Rohansicht bleibt abrufbar. Dies ist kein allgemeiner semantischer Filter und keine garantierte Kontingentersparnis.
 

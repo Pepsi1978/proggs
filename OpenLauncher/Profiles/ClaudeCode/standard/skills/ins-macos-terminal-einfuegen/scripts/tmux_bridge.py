@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -22,11 +23,26 @@ FORMAT = '\t'.join('#{' + key + '}' for key in (
     'pane_current_command', 'cursor_x', 'cursor_y'))
 
 
-def run(args, data=None):
+class BridgeError(RuntimeError):
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        raise BridgeError('E_ARGS', message)
+
+
+CHECK_CANCEL = None
+
+def run(args, data=None, cleanup=False):
+    if CHECK_CANCEL and not cleanup:
+        CHECK_CANCEL()
     result = subprocess.run(args, input=data, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, timeout=10)
     if result.returncode:
-        raise RuntimeError(result.stderr.decode('utf-8', 'replace').strip() or 'Werkzeug fehlgeschlagen')
+        raise BridgeError('E_TOOL', result.stderr.decode('utf-8', 'replace').strip()[:240] or 'Werkzeug fehlgeschlagen')
     return result.stdout.decode('utf-8', 'replace')
 
 
@@ -60,15 +76,15 @@ def descendant(pid, root, rows):
 def meta(tmux, pane):
     values = run(tmux + ['display-message', '-p', '-t', pane, FORMAT]).rstrip('\n').split('\t')
     if len(values) != len(FIELDS):
-        raise RuntimeError('Unerwartetes tmux-Format; Zuordnung nicht möglich')
+        raise BridgeError('E_STATE', 'Unerwartetes tmux-Format; Zuordnung nicht möglich')
     return dict(zip(FIELDS, values))
 
 
 def identity(info, agent_pid):
     if info['dead'] != '0':
-        raise RuntimeError('Pane ist beendet')
+        raise BridgeError('E_TARGET', 'Pane ist beendet')
     if not descendant(agent_pid, int(info['pane_pid']), processes()):
-        raise RuntimeError('Agent gehört nicht mehr zu diesem Pane')
+        raise BridgeError('E_TARGET', 'Agent gehört nicht mehr zu diesem Pane')
     return {key: info[key] for key in ('socket', 'server_pid', 'session', 'pane', 'pane_pid')} | {
         'cwd': os.path.realpath(info['cwd']), 'agent_pid': agent_pid,
         'server_process': proc(info['server_pid']), 'pane_process': proc(info['pane_pid']),
@@ -90,11 +106,11 @@ def input_frame(screen):
     rows = screen.splitlines()
     separators = [i for i, row in enumerate(rows) if re.fullmatch(r'─{20,}', row.strip())]
     if len(separators) < 2:
-        raise RuntimeError('Claude-Eingaberahmen nicht eindeutig erkannt')
+        raise BridgeError('E_INPUT', 'Claude-Eingaberahmen nicht eindeutig erkannt')
     top, bottom = separators[-2:]
     field = '\n'.join(rows[top + 1:bottom]).strip()
     if not field.startswith('❯'):
-        raise RuntimeError('Kein Claude-Eingabefeld im Rahmen')
+        raise BridgeError('E_INPUT', 'Kein Claude-Eingabefeld im Rahmen')
     return rows, top, bottom, field[1:].lstrip(' \u00a0')
 
 
@@ -122,8 +138,9 @@ def surroundings(screen):
 
 
 def cancelled(args):
-    if args.cancel_file and args.cancel_file.exists():
-        raise RuntimeError('Abgebrochen: Cancel-Datei vorhanden; keine weitere Zustellung')
+    paths = ([args.state.parent / 'STOP'] if args.state else []) + ([args.cancel_file] if args.cancel_file else [])
+    if any(path.exists() for path in paths):
+        raise BridgeError('E_STOP', 'Stoppsignal vorhanden; keine weitere Zustellung')
 
 
 def snapshot(tmux, info):
@@ -133,9 +150,11 @@ def snapshot(tmux, info):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    global CHECK_CANCEL
+    parser = Parser(description=__doc__)
     parser.add_argument('action', choices=['list', 'bind', 'read', 'paste', 'enter', 'submit'])
     parser.add_argument('--socket', help='Expliziter tmux-Socket; beim ersten list optional')
+    parser.add_argument('--run', dest='run_dir', type=Path, help='Privater Dialogordner: target.json, ID.txt und STOP')
     parser.add_argument('--state', type=Path, help='Private Laufzeitdatei außerhalb des Repos')
     parser.add_argument('--pane')
     parser.add_argument('--agent-pid', type=int)
@@ -151,9 +170,27 @@ def main():
     parser.add_argument('--lines', type=int, default=0)
     parser.add_argument('--max-chars', type=int, default=6000)
     args = parser.parse_args()
+    if args.run_dir:
+        if args.run_dir.is_symlink():
+            parser.error('--run darf kein Symlink sein')
+        derived_state = args.run_dir / 'target.json'
+        if args.state and args.state.absolute() != derived_state.absolute():
+            parser.error('--state widerspricht --run/target.json')
+        args.state = derived_state
+        if args.action in ('paste', 'submit'):
+            if not args.id or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', args.id):
+                parser.error('Gültige --id vor Ableitung der Textdatei erforderlich')
+            derived_text = args.run_dir / (args.id + '.txt')
+            if args.text_file and args.text_file.absolute() != derived_text.absolute():
+                parser.error('--text-file widerspricht --run/ID.txt')
+            args.text_file = derived_text
+            if not args.sha256:
+                parser.error('--run verlangt auch beim Einfügen den autorisierten --sha256')
+    CHECK_CANCEL = lambda: cancelled(args)
+    CHECK_CANCEL()
     binary = shutil.which('tmux')
     if not binary:
-        raise RuntimeError('tmux fehlt; keine Ersatzsitzung starten')
+        raise BridgeError('E_STATE', 'tmux fehlt; keine Ersatzsitzung starten')
     tmux = [binary] + (['-S', args.socket] if args.socket else [])
     if args.action == 'list':
         rows = processes()
@@ -168,7 +205,7 @@ def main():
         parser.error('--state fehlt')
     # Ein privates Verzeichnis anlegen (mktemp -d); verhindert versehentliche Mitbenutzung.
     if not args.state.parent.is_dir() or args.state.parent.stat().st_mode & 0o077:
-        raise RuntimeError('State-Verzeichnis muss vorhanden und privat sein (chmod 700)')
+        raise BridgeError('E_STATE', 'State-Verzeichnis muss vorhanden und privat sein (chmod 700)')
     if args.cancel_file and args.cancel_file.parent.resolve() != args.state.parent.resolve():
         parser.error('--cancel-file muss im privaten State-Verzeichnis liegen')
     if not 0 <= args.wait <= 10:
@@ -179,7 +216,7 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if args.action == 'bind':
             if args.state.exists():
-                raise RuntimeError('Bindung existiert; für bewusste Neuzuordnung eine neue State-Datei verwenden')
+                raise BridgeError('E_STATE', 'Bindung existiert; für bewusste Neuzuordnung eine neue State-Datei verwenden')
             if not args.socket or not args.pane or not args.cwd or not args.agent_pid:
                 parser.error('bind braucht --socket, --pane, --agent-pid und --cwd')
             if not re.fullmatch(r'%\d+', args.pane):
@@ -187,7 +224,7 @@ def main():
             info = meta(tmux, args.pane)
             bound = identity(info, args.agent_pid)
             if bound['cwd'] != os.path.realpath(args.cwd):
-                raise RuntimeError('Arbeitsverzeichnis stimmt nicht mit dem bestätigten Ziel überein')
+                raise BridgeError('E_TARGET', 'Arbeitsverzeichnis stimmt nicht mit dem bestätigten Ziel überein')
             save(args.state, {'identity': bound, 'deliveries': {}})
             emit({'bound': bound})
             return
@@ -196,7 +233,7 @@ def main():
         tmux = [binary, '-S', bound['socket']]
         info = meta(tmux, bound['pane'])
         if identity(info, bound['agent_pid']) != bound:
-            raise RuntimeError('Ziel/Prozess/Arbeitsverzeichnis geändert; zuerst neu zuordnen')
+            raise BridgeError('E_TARGET', 'Ziel/Prozess/Arbeitsverzeichnis geändert; zuerst neu zuordnen')
         screen, observed = snapshot(tmux, info)
         if args.action == 'read':
             if not 0 <= args.lines <= 500 or not 1000 <= args.max_chars <= 30000:
@@ -215,7 +252,7 @@ def main():
                 cancelled(args)
                 info = meta(tmux, bound['pane'])
                 if identity(info, bound['agent_pid']) != bound:
-                    raise RuntimeError('Identität während des Wartens geändert')
+                    raise BridgeError('E_TARGET', 'Identität während des Wartens geändert')
                 screen, observed = snapshot(tmux, info)
             result = {'event': 'snapshot' if changed or delta or args.force_view else 'unchanged',
                       'observed': observed}
@@ -238,41 +275,46 @@ def main():
             emit(result)
             return
         if args.observed != observed:
-            raise RuntimeError('Momentaufnahme geändert/veraltet; erneut lesen, nicht blind zustellen')
+            raise BridgeError('E_STALE', 'Momentaufnahme geändert/veraltet; erneut lesen, nicht blind zustellen')
         if info['in_mode'] != '0' or info['input_off'] != '0':
-            raise RuntimeError('Pane nimmt keine normale Eingabe an')
+            raise BridgeError('E_INPUT', 'Pane nimmt keine normale Eingabe an')
         if not args.id or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', args.id):
             parser.error('--id muss eine kurze eindeutige Auftragskennung sein')
         def recheck():
             cancelled(args)
             latest = meta(tmux, bound['pane'])
             if identity(latest, bound['agent_pid']) != bound or snapshot(tmux, latest)[1] != args.observed:
-                raise RuntimeError('Ziel oder Ansicht unmittelbar vor Eingabe geändert; erneut lesen')
+                raise BridgeError('E_STALE', 'Ziel oder Ansicht unmittelbar vor Eingabe geändert; erneut lesen')
 
         deliveries = state['deliveries']
         if args.action in ('paste', 'submit'):
             if args.id in deliveries:
-                raise RuntimeError('Kennung bereits versucht; zuerst Zustellung klären, nicht erneut einfügen')
+                raise BridgeError('E_DUPLICATE', 'Kennung bereits versucht; zuerst Zustellung klären, nicht erneut einfügen')
             if args.text_file is None:
                 parser.error('--text-file fehlt')
-            text = args.text_file.read_text(encoding='utf-8')
+            fd = os.open(args.text_file, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(fd, encoding='utf-8') as source:
+                if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+                    raise BridgeError('E_TEXT', 'Auftrag muss eine reguläre Datei ohne Symlink sein')
+                text = source.read(65537)
             if not text.strip() or len(text.encode()) > 65536:
-                raise RuntimeError('Leerer oder zu großer Auftrag')
+                raise BridgeError('E_TEXT', 'Leerer oder zu großer Auftrag')
             if any((ord(c) < 32 and c not in '\n\t') or ord(c) == 127 for c in text):
-                raise RuntimeError('Steuerzeichen im Auftrag nicht erlaubt')
+                raise BridgeError('E_TEXT', 'Steuerzeichen im Auftrag nicht erlaubt')
             text_hash = hashlib.sha256(text.encode()).hexdigest()
-            if args.action == 'submit':
+            if args.action == 'submit' or args.run_dir:
                 if args.sha256 != text_hash:
-                    raise RuntimeError('Auftragshash fehlt oder Inhalt nach Autorisierung geändert')
+                    raise BridgeError('E_TEXT', 'Auftragshash fehlt oder Inhalt nach Autorisierung geändert')
+            if args.action == 'submit':
                 if any(d['status'] in ('pasted', 'paste_attempted', 'enter_attempted') for d in deliveries.values()):
-                    raise RuntimeError('Andere Zustellung noch offen; zuerst klären')
+                    raise BridgeError('E_DUPLICATE', 'Andere Zustellung noch offen; zuerst klären')
                 frame = input_frame(screen)
                 if frame[3] != '' or info['cursor_x'] != '2' or int(info['cursor_y']) != frame[1] + 1:
-                    raise RuntimeError('submit verlangt ein eindeutig leeres Eingabefeld; auch Ghosts zuerst klären')
+                    raise BridgeError('E_INPUT', 'submit verlangt ein eindeutig leeres Eingabefeld; auch Ghosts zuerst klären')
                 before = screen
             # paste-buffer -p klammert nur bei bereits aktivierter Unterstützung des Zielprogramms.
             if info['bracket_paste'] != '1':
-                raise RuntimeError('Bracketed Paste ist nicht aktiv; nicht mit Zeilenumbrüchen experimentieren')
+                raise BridgeError('E_INPUT', 'Bracketed Paste ist nicht aktiv; nicht mit Zeilenumbrüchen experimentieren')
             buffer = 'codex-' + uuid.uuid4().hex
             try:
                 run(tmux + ['load-buffer', '-b', buffer, '-'], text.encode())
@@ -281,7 +323,7 @@ def main():
                 save(args.state, state)
                 run(tmux + ['paste-buffer', '-p', '-r', '-b', buffer, '-t', bound['pane']])
             finally:
-                run(tmux + ['delete-buffer', '-b', buffer])
+                run(tmux + ['delete-buffer', '-b', buffer], cleanup=True)
             deliveries[args.id]['status'] = 'pasted'
             save(args.state, state)
             if args.action == 'submit':
@@ -290,7 +332,7 @@ def main():
                     cancelled(args)
                     latest = meta(tmux, bound['pane'])
                     if identity(latest, bound['agent_pid']) != bound:
-                        raise RuntimeError('Identität nach Paste geändert; kein Enter')
+                        raise BridgeError('E_TARGET', 'Identität nach Paste geändert; kein Enter')
                     after, after_token = snapshot(tmux, latest)
                     draft = input_frame(after)[3]
                     own = draft == text or re.fullmatch(r'\[Pasted text #\d+\]', draft)
@@ -313,7 +355,7 @@ def main():
                 emit({'id': args.id, 'transport': 'pasted', 'submitted': False})
         else:
             if deliveries.get(args.id, {}).get('status') != 'pasted':
-                raise RuntimeError('Kein eindeutig eingefügter, noch ungesendeter Auftrag für diese Kennung')
+                raise BridgeError('E_TEXT', 'Kein eindeutig eingefügter, noch ungesendeter Auftrag für diese Kennung')
             recheck()
             deliveries[args.id]['status'] = 'enter_attempted'
             save(args.state, state)
@@ -328,5 +370,6 @@ if __name__ == '__main__':
     try:
         main()
     except (RuntimeError, OSError, ValueError, subprocess.TimeoutExpired) as error:
-        emit({'error': str(error), 'action': 'Anhalten und lesen; keine automatische Wiederholung'})
+        emit({'error': getattr(error, 'code', 'E_TIMEOUT' if isinstance(error, subprocess.TimeoutExpired) else 'E_STATE'),
+              'message': str(error)[:240]})
         sys.exit(1)

@@ -1,4 +1,4 @@
-import json,os,pathlib,subprocess,tempfile,time,hashlib,importlib.util,threading,sys
+import json,os,pathlib,subprocess,tempfile,time,hashlib,importlib.util,threading,sys,shlex
 sys.dont_write_bytecode = True
 skill = pathlib.Path(__file__).resolve().parents[1]
 new = str(skill/'scripts/tmux_bridge.py')
@@ -63,6 +63,30 @@ while True:
         normalized=module.normalize_clock(footer)
         assert 'Antwort ⏳ 2m10s' in normalized and '⏳ <Laufzeit>' in normalized
         assert module.normalize_clock(footer.replace('$0.00','$1.00'))!=normalized
+        # --run ändert weder Ziel noch Ledger; Aliaswerte müssen exakt zusammenpassen.
+        alias = d/'target.json'; alias.write_text(pathlib.Path(b).read_text())
+        alias_read,_ = call(new,'read','--run',str(d),'--force-view')
+        assert alias_read['observed'] == fresh['observed']
+        _, error_old_bytes = call(old,'enter','--state',a,'--id','X','--observed','falsch',ok=False)
+        stale,error_new_bytes = call(new,'enter','--state',b,'--id','X','--observed','falsch',ok=False)
+        assert stale['error']=='E_STALE'
+        conflict,_ = call(new,'read','--run',str(d),'--state',b,ok=False)
+        assert conflict['error']=='E_ARGS'
+        traversal,_ = call(new,'submit','--run',str(d),'--id','../X','--sha256','x',ok=False)
+        assert traversal['error']=='E_ARGS'
+        linked = d/'X.txt'; linked.symlink_to(f)
+        call(new,'paste','--run',str(d),'--id','X','--sha256',hashlib.sha256(text.encode()).hexdigest(),
+             '--observed',fresh['observed'],ok=False)
+        stop=d/'STOP';stop.touch()
+        for mode in [('read','--run',str(d)),('read','--state',b)]:
+            blocked,_=call(new,*mode,ok=False);assert blocked['error']=='E_STOP'
+        assert stop.exists();stop.unlink()  # Explizite Fortsetzung ausschließlich im isolierten Test.
+        common=['--id','C17','--sha256','0'*64,'--observed','1'*64]
+        old_command=shlex.join(['python3',new,'submit','--state',str(d/'target.json'),
+                              '--text-file',str(d/'C17.txt')]+common)
+        new_command=shlex.join(['python3',new,'submit','--run',str(d)]+common)
+        print(json.dumps({'legacy_command_chars':len(old_command),'run_command_chars':len(new_command),
+                          'stale_error_old_bytes':error_old_bytes,'stale_error_new_bytes':error_new_bytes}))
         measurement={'scenario':'6 gleiche Abfragen (erste Ansicht + 5 Wiederholungen), UTF-8-JSON-Bytes','old_bytes':oldbytes,'new_bytes':newbytes,'wait_1s_bytes':n,'wait_1s_elapsed':round(duration,3),'cancel_elapsed':round(cancel_time,3),'submit_elapsed':round(latency,3),'model_tool_calls_old_read_paste_read_enter':4,'model_tool_calls_new_read_submit':2}
         print(json.dumps(measurement))
         print('OK: eigenes isoliertes TUI-Testpane; bytegenaues Paste+Enter, Doppel-/Identitätsschutz, Cancel und nur eng verankerte Laufzeitnormalisierung.')

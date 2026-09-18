@@ -19,7 +19,7 @@ Bestimme die **eigentliche Claude-PID**, nicht einen MCP-Kindprozess, Shell-Wrap
 BRIDGE_RUN=$(mktemp -d "${TMPDIR:-/tmp}/codex-tmux-bridge.XXXXXX")
 chmod 700 "$BRIDGE_RUN"
 # Werte aus der bestätigten list-Ausgabe einsetzen; keine historischen IDs kopieren.
-python3 "$BRIDGE" bind --state "$BRIDGE_RUN/target.json" \
+python3 "$BRIDGE" bind --run "$BRIDGE_RUN" \
   --socket '/BESTÄTIGTER/SOCKET' --pane '%BESTÄTIGTE-ID' \
   --agent-pid BESTÄTIGTE_PID --cwd '/BESTÄTIGTER/ARBEITSORDNER'
 ```
@@ -28,6 +28,16 @@ Die Platzhalter sind absichtlich nicht ausführbar. In nachfolgenden Tool-Shells
 
 `bind` überschreibt eine vorhandene Bindung nicht. Neue State-Datei nur nach bewusster Neuzuordnung; keine zweite Bindung zum Umgehen einer Zustellungssperre. Prüft der Helfer nach `cd`, Prozessneustart oder Sessionwechsel eine andere Identität, hält er an. Nach geklärtem Wechsel neu binden. Verschobene Panes/mehrere angebundene Clients nicht automatisch als dieselbe sichtbare Zieloberfläche behandeln.
 
+## Ein Dialogverzeichnis, kurze Aufrufe
+
+`--run` verlangt ein bereits angelegtes privates Verzeichnis ohne Symlink. Es leitet `target.json` und bei `paste`/`submit` die Datei `ID.txt` ab. Kennungen werden vor dem Pfadbau geprüft; Slash/Punkt-Traversal ist unzulässig. Abgeleitete Textdateien müssen reguläre Dateien ohne Symlink sein. Unter `--run` ist der autorisierte SHA-256 auch bei reinem `paste` Pflicht, damit ein Tippfehler in der ID keinen alten Text unbemerkt einfügt.
+
+Die bisherigen expliziten Optionen `--state`, `--text-file` und `--cancel-file` bleiben verfügbar. Stimmen explizite State-/Textpfade nicht mit `--run` überein, wird abgebrochen. Nicht automatisch einen anderen Ordner oder eine andere Datei wählen. Ein Dialog, ein Ordner, ein zustellender Agent; ein zweiter Ordner wäre eine mögliche Umgehung von Stopp und Zustellungsledger und ist kein Wiederherstellungsweg.
+
+Eine Datei `STOP` neben der State-Datei sperrt Aufrufe auch dann, wenn sie die alte `--state`-Schreibweise nutzen. Der Helfer prüft sie vor Werkzeugaktionen und während Warte-/Renderphasen. Bei Stopp nur eigenes Hilfsmaterial aufräumen; keine neue Zustellung. Ein bereits laufender Betriebssystemaufruf und das letzte kleine Rennen vor einer Mutation bleiben Grenzen. Aufräumen des eigenen tmux-Puffers ist weiterhin erlaubt.
+
+`STOP` bleibt liegen, bis der Nutzer ausdrücklich fortsetzen lässt. Danach darf der ausführende Agent genau dieses Signal entfernen, ohne Ledger, Zielbindung oder Auftragshashes zu löschen. Erst frisch lesen und offene/unklare Zustellung klären. Kein automatisches Resume durch Timeout, kein Neuanlegen des Dialogordners zum Umgehen des Stopps. Ein aufrufspezifisches `--cancel-file` kann zusätzlich verwendet werden.
+
 ## Lesen und sofort absenden
 
 `read` prüft Identität und liefert standardmäßig den aktuellen Bildschirm, bei gleichem Inhalt nur `event: unchanged` und einen frischen `observed`-Token. `--verbose` zeigt alle Metadaten; im Normalfall erscheinen nur geänderte Zustandsfelder. Cursor- und Modusdaten bleiben vollständig Teil der internen Prüfung. `--lines 80` liest bei Bedarf History, `--force-view` wiederholt gezielt eine Ansicht. Der Token ist keine automatische Erkennung von Bereitschaft oder Autorisierung.
@@ -35,11 +45,11 @@ Die Platzhalter sind absichtlich nicht ausführbar. In nachfolgenden Tool-Shells
 Alle inhaltlichen Entscheidungen und die Textdatei **vor** Paste vorbereiten. Bei ausdrücklichem Absendeauftrag:
 
 ```sh
-python3 "$BRIDGE" read --state "$BRIDGE_RUN/target.json"
+python3 "$BRIDGE" read --run "$BRIDGE_RUN"
 # Auftrag sicher als UTF-8-Datei speichern; Hash des autorisierten Inhalts bestimmen.
 shasum -a 256 "$BRIDGE_RUN/C17.txt"
-python3 "$BRIDGE" submit --state "$BRIDGE_RUN/target.json" \
-  --id C17 --text-file "$BRIDGE_RUN/C17.txt" --sha256 'HASH_DES_AUTORISIERTEN_TEXTES' \
+python3 "$BRIDGE" submit --run "$BRIDGE_RUN" \
+  --id C17 --sha256 'HASH_DES_AUTORISIERTEN_TEXTES' \
   --observed 'TOKEN_AUS_INHALTLICH_GEPRÜFTEM_READ'
 ```
 
@@ -52,11 +62,11 @@ Die kurze Renderwartephase beträgt bis zu einer Sekunde zuzüglich Werkzeuglauf
 ## Nur einfügen oder manuell geklärter Rückfall
 
 ```sh
-python3 "$BRIDGE" paste --state "$BRIDGE_RUN/target.json" \
-  --id C17 --text-file "$BRIDGE_RUN/C17.txt" --observed 'GEPRÜFTER_TOKEN'
-python3 "$BRIDGE" read --state "$BRIDGE_RUN/target.json" --force-view
+python3 "$BRIDGE" paste --run "$BRIDGE_RUN" \
+  --id C17 --sha256 'HASH_DES_AUTORISIERTEN_TEXTES' --observed 'GEPRÜFTER_TOKEN'
+python3 "$BRIDGE" read --run "$BRIDGE_RUN" --force-view
 # Nur nach vorhandener Absendeautorisierung und eindeutiger Prüfung des eigenen Entwurfs:
-python3 "$BRIDGE" enter --state "$BRIDGE_RUN/target.json" \
+python3 "$BRIDGE" enter --run "$BRIDGE_RUN" \
   --id C17 --observed 'NEUER_GEPRÜFTER_TOKEN'
 ```
 
@@ -79,3 +89,7 @@ Dadurch ist der Schreibschutz um genau diese Laufzeitzellen schwächer; alle üb
 | `enter_sent` | Enter angenommen; Claude-Annahme anhand neuer Ausgabe prüfen. |
 
 Dies ist kein Exactly-once-Protokoll. Abstürze, Nutzerbedienung und ein Prozesswechsel zwischen Prüfung und Schreiben bleiben Grenzen. Nur ein zustellender Agent pro Dialog. Nach Ende private Laufzeitdateien entfernen, nicht die Claude-Sitzung oder den tmux-Server beenden.
+
+## Kurze Fehlerantworten
+
+Fehler liefern einen stabilen Code und einen konkreten deutschen Satz: `E_STALE` (Ansicht veraltet), `E_TARGET` (Identität), `E_INPUT` (Eingabe unklar), `E_DUPLICATE` (bereits versucht/offen), `E_TEXT` (Text/Hash), `E_STOP` (Stoppsignal), `E_ARGS` (Argumente), `E_TOOL`/`E_TIMEOUT`/`E_STATE` (lokaler Werkzeug-/Zustandsfehler). Diese Codes lösen keinen automatischen Retry aus. Status und Ledger bestimmen, ob eine Mutation versucht wurde. Ein Rückfall mit `transport: pasted, submitted: false` ist ein bewusst ungesendeter Entwurf, kein fertiger Auftrag.

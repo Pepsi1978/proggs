@@ -43,3 +43,11 @@ Nutzerwunsch und Diskussionsrunde O4 dauerhaft übernommen: verständliche deuts
 Korrelationsgrenze konkretisiert: ein fachlich aktiver Umsetzungsauftrag, Zwischenfragen lokal beantworten. Claudes Vorschlag eines Pasteblock-Ankers wurde anhand der tatsächlichen Darstellung verworfen: Die Blocknummer verschwand nach Enter zugunsten des ausgeschriebenen Auftrags. Keine automatische Abtrennung hinter der letzten Kennungsfundstelle. Kein zusätzlicher Ack-Modellaufruf eingeführt.
 
 Der neue `submit`-Helfer hat die echte Diskussionsnachricht O5 in derselben bestätigten Claude-Sitzung als `enter_sent` übergeben; gemessene Helferlaufzeit 0,206 Sekunden. Die Antwort steht zum Zeitpunkt dieses Dokumentationsschritts noch aus. Diese Fassung ändert nur Anweisungen; keine erneuten Transporttests erforderlich.
+
+## Fassung 1.2.0 — 18.09.2026, 12:25 Uhr
+
+Diskussionsrunden O5/O6: keinen Snapshot-Diff ohne belegten Bedarf bauen; stattdessen kürzere Aufrufe, eindeutige Fehler und Stoppsignal. Rohpuffer bleiben ungespeichert. `--run` leitet Dateien im bestehenden privaten Ordner ab, verlangt Hash auch beim abgeleiteten Paste und lehnt Konflikte, Traversal-IDs sowie Symlink-Textdateien ab. `STOP` sperrt neue lokale Aktionen und laufende Polls; keine automatische Entfernung, kein neues Verzeichnis als Umgehung. Claudes Vorschlag, nur der Nutzer dürfe die Datei selbst entfernen, wurde präzisiert: ein ausdrücklicher Fortsetzungsauftrag genügt; Ledger erhalten und frisch prüfen.
+
+Isolierter Vergleich mit identischen Hostpfaden und Testinhalt: vollständiger Submit-Aufruf mit expliziten State-/Textpfaden 484 Zeichen, mit `--run` 375 Zeichen. Dieselbe veraltete Momentaufnahme erzeugte vorher 149 Byte, jetzt 106 Byte UTF-8-JSON. Das sind Aufruf-/Ausgabemaße, kein Token- oder Kontingentnachweis. Der reproduzierbare Smokecheck deckt nun zusätzlich Alias-Gleichheit, Konflikt/Traversal/Symlink-Ablehnung und STOP-Sperre auch über die alte State-Schreibweise ab. Alle Prüfungen erfolgreich; keine zusätzlichen Modelltests für den Helfer.
+
+Transportseitig wurde in O6 Sättigung benannt: keine weiteren Abkürzungen ohne neue Messung oder konkreten Fehler. Weitere Gewinne eher durch vollständig gebündelte Nutzeraufträge und Dateiprüfungen an sinnvollen Meilensteinen als durch zusätzliche Automatik.
