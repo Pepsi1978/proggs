@@ -79,6 +79,22 @@ func run() -> Int32 {
             print("  ❌ tmux: Startargumente wurden verändert")
             failures += 1
         }
+        // Der externe Start muss dasselbe fertige Agent-Skript unverändert übergeben.
+        let wrapper = try TerminalLauncher.buildTmuxStartScript(scriptPath: script, workDir: workDir, tmuxPath: mock)
+        defer { try? FileManager.default.removeItem(atPath: wrapper) }
+        let wrappedResult = Shell.run("/bin/zsh", [wrapper], timeout: 10)
+        let wrappedArgs = try String(contentsOfFile: capture, encoding: .utf8)
+            .split(separator: "\0").map(String.init)
+        if wrappedResult.exitCode == 0 && wrappedArgs.count == 8
+            && Array(wrappedArgs.prefix(3)) == ["new-session", "-A", "-s"]
+            && wrappedArgs[3].hasPrefix("openlauncher-")
+            && Array(wrappedArgs.suffix(4)) == ["-c", workDir, "/bin/zsh", script]
+            && !FileManager.default.fileExists(atPath: wrapper) {
+            print("  ✅ Externes tmux: Agent-Skript und Arbeitsordner unverändert, Wrapper aufgeräumt")
+        } else {
+            print("  ❌ Externer tmux-Wrapper: Argumente oder Aufräumen fehlerhaft")
+            failures += 1
+        }
     } catch {
         print("  ❌ tmux-Argumentprüfung: \(error.localizedDescription)")
         failures += 1

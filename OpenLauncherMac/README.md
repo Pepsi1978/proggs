@@ -86,6 +86,16 @@ erzeugt — beide Fassungen tragen damit exakt dasselbe Bild.
 
 ## Terminal
 
+Die unabhängige Auswahl **Terminal für ▶ Start** bietet **Standard-Terminal** und **tmux**.
+Sie gilt für alle Modelle und Provider, einschließlich Claude, Codex CLI und OpenCode mit Zen
+oder OpenRouter. Beide Varianten öffnen sichtbar Terminal.app. Bei tmux läuft das unveränderte
+Agent-Startskript in einer neuen, eindeutig benannten Sitzung; alle Modell-, Profil-, Modus-,
+Effort-, Ordner- und Rechte-Einstellungen bleiben erhalten. Die Auswahl wird unter
+`~/Library/Application Support/OpenLauncher/layout.json` gespeichert (ältere Einstellungen
+verwenden Standard-Terminal). Sie ändert weder die CLI-Auswahl noch laufende Sitzungen.
+Ohne installiertes tmux erscheint eine Fehlermeldung; es gibt keinen stillen Wechsel des Terminals.
+Die Auswahl beeinflusst **Start (Codex)** nicht und erzeugt dort keine zweite tmux-Ebene.
+
 **Start (Codex)** kopiert für ein ausgewähltes Claude-Code-Modell einen tmux-Startbefehl.
 Im rechten Terminal der Codex-Desktop-App eine **freie Shell** verwenden (gegebenenfalls einen
 neuen Terminal-Tab öffnen), den Befehl einfügen und Enter drücken. Nicht in den Prompt einer

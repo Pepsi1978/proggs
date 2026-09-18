@@ -104,6 +104,10 @@ final class MainViewModel {
     private(set) var thinkingTitle = "THINKING"
     private(set) var thinkingSubtitle = "Reasoning-Level"
 
+    var useTmux = false {
+        didSet { if useTmux != oldValue { delegate?.profileStateChanged() } }
+    }
+
     var workDir: String = "" {
         didSet { if workDir != oldValue { delegate?.workDirChanged() } }
     }
@@ -922,6 +926,7 @@ final class MainViewModel {
         if let t = selectedThinkingOption?.displayName, !t.isEmpty {
             parts.append("\(thinkingTitle.caseInsensitiveCompare("EFFORT") == .orderedSame ? "Effort" : "Thinking") \(t)")
         }
+        parts.append(useTmux ? "Terminal: tmux" : "Standard-Terminal")
         return parts.joined(separator: " · ")
     }
 
@@ -997,7 +1002,7 @@ final class MainViewModel {
                     return
                 }
                 try launcher.launchClaudeCode(modelId: model.slug, workDir: workDir,
-                                              effortLevel: thinkingLevel, claudeConfigDir: claudeConfigDir)
+                                              effortLevel: thinkingLevel, claudeConfigDir: claudeConfigDir, useTmux: useTmux)
                 statusText = launchStatus
                 return
             }
@@ -1010,7 +1015,7 @@ final class MainViewModel {
                 // Eigenes Codex-Zuhause statt ~/.codex (keine fremden Plugins, MCP-Server, Hooks);
                 // die Statuszeile setzt prepareCodexHome selbst.
                 let codexHome = try profiles.prepareCodexHome(profileId: profile.id)
-                try launcher.launchCodexCli(model: model, workDir: workDir, effortLevel: thinkingLevel, codexHome: codexHome)
+                try launcher.launchCodexCli(model: model, workDir: workDir, effortLevel: thinkingLevel, codexHome: codexHome, useTmux: useTmux)
                 Logger.shared.info("MainViewModel", "start", "Codex-CLI-Kontext geschrieben",
                                    ["profile": profile.id, "workMode": workMode.id, "agentsPath": agentsPath,
                                     "codexHome": codexHome])
@@ -1034,7 +1039,7 @@ final class MainViewModel {
             let modelString = try launcher.configureProvider(model: model, chosen: provider,
                                                              allProviders: providers, thinkingLevel: thinkingLevel)
             try launcher.launch(modelString: modelString, workDir: workDir, thinkingLevel: thinkingLevel,
-                                profileConfigPath: profileSession.configPath, workMode: workMode.id)
+                                profileConfigPath: profileSession.configPath, workMode: workMode.id, useTmux: useTmux)
             Logger.shared.info("MainViewModel", "start", "OpenCode-Profilsnapshot erstellt", [
                 "profileId": profileSession.profileId,
                 "sourceGlobalPath": profileSession.sourceGlobalPath,

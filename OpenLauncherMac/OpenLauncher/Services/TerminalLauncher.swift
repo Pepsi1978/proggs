@@ -51,18 +51,45 @@ private struct TabColorState: Codable {
 enum TerminalLauncher {
     /// Startet das Skript in Terminal.app. Gibt den verwendeten Terminal-Namen zurueck.
     @discardableResult
-    static func openScript(_ scriptPath: String, workDir: String) -> String {
+    static func openScript(_ scriptPath: String, workDir: String, useTmux: Bool = false) throws -> String {
+        let terminalScript = useTmux ? try buildTmuxStartScript(scriptPath: scriptPath, workDir: workDir) : scriptPath
         // Ohne Ausfuehrungsrecht wuerde Terminal.app das Skript nur im Editor zeigen statt es zu starten.
-        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptPath)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: terminalScript)
 
-        let result = Shell.run("/usr/bin/open", ["-a", "Terminal", scriptPath],
+        let result = Shell.run("/usr/bin/open", ["-a", "Terminal", terminalScript],
                                workingDirectory: workDir, timeout: 20)
         if result.exitCode != 0 {
             Logger.shared.error("TerminalLauncher", "openScript",
                                 "Terminal.app konnte nicht geoeffnet werden: \(result.stderr.trimmingCharacters(in: .whitespacesAndNewlines))",
                                 ["script": scriptPath])
         }
-        return "Terminal.app"
+        return useTmux ? "Terminal.app · tmux" : "Terminal.app"
+    }
+
+    static func tmuxCommand(tmuxPath: String, session: String, workDir: String, scriptPath: String) -> String {
+        // Getrennte Argumente vermeiden eine zweite Shell-Auswertung durch tmux.
+        // -A verbindet erneut, ohne andere Clients abzumelden.
+        [tmuxPath, "new-session", "-A", "-s", session, "-c", workDir, "/bin/zsh", scriptPath]
+            .map(Shell.singleQuoted).joined(separator: " ")
+    }
+
+    static func buildTmuxStartScript(scriptPath: String, workDir: String, tmuxPath: String? = nil) throws -> String {
+        guard let tmux = tmuxPath ?? Shell.which("tmux") else {
+            throw LauncherError.message("tmux ist nicht installiert. Bitte mit Homebrew installieren: brew install tmux – oder Standard-Terminal wählen.")
+        }
+        let session = "openlauncher-" + UUID().uuidString.lowercased()
+        let wrapper = (Paths.tempDir as NSString).appendingPathComponent("\(session).command")
+        let command = tmuxCommand(tmuxPath: tmux, session: session, workDir: workDir, scriptPath: scriptPath)
+        let script = """
+        #!/bin/zsh
+        # Nur die äußere Datei entfernen; das Agent-Skript gehört der weiterlaufenden Sitzung.
+        rm -f \(Shell.singleQuoted(wrapper))
+        exec \(command)
+        """
+        guard Paths.writeAtomic(script, to: wrapper) else {
+            throw LauncherError.message("tmux-Startskript konnte nicht geschrieben werden: \(wrapper)")
+        }
+        return wrapper
     }
 
     // ===================== Tab-Farben =====================

@@ -199,7 +199,7 @@ final class OpenLauncherService {
 
     /// Startet opencode in einem neuen Terminal-Tab.
     func launch(modelString: String, workDir: String, thinkingLevel rawLevel: String?,
-                profileConfigPath: String, workMode: String) throws {
+                profileConfigPath: String, workMode: String, useTmux: Bool = false) throws {
         let thinkingLevel = Self.normalizeThinkingLevel(rawLevel)
         do {
             Paths.ensureDirectory(workDir)
@@ -209,7 +209,7 @@ final class OpenLauncherService {
                                                            thinkingLevel: thinkingLevel,
                                                            profileConfigPath: profileConfigPath,
                                                            workMode: workMode, tabColor: tabColor, title: title)
-            let terminal = TerminalLauncher.openScript(script, workDir: workDir)
+            let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
             Logger.shared.info("OpenLauncherService", "launch", "opencode gestartet (\(terminal))",
                                ["modelString": modelString, "workDir": workDir,
                                 "thinkingLevel": thinkingLevel ?? "", "tabColor": tabColor.name])
@@ -225,7 +225,7 @@ final class OpenLauncherService {
     ///   (Profiles/ClaudeCodeMac/<id>) -> CLAUDE_CONFIG_DIR. Standard/Strikt tragen versionierte
     ///   skills/rules/agents/commands, Minimal ist regelfrei (Skills per Symlink).
     func launchClaudeCode(modelId: String, workDir: String, effortLevel rawEffort: String?,
-                          claudeConfigDir: String?) throws {
+                          claudeConfigDir: String?, useTmux: Bool = false) throws {
         let effortLevel = Self.normalizeThinkingLevel(rawEffort)
         do {
             Paths.ensureDirectory(workDir)
@@ -235,7 +235,7 @@ final class OpenLauncherService {
                                                              effortLevel: effortLevel, colorName: tabColor.name,
                                                              claudeConfigDir: claudeConfigDir,
                                                              tabColor: tabColor, title: title)
-            let terminal = TerminalLauncher.openScript(script, workDir: workDir)
+            let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
             Logger.shared.info("OpenLauncherService", "launchClaudeCode", "Claude Code gestartet (\(terminal))",
                                ["modelId": modelId, "workDir": workDir,
                                 "effortLevel": effortLevel ?? "", "tabColor": tabColor.name])
@@ -267,16 +267,13 @@ final class OpenLauncherService {
     }
 
     static func claudeTmuxCommand(tmuxPath: String, session: String, workDir: String, scriptPath: String) -> String {
-        // Mehrere Argumente nach -c vermeiden die zusätzliche Shell-Auswertung eines command-Strings.
-        // tmux -A hängt wieder an, ohne andere Clients abzumelden oder Eingaben zu senden.
-        [tmuxPath, "new-session", "-A", "-s", session, "-c", workDir, "/bin/zsh", scriptPath]
-            .map(Shell.singleQuoted).joined(separator: " ")
+        TerminalLauncher.tmuxCommand(tmuxPath: tmuxPath, session: session, workDir: workDir, scriptPath: scriptPath)
     }
 
     /// Startet das eigenstaendige Codex CLI (OpenAI) statt OpenCode in einem neuen Terminal-Tab.
     /// Die Profilregeln stehen bereits in der AGENTS.md des Arbeitsverzeichnisses
     /// (InstructionProfileService.activateCodexProjectAgents).
-    func launchCodexCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, codexHome: String) throws {
+    func launchCodexCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, codexHome: String, useTmux: Bool = false) throws {
         let (slug, serviceTier) = Self.resolveCodexModelSlug(model.slug)
         let effort = Self.normalizeCodexEffort(rawEffort)
         do {
@@ -286,7 +283,7 @@ final class OpenLauncherService {
             let script = try Self.buildCodexStartScript(slug: slug, workDir: workDir, effort: effort,
                                                         serviceTier: serviceTier, codexHome: codexHome,
                                                         tabColor: tabColor, title: title)
-            let terminal = TerminalLauncher.openScript(script, workDir: workDir)
+            let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
             Logger.shared.info("OpenLauncherService", "launchCodexCli", "Codex CLI gestartet (\(terminal))",
                                ["slug": slug, "workDir": workDir, "effort": effort ?? "",
                                 "serviceTier": serviceTier ?? "", "tabColor": tabColor.name])

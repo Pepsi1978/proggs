@@ -52,6 +52,7 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private let logsButton = StyledButton(style: .ghost, title: "Logs")
     private let statusLabel = MarqueeLabel(size: 13, role: .dim)
     private let startCodexButton = StyledButton(style: .ghost, title: "Start (Codex)")
+    private let terminalChoice = NSPopUpButton(frame: .zero, pullsDown: false)
     private let startButton = StyledButton(style: .accent, title: "▶ Start")
 
     /// Mindestbreite der Provider-/Profil-Spalte (MinWidth="400" in XAML).
@@ -71,6 +72,7 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     init(viewModel: MainViewModel, layoutSettings: LayoutSettings) {
         self.viewModel = viewModel
         self.layoutSettings = layoutSettings
+        viewModel.useTmux = layoutSettings.useTmux
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: layoutSettings.windowWidth, height: layoutSettings.windowHeight),
@@ -130,7 +132,7 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
             footer.leadingAnchor.constraint(equalTo: rootView.leadingAnchor),
             footer.trailingAnchor.constraint(equalTo: rootView.trailingAnchor),
             footer.bottomAnchor.constraint(equalTo: rootView.bottomAnchor),
-            footer.heightAnchor.constraint(equalToConstant: 62)
+            footer.heightAnchor.constraint(equalToConstant: 96)
         ])
     }
 
@@ -342,6 +344,25 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         footer.translatesAutoresizingMaskIntoConstraints = false
         rootView.addSubview(footer)
 
+        let terminalCaption = UI.label("Terminal für ▶ Start", size: 12, role: .muted)
+        terminalChoice.addItems(withTitles: ["Standard-Terminal", "tmux"])
+        terminalChoice.selectItem(at: viewModel.useTmux ? 1 : 0)
+        terminalChoice.target = self
+        terminalChoice.action = #selector(terminalChoiceChanged)
+        terminalChoice.setAccessibilityLabel("Terminal für normalen Start")
+        terminalChoice.toolTip = "Gilt für alle Modelle und CLIs im externen macOS-Terminal. Start (Codex) verwendet weiterhin seinen eigenen tmux-Startbefehl."
+        for view in [terminalCaption, terminalChoice] as [NSView] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            footer.addSubview(view)
+        }
+        NSLayoutConstraint.activate([
+            terminalChoice.trailingAnchor.constraint(equalTo: footer.trailingAnchor, constant: -16),
+            terminalChoice.topAnchor.constraint(equalTo: footer.topAnchor, constant: 7),
+            terminalChoice.widthAnchor.constraint(equalToConstant: 180),
+            terminalCaption.trailingAnchor.constraint(equalTo: terminalChoice.leadingAnchor, constant: -8),
+            terminalCaption.centerYAnchor.constraint(equalTo: terminalChoice.centerYAnchor)
+        ])
+
         let caption = UI.label("Arbeitsverzeichnis", size: 13, role: .muted)
         workDirField.translatesAutoresizingMaskIntoConstraints = false
         workDirField.target = self
@@ -386,37 +407,43 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
 
         NSLayoutConstraint.activate([
             caption.leadingAnchor.constraint(equalTo: footer.leadingAnchor, constant: 16),
-            caption.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
+            caption.centerYAnchor.constraint(equalTo: footer.centerYAnchor, constant: 14),
 
             workDirField.leadingAnchor.constraint(equalTo: caption.trailingAnchor, constant: 10),
-            workDirField.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
+            workDirField.centerYAnchor.constraint(equalTo: footer.centerYAnchor, constant: 14),
             workDirField.widthAnchor.constraint(equalToConstant: 180),
 
             browseButton.leadingAnchor.constraint(equalTo: workDirField.trailingAnchor, constant: 8),
-            browseButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
+            browseButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor, constant: 14),
 
             errorDetailsButton.leadingAnchor.constraint(equalTo: browseButton.trailingAnchor, constant: 8),
 
             logsButton.leadingAnchor.constraint(equalTo: errorDetailsButton.trailingAnchor, constant: 8),
-            errorDetailsButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
+            errorDetailsButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor, constant: 14),
 
-            logsButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
+            logsButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor, constant: 14),
 
             statusLabel.leadingAnchor.constraint(equalTo: logsButton.trailingAnchor, constant: 8),
             statusLabel.trailingAnchor.constraint(equalTo: startCodexButton.leadingAnchor, constant: -16),
-            statusLabel.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
+            statusLabel.centerYAnchor.constraint(equalTo: footer.centerYAnchor, constant: 14),
             statusLabel.heightAnchor.constraint(equalToConstant: 20),
 
             startCodexButton.trailingAnchor.constraint(equalTo: startButton.leadingAnchor, constant: -8),
-            startCodexButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor),
+            startCodexButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor, constant: 14),
 
             startButton.trailingAnchor.constraint(equalTo: footer.trailingAnchor, constant: -16),
-            startButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor)
+            startButton.centerYAnchor.constraint(equalTo: footer.centerYAnchor, constant: 14)
         ])
 
         statusLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return footer
+    }
+
+    @objc private func terminalChoiceChanged() {
+        viewModel.useTmux = terminalChoice.indexOfSelectedItem == 1
+        layoutSettings.useTmux = viewModel.useTmux
+        layoutSettings.save()
     }
 
     // MARK: - Aktualisieren

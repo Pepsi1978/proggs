@@ -42,6 +42,9 @@ final class LayoutSettings: Codable {
     /// Gewaehltes Design: "Dark" oder "Light". Wird beim App-Start angewendet.
     var theme: String = "Dark"
 
+    /// Unabhängige Terminal-Auswahl für den normalen Start aller CLIs.
+    var useTmux: Bool = false
+
     enum CodingKeys: String, CodingKey {
         case modelPaneWidth = "ModelPaneWidth"
         case effortPaneWidth = "EffortPaneWidth"
@@ -52,6 +55,7 @@ final class LayoutSettings: Codable {
         case windowHeight = "WindowHeight"
         case windowState = "WindowState"
         case theme = "Theme"
+        case useTmux = "UseTmux"
     }
 
     init() {}
@@ -67,6 +71,7 @@ final class LayoutSettings: Codable {
         windowHeight = LayoutSettings.decodeDouble(c, .windowHeight) ?? LayoutSettings.defaultWindowHeight
         windowState = (try? c.decode(String.self, forKey: .windowState)) ?? "Normal"
         theme = (try? c.decode(String.self, forKey: .theme)) ?? "Dark"
+        useTmux = (try? c.decode(Bool.self, forKey: .useTmux)) ?? false
     }
 
     /// .NET schreibt NaN als String "NaN" (AllowNamedFloatingPointLiterals). Beide Formen lesen,
@@ -92,6 +97,7 @@ final class LayoutSettings: Codable {
         try c.encode(windowHeight, forKey: .windowHeight)
         try c.encode(windowState, forKey: .windowState)
         try c.encode(theme, forKey: .theme)
+        try c.encode(useTmux, forKey: .useTmux)
     }
 
     static func load() -> LayoutSettings {
