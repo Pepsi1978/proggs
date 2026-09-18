@@ -904,7 +904,7 @@ final class MainViewModel {
 
     func start() { startCore(copyForCodex: false) }
 
-    /// Start (Codex): kopiert den Claude-Startbefehl fuer ein vorhandenes Terminal in die Zwischenablage.
+    /// Start (Codex): kopiert den profilierten Claude-Start in tmux für das vorhandene Terminal.
     func startCodex() { startCore(copyForCodex: true) }
 
     var canStartCodex: Bool { Self.isClaudeCodeModel(selectedModel) }
@@ -990,8 +990,10 @@ final class MainViewModel {
                                                                                 effortLevel: thinkingLevel,
                                                                                 claudeConfigDir: claudeConfigDir)
                     NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(command, forType: .string)
-                    statusText = launchStatus
+                    guard NSPasteboard.general.setString(command, forType: .string) else {
+                        throw LauncherError.message("Der Startbefehl konnte nicht in die Zwischenablage kopiert werden.")
+                    }
+                    statusText = "tmux-Start kopiert — in eine freie Shell im Codex-Terminal einfügen und Enter drücken. " + launchStatus
                     return
                 }
                 try launcher.launchClaudeCode(modelId: model.slug, workDir: workDir,

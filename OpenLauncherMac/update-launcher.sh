@@ -63,7 +63,11 @@ build_ist_aktuell() {
     [ -z "$neueste" ]
 }
 
-if build_ist_aktuell && laeuft; then
+# Ein frisch geprüfter Build allein beweist nicht, dass diese Fassung schon installiert ist.
+# Auch die Bundle-Metadaten vergleichen: ein reiner Versionsbump kann dieselbe Binary ergeben.
+if build_ist_aktuell && laeuft && \
+    cmp -s "$BUILD_BINARY" "$INSTALLED_BINARY" && \
+    cmp -s "$BUILD_APP/Contents/Info.plist" "$INSTALLED_APP/Contents/Info.plist"; then
     VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INSTALLED_APP/Contents/Info.plist" 2>/dev/null || echo "?")
     erfolg "LAUNCHER_UPDATE_STATUS=already-current VERSION=$VERSION"
     exit 0

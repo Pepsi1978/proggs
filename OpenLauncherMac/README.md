@@ -86,6 +86,21 @@ erzeugt — beide Fassungen tragen damit exakt dasselbe Bild.
 
 ## Terminal
 
+**Start (Codex)** kopiert für ein ausgewähltes Claude-Code-Modell einen tmux-Startbefehl.
+Im rechten Terminal der Codex-Desktop-App eine **freie Shell** verwenden (gegebenenfalls einen
+neuen Terminal-Tab öffnen), den Befehl einfügen und Enter drücken. Nicht in den Prompt einer
+bereits laufenden Claude-Sitzung einfügen. Voraussetzung: `tmux`, zum Beispiel über Homebrew.
+
+Der neue Claude-Prozess erhält denselben Profilordner, Modus, Modell, Effort, Arbeitsordner und
+dieselben Startrechte wie beim normalen Launcher-Start. tmux ersetzt oder reduziert keine
+Claude-Slash-Befehle, Skills oder Statuszeile. Jeder Klick bereitet eine neue eindeutig benannte
+Sitzung vor. Solange sie läuft, hängt derselbe kopierte Befehl wieder daran an; andere Clients und
+Eingaben bleiben erhalten. Neue Auswahlen erfordern einen neuen Klick und ändern keine bereits
+laufende Sitzung. Nach dem Ende einer Sitzung den Startbefehl im Launcher neu erzeugen.
+
+Die Auswahl bleibt unten sichtbar; die Bestätigung des Kopierens steht im Tooltip der
+Auswahlzeile. Der normale **Start**-Button öffnet weiterhin das externe macOS-Terminal.
+
 Gestartet wird im **Standard-Terminal von macOS** (Terminal.app). Ob dabei ein neues Fenster oder
 ein neuer Tab aufgeht, entscheidet die Systemeinstellung „Tabs bevorzugen beim Öffnen von
 Dokumenten" — der Launcher überlässt das bewusst dem System.

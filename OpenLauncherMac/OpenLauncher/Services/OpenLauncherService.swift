@@ -248,16 +248,29 @@ final class OpenLauncherService {
 
     /// Gegenstueck zu PrepareClaudeCodeTerminalCommand (Windows): erzeugt das Startskript fuer ein
     /// bereits offenes Terminal (z. B. im Codex-Terminal) und liefert den einzufuegenden Befehl.
-    /// Ein Kindprozess bleibt im vorhandenen Terminal und isoliert Profil/Umgebung von dessen Shell.
+    /// tmux hält die profilierte Claude-Sitzung am Leben, auch wenn das Terminal geschlossen wird.
     func prepareClaudeCodeTerminalCommand(modelId: String, workDir: String, effortLevel rawEffort: String?,
                                           claudeConfigDir: String?) throws -> String {
         let effortLevel = Self.normalizeThinkingLevel(rawEffort)
+        guard let tmux = Shell.which("tmux") else {
+            throw LauncherError.message("tmux ist nicht installiert. Bitte zuerst mit Homebrew installieren: brew install tmux")
+        }
         Paths.ensureDirectory(workDir)
         let script = try Self.buildClaudeCodeStartScript(modelId: modelId, workDir: workDir,
                                                          effortLevel: effortLevel, colorName: "",
                                                          claudeConfigDir: claudeConfigDir,
                                                          tabColor: nil, title: nil, embeddedTerminal: true)
-        return "/bin/zsh \(Shell.singleQuoted(script))"
+        // Eine neue Launcher-Auswahl bekommt eine neue Sitzung. Nur derselbe kopierte Befehl
+        // darf wieder an seine bestehende Sitzung anhängen, ohne deren Auswahl zu verändern.
+        let session = "claude-codex-" + UUID().uuidString.lowercased()
+        return Self.claudeTmuxCommand(tmuxPath: tmux, session: session, workDir: workDir, scriptPath: script)
+    }
+
+    static func claudeTmuxCommand(tmuxPath: String, session: String, workDir: String, scriptPath: String) -> String {
+        // Mehrere Argumente nach -c vermeiden die zusätzliche Shell-Auswertung eines command-Strings.
+        // tmux -A hängt wieder an, ohne andere Clients abzumelden oder Eingaben zu senden.
+        [tmuxPath, "new-session", "-A", "-s", session, "-c", workDir, "/bin/zsh", scriptPath]
+            .map(Shell.singleQuoted).joined(separator: " ")
     }
 
     /// Startet das eigenstaendige Codex CLI (OpenAI) statt OpenCode in einem neuen Terminal-Tab.

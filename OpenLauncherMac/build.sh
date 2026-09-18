@@ -20,8 +20,8 @@ rm -rf "$BUILD_DIR"
 mkdir -p "$APP_BUNDLE/Contents/MacOS"
 mkdir -p "$APP_BUNDLE/Contents/Resources"
 
-# Info.plist mit echtem Build-Zeitstempel (deutsche Schreibweise wie unter Windows: dd.MM.yyyy, HH.mm)
-BUILD_TIMESTAMP="$(date '+%d.%m.%Y, %H.%M')"
+# Info.plist mit echtem Build-Zeitstempel (dd.MM.yyyy, HH:mm).
+BUILD_TIMESTAMP="$(date '+%d.%m.%Y, %H:%M')"
 sed "s/__BUILD_TIMESTAMP__/$BUILD_TIMESTAMP/" "$SRC_DIR/Info.plist" > "$APP_BUNDLE/Contents/Info.plist"
 
 SWIFT_FILES=(

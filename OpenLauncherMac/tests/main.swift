@@ -52,6 +52,38 @@ func run() -> Int32 {
 
     let color = TerminalTabColor(name: "green", hex: "#13A10E")
 
+    // Prüft die echten Shell-Argumentgrenzen statt nur den erzeugten Befehlstext.
+    // Keine Claude-Runde und kein Zugriff auf die tmux-Sitzung des Nutzers.
+    do {
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("tmux prüfung '\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let capture = directory.appendingPathComponent("argumente").path
+        let mock = directory.appendingPathComponent("tmux").path
+        try "#!/bin/zsh\nprintf '%s\\0' \"$@\" > \(Shell.singleQuoted(capture))\n"
+            .write(toFile: mock, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: mock)
+        let workDir = directory.appendingPathComponent("Projekt $(echo FALSCH); Grüße").path
+        let script = directory.appendingPathComponent("Start ' $(echo FALSCH).sh").path
+        let session = "claude-codex-test"
+        let command = OpenLauncherService.claudeTmuxCommand(
+            tmuxPath: mock, session: session, workDir: workDir, scriptPath: script)
+        let result = Shell.run("/bin/zsh", ["-c", command], timeout: 10)
+        let captured = try String(contentsOfFile: capture, encoding: .utf8)
+            .split(separator: "\0").map(String.init)
+        let expected = ["new-session", "-A", "-s", session, "-c", workDir, "/bin/zsh", script]
+        if result.exitCode == 0 && captured == expected {
+            print("  ✅ tmux: UTF-8, Leerzeichen, Quotes und Shell-Metazeichen bleiben unveränderte Argumente")
+        } else {
+            print("  ❌ tmux: Startargumente wurden verändert")
+            failures += 1
+        }
+    } catch {
+        print("  ❌ tmux-Argumentprüfung: \(error.localizedDescription)")
+        failures += 1
+    }
+
     do {
         let claude = try OpenLauncherService.buildClaudeCodeStartScript(
             modelId: "claude-opus-5[1m]", workDir: NSHomeDirectory() + "/proggs",

@@ -373,7 +373,7 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         startCodexButton.verticalPadding = 10
         startCodexButton.target = self
         startCodexButton.action = #selector(startCodex)
-        startCodexButton.toolTip = "Claude-Startbefehl kopieren, dann im Codex-Terminal einfügen und Enter drücken. Modell, Profil und Modus werden übernommen."
+        startCodexButton.toolTip = "Claude in tmux: Startbefehl kopieren, in eine freie Shell im Codex-Terminal einfügen und Enter drücken. Modell, Profil, Modus, Effort und Arbeitsordner werden übernommen. Neuer Klick = neue Sitzung; derselbe Befehl öffnet die laufende Sitzung erneut."
 
         // Kompaktes Arbeitsverzeichnis wie unter Windows: fester Platz, voller Pfad im Tooltip.
         (workDirField.cell as? NSTextFieldCell)?.lineBreakMode = .byTruncatingHead

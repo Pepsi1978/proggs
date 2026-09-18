@@ -19,6 +19,7 @@ swiftc -o "$OUT/start-script-syntax-test" \
     "$SRC/Services/JSONValue.swift" \
     "$SRC/Services/Theme.swift" \
     "$SRC/Services/LayoutSettings.swift" \
+    "$SRC/Services/PublicCatalogHttp.swift" \
     "$SRC/Services/OpenCodeVariantCatalog.swift" \
     "$SRC/Services/LmStudioService.swift" \
     "$SRC/Services/ModelRegistry.swift" \
