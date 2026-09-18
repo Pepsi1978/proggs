@@ -152,7 +152,30 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             if (showVoices) {
             OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("Stimmen suchen") }, singleLine = true)
             Toggle("Nur Favoriten anzeigen", onlyFavorites) { onlyFavorites = it }
-            available.filter { (!onlyFavorites || it.first in settings.favoriteTtsVoices) && it.second.contains(search, ignoreCase = true) }.forEach { (id, label) ->
+            // Einmal gefiltert: dieselbe Liste entscheidet über Einträge und Leerzustand. Der normalisierte
+            // Suchtext gilt für Filter, Meldung und Rücksetzknopf gleichermaßen – reine Leerzeichen filtern
+            // dadurch gar nicht erst. Das Eingabefeld zeigt weiterhin die rohe Eingabe.
+            val suchtext = search.trim()
+            val gefiltert = available.filter { (!onlyFavorites || it.first in settings.favoriteTtsVoices) && it.second.contains(suchtext, ignoreCase = true) }
+            // Eine von vornherein leere Liste (eigene Stimmen noch nicht geladen) ist kein Filterproblem.
+            // Dafür sprechen weiter unten die Lade-, Fehler- und „0 eigene Stimmen“-Zeilen, hier bleibt es still.
+            if (available.isNotEmpty() && gefiltert.isEmpty()) {
+                val suchbegriff = suchtext.isNotEmpty()
+                Text(when {
+                    suchbegriff && onlyFavorites -> "Keine deiner Favoriten passt zu „$suchtext“."
+                    suchbegriff -> "Keine Stimme passt zu „$suchtext“."
+                    else -> "Für diesen Anbieter ist noch keine Stimme als Favorit markiert."
+                }, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Jeder Knopf führt garantiert zu einer gefüllten Liste: bei beiden Filtern wird auch beides gelöst.
+                    when {
+                        suchbegriff && onlyFavorites -> StillerKnopf("Filter zurücksetzen", { search = ""; onlyFavorites = false }, hervorgehoben = true)
+                        suchbegriff -> StillerKnopf("Suche löschen", { search = "" }, hervorgehoben = true)
+                        else -> StillerKnopf("Favoritenfilter ausschalten", { onlyFavorites = false }, hervorgehoben = true)
+                    }
+                }
+            }
+            gefiltert.forEach { (id, label) ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     // Auswahlpunkt und Name sind eine gemeinsame Fläche von mindestens 48 dp; der Favoritenstern
                     // liegt bewusst daneben und wählt die Stimme deshalb nicht aus.

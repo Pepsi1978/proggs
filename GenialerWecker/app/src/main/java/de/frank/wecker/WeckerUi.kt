@@ -804,11 +804,21 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, gemerktesDat
             style = MaterialTheme.typography.bodySmall)
     }
     if (alarm.startDate.isNotBlank()) {
-        val ahead = java.time.temporal.ChronoUnit.DAYS.between(today, java.time.LocalDate.parse(alarm.startDate)).toInt()
+        // Kalendertage, damit die Zeitumstellung die Entfernung nicht verfälscht; als Long, weil der Abstand
+        // beliebig groß sein darf und erst nach der Bereichsprüfung in den Schieberegler passt.
+        val ahead = java.time.temporal.ChronoUnit.DAYS.between(today, java.time.LocalDate.parse(alarm.startDate))
+        val tage = { anzahl: Long -> if (anzahl == 1L) "1 Tag" else "$anzahl Tage" }
         Text(if (mode == "once") "Am ${dateLabel(alarm.startDate)} um ${alarm.timeLabel}" else "Startdatum: ${dateLabel(alarm.startDate)}")
-        ValueSlider("Schnellwahl: in", ahead.coerceIn(0, 60), 0..60, "Tagen") {
+        // Die Schnellwahl erscheint nur, wenn sie den tatsächlichen Abstand zeigen kann. Sonst würde sie einen
+        // geklemmten Wert behaupten – und eine Berührung würde einen bestehenden Rhythmus neu verankern.
+        if (ahead in 0L..60L) ValueSlider("Schnellwahl: in", ahead.toInt(), 0..60, "Tagen") {
             change(alarm.copy(startDate = today.plusDays(it.toLong()).toString()))
         }
+        // Ein einmaliger Termin in der Vergangenheit hat oben bereits seine eigene Warnkarte; nicht doppelt melden.
+        else if (!(mode == "once" && ahead < 0L)) Text(
+            if (ahead > 60L) "Das Startdatum liegt ${tage(ahead)} voraus – weiter als die Schnellwahl reicht. Ändere es über den Kalender."
+            else "Das Startdatum liegt ${tage(-ahead)} zurück. Daran bleibt der Rhythmus verankert. Bei Bedarf kannst du es über den Kalender ändern.",
+            style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
         StillerKnopf("Datum im Kalender wählen", {
             val date = java.time.LocalDate.parse(alarm.startDate)
             android.app.DatePickerDialog(activity, { _, year, month, day ->

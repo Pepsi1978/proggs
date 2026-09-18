@@ -79,6 +79,19 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
   die Einstellungen verlässt, verliert eine ungespeicherte Eingabe weiterhin – der Zustand ist
   jetzt nur sichtbar, bevor es passiert.
 
+### Bedienkomfort (1.1.47)
+
+- Die Schnellwahl „in X Tagen“ erscheint nur noch, wenn das Startdatum tatsächlich zwischen heute
+  und 60 Tagen liegt. Weiter entfernte Anker – auch ein in der Vergangenheit liegender Schichtanker –
+  nennen stattdessen sachlich ihre Entfernung und verweisen auf den Kalender. Damit behauptet die
+  Schnellwahl keinen geklemmten Wert mehr. Weil sie außerhalb dieses Bereichs gar nicht erscheint,
+  kann ein weit entfernter oder zurückliegender Anker dort auch nicht versehentlich neu gesetzt
+  werden; innerhalb von 0 bis 60 Tagen bleibt der Regler unverändert bedienbar.
+- Die Stimmenliste in den Einstellungen sagt jetzt, warum sie leer ist: kein Treffer zur Suche, keine
+  Favoriten für diesen Anbieter, oder beides. Der angebotene Knopf setzt genau die Filter zurück,
+  die im Weg stehen. Eine noch nicht geladene eigene Stimmenliste wird weiterhin durch die
+  vorhandenen Lade- und Fehlerhinweise erklärt, nicht als Filterproblem ausgegeben.
+
 ## Ideenbrücke
 
 Geniale Ideen benötigt das mitgelieferte Update mit `bridge/WeckerProvider.kt`.
