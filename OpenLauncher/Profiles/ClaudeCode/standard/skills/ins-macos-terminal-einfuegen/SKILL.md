@@ -2,8 +2,8 @@
 name: ins-macos-terminal-einfuegen
 description: "Für „ins macOS Terminal einfügen“, „bei Claude reinschreiben“, Sprachaufträge aus Codex/Astra und beauftragten Dialog mit derselben sichtbaren Claude-Code-Sitzung in tmux: sicher zuordnen, Text übergeben, relevante Antworten lesen und reale Dateien prüfen. Gilt im Codex-Terminal und in Terminal.app, ohne Computer Use."
 metadata:
-  version: "1.2.2"
-  updated_at: "18.09.2026 12:54"
+  version: "1.2.3"
+  updated_at: "18.09.2026 13:07"
 ---
 
 # Ins macOS Terminal einfügen
@@ -22,7 +22,7 @@ Halte dafür einen kompakten Arbeitsstand im aktuellen Kontext beziehungsweise p
 
 Übergebe an Claude nur relevante, konsolidierte Änderungen an einem konkreten sicheren Meilenstein; wiederhole weder Transkriptdopplungen noch bereits erledigte Arbeit. Berücksichtige dringende Zielkorrekturen vor der nächsten eigenen Änderung oder Übergabe und prüfe den tatsächlichen Claude-Zustand, bevor du steuerst. Keine blinden Tastendrücke oder neue Umsetzungsanweisung in eine laufende Generation; nutze bei verlangtem Abbruch die Stopp-Regel. Bewahre den Arbeitsstand für den gesamten aktiven Auftrag und gleiche ihn nach Kontextverdichtung oder Verbindungsproblemen mit echten Dateien und der sicher zugeordneten Sitzung ab. Versprich keine technisch unterbrechungsfreie Verbindung.
 
-Diese Fortsetzung erweitert keinen einfachen Einzelauftrag zum Einfügen und auch keinen begrenzten Implementierungsauftrag automatisch zum unbegrenzten Umbau. Maßgeblich bleibt der ausdrücklich beauftragte Umfang. Ein autorisierter Verbesserungsloop gilt nur während des aktiven Chats; richte dafür keinen Dauerdaemon oder geplante Automation ein und verspreche keine Arbeit nach Chat-Ende. Bei Stopp oder bekanntem Chat-Ende keine neue Runde oder Übergabe starten; Stoppsignal und Umgang mit laufender Claude-Arbeit richten sich nach „Stopp, Aufwand und Grenzen“ unten.
+Diese Fortsetzung erweitert keinen einfachen Einzelauftrag zum Einfügen und auch keinen begrenzten Implementierungsauftrag automatisch zum unbegrenzten Umbau. Maßgeblich bleibt der ausdrücklich beauftragte Umfang. **Das Ende der Sprachverbindung, ein `transcript_tail_flush` oder der Wechsel zum Textchat ist kein Stopp des Verbesserungsauftrags.** Ein ausdrücklich autorisierter Loop bleibt in der aktiven Aufgabe bestehen, bis der Nutzer ihn klar manuell stoppt, pausiert oder abbricht; eine solche Anweisung richtet sich nach „Stopp, Aufwand und Grenzen“ unten. „Den Chat beenden“ im Zusammenhang auslegen: Hier meint die Grenze das manuelle Beenden des Auftrags, nicht ein automatisches Voice-Ende. Nach Voice-Ende im Textchat weiterarbeiten und den tatsächlichen Fortschritt melden, ohne erneute Fortsetzungsfreigabe zu verlangen oder allein deshalb `STOP` zu setzen. Echte technische Blockaden, fehlender sinnvoller Nutzen oder erforderliche Produktentscheidungen transparent melden. Richte keinen versteckten Dauerdaemon oder geplante Automation ein und verspreche keine unbegrenzte technische Verfügbarkeit nach Ende der tatsächlichen Ausführungsmöglichkeit.
 
 ## Einstieg und Zielbindung
 
