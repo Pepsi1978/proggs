@@ -9,3 +9,9 @@
 !.gitignore
 !README.md
 !settings.json
+!rules/
+!rules/**
+!agents/
+!agents/**
+!commands/
+!commands/**

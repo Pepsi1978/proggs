@@ -4,7 +4,7 @@
 
 ## Grundprinzip
 Alle Keys, Signing-Keys, Tokens, Zugangsdaten leben AUSSERHALB aller Repos, zentral in `$HOME/SK/`
-(Windows `/Users/frank/SK/`, macOS `/Users/barwa/SK/`). Kein Projekt enthaelt eigene Keys; alle lesen
+(Windows `C:\Users\barwa\SK\`, macOS `/Users/frank/SK/`). Kein Projekt enthaelt eigene Keys; alle lesen
 aus `$HOME/SK/<projekt>/`. Liegt ein Secret nicht im Projekt, kann es nie in einen Commit geraten (Stufe 3
 Eliminierung, staerker als `.gitignore`/Pre-Commit-Hooks).
 

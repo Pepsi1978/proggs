@@ -26,11 +26,11 @@ Das Programmiersystem leidet an einem "Erkennungs-ohne-Heilung-Muster": Fehler w
 ```bash
 uname -s
 ```
-- `MINGW*` oder `MSYS*` → Windows Git Bash → Pfade: `/Users/frank`, PowerShell via `pwsh -Command`
+- `MINGW*` oder `MSYS*` → Windows Git Bash → Pfade: `C:\Users\barwa\`, PowerShell via `pwsh -Command`
 - `Darwin` → macOS → Pfade: `/Users/barwa/` oder `~/`
 - `Linux` → Linux → Pfade: `~/`
 
-**Whiteboard-Pfad (Windows):** `/Users/frank/proggs/.claude/agent-memory/shared/MEMORY.md`
+**Whiteboard-Pfad (Windows):** `C:\Users\barwa\proggs\.claude\agent-memory\shared\MEMORY.md`
 **Whiteboard-Pfad (macOS/Linux):** `~/proggs/.claude/agent-memory/shared/MEMORY.md`
 
 ## Schritt 1: Whiteboard lesen
