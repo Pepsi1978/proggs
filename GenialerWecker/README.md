@@ -92,6 +92,19 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
   die im Weg stehen. Eine noch nicht geladene eigene Stimmenliste wird weiterhin durch die
   vorhandenen Lade- und Fehlerhinweise erklärt, nicht als Filterproblem ausgegeben.
 
+### Bedienkomfort (1.1.48)
+
+- Ein noch nicht gespeicherter Sprachschlüssel überlebt jetzt das **Zuklappen der Karte
+  „Sprachschlüssel"**; die zugeklappte Karte nennt das sachlich als „ungespeicherte Änderung"
+  und stellt einen Entwurf nie als gespeicherten Schlüssel dar. Ausdrücklich **nicht** behoben
+  sind Verluste beim Verlassen der Einstellungen, beim Drehen oder Falten und beim Prozessende –
+  dort gilt weiterhin das bisherige Verhalten. Der Entwurf bleibt nur im Arbeitsspeicher der
+  Einstellungsseite: nichts davon geht in den SavedState, auf die Platte oder ins Log. Beim
+  Zuklappen ist ein sichtbar gemachter Schlüssel wieder maskiert.
+- Bestätigungsdialoge benennen die Folge auf dem Knopf selbst: „Wecker löschen", „Stimme löschen"
+  und „Übernehmen" statt eines allgemeinen „Bestätigen". Titel, Warntexte und „Abbrechen" sind
+  unverändert, es kam kein zusätzlicher Dialog hinzu.
+
 ## Ideenbrücke
 
 Geniale Ideen benötigt das mitgelieferte Update mit `bridge/WeckerProvider.kt`.

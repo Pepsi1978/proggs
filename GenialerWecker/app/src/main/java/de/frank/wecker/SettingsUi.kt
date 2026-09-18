@@ -69,6 +69,13 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         else -> settings.edgeTtsVoice
     }) }
     var rate by remember(revision) { mutableFloatStateOf(settings.ttsSpeechRate) }
+    // Eine Ebene über der zuklappbaren Karte, damit bloßes Zuklappen die Eingabe nicht verwirft. Der Schlüssel
+    // bleibt im Arbeitsspeicher dieser Seite – nichts davon geht in SavedState, auf die Platte, ins Log oder ins
+    // ViewModel. Der Schlüsselwert selbst ist der Erinnerungsschlüssel: nur ein tatsächlich geänderter
+    // gespeicherter Wert setzt genau seinen Entwurf zurück, die beiden anderen bleiben unberührt.
+    var googleEntwurf by remember(settings.googleTtsApiKey) { mutableStateOf(settings.googleTtsApiKey) }
+    var qwenEntwurf by remember(settings.qwenTtsApiKey) { mutableStateOf(settings.qwenTtsApiKey) }
+    var groqEntwurf by remember(settings.groqApiKey) { mutableStateOf(settings.groqApiKey) }
     LaunchedEffect(Unit) { vm.loadVoices() }
     val microphone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
         if (allowed) vm.startRecording(true) else vm.message.value = "Für deine Stimmprobe wird die Mikrofonberechtigung benötigt."
@@ -237,11 +244,16 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             GoldKnopf("Spracheinstellungen übernehmen", { copySettings = true })
             Text("Übernimmt die dort gewählte Stimme, das Tempo sowie Google-, Alibaba- und Groq-Schlüssel. Danach kannst du die Stimme im Wecker unabhängig auswählen.", style = MaterialTheme.typography.bodySmall)
         }
+        // Die Zusammenfassung spricht ausschließlich über gespeicherte Schlüssel; ein Entwurf wird als offen
+        // benannt und nie als vorhandener Schlüssel dargestellt.
+        val offeneSchluessel = googleEntwurf.trim() != settings.googleTtsApiKey.trim() ||
+            qwenEntwurf.trim() != settings.qwenTtsApiKey.trim() || groqEntwurf.trim() != settings.groqApiKey.trim()
         Section("Sprachschlüssel", collapsible = true, summary = listOf("Google" to settings.googleTtsApiKey, "Alibaba" to settings.qwenTtsApiKey, "Groq" to settings.groqApiKey)
-            .joinToString(" · ") { (name, key) -> "$name ${if (key.isBlank()) "fehlt" else "✓"}" }) {
-                SecretField("Google / Chirp-3-HD-Schlüssel", settings.googleTtsApiKey) { settings.googleTtsApiKey = it; vm.settingsChanged() }
-                SecretField("Alibaba / DashScope-Schlüssel", settings.qwenTtsApiKey) { settings.qwenTtsApiKey = it; vm.settingsChanged() }
-                SecretField("Groq-Schlüssel", settings.groqApiKey) { settings.groqApiKey = it; vm.settingsChanged() }
+            .joinToString(" · ") { (name, key) -> "$name ${if (key.isBlank()) "fehlt" else "✓"}" } +
+            if (offeneSchluessel) " · ungespeicherte Änderung" else "") {
+                SecretField("Google / Chirp-3-HD-Schlüssel", settings.googleTtsApiKey, googleEntwurf, { googleEntwurf = it }) { settings.googleTtsApiKey = it; vm.settingsChanged() }
+                SecretField("Alibaba / DashScope-Schlüssel", settings.qwenTtsApiKey, qwenEntwurf, { qwenEntwurf = it }) { settings.qwenTtsApiKey = it; vm.settingsChanged() }
+                SecretField("Groq-Schlüssel", settings.groqApiKey, groqEntwurf, { groqEntwurf = it }) { settings.groqApiKey = it; vm.settingsChanged() }
             Text("Die Schlüssel werden mit Android Keystore verschlüsselt gespeichert.", style = MaterialTheme.typography.bodySmall)
         }
         Section("Meine Stimme aufnehmen", collapsible = true, summary = "Eigene Stimmen erstellen und verwalten") {
@@ -295,27 +307,27 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }
         Spacer(Modifier.height(16.dp))
     }
-    if (copySettings) Confirm("Spracheinstellungen übernehmen?", "Die Sprachschlüssel, Stimme und das Tempo im Wecker werden durch die Werte aus Geniale Ideen ersetzt.", {
+    if (copySettings) Confirm("Spracheinstellungen übernehmen?", "Die Sprachschlüssel, Stimme und das Tempo im Wecker werden durch die Werte aus Geniale Ideen ersetzt.", "Übernehmen", {
         copySettings = false; vm.importSettings()
     }, { copySettings = false })
-    removeVoice?.let { voice -> Confirm("Stimme aus Alibaba löschen?", "Diese Stimme wird auch für andere Apps unbrauchbar. Vorbereitete Wecker-Audiodateien bleiben erhalten.", {
+    removeVoice?.let { voice -> Confirm("Stimme aus Alibaba löschen?", "Diese Stimme wird auch für andere Apps unbrauchbar. Vorbereitete Wecker-Audiodateien bleiben erhalten.", "Stimme löschen", {
         removeVoice = null; vm.removeVoice(voice.id)
     }, { removeVoice = null }) }
 }
 
 /**
- * Der Schlüssel wird ausschließlich hier im Feld gehalten und erst auf ausdrückliches Speichern abgelegt –
+ * Zeigt den Entwurf, den [SettingsPage] hält, und legt ihn erst auf ausdrückliches Speichern ab –
  * nie im SavedState, nie im Log, kein automatisches Speichern bei Fokusverlust. Verglichen wird der
  * normalisierte Wert, weil auch getrimmt gespeichert wird.
  */
 @Composable
-private fun SecretField(label: String, initial: String, save: (String) -> Unit) {
-    var text by remember(label, initial) { mutableStateOf(initial) }
+private fun SecretField(label: String, gespeichert: String, text: String, onText: (String) -> Unit, save: (String) -> Unit) {
+    // Bewusst nur hier gemerkt: beim Zuklappen der Karte ist der Schlüssel wieder maskiert.
     var visible by remember { mutableStateOf(false) }
     val tastatur = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
-    val geaendert = text.trim() != initial.trim()
+    val geaendert = text.trim() != gespeichert.trim()
     fun speichern() { save(text.trim()); tastatur?.hide() }
-    OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), label = { Text(label) }, singleLine = true,
+    OutlinedTextField(text, onText, Modifier.fillMaxWidth(), label = { Text(label) }, singleLine = true,
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { if (geaendert) speichern() else tastatur?.hide() }))

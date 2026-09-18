@@ -190,7 +190,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
             text = { Text("„${draft?.name.orEmpty()}“ hat noch ungespeicherte Änderungen.") },
             confirmButton = { GoldKnopf("Entwurf fortsetzen", { pendingOpen = null; page = "edit" }) },
             dismissButton = { StillerKnopf("Verwerfen", { pendingOpen = null; vm.closeEditor(); open(); page = "edit" }) }) }
-        delete?.let { alarm -> Confirm("Wecker löschen?", "„${alarm.name}“ wird entfernt.", {
+        delete?.let { alarm -> Confirm("Wecker löschen?", "„${alarm.name}“ wird entfernt.", "Wecker löschen", {
             vm.delete(alarm); delete = null
         }, { delete = null }) }
     }
@@ -699,10 +699,11 @@ fun PhotoPreview(file: File) {
     bitmap?.let { Image(it.asImageBitmap(), "Gespeichertes Referenzmotiv", Modifier.fillMaxWidth().heightIn(max = 240.dp).clip(RoundedCornerShape(16.dp))) }
 }
 
+/** [aktion] benennt die Folge auf dem Knopf selbst – ohne Vorgabe, damit keine Rückfrage beim generischen „Bestätigen“ bleibt. */
 @Composable
-fun Confirm(title: String, text: String, yes: () -> Unit, no: () -> Unit) {
+fun Confirm(title: String, text: String, aktion: String, yes: () -> Unit, no: () -> Unit) {
     AlertDialog(onDismissRequest = no, title = { Text(title) }, text = { Text(text) },
-        confirmButton = { GoldKnopf("Bestätigen", yes) }, dismissButton = { StillerKnopf("Abbrechen", no) })
+        confirmButton = { GoldKnopf(aktion, yes) }, dismissButton = { StillerKnopf("Abbrechen", no) })
 }
 
 fun newPhoto(context: Context): File = File(context.cacheDir, "photos").apply { mkdirs() }.let { File(it, "${UUID.randomUUID()}.jpg") }
