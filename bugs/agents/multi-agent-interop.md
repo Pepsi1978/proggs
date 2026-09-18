@@ -1,5 +1,7 @@
 # Bekannte Bugs: Modelluebergreifende Agenten-Zusammenarbeit (MCP, A2A, Cross-Vendor)
 
+> Ergänzung 18.09.2026: §10 beschreibt eine dokumentierte Produktgrenze und typische Fehlannahmen beim Codex-/Claude-Terminaldialog auf macOS, keinen neu behaupteten Softwaredefekt.
+
 > **PFLICHT-LESEN vor Arbeit an einer Verbindung zwischen Agenten** — egal ob ueber MCP, A2A,
 > OpenAI-Handoffs, dateibasierte Uebergabe oder Queue.
 > **Geltungsbereich:** die VERBINDUNG — Protokolle, Handoffs, Cross-Vendor-Betrieb, Schreibkonflikte
@@ -30,6 +32,7 @@
 | 7 | Ergebnisse eines Laufs tauchen im naechsten auf | Ausgabeverzeichnis nicht aufgeraeumt | §7 |
 | 8 | "ACP unterstuetzt das doch" — tut es nicht | Zwei verschiedene Protokolle, gleiches Kuerzel | §8 |
 | 9 | Recherche liefert nur SEO-Blogs | Such-Engine bevorzugt optimierte Seiten vor Primaerquellen | §9 |
+| 10 | Sichtbare Claude-CLI bleibt trotz voller Rechte nicht beschreibbar | Computer Use schließt Terminal-Apps und ChatGPT selbst aus; Headless-/Resume-Erfolg ist kein TUI-Nachweis | §10 |
 
 ---
 
@@ -233,3 +236,27 @@ Aussage die Quelle" und uebergab die Quellen als nummerierte Liste. Das Modell z
 im Prompt ausdruecklich die vollstaendige URL verlangen.
 
 Quelle: https://www.anthropic.com/engineering/multi-agent-research-system; eigene Messung 2026-09-09.
+
+## §10 Codex-/Claude-Terminaldialog auf macOS: Produktgrenze statt fehlender Shellrechte
+
+**Stand:** 18.09.2026, 10:44 Uhr. **Versionen:** Desktop-Bundle `com.openai.codex` 26.915.31029 (9771), lokal als ChatGPT.app installiert; vorhandene Claude-CLI laut Ursprungssitzung 2.1.276. Laufende Herstellerdokumentation, keine exakte Buildgarantie.
+
+**Symptom:** Der vorhandene rechte Terminalpuffer ist lesbar, die native Computer-Use-Abfrage der Codex-App wird jedoch aus Sicherheitsgründen verweigert. Volle Datei-/Shellrechte und die Zustimmung des Nutzers beseitigen diese Ablehnung nicht.
+
+**Ursache / Beleg:** Die offizielle OpenAI-Dokumentation schließt die Automatisierung von Terminal-Apps und ChatGPT selbst aus. Sie trennt diese Produktgrenze von macOS-Bildschirmaufnahme/Bedienungshilfen, App-Zustimmungen und Datei-/Shell-Sandboxrechten. Der konkrete interne Sperrmechanismus wurde nicht untersucht. Keine unbelegte TCC-Fehlkonfiguration diagnostizieren.
+
+**Funktionserhaltender nächster Weg:** Den vorhandenen Lesezugang und konkrete ungesendete Auftragsentwürfe weiter nutzen. Für dieselbe laufende Claude-Sitzung ist `/remote-control` als offizielle alternative Bedienoberfläche dokumentiert; Aktivierung erfordert eine zulässige Eingabe durch den Nutzer und geeignete Konto-/Endpoint-/Organisationsbedingungen. Die praktische Anbindung von Astra daran ist noch offen. Nicht als bereits funktionierenden Fix darstellen und die Ziel-App-Sperre weder technisch umgehen noch durch eine neue Sitzung verdecken.
+
+**Verwandte Fallen:**
+
+- Erfolgreiches `claude -p --resume …` belegt fortgesetzten Kontext im betreffenden Aufruf, keine Eingabe in einen schon sichtbaren Terminalprozess. Die CLI-Referenz beschreibt `--print` ausdrücklich als nicht interaktiv.
+- `read_thread_terminal` ist taskgebunden und kein Schreibwerkzeug. Ein anderer Codex-Task liest dadurch nicht den ursprünglichen Terminal-Tab.
+- Terminalpuffer mit Cursorbewegung, Löschen und Wagenrücklauf ist kein append-only Gesprächsprotokoll. Präfix-Diff und entfernte ANSI-Farben garantieren weder vollständige Antwort noch korrekte Bildschirmrekonstruktion.
+- `open_in_codex.sessionId` und die Prozess-ID für `write_stdin` nicht ohne dokumentierte Zuordnung gleichsetzen. Anzeige einer Textdatei ist keine verbundene CLI.
+- Ein `Always allow`-Eintrag oder ein höherer Shell-Rechtemodus ist kein dokumentierter Ausnahme-Schalter für die ausgeschlossenen Ziele.
+
+**Fix-Status:** Kein Open/Closed-Issue behauptet. Dokumentierte Produktgrenze; alternative native Claude-Oberfläche als Option gefunden, End-to-End-Dialog nicht validiert. Keine App-/Sitzungsumstellung im Recherchelauf.
+
+**Quellen:** `offiziell` https://developers.openai.com/codex/app/computer-use ; https://code.claude.com/docs/en/remote-control ; https://code.claude.com/docs/en/cli-reference ; https://code.claude.com/docs/en/sessions . `lokal` Werkzeugbeschreibungen, dokumentierte Ablehnung und erfolgreiche Leseprobe in der Ursprungstask vom 18.09.2026. Persistenz und bestehende Hook-Zuordnung: Best-Practices-Gegenseite §9.
+
+**Quellenprüfung in diesem Lauf:** Die automatische Auswertung behauptete, die offizielle Computer-Use-Quelle enthalte nur Navigation. Tatsächlich lag der Volltext in `sources.json`; der Auswerter erhielt aufgrund von `MAX_PER_SOURCE=20000` nur den navigationslastigen Anfang. Auch dokumentierte CLI-Flags lagen teils hinter dieser Grenze. Vor einem Negativbefund den schon geholten Primärtext gezielt nachlesen; keine zusätzliche breite Recherche allein wegen abgeschnittener Modellsicht starten. Kein Pipeline-Code wurde in diesem Auftrag geändert.

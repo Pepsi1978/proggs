@@ -4,6 +4,7 @@
 > diesem Bereich ein Fehler auf — dann lies den ENTSCHEIDENDEN Abschnitt im VOLLTEXT
 > (`best-practices/agents/multi-agent-interop.md`), nicht nur diese Kurzfassung.
 > Stand: 2026-09-09. Gegenseite: `bugs/agents/multi-agent-interop.md`.
+> Ergänzung 18.09.2026: Codex/Claude unter macOS in §9 des Volltexts; ältere Headless-Empfehlungen ersetzen keine vorhandene sichtbare Sitzung.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -24,6 +25,7 @@
 | 13 | Kosten schaetzen | 3-Agenten-Pipeline ≈ 3x Tokens; Tool-Schemas 60-80 % des Verbrauchs; im Lasttest messen | §7 |
 | 14 | Fremden MCP-Server einbinden | Strikt whitelisten + Tool-Beschreibungen sanitizen. Tool Poisoning ist real und ungeloest | §8 |
 | 15 | A2A-Tokens vergeben | Auf einzelne Skills scopen, kurze Ablaufzeit selbst erzwingen — die Spec tut es nicht | §8 |
+| 16 | Claude neben Codex auf macOS bedienen | Computer Use schließt Terminal-Apps/ChatGPT selbst aus. `/remote-control` in bestehender Claude-Sitzung ist eine offizielle alternative Oberfläche; lokale Eignung und Astra-Steuerung ungeprüft. `--print`/`--resume` beweisen keine TUI-Eingabe | §9 |
 
 **Merksatz:** MCP verbindet einen Agenten **nach unten** mit seinen Werkzeugen, A2A **zur Seite** mit
 anderen Agenten. Wer die beiden verwechselt, baut die falsche Bruecke.

@@ -4,6 +4,7 @@
 > diesem Bereich ein Fehler auf — dann lies den ENTSCHEIDENDEN Abschnitt im VOLLTEXT
 > (`bugs/agents/multi-agent-interop.md`), nicht nur diese Kurzfassung.
 > Stand: 2026-09-09.
+> Ergänzung 18.09.2026: Codex-/Claude-Terminaldialog unter macOS, Volltext §10.
 
 ## ⚡ Kurzcheck (Stufe A — vor der Arbeit lesen)
 
@@ -19,6 +20,7 @@
 | 8 | Architekturentscheidung auf Basis von "ACP" ist falsch | ZWEI Protokolle mit dem Kuerzel: Zed = Agent↔Editor, IBM/BeeAI = Agent↔Agent | Bei jeder ACP-Erwaehnung zuerst den Traeger pruefen |
 | 9 | Recherche belegt alles mit Marketing-Blogs statt Primaerquellen | Retrieval-Bias zu SEO-optimierten Seiten; faellt in automatisierten Evals NICHT auf | Agenten mit eigener Suche statt Snippet-Pipeline; Prompt auf Primaerquellen lenken; menschliche Stichprobe |
 | 10 | Antwort zitiert "(Quelle 3)" statt einer URL | Prompt uebergab Quellen als nummerierte Liste und verlangte nur "die Quelle" | Im Prompt ausdruecklich die vollstaendige URL verlangen — sonst ist die Antwort ohne Quellendatei nicht pruefbar |
+| 11 | Codex-App bleibt trotz voller Rechte für Computer Use gesperrt | OpenAI schließt Terminal-Apps/ChatGPT selbst aus; Shellrechte sind eine andere Ebene | Kein Umgehen. Bestehende Claude-Sitzung gegebenenfalls über offiziell dokumentiertes `/remote-control` weiterbedienen; hier nicht aktiviert oder End-to-End geprüft. Headless-Erfolg nicht als sichtbare Eingabe ausgeben (§10) |
 
 **Faustregel:** Die Verbindung zwischen Agenten ist 2026 der unsicherste und teuerste Teil des
 Systems — nicht die Agenten selbst. Vor jeder Cross-Vendor-Architektur pruefen, ob ein gemeinsames

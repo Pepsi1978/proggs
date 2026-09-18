@@ -1,5 +1,7 @@
 # Modelluebergreifende Agenten-Zusammenarbeit — Best Practices (Stand 2026-09-09)
 
+> Ergänzung vom 18.09.2026: §9 behandelt die vorhandene sichtbare Claude-Sitzung in Codex unter macOS. Die älteren allgemeinen Aussagen zu Headless-/Dateiübergaben sind kein Ersatz für diese Sitzungsanforderung.
+
 > Die **Praeventions-Seite** zum Bug-Almanach `bugs/agents/multi-agent-interop.md`. Der Almanach
 > sagt *was schiefgeht*; diese Datei sagt *wie man Agenten verschiedener Anbieter von vornherein so
 > zusammensetzt, dass es haelt*. Vor der Arbeit beide lesen — **erst Almanach, dann Best Practices**.
@@ -35,6 +37,7 @@
 | 8 | Parallel im selben Repo arbeiten | Git-Worktrees (`isolation: worktree`), praktische Grenze 8-10 | §6 |
 | 9 | Kosten schaetzen | Orchestrator-Overhead einrechnen: 3-Agenten-Pipeline ≈ 3x Tokens | §7 |
 | 10 | Fremden MCP-Server einbinden | Whitelisting + Tool-Description-Sanitizing, Tool Poisoning ist real | §8 |
+| 11 | Claude-Sitzung neben Codex unter macOS steuern | Computer Use schließt Terminal-Apps und ChatGPT selbst aus; Rechtearten getrennt betrachten. `/remote-control` ist eine dokumentierte alternative Oberfläche derselben Claude-Sitzung, noch kein getesteter Astra-Dialog | §9 |
 
 ---
 
@@ -227,3 +230,47 @@ bei hoeherem Schutzbedarf mTLS-gebundene Tokens oder DPoP.
   Muster — nur implizite Erwaehnungen als "kleinster gemeinsamer Nenner".
 - Eine offizielle Anthropic-Doku dazu, wie man mit dem Claude Agent SDK Agenten baut, die FREMDE
   CLI-Agenten aufrufen. Nur das allgemeine Headless-Subprocess-Muster und Community-Beispiele.
+
+## §9 Vorhandene sichtbare Claude-Sitzung in Codex unter macOS `offiziell` + lokaler Befund
+
+**Stand:** 18.09.2026, 10:44 Uhr (Systembefehl). **Versionsanker:** lokale Desktop-App mit Bundle-ID `com.openai.codex`, Versionsnummer `26.915.31029`, Build `9771`, installiert als `/Applications/ChatGPT.app`; Claude Code im ursprünglichen Terminal `2.1.276` laut dortigem Befund. Die Webdokumentation ist fortlaufend und nicht exakt auf diese Builds eingefroren.
+
+### Rechte und Schnittstellen auseinanderhalten
+
+OpenAI unterscheidet macOS-Bildschirmaufnahme/Bedienungshilfen, App-Freigaben in Computer Use und Sandbox-/Freigaberegeln für Dateien und Shell. Zusätzlich schließt die offizielle Computer-Use-Dokumentation **Terminal-Apps und ChatGPT selbst** als Automatisierungsziele aus. Ein voller Shellzugriff oder eine gewöhnliche App-Freigabe ist daher kein belegter Weg, diese Zielbeschränkung aufzuheben. In der geprüften Dokumentation ist kein Ausnahme-Schalter dafür beschrieben. Nicht mit AppleScript, System Events, privaten APIs oder PTY-Injektion umgehen.
+
+Quelle `offiziell`: https://developers.openai.com/codex/app/computer-use — Abschnitte „Permissions and approvals“ und „Safety guidance“.
+
+Die öffentlich im Werkzeugkontext bereitgestellte Schnittstelle `read_thread_terminal({})` liest ausschließlich das Terminal der aufrufenden Codex-Aufgabe. Sie hat keinen Schreibparameter und keine Ziel-Aufgaben-ID. `open_in_codex` mit `type: terminal` öffnet ein Panel; aus seinem optionalen `sessionId` lässt sich keine Zuordnung zu `exec_command.session_id` ableiten. Diese IDs nicht raten oder vermischen. In den geprüften Quellen und verfügbaren Werkzeugbeschreibungen wurde **kein unterstützter direkter Schreibzugang zum bestehenden App-Terminal nachgewiesen**. Das ist ein begrenztes Rechercheergebnis, keine Aussage über jede denkbare zukünftige Schnittstelle.
+
+Quelle `lokal`: Werkzeugbeschreibungen dieser Aufgabe am 18.09.2026; erfolgreiche Leseprobe in der Ursprungstask. Der Rückgabewert enthielt einen Textblock mit ANSI-Neuzeichnungen, ohne separate Terminalkennung. Die Sicherheitsablehnung von `cua.getApp('com.openai.codex')` wurde dort beobachtet; hier nicht wiederholt.
+
+Die zusätzlich geprüfte offizielle Terminal-Seite bestätigt ein Terminal pro Chat/Projekt beziehungsweise Worktree und das Lesen seiner aktuellen Ausgabe durch ChatGPT. Sie beschreibt außerdem benutzerseitige Terminalbefehle und wiederverwendbare Actions, jedoch keine API zum Senden von Texteingaben an einen bereits laufenden interaktiven Agenten. Actions sind damit kein Nachweis einer solchen Eingabeschnittstelle.
+
+Quelle `offiziell`: https://developers.openai.com/codex/integrated-terminal .
+
+### Offizielle alternative Oberfläche derselben Claude-Sitzung
+
+Anthropic dokumentiert `/remote-control` beziehungsweise `/rc` **innerhalb einer bereits laufenden interaktiven Sitzung**. Der bisherige Gesprächsverlauf wird übernommen, Claude läuft lokal weiter, und Terminal sowie verbundene Web-/Mobiloberfläche können denselben Dialog bedienen. Die normale interaktive Variante `claude --remote-control` ist vom Servermodus `claude remote-control` zu unterscheiden. Für die vorhandene Sitzung wäre der Slash-Befehl relevant, nicht der Start eines Ersatzprozesses.
+
+Die Requirements nennen ein geeignetes claude.ai-Login, direkte Nutzung von `api.anthropic.com`, Projektvertrauen und gegebenenfalls Organisationsfreigabe; API-Key allein, alternative Modell-Gateways und deaktivierte Feature-Flag-Auswertung können den Weg ausschließen. Die Seite ist beim Tarifumfang uneinheitlich: Einleitung „all plans“, Requirements konkret Pro/Max/Team/Enterprise. Deshalb die tatsächliche Berechtigung der Sitzung prüfen, keine pauschale Tarifgarantie ableiten.
+
+Quelle `offiziell`: https://code.claude.com/docs/en/remote-control — „From an existing session“, „Requirements“, Synchronisierung mehrerer Oberflächen.
+
+**Noch kein Umsetzungsergebnis:** Remote Control wurde in dieser Untersuchung nicht aktiviert, keine Nachricht darüber gesendet und keine Astra-Steuerbarkeit einer separaten Weboberfläche getestet. Es ist eine dokumentierte Option für dieselbe Claude-Sitzung, keine Freigabe zum Umgehen der Codex-App-Sperre und kein nachgewiesener automatischer Sprachablauf. Eine neue Browser-/Remote-Control-Einrichtung muss als eigener konkreter nächster Schritt beauftragt werden; die bestehenden Grenzen gelten weiter.
+
+### Headless, SDK und Channels richtig einordnen
+
+- `--print` arbeitet ohne interaktiven Modus; `--input-format`/`--output-format` sind in der CLI-Referenz für diesen Modus beschrieben. `--resume` setzt eine gespeicherte Unterhaltung fort. Ein erfolgreicher separater Aufruf beweist weder Eingabe in die laufende TUI noch deren Synchronisierung.
+- Das Agent SDK unterstützt langlebige Streaming-Eingaben mit Warteschlange, Unterbrechungen und laufenden Antworten. Das ist ein dokumentierter Integrationsbaustein für eine entsprechend gebaute Anwendung; kein Beleg für das Andocken an einen beliebigen schon geöffneten Terminalprozess.
+- `--channels` ist als Research Preview für eingehende Benachrichtigungen zugelassener MCP-Server dokumentiert. In dieser Recherche wurden weder nachträgliches Aktivieren in der vorhandenen Sitzung noch ein vollständiger bidirektionaler Astra-Adapter nachgewiesen. Daher nur ein offener Integrationskandidat, kein fertiger Ersatz.
+
+Quellen `offiziell`: https://code.claude.com/docs/en/cli-reference ; https://code.claude.com/docs/en/sessions ; https://code.claude.com/docs/en/agent-sdk/streaming-vs-single-mode .
+
+### Kontingent und Prüfgrenzen
+
+Für das belegte Mitlesen vorhandene strukturierte Werkzeuge vor Screenshots bevorzugen. Identische Puffer vor Ausgabe ins Modell vergleichen; Änderungen durch ANSI-Neuzeichnen nicht mit fachlich neuer Antwort verwechseln. Kurze, kontextreiche Ausschnitte und gezielte Dateidiffs im bestätigten Worktree verwenden. Das sind lokale Ablaufempfehlungen, **keine gemessene ChatGPT-Kontingentersparnis**. Claude-Cachewerte messen nicht ChatGPT-Verbrauch. End-to-End-Latenz und tatsächliche Kontingentwirkung blieben ungeprüft.
+
+**Registrierung:** vorhandener Bereich `agents/multi-agent-interop`, kein neuer Dateibereich. Der rekursive Almanach-Index erfasst ihn; der kuratierte Hint-Eintrag ist in `claude-code-setup/hooks` und `Umgebung/Hooks` bereits mit Leerzeichen-/Bindestrichvarianten vorhanden und die beiden Dateien sind identisch. Kein neuer Guard-Dateifilter: konzeptionelle Agentenkommunikation hat kein eindeutiges Dateimuster. Keine Hook-Codeänderung für diese Ergänzung.
+
+**Rechercheverfahren:** vom Nutzer freigegebene Engine A, zwei Teilfragen über `research-swarm.py`, `MM_LIMIT=10`; eine enge Nachlese zur verlinkten Terminal-Seite mit Limit 3. Firecrawl lieferte keine brauchbaren Treffer, deshalb jeweils automatischer Tavily-Rückfall. Nur Herstellerquellen und ausdrücklich markierte lokale Befunde wurden übernommen. Die Auswerter sahen je Quelle höchstens 20.000 Zeichen: Dadurch fehlte ihnen bei langen Navigationen teils der eigentliche Seitentext. Die tragenden Aussagen zu Computer-Use-Sperre, Terminalfunktionen und CLI-Flags wurden deshalb zusätzlich im bereits gespeicherten vollständigen Primärtext gelesen; gegenteilige Unsicherheitsangaben der Auswerter nicht als Sachbefund übernommen. Drittanbieterbehauptungen und Tavily-Synthesen sind keine Produktbelege.
