@@ -2,8 +2,8 @@
 name: ins-macos-terminal-einfuegen
 description: "Für „ins macOS Terminal einfügen“, „bei Claude reinschreiben“, Sprachaufträge aus Codex/Astra und beauftragten Dialog mit derselben sichtbaren Claude-Code-Sitzung in tmux: sicher zuordnen, Text übergeben, relevante Antworten lesen und reale Dateien prüfen. Gilt im Codex-Terminal und in Terminal.app, ohne Computer Use."
 metadata:
-  version: "1.2.0"
-  updated_at: "18.09.2026 12:25"
+  version: "1.2.1"
+  updated_at: "18.09.2026 12:49"
 ---
 
 # Ins macOS Terminal einfügen
@@ -30,7 +30,7 @@ metadata:
 
 Lies bei beauftragtem Dialog einmal [Puffer sparsam lesen](references/puffer-lesen.md). **Während des beauftragten Dialogs oder der begleiteten Programmierung aktiv weiter mitlesen**, auch nachdem der Auftrag abgesendet wurde. Nutze kurze `read --wait`-Aufrufe (zunächst 2–3, bei Stillstand 5–10 Sekunden) mit privater Cancel-Datei; zwischen den begrenzten Aufrufen Nutzerkorrekturen und Stopp priorisieren. Gib nur relevante neue Aussagen aus, beantworte Rückfragen und prüfe Dateien an sinnvollen Meilensteinen. Keine neue Anweisung in eine noch laufende Generation schicken. Ein laufender Beobachtungsauftrag gilt im aktiven Turn; keine Aktivität nach Turn-/App-Ende oder lückenlosen Livestream versprechen. Vereinbare die kurze Ergebniskonvention **im eigentlichen Auftrag**, ohne separate Bestätigungs-Modellrunde:
 
-> Auftrag C17: [konkretes Ziel und Grenzen]. Zum Abschluss bitte `C17 fertig`, `C17 blockiert` oder `C17 rückfrage`, dazu betroffene Dateien und tatsächlicher Prüfstatus. Wenn für eine Entscheidung etwas fehlt, frage gezielt.
+> Auftrag C17: [konkretes Ziel, Grenzen und anwendbare Abschlusskette]. Melde `C17 fertig` erst nach dem tatsächlichen Abschluss, sonst `C17 Zwischenstand – Review läuft, Commit/Push folgen`, `C17 blockiert` oder `C17 rückfrage`; dazu betroffene Dateien und konkrete Nachweise. Wenn für eine Entscheidung etwas fehlt, frage gezielt.
 
 Halte die aktuelle Auftragskennung und den zuletzt gelesenen Antwortstand im flüchtigen Kontext. Standardmäßig ein fachlich aktiver Umsetzungsauftrag; Nutzerzwischenfragen lokal sofort beantworten und Ergänzungen sammeln. Keine zweite Umsetzung in die laufende Generation senden. Ein sichtbarer Pasteblock `#N` bleibt nach Enter nicht zwingend erhalten und ist kein belastbarer Antwortanker. Keine Inhalte automatisch hinter der letzten Kennungsfundstelle abschneiden: Diese kann zu einem Prompt-Echo, Zitat oder einer neuen Rückfrage gehören.
 
@@ -39,6 +39,18 @@ Ein Marker zählt nur als neue, zum aktuellen Auftrag gehörende **Claude-Antwor
 Bei beauftragter Codebegleitung den bestätigten Worktree, dessen Ausgangsstand und fremde Änderungen berücksichtigen. Zu Dateimeilensteinen relevante Dateien und staged/unstaged Diffs lesen; neue Dateien separat öffnen. Gegen den zuletzt gelesenen Inhalt vergleichen, nicht immer den gesamten HEAD-Diff als neu behandeln. Gelegentlich einen kleinen `git status`-Überblick nehmen, um neue/gelöschte Dateien und HEAD-Wechsel zu bemerken. Ein unveränderter Dateiname, Status oder eine Dateigröße beweist keinen unveränderten Inhalt. Keine vollständigen Repo-Scans pro Pufferabfrage.
 
 Sende nur neue Nutzerwünsche, benötigte Antworten oder belegte Probleme mit Datei/Fundstelle und Auswirkung. Einen gerade unvollständigen Umbau nicht voreilig als Bug melden. Claude implementiert weiter; ohne separaten Auftrag nicht parallel dieselben Dateien ändern. Nach Abschluss den tatsächlich erreichten Stand und die vorhandenen Prüfbelege nennen. Ein beobachteter Build-Erfolg ersetzt keine fachliche Prüfung.
+
+### Jedes abgeschlossene Update vollständig abschließen
+
+Übernimm die Abschlussregeln des aktiven Profils und Projekts bereits in den Umsetzungsauftrag an Claude. In diesem Repo verlangen Minimal- und Standardprofil die vollständige Kette: bauen, Version mit echter Systemzeit nach Projektregel genau einmal pro Commit erhöhen, committen, vor dem Push rebasen und pushen, auf dem autorisierten Gerät installieren beziehungsweise deployen. Die endgültige APK muss die erhöhte Version enthalten; nach einem Bump nach dem ersten Build erneut bauen. Gemeint ist ein sinnvoll abgeschlossenes Update, nicht jeder Einzel-Edit oder jede Modellantwort.
+
+Claude bleibt für Umsetzung und Abschluss zuständig. Codex/Astra führt den beauftragten Dialog eigenständig bis zum Abschluss weiter und prüft konkrete Nachweise: erfolgreichen Build des aktuellen Stands, Versionsdatei und Artefakt, Commit-ID mit passendem Dateiumfang, Remote-Stand nach Push und gegebenenfalls tatsächliches Installationsergebnis. „Claude sagt fertig“ genügt nicht. Git-Mutationen zwischen Implementierer und Koordinator nacheinander ausführen; fremde Änderungen schützen und bei Rebase-Konflikten gemäß Projektregel stoppen und melden.
+
+Ein interner Review-Halt ist ein **Zwischenstand**: „Review läuft, Commit/Push folgen“. Fordere dafür kein unqualifiziertes `fertig` an und beende die Gesamtaufgabe dort nicht. Übergebe nach dem konkreten Review nötige Korrekturen und den bereits autorisierten restlichen Abschluss unmittelbar an Claude; der Nutzer muss Commit und Push nicht nochmals verlangen oder freigeben.
+
+Installiere nach erfolgreichem Build/Commit/Push auf dem angeschlossenen, eindeutig zum Auftrag gehörenden und autorisierten Handy, wenn verfügbar. Ein beliebiges verbundenes Gerät ist kein Installationsziel. Aktuelle Nutzergrenzen haben Vorrang, etwa „ohne Emulator“ oder „Handy später“: dann weder Emulator starten noch eine andere Installation erzwingen, sondern die fertige APK mit Pfad bereitstellen und ausdrücklich **„gebaut, nicht installiert; Handy folgt später“** melden. Fehlt ein Gerät ohne solche Festlegung, APK bereitstellen und fehlende Installation samt Grund offen nennen. Fehlgeschlagenen Build, abgelehnten Push oder gescheiterte Installation niemals still überspringen oder als Erfolg melden.
+
+Der Abschluss nennt Änderung, Version, Buildstatus, **committet ja/nein**, **gepusht ja/nein**, **installiert auf welchem Gerät beziehungsweise nicht installiert mit Grund**, bei ausstehender Installation auch den APK-Pfad. `fertig` bezeichnet nur den erfüllten aktuell autorisierten Umfang; ausdrücklich zurückgestellte Installation bleibt sichtbar zurückgestellt.
 
 ## Verständliche Fortschrittskommunikation
 

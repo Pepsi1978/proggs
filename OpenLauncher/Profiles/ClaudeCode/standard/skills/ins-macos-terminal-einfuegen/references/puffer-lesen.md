@@ -31,6 +31,8 @@ Zwischen begrenzten Aufrufen neue Nutzerbeiträge prüfen. „Stopp“ priorisie
 
 ## Abschluss und Dateien
 
+Ein Review-Halt ist ein Zwischenstand mit noch folgenden Commit-/Push-Schritten, kein `fertig`. Führe die Begleitung nach dem Review ohne erneute Nutzeraufforderung bis zur anwendbaren Abschlusskette aus SKILL.md fort: Build und Versionsartefakt, Commit, Rebase/Push und autorisierte Installation konkret belegen. Zurückgestellte oder fehlgeschlagene Schritte ausdrücklich nennen; bei ausstehender Installation die APK bereitstellen. Ein Build allein beendet kein beauftragtes Update.
+
 Stiller Puffer, gleicher Hash, Shell-Prompt oder ein leer wirkendes Eingabefeld beweisen keinen Abschluss. `C17 fertig` zählt nur als neue Claude-Antwort zum aktuellen Auftrag; das Echo der Aufforderung oder ein alter Marker zählt nicht. Ein eindeutiger Selbstbericht kann den Dialog beenden, belegt aber nicht die Codekorrektheit.
 
 Bei beauftragter Programmierbegleitung zu Dateimeilensteinen echte Dateien und Diffs im bestätigten Worktree prüfen. Bei laufendem Umbau Zwischenstand markieren; keine halbfertige Refaktorierung vorschnell korrigieren. Normale Git-Diffs enthalten keine unverfolgten Dateien. Inhalte gegen zuletzt gelesenen Stand vergleichen und fremde Voränderungen schützen. Ein stilles Terminal bedeutet nicht unveränderte Dateien.
