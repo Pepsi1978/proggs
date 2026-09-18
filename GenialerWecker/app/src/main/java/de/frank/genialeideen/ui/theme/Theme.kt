@@ -47,16 +47,20 @@ val IdeenSchriftFest = FontFamily(
     Font(R.font.jetbrains_mono, FontWeight.Medium),
 )
 
-private fun typografie(skalierung: Float) = Typography().let { standard ->
+/**
+ * [titelSchrift] ersetzt die Schrift für Display-, Headline- und Title-Stile; ohne Angabe gilt
+ * unverändert [IdeenSchriftBetont]. Fließtext und Beschriftungen bleiben in jedem Fall [IdeenSchrift].
+ */
+private fun typografie(skalierung: Float, titelSchrift: FontFamily = IdeenSchriftBetont) = Typography().let { standard ->
     Typography(
-        displayLarge = standard.displayLarge.skaliert(skalierung, IdeenSchriftBetont),
-        displayMedium = standard.displayMedium.skaliert(skalierung, IdeenSchriftBetont),
-        displaySmall = standard.displaySmall.skaliert(skalierung, IdeenSchriftBetont),
-        headlineLarge = standard.headlineLarge.skaliert(skalierung, IdeenSchriftBetont),
-        headlineMedium = standard.headlineMedium.skaliert(skalierung, IdeenSchriftBetont),
-        headlineSmall = standard.headlineSmall.skaliert(skalierung, IdeenSchriftBetont),
-        titleLarge = standard.titleLarge.skaliert(skalierung, IdeenSchriftBetont),
-        titleMedium = standard.titleMedium.skaliert(skalierung, IdeenSchriftBetont),
+        displayLarge = standard.displayLarge.skaliert(skalierung, titelSchrift),
+        displayMedium = standard.displayMedium.skaliert(skalierung, titelSchrift),
+        displaySmall = standard.displaySmall.skaliert(skalierung, titelSchrift),
+        headlineLarge = standard.headlineLarge.skaliert(skalierung, titelSchrift),
+        headlineMedium = standard.headlineMedium.skaliert(skalierung, titelSchrift),
+        headlineSmall = standard.headlineSmall.skaliert(skalierung, titelSchrift),
+        titleLarge = standard.titleLarge.skaliert(skalierung, titelSchrift),
+        titleMedium = standard.titleMedium.skaliert(skalierung, titelSchrift),
         titleSmall = standard.titleSmall.skaliert(skalierung, IdeenSchrift),
         bodyLarge = standard.bodyLarge.skaliert(skalierung, IdeenSchrift),
         bodyMedium = standard.bodyMedium.skaliert(skalierung, IdeenSchrift),
@@ -81,10 +85,14 @@ private fun TextStyle.skaliert(faktor: Float, familie: FontFamily): TextStyle =
 fun GenialeIdeenTheme(
     themeWahl: String,
     schriftSkalierung: Float = 1f,
+    /** Abweichende Farbwelt eines gewählten Designs; ohne Vorgabe gilt unverändert Gold. */
+    paletteVorgabe: GoldPalette? = null,
+    /** Abweichende Schrift für Titel und große Zahlen; ohne Vorgabe die bisherige Serifenschrift. */
+    titelSchrift: FontFamily? = null,
     content: @Composable () -> Unit,
 ) {
     val dunkel = themeWahl == "dark"
-    val ziel = if (dunkel) DunkleGoldPalette else HelleGoldPalette
+    val ziel = paletteVorgabe ?: if (dunkel) DunkleGoldPalette else HelleGoldPalette
     val context = LocalContext.current
     val reduziert = Motion.bewegungReduziert(context)
     val dauer = if (reduziert) 0 else Motion.THEME_WECHSEL_MS
@@ -142,7 +150,7 @@ fun GenialeIdeenTheme(
         )
     }
     }
-    val schrift = remember(schriftSkalierung) { typografie(schriftSkalierung) }
+    val schrift = remember(schriftSkalierung, titelSchrift) { typografie(schriftSkalierung, titelSchrift ?: IdeenSchriftBetont) }
 
     CompositionLocalProvider(
         LocalGold provides palette,
@@ -170,8 +178,12 @@ fun SchalterFarben(): SwitchColors {
         checkedBorderColor = gold.primaerGedaempft,
         checkedIconColor = gold.aufPrimaer,
         uncheckedThumbColor = gold.textPrimaer,
-        uncheckedTrackColor = if (gold.istDunkel) Color(0xFF3B352B) else Color(0xFFE8E0CE),
-        uncheckedBorderColor = if (gold.istDunkel) Color(0xFF8F8168) else gold.primaerGedaempft,
+        // Schlicht behält die abgestimmten Brauntöne; andere Designs nehmen ihre eigene Palette,
+        // damit die Schiene nicht warm aus einer kühlen Oberfläche sticht.
+        uncheckedTrackColor = if (de.frank.wecker.design.LocalDesignTokens.current.plastisch)
+            (if (gold.istDunkel) Color(0xFF3B352B) else Color(0xFFE8E0CE)) else gold.flaecheErhoeht,
+        uncheckedBorderColor = if (de.frank.wecker.design.LocalDesignTokens.current.plastisch)
+            (if (gold.istDunkel) Color(0xFF8F8168) else gold.primaerGedaempft) else gold.rahmen,
         uncheckedIconColor = gold.textPrimaer,
         disabledCheckedThumbColor = gold.textGedaempft,
         disabledCheckedTrackColor = gold.flaecheErhoeht,

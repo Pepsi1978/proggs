@@ -157,6 +157,35 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
 - **In 1.1.51 ist die native Optik noch unverändert.** Die Umsetzung folgt in einer eigenen Runde;
   bis dahin sieht die App aus wie bisher.
 
+### Vier Designs (1.1.52)
+
+Unter **Einstellungen → Darstellung → Design** stehen vier dauerhaft wählbare Erscheinungsbilder.
+Die Wahl ist **unabhängig** von Hell/Dunkel und von der Ausrichtung — jedes Design hat beide Modi —
+und gilt für Weckerliste, Editor, Einstellungen und Weckbildschirm.
+
+- **Schlicht** (Vorgabe) — genau das bisherige Gold auf Glas. `paletteFuer(SCHLICHT, …)` gibt die
+  vorhandenen Objekte `DunkleGoldPalette` und `HelleGoldPalette` unverändert zurück, und
+  `SchlichtGestalt` ruft weiterhin `SichtbarerHintergrund` und `GoldKarte` auf. Es wurde nichts
+  nachgebaut; ohne eigene Wahl sieht die App aus wie zuvor.
+- **Morgenruhe** — Salbei und Creme am Tag, Tannengrün in der Nacht, Terrakotta als Akzent. Die
+  Weckerliste wird zur **Tagesachse**: jede Karte hängt als Station an einer durchgehenden Linie.
+  Flache Flächen ohne Glanz, Pillenknöpfe, gestapelte Alarmtasten. Das **Bettmotiv** steht im Kopf.
+- **Traumraum** — Pflaume, Rosé und Perlmutt. **Kuppel** mit zentriertem Kissenmotiv über dem Kopf,
+  Termin und Restzeit in einer runden **Perle**, stark gerundete Flächen, runde Alarmtasten.
+- **Orbit** — Fast-Schwarz mit Eisblau und Limette. **Instrumententafel**: kantige Module, eigene
+  Kopfzeile mit fester Schrift, alle großen Zahlen in Monospace, Wecker als dichte Zeilen mit
+  Termin auf einer Achse, zwei gleich große Alarmmodule, **Sternbahn** als Motiv.
+
+Nachtatelier (A) ist bewusst **nicht** übernommen und bleibt nur als Entwurf unter `design/`.
+
+Technisch: `de/frank/wecker/design/` enthält Enum, Tokens, Paletten und vier Gestalten. Der geteilte
+Code berechnet Zustand und Rückrufe einmal; die Gestalten zeichnen nur. **Alle Funktionen bleiben in
+jedem Design vollständig**: Editor, Diktat, Stimmen, Schlüssel, Berechtigungen, Foto-Aufgabe,
+Schlummern, Bereitschaft und Meldungen. Die Zustandsmaschine des Weckbildschirms — `PendingAction`,
+Ring-Absicherung, Foto-Auslöser, `BackHandler`, Dienstkommunikation, Schlummern und Stoppen — ist
+unangetastet; Designs ändern dort nur Anordnung, Form und Farbe. Die Mindestmaße der Alarmtasten
+gelten in allen vier.
+
 ### Termin-Anzeige auf den Weckerkarten (1.1.51)
 
 - Behoben: Die **große Überschrift einer Weckerkarte** zeigte immer die konfigurierte Weckzeit. Bei

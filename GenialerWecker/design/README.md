@@ -1,10 +1,10 @@
 # Designentwürfe · Genialer Wecker
 
 Vier Entwürfe für eine moderne Wecker- und Schlaf-App, jeder in Hell und Dunkel.
-**Die Entscheidung ist gefallen:** nativ umgesetzt werden **Schlicht** (das heutige
-Gold-/Glasdesign, Vorgabe), **Morgenruhe (B)**, **Traumraum (D)** und **Orbit (C)**.
-**Nachtatelier (A) wird nicht übernommen** und bleibt hier nur als Entwurf stehen.
-In **1.1.51 ist die native Optik noch unverändert**; die Umsetzung folgt in einer eigenen Runde.
+**Nativ umgesetzt seit 1.1.52:** **Schlicht** (das heutige Gold-/Glasdesign, Vorgabe),
+**Morgenruhe (B)**, **Traumraum (D)** und **Orbit (C)** stehen in der App unter
+Einstellungen → Darstellung → Design zur Wahl. **Nachtatelier (A) ist bewusst nicht übernommen**
+und bleibt hier nur als Entwurf stehen. Diese Seiten dienen weiterhin als visuelle Vorlage.
 
 Öffnen: `design/index.html` im Browser, oder über den lokalen Vorschauserver.
 
@@ -77,7 +77,7 @@ Datei, zeichnet CSS eine Ersatzfläche, damit das Layout trotzdem beurteilbar is
 
 ## Offen
 
-- **Native Umsetzung von Schlicht, B, D und C ist beauftragt und steht noch aus.** A ist bewusst
-  ausgenommen. Solange sie nicht umgesetzt ist, zeigt die App unverändert das bisherige Design.
+- Nichts offen: Schlicht, B, D und C sind in **1.1.52** nativ umgesetzt, A bleibt ausgenommen.
+  Die Entwürfe hier bleiben als Vorlage und Vergleichsgrundlage erhalten.
 - Der Anzeigefehler bei Monatsweckern (Kartenüberschrift ohne Datum) ist in **1.1.51** behoben;
   Einzelheiten im Projekt-README. Die Vorschauen hier zeigen die Regel bereits richtig.

@@ -43,6 +43,8 @@ import de.frank.genialeideen.auth.ReasoningEffort
 import de.frank.genialeideen.tts.*
 import de.frank.genialeideen.ui.*
 import de.frank.genialeideen.ui.theme.*
+import de.frank.wecker.design.Design
+import de.frank.wecker.design.LocalGestalt
 
 @Composable
 fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
@@ -90,7 +92,9 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }) }
             .onFailure { vm.message.value = "Diese Einstellungsseite ist auf dem Gerät nicht verfügbar. Öffne die Android-App-Einstellungen." }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding()) {
+      DesignBlatt {
+       Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val missing = permissions.count { !it.second }
         // Every requirement sits next to the one button that fixes it; nothing to search for.
         val fix: Map<String, () -> Unit> = mapOf(
@@ -135,8 +139,19 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }
         BenachrichtigungenKarte(vm, activity)
         var ausrichtung by remember(revision) { mutableStateOf(settings.ausrichtung) }
+        var design by remember(revision) { mutableStateOf(settings.design) }
         Section("Darstellung", collapsible = true, initiallyExpanded = false,
-            summary = "Ausrichtung: ${Ausrichtung.optionen.find { it.first == ausrichtung }?.second ?: "Automatisch"}") {
+            summary = "${Design.von(design).anzeige} · Ausrichtung: ${Ausrichtung.optionen.find { it.first == ausrichtung }?.second ?: "Automatisch"}") {
+            // Eigene Achse: das Design gilt unabhängig von Hell/Dunkel und von der Ausrichtung.
+            Choice("Design", design, Design.entries.map { it.id to it.anzeige }) {
+                design = it
+                settings.design = it
+                vm.settingsRevision.value++
+            }
+            Text(Design.von(design).beschreibung, style = MaterialTheme.typography.bodySmall)
+            Text("Gilt für Weckerliste, Editor, Einstellungen und den Weckbildschirm. Hell/Dunkel und Ausrichtung wählst du weiterhin getrennt.",
+                style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+            HorizontalDivider(color = LocalGold.current.rahmen)
             Choice("Ausrichtung", ausrichtung, Ausrichtung.optionen) {
                 ausrichtung = it
                 settings.ausrichtung = it
@@ -321,6 +336,8 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             Text("Design, 3D-Knöpfe, Animationen und Sprachbausteine aus Geniale Ideen. Weckdienst, Offline-Vorbereitung und Foto-Aufgaben für diese App entwickelt.", style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(16.dp))
+       }
+      }
     }
     if (copySettings) Confirm("Spracheinstellungen übernehmen?", "Die Sprachschlüssel, Stimme und das Tempo im Wecker werden durch die Werte aus Geniale Ideen ersetzt.", "Übernehmen", {
         copySettings = false; vm.importSettings()

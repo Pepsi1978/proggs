@@ -60,7 +60,8 @@ fun Knopf3D(
     aufTipp: () -> Unit,
     modifier: Modifier = Modifier,
     grundfarbe: Color? = null,
-    form: Shape = RoundedCornerShape(16.dp),
+    /** Ohne Angabe die Standardform des gewählten Designs; Schlicht bleibt bei 16 dp. */
+    form: Shape? = null,
     hoehe: Dp = Hoehe.karteErhoeht,
     aktiviert: Boolean = true,
     /** Der wichtigste Knopf eines Bildschirms bekommt zusätzlich den atmenden Schein. */
@@ -71,6 +72,8 @@ fun Knopf3D(
     inhalt: @Composable () -> Unit,
 ) {
     val gold = LocalGold.current
+    val tokens = de.frank.wecker.design.LocalDesignTokens.current
+    val form = form ?: RoundedCornerShape(if (tokens.plastisch) 16.dp else tokens.chipRadius)
     val reduziert = LocalBewegungReduziert.current
     val haptik = LocalHapticFeedback.current
     val quelle = remember { MutableInteractionSource() }
@@ -101,16 +104,18 @@ fun Knopf3D(
                     Modifier
                 },
             )
-            .tiefenSchatten(
+            .then(if (tokens.plastisch) Modifier.tiefenSchatten(
                 farbe = if (aktiviert) grund else Color.Black,
                 hoehe = schattenHoehe,
                 form = form,
                 gedrueckt = gedrueckt,
-            )
+            ) else Modifier)
             .clip(form)
-            .background(koerperVerlauf(koerper, gedrueckt = gedrueckt && aktiviert))
-            .background(if (gedrueckt) Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)) else glanzLicht())
-            .border(1.dp, lichtKante(gedrueckt = gedrueckt && aktiviert), form)
+            .then(if (tokens.plastisch)
+                Modifier.background(koerperVerlauf(koerper, gedrueckt = gedrueckt && aktiviert))
+                    .background(if (gedrueckt) Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)) else glanzLicht())
+                    .border(1.dp, lichtKante(gedrueckt = gedrueckt && aktiviert), form)
+                else Modifier.background(koerper))
             .then(
                 if (aktiviert) {
                     Modifier.clickable(interactionSource = quelle, indication = null) {
@@ -203,7 +208,10 @@ fun StillerKnopf(
     hervorgehoben: Boolean = false,
 ) {
     val gold = LocalGold.current
-    val form = RoundedCornerShape(12.dp)
+    // Nicht plastische Designs (Morgenruhe, Traumraum, Orbit) übernehmen ihre eigene Kantenform;
+    // Schlicht behält den bisherigen Radius von 12 dp und den erhabenen Körper.
+    val tokens = de.frank.wecker.design.LocalDesignTokens.current
+    val form = RoundedCornerShape(if (tokens.plastisch) 12.dp else tokens.chipRadius)
     val reduziert = LocalBewegungReduziert.current
     val quelle = remember { MutableInteractionSource() }
     val gedrueckt by quelle.collectIsPressedAsState()
@@ -219,10 +227,12 @@ fun StillerKnopf(
             .graphicsLayer { scaleX = skalierung; scaleY = skalierung }
             // One consistent raised 3D look for every secondary button (opaque body, so the shadow
             // never shows through); only pressing sinks it in. `hervorgehoben` stays for API compatibility.
-            .tiefenSchatten(Color.Black, 4.dp, form, gedrueckt = gedrueckt)
+            .then(if (tokens.plastisch) Modifier.tiefenSchatten(Color.Black, 4.dp, form, gedrueckt = gedrueckt) else Modifier)
             .clip(form)
-            .background(koerperVerlauf(gold.flaecheErhoeht, gedrueckt = gedrueckt))
-            .border(1.dp, lichtKante(gedrueckt = gedrueckt, staerke = 0.35f), form)
+            .then(if (tokens.plastisch) Modifier.background(koerperVerlauf(gold.flaecheErhoeht, gedrueckt = gedrueckt))
+                else Modifier.background(gold.flaecheErhoeht))
+            .then(if (tokens.plastisch) Modifier.border(1.dp, lichtKante(gedrueckt = gedrueckt, staerke = 0.35f), form)
+                else Modifier.border(1.dp, gold.rahmen, form))
             .clickable(interactionSource = quelle, indication = null) {
                 haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 aufTipp()
