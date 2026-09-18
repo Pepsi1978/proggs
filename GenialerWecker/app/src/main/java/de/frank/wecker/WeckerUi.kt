@@ -37,7 +37,9 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -199,13 +201,21 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
     onDelete: (Alarm) -> Unit, onSettings: () -> Unit, openDraft: Alarm?, onResumeDraft: () -> Unit) {
     val gold = LocalGold.current
     // Nur für diese Listenansicht merken: neue Wecker und eine neu geöffnete Liste sind kompakt.
-    var expandedIds by remember { mutableStateOf(emptySet<String>()) }
+    // Saveable, damit das Auf- und Zuklappen des Geräts (Activity-Neuerstellung) den Stand nicht verwirft;
+    // beim Verlassen der Liste wird der Eintrag verworfen, die Liste beginnt also weiterhin zugeklappt.
+    var expandedIds by rememberSaveable(saver = androidx.compose.runtime.saveable.listSaver<MutableState<Set<String>>, String>(
+        save = { it.value.toList() }, restore = { mutableStateOf(it.toSet()) })) { mutableStateOf(emptySet<String>()) }
     val issues by vm.store.issues.collectAsState()
     val now = rememberNow(60_000)
     val nextRegular = alarms.mapNotNull { alarm -> alarm.nextAt.takeIf { alarm.enabled && it > now } }.minOrNull()
     val nextSnooze = alarms.mapNotNull { alarm -> alarm.snoozeUntil.takeIf { it > now } }.minOrNull()
     val next = listOfNotNull(nextRegular, nextSnooze).minOrNull()
     val nextIsSnooze = next != null && next == nextSnooze
+    // Nur der Name zum bereits ermittelten Termin; die Berechnung und der Vorrang des Schlummerns bleiben unberührt.
+    val nextName = next?.let { target ->
+        if (nextIsSnooze) alarms.firstOrNull { it.snoozeUntil == target }?.name
+        else alarms.firstOrNull { it.enabled && it.nextAt == target }?.name
+    }?.takeIf { it.isNotBlank() }
     val gridState = rememberLazyGridState()
     val saved by vm.lastSaved.collectAsStateWithLifecycle()
     val resumed = rememberResumed()
@@ -252,6 +262,9 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                                     Text("Schalte einen Wecker ein oder lege einen neuen an.", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
                                 } else {
                                     TerminZeile(now, next, nextIsSnooze)
+                                    // Welcher Wecker das ist: lange Namen brechen um, höchstens zwei Zeilen.
+                                    nextName?.let { name -> Text(name, style = MaterialTheme.typography.titleSmall,
+                                        color = gold.textPrimaer, maxLines = 2, overflow = TextOverflow.Ellipsis) }
                                     Text("in ${remainingLong(next - now)}", style = MaterialTheme.typography.bodyMedium, color = gold.primaer)
                                 }
                             }
@@ -561,9 +574,9 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     val available = voices.map {
         "${TtsProvider.QWEN_CLONE.id}|${it.id}" to "${vm.settings.qwenVoiceNames[it.id] ?: it.name} · Meine Stimmen"
     } + TtsCatalog.googleVoices.map {
-        "${TtsProvider.GOOGLE_CLOUD.id}|${it.id}" to "${it.name} · Google"
+        "${TtsProvider.GOOGLE_CLOUD.id}|${it.id}" to "${it.name} · Google · ${geschlecht(it)}"
     } + TtsCatalog.edgeVoices.map {
-        "${TtsProvider.EDGE.id}|${it.id}" to "${it.name} · Edge"
+        "${TtsProvider.EDGE.id}|${it.id}" to "${it.name} · Edge · ${geschlecht(it)}"
     }
     val defaultId = when (defaults.ttsProvider) {
         TtsProvider.GOOGLE_CLOUD.id -> defaults.googleTtsVoice
@@ -624,17 +637,49 @@ fun ValueSlider(label: String, value: Int, range: IntRange, unit: String, change
         valueRange = range.first.toFloat()..range.last.toFloat())
 }
 
+/** Stimmen im Editor genauso benennen wie in den Einstellungen. */
+fun geschlecht(stimme: TtsVoice): String = if (stimme.gender == VoiceGender.FEMALE) "weiblich" else "männlich"
+
+/** Ab wie vielen Einträgen die Auswahl ein Suchfeld bekommt; kürzere Listen bleiben unverändert. */
+private const val CHOICE_SUCHE_AB = 12
+
 @Composable
 fun Choice(label: String, selected: String, options: List<Pair<String, String>>, choose: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Text(label, style = MaterialTheme.typography.labelLarge)
     GoldKnopf(options.find { it.first == selected }?.second ?: "Auswählen", { open = true }, Modifier.fillMaxWidth())
-    if (open) AlertDialog(onDismissRequest = { open = false }, title = { Text(label) },
-        text = { LazyColumn { items(options, key = { it.first }) { option ->
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(option.first == selected, role = androidx.compose.ui.semantics.Role.RadioButton) { choose(option.first); open = false }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(option.first == selected, null); Text(option.second, Modifier.padding(start = 8.dp))
+    if (open) {
+        // Der Zustand lebt nur, solange der Dialog offen ist: jedes Öffnen beginnt ohne Suchbegriff
+        // und bei der aktuellen Auswahl.
+        var suche by rememberSaveable { mutableStateOf("") }
+        val suchbar = options.size > CHOICE_SUCHE_AB
+        val gezeigt = if (!suchbar || suche.isBlank()) options
+            else options.filter { it.second.contains(suche.trim(), ignoreCase = true) }
+        val listState = rememberLazyListState(
+            initialFirstVisibleItemIndex = options.indexOfFirst { it.first == selected }.coerceAtLeast(0))
+        // Nach einem eingegebenen Suchbegriff steht das erste Ergebnis oben. Der leere Anfangszustand
+        // löst nichts aus, damit die Startposition auf der aktuellen Auswahl erhalten bleibt.
+        if (suchbar) LaunchedEffect(suche) { if (suche.isNotBlank()) listState.scrollToItem(0) }
+        val eintraege: LazyListScope.() -> Unit = {
+            items(gezeigt, key = { it.first }) { option ->
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(option.first == selected, role = androidx.compose.ui.semantics.Role.RadioButton) { choose(option.first); open = false }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(option.first == selected, null); Text(option.second, Modifier.padding(start = 8.dp))
+                }
             }
-        } } }, confirmButton = { StillerKnopf("Schließen", { open = false }) })
+        }
+        AlertDialog(onDismissRequest = { open = false }, title = { Text(label) },
+            text = {
+                // Kurze Listen behalten genau den bisherigen Aufbau ohne Höhenbegrenzung.
+                if (!suchbar) LazyColumn(state = listState, content = eintraege)
+                else Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(suche, { suche = it }, Modifier.fillMaxWidth(), label = { Text("Suchen") }, singleLine = true)
+                    if (gezeigt.isEmpty()) Text("Kein Eintrag passt zu „${suche.trim()}“. Ändere den Suchbegriff oder leere das Feld, um wieder alle ${options.size} Einträge zu sehen.",
+                        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                    // Begrenzt nach oben, weicht auf kleinen Schirmen aber zurück, statt den Dialog zu sprengen.
+                    else LazyColumn(Modifier.heightIn(max = 320.dp).weight(1f, fill = false), state = listState, content = eintraege)
+                }
+            }, confirmButton = { StillerKnopf("Schließen", { open = false }) })
+    }
 }
 
 @Composable

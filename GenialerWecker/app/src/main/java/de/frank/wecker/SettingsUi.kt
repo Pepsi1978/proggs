@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -153,7 +154,9 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             Toggle("Nur Favoriten anzeigen", onlyFavorites) { onlyFavorites = it }
             available.filter { (!onlyFavorites || it.first in settings.favoriteTtsVoices) && it.second.contains(search, ignoreCase = true) }.forEach { (id, label) ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected == id, {
+                    // Auswahlpunkt und Name sind eine gemeinsame Fläche von mindestens 48 dp; der Favoritenstern
+                    // liegt bewusst daneben und wählt die Stimme deshalb nicht aus.
+                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(selected == id, role = androidx.compose.ui.semantics.Role.RadioButton) {
                         selected = id
                         when (provider) {
                             TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice = id
@@ -162,11 +165,16 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                         }
                         vm.settingsChanged()
                         showVoices = false
-                    })
-                    Text(label, Modifier.weight(1f))
-                    StillerKnopf(if (id in settings.favoriteTtsVoices) "★" else "☆", {
-                        settings.favoriteTtsVoices = if (id in settings.favoriteTtsVoices) settings.favoriteTtsVoices - id else settings.favoriteTtsVoices + id
+                    }, verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected == id, null)
+                        Text(label, Modifier.padding(start = 8.dp))
+                    }
+                    val favorit = id in settings.favoriteTtsVoices
+                    StillerKnopf(if (favorit) "★" else "☆", {
+                        settings.favoriteTtsVoices = if (favorit) settings.favoriteTtsVoices - id else settings.favoriteTtsVoices + id
                         vm.settingsRevision.value++
+                    }, Modifier.semantics {
+                        contentDescription = if (favorit) "$label aus den Favoriten entfernen" else "$label zu den Favoriten hinzufügen"
                     })
                 }
             }

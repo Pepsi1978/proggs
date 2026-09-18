@@ -51,6 +51,19 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
 - Die Berechtigungskarte erscheint auf der Startseite nur bei fehlenden Freigaben.
   Oben in den Einstellungen steht der vollständige Status mit grünem Schutzsymbol.
 
+### Bedienkomfort (1.1.45)
+
+- Die Kopfkarte nennt neben Termin und Restzeit auch den **Namen** des nächsten Weckers
+  beziehungsweise des laufenden Schlummerns. Lange Namen brechen auf zwei Zeilen um.
+- Aufgeklappte Weckerkarten bleiben beim Falten oder Drehen des Geräts aufgeklappt.
+  Eine neu geöffnete Liste startet weiterhin zugeklappt.
+- Die Stimmenauswahl im Wecker nennt wie die Einstellungen auch weiblich/männlich, öffnet
+  bei der aktuellen Auswahl und bietet ab mehr als zwölf Einträgen ein Suchfeld mit
+  verständlichem Hinweis, wenn nichts passt. Kurze Auswahllisten bleiben unverändert.
+- In den Einstellungen sind Auswahlpunkt und Stimmenname eine gemeinsame, mindestens 48 dp
+  hohe Fläche; der Favoritenstern liegt daneben, hat einen sprechenden Namen für TalkBack
+  und wählt die Stimme nicht aus.
+
 ## Ideenbrücke
 
 Geniale Ideen benötigt das mitgelieferte Update mit `bridge/WeckerProvider.kt`.
