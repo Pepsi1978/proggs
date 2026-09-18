@@ -20,3 +20,18 @@ Die vorher im Nutzerdialog nachgewiesene Verbindung zu Claude in Codex-Terminal 
 3. „Begleite die Umsetzung.“ Adaptive, unterbrechbare Momentaufnahmen und gezielte reale Dateimeilensteine lesen. Unveränderter Hash ist kein Abschluss; neuer Marker ist ein Selbstbericht. Timeout führt zu Lesen, nicht Wiederholung; „Stopp“ beendet die Begleitung.
 
 Dies sind dokumentierte Sollabläufe, keine behaupteten Modell-Benchmarks oder gemessenen Einsparquoten.
+
+## Fassung 1.1.0 — 18.09.2026, 12:16 Uhr
+
+Drei substanzielle sichtbare Diskussionsrunden mit der bereits bestätigten Claude-Sitzung: Architektur/Aufwandsquellen, Risiken eines schnellen Submit samt Alternativen, konkrete Guard-/Cursor- und Korrelationsgrenzen. Claude änderte dabei keine Dateien. Ausgewählt: Versuchstatus direkt vor Mutation, zusammenhängendes geprüftes Submit, kompakte Zustandsausgabe, Bildschirm als Standardausschnitt, eng verankerte Laufzeitnormalisierung und abbrechbares begrenztes Mitlesen. Keine breite Spinnerfilterung, keine Ruhe-Fertigerkennung, kein sofortiger Snapshot-Diff.
+
+Kontrollierter Vergleich gegen den Helfer aus Commit `d0b0352a8`, auf demselben isolierten lokalen tmux-Testpane:
+
+| Messgröße | Ausgangsfassung | Fassung 1.1.0 |
+|---|---:|---:|
+| Sechs identische Leseabfragen: erste Ansicht + fünf Wiederholungen, gesamte UTF-8-JSON-Ausgabe | 3.642 Byte | 1.700 Byte |
+| Modellseitige Werkzeugaufrufe für Lesen → vollständige autorisierte Übergabe, Bindung bereits vorhanden | 4: read/paste/read/enter | 2: read/submit |
+
+Zusätzliche lokale Beobachtungen: `read --wait 1` lieferte nach 1,123 Sekunden 122 Byte; privater Cancel-Marker nach 0,25 Sekunden wurde bis 0,334 Sekunden erkannt. Vollständiger Test-Submit einschließlich Helferstart dauerte 0,204 Sekunden. Zwei vorherige echte Diskussionsübergaben mit derselben lokalen Prüffolge dauerten 0,331 beziehungsweise 0,332 Sekunden Paste-bis-Enter. Diese Zeitwerte sind Einzelbeobachtungen, keine Latenzgarantie.
+
+Bytegenauer Mehrzeiler-/Sonderzeichen-Transport, separates internes Enter, veraltete Tokens ohne verbrauchte Kennung, Duplikat-/Identitäts-/Fremdentwurfschutz und abbrechbares Warten wurden lokal geprüft. Die eng verankerte Normalisierung erhält gleichlautenden Antworttext sowie Preisänderungen. Reproduzierbarer Smokecheck: `python3 <Skillordner>/tests/check_bridge.py`; er nutzt ausschließlich einen eigenen temporären tmux-Server und keinen Modellaufruf. Messwerte schwanken mit Version, Fensterinhalt und Host; JSON-Bytes sind weder Modelltoken noch Konto-Kontingent.

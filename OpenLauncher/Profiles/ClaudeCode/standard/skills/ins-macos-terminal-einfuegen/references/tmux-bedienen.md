@@ -28,40 +28,54 @@ Die Platzhalter sind absichtlich nicht ausführbar. In nachfolgenden Tool-Shells
 
 `bind` überschreibt eine vorhandene Bindung nicht. Neue State-Datei nur nach bewusster Neuzuordnung; keine zweite Bindung zum Umgehen einer Zustellungssperre. Prüft der Helfer nach `cd`, Prozessneustart oder Sessionwechsel eine andere Identität, hält er an. Nach geklärtem Wechsel neu binden. Verschobene Panes/mehrere angebundene Clients nicht automatisch als dieselbe sichtbare Zieloberfläche behandeln.
 
-## Lesen, einfügen, Enter
+## Lesen und sofort absenden
+
+`read` prüft Identität und liefert standardmäßig den aktuellen Bildschirm, bei gleichem Inhalt nur `event: unchanged` und einen frischen `observed`-Token. `--verbose` zeigt alle Metadaten; im Normalfall erscheinen nur geänderte Zustandsfelder. Cursor- und Modusdaten bleiben vollständig Teil der internen Prüfung. `--lines 80` liest bei Bedarf History, `--force-view` wiederholt gezielt eine Ansicht. Der Token ist keine automatische Erkennung von Bereitschaft oder Autorisierung.
+
+Alle inhaltlichen Entscheidungen und die Textdatei **vor** Paste vorbereiten. Bei ausdrücklichem Absendeauftrag:
 
 ```sh
 python3 "$BRIDGE" read --state "$BRIDGE_RUN/target.json"
+# Auftrag sicher als UTF-8-Datei speichern; Hash des autorisierten Inhalts bestimmen.
+shasum -a 256 "$BRIDGE_RUN/C17.txt"
+python3 "$BRIDGE" submit --state "$BRIDGE_RUN/target.json" \
+  --id C17 --text-file "$BRIDGE_RUN/C17.txt" --sha256 'HASH_DES_AUTORISIERTEN_TEXTES' \
+  --observed 'TOKEN_AUS_INHALTLICH_GEPRÜFTEM_READ'
 ```
 
-Die Antwort enthält `observed` und die begrenzte aktuelle Textsicht. Prüfe zuerst inhaltlich, ob Claude eine **neue Nachricht** erwartet und kein echter Nutzereingabetext vorliegt. Ein Ghost-Vorschlag kann im reinen Textauszug wie Eingabe aussehen: Farbe allein ist kein sicherer Beleg. Bei Bedarf wenige Promptzeilen mit `tmux -S SOCKET capture-pane -p -e -t PANE` auf Stilinformationen prüfen und mit vorheriger Beobachtung vergleichen. Bleibt es unklar, nichts senden. Der Helfer erkennt diese Bedeutung nicht.
+`submit` erledigt Paste, kurze lokale Nachkontrolle und Enter in **einem** Werkzeugaufruf. Voraussetzungen: exakter Hash, keine andere unklare/offene Zustellung im Ledger, erkannter Claude-Eingaberahmen, vollständig leeres Eingabefeld, Cursor an dessen Anfang, aktive Bracketed-Paste-Unterstützung und frisch geprüfte Identität/Ansicht. Ein leerer Prompt allein beweist trotzdem keine semantische Bereitschaft: laufende Generierung, Freigaben und offene Aufgaben vorab ausschließen.
 
-Den fertigen Text über eine sichere Datei-Schreibschnittstelle speichern. Bei Shell-Heredocs einen quotierten, im Inhalt garantiert nicht vorkommenden Abschlussmarker verwenden; nie Sprachtext in einen interpolierten Shellbefehl einbauen. Steuerzeichen sind verboten, UTF-8, Zeilenumbrüche und Tabulatoren erlaubt. Die gesamte Nachricht einschließlich Kennung vor Einfügen fertigstellen.
+Nach Paste muss der exakte ungebrochene Text oder genau ein neuer `[Pasted text #N]`-Block ohne fremden Zusatz erscheinen. Der Rahmen und die übrige Ansicht müssen passen. Der Helfer kennt nur den sichtbaren Rahmen dieses Claude-TUI-Formats; andere Layouts, umgebrochene ungekürzte Texte und unbekannte Blockdarstellungen können den konservativen Rückfall auf `pasted` auslösen. Das ist kein Auftrag zum automatischen Wiederholen. Die Blocknummer ist keine Zeilenzahl und kein Inhaltsbeweis; Transporthash und Übergang aus dem leeren Feld ergeben eine begrenzte technische Bestätigung. Parallel eingefügter fremder Inhalt kann trotz dieser Prüfungen nicht atomar ausgeschlossen werden.
+
+Die kurze Renderwartephase beträgt bis zu einer Sekunde zuzüglich Werkzeuglaufzeiten; meist erfolgt die Übergabe unmittelbar. Direkt vor Enter nochmals Identität und Ansicht prüfen. Bei Abweichung kein Enter, bereits eingefügten Text erhalten und gezielt lesen. `enter_sent` belegt nur Transport. Neue Antwort/Arbeitsbeginn getrennt beobachten.
+
+## Nur einfügen oder manuell geklärter Rückfall
 
 ```sh
 python3 "$BRIDGE" paste --state "$BRIDGE_RUN/target.json" \
-  --id C17 --text-file "$BRIDGE_RUN/C17.txt" --observed 'TOKEN_AUS_READ'
+  --id C17 --text-file "$BRIDGE_RUN/C17.txt" --observed 'GEPRÜFTER_TOKEN'
 python3 "$BRIDGE" read --state "$BRIDGE_RUN/target.json" --force-view
-# Erst nach Kontrolle des eingefügten Entwurfs und bestehendem Absendeauftrag:
+# Nur nach vorhandener Absendeautorisierung und eindeutiger Prüfung des eigenen Entwurfs:
 python3 "$BRIDGE" enter --state "$BRIDGE_RUN/target.json" \
-  --id C17 --observed 'NEUER_TOKEN_AUS_READ'
+  --id C17 --observed 'NEUER_GEPRÜFTER_TOKEN'
 ```
 
-`paste` und `enter` gehören in getrennte Werkzeugaufrufe, damit Nutzerkorrekturen dazwischen berücksichtigt werden. Neue Beobachtungstokens nicht blind übernehmen: Sie belegen nur dieselbe Momentaufnahme, keine leere Eingabe oder Freigabe. Bei fremdem Entwurf, Ghost-Unklarheit, Shell, Generierung oder Freigabedialog anhalten. Nicht Enter senden, um herauszufinden, was passiert.
+Bei „nur einfügen“ kein Enter. Keine fremden Entwürfe löschen, keine Vorschläge mit Tab übernehmen. Bei unklarer Ghost-Suggestion gegebenenfalls wenige Promptzeilen mit `capture-pane -p -e` ansehen; Farbe oder Cursorposition allein beweisen keine leere Eingabe. `submit` verweigert nichtleere Textfelder einschließlich Ghost-Suggestions konservativ. Nicht durch neue State-Dateien oder Kennungen umgehen.
 
-Der Helfer benutzt `subprocess.run([...])` ohne `shell=True`. Er lädt den UTF-8-Text über stdin in einen zufällig benannten tmux-Puffer, fügt mit `paste-buffer -p -r` ein und entfernt nur diesen Puffer. `-p` setzt Paste-Klammern nur bei vom Ziel aktivierter Unterstützung (`bracket_paste_flag=1`); andernfalls verweigert der Helfer die Eingabe. `-r` erhält LF-Zeilenumbrüche. Keine künstlichen ESC-Sequenzen injizieren und keine Zeilen einzeln mit Enter zustellen. Ein mehrzeilig eingeklappter Claude-Pasteblock ist nicht automatisch vollständig überprüfbar; bei fehlender Vorschau Enter auslassen.
+Der Helfer übergibt Argumente per `subprocess.run([...])` ohne Shell-Auswertung. Er lädt den Text über stdin in einen zufällig benannten tmux-Puffer, nutzt `paste-buffer -p -r` und löscht nur diesen Puffer. UTF-8, LF und Tab bleiben erhalten; andere Steuerzeichen sind unzulässig. Keine Zeilen einzeln mit Enter senden. `send-keys -l` ersetzt ebenfalls keine sichere Shell-Quotierung. Sprachtext nie in einen interpolierten Shellbefehl oder `eval` einsetzen.
 
-Für gezielte **einzeilige** manuelle Eingabe wäre `send-keys -l` nur mit getrennten Prozessargumenten und ohne Steuerzeichen geeignet. Es macht interpolierte Shellbefehle nicht sicher. Standardweg dieses Skills bleibt der Helfer; keine unquotierten Sprachtexte, `eval`, Command-Substitution oder Tastenkürzel zum Leeren der Eingabe.
+## Schreibschutz und Statusrauschen
 
-## Transportstatus und Wiederholung
+Der Beobachtungstoken enthält Prozess-/Pane-Metadaten, Cursor und aktuelle Ansicht. Ausschließlich die numerische Laufzeit in einer vollständig erkannten Launcher-Fußzeile **unter dem Eingaberahmen** wird normalisiert. Pfad, Modell, Preise, Limits, unbekannte Footer und Antworttext bleiben relevant. Breite Zeilenfilter und Spinner-Heuristiken werden nicht verwendet. Die ausgegebene Ansicht bleibt roh, der Vergleich ignoriert nur dieses exakt begrenzte Laufzeitfeld. Bei gekürzter/unbekannter Statuszeile wird nichts normalisiert.
 
-| Status | Bedeutung / nächster Schritt |
+Dadurch ist der Schreibschutz um genau diese Laufzeitzellen schwächer; alle übrigen Änderungen verlangen erneutes Lesen. Ein abgelaufener Token vor einer Mutation ist kein Zustellungsversuch. Versuchstatus erst nach letzter erfolgreicher Vorprüfung unmittelbar vor `paste-buffer` beziehungsweise `send-keys` speichern. Bei Timeout nach diesem Punkt zuerst Zustellung klären.
+
+| Status | Bedeutung |
 |---|---|
-| `paste_attempted` | Vor dem Schreiben gespeichert. Fehler/Timeout kann trotzdem Teilzustellung bedeuten; lesen und klären. |
-| `pasted` | tmux hat Paste angenommen. Entwurf lesen, kein Beleg für Claude-Annahme. |
-| `enter_attempted` | Absenden versucht; bei Fehler nicht automatisch nochmals Enter. |
-| `enter_sent` | tmux hat Enter angenommen. Erst neue Claude-Ausgabe belegt fachliche Annahme. |
+| Keine neue Kennung im Ledger | Vorprüfung abgebrochen, noch kein Pane-Schreibversuch. Frisch lesen und denselben Auftrag erneut prüfen. |
+| `paste_attempted` | Pane-Schreiben versucht; Teilzustellung möglich, kein automatischer Retry. |
+| `pasted` | tmux hat Paste angenommen, noch kein Enter. Entwurf bewahren und klären. |
+| `enter_attempted` | Enter versucht; bei Fehler nicht automatisch nochmals Enter. |
+| `enter_sent` | Enter angenommen; Claude-Annahme anhand neuer Ausgabe prüfen. |
 
-Kennungen im gesamten Dialog eindeutig halten. Ein erneuter Aufruf mit derselben Kennung wird gesperrt. Dies ist Schutz vor versehentlichen Wiederholungen, kein Exactly-once-Protokoll: Abstürze, zwei getrennte Bindungen, Nutzerbedienung und Prozesse, die zwischen Prüfung und Schreiben wechseln, bleiben Grenzen. Bei einem eingefügten Auftrag kann späterer fremder Text nicht anhand des Tokens allein erkannt werden; vor Enter den tatsächlichen Entwurf erneut beurteilen.
-
-Nach Abschluss die konkrete private Laufzeitablage inklusive Auftragsdateien löschen. Nicht den tmux-Server oder die Claude-Sitzung beenden. Keine State-Dateien einchecken.
+Dies ist kein Exactly-once-Protokoll. Abstürze, Nutzerbedienung und ein Prozesswechsel zwischen Prüfung und Schreiben bleiben Grenzen. Nur ein zustellender Agent pro Dialog. Nach Ende private Laufzeitdateien entfernen, nicht die Claude-Sitzung oder den tmux-Server beenden.
