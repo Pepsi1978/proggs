@@ -16,12 +16,36 @@ in Graustufen als eigener erkennbar.
 | | Richtung | Aufbau | Typografie | Farbwelt |
 |---|---|---|---|---|
 | **A** | Nachtatelier | redaktionell, einspaltig, Haarlinien statt Kästen | Newsreader (Serif) für Zeit und Titel | Marineblau / Elfenbein / Kupfer |
-| **B** | Morgenruhe | der Tag als vertikale Achse, Karten als Stationen | Inter, große Zeilenhöhe | Salbei / Creme / Tannengrün / Terrakotta |
+| **B** | Morgenruhe | der Tag als vertikale Achse, Karten als Stationen | Inter, große Zeilenhöhe | *Entwurf:* Salbei / Creme / Terrakotta — **in der App seit 1.1.55: Leinen / Tintenblau / Messing** |
 | **C** | Orbit | Instrumententafel im festen Raster, Ring-Countdown, tabellarische Weckerzeilen | JetBrains Mono für alle Zahlen | Fast-Schwarz / Eisblau / Limette |
-| **D** | Traumraum | skulptural: Kuppel, runde Perle, Editor als Bottom-Sheet | Inter, kräftig und rund | Pflaume / Rosé / Perlmutt |
+| **D** | Traumraum | skulptural: Kuppel, runde Perle, Editor als Bottom-Sheet | Inter, kräftig und rund | *Entwurf:* Pflaume / Rosé / Perlmutt — **in der App seit 1.1.55: warmes Schwarz / Glut-Orange / Bernstein** |
 
 Der Hellmodus von A ist bewusst elfenbein-dominant und nicht das invertierte Dunkel, damit A und C
 nicht als dasselbe gelesen werden.
+
+## Abweichung der App von diesen Entwürfen (seit 1.1.55)
+
+Die Seiten hier zeigen weiterhin den **ursprünglichen Entwurfsstand**. Zwei Farbwelten sind in der
+App bewusst abgelöst worden; das Strukturprinzip, die Typografie und der Aufbau jeder Variante
+bleiben unverändert:
+
+* **Morgenruhe** trug grünstichige Flächen unter einem rostroten Primärton. Das ist ein
+  Komplementärpaar ohne vermittelnden Zwischenton und wirkte schmutzig statt ruhig; das
+  namensgebende Salbei war zudem nirgends Akzent, sondern nur Untergrund. In der App liegt jetzt
+  neutrales Leinen unter tiefem Tintenblau, mit gedecktem Messing als warmem Gegenpunkt.
+* **Traumraum** war Pflaume und Rosé. In der App trägt es jetzt ein *warmes* Schwarz (`#0E0B09`)
+  mit klarem Orange (`#FF7A33`) und sparsamem Bernstein. Das Schwarz ist bewusst warm, damit es
+  sich von Schlichts neutralem `#121212` und Orbits kühlem `#08090C` unterscheidet; das Orange ist
+  deutlich rotstichiger als Schlichts Gold, damit Traumraum kein Schlicht-Klon wird.
+
+Verbindlich sind die Werte in `app/src/main/java/de/frank/wecker/design/Paletten.kt`. Jede dort
+gesetzte Kombination aus Text-, Primär- und Akzentfarbe auf ihrer Fläche ist gerechnet und liegt
+über dem WCAG-AA-Wert von 4,5:1.
+
+Ebenfalls seit 1.1.55 und in keinem Entwurf abgebildet: Die oberste Uhrenkarte steht in allen vier
+Designs fest und scrollt nicht mehr mit; zugeklappte Weckerkarten sind innerhalb einer Ansicht
+gleich hoch; Dialoge sowie Datums- und Uhrzeitwahl kommen aus der jeweiligen Farbwelt statt vom
+System.
 
 ## Je Entwurf vier Seiten
 

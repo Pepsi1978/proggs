@@ -60,6 +60,7 @@ import androidx.compose.foundation.clickable
 import de.frank.genialeideen.ui.theme.Hoehe
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.LocalGold
+import de.frank.genialeideen.ui.theme.LocalSemantisch
 import de.frank.genialeideen.ui.theme.Motion
 import de.frank.genialeideen.ui.theme.Semantisch
 import de.frank.genialeideen.ui.theme.dunkler
@@ -158,11 +159,15 @@ fun KopfKnopf(
     inhalt: @Composable () -> Unit,
 ) {
     val gold = LocalGold.current
+    // Die Eckenform kommt aus dem Design, nicht aus einem festen Wert: In Morgenruhe und
+    // Traumraum ist der Kopfknopf dadurch rund wie jeder andere kleine Knopf dort, in Orbit
+    // kantig. Die Pillenform wird gedeckelt, damit aus dem Quadrat kein Kreis wird.
+    val tokens = de.frank.wecker.design.LocalDesignTokens.current
     Knopf3D(
         aufTipp = aufTipp,
         modifier = Modifier.size(40.dp),
         grundfarbe = gold.primaer.copy(alpha = 0.16f).compositeUeber(gold.flaeche),
-        form = RoundedCornerShape(12.dp),
+        form = RoundedCornerShape(if (tokens.chipRadius > 20.dp) 20.dp else tokens.chipRadius),
         hoehe = Hoehe.karte,
         innenAbstandWaagerecht = 0.dp,
         innenAbstandSenkrecht = 0.dp,
@@ -400,7 +405,9 @@ fun Leerzustand(
             modifier = Modifier
                 .size(112.dp)
                 .graphicsLayer { scaleX = atem; scaleY = atem }
-                .clip(RoundedCornerShape(32.dp))
+                // Die Form folgt dem Design: im kantigen Orbit ist das Symbolfeld kein
+                // Rundling, im weich gerundeten Traumraum keine Ecke.
+                .clip(RoundedCornerShape(de.frank.wecker.design.LocalDesignTokens.current.karteRadius))
                 .background(
                     Brush.radialGradient(
                         listOf(gold.primaer.copy(alpha = 0.26f), Color.Transparent),
@@ -440,7 +447,7 @@ fun MeldungsStreifen(
     modifier: Modifier = Modifier,
 ) {
     val gold = LocalGold.current
-    val farbe = if (meldung.istFehler) Semantisch.fehler else Semantisch.erfolg
+    val farbe = if (meldung.istFehler) LocalSemantisch.current.fehler else LocalSemantisch.current.erfolg
     val form = RoundedCornerShape(16.dp)
     Row(
         modifier = modifier

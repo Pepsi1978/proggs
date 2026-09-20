@@ -66,13 +66,18 @@ object MorgenruheGestalt : WeckerGestalt {
         ) { inhalt() }
     }
 
+    /**
+     * Das freigestellte Objekt steht für sich — wie beim Orbit-Motiv: kein Beschnitt, keine Platte,
+     * kein Rahmen. Vorher lag hier das Bild mit seinem eingebrannten cremefarbenen Hintergrund in
+     * einer gerahmten Kachel; im Dunkelmodus stand deshalb eine helle Fläche mitten im dunklen Raum,
+     * und nach einem Palettenwechsel hätte sie erst recht nicht mehr gepasst.
+     */
     @Composable override fun Motiv(modifier: Modifier) {
-        val gold = LocalGold.current
         Image(
-            painter = painterResource(R.drawable.design_bett),
+            painter = painterResource(R.drawable.design_bett_frei),
             contentDescription = null,
-            modifier = modifier.size(132.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, gold.rahmen, RoundedCornerShape(20.dp)),
-            contentScale = ContentScale.Crop,
+            modifier = if (modifier == Modifier) Modifier.size(120.dp) else modifier,
+            contentScale = ContentScale.Fit,
         )
     }
 
@@ -93,7 +98,10 @@ object TraumraumGestalt : WeckerGestalt {
                 .background(gold.hintergrund)
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(gold.primaer.copy(alpha = .16f), Color.Transparent),
+                        // Gedämpft von 16 auf 9 Prozent: Oben lagen drei warme Schichten
+                        // übereinander — dieser Schein, die helle Kuppel und der orangefarbene
+                        // Hauptknopf. Eine davon muss zurücktreten, sonst glüht der ganze Kopf.
+                        colors = listOf(gold.primaer.copy(alpha = .09f), Color.Transparent),
                         center = Offset(0.5f, 0f),
                         radius = 1400f,
                     ),
@@ -112,12 +120,17 @@ object TraumraumGestalt : WeckerGestalt {
         ) { inhalt() }
     }
 
+    /**
+     * Ebenfalls freigestellt. Der runde Beschnitt entfällt damit: Er hatte nur den Zweck, den
+     * deckenden pflaumefarbenen Bildhintergrund zu einer Scheibe zu machen. Auf warmem Schwarz
+     * stünde diese Scheibe als Fremdkörper.
+     */
     @Composable override fun Motiv(modifier: Modifier) {
         Image(
-            painter = painterResource(R.drawable.design_kissen),
+            painter = painterResource(R.drawable.design_kissen_frei),
             contentDescription = null,
-            modifier = modifier.size(148.dp).clip(RoundedCornerShape(50)),
-            contentScale = ContentScale.Crop,
+            modifier = if (modifier == Modifier) Modifier.size(128.dp) else modifier,
+            contentScale = ContentScale.Fit,
         )
     }
 

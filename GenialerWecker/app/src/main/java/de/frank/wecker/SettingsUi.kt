@@ -118,15 +118,15 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         Section("Weckbereitschaft") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (missing == 0) Icons.Default.VerifiedUser else Icons.Default.NotificationsActive, null,
-                    tint = if (missing == 0) Semantisch.erfolg else Semantisch.warnung)
+                    tint = if (missing == 0) LocalSemantisch.current.erfolg else LocalSemantisch.current.warnung)
                 Text(if (missing == 0) "Alles bereit: Der Wecker klingelt auch gesperrt und ohne Internet."
                     else "$missing ${if (missing == 1) "Freigabe fehlt" else "Freigaben fehlen"}. Tippe jeweils auf „Erlauben“.",
                     Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyMedium)
             }
             permissions.forEach { (name, ready) ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (ready) "✓" else "○", color = if (ready) Semantisch.erfolg else Semantisch.warnung)
-                    Text(name, Modifier.weight(1f).padding(start = 10.dp), color = if (ready) LocalGold.current.textPrimaer else Semantisch.warnung)
+                    Text(if (ready) "✓" else "○", color = if (ready) LocalSemantisch.current.erfolg else LocalSemantisch.current.warnung)
+                    Text(name, Modifier.weight(1f).padding(start = 10.dp), color = if (ready) LocalGold.current.textPrimaer else LocalSemantisch.current.warnung)
                     if (ready) Text("erteilt", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
                     else StillerKnopf("Erlauben", { fix[name]?.invoke() }, Modifier.semantics { contentDescription = "$name erlauben" }, hervorgehoben = true)
                 }
@@ -241,7 +241,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
             if (provider == TtsProvider.QWEN_CLONE.id) {
                 if (voicesLoading) Text("Deine hochgeladenen Stimmen werden geladen …")
-                if (voiceError.isNotBlank()) Text(voiceError, color = Semantisch.warnung)
+                if (voiceError.isNotBlank()) Text(voiceError, color = LocalSemantisch.current.warnung)
                 Text("${voices.size} eigene Stimmen", style = MaterialTheme.typography.bodySmall)
                 GoldKnopf("Meine Stimmen aktualisieren", { vm.loadVoices(force = true) }, aktiviert = !voicesLoading)
             }
@@ -370,7 +370,7 @@ private fun SecretField(label: String, gespeichert: String, text: String, onText
         GoldKnopf("Speichern", { speichern() }, aktiviert = geaendert)
     }
     // Eigene Zeile, damit der Hinweis auch bei großer Schrift vollständig lesbar bleibt.
-    if (geaendert) Text("Noch nicht gespeichert", style = MaterialTheme.typography.bodySmall, color = Semantisch.warnung)
+    if (geaendert) Text("Noch nicht gespeichert", style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
 }
 
 @Composable
@@ -439,7 +439,7 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
                 style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
             when (blocked) {
                 "app" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Benachrichtigungen der App sind ausgeschaltet.", Modifier.weight(1f), color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)
+                    Text("Benachrichtigungen der App sind ausgeschaltet.", Modifier.weight(1f), color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
                     StillerKnopf("Erlauben", {
                         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
                             activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -447,7 +447,7 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
                     }, hervorgehoben = true)
                 }
                 "kanal" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Der Kanal „Schlafenszeit-Erinnerung“ ist gesperrt.", Modifier.weight(1f), color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall)
+                    Text("Der Kanal „Schlafenszeit-Erinnerung“ ist gesperrt.", Modifier.weight(1f), color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
                     StillerKnopf("Kanal öffnen", {
                         open(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName).putExtra(Settings.EXTRA_CHANNEL_ID, SchlafErinnerung.CHANNEL))
@@ -457,8 +457,8 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
                     Text("Noch kein aktiver Wecker mit Schlafdauer.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
             }
             if (inexact) Text("Ohne Freigabe für genaue Zeiten kann die Erinnerung einige Minuten verspätet kommen.",
-                style = MaterialTheme.typography.bodySmall, color = Semantisch.warnung)
+                style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
         }
-        problems.forEach { Text(it, color = Semantisch.warnung, style = MaterialTheme.typography.bodySmall) }
+        problems.forEach { Text(it, color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall) }
     }
 }

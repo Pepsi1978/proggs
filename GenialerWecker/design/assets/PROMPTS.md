@@ -26,3 +26,34 @@ Datei: `c-orbit/sternbahn-freigestellt.png`. Bearbeitet mit dem integrierten Ima
 Exakter Bearbeitungsauftrag:
 
 > Use case: background-extraction. Asset type: transparent decorative PNG for the native Android alarm app's Orbit design. Edit the supplied image: remove the entire black rectangular background and ground/background shading, making all space surrounding and inside the orbital wire loops genuinely transparent (real alpha channel, not painted checkerboard and not black). Preserve the beautiful recognizable icy blue crescent sculpture, metallic orbital wires, small lime sphere, three tiny stars, and its compact dark display base, maintaining their position, proportions and premium 3D materials. Keep natural clean anti-aliased edges and subtle object shading. The result must blend directly onto BOTH pure white/light gray and dark navy-charcoal UI surfaces, so avoid a dark halo or matte rectangle. Center the complete object on a square transparent canvas with narrow safe padding, no cropping. No text, numerals, UI, border, background plate, checkerboard, or new objects. This is the same existing Orbit motif extracted for placement where a round twelve-hour clock used to be.
+
+
+## Morgenruhe und Traumraum – freigestellte Motive für die native App
+
+Dateien: `app/src/main/res/drawable-nodpi/design_bett_frei.png` und `design_kissen_frei.png`.
+Die Originale `b-morgenruhe/bett.png` und `d-traumraum/kissen.png` bleiben hier unverändert erhalten.
+
+Beide Entwurfsbilder hatten einen **deckenden farbigen Hintergrund** (Bett: warmes Creme,
+Kissen: gedeckte Pflaume). In der App wurden sie deshalb beschnitten dargestellt — das Bett in
+einer gerahmten Kachel, das Kissen als runde Scheibe. Im Dunkelmodus stand dadurch eine helle
+Fläche mitten im dunklen Raum, und nach dem Palettenwechsel auf Leinen/Tinte beziehungsweise
+warmes Schwarz/Orange hätte der eingebrannte Hintergrund erst recht nicht mehr gepasst.
+
+Bearbeitung: echte Hintergrundentfernung mit Pillow, **keine** Tönung oder Einfärbung.
+Flood-Fill von allen vier Rändern mit Farbtoleranz (kein globaler Farbschlüssel, sonst
+verschwinden gleichfarbige Stellen im Objekt selbst), weiche Alphakante, und an den
+halbtransparenten Kantenpixeln wurde die alte Hintergrundfarbe herausgerechnet, damit auf
+dunklen wie hellen Flächen kein Farbsaum stehen bleibt. Objektfarben, Materialien, Schattierung
+und Rim-Light sind unverändert — der plastische Eindruck bleibt vollständig erhalten.
+
+Geprüft wurde durch Komposition auf vier Untergründe: `#0E0B09`, `#F7F1EA`, `#F4F1EC`, `#171D21`.
+Kein Halo feststellbar; Randpixel voll transparent (Alpha 0), Alpha-Extrema 0..255.
+
+Ergebnis: je 768×768 px mit echtem Alphakanal, 253 KB und 472 KB. Zusammen mit dem Entfernen des
+seit der Orbit-Freistellung unreferenzierten `design_sternbahn.png` sank das Debug-APK von
+26 MB auf 21 MB.
+
+**Offen:** Das Bettmotiv zeigt Salbeigrün und Terrakotta und stammt damit noch aus der
+abgelösten Morgenruhe-Farbwelt. Zur neuen Palette aus Leinen, Tintenblau und Messing passt es
+nur teilweise. Eine Neugenerierung braucht ein Bildgenerierungswerkzeug und ist nicht Teil
+dieser Bearbeitung.

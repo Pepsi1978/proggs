@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -118,7 +119,8 @@ fun Knopf3D(
                 else Modifier.background(koerper))
             .then(
                 if (aktiviert) {
-                    Modifier.clickable(interactionSource = quelle, indication = null) {
+                    Modifier.clickable(interactionSource = quelle, indication = null,
+                        role = androidx.compose.ui.semantics.Role.Button) {
                         haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         aufTipp()
                     }
@@ -148,6 +150,11 @@ fun GoldKnopf(
     laedt: Boolean = false,
     hauptKnopf: Boolean = false,
     symbol: (@Composable () -> Unit)? = null,
+    /**
+     * Sprechender Name für Knöpfe, deren Aufschrift allein nichts sagt — etwa ein bloßes „＋".
+     * [Knopf3D] konnte das schon, [GoldKnopf] reichte es bisher nicht durch.
+     */
+    beschreibung: String? = null,
 ) {
     val gold = LocalGold.current
     Knopf3D(
@@ -155,6 +162,7 @@ fun GoldKnopf(
         modifier = modifier,
         aktiviert = aktiviert && !laedt,
         hauptKnopf = hauptKnopf,
+        beschreibung = beschreibung,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (symbol != null) {
@@ -233,10 +241,15 @@ fun StillerKnopf(
                 else Modifier.background(gold.flaecheErhoeht))
             .then(if (tokens.plastisch) Modifier.border(1.dp, lichtKante(gedrueckt = gedrueckt, staerke = 0.35f), form)
                 else Modifier.border(1.dp, gold.rahmen, form))
-            .clickable(interactionSource = quelle, indication = null) {
+            // Rolle und Mindestgröße: Ohne `Role.Button` sagt TalkBack nur den Text an, nie
+            // „Schaltfläche"; ohne die Mindestgröße bleibt der Körper bei rund 34 dp unter dem
+            // Richtwert von 48 dp für Tippflächen.
+            .clickable(interactionSource = quelle, indication = null,
+                role = androidx.compose.ui.semantics.Role.Button) {
                 haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 aufTipp()
             }
+            .minimumInteractiveComponentSize()
             .padding(horizontal = 14.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center,
     ) {

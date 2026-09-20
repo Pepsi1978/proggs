@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -12,39 +13,82 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.genialeideen.R
 
 val LocalGold = staticCompositionLocalOf { HelleGoldPalette }
 
-/** Eine eigene Schriftfamilie statt der Systemschrift (Baustein N.6). */
-val IdeenSchrift = FontFamily(
-    Font(R.font.inter, FontWeight.Normal),
+/**
+ * Die semantischen Farben in der Fassung, die auf dem aktuellen Untergrund lesbar ist.
+ * Immer hierüber lesen statt [Semantisch] direkt — sonst steht ein Warnhinweis im hellen
+ * Modus mit gemessenen 1,79:1 praktisch unsichtbar auf der Karte.
+ */
+val LocalSemantisch = staticCompositionLocalOf { semantischeFarben(dunkel = false) }
+
+/**
+ * Alle drei Schriftdateien sind **variable** Schriften mit einer `wght`-Achse — nachgemessen in
+ * den `fvar`-Tabellen: Inter 100–900, Newsreader 200–800, JetBrains Mono 100–800.
+ *
+ * Registriert war bisher je **eine** feste Instanz (Inter bei Normal, Mono bei Medium,
+ * Newsreader bei SemiBold). Damit lief jede Gewichtsangabe der Designs ins Leere: Android
+ * synthetisiert nur Fett, und das auch nur ab 600 und bei genügend Abstand. Morgenruhes leichte
+ * Uhr blieb Regular, Traumraums kräftige Uhr wurde ein gleichmäßig verdicktes Faux-Bold, Orbits
+ * halbfette Ziffern blieben Medium. Zwei der vier Designs unterschieden sich dadurch in der
+ * Kopfleiste praktisch nur noch durch die Farbe.
+ *
+ * Jetzt trägt jede Stufe ihre echte Achsenposition. [achse] hält Gewichtsangabe und
+ * Achsenwert zusammen, damit beide nicht auseinanderlaufen können.
+ */
+@OptIn(ExperimentalTextApi::class)
+private fun achse(resId: Int, gewicht: FontWeight) = Font(
+    resId = resId,
+    weight = gewicht,
+    variationSettings = FontVariation.Settings(FontVariation.weight(gewicht.weight)),
 )
 
+/** Die Grotesk der Oberfläche — Inter deckt 100 bis 900 ab. */
+val IdeenSchrift = FontFamily(
+    achse(R.font.inter, FontWeight.Light),
+    achse(R.font.inter, FontWeight.Normal),
+    achse(R.font.inter, FontWeight.Medium),
+    achse(R.font.inter, FontWeight.SemiBold),
+    achse(R.font.inter, FontWeight.Bold),
+)
+
+/** Die Serifenschrift der Schlicht-Titel — Newsreader beginnt erst bei 200. */
 val IdeenSchriftBetont = FontFamily(
-    Font(R.font.newsreader, FontWeight.SemiBold),
+    achse(R.font.newsreader, FontWeight.Light),
+    achse(R.font.newsreader, FontWeight.Normal),
+    achse(R.font.newsreader, FontWeight.Medium),
+    achse(R.font.newsreader, FontWeight.SemiBold),
+    achse(R.font.newsreader, FontWeight.Bold),
 )
 
 /**
  * Die Schrift für die Ideen-Überschriften: Inter, nicht die Serifenschrift. Serifen werden
- * künstlich fett schnell matschig, die Grotesk bleibt auch bei Black klar lesbar. Sie ist als
- * Normal registriert — nur dann zeichnet Android bei hohen Gewichten überhaupt fett.
+ * künstlich fett schnell matschig, die Grotesk bleibt auch bei Black klar lesbar.
  */
-val IdeenSchriftDick = FontFamily(
-    Font(R.font.inter, FontWeight.Normal),
-)
+val IdeenSchriftDick = IdeenSchrift
 
-/** Festbreitenschrift für den Anmeldecode (Baustein O.1). */
+/** Festbreitenschrift für Anmeldecode und die Orbit-Zahlen — Mono deckt 100 bis 800 ab. */
 val IdeenSchriftFest = FontFamily(
-    Font(R.font.jetbrains_mono, FontWeight.Medium),
+    achse(R.font.jetbrains_mono, FontWeight.Light),
+    achse(R.font.jetbrains_mono, FontWeight.Normal),
+    achse(R.font.jetbrains_mono, FontWeight.Medium),
+    achse(R.font.jetbrains_mono, FontWeight.SemiBold),
+    achse(R.font.jetbrains_mono, FontWeight.Bold),
 )
 
 /**
@@ -116,50 +160,128 @@ fun GenialeIdeenTheme(
         istDunkel = ziel.istDunkel,
     )
 
-    val schema = remember(dunkel, palette) { if (dunkel) {
-        darkColorScheme(
-            primary = palette.primaer,
-            onPrimary = palette.aufPrimaer,
-            secondary = palette.primaerGedaempft,
-            onSecondary = palette.aufPrimaer,
-            tertiary = palette.akzentWarm,
-            background = palette.hintergrund,
-            onBackground = palette.textPrimaer,
-            surface = palette.flaeche,
-            onSurface = palette.textPrimaer,
-            surfaceVariant = palette.flaecheErhoeht,
-            onSurfaceVariant = palette.textGedaempft,
-            outline = palette.rahmen,
-            error = Semantisch.fehler,
-        )
-    } else {
-        lightColorScheme(
-            primary = palette.primaer,
-            onPrimary = palette.aufPrimaer,
-            secondary = palette.primaerGedaempft,
-            onSecondary = palette.aufPrimaer,
-            tertiary = palette.akzentWarm,
-            background = palette.hintergrund,
-            onBackground = palette.textPrimaer,
-            surface = palette.flaeche,
-            onSurface = palette.textPrimaer,
-            surfaceVariant = palette.flaecheErhoeht,
-            onSurfaceVariant = palette.textGedaempft,
-            outline = palette.rahmen,
-            error = Semantisch.fehler,
-        )
-    }
+    // Material3 zieht sich viele Flächen NICHT aus `surface`, sondern aus den Container-Rollen:
+    // `AlertDialog` etwa aus surfaceContainerHigh, Menüs und Blätter aus surfaceContainer.
+    // Wurden die nicht gesetzt, gewann die Material-Grundpalette — dann stand ein graulila
+    // Standarddialog mitten in einer goldenen, blauen oder orangefarbenen App. Deshalb ist hier
+    // jede Rolle aus der eigenen Palette abgeleitet, statt nur die Handvoll Hauptfarben zu setzen.
+    val schema = remember(dunkel, palette) {
+        val flaecheHoch = palette.flaecheErhoeht
+        val behaelterPrimaer = if (dunkel) palette.primaer.mischeMit(palette.flaeche, 0.74f)
+            else palette.primaer.mischeMit(Color.White, 0.82f)
+        val aufBehaelterPrimaer = if (dunkel) palette.primaer.heller(0.30f) else palette.primaer.dunkler(0.28f)
+        val behaelterZweit = if (dunkel) palette.primaerGedaempft.mischeMit(palette.flaeche, 0.76f)
+            else palette.primaerGedaempft.mischeMit(Color.White, 0.84f)
+        val aufBehaelterZweit = if (dunkel) palette.primaerGedaempft.heller(0.34f) else palette.primaerGedaempft.dunkler(0.30f)
+        val behaelterDritt = if (dunkel) palette.akzentWarm.mischeMit(palette.flaeche, 0.76f)
+            else palette.akzentWarm.mischeMit(Color.White, 0.84f)
+        val aufBehaelterDritt = if (dunkel) palette.akzentWarm.heller(0.30f) else palette.akzentWarm.dunkler(0.28f)
+        val fehler = if (dunkel) Semantisch.fehler else Semantisch.fehlerHell
+        val behaelterFehler = if (dunkel) fehler.mischeMit(palette.flaeche, 0.76f) else fehler.mischeMit(Color.White, 0.86f)
+        val aufBehaelterFehler = if (dunkel) fehler.heller(0.30f) else fehler.dunkler(0.24f)
+        if (dunkel) {
+            darkColorScheme(
+                primary = palette.primaer,
+                onPrimary = palette.aufPrimaer,
+                primaryContainer = behaelterPrimaer,
+                onPrimaryContainer = aufBehaelterPrimaer,
+                inversePrimary = palette.primaer.dunkler(0.35f),
+                secondary = palette.primaerGedaempft,
+                onSecondary = palette.aufPrimaer,
+                secondaryContainer = behaelterZweit,
+                onSecondaryContainer = aufBehaelterZweit,
+                tertiary = palette.akzentWarm,
+                onTertiary = palette.aufPrimaer,
+                tertiaryContainer = behaelterDritt,
+                onTertiaryContainer = aufBehaelterDritt,
+                background = palette.hintergrund,
+                onBackground = palette.textPrimaer,
+                surface = palette.flaeche,
+                onSurface = palette.textPrimaer,
+                surfaceVariant = palette.flaecheErhoeht,
+                onSurfaceVariant = palette.textGedaempft,
+                surfaceTint = palette.primaer,
+                inverseSurface = palette.textPrimaer,
+                inverseOnSurface = palette.flaeche,
+                error = fehler,
+                onError = Color(0xFF2A0606),
+                errorContainer = behaelterFehler,
+                onErrorContainer = aufBehaelterFehler,
+                // Unverändert palette.rahmen wie vor der Umstellung: In Schlicht darf sich keine
+                // einzige Farbe verschieben, und `outline` färbt dort jeden Eingabefeldrand.
+                outline = palette.rahmen,
+                // `outlineVariant` ist die *leisere* der beiden Rollen — Trennlinien und
+                // Chip-Ränder ziehen daraus. Vorher lag hier der hellere, also auffälligere
+                // Ton; im Dunkeln heißt leiser, näher an die Fläche zu rücken.
+                outlineVariant = palette.rahmen.dunkler(0.22f),
+                scrim = Color.Black,
+                // Die fünf Container-Stufen im Dunkeln: von tiefer als der Hintergrund bis über
+                // die erhöhte Fläche. Dialoge landen auf `surfaceContainerHigh`.
+                surfaceBright = flaecheHoch.heller(0.14f),
+                surfaceDim = palette.hintergrund.dunkler(0.10f),
+                surfaceContainerLowest = palette.hintergrund.dunkler(0.28f),
+                surfaceContainerLow = palette.hintergrund,
+                surfaceContainer = palette.flaeche,
+                surfaceContainerHigh = flaecheHoch,
+                surfaceContainerHighest = flaecheHoch.heller(0.10f),
+            )
+        } else {
+            lightColorScheme(
+                primary = palette.primaer,
+                onPrimary = palette.aufPrimaer,
+                primaryContainer = behaelterPrimaer,
+                onPrimaryContainer = aufBehaelterPrimaer,
+                inversePrimary = palette.primaer.heller(0.45f),
+                secondary = palette.primaerGedaempft,
+                onSecondary = palette.aufPrimaer,
+                secondaryContainer = behaelterZweit,
+                onSecondaryContainer = aufBehaelterZweit,
+                tertiary = palette.akzentWarm,
+                onTertiary = Color.White,
+                tertiaryContainer = behaelterDritt,
+                onTertiaryContainer = aufBehaelterDritt,
+                background = palette.hintergrund,
+                onBackground = palette.textPrimaer,
+                surface = palette.flaeche,
+                onSurface = palette.textPrimaer,
+                surfaceVariant = palette.flaecheErhoeht,
+                onSurfaceVariant = palette.textGedaempft,
+                surfaceTint = palette.primaer,
+                inverseSurface = palette.textPrimaer,
+                inverseOnSurface = palette.flaeche,
+                error = fehler,
+                onError = Color.White,
+                errorContainer = behaelterFehler,
+                onErrorContainer = aufBehaelterFehler,
+                outline = palette.rahmen,
+                outlineVariant = palette.rahmen.heller(0.24f),
+                scrim = Color.Black,
+                // Im Hellen ist die weiße Karte die hellste Stufe; der Seitenhintergrund liegt darunter.
+                surfaceBright = palette.flaeche,
+                surfaceDim = palette.hintergrund.dunkler(0.08f),
+                surfaceContainerLowest = Color.White,
+                surfaceContainerLow = palette.flaeche,
+                surfaceContainer = palette.hintergrund,
+                surfaceContainerHigh = flaecheHoch,
+                surfaceContainerHighest = flaecheHoch.dunkler(0.05f),
+            )
+        }
     }
     val schrift = remember(schriftSkalierung, titelSchrift) { typografie(schriftSkalierung, titelSchrift ?: IdeenSchriftBetont) }
 
+    val tokens = de.frank.wecker.design.LocalDesignTokens.current
+    val formen = remember(tokens) { formenFuer(tokens.chipRadius, tokens.karteRadius) }
+
     CompositionLocalProvider(
         LocalGold provides palette,
+        LocalSemantisch provides semantischeFarben(ziel.istDunkel),
         LocalBewegungReduziert provides reduziert,
         LocalContentColor provides palette.textPrimaer,
     ) {
         MaterialTheme(
             colorScheme = schema,
             typography = schrift,
+            shapes = formen,
             content = content,
         )
     }
@@ -193,5 +315,25 @@ fun SchalterFarben(): SwitchColors {
         disabledUncheckedTrackColor = gold.flaecheErhoeht,
         disabledUncheckedBorderColor = gold.rahmen,
         disabledUncheckedIconColor = gold.textGedaempft,
+    )
+}
+
+/**
+ * Die Eckenformen des gewählten Designs als Material-Formenstaffel. Vorher zog jede
+ * Material-Komponente ihre eigene Rundung aus der Grundvorlage — ein 28 dp runder Dialog stand
+ * dann im kantigen Orbit, ein 4 dp kantiges Eingabefeld im weich gerundeten Traumraum.
+ *
+ * Die Pillenform (999 dp) gilt bewusst nur für kleine Bedienelemente und wird für Eingabefelder
+ * und Menüs gedeckelt: Ein mehrzeiliges Textfeld als Kapsel wäre weder schön noch lesbar.
+ */
+internal fun formenFuer(chipRadius: Dp, karteRadius: Dp): Shapes {
+    val klein = if (chipRadius > 16.dp) 12.dp else chipRadius
+    val mittelklein = if (chipRadius > 16.dp) 16.dp else chipRadius
+    return Shapes(
+        extraSmall = RoundedCornerShape(klein),
+        small = RoundedCornerShape(mittelklein),
+        medium = RoundedCornerShape(karteRadius),
+        large = RoundedCornerShape(karteRadius),
+        extraLarge = RoundedCornerShape(karteRadius),
     )
 }

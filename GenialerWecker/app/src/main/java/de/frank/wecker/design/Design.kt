@@ -15,8 +15,8 @@ import androidx.compose.ui.unit.dp
  */
 enum class Design(val id: String, val anzeige: String, val beschreibung: String) {
     SCHLICHT("schlicht", "Schlicht", "Das gewohnte Gold auf Glas."),
-    MORGENRUHE("morgenruhe", "Morgenruhe", "Ruhiger Tagesablauf an einer Achse, Salbei und Terrakotta."),
-    TRAUMRAUM("traumraum", "Traumraum", "Weiche Kuppel und runde Flächen in Pflaume und Rosé."),
+    MORGENRUHE("morgenruhe", "Morgenruhe", "Ruhiger Tagesablauf an einer Achse, Leinen und Tinte."),
+    TRAUMRAUM("traumraum", "Traumraum", "Weiche Kuppel und runde Flächen, warmes Schwarz und Glut-Orange."),
     ORBIT("orbit", "Orbit", "Instrumententafel mit Ring und festen Zahlen, Eisblau und Limette.");
 
     companion object {

@@ -53,10 +53,41 @@ val HelleGoldPalette = GoldPalette(
     istDunkel = false,
 )
 
-/** Semantische Farben — in beiden Modi gleich, Gold bleibt der Marke vorbehalten. */
+/**
+ * Semantische Farben. Die Werte hier sind unveraendert die bisherigen und bleiben die Vorgabe
+ * für dunkle Oberflächen, wo sie gemessen tragen (Erfolg 6,54:1, Warnung 9,89:1, Fehler 5,56:1,
+ * Info 9,18:1 auf #181818).
+ *
+ * Auf hellen Oberflächen tragen dieselben Werte **nicht**: gemessen 2,71 / 1,79 / 3,19 / 1,93:1
+ * auf Weiß — alle unter dem AA-Wert von 4,5:1. Ein Warnhinweis war dort faktisch nicht lesbar.
+ * Deshalb gibt es je eine dunklere Schwesterfarbe für den hellen Modus. Der Farbcharakter bleibt
+ * erhalten: Warnung bleibt Bernstein und wird NICHT wie ein Fehler rot. Abgerufen wird das über
+ * [semantischeFarben]; Icon und Text bleiben in jedem Fall zusammen stehen.
+ */
 object Semantisch {
     val erfolg = Color(0xFF4CAF7D)
     val warnung = Color(0xFFFFB300)
     val fehler = Color(0xFFFF5252)
     val info = Color(0xFF4ECDC4)
+
+    /** Gemessen auf Weiß: 5,32 / 6,39 / 5,62 / 6,09:1 — alle über 4,5:1. */
+    val erfolgHell = Color(0xFF217A4B)
+    val warnungHell = Color(0xFF8A5200)
+    val fehlerHell = Color(0xFFC62828)
+    val infoHell = Color(0xFF106E67)
+}
+
+/** Die vier semantischen Farben in der Fassung, die auf dem aktuellen Untergrund lesbar ist. */
+@Immutable
+data class SemantischeFarben(
+    val erfolg: Color,
+    val warnung: Color,
+    val fehler: Color,
+    val info: Color,
+)
+
+fun semantischeFarben(dunkel: Boolean): SemantischeFarben = if (dunkel) {
+    SemantischeFarben(Semantisch.erfolg, Semantisch.warnung, Semantisch.fehler, Semantisch.info)
+} else {
+    SemantischeFarben(Semantisch.erfolgHell, Semantisch.warnungHell, Semantisch.fehlerHell, Semantisch.infoHell)
 }

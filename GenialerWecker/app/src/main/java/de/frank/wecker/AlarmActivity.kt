@@ -269,7 +269,7 @@ class AlarmActivity : ComponentActivity() {
                                         // Design derselbe Code. Die Uhr zeigt immer die echte aktuelle Zeit.
                                         WeckKopf(alarm, contentWidth, contentHeight, shownFeedback != null)
                                         if (alarm != null) WeckSchritte(alarm, state.step, state.variation)
-                                        if (shownFeedback == null && state.message.isNotBlank()) Text(state.message, color = Semantisch.warnung)
+                                        if (shownFeedback == null && state.message.isNotBlank()) Text(state.message, color = LocalSemantisch.current.warnung)
                                         if (shownFeedback == null && shownMessage.isNotBlank()) Text(shownMessage)
                                         if (alarm != null && alarm.photoRequired && shownFeedback == null) {
                                             Section("Deine Foto-Aufgabe") {
@@ -625,9 +625,9 @@ private fun WeckTasten(alarm: Alarm, checking: Boolean, confirmed: String?, snoo
         val endDone = confirmed == "STOP"
         val snooze = @Composable { modifier: Modifier ->
             Taste(round, diameter, if (snoozeDone) Icons.Default.Check else Icons.Default.Snooze, if (snoozeDone) "Schlummert" else "Schlummern",
-                Semantisch.info, enabled = snoozeLeft > 0 || snoozeDone, main = false, confirmed = snoozeDone, faded = confirmed != null && !snoozeDone,
+                LocalSemantisch.current.info, enabled = snoozeLeft > 0 || snoozeDone, main = false, confirmed = snoozeDone, faded = confirmed != null && !snoozeDone,
                 info = if (snoozeLeft > 0) "${alarm.snoozeMinutes} Min. · noch $snoozeLeft" else "Keine Schlummerpause mehr",
-                infoColor = if (snoozeLeft > 0) gold.textGedaempft else Semantisch.warnung, onClick = onSnooze,
+                infoColor = if (snoozeLeft > 0) gold.textGedaempft else LocalSemantisch.current.warnung, onClick = onSnooze,
                 modifier = modifier.wackelnBeiFehler(snoozeWiggle))
         }
         val end = @Composable { modifier: Modifier ->
