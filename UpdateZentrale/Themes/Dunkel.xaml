@@ -5,12 +5,12 @@
          tauscht zur Laufzeit nur dieses eine Wörterbuch aus. Deshalb greifen alle Verwendungen
          per DynamicResource, nie per StaticResource. -->
 
-    <SolidColorBrush x:Key="PinselHintergrund" Color="#0B0C10" />
-    <SolidColorBrush x:Key="PinselFlaeche" Color="#14161E" />
-    <SolidColorBrush x:Key="PinselFlaecheHoch" Color="#1B1E28" />
-    <SolidColorBrush x:Key="PinselFlaecheTief" Color="#101219" />
-    <SolidColorBrush x:Key="PinselRand" Color="#262A36" />
-    <SolidColorBrush x:Key="PinselRandHell" Color="#394054" />
+    <SolidColorBrush x:Key="PinselHintergrund" Color="#050609" />
+    <SolidColorBrush x:Key="PinselFlaeche" Color="#1A1E2A" />
+    <SolidColorBrush x:Key="PinselFlaecheHoch" Color="#242939" />
+    <SolidColorBrush x:Key="PinselFlaecheTief" Color="#161A25" />
+    <SolidColorBrush x:Key="PinselRand" Color="#333A4E" />
+    <SolidColorBrush x:Key="PinselRandHell" Color="#4A5470" />
     <SolidColorBrush x:Key="PinselText" Color="#EEF0F6" />
     <SolidColorBrush x:Key="PinselTextLeise" Color="#9AA1B4" />
     <SolidColorBrush x:Key="PinselTextSehrLeise" Color="#7E8699" />
@@ -26,25 +26,25 @@
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="PinselKarte" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#171A24" Offset="0" />
-        <GradientStop Color="#12141C" Offset="1" />
+        <GradientStop Color="#1E2230" Offset="0" />
+        <GradientStop Color="#171B26" Offset="1" />
     </LinearGradientBrush>
 
-    <SolidColorBrush x:Key="PinselKarteGewaehlt" Color="#191C28" />
+    <SolidColorBrush x:Key="PinselKarteGewaehlt" Color="#232841" />
 
     <RadialGradientBrush x:Key="PinselSchein" GradientOrigin="0.12,0" Center="0.12,0" RadiusX="0.85" RadiusY="0.7">
-        <GradientStop Color="#2A1E5C" Offset="0" />
+        <GradientStop Color="#1C1440" Offset="0" />
         <GradientStop Color="#00000000" Offset="1" />
     </RadialGradientBrush>
 
     <!-- Konsolenbereich -->
-    <SolidColorBrush x:Key="PinselKonsole" Color="#0A0B10" />
-    <SolidColorBrush x:Key="PinselKonsoleRand" Color="#1E2230" />
+    <SolidColorBrush x:Key="PinselKonsole" Color="#0B0D14" />
+    <SolidColorBrush x:Key="PinselKonsoleRand" Color="#2E3449" />
     <SolidColorBrush x:Key="PinselKonsoleText" Color="#9FB4C9" />
 
     <!-- Merkmal-Plaketten -->
-    <SolidColorBrush x:Key="PinselPlaketteFlaeche" Color="#1E2230" />
-    <SolidColorBrush x:Key="PinselPlaketteRand" Color="#262A36" />
+    <SolidColorBrush x:Key="PinselPlaketteFlaeche" Color="#2A3044" />
+    <SolidColorBrush x:Key="PinselPlaketteRand" Color="#3B4258" />
 
     <SolidColorBrush x:Key="PinselLaeuftFlaeche" Color="#16281E" />
     <SolidColorBrush x:Key="PinselLaeuftRand" Color="#245437" />
@@ -63,9 +63,14 @@
     <SolidColorBrush x:Key="PinselFehlerText" Color="#FFB4C0" />
 
     <!-- Bedienelemente -->
-    <SolidColorBrush x:Key="PinselSchalterBahn" Color="#2A2F3D" />
-    <SolidColorBrush x:Key="PinselSchalterRand" Color="#363C4C" />
+    <SolidColorBrush x:Key="PinselSchalterBahn" Color="#353C51" />
+    <SolidColorBrush x:Key="PinselSchalterRand" Color="#454D66" />
     <SolidColorBrush x:Key="PinselSchalterKnopf" Color="#B9C0D0" />
-    <SolidColorBrush x:Key="PinselRollbalken" Color="#333949" />
+    <SolidColorBrush x:Key="PinselRollbalken" Color="#454D66" />
+
+    <!-- Schatten trennt die Karten zusaetzlich vom Untergrund; im Dunkeln kraeftig und tief,
+         damit die Flaechen sichtbar aufliegen statt zu verschwimmen. -->
+    <DropShadowEffect x:Key="KartenSchatten" BlurRadius="18" ShadowDepth="3" Direction="270"
+                      Color="#000000" Opacity="0.75" RenderingBias="Performance" />
 
 </ResourceDictionary>

@@ -5,12 +5,12 @@
          funktioniert. Warme, leicht entsättigte Töne statt reinem Weiß – das ermüdet weniger
          und lässt die farbigen Kennzeichen sauber wirken. -->
 
-    <SolidColorBrush x:Key="PinselHintergrund" Color="#F4F5F9" />
+    <SolidColorBrush x:Key="PinselHintergrund" Color="#DFE3ED" />
     <SolidColorBrush x:Key="PinselFlaeche" Color="#FFFFFF" />
     <SolidColorBrush x:Key="PinselFlaecheHoch" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="PinselFlaecheTief" Color="#FBFBFE" />
-    <SolidColorBrush x:Key="PinselRand" Color="#DFE2EC" />
-    <SolidColorBrush x:Key="PinselRandHell" Color="#C4C9D9" />
+    <SolidColorBrush x:Key="PinselFlaecheTief" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PinselRand" Color="#BFC6D8" />
+    <SolidColorBrush x:Key="PinselRandHell" Color="#98A2BC" />
     <SolidColorBrush x:Key="PinselText" Color="#161822" />
     <SolidColorBrush x:Key="PinselTextLeise" Color="#5C6479" />
     <SolidColorBrush x:Key="PinselTextSehrLeise" Color="#79819A" />
@@ -27,13 +27,13 @@
 
     <LinearGradientBrush x:Key="PinselKarte" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="#FFFFFF" Offset="0" />
-        <GradientStop Color="#F8F9FD" Offset="1" />
+        <GradientStop Color="#FBFCFF" Offset="1" />
     </LinearGradientBrush>
 
-    <SolidColorBrush x:Key="PinselKarteGewaehlt" Color="#F1EEFF" />
+    <SolidColorBrush x:Key="PinselKarteGewaehlt" Color="#EAE4FF" />
 
     <RadialGradientBrush x:Key="PinselSchein" GradientOrigin="0.12,0" Center="0.12,0" RadiusX="0.85" RadiusY="0.7">
-        <GradientStop Color="#33D8CEFF" Offset="0" />
+        <GradientStop Color="#26B9AEF5" Offset="0" />
         <GradientStop Color="#00FFFFFF" Offset="1" />
     </RadialGradientBrush>
 
@@ -43,8 +43,8 @@
     <SolidColorBrush x:Key="PinselKonsoleText" Color="#C3D3E2" />
 
     <!-- Merkmal-Plaketten -->
-    <SolidColorBrush x:Key="PinselPlaketteFlaeche" Color="#EEF0F7" />
-    <SolidColorBrush x:Key="PinselPlaketteRand" Color="#DFE2EC" />
+    <SolidColorBrush x:Key="PinselPlaketteFlaeche" Color="#E7EAF4" />
+    <SolidColorBrush x:Key="PinselPlaketteRand" Color="#C3CADC" />
 
     <SolidColorBrush x:Key="PinselLaeuftFlaeche" Color="#E4F7EC" />
     <SolidColorBrush x:Key="PinselLaeuftRand" Color="#A9DEC1" />
@@ -63,9 +63,14 @@
     <SolidColorBrush x:Key="PinselFehlerText" Color="#98203A" />
 
     <!-- Bedienelemente -->
-    <SolidColorBrush x:Key="PinselSchalterBahn" Color="#DDE1EC" />
-    <SolidColorBrush x:Key="PinselSchalterRand" Color="#C7CDDC" />
+    <SolidColorBrush x:Key="PinselSchalterBahn" Color="#CAD1E1" />
+    <SolidColorBrush x:Key="PinselSchalterRand" Color="#AEB7CD" />
     <SolidColorBrush x:Key="PinselSchalterKnopf" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="PinselRollbalken" Color="#C2C8D8" />
+    <SolidColorBrush x:Key="PinselRollbalken" Color="#A7B0C6" />
+
+    <!-- Im Hellen ein weicher, breiter Schatten: hebt die weissen Karten vom grauen Untergrund ab,
+         ohne schmutzig zu wirken. -->
+    <DropShadowEffect x:Key="KartenSchatten" BlurRadius="14" ShadowDepth="2" Direction="270"
+                      Color="#4A5578" Opacity="0.30" RenderingBias="Performance" />
 
 </ResourceDictionary>
