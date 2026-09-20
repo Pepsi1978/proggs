@@ -21,7 +21,7 @@
       .\Start-CodexAdmin.ps1               Fenster sichtbar starten (Desktop-Verknuepfung)
       .\Start-CodexAdmin.ps1 -Background   Beim Anmelden ins Tray starten (Autostart-Aufgabe)
 #>
-# Version 1.0.0 - 20.09.2026, 11:44 Uhr
+# Version 1.0.1 - 20.09.2026, 11:50 Uhr
 
 param([switch]$Background)
 
@@ -33,6 +33,11 @@ $KeinDeElevate = '--do-not-de-elevate'
 
 $StatusPfad = Join-Path $env:LOCALAPPDATA 'CodexAutostart\last-launch.json'
 
+# Sammelt Zwischenschritte, damit im Fehlerfall nachvollziehbar ist, was der Launcher
+# vorgefunden hat. Landet mit in der Statusdatei.
+$script:Spur = New-Object System.Collections.ArrayList
+function Notiere([string]$Text) { [void]$script:Spur.Add("$(Get-Date -Format 'HH:mm:ss')  $Text") }
+
 function Schreibe-Status([bool]$Erfolg, [string]$Meldung, $Prozess) {
     try {
         $ordner = Split-Path $StatusPfad -Parent
@@ -43,7 +48,8 @@ function Schreibe-Status([bool]$Erfolg, [string]$Meldung, $Prozess) {
             Pid        = $Prozess
             Background = [bool]$Background
             Time       = (Get-Date -Format o)
-        } | ConvertTo-Json | Set-Content -LiteralPath $StatusPfad -Encoding UTF8
+            Verlauf    = @($script:Spur)
+        } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $StatusPfad -Encoding UTF8
     } catch { }
 }
 
@@ -86,6 +92,31 @@ public static class CodexAdminCheck {
  [DllImport("advapi32.dll", SetLastError=true)] static extern bool GetTokenInformation(IntPtr t,int c,out int v,int n,out int l);
  [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
  [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr h,int n);
+ [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
+ [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc f, IntPtr l);
+ [DllImport("user32.dll")] static extern int GetWindowThreadProcessId(IntPtr h, out int pid);
+ [DllImport("user32.dll", EntryPoint="GetWindowLongPtrW")] static extern IntPtr GetWindowLongPtr(IntPtr h, int i);
+ [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr h, uint c);
+ delegate bool EnumProc(IntPtr h, IntPtr l);
+
+ // Auch VERSTECKTE Fenster finden. Process.MainWindowHandle liefert nur sichtbare
+ // Fenster und ist daher nutzlos, sobald Codex im Tray liegt.
+ public static IntPtr FindeFenster(int pid) {
+   IntPtr treffer = IntPtr.Zero;
+   EnumWindows(delegate(IntPtr h, IntPtr l) {
+     int p; GetWindowThreadProcessId(h, out p);
+     if (p != pid) return true;
+     if (GetWindow(h, 4) != IntPtr.Zero) return true;              // kein Eigentuemer-Fenster
+     long ex = (long)GetWindowLongPtr(h, -20);
+     if ((ex & 0x80) != 0) return true;                            // kein WS_EX_TOOLWINDOW (Overlay)
+     treffer = h;
+     return false;
+   }, IntPtr.Zero);
+   return treffer;
+ }
+
  public static bool Elevated(int pid) {
    IntPtr p=OpenProcess(0x1000,false,pid), t=IntPtr.Zero;
    if(p==IntPtr.Zero) return false;
@@ -105,18 +136,55 @@ public static class CodexAdminCheck {
     $exe = Join-Path $paket.InstallLocation 'app\ChatGPT.exe'
     if (-not (Test-Path -LiteralPath $exe)) { throw "Programmdatei nicht gefunden: $exe" }
 
+    # Codex startet viele Hilfsprozesse (Renderer, GPU, Utility). Der Hauptprozess ist
+    # der einzige, dessen Elternprozess KEIN ChatGPT.exe ist.
+    # Bewusst NICHT ueber die Kommandozeile unterscheiden: die Kommandozeile erhoehter
+    # Prozesse ist je nach Kontext nicht lesbar und kommt dann leer zurueck.
     function Hole-Hauptprozesse {
-        @(Get-CimInstance Win32_Process -Filter "Name='ChatGPT.exe'" |
-            Where-Object { $_.CommandLine -notmatch '--type=' })
+        $alle = @(Get-CimInstance Win32_Process -Filter "Name='ChatGPT.exe'")
+        $ids  = @($alle | ForEach-Object { [int]$_.ProcessId })
+        @($alle | Where-Object { $ids -notcontains [int]$_.ParentProcessId })
     }
 
     # --- Schritt 3: laufende Instanzen pruefen ----------------------------------
     # Electron laesst nur eine Instanz zu. Eine bereits laufende unerhoehte Instanz
     # blockiert jeden erhoehten Start - sie muss vorher weg.
-    $laufend = Hole-Hauptprozesse
+    # @() beim Aufruf ist Pflicht: PowerShell entrollt Arrays beim Rueckgabewert, und ein
+    # einzelnes CimInstance-Objekt hat keine .Count-Eigenschaft - die Abfrage liefe ins Leere.
+    $laufend = @(Hole-Hauptprozesse)
     $unerhoeht = @($laufend | Where-Object { -not [CodexAdminCheck]::Elevated([int]$_.ProcessId) })
+    Notiere ("Hauptprozesse: " + $laufend.Count + " (davon unerhoeht: " + $unerhoeht.Count + ") - PIDs: " +
+             (($laufend | ForEach-Object { $_.ProcessId }) -join ', '))
 
     if ($laufend.Count -and -not $unerhoeht.Count) {
+        # Laeuft schon erhoeht. Beim manuellen Start soll das Fenster nach vorne kommen -
+        # sonst passiert beim Klick auf die Verknuepfung scheinbar gar nichts, solange
+        # Codex im Tray liegt.
+        if (-not $Background) {
+            $gezeigt = $false
+            foreach ($prozess in $laufend) {
+                $fenster = [CodexAdminCheck]::FindeFenster([int]$prozess.ProcessId)
+                if ($fenster -eq [IntPtr]::Zero) { continue }
+                if ([CodexAdminCheck]::IsIconic($fenster)) {
+                    [void][CodexAdminCheck]::ShowWindowAsync($fenster, 9)    # SW_RESTORE
+                } else {
+                    [void][CodexAdminCheck]::ShowWindowAsync($fenster, 5)    # SW_SHOW
+                }
+                Start-Sleep -Milliseconds 400
+                [void][CodexAdminCheck]::SetForegroundWindow($fenster)
+                # Erfolg nur zaehlen, wenn das Fenster danach wirklich sichtbar und nicht
+                # minimiert ist - ein "true" der API allein sagt darueber nichts aus.
+                if ([CodexAdminCheck]::IsWindowVisible($fenster) -and -not [CodexAdminCheck]::IsIconic($fenster)) {
+                    $gezeigt = $true
+                    break
+                }
+            }
+            if (-not $gezeigt) {
+                Zeige-Meldung ("Codex laeuft bereits mit Administratorrechten, das Fenster liess sich aber " +
+                               "nicht nach vorne holen.`n`nBitte das Codex-Symbol im Benachrichtigungsfeld " +
+                               "(unten rechts neben der Uhr) anklicken.") 'Codex - Administratorstart'
+            }
+        }
         Schreibe-Status $true 'Codex laeuft bereits mit Administratorrechten.' $laufend[0].ProcessId
         exit 0
     }
@@ -132,8 +200,8 @@ public static class CodexAdminCheck {
         # Alle Codex-Prozesse beenden, auch die Renderer-Kindprozesse.
         Get-Process -Name ChatGPT -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
         $frist = (Get-Date).AddSeconds(15)
-        while ((Hole-Hauptprozesse).Count -and (Get-Date) -lt $frist) { Start-Sleep -Milliseconds 300 }
-        if ((Hole-Hauptprozesse).Count) { throw 'Codex liess sich nicht beenden. Bitte manuell schliessen und erneut versuchen.' }
+        while (@(Hole-Hauptprozesse).Count -and (Get-Date) -lt $frist) { Start-Sleep -Milliseconds 300 }
+        if (@(Hole-Hauptprozesse).Count) { throw 'Codex liess sich nicht beenden. Bitte manuell schliessen und erneut versuchen.' }
         Start-Sleep -Seconds 2
     }
 
@@ -149,6 +217,7 @@ public static class CodexAdminCheck {
     $info.UseShellExecute = $false
     $info.WorkingDirectory = $env:USERPROFILE
     $app = [Diagnostics.Process]::Start($info)
+    Notiere ("Neu gestartet: PID " + $app.Id + " aus " + $exe)
 
     Start-Sleep -Seconds 5
     $app.Refresh()

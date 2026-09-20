@@ -1,6 +1,6 @@
 # Codex Desktop mit Administratorrechten starten
 
-Version 1.0.0 — 20.09.2026, 11:44 Uhr
+Version 1.0.1 — 20.09.2026, 11:50 Uhr
 
 Startet **Codex Desktop** (MSIX-Paket `OpenAI.Codex`) dauerhaft mit Administratorrechten:
 beim Anmelden automatisch im System-Tray und per Desktop-Verknüpfung sichtbar.
@@ -71,6 +71,10 @@ Das Skript holt sich die Adminrechte selbst (eine UAC-Abfrage) und legt an:
 6. Im `-Background`-Modus: versteckt das Fenster mehrfach (`SW_HIDE`), Codex bleibt über
    das Tray-Symbol erreichbar.
 
+Läuft Codex bereits erhöht und wird die Desktop-Verknüpfung geklickt, holt der Launcher
+das Fenster nach vorne, statt gar nichts zu tun. Dafür sucht er das Fenster selbst per
+`EnumWindows` — `Process.MainWindowHandle` findet versteckte Tray-Fenster nicht.
+
 Ergebnis jedes Starts landet in `%LOCALAPPDATA%\CodexAutostart\last-launch.json`.
 
 ## Prüfen, ob es wirkt
@@ -83,6 +87,20 @@ Get-CimInstance Win32_Process -Filter "Name='ChatGPT.exe'" |
 
 Ist die **Kommandozeile leer**, obwohl die Prozesse laufen, ist das der Beweis: Ein
 normaler Benutzerprozess darf die Kommandozeile erhöhter Prozesse nicht lesen.
+
+## Fallstricke, die hier schon Blut gekostet haben
+
+- **`--do-not-de-elevate` weglassen** → Codex startet unerhöht neu, der Launcher meldet
+  einen Fehler, obwohl die App läuft.
+- **Start über `shell:AppsFolder`** → Windows aktiviert das Paket und fällt dabei auf
+  normale Rechte zurück. Nur `CreateProcess` (`UseShellExecute=false`) vererbt das Token.
+- **Hauptprozess über die Kommandozeile erkennen** (`--type=` herausfiltern) → die
+  Kommandozeile erhöhter Prozesse ist für normale Prozesse nicht lesbar und kommt leer
+  zurück. Der Launcher erkennt den Hauptprozess deshalb daran, dass sein Elternprozess
+  kein `ChatGPT.exe` ist.
+- **`$liste = Funktion-Die-Ein-Array-Liefert`** → PowerShell entrollt das Array; bei genau
+  einem Treffer bleibt ein `CimInstance` übrig, das keine `.Count`-Eigenschaft hat. Die
+  Prüfung läuft still ins Leere. Immer `@(...)` um den Aufruf.
 
 ## Nach einem Codex-Update
 
