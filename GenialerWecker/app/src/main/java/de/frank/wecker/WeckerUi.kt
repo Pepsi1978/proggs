@@ -423,6 +423,46 @@ private fun uhrGroesse(stufe: KopfStufe): androidx.compose.ui.unit.TextUnit = wh
 }
 
 /**
+ * Die größte Schriftgröße, mit der die Uhrzeit in [maxBreite] noch vollständig passt.
+ *
+ * `softWrap = false` schneidet stillschweigend ab, wenn der Platz nicht reicht — und genau das
+ * geschah bei schmalen Geräten: Die Textspalte war rechnerisch 138 dp breit, die Uhr brauchte bei
+ * 52 sp und hochgesetzter Systemschrift deutlich mehr. Statt zu raten wird hier gemessen, wie es
+ * der Weckbildschirm für seine große Uhr schon tut. Gemessen wird mit dem breitesten Ziffernpaar,
+ * damit die Größe über den Tag hinweg stabil bleibt und die Zahl nicht bei jedem Minutenwechsel
+ * springt.
+ */
+@Composable
+private fun passendeUhrGroesse(
+    maxBreite: androidx.compose.ui.unit.Dp,
+    basis: androidx.compose.ui.unit.TextUnit,
+    familie: androidx.compose.ui.text.font.FontFamily,
+    gewicht: FontWeight?,
+): androidx.compose.ui.unit.TextUnit {
+    val messer = androidx.compose.ui.text.rememberTextMeasurer()
+    val dichte = LocalDensity.current
+    return remember(messer, maxBreite, basis, familie, gewicht, dichte.density, dichte.fontScale) {
+        val grenze = with(dichte) { maxBreite.toPx() }
+        if (grenze <= 0f) return@remember basis
+        val stil = androidx.compose.ui.text.TextStyle(fontFamily = familie, fontWeight = gewicht)
+        fun breiteBei(sp: Float) = messer.measure(
+            "00:00", stil.copy(fontSize = sp.sp), maxLines = 1, softWrap = false,
+        ).size.width.toFloat()
+        val gewuenscht = basis.value
+        if (breiteBei(gewuenscht) <= grenze) return@remember basis
+        // Halbierung zwischen einer sicher passenden Untergrenze und der zu großen Wunschgröße.
+        var passt = 22f
+        var zuGross = gewuenscht
+        if (breiteBei(passt) > grenze) return@remember passt.sp
+        repeat(7) {
+            val mitte = (passt + zuGross) / 2f
+            if (breiteBei(mitte) <= grenze) passt = mitte else zuGross = mitte
+        }
+        passt.sp
+    }
+}
+
+/**
  * Die Uhr wächst mit der Systemschrift nur begrenzt mit: Bei doppelter Schrift würde aus 52 sp
  * eine 120 dp hohe Zeile und der feststehende Hero verschlänge die halbe Seite. Termin, Name und
  * Restzeit skalieren dagegen voll mit — sie muss man lesen können.
@@ -515,7 +555,8 @@ private fun TerminGruppe(
                 )
             }
             Text("in ${remainingLong(daten.next - daten.now)}",
-                style = MaterialTheme.typography.bodyMedium, color = fuehrung, maxLines = 1)
+                style = MaterialTheme.typography.bodyMedium, color = fuehrung,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -566,45 +607,90 @@ private fun SchlichtHero(
         SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden)
         return
     }
-    // Der Ring darf die Textspalte nie unter ihr Mindestmaß drücken: Die längste Zeile und die
-    // Knopfzeile brauchen zusammen rund 186 dp.
-    val ring = (daten.breite - 232.dp).coerceIn(100.dp, if (daten.weit) 148.dp else 132.dp)
+    // Gerechnet wird mit der **echten** Innenbreite, nicht mit der Fensterbreite: Von dieser
+    // gehen außen 2 × 16 dp und innerhalb der Karte noch einmal 2 × 16 dp ab. Vorher floss die
+    // volle Fensterbreite in die Ringgröße ein — bei 360 dp Gerätebreite blieben der Textspalte
+    // dadurch 138 statt der zugesicherten 186 dp, und die Uhr wurde abgeschnitten.
+    val innen = daten.breite - HERO_AUSSEN * 2 - KARTE_INNEN * 2
+    // Die Aktionen stehen jetzt immer unter dem Ganzen und über die volle Breite. Dadurch muss
+    // die Textspalte nur noch Termin, Name und Restzeit tragen, und der Ring darf größer bleiben,
+    // statt bei schmalen Geräten auf Abzeichengröße zu schrumpfen.
+    val ringRoh = innen - SPALTEN_ABSTAND - textMindest() - RINGBETT_RAND
+    // Unter 96 dp wäre der Ring kein Instrument mehr, sondern ein Abzeichen. Auf sehr schmalen
+    // Geräten entfällt er deshalb ganz und die Uhr bekommt die volle Breite — die Anordnung
+    // wechselt, statt beide Teile unlesbar zu quetschen.
+    val zeigtRing = ringRoh >= 96.dp
+    val ring = ringRoh.coerceIn(96.dp, if (daten.weit) 148.dp else 132.dp)
+    val textBreite = if (zeigtRing) innen - SPALTEN_ABSTAND - (ring + RINGBETT_RAND) else innen
     HeroKarte {
-        Row(
-            Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Der Ring liegt in einer leicht vertieften Mulde — dieselbe Sprache wie ein nicht
-            // gedrückter Knopf, nur auf ein Instrument angewendet. Statisch, kein Dauerleuchten.
-            Box(
-                Modifier.size(ring + 16.dp)
-                    .background(gold.flaeche.dunkler(0.05f), CircleShape)
-                    .border(1.dp, lichtKante(gedrueckt = true, staerke = 0.35f), CircleShape),
-                contentAlignment = Alignment.Center,
+        Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                RestzeitRing(daten.now, daten.next, daten.nextIsSnooze, Modifier.size(ring))
+                // Der Ring liegt in einer leicht vertieften Mulde — dieselbe Sprache wie ein nicht
+                // gedrückter Knopf, nur auf ein Instrument angewendet. Statisch, kein Dauerleuchten.
+                if (zeigtRing) Box(
+                    Modifier.size(ring + RINGBETT_RAND)
+                        .background(gold.flaeche.dunkler(0.05f), CircleShape)
+                        .border(1.dp, lichtKante(gedrueckt = true, staerke = 0.35f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    RestzeitRing(daten.now, daten.next, daten.nextIsSnooze, Modifier.size(ring))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(datumsZeile(daten.now), Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelMedium, color = gold.textGedaempft,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    GedeckelteSchrift {
+                        // Die Größe wird gegen die tatsächlich verbleibende Spaltenbreite gemessen.
+                        val groesse = passendeUhrGroesse(textBreite, uhrGroesse(daten.stufe),
+                            zahlSchrift(), zahlGewicht())
+                        Text(formatClock(daten.now), Modifier.semantics { heading() },
+                            fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                            fontSize = groesse, color = gold.primaer, maxLines = 1, softWrap = false)
+                    }
+                    TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer)
+                }
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(datumsZeile(daten.now), Modifier.weight(1f),
-                        style = MaterialTheme.typography.labelMedium, color = gold.textGedaempft,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
+            // Über die volle Breite: Hier ist Platz für den beschrifteten Hauptknopf und die
+            // zweitrangige Handlung, auch wenn deren Text länger ist.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) {
+                    HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden)
                 }
-                GedeckelteSchrift {
-                    Text(formatClock(daten.now), Modifier.semantics { heading() },
-                        fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                        fontSize = uhrGroesse(daten.stufe), color = gold.primaer,
-                        maxLines = 1, softWrap = false)
-                }
-                TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer)
-                Spacer(Modifier.height(2.dp))
-                HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden)
+                BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
             }
         }
     }
 }
+
+/** Außenabstand der Hero-Box links und rechts. */
+private val HERO_AUSSEN = 16.dp
+/** Innenabstand innerhalb der Hero-Karte. */
+private val KARTE_INNEN = 16.dp
+/** Abstand zwischen Ring-/Motivspalte und Textspalte. */
+private val SPALTEN_ABSTAND = 14.dp
+/** Der Rand des vertieften Ringbetts rund um den Ring. */
+private val RINGBETT_RAND = 16.dp
+/**
+ * Was die Textspalte mindestens braucht, damit Termin, Name und Restzeit lesbar bleiben.
+ * Die längste Zeile ist der Termin („● Wecker 07:00 · morgen"); die Aktionen stehen inzwischen
+ * darunter und zählen hier nicht mehr mit.
+ */
+private val TEXT_MINDEST = 150.dp
+
+/**
+ * Die Mindestbreite wächst mit der Systemschrift: Bei großer Schrift braucht dieselbe Zeile
+ * mehr Platz, der Bildschirm wird aber nicht breiter. Gedeckelt bei Faktor 1,5, damit der Ring
+ * nicht schon bei mäßig vergrößerter Schrift ganz verschwindet.
+ */
+@Composable
+private fun textMindest(): androidx.compose.ui.unit.Dp =
+    TEXT_MINDEST * LocalDensity.current.fontScale.coerceIn(1f, 1.5f)
 
 /**
  * Schlichts Heroträger: der gewohnte Goldkörper, aber deutlich erhoben und mit einem statischen
@@ -666,11 +752,21 @@ private fun SchmalerHero(
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
                 if (daten.next != null) Text("in ${remainingLong(daten.next - daten.now)}",
-                    style = MaterialTheme.typography.bodySmall, color = gold.primaer, maxLines = 1)
+                    style = MaterialTheme.typography.bodySmall, color = gold.primaer,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (daten.nextIsSnooze) StillerKnopf("Wecken", aufSchlummernBeenden, hervorgehoben = true)
-            GoldKnopf("Neu", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
-                symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
+            // „Wecken" stand hier früher und war irreführend: Die Handlung entfernt den
+            // Schlummertermin und plant den Wecker regulär neu — sie löst kein sofortiges
+            // Klingeln aus. Wer das falsch versteht, verliert seinen Schlummeralarm.
+            // Der längere Text darf umbrechen, statt die Zeile zu sprengen.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (daten.nextIsSnooze) StillerKnopf("Schlummern beenden", aufSchlummernBeenden, hervorgehoben = true)
+                GoldKnopf("Neu", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
+                    symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
+            }
         }
     }
 }
@@ -696,28 +792,43 @@ private fun MorgenruheHero(
     val oeffnen = { daten.nextAlarm?.let(aufOeffnen); Unit }
     if (daten.schmal) { SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden); return }
     val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
-    val motiv = if (daten.weit) 128.dp else 104.dp
+    // Wie bei Schlicht mit der echten Innenbreite gerechnet. Der Fehler war hier ein anderer:
+    // Motiv und Aktionsknopf standen in derselben rechten Spalte, die damit so breit wurde wie
+    // der Knopf — der Textspalte blieben bei 360 dp Gerätebreite nur 132 dp. Jetzt trägt die
+    // rechte Spalte allein das Motiv, die Aktionen stehen darunter über die volle Breite.
+    val innen = daten.breite - HERO_AUSSEN * 2 - KARTE_INNEN * 2
+    val motiv = (innen - SPALTEN_ABSTAND - textMindest())
+        .coerceIn(0.dp, if (daten.weit) 128.dp else 104.dp)
+    val zeigtMotiv = motiv >= 72.dp
+    val textBreite = innen - if (zeigtMotiv) SPALTEN_ABSTAND + motiv else 0.dp
     Column(Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund).border(1.dp, gold.heroKante, form)) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    // Das einzige Ornament des Designs: ein kurzer Messingstrich als Tagesmarke.
-                    Box(Modifier.width(40.dp).height(2.dp).background(gold.akzentWarm))
-                    Text(datumsZeile(daten.now), style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium, color = gold.heroFuehrung,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    GedeckelteSchrift {
-                        Text(formatClock(daten.now), Modifier.semantics { heading() },
-                            fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                            fontSize = uhrGroesse(daten.stufe), color = gold.heroSchrift,
-                            maxLines = 1, softWrap = false)
+            Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        // Das einzige Ornament des Designs: ein kurzer Messingstrich als Tagesmarke.
+                        Box(Modifier.width(40.dp).height(2.dp).background(gold.akzentWarm))
+                        Text(datumsZeile(daten.now), style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium, color = gold.heroFuehrung,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        GedeckelteSchrift {
+                            val groesse = passendeUhrGroesse(textBreite, uhrGroesse(daten.stufe),
+                                zahlSchrift(), zahlGewicht())
+                            Text(formatClock(daten.now), Modifier.semantics { heading() },
+                                fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                                fontSize = groesse, color = gold.heroSchrift,
+                                maxLines = 1, softWrap = false)
+                        }
+                        TerminGruppe(daten, oeffnen, gold.heroSchrift, gold.heroSchriftGedaempft, gold.heroFuehrung)
                     }
-                    TerminGruppe(daten, oeffnen, gold.heroSchrift, gold.heroSchriftGedaempft, gold.heroFuehrung)
-                    BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
+                    // Nur das Motiv steht rechts — und nur, wenn dafür wirklich Platz ist.
+                    if (zeigtMotiv) LocalGestalt.current.Motiv(Modifier.size(motiv))
                 }
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    LocalGestalt.current.Motiv(Modifier.size(motiv))
-                    HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden, knopfText = "Wecker anlegen")
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden, knopfText = "Wecker anlegen")
+                    }
+                    BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
                 }
             }
         }
@@ -752,6 +863,8 @@ private fun TraumraumHero(
     val kuppelForm = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
     val motiv = if (daten.weit) 96.dp else 72.dp
     val versatz = 26.dp
+    // Auch hier gegen die echte Restbreite gemessen: innen abzüglich Motiv und Abstand.
+    val uhrPlatz = daten.breite - HERO_AUSSEN * 2 - 40.dp - motiv - 14.dp
     Column(Modifier.fillMaxWidth()) {
         Box(
             Modifier.fillMaxWidth()
@@ -773,9 +886,11 @@ private fun TraumraumHero(
                     horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     LocalGestalt.current.Motiv(Modifier.size(motiv))
                     GedeckelteSchrift {
+                        val groesse = passendeUhrGroesse(uhrPlatz, uhrGroesse(daten.stufe),
+                            zahlSchrift(), zahlGewicht())
                         Text(formatClock(daten.now), Modifier.semantics { heading() },
                             fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                            fontSize = uhrGroesse(daten.stufe), color = gold.heroFuehrung,
+                            fontSize = groesse, color = gold.heroFuehrung,
                             maxLines = 1, softWrap = false)
                     }
                 }
@@ -802,7 +917,7 @@ private fun TraumraumHero(
             Column(horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 GoldKnopf("＋", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen")
-                if (daten.nextIsSnooze) StillerKnopf("Wecken", aufSchlummernBeenden, hervorgehoben = true)
+                if (daten.nextIsSnooze) StillerKnopf("Schlummern beenden", aufSchlummernBeenden, hervorgehoben = true)
             }
         }
     }
@@ -829,7 +944,12 @@ private fun OrbitHero(
     val oeffnen = { daten.nextAlarm?.let(aufOeffnen); Unit }
     if (daten.schmal) { SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden); return }
     val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
-    val motiv = if (daten.weit) 108.dp else 92.dp
+    // Auch hier gibt die echte Innenbreite die Motivgröße vor: Auf sehr schmalen Abdeckbildschirmen
+    // ginge sonst der Datenspalte der Platz aus. Orbits Innenabstand ist 12 dp, nicht 16 dp.
+    val innen = daten.breite - HERO_AUSSEN * 2 - 24.dp
+    val motiv = (innen - 12.dp - textMindest()).coerceIn(0.dp, if (daten.weit) 108.dp else 92.dp)
+    val zeigtMotiv = motiv >= 64.dp
+    val uhrPlatz = innen - if (zeigtMotiv) motiv + 12.dp else 0.dp
     val statusFarbe = when {
         daten.nextIsSnooze -> semantisch.info
         daten.hatTermin -> gold.akzentWarm
@@ -864,12 +984,14 @@ private fun OrbitHero(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                LocalGestalt.current.Motiv(Modifier.size(motiv))
+                if (zeigtMotiv) LocalGestalt.current.Motiv(Modifier.size(motiv))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     GedeckelteSchrift {
+                        val groesse = passendeUhrGroesse(uhrPlatz, uhrGroesse(daten.stufe),
+                            IdeenSchriftFest, FontWeight.SemiBold)
                         Text(formatClock(daten.now), Modifier.semantics { heading() },
                             fontFamily = IdeenSchriftFest, fontWeight = FontWeight.SemiBold,
-                            fontSize = uhrGroesse(daten.stufe), color = gold.heroFuehrung,
+                            fontSize = groesse, color = gold.heroFuehrung,
                             maxLines = 1, softWrap = false)
                     }
                     RestzeitSkala(daten, gold.heroFuehrung, if (daten.nextIsSnooze) semantisch.info else gold.akzentWarm,
@@ -890,7 +1012,7 @@ private fun OrbitHero(
                 GoldKnopf("WECKER", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
                     symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
                 Spacer(Modifier.weight(1f))
-                if (daten.nextIsSnooze) StillerKnopf("WECKEN", aufSchlummernBeenden, hervorgehoben = true)
+                if (daten.nextIsSnooze) StillerKnopf("SCHLUMMERN BEENDEN", aufSchlummernBeenden, hervorgehoben = true)
                 BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung,
                     stil = MaterialTheme.typography.labelSmall.copy(fontFamily = IdeenSchriftFest))
             }
@@ -2044,7 +2166,12 @@ private fun TerminZeile(now: Long, target: Long, snooze: Boolean) {
     val targetText = terminAnzeige(now, target).einzeilig
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LegendenMarker(hollow = false, color = accent)
-        Text("${if (snooze) "Schlummern bis" else "Wecker"} $targetText", style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer)
+        // Genau eine Zeile: Ohne diese Begrenzung brach „Wecker Mo, 22.09. · 06:30" um, und der
+        // Hero war je nach Termin unterschiedlich hoch — er sprang beim Wechsel von „morgen"
+        // auf ein Wochentagsdatum.
+        Text("${if (snooze) "Schlummern bis" else "Wecker"} $targetText",
+            style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
