@@ -773,3 +773,108 @@ Direkt nach `keyDown` kam ein noch laufender Poll-Response mit dem ALTEN State z
 | K1–K7 (Packaging/Distribution) | O. Distribution & Packaging |
 | M1, M2 (Throttling/Push) + Z6/Z7 | L. Performance & Push-statt-Poll |
 | O1–O4, A4 (Marketplace) | P. Marketplace-Konventionen |
+
+---
+
+## R. Betrieb: Software laeuft, aber das Geraet reagiert ueberhaupt nicht (KEIN Plugin-Bug)
+
+> Eigener Vorfall 20.09.2026. Symptom des Benutzers: "Stream Deck ist angeschlossen, ich kann
+> Tasten druecken wie ich will — es passiert gar nichts." Wichtig: Das ist KEIN Plugin-Fehler.
+> Erst diesen Abschnitt abarbeiten, bevor irgendein Plugin verdaechtigt wird.
+
+### R1 — Leere `StreamDeck.log` = Prozess ist beim Start eingefroren (Leitsymptom)
+
+Die sicherste Einzeldiagnose. `%APPDATA%\Elgato\StreamDeck\logs\StreamDeck.log` ist **0 Bytes**,
+`LastWriteTime` == Startzeit des Prozesses, und seitdem wurde nichts mehr geschrieben.
+
+Die Software rotiert beim Start das alte Log nach `StreamDeck.1.log` und legt ein neues leeres an.
+Bleibt das neue leer, ist der Prozess **noch vor dem Sentry-Init** haengen geblieben — er hat nie
+angefangen, das Geraet zu bedienen. `Responding: True` im Task-Manager taeuscht: das prueft nur die
+Qt-Fensterschleife, nicht den Device-Thread. Auch CPU-Zeit > 0 und mehrere hundert MB RAM sind
+kein Gegenbeweis.
+
+```powershell
+# Der 10-Sekunden-Check — ist die Software wirklich am Leben?
+Get-ChildItem "$env:APPDATA\Elgato\StreamDeck\logs\StreamDeck.log" |
+  Select-Object Length, LastWriteTime
+# Length 0 und LastWriteTime == Prozess-Startzeit  ->  eingefroren, neu starten (R4)
+```
+
+### R2 — Verwaister `crashpad_handler` verraet den abgestuerzten ersten Startversuch
+
+Zu jeder lebenden `StreamDeck.exe` gehoert **genau ein** `crashpad_handler`. Finden sich zwei (oder
+mehr) mit unterschiedlichen Startzeiten, ist ein frueherer Startversuch gestorben und hat seinen
+Crash-Handler als Waise zurueckgelassen. Im Vorfall: `crashpad_handler` 09:47:47 ohne Elternprozess,
+danach der zweite Start um 09:48:00, dessen Log leer blieb.
+
+```powershell
+Get-Process | Where-Object { $_.Path -like '*Elgato*' } |
+  Select-Object ProcessName, Id, StartTime, Responding | Sort-Object StartTime
+```
+
+### R3 — Ursache im Vorfall: Explorer-Absturz riss den Stream-Deck-Autostart mit
+
+Im Application-Eventlog stand 6 Minuten vor den kaputten Startversuchen:
+
+```
+09:41:15  Application Hang  explorer.exe hat aufgehoert mit Windows zu interagieren
+```
+
+Der Explorer-Neustart startet die Autostart-Eintraege erneut — dabei kollidierten zwei Startversuche
+(09:47:47 und 09:48:00) um den Device-Lock auf das HID-Handle. Ergebnis: der Ueberlebende kam nie an
+das Geraet heran. **Merke: Nach jedem Explorer-Crash/-Neustart ist Stream Deck ein Verdaechtiger.**
+
+```powershell
+Get-WinEvent -FilterHashtable @{LogName='Application'; Level=1,2; StartTime=(Get-Date).Date} |
+  Select-Object -First 12 TimeCreated, ProviderName
+```
+
+### R4 — Fix: ALLE Elgato-Prozesse beenden, dann EINMAL neu starten
+
+Nur `StreamDeck.exe` zu beenden reicht nicht — `QtWebEngineProcess`, `crashpad_handler` und der
+`ElgatoAudioControlServer(Watcher)` halten sonst Handles und der Neustart landet wieder im selben
+Zustand. Nicht als Administrator starten (siehe N1).
+
+```powershell
+Get-Process | Where-Object { $_.Path -like '*Elgato*' -or $_.ProcessName -eq 'StreamDeck' } |
+  Stop-Process -Force
+Start-Sleep -Seconds 4
+Start-Process "C:\Program Files\Elgato\StreamDeck\StreamDeck.exe"
+```
+
+**Erfolg pruefen — diese eine Zeile muss im Log stehen:**
+
+```
+DeviceManager  inf CORE  device status changed @(1)[4057/143/<SERIAL>]: connected
+```
+
+Steht sie da, leuchtet das Geraet wieder und die Tasten reagieren. Vorher nichts anderes debuggen.
+
+### R5 — Hardware zuerst ausschliessen (30 Sekunden, spart stundenlange Fehlsuche)
+
+Bevor die Software verdaechtigt wird: sieht Windows das Geraet ueberhaupt? Elgato ist **VID_0FD9**.
+
+```powershell
+Get-PnpDevice | Where-Object { $_.InstanceId -match 'VID_0FD9' } |
+  Select-Object Status, Class, FriendlyName, InstanceId
+```
+
+Zwei Eintraege mit `Status: OK` (ein `USB\`- und ein `HID\`-Knoten) == Kabel, Port und Treiber sind
+in Ordnung, der Fehler liegt garantiert in der Software → R1. Fehlt der `HID\`-Knoten, ist es ein
+Kabel-/Port-/Treiberproblem — dann hilft kein Software-Neustart.
+
+> ⚠️ **Falle:** `Get-PnpDevice` liefert ohne erhoehte Rechte bei sehr vielen intakten Geraeten
+> `Status: Unknown` (im Vorfall u. a. saemtliche Razer-Geraete). Das ist **kein** Defekt. Nur
+> `Status: Error` ist ein echtes Problem — `Unknown` niemals als Befund werten.
+
+### R6 — Zwei Dauer-Logzeilen, die IMMER auftauchen und NIE die Ursache sind
+
+Beide stehen auch in jedem einwandfrei laufenden Log. Nicht darauf anspringen:
+
+| Logzeile | Bedeutung |
+|----------|-----------|
+| `EGQTCredentialStore … CredRead() err: 1168` | Kein Elgato-Konto im Windows-Credential-Store hinterlegt. Ohne Marketplace-Login normal. |
+| `NodeManager … Failed to save Node.js manifest … Pfad nicht finden` | Node-Manifest-Kopie aus `%TEMP%\com.elgato.streamdeck\<guid>` schlaegt fehl. Betrifft nur Node-Plugins; klassische JS-Plugins laufen unbeeintraechtigt. |
+
+Ebenso harmlos: `analytics::ApiClient::send_data Response status: 403` beim Shutdown — nur die
+Telemetrie-Abgabe, ohne Konto erwartbar.
