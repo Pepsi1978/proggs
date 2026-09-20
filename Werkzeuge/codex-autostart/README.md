@@ -1,6 +1,6 @@
 # Codex Desktop mit Administratorrechten starten
 
-Version 1.1.0 — 20.09.2026, 12:01 Uhr
+Version 1.2.0 — 20.09.2026, 12:24 Uhr
 
 Startet **Codex Desktop** (MSIX-Paket `OpenAI.Codex`) dauerhaft mit Administratorrechten:
 beim Anmelden automatisch im System-Tray und per Desktop-Verknüpfung sichtbar.
@@ -128,9 +128,52 @@ Win32 darf nur **lesen**: `EnumWindows` zum Finden, `IsWindowVisible`/`IsIconic`
   einem Treffer bleibt ein `CimInstance` übrig, das keine `.Count`-Eigenschaft hat. Die
   Prüfung läuft still ins Leere. Immer `@(...)` um den Aufruf.
 
-## Nach einem Codex-Update
+## Updates
 
-Nichts zu tun — der Paketpfad wird bei jedem Start neu ermittelt.
+**Updates funktionieren unverändert weiter.** Codex Desktop ist ein Store-signiertes
+MSIX-Paket (`SignatureKind: Store`) und wird über den Paketdienst von Windows aktualisiert —
+per Store im Hintergrund oder über die UpdateZentrale, die
+`winget upgrade --id 9PLM9XGG6VKS --source msstore --silent` ausführt.
 
-Sollte OpenAI eines Tages `allowElevation` ins Manifest aufnehmen, ließe sich wieder der
-saubere Weg über `shell:AppsFolder` nutzen; nötig ist das nicht.
+Das ist völlig unabhängig davon, wie die App gestartet wurde. Der Launcher greift in den
+Update-Weg an keiner Stelle ein: Er ersetzt nur den **Start**, nicht die Installation.
+
+Nach einem Update ist nichts von Hand nachzuziehen:
+
+| Was | Warum es das Update überlebt |
+|---|---|
+| Autostart-Aufgabe | zeigt auf dieses Skript, nicht auf Codex |
+| Desktop-Verknüpfung | ebenso |
+| Paketpfad (enthält die Versionsnummer) | wird bei **jedem** Start neu über `Get-AppxPackage` ermittelt |
+
+**Der eine Haken, den der Launcher abfängt:** Ein MSIX-Update kann nicht in einen laufenden
+Paketordner geschrieben werden. Windows legt die neue Version daneben — die laufende Instanz
+arbeitet weiter aus dem alten Ordner. Da Codex per Autostart durchgehend läuft, bliebe das
+Update sonst bis zum nächsten Hochfahren wirkungslos.
+
+Deshalb vergleicht der Launcher bei jedem Start den Pfad der laufenden Instanz mit dem
+aktuellen Paketpfad. Weichen sie ab, fragt er beim Klick auf die Verknüpfung:
+
+> Codex wurde aktualisiert, es läuft aber noch die alte Fassung. Soll Codex jetzt neu
+> gestartet werden, damit das Update wirksam wird?
+
+Im Autostart-Modus (`-Background`) wird nie ungefragt beendet.
+
+### Was die UpdateZentrale betrifft
+
+Der Katalogeintrag `codex-desktop` steht auf `beendenVorUpdate: false` und
+`neuStartenNachUpdate: false` — die UpdateZentrale fasst die laufende App also nicht an und
+startet sie auch nicht neu. Das ist gut so: Ihr Neustart liefe über
+`shell:AppsFolder\…` und damit **ohne** Administratorrechte.
+
+Zwei Dinge dort deshalb nicht einschalten:
+
+- **„Autostart als geplante Aufgabe"** für Codex. Die UpdateZentrale legt eine eigene Aufgabe
+  `UpdateZentrale - codex-desktop` an — es gäbe zwei Autostart-Einträge nebeneinander.
+- **„Nach dem Update neu starten"** für Codex, solange der Neustart über `shell:AppsFolder`
+  läuft. Codex liefe danach unerhöht.
+
+## Wenn OpenAI das Manifest ändert
+
+Sollte eines Tages `allowElevation` im Manifest stehen, ließe sich wieder der saubere Weg über
+`shell:AppsFolder` nutzen; nötig ist das nicht.

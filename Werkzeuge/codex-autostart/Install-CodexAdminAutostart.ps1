@@ -11,7 +11,7 @@
     Beide zeigen auf Start-CodexAdmin.ps1 in DIESEM Repo-Ordner.
     Einfach ausfuehren; das Skript holt sich Adminrechte selbst.
 #>
-# Version 1.1.0 - 20.09.2026, 12:01 Uhr
+# Version 1.2.0 - 20.09.2026, 12:24 Uhr
 $ErrorActionPreference = 'Stop'
 
 $identitaet = [Security.Principal.WindowsIdentity]::GetCurrent()

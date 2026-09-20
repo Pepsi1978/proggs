@@ -28,7 +28,7 @@
       .\Start-CodexAdmin.ps1               Fenster sichtbar starten (Desktop-Verknuepfung)
       .\Start-CodexAdmin.ps1 -Background   Beim Anmelden ins Tray starten (Autostart-Aufgabe)
 #>
-# Version 1.1.0 - 20.09.2026, 12:01 Uhr
+# Version 1.2.0 - 20.09.2026, 12:24 Uhr
 
 param(
     [switch]$Background,
@@ -166,6 +166,18 @@ public static class CodexAdminCheck {
         @($alle | Where-Object { $ids -notcontains [int]$_.ParentProcessId })
     }
 
+    # Programmpfad eines laufenden Prozesses. Win32_Process.ExecutablePath ist je nach
+    # Rechtestand leer, deshalb zweiter Weg ueber Process.Path. Leer heisst "unbekannt" -
+    # daraus wird nie auf "veraltet" geschlossen.
+    function Hole-Pfad([int]$Kennung, $CimProzess) {
+        if ($CimProzess -and $CimProzess.ExecutablePath) { return [string]$CimProzess.ExecutablePath }
+        try {
+            $p = Get-Process -Id $Kennung -ErrorAction Stop
+            if ($p.Path) { return [string]$p.Path }
+        } catch { }
+        return ''
+    }
+
     # Startet die .exe erhoeht. UseShellExecute=false: CreateProcess erbt das erhoehte
     # Token. Ueber ShellExecute wuerde Windows die App als Paket aktivieren und dabei
     # auf normale Rechte zurueckfallen.
@@ -198,6 +210,39 @@ public static class CodexAdminCheck {
         Start-Sleep -Seconds 2
         $laufend = @()
         $unerhoeht = @()
+    }
+
+    # Laeuft eine Instanz aus einem ALTEN Paketordner? Dann wurde Codex zwischenzeitlich
+    # aktualisiert (der Ordner enthaelt die Version), die alte Fassung laeuft aber weiter.
+    # Ohne Neustart bliebe das Update bis zum naechsten Hochfahren wirkungslos.
+    $veraltet = @($laufend | Where-Object {
+        $pfad = Hole-Pfad ([int]$_.ProcessId) $_
+        $pfad -and $pfad -ne $exe
+    })
+    if ($laufend.Count) {
+        $gelesen = Hole-Pfad ([int]$laufend[0].ProcessId) $laufend[0]
+        Notiere ("Pfad der laufenden Instanz: " + $(if ($gelesen) { $gelesen } else { '(nicht lesbar)' }))
+    }
+    if ($veraltet.Count) {
+        Notiere 'Laufende Instanz stammt aus einem alten Paketordner - Codex wurde aktualisiert.'
+        if ($Background) {
+            # Beim Anmelden laeuft normalerweise nichts - passiert es doch, nicht ungefragt
+            # eine Sitzung abschiessen.
+            Notiere 'Hintergrundstart: alte Instanz bleibt unangetastet.'
+        } else {
+            $text = "Codex wurde aktualisiert, es laeuft aber noch die alte Fassung.`n`n" +
+                    "Soll Codex jetzt neu gestartet werden, damit das Update wirksam wird?`n" +
+                    "(Nicht gespeicherte Eingaben im Codex-Fenster gehen dabei verloren.)"
+            if (Frage-Nutzer $text 'Codex - Administratorstart') {
+                Get-Process -Name ChatGPT -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+                $frist = (Get-Date).AddSeconds(15)
+                while (@(Hole-Hauptprozesse).Count -and (Get-Date) -lt $frist) { Start-Sleep -Milliseconds 300 }
+                Start-Sleep -Seconds 2
+                $laufend = @()
+                $unerhoeht = @()
+                Notiere 'Alte Fassung beendet - starte die aktuelle.'
+            }
+        }
     }
 
     if ($laufend.Count -and -not $unerhoeht.Count) {

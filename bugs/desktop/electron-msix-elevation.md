@@ -19,6 +19,7 @@
 | 8 | Fenstersuche erwischt das falsche Fenster | `Process.MainWindowHandle` findet nur **sichtbare** Fenster (bei Tray-Apps 0). Selbst per `EnumWindows` suchen und dabei Eigentümer-Fenster, `WS_EX_TOOLWINDOW`-Overlays und fremde Fensterklassen aussortieren — Codex hält mehrere `Chrome_WidgetWin_1`-Fenster. |
 | 9 | Aktivierung meldet Erfolg, Benutzer sieht nichts | Rückgabewert von `SetForegroundWindow` ist kein Erfolgsmaß. Immer `IsWindowVisible` **und** `IsIconic` nachprüfen. |
 | 10 | Nach dem Umstieg auf erhöht: Drag & Drop und Automatisierung funktionieren nicht mehr | **UIPI**: unerhöhte Prozesse dürfen erhöhten Fenstern keine Eingaben schicken. Betrifft Explorer-Drag&Drop, Overlays, Sendkeys-Werkzeuge, Autohotkey. Kein Bug — Designentscheidung von Windows. |
+| 12 | Nach einem Paket-Update laeuft weiter die alte Version | Ein MSIX-Update kann nicht in einen **laufenden** Paketordner geschrieben werden; Windows legt die neue Version daneben. Bei einer Tray-App, die durchgehend laeuft, bleibt das Update sonst bis zum Neustart wirkungslos. Beim Start den Pfad der laufenden Instanz gegen den aktuellen Paketpfad pruefen (`Get-AppxPackage`). |
 | 11 | PowerShell: `$liste = Funktion-Die-Ein-Array-Liefert` und `.Count` ist leer | **Nicht Electron-spezifisch, aber genauso tückisch.** PowerShell entrollt Arrays beim Funktionsrückgabewert; bei genau einem Treffer bleibt ein einzelnes Objekt übrig. Bei `CimInstance` existiert `.Count` nicht → `$null` → `if ($liste.Count)` ist still `false`. Immer `@(Funktion)` am **Aufruf**. |
 
 ## §1 Die De-Elevation von Chromium
@@ -64,6 +65,19 @@ liegt es daran.
 
 Der Paketpfad enthält die Version und ändert sich bei jedem Update. Immer zur Laufzeit über
 `Get-AppxPackage` ermitteln, nie fest verdrahten.
+
+**Updates selbst bleiben unberührt.** Ein Store-MSIX wird vom Paketdienst aktualisiert
+(Store im Hintergrund oder `winget upgrade --id <ProduktId> --source msstore`) — unabhängig
+davon, wie die App gestartet wurde. Ein Launcher, der nur den Start ersetzt, bricht nichts.
+
+Zwei Folgen für dauerlaufende Tray-Apps:
+
+1. Die laufende Instanz arbeitet nach dem Update weiter aus dem **alten** Ordner. Beim Start
+   den Pfad der laufenden Instanz gegen den aktuellen Paketpfad vergleichen und bei Abweichung
+   einen Neustart anbieten.
+2. `Win32_Process.ExecutablePath` ist bei erhöhten Prozessen aus einem normalen Prozess heraus
+   **leer** — wie die Kommandozeile. Zweiten Weg über `(Get-Process -Id …).Path` vorsehen und
+   „Pfad unbekannt" nie als „veraltet" werten.
 
 ## §3 Prüfen, ob es wirklich erhöht läuft
 
