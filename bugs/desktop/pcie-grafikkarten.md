@@ -1,6 +1,6 @@
 # PCIe-Grafikkarten: Diagnosefallen
 
-Stand: 20.09.2026 10:18. Versionsanker: NVIDIA-SMI 616.92, RTX 5090, MSI MAG Z690 TOMAHAWK WIFI DDR4 MS-7D32, BIOS 1.M0. Die folgenden Punkte sind Diagnosefallen, keine pauschale Behauptung eines Hardwaredefekts.
+Stand: 20.09.2026 10:24. Versionsanker: NVIDIA-SMI 616.92, RTX 5090, MSI MAG Z690 TOMAHAWK WIFI DDR4 MS-7D32, BIOS 1.M0. Die folgenden Punkte sind Diagnosefallen, keine pauschale Behauptung eines Hardwaredefekts.
 
 ## 1. Momentane Verbindung mit Maximalfähigkeit verwechseln
 
@@ -20,14 +20,14 @@ Stand: 20.09.2026 10:18. Versionsanker: NVIDIA-SMI 616.92, RTX 5090, MSI MAG Z69
 - Quellen: [DDR4-Support](https://ru.msi.com/Motherboard/MAG-Z690-TOMAHAWK-WIFI-DDR4/support) und [anders benannte Variante](https://www.msi.com/Motherboard/MAG-Z690-TOMAHAWK-WIFI/support), beide offiziell.
 - Status: In dieser Recherche erkannt und korrigiert; kein falsches Paket heruntergeladen oder geflasht.
 
-## 3. Alte Anzeige ohne aktuelle Gegenprobe als BIOS-Fehler behandeln
+## 3. Veralteten Screenshot als aktuellen Fehler behandeln – geklärt
 
-- Symptom: CPU-Z-Screenshot vom 04.09.2026 zeigt maximal PCIe 4.0 x16, obwohl heutige NVIDIA-SMI-Messungen aktive Gen5 zeigen.
-- Ursache: Für die konkrete alte Anzeige nicht geklärt. Andere Messzeitpunkte, Tool-Anzeige oder damalige Konfiguration sind mögliche Erklärungen, keine bestätigten Ursachen.
+- Symptom: Ein alter CPU-Z-Screenshot wurde irrtümlich als Hinweis auf eine aktuelle Gen4-Anzeige behandelt. Der Benutzer bestätigt, dass die aktuelle Anzeige ebenfalls PCI Express 5.0 zeigt.
+- Ursache: Veralteter Screenshot als Diagnosegrundlage. Ein aktueller Anzeige- oder BIOS-Fehler ist nicht nachgewiesen.
 - Versionen: Screenshot CPU-Z 2.19.0 x64; heutiger Treiber 616.92; identifizierte Karte RTX 5090.
 - Funktionserhaltender Fix: Aktuelle direkte Messung vor BIOS-/VBIOS-Eingriffen. BIOS-Update nur nach modellgenauem Abgleich und eigenem Änderungsgrund bewerten.
-- Quelle: Benutzer-Screenshot und lokale Primärmessung; [offizielle MSI-BIOS-Liste](https://ru.msi.com/Motherboard/MAG-Z690-TOMAHAWK-WIFI-DDR4/support).
-- Status: Heutige feste Gen4-Begrenzung widerlegt; Ursache der historischen Anzeige offen.
+- Quelle: Ausdrückliche Benutzerkorrektur vom 20.09.2026, alter Benutzer-Screenshot und lokale Primärmessung; [offizielle MSI-BIOS-Liste](https://ru.msi.com/Motherboard/MAG-Z690-TOMAHAWK-WIFI-DDR4/support).
+- Status: Frage zur PCIe-Generation geklärt: aktuelle Anzeige und Live-Messung zeigen Gen5. Keine weitere Ursachenforschung zur alten Anzeige erforderlich. Die noch ausstehende x16-Lastprüfung ist eine getrennte Frage.
 
 ## Bezug zu Best Practices
 

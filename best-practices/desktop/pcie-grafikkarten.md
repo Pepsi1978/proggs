@@ -1,12 +1,12 @@
 # PCIe-Grafikkarten: Verbindung und BIOS prüfen
 
-Stand: 20.09.2026 10:18 (Systemzeit). Bereichsversion: Dokumentationsstand, keine Softwareänderung.
+Stand: 20.09.2026 10:24 (Systemzeit). Bereichsversion: Dokumentationsstand, keine Softwareänderung.
 
 ## Versionsanker und konkreter Befund
 
 MSI MAG Z690 TOMAHAWK WIFI DDR4 (MS-7D32), Revision 1.0; Intel Core i9-13900K; NVIDIA GeForce RTX 5090, MSI-Subsystem 53031462; Treiber 616.92; VBIOS 98.02.2e.40.a3. Mainboard-BIOS laut SMBIOS: 1.M0, Build-Datum 05.08.2025. Grafikkarte laut Benutzer direkt im obersten langen Steckplatz ohne Riser.
 
-Am 20.09.2026 lieferte NVIDIA-SMI GPU-Maximum Gen5, Host-Maximum Gen5 und maximale Breite x16. Im Leerlauf wurden Gen1 x4/P8, zwischenzeitlich auch aktive Gen5 x4/P0 gemessen. Gen5 ist damit tatsächlich beobachtet; ein erfolgreicher Gen5-x16-Lasttest ist NICHT belegt. Der CPU-Z-Screenshot vom 04.09.2026 zeigt abweichend maximal Gen4 x16; die Ursache dieser älteren Anzeige ist nicht ermittelt.
+Am 20.09.2026 lieferte NVIDIA-SMI GPU-Maximum Gen5, Host-Maximum Gen5 und maximale Breite x16. Im Leerlauf wurden Gen1 x4/P8, zwischenzeitlich auch aktive Gen5 x4/P0 gemessen. Gen5 ist damit tatsächlich beobachtet; ein erfolgreicher Gen5-x16-Lasttest ist NICHT belegt. Benutzerkorrektur vom 20.09.2026: Der beigefügte Screenshot war veraltet; die aktuelle Anzeige zeigt ebenfalls PCI Express 5.0. Es besteht damit keine aktuelle widersprüchliche Gen4-Anzeige und kein darauf begründeter BIOS-Fixbedarf.
 
 ## Diagnosefolge
 
