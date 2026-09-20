@@ -53,7 +53,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     public string ArtText => Eintrag.Art switch
     {
         "winget" => "winget",
-        "msstore" => "Microsoft Store",
+        "msstore" => Eintrag.SelbstAktualisierend ? "Eigener Updater" : "Microsoft Store",
         "cli" => "Selbst-Update",
         "reposkript" => "Eigenes Skript",
         _ => Eintrag.Art
@@ -119,6 +119,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         UpdateZustand.UpdateVerfuegbar => "Aktualisieren",
         UpdateZustand.Pruefe => "Prüft …",
         UpdateZustand.NichtInstalliert => "Nicht installiert",
+        _ when Eintrag.SelbstAktualisierend => "App öffnen",
         _ when Eintrag.Art == "msstore" => "Im Store öffnen",
         _ => "Aktualisieren"
     };
@@ -206,8 +207,18 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             if (!Dialoge.Fragen(frage, "Autostart mit Administratorrechten?")) return;
 
-            var (erfolg, ausgabe) = await Aufgabenplanung.AnlegenAsync(
-                Eintrag.Id, Pfade.Aufloesen(Eintrag.ExePfad), Eintrag.StartArgumente);
+            // Read the existing entry FIRST and reuse its exact command line -- wrappers like
+            // wscript.exe with a watcher script must survive the move to the task.
+            var vorhanden = Systemdienst.RunEintrag(Eintrag);
+            var befehlszeile = vorhanden?.Wert;
+            if (string.IsNullOrWhiteSpace(befehlszeile))
+            {
+                befehlszeile = "\"" + Pfade.Aufloesen(Eintrag.ExePfad) + "\"";
+                if (!string.IsNullOrWhiteSpace(Eintrag.StartArgumente))
+                    befehlszeile += " " + Eintrag.StartArgumente;
+            }
+
+            var (erfolg, ausgabe) = await Aufgabenplanung.AnlegenAsync(Eintrag.Id, befehlszeile!);
 
             if (!erfolg)
             {
@@ -215,7 +226,6 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 return;
             }
 
-            var vorhanden = Systemdienst.RunEintrag(Eintrag);
             if (vorhanden is not null)
             {
                 einstellung.GesicherterRunName = vorhanden.Value.Name;

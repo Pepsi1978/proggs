@@ -21,5 +21,9 @@ $lnk.Description = "UpdateZentrale - alle Werkzeuge pruefen und aktualisieren"
 $lnk.WindowStyle = 1
 $lnk.Save()
 
+# Windows merkt sich Verknuepfungs-Icons pro Pfad; ohne das Auffrischen bleibt nach einer
+# Icon-Aenderung das alte Bild stehen.
+try { & "$env:SystemRoot\System32\ie4uinit.exe" -show } catch { }
+
 Write-Output "Verknuepfung erstellt: $lnkPath"
 Write-Output "  -> Ziel: $exe"

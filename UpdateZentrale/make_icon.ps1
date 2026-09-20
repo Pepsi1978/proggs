@@ -61,23 +61,26 @@ $innenStift = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(90
 $g.DrawPath($innenStift, $innen)
 
 # --- Kreisbogen als Aktualisieren-Geste, offen oben rechts ---
-$bogenRand = $gross * 0.255
+$bogenRand = $gross * 0.225
 $bogenGroesse = $gross - (2 * $bogenRand)
-$bogenStift = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(120, 255, 255, 255)), ([single]($gross * 0.055))
+$bogenStift = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(205, 255, 255, 255)), ([single]($gross * 0.075))
 $bogenStift.StartCap = 'Round'
 $bogenStift.EndCap = 'Round'
-$g.DrawArc($bogenStift, $bogenRand, $bogenRand, $bogenGroesse, $bogenGroesse, 35, 285)
+# Offen nach oben rechts - genau dort setzt der Pfeil an, so lesen Ring und Pfeil als eine Geste.
+$g.DrawArc($bogenStift, $bogenRand, $bogenRand, $bogenGroesse, $bogenGroesse, 20, 295)
 
 # --- Pfeil nach oben, mit weichem Schatten fuer Plastizitaet ---
 $w = $gross
+# Schlanker gehalten als der Ring, damit beide Formen nebeneinander bestehen und das Zeichen
+# auch bei 16 Pixeln noch als Pfeil im Kreis lesbar bleibt.
 $punkte = @(
-    (New-Object System.Drawing.PointF([single]($w * 0.500), [single]($w * 0.205))),
-    (New-Object System.Drawing.PointF([single]($w * 0.735), [single]($w * 0.470))),
-    (New-Object System.Drawing.PointF([single]($w * 0.605), [single]($w * 0.470))),
-    (New-Object System.Drawing.PointF([single]($w * 0.605), [single]($w * 0.775))),
-    (New-Object System.Drawing.PointF([single]($w * 0.395), [single]($w * 0.775))),
-    (New-Object System.Drawing.PointF([single]($w * 0.395), [single]($w * 0.470))),
-    (New-Object System.Drawing.PointF([single]($w * 0.265), [single]($w * 0.470)))
+    (New-Object System.Drawing.PointF([single]($w * 0.500), [single]($w * 0.255))),
+    (New-Object System.Drawing.PointF([single]($w * 0.665), [single]($w * 0.440))),
+    (New-Object System.Drawing.PointF([single]($w * 0.577), [single]($w * 0.440))),
+    (New-Object System.Drawing.PointF([single]($w * 0.577), [single]($w * 0.735))),
+    (New-Object System.Drawing.PointF([single]($w * 0.423), [single]($w * 0.735))),
+    (New-Object System.Drawing.PointF([single]($w * 0.423), [single]($w * 0.440))),
+    (New-Object System.Drawing.PointF([single]($w * 0.335), [single]($w * 0.440)))
 )
 
 $pfeilSchatten = New-Object System.Drawing.Drawing2D.GraphicsPath
@@ -91,6 +94,10 @@ $g.FillPath($schattenStift, $pfeilSchatten)
 $pfeil = New-Object System.Drawing.Drawing2D.GraphicsPath
 $pfeil.AddPolygon([System.Drawing.PointF[]]$punkte)
 $g.FillPath([System.Drawing.Brushes]::White, $pfeil)
+
+# Vorschau zum Anschauen ablegen (die .ico selbst laesst sich schlecht direkt betrachten).
+$vorschau = Join-Path $PSScriptRoot 'icon-vorschau.png'
+$meister.Save($vorschau, [System.Drawing.Imaging.ImageFormat]::Png)
 
 $g.Dispose()
 

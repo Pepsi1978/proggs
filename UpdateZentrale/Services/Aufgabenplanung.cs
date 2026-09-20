@@ -28,13 +28,18 @@ public static class Aufgabenplanung
     /// Creates a logon task that starts the program elevated and without a UAC prompt.
     /// Requires the app itself to run elevated -- otherwise schtasks refuses /RL HIGHEST.
     /// </summary>
+    /// <param name="befehlszeile">
+    /// The exact command the autostart used before. It must be taken over verbatim: CVO for
+    /// example starts through wscript.exe with its watcher script, and launching the exe directly
+    /// would bypass the watchdog that rebuild-overlay.ps1 relies on.
+    /// </param>
     public static async Task<(bool Erfolg, string Ausgabe)> AnlegenAsync(
-        string id, string exe, string? argumente, CancellationToken abbruch = default)
+        string id, string befehlszeile, CancellationToken abbruch = default)
     {
-        if (!File.Exists(exe)) return (false, "Programmdatei nicht gefunden: " + exe);
+        if (string.IsNullOrWhiteSpace(befehlszeile)) return (false, "Kein Startbefehl bekannt.");
 
-        var befehl = "\\\"" + exe + "\\\"";
-        if (!string.IsNullOrWhiteSpace(argumente)) befehl += " " + argumente;
+        // schtasks passes /TR through a second parser, so inner quotes need escaping.
+        var befehl = befehlszeile.Replace("\"", "\\\"");
 
         var args = "/Create /F /SC ONLOGON /RL HIGHEST"
                  + " /TN \"" + AufgabenName(id) + "\""

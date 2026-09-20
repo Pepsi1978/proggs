@@ -12,7 +12,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <!-- Single source of truth; the SDK derives AssemblyVersion and FileVersion from it. -->
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Company>Pepsi1978</Company>
     <Product>UpdateZentrale</Product>
     <Copyright>© 2026 Pepsi1978</Copyright>
