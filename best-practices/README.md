@@ -102,3 +102,7 @@ best-practices/
   - `best-practices`-Skill — rollt eine Software/ein Harness-Thema gezielt auf und pflegt die neuesten Empfehlungen.
 - **Kopplung:** `python bugs/check-coupling.py` prüft, dass jede gepaarte Datei wechselseitig
   mit ihrem Almanach verlinkt ist; `python bugs/health.py` ist der Gesamt-Selbsttest.
+
+## PCIe-Grafikkarten und BIOS-Diagnose (20.09.2026)
+
+[PCIe-Grafikkarten: Volltext](desktop/pcie-grafikkarten.md) · [Kurzcheck](desktop/pcie-grafikkarten-kurzcheck.md). Maximalfähigkeit und aktive Verbindung, Lastvergleich, exakte MSI-DDR4-BIOS-Zuordnung.
