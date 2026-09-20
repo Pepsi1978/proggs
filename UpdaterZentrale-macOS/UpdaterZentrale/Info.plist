@@ -10,9 +10,9 @@
     <string>de.frank.UpdaterZentrale</string>
     <!-- Einzige Quelle der Wahrheit für die Version (Gegenstück zu <Version> in der csproj). -->
     <key>CFBundleVersion</key>
-    <string>1.0.0</string>
+    <string>1.0.1</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.0.1</string>
     <key>BuildTimestamp</key>
     <string>__BUILD_TIMESTAMP__</string>
     <key>CFBundlePackageType</key>

@@ -52,7 +52,9 @@ Abgelegt wird alles in `~/Library/Application Support/UpdaterZentrale/logs/`:
 
 * `updates-JJJJ-MM-TT.log` – ein Tagesprotokoll mit Kopf, roher Ausgabe und Ergebnis je Lauf.
 * `verlauf.jsonl` – eine Zeile je Lauf, maschinenlesbar. Daraus lädt die App beim Start, was
-  zuletzt passiert ist. Das Format ist mit der Windows-Fassung identisch.
+  zuletzt passiert ist. Die Feldnamen sind dieselben wie unter Windows; die Werte von
+  `Ergebnis` und `Zeit` schreibt Swift lesbarer (Text statt Zahl, ISO-8601-Zeit). Das fällt nicht
+  auf: jede Plattform hat ihren eigenen Protokollordner.
 
 Die Schaltfläche **Protokolle** in der Fußzeile öffnet diesen Ordner.
 

@@ -57,7 +57,7 @@ Ergebnis des ersten Laufs — jede Zeile ist eine echte Erkennung, keine Annahme
 | **Fingerabdruck** vor/nach dem Lauf, fünf Ergebnisse | identisch, inkl. „Nicht verifiziert" | ✅ 1:1 |
 | **Ausstehend** + rückwirkende Bestätigung + 7-Tage-Frist | identisch | ✅ 1:1 |
 | „Jetzt starten und übernehmen" | identisch | ✅ 1:1 |
-| **Protokolle** `updates-JJJJ-MM-TT.log` + `verlauf.jsonl` | identisch, JSON-Feldnamen gleich | ✅ 1:1 |
+| **Protokolle** `updates-JJJJ-MM-TT.log` + `verlauf.jsonl` | gleiche Dateien, gleiche JSON-Feldnamen; `Ergebnis` steht als Text statt als Zahl, `Zeit` als ISO 8601 | ✅ |
 | Kopf/Fuß je Lauf mit Befehl und Stand vorher/nachher | identisch (Zeile „Rechte" sagt jetzt „Standardbenutzer (macOS …)") | ✅ |
 | „Protokolle"-Schaltfläche, „Protokoll öffnen" auf der Karte | identisch | ✅ 1:1 |
 | **Laufende Programme** pfadgenau erkennen (inkl. Helfer) | `NSWorkspace` für Apps + `pgrep`/`proc_pidpath` für CLI-Werkzeuge; Pfadvergleich bleibt | ✅ 1:1 |
@@ -192,9 +192,15 @@ Nicht automatisch prüfbar, weil ein echter Installationslauf Programme beendet 
    muss die Karte „Abgebrochen" zeigen, bei „Ja" „Neue Version gebaut und gestartet".
 4. **TVO oder CVO aktualisieren** → hier fragt die Updater-Zentrale selbst; bei „Nein" darf das
    Skript gar nicht erst starten.
-5. **Hell-Modus** oben rechts umschalten → alle Flächen, Karten und die Fenstertitelleiste ziehen
+5. **Hell-Modus** oben rechts umschalten (am 20.09.2026 NICHT visuell geprüft – der Bildschirm
+   war gesperrt, die Farbwerte sind aber 1:1 aus `Hell.xaml` übernommen) → alle Flächen, Karten und die Fenstertitelleiste ziehen
    mit; nach einem Neustart der App ist die Wahl noch gesetzt.
 6. **Terminal** rechts unten: `brew --version` eingeben → Ausgabe erscheint (beweist, dass der
    PATH stimmt). „Fenster" öffnet iTerm im Repo-Ordner.
 7. **Einzelstart**: die App ein zweites Mal starten → das vorhandene Fenster kommt nach vorn.
 8. **Schreibtisch-Verknüpfung** doppelklicken → die App startet mit ihrem Symbol.
+9. **Karte anklicken** – auf den Beschreibungstext, nicht auf eine Schaltfläche → der Rahmen wird
+   violett, und rechts wechselt der Protokollbereich auf dieses Programm.
+10. **Beim ersten Start** fragt macOS nach der Erlaubnis, „Systemereignisse" zu steuern (für das
+    Auslesen der Anmeldeobjekte). Bei „Nicht erlauben" fehlt nur das Autostart-Kennzeichen aus den
+    Anmeldeobjekten – die LaunchAgents werden weiterhin erkannt, alles andere bleibt unberührt.

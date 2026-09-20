@@ -194,6 +194,15 @@ final class HauptViewModel {
         laeuftSammelvorgang = true
         defer { laeuftSammelvorgang = false }
 
+        // Erst den Homebrew-Katalog auffrischen, DANN pruefen. Ohne das liest `brew info` den
+        // lokalen Tap, und der kann Tage alt sein -- die Pruefung meldete dann "Aktuell", obwohl
+        // ein Cask laengst neuer ist. `winget list` unter Windows hat dieses Problem nicht, weil es
+        // seine Quelle selbst aktuell haelt.
+        if programme.contains(where: { $0.eintrag.art == "brew" }) {
+            kopfStatus = "Homebrew-Katalog wird aufgefrischt …"
+            _ = await Kommandozeile.ausfuehren(Pfade.brew, ["update", "--quiet"], zeitlimit: 300)
+        }
+
         // Bewusst nacheinander: brew greift ohnehin seriell auf seinen Katalog zu, und ein
         // paralleler Schwung macht das Protokoll unlesbar.
         let gesamt = programme.count

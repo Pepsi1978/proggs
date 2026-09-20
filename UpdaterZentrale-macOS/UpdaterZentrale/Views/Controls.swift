@@ -38,6 +38,15 @@ final class ThemedLabel: NSTextField {
     required init?(coder: NSCoder) { fatalError("init(coder:) wird nicht verwendet") }
     deinit { NotificationCenter.default.removeObserver(self) }
 
+    /// Beschriftungen nehmen keine Klicks an.
+    ///
+    /// Eine Karte ist fast vollstaendig von Beschriftungen bedeckt. NSTextField verschluckt
+    /// `mouseDown` auch als reines Label -- ein Klick auf den Beschreibungstext waehlte die Karte
+    /// dann NICHT aus, obwohl er unter Windows genau das tut. `hitTest` auf nil reicht den Klick
+    /// an die darunterliegende Ansicht weiter; Schaltflaechen und Schiebeschalter sind eigene
+    /// Steuerelemente und davon nicht betroffen.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
     /// Mehrzeilige Beschriftungen muessen UMBRECHEN statt das Fenster breiter zu machen.
     ///
     /// AppKit fragt ein Label ohne `preferredMaxLayoutWidth` nach seiner Breite fuer EINE Zeile.
