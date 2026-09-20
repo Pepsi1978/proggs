@@ -131,13 +131,21 @@ fun Modifier.pulsierenderSchein(
     hoehe: Dp = 18.dp,
 ): Modifier = composed {
     val reduziert = LocalBewegungReduziert.current
-    val uebergang = rememberInfiniteTransition(label = "schein")
-    val atem by uebergang.animateFloat(
-        initialValue = 0.25f,
-        targetValue = if (aktiv && !reduziert) 0.45f else 0.25f,
-        animationSpec = infiniteRepeatable(tween(Motion.ATEM_MS), RepeatMode.Reverse),
-        label = "atemwert",
-    )
+    // Bei reduzierter Bewegung lagen Start- und Zielwert zwar beide auf 0,25 — die Endlos-
+    // Animation lief aber trotzdem und rechnete Bild für Bild denselben Wert aus. Auf dem
+    // feststehenden Kopf ist das ein Dauerticker ohne jede sichtbare Wirkung. Jetzt entsteht
+    // sie gar nicht erst, wenn nichts zu atmen ist.
+    val atem = if (aktiv && !reduziert) {
+        val uebergang = rememberInfiniteTransition(label = "schein")
+        uebergang.animateFloat(
+            initialValue = 0.25f,
+            targetValue = 0.45f,
+            animationSpec = infiniteRepeatable(tween(Motion.ATEM_MS), RepeatMode.Reverse),
+            label = "atemwert",
+        ).value
+    } else {
+        0.25f
+    }
     if (hoehe > 0.dp) {
         graphicsLayer {
             shadowElevation = hoehe.toPx()

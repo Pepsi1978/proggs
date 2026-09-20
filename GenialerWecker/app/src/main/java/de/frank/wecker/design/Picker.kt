@@ -49,11 +49,20 @@ import java.time.ZoneOffset
  */
 
 /**
- * Spiegelt `HOEHENANTEIL` aus Dialoge.kt: Der [DesignDialog] deckelt sich über
- * `heightIn(max = Fensterhöhe × 0,82)`. Der Wert steht dort `private`, deshalb hier noch einmal —
- * wird er in Dialoge.kt geändert, muss er hier mitgezogen werden.
+ * Der Höhenanteil, den die Picker beim [DesignDialog] anfordern.
+ *
+ * Die Vorgabe des Rahmens sind 0,82 der Fensterhöhe. Das ist für Text- und Listendialoge richtig —
+ * für die Picker war es ein Deckel: Bei 751 dp Fensterhöhe (Samsung Fold, Außenschirm) blieben nach
+ * Abzug von Titel, Knopfzeile und Innenabständen nur rund 478 dp Inhalt, und der Monatskalender
+ * braucht 512 dp am Stück ([KALENDER_BEDARF], `requiredHeight`, schrumpft nicht). Die Datumswahl
+ * startete deshalb auf einem ganz gewöhnlichen Telefon in der Tippeingabe.
+ *
+ * Uhr und Kalender können nicht schrumpfen, deshalb fordern sie mit 1,0 alles an. Gedeckelt bleiben
+ * sie trotzdem: `dialogHoechstHoehe` in Dialoge.kt zieht Systemleisten und etwas Luft ab, und
+ * darüber hinaus wächst der Rahmen nicht — im Querformat greift diese harte Grenze, nicht der
+ * Anteil. Wo es dann immer noch zu eng ist, bleibt die kompakte Fassung der Ausweg.
  */
-private const val DIALOG_HOEHENANTEIL = 0.82f
+private const val PICKER_HOEHENANTEIL = 1f
 
 /** Spiegelt `MAX_BREITE` aus Dialoge.kt — dieselbe Auflage wie beim Höhenanteil. */
 private val DIALOG_MAX_BREITE = 560.dp
@@ -109,19 +118,22 @@ private val KALENDER_BEDARF = 512.dp
 /**
  * Der Platz, der dem Dialog**inhalt** tatsächlich bleibt — nicht die rohe Bildschirmhöhe.
  *
- * `LocalConfiguration.screenHeightDp` war die falsche Größe: Der Rahmen in Dialoge.kt nimmt davon
- * nur 82 %, und von diesen 82 % gehen Titelzeile, Innenabstände und Knopfzeile ab. Bei 500 dp
- * Bildschirmhöhe blieben so statt 500 dp nur rund 270 dp übrig — das Zifferblatt (412 dp) passte
- * nie, wurde bisher aber trotzdem gewählt und abgeschnitten.
+ * `LocalConfiguration.screenHeightDp` war die falsche Größe: Der Rahmen in Dialoge.kt deckelt sich,
+ * und von dem, was übrig bleibt, gehen Titelzeile, Innenabstände und Knopfzeile ab. Bei 500 dp
+ * Bildschirmhöhe blieben so statt 500 dp nur rund 300 dp übrig — das Zifferblatt (412 dp) passte
+ * nie, wurde vor dieser Rechnung aber trotzdem gewählt und abgeschnitten.
  *
  * Rechnung (alle Zahlen aus Dialoge.kt und Knopf3D.kt):
  * ```
- *   Fensterhöhe × 0,82                    Obergrenze des Rahmens (heightIn)
+ *   dialogHoechstHoehe(1,0)               Obergrenze des Rahmens (heightIn), siehe Dialoge.kt:
+ *                                         Fensterhöhe − Systemleisten − 2 × 8 dp Luft
  * − Titelzeile                            Innenabstand + Zeilenhöhe des Titelstils
  * − 24 dp                                 Innenabstand der Inhaltsspalte (12 oben + 12 unten)
  * − Knopfzeile                            4 dp oben + Innenabstand unten + Knopfhöhe
  * ```
  * Die Knopfhöhe ist die des `GoldKnopf`: 2 × 13 dp Innenabstand um eine labelLarge-Zeile (20 sp).
+ * Gerechnet wird mit demselben [PICKER_HOEHENANTEIL], den die Dialoge unten an den Rahmen geben —
+ * beide Seiten laufen durch dieselbe Funktion, die Zahl kann nicht mehr auseinanderlaufen.
  *
  * Schriftskalierung: Jeder sp-Wert läuft durch `Density.toDp()`. Das zieht die Systemschriftgröße
  * mit — und zwar richtig, auch für die nichtlineare Skalierung ab Android 14, die ein einfaches
@@ -130,8 +142,17 @@ private val KALENDER_BEDARF = 512.dp
  *
  * Beispiel Schlicht bei einfacher Systemschrift: Titel 20 + 24 = 44 dp, Inhaltsspalte 24 dp,
  * Knopfzeile 4 + 20 + 46 = 70 dp → 138 dp Rahmenverbrauch. Für den Kalender (512 dp) braucht es
- * damit (512 + 138) / 0,82 ≈ **793 dp** Fensterhöhe, für das stehende Zifferblatt (412 dp)
- * (412 + 138) / 0,82 ≈ **671 dp**.
+ * damit 512 + 138 = **650 dp** Rahmenhöhe, für das stehende Zifferblatt (412 dp) 550 dp.
+ *
+ * Auf das Gerät gerechnet, auf dem die Datumswahl in der Tippeingabe landete (751 dp Fensterhöhe):
+ * ```
+ *   Gestensteuerung, Leisten 24 + 24 dp:  751 − 48 − 16 = 687 → 549 dp Inhalt → Kalender ✓
+ *   Drei Knöpfe,     Leisten 24 + 48 dp:  751 − 72 − 16 = 663 → 525 dp Inhalt → Kalender ✓
+ * ```
+ * Der Kalender gewinnt, solange `Systemleisten ≤ 85 dp` sind (751 − Leisten − 16 − 138 ≥ 512).
+ * Darüber — sehr hohe Leisten, oder schlicht ein niedrigeres Fenster — fällt die Wahl wie bisher
+ * auf die Tippeingabe zurück: eng, aber vollständig bedienbar. Zum Vergleich die alte Deckelung:
+ * 751 × 0,82 = 616 − 138 = 478 dp, also 34 dp zu wenig für den Kalender.
  */
 @Composable
 private fun dialogInhaltsHoehe(): Dp {
@@ -162,7 +183,9 @@ private fun dialogInhaltsHoehe(): Dp {
     val knopfZeilen = if (dichte.fontScale >= 1.5f) 2 else 1
     val knoepfe = 4.dp + innen + knopf * knopfZeilen + if (knopfZeilen > 1) 8.dp else 0.dp
 
-    val rahmen = LocalConfiguration.current.screenHeightDp.dp * DIALOG_HOEHENANTEIL
+    // Dieselbe Funktion, die auch der Rahmen selbst benutzt — und hier im App-Fenster aufgerufen,
+    // genau wie dort (im Dialogfenster melden die Systemleisten 0 dp, siehe Dialoge.kt).
+    val rahmen = dialogHoechstHoehe(PICKER_HOEHENANTEIL)
     return (rahmen - titel - 24.dp - knoepfe).coerceAtLeast(0.dp)
 }
 
@@ -221,6 +244,8 @@ fun ZeitWahlDialog(stunde: Int, minute: Int, aufAbbruch: () -> Unit, aufWahl: (I
         // Nur hier verlässt ein Wert den Dialog. Abbrechen, Wegtippen und Zurück schreiben nichts.
         bestaetigung = { GoldKnopf("Übernehmen", { aufWahl(zustand.hour, zustand.minute) }) },
         abbruch = { StillerKnopf("Abbrechen", aufAbbruch) },
+        // Das Zifferblatt kann nicht schrumpfen; der Rahmen gibt ihm alles bis zur harten Grenze.
+        hoehenAnteil = PICKER_HOEHENANTEIL,
         inhalt = {
             // Sicherheitsnetz, falls die Rechnung oben trotzdem zu knapp liegt:
             // `weight(1f, fill = false)` gibt dem Inhalt nur den Rest der gedeckelten Dialoghöhe —
@@ -362,15 +387,19 @@ fun DatumWahlDialog(
             )
         },
         abbruch = { StillerKnopf("Abbrechen", aufAbbruch) },
+        // Derselbe Anteil, mit dem `dialogInhaltsHoehe()` oben die Schwelle gerechnet hat.
+        hoehenAnteil = PICKER_HOEHENANTEIL,
         inhalt = {
             // `weight(1f, fill = false)` hält die Knopfzeile auch dann im Dialog, wenn der Kalender
             // mehr Platz haben möchte, als übrig ist.
             //
             // Gescrollt werden darf hier **nur** die Tippeingabe. Der Kalender bringt mit seiner
-            // Jahresauswahl ein eigenes senkrecht scrollendes `LazyVerticalGrid` mit; läge ein
-            // `verticalScroll` darüber, stünde gleichachsiges Scrollen ineinander und die Messung
-            // liefe in „infinity constraints" (Bug-Almanach jetpack-compose §6.1) — und zwar erst
-            // beim Antippen der Jahreszahl, also spät und schwer zu finden. Im Kalendermodus ist
+            // Jahresauswahl ein eigenes senkrecht scrollendes `LazyVerticalGrid` mit — genau das
+            // Muster, vor dem der Bug-Almanach jetpack-compose §6.1 warnt: gleichachsiges Scrollen
+            // ineinander. Material begrenzt die Höhe dieses Gitters an seiner Aufrufstelle zwar
+            // selbst (`requiredHeight(48 dp × 6 − 56 dp)`), die Messung liefe also nicht in
+            // „infinity constraints" — darauf bauen wir aber nicht: Der Gestenkonflikt bliebe, und
+            // die Auflage kann mit der nächsten Material-Version fallen. Im Kalendermodus ist
             // deshalb allein die Schwelle oben der Schutz, und sie ist gegen die echten
             // Material-Maße gerechnet.
             //

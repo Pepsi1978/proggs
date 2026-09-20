@@ -95,6 +95,17 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlin.math.roundToInt
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 
 @Composable
 fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
@@ -242,11 +253,18 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
     val nextSnooze = alarms.mapNotNull { alarm -> alarm.snoozeUntil.takeIf { it > now } }.minOrNull()
     val next = listOfNotNull(nextRegular, nextSnooze).minOrNull()
     val nextIsSnooze = next != null && next == nextSnooze
-    // Nur der Name zum bereits ermittelten Termin; die Berechnung und der Vorrang des Schlummerns bleiben unberührt.
-    val nextName = next?.let { target ->
-        if (nextIsSnooze) alarms.firstOrNull { it.snoozeUntil == target }?.name
-        else alarms.firstOrNull { it.enabled && it.nextAt == target }?.name
-    }?.takeIf { it.isNotBlank() }
+    // Derselbe Wecker wie bisher, nur als Objekt statt nur mit Namen — dadurch kann der Hero ihn
+    // direkt öffnen. Berechnung und Vorrang des Schlummerns bleiben unberührt.
+    val nextAlarm = next?.let { target ->
+        if (nextIsSnooze) alarms.firstOrNull { it.snoozeUntil == target }
+        else alarms.firstOrNull { it.enabled && it.nextAt == target }
+    }
+    val nextName = nextAlarm?.name?.takeIf { it.isNotBlank() }
+    // Einmal abfragen und an Hero und Bereitschaftskarte weitergeben: Zwei Aufrufer hätten zwei
+    // Zwei-Sekunden-Schleifen über NotificationManager, PowerManager und AlarmScheduler bedeutet.
+    val bereitschaft = rememberReadiness()
+    // Nur sinnvoll, solange der nächste Termin tatsächlich ein Schlummern ist.
+    val aufSchlummernBeenden: () -> Unit = { nextAlarm?.takeIf { nextIsSnooze }?.let { vm.endSnooze(it) } }
     val gridState = rememberLazyGridState()
     val saved by vm.lastSaved.collectAsStateWithLifecycle()
     val resumed = rememberResumed()
@@ -292,41 +310,35 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
         // einen Block, der nie wegscrollt, zu viel. WEIT gilt jetzt erst ab echtem Tablettmaß;
         // Telefon und Foldable, auch aufgeklappt, liegen darunter und bekommen die mittlere
         // Fassung mit kleinerem Motiv und kleinerer Uhr (beim Traumraum rund 32 %).
+        // Die Schriftskalierung geht mit in die Rechnung: Bei doppelt großer Systemschrift wächst
+        // jede Zeile mit, der verfügbare Platz aber nicht. Ohne diesen Teiler bliebe der Hero auf
+        // der großen Stufe stehen und fräße die halbe Seite.
+        val schriftFaktor = LocalDensity.current.fontScale.coerceAtLeast(1f)
+        val nutzHoehe = maxHeight / schriftFaktor
         val stufe = when {
-            maxHeight < 400.dp -> KopfStufe.SCHMAL
-            maxHeight < 820.dp -> KopfStufe.MITTEL
+            nutzHoehe < 400.dp -> KopfStufe.SCHMAL
+            nutzHoehe < 820.dp -> KopfStufe.MITTEL
             else -> KopfStufe.WEIT
         }
-        val ringSize = when (stufe) {
-            KopfStufe.SCHMAL -> 0.dp
-            KopfStufe.MITTEL -> if (breite < 360.dp) 60.dp else 68.dp
-            KopfStufe.WEIT -> if (breite < 360.dp) 80.dp else 88.dp
-        }
-        // Derselbe Inhalt in jedem Design, nur anders angeordnet: Uhrzeit, Termin, Name,
-        // Restzeit und die Aktion „＋ Wecker". Die Rückrufe sind überall dieselben.
-        val terminBlock: @Composable ColumnScope.() -> Unit = {
-            if (next == null) {
-                Text("Kein Wecker aktiv", style = MaterialTheme.typography.titleMedium, color = gold.textPrimaer)
-                if (stufe != KopfStufe.SCHMAL) Text("Schalte einen Wecker ein oder lege einen neuen an.",
-                    style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
-            } else {
-                TerminZeile(now, next, nextIsSnooze)
-                // Welcher Wecker das ist: lange Namen brechen um, höchstens zwei Zeilen.
-                nextName?.let { name -> Text(name, style = MaterialTheme.typography.titleSmall,
-                    color = gold.textPrimaer, maxLines = if (stufe == KopfStufe.SCHMAL) 1 else 2, overflow = TextOverflow.Ellipsis) }
-                Text("in ${remainingLong(next - now)}", style = MaterialTheme.typography.bodyMedium, color = gold.primaer)
-            }
-        }
+        val heroDaten = HeroDaten(
+            now = now, next = next, nextIsSnooze = nextIsSnooze, nextAlarm = nextAlarm,
+            nextName = nextName, bereit = bereitschaft.all { it.second },
+            offen = bereitschaft.count { !it.second }, stufe = stufe, breite = breite,
+        )
         Column(Modifier.fillMaxSize()) {
-            // Der feststehende Kopf. Er sitzt außerhalb des Rasters, damit die Weckerliste
-            // darunter scrollt, ohne ihn mitzunehmen.
-            Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 10.dp)) {
+            // Der feststehende Hero. Er sitzt außerhalb des Rasters, damit die Weckerliste
+            // darunter scrollt, ohne ihn mitzunehmen. `zIndex` hebt ihn über das Raster: Sonst
+            // zeichnet die Liste als späteres Geschwister über seinen Schatten, und die Karten
+            // würden auf ihm liegen statt unter ihm durchzugleiten.
+            Box(
+                Modifier.fillMaxWidth().zIndex(1f)
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),
+            ) {
                 when (LocalDesignTokens.current.design) {
-                    // Traumraum: geschwungene Kuppel mit zentrierter Uhr, darunter überlappend die Perle.
-                    Design.TRAUMRAUM -> TraumraumKopf(now, terminBlock, onNew, stufe)
-                    // Orbit: Instrumentenmodul aus freigestelltem Motiv links und Datenblock rechts.
-                    Design.ORBIT -> OrbitKopf(now, next, nextIsSnooze, ringSize, terminBlock, onNew, stufe)
-                    else -> StandardKopf(now, next, nextIsSnooze, ringSize, terminBlock, onNew, stufe)
+                    Design.TRAUMRAUM -> TraumraumHero(heroDaten, onNew, onEdit, aufSchlummernBeenden)
+                    Design.ORBIT -> OrbitHero(heroDaten, onNew, onEdit, onSettings, aufSchlummernBeenden)
+                    Design.MORGENRUHE -> MorgenruheHero(heroDaten, onNew, onEdit, onSettings, aufSchlummernBeenden)
+                    else -> SchlichtHero(heroDaten, onNew, onEdit, onSettings, aufSchlummernBeenden)
                 }
             }
             LazyVerticalGrid(columns = GridCells.Fixed(if (breite >= 680.dp && !achsenDesign) 2 else 1), state = gridState,
@@ -334,7 +346,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                 verticalArrangement = Arrangement.spacedBy(if (achsenDesign) 0.dp else 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 // Bleibt immer ein Eintrag, auch wenn sie nichts zeigt — sonst verschöbe sich der
                 // Sprungindex nach dem Speichern, sobald alle Freigaben erteilt sind.
-                item(span = { GridItemSpan(maxLineSpan) }) { ReadinessCard(onSettings, hideWhenReady = true) }
+                item(span = { GridItemSpan(maxLineSpan) }) { ReadinessCard(onSettings, hideWhenReady = true, zustand = bereitschaft) }
                 if (openDraft != null) item(span = { GridItemSpan(maxLineSpan) }) {
                     LocalGestalt.current.Flaeche(Modifier, erhoeht = false) {
                         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -366,7 +378,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
     }
 }
 
-/** Wie viel Platz der feststehende Kopf bekommt. */
+/** Wie viel Platz der feststehende Hero bekommt. */
 enum class KopfStufe { SCHMAL, MITTEL, WEIT }
 
 /**
@@ -376,44 +388,554 @@ enum class KopfStufe { SCHMAL, MITTEL, WEIT }
  */
 private const val VORLAUF_EINTRAEGE = 1
 
-/** Die Schriftgröße der großen Kopfuhr je Platzstufe. */
+/**
+ * Alles, was die vier Hero-Bereiche zeigen — einmal berechnet, dann nur noch angeordnet.
+ *
+ * Vorher reichte ein `terminBlock`-Lambda eine fertige Textfolge durch und zwang damit allen
+ * Designs dieselbe Reihenfolge auf. Mit den Rohdaten setzt jedes Design seine eigene Hierarchie:
+ * Morgenruhe führt mit dem Datum, Orbit mit einem Instrumentenkopf, Schlicht mit der Uhr.
+ */
+@Immutable
+data class HeroDaten(
+    val now: Long,
+    val next: Long?,
+    val nextIsSnooze: Boolean,
+    val nextAlarm: Alarm?,
+    val nextName: String?,
+    val bereit: Boolean,
+    val offen: Int,
+    val stufe: KopfStufe,
+    val breite: androidx.compose.ui.unit.Dp,
+) {
+    val hatTermin: Boolean get() = next != null
+    val schmal: Boolean get() = stufe == KopfStufe.SCHMAL
+    val weit: Boolean get() = stufe == KopfStufe.WEIT
+    /** Die Restzeit als Anteil eines Tages — für lineare Anzeigen. Über 24 Stunden ist voll. */
+    fun tagesAnteil(): Float =
+        next?.let { ((it - now) / 86_400_000f).coerceIn(0f, 1f) } ?: 0f
+}
+
+/** Die Schriftgröße der großen Hero-Uhr je Platzstufe. */
 private fun uhrGroesse(stufe: KopfStufe): androidx.compose.ui.unit.TextUnit = when (stufe) {
-    KopfStufe.SCHMAL -> 30.sp
-    KopfStufe.MITTEL -> 40.sp
-    KopfStufe.WEIT -> 48.sp
+    KopfStufe.SCHMAL -> 34.sp
+    KopfStufe.MITTEL -> 52.sp
+    KopfStufe.WEIT -> 56.sp
 }
 
 /**
- * Der feststehende Kopf für Schlicht und Morgenruhe. Er trägt dieselben Angaben wie zuvor, nur
- * enger gesetzt: Die Aktion „＋ Wecker" sitzt jetzt in der Kopfzeile statt in einer eigenen Reihe,
- * und in der schmalsten Stufe entfällt das Ringbild ganz, damit die Liste darunter Platz behält.
+ * Die Uhr wächst mit der Systemschrift nur begrenzt mit: Bei doppelter Schrift würde aus 52 sp
+ * eine 120 dp hohe Zeile und der feststehende Hero verschlänge die halbe Seite. Termin, Name und
+ * Restzeit skalieren dagegen voll mit — sie muss man lesen können.
  */
 @Composable
-private fun StandardKopf(
-    now: Long, next: Long?, nextIsSnooze: Boolean, ringSize: androidx.compose.ui.unit.Dp,
-    terminBlock: @Composable ColumnScope.() -> Unit, onNew: () -> Unit, stufe: KopfStufe,
+private fun GedeckelteSchrift(inhalt: @Composable () -> Unit) {
+    val dichte = LocalDensity.current
+    CompositionLocalProvider(
+        LocalDensity provides Density(dichte.density, dichte.fontScale.coerceAtMost(1.2f)),
+        content = inhalt,
+    )
+}
+
+/** Das Datum als ruhige Kopfzeile — heute stand nirgends, welcher Tag überhaupt ist. */
+private fun datumsZeile(now: Long): String = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
+    .format(DateTimeFormatter.ofPattern("EEEE, d. MMMM", java.util.Locale.GERMAN))
+
+/** Kurzfassung für enge Anordnungen. */
+private fun datumKurz(now: Long): String = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
+    .format(DateTimeFormatter.ofPattern("EE dd.MM.", java.util.Locale.GERMAN))
+
+/**
+ * Der Bereitschaftshinweis als eine Zeile. Er beantwortet die Frage, die bei einem Wecker über
+ * allem steht: Wird er überhaupt klingeln? Die ausführlichen Angaben bleiben in der
+ * Bereitschaftskarte, die ohnehin nur erscheint, wenn etwas fehlt.
+ */
+@Composable
+private fun BereitZeile(
+    daten: HeroDaten, aufEinstellungen: () -> Unit,
+    farbeBereit: androidx.compose.ui.graphics.Color, farbeOffen: androidx.compose.ui.graphics.Color,
+    stil: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.labelMedium,
+) {
+    val text = if (daten.bereit) "Weckbereit"
+    else "${daten.offen} ${if (daten.offen == 1) "Freigabe fehlt" else "Freigaben fehlen"}"
+    Row(
+        Modifier
+            .then(if (daten.bereit) Modifier else Modifier.clickable(
+                onClickLabel = "Weckbereitschaft einrichten", onClick = aufEinstellungen))
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            if (daten.bereit) Icons.Default.VerifiedUser else Icons.Default.NotificationsActive,
+            null, tint = if (daten.bereit) farbeBereit else farbeOffen,
+            modifier = Modifier.size(15.dp),
+        )
+        Text(text, Modifier.padding(start = 6.dp), style = stil,
+            color = if (daten.bereit) farbeBereit else farbeOffen, maxLines = 1)
+    }
+}
+
+/**
+ * Der gemeinsame Terminblock: Termin, Name und Restzeit als **eine** antippbare Gruppe, die den
+ * nächsten Wecker öffnet. Das ist die naheliegendste Handlung nach dem Blick auf die Uhr; bisher
+ * musste man ihn in der Liste suchen. Die Zeilenzahl ist in jedem Zustand gleich, damit der Hero
+ * nicht springt, wenn ein Wecker aus- oder eingeschaltet wird.
+ */
+@Composable
+private fun TerminGruppe(
+    daten: HeroDaten, aufOeffnen: () -> Unit,
+    textFarbe: androidx.compose.ui.graphics.Color,
+    gedaempft: androidx.compose.ui.graphics.Color,
+    fuehrung: androidx.compose.ui.graphics.Color,
+    zeigePfeil: Boolean = true,
+) {
+    val oeffenbar = daten.nextAlarm != null
+    Column(
+        Modifier.fillMaxWidth()
+            .then(if (oeffenbar) Modifier.clickable(
+                onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
+    ) {
+        if (daten.next == null) {
+            Text("Kein Wecker aktiv", style = MaterialTheme.typography.bodyMedium,
+                color = textFarbe, maxLines = 1)
+            Text("Lege einen an oder schalte einen ein", style = MaterialTheme.typography.titleSmall,
+                color = gedaempft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // Hält die dritte Zeile frei, damit der Hero in jedem Zustand gleich hoch bleibt.
+            Text(" ", Modifier.clearAndSetSemantics { },
+                style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+        } else {
+            TerminZeile(daten.now, daten.next, daten.nextIsSnooze)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(daten.nextName ?: "Wecker", Modifier.weight(1f, fill = false),
+                    style = MaterialTheme.typography.titleSmall, color = textFarbe,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (zeigePfeil && oeffenbar) Icon(
+                    Icons.Default.ChevronRight, null, tint = gedaempft,
+                    modifier = Modifier.padding(start = 2.dp).size(16.dp),
+                )
+            }
+            Text("in ${remainingLong(daten.next - daten.now)}",
+                style = MaterialTheme.typography.bodyMedium, color = fuehrung, maxLines = 1)
+        }
+    }
+}
+
+/**
+ * Die Aktionszeile: die Hauptaktion als beschrifteter Knopf statt als isoliertes Pluszeichen,
+ * daneben genau eine zweitrangige Handlung, die zum Zustand passt — beim Schlummern das Beenden,
+ * sonst das Öffnen des nächsten Weckers.
+ */
+@Composable
+private fun HeroAktionen(
+    daten: HeroDaten, aufNeu: () -> Unit, aufOeffnen: () -> Unit, aufSchlummernBeenden: () -> Unit,
+    knopfText: String = "Neuer Wecker",
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        GoldKnopf(knopfText, aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
+            symbol = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) })
+        when {
+            daten.nextIsSnooze -> StillerKnopf("Schlummern beenden", aufSchlummernBeenden, hervorgehoben = true)
+            daten.nextAlarm != null -> StillerKnopf("Öffnen", aufOeffnen)
+        }
+    }
+}
+
+/**
+ * **Schlicht — die Uhr im Glasbett.**
+ *
+ * Der bisherige Kopf war eine enge Zeile aus Ring, Uhr, Text und einem nackten Pluszeichen und
+ * damit kleiner als eine geschlossene Weckerkarte. Jetzt ist er das, was er sein soll: das
+ * Zentrum der Seite. Der Ring sitzt in einer vertieften Mulde, die Karte trägt den plastischen
+ * Goldverlauf mit Lichtkante und einem statischen Glanzbogen, und sie schwebt als einziges
+ * Element über der Liste.
+ *
+ * Die Goldfarben selbst sind unverändert — es ändern sich nur Anordnung, Tiefe und Licht.
+ */
+@Composable
+private fun SchlichtHero(
+    daten: HeroDaten, aufNeu: () -> Unit, aufOeffnen: (Alarm) -> Unit,
+    aufEinstellungen: () -> Unit, aufSchlummernBeenden: () -> Unit,
 ) {
     val gold = LocalGold.current
-    LocalGestalt.current.Flaeche(Modifier, erhoeht = true) {
+    val semantisch = LocalSemantisch.current
+    val oeffnen = { daten.nextAlarm?.let(aufOeffnen); Unit }
+    if (daten.schmal) {
+        SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden)
+        return
+    }
+    // Der Ring darf die Textspalte nie unter ihr Mindestmaß drücken: Die längste Zeile und die
+    // Knopfzeile brauchen zusammen rund 186 dp.
+    val ring = (daten.breite - 232.dp).coerceIn(100.dp, if (daten.weit) 148.dp else 132.dp)
+    HeroKarte {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = if (stufe == KopfStufe.SCHMAL) 10.dp else 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (stufe != KopfStufe.SCHMAL) {
-                if (LocalGestalt.current.zeigtRestzeitRing) RestzeitRing(now, next, nextIsSnooze, Modifier.size(ringSize))
-                else LocalGestalt.current.Motiv(Modifier.size(ringSize))
+            // Der Ring liegt in einer leicht vertieften Mulde — dieselbe Sprache wie ein nicht
+            // gedrückter Knopf, nur auf ein Instrument angewendet. Statisch, kein Dauerleuchten.
+            Box(
+                Modifier.size(ring + 16.dp)
+                    .background(gold.flaeche.dunkler(0.05f), CircleShape)
+                    .border(1.dp, lichtKante(gedrueckt = true, staerke = 0.35f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                RestzeitRing(daten.now, daten.next, daten.nextIsSnooze, Modifier.size(ring))
             }
-            // No maxLines: with large system fonts the lines wrap instead of being cut off.
-            Column(Modifier.weight(1f)) {
-                // The current time appears exactly once.
-                Text(formatClock(now), fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                    fontSize = uhrGroesse(stufe), color = gold.primaer, maxLines = 1)
-                terminBlock()
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(datumsZeile(daten.now), Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelMedium, color = gold.textGedaempft,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
+                }
+                GedeckelteSchrift {
+                    Text(formatClock(daten.now), Modifier.semantics { heading() },
+                        fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                        fontSize = uhrGroesse(daten.stufe), color = gold.primaer,
+                        maxLines = 1, softWrap = false)
+                }
+                TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer)
+                Spacer(Modifier.height(2.dp))
+                HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden)
             }
-            // Das Pluszeichen allein sagt einem Screenreader nichts. Der Knopf trägt deshalb einen
-            // eigenen Namen; er liegt auf dem Knopf selbst, damit die Ansage die Handlung nennt.
-            GoldKnopf("＋", onNew, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen")
+        }
+    }
+}
+
+/**
+ * Schlichts Heroträger: der gewohnte Goldkörper, aber deutlich erhoben und mit einem statischen
+ * Glanzbogen im oberen Drittel — die Glassignatur, die dem alten Kopf fehlte. Bewusst ohne jede
+ * Endlosbewegung: Der Hero scrollt nie weg und würde sonst dauerhaft Bilder kosten.
+ */
+@Composable
+private fun HeroKarte(inhalt: @Composable () -> Unit) {
+    val gold = LocalGold.current
+    val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
+    val flaeche = gold.heroGrund
+    Box(
+        Modifier.fillMaxWidth()
+            .tiefenSchatten(gold.primaer, Hoehe.schwebendeLeiste, form)
+            .clip(form)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        flaeche.heller(if (gold.istDunkel) 0.08f else 0.03f),
+                        flaeche,
+                        flaeche.dunkler(if (gold.istDunkel) 0.12f else 0.05f),
+                    ),
+                ),
+            )
+            .background(glanzLicht(deckung = if (gold.istDunkel) 0.06f else 0.14f))
+            .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.16f else 0.55f), form),
+    ) { inhalt() }
+}
+
+/**
+ * Die flache Fassung für wenig Höhe — Querformat und sehr große Systemschrift. Sie zeigt
+ * dieselben Angaben in einer Zeile, statt Inhalte abzuschneiden oder den Hero die ganze
+ * Seite füllen zu lassen.
+ */
+@Composable
+private fun SchmalerHero(
+    daten: HeroDaten, aufNeu: () -> Unit, aufOeffnen: () -> Unit, aufSchlummernBeenden: () -> Unit,
+) {
+    val gold = LocalGold.current
+    LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = true) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            GedeckelteSchrift {
+                Text(formatClock(daten.now), fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                    fontSize = uhrGroesse(daten.stufe), color = gold.primaer, maxLines = 1, softWrap = false)
+            }
+            Column(
+                Modifier.weight(1f).then(
+                    if (daten.nextAlarm != null) Modifier.clickable(
+                        onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
+            ) {
+                Text(
+                    if (daten.next == null) "Kein Wecker aktiv"
+                    else "${terminAnzeige(daten.now, daten.next).einzeilig}${daten.nextName?.let { " · $it" } ?: ""}",
+                    style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                if (daten.next != null) Text("in ${remainingLong(daten.next - daten.now)}",
+                    style = MaterialTheme.typography.bodySmall, color = gold.primaer, maxLines = 1)
+            }
+            if (daten.nextIsSnooze) StillerKnopf("Wecken", aufSchlummernBeenden, hervorgehoben = true)
+            GoldKnopf("Neu", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
+                symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
+        }
+    }
+}
+
+/**
+ * **Morgenruhe — das Tagesblatt am Anfang der Achse.**
+ *
+ * Morgenruhe ordnet den Tag an einer senkrechten Achse; die Weckerkarten sind Stationen darauf.
+ * Der Hero ist folgerichtig der Kopf dieser Achse: Er führt mit dem Datum, nicht mit der Uhrzeit,
+ * und die Linie der Stationen beginnt sichtbar unter ihm.
+ *
+ * Er trägt bewusst keinen Schatten und keinen Verlauf — das ist Schlichts Sprache. Die Abgrenzung
+ * macht eine eigene, tiefer gesetzte Leinenfläche mit klarer Kante; das einzige Ornament ist ein
+ * kurzer Messingstrich.
+ */
+@Composable
+private fun MorgenruheHero(
+    daten: HeroDaten, aufNeu: () -> Unit, aufOeffnen: (Alarm) -> Unit,
+    aufEinstellungen: () -> Unit, aufSchlummernBeenden: () -> Unit,
+) {
+    val gold = LocalGold.current
+    val semantisch = LocalSemantisch.current
+    val oeffnen = { daten.nextAlarm?.let(aufOeffnen); Unit }
+    if (daten.schmal) { SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden); return }
+    val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
+    val motiv = if (daten.weit) 128.dp else 104.dp
+    Column(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund).border(1.dp, gold.heroKante, form)) {
+            Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    // Das einzige Ornament des Designs: ein kurzer Messingstrich als Tagesmarke.
+                    Box(Modifier.width(40.dp).height(2.dp).background(gold.akzentWarm))
+                    Text(datumsZeile(daten.now), style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium, color = gold.heroFuehrung,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    GedeckelteSchrift {
+                        Text(formatClock(daten.now), Modifier.semantics { heading() },
+                            fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                            fontSize = uhrGroesse(daten.stufe), color = gold.heroSchrift,
+                            maxLines = 1, softWrap = false)
+                    }
+                    TerminGruppe(daten, oeffnen, gold.heroSchrift, gold.heroSchriftGedaempft, gold.heroFuehrung)
+                    BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
+                }
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LocalGestalt.current.Motiv(Modifier.size(motiv))
+                    HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden, knopfText = "Wecker anlegen")
+                }
+            }
+        }
+        // Der Anschluss an die Tagesachse: Der Punkt sitzt genau dort, wo `Station` in der Liste
+        // ihre Linie zeichnet — 13 dp von der Spaltenkante. Ohne ihn schwebte die erste Station.
+        Row(Modifier.fillMaxWidth().height(12.dp)) {
+            Box(Modifier.width(26.dp), contentAlignment = Alignment.TopCenter) {
+                Box(Modifier.width(2.dp).fillMaxHeight().background(gold.rahmen))
+            }
+        }
+    }
+}
+
+/**
+ * **Traumraum — die Kuppel als Objekt, die Perle als Brücke.**
+ *
+ * Aufbau und Überlappung bleiben; sie tragen den Charakter. Behoben ist, was den Hero unsichtbar
+ * machte: Der radiale Schein lag bisher auf dem **Seitenhintergrund** und beleuchtete damit Seite
+ * und Kuppel gleichermaßen — gemessene 1,07:1 im hellen Modus, auf dem Gerät nicht zu erkennen.
+ * Jetzt liegt das Licht **in** der Kuppel, die Kuppel hat eine eigene warme Fläche mit sichtbarer
+ * Kante, und die Perle sitzt auf der normalen Fläche statt auf derselben Farbe wie die Kuppel —
+ * erst dadurch ist die Überlappung überhaupt zu sehen.
+ */
+@Composable
+private fun TraumraumHero(
+    daten: HeroDaten, aufNeu: () -> Unit, aufOeffnen: (Alarm) -> Unit, aufSchlummernBeenden: () -> Unit,
+) {
+    val gold = LocalGold.current
+    val oeffnen = { daten.nextAlarm?.let(aufOeffnen); Unit }
+    if (daten.schmal) { SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden); return }
+    val radius = LocalDesignTokens.current.karteRadius
+    val kuppelForm = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
+    val motiv = if (daten.weit) 96.dp else 72.dp
+    val versatz = 26.dp
+    Column(Modifier.fillMaxWidth()) {
+        Box(
+            Modifier.fillMaxWidth()
+                // Eine einzige farbige Umgebungsschicht statt eines Kontaktschattens: weicher
+                // Schein von oben, kein plastischer Körper — das ist Traumraums Sprache.
+                .shadow(16.dp, kuppelForm, ambientColor = gold.primaer.copy(alpha = .35f),
+                    spotColor = androidx.compose.ui.graphics.Color.Transparent)
+                .clip(kuppelForm)
+                .background(Brush.verticalGradient(listOf(gold.heroGrund, gold.heroGrundUnten)))
+                .border(1.dp, gold.heroKante, kuppelForm)
+                .padding(top = 14.dp, bottom = versatz + 14.dp, start = 20.dp, end = 20.dp),
+        ) {
+            // Das Licht sitzt jetzt in der Kuppel und ist von ihr beschnitten.
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(datumsZeile(daten.now), style = MaterialTheme.typography.labelMedium,
+                    color = gold.akzentWarm, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    LocalGestalt.current.Motiv(Modifier.size(motiv))
+                    GedeckelteSchrift {
+                        Text(formatClock(daten.now), Modifier.semantics { heading() },
+                            fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                            fontSize = uhrGroesse(daten.stufe), color = gold.heroFuehrung,
+                            maxLines = 1, softWrap = false)
+                    }
+                }
+            }
+        }
+        // Die Perle überlappt die Kuppel. Der Versatz wird aus der belegten Höhe herausgerechnet,
+        // damit darunter keine tote Fläche entsteht.
+        Row(
+            Modifier.fillMaxWidth()
+                .layout { messbar, grenzen ->
+                    val platz = messbar.measure(grenzen)
+                    val hub = versatz.roundToPx()
+                    layout(platz.width, (platz.height - hub).coerceAtLeast(0)) { platz.place(0, -hub) }
+                }
+                .padding(horizontal = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(Modifier.weight(1f)) {
+                Perle {
+                    TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer)
+                }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                GoldKnopf("＋", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen")
+                if (daten.nextIsSnooze) StillerKnopf("Wecken", aufSchlummernBeenden, hervorgehoben = true)
+            }
+        }
+    }
+}
+
+/**
+ * **Orbit — das Hauptinstrument.**
+ *
+ * Orbit ist eine Instrumententafel, und der Hero ist ihr Hauptinstrument: Kopfstreifen mit
+ * Statusleuchte, Messwerk in der Mitte, Fußstreifen mit Aktion und Bereitschaftsanzeige.
+ * Statt eines Rings — den dieses Design nie hatte — zeigt eine lineare Skala die Restzeit als
+ * Anteil eines Tages. Sie rechnet nur mit dem bereits bekannten Termin, es kommt keine neue
+ * Weckmechanik dazu.
+ *
+ * Kein Schatten, kein Verlauf, kein Schein: Hier arbeiten ausschließlich Linien und Kanten.
+ */
+@Composable
+private fun OrbitHero(
+    daten: HeroDaten, aufNeu: () -> Unit, aufOeffnen: (Alarm) -> Unit,
+    aufEinstellungen: () -> Unit, aufSchlummernBeenden: () -> Unit,
+) {
+    val gold = LocalGold.current
+    val semantisch = LocalSemantisch.current
+    val oeffnen = { daten.nextAlarm?.let(aufOeffnen); Unit }
+    if (daten.schmal) { SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden); return }
+    val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
+    val motiv = if (daten.weit) 108.dp else 92.dp
+    val statusFarbe = when {
+        daten.nextIsSnooze -> semantisch.info
+        daten.hatTermin -> gold.akzentWarm
+        else -> gold.heroSchriftGedaempft
+    }
+    val statusText = when {
+        daten.nextIsSnooze -> "SCHLUMMERT"
+        daten.hatTermin -> "AKTIV"
+        else -> "KEIN TERMIN"
+    }
+    Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund).border(1.dp, gold.heroKante, form)) {
+        Column(Modifier.fillMaxWidth()) {
+            // Kopfstreifen: links der Signalbalken, rechts die Statusleuchte.
+            Row(
+                Modifier.fillMaxWidth().padding(start = 0.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.width(3.dp).height(14.dp).background(gold.akzentWarm))
+                Text("NÄCHSTER TERMIN", Modifier.padding(start = 9.dp).weight(1f),
+                    fontFamily = IdeenSchriftFest, style = MaterialTheme.typography.labelSmall,
+                    color = gold.heroSchriftGedaempft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(datumKurz(daten.now).uppercase(java.util.Locale.GERMAN),
+                    fontFamily = IdeenSchriftFest, style = MaterialTheme.typography.labelSmall,
+                    color = gold.heroSchriftGedaempft, maxLines = 1)
+                Box(Modifier.padding(start = 10.dp, end = 5.dp).size(7.dp).background(statusFarbe, CircleShape))
+                Text(statusText, fontFamily = IdeenSchriftFest,
+                    style = MaterialTheme.typography.labelSmall, color = statusFarbe, maxLines = 1)
+            }
+            HorizontalDivider(color = gold.heroKante)
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LocalGestalt.current.Motiv(Modifier.size(motiv))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    GedeckelteSchrift {
+                        Text(formatClock(daten.now), Modifier.semantics { heading() },
+                            fontFamily = IdeenSchriftFest, fontWeight = FontWeight.SemiBold,
+                            fontSize = uhrGroesse(daten.stufe), color = gold.heroFuehrung,
+                            maxLines = 1, softWrap = false)
+                    }
+                    RestzeitSkala(daten, gold.heroFuehrung, if (daten.nextIsSnooze) semantisch.info else gold.akzentWarm,
+                        gold.heroKante)
+                    OrbitZeile("TERMIN", if (daten.next == null) "—"
+                        else terminAnzeige(daten.now, daten.next).einzeilig, gold, oeffnen, daten.nextAlarm != null)
+                    OrbitZeile("NAME", daten.nextName ?: "—", gold, oeffnen, daten.nextAlarm != null)
+                    OrbitZeile("REST", daten.next?.let { remainingLong(it - daten.now) } ?: "—",
+                        gold, oeffnen, daten.nextAlarm != null, wertFarbe = gold.heroFuehrung)
+                }
+            }
+            HorizontalDivider(color = gold.heroKante)
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                GoldKnopf("WECKER", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
+                    symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
+                Spacer(Modifier.weight(1f))
+                if (daten.nextIsSnooze) StillerKnopf("WECKEN", aufSchlummernBeenden, hervorgehoben = true)
+                BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung,
+                    stil = MaterialTheme.typography.labelSmall.copy(fontFamily = IdeenSchriftFest))
+            }
+        }
+    }
+}
+
+/** Eine Messwertzeile der Instrumententafel: Beschriftung links, Wert rechts. */
+@Composable
+private fun OrbitZeile(
+    name: String, wert: String, gold: de.frank.genialeideen.ui.theme.GoldPalette,
+    aufOeffnen: () -> Unit, klickbar: Boolean,
+    wertFarbe: androidx.compose.ui.graphics.Color = gold.heroSchrift,
+) {
+    Row(
+        Modifier.fillMaxWidth()
+            .then(if (klickbar) Modifier.clickable(onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(name, Modifier.width(60.dp), fontFamily = IdeenSchriftFest,
+            style = MaterialTheme.typography.labelSmall, color = gold.heroSchriftGedaempft, maxLines = 1)
+        Text(wert, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall,
+            color = wertFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * Die lineare Restzeitskala: gefüllter Anteil bis zum nächsten Termin, bezogen auf 24 Stunden,
+ * mit Teilstrichen alle sechs Stunden. Reine Arithmetik auf dem bereits bekannten Termin.
+ * Für TalkBack stumm — die Zeile „REST" daneben ist maßgeblich.
+ */
+@Composable
+private fun RestzeitSkala(
+    daten: HeroDaten, spurFarbe: androidx.compose.ui.graphics.Color,
+    fuellFarbe: androidx.compose.ui.graphics.Color, kante: androidx.compose.ui.graphics.Color,
+) {
+    val anteil = daten.tagesAnteil()
+    Canvas(Modifier.fillMaxWidth().height(4.dp).clearAndSetSemantics { }) {
+        drawRect(kante, size = size)
+        if (anteil > 0f) drawRect(fuellFarbe, size = androidx.compose.ui.geometry.Size(size.width * anteil, size.height))
+        // Teilstriche alle sechs Stunden — sie geben der Skala erst ihren Maßstab.
+        for (i in 1..3) {
+            val x = size.width * (i / 4f)
+            drawRect(spurFarbe.copy(alpha = .55f), topLeft = Offset(x, 0f),
+                size = androidx.compose.ui.geometry.Size(1.dp.toPx(), size.height))
         }
     }
 }
@@ -459,9 +981,9 @@ private fun WeckerKarte(
     val schlafHinweis = if (alarm.enabled && alarm.nextAt > 0 && alarm.sleepMinutes > 0)
         Schlaf.hinweis(alarm.nextAt, alarm.sleepMinutes, now) else null
 
-    Station(achse, alarm.enabled) {
+    Station(achse, alarm.enabled, modifier) {
         LocalGestalt.current.Flaeche(
-            modifier.fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .then(if (glowAlpha > 0f) Modifier.border(2.dp, gold.primaer.copy(alpha = glowAlpha),
                     RoundedCornerShape(LocalDesignTokens.current.karteRadius)) else Modifier)
                 .clickable(
@@ -811,13 +1333,20 @@ private fun Perle(inhalt: @Composable ColumnScope.() -> Unit) {
  * Eine Station an der Tagesachse: nur Morgenruhe zeichnet Linie und Punkt, alle anderen Designs
  * geben den Inhalt unverändert weiter. Die Karte selbst bleibt in jedem Fall dieselbe.
  */
+/**
+ * @param modifier gehört an die **äußere** Wurzel dieses Listeneintrags. Lazy-Layouts lesen die
+ *   ParentData am Wurzelknoten des Items; lag `animateItem()` weiter innen an der Karte, sah das
+ *   Raster ihn bei Morgenruhe gar nicht — dort fehlten deshalb Ein-, Ausblend- und
+ *   Verschiebeanimationen, die die anderen drei Designs hatten.
+ */
 @Composable
-private fun Station(anAchse: Boolean, aktiv: Boolean, inhalt: @Composable () -> Unit) {
-    if (!anAchse) { inhalt(); return }
+private fun Station(anAchse: Boolean, aktiv: Boolean, modifier: Modifier = Modifier,
+    inhalt: @Composable () -> Unit) {
+    if (!anAchse) { Box(modifier) { inhalt() }; return }
     val gold = LocalGold.current
     // Die Linie läuft über die volle Höhe jeder Station und damit ohne Unterbrechung durch die Liste;
     // der Punkt sitzt auf Höhe der Weckzeit. Der eigene Abstand liegt innerhalb der Station.
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), verticalAlignment = Alignment.Top) {
+    Row(modifier.fillMaxWidth().height(IntrinsicSize.Max), verticalAlignment = Alignment.Top) {
         Box(Modifier.width(26.dp).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
             Box(Modifier.width(2.dp).fillMaxHeight().background(gold.rahmen))
             Box(Modifier.padding(top = 30.dp).size(13.dp)
@@ -1725,8 +2254,11 @@ fun remaining(ms: Long): String { val minutes = ZeitRing.ceilMinutes(ms); return
 
 
 @Composable
-fun ReadinessCard(onSettings: () -> Unit, hideWhenReady: Boolean = false) {
-    val state = rememberReadiness()
+fun ReadinessCard(onSettings: () -> Unit, hideWhenReady: Boolean = false,
+    /** Vorgegebener Zustand; ohne Vorgabe fragt die Karte selbst. Die Weckerliste reicht ihn
+     *  herein, damit dort nicht zwei Zwei-Sekunden-Abfragen nebeneinander laufen. */
+    zustand: List<Pair<String, Boolean>>? = null) {
+    val state = zustand ?: rememberReadiness()
     if (hideWhenReady && state.all { it.second }) return
     LocalGestalt.current.Flaeche(Modifier, erhoeht = false) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {

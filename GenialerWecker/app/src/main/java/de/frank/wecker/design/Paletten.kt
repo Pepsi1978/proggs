@@ -53,6 +53,9 @@ val MorgenruheDunkel = GoldPalette(
     rahmen = Color(0xFF2A343A),
     eingabefeld = Color(0xFF0D1113),
     istDunkel = true,
+    // Das Tagesblatt liegt eine Stufe über der Seite: 1,30:1 statt der 1,08:1 von `flaeche`.
+    heroFlaeche = Color(0xFF232C31),
+    heroRahmen = Color(0xFF3A464D),
 )
 
 val MorgenruheHell = GoldPalette(
@@ -68,6 +71,12 @@ val MorgenruheHell = GoldPalette(
     rahmen = Color(0xFFDCD6CB),
     eingabefeld = Color(0xFFFAF8F4),
     istDunkel = false,
+    // Leinen eine Stufe tiefer (1,20:1 zur Seite) plus ein deutlich sichtbarer Rahmen (1,58:1).
+    // Morgenruhe trägt bewusst keinen Schatten — die Kante muss die Arbeit machen.
+    heroFlaeche = Color(0xFFE3DDD2),
+    heroRahmen = Color(0xFFC9C1B3),
+    // Der gewohnte gedämpfte Ton läge auf dieser Fläche bei 4,05:1; dieser bei 4,94:1.
+    heroTextGedaempft = Color(0xFF525E65),
 )
 
 // --- D · Traumraum: Glut — warmes Schwarz und klares Orange -------------------------------
@@ -94,6 +103,10 @@ val TraumraumDunkel = GoldPalette(
     rahmen = Color(0xFF33241C),
     eingabefeld = Color(0xFF130F0C),
     istDunkel = true,
+    // Die Kuppel hebt sich jetzt mit 1,33:1 von der Seite ab statt mit 1,16:1. Bewusst kein
+    // Verlauf nach unten dunkler: Genau an der unteren Rundung zählt die Abgrenzung.
+    heroFlaeche = Color(0xFF342519),
+    heroRahmen = Color(0xFF4A3524),
 )
 
 val TraumraumHell = GoldPalette(
@@ -109,6 +122,15 @@ val TraumraumHell = GoldPalette(
     rahmen = Color(0xFFE4D6C9),
     eingabefeld = Color(0xFFFAF4EE),
     istDunkel = false,
+    // Warm-helle Pfirsichkuppel mit leichtem Verlauf. Die Fläche allein trägt nur 1,25:1 zur
+    // Seite — deshalb kommen ein deutlich sichtbarer Rahmen (1,64:1) und die farbige
+    // Umgebungsschicht dazu. Erst zusammen ergibt das eine erkennbare eigene Fläche.
+    heroFlaeche = Color(0xFFEFD5C0),
+    heroFlaecheUnten = Color(0xFFF3DCCB),
+    heroRahmen = Color(0xFFD9B99E),
+    // Auf Pfirsich fiele der Primärton auf 3,81:1. Der gedämpfte trägt mit 5,32:1.
+    heroPrimaer = Color(0xFF93380C),
+    heroTextGedaempft = Color(0xFF66544A),
 )
 
 // --- C · Orbit: Fast-Schwarz mit Eisblau, Limette als Signal ---------------------------------
@@ -126,6 +148,11 @@ val OrbitDunkel = GoldPalette(
     rahmen = Color(0xFF262C38),
     eingabefeld = Color(0xFF0C0F14),
     istDunkel = true,
+    // Das Hauptinstrument liegt mit 1,22:1 über der Tafel — bei Orbit reicht wenig, weil die
+    // harten Kanten und Trennlinien die Abgrenzung übernehmen.
+    heroFlaeche = Color(0xFF1B2029),
+    heroRahmen = Color(0xFF323A48),
+    heroTextGedaempft = Color(0xFF8B94A8),
 )
 
 val OrbitHell = GoldPalette(
@@ -141,4 +168,6 @@ val OrbitHell = GoldPalette(
     rahmen = Color(0xFFD2D7E0),
     eingabefeld = Color(0xFFF8F9FC),
     istDunkel = false,
+    heroFlaeche = Color(0xFFFFFFFF),
+    heroRahmen = Color(0xFFBCC3CF),
 )

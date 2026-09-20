@@ -158,6 +158,15 @@ fun GenialeIdeenTheme(
         rahmen = weich(ziel.rahmen, "rahmen"),
         eingabefeld = weich(ziel.eingabefeld, "eingabefeld"),
         istDunkel = ziel.istDunkel,
+        // Die Hero-Rollen müssen mitkopiert werden, sonst fielen sie beim Themenwechsel auf die
+        // Vorgaben zurück und der Hero verlöre genau die Fläche, die ihn abhebt. Sie werden
+        // ebenso weich überblendet wie alles andere; `null` bleibt `null`.
+        heroFlaeche = ziel.heroFlaeche?.let { weich(it, "heroFlaeche") },
+        heroFlaecheUnten = ziel.heroFlaecheUnten?.let { weich(it, "heroFlaecheUnten") },
+        heroRahmen = ziel.heroRahmen?.let { weich(it, "heroRahmen") },
+        heroText = ziel.heroText?.let { weich(it, "heroText") },
+        heroTextGedaempft = ziel.heroTextGedaempft?.let { weich(it, "heroTextGedaempft") },
+        heroPrimaer = ziel.heroPrimaer?.let { weich(it, "heroPrimaer") },
     )
 
     // Material3 zieht sich viele Flächen NICHT aus `surface`, sondern aus den Container-Rollen:

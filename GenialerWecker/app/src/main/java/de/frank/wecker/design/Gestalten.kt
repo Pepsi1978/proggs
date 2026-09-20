@@ -12,7 +12,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -73,11 +76,16 @@ object MorgenruheGestalt : WeckerGestalt {
      * und nach einem Palettenwechsel hätte sie erst recht nicht mehr gepasst.
      */
     @Composable override fun Motiv(modifier: Modifier) {
+        // Das Bild stammt noch aus der abgelösten Salbei-/Terrakotta-Welt. Bis es in Leinen und
+        // Tinte neu erzeugt ist, nimmt eine Entsättigung ihm die Buntheit: Terrakotta wird
+        // Messingbraun, Salbei ein ruhiges Graugrün. Das ist eine Tonwertkorrektur, keine
+        // flache Einfärbung — Schattierung und Materialwirkung bleiben vollständig erhalten.
         Image(
             painter = painterResource(R.drawable.design_bett_frei),
             contentDescription = null,
             modifier = if (modifier == Modifier) Modifier.size(120.dp) else modifier,
             contentScale = ContentScale.Fit,
+            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.55f) }),
         )
     }
 
@@ -126,11 +134,17 @@ object TraumraumGestalt : WeckerGestalt {
      * stünde diese Scheibe als Fremdkörper.
      */
     @Composable override fun Motiv(modifier: Modifier) {
+        // Der Mond auf dem Kissen ist noch im alten Rosé gemalt — auf der warmen Glutkuppel wäre
+        // das genau der Rückfall in die abgelöste Pflaume-/Rosé-Welt. Der multiplizierende Filter
+        // nimmt den Rotstich heraus und lässt das Objekt bernsteinfarben wirken; weil er die
+        // vorhandenen Helligkeiten multipliziert statt sie zu ersetzen, bleibt die Plastik
+        // vollständig erhalten. Ein neu erzeugtes Bild wäre die saubere Lösung.
         Image(
             painter = painterResource(R.drawable.design_kissen_frei),
             contentDescription = null,
             modifier = if (modifier == Modifier) Modifier.size(128.dp) else modifier,
             contentScale = ContentScale.Fit,
+            colorFilter = ColorFilter.tint(Color(0xFFFFC898), BlendMode.Modulate),
         )
     }
 

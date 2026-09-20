@@ -21,7 +21,31 @@ data class GoldPalette(
     val rahmen: Color,
     val eingabefeld: Color,
     val istDunkel: Boolean,
-)
+    /**
+     * Die Fläche des Hero-Bereichs oben auf der Weckerliste und ihre Textfarben.
+     *
+     * Ohne eigene Werte fällt alles auf die gewohnten Rollen zurück — so bleibt Schlicht exakt
+     * bei seinen Goldwerten. Morgenruhe, Traumraum und Orbit setzen abweichende Werte, weil ihre
+     * `flaecheErhoeht` sich zu wenig vom Seitenhintergrund abhebt: Bei Traumraum waren es
+     * gemessene 1,07:1 im hellen und 1,16:1 im dunklen Modus — auf dem Gerät praktisch unsichtbar.
+     *
+     * [heroFlaecheUnten] ist das Ende eines senkrechten Verlaufs; gleich [heroFlaeche] heißt flach.
+     */
+    val heroFlaeche: Color? = null,
+    val heroFlaecheUnten: Color? = null,
+    val heroRahmen: Color? = null,
+    val heroText: Color? = null,
+    val heroTextGedaempft: Color? = null,
+    val heroPrimaer: Color? = null,
+) {
+    /** Die Hero-Fläche, oder die erhöhte Fläche, wenn das Design keine eigene setzt. */
+    val heroGrund: Color get() = heroFlaeche ?: flaecheErhoeht
+    val heroGrundUnten: Color get() = heroFlaecheUnten ?: heroGrund
+    val heroKante: Color get() = heroRahmen ?: rahmen
+    val heroSchrift: Color get() = heroText ?: textPrimaer
+    val heroSchriftGedaempft: Color get() = heroTextGedaempft ?: textGedaempft
+    val heroFuehrung: Color get() = heroPrimaer ?: primaer
+}
 
 val DunkleGoldPalette = GoldPalette(
     hintergrund = Color(0xFF121212),

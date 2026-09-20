@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,10 +34,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -62,12 +66,55 @@ import de.frank.genialeideen.ui.theme.Motion
 /** Anteil der Fensterhöhe, den ein Dialog höchstens einnimmt. Der Rest bleibt sichtbar frei. */
 private const val HOEHENANTEIL = 0.82f
 
+/**
+ * Luft zwischen Dialogkante und Systemleiste — oben wie unten. Bewusst knapp: Jedes Millimeter
+ * hier fehlt dem Inhalt, und der Monatskalender in Picker.kt braucht seine 512 dp am Stück.
+ */
+private val RAND_LUFT = 8.dp
+
 /** Breitengrenze: auf dem Telefon füllt der Dialog die Zeile, auf dem aufgeklappten Foldable nicht. */
 private val MAX_BREITE = 560.dp
 
 /**
+ * Die Höhe, auf die sich ein Dialograhmen deckelt — zwei Grenzen, die kleinere gewinnt:
+ *
+ * 1. [anteil] der Fensterhöhe. Das ist die Wunschhöhe: Bei der Vorgabe 0,82 bleibt sichtbar Rand
+ *    frei, der Dialog wirkt als Dialog. Ein Aufrufer, der den Platz wirklich braucht, hebt den
+ *    Anteil an (die Picker in Picker.kt fordern mit 1,0 alles an, was Grenze 2 hergibt).
+ * 2. Die **harte** Obergrenze: Fensterhöhe − Systemleisten − 2 × [RAND_LUFT]. Sie greift im Querformat
+ *    und auf kleinen Schirmen und verhindert, dass der Rahmen über den Bildschirm hinauswächst.
+ *
+ * Warum die Systemleisten überhaupt abgezogen werden: Die App läuft mit `enableEdgeToEdge` und
+ * targetSdk 36. Ab API 35 schließt `Configuration.screenHeightDp` die Systemleisten **nicht mehr**
+ * aus (Android-15-Verhaltensänderung; Google verweist für Maße seither auf `WindowMetrics`) — der
+ * Wert ist die volle Fensterhöhe. Auf älteren Geräten zieht dieser Aufruf sie ein zweites Mal ab;
+ * das kostet etwas Höhe, kann aber nie über den Rand laufen. Die Richtung ist bewusst so gewählt.
+ *
+ * **Diese Funktion gehört in die Komposition des App-Fensters, nicht in die eines `Dialog`.**
+ * Der Dialog trägt `decorFitsSystemWindows = true`, sein Fenster ist also bereits um die
+ * Systemleisten eingerückt und meldet innen 0 dp. Stünde der Aufruf dort, läse er andere Werte als
+ * `dialogInhaltsHoehe()` in Picker.kt, das ihn aus dem App-Fenster heraus aufruft — Rahmen und
+ * Schwellenrechnung lägen auseinander.
+ */
+@Composable
+internal fun dialogHoechstHoehe(anteil: Float = HOEHENANTEIL): Dp {
+    val dichte = LocalDensity.current
+    val leisten = WindowInsets.systemBars
+    val leistenHoehe = with(dichte) { (leisten.getTop(this) + leisten.getBottom(this)).toDp() }
+    val fenster = LocalConfiguration.current.screenHeightDp.dp
+    val obergrenze = (fenster - leistenHoehe - RAND_LUFT * 2).coerceAtLeast(0.dp)
+    return minOf(fenster * anteil, obergrenze)
+}
+
+/**
  * Dialograhmen in der Farbwelt und Form des gewählten Designs.
  * [inhalt] ist optional; [bestaetigung] und [abbruch] sind die Knopfzeilen.
+ *
+ * [hoehenAnteil] ist der Anteil der Fensterhöhe, den der Rahmen anfordert. Ohne Angabe bleibt es
+ * beim gewohnten [HOEHENANTEIL]; Aufrufer mit einem Inhalt, der nicht schrumpfen kann, dürfen mehr
+ * verlangen. Die harte Obergrenze nahe der Fensterhöhe gilt weiterhin — siehe
+ * [dialogHoechstHoehe]. Der Parameter steht **vor** [inhalt], damit ein nachgestelltes
+ * Inhalts-Lambda (wie in [DesignTextDialog]) weiterhin auf [inhalt] fällt.
  *
  * Die Scrollhoheit bleibt beim Aufrufer: [inhalt] bekommt eine nach oben begrenzte Spalte, darf
  * darin selbst eine `LazyColumn` aufspannen. Der Rahmen legt **kein** eigenes `verticalScroll`
@@ -80,6 +127,7 @@ fun DesignDialog(
     aufSchliessen: () -> Unit,
     bestaetigung: @Composable () -> Unit,
     abbruch: (@Composable () -> Unit)? = null,
+    hoehenAnteil: Float = HOEHENANTEIL,
     inhalt: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val tokens = LocalDesignTokens.current
@@ -88,7 +136,11 @@ fun DesignDialog(
     val reduziert = LocalBewegungReduziert.current
     // Relativ zur Fensterhöhe statt als feste Zahl: auf dem kleinen Außenschirm des Foldables
     // bleibt derselbe Anteil frei wie auf dem aufgeklappten Gerät.
-    val maxHoehe = (LocalConfiguration.current.screenHeightDp * HOEHENANTEIL).dp
+    //
+    // Der Aufruf steht hier oben mit Absicht — außerhalb des `Dialog`-Lambdas darunter. Im
+    // Dialogfenster selbst melden die Systemleisten 0 dp; die Zahl wäre eine andere als die, mit
+    // der Picker.kt seine Schwellen rechnet. Nicht nach unten verschieben.
+    val maxHoehe = dialogHoechstHoehe(hoehenAnteil)
 
     Dialog(
         onDismissRequest = aufSchliessen,
