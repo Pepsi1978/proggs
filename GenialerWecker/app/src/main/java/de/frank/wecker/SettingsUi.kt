@@ -187,7 +187,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             } else catalog.map { it.id to "${it.name} · ${if (it.gender == VoiceGender.FEMALE) "weiblich" else "männlich"}" }
             GoldKnopf(available.find { it.first == selected }?.second ?: settings.qwenVoiceNames[selected] ?: "Stimme auswählen", { showVoices = !showVoices }, Modifier.fillMaxWidth())
             if (showVoices) {
-            OutlinedTextField(search, { search = it }, Modifier.fillMaxWidth(), label = { Text("Stimmen suchen") }, singleLine = true)
+            Eingabefeld(search, { search = it }, "Stimmen suchen", Modifier.fillMaxWidth())
             Toggle("Nur Favoriten anzeigen", onlyFavorites) { onlyFavorites = it }
             // Einmal gefiltert: dieselbe Liste entscheidet über Einträge und Leerzustand. Der normalisierte
             // Suchtext gilt für Filter, Meldung und Rücksetzknopf gleichermaßen – reine Leerzeichen filtern
@@ -288,7 +288,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }
         Section("Meine Stimme aufnehmen", collapsible = true, summary = "Eigene Stimmen erstellen und verwalten") {
             Text(VoiceSampleScript.script(VoiceSampleScript.fallback).joinToString("\n\n"), style = MaterialTheme.typography.bodySmall)
-            OutlinedTextField(voiceName, { voiceName = it }, Modifier.fillMaxWidth(), label = { Text("Name deiner Stimme") }, singleLine = true)
+            Eingabefeld(voiceName, { voiceName = it }, "Name deiner Stimme", Modifier.fillMaxWidth())
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 GoldKnopf(if (recording) "■ Aufnahme beenden" else "● Stimmprobe aufnehmen", {
                     if (recording) vm.stopRecording()

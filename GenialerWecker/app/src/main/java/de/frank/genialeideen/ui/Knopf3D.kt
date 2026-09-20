@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
@@ -40,7 +42,7 @@ import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Motion
 import de.frank.genialeideen.ui.theme.dunkler
-import de.frank.genialeideen.ui.theme.glanzLicht
+import de.frank.genialeideen.ui.theme.glanzBogen
 import de.frank.genialeideen.ui.theme.koerperVerlauf
 import de.frank.genialeideen.ui.theme.lichtKante
 import de.frank.genialeideen.ui.theme.pulsierenderSchein
@@ -48,6 +50,8 @@ import de.frank.genialeideen.ui.theme.tiefenSchatten
 
 /**
  * Der plastische 3D-Knopf aus Baustein N.2 — die **einzige** Knopf-Bauart der App.
+ * Seine Lichtschicht liegt in [glanzBogen]; sie fehlte lange, weil sie mit Pixelwerten statt
+ * Anteilen gerechnet wurde und dadurch auf einen Punkt zusammenfiel.
  *
  * Vier Schichten von unten nach oben: Schlagschatten, Körper mit senkrechtem Verlauf,
  * Lichtkante oben und dunkle Kante unten, Glanzbogen im oberen Drittel. Beim Drücken kippt
@@ -74,7 +78,8 @@ fun Knopf3D(
 ) {
     val gold = LocalGold.current
     val tokens = de.frank.wecker.design.LocalDesignTokens.current
-    val form = form ?: RoundedCornerShape(if (tokens.plastisch) 16.dp else tokens.chipRadius)
+    // Die Form kommt aus dem Design, nicht aus dem Materialmerkmal.
+    val form = form ?: RoundedCornerShape(tokens.knopfRadius)
     val reduziert = LocalBewegungReduziert.current
     val haptik = LocalHapticFeedback.current
     val quelle = remember { MutableInteractionSource() }
@@ -114,7 +119,9 @@ fun Knopf3D(
             .clip(form)
             .then(if (tokens.plastisch)
                 Modifier.background(koerperVerlauf(koerper, gedrueckt = gedrueckt && aktiviert))
-                    .background(if (gedrueckt) Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)) else glanzLicht())
+                    // Der Glanzbogen ist jetzt ein Modifier, weil er die tatsächliche Knopfgröße
+                    // braucht. Als Brush mit festen Pixelwerten war er auf dem Gerät unsichtbar.
+                    .then(if (gedrueckt) Modifier else Modifier.glanzBogen())
                     .border(1.dp, lichtKante(gedrueckt = gedrueckt && aktiviert), form)
                 else Modifier.background(koerper))
             .then(
@@ -164,16 +171,24 @@ fun GoldKnopf(
         hauptKnopf = hauptKnopf,
         beschreibung = beschreibung,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (symbol != null) {
-                symbol()
-                Spacer(Modifier.width(8.dp))
+        // Der Symbolslot bekommt dieselbe Vordergrundfarbe wie die Aufschrift. Vorher setzte nur
+        // der Text sie ausdrücklich, das Symbol erbte die Farbe der umgebenden Seite — auf dem
+        // dunklen Tintenknopf von Morgenruhe stand dadurch ein fast schwarzes Pluszeichen neben
+        // weißer Schrift. Über `LocalContentColor` bleibt es überschreibbar: Wer ein Symbol mit
+        // eigener semantischer Farbe übergibt (etwa eine Warnung), setzt seinen `tint` weiterhin
+        // selbst und gewinnt.
+        CompositionLocalProvider(LocalContentColor provides gold.aufPrimaer) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (symbol != null) {
+                    symbol()
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    text = if (laedt) "Einen Moment …" else text,
+                    color = gold.aufPrimaer,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                )
             }
-            Text(
-                text = if (laedt) "Einen Moment …" else text,
-                color = gold.aufPrimaer,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-            )
         }
     }
 }
@@ -216,10 +231,9 @@ fun StillerKnopf(
     hervorgehoben: Boolean = false,
 ) {
     val gold = LocalGold.current
-    // Nicht plastische Designs (Morgenruhe, Traumraum, Orbit) übernehmen ihre eigene Kantenform;
-    // Schlicht behält den bisherigen Radius von 12 dp und den erhabenen Körper.
+    // Jedes Design bringt seine eigene Kantenform mit; Schlicht behält seine gewohnte Rundung.
     val tokens = de.frank.wecker.design.LocalDesignTokens.current
-    val form = RoundedCornerShape(if (tokens.plastisch) 12.dp else tokens.chipRadius)
+    val form = RoundedCornerShape(if (tokens.plastisch) 12.dp else tokens.knopfRadius)
     val reduziert = LocalBewegungReduziert.current
     val quelle = remember { MutableInteractionSource() }
     val gedrueckt by quelle.collectIsPressedAsState()

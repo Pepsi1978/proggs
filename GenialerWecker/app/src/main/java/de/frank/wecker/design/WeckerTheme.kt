@@ -17,9 +17,17 @@ import de.frank.genialeideen.ui.theme.IdeenSchriftFest
 @Composable
 fun WeckerTheme(themeWahl: String, design: Design, content: @Composable () -> Unit) {
     val dunkel = themeWahl == "dark"
+    val palette = paletteFuer(design, dunkel)
     CompositionLocalProvider(
         LocalDesignTokens provides tokensFuer(design),
         LocalGestalt provides gestaltFuer(design),
+        // Die Materialwerte hängen an Design und Modus und werden einmal hier gesetzt, damit
+        // jede Fläche und jedes Bedienelement dieselbe Tiefensprache liest.
+        LocalMaterial provides materialFuer(
+            design, dunkel,
+            primaer = palette.primaer, gedaempft = palette.primaerGedaempft,
+            text = palette.textPrimaer, rahmen = palette.rahmen,
+        ),
     ) {
         GenialeIdeenTheme(
             themeWahl = themeWahl,

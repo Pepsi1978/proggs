@@ -718,7 +718,7 @@ private fun HeroKarte(inhalt: @Composable () -> Unit) {
                     ),
                 ),
             )
-            .background(glanzLicht(deckung = if (gold.istDunkel) 0.06f else 0.14f))
+            .glanzBogen(deckung = if (gold.istDunkel) 0.06f else 0.14f)
             .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.16f else 0.55f), form),
     ) { inhalt() }
 }
@@ -1376,10 +1376,22 @@ fun DesignBlatt(inhalt: @Composable ColumnScope.() -> Unit) {
     // Genau eine Aufrufstelle für Column und für den Inhalt: nur der Modifier und der Griff hängen
     // am Design. Ein Wechsel zu oder von Traumraum lässt damit die Zusammensetzung stehen, statt den
     // Unterbaum zu verwerfen — aufgeklappte Karten bleiben offen.
+    // Das Blatt trug bisher nur Farbe und einen Strich. Damit blieben Traumraums Editor und
+    // Einstellungen die einzigen großen Flächen der App ganz ohne Tiefe — ausgerechnet dort, wo
+    // man sich am längsten aufhält. Jetzt bekommt es dieselbe Schichtung wie jede andere Fläche:
+    // deckende Grundfarbe, Tiefenverlauf, gerichteter Reflex, Kante zuletzt.
+    val material = LocalMaterial.current
     Column(
         Modifier.fillMaxWidth().then(
-            if (traum) Modifier.padding(top = 10.dp).clip(form).background(gold.flaeche)
-                .border(1.dp, gold.rahmen, form).padding(horizontal = 4.dp, vertical = 10.dp)
+            if (traum) Modifier.padding(top = 10.dp)
+                .clip(form)
+                .background(gold.flaeche)
+                .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
+                .gerichteterReflex(material.reflexFarbe, material.reflexAlpha,
+                    material.reflexWinkelGrad, material.reflexLaenge)
+                .border(1.dp, materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha,
+                    material.kanteSchattenAlpha), form)
+                .padding(horizontal = 4.dp, vertical = 10.dp)
             else Modifier,
         ),
     ) {
@@ -1623,16 +1635,31 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
             }
         }
         // Traumraum: leichte Abschnittstrennung innerhalb des bereits vorhandenen großen Blatts.
-        Design.TRAUMRAUM -> Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp).animateContentSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(kopfModifier, verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) {
-                    beschriftung(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), gold.textPrimaer)
+        // Traumraum behält seine offene Gliederung auf dem Blatt — keine Karte in der Karte.
+        // Statt einer bloßen Trennlinie bekommt der Abschnitt aber eine leicht abgesetzte
+        // Vertiefung, sobald er offen ist: Dadurch liegt der Inhalt sichtbar *im* Blatt.
+        Design.TRAUMRAUM -> {
+            val material = LocalMaterial.current
+            val abschnittForm = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
+            Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp).animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(kopfModifier, verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        beschriftung(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), gold.textPrimaer)
+                    }
+                    if (collapsible) KlappKnopf(expanded, { expanded = !expanded }, beschreibung = null, modifier = Modifier.padding(start = 8.dp))
                 }
-                if (collapsible) KlappKnopf(expanded, { expanded = !expanded }, beschreibung = null, modifier = Modifier.padding(start = 8.dp))
+                if (expanded) Box(
+                    Modifier.fillMaxWidth()
+                        .clip(abschnittForm)
+                        .background(gold.flaecheErhoeht)
+                        .innenSchatten(abschnittForm, material.innenSchattenAlpha * 0.6f, tiefe = 4.dp)
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+                }
+                HorizontalDivider(color = gold.rahmen.copy(alpha = .6f))
             }
-            if (expanded) content()
-            HorizontalDivider(color = gold.rahmen.copy(alpha = .6f))
         }
         // Schlicht: unverändert der bisherige Aufbau aus Kopfzeile und Inhalt in einer Karte.
         else -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
@@ -1701,7 +1728,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 Text(alarm.timeLabel, Modifier.weight(1f).clickable(onClickLabel = "Uhrzeit ändern", onClick = pickTime), fontSize = 52.sp, fontFamily = zahlSchrift(), fontWeight = zahlGewicht(), color = LocalGold.current.primaer)
                 GoldKnopf("Uhrzeit ändern", pickTime)
             }
-            OutlinedTextField(alarm.name, { vm.change(alarm.copy(name = it)) }, Modifier.fillMaxWidth(), label = { Text("Name des Weckers") }, singleLine = true)
+            Eingabefeld(alarm.name, { vm.change(alarm.copy(name = it)) }, "Name des Weckers", Modifier.fillMaxWidth())
             SchlafdauerEingabe(alarm, vm::change)
         }
         // Kept outside the section: its content is removed while collapsed, the remembered date must survive that.
@@ -1884,15 +1911,31 @@ fun KlappKnopf(expanded: Boolean, onToggle: () -> Unit, beschreibung: String?, m
 fun Toggle(label: String, value: Boolean, change: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = change),
         verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f)); Switch(value, null, colors = SchalterFarben())
+        // Der eigene Schalter statt des Material-Schalters: Seine Bahn liegt vertieft, der Knauf
+        // erhaben. Die Rolle sitzt bereits am umschließenden `toggleable`, deshalb hier ohne
+        // eigenen Rückruf — sonst meldete TalkBack zwei Schalter.
+        Text(label, Modifier.weight(1f)); Schalter3D(value, null)
     }
 }
 
 @Composable
 fun ValueSlider(label: String, value: Int, range: IntRange, unit: String, change: (Int) -> Unit) {
-    Text("$label: $value $unit", style = MaterialTheme.typography.bodyMedium)
-    Slider(value.toFloat(), { change(it.roundToInt()) }, Modifier.semantics { contentDescription = label; stateDescription = "$value $unit" },
-        valueRange = range.first.toFloat()..range.last.toFloat())
+    Column(Modifier.fillMaxWidth()) {
+        Text("$label: $value${if (unit.isBlank()) "" else " $unit"}")
+        // Reglerbahn als vertiefte Rille, Knauf erhaben — dasselbe Material wie überall sonst.
+        Regler3D(
+            wert = value.toFloat(),
+            aufAenderung = { change(it.roundToInt()) },
+            // Die Ansage für TalkBack bleibt wie bisher: Name des Reglers und sein aktueller
+            // Wert samt Einheit. Ohne sie hieße der Regler nur „Schieberegler".
+            modifier = Modifier.semantics {
+                contentDescription = label
+                stateDescription = "$value${if (unit.isBlank()) "" else " $unit"}"
+            },
+            bereich = range.first.toFloat()..range.last.toFloat(),
+            stufen = (range.last - range.first - 1).coerceAtLeast(0),
+        )
+    }
 }
 
 /** Stimmen im Editor genauso benennen wie in den Einstellungen. */
@@ -1933,7 +1976,7 @@ fun Choice(label: String, selected: String, options: List<Pair<String, String>>,
                 // Kurze Listen behalten genau den bisherigen Aufbau ohne Höhenbegrenzung.
                 if (!suchbar) LazyColumn(state = listState, content = eintraege)
                 else {
-                    OutlinedTextField(suche, { suche = it }, Modifier.fillMaxWidth(), label = { Text("Suchen") }, singleLine = true)
+                    Eingabefeld(suche, { suche = it }, "Suchen", Modifier.fillMaxWidth())
                     Spacer(Modifier.height(8.dp))
                     if (gezeigt.isEmpty()) Text("Kein Eintrag passt zu „${suche.trim()}“. Ändere den Suchbegriff oder leere das Feld, um wieder alle ${options.size} Einträge zu sehen.",
                         style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
@@ -2040,7 +2083,7 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, gemerktesDat
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         listOf("once" to "Einmalig", "daily" to "Täglich", "weekdays" to "An Wochentagen",
             "interval" to "Alle X Tage", "month" to "Monatlich", "year" to "Jährlich").forEach { (id, label) ->
-            FilterChip(mode == id, { changeMode(id) }, { Text(label) })
+            Chip3D(mode == id, { changeMode(id) }, label)
         }
     }
     if (mode == "weekdays") {
@@ -2066,7 +2109,7 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, gemerktesDat
         // Existing values above 60 days stay untouched; the slider grows instead of cutting them down.
         ValueSlider("Alle wie viele Tage?", alarm.intervalDays, 1..maxOf(60, alarm.intervalDays), "Tage") { change(alarm.copy(intervalDays = it)) }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(4, 5, 8, 35).forEach { days -> FilterChip(alarm.intervalDays == days, { change(alarm.copy(intervalDays = days)) }, { Text("$days Tage") }) }
+            listOf(4, 5, 8, 35).forEach { days -> Chip3D(alarm.intervalDays == days, { change(alarm.copy(intervalDays = days)) }, "$days Tage") }
         }
     }
     if (mode == "month") {
@@ -2388,7 +2431,7 @@ private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
     val sleep = alarm.sleepMinutes
     Text("Gewünschte Schlafdauer", style = MaterialTheme.typography.labelLarge)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        FilterChip(sleep == 0, { if (sleep != 0) change(alarm.copy(sleepMinutes = 0)) }, { Text("Aus") })
+        Chip3D(sleep == 0, { if (sleep != 0) change(alarm.copy(sleepMinutes = 0)) }, "Aus")
         listOf(7, 8, 9).forEach { hours ->
             FilterChip(sleep == hours * 60, { if (sleep != hours * 60) change(alarm.copy(sleepMinutes = hours * 60)) }, { Text("$hours Std.") })
         }

@@ -8,10 +8,12 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DisplayMode
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TimePickerDefaults
+import androidx.compose.material3.Typography
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -22,7 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.genialeideen.ui.GoldKnopf
@@ -260,6 +264,129 @@ private fun pickerRand(mindestBreite: Dp): Dp =
 private fun pickerInhaltsBreite(rand: Dp): Dp =
     minOf(LocalConfiguration.current.screenWidthDp.dp - rand * 2, DIALOG_MAX_BREITE).coerceAtLeast(0.dp)
 
+/**
+ * Höhe eines Zifferfelds der Tippeingabe — und zugleich die Kante, an der zugeschnitten wird.
+ *
+ * Aus dem Material-3-AAR im Gradle-Cache ausgelesen (1.3.1, Compose-BOM 2025.01.01), nicht
+ * geschätzt: `TimePickerTextField` setzt an seinem Textfeld
+ * `Modifier.size(TimeInputTokens.TimeFieldContainerWidth, TimeInputTokens.TimeFieldContainerHeight)`
+ * = 96 × 72 dp. Der Innenabstand der Umrandung ist dabei **null** — die `DecorationBox` bekommt
+ * ausdrücklich `PaddingValues(0.dp)` —, dem Text stehen die 72 dp also vollständig zur Verfügung,
+ * mehr aber auch nicht. `size` beugt sich zwar eingehenden Grenzen, im Dialog kommt von oben aber
+ * keine engere Vorgabe an; praktisch sind es immer genau 72 dp.
+ */
+private val ZIFFERNFELD_HOEHE = 72.dp
+
+/**
+ * Eine Typografie, deren `displayMedium` noch in ein [ZIFFERNFELD_HOEHE] hohes Feld passt — oder
+ * `null`, wenn nichts zu deckeln ist und die Tippeingabe unverändert bleiben darf.
+ *
+ * **Warum ausgerechnet `displayMedium`.** Die Zifferneingabe holt ihren Textstil über den Token
+ * `TimeInputTokens.TimeFieldLabelTextFont`, und der zeigt auf `DisplayMedium` — in der M3-Skala
+ * 45 sp Schrift bei 52 sp Zeilenhöhe (beides aus dem AAR ausgelesen). `TimeInputImpl` legt genau
+ * diesen Stil als `LocalTextStyle` über den ganzen Baustein: Stundenfeld, Minutenfeld **und** den
+ * Doppelpunkt dazwischen, der seinen Stil ebenfalls nur aus `LocalTextStyle` liest (der Token
+ * `TimeFieldSeparatorFont` steht zwar in der Tabelle, wird im Code aber nirgends abgefragt). Ein
+ * einziger Stil deckt also alles ab, was in die 72-dp-Felder muss. Die Beschriftungen
+ * „Stunde"/„Minute" laufen dagegen über `bodySmall`, stehen **unter** den Feldern und werden nicht
+ * zugeschnitten — die bleiben hier bewusst unangetastet und skalieren voll mit.
+ *
+ * **Warum nicht wie `GedeckelteSchrift` in WeckerUi.kt die Dichte deckeln.** `Density(d, f)` baut
+ * eine **lineare** Dichte. Die echte `LocalDensity` auf dem Gerät ist das nicht: `AndroidComposeView`
+ * legt sie mit `Density(context)` an, und die hängt sich einen `FontScaleConverter` aus
+ * `FontScaleConverterFactory.forScale(fontScale)` an (nachgelesen in `ui-unit` 1.7.7 im
+ * Gradle-Cache). Tauschte man die gegen eine lineare Dichte, würde die Schrift dort kleiner, wo das
+ * System sie längst gebändigt hat, und alle Beschriftungen im Baustein schrumpften mit. Hier wird
+ * deshalb nur der eine Stil angefasst, der es nötig hat.
+ *
+ * **Linear oder nichtlinear — hier wird nicht unterschieden, sondern gemessen.** Der verbreitete
+ * Satz „bis Android 13 linear, ab Android 14 die Kurve" gilt für Compose so nicht: die Kurve ist in
+ * `androidx.compose.ui.unit.fontscaling` **nachgebaut** und greift ohne jede SDK-Abfrage, also auf
+ * jeder Android-Fassung. Aus der Stützstellen-Tabelle im AAR (zwischen den Stützstellen wird linear
+ * interpoliert, 30 sp und 100 sp sind die beiden obersten):
+ * ```
+ *   Systemschrift 1,0   kein Konverter (erst ab 1,03), rein proportional   45 sp → 45,0 dp
+ *   Systemschrift 1,5   30 sp → 30 dp, 100 sp → 100 dp                     45 sp → 45,0 dp
+ *   Systemschrift 2,0   30 sp → 38 dp, 100 sp → 100 dp                     45 sp → 51,3 dp
+ * ```
+ * Bei 1,5 wächst große Schrift also gar nicht, bei 2,0 um ein Siebtel — die oft zitierten 90 dp
+ * kommen bis 2,0 nie zustande. Genau deshalb wird hier nicht gerechnet, sondern mit dem
+ * `TextMeasurer` durch die echte Dichte gemessen: Er nimmt den Konverter mit, wie er gerade ist.
+ * Das fängt auch die drei Fälle ab, die eine feste Grenze verfehlen würde:
+ *  * Oberhalb der größten Stützstelle (2,0) legt `forScale` eine Ein-Punkt-Tabelle an und rechnet
+ *    wieder rein proportional — bei 2,5 werden aus 45 sp tatsächlich rund 112 dp.
+ *  * Die App-eigene Schriftskalierung (`GenialeIdeenTheme`, 0,85 bis 1,4) hebt in `skaliert()` nur
+ *    `fontSize`, nicht `lineHeight`. Bei Faktor 1,4 stehen 63 sp in einer 52-sp-Zeile: der
+ *    Schriftkasten ragt darüber hinaus, die Ziffern-Tinte (rund 45 sp) sitzt noch im Kasten. Eine
+ *    Rechnung allein über die Zeilenhöhe würde diese Verschiebung gar nicht sehen.
+ *  * Jedes Design darf über `titelSchrift` eine eigene Schrift für die Display-Stile mitbringen.
+ *    Wie hoch deren Ober- und Unterlängen sind, weiß nur die Schrift selbst.
+ *
+ * **Welches Maß gemessen wird — und warum es bewusst eine Stufe strenger ist.** Gemessen wird mit
+ * `lineHeight = Unspecified` der **Schriftkasten** aus Ober- und Unterlänge. Zugeschnitten wird in
+ * Wahrheit bei `min(Zeilenkasten, 72 dp)`: Der M3-Stil trägt `LineHeightStyle(Center, Trim.None)`,
+ * eine einzeilige Messung ergibt also genau die Zeilenhöhe, und das Textfeld klemmt sie auf die
+ * Feldhöhe. Die Ziffern-**Tinte** ist mit rund 0,7 em noch einmal deutlich kleiner als der
+ * Schriftkasten und hat darin je Seite etwa 0,2 em Luft. „Schriftkasten ≤ Feld" ist damit strenger
+ * als „Tinte ≤ Feld" — und zwar absichtlich: Es ist dasselbe Verhältnis, das Material selbst mit
+ * 52 sp Zeile in 72 dp Feld einhält, es hält die Ziffern mittig statt bündig an der Kante, und es
+ * bleibt die sichere Richtung, wenn eine Design-Schrift ungewöhnliche Metriken mitbringt. Der
+ * Preis: In seltenen Kombinationen (kastenreiche Schrift × App-Skalierung × Systemschrift 2,0) kann
+ * die Deckelung um wenige Prozent greifen, ohne dass schon etwas sichtbar abgeschnitten wäre.
+ *
+ * **Bedienbarkeit.** Gedeckelt wird erst, wenn der Schriftkasten die 72 dp überschreitet, und dann
+ * nur so weit, bis er hineinpasst — die Ziffern bleiben also immer so groß, wie das Feld es
+ * überhaupt zulässt. Bei gewöhnlicher App-Schriftgröße greift die Deckelung auf keiner Systemstufe
+ * bis 2,0: 51,3 dp Schrift ergeben mit Roboto-Metrik (1,17 em) rund 60 dp Kasten, also gut 12 dp
+ * Luft — was die Design-Schrift daraus macht, misst der Code selbst, geschätzt wird nichts. Die
+ * Deckelung ist ein Fangnetz für die Fälle oben, keine generelle Verkleinerung. Und sie rührt nur
+ * an der Schrift: Die Tippflächen bleiben mit 96 × 72 dp unverändert weit über den geforderten
+ * 48 dp.
+ */
+@Composable
+private fun gedeckelteZifferSchrift(): Typography? {
+    val messer = rememberTextMeasurer()
+    val typo = MaterialTheme.typography
+    val dichte = LocalDensity.current
+    return remember(messer, typo, dichte.density, dichte.fontScale) {
+        val stil = typo.displayMedium
+        val groesse = stil.fontSize.value
+        val zeile = stil.lineHeight.value
+        // Unspezifizierte Größen sind NaN; dann gibt es nichts zu rechnen.
+        if (groesse.isNaN() || groesse <= 0f) return@remember null
+        val grenze = with(dichte) { ZIFFERNFELD_HOEHE.toPx() }
+        // `lineHeight = Unspecified` heißt: kein vorgegebener Zeilenkasten, die Schrift gibt ihre
+        // eigene Höhe an. Das ist der Schriftkasten aus Ober- und Unterlänge — das strengere Maß,
+        // siehe den Absatz oben; `lineHeightStyle` bleibt dabei wirkungslos, weil es nichts zu
+        // verteilen gibt.
+        fun hoeheBei(faktor: Float): Float = messer.measure(
+            "00",
+            stil.copy(fontSize = (groesse * faktor).sp, lineHeight = TextUnit.Unspecified),
+            maxLines = 1, softWrap = false,
+        ).size.height.toFloat()
+        fun mitFaktor(faktor: Float) = typo.copy(
+            displayMedium = stil.copy(
+                fontSize = (groesse * faktor).sp,
+                // Die Zeilenhöhe zieht mit, sonst stünde eine kleine Schrift in einem unverändert
+                // hohen Zeilenkasten und säße nicht mehr mittig im Feld.
+                lineHeight = if (zeile.isNaN()) stil.lineHeight else (zeile * faktor).sp,
+            ),
+        )
+        if (hoeheBei(1f) <= grenze) return@remember null
+        // Halbierung zwischen einer sicher passenden Untergrenze und der zu großen Wunschgröße —
+        // dasselbe Verfahren wie `passendeUhrGroesse` in WeckerUi.kt. 0,4 ist die Notbremse: Wer
+        // die Ziffern bei 45 sp Grundgröße unter 18 sp drückt, hat ein anderes Problem.
+        var passt = 0.4f
+        var zuGross = 1f
+        if (hoeheBei(passt) > grenze) return@remember mitFaktor(passt)
+        repeat(7) {
+            val mitte = (passt + zuGross) / 2f
+            if (hoeheBei(mitte) <= grenze) passt = mitte else zuGross = mitte
+        }
+        mitFaktor(passt)
+    }
+}
+
 /** Uhrzeitwahl in der Farbwelt des Designs. Immer 24-Stunden-Format. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -343,7 +470,23 @@ fun ZeitWahlDialog(stunde: Int, minute: Int, aufAbbruch: () -> Unit, aufWahl: (I
             if (platzFuerZifferblatt) {
                 TimePicker(state = zustand, modifier = platz, colors = farben)
             } else {
-                TimeInput(state = zustand, modifier = platz, colors = farben)
+                // Die Zifferneingabe schneidet ihre Ziffern **innen** zu (feste 72 dp hohe Felder);
+                // der Scroll oben hilft dagegen nicht, er sieht die Überlänge gar nicht. Siehe
+                // [gedeckelteZifferSchrift] für die Messung und die Grenze.
+                val enger = gedeckelteZifferSchrift()
+                if (enger == null) {
+                    // Der Normalfall: nichts zu deckeln, also auch kein zusätzlicher Wrapper —
+                    // der auf dem Gerät geprüfte Stand bleibt Bit für Bit derselbe.
+                    TimeInput(state = zustand, modifier = platz, colors = farben)
+                } else {
+                    // `MaterialTheme` reicht nur Kompositionswerte weiter und legt **keinen**
+                    // Layout-Knoten dazwischen: `align` und `weight(1f, fill = false)` aus [platz]
+                    // wirken unverändert gegen die Spalte des Dialogs. Farbschema und Formen
+                    // übernimmt der Aufruf ungefragt aus dem umgebenden Theme.
+                    MaterialTheme(typography = enger) {
+                        TimeInput(state = zustand, modifier = platz, colors = farben)
+                    }
+                }
             }
         },
     )

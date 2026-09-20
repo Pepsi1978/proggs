@@ -71,15 +71,17 @@ import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.LocalSemantisch
 import de.frank.genialeideen.ui.theme.Motion
 import de.frank.genialeideen.ui.theme.Semantisch
-import de.frank.genialeideen.ui.theme.dunkler
 import de.frank.genialeideen.ui.theme.kippKarte
-import de.frank.genialeideen.ui.theme.heller
 import de.frank.genialeideen.ui.theme.lichtKante
 import de.frank.genialeideen.ui.theme.milchglas
 import de.frank.genialeideen.ui.theme.mischeMit
 import de.frank.genialeideen.ui.theme.tiefenSchatten
+import de.frank.genialeideen.ui.theme.vignette
 import de.frank.genialeideen.ui.theme.wackelnBeiFehler
 import de.frank.genialeideen.ui.theme.wanderndesGlanzlicht
+import de.frank.wecker.design.Ebene
+import de.frank.wecker.design.LocalMaterial
+import de.frank.wecker.design.MaterialFlaeche
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -103,6 +105,12 @@ fun IdeenKopfleiste(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            // Geprüft gegen die Schichtreihenfolge des Materialsystems: `milchglas` legt
+            // Grundfläche, dann den gerichteten Reflex, dann die Körnung und erst zuletzt die
+            // Kante. Alle drei zeichnen mit `onDrawBehind`, also **hinter** Titel und Symbolen —
+            // die Körnung nimmt der Schrift seit der Korrektur in `Effekte.kt` keine Schärfe
+            // mehr. Die Kante bleibt hier bewusst aus (`kante = false`), weil die Leiste bis an
+            // den Bildschirmrand läuft und sonst ein heller Strich oben und seitlich stünde.
             .milchglas(gold.flaeche, RoundedCornerShape(0.dp), deckung = 0.55f, kante = false)
             .statusBarsPadding()
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -353,6 +361,23 @@ fun Modifier.goldSchein(farbe: Color, hoehe: Dp = 12.dp, radius: Dp = 20.dp): Mo
 /**
  * Karte mit Verlauf, Lichtkante und mehrschichtigem Schatten (N.3, N.4).
  * Eine plane Farbfüllung ohne alles gibt es in dieser App nicht.
+ *
+ * Sie ist seit dem Materialumbau nur noch der vertraute Name für [MaterialFlaeche] auf der
+ * Karten- beziehungsweise Hero-Ebene. Das ist Absicht: Schlichts Karten kommen über
+ * `Flaeche(erhoeht)` herein, der Schlicht-Dialog dagegen ruft [GoldKarte] unmittelbar auf —
+ * über eine gemeinsame Umsetzung können beide nicht mehr auseinanderlaufen.
+ *
+ * **Was sich dabei geändert hat, und warum kein Goldwert wandert:**
+ *  - Der Körperverlauf rechnete `heller(a)`/`dunkler(a)` auf die Flächenfarbe. Das ist
+ *    rechnerisch identisch mit Weiß- beziehungsweise Schwarz-Alpha über derselben Farbe
+ *    (`c + (1−c)·a` und `c·(1−a)`) — genau das tut jetzt `tiefenVerlauf` mit Schlichts Werten.
+ *  - Der warme Schein lief über `radius = 700f`, einen festen Pixelwert: auf einer kleinen Karte
+ *    ein Schein über die ganze Fläche, auf einer breiten Hero-Karte ein Fleck in der Ecke. An
+ *    seiner Stelle steht der gerichtete Reflex, dessen Länge ein Anteil der Fläche ist und der
+ *    deshalb auf jeder Kartengröße gleich wirkt.
+ *  - Die Kante ist von Weiß auf Schlichts Primärgold gewechselt — die „goldene Kante" seiner
+ *    Handschrift. Ein Palettenton verschiebt sich auch dadurch nicht: Sie liegt als Farbe mit
+ *    Alpha über der unveränderten Grundfläche.
  */
 @Composable
 fun GoldKarte(
@@ -360,39 +385,11 @@ fun GoldKarte(
     erhoeht: Boolean = false,
     kippbar: Boolean = false,
     inhalt: @Composable () -> Unit,
-) {
-    val gold = LocalGold.current
-    val form = RoundedCornerShape(20.dp)
-    val flaeche = if (erhoeht) gold.flaecheErhoeht else gold.flaeche
-    Box(
-        modifier = modifier
-            .then(if (kippbar) Modifier.kippKarte() else Modifier)
-            .tiefenSchatten(
-                farbe = gold.primaer,
-                hoehe = if (erhoeht) Hoehe.karteErhoeht else Hoehe.karte,
-                form = form,
-            )
-            .clip(form)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        flaeche.heller(if (gold.istDunkel) 0.06f else 0.02f),
-                        flaeche,
-                        flaeche.dunkler(if (gold.istDunkel) 0.10f else 0.04f),
-                    ),
-                ),
-            )
-            // Ein warmer Schein aus der Lichtrichtung oben links.
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(gold.primaer.copy(alpha = 0.10f), Color.Transparent),
-                    center = Offset(0f, 0f),
-                    radius = 700f,
-                ),
-            )
-            .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.16f else 0.55f), form),
-    ) { inhalt() }
-}
+) = MaterialFlaeche(
+    modifier = modifier.then(if (kippbar) Modifier.kippKarte() else Modifier),
+    ebene = if (erhoeht) Ebene.HERO else Ebene.KARTE,
+    inhalt = inhalt,
+)
 
 /** Ein Element blendet gestaffelt auf, gleitet hoch und schwingt leicht ein (N.7). */
 @Composable
@@ -461,6 +458,10 @@ fun SchimmerGeruest(zeilen: Int = 3, modifier: Modifier = Modifier) {
 /**
  * Die bewegte Hintergrund-Ebene (N.3): zwei goldene Scheine, die langsam wandern.
  * Auf Leer- und Ladebildschirmen Pflicht — die App wirkt lebendig, auch wenn nichts passiert.
+ *
+ * Dazu die Vignette des Materials: Sie dunkelt die Ecken der Seite leicht ab und gibt ihr damit
+ * eine Wölbung, auf der die Karten erst aufliegen. Ohne sie schwebt jede Karte über einer
+ * gleichmäßigen Farbfläche, und genau das lässt eine Oberfläche flach wirken.
  */
 @Composable
 fun BewegterHintergrund(modifier: Modifier = Modifier) {
@@ -481,8 +482,13 @@ fun BewegterHintergrund(modifier: Modifier = Modifier) {
         wert
     }
     // Eigene Zeichenebene: Der wandernde Schein zieht so nur sich selbst neu, nicht die
-    // Liste darüber.
-    Canvas(modifier = modifier.fillMaxSize().graphicsLayer()) {
+    // Liste darüber. Die Vignette steht bewusst **vor** dieser Ebene: Sie liegt damit unter den
+    // Scheinen und wird nicht bei jedem Bild der Endlos-Animation mitgerechnet.
+    Canvas(
+        modifier = modifier.fillMaxSize()
+            .vignette(LocalMaterial.current.vignetteAlpha)
+            .graphicsLayer(),
+    ) {
         val phase = phaseState?.value ?: 0f
         val breite = size.width
         val hoehe = size.height

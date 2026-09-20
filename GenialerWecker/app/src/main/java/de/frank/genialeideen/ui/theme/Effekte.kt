@@ -22,6 +22,12 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.addOutline
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -113,12 +119,25 @@ fun lichtKante(gedrueckt: Boolean = false, staerke: Float = 0.45f): Brush = Brus
     },
 )
 
-/** Der flache Glanzbogen im oberen Drittel (N.2, Schicht 4). */
-fun glanzLicht(deckung: Float = 0.40f): Brush = Brush.radialGradient(
-    colors = listOf(Color.White.copy(alpha = deckung), Color.Transparent),
-    center = Offset(0.35f, -0.35f),
-    radius = 1.1f,
-)
+/**
+ * Der flache Glanzbogen im oberen Drittel (N.2, Schicht 4).
+ *
+ * **Achtung, hier lag ein Fehler:** `Brush.radialGradient` erwartet `center` und `radius` in
+ * **Pixeln**, nicht in Anteilen der Fläche. Die frühere Fassung setzte `center = Offset(0.35f,
+ * -0.35f)` und `radius = 1.1f` — also einen Radius von gut einem Pixel dicht an der linken
+ * oberen Ecke. Der Glanz war damit auf keinem Gerät zu sehen, und weil [glanzLicht] in jedem
+ * plastischen Knopf steckt, fehlte der gesamten App ihre oberste Lichtschicht.
+ *
+ * Als [Modifier] statt als [Brush], weil die Größe erst beim Zeichnen feststeht.
+ */
+fun Modifier.glanzBogen(deckung: Float = 0.40f): Modifier = drawWithCache {
+    val pinsel = Brush.radialGradient(
+        colors = listOf(Color.White.copy(alpha = deckung), Color.Transparent),
+        center = Offset(size.width * 0.35f, -size.height * 0.35f),
+        radius = size.width * 1.1f,
+    )
+    onDrawBehind { drawRect(pinsel) }
+}
 
 /**
  * Atmender goldener Schein — für den wichtigsten Knopf eines Bildschirms und aktive Karten
@@ -237,6 +256,12 @@ fun Modifier.milchglas(
     form: Shape,
     deckung: Float = 0.62f,
     kante: Boolean = true,
+    /**
+     * Stärke der Körnung; 0 lässt sie ganz weg. Orbit schließt Körnung in seinem Material
+     * ausdrücklich aus — vorher war sie hier fest verdrahtet und kam über die Kopfleiste
+     * trotzdem an.
+     */
+    koernungAlpha: Float = 0.04f,
 ): Modifier = this
     .background(
         brush = Brush.verticalGradient(
@@ -247,15 +272,10 @@ fun Modifier.milchglas(
         ),
         shape = form,
     )
-    .background(
-        brush = Brush.linearGradient(
-            colors = listOf(Color.White.copy(alpha = 0.12f), Color.Transparent),
-            start = Offset.Zero,
-            end = Offset(220f, 220f),
-        ),
-        shape = form,
-    )
-    .koernung()
+    // Der Reflex lief früher über feste 220 Pixel — auf einer breiten Leiste ein Fleck in der
+    // Ecke, auf einem schmalen Gerät die halbe Fläche. Jetzt folgt er der tatsächlichen Größe.
+    .gerichteterReflex(Color.White, 0.12f, winkelGrad = 45f, laenge = 0.6f)
+    .then(if (koernungAlpha > 0f) Modifier.koernung(koernungAlpha) else Modifier)
     // Randlos, wo die Fläche bis an den Bildschirmrand läuft: Sonst stünde die helle Kante
     // im Dunkelmodus als weisser Strich ganz oben und an der Seite.
     .then(if (kante) Modifier.border(1.dp, lichtKante(staerke = 0.30f), form) else Modifier)
@@ -297,8 +317,9 @@ fun Modifier.koernung(deckung: Float = 0.04f): Modifier = drawWithCache {
         strokeWidth = 1.2f
         strokeCap = StrokeCap.Round
     }
-    onDrawWithContent {
-        drawContent()
+    // Hinter den Inhalt, nicht darüber: Vorher lag die Körnung als letzte Schicht auf Text und
+    // Symbolen und nahm ihnen die Schärfe. Sie gehört unter den Inhalt, wie jede Materialschicht.
+    onDrawBehind {
         if (koordinaten.isNotEmpty()) {
             drawIntoCanvas { canvas ->
                 canvas.drawRawPoints(androidx.compose.ui.graphics.PointMode.Points, koordinaten, stift)
@@ -342,4 +363,143 @@ fun Modifier.wanderndesGlanzlicht(breite: Float = 900f): Modifier = composed {
                 blendMode = BlendMode.SrcIn,
             )
         }
+}
+
+// --- Die gemeinsame Tiefensprache ------------------------------------------------------------
+//
+// Alle folgenden Bausteine sind bewusst **designneutral**: Sie bekommen ihre Werte übergeben und
+// legen nur Weiß- beziehungsweise Schwarz-Alpha über eine bereits deckende Grundfläche. Dadurch
+// verschiebt keiner von ihnen einen Farbton — Schlichts Goldwerte bleiben unangetastet, und jedes
+// Design behält seine Handschrift über die Werte, nicht über eigenen Zeichencode.
+//
+// Alle zeichnen mit `onDrawBehind`, damit Text und Symbole darüber scharf bleiben, und bereiten
+// ihre Pinsel in `drawWithCache` genau einmal je Größe vor statt bei jeder Neuzeichnung.
+//
+// **Wichtig für Aufrufer:** [tiefenVerlauf], [gerichteterReflex] und [vignette] füllen das volle
+// Rechteck der Fläche. Sie gehören deshalb **hinter** ein `Modifier.clip(form)`, sonst malen sie
+// über abgerundete Ecken hinaus. Die Schichtreihenfolge im Materialsystem sieht genau das vor:
+// erst `clip`, dann Grundfarbe, dann diese Schichten, zuletzt die Kante. [innenSchatten] und
+// [nut] schneiden sich dagegen selbst an der übergebenen Form ab.
+
+/**
+ * Der senkrechte Tiefenverlauf einer Fläche: oben etwas Licht, unten etwas Schatten.
+ * [gedrueckt] dreht ihn um — daraus liest das Auge „eingedrückt" statt „erhaben".
+ */
+fun Modifier.tiefenVerlauf(oben: Float, unten: Float, gedrueckt: Boolean = false): Modifier =
+    drawWithCache {
+        val farben = listOf(
+            Color.White.copy(alpha = oben),
+            Color.Transparent,
+            Color.Black.copy(alpha = unten),
+        )
+        val pinsel = Brush.verticalGradient(if (gedrueckt) farben.asReversed() else farben)
+        onDrawBehind { drawRect(pinsel) }
+    }
+
+/**
+ * Ein gerichteter Reflex über die Fläche — das, was Glas von Farbe unterscheidet.
+ *
+ * [winkelGrad] zählt von der Waagerechten, [laenge] ist ein Anteil der Fläche. Beides relativ,
+ * damit derselbe Reflex auf einer Kopfleiste und auf einem kleinen Chip gleich wirkt.
+ */
+fun Modifier.gerichteterReflex(
+    farbe: Color,
+    alpha: Float,
+    winkelGrad: Float,
+    laenge: Float,
+): Modifier = drawWithCache {
+    val bogen = Math.toRadians(winkelGrad.toDouble())
+    val ende = Offset(
+        (size.width * laenge * kotlin.math.cos(bogen)).toFloat(),
+        (size.height * laenge * kotlin.math.sin(bogen)).toFloat(),
+    )
+    val pinsel = Brush.linearGradient(
+        colors = listOf(farbe.copy(alpha = alpha), farbe.copy(alpha = 0f)),
+        start = Offset.Zero,
+        end = ende,
+    )
+    onDrawBehind { drawRect(pinsel) }
+}
+
+/**
+ * Ein innerer Schatten ohne Weichzeichner — damit Eingabefelder, Reglerbahnen und gedrückte
+ * Knöpfe sichtbar **unter** der Oberfläche liegen.
+ *
+ * Compose kennt bis einschließlich der hier verwendeten Fassung keinen inneren Schatten, und
+ * `BlurMaskFilter` ist mit Hardwarebeschleunigung unterhalb von API 28 nicht verlässlich. Deshalb
+ * vier Konturstriche mit abnehmender Deckung, innen an der Form abgeschnitten: kein Offscreen-
+ * Puffer, keine Versionsabhängigkeit, und der Inhalt darüber bleibt scharf.
+ */
+fun Modifier.innenSchatten(
+    form: Shape,
+    alpha: Float,
+    tiefe: Dp = 6.dp,
+    farbe: Color = Color.Black,
+): Modifier = drawWithCache {
+    val umriss = form.createOutline(size, layoutDirection, this)
+    val pfad = Path().apply { addOutline(umriss) }
+    val tiefePx = tiefe.toPx()
+    // Pinsel und Strichbreiten werden **einmal je Größe** angelegt, nicht bei jedem Bild. Vorher
+    // entstanden hier pro Zeichenvorgang vier Verlaufspinsel samt Farblisten und vier
+    // Stroke-Objekte — bei einem Element, das in jeder Liste mehrfach vorkommt, ist das
+    // vermeidbarer Müll. (Kein gemessener Bildratenwert, nur die eingesparte Zuteilung.)
+    val ringe = listOf(0.25f to alpha, 0.5f to alpha * 0.6f, 0.75f to alpha * 0.35f, 1f to alpha * 0.15f)
+        .map { (anteil, a) ->
+            // Oben kräftiger als unten: Das Licht kommt in der ganzen App von oben links.
+            Brush.verticalGradient(listOf(farbe.copy(alpha = a), farbe.copy(alpha = a * 0.15f))) to
+                Stroke(width = tiefePx * anteil * 2f)
+        }
+    onDrawBehind {
+        clipPath(pfad) {
+            ringe.forEach { (pinsel, strich) -> drawPath(pfad, brush = pinsel, style = strich) }
+        }
+    }
+}
+
+/**
+ * Die Materialkante: Licht oben, Schatten unten, in der Farbe des jeweiligen Designs.
+ * Sie gehört als **letzte** Schicht über Verlauf und Reflex, sonst verschluckt der Reflex sie.
+ */
+fun materialKante(
+    lichtFarbe: Color,
+    lichtAlpha: Float,
+    schattenAlpha: Float,
+    gedrueckt: Boolean = false,
+): Brush = Brush.verticalGradient(
+    if (gedrueckt) {
+        listOf(Color.Black.copy(alpha = schattenAlpha), Color.Transparent, lichtFarbe.copy(alpha = lichtAlpha))
+    } else {
+        listOf(lichtFarbe.copy(alpha = lichtAlpha), Color.Transparent, Color.Black.copy(alpha = schattenAlpha))
+    },
+)
+
+/**
+ * Eine feine dunkle Innenlinie dicht hinter der Kante — die Fräsnut einer Instrumententafel.
+ * Nur Orbit trägt sie; sie ist das, was dort „aus dem Vollen gefräst" statt „gedruckt" aussehen lässt.
+ */
+fun Modifier.nut(form: Shape, alpha: Float = 0.25f, einzug: Dp = 2.dp): Modifier = drawWithCache {
+    val einzugPx = einzug.toPx()
+    val innen = androidx.compose.ui.geometry.Size(
+        (size.width - einzugPx * 2).coerceAtLeast(0f),
+        (size.height - einzugPx * 2).coerceAtLeast(0f),
+    )
+    val pfad = Path().apply { addOutline(form.createOutline(innen, layoutDirection, this@drawWithCache)) }
+    onDrawBehind {
+        translate(einzugPx, einzugPx) {
+            drawPath(pfad, Color.Black.copy(alpha = alpha), style = Stroke(width = 1.dp.toPx()))
+        }
+    }
+}
+
+/**
+ * Eine Vignette für den Seitenhintergrund: zu den Ecken hin etwas dunkler.
+ * Sie kostet nichts und gibt der ganzen Seite eine Wölbung, auf der die Karten erst aufliegen.
+ */
+fun Modifier.vignette(alpha: Float): Modifier = drawWithCache {
+    val pinsel = Brush.radialGradient(
+        colors = listOf(Color.Transparent, Color.Black.copy(alpha = alpha)),
+        center = Offset(size.width / 2f, size.height / 2f),
+        radius = kotlin.math.max(size.width, size.height) * 0.75f,
+    )
+    onDrawBehind { drawRect(pinsel) }
 }
