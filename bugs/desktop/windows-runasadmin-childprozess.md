@@ -32,8 +32,26 @@ kein Registry-Schreiben, die bewusste Benutzer-Einstellung bleibt erhalten.
 Zusätzlich `Win32Exception.NativeErrorCode == 740` gesondert fangen und mit einem
 verständlichen deutschen Text melden statt der rohen englischen Meldung.
 
+## Weitere betroffene Stellen (Sweep 20.09.2026)
+Betroffen ist **jedes** Programm, dessen exe das Flag tragen kann und das von einem anderen
+Programm per `CreateProcess` (UseShellExecute = false) gestartet wird:
+
+| Startet | Gestartete exe | Status |
+|---|---|---|
+| OpenLauncher `LmStudioService` | `lms.exe` | gefixt (RunAsInvoker) |
+| UpdateZentrale `CliAktualisierer` → `Kommandozeile` | `claude.exe`, `codex.exe`, `lms.exe` | Fix vorbereitet |
+| Terminal/pwsh (vom OpenLauncher gestartet) | `claude.exe`, `codex.exe` | nicht am Startort behebbar |
+
+**Nicht** per `__COMPAT_LAYER` behandeln: interaktive Terminals (wt.exe, pwsh) und winget.
+Die Variable wird an alle Enkelprozesse vererbt und würde dort jede berechtigte
+UAC-Abfrage unterdrücken — Installer liefen dann still ohne Rechte statt zu fragen.
+Für solche Fälle ist der richtige Ort die Stelle, an der das Flag gesetzt wird: dort warnen.
+
+Starts über `UseShellExecute = true` sind nicht betroffen — dort zeigt Windows den UAC-Dialog.
+
 ## Fundstellen
 - `TerminalVoiceOverlay-Windows/Services/AudioRecorder.cs` (Capture-Worker)
+- `OpenLauncher/Services/LmStudioService.cs` → `OhneRechteanforderung`
 - `TerminalVoiceOverlay-Windows/App.xaml.cs` → `StartOverlayProcess` (Watchdog)
 - gleiche Stellen in `ClaudeVoiceOverlay-Windows`
 - Fix-Commit: `dd9655544` (20.09.2026)

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -43,6 +43,17 @@ public sealed class LmStudioService
     public static bool IsInstalled => File.Exists(LmsPath);
 
     /// <summary>
+    /// Steht lms.exe in Windows auf "Als Administrator ausführen" (AppCompat-Flag RUNASADMIN,
+    /// z.B. über die UpdateZentrale gesetzt), scheitert jeder Start per CreateProcess aus einem
+    /// nicht erhöhten Launcher mit Win32-Fehler 740 — ohne Shell kann Windows keinen UAC-Dialog
+    /// zeigen. Diese kurzlebigen Abfragen brauchen nie erhöhte Rechte, deshalb wird die
+    /// Anforderung für genau dieses Kind ausgehebelt. Läuft der Launcher selbst erhöht, erbt das
+    /// Kind weiterhin dessen Rechte ("RunAsInvoker" = mit den Rechten des Aufrufers).
+    /// </summary>
+    private static void OhneRechteanforderung(ProcessStartInfo psi)
+        => psi.Environment["__COMPAT_LAYER"] = "RunAsInvoker";
+
+    /// <summary>
     /// Startet den lokalen LM-Studio-Server, falls er nicht schon läuft. Idempotent —
     /// "lms server start" meldet bei laufendem Server nur Erfolg.
     /// </summary>
@@ -51,7 +62,7 @@ public sealed class LmStudioService
         if (!IsInstalled) return false;
         try
         {
-            using var proc = Process.Start(new ProcessStartInfo
+            var psi = new ProcessStartInfo
             {
                 FileName = LmsPath,
                 Arguments = "server start",
@@ -59,7 +70,9 @@ public sealed class LmStudioService
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
-            });
+            };
+            OhneRechteanforderung(psi);
+            using var proc = Process.Start(psi);
             if (proc == null) return false;
             proc.WaitForExit(20_000);
             Logger.Instance.Info("LmStudioService", "EnsureServerRunning", $"lms server start beendet mit {proc.ExitCode}");
@@ -83,7 +96,7 @@ public sealed class LmStudioService
         if (!IsInstalled || string.IsNullOrWhiteSpace(modelId)) return 0;
         try
         {
-            using var proc = Process.Start(new ProcessStartInfo
+            var psi = new ProcessStartInfo
             {
                 FileName = LmsPath,
                 Arguments = "ps --json",
@@ -91,7 +104,9 @@ public sealed class LmStudioService
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
-            });
+            };
+            OhneRechteanforderung(psi);
+            using var proc = Process.Start(psi);
             if (proc == null) return 0;
             var json = proc.StandardOutput.ReadToEnd();
             proc.WaitForExit(30_000);
