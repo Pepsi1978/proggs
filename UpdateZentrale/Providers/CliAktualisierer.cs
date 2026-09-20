@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.RegularExpressions;
 using UpdateZentrale.Models;
 using UpdateZentrale.Services;
@@ -25,7 +25,7 @@ public sealed class CliAktualisierer : IAktualisierer
         var installiert = "";
         if (!string.IsNullOrWhiteSpace(eintrag.VersionsArgumente))
         {
-            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente, TimeSpan.FromMinutes(2), abbruch: abbruch);
+            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente, TimeSpan.FromMinutes(2), abbruch: abbruch, alsAufrufer: true);
             installiert = VersionsMuster.Match(lauf.Ausgabe).Value;
             protokoll.Report($"{Path.GetFileName(exe)} {eintrag.VersionsArgumente} -> {lauf.Ausgabe}");
         }
@@ -35,7 +35,7 @@ public sealed class CliAktualisierer : IAktualisierer
         {
             protokoll.Report($"{Path.GetFileName(exe)} {eintrag.PruefArgumente}");
             var lauf = await Kommandozeile.AusfuehrenAsync(
-                exe, eintrag.PruefArgumente, TimeSpan.FromMinutes(6), abbruch: abbruch);
+                exe, eintrag.PruefArgumente, TimeSpan.FromMinutes(6), abbruch: abbruch, alsAufrufer: true);
             protokoll.Report(lauf.Ausgabe);
 
             var geplant = lauf.Ausgabe
@@ -80,8 +80,9 @@ public sealed class CliAktualisierer : IAktualisierer
         var args = eintrag.UpdateArgumente ?? "update";
         protokoll.Report($"{Path.GetFileName(exe)} {args}");
 
+        // alsAufrufer: die verwaltete exe kann das Admin-Flag dieser App tragen (siehe Kommandozeile).
         var lauf = await Kommandozeile.AusfuehrenAsync(
-            exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
+            exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch, alsAufrufer: true);
         protokoll.Report(lauf.Ausgabe);
 
         if (lauf.Abgelaufen)
@@ -90,6 +91,37 @@ public sealed class CliAktualisierer : IAktualisierer
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: $"Endete mit Code {lauf.ExitCode}.", Protokoll: lauf.Ausgabe);
 
         return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Update abgeschlossen.", Protokoll: lauf.Ausgabe);
+    }
+
+    /// <summary>
+    /// The version where the tool reports one. The LM Studio runtimes have none, so their
+    /// fingerprint is the dry-run plan instead: after a successful update it must be empty.
+    /// </summary>
+    public async Task<string> FingerabdruckAsync(ProgrammEintrag eintrag, CancellationToken abbruch)
+    {
+        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        if (!File.Exists(exe)) return "";
+
+        if (!string.IsNullOrWhiteSpace(eintrag.VersionsArgumente))
+        {
+            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente, TimeSpan.FromMinutes(2), abbruch: abbruch);
+            var version = VersionsMuster.Match(lauf.Ausgabe).Value;
+            if (!string.IsNullOrWhiteSpace(version)) return version;
+        }
+
+        if (!string.IsNullOrWhiteSpace(eintrag.PruefArgumente))
+        {
+            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.PruefArgumente, TimeSpan.FromMinutes(8), abbruch: abbruch);
+            var geplant = lauf.Ausgabe
+                .Split('\n')
+                .Where(z => z.Contains('→') || z.Contains("->"))
+                .Select(z => z.Trim())
+                .ToList();
+
+            return geplant.Count == 0 ? "nichts offen" : string.Join(" | ", geplant);
+        }
+
+        return "";
     }
 
     private static async Task<string> NpmVersionAsync(string paket, IProgress<string> protokoll, CancellationToken abbruch)

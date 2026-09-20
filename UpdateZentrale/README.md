@@ -21,6 +21,45 @@ Start über die Desktop-Verknüpfung **UpdateZentrale** (`create_shortcut.ps1` l
 | **Protokoll** | Rechts oben steht die vollständige Ausgabe des jeweiligen Update-Werkzeugs. |
 | **Terminal** | Rechts unten eine eingebaute PowerShell-Zeile mit den Rechten der UpdateZentrale, dazu eine Schaltfläche für ein echtes Terminalfenster. |
 
+### Protokolle und Verifikation
+
+Jeder Update-Lauf wird **überprüft und dauerhaft mitgeschrieben** – ein Programm gilt erst dann
+als aktualisiert, wenn sich nachweislich etwas geändert hat, nicht schon weil ein Installer
+„fertig" gemeldet hat.
+
+Dafür liest die App vor und nach dem Lauf einen *Fingerabdruck* und vergleicht beide. Was das
+ist, hängt von der Update-Art ab:
+
+| Art | Fingerabdruck |
+|---|---|
+| `winget`, `store` | die installierte Version (bei Paket-Apps aus `Get-AppxPackage`) |
+| `cli` | die gemeldete Version, bei den LM-Studio-Runtimes stattdessen der Trockenlauf-Plan – der muss danach leer sein |
+| `reposkript` | Version **und** Schreibzeit der gebauten Programmdatei (die csproj-Version allein ändert sich beim Neubau nicht) |
+
+Daraus wird eines von fünf Ergebnissen:
+
+| Ergebnis | Bedeutung |
+|---|---|
+| **Erfolgreich** | Der Fingerabdruck hat sich geändert – das Update ist nachweislich angekommen. |
+| **Ausstehend** | Der Installer hat das Update abgelegt, es wird beim nächsten Start des Programms aktiv. Beim nächsten Start der UpdateZentrale wird das rückwirkend bestätigt; kommt es binnen sieben Tagen nicht an, wird es als Fehler ausgewiesen. |
+| **Abgebrochen** | Es war nichts offen, oder du hast im Rückfragefenster abgelehnt. |
+| **Fehlgeschlagen** | Das Werkzeug selbst hat einen Fehler gemeldet – mit Grund, etwa fehlende Administratorrechte. |
+| **Nicht verifiziert** | Der heikelste Fall: Erfolg gemeldet, aber nichts hat sich geändert. Wird rot ausgewiesen statt stillschweigend als Erfolg verbucht. |
+
+Auf der Karte steht danach eine Zeile „Zuletzt: … – Ergebnis", bei Problemen zusätzlich ein rotes
+Band mit dem Grund und einer Schaltfläche **Protokoll öffnen**.
+
+Abgelegt wird alles in `%LOCALAPPDATA%\UpdateZentrale\logs\`:
+
+* `updates-JJJJ-MM-TT.log` – ein Tagesprotokoll. Pro Lauf ein Kopf mit Zeit, Programm, Art,
+  genauem Befehl, ob erhöht gelaufen wurde und dem Stand vorher; danach die rohe Ausgabe des
+  Werkzeugs; am Ende Ergebnis, Begründung, Stand nachher und Exit-Code. Auch Programmausnahmen
+  landen hier.
+* `verlauf.jsonl` – eine Zeile je Lauf, maschinenlesbar. Daraus lädt die App beim Start, was
+  zuletzt passiert ist.
+
+Die Schaltfläche **Protokolle** in der Fußzeile öffnet diesen Ordner.
+
 ### Administratorrechte
 
 * Die UpdateZentrale markiert sich beim ersten Start selbst mit dem Windows-Kompatibilitätsschalter
@@ -102,8 +141,10 @@ Weitere optionale Felder:
   LM Studio darf dabei laufen.
 * **Claude Desktop** – winget führt das Paket als `Anthropic.Claude` mit dem offiziellen
   Installer von `downloads.claude.ai`. Das Update läuft still und vollautomatisch. Der Installer
-  legt die neue Fassung bereit und schließt sie beim nächsten Start der App ab – die Karte sagt
-  das dann auch so, statt weiter „Update verfügbar" zu melden.
+  **legt die neue Fassung aber nur bereit** und schaltet sie erst beim nächsten Start von Claude
+  Desktop um. Bis dahin meldet jede Prüfung weiter die alte Version – früher sah das aus, als sei
+  das Update gar nicht angekommen. Die Karte weist das jetzt als **Ausstehend** aus, bietet
+  „Jetzt starten und übernehmen" an und bestätigt es später rückwirkend.
 * **Codex Desktop** – das installierte Paket ist Store-signiert und im Microsoft Store als
   „ChatGPT" gelistet (Produkt-ID `9PLM9XGG6VKS`, Publisher-Seite openai.com/codex). Das Update
   läuft still über die Store-Quelle von winget; der Weg über die App war nur die sichtbare

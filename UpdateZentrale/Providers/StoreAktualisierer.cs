@@ -92,6 +92,10 @@ public sealed class StoreAktualisierer : IAktualisierer
         return new PruefErgebnis(UpdateZustand.Fertig, neu, "", "Update installiert.", lauf.Ausgabe);
     }
 
+    /// <summary>The registered package version -- read straight from Windows, no network.</summary>
+    public async Task<string> FingerabdruckAsync(ProgrammEintrag eintrag, CancellationToken abbruch)
+        => await AppxVersionAsync(eintrag, new Progress<string>(_ => { }), abbruch);
+
     internal static bool BrauchtRechte(string ausgabe)
         => ausgabe.Contains("0x80073d28", StringComparison.OrdinalIgnoreCase)
            || ausgabe.Contains("Administratorrechte", StringComparison.OrdinalIgnoreCase)

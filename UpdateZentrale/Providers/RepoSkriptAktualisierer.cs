@@ -87,6 +87,27 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
             Meldung: "Das Skript endete mit Code " + lauf.ExitCode + ".", Protokoll: lauf.Ausgabe);
     }
 
+    /// <summary>
+    /// The csproj version only moves when someone bumps it, so it alone would report a false
+    /// failure after a rebuild. The write time of the built exe is what actually changes here.
+    /// </summary>
+    public Task<string> FingerabdruckAsync(ProgrammEintrag eintrag, CancellationToken abbruch)
+    {
+        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe)) return Task.FromResult("");
+
+        try
+        {
+            var zeit = File.GetLastWriteTimeUtc(exe).ToString("yyyy-MM-dd HH:mm:ss");
+            var version = InstallierteVersion(eintrag);
+            return Task.FromResult((string.IsNullOrWhiteSpace(version) ? "" : version + " vom ") + zeit);
+        }
+        catch
+        {
+            return Task.FromResult("");
+        }
+    }
+
     /// <summary>rebuild-overlay.ps1 requires PowerShell 7; fall back only if pwsh is missing.</summary>
     private static string PwshPfad()
     {

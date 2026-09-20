@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using UpdateZentrale.Models;
@@ -122,19 +122,22 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// </summary>
     public bool AktionMoeglich => _aktualisierer is not null
                                   && !IstBeschaeftigt
-                                  && Zustand != UpdateZustand.Aktuell;
+                                  && Zustand != UpdateZustand.Aktuell
+                                  && !UebernahmeOffen;
 
-    public string AktionsText => Zustand switch
-    {
-        UpdateZustand.Aktuell => "Aktuell",
-        UpdateZustand.UpdateVerfuegbar => "Aktualisieren",
-        UpdateZustand.Pruefe => "Prüft …",
-        UpdateZustand.NichtInstalliert => "Nicht installiert",
-        _ => "Aktualisieren"
-    };
+    public string AktionsText => UebernahmeOffen
+        ? "Neustart nötig"
+        : Zustand switch
+        {
+            UpdateZustand.Aktuell => "Aktuell",
+            UpdateZustand.UpdateVerfuegbar => "Aktualisieren",
+            UpdateZustand.Pruefe => "Prüft …",
+            UpdateZustand.NichtInstalliert => "Nicht installiert",
+            _ => "Aktualisieren"
+        };
 
     /// <summary>Only a real update gets the accent button; everything else stays calm.</summary>
-    public bool AktionBetont => Zustand == UpdateZustand.UpdateVerfuegbar;
+    public bool AktionBetont => Zustand == UpdateZustand.UpdateVerfuegbar && !UebernahmeOffen;
 
     public bool KannPruefen => _aktualisierer is not null && !IstBeschaeftigt;
 
@@ -146,6 +149,92 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
     public event EventHandler<string>? Meldung;
 
+    [ObservableProperty] private UpdateBericht? _letzterBericht;
+
+    public bool HatBericht => LetzterBericht is not null;
+    public bool BerichtIstFehler => LetzterBericht?.IstFehler == true;
+    public string BerichtKurz => LetzterBericht?.Kurzfassung ?? "";
+    public string BerichtGrund => LetzterBericht?.Meldung ?? "";
+
+    /// <summary>
+    /// The update is downloaded and installed, but the program has not picked it up yet. Without
+    /// saying so, a new check finds the same update again and it looks as if nothing happened --
+    /// which is exactly how this shows up in practice.
+    /// </summary>
+    public bool UebernahmeOffen => LetzterBericht?.Ergebnis == LaufErgebnis.Ausstehend;
+
+    public string UebernahmeText => "Das Update ist bereits heruntergeladen und installiert. Es wird aktiv, "
+                                    + "sobald " + Name + " einmal neu gestartet wurde – bis dahin meldet die Prüfung "
+                                    + "weiterhin die alte Version.";
+
+    partial void OnLetzterBerichtChanged(UpdateBericht? value)
+    {
+        OnPropertyChanged(nameof(HatBericht));
+        OnPropertyChanged(nameof(BerichtIstFehler));
+        OnPropertyChanged(nameof(BerichtKurz));
+        OnPropertyChanged(nameof(BerichtGrund));
+        OnPropertyChanged(nameof(UebernahmeOffen));
+        OnPropertyChanged(nameof(AktionMoeglich));
+        OnPropertyChanged(nameof(AktionsText));
+        OnPropertyChanged(nameof(AktionBetont));
+    }
+
+    /// <summary>Opens the log of the run that is shown on the card.</summary>
+    [RelayCommand]
+    private void ProtokollOeffnen() => Protokollierung.DateiOeffnen(LetzterBericht?.ProtokollDatei);
+
+    /// <summary>
+    /// A staged update (Claude Desktop) only becomes real on the program's next start. On a later
+    /// launch of the UpdateZentrale this confirms it retroactively -- or flags that it never
+    /// arrived, which is exactly the case that would otherwise go unnoticed.
+    /// </summary>
+    public async Task AusstehendesPruefenAsync()
+    {
+        if (_aktualisierer is null || LetzterBericht is not { Ergebnis: LaufErgebnis.Ausstehend } offen) return;
+
+        var jetzt = await _aktualisierer.FingerabdruckAsync(Eintrag, CancellationToken.None);
+        if (string.IsNullOrWhiteSpace(jetzt) || jetzt == offen.VersionNachher)
+        {
+            if ((DateTime.Now - offen.Zeit).TotalDays >= 7)
+            {
+                var haengt = new UpdateBericht
+                {
+                    Zeit = DateTime.Now,
+                    ProgrammId = Eintrag.Id,
+                    Name = Name,
+                    Art = Eintrag.Art,
+                    Ergebnis = LaufErgebnis.NichtVerifiziert,
+                    VersionVorher = offen.VersionNachher,
+                    VersionNachher = jetzt,
+                    Befehl = offen.Befehl,
+                    Erhoeht = Rechte.IstErhoeht,
+                    Meldung = "Das Update vom " + offen.Zeit.ToString("dd.MM.yyyy")
+                            + " wurde bis heute nicht übernommen – das Programm wurde offenbar nie neu gestartet."
+                };
+                Protokollierung.LaufBeenden(haengt);
+                LetzterBericht = haengt;
+            }
+            return;
+        }
+
+        var bestaetigt = new UpdateBericht
+        {
+            Zeit = DateTime.Now,
+            ProgrammId = Eintrag.Id,
+            Name = Name,
+            Art = Eintrag.Art,
+            Ergebnis = LaufErgebnis.Erfolgreich,
+            VersionVorher = offen.VersionNachher,
+            VersionNachher = jetzt,
+            Befehl = offen.Befehl,
+            Erhoeht = Rechte.IstErhoeht,
+            Meldung = "Nachträglich bestätigt: das Update vom " + offen.Zeit.ToString("dd.MM.yyyy")
+                    + " ist inzwischen aktiv (" + jetzt + ")."
+        };
+        Protokollierung.LaufBeenden(bestaetigt);
+        LetzterBericht = bestaetigt;
+    }
+
     [ObservableProperty] private bool _autostartAlsAufgabe;
 
     /// <summary>
@@ -154,12 +243,23 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// </summary>
     public bool AutostartUmstellbar => KannStarten && (ImAutostart || AutostartAlsAufgabe) && AlsAdministrator;
 
+    /// <summary>
+    /// Kommandozeilen-Werkzeuge werden von anderen Programmen im Hintergrund gestartet (der
+    /// OpenLauncher ruft lms.exe, jedes Terminal ruft claude.exe/codex.exe) — und zwar per
+    /// CreateProcess ohne Shell. Für so einen Start kann Windows keinen UAC-Dialog zeigen: steht
+    /// die exe auf "Als Administrator ausführen", bricht der Start mit Fehler 740 ab. Die
+    /// Zentrale selbst umgeht das für ihre eigenen Aufrufe, fremde Programme können das nicht.
+    /// </summary>
+    public bool KonsolenAdminWarnung =>
+        _alsAdministrator && Eintrag.Art.Equals("cli", StringComparison.OrdinalIgnoreCase);
+
     public void ZustandAktualisieren()
     {
         Laeuft = Prozessdienst.Laeuft(Eintrag);
         ImAutostart = Systemdienst.ImAutostart(Eintrag);
         AdminWarnung = Systemdienst.AdminBrichtAutostart(Eintrag, _alsAdministrator) && !AutostartAlsAufgabe;
         OnPropertyChanged(nameof(AutostartUmstellbar));
+        OnPropertyChanged(nameof(KonsolenAdminWarnung));
     }
 
     /// <summary>Checks once whether the elevated logon task for this program exists.</summary>
@@ -304,6 +404,11 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
         await LaufAsync(async (fortschritt, abbruch) =>
         {
+            // Evidence before the run: whatever must change if the update really arrives.
+            StatusText = "Ermittelt den Stand …";
+            var vorher = await _aktualisierer.FingerabdruckAsync(Eintrag, abbruch);
+
+            Protokollierung.LaufBeginnen(Eintrag, BefehlsBeschreibung(), vorher);
             var liefVorher = Prozessdienst.Laeuft(Eintrag);
 
             if (Eintrag.BeendenVorUpdate && liefVorher)
@@ -322,23 +427,124 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 Prozessdienst.Starten(Eintrag, AlsAdministrator);
             }
 
-            // Re-read the version so the card shows the new state right away -- except when the
-            // installer only staged the update; there the old version is still the truth and a
-            // re-check would wrongly show "Update verfügbar" again.
-            if (ergebnis.Zustand == UpdateZustand.Fertig && !ergebnis.ErstNachNeustart)
+            // Evidence after the run, and the verdict drawn from comparing the two.
+            StatusText = "Prüft das Ergebnis …";
+            var nachher = await _aktualisierer.FingerabdruckAsync(Eintrag, abbruch);
+            var bericht = Bewerten(ergebnis, vorher, nachher);
+
+            fortschritt.Report(AbschlussZeile(bericht));
+            Protokollierung.LaufBeenden(bericht);
+            LetzterBericht = bericht;
+
+            // Refresh the displayed versions -- but not when the installer only staged the
+            // update; there the old version is still the truth and a re-check would wrongly
+            // show "Update verfügbar" again.
+            if (bericht.Ergebnis == LaufErgebnis.Erfolgreich)
             {
-                var nachher = await _aktualisierer.PruefenAsync(Eintrag, fortschritt, abbruch);
+                var frisch = await _aktualisierer.PruefenAsync(Eintrag, fortschritt, abbruch);
                 return ergebnis with
                 {
-                    Zustand = nachher.Zustand == UpdateZustand.Aktuell ? UpdateZustand.Aktuell : ergebnis.Zustand,
-                    InstallierteVersion = nachher.InstallierteVersion,
-                    VerfuegbareVersion = nachher.VerfuegbareVersion
+                    Zustand = frisch.Zustand == UpdateZustand.Aktuell ? UpdateZustand.Aktuell : ergebnis.Zustand,
+                    InstallierteVersion = frisch.InstallierteVersion,
+                    VerfuegbareVersion = frisch.VerfuegbareVersion,
+                    Meldung = bericht.Meldung
                 };
             }
 
-            return ergebnis;
+            return ergebnis with
+            {
+                Zustand = bericht.Ergebnis switch
+                {
+                    LaufErgebnis.Abgebrochen => UpdateZustand.Abgebrochen,
+                    LaufErgebnis.Fehlgeschlagen => UpdateZustand.Fehler,
+                    LaufErgebnis.NichtVerifiziert => UpdateZustand.Fehler,
+                    _ => ergebnis.Zustand
+                },
+                Meldung = bericht.Meldung
+            };
         });
     }
+
+    /// <summary>
+    /// Turns "the tool exited with 0" into a statement about reality: did the fingerprint that
+    /// had to change actually change? Everything else is reported as a problem, with the reason.
+    /// </summary>
+    private UpdateBericht Bewerten(PruefErgebnis ergebnis, string vorher, string nachher)
+    {
+        var bericht = new UpdateBericht
+        {
+            ProgrammId = Eintrag.Id,
+            Name = Name,
+            Art = Eintrag.Art,
+            VersionVorher = vorher,
+            VersionNachher = nachher,
+            Befehl = BefehlsBeschreibung(),
+            Erhoeht = Rechte.IstErhoeht,
+            ExitCode = ergebnis.Zustand == UpdateZustand.Fehler ? 1 : 0
+        };
+
+        if (ergebnis.Zustand == UpdateZustand.Abgebrochen)
+        {
+            bericht.Ergebnis = LaufErgebnis.Abgebrochen;
+            bericht.Meldung = ergebnis.Meldung;
+        }
+        else if (ergebnis.Zustand == UpdateZustand.Fehler)
+        {
+            bericht.Ergebnis = LaufErgebnis.Fehlgeschlagen;
+            bericht.Meldung = ergebnis.Meldung;
+        }
+        else if (ergebnis.Zustand == UpdateZustand.Aktuell)
+        {
+            bericht.Ergebnis = LaufErgebnis.Abgebrochen;
+            bericht.Meldung = string.IsNullOrWhiteSpace(ergebnis.Meldung) ? "Es war nichts offen." : ergebnis.Meldung;
+        }
+        else if (ergebnis.ErstNachNeustart)
+        {
+            bericht.Ergebnis = LaufErgebnis.Ausstehend;
+            bericht.AusstehendeVersion = string.IsNullOrWhiteSpace(VerfuegbareVersion) ? null : VerfuegbareVersion;
+            bericht.Meldung = ergebnis.Meldung;
+        }
+        else if (string.IsNullOrWhiteSpace(vorher) && string.IsNullOrWhiteSpace(nachher))
+        {
+            bericht.Ergebnis = LaufErgebnis.NichtVerifiziert;
+            bericht.Meldung = "Das Update meldete Erfolg, der Stand ließ sich aber weder vorher noch "
+                            + "nachher ermitteln – es ist nicht überprüfbar.";
+        }
+        else if (vorher == nachher)
+        {
+            bericht.Ergebnis = LaufErgebnis.NichtVerifiziert;
+            bericht.Meldung = "Das Update meldete Erfolg, der Stand ist aber unverändert ("
+                            + Beschreibe(nachher) + "). Einzelheiten stehen im Protokoll.";
+        }
+        else
+        {
+            bericht.Ergebnis = LaufErgebnis.Erfolgreich;
+            bericht.Meldung = "Verifiziert: " + Beschreibe(vorher) + " → " + Beschreibe(nachher);
+        }
+
+        return bericht;
+    }
+
+    private static string Beschreibe(string fingerabdruck)
+        => string.IsNullOrWhiteSpace(fingerabdruck) ? "(unbekannt)" : fingerabdruck;
+
+    private static string AbschlussZeile(UpdateBericht bericht) => bericht.Ergebnis switch
+    {
+        LaufErgebnis.Erfolgreich => "✔ " + bericht.Meldung,
+        LaufErgebnis.Ausstehend => "⏳ " + bericht.Meldung,
+        LaufErgebnis.Abgebrochen => "– " + bericht.Meldung,
+        _ => "✘ " + bericht.Meldung
+    };
+
+    /// <summary>Human-readable description of what this card actually runs, for the log header.</summary>
+    private string BefehlsBeschreibung() => Eintrag.Art switch
+    {
+        "winget" => "winget upgrade --id " + Eintrag.WingetId + " --exact --silent",
+        "store" or "msstore" => "winget upgrade --id " + Eintrag.StoreProduktId + " --source msstore --silent",
+        "cli" => Pfade.Aufloesen(Eintrag.ExePfad) + " " + (Eintrag.UpdateArgumente ?? "update"),
+        "reposkript" => "pwsh -File " + Eintrag.Skript + " " + Eintrag.SkriptArgumente,
+        _ => Eintrag.Art
+    };
 
     [RelayCommand]
     private void Starten()
@@ -359,6 +565,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(zeile)) return;
             _protokoll.AppendLine(zeile.Trim());
+            Protokollierung.Schreiben(Eintrag.Id, zeile);
             OnPropertyChanged(nameof(Protokoll));
         });
 
@@ -375,6 +582,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
             Zustand = UpdateZustand.Fehler;
             StatusText = ex.Message;
             _protokoll.AppendLine(ex.ToString());
+            Protokollierung.Schreiben(Eintrag.Id, "[Ausnahme] " + ex);
         }
         finally
         {

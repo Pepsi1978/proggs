@@ -208,6 +208,7 @@ public sealed partial class HauptViewModel : ObservableObject
 
         var (katalog, fehler) = Katalogdienst.Laden();
         KatalogFehler = fehler;
+        var berichte = Protokollierung.LetzteBerichte();
 
         foreach (var eintrag in katalog.Programme)
         {
@@ -215,6 +216,10 @@ public sealed partial class HauptViewModel : ObservableObject
             var vm = new ProgrammViewModel(eintrag, dienst, _einstellungen);
             vm.PropertyChanged += AufProgrammGeaendert;
             vm.Meldung += (_, text) => Dialoge.Hinweis(text);
+
+            // The history survives restarts, so each card can show how its last run went.
+            if (berichte.TryGetValue(eintrag.Id, out var bericht)) vm.LetzterBericht = bericht;
+
             Programme.Add(vm);
         }
 
@@ -242,6 +247,9 @@ public sealed partial class HauptViewModel : ObservableObject
 
         // Which programs already start elevated through a scheduled task?
         foreach (var p in Programme) await p.AufgabenZustandLesenAsync();
+
+        // Did a previously staged update arrive in the meantime -- or is it still hanging?
+        foreach (var p in Programme) await p.AusstehendesPruefenAsync();
 
         await AllePruefenAsync();
     }
@@ -326,6 +334,10 @@ public sealed partial class HauptViewModel : ObservableObject
             Dialoge.Hinweis("Der Katalog ließ sich nicht öffnen: " + ex.Message);
         }
     }
+
+    /// <summary>Opens the log folder; every run is recorded there, day by day.</summary>
+    [RelayCommand]
+    private void ProtokolleOeffnen() => Protokollierung.OrdnerOeffnen();
 
     [RelayCommand]
     private void ZustaendeAuffrischen()

@@ -84,6 +84,27 @@ public sealed class WingetAktualisierer : IAktualisierer
     }
 
     /// <summary>
+    /// The installed version. For packaged apps Get-AppxPackage is both faster and more truthful
+    /// than the winget table, because it reads the registration rather than a correlation.
+    /// </summary>
+    public async Task<string> FingerabdruckAsync(ProgrammEintrag eintrag, CancellationToken abbruch)
+    {
+        if (!string.IsNullOrWhiteSpace(eintrag.AppxName))
+        {
+            var befehl = "-NoProfile -NonInteractive -Command \"(Get-AppxPackage -Name '" + eintrag.AppxName
+                       + "' | Sort-Object Version | Select-Object -Last 1).Version\"";
+            var appx = await Kommandozeile.AusfuehrenAsync("powershell.exe", befehl, TimeSpan.FromMinutes(2), abbruch: abbruch);
+            return appx.Ausgabe.Trim();
+        }
+
+        if (!File.Exists(Pfade.Winget)) return "";
+
+        var args = $"list --id {eintrag.WingetId} --exact --disable-interactivity --accept-source-agreements";
+        var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(3), abbruch: abbruch);
+        return TabellenZeile(lauf.Ausgabe, eintrag.WingetId ?? "")?.Installiert ?? "";
+    }
+
+    /// <summary>
     /// Finds the package row and returns (installed, available).
     ///
     /// Header column offsets are not usable: winget pads columns by display width, and a name
