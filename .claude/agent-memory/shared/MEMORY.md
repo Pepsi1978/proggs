@@ -662,3 +662,22 @@ zurueckgemeldet. Mehrere Vorschlaege pro Session sind ausdruecklich erwuenscht (
 - **Compound Effect Dokumentation (PFLICHT)**: Wenn eine Verbesserung aus Selbstbeobachtung heraus entsteht (Fehler bemerkt → Vorschlag → Fix → Fehlerklasse eliminiert), MUSS die Kette in "Meta-Intelligenz & Selbstverbesserung > Compound Effect Erfolge" dokumentiert werden. /self-improve zaehlt und trackt diese als Metrik.
 - **Direktiven-Integritaetspruefung**: /self-improve MUSS bei JEDEM Lauf pruefen ob Direktive #1 (Superintelligenz) und #2 (Selbstbeobachtung) in allen Speicherorten vorhanden sind
 - **Invariant-Check (2026-03-31)**: SessionStart-Hook prueft 5 System-Invarianten: (1) Stale OFFEN >7d, (2) bypassPermissions aktiv, (3) Hook-Paare vollstaendig, (4) Systemzustand <14d alt, (5) CLAUDE.md Sync. Verhindert das "Erkennungs-ohne-Heilung-Muster" durch proaktive Sichtbarkeit.
+
+## Offen für die parallele UpdateZentrale-Session (20.09.2026, 12:30)
+
+In der UpdateZentrale liegen **nicht committete** Änderungen einer anderen Session (Fix für
+Win32-Fehler 740, siehe `bugs/desktop/windows-runasadmin-childprozess.md`). Sie wurden bewusst
+NICHT committet, weil zeitgleich ein Refactoring läuft (`IAktualisierer.FingerabdruckAsync`,
+`Models/UpdateBericht.cs`, `Services/Protokollierung.cs`) und der Baum ohne dessen Abschluss
+nicht kompiliert. Betroffene Dateien im Arbeitsverzeichnis:
+
+- `Services/Kommandozeile.cs` — neuer Parameter `alsAufrufer` (Default false) setzt
+  `__COMPAT_LAYER=RunAsInvoker`; zusätzlich eigener catch für `Win32Exception 740`.
+- `Providers/CliAktualisierer.cs` — drei Aufrufe auf `alsAufrufer: true` (nur die verwaltete exe).
+- `ViewModels/ProgrammViewModel.cs` — neue Property `KonsolenAdminWarnung` (Art == "cli").
+- `HauptFenster.xaml` — Warn-Box dazu.
+- `UpdateZentrale.csproj` — Version auf 1.2.2 gebumpt.
+
+**Wer als nächstes in der UpdateZentrale arbeitet:** diese Änderungen mitnehmen, nicht
+verwerfen. `alsAufrufer` bewusst NICHT als Default setzen — winget und die Update-Skripte
+müssen Installer weiter elevieren dürfen.
