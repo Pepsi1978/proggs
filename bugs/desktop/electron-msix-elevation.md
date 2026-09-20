@@ -79,16 +79,21 @@ Get-CimInstance Win32_Process -Filter "Name='ChatGPT.exe'" | Select-Object Proce
 
 ## §4 Win32-Fenstersteuerung zerstört Electron-Apps
 
-**Die teuerste Falle hier.** Electron verwaltet Sichtbarkeit und Eingabe-Routing seines
-Fensters selbst. Wird das Fenster per `ShowWindow` versteckt oder sichtbar gemacht, bleibt
-der interne Zustand von Electron unverändert. Folge: Das Fenster steht auf dem Bildschirm,
-aber der Renderer zeichnet nicht und nimmt keine Mausklicks an. Für den Benutzer sieht es
-aus, als sei die App abgestürzt.
+**Die teuerste Falle hier.**
 
-Symptome der Live-Messung im Fehlerzustand: Prozess `Responding = True`, Fenster
-`IsWindowVisible = True`, `IsWindowEnabled = True`, `IsHungAppWindow = False` — technisch
-alles in Ordnung, und trotzdem reagiert nichts. Ein zweites Merkmal: Das Hauptfenster stand
-minimiert bei `-16000,-16000` mit einer Größe von 157x25 Pixeln.
+**BELEGT (Live-Messung im Fehlerzustand, 20.09.2026):** Nach `SW_HIDE` beim Tray-Start und
+anschließendem `SW_SHOW`/`SW_RESTORE` war Codex für den Benutzer unbedienbar. Gemessen:
+Prozess `Responding = True`, `IsWindowEnabled = True`, `IsHungAppWindow = False` — technisch
+alles gesund. Das Hauptfenster stand dabei **minimiert** bei `-16000,-16000` mit 157x25
+Pixeln, obwohl die Aktivierung wenige Minuten zuvor „Sichtbar, nicht minimiert, im
+Vordergrund" gemeldet hatte.
+
+**HYPOTHESE, NICHT GEMESSEN:** dass der Renderer im Hintergrundzustand bleibt, weil Electron
+von der Win32-Änderung nichts erfährt. Der Mechanismus ist plausibel und deckt sich mit der
+Electron-Dokumentation, wurde hier aber nicht instrumentiert nachgewiesen.
+
+Für die Konsequenz ist das egal: Schreibende Win32-Zugriffe auf das Fenster raus — der Fix
+ist in beiden Fällen derselbe.
 
 Richtig ist immer der Weg über die App selbst:
 

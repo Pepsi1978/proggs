@@ -112,6 +112,7 @@ public static class CodexAdminCheck {
  [DllImport("user32.dll", EntryPoint="GetWindowLongPtrW")] static extern IntPtr GetWindowLongPtr(IntPtr h, int i);
  [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr h, uint c);
  [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassNameW(IntPtr h, System.Text.StringBuilder s, int n);
+ [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetWindowTextLengthW(IntPtr h);
  delegate bool EnumProc(IntPtr h, IntPtr l);
 
  // Sucht das echte Hauptfenster - auch wenn es versteckt oder minimiert ist.
@@ -129,6 +130,7 @@ public static class CodexAdminCheck {
      var k = new System.Text.StringBuilder(64);
      GetClassNameW(h, k, 64);
      if (k.ToString() != "Chrome_WidgetWin_1") return true;
+     if (GetWindowTextLengthW(h) == 0) return true;                // nur das betitelte Fenster
      treffer = h;
      return false;
    }, IntPtr.Zero);
@@ -207,6 +209,16 @@ public static class CodexAdminCheck {
             $zweit = Starte-Exe
             Notiere ("Zweitstart als Fenster-Signal: PID " + $zweit.Id)
             Start-Sleep -Seconds 6
+
+            # Sicherung: Der Zweitprozess MUSS sich selbst beenden. Tut er es nicht,
+            # laufen zwei erhoehte Instanzen auf demselben Profil - das waere echter
+            # Schaden, also hart beenden.
+            $zweit.Refresh()
+            if (-not $zweit.HasExited) {
+                Notiere ("Zweitprozess " + $zweit.Id + " lebt noch - wird beendet.")
+                try { $zweit.Kill() } catch { }
+                Start-Sleep -Seconds 2
+            }
 
             $fenster = [CodexAdminCheck]::FindeFenster([int]$laufend[0].ProcessId)
             $sichtbar = ($fenster -ne [IntPtr]::Zero) -and
