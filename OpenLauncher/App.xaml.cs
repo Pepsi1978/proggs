@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -22,6 +22,14 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // update-launcher.ps1 startet uns mit __COMPAT_LAYER=RunAsInvoker, weil OpenLauncher.exe
+        // sonst mit Win32-Fehler 740 gar nicht anspringt, wenn sie auf "Als Administrator
+        // ausfuehren" steht. Die Variable hat ihre Arbeit beim Erzeugen dieses Prozesses getan —
+        // bliebe sie stehen, wuerde sie an jedes Terminal und jedes Enkelkind vererbt und dort
+        // JEDE berechtigte UAC-Abfrage unterdruecken (Installer liefen still ohne Rechte).
+        // Deshalb sofort aus der eigenen Umgebung loeschen; lms.exe setzt sie bei Bedarf selbst.
+        Environment.SetEnvironmentVariable("__COMPAT_LAYER", null);
+
         // Muss VOR jedem anderen Zugriff auf den Anwendungsdatenordner laufen (auch vor dem Logger,
         // der seinen Ordner selbst anlegt) — sonst existiert das Ziel bereits und die Uebernahme
         // der alten Daten wuerde stillschweigend ausbleiben.

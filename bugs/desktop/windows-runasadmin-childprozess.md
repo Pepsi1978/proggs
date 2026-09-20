@@ -43,6 +43,12 @@ Programm per `CreateProcess` (UseShellExecute = false) gestartet wird:
 | UpdateZentrale `CliAktualisierer` → `Kommandozeile` | `claude.exe`, `codex.exe`, `lms.exe` | Fix vorbereitet |
 | Terminal/pwsh (vom OpenLauncher gestartet) | `claude.exe`, `codex.exe` | nicht am Startort behebbar |
 
+**Gegenstück nicht vergessen:** Wer einen Prozess mit `__COMPAT_LAYER` startet, vererbt die
+Variable an dessen gesamte Nachkommenschaft. Startet dieses Kind selbst Terminals (OpenLauncher
+→ wt.exe/pwsh → claude.exe), muss es die Variable beim eigenen Start wieder aus seiner Umgebung
+löschen (`Environment.SetEnvironmentVariable("__COMPAT_LAYER", null)` in `OnStartup`). Ihre
+Wirkung auf den eigenen Prozess ist zu diesem Zeitpunkt längst eingetreten.
+
 **Nicht** per `__COMPAT_LAYER` behandeln: interaktive Terminals (wt.exe, pwsh) und winget.
 Die Variable wird an alle Enkelprozesse vererbt und würde dort jede berechtigte
 UAC-Abfrage unterdrücken — Installer liefen dann still ohne Rechte statt zu fragen.
