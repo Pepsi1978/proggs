@@ -104,14 +104,16 @@ public sealed class CliAktualisierer : IAktualisierer
 
         if (!string.IsNullOrWhiteSpace(eintrag.VersionsArgumente))
         {
-            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente, TimeSpan.FromMinutes(2), abbruch: abbruch);
+            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente,
+                TimeSpan.FromMinutes(2), abbruch: abbruch, alsAufrufer: true);
             var version = VersionsMuster.Match(lauf.Ausgabe).Value;
             if (!string.IsNullOrWhiteSpace(version)) return version;
         }
 
         if (!string.IsNullOrWhiteSpace(eintrag.PruefArgumente))
         {
-            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.PruefArgumente, TimeSpan.FromMinutes(8), abbruch: abbruch);
+            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.PruefArgumente,
+                TimeSpan.FromMinutes(8), abbruch: abbruch, alsAufrufer: true);
             var geplant = lauf.Ausgabe
                 .Split('\n')
                 .Where(z => z.Contains('→') || z.Contains("->"))

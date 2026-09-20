@@ -663,7 +663,7 @@ zurueckgemeldet. Mehrere Vorschlaege pro Session sind ausdruecklich erwuenscht (
 - **Direktiven-Integritaetspruefung**: /self-improve MUSS bei JEDEM Lauf pruefen ob Direktive #1 (Superintelligenz) und #2 (Selbstbeobachtung) in allen Speicherorten vorhanden sind
 - **Invariant-Check (2026-03-31)**: SessionStart-Hook prueft 5 System-Invarianten: (1) Stale OFFEN >7d, (2) bypassPermissions aktiv, (3) Hook-Paare vollstaendig, (4) Systemzustand <14d alt, (5) CLAUDE.md Sync. Verhindert das "Erkennungs-ohne-Heilung-Muster" durch proaktive Sichtbarkeit.
 
-## Offen für die parallele UpdateZentrale-Session (20.09.2026, 12:30)
+## ERLEDIGT: UpdateZentrale-Übergabe (20.09.2026, 12:30 — abgeschlossen 12:52)
 
 In der UpdateZentrale liegen **nicht committete** Änderungen einer anderen Session (Fix für
 Win32-Fehler 740, siehe `bugs/desktop/windows-runasadmin-childprozess.md`). Sie wurden bewusst
@@ -681,3 +681,15 @@ nicht kompiliert. Betroffene Dateien im Arbeitsverzeichnis:
 **Wer als nächstes in der UpdateZentrale arbeitet:** diese Änderungen mitnehmen, nicht
 verwerfen. `alsAufrufer` bewusst NICHT als Default setzen — winget und die Update-Skripte
 müssen Installer weiter elevieren dürfen.
+
+**Erledigt (12:52, Session 01B4U34T):** Alle oben genannten Änderungen sind in Commit
+`b0435475e` enthalten und gepusht; das Arbeitsverzeichnis ist sauber. Der Baum kompiliert,
+das Refactoring (`FingerabdruckAsync`, `UpdateBericht`, `Protokollierung`) ist abgeschlossen.
+Nachgezogen: `FingerabdruckAsync` im `CliAktualisierer` ruft dieselbe verwaltete exe auf wie
+die Prüfung und braucht deshalb ebenfalls `alsAufrufer: true` — war zunächst vergessen, ist
+jetzt gesetzt (5 Aufrufstellen).
+
+**Neu und wichtig für parallele Arbeit:** Die UpdateZentrale laesst sich ab 1.3.0 nur noch
+EINMAL starten (Mutex `Global\\UpdateZentrale.Einzelstart`, `Services/Einzelstart.cs`); ein
+zweiter Start holt das vorhandene Fenster nach vorne und beendet sich. Grund: zwei Instanzen
+schrieben dieselbe `settings.json` und dieselben Protokolldateien.
