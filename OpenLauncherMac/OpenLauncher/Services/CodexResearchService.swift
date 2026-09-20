@@ -17,8 +17,11 @@ struct CodexResearchModel {
 
 enum ResearchFailure: Error, LocalizedError {
     case message(String)
+    case authenticationRequired(String)
     var errorDescription: String? {
-        switch self { case .message(let text): return text }
+        switch self {
+        case .message(let text), .authenticationRequired(let text): return text
+        }
     }
 }
 
@@ -66,6 +69,23 @@ final class CodexResearchService {
     }
 
     func isConnected() throws -> Bool { try readTokens() != nil }
+
+    /// True/false ist ein bestätigter Status; nil bewahrt den letzten UI-Stand bei Netzproblemen.
+    func loginRequired() async -> Bool? {
+        do {
+            guard try isConnected() else { return true }
+            _ = try await models()
+            return false
+        } catch ResearchFailure.authenticationRequired(_) {
+            return true
+        } catch is DecodingError {
+            return true
+        } catch {
+            Logger.shared.warn("CodexResearchService", "loginRequired",
+                               "Anmeldestatus vorübergehend nicht prüfbar: \(type(of: error))")
+            return nil
+        }
+    }
 
     private func saveTokens(_ json: [String: Any], previousRefresh: String? = nil) throws -> Tokens {
         guard let access = json["access_token"] as? String, !access.isEmpty,
@@ -123,21 +143,26 @@ final class CodexResearchService {
         guard !authBusy else { throw ResearchFailure.message("Anmeldung wird aktualisiert; bitte erneut versuchen.") }
         authBusy = true
         defer { authBusy = false }
-        guard var tokens = try readTokens() else { throw ResearchFailure.message("Nicht angemeldet.") }
+        guard var tokens = try readTokens() else { throw ResearchFailure.authenticationRequired("Nicht angemeldet.") }
         if tokens.expires < Date().addingTimeInterval(60) {
-            let fresh = try await tokenRequest(["grant_type": "refresh_token", "client_id": clientID, "refresh_token": tokens.refresh])
+            let fresh: [String: Any]
+            do {
+                fresh = try await tokenRequest(["grant_type": "refresh_token", "client_id": clientID, "refresh_token": tokens.refresh])
+            } catch ResearchFailure.message(let text) where text.contains("HTTP 400") || text.contains("HTTP 401") || text.contains("HTTP 403") {
+                throw ResearchFailure.authenticationRequired("Anmeldung abgelaufen oder widerrufen. Bitte erneut mit OpenAI verbinden.")
+            }
             try Task.checkCancellation()
             tokens = try saveTokens(fresh, previousRefresh: tokens.refresh)
         }
         let segments = tokens.access.split(separator: ".")
-        guard segments.count > 1 else { throw ResearchFailure.message("Ungültiges Zugangstoken.") }
+        guard segments.count > 1 else { throw ResearchFailure.authenticationRequired("Ungültiges Zugangstoken.") }
         var encoded = String(segments[1]).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
         encoded += String(repeating: "=", count: (4 - encoded.count % 4) % 4)
         guard let data = Data(base64Encoded: encoded),
               let jwt = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let auth = jwt["https://api.openai.com/auth"] as? [String: Any],
               let account = auth["chatgpt_account_id"] as? String, !account.isEmpty else {
-            throw ResearchFailure.message("ChatGPT-Konto fehlt.")
+            throw ResearchFailure.authenticationRequired("ChatGPT-Konto fehlt.")
         }
         var request = URLRequest(url: URL(string: backend + suffix)!)
         request.setValue("Bearer " + tokens.access, forHTTPHeaderField: "Authorization")
@@ -369,6 +394,9 @@ final class CodexResearchService {
 
     private func object(_ request: URLRequest) async throws -> [String: Any] {
         let (data, status) = try await responseData(request)
+        if request.value(forHTTPHeaderField: "Authorization") != nil, [400, 401, 403].contains(status) {
+            throw ResearchFailure.authenticationRequired("Anmeldung abgelaufen oder widerrufen. Bitte erneut mit OpenAI verbinden.")
+        }
         guard (200..<300).contains(status) else { throw ResearchFailure.message("Kontozugriff fehlgeschlagen (HTTP \(status)).") }
         guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw URLError(.cannotParseResponse) }
         return object

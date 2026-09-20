@@ -13,6 +13,7 @@ protocol MainViewModelDelegate: AnyObject {
     func statusChanged()
     func hiddenModelsChanged()
     func workDirChanged()
+    func openAiLoginStatusChanged()
 
     // --- Dialoge (in WPF direkt im ViewModel, hier bewusst an das Fenster delegiert) ---
     func askModelDialog(groups: [ModelGroupEntry], defaultGroup: ModelGroupEntry, title: String,
@@ -162,6 +163,11 @@ final class MainViewModel {
     /// untereinander und der Profil-Bereich saesse mit gespeichertem Standard eine Zeile tiefer.
     private(set) var hasNoModelDefault = true
     private(set) var canSaveModelDefault = false
+    private(set) var needsOpenAiLogin = false {
+        didSet {
+            if needsOpenAiLogin != oldValue { delegate?.openAiLoginStatusChanged() }
+        }
+    }
 
     // ===================== Aufbau =====================
 
@@ -217,6 +223,7 @@ final class MainViewModel {
     func activateInitialSelection() {
         onSelectedModelChanged(selectedModel)
         delegate?.selectedModelChanged()
+        Task { await refreshOpenAiLoginStatus() }
         periodicEffortTask = Task { [weak self] in
             while !Task.isCancelled {
                 do { try await Task.sleep(nanoseconds: 60_000_000_000) } catch { return }
@@ -224,6 +231,16 @@ final class MainViewModel {
                 await self.refreshPeriodicEfforts()
             }
         }
+    }
+
+    func refreshOpenAiLoginStatus() async {
+        if let required = await CodexResearchService.shared.loginRequired() {
+            needsOpenAiLogin = required
+        }
+    }
+
+    func setOpenAiLoginRequired(_ required: Bool) {
+        needsOpenAiLogin = required
     }
 
     /// Version UND Zeitstempel kommen aus dem App-Bundle: die Uhrzeit setzt build.sh beim Compile

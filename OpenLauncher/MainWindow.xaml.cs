@@ -629,12 +629,13 @@ public partial class MainWindow : Window
 
     private void ThemeBtn_Click(object sender, RoutedEventArgs e) => ThemeManager.Toggle();
 
-    private void Settings_Click(object sender, RoutedEventArgs e)
+    private async void Settings_Click(object sender, RoutedEventArgs e)
     {
         var settings = new SettingsWindow(ViewModel) { Owner = this };
         settings.ResearchCompleted += ViewModel.ApplyResearchResult;
         settings.ShowDialog();
         settings.ResearchCompleted -= ViewModel.ApplyResearchResult;
+        await ViewModel.RefreshOpenAiLoginStatusAsync();
     }
 
     private void ApplyWindowTheme()

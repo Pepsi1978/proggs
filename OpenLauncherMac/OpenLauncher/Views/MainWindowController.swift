@@ -43,6 +43,7 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     private let providerTitleLabel = UI.label("PROVIDER ", size: 12, weight: .bold, role: .muted)
     private let providerModelLabel = UI.label("—", size: 15, weight: .bold, role: .accent)
     private let refreshButton = StyledButton(style: .ghost, title: "Aktualisieren")
+    private let openAiLoginWarningButton = StyledButton(style: .warning, title: "!")
     private let researchSettingsButton = StyledButton(style: .ghost, title: "")
     private var researchSettingsWindow: ResearchSettingsWindowController?
 
@@ -275,7 +276,14 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         researchSettingsButton.setAccessibilityLabel("Recherche-Einstellungen")
         researchSettingsButton.target = self
         researchSettingsButton.action = #selector(showResearchSettings)
-        let providerHeader = NSStackView(views: [providerTitleLabel, providerModelLabel, UI.spacer(), refreshButton, researchSettingsButton])
+        openAiLoginWarningButton.fontSize = 18
+        openAiLoginWarningButton.widthAnchor.constraint(equalToConstant: 30).isActive = true
+        openAiLoginWarningButton.toolTip = "OpenAI-Anmeldung abgelaufen oder nicht vorhanden. Zum erneuten Anmelden öffnen."
+        openAiLoginWarningButton.setAccessibilityLabel("OpenAI-Anmeldung erforderlich")
+        openAiLoginWarningButton.target = self
+        openAiLoginWarningButton.action = #selector(showResearchSettings)
+        openAiLoginWarningButton.isHidden = true
+        let providerHeader = NSStackView(views: [providerTitleLabel, providerModelLabel, UI.spacer(), refreshButton, openAiLoginWarningButton, researchSettingsButton])
         providerHeader.orientation = .horizontal
         providerHeader.spacing = 6
         providerHeader.translatesAutoresizingMaskIntoConstraints = false
@@ -490,6 +498,10 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
     @objc private func showResearchSettings() {
         if researchSettingsWindow == nil { researchSettingsWindow = ResearchSettingsWindowController(viewModel: viewModel) }
         researchSettingsWindow?.showWindow(nil)
+    }
+
+    func openAiLoginStatusChanged() {
+        openAiLoginWarningButton.isHidden = !viewModel.needsOpenAiLogin
     }
     @objc private func browseWorkDir() { viewModel.browseWorkDir() }
     @objc private func showLastError() { viewModel.showLastError() }

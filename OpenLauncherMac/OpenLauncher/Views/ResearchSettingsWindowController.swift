@@ -138,6 +138,10 @@ final class ResearchSettingsWindowController: NSWindowController, NSWindowDelega
             }
             do { try await action() }
             catch {
+                if let failure = error as? ResearchFailure,
+                   case ResearchFailure.authenticationRequired(_) = failure {
+                    viewModel.setOpenAiLoginRequired(true)
+                }
                 status.stringValue = Task.isCancelled ? "Vorgang abgebrochen." :
                     (error as? ResearchFailure)?.localizedDescription ?? "Vorgang fehlgeschlagen. Anmeldung oder Verbindung prüfen."
                 connection.stringValue = "Verbindung nicht bestätigt; gespeicherte Anmeldung bleibt erhalten."
@@ -151,6 +155,7 @@ final class ResearchSettingsWindowController: NSWindowController, NSWindowDelega
         let available = try await service.models()
         try Task.checkCancellation()
         models = available
+        viewModel.setOpenAiLoginRequired(!connected)
         model.removeAllItems()
         model.addItems(withTitles: models.map { $0.id })
         if let index = models.firstIndex(where: { $0.id == settings.model }) { model.selectItem(at: index) }
@@ -234,5 +239,6 @@ final class ResearchSettingsWindowController: NSWindowController, NSWindowDelega
         operation?.cancel()
         reportTask?.cancel()
         reportTask = nil
+        Task { await viewModel.refreshOpenAiLoginStatus() }
     }
 }

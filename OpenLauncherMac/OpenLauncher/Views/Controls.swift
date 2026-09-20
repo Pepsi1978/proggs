@@ -85,6 +85,7 @@ class StyledButton: NSControl {
         case window   // `WindowBtn`
         case close    // `CloseBtn`
         case theme    // `ThemeBtn`
+        case warning  // Oranger Hinweis auf erforderliche Benutzeraktion
     }
 
     private let label = NSTextField(labelWithString: "")
@@ -275,6 +276,12 @@ class StyledButton: NSControl {
             layer?.borderColor = palette.accentLine.cgColor
             layer?.backgroundColor = (isHovered ? palette.hoverBg.flattened(over: base) : palette.accentSoftBg.flattened(over: base)).cgColor
             label.textColor = palette.accent
+        case .warning:
+            layer?.cornerRadius = 7
+            layer?.borderWidth = 1
+            layer?.borderColor = palette.statusWarnFg.cgColor
+            layer?.backgroundColor = (isHovered ? palette.hoverBg.flattened(over: base) : palette.statusWarnBg.flattened(over: base)).cgColor
+            label.textColor = palette.statusWarnFg
         }
         symbolView.contentTintColor = label.textColor
         window?.invalidateCursorRects(for: self)

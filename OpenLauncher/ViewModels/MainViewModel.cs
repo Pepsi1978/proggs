@@ -117,6 +117,7 @@ public sealed partial class MainViewModel : ObservableObject
         _ = RefreshLmStudioModelsAsync();
         WorkDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
         _ = CheckOpenCodeUpdateAsync();
+        _ = RefreshOpenAiLoginStatusAsync();
         _effortTimer.Tick += async (_, _) => await RefreshPeriodicEffortsAsync();
         _effortTimer.Start();
 
@@ -172,6 +173,17 @@ public sealed partial class MainViewModel : ObservableObject
     // untereinander und der Profil-Bereich saesse mit gespeichertem Standard eine Zeile tiefer.
     [ObservableProperty] private bool _hasNoModelDefault = true;
     [ObservableProperty] private bool _canSaveModelDefault;
+    [ObservableProperty] private bool _needsOpenAiLogin;
+
+    public async Task RefreshOpenAiLoginStatusAsync()
+    {
+        try
+        {
+            var required = await CodexResearchService.Instance.GetLoginRequiredAsync(_lifetime.Token);
+            if (required.HasValue) NeedsOpenAiLogin = required.Value;
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+    }
 
     partial void OnSelectedModelChanged(ModelEntry? value)
     {

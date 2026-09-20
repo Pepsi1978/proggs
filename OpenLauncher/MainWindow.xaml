@@ -397,6 +397,13 @@
                     <Button Style="{StaticResource ThemeBtn}" Width="42" Height="33" Content="&#xE72C;" Margin="0,0,8,0"
                             ToolTip="Modelle von OpenRouter und OpenCode Zen aktualisieren"
                             Command="{Binding RefreshModelCatalogCommand}"/>
+                    <Button Style="{StaticResource ThemeBtn}" Width="34" Height="33" Content="!" Margin="0,0,8,0"
+                            FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="19" FontWeight="Bold"
+                            Foreground="{DynamicResource StatusWarnFg}" Background="{DynamicResource StatusWarnBg}"
+                            BorderBrush="{DynamicResource StatusWarnFg}"
+                            Visibility="{Binding NeedsOpenAiLogin, Converter={StaticResource BoolToVisibility}}"
+                            ToolTip="OpenAI-Anmeldung abgelaufen oder nicht vorhanden. Zum erneuten Anmelden öffnen."
+                            AutomationProperties.Name="OpenAI-Anmeldung erforderlich" Click="Settings_Click"/>
                     <Button Style="{StaticResource ThemeBtn}" Width="42" Height="33" Content="&#xE713;" Margin="0,0,8,0"
                             ToolTip="Recherche-Einstellungen" AutomationProperties.Name="Recherche-Einstellungen" Click="Settings_Click"/>
                     <Button x:Name="ThemeBtn" Style="{StaticResource ThemeBtn}" Width="42" Height="33" Content="&#xE706;" Margin="0,0,8,0" ToolTip="Design wechseln" Click="ThemeBtn_Click"/>

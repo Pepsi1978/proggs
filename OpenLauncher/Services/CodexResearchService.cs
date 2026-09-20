@@ -48,6 +48,36 @@ public sealed class CodexResearchService
     public async Task<bool> IsConnectedAsync(CancellationToken ct) =>
         await Task.Run(() => File.Exists(TokenPath), ct).ConfigureAwait(false);
 
+    /// <summary>
+    /// True bedeutet sicher: Anmeldung fehlt oder wird vom Kontozugang abgelehnt.
+    /// Null bedeutet, dass der Status wegen eines vorübergehenden Fehlers nicht geprüft werden konnte.
+    /// </summary>
+    public async Task<bool?> GetLoginRequiredAsync(CancellationToken ct)
+    {
+        if (!await IsConnectedAsync(ct).ConfigureAwait(false)) return true;
+        try
+        {
+            _ = await GetModelsAsync(ct).ConfigureAwait(false);
+            return false;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+        catch (HttpRequestException ex) when (ex.StatusCode is System.Net.HttpStatusCode.BadRequest
+            or System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
+        {
+            return true;
+        }
+        catch (Exception ex) when (ex is InvalidDataException or JsonException or System.ComponentModel.Win32Exception)
+        {
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn(nameof(CodexResearchService), nameof(GetLoginRequiredAsync),
+                "Anmeldestatus vorübergehend nicht prüfbar: " + ex.GetType().Name);
+            return null;
+        }
+    }
+
     public async Task LoginAsync(Action<string, string> onDeviceCode, CancellationToken ct)
     {
         await AuthGate.WaitAsync(ct).ConfigureAwait(false);
