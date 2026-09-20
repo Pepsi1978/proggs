@@ -118,26 +118,38 @@ import de.frank.wecker.design.Material
  *    zwischen „erhaben" und „eingelassen".
  * 4. Innenschatten, oben kräftiger als unten.
  * 5. die Nut, wenn das Design sie führt.
- * 6. die Materialkante zuletzt, sonst verschluckt sie die darüberliegende Schicht.
+ * 6. die Materialkante zuletzt.
+ *
+ * [kante] gibt es nur wegen des Eingabefelds: Dort zeichnet Material3 selbst schon einen
+ * deckenden Rahmen. Beide übereinander sähe man nur an einer Stelle — in der Lücke, die der
+ * Rahmen für die schwebende Beschriftung freilässt. Genau dort stünde die Schattenkante als
+ * dunkles Härchen hinter der Schrift.
  */
 private fun Modifier.vertieftesMaterial(
     form: Shape,
     grund: Color,
     material: Material,
     tiefe: Dp,
+    kante: Boolean = true,
 ): Modifier = this
     .clip(form)
     .background(grund)
     .tiefenVerlauf(material.tiefenOben, material.tiefenUnten, gedrueckt = true)
     .innenSchatten(form, material.innenSchattenAlpha, tiefe = tiefe)
     .then(if (material.nut) Modifier.nut(form, alpha = material.innenSchattenAlpha) else Modifier)
-    .border(
-        1.dp,
-        materialKante(
-            material.kanteLichtFarbe, material.kanteLichtAlpha, material.kanteSchattenAlpha,
-            gedrueckt = true,
-        ),
-        form,
+    .then(
+        if (kante) {
+            Modifier.border(
+                1.dp,
+                materialKante(
+                    material.kanteLichtFarbe, material.kanteLichtAlpha, material.kanteSchattenAlpha,
+                    gedrueckt = true,
+                ),
+                form,
+            )
+        } else {
+            Modifier
+        },
     )
 
 /**
@@ -152,10 +164,13 @@ private fun Modifier.erhabenesMaterial(
     grund: Color,
     material: Material,
     /**
-     * Deckung des Glanzbogens, 0 bedeutet keinen. Er gehört als Parameter hierher und nicht
-     * hinter den Aufruf: Modifier zeichnen in der Reihenfolge der Kette, ein nachgestelltes
-     * `glanzBogen()` läge also **über** der Materialkante und würde sie aufhellen. In
-     * [Knopf3D] steht er aus demselben Grund vor dem `border`.
+     * Deckung des Glanzbogens, 0 bedeutet keinen.
+     *
+     * Als Parameter und nicht als nachgestellter Aufruf, damit die Schichtfolge an einer
+     * Stelle steht. Zur Einordnung, weil es leicht falsch verstanden wird: Die `onDrawBehind`-
+     * Schichten zeichnen in der Reihenfolge der Kette, `border` dagegen zeichnet **immer**
+     * über seinen gesamten Inhalt — ein `glanzBogen()` hinter dem Aufruf läge also ohnehin
+     * unter der Kante. Hier geht es allein um Lesbarkeit, nicht um eine Korrektur.
      */
     glanz: Float = 0f,
 ): Modifier = this
@@ -234,7 +249,9 @@ fun Eingabefeld(
                 // Etwas flacher als das Material vorgibt: Die untere Hälfte der Beschriftung
                 // sitzt genau auf dem kräftigsten Streifen des Innenschattens und würde sonst
                 // an Kontrast verlieren.
-                .vertieftesMaterial(form, gold.eingabefeld, material, tiefe = 4.dp),
+                // Ohne eigene Kante: Den Rahmen zeichnet das Textfeld selbst, mit der Lücke
+                // für die Beschriftung. Siehe [vertieftesMaterial].
+                .vertieftesMaterial(form, gold.eingabefeld, material, tiefe = 4.dp, kante = false),
         )
         OutlinedTextField(
             value = wert,
