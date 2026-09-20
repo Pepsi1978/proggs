@@ -73,7 +73,16 @@ private const val HOEHENANTEIL = 0.82f
 private val RAND_LUFT = 8.dp
 
 /** Breitengrenze: auf dem Telefon füllt der Dialog die Zeile, auf dem aufgeklappten Foldable nicht. */
-private val MAX_BREITE = 560.dp
+internal val DIALOG_MAX_BREITE = 560.dp
+
+/**
+ * Der übliche waagerechte Außenabstand des Rahmens — Rand zum Bildschirmrand, kein Innenabstand.
+ *
+ * Steht hier als einzige Quelle, weil Picker.kt mit derselben Zahl rechnet und sie für seine beiden
+ * Dialoge auch unterschreiten darf (siehe [DesignDialog] `randSeitlich`). Zwei gespiegelte Konstanten
+ * in zwei Dateien liefen sonst irgendwann auseinander.
+ */
+internal val DIALOG_RAND_SEITLICH = 24.dp
 
 /**
  * Die Höhe, auf die sich ein Dialograhmen deckelt — zwei Grenzen, die kleinere gewinnt:
@@ -116,6 +125,16 @@ internal fun dialogHoechstHoehe(anteil: Float = HOEHENANTEIL): Dp {
  * [dialogHoechstHoehe]. Der Parameter steht **vor** [inhalt], damit ein nachgestelltes
  * Inhalts-Lambda (wie in [DesignTextDialog]) weiterhin auf [inhalt] fällt.
  *
+ * [randSeitlich] ist der Abstand zum Bildschirmrand, [inhaltRandSeitlich] überschreibt — nur für die
+ * Inhaltsspalte — den designabhängigen Innenabstand. Beide haben Standardwerte; für alle
+ * bestehenden Aufrufer ändert sich damit nichts. Gebraucht werden sie von den Pickern in Picker.kt:
+ * Der Monatskalender von Material 3 ist mit 360 dp breiter, als ein 360-dp-Telefon nach Abzug des
+ * gewohnten Rahmens (2 × 24 dp Rand + 2 × 20 dp innen = 88 dp) übrig lässt, und er schrumpft nicht.
+ * Er gibt deshalb genau so viel Rahmen ab, wie er für seine Breite braucht — mehr nicht.
+ *
+ * Wichtig: Titelzeile und Knopfzeile behalten ihren gewohnten Innenabstand. Nur so bleibt die
+ * Höhenrechnung in `dialogInhaltsHoehe()` (Picker.kt) gültig, die genau diese beiden Zeilen abzieht.
+ *
  * Die Scrollhoheit bleibt beim Aufrufer: [inhalt] bekommt eine nach oben begrenzte Spalte, darf
  * darin selbst eine `LazyColumn` aufspannen. Der Rahmen legt **kein** eigenes `verticalScroll`
  * darüber — sonst stünde gleichachsiges Scrollen ineinander und die Messung liefe in
@@ -128,6 +147,8 @@ fun DesignDialog(
     bestaetigung: @Composable () -> Unit,
     abbruch: (@Composable () -> Unit)? = null,
     hoehenAnteil: Float = HOEHENANTEIL,
+    randSeitlich: Dp = DIALOG_RAND_SEITLICH,
+    inhaltRandSeitlich: Dp? = null,
     inhalt: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val tokens = LocalDesignTokens.current
@@ -161,8 +182,8 @@ fun DesignDialog(
         // danach begrenzt `widthIn` die Restbreite — erst dann darf `fillMaxWidth` sie ausfüllen.
         // Umgekehrt käme `fillMaxWidth` mit einer festen Breite an und `widthIn` bliebe wirkungslos.
         val rahmen = Modifier
-            .padding(horizontal = 24.dp)
-            .widthIn(max = MAX_BREITE)
+            .padding(horizontal = randSeitlich)
+            .widthIn(max = DIALOG_MAX_BREITE)
             .fillMaxWidth()
             .heightIn(max = maxHoehe)
             .graphicsLayer {
@@ -172,7 +193,13 @@ fun DesignDialog(
             }
 
         val koerper: @Composable () -> Unit = {
-            DialogKoerper(titel = titel, bestaetigung = bestaetigung, abbruch = abbruch, inhalt = inhalt)
+            DialogKoerper(
+                titel = titel,
+                bestaetigung = bestaetigung,
+                abbruch = abbruch,
+                inhaltRandSeitlich = inhaltRandSeitlich,
+                inhalt = inhalt,
+            )
         }
 
         // Das Dialogfenster selbst ist durchsichtig. Deckend wird die Fläche durch die Gestalt:
@@ -240,6 +267,7 @@ private fun DialogKoerper(
     titel: String,
     bestaetigung: @Composable () -> Unit,
     abbruch: (@Composable () -> Unit)?,
+    inhaltRandSeitlich: Dp?,
     inhalt: (@Composable ColumnScope.() -> Unit)?,
 ) {
     val gold = LocalGold.current
@@ -258,7 +286,9 @@ private fun DialogKoerper(
                 Modifier
                     .fillMaxWidth()
                     .weight(1f, fill = false)
-                    .padding(horizontal = innen, vertical = 12.dp),
+                    // Nur der Inhalt darf seinen seitlichen Abstand überschreiben; der senkrechte
+                    // bleibt, damit die Höhenrechnung in Picker.kt weiterhin stimmt.
+                    .padding(horizontal = inhaltRandSeitlich ?: innen, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 content = inhalt,
             )

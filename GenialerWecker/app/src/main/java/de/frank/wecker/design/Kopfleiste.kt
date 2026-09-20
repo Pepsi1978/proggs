@@ -21,17 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.Text
 import de.frank.genialeideen.ui.IdeenKopfleiste
 import de.frank.genialeideen.ui.KopfKnopf
+import de.frank.genialeideen.ui.KopfTitel
 import de.frank.genialeideen.ui.theme.IdeenSchriftFest
 import de.frank.genialeideen.ui.theme.LocalGold
 
@@ -78,14 +74,17 @@ private fun OrbitLeiste(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             voran?.invoke()
-            // Versalien mit Sperrung brauchen mehr Platz als die sonstige Kopfzeile; zwei Zeilen
-            // verhindern, dass „WECKER BEARBEITEN“ bei großer Schrift früh gekürzt wird.
-            Text(
-                titel.uppercase(java.util.Locale.GERMAN),
-                Modifier.weight(1f).semantics { heading() },
-                fontFamily = IdeenSchriftFest,
-                style = MaterialTheme.typography.labelLarge,
-                color = gold.primaer, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            // Versalien in fester Schrift brauchen mehr Platz als jede andere Kopfzeile:
+            // „WECKER BEARBEITEN“ sind 17 Zeichen ohne schmale Buchstaben. Beides bleibt —
+            // [KopfTitel] misst mit genau diesem Stil und verkleinert lieber die Schrift, als
+            // Orbit seinen Charakter zu nehmen. Die Untergrenze liegt tiefer als sonst, weil
+            // labelLarge mit 14 sp ohnehin klein anfängt.
+            KopfTitel(
+                titel = titel.uppercase(java.util.Locale.GERMAN),
+                stil = MaterialTheme.typography.labelLarge.copy(fontFamily = IdeenSchriftFest),
+                farbe = gold.primaer,
+                modifier = Modifier.weight(1f),
+                kleinste = 11.sp,
             )
             // Dieselben Vektorsymbole wie in den anderen drei Designs. Vorher standen hier die
             // Schriftzeichen ☀ ☾ ⚙ — die fallen je nach Gerät als farbiges Emoji aus der
@@ -112,13 +111,14 @@ private fun RuhigeLeiste(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             voran?.invoke()
-            Text(
-                titel,
-                Modifier.weight(1f).semantics { heading() },
-                style = MaterialTheme.typography.titleLarge.copy(
+            // Bei 16 dp Rand bleiben im Editor auf 320 dp dieselben 144 dp wie in Schlicht.
+            KopfTitel(
+                titel = titel,
+                stil = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Medium, letterSpacing = 0.3.sp,
                 ),
-                color = gold.textPrimaer, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                farbe = gold.textPrimaer,
+                modifier = Modifier.weight(1f),
             )
             LeistenKnoepfe(themeWahl, aufThemeTipp, aufEinstellungen)
         }
@@ -149,11 +149,13 @@ private fun BogenLeiste(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             voran?.invoke()
-            Text(
-                titel,
-                Modifier.weight(1f).semantics { heading() },
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = gold.textPrimaer, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            // Traumraum hat mit 18 dp den breitesten Rand und damit die engste Titelspalte:
+            // auf 320 dp bleiben im Editor 140 dp.
+            KopfTitel(
+                titel = titel,
+                stil = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                farbe = gold.textPrimaer,
+                modifier = Modifier.weight(1f),
             )
             LeistenKnoepfe(themeWahl, aufThemeTipp, aufEinstellungen)
         }

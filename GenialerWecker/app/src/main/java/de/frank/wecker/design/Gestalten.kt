@@ -136,15 +136,24 @@ object TraumraumGestalt : WeckerGestalt {
     @Composable override fun Motiv(modifier: Modifier) {
         // Der Mond auf dem Kissen ist noch im alten Rosé gemalt — auf der warmen Glutkuppel wäre
         // das genau der Rückfall in die abgelöste Pflaume-/Rosé-Welt. Der multiplizierende Filter
-        // nimmt den Rotstich heraus und lässt das Objekt bernsteinfarben wirken; weil er die
-        // vorhandenen Helligkeiten multipliziert statt sie zu ersetzen, bleibt die Plastik
-        // vollständig erhalten. Ein neu erzeugtes Bild wäre die saubere Lösung.
+        // nimmt den Rotstich heraus; weil er die vorhandenen Helligkeiten multipliziert statt sie
+        // zu ersetzen, bleibt die Plastik vollständig erhalten. Ein neu erzeugtes Bild wäre die
+        // saubere Lösung.
+        //
+        // Die Tönung ist modusabhängig, weil dieselbe Farbe auf den beiden Kuppeln sehr
+        // unterschiedlich wirkt. Gemessen gegen die jeweilige Kuppelfarbe, mit dem Mittelwert
+        // der deckenden Bildpunkte (#B68D7F):
+        //   dunkle Kuppel #342519 — #FFC898 ergibt 3,73:1, dunklere Tönungen nur 2,1 bis 2,5:1
+        //   helle Kuppel  #EFD5C0 — #FFC898 ergibt magere 2,81:1, #C87A45 dagegen 5,02:1
+        // Im Dunkeln bleibt es deshalb beim warmen Bernstein; im Hellen tritt eine tiefere
+        // Tönung an seine Stelle, damit sich das Kissen von der Pfirsichfläche absetzt.
+        val toenung = if (LocalGold.current.istDunkel) Color(0xFFFFC898) else Color(0xFFC87A45)
         Image(
             painter = painterResource(R.drawable.design_kissen_frei),
             contentDescription = null,
             modifier = if (modifier == Modifier) Modifier.size(128.dp) else modifier,
             contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(Color(0xFFFFC898), BlendMode.Modulate),
+            colorFilter = ColorFilter.tint(toenung, BlendMode.Modulate),
         )
     }
 

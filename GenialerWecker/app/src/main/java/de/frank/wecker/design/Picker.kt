@@ -64,12 +64,6 @@ import java.time.ZoneOffset
  */
 private const val PICKER_HOEHENANTEIL = 1f
 
-/** Spiegelt `MAX_BREITE` aus Dialoge.kt — dieselbe Auflage wie beim Höhenanteil. */
-private val DIALOG_MAX_BREITE = 560.dp
-
-/** Der waagerechte Außenabstand des Dialograhmens aus Dialoge.kt: 24 dp je Seite. */
-private val DIALOG_RAND = 24.dp
-
 /**
  * Höhenbedarf des **stehenden** Zifferblatts. Nachgerechnet:
  * Zeitanzeige 80 dp (`TimePickerTokens.TimeSelectorContainerHeight`)
@@ -98,6 +92,14 @@ private val UHR_QUER_BEDARF = 296.dp
 private val UHR_QUER_BREITE = 508.dp
 
 /**
+ * Breitenbedarf des **stehenden** Zifferblatts: 256 dp (`TimePickerTokens.ClockDialContainerSize`).
+ * Die Zeitanzeige darüber ist mit 96 + 24 + 96 = 216 dp schmaler, das Zifferblatt gibt also das Maß.
+ * Auf den gängigen Telefonbreiten wird diese Schwelle nie scharf (320 dp Schirm lassen 272 dp Inhalt
+ * übrig); sie fängt geteilte Fenster und sehr schmale Schirme ab.
+ */
+private val UHR_HOCH_BREITE = 256.dp
+
+/**
  * Höhenbedarf des Monatskalenders. Nachgerechnet:
  * Kopfbereich mindestens 120 dp (`DatePickerModalTokens.HeaderContainerHeight`; der Wert wird
  * unabhängig davon gesetzt, ob ein `title` übergeben wurde)
@@ -114,6 +116,26 @@ private val UHR_QUER_BREITE = 508.dp
  * über den Rand hinaus. Es gibt kein Zurechtstutzen, deshalb muss die Schwelle stimmen.
  */
 private val KALENDER_BEDARF = 512.dp
+
+/**
+ * **Breiten**bedarf des Monatskalenders — bis hierher wurde nur die Höhe geprüft, und genau das war
+ * die Lücke. Nachgerechnet gegen Material 3 1.3.1 (aus dem AAR im Gradle-Cache ausgelesen, nicht
+ * geschätzt):
+ * ```
+ *   7 Spalten × 48 dp   `RecommendedSizeForAccessibility`, als `requiredSize` je Tagesfeld = 336 dp
+ * + 2 × 12 dp           `DatePickerHorizontalPadding`, der eigene Rand der Wochen- und Tageszeilen
+ * = 360 dp
+ * ```
+ * Gegenprobe: `DatePickerModalTokens.ContainerWidth` ist ebenfalls 360 dp, und `DateEntryContainer`
+ * setzt genau diesen Wert als `sizeIn(minWidth = …)`. Die Rechnung geht also auf.
+ *
+ * Was bei weniger Breite passiert: `sizeIn` beugt sich den eingehenden Grenzen, der Kalender wird
+ * also schmaler gemessen — die Tagesfelder darin aber **nicht**, `requiredSize` ignoriert jede
+ * Vorgabe. Die Tageszeile ordnet mit `Arrangement.SpaceEvenly` an; bleibt zu wenig Platz, wird der
+ * Zwischenraum negativ und die Tagesfelder schieben sich übereinander und über den Rand hinaus.
+ * Das sieht auf den ersten Blick noch nach Kalender aus, die Tippflächen überlappen sich aber.
+ */
+private val KALENDER_BREITE = 360.dp
 
 /**
  * Der Platz, der dem Dialog**inhalt** tatsächlich bleibt — nicht die rohe Bildschirmhöhe.
@@ -177,7 +199,9 @@ private fun dialogInhaltsHoehe(): Dp {
 
     val knopf = 26.dp + with(dichte) { 20.sp.toDp() }
     // Ab etwa anderthalbfacher Systemschrift bricht die `FlowRow` in Dialoge.kt um: Auf einem
-    // 360-dp-Telefon bleiben der Knopfzeile rund 272 dp (360 − 2 × 24 Rand − 2 × 20 innen),
+    // 360-dp-Telefon bleiben der Knopfzeile rund 272 dp (360 − 2 × 24 Rand − 2 × 20 innen; gibt der
+    // Rahmen für den Kalender Rand ab, werden es mehr — die Annahme liegt dann auf der sicheren
+    // Seite, weil sie zu viel Höhe abzieht, nie zu wenig),
     // „Abbrechen" und „Übernehmen" brauchen bei 1,5-facher Schrift zusammen aber schon rund
     // 350 dp. Dann zählt die Knopfhöhe doppelt, dazu 8 dp Zeilenabstand.
     val knopfZeilen = if (dichte.fontScale >= 1.5f) 2 else 1
@@ -190,16 +214,51 @@ private fun dialogInhaltsHoehe(): Dp {
 }
 
 /**
- * Die Breite, die dem Dialoginhalt bleibt: Der Rahmen zieht 24 dp Außenabstand je Seite ab und ist
- * auf 560 dp gedeckelt; davon gehen noch die seitlichen Innenabstände der Inhaltsspalte ab.
- * Gebraucht wird das nur für die liegende Fassung der Uhr, die in die Breite baut.
+ * Der seitliche Rand, den ein Picker-Dialog sich noch leisten kann, ohne [mindestBreite] zu
+ * unterschreiten — und zwar nur so wenig wie nötig, nie weniger als nötig.
+ *
+ * Warum überhaupt: Der gewohnte Rahmen zieht 24 dp Außenabstand je Seite ab, dazu 20 dp Innenabstand
+ * je Seite (bei Orbit 14 dp). Vom Schirm bleiben dem Inhalt damit:
+ * ```
+ *   320 dp → 320 − 48 − 40 = 232 dp
+ *   360 dp → 360 − 48 − 40 = 272 dp
+ *   393 dp → 393 − 48 − 40 = 305 dp
+ *   412 dp → 412 − 48 − 40 = 324 dp
+ * ```
+ * Der Monatskalender braucht 360 dp ([KALENDER_BREITE]) und schrumpft nicht. Auf **keinem** dieser
+ * Telefone hätte er gepasst — auf dem Prüfgerät (475 dp breit) dagegen schon, dort blieben 387 dp.
+ * Deshalb wird nicht einfach auf die Tippeingabe zurückgefallen, sondern zuerst der Rahmen dünner
+ * gezogen. Mit `inhaltRandSeitlich = 0` (die Material-Picker bringen ihren eigenen Innenabstand mit,
+ * ein zweiter läge nur doppelt darüber) und diesem Rand ergibt sich:
+ * ```
+ *   320 dp → Rand 0    → 320 dp Inhalt → zu schmal, Tippeingabe
+ *   360 dp → Rand 0    → 360 dp Inhalt → Kalender, Karte liegt randlos an
+ *   393 dp → Rand 16,5 → 360 dp Inhalt → Kalender
+ *   412 dp → Rand 24   → 364 dp Inhalt → Kalender, Optik unverändert
+ *   475 dp → Rand 24   → 427 dp Inhalt → Kalender, Optik unverändert (Prüfgerät)
+ * ```
+ * Die Deckelung auf [DIALOG_RAND_SEITLICH] ist der Punkt: Wo der Platz reicht, sieht der Dialog
+ * genauso aus wie jeder andere. Erst darunter gibt er Rand ab, und ab 360 dp Schirmbreite abwärts
+ * liegt die Karte bündig an den Bildschirmkanten — bewusst in Kauf genommen, weil ein vollständiger
+ * Kalender mehr wert ist als 24 dp Luft.
  */
 @Composable
-private fun dialogInhaltsBreite(): Dp {
-    val innen = if (LocalDesignTokens.current.design == Design.ORBIT) 14.dp else 20.dp
-    val rahmen = minOf(LocalConfiguration.current.screenWidthDp.dp - DIALOG_RAND * 2, DIALOG_MAX_BREITE)
-    return (rahmen - innen * 2).coerceAtLeast(0.dp)
-}
+private fun pickerRand(mindestBreite: Dp): Dp =
+    ((LocalConfiguration.current.screenWidthDp.dp - mindestBreite) / 2).coerceIn(0.dp, DIALOG_RAND_SEITLICH)
+
+/**
+ * Die Breite, die dem Dialoginhalt bei diesem [rand] bleibt. Der Rahmen deckelt sich zusätzlich auf
+ * [DIALOG_MAX_BREITE]; der seitliche Innenabstand entfällt, weil die Picker-Dialoge unten
+ * `inhaltRandSeitlich = 0.dp` übergeben. Dieselbe Zahl geht an [DesignDialog] und in die Schwelle —
+ * sie können nicht auseinanderlaufen.
+ *
+ * Im Querformat ist `screenWidthDp` ab API 35 die volle Fensterbreite, eine seitliche Navigations-
+ * leiste ist also **nicht** abgezogen. Für die liegende Uhr fängt das die Deckelung auf 560 dp ab
+ * (bei 800 dp Schirm bleiben 560 dp, gebraucht werden 508 dp); exakt ist die Rechnung dort nicht.
+ */
+@Composable
+private fun pickerInhaltsBreite(rand: Dp): Dp =
+    minOf(LocalConfiguration.current.screenWidthDp.dp - rand * 2, DIALOG_MAX_BREITE).coerceAtLeast(0.dp)
 
 /** Uhrzeitwahl in der Farbwelt des Designs. Immer 24-Stunden-Format. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -216,9 +275,19 @@ fun ZeitWahlDialog(stunde: Int, minute: Int, aufAbbruch: () -> Unit, aufWahl: (I
     // muss hier stehen — sonst rechnet die Schwelle mit der Fassung, die gar nicht gezeichnet wird.
     val quer = konfig.screenHeightDp < konfig.screenWidthDp
     val raum = dialogInhaltsHoehe()
-    val breite = dialogInhaltsBreite()
+    // So viel Breite braucht die Fassung, die Material zeichnen würde — danach richtet sich, wie
+    // viel Rand der Rahmen noch abgeben kann.
+    val mindestBreite = if (quer) UHR_QUER_BREITE else UHR_HOCH_BREITE
+    val schmalerRand = pickerRand(mindestBreite)
+    val breite = pickerInhaltsBreite(schmalerRand)
     val platzFuerZifferblatt =
-        if (quer) raum >= UHR_QUER_BEDARF && breite >= UHR_QUER_BREITE else raum >= UHR_HOCH_BEDARF
+        if (quer) raum >= UHR_QUER_BEDARF && breite >= UHR_QUER_BREITE
+        else raum >= UHR_HOCH_BEDARF && breite >= UHR_HOCH_BREITE
+    // Reicht es trotzdem nicht, steht die schmale Tippeingabe im Dialog — dann darf er seinen
+    // gewohnten Rand behalten. Der Rand hängt bewusst nicht am Zifferblatt-Platz „gerade eben",
+    // sondern an derselben Entscheidung, die auch den Inhalt wählt: beide sind für eine
+    // Bildschirmlage fest, die Rahmenbreite springt also nicht.
+    val rand = if (platzFuerZifferblatt) schmalerRand else DIALOG_RAND_SEITLICH
 
     val farben = TimePickerDefaults.colors(
         clockDialColor = gold.flaecheErhoeht,
@@ -246,6 +315,10 @@ fun ZeitWahlDialog(stunde: Int, minute: Int, aufAbbruch: () -> Unit, aufWahl: (I
         abbruch = { StillerKnopf("Abbrechen", aufAbbruch) },
         // Das Zifferblatt kann nicht schrumpfen; der Rahmen gibt ihm alles bis zur harten Grenze.
         hoehenAnteil = PICKER_HOEHENANTEIL,
+        randSeitlich = rand,
+        // `TimePicker` und `TimeInput` bringen ihren eigenen Innenabstand mit und stehen mittig;
+        // ein zweiter Innenabstand nähme nur Breite weg. Titel und Knopfzeile behalten ihren.
+        inhaltRandSeitlich = 0.dp,
         inhalt = {
             // Sicherheitsnetz, falls die Rechnung oben trotzdem zu knapp liegt:
             // `weight(1f, fill = false)` gibt dem Inhalt nur den Rest der gedeckelten Dialoghöhe —
@@ -289,7 +362,18 @@ fun DatumWahlDialog(
 ) {
     val gold = LocalGold.current
     val heute = remember { LocalDate.now() }
-    val platzFuerKalender = dialogInhaltsHoehe() >= KALENDER_BEDARF
+    // Zwei Maße, nicht eines: Bis hierher entschied allein die Höhe, und auf einem 360-dp-Telefon
+    // erschien deshalb ein Kalender, der mit 360 dp gar nicht in die 272 dp Inhaltsbreite passte —
+    // seine Tagesfelder sind `requiredSize`, sie schoben sich übereinander (siehe
+    // [KALENDER_BREITE]). Der Rahmen gibt jetzt erst so viel Rand ab, wie der Kalender braucht,
+    // und nur wenn das immer noch nicht reicht, fällt die Wahl auf die Tippeingabe.
+    val schmalerRand = pickerRand(KALENDER_BREITE)
+    val platzFuerKalender =
+        dialogInhaltsHoehe() >= KALENDER_BEDARF && pickerInhaltsBreite(schmalerRand) >= KALENDER_BREITE
+    // Ohne Kalender steht nur die schmale Tippeingabe im Dialog — dann behält er seinen
+    // gewohnten Rand. Der Wert hängt am Platz, nicht am gerade gewählten Modus: Beim Umschalten
+    // von Hand soll die Rahmenbreite nicht springen.
+    val rand = if (platzFuerKalender) schmalerRand else DIALOG_RAND_SEITLICH
 
     // Der Jahresbereich ist **keine** fachliche Grenze — er sagt nur, was der Kalender überhaupt
     // anbietet. Basis ist deshalb der regulär unterstützte Bereich von Material 3
@@ -327,15 +411,26 @@ fun DatumWahlDialog(
     val zustand = rememberDatePickerState(
         initialSelectedDateMillis = datum.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
         yearRange = jahre,
-        // Bei wenig Platz startet die Wahl in der Tippeingabe; der Umschalter bleibt,
-        // sodass der Kalender bei genug Platz weiterhin einen Tipp entfernt ist.
+        // Bei wenig Platz startet die Wahl in der Tippeingabe; dort verschwindet dann auch der
+        // Umschalter (`showModeToggle` unten), damit der zu große Kalender gar nicht erst
+        // erreichbar ist.
         initialDisplayMode = if (platzFuerKalender) DisplayMode.Picker else DisplayMode.Input,
         selectableDates = waehlbar,
     )
 
     // `initialDisplayMode` greift nur beim Anlegen, der Modus selbst wird über die Drehung hinweg
     // gesichert. Ohne diesen Nachzug stünde nach dem Drehen ins Querformat wieder der Kalender da —
-    // abgeschnitten. Der Effekt hängt allein am Platz, ein späteres Umschalten von Hand bleibt.
+    // abgeschnitten.
+    //
+    // Dieser Effekt allein hat nicht gereicht, und das war die zweite Engstelle: Er läuft nur, wenn
+    // sich [platzFuerKalender] **ändert**. Der Umschalter stand aber immer da, der Nutzer konnte den
+    // Kalender im Querformat also jederzeit wieder einschalten — der Wert änderte sich dabei nicht,
+    // der Effekt lief nicht erneut, und die 512 dp Kalenderhöhe standen in rund 344 dp Fensterhöhe
+    // minus Rahmen. Gescrollt werden darf im Kalendermodus nicht (Jahresauswahl, siehe unten),
+    // also verschwindet stattdessen der Umschalter: `showModeToggle = platzFuerKalender`.
+    // Material blendet damit nur das Symbol in der Kopfzeile aus; `displayMode` bleibt von hier aus
+    // setzbar, dieser Effekt arbeitet unverändert weiter. Abbrechen und Übernehmen stehen in der
+    // Knopfzeile des Rahmens und sind davon ohnehin nicht berührt.
     LaunchedEffect(platzFuerKalender) {
         if (!platzFuerKalender && zustand.displayMode == DisplayMode.Picker) zustand.displayMode = DisplayMode.Input
     }
@@ -389,6 +484,11 @@ fun DatumWahlDialog(
         abbruch = { StillerKnopf("Abbrechen", aufAbbruch) },
         // Derselbe Anteil, mit dem `dialogInhaltsHoehe()` oben die Schwelle gerechnet hat.
         hoehenAnteil = PICKER_HOEHENANTEIL,
+        // Und dieselbe Breitenrechnung, mit der `platzFuerKalender` entschieden wurde.
+        randSeitlich = rand,
+        // Der `DatePicker` polstert sich mit 12 dp je Seite selbst (`DatePickerHorizontalPadding`);
+        // ein zweiter Innenabstand käme nur oben drauf und nähme dem Raster seine 360 dp.
+        inhaltRandSeitlich = 0.dp,
         inhalt = {
             // `weight(1f, fill = false)` hält die Knopfzeile auch dann im Dialog, wenn der Kalender
             // mehr Platz haben möchte, als übrig ist.
@@ -399,9 +499,10 @@ fun DatumWahlDialog(
             // ineinander. Material begrenzt die Höhe dieses Gitters an seiner Aufrufstelle zwar
             // selbst (`requiredHeight(48 dp × 6 − 56 dp)`), die Messung liefe also nicht in
             // „infinity constraints" — darauf bauen wir aber nicht: Der Gestenkonflikt bliebe, und
-            // die Auflage kann mit der nächsten Material-Version fallen. Im Kalendermodus ist
-            // deshalb allein die Schwelle oben der Schutz, und sie ist gegen die echten
-            // Material-Maße gerechnet.
+            // die Auflage kann mit der nächsten Material-Version fallen. Im Kalendermodus sind
+            // deshalb allein die beiden Schwellen oben der Schutz — Höhe **und** Breite, beide
+            // gegen die echten Material-Maße gerechnet — und der Umschalter, der bei zu wenig
+            // Platz gar nicht erst erscheint.
             //
             // In der Tippeingabe dagegen gibt es keinen inneren Scroller, und genau dort geht die
             // Bildschirmtastatur auf. Der Scroll fängt ab, was die Schwelle nicht sehen kann:
@@ -417,7 +518,9 @@ fun DatumWahlDialog(
                     .then(if (eingabe) Modifier.verticalScroll(scrollZustand) else Modifier),
                 // Der Dialog trägt bereits seine Überschrift; eine zweite wäre doppelt.
                 title = null,
-                showModeToggle = true,
+                // Kein Platz, kein Umschalter: Ein Modus, der nicht vollständig auf den Schirm
+                // passt, darf auch nicht wählbar sein (siehe der Effekt weiter oben).
+                showModeToggle = platzFuerKalender,
                 colors = farben,
             )
         },

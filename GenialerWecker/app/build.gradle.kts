@@ -12,9 +12,9 @@ android {
         applicationId = "de.frank.genialerwecker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 54
-        versionName = "1.1.57"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"20.09.2026, 11:28 Uhr\"")
+        versionCode = 55
+        versionName = "1.1.58"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"20.09.2026, 11:56 Uhr\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {

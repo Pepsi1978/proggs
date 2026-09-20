@@ -509,8 +509,11 @@ private fun BereitZeile(
             null, tint = if (daten.bereit) farbeBereit else farbeOffen,
             modifier = Modifier.size(15.dp),
         )
-        Text(text, Modifier.padding(start = 6.dp), style = stil,
-            color = if (daten.bereit) farbeBereit else farbeOffen, maxLines = 1)
+        // Ohne Kürzungszeichen und ohne Breitenvorgabe schnitt „2 Freigaben fehlen" bei
+        // vergrößerter Systemschrift still ab — man sah nicht einmal, dass etwas fehlt.
+        Text(text, Modifier.weight(1f, fill = false).padding(start = 6.dp), style = stil,
+            color = if (daten.bereit) farbeBereit else farbeOffen,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -731,41 +734,63 @@ private fun SchmalerHero(
 ) {
     val gold = LocalGold.current
     LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = true) {
-        Row(
+        // Vorher standen Uhr, Terminspalte und die Aktionsreihe in **einer** Zeile, wobei nur die
+        // Terminspalte gewichtet war. Uhr und die lange Aktion „Schlummern beenden" nahmen sich
+        // die Breite zuerst; auf 320 bis 360 dp blieb vom Termin fast nichts übrig. Jetzt stehen
+        // die Aktionen unter der Zeile, und der Termin behält die Breite, die er braucht.
+        Column(
             Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            GedeckelteSchrift {
-                Text(formatClock(daten.now), fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                    fontSize = uhrGroesse(daten.stufe), color = gold.primaer, maxLines = 1, softWrap = false)
-            }
-            Column(
-                Modifier.weight(1f).then(
-                    if (daten.nextAlarm != null) Modifier.clickable(
-                        onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    if (daten.next == null) "Kein Wecker aktiv"
-                    else "${terminAnzeige(daten.now, daten.next).einzeilig}${daten.nextName?.let { " · $it" } ?: ""}",
-                    style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-                if (daten.next != null) Text("in ${remainingLong(daten.next - daten.now)}",
-                    style = MaterialTheme.typography.bodySmall, color = gold.primaer,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                GedeckelteSchrift {
+                    // Auch hier gegen den echten Platz gemessen: Die Uhr darf die Terminspalte
+                    // nicht auffressen, sondern gibt selbst nach.
+                    val groesse = passendeUhrGroesse(
+                        daten.breite - HERO_AUSSEN * 2 - 28.dp - textMindest(),
+                        uhrGroesse(daten.stufe), zahlSchrift(), zahlGewicht(),
+                    )
+                    Text(formatClock(daten.now), fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                        fontSize = groesse, color = gold.primaer, maxLines = 1, softWrap = false)
+                }
+                Column(
+                    Modifier.weight(1f).then(
+                        if (daten.nextAlarm != null) Modifier.clickable(
+                            onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
+                ) {
+                    Text(
+                        if (daten.next == null) "Kein Wecker aktiv"
+                        else "${terminAnzeige(daten.now, daten.next).einzeilig}${daten.nextName?.let { " · $it" } ?: ""}",
+                        style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                    if (daten.next != null) Text("in ${remainingLong(daten.next - daten.now)}",
+                        style = MaterialTheme.typography.bodySmall, color = gold.primaer,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
-            // „Wecken" stand hier früher und war irreführend: Die Handlung entfernt den
-            // Schlummertermin und plant den Wecker regulär neu — sie löst kein sofortiges
-            // Klingeln aus. Wer das falsch versteht, verliert seinen Schlummeralarm.
-            // Der längere Text darf umbrechen, statt die Zeile zu sprengen.
-            FlowRow(
+            // Eigene Zeile für die Handlungen. „Schlummern beenden" ist bewusst ausgeschrieben —
+            // die Handlung entfernt den Schlummertermin und plant regulär neu, sie weckt nicht
+            // sofort. Eine Kurzform wie „Wecken" wäre irreführend und könnte den Schlummeralarm
+            // kosten. Bei sehr schmalen Geräten bricht die Reihe um, statt zu drängeln.
+            // Bewusst eine Row mit Gewicht statt einer FlowRow: Diese Fassung greift auch
+            // hochkant bei sehr großer Systemschrift, und dort ist „Schlummern beenden" breiter
+            // als die ganze Karte. In der FlowRow liefe der Knopftext über, weil er ohne
+            // Breitenvorgabe misst. Mit `weight(1f, fill = false)` bekommt er eine Obergrenze
+            // und bricht innerhalb des Knopfes auf zwei Zeilen um.
+            Row(
+                Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (daten.nextIsSnooze) StillerKnopf("Schlummern beenden", aufSchlummernBeenden, hervorgehoben = true)
-                GoldKnopf("Neu", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
+                GoldKnopf("Neuer Wecker", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
                     symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
+                if (daten.nextIsSnooze) StillerKnopf("Schlummern beenden", aufSchlummernBeenden,
+                    Modifier.weight(1f, fill = false), hervorgehoben = true)
             }
         }
     }
@@ -898,7 +923,11 @@ private fun TraumraumHero(
         }
         // Die Perle überlappt die Kuppel. Der Versatz wird aus der belegten Höhe herausgerechnet,
         // damit darunter keine tote Fläche entsteht.
-        Row(
+        // Die Aktion sitzt **in** der Perle, nicht daneben. Vorher stand sie als runder Knopf
+        // rechts außerhalb auf dem Seitenhintergrund, während die Kuppel darüber endete — sie
+        // wirkte herausgefallen, und rechts neben der Perle blieb eine leere Kuppelecke stehen.
+        // Jetzt überlappt eine einzige geschlossene Fläche die Kuppel.
+        Box(
             Modifier.fillMaxWidth()
                 .layout { messbar, grenzen ->
                     val platz = messbar.measure(grenzen)
@@ -906,18 +935,35 @@ private fun TraumraumHero(
                     layout(platz.width, (platz.height - hub).coerceAtLeast(0)) { platz.place(0, -hub) }
                 }
                 .padding(horizontal = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Box(Modifier.weight(1f)) {
-                Perle {
+            Perle {
+                // Auf schmalen Geräten steht die Aktion unter dem Termin statt daneben; die
+                // Schwelle rechnet mit der echten Innenbreite der Perle.
+                val innen = daten.breite - HERO_AUSSEN * 2 - 36.dp - 32.dp
+                val nebeneinander = innen >= textMindest() + 60.dp && !daten.nextIsSnooze
+                if (nebeneinander) Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(Modifier.weight(1f)) {
+                        TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer)
+                    }
+                    GoldKnopf("＋", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen")
+                } else {
                     TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer)
+                    Spacer(Modifier.height(8.dp))
+                    FlowRow(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        GoldKnopf("Neuer Wecker", aufNeu, hauptKnopf = true,
+                            beschreibung = "Neuen Wecker anlegen",
+                            symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
+                        if (daten.nextIsSnooze) StillerKnopf("Schlummern beenden",
+                            aufSchlummernBeenden, hervorgehoben = true)
+                    }
                 }
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                GoldKnopf("＋", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen")
-                if (daten.nextIsSnooze) StillerKnopf("Schlummern beenden", aufSchlummernBeenden, hervorgehoben = true)
             }
         }
     }
@@ -1004,17 +1050,31 @@ private fun OrbitHero(
                 }
             }
             HorizontalDivider(color = gold.heroKante)
-            Row(
+            // Vorher standen hier drei ungewichtete Teile nebeneinander, getrennt durch einen
+            // Spacer mit Gewicht. Der kann sich nur bis null zusammenziehen — sobald die lange
+            // Aktion „SCHLUMMERN BEENDEN" dazukam, wurde die Bereitschaftsanzeige rechts
+            // hinausgedrängt. Eine FlowRow bricht stattdessen sauber um.
+            // Vorher standen hier drei ungewichtete Teile nebeneinander, getrennt durch einen
+            // Spacer mit Gewicht. Der kann sich nur bis null zusammenziehen — sobald die lange
+            // Aktion „SCHLUMMERN BEENDEN" dazukam, wurde die Bereitschaft rechts hinausgedrängt.
+            // Nachgerechnet braucht diese Zeile mit Schlummern und fehlenden Freigaben rund
+            // 436 dp; selbst das Fold bietet nur 419 dp. Die Aufteilung hängt deshalb am
+            // Zustand, nicht an der Gerätebreite: Die Hauptaktion und die Bereitschaft teilen
+            // sich immer eine Zeile, die lange Schlummeraktion bekommt ihre eigene darunter.
+            Column(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                GoldKnopf("WECKER", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
-                    symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
-                Spacer(Modifier.weight(1f))
-                if (daten.nextIsSnooze) StillerKnopf("SCHLUMMERN BEENDEN", aufSchlummernBeenden, hervorgehoben = true)
-                BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung,
-                    stil = MaterialTheme.typography.labelSmall.copy(fontFamily = IdeenSchriftFest))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    GoldKnopf("WECKER", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
+                        symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
+                    Spacer(Modifier.weight(1f))
+                    BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung,
+                        stil = MaterialTheme.typography.labelSmall.copy(fontFamily = IdeenSchriftFest))
+                }
+                if (daten.nextIsSnooze) Box(Modifier.fillMaxWidth()) {
+                    StillerKnopf("SCHLUMMERN BEENDEN", aufSchlummernBeenden, hervorgehoben = true)
+                }
             }
         }
     }
