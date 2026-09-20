@@ -14,10 +14,12 @@
 | 3 | `Process.Start` mit `UseShellExecute = $true` verliert die Rechte | ShellExecute reicht den Start an die Shell weiter, die das Paket normal aktiviert. Nur `UseShellExecute = $false` (CreateProcess) vererbt das erhöhte Token. |
 | 4 | Prozesssuche über die Kommandozeile findet nichts (`--type=` herausfiltern) | Die **Kommandozeile erhöhter Prozesse ist für normale Prozesse nicht lesbar** — `Win32_Process.CommandLine` kommt leer zurück, der Filter greift ins Leere. Hauptprozess stattdessen daran erkennen, dass sein Elternprozess nicht dieselbe `.exe` ist. |
 | 5 | Zweiter Start stirbt sofort, obwohl die Prüfung "läuft nicht" sagte | Electrons Single-Instance-Lock. Erst prüfen, ob eine Instanz läuft (Punkt 4), unerhöhte vor dem erhöhten Start beenden und auf das Verschwinden **warten**. |
-| 6 | Klick auf die Verknüpfung tut scheinbar nichts, App liegt im Tray | `Process.MainWindowHandle` liefert nur **sichtbare** Fenster und ist bei Tray-Apps 0. Fenster per `EnumWindows` selbst suchen (Owner-Fenster und `WS_EX_TOOLWINDOW` überspringen). |
-| 7 | Aktivierung meldet Erfolg, Benutzer sieht nichts | Rückgabewert von `SetForegroundWindow` ist kein Erfolgsmaß. Immer `IsWindowVisible` **und** `IsIconic` nachprüfen. (Gleiche Lehre wie `openlauncher-terminalfarben`-Umfeld, siehe OpenLauncher-Bug-Case vom 20.09.2026.) |
-| 8 | Nach dem Umstieg auf erhöht: Drag & Drop und Automatisierung funktionieren nicht mehr | **UIPI**: unerhöhte Prozesse dürfen erhöhten Fenstern keine Eingaben schicken. Betrifft Explorer-Drag&Drop, Overlays, Sendkeys-Werkzeuge, Autohotkey. Kein Bug — Designentscheidung von Windows. |
-| 9 | PowerShell: `$liste = Funktion-Die-Ein-Array-Liefert` und `.Count` ist leer | **Nicht Electron-spezifisch, sondern die teuerste Falle hier.** PowerShell entrollt Arrays beim Funktionsrückgabewert; bei genau einem Treffer bleibt ein einzelnes Objekt übrig. Bei `CimInstance` existiert `.Count` nicht → `$null` → `if ($liste.Count)` ist still `false`. Immer `@(Funktion)` am **Aufruf**. |
+| 6 | **App ist sichtbar, aber komplett tot — kein Klick kommt an, nichts wird gezeichnet** | Das Fenster wurde per `ShowWindow` sichtbar gemacht. **Electron weiß davon nichts**, der Renderer bleibt im Hintergrundzustand. Siehe §4 — die teuerste Falle in diesem Almanach. |
+| 7 | Klick auf die Verknüpfung tut scheinbar nichts, App liegt im Tray | Nicht per `ShowWindow` nachhelfen (→ Punkt 6). Stattdessen die `.exe` ein zweites Mal starten: Electrons Single-Instance-Sperre meldet das der laufenden Instanz, die ihr Fenster selbst zeigt. |
+| 8 | Fenstersuche erwischt das falsche Fenster | `Process.MainWindowHandle` findet nur **sichtbare** Fenster (bei Tray-Apps 0). Selbst per `EnumWindows` suchen und dabei Eigentümer-Fenster, `WS_EX_TOOLWINDOW`-Overlays und fremde Fensterklassen aussortieren — Codex hält mehrere `Chrome_WidgetWin_1`-Fenster. |
+| 9 | Aktivierung meldet Erfolg, Benutzer sieht nichts | Rückgabewert von `SetForegroundWindow` ist kein Erfolgsmaß. Immer `IsWindowVisible` **und** `IsIconic` nachprüfen. |
+| 10 | Nach dem Umstieg auf erhöht: Drag & Drop und Automatisierung funktionieren nicht mehr | **UIPI**: unerhöhte Prozesse dürfen erhöhten Fenstern keine Eingaben schicken. Betrifft Explorer-Drag&Drop, Overlays, Sendkeys-Werkzeuge, Autohotkey. Kein Bug — Designentscheidung von Windows. |
+| 11 | PowerShell: `$liste = Funktion-Die-Ein-Array-Liefert` und `.Count` ist leer | **Nicht Electron-spezifisch, aber genauso tückisch.** PowerShell entrollt Arrays beim Funktionsrückgabewert; bei genau einem Treffer bleibt ein einzelnes Objekt übrig. Bei `CimInstance` existiert `.Count` nicht → `$null` → `if ($liste.Count)` ist still `false`. Immer `@(Funktion)` am **Aufruf**. |
 
 ## §1 Die De-Elevation von Chromium
 
@@ -75,7 +77,32 @@ Get-CimInstance Win32_Process -Filter "Name='ChatGPT.exe'" | Select-Object Proce
 #    "Zugriff verweigert" aus einem normalen Prozess ist selbst schon der Beweis.
 ```
 
-## §4 Autostart ohne UAC-Abfrage
+## §4 Win32-Fenstersteuerung zerstört Electron-Apps
+
+**Die teuerste Falle hier.** Electron verwaltet Sichtbarkeit und Eingabe-Routing seines
+Fensters selbst. Wird das Fenster per `ShowWindow` versteckt oder sichtbar gemacht, bleibt
+der interne Zustand von Electron unverändert. Folge: Das Fenster steht auf dem Bildschirm,
+aber der Renderer zeichnet nicht und nimmt keine Mausklicks an. Für den Benutzer sieht es
+aus, als sei die App abgestürzt.
+
+Symptome der Live-Messung im Fehlerzustand: Prozess `Responding = True`, Fenster
+`IsWindowVisible = True`, `IsWindowEnabled = True`, `IsHungAppWindow = False` — technisch
+alles in Ordnung, und trotzdem reagiert nichts. Ein zweites Merkmal: Das Hauptfenster stand
+minimiert bei `-16000,-16000` mit einer Größe von 157x25 Pixeln.
+
+Richtig ist immer der Weg über die App selbst:
+
+| Ziel | Falsch | Richtig |
+|---|---|---|
+| Fenster zeigen | `ShowWindow(SW_SHOW)` / `SW_RESTORE` | `.exe` erneut starten → Single-Instance-Signal, die App zeigt sich selbst |
+| Fenster ins Tray | `ShowWindow(SW_HIDE)` | `WM_CLOSE` posten → die App geht selbst ins Tray und bleibt resident |
+
+Win32 darf nur **lesen**: `EnumWindows` zum Finden, `IsWindowVisible`/`IsIconic` zum Prüfen.
+
+Gegenprobe nach jedem Eingriff: Fenster-Rechteck plausibel (nicht 157x25, nicht bei -16000),
+`IsIconic = False`, und der Prozess hat das Fenster selbst geöffnet.
+
+## §5 Autostart ohne UAC-Abfrage
 
 Ein erhöhter Autostart gehört in die **Aufgabenplanung**, nicht in `HKCU\...\Run` und nicht
 in den Startup-Ordner — beide können nicht erhöht starten.
@@ -92,7 +119,7 @@ Administratorrechte (`Register-ScheduledTask` → "Zugriff verweigert"), ihn zu 
 zu **löschen** dagegen nicht. Zum Testen eines erhöhten Launchers ist `Start-ScheduledTask`
 auf einer bestehenden Aufgabe deshalb der bequemste Weg — er umgeht die UAC-Abfrage.
 
-## §5 Sonderzeichen in Task-Namen
+## §6 Sonderzeichen in Task-Namen
 
 Ein Task namens `Codex Desktop – Start im System-Tray` (Gedankenstrich U+2013) lässt sich aus
 einem `.ps1` heraus nicht zuverlässig per Literal ansprechen: Windows PowerShell 5.1 liest

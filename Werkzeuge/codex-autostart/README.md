@@ -1,6 +1,6 @@
 # Codex Desktop mit Administratorrechten starten
 
-Version 1.0.1 — 20.09.2026, 11:50 Uhr
+Version 1.1.0 — 20.09.2026, 12:01 Uhr
 
 Startet **Codex Desktop** (MSIX-Paket `OpenAI.Codex`) dauerhaft mit Administratorrechten:
 beim Anmelden automatisch im System-Tray und per Desktop-Verknüpfung sichtbar.
@@ -68,12 +68,15 @@ Das Skript holt sich die Adminrechte selbst (eine UAC-Abfrage) und legt an:
 4. Startet `ChatGPT.exe --do-not-de-elevate` per `CreateProcess` (`UseShellExecute=false`),
    damit das erhöhte Token vererbt wird.
 5. Prüft nach 5 s, dass der Prozess lebt **und** wirklich erhöht ist.
-6. Im `-Background`-Modus: versteckt das Fenster mehrfach (`SW_HIDE`), Codex bleibt über
-   das Tray-Symbol erreichbar.
+6. Im `-Background`-Modus: wartet auf das Fenster und postet **`WM_CLOSE`**. Codex geht
+   daraufhin selbst ins Benachrichtigungsfeld und bleibt dort voll bedienbar.
 
-Läuft Codex bereits erhöht und wird die Desktop-Verknüpfung geklickt, holt der Launcher
-das Fenster nach vorne, statt gar nichts zu tun. Dafür sucht er das Fenster selbst per
-`EnumWindows` — `Process.MainWindowHandle` findet versteckte Tray-Fenster nicht.
+Läuft Codex bereits erhöht und wird die Desktop-Verknüpfung geklickt, **startet der Launcher
+die `.exe` ein zweites Mal**. Electrons Single-Instance-Sperre meldet das der laufenden
+Instanz, die ihr Fenster daraufhin selbst zeigt; der zweite Prozess beendet sich.
+
+Mit `-Neustart` beendet der Launcher eine laufende Instanz ohne Rückfrage und startet
+sichtbar neu — für den Fall, dass Codex hängt oder unerhöht läuft.
 
 Ergebnis jedes Starts landet in `%LOCALAPPDATA%\CodexAutostart\last-launch.json`.
 
@@ -88,6 +91,25 @@ Get-CimInstance Win32_Process -Filter "Name='ChatGPT.exe'" |
 Ist die **Kommandozeile leer**, obwohl die Prozesse laufen, ist das der Beweis: Ein
 normaler Benutzerprozess darf die Kommandozeile erhöhter Prozesse nicht lesen.
 
+## Die wichtigste Regel: Finger weg vom Fenster
+
+**Niemals `ShowWindow` oder `SetForegroundWindow` auf das Electron-Fenster anwenden.**
+
+Electron verwaltet Sichtbarkeit und Eingabe-Routing selbst. Ein per Win32 versteckt oder
+sichtbar gemachtes Fenster ist für Electron unsichtbar geblieben: Das Fenster steht auf dem
+Bildschirm, aber der Renderer zeichnet nicht und nimmt keine Mausklicks an — **die App sieht
+offen aus und ist komplett tot**. Genau das ist in Version 1.0.x passiert (`SW_HIDE` beim
+Tray-Start, danach `SW_SHOW` beim Klick auf die Verknüpfung).
+
+Richtig ist der Weg über die App selbst:
+
+| Ziel | Falsch | Richtig |
+|---|---|---|
+| Fenster zeigen | `ShowWindow(SW_SHOW)` | `.exe` erneut starten → Single-Instance-Signal, die App zeigt sich selbst |
+| Fenster ins Tray | `ShowWindow(SW_HIDE)` | `WM_CLOSE` posten → die App geht selbst ins Tray und bleibt resident |
+
+Win32 darf nur **lesen**: `EnumWindows` zum Finden, `IsWindowVisible`/`IsIconic` zum Prüfen.
+
 ## Fallstricke, die hier schon Blut gekostet haben
 
 - **`--do-not-de-elevate` weglassen** → Codex startet unerhöht neu, der Launcher meldet
@@ -98,6 +120,10 @@ normaler Benutzerprozess darf die Kommandozeile erhöhter Prozesse nicht lesen.
   Kommandozeile erhöhter Prozesse ist für normale Prozesse nicht lesbar und kommt leer
   zurück. Der Launcher erkennt den Hauptprozess deshalb daran, dass sein Elternprozess
   kein `ChatGPT.exe` ist.
+- **Fenstersuche ohne Klassenprüfung** → Codex hält mehrere `Chrome_WidgetWin_1`-Fenster,
+  darunter transparente Overlays (`WS_EX_TOOLWINDOW`) und ein titelloses Zweitfenster.
+  Overlays, Eigentümer-Fenster und fremde Fensterklassen aussortieren, sonst erwischt man
+  das falsche.
 - **`$liste = Funktion-Die-Ein-Array-Liefert`** → PowerShell entrollt das Array; bei genau
   einem Treffer bleibt ein `CimInstance` übrig, das keine `.Count`-Eigenschaft hat. Die
   Prüfung läuft still ins Leere. Immer `@(...)` um den Aufruf.
