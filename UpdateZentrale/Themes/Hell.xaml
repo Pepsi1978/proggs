@@ -1,0 +1,71 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Helles Farbset. Gleiche Schlüssel wie Dunkel.xaml, damit die Umschaltung zur Laufzeit
+         funktioniert. Warme, leicht entsättigte Töne statt reinem Weiß – das ermüdet weniger
+         und lässt die farbigen Kennzeichen sauber wirken. -->
+
+    <SolidColorBrush x:Key="PinselHintergrund" Color="#F4F5F9" />
+    <SolidColorBrush x:Key="PinselFlaeche" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PinselFlaecheHoch" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PinselFlaecheTief" Color="#FBFBFE" />
+    <SolidColorBrush x:Key="PinselRand" Color="#DFE2EC" />
+    <SolidColorBrush x:Key="PinselRandHell" Color="#C4C9D9" />
+    <SolidColorBrush x:Key="PinselText" Color="#161822" />
+    <SolidColorBrush x:Key="PinselTextLeise" Color="#5C6479" />
+    <SolidColorBrush x:Key="PinselTextSehrLeise" Color="#79819A" />
+
+    <SolidColorBrush x:Key="PinselAkzent" Color="#6344E8" />
+    <SolidColorBrush x:Key="PinselAkzentRand" Color="#5738DC" />
+    <SolidColorBrush x:Key="PinselAufAkzent" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PinselAufKennzeichen" Color="#FFFFFF" />
+
+    <LinearGradientBrush x:Key="PinselAkzentVerlauf" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#6C4CF0" Offset="0" />
+        <GradientStop Color="#3C8DF5" Offset="1" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="PinselKarte" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#FFFFFF" Offset="0" />
+        <GradientStop Color="#F8F9FD" Offset="1" />
+    </LinearGradientBrush>
+
+    <SolidColorBrush x:Key="PinselKarteGewaehlt" Color="#F1EEFF" />
+
+    <RadialGradientBrush x:Key="PinselSchein" GradientOrigin="0.12,0" Center="0.12,0" RadiusX="0.85" RadiusY="0.7">
+        <GradientStop Color="#33D8CEFF" Offset="0" />
+        <GradientStop Color="#00FFFFFF" Offset="1" />
+    </RadialGradientBrush>
+
+    <!-- Konsolenbereich -->
+    <SolidColorBrush x:Key="PinselKonsole" Color="#1B1E28" />
+    <SolidColorBrush x:Key="PinselKonsoleRand" Color="#2A2F3D" />
+    <SolidColorBrush x:Key="PinselKonsoleText" Color="#C3D3E2" />
+
+    <!-- Merkmal-Plaketten -->
+    <SolidColorBrush x:Key="PinselPlaketteFlaeche" Color="#EEF0F7" />
+    <SolidColorBrush x:Key="PinselPlaketteRand" Color="#DFE2EC" />
+
+    <SolidColorBrush x:Key="PinselLaeuftFlaeche" Color="#E4F7EC" />
+    <SolidColorBrush x:Key="PinselLaeuftRand" Color="#A9DEC1" />
+    <SolidColorBrush x:Key="PinselLaeuftText" Color="#127A45" />
+
+    <SolidColorBrush x:Key="PinselAutostartFlaeche" Color="#E7EFFE" />
+    <SolidColorBrush x:Key="PinselAutostartRand" Color="#B4CCF4" />
+    <SolidColorBrush x:Key="PinselAutostartText" Color="#1D4FA8" />
+
+    <SolidColorBrush x:Key="PinselWarnFlaeche" Color="#FDF1DE" />
+    <SolidColorBrush x:Key="PinselWarnRand" Color="#EBC88A" />
+    <SolidColorBrush x:Key="PinselWarnText" Color="#8A5A11" />
+
+    <SolidColorBrush x:Key="PinselFehlerFlaeche" Color="#FDE9ED" />
+    <SolidColorBrush x:Key="PinselFehlerRand" Color="#F2B8C4" />
+    <SolidColorBrush x:Key="PinselFehlerText" Color="#98203A" />
+
+    <!-- Bedienelemente -->
+    <SolidColorBrush x:Key="PinselSchalterBahn" Color="#DDE1EC" />
+    <SolidColorBrush x:Key="PinselSchalterRand" Color="#C7CDDC" />
+    <SolidColorBrush x:Key="PinselSchalterKnopf" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PinselRollbalken" Color="#C2C8D8" />
+
+</ResourceDictionary>

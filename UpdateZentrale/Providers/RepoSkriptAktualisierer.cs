@@ -70,21 +70,21 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
         var status = StatusLesen(lauf.Ausgabe, eintrag.StatusPraefix);
         if (status == "cancelled")
             return new PruefErgebnis(UpdateZustand.Abgebrochen,
-                Meldung: "Du hast im Ja/Nein-Fenster auf 'Nein' geklickt - es wurde nichts geaendert.", Protokoll: lauf.Ausgabe);
+                Meldung: "Du hast im Ja/Nein-Fenster auf 'Nein' geklickt – es wurde nichts geändert.", Protokoll: lauf.Ausgabe);
         if (status == "no-answer")
             return new PruefErgebnis(UpdateZustand.Abgebrochen,
-                Meldung: "Kein Klick im Zeitfenster - es wurde nichts geaendert.", Protokoll: lauf.Ausgabe);
+                Meldung: "Kein Klick im Zeitfenster – es wurde nichts geändert.", Protokoll: lauf.Ausgabe);
         if (status == "already-current")
             return new PruefErgebnis(UpdateZustand.Aktuell, Meldung: "War bereits aktuell.", Protokoll: lauf.Ausgabe);
         if (status == "started")
             return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Neue Version gebaut und gestartet.", Protokoll: lauf.Ausgabe);
         if (lauf.Abgelaufen)
-            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit ueberschritten.", Protokoll: lauf.Ausgabe);
+            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit überschritten.", Protokoll: lauf.Ausgabe);
         if (lauf.ExitCode == 0)
             return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Skript erfolgreich durchgelaufen.", Protokoll: lauf.Ausgabe);
 
         return new PruefErgebnis(UpdateZustand.Fehler,
-            Meldung: "Skript endete mit Code " + lauf.ExitCode + ".", Protokoll: lauf.Ausgabe);
+            Meldung: "Das Skript endete mit Code " + lauf.ExitCode + ".", Protokoll: lauf.Ausgabe);
     }
 
     /// <summary>rebuild-overlay.ps1 requires PowerShell 7; fall back only if pwsh is missing.</summary>

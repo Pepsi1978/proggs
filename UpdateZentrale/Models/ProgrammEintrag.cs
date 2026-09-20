@@ -21,6 +21,12 @@ public sealed class ProgrammEintrag
     public string? AppxName { get; set; }
     public string? PackageFamilyName { get; set; }
 
+    /// <summary>Application id inside the MSIX package; almost always "App".</summary>
+    public string? AppxAnwendungsId { get; set; }
+
+    /// <summary>MSIX package that ships its own updater instead of being served by the Store.</summary>
+    public bool SelbstAktualisierend { get; set; }
+
     public string ExePfad { get; set; } = "";
     public string? VersionsArgumente { get; set; }
     public string? UpdateArgumente { get; set; }

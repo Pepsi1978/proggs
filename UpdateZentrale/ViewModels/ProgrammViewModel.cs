@@ -42,8 +42,10 @@ public sealed partial class ProgrammViewModel : ObservableObject
     public string Beschreibung => Eintrag.Beschreibung;
     public string Akzent => Eintrag.Akzent;
 
+    /// <summary>Up to two initials for the tile; brackets and symbols are skipped.</summary>
     public string Kuerzel => new string(Eintrag.Name
-        .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+        .Split(new[] { ' ', '-', '/' }, StringSplitOptions.RemoveEmptyEntries)
+        .Where(t => char.IsLetterOrDigit(t[0]))
         .Take(2)
         .Select(t => char.ToUpperInvariant(t[0]))
         .ToArray());
@@ -62,14 +64,13 @@ public sealed partial class ProgrammViewModel : ObservableObject
     public bool KannStarten => !string.IsNullOrWhiteSpace(Eintrag.ExePfad);
 
     [ObservableProperty] private UpdateZustand _zustand = UpdateZustand.Unbekannt;
-    [ObservableProperty] private string _statusText = "Noch nicht geprueft";
+    [ObservableProperty] private string _statusText = "Noch nicht geprüft";
     [ObservableProperty] private string _installierteVersion = "";
     [ObservableProperty] private string _verfuegbareVersion = "";
     [ObservableProperty] private bool _istBeschaeftigt;
     [ObservableProperty] private bool _laeuft;
     [ObservableProperty] private bool _imAutostart;
     [ObservableProperty] private bool _adminWarnung;
-    [ObservableProperty] private bool _ausgewaehlt = true;
 
     private bool _alsAdministrator;
 
@@ -92,33 +93,159 @@ public sealed partial class ProgrammViewModel : ObservableObject
             if (!erfolg && value)
             {
                 _alsAdministrator = false;
-                Melde("Administratormodus liess sich nicht setzen - Programmdatei nicht gefunden.");
+                Melde("Der Administratormodus ließ sich nicht setzen – die Programmdatei wurde nicht gefunden.");
             }
 
-            AdminWarnung = Systemdienst.AdminBrichtAutostart(Eintrag, _alsAdministrator);
+            ZustandAktualisieren();
             OnPropertyChanged();
         }
     }
 
     public string Protokoll => _protokoll.ToString();
 
-    public bool KannAktualisieren => _aktualisierer is not null && !IstBeschaeftigt;
+    public bool HatUpdate => Zustand == UpdateZustand.UpdateVerfuegbar;
+
+    /// <summary>
+    /// The update button only invites action when there really is a newer version. Once a check
+    /// found nothing, the button says "Aktuell" and is disabled instead of suggesting work.
+    /// </summary>
+    public bool AktionMoeglich => _aktualisierer is not null
+                                  && !IstBeschaeftigt
+                                  && Zustand != UpdateZustand.Aktuell;
+
+    public string AktionsText => Zustand switch
+    {
+        UpdateZustand.Aktuell => "Aktuell",
+        UpdateZustand.UpdateVerfuegbar => "Aktualisieren",
+        UpdateZustand.Pruefe => "Prüft …",
+        UpdateZustand.NichtInstalliert => "Nicht installiert",
+        _ when Eintrag.Art == "msstore" => "Im Store öffnen",
+        _ => "Aktualisieren"
+    };
+
+    /// <summary>Only a real update gets the accent button; everything else stays calm.</summary>
+    public bool AktionBetont => Zustand == UpdateZustand.UpdateVerfuegbar;
+
+    public bool KannPruefen => _aktualisierer is not null && !IstBeschaeftigt;
 
     public string VersionsText => string.IsNullOrWhiteSpace(InstallierteVersion)
-        ? "-"
+        ? "–"
         : string.IsNullOrWhiteSpace(VerfuegbareVersion) || VerfuegbareVersion == InstallierteVersion
             ? InstallierteVersion
             : InstallierteVersion + "   →   " + VerfuegbareVersion;
 
-    public bool HatUpdate => Zustand == UpdateZustand.UpdateVerfuegbar;
-
     public event EventHandler<string>? Meldung;
+
+    [ObservableProperty] private bool _autostartAlsAufgabe;
+
+    /// <summary>
+    /// Only worth showing where the conflict actually exists: the program starts elevated and has
+    /// (or had) an autostart entry that Windows would now skip.
+    /// </summary>
+    public bool AutostartUmstellbar => KannStarten && (ImAutostart || AutostartAlsAufgabe) && AlsAdministrator;
 
     public void ZustandAktualisieren()
     {
         Laeuft = Prozessdienst.Laeuft(Eintrag);
         ImAutostart = Systemdienst.ImAutostart(Eintrag);
-        AdminWarnung = Systemdienst.AdminBrichtAutostart(Eintrag, _alsAdministrator);
+        AdminWarnung = Systemdienst.AdminBrichtAutostart(Eintrag, _alsAdministrator) && !AutostartAlsAufgabe;
+        OnPropertyChanged(nameof(AutostartUmstellbar));
+    }
+
+    /// <summary>Checks once whether the elevated logon task for this program exists.</summary>
+    public async Task AufgabenZustandLesenAsync()
+    {
+        AutostartAlsAufgabe = await Aufgabenplanung.ExistiertAsync(Eintrag.Id);
+        ZustandAktualisieren();
+    }
+
+    /// <summary>
+    /// Moves the autostart from the Run key into a scheduled task with highest privileges -- and
+    /// back again. Creating such a task needs an elevated UpdateZentrale.
+    /// </summary>
+    [RelayCommand]
+    private async Task AutostartUmstellenAsync()
+    {
+        if (!Rechte.IstErhoeht)
+        {
+            Melde("Dafür muss die UpdateZentrale selbst mit Administratorrechten laufen.\n\n"
+                  + "Oben auf „Als Administrator neu starten“ klicken und es danach erneut versuchen.");
+            return;
+        }
+
+        var einstellung = _einstellungen.Fuer(Eintrag.Id);
+
+        if (AutostartAlsAufgabe)
+        {
+            var (weg, ausgabe) = await Aufgabenplanung.EntfernenAsync(Eintrag.Id);
+            if (!weg)
+            {
+                Melde("Die geplante Aufgabe ließ sich nicht entfernen:\n" + ausgabe);
+                return;
+            }
+
+            // Put the original Run entry back exactly as it was.
+            if (!string.IsNullOrWhiteSpace(einstellung.GesicherterRunName)
+                && !string.IsNullOrWhiteSpace(einstellung.GesicherterRunWert))
+            {
+                Systemdienst.RunEintragSchreiben(einstellung.GesicherterRunName!, einstellung.GesicherterRunWert!);
+                einstellung.GesicherterRunName = null;
+                einstellung.GesicherterRunWert = null;
+                _einstellungen.Speichern();
+            }
+
+            AutostartAlsAufgabe = false;
+            StatusText = "Autostart läuft wieder über den normalen Windows-Autostart.";
+        }
+        else
+        {
+            var frage = "Der Autostart von " + Name + " wird auf eine geplante Aufgabe umgestellt.\n\n"
+                      + "Damit startet das Programm bei der Anmeldung mit Administratorrechten und ohne Rückfrage "
+                      + "der Benutzerkontensteuerung. Der bisherige Autostart-Eintrag wird gesichert und entfernt; "
+                      + "beim Zurückstellen wird er wiederhergestellt.\n\nJetzt umstellen?";
+
+            if (!Dialoge.Fragen(frage, "Autostart mit Administratorrechten?")) return;
+
+            var (erfolg, ausgabe) = await Aufgabenplanung.AnlegenAsync(
+                Eintrag.Id, Pfade.Aufloesen(Eintrag.ExePfad), Eintrag.StartArgumente);
+
+            if (!erfolg)
+            {
+                Melde("Die geplante Aufgabe ließ sich nicht anlegen:\n" + ausgabe);
+                return;
+            }
+
+            var vorhanden = Systemdienst.RunEintrag(Eintrag);
+            if (vorhanden is not null)
+            {
+                einstellung.GesicherterRunName = vorhanden.Value.Name;
+                einstellung.GesicherterRunWert = vorhanden.Value.Wert;
+                _einstellungen.Speichern();
+                Systemdienst.RunEintragEntfernen(vorhanden.Value.Name);
+            }
+
+            AutostartAlsAufgabe = true;
+            StatusText = "Autostart läuft jetzt als geplante Aufgabe mit Administratorrechten.";
+        }
+
+        ZustandAktualisieren();
+    }
+
+    /// <summary>Forces the state converters to run again after a light/dark switch.</summary>
+    public void DarstellungAuffrischen() => OnPropertyChanged(nameof(Zustand));
+
+    partial void OnZustandChanged(UpdateZustand value)
+    {
+        OnPropertyChanged(nameof(HatUpdate));
+        OnPropertyChanged(nameof(AktionMoeglich));
+        OnPropertyChanged(nameof(AktionsText));
+        OnPropertyChanged(nameof(AktionBetont));
+    }
+
+    partial void OnIstBeschaeftigtChanged(bool value)
+    {
+        OnPropertyChanged(nameof(AktionMoeglich));
+        OnPropertyChanged(nameof(KannPruefen));
     }
 
     [RelayCommand]
@@ -127,7 +254,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         if (_aktualisierer is null) return;
         await LaufAsync(async (fortschritt, abbruch) =>
         {
-            StatusText = "Wird geprueft …";
+            StatusText = "Wird geprüft …";
             Zustand = UpdateZustand.Pruefe;
             return await _aktualisierer.PruefenAsync(Eintrag, fortschritt, abbruch);
         });
@@ -143,14 +270,14 @@ public sealed partial class ProgrammViewModel : ObservableObject
         if (Eintrag.BeendenVorUpdate && Prozessdienst.Laeuft(Eintrag))
         {
             var laufende = Prozessdienst.Laufende(Eintrag).Count;
-            var frage = Name + " laeuft gerade (" + laufende + " Prozess(e) inklusive Helferprogramme).\n\n"
+            var frage = Name + " läuft gerade (" + laufende + " Prozess(e) einschließlich Helferprogramme).\n\n"
                       + "Zum Aktualisieren muss das Programm beendet werden."
                       + (Eintrag.NeuStartenNachUpdate ? " Danach wird es automatisch neu gestartet." : "")
                       + "\n\nJetzt beenden und aktualisieren?";
 
             if (!Dialoge.Fragen(frage, "Programm beenden?"))
             {
-                StatusText = "Abgebrochen - das Programm laeuft weiter.";
+                StatusText = "Abgebrochen – das Programm läuft weiter.";
                 Zustand = UpdateZustand.Abgebrochen;
                 return;
             }
@@ -162,7 +289,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             if (Eintrag.BeendenVorUpdate && liefVorher)
             {
-                StatusText = "Beende Programm …";
+                StatusText = "Beendet das Programm …";
                 fortschritt.Report("Beende " + string.Join(", ", Eintrag.AlleProzesse));
                 await Prozessdienst.BeendenAsync(Eintrag, abbruch);
             }
@@ -172,7 +299,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
             if (Eintrag.NeuStartenNachUpdate && liefVorher && ergebnis.Zustand == UpdateZustand.Fertig)
             {
-                fortschritt.Report("Starte " + Name + " neu.");
+                fortschritt.Report("Startet " + Name + " neu.");
                 Prozessdienst.Starten(Eintrag, AlsAdministrator);
             }
 
@@ -182,6 +309,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 var nachher = await _aktualisierer.PruefenAsync(Eintrag, fortschritt, abbruch);
                 return ergebnis with
                 {
+                    Zustand = nachher.Zustand == UpdateZustand.Aktuell ? UpdateZustand.Aktuell : ergebnis.Zustand,
                     InstallierteVersion = nachher.InstallierteVersion,
                     VerfuegbareVersion = nachher.VerfuegbareVersion
                 };
@@ -205,7 +333,6 @@ public sealed partial class ProgrammViewModel : ObservableObject
     {
         if (IstBeschaeftigt) return;
         IstBeschaeftigt = true;
-        OnPropertyChanged(nameof(KannAktualisieren));
 
         var fortschritt = new Progress<string>(zeile =>
         {
@@ -220,7 +347,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
             Zustand = ergebnis.Zustand;
             if (!string.IsNullOrWhiteSpace(ergebnis.InstallierteVersion)) InstallierteVersion = ergebnis.InstallierteVersion;
             VerfuegbareVersion = ergebnis.VerfuegbareVersion;
-            StatusText = string.IsNullOrWhiteSpace(ergebnis.Meldung) ? Zustand.ToString() : ergebnis.Meldung;
+            StatusText = string.IsNullOrWhiteSpace(ergebnis.Meldung) ? AktionsText : ergebnis.Meldung;
         }
         catch (Exception ex)
         {
@@ -232,9 +359,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
         {
             IstBeschaeftigt = false;
             ZustandAktualisieren();
-            OnPropertyChanged(nameof(KannAktualisieren));
             OnPropertyChanged(nameof(VersionsText));
-            OnPropertyChanged(nameof(HatUpdate));
             OnPropertyChanged(nameof(Protokoll));
         }
     }

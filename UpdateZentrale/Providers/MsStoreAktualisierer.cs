@@ -5,9 +5,12 @@ using UpdateZentrale.Services;
 namespace UpdateZentrale.Providers;
 
 /// <summary>
-/// MSIX/Store apps. winget lists them without a source, so "winget upgrade" reports nothing even
-/// when the Store has a newer build. The installed version therefore comes from Get-AppxPackage,
-/// and the update is handed to the Store via its package family name.
+/// MSIX apps. winget lists them without a source, so "winget upgrade" reports nothing even when a
+/// newer build exists -- the installed version therefore comes from Get-AppxPackage.
+///
+/// Two flavours: packages the Microsoft Store maintains (update handed to the Store), and
+/// packages that ship their own updater inside the app (Codex Desktop). The catalog flag
+/// selbstAktualisierend decides which one applies.
 /// </summary>
 public sealed class MsStoreAktualisierer : IAktualisierer
 {
@@ -24,32 +27,62 @@ public sealed class MsStoreAktualisierer : IAktualisierer
         protokoll.Report(version);
 
         if (string.IsNullOrWhiteSpace(version))
-            return new PruefErgebnis(UpdateZustand.NichtInstalliert, Meldung: "Store-App nicht installiert.", Protokoll: lauf.Ausgabe);
+            return new PruefErgebnis(UpdateZustand.NichtInstalliert, Meldung: "Nicht installiert.", Protokoll: lauf.Ausgabe);
 
-        // The Store exposes no queryable "latest version" per package, so this stays honest instead
-        // of guessing: show what is installed and offer the Store page.
-        return new PruefErgebnis(UpdateZustand.Unbekannt, version, "",
-            "Der Store verwaltet die Updates - die Schaltflaeche oeffnet die Store-Seite.", lauf.Ausgabe);
+        // Neither the Store nor the in-app updater exposes a queryable "latest version", so this
+        // stays honest instead of guessing: show what is installed and offer the right action.
+        var meldung = eintrag.SelbstAktualisierend
+            ? "Aktualisiert sich selbst – die Schaltfläche öffnet die App."
+            : "Der Store verwaltet die Updates – die Schaltfläche öffnet die Store-Seite.";
+
+        return new PruefErgebnis(UpdateZustand.Unbekannt, version, "", meldung, lauf.Ausgabe);
     }
 
     public Task<PruefErgebnis> AktualisierenAsync(ProgrammEintrag eintrag, IProgress<string> protokoll, CancellationToken abbruch)
     {
+        return Task.FromResult(eintrag.SelbstAktualisierend
+            ? AppOeffnen(eintrag, protokoll)
+            : StoreOeffnen(eintrag, protokoll));
+    }
+
+    /// <summary>Launches the packaged app through the apps folder, using its package family name.</summary>
+    private static PruefErgebnis AppOeffnen(ProgrammEintrag eintrag, IProgress<string> protokoll)
+    {
+        var ziel = "shell:AppsFolder\\" + eintrag.PackageFamilyName + "!" + (eintrag.AppxAnwendungsId ?? "App");
         try
         {
-            // Opens the Store straight at this package; the Store does the actual download.
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = ziel,
+                UseShellExecute = true
+            });
+            protokoll.Report("Geöffnet: " + ziel);
+            return new PruefErgebnis(UpdateZustand.Fertig,
+                Meldung: eintrag.Name + " wurde geöffnet – das Update läuft in der App selbst.");
+        }
+        catch (Exception ex)
+        {
+            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Die App ließ sich nicht öffnen: " + ex.Message);
+        }
+    }
+
+    private static PruefErgebnis StoreOeffnen(ProgrammEintrag eintrag, IProgress<string> protokoll)
+    {
+        try
+        {
             Process.Start(new ProcessStartInfo
             {
                 FileName = "ms-windows-store://pdp/?PFN=" + eintrag.PackageFamilyName,
                 UseShellExecute = true
             });
-            protokoll.Report("Store geoeffnet: " + eintrag.PackageFamilyName);
-            return Task.FromResult(new PruefErgebnis(UpdateZustand.Fertig,
-                Meldung: "Microsoft Store geoeffnet - dort auf 'Aktualisieren' klicken."));
+            protokoll.Report("Store geöffnet: " + eintrag.PackageFamilyName);
+            return new PruefErgebnis(UpdateZustand.Fertig,
+                Meldung: "Microsoft Store geöffnet – dort auf 'Aktualisieren' klicken.");
         }
         catch (Exception ex)
         {
-            return Task.FromResult(new PruefErgebnis(UpdateZustand.Fehler,
-                Meldung: "Store liess sich nicht oeffnen: " + ex.Message));
+            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Der Store ließ sich nicht öffnen: " + ex.Message);
         }
     }
 }

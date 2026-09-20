@@ -76,5 +76,11 @@ public static class Kommandozeile
     }
 
     private static string Saeubern(string text)
-        => Steuerzeichen.Replace(text ?? "", "").Replace("\r\n", "\n").Trim();
+        // winget repaints its progress line with bare carriage returns even with
+        // --disable-interactivity. Those must become line breaks, otherwise the table header ends
+        // up glued behind spinner frames and the column parser never finds it.
+        => Steuerzeichen.Replace(text ?? "", "")
+            .Replace("\r\n", "\n")
+            .Replace('\r', '\n')
+            .Trim();
 }

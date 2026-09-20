@@ -7,6 +7,14 @@ public sealed class ProgrammEinstellung
 {
     public bool AlsAdministrator { get; set; }
     public bool Ausgeblendet { get; set; }
+
+    /// <summary>
+    /// The Run entry that was replaced by a scheduled task. Kept so switching the elevated
+    /// autostart off can put the original entry back exactly as it was.
+    /// </summary>
+    public string? GesicherterRunName { get; set; }
+
+    public string? GesicherterRunWert { get; set; }
 }
 
 /// <summary>
@@ -22,6 +30,15 @@ public sealed class Einstellungen
     };
 
     public Dictionary<string, ProgrammEinstellung> Programme { get; set; } = new();
+
+    /// <summary>Light mode; dark stays the default because the app is usually opened briefly.</summary>
+    public bool HellModus { get; set; }
+
+    /// <summary>
+    /// Remembers that the "always run elevated" flag was applied once, so switching it off stays
+    /// switched off instead of being re-applied on the next start.
+    /// </summary>
+    public bool AdminStartGesetzt { get; set; }
 
     public static Einstellungen Laden()
     {

@@ -1,72 +1,46 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Farbwelt: tiefes Anthrazit mit violettem Akzent. Alles andere leitet sich hieraus ab. -->
-    <Color x:Key="FarbeHintergrund">#0B0C10</Color>
-    <Color x:Key="FarbeFlaeche">#14161E</Color>
-    <Color x:Key="FarbeFlaecheHoch">#1B1E28</Color>
-    <Color x:Key="FarbeRand">#262A36</Color>
-    <Color x:Key="FarbeAkzent">#7C5CFF</Color>
-    <Color x:Key="FarbeAkzentHell">#9D86FF</Color>
-    <Color x:Key="FarbeText">#EEF0F6</Color>
-    <Color x:Key="FarbeTextLeise">#9AA1B4</Color>
-
-    <SolidColorBrush x:Key="PinselHintergrund" Color="{StaticResource FarbeHintergrund}" />
-    <SolidColorBrush x:Key="PinselFlaeche" Color="{StaticResource FarbeFlaeche}" />
-    <SolidColorBrush x:Key="PinselFlaecheHoch" Color="{StaticResource FarbeFlaecheHoch}" />
-    <SolidColorBrush x:Key="PinselRand" Color="{StaticResource FarbeRand}" />
-    <SolidColorBrush x:Key="PinselAkzent" Color="{StaticResource FarbeAkzent}" />
-    <SolidColorBrush x:Key="PinselText" Color="{StaticResource FarbeText}" />
-    <SolidColorBrush x:Key="PinselTextLeise" Color="{StaticResource FarbeTextLeise}" />
-
-    <LinearGradientBrush x:Key="PinselAkzentVerlauf" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="{StaticResource FarbeAkzent}" Offset="0" />
-        <GradientStop Color="#4DA3FF" Offset="1" />
-    </LinearGradientBrush>
-
-    <LinearGradientBrush x:Key="PinselKarte" StartPoint="0,0" EndPoint="0,1">
-        <GradientStop Color="#171A24" Offset="0" />
-        <GradientStop Color="#12141C" Offset="1" />
-    </LinearGradientBrush>
+    <!-- Nur Formen und Typografie. Alle Farben kommen per DynamicResource aus Themes/Dunkel.xaml
+         bzw. Themes/Hell.xaml, damit die Umschaltung zur Laufzeit durchschlägt. -->
 
     <FontFamily x:Key="SchriftUi">Segoe UI Variable Display, Segoe UI</FontFamily>
     <FontFamily x:Key="SchriftMono">Cascadia Mono, Consolas</FontFamily>
 
-    <!-- Typografie -->
     <Style x:Key="TitelGross" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource SchriftUi}" />
         <Setter Property="FontSize" Value="26" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Foreground" Value="{StaticResource PinselText}" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselText}" />
     </Style>
 
     <Style x:Key="TitelKarte" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource SchriftUi}" />
         <Setter Property="FontSize" Value="15.5" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Foreground" Value="{StaticResource PinselText}" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselText}" />
     </Style>
 
     <Style x:Key="TextLeise" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource SchriftUi}" />
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="Foreground" Value="{StaticResource PinselTextLeise}" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselTextLeise}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
     <Style TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource SchriftUi}" />
-        <Setter Property="Foreground" Value="{StaticResource PinselText}" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselText}" />
         <Setter Property="TextOptions.TextFormattingMode" Value="Ideal" />
         <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
     </Style>
 
-    <!-- Schaltflaechen: eine Basis, drei Auspraegungen -->
+    <!-- Schaltflächen: eine Basis, drei Ausprägungen -->
     <Style x:Key="SchalterBasis" TargetType="Button">
         <Setter Property="FontFamily" Value="{StaticResource SchriftUi}" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Foreground" Value="{StaticResource PinselText}" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselText}" />
         <Setter Property="Padding" Value="16,9" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
@@ -89,7 +63,7 @@
                             <Setter TargetName="Huelle" Property="Opacity" Value="0.7" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Huelle" Property="Opacity" Value="0.35" />
+                            <Setter TargetName="Huelle" Property="Opacity" Value="0.4" />
                             <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -99,24 +73,32 @@
     </Style>
 
     <Style x:Key="SchalterHaupt" TargetType="Button" BasedOn="{StaticResource SchalterBasis}">
-        <Setter Property="Background" Value="{StaticResource PinselAkzentVerlauf}" />
-        <Setter Property="BorderBrush" Value="#6B4BF0" />
+        <Setter Property="Background" Value="{DynamicResource PinselAkzentVerlauf}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PinselAkzentRand}" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselAufAkzent}" />
     </Style>
 
     <Style x:Key="SchalterZweit" TargetType="Button" BasedOn="{StaticResource SchalterBasis}">
-        <Setter Property="Background" Value="{StaticResource PinselFlaecheHoch}" />
-        <Setter Property="BorderBrush" Value="{StaticResource PinselRand}" />
+        <Setter Property="Background" Value="{DynamicResource PinselFlaecheHoch}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PinselRand}" />
     </Style>
 
     <Style x:Key="SchalterLeise" TargetType="Button" BasedOn="{StaticResource SchalterBasis}">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="{StaticResource PinselRand}" />
-        <Setter Property="Foreground" Value="{StaticResource PinselTextLeise}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PinselRand}" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselTextLeise}" />
         <Setter Property="FontWeight" Value="Normal" />
         <Setter Property="Padding" Value="12,7" />
     </Style>
 
-    <!-- Schiebeschalter fuer "Immer als Administrator" -->
+    <!-- Ruhige Ausprägung für „Aktuell": sichtbar, aber ohne Aufforderungscharakter -->
+    <Style x:Key="SchalterRuhig" TargetType="Button" BasedOn="{StaticResource SchalterBasis}">
+        <Setter Property="Background" Value="{DynamicResource PinselPlaketteFlaeche}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PinselPlaketteRand}" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselTextLeise}" />
+    </Style>
+
+    <!-- Schiebeschalter (Administratormodus, Hell/Dunkel) -->
     <Style x:Key="Schiebeschalter" TargetType="ToggleButton">
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Width" Value="42" />
@@ -126,20 +108,26 @@
                 <ControlTemplate TargetType="ToggleButton">
                     <Grid>
                         <Border x:Name="Bahn" CornerRadius="12"
-                                Background="#2A2F3D" BorderBrush="#363C4C" BorderThickness="1" />
-                        <Ellipse x:Name="Knopf" Width="17" Height="17" Fill="#B9C0D0"
+                                Background="{DynamicResource PinselSchalterBahn}"
+                                BorderBrush="{DynamicResource PinselSchalterRand}" BorderThickness="1" />
+                        <Ellipse x:Name="Knopf" Width="17" Height="17"
+                                 Fill="{DynamicResource PinselSchalterKnopf}"
                                  HorizontalAlignment="Left" Margin="3,0,0,0" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Bahn" Property="Background" Value="{StaticResource PinselAkzentVerlauf}" />
-                            <Setter TargetName="Bahn" Property="BorderBrush" Value="#6B4BF0" />
+                            <Setter TargetName="Bahn" Property="Background" Value="{DynamicResource PinselAkzentVerlauf}" />
+                            <Setter TargetName="Bahn" Property="BorderBrush" Value="{DynamicResource PinselAkzentRand}" />
                             <Setter TargetName="Knopf" Property="HorizontalAlignment" Value="Right" />
                             <Setter TargetName="Knopf" Property="Margin" Value="0,0,3,0" />
                             <Setter TargetName="Knopf" Property="Fill" Value="White" />
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Bahn" Property="Opacity" Value="0.85" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bahn" Property="Opacity" Value="0.4" />
+                            <Setter Property="Cursor" Value="Arrow" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -160,7 +148,8 @@
                                 <Thumb>
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <Border Background="#333949" CornerRadius="5" Margin="2,0" />
+                                            <Border Background="{DynamicResource PinselRollbalken}"
+                                                    CornerRadius="5" Margin="2,0" />
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>
@@ -178,11 +167,35 @@
         </Setter>
     </Style>
 
-    <!-- Gruppenueberschrift in der Liste -->
+    <!-- Eingabezeile des eingebauten Terminals -->
+    <Style x:Key="BefehlsZeile" TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{StaticResource SchriftMono}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselKonsoleText}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource PinselKonsoleText}" />
+        <Setter Property="Background" Value="{DynamicResource PinselKonsole}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PinselKonsoleRand}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="9,7" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="GruppenUeberschrift" TargetType="TextBlock">
         <Setter Property="FontSize" Value="11.5" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Foreground" Value="{StaticResource PinselTextLeise}" />
+        <Setter Property="Foreground" Value="{DynamicResource PinselTextLeise}" />
         <Setter Property="Margin" Value="4,18,0,8" />
     </Style>
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "hinweis": "Neues Programm = ein weiteres Objekt in 'programme'. Kein Neubau noetig; die App liest diese Datei bei jedem Start und beim Klick auf 'Katalog neu laden'. Feldbeschreibung: siehe README.md.",
+  "hinweis": "Neues Programm = ein weiteres Objekt in 'programme'. Kein Neubau nötig; die App liest diese Datei bei jedem Start und beim Klick auf 'Neu laden'. Feldbeschreibung: siehe README.md.",
   "programme": [
     {
       "id": "lmstudio",
@@ -24,10 +24,9 @@
       "id": "lmstudio-runtimes",
       "name": "LM Studio Engines & Runtimes",
       "gruppe": "KI-Anwendungen",
-      "beschreibung": "Inferenz-Runtimes: llama.cpp fuer CPU/AVX2, NVIDIA CUDA, CUDA12 und Vulkan.",
+      "beschreibung": "Inferenz-Runtimes: llama.cpp für CPU/AVX2, NVIDIA CUDA, CUDA12 und Vulkan.",
       "art": "cli",
       "exePfad": "%USERPROFILE%/.lmstudio/bin/lms.exe",
-      "versionsArgumente": "version",
       "pruefArgumente": "runtime update --all --dry-run",
       "updateArgumente": "runtime update --all --yes",
       "pfeilZaehlen": true,
@@ -36,47 +35,44 @@
       "helferProzesse": [],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
-      "hinweis": "Laedt teils mehrere Gigabyte herunter. LM Studio darf dabei laufen.",
+      "hinweis": "Lädt teils mehrere Gigabyte herunter. LM Studio darf dabei laufen.",
       "akzent": "#F2A13B"
     },
     {
       "id": "claude-desktop",
       "name": "Claude Desktop",
       "gruppe": "KI-Anwendungen",
-      "beschreibung": "Anthropic Claude als Windows-Anwendung.",
-      "art": "winget",
-      "wingetId": "Anthropic.Claude",
+      "beschreibung": "Anthropic Claude als Windows-Anwendung (MSIX-Paket).",
+      "art": "msstore",
       "exePfad": "",
-      "prozesse": [
-        "Claude",
-        "claude-desktop"
-      ],
+      "prozesse": [],
       "helferProzesse": [],
-      "beendenVorUpdate": true,
-      "neuStartenNachUpdate": true,
-      "akzent": "#D97757"
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "akzent": "#D97757",
+      "appxName": "Claude",
+      "packageFamilyName": "Claude_pzs8sxrjxfjjc",
+      "hinweis": "Aktualisiert sich selbst – die Schaltfläche öffnet die App, das Update läuft dort.",
+      "selbstAktualisierend": true,
+      "appxAnwendungsId": "Claude"
     },
     {
       "id": "codex-desktop",
       "name": "Codex Desktop",
       "gruppe": "KI-Anwendungen",
-      "beschreibung": "OpenAI Codex als Store-App (MSIX). Updates laufen ueber den Microsoft Store.",
+      "beschreibung": "OpenAI Codex als Windows-Anwendung (MSIX-Paket, nicht aus dem Microsoft Store).",
       "art": "msstore",
       "appxName": "OpenAI.Codex",
       "packageFamilyName": "OpenAI.Codex_2p2nqsd0c76g0",
       "exePfad": "",
-      "prozesse": [
-        "Codex"
-      ],
-      "helferProzesse": [
-        "codex-code-mode-host",
-        "codex-computer-use-swift",
-        "codex-windows-sandbox-service"
-      ],
+      "prozesse": [],
+      "helferProzesse": [],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
-      "hinweis": "Store-Apps aktualisiert Windows selbst; die Schaltflaeche oeffnet die Store-Seite.",
-      "akzent": "#8E8EA0"
+      "hinweis": "Bringt einen eigenen Updater mit – die Schaltfläche öffnet die App, das Update läuft dort.",
+      "akzent": "#8E8EA0",
+      "selbstAktualisierend": true,
+      "appxAnwendungsId": "App"
     },
     {
       "id": "claude-cli",
@@ -95,7 +91,7 @@
       "helferProzesse": [],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
-      "hinweis": "Laufende Sessions werden nicht beendet; das Update greift beim naechsten Start.",
+      "hinweis": "Laufende Sessions werden nicht beendet; das Update greift beim nächsten Start.",
       "akzent": "#D97757"
     },
     {
@@ -117,14 +113,14 @@
       ],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
-      "hinweis": "Getrennt von Codex Desktop - eigener Release-Kanal unter ~/.codex/packages.",
+      "hinweis": "Getrennt von Codex Desktop – eigener Release-Kanal unter ~/.codex/packages.",
       "akzent": "#8E8EA0"
     },
     {
       "id": "streamdeck",
       "name": "Stream Deck",
       "gruppe": "Hardware",
-      "beschreibung": "Elgato Stream Deck inklusive Helferdiensten (Audio-Controller, Plugin-Hosts).",
+      "beschreibung": "Elgato Stream Deck einschließlich Helferdiensten (Audio-Controller, Plugin-Hosts).",
       "art": "winget",
       "wingetId": "Elgato.StreamDeck",
       "exePfad": "C:/Program Files/Elgato/StreamDeck/StreamDeck.exe",
@@ -139,14 +135,14 @@
       ],
       "beendenVorUpdate": true,
       "neuStartenNachUpdate": true,
-      "hinweis": "Helferdienste werden mitbeendet, sonst haengt der Installer.",
+      "hinweis": "Helferdienste werden mitbeendet, sonst hängt der Installer.",
       "akzent": "#3FA9F5"
     },
     {
       "id": "openlauncher",
       "name": "OpenLauncher",
       "gruppe": "Eigene Werkzeuge",
-      "beschreibung": "Eigener Launcher fuer CLI-Profile. Update ausschliesslich ueber update-launcher.ps1.",
+      "beschreibung": "Eigener Launcher für CLI-Profile. Update ausschließlich über update-launcher.ps1.",
       "art": "reposkript",
       "repoOrdner": "OpenLauncher",
       "skript": "OpenLauncher/update-launcher.ps1",
@@ -168,7 +164,7 @@
       "id": "tvo",
       "name": "TerminalVoiceOverlay (TVO)",
       "gruppe": "Eigene Werkzeuge",
-      "beschreibung": "Spracheingabe fuers Windows Terminal. Update nur ueber rebuild-overlay.ps1 TVO.",
+      "beschreibung": "Spracheingabe fürs Windows Terminal. Update nur über rebuild-overlay.ps1 TVO.",
       "art": "reposkript",
       "repoOrdner": "TerminalVoiceOverlay-Windows",
       "skript": "rebuild-overlay.ps1",
@@ -183,14 +179,14 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "dialogWartezeitSekunden": 360,
-      "hinweis": "Prozesse werden NIE von Hand beendet - das erledigt allein das Skript.",
+      "hinweis": "Prozesse werden NIE von Hand beendet – das erledigt allein das Skript.",
       "akzent": "#22C55E"
     },
     {
       "id": "cvo",
       "name": "ClaudeVoiceOverlay (CVO)",
       "gruppe": "Eigene Werkzeuge",
-      "beschreibung": "Spracheingabe fuer Claude Desktop. Update nur ueber rebuild-overlay.ps1 CVO.",
+      "beschreibung": "Spracheingabe für Claude Desktop. Update nur über rebuild-overlay.ps1 CVO.",
       "art": "reposkript",
       "repoOrdner": "ClaudeVoiceOverlay-Windows",
       "skript": "rebuild-overlay.ps1",
@@ -205,7 +201,7 @@
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
       "dialogWartezeitSekunden": 360,
-      "hinweis": "Prozesse werden NIE von Hand beendet - das erledigt allein das Skript.",
+      "hinweis": "Prozesse werden NIE von Hand beendet – das erledigt allein das Skript.",
       "akzent": "#22C55E"
     }
   ]

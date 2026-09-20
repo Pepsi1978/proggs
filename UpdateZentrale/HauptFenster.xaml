@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:UpdateZentrale.ViewModels"
         Title="UpdateZentrale"
-        Height="880" Width="1320" MinHeight="620" MinWidth="1040"
+        Height="880" Width="1340" MinHeight="620" MinWidth="1060"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource PinselHintergrund}"
+        Background="{DynamicResource PinselHintergrund}"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Ideal">
 
@@ -20,15 +20,8 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Sanfter Lichtschein oben links: gibt der Flaeche Tiefe, ohne von den Karten abzulenken -->
-        <Border Grid.RowSpan="3" IsHitTestVisible="False">
-            <Border.Background>
-                <RadialGradientBrush GradientOrigin="0.12,0" Center="0.12,0" RadiusX="0.85" RadiusY="0.7">
-                    <GradientStop Color="#2A1E5C" Offset="0" />
-                    <GradientStop Color="#00000000" Offset="1" />
-                </RadialGradientBrush>
-            </Border.Background>
-        </Border>
+        <!-- Sanfter Lichtschein oben links: gibt der Fläche Tiefe, ohne von den Karten abzulenken -->
+        <Border Grid.RowSpan="3" IsHitTestVisible="False" Background="{DynamicResource PinselSchein}" />
 
         <!-- ================= Kopfzeile ================= -->
         <Grid Grid.Row="0" Margin="28,24,28,10">
@@ -40,29 +33,63 @@
             <StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Border Width="34" Height="34" CornerRadius="10"
-                            Background="{StaticResource PinselAkzentVerlauf}" Margin="0,0,12,0">
-                        <TextBlock Text="&#x2191;" FontSize="19" FontWeight="Bold" Foreground="White"
+                            Background="{DynamicResource PinselAkzentVerlauf}" Margin="0,0,12,0">
+                        <TextBlock Text="&#x2191;" FontSize="19" FontWeight="Bold"
+                                   Foreground="{DynamicResource PinselAufAkzent}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <TextBlock Text="UpdateZentrale" Style="{StaticResource TitelGross}" VerticalAlignment="Center" />
                     <Border Margin="14,0,0,0" Padding="10,4" CornerRadius="8" VerticalAlignment="Center"
-                            Background="#1E2230" BorderBrush="{StaticResource PinselRand}" BorderThickness="1">
+                            Background="{DynamicResource PinselPlaketteFlaeche}"
+                            BorderBrush="{DynamicResource PinselPlaketteRand}" BorderThickness="1">
                         <TextBlock Text="{Binding UpdateZusammenfassung}" FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{StaticResource PinselTextLeise}" />
+                                   Foreground="{DynamicResource PinselTextLeise}" />
                     </Border>
                 </StackPanel>
-                <TextBlock Text="Alle Werkzeuge an einem Ort pruefen und aktualisieren."
-                           Style="{StaticResource TextLeise}" Margin="46,4,0,0" />
+                <StackPanel Orientation="Horizontal" Margin="46,5,0,0">
+                    <TextBlock Text="Alle Werkzeuge an einem Ort prüfen und aktualisieren."
+                               Style="{StaticResource TextLeise}" VerticalAlignment="Center" />
+
+                    <Border Margin="10,0,0,0" Padding="7,2" CornerRadius="6" VerticalAlignment="Center"
+                            Background="{DynamicResource PinselLaeuftFlaeche}"
+                            BorderBrush="{DynamicResource PinselLaeuftRand}" BorderThickness="1"
+                            Visibility="{Binding IstErhoeht, Converter={StaticResource BoolSichtbar}}">
+                        <TextBlock Text="Administrator" FontSize="10.5"
+                                   Foreground="{DynamicResource PinselLaeuftText}" />
+                    </Border>
+
+                    <Button Content="Als Administrator neu starten" Style="{StaticResource SchalterLeise}"
+                            FontSize="11" Padding="9,3" Margin="10,0,0,0"
+                            Command="{Binding AlsAdminNeuStartenCommand}"
+                            Visibility="{Binding NichtErhoeht, Converter={StaticResource BoolSichtbar}}"
+                            ToolTip="Startet die UpdateZentrale erhöht neu, damit jede Installation durchläuft." />
+                </StackPanel>
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Katalog oeffnen" Style="{StaticResource SchalterLeise}"
+
+                <!-- Hell/Dunkel -->
+                <Border Padding="11,6" CornerRadius="9" Margin="0,0,10,0"
+                        Background="{DynamicResource PinselFlaecheHoch}"
+                        BorderBrush="{DynamicResource PinselRand}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#x1F319;" FontSize="13" VerticalAlignment="Center" Margin="0,0,7,0"
+                                   ToolTip="Dunkler Modus" />
+                        <ToggleButton Style="{StaticResource Schiebeschalter}" VerticalAlignment="Center"
+                                      IsChecked="{Binding HellModus, Mode=TwoWay}"
+                                      ToolTip="Zwischen hellem und dunklem Modus umschalten" />
+                        <TextBlock Text="&#x2600;" FontSize="13" VerticalAlignment="Center" Margin="7,0,0,0"
+                                   ToolTip="Heller Modus" />
+                    </StackPanel>
+                </Border>
+
+                <Button Content="Katalog öffnen" Style="{StaticResource SchalterLeise}"
                         Command="{Binding KatalogOeffnenCommand}" Margin="0,0,8,0"
-                        ToolTip="programs.json oeffnen - dort werden neue Programme eingetragen." />
+                        ToolTip="programs.json öffnen – dort werden neue Programme eingetragen." />
                 <Button Content="Neu laden" Style="{StaticResource SchalterLeise}"
                         Command="{Binding KatalogNeuLadenCommand}" Margin="0,0,8,0"
                         ToolTip="Katalog neu einlesen, ohne die App neu zu starten." />
-                <Button Content="Alle pruefen" Style="{StaticResource SchalterZweit}"
+                <Button Content="Alle prüfen" Style="{StaticResource SchalterZweit}"
                         Command="{Binding AllePruefenCommand}" Margin="0,0,8,0"
                         IsEnabled="{Binding LaeuftSammelvorgang, Converter={StaticResource Nicht}}" />
                 <Button Content="Alle Updates installieren" Style="{StaticResource SchalterHaupt}"
@@ -73,9 +100,11 @@
 
         <!-- Hinweisband, wenn der Katalog nicht gelesen werden konnte -->
         <Border Grid.Row="0" Margin="28,0,28,0" VerticalAlignment="Bottom" Padding="14,10" CornerRadius="9"
-                Background="#3A1B22" BorderBrush="#7A2B38" BorderThickness="1"
+                Background="{DynamicResource PinselFehlerFlaeche}"
+                BorderBrush="{DynamicResource PinselFehlerRand}" BorderThickness="1"
                 Visibility="{Binding KatalogFehler, Converter={StaticResource TextSichtbar}}">
-            <TextBlock Text="{Binding KatalogFehler}" Foreground="#FFB4C0" FontSize="12.5" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding KatalogFehler}" Foreground="{DynamicResource PinselFehlerText}"
+                       FontSize="12.5" TextWrapping="Wrap" />
         </Border>
 
         <!-- ================= Hauptbereich ================= -->
@@ -111,17 +140,20 @@
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
                                     <Border x:Name="Rahmen" CornerRadius="14"
-                                            Background="{StaticResource PinselKarte}"
-                                            BorderBrush="{StaticResource PinselRand}" BorderThickness="1">
+                                            Background="{DynamicResource PinselKarte}"
+                                            BorderBrush="{DynamicResource PinselRand}" BorderThickness="1">
                                         <ContentPresenter />
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Rahmen" Property="BorderBrush" Value="#394054" />
+                                            <Setter TargetName="Rahmen" Property="BorderBrush"
+                                                    Value="{DynamicResource PinselRandHell}" />
                                         </Trigger>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Rahmen" Property="BorderBrush" Value="#6B4BF0" />
-                                            <Setter TargetName="Rahmen" Property="Background" Value="#191C28" />
+                                            <Setter TargetName="Rahmen" Property="BorderBrush"
+                                                    Value="{DynamicResource PinselAkzentRand}" />
+                                            <Setter TargetName="Rahmen" Property="Background"
+                                                    Value="{DynamicResource PinselKarteGewaehlt}" />
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -139,12 +171,12 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <!-- Kennzeichen mit Programmfarbe -->
+                            <!-- Kennzeichen in der Programmfarbe -->
                             <Border Grid.Column="0" Width="46" Height="46" CornerRadius="13"
                                     VerticalAlignment="Top" Margin="0,2,14,0"
                                     Background="{Binding Akzent, Converter={StaticResource HexPinsel}}">
                                 <TextBlock Text="{Binding Kuerzel}" FontSize="16" FontWeight="Bold"
-                                           Foreground="#0B0C10"
+                                           Foreground="{DynamicResource PinselAufKennzeichen}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
 
@@ -154,21 +186,26 @@
                                     <TextBlock Text="{Binding Name}" Style="{StaticResource TitelKarte}" />
 
                                     <Border Margin="10,1,0,0" Padding="7,2" CornerRadius="6" VerticalAlignment="Center"
-                                            Background="#1E2230" BorderBrush="{StaticResource PinselRand}" BorderThickness="1">
+                                            Background="{DynamicResource PinselPlaketteFlaeche}"
+                                            BorderBrush="{DynamicResource PinselPlaketteRand}" BorderThickness="1">
                                         <TextBlock Text="{Binding ArtText}" FontSize="10.5"
-                                                   Foreground="{StaticResource PinselTextLeise}" />
+                                                   Foreground="{DynamicResource PinselTextLeise}" />
                                     </Border>
 
                                     <Border Margin="6,1,0,0" Padding="7,2" CornerRadius="6" VerticalAlignment="Center"
-                                            Background="#16281E" BorderBrush="#245437" BorderThickness="1"
+                                            Background="{DynamicResource PinselLaeuftFlaeche}"
+                                            BorderBrush="{DynamicResource PinselLaeuftRand}" BorderThickness="1"
                                             Visibility="{Binding Laeuft, Converter={StaticResource BoolSichtbar}}">
-                                        <TextBlock Text="laeuft gerade" FontSize="10.5" Foreground="#5FE29B" />
+                                        <TextBlock Text="läuft gerade" FontSize="10.5"
+                                                   Foreground="{DynamicResource PinselLaeuftText}" />
                                     </Border>
 
                                     <Border Margin="6,1,0,0" Padding="7,2" CornerRadius="6" VerticalAlignment="Center"
-                                            Background="#1B2436" BorderBrush="#2C3B57" BorderThickness="1"
+                                            Background="{DynamicResource PinselAutostartFlaeche}"
+                                            BorderBrush="{DynamicResource PinselAutostartRand}" BorderThickness="1"
                                             Visibility="{Binding ImAutostart, Converter={StaticResource BoolSichtbar}}">
-                                        <TextBlock Text="Autostart" FontSize="10.5" Foreground="#89B4FF" />
+                                        <TextBlock Text="Autostart" FontSize="10.5"
+                                                   Foreground="{DynamicResource PinselAutostartText}" />
                                     </Border>
                                 </StackPanel>
 
@@ -176,7 +213,8 @@
                                            Margin="0,4,18,0" />
 
                                 <TextBlock Text="{Binding Hinweis}" Style="{StaticResource TextLeise}"
-                                           Foreground="#7E8699" FontStyle="Italic" Margin="0,4,18,0"
+                                           Foreground="{DynamicResource PinselTextSehrLeise}" FontStyle="Italic"
+                                           Margin="0,4,18,0"
                                            Visibility="{Binding HatHinweis, Converter={StaticResource BoolSichtbar}}" />
 
                                 <!-- Version und Zustand -->
@@ -189,26 +227,63 @@
                                     </Border>
 
                                     <TextBlock Text="{Binding VersionsText}" FontFamily="{StaticResource SchriftMono}"
-                                               FontSize="12" Foreground="{StaticResource PinselTextLeise}"
+                                               FontSize="12" Foreground="{DynamicResource PinselTextLeise}"
                                                VerticalAlignment="Center" Margin="10,0,0,0" />
                                 </StackPanel>
 
                                 <TextBlock Text="{Binding StatusText}" Style="{StaticResource TextLeise}"
-                                           Margin="0,6,18,0" Foreground="#8B93A7" />
+                                           Margin="0,6,18,0" />
 
                                 <Border Margin="0,8,18,0" Padding="9,6" CornerRadius="7"
-                                        Background="#3A2A16" BorderBrush="#6B4A1E" BorderThickness="1"
+                                        Background="{DynamicResource PinselWarnFlaeche}"
+                                        BorderBrush="{DynamicResource PinselWarnRand}" BorderThickness="1"
                                         Visibility="{Binding AdminWarnung, Converter={StaticResource BoolSichtbar}}">
-                                    <TextBlock Text="Achtung: Dieses Programm steht im Autostart. Mit Administratorrechten startet Windows es dort nicht mehr automatisch."
-                                               FontSize="11" Foreground="#FFCE8A" TextWrapping="Wrap" />
+                                    <StackPanel>
+                                        <TextBlock Text="Dieses Programm steht im Autostart. Den normalen Autostart überspringt Windows bei Programmen mit Administratorrechten – eine geplante Aufgabe startet es trotzdem, sogar ohne Rückfrage."
+                                                   FontSize="11" Foreground="{DynamicResource PinselWarnText}"
+                                                   TextWrapping="Wrap" />
+                                        <Button Content="Autostart auf Administratorrechte umstellen"
+                                                Style="{StaticResource SchalterLeise}" FontSize="11"
+                                                Padding="9,4" Margin="0,7,0,0" HorizontalAlignment="Left"
+                                                Command="{Binding AutostartUmstellenCommand}" />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Margin="0,8,18,0" Padding="9,6" CornerRadius="7"
+                                        Background="{DynamicResource PinselLaeuftFlaeche}"
+                                        BorderBrush="{DynamicResource PinselLaeuftRand}" BorderThickness="1"
+                                        Visibility="{Binding AutostartAlsAufgabe, Converter={StaticResource BoolSichtbar}}">
+                                    <StackPanel>
+                                        <TextBlock Text="Startet bei der Anmeldung als geplante Aufgabe mit Administratorrechten."
+                                                   FontSize="11" Foreground="{DynamicResource PinselLaeuftText}"
+                                                   TextWrapping="Wrap" />
+                                        <Button Content="Wieder auf normalen Autostart zurückstellen"
+                                                Style="{StaticResource SchalterLeise}" FontSize="11"
+                                                Padding="9,4" Margin="0,7,0,0" HorizontalAlignment="Left"
+                                                Command="{Binding AutostartUmstellenCommand}" />
+                                    </StackPanel>
                                 </Border>
                             </StackPanel>
 
                             <!-- Bedienelemente -->
-                            <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Width="186">
-                                <Button Content="Aktualisieren" Style="{StaticResource SchalterHaupt}"
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Width="188">
+
+                                <!-- Nur bei echtem Update betont; sonst ruhig und mit Text „Aktuell" -->
+                                <Button Content="{Binding AktionsText}"
                                         Command="{Binding AktualisierenCommand}"
-                                        IsEnabled="{Binding KannAktualisieren}" />
+                                        IsEnabled="{Binding AktionMoeglich}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource SchalterRuhig}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding AktionBetont}" Value="True">
+                                                    <Setter Property="Background" Value="{DynamicResource PinselAkzentVerlauf}" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource PinselAkzentRand}" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource PinselAufAkzent}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
 
                                 <Grid Margin="0,8,0,0">
                                     <Grid.ColumnDefinitions>
@@ -216,14 +291,15 @@
                                         <ColumnDefinition Width="8" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Button Grid.Column="0" Content="Pruefen" Style="{StaticResource SchalterZweit}"
-                                            Command="{Binding PruefenCommand}" IsEnabled="{Binding KannAktualisieren}" />
+                                    <Button Grid.Column="0" Content="Prüfen" Style="{StaticResource SchalterZweit}"
+                                            Command="{Binding PruefenCommand}" IsEnabled="{Binding KannPruefen}" />
                                     <Button Grid.Column="2" Content="Starten" Style="{StaticResource SchalterLeise}"
                                             Command="{Binding StartenCommand}" IsEnabled="{Binding KannStarten}" />
                                 </Grid>
 
                                 <Border Margin="0,10,0,0" Padding="10,7" CornerRadius="9"
-                                        Background="#161925" BorderBrush="{StaticResource PinselRand}" BorderThickness="1">
+                                        Background="{DynamicResource PinselFlaecheTief}"
+                                        BorderBrush="{DynamicResource PinselRand}" BorderThickness="1">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -232,18 +308,19 @@
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Text="Als Administrator" FontSize="11.5" FontWeight="SemiBold" />
                                             <TextBlock Text="bei jedem Start" FontSize="10"
-                                                       Foreground="{StaticResource PinselTextLeise}" />
+                                                       Foreground="{DynamicResource PinselTextLeise}" />
                                         </StackPanel>
                                         <ToggleButton Grid.Column="1" Style="{StaticResource Schiebeschalter}"
                                                       VerticalAlignment="Center"
                                                       IsChecked="{Binding AlsAdministrator, Mode=TwoWay}"
                                                       IsEnabled="{Binding KannStarten}"
-                                                      ToolTip="Setzt den Windows-Kompatibilitaetsschalter 'Programm als Administrator ausfuehren'." />
+                                                      ToolTip="Setzt den Windows-Kompatibilitätsschalter: Programm als Administrator ausführen." />
                                     </Grid>
                                 </Border>
 
                                 <ProgressBar Height="3" Margin="0,10,0,0" IsIndeterminate="True"
-                                             Background="Transparent" BorderThickness="0" Foreground="#7C5CFF"
+                                             Background="Transparent" BorderThickness="0"
+                                             Foreground="{DynamicResource PinselAkzent}"
                                              Visibility="{Binding IstBeschaeftigt, Converter={StaticResource BoolSichtbar}}" />
                             </StackPanel>
                         </Grid>
@@ -253,14 +330,17 @@
 
             <GridSplitter Grid.Column="1" Width="6" Background="Transparent" HorizontalAlignment="Center" />
 
-            <!-- ================= Protokoll ================= -->
-            <Border Grid.Column="2" CornerRadius="14" Background="#101219"
-                    BorderBrush="{StaticResource PinselRand}" BorderThickness="1" Margin="0,0,0,0">
+            <!-- ================= Protokoll und Terminal ================= -->
+            <Border Grid.Column="2" CornerRadius="14" Background="{DynamicResource PinselFlaecheTief}"
+                    BorderBrush="{DynamicResource PinselRand}" BorderThickness="1">
                 <Grid Margin="16,14">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
+                        <RowDefinition Height="2*" MinHeight="120" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="1.3*" MinHeight="120" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <StackPanel>
@@ -270,31 +350,79 @@
                     </StackPanel>
 
                     <Border Grid.Row="1" Margin="0,12,0,10" Padding="11,9" CornerRadius="9"
-                            Background="#161925" BorderBrush="{StaticResource PinselRand}" BorderThickness="1">
+                            Background="{DynamicResource PinselFlaecheHoch}"
+                            BorderBrush="{DynamicResource PinselRand}" BorderThickness="1">
                         <StackPanel>
                             <TextBlock Text="{Binding AusgewaehltesProgramm.StatusText}" FontSize="12"
                                        TextWrapping="Wrap" />
                             <TextBlock Text="{Binding AusgewaehltesProgramm.VersionsText}"
                                        FontFamily="{StaticResource SchriftMono}" FontSize="11.5"
-                                       Foreground="{StaticResource PinselTextLeise}" Margin="0,5,0,0" />
+                                       Foreground="{DynamicResource PinselTextLeise}" Margin="0,5,0,0" />
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Row="2" CornerRadius="9" Background="#0A0B10"
-                            BorderBrush="#1E2230" BorderThickness="1">
-                        <ScrollViewer x:Name="ProtokollLeser" Margin="10,8" VerticalScrollBarVisibility="Auto">
+                    <Border Grid.Row="2" CornerRadius="9" Background="{DynamicResource PinselKonsole}"
+                            BorderBrush="{DynamicResource PinselKonsoleRand}" BorderThickness="1">
+                        <ScrollViewer Margin="10,8" VerticalScrollBarVisibility="Auto">
                             <TextBlock Text="{Binding AusgewaehltesProgramm.Protokoll}"
                                        FontFamily="{StaticResource SchriftMono}" FontSize="11.5"
-                                       Foreground="#9FB4C9" TextWrapping="Wrap" />
+                                       Foreground="{DynamicResource PinselKonsoleText}" TextWrapping="Wrap" />
                         </ScrollViewer>
                     </Border>
+
+                    <!-- Eingebautes Terminal: läuft mit den Rechten der UpdateZentrale -->
+                    <Grid Grid.Row="3" Margin="0,16,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding TerminalKopf}" Style="{StaticResource TitelKarte}"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Fenster" Style="{StaticResource SchalterLeise}" Padding="9,4"
+                                    FontSize="11" Command="{Binding TerminalFensterOeffnenCommand}"
+                                    Margin="0,0,6,0"
+                                    ToolTip="Ein echtes Terminalfenster im Repo-Ordner öffnen" />
+                            <Button Content="Leeren" Style="{StaticResource SchalterLeise}" Padding="9,4"
+                                    FontSize="11" Command="{Binding TerminalLeerenCommand}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Row="4" CornerRadius="9" Background="{DynamicResource PinselKonsole}"
+                            BorderBrush="{DynamicResource PinselKonsoleRand}" BorderThickness="1">
+                        <ScrollViewer x:Name="TerminalLeser" Margin="10,8" VerticalScrollBarVisibility="Auto">
+                            <TextBlock Text="{Binding TerminalAusgabe}"
+                                       FontFamily="{StaticResource SchriftMono}" FontSize="11.5"
+                                       Foreground="{DynamicResource PinselKonsoleText}" TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </Border>
+
+                    <Grid Grid.Row="5" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Style="{StaticResource BefehlsZeile}"
+                                 Text="{Binding Befehl, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding TerminalLaeuft, Converter={StaticResource Nicht}}"
+                                 ToolTip="PowerShell-Befehl eingeben und mit der Eingabetaste ausführen">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding BefehlAusfuehrenCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <Button Grid.Column="1" Content="Ausführen" Style="{StaticResource SchalterZweit}"
+                                Margin="8,0,0,0" Padding="13,7"
+                                Command="{Binding BefehlAusfuehrenCommand}"
+                                IsEnabled="{Binding TerminalLaeuft, Converter={StaticResource Nicht}}" />
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
 
-        <!-- ================= Fusszeile ================= -->
+        <!-- ================= Fußzeile ================= -->
         <Border Grid.Row="2" Margin="28,14,28,18" Padding="16,10" CornerRadius="11"
-                Background="#101219" BorderBrush="{StaticResource PinselRand}" BorderThickness="1">
+                Background="{DynamicResource PinselFlaecheTief}"
+                BorderBrush="{DynamicResource PinselRand}" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -302,7 +430,13 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="{Binding KopfStatus}" Style="{StaticResource TextLeise}" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Content="Zustaende auffrischen" Style="{StaticResource SchalterLeise}"
+                    <TextBlock Text="Immer als Administrator starten" Style="{StaticResource TextLeise}"
+                               VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ToggleButton Style="{StaticResource Schiebeschalter}" VerticalAlignment="Center"
+                                  Margin="0,0,16,0"
+                                  IsChecked="{Binding ImmerAlsAdmin, Mode=TwoWay}"
+                                  ToolTip="Windows startet die UpdateZentrale dann immer erhöht (Abfrage der Benutzerkontensteuerung)." />
+                    <Button Content="Zustände auffrischen" Style="{StaticResource SchalterLeise}"
                             Command="{Binding ZustaendeAuffrischenCommand}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding AnwendungsVersion}" Style="{StaticResource TextLeise}"
                                VerticalAlignment="Center" />

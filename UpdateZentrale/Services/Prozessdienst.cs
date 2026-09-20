@@ -13,18 +13,64 @@ public static class Prozessdienst
     public static IReadOnlyList<Process> Laufende(ProgrammEintrag eintrag)
     {
         var treffer = new List<Process>();
+        var erwarteterOrdner = OrdnerVon(eintrag);
+
         foreach (var name in eintrag.AlleProzesse)
         {
+            Process[] kandidaten;
             try
             {
-                treffer.AddRange(Process.GetProcessesByName(name));
+                kandidaten = Process.GetProcessesByName(name);
             }
             catch
             {
-                // A process can die between enumeration and access -- never fatal for a check.
+                continue;
+            }
+
+            foreach (var kandidat in kandidaten)
+            {
+                if (PasstZumEintrag(kandidat, eintrag, erwarteterOrdner)) treffer.Add(kandidat);
             }
         }
         return treffer;
+    }
+
+    /// <summary>
+    /// Process names collide across entries -- the Claude Code CLI and the Claude desktop app are
+    /// both called "claude", and Windows matches names case-insensitively. Without a path check a
+    /// desktop update would offer to kill running CLI sessions, so a known install folder always
+    /// wins over the bare name.
+    /// </summary>
+    private static bool PasstZumEintrag(Process prozess, ProgrammEintrag eintrag, string? erwarteterOrdner)
+    {
+        if (erwarteterOrdner is null) return true;
+
+        var pfad = PfadVon(prozess);
+        if (string.IsNullOrEmpty(pfad)) return false;   // Unreadable path: never assume a match.
+
+        return pfad.StartsWith(erwarteterOrdner, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? OrdnerVon(ProgrammEintrag eintrag)
+    {
+        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        if (string.IsNullOrWhiteSpace(exe)) return null;
+
+        var ordner = Path.GetDirectoryName(exe);
+        return string.IsNullOrWhiteSpace(ordner) ? null : ordner;
+    }
+
+    private static string PfadVon(Process prozess)
+    {
+        try
+        {
+            return prozess.MainModule?.FileName ?? "";
+        }
+        catch
+        {
+            // Access denied for elevated or protected processes -- treated as "unknown path".
+            return "";
+        }
     }
 
     public static bool Laeuft(ProgrammEintrag eintrag) => Laufende(eintrag).Count > 0;

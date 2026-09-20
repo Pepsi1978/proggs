@@ -26,9 +26,21 @@ public sealed class ZustandZuPinselUmwandler : IValueConverter
             _ => (148, 163, 184)
         };
 
-        return Hintergrund
-            ? new SolidColorBrush(Color.FromArgb(38, (byte)r, (byte)g, (byte)b))
-            : new SolidColorBrush(Color.FromRgb((byte)r, (byte)g, (byte)b));
+        if (Hintergrund)
+        {
+            return new SolidColorBrush(Color.FromArgb(Darstellung.IstHell ? (byte)30 : (byte)38,
+                (byte)r, (byte)g, (byte)b));
+        }
+
+        // On a light surface the saturated tone is too pale to read, so it is darkened.
+        if (Darstellung.IstHell)
+        {
+            r = (int)(r * 0.72);
+            g = (int)(g * 0.72);
+            b = (int)(b * 0.72);
+        }
+
+        return new SolidColorBrush(Color.FromRgb((byte)r, (byte)g, (byte)b));
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -41,13 +53,13 @@ public sealed class ZustandZuTextUmwandler : IValueConverter
         => (value as UpdateZustand?) switch
         {
             UpdateZustand.Aktuell => "Aktuell",
-            UpdateZustand.UpdateVerfuegbar => "Update verfuegbar",
+            UpdateZustand.UpdateVerfuegbar => "Update verfügbar",
             UpdateZustand.Fertig => "Fertig",
             UpdateZustand.Fehler => "Fehler",
             UpdateZustand.Abgebrochen => "Abgebrochen",
             UpdateZustand.NichtInstalliert => "Nicht installiert",
-            UpdateZustand.Pruefe => "Pruefe",
-            _ => "Unbekannt"
+            UpdateZustand.Pruefe => "Prüft …",
+            _ => "Noch nicht geprüft"
         };
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -34,6 +34,19 @@ public sealed partial class HauptViewModel : ObservableObject
         Ansicht = CollectionViewSource.GetDefaultView(Programme);
         Ansicht.GroupDescriptions.Add(new PropertyGroupDescription(nameof(ProgrammViewModel.Gruppe)));
 
+        _hellModus = _einstellungen.HellModus;
+        Darstellung.Anwenden(_hellModus);
+
+        // The updater is meant to be able to install anything, so it marks itself to always run
+        // elevated on the first launch. The switch in the footer turns that off again.
+        if (!_einstellungen.AdminStartGesetzt)
+        {
+            Rechte.ImmerAlsAdminSetzen(true);
+            _einstellungen.AdminStartGesetzt = true;
+            _einstellungen.Speichern();
+        }
+        _immerAlsAdmin = Rechte.ImmerAlsAdmin;
+
         KatalogLaden();
     }
 
@@ -45,6 +58,124 @@ public sealed partial class HauptViewModel : ObservableObject
     [ObservableProperty] private string _kopfStatus = "Bereit.";
     [ObservableProperty] private bool _laeuftSammelvorgang;
     [ObservableProperty] private string? _katalogFehler;
+
+    private bool _hellModus;
+
+    /// <summary>Light or dark; the choice is remembered in settings.json.</summary>
+    public bool HellModus
+    {
+        get => _hellModus;
+        set
+        {
+            if (_hellModus == value) return;
+            _hellModus = value;
+
+            Darstellung.Anwenden(value);
+            _einstellungen.HellModus = value;
+            _einstellungen.Speichern();
+
+            // The state pills are drawn by converters that read the mode, so they need a nudge.
+            foreach (var p in Programme) p.DarstellungAuffrischen();
+
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DarstellungsText));
+        }
+    }
+
+    public string DarstellungsText => HellModus ? "Heller Modus" : "Dunkler Modus";
+
+    // ---------------- Rechte ----------------
+
+    private bool _immerAlsAdmin;
+
+    public bool IstErhoeht => Rechte.IstErhoeht;
+    public bool NichtErhoeht => !Rechte.IstErhoeht;
+
+    public string RechteText => Rechte.IstErhoeht
+        ? "Läuft mit Administratorrechten"
+        : "Läuft ohne Administratorrechte";
+
+    /// <summary>Marks the exe itself with the RUNASADMIN compatibility flag.</summary>
+    public bool ImmerAlsAdmin
+    {
+        get => _immerAlsAdmin;
+        set
+        {
+            if (_immerAlsAdmin == value) return;
+            _immerAlsAdmin = value;
+
+            if (!Rechte.ImmerAlsAdminSetzen(value))
+            {
+                _immerAlsAdmin = !value;
+                Dialoge.Hinweis("Die Einstellung ließ sich nicht schreiben.");
+            }
+            OnPropertyChanged();
+        }
+    }
+
+    [RelayCommand]
+    private void AlsAdminNeuStarten()
+    {
+        if (Rechte.IstErhoeht)
+        {
+            Dialoge.Hinweis("Die UpdateZentrale läuft bereits mit Administratorrechten.");
+            return;
+        }
+
+        if (Rechte.NeuStartenAlsAdmin())
+        {
+            System.Windows.Application.Current?.Shutdown();
+        }
+        else
+        {
+            KopfStatus = "Der Neustart mit Administratorrechten wurde abgebrochen.";
+        }
+    }
+
+    // ---------------- Terminal ----------------
+
+    [ObservableProperty] private string _befehl = "";
+    [ObservableProperty] private string _terminalAusgabe = "";
+    [ObservableProperty] private bool _terminalLaeuft;
+
+    public string TerminalKopf => "Terminal · " + (Rechte.IstErhoeht ? "Administrator" : "Standardrechte");
+
+    [RelayCommand]
+    private async Task BefehlAusfuehrenAsync()
+    {
+        var befehl = Befehl.Trim();
+        if (string.IsNullOrWhiteSpace(befehl) || TerminalLaeuft) return;
+
+        TerminalLaeuft = true;
+        TerminalAusgabe += (TerminalAusgabe.Length == 0 ? "" : "\n\n") + "PS> " + befehl + "\n";
+        Befehl = "";
+
+        try
+        {
+            var ausgabe = await Terminal.AusfuehrenAsync(befehl);
+            TerminalAusgabe += ausgabe;
+        }
+        catch (Exception ex)
+        {
+            TerminalAusgabe += "[Fehler] " + ex.Message;
+        }
+        finally
+        {
+            TerminalLaeuft = false;
+        }
+    }
+
+    [RelayCommand]
+    private void TerminalLeeren() => TerminalAusgabe = "";
+
+    [RelayCommand]
+    private void TerminalFensterOeffnen()
+    {
+        if (!Terminal.FensterOeffnen())
+        {
+            Dialoge.Hinweis("Es ließ sich kein Terminalfenster öffnen.");
+        }
+    }
 
     public string AnwendungsVersion
     {
@@ -65,8 +196,8 @@ public sealed partial class HauptViewModel : ObservableObject
     public string UpdateZusammenfassung => AnzahlUpdates switch
     {
         0 => "Keine Updates offen",
-        1 => "1 Update verfuegbar",
-        _ => AnzahlUpdates + " Updates verfuegbar"
+        1 => "1 Update verfügbar",
+        _ => AnzahlUpdates + " Updates verfügbar"
     };
 
     private void KatalogLaden()
@@ -100,6 +231,20 @@ public sealed partial class HauptViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Runs once after the window is up, so the list is meaningful without a first click -- and
+    /// so the update buttons show "Aktuell" wherever nothing is pending.
+    /// </summary>
+    public async Task ErstePruefungAsync()
+    {
+        await Task.Delay(400);
+
+        // Which programs already start elevated through a scheduled task?
+        foreach (var p in Programme) await p.AufgabenZustandLesenAsync();
+
+        await AllePruefenAsync();
+    }
+
     [RelayCommand]
     private async Task AllePruefenAsync()
     {
@@ -113,10 +258,10 @@ public sealed partial class HauptViewModel : ObservableObject
             for (var i = 0; i < gesamt; i++)
             {
                 var p = Programme[i];
-                KopfStatus = "Pruefe " + p.Name + " (" + (i + 1) + "/" + gesamt + ") …";
+                KopfStatus = "Prüft " + p.Name + " (" + (i + 1) + " von " + gesamt + ") …";
                 await p.PruefenCommand.ExecuteAsync(null);
             }
-            KopfStatus = "Pruefung abgeschlossen – " + UpdateZusammenfassung + ".";
+            KopfStatus = "Prüfung abgeschlossen – " + UpdateZusammenfassung + ".";
         }
         finally
         {
@@ -132,13 +277,13 @@ public sealed partial class HauptViewModel : ObservableObject
         var offen = Programme.Where(p => p.HatUpdate).ToList();
         if (offen.Count == 0)
         {
-            Dialoge.Hinweis("Es ist kein Update offen. Pruefe zuerst, oder aktualisiere einzelne Programme gezielt.");
+            Dialoge.Hinweis("Es ist kein Update offen. Prüfe zuerst, oder aktualisiere einzelne Programme gezielt.");
             return;
         }
 
         var liste = string.Join("\n", offen.Select(p => "  • " + p.Name));
         if (!Dialoge.Fragen("Diese Programme werden jetzt aktualisiert:\n\n" + liste
-                            + "\n\nLaufende Programme werden vorher abgefragt.", "Alle Updates installieren?"))
+                            + "\n\nBei laufenden Programmen wird vorher nachgefragt.", "Alle Updates installieren?"))
         {
             return;
         }
@@ -148,11 +293,11 @@ public sealed partial class HauptViewModel : ObservableObject
         {
             for (var i = 0; i < offen.Count; i++)
             {
-                KopfStatus = "Aktualisiere " + offen[i].Name + " (" + (i + 1) + "/" + offen.Count + ") …";
+                KopfStatus = "Aktualisiert " + offen[i].Name + " (" + (i + 1) + " von " + offen.Count + ") …";
                 AusgewaehltesProgramm = offen[i];
                 await offen[i].AktualisierenCommand.ExecuteAsync(null);
             }
-            KopfStatus = "Alle Updates durchgelaufen.";
+            KopfStatus = "Alle Updates sind durchgelaufen.";
         }
         finally
         {
@@ -177,7 +322,7 @@ public sealed partial class HauptViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            Dialoge.Hinweis("Katalog liess sich nicht oeffnen: " + ex.Message);
+            Dialoge.Hinweis("Der Katalog ließ sich nicht öffnen: " + ex.Message);
         }
     }
 
@@ -185,6 +330,6 @@ public sealed partial class HauptViewModel : ObservableObject
     private void ZustaendeAuffrischen()
     {
         foreach (var p in Programme) p.ZustandAktualisieren();
-        KopfStatus = "Laufende Programme und Autostart neu eingelesen.";
+        KopfStatus = "Laufende Programme und Autostart wurden neu eingelesen.";
     }
 }

@@ -63,12 +63,12 @@ public sealed class CliAktualisierer : IAktualisierer
                 var neuer = Vergleiche(verfuegbar, installiert) > 0;
                 return new PruefErgebnis(neuer ? UpdateZustand.UpdateVerfuegbar : UpdateZustand.Aktuell,
                     installiert, verfuegbar,
-                    neuer ? $"Neue Version {verfuegbar} verfuegbar." : "Auf dem neuesten Stand.");
+                    neuer ? $"Neue Version {verfuegbar} verfügbar." : "Auf dem neuesten Stand.");
             }
         }
 
         return new PruefErgebnis(UpdateZustand.Unbekannt, installiert, "",
-            "Keine Pruefquelle hinterlegt - Update laesst sich trotzdem ausloesen.");
+            "Keine Prüfquelle hinterlegt – das Update lässt sich trotzdem auslösen.");
     }
 
     public async Task<PruefErgebnis> AktualisierenAsync(ProgrammEintrag eintrag, IProgress<string> protokoll, CancellationToken abbruch)
@@ -85,7 +85,7 @@ public sealed class CliAktualisierer : IAktualisierer
         protokoll.Report(lauf.Ausgabe);
 
         if (lauf.Abgelaufen)
-            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit ueberschritten.", Protokoll: lauf.Ausgabe);
+            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit überschritten.", Protokoll: lauf.Ausgabe);
         if (lauf.ExitCode != 0)
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: $"Endete mit Code {lauf.ExitCode}.", Protokoll: lauf.Ausgabe);
 

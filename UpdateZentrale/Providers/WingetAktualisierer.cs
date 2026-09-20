@@ -25,8 +25,14 @@ public sealed class WingetAktualisierer : IAktualisierer
         var zeile = TabellenZeile(lauf.Ausgabe, eintrag.WingetId ?? "");
         if (zeile is null)
         {
-            return new PruefErgebnis(UpdateZustand.NichtInstalliert,
-                Meldung: "Nicht ueber winget installiert.", Protokoll: lauf.Ausgabe);
+            // The id appearing without a parsable table means the output shape changed, not that
+            // the program is missing -- saying "not installed" there would be a lie.
+            var kenntPaket = lauf.Ausgabe.Contains(eintrag.WingetId ?? "\u0000", StringComparison.OrdinalIgnoreCase);
+            return kenntPaket
+                ? new PruefErgebnis(UpdateZustand.Unbekannt,
+                    Meldung: "winget-Ausgabe war nicht lesbar – siehe Protokoll.", Protokoll: lauf.Ausgabe)
+                : new PruefErgebnis(UpdateZustand.NichtInstalliert,
+                    Meldung: "Nicht über winget installiert.", Protokoll: lauf.Ausgabe);
         }
 
         var (installiert, verfuegbar) = zeile.Value;
@@ -35,7 +41,7 @@ public sealed class WingetAktualisierer : IAktualisierer
             : UpdateZustand.UpdateVerfuegbar;
 
         return new PruefErgebnis(zustand, installiert, verfuegbar,
-            zustand == UpdateZustand.Aktuell ? "Auf dem neuesten Stand." : $"Neue Version {verfuegbar} verfuegbar.",
+            zustand == UpdateZustand.Aktuell ? "Auf dem neuesten Stand." : $"Neue Version {verfuegbar} verfügbar.",
             lauf.Ausgabe);
     }
 
@@ -53,12 +59,12 @@ public sealed class WingetAktualisierer : IAktualisierer
         protokoll.Report(lauf.Ausgabe);
 
         if (lauf.Abgelaufen)
-            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit ueberschritten.", Protokoll: lauf.Ausgabe);
+            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit überschritten.", Protokoll: lauf.Ausgabe);
 
         if (lauf.ExitCode != 0)
         {
             var grund = lauf.Ausgabe.Contains("No applicable upgrade", StringComparison.OrdinalIgnoreCase)
-                ? "Kein Upgrade verfuegbar."
+                ? "Kein Upgrade verfügbar."
                 : $"winget endete mit Code {lauf.ExitCode}.";
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: grund, Protokoll: lauf.Ausgabe);
         }
@@ -66,39 +72,42 @@ public sealed class WingetAktualisierer : IAktualisierer
         return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Update installiert.", Protokoll: lauf.Ausgabe);
     }
 
-    /// <summary>Finds the package row and returns (installed, available) using header column offsets.</summary>
+    /// <summary>
+    /// Finds the package row and returns (installed, available).
+    ///
+    /// Header column offsets are not usable: winget pads columns by display width, and a name
+    /// that is itself version-like ("LM Studio 0.4.24+1") pushes the row out of alignment.
+    /// Anchoring on the exact package id and reading the fields behind it survives that, and
+    /// works regardless of the display language.
+    /// </summary>
     private static (string Installiert, string Verfuegbar)? TabellenZeile(string ausgabe, string id)
     {
-        var zeilen = ausgabe.Split('\n');
-        var kopfIndex = Array.FindIndex(zeilen, z =>
-            (z.Contains("Version", StringComparison.OrdinalIgnoreCase)) &&
-            (z.TrimStart().StartsWith("Name", StringComparison.OrdinalIgnoreCase)));
-        if (kopfIndex < 0) return null;
+        if (string.IsNullOrWhiteSpace(id)) return null;
 
-        var kopf = zeilen[kopfIndex];
-        var spaltenVersion = kopf.IndexOf("Version", StringComparison.OrdinalIgnoreCase);
-        // Column after Version is "Available"/"Verfuegbar" depending on the display language.
-        var spaltenVerfuegbar = kopf.IndexOf("Available", StringComparison.OrdinalIgnoreCase);
-        if (spaltenVerfuegbar < 0) spaltenVerfuegbar = kopf.IndexOf("Verf", spaltenVersion + 1, StringComparison.OrdinalIgnoreCase);
-        var spaltenQuelle = kopf.IndexOf("Source", StringComparison.OrdinalIgnoreCase);
-        if (spaltenQuelle < 0) spaltenQuelle = kopf.IndexOf("Quelle", StringComparison.OrdinalIgnoreCase);
-
-        foreach (var zeile in zeilen.Skip(kopfIndex + 1))
+        foreach (var zeile in ausgabe.Split('\n'))
         {
-            if (!zeile.Contains(id, StringComparison.OrdinalIgnoreCase)) continue;
+            var stelle = zeile.IndexOf(id, StringComparison.OrdinalIgnoreCase);
+            if (stelle < 0) continue;
+            if (zeile.TrimStart().StartsWith("Name", StringComparison.OrdinalIgnoreCase)) continue;
 
-            var installiert = Ausschnitt(zeile, spaltenVersion, spaltenVerfuegbar);
-            var verfuegbar = spaltenVerfuegbar < 0 ? "" : Ausschnitt(zeile, spaltenVerfuegbar, spaltenQuelle);
-            return (installiert, verfuegbar);
+            var rest = zeile[(stelle + id.Length)..]
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .ToList();
+
+            // Trailing source column ("winget", "msstore", "MSIX\..."): not a version.
+            while (rest.Count > 0 && !SiehtNachVersionAus(rest[^1])) rest.RemoveAt(rest.Count - 1);
+
+            return rest.Count switch
+            {
+                0 => ("", ""),
+                1 => (rest[0], ""),
+                _ => (rest[0], rest[1])
+            };
         }
         return null;
     }
 
-    private static string Ausschnitt(string zeile, int von, int bis)
-    {
-        if (von < 0 || von >= zeile.Length) return "";
-        var ende = bis < 0 || bis > zeile.Length ? zeile.Length : bis;
-        if (ende <= von) ende = zeile.Length;
-        return zeile[von..ende].Trim();
-    }
+    /// <summary>A version field always starts with a digit; "winget" and "Unknown" do not.</summary>
+    private static bool SiehtNachVersionAus(string feld)
+        => feld.Length > 0 && char.IsDigit(feld[0]);
 }
