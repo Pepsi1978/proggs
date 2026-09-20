@@ -188,6 +188,19 @@ if ($launcherStart.EnvironmentVariables['TERM'] -eq 'dumb') {
 if ([string]::IsNullOrWhiteSpace($launcherStart.EnvironmentVariables['COLORTERM'])) {
     $launcherStart.EnvironmentVariables.Remove('COLORTERM')
 }
+# Steht OpenLauncher.exe in Windows auf "Als Administrator ausfuehren" (AppCompat-Flag
+# RUNASADMIN, z.B. ueber die UpdateZentrale gesetzt), scheitert dieser Start mit Win32-Fehler
+# 740: ohne Shell kann Windows keinen UAC-Dialog zeigen. Die Umgebungsbereinigung oben braucht
+# aber UseShellExecute=$false. Also die Rechteanforderung fuer genau dieses Kind aushebeln --
+# der Launcher lief hier noch nie erhoeht. Laeuft dieses Skript erhoeht, erbt er dessen Rechte.
+$launcherStart.EnvironmentVariables['__COMPAT_LAYER'] = 'RunAsInvoker'
+
+$layerKey = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
+$layerValue = (Get-ItemProperty -Path $layerKey -Name $launcherExe -ErrorAction SilentlyContinue).$launcherExe
+if ($layerValue -and $layerValue -match 'RUNASADMIN') {
+    Write-Output "Hinweis: OpenLauncher.exe steht auf 'Als Administrator ausfuehren'. Dieses Skript startet sie bewusst ohne erhoehte Rechte, sonst bricht der Start mit Fehler 740 ab."
+}
+
 $newLauncher = [System.Diagnostics.Process]::Start($launcherStart)
 Start-Sleep -Seconds 1
 if ($newLauncher.HasExited) {

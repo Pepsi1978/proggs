@@ -39,6 +39,7 @@ Programm per `CreateProcess` (UseShellExecute = false) gestartet wird:
 | Startet | Gestartete exe | Status |
 |---|---|---|
 | OpenLauncher `LmStudioService` | `lms.exe` | gefixt (RunAsInvoker) |
+| `OpenLauncher/update-launcher.ps1` | `OpenLauncher.exe` | gefixt (RunAsInvoker + Hinweis) |
 | UpdateZentrale `CliAktualisierer` → `Kommandozeile` | `claude.exe`, `codex.exe`, `lms.exe` | Fix vorbereitet |
 | Terminal/pwsh (vom OpenLauncher gestartet) | `claude.exe`, `codex.exe` | nicht am Startort behebbar |
 
@@ -52,6 +53,7 @@ Starts über `UseShellExecute = true` sind nicht betroffen — dort zeigt Window
 ## Fundstellen
 - `TerminalVoiceOverlay-Windows/Services/AudioRecorder.cs` (Capture-Worker)
 - `OpenLauncher/Services/LmStudioService.cs` → `OhneRechteanforderung`
+- `OpenLauncher/update-launcher.ps1` (baute erfolgreich, startete den Launcher aber nicht mehr)
 - `TerminalVoiceOverlay-Windows/App.xaml.cs` → `StartOverlayProcess` (Watchdog)
 - gleiche Stellen in `ClaudeVoiceOverlay-Windows`
 - Fix-Commit: `dd9655544` (20.09.2026)
