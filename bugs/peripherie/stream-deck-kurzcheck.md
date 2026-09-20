@@ -36,3 +36,7 @@
 > ueberhaupt ein Plugin-Bug ist — `StreamDeck.log` auf 0 Bytes pruefen (#16), dann alles andere.
 > Abschnitt R beruht auf einem einzigen Vorfall (n=1): Symptom und Fix sind bestaetigt, die
 > Ursache nicht.
+
+## Screenshot scheitert nur bei CPU-Z im Vordergrund
+
+Stand 20.09.2026: CPU-Z 2.19.0 x64 läuft erhöht, Stream Deck 7.4.2.22730 normal; die Taste sendet Windows+Druck. UIPI als Ursache prüfen, keine Screenshot-Sperre unterstellen. CPU-Z sichtbar lassen und ein normales Fenster fokussieren oder die physische Tastatur testen. [Befund und Grenzen: Abschnitt S](stream-deck.md#s-screenshot-hotkey-bei-erhöhtem-vordergrundfenster-cpu-z).

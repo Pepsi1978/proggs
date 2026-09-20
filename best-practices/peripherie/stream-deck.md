@@ -537,3 +537,15 @@ Quelle: docs.elgato.com/streamdeck/cli/commands/pack/ · .../validate/ — **off
 - streamdecklabs.com (Remote-Debugging klassisch)
 - developer.chrome.com/blog/timer-throttling-in-chrome-88 (Webview-Throttling)
 - websocket.org/guides/reconnection
+
+## S. Screenshot-Hotkeys und Prozessrechte
+
+Stand: 20.09.2026 10:29. Anker: CPU-Z 2.19.0 x64 und Stream Deck 7.4.2.22730.
+
+Bei einem Screenshot-Hotkey, der nur mit bestimmten Vordergrundfenstern scheitert, zuerst die gespeicherte Aktion und die Prozessrechte vergleichen. Ein Hotkey sendet Tasteneingaben; er fertigt das Bildschirmfoto nicht selbst an. Im geprüften Fall sendet die Taste Windows+Druck, während CPU-Z erhöht und Stream Deck normal läuft. Die erfolgreiche Fensterabfrage mit `DisplayAffinity=0` belegt keine explizite Windows-Aufnahmesperre.
+
+CPU-Z sichtbar lassen und den Fokus vor dem Stream-Deck-Hotkey auf ein normales Fenster oder den Desktop setzen. Alternativ die echte Tastatur zum Gegenprüfen verwenden. Dies sind vorgeschlagene Workarounds; ein erneuter Benutzertest ist noch nicht dokumentiert. Bei dauerhaftem Bedarf eine direkte Screenshot-Aktion prüfen, die ohne Eingabeinjektion auskommt. Den gesamten Stream-Deck-Prozess nicht vorschnell erhöhen; Plugin-Kompatibilität berücksichtigen.
+
+**Quelle (offiziell):** [Microsoft SendInput](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput). **Lokale Belege:** Prozess-Token, Stream-Deck-Profil und CPU-Z-Fensterabfrage vom genannten Datum.
+
+**Bezug zum Bug-Almanach:** [Abschnitt S: Screenshot-Hotkey bei erhöhtem Vordergrundfenster](../../bugs/peripherie/stream-deck.md#s-screenshot-hotkey-bei-erhöhtem-vordergrundfenster-cpu-z).

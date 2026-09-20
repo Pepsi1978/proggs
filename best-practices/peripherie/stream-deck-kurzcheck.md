@@ -27,3 +27,7 @@
 | 13 | Icons liefern | PNG quadratisch transparent, @1x + @2x; Listen-Icons monochrom weiss | §I1 |
 | 14 | SD+ Touch-Layout | Items im 200×100-Canvas, Touch-Targets ≥ 35×35 px, sonst laedt Layout nicht | §J2 |
 | 15 | Globale Settings empfangen | `getGlobalSettings()` aktiv anstossen, sonst feuert der Listener nie | §G4 |
+
+## Screenshot-Hotkeys bei Administratorfenstern
+
+Stand 20.09.2026, CPU-Z 2.19.0 x64 / Stream Deck 7.4.2.22730: Gespeicherten Hotkey und Prozessrechte zuerst prüfen. Ein normales Stream Deck kann an der UIPI-Grenze eines erhöhten Vordergrundfensters scheitern. Fokus auf ein normales Fenster setzen, während CPU-Z sichtbar bleibt; physische Tastatur als Gegenprobe. [Details und Quelle](stream-deck.md#s-screenshot-hotkeys-und-prozessrechte).

@@ -903,3 +903,15 @@ Beide stehen auch in jedem einwandfrei laufenden Log. Nicht darauf anspringen:
 
 Ebenso harmlos: `analytics::ApiClient::send_data Response status: 403` beim Shutdown — nur die
 Telemetrie-Abgabe, ohne Konto erwartbar.
+
+## S. Screenshot-Hotkey bei erhöhtem Vordergrundfenster (CPU-Z)
+
+Stand: 20.09.2026 10:29. Versionsanker: CPU-Z 2.19.0 x64 (Benutzerangabe), Stream Deck 7.4.2.22730 (Dateiversion), Windows.
+
+- **Symptom:** Die Stream-Deck-Screenshot-Taste funktioniert bei aktivem CPU-Z nicht, nach Minimieren bzw. Fokuswechsel zu einer normalen Anwendung wieder. Benutzerbeobachtung, keine vollständige automatisierte Vorher-/Nachher-Reproduktion.
+- **Messung:** CPU-Z-Prozesstoken `Elevated`, StreamDeck-Prozesstoken `Standard`. Die betreffende Taste ist eine System-Hotkey-Aktion mit Titel `Win+Druck`, Windows-Modifikator und virtuellem Tastencode 44. Für das gültige CPU-Z-Hauptfenster liefert `GetWindowDisplayAffinity` erfolgreich den Wert 0: keine explizite Windows-Aufnahmesperre.
+- **Ursache:** Der gemessene Rechteunterschied passt zur Windows-UIPI-Grenze für simulierte Eingaben. Microsoft dokumentiert, dass `SendInput` nur in Prozesse gleicher oder niedrigerer Integritätsstufe injizieren darf. Das erklärt das fokusabhängige Fehlerbild; es ist kein Hinweis auf fehlende Screenshot-Rechte des Bildinhalts.
+- **Funktionserhaltender Workaround:** CPU-Z sichtbar lassen, ein nicht erhöhtes Fenster oder den Desktop fokussieren, danach die Stream-Deck-Taste drücken. Alternativ Windows+Druck auf der physischen Tastatur testen. Die Gegenprobe beim Benutzer steht noch aus.
+- **Nicht pauschal ändern:** Stream Deck nicht allein hierfür dauerhaft als Administrator starten; der bestehende Abschnitt N1 beschreibt mögliche Plugin-Probleme. CPU-Z-Rechte nicht blind reduzieren, da Hardwarefunktionen betroffen sein können. Für eine dauerhafte Lösung wäre eine direkt aufnehmende Screenshot-Aktion ohne simulierten Hotkey gesondert zu prüfen.
+- **Quelle (offiziell):** [Microsoft SendInput/UIPI](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput), ergänzt durch lokale Token-, Fenster- und Profilprüfung.
+- **Bezug:** [Best Practices: Screenshot-Hotkeys und Prozessrechte](../../best-practices/peripherie/stream-deck.md#s-screenshot-hotkeys-und-prozessrechte).
