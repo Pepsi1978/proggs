@@ -1,0 +1,22 @@
+<Application x:Class="UpdateZentrale.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:dienste="clr-namespace:UpdateZentrale.Services"
+             StartupUri="HauptFenster.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <dienste:ZustandZuPinselUmwandler x:Key="ZustandVordergrund" Hintergrund="False" />
+            <dienste:ZustandZuPinselUmwandler x:Key="ZustandHintergrund" Hintergrund="True" />
+            <dienste:ZustandZuTextUmwandler x:Key="ZustandText" />
+            <dienste:HexZuPinselUmwandler x:Key="HexPinsel" />
+            <dienste:BoolZuSichtbarkeitUmwandler x:Key="BoolSichtbar" />
+            <dienste:BoolZuSichtbarkeitUmwandler x:Key="BoolSichtbarUmgekehrt" Umkehren="True" />
+            <dienste:TextZuSichtbarkeitUmwandler x:Key="TextSichtbar" />
+            <dienste:NichtUmwandler x:Key="Nicht" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

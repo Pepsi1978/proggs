@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>UpdateZentrale</RootNamespace>
+    <AssemblyName>UpdateZentrale</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <!-- Single source of truth; the SDK derives AssemblyVersion and FileVersion from it. -->
+    <Version>1.0.0</Version>
+    <Company>Pepsi1978</Company>
+    <Product>UpdateZentrale</Product>
+    <Copyright>© 2026 Pepsi1978</Copyright>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+  </ItemGroup>
+
+  <!-- Same pattern as OpenLauncher: MSBuild writes the real build time into the assembly so no
+       hand-maintained timestamp literal can drift. -->
+  <Target Name="SetBuildTimestamp" BeforeTargets="GetAssemblyAttributes">
+    <PropertyGroup>
+      <BuildTimestamp>$([System.DateTime]::Now.ToString("dd.MM.yyyy, HH:mm"))</BuildTimestamp>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>BuildTimestamp</_Parameter1>
+        <_Parameter2>$(BuildTimestamp)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
+  <!-- programs.json is read from the repo folder at runtime, never embedded: adding a program
+       must be a JSON edit, not a rebuild. -->
+  <ItemGroup>
+    <None Update="programs.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

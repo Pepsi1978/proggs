@@ -1,0 +1,212 @@
+{
+  "version": 1,
+  "hinweis": "Neues Programm = ein weiteres Objekt in 'programme'. Kein Neubau noetig; die App liest diese Datei bei jedem Start und beim Klick auf 'Katalog neu laden'. Feldbeschreibung: siehe README.md.",
+  "programme": [
+    {
+      "id": "lmstudio",
+      "name": "LM Studio",
+      "gruppe": "KI-Anwendungen",
+      "beschreibung": "Lokale LLM-Laufzeit mit Modell-Katalog und OpenAI-kompatiblem Server.",
+      "art": "winget",
+      "wingetId": "ElementLabs.LMStudio",
+      "exePfad": "%LOCALAPPDATA%/Programs/LM Studio/LM Studio.exe",
+      "prozesse": [
+        "LM Studio"
+      ],
+      "helferProzesse": [
+        "lms"
+      ],
+      "beendenVorUpdate": true,
+      "neuStartenNachUpdate": true,
+      "akzent": "#F2A13B"
+    },
+    {
+      "id": "lmstudio-runtimes",
+      "name": "LM Studio Engines & Runtimes",
+      "gruppe": "KI-Anwendungen",
+      "beschreibung": "Inferenz-Runtimes: llama.cpp fuer CPU/AVX2, NVIDIA CUDA, CUDA12 und Vulkan.",
+      "art": "cli",
+      "exePfad": "%USERPROFILE%/.lmstudio/bin/lms.exe",
+      "versionsArgumente": "version",
+      "pruefArgumente": "runtime update --all --dry-run",
+      "updateArgumente": "runtime update --all --yes",
+      "pfeilZaehlen": true,
+      "zeitlimitMinuten": 45,
+      "prozesse": [],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "hinweis": "Laedt teils mehrere Gigabyte herunter. LM Studio darf dabei laufen.",
+      "akzent": "#F2A13B"
+    },
+    {
+      "id": "claude-desktop",
+      "name": "Claude Desktop",
+      "gruppe": "KI-Anwendungen",
+      "beschreibung": "Anthropic Claude als Windows-Anwendung.",
+      "art": "winget",
+      "wingetId": "Anthropic.Claude",
+      "exePfad": "",
+      "prozesse": [
+        "Claude",
+        "claude-desktop"
+      ],
+      "helferProzesse": [],
+      "beendenVorUpdate": true,
+      "neuStartenNachUpdate": true,
+      "akzent": "#D97757"
+    },
+    {
+      "id": "codex-desktop",
+      "name": "Codex Desktop",
+      "gruppe": "KI-Anwendungen",
+      "beschreibung": "OpenAI Codex als Store-App (MSIX). Updates laufen ueber den Microsoft Store.",
+      "art": "msstore",
+      "appxName": "OpenAI.Codex",
+      "packageFamilyName": "OpenAI.Codex_2p2nqsd0c76g0",
+      "exePfad": "",
+      "prozesse": [
+        "Codex"
+      ],
+      "helferProzesse": [
+        "codex-code-mode-host",
+        "codex-computer-use-swift",
+        "codex-windows-sandbox-service"
+      ],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "hinweis": "Store-Apps aktualisiert Windows selbst; die Schaltflaeche oeffnet die Store-Seite.",
+      "akzent": "#8E8EA0"
+    },
+    {
+      "id": "claude-cli",
+      "name": "Claude Code CLI",
+      "gruppe": "Kommandozeile",
+      "beschreibung": "Claude Code im Terminal. Nativer Installer unter ~/.local/bin.",
+      "art": "cli",
+      "exePfad": "%USERPROFILE%/.local/bin/claude.exe",
+      "versionsArgumente": "--version",
+      "updateArgumente": "update",
+      "npmPaket": "@anthropic-ai/claude-code",
+      "zeitlimitMinuten": 15,
+      "prozesse": [
+        "claude"
+      ],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "hinweis": "Laufende Sessions werden nicht beendet; das Update greift beim naechsten Start.",
+      "akzent": "#D97757"
+    },
+    {
+      "id": "codex-cli",
+      "name": "Codex CLI",
+      "gruppe": "Kommandozeile",
+      "beschreibung": "OpenAI Codex im Terminal. Eigener Standalone-Install unter ~/.codex.",
+      "art": "cli",
+      "exePfad": "%LOCALAPPDATA%/Programs/OpenAI/Codex/bin/codex.exe",
+      "versionsArgumente": "--version",
+      "updateArgumente": "update",
+      "npmPaket": "@openai/codex",
+      "zeitlimitMinuten": 15,
+      "prozesse": [
+        "codex"
+      ],
+      "helferProzesse": [
+        "codex-code-mode-host"
+      ],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "hinweis": "Getrennt von Codex Desktop - eigener Release-Kanal unter ~/.codex/packages.",
+      "akzent": "#8E8EA0"
+    },
+    {
+      "id": "streamdeck",
+      "name": "Stream Deck",
+      "gruppe": "Hardware",
+      "beschreibung": "Elgato Stream Deck inklusive Helferdiensten (Audio-Controller, Plugin-Hosts).",
+      "art": "winget",
+      "wingetId": "Elgato.StreamDeck",
+      "exePfad": "C:/Program Files/Elgato/StreamDeck/StreamDeck.exe",
+      "startArgumente": "--runinbk",
+      "prozesse": [
+        "StreamDeck"
+      ],
+      "helferProzesse": [
+        "ElgatoAudioControlServer",
+        "ElgatoAudioControlServerWatcher",
+        "StreamDeckPluginHost"
+      ],
+      "beendenVorUpdate": true,
+      "neuStartenNachUpdate": true,
+      "hinweis": "Helferdienste werden mitbeendet, sonst haengt der Installer.",
+      "akzent": "#3FA9F5"
+    },
+    {
+      "id": "openlauncher",
+      "name": "OpenLauncher",
+      "gruppe": "Eigene Werkzeuge",
+      "beschreibung": "Eigener Launcher fuer CLI-Profile. Update ausschliesslich ueber update-launcher.ps1.",
+      "art": "reposkript",
+      "repoOrdner": "OpenLauncher",
+      "skript": "OpenLauncher/update-launcher.ps1",
+      "skriptArgumente": "",
+      "statusPraefix": "LAUNCHER_UPDATE_STATUS=",
+      "projektDatei": "OpenLauncher/OpenLauncher.csproj",
+      "exePfad": "%USERPROFILE%/proggs/OpenLauncher/bin/Release/net8.0-windows10.0.19041.0/win-x64/OpenLauncher.exe",
+      "prozesse": [
+        "OpenLauncher"
+      ],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "dialogWartezeitSekunden": 360,
+      "hinweis": "Das Skript zeigt zuerst ein Ja/Nein-Fenster. Ohne Klick auf Ja passiert nichts.",
+      "akzent": "#7C5CFF"
+    },
+    {
+      "id": "tvo",
+      "name": "TerminalVoiceOverlay (TVO)",
+      "gruppe": "Eigene Werkzeuge",
+      "beschreibung": "Spracheingabe fuers Windows Terminal. Update nur ueber rebuild-overlay.ps1 TVO.",
+      "art": "reposkript",
+      "repoOrdner": "TerminalVoiceOverlay-Windows",
+      "skript": "rebuild-overlay.ps1",
+      "skriptArgumente": "TVO",
+      "statusPraefix": "OVERLAY_UPDATE_STATUS=",
+      "projektDatei": "TerminalVoiceOverlay-Windows/TerminalVoiceOverlay.csproj",
+      "exePfad": "%USERPROFILE%/proggs/TerminalVoiceOverlay-Windows/publish/TerminalVoiceOverlay.exe",
+      "prozesse": [
+        "TerminalVoiceOverlay"
+      ],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "dialogWartezeitSekunden": 360,
+      "hinweis": "Prozesse werden NIE von Hand beendet - das erledigt allein das Skript.",
+      "akzent": "#22C55E"
+    },
+    {
+      "id": "cvo",
+      "name": "ClaudeVoiceOverlay (CVO)",
+      "gruppe": "Eigene Werkzeuge",
+      "beschreibung": "Spracheingabe fuer Claude Desktop. Update nur ueber rebuild-overlay.ps1 CVO.",
+      "art": "reposkript",
+      "repoOrdner": "ClaudeVoiceOverlay-Windows",
+      "skript": "rebuild-overlay.ps1",
+      "skriptArgumente": "CVO",
+      "statusPraefix": "OVERLAY_UPDATE_STATUS=",
+      "projektDatei": "ClaudeVoiceOverlay-Windows/ClaudeVoiceOverlay.csproj",
+      "exePfad": "%USERPROFILE%/proggs/ClaudeVoiceOverlay-Windows/publish/ClaudeVoiceOverlay.exe",
+      "prozesse": [
+        "ClaudeVoiceOverlay"
+      ],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "dialogWartezeitSekunden": 360,
+      "hinweis": "Prozesse werden NIE von Hand beendet - das erledigt allein das Skript.",
+      "akzent": "#22C55E"
+    }
+  ]
+}
