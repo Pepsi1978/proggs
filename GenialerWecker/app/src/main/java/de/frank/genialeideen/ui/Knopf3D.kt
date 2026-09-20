@@ -42,6 +42,10 @@ import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.Motion
 import de.frank.genialeideen.ui.theme.dunkler
+import de.frank.genialeideen.ui.theme.tiefenVerlauf
+import de.frank.genialeideen.ui.theme.gerichteterReflex
+import de.frank.genialeideen.ui.theme.innenSchatten
+import de.frank.genialeideen.ui.theme.materialKante
 import de.frank.genialeideen.ui.theme.glanzBogen
 import de.frank.genialeideen.ui.theme.koerperVerlauf
 import de.frank.genialeideen.ui.theme.lichtKante
@@ -78,6 +82,7 @@ fun Knopf3D(
 ) {
     val gold = LocalGold.current
     val tokens = de.frank.wecker.design.LocalDesignTokens.current
+    val material = de.frank.wecker.design.LocalMaterial.current
     // Die Form kommt aus dem Design, nicht aus dem Materialmerkmal.
     val form = form ?: RoundedCornerShape(tokens.knopfRadius)
     val reduziert = LocalBewegungReduziert.current
@@ -110,20 +115,52 @@ fun Knopf3D(
                     Modifier
                 },
             )
-            .then(if (tokens.plastisch) Modifier.tiefenSchatten(
-                farbe = if (aktiviert) grund else Color.Black,
+            // **Hier lag der Grund, warum drei von vier Designs flach aussahen.** Bis eben bekam
+            // nur Schlicht (`plastisch = true`) Schatten, Körperverlauf, Glanz und Lichtkante —
+            // Morgenruhe, Traumraum und Orbit landeten im `else`-Zweig und damit bei einer
+            // nackten Farbfläche mit Rahmenstrich. Jeder Knopf dieser drei Designs war flach,
+            // auch nachdem das Materialsystem stand.
+            //
+            // Jetzt trägt **jeder** Knopf dieselbe Schichtfolge; die Unterschiede kommen aus dem
+            // Material des Designs, nicht aus einer Abzweigung. Schlicht behält seinen gewohnten
+            // Körperverlauf, weil `koerperVerlauf` aus der Grundfarbe rechnet und damit exakt
+            // dieselben Werte liefert wie bisher.
+            .tiefenSchatten(
+                farbe = when {
+                    !aktiviert -> Color.Black
+                    material.schattenFarbe != null -> material.schattenFarbe
+                    else -> grund
+                },
                 hoehe = schattenHoehe,
                 form = form,
                 gedrueckt = gedrueckt,
-            ) else Modifier)
+            )
             .clip(form)
-            .then(if (tokens.plastisch)
+            .then(if (tokens.plastisch) {
                 Modifier.background(koerperVerlauf(koerper, gedrueckt = gedrueckt && aktiviert))
-                    // Der Glanzbogen ist jetzt ein Modifier, weil er die tatsächliche Knopfgröße
-                    // braucht. Als Brush mit festen Pixelwerten war er auf dem Gerät unsichtbar.
-                    .then(if (gedrueckt) Modifier else Modifier.glanzBogen())
-                    .border(1.dp, lichtKante(gedrueckt = gedrueckt && aktiviert), form)
-                else Modifier.background(koerper))
+            } else {
+                // Deckende Grundfarbe, darauf der Tiefenverlauf des Designs — derselbe Aufbau,
+                // nur ohne Schlichts kräftigen Körperverlauf.
+                Modifier.background(koerper)
+                    .tiefenVerlauf(
+                        oben = material.tiefenOben * 2.2f,
+                        unten = material.tiefenUnten * 2.2f,
+                        gedrueckt = gedrueckt && aktiviert,
+                    )
+            })
+            // Der gerichtete Reflex macht aus der Fläche einen Körper. Beim Drücken tritt er
+            // zurück, damit der Knopf sichtbar einsinkt.
+            .then(if (gedrueckt) Modifier else Modifier.gerichteterReflex(
+                material.reflexFarbe, material.reflexAlpha, material.reflexWinkelGrad, material.reflexLaenge))
+            .then(if (gedrueckt) Modifier else Modifier.glanzBogen(if (tokens.plastisch) 0.40f else 0.22f))
+            .then(if (gedrueckt) Modifier.innenSchatten(form, material.innenSchattenAlpha, tiefe = 4.dp) else Modifier)
+            .border(
+                1.dp,
+                if (tokens.plastisch) lichtKante(gedrueckt = gedrueckt && aktiviert)
+                else materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha,
+                    material.kanteSchattenAlpha, gedrueckt = gedrueckt && aktiviert),
+                form,
+            )
             .then(
                 if (aktiviert) {
                     Modifier.clickable(interactionSource = quelle, indication = null,
@@ -233,6 +270,7 @@ fun StillerKnopf(
     val gold = LocalGold.current
     // Jedes Design bringt seine eigene Kantenform mit; Schlicht behält seine gewohnte Rundung.
     val tokens = de.frank.wecker.design.LocalDesignTokens.current
+    val material = de.frank.wecker.design.LocalMaterial.current
     val form = RoundedCornerShape(if (tokens.plastisch) 12.dp else tokens.knopfRadius)
     val reduziert = LocalBewegungReduziert.current
     val quelle = remember { MutableInteractionSource() }
@@ -249,12 +287,24 @@ fun StillerKnopf(
             .graphicsLayer { scaleX = skalierung; scaleY = skalierung }
             // One consistent raised 3D look for every secondary button (opaque body, so the shadow
             // never shows through); only pressing sinks it in. `hervorgehoben` stays for API compatibility.
-            .then(if (tokens.plastisch) Modifier.tiefenSchatten(Color.Black, 4.dp, form, gedrueckt = gedrueckt) else Modifier)
+            // Auch der zweitrangige Knopf bekommt in allen vier Designs einen Körper — flacher
+            // als der Hauptknopf, aber nicht flach.
+            .tiefenSchatten(Color.Black, if (gedrueckt) 1.dp else 4.dp, form, gedrueckt = gedrueckt)
             .clip(form)
             .then(if (tokens.plastisch) Modifier.background(koerperVerlauf(gold.flaecheErhoeht, gedrueckt = gedrueckt))
-                else Modifier.background(gold.flaecheErhoeht))
-            .then(if (tokens.plastisch) Modifier.border(1.dp, lichtKante(gedrueckt = gedrueckt, staerke = 0.35f), form)
-                else Modifier.border(1.dp, gold.rahmen, form))
+                else Modifier.background(gold.flaecheErhoeht)
+                    .tiefenVerlauf(material.tiefenOben * 1.8f, material.tiefenUnten * 1.8f, gedrueckt = gedrueckt))
+            .then(if (gedrueckt) Modifier else Modifier.gerichteterReflex(
+                material.reflexFarbe, material.reflexAlpha * 0.7f,
+                material.reflexWinkelGrad, material.reflexLaenge))
+            .then(if (gedrueckt) Modifier.innenSchatten(form, material.innenSchattenAlpha * 0.7f, tiefe = 3.dp) else Modifier)
+            .border(
+                1.dp,
+                if (tokens.plastisch) lichtKante(gedrueckt = gedrueckt, staerke = 0.35f)
+                else materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha,
+                    material.kanteSchattenAlpha, gedrueckt = gedrueckt),
+                form,
+            )
             // Rolle und Mindestgröße: Ohne `Role.Button` sagt TalkBack nur den Text an, nie
             // „Schaltfläche"; ohne die Mindestgröße bleibt der Körper bei rund 34 dp unter dem
             // Richtwert von 48 dp für Tippflächen.

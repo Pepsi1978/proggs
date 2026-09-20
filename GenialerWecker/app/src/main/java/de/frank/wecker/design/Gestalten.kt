@@ -137,7 +137,14 @@ internal fun MaterialFlaeche(
                 if (ebene == Ebene.HINTERGRUND) {
                     Modifier
                 } else {
-                    Modifier.border(
+                    // Der deckende Umriss **unter** der Materialkante. Ohne ihn hatte eine weiße
+                    // Karte auf hellem Leinen gar keine Begrenzung: Die Materialkante legt nur
+                    // Weiß- und Schwarz-Alpha auf, und Weiß auf Weiß ergibt rechnerisch null
+                    // Unterschied — unabhängig davon, wie hoch das Alpha steht. Genau dafür ist
+                    // `kanteGrund` gedacht; es war gesetzt, wurde aber nie gezeichnet.
+                    (material.kanteGrund?.let { grundfarbe ->
+                        Modifier.border(1.dp, grundfarbe, koerperForm)
+                    } ?: Modifier).border(
                         width = 1.dp,
                         brush = materialKante(
                             lichtFarbe = material.kanteLichtFarbe,

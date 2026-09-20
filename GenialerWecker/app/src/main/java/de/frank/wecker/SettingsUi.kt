@@ -167,9 +167,9 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }} · Tempo ${"%.2f".format(rate)}× · gilt für alle Wecker ohne eigene Stimme") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(TtsProvider.QWEN_CLONE, TtsProvider.GOOGLE_CLOUD, TtsProvider.EDGE).forEach { item ->
-                    FilterChip(provider == item.id, {
+                    Chip3D(provider == item.id, {
                         settings.ttsProvider = item.id; provider = item.id; vm.settingsChanged()
-                    }, { Text(if (item == TtsProvider.QWEN_CLONE) "Meine Stimmen" else item.label) })
+                    }, if (item == TtsProvider.QWEN_CLONE) "Meine Stimmen" else item.label)
                 }
             }
             when (provider) {
@@ -246,7 +246,8 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 GoldKnopf("Meine Stimmen aktualisieren", { vm.loadVoices(force = true) }, aktiviert = !voicesLoading)
             }
             Text("Sprechtempo: ${"%.2f".format(rate)}×")
-            Slider(rate, { rate = it }, valueRange = .5f..2f, onValueChangeFinished = { settings.ttsSpeechRate = rate; vm.settingsChanged() })
+            Regler3D(rate, { rate = it }, bereich = .5f..2f,
+                aufAenderungFertig = { settings.ttsSpeechRate = rate; vm.settingsChanged() })
             var german by remember(revision) { mutableStateOf(settings.immerDeutschVorlesen) }
             Toggle("Deutsche Aussprache beibehalten", german) { german = it; settings.immerDeutschVorlesen = it; vm.settingsChanged() }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -359,10 +360,10 @@ private fun SecretField(label: String, gespeichert: String, text: String, onText
     val tastatur = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val geaendert = text.trim() != gespeichert.trim()
     fun speichern() { save(text.trim()); tastatur?.hide() }
-    OutlinedTextField(text, onText, Modifier.fillMaxWidth(), label = { Text(label) }, singleLine = true,
-        visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { if (geaendert) speichern() else tastatur?.hide() }))
+    Eingabefeld(text, onText, label, Modifier.fillMaxWidth(),
+        sichtWandlung = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+        tastaturOptionen = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+        tastaturAktionen = androidx.compose.foundation.text.KeyboardActions(onDone = { if (geaendert) speichern() else tastatur?.hide() }))
     // Umbrechend: auf schmaler Breite und mit großer Schrift bleiben beide Knöpfe sichtbar.
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         StillerKnopf(if (visible) "Verbergen" else "Anzeigen", { visible = !visible })
@@ -422,13 +423,15 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
             var vorlauf by remember(refresh) { mutableIntStateOf(SchlafErinnerung.leadMinutes(context)) }
             Text(if (vorlauf == 0) "Vorlauf: zur Schlafenszeit" else "Vorlauf: $vorlauf Min. vorher",
                 style = MaterialTheme.typography.titleMedium, color = LocalGold.current.primaer)
-            Slider(vorlauf.toFloat(), { vorlauf = it.roundToInt() },
+            // Die Neuplanung hängt weiterhin ausschließlich am Ende der Geste, nicht an jeder
+            // Bewegung — sonst würde bei jedem Pixel neu terminiert.
+            Regler3D(vorlauf.toFloat(), { vorlauf = it.roundToInt() },
                 Modifier.semantics {
                     contentDescription = "Vorlauf der Schlafenszeit-Erinnerung"
                     stateDescription = if (vorlauf == 0) "zur Schlafenszeit" else "$vorlauf Minuten vorher"
                 },
-                valueRange = 0f..SchlafPlan.LEAD_MAX_MINUTES.toFloat(), steps = SchlafPlan.LEAD_MAX_MINUTES - 1,
-                onValueChangeFinished = {
+                bereich = 0f..SchlafPlan.LEAD_MAX_MINUTES.toFloat(), stufen = SchlafPlan.LEAD_MAX_MINUTES - 1,
+                aufAenderungFertig = {
                     if (!SchlafErinnerung.setLeadMinutes(context, vorlauf)) {
                         vm.message.value = "Der Vorlauf konnte nicht gespeichert werden. Der bisherige Stand gilt weiter."
                         vorlauf = SchlafErinnerung.leadMinutes(context)

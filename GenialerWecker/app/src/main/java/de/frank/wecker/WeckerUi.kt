@@ -1183,13 +1183,15 @@ private fun WeckerKarte(
                 // --- Fach 1: Kopfzeile ---
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(if (dicht) 8.dp else 12.dp)) {
-                    Switch(alarm.enabled, { on ->
+                    // Der Schalter, den man auf der Weckerliste als Erstes sieht — bisher der
+                    // rohe Material-Schalter ohne jede Tiefe.
+                    Schalter3D(alarm.enabled, { on ->
                         // A one-off date that has passed cannot ring: open the editor to pick a new date instead of failing.
                         val latest = vm.store.get(alarm.id) ?: alarm
                         if (on && latest.isExpiredOnce()) onEdit(latest) else vm.toggle(alarm, on)
                     }, Modifier.semantics {
                         contentDescription = "Wecker aktivieren: ${alarm.name}"
-                    }, colors = SchalterFarben())
+                    })
                     Column(Modifier.weight(1f).clickable(
                         interactionSource = remember { MutableInteractionSource() }, indication = null,
                         onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) })) {
@@ -1599,7 +1601,9 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
     val beschriftung = @Composable { titelStil: androidx.compose.ui.text.TextStyle, titelFarbe: androidx.compose.ui.graphics.Color ->
         Column(Modifier.fillMaxWidth()) {
             Text(title, style = titelStil, color = titelFarbe)
-            if (!expanded && summary.isNotBlank()) Text(summary, style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+            // Morgenruhe zeigt die Zusammenfassung in seiner Fläche, nicht unter dem Titel.
+            if (!expanded && summary.isNotBlank() && entwurf != Design.MORGENRUHE)
+                Text(summary, style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
             // A missing required input is shown in its own card, also while collapsed.
             if (error != null) Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Warning, null, tint = LocalSemantisch.current.warnung, modifier = Modifier.size(18.dp))
@@ -1610,13 +1614,25 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
 
     when (entwurf) {
         // Morgenruhe: der Gruppentitel steht ruhig über der flachen Karte, nicht in ihr.
+        // Der Gruppentitel steht weiterhin ruhig über der Fläche — das ist Morgenruhes Entwurf.
+        // Die Fläche selbst gab es bisher aber **nur im aufgeklappten Zustand**; auf der
+        // Einstellungsseite, wo fast alles zugeklappt ist, stand deshalb bloß Text auf dem
+        // Seitenhintergrund. Gemessen waren das 3 von 255 Helligkeitsstufen Unterschied — die
+        // Seite wirkte vollkommen flach. Jetzt trägt auch der zugeklappte Abschnitt seine
+        // Fläche; der Titel bleibt darüber.
         Design.MORGENRUHE -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(kopfModifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f)) { beschriftung(MaterialTheme.typography.titleSmall, gold.textGedaempft) }
                 if (collapsible) KlappKnopf(expanded, { expanded = !expanded }, beschreibung = null, modifier = Modifier.padding(start = 8.dp))
             }
-            if (expanded) LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
-                Column(Modifier.padding(18.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+            LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
+                Column(Modifier.padding(if (expanded) 18.dp else 14.dp).animateContentSize(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (expanded) content()
+                    // Zugeklappt trägt die Fläche die Zusammenfassung, statt leer zu bleiben.
+                    else if (summary.isNotBlank()) Text(summary,
+                        style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                }
             }
         }
         // Orbit: technische Modulkopfzeile mit fester Schrift und Trennlinie im kantigen Modul.
@@ -1779,7 +1795,8 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
         if (Step.TEXT in alarm.steps) Section("Deine Erinnerung", collapsible = true, initiallyExpanded = alarm.text.isBlank(),
             summary = alarm.text.trim().replace('\n', ' ').let { if (it.length > 50) "„${it.take(50)}…“" else if (it.isNotBlank()) "„$it“" else "" },
             error = if (alarm.text.isBlank()) "Der Erinnerungstext fehlt." else null) {
-            OutlinedTextField(alarm.text, { vm.change(alarm.copy(text = it)) }, Modifier.fillMaxWidth().heightIn(min = 160.dp), label = { Text("Text, der vorgelesen werden soll") })
+            Eingabefeld(alarm.text, { vm.change(alarm.copy(text = it)) }, "Text, der vorgelesen werden soll",
+                Modifier.fillMaxWidth().heightIn(min = 160.dp), einzeilig = false)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 GoldKnopf(if (recording) "■ Diktat abschließen" else "● Diktieren", {
                     if (recording) vm.stopRecording()
@@ -1880,7 +1897,7 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
         }
         Text("Sprechgeschwindigkeit: ${"%.2f".format(effective.ttsSpeechRate)}×" +
             if (alarm.speechRate == null) " · Standard aus Einstellungen" else " · nur dieser Wecker")
-        Slider(effective.ttsSpeechRate, { vm.change(alarm.copy(speechRate = it)) }, valueRange = .5f..2f)
+        Regler3D(effective.ttsSpeechRate, { vm.change(alarm.copy(speechRate = it)) }, bereich = .5f..2f)
         if (alarm.speechRate != null) StillerKnopf("Standard-Sprechgeschwindigkeit verwenden", {
             vm.change(alarm.copy(speechRate = null))
         })
@@ -2092,8 +2109,8 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, gemerktesDat
             listOf("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So").forEachIndexed { index, name ->
                 val day = index + 1
                 // Removing the last day keeps the weekday mode instead of silently turning into a one-off alarm.
-                FilterChip(day in alarm.days, { if (day !in alarm.days || alarm.days.size > 1) change(alarm.copy(days = if (day in alarm.days) alarm.days - day else alarm.days + day)) },
-                    { Text(name) }, Modifier.semantics { contentDescription = names[index] })
+                Chip3D(day in alarm.days, { if (day !in alarm.days || alarm.days.size > 1) change(alarm.copy(days = if (day in alarm.days) alarm.days - day else alarm.days + day)) },
+                    name, Modifier.semantics { contentDescription = names[index] })
             }
         }
     }
@@ -2433,7 +2450,7 @@ private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Chip3D(sleep == 0, { if (sleep != 0) change(alarm.copy(sleepMinutes = 0)) }, "Aus")
         listOf(7, 8, 9).forEach { hours ->
-            FilterChip(sleep == hours * 60, { if (sleep != hours * 60) change(alarm.copy(sleepMinutes = hours * 60)) }, { Text("$hours Std.") })
+            Chip3D(sleep == hours * 60, { if (sleep != hours * 60) change(alarm.copy(sleepMinutes = hours * 60)) }, "$hours Std.")
         }
     }
     if (sleep > 0) Row(verticalAlignment = Alignment.CenterVertically) {
