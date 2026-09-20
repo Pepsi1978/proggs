@@ -1,0 +1,3 @@
+# Das gebaute App-Buendel gehoert nicht ins Repo - es entsteht mit build.sh neu.
+build/
+.DS_Store

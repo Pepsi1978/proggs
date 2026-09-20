@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Updater-Zentrale macOS</string>
+    <key>CFBundleDisplayName</key>
+    <string>Updater-Zentrale macOS</string>
+    <key>CFBundleIdentifier</key>
+    <string>de.frank.UpdaterZentrale</string>
+    <!-- Einzige Quelle der Wahrheit für die Version (Gegenstück zu <Version> in der csproj). -->
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>BuildTimestamp</key>
+    <string>__BUILD_TIMESTAMP__</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>UpdaterZentrale</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Pepsi1978</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Die Updater-Zentrale liest die Anmeldeobjekte aus und öffnet ein Terminalfenster im Repo-Ordner.</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>

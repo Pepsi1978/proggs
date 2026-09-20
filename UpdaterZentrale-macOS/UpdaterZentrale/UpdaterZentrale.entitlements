@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Bewusst UNSANDBOXED (Projekt-Anker der macOS-Apps): die Updater-Zentrale ruft brew auf,
+         startet die Update-Skripte in ~/proggs, beendet fremde Programme und schreibt ihre
+         Protokolle. Mit App-Sandbox waere nichts davon moeglich. -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+    <!-- Fuer osascript (Anmeldeobjekte lesen) und das Oeffnen eines Terminalfensters. -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+</dict>
+</plist>
