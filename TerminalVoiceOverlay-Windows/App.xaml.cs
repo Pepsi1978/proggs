@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -367,12 +367,18 @@ namespace TerminalVoiceOverlay
         private Process? StartOverlayProcess()
         {
             Console.WriteLine("Watchdog: starting overlay...");
-            return Process.Start(new ProcessStartInfo
+            var psi = new ProcessStartInfo
             {
                 FileName = Environment.ProcessPath!,
                 Arguments = $"--run --watchdog-pid={Environment.ProcessId}",
                 UseShellExecute = false
-            });
+            };
+            // Wie beim Capture-Worker: steht die exe auf "Als Administrator
+            // ausfuehren", scheitert CreateProcess aus einem nicht erhoehten
+            // Watchdog mit Win32-Fehler 740. Das Overlay braucht keine
+            // erhoehten Rechte — Anforderung fuer dieses Kind aushebeln.
+            psi.Environment["__COMPAT_LAYER"] = "RunAsInvoker";
+            return Process.Start(psi);
         }
 
         // ── Overlay mode: the actual voice overlay with UI ──

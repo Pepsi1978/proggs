@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -87,6 +87,9 @@ namespace ClaudeVoiceOverlay.Services
         /// jedem Startversuch zurueckgesetzt. Die UI liest ihn, sobald
         /// <see cref="StartAsync"/> false liefert — nie mehr stummer Klick.
         /// </summary>
+        /// <summary>Win32 ERROR_ELEVATION_REQUIRED — CreateProcess auf eine exe mit Admin-Flag.</summary>
+        private const int ElevationRequired = 740;
+
         public RecordingStartFailure LastStartFailure { get; private set; } = RecordingStartFailure.None;
 
         /// <summary>Benutzer-lesbarer Grund (deutsch) zu <see cref="LastStartFailure"/>.</summary>
@@ -210,6 +213,17 @@ namespace ClaudeVoiceOverlay.Services
                 psi.ArgumentList.Add("--out");
                 psi.ArgumentList.Add(tempFile);
 
+                // Direktive 3 (Vorfall 20.09.2026, Win32-Fehler 740): Steht die
+                // eigene exe in Windows auf "Als Administrator ausfuehren"
+                // (AppCompat-Flag RUNASADMIN, z.B. per UpdateZentrale gesetzt),
+                // scheitert CreateProcess aus einem nicht erhoehten Overlay mit
+                // ERROR_ELEVATION_REQUIRED — die Aufnahme ging gar nicht mehr.
+                // Der Capture-Worker nimmt nur per waveIn auf und braucht NIE
+                // erhoehte Rechte, deshalb hebeln wir die Anforderung fuer genau
+                // dieses Kind per __COMPAT_LAYER aus. Wirkt auch, wenn das Flag
+                // spaeter erneut gesetzt wird — kein Registry-Schreiben noetig.
+                psi.Environment["__COMPAT_LAYER"] = "RunAsInvoker";
+
                 session.Proc = new Process { StartInfo = psi };
                 session.Proc.OutputDataReceived += (_, e) => OnWorkerStdout(session, e.Data);
                 session.Proc.ErrorDataReceived += (_, e) => OnWorkerStderr(e.Data);
@@ -222,6 +236,16 @@ namespace ClaudeVoiceOverlay.Services
                 }
                 session.Proc.BeginOutputReadLine();
                 session.Proc.BeginErrorReadLine();
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == ElevationRequired)
+            {
+                LogError("recording_start_elevation_required", ex, tempFile);
+                SetStartFailure(RecordingStartFailure.Other,
+                    "Windows verlangt erhoehte Rechte fuer den Aufnahme-Prozess. Die Programmdatei "
+                    + "steht auf \"Als Administrator ausfuehren\" — dieses Haekchen in den "
+                    + "Eigenschaften der exe (oder in der UpdateZentrale) entfernen und das "
+                    + "Overlay neu starten.");
+                return false;
             }
             catch (Exception ex)
             {
