@@ -53,7 +53,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
     public string ArtText => Eintrag.Art switch
     {
         "winget" => "winget",
-        "msstore" => Eintrag.SelbstAktualisierend ? "Eigener Updater" : "Microsoft Store",
+        "store" => "Microsoft Store",
+        "msstore" => "Microsoft Store",
         "cli" => "Selbst-Update",
         "reposkript" => "Eigenes Skript",
         _ => Eintrag.Art
@@ -61,7 +62,17 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
     public string? Hinweis => Eintrag.Hinweis;
     public bool HatHinweis => !string.IsNullOrWhiteSpace(Eintrag.Hinweis);
-    public bool KannStarten => !string.IsNullOrWhiteSpace(Eintrag.ExePfad);
+    /// <summary>A packaged app is launched through the apps folder, so it needs no exe path.</summary>
+    public bool KannStarten => !string.IsNullOrWhiteSpace(Eintrag.ExePfad) || Eintrag.IstPaketApp;
+
+    /// <summary>
+    /// Windows refuses to run packaged (MSIX/Store) apps elevated at all -- there is no
+    /// compatibility flag for them. Showing a switch that cannot work would be a lie, so those
+    /// cards get an explanation instead.
+    /// </summary>
+    public bool AdminSchalterMoeglich => !Eintrag.IstPaketApp && !string.IsNullOrWhiteSpace(Eintrag.ExePfad);
+
+    public bool AdminNichtMoeglich => Eintrag.IstPaketApp;
 
     [ObservableProperty] private UpdateZustand _zustand = UpdateZustand.Unbekannt;
     [ObservableProperty] private string _statusText = "Noch nicht geprüft";
@@ -119,8 +130,6 @@ public sealed partial class ProgrammViewModel : ObservableObject
         UpdateZustand.UpdateVerfuegbar => "Aktualisieren",
         UpdateZustand.Pruefe => "Prüft …",
         UpdateZustand.NichtInstalliert => "Nicht installiert",
-        _ when Eintrag.SelbstAktualisierend => "App öffnen",
-        _ when Eintrag.Art == "msstore" => "Im Store öffnen",
         _ => "Aktualisieren"
     };
 
@@ -313,8 +322,10 @@ public sealed partial class ProgrammViewModel : ObservableObject
                 Prozessdienst.Starten(Eintrag, AlsAdministrator);
             }
 
-            // Re-read the version so the card shows the new state right away.
-            if (ergebnis.Zustand == UpdateZustand.Fertig)
+            // Re-read the version so the card shows the new state right away -- except when the
+            // installer only staged the update; there the old version is still the truth and a
+            // re-check would wrongly show "Update verfügbar" again.
+            if (ergebnis.Zustand == UpdateZustand.Fertig && !ergebnis.ErstNachNeustart)
             {
                 var nachher = await _aktualisierer.PruefenAsync(Eintrag, fortschritt, abbruch);
                 return ergebnis with

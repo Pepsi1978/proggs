@@ -42,26 +42,28 @@
       "id": "claude-desktop",
       "name": "Claude Desktop",
       "gruppe": "KI-Anwendungen",
-      "beschreibung": "Anthropic Claude als Windows-Anwendung (MSIX-Paket).",
-      "art": "msstore",
-      "exePfad": "",
-      "prozesse": [],
+      "beschreibung": "Anthropic Claude als Windows-Anwendung.",
+      "art": "winget",
+      "prozesse": [
+        "Claude"
+      ],
       "helferProzesse": [],
-      "beendenVorUpdate": false,
-      "neuStartenNachUpdate": false,
+      "beendenVorUpdate": true,
+      "neuStartenNachUpdate": true,
       "akzent": "#D97757",
       "appxName": "Claude",
+      "hinweis": "Wird still über winget aktualisiert; dafür braucht die UpdateZentrale Administratorrechte.",
+      "appxAnwendungsId": "Claude",
+      "wingetId": "Anthropic.Claude",
       "packageFamilyName": "Claude_pzs8sxrjxfjjc",
-      "hinweis": "Aktualisiert sich selbst – die Schaltfläche öffnet die App, das Update läuft dort.",
-      "selbstAktualisierend": true,
-      "appxAnwendungsId": "Claude"
+      "exePfad": ""
     },
     {
       "id": "codex-desktop",
       "name": "Codex Desktop",
       "gruppe": "KI-Anwendungen",
-      "beschreibung": "OpenAI Codex als Windows-Anwendung (MSIX-Paket, nicht aus dem Microsoft Store).",
-      "art": "msstore",
+      "beschreibung": "OpenAI Codex als Windows-Anwendung (Store-Paket, im Store als ChatGPT).",
+      "art": "store",
       "appxName": "OpenAI.Codex",
       "packageFamilyName": "OpenAI.Codex_2p2nqsd0c76g0",
       "exePfad": "",
@@ -69,10 +71,10 @@
       "helferProzesse": [],
       "beendenVorUpdate": false,
       "neuStartenNachUpdate": false,
-      "hinweis": "Bringt einen eigenen Updater mit – die Schaltfläche öffnet die App, das Update läuft dort.",
+      "hinweis": "Wird still über die Store-Quelle aktualisiert; dafür braucht die UpdateZentrale Administratorrechte.",
       "akzent": "#8E8EA0",
-      "selbstAktualisierend": true,
-      "appxAnwendungsId": "App"
+      "appxAnwendungsId": "App",
+      "storeProduktId": "9PLM9XGG6VKS"
     },
     {
       "id": "claude-cli",

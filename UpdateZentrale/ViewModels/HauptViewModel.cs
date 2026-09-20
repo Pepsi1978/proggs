@@ -24,7 +24,8 @@ public sealed partial class HauptViewModel : ObservableObject
         {
             ["winget"] = new WingetAktualisierer(),
             ["cli"] = new CliAktualisierer(),
-            ["msstore"] = new MsStoreAktualisierer(),
+            ["store"] = new StoreAktualisierer(),
+            ["msstore"] = new StoreAktualisierer(),   // Altname aus früheren Katalogfassungen
             ["reposkript"] = new RepoSkriptAktualisierer()
         };
 

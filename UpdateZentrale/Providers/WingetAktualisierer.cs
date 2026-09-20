@@ -65,8 +65,19 @@ public sealed class WingetAktualisierer : IAktualisierer
         {
             var grund = lauf.Ausgabe.Contains("No applicable upgrade", StringComparison.OrdinalIgnoreCase)
                 ? "Kein Upgrade verfügbar."
-                : $"winget endete mit Code {lauf.ExitCode}.";
+                : StoreAktualisierer.BrauchtRechte(lauf.Ausgabe)
+                    ? "Dafür fehlen Administratorrechte – oben auf „Als Administrator neu starten“ klicken."
+                    : $"winget endete mit Code {lauf.ExitCode}.";
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: grund, Protokoll: lauf.Ausgabe);
+        }
+
+        // Some installers (Claude Desktop) only stage the update and swap it in on next launch.
+        if (lauf.Ausgabe.Contains("Restart the application", StringComparison.OrdinalIgnoreCase)
+            || lauf.Ausgabe.Contains("Starten Sie die Anwendung neu", StringComparison.OrdinalIgnoreCase))
+        {
+            return new PruefErgebnis(UpdateZustand.Fertig,
+                Meldung: "Installiert – wird beim nächsten Start von " + eintrag.Name + " übernommen.",
+                Protokoll: lauf.Ausgabe, ErstNachNeustart: true);
         }
 
         return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Update installiert.", Protokoll: lauf.Ausgabe);

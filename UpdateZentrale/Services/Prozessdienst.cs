@@ -43,6 +43,14 @@ public static class Prozessdienst
     /// </summary>
     private static bool PasstZumEintrag(Process prozess, ProgrammEintrag eintrag, string? erwarteterOrdner)
     {
+        // Packaged apps live under WindowsApps in a folder that carries the version, so the path
+        // moves with every update. The publisher hash from the package family name does not.
+        if (eintrag.PaketKennung is { } kennung)
+        {
+            var pfadPaket = PfadVon(prozess);
+            return pfadPaket.Contains(kennung, StringComparison.OrdinalIgnoreCase);
+        }
+
         if (erwarteterOrdner is null) return true;
 
         var pfad = PfadVon(prozess);
@@ -97,6 +105,11 @@ public static class Prozessdienst
 
     public static bool Starten(ProgrammEintrag eintrag, bool alsAdministrator)
     {
+        // A packaged app cannot be launched by its exe path (the WindowsApps folder is locked
+        // down); it is started through the apps folder instead. Windows also refuses to run
+        // packaged apps elevated at all, so the admin flag is irrelevant here.
+        if (eintrag.IstPaketApp) return PaketAppStarten(eintrag);
+
         var exe = Pfade.Aufloesen(eintrag.ExePfad);
         if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe)) return false;
 
@@ -117,6 +130,25 @@ public static class Prozessdienst
         catch
         {
             return false;   // User dismissed the UAC prompt, or the exe vanished.
+        }
+    }
+
+    private static bool PaketAppStarten(ProgrammEintrag eintrag)
+    {
+        var ziel = "shell:AppsFolder\\" + eintrag.PackageFamilyName + "!" + (eintrag.AppxAnwendungsId ?? "App");
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = ziel,
+                UseShellExecute = true
+            });
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

@@ -24,8 +24,28 @@ public sealed class ProgrammEintrag
     /// <summary>Application id inside the MSIX package; almost always "App".</summary>
     public string? AppxAnwendungsId { get; set; }
 
-    /// <summary>MSIX package that ships its own updater instead of being served by the Store.</summary>
-    public bool SelbstAktualisierend { get; set; }
+    /// <summary>Store product id (e.g. 9PLM9XGG6VKS), used for the silent msstore upgrade.</summary>
+    public string? StoreProduktId { get; set; }
+
+    /// <summary>True when this entry is a packaged (MSIX) app rather than a plain exe.</summary>
+    [JsonIgnore]
+    public bool IstPaketApp => !string.IsNullOrWhiteSpace(PackageFamilyName);
+
+    /// <summary>
+    /// Publisher hash from the package family name. Every install folder of that package under
+    /// WindowsApps carries it, which makes it a reliable way to tell a packaged app's processes
+    /// apart from a same-named CLI.
+    /// </summary>
+    [JsonIgnore]
+    public string? PaketKennung
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(PackageFamilyName)) return null;
+            var teil = PackageFamilyName.Split('_').LastOrDefault();
+            return string.IsNullOrWhiteSpace(teil) ? null : teil;
+        }
+    }
 
     public string ExePfad { get; set; } = "";
     public string? VersionsArgumente { get; set; }

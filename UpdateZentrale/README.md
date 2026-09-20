@@ -13,7 +13,7 @@ Start über die Desktop-Verknüpfung **UpdateZentrale** (`create_shortcut.ps1` l
 | Bereich | Verhalten |
 |---|---|
 | **Prüfen** | Läuft beim Start automatisch für alle Einträge, danach jederzeit einzeln oder gesammelt. Zeigt installierte Version → verfügbare Version. |
-| **Aktualisieren** | Die Schaltfläche lädt nur dann zum Klick ein, wenn wirklich eine neuere Version vorliegt. Ist alles aktuell, steht dort „Aktuell" und sie ist abgeschaltet. |
+| **Aktualisieren** | Läuft für jedes Programm still durch, ohne dass eine fremde Oberfläche aufgeht. Die Schaltfläche lädt nur dann zum Klick ein, wenn wirklich eine neuere Version vorliegt; ist alles aktuell, steht dort „Aktuell" und sie ist abgeschaltet. |
 | **Laufende Programme** | Wird pfadgenau erkannt (inklusive Helferprogramme). Muss ein Programm für das Update beendet werden, fragt die App vorher und startet es danach wieder, wenn es vorher lief. |
 | **Autostart** | Wird pro Programm angezeigt und lässt sich auf eine geplante Aufgabe mit Administratorrechten umstellen. |
 | **Als Administrator** | Schiebeschalter pro Programm sowie für die UpdateZentrale selbst. |
@@ -74,7 +74,7 @@ bleibt `prozesse` besser leer – lieber kein Merkmal als ein falsches.
 |---|---|---|---|---|
 | `winget` | Alles, was winget kennt | `wingetId` | `winget list --id …` | `winget upgrade --id … --silent` |
 | `cli` | Werkzeuge, die sich selbst aktualisieren | `exePfad`, `updateArgumente` | `pruefArgumente` (Trockenlauf) **oder** `npmPaket` | `exePfad updateArgumente` |
-| `msstore` | MSIX-Pakete | `appxName`, `packageFamilyName` | `Get-AppxPackage` | Store-Seite oder – mit `selbstAktualisierend` – die App selbst |
+| `store` | Store-signierte MSIX-Pakete | `appxName`, `packageFamilyName`, `storeProduktId` | `Get-AppxPackage` + `winget upgrade`-Liste | `winget upgrade --id <ProduktId> --source msstore --silent` |
 | `reposkript` | Eigene Werkzeuge in `~/proggs` | `skript`, `statusPraefix` | `git rev-list HEAD..origin/main` + csproj-Version gegen gebaute Exe | ruft das vorhandene PowerShell-Skript auf |
 
 Weitere optionale Felder:
@@ -84,7 +84,7 @@ Weitere optionale Felder:
 | `versionsArgumente` | Argumente, die die installierte Version ausgeben (z. B. `--version`) |
 | `pruefArgumente` | Trockenlauf-Befehl; Zeilen mit `→` bzw. `->` gelten als geplante Updates |
 | `npmPaket` | Vergleichsquelle für die neueste Version, wenn das Werkzeug auf npm liegt |
-| `selbstAktualisierend` | MSIX-Paket mit eigenem Updater: die Schaltfläche öffnet die App statt des Stores |
+| `storeProduktId` | Store-Produkt-ID für das stille Update über die msstore-Quelle |
 | `appxAnwendungsId` | Anwendungs-ID im MSIX-Paket (fast immer `App`) |
 | `startArgumente` | Argumente beim Start über die Schaltfläche „Starten" und in der geplanten Aufgabe |
 | `zeitlimitMinuten` | Zeitlimit des Update-Laufs (Standard 20) |
@@ -100,9 +100,18 @@ Weitere optionale Felder:
   `lms runtime update --all --dry-run`, aktualisiert mit `lms runtime update --all --yes`. Deckt
   llama.cpp für CPU/AVX2, NVIDIA CUDA, CUDA12 und Vulkan ab. Lädt teils mehrere Gigabyte;
   LM Studio darf dabei laufen.
-* **Claude Desktop und Codex Desktop** – beides MSIX-Pakete, die sich **selbst** aktualisieren
-  (nicht über den Microsoft Store). Die Karte zeigt die installierte Paketversion, die
-  Schaltfläche öffnet die jeweilige App, in der das Update ausgelöst wird.
+* **Claude Desktop** – winget führt das Paket als `Anthropic.Claude` mit dem offiziellen
+  Installer von `downloads.claude.ai`. Das Update läuft still und vollautomatisch. Der Installer
+  legt die neue Fassung bereit und schließt sie beim nächsten Start der App ab – die Karte sagt
+  das dann auch so, statt weiter „Update verfügbar" zu melden.
+* **Codex Desktop** – das installierte Paket ist Store-signiert und im Microsoft Store als
+  „ChatGPT" gelistet (Produkt-ID `9PLM9XGG6VKS`, Publisher-Seite openai.com/codex). Das Update
+  läuft still über die Store-Quelle von winget; der Weg über die App war nur die sichtbare
+  Variante desselben Mechanismus.
+* **Paket-Apps und Administratorrechte** – Windows lässt MSIX-Pakete grundsätzlich nicht erhöht
+  laufen; für sie gibt es keinen Kompatibilitätsschalter. Deshalb zeigen diese Karten statt des
+  Schalters eine Erklärung. Das Update selbst braucht sehr wohl Adminrechte – die bringt die
+  UpdateZentrale mit.
 * **Codex Desktop vs. Codex CLI** – zwei getrennte Installationen: das MSIX-Paket und der
   Standalone-Build unter `~/.codex/packages`. Deshalb zwei Karten mit unterschiedlichen Wegen.
 * **Claude Code CLI** – laufende Sessions werden nie beendet; das Update greift beim nächsten Start.
