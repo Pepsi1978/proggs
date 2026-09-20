@@ -71,7 +71,7 @@ Ergebnis des ersten Laufs — jede Zeile ist eine echte Erkennung, keine Annahme
 | „Fenster" öffnet ein echtes Terminal | iTerm, sonst Terminal.app | ✅ 1:1 |
 | **Einzelstart** | Bundle-Kennung statt Mutex; bestehendes Fenster nach vorn | ✅ 1:1 |
 | Einstellungen außerhalb des Repos | `~/Library/Application Support/UpdaterZentrale/settings.json` | ✅ 1:1 |
-| **Desktop-Verknüpfung** (`create_shortcut.ps1`) | `tools/install-desktop-icon.sh` legt einen Finder-Alias an | ✅ 1:1 |
+| **Desktop-Verknüpfung** (`create_shortcut.ps1`) | `tools/install-desktop-icon.sh` legt einen Finder-Alias an, mit eigenem Symbol statt Verknüpfungspfeil | ✅ 1:1 |
 | **App-Symbol** (`make_icon.ps1` → `app.ico`) | `tools/make-icon.sh` → `AppIcon.icns`, gleiches Motiv | ✅ 1:1 |
 
 ### Update-Arten
@@ -170,7 +170,19 @@ Windows startet mit 1340 × 880 bei Mindestgröße 1060 × 620. Dieses MacBook h
 das Fenster ragte links aus dem Bild. Die Mac-Fassung richtet sich nach dem nutzbaren Bereich
 (hier 1180 × 709), Mindestgröße 880 × 540.
 
-### 6. `DEVELOPER_DIR` wird für Kindprozesse gesetzt
+### 6. Die Schreibtisch-Verknüpfung trägt kein Pfeil-Abzeichen
+
+Der Finder malt den Verknüpfungspfeil nur dann auf, wenn er das Symbol selbst aus dem Ziel
+ableitet. Trägt die Datei ein **eigenes** Symbol (Finder-Merkmal `kHasCustomIcon`), zeigt er
+dieses unverändert — ohne Abzeichen. `tools/install-desktop-icon.sh` setzt es deshalb mit
+`sips`/`DeRez`/`Rez`/`SetFile`.
+
+Nicht mit `NSWorkspace.setIcon`: das meldet bei einer Alias-Datei zwar Erfolg, setzt
+`kHasCustomIcon` aber nicht (nachgeprüft am 20.09.2026 — das Flag blieb `0x8000` statt `0x8400`,
+und die Ressourcen-Gabel enthielt 286 statt 435 954 Bytes). Die Alias-Daten überleben das
+Anhängen der Symbol-Ressource; der Alias zeigt danach weiterhin auf `/Applications`.
+
+### 7. `DEVELOPER_DIR` wird für Kindprozesse gesetzt
 
 `update-launcher.sh` und `rebuild-overlay.sh` bauen mit `swiftc`. Zeigt `xcode-select -p` auf
 Xcode.app und ist dessen Lizenz nicht angenommen, bricht jeder dieser Builds ab — und der Launcher

@@ -8,7 +8,8 @@ macOS-Fassung von `~/proggs/UpdateZentrale` (Windows). Was gleich blieb und was 
 unterscheidet, steht in **[PORTING.md](PORTING.md)**.
 
 Start über die Verknüpfung **Updater-Zentrale macOS** auf dem Schreibtisch
-(`tools/install-desktop-icon.sh` legt sie an) oder über Spotlight.
+(`tools/install-desktop-icon.sh` legt sie an – mit eigenem Symbol und ohne den kleinen
+Verknüpfungspfeil) oder über Spotlight.
 
 ---
 
@@ -153,7 +154,7 @@ Weitere optionale Felder:
 | `UpdaterZentrale/Views/` | Oberfläche (AppKit, programmatisch) |
 | `build.sh` | Baut das `.app`-Bündel und signiert es |
 | `tools/make-icon.sh` | Erzeugt `AppIcon.icns` |
-| `tools/install-desktop-icon.sh` | Legt die Schreibtisch-Verknüpfung an |
+| `tools/install-desktop-icon.sh` | Legt die Schreibtisch-Verknüpfung an – mit eigenem Symbol, ohne Verknüpfungspfeil |
 | `PORTING.md` | Paritätsliste, bewusste Abweichungen, was nicht portiert wurde |
 
 Benutzereinstellungen (Hell/Dunkel) liegen außerhalb des Repos in
