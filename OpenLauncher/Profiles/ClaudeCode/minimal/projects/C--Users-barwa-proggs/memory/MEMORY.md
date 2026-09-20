@@ -1,0 +1,6 @@
+- [OpenLauncher nur per Update-Skript bauen](openlauncher-nur-update-skript.md) — kein dotnet build von Hand, kein manuelles Schliessen erbitten
+- [Aktiver Config-Ordner ist das OpenLauncher-Profil](aktiver-config-ordner-openlauncher-profil.md) — Settings liegen NICHT in ~/.claude
+- [advisorModel braucht den Alias, keine Modell-ID](advisormodel-alias-statt-modell-id.md) — claude-fable-5-1 schaltet den Advisor still ab
+- [GenialeIdeen per installSchnell](genialeideen-install-schnell.md) — Debug-Build ruckelt, immer den schnellen Build installieren
+- [OpenLauncher-Update fragt immer](openlauncher-update-dialog-immer.md) — nie -Force, höchstes Zeitlimit, auf Klick warten
+- [Fenster-Aktivierung: Erfolg nur mit IsIconic](aktivierung-erfolg-nur-mit-isiconic.md) — activated=true ohne sichtbares Fenster heisst: die Erfolgspruefung ist falsch

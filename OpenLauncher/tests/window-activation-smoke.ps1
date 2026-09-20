@@ -33,9 +33,11 @@ public static class OpenLauncherWindowTestNative
     [DllImport("user32.dll")]
     public static extern bool PostMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
 
-    // Die Windows-Shell schickt beim Taskleisten-Klick KEIN WM_SYSCOMMAND/SC_RESTORE, sondern ruft
-    // ShowWindow/SwitchToThisWindow direkt auf. Der Test muss genau diesen Weg nachstellen, sonst
-    // prueft er einen Pfad, den die Realitaet nie nimmt.
+    // Die Shell ruft beim Taskleisten-Klick ShowWindow/SwitchToThisWindow direkt auf; dieser Weg wird
+    // hier nachgestellt. ACHTUNG, Annahme berichtigt am 20.09.2026: die frühere Aussage "die Shell
+    // schickt dabei KEIN WM_SYSCOMMAND/SC_RESTORE" ist für Windows 11 26200 widerlegt. Das
+    // Laufzeitlog zeigt acht Einträge reason=system-restore während reinen Taskleisten-Klicks.
+    // Beide Wege sind daher echt und werden beide geprüft.
     [DllImport("user32.dll")]
     public static extern void SwitchToThisWindow(IntPtr hwnd, bool altTab);
 }
@@ -56,13 +58,20 @@ function Get-LiveHandle([int]$ProcessId) {
     return $process.MainWindowHandle
 }
 
-function Assert-Restored([int]$ProcessId, [bool]$ExpectedMaximized, [string]$Scenario) {
+function Assert-Restored([int]$ProcessId, [bool]$ExpectedMaximized, [string]$Scenario,
+                        [bool]$RequireForeground = $true) {
     Wait-Until { -not [OpenLauncherWindowTestNative]::IsIconic((Get-LiveHandle $ProcessId)) } `
         "$Scenario did not restore the minimized window."
-    Wait-Until {
-        $handle = Get-LiveHandle $ProcessId
-        [OpenLauncherWindowTestNative]::GetForegroundWindow() -eq $handle
-    } "$Scenario did not activate the launcher HWND."
+    # Sichtbarkeit ist die Pflicht-Zusicherung, der Vordergrund nur dort, wo die App ihn selbst holen
+    # DARF. Auf SC_RESTORE erzwingt sie ihn bewusst nicht mehr: Windows besitzt diesen Pfad. Dass die
+    # reine Vordergrund-Pruefung als Erfolgsmass untauglich ist, hat der Defekt vom 20.09.2026
+    # belegt - acht Log-Zeilen activated=true bei nativ minimiertem Fenster.
+    if ($RequireForeground) {
+        Wait-Until {
+            $handle = Get-LiveHandle $ProcessId
+            [OpenLauncherWindowTestNative]::GetForegroundWindow() -eq $handle
+        } "$Scenario did not activate the launcher HWND."
+    }
 
     $handle = Get-LiveHandle $ProcessId
     if ([OpenLauncherWindowTestNative]::IsZoomed($handle) -ne $ExpectedMaximized) {
@@ -126,7 +135,7 @@ try {
     if (-not [OpenLauncherWindowTestNative]::PostMessage($handle, $WM_SYSCOMMAND, [IntPtr]$SC_RESTORE, [IntPtr]::Zero)) {
         throw 'SC_RESTORE could not be posted.'
     }
-    Assert-Restored $primary.Id $wasMaximized 'SC_RESTORE'
+    Assert-Restored $primary.Id $wasMaximized 'SC_RESTORE' -RequireForeground $false
 
     # Kernszenario: der echte Taskleisten-Klick. Mehrfach wiederholt, weil der gemeldete Defekt
     # intermittierend war und sich erst nach mehreren Aktivierungszyklen zeigte (haengende
@@ -148,10 +157,29 @@ try {
     # Diese Assertion faengt auch ein Wiedereinbauen des Activated/StateChanged-Pushs ab, das in
     # diesem Fenster-Code bereits zweimal passiert ist.
     $shellLog = Get-LauncherLogSince $logBefore
-    $selfPush = @($shellLog | Where-Object { $_ -match '"fn":"BringToTaskbarForeground"' -and $_ -match '"reason":"(activated|state-changed)"' })
+    # system-restore gehoert seit 20.09.2026 dazu: dieser Grund lief bei JEDEM Taskleisten-Klick an
+    # (acht Eintraege im Laufzeitlog) und ist damit derselbe verbotene Selbst-Push, nur unter anderem
+    # Namen. Der Test haette den Defekt sonst erneut durchgelassen.
+    $selfPush = @($shellLog | Where-Object { $_ -match '"fn":"BringToTaskbarForeground"' -and $_ -match '"reason":"(activated|state-changed|system-restore)"' })
     if ($selfPush.Count -gt 0) {
-        throw "App forced its own foreground sequence on a plain shell restore ($($selfPush.Count) log entries). Windows must own that path; see reason=activated/state-changed."
+        throw "App forced its own foreground sequence on a plain shell restore ($($selfPush.Count) log entries). Windows must own that path; see reason=activated/state-changed/system-restore."
     }
+
+    # Gegenprobe zur Selbstheilung: direkt NACH einer Restore-Anforderung minimieren. Genau hier
+    # wuerde eine zu eifrige Heilung das Fenster wieder hochreissen - der Fix-Induced-Failure, der am
+    # 24.07.2026 schon einmal auftrat und am 20.09.2026 beim Entwurf erneut drohte. Die Heilung darf
+    # ausschliesslich greifen, wenn ein Restore angefordert wurde und KEIN Minimieren folgte.
+    $handle = Get-LiveHandle $primary.Id
+    [void][OpenLauncherWindowTestNative]::ShowWindow($handle, $SW_MINIMIZE)
+    Wait-Until { [OpenLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } `
+        'Launcher did not minimize before the restore-then-minimize check.'
+    if (-not [OpenLauncherWindowTestNative]::PostMessage($handle, $WM_SYSCOMMAND, [IntPtr]$SC_RESTORE, [IntPtr]::Zero)) {
+        throw 'SC_RESTORE could not be posted for the restore-then-minimize check.'
+    }
+    Wait-Until { -not [OpenLauncherWindowTestNative]::IsIconic((Get-LiveHandle $primary.Id)) } `
+        'SC_RESTORE did not restore the window before the restore-then-minimize check.'
+    [void][OpenLauncherWindowTestNative]::ShowWindow((Get-LiveHandle $primary.Id), $SW_MINIMIZE)
+    Assert-StaysMinimized $primary.Id 'Minimize immediately after a restore request'
 
     # Gegenprobe: der Taskleisten-Button ist ein Schalter. Minimiert die Shell das aktive Fenster,
     # darf die App es nicht selbsttaetig wieder nach vorn holen.

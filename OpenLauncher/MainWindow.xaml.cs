@@ -48,6 +48,27 @@ public partial class MainWindow : Window
     // Selbstheilung unten ein absichtlich minimiertes Fenster sofort wieder hochreissen.
     private DateTime _lastNativeMinimizeUtc = DateTime.MinValue;
     private string _queuedActivationReason = "unspecified";
+    // Shell-Restore-Beobachtung. Beim Klick auf den Taskleisten-Button restauriert UND aktiviert
+    // Windows das Fenster selbst. Auf diesem Windows-Build kommt dabei sehr wohl ein
+    // WM_SYSCOMMAND/SC_RESTORE an — die gegenteilige Annahme des Fixes vom 24.07.2026 ist damit
+    // widerlegt (Laufzeitlog 20.09.2026: acht Eintraege reason=system-restore innerhalb von 100 s,
+    // ALLE mit wasMinimized=false, die Shell hatte also bereits restauriert). Eine eigene
+    // Vordergrund-Erzwingung ist dort nicht nur unnoetig: sie funkt in die noch laufende
+    // Klickverarbeitung von explorer.exe hinein, das Fenster ist beim Abschluss der Shell-Sequenz
+    // schon Vordergrund, die Shell wertet den Klick daher als Minimieren-Toggle — und das Fenster
+    // bleibt nativ minimiert bei -16000/-16000 stehen, obwohl activated=true protokolliert wurde.
+    // Auf SC_RESTORE wird deshalb nur noch BEOBACHTET und ausschliesslich bei nachgewiesenem
+    // Misserfolg nachgeholfen, vom sanftesten Mittel aufwaerts.
+    private const int ShellRestoreWatchIntervalMs = 200;
+    // 10 Kontrollen = 2 s. Ein spaeteres Rueck-Minimieren faellt dem Always-on-Detektor im
+    // WM_SIZE-Zweig auf, auch wenn es hinter dem Beobachtungsfenster liegt.
+    private const int ShellRestoreWatchTicks = 10;
+    private const int MinimizeAfterRestoreTraceMs = 3000;
+    private DateTime _restoreRequestedUtc = DateTime.MinValue;
+    private int _shellRestoreChecksLeft;
+    private bool _shellRestoreHealed;
+    private bool _shellRestoreSoftActivated;
+    private readonly System.Windows.Threading.DispatcherTimer _shellRestoreWatchTimer;
     private readonly System.Windows.Threading.DispatcherTimer _layoutSaveTimer;
     private readonly System.Windows.Threading.DispatcherTimer _minimizeStuckTimer;
 
@@ -124,6 +145,14 @@ public partial class MainWindow : Window
             _minimizeStuckTimer.Stop();
             RepairStuckNativeMinimize();
         };
+        // Laeuft nur nach einer echten Restore-Anforderung und prueft mehrfach nach, statt einmalig
+        // zu raten: ein einzelner Blick 400 ms spaeter verpasst genau den Fall, in dem die Shell das
+        // Fenster erst danach wieder minimiert.
+        _shellRestoreWatchTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(ShellRestoreWatchIntervalMs)
+        };
+        _shellRestoreWatchTimer.Tick += (_, _) => CheckShellRestoreProgress();
         RestoreWindowLayout();
         ModelColumn.Width = new GridLength(_layoutSettings.ModelPaneWidth);
         EffortColumn.Width = new GridLength(_layoutSettings.EffortPaneWidth);
@@ -144,6 +173,7 @@ public partial class MainWindow : Window
             ViewModel.StopBackgroundUpdates();
             _layoutSaveTimer.Stop();
             _minimizeStuckTimer.Stop();
+            _shellRestoreWatchTimer.Stop();
             SaveWindowLayout();
             ThemeManager.ThemeChanged -= OnThemeChanged;
         };
@@ -260,7 +290,7 @@ public partial class MainWindow : Window
             if (!activated)
             {
                 Activate();
-                activated = GetForegroundWindow() == hwnd;
+                activated = IsForegroundAndVisible(hwnd);
             }
             if (!activated) activated = TryForceForeground(hwnd);
 
@@ -295,24 +325,183 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Beginnt die Beobachtung einer Restore-Anforderung (SC_RESTORE). Erzwingt bewusst NICHTS:
+    /// beim Taskleisten-Klick besitzt Windows die Aktivierung. Erst wenn die Kontrollen belegen,
+    /// dass der Restore nicht gewirkt hat, wird nachgeholfen — vom sanftesten Mittel aufwaerts.
+    /// </summary>
+    private void BeginShellRestoreWatch()
+    {
+        _restoreRequestedUtc = DateTime.UtcNow;
+        _shellRestoreChecksLeft = ShellRestoreWatchTicks;
+        _shellRestoreHealed = false;
+        _shellRestoreSoftActivated = false;
+        _shellRestoreWatchTimer.Stop();
+        _shellRestoreWatchTimer.Start();
+    }
+
+    /// <summary>
+    /// Eine Kontrolle der laufenden Restore-Anforderung. Greift nur bei nachgewiesenem Misserfolg
+    /// ein und eskaliert hoechstens einmal je Stufe: nativer Restore, dann sanfte Aktivierung ohne
+    /// Eingabekopplung, dann Taskleisten-Blinken als sichtbares Signal.
+    /// </summary>
+    private void CheckShellRestoreProgress()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero)
+        {
+            _shellRestoreWatchTimer.Stop();
+            return;
+        }
+
+        var remaining = --_shellRestoreChecksLeft;
+        var iconic = IsIconic(hwnd);
+        var ownsForeground = ForegroundBelongsToThisProcess();
+
+        // Erfolgsfall und Normalfall am Taskleisten-Button: Windows hat es selbst geschafft. Genau
+        // hier hat die alte Fassung trotzdem eingegriffen und damit den Schaden verursacht.
+        if (!iconic && ownsForeground)
+        {
+            _shellRestoreWatchTimer.Stop();
+            return;
+        }
+
+        if (iconic)
+        {
+            if (!_shellRestoreHealed && ShouldHealMissingRestore())
+            {
+                _shellRestoreHealed = true;
+                ShowWindow(hwnd, SW_RESTORE);
+                Logger.Instance.Warn("MainWindow", "CheckShellRestoreProgress",
+                    "Restore angefordert, Fenster blieb nativ minimiert; nativ nachrestauriert", new
+                    {
+                        stillMinimized = IsIconic(hwnd),
+                        windowState = WindowState.ToString(),
+                        msSinceRequest = (int)(DateTime.UtcNow - _restoreRequestedUtc).TotalMilliseconds,
+                        minimizeAfterRequest = _lastNativeMinimizeUtc >= _restoreRequestedUtc,
+                        hwnd = FormatHandle(hwnd)
+                    });
+            }
+        }
+        else if (!_shellRestoreSoftActivated)
+        {
+            // Sichtbar, aber ein fremdes Fenster liegt davor. Bewusst OHNE AttachThreadInput: die
+            // Eingabekopplung an den Shell-Thread ist die dokumentierte Ursache des Zustands
+            // "laesst sich bis zum Neustart nicht mehr aktivieren".
+            _shellRestoreSoftActivated = true;
+            SetForegroundWindow(hwnd);
+        }
+
+        if (remaining > 0) return;
+
+        _shellRestoreWatchTimer.Stop();
+        if (ForegroundBelongsToThisProcess() && !IsIconic(hwnd)) return;
+
+        // Unbedingt protokollieren: dieser Zweig ist der gemeldete Fehlerfall. Ohne Protokoll waere
+        // er im Log genau so unsichtbar wie bisher — acht activated=true-Zeilen ohne sichtbares
+        // Fenster waren der Grund, warum der Defekt dreimal falsch eingeordnet wurde.
+        FlashTaskbar(hwnd);
+        Logger.Instance.Warn("MainWindow", "CheckShellRestoreProgress",
+            "Restore-Anforderung blieb nach allen Kontrollen ohne sichtbares Fenster; Taskleisten-Blinken als letzter Fallback", new
+            {
+                iconic = IsIconic(hwnd),
+                windowState = WindowState.ToString(),
+                healed = _shellRestoreHealed,
+                softActivated = _shellRestoreSoftActivated,
+                foreground = FormatHandle(GetForegroundWindow()),
+                hwnd = FormatHandle(hwnd)
+            });
+    }
+
+    /// <summary>
+    /// Trennt den Fehlerzustand von einer bewussten Benutzeraktion — bewusst streng, denn hier liegt
+    /// die gefaehrlichste Stelle des ganzen Fixes: eine zu eifrige Selbstheilung hat am 24.07.2026
+    /// schon einmal ein absichtlich minimiertes Fenster wieder hochgerissen.
+    ///
+    /// Geheilt wird NUR der eindeutige Fall: es wurde ein Restore angefordert, seither kam kein
+    /// einziges Minimieren, und das Fenster ist trotzdem noch minimiert. Dann ist der Restore
+    /// nachweislich nicht angekommen (Zustand vom 18.07.2026) — das kann keine Benutzeraktion sein.
+    ///
+    /// Ein Minimieren NACH der Anforderung wird ausdruecklich NICHT geheilt: "Fenster hoch, sofort
+    /// wieder runter" ist vom Doppelklick des Benutzers auf den Taskleisten-Button nicht
+    /// unterscheidbar. Dieser Fall wird nur protokolliert (Always-on-Detektor im WM_SIZE-Zweig),
+    /// damit die naechste Diagnose Daten hat, statt den Benutzerwillen zu ueberfahren.
+    /// </summary>
+    private bool ShouldHealMissingRestore() => _lastNativeMinimizeUtc < _restoreRequestedUtc;
+
+    private static bool ForegroundBelongsToThisProcess()
+    {
+        var foreground = GetForegroundWindow();
+        if (foreground == IntPtr.Zero) return false;
+        GetWindowThreadProcessId(foreground, out var pid);
+        return pid == (uint)Environment.ProcessId;
+    }
+
+    /// <summary>
+    /// True, wenn das Fenster zur Windows-Shell gehoert (Taskleiste, Startmenue). An einen
+    /// Shell-Thread darf die Eingabewarteschlange NIE geheftet werden: loest sich das Paar durch ein
+    /// Race nicht, ist der Prozess bis zum Neustart nicht mehr aktivierbar.
+    /// </summary>
+    private static bool BelongsToShell(uint processId)
+    {
+        if (processId == 0) return false;
+        try
+        {
+            using var process = System.Diagnostics.Process.GetProcessById((int)processId);
+            return string.Equals(process.ProcessName, "explorer", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            // Prozess bereits beendet oder kein Zugriff. Im Zweifel als Shell behandeln: eine
+            // ausgelassene Kopplung kostet einen Aktivierungsversuch, eine falsche kostet die
+            // Bedienbarkeit bis zum Neustart.
+            Logger.Instance.Warn("MainWindow", "BelongsToShell",
+                "Vordergrund-Prozess nicht bestimmbar; Eingabekopplung wird vorsorglich ausgelassen", new
+                {
+                    processId,
+                    error = ex.Message
+                });
+            return true;
+        }
+    }
+
     private static bool TryActivateWithForegroundThread(IntPtr hwnd)
     {
         var foreground = GetForegroundWindow();
-        if (foreground == hwnd) return true;
+        // Vordergrund ALLEIN ist kein Erfolg: im Laufzeitlog vom 20.09.2026 stehen acht Aktivierungen
+        // mit activated=true, waehrend das Fenster nachweislich nativ minimiert bei -16000/-16000 hing.
+        // Ursache war genau diese Abkuerzung — sie meldete Erfolg, sobald das HWND den Vordergrund
+        // hielt, ohne den Minimierungszustand zu pruefen. Dadurch blieb der eigentliche Fehler acht
+        // Klicks lang unsichtbar und jeder Fallback wurde uebersprungen.
+        if (foreground == hwnd && !IsIconic(hwnd)) return true;
 
         var currentThread = GetCurrentThreadId();
-        var foregroundThread = foreground == IntPtr.Zero ? 0 : GetWindowThreadProcessId(foreground, out _);
+        var foregroundPid = 0u;
+        var foregroundThread = foreground == IntPtr.Zero ? 0 : GetWindowThreadProcessId(foreground, out foregroundPid);
         var attached = false;
 
         try
         {
-            if (foregroundThread != 0 && foregroundThread != currentThread)
+            // Niemals an einen Shell-Thread heften. Die Eingabekopplung an explorer.exe ist die
+            // dokumentierte Ursache des Zustands "laesst sich bis zum Neustart nicht aktivieren";
+            // ein Foreground-Recht von der Taskleiste zu leihen bringt ohnehin nichts, weil die
+            // Shell in genau diesem Moment selbst aktiviert. Der Aufruf laeuft ohne Kopplung weiter,
+            // die Funktion bleibt also erhalten.
+            var shellForeground = BelongsToShell(foregroundPid);
+            if (foregroundThread != 0 && foregroundThread != currentThread && !shellForeground)
                 attached = AttachThreadInput(currentThread, foregroundThread, true);
+            else if (shellForeground)
+                Logger.Instance.Info("MainWindow", "TryActivateWithForegroundThread",
+                    "Vordergrund gehoert zur Shell; Eingabekopplung ausgelassen", new
+                    {
+                        foregroundPid,
+                        foregroundThread
+                    });
 
             BringWindowToTop(hwnd);
             SetForegroundWindow(hwnd);
             SetFocus(hwnd);
-            return GetForegroundWindow() == hwnd;
+            return IsForegroundAndVisible(hwnd);
         }
         finally
         {
@@ -347,13 +536,21 @@ public partial class MainWindow : Window
             BringWindowToTop(hwnd);
             SetForegroundWindow(hwnd);
             SwitchToThisWindow(hwnd, true);
-            return GetForegroundWindow() == hwnd;
+            return IsForegroundAndVisible(hwnd);
         }
         finally
         {
             SetWindowPos(hwnd, restoreZOrder, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
         }
     }
+
+    /// <summary>
+    /// Erfolgsmass fuer jede Aktivierung: das Fenster muss den Vordergrund halten UND sichtbar sein.
+    /// Ein minimiertes Fenster kann den Vordergrund-Status durchaus behalten — dann klickt der
+    /// Benutzer auf den Taskleisten-Button und Windows wertet den Klick als Minimieren-Toggle eines
+    /// bereits aktiven Fensters, also als Nichts-Tun. Genau dieser Zustand war am 20.09.2026 messbar.
+    /// </summary>
+    private static bool IsForegroundAndVisible(IntPtr hwnd) => GetForegroundWindow() == hwnd && !IsIconic(hwnd);
 
     private static string FormatHandle(IntPtr hwnd) => $"0x{hwnd.ToInt64():X}";
 
@@ -489,10 +686,31 @@ public partial class MainWindow : Window
             // das erst spaeter feuert. Stoppt die Selbstheilung, bevor sie den Zustand missdeutet.
             _lastNativeMinimizeUtc = DateTime.UtcNow;
             _minimizeStuckTimer.Stop();
+            // Unabhaengig von jedem Timer-Zeitplan: ein Minimieren dicht nach einer Restore-Anforderung
+            // ist das widerspruechliche Paar, das den gemeldeten Defekt erzeugt. Faellt es ausserhalb
+            // des Beobachtungsfensters, waere es sonst wieder voellig unsichtbar — und genau diese
+            // Log-Luecke hat die Fehlersuche am 12.07., 18.07. und 24.07.2026 dreimal fehlgeleitet.
+            var msSinceRestoreRequest = (DateTime.UtcNow - _restoreRequestedUtc).TotalMilliseconds;
+            if (msSinceRestoreRequest <= MinimizeAfterRestoreTraceMs)
+            {
+                Logger.Instance.Warn("MainWindow", "WndProc",
+                    "Fenster wurde kurz nach einer Restore-Anforderung minimiert", new
+                    {
+                        msSinceRestoreRequest = (int)msSinceRestoreRequest,
+                        windowState = WindowState.ToString(),
+                        watchActive = _shellRestoreWatchTimer.IsEnabled,
+                        healed = _shellRestoreHealed,
+                        foreground = FormatHandle(GetForegroundWindow()),
+                        hwnd = FormatHandle(hwnd)
+                    });
+            }
         }
         else if (msg == WM_SYSCOMMAND && ((int)wParam & 0xFFF0) == SC_RESTORE)
         {
-            QueueBringToTaskbarForeground("system-restore");
+            // BEWUSST KEIN QueueBringToTaskbarForeground mehr: SC_RESTORE kommt auch beim
+            // Taskleisten-Klick an, wo Windows die Aktivierung selbst besitzt. handled bleibt false,
+            // damit DefWindowProc den Restore wie gewohnt ausfuehrt; wir sehen nur nach, ob er wirkt.
+            BeginShellRestoreWatch();
         }
         return IntPtr.Zero;
     }
