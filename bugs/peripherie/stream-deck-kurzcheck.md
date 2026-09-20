@@ -28,10 +28,11 @@
 | 14 | Aenderung erscheint nicht | `streamdeck restart <uuid>`, Software beenden (Lock), nicht als Admin | §E2, K6, N1 |
 | 15 | Packen scheitert / Plugin laedt nicht | `streamdeck validate` → `pack`, nie `Compress-Archive` | §J1, K3 |
 | 16 | Geraet reagiert GAR NICHT, Software laeuft | `StreamDeck.log` == 0 Bytes → Start eingefroren, alle Elgato-Prozesse killen + 1x neu starten | §R1, R4 |
-| 17 | Nach Explorer-Absturz/-Neustart tot | Doppelter `crashpad_handler` = kollidierte Startversuche, gleicher Fix wie 16 | §R2, R3 |
+| 17 | Nach Explorer-Absturz/-Neustart tot | Heuristik: Stream Deck zuerst verdaechtigen, Fix wie 16. `crashpad_handler` NUR nach Pfad `\Elgato\` zaehlen — fremde Apps haben eigene | §R2, R3 |
 | 18 | Hardware verdaechtig? | `VID_0FD9` per `Get-PnpDevice`: 2x `Status OK` = Hardware fein. `Unknown` ist KEIN Defekt | §R5 |
 | 19 | `CredRead() err: 1168` / Node-Manifest-Fehler im Log | Dauergaeste, nie die Ursache — nicht darauf anspringen | §R6 |
 
-> **Weiche vor jeder Fehlersuche (§R):** Reagiert das Geraet komplett nicht, ist es meist KEIN
-> Plugin-Bug, sondern ein eingefrorener Start der Software. Erst `StreamDeck.log` auf 0 Bytes
-> pruefen (#16), dann alles andere.
+> **Weiche vor jeder Fehlersuche (§R):** Reagiert das Geraet komplett nicht, erst pruefen ob es
+> ueberhaupt ein Plugin-Bug ist — `StreamDeck.log` auf 0 Bytes pruefen (#16), dann alles andere.
+> Abschnitt R beruht auf einem einzigen Vorfall (n=1): Symptom und Fix sind bestaetigt, die
+> Ursache nicht.

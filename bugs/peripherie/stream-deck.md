@@ -800,34 +800,53 @@ Get-ChildItem "$env:APPDATA\Elgato\StreamDeck\logs\StreamDeck.log" |
 # Length 0 und LastWriteTime == Prozess-Startzeit  ->  eingefroren, neu starten (R4)
 ```
 
-### R2 — Verwaister `crashpad_handler` verraet den abgestuerzten ersten Startversuch
+### R2 — FALLE: `crashpad_handler` NICHT nach Namen zaehlen, nur nach Pfad
 
-Zu jeder lebenden `StreamDeck.exe` gehoert **genau ein** `crashpad_handler`. Finden sich zwei (oder
-mehr) mit unterschiedlichen Startzeiten, ist ein frueherer Startversuch gestorben und hat seinen
-Crash-Handler als Waise zurueckgelassen. Im Vorfall: `crashpad_handler` 09:47:47 ohne Elternprozess,
-danach der zweite Start um 09:48:00, dessen Log leer blieb.
+Naheliegend und **falsch**: aus mehreren `crashpad_handler`-Prozessen auf abgestuerzte
+Stream-Deck-Startversuche zu schliessen. Im Vorfall standen zwei da (09:47:47 und 09:48:00) und die
+Diagnose "kollidierte Startversuche" lag auf der Hand — der aeltere gehoerte aber zu
+**Google Drive File Stream**:
 
-```powershell
-Get-Process | Where-Object { $_.Path -like '*Elgato*' } |
-  Select-Object ProcessName, Id, StartTime, Responding | Sort-Object StartTime
+```
+20032  C:\Program Files\Google\Drive File Stream\<version>\crashpad_handler.exe
+33640  C:\Program Files\Elgato\StreamDeck\crashpad_handler.exe
 ```
 
-### R3 — Ursache im Vorfall: Explorer-Absturz riss den Stream-Deck-Autostart mit
+Jede Chromium-basierte Anwendung (Google Drive, Discord, Steam, Razer Synapse …) bringt einen
+eigenen `crashpad_handler` mit. **Immer den Pfad mitausgeben**, sonst diagnostiziert man fremde
+Prozesse:
 
-Im Application-Eventlog stand 6 Minuten vor den kaputten Startversuchen:
+```powershell
+Get-Process crashpad_handler -ErrorAction SilentlyContinue |
+  Select-Object Id, Path, StartTime | Format-Table -AutoSize -Wrap
+```
+
+Nur Eintraege unter `Program Files\Elgato` zaehlen. Genau dieselbe Pfad-Pruefung braucht auch der
+Kill-Befehl in R4 — sonst erwischt er fremde Anwendungen.
+
+### R3 — Ausloeser im Vorfall: Explorer-Absturz kurz davor (Korrelation, kein Beweis)
+
+Im Application-Eventlog stand 6 Minuten vor dem kaputten Start:
 
 ```
 09:41:15  Application Hang  explorer.exe hat aufgehoert mit Windows zu interagieren
 ```
 
-Der Explorer-Neustart startet die Autostart-Eintraege erneut — dabei kollidierten zwei Startversuche
-(09:47:47 und 09:48:00) um den Device-Lock auf das HID-Handle. Ergebnis: der Ueberlebende kam nie an
-das Geraet heran. **Merke: Nach jedem Explorer-Crash/-Neustart ist Stream Deck ein Verdaechtiger.**
+Der Explorer-Neustart faehrt die Autostart-Eintraege erneut hoch, darunter Stream Deck — und dieser
+Start (09:48:00) blieb eingefroren. **Ehrlich bleiben: das ist eine zeitliche Korrelation, der
+Mechanismus ist nicht belegt.** Es wurde kein zweiter Elgato-Prozess und kein Lock-Konflikt
+nachgewiesen (siehe R2 — der vermeintliche Beleg war ein fremder Prozess). Belegt ist nur: Start
+eingefroren, Log 0 Bytes, Neustart behebt es.
+
+Als Heuristik taugt es trotzdem: Nach einem Explorer-Crash lohnt der Blick auf Stream Deck zuerst.
 
 ```powershell
 Get-WinEvent -FilterHashtable @{LogName='Application'; Level=1,2; StartTime=(Get-Date).Date} |
   Select-Object -First 12 TimeCreated, ProviderName
 ```
+
+> **Stand der Erkenntnis (n=1):** Dieser Abschnitt beruht auf einem einzigen dokumentierten Vorfall.
+> Das Leitsymptom (R1) und der Fix (R4) sind empirisch bestaetigt; die Ursache ist es nicht.
 
 ### R4 — Fix: ALLE Elgato-Prozesse beenden, dann EINMAL neu starten
 
@@ -836,11 +855,17 @@ Nur `StreamDeck.exe` zu beenden reicht nicht — `QtWebEngineProcess`, `crashpad
 Zustand. Nicht als Administrator starten (siehe N1).
 
 ```powershell
-Get-Process | Where-Object { $_.Path -like '*Elgato*' -or $_.ProcessName -eq 'StreamDeck' } |
-  Stop-Process -Force
+# Pfad-Filter ist Pflicht: 'crashpad_handler' allein wuerde fremde Apps treffen (R2)
+Get-Process | Where-Object { $_.Path -like '*\Elgato\*' } | Stop-Process -Force
 Start-Sleep -Seconds 4
 Start-Process "C:\Program Files\Elgato\StreamDeck\StreamDeck.exe"
 ```
+
+**Nachziehen:** Der StreamDeck-Start holt `ElgatoAudioControlServer` und dessen `…Watcher` NICHT
+automatisch zurueck. Wurden sie mitbeendet, beide einzeln wieder starten (der Watcher respawnt den
+Server, fehlt er, bleibt der Server nach einem Absturz weg). Beide liegen in
+`C:\Program Files\Elgato\Volume Controller\`. Betrifft nur Audio-/Wave-Link-Actions, nicht die
+Tasten selbst.
 
 **Erfolg pruefen — diese eine Zeile muss im Log stehen:**
 
