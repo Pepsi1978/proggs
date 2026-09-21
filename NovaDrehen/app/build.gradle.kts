@@ -11,9 +11,9 @@ android {
         applicationId = "de.frank.novadrehen"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"21.09.2026, 19:51 Uhr\"")
+        versionCode = 2
+        versionName = "1.0.1"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"21.09.2026, 20:06 Uhr\"")
     }
 
     buildFeatures {
