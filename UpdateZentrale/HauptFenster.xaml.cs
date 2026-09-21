@@ -49,8 +49,10 @@ public partial class HauptFenster : Window
         // Die Mindestgröße zuerst, sonst hält WPF ein zu großes MinHeight gegen den Deckel.
         MinWidth = Math.Min(MinWidth, hoechstBreite);
         MinHeight = Math.Min(MinHeight, hoechstHoehe);
-        MaxWidth = flaeche.Width;
-        MaxHeight = flaeche.Height;
+        // Bewusst KEIN MaxWidth/MaxHeight: WPF reicht sie als größte Fenstergröße an Windows
+        // weiter. Maximiert ist das Fenster aber um den Rahmen größer als die Arbeitsfläche, und
+        // auf einem zweiten, größeren Bildschirm deutlich größer als die Fläche des Hauptbildschirms
+        // -- der Rest blieb als schwarzer Streifen rechts und unten stehen.
 
         Width = Math.Min(Width, hoechstBreite);
         Height = Math.Min(Height, hoechstHoehe);

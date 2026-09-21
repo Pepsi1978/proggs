@@ -20,16 +20,9 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
         var quelle = QuellVersion(eintrag);
 
         // Signal 1: does the remote carry commits for this folder that are not here yet?
-        var hinterstand = 0;
+        var hinterstand = await HinterstandAsync(eintrag, abbruch);
         if (!string.IsNullOrWhiteSpace(eintrag.RepoOrdner))
-        {
-            await Kommandozeile.AusfuehrenAsync("git", "fetch --quiet", TimeSpan.FromMinutes(3), Pfade.RepoWurzel, abbruch);
-            var zaehl = await Kommandozeile.AusfuehrenAsync("git",
-                "rev-list --count HEAD..origin/main -- \"" + eintrag.RepoOrdner + "\"",
-                TimeSpan.FromMinutes(2), Pfade.RepoWurzel, abbruch);
-            int.TryParse(zaehl.Ausgabe.Trim(), out hinterstand);
             protokoll.Report("git rev-list HEAD..origin/main -- " + eintrag.RepoOrdner + " -> " + hinterstand);
-        }
 
         // Signal 2: is the source version newer than the built exe?
         var quellstandNeuer = !string.IsNullOrWhiteSpace(quelle)
@@ -57,6 +50,23 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
         var skript = Path.Combine(Pfade.RepoWurzel, (eintrag.Skript ?? "").Replace('/', Path.DirectorySeparatorChar));
         if (!File.Exists(skript))
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Skript fehlt: " + skript);
+
+        // The check reports "update available" as soon as origin/main carries commits for this
+        // folder, but the scripts only build what is on disk. Without pulling first they answer
+        // "already current", the next check finds the same commits again, and the card asks for
+        // the same update over and over. Same fast-forward-only pull the launcher itself does.
+        var hinterstand = await HinterstandAsync(eintrag, abbruch);
+        if (hinterstand > 0)
+        {
+            protokoll.Report("git pull --ff-only (" + hinterstand + " neue Commit(s) für " + eintrag.RepoOrdner + ")");
+            var zug = await Kommandozeile.AusfuehrenAsync("git", "pull --ff-only", TimeSpan.FromMinutes(3), Pfade.RepoWurzel, abbruch);
+            protokoll.Report(zug.Ausgabe);
+            if (zug.ExitCode != 0)
+                return new PruefErgebnis(UpdateZustand.Fehler,
+                    Meldung: "git pull --ff-only ist fehlgeschlagen (lokale Änderungen oder abweichender Verlauf) – "
+                             + "das Repo muss erst von Hand abgeglichen werden. Das Update-Skript wurde nicht gestartet.",
+                    Protokoll: zug.Ausgabe);
+        }
 
         var args = ("-NoProfile -ExecutionPolicy Bypass -File \"" + skript + "\" " + eintrag.SkriptArgumente).TrimEnd();
         protokoll.Report("pwsh " + args);
@@ -106,6 +116,16 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
         {
             return Task.FromResult("");
         }
+    }
+
+    private static async Task<int> HinterstandAsync(ProgrammEintrag eintrag, CancellationToken abbruch)
+    {
+        if (string.IsNullOrWhiteSpace(eintrag.RepoOrdner)) return 0;
+        await Kommandozeile.AusfuehrenAsync("git", "fetch --quiet", TimeSpan.FromMinutes(3), Pfade.RepoWurzel, abbruch);
+        var zaehl = await Kommandozeile.AusfuehrenAsync("git",
+            "rev-list --count HEAD..origin/main -- \"" + eintrag.RepoOrdner + "\"",
+            TimeSpan.FromMinutes(2), Pfade.RepoWurzel, abbruch);
+        return int.TryParse(zaehl.Ausgabe.Trim(), out var anzahl) ? anzahl : 0;
     }
 
     /// <summary>rebuild-overlay.ps1 requires PowerShell 7; fall back only if pwsh is missing.</summary>

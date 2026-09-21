@@ -67,8 +67,13 @@ public static class Kommandozeile
             return new BefehlErgebnis(-1, $"Start fehlgeschlagen: {ex.Message}", false);
         }
 
-        var ausgabe = prozess.StandardOutput.ReadToEndAsync(abbruch);
-        var fehler = prozess.StandardError.ReadToEndAsync(abbruch);
+        // Read incrementally, never with ReadToEnd: a program the tool starts (update-launcher.ps1
+        // and rebuild-overlay.ps1 start the freshly built app with UseShellExecute=$false) inherits
+        // this pipe and keeps it open for as long as it runs. ReadToEnd then waits for an EOF that
+        // only comes when the user closes that app -- the update run never ends.
+        var fehlerPuffer = new StringBuilder();
+        var ausgabe = MitlesenAsync(prozess.StandardOutput, puffer);
+        var fehler = MitlesenAsync(prozess.StandardError, fehlerPuffer);
 
         using var zeitgeber = new CancellationTokenSource(zeitlimit);
         using var verbund = CancellationTokenSource.CreateLinkedTokenSource(zeitgeber.Token, abbruch);
@@ -80,19 +85,55 @@ public static class Kommandozeile
         catch (OperationCanceledException)
         {
             try { prozess.Kill(entireProcessTree: true); } catch { }
-            return new BefehlErgebnis(-1, Saeubern(puffer.Append(await SicherAsync(ausgabe)).ToString()), true);
+            await AuslaufenLassenAsync(ausgabe, fehler);
+            return new BefehlErgebnis(-1, Saeubern(Zusammenfuegen(puffer, fehlerPuffer)), true);
         }
 
-        puffer.Append(await SicherAsync(ausgabe));
-        var fehlertext = await SicherAsync(fehler);
-        if (!string.IsNullOrWhiteSpace(fehlertext)) puffer.AppendLine().Append(fehlertext);
+        // The tool itself has exited; give the pipes a moment to drain, then stop waiting.
+        if (!await AuslaufenLassenAsync(ausgabe, fehler))
+        {
+            lock (puffer)
+            {
+                puffer.AppendLine().Append("[UpdateZentrale] Ausgabe-Pipe wird noch von einem gestarteten "
+                    + "Kindprozess gehalten – Lauf nach Prozessende abgeschlossen.");
+            }
+        }
 
-        return new BefehlErgebnis(prozess.ExitCode, Saeubern(puffer.ToString()), false);
+        return new BefehlErgebnis(prozess.ExitCode, Saeubern(Zusammenfuegen(puffer, fehlerPuffer)), false);
     }
 
-    private static async Task<string> SicherAsync(Task<string> aufgabe)
+    private static readonly TimeSpan Auslaufzeit = TimeSpan.FromSeconds(2);
+
+    private static async Task MitlesenAsync(StreamReader leser, StringBuilder ziel)
     {
-        try { return await aufgabe; } catch { return ""; }
+        var block = new char[4096];
+        try
+        {
+            int gelesen;
+            while ((gelesen = await leser.ReadAsync(block, 0, block.Length)) > 0)
+            {
+                lock (ziel) ziel.Append(block, 0, gelesen);
+            }
+        }
+        catch
+        {
+            // A broken pipe only ends the reading, never the run.
+        }
+    }
+
+    /// <returns>false if a pipe was still open after the grace period.</returns>
+    private static async Task<bool> AuslaufenLassenAsync(Task ausgabe, Task fehler)
+    {
+        var beide = Task.WhenAll(ausgabe, fehler);
+        return await Task.WhenAny(beide, Task.Delay(Auslaufzeit)) == beide;
+    }
+
+    private static string Zusammenfuegen(StringBuilder ausgabe, StringBuilder fehler)
+    {
+        string text, fehlertext;
+        lock (ausgabe) text = ausgabe.ToString();
+        lock (fehler) fehlertext = fehler.ToString();
+        return string.IsNullOrWhiteSpace(fehlertext) ? text : text + Environment.NewLine + fehlertext;
     }
 
     private static string Saeubern(string text)
