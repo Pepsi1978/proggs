@@ -57,6 +57,14 @@
   },
   "language": "german",
   "effortLevel": "xhigh",
+  "modelSettings": {
+    "claude-fable-5-1": {
+      "effortLevel": "high"
+    },
+    "claude-opus-5": {
+      "effortLevel": "xhigh"
+    }
+  },
   "advisorModel": "fable",
   "askUserQuestionTimeout": "never",
   "skipDangerousModePermissionPrompt": true,
@@ -70,9 +78,23 @@
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
   "agentPushNotifEnabled": true,
-  "modelSettings": {
-    "claude-fable-5-1": {
-      "effortLevel": "high"
-    }
+  "enabledPlugins": {
+    "bio-research@synced": false,
+    "sales@synced": false,
+    "small-business@synced": false,
+    "marketing@synced": false,
+    "legal@synced": false,
+    "finance@synced": false,
+    "human-resources@synced": false,
+    "zapier@synced": false,
+    "customer-support@synced": false,
+    "operations@synced": false,
+    "product-management@synced": false,
+    "design@synced": false,
+    "data@synced": false,
+    "enterprise-search@synced": false,
+    "engineering@synced": false,
+    "desktop-commander@synced": false,
+    "cowork-plugin-management@synced": false
   }
 }
