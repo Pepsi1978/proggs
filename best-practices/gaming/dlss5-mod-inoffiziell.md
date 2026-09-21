@@ -1,7 +1,7 @@
 # DLSS 5 Mod (inoffiziell: NVIDIA-Neural-Rendering in fremden Spielen) — Best Practices
 
 > Stand: 21.09.2026 16:26 · Versions-Anker: NVIDIA-Treiber 616.92, RTX 5090, OptiScaler-DLSSNR v0.2.0 (03.09.2026), `nvngx_dlssnr.dll` 310.8.0, DLSS5-Feeder 1.16.0-beta.6, DLSS5 Swapper 2.2.7, ReShade 6.8.0 · Anlass: YouTube-„DLSS 5“-Videos nachbauen
-> Gegenstück: `bugs/gaming/dlss5-mod-inoffiziell.md` · Kurzcheck: `dlss5-mod-inoffiziell-kurzcheck.md` · Werkzeug: `Werkzeuge/dlss5-mod/` · Nachbarbereich: `nvidia-dlss-override.md`
+> Gegenstück: `bugs/gaming/dlss5-mod-inoffiziell.md` · Kurzcheck: `dlss5-mod-inoffiziell-kurzcheck.md` · Werkzeug: `Werkzeuge/dlss5-mod/` · Nachbarbereich: `nvidia-dlss-override.md` · **Einstieg mit Stand je Spiel und Fahrplan: `Recherchen/dlss5-grafik/README.md`**
 
 ## 1. Was der „DLSS 5 Mod“ wirklich ist
 - Kein Filter, sondern **NVIDIAs echtes DLSS-5-Modell** `nvngx_dlssnr.dll` (NGX-Feature 18, Dateibeschreibung „NVIDIA DLSSNR“, ca. 160 MB, nur RTX 50). Es stammt aus dem Early-Access-Build von NBA 2K27 und wird per Hook in fremde Spiele eingeschleust. `extern` https://www.heise.de/en/background/DLSS-5-mod-tried-out-Why-all-the-fuss-11434544.html

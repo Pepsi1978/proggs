@@ -1,5 +1,7 @@
 # DLSS 5 Mod (inoffiziell) für Singleplayer-Spiele
 
+> Gesamtstand, beste Einstellungen und Optimierungs-Fahrplan: `Recherchen/dlss5-grafik/README.md`
+
 Rüstet NVIDIAs DLSS-5-Neural-Rendering-Modell (`nvngx_dlssnr.dll`) in Spiele nach, die selbst nur DLSS 2–4 mitbringen. Weg: **OptiScaler-DLSSNR** (Fork von Dagherbou, v0.2.0) fängt die DLSS-Aufrufe des Spiels ab und schickt das Bild danach durch das NVIDIA-Modell, vor dem HUD. Nur RTX 50, Treiber ab 616.56.
 
 **Nicht offiziell.** Die Modell-DLL ist echte NVIDIA-Software (Authenticode „NVIDIA Corporation“), wird aber ohne Lizenz über einen GitHub-Mirror (`RankFTW/rhi-repo`) verteilt. Deshalb liegen **keine Binärdateien in diesem Repo**: Das Skript lädt sie nach `%LOCALAPPDATA%\DLSS5-Mod\downloads`.
