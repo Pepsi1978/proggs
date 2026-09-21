@@ -60,6 +60,10 @@ data class Alarm(
     val preparationError: String = "",
     /** Gewünschte Schlafdauer in Minuten (30-Minuten-Schritte, 30 bis 1440); 0 = keine Angabe. */
     val sleepMinutes: Int = 0,
+    /** Schlafenszeit-Erinnerung für diesen Wecker; null = wie in den globalen Einstellungen. */
+    val sleepReminder: Boolean? = null,
+    /** Vorlauf der Erinnerung in Minuten für diesen Wecker; null = globaler Vorlauf. */
+    val sleepLeadMinutes: Int? = null,
     /**
      * Auslassungsmarke als lokales ISO-Datum ("2026-09-19"), nur für wiederholende Wecker: ALLE Termine bis einschließlich
      * dieses Kalendertags gelten als ausgelassen. Ortszeit statt Zeitpunkt, damit ein Uhr- oder Zeitzonenwechsel die
@@ -130,6 +134,8 @@ data class Alarm(
         put("voiceVariants", JSONArray(voiceVariants.map { it.json() }))
         put("preparedAt", preparedAt); put("preparedSpeed", preparedSpeed); put("preparedSignature", preparedSignature); put("preparationError", preparationError)
         put("sleepMinutes", sleepMinutes)
+        sleepReminder?.let { put("sleepReminder", it) }
+        sleepLeadMinutes?.let { put("sleepLeadMinutes", it) }
         put("skippedThrough", skippedThrough)
         put("repeatUnit", repeatUnit); put("repeatEvery", repeatEvery)
     }
@@ -176,6 +182,8 @@ data class Alarm(
             preparationError = j.optString("preparationError"),
             // Older entries have no field; an invalid stored value falls back to "no sleep duration".
             sleepMinutes = j.optInt("sleepMinutes", 0).takeIf(Schlaf::valid) ?: 0,
+            sleepReminder = if (j.has("sleepReminder")) j.optBoolean("sleepReminder") else null,
+            sleepLeadMinutes = if (j.has("sleepLeadMinutes")) j.optInt("sleepLeadMinutes").coerceIn(0, SchlafPlan.LEAD_MAX_MINUTES) else null,
             skippedThrough = j.optString("skippedThrough", "").takeIf { raw -> raw.isBlank() || runCatching { LocalDate.parse(raw) }.isSuccess } ?: "",
             // Taken as stored; from() checks them and rejects an invalid entry instead of reinterpreting it.
             repeatUnit = j.optString("repeatUnit", ""),

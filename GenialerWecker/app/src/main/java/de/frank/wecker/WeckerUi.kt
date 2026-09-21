@@ -2747,8 +2747,48 @@ private fun SchlafdauerEingabe(alarm: Alarm, change: (Alarm) -> Unit) {
             Icon(Icons.Default.Add, "Schlafdauer um 30 Minuten erhöhen", tint = LocalGold.current.primaer)
         }
     }
-    Text(if (sleep == 0) "Ohne Angabe wird keine Schlafenszeit angezeigt." else "Zeigt die ungefähre Schlafenszeit. Die Erinnerung kommt mit dem in den Einstellungen gewählten Vorlauf, wenn sie dort eingeschaltet ist. Kein Tracking.",
+    Text(if (sleep == 0) "Ohne Angabe wird keine Schlafenszeit angezeigt." else "Zeigt die ungefähre Schlafenszeit. Kein Tracking.",
         style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+    if (sleep > 0) SchlafErinnerungProWecker(alarm, change)
+}
+
+/**
+ * Schlafenszeit-Erinnerung direkt am Wecker: ohne eigene Wahl folgt sie Schalter und Vorlauf der globalen
+ * Einstellungen; wer hier schaltet oder zieht, legt es für diesen Wecker fest.
+ */
+@Composable
+private fun SchlafErinnerungProWecker(alarm: Alarm, change: (Alarm) -> Unit) {
+    val context = LocalContext.current
+    val globalAn = remember { SchlafErinnerung.enabled(context) }
+    val globalVorlauf = remember { SchlafErinnerung.leadMinutes(context) }
+    val an = SchlafPlan.an(alarm, globalAn)
+    var vorlauf by remember(alarm.id, alarm.sleepLeadMinutes) { mutableIntStateOf(SchlafPlan.vorlauf(alarm, globalVorlauf)) }
+    Toggle("Schlafenszeit-Erinnerung", an) { change(alarm.copy(sleepReminder = it, sleepLeadMinutes = alarm.sleepLeadMinutes ?: vorlauf)) }
+    if (!an) return
+    val vorlaufText = if (vorlauf == 0) "zur Schlafenszeit" else "$vorlauf Min. vor dem Schlafengehen"
+    Text("Erinnerung $vorlaufText", style = MaterialTheme.typography.labelLarge, color = LocalGold.current.primaer)
+    Regler3D(vorlauf.toFloat(), { vorlauf = it.roundToInt() },
+        Modifier.semantics {
+            contentDescription = "Vorlauf der Schlafenszeit-Erinnerung für diesen Wecker"
+            stateDescription = if (vorlauf == 0) "zur Schlafenszeit" else "$vorlauf Minuten vorher"
+        },
+        bereich = 0f..SchlafPlan.LEAD_MAX_MINUTES.toFloat(), stufen = SchlafPlan.LEAD_MAX_MINUTES - 1,
+        aufAenderungFertig = { change(alarm.copy(sleepReminder = true, sleepLeadMinutes = vorlauf)) })
+    // Uhrzeit aus der nächsten Weckzeit dieses Entwurfs; ohne berechenbaren Termin bleibt es beim Vorlauf.
+    val minute = rememberNow(60_000)
+    val erinnerung = remember(alarm, vorlauf, minute / 60_000) {
+        runCatching {
+            val weck = AlarmTime.next(alarm).takeIf { it > 0 } ?: return@runCatching null
+            val bett = Schlaf.bedtime(weck, alarm.sleepMinutes)
+            fun uhr(t: Long) = Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+            uhr(bett - SchlafPlan.leadMs(vorlauf)) to uhr(bett)
+        }.getOrNull()
+    }
+    Text(when {
+        erinnerung == null -> "Die Erinnerung kommt $vorlaufText."
+        vorlauf == 0 -> "Um ${erinnerung.second} Uhr kommt die Schlaferinnerung – genau zur Schlafenszeit."
+        else -> "Um ${erinnerung.first} Uhr kommt die Schlaferinnerung – $vorlauf Minuten vor der Schlafenszeit um ${erinnerung.second} Uhr."
+    }, style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
 }
 
 /** What saving will do: switched on, and the term it will then ring. Not a claim that it is already planned. */

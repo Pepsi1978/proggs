@@ -49,6 +49,10 @@ object SchlafPlan {
 
     fun leadMs(minutes: Int): Long = minutes.coerceIn(0, LEAD_MAX_MINUTES) * 60_000L
 
+    /** Der Wecker darf die globale Einstellung übersteuern; ohne eigene Wahl gilt die globale. */
+    fun an(alarm: Alarm?, global: Boolean): Boolean = alarm?.sleepReminder ?: global
+    fun vorlauf(alarm: Alarm?, global: Int): Int = (alarm?.sleepLeadMinutes ?: global).coerceIn(0, LEAD_MAX_MINUTES)
+
     /** Wake times from the stored nextAt (which already reflects a skipped occurrence) onwards. */
     fun wakeTimes(alarm: Alarm, zone: ZoneId = ZoneId.systemDefault()): List<Long> {
         if (!alarm.enabled || alarm.sleepMinutes <= 0 || alarm.nextAt <= 0) return emptyList()
@@ -277,8 +281,8 @@ object SchlafErinnerung {
     fun sync(context: Context, alarmId: String) = synchronized(lock) {
         try {
             val current = AlarmStore.get(context).get(alarmId)
-            val vorlauf = leadMinutes(context)
-            val occurrence = current?.let { SchlafPlan.next(it, System.currentTimeMillis(), enabled(context), leadMinutes = vorlauf) }
+            val vorlauf = SchlafPlan.vorlauf(current, leadMinutes(context))
+            val occurrence = current?.let { SchlafPlan.next(it, System.currentTimeMillis(), SchlafPlan.an(it, enabled(context)), leadMinutes = vorlauf) }
             if (occurrence == null) cancelPlan(context, alarmId)
             else {
                 val manager = context.getSystemService(AlarmManager::class.java)
@@ -351,7 +355,7 @@ object SchlafErinnerung {
             val alarms = AlarmStore.get(context).all().filter { it.id != excludeId }
             visible.forEach { sbn ->
                 val group = sbn.tag.removePrefix(TAG_PREFIX).toLongOrNull() ?: return@forEach
-                val members = alarms.mapNotNull { alarm -> SchlafPlan.inGruppe(alarm, group, now, setting)?.let { alarm to it } }
+                val members = alarms.mapNotNull { alarm -> SchlafPlan.inGruppe(alarm, group, now, SchlafPlan.an(alarm, setting))?.let { alarm to it } }
                 if (members.isEmpty()) { manager.cancel(sbn.tag, sbn.id); return@forEach }
                 val text = SchlafPlan.text(members.first().second.bedtime, now, members.map { (a, v) -> SchlafPlan.Eintrag(a.name, v.wakeAt, v.sleepMinutes) })
                 if (sbn.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() != text) post(context, group, text, silent = true)
@@ -373,7 +377,9 @@ object SchlafErinnerung {
                 val setting = enabled(context)
                 // Gegen das mit dem aktuellen Vorlauf gültige Zeitfenster geprüft: Ausgeliefertes, das nicht mehr
                 // hineinfällt, wird verworfen. Eine Vorlaufänderung allein macht eine Auslieferung nicht ungültig.
-                val occurrence = SchlafPlan.gueltig(store.get(alarmId), wakeAt, sleepMinutes, now, setting, leadMinutes = leadMinutes(context)) ?: return false
+                val eigener = store.get(alarmId)
+                val occurrence = SchlafPlan.gueltig(eigener, wakeAt, sleepMinutes, now, SchlafPlan.an(eigener, setting),
+                    leadMinutes = SchlafPlan.vorlauf(eigener, leadMinutes(context))) ?: return false
                 val marks = SchlafPlan.Marken.parse(store.prefs.getString(MARKS_KEY, null)).bereinigt(now)
                 val memoryKey = "${occurrence.group}|${occurrence.key}"
                 if (marks.enthaelt(occurrence) || memoryKey in memoryMarks) return false
@@ -386,7 +392,7 @@ object SchlafErinnerung {
                 val alreadyAnnounced = marks.gruppeGemeldet(occurrence) || memoryMarks.any { it.startsWith("${occurrence.group}|") }
                 memoryMarks += memoryKey
                 val marked = store.prefs.edit().putString(MARKS_KEY, marks.mit(occurrence).json()).commit()
-                val members = store.all().mapNotNull { alarm -> SchlafPlan.inGruppe(alarm, occurrence.group, now, setting)?.let { alarm to it } }
+                val members = store.all().mapNotNull { alarm -> SchlafPlan.inGruppe(alarm, occurrence.group, now, SchlafPlan.an(alarm, setting))?.let { alarm to it } }
                     .ifEmpty { listOf(store.get(alarmId)!! to occurrence) }
                 val text = SchlafPlan.text(occurrence.bedtime, now, members.map { (a, v) -> SchlafPlan.Eintrag(a.name, v.wakeAt, v.sleepMinutes) })
                 post(context, occurrence.group, text, silent = alreadyAnnounced)
