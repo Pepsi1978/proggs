@@ -291,6 +291,9 @@ fun StillerKnopf(
 
     Box(
         modifier = modifier
+            // Die 48-dp-Tippfläche liegt **außen**: Innen aufgeblasen machte sie aus kurzen Knöpfen
+            // wie „Dauer“ hohe Klötze mit eckigem Schatten. So bleibt der sichtbare Körper überall gleich.
+            .minimumInteractiveComponentSize()
             .graphicsLayer { scaleX = skalierung; scaleY = skalierung }
             // One consistent raised 3D look for every secondary button (opaque body, so the shadow
             // never shows through); only pressing sinks it in. `hervorgehoben` stays for API compatibility.
@@ -323,7 +326,6 @@ fun StillerKnopf(
                 haptik.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 aufTipp()
             }
-            .minimumInteractiveComponentSize()
             .padding(horizontal = 14.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center,
     ) {

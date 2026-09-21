@@ -19,6 +19,10 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -653,7 +657,13 @@ fun DatumWahlDialog(
             // (adjustResize), bleibt das Feld erreichbar; schiebt das System es hoch (adjustPan),
             // erledigt es das selbst.
             val eingabe = zustand.displayMode == DisplayMode.Input
-            DatePicker(
+            // Der Kalender ist beim ersten Aufbau schwer. Damit das Fenster sofort erscheint,
+            // steht im ersten Bild ein gleich hoher Platzhalter; der Kalender folgt ein Bild später.
+            var bereit by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; bereit = true }
+            if (!bereit) androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth()
+                .height(if (platzFuerKalender) KALENDER_BEDARF - 80.dp else 160.dp))
+            else DatePicker(
                 state = zustand,
                 modifier = Modifier
                     .fillMaxWidth()

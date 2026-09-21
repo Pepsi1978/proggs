@@ -752,7 +752,10 @@ private fun HeroKarte(inhalt: @Composable () -> Unit) {
             )
             .glanzBogen(deckung = if (gold.istDunkel) 0.06f else 0.14f)
             .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.16f else 0.55f), form),
-    ) { inhalt() }
+    ) {
+        HeroDeko(Modifier.matchParentSize())
+        inhalt()
+    }
 }
 
 /**
@@ -866,6 +869,7 @@ private fun MorgenruheHero(
                     center = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f), radius = size.maxDimension * 0.6f))
             }
             .border(1.dp, gold.heroKante, form)) {
+            HeroDeko(Modifier.matchParentSize())
             Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -936,11 +940,15 @@ private fun TraumraumHero(
             Modifier.fillMaxWidth()
                 // Eine einzige farbige Umgebungsschicht statt eines Kontaktschattens: weicher
                 // Schein von oben, kein plastischer Körper — das ist Traumraums Sprache.
-                .shadow(16.dp, kuppelForm, ambientColor = gold.primaer.copy(alpha = .35f),
-                    spotColor = androidx.compose.ui.graphics.Color.Transparent)
+                // Dreidimensional: kräftiger Schatten nach unten, Licht von oben, Glanzbogen und
+                // eine Lichtkante — die Kuppel steht jetzt als Körper über der Seite.
+                .shadow(18.dp, kuppelForm, ambientColor = gold.primaer.copy(alpha = .45f),
+                    spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = .6f))
                 .clip(kuppelForm)
-                .background(Brush.verticalGradient(listOf(gold.heroGrund, gold.heroGrundUnten)))
+                .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(0.10f), gold.heroGrund, gold.heroGrundUnten.dunkler(0.12f))))
+                .glanzBogen(deckung = if (gold.istDunkel) 0.10f else 0.22f)
                 .border(1.dp, gold.heroKante, kuppelForm)
+                .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.28f else 0.6f), kuppelForm)
                 .padding(top = 14.dp, bottom = versatz + 14.dp, start = 20.dp, end = 20.dp),
         ) {
             // Nachthimmel in der Kuppel: Sterne in zwei Tönen und ein heller Mond — dadurch hat
@@ -1059,6 +1067,7 @@ private fun OrbitHero(
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.5f), radius = size.maxDimension * 0.5f))
         }
         .border(1.dp, gold.heroKante, form)) {
+        HeroDeko(Modifier.matchParentSize())
         Column(Modifier.fillMaxWidth()) {
             // Kopfstreifen: links der Signalbalken, rechts die Statusleuchte.
             Row(
@@ -1580,8 +1589,15 @@ private fun OrbitKopf(now: Long, next: Long?, nextIsSnooze: Boolean, ringSize: a
 @Composable
 private fun Perle(inhalt: @Composable ColumnScope.() -> Unit) {
     val gold = LocalGold.current
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(gold.flaecheErhoeht)
-        .border(1.dp, gold.rahmen, RoundedCornerShape(28.dp)).padding(16.dp)) {
+    val form = RoundedCornerShape(28.dp)
+    // Die Perle schwebt erhaben über der Kuppel: Schatten, Licht von oben, Lichtkante.
+    Box(Modifier.fillMaxWidth()
+        .tiefenSchatten(gold.primaer, Hoehe.karteErhoeht, form)
+        .clip(form)
+        .background(Brush.verticalGradient(listOf(gold.flaecheErhoeht.heller(0.06f), gold.flaecheErhoeht, gold.flaecheErhoeht.dunkler(0.08f))))
+        .glanzBogen(deckung = if (gold.istDunkel) 0.06f else 0.18f)
+        .border(1.dp, gold.rahmen, form)
+        .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.22f else 0.5f), form).padding(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp), content = inhalt)
     }
 }
@@ -1855,6 +1871,8 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                         else microphone.launch(Manifest.permission.RECORD_AUDIO)
                     // Stop is always possible; start only while nothing else runs.
                     }, aktiviert = recording || busy.isBlank())
+                    // Test vorlesen: der eigene Text mit der Stimme und dem Tempo dieses Weckers; zweiter Tipp stoppt.
+                    AnhoerKnopfText(vm, alarm)
                     StillerKnopf("Text verbessern", vm::improve)
                     if (alarm.originalText.isNotBlank()) StillerKnopf("Original zurückholen", { vm.change(alarm.copy(text = alarm.originalText, originalText = "")) })
                 }
@@ -1883,7 +1901,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                             RadioButton(alarm.cue == id, null)
                             Text(title, Modifier.padding(start = 8.dp))
                         }
-                        StillerKnopf("Anhören", { vm.playTone(id) })
+                        AnhoerKnopf(vm, "ton:$id") { vm.playTone(id) }
                     }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
@@ -1903,7 +1921,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                                 color = LocalGold.current.textGedaempft, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
-                    if (anhoeren != null) StillerKnopf("Anhören", anhoeren)
+                    if (anhoeren != null) AnhoerKnopf(vm, "musik:$titel", anhoeren)
                 }
             }
             val eigene = alarm.music.isNotBlank()
@@ -1916,14 +1934,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                     .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
                     .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false))
             }, if (istGeraet) ({ vm.playMusic(alarm.music) }) else null)
-            // Die eingebauten Signale — jedes wählbar und jedes anhörbar.
-            Tones.names.forEach { (id, title) ->
-                Auswahl(title, null, !eigene && alarm.tone == id,
-                    { vm.change(alarm.copy(tone = id, music = "", musicName = title, musicQuelle = "")) }, { vm.playTone(id) })
             }
-            }
-            if (Step.MUSIC in alarm.steps || Step.TONE in alarm.steps) StillerKnopf("Vorschau stoppen", vm::stopPreview)
-            Text("Das Erinnerungszeichen dauert 2 Sekunden, die anderen eingebauten Signale 6 Sekunden. Der Musikschritt spielt die ganze Datei ab. Alle eingebauten Signale wurden eigens für diese App erzeugt.", style = MaterialTheme.typography.bodySmall)
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             Text("Lautstärke", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             ValueSlider("Wecklautstärke", alarm.volume, 1..100, "%") { vm.change(alarm.copy(volume = it)) }
@@ -1935,7 +1946,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             ValueSlider("Schlummerdauer", alarm.snoozeMinutes, 1..60, "Min.") { vm.change(alarm.copy(snoozeMinutes = it)) }
             ValueSlider("Erlaubte Schlummerpausen", alarm.snoozeLimit, 0..20, "") { vm.change(alarm.copy(snoozeLimit = it)) }
         }
-        Section("Aufstehen zum Ausschalten", collapsible = true,
+        Section("Wecker ausschalten", collapsible = true,
             summary = if (!alarm.photoRequired) "Normaler Stoppknopf" else listOfNotNull(
                 if (alarm.reference.isNotBlank()) "Referenzmotiv ab ${alarm.photoTolerance} % Ähnlichkeit" else null,
                 if (alarm.minBrightness > 0) "Helligkeit ab ${alarm.minBrightness} %" else null,
@@ -1963,7 +1974,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 Text("Schlummern bleibt entsprechend deinem Limit möglich. Der normale Stoppknopf wird durch die Foto-Aufgabe ersetzt.", style = MaterialTheme.typography.bodySmall)
             }
         }
-        Text("Dein Entwurf wird automatisch gespeichert. Beim Speichern werden sechs Stimmvarianten vorbereitet. Beim Wecken folgen sie offline aufeinander.", style = MaterialTheme.typography.bodySmall)
+        Text(modifier = Modifier.padding(horizontal = 14.dp), text = "Dein Entwurf wird automatisch gespeichert. Beim Speichern werden sechs Stimmvarianten vorbereitet. Beim Wecken folgen sie offline aufeinander.", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(16.dp))
        }
       }
@@ -2032,7 +2043,7 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
 /** The former raised StillerKnopf (⌃/⌄) as fold button; small body, touch target extended to 48 dp. */
 @Composable
 fun KlappKnopf(expanded: Boolean, onToggle: () -> Unit, beschreibung: String?, modifier: Modifier = Modifier) {
-    StillerKnopf(if (expanded) "⌃" else "⌄", onToggle, modifier.minimumInteractiveComponentSize().then(
+    StillerKnopf(if (expanded) "⌃" else "⌄", onToggle, modifier.minimumInteractiveComponentSize().size(44.dp).then(
         if (beschreibung == null) Modifier.clearAndSetSemantics {}
         else Modifier.semantics { contentDescription = beschreibung; stateDescription = if (expanded) "Aufgeklappt" else "Zugeklappt" }))
 }
@@ -2835,3 +2846,95 @@ private fun TraumTermin(daten: HeroDaten, aufOeffnen: () -> Unit) {
 @Composable
 fun wirksamesTheme(wahl: String): String =
     if (wahl == "system") (if (androidx.compose.foundation.isSystemInDarkTheme()) "dark" else "light") else wahl
+
+
+/** „Anhören“ wird während der Vorschau zu „Stopp“; ein zweiter Tipp beendet sie. */
+@Composable
+fun AnhoerKnopf(vm: WeckerViewModel, schluessel: String, abspielen: () -> Unit) {
+    val laeuft by vm.vorschau.collectAsStateWithLifecycle()
+    val aktiv = laeuft == schluessel
+    StillerKnopf(if (aktiv) "■ Stopp" else "Anhören", {
+        if (aktiv) vm.stopPreview() else { abspielen(); vm.vorschau.value = schluessel }
+    }, hervorgehoben = aktiv)
+}
+
+
+@Composable
+private fun AnhoerKnopfText(vm: WeckerViewModel, alarm: Alarm) {
+    val laeuft by vm.vorschau.collectAsStateWithLifecycle()
+    val aktiv = laeuft == "text:${alarm.id}"
+    StillerKnopf(if (aktiv) "■ Stopp" else "Test vorlesen", {
+        if (aktiv) vm.stopPreview()
+        else if (alarm.text.isBlank()) vm.message.value = "Gib zuerst einen Text ein."
+        else { vm.previewVoice(alarm, alarm.text); vm.vorschau.value = "text:${alarm.id}" }
+    }, hervorgehoben = aktiv)
+}
+
+
+/**
+ * Die Schmuckebene hinter den Heros, je Design eigen: Schlicht goldenes Funkeln, Morgenruhe eine
+ * aufgehende Sonne mit Strahlen, Orbit Umlaufbahnen mit Planeten. Traumraum hat seinen Sternenhimmel.
+ * Deterministisch und ohne Animation — der Hero steht dauerhaft auf dem Schirm.
+ */
+@Composable
+private fun HeroDeko(modifier: Modifier) {
+    val gold = LocalGold.current
+    val design = LocalDesignTokens.current.design
+    androidx.compose.foundation.Canvas(modifier) {
+        val zufall = java.util.Random(7)
+        when (design) {
+            Design.SCHLICHT -> repeat(14) {
+                val x = size.width * (0.35f + zufall.nextFloat() * 0.62f)
+                val y = size.height * zufall.nextFloat() * 0.7f
+                val r = (1.5f + zufall.nextFloat() * 3.5f).dp.toPx()
+                val a = if (gold.istDunkel) 0.25f + zufall.nextFloat() * 0.35f else 0.18f + zufall.nextFloat() * 0.25f
+                val c = androidx.compose.ui.geometry.Offset(x, y)
+                // Vierzackiges Funkeln
+                val pfad = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(x, y - r * 2); quadraticTo(x, y, x + r * 2, y); quadraticTo(x, y, x, y + r * 2)
+                    quadraticTo(x, y, x - r * 2, y); quadraticTo(x, y, x, y - r * 2); close()
+                }
+                drawPath(pfad, gold.primaer.copy(alpha = a))
+                drawCircle(androidx.compose.ui.graphics.Color.White.copy(alpha = a * 0.8f), r * 0.35f, c)
+            }
+            Design.MORGENRUHE -> {
+                val c = androidx.compose.ui.geometry.Offset(size.width * 0.86f, size.height * 0.30f)
+                val r = 22.dp.toPx()
+                repeat(12) { i ->
+                    val w = Math.toRadians(i * 30.0)
+                    val a = c + androidx.compose.ui.geometry.Offset((r * 1.45f * Math.cos(w)).toFloat(), (r * 1.45f * Math.sin(w)).toFloat())
+                    val b = c + androidx.compose.ui.geometry.Offset((r * 2.1f * Math.cos(w)).toFloat(), (r * 2.1f * Math.sin(w)).toFloat())
+                    drawLine(gold.akzentWarm.copy(alpha = .30f), a, b, 2.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
+                }
+                drawCircle(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .45f), gold.akzentWarm.copy(alpha = .12f)), center = c, radius = r), r, c)
+                // Zwei kleine Vögel am Morgenhimmel
+                listOf(0.62f to 0.14f, 0.70f to 0.22f).forEach { (fx, fy) ->
+                    val p = androidx.compose.ui.geometry.Offset(size.width * fx, size.height * fy)
+                    val w = 6.dp.toPx()
+                    val vogel = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(p.x - w, p.y); quadraticTo(p.x - w / 2, p.y - w / 2, p.x, p.y)
+                        quadraticTo(p.x + w / 2, p.y - w / 2, p.x + w, p.y)
+                    }
+                    drawPath(vogel, gold.heroSchriftGedaempft.copy(alpha = .45f), style = androidx.compose.ui.graphics.drawscope.Stroke(1.5f.dp.toPx()))
+                }
+            }
+            Design.ORBIT -> {
+                val c = androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height * 0.55f)
+                listOf(1f, 1.55f, 2.1f).forEachIndexed { i, f ->
+                    val rx = 48.dp.toPx() * f
+                    val ry = rx * 0.42f
+                    drawOval(gold.primaer.copy(alpha = .16f - i * 0.03f), topLeft = c - androidx.compose.ui.geometry.Offset(rx, ry),
+                        size = androidx.compose.ui.geometry.Size(rx * 2, ry * 2), style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+                    val w = Math.toRadians(40.0 + i * 95)
+                    val p = c + androidx.compose.ui.geometry.Offset((rx * Math.cos(w)).toFloat(), (ry * Math.sin(w)).toFloat())
+                    drawCircle(if (i == 1) gold.akzentWarm.copy(alpha = .7f) else gold.primaer.copy(alpha = .55f), (2.5f + i).dp.toPx(), p)
+                }
+                repeat(18) {
+                    drawCircle(gold.heroSchrift.copy(alpha = .10f + zufall.nextFloat() * .2f), (0.6f + zufall.nextFloat()).dp.toPx(),
+                        androidx.compose.ui.geometry.Offset(size.width * zufall.nextFloat(), size.height * zufall.nextFloat()))
+                }
+            }
+            else -> {}
+        }
+    }
+}

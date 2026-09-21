@@ -559,7 +559,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
      * Hört die Stimme ab. Ohne [alarm] gilt der globale Standard, mit [alarm] dessen eigene Auswahl
      * samt eigenem Tempo. Die globalen Einstellungen werden dabei nie verändert.
      */
-    fun previewVoice(alarm: Alarm? = null) {
+    fun previewVoice(alarm: Alarm? = null, text: String? = null) {
         if (rejectPreviewWhileRecording()) return
         stopPreview()
         val generation = previewGeneration
@@ -573,7 +573,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             previewJob = job
             try {
                 val prep = SpeechPreparation(app, settings) { voice }
-                val file = prep.audio("Guten Morgen! Es ist Zeit für deine genialen Ideen. Dein Wecker ist bereit.")
+                val file = prep.audio(text?.takeIf { it.isNotBlank() }?.take(1500)
+                    ?: "Guten Morgen! Es ist Zeit für deine genialen Ideen. Dein Wecker ist bereit.")
                 if (generation != previewGeneration) return@runAction
                 // Hand over without stopPreview(): that would cancel this very job.
                 if (previewJob === job) previewJob = null
@@ -658,7 +659,9 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         player.release()
         if (generation == previewGeneration) message.value = "Die Vorschau konnte nicht abgespielt werden."
     }
-    private fun releasePlayer() { val player = preview; preview = null; player?.release() }
+    private fun releasePlayer() { val player = preview; preview = null; player?.release(); vorschau.value = null }
+    /** Was gerade zur Probe läuft (Schlüssel des Anhören-Knopfs), sonst null. */
+    val vorschau = MutableStateFlow<String?>(null)
     /** Stops playback and cancels only the preview's own preparation; every later result of it is discarded. */
     fun stopPreview() {
         previewGeneration++
