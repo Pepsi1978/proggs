@@ -1298,6 +1298,19 @@ private fun WeckerKarte(
                 Modifier.padding(horizontal = if (dicht) 10.dp else 16.dp, vertical = if (dicht) 8.dp else 11.dp),
                 verticalArrangement = Arrangement.spacedBy(if (dicht) 3.dp else 5.dp),
             ) {
+                // Name über dem Schalter, in allen Designs gleich: Name unterstrichen, dann „ – “ und die
+                // Wiederholung eine Spur kleiner. Dieselbe Grundlinie für beide.
+                Row(Modifier.fillMaxWidth().clickable(
+                    interactionSource = remember { MutableInteractionSource() }, indication = null,
+                    onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) })) {
+                    val zeilenStil = if (dicht) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium
+                    val planStil = zeilenStil.copy(fontWeight = FontWeight.Normal, fontSize = zeilenStil.fontSize * 0.85f)
+                    Text(alarm.name, Modifier.alignByBaseline().weight(1f, fill = false),
+                        style = zeilenStil.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline),
+                        maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
+                    Text(" – " + (if (alarm.enabled) kurzPlan(alarm) else "${kurzPlan(alarm)} · aus"), Modifier.alignByBaseline(),
+                        style = planStil, color = gold.textGedaempft, maxLines = 1)
+                }
                 // --- Fach 1: Kopfzeile ---
                 // Schalter, Uhrzeit und Klapppfeil stehen auf einer Linie; darunter Name und
                 // Wiederholung in einer Zeile. Termin und Datum stehen nur noch einmal: neben der Uhrzeit.
@@ -1321,19 +1334,6 @@ private fun WeckerKarte(
                     }
                     KlappKnopf(expanded, aufKlappen,
                         beschreibung = "Weckerdetails ${if (expanded) "zuklappen" else "aufklappen"}: ${alarm.name}")
-                }
-                Row(Modifier.fillMaxWidth().clickable(
-                    interactionSource = remember { MutableInteractionSource() }, indication = null,
-                    onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) }),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    // Dieselbe Schrift und dieselbe Grundlinie für Name und Wiederholung — nur Farbe
-                    // und Gewicht unterscheiden sie. Vorher saß „Täglich“ tiefer und in anderer Schrift.
-                    val zeilenStil = if (dicht) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium
-                    Text(alarm.name, Modifier.alignByBaseline().weight(1f, fill = false),
-                        style = zeilenStil, maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
-                    Text(if (alarm.enabled) kurzPlan(alarm) else "${kurzPlan(alarm)} · aus", Modifier.alignByBaseline(),
-                        style = zeilenStil.copy(fontWeight = FontWeight.Normal),
-                        color = gold.textGedaempft, maxLines = 1)
                 }
 
                 // Without RESUMED or with reduced motion the details switch instantly.
