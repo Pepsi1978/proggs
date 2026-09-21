@@ -1039,6 +1039,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.driveDisconnectedNotified = false
             self.syncSlotsWithCloud()
             self.syncHistoryWithCloud()
+            GeminiPromptSync.trySyncFromCloud()   // Schnell-Prompts + Gemini-Prompts nachziehen
         }
         // Laufender Abgleich: Aenderungen vom anderen Geraet kommen sonst erst
         // beim naechsten App-Start an.

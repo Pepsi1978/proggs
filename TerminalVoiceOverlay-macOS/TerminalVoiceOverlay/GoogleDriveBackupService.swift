@@ -775,40 +775,141 @@ enum GeminiPromptSync {
         return json
     }
 
-    /// Nach jedem Speichern (Editor/Schalter/Praeambel) aufrufen. Fire-and-forget.
-    static func tryUpload() {
-        guard GoogleDriveBackupService.shared.isAuthenticated() else { return }
+    // ── Dirty-Marker + Serialisierung (Pendant zu Windows SyncGate/.gemini-prompts-dirty,
+    // Fix 21.09.2026: Schnell-Prompts kamen vom Mac nicht ins Backup) ──
+    // Jede lokale Aenderung setzt zuerst den Dirty-Marker; er wird erst nach einem
+    // ERFOLGREICHEN Upload geloescht. Ein gescheiterter Upload (Netz weg, Token
+    // abgelaufen) wird so beim naechsten Start bzw. naechsten Verbinden wiederholt —
+    // und ein ungesicherter lokaler Stand wird nie von einem Cloud-Bundle ueberschrieben.
+    // Alle Laeufe gehen ueber eine serielle Queue; Uploads vor dem ersten Abgleich
+    // warten, damit ein Start-Upload (z. B. KI-Ueberschrift) kein neueres Bundle
+    // vom anderen Geraet mit veraltetem Mac-Stand ueberschreibt.
+    private static let dirtyMarkerName = ".gemini-prompts-dirty"
+    private static var dirtyURL: URL { skDir.appendingPathComponent(dirtyMarkerName) }
+    private static let syncQueue = DispatchQueue(label: "GeminiPromptSync.queue")
+    private static var initialSyncDone = false   // nur auf syncQueue lesen/schreiben
+
+    private static func markDirty() {
+        try? FileManager.default.createDirectory(at: skDir, withIntermediateDirectories: true)
+        try? UUID().uuidString.write(to: dirtyURL, atomically: true, encoding: .utf8)
+    }
+    private static func readDirty() -> String {
+        (try? String(contentsOf: dirtyURL, encoding: .utf8))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+    private static func clearDirty(ifStill generation: String) {
+        guard !generation.isEmpty, readDirty() == generation else { return }
+        try? FileManager.default.removeItem(at: dirtyURL)
+    }
+
+    /// true, wenn das Cloud-Bundle neuer ist als der lokale Marker. Vergleicht
+    /// Zeitpunkte statt Zeichenketten — Windows schreibt "…+00:00" mit 7
+    /// Nachkommastellen, der Mac "…Z" ohne.
+    private static func isNewerThanMarker(_ cloudSavedAt: String, _ marker: String) -> Bool {
+        guard let cloud = PromptSlotStore.parseDate(cloudSavedAt) else { return false }
+        guard !marker.isEmpty, let local = PromptSlotStore.parseDate(marker) else { return true }
+        return cloud > local
+    }
+
+    /// Laedt synchron hoch (nur auf syncQueue aufrufen). true bei Erfolg.
+    private static func uploadBlocking() -> Bool {
+        let generation = readDirty()
         let savedAt = nowStamp()
-        guard let json = buildLocalBundleJSON(savedAt: savedAt) else { return }
+        guard let json = buildLocalBundleJSON(savedAt: savedAt) else {
+            clearDirty(ifStill: generation)   // lokal nichts vorhanden — nichts zu sichern
+            return true
+        }
+        let done = DispatchSemaphore(value: 0)
+        var ok = false
         GoogleDriveBackupService.shared.uploadGeminiPrompts(json: json) { result in
-            if case .success = result { writeMarker(savedAt) }
+            switch result {
+            case .success:
+                writeMarker(savedAt)
+                clearDirty(ifStill: generation)
+                ok = true
+            case .failure(let e):
+                NSLog("[GeminiPromptSync] Backup-Upload fehlgeschlagen: \(e.localizedDescription)")
+            }
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + 90)
+        return ok
+    }
+
+    /// Nach jedem Speichern (Editor/Schalter/Praeambel/KI-Ueberschrift) aufrufen.
+    /// Fire-and-forget.
+    static func tryUpload() {
+        markDirty()
+        syncQueue.async {
+            // Vor dem ersten Abgleich nicht hochladen — der Abgleich laedt den
+            // markierten Stand anschliessend selbst hoch.
+            guard initialSyncDone else { return }
+            guard GoogleDriveBackupService.shared.isAuthenticated() else {
+                NSLog("[GeminiPromptSync] Google Drive nicht verbunden — Upload wartet auf Verbindung")
+                return
+            }
+            _ = uploadBlocking()
         }
     }
 
-    /// Einmal beim App-Start. LWW: nur ein neueres Cloud-Bundle ueberschreibt lokal.
+    /// Beim App-Start und nach jedem (Neu-)Verbinden mit Google Drive.
+    /// Ungesicherte lokale Aenderungen (Dirty-Marker) werden zuerst hochgeladen;
+    /// sonst gilt LWW: nur ein neueres Cloud-Bundle ueberschreibt lokal.
     static func trySyncFromCloud() {
-        guard GoogleDriveBackupService.shared.isAuthenticated() else { return }
-        GoogleDriveBackupService.shared.downloadGeminiPrompts { result in
-            guard case .success(let maybeJson) = result else { return }
+        syncQueue.async {
+            defer { initialSyncDone = true }
+            guard GoogleDriveBackupService.shared.isAuthenticated() else {
+                NSLog("[GeminiPromptSync] Google Drive nicht verbunden — kein Abgleich der Schnell-Prompts")
+                return
+            }
+            if !readDirty().isEmpty {
+                _ = uploadBlocking()
+                return
+            }
+            let done = DispatchSemaphore(value: 0)
+            var downloaded: Result<String?, Error> = .success(nil)
+            GoogleDriveBackupService.shared.downloadGeminiPrompts { result in
+                downloaded = result
+                done.signal()
+            }
+            _ = done.wait(timeout: .now() + 90)
+            guard case .success(let maybeJson) = downloaded else {
+                if case .failure(let e) = downloaded {
+                    NSLog("[GeminiPromptSync] Cloud-Abgleich fehlgeschlagen: \(e.localizedDescription)")
+                }
+                return
+            }
             guard let json = maybeJson,
                   let data = json.data(using: .utf8),
                   let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let savedAt = obj["savedAt"] as? String,
                   let files = obj["files"] as? [String: String] else {
-                tryUpload()  // kein gueltiges Cloud-Bundle -> lokalen Stand saeen
+                _ = uploadBlocking()  // kein gueltiges Cloud-Bundle -> lokalen Stand saeen
                 return
             }
-            if savedAt <= readMarker() { return }  // lokal aktuell/neuer
-            try? FileManager.default.createDirectory(at: skDir, withIntermediateDirectories: true)
-            for (name, content) in files {
-                let safe = (name as NSString).lastPathComponent  // kein Pfad-Trick
-                if safe.isEmpty { continue }
-                try? content.write(to: skDir.appendingPathComponent(safe), atomically: true, encoding: .utf8)
+            // Waehrend des Downloads lokal gespeichert? Dann gewinnt der lokale Stand.
+            if !readDirty().isEmpty { _ = uploadBlocking(); return }
+            if isNewerThanMarker(savedAt, readMarker()) {
+                try? FileManager.default.createDirectory(at: skDir, withIntermediateDirectories: true)
+                let allowed = Set(syncedFileNames)
+                for (name, content) in files {
+                    let safe = (name as NSString).lastPathComponent  // kein Pfad-Trick
+                    guard !safe.isEmpty, allowed.contains(safe) else { continue }
+                    try? content.write(to: skDir.appendingPathComponent(safe), atomically: true, encoding: .utf8)
+                }
+                writeMarker(savedAt)
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: QuickPromptStore.changedNotification, object: nil)
+                }
             }
-            writeMarker(savedAt)
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: QuickPromptStore.changedNotification, object: nil)
+            // Lueckenpruefung (Pendant Windows MissingInCloud): fehlt eine lokal
+            // vorhandene Datei im Cloud-Bundle (z. B. Schnell-Prompts, die ein
+            // anderes Geraet nie hatte), den lokalen Stand hochladen.
+            let missing = syncedFileNames.contains { name in
+                files[name] == nil
+                    && FileManager.default.fileExists(atPath: skDir.appendingPathComponent(name).path)
             }
+            if missing { _ = uploadBlocking() }
         }
     }
 }

@@ -218,11 +218,31 @@ public sealed class GeminiPromptDriveSync
         catch (JsonException ex) { throw new InvalidDataException("Google Drive bundle is not valid JSON.", ex); }
         if (cloud is null || string.IsNullOrEmpty(cloud.savedAt)) return;
 
-        if (!IsNewerThanMarker(cloud.savedAt, ReadMarker())) return;
+        if (IsNewerThanMarker(cloud.savedAt, ReadMarker()))
+        {
+            ApplyCloudFiles(cloud.files);
+            WriteMarker(cloud.savedAt);
+            CloudApplied?.Invoke();
+        }
 
-        ApplyCloudFiles(cloud.files);
-        WriteMarker(cloud.savedAt);
-        CloudApplied?.Invoke();
+        // Lueckenpruefung (Fix 21.09.2026): Ein Bundle von einem Geraet ohne
+        // Schnell-Prompts (z. B. aeltere Mac-Version) liess die lokal vorhandenen
+        // Schnell-Prompts dauerhaft aus dem Backup fallen, weil ApplyCloudFiles sie
+        // bewusst nicht loescht, aber auch nie wieder jemand hochlud. Fehlt eine
+        // lokal vorhandene Datei im Cloud-Bundle, wird der lokale Stand hochgeladen.
+        if (MissingInCloud(cloud.files))
+            await UploadCoreAsync(ct).ConfigureAwait(false);
+    }
+
+    private static bool MissingInCloud(Dictionary<string, string> cloudFiles)
+    {
+        var cloudNames = new HashSet<string>(cloudFiles.Keys, StringComparer.OrdinalIgnoreCase);
+        foreach (var name in SyncedFileNames())
+        {
+            if (!cloudNames.Contains(name) && File.Exists(Path.Combine(SkDir, name)))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>Wird nach dem Anwenden eines neueren Cloud-Bundles gefeuert (vom
