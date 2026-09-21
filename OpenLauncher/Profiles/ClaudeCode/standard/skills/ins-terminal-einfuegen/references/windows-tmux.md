@@ -34,7 +34,7 @@ die Sitzung. Der temporäre Wrapper bleibt zum Wiederanhängen erhalten.
    Prozesswechsel oder fehlender Zuordnung nicht schreiben.
 5. Privaten Dialogordner auf dem **Linux-Dateisystem** mit `mktemp -d` erzeugen
    (0700). Nicht unter `/mnt/c`: Windows-Mounts bilden Linux-Dateirechte nicht immer ab.
-   UTF-8-Aufträge dorthin kopieren, Hash berechnen, frisch `read`, dann genau einmal
+   UTF-8-Aufträge dorthin kopieren, Hash berechnen, anhand eines aktuellen `read` genau einmal
    `submit` beziehungsweise `paste`/`enter`. Keine künstlichen Probeaufträge ohne Auftrag.
 
 Ubuntu-tmux 3.6 meldet hier kein `bracket_paste_flag`. Deshalb unter diesem Windows-Weg
@@ -73,12 +73,18 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
 - Übergaben kurz: `R2: Ziel; relevante Änderung seit R1; Grenzen; erwarteter Nachweis`.
   Keine eigene Empfangsbestätigungsrunde. Für kleine Fragen direkte Antworten;
   bei Code Fundstellen, Tests, offene Punkte und später Commit/Push nennen lassen.
-- Textdatei und SHA vor dem frischen `read` vorbereiten. Dann unmittelbar `submit
-  --literal-line` senden. Der Helfer erkennt bekannte zweispaltige Fortsetzungszeilen,
+- Textdatei und SHA vor dem Senden vorbereiten. Ein gerade inhaltlich geprüfter
+  Warte-Read mit bekanntem Antwortkontext und Eingabezustand ist bereits das nötige
+  frische `read`: dessen Token direkt für `submit --literal-line` verwenden, ohne
+  routinemäßigen zweiten Leseaufruf. Nach Nutzerinteraktion, langer Zwischenarbeit,
+  unbekanntem Zustand oder `E_STALE` erneut lesen; keine blinde automatische Wiederholung.
+  Der Helfer erkennt bekannte zweispaltige Fortsetzungszeilen,
   ohne Leerraum allgemein zu entfernen. Unklare Darstellung bleibt bei `pasted`.
   Keine erneute Einfügung und kein blindes Enter nach unklarem Transport.
-- Für laufendes Mitlesen `read --compact --wait 3` verwenden, bei Stillstand längere
-  begrenzte Intervalle. [Puffer sparsam lesen](../../ins-macos-terminal-einfuegen/references/puffer-lesen.md)
+- Bei live bestätigtem Titelverhalten während Claudes Arbeit
+  `read --compact --wait-mode status --wait 10` verwenden. Direkt nach dem Senden
+  bis zum belegten Arbeitsbeginn bzw. bei unbekanntem Titelverhalten mit
+  `read --compact --wait 3` starten. [Puffer sparsam lesen](../../ins-macos-terminal-einfuegen/references/puffer-lesen.md)
   erklärt Auszüge, Vollansicht und Grenzen. Bei fehlendem Kontext einmal `--force-view`.
   Kein vollständiger Bildschirm und keine vollständige Skill-Lektüre pro Nachricht.
 - Review an Dateimeilensteinen: zuerst Status und betroffene Pfade, dann deren echten
