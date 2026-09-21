@@ -1276,10 +1276,10 @@ private fun WeckerKarte(
                 verticalArrangement = Arrangement.spacedBy(if (dicht) 3.dp else 5.dp),
             ) {
                 // --- Fach 1: Kopfzeile ---
+                // Schalter, Uhrzeit und Klapppfeil stehen auf einer Linie; darunter Name und
+                // Wiederholung in einer Zeile. Termin und Datum stehen nur noch einmal: neben der Uhrzeit.
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(if (dicht) 8.dp else 12.dp)) {
-                    // Der Schalter, den man auf der Weckerliste als Erstes sieht — bisher der
-                    // rohe Material-Schalter ohne jede Tiefe.
                     Schalter3D(alarm.enabled, { on ->
                         // A one-off date that has passed cannot ring: open the editor to pick a new date instead of failing.
                         val latest = vm.store.get(alarm.id) ?: alarm
@@ -1287,7 +1287,7 @@ private fun WeckerKarte(
                     }, Modifier.semantics {
                         contentDescription = "Wecker aktivieren: ${alarm.name}"
                     })
-                    Column(Modifier.weight(1f).clickable(
+                    Box(Modifier.weight(1f).clickable(
                         interactionSource = remember { MutableInteractionSource() }, indication = null,
                         onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) })) {
                         val timeColor by androidx.compose.animation.animateColorAsState(
@@ -1295,22 +1295,21 @@ private fun WeckerKarte(
                             if (reducedMotion) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(250),
                             label = "weckzeitFarbe")
                         WeckzeitUeberschrift(alarm, now, timeColor, platzHalten = !expanded)
-                        // Row statt FlowRow: Eine FlowRow bricht je nach Länge von Name und Zeitplan
-                        // mal auf eine, mal auf zwei Zeilen um — und genau dadurch wurden zugeklappte
-                        // Orbit-Karten unterschiedlich hoch. Jetzt teilen sich beide fest eine Zeile,
-                        // der Name bekommt den Vorrang und der Zeitplan seinen eigenen Mindestanteil.
-                        if (dicht) Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Text(alarm.name, Modifier.weight(1f, fill = false),
-                                style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(scheduleLabel(alarm), Modifier.weight(1f, fill = false), fontFamily = IdeenSchriftFest,
-                                style = MaterialTheme.typography.labelSmall, color = gold.textGedaempft,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        } else Text(alarm.name, style = MaterialTheme.typography.titleMedium,
-                            maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
                     }
                     KlappKnopf(expanded, aufKlappen,
                         beschreibung = "Weckerdetails ${if (expanded) "zuklappen" else "aufklappen"}: ${alarm.name}")
+                }
+                Row(Modifier.fillMaxWidth().clickable(
+                    interactionSource = remember { MutableInteractionSource() }, indication = null,
+                    onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) }),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(alarm.name, Modifier.weight(1f, fill = false),
+                        style = if (dicht) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
+                        maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (alarm.enabled) kurzPlan(alarm) else "${kurzPlan(alarm)} · aus",
+                        fontFamily = if (dicht) IdeenSchriftFest else null,
+                        style = if (dicht) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodyMedium,
+                        color = gold.textGedaempft, maxLines = 1)
                 }
 
                 // Without RESUMED or with reduced motion the details switch instantly.
@@ -1322,12 +1321,6 @@ private fun WeckerKarte(
                 // --- Fach 2 und 3: Planzeile und Hinweisfach, beide nur im zugeklappten Zustand ---
                 AnimatedVisibility(!expanded && !dicht, enter = detailEnter, exit = detailExit) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            if (alarm.enabled && alarm.nextAt > 0) "${scheduleLabel(alarm)} · ${terminAnzeige(now, alarm.nextAt).einzeilig}"
-                            else "${scheduleLabel(alarm)} · ausgeschaltet",
-                            color = gold.textGedaempft, style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        )
                         HinweisFach(schlummerBis = schlummerBis, warnung = hinweis, schlaf = schlafHinweis,
                             warnFarbe = semantisch.warnung, akzentFarbe = gold.primaer,
                             ruhigFarbe = gold.textPrimaer, leerFarbe = gold.textGedaempft)
@@ -2944,4 +2937,14 @@ private fun HeroDeko(modifier: Modifier) {
             else -> {}
         }
     }
+}
+
+
+/** Nur die Art der Wiederholung — Uhrzeit und Datum stehen schon neben der großen Zahl. */
+fun kurzPlan(alarm: Alarm): String = when {
+    alarm.repeatUnit == Alarm.MONTHLY -> if (alarm.repeatEvery <= 1) "Monatlich" else "Alle ${alarm.repeatEvery} Monate"
+    alarm.repeatUnit == Alarm.YEARLY -> if (alarm.repeatEvery <= 1) "Jährlich" else "Alle ${alarm.repeatEvery} Jahre"
+    alarm.intervalDays > 0 -> "Alle ${alarm.intervalDays} Tage"
+    alarm.startDate.isNotBlank() -> "Einmalig"
+    else -> dayLabel(alarm.days)
 }
