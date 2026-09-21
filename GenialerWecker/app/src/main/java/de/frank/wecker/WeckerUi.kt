@@ -410,7 +410,9 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
             Box(
                 Modifier.fillMaxWidth().zIndex(1f)
                     // Traumraum rückt minimal näher an die Kopfleiste.
-                    .padding(start = 16.dp, end = 16.dp, top = seitenAbstandOben(), bottom = 14.dp),
+                    // Morgenruhe führt die Tagesachse selbst bis an die Liste, daher dort kein Abstand.
+                    .padding(start = 16.dp, end = 16.dp, top = seitenAbstandOben(),
+                        bottom = if (LocalDesignTokens.current.design == Design.MORGENRUHE) 0.dp else 14.dp),
             ) {
                 when (LocalDesignTokens.current.design) {
                     Design.TRAUMRAUM -> TraumraumHero(heroDaten, onNew, onEdit, aufSchlummernBeenden)
@@ -962,7 +964,8 @@ private fun MorgenruheHero(
         }
         // Der Anschluss an die Tagesachse: Der Punkt sitzt genau dort, wo `Station` in der Liste
         // ihre Linie zeichnet — 13 dp von der Spaltenkante. Ohne ihn schwebte die erste Station.
-        Row(Modifier.fillMaxWidth().height(12.dp)) {
+        // 26 dp = die bisherigen 12 dp plus die 14 dp Hero-Abstand, den Morgenruhe nicht mehr trägt.
+        Row(Modifier.fillMaxWidth().height(26.dp)) {
             Box(Modifier.width(26.dp), contentAlignment = Alignment.TopCenter) {
                 Box(Modifier.width(2.dp).fillMaxHeight().background(gold.rahmen))
             }
