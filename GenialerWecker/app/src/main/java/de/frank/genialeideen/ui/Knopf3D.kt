@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -222,10 +223,12 @@ fun GoldKnopf(
         // eigener semantischer Farbe übergibt (etwa eine Warnung), setzt seinen `tint` weiterhin
         // selbst und gewinnt.
         CompositionLocalProvider(LocalContentColor provides gold.aufPrimaer) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Mit Symbol rückt der Inhalt ein Stück nach links: Das Plus stand sonst sichtbar weit innen,
+            // weil die Glyphe selbst schon Luft mitbringt.
+            Row(if (symbol != null) Modifier.offset(x = (-4).dp) else Modifier, verticalAlignment = Alignment.CenterVertically) {
                 if (symbol != null) {
                     symbol()
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(6.dp))
                 }
                 Text(
                     text = if (laedt) "Einen Moment …" else text,

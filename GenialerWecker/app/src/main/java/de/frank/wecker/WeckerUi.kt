@@ -610,6 +610,7 @@ private fun TerminGruppe(
     fuehrung: androidx.compose.ui.graphics.Color,
     zeigePfeil: Boolean = true,
     ausrichtung: Alignment.Horizontal = Alignment.Start,
+    punkt: Boolean = true,
 ) {
     val oeffenbar = daten.nextAlarm != null
     Column(
@@ -628,7 +629,7 @@ private fun TerminGruppe(
             Text(" ", Modifier.clearAndSetSemantics { },
                 style = MaterialTheme.typography.bodyMedium, maxLines = 1)
         } else {
-            TerminZeile(daten.now, daten.next, daten.nextIsSnooze)
+            TerminZeile(daten.now, daten.next, daten.nextIsSnooze, punkt)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(daten.nextName ?: "Wecker", Modifier.weight(1f, fill = false),
                     style = MaterialTheme.typography.titleSmall, color = textFarbe,
@@ -663,7 +664,8 @@ private fun HeroAktionen(
             symbol = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) })
         when {
             daten.nextIsSnooze -> StillerKnopf("Schlummern beenden", aufSchlummernBeenden, hervorgehoben = true)
-            daten.nextAlarm != null -> StillerKnopf("Öffnen", aufOeffnen)
+            // Gleich groß wie der Hauptknopf: derselbe Körper, nur nicht als Hauptaktion betont.
+            daten.nextAlarm != null -> GoldKnopf("Öffnen", aufOeffnen, beschreibung = "Nächsten Wecker öffnen")
         }
     }
 }
@@ -731,9 +733,7 @@ private fun SchlichtHero(
                 // Rechtsbündig: Datum, Uhr und Termin enden an derselben Kante wie „Weckbereit“.
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp),
                     horizontalAlignment = Alignment.End) {
-                    Text(datumsZeile(daten.now),
-                        style = MaterialTheme.typography.labelMedium, color = gold.textGedaempft,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // Oben die Uhr, darunter Datum und Termin in derselben Schriftgröße, ohne Punkt davor.
                     GedeckelteSchrift {
                         // Die Größe wird gegen die tatsächlich verbleibende Spaltenbreite gemessen.
                         val groesse = passendeUhrGroesse(textBreite, uhrGroesse(daten.stufe),
@@ -742,8 +742,11 @@ private fun SchlichtHero(
                             fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
                             fontSize = groesse, color = gold.primaer, maxLines = 1, softWrap = false)
                     }
+                    Text(datumsZeile(daten.now),
+                        style = MaterialTheme.typography.bodyMedium, color = gold.textGedaempft,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                     TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer,
-                        ausrichtung = Alignment.End)
+                        ausrichtung = Alignment.End, punkt = false)
                 }
             }
             // Über die volle Breite: Hier ist Platz für den beschrifteten Hauptknopf und die
@@ -1181,15 +1184,12 @@ private fun OrbitHero(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                // Dieselbe Aktionszeile wie in den anderen Designs: „Neuer Wecker“ und „Öffnen“ gleich groß,
+                // beim Schlummern statt „Öffnen“ das Beenden.
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    GoldKnopf("WECKER", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen",
-                        symbol = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) })
-                    Spacer(Modifier.weight(1f))
+                    Box(Modifier.weight(1f)) { HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden) }
                     BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung,
                         stil = MaterialTheme.typography.labelSmall.copy(fontFamily = IdeenSchriftFest))
-                }
-                if (daten.nextIsSnooze) Box(Modifier.fillMaxWidth()) {
-                    StillerKnopf("SCHLUMMERN BEENDEN", aufSchlummernBeenden, hervorgehoben = true)
                 }
             }
         }
@@ -2452,12 +2452,12 @@ private fun WeckzeitUeberschrift(alarm: Alarm, now: Long, farbe: androidx.compos
 
 /** The alarm term with the same filled marker as on the ring; the weekday and date are added when it is not today. */
 @Composable
-private fun TerminZeile(now: Long, target: Long, snooze: Boolean) {
+private fun TerminZeile(now: Long, target: Long, snooze: Boolean, punkt: Boolean = true) {
     val gold = LocalGold.current
     val accent = if (snooze) LocalSemantisch.current.info else gold.primaer
     val targetText = terminAnzeige(now, target).einzeilig
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        LegendenMarker(hollow = false, color = accent)
+        if (punkt) LegendenMarker(hollow = false, color = accent)
         // Genau eine Zeile: Ohne diese Begrenzung brach „Wecker Mo, 22.09. · 06:30" um, und der
         // Hero war je nach Termin unterschiedlich hoch — er sprang beim Wechsel von „morgen"
         // auf ein Wochentagsdatum.
