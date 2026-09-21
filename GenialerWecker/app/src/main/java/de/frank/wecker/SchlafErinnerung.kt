@@ -131,7 +131,9 @@ object SchlafErinnerung {
     private const val MARKS_KEY = "sleep_reminder_marks"
     private const val PLAN_ISSUES_KEY = "sleep_reminder_plan_issues"
     private const val DELIVERY_ISSUE_KEY = "sleep_reminder_delivery_issue"
-    const val CHANNEL = "sleep_reminder_v1"
+    /** v2 ist stumm: Den Ton spielt [SchlafTon] selbst, mit eigener Lautstärke. */
+    const val CHANNEL = "sleep_reminder_v2"
+    private const val ALTER_KANAL = "sleep_reminder_v1"
     private const val NOTIFICATION_ID = 6000
     private const val TAG_PREFIX = "schlaf:"
     private val lock = Any()
@@ -231,9 +233,14 @@ object SchlafErinnerung {
     }
 
     fun ensureChannel(context: Context) {
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(
+        val manager = context.getSystemService(NotificationManager::class.java)
+        // Der Klang eines Kanals ist nach dem Anlegen unveränderlich, deshalb ein neuer, stummer Kanal.
+        if (manager.getNotificationChannel(ALTER_KANAL) != null) runCatching { manager.deleteNotificationChannel(ALTER_KANAL) }
+        manager.createNotificationChannel(
             NotificationChannel(CHANNEL, "Schlafenszeit-Erinnerung", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "Zum eingestellten Vorlauf vor der berechneten Schlafenszeit."
+                description = "Zum eingestellten Vorlauf vor der berechneten Schlafenszeit. Den Klingelton wählst du in der App."
+                setSound(null, null)
+                enableVibration(false)
             })
     }
 
@@ -356,23 +363,25 @@ object SchlafErinnerung {
 
     // ---------- delivery ----------
     /** Validates the fingerprint, checks Android's blocks, marks durably, then shows the group text of all valid alarms. */
-    fun deliver(context: Context, alarmId: String, wakeAt: Long, sleepMinutes: Int) {
+    /** Liefert true, wenn die Erinnerung neu angezeigt wurde und deshalb klingeln soll. */
+    fun deliver(context: Context, alarmId: String, wakeAt: Long, sleepMinutes: Int): Boolean {
         val store = AlarmStore.get(context)
+        var klingeln = false
         try {
             synchronized(lock) {
                 val now = System.currentTimeMillis()
                 val setting = enabled(context)
                 // Gegen das mit dem aktuellen Vorlauf gültige Zeitfenster geprüft: Ausgeliefertes, das nicht mehr
                 // hineinfällt, wird verworfen. Eine Vorlaufänderung allein macht eine Auslieferung nicht ungültig.
-                val occurrence = SchlafPlan.gueltig(store.get(alarmId), wakeAt, sleepMinutes, now, setting, leadMinutes = leadMinutes(context)) ?: return
+                val occurrence = SchlafPlan.gueltig(store.get(alarmId), wakeAt, sleepMinutes, now, setting, leadMinutes = leadMinutes(context)) ?: return false
                 val marks = SchlafPlan.Marken.parse(store.prefs.getString(MARKS_KEY, null)).bereinigt(now)
                 val memoryKey = "${occurrence.group}|${occurrence.key}"
-                if (marks.enthaelt(occurrence) || memoryKey in memoryMarks) return
+                if (marks.enthaelt(occurrence) || memoryKey in memoryMarks) return false
                 // Blocked by Android: do not pretend it was shown, and do not mark it.
                 blockiert(context)?.let { reason ->
                     setDeliveryIssue(context, if (reason == "app") "Eine Schlafenszeit-Erinnerung wurde nicht angezeigt: Benachrichtigungen der App sind aus."
                         else "Eine Schlafenszeit-Erinnerung wurde nicht angezeigt: Der Kanal „Schlafenszeit-Erinnerung“ ist gesperrt.")
-                    return
+                    return false
                 }
                 val alreadyAnnounced = marks.gruppeGemeldet(occurrence) || memoryMarks.any { it.startsWith("${occurrence.group}|") }
                 memoryMarks += memoryKey
@@ -381,6 +390,7 @@ object SchlafErinnerung {
                     .ifEmpty { listOf(store.get(alarmId)!! to occurrence) }
                 val text = SchlafPlan.text(occurrence.bedtime, now, members.map { (a, v) -> SchlafPlan.Eintrag(a.name, v.wakeAt, v.sleepMinutes) })
                 post(context, occurrence.group, text, silent = alreadyAnnounced)
+                klingeln = !alreadyAnnounced
                 setDeliveryIssue(context, if (marked) null
                     else "Die Zustellmarke einer Schlafenszeit-Erinnerung konnte nicht gespeichert werden. Nach einem Neustart kann sie erneut klingeln.")
             }
@@ -390,6 +400,7 @@ object SchlafErinnerung {
         } finally {
             store.get(alarmId)?.let { sync(context, it) }
         }
+        return klingeln
     }
 
     private fun post(context: Context, group: Long, text: String, silent: Boolean) {
@@ -408,6 +419,11 @@ object SchlafErinnerung {
 class SchlafErinnerungReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra("id") ?: return
-        SchlafErinnerung.deliver(context, id, intent.getLongExtra("wakeAt", 0), intent.getIntExtra("sleep", 0))
+        val klingeln = SchlafErinnerung.deliver(context, id, intent.getLongExtra("wakeAt", 0), intent.getIntExtra("sleep", 0))
+        // Bei „Nicht stören“ bleibt die Erinnerung stumm; sonst klingt der gewählte Ton in der gewählten Lautstärke.
+        if (klingeln && !SchlafTon.nichtStoerenAktiv(context)) {
+            val auftrag = goAsync()
+            SchlafTon.spielen(context.applicationContext) { runCatching { auftrag.finish() } }
+        }
     }
 }

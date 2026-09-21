@@ -28,6 +28,12 @@ class IdeasBridge(private val context: Context) {
         val array = JSONArray(store.prefs.getString("ideas", "[]"))
         return (0 until array.length()).map { array.getJSONObject(it).let { j -> OpenIdea(j.getLong("id"), j.getString("title"), j.getString("text")) } }
     }
+    /** Abgewählte Ideen werden beim Wecken nicht vorgelesen. Gemerkt wird die Abwahl, damit neue Ideen automatisch aktiv sind. */
+    fun deaktiviert(): Set<Long> = store.prefs.getStringSet("ideasDisabled", emptySet()).orEmpty().mapNotNull { it.toLongOrNull() }.toSet()
+    fun setzeAktiv(id: Long, aktiv: Boolean) {
+        val neu = if (aktiv) deaktiviert() - id else deaktiviert() + id
+        store.prefs.edit().putStringSet("ideasDisabled", neu.map { it.toString() }.toSet()).commit()
+    }
     suspend fun copySettings(settings: SecureSettings) = withContext(Dispatchers.IO) {
         val data = context.contentResolver.call(URI, "speechSettings", null, null)
             ?: error("Geniale Ideen hat keine Spracheinstellungen geliefert.")

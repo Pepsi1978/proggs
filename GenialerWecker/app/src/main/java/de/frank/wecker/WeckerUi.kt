@@ -1714,11 +1714,11 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
 private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentActivity) {
     val recording by vm.recording.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
-    val music = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let(vm::importMusic) }
+    val music = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let { uri -> vm.importMusic(uri, "datei") } }
     val ringtone = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         @Suppress("DEPRECATION")
         val uri = result.data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
-        uri?.let { vm.importMusic(it) }
+        uri?.let { vm.importMusic(it, "geraet") }
     }
     var photoPath by rememberSaveable { mutableStateOf("") }
     val photo = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -1789,25 +1789,32 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             if (Step.TONE in alarm.steps) "Klingelzeichen: ${Tones.names[alarm.cue] ?: alarm.cue}" else null,
             if (Step.MUSIC in alarm.steps) "Musik: ${alarm.musicName}" else null).joinToString(" · ")) {
             if (Step.TONE in alarm.steps) Choice("Klingelzeichen vor dem Text", alarm.cue, Tones.names.toList()) { vm.change(alarm.copy(cue = it)) }
-            Text(alarm.musicName, style = MaterialTheme.typography.bodyMedium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                GoldKnopf("MP3 / Audio wählen", { music.launch(arrayOf("audio/*")) })
-                StillerKnopf("Geräte-Wecktöne", {
-                    ringtone.launch(Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
-                        .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
-                        .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false))
-                })
-            }
-            Tones.names.forEach { (id, title) ->
+            // Eigene Musik und Geräte-Wecktöne stehen als Auswahlpunkte in derselben Liste wie die
+            // eingebauten Signale. Der Punkt öffnet die jeweilige Auswahl; „Anhören“ spielt die Datei.
+            @Composable fun Auswahl(titel: String, unter: String?, gewaehlt: Boolean, waehlen: () -> Unit, anhoeren: (() -> Unit)?) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(alarm.music.isBlank() && alarm.tone == id, interactionSource = null, indication = null, role = androidx.compose.ui.semantics.Role.RadioButton) {
-                        vm.change(alarm.copy(tone = id, music = "", musicName = title)) }, verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(alarm.music.isBlank() && alarm.tone == id, null)
-                        Text(title, Modifier.padding(start = 8.dp))
+                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(gewaehlt, interactionSource = null, indication = null,
+                        role = androidx.compose.ui.semantics.Role.RadioButton, onClick = waehlen), verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(gewaehlt, null)
+                        Column(Modifier.padding(start = 8.dp)) {
+                            Text(titel)
+                            if (unter != null) Text(unter, style = MaterialTheme.typography.bodySmall,
+                                color = LocalGold.current.textGedaempft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
                     }
-                    StillerKnopf("Anhören", { vm.playTone(id) })
+                    if (anhoeren != null) StillerKnopf("Anhören", anhoeren)
                 }
             }
+            val eigene = alarm.music.isNotBlank()
+            val istGeraet = eigene && alarm.musicQuelle == "geraet"
+            val istDatei = eigene && !istGeraet
+            Auswahl("MP3 / Audio-Datei", if (istDatei) alarm.musicName else "Eigene Datei vom Gerät wählen", istDatei,
+                { music.launch(arrayOf("audio/*")) }, if (istDatei) ({ vm.playMusic(alarm.music) }) else null)
+            Auswahl("Geräte-Weckton", if (istGeraet) alarm.musicName else "Einen der Wecktöne des Handys wählen", istGeraet, {
+                ringtone.launch(Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false))
+            }, if (istGeraet) ({ vm.playMusic(alarm.music) }) else null)
             StillerKnopf("Vorschau stoppen", vm::stopPreview)
             Text("Das Erinnerungszeichen dauert 2 Sekunden, die anderen eingebauten Signale 6 Sekunden. Der Musikschritt spielt die ganze Datei ab. Alle eingebauten Signale wurden eigens für diese App erzeugt.", style = MaterialTheme.typography.bodySmall)
         }

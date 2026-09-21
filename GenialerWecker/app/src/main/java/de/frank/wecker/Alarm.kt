@@ -40,6 +40,8 @@ data class Alarm(
     val speechRate: Float? = null,
     val music: String = "",
     val musicName: String = "Klassischer Wecker",
+    /** Woher [music] stammt: „datei“ (MP3/Audio) oder „geraet“ (Geräte-Weckton). Leer bei Altbestand. */
+    val musicQuelle: String = "",
     val tone: String = "classic",
     val cue: String = "chime",
     val reference: String = "",
@@ -119,7 +121,7 @@ data class Alarm(
         put("snoozes", snoozes); put("volume", volume); put("fadeSeconds", fadeSeconds); put("vibrate", vibrate)
         put("steps", JSONArray(steps.map { it.name })); put("text", text); put("originalText", originalText)
         put("voiceProvider", voiceProvider); put("voiceId", voiceId); put("speechRate", speechRate ?: JSONObject.NULL)
-        put("music", music); put("musicName", musicName); put("tone", tone); put("cue", cue); put("reference", reference)
+        put("music", music); put("musicName", musicName); put("musicQuelle", musicQuelle); put("tone", tone); put("cue", cue); put("reference", reference)
         put("photoRequired", photoRequired); put("photoTolerance", photoTolerance)
         put("minBrightness", minBrightness); put("color", color); put("colorPercent", colorPercent)
         put("prepared", JSONObject().apply { prepared.forEach { (key, files) -> put(key, JSONArray(files)) } })
@@ -158,7 +160,7 @@ data class Alarm(
             snoozeMinutes = j.optInt("snoozeMinutes", 5), snoozeLimit = j.optInt("snoozeLimit", 3), snoozes = j.optInt("snoozes"),
             volume = j.optInt("volume", 70), fadeSeconds = j.optInt("fadeSeconds"), vibrate = j.optBoolean("vibrate", true),
             steps = j.getJSONArray("steps").let { a -> (0 until a.length()).map { Step.valueOf(a.getString(it)) } },
-            text = j.optString("text"), originalText = j.optString("originalText"), music = j.optString("music"),
+            text = j.optString("text"), originalText = j.optString("originalText"), music = j.optString("music"), musicQuelle = j.optString("musicQuelle"),
             voiceProvider = j.optString("voiceProvider"), voiceId = j.optString("voiceId"),
             speechRate = if (j.isNull("speechRate")) null else j.optDouble("speechRate").toFloat().takeIf { it in .5f..2f },
             musicName = j.optString("musicName", "Klassischer Wecker"), tone = j.optString("tone", "classic"), cue = j.optString("cue", "chime"),

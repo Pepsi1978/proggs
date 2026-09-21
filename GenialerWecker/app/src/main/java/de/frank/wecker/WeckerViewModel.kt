@@ -254,6 +254,13 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         message.value = "${ideas.value.size} offene Ideen in Originalreihenfolge übernommen."
         PreparationWorker.enqueue(app)
     }
+    val ideasDisabled = MutableStateFlow(IdeasBridge(application).deaktiviert())
+    fun setIdeaActive(id: Long, aktiv: Boolean) {
+        val bridge = IdeasBridge(app)
+        bridge.setzeAktiv(id, aktiv)
+        ideasDisabled.value = bridge.deaktiviert()
+        PreparationWorker.enqueue(app)
+    }
     fun importSettings() = runAction("Spracheinstellungen übernehmen …") {
         IdeasBridge(app).copySettings(settings)
         settingsChanged()
@@ -265,7 +272,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         if (requestedVoiceAccount != voiceAccount()) { restoreVoiceCache(); loadVoices(force = true) }
         PreparationWorker.enqueue(app)
     }
-    fun importMusic(uri: Uri) = runAction("Song vollständig auf dem Gerät speichern …") {
+    fun importMusic(uri: Uri, quelle: String = "datei") = runAction("Song vollständig auf dem Gerät speichern …") {
         val alarmId = _draft.value?.id ?: return@runAction
         val result = withContext(Dispatchers.IO) {
             val name = app.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
@@ -284,7 +291,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 file.absolutePath to name
             } catch (e: Exception) { file.delete(); throw e }
         }
-        _draft.value?.takeIf { it.id == alarmId }?.let { change(it.copy(music = result.first, musicName = result.second)) }
+        _draft.value?.takeIf { it.id == alarmId }?.let { change(it.copy(music = result.first, musicName = result.second, musicQuelle = quelle)) }
     }
     fun referencePhoto(file: File) = runAction("Referenzfoto prüfen …") {
         val alarm = _draft.value ?: return@runAction
@@ -600,6 +607,14 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 if (previewJob === job) previewJob = null
             }
         }
+    }
+    /** Spielt die gewählte eigene Musikdatei (MP3 oder Geräte-Weckton) zur Probe ab. */
+    fun playMusic(path: String) {
+        if (rejectPreviewWhileRecording()) return
+        stopPreview()
+        val file = File(path)
+        if (!file.exists()) { message.value = "Die Audiodatei ist nicht mehr vorhanden."; return }
+        startPlayer(file, 1f, previewGeneration)
     }
     /** Local player until it is prepared successfully; every failure releases it and never throws into the UI. */
     private fun startPlayer(file: File, speed: Float, generation: Long) {

@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -266,10 +267,24 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             GoldKnopf("Jetzt abgleichen", vm::syncIdeas)
             if (ideasAt > 0) Text("Stand: ${formatAt(ideasAt)}", style = MaterialTheme.typography.bodySmall)
             if (ideas.isEmpty()) Leerzustand("✧", "Noch keine offenen Ideen", "Öffne Geniale Ideen und lege dort eine offene Idee an. Beide Apps benötigen den aktuellen Stand.")
+            val ideasDisabled by vm.ideasDisabled.collectAsStateWithLifecycle()
+            if (ideas.isNotEmpty()) Text("Häkchen entfernen, damit eine Idee beim Wecken nicht vorgelesen wird.",
+                style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
             ideas.forEachIndexed { index, idea ->
                 if (index > 0) HorizontalDivider(color = LocalGold.current.textGedaempft.copy(alpha = .3f))
-                Text(idea.title, style = MaterialTheme.typography.titleSmall, color = LocalGold.current.textPrimaer)
-                Text(idea.text, style = MaterialTheme.typography.bodySmall)
+                val aktiv = idea.id !in ideasDisabled
+                Row(Modifier.fillMaxWidth().toggleable(aktiv, interactionSource = null, indication = null,
+                    role = androidx.compose.ui.semantics.Role.Checkbox) { vm.setIdeaActive(idea.id, it) },
+                    verticalAlignment = Alignment.Top) {
+                    Checkbox(aktiv, null, colors = CheckboxDefaults.colors(checkedColor = LocalGold.current.primaer,
+                        uncheckedColor = LocalGold.current.textGedaempft, checkmarkColor = LocalGold.current.aufPrimaer))
+                    Column(Modifier.weight(1f).padding(start = 8.dp, top = 12.dp)) {
+                        Text(idea.title, style = MaterialTheme.typography.titleSmall,
+                            color = if (aktiv) LocalGold.current.textPrimaer else LocalGold.current.textGedaempft)
+                        Text(idea.text, style = MaterialTheme.typography.bodySmall,
+                            color = if (aktiv) LocalContentColor.current else LocalGold.current.textGedaempft)
+                    }
+                }
             }
             HorizontalDivider(color = LocalGold.current.primaer.copy(alpha = .4f))
             GoldKnopf("Spracheinstellungen übernehmen", { copySettings = true })
@@ -440,6 +455,7 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
                 })
             Text("0 Minuten erinnert genau zur Schlafenszeit. Ausgeschaltet wird die Erinnerung allein über den Schalter.",
                 style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+            SchlafTonWahl()
             when (blocked) {
                 "app" -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Benachrichtigungen der App sind ausgeschaltet.", Modifier.weight(1f), color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
@@ -463,5 +479,61 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
                 style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
         }
         problems.forEach { Text(it, color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall) }
+    }
+}
+
+
+/**
+ * Klingelton und Lautstärke der Schlafenszeit-Erinnerung. Die Liste zeigt die Standard-Töne des
+ * Handys; jeder lässt sich vorher anhören. „Erinnerung testen“ klingt genau so laut wie später
+ * die echte Erinnerung — unabhängig von der Gerätelautstärke.
+ */
+@Composable
+private fun SchlafTonWahl() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var ton by remember { mutableStateOf(SchlafTon.gewaehlt(context)) }
+    var lautstaerke by remember { mutableIntStateOf(SchlafTon.lautstaerke(context)) }
+    var offen by rememberSaveable { mutableStateOf(false) }
+    val titel = remember(ton) { SchlafTon.titel(context, ton) }
+    DisposableEffect(Unit) { onDispose { SchlafTon.stoppen() } }
+    HorizontalDivider(color = LocalGold.current.rahmen)
+    Text("Klingelton der Erinnerung", style = MaterialTheme.typography.labelLarge)
+    GoldKnopf(titel, { offen = true }, Modifier.fillMaxWidth(),
+        symbol = { Icon(Icons.Default.MusicNote, null, Modifier.size(18.dp)) })
+    Text("Lautstärke der Erinnerung: $lautstaerke %", style = MaterialTheme.typography.bodyMedium)
+    Regler3D(lautstaerke.toFloat(), { lautstaerke = it.roundToInt() }, bereich = 5f..100f,
+        aufAenderungFertig = { SchlafTon.setLautstaerke(context, lautstaerke) })
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        GoldKnopf("Erinnerung testen", { SchlafTon.spielen(context, ton, lautstaerke) })
+        StillerKnopf("Stoppen", { SchlafTon.stoppen() })
+    }
+    Text("Die Erinnerung klingt genau so laut wie hier beim Testen — egal wie laut oder leise das Handy gerade gestellt ist. Bei „Nicht stören“ bleibt sie stumm.",
+        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+    if (offen) {
+        val toene = remember { SchlafTon.alle(context) }
+        de.frank.wecker.design.DesignDialog(
+            titel = "Klingelton wählen",
+            aufSchliessen = { SchlafTon.stoppen(); offen = false },
+            bestaetigung = { StillerKnopf("Schließen", { SchlafTon.stoppen(); offen = false }) },
+            inhalt = {
+                if (toene.isEmpty()) Text("Auf diesem Gerät wurden keine Benachrichtigungstöne gefunden.", style = MaterialTheme.typography.bodySmall)
+                else androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 420.dp).weight(1f, fill = false),
+                    state = androidx.compose.foundation.lazy.rememberLazyListState(toene.indexOfFirst { it.uri == ton }.coerceAtLeast(0))) {
+                    items(toene.size, key = { toene[it].uri }) { i ->
+                        val eintrag = toene[i]
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(eintrag.uri == ton, interactionSource = null, indication = null,
+                                role = androidx.compose.ui.semantics.Role.RadioButton) {
+                                ton = eintrag.uri; SchlafTon.setGewaehlt(context, eintrag.uri)
+                            }, verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(eintrag.uri == ton, null)
+                                Text(eintrag.titel, Modifier.padding(start = 8.dp))
+                            }
+                            StillerKnopf("Anhören", { SchlafTon.spielen(context, eintrag.uri, lautstaerke) })
+                        }
+                    }
+                }
+            },
+        )
     }
 }

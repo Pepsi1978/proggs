@@ -38,7 +38,9 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                 val groups = mutableListOf<SpeechGroup>()
                 if (Step.IDEAS in alarm.steps) {
                     progress("Offene Ideen werden abgeglichen …")
-                    val ideas = IdeasBridge(context).refresh()
+                    val bridge = IdeasBridge(context)
+                    val aus = bridge.deaktiviert()
+                    val ideas = bridge.refresh().filter { it.id !in aus }
                     groups += ideas.map { SpeechGroup(Step.IDEAS.name, chunks("${it.title}.\n${it.text}")) }
                         .ifEmpty { listOf(SpeechGroup(Step.IDEAS.name, listOf("Es sind keine offenen Ideen vorhanden."))) }
                 }
