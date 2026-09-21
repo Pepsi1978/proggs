@@ -25,6 +25,7 @@ bugs/
 ├── desktop/          C#/.NET (Windows), Swift/AppKit (macOS), 3D (Metal/RealityKit, .NET/Stride, Rust wgpu/Bevy, Godot)
 ├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/Babylon/WebGPU), Webdesign, Lottie/Rive/SVG
 ├── peripherie/       Elgato Stream-Deck-Plugin
+├── gaming/           PC-Gaming-Tuning (NVIDIA DLSS Override, Anti-Cheat-Fallen)
 ├── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
 ├── opencode/         OpenCode CLI (quelloffener Terminal-KI-Coding-Agent: Install/WSL, Config, AGENTS.md, Agents/Plugins/MCP/Skills, OpenRouter, Token)
 ├── assets/           App-Icon-Building (Windows .ico, Android Adaptive, macOS .icns), 3D-Visuelle-Qualität (PBR/Licht/PostFX)
@@ -127,6 +128,12 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
 | **Elgato Stream-Deck-Plugin** (klassisches WebSocket/JS-SDK + Node-SDK) | [`peripherie/stream-deck.md`](peripherie/stream-deck.md) | 2026-07-02 | ~86 | `*.sdPlugin/*`, Stream-Deck-`manifest.json` (mit `SDKVersion`/`Actions`/`States`), `propertyInspector`, `code.js`/`plugin.html`/`inspector.html` im Plugin-Webview, `@elgato/streamdeck` · „Stream Deck", „Elgato", „sdPlugin", „Property Inspector", „willAppear", „keyDown", „setState", „DisableAutomaticStates" · Best-Practices: `best-practices/peripherie/stream-deck.md` |
+
+### 🎮 `gaming/` — PC-Gaming-Tuning
+
+| Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
+|---------|-------|-------|------|-------------------------------------------|
+| **NVIDIA DLSS Override** (NVIDIA App, Profile Inspector, DLL-Tausch, Anti-Cheat) | [`gaming/nvidia-dlss-override.md`](gaming/nvidia-dlss-override.md) | 2026-09-21 | 8 | „DLSS", „DLSS Override", „Profile Inspector", „nvngx_dlss", „Smooth Motion", „DLSS 5", „Ricochet" · Best-Practices: `best-practices/gaming/nvidia-dlss-override.md` |
 
 ### 🔐 `server/` — Server-Betrieb & Infrastruktur (VPS, VPN, Hosting)
 
