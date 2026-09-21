@@ -534,6 +534,7 @@ $fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
 try {
     $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'openlauncher-codex-cli-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
     if (-not $ok) { exit 2 }
+{{TmuxLaunchVerification(innerScript, log.LogPath)}}
 } finally {
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
 }
@@ -750,6 +751,36 @@ try {
 
     private static string EscapePowerShellSingleQuotedValue(string value) => value.Replace("'", "''", StringComparison.Ordinal);
 
+    /// <summary>
+    /// Bei tmux lebt die aeussere -NoExit-Shell auch nach einem gescheiterten WSL-Start am Prompt weiter.
+    /// Erfolg gilt deshalb erst, wenn die innere CLI-PowerShell mit genau dem Startskript laeuft.
+    /// </summary>
+    internal static string TmuxLaunchVerification(string innerScript, string logPath)
+    {
+        const string suffix = "-tmux.ps1";
+        var name = Path.GetFileName(innerScript);
+        if (!name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) return string.Empty;
+        var inner = name[..^suffix.Length] + ".ps1";
+        return $$"""
+$innerPattern = [regex]::Escape({{PowerShellLiteral(inner)}})
+$deadline = (Get-Date).AddSeconds(30)
+$innerPid = 0
+while (-not $innerPid -and (Get-Date) -lt $deadline) {
+    $innerPid = @(Get-CimInstance Win32_Process -Filter "Name='pwsh.exe' OR Name='powershell.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match $innerPattern } | Select-Object -First 1).ProcessId
+    if (-not $innerPid) { Start-Sleep -Milliseconds 500 }
+}
+$stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+if ($innerPid) {
+    Add-Content -Path {{PowerShellLiteral(logPath)}} -Value "[$stamp] [robust] tmux: CLI-PowerShell in der Sitzung bestaetigt (PID $innerPid)" -ErrorAction SilentlyContinue
+} else {
+    Add-Content -Path {{PowerShellLiteral(logPath)}} -Value "[$stamp] [robust] FEHLER tmux: CLI-PowerShell nicht gestartet; der ERFOLG oben betrifft nur die aeussere Shell" -ErrorAction SilentlyContinue
+    exit 3
+}
+
+""";
+    }
+
     private static string? ResolveRobustLauncherScript()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -799,6 +830,7 @@ $fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
 try {
     $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'openlauncher-opencode-run-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
     if (-not $ok) { exit 2 }
+{{TmuxLaunchVerification(innerScript, log.LogPath)}}
 } finally {
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
 }
@@ -860,6 +892,7 @@ $fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
 try {
     $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'openlauncher-claude-code-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
     if (-not $ok) { exit 2 }
+{{TmuxLaunchVerification(innerScript, log.LogPath)}}
 } finally {
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
 }

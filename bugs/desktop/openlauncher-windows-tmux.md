@@ -159,3 +159,41 @@ Statusabfrage nicht mit Commit oder Rebase um den Index konkurriert. Der isolier
 Test prüft zusätzlich einen offenen `pasted`-Eintrag, Duplikatblockade beim Folgesenden,
 kaputtes Arbeitsstand-JSON, fehlendes Git-Repository, STOP und weniger JSON-Bytes als
 die getrennten Rohabrufe.
+
+## Store-PowerShell aus WSL gesperrt: stilles `[exited]` (22.09.2026)
+
+**Symptom:** Normaler OpenLauncher-Start mit tmux (Claude Opus, Profil minimal) zeigte nur
+`PowerShell 7.6.6`, `[exited]` und den äußeren Prompt. Das Log meldete trotzdem ERFOLG.
+
+**Ursache:** Ist PowerShell 7 aus dem Microsoft Store installiert, liefert `where.exe pwsh.exe`
+zuerst `C:\Program Files\WindowsApps\Microsoft.PowerShell_<Version>…\pwsh.exe`.
+`ResolvePowerShellExecutable` übernahm diesen Pfad, der tmux-Wrapper übersetzte ihn 1:1 per
+`wslpath`. WSL-Interop darf Dateien im geschützten Paketordner nicht starten
+(`CreateProcessCommon execvpe failed: Permission denied`). `tmux new-session -A` endete
+still mit `[exited]` und Exit 0. Die äußere `pwsh -NoExit` blieb am Prompt und erfüllte
+damit die Prozessprüfung `InnerMatch` von `start-wt-common.ps1`. Derselbe Pfad ließ
+`verify-tmux.ps1` bei `claude` scheitern.
+
+**Fix (zukunftssicher, ohne Versionspfad):**
+- `TmuxLauncher.PowerShellCandidates` schließt `Program Files\WindowsApps` aus und
+  bevorzugt die App-Ausführungsverknüpfung `%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`,
+  danach `Program Files\PowerShell\7`. Windows PowerShell 5.1 bleibt unverändert allein.
+- `ResolveWslPowerShell` belegt jeden Kandidaten durch einen echten Start aus derselben
+  Distribution (`-Command exit 0`) und merkt sich den Erfolg pro Distribution. Startet keiner,
+  folgt eine verständliche Fehlermeldung.
+
+**Zwei Erfolgsschichten:**
+1. Der Wrapper legt die Sitzung getrennt an (`new-session -d` in Fenstergröße), prüft sie nach
+   1,5 s mit `has-session` und hängt erst dann an. Das `$LASTEXITCODE` von `attach-session`
+   wird geprüft: tmux liefert bei normalem CLI-Ende und bei Detach 0, bei fehlender Sitzung
+   ungleich 0.
+2. Der robuste Windows-Terminal-Starter verlangt bei `*-tmux.ps1` zusätzlich innerhalb von
+   30 s einen pwsh-/powershell-Prozess mit exakt dem inneren GUID-Skriptnamen. Er loggt
+   `tmux: CLI-PowerShell … bestaetigt` oder `FEHLER tmux … ERFOLG oben betrifft nur die
+   aeussere Shell`. Nicht-tmux-Starts bleiben unverändert.
+
+**Tests:**
+- `OpenLauncher/tests/check-tmux-powershell.ps1`: Kandidatenlogik, realer Wrapper ohne
+  Paketpfad, sofort sterbende CLI und realer Attach-Fehlerpfad.
+- `OpenLauncher/tests/check-tmux-attach-exit.py`: Exitcodes mit echtem pty.
+- `verify-tmux.ps1`: repariert, Claude, Codex CLI und OpenCode grün.

@@ -10,7 +10,7 @@ try {
     foreach ($cli in @('claude', 'codex', 'opencode')) {
         $exe = switch ($cli) {
             'claude' { Join-Path $env:APPDATA 'npm/node_modules/@anthropic-ai/claude-code/bin/claude.exe' }
-            'codex' { (Get-Command codex.exe).Source }
+            'codex' { (Get-Command codex.exe, codex.cmd -ErrorAction SilentlyContinue | Select-Object -First 1).Source }
             'opencode' {
                 $root = Join-Path $env:USERPROFILE '.local/share/opencode-mousefix'
                 $pointer = Get-Content (Join-Path $root 'current.json') -Raw | ConvertFrom-Json
@@ -30,7 +30,8 @@ try {
         $session = $Matches[1]; $distro = $Matches[2]
         $sessions += @{ session = $session; distro = $distro }
         # Nur der Client-Modus wird für den Test geändert; produktive Argumente bleiben erhalten.
-        $detached = $content.Replace("'new-session' '-A'", "'new-session' '-d'")
+        if ($content -notmatch "'new-session' '-d'" -or $content -notmatch "'attach-session'") { throw 'Wrapper legt die Sitzung nicht geprüft an.' }
+        $detached = $content -replace "(?m)^.*'attach-session'.*$", ''
         & ([scriptblock]::Create($detached))
         $mouse = wsl -d $distro --exec tmux -L openlauncher show-options -gv mouse
         if ($mouse.Trim() -ne 'on') { throw 'Maussteuerung im produktiven Wrapper fehlt.' }

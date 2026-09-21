@@ -36,6 +36,51 @@ public static class TmuxLauncher
 
     private static string Literal(string text) => "'" + text.Replace("'", "''") + "'";
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> VerifiedShells = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Store-PowerShell liegt in einem geschützten Paketordner, den WSL-Interop nicht starten darf
+    /// (execvpe: Permission denied). Die benutzerbezogene App-Ausführungsverknüpfung startet dagegen.
+    /// </summary>
+    public static bool IsProtectedPackagePath(string path, string programFiles) =>
+        Path.GetFullPath(path).StartsWith(Path.Combine(programFiles, "WindowsApps") + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+
+    public static string[] PowerShellCandidates(string powerShell, string programFiles, string localAppData)
+    {
+        var candidates = new System.Collections.Generic.List<string>();
+        if (!IsProtectedPackagePath(powerShell, programFiles)) candidates.Add(powerShell);
+        if (string.Equals(Path.GetFileName(powerShell), "pwsh.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            candidates.Add(Path.Combine(localAppData, "Microsoft", "WindowsApps", "pwsh.exe"));
+            candidates.Add(Path.Combine(programFiles, "PowerShell", "7", "pwsh.exe"));
+        }
+        return candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static string ResolveWslPowerShell(string distro, string powerShell)
+    {
+        var candidates = PowerShellCandidates(powerShell,
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+        var errors = new System.Collections.Generic.List<string>();
+        foreach (var candidate in candidates.Where(File.Exists))
+        {
+            if (VerifiedShells.TryGetValue(distro + "|" + candidate, out var known)) return known;
+            try
+            {
+                var linux = Query("-d", distro, "--exec", "wslpath", "-u", candidate);
+                // Echter Startbeweis aus derselben Distribution, nicht nur Dateiexistenz.
+                Query("-d", distro, "--exec", linux, "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "exit 0");
+                VerifiedShells[distro + "|" + candidate] = linux;
+                return linux;
+            }
+            catch (IOException error) { errors.Add(candidate + ": " + error.Message); } // nächster Kandidat, Grund bleibt erhalten
+        }
+        throw new IOException("Keine aus WSL startbare PowerShell gefunden (geprüft: " + string.Join(", ", candidates)
+            + (errors.Count > 0 ? "; Fehler: " + string.Join(" | ", errors) : "")
+            + "). Die Store-PowerShell im Paketordner ist aus WSL gesperrt; bitte die App-Ausführungsverknüpfung für pwsh aktivieren oder Standard-Terminal wählen.");
+    }
+
     public static string BuildStartScript(string script, string workDir, string powerShell)
     {
         if (!File.Exists(script) || !File.Exists(powerShell) || !Directory.Exists(workDir))
@@ -49,11 +94,12 @@ public static class TmuxLauncher
         var tmux = Query("-d", distro, "--exec", "sh", "-c", "command -v tmux");
         if (string.IsNullOrWhiteSpace(tmux)) throw new IOException("tmux fehlt in " + distro + ". Bitte tmux installieren oder Standard-Terminal wählen.");
         var linuxDir = Query("-d", distro, "--exec", "wslpath", "-u", workDir);
-        var linuxShell = Query("-d", distro, "--exec", "wslpath", "-u", powerShell);
+        var linuxShell = ResolveWslPowerShell(distro, powerShell);
         var session = "openlauncher-" + Guid.NewGuid().ToString("N");
         var wrapper = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(script) + "-tmux.ps1");
+        var baseArgs = new[] { "-d", distro, "--exec", tmux, "-L", "openlauncher" };
         // --exec and separate tmux command arguments avoid shell interpretation of paths, quotes and metacharacters.
-        var args = new[] { "-d", distro, "--exec", tmux, "-L", "openlauncher", "new-session", "-A", "-s", session,
+        var args = new[] { "new-session", "-d", "-s", session, "-x", "__W__", "-y", "__H__",
             "-c", linuxDir, linuxShell, "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script,
             ";", "set-option", "-g", "mouse", "on",
             ";", "bind-key", "-T", "root", "WheelUpPane", "if-shell", "-F", "#{pane_in_mode}",
@@ -64,11 +110,25 @@ public static class TmuxLauncher
             "send-keys -X -N 5 scroll-up", "copy-mode -e; send-keys -X -N 5 scroll-up",
             ";", "bind-key", "-T", "root", "WheelDownStatus", "if-shell", "-F", "#{pane_in_mode}",
             "send-keys -X -N 5 scroll-down", "" };
+        var tmuxCall = "& " + Literal(Wsl) + " " + string.Join(" ", baseArgs.Select(Literal));
+        var target = Literal("=" + session);
+        // Erst getrennt anlegen und prüfen, dann anhängen: ein sofort sterbender Pane darf nicht als
+        // stilles "[exited]" enden. Derselbe Wrapper hängt eine noch laufende Sitzung wieder an.
         var content = "# tmux-Sitzung: " + session + " | WSL: " + distro + "\n"
             + "$ErrorActionPreference = 'Stop'\n"
             + "$env:TERM = 'xterm-256color'\n"
-            + "& " + Literal(Wsl) + " " + string.Join(" ", args.Select(Literal)) + "\n"
-            + "if ($LASTEXITCODE -ne 0) { throw 'tmux-Start fehlgeschlagen. Bitte WSL, tmux und Windows-Interop prüfen.' }\n";
+            + tmuxCall + " 'has-session' '-t' " + target + " 2>$null\n"
+            + "if ($LASTEXITCODE -ne 0) {\n"
+            + "    try { $w = [Math]::Max(80, [Console]::WindowWidth); $h = [Math]::Max(24, [Console]::WindowHeight) } catch { $w = 160; $h = 48 }\n"
+            + "    " + tmuxCall + " " + string.Join(" ", args.Select(Literal)).Replace("'__W__'", "$w").Replace("'__H__'", "$h") + "\n"
+            + "    if ($LASTEXITCODE -ne 0) { throw 'tmux-Start fehlgeschlagen. Bitte WSL, tmux und Windows-Interop prüfen.' }\n"
+            + "    Start-Sleep -Milliseconds 1500\n"
+            + "    " + tmuxCall + " 'has-session' '-t' " + target + " 2>$null\n"
+            + "    if ($LASTEXITCODE -ne 0) { throw 'Die CLI hat die tmux-Sitzung sofort beendet. Bitte PowerShell-Start aus WSL und das Startskript prüfen.' }\n"
+            + "}\n"
+            + tmuxCall + " 'attach-session' '-t' " + target + "\n"
+            // tmux meldet bei normalem Sitzungsende und bei Detach 0, bei fehlender Sitzung oder Anhängefehler ungleich 0.
+            + "if ($LASTEXITCODE -ne 0) { throw 'Anhängen an die tmux-Sitzung fehlgeschlagen oder Sitzung bereits beendet. Bitte WSL, tmux und das Startskript prüfen.' }\n";
         // Keep the wrapper after detach: the same copied command reattaches to the same session.
         File.WriteAllText(wrapper, content, new UTF8Encoding(false));
         return wrapper;

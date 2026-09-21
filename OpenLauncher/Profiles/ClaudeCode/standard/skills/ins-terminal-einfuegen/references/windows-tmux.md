@@ -13,6 +13,39 @@ Startbefehl hängt dieselbe laufende Sitzung wieder an. Ein neuer Startklick erz
 neue Sitzung. `Strg+B`, danach `D`, trennt die Anzeige; `exit` bzw. CLI-Ende beendet
 die Sitzung. Der temporäre Wrapper bleibt zum Wiederanhängen erhalten.
 
+## Zwei sichtbare Oberflächen, ein Brückenweg
+
+Das tmux-Häkchen gilt für beide Startbuttons. OpenLauncher legt jeweils denselben
+Wrapper um das Windows-Startskript:
+
+- **Start (Codex)**, nur für Claude-Code-Modelle: OpenLauncher kopiert einen Startbefehl,
+  der Nutzer führt ihn im Codex-Terminal aus.
+- **Start**: Claude Code, Codex CLI oder OpenCode laufen direkt in einem normalen
+  Windows-Terminal- oder PowerShell-Tab.
+
+Mit gesetztem Häkchen sind beide über denselben Socket `openlauncher` und denselben
+Helfer les- und beschreibbar. Der Wrapper startet die CLI-PowerShell mit einem aus WSL
+geprüft startbaren Pfad. Die Store-PowerShell im geschützten Paketordner
+`Program Files\WindowsApps` ist aus WSL gesperrt; stattdessen dient die
+App-Ausführungsverknüpfung. Der Wrapper legt die Sitzung erst getrennt an, prüft sie und
+hängt dann an. Stirbt die CLI sofort, erscheint ein klarer Fehler statt eines stillen
+`[exited]`. Beim normalen Start bestätigt das OpenLauncher-Log den Erfolg erst mit
+`tmux: CLI-PowerShell in der Sitzung bestaetigt`. Computer Use, Tray-Helfer oder ein neuer Dienst sind nicht
+nötig. Ohne Häkchen gestartete Sitzungen lassen sich nachträglich nicht über die Brücke
+übernehmen.
+
+Die Zielbindung unterscheidet die Oberfläche:
+- **Codex-Terminal:** zusätzlich den konkreten Codex-Tab und den dort ausgeführten kopierten
+  Wrapper prüfen.
+- **Normales Terminal:** konkreten Windows-Terminal-Tab, Wrapper, `openlauncher-<ID>`-Session,
+  CWD und Prozessbaum einander zuordnen.
+
+Nie nur nach Pane-Nummer, Titel, Position oder zuletzt gestarteter Session wählen.
+
+Claude Code darf `submit` mit dem geprüften Claude-Eingaberahmen nutzen. Bei OpenCode und
+Codex CLI den TUI-Zustand eigens lesen und prüfen, dann `paste` und separat geprüftes
+`enter`. Es gibt keine allgemeine automatische Erkennung.
+
 ## Zielbindung
 
 1. Den vollständigen Startbefehl/Wrapper der beauftragten sichtbaren Sitzung zuordnen.
@@ -58,8 +91,8 @@ Claude unter Windows kann je nach Version `>` oder `❯` anzeigen; der gemeinsam
 akzeptiert beide Zeichen nur innerhalb des vollständigen Eingaberahmens. Fremde Entwürfe, laufende
 Generierung, Freigabedialoge, Ghost-Vorschläge und unklare Pasteblöcke bleiben Stopper.
 Ein tmux-Transporterfolg ist noch keine Claude-Antwort: danach die tatsächliche neue
-Antwort lesen. Die Zuordnung zum sichtbaren Codex-Tab zusätzlich prüfen; tmux kennt
-keine Codex-Tab-ID.
+Antwort lesen. Die Zuordnung zum sichtbaren Codex- bzw. Windows-Terminal-Tab zusätzlich
+prüfen; tmux kennt keine Tab-ID.
 
 Wurde ein eigener, nie abgesendeter Entwurf nachweislich manuell vollständig aus dem
 Eingabefeld entfernt, den offenen Ledger-Eintrag mit `resolve --id <ID> --sha256

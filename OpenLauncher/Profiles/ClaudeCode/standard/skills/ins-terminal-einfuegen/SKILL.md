@@ -6,7 +6,7 @@ description: Koordiniert Sprachaufträge, Codeprüfung und Textübergaben an lau
 
 ## Genau einen passenden Weg laden
 
-- **Windows mit bestätigter OpenLauncher-tmux-Sitzung:** [Windows-tmux](references/windows-tmux.md). Lesen und Schreiben erfolgen über WSL, ohne Computer Use. Der automatische `submit`-Parser gilt ausschließlich für geprüfte Claude-Eingaberahmen. Bei OpenCode/Codex CLI den tatsächlichen Zustand prüfen, `paste` und separat autorisiertes `enter` verwenden; keine automatische Claude-Erkennung behaupten.
+- **Windows mit bestätigter OpenLauncher-tmux-Sitzung:** [Windows-tmux](references/windows-tmux.md), gleichermaßen für **Start (Codex)** im Codex-Terminal und für **Start** im normalen Windows-Terminal-/PowerShell-Tab; die Zielbindung unterscheidet beide Oberflächen. Lesen und Schreiben erfolgen über WSL, ohne Computer Use. Der automatische `submit`-Parser gilt ausschließlich für geprüfte Claude-Eingaberahmen. Bei OpenCode/Codex CLI den tatsächlichen Zustand prüfen, `paste` und separat autorisiertes `enter` verwenden; keine automatische Claude-Erkennung behaupten.
 - **macOS:** [Ins macOS Terminal einfügen](../ins-macos-terminal-einfuegen/SKILL.md). Keine Windows-Anleitungen zusätzlich laden.
 - **Windows ohne bestätigtes tmux:** vor der Steuerung den vollständigen [Windows-Fensterweg](references/windows-fenster.md) lesen. Er enthält Zugang, Fokusprüfung, Eingabehelfer und Wiederaufnahme nach Fehlern.
 
