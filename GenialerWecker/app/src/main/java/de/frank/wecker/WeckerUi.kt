@@ -165,8 +165,10 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                 AufnahmeLeiste(vm)
                 // Bestätigungen stehen 3 Sekunden gut sichtbar da und verschwinden dann von selbst —
                 // nichts mehr wegklicken. Ein Tipp schließt sie früher.
+                // Fehler bleiben stehen, bis man sie antippt — nur Bestätigungen verschwinden von selbst.
+                val istFehler = Regex("nicht|fehl|kein |abgebrochen|leer|warte|zuerst", RegexOption.IGNORE_CASE).containsMatchIn(message)
                 LaunchedEffect(message) {
-                    if (message.isNotBlank()) { delay(3_000); if (vm.message.value == message) vm.message.value = "" }
+                    if (message.isNotBlank() && !istFehler) { delay(3_000); if (vm.message.value == message) vm.message.value = "" }
                 }
                 androidx.compose.animation.AnimatedVisibility(message.isNotBlank(),
                     enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
@@ -177,11 +179,12 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
                         .shadow(8.dp, form, ambientColor = gold.primaer, spotColor = gold.primaer)
                         .clip(form).background(gold.flaecheErhoeht)
-                        .border(2.dp, gold.primaer, form)
+                        .border(2.dp, if (istFehler) LocalSemantisch.current.warnung else gold.primaer, form)
                         .clickable(onClickLabel = "Meldung schließen") { vm.message.value = "" }
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, null, tint = gold.primaer, modifier = Modifier.size(22.dp))
+                        Icon(if (istFehler) Icons.Default.Warning else Icons.Default.CheckCircle, null,
+                            tint = if (istFehler) LocalSemantisch.current.warnung else gold.primaer, modifier = Modifier.size(22.dp))
                         Text(zuletzt, Modifier.weight(1f).padding(start = 12.dp), style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold, color = gold.textPrimaer)
                     }
