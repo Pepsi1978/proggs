@@ -52,6 +52,9 @@ frühere Eingaben. Nur `mouse on` genügt nicht: die tmux-Standardbindung kann E
 im alternativen Bildschirm erneut an die Anwendung weiterreichen. Deshalb setzt der
 Windows-Launcher auf seinem eigenen Socket `mouse on` und explizite Bindungen:
 WheelUpPane öffnet den Kopiermodus, WheelDownPane sendet nur innerhalb dieses Modus.
+Auch WheelUpStatus/WheelDownStatus scrollen den aktiven Verlauf; die tmux-Defaults
+`previous-window`/`next-window` sind auf dem Launcher-Socket ersetzt. Der Test prüft
+dies mit zwei Fenstern, einschließlich Rückkehr zum Eingabemodus am Verlaufsende.
 Neue Starts und erneutes Anhängen über neu erzeugte Wrapper erhalten diese Vorgabe.
 Andere tmux-Server werden nicht geändert. `tests/check-tmux-mouse.py` prüft in einem
 eigenen Testclient SGR-Mausereignisse und bestätigt null Eingabebytes bei der Anwendung.

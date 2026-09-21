@@ -36,6 +36,8 @@ try {
         if ($mouse.Trim() -ne 'on') { throw 'Maussteuerung im produktiven Wrapper fehlt.' }
         $wheel = wsl -d $distro --exec tmux -L openlauncher list-keys -T root WheelUpPane
         if ($wheel -notmatch 'copy-mode -e; send-keys -M') { throw 'Mausrad leitet weiterhin Tasten an die CLI weiter.' }
+        $statusWheel = wsl -d $distro --exec tmux -L openlauncher list-keys -T root WheelUpStatus
+        if ($statusWheel -notmatch 'scroll-up' -or $statusWheel -match 'previous-window') { throw 'Mausrad auf Statusleiste wechselt noch Fenster.' }
         $deadline = [DateTime]::UtcNow.AddSeconds(25)
         while (-not (Test-Path -LiteralPath $output)) {
             if ([DateTime]::UtcNow -gt $deadline) { throw "$cli antwortet im tmux-Test nicht." }

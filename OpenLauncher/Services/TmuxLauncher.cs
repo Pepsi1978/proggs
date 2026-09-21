@@ -59,7 +59,11 @@ public static class TmuxLauncher
             ";", "bind-key", "-T", "root", "WheelUpPane", "if-shell", "-F", "#{pane_in_mode}",
             "send-keys -M", "copy-mode -e; send-keys -M",
             ";", "bind-key", "-T", "root", "WheelDownPane", "if-shell", "-F", "#{pane_in_mode}",
-            "send-keys -M", "" };
+            "send-keys -M", "",
+            ";", "bind-key", "-T", "root", "WheelUpStatus", "if-shell", "-F", "#{pane_in_mode}",
+            "send-keys -X -N 5 scroll-up", "copy-mode -e; send-keys -X -N 5 scroll-up",
+            ";", "bind-key", "-T", "root", "WheelDownStatus", "if-shell", "-F", "#{pane_in_mode}",
+            "send-keys -X -N 5 scroll-down", "" };
         var content = "# tmux-Sitzung: " + session + " | WSL: " + distro + "\n"
             + "$ErrorActionPreference = 'Stop'\n"
             + "$env:TERM = 'xterm-256color'\n"

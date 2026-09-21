@@ -27,6 +27,8 @@ while True:
         ['set-option', '-g', 'mouse', 'on'],
         ['bind-key', '-T', 'root', 'WheelUpPane', 'if-shell', '-F', '#{pane_in_mode}', 'send-keys -M', 'copy-mode -e; send-keys -M'],
         ['bind-key', '-T', 'root', 'WheelDownPane', 'if-shell', '-F', '#{pane_in_mode}', 'send-keys -M', ''],
+        ['bind-key', '-T', 'root', 'WheelUpStatus', 'if-shell', '-F', '#{pane_in_mode}', 'send-keys -X -N 5 scroll-up', 'copy-mode -e; send-keys -X -N 5 scroll-up'],
+        ['bind-key', '-T', 'root', 'WheelDownStatus', 'if-shell', '-F', '#{pane_in_mode}', 'send-keys -X -N 5 scroll-down', ''],
     ]:
         subprocess.run(tmux + args, check=True)
     master, slave = pty.openpty()
@@ -47,7 +49,20 @@ while True:
         os.write(master, b'\x1b[<65;10;10M')
         time.sleep(.15)
         assert not received.read_bytes(), received.read_bytes()
-        print('OK: wheel-up enters scrollback; wheel-down and wheel-up send zero bytes to CLI.')
+        mode = subprocess.check_output(tmux + ['display-message', '-p', '-t', 'test:0', '#{pane_in_mode}']).strip()
+        if mode == b'1':
+            subprocess.run(tmux + ['send-keys', '-X', '-t', 'test:0', 'cancel'], check=True)
+        subprocess.run(tmux + ['new-window', '-d', '-t', 'test', 'sleep', '30'], check=True)
+        os.write(master, b'\x1b[<64;10;24M')
+        time.sleep(.2)
+        state = subprocess.check_output(tmux + ['display-message', '-p', '-t', 'test', '#{window_index}:#{pane_in_mode}']).strip()
+        assert state == b'0:1', state
+        os.write(master, b'\x1b[<65;10;24M')
+        time.sleep(.15)
+        window = subprocess.check_output(tmux + ['display-message', '-p', '-t', 'test', '#{window_index}']).strip()
+        assert window == b'0', window
+        assert not received.read_bytes(), received.read_bytes()
+        print('OK: pane and status wheel scroll history, never switch windows, and send zero bytes to CLI.')
     finally:
         subprocess.run(tmux + ['kill-server'], check=True)
         client.wait(timeout=5)
