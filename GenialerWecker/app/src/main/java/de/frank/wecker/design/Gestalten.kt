@@ -410,7 +410,7 @@ private fun ZeichenRegen(modifier: Modifier) {
         val spaltenBreite = schrift * 1.25f
         val spalten = (size.width / spaltenBreite).toInt() + 1
         val schweif = 16
-        val grundAlpha = if (dunkel) 0.34f else 0.20f
+        val grundAlpha = if (dunkel) 0.34f else 0.34f
         val leinwand = drawContext.canvas.nativeCanvas
         for (spalte in 0 until spalten) {
             // Jede Spalte hat ihr eigenes, festes Tempo und ihren eigenen Versatz.
@@ -429,7 +429,9 @@ private fun ZeichenRegen(modifier: Modifier) {
                 val anteil = 1f - i / schweif.toFloat()
                 val istKopf = i == 0
                 val c = when {
-                    istKopf -> androidx.compose.ui.graphics.Color.White.copy(alpha = (grundAlpha * 1.6f).coerceAtMost(0.6f))
+                    // Im Hellen trägt Weiß auf hellem Grund nicht — dort leuchtet der Kopf in kräftigem Eisblau.
+                    istKopf -> if (dunkel) androidx.compose.ui.graphics.Color.White.copy(alpha = (grundAlpha * 1.6f).coerceAtMost(0.6f))
+                        else farbe.copy(alpha = 0.6f)
                     (spalte + reihe) % 23 == 0 -> akzent.copy(alpha = grundAlpha * anteil)
                     else -> farbe.copy(alpha = grundAlpha * anteil * anteil + 0.02f)
                 }
