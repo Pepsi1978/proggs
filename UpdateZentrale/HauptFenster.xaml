@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:UpdateZentrale.ViewModels"
         Title="UpdateZentrale"
         Height="880" Width="1340" MinHeight="620" MinWidth="1060"
-        WindowStartupLocation="CenterScreen"
+        WindowStartupLocation="Manual"
         Background="{DynamicResource PinselHintergrund}"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Ideal">

@@ -14,7 +14,11 @@ public partial class HauptFenster : Window
     {
         InitializeComponent();
 
-        SourceInitialized += (_, _) => TitelleisteAnpassen();
+        SourceInitialized += (_, _) =>
+        {
+            AnBildschirmAnpassen();
+            TitelleisteAnpassen();
+        };
         Darstellung.Gewechselt += (_, _) => TitelleisteAnpassen();
 
         // The list is only useful once every card knows its state, so the first check runs by
@@ -23,6 +27,36 @@ public partial class HauptFenster : Window
         {
             if (DataContext is HauptViewModel modell) await modell.ErstePruefungAsync();
         };
+    }
+
+    /// <summary>
+    /// Die Wunschgröße aus der XAML passt auf einen großen Bildschirm, nicht auf jeden. Auf einem
+    /// Laptop mit 1440x852 nutzbarer Fläche (2880x1800 bei 200% Skalierung) ist das Fenster höher
+    /// als der Platz: WPF zentriert dann auf einen negativen oberen Rand, und die Kopfzeile steht
+    /// über dem oberen Bildschirmrand -- unerreichbar. Deshalb wird die Größe auf die Arbeitsfläche
+    /// gedeckelt und das Fenster darin selbst zentriert. Auf einem großen Bildschirm greift der
+    /// Deckel nicht und es bleibt bei der Wunschgröße.
+    /// </summary>
+    private void AnBildschirmAnpassen()
+    {
+        var flaeche = SystemParameters.WorkArea;
+        if (flaeche.Width <= 0 || flaeche.Height <= 0) return;
+
+        // Etwas Luft zum Rand: ein randloses Fenster wirkt wie ein halb misslungenes Maximieren.
+        var hoechstBreite = flaeche.Width * 0.96;
+        var hoechstHoehe = flaeche.Height * 0.96;
+
+        // Die Mindestgröße zuerst, sonst hält WPF ein zu großes MinHeight gegen den Deckel.
+        MinWidth = Math.Min(MinWidth, hoechstBreite);
+        MinHeight = Math.Min(MinHeight, hoechstHoehe);
+        MaxWidth = flaeche.Width;
+        MaxHeight = flaeche.Height;
+
+        Width = Math.Min(Width, hoechstBreite);
+        Height = Math.Min(Height, hoechstHoehe);
+
+        Left = flaeche.Left + (flaeche.Width - Width) / 2;
+        Top = flaeche.Top + (flaeche.Height - Height) / 2;
     }
 
     /// <summary>
