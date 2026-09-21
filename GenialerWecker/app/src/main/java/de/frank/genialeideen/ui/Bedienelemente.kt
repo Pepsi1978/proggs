@@ -239,26 +239,21 @@ fun Eingabefeld(
     // Wie in `formenFuer`: Die Kapselform wird für Eingabefelder gedeckelt — ein mehrzeiliges
     // Textfeld als Kapsel wäre weder schön noch lesbar.
     val form = RoundedCornerShape(if (tokens.chipRadius > 16.dp) 12.dp else tokens.chipRadius)
-    val absatzOben = with(LocalDensity.current) { 8.sp.toDp() }
 
-    Box {
-        Box(
-            Modifier
-                .matchParentSize()
-                .padding(top = absatzOben)
-                // Etwas flacher als das Material vorgibt: Die untere Hälfte der Beschriftung
-                // sitzt genau auf dem kräftigsten Streifen des Innenschattens und würde sonst
-                // an Kontrast verlieren.
-                // Ohne eigene Kante: Den Rahmen zeichnet das Textfeld selbst, mit der Lücke
-                // für die Beschriftung. Siehe [vertieftesMaterial].
-                .vertieftesMaterial(form, gold.eingabefeld, material, tiefe = 4.dp, kante = false),
+    // Die Beschriftung steht über dem Feld statt auf seiner Linie, und das Feld hat genau eine
+    // Umrandung — keine vertiefte Hülle mit Innenschatten mehr, die als Doppellinie erschien.
+    androidx.compose.foundation.layout.Column {
+        Text(
+            beschriftung,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = if (istFehler) de.frank.genialeideen.ui.theme.LocalSemantisch.current.fehler else gold.textGedaempft,
         )
         OutlinedTextField(
             value = wert,
             onValueChange = aufAenderung,
             modifier = modifier,
             enabled = aktiviert,
-            label = { Text(beschriftung) },
             isError = istFehler,
             visualTransformation = sichtWandlung,
             keyboardOptions = tastaturOptionen,
@@ -269,18 +264,14 @@ fun Eingabefeld(
                 focusedTextColor = gold.textPrimaer,
                 unfocusedTextColor = gold.textPrimaer,
                 disabledTextColor = gold.textGedaempft,
-                // Durchsichtig in jedem Zustand: Die Fläche kommt aus der Hülle darunter.
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                errorContainerColor = Color.Transparent,
+                focusedContainerColor = gold.eingabefeld,
+                unfocusedContainerColor = gold.eingabefeld,
+                disabledContainerColor = gold.eingabefeld,
+                errorContainerColor = gold.eingabefeld,
                 cursorColor = gold.primaer,
                 focusedBorderColor = gold.primaer,
                 unfocusedBorderColor = gold.rahmen,
                 disabledBorderColor = gold.rahmen,
-                focusedLabelColor = gold.primaer,
-                unfocusedLabelColor = gold.textGedaempft,
-                disabledLabelColor = gold.textGedaempft,
                 focusedPlaceholderColor = gold.textGedaempft,
                 unfocusedPlaceholderColor = gold.textGedaempft,
             ),
@@ -569,10 +560,12 @@ fun Chip3D(
 
     val form = RoundedCornerShape(tokens.chipRadius)
     val schattenFarbe = material.schattenFarbe ?: Color.Black
+    // Nicht gewählt ist jetzt ebenfalls erhaben, wie der stille Knopf „Stoppen“ — vorher lag der
+    // ungewählte Chip vertieft und wirkte wie eingedrückt. Die Wahl zeigt sich über die Farbe.
     val grund = when {
-        !aktiviert -> gold.eingabefeld
+        !aktiviert -> gold.flaecheErhoeht
         gewaehlt -> gold.primaer
-        else -> gold.eingabefeld
+        else -> gold.flaecheErhoeht
     }
     val schrift = when {
         !aktiviert -> gold.textGedaempft
@@ -599,26 +592,19 @@ fun Chip3D(
             .minimumInteractiveComponentSize()
             .graphicsLayer { scaleX = skalierung; scaleY = skalierung }
             .then(
-                if (gewaehlt && aktiviert) {
-                    // Der gewählte Chip ist das einzige Element hier, das nach außen Schatten
-                    // wirft — und auch er nur mit einer Schicht.
+                if (aktiviert) {
+                    // Jeder Chip wirft nach außen Schatten — gewählt etwas höher, nie eingedrückt.
                     Modifier.shadow(
-                        elevation = 5.dp,
+                        elevation = if (gedrueckt) 1.dp else if (gewaehlt) 5.dp else 3.dp,
                         shape = form,
-                        ambientColor = schattenFarbe,
-                        spotColor = schattenFarbe,
+                        ambientColor = if (gewaehlt) schattenFarbe else Color.Black,
+                        spotColor = if (gewaehlt) schattenFarbe else Color.Black,
                     )
                 } else {
                     Modifier
                 },
             )
-            .then(
-                if (gewaehlt) {
-                    Modifier.erhabenesMaterial(form, grund, material)
-                } else {
-                    Modifier.vertieftesMaterial(form, grund, material, tiefe = 4.dp)
-                },
-            )
+            .erhabenesMaterial(form, grund, material, glanz = if (gewaehlt) 0f else 0.18f)
             .padding(horizontal = 14.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center,
     ) {

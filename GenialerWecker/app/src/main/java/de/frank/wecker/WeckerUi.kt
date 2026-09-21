@@ -162,10 +162,27 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                     StillerKnopf("Abbrechen", vm::cancelAction)
                 }
                 AufnahmeLeiste(vm)
-                if (message.isNotBlank()) LocalGestalt.current.Flaeche(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), erhoeht = false) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(message, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                        StillerKnopf("OK", { vm.message.value = "" })
+                // Bestätigungen stehen 3 Sekunden gut sichtbar da und verschwinden dann von selbst —
+                // nichts mehr wegklicken. Ein Tipp schließt sie früher.
+                LaunchedEffect(message) {
+                    if (message.isNotBlank()) { delay(3_000); if (vm.message.value == message) vm.message.value = "" }
+                }
+                androidx.compose.animation.AnimatedVisibility(message.isNotBlank(),
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()) {
+                    var zuletzt by remember { mutableStateOf(message) }
+                    if (message.isNotBlank()) zuletzt = message
+                    val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius.coerceAtMost(20.dp))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                        .shadow(8.dp, form, ambientColor = gold.primaer, spotColor = gold.primaer)
+                        .clip(form).background(gold.flaecheErhoeht)
+                        .border(2.dp, gold.primaer, form)
+                        .clickable(onClickLabel = "Meldung schließen") { vm.message.value = "" }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, null, tint = gold.primaer, modifier = Modifier.size(22.dp))
+                        Text(zuletzt, Modifier.weight(1f).padding(start = 12.dp), style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold, color = gold.textPrimaer)
                     }
                 }
                 // Der Bildschirmwechsel hatte bisher die Vorgabe-Überblendung: beide Seiten lagen
@@ -341,7 +358,8 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                     else -> SchlichtHero(heroDaten, onNew, onEdit, onSettings, aufSchlummernBeenden)
                 }
             }
-            LazyVerticalGrid(columns = GridCells.Fixed(if (breite >= 680.dp && !achsenDesign) 2 else 1), state = gridState,
+            // Immer untereinander, auch aufgeklappt — in allen Designs gleich.
+            LazyVerticalGrid(columns = GridCells.Fixed(1), state = gridState,
                 contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 32.dp),
                 verticalArrangement = Arrangement.spacedBy(if (achsenDesign) 0.dp else 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 // Bleibt immer ein Eintrag, auch wenn sie nichts zeigt — sonst verschöbe sich der
@@ -1620,19 +1638,20 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
         // Seitenhintergrund. Gemessen waren das 3 von 255 Helligkeitsstufen Unterschied — die
         // Seite wirkte vollkommen flach. Jetzt trägt auch der zugeklappte Abschnitt seine
         // Fläche; der Titel bleibt darüber.
-        Design.MORGENRUHE -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(kopfModifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) { beschriftung(MaterialTheme.typography.titleSmall, gold.textGedaempft) }
-                if (collapsible) KlappKnopf(expanded, { expanded = !expanded }, beschreibung = null, modifier = Modifier.padding(start = 8.dp))
-            }
-            LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
-                Column(Modifier.padding(if (expanded) 18.dp else 14.dp).animateContentSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (expanded) content()
-                    // Zugeklappt trägt die Fläche die Zusammenfassung, statt leer zu bleiben.
-                    else if (summary.isNotBlank()) Text(summary,
-                        style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+        // Morgenruhe: Titel, Zusammenfassung und Klapppfeil liegen jetzt **in** der Blase statt
+        // darüber. Die Blase ist dafür höher und hat rundum gleichmäßige Abstände.
+        Design.MORGENRUHE -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp).animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(kopfModifier.heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        beschriftung(MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), gold.textPrimaer)
+                        if (!expanded && summary.isNotBlank()) Text(summary,
+                            style = MaterialTheme.typography.bodyMedium, color = gold.textGedaempft)
+                    }
+                    if (collapsible) KlappKnopf(expanded, { expanded = !expanded }, beschreibung = null, modifier = Modifier.padding(start = 12.dp))
                 }
+                if (expanded) content()
             }
         }
         // Orbit: technische Modulkopfzeile mit fester Schrift und Trennlinie im kantigen Modul.
@@ -1781,7 +1800,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             }
             Tones.names.forEach { (id, title) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(alarm.music.isBlank() && alarm.tone == id, role = androidx.compose.ui.semantics.Role.RadioButton) {
+                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(alarm.music.isBlank() && alarm.tone == id, interactionSource = null, indication = null, role = androidx.compose.ui.semantics.Role.RadioButton) {
                         vm.change(alarm.copy(tone = id, music = "", musicName = title)) }, verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(alarm.music.isBlank() && alarm.tone == id, null)
                         Text(title, Modifier.padding(start = 8.dp))
@@ -1926,7 +1945,10 @@ fun KlappKnopf(expanded: Boolean, onToggle: () -> Unit, beschreibung: String?, m
 
 @Composable
 fun Toggle(label: String, value: Boolean, change: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = change),
+    // Ohne Wellenschlag: Die graue Fläche, die beim Umschalten über die ganze Zeile lief, ist weg.
+    // Die Rückmeldung ist allein der wandernde Knauf.
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+        indication = null, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = change),
         verticalAlignment = Alignment.CenterVertically) {
         // Der eigene Schalter statt des Material-Schalters: Seine Bahn liegt vertieft, der Knauf
         // erhaben. Die Rolle sitzt bereits am umschließenden `toggleable`, deshalb hier ohne
@@ -1980,7 +2002,7 @@ fun Choice(label: String, selected: String, options: List<Pair<String, String>>,
         if (suchbar) LaunchedEffect(suche) { if (suche.isNotBlank()) listState.scrollToItem(0) }
         val eintraege: LazyListScope.() -> Unit = {
             items(gezeigt, key = { it.first }) { option ->
-                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(option.first == selected, role = androidx.compose.ui.semantics.Role.RadioButton) { choose(option.first); open = false }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(option.first == selected, interactionSource = null, indication = null, role = androidx.compose.ui.semantics.Role.RadioButton) { choose(option.first); open = false }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(option.first == selected, null); Text(option.second, Modifier.padding(start = 8.dp))
                 }
             }

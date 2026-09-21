@@ -122,7 +122,9 @@ fun materialFuer(design: Design, dunkel: Boolean, primaer: Color, gedaempft: Col
         kanteLichtFarbe = primaer,
         kanteLichtAlpha = if (dunkel) 0.35f else 0.45f,
         kanteSchattenAlpha = if (dunkel) 0.45f else 0.3f,
-        kanteGrund = null,
+        // Geschlossener goldener Umriss: Vorher waren die Seiten fast durchsichtig und die Blasen
+        // wirkten links und rechts offen.
+        kanteGrund = primaer.copy(alpha = if (dunkel) 0.38f else 0.42f),
         innenSchattenAlpha = if (dunkel) 0.4f else 0.24f,
         koernungAlpha = 0.04f,
         schattenFarbe = primaer,
@@ -154,7 +156,7 @@ fun materialFuer(design: Design, dunkel: Boolean, primaer: Color, gedaempft: Col
         kanteLichtFarbe = primaer,
         kanteLichtAlpha = if (dunkel) 0.32f else 0.22f,
         kanteSchattenAlpha = if (dunkel) 0.45f else 0.3f,
-        kanteGrund = null,
+        kanteGrund = rahmen,
         innenSchattenAlpha = if (dunkel) 0.45f else 0.24f,
         koernungAlpha = 0.03f,
         schattenFarbe = primaer,

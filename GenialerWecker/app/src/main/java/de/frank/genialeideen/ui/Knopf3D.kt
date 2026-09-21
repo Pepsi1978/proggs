@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -92,7 +93,10 @@ fun Knopf3D(
 
     val grund = grundfarbe ?: gold.primaer
     // Deaktivierte Knöpfe bleiben plastisch, nur entsättigt — nie ein graues Rechteck.
-    val koerper = if (aktiviert) grund else grund.dunkler(0.35f).copy(alpha = 0.55f)
+    // Deckend statt halbdurchsichtig: Durch einen durchscheinenden Körper sah man den eigenen
+    // Schatten als Viereck mitten im Knopf — genau das „Viereck hinter Speichern“.
+    val koerper = if (aktiviert) grund
+        else grund.dunkler(0.35f).copy(alpha = 0.55f).compositeOver(gold.flaecheErhoeht)
 
     val skalierung by animateFloatAsState(
         targetValue = if (gedrueckt && aktiviert && !reduziert) 0.96f else 1f,
@@ -100,7 +104,7 @@ fun Knopf3D(
         label = "knopfdruck",
     )
     val schattenHoehe by animateDpAsState(
-        targetValue = if (gedrueckt && aktiviert) 2.dp else hoehe,
+        targetValue = if (!aktiviert) 1.dp else if (gedrueckt) 2.dp else hoehe,
         animationSpec = Motion.mikro(reduziert),
         label = "knopfschatten",
     )

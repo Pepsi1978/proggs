@@ -216,7 +216,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     // Auswahlpunkt und Name sind eine gemeinsame Fläche von mindestens 48 dp; der Favoritenstern
                     // liegt bewusst daneben und wählt die Stimme deshalb nicht aus.
-                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(selected == id, role = androidx.compose.ui.semantics.Role.RadioButton) {
+                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(selected == id, interactionSource = null, indication = null, role = androidx.compose.ui.semantics.Role.RadioButton) {
                         selected = id
                         when (provider) {
                             TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice = id
