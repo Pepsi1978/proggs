@@ -4,3 +4,5 @@
 - [GenialeIdeen per installSchnell](genialeideen-install-schnell.md) — Debug-Build ruckelt, immer den schnellen Build installieren
 - [OpenLauncher-Update fragt immer](openlauncher-update-dialog-immer.md) — nie -Force, höchstes Zeitlimit, auf Klick warten
 - [Fenster-Aktivierung: Erfolg nur mit IsIconic](aktivierung-erfolg-nur-mit-isiconic.md) — activated=true ohne sichtbares Fenster heisst: die Erfolgspruefung ist falsch
+- [Dieser Rechner: abweichende Installationswege](dieser-rechner-installationswege.md) — npm-CLIs, LM Studio in Program Files, kein Stream Deck
+- [Synced-Plugins abschalten](synced-plugins-abschalten.md) — Schlüssel "name@synced": false in enabledPlugins

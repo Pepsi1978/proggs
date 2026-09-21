@@ -75,5 +75,24 @@
       "effortLevel": "high"
     }
   },
-  "_comment": "macOS-Fassung des Minimal-Profils. 1:1 aus Profiles/ClaudeCode/minimal/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript. Das Profil bleibt regelfrei - die Skills blendet der Launcher per Symlink ein."
+  "_comment": "macOS-Fassung des Minimal-Profils. 1:1 aus Profiles/ClaudeCode/minimal/settings.json; der Emulator-Waechter laeuft hier als bash-Skript statt als PowerShell-Skript. Das Profil bleibt regelfrei - die Skills blendet der Launcher per Symlink ein.",
+  "enabledPlugins": {
+    "bio-research@synced": false,
+    "sales@synced": false,
+    "small-business@synced": false,
+    "marketing@synced": false,
+    "legal@synced": false,
+    "finance@synced": false,
+    "human-resources@synced": false,
+    "zapier@synced": false,
+    "customer-support@synced": false,
+    "operations@synced": false,
+    "product-management@synced": false,
+    "design@synced": false,
+    "data@synced": false,
+    "enterprise-search@synced": false,
+    "engineering@synced": false,
+    "desktop-commander@synced": false,
+    "cowork-plugin-management@synced": false
+  }
 }
