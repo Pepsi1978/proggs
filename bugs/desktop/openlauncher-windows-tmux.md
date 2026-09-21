@@ -43,3 +43,31 @@ Reproduzierbare Prüfungen:
   Pfade/Sonderzeichen, fehlendes Startskript, ausschließlich eigene Testsitzungen.
 - `ins-macos-terminal-einfuegen/tests/check_literal_line.py`: bytegenauer Transport,
   beide Promptformen, separates Enter, alte Tokens, Duplikate, Steuerzeichen, STOP.
+
+## Mausrad und schnellere Dialogübergaben (21.09.2026)
+
+Ursachenkette Mausrad: `mouse off` überlässt dem Terminal die Interpretation;
+im alternativen Bildschirm kann das Rad als Pfeiltaste ankommen; die CLI wählt dann
+frühere Eingaben. Nur `mouse on` genügt nicht: die tmux-Standardbindung kann Ereignisse
+im alternativen Bildschirm erneut an die Anwendung weiterreichen. Deshalb setzt der
+Windows-Launcher auf seinem eigenen Socket `mouse on` und explizite Bindungen:
+WheelUpPane öffnet den Kopiermodus, WheelDownPane sendet nur innerhalb dieses Modus.
+Neue Starts und erneutes Anhängen über neu erzeugte Wrapper erhalten diese Vorgabe.
+Andere tmux-Server werden nicht geändert. `tests/check-tmux-mouse.py` prüft in einem
+eigenen Testclient SGR-Mausereignisse und bestätigt null Eingabebytes bei der Anwendung.
+
+Ursachenkette Versand: ein langer Originaltext ist einzeilig, die gerenderte Darstellung
+enthält Fortsetzungszeilen, der frühere strikte Stringvergleich fällt deshalb zurück.
+Zusätzlich verändern Feldhöhe und bekannter Footerhinweis die Umgebung. Der Helfer
+erkennt nun ausschließlich die bekannte Zweispalten-Fortsetzung, bewahrt sonstige
+Leerzeichen und erlaubt begrenzten Scrollverlust entsprechend dem Feldwachstum.
+Andere Zeichen/Umgebungsänderungen bleiben ein Rückfall ohne Enter. Keine pauschale
+Whitespace-Normalisierung und keine vollständige Abschaltung der Umgebungsprüfung.
+
+Der optionale Kompaktlesemodus meldet einen positionsgebundenen Ersetzungsbereich.
+Er speichert Zeilenhashes, keine Rohtexte; gleiche Zeilen an verschiedenen Positionen
+bleiben erhalten. Kürzung verwirft die Folgebasis. Originalansicht per `--force-view`.
+`tests/check_speed.py` prüft Umbruch, fremde Zeichen, veränderte Leerzeichen/Umgebung,
+identische Zeilen und Vollansicht. Bestehender Literal-Line-Test bleibt grün.
+Messung des isolierten Empfängers: automatischer Versand ca. 0,25 s, keine zusätzliche
+Modellrunde zwischen Paste und Enter. Dies misst Transport, keinen Modellverbrauch.

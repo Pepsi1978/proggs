@@ -54,7 +54,12 @@ public static class TmuxLauncher
         var wrapper = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(script) + "-tmux.ps1");
         // --exec and separate tmux command arguments avoid shell interpretation of paths, quotes and metacharacters.
         var args = new[] { "-d", distro, "--exec", tmux, "-L", "openlauncher", "new-session", "-A", "-s", session,
-            "-c", linuxDir, linuxShell, "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script };
+            "-c", linuxDir, linuxShell, "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script,
+            ";", "set-option", "-g", "mouse", "on",
+            ";", "bind-key", "-T", "root", "WheelUpPane", "if-shell", "-F", "#{pane_in_mode}",
+            "send-keys -M", "copy-mode -e; send-keys -M",
+            ";", "bind-key", "-T", "root", "WheelDownPane", "if-shell", "-F", "#{pane_in_mode}",
+            "send-keys -M", "" };
         var content = "# tmux-Sitzung: " + session + " | WSL: " + distro + "\n"
             + "$ErrorActionPreference = 'Stop'\n"
             + "$env:TERM = 'xterm-256color'\n"

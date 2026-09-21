@@ -132,9 +132,55 @@ def surroundings(screen):
     # Ausschließlich diese beiden bekannten Hinweise wechseln bei Claudes Pasteblock.
     footer = rows[bottom:]
     hints = {'  paste again to expand',
+             '  ⏵⏵ bypass permissions on (shift+tab to cycle)',
              '  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents'}
     footer = ['<bekannter Eingabehinweis>' if row in hints else row for row in footer]
     return '\n'.join(rows[:top + 1] + footer)
+
+
+def own_draft(draft, text):
+    """Accept exact text or Claude's two-column continuation, never strip all whitespace."""
+    if draft == text:
+        return True
+    if '\n' in text or '\n' not in draft:
+        return False
+    lines = draft.split('\n')
+    if any(not line.startswith('  ') for line in lines[1:]):
+        return False
+    positions = {0}
+    for index, line in enumerate(lines):
+        segment = line if index == 0 else line[2:]
+        next_positions = set()
+        for pos in positions:
+            # A word-wrap can replace exactly one space; a hard wrap replaces none.
+            starts = (pos, pos + 1) if index and text[pos:pos + 1] == ' ' else (pos,)
+            for start in starts:
+                if text.startswith(segment, start):
+                    next_positions.add(start + len(segment))
+        positions = next_positions
+        if not positions:
+            return False
+    return len(text) in positions
+
+
+def same_surroundings(before, after):
+    """Only tolerate top-of-screen loss caused by the input field growing."""
+    old, top_old, bottom_old, _ = input_frame(before)
+    new, top_new, bottom_new, _ = input_frame(after)
+    growth = (bottom_new - top_new) - (bottom_old - top_old)
+    lost = top_old - top_new
+    if lost < 0 or lost > max(0, growth):
+        return False
+    if old[lost:top_old] != new[:top_new]:
+        return False
+    old_footer = surroundings(before).splitlines()[top_old + 1:]
+    new_footer = surroundings(after).splitlines()[top_new + 1:]
+    # Growing the field consumes trailing blank terminal rows, not footer content.
+    while old_footer and old_footer[-1] == '':
+        old_footer.pop()
+    while new_footer and new_footer[-1] == '':
+        new_footer.pop()
+    return old_footer == new_footer
 
 
 def cancelled(args):
@@ -163,6 +209,7 @@ def main():
     parser.add_argument('--id', help='Eindeutige Auftragskennung, z. B. C17')
     parser.add_argument('--text-file', type=Path)
     parser.add_argument('--force-view', action='store_true', help='Momentaufnahme auch bei gleichem Inhalt ausgeben')
+    parser.add_argument('--compact', action='store_true', help='read: positionsgebundener Änderungsauszug, keine globale Zeilendeduplizierung')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--wait', type=float, default=0, help='read: maximal 10 Sekunden auf Änderung warten')
     parser.add_argument('--cancel-file', type=Path)
@@ -265,12 +312,35 @@ def main():
             elif delta:
                 result['state_changes'] = delta
             if changed or args.force_view:
+                hashes = [hashlib.sha256(row.encode()).hexdigest() for row in text.splitlines()]
+                previous = state.get('last_rows', [])
+                full_text = text
+                if args.compact and not args.force_view and previous and state.get('last_lines') == args.lines:
+                    prefix = 0
+                    while prefix < min(len(previous), len(hashes)) and previous[prefix] == hashes[prefix]:
+                        prefix += 1
+                    suffix = 0
+                    while suffix < min(len(previous), len(hashes)) - prefix and previous[-suffix - 1] == hashes[-suffix - 1]:
+                        suffix += 1
+                    end = len(hashes) - suffix
+                    text = '\n'.join(full_text.splitlines()[prefix:end])
+                    result['view'] = 'replacement_excerpt'
+                    result['base_view'] = state.get('last_view')
+                    result['replace_rows'] = [prefix, len(previous) - suffix]
+                    result['unchanged_prefix_rows'] = prefix
+                    result['unchanged_suffix_rows'] = suffix
+                else:
+                    result['view'] = 'snapshot'
+                result['view_hash'] = digest
                 if len(text) > args.max_chars:
                     half = args.max_chars // 2
                     result.update(text=text[:half] + '\n[… Mittelteil ausgelassen …]\n' + text[-half:],
                                   omitted_chars=len(text) - 2 * half)
                 else:
                     result['text'] = text
+                # Never use an unseen/truncated range as the next compact baseline.
+                state['last_rows'] = hashes if len(text) <= args.max_chars else []
+                state['last_lines'] = args.lines
             state['last_view'] = digest
             state['last_state'] = info
             save(args.state, state)
@@ -345,8 +415,8 @@ def main():
                         raise BridgeError('E_TARGET', 'Identität nach Paste geändert; kein Enter')
                     after, after_token = snapshot(tmux, latest)
                     draft = input_frame(after)[3]
-                    own = draft == text or re.fullmatch(r'\[Pasted text #\d+\]', draft)
-                    if own and surroundings(after) == surroundings(before):
+                    own = own_draft(draft, text) or re.fullmatch(r'\[Pasted text #\d+\]', draft)
+                    if own and same_surroundings(before, after):
                         break
                     if draft or time.monotonic() >= deadline:
                         emit({'id': args.id, 'transport': 'pasted', 'submitted': False,

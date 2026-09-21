@@ -14,6 +14,9 @@ und Claude Code darin starten. Der automatische `submit`-Parser des gemeinsamen 
 ist jedoch ausschließlich für geprüfte Claude-Eingaberahmen vorgesehen. Für andere CLIs
 deren tatsächlichen Prompt und Zustand lesen, `paste` und separat autorisiertes `enter`
 verwenden; nicht behaupten, der Claude-Parser erkenne deren Eingabebereitschaft.
+Bei bestätigtem tmux reichen diese Referenz und die dort verlinkten gemeinsamen
+Dialogregeln. Die folgenden Computer-Use-Helfer und Fensteranleitungen nicht zusätzlich
+laden oder ausführen. Bereits gelesene Dokumentation in derselben Aufgabe nicht wiederholen.
 Ohne bestätigte tmux-Sitzung gilt weiterhin der folgende Windows-Fensterweg.
 
 Unter **macOS** direkt [Ins macOS Terminal einfügen](../ins-macos-terminal-einfuegen/SKILL.md) lesen und dessen Ablauf verwenden. Die folgenden Fenstersteuerungs- und Eingabehelfer sind für **Windows mit `@oai/sky`**; sie sind kein getesteter macOS-Schreibweg. Auf macOS nicht zusätzlich die Windows-Initialisierung oder historischen Windows-Messnotizen laden. Bei eindeutigem macOS-Auftrag künftig unmittelbar den macOS-Skill auswählen.

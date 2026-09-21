@@ -32,6 +32,10 @@ try {
         # Nur der Client-Modus wird für den Test geändert; produktive Argumente bleiben erhalten.
         $detached = $content.Replace("'new-session' '-A'", "'new-session' '-d'")
         & ([scriptblock]::Create($detached))
+        $mouse = wsl -d $distro --exec tmux -L openlauncher show-options -gv mouse
+        if ($mouse.Trim() -ne 'on') { throw 'Maussteuerung im produktiven Wrapper fehlt.' }
+        $wheel = wsl -d $distro --exec tmux -L openlauncher list-keys -T root WheelUpPane
+        if ($wheel -notmatch 'copy-mode -e; send-keys -M') { throw 'Mausrad leitet weiterhin Tasten an die CLI weiter.' }
         $deadline = [DateTime]::UtcNow.AddSeconds(25)
         while (-not (Test-Path -LiteralPath $output)) {
             if ([DateTime]::UtcNow -gt $deadline) { throw "$cli antwortet im tmux-Test nicht." }

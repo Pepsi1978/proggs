@@ -4,6 +4,22 @@ Nur für einen beauftragten Dialog oder Prüflauf laden. `tmux_bridge.py read` l
 
 ## Kleine Auszüge vor der Modellausgabe
 
+`read --compact` liefert nach der ersten vollständigen Ansicht einen **positionsgebundenen
+Ersetzungsauszug**: `replace_rows` ist das halboffene, nullbasierte Zeilenintervall der
+vorigen Ansicht; `text` ersetzt dieses Intervall. `base_view` und `view_hash` ordnen die
+Ansichten zu. Unveränderte Präfix-/Suffixzeilen werden nur gezählt. Wiederholte Zeilen
+werden niemals als globale Menge entfernt; auch Löschungen erscheinen als Ersetzung.
+Es handelt sich weder um ein vollständiges Transkript noch um eine neue Antwort allein.
+Bei Reflow kann der Auszug groß sein. Unbekannte Fehler und Rückfragen werden nicht
+herausgefiltert. Footer bleiben sichtbar, wenn sie sich ändern.
+
+Gespeichert werden ausschließlich begrenzte Zeilenhashes im privaten Dialogzustand.
+Nach gekürzter Ausgabe oder geänderter History-Tiefe kommt zuerst eine Vollansicht.
+`--force-view` liefert unabhängig vom Kompaktmodus die ganze begrenzte Momentaufnahme.
+Nach Kontextverlust oder unklarer Basis diese Vollansicht lesen. Der unveränderte
+Beobachtungstoken für Eingaben bezieht sich weiterhin auf die gesamte aktuelle Ansicht,
+nicht allein auf den Auszug. Keine Sicherheitsentscheidung allein aus fehlenden Zeilen.
+
 Der Helfer vergleicht den Hash der begrenzten Textsicht vor Ausgabe. Bei Gleichheit erscheinen nur `event: unchanged` und der Beobachtungstoken. Metadaten werden nur bei Änderung oder mit `--verbose` ausgegeben. `unchanged` bedeutet ausschließlich „dieser Textausschnitt ist gleich“. Cursor- und Modusdaten können trotzdem wechseln. Rohtext bleibt nur während des Aufrufs im Speicher; in der privaten State-Datei steht lediglich der Vergleichshash.
 
 Bei Änderung liefert er eine begrenzte **Momentaufnahme**, kein behauptetes Delta. Standardlimit 6.000 Zeichen: bei Überschreitung Anfang und Ende mit ausdrücklich markiertem ausgelassenem Mittelteil. Für relevante Lücken einmal gezielt `--lines` (0–500) und `--max-chars` (1.000–30.000) anpassen; `--force-view` zeigt auch gleiche Inhalte wieder. Ein gezielter `capture-pane`-Ausschnitt innerhalb der bestätigten Bindung ist ebenfalls möglich. Fehlenden Antwortanfang oder eine gekürzte Rückfrage nicht erraten.

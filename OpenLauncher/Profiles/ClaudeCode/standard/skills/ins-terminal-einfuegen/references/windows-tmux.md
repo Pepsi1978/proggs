@@ -47,8 +47,8 @@ abflachen und keinen Paste-Modus vortäuschen. Bei einem umbrochenen Entwurf kan
 konservativ bei `pasted` anhalten: frisch lesen, den eigenen vollständigen Entwurf
 prüfen, dann bei autorisiertem Absenden einmal `enter` mit dem neuen Token.
 
-Claude unter Windows verwendet aktuell `>` statt `❯`; der gemeinsame Parser akzeptiert
-beide Zeichen nur innerhalb des vollständigen Eingaberahmens. Fremde Entwürfe, laufende
+Claude unter Windows kann je nach Version `>` oder `❯` anzeigen; der gemeinsame Parser
+akzeptiert beide Zeichen nur innerhalb des vollständigen Eingaberahmens. Fremde Entwürfe, laufende
 Generierung, Freigabedialoge, Ghost-Vorschläge und unklare Pasteblöcke bleiben Stopper.
 Ein tmux-Transporterfolg ist noch keine Claude-Antwort: danach die tatsächliche neue
 Antwort lesen. Die Zuordnung zum sichtbaren Codex-Tab zusätzlich prüfen; tmux kennt
@@ -57,3 +57,39 @@ keine Codex-Tab-ID.
 Für einen laufenden Dialog gelten die Koordinations- und Abschlussregeln des
 übergeordneten Skills. Die Windows-tmux-Einrichtung autorisiert keine selbstständigen
 Programmieraufträge an andere CLIs.
+
+## Schneller Dialog und klare Rollen
+
+Die Regeln für Auftragskennung, Nutzerzwischenrufe, Abschluss und Stopp aus
+[dem macOS-Skill](../../ins-macos-terminal-einfuegen/SKILL.md) gelten auch hier.
+Für einen ausdrücklich beauftragten Verbesserungsloop bis zum manuellen Stopp
+weiterarbeiten; Voice-Ende und eine Zwischenfrage sind kein Stopp. Keine geplante
+Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updates erzeugen.
+
+- Rollen im Auftrag festlegen: Der Nutzer steuert, Codex koordiniert und prüft,
+  Claude diskutiert oder implementiert gemäß Auftrag. Codex darf seinen Kommunikationsskill
+  selbst bearbeiten; dann Claude ausdrücklich nur zur Gegenprüfung einsetzen.
+  Pro Datei ein Schreibender, Git-Mutationen nacheinander.
+- Übergaben kurz: `R2: Ziel; relevante Änderung seit R1; Grenzen; erwarteter Nachweis`.
+  Keine eigene Empfangsbestätigungsrunde. Für kleine Fragen direkte Antworten;
+  bei Code Fundstellen, Tests, offene Punkte und später Commit/Push nennen lassen.
+- Textdatei und SHA vor dem frischen `read` vorbereiten. Dann unmittelbar `submit
+  --literal-line` senden. Der Helfer erkennt bekannte zweispaltige Fortsetzungszeilen,
+  ohne Leerraum allgemein zu entfernen. Unklare Darstellung bleibt bei `pasted`.
+  Keine erneute Einfügung und kein blindes Enter nach unklarem Transport.
+- Für laufendes Mitlesen `read --compact --wait 3` verwenden, bei Stillstand längere
+  begrenzte Intervalle. [Puffer sparsam lesen](../../ins-macos-terminal-einfuegen/references/puffer-lesen.md)
+  erklärt Auszüge, Vollansicht und Grenzen. Bei fehlendem Kontext einmal `--force-view`.
+  Kein vollständiger Bildschirm und keine vollständige Skill-Lektüre pro Nachricht.
+- Review an Dateimeilensteinen: zuerst Status und betroffene Pfade, dann deren echten
+  staged/unstaged Diff sowie neue Dateien. Gegen den zuletzt geprüften Inhalt vergleichen;
+  Commitwechsel beachten. Keine Repo-Gesamtscans pro Terminalabruf. Claudes Kurzbericht
+  dient als Wegweiser, ersetzt aber weder Diff noch Testbeleg.
+- Zwischen jedem Lesen und Senden neu eingetroffene Nutzeranweisungen berücksichtigen.
+  Fragmente sammeln, Transkriptdopplungen vermeiden. Fremde Entwürfe stehen lassen.
+  Scrollmodus ist keine Eingabebereitschaft: nicht automatisch verlassen und absenden.
+
+Das Mausrad steuert im OpenLauncher-tmux den Verlauf. Hochscrollen aktiviert den
+tmux-Kopiermodus; unten bzw. mit `q` verlässt der Nutzer ihn wieder. Mausrad nach unten
+außerhalb dieses Modus erzeugt keine CLI-Tastatureingabe. Das gilt auf dem eigenen
+OpenLauncher-Socket; andere tmux-Server werden nicht umkonfiguriert.
