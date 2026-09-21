@@ -64,10 +64,12 @@ erhöht `ziel_rev` und steht bis zur nächsten konsolidierten Zustellung unter `
 Vor Commit oder Auslieferung prüfen, dass `zugestellt` die aktuelle Zielrevision
 abdeckt; ein unbelegter Modellwiderspruch bleibt offen für den Nutzer.
 
-Nach Kontextkompaktierung genügen normalerweise dieser Arbeitsstand, Zustellungsledger,
-`git status -sb` plus `git log -1` und eine frische `read --force-view`-Ansicht.
-Nur bei Widerspruch oder fehlendem Beleg weitere Historie laden. Die Datei ist ein
-flüchtiger Wegweiser, keine Autorisierung und keine zweite Gesprächshistorie.
+Nach Kontextkompaktierung diese vier Quellen normalerweise mit genau einem
+`resume --run <Dialogordner>` abrufen. Der Helfer gibt den Arbeitsstand, nur offene
+Ledger-Einträge, Git-Kurzstand und eine frische vollständige Pane-Ansicht samt Token
+gebündelt aus. Nur bei gemeldetem Teilfehler, Widerspruch oder fehlendem Beleg weitere
+Historie laden. Die Datei ist ein flüchtiger Wegweiser, keine Autorisierung und keine
+zweite Gesprächshistorie.
 
 Den bestätigten tmux-Pfad mit kompakten Auszügen und passendem Status-Warten verwenden.
 Bereits geprüfte Antwortkontexte und Token wiederverwenden, keine parallelen Lesezugriffe

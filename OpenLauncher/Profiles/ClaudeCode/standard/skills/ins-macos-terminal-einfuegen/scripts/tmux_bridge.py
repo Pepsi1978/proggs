@@ -141,6 +141,49 @@ def marker_in_history(marker, history):
     return marker in re.sub(r'\s+', ' ', history)
 
 
+def resume_workstate(path):
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, 'rb') as source:
+            if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+                raise ValueError('keine reguläre Datei')
+            data = source.read(1025)
+        if len(data) > 1024:
+            raise ValueError('größer als 1 KiB')
+        parsed = json.loads(data.decode('utf-8'))
+        if not isinstance(parsed, dict):
+            raise ValueError('JSON-Wurzel ist kein Objekt')
+        keys = ('ziel_rev', 'zugestellt', 'offen', 'phase', 'status')
+        return {key: parsed[key] for key in keys if key in parsed}, None
+    except (OSError, ValueError, UnicodeError, json.JSONDecodeError) as error:
+        return None, str(error)[:240]
+
+
+def resume_git(cwd):
+    try:
+        windows_git = shutil.which('git.exe') if cwd.startswith('/mnt/') else None
+        if windows_git and shutil.which('wslpath'):
+            git_cwd = run(['wslpath', '-w', cwd]).strip()
+            command = [windows_git, '--no-optional-locks', '-C', git_cwd]
+        else:
+            native_git = shutil.which('git')
+            if not native_git:
+                raise BridgeError('E_TOOL', 'git fehlt')
+            command = [native_git, '--no-optional-locks', '-C', cwd]
+        status_rows = run(command + ['status', '-sb']).splitlines()
+        result = {'status': status_rows[:20],
+                  'log': run(command + ['log', '-1', '--oneline']).strip()}
+        if len(status_rows) > 20:
+            result['omitted_status_lines'] = len(status_rows) - 20
+        return result, None
+    except BridgeError as error:
+        if error.code == 'E_STOP':
+            raise
+        return None, str(error)[:240]
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return None, str(error)[:240]
+
+
 def input_frame(screen):
     rows = screen.splitlines()
     separators = [i for i, row in enumerate(rows) if re.fullmatch(r'─{20,}', row.strip())]
@@ -266,7 +309,7 @@ def main():
     global CHECK_CANCEL
     parser = Parser(description=__doc__)
     parser.add_argument('action', choices=[
-        'list', 'bind', 'read', 'paste', 'enter', 'submit', 'submit-file', 'resolve'])
+        'list', 'bind', 'read', 'resume', 'paste', 'enter', 'submit', 'submit-file', 'resolve'])
     parser.add_argument('--socket', help='Expliziter tmux-Socket; beim ersten list optional')
     parser.add_argument('--run', dest='run_dir', type=Path, help='Privater Dialogordner: target.json, ID.txt und STOP')
     parser.add_argument('--state', type=Path, help='Private Laufzeitdatei außerhalb des Repos')
@@ -366,6 +409,46 @@ def main():
         if identity(info, bound['agent_pid']) != bound:
             raise BridgeError('E_TARGET', 'Ziel/Prozess/Arbeitsverzeichnis geändert; zuerst neu zuordnen')
         screen, observed = snapshot(tmux, info)
+        if args.action == 'resume':
+            if not 1000 <= args.max_chars <= 30000:
+                parser.error('Grenzen: --max-chars 1000..30000')
+            result = {'event': 'resume', 'observed': observed}
+            workstate, workstate_error = resume_workstate(args.state.parent / 'arbeitsstand.json')
+            if workstate_error:
+                result['arbeitsstand_error'] = workstate_error
+            else:
+                result['arbeitsstand'] = workstate
+            deliveries = state.get('deliveries', {})
+            result['offene_zustellungen'] = [
+                {'id': delivery_id, 'status': delivery.get('status'),
+                 **({'payload_bytes': delivery['payload_bytes']} if 'payload_bytes' in delivery else {})}
+                for delivery_id, delivery in deliveries.items()
+                if delivery.get('status') not in ('enter_sent', 'cleared')]
+            result['letzte_id'] = next(reversed(deliveries), None) if deliveries else None
+            git, git_error = resume_git(bound['cwd'])
+            if git_error:
+                result['git_error'] = git_error
+            else:
+                result['git'] = git
+            cancelled(args)
+            view_digest = hashlib.sha256(normalize_clock(screen).encode()).hexdigest()
+            if len(screen) > args.max_chars:
+                half = args.max_chars // 2
+                result['pane'] = screen[:half] + '\n[… Mittelteil ausgelassen …]\n' + screen[-half:]
+                result['omitted_chars'] = len(screen) - 2 * half
+                state['last_rows'] = []
+            else:
+                result['pane'] = screen
+                state['last_rows'] = [hashlib.sha256(row.encode()).hexdigest()
+                                      for row in screen.splitlines()]
+            state['last_view'] = view_digest
+            state['last_lines'] = 0
+            state['last_state'] = info
+            state['last_read_status'] = read_status(info, screen)
+            cancelled(args)
+            save(args.state, state)
+            emit(result)
+            return
         if args.action == 'read':
             if not 0 <= args.lines <= 500 or not 1000 <= args.max_chars <= 30000:
                 parser.error('Grenzen: --lines 0..500, --max-chars 1000..30000')

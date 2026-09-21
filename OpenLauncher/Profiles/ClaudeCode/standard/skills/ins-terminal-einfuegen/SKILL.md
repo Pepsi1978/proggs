@@ -30,3 +30,8 @@ bei Claude, gezielte unabhängige Prüfung bei Codex, kompakte Belegübergaben u
 Kurze Aufträge mit Kennung, neuem Ziel/Delta, Grenzen und erwarteten Nachweisen verwenden. Keine separate Empfangsbestätigung anfordern. Auf bestätigtem tmux den geprüften Token des letzten geeigneten Warte-Reads direkt weiterverwenden, statt routinemäßig nochmals zu lesen. Eine neue Spracheingabe bei Codex allein verändert das Zielterminal nicht; nach Eingabe/Scrollen im Zielterminal, längerer Zwischenarbeit, unklarem Zustand oder `E_STALE` frisch prüfen.
 
 Neue Helferänderungen nach isolierter Prüfung bereits im laufenden autorisierten Dialog testen. Relevante neue Erkenntnisse und Phasenwechsel knapp melden. Keine feste Antwortzeit, prozentuale Kontingentersparnis oder verlustlosen Livestream behaupten. Werkzeugaufrufe und Ausgabebytes lassen sich messen; der tatsächliche Modellverbrauch folgt daraus nicht direkt.
+
+Nach einer Kontextkompaktierung auf bestätigtem tmux einmal `resume --run <Dialogordner>`
+verwenden. Die gebündelte Leseausgabe ersetzt die getrennten Abrufe von Arbeitsstand,
+offenem Ledger, Git-Kurzstand und aktueller Pane-Ansicht, erweitert aber keine
+Autorisierung. Optionale Teilfehler gezielt klären; STOP und Zielabweichung bleiben hart.

@@ -147,3 +147,15 @@ Zustellung, offene Nutzeränderungen, Phase und festen Rundenausgang. Vor Commit
 Updater muss die Zustellung die aktuelle Zielrevision abdecken. Nach Kompaktierung
 genügen normalerweise dieser Zustand, Ledger, `git status/log` und eine frische
 Pane-Ansicht; vollständige Rohverläufe werden nur bei Widersprüchen nachgeladen.
+
+`resume` setzt diese Wiederaufnahme als einzelne read-only Aktion um. Der Live-Aufruf
+gegen dieselbe Windows-Claude-Sitzung lieferte den 119-Byte-Arbeitsstand, keine offenen
+Zustellungen, letzte ID R15, den echten Windows-Git-Stand und eine frische Pane-Ansicht
+mit Token. Unter WSL wird `git.exe` mit dem per `wslpath -w` übersetzten Repo-Pfad
+verwendet; auf nativen Linux-/macOS-Pfaden natives `git`. Arbeitsstand- oder Git-Fehler
+werden getrennt gemeldet, während Zielbindung und STOP auch bei einem Signal während
+des Git-Abrufs hart bleiben. Git läuft mit `--no-optional-locks`, damit die reine
+Statusabfrage nicht mit Commit oder Rebase um den Index konkurriert. Der isolierte
+Test prüft zusätzlich einen offenen `pasted`-Eintrag, Duplikatblockade beim Folgesenden,
+kaputtes Arbeitsstand-JSON, fehlendes Git-Repository, STOP und weniger JSON-Bytes als
+die getrennten Rohabrufe.

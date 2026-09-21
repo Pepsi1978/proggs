@@ -42,6 +42,16 @@ Eine Datei `STOP` neben der State-Datei sperrt Aufrufe auch dann, wenn sie die a
 
 `read` prüft Identität und liefert standardmäßig den aktuellen Bildschirm, bei gleichem Inhalt nur `event: unchanged` und einen frischen `observed`-Token. `--verbose` zeigt alle Metadaten; im Normalfall erscheinen nur geänderte Zustandsfelder. Cursor- und Modusdaten bleiben vollständig Teil der internen Prüfung. `--lines 80` liest bei Bedarf History, `--force-view` wiederholt gezielt eine Ansicht. Der Token ist keine automatische Erkennung von Bereitschaft oder Autorisierung.
 
+Nach einer Kontextkompaktierung bündelt `resume --run "$BRIDGE_RUN"` in genau einem
+Leseaufruf: die fünf erlaubten Felder aus `arbeitsstand.json` (maximal 1 KiB), nur
+offene Ledger-Einträge, letzte ID, `git status -sb` (maximal 20 Zeilen) und
+`git log -1 --oneline` sowie eine frische vollständige Pane-Ansicht mit
+Beobachtungstoken. Unter WSL nutzt es `git.exe` auf dem Windows-Pfad, sonst natives
+`git`; beide laufen mit `--no-optional-locks`, damit die Leseabfrage nicht mit
+Commit oder Rebase um den Index konkurriert. Fehler optionaler Teile erscheinen als `arbeitsstand_error` oder
+`git_error`; Zielbindung und STOP brechen weiterhin hart ab. `resume` schreibt
+nur dieselbe kompakte Lesebasis wie `read` und autorisiert keine Übergabe.
+
 Bei `in_mode=1` ist ein tmux-Modus wie Kopieren/Scrollen aktiv: weiter lesen ist möglich, aber nicht schreiben oder den Modus selbst verlassen. Warte auf den normalen Eingabemodus und lies dann frisch. Ghost-Suggestions können in der ANSI-Ansicht als ganze Zeile oder wortweise mit Dim-Sequenzen markiert sein; eine einzige erwartete Sequenz ist deshalb kein verlässlicher Parser. Beurteile den gesamten Eingabebereich samt Cursor und Dialogzustand, statt eine fehlgeschlagene Musterprüfung mit einem Tastendruck zu umgehen.
 
 Alle inhaltlichen Entscheidungen und die Textdatei **vor** Paste vorbereiten. Bei ausdrücklichem Absendeauftrag:

@@ -106,6 +106,10 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
   `read --compact --wait 3` starten. [Puffer sparsam lesen](../../ins-macos-terminal-einfuegen/references/puffer-lesen.md)
   erklärt Auszüge, Vollansicht und Grenzen. Bei fehlendem Kontext einmal `--force-view`.
   Kein vollständiger Bildschirm und keine vollständige Skill-Lektüre pro Nachricht.
+- Nach Codex-Kontextkompaktierung einmal `resume --run <Dialogordner>` nutzen. Es
+  liest Arbeitsstand, offene Zustellungen, Windows-Git-Kurzstand und eine frische
+  Pane-Ansicht in einem Aufruf. Ein Teilfehler ersetzt den betroffenen Beleg nicht;
+  STOP oder geänderte Zielidentität bleiben harte Fehler.
 - Review an Dateimeilensteinen: zuerst Status und betroffene Pfade, dann deren echten
   staged/unstaged Diff sowie neue Dateien. Gegen den zuletzt geprüften Inhalt vergleichen;
   Commitwechsel beachten. Keine Repo-Gesamtscans pro Terminalabruf. Claudes Kurzbericht
