@@ -1372,6 +1372,8 @@ final class PBSettingsDialog: NSWindowController, NSWindowDelegate {
                     self.settings.googleOAuthRefreshToken = info.refreshToken
                     self.settings.googleAccountEmail = info.email
                     try? PromptBoardStore.shared.updateSettings(self.settings)
+                    // Sofort abgleichen statt bis zu 30 s auf den Timer zu warten.
+                    NotificationCenter.default.post(name: GoogleDriveBackupService.didConnectNotification, object: nil)
                     self.updateStatus()
                 case .failure(let err):
                     NSAlert.warn("Google-Login fehlgeschlagen: \(err.localizedDescription)")

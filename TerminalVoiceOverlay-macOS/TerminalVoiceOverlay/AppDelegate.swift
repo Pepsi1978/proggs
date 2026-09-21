@@ -1031,6 +1031,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Fire-and-forget, Fehler nur in den Debug-Log.
     private func mergeSlotsFromCloudOnLaunch() {
         syncSlotsWithCloud()
+        NotificationCenter.default.addObserver(
+            forName: GoogleDriveBackupService.didConnectNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            tvoDebug("[App] drive connected: sofortiger Abgleich von Slots und Historie")
+            self.driveDisconnectedNotified = false
+            self.syncSlotsWithCloud()
+            self.syncHistoryWithCloud()
+        }
         // Laufender Abgleich: Aenderungen vom anderen Geraet kommen sonst erst
         // beim naechsten App-Start an.
         slotSyncTimer?.invalidate()
@@ -1050,6 +1059,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func syncSlotsWithCloud() {
         guard GoogleDriveBackupService.shared.isAuthenticated() else {
             tvoDebug("[App] slot sync skipped: drive not connected")
+            // Sichtbar warnen: sonst laeuft der Abgleich still ins Leere und
+            // Windows-Prompts kommen nie an (Frank-Vorfall 21.09.2026).
+            notifyDriveDisconnectedOnce()
             return
         }
         if slotSyncRunning { slotSyncPending = true; return }

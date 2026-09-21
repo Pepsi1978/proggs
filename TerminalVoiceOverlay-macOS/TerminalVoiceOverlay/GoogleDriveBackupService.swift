@@ -12,6 +12,10 @@ final class GoogleDriveBackupService {
 
     static let shared = GoogleDriveBackupService()
 
+    /// Wird nach erfolgreichem Verbinden gepostet — der AppDelegate zieht dann
+    /// Slots und Historie sofort aus der Cloud.
+    static let didConnectNotification = Notification.Name("tvo.GoogleDriveBackupService.didConnect")
+
     // Eigene Session mit harten Grenzen (Windows-Pendant DriveHttp, 03.09.2026):
     // URLSession.shared wartet bis 60 s pro Paket und 7 Tage insgesamt — ein
     // haengender Drive-Aufruf blockierte so Backup und Slot-Sync still.

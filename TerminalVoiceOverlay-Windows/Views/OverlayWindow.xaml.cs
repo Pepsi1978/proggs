@@ -4291,6 +4291,7 @@ namespace TerminalVoiceOverlay.Views
                 if (msg.Contains("invalid_grant", StringComparison.OrdinalIgnoreCase)) return true;
                 if (msg.Contains("Token has been expired", StringComparison.OrdinalIgnoreCase)) return true;
                 if (msg.Contains("revoked", StringComparison.OrdinalIgnoreCase)) return true;
+                if (msg.Contains("nicht verbunden", StringComparison.OrdinalIgnoreCase)) return true;
             }
             return false;
         }
@@ -4433,11 +4434,24 @@ namespace TerminalVoiceOverlay.Views
                 {
                     await sync.UploadSlotsAsync(_slotService.SlotsFilePath);
                     _promptPanel?.MarkSyncedNow();
+                    LogHistorySync("OK: prompt-slots.json uploaded to Drive.");
                 }
+                _driveSyncWarningShown = false;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Slot cloud sync failed: {ex.Message}");
+                // Frueher nur Console.WriteLine — in der WPF-App unsichtbar. Folge
+                // (Frank-Vorfall 21.09.2026): Windows lud seit dem 13.09. keine
+                // Slots mehr hoch, der Mac bekam die Prompts 1-10 nie zu sehen.
+                LogHistorySync($"FAIL slots: {ex.GetType().Name}: {ex.Message}");
+                if (!_driveSyncWarningShown && IsDriveAuthFailure(ex))
+                {
+                    _driveSyncWarningShown = true;
+                    App.ShowTrayBalloon(
+                        "Drive-Sync nicht moeglich",
+                        "Google Drive ist nicht verbunden oder der Token ist abgelaufen. Prompt-Slots und Historie werden NICHT mit dem Mac synchronisiert. Bitte im PromptBoard (Stern-Button -> Einstellungen) neu verbinden.",
+                        System.Windows.Forms.ToolTipIcon.Warning);
+                }
             }
             finally
             {
