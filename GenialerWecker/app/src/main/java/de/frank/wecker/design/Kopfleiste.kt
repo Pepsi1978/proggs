@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +47,7 @@ fun DesignKopfleiste(
     titel: String,
     themeWahl: String,
     aufThemeTipp: (() -> Unit)? = null,
+    aufDesignTipp: (() -> Unit)? = null,
     aufEinstellungen: (() -> Unit)? = null,
     voran: (@Composable () -> Unit)? = null,
 ) {
@@ -54,11 +56,11 @@ fun DesignKopfleiste(
         // des Standarddesigns und bleibt unangetastet.
         Design.SCHLICHT -> IdeenKopfleiste(
             titel = titel, themeWahl = themeWahl, aufThemeTipp = aufThemeTipp,
-            aufEinstellungen = aufEinstellungen, voran = voran,
+            aufEinstellungen = aufEinstellungen, voran = voran, aufDesignTipp = aufDesignTipp,
         )
-        Design.ORBIT -> OrbitLeiste(titel, themeWahl, aufThemeTipp, aufEinstellungen, voran)
-        Design.MORGENRUHE -> RuhigeLeiste(titel, themeWahl, aufThemeTipp, aufEinstellungen, voran)
-        Design.TRAUMRAUM -> BogenLeiste(titel, themeWahl, aufThemeTipp, aufEinstellungen, voran)
+        Design.ORBIT -> OrbitLeiste(titel, themeWahl, aufThemeTipp, aufEinstellungen, voran, aufDesignTipp)
+        Design.MORGENRUHE -> RuhigeLeiste(titel, themeWahl, aufThemeTipp, aufEinstellungen, voran, aufDesignTipp)
+        Design.TRAUMRAUM -> BogenLeiste(titel, themeWahl, aufThemeTipp, aufEinstellungen, voran, aufDesignTipp)
     }
 }
 
@@ -67,6 +69,7 @@ fun DesignKopfleiste(
 private fun OrbitLeiste(
     titel: String, themeWahl: String, aufThemeTipp: (() -> Unit)?,
     aufEinstellungen: (() -> Unit)?, voran: (@Composable () -> Unit)?,
+    aufDesignTipp: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
     Column(Modifier.fillMaxWidth().background(gold.flaeche).statusBarsPadding()) {
@@ -90,7 +93,7 @@ private fun OrbitLeiste(
             // Dieselben Vektorsymbole wie in den anderen drei Designs. Vorher standen hier die
             // Schriftzeichen ☀ ☾ ⚙ — die fallen je nach Gerät als farbiges Emoji aus der
             // monochromen Instrumentenoptik heraus und sind nicht sicher verfügbar.
-            LeistenKnoepfe(themeWahl, aufThemeTipp, aufEinstellungen)
+            LeistenKnoepfe(themeWahl, aufThemeTipp, aufEinstellungen, aufDesignTipp)
         }
         HorizontalDivider(color = gold.rahmen)
     }
@@ -104,6 +107,7 @@ private fun OrbitLeiste(
 private fun RuhigeLeiste(
     titel: String, themeWahl: String, aufThemeTipp: (() -> Unit)?,
     aufEinstellungen: (() -> Unit)?, voran: (@Composable () -> Unit)?,
+    aufDesignTipp: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
     Column(Modifier.fillMaxWidth().background(gold.hintergrund).statusBarsPadding()) {
@@ -121,7 +125,7 @@ private fun RuhigeLeiste(
                 farbe = gold.textPrimaer,
                 modifier = Modifier.weight(1f),
             )
-            LeistenKnoepfe(themeWahl, aufThemeTipp, aufEinstellungen)
+            LeistenKnoepfe(themeWahl, aufThemeTipp, aufEinstellungen, aufDesignTipp)
         }
         HorizontalDivider(color = gold.rahmen)
     }
@@ -135,6 +139,7 @@ private fun RuhigeLeiste(
 private fun BogenLeiste(
     titel: String, themeWahl: String, aufThemeTipp: (() -> Unit)?,
     aufEinstellungen: (() -> Unit)?, voran: (@Composable () -> Unit)?,
+    aufDesignTipp: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
     // Derselbe Radius wie Karten und Kuppel — vorher trafen hier 28 dp auf 46 dp der Kuppel.
@@ -158,7 +163,7 @@ private fun BogenLeiste(
                 farbe = gold.textPrimaer,
                 modifier = Modifier.weight(1f),
             )
-            LeistenKnoepfe(themeWahl, aufThemeTipp, aufEinstellungen)
+            LeistenKnoepfe(themeWahl, aufThemeTipp, aufEinstellungen, aufDesignTipp)
         }
     }
 }
@@ -167,8 +172,16 @@ private fun BogenLeiste(
 @Composable
 private fun LeistenKnoepfe(
     themeWahl: String, aufThemeTipp: (() -> Unit)?, aufEinstellungen: (() -> Unit)?,
+    aufDesignTipp: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
+    // Design-Schalter: reihum Schlicht → Morgenruhe → Traumraum → Orbit, im Stil des jeweiligen Designs.
+    if (aufDesignTipp != null) {
+        KopfKnopf(beschreibung = "Design wechseln", aufTipp = aufDesignTipp) {
+            Icon(Icons.Default.Palette, contentDescription = null, tint = gold.primaer, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(8.dp))
+    }
     if (aufThemeTipp != null) {
         KopfKnopf(
             beschreibung = when (themeWahl) {

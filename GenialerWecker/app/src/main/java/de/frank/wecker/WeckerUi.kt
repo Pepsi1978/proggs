@@ -28,6 +28,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.layer.drawLayer
+import kotlinx.coroutines.launch
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -146,17 +149,41 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
         else if (page == "settings" && settingsFrom == "edit" && draft != null) page = "edit"
         else { if (page == "edit") vm.closeEditor(); page = "alarms" }
     }
+    // Sanfter Wechsel von Modus und Design: ein Standbild der bisherigen Ansicht liegt kurz obenauf
+    // und blendet aus, während darunter schon alles im neuen Aussehen steht.
+    val ansicht = androidx.compose.ui.graphics.rememberGraphicsLayer()
+    var standbild by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    val standbildDeckung = remember { androidx.compose.animation.core.Animatable(0f) }
+    val bildScope = rememberCoroutineScope()
+    val mitUeberblendung: (() -> Unit) -> Unit = { aenderung ->
+        bildScope.launch {
+            standbild = runCatching { ansicht.toImageBitmap() }.getOrNull()
+            standbildDeckung.snapTo(1f)
+            aenderung()
+            standbildDeckung.animateTo(0f, androidx.compose.animation.core.tween(420))
+            standbild = null
+        }
+    }
     WeckerTheme(theme, design) {
         val gold = LocalGold.current
         BackHandler(page != "alarms") { back() }
-        Box(Modifier.fillMaxSize().background(gold.hintergrund)) {
+        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize()
+            .drawWithContent { ansicht.record { this@drawWithContent.drawContent() }; drawLayer(ansicht) }
+            .background(gold.hintergrund)) {
             LocalGestalt.current.Hintergrund(Modifier.fillMaxSize())
             Column(Modifier.fillMaxSize().imePadding()) {
                 DesignKopfleiste(
                     titel = when (page) { "edit" -> if (vm.isNewDraft) "Neuer Wecker" else "Wecker bearbeiten"; "settings" -> "Einstellungen"; else -> "Genialer Wecker" },
                     themeWahl = themeRoh,
                     // Reihum: hell → dunkel → automatisch → hell.
-                    aufThemeTipp = { vm.settings.theme = when (themeRoh) { "light" -> "dark"; "dark" -> "system"; else -> "light" } },
+                    aufThemeTipp = { mitUeberblendung { vm.settings.theme = when (themeRoh) { "light" -> "dark"; "dark" -> "system"; else -> "light" } } },
+                    // Schaltet reihum durch die vier Designs.
+                    aufDesignTipp = { mitUeberblendung {
+                        val alle = Design.entries
+                        vm.settings.design = alle[(alle.indexOf(design) + 1) % alle.size].id
+                        vm.settingsRevision.value++
+                    } },
                     aufEinstellungen = if (page == "settings") null else ({ vm.stopPreview(); settingsFrom = page; page = "settings" }),
                     voran = if (page != "alarms") ({ StillerKnopf("‹", { back() }, Modifier.semantics { contentDescription = "Zurück zur Weckerliste" }); Spacer(Modifier.width(8.dp)) }) else null,
                 )
@@ -237,6 +264,11 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                     }
                 }
             }
+        }
+        standbild?.let { bild ->
+            Image(bild, null, Modifier.fillMaxSize().graphicsLayer { alpha = standbildDeckung.value },
+                contentScale = androidx.compose.ui.layout.ContentScale.FillBounds)
+        }
         }
         if (leaveEditor) DesignTextDialog(
             titel = "Änderungen speichern?",

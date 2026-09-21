@@ -33,6 +33,9 @@ fun WeckerTheme(themeWahl: String, design: Design, ausrichtung: String? = null, 
         GenialeIdeenTheme(
             themeWahl = themeWahl,
             paletteVorgabe = paletteFuer(design, dunkel),
+            // Kein Farbverlauf über viele Bilder (der ließ die ganze App ruckeln); die App blendet
+            // stattdessen ein Standbild der alten Ansicht weich aus.
+            weicherWechsel = false,
             // Schlicht behält die Serifenschrift; Morgenruhe und Traumraum setzen die ruhige
             // Grotesk der Entwürfe, Orbit die feste Schrift seiner Instrumententafel.
             titelSchrift = when (design) {

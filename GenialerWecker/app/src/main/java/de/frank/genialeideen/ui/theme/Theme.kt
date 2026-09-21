@@ -133,13 +133,15 @@ fun GenialeIdeenTheme(
     paletteVorgabe: GoldPalette? = null,
     /** Abweichende Schrift für Titel und große Zahlen; ohne Vorgabe die bisherige Serifenschrift. */
     titelSchrift: FontFamily? = null,
+    /** false: Farben springen sofort — die Überblendung übernimmt dann der Aufrufer als Standbild. */
+    weicherWechsel: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val dunkel = themeWahl == "dark"
     val ziel = paletteVorgabe ?: if (dunkel) DunkleGoldPalette else HelleGoldPalette
     val context = LocalContext.current
     val reduziert = Motion.bewegungReduziert(context)
-    val dauer = if (reduziert) 0 else Motion.THEME_WECHSEL_MS
+    val dauer = if (reduziert || !weicherWechsel) 0 else Motion.THEME_WECHSEL_MS
 
     @Composable
     fun weich(farbe: Color, name: String) =

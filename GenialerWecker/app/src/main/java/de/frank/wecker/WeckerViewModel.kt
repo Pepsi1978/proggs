@@ -248,6 +248,19 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+    /**
+     * Stiller Abgleich beim Aufklappen: ohne Fortschrittszeile und ohne Meldung oben — beides schob
+     * bisher die ganze Seite nach unten, und der Abschnitt sprang beim Öffnen.
+     */
+    fun syncIdeasStill() {
+        viewModelScope.launch {
+            runCatching { IdeasBridge(app).refresh() }.onSuccess {
+                ideas.value = it
+                ideasAt.value = store.prefs.getLong("ideasAt", 0)
+                PreparationWorker.enqueue(app)
+            }
+        }
+    }
     fun syncIdeas() = runAction("Offene Ideen lesen …") {
         ideas.value = IdeasBridge(app).refresh()
         ideasAt.value = store.prefs.getLong("ideasAt", 0)

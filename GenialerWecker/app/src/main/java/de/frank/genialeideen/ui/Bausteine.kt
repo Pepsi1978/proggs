@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -100,6 +101,7 @@ fun IdeenKopfleiste(
     /** Null lässt das Zahnrad weg — in den Einstellungen selbst hat es nichts zu suchen. */
     aufEinstellungen: (() -> Unit)? = null,
     voran: (@Composable () -> Unit)? = null,
+    aufDesignTipp: (() -> Unit)? = null,
 ) {
     val gold = LocalGold.current
     Row(
@@ -137,16 +139,23 @@ fun IdeenKopfleiste(
             }
             Spacer(Modifier.width(8.dp))
         }
+        if (aufDesignTipp != null) {
+            KopfKnopf(beschreibung = "Design wechseln", aufTipp = aufDesignTipp) {
+                Icon(Icons.Default.Palette, contentDescription = null, tint = gold.primaer, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+        }
         if (aufThemeTipp != null) {
             KopfKnopf(
-                beschreibung = if (themeWahl == "dark") {
-                    "Dunkler Modus, tippen für hell"
-                } else {
-                    "Heller Modus, tippen für dunkel"
+                beschreibung = when (themeWahl) {
+                    "dark" -> "Dunkler Modus, tippen für automatisch"
+                    "system" -> "Automatisch wie das Handy, tippen für hell"
+                    else -> "Heller Modus, tippen für dunkel"
                 },
                 aufTipp = aufThemeTipp,
             ) {
-                Icon(
+                if (themeWahl == "system") de.frank.wecker.design.ModusAutomatikSymbol(gold.primaer)
+                else Icon(
                     imageVector = if (themeWahl == "dark") Icons.Default.DarkMode else Icons.Default.LightMode,
                     contentDescription = null,
                     tint = gold.primaer,

@@ -259,7 +259,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         Section("Geniale Ideen · Offene Ideen", collapsible = true,
             summary = "${ideas.size} offene ${if (ideas.size == 1) "Idee" else "Ideen"} · ${if (ideasAt > 0) "Stand ${formatAt(ideasAt)}" else "noch nicht abgeglichen"}") {
             // Opening the section syncs, like opening the former ideas page did.
-            LaunchedEffect(Unit) { vm.syncIdeas() }
+            LaunchedEffect(Unit) { vm.syncIdeasStill() }
             Text("Nur offene Ideen, in derselben Reihenfolge. Die Originale bleiben in Geniale Ideen. Dein Wecker erhält eine lokale Lesekopie. Beide Apps müssen mit demselben Schlüssel signiert sein.", style = MaterialTheme.typography.bodySmall)
             GoldKnopf("Jetzt abgleichen", vm::syncIdeas)
             if (ideasAt > 0) Text("Stand: ${formatAt(ideasAt)}", style = MaterialTheme.typography.bodySmall)
