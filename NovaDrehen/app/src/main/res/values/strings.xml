@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dienst_beschreibung">Hält den Nova-Startbildschirm im zugeklappten Zustand im Hochformat. Apps drehen sich weiter frei. Liest keine Inhalte, prüft nur, welche App vorne ist.</string>
+</resources>
