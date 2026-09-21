@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Einzelaufrufe für eine bestätigte tmux-Sitzung; keine automatische Bereitschaftserkennung."""
 import argparse
+import difflib
 import fcntl
 import hashlib
 import json
@@ -16,11 +17,11 @@ import time
 import uuid
 
 FIELDS = ('socket', 'server_pid', 'session', 'pane', 'pane_pid', 'cwd',
-          'dead', 'in_mode', 'input_off', 'bracket_paste', 'command', 'cursor_x', 'cursor_y')
+          'dead', 'in_mode', 'input_off', 'bracket_paste', 'command', 'cursor_x', 'cursor_y', 'title')
 FORMAT = '\t'.join('#{' + key + '}' for key in (
     'socket_path', 'pid', 'session_id', 'pane_id', 'pane_pid', 'pane_current_path',
     'pane_dead', 'pane_in_mode', 'pane_input_off', 'bracket_paste_flag',
-    'pane_current_command', 'cursor_x', 'cursor_y'))
+    'pane_current_command', 'cursor_x', 'cursor_y', 'pane_title'))
 
 
 class BridgeError(RuntimeError):
@@ -115,7 +116,7 @@ def input_frame(screen):
 
 
 def normalize_clock(screen):
-    # Nur Laufzeit in der bekannten Launcher-Fußzeile unter dem letzten Eingaberahmen.
+    # Nur Laufzeit, Uhrzeit und Restzeiten in erkannten Launcher-Fußzeilen unter dem Rahmen.
     # Antworttext, Preis, Modell, Pfad, Limits und unbekannte Footer bleiben unverändert.
     try:
         rows, _, bottom, _ = input_frame(screen)
@@ -124,7 +125,35 @@ def normalize_clock(screen):
     pattern = r'^(  📁 .+   💰 \$[0-9.]+   ⏳ )([0-9]+[hms])+(   🏷️ v[0-9.]+) *$'
     for i in range(bottom + 1, len(rows)):
         rows[i] = re.sub(pattern, r'\1<Laufzeit>\3', rows[i])
+        ctx = re.fullmatch(r'(  🧠 ctx [^┃]+┃ 🤖 [^┃]+┃ ⚡ [^┃]+┃ ⏱ 5h .+┃ 📅 7d .+┃ 🕐 )([0-2]\d:[0-5]\d)( *(?:/rc)? *)', rows[i])
+        if ctx:
+            row = ctx[1] + '<Uhrzeit>' + ctx[3]
+            for label in ('⏱ 5h', '📅 7d'):
+                row = re.sub(r'(' + re.escape(label) + r' [^()]*\()(?:\d+[DdHhms])+(\))', r'\1<Restzeit>\2', row)
+            rows[i] = row
     return '\n'.join(rows)
+
+
+def compact_edits(previous, rows):
+    """Ordered sequence alignment; repeated lines keep their positions and multiplicity."""
+    hashes = [hashlib.sha256(row.encode()).hexdigest() for row in rows]
+    edits = []
+    for tag, a, b, c, d in difflib.SequenceMatcher(None, previous, hashes, autojunk=False).get_opcodes():
+        if tag != 'equal':
+            edits.append({'old_rows': [a, b], 'new_rows': [c, d], 'text': '\n'.join(rows[c:d])})
+    return hashes, edits
+
+
+def read_status(info, screen):
+    try:
+        field = input_frame(screen)[3]
+    except BridgeError:
+        return None
+    # These two animation frames were observed live in the same busy Claude session.
+    # Normalize only the wake signal; raw metadata and write freshness stay untouched.
+    title = re.sub(r'^[◐◑] ', '<busy> ', info['title'])
+    data = [title, info['in_mode'], info['input_off'], field]
+    return hashlib.sha256(json.dumps(data).encode()).hexdigest()
 
 
 def surroundings(screen):
@@ -212,6 +241,8 @@ def main():
     parser.add_argument('--compact', action='store_true', help='read: positionsgebundener Änderungsauszug, keine globale Zeilendeduplizierung')
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--wait', type=float, default=0, help='read: maximal 10 Sekunden auf Änderung warten')
+    parser.add_argument('--wait-mode', choices=['activity', 'status'], default='activity',
+                        help='status: frühes Wecken durch Titel/Eingabefeld/Modus, sonst spätestens --wait; kein Fertigbeweis')
     parser.add_argument('--cancel-file', type=Path)
     parser.add_argument('--sha256', help='submit: Hash des vollständig autorisierten Textes')
     parser.add_argument('--literal-line', action='store_true',
@@ -295,7 +326,9 @@ def main():
                 digest = hashlib.sha256(normalize_clock(text).encode()).hexdigest()
                 changed = digest != state.get('last_view')
                 delta = {k: v for k, v in info.items() if state.get('last_state', {}).get(k) != v}
-                if changed or delta or args.force_view or time.monotonic() - started >= args.wait:
+                status = read_status(info, screen)
+                wake = (changed or delta) if args.wait_mode == 'activity' else ('last_read_status' not in state or status != state['last_read_status'])
+                if wake or args.force_view or time.monotonic() - started >= args.wait:
                     break
                 time.sleep(min(0.25, max(0, args.wait - (time.monotonic() - started))))
                 cancelled(args)
@@ -307,28 +340,25 @@ def main():
                       'observed': observed}
             if args.wait:
                 result['waited_ms'] = round((time.monotonic() - started) * 1000)
+                if args.wait_mode == 'status':
+                    result['wake_reason'] = 'status_changed' if wake else 'timeout'
             if args.verbose:
                 result['state'] = info
             elif delta:
                 result['state_changes'] = delta
             if changed or args.force_view:
-                hashes = [hashlib.sha256(row.encode()).hexdigest() for row in text.splitlines()]
                 previous = state.get('last_rows', [])
+                hashes, edits = compact_edits(previous, text.splitlines())
                 full_text = text
                 if args.compact and not args.force_view and previous and state.get('last_lines') == args.lines:
-                    prefix = 0
-                    while prefix < min(len(previous), len(hashes)) and previous[prefix] == hashes[prefix]:
-                        prefix += 1
-                    suffix = 0
-                    while suffix < min(len(previous), len(hashes)) - prefix and previous[-suffix - 1] == hashes[-suffix - 1]:
-                        suffix += 1
-                    end = len(hashes) - suffix
-                    text = '\n'.join(full_text.splitlines()[prefix:end])
-                    result['view'] = 'replacement_excerpt'
-                    result['base_view'] = state.get('last_view')
-                    result['replace_rows'] = [prefix, len(previous) - suffix]
-                    result['unchanged_prefix_rows'] = prefix
-                    result['unchanged_suffix_rows'] = suffix
+                    payload = json.dumps(edits, ensure_ascii=False)
+                    if len(payload) < min(len(full_text), args.max_chars):
+                        result['view'] = 'replacement_excerpts'
+                        result['base_view'] = state.get('last_view')
+                        result['edits'] = edits
+                        text = ''
+                    else:
+                        result['view'] = 'snapshot'
                 else:
                     result['view'] = 'snapshot'
                 result['view_hash'] = digest
@@ -336,20 +366,23 @@ def main():
                     half = args.max_chars // 2
                     result.update(text=text[:half] + '\n[… Mittelteil ausgelassen …]\n' + text[-half:],
                                   omitted_chars=len(text) - 2 * half)
-                else:
+                elif 'edits' not in result:
                     result['text'] = text
                 # Never use an unseen/truncated range as the next compact baseline.
                 state['last_rows'] = hashes if len(text) <= args.max_chars else []
                 state['last_lines'] = args.lines
             state['last_view'] = digest
             state['last_state'] = info
+            state['last_read_status'] = status
             save(args.state, state)
             emit(result)
             return
+        if info['in_mode'] != '0':
+            raise BridgeError('E_INPUT', 'Verlauf/Kopiermodus aktiv; Nutzer nach unten scrollen oder q drücken lassen, nicht automatisch verlassen')
+        if info['input_off'] != '0':
+            raise BridgeError('E_INPUT', 'Pane nimmt keine normale Eingabe an')
         if args.observed != observed:
             raise BridgeError('E_STALE', 'Momentaufnahme geändert/veraltet; erneut lesen, nicht blind zustellen')
-        if info['in_mode'] != '0' or info['input_off'] != '0':
-            raise BridgeError('E_INPUT', 'Pane nimmt keine normale Eingabe an')
         if not args.id or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', args.id):
             parser.error('--id muss eine kurze eindeutige Auftragskennung sein')
         def recheck():
@@ -414,7 +447,14 @@ def main():
                     if identity(latest, bound['agent_pid']) != bound:
                         raise BridgeError('E_TARGET', 'Identität nach Paste geändert; kein Enter')
                     after, after_token = snapshot(tmux, latest)
-                    draft = input_frame(after)[3]
+                    try:
+                        draft = input_frame(after)[3]
+                    except BridgeError as error:
+                        if error.code != 'E_INPUT':
+                            raise
+                        emit({'id': args.id, 'transport': 'pasted', 'submitted': False,
+                              'reason': 'Eingaberahmen nach Paste nicht vollständig sichtbar; gezielt lesen, kein Enter'})
+                        return
                     own = own_draft(draft, text) or re.fullmatch(r'\[Pasted text #\d+\]', draft)
                     if own and same_surroundings(before, after):
                         break

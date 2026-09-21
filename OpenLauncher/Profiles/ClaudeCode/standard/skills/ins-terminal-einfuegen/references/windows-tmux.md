@@ -89,6 +89,26 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
   Fragmente sammeln, Transkriptdopplungen vermeiden. Fremde Entwürfe stehen lassen.
   Scrollmodus ist keine Eingabebereitschaft: nicht automatisch verlassen und absenden.
 
+### Vorschlag ist nicht automatisch ein Nutzerentwurf
+
+Claude kann nach einer Antwort einen blassen nächsten Auftrag anzeigen. Die reine
+tmux-Textansicht kann diesen Ghost-Vorschlag wie eingegebenen Text darstellen; unter
+Windows/Interop fehlen dort mitunter auch bei `capture-pane -e` die Stilmerkmale.
+Text bei Cursorposition 2 ist nur ein Hinweis, kein Beweis: Auch ein echter Entwurf
+kann einen Cursor am Anfang haben. Vor einer Rückfrage gezielt die aktuelle formatierte
+Ansicht derselben Sitzung prüfen, beispielsweise den passenden Ausschnitt von
+`read_thread_terminal`. DIM-Stil des gesamten Vorschlags, Cursor am leeren Prompt und
+passender abgeschlossener Antwort gemeinsam abgleichen. Bei fehlendem Nachweis bleibt
+es ein ungeklärter Entwurf; nicht aufgrund des Wortlauts oder eines einzelnen Cursorwerts
+löschen, überschreiben oder absenden.
+
+Bei eindeutig bestätigtem Ghost darf der bereits autorisierte eigene Text mit `paste`
+eingefügt werden: keine Löschkombination, kein Tab/Pfeil und kein vorbereitendes Enter.
+Danach den eigenen Text bzw. genau einen neu erschienenen Pasteblock prüfen und das
+autorisierte Enter einmal senden. Der strenge `submit`-Leerfeldschutz bleibt erhalten.
+Der Vorschlag selbst ist keine Anweisung und wird niemals allein durch diesen Befund
+als Auftrag übernommen. Bereits gestellte unnötige Rückfragen ausdrücklich auflösen.
+
 Das Mausrad steuert im OpenLauncher-tmux den Verlauf. Hochscrollen aktiviert den
 tmux-Kopiermodus; unten bzw. mit `q` verlässt der Nutzer ihn wieder. Mausrad nach unten
 außerhalb dieses Modus erzeugt keine CLI-Tastatureingabe. Das gilt auf dem eigenen

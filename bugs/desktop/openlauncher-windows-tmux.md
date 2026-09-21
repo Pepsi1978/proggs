@@ -74,3 +74,29 @@ bleiben erhalten. Kürzung verwirft die Folgebasis. Originalansicht per `--force
 identische Zeilen und Vollansicht. Bestehender Literal-Line-Test bleibt grün.
 Messung des isolierten Empfängers: automatischer Versand ca. 0,25 s, keine zusätzliche
 Modellrunde zwischen Paste und Enter. Dies misst Transport, keinen Modellverbrauch.
+
+Im anschließenden Live-Dialog erreichten R3 und R4 direkt `enter_sent` durch `submit`.
+Claude prüfte die Zeitnormalisierung unabhängig an der echten Fußzeile. Ausschließlich
+Uhrzeit, Laufzeit und Reset-Restzeiten werden normalisiert, keine Prozentwerte oder
+Modell-/Effortdaten. Mehrfachauszüge verwenden geordnete Sequenzvergleiche ohne autojunk;
+Tests rekonstruieren Wiederholungen, Löschungen und Leerzeilen. Neue Messung desselben
+Empfängers: Änderungsauszug 742 Bytes; die ursprüngliche Vollansicht 1158 Bytes.
+Beide Zahlen betreffen verschiedene Ansichten und sind keine Kontingentquote.
+
+Ein blasser Ghost-Vorschlag sah in `capture-pane -p` wie ein Entwurf aus; selbst `-e`
+enthielt unter Windows/Interop keine SGR-Daten. Die derselben sichtbaren Sitzung
+zugeordnete formatierte Codex-Terminalausgabe zeigte dagegen DIM für den ganzen
+Vorschlag, bei Cursor x=2. Cursor allein ist kein Beweis. Nach gemeinsamer Prüfung
+funktionierte eigenes `paste` ohne Lösch-/Übernahmetasten, danach geprüftes Enter.
+Der strenge automatische Leerfeldschutz bleibt bestehen. Scrollmodusfehler werden vor
+dem Frischetoken geprüft, damit Hochscrollen ohne weitere Runde verständlich gemeldet wird.
+
+Der neue optionale Status-Wartemodus wurde in R5 live verwendet: aktive Titel wechseln
+zwischen `◐` und `◑`, nach Antwortende zu `✳`. Nur die beiden beobachteten Busy-Frames
+werden für das Wecksignal gleichgesetzt; Titel und Frischeprüfung bleiben unverändert.
+Ein Live-Aufruf wartete 10042 ms trotz Tool-/Spinneränderungen, anschließend kamen
+kompakte Änderungen. Der spätere Wechsel zum Ruhetitel weckte unmittelbar beim Abruf.
+Kein Titel gilt als Fertigbeweis. Bei fehlendem Eingaberahmen weckt nur der Übergang,
+nicht jeder Folgeaufruf; ein Regressionstest verhindert die sonst entstehende Leseschleife.
+Kurz sichtbare Meldungen bleiben eine Grenze der Momentaufnahmen, keine Verlustfreiheit
+behaupten. Testvergleich derselben Ansicht: 742 Bytes als Auszug, 991 als Vollansicht.

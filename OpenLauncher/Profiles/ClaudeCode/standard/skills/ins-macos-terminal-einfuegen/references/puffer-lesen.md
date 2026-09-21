@@ -5,10 +5,14 @@ Nur für einen beauftragten Dialog oder Prüflauf laden. `tmux_bridge.py read` l
 ## Kleine Auszüge vor der Modellausgabe
 
 `read --compact` liefert nach der ersten vollständigen Ansicht einen **positionsgebundenen
-Ersetzungsauszug**: `replace_rows` ist das halboffene, nullbasierte Zeilenintervall der
-vorigen Ansicht; `text` ersetzt dieses Intervall. `base_view` und `view_hash` ordnen die
-Ansichten zu. Unveränderte Präfix-/Suffixzeilen werden nur gezählt. Wiederholte Zeilen
+Ersetzungsauszug**: `edits` enthält geordnete Ersetzungen. `old_rows` ist das halboffene,
+nullbasierte Zeilenintervall der vorigen Ansicht, `new_rows` das der neuen Ansicht;
+`text` ersetzt dieses Intervall. Alle alten Indizes beziehen sich auf dieselbe Basis
+(beim Rekonstruieren von hinten anwenden). Ein leeres `text` mit nichtleerem `new_rows`
+steht für eine Leerzeile, ein leeres neues Intervall für Löschung. `base_view` und
+`view_hash` ordnen die Ansichten zu. Auch gescrollte gleiche Blöcke werden erkannt. Wiederholte Zeilen
 werden niemals als globale Menge entfernt; auch Löschungen erscheinen als Ersetzung.
+Ist die strukturierte Ausgabe größer als die Vollansicht, wird die Vollansicht geliefert.
 Es handelt sich weder um ein vollständiges Transkript noch um eine neue Antwort allein.
 Bei Reflow kann der Auszug groß sein. Unbekannte Fehler und Rückfragen werden nicht
 herausgefiltert. Footer bleiben sichtbar, wenn sie sich ändern.
@@ -39,9 +43,27 @@ python3 "$BRIDGE" read --run "$BRIDGE_RUN" \
 
 `--wait` akzeptiert 0–10 Sekunden lokale Wartezeit. Bei Änderung oder Zustandswechsel kehrt der Aufruf zurück; andernfalls liefert er nach Ablauf `unchanged` und `waited_ms`. Lokal wird ungefähr alle 250 ms geprüft, einschließlich Identität. Es gibt keinen Hintergrundprozess und keine Fertigerkennung. Lokale Unterprozesse brauchen zusätzliche Laufzeit und besitzen eigene Timeouts; die Warteangabe ist keine Garantie einer millisekundengenauen Gesamtdauer.
 
+Nach live bestätigtem Titelverhalten der konkreten Sitzung kann während einer laufenden
+Arbeit `--wait-mode status --wait 10 --compact` Modellrunden bündeln. Früh geweckt wird
+bei geändertem Pane-Titel, Eingabefeld oder Scroll-/Eingabemodus sowie fehlendem Rahmen.
+Die zwei live beobachteten Titelanimationen `◐`/`◑` gelten dabei als derselbe Zustand;
+Originaltitel und Schreibtoken bleiben unverändert. Sonst kommt die aktuelle Ansicht
+spätestens nach der begrenzten Wartezeit plus Werkzeuglaufzeit. `wake_reason` beschreibt
+nur den Auslöser, niemals Annahme, Bereitschaft oder Fertigstellung. Bei neuem/unklarem
+Titelverhalten den Standardmodus `activity` verwenden. Auch der Statusmodus ist eine
+Momentaufnahme, kein verlustloses Log: kurz eingeblendete und wieder verschwundene
+Meldungen sind nicht garantiert enthalten. Relevante Lücken gezielt nachlesen und
+Codeergebnisse unabhängig prüfen. Keine Fehlerzeilen pauschal filtern.
+
+Neue Helferänderungen nach isolierten Tests bereits im laufenden autorisierten Dialog
+verwenden und dort belegen, bevor eine Wirkung für künftige Sitzungen behauptet wird.
+Geprüfte Pfade und Aufrufvorlagen im flüchtigen Sitzungskontext wiederverwenden;
+keine wiederholte Tool-/Skill-Erkundung pro Nachricht. Kürzere Aufrufe sparen Kontext,
+ersetzen aber weder frische Beobachtung noch Stopppunkte.
+
 Für den äußeren Werkzeugaufruf kurze Yield-Zeit verwenden (beispielsweise 1 Sekunde), sodass neue Nutzersteuerung vor dem Abschluss verarbeitet werden kann. Während ein `read --wait` läuft, keine zweite Zustellung starten. Bei Stopp `STOP` im selben Dialogordner erzeugen; zusätzlich kann die aktuelle private Cancel-Datei gesetzt oder der eindeutig zugehörige eigene Leseprozess abgebrochen werden. `STOP` bleibt auch für nachfolgende Aufrufe wirksam, bis der Nutzer ausdrücklich fortsetzen lässt. Abbruch wird zwischen lokalen Prüfschritten erkannt, nicht während eines blockierenden Betriebssystemaufrufs. Pro Aufruf neuen Cancel-Dateinamen verwenden; keinen alten Abbruchmarker löschen und dann unbemerkt weitermachen.
 
-Zunächst 2–3 Sekunden, bei wiederholt unverändertem Stand 5–10 Sekunden wählen. Nach relevanter Aktivität wieder kürzer reagieren. Spinner/Zähler können weiterhin Änderungen auslösen: keine pauschalen Filter, die Fehler/Rückfragen verschlucken. Nur die exakt erkannte numerische Launcher-Laufzeit im Footer wird beim Vergleich normalisiert; Rohansicht bleibt abrufbar. Dies ist kein allgemeiner semantischer Filter und keine garantierte Kontingentersparnis.
+Zunächst 2–3 Sekunden, bei wiederholt unverändertem Stand 5–10 Sekunden wählen. Nach relevanter Aktivität wieder kürzer reagieren. Spinner/Zähler können weiterhin Änderungen auslösen: keine pauschalen Filter, die Fehler/Rückfragen verschlucken. Nur die exakt erkannte Launcher-Laufzeit sowie Uhrzeit und verbleibenden Resetzeiten in der vollständigen ctx-Fußzeile werden beim Vergleich normalisiert; Rohansicht bleibt abrufbar. Prozentwerte, Modell, Effort, Tempoanzeige und Antworttext bleiben unverändert geprüft. Dies ist kein allgemeiner semantischer Filter und keine garantierte Kontingentersparnis.
 
 Zwischen begrenzten Aufrufen neue Nutzerbeiträge prüfen. „Stopp“ priorisieren; danach keine neuen Sends/Edits starten. Eine einmalige Statusfrage autorisiert keine Schleife. Ein aktiver Auftrag erzeugt keine geplante Dauerautomation und garantiert keine weitere Beobachtung nach Turn-/App-Ende. Bei fehlender sinnvoller nächster Handlung konkrete Sättigung oder Blockade melden statt leere Wiederholungsrunden zu erzeugen.
 
