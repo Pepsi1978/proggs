@@ -164,6 +164,15 @@ public partial class MainWindow : Window
             ProfileRow.Height = new GridLength(1 - _layoutSettings.ProviderRowShare, GridUnitType.Star);
         }
         ViewModel = new MainViewModel();
+        ViewModel.UseTmux = _layoutSettings.UseTmux;
+        ViewModel.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(MainViewModel.UseTmux))
+            {
+                _layoutSettings.UseTmux = ViewModel.UseTmux;
+                _layoutSettings.Save();
+            }
+        };
         DataContext = ViewModel;
 
         UpdateThemeButton(ThemeManager.Current);

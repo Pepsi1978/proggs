@@ -58,6 +58,8 @@ public sealed class LayoutSettings
     /// <summary>Gewaehltes Design: "Dark" oder "Light". Wird beim App-Start angewendet.</summary>
     public string Theme { get; set; } = "Dark";
 
+    public bool UseTmux { get; set; }
+
     public static LayoutSettings Load()
     {
         try

@@ -241,7 +241,7 @@ $env:Path = $pathEntries -join ';'
     }
 
     /// <summary>Startet opencode in einem neuen Windows-Terminal-Fenster.</summary>
-    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode)
+    public void Launch(string modelString, string workDir, string? thinkingLevel, string profileConfigPath, string workMode, bool useTmux = false)
     {
         var log = Logger.Instance;
         thinkingLevel = NormalizeThinkingLevel(thinkingLevel);
@@ -263,6 +263,7 @@ $env:Path = $pathEntries -join ';'
             // wie der bereits funktionierende Claude-Code-Weg).
             var innerScript = BuildOpenCodeStartScript(modelString, workDir, thinkingLevel, profileConfigPath, workMode);
             var shell = ResolvePowerShellExecutable();
+            if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
             if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
@@ -327,7 +328,7 @@ $env:Path = $pathEntries -join ';'
     /// (Skills per Junction). Praktisch immer gesetzt; bei null (nicht mehr vorgesehen) wuerde Claude
     /// auf das echte ~/.claude zurueckfallen.
     /// </param>
-    public void LaunchClaudeCode(string modelId, string workDir, string? effortLevel, string? claudeConfigDir = null)
+    public void LaunchClaudeCode(string modelId, string workDir, string? effortLevel, string? claudeConfigDir = null, bool useTmux = false)
     {
         var log = Logger.Instance;
         effortLevel = NormalizeThinkingLevel(effortLevel);
@@ -336,8 +337,9 @@ $env:Path = $pathEntries -join ';'
             Directory.CreateDirectory(workDir);
             var wt = ResolveWt();
             var tabColor = PickClaudeTerminalTabColor();
-            var innerScript = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, tabColor.Name, claudeConfigDir);
+            var innerScript = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, tabColor.Name, claudeConfigDir, embeddedTerminal: useTmux);
             var shell = ResolvePowerShellExecutable();
+            if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
 
             if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
@@ -399,7 +401,7 @@ $env:Path = $pathEntries -join ';'
     /// persoenliche ~/.codex-Umgebung -- globale AGENTS.md, Plugins, MCP-Server, Hooks,
     /// angepasste Statuszeile -- vollstaendig aus der Sitzung heraus.
     /// </summary>
-    public void LaunchCodexCli(ModelEntry model, string workDir, string? effortLevel, string codexHome)
+    public void LaunchCodexCli(ModelEntry model, string workDir, string? effortLevel, string codexHome, bool useTmux = false)
     {
         var log = Logger.Instance;
         var slug = ResolveCodexModelSlug(model.Slug, out var serviceTier);
@@ -412,6 +414,7 @@ $env:Path = $pathEntries -join ';'
             var tabColor = PickCodexTerminalTabColor();
             var innerScript = BuildCodexStartScript(slug, workDir, effort, serviceTier, codexHome);
             var shell = ResolvePowerShellExecutable();
+            if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
             var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
             var title = BuildCodexTitle(tabColor.Name, effort);
 
@@ -879,9 +882,10 @@ try {
         return Process.Start(psi);
     }
 
-    public string PrepareClaudeCodeTerminalCommand(string modelId, string workDir, string? effortLevel, string? claudeConfigDir)
+    public string PrepareClaudeCodeTerminalCommand(string modelId, string workDir, string? effortLevel, string? claudeConfigDir, bool useTmux = false)
     {
         var script = BuildClaudeCodeStartScript(modelId, workDir, effortLevel, string.Empty, claudeConfigDir, embeddedTerminal: true);
+        if (useTmux) script = TmuxLauncher.BuildStartScript(script, workDir, ResolvePowerShellExecutable().Path);
         // Ein Kindprozess bleibt im vorhandenen Terminal und isoliert Profil/Umgebung von dessen Shell.
         return $"& {PowerShellLiteral(ResolvePowerShellExecutable().Path)} -NoLogo -NoProfile -ExecutionPolicy Bypass -File {PowerShellLiteral(script)}";
     }

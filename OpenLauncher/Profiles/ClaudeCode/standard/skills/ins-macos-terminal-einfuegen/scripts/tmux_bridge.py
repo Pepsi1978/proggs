@@ -109,7 +109,7 @@ def input_frame(screen):
         raise BridgeError('E_INPUT', 'Claude-Eingaberahmen nicht eindeutig erkannt')
     top, bottom = separators[-2:]
     field = '\n'.join(rows[top + 1:bottom]).strip()
-    if not field.startswith('❯'):
+    if not field.startswith(('❯', '>')):
         raise BridgeError('E_INPUT', 'Kein Claude-Eingabefeld im Rahmen')
     return rows, top, bottom, field[1:].lstrip(' \u00a0')
 
@@ -167,6 +167,8 @@ def main():
     parser.add_argument('--wait', type=float, default=0, help='read: maximal 10 Sekunden auf Änderung warten')
     parser.add_argument('--cancel-file', type=Path)
     parser.add_argument('--sha256', help='submit: Hash des vollständig autorisierten Textes')
+    parser.add_argument('--literal-line', action='store_true',
+                        help='Einzeiligen Text ohne Steuerzeichen literal senden, wenn tmux keinen Paste-Status meldet')
     parser.add_argument('--lines', type=int, default=0)
     parser.add_argument('--max-chars', type=int, default=6000)
     args = parser.parse_args()
@@ -301,6 +303,8 @@ def main():
                 raise BridgeError('E_TEXT', 'Leerer oder zu großer Auftrag')
             if any((ord(c) < 32 and c not in '\n\t') or ord(c) == 127 for c in text):
                 raise BridgeError('E_TEXT', 'Steuerzeichen im Auftrag nicht erlaubt')
+            if args.literal_line and any(ord(c) < 32 or ord(c) == 127 for c in text):
+                raise BridgeError('E_TEXT', 'Literal-Line erlaubt keine Zeilenumbrüche, Tabs oder Steuerzeichen')
             text_hash = hashlib.sha256(text.encode()).hexdigest()
             if args.action == 'submit' or args.run_dir:
                 if args.sha256 != text_hash:
@@ -313,17 +317,23 @@ def main():
                     raise BridgeError('E_INPUT', 'submit verlangt ein eindeutig leeres Eingabefeld; auch Ghosts zuerst klären')
                 before = screen
             # paste-buffer -p klammert nur bei bereits aktivierter Unterstützung des Zielprogramms.
-            if info['bracket_paste'] != '1':
+            if not args.literal_line and info['bracket_paste'] != '1':
                 raise BridgeError('E_INPUT', 'Bracketed Paste ist nicht aktiv; nicht mit Zeilenumbrüchen experimentieren')
             buffer = 'codex-' + uuid.uuid4().hex
-            try:
-                run(tmux + ['load-buffer', '-b', buffer, '-'], text.encode())
+            if args.literal_line:
                 recheck()
                 deliveries[args.id] = {'status': 'paste_attempted', 'sha256': text_hash}
                 save(args.state, state)
-                run(tmux + ['paste-buffer', '-p', '-r', '-b', buffer, '-t', bound['pane']])
-            finally:
-                run(tmux + ['delete-buffer', '-b', buffer], cleanup=True)
+                run(tmux + ['send-keys', '-l', '-t', bound['pane'], '--', text])
+            else:
+                try:
+                    run(tmux + ['load-buffer', '-b', buffer, '-'], text.encode())
+                    recheck()
+                    deliveries[args.id] = {'status': 'paste_attempted', 'sha256': text_hash}
+                    save(args.state, state)
+                    run(tmux + ['paste-buffer', '-p', '-r', '-b', buffer, '-t', bound['pane']])
+                finally:
+                    run(tmux + ['delete-buffer', '-b', buffer], cleanup=True)
             deliveries[args.id]['status'] = 'pasted'
             save(args.state, state)
             if args.action == 'submit':

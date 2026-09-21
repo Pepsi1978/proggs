@@ -13,6 +13,7 @@ namespace OpenLauncher.ViewModels;
 
 public sealed partial class MainViewModel : ObservableObject
 {
+    [ObservableProperty] private bool _useTmux;
     private readonly ModelRegistry _registry;
     private readonly OpenRouterService _router = new();
     private readonly OpenCodeCatalogService _openCodeCatalog = new();
@@ -995,7 +996,8 @@ public sealed partial class MainViewModel : ObservableObject
             // Beide Startbuttons und alle CLIs zeigen dieselbe tatsächlich vorbereitete Auswahl.
             var launchStatus = SelectedModel.DisplayName
                 + (string.IsNullOrWhiteSpace(thinkingLevel) ? string.Empty : $" · Effort {SelectedThinkingOption?.DisplayName}")
-                + $" · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}";
+                + $" · Profil {SelectedProfile.DisplayName} · Modus {SelectedWorkMode.DisplayName}"
+                + (UseTmux ? " · tmux (WSL)" : " · Standard-Terminal");
             var profileDocuments = _profiles.LoadProfile(isClaudeCode, SelectedProfile.Id, WorkDir);
             Logger.Instance.Info("MainViewModel", "Start", "Vollständige Startauswahl geprüft", new
             {
@@ -1018,7 +1020,7 @@ public sealed partial class MainViewModel : ObservableObject
                 var claudeConfigDir = _profiles.EnsureClaudeConfigDir(SelectedProfile.Id, SelectedWorkMode.Id);
                 if (copyForCodex)
                 {
-                    var command = _launcher.PrepareClaudeCodeTerminalCommand(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir);
+                    var command = _launcher.PrepareClaudeCodeTerminalCommand(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir, UseTmux);
                     for (var attempt = 0; ; attempt++)
                     {
                         try { Clipboard.SetDataObject(command, copy: true); break; }
@@ -1030,7 +1032,7 @@ public sealed partial class MainViewModel : ObservableObject
                     StatusText = launchStatus;
                     return;
                 }
-                _launcher.LaunchClaudeCode(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir);
+                _launcher.LaunchClaudeCode(SelectedModel.Slug, WorkDir, thinkingLevel, claudeConfigDir, UseTmux);
                 StatusText = launchStatus;
                 return;
             }
@@ -1045,7 +1047,7 @@ public sealed partial class MainViewModel : ObservableObject
                 // PrepareCodexHome selbst (Vorlage: Statusline-Codex/status-line.toml).
                 // Skills kommen aus dem Repo: ~/.agents/skills ist eine Junction auf standard/skills.
                 var codexHome = _profiles.PrepareCodexHome(SelectedProfile.Id);
-                _launcher.LaunchCodexCli(SelectedModel, WorkDir, thinkingLevel, codexHome);
+                _launcher.LaunchCodexCli(SelectedModel, WorkDir, thinkingLevel, codexHome, UseTmux);
                 Logger.Instance.Info("MainViewModel", "Start", "Codex-CLI-Kontext geschrieben", new
                 {
                     profile = SelectedProfile.Id,
@@ -1074,7 +1076,7 @@ public sealed partial class MainViewModel : ObservableObject
                 StringComparison.OrdinalIgnoreCase);
             var profileSession = _profiles.PrepareOpenCodeSession(SelectedProfile.Id, WorkDir, isLmStudio);
             var modelString = _launcher.ConfigureProvider(SelectedModel, provider, Providers, thinkingLevel);
-            _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath, SelectedWorkMode.Id);
+            _launcher.Launch(modelString, WorkDir, thinkingLevel, profileSession.ConfigPath, SelectedWorkMode.Id, UseTmux);
             Logger.Instance.Info("MainViewModel", "Start", "OpenCode-Profilsnapshot erstellt", new
             {
                 profileSession.ProfileId,

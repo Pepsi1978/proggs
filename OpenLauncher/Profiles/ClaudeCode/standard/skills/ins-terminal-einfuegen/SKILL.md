@@ -7,6 +7,15 @@ description: Koordiniert Sprachaufträge, Codeprüfung und Textübergaben an lau
 
 ## Plattform zuerst wählen
 
+Unter **Windows mit einer über OpenLauncher gestarteten tmux-Sitzung** zuerst
+[Windows-tmux](references/windows-tmux.md) lesen. Dieser Weg liest und schreibt ohne
+Computer Use über WSL. Er gilt für alle Profile; OpenLauncher kann OpenCode, Codex CLI
+und Claude Code darin starten. Der automatische `submit`-Parser des gemeinsamen Helfers
+ist jedoch ausschließlich für geprüfte Claude-Eingaberahmen vorgesehen. Für andere CLIs
+deren tatsächlichen Prompt und Zustand lesen, `paste` und separat autorisiertes `enter`
+verwenden; nicht behaupten, der Claude-Parser erkenne deren Eingabebereitschaft.
+Ohne bestätigte tmux-Sitzung gilt weiterhin der folgende Windows-Fensterweg.
+
 Unter **macOS** direkt [Ins macOS Terminal einfügen](../ins-macos-terminal-einfuegen/SKILL.md) lesen und dessen Ablauf verwenden. Die folgenden Fenstersteuerungs- und Eingabehelfer sind für **Windows mit `@oai/sky`**; sie sind kein getesteter macOS-Schreibweg. Auf macOS nicht zusätzlich die Windows-Initialisierung oder historischen Windows-Messnotizen laden. Bei eindeutigem macOS-Auftrag künftig unmittelbar den macOS-Skill auswählen.
 
 Nutze den vorhandenen Terminal-Tab des Nutzers. Ein frisch gestarteter Shell-Prozess ist kein Ersatz für dessen laufende Sitzung. Eine Bitte um Einfügen allein bedeutet nicht automatisch Absenden; „abschicken“, „absenden“ oder „mit Enter ausführen“ schließt Enter ein. Nutze den zuletzt eindeutig festgelegten Text und sende ihn genau einmal.
