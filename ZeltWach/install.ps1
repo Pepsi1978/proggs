@@ -5,6 +5,22 @@ $ziel = Join-Path $env:LOCALAPPDATA 'Programs\ZeltWach'
 $exe = Join-Path $ziel 'ZeltWach.exe'
 
 Get-Process ZeltWach -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Einmalig (UAC): Schlüssel für den Fingerabdruck-Schalter anlegen und dem Benutzer Schreibrecht geben.
+$regPfad = 'HKLM:\SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider'
+$schreibbar = $false
+try { $k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider', $true); $schreibbar = $null -ne $k; if ($k) { $k.Close() } } catch {}
+if (-not $schreibbar) {
+    $benutzer = "$env:USERDOMAIN\$env:USERNAME"
+    $admin = @"
+New-Item -Path '$regPfad' -Force | Out-Null
+`$acl = Get-Acl '$regPfad'
+`$acl.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule('$benutzer','FullControl','Allow')))
+Set-Acl '$regPfad' `$acl
+"@
+    $b64 = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($admin))
+    Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList "-NoProfile -EncodedCommand $b64"
+}
 dotnet publish "$PSScriptRoot\ZeltWach.csproj" -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o $ziel | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Build fehlgeschlagen' }
 
