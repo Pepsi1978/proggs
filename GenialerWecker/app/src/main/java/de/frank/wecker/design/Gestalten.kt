@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -342,7 +344,10 @@ object OrbitGestalt : WeckerGestalt {
             Modifier.fillMaxSize()
                 .background(LocalGold.current.hintergrund)
                 .vignette(LocalMaterial.current.vignetteAlpha),
-        )
+        ) {
+            // Fließende Zeichen wie in „Matrix“, aber in Orbits Eisblau statt Knallgrün.
+            ZeichenRegen(Modifier.fillMaxSize())
+        }
     }
 
     /**
@@ -369,4 +374,68 @@ object OrbitGestalt : WeckerGestalt {
     override val zeigtRestzeitRing = true
 
     @Composable override fun trennfarbe(): Color = LocalGold.current.rahmen
+}
+
+
+/**
+ * Orbits Zeichenregen: senkrechte Spalten fallender Zeichen mit hellem Kopf und verblassendem
+ * Schweif, in der Primärfarbe des Designs (Eisblau), vereinzelt ein Limetten-Akzent.
+ *
+ * Günstig gezeichnet: ein einziger nativer `Paint`, kein Textmesser, rund 20 Bilder pro Sekunde, und
+ * der Zeitwert wird nur im Zeichenblock gelesen — dadurch zeichnet sich allein diese Ebene neu, nie
+ * die App darüber. Bei reduzierter Bewegung steht der Regen still.
+ */
+@Composable
+private fun ZeichenRegen(modifier: Modifier) {
+    val gold = LocalGold.current
+    val reduziert = de.frank.genialeideen.ui.theme.LocalBewegungReduziert.current
+    val farbe = gold.primaer
+    val akzent = gold.akzentWarm
+    val dunkel = gold.istDunkel
+    val zeit = androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    if (!reduziert) androidx.compose.runtime.LaunchedEffect(Unit) {
+        var letzte = 0L
+        while (true) {
+            androidx.compose.runtime.withFrameMillis { t -> if (t - letzte >= 50) { zeit.longValue = t; letzte = t } }
+        }
+    }
+    val zeichen = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜ0123456789:.=+<>"
+    val stift = androidx.compose.runtime.remember {
+        android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { typeface = android.graphics.Typeface.MONOSPACE }
+    }
+    androidx.compose.foundation.Canvas(modifier) {
+        val t = zeit.longValue
+        val schrift = 15.dp.toPx()
+        stift.textSize = schrift
+        val spaltenBreite = schrift * 1.25f
+        val spalten = (size.width / spaltenBreite).toInt() + 1
+        val schweif = 16
+        val grundAlpha = if (dunkel) 0.34f else 0.20f
+        val leinwand = drawContext.canvas.nativeCanvas
+        for (spalte in 0 until spalten) {
+            // Jede Spalte hat ihr eigenes, festes Tempo und ihren eigenen Versatz.
+            val h = (spalte * 7919 + 13) % 1000
+            val tempo = 0.06f + (h % 70) / 1000f        // Pixel je Millisekunde, in dp umgerechnet unten
+            val versatz = (h * 37 % 1000) / 1000f
+            val laenge = size.height + schweif * schrift
+            val kopf = ((t * tempo * density + versatz * laenge) % laenge)
+            val x = spalte * spaltenBreite
+            for (i in 0 until schweif) {
+                val y = kopf - i * schrift
+                if (y < -schrift || y > size.height + schrift) continue
+                val reihe = ((y / schrift).toInt())
+                // Die Zeichen flackern gelegentlich um, wie im Original.
+                val wahl = (spalte * 31 + reihe * 17 + (t / 180).toInt() * (if ((spalte + reihe) % 5 == 0) 1 else 0)) % zeichen.length
+                val anteil = 1f - i / schweif.toFloat()
+                val istKopf = i == 0
+                val c = when {
+                    istKopf -> androidx.compose.ui.graphics.Color.White.copy(alpha = (grundAlpha * 1.6f).coerceAtMost(0.6f))
+                    (spalte + reihe) % 23 == 0 -> akzent.copy(alpha = grundAlpha * anteil)
+                    else -> farbe.copy(alpha = grundAlpha * anteil * anteil + 0.02f)
+                }
+                stift.color = c.toArgb()
+                leinwand.drawText(zeichen, wahl, wahl + 1, x, y, stift)
+            }
+        }
+    }
 }
