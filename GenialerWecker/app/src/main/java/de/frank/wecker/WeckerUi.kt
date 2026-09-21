@@ -1302,13 +1302,14 @@ private fun WeckerKarte(
                 Row(Modifier.fillMaxWidth().clickable(
                     interactionSource = remember { MutableInteractionSource() }, indication = null,
                     onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) }),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(alarm.name, Modifier.weight(1f, fill = false),
-                        style = if (dicht) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
-                        maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
-                    Text(if (alarm.enabled) kurzPlan(alarm) else "${kurzPlan(alarm)} · aus",
-                        fontFamily = if (dicht) IdeenSchriftFest else null,
-                        style = if (dicht) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodyMedium,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Dieselbe Schrift und dieselbe Grundlinie für Name und Wiederholung — nur Farbe
+                    // und Gewicht unterscheiden sie. Vorher saß „Täglich“ tiefer und in anderer Schrift.
+                    val zeilenStil = if (dicht) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium
+                    Text(alarm.name, Modifier.alignByBaseline().weight(1f, fill = false),
+                        style = zeilenStil, maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (alarm.enabled) kurzPlan(alarm) else "${kurzPlan(alarm)} · aus", Modifier.alignByBaseline(),
+                        style = zeilenStil.copy(fontWeight = FontWeight.Normal),
                         color = gold.textGedaempft, maxLines = 1)
                 }
 
