@@ -204,14 +204,15 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                         if (wechselReduziert) {
                             (androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None)
                         } else {
+                            // Weich statt schiebend: Die neue Seite blendet ein und wächst dabei kaum
+                            // merklich heran, die alte blendet aus. Ohne Seitwärtsbewegung fällt ein
+                            // schwerer erster Aufbau (Editor) nicht mehr als Sprung auf.
                             val vorwaerts = tiefe(targetState) >= tiefe(initialState)
-                            val weg = if (vorwaerts) 56 else -56
-                            val dauer = Motion.ZUSTAND_MS
-                            (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(dauer)) +
-                                androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(dauer)) { weg })
-                                .togetherWith(
-                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(dauer / 2)) +
-                                        androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(dauer)) { -weg })
+                            val weich = androidx.compose.animation.core.FastOutSlowInEasing
+                            (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(320, delayMillis = 40, easing = weich)) +
+                                androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(360, easing = weich),
+                                    initialScale = if (vorwaerts) 0.97f else 1.02f))
+                                .togetherWith(androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200, easing = weich)))
                         }
                     }) { current ->
                     when (current) {
@@ -1704,6 +1705,11 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
     // Only visibility is remembered here; all values live in the draft in the ViewModel.
     // Der Zustand liegt genau einmal hier, unabhängig vom Design; die Designs ordnen nur anders an.
     var expanded by rememberSaveable(title) { mutableStateOf(initiallyExpanded || !collapsible) }
+    // Größenänderungen animieren erst, wenn der Seitenübergang vorbei ist — direkt nach dem Öffnen
+    // sortieren sich Inhalte noch, und die Kanten der Blasen ruckelten dabei sichtbar.
+    var groesseAnimieren by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { delay(450); groesseAnimieren = true }
+    val sanftWachsen = if (groesseAnimieren) Modifier.animateContentSize() else Modifier
     val gold = LocalGold.current
     val entwurf = LocalDesignTokens.current.design
 
@@ -1737,7 +1743,7 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
         // Morgenruhe: Titel, Zusammenfassung und Klapppfeil liegen jetzt **in** der Blase statt
         // darüber. Die Blase ist dafür höher und hat rundum gleichmäßige Abstände.
         Design.MORGENRUHE -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
-            Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp).animateContentSize(),
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp).then(sanftWachsen),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(kopfModifier.heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1752,7 +1758,7 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
         }
         // Orbit: technische Modulkopfzeile mit fester Schrift und Trennlinie im kantigen Modul.
         Design.ORBIT -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
-            Column(Modifier.animateContentSize()) {
+            Column(Modifier.then(sanftWachsen)) {
                 // Der Klapppfeil ist ein bündiges Segment der Modulkopfzeile: von der oberen bis zur
                 // unteren Kante, durch eine Trennlinie abgesetzt, ohne eigenen Rahmen. So fügt er
                 // sich im Hell- wie im Dunkelmodus und auch bei mehrzeiligen Köpfen ein.
@@ -1785,7 +1791,7 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
         Design.TRAUMRAUM -> {
             val material = LocalMaterial.current
             val abschnittForm = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
-            Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp).animateContentSize(),
+            Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp).then(sanftWachsen),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(kopfModifier, verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) {
@@ -1811,7 +1817,7 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
         }
         // Schlicht: unverändert der bisherige Aufbau aus Kopfzeile und Inhalt in einer Karte.
         else -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
-            Column(Modifier.padding(18.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.padding(18.dp).then(sanftWachsen), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(kopfModifier, verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) { beschriftung(MaterialTheme.typography.titleMedium, gold.primaer) }
                     // The header row already announces this action; the button itself stays silent for TalkBack.
