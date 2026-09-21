@@ -87,15 +87,21 @@ Felder: `rev` (streng monoton), `id`, `ts`, `status` (`steuerung|stopp`), `einze
 optional `payload_path`, `sha256`, `bytes` für lange bytegenaue Inhalte. Nur der neueste
 konsolidierte Nutzerstand, keine Queue und keine Chatkopie. Schreiben ist kein
 Verarbeitungsbeweis und keine zusätzliche Autorisierung; die Zustellung am freien Prompt
-bleibt nötig.
+bleibt nötig und nennt dieselbe `ziel_rev`. Ist diese `ziel_rev` höchstens gleich
+`processed_ziel_rev`, wendet Claude den Inhalt nicht erneut an, sondern bestätigt bzw.
+prüft nur die Verarbeitung; nur eine höhere Revision wird neu eingearbeitet.
 
 Claude prüft die im Auftrag genannte Datei vor Planänderung, Commit, Push und
 Deployment: reguläre Datei ohne Link, höchstens 1 KiB, gültiges JSON, Payload per Hash.
 Eine höhere `rev` innerhalb des Umfangs einarbeiten, eine gleiche oder kleinere nicht erneut.
 Bei Zielwechsel oder Unklarheit vor Commit halten und melden. Fehlt eine vereinbarte
 Steuerdatei später oder ist ihr Inhalt ungültig, stoppt das den Abschluss: kein Commit,
-Push oder Deployment, bis Codex den Zustand geklärt hat. `status=stopp` verhindert ab dem nächsten Checkpoint Commit,
-Push und Deployment, bricht aber keine laufende Generation ab; `STOP` bleibt vorrangig.
+Push oder Deployment, bis Codex den Zustand geklärt hat. `status=stopp` verhindert ab dem
+nächsten Checkpoint Commit, Push und Deployment, bricht aber keine laufende Generation ab.
+Die private `STOP`-Datei sperrt Brücke und weitere Codex-Zustellungen, ist für Claude aber
+nicht zwingend sichtbar (unter Windows im Linux-Run-Verzeichnis). Soll ein Stopp auch den
+laufenden Abschluss verhindern, setzt Codex daher zusätzlich atomar `status=stopp` mit
+neuer `rev`. Ohne vereinbarte Steuerdatei bleibt das bisherige STOP-Verhalten unverändert.
 Der Bericht nennt `processed_ziel_rev`; Codex vergleicht sie mit der neuesten `rev`.
 Ohne vereinbarten Pfad gibt es keine Steuerdatei.
 

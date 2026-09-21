@@ -94,6 +94,10 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
   bei Code Fundstellen, Tests, offene Punkte und später Commit/Push nennen lassen.
   Längere Implementierungsaufträge nennen den exakten Pfad der Steuerdatei und die
   Checkpoints vor Plan, Commit, Push und Deployment; Bericht mit `processed_ziel_rev`.
+  Die spätere Promptzustellung einer vorgemerkten Steuerung nennt dieselbe `ziel_rev`;
+  bereits verarbeitete Revisionen wendet Claude nicht erneut an. Das `STOP` im
+  Linux-Run-Verzeichnis sieht Claude nicht: für einen Abschlussstopp zusätzlich
+  `status=stopp` mit neuer Revision in die Steuerdatei schreiben.
 - Textdatei und SHA vor dem Senden vorbereiten. Ein gerade inhaltlich geprüfter
   Warte-Read mit bekanntem Antwortkontext und Eingabezustand ist bereits das nötige
   frische `read`: dessen Token direkt für `submit --literal-line` verwenden, ohne
