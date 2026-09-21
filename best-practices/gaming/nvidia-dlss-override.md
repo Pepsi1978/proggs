@@ -31,4 +31,4 @@ Die Option erscheint **nur für Titel auf NVIDIAs Kompatibilitätsliste**, der G
 
 ## 6. CoD MW2 (2022) konkret
 - Seit 29.07.2025 aus COD HQ gelöst und eigenständig (`cod22-cod.exe`, Kampagne in `sp22\`). https://www.windowscentral.com/gaming/xbox/call-of-dutys-bloated-hq-launcher-now-officially-decoupled-by-activision-heres-what-you-need-to-know
-- Im Spiel: Grafik → Qualität → „Upscaling/Sharpening“ = NVIDIA DLSS, Stufe Quality (1440p) bzw. Balanced/Quality (4K), Reflex „On + Boost“. **Kein natives DLAA** (erst ab MW3). https://www.charlieintel.com/call-of-duty-modern-warfare-2/best-modern-warfare-2-pc-settings-199966/
+- Im Spiel: Grafik → Qualität → „Upscaling/Sharpening“ = NVIDIA DLSS, Stufe Quality (1440p) bzw. Balanced/Quality (4K). Reflex steht **nicht** im Reiter „Qualität“, sondern unter Grafik → Reiter „Anzeige“ → „NVIDIA Reflex Low Latency“ = Aktiviert + Boost (Nutzer suchte es am 21.09.2026 vergeblich unter „Qualität“). **Kein natives DLAA** (erst ab MW3). https://www.charlieintel.com/call-of-duty-modern-warfare-2/best-modern-warfare-2-pc-settings-199966/
