@@ -9,4 +9,5 @@
 - B8 „DLSS 5 Mod“ (YouTube) = echtes, geleaktes NVIDIA-Modell `nvngx_dlssnr.dll`, inoffiziell eingeschleust → nur Singleplayer ohne Anti-Cheat, Details `dlss5-mod-inoffiziell.md`.
 - B9 Profile-Inspector-Override bei Nicht-Whitelist-Spiel wirkungslos (MW2, Treiber 616.92, per NGX-Log verifiziert). Immer mit `LogLevel`=1 und NGX-Log prüfen, nie nur mit dem Indikator.
 - B10 NVAPI lehnt 0x00634291 ab (-160); kaputte `.nip` lässt NVPI-Silent-Import hängen; PowerShell `@(@(x))` flacht ab, `$s` = `$S`.
+- B11 `nvngx_config.txt` `app_<ID>_forced` + umbenannte `.bin` → scheitert an REQUIRE_CMSID (eingebettete App-ID in der signierten Datei). Kein Treiber-Weg für Spiele ohne Freigabe.
 Volltext: `nvidia-dlss-override.md`

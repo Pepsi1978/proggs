@@ -58,6 +58,13 @@
 - **Zwei PowerShell-Fallen beim Erzeugen der `.nip`:** `@(@(a,b,c))` wird zu einem flachen Array (ein Einzel-Setting zerfällt in drei Skalare), und `$s` überschreibt `$S` (Variablennamen ohne Groß-/Kleinschreibung). Mit `[pscustomobject]`-Listen und eindeutigen Namen arbeiten.
 - **Quelle:** eigene Messung
 
+## B11 — `nvngx_config.txt`-Trick (`app_<ID>_forced`) scheitert an REQUIRE_CMSID (VERIFIZIERT 21.09.2026)
+- **Versuch:** In `C:\ProgramData\NVIDIA\NGX\models\nvngx_config.txt` unter `[dlss]` `app_8741FBC(_forced) = 310.9.0` und `app_E658703(_forced) = 310.9.0` eingetragen, dazu `160_E658700.bin` als `160_8741FBC.bin`/`160_E658703.bin` in `dlss\versions\20318464\files` kopiert (MW2-App-ID = cmsid 101816511 = 0x8741FBC, siehe `Embedded app Id` im Log).
+- **Ergebnis (NGX-Log mit `LogLevel`=2):** Der Treiber lädt und validiert das Paket (`Snippet version : 310.9.0, Embedded app Id : E658703 (0)`), verwirft es aber, weil die Treiber-Flags `REQUIRE_CMSID` verlangen, dass die **in die signierte Datei eingebettete** App-ID zum Spiel passt. Die Spiel-DLL trägt `8741FBC`, das Override-Paket nur die generische ID. Dateiname und Config-Eintrag helfen deshalb nicht, die Signatur verhindert eine Änderung.
+- **Folge:** Bei NGX-Direct-Spielen ohne NVIDIA-Freigabe lässt sich per Treiber (DRS-Profil, `nvngx_config.txt`) kein neueres DLSS erzwingen. Es bleibt nur der Dateitausch im Spielordner (Anti-Cheat-Risiko B3).
+- **Aufräumen:** Die kopierten `.bin` sind gesperrt, solange das Spiel läuft. Erst nach Spielende löschen und die `app_…`-Zeilen wieder entfernen.
+- **Quelle:** eigene Messung. Idee aus https://github.com/emoose/DLSSTweaks/issues/139
+
 ## B7 — MW2 2022: „Shader Optimization“ hängt / DLSS schaltet sich ab
 - **Symptom:** Nach Grafik- oder Treiberänderung hängt die Shader-Optimierung, oder die DLSS-Option verschwindet bzw. springt zurück.
 - **Fix:** Shader-Cache löschen (`shadercache` im Spielordner bzw. `%localappdata%\Activision\Call of Duty\ShaderCache`), Steam-Integritätsprüfung ausführen, Overlays aus.
