@@ -1,5 +1,5 @@
 #Requires -Version 7
-# Version 1.5.0 - 11.09.2026, 14:18 Uhr
+# Version 1.6.0 - 21.09.2026, 11:37 Uhr
 <#
 .SYNOPSIS
     Baut ein Voice-Overlay (CVO/TVO) sauber neu und startet es neu — in EINEM Schritt.
@@ -39,6 +39,8 @@
     auf "Ja" wird nichts beendet und nichts gebaut — so wird keine laufende Spracheingabe
     abgeschossen. Rueckmeldung als Zeile OVERLAY_UPDATE_STATUS=cancelled | no-answer.
     Nach DialogTimeoutSeconds ohne Klick gilt "Nein", nie "Ja".
+    Es gibt BEWUSST keinen Schalter, der die Rueckfrage ueberspringt: das Update ist immer an
+    den Klick auf "Ja" gebunden (Vorgabe des Benutzers, 21.09.2026).
 #>
 param(
     [Parameter(Mandatory, Position = 0)]
@@ -46,9 +48,6 @@ param(
     [string]$Target,
 
     [switch]$NoStart,
-
-    # Ueberspringt die Rueckfrage. NUR auf ausdrueckliche Ansage des Benutzers verwenden.
-    [switch]$Force,
 
     [int]$DialogTimeoutSeconds = 240
 )
@@ -315,10 +314,7 @@ $targets = if ($Target -eq 'Both') { @('CVO', 'TVO') } else { @($Target) }
 $failed = @()
 
 # Ohne Freigabe per Klick passiert nichts: kein Beenden, kein Build, kein Start.
-if ($Force) {
-    Write-Host 'OVERLAY_UPDATE_INFO=-Force gesetzt: Update ohne Rueckfrage.'
-}
-else {
+{
     $names = @($targets | ForEach-Object { "$($Overlays[$_].Name) ($_, $($Overlays[$_].Label))" })
     switch (Show-UpdateDialog -Names $names) {
         'yes' { Write-Host 'OVERLAY_UPDATE_INFO=Update per Klick freigegeben.' }

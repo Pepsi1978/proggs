@@ -1,5 +1,5 @@
 #!/bin/bash
-# Version 1.3.0 - 21.09.2026, 11:33 Uhr
+# Version 1.4.0 - 21.09.2026, 11:37 Uhr
 #
 # macOS-Pendant zu rebuild-overlay.ps1: baut ein Voice-Overlay sauber neu und
 # startet es neu — in EINEM Schritt, inklusive Verifikation, dass hinterher
@@ -21,12 +21,13 @@
 #   bash rebuild-overlay.sh CVO        # nur ClaudeCodexVoiceOverlay
 #   bash rebuild-overlay.sh Both       # beide nacheinander
 #   bash rebuild-overlay.sh TVO --no-start   # nur beenden + bauen
-#   bash rebuild-overlay.sh TVO --force      # ohne Rueckfrage — NUR auf ausdrueckliche Ansage
 #
 # Freigabe per Klick (wie rebuild-overlay.ps1): Vor JEDEM Update erscheint ein Ja/Nein-Fenster.
 # Erst nach "Ja" wird beendet, gebaut und gestartet. "Nein" oder kein Klick binnen
 # OVERLAY_UPDATE_DIALOG_TIMEOUT Sekunden (Vorgabe 240) -> nichts passiert.
 # Rueckmeldung: OVERLAY_UPDATE_STATUS=cancelled | no-answer.
+# Es gibt BEWUSST keinen Schalter, der die Rueckfrage ueberspringt: das Update ist immer an den
+# Klick auf "Ja" gebunden (Vorgabe des Benutzers, 21.09.2026).
 
 set -uo pipefail
 
@@ -34,11 +35,9 @@ REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 TARGET="${1:-}"
 NO_START=0
-FORCE=0
 for a in "${@:2}"; do
     case "$a" in
         --no-start) NO_START=1 ;;
-        --force|-Force) FORCE=1 ;;
     esac
 done
 DIALOG_TIMEOUT="${OVERLAY_UPDATE_DIALOG_TIMEOUT:-240}"
@@ -286,9 +285,7 @@ case "$TARGET" in
 esac
 
 # Ohne Freigabe per Klick passiert nichts: kein Beenden, kein Build, kein Start.
-if (( FORCE )); then
-    echo "OVERLAY_UPDATE_INFO=--force gesetzt: Update ohne Rueckfrage."
-else
+{
     NAMES=""
     for t in "${TARGETS[@]}"; do
         overlay_config "$t" || continue
@@ -314,7 +311,7 @@ AS
         TIMEOUT) echo "OVERLAY_UPDATE_STATUS=no-answer (kein Klick innerhalb von $DIALOG_TIMEOUT Sekunden -- nichts geaendert)"; exit 0 ;;
         *) echo "OVERLAY_UPDATE_STATUS=cancelled (nichts geaendert)"; exit 0 ;;
     esac
-fi
+}
 
 # Bei "Both" ZUERST beide anhalten, dann erst bauen. Grund: die beiden Overlays
 # haben je einen eigenen Status-Port (TVO 5723, CVO 5724) — eine ALTE Fassung
