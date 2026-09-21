@@ -114,6 +114,7 @@ import androidx.compose.runtime.Immutable
 
 @Composable
 fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
+    AutomatischeWeckbereitschaft(activity)
     val themeRoh by vm.theme.collectAsStateWithLifecycle()
     // „system“ folgt dem Handy; alles Weitere sieht nur noch hell oder dunkel.
     val theme = wirksamesTheme(themeRoh)

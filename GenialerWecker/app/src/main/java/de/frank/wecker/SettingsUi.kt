@@ -98,25 +98,15 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val missing = permissions.count { !it.second }
         // Every requirement sits next to the one button that fixes it; nothing to search for.
-        val fix: Map<String, () -> Unit> = mapOf(
-            "Genaue Weckzeiten" to { if (Build.VERSION.SDK_INT >= 31) launch(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, true) },
-            "Benachrichtigungen" to {
-                if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
-                    notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-                else launch(Settings.ACTION_APP_NOTIFICATION_SETTINGS, extraPackage = true)
-            },
-            "Vollbild-Wecker" to { if (Build.VERSION.SDK_INT >= 34) launch(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, true) },
-            "Wecker bei Nicht stören" to {
-                if (!activity.getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted) launch(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                else launch("android.settings.ZEN_MODE_SETTINGS")
-            },
-            "Akku uneingeschränkt" to {
-                if (activity.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(activity.packageName))
-                    launch(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, true)
-                else launch(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, true)
-            },
-        )
-        Section("Weckbereitschaft") {
+        fun fix(name: String) {
+            if (!Weckbereitschaft.beheben(activity, name) { notifications.launch(Manifest.permission.POST_NOTIFICATIONS) })
+                vm.message.value = "Diese Einstellungsseite ist auf dem Gerät nicht verfügbar. Öffne die Android-App-Einstellungen."
+        }
+        // Alles erteilt: nur eine zugeklappte Zeile wie „Benachrichtigungen“. Fehlt etwas, steht die Karte offen.
+        // key() setzt den Klappzustand neu, sobald sich „fehlt etwas“ ändert.
+        key(missing == 0) {
+        Section("Weckbereitschaft", collapsible = missing == 0, initiallyExpanded = missing > 0,
+            summary = if (missing == 0) "Alles bereit" else "$missing ${if (missing == 1) "Freigabe fehlt" else "Freigaben fehlen"}") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (missing == 0) Icons.Default.VerifiedUser else Icons.Default.NotificationsActive, null,
                     tint = if (missing == 0) LocalSemantisch.current.erfolg else LocalSemantisch.current.warnung)
@@ -129,7 +119,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                     Text(if (ready) "✓" else "○", color = if (ready) LocalSemantisch.current.erfolg else LocalSemantisch.current.warnung)
                     Text(name, Modifier.weight(1f).padding(start = 10.dp), color = if (ready) LocalGold.current.textPrimaer else LocalSemantisch.current.warnung)
                     if (ready) Text("erteilt", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-                    else StillerKnopf("Erlauben", { fix[name]?.invoke() }, Modifier.semantics { contentDescription = "$name erlauben" }, hervorgehoben = true)
+                    else StillerKnopf("Erlauben", { fix(name) }, Modifier.semantics { contentDescription = "$name erlauben" }, hervorgehoben = true)
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -137,6 +127,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 StillerKnopf("App-Info öffnen", { launch(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, true) })
             }
             Text("Erlaube Wecker in allen verwendeten Nicht-stören-Modi und Routinen. Nach „Stopp erzwingen“ die App einmal öffnen. Ein ausgeschaltetes Telefon kann nicht wecken.", style = MaterialTheme.typography.bodySmall)
+        }
         }
         BenachrichtigungenKarte(vm, activity)
         var ausrichtung by remember(revision) { mutableStateOf(settings.ausrichtung) }
