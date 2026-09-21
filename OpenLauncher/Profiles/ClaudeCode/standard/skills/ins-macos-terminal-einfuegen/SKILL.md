@@ -42,6 +42,11 @@ Diese Fortsetzung erweitert keinen einfachen Einzelauftrag zum Einfügen und auc
 
 ## Antworten und Implementierung begleiten
 
+Bei längerer Zusammenarbeit oder ausdrücklich gewünschtem geringeren Codex-Verbrauch
+einmal [Kontingent sparsam nutzen](../ins-terminal-einfuegen/references/kontingent-sparen.md)
+lesen. Die gemeinsamen Regeln bündeln Vorarbeit, Belegübergaben, Review und Updates,
+ohne unabhängige Prüfung oder Projektabschluss zu ersetzen.
+
 Lies bei größeren Umsetzungen mit mehreren Varianten oder Bildschirmbereichen [Umfang und Review](references/umfang-und-review.md), bevor du den ersten großen Umsetzungsauftrag sendest. Die Referenz hilft auch beim Nachweis eines ausdrücklich gewünschten Advisors und bei visuellen Ergebnisberichten; sie erweitert den Nutzerauftrag nicht. Bei einer dringenden Nutzerkorrektur sichere unabhängige offene Befunde im temporären Arbeitsstand und stelle sie zurück, statt konkurrierende Schreibaufträge zu senden.
 
 Lies bei beauftragtem Dialog einmal [Puffer sparsam lesen](references/puffer-lesen.md). **Während des beauftragten Dialogs oder der begleiteten Programmierung aktiv weiter mitlesen**, auch nachdem der Auftrag abgesendet wurde. Bei live bestätigtem Titelverhalten während der Arbeit `read --compact --wait-mode status --wait 10` verwenden; bis zum belegten Arbeitsbeginn oder bei unbekanntem Titelverhalten `read --compact --wait 3`. Eine private Cancel-Datei erlaubt lokalen Abbruch; zwischen den begrenzten Aufrufen Nutzerkorrekturen und Stopp priorisieren. Gib nur relevante neue Aussagen aus, beantworte Rückfragen und prüfe Dateien an sinnvollen Meilensteinen. Keine neue Anweisung in eine noch laufende Generation schicken. Ein laufender Beobachtungsauftrag gilt im aktiven Turn; keine Aktivität nach Turn-/App-Ende oder lückenlosen Livestream versprechen. Vereinbare die kurze Ergebniskonvention **im eigentlichen Auftrag**, ohne separate Bestätigungs-Modellrunde:
