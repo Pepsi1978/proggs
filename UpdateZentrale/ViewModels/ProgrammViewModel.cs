@@ -322,7 +322,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
             var befehlszeile = vorhanden?.Wert;
             if (string.IsNullOrWhiteSpace(befehlszeile))
             {
-                befehlszeile = "\"" + Pfade.Aufloesen(Eintrag.ExePfad) + "\"";
+                befehlszeile = "\"" + Pfade.Aufloesen(Eintrag.ExePfadWirksam) + "\"";
                 if (!string.IsNullOrWhiteSpace(Eintrag.StartArgumente))
                     befehlszeile += " " + Eintrag.StartArgumente;
             }
@@ -541,7 +541,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     {
         "winget" => "winget upgrade --id " + Eintrag.WingetId + " --exact --silent",
         "store" or "msstore" => "winget upgrade --id " + Eintrag.StoreProduktId + " --source msstore --silent",
-        "cli" => Pfade.Aufloesen(Eintrag.ExePfad) + " " + (Eintrag.UpdateArgumente ?? "update"),
+        "cli" => Pfade.Aufloesen(Eintrag.ExePfadWirksam) + " " + (Eintrag.UpdateArgumente ?? "update"),
         "reposkript" => "pwsh -File " + Eintrag.Skript + " " + Eintrag.SkriptArgumente,
         _ => Eintrag.Art
     };
@@ -551,7 +551,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     {
         if (!Prozessdienst.Starten(Eintrag, AlsAdministrator))
         {
-            Melde("Konnte nicht gestartet werden: " + Pfade.Aufloesen(Eintrag.ExePfad));
+            Melde("Konnte nicht gestartet werden: " + Pfade.Aufloesen(Eintrag.ExePfadWirksam));
         }
         ZustandAktualisieren();
     }

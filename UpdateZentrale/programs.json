@@ -10,6 +10,9 @@
       "art": "winget",
       "wingetId": "ElementLabs.LMStudio",
       "exePfad": "%LOCALAPPDATA%/Programs/LM Studio/LM Studio.exe",
+      "exePfadAlternativen": [
+        "C:/Program Files/LM Studio/LM Studio.exe"
+      ],
       "prozesse": [
         "LM Studio"
       ],
@@ -83,6 +86,9 @@
       "beschreibung": "Claude Code im Terminal. Nativer Installer unter ~/.local/bin.",
       "art": "cli",
       "exePfad": "%USERPROFILE%/.local/bin/claude.exe",
+      "exePfadAlternativen": [
+        "%APPDATA%/npm/claude.cmd"
+      ],
       "versionsArgumente": "--version",
       "updateArgumente": "update",
       "npmPaket": "@anthropic-ai/claude-code",
@@ -103,6 +109,9 @@
       "beschreibung": "OpenAI Codex im Terminal. Eigener Standalone-Install unter ~/.codex.",
       "art": "cli",
       "exePfad": "%LOCALAPPDATA%/Programs/OpenAI/Codex/bin/codex.exe",
+      "exePfadAlternativen": [
+        "%APPDATA%/npm/codex.cmd"
+      ],
       "versionsArgumente": "--version",
       "updateArgumente": "update",
       "npmPaket": "@openai/codex",
@@ -126,6 +135,10 @@
       "art": "winget",
       "wingetId": "Elgato.StreamDeck",
       "exePfad": "C:/Program Files/Elgato/StreamDeck/StreamDeck.exe",
+      "exePfadAlternativen": [
+        "%LOCALAPPDATA%/Programs/Elgato/StreamDeck/StreamDeck.exe"
+      ],
+      "ausblendenWennFehlt": true,
       "startArgumente": "--runinbk",
       "prozesse": [
         "StreamDeck"

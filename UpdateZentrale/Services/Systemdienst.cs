@@ -19,7 +19,7 @@ public static class Systemdienst
     /// </summary>
     public static bool AdminModusLesen(ProgrammEintrag eintrag)
     {
-        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (string.IsNullOrWhiteSpace(exe)) return false;
 
         using var key = Registry.CurrentUser.OpenSubKey(LayersSchluessel);
@@ -29,7 +29,7 @@ public static class Systemdienst
 
     public static bool AdminModusSetzen(ProgrammEintrag eintrag, bool aktiv)
     {
-        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe)) return false;
 
         try
@@ -80,7 +80,7 @@ public static class Systemdienst
             using var key = Registry.CurrentUser.OpenSubKey(RunSchluessel);
             if (key is null) return false;
 
-            var exe = Pfade.Aufloesen(eintrag.ExePfad);
+            var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
             var ordner = string.IsNullOrWhiteSpace(eintrag.RepoOrdner)
                 ? null
                 : Path.Combine(Pfade.RepoWurzel, eintrag.RepoOrdner.Replace('/', Path.DirectorySeparatorChar));
@@ -117,7 +117,7 @@ public static class Systemdienst
             using var key = Registry.CurrentUser.OpenSubKey(RunSchluessel);
             if (key is null) return null;
 
-            var exe = Pfade.Aufloesen(eintrag.ExePfad);
+            var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
             var ordner = string.IsNullOrWhiteSpace(eintrag.RepoOrdner)
                 ? null
                 : Path.Combine(Pfade.RepoWurzel, eintrag.RepoOrdner.Replace('/', Path.DirectorySeparatorChar));

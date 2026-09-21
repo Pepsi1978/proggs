@@ -93,7 +93,7 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
     /// </summary>
     public Task<string> FingerabdruckAsync(ProgrammEintrag eintrag, CancellationToken abbruch)
     {
-        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe)) return Task.FromResult("");
 
         try
@@ -134,7 +134,7 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
 
     private static string InstallierteVersion(ProgrammEintrag eintrag)
     {
-        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe)) return "";
         try
         {

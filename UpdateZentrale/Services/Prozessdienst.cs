@@ -61,7 +61,7 @@ public static class Prozessdienst
 
     private static string? OrdnerVon(ProgrammEintrag eintrag)
     {
-        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (string.IsNullOrWhiteSpace(exe)) return null;
 
         var ordner = Path.GetDirectoryName(exe);
@@ -110,7 +110,7 @@ public static class Prozessdienst
         // packaged apps elevated at all, so the admin flag is irrelevant here.
         if (eintrag.IstPaketApp) return PaketAppStarten(eintrag);
 
-        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (string.IsNullOrWhiteSpace(exe) || !File.Exists(exe)) return false;
 
         var start = new ProcessStartInfo

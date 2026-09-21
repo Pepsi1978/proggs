@@ -34,6 +34,11 @@ public static class Katalogdienst
             {
                 return (new ProgrammKatalog(), $"Katalog ist leer: {datei}");
             }
+
+            // Einträge, die es nur auf manchen Rechnern gibt, verschwinden hier still: derselbe
+            // Katalog gilt für alle Geräte, zeigt aber nur, was hier wirklich installiert ist.
+            katalog.Programme.RemoveAll(e => e.AusblendenWennFehlt && !e.AufDiesemRechnerVorhanden);
+
             return (katalog, null);
         }
         catch (Exception ex)

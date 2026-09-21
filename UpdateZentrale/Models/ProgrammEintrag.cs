@@ -48,6 +48,59 @@ public sealed class ProgrammEintrag
     }
 
     public string ExePfad { get; set; } = "";
+
+    /// <summary>
+    /// Weitere Orte, an denen dasselbe Programm liegen kann. Dieselbe programs.json laeuft auf
+    /// mehreren Rechnern, und dort unterscheiden sich die Installationswege: LM Studio liegt mal
+    /// unter %LOCALAPPDATA%, mal unter "Program Files"; die CLIs kommen mal vom nativen Installer,
+    /// mal als npm-Shim. Statt den Katalog je Rechner zu gabeln, gewinnt der erste Pfad, den es
+    /// wirklich gibt.
+    /// </summary>
+    public List<string> ExePfadAlternativen { get; set; } = new();
+
+    /// <summary>
+    /// Der Katalog-Pfad, der auf diesem Rechner existiert -- unaufgeloest, damit die Aufrufer
+    /// weiterhin selbst <see cref="Services.Pfade.Aufloesen"/> anwenden. Gibt es keinen, bleibt es
+    /// bei <see cref="ExePfad"/>, damit die Fehlermeldung den erwarteten Ort nennt.
+    /// </summary>
+    [JsonIgnore]
+    public string ExePfadWirksam
+    {
+        get
+        {
+            if (ExePfadAlternativen.Count == 0) return ExePfad;
+            foreach (var kandidat in new[] { ExePfad }.Concat(ExePfadAlternativen))
+            {
+                if (string.IsNullOrWhiteSpace(kandidat)) continue;
+                var aufgeloest = Services.Pfade.Aufloesen(kandidat);
+                if (!string.IsNullOrEmpty(aufgeloest) && System.IO.File.Exists(aufgeloest)) return kandidat;
+            }
+            return ExePfad;
+        }
+    }
+
+    /// <summary>
+    /// Blendet den Eintrag aus, wenn auf diesem Rechner keiner der Pfadkandidaten existiert. Für
+    /// Programme, die nur auf einem Teil der Rechner benutzt werden: derselbe Katalog bleibt für
+    /// alle gültig, ohne auf einem Gerät eine Karte "Nicht installiert" stehen zu lassen.
+    /// </summary>
+    public bool AusblendenWennFehlt { get; set; }
+
+    [JsonIgnore]
+    public bool AufDiesemRechnerVorhanden
+    {
+        get
+        {
+            foreach (var kandidat in new[] { ExePfad }.Concat(ExePfadAlternativen))
+            {
+                if (string.IsNullOrWhiteSpace(kandidat)) continue;
+                var aufgeloest = Services.Pfade.Aufloesen(kandidat);
+                if (!string.IsNullOrEmpty(aufgeloest) && System.IO.File.Exists(aufgeloest)) return true;
+            }
+            return false;
+        }
+    }
+
     public string? VersionsArgumente { get; set; }
     public string? UpdateArgumente { get; set; }
     public string? PruefArgumente { get; set; }

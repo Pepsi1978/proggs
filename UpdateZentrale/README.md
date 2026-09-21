@@ -120,6 +120,8 @@ Weitere optionale Felder:
 
 | Feld | Bedeutung |
 |---|---|
+| `exePfadAlternativen` | Weitere Orte für dieselbe Programmdatei; der erste Pfad, den es auf diesem Rechner wirklich gibt, gewinnt. So läuft derselbe Katalog auf mehreren Rechnern (LM Studio unter `Program Files` statt `%LOCALAPPDATA%`, CLIs als npm-Shim statt nativem Installer). |
+| `ausblendenWennFehlt` | Blendet die Karte aus, wenn auf diesem Rechner keiner der Pfadkandidaten existiert – für Programme, die nur auf einem Teil der Geräte benutzt werden. |
 | `versionsArgumente` | Argumente, die die installierte Version ausgeben (z. B. `--version`) |
 | `pruefArgumente` | Trockenlauf-Befehl; Zeilen mit `→` bzw. `->` gelten als geplante Updates |
 | `npmPaket` | Vergleichsquelle für die neueste Version, wenn das Werkzeug auf npm liegt |

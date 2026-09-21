@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using UpdateZentrale.Models;
 using UpdateZentrale.Services;
@@ -18,7 +19,7 @@ public sealed class CliAktualisierer : IAktualisierer
 
     public async Task<PruefErgebnis> PruefenAsync(ProgrammEintrag eintrag, IProgress<string> protokoll, CancellationToken abbruch)
     {
-        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (!File.Exists(exe))
             return new PruefErgebnis(UpdateZustand.NichtInstalliert, Meldung: $"Nicht gefunden: {exe}");
 
@@ -73,7 +74,7 @@ public sealed class CliAktualisierer : IAktualisierer
 
     public async Task<PruefErgebnis> AktualisierenAsync(ProgrammEintrag eintrag, IProgress<string> protokoll, CancellationToken abbruch)
     {
-        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (!File.Exists(exe))
             return new PruefErgebnis(UpdateZustand.NichtInstalliert, Meldung: $"Nicht gefunden: {exe}");
 
@@ -99,7 +100,7 @@ public sealed class CliAktualisierer : IAktualisierer
     /// </summary>
     public async Task<string> FingerabdruckAsync(ProgrammEintrag eintrag, CancellationToken abbruch)
     {
-        var exe = Pfade.Aufloesen(eintrag.ExePfad);
+        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (!File.Exists(exe)) return "";
 
         if (!string.IsNullOrWhiteSpace(eintrag.VersionsArgumente))
@@ -126,14 +127,32 @@ public sealed class CliAktualisierer : IAktualisierer
         return "";
     }
 
+    private static readonly HttpClient Netz = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+    /// <summary>
+    /// Fragt die Registry direkt per HTTPS statt über "npm view". Der npm-Shim löst seine eigenen
+    /// Module relativ zum Arbeitsverzeichnis auf; startet die Zentrale ihn aus dem Projektordner,
+    /// sucht er dort ein node_modules und bricht mit MODULE_NOT_FOUND ab. Die Registry-Abfrage
+    /// braucht weder node noch ein bestimmtes Arbeitsverzeichnis.
+    /// </summary>
     private static async Task<string> NpmVersionAsync(string paket, IProgress<string> protokoll, CancellationToken abbruch)
     {
-        var npm = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "npm", "npm.cmd");
-        if (!File.Exists(npm)) npm = "npm.cmd";
-
-        var lauf = await Kommandozeile.AusfuehrenAsync(npm, $"view {paket} version", TimeSpan.FromMinutes(2), abbruch: abbruch);
-        protokoll.Report($"npm view {paket} version -> {lauf.Ausgabe}");
-        return VersionsMuster.Match(lauf.Ausgabe).Value;
+        var adresse = $"https://registry.npmjs.org/{paket}/latest";
+        try
+        {
+            using var antwort = await Netz.GetAsync(adresse, abbruch);
+            antwort.EnsureSuccessStatusCode();
+            using var strom = await antwort.Content.ReadAsStreamAsync(abbruch);
+            using var json = await System.Text.Json.JsonDocument.ParseAsync(strom, cancellationToken: abbruch);
+            var version = json.RootElement.TryGetProperty("version", out var feld) ? feld.GetString() ?? "" : "";
+            protokoll.Report($"registry.npmjs.org {paket} -> {version}");
+            return VersionsMuster.Match(version).Value;
+        }
+        catch (Exception ex)
+        {
+            protokoll.Report($"registry.npmjs.org {paket} -> Abfrage fehlgeschlagen: {ex.Message}");
+            return "";
+        }
     }
 
     /// <summary>Numeric component compare; returns &gt;0 when a is newer than b.</summary>
