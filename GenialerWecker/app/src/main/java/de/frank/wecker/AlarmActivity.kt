@@ -223,13 +223,14 @@ class AlarmActivity : ComponentActivity() {
                 onDispose { darstellung.removeObserver(beobachter) }
             }
             LaunchedEffect(ausrichtung) { Ausrichtung.anwenden(this@AlarmActivity, ausrichtung) }
+            val wirksam = wirksamesTheme(theme)
             SideEffect {
                 androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
-                    isAppearanceLightStatusBars = theme != "dark"
-                    isAppearanceLightNavigationBars = theme != "dark"
+                    isAppearanceLightStatusBars = wirksam != "dark"
+                    isAppearanceLightNavigationBars = wirksam != "dark"
                 }
             }
-            WeckerTheme(theme, design, ausrichtung) {
+            WeckerTheme(wirksam, design, ausrichtung) {
                 val gold = LocalGold.current
                 val alarm = state.alarm ?: shownAlarm.takeIf { feedback != null }
                 // The ring whose UI is shown; the confirmed ring stays displayed while the service shuts down.

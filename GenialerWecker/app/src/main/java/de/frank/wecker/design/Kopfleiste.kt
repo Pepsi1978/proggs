@@ -170,11 +170,15 @@ private fun LeistenKnoepfe(
     val gold = LocalGold.current
     if (aufThemeTipp != null) {
         KopfKnopf(
-            beschreibung = if (themeWahl == "dark") "Dunkler Modus, tippen für hell"
-            else "Heller Modus, tippen für dunkel",
+            beschreibung = when (themeWahl) {
+                "dark" -> "Dunkler Modus, tippen für automatisch"
+                "system" -> "Automatisch wie das Handy, tippen für hell"
+                else -> "Heller Modus, tippen für dunkel"
+            },
             aufTipp = aufThemeTipp,
         ) {
-            Icon(
+            if (themeWahl == "system") ModusAutomatikSymbol(gold.primaer)
+            else Icon(
                 imageVector = if (themeWahl == "dark") Icons.Default.DarkMode else Icons.Default.LightMode,
                 contentDescription = null, tint = gold.primaer,
                 modifier = Modifier.size(20.dp),
@@ -189,5 +193,18 @@ private fun LeistenKnoepfe(
                 tint = gold.primaer, modifier = Modifier.size(20.dp),
             )
         }
+    }
+}
+
+
+/** Automatik: Sonne und Mond zugleich, dazu ein „A“ — in der Farbe des jeweiligen Designs. */
+@Composable
+fun ModusAutomatikSymbol(farbe: androidx.compose.ui.graphics.Color, groesse: androidx.compose.ui.unit.Dp = 22.dp) {
+    androidx.compose.foundation.layout.Box(Modifier.size(groesse)) {
+        Icon(Icons.Default.LightMode, null, tint = farbe, modifier = Modifier.size(groesse * 0.55f).align(androidx.compose.ui.Alignment.TopStart))
+        Icon(Icons.Default.DarkMode, null, tint = farbe, modifier = Modifier.size(groesse * 0.55f).align(androidx.compose.ui.Alignment.BottomEnd))
+        androidx.compose.material3.Text("A", color = farbe, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            fontSize = androidx.compose.ui.unit.TextUnit(groesse.value * 0.42f, androidx.compose.ui.unit.TextUnitType.Sp),
+            modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd))
     }
 }

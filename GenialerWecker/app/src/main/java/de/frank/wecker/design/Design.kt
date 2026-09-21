@@ -104,6 +104,11 @@ data class Material(
     val vignetteAlpha: Float,
     /** Die eingefräste Innenlinie — allein Orbits Handschrift. */
     val nut: Boolean,
+    /**
+     * Ob Flächen einen Außenschatten werfen. Orbit hell verzichtet darauf: Der nach unten
+     * wachsende Schatten ließ die kantigen Module unten schmaler wirken als oben (V-Form).
+     */
+    val schatten: Boolean = true,
 )
 
 /**
@@ -165,7 +170,7 @@ fun materialFuer(design: Design, dunkel: Boolean, primaer: Color, gedaempft: Col
     )
     Design.ORBIT -> Material(
         tiefenOben = if (dunkel) 0.1f else 0.05f,
-        tiefenUnten = if (dunkel) 0.2f else 0.1f,
+        tiefenUnten = if (dunkel) 0.2f else 0.04f,
         reflexFarbe = Color.White,
         reflexAlpha = if (dunkel) 0.16f else 0.25f,
         // Schmales hartes Band statt weicher Fläche: gebürstetes Metall, kein Glas.
@@ -177,8 +182,9 @@ fun materialFuer(design: Design, dunkel: Boolean, primaer: Color, gedaempft: Col
         innenSchattenAlpha = if (dunkel) 0.45f else 0.26f,
         koernungAlpha = 0f,
         schattenFarbe = null,
-        vignetteAlpha = if (dunkel) 0.18f else 0.05f,
+        vignetteAlpha = if (dunkel) 0.18f else 0f,
         nut = true,
+        schatten = dunkel,
     )
 }
 

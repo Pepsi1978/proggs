@@ -141,32 +141,24 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         BenachrichtigungenKarte(vm, activity)
         var ausrichtung by remember(revision) { mutableStateOf(settings.ausrichtung) }
         var design by remember(revision) { mutableStateOf(settings.design) }
+        val modus by vm.theme.collectAsStateWithLifecycle()
+        var statuszeile by remember(revision) { mutableStateOf(settings.statuszeileSichtbar) }
+        val modusOptionen = listOf("light" to "Hell", "dark" to "Dunkel", "system" to "Automatisch")
         Section("Darstellung", collapsible = true, initiallyExpanded = false,
-            summary = "${Design.von(design).anzeige} · Ausrichtung: ${Ausrichtung.optionen.find { it.first == ausrichtung }?.second ?: "Automatisch"}") {
-            // Eigene Achse: das Design gilt unabhängig von Hell/Dunkel und von der Ausrichtung.
-            Choice("Design", design, Design.entries.map { it.id to it.anzeige }) {
-                design = it
-                settings.design = it
-                vm.settingsRevision.value++
-            }
-            Text(Design.von(design).beschreibung, style = MaterialTheme.typography.bodySmall)
-            Text("Gilt für Weckerliste, Editor, Einstellungen und den Weckbildschirm. Hell/Dunkel und Ausrichtung wählst du weiterhin getrennt.",
-                style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-            HorizontalDivider(color = LocalGold.current.rahmen)
-            Choice("Ausrichtung", ausrichtung, Ausrichtung.optionen) {
-                ausrichtung = it
-                settings.ausrichtung = it
-                Ausrichtung.anwenden(activity, it)
-                vm.settingsRevision.value++
+            summary = "${Design.von(design).anzeige} · ${modusOptionen.find { it.first == modus }?.second ?: "Hell"} · " +
+                (Ausrichtung.optionen.find { it.first == ausrichtung }?.second ?: "Automatisch")) {
+            // Direkt anklickbare Punkte statt großer Knöpfe mit Auswahlfenster — und kaum Erklärtext.
+            AuswahlPunkte("Design", design, Design.entries.map { it.id to it.anzeige }) {
+                design = it; settings.design = it; vm.settingsRevision.value++
             }
             HorizontalDivider(color = LocalGold.current.rahmen)
-            var statuszeile by remember(revision) { mutableStateOf(settings.statuszeileSichtbar) }
+            AuswahlPunkte("Modus", modus, modusOptionen) { settings.theme = it }
+            HorizontalDivider(color = LocalGold.current.rahmen)
+            AuswahlPunkte("Ausrichtung", ausrichtung, Ausrichtung.optionen) {
+                ausrichtung = it; settings.ausrichtung = it; Ausrichtung.anwenden(activity, it); vm.settingsRevision.value++
+            }
+            HorizontalDivider(color = LocalGold.current.rahmen)
             Toggle("Statuszeile anzeigen", statuszeile) { statuszeile = it; settings.statuszeileSichtbar = it }
-            Text("Blendet oben Uhrzeit, Akku und Benachrichtigungen des Handys ein oder aus.",
-                style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-            Text("Gilt für die Weckerliste und den Weckbildschirm. „Automatisch“ überlässt die Wahl wie bisher dem Gerät. " +
-                "Android kann die Ausrichtung in geteilten Fenstern oder auf großen Displays vorgeben.",
-                style = MaterialTheme.typography.bodySmall)
         }
         Section("Vorlesen · Stimmen & Tempo", collapsible = true, summary = "${when (provider) {
             TtsProvider.GOOGLE_CLOUD.id -> "Google"; TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"; else -> "Edge"
@@ -540,5 +532,20 @@ private fun SchlafTonWahl() {
                 }
             },
         )
+    }
+}
+
+
+/** Eine kleine Gruppe direkt anklickbarer Auswahlpunkte mit Überschrift. */
+@Composable
+private fun AuswahlPunkte(titel: String, gewaehlt: String, optionen: List<Pair<String, String>>, waehlen: (String) -> Unit) {
+    Text(titel, style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+    optionen.forEach { (id, name) ->
+        Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).selectable(id == gewaehlt, interactionSource = null, indication = null,
+            role = androidx.compose.ui.semantics.Role.RadioButton) { if (id != gewaehlt) waehlen(id) },
+            verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(id == gewaehlt, null)
+            Text(name, Modifier.padding(start = 8.dp))
+        }
     }
 }

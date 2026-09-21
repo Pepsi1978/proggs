@@ -110,7 +110,9 @@ import androidx.compose.runtime.Immutable
 
 @Composable
 fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
-    val theme by vm.theme.collectAsStateWithLifecycle()
+    val themeRoh by vm.theme.collectAsStateWithLifecycle()
+    // „system“ folgt dem Handy; alles Weitere sieht nur noch hell oder dunkel.
+    val theme = wirksamesTheme(themeRoh)
     // Eigene Achse neben Hell/Dunkel und Ausrichtung; lifecycle-bewusst gesammelt.
     val designId by vm.settings.designFlow.collectAsStateWithLifecycle()
     val design = Design.von(designId)
@@ -152,8 +154,9 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
             Column(Modifier.fillMaxSize().imePadding()) {
                 DesignKopfleiste(
                     titel = when (page) { "edit" -> if (vm.isNewDraft) "Neuer Wecker" else "Wecker bearbeiten"; "settings" -> "Einstellungen"; else -> "Genialer Wecker" },
-                    themeWahl = theme,
-                    aufThemeTipp = { vm.settings.theme = if (theme == "dark") "light" else "dark" },
+                    themeWahl = themeRoh,
+                    // Reihum: hell → dunkel → automatisch → hell.
+                    aufThemeTipp = { vm.settings.theme = when (themeRoh) { "light" -> "dark"; "dark" -> "system"; else -> "light" } },
                     aufEinstellungen = if (page == "settings") null else ({ vm.stopPreview(); settingsFrom = page; page = "settings" }),
                     voran = if (page != "alarms") ({ StillerKnopf("‹", { back() }, Modifier.semantics { contentDescription = "Zurück zur Weckerliste" }); Spacer(Modifier.width(8.dp)) }) else null,
                 )
@@ -1705,8 +1708,11 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
                         beschriftung(MaterialTheme.typography.labelLarge.copy(fontFamily = IdeenSchriftFest, letterSpacing = 1.5.sp), gold.primaer)
                     }
                     if (collapsible) {
-                        VerticalDivider(color = gold.rahmen)
-                        Box(Modifier.fillMaxHeight().width(52.dp).background(gold.flaecheErhoeht.copy(alpha = .6f))
+                        // Innerhalb der eingefrästen Innenlinie: Außenkante und Nut laufen ungebrochen
+                        // um die ganze Blase, das Segment liegt nur als leicht getönte Fläche darin.
+                        VerticalDivider(Modifier.padding(vertical = 3.dp), color = gold.rahmen)
+                        Box(Modifier.fillMaxHeight().padding(top = 3.dp, bottom = 3.dp, end = 3.dp).width(49.dp)
+                            .background(gold.primaer.copy(alpha = .06f), RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp))
                             .clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
                             Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null,
                                 tint = gold.primaer, modifier = Modifier.size(26.dp))
@@ -1794,8 +1800,10 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                     Modifier.padding(start = 12.dp), color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodyMedium)
             }
         }
+        // Kept outside the section: its content is removed while collapsed, the remembered date must survive that.
+        var gemerktesDatum by rememberSaveable(alarm.id) { mutableStateOf(alarm.startDate) }
         Section("Deine Weckzeit", collapsible = true, initiallyExpanded = true,
-            summary = listOfNotNull(alarm.timeLabel, alarm.name.ifBlank { null },
+            summary = listOfNotNull(alarm.timeLabel, alarm.name.ifBlank { null }, scheduleLabel(alarm),
                 if (alarm.sleepMinutes > 0) "Schlafdauer ${Schlaf.dauer(alarm.sleepMinutes)}" else null).joinToString(" · ")) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Früher öffnete hier der Plattformdialog `android.app.TimePickerDialog`. Der zieht sein
@@ -1819,10 +1827,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             }
             Eingabefeld(alarm.name, { vm.change(alarm.copy(name = it)) }, "Name des Weckers", Modifier.fillMaxWidth())
             SchlafdauerEingabe(alarm, vm::change)
-        }
-        // Kept outside the section: its content is removed while collapsed, the remembered date must survive that.
-        var gemerktesDatum by rememberSaveable(alarm.id) { mutableStateOf(alarm.startDate) }
-        Section("Wiederholung", collapsible = true, summary = scheduleLabel(alarm)) {
+            // Die Wiederholung gehört zur Weckzeit — hier sieht man sofort, dass der Wecker auch täglich klingeln kann.
+            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            Text("Wann soll er wecken?", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             RepeatEditor(alarm, activity, gemerktesDatum, { gemerktesDatum = it }, vm::change)
         }
         Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }.ifBlank { "Kein Schritt gewählt" },
@@ -2801,3 +2808,9 @@ private fun TraumTermin(daten: HeroDaten, aufOeffnen: () -> Unit) {
         }
     }
 }
+
+
+/** Löst die Wahl „system“ in hell oder dunkel auf, je nach Einstellung des Handys. */
+@Composable
+fun wirksamesTheme(wahl: String): String =
+    if (wahl == "system") (if (androidx.compose.foundation.isSystemInDarkTheme()) "dark" else "light") else wahl

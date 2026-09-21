@@ -86,7 +86,7 @@ internal fun MaterialFlaeche(
         Ebene.ABSCHNITT, Ebene.KARTE -> gold.flaeche
         Ebene.HERO, Ebene.DIALOG, Ebene.KNOPF -> gold.flaecheErhoeht
     }
-    val hoehe = when (ebene) {
+    val hoehe = if (!material.schatten) 0.dp else when (ebene) {
         Ebene.HINTERGRUND, Ebene.VERTIEFT -> 0.dp
         Ebene.ABSCHNITT -> Hoehe.kontakt
         Ebene.KARTE, Ebene.KNOPF -> Hoehe.karte
