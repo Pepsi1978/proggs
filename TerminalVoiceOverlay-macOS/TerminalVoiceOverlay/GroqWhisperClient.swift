@@ -567,6 +567,9 @@ final class GroqWhisperClient {
     /// RMS-Pegel ueber der Stille-Schwelle liegt. Liest die Sample-Rate aus dem Header (Bytes 24-27).
     /// Bei jedem Problem nil -> dann kein Audio-Abgleich (funktionserhaltend).
     private static func buildVoicedTimeline(_ wav: Data) -> [Bool]? {
+        // Echten data-Chunk nutzen: AVAudioFile schreibt vor "fmt " einen JUNK-Chunk, der
+        // 44-Byte-Standardheader stimmt dann nicht. Nur wenn der Parser scheitert, der alte Weg.
+        if let fmt = readWavFormat(wav) { return buildVoicedTimeline(wav, fmt) }
         let bytes = [UInt8](wav)
         let headerSize = 44
         guard bytes.count > headerSize + 4 else { return nil }

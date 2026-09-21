@@ -164,7 +164,20 @@ final class AudioRecorder {
         let tempDir = FileManager.default.temporaryDirectory
         let url = tempDir.appendingPathComponent("recording_\(UUID().uuidString).wav")
 
-        let file = try AVAudioFile(forWriting: url, settings: wavFormat.settings)
+        // Datei als 16-bit-PCM (wie Windows), Verarbeitung bleibt Float32. Vorher landete Float32 in
+        // der WAV — der Stille-Schutz im GroqWhisperClient liest aber 16-bit-Samples und hielt damit
+        // jedes Rauschen fuer Sprache ("Vielen Dank" nach stillem Knopfdruck, 21.09.2026).
+        let fileSettings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: targetRate,
+            AVNumberOfChannelsKey: targetChannels,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false,
+        ]
+        let file = try AVAudioFile(forWriting: url, settings: fileSettings,
+                                   commonFormat: .pcmFormatFloat32, interleaved: false)
 
         guard let converter = AVAudioConverter(from: recordingFormat, to: wavFormat) else {
             throw RecorderError.converterError
