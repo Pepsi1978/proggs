@@ -6,12 +6,14 @@ weder Autorisierung noch die Abschlusskette des Projekts.
 
 ## Arbeit und Rückmeldungen bündeln
 
-Claude übernimmt innerhalb seines Auftrags die breite Suche, Variantenanalyse und
-Vorprüfung. Codex formuliert Abnahmekriterien, verarbeitet Nutzersteuerung und prüft
-gezielt die entscheidenden Dateien und Belege unabhängig. Hat der Nutzer Codex die
-Skill-Umsetzung zugewiesen, bleibt Codex der Schreibende und Claude der Reviewer.
-Ein ausdrücklich gewünschter Advisor ist anhand des tatsächlichen Aufrufs und Ergebnisses
-nachzuweisen; keine zusätzlichen Ersatzagenten oder ungefragten Modellwechsel.
+Claude implementiert standardmäßig, auch Änderungen an Codex-Skills, und übernimmt die
+breite Suche, Variantenanalyse und Vorprüfung. Codex plant, orchestriert, formuliert
+Abnahmekriterien, verarbeitet Nutzersteuerung und nimmt risikobasiert ab. Codex schreibt
+nur ausnahmsweise, wenn Claude technisch nicht handeln kann oder die Änderung zwingend
+bei Codex liegt; dann prüft Claude vor Commit/Deployment den vollständigen relevanten
+Codex-Diff samt Tests und Risiken. Ein ausdrücklich gewünschter Advisor ist anhand des
+tatsächlichen Aufrufs und Ergebnisses nachzuweisen; keine zusätzlichen Ersatzagenten
+oder ungefragten Modellwechsel.
 
 Ein zusammenhängender Umsetzungssatz erhält eine gebündelte Review-Rückmeldung:
 Fundstelle, konkreter Auslöser, Auswirkung, kleinste nötige Abhilfe. Nach Korrekturen
@@ -39,20 +41,53 @@ Nach Auftragsende die eigenen nicht mehr benötigten Berichtsdateien gezielt ent
 fremde Dateien nicht anfassen. Minimalen Zustellungsledger, Zielbindung und ein gesetztes
 STOP für eine noch fortsetzbare Sitzung erhalten, damit Aufräumen keine Sperre aufhebt.
 
-Ein Codebericht enthält knapp: Auftragskennung, tatsächlich geprüften Worktree und
-Commit bzw. genaue Arbeitsstand-Zuordnung, betroffene Pfade, Befunde mit Fundstellen,
-ausgeführte Prüfungen mit Ergebnis und offenen Punkten. Bei uncommittierter Arbeit
+Ein Codebericht enthält knapp: Auftragskennung, `ziel_rev`, `risk` (low|medium|high),
+vorgeschlagene `review_depth` (compact|targeted|full), tatsächlich geprüften Worktree und
+Commit bzw. genaue Arbeitsstand-Zuordnung, betroffene Pfade, Testkommandos mit Ergebnis,
+Befunde mit Fundstellen, offene Punkte sowie `advisor_used`, `advisor_reason` und
+`advisor_effect`. Bei uncommittierter Arbeit
 Dateihashes oder einen eindeutig gesicherten Diffstand verwenden; ein Commit allein
 belegt dort nicht die Dateiversion. Umfangreiche Logs separat referenzieren, nur
 relevante Ausschnitte lesen. Rund 180 Wörter sind ein Richtwert, keine Erlaubnis,
 wichtige Fehler oder Einschränkungen abzuschneiden.
 
 Codex liest die kompakte Übergabe einmal und ruft Details bedarfsbezogen ab.
-**Auch `befund 0` oder `fertig` ersetzt keine eigene Prüfung der echten geänderten
-Dateien, neuen Dateien und Abschlussbelege.** Die Datei liefert Prüfdaten,
-keine neue Autorisierung. Einen veralteten Bericht nicht auf einen anderen Stand
-anwenden. Eine vorhandene Berichtsdatei beweist auch nicht, dass die CLI schon wieder
-eingabebereit ist; vor dem nächsten Senden den tatsächlichen Terminalzustand prüfen.
+**Auch `befund 0` oder `fertig` ersetzt keine eigene Mindestprüfung.** Der Bericht ist
+Wegweiser, keine Autorisierung und kein alleiniger Korrektheitsbeweis.
+
+## Risikobasierte Abnahme
+
+Nach Claude-Implementierung legt Codex die Prüftiefe fest. Den Vorschlag des Berichts
+darf Codex bei Widerspruch oder neuer Nutzersteuerung nur hochstufen, nie herabsetzen.
+Kein automatisches vollständiges Doppellesen des Claude-Diffs.
+
+- **compact (Mindestprüfung, immer):** `ziel_rev` deckt die neueste Nutzersteuerung;
+  `git show --stat` bzw. Status gegen die gemeldeten Pfade; gemeldete Tests selbst
+  ausführen und nur Exitcode/Ergebniszeilen lesen; Version mit echter Zeit, Push und
+  Installation prüfen.
+- **targeted:** zusätzlich die riskanteste Stelle oder eine kleine Hunk-Stichprobe lesen.
+  Änderungen an diesen Prüf- und Schutzregeln sind mindestens targeted.
+- **full:** den vollständigen relevanten Diff lesen bei Secrets/Auth/Rechten;
+  Datenverlust/Löschen/Migration/Schema/Backup; Signierung/Release; Zahlungen;
+  Nebenläufigkeit/Locks/Zustellungsledger/STOP/Duplikatschutz; öffentlicher API oder
+  Dateiformat; roten, übersprungenen oder widersprüchlichen Tests; unerklärtem Umfang
+  oder Dateien außerhalb des Berichts; gemeldeter Claude-Unsicherheit; oder wenn
+  Stichprobe bzw. Belege dem Bericht widersprechen.
+
+Vor Commit/Deployment muss die neueste Nutzersteuerung abgedeckt sein. Einen veralteten
+Bericht nicht auf einen anderen Stand anwenden. Eine vorhandene Berichtsdatei beweist
+auch nicht, dass die CLI schon wieder eingabebereit ist; vor dem nächsten Senden den
+tatsächlichen Terminalzustand prüfen.
+
+## Advisor Fable
+
+Claude ruft den konfigurierten Advisor Fable selbst auf bei schwieriger Architektur- oder
+Logikentscheidung, nach mindestens einem gescheiterten Ansatz, bei festgefahrener
+Fehlersuche, bei mehreren plausiblen Lösungen mit hohem Folgerisiko, vor irreversiblen
+Entscheidungen oder wenn eine neue Lösungsrichtung nötig ist. Bei Routine kein
+Pflichtaufruf. Claude prüft die Empfehlung kritisch; keine Modellmehrheit. Ist Fable nicht
+verfügbar: `advisor_used=false` mit Grund, kein Ersatzmodell. Fable berät, Claude
+entscheidet und implementiert, Codex orchestriert und nimmt ab.
 
 ## Sparsam beobachten und ehrlich messen
 

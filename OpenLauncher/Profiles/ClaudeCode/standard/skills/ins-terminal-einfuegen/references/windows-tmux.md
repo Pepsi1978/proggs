@@ -85,9 +85,9 @@ Für einen ausdrücklich beauftragten Verbesserungsloop bis zum manuellen Stopp
 weiterarbeiten; Voice-Ende und eine Zwischenfrage sind kein Stopp. Keine geplante
 Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updates erzeugen.
 
-- Rollen im Auftrag festlegen: Der Nutzer steuert, Codex koordiniert und prüft,
-  Claude diskutiert oder implementiert gemäß Auftrag. Codex darf seinen Kommunikationsskill
-  selbst bearbeiten; dann Claude ausdrücklich nur zur Gegenprüfung einsetzen.
+- Rollen im Auftrag festlegen: Der Nutzer steuert, Codex plant, koordiniert und nimmt ab,
+  Claude diskutiert oder implementiert gemäß Auftrag, standardmäßig auch Codex-Skills.
+  Schreibt Codex ausnahmsweise selbst, prüft Claude den vollständigen relevanten Diff.
   Pro Datei ein Schreibender, Git-Mutationen nacheinander.
 - Übergaben kurz: `R2: Ziel; relevante Änderung seit R1; Grenzen; erwarteter Nachweis`.
   Keine eigene Empfangsbestätigungsrunde. Für kleine Fragen direkte Antworten;
@@ -110,10 +110,11 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
   liest Arbeitsstand, offene Zustellungen, Windows-Git-Kurzstand und eine frische
   Pane-Ansicht in einem Aufruf. Ein Teilfehler ersetzt den betroffenen Beleg nicht;
   STOP oder geänderte Zielidentität bleiben harte Fehler.
-- Review an Dateimeilensteinen: zuerst Status und betroffene Pfade, dann deren echten
-  staged/unstaged Diff sowie neue Dateien. Gegen den zuletzt geprüften Inhalt vergleichen;
+- Review an Dateimeilensteinen: zuerst Status und betroffene Pfade gegen den Bericht, dann
+  risikobasiert gemäß [Kontingent sparsam nutzen](kontingent-sparen.md) Stichprobe oder
+  vollständigen Diff sowie neue Dateien. Gegen den zuletzt geprüften Inhalt vergleichen;
   Commitwechsel beachten. Keine Repo-Gesamtscans pro Terminalabruf. Claudes Kurzbericht
-  dient als Wegweiser, ersetzt aber weder Diff noch Testbeleg.
+  dient als Wegweiser, ersetzt aber weder Mindestprüfung noch Testbeleg.
 - Zwischen jedem Lesen und Senden neu eingetroffene Nutzeranweisungen berücksichtigen.
   Fragmente sammeln, Transkriptdopplungen vermeiden. Fremde Entwürfe stehen lassen.
   Scrollmodus ist keine Eingabebereitschaft: nicht automatisch verlassen und absenden.
