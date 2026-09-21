@@ -120,13 +120,27 @@ function Hole-Geraete {
 $geraete = @(Hole-Geraete)
 $bereit  = @($geraete | Where-Object { $_.Zustand -eq 'device' })
 
+# Standardweg ist WLAN: fehlt eine WLAN-Verbindung, verbindet das Werkzeugskript
+# neu (mit Kabel schaltet es tcpip ein, ohne Kabel nimmt es die letzte IP).
+$wlanSkript = Join-Path $PSScriptRoot '..\Werkzeuge\adb-wlan\adb-wlan.ps1'
+if (-not ($bereit | Where-Object { $_.Seriennummer -match ':\d+$' }) -and (Test-Path -LiteralPath $wlanSkript)) {
+    Schreib '  Handy per WLAN verbinden …' DarkGray
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $wlanSkript *> $null
+    $geraete = @(Hole-Geraete)
+    $bereit  = @($geraete | Where-Object { $_.Zustand -eq 'device' })
+}
+# Hängt dasselbe Handy per USB und WLAN, zählt nur das WLAN-Gerät.
+$wlan = @($bereit | Where-Object { $_.Seriennummer -match ':\d+$' })
+if ($wlan.Count -ge 1) { $bereit = $wlan }
+
 if ($bereit.Count -eq 0) {
     if ($geraete | Where-Object { $_.Zustand -eq 'unauthorized' }) {
         Schreib '  ❗ Das Handy ist angeschlossen, hat den Rechner aber noch nicht bestätigt.' Red
         Schreib '     Auf dem Handy-Bildschirm "USB-Debugging zulassen" antippen und neu starten.' DarkGray
     } else {
         Schreib '  ❗ Kein Handy gefunden.' Red
-        Schreib '     Handy per USB anschließen, entsperren und USB-Debugging einschalten.' DarkGray
+        Schreib '     WLAN-Verbindung klappt nicht (Handy neu gestartet oder anderes Netz?).' DarkGray
+        Schreib '     Einmal per USB anschließen, entsperren und neu starten — danach geht es ohne Kabel.' DarkGray
         Schreib '     (Einstellungen → Entwickleroptionen → USB-Debugging)' DarkGray
     }
     Beende 1
