@@ -2883,23 +2883,27 @@ private fun HeroDeko(modifier: Modifier) {
     androidx.compose.foundation.Canvas(modifier) {
         val zufall = java.util.Random(7)
         when (design) {
-            Design.SCHLICHT -> repeat(14) {
-                val x = size.width * (0.35f + zufall.nextFloat() * 0.62f)
-                val y = size.height * zufall.nextFloat() * 0.7f
-                val r = (1.5f + zufall.nextFloat() * 3.5f).dp.toPx()
-                val a = if (gold.istDunkel) 0.25f + zufall.nextFloat() * 0.35f else 0.18f + zufall.nextFloat() * 0.25f
-                val c = androidx.compose.ui.geometry.Offset(x, y)
-                // Vierzackiges Funkeln
+            // Feste Plätze statt Zufall: nur in den freien Zonen — zwischen Zifferblatt und
+            // rechtsbündigem Text und unten zwischen „Öffnen“ und „Weckbereit“, nie unter Schrift.
+            Design.SCHLICHT -> listOf(
+                Triple(0.43f, 0.10f, 3.2f), Triple(0.48f, 0.28f, 2.0f), Triple(0.41f, 0.46f, 2.6f), Triple(0.47f, 0.62f, 1.8f),
+                Triple(0.53f, 0.83f, 2.4f), Triple(0.60f, 0.93f, 1.6f), Triple(0.66f, 0.80f, 2.8f), Triple(0.72f, 0.91f, 1.8f),
+            ).forEach { (fx, fy, groesse) ->
+                val x = size.width * fx
+                val y = size.height * fy
+                val r = groesse.dp.toPx()
+                val a = if (gold.istDunkel) 0.45f else 0.35f
                 val pfad = androidx.compose.ui.graphics.Path().apply {
                     moveTo(x, y - r * 2); quadraticTo(x, y, x + r * 2, y); quadraticTo(x, y, x, y + r * 2)
                     quadraticTo(x, y, x - r * 2, y); quadraticTo(x, y, x, y - r * 2); close()
                 }
                 drawPath(pfad, gold.primaer.copy(alpha = a))
-                drawCircle(androidx.compose.ui.graphics.Color.White.copy(alpha = a * 0.8f), r * 0.35f, c)
+                drawCircle(androidx.compose.ui.graphics.Color.White.copy(alpha = a * 0.8f), r * 0.35f, androidx.compose.ui.geometry.Offset(x, y))
             }
             Design.MORGENRUHE -> {
-                val c = androidx.compose.ui.geometry.Offset(size.width * 0.86f, size.height * 0.30f)
-                val r = 22.dp.toPx()
+                // Links neben dem Bett bei den Vögeln, kleiner — nicht mehr direkt hinter dem Bett.
+                val c = androidx.compose.ui.geometry.Offset(size.width * 0.60f, size.height * 0.16f)
+                val r = 13.dp.toPx()
                 repeat(12) { i ->
                     val w = Math.toRadians(i * 30.0)
                     val a = c + androidx.compose.ui.geometry.Offset((r * 1.45f * Math.cos(w)).toFloat(), (r * 1.45f * Math.sin(w)).toFloat())
@@ -2908,7 +2912,7 @@ private fun HeroDeko(modifier: Modifier) {
                 }
                 drawCircle(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .45f), gold.akzentWarm.copy(alpha = .12f)), center = c, radius = r), r, c)
                 // Zwei kleine Vögel am Morgenhimmel
-                listOf(0.62f to 0.14f, 0.70f to 0.22f).forEach { (fx, fy) ->
+                listOf(0.47f to 0.10f, 0.53f to 0.20f).forEach { (fx, fy) ->
                     val p = androidx.compose.ui.geometry.Offset(size.width * fx, size.height * fy)
                     val w = 6.dp.toPx()
                     val vogel = androidx.compose.ui.graphics.Path().apply {
