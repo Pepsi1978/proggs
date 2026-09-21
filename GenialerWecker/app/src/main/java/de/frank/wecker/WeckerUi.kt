@@ -1270,8 +1270,10 @@ private fun WeckerKarte(
         ) {
             // No animateContentSize here: the detail block animates its own size, never two size animations at once.
             Column(
-                Modifier.padding(horizontal = if (dicht) 10.dp else 18.dp, vertical = if (dicht) 8.dp else 16.dp),
-                verticalArrangement = Arrangement.spacedBy(if (dicht) 3.dp else 8.dp),
+                // Etwas kompakter als früher, damit auf einem großen Handy drei Wecker sichtbar sind —
+                // aber nicht so dicht wie Orbits Instrumentenzeile.
+                Modifier.padding(horizontal = if (dicht) 10.dp else 16.dp, vertical = if (dicht) 8.dp else 11.dp),
+                verticalArrangement = Arrangement.spacedBy(if (dicht) 3.dp else 5.dp),
             ) {
                 // --- Fach 1: Kopfzeile ---
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -1367,23 +1369,18 @@ private fun WeckerKarte(
                         Text(status, style = MaterialTheme.typography.bodySmall,
                             color = if (alarm.preparationError.isNotBlank() || alarm.preparedAt == 0L) semantisch.warnung else semantisch.erfolg)
                     }
-                    // Frequent actions first.
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Alle Aktionen in **einem** Umbruchbereich: Auf breiten Geräten (Fold, S25 Ultra)
+                    // stehen drei oder mehr nebeneinander, auf schmalen brechen sie um. Vorher lagen
+                    // sie in drei getrennten Reihen, und rechts blieb viel Platz leer.
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         StillerKnopf("Bearbeiten", { onEdit(alarm) }, hervorgehoben = true)
                         StillerKnopf("Testwecken", { vm.test(alarm) })
                         if (alarm.enabled && alarm.repeats) {
                             if (skipped) StillerKnopf("Auslassen rückgängig", { vm.unskip(alarm) })
                             else StillerKnopf("Nächsten Termin auslassen", { vm.skip(alarm) })
                         }
-                    }
-                    // Rare actions second.
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (alarm.needsSpeech) StillerKnopf("Audio vorbereiten", { vm.prepare(alarm) })
                         StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0, snoozes = 0, skippedThrough = "")) })
-                    }
-                    // Delete separated by a divider and its own end-aligned row, without a fixed width.
-                    HorizontalDivider(color = LocalGestalt.current.trennfarbe())
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         StillerKnopf("Löschen", { onDelete(alarm) })
                     }
                 } }
@@ -2439,20 +2436,20 @@ private fun WeckzeitUeberschrift(alarm: Alarm, now: Long, farbe: androidx.compos
     }
     val datumText = anzeige?.datum
     if (datumText != null) {
-        Text(datumText, style = MaterialTheme.typography.titleMedium, color = farbe,
+        Text(datumText, style = MaterialTheme.typography.labelLarge, color = farbe,
             maxLines = if (platzHalten) 1 else 2, overflow = TextOverflow.Ellipsis)
     } else if (platzHalten) {
         // Unsichtbarer Platzhalter derselben Typografie: eine Zeile, die mit der Systemschrift
         // mitwächst. Ohne ihn wären Karten mit Datum rund 74 Pixel höher als die ohne.
-        Text(" ", Modifier.clearAndSetSemantics { }, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        Text(" ", Modifier.clearAndSetSemantics { }, style = MaterialTheme.typography.labelLarge, maxLines = 1)
     }
     // Auch hier eine feste Zeile: Uhrzeit und Zusatz („morgen") dürfen nicht je nach Namenslänge
     // mal neben-, mal untereinander stehen. Der Zusatz sitzt auf der Grundlinie der großen Zahl.
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
         Text(anzeige?.uhrzeit ?: alarm.timeLabel, fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-            fontSize = 44.sp, color = farbe, maxLines = 1)
+            fontSize = 36.sp, color = farbe, maxLines = 1)
         anzeige?.zusatz?.let { zusatz ->
-            Text(zusatz, Modifier.weight(1f, fill = false).padding(bottom = 8.dp),
+            Text(zusatz, Modifier.weight(1f, fill = false).padding(bottom = 6.dp),
                 style = MaterialTheme.typography.titleMedium, color = farbe,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
