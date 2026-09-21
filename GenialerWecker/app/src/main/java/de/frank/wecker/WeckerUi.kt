@@ -1392,10 +1392,8 @@ private fun WeckerKarte(
                     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         StillerKnopf("Bearbeiten", { onEdit(alarm) }, hervorgehoben = true)
                         StillerKnopf("Testwecken", { vm.test(alarm) })
-                        if (alarm.enabled && alarm.repeats) {
-                            if (skipped) StillerKnopf("Auslassen rückgängig", { vm.unskip(alarm) })
-                            else StillerKnopf("Nächsten Termin auslassen", { vm.skip(alarm) })
-                        }
+                        // „Nächsten Termin auslassen“ gibt es nicht mehr; ein schon gesetztes Auslassen bleibt rücknehmbar.
+                        if (alarm.enabled && alarm.repeats && skipped) StillerKnopf("Auslassen rückgängig", { vm.unskip(alarm) })
                         if (alarm.needsSpeech) StillerKnopf("Audio vorbereiten", { vm.prepare(alarm) })
                         StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0, snoozes = 0, skippedThrough = "")) })
                         StillerKnopf("Löschen", { onDelete(alarm) })
