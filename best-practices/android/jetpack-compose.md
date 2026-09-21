@@ -601,3 +601,10 @@ instrumentiert getestet wurde.
 - Animation/Tooling/Testing: /develop/ui/compose/animation/{choose-api,value-based,composables-modifiers};
   /tooling/previews, /testing; /studio/preview/compose-screenshot-testing.
 - `extern`: composables.com (Pager-Parameter-Versionsbeleg), github.com/skydoves/compose-performance.
+
+### Debug-Build ruckelt auf dem Gerät (GenialerWecker, 21.09.2026)
+- **Symptom:** Tippen ruckelt, Dialoge (v. a. Material3 `DatePicker`) öffnen erst nach ~1 s.
+- **Ursache 1:** Installiert war der Debug-Build; als `debuggable` läuft Compose ohne vorkompilierte Profile deutlich langsamer.
+  **Fix:** `buildTypes { getByName("debug") { isDebuggable = false } }` (Signatur bleibt der gemeinsame Debug-Key; `run-as` geht danach nicht mehr), nach der Installation optional `adb shell cmd package compile -m speed-profile -f <paket>`.
+- **Ursache 2:** Fortschritts-/Meldungszeilen, die oben in eine `Column` *eingefügt* werden, verschieben die ganze Seite bei jedem Knopfdruck. **Fix:** als schwebende Überlagerung (`Box` + `align(TopCenter)`) statt im Layoutfluss.
+- **Theme-Wechsel ruckelt:** statt ~20 `animateColorAsState` (die ganze App zeichnet jedes Bild neu) ein Standbild via `rememberGraphicsLayer().toImageBitmap()` überblenden und die Farben sofort umschalten.
