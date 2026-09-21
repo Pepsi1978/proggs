@@ -36,7 +36,7 @@ best-practices/
 ├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/WebGPU), Webseitenbau/Webdesign/Effekte, Lottie/Rive/SVG-Animationen
 ├── apis/             LLM-/HTTP-API-Integration + OAuth/Auth (OpenAI, Anthropic, Gemini, Groq, OpenRouter, xAI, Mistral, DeepSeek, lokal, OAuth, TTS, …)
 ├── peripherie/       Elgato Stream-Deck-Plugin
-├── gaming/           PC-Gaming-Tuning (NVIDIA DLSS Override)
+├── gaming/           PC-Gaming-Tuning (NVIDIA DLSS Override, DLSS-5-Mod inoffiziell)
 ├── assets/           App-Icon-Building, 3D-Visuelle-Qualität (PBR/Licht/PostFX)
 ├── agents/           Boss-/Orchestrator-Agent im Multi-Agenten-System + Loop Engineering (autonome Agenten-Schleifen) + Anti-Halluzinations-Regeln (Modelle/Agenten zum Nicht-Erfinden bewegen)
 ├── second-brain/     Selbstgehostetes persönliches Memory-System („zweites Gehirn"/PKM): VPS, Memory-Backends, Datenmodell, Orchestrator+Suche, Schreibpfad, Multi-Client, Sicherheit, Qualität, Referenz-Architekturen
@@ -55,7 +55,7 @@ best-practices/
 | `web/` | 5 | Chrome-Erweiterungen, TypeScript, 3D Web, Webseitenbau/Webdesign/Effekte, Lottie/Rive/SVG-Animationen | `bugs/web/` |
 | `apis/` | 15 | LLM-/HTTP-APIs + OAuth (14 gepaart + `multi-provider` ungepaart) | `bugs/apis/` |
 | `peripherie/` | 1 | Elgato Stream-Deck | `bugs/peripherie/` |
-| `gaming/` | 1 | NVIDIA DLSS Override (App/Profile Inspector, Anti-Cheat) | `bugs/gaming/` |
+| `gaming/` | 2 | NVIDIA DLSS Override (App/Profile Inspector, Anti-Cheat), DLSS-5-Mod inoffiziell (OptiScaler-DLSSNR) | `bugs/gaming/` |
 | `assets/` | 2 | Icon-Building, 3D-Optik | `bugs/assets/` |
 | `agents/` | 3 | Orchestrator-Agent, Loop Engineering, Anti-Halluzinations-Regeln (konzeptionell, ungepaart) | `bugs/agents/` |
 | `second-brain/` | 9 | Selbstgehostetes persönliches Memory („zweites Gehirn") — Architektur/Best-Practices (konzeptionell) | — (ungepaart) |

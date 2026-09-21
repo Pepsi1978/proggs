@@ -25,7 +25,7 @@ bugs/
 ├── desktop/          C#/.NET (Windows), Swift/AppKit (macOS), 3D (Metal/RealityKit, .NET/Stride, Rust wgpu/Bevy, Godot)
 ├── web/              Chrome-Erweiterungen, TypeScript/Node, 3D (Three.js/Babylon/WebGPU), Webdesign, Lottie/Rive/SVG
 ├── peripherie/       Elgato Stream-Deck-Plugin
-├── gaming/           PC-Gaming-Tuning (NVIDIA DLSS Override, Anti-Cheat-Fallen)
+├── gaming/           PC-Gaming-Tuning (NVIDIA DLSS Override, DLSS-5-Mod inoffiziell, Anti-Cheat-Fallen)
 ├── claude-tooling/   Claude-Hooks, MCP-Server-Bau, Python (Windows-Scripting)
 ├── opencode/         OpenCode CLI (quelloffener Terminal-KI-Coding-Agent: Install/WSL, Config, AGENTS.md, Agents/Plugins/MCP/Skills, OpenRouter, Token)
 ├── assets/           App-Icon-Building (Windows .ico, Android Adaptive, macOS .icns), 3D-Visuelle-Qualität (PBR/Licht/PostFX)
@@ -133,7 +133,8 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 
 | Bereich | Datei | Stand | Bugs | Erkennungs-Trigger (Dateien / Stichworte) |
 |---------|-------|-------|------|-------------------------------------------|
-| **NVIDIA DLSS Override** (NVIDIA App, Profile Inspector, DLL-Tausch, Anti-Cheat) | [`gaming/nvidia-dlss-override.md`](gaming/nvidia-dlss-override.md) | 2026-09-21 | 8 | „DLSS", „DLSS Override", „Profile Inspector", „nvngx_dlss", „Smooth Motion", „DLSS 5", „Ricochet" · Best-Practices: `best-practices/gaming/nvidia-dlss-override.md` |
+| **NVIDIA DLSS Override** (NVIDIA App, Profile Inspector, DLL-Tausch, Anti-Cheat) | [`gaming/nvidia-dlss-override.md`](gaming/nvidia-dlss-override.md) | 2026-09-21 | 10 | „DLSS", „DLSS Override", „Profile Inspector", „nvngx_dlss", „Smooth Motion", „DLSS 5", „Ricochet" · Best-Practices: `best-practices/gaming/nvidia-dlss-override.md` |
+| **DLSS 5 Mod inoffiziell** (OptiScaler-DLSSNR, DLSS5-Feeder, DLSS5 Swapper, RenoDX, geleaktes `nvngx_dlssnr.dll`) | [`gaming/dlss5-mod-inoffiziell.md`](gaming/dlss5-mod-inoffiziell.md) | 2026-09-21 | 11 | „DLSS 5 Mod", „dlssnr", „DLSS5-Feeder", „DLSS5 Swapper", „RenoDX", „Neural Rendering", „Deep Fried Chicken" · Best-Practices: `best-practices/gaming/dlss5-mod-inoffiziell.md` |
 
 ### 🔐 `server/` — Server-Betrieb & Infrastruktur (VPS, VPN, Hosting)
 

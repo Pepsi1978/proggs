@@ -46,11 +46,17 @@
 - **Diagnose-Weg (Poka-Yoke):** Vor jeder Override-Aussage das NGX-Log prüfen: `HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore` → `LogLevel`=1, Spiel starten und die Logs im spieleigenen Log-Ordner lesen (MW2: `%LOCALAPPDATA%\Activision\Call of Duty MWII\crash_reports\gpu\nvngx.log`), danach `LogLevel` wieder löschen. Der offizielle Indikatorwert laut NVIDIA/DLSS-Repo ist `ShowDlssIndicator`=1 (nicht 0x400). Keiner der beiden Werte zeigte bei MW2 mit DLSS 2.4.12 eine Anzeige, deshalb ist das Log der verlässliche Beweis.
 - **Quelle:** eigene Messung, https://github.com/NVIDIA/DLSS/tree/main/utils
 
-## B8 — „DLSS 5 Mod“ auf YouTube ist kein NVIDIA DLSS 5
-- **Symptom:** Videos zeigen „DLSS 5“ in alten Spielen, z. B. „3x DLSS 5 Call of Duty Modern Warfare 2 DMZ Offline“ (TheGr08, aufgenommen auf einer RTX 4090, obwohl echtes DLSS 5 nur auf RTX 50 läuft).
-- **Ursache:** Das ist ein ReShade-/Filter-Mod („DLSS 5 MOD“, Download über imod.gg, Tags #ReShade #DLSS5feeder) und kein NVIDIA-Feature. Er läuft dort im **Offline**-Modus ohne Anti-Cheat.
-- **Fix:** Nicht als echtes DLSS 5 behandeln. Im Online-Multiplayer injiziert ReShade Code ins Spiel, das hat mit Ricochet ein hohes Ban-Risiko. Nur offline oder mit einem Zweitaccount.
-- **Quelle:** https://www.youtube.com/watch?v=uAHkSDk9LRo (Videobeschreibung, abgerufen 21.09.2026)
+## B8 — „DLSS 5 Mod“ auf YouTube: echtes NVIDIA-Modell, aber inoffiziell eingeschleust (korrigiert 21.09.2026 16:26)
+- **Symptom:** Videos zeigen „DLSS 5“ in alten Spielen, z. B. „3x DLSS 5 Call of Duty Modern Warfare 2 DMZ Offline“ (TheGr08).
+- **Ursache:** Kein reiner Filter, wie hier zuerst stand: Die Mods (DLSS5-Feeder über ReShade, OptiScaler-DLSSNR, RenoDX) schleusen **NVIDIAs echtes DLSS-5-Modell** `nvngx_dlssnr.dll` ein, das aus dem NBA-2K27-Early-Access geleakt wurde. Offiziell ist das nicht, und per Treiber-Override geht es nicht.
+- **Fix:** Nur in Singleplayer-Spielen ohne Anti-Cheat. In CoD (Ricochet) droht ein Bann, auch offline in der Kampagne. Alles Weitere: eigener Bereich `bugs/gaming/dlss5-mod-inoffiziell.md` und Werkzeug `Werkzeuge/dlss5-mod/`.
+- **Quellen:** https://www.youtube.com/watch?v=uAHkSDk9LRo · https://www.heise.de/en/background/DLSS-5-mod-tried-out-Why-all-the-fuss-11434544.html
+
+## B10 — Eigenbau-Fallen beim Setzen von Overrides ohne Profile Inspector (21.09.2026, Treiber 616.92)
+- **NVAPI lehnt 0x00634291 ab:** `NvAPI_DRS_SetSetting` meldet für „DLSS - Forced Model Preset Profile“ `-160` (SETTING_NOT_FOUND). Der Preset-Buchstabe 0x10E41DF3 = 0x00FFFFFF („Use recommended“) reicht. Fertiger NVAPI-Schreiber mit Rücklesen: `Werkzeuge/dlss-override/spiele-einrichten.ps1`, Anzeige: `werte-lesen.ps1`.
+- **Kaputte `.nip` lässt NVPI im Silent-Import hängen:** Bei ungültigen Einträgen (leere `SettingValue`) zeigt `-silent -mergeImport` ein Fenster „Error“ (`Import Error: …`) und blockiert. Läuft NVPI als Admin, kann ein normaler Prozess das Fenster weder lesen noch fotografieren (UIPI). Vorher legte NVPI schon ein neues Profil ohne Exe an. Poka-Yoke: `.nip` vor dem Import per `[xml]` zurücklesen und jede `SettingValue` prüfen.
+- **Zwei PowerShell-Fallen beim Erzeugen der `.nip`:** `@(@(a,b,c))` wird zu einem flachen Array (ein Einzel-Setting zerfällt in drei Skalare), und `$s` überschreibt `$S` (Variablennamen ohne Groß-/Kleinschreibung). Mit `[pscustomobject]`-Listen und eindeutigen Namen arbeiten.
+- **Quelle:** eigene Messung
 
 ## B7 — MW2 2022: „Shader Optimization“ hängt / DLSS schaltet sich ab
 - **Symptom:** Nach Grafik- oder Treiberänderung hängt die Shader-Optimierung, oder die DLSS-Option verschwindet bzw. springt zurück.

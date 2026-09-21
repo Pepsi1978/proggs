@@ -6,6 +6,7 @@
 - B5 DLL-Override ohne Wirkung → NGX-Cache leer → NGX-Cache prüfen bzw. nvidiaDlssGlom.
 - B6 Profilkonflikt MW2/MW3 → Exe per absolutem Pfad binden.
 - B7 Shader-Optimierung hängt → Shader-Cache löschen, Dateien prüfen.
-- B8 „DLSS 5 Mod“ (YouTube/imod.gg) = ReShade-Filter, kein NVIDIA DLSS 5 → nur offline, online Ban-Risiko.
+- B8 „DLSS 5 Mod“ (YouTube) = echtes, geleaktes NVIDIA-Modell `nvngx_dlssnr.dll`, inoffiziell eingeschleust → nur Singleplayer ohne Anti-Cheat, Details `dlss5-mod-inoffiziell.md`.
 - B9 Profile-Inspector-Override bei Nicht-Whitelist-Spiel wirkungslos (MW2, Treiber 616.92, per NGX-Log verifiziert). Immer mit `LogLevel`=1 und NGX-Log prüfen, nie nur mit dem Indikator.
+- B10 NVAPI lehnt 0x00634291 ab (-160); kaputte `.nip` lässt NVPI-Silent-Import hängen; PowerShell `@(@(x))` flacht ab, `$s` = `$S`.
 Volltext: `nvidia-dlss-override.md`
