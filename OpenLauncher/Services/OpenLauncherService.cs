@@ -32,16 +32,22 @@ public sealed class OpenLauncherService
     private const string Gpt56LunaFastSlug = "gpt-5.6-luna-fast";
     private const string ProgrammerProcessPriorityScript = """
 function Set-ProgrammerProcessPriority {
-    param([Diagnostics.Process]$Process, [string]$Label)
+    param([Diagnostics.Process]$Process, [string]$Label, [switch]$SkipAccessDenied)
     try {
         $Process.PriorityClass = [Diagnostics.ProcessPriorityClass]::AboveNormal
     } catch {
+        # Elevated processes (e.g. an admin Windows Terminal) reject changes from a
+        # non-elevated shell with ERROR_ACCESS_DENIED -- expected, not worth a warning.
+        $baseError = $_.Exception.GetBaseException()
+        if ($SkipAccessDenied -and $baseError -is [ComponentModel.Win32Exception] -and $baseError.NativeErrorCode -eq 5) {
+            return
+        }
         Write-Warning ($Label + ' konnte nicht auf AboveNormal gesetzt werden: ' + $_.Exception.Message)
     }
 }
 Set-ProgrammerProcessPriority ([Diagnostics.Process]::GetCurrentProcess()) 'PowerShell'
 Get-Process -Name 'WindowsTerminal' -ErrorAction SilentlyContinue |
-    ForEach-Object { Set-ProgrammerProcessPriority $_ 'Windows Terminal' }
+    ForEach-Object { Set-ProgrammerProcessPriority $_ 'Windows Terminal' -SkipAccessDenied }
 """;
 
     /// <summary>

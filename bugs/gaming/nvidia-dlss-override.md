@@ -30,7 +30,7 @@
 ## B5 — Profile Inspector: DLL-Override ohne Wirkung
 - **Symptom:** Der Indikator zeigt weiter das alte Preset bzw. die alte DLL.
 - **Ursache:** Das Treiber-Modell-Cache (`C:\ProgramData\NVIDIA\NGX\models`) ist leer oder veraltet, weil keine NVIDIA App installiert ist.
-- **Fix:** „latest available“ wählen (online) oder das Cache mit nvidiaDlssGlom/dlssdl füllen.
+- **Fix:** Treiber-Cache unter `C:\ProgramData\NVIDIA\NGX\models\dlss\versions` prüfen und bei Bedarf mit nvidiaDlssGlom/dlssdl füllen. Die Option „latest available“ gibt es in NVPI 3.0.2.1 nicht.
 - **Quellen:** https://github.com/Orbmu2k/nvidiaProfileInspector/issues/380 · https://forums.guru3d.com/threads/dlssdl-download-latest-dlss-ota-files.461660/
 
 ## B6 — Profilkonflikt CoD MW2 (2022) / MW3 (2023)
