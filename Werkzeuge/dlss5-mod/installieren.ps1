@@ -4,7 +4,8 @@
 # valid NVIDIA Authenticode signature or nothing is installed.
 # Usage: .\installieren.ps1                      (default game list below)
 #        .\installieren.ps1 -Spiel 'Cyberpunk 2077'
-param([string[]]$Spiel)
+#        .\installieren.ps1 -Spiel 'CoD MW2','CoD MW2 Kampagne' -TrotzAntiCheat   (ban risk, second account only)
+param([string[]]$Spiel, [switch]$TrotzAntiCheat)
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
@@ -23,8 +24,14 @@ $Spiele = [ordered]@{
     'Star Trek Voyager' = 'G:\SteamLibrary\steamapps\common\Star Trek Voyager - Across the Unknown\STVoyager\Binaries\Win64\STVoyagerSteam-Win64-Shipping.exe'
     'AC Shadows'        = 'D:\SteamLibrary\steamapps\common\Assassin''s Creed Shadows\ACShadows.exe'
 }
+# Anti-cheat games: never part of the default run. Only by explicit name AND -TrotzAntiCheat
+# (user decision 21.09.2026: MW2 only with the second account "Walter").
+$AntiCheatSpiele = [ordered]@{
+    'CoD MW2'          = 'D:\SteamLibrary\steamapps\common\Call of Duty Modern Warfare II\cod22-cod.exe'
+    'CoD MW2 Kampagne' = 'D:\SteamLibrary\steamapps\common\Call of Duty Modern Warfare II\sp22\sp22-cod.exe'
+}
 # Kernel anti-cheat: a ReShade/OptiScaler hook there risks a permanent account ban. Never install.
-$AntiCheat = 'Randgrid.sys','randgrid.sys','skuld.sys','EasyAntiCheat','BattlEye','BEService*','EAAntiCheat*','ACE-*','AntiCheatExpert'
+$AntiCheat ='Randgrid.sys','randgrid.sys','skuld.sys','EasyAntiCheat','BattlEye','BEService*','EAAntiCheat*','ACE-*','AntiCheatExpert'
 
 $cache = "$env:LOCALAPPDATA\DLSS5-Mod\downloads"
 New-Item -ItemType Directory -Force $cache | Out-Null
@@ -44,10 +51,14 @@ $optiFiles = Get-ChildItem $Pakete.Opti.Dir -Recurse -File | Where-Object { $_.N
 $ziel = if ($Spiel) { $Spiel } else { @($Spiele.Keys) }
 foreach ($name in $ziel) {
     $exe = $Spiele[$name]
+    if (-not $exe -and $TrotzAntiCheat) { $exe = $AntiCheatSpiele[$name] }
     if (-not $exe -or -not (Test-Path $exe)) { "[$name] übersprungen: Exe nicht gefunden"; continue }
     $dir = Split-Path $exe
     $root = ($exe -split '\\steamapps\\common\\')[0] + '\steamapps\common\' + (($exe -split '\\steamapps\\common\\')[1] -split '\\')[0]
-    if (Get-ChildItem $root -Recurse -Depth 4 -Include $AntiCheat -ErrorAction SilentlyContinue | Select-Object -First 1) { "[$name] BLOCKIERT: Anti-Cheat gefunden, Bann-Risiko"; continue }
+    if (Get-ChildItem $root -Recurse -Depth 4 -Include $AntiCheat -ErrorAction SilentlyContinue | Select-Object -First 1) {
+        if (-not $TrotzAntiCheat) { "[$name] BLOCKIERT: Anti-Cheat gefunden, Bann-Risiko"; continue }
+        "[$name] WARNUNG: Anti-Cheat vorhanden, Installation auf eigenes Risiko (nur Zweitaccount)"
+    }
     if (Get-Process -Name ([IO.Path]::GetFileNameWithoutExtension($exe)) -ErrorAction SilentlyContinue) { "[$name] übersprungen: Spiel läuft gerade"; continue }
     $dxgi = Join-Path $dir 'dxgi.dll'
     if ((Test-Path $dxgi) -and (Get-Item $dxgi).VersionInfo.OriginalFilename -ne 'OptiScaler.dll') { "[$name] übersprungen: fremde dxgi.dll vorhanden (z. B. ReShade)"; continue }
