@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace OpenLauncher.Services;
 
@@ -91,8 +92,80 @@ public sealed class InstructionProfileService
         if (profileId is "minimal" or "strict")
             EnsureSkillsLink(Path.Combine(dir, "skills"));
         EnsureGlobalSkillLinks();
+        EnsureClaudeElgatoMcp(dir);
 
         return dir;
+    }
+
+    // ===================== Elgato-MCP (Stream Deck) =====================
+
+    /// <summary>
+    /// Einstiegsskript des global per npm installierten Elgato-MCP-Servers (@elgato/mcp-server) oder
+    /// null, wenn er fehlt. Direkt per node gestartet statt ueber die .cmd-Huelle -- unter Windows
+    /// zuverlaessiger. Fehlt er, wird nichts eingetragen (sonst meldet jede Sitzung einen toten Server).
+    /// </summary>
+    private static string? ResolveElgatoMcpScript()
+    {
+        var script = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "npm", "node_modules", "@elgato", "mcp-server", "bin", "index.js");
+        return File.Exists(script) ? script : null;
+    }
+
+    /// <summary>
+    /// Traegt den Elgato-MCP als User-Server in die .claude.json des Profil-Config-Ordners ein, falls
+    /// er fehlt. Claude Code laeuft nur mit Cloud-Modellen, daher ohne LM-Studio-Ausnahme.
+    /// </summary>
+    private static void EnsureClaudeElgatoMcp(string configDir)
+    {
+        var script = ResolveElgatoMcpScript();
+        if (script == null) return;
+        var path = Path.Combine(configDir, ".claude.json");
+        try
+        {
+            var root = File.Exists(path)
+                ? JsonNode.Parse(ReadText(path)) as JsonObject ?? new JsonObject()
+                : new JsonObject();
+            if (root["mcpServers"] is not JsonObject servers)
+            {
+                servers = new JsonObject();
+                root["mcpServers"] = servers;
+            }
+            if (servers["elgato"] != null) return;
+            servers["elgato"] = new JsonObject
+            {
+                ["type"] = "stdio",
+                ["command"] = "node",
+                ["args"] = new JsonArray(script),
+                ["env"] = new JsonObject()
+            };
+            File.WriteAllText(path, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
+            Logger.Instance.Info("InstructionProfileService", "EnsureClaudeElgatoMcp", "Elgato-MCP eingetragen", new { path });
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "EnsureClaudeElgatoMcp", $"Elgato-MCP nicht eingetragen: {ex.Message}", new { path });
+        }
+    }
+
+    /// <summary>Haengt den Elgato-MCP an die config.toml des Codex-Zuhauses an, falls er fehlt.</summary>
+    private static void EnsureCodexElgatoMcp(string home)
+    {
+        var script = ResolveElgatoMcpScript();
+        if (script == null) return;
+        var configPath = Path.Combine(home, "config.toml");
+        try
+        {
+            var text = ReadText(configPath);
+            if (text.Contains("[mcp_servers.elgato]", StringComparison.Ordinal)) return;
+            // TOML-Literal-String (einfache Anfuehrungszeichen): Backslashes im Pfad bleiben unveraendert.
+            var block = $"\n# Elgato Stream Deck (von OpenLauncher eingetragen)\n[mcp_servers.elgato]\ncommand = \"node\"\nargs = ['{script}']\n";
+            WriteText(configPath, text.TrimEnd('\n') + "\n" + block);
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Warn("InstructionProfileService", "EnsureCodexElgatoMcp", $"Elgato-MCP nicht eingetragen: {ex.Message}", new { configPath });
+        }
     }
 
     /// <summary>
@@ -412,6 +485,8 @@ public sealed class InstructionProfileService
         // [projects.*]-Vertrauensstufen ein, die bei jedem Neuschreiben verloren gingen (dann kaeme
         // der Vertrauensdialog bei jedem Start zurueck).
         CreateIfMissing(Path.Combine(home, "config.toml"), CodexBaseConfig);
+        // Einzige Ausnahme von "kein MCP-Server": der Elgato-MCP (Stream Deck) soll ueberall laufen.
+        EnsureCodexElgatoMcp(home);
 
         // Anmeldung aus dem persoenlichen ~/.codex uebernehmen, damit kein zweiter Login noetig ist.
         // Nur wenn sie hier fehlt oder die Quelle neuer ist: ein im eigenen Zuhause erneuerter
@@ -534,14 +609,26 @@ status_line = ["model-with-reasoning", "current-dir", "permissions", "context-us
         // Chrome-MCPs sind nur fuer lokale LM-Studio-Modelle abgeschaltet. Die explizite
         // Gegenrichtung verhindert, dass ein alter globaler false-Wert Cloud-Sitzungen lahmlegt.
         var chromeEnabled = !isLmStudio;
+        var mcp = new Dictionary<string, object>
+        {
+            ["chrome-devtools"] = new Dictionary<string, bool> { ["enabled"] = chromeEnabled },
+            ["chrome-personal"] = new Dictionary<string, bool> { ["enabled"] = chromeEnabled }
+        };
+        // Elgato-MCP (Stream Deck): fuer alle Modelle aktiv, nur bei lokalen LM-Studio-Modellen aus.
+        var elgatoScript = ResolveElgatoMcpScript();
+        if (elgatoScript != null)
+        {
+            mcp["elgato"] = new Dictionary<string, object>
+            {
+                ["type"] = "local",
+                ["command"] = new[] { "node", elgatoScript },
+                ["enabled"] = !isLmStudio
+            };
+        }
         var config = new Dictionary<string, object>
         {
             ["$schema"] = "https://opencode.ai/config.json",
-            ["mcp"] = new Dictionary<string, object>
-            {
-                ["chrome-devtools"] = new Dictionary<string, bool> { ["enabled"] = chromeEnabled },
-                ["chrome-personal"] = new Dictionary<string, bool> { ["enabled"] = chromeEnabled }
-            }
+            ["mcp"] = mcp
         };
         WriteText(configPath, JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true }));
         DeleteOldSessions(Path.GetDirectoryName(sessionRoot)!);
