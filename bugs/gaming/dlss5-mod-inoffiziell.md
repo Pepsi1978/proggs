@@ -62,6 +62,22 @@
 - **Fix:** Mod entfernen (`entfernen.ps1 -Spiel 'Modern Warfare II'`), danach startet MW2 wieder. Keine anderen Proxy-Namen probieren: Das wäre gezieltes Umgehen des Anti-Cheats. CoD-Titel bleiben im Installer gesperrt.
 - **Quelle:** eigene Messung (Treiber 616.92, OptiScaler-DLSSNR v0.2.0, MW2 Steam)
 
+## M13 — Cyberpunk: CET/RED4ext/RedScript-Mods brechen mit OptiScaler als `dxgi.dll`
+- **Symptom:** Script-Mods (Ultra+, Nova City, LUT Switcher, DreamPunk-Listen) laden nicht oder das Spiel „flatlined“, sobald OptiScaler-DLSSNR v0.2.0 als `dxgi.dll` in `bind` liegt. Gemeldet für 2.3.1, ungelöst.
+- **Workaround:** OptiScaler als `.asi` über einen ASI-Loader in `bind\plugins\` laden (kostet laut Bericht ca. 10 FPS, bei neueren Builds unzuverlässig), oder auf diese Mods verzichten.
+- **Quellen:** https://github.com/optiscaler/OptiScaler/issues/313 · Research 21.09.2026 (Issue zum DLSSNR-Fork mit genau diesem Setup)
+
+## M14 — Cyberpunk: automatischer Belichtungs-Scan greift nicht (HDR)
+- **Symptom:** In HDR stimmt der Weißpunkt des Neural Pass nicht, Lichter wirken ausgebrannt oder flach.
+- **Ursache:** Cyberpunk berechnet die Belichtung in einer Form, die der Scan nicht sieht. Der Mod fällt auf den manuellen Regler zurück.
+- **Fix:** Paper White (`WhitePointScale`) von Hand kalibrieren oder SDR spielen. Der früher dabei mögliche Absturz (use-after-free mit RR + Streamline) ist seit v0.2.0 behoben.
+- **Quellen:** https://github.com/Dagherbou/OptiScaler_DLSSNR/discussions/17 · https://github.com/Dagherbou/OptiScaler_DLSSNR/releases/tag/v0.2.0-dlssnr
+
+## M15 — Flimmern bei Model Resolution unter 100 %
+- **Symptom:** Bei `WorkingScale` um 0,7 flimmert das Bild beim Kameraschwenk (Cyberpunk, RE Requiem, TLoU 2).
+- **Fix:** `WorkingScale` 1,0 lassen. Sonst `TransferStrength` ca. 15 % senken, `MaxRatio` knapp unter 2,0, `Intensity` < 1,5.
+- **Quelle:** https://github.com/Dagherbou/OptiScaler_DLSSNR/discussions/17 (04.09.2026)
+
 ## M11 — AnvilNext (AC-Reihe): Tiefenpuffer geht bei Kamerawechsel verloren
 - **Symptom:** Bei der ReShade-/Feeder-Route fällt der Effekt in Dialogen und Zwischensequenzen aus.
 - **Einordnung:** Für AC Mirage belegt, auf AC Shadows übertragbar. Betrifft nur die ReShade-Route, nicht OptiScaler (der liest Tiefe und Bewegungsvektoren aus dem DLSS-Aufruf).

@@ -4,4 +4,5 @@
 - Nur Original-Releases, SHA-256 gegen GitHub-`digest`, Modell-DLL nur mit gültiger NVIDIA-Authenticode-Signatur. imod.gg meiden. Keine Binärdateien ins Repo.
 - Nie in Kernel-Anti-Cheat-Spielen (BF6, CoD inkl. Kampagne, Delta Force, PUBG). Feste Spieleliste statt Ordnersuche.
 - Treiber ≥ 616.64: renodx-dlss5 4.6/4.7 kaputt → OptiScaler-DLSSNR oder DFC. Smooth Motion aus. Kosten ca. 45–50 % FPS.
+- Cyberpunk: PT + RR an, DLSS Quality, Preset K, MFG; Mod-Regler TransferStrength 0,85 / MaxRatio 1,8 / WorkingScale 1,0; keine CET/RED4ext-Mods; Log zeigt `DLSS-NR cost` = läuft.
 Werkzeug: `Werkzeuge/dlss5-mod/` · Volltext: `dlss5-mod-inoffiziell.md`
