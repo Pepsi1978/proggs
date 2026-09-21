@@ -22,6 +22,8 @@ FORMAT = '\t'.join('#{' + key + '}' for key in (
     'socket_path', 'pid', 'session_id', 'pane_id', 'pane_pid', 'pane_current_path',
     'pane_dead', 'pane_in_mode', 'pane_input_off', 'bracket_paste_flag',
     'pane_current_command', 'cursor_x', 'cursor_y', 'pane_title'))
+MAX_LITERAL_BYTES = 512
+MAX_HANDOFF_BYTES = 8 * 1024 * 1024
 
 
 class BridgeError(RuntimeError):
@@ -101,6 +103,42 @@ def save(path, state):
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
+
+
+def regular_utf8(path, max_bytes, allow_cr=False):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as source:
+        if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+            raise BridgeError('E_TEXT', 'Auftrag muss eine reguläre Datei ohne Symlink sein')
+        data = source.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise BridgeError('E_TEXT', f'Datei überschreitet die technische Grenze von {max_bytes} Bytes')
+    try:
+        text = data.decode('utf-8')
+    except UnicodeDecodeError as error:
+        raise BridgeError('E_TEXT', 'Datei ist kein gültiges UTF-8') from error
+    allowed = '\n\t\r' if allow_cr else '\n\t'
+    if any((ord(c) < 32 and c not in allowed) or ord(c) == 127 for c in text):
+        raise BridgeError('E_TEXT', 'Steuerzeichen im Auftrag nicht erlaubt')
+    return text, data
+
+
+def delivery_marker(delivery, delivery_id, source_path):
+    if delivery.get('payload_sha256'):
+        marker = f"{delivery_id}: Lies {delivery.get('display_path', '')}"
+    else:
+        if not source_path or not source_path.exists():
+            raise BridgeError('E_TEXT', 'Quelltext des offenen Einfügeversuchs fehlt; Verlauf nicht sicher prüfbar')
+        old_text, _ = regular_utf8(source_path, 65536)
+        marker = old_text
+    marker = re.sub(r'\s+', ' ', marker.strip())[:60]
+    if not marker:
+        raise BridgeError('E_TEXT', 'Kein markanter Auftragstext für die Verlaufsprüfung vorhanden')
+    return marker
+
+
+def marker_in_history(marker, history):
+    return marker in re.sub(r'\s+', ' ', history)
 
 
 def input_frame(screen):
@@ -227,7 +265,8 @@ def snapshot(tmux, info):
 def main():
     global CHECK_CANCEL
     parser = Parser(description=__doc__)
-    parser.add_argument('action', choices=['list', 'bind', 'read', 'paste', 'enter', 'submit'])
+    parser.add_argument('action', choices=[
+        'list', 'bind', 'read', 'paste', 'enter', 'submit', 'submit-file', 'resolve'])
     parser.add_argument('--socket', help='Expliziter tmux-Socket; beim ersten list optional')
     parser.add_argument('--run', dest='run_dir', type=Path, help='Privater Dialogordner: target.json, ID.txt und STOP')
     parser.add_argument('--state', type=Path, help='Private Laufzeitdatei außerhalb des Repos')
@@ -237,6 +276,10 @@ def main():
     parser.add_argument('--observed', help='Token aus einer gerade inhaltlich geprüften read-Ausgabe')
     parser.add_argument('--id', help='Eindeutige Auftragskennung, z. B. C17')
     parser.add_argument('--text-file', type=Path)
+    parser.add_argument('--payload-file', type=Path,
+                        help='submit-file: lange vollständige UTF-8-Datei, die das Ziel selbst lesen kann')
+    parser.add_argument('--display-path',
+                        help='submit-file: kurzer absoluter Pfad in der Umgebung des Zielagenten')
     parser.add_argument('--force-view', action='store_true', help='Momentaufnahme auch bei gleichem Inhalt ausgeben')
     parser.add_argument('--compact', action='store_true', help='read: positionsgebundener Änderungsauszug, keine globale Zeilendeduplizierung')
     parser.add_argument('--verbose', action='store_true')
@@ -244,7 +287,11 @@ def main():
     parser.add_argument('--wait-mode', choices=['activity', 'status'], default='activity',
                         help='status: frühes Wecken durch Titel/Eingabefeld/Modus, sonst spätestens --wait; kein Fertigbeweis')
     parser.add_argument('--cancel-file', type=Path)
-    parser.add_argument('--sha256', help='submit: Hash des vollständig autorisierten Textes')
+    parser.add_argument('--sha256',
+                        help='submit/submit-file/resolve: Hash des autorisierten Textes beziehungsweise der Payload')
+    parser.add_argument('--continued-as', help='resolve: neue Kennung, unter der der Inhalt fortgeführt wird')
+    parser.add_argument('--manual-clear-confirmed', action='store_true',
+                        help='resolve: bestätigt die beobachtete manuelle Entfernung aus dem Eingabefeld')
     parser.add_argument('--literal-line', action='store_true',
                         help='Einzeiligen Text ohne Steuerzeichen literal senden, wenn tmux keinen Paste-Status meldet')
     parser.add_argument('--lines', type=int, default=0)
@@ -257,15 +304,19 @@ def main():
         if args.state and args.state.absolute() != derived_state.absolute():
             parser.error('--state widerspricht --run/target.json')
         args.state = derived_state
-        if args.action in ('paste', 'submit'):
+        if args.action in ('paste', 'submit', 'submit-file'):
             if not args.id or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', args.id):
                 parser.error('Gültige --id vor Ableitung der Textdatei erforderlich')
-            derived_text = args.run_dir / (args.id + '.txt')
-            if args.text_file and args.text_file.absolute() != derived_text.absolute():
-                parser.error('--text-file widerspricht --run/ID.txt')
-            args.text_file = derived_text
             if not args.sha256:
                 parser.error('--run verlangt auch beim Einfügen den autorisierten --sha256')
+            if args.action == 'submit-file':
+                if not args.payload_file or not args.display_path:
+                    parser.error('submit-file braucht --payload-file und --display-path')
+            else:
+                derived_text = args.run_dir / (args.id + '.txt')
+                if args.text_file and args.text_file.absolute() != derived_text.absolute():
+                    parser.error('--text-file widerspricht --run/ID.txt')
+                args.text_file = derived_text
     CHECK_CANCEL = lambda: cancelled(args)
     CHECK_CANCEL()
     binary = shutil.which('tmux')
@@ -395,27 +446,70 @@ def main():
                 raise BridgeError('E_STALE', 'Ziel oder Ansicht unmittelbar vor Eingabe geändert; erneut lesen')
 
         deliveries = state['deliveries']
-        if args.action in ('paste', 'submit'):
+        if args.action == 'resolve':
+            delivery = deliveries.get(args.id, {})
+            if delivery.get('status') not in ('pasted', 'paste_attempted'):
+                raise BridgeError('E_TEXT', 'Nur ein offener, nie gesendeter Einfügeversuch darf als manuell entfernt geklärt werden')
+            authorized_hash = delivery.get('payload_sha256', delivery.get('sha256'))
+            if not args.sha256 or args.sha256 != authorized_hash:
+                raise BridgeError('E_TEXT', 'Auftragshash stimmt nicht mit dem offenen Einfügeversuch überein')
+            if not args.manual_clear_confirmed:
+                parser.error('resolve braucht --manual-clear-confirmed nach beobachteter manueller Entfernung')
+            if args.continued_as and not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', args.continued_as):
+                parser.error('--continued-as muss eine gültige neue Auftragskennung sein')
+            frame = input_frame(screen)
+            if frame[3] != '' or info['cursor_x'] != '2' or int(info['cursor_y']) != frame[1] + 1:
+                raise BridgeError('E_INPUT', 'resolve verlangt das frisch geprüfte, vollständig leere Eingabefeld')
+            source_path = args.run_dir / (args.id + '.txt') if args.run_dir else args.text_file
+            marker = delivery_marker(delivery, args.id, source_path)
+            history = run(tmux + ['capture-pane', '-p', '-t', bound['pane'], '-S', '-300'])
+            if marker_in_history(marker, history):
+                raise BridgeError('E_DUPLICATE', 'Anfang des offenen Auftrags steht bereits im Verlauf; nicht als bloß entfernt klären')
+            recheck()
+            delivery['status'] = 'cleared'
+            if args.continued_as:
+                delivery['continued_as'] = args.continued_as
+            save(args.state, state)
+            emit({'id': args.id, 'transport': 'cleared', 'continued_as': args.continued_as,
+                  'next': 'Nur der Transportversuch ist geklärt; Aufgabeninhalt und Autorisierung folgen dem aktuellen Auftrag'})
+            return
+        if args.action in ('paste', 'submit', 'submit-file'):
             if args.id in deliveries:
                 raise BridgeError('E_DUPLICATE', 'Kennung bereits versucht; zuerst Zustellung klären, nicht erneut einfügen')
-            if args.text_file is None:
-                parser.error('--text-file fehlt')
-            fd = os.open(args.text_file, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-            with os.fdopen(fd, encoding='utf-8') as source:
-                if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
-                    raise BridgeError('E_TEXT', 'Auftrag muss eine reguläre Datei ohne Symlink sein')
-                text = source.read(65537)
-            if not text.strip() or len(text.encode()) > 65536:
-                raise BridgeError('E_TEXT', 'Leerer oder zu großer Auftrag')
-            if any((ord(c) < 32 and c not in '\n\t') or ord(c) == 127 for c in text):
-                raise BridgeError('E_TEXT', 'Steuerzeichen im Auftrag nicht erlaubt')
+            payload = None
+            if args.action == 'submit-file':
+                payload_text, payload_data = regular_utf8(args.payload_file, MAX_HANDOFF_BYTES, allow_cr=True)
+                if not payload_text.strip():
+                    raise BridgeError('E_TEXT', 'Leere Payload-Datei')
+                payload_hash = hashlib.sha256(payload_data).hexdigest()
+                if args.sha256 != payload_hash:
+                    raise BridgeError('E_TEXT', 'Payload-Hash fehlt oder Inhalt nach Autorisierung geändert')
+                if (not args.display_path.strip() or
+                        any(ord(c) < 32 or ord(c) == 127 for c in args.display_path)):
+                    raise BridgeError('E_TEXT', 'display-path muss eine druckbare einzelne Zeile sein')
+                text = (f'{args.id}: Lies {args.display_path} vollständig. '
+                        f'Erwarte UTF-8-Bytes={len(payload_data)} und SHA-256={payload_hash}. '
+                        'Bestätige payload_bytes, payload_sha256 und vollstaendig_gelesen=true; '
+                        'führe dann ausschließlich den Datei-Auftrag aus.')
+                payload = {'payload_sha256': payload_hash, 'payload_bytes': len(payload_data),
+                           'display_path': args.display_path}
+            else:
+                if args.text_file is None:
+                    parser.error('--text-file fehlt')
+                text, _ = regular_utf8(args.text_file, 65536)
+                if not text.strip():
+                    raise BridgeError('E_TEXT', 'Leerer Auftrag')
             if args.literal_line and any(ord(c) < 32 or ord(c) == 127 for c in text):
                 raise BridgeError('E_TEXT', 'Literal-Line erlaubt keine Zeilenumbrüche, Tabs oder Steuerzeichen')
+            if args.literal_line and len(text.encode()) > MAX_LITERAL_BYTES:
+                if args.action == 'submit-file':
+                    raise BridgeError('E_TEXT', f'Dateiverweis über {MAX_LITERAL_BYTES} Bytes; kürzeren display-path verwenden')
+                raise BridgeError('E_TEXT', f'Literal-Line über {MAX_LITERAL_BYTES} Bytes; lange Inhalte mit submit-file übergeben')
             text_hash = hashlib.sha256(text.encode()).hexdigest()
-            if args.action == 'submit' or args.run_dir:
+            if args.action == 'submit' or (args.run_dir and args.action != 'submit-file'):
                 if args.sha256 != text_hash:
                     raise BridgeError('E_TEXT', 'Auftragshash fehlt oder Inhalt nach Autorisierung geändert')
-            if args.action == 'submit':
+            if args.action in ('submit', 'submit-file'):
                 if any(d['status'] in ('pasted', 'paste_attempted', 'enter_attempted') for d in deliveries.values()):
                     raise BridgeError('E_DUPLICATE', 'Andere Zustellung noch offen; zuerst klären')
                 frame = input_frame(screen)
@@ -426,23 +520,26 @@ def main():
             if not args.literal_line and info['bracket_paste'] != '1':
                 raise BridgeError('E_INPUT', 'Bracketed Paste ist nicht aktiv; nicht mit Zeilenumbrüchen experimentieren')
             buffer = 'codex-' + uuid.uuid4().hex
+            delivery = {'status': 'paste_attempted', 'sha256': text_hash}
+            if payload:
+                delivery.update(payload)
             if args.literal_line:
                 recheck()
-                deliveries[args.id] = {'status': 'paste_attempted', 'sha256': text_hash}
+                deliveries[args.id] = delivery
                 save(args.state, state)
                 run(tmux + ['send-keys', '-l', '-t', bound['pane'], '--', text])
             else:
                 try:
                     run(tmux + ['load-buffer', '-b', buffer, '-'], text.encode())
                     recheck()
-                    deliveries[args.id] = {'status': 'paste_attempted', 'sha256': text_hash}
+                    deliveries[args.id] = delivery
                     save(args.state, state)
                     run(tmux + ['paste-buffer', '-p', '-r', '-b', buffer, '-t', bound['pane']])
                 finally:
                     run(tmux + ['delete-buffer', '-b', buffer], cleanup=True)
             deliveries[args.id]['status'] = 'pasted'
             save(args.state, state)
-            if args.action == 'submit':
+            if args.action in ('submit', 'submit-file'):
                 deadline = time.monotonic() + 1
                 while True:
                     cancelled(args)
@@ -455,15 +552,19 @@ def main():
                     except BridgeError as error:
                         if error.code != 'E_INPUT':
                             raise
-                        emit({'id': args.id, 'transport': 'pasted', 'submitted': False,
-                              'reason': 'Eingaberahmen nach Paste nicht vollständig sichtbar; gezielt lesen, kein Enter'})
+                        result = {'id': args.id, 'transport': 'pasted', 'submitted': False,
+                                  'reason': 'Eingaberahmen nach Paste nicht vollständig sichtbar; gezielt lesen, kein Enter'}
+                        result.update(payload or {})
+                        emit(result)
                         return
                     own = own_draft(draft, text) or re.fullmatch(r'\[Pasted text #\d+\]', draft)
                     if own and same_surroundings(before, after):
                         break
                     if draft or time.monotonic() >= deadline:
-                        emit({'id': args.id, 'transport': 'pasted', 'submitted': False,
-                              'reason': 'Entwurf/Umgebung nicht eindeutig; lesen, kein automatisches Enter'})
+                        result = {'id': args.id, 'transport': 'pasted', 'submitted': False,
+                                  'reason': 'Entwurf/Umgebung nicht eindeutig; lesen, kein automatisches Enter'}
+                        result.update(payload or {})
+                        emit(result)
                         return
                     time.sleep(0.05)
                 args.observed = after_token
@@ -473,7 +574,9 @@ def main():
                 run(tmux + ['send-keys', '-t', bound['pane'], 'Enter'])
                 deliveries[args.id]['status'] = 'enter_sent'
                 save(args.state, state)
-                emit({'id': args.id, 'transport': 'enter_sent'})
+                result = {'id': args.id, 'transport': 'enter_sent'}
+                result.update(payload or {})
+                emit(result)
             else:
                 emit({'id': args.id, 'transport': 'pasted', 'submitted': False})
         else:

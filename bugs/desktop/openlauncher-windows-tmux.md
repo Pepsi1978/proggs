@@ -115,3 +115,35 @@ abgesehen von relativen Links. Plattformwahl, Autorisierung, Nutzerzwischenrufe,
 Entwurfs-/Stoppschutz, Rollen/Review und Mehrzeilerregel bleiben im Einstieg.
 Alle Markdown-Links wurden aufgelöst, Claude prüfte die erhaltenen Regeln unabhängig.
 Dies spart Einstiegstext, ist aber keine gemessene Kontingentprozentzahl.
+
+## Bytegenaue lange Übergaben und kompakter Dreierloop (21.09.2026)
+
+Ein direkter langer `send-keys -l`-Auftrag erschien in der echten Windows-Claude-
+Eingabe nur als Schlussrest; der Helfer verhinderte das Enter, die genaue Ursache
+zwischen tmux, WSL-Interop/ConPTY und Claude-TUI blieb jedoch unbelegt. Direkte
+`--literal-line` ist deshalb konservativ auf 512 UTF-8-Bytes begrenzt. Längere oder
+mehrzeilige Aufträge laufen über `submit-file`: Die unveränderte, für das Ziel
+zugängliche UTF-8-Datei wird bis 8 MiB geprüft, mit Bytezahl und SHA-256 autorisiert,
+und nur ein kurzer automatisch erzeugter Verweis gelangt ins Terminal. CRLF bleibt
+bytegetreu; große Dateien müssen innerhalb des Modells abschnittsweise gelesen werden.
+
+Der Live-Test R14 übergab 2950 Payload-Bytes mit SHA-256
+`b6f31628bdc3dac7e9c9f45b15938de7d7276da9bbce7876a25fd24cb5da1cb3`.
+Claude meldete dieselbe Bytezahl und denselben Hash und las den vollständigen Auftrag.
+Der isolierte Test verwendet zusätzlich eine 8400-Byte-CRLF-Payload, einen falschen
+Hash, einen zu langen Zielpfad und stellt sicher, dass nie Payloadbytes in die
+Terminaleingabe geraten. Diese Belege zeigen vollständigen Dateitransport und die
+gemeldete Lektüre, keine mathematisch beweisbare semantische Verarbeitung jedes Zeichens.
+
+Ein manuell aus dem Eingabefeld entfernter, nie abgesendeter Versuch kann mit
+`resolve` als `cleared` abgeschlossen und unter neuer ID fortgeführt werden.
+Kennung und Hash bleiben gesperrt. Voraussetzung sind der ursprüngliche Auftrags-
+beziehungsweise Payload-Hash, `--manual-clear-confirmed`, ein frisches leeres Feld
+und kein passender Textanfang in 300 Verlaufszeilen; die Aktion sendet keine Taste.
+Der Status beschreibt nur den Transport, weder Stopp noch inhaltliches Verwerfen.
+
+Der Dreierloop hält künftig im privaten Dialogordner nur Zielrevision, letzte
+Zustellung, offene Nutzeränderungen, Phase und festen Rundenausgang. Vor Commit oder
+Updater muss die Zustellung die aktuelle Zielrevision abdecken. Nach Kompaktierung
+genügen normalerweise dieser Zustand, Ledger, `git status/log` und eine frische
+Pane-Ansicht; vollständige Rohverläufe werden nur bei Widersprüchen nachgeladen.

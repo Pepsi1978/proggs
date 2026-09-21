@@ -76,6 +76,17 @@ Bei „nur einfügen“ kein Enter. Keine fremden Entwürfe löschen, keine Vors
 
 Der Helfer übergibt Argumente per `subprocess.run([...])` ohne Shell-Auswertung. Er lädt den Text über stdin in einen zufällig benannten tmux-Puffer, nutzt `paste-buffer -p -r` und löscht nur diesen Puffer. UTF-8, LF und Tab bleiben erhalten; andere Steuerzeichen sind unzulässig. Keine Zeilen einzeln mit Enter senden. `send-keys -l` ersetzt ebenfalls keine sichere Shell-Quotierung. Sprachtext nie in einen interpolierten Shellbefehl oder `eval` einsetzen.
 
+Direkte `--literal-line` ist auf 512 UTF-8-Bytes begrenzt. Für längere oder
+mehrzeilige Inhalte `submit-file` mit `--payload-file`, dem in der Zielumgebung
+lesbaren `--display-path`, Payload-`--sha256`, frischem `--observed` und bei
+Windows `--literal-line` verwenden. Die Payload bleibt unverändert in der Datei;
+im Terminal erscheint nur ein kurzer, geprüfter Verweis mit Bytezahl und SHA-256.
+Die technische Obergrenze beträgt 8 MiB und ist keine Behauptung, dass ein Modell
+diesen Umfang in einem Leseschritt verarbeitet; große Dateien abschnittsweise lesen.
+CRLF und sonstiger erlaubter UTF-8-Text bleiben in der Payload bytegetreu erhalten.
+Ist der automatisch erzeugte Verweis länger als 512 Bytes, einen kürzeren
+`display-path` verwenden.
+
 ## Schreibschutz und Statusrauschen
 
 Der Beobachtungstoken enthält Prozess-/Pane-Metadaten, Cursor und aktuelle Ansicht. Ausschließlich die numerische Laufzeit in einer vollständig erkannten Launcher-Fußzeile **unter dem Eingaberahmen** wird normalisiert. Pfad, Modell, Preise, Limits, unbekannte Footer und Antworttext bleiben relevant. Breite Zeilenfilter und Spinner-Heuristiken werden nicht verwendet. Die ausgegebene Ansicht bleibt roh, der Vergleich ignoriert nur dieses exakt begrenzte Laufzeitfeld. Bei gekürzter/unbekannter Statuszeile wird nichts normalisiert.
@@ -87,10 +98,25 @@ Dadurch ist der Schreibschutz um genau diese Laufzeitzellen schwächer; alle üb
 | Keine neue Kennung im Ledger | Vorprüfung abgebrochen, noch kein Pane-Schreibversuch. Frisch lesen und denselben Auftrag erneut prüfen. |
 | `paste_attempted` | Pane-Schreiben versucht; Teilzustellung möglich, kein automatischer Retry. |
 | `pasted` | tmux hat Paste angenommen, noch kein Enter. Entwurf bewahren und klären. |
+| `cleared` | Nie abgesendeter eigener Entwurf wurde nachweislich manuell aus dem Feld entfernt; Kennung und Hash bleiben gesperrt, der fachliche Auftrag kann unter neuer ID weiterlaufen. |
 | `enter_attempted` | Enter versucht; bei Fehler nicht automatisch nochmals Enter. |
 | `enter_sent` | Enter angenommen; Claude-Annahme anhand neuer Ausgabe prüfen. |
 
 Dies ist kein Exactly-once-Protokoll. Abstürze, Nutzerbedienung und ein Prozesswechsel zwischen Prüfung und Schreiben bleiben Grenzen. Nur ein zustellender Agent pro Dialog. Nach Ende private Laufzeitdateien entfernen, nicht die Claude-Sitzung oder den tmux-Server beenden.
+
+Nach nachgewiesener manueller Entfernung eines eigenen offenen Entwurfs darf `resolve`
+mit dessen ID, ursprünglichem Auftrags- beziehungsweise Payload-SHA-256 und einem
+frischen Beobachtungstoken verwendet
+werden. Es verlangt einen leeren Claude-Eingaberahmen, setzt ausschließlich `pasted`
+oder `paste_attempted` auf `cleared` und sendet keine Taste.
+`--manual-clear-confirmed` hält die beobachtete manuelle Bereinigung fest; ein
+markanter Textanfang des Auftrags im jüngeren Pane-Verlauf verhindert die Klärung.
+Ist dort nur ein nicht eindeutig zuordenbarer `[Pasted text #N]`-Block sichtbar,
+bleibt die erforderliche Sichtprüfung bestehen; die Nummer allein beweist keinen Auftrag.
+`--continued-as <ID>`
+dokumentiert die Fortführung, ohne den neuen Auftrag selbst zu senden. Eine gesendete
+oder auch nur versuchsweise mit Enter bestätigte Zustellung bleibt unverändert. Der
+Status beschreibt nur den Transport, nicht Stopp, Verwerfen oder Erledigung des Inhalts.
 
 ## Kurze Fehlerantworten
 

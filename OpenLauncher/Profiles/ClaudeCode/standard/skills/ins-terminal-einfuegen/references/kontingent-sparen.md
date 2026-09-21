@@ -56,6 +56,19 @@ eingabebereit ist; vor dem nächsten Senden den tatsächlichen Terminalzustand p
 
 ## Sparsam beobachten und ehrlich messen
 
+Für einen aktiven Dreierloop einen privaten `arbeitsstand.json` im bestehenden
+Dialogordner unter 1 KiB halten: `ziel_rev`, `zugestellt`, `offen`, `phase`
+und `status`. Zulässige Rundenausgänge sind `erreicht`, `zwischenstand`,
+`blockiert`, `saettigung`, `rueckfrage` und `stopp`. Neue Nutzersteuerung
+erhöht `ziel_rev` und steht bis zur nächsten konsolidierten Zustellung unter `offen`.
+Vor Commit oder Auslieferung prüfen, dass `zugestellt` die aktuelle Zielrevision
+abdeckt; ein unbelegter Modellwiderspruch bleibt offen für den Nutzer.
+
+Nach Kontextkompaktierung genügen normalerweise dieser Arbeitsstand, Zustellungsledger,
+`git status -sb` plus `git log -1` und eine frische `read --force-view`-Ansicht.
+Nur bei Widerspruch oder fehlendem Beleg weitere Historie laden. Die Datei ist ein
+flüchtiger Wegweiser, keine Autorisierung und keine zweite Gesprächshistorie.
+
 Den bestätigten tmux-Pfad mit kompakten Auszügen und passendem Status-Warten verwenden.
 Bereits geprüfte Antwortkontexte und Token wiederverwenden, keine parallelen Lesezugriffe
 oder vollständigen Repo-Scans pro Terminalabfrage. Rohtranskripte und Tool-Beschreibungen

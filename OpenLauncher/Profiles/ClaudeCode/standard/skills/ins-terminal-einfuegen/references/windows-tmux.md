@@ -38,12 +38,19 @@ die Sitzung. Der temporäre Wrapper bleibt zum Wiederanhängen erhalten.
    `submit` beziehungsweise `paste`/`enter`. Keine künstlichen Probeaufträge ohne Auftrag.
 
 Ubuntu-tmux 3.6 meldet hier kein `bracket_paste_flag`. Deshalb unter diesem Windows-Weg
-`--literal-line` bei `paste`/`submit` verwenden: ausschließlich eine echte Textzeile,
-ohne Tabs oder Steuerzeichen. Der Helfer sendet sie mit `send-keys -l` ohne Shell und
+`--literal-line` bei `paste`/`submit` verwenden: ausschließlich eine echte Textzeile
+bis 512 UTF-8-Bytes, ohne Tabs oder Steuerzeichen. Der Helfer sendet sie mit `send-keys -l` ohne Shell und
 ohne eingebettetes Enter; alle Identitäts-, Hash-, Frische- und Duplikatprüfungen bleiben
-aktiv. Mehrzeilige Originalaufträge unverändert in einer gemeinsamen UTF-8-Datei ablegen
-und deren Windows-Pfad in einer kurzen einzeiligen Anweisung übergeben. Nicht still
-abflachen und keinen Paste-Modus vortäuschen. Bei einem umbrochenen Entwurf kann `submit`
+aktiv. Lange oder mehrzeilige Originalaufträge unverändert in einer gemeinsamen
+UTF-8-Datei ablegen und mit `submit-file --payload-file <WSL-Pfad> --display-path
+<Windows-Pfad>` übergeben. Der autorisierte `--sha256` gilt der vollständigen Payload.
+Der Helfer prüft UTF-8, Steuerzeichen, Bytezahl und Hash, erzeugt nur den kurzen
+Dateiverweis und schreibt die Payload-Metadaten in den Ledger. Das Ziel bestätigt
+Bytezahl, SHA-256 und `vollstaendig_gelesen=true`; bei Dateien oberhalb eines einzelnen
+Lesefensters abschnittsweise lesen. CRLF bleibt in der Payload bytegetreu erhalten.
+Der `display-path` muss kurz genug bleiben, damit der erzeugte Verweis höchstens
+512 UTF-8-Bytes umfasst. Nicht still abflachen und keinen Paste-Modus
+vortäuschen. Bei einem umbrochenen Entwurf kann `submit`
 konservativ bei `pasted` anhalten: frisch lesen, den eigenen vollständigen Entwurf
 prüfen, dann bei autorisiertem Absenden einmal `enter` mit dem neuen Token.
 
@@ -53,6 +60,18 @@ Generierung, Freigabedialoge, Ghost-Vorschläge und unklare Pasteblöcke bleiben
 Ein tmux-Transporterfolg ist noch keine Claude-Antwort: danach die tatsächliche neue
 Antwort lesen. Die Zuordnung zum sichtbaren Codex-Tab zusätzlich prüfen; tmux kennt
 keine Codex-Tab-ID.
+
+Wurde ein eigener, nie abgesendeter Entwurf nachweislich manuell vollständig aus dem
+Eingabefeld entfernt, den offenen Ledger-Eintrag mit `resolve --id <ID> --sha256
+<alter Auftrags- beziehungsweise Payload-Hash> --manual-clear-confirmed
+--continued-as <neue ID> --observed <frischer
+Token>` klären. `resolve`
+akzeptiert nur `pasted` oder `paste_attempted`, prüft Ziel, Frische und ein vollständig
+leeres Eingabefeld sowie einen markanten Textanfang im jüngeren Verlauf und sendet
+keine Terminaltaste. Es entscheidet nicht über den
+fachlichen Auftrag: Mit `--continued-as` bleibt seine Fortführung nachvollziehbar. Die
+alte Kennung und ihr Hash bleiben als `cleared` erhalten; `enter_attempted` und
+`enter_sent` können damit nicht zurückgesetzt werden.
 
 Für einen laufenden Dialog gelten die Koordinations- und Abschlussregeln des
 übergeordneten Skills. Die Windows-tmux-Einrichtung autorisiert keine selbstständigen
