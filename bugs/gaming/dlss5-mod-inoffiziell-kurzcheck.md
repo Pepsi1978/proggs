@@ -4,4 +4,5 @@
 - M3 `0xBAD00001` NGX-Init im Spielprozess (Feeder #47, offen). M4 unsignierte Modell-DLL → `0xBAD00002` → Authenticode-Pflicht.
 - M5 165-MB-`nvngx_dlssd.dll` = falsch benanntes Modell, zerstört Ray Reconstruction. M6 zwei Neural-Consumer = stilles Nichts.
 - M7 Swapper-Deinstallation lässt Dateien liegen → erst „Restore originals“. M8 Anti-Cheat-Bann. M9 Defender vs. DFC. M10 Smooth Motion aus. M11 AC-Engine verliert Tiefe (nur ReShade-Route).
+- M12 CoD MW2: Absturz `0xc0000005` in `ntdll.dll` 1 s nach dem OptiScaler-Start (Manipulationsschutz) → Mod raus, CoD bleibt gesperrt.
 Volltext: `dlss5-mod-inoffiziell.md`

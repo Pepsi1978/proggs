@@ -56,6 +56,12 @@
 - **Fix:** Smooth Motion für Spiele mit Mod ausschalten.
 - **Quelle:** https://github.com/jlrouzies-fr/DLSS5-Feeder/issues/1
 
+## M12 — CoD MW2 (2022): Spiel stürzt direkt nach dem Start ab (VERIFIZIERT 21.09.2026 17:59)
+- **Symptom:** MW2 startet nicht. Windows meldet `cod22-cod.exe`, Modul `ntdll.dll`, Ausnahme `0xc0000005`, zweimal hintereinander, ca. 1 s nach dem Start.
+- **Beleg:** `OptiScaler.log` im Spielordner endet regulär mit „Init done“ und der GPU-Erkennung (RTX 5090). Direkt danach kommt der Absturz. Der Ricochet-Kerneltreiber `atvi-hrist_sr` war noch nicht einmal gestartet, abgeschossen hat also der Manipulationsschutz im Spielprozess.
+- **Fix:** Mod entfernen (`entfernen.ps1 -Spiel 'Modern Warfare II'`), danach startet MW2 wieder. Keine anderen Proxy-Namen probieren: Das wäre gezieltes Umgehen des Anti-Cheats. CoD-Titel bleiben im Installer gesperrt.
+- **Quelle:** eigene Messung (Treiber 616.92, OptiScaler-DLSSNR v0.2.0, MW2 Steam)
+
 ## M11 — AnvilNext (AC-Reihe): Tiefenpuffer geht bei Kamerawechsel verloren
 - **Symptom:** Bei der ReShade-/Feeder-Route fällt der Effekt in Dialogen und Zwischensequenzen aus.
 - **Einordnung:** Für AC Mirage belegt, auf AC Shadows übertragbar. Betrifft nur die ReShade-Route, nicht OptiScaler (der liest Tiefe und Bewegungsvektoren aus dem DLSS-Aufruf).
