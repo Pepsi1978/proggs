@@ -2887,7 +2887,7 @@ fun AnhoerKnopf(vm: WeckerViewModel, schluessel: String, abspielen: () -> Unit) 
 private fun AnhoerKnopfText(vm: WeckerViewModel, alarm: Alarm) {
     val laeuft by vm.vorschau.collectAsStateWithLifecycle()
     val aktiv = laeuft == "text:${alarm.id}"
-    StillerKnopf(if (aktiv) "■ Stopp" else "Test vorlesen", {
+    StillerKnopf(if (aktiv) "■ Test stoppen" else "Test vorlesen", {
         if (aktiv) vm.stopPreview()
         else if (alarm.text.isBlank()) vm.message.value = "Gib zuerst einen Text ein."
         else { vm.previewVoice(alarm, alarm.text); vm.vorschau.value = "text:${alarm.id}" }

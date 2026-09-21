@@ -633,7 +633,11 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     /** Local player until it is prepared successfully; every failure releases it and never throws into the UI. */
     private fun startPlayer(file: File, speed: Float, generation: Long) {
+        // Die Markierung des laufenden Anhören-Knopfs bleibt erhalten: Nur der alte Player wird
+        // freigegeben, die Vorschau selbst läuft ja gerade an (sonst zeigte der Knopf nie „Stopp“).
+        val laufend = vorschau.value
         releasePlayer()
+        vorschau.value = laufend
         // Construction can fail natively; that must not escape as an unhandled coroutine exception.
         val player = try { MediaPlayer() } catch (e: Exception) {
             android.util.Log.w("WeckerPreview", "MediaPlayer konnte nicht erzeugt werden", e)
