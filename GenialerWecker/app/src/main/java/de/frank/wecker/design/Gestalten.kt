@@ -313,13 +313,15 @@ object TraumraumGestalt : WeckerGestalt {
         //   helle Kuppel  #EFD5C0 — #FFC898 ergibt magere 2,81:1, #C87A45 dagegen 5,02:1
         // Im Dunkeln bleibt es deshalb beim warmen Bernstein; im Hellen tritt eine tiefere
         // Tönung an seine Stelle, damit sich das Kissen von der Pfirsichfläche absetzt.
-        val toenung = if (LocalGold.current.istDunkel) Color(0xFFFFC898) else Color(0xFFC87A45)
+        // Statt einer einzigen Tönung, die Kissen, Mond und Sterne zu einer Farbfläche machte, nur
+        // entsättigt: Die hellen und dunklen Partien des Bildes bleiben unterscheidbar, und das
+        // Motiv hebt sich von der orangefarbenen Kuppel ab.
         Image(
             painter = painterResource(R.drawable.design_kissen_frei),
             contentDescription = null,
             modifier = if (modifier == Modifier) Modifier.size(128.dp) else modifier,
             contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.tint(toenung, BlendMode.Modulate),
+            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.3f) }),
         )
     }
 

@@ -53,6 +53,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.layout
@@ -548,6 +549,7 @@ private fun TerminGruppe(
     gedaempft: androidx.compose.ui.graphics.Color,
     fuehrung: androidx.compose.ui.graphics.Color,
     zeigePfeil: Boolean = true,
+    ausrichtung: Alignment.Horizontal = Alignment.Start,
 ) {
     val oeffenbar = daten.nextAlarm != null
     Column(
@@ -555,6 +557,7 @@ private fun TerminGruppe(
             .then(if (oeffenbar) Modifier.clickable(
                 onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
         verticalArrangement = Arrangement.spacedBy(1.dp),
+        horizontalAlignment = ausrichtung,
     ) {
         if (daten.next == null) {
             Text("Kein Wecker aktiv", style = MaterialTheme.typography.bodyMedium,
@@ -652,20 +655,25 @@ private fun SchlichtHero(
             ) {
                 // Der Ring liegt in einer leicht vertieften Mulde — dieselbe Sprache wie ein nicht
                 // gedrückter Knopf, nur auf ein Instrument angewendet. Statisch, kein Dauerleuchten.
+                // Ein richtiger Wecker: Glocken, Hammer und Füße hinter einem gewölbten
+                // Zifferblatt mit Minutenteilung und Zeigern; der Restzeitbogen liegt darauf.
                 if (zeigtRing) Box(
-                    Modifier.size(ring + RINGBETT_RAND)
-                        .background(gold.flaeche.dunkler(0.05f), CircleShape)
-                        .border(1.dp, lichtKante(gedrueckt = true, staerke = 0.35f), CircleShape),
+                    Modifier.size(ring + RINGBETT_RAND),
                     contentAlignment = Alignment.Center,
                 ) {
-                    RestzeitRing(daten.now, daten.next, daten.nextIsSnooze, Modifier.size(ring))
+                    WeckerSilhouette(Modifier.matchParentSize())
+                    Box(Modifier.size(ring + 6.dp)
+                        .shadow(6.dp, CircleShape, ambientColor = gold.primaer, spotColor = gold.primaer)
+                        .background(Brush.radialGradient(listOf(gold.flaecheErhoeht.heller(0.06f), gold.flaeche.dunkler(0.04f))), CircleShape)
+                        .border(2.dp, gold.primaer.copy(alpha = .75f), CircleShape))
+                    RestzeitRing(daten.now, daten.next, daten.nextIsSnooze, Modifier.size(ring), zifferblatt = true)
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(datumsZeile(daten.now), Modifier.weight(1f),
-                            style = MaterialTheme.typography.labelMedium, color = gold.textGedaempft,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                // Rechtsbündig: Datum, Uhr und Termin enden an derselben Kante wie „Weckbereit“.
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp),
+                    horizontalAlignment = Alignment.End) {
+                    Text(datumsZeile(daten.now),
+                        style = MaterialTheme.typography.labelMedium, color = gold.textGedaempft,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                     GedeckelteSchrift {
                         // Die Größe wird gegen die tatsächlich verbleibende Spaltenbreite gemessen.
                         val groesse = passendeUhrGroesse(textBreite, uhrGroesse(daten.stufe),
@@ -674,7 +682,8 @@ private fun SchlichtHero(
                             fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
                             fontSize = groesse, color = gold.primaer, maxLines = 1, softWrap = false)
                     }
-                    TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer)
+                    TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer,
+                        ausrichtung = Alignment.End)
                 }
             }
             // Über die volle Breite: Hier ist Platz für den beschrifteten Hauptknopf und die
@@ -845,7 +854,13 @@ private fun MorgenruheHero(
     val zeigtMotiv = motiv >= 72.dp
     val textBreite = innen - if (zeigtMotiv) SPALTEN_ABSTAND + motiv else 0.dp
     Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund).border(1.dp, gold.heroKante, form)) {
+        Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund)
+            // Weiches Morgenlicht hinter dem Bett — ein warmer Schein oben rechts.
+            .drawBehind {
+                drawRect(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .20f), androidx.compose.ui.graphics.Color.Transparent),
+                    center = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f), radius = size.maxDimension * 0.6f))
+            }
+            .border(1.dp, gold.heroKante, form)) {
             Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -862,11 +877,14 @@ private fun MorgenruheHero(
                                 fontSize = groesse, color = gold.heroSchrift,
                                 maxLines = 1, softWrap = false)
                         }
-                        TerminGruppe(daten, oeffnen, gold.heroSchrift, gold.heroSchriftGedaempft, gold.heroFuehrung)
                     }
                     // Nur das Motiv steht rechts — und nur, wenn dafür wirklich Platz ist.
                     if (zeigtMotiv) LocalGestalt.current.Motiv(Modifier.size(motiv))
                 }
+                // Der Termin nutzt jetzt die ganze Breite: links Weckzeit und Name, rechts die
+                // Restzeit — statt alles in die linke Spalte neben das Bett zu quetschen.
+                HorizontalDivider(color = gold.heroKante)
+                TerminVerteilt(daten, oeffnen, gold.heroSchrift, gold.heroSchriftGedaempft, gold.heroFuehrung)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) {
                         HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden, knopfText = "Wecker anlegen")
@@ -904,10 +922,10 @@ private fun TraumraumHero(
     if (daten.schmal) { SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden); return }
     val radius = LocalDesignTokens.current.karteRadius
     val kuppelForm = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
-    val motiv = if (daten.weit) 96.dp else 72.dp
+    val motiv = if (daten.weit) 84.dp else 64.dp
     val versatz = 26.dp
-    // Auch hier gegen die echte Restbreite gemessen: innen abzüglich Motiv und Abstand.
-    val uhrPlatz = daten.breite - HERO_AUSSEN * 2 - 40.dp - motiv - 14.dp
+    // Auch hier gegen die echte Restbreite gemessen: innen abzüglich der beidseitigen Motivfreiräume.
+    val uhrPlatz = daten.breite - HERO_AUSSEN * 2 - 40.dp - motiv * 1.1f
     Column(Modifier.fillMaxWidth()) {
         Box(
             Modifier.fillMaxWidth()
@@ -920,14 +938,19 @@ private fun TraumraumHero(
                 .border(1.dp, gold.heroKante, kuppelForm)
                 .padding(top = 14.dp, bottom = versatz + 14.dp, start = 20.dp, end = 20.dp),
         ) {
-            // Das Licht sitzt jetzt in der Kuppel und ist von ihr beschnitten.
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(datumsZeile(daten.now), style = MaterialTheme.typography.labelMedium,
-                    color = gold.akzentWarm, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    LocalGestalt.current.Motiv(Modifier.size(motiv))
+            // Nachthimmel in der Kuppel: Sterne in zwei Tönen und ein heller Mond — dadurch hat
+            // das Motiv endlich Kontrast statt einer einzigen Farbfläche.
+            Sternenhimmel(Modifier.matchParentSize())
+            // Datum und Uhr stehen exakt mittig; das Kissen sitzt als ruhiges Motiv links daneben
+            // und schiebt die Uhr nicht mehr aus der Mitte.
+            Box(Modifier.fillMaxWidth()) {
+                LocalGestalt.current.Motiv(Modifier.align(Alignment.CenterStart).size(motiv))
+                Column(Modifier.fillMaxWidth().padding(horizontal = motiv * 0.55f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(datumsZeile(daten.now), style = MaterialTheme.typography.labelLarge,
+                        color = gold.akzentWarm, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     GedeckelteSchrift {
                         val groesse = passendeUhrGroesse(uhrPlatz, uhrGroesse(daten.stufe),
                             zahlSchrift(), zahlGewicht())
@@ -1024,7 +1047,13 @@ private fun OrbitHero(
         daten.hatTermin -> "AKTIV"
         else -> "KEIN TERMIN"
     }
-    Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund).border(1.dp, gold.heroKante, form)) {
+    Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund)
+        // Kühles Instrumentenleuchten hinter dem Motiv.
+        .drawBehind {
+            drawRect(Brush.radialGradient(listOf(gold.primaer.copy(alpha = .14f), androidx.compose.ui.graphics.Color.Transparent),
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.5f), radius = size.maxDimension * 0.5f))
+        }
+        .border(1.dp, gold.heroKante, form)) {
         Column(Modifier.fillMaxWidth()) {
             // Kopfstreifen: links der Signalbalken, rechts die Statusleuchte.
             Row(
@@ -2330,7 +2359,7 @@ private fun TerminZeile(now: Long, target: Long, snooze: Boolean) {
  * Für TalkBack stumm, der Text daneben ist maßgeblich.
  */
 @Composable
-private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Modifier = Modifier) {
+private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Modifier = Modifier, zifferblatt: Boolean = false) {
     val gold = LocalGold.current
     val accent = if (snooze) LocalSemantisch.current.info else gold.primaer
     val geometry = target?.let { ZeitRing.berechne(now, it) }
@@ -2349,6 +2378,10 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
             center + androidx.compose.ui.geometry.Offset((r * Math.cos(it)).toFloat(), (r * Math.sin(it)).toFloat())
         }
         drawCircle(gold.textGedaempft.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+        // Das Zifferblatt bekommt zusätzlich eine feine Minutenteilung.
+        if (zifferblatt) repeat(60) { minute ->
+            if (minute % 5 != 0) drawLine(gold.textGedaempft.copy(alpha = .35f), point(minute * 6f - 90f, radius - 2.5f.dp.toPx()), point(minute * 6f - 90f, radius), 1.dp.toPx())
+        }
         repeat(12) { hour ->
             val a = hour * 30f - 90f
             val long = hour % 3 == 0
@@ -2379,8 +2412,114 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
                     constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidth.toInt().coerceAtLeast(1)))
             drawText(layout, topLeft = center - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
         }
+        // Zeiger der aktuellen Uhrzeit — nur wenn die Mitte frei ist, sonst stünden sie über der Kennzeichnung.
+        if (zifferblatt && geometry?.centerLabel == null) {
+            val zeit = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
+            val minutenWinkel = zeit.minute * 6f - 90f
+            val stundenWinkel = (zeit.hour % 12) * 30f + zeit.minute * 0.5f - 90f
+            val zeiger = androidx.compose.ui.graphics.StrokeCap.Round
+            drawLine(gold.textPrimaer.copy(alpha = .85f), center, point(stundenWinkel, radius * 0.45f), 3.5f.dp.toPx(), zeiger)
+            drawLine(gold.textPrimaer.copy(alpha = .75f), center, point(minutenWinkel, radius * 0.66f), 2.dp.toPx(), zeiger)
+            drawCircle(accent, 3.5f.dp.toPx(), center)
+        }
         if (geometry != null) ringMarker(point(geometry.targetAngle), hollow = false, color = accent, surface = surface)
         ringMarker(point(nowAngle), hollow = true, color = gold.textPrimaer, surface = surface)
+    }
+}
+
+/** Glocken, Hammer und Füße eines klassischen Weckers — der Hintergrund hinter Schlichts Zifferblatt. */
+@Composable
+private fun WeckerSilhouette(modifier: Modifier) {
+    val gold = LocalGold.current
+    val farbe = gold.primaer
+    androidx.compose.foundation.Canvas(modifier) {
+        val r = size.minDimension / 2f
+        fun punkt(winkel: Float, abstand: Float) = Math.toRadians(winkel.toDouble()).let {
+            center + androidx.compose.ui.geometry.Offset((abstand * Math.cos(it)).toFloat(), (abstand * Math.sin(it)).toFloat())
+        }
+        val glocke = r * 0.34f
+        listOf(-128f, -52f).forEach { w ->
+            val mitte = punkt(w, r * 0.80f)
+            drawCircle(Brush.radialGradient(listOf(farbe.heller(0.35f), farbe, farbe.dunkler(0.25f)),
+                center = mitte - androidx.compose.ui.geometry.Offset(glocke * .3f, glocke * .3f), radius = glocke * 1.2f), glocke, mitte)
+        }
+        // Der Bügel mit dem Hammer zwischen den Glocken.
+        drawLine(farbe.dunkler(0.15f), punkt(-128f, r * 0.80f), punkt(-52f, r * 0.80f), 3.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(farbe.dunkler(0.15f), punkt(-90f, r * 0.62f), punkt(-90f, r * 0.98f), 3.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
+        drawCircle(farbe, 4.dp.toPx(), punkt(-90f, r * 0.98f))
+        // Zwei Füße unten.
+        listOf(128f, 52f).forEach { w ->
+            drawLine(farbe.dunkler(0.2f), punkt(w, r * 0.72f), punkt(w, r * 0.99f), 5.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
+        }
+    }
+}
+
+/** Deterministischer Sternenhimmel mit Mond für Traumraums Kuppel — keine Animation, kein Zufall pro Bild. */
+@Composable
+private fun Sternenhimmel(modifier: Modifier) {
+    val gold = LocalGold.current
+    val stern = if (gold.istDunkel) androidx.compose.ui.graphics.Color(0xFFFFF4E0) else gold.akzentWarm
+    val glut = gold.primaer
+    val mond = if (gold.istDunkel) androidx.compose.ui.graphics.Color(0xFFFFE9B8) else androidx.compose.ui.graphics.Color(0xFFFFF6DC)
+    val himmel = gold.heroGrund
+    androidx.compose.foundation.Canvas(modifier) {
+        val zufall = java.util.Random(21)
+        repeat(46) { i ->
+            val x = zufall.nextFloat() * size.width
+            val y = zufall.nextFloat() * size.height * 0.85f
+            val gross = zufall.nextFloat()
+            val farbe = if (i % 5 == 0) glut else stern
+            val r = (0.7f + gross * 1.6f).dp.toPx()
+            drawCircle(farbe.copy(alpha = 0.35f + gross * 0.55f), r, androidx.compose.ui.geometry.Offset(x, y))
+            // Die hellsten bekommen einen kleinen Kreuzschein.
+            if (gross > 0.86f) {
+                val l = r * 3.2f
+                drawLine(farbe.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(x - l, y), androidx.compose.ui.geometry.Offset(x + l, y), 0.8f.dp.toPx())
+                drawLine(farbe.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(x, y - l), androidx.compose.ui.geometry.Offset(x, y + l), 0.8f.dp.toPx())
+            }
+        }
+        // Mondsichel oben rechts, mit weichem Hof.
+        val m = androidx.compose.ui.geometry.Offset(size.width - 34.dp.toPx(), 26.dp.toPx())
+        val mr = 13.dp.toPx()
+        drawCircle(Brush.radialGradient(listOf(mond.copy(alpha = .35f), androidx.compose.ui.graphics.Color.Transparent), center = m, radius = mr * 2.6f), mr * 2.6f, m)
+        drawCircle(mond, mr, m)
+        drawCircle(himmel, mr * 0.86f, m + androidx.compose.ui.geometry.Offset(mr * 0.45f, -mr * 0.25f))
+    }
+}
+
+/**
+ * Morgenruhes Terminzeile über die volle Heldenbreite: links Weckzeit und Name, rechts die Restzeit.
+ * Dieselben Angaben wie [TerminGruppe], nur ordentlich auf die Fläche verteilt.
+ */
+@Composable
+private fun TerminVerteilt(
+    daten: HeroDaten, aufOeffnen: () -> Unit,
+    textFarbe: androidx.compose.ui.graphics.Color, gedaempft: androidx.compose.ui.graphics.Color,
+    fuehrung: androidx.compose.ui.graphics.Color,
+) {
+    val oeffenbar = daten.nextAlarm != null
+    Row(
+        Modifier.fillMaxWidth().then(if (oeffenbar) Modifier.clickable(
+            onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (daten.next == null) {
+                Text("Kein Wecker aktiv", style = MaterialTheme.typography.bodyMedium, color = textFarbe, maxLines = 1)
+                Text("Lege einen an oder schalte einen ein", style = MaterialTheme.typography.bodySmall,
+                    color = gedaempft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else {
+                TerminZeile(daten.now, daten.next, daten.nextIsSnooze)
+                Text(daten.nextName ?: "Wecker", style = MaterialTheme.typography.titleSmall, color = textFarbe,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (daten.next != null) Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("noch", style = MaterialTheme.typography.labelSmall, color = gedaempft)
+            Text(remainingLong(daten.next - daten.now), style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold, color = fuehrung, maxLines = 1)
+        }
     }
 }
 

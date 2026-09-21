@@ -15,7 +15,7 @@ import de.frank.genialeideen.ui.theme.IdeenSchriftFest
  * [paletteFuer] die bestehenden Paletten unverändert zurück — dieselbe Optik wie bisher.
  */
 @Composable
-fun WeckerTheme(themeWahl: String, design: Design, content: @Composable () -> Unit) {
+fun WeckerTheme(themeWahl: String, design: Design, ausrichtung: String? = null, content: @Composable () -> Unit) {
     val dunkel = themeWahl == "dark"
     val palette = paletteFuer(design, dunkel)
     CompositionLocalProvider(
@@ -39,7 +39,7 @@ fun WeckerTheme(themeWahl: String, design: Design, content: @Composable () -> Un
                 Design.MORGENRUHE, Design.TRAUMRAUM -> IdeenSchrift
                 Design.ORBIT -> IdeenSchriftFest
             },
-            content = content,
+            content = if (ausrichtung == null) content else ({ de.frank.wecker.AusrichtungsSperre(ausrichtung, content) }),
         )
     }
 }

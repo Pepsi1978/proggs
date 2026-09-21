@@ -229,7 +229,7 @@ class AlarmActivity : ComponentActivity() {
                     isAppearanceLightNavigationBars = theme != "dark"
                 }
             }
-            WeckerTheme(theme, design) {
+            WeckerTheme(theme, design, ausrichtung) {
                 val gold = LocalGold.current
                 val alarm = state.alarm ?: shownAlarm.takeIf { feedback != null }
                 // The ring whose UI is shown; the confirmed ring stays displayed while the service shuts down.

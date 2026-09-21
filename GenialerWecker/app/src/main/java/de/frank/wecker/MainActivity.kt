@@ -15,6 +15,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -23,7 +25,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         hideStatusBar()
-        setContent { WeckerApp(model, this) }
+        setContent {
+            val ausrichtung by model.settings.ausrichtungFlow.collectAsStateWithLifecycle()
+            AusrichtungsSperre(ausrichtung) { WeckerApp(model, this) }
+        }
         // Die gewählte Ausrichtung folgt der Einstellung; nur eine echte Abweichung wird gesetzt,
         // damit daraus keine Kette aus Neukonfigurationen entsteht.
         lifecycleScope.launch {
