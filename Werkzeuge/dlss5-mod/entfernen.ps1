@@ -8,6 +8,7 @@ if (-not $lists) { 'Keine Mod-Installation gefunden.'; return }
 foreach ($l in $lists) {
     $dir = $l.DirectoryName
     foreach ($rel in Get-Content $l.FullName) { $p = Join-Path $dir $rel; if (Test-Path $p) { Remove-Item $p -Force } }
+    $cap = Join-Path $dir 'dlssnr-capture'; if (Test-Path $cap) { Remove-Item $cap -Recurse -Force }
     foreach ($sub in 'OptiScaler\D3D12_OptiScaler','OptiScaler','Licenses') { $p = Join-Path $dir $sub; if ((Test-Path $p) -and -not (Get-ChildItem $p -Recurse -File)) { Remove-Item $p -Recurse -Force } }
     Remove-Item $l.FullName -Force
     "Entfernt: $dir"

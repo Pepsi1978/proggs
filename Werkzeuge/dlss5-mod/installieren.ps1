@@ -68,7 +68,8 @@ foreach ($name in $ziel) {
     $ini = Get-Content $iniPath; $inNr = $false
     for ($i = 0; $i -lt $ini.Count; $i++) {
         if ($ini[$i] -match '^\[') { $inNr = $ini[$i] -eq '[DlssNr]' }
-        elseif ($inNr -and $ini[$i] -eq 'Enabled=auto') { $ini[$i] = 'Enabled=true'; break }
+        elseif ($ini[$i] -eq 'Dx12Upscaler=auto') { $ini[$i] = 'Dx12Upscaler=dlss' }  # auto = DLSS on RTX anyway, pin it
+        elseif ($inNr -and $ini[$i] -eq 'Enabled=auto') { $ini[$i] = 'Enabled=true' }
     }
     Set-Content $iniPath $ini -Encoding UTF8
     $manifest += 'OptiScaler.log'

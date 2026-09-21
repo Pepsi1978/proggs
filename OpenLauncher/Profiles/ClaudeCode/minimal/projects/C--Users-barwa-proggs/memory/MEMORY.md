@@ -6,3 +6,7 @@
 - [Fenster-Aktivierung: Erfolg nur mit IsIconic](aktivierung-erfolg-nur-mit-isiconic.md) — activated=true ohne sichtbares Fenster heisst: die Erfolgspruefung ist falsch
 - [Dieser Rechner: abweichende Installationswege](dieser-rechner-installationswege.md) — npm-CLIs, LM Studio in Program Files, kein Stream Deck
 - [Synced-Plugins abschalten](synced-plugins-abschalten.md) — Schlüssel "name@synced": false in enabledPlugins
+- [Profilregeln kommen aus sources/](profilregeln-aus-sources-generiert.md) — fehlende Regel = veraltetes Repo oder Session vor dem Pull, kein Launcher-Problem
+- [MW2 DLSS-Override eingerichtet](mw2-dlss-override-eingerichtet.md) — Treiberprofil + NVPI-Ort, nach Treiber-Clean-Install einrichten.ps1 erneut
+- [Commit nur mit Pfaden](commit-nur-mit-pfaden.md) — parallele Sitzungen haben Dateien im Index vorgemerkt, nacktes git commit nimmt sie mit
+- [DLSS-5-Mod installiert](dlss5-mod-installiert.md) — OptiScaler-DLSSNR in 5 SP-Spielen, Overrides für 10 Spiele evtl. wirkungslos ohne NVIDIA-App-Keys
