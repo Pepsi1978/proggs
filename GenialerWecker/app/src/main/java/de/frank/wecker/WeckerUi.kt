@@ -387,7 +387,9 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
             // würden auf ihm liegen statt unter ihm durchzugleiten.
             Box(
                 Modifier.fillMaxWidth().zIndex(1f)
-                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),
+                    // Traumraum rückt minimal näher an die Kopfleiste.
+                    .padding(start = 16.dp, end = 16.dp,
+                        top = if (LocalDesignTokens.current.design == Design.TRAUMRAUM) 4.dp else 12.dp, bottom = 14.dp),
             ) {
                 when (LocalDesignTokens.current.design) {
                     Design.TRAUMRAUM -> TraumraumHero(heroDaten, onNew, onEdit, aufSchlummernBeenden)
