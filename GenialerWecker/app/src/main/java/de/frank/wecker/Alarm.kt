@@ -21,6 +21,8 @@ data class Alarm(
     val days: Set<Int> = emptySet(),
     /** Bei Intervallen das feste Ankerdatum, sonst ein einmaliger Kalendertag. */
     val startDate: String = "",
+    /** Letzter Tag, an dem eine Wiederholung noch weckt (ISO-Datum). Leer bedeutet endlos. */
+    val endDate: String = "",
     val intervalDays: Int = 0,
     val enabled: Boolean = true,
     val nextAt: Long = 0,
@@ -116,7 +118,7 @@ data class Alarm(
     }
     fun json(): JSONObject = JSONObject().apply {
         put("id", id); put("name", name); put("hour", hour); put("minute", minute)
-        put("days", JSONArray(days.sorted())); put("startDate", startDate); put("intervalDays", intervalDays); put("enabled", enabled); put("nextAt", nextAt)
+        put("days", JSONArray(days.sorted())); put("startDate", startDate); put("endDate", endDate); put("intervalDays", intervalDays); put("enabled", enabled); put("nextAt", nextAt)
         put("snoozeUntil", snoozeUntil); put("snoozeMinutes", snoozeMinutes); put("snoozeLimit", snoozeLimit)
         put("snoozes", snoozes); put("volume", volume); put("fadeSeconds", fadeSeconds); put("vibrate", vibrate)
         put("steps", JSONArray(steps.map { it.name })); put("text", text); put("originalText", originalText)
@@ -155,7 +157,7 @@ data class Alarm(
         private fun read(j: JSONObject) = Alarm(
             id = j.getString("id"), name = j.optString("name", "Wecker"), hour = j.getInt("hour"), minute = j.getInt("minute"),
             days = j.getJSONArray("days").let { a -> (0 until a.length()).map { a.getInt(it) }.toSet() },
-            startDate = j.optString("startDate"), intervalDays = j.optInt("intervalDays"),
+            startDate = j.optString("startDate"), endDate = j.optString("endDate"), intervalDays = j.optInt("intervalDays"),
             enabled = j.optBoolean("enabled"), nextAt = j.optLong("nextAt"), snoozeUntil = j.optLong("snoozeUntil"),
             snoozeMinutes = j.optInt("snoozeMinutes", 5), snoozeLimit = j.optInt("snoozeLimit", 3), snoozes = j.optInt("snoozes"),
             volume = j.optInt("volume", 70), fadeSeconds = j.optInt("fadeSeconds"), vibrate = j.optBoolean("vibrate", true),
@@ -194,7 +196,18 @@ data class Alarm(
  * Abgesichert durch DstBerlinTest.
  */
 object AlarmTime {
+    /**
+     * Der nächste Weckzeitpunkt. Liegt er bei einer Wiederholung hinter dem Enddatum („Dauer“), ist die
+     * Wiederholung abgelaufen: dann 0, und der Wecker klingelt nicht mehr.
+     */
     fun next(alarm: Alarm, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): Long {
+        val kandidat = nextOhneEnde(alarm, now, zone)
+        if (!alarm.repeats || alarm.endDate.isBlank()) return kandidat
+        val ende = runCatching { LocalDate.parse(alarm.endDate) }.getOrNull() ?: return kandidat
+        return if (Instant.ofEpochMilli(kandidat).atZone(zone).toLocalDate().isAfter(ende)) 0L else kandidat
+    }
+
+    private fun nextOhneEnde(alarm: Alarm, now: Instant, zone: ZoneId): Long {
         val today = now.atZone(zone).toLocalDate()
         if (alarm.startDate.isNotBlank()) {
             val first = LocalDate.parse(alarm.startDate)

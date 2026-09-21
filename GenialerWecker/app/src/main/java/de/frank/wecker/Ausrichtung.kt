@@ -40,7 +40,12 @@ object Ausrichtung {
      * Durchlauf würde daraus eine Schleife machen.
      */
     fun anwenden(activity: Activity, wert: String) {
-        val ziel = angefordert(wert)
+        // Auf großen Displays (aufgeklapptes Foldable) übergeht Android die Anforderung: Es dreht das
+        // Display trotzdem und setzt die App nur als schmalen Streifen in die Mitte. Dort wird deshalb
+        // gar nichts angefordert; die App bekommt das volle Fenster, und [AusrichtungsSperre] dreht
+        // den Inhalt selbst zurück, sodass er fest zum Gerät stehen bleibt.
+        val gross = activity.resources.configuration.smallestScreenWidthDp >= 600
+        val ziel = if (gross) ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED else angefordert(wert)
         if (activity.requestedOrientation != ziel) activity.requestedOrientation = ziel
     }
 }

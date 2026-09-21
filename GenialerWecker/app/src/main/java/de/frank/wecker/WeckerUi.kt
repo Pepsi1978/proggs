@@ -1829,7 +1829,6 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             SchlafdauerEingabe(alarm, vm::change)
             // Die Wiederholung gehört zur Weckzeit — hier sieht man sofort, dass der Wecker auch täglich klingeln kann.
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
-            Text("Wann soll er wecken?", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             RepeatEditor(alarm, activity, gemerktesDatum, { gemerktesDatum = it }, vm::change)
         }
         Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }.ifBlank { "Kein Schritt gewählt" },
@@ -2239,6 +2238,39 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, gemerktesDat
         }
         if (alarm.startDate.isBlank()) Text("Ohne Datum weckt er beim nächsten Erreichen der Uhrzeit.", style = MaterialTheme.typography.bodySmall)
     }
+    if (alarm.startDate.isNotBlank()) {
+        // Kalendertage, damit die Zeitumstellung die Entfernung nicht verfälscht; als Long, weil der Abstand
+        // beliebig groß sein darf und erst nach der Bereichsprüfung in den Schieberegler passt.
+        val ahead = java.time.temporal.ChronoUnit.DAYS.between(today, java.time.LocalDate.parse(alarm.startDate))
+        val tage = { anzahl: Long -> if (anzahl == 1L) "1 Tag" else "$anzahl Tage" }
+        // Auch hier stand bisher der helle Plattformdialog. Der Ersatz übernimmt die Semantik
+        // unverändert: Er schreibt erst beim Bestätigen, und nur das Startdatum.
+        // Ebenfalls saveable, aus demselben Grund wie bei der Uhrzeitwahl.
+        var datumWahlOffen by rememberSaveable(alarm.id) { mutableStateOf(false) }
+        // Knopf und gewähltes Datum stehen in einer Zeile, direkt unter der Auswahl.
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StillerKnopf(if (mode == "once") "Datum wählen" else "Startdatum", { datumWahlOffen = true }, hervorgehoben = true)
+            Text(if (mode == "once") "${dateLabel(alarm.startDate)} um ${alarm.timeLabel}" else "ab ${dateLabel(alarm.startDate)}",
+                Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+        }
+        if (datumWahlOffen) DatumWahlDialog(
+            datum = runCatching { java.time.LocalDate.parse(alarm.startDate) }.getOrDefault(today),
+            fruehestes = null,
+            aufAbbruch = { datumWahlOffen = false },
+            aufWahl = { gewaehlt -> datumWahlOffen = false; change(alarm.copy(startDate = gewaehlt.toString())) },
+        )
+        // Die Schnellwahl erscheint nur, wenn sie den tatsächlichen Abstand zeigen kann. Sonst würde sie einen
+        // geklemmten Wert behaupten – und eine Berührung würde einen bestehenden Rhythmus neu verankern.
+        if (ahead in 0L..60L) ValueSlider("Schnellwahl: in", ahead.toInt(), 0..60, "Tagen") {
+            change(alarm.copy(startDate = today.plusDays(it.toLong()).toString()))
+        }
+        // Ein einmaliger Termin in der Vergangenheit hat oben bereits seine eigene Warnkarte; nicht doppelt melden.
+        else if (!(mode == "once" && ahead < 0L)) Text(
+            if (ahead > 60L) "Das Startdatum liegt ${tage(ahead)} voraus – weiter als die Schnellwahl reicht. Ändere es über den Kalender."
+            else "Das Startdatum liegt ${tage(-ahead)} zurück. Daran bleibt der Rhythmus verankert. Bei Bedarf kannst du es über den Kalender ändern.",
+            style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+        if (mode == "interval") Text("Der Rhythmus bleibt am Startdatum verankert. Schlummern oder das Auslassen eines Termins verschiebt deine Schichtfolge nicht.", style = MaterialTheme.typography.bodySmall)
+    }
     if (mode == "interval") {
         // Existing values above 60 days stay untouched; the slider grows instead of cutting them down.
         ValueSlider("Alle wie viele Tage?", alarm.intervalDays, 1..maxOf(60, alarm.intervalDays), "Tage") { change(alarm.copy(intervalDays = it)) }
@@ -2262,34 +2294,23 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, gemerktesDat
             if (date.monthValue == 2 && date.dayOfMonth == 29) " Ohne 29.02. weckt er am 28.02., im Schaltjahr wieder am 29.02." else "",
             style = MaterialTheme.typography.bodySmall)
     }
-    if (alarm.startDate.isNotBlank()) {
-        // Kalendertage, damit die Zeitumstellung die Entfernung nicht verfälscht; als Long, weil der Abstand
-        // beliebig groß sein darf und erst nach der Bereichsprüfung in den Schieberegler passt.
-        val ahead = java.time.temporal.ChronoUnit.DAYS.between(today, java.time.LocalDate.parse(alarm.startDate))
-        val tage = { anzahl: Long -> if (anzahl == 1L) "1 Tag" else "$anzahl Tage" }
-        Text(if (mode == "once") "Am ${dateLabel(alarm.startDate)} um ${alarm.timeLabel}" else "Startdatum: ${dateLabel(alarm.startDate)}")
-        // Die Schnellwahl erscheint nur, wenn sie den tatsächlichen Abstand zeigen kann. Sonst würde sie einen
-        // geklemmten Wert behaupten – und eine Berührung würde einen bestehenden Rhythmus neu verankern.
-        if (ahead in 0L..60L) ValueSlider("Schnellwahl: in", ahead.toInt(), 0..60, "Tagen") {
-            change(alarm.copy(startDate = today.plusDays(it.toLong()).toString()))
-        }
-        // Ein einmaliger Termin in der Vergangenheit hat oben bereits seine eigene Warnkarte; nicht doppelt melden.
-        else if (!(mode == "once" && ahead < 0L)) Text(
-            if (ahead > 60L) "Das Startdatum liegt ${tage(ahead)} voraus – weiter als die Schnellwahl reicht. Ändere es über den Kalender."
-            else "Das Startdatum liegt ${tage(-ahead)} zurück. Daran bleibt der Rhythmus verankert. Bei Bedarf kannst du es über den Kalender ändern.",
-            style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-        // Auch hier stand bisher der helle Plattformdialog. Der Ersatz übernimmt die Semantik
-        // unverändert: Er schreibt erst beim Bestätigen, und nur das Startdatum.
-        // Ebenfalls saveable, aus demselben Grund wie bei der Uhrzeitwahl.
-        var datumWahlOffen by rememberSaveable(alarm.id) { mutableStateOf(false) }
-        if (datumWahlOffen) DatumWahlDialog(
-            datum = runCatching { java.time.LocalDate.parse(alarm.startDate) }.getOrDefault(today),
-            fruehestes = null,
-            aufAbbruch = { datumWahlOffen = false },
-            aufWahl = { gewaehlt -> datumWahlOffen = false; change(alarm.copy(startDate = gewaehlt.toString())) },
+    // Dauer: wie lange die Wiederholung läuft. Vorgabe „endlos“; ein Tipp öffnet den Kalender für das Enddatum.
+    if (mode != "once") {
+        var endeWahlOffen by rememberSaveable(alarm.id) { mutableStateOf(false) }
+        if (endeWahlOffen) DatumWahlDialog(
+            datum = runCatching { java.time.LocalDate.parse(alarm.endDate) }.getOrNull()
+                ?: runCatching { java.time.LocalDate.parse(alarm.startDate).plusMonths(12) }.getOrDefault(today.plusMonths(12)),
+            fruehestes = runCatching { java.time.LocalDate.parse(alarm.startDate) }.getOrNull()?.takeIf { it.isAfter(today) } ?: today,
+            aufAbbruch = { endeWahlOffen = false },
+            aufWahl = { gewaehlt -> endeWahlOffen = false; change(alarm.copy(endDate = gewaehlt.toString())) },
         )
-        StillerKnopf("Datum im Kalender wählen", { datumWahlOffen = true })
-        if (mode == "interval") Text("Der Rhythmus bleibt am Startdatum verankert. Schlummern oder das Auslassen eines Termins verschiebt deine Schichtfolge nicht.", style = MaterialTheme.typography.bodySmall)
+        HorizontalDivider(Modifier.padding(vertical = 2.dp), color = LocalGold.current.rahmen)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StillerKnopf("Dauer", { endeWahlOffen = true }, hervorgehoben = true)
+            Text(if (alarm.endDate.isBlank()) "Dauer: endlos" else "Dauer: bis ${dateLabel(alarm.endDate)}",
+                Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+            if (alarm.endDate.isNotBlank()) StillerKnopf("Endlos", { change(alarm.copy(endDate = "")) })
+        }
     }
 }
 

@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
@@ -197,14 +198,24 @@ private fun LeistenKnoepfe(
 }
 
 
-/** Automatik: Sonne und Mond zugleich, dazu ein „A“ — in der Farbe des jeweiligen Designs. */
+/**
+ * Automatik: ein großes, klares „A“ in einem halb gefüllten Kreis (halb Tag, halb Nacht) —
+ * gut erkennbar statt zweier winziger Symbole. Farbe und Schrift kommen aus dem Design.
+ */
 @Composable
 fun ModusAutomatikSymbol(farbe: androidx.compose.ui.graphics.Color, groesse: androidx.compose.ui.unit.Dp = 22.dp) {
-    androidx.compose.foundation.layout.Box(Modifier.size(groesse)) {
-        Icon(Icons.Default.LightMode, null, tint = farbe, modifier = Modifier.size(groesse * 0.55f).align(androidx.compose.ui.Alignment.TopStart))
-        Icon(Icons.Default.DarkMode, null, tint = farbe, modifier = Modifier.size(groesse * 0.55f).align(androidx.compose.ui.Alignment.BottomEnd))
-        androidx.compose.material3.Text("A", color = farbe, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            fontSize = androidx.compose.ui.unit.TextUnit(groesse.value * 0.42f, androidx.compose.ui.unit.TextUnitType.Sp),
-            modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd))
+    androidx.compose.foundation.layout.Box(
+        Modifier.size(groesse).drawBehind {
+            val r = size.minDimension / 2f
+            drawCircle(farbe, r - 1.dp.toPx(), style = androidx.compose.ui.graphics.drawscope.Stroke(1.5f.dp.toPx()))
+            drawArc(farbe.copy(alpha = .22f), 90f, 180f, useCenter = true,
+                topLeft = androidx.compose.ui.geometry.Offset(1.dp.toPx(), 1.dp.toPx()),
+                size = androidx.compose.ui.geometry.Size(size.width - 2.dp.toPx(), size.height - 2.dp.toPx()))
+        },
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+    ) {
+        androidx.compose.material3.Text("A", color = farbe, fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
+            fontSize = androidx.compose.ui.unit.TextUnit(groesse.value * 0.62f, androidx.compose.ui.unit.TextUnitType.Sp),
+            lineHeight = androidx.compose.ui.unit.TextUnit(groesse.value * 0.62f, androidx.compose.ui.unit.TextUnitType.Sp))
     }
 }

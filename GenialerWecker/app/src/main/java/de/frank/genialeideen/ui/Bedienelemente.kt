@@ -138,6 +138,9 @@ private fun Modifier.vertieftesMaterial(
     .background(grund)
     .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
     .then(if (material.nut) Modifier.nut(form, alpha = material.innenSchattenAlpha) else Modifier)
+    // Rundum geschlossen: Die Materialkante zeichnet nur oben und unten; ohne diesen Umriss wirkten
+    // Schalter- und Reglerbahnen links und rechts offen.
+    .then(if (kante) Modifier.border(1.dp, material.kanteGrund ?: Color.Black.copy(alpha = 0.14f), form) else Modifier)
     .then(
         if (kante) {
             Modifier.border(
