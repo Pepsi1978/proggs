@@ -1936,7 +1936,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             if (Step.IDEAS in alarm.steps) Text("Die offenen Ideen werden in ihrer Reihenfolge aus Geniale Ideen gelesen. Bei bestehender Verbindung bereitet die App Änderungen automatisch vor. Ansehen und abgleichen: Einstellungen → Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
         }
         if (alarm.needsSpeech) AlarmSpeechEditor(vm, alarm)
-        Section("Musik, Klingelzeichen & Lautstärke", collapsible = true, summary = listOfNotNull(
+        Section("Lautstärke & Schlummern", collapsible = true, summary = listOfNotNull(
             if (Step.TONE in alarm.steps) "Klingelzeichen: ${Tones.names[alarm.cue] ?: alarm.cue}" else null,
             if (Step.MUSIC in alarm.steps) "Musik: ${alarm.musicName}" else null,
             "${alarm.volume} % Lautstärke",
@@ -1952,7 +1952,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                             RadioButton(alarm.cue == id, null)
                             Text(title, Modifier.padding(start = 8.dp))
                         }
-                        AnhoerKnopf(vm, "ton:$id") { vm.playTone(id) }
+                        AnhoerKnopf(vm, "ton:$id") { vm.playTone(id, alarm.volume) }
                     }
                 }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
@@ -1979,16 +1979,16 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             val istGeraet = eigene && alarm.musicQuelle == "geraet"
             val istDatei = eigene && !istGeraet
             Auswahl("MP3 / Audio-Datei", if (istDatei) alarm.musicName else "Eigene Datei vom Gerät wählen", istDatei,
-                { music.launch(arrayOf("audio/*")) }, if (istDatei) ({ vm.playMusic(alarm.music) }) else null)
+                { music.launch(arrayOf("audio/*")) }, if (istDatei) ({ vm.playMusic(alarm.music, alarm.volume) }) else null)
             Auswahl("Geräte-Weckton", if (istGeraet) alarm.musicName else "Einen der Wecktöne des Handys wählen", istGeraet, {
                 ringtone.launch(Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
                     .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
                     .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false))
-            }, if (istGeraet) ({ vm.playMusic(alarm.music) }) else null)
+            }, if (istGeraet) ({ vm.playMusic(alarm.music, alarm.volume) }) else null)
             }
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             Text("Lautstärke", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
-            ValueSlider("Wecklautstärke", alarm.volume, 1..100, "%") { vm.change(alarm.copy(volume = it)) }
+            ValueSlider("Wecklautstärke", alarm.volume, 1..100, "%") { vm.change(alarm.copy(volume = it)); vm.vorschauLautstaerke(it) }
             Text("Diese Lautstärke gilt beim Wecken unabhängig von der bisherigen Lautstärke. Android setzt sie auf die nächste unterstützte Lautstärkestufe. Danach wird der vorherige Wert wiederhergestellt.", style = MaterialTheme.typography.bodySmall)
             ValueSlider("Sanftes Anschwellen", alarm.fadeSeconds, 0..120, "Sek.") { vm.change(alarm.copy(fadeSeconds = it)) }
             Toggle("Vibrieren", alarm.vibrate) { vm.change(alarm.copy(vibrate = it)) }

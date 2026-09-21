@@ -601,7 +601,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     /** Plays a built-in tone; creating the file runs on IO, playback on Main, both bound to the current generation. */
-    fun playTone(id: String) {
+    fun playTone(id: String, weckLautstaerke: Int? = null) {
         if (rejectPreviewWhileRecording()) return
         stopPreview()
         val generation = previewGeneration
@@ -617,7 +617,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 if (generation != previewGeneration) return@launch
                 if (previewJob === job) previewJob = null
-                startPlayer(file, 1f, generation)
+                startPlayer(file, 1f, generation, weckLautstaerke)
             } finally {
                 // Released only by its own identity, also after file errors or cancellation.
                 if (previewJob === job) previewJob = null
@@ -625,12 +625,12 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     /** Spielt die gewählte eigene Musikdatei (MP3 oder Geräte-Weckton) zur Probe ab. */
-    fun playMusic(path: String) {
+    fun playMusic(path: String, weckLautstaerke: Int? = null) {
         if (rejectPreviewWhileRecording()) return
         stopPreview()
         val file = File(path)
         if (!file.exists()) { message.value = "Die Audiodatei ist nicht mehr vorhanden."; return }
-        startPlayer(file, 1f, previewGeneration)
+        startPlayer(file, 1f, previewGeneration, weckLautstaerke)
     }
     /** Local player until it is prepared successfully; every failure releases it and never throws into the UI. */
     private fun startPlayer(file: File, speed: Float, generation: Long, weckLautstaerke: Int? = null) {
@@ -699,6 +699,18 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     private var vorherAlarmLautstaerke = -1
+    /**
+     * Wecklautstärke während des Anhörens live nachziehen – derselbe Weg wie beim echten Wecken
+     * (Alarmstrom auf den Anteil), nur solange eine Vorschau auf dem Alarmstrom läuft.
+     */
+    fun vorschauLautstaerke(weckLautstaerke: Int) {
+        if (preview == null || vorherAlarmLautstaerke < 0) return
+        runCatching {
+            val audio = app.getSystemService(android.media.AudioManager::class.java)
+            val max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM)
+            audio.setStreamVolume(android.media.AudioManager.STREAM_ALARM, (max * weckLautstaerke / 100f).toInt().coerceIn(1, max), 0)
+        }
+    }
     /** Was gerade zur Probe läuft (Schlüssel des Anhören-Knopfs), sonst null. */
     val vorschau = MutableStateFlow<String?>(null)
     /** Stops playback and cancels only the preview's own preparation; every later result of it is discarded. */
