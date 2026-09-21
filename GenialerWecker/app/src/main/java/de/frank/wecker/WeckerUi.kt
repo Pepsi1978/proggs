@@ -1298,15 +1298,20 @@ private fun WeckerKarte(
                 Modifier.padding(horizontal = if (dicht) 10.dp else 16.dp, vertical = if (dicht) 8.dp else 11.dp),
                 verticalArrangement = Arrangement.spacedBy(if (dicht) 3.dp else 5.dp),
             ) {
-                // Name über dem Schalter, in allen Designs gleich: Name unterstrichen, dann „ · “ und die
+                // Name über dem Schalter, in allen Designs gleich: Name in einer Blase, dann „ · “ und die
                 // Wiederholung eine Spur kleiner. Dieselbe Grundlinie für beide.
                 Row(Modifier.fillMaxWidth().clickable(
                     interactionSource = remember { MutableInteractionSource() }, indication = null,
                     onClickLabel = "Wecker bearbeiten", onClick = { onEdit(alarm) })) {
                     val zeilenStil = if (dicht) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium
                     val planStil = zeilenStil.copy(fontWeight = FontWeight.Normal, fontSize = zeilenStil.fontSize * 0.85f)
-                    Text(alarm.name, Modifier.alignByBaseline().weight(1f, fill = false),
-                        style = zeilenStil.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline),
+                    // Der Name sitzt in einer eigenen Blase in der Akzentfarbe des Designs, damit er heraussticht.
+                    val namensForm = RoundedCornerShape(LocalDesignTokens.current.chipRadius)
+                    Text(alarm.name, Modifier.alignByBaseline().weight(1f, fill = false)
+                        .clip(namensForm).background(gold.primaer.copy(alpha = .16f), namensForm)
+                        .border(1.dp, gold.primaer.copy(alpha = .35f), namensForm)
+                        .padding(horizontal = 10.dp, vertical = 2.dp),
+                        style = zeilenStil, color = gold.textPrimaer,
                         maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
                     Text(" · " + (if (alarm.enabled) kurzPlan(alarm) else "${kurzPlan(alarm)} · aus"), Modifier.alignByBaseline(),
                         style = planStil, color = gold.textGedaempft, maxLines = 1)
