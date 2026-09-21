@@ -49,6 +49,12 @@ class MainActivity : ComponentActivity() {
         SchlafErinnerung.syncAll(this)
         if (AlarmService.state.value.alarm != null) startActivity(Intent(this, AlarmActivity::class.java))
     }
+    // Drehen und Auf-/Zuklappen erzeugen keinen Neustart mehr; die Ausrichtung wird hier neu bewertet
+    // (großes oder kleines Display), Compose zeichnet mit der neuen Konfiguration selbst neu.
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        Ausrichtung.anwenden(this, model.settings.ausrichtung)
+    }
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) statuszeileAnwenden()

@@ -40,6 +40,12 @@ object Ausrichtung {
      * Durchlauf würde daraus eine Schleife machen.
      */
     fun anwenden(activity: Activity, wert: String) {
+        // Ohne Dreh-Animation: Bei fester Ausrichtung soll beim Drehen des Geräts nichts sichtbar
+        // wegschwenken — das System wechselt die Lage nahtlos, die App hält den Inhalt fest.
+        activity.window.attributes = activity.window.attributes.apply {
+            rotationAnimation = if (wert == AUTOMATISCH) android.view.WindowManager.LayoutParams.ROTATION_ANIMATION_ROTATE
+                else android.view.WindowManager.LayoutParams.ROTATION_ANIMATION_SEAMLESS
+        }
         // Auf großen Displays (aufgeklapptes Foldable) übergeht Android die Anforderung: Es dreht das
         // Display trotzdem und setzt die App nur als schmalen Streifen in die Mitte. Dort wird deshalb
         // gar nichts angefordert; die App bekommt das volle Fenster, und [AusrichtungsSperre] dreht

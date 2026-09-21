@@ -222,7 +222,8 @@ class AlarmActivity : ComponentActivity() {
                 darstellung.addObserver(beobachter)
                 onDispose { darstellung.removeObserver(beobachter) }
             }
-            LaunchedEffect(ausrichtung) { Ausrichtung.anwenden(this@AlarmActivity, ausrichtung) }
+            val konfiguration = androidx.compose.ui.platform.LocalConfiguration.current
+            LaunchedEffect(ausrichtung, konfiguration.smallestScreenWidthDp) { Ausrichtung.anwenden(this@AlarmActivity, ausrichtung) }
             val wirksam = wirksamesTheme(theme)
             SideEffect {
                 androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
