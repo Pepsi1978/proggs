@@ -47,7 +47,9 @@ Nach live bestätigtem Titelverhalten der konkreten Sitzung kann während einer 
 Arbeit `--wait-mode status --wait 10 --compact` Modellrunden bündeln. Früh geweckt wird
 bei geändertem Pane-Titel, Eingabefeld oder Scroll-/Eingabemodus sowie fehlendem Rahmen.
 Die zwei live beobachteten Titelanimationen `◐`/`◑` gelten dabei als derselbe Zustand;
-Originaltitel und Schreibtoken bleiben unverändert. Sonst kommt die aktuelle Ansicht
+Originaltitel und Schreibtoken bleiben unverändert.
+Bei anderen Titeln wecken zusätzlich Inhalts-/Metadatenänderungen, damit eine bereits
+vor Beginn des Aufrufs fertig gewordene Antwort nicht unnötig wartet. Die aktuelle Ansicht kommt
 spätestens nach der begrenzten Wartezeit plus Werkzeuglaufzeit. `wake_reason` beschreibt
 nur den Auslöser, niemals Annahme, Bereitschaft oder Fertigstellung. Bei neuem/unklarem
 Titelverhalten den Standardmodus `activity` verwenden. Auch der Statusmodus ist eine

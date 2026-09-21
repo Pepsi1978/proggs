@@ -100,3 +100,18 @@ Kein Titel gilt als Fertigbeweis. Bei fehlendem Eingaberahmen weckt nur der Übe
 nicht jeder Folgeaufruf; ein Regressionstest verhindert die sonst entstehende Leseschleife.
 Kurz sichtbare Meldungen bleiben eine Grenze der Momentaufnahmen, keine Verlustfreiheit
 behaupten. Testvergleich derselben Ansicht: 742 Bytes als Auszug, 991 als Vollansicht.
+
+R8 zeigte die andere Zeitgrenze: Ist ein kompletter Busy/Idle-Zyklus zwischen zwei
+Reads vergangen, kann der unveränderte Ruhetitel allein kein Wecken auslösen. Deshalb
+bündelt der Statusmodus ausschließlich bei den nachgewiesenen Busy-Titeln; bei allen
+anderen Titeln wecken auch Inhalts-/Metadatenänderungen. Ein echter tmux-Test verändert
+Antworttext oberhalb des Rahmens bei unverändertem Ruhetitel und prüft sofortige Rückgabe.
+R9 bestätigte die Logik und unveränderte STOP-/Identitätsprüfungen im Review.
+
+Der Windows-Einstieg wurde von 29442 auf rund 6037 UTF-8-Bytes verkürzt. Die vollständige
+alte Fensteranleitung liegt nun in `references/windows-fenster.md`; ein Vergleich gegen
+den vorherigen Commit bestätigt unveränderten Inhalt ab dem bisherigen Schnellweg,
+abgesehen von relativen Links. Plattformwahl, Autorisierung, Nutzerzwischenrufe,
+Entwurfs-/Stoppschutz, Rollen/Review und Mehrzeilerregel bleiben im Einstieg.
+Alle Markdown-Links wurden aufgelöst, Claude prüfte die erhaltenen Regeln unabhängig.
+Dies spart Einstiegstext, ist aber keine gemessene Kontingentprozentzahl.

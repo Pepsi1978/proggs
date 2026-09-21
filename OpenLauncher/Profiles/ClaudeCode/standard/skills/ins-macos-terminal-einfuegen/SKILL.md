@@ -53,7 +53,7 @@ Halte die aktuelle Auftragskennung und den zuletzt gelesenen Antwortstand im fl�
 Ein gerade inhaltlich geprüfter Warte-Read mit bekanntem Antwortkontext und Eingabezustand
 liefert bereits den frischen Token für die nächste autorisierte Übergabe. Sobald deren
 Textdatei und SHA bereit sind, direkt `submit` verwenden; keine routinemäßige zusätzliche
-Leserunde. Nach Nutzerinteraktion, langer Zwischenarbeit, unklarem Zustand oder `E_STALE`
+Leserunde. Nach Eingabe oder Scrollen im Zielterminal, langer Zwischenarbeit, unklarem Zustand oder `E_STALE`
 erneut lesen und inhaltlich prüfen. Die mechanische Frischeprüfung bleibt unverändert.
 
 Ein Marker zählt nur als neue, zum aktuellen Auftrag gehörende **Claude-Antwort**, nicht als Echo des gerade eingefügten Prompts. Ein Selbstbericht ist noch kein Beweis für korrekten Code. Gleicher Hash, stiller Puffer, ein Prompt oder Zeitablauf sind keine Fertigsignale.

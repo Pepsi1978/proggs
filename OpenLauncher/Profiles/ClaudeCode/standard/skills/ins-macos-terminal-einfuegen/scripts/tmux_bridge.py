@@ -328,6 +328,9 @@ def main():
                 delta = {k: v for k, v in info.items() if state.get('last_state', {}).get(k) != v}
                 status = read_status(info, screen)
                 wake = (changed or delta) if args.wait_mode == 'activity' else ('last_read_status' not in state or status != state['last_read_status'])
+                if args.wait_mode == 'status' and not info['title'].startswith(('◐ ', '◑ ')):
+                    # The whole busy -> idle cycle may have happened between two reads.
+                    wake = wake or changed or delta
                 if wake or args.force_view or time.monotonic() - started >= args.wait:
                     break
                 time.sleep(min(0.25, max(0, args.wait - (time.monotonic() - started))))

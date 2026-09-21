@@ -63,7 +63,11 @@ def paint():
     os.write(1,('\\x1b[H\\x1b[2J'+'\\r\\n'.join(rows)+'\\x1b['+str(10+len(wrapped)-1)+';'+str(3+len(wrapped[-1]))+'H').encode())
 paint()
 while True:
-    data+=os.read(0,65536)
+    chunk=os.read(0,65536)
+    if chunk == b'\\x02':
+        os.write(1,b'\\x1b[1;1HFinished response')
+        continue
+    data+=chunk
     Path(sys.argv[1]).write_bytes(data)
     if data.endswith(b'\\x01'):
         os.write(1,b'\\x1b[H\\x1b[2JApproval waiting')
@@ -114,6 +118,11 @@ while True:
         awakened, _ = call('read', *common, '--compact', '--wait-mode', 'status', '--wait', '3')
         timer.join()
         assert awakened['wake_reason'] == 'status_changed' and time.monotonic() - start < 2
+        subprocess.run(tmux + ['send-keys', '-t', info['pane'], 'C-b'], check=True)
+        time.sleep(.1)
+        completed, _ = call('read', *common, '--wait-mode', 'status', '--wait', '2')
+        assert completed['waited_ms'] < 500 and completed['wake_reason'] == 'status_changed'
+        assert 'Finished response' in completed.get('text', '') or any('Finished response' in edit['text'] for edit in completed.get('edits', []))
         subprocess.run(tmux + ['select-pane', '-t', info['pane'], '-T', '◐ Claude'], check=True)
         call('read', *common)
         timer = threading.Timer(.15, lambda: subprocess.run(tmux + ['select-pane', '-t', info['pane'], '-T', '◑ Claude'], check=True))

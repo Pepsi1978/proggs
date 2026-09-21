@@ -76,7 +76,7 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
 - Textdatei und SHA vor dem Senden vorbereiten. Ein gerade inhaltlich geprüfter
   Warte-Read mit bekanntem Antwortkontext und Eingabezustand ist bereits das nötige
   frische `read`: dessen Token direkt für `submit --literal-line` verwenden, ohne
-  routinemäßigen zweiten Leseaufruf. Nach Nutzerinteraktion, langer Zwischenarbeit,
+  routinemäßigen zweiten Leseaufruf. Nach Eingabe oder Scrollen im Zielterminal, langer Zwischenarbeit,
   unbekanntem Zustand oder `E_STALE` erneut lesen; keine blinde automatische Wiederholung.
   Der Helfer erkennt bekannte zweispaltige Fortsetzungszeilen,
   ohne Leerraum allgemein zu entfernen. Unklare Darstellung bleibt bei `pasted`.
