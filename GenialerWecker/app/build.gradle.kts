@@ -12,9 +12,9 @@ android {
         applicationId = "de.frank.genialerwecker"
         minSdk = 26
         targetSdk = 36
-        versionCode = 73
-        versionName = "1.1.77"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"21.09.2026, 12:41 Uhr\"")
+        versionCode = 74
+        versionName = "1.1.78"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"21.09.2026, 12:47 Uhr\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {
@@ -22,6 +22,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true; buildConfig = true }
+    // Die installierte Fassung ist der Debug-Build. Als „debuggable“ läuft Compose auf dem Gerät
+    // deutlich langsamer (ohne vorkompilierte Profile) — spürbar als Ruckeln beim Tippen und als
+    // träge öffnende Fenster. Signiert wird weiterhin mit dem gemeinsamen Debug-Schlüssel.
+    buildTypes { getByName("debug") { isDebuggable = false } }
     packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
 }
 kotlin { compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 }

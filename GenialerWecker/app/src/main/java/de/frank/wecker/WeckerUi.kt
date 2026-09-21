@@ -187,38 +187,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                     aufEinstellungen = if (page == "settings") null else ({ vm.stopPreview(); settingsFrom = page; page = "settings" }),
                     voran = if (page != "alarms") ({ StillerKnopf("‹", { back() }, Modifier.semantics { contentDescription = "Zurück zur Weckerliste" }); Spacer(Modifier.width(8.dp)) }) else null,
                 )
-                if (busy.isNotBlank() || audioBusy.isNotBlank()) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Text(busy.ifBlank { audioBusy }, Modifier.weight(1f).padding(horizontal = 10.dp), style = MaterialTheme.typography.bodySmall)
-                    StillerKnopf("Abbrechen", vm::cancelAction)
-                }
                 AufnahmeLeiste(vm)
-                // Bestätigungen stehen 3 Sekunden gut sichtbar da und verschwinden dann von selbst —
-                // nichts mehr wegklicken. Ein Tipp schließt sie früher.
-                // Fehler bleiben stehen, bis man sie antippt — nur Bestätigungen verschwinden von selbst.
-                val istFehler = Regex("nicht|fehl|kein |abgebrochen|leer|warte|zuerst", RegexOption.IGNORE_CASE).containsMatchIn(message)
-                LaunchedEffect(message) {
-                    if (message.isNotBlank() && !istFehler) { delay(3_000); if (vm.message.value == message) vm.message.value = "" }
-                }
-                androidx.compose.animation.AnimatedVisibility(message.isNotBlank(),
-                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
-                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()) {
-                    var zuletzt by remember { mutableStateOf(message) }
-                    if (message.isNotBlank()) zuletzt = message
-                    val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius.coerceAtMost(20.dp))
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-                        .shadow(8.dp, form, ambientColor = gold.primaer, spotColor = gold.primaer)
-                        .clip(form).background(gold.flaecheErhoeht)
-                        .border(2.dp, if (istFehler) LocalSemantisch.current.warnung else gold.primaer, form)
-                        .clickable(onClickLabel = "Meldung schließen") { vm.message.value = "" }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Icon(if (istFehler) Icons.Default.Warning else Icons.Default.CheckCircle, null,
-                            tint = if (istFehler) LocalSemantisch.current.warnung else gold.primaer, modifier = Modifier.size(22.dp))
-                        Text(zuletzt, Modifier.weight(1f).padding(start = 12.dp), style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold, color = gold.textPrimaer)
-                    }
-                }
                 // Der Bildschirmwechsel hatte bisher die Vorgabe-Überblendung: beide Seiten lagen
                 // kurz übereinander und wuchsen dabei. Jetzt trägt die Richtung die Bedeutung —
                 // tiefer hinein schiebt von rechts, zurück nach links — und beide Seiten bewegen
@@ -227,7 +196,10 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                 val tiefe = { seite: String -> when (seite) { "alarms" -> 0; "edit" -> 1; else -> 2 } }
                 // Außerhalb des Übergangs lesen: der transitionSpec-Block ist kein Composable.
                 val wechselReduziert = LocalBewegungReduziert.current
-                AnimatedContent(page, Modifier.weight(1f), label = "Bildschirmwechsel",
+                // Fortschritt und Meldungen schweben über dem Inhalt, statt ihn nach unten zu schieben —
+                // das Einfügen einer Zeile oben ließ die ganze Seite bei jedem Knopfdruck ruckeln.
+                Box(Modifier.weight(1f)) {
+                AnimatedContent(page, Modifier.fillMaxSize(), label = "Bildschirmwechsel",
                     transitionSpec = {
                         if (wechselReduziert) {
                             (androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None)
@@ -262,6 +234,46 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                             onSettings = { settingsFrom = "alarms"; page = "settings" },
                             openDraft = draft?.takeIf { vm.draftChanged() }, onResumeDraft = { page = "edit" })
                     }
+                }
+                Column(Modifier.fillMaxWidth().align(Alignment.TopCenter).zIndex(2f)) {
+                    androidx.compose.animation.AnimatedVisibility(busy.isNotBlank() || audioBusy.isNotBlank(),
+                        enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) {
+                        val form = RoundedCornerShape(16.dp)
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                            .shadow(6.dp, form).clip(form).background(gold.flaecheErhoeht).border(1.dp, gold.rahmen, form)
+                            .padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = gold.primaer)
+                            Text(busy.ifBlank { audioBusy }, Modifier.weight(1f).padding(horizontal = 10.dp), style = MaterialTheme.typography.bodySmall)
+                            StillerKnopf("Abbrechen", vm::cancelAction)
+                        }
+                    }
+                // Bestätigungen stehen 3 Sekunden gut sichtbar da und verschwinden dann von selbst —
+                // nichts mehr wegklicken. Ein Tipp schließt sie früher.
+                // Fehler bleiben stehen, bis man sie antippt — nur Bestätigungen verschwinden von selbst.
+                val istFehler = Regex("nicht|fehl|kein |abgebrochen|leer|warte|zuerst", RegexOption.IGNORE_CASE).containsMatchIn(message)
+                LaunchedEffect(message) {
+                    if (message.isNotBlank() && !istFehler) { delay(3_000); if (vm.message.value == message) vm.message.value = "" }
+                }
+                androidx.compose.animation.AnimatedVisibility(message.isNotBlank(),
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = .96f),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(targetScale = .96f)) {
+                    var zuletzt by remember { mutableStateOf(message) }
+                    if (message.isNotBlank()) zuletzt = message
+                    val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius.coerceAtMost(20.dp))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
+                        .shadow(8.dp, form, ambientColor = gold.primaer, spotColor = gold.primaer)
+                        .clip(form).background(gold.flaecheErhoeht)
+                        .border(2.dp, if (istFehler) LocalSemantisch.current.warnung else gold.primaer, form)
+                        .clickable(onClickLabel = "Meldung schließen") { vm.message.value = "" }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (istFehler) Icons.Default.Warning else Icons.Default.CheckCircle, null,
+                            tint = if (istFehler) LocalSemantisch.current.warnung else gold.primaer, modifier = Modifier.size(22.dp))
+                        Text(zuletzt, Modifier.weight(1f).padding(start = 12.dp), style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold, color = gold.textPrimaer)
+                    }
+                }
+                }
                 }
             }
         }

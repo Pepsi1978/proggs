@@ -657,13 +657,7 @@ fun DatumWahlDialog(
             // (adjustResize), bleibt das Feld erreichbar; schiebt das System es hoch (adjustPan),
             // erledigt es das selbst.
             val eingabe = zustand.displayMode == DisplayMode.Input
-            // Der Kalender ist beim ersten Aufbau schwer. Damit das Fenster sofort erscheint,
-            // steht im ersten Bild ein gleich hoher Platzhalter; der Kalender folgt ein Bild später.
-            var bereit by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) { androidx.compose.runtime.withFrameNanos { }; bereit = true }
-            if (!bereit) androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth()
-                .height(if (platzFuerKalender) KALENDER_BEDARF - 80.dp else 160.dp))
-            else DatePicker(
+            DatePicker(
                 state = zustand,
                 modifier = Modifier
                     .fillMaxWidth()
