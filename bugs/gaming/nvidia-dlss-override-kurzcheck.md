@@ -7,4 +7,5 @@
 - B6 Profilkonflikt MW2/MW3 → Exe per absolutem Pfad binden.
 - B7 Shader-Optimierung hängt → Shader-Cache löschen, Dateien prüfen.
 - B8 „DLSS 5 Mod“ (YouTube/imod.gg) = ReShade-Filter, kein NVIDIA DLSS 5 → nur offline, online Ban-Risiko.
+- B9 Profile-Inspector-Override bei Nicht-Whitelist-Spiel wirkungslos (MW2, Treiber 616.92, per NGX-Log verifiziert). Immer mit `LogLevel`=1 und NGX-Log prüfen, nie nur mit dem Indikator.
 Volltext: `nvidia-dlss-override.md`

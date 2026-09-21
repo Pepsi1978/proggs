@@ -23,6 +23,8 @@ Die Option erscheint **nur für Titel auf NVIDIAs Kompatibilitätsliste**, der G
 - Nicht gleichzeitig Overrides in der NVIDIA App **und** im Profile Inspector für denselben Titel pflegen, weil sich beide gegenseitig überschreiben.
 
 ## 4. Verifikation (immer!)
+**Verlässlich ist nur das NGX-Log** (`LogLevel`=1, siehe Almanach B9). Bei MW2 wurde gemessen, dass der Profile-Inspector-Override trotz korrektem Profil nicht greift. Der Indikator erschien dort weder mit 0x400 noch mit 1. Das offizielle NVIDIA-Repo setzt `ShowDlssIndicator`=1.
+
 `HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore` → DWORD `ShowDlssIndicator` = `0x400` (1024; der Wert 1 wirkt nur mit Dev-DLLs). Im Spiel erscheint dann unten links ein Overlay mit Version und Preset. Ausschalten mit 0. `offiziell` https://github.com/NVIDIA/DLSS/blob/main/utils/ngx_driver_onscreenindicator.reg
 
 ## 5. Anti-Cheat-Spiele (Ricochet/EAC/BattlEye)

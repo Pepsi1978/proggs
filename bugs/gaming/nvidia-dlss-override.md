@@ -38,6 +38,14 @@
 - **Fix:** Profil gezielt über den absoluten Exe-Pfad (`...\Call of Duty Modern Warfare II\cod22-cod.exe`) binden.
 - **Quelle:** https://github.com/Orbmu2k/nvidiaProfileInspector/issues/346
 
+## B9 — Profile-Inspector-Override wird bei Nicht-Whitelist-Spiel ignoriert (VERIFIZIERT)
+- **Symptom:** Das Profil ist korrekt gesetzt (Export zeigt SR-Override=1, Preset=Recommended), trotzdem gibt es keine DLSS-Anzeige und keine neue Version.
+- **Beleg (21.09.2026, Treiber 616.92, CoD MW2 2022, DLSS 2.4.12, DLAA aktiv):** Das NGX-Log zeigt `DRS PROFILE FOUND : "Call of Duty: Modern Warfare 2 (2022)"`, danach `Feature dlss failed to load ... from cache (versions\0 ... 160_8741FBC.bin / 160_E658703.bin)` und dann `feature dlss snippet: ...\nvngx_dlss.dll version: 2.4.12`. Der Override-Snippet `dlss_override app_E658700=310.9.0` liegt bereit, wird aber nicht gezogen.
+- **Ursache (Vermutung):** Der Treiber wendet den SR-Override nur bei von NVIDIA freigegebenen Titeln an. Die NVIDIA App schreibt dafür zusätzlich die „Override Reserved Key“-Settings (0x10C7D684/0x10C7D82C), die sich nicht nachbauen lassen. Die Profile-Inspector-Anleitungen im Netz („funktioniert in jedem Spiel“) gelten für diesen Treiberstand nicht.
+- **Fix:** Einen funktionserhaltenden Weg ohne Dateitausch gibt es nicht. Die Alternative wäre der DLL-Tausch im Spielordner, der in Anti-Cheat-Spielen ein Ban-Risiko hat (B3). Deshalb die mitgelieferte DLSS/DLAA-Version nutzen.
+- **Diagnose-Weg (Poka-Yoke):** Vor jeder Override-Aussage das NGX-Log prüfen: `HKLM\SOFTWARE\NVIDIA Corporation\Global\NGXCore` → `LogLevel`=1, Spiel starten und die Logs im spieleigenen Log-Ordner lesen (MW2: `%LOCALAPPDATA%\Activision\Call of Duty MWII\crash_reports\gpu\nvngx.log`), danach `LogLevel` wieder löschen. Der offizielle Indikatorwert laut NVIDIA/DLSS-Repo ist `ShowDlssIndicator`=1 (nicht 0x400). Keiner der beiden Werte zeigte bei MW2 mit DLSS 2.4.12 eine Anzeige, deshalb ist das Log der verlässliche Beweis.
+- **Quelle:** eigene Messung, https://github.com/NVIDIA/DLSS/tree/main/utils
+
 ## B8 — „DLSS 5 Mod“ auf YouTube ist kein NVIDIA DLSS 5
 - **Symptom:** Videos zeigen „DLSS 5“ in alten Spielen, z. B. „3x DLSS 5 Call of Duty Modern Warfare 2 DMZ Offline“ (TheGr08, aufgenommen auf einer RTX 4090, obwohl echtes DLSS 5 nur auf RTX 50 läuft).
 - **Ursache:** Das ist ein ReShade-/Filter-Mod („DLSS 5 MOD“, Download über imod.gg, Tags #ReShade #DLSS5feeder) und kein NVIDIA-Feature. Er läuft dort im **Offline**-Modus ohne Anti-Cheat.
