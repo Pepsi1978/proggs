@@ -79,6 +79,26 @@ Bericht nicht auf einen anderen Stand anwenden. Eine vorhandene Berichtsdatei be
 auch nicht, dass die CLI schon wieder eingabebereit ist; vor dem nächsten Senden den
 tatsächlichen Terminalzustand prüfen.
 
+## Steuerdatei für überlappende Nutzersteuerung
+
+Codex hält pro Run eine Datei `steuerung.json` in einem für beide lesbaren, nutzerprivaten
+Ordner (unter Windows `%TEMP%`, nicht das Linux-Run-Verzeichnis) und ersetzt sie atomar.
+Felder: `rev` (streng monoton), `id`, `ts`, `status` (`steuerung|stopp`), `einzeiler`,
+optional `payload_path`, `sha256`, `bytes` für lange bytegenaue Inhalte. Nur der neueste
+konsolidierte Nutzerstand, keine Queue und keine Chatkopie. Schreiben ist kein
+Verarbeitungsbeweis und keine zusätzliche Autorisierung; die Zustellung am freien Prompt
+bleibt nötig.
+
+Claude prüft die im Auftrag genannte Datei vor Planänderung, Commit, Push und
+Deployment: reguläre Datei ohne Link, höchstens 1 KiB, gültiges JSON, Payload per Hash.
+Eine höhere `rev` innerhalb des Umfangs einarbeiten, eine gleiche oder kleinere nicht erneut.
+Bei Zielwechsel oder Unklarheit vor Commit halten und melden. Fehlt eine vereinbarte
+Steuerdatei später oder ist ihr Inhalt ungültig, stoppt das den Abschluss: kein Commit,
+Push oder Deployment, bis Codex den Zustand geklärt hat. `status=stopp` verhindert ab dem nächsten Checkpoint Commit,
+Push und Deployment, bricht aber keine laufende Generation ab; `STOP` bleibt vorrangig.
+Der Bericht nennt `processed_ziel_rev`; Codex vergleicht sie mit der neuesten `rev`.
+Ohne vereinbarten Pfad gibt es keine Steuerdatei.
+
 ## Advisor Fable
 
 Claude ruft den konfigurierten Advisor Fable selbst auf bei schwieriger Architektur- oder

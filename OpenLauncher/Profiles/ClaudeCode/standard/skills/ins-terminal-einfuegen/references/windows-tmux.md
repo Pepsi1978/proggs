@@ -92,6 +92,8 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
 - Übergaben kurz: `R2: Ziel; relevante Änderung seit R1; Grenzen; erwarteter Nachweis`.
   Keine eigene Empfangsbestätigungsrunde. Für kleine Fragen direkte Antworten;
   bei Code Fundstellen, Tests, offene Punkte und später Commit/Push nennen lassen.
+  Längere Implementierungsaufträge nennen den exakten Pfad der Steuerdatei und die
+  Checkpoints vor Plan, Commit, Push und Deployment; Bericht mit `processed_ziel_rev`.
 - Textdatei und SHA vor dem Senden vorbereiten. Ein gerade inhaltlich geprüfter
   Warte-Read mit bekanntem Antwortkontext und Eingabezustand ist bereits das nötige
   frische `read`: dessen Token direkt für `submit --literal-line` verwenden, ohne
