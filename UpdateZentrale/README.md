@@ -4,7 +4,7 @@ Ein Windows-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und ak
 LM Studio (inklusive Engines und Runtimes), Claude Desktop, Codex Desktop, Claude Code CLI,
 Codex CLI, Stream Deck sowie die eigenen Werkzeuge OpenLauncher, TVO und CVO.
 
-Start über die Desktop-Verknüpfung **UpdateZentrale** (`create_shortcut.ps1` legt sie an).
+Start über die Verknüpfung **UpdateZentrale** auf dem Desktop oder im Startmenü (`create_shortcut.ps1` legt beide an).
 
 ---
 
@@ -178,7 +178,7 @@ Weitere optionale Felder:
 | `HauptFenster.xaml` | Oberfläche |
 | `Theme.xaml` | Formen und Typografie (ohne Farben) |
 | `Themes/Dunkel.xaml`, `Themes/Hell.xaml` | Die beiden Farbsätze; gleiche Schlüssel, zur Laufzeit tauschbar |
-| `create_shortcut.ps1` | Desktop-Verknüpfung |
+| `create_shortcut.ps1` | Verknüpfung auf dem Desktop und im Startmenü |
 | `make_icon.ps1` | Erzeugt `app.ico` |
 
 Benutzereinstellungen (Administrator-Schalter, Hell/Dunkel, gesicherte Autostart-Einträge) liegen
