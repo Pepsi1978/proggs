@@ -15,6 +15,7 @@ import de.frank.genialeideen.data.settings.SecureSettings
 import de.frank.genialeideen.speech.SyntheseStimme
 import de.frank.genialeideen.tts.*
 import kotlinx.coroutines.*
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
@@ -601,7 +602,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     /** Plays a built-in tone; creating the file runs on IO, playback on Main, both bound to the current generation. */
-    fun playTone(id: String, weckLautstaerke: Int? = null) {
+    fun playTone(id: String, weckLautstaerke: Int? = null, anschwellSekunden: Int = 0) {
         if (rejectPreviewWhileRecording()) return
         stopPreview()
         val generation = previewGeneration
@@ -617,7 +618,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 if (generation != previewGeneration) return@launch
                 if (previewJob === job) previewJob = null
-                startPlayer(file, 1f, generation, weckLautstaerke)
+                startPlayer(file, 1f, generation, weckLautstaerke, anschwellSekunden)
             } finally {
                 // Released only by its own identity, also after file errors or cancellation.
                 if (previewJob === job) previewJob = null
@@ -625,15 +626,15 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
     /** Spielt die gewählte eigene Musikdatei (MP3 oder Geräte-Weckton) zur Probe ab. */
-    fun playMusic(path: String, weckLautstaerke: Int? = null) {
+    fun playMusic(path: String, weckLautstaerke: Int? = null, anschwellSekunden: Int = 0) {
         if (rejectPreviewWhileRecording()) return
         stopPreview()
         val file = File(path)
         if (!file.exists()) { message.value = "Die Audiodatei ist nicht mehr vorhanden."; return }
-        startPlayer(file, 1f, previewGeneration, weckLautstaerke)
+        startPlayer(file, 1f, previewGeneration, weckLautstaerke, anschwellSekunden)
     }
     /** Local player until it is prepared successfully; every failure releases it and never throws into the UI. */
-    private fun startPlayer(file: File, speed: Float, generation: Long, weckLautstaerke: Int? = null) {
+    private fun startPlayer(file: File, speed: Float, generation: Long, weckLautstaerke: Int? = null, anschwellSekunden: Int = 0) {
         // Die Markierung des laufenden Anhören-Knopfs bleibt erhalten: Nur der alte Player wird
         // freigegeben, die Vorschau selbst läuft ja gerade an (sonst zeigte der Knopf nie „Stopp“).
         val laufend = vorschau.value
@@ -642,11 +643,14 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         if (weckLautstaerke != null) {
             // Wie AlarmService.setVolume: Alarmstrom auf den Anteil der Wecklautstärke, danach zurück.
             val audio = app.getSystemService(android.media.AudioManager::class.java)
-            val max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM)
-            runCatching {
-                vorherAlarmLautstaerke = audio.getStreamVolume(android.media.AudioManager.STREAM_ALARM)
-                audio.setStreamVolume(android.media.AudioManager.STREAM_ALARM,
-                    (max * weckLautstaerke / 100f).toInt().coerceIn(1, max), 0)
+            runCatching { vorherAlarmLautstaerke = audio.getStreamVolume(android.media.AudioManager.STREAM_ALARM) }
+            vorschauZiel = weckLautstaerke
+            vorschauAnschwellen = anschwellSekunden
+            vorschauStart = System.currentTimeMillis()
+            alarmstromSetzen(anschwellAnteil())
+            // Dieselbe Rampe wie beim echten Wecken (AlarmService): alle 500 ms nachziehen, ab 5 %.
+            anschwellJob = viewModelScope.launch {
+                while (isActive) { delay(500); alarmstromSetzen(anschwellAnteil()) }
             }
         }
         // Construction can fail natively; that must not escape as an unhandled coroutine exception.
@@ -691,6 +695,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     private fun releasePlayer() {
         val player = preview; preview = null; player?.release(); vorschau.value = null
+        anschwellJob?.cancel(); anschwellJob = null
         // Eine für die Testvorlesung gesetzte Alarmlautstärke wird wiederhergestellt.
         if (vorherAlarmLautstaerke >= 0) {
             runCatching { app.getSystemService(android.media.AudioManager::class.java)
@@ -705,11 +710,26 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
      */
     fun vorschauLautstaerke(weckLautstaerke: Int) {
         if (preview == null || vorherAlarmLautstaerke < 0) return
-        runCatching {
-            val audio = app.getSystemService(android.media.AudioManager::class.java)
-            val max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM)
-            audio.setStreamVolume(android.media.AudioManager.STREAM_ALARM, (max * weckLautstaerke / 100f).toInt().coerceIn(1, max), 0)
-        }
+        vorschauZiel = weckLautstaerke
+        alarmstromSetzen(anschwellAnteil())
+    }
+    /** Anschwelldauer während des Anhörens ändern; die laufende Rampe rechnet ab ihrem Start neu. */
+    fun vorschauAnschwellen(sekunden: Int) {
+        if (preview == null || vorherAlarmLautstaerke < 0) return
+        vorschauAnschwellen = sekunden
+        alarmstromSetzen(anschwellAnteil())
+    }
+    private var vorschauZiel = 100
+    private var vorschauAnschwellen = 0
+    private var vorschauStart = 0L
+    private var anschwellJob: Job? = null
+    private fun anschwellAnteil(): Float = if (vorschauAnschwellen == 0) 1f else
+        ((System.currentTimeMillis() - vorschauStart).toFloat() / (vorschauAnschwellen * 1000)).coerceIn(.05f, 1f)
+    private fun alarmstromSetzen(anteil: Float) = runCatching {
+        val audio = app.getSystemService(android.media.AudioManager::class.java)
+        val max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM)
+        val prozent = (vorschauZiel * anteil).roundToInt().coerceAtLeast(1)
+        audio.setStreamVolume(android.media.AudioManager.STREAM_ALARM, (max * prozent / 100f).toInt().coerceIn(1, max), 0)
     }
     /** Was gerade zur Probe läuft (Schlüssel des Anhören-Knopfs), sonst null. */
     val vorschau = MutableStateFlow<String?>(null)
