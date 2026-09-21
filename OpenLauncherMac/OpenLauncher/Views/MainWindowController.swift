@@ -165,9 +165,37 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         catalogButton.target = self
         catalogButton.action = #selector(refreshModelCatalog)
 
-        for view in [badge, appLabel, versionChip, catalogButton, themeButton] as [NSView] {
+        researchSettingsButton.symbolName = "gearshape"
+        researchSettingsButton.fontSize = 15
+        researchSettingsButton.horizontalPadding = 12
+        researchSettingsButton.verticalPadding = 8
+        researchSettingsButton.toolTip = "Modell-Recherche und Anmeldung"
+        researchSettingsButton.setAccessibilityLabel("Recherche-Einstellungen")
+        researchSettingsButton.target = self
+        researchSettingsButton.action = #selector(showResearchSettings)
+
+        openAiLoginWarningButton.fontSize = 18
+        openAiLoginWarningButton.horizontalPadding = 12
+        openAiLoginWarningButton.verticalPadding = 8
+        openAiLoginWarningButton.toolTip = "OpenAI-Anmeldung abgelaufen oder nicht vorhanden. Zum erneuten Anmelden öffnen."
+        openAiLoginWarningButton.setAccessibilityLabel("OpenAI-Anmeldung erforderlich")
+        openAiLoginWarningButton.target = self
+        openAiLoginWarningButton.action = #selector(showResearchSettings)
+        openAiLoginWarningButton.isHidden = true
+
+        // Reihenfolge von links: Aktualisieren, Zahnrad, Warnung, Design-Umschalter. Die Stack-View
+        // nimmt den versteckten Warnknopf automatisch aus dem Layout, sodass keine Luecke bleibt.
+        let titleBarButtons = NSStackView(views: [catalogButton, researchSettingsButton, openAiLoginWarningButton, themeButton])
+        titleBarButtons.orientation = .horizontal
+        titleBarButtons.spacing = 8
+
+        for view in [badge, appLabel, versionChip, titleBarButtons] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             titleBar.addSubview(view)
+        }
+        for button in [catalogButton, researchSettingsButton, openAiLoginWarningButton, themeButton] {
+            button.widthAnchor.constraint(equalToConstant: 42).isActive = true
+            button.heightAnchor.constraint(equalToConstant: 33).isActive = true
         }
 
         NSLayoutConstraint.activate([
@@ -187,15 +215,9 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
             versionLabel.topAnchor.constraint(equalTo: versionChip.topAnchor, constant: 3),
             versionLabel.bottomAnchor.constraint(equalTo: versionChip.bottomAnchor, constant: -3),
 
-            catalogButton.trailingAnchor.constraint(equalTo: themeButton.leadingAnchor, constant: -8),
-            catalogButton.centerYAnchor.constraint(equalTo: titleBar.centerYAnchor),
-            catalogButton.widthAnchor.constraint(equalToConstant: 42),
-            catalogButton.heightAnchor.constraint(equalToConstant: 33),
-
-            themeButton.trailingAnchor.constraint(equalTo: titleBar.trailingAnchor, constant: -18),
-            themeButton.centerYAnchor.constraint(equalTo: titleBar.centerYAnchor),
-            themeButton.widthAnchor.constraint(equalToConstant: 42),
-            themeButton.heightAnchor.constraint(equalToConstant: 33)
+            titleBarButtons.trailingAnchor.constraint(equalTo: titleBar.trailingAnchor, constant: -18),
+            titleBarButtons.centerYAnchor.constraint(equalTo: titleBar.centerYAnchor),
+            titleBarButtons.leadingAnchor.constraint(greaterThanOrEqualTo: versionChip.trailingAnchor, constant: 12)
         ])
     }
 
@@ -270,20 +292,8 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
         refreshButton.target = self
         refreshButton.action = #selector(refresh)
 
-        researchSettingsButton.symbolName = "gearshape"
-        researchSettingsButton.widthAnchor.constraint(equalToConstant: 34).isActive = true
-        researchSettingsButton.toolTip = "Modell-Recherche und Anmeldung"
-        researchSettingsButton.setAccessibilityLabel("Recherche-Einstellungen")
-        researchSettingsButton.target = self
-        researchSettingsButton.action = #selector(showResearchSettings)
-        openAiLoginWarningButton.fontSize = 18
-        openAiLoginWarningButton.widthAnchor.constraint(equalToConstant: 30).isActive = true
-        openAiLoginWarningButton.toolTip = "OpenAI-Anmeldung abgelaufen oder nicht vorhanden. Zum erneuten Anmelden öffnen."
-        openAiLoginWarningButton.setAccessibilityLabel("OpenAI-Anmeldung erforderlich")
-        openAiLoginWarningButton.target = self
-        openAiLoginWarningButton.action = #selector(showResearchSettings)
-        openAiLoginWarningButton.isHidden = true
-        let providerHeader = NSStackView(views: [providerTitleLabel, providerModelLabel, UI.spacer(), refreshButton, openAiLoginWarningButton, researchSettingsButton])
+        // Zahnrad und Warnknopf sitzen in der Titelleiste (siehe buildTitleBar), nicht hier.
+        let providerHeader = NSStackView(views: [providerTitleLabel, providerModelLabel, UI.spacer(), refreshButton])
         providerHeader.orientation = .horizontal
         providerHeader.spacing = 6
         providerHeader.translatesAutoresizingMaskIntoConstraints = false
