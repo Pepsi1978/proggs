@@ -27,6 +27,8 @@ Bei längerer Zusammenarbeit oder ausdrücklich gewünschtem geringeren Codex-Ve
 einmal [Kontingent sparsam nutzen](references/kontingent-sparen.md) lesen: breite Vorarbeit
 bei Claude, gezielte unabhängige Prüfung bei Codex, kompakte Belegübergaben und gebündelte Updates.
 
+Bei beauftragter Programmierbegleitung einmal den [Programmierloop](references/programmier-loop.md) lesen: Zielvertrag, Einordnung von Nutzerbeiträgen, Rollen, optionale Subagenten, Review-Checkpoint vor Abschluss und Belegregeln.
+
 Kurze Aufträge mit Kennung, neuem Ziel/Delta, Grenzen und erwarteten Nachweisen verwenden. Keine separate Empfangsbestätigung anfordern. Kann Nutzersteuerung eine laufende Implementierung überholen, eine konsolidierte Steuerdatei gemäß [Kontingent sparsam nutzen](references/kontingent-sparen.md) einrichten, ihren exakten Pfad im Auftrag mitgeben und die gemeldete `processed_ziel_rev` gegen die neueste Revision abnehmen; die normale Zustellung am freien Prompt bleibt nötig. Auf bestätigtem tmux den geprüften Token des letzten geeigneten Warte-Reads direkt weiterverwenden, statt routinemäßig nochmals zu lesen. Eine neue Spracheingabe bei Codex allein verändert das Zielterminal nicht; nach Eingabe/Scrollen im Zielterminal, längerer Zwischenarbeit, unklarem Zustand oder `E_STALE` frisch prüfen.
 
 Neue Helferänderungen nach isolierter Prüfung bereits im laufenden autorisierten Dialog testen. Relevante neue Erkenntnisse und Phasenwechsel knapp melden. Keine feste Antwortzeit, prozentuale Kontingentersparnis oder verlustlosen Livestream behaupten. Werkzeugaufrufe und Ausgabebytes lassen sich messen; der tatsächliche Modellverbrauch folgt daraus nicht direkt.

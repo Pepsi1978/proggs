@@ -25,7 +25,8 @@ oder zielwidrige Änderungen sofort benennen, nicht für ein Bündel zurückhalt
 
 Neue Helfer direkt nach isoliertem Test im laufenden Dialog verwenden. Verwandte
 Korrekturen bis zum sinnvollen Updateabschluss bündeln, statt pro Kleinigkeit einen
-Commit/Versionssprung/Updaterlauf auszulösen. Dann alle geltenden Abschlussregeln
+Commit/Versionssprung/Updaterlauf auszulösen. Nach dem internen Review-Checkpoint und der
+gebundenen Freigabe ([Programmierloop](programmier-loop.md)) alle geltenden Abschlussregeln
 vollständig erfüllen: Build, einmaliger Versionsbump mit echter Zeit, Commit,
 Rebase/Push und autorisierte Installation. Kein automatischer Verzicht auf Updater,
 Version oder Deployment bei reinen Skill-/Helferänderungen.
@@ -61,10 +62,12 @@ Nach Claude-Implementierung legt Codex die Prüftiefe fest. Den Vorschlag des Be
 darf Codex bei Widerspruch oder neuer Nutzersteuerung nur hochstufen, nie herabsetzen.
 Kein automatisches vollständiges Doppellesen des Claude-Diffs.
 
-- **compact (Mindestprüfung, immer):** `ziel_rev` deckt die neueste Nutzersteuerung;
-  `git show --stat` bzw. Status gegen die gemeldeten Pfade; gemeldete Tests selbst
-  ausführen und nur Exitcode/Ergebniszeilen lesen; Version mit echter Zeit, Push und
-  Installation prüfen.
+- **compact (Mindestprüfung, immer, phasenabhängig):** Am Review-Checkpoint vor dem
+  Abschluss prüfen: `ziel_rev` deckt die neueste Nutzersteuerung; Status und
+  Pfad-Hashes gegen den gemeldeten Stand; Kriterienbelege; eine passende unabhängige
+  Prüfung mit knappen Ergebniszeilen. Tests mit belegt identischer Basis nicht blind
+  wiederholen. Nach dem gebundenen Abschluss zusätzlich den finalen Build, die Version
+  mit echter Zeit, Push und Installation prüfen.
 - **targeted:** zusätzlich die riskanteste Stelle oder eine kleine Hunk-Stichprobe lesen.
   Änderungen an diesen Prüf- und Schutzregeln sind mindestens targeted.
 - **full:** den vollständigen relevanten Diff lesen bei Secrets/Auth/Rechten;
@@ -87,9 +90,13 @@ Felder: `rev` (streng monoton), `id`, `ts`, `status` (`steuerung|stopp`), `einze
 optional `payload_path`, `sha256`, `bytes` für lange bytegenaue Inhalte. Nur der neueste
 konsolidierte Nutzerstand, keine Queue und keine Chatkopie. Schreiben ist kein
 Verarbeitungsbeweis und keine zusätzliche Autorisierung; die Zustellung am freien Prompt
-bleibt nötig und nennt dieselbe `ziel_rev`. Ist diese `ziel_rev` höchstens gleich
-`processed_ziel_rev`, wendet Claude den Inhalt nicht erneut an, sondern bestätigt bzw.
-prüft nur die Verarbeitung; nur eine höhere Revision wird neu eingearbeitet.
+bleibt nötig und nennt Steuer-`id` und `rev`. Nur die erneute Zustellung desselben
+bereits verarbeiteten Nutzer-Deltas (gleiche `id` und `rev`) wendet Claude nicht erneut an,
+sondern bestätigt die Verarbeitung. Neue Runden, Teilaufträge, Reviewkorrekturen und
+Abschlussaufträge dürfen dieselbe `ziel_rev` tragen und werden normal ausgeführt. Ein
+Auftrag mit älterer `ziel_rev` wird an der aktuellen Zielvorgabe geprüft und aktiviert nie
+alte Vorgaben. `processed_ziel_rev` belegt Kenntnis und Einarbeitung der aktuellen
+Steuerung, nicht die Erfüllung der Zielkriterien.
 
 Claude prüft die im Auftrag genannte Datei vor Planänderung, Commit, Push und
 Deployment: reguläre Datei ohne Link, höchstens 1 KiB, gültiges JSON, Payload per Hash.
@@ -120,8 +127,10 @@ entscheidet und implementiert, Codex orchestriert und nimmt ab.
 Für einen aktiven Dreierloop einen privaten `arbeitsstand.json` im bestehenden
 Dialogordner unter 1 KiB halten: `ziel_rev`, `zugestellt`, `offen`, `phase`
 und `status`. Zulässige Rundenausgänge sind `erreicht`, `zwischenstand`,
-`blockiert`, `saettigung`, `rueckfrage` und `stopp`. Neue Nutzersteuerung
-erhöht `ziel_rev` und steht bis zur nächsten konsolidierten Zustellung unter `offen`.
+`blockiert`, `saettigung`, `rueckfrage` und `stopp`; `saettigung` ist bei offenen
+Musskriterien kein Zielerfolg. Nur verbindliche Nutzeränderungen an Ziel, Grenzen oder
+Kriterien erhöhen `ziel_rev`, keine Rundenkennung; sie stehen bis zur nächsten
+konsolidierten Zustellung unter `offen`. Kriterien stehen im Zielvertrag, nicht hier.
 Vor Commit oder Auslieferung prüfen, dass `zugestellt` die aktuelle Zielrevision
 abdeckt; ein unbelegter Modellwiderspruch bleibt offen für den Nutzer.
 

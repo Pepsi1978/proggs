@@ -92,10 +92,14 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
 - Übergaben kurz: `R2: Ziel; relevante Änderung seit R1; Grenzen; erwarteter Nachweis`.
   Keine eigene Empfangsbestätigungsrunde. Für kleine Fragen direkte Antworten;
   bei Code Fundstellen, Tests, offene Punkte und später Commit/Push nennen lassen.
+  Implementierungsaufträge enden standardmäßig am Review-Checkpoint als `Rn zwischenstand`;
+  Commit, Push und Auslieferung folgen erst auf die gebundene Freigabe
+  ([Programmierloop](programmier-loop.md)).
   Längere Implementierungsaufträge nennen den exakten Pfad der Steuerdatei und die
   Checkpoints vor Plan, Commit, Push und Deployment; Bericht mit `processed_ziel_rev`.
-  Die spätere Promptzustellung einer vorgemerkten Steuerung nennt dieselbe `ziel_rev`;
-  bereits verarbeitete Revisionen wendet Claude nicht erneut an. Das `STOP` im
+  Die spätere Promptzustellung einer vorgemerkten Steuerung nennt Steuer-`id` und `rev`;
+  nur dasselbe bereits verarbeitete Nutzer-Delta wird nicht erneut angewendet, neue
+  Aufträge mit gleicher `ziel_rev` schon. Das `STOP` im
   Linux-Run-Verzeichnis sieht Claude nicht: für einen Abschlussstopp zusätzlich
   `status=stopp` mit neuer Revision in die Steuerdatei schreiben.
 - Textdatei und SHA vor dem Senden vorbereiten. Ein gerade inhaltlich geprüfter

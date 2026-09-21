@@ -4,13 +4,13 @@ Diese Anleitung gilt innerhalb eines bereits beauftragten Dialogs. Sie verlangt 
 
 ## Vor der ersten großen Umsetzung
 
-Leite aus den Nutzervorgaben eine kurze Abdeckungsliste ab: Varianten, betroffene Bildschirmbereiche, Hell/Dunkel, Bilder und ausdrücklich unveränderte Standardansicht. Halte gemeinsame Funktionen und bestehende Anzeige- oder Datumsregeln als zu bewahrende Eigenschaften fest. Keine zusätzlichen Varianten oder Anforderungen erfinden. Gib diese Liste im eigentlichen Umsetzungsauftrag mit; eine separate Planbestätigung ist nicht nötig.
+Leite aus den Nutzervorgaben eine kurze Abdeckungsliste ab: Varianten, betroffene Bildschirmbereiche, Hell/Dunkel, Bilder und ausdrücklich unveränderte Standardansicht. Halte gemeinsame Funktionen und bestehende Anzeige- oder Datumsregeln als zu bewahrende Eigenschaften fest. Keine zusätzlichen Varianten oder Anforderungen erfinden. Gib diese Liste als Kriterien des Zielvertrags ([Programmierloop](../../ins-terminal-einfuegen/references/programmier-loop.md)) im eigentlichen Umsetzungsauftrag mit; eine separate Planbestätigung ist nicht nötig.
 
 Gleiche die Liste an tatsächlichen Datei-Meilensteinen mit Code und vorhandenen Vorlagen ab. Farben und Formen allein erfüllen keinen Auftrag für unterschiedliche Layouts. Änderungen an gemeinsam genutzten Bausteinen auch gegen die ausdrücklich unveränderte Standardvariante prüfen.
 
 ## Review bündeln
 
-Lies nach der ersten zusammenhängenden Umsetzung den relevanten Diff einschließlich neuer Dateien. Bündele zusammengehörige Befunde in einer Rückmeldung: Datei/Funktion, konkreter Auslöser, Auswirkung und kleinster notwendiger Korrekturumfang. Vermeide nacheinander entdeckte Stilwünsche und kleinteilige Promptserien. Neue belegte Fehler innerhalb derselben Runde bleiben korrigierbar; erfinde keine Folgearbeit, wenn der Auftrag erfüllt ist.
+Prüfe nach der ersten zusammenhängenden Umsetzung am Review-Checkpoint risikobasiert gemäß [Kontingent sparsam nutzen](../../ins-terminal-einfuegen/references/kontingent-sparen.md): Mindestprüfung immer, Stichprobe oder vollständiger Diff einschließlich neuer Dateien nach den dortigen Auslösern. Bündele zusammengehörige Befunde in einer Rückmeldung: Datei/Funktion, konkreter Auslöser, Auswirkung und kleinster notwendiger Korrekturumfang. Vermeide nacheinander entdeckte Stilwünsche und kleinteilige Promptserien. Neue belegte Fehler innerhalb derselben Runde bleiben korrigierbar; erfinde keine Folgearbeit, wenn der Auftrag erfüllt ist.
 
 ## Gewünschten Advisor nachweisen
 
