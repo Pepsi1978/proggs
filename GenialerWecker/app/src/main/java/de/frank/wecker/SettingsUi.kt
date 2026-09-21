@@ -93,7 +93,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         }) }
             .onFailure { vm.message.value = "Diese Einstellungsseite ist auf dem Gerät nicht verfügbar. Öffne die Android-App-Einstellungen." }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding()) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = seitenAbstandOben(), bottom = 16.dp).navigationBarsPadding()) {
       DesignBlatt {
        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val missing = permissions.count { !it.second }

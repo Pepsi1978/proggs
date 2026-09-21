@@ -50,6 +50,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -185,7 +186,14 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                         vm.settingsRevision.value++
                     } },
                     aufEinstellungen = if (page == "settings") null else ({ vm.stopPreview(); settingsFrom = page; page = "settings" }),
-                    voran = if (page != "alarms") ({ StillerKnopf("‹", { back() }, Modifier.semantics { contentDescription = "Zurück zur Weckerliste" }); Spacer(Modifier.width(8.dp)) }) else null,
+                    // Derselbe runde Kopfknopf wie rechts — der frühere höhere „‹“-Knopf machte die
+                    // Kopfleiste im Editor höher als auf der Liste, und die oberste Linie sprang.
+                    voran = if (page != "alarms") ({
+                        KopfKnopf(beschreibung = "Zurück zur Weckerliste", aufTipp = { back() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = gold.primaer, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }) else null,
                 )
                 AufnahmeLeiste(vm)
                 // Der Bildschirmwechsel hatte bisher die Vorgabe-Überblendung: beide Seiten lagen
@@ -401,8 +409,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
             Box(
                 Modifier.fillMaxWidth().zIndex(1f)
                     // Traumraum rückt minimal näher an die Kopfleiste.
-                    .padding(start = 16.dp, end = 16.dp,
-                        top = if (LocalDesignTokens.current.design == Design.TRAUMRAUM) 4.dp else 12.dp, bottom = 14.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = seitenAbstandOben(), bottom = 14.dp),
             ) {
                 when (LocalDesignTokens.current.design) {
                     Design.TRAUMRAUM -> TraumraumHero(heroDaten, onNew, onEdit, aufSchlummernBeenden)
@@ -1493,7 +1500,7 @@ fun DesignBlatt(inhalt: @Composable ColumnScope.() -> Unit) {
                     val platz = messbar.measure(grenzen.copy(minWidth = breite, maxWidth = breite))
                     layout(grenzen.maxWidth, platz.height) { platz.place(-extra, 0) }
                 }
-                .padding(top = 10.dp, bottom = 12.dp)
+                .padding(bottom = 12.dp)
                 .clip(form)
                 .background(gold.flaeche)
                 .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
@@ -1846,7 +1853,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
     val microphone = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
         if (allowed) vm.startRecording() else vm.message.value = "Für das Diktat wird die Mikrofonberechtigung benötigt."
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding()) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = seitenAbstandOben(), bottom = 16.dp).navigationBarsPadding()) {
       DesignBlatt {
        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // Derived from this draft only, so it disappears once corrected and never carries over to another draft.
@@ -2969,3 +2976,12 @@ fun kurzPlan(alarm: Alarm): String = when {
     alarm.startDate.isNotBlank() -> "Einmalig"
     else -> dayLabel(alarm.days)
 }
+
+
+/**
+ * Der Abstand zwischen Kopfleiste und der ersten Fläche — auf Liste, Editor und Einstellungen
+ * **derselbe**, damit die oberste Linie beim Seitenwechsel nicht springt.
+ */
+@Composable
+fun seitenAbstandOben(): androidx.compose.ui.unit.Dp =
+    if (LocalDesignTokens.current.design == Design.TRAUMRAUM) 4.dp else 12.dp
