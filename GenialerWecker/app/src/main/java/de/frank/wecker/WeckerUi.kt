@@ -222,7 +222,6 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                                             notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
                                         } else vm.save { page = "alarms" }
                                     }, Modifier.fillMaxWidth(), aktiviert = busy.isBlank() && !recording, hauptKnopf = true)
-                                    SpeicherVorschau(alarm)
                                 }
                             }
                         } } ?: Box(Modifier.fillMaxSize())
@@ -990,11 +989,11 @@ private fun TraumraumHero(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Box(Modifier.weight(1f)) {
-                        TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer)
+                        TraumTermin(daten, oeffnen)
                     }
                     GoldKnopf("＋", aufNeu, hauptKnopf = true, beschreibung = "Neuen Wecker anlegen")
                 } else {
-                    TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer)
+                    TraumTermin(daten, oeffnen)
                     Spacer(Modifier.height(8.dp))
                     FlowRow(
                         Modifier.fillMaxWidth(),
@@ -1424,7 +1423,8 @@ private fun NebenMarker(
 fun DesignBlatt(inhalt: @Composable ColumnScope.() -> Unit) {
     val gold = LocalGold.current
     val traum = LocalDesignTokens.current.design == Design.TRAUMRAUM
-    val form = RoundedCornerShape(topStart = 38.dp, topEnd = 38.dp)
+    // Rundum abgerundet: Die Blase beginnt oben rund und endet unten ebenso rund.
+    val form = RoundedCornerShape(38.dp)
     // Genau eine Aufrufstelle für Column und für den Inhalt: nur der Modifier und der Griff hängen
     // am Design. Ein Wechsel zu oder von Traumraum lässt damit die Zusammensetzung stehen, statt den
     // Unterbaum zu verwerfen — aufgeklappte Karten bleiben offen.
@@ -1435,7 +1435,15 @@ fun DesignBlatt(inhalt: @Composable ColumnScope.() -> Unit) {
     val material = LocalMaterial.current
     Column(
         Modifier.fillMaxWidth().then(
-            if (traum) Modifier.padding(top = 10.dp)
+            if (traum) Modifier
+                // Breiter: Das Blatt nutzt 8 dp des Seitenrands mit, damit der Inhalt nicht gequetscht wirkt.
+                .layout { messbar, grenzen ->
+                    val extra = 8.dp.roundToPx()
+                    val breite = grenzen.maxWidth + extra * 2
+                    val platz = messbar.measure(grenzen.copy(minWidth = breite, maxWidth = breite))
+                    layout(grenzen.maxWidth, platz.height) { platz.place(-extra, 0) }
+                }
+                .padding(top = 10.dp, bottom = 12.dp)
                 .clip(form)
                 .background(gold.flaeche)
                 .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
@@ -1443,7 +1451,7 @@ fun DesignBlatt(inhalt: @Composable ColumnScope.() -> Unit) {
                     material.reflexWinkelGrad, material.reflexLaenge)
                 .border(1.dp, materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha,
                     material.kanteSchattenAlpha), form)
-                .padding(horizontal = 4.dp, vertical = 10.dp)
+                .padding(start = 0.dp, end = 0.dp, top = 10.dp, bottom = 22.dp)
             else Modifier,
         ),
     ) {
@@ -1689,11 +1697,21 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
         // Orbit: technische Modulkopfzeile mit fester Schrift und Trennlinie im kantigen Modul.
         Design.ORBIT -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
             Column(Modifier.animateContentSize()) {
-                Row(kopfModifier.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) {
+                // Der Klapppfeil ist ein bündiges Segment der Modulkopfzeile: von der oberen bis zur
+                // unteren Kante, durch eine Trennlinie abgesetzt, ohne eigenen Rahmen. So fügt er
+                // sich im Hell- wie im Dunkelmodus und auch bei mehrzeiligen Köpfen ein.
+                Row(kopfModifier.height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 10.dp)) {
                         beschriftung(MaterialTheme.typography.labelLarge.copy(fontFamily = IdeenSchriftFest, letterSpacing = 1.5.sp), gold.primaer)
                     }
-                    if (collapsible) KlappKnopf(expanded, { expanded = !expanded }, beschreibung = null, modifier = Modifier.padding(start = 8.dp))
+                    if (collapsible) {
+                        VerticalDivider(color = gold.rahmen)
+                        Box(Modifier.fillMaxHeight().width(52.dp).background(gold.flaecheErhoeht.copy(alpha = .6f))
+                            .clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
+                            Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null,
+                                tint = gold.primaer, modifier = Modifier.size(26.dp))
+                        }
+                    }
                 }
                 if (expanded) {
                     HorizontalDivider(color = gold.rahmen)
@@ -1708,7 +1726,7 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
         Design.TRAUMRAUM -> {
             val material = LocalMaterial.current
             val abschnittForm = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
-            Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp).animateContentSize(),
+            Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp).animateContentSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(kopfModifier, verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) {
@@ -1718,9 +1736,13 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
                 }
                 if (expanded) Box(
                     Modifier.fillMaxWidth()
+                        // Nach außen statt eingedrückt: hell oben, dunkel unten, feine Kante.
+                        .shadow(3.dp, abschnittForm, ambientColor = material.schattenFarbe ?: androidx.compose.ui.graphics.Color.Black,
+                            spotColor = material.schattenFarbe ?: androidx.compose.ui.graphics.Color.Black)
                         .clip(abschnittForm)
                         .background(gold.flaecheErhoeht)
-                        .innenSchatten(abschnittForm, material.innenSchattenAlpha * 0.6f, tiefe = 4.dp)
+                        .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
+                        .border(1.dp, materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha * .8f, material.kanteSchattenAlpha * .6f), abschnittForm)
                         .padding(horizontal = 12.dp, vertical = 12.dp),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
@@ -1804,23 +1826,64 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             RepeatEditor(alarm, activity, gemerktesDatum, { gemerktesDatum = it }, vm::change)
         }
         Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }.ifBlank { "Kein Schritt gewählt" },
-            error = if (alarm.steps.isEmpty()) "Wähle mindestens einen Weckschritt." else null) {
+            error = if (alarm.steps.isEmpty()) "Wähle mindestens einen Weckschritt."
+                else if (Step.TEXT in alarm.steps && alarm.text.isBlank()) "Der Erinnerungstext fehlt." else null,
+            initiallyExpanded = Step.TEXT in alarm.steps && alarm.text.isBlank()) {
             Text("Der gesamte Ablauf wiederholt sich bis zum Stoppen; Songs laufen vollständig durch.", style = MaterialTheme.typography.bodySmall)
             Text("Bausteine auswählen", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             Step.entries.forEach { step -> Toggle(step.title, step in alarm.steps) { checked ->
                 vm.change(alarm.copy(steps = if (checked) alarm.steps + step else alarm.steps - step))
             } }
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            // Der eigene Text steht genau dort, wo man ihn auswählt — nicht weit unten in einem
+            // eigenen Abschnitt, den man erst suchen muss.
+            if (Step.TEXT in alarm.steps) {
+                Text("Dein eigener Text", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+                if (alarm.text.isBlank()) Text("Der Erinnerungstext fehlt.", color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
+            Eingabefeld(alarm.text, { vm.change(alarm.copy(text = it)) }, "Text, der vorgelesen werden soll",
+                    Modifier.fillMaxWidth().heightIn(min = 160.dp), einzeilig = false)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GoldKnopf(if (recording) "■ Diktat abschließen" else "● Diktieren", {
+                        if (recording) vm.stopRecording()
+                        else if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.startRecording()
+                        else microphone.launch(Manifest.permission.RECORD_AUDIO)
+                    // Stop is always possible; start only while nothing else runs.
+                    }, aktiviert = recording || busy.isBlank())
+                    StillerKnopf("Text verbessern", vm::improve)
+                    if (alarm.originalText.isNotBlank()) StillerKnopf("Original zurückholen", { vm.change(alarm.copy(text = alarm.originalText, originalText = "")) })
+                }
+                Text("Groq · Whisper Large V3 Turbo. Die KI-Textverbesserung nutzt dieselbe ChatGPT-Anmeldung und Modellauswahl wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            }
             Text("Reihenfolge beim Wecken (verschieben per Drag-and-drop)", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             if (alarm.steps.isEmpty()) Text("Noch kein Baustein ausgewählt.", style = MaterialTheme.typography.bodySmall)
             else de.frank.module.draganddrop.WeckReihenfolgeListe(alarm, vm::change)
             if (Step.IDEAS in alarm.steps) Text("Die offenen Ideen werden in ihrer Reihenfolge aus Geniale Ideen gelesen. Bei bestehender Verbindung bereitet die App Änderungen automatisch vor. Ansehen und abgleichen: Einstellungen → Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
         }
         if (alarm.needsSpeech) AlarmSpeechEditor(vm, alarm)
-        if (Step.MUSIC in alarm.steps || Step.TONE in alarm.steps) Section("Musik & Klingelzeichen", collapsible = true, summary = listOfNotNull(
+        Section("Musik, Klingelzeichen & Lautstärke", collapsible = true, summary = listOfNotNull(
             if (Step.TONE in alarm.steps) "Klingelzeichen: ${Tones.names[alarm.cue] ?: alarm.cue}" else null,
-            if (Step.MUSIC in alarm.steps) "Musik: ${alarm.musicName}" else null).joinToString(" · ")) {
-            if (Step.TONE in alarm.steps) Choice("Klingelzeichen vor dem Text", alarm.cue, Tones.names.toList()) { vm.change(alarm.copy(cue = it)) }
+            if (Step.MUSIC in alarm.steps) "Musik: ${alarm.musicName}" else null,
+            "${alarm.volume} % Lautstärke",
+            if (alarm.snoozeLimit == 0) "Schlummern aus" else "Schlummern ${alarm.snoozeMinutes} Min., bis ${alarm.snoozeLimit}×").joinToString(" · ")) {
+            // Das Klingelzeichen als offene Liste statt in einem Knopf versteckt — jeder Ton lässt sich wählen und anhören.
+            if (Step.TONE in alarm.steps) {
+                Text("Klingelzeichen vor dem Text", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+                Tones.names.forEach { (id, title) ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(alarm.cue == id, interactionSource = null, indication = null,
+                            role = androidx.compose.ui.semantics.Role.RadioButton) { vm.change(alarm.copy(cue = id)) },
+                            verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(alarm.cue == id, null)
+                            Text(title, Modifier.padding(start = 8.dp))
+                        }
+                        StillerKnopf("Anhören", { vm.playTone(id) })
+                    }
+                }
+                HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            }
+            if (Step.MUSIC in alarm.steps) {
+            Text("Musik / Weckton", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             // Eigene Musik und Geräte-Wecktöne stehen als Auswahlpunkte in derselben Liste wie die
             // eingebauten Signale. Der Punkt öffnet die jeweilige Auswahl; „Anhören“ spielt die Datei.
             @Composable fun Auswahl(titel: String, unter: String?, gewaehlt: Boolean, waehlen: () -> Unit, anhoeren: (() -> Unit)?) {
@@ -1847,36 +1910,22 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                     .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
                     .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false))
             }, if (istGeraet) ({ vm.playMusic(alarm.music) }) else null)
-            StillerKnopf("Vorschau stoppen", vm::stopPreview)
-            Text("Das Erinnerungszeichen dauert 2 Sekunden, die anderen eingebauten Signale 6 Sekunden. Der Musikschritt spielt die ganze Datei ab. Alle eingebauten Signale wurden eigens für diese App erzeugt.", style = MaterialTheme.typography.bodySmall)
-        }
-        if (Step.TEXT in alarm.steps) Section("Deine Erinnerung", collapsible = true, initiallyExpanded = alarm.text.isBlank(),
-            summary = alarm.text.trim().replace('\n', ' ').let { if (it.length > 50) "„${it.take(50)}…“" else if (it.isNotBlank()) "„$it“" else "" },
-            error = if (alarm.text.isBlank()) "Der Erinnerungstext fehlt." else null) {
-            Eingabefeld(alarm.text, { vm.change(alarm.copy(text = it)) }, "Text, der vorgelesen werden soll",
-                Modifier.fillMaxWidth().heightIn(min = 160.dp), einzeilig = false)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                GoldKnopf(if (recording) "■ Diktat abschließen" else "● Diktieren", {
-                    if (recording) vm.stopRecording()
-                    else if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.startRecording()
-                    else microphone.launch(Manifest.permission.RECORD_AUDIO)
-                // Stop is always possible; start only while nothing else runs.
-                }, aktiviert = recording || busy.isBlank())
-                StillerKnopf("Text verbessern", vm::improve)
-                if (alarm.originalText.isNotBlank()) StillerKnopf("Original zurückholen", { vm.change(alarm.copy(text = alarm.originalText, originalText = "")) })
+            // Die eingebauten Signale — jedes wählbar und jedes anhörbar.
+            Tones.names.forEach { (id, title) ->
+                Auswahl(title, null, !eigene && alarm.tone == id,
+                    { vm.change(alarm.copy(tone = id, music = "", musicName = title, musicQuelle = "")) }, { vm.playTone(id) })
             }
-            Text("Groq · Whisper Large V3 Turbo. Die KI-Textverbesserung nutzt dieselbe ChatGPT-Anmeldung und Modellauswahl wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
-        }
-        Section("Lautstärke & Schlummern", collapsible = true, summary = listOf(
-            "${alarm.volume} % Lautstärke",
-            if (alarm.fadeSeconds > 0) "Anschwellen ${alarm.fadeSeconds} Sek." else "ohne Anschwellen",
-            if (alarm.vibrate) "Vibration an" else "Vibration aus",
-            if (alarm.snoozeLimit == 0) "Schlummern deaktiviert" else "Schlummern ${alarm.snoozeMinutes} Min., bis ${alarm.snoozeLimit}×",
-        ).joinToString(" · ")) {
+            }
+            if (Step.MUSIC in alarm.steps || Step.TONE in alarm.steps) StillerKnopf("Vorschau stoppen", vm::stopPreview)
+            Text("Das Erinnerungszeichen dauert 2 Sekunden, die anderen eingebauten Signale 6 Sekunden. Der Musikschritt spielt die ganze Datei ab. Alle eingebauten Signale wurden eigens für diese App erzeugt.", style = MaterialTheme.typography.bodySmall)
+            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            Text("Lautstärke", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             ValueSlider("Wecklautstärke", alarm.volume, 1..100, "%") { vm.change(alarm.copy(volume = it)) }
             Text("Diese Lautstärke gilt beim Wecken unabhängig von der bisherigen Lautstärke. Android setzt sie auf die nächste unterstützte Lautstärkestufe. Danach wird der vorherige Wert wiederhergestellt.", style = MaterialTheme.typography.bodySmall)
             ValueSlider("Sanftes Anschwellen", alarm.fadeSeconds, 0..120, "Sek.") { vm.change(alarm.copy(fadeSeconds = it)) }
             Toggle("Vibrieren", alarm.vibrate) { vm.change(alarm.copy(vibrate = it)) }
+            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            Text("Schlummern", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             ValueSlider("Schlummerdauer", alarm.snoozeMinutes, 1..60, "Min.") { vm.change(alarm.copy(snoozeMinutes = it)) }
             ValueSlider("Erlaubte Schlummerpausen", alarm.snoozeLimit, 0..20, "") { vm.change(alarm.copy(snoozeLimit = it)) }
         }
@@ -2719,4 +2768,36 @@ fun readiness(context: Context): List<Pair<String, Boolean>> {
         "Wecker bei Nicht stören" to (manager.isNotificationPolicyAccessGranted && allowsAlarms && manager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_NONE),
         // Samsung puts optimized apps to sleep; unrestricted battery keeps restore and preparation alive.
         "Akku uneingeschränkt" to context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName))
+}
+
+
+/**
+ * Traumraums Terminangaben als kleine Liste mit Punkten: „Nächster Wecker 04:01 · morgen“,
+ * „Name: Frühschicht“, „Klingelt in 17 Std. 3 Min.“ — gleich hoch in jedem Zustand.
+ */
+@Composable
+private fun TraumTermin(daten: HeroDaten, aufOeffnen: () -> Unit) {
+    val gold = LocalGold.current
+    val akzent = if (daten.nextIsSnooze) LocalSemantisch.current.info else gold.primaer
+    @Composable fun Zeile(text: String, farbe: androidx.compose.ui.graphics.Color, stil: androidx.compose.ui.text.TextStyle) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).clip(CircleShape).background(akzent))
+            Text(text, Modifier.padding(start = 8.dp), style = stil, color = farbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+    Column(Modifier.fillMaxWidth().then(if (daten.nextAlarm != null) Modifier.clickable(
+        onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
+        verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        if (daten.next == null) {
+            Zeile("Kein Wecker aktiv", gold.textPrimaer, MaterialTheme.typography.bodyMedium)
+            Zeile("Lege einen an oder schalte einen ein", gold.textGedaempft, MaterialTheme.typography.bodySmall)
+            Zeile(" ", gold.textGedaempft, MaterialTheme.typography.bodySmall)
+        } else {
+            val termin = terminAnzeige(daten.now, daten.next).einzeilig
+            Zeile("${if (daten.nextIsSnooze) "Schlummern bis" else "Nächster Wecker"} $termin", gold.textPrimaer,
+                MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+            Zeile("Name: ${daten.nextName ?: "Wecker"}", gold.textPrimaer, MaterialTheme.typography.bodyMedium)
+            Zeile("Klingelt in ${remainingLong(daten.next - daten.now)}", akzent, MaterialTheme.typography.bodyMedium)
+        }
+    }
 }

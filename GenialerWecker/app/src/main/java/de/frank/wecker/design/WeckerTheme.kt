@@ -1,6 +1,7 @@
 package de.frank.wecker.design
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.CompositionLocalProvider
 import de.frank.genialeideen.ui.theme.GenialeIdeenTheme
 import de.frank.genialeideen.ui.theme.IdeenSchrift
@@ -39,7 +40,21 @@ fun WeckerTheme(themeWahl: String, design: Design, ausrichtung: String? = null, 
                 Design.MORGENRUHE, Design.TRAUMRAUM -> IdeenSchrift
                 Design.ORBIT -> IdeenSchriftFest
             },
-            content = if (ausrichtung == null) content else ({ de.frank.wecker.AusrichtungsSperre(ausrichtung, content) }),
+            content = {
+                // Kein graues Viereck mehr beim Antippen — nirgends in der App. Die Rückmeldung
+                // geben die Bedienelemente selbst (Knopf sinkt ein, Knauf wandert, Haken erscheint).
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.LocalIndication provides KeineIndikation) {
+                    if (ausrichtung == null) content() else de.frank.wecker.AusrichtungsSperre(ausrichtung, content)
+                }
+            },
         )
     }
+}
+
+/** Eine Rückmeldung, die nichts zeichnet — ersetzt den grauen Wellenschlag von Material. */
+private object KeineIndikation : androidx.compose.foundation.IndicationNodeFactory {
+    override fun create(interactionSource: androidx.compose.foundation.interaction.InteractionSource): androidx.compose.ui.node.DelegatableNode =
+        object : Modifier.Node() {}
+    override fun equals(other: Any?) = other === this
+    override fun hashCode() = 7
 }

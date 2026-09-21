@@ -159,6 +159,11 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 Ausrichtung.anwenden(activity, it)
                 vm.settingsRevision.value++
             }
+            HorizontalDivider(color = LocalGold.current.rahmen)
+            var statuszeile by remember(revision) { mutableStateOf(settings.statuszeileSichtbar) }
+            Toggle("Statuszeile anzeigen", statuszeile) { statuszeile = it; settings.statuszeileSichtbar = it }
+            Text("Blendet oben Uhrzeit, Akku und Benachrichtigungen des Handys ein oder aus.",
+                style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
             Text("Gilt für die Weckerliste und den Weckbildschirm. „Automatisch“ überlässt die Wahl wie bisher dem Gerät. " +
                 "Android kann die Ausrichtung in geteilten Fenstern oder auf großen Displays vorgeben.",
                 style = MaterialTheme.typography.bodySmall)

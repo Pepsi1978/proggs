@@ -132,19 +132,17 @@ private fun Modifier.vertieftesMaterial(
     tiefe: Dp,
     kante: Boolean = true,
 ): Modifier = this
+    // Auch diese Flächen stehen jetzt nach außen: hell oben, dunkel unten, kein Innenschatten.
+    // Eingedrückte Effekte gibt es in der App nicht mehr.
     .clip(form)
     .background(grund)
-    .tiefenVerlauf(material.tiefenOben, material.tiefenUnten, gedrueckt = true)
-    .innenSchatten(form, material.innenSchattenAlpha, tiefe = tiefe)
+    .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
     .then(if (material.nut) Modifier.nut(form, alpha = material.innenSchattenAlpha) else Modifier)
     .then(
         if (kante) {
             Modifier.border(
                 1.dp,
-                materialKante(
-                    material.kanteLichtFarbe, material.kanteLichtAlpha, material.kanteSchattenAlpha,
-                    gedrueckt = true,
-                ),
+                materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha, material.kanteSchattenAlpha),
                 form,
             )
         } else {
@@ -182,6 +180,7 @@ private fun Modifier.erhabenesMaterial(
     )
     .then(if (glanz > 0f) Modifier.glanzBogen(deckung = glanz) else Modifier)
     .then(if (material.nut) Modifier.nut(form, alpha = material.innenSchattenAlpha) else Modifier)
+    .then(material.kanteGrund?.let { Modifier.border(1.dp, it, form) } ?: Modifier)
     .border(
         1.dp,
         materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha, material.kanteSchattenAlpha),

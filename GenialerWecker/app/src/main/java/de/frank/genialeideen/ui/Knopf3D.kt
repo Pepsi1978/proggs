@@ -158,6 +158,9 @@ fun Knopf3D(
                 material.reflexFarbe, material.reflexAlpha, material.reflexWinkelGrad, material.reflexLaenge))
             .then(if (gedrueckt) Modifier else Modifier.glanzBogen(if (tokens.plastisch) 0.40f else 0.22f))
             .then(if (gedrueckt) Modifier.innenSchatten(form, material.innenSchattenAlpha, tiefe = 4.dp) else Modifier)
+            // Geschlossener Umriss auch links und rechts: Die Materialkante allein zeichnet nur
+            // oben und unten, der Knopf wirkte dadurch seitlich offen (vor allem in Orbit).
+            .then(if (!tokens.plastisch && material.kanteGrund != null) Modifier.border(1.dp, material.kanteGrund, form) else Modifier)
             .border(
                 1.dp,
                 if (tokens.plastisch) lichtKante(gedrueckt = gedrueckt && aktiviert)
@@ -302,6 +305,9 @@ fun StillerKnopf(
                 material.reflexFarbe, material.reflexAlpha * 0.7f,
                 material.reflexWinkelGrad, material.reflexLaenge))
             .then(if (gedrueckt) Modifier.innenSchatten(form, material.innenSchattenAlpha * 0.7f, tiefe = 3.dp) else Modifier)
+            // Geschlossener Umriss auch links und rechts: Die Materialkante allein zeichnet nur
+            // oben und unten, der Knopf wirkte dadurch seitlich offen (vor allem in Orbit).
+            .then(if (!tokens.plastisch && material.kanteGrund != null) Modifier.border(1.dp, material.kanteGrund, form) else Modifier)
             .border(
                 1.dp,
                 if (tokens.plastisch) lichtKante(gedrueckt = gedrueckt, staerke = 0.35f)

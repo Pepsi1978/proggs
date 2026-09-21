@@ -24,13 +24,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        hideStatusBar()
+        statuszeileAnwenden()
         setContent {
             val ausrichtung by model.settings.ausrichtungFlow.collectAsStateWithLifecycle()
             AusrichtungsSperre(ausrichtung) { WeckerApp(model, this) }
         }
         // Die gewählte Ausrichtung folgt der Einstellung; nur eine echte Abweichung wird gesetzt,
         // damit daraus keine Kette aus Neukonfigurationen entsteht.
+        lifecycleScope.launch { model.settings.statuszeileFlow.collect { statuszeileAnwenden() } }
         lifecycleScope.launch {
             model.settings.ausrichtungFlow.collect { Ausrichtung.anwenden(this@MainActivity, it) }
         }
@@ -50,12 +51,17 @@ class MainActivity : ComponentActivity() {
     }
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideStatusBar()
+        if (hasFocus) statuszeileAnwenden()
     }
     override fun onStop() {
         if (model.recording.value) model.stopRecording()
         model.stopPreview()
         super.onStop()
+    }
+
+    private fun statuszeileAnwenden() {
+        if (model.settings.statuszeileSichtbar) WindowCompat.getInsetsController(window, window.decorView).show(WindowInsetsCompat.Type.statusBars())
+        else hideStatusBar()
     }
 }
 

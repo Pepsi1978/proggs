@@ -286,7 +286,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 val metadata = MediaMetadataRetriever()
                 try {
                     metadata.setDataSource(file.absolutePath)
-                    require(metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes") { "Diese Datei enthält keine abspielbare Audiospur." }
+                    // Geräte-Wecktöne (oft OGG) melden „hat Audio“ teils gar nicht; nur ein ausdrückliches Nein weist ab.
+                    require(metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) != "no") { "Diese Datei enthält keine abspielbare Audiospur." }
                 } finally { metadata.release() }
                 file.absolutePath to name
             } catch (e: Exception) { file.delete(); throw e }

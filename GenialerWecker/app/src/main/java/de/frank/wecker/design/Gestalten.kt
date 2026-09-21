@@ -93,7 +93,8 @@ internal fun MaterialFlaeche(
         Ebene.HERO -> Hoehe.karteErhoeht
         Ebene.DIALOG -> Hoehe.dialog
     }
-    val vertieft = ebene == Ebene.VERTIEFT
+    // Keine eingedrückten Flächen mehr: auch VERTIEFT wird wie eine erhabene Fläche beleuchtet.
+    val vertieft = false
     val grossflaeche = ebene == Ebene.HERO || ebene == Ebene.DIALOG
     // Der doppelte Schatten (Kontakt- plus Umgebungsschatten) kostet eine zweite Schattenebene
     // und bleibt deshalb den wenigen großen Flächen vorbehalten, die nie in einer Liste stehen.

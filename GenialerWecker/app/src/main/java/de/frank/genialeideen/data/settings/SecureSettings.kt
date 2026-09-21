@@ -48,6 +48,13 @@ class SecureSettings(context: Context) : Closeable {
     private val _ausrichtungFlow = MutableStateFlow(ausrichtung)
     val ausrichtungFlow: StateFlow<String> = _ausrichtungFlow.asStateFlow()
 
+    /** Ob die Statuszeile oben sichtbar ist. Vorgabe: ausgeblendet, wie bisher. */
+    var statuszeileSichtbar: Boolean
+        get() = readString("statuszeile", "aus") == "an"
+        set(value) { writeString("statuszeile", if (value) "an" else "aus"); _statuszeileFlow.value = value }
+    private val _statuszeileFlow = MutableStateFlow(readString("statuszeile", "aus") == "an")
+    val statuszeileFlow: StateFlow<Boolean> = _statuszeileFlow.asStateFlow()
+
     private val _designFlow = MutableStateFlow(design)
     val designFlow: StateFlow<String> = _designFlow.asStateFlow()
 
