@@ -15,6 +15,14 @@ public sealed class ProgrammEinstellung
     public string? GesicherterRunName { get; set; }
 
     public string? GesicherterRunWert { get; set; }
+
+    /// <summary>
+    /// Bis hierher wurden Fehlermeldungen weggeklickt. Das rote Band einer Karte bleibt so lange
+    /// stehen, bis es quittiert wird -- und ein spaeterer Fehler taucht wieder auf, weil sein
+    /// Zeitstempel jenseits dieser Marke liegt. Das Protokoll bleibt davon unberuehrt: quittiert
+    /// wird nur die Anzeige, nichts wird geloescht.
+    /// </summary>
+    public DateTime? FehlerQuittiertBis { get; set; }
 }
 
 /// <summary>

@@ -269,15 +269,28 @@
                                         Background="{DynamicResource PinselFehlerFlaeche}"
                                         BorderBrush="{DynamicResource PinselFehlerRand}" BorderThickness="1"
                                         Visibility="{Binding BerichtIstFehler, Converter={StaticResource BoolSichtbar}}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding BerichtGrund}" FontSize="11"
-                                                   Foreground="{DynamicResource PinselFehlerText}"
-                                                   TextWrapping="Wrap" />
-                                        <Button Content="Protokoll öffnen" Style="{StaticResource SchalterLeise}"
-                                                FontSize="11" Padding="9,4" Margin="0,7,0,0"
-                                                HorizontalAlignment="Left"
-                                                Command="{Binding ProtokollOeffnenCommand}" />
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                            <TextBlock Text="{Binding BerichtGrund}" FontSize="11"
+                                                       Foreground="{DynamicResource PinselFehlerText}"
+                                                       TextWrapping="Wrap" />
+                                            <Button Content="Protokoll öffnen" Style="{StaticResource SchalterLeise}"
+                                                    FontSize="11" Padding="9,4" Margin="0,7,0,0"
+                                                    HorizontalAlignment="Left"
+                                                    Command="{Binding ProtokollOeffnenCommand}" />
+                                        </StackPanel>
+
+                                        <!-- Wegklicken nimmt nur das Band; im Protokoll bleibt der Lauf stehen. -->
+                                        <Button Grid.Column="1" Content="&#x2715;" Style="{StaticResource SchalterLeise}"
+                                                FontSize="11" Padding="7,2" VerticalAlignment="Top"
+                                                Command="{Binding FehlerQuittierenCommand}"
+                                                ToolTip="Meldung wegklicken – im Protokoll bleibt sie erhalten" />
+                                    </Grid>
                                 </Border>
 
                                 <Border Margin="0,8,18,0" Padding="9,6" CornerRadius="7"

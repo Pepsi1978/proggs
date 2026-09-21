@@ -152,7 +152,14 @@ public sealed partial class ProgrammViewModel : ObservableObject
     [ObservableProperty] private UpdateBericht? _letzterBericht;
 
     public bool HatBericht => LetzterBericht is not null;
-    public bool BerichtIstFehler => LetzterBericht?.IstFehler == true;
+
+    /// <summary>
+    /// Das rote Band. Es verschwindet erst, wenn es weggeklickt wurde -- und nur für genau diesen
+    /// Lauf: Ein spaeterer Fehler hat einen spaeteren Zeitstempel und wird wieder gezeigt.
+    /// </summary>
+    public bool BerichtIstFehler => LetzterBericht is { IstFehler: true } bericht
+                                    && !(_einstellungen.Fuer(Eintrag.Id).FehlerQuittiertBis is { } marke
+                                         && marke >= bericht.Zeit);
     public string BerichtKurz => LetzterBericht?.Kurzfassung ?? "";
     public string BerichtGrund => LetzterBericht?.Meldung ?? "";
 
@@ -182,6 +189,23 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// <summary>Opens the log of the run that is shown on the card.</summary>
     [RelayCommand]
     private void ProtokollOeffnen() => Protokollierung.DateiOeffnen(LetzterBericht?.ProtokollDatei);
+
+    /// <summary>
+    /// Nimmt das rote Band von der Karte. Gemeldet bleibt der Lauf trotzdem: im Tagesprotokoll und
+    /// in verlauf.jsonl steht er unveraendert, und die graue "Zuletzt:"-Zeile nennt ihn weiter.
+    /// Weggeklickt wird nur der Alarm, nicht die Tatsache.
+    /// </summary>
+    [RelayCommand]
+    private void FehlerQuittieren()
+    {
+        if (LetzterBericht is not { IstFehler: true } bericht) return;
+
+        _einstellungen.Fuer(Eintrag.Id).FehlerQuittiertBis = bericht.Zeit;
+        _einstellungen.Speichern();
+
+        // LetzterBericht selbst aendert sich nicht, also meldet sich hier nichts von allein.
+        OnPropertyChanged(nameof(BerichtIstFehler));
+    }
 
     /// <summary>
     /// A staged update (Claude Desktop) only becomes real on the program's next start. On a later

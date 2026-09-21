@@ -49,6 +49,12 @@ Daraus wird eines von fünf Ergebnissen:
 Auf der Karte steht danach eine Zeile „Zuletzt: … – Ergebnis", bei Problemen zusätzlich ein rotes
 Band mit dem Grund und einer Schaltfläche **Protokoll öffnen**.
 
+Das rote Band bleibt stehen, bis es über das **✕** rechts oben weggeklickt wird – es verschwindet
+also nicht von allein und geht beim Schließen der App nicht verloren. Weggeklickt wird nur die
+Anzeige: im Tagesprotokoll und in `verlauf.jsonl` steht der Lauf unverändert, und die graue
+Zeile „Zuletzt: …" nennt ihn weiter. Tritt später ein **neuer** Fehler auf, erscheint das Band
+wieder, weil sein Zeitstempel jenseits der quittierten Marke liegt.
+
 Abgelegt wird alles in `%LOCALAPPDATA%\UpdateZentrale\logs\`:
 
 * `updates-JJJJ-MM-TT.log` – ein Tagesprotokoll. Pro Lauf ein Kopf mit Zeit, Programm, Art,
