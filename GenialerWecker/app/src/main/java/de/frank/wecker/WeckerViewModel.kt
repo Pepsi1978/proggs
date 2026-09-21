@@ -591,7 +591,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 if (generation != previewGeneration) return@runAction
                 // Hand over without stopPreview(): that would cancel this very job.
                 if (previewJob === job) previewJob = null
-                startPlayer(file, prep.playbackSpeed, generation)
+                // Mit eigenem Text: genau so laut wie beim echten Wecken (Alarm-Audiostrom, Wecklautstärke).
+                startPlayer(file, prep.playbackSpeed, generation, weckLautstaerke = if (text != null) alarm?.volume else null)
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
                 // An error of an outdated preview is dropped instead of overwriting newer messages.
@@ -632,12 +633,22 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         startPlayer(file, 1f, previewGeneration)
     }
     /** Local player until it is prepared successfully; every failure releases it and never throws into the UI. */
-    private fun startPlayer(file: File, speed: Float, generation: Long) {
+    private fun startPlayer(file: File, speed: Float, generation: Long, weckLautstaerke: Int? = null) {
         // Die Markierung des laufenden Anhören-Knopfs bleibt erhalten: Nur der alte Player wird
         // freigegeben, die Vorschau selbst läuft ja gerade an (sonst zeigte der Knopf nie „Stopp“).
         val laufend = vorschau.value
         releasePlayer()
         vorschau.value = laufend
+        if (weckLautstaerke != null) {
+            // Wie AlarmService.setVolume: Alarmstrom auf den Anteil der Wecklautstärke, danach zurück.
+            val audio = app.getSystemService(android.media.AudioManager::class.java)
+            val max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_ALARM)
+            runCatching {
+                vorherAlarmLautstaerke = audio.getStreamVolume(android.media.AudioManager.STREAM_ALARM)
+                audio.setStreamVolume(android.media.AudioManager.STREAM_ALARM,
+                    (max * weckLautstaerke / 100f).toInt().coerceIn(1, max), 0)
+            }
+        }
         // Construction can fail natively; that must not escape as an unhandled coroutine exception.
         val player = try { MediaPlayer() } catch (e: Exception) {
             android.util.Log.w("WeckerPreview", "MediaPlayer konnte nicht erzeugt werden", e)
@@ -645,7 +656,9 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
         try {
-            player.setAudioAttributes(android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            player.setAudioAttributes(android.media.AudioAttributes.Builder()
+                .setUsage(if (weckLautstaerke != null) android.media.AudioAttributes.USAGE_ALARM else android.media.AudioAttributes.USAGE_MEDIA)
+                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build())
             player.setDataSource(file.absolutePath)
             player.setOnPreparedListener { prepared ->
                 if (preview !== prepared || generation != previewGeneration) return@setOnPreparedListener
@@ -676,7 +689,16 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         player.release()
         if (generation == previewGeneration) message.value = "Die Vorschau konnte nicht abgespielt werden."
     }
-    private fun releasePlayer() { val player = preview; preview = null; player?.release(); vorschau.value = null }
+    private fun releasePlayer() {
+        val player = preview; preview = null; player?.release(); vorschau.value = null
+        // Eine für die Testvorlesung gesetzte Alarmlautstärke wird wiederhergestellt.
+        if (vorherAlarmLautstaerke >= 0) {
+            runCatching { app.getSystemService(android.media.AudioManager::class.java)
+                .setStreamVolume(android.media.AudioManager.STREAM_ALARM, vorherAlarmLautstaerke, 0) }
+            vorherAlarmLautstaerke = -1
+        }
+    }
+    private var vorherAlarmLautstaerke = -1
     /** Was gerade zur Probe läuft (Schlüssel des Anhören-Knopfs), sonst null. */
     val vorschau = MutableStateFlow<String?>(null)
     /** Stops playback and cancels only the preview's own preparation; every later result of it is discarded. */
