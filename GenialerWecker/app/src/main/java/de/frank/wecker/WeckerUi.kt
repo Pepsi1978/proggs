@@ -2403,55 +2403,29 @@ private fun LegendenMarker(hollow: Boolean, color: androidx.compose.ui.graphics.
 @Composable
 private fun WeckzeitUeberschrift(alarm: Alarm, now: Long, farbe: androidx.compose.ui.graphics.Color,
     platzHalten: Boolean = false) {
-    val anzeige = remember(alarm.enabled, alarm.nextAt, alarm.timeLabel, now) {
-        if (alarm.enabled && alarm.nextAt > 0) terminAnzeige(now, alarm.nextAt) else null
-    }
-    // Orbit setzt Zeit und Termin als dichte Zeile auf eine Achse; die anderen Designs stellen die
-    // Uhrzeit groß heraus und das Datum darüber.
-    if (LocalDesignTokens.current.design == Design.ORBIT) {
-        // Dieselbe Reihenfolge wie in jedem Design: ab übermorgen steht das Datum vorn, heute und
-        // morgen die Uhrzeit. Orbit setzt es nur kompakter und in fester Schrift.
-        // Row statt FlowRow, aus demselben Grund wie in der Kartenzeile: Der Umbruch hing von der
-        // Textlänge ab und machte Karten unterschiedlich hoch. Alle drei Teile bleiben auf einer
-        // Zeile; wird es eng, kürzt der Zusatz zuerst, die Uhrzeit nie.
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            val datumText = anzeige?.datum
-            if (datumText != null) {
-                Text(datumText, Modifier.weight(1f, fill = false), fontFamily = IdeenSchriftFest,
-                    style = MaterialTheme.typography.labelMedium, color = farbe,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-            } else if (platzHalten) {
-                Text(" ", Modifier.clearAndSetSemantics { }, fontFamily = IdeenSchriftFest,
-                    style = MaterialTheme.typography.labelMedium, maxLines = 1)
-            }
-            Text(anzeige?.uhrzeit ?: alarm.timeLabel, fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                fontSize = 30.sp, color = farbe, maxLines = 1)
-            anzeige?.zusatz?.let { zusatz ->
-                Text(zusatz, Modifier.weight(1f, fill = false), fontFamily = IdeenSchriftFest,
-                    style = MaterialTheme.typography.labelMedium, color = farbe,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+    // In allen Designs gleich: die Uhrzeit, direkt daneben wann sie das nächste Mal weckt —
+    // „heute“, „morgen“ oder ab übermorgen „am 23.09.2026“. Kein Datum mehr über der Zahl.
+    val zusatz = remember(alarm.enabled, alarm.nextAt, now) {
+        if (!alarm.enabled || alarm.nextAt <= 0) null else {
+            val zone = ZoneId.systemDefault()
+            val tag = Instant.ofEpochMilli(alarm.nextAt).atZone(zone).toLocalDate()
+            val heute = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+            when (tag) {
+                heute -> "heute"
+                heute.plusDays(1) -> "morgen"
+                else -> "am " + tag.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
             }
         }
-        return
     }
-    val datumText = anzeige?.datum
-    if (datumText != null) {
-        Text(datumText, style = MaterialTheme.typography.labelLarge, color = farbe,
-            maxLines = if (platzHalten) 1 else 2, overflow = TextOverflow.Ellipsis)
-    } else if (platzHalten) {
-        // Unsichtbarer Platzhalter derselben Typografie: eine Zeile, die mit der Systemschrift
-        // mitwächst. Ohne ihn wären Karten mit Datum rund 74 Pixel höher als die ohne.
-        Text(" ", Modifier.clearAndSetSemantics { }, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-    }
-    // Auch hier eine feste Zeile: Uhrzeit und Zusatz („morgen") dürfen nicht je nach Namenslänge
-    // mal neben-, mal untereinander stehen. Der Zusatz sitzt auf der Grundlinie der großen Zahl.
+    val orbit = LocalDesignTokens.current.design == Design.ORBIT
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
-        Text(anzeige?.uhrzeit ?: alarm.timeLabel, fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-            fontSize = 36.sp, color = farbe, maxLines = 1)
-        anzeige?.zusatz?.let { zusatz ->
-            Text(zusatz, Modifier.weight(1f, fill = false).padding(bottom = 6.dp),
-                style = MaterialTheme.typography.titleMedium, color = farbe,
-                maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(alarm.timeLabel, fontFamily = if (orbit) zahlSchrift() else zahlSchrift(), fontWeight = zahlGewicht(),
+            fontSize = if (orbit) 30.sp else 36.sp, color = farbe, maxLines = 1)
+        zusatz?.let {
+            Text(it, Modifier.weight(1f, fill = false).padding(bottom = if (orbit) 5.dp else 6.dp),
+                fontFamily = if (orbit) IdeenSchriftFest else null,
+                style = if (orbit) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleMedium,
+                color = farbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
