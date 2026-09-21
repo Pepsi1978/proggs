@@ -2913,8 +2913,8 @@ private fun HeroDeko(modifier: Modifier) {
             }
             Design.MORGENRUHE -> {
                 // Links neben dem Bett bei den Vögeln, kleiner — nicht mehr direkt hinter dem Bett.
-                val c = androidx.compose.ui.geometry.Offset(size.width * 0.60f, size.height * 0.16f)
-                val r = 13.dp.toPx()
+                val c = androidx.compose.ui.geometry.Offset(size.width * 0.67f, size.height * 0.16f)
+                val r = 10.dp.toPx()
                 repeat(12) { i ->
                     val w = Math.toRadians(i * 30.0)
                     val a = c + androidx.compose.ui.geometry.Offset((r * 1.45f * Math.cos(w)).toFloat(), (r * 1.45f * Math.sin(w)).toFloat())
@@ -2923,7 +2923,7 @@ private fun HeroDeko(modifier: Modifier) {
                 }
                 drawCircle(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .45f), gold.akzentWarm.copy(alpha = .12f)), center = c, radius = r), r, c)
                 // Zwei kleine Vögel am Morgenhimmel
-                listOf(0.47f to 0.10f, 0.53f to 0.20f).forEach { (fx, fy) ->
+                listOf(0.55f to 0.10f, 0.60f to 0.20f).forEach { (fx, fy) ->
                     val p = androidx.compose.ui.geometry.Offset(size.width * fx, size.height * fy)
                     val w = 6.dp.toPx()
                     val vogel = androidx.compose.ui.graphics.Path().apply {
