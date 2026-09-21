@@ -1298,7 +1298,7 @@ private fun WeckerKarte(
                 Modifier.padding(horizontal = if (dicht) 10.dp else 16.dp, vertical = if (dicht) 8.dp else 11.dp),
                 verticalArrangement = Arrangement.spacedBy(if (dicht) 3.dp else 5.dp),
             ) {
-                // Name über dem Schalter, in allen Designs gleich: Name unterstrichen, dann „ – “ und die
+                // Name über dem Schalter, in allen Designs gleich: Name unterstrichen, dann „ · “ und die
                 // Wiederholung eine Spur kleiner. Dieselbe Grundlinie für beide.
                 Row(Modifier.fillMaxWidth().clickable(
                     interactionSource = remember { MutableInteractionSource() }, indication = null,
@@ -1308,7 +1308,7 @@ private fun WeckerKarte(
                     Text(alarm.name, Modifier.alignByBaseline().weight(1f, fill = false),
                         style = zeilenStil.copy(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline),
                         maxLines = if (expanded) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
-                    Text(" – " + (if (alarm.enabled) kurzPlan(alarm) else "${kurzPlan(alarm)} · aus"), Modifier.alignByBaseline(),
+                    Text(" · " + (if (alarm.enabled) kurzPlan(alarm) else "${kurzPlan(alarm)} · aus"), Modifier.alignByBaseline(),
                         style = planStil, color = gold.textGedaempft, maxLines = 1)
                 }
                 // --- Fach 1: Kopfzeile ---
