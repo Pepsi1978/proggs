@@ -94,8 +94,8 @@ werden nie umbenannt. Ausnahme: Eine auf der Platte gelöschte Datei wird immer 
 ### Suno Archiv: alle Songs
 
 Doppelklick auf **„Suno Archiv"** lädt **alle** eigenen Songs (ohne Daumen-Filter) nach
-**`C:\Suno Archiv`** — mit eigener Nummerierung und eigener `_bestand.json`. Bis zu 1000
-gesperrte Songs je Start, dann erneut starten. Läuft auf Port 8788 und kann darum neben
+**`C:\Suno Archiv`** — mit eigener Nummerierung und eigener `_bestand.json`. **100 Songs je
+Start** (älteste zuerst, rund 10–15 Minuten), dann erneut starten, bis „Nichts Neues“ kommt. Läuft auf Port 8788 und kann darum neben
 „Suno Backup" laufen.
 
 **Suno Backup kopiert aus dem Archiv:** Liegt ein Song mit Daumen hoch schon im Archiv, wird

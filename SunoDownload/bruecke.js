@@ -68,8 +68,12 @@
   const STUDIO_GLEICH = 4;
   /** Studio-Weg: höchstens so viele Songs je Lauf, damit ein Abbruch nicht Stunden kostet. */
   const STUDIO_JE_LAUF = 300;
-  /** Archiv: mehr je Lauf (rund eine Stunde), sonst bräuchten 8000 Songs 27 Starts. */
-  const STUDIO_JE_LAUF_ARCHIV = 1000;
+  /**
+   * Archiv: höchstens so viele Songs je Start (alle Wege zusammen), älteste zuerst.
+   * Kurze Läufe von rund 10–15 Minuten — ein Abbruch kostet dann wenig, und der
+   * nächste Start macht mit den nächsten 100 weiter.
+   */
+  const ARCHIV_JE_LAUF = 100;
   /** Notbremse gegen eine Bibliothek, die kein Ende meldet. */
   const MAX_SEITEN = 1200;
 
@@ -369,7 +373,12 @@
   // verloren ging. Neue Daumen hängen sich, älteste zuerst, hinten an die Nummerierung.
   // Im Archiv-Modus (Suno Archiv) zählt der Daumen nicht: dort kommt alles hinein.
   let liste = [...gefunden.values()].filter((s) => hallo.alle === true || s.daumen || fehlt.has(s.id)).sort(nachAlter);
-  if (hallo.alle === true) zeig('🗄️ Archiv: ' + liste.length + ' Songs fehlen noch im Archiv.', '#06c');
+  if (hallo.alle === true) {
+    const offenGesamt = liste.length;
+    liste = liste.slice(0, ARCHIV_JE_LAUF);
+    zeig('🗄️ Archiv: ' + offenGesamt + ' Songs fehlen noch — dieser Start holt die ältesten ' + liste.length +
+      (offenGesamt > liste.length ? ', danach bitte erneut starten.' : '.'), '#06c');
+  }
   else zeig('👍 ' + liste.length + ' Songs mit Daumen hoch fehlen noch (' + (alleFehlenden - liste.length) +
     ' ohne Daumen werden übergangen).', '#06c');
 
@@ -530,7 +539,7 @@
   let studioVertagt = 0;
   if (hallo.freischalten !== true) {
     const gesperrt = zuLaden.filter((s) => !links.has(s.id)); // nach Alter sortiert, älteste zuerst
-    const jetzt = gesperrt.slice(0, hallo.alle === true ? STUDIO_JE_LAUF_ARCHIV : STUDIO_JE_LAUF);
+    const jetzt = gesperrt.slice(0, hallo.alle === true ? ARCHIV_JE_LAUF : STUDIO_JE_LAUF);
     studioVertagt = gesperrt.length - jetzt.length;
     if (jetzt.length) {
       zeig('🎛️ ' + jetzt.length + ' gesperrte Songs werden über den Studio-Weg geholt' +
