@@ -18,7 +18,13 @@ public enum LaufErgebnis
     /// The worst case and the reason this exists: the tool reported success, but nothing actually
     /// changed. Silently trusting the exit code would hide exactly this.
     /// </summary>
-    NichtVerifiziert
+    NichtVerifiziert,
+
+    /// <summary>
+    /// Nothing needed installing: the real check (before or right after the call) confirmed the
+    /// current state. Appended last -- verlauf.jsonl stores the number, older entries keep theirs.
+    /// </summary>
+    BereitsAktuell
 }
 
 /// <summary>
@@ -52,6 +58,7 @@ public sealed class UpdateBericht
         LaufErgebnis.Abgebrochen => "Abgebrochen",
         LaufErgebnis.Fehlgeschlagen => "Fehlgeschlagen",
         LaufErgebnis.NichtVerifiziert => "Nicht verifiziert",
+        LaufErgebnis.BereitsAktuell => "Bereits aktuell",
         _ => "Unbekannt"
     };
 

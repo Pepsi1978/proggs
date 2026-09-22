@@ -21,7 +21,8 @@ public static class Protokollierung
         PropertyNameCaseInsensitive = true
     };
 
-    public static string Ordner { get; } = Path.Combine(Pfade.BenutzerOrdner, "logs");
+    /// <summary>Settable only for tests, so they never write into the real history.</summary>
+    public static string Ordner { get; internal set; } = Path.Combine(Pfade.BenutzerOrdner, "logs");
 
     public static string VerlaufsDatei => Path.Combine(Ordner, "verlauf.jsonl");
 

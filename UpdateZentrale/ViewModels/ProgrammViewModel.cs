@@ -263,47 +263,27 @@ public sealed partial class ProgrammViewModel : ObservableObject
     {
         if (_aktualisierer is null || LetzterBericht is not { Ergebnis: LaufErgebnis.Ausstehend } offen) return;
 
+        // Confirmed only with the expected target reached AND a real current check -- any other
+        // fingerprint change is not proof when the same or another update is still offered.
         var jetzt = await _aktualisierer.FingerabdruckAsync(Eintrag, CancellationToken.None);
-        if (string.IsNullOrWhiteSpace(jetzt) || jetzt == offen.VersionNachher)
-        {
-            if ((DateTime.Now - offen.Zeit).TotalDays >= 7)
-            {
-                var haengt = new UpdateBericht
-                {
-                    Zeit = DateTime.Now,
-                    ProgrammId = Eintrag.Id,
-                    Name = Name,
-                    Art = Eintrag.Art,
-                    Ergebnis = LaufErgebnis.NichtVerifiziert,
-                    VersionVorher = offen.VersionNachher,
-                    VersionNachher = jetzt,
-                    Befehl = offen.Befehl,
-                    Erhoeht = Rechte.IstErhoeht,
-                    Meldung = "Das Update vom " + offen.Zeit.ToString("dd.MM.yyyy")
-                            + " wurde bis heute nicht übernommen – das Programm wurde offenbar nie neu gestartet."
-                };
-                Protokollierung.LaufBeenden(haengt);
-                LetzterBericht = haengt;
-            }
-            return;
-        }
+        var pruefung = await _aktualisierer.PruefenAsync(Eintrag, new Progress<string>(_ => { }), CancellationToken.None);
+        if (UpdateKette.StagedUrteil(offen, jetzt, pruefung, DateTime.Now) is not { } urteil) return;
 
-        var bestaetigt = new UpdateBericht
+        var nachtrag = new UpdateBericht
         {
             Zeit = DateTime.Now,
             ProgrammId = Eintrag.Id,
             Name = Name,
             Art = Eintrag.Art,
-            Ergebnis = LaufErgebnis.Erfolgreich,
+            Ergebnis = urteil.Ergebnis,
             VersionVorher = offen.VersionNachher,
             VersionNachher = jetzt,
             Befehl = offen.Befehl,
             Erhoeht = Rechte.IstErhoeht,
-            Meldung = "Nachträglich bestätigt: das Update vom " + offen.Zeit.ToString("dd.MM.yyyy")
-                    + " ist inzwischen aktiv (" + jetzt + ")."
+            Meldung = urteil.Meldung
         };
-        Protokollierung.LaufBeenden(bestaetigt);
-        LetzterBericht = bestaetigt;
+        Protokollierung.LaufBeenden(nachtrag);
+        LetzterBericht = nachtrag;
     }
 
     [ObservableProperty] private bool _autostartAlsAufgabe;
@@ -485,146 +465,97 @@ public sealed partial class ProgrammViewModel : ObservableObject
         }
     }
 
+    /// <summary>Test seam: replaces the settle pauses of the update chain (never used by the app).</summary>
+    internal Func<TimeSpan, CancellationToken, Task>? KettenWarten { get; set; }
+
+    /// <summary>
+    /// One click = one bounded update chain (see UpdateKette), inside the ownership taken by the
+    /// caller. Exactly one log header and one footer; the report is written from the FINAL verdict
+    /// only, never before the real provider re-check.
+    /// </summary>
     private async Task AktualisierenMitBesitzAsync()
     {
         if (_aktualisierer is null) return;
 
-        // Electron/NSIS installers hang silently while the app is running, so the helper processes
-        // go down too -- but only after the user agreed.
-        if (Eintrag.BeendenVorUpdate && Prozessdienst.Laeuft(Eintrag))
-        {
-            var laufende = Prozessdienst.Laufende(Eintrag).Count;
-            var frage = Name + " läuft gerade (" + laufende + " Prozess(e) einschließlich Helferprogramme).\n\n"
-                      + "Zum Aktualisieren muss das Programm beendet werden."
-                      + (Eintrag.NeuStartenNachUpdate ? " Danach wird es automatisch neu gestartet." : "")
-                      + "\n\nJetzt beenden und aktualisieren?";
-
-            if (!Dialoge.Fragen(frage, "Programm beenden?"))
-            {
-                StatusText = "Abgebrochen – das Programm läuft weiter.";
-                Zustand = UpdateZustand.Abgebrochen;
-                return;
-            }
-        }
-
         await LaufAsync(async (fortschritt, abbruch) =>
         {
-            // Evidence before the run: whatever must change if the update really arrives.
-            StatusText = "Ermittelt den Stand …";
-            var vorher = await _aktualisierer.FingerabdruckAsync(Eintrag, abbruch);
+            var kette = new UpdateKette(_aktualisierer, Eintrag, fortschritt, text => StatusText = text, KettenWarten);
 
+            var (vorher, vorPruefung) = await kette.VorpruefenAsync(abbruch);
             Protokollierung.LaufBeginnen(Eintrag, BefehlsBeschreibung(), vorher);
-            var liefVorher = Prozessdienst.Laeuft(Eintrag);
 
-            PruefErgebnis? beendenFehler = null;
-            if (Eintrag.BeendenVorUpdate && liefVorher)
+            var urteil = UpdateKette.BereitsAktuell(vorher, vorPruefung);
+            var liefVorher = false;
+
+            if (urteil is null)
             {
-                StatusText = "Beendet das Programm …";
-                fortschritt.Report("Beende " + string.Join(", ", Eintrag.AlleProzesse));
-                var beendet = await Prozessdienst.BeendenAsync(Eintrag, abbruch);
-                if (beendet.Problem is not null) fortschritt.Report(beendet.Problem);
+                liefVorher = Prozessdienst.Laeuft(Eintrag);
 
-                // An installer next to a still running target hangs or half-installs. The run is
-                // stopped here -- but through the normal verdict below, so the log gets its footer
-                // and the card its report.
-                if (!beendet.Erfolgreich)
-                    beendenFehler = new PruefErgebnis(UpdateZustand.Fehler,
-                        Meldung: Name + " ließ sich nicht vollständig beenden – das Update wurde nicht gestartet. "
-                                 + beendet.Problem);
+                // Electron/NSIS installers hang silently while the app is running, so the helper
+                // processes go down too -- but only after the user agreed, and only once per chain.
+                if (Eintrag.BeendenVorUpdate && liefVorher)
+                {
+                    var laufende = Prozessdienst.Laufende(Eintrag).Count;
+                    var frage = Name + " läuft gerade (" + laufende + " Prozess(e) einschließlich Helferprogramme).\n\n"
+                              + "Zum Aktualisieren muss das Programm beendet werden."
+                              + (Eintrag.NeuStartenNachUpdate ? " Danach wird es automatisch neu gestartet." : "")
+                              + "\n\nJetzt beenden und aktualisieren?";
+
+                    if (!Dialoge.Fragen(frage, "Programm beenden?"))
+                    {
+                        urteil = new KettenUrteil(LaufErgebnis.Abgebrochen, "Abgebrochen – das Programm läuft weiter.",
+                            vorher, vorher, vorPruefung with { Zustand = UpdateZustand.Abgebrochen }, 0, false);
+                    }
+                    else
+                    {
+                        StatusText = "Beendet das Programm …";
+                        fortschritt.Report("Beende " + string.Join(", ", Eintrag.AlleProzesse));
+                        var beendet = await Prozessdienst.BeendenAsync(Eintrag, abbruch);
+                        if (beendet.Problem is not null) fortschritt.Report(beendet.Problem);
+
+                        // An installer next to a still running target hangs or half-installs.
+                        if (!beendet.Erfolgreich)
+                        {
+                            var meldung = Name + " ließ sich nicht vollständig beenden – das Update wurde nicht gestartet. "
+                                          + beendet.Problem;
+                            urteil = new KettenUrteil(LaufErgebnis.Fehlgeschlagen, meldung, vorher, vorher,
+                                vorPruefung with { Zustand = UpdateZustand.Fehler }, 0, false);
+                        }
+                    }
+                }
+
+                urteil ??= await kette.AusfuehrenAsync(vorher, vorPruefung, abbruch);
             }
 
-            StatusText = beendenFehler is null ? "Aktualisiert …" : "Update nicht gestartet.";
-            var ergebnis = beendenFehler ?? await _aktualisierer.AktualisierenAsync(Eintrag, fortschritt, abbruch);
-
-            if (Eintrag.NeuStartenNachUpdate && liefVorher && ergebnis.Zustand == UpdateZustand.Fertig)
+            // Restart once, after the whole chain -- never between passes, where a running target
+            // would block the next installer.
+            if (Eintrag.NeuStartenNachUpdate && liefVorher && urteil.UpdateLiefDurch)
             {
                 fortschritt.Report("Startet " + Name + " neu.");
                 Prozessdienst.Starten(Eintrag, AlsAdministrator);
             }
 
-            // Evidence after the run, and the verdict drawn from comparing the two.
-            StatusText = "Prüft das Ergebnis …";
-            var nachher = await _aktualisierer.FingerabdruckAsync(Eintrag, abbruch);
-            var bericht = Bewerten(ergebnis, vorher, nachher);
+            var bericht = new UpdateBericht
+            {
+                ProgrammId = Eintrag.Id,
+                Name = Name,
+                Art = Eintrag.Art,
+                Ergebnis = urteil.Ergebnis,
+                Meldung = urteil.Meldung,
+                VersionVorher = urteil.FingerabdruckVorher,
+                VersionNachher = urteil.FingerabdruckNachher,
+                AusstehendeVersion = urteil.AusstehendeVersion,
+                Befehl = BefehlsBeschreibung(),
+                Erhoeht = Rechte.IstErhoeht,
+                ExitCode = urteil.Ergebnis is LaufErgebnis.Fehlgeschlagen or LaufErgebnis.NichtVerifiziert ? 1 : 0
+            };
 
             fortschritt.Report(AbschlussZeile(bericht));
             Protokollierung.LaufBeenden(bericht);
             LetzterBericht = bericht;
 
-            // Refresh the displayed versions -- but not when the installer only staged the
-            // update; there the old version is still the truth and a re-check would wrongly
-            // show "Update verfügbar" again.
-            if (bericht.Ergebnis == LaufErgebnis.Erfolgreich)
-            {
-                var frisch = await _aktualisierer.PruefenAsync(Eintrag, fortschritt, abbruch);
-                return ergebnis with
-                {
-                    Zustand = frisch.Zustand == UpdateZustand.Aktuell ? UpdateZustand.Aktuell : ergebnis.Zustand,
-                    InstallierteVersion = frisch.InstallierteVersion,
-                    VerfuegbareVersion = frisch.VerfuegbareVersion,
-                    Meldung = bericht.Meldung
-                };
-            }
-
-            return ergebnis with
-            {
-                Zustand = bericht.Ergebnis switch
-                {
-                    LaufErgebnis.Abgebrochen => UpdateZustand.Abgebrochen,
-                    LaufErgebnis.Fehlgeschlagen => UpdateZustand.Fehler,
-                    LaufErgebnis.NichtVerifiziert => UpdateZustand.Fehler,
-                    _ => ergebnis.Zustand
-                },
-                Meldung = bericht.Meldung
-            };
+            return urteil.FuerKarte;
         });
-    }
-
-    /// <summary>
-    /// Turns "the tool exited with 0" into a statement about reality: did the fingerprint that
-    /// had to change actually change? Everything else is reported as a problem, with the reason.
-    /// </summary>
-    private UpdateBericht Bewerten(PruefErgebnis ergebnis, string vorher, string nachher)
-    {
-        var bericht = new UpdateBericht
-        {
-            ProgrammId = Eintrag.Id,
-            Name = Name,
-            Art = Eintrag.Art,
-            VersionVorher = vorher,
-            VersionNachher = nachher,
-            Befehl = BefehlsBeschreibung(),
-            Erhoeht = Rechte.IstErhoeht,
-            ExitCode = ergebnis.Zustand == UpdateZustand.Fehler ? 1 : 0
-        };
-
-        if (ergebnis.Zustand == UpdateZustand.Abgebrochen)
-        {
-            bericht.Ergebnis = LaufErgebnis.Abgebrochen;
-            bericht.Meldung = ergebnis.Meldung;
-        }
-        else if (ergebnis.Zustand == UpdateZustand.Fehler)
-        {
-            bericht.Ergebnis = LaufErgebnis.Fehlgeschlagen;
-            bericht.Meldung = ergebnis.Meldung;
-        }
-        else if (ergebnis.Zustand == UpdateZustand.Aktuell)
-        {
-            bericht.Ergebnis = LaufErgebnis.Abgebrochen;
-            bericht.Meldung = string.IsNullOrWhiteSpace(ergebnis.Meldung) ? "Es war nichts offen." : ergebnis.Meldung;
-        }
-        else if (ergebnis.ErstNachNeustart)
-        {
-            bericht.Ergebnis = LaufErgebnis.Ausstehend;
-            bericht.AusstehendeVersion = string.IsNullOrWhiteSpace(VerfuegbareVersion) ? null : VerfuegbareVersion;
-            bericht.Meldung = ergebnis.Meldung;
-        }
-        else
-        {
-            (bericht.Ergebnis, bericht.Meldung) = FingerabdruckUrteil(vorher, nachher);
-        }
-
-        return bericht;
     }
 
     /// <summary>
@@ -656,7 +587,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
     private static string AbschlussZeile(UpdateBericht bericht) => bericht.Ergebnis switch
     {
-        LaufErgebnis.Erfolgreich => "✔ " + bericht.Meldung,
+        LaufErgebnis.Erfolgreich or LaufErgebnis.BereitsAktuell => "✔ " + bericht.Meldung,
         LaufErgebnis.Ausstehend => "⏳ " + bericht.Meldung,
         LaufErgebnis.Abgebrochen => "– " + bericht.Meldung,
         _ => "✘ " + bericht.Meldung
