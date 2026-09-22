@@ -52,6 +52,15 @@ sealed class TrayKontext : ApplicationContext
         timer = new System.Windows.Forms.Timer { Interval = 1000 };
         timer.Tick += (_, _) => Pruefen();
         timer.Start();
+
+        // Die Richtlinie überlebt Neustart und Ruhezustand: vorher freigeben, damit die Anmeldung
+        // im Laptop-Modus den Fingerabdruck anbietet. Nach dem Aufwachen sofort neu bewerten.
+        SystemEvents.SessionEnding += (_, _) => Fingerabdruck(true);
+        SystemEvents.PowerModeChanged += (_, e) =>
+        {
+            if (e.Mode == PowerModes.Suspend) Fingerabdruck(true);
+            if (e.Mode == PowerModes.Resume) { zelt = null; Pruefen(); }
+        };
         Pruefen();
     }
 

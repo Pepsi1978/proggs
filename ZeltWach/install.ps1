@@ -10,13 +10,20 @@ Get-Process ZeltWach -ErrorAction SilentlyContinue | Stop-Process -Force
 $regPfad = 'HKLM:\SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider'
 $schreibbar = $false
 try { $k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider', $true); $schreibbar = $null -ne $k; if ($k) { $k.Close() } } catch {}
-if (-not $schreibbar) {
+# Beim Systemstart gibt ein SYSTEM-Task den Fingerabdruck frei, bevor der Anmeldebildschirm kommt –
+# sonst bliebe ein im Zeltmodus gesetztes Enabled=0 über den Neustart hinweg stehen.
+$taskFehlt = -not (Get-ScheduledTask -TaskName 'ZeltWach Fingerabdruck freigeben' -ErrorAction SilentlyContinue)
+if (-not $schreibbar -or $taskFehlt) {
     $benutzer = "$env:USERDOMAIN\$env:USERNAME"
     $admin = @"
 New-Item -Path '$regPfad' -Force | Out-Null
 `$acl = Get-Acl '$regPfad'
 `$acl.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule('$benutzer','FullControl','Allow')))
 Set-Acl '$regPfad' `$acl
+`$aktion = New-ScheduledTaskAction -Execute 'reg.exe' -Argument 'delete "HKLM\SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" /v Enabled /f'
+`$ausloeser = New-ScheduledTaskTrigger -AtStartup
+`$prinzipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -TaskName 'ZeltWach Fingerabdruck freigeben' -Action `$aktion -Trigger `$ausloeser -Principal `$prinzipal -Force | Out-Null
 "@
     $b64 = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($admin))
     Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList "-NoProfile -EncodedCommand $b64"
