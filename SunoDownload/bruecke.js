@@ -73,7 +73,26 @@
   /** Notbremse gegen eine Bibliothek, die kein Ende meldet. */
   const MAX_SEITEN = 1200;
 
-  const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+  /**
+   * Warten über einen Worker: Chrome drosselt setTimeout in einem Tab, der länger als
+   * 5 Minuten im Hintergrund liegt, auf einmal pro Minute. Dann stand der Studio-Weg
+   * (2 s Takt) praktisch still und der Downloader brach nach 180 s Stille ab
+   * (22.09.2026, bei Studio 235 von 1000). Worker-Timer werden nicht so gedrosselt.
+   */
+  let takt = null;
+  const wartende = new Map();
+  let wartNr = 0;
+  try {
+    takt = new Worker(URL.createObjectURL(new Blob(
+      ['onmessage=e=>setTimeout(()=>postMessage(e.data.nr),e.data.ms)'], { type: 'text/javascript' })));
+    takt.onmessage = (e) => { const f = wartende.get(e.data); wartende.delete(e.data); if (f) f(); };
+  } catch (e) { takt = null; }
+  const warte = (ms) => new Promise((r) => {
+    if (!takt) { setTimeout(r, ms); return; }
+    const nr = ++wartNr;
+    wartende.set(nr, r);
+    takt.postMessage({ nr, ms });
+  });
   const zeig = (t, f) => console.log('%c' + t, 'font-size:15px;font-weight:bold;color:' + (f || '#0a0'));
 
   // Suno stellt window.Clerk nicht mehr bereit; das Sitzungs-Token steht aber im
@@ -187,7 +206,11 @@
     }
   };
   /** Lebenszeichen an den Downloader — sonst hält der ihn für abgestürzt. */
-  const puls = (text) => anDownloader('/puls', { text }, true);
+  let letzterPuls = 'läuft …';
+  const puls = (text) => { letzterPuls = text; return anDownloader('/puls', { text }, true); };
+  // Auch wenn gerade 4 langsame Studio-Songs gleichzeitig hängen: alle 20 s melden.
+  let herzAktiv = true;
+  (async () => { while (herzAktiv) { await warte(20000); if (herzAktiv) await anDownloader('/puls', { text: letzterPuls }, true); } })();
 
   // ------------------------------------------------------------- anmelden
   const hallo = await anDownloader('/start');
@@ -648,6 +671,7 @@
     if (!auftrag) {
       // Der Downloader hat den Server geschlossen — er ist fertig.
       zeig('✅ Der Downloader hat sich beendet.', '#0a0');
+      herzAktiv = false;
       break;
     }
     if (auftrag.fertig) {
