@@ -272,6 +272,8 @@
         privat: typeof c.is_public === 'boolean' ? !c.is_public : true,
         download_url: undefined,
         freigeschaltet: frei,
+        // Daumen hoch: nur diese Songs werden gesichert (Rest sind Experimente).
+        daumen: c.is_liked === true || (c.reaction && c.reaction.reaction_type === 'L') === true,
       });
       neu++;
     }
@@ -337,11 +339,16 @@
     return ta === tb ? a.id.localeCompare(b.id) : ta - tb;
   };
 
-  let liste = [...gefunden.values()].sort(nachAlter);
+  const alleFehlenden = gefunden.size;
+  // Gesichert wird nur, was einen Daumen hoch hat — dazu jede Datei, die auf der Platte
+  // verloren ging. Neue Daumen hängen sich, älteste zuerst, hinten an die Nummerierung.
+  let liste = [...gefunden.values()].filter((s) => s.daumen || fehlt.has(s.id)).sort(nachAlter);
+  zeig('👍 ' + liste.length + ' Songs mit Daumen hoch fehlen noch (' + (alleFehlenden - liste.length) +
+    ' ohne Daumen werden übergangen).', '#06c');
   if (limit) liste = liste.slice(-limit); // beim Probelauf die neuesten nehmen
 
   if (!liste.length) {
-    zeig('✅ Nichts Neues — der Downloader hat bereits alles.', '#0a0');
+    zeig('✅ Nichts Neues — alle Songs mit Daumen hoch sind schon gesichert.', '#0a0');
     await anDownloader('/fertig', { gesamt: 0 });
     return;
   }
@@ -364,7 +371,7 @@
   }
   zeig('📄 ' + liste.length + ' Songs fehlen auf der Platte, davon sind ' + kandidaten.length + ' freigeschaltet.', '#06c');
   if (vorgefiltert) {
-    console.log('   ' + vorgefiltert + ' gesperrte Songs werden über den Studio-Weg geholt.');
+    console.log('   ' + vorgefiltert + ' davon sind gesperrt — sie kommen über den Studio-Weg.');
   }
 
   if (!liste.length && hallo.freischalten !== true) {

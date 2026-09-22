@@ -84,6 +84,13 @@ Es entsteht kein neuer Song in der Bibliothek, und es kostet keine Credits (geme
 Jeder Song braucht 5–15 s Aufbereitung; 4 laufen gleichzeitig, höchstens 300 je Start —
 der Rest kommt beim nächsten Start von „Suno Backup“ an die Reihe.
 
+### Nur Songs mit Daumen hoch
+
+Gesichert werden **nur Songs mit Daumen hoch** (`is_liked`) — alles andere gilt als Experiment
+und bleibt liegen. Vergibst du später neue Daumen, holt der nächste Start genau diese Songs,
+älteste zuerst, und hängt sie mit den nächsten freien Nummern hinten an. Vorhandene Dateien
+werden nie umbenannt. Ausnahme: Eine auf der Platte gelöschte Datei wird immer neu geladen.
+
 ### Aus der Kommandozeile
 
 ```cmd
