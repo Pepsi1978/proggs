@@ -34,6 +34,16 @@
  *    Absage zu werten hieße, freigeschaltete Songs stillschweigend liegen zu lassen.
  * ---------------------------------------------------------------------------
  *
+ * 4) DER STUDIO-WEG FÜR GESPERRTE SONGS (gemessen 22.09.2026).  Sagt
+ *    /api/download/clip "not_authorized", liefert /api/studio/clip/{id}/download
+ *    ?format=mp3 denselben Song trotzdem — das ist der Endpunkt, den Sunos Studio
+ *    beim Export benutzt. Antwort erst {status:"processing"}, nach 5–15 s
+ *    {status:"ready", download_url}. Kein neuer Song in der Bibliothek, kein
+ *    Credit-Verbrauch (390 vorher, 390 nachher). Getestet an Songs von 2025 und 2026.
+ *    Da jeder Song Aufbereitung braucht, laufen STUDIO_GLEICH davon parallel und je
+ *    Lauf höchstens STUDIO_JE_LAUF — der Rest kommt beim nächsten Start.
+ * ---------------------------------------------------------------------------
+ *
  * Freigeschaltet wird nichts von selbst — das macht der Benutzer auf suno.com.
  * Nur mit --freischalten schaltet die Brücke zusätzlich frei; das verbraucht
  * Kontingent aus dem Abo.
@@ -54,6 +64,10 @@
   /** Gemessen: unter 1,5 s Abstand antwortet der Link-Endpunkt mit "rate_limited". */
   const LINK_PAUSE_MIN = 1500;
   const LINK_PAUSE_MAX = 8000;
+  /** Studio-Weg: so viele Songs werden gleichzeitig aufbereitet. */
+  const STUDIO_GLEICH = 4;
+  /** Studio-Weg: höchstens so viele Songs je Lauf, damit ein Abbruch nicht Stunden kostet. */
+  const STUDIO_JE_LAUF = 300;
   /** Notbremse gegen eine Bibliothek, die kein Ende meldet. */
   const MAX_SEITEN = 1200;
 
@@ -343,16 +357,17 @@
   const alleFragen = hallo.alleFragen === true || !feldVorhanden;
   const kandidaten = alleFragen ? liste : liste.filter((s) => s.freigeschaltet);
   const vorgefiltert = liste.length - kandidaten.length;
+  // Gesperrte Songs gehen nicht verloren: sie laufen später über den Studio-Weg.
 
   if (!feldVorhanden) {
     zeig('⚠️ Die Songliste nennt kein Freischalt-Feld mehr — es wird für jeden Song einzeln nachgefragt.', '#c60');
   }
   zeig('📄 ' + liste.length + ' Songs fehlen auf der Platte, davon sind ' + kandidaten.length + ' freigeschaltet.', '#06c');
   if (vorgefiltert) {
-    console.log('   ' + vorgefiltert + ' gesperrte Songs werden gar nicht erst gefragt (auf suno.com freischalten).');
+    console.log('   ' + vorgefiltert + ' gesperrte Songs werden über den Studio-Weg geholt.');
   }
 
-  if (!kandidaten.length && hallo.freischalten !== true) {
+  if (!liste.length && hallo.freischalten !== true) {
     zeig('⏭️ Kein freigeschalteter Song dabei — nichts zu laden.', '#c60');
     await anDownloader('/kontingent', {
       gesperrt: liste.length,
@@ -428,10 +443,63 @@
     return { links, abgelehnt };
   };
 
+  /** Ein Song über Sunos Studio-Export-Endpunkt: fragen, bis er aufbereitet ist. */
+  const studioLink = async (id) => {
+    for (let v = 0; v < 90; v++) {
+      const d = await api('/api/studio/clip/' + id + '/download?format=mp3', 3);
+      if (d && typeof d.download_url === 'string' && d.download_url) return { url: d.download_url };
+      const grund = String((d && (d.reason || d.detail || d.message || d.status)) || '');
+      if (d && d.status === 'error') return { grund: 'Studio: ' + (d.detail || d.message || 'Fehler') };
+      if (!d) return { grund: 'Studio: keine Antwort' };
+      if (d.ok === false && !BREMSE.test(grund)) return { grund: 'Studio: ' + (grund || 'abgelehnt') };
+      await warte(BREMSE.test(grund) ? 1000 + Math.random() * 1000 : 2000);
+    }
+    return { grund: 'Studio: Aufbereitung dauerte zu lange' };
+  };
+
+  /** Holt Studio-Links für viele Songs, STUDIO_GLEICH gleichzeitig. */
+  const studioLinks = async (ids, wortmeldung) => {
+    const links = new Map();
+    const abgelehnt = new Map();
+    let naechster = 0;
+    let erledigt = 0;
+    const arbeiter = async () => {
+      while (naechster < ids.length) {
+        const id = ids[naechster++];
+        const e = await studioLink(id);
+        if (e.url) links.set(id, e.url);
+        else abgelehnt.set(id, e.grund);
+        erledigt++;
+        if (erledigt % 5 === 0 || erledigt === ids.length) {
+          console.log('   ' + wortmeldung + ': ' + links.size + ' von ' + ids.length +
+            (abgelehnt.size ? ' · ' + abgelehnt.size + ' fehlgeschlagen' : ''));
+          await puls(wortmeldung + ': ' + links.size + ' von ' + ids.length);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(STUDIO_GLEICH, ids.length) }, arbeiter));
+    return { links, abgelehnt };
+  };
+
   const beginn = Date.now();
   const ersteRunde = await linkeHolen(kandidaten.map((s) => s.id), 'Links');
   const links = ersteRunde.links;
   const abgelehnt = ersteRunde.abgelehnt;
+
+  // Alles ohne Link — vorab als gesperrt erkannt oder eben abgelehnt — über den Studio-Weg.
+  let studioVertagt = 0;
+  if (hallo.freischalten !== true) {
+    const gesperrt = liste.filter((s) => !links.has(s.id)); // nach Alter sortiert, älteste zuerst
+    const jetzt = gesperrt.slice(0, STUDIO_JE_LAUF);
+    studioVertagt = gesperrt.length - jetzt.length;
+    if (jetzt.length) {
+      zeig('🎛️ ' + jetzt.length + ' gesperrte Songs werden über den Studio-Weg geholt' +
+        (studioVertagt ? ' (' + studioVertagt + ' weitere beim nächsten Start)' : '') + ' …', '#06c');
+      const studio = await studioLinks(jetzt.map((s) => s.id), 'Studio');
+      for (const [id, url] of studio.links) { links.set(id, url); abgelehnt.delete(id); }
+      for (const [id, grund] of studio.abgelehnt) abgelehnt.set(id, grund);
+    }
+  }
 
   // ------------------------------------------------------------- Freischalten (nur --freischalten)
   /**
@@ -518,14 +586,14 @@
     const u = links.get(s.id);
     if (u) s.download_url = u;
   }
-  const ohneLink = liste.filter((s) => !s.download_url);
+  const ohneLink = liste.filter((s) => !s.download_url && abgelehnt.has(s.id));
   liste = liste.filter((s) => s.download_url);
 
   zeig('🔑 ' + liste.length + ' Songs mit Download-Link (' + dauer + ' s).', liste.length ? '#0a0' : '#c60');
 
   if (ohneLink.length) {
     // Der Benutzer soll sehen, WAS er noch von Hand freischalten müsste.
-    zeig('⏭️ ' + ohneLink.length + ' Songs bleiben liegen — auf suno.com freischalten, dann beim nächsten Lauf holen.', '#c60');
+    zeig('⏭️ ' + ohneLink.length + ' Songs bleiben liegen — beim nächsten Lauf wird es erneut versucht.', '#c60');
     for (const s of ohneLink.slice(0, 10)) {
       console.log('      · ' + (s.title || '(ohne Titel)') + '  [' + (abgelehnt.get(s.id) || 'gesperrt') + ']');
     }
@@ -538,8 +606,10 @@
     }
   }
 
+  if (studioVertagt) zeig('ℹ️ ' + studioVertagt + ' gesperrte Songs folgen beim nächsten Start von Suno Backup.', '#06c');
+
   if (!liste.length) {
-    zeig('❗ Kein freigeschalteter Song übrig — nichts zu laden.', '#c00');
+    zeig('❗ Kein Song mit Download-Link übrig — nichts zu laden.', '#c00');
     await anDownloader('/fertig', { gesamt: 0 });
     return;
   }
@@ -571,6 +641,11 @@
       const frisch = await linkeHolen(auftrag.ids, 'Nachschub');
       const paket = {};
       for (const [id, url] of frisch.links) paket[id] = url;
+      const nochOffen = auftrag.ids.filter((id) => !paket[id]);
+      if (nochOffen.length) {
+        const studio = await studioLinks(nochOffen, 'Nachschub (Studio)');
+        for (const [id, url] of studio.links) paket[id] = url;
+      }
       // Auch die erfolglosen zurückmelden, sonst wartet der Downloader ins Leere.
       for (const id of auftrag.ids) if (!paket[id]) paket[id] = '';
       await anDownloader('/links', { links: paket });

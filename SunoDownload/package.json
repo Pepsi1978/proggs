@@ -1,6 +1,6 @@
 {
   "name": "suno-download",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "description": "Lädt die komplette eigene Suno-Bibliothek als nummerierte MP3-Dateien herunter (älteste zuerst).",
   "type": "module",
   "private": true,

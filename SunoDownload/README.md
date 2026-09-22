@@ -75,6 +75,15 @@ sie, sobald Suno bremst, und verkürzt sie wieder, wenn es glatt läuft.
 `not_authorized`. Wer die beiden nicht auseinanderhält, wirft freigeschaltete Songs
 stillschweigend weg. Ein gebremster Song wird deshalb erneut gefragt, ein gesperrter nicht.
 
+### Gesperrte Songs: der Studio-Weg (seit 22.09.2026)
+
+Songs, für die der normale Download-Endpunkt `not_authorized` meldet, holt die Brücke über
+`/api/studio/clip/{id}/download?format=mp3` — denselben Endpunkt, den Sunos Studio beim
+MP3-Export benutzt. Ein Export von Hand, eine Playlist oder Daumen sind dafür **nicht** nötig.
+Es entsteht kein neuer Song in der Bibliothek, und es kostet keine Credits (gemessen).
+Jeder Song braucht 5–15 s Aufbereitung; 4 laufen gleichzeitig, höchstens 300 je Start —
+der Rest kommt beim nächsten Start von „Suno Backup“ an die Reihe.
+
 ### Aus der Kommandozeile
 
 ```cmd
