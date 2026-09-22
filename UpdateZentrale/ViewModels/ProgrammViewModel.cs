@@ -516,15 +516,25 @@ public sealed partial class ProgrammViewModel : ObservableObject
             Protokollierung.LaufBeginnen(Eintrag, BefehlsBeschreibung(), vorher);
             var liefVorher = Prozessdienst.Laeuft(Eintrag);
 
+            PruefErgebnis? beendenFehler = null;
             if (Eintrag.BeendenVorUpdate && liefVorher)
             {
                 StatusText = "Beendet das Programm …";
                 fortschritt.Report("Beende " + string.Join(", ", Eintrag.AlleProzesse));
-                await Prozessdienst.BeendenAsync(Eintrag, abbruch);
+                var beendet = await Prozessdienst.BeendenAsync(Eintrag, abbruch);
+                if (beendet.Problem is not null) fortschritt.Report(beendet.Problem);
+
+                // An installer next to a still running target hangs or half-installs. The run is
+                // stopped here -- but through the normal verdict below, so the log gets its footer
+                // and the card its report.
+                if (!beendet.Erfolgreich)
+                    beendenFehler = new PruefErgebnis(UpdateZustand.Fehler,
+                        Meldung: Name + " ließ sich nicht vollständig beenden – das Update wurde nicht gestartet. "
+                                 + beendet.Problem);
             }
 
-            StatusText = "Aktualisiert …";
-            var ergebnis = await _aktualisierer.AktualisierenAsync(Eintrag, fortschritt, abbruch);
+            StatusText = beendenFehler is null ? "Aktualisiert …" : "Update nicht gestartet.";
+            var ergebnis = beendenFehler ?? await _aktualisierer.AktualisierenAsync(Eintrag, fortschritt, abbruch);
 
             if (Eintrag.NeuStartenNachUpdate && liefVorher && ergebnis.Zustand == UpdateZustand.Fertig)
             {

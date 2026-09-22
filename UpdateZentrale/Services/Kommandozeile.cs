@@ -10,7 +10,16 @@ namespace UpdateZentrale.Services;
 /// scripts launch the freshly built app that way). The run is complete; this only says why the
 /// last lines may be missing.
 /// </param>
-public sealed record BefehlErgebnis(int ExitCode, string Ausgabe, bool Abgelaufen, bool PipeGehalten = false);
+/// <param name="Abgelaufen">The internal time limit ran out and the tree was killed.</param>
+/// <param name="Abgebrochen">
+/// The caller cancelled. Kept apart from Abgelaufen: a user's cancel is no exceeded time limit.
+/// </param>
+/// <param name="BeendenProblem">
+/// Set when killing the tree after a time limit or cancel did not fully work -- the run then
+/// must not look as if everything had been cleaned up.
+/// </param>
+public sealed record BefehlErgebnis(int ExitCode, string Ausgabe, bool Abgelaufen, bool PipeGehalten = false,
+                                    bool Abgebrochen = false, string? BeendenProblem = null);
 
 /// <summary>
 /// Runs console tools and returns their whole output. winget and the PowerShell update scripts
@@ -77,8 +86,9 @@ public static class Kommandozeile
         // this pipe and keeps it open for as long as it runs. ReadToEnd then waits for an EOF that
         // only comes when the user closes that app -- the update run never ends.
         var fehlerPuffer = new StringBuilder();
-        var ausgabe = MitlesenAsync(prozess.StandardOutput, puffer);
-        var fehler = MitlesenAsync(prozess.StandardError, fehlerPuffer);
+        var lesen = new Lesezustand();
+        var ausgabe = MitlesenAsync(prozess.StandardOutput, puffer, lesen);
+        var fehler = MitlesenAsync(prozess.StandardError, fehlerPuffer, lesen);
 
         using var zeitgeber = new CancellationTokenSource(zeitlimit);
         using var verbund = CancellationTokenSource.CreateLinkedTokenSource(zeitgeber.Token, abbruch);
@@ -89,15 +99,27 @@ public static class Kommandozeile
         }
         catch (OperationCanceledException)
         {
-            try { prozess.Kill(entireProcessTree: true); } catch { }
-            await AuslaufenLassenAsync(ausgabe, fehler);
-            return new BefehlErgebnis(-1, Saeubern(Zusammenfuegen(puffer, fehlerPuffer)), true);
+            // The caller wins over the timer when both fired: a cancel is never reported as a
+            // time limit.
+            var vomAufrufer = abbruch.IsCancellationRequested;
+            var problem = await BaumBeendenAsync(prozess);
+            if (!await AuslaufenLassenAsync(ausgabe, fehler)) lesen.Aus = true;
+
+            var text = Zusammenfuegen(puffer, fehlerPuffer)
+                       + Environment.NewLine + "[UpdateZentrale] "
+                       + (vomAufrufer ? "Abgebrochen" : "Zeitlimit überschritten")
+                       + (problem is null ? " – Prozessbaum beendet." : " – " + problem);
+            return new BefehlErgebnis(-1, Saeubern(text), Abgelaufen: !vomAufrufer, Abgebrochen: vomAufrufer,
+                                      BeendenProblem: problem);
         }
 
         // The tool itself has exited; give the pipes a moment to drain, then stop waiting.
         var gehalten = !await AuslaufenLassenAsync(ausgabe, fehler);
         if (gehalten)
         {
+            // The orphaned readers end when the holding child exits (measured: nothing piles up
+            // across runs). Until then they must not keep growing a buffer nobody reads.
+            lesen.Aus = true;
             lock (puffer)
             {
                 puffer.AppendLine().Append("[UpdateZentrale] Ausgabe-Pipe wird noch von einem gestarteten "
@@ -110,7 +132,63 @@ public static class Kommandozeile
 
     private static readonly TimeSpan Auslaufzeit = TimeSpan.FromSeconds(2);
 
-    private static async Task MitlesenAsync(StreamReader leser, StringBuilder ziel)
+    private sealed class Lesezustand
+    {
+        public volatile bool Aus;
+    }
+
+    /// <summary>
+    /// Kills the whole tree and waits, bounded, for the root to be gone.
+    /// </summary>
+    /// <returns>null when done; otherwise what is known to be left over.</returns>
+    private static async Task<string?> BaumBeendenAsync(Process prozess)
+    {
+        string? problem = null;
+        try
+        {
+            prozess.Kill(entireProcessTree: true);
+        }
+        catch (InvalidOperationException)
+        {
+            // Exited between the cancel and the kill -- nothing left to do.
+        }
+        catch (AggregateException ex)
+        {
+            // Not every member of the tree could be terminated (.NET reports it this way).
+            problem = "Nicht alle Kindprozesse ließen sich beenden: "
+                      + string.Join("; ", ex.InnerExceptions.Select(i => i.Message));
+        }
+        catch (Exception ex)
+        {
+            problem = "Beenden fehlgeschlagen: " + ex.Message;
+        }
+
+        try
+        {
+            using var frist = new CancellationTokenSource(Beendefrist);
+            await prozess.WaitForExitAsync(frist.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            problem = (problem is null ? "" : problem + " ") + "Prozess " + ProzessId(prozess)
+                      + " lief " + Beendefrist.TotalSeconds + " s nach dem Beenden noch.";
+        }
+        catch (InvalidOperationException)
+        {
+            // No process associated any more: it is gone.
+        }
+        return problem;
+    }
+
+    private static readonly TimeSpan Beendefrist = TimeSpan.FromSeconds(5);
+
+    private static string ProzessId(Process prozess)
+    {
+        try { return prozess.Id.ToString(); }
+        catch { return "?"; }
+    }
+
+    private static async Task MitlesenAsync(StreamReader leser, StringBuilder ziel, Lesezustand zustand)
     {
         var block = new char[4096];
         try
@@ -118,6 +196,7 @@ public static class Kommandozeile
             int gelesen;
             while ((gelesen = await leser.ReadAsync(block, 0, block.Length)) > 0)
             {
+                if (zustand.Aus) break;
                 lock (ziel) ziel.Append(block, 0, gelesen);
             }
         }
