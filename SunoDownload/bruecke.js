@@ -68,6 +68,8 @@
   const STUDIO_GLEICH = 4;
   /** Studio-Weg: höchstens so viele Songs je Lauf, damit ein Abbruch nicht Stunden kostet. */
   const STUDIO_JE_LAUF = 300;
+  /** Archiv: mehr je Lauf (rund eine Stunde), sonst bräuchten 8000 Songs 27 Starts. */
+  const STUDIO_JE_LAUF_ARCHIV = 1000;
   /** Notbremse gegen eine Bibliothek, die kein Ende meldet. */
   const MAX_SEITEN = 1200;
 
@@ -342,9 +344,17 @@
   const alleFehlenden = gefunden.size;
   // Gesichert wird nur, was einen Daumen hoch hat — dazu jede Datei, die auf der Platte
   // verloren ging. Neue Daumen hängen sich, älteste zuerst, hinten an die Nummerierung.
-  let liste = [...gefunden.values()].filter((s) => s.daumen || fehlt.has(s.id)).sort(nachAlter);
-  zeig('👍 ' + liste.length + ' Songs mit Daumen hoch fehlen noch (' + (alleFehlenden - liste.length) +
+  // Im Archiv-Modus (Suno Archiv) zählt der Daumen nicht: dort kommt alles hinein.
+  let liste = [...gefunden.values()].filter((s) => hallo.alle === true || s.daumen || fehlt.has(s.id)).sort(nachAlter);
+  if (hallo.alle === true) zeig('🗄️ Archiv: ' + liste.length + ' Songs fehlen noch im Archiv.', '#06c');
+  else zeig('👍 ' + liste.length + ' Songs mit Daumen hoch fehlen noch (' + (alleFehlenden - liste.length) +
     ' ohne Daumen werden übergangen).', '#06c');
+
+  // Was schon im Archiv liegt, kopiert der Downloader von dort — dafür braucht es keinen Link.
+  const imArchiv = new Set(hallo.imArchiv || []);
+  const ausArchiv = liste.filter((s) => imArchiv.has(s.id));
+  if (ausArchiv.length) zeig('🗄️ ' + ausArchiv.length + ' davon liegen schon im Archiv und werden von dort kopiert.', '#06c');
+  const zuLaden = liste.filter((s) => !imArchiv.has(s.id));
   if (limit) liste = liste.slice(-limit); // beim Probelauf die neuesten nehmen
 
   if (!liste.length) {
@@ -362,8 +372,8 @@
    * jeder gefragt; dann ist Langsamkeit besser als ein leerer Lauf.
    */
   const alleFragen = hallo.alleFragen === true || !feldVorhanden;
-  const kandidaten = alleFragen ? liste : liste.filter((s) => s.freigeschaltet);
-  const vorgefiltert = liste.length - kandidaten.length;
+  const kandidaten = alleFragen ? zuLaden : zuLaden.filter((s) => s.freigeschaltet);
+  const vorgefiltert = zuLaden.length - kandidaten.length;
   // Gesperrte Songs gehen nicht verloren: sie laufen später über den Studio-Weg.
 
   if (!feldVorhanden) {
@@ -496,8 +506,8 @@
   // Alles ohne Link — vorab als gesperrt erkannt oder eben abgelehnt — über den Studio-Weg.
   let studioVertagt = 0;
   if (hallo.freischalten !== true) {
-    const gesperrt = liste.filter((s) => !links.has(s.id)); // nach Alter sortiert, älteste zuerst
-    const jetzt = gesperrt.slice(0, STUDIO_JE_LAUF);
+    const gesperrt = zuLaden.filter((s) => !links.has(s.id)); // nach Alter sortiert, älteste zuerst
+    const jetzt = gesperrt.slice(0, hallo.alle === true ? STUDIO_JE_LAUF_ARCHIV : STUDIO_JE_LAUF);
     studioVertagt = gesperrt.length - jetzt.length;
     if (jetzt.length) {
       zeig('🎛️ ' + jetzt.length + ' gesperrte Songs werden über den Studio-Weg geholt' +
@@ -592,6 +602,7 @@
   for (const s of liste) {
     const u = links.get(s.id);
     if (u) s.download_url = u;
+    else if (imArchiv.has(s.id)) s.download_url = 'archiv'; // der Downloader kopiert
   }
   const ohneLink = liste.filter((s) => !s.download_url && abgelehnt.has(s.id));
   liste = liste.filter((s) => s.download_url);

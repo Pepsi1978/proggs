@@ -91,6 +91,17 @@ und bleibt liegen. Vergibst du später neue Daumen, holt der nächste Start gena
 älteste zuerst, und hängt sie mit den nächsten freien Nummern hinten an. Vorhandene Dateien
 werden nie umbenannt. Ausnahme: Eine auf der Platte gelöschte Datei wird immer neu geladen.
 
+### Suno Archiv: alle Songs
+
+Doppelklick auf **„Suno Archiv"** lädt **alle** eigenen Songs (ohne Daumen-Filter) nach
+**`C:\Suno Archiv`** — mit eigener Nummerierung und eigener `_bestand.json`. Bis zu 1000
+gesperrte Songs je Start, dann erneut starten. Läuft auf Port 8788 und kann darum neben
+„Suno Backup" laufen.
+
+**Suno Backup kopiert aus dem Archiv:** Liegt ein Song mit Daumen hoch schon im Archiv, wird
+er von dort kopiert statt neu geladen — mit der nächsten freien Nummer im Backup, genau wie ein
+Download. Liegt er nicht im Archiv, wird er wie gewohnt geladen.
+
 ### Aus der Kommandozeile
 
 ```cmd

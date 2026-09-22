@@ -103,6 +103,7 @@ $wsh = New-Object -ComObject WScript.Shell
 
 $symbole = @(
     @{ Name = 'Suno Backup';         Start = 'Neue-Songs-holen.cmd'; Symbol = 'suno-backup.ico';    Text = 'Holt neue Songs aus der Suno-Bibliothek' },
+    @{ Name = 'Suno Archiv';         Start = 'Suno-Archiv.cmd';      Symbol = 'suno-backup.ico';    Text = 'Sichert ALLE Songs nach C:\Suno Archiv' },
     @{ Name = 'Suno Handy-Abgleich'; Start = 'Handy-Abgleich.cmd';   Symbol = 'handy-abgleich.ico'; Text = 'Kopiert neue MP3s auf das Handy' }
 )
 foreach ($s in $symbole) {

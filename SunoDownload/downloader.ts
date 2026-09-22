@@ -20,10 +20,15 @@
  *   node downloader.ts --limit 15 "D:\Test"  ... nur die ersten 15 (zum Ausprobieren)
  *   node downloader.ts --freischalten        ... zusätzlich selbst freischalten (Kontingent!)
  *   node downloader.ts --alle-pruefen        ... jeden Song einzeln bei Suno nachfragen (langsam)
+ *   node downloader.ts --alle "C:\Suno Archiv" ... Archiv: ALLE Songs, nicht nur Daumen hoch
+ *
+ * Normalbetrieb (Suno Backup): nur Songs mit Daumen hoch. Liegt so ein Song schon im
+ * Archiv (C:\Suno Archiv, eigene _bestand.json), wird er von dort kopiert statt neu
+ * geladen.
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
@@ -79,6 +84,10 @@ const FREISCHALTEN = args.includes('--freischalten');
  * durch. Die Brücke schaltet von selbst darauf um, wenn das Feld ganz verschwindet.
  */
 const ALLE_PRUEFEN = args.includes('--alle-pruefen');
+/** Archiv-Modus: jeden eigenen Song sichern, nicht nur die mit Daumen hoch. */
+const ALLE = args.includes('--alle');
+/** Wo das Archiv liegt — Suno Backup kopiert Daumen-Songs von dort, statt sie zu laden. */
+const ARCHIV = 'C:\\Suno Archiv';
 const ZIEL = args.find((a) => !a.startsWith('--') && !/^\d+$/.test(a)) ?? DEFAULT_TARGET;
 
 if (!existsSync(ZIEL)) {
@@ -112,6 +121,18 @@ if (!existsSync(ZIEL)) {
 type Auftrag = { song: Song; nummer: number; datei: string };
 
 const bestand: Bestand = ladeBestand(ZIEL);
+/** Songs, die fertig im Archiv liegen: id -> Pfad der Datei. Im Archiv-Modus selbst leer. */
+const imArchiv = new Map<string, string>();
+if (!ALLE && existsSync(ARCHIV) && ARCHIV.toLowerCase() !== ZIEL.toLowerCase()) {
+  for (const [id, e] of Object.entries(ladeBestand(ARCHIV).eintraege)) {
+    const pfad = join(ARCHIV, e.datei);
+    try {
+      if (statSync(pfad).size > 100_000) imArchiv.set(id, pfad);
+    } catch {
+      /* Datei fehlt — dann eben laden */
+    }
+  }
+}
 /** Alles, was der Browser bisher gemeldet hat — nach id, damit Dubletten zusammenfallen. */
 const gemeldet = new Map<string, Song>();
 /** Songs, deren Link abgelaufen ist: der Browser wird um einen frischen gebeten. */
@@ -194,6 +215,8 @@ const server = createServer(async (req, res) => {
       limit: LIMIT,
       freischalten: FREISCHALTEN,
       alleFragen: ALLE_PRUEFEN,
+      alle: ALLE,
+      imArchiv: [...imArchiv.keys()],
     });
     return;
   }
@@ -377,6 +400,16 @@ async function ladeEinen(auftrag: Auftrag, belegt: Set<string>): Promise<void> {
 
   try {
     let groesse: number;
+    const archivDatei = imArchiv.get(song.id);
+    if (archivDatei) {
+      // Liegt schon im Archiv (samt Cover und Titel) — kopieren statt laden.
+      copyFileSync(archivDatei, pfad);
+      bestand.eintraege[song.id] = { nummer, datei, titel: song.title };
+      belegt.add(datei.toLowerCase());
+      stand.geladen++;
+      log('info', 'Song aus Archiv kopiert', { id: song.id, datei, nummer, quelle: archivDatei });
+      return;
+    }
     try {
       groesse = await ladeDatei(song.audio_url, pfad, song.id, song.media_urls, song.download_url);
     } catch (ersterFehler) {
