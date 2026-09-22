@@ -60,7 +60,10 @@
   const warte = (ms) => new Promise((r) => setTimeout(r, ms));
   const zeig = (t, f) => console.log('%c' + t, 'font-size:15px;font-weight:bold;color:' + (f || '#0a0'));
 
-  if (!window.Clerk || !window.Clerk.session) {
+  // Suno stellt window.Clerk nicht mehr bereit; das Sitzungs-Token steht aber im
+  // Cookie __session, das die Seite selbst laufend erneuert.
+  const ausCookie = () => { const m = document.cookie.match(/(?:^|; )__session=([^;]+)/); return m ? m[1] : null; };
+  if (!(window.Clerk && window.Clerk.session) && !ausCookie()) {
     zeig('❗ Keine Suno-Anmeldung auf dieser Seite. Bitte https://suno.com/me öffnen.', '#c00');
     return;
   }
@@ -72,8 +75,14 @@
   let tokenBis = 0;
   const holeToken = async () => {
     if (token && Date.now() < tokenBis) return token;
-    token = await window.Clerk.session.getToken();
-    tokenBis = Date.now() + 40000;
+    if (window.Clerk && window.Clerk.session) {
+      token = await window.Clerk.session.getToken();
+      tokenBis = Date.now() + 40000;
+    } else {
+      // Das Cookie erneuert die Seite selbst, darum bei jeder Anfrage frisch lesen.
+      token = ausCookie();
+      tokenBis = 0;
+    }
     return token;
   };
 

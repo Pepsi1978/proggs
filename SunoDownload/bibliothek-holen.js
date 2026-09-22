@@ -134,11 +134,17 @@
   window.sunoStand = () => songs.size;
 
   // ---------------------------------------------------------------- Anmeldung
-  if (!window.Clerk || !window.Clerk.session) {
+  // Suno stellt window.Clerk nicht mehr bereit; das Sitzungs-Token steht aber im
+  // Cookie __session, das die Seite selbst laufend erneuert.
+  const ausCookie = () => { const m = document.cookie.match(/(?:^|; )__session=([^;]+)/); return m ? m[1] : null; };
+  if (!(window.Clerk && window.Clerk.session) && !ausCookie()) {
     zeig('❗ Keine Suno-Anmeldung auf dieser Seite. Bitte https://suno.com/me öffnen.', '#c00');
     return;
   }
-  const token = async () => { try { return await window.Clerk.session.getToken(); } catch (e) { return null; } };
+  const token = async () => {
+    try { if (window.Clerk && window.Clerk.session) return await window.Clerk.session.getToken(); } catch (e) { /* Cookie versuchen */ }
+    return ausCookie();
+  };
 
   const hol = async (adresse) => {
     try {
