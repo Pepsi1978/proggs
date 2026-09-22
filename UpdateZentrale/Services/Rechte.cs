@@ -15,9 +15,49 @@ public static class Rechte
 {
     private const string LayersSchluessel = @"Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers";
 
-    public static string EigeneExe { get; } = Process.GetCurrentProcess().MainModule?.FileName
-                                              ?? Environment.ProcessPath
-                                              ?? "";
+    /// <summary>
+    /// The own exe -- also the registry value name of the RUNASADMIN entry, so it must be the
+    /// exact form Windows uses (measured: ProcessPath equals MainModule.FileName).
+    /// </summary>
+    public static string EigeneExe { get; } = EigeneExeErmitteln();
+
+    private static string EigeneExeErmitteln()
+    {
+        if (!string.IsNullOrWhiteSpace(Environment.ProcessPath)) return Environment.ProcessPath;
+        try
+        {
+            using var ich = Process.GetCurrentProcess();
+            return ich.MainModule?.FileName ?? "";
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
+    private const string AdminToken = "RUNASADMIN";
+
+    /// <summary>The AppCompat value is a list of space-separated tokens; only an exact token counts.</summary>
+    internal static bool HatAdminToken(string? wert)
+        => wert is not null && wert.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Any(t => t.Equals(AdminToken, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Adds the token, keeping every other token as it was.</summary>
+    internal static string MitAdminToken(string? wert)
+    {
+        if (HatAdminToken(wert)) return wert!;
+        var basis = string.IsNullOrWhiteSpace(wert) ? "~" : wert.Trim();
+        return basis + " " + AdminToken;
+    }
+
+    /// <returns>The value without the exact token, or null when nothing meaningful is left.</returns>
+    internal static string? OhneAdminToken(string? wert)
+    {
+        if (wert is null) return null;
+        var rest = string.Join(' ', wert.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(t => !t.Equals(AdminToken, StringComparison.OrdinalIgnoreCase)));
+        return string.IsNullOrWhiteSpace(rest) || rest == "~" ? null : rest;
+    }
 
     public static bool IstErhoeht
     {
@@ -42,8 +82,7 @@ public static class Rechte
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(LayersSchluessel);
-                return (key?.GetValue(EigeneExe) as string)?
-                    .Contains("RUNASADMIN", StringComparison.OrdinalIgnoreCase) == true;
+                return HatAdminToken(key?.GetValue(EigeneExe) as string);
             }
             catch
             {
@@ -61,25 +100,16 @@ public static class Rechte
             using var key = Registry.CurrentUser.CreateSubKey(LayersSchluessel, writable: true);
             if (key is null) return false;
 
+            var vorhanden = key.GetValue(EigeneExe) as string;
             if (aktiv)
             {
-                var vorhanden = key.GetValue(EigeneExe) as string ?? "~";
-                if (!vorhanden.Contains("RUNASADMIN", StringComparison.OrdinalIgnoreCase))
-                {
-                    vorhanden = (vorhanden.Trim() + " RUNASADMIN").Trim();
-                }
-                key.SetValue(EigeneExe, vorhanden, RegistryValueKind.String);
+                key.SetValue(EigeneExe, MitAdminToken(vorhanden), RegistryValueKind.String);
             }
             else
             {
-                var vorhanden = key.GetValue(EigeneExe) as string;
                 if (vorhanden is null) return true;
-
-                var rest = string.Join(' ', vorhanden
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Where(t => !t.Equals("RUNASADMIN", StringComparison.OrdinalIgnoreCase)));
-
-                if (string.IsNullOrWhiteSpace(rest) || rest == "~") key.DeleteValue(EigeneExe, throwOnMissingValue: false);
+                var rest = OhneAdminToken(vorhanden);
+                if (rest is null) key.DeleteValue(EigeneExe, throwOnMissingValue: false);
                 else key.SetValue(EigeneExe, rest, RegistryValueKind.String);
             }
             return true;
@@ -90,16 +120,21 @@ public static class Rechte
         }
     }
 
-    /// <summary>Starts a second, elevated instance and reports whether it came up.</summary>
+    /// <summary>
+    /// Starts the elevated successor and reports whether it came up. This instance keeps the
+    /// single-instance lock during the UAC prompt; the successor gets this PID and waits for
+    /// this process to end before it claims the lock (see Uebernahme).
+    /// </summary>
     public static bool NeuStartenAlsAdmin()
     {
         if (string.IsNullOrWhiteSpace(EigeneExe)) return false;
 
         try
         {
-            Process.Start(new ProcessStartInfo
+            using var _ = Process.Start(new ProcessStartInfo
             {
                 FileName = EigeneExe,
+                Arguments = Uebernahme.Argument(Environment.ProcessId),
                 UseShellExecute = true,
                 Verb = "runas",
                 WorkingDirectory = Path.GetDirectoryName(EigeneExe) ?? ""

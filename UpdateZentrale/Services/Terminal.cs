@@ -26,12 +26,24 @@ public static class Terminal
             Arbeitsverzeichnis,
             abbruch);
 
+        return Auswerten(lauf);
+    }
+
+    /// <summary>
+    /// The text shown for a run. A cancel is a cancel -- not "code -1" and not a time limit; a
+    /// problem while ending the process tree stays visible.
+    /// </summary>
+    internal static string Auswerten(BefehlErgebnis lauf)
+    {
         var ausgabe = string.IsNullOrWhiteSpace(lauf.Ausgabe)
             ? "(keine Ausgabe)"
             : lauf.Ausgabe;
 
-        if (lauf.Abgelaufen) ausgabe += "\n[Zeitlimit von 10 Minuten überschritten]";
+        if (lauf.Abgebrochen) ausgabe += "\n[Abgebrochen]";
+        else if (lauf.Abgelaufen) ausgabe += "\n[Zeitlimit von 10 Minuten überschritten]";
         else if (lauf.ExitCode != 0) ausgabe += "\n[Beendet mit Code " + lauf.ExitCode + "]";
+
+        if (!string.IsNullOrWhiteSpace(lauf.BeendenProblem)) ausgabe += "\n[Beenden unvollständig: " + lauf.BeendenProblem + "]";
 
         return ausgabe;
     }
@@ -50,7 +62,7 @@ public static class Terminal
         {
             if (File.Exists(wt))
             {
-                Process.Start(new ProcessStartInfo
+                using var _ = Process.Start(new ProcessStartInfo
                 {
                     FileName = wt,
                     Arguments = "-d \"" + ordner + "\"",
@@ -59,7 +71,7 @@ public static class Terminal
             }
             else
             {
-                Process.Start(new ProcessStartInfo
+                using var _ = Process.Start(new ProcessStartInfo
                 {
                     FileName = PowerShellPfad(),
                     WorkingDirectory = ordner,

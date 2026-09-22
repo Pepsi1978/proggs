@@ -43,9 +43,10 @@ public sealed partial class HauptViewModel : ObservableObject
 
         // The updater is meant to be able to install anything, so it marks itself to always run
         // elevated on the first launch. The switch in the footer turns that off again.
-        if (!_einstellungen.AdminStartGesetzt)
+        // Marked as done only when the registry write really succeeded -- otherwise the next start
+        // tries again instead of the app believing in a setting Windows never got.
+        if (!_einstellungen.AdminStartGesetzt && Rechte.ImmerAlsAdminSetzen(true))
         {
-            Rechte.ImmerAlsAdminSetzen(true);
             _einstellungen.AdminStartGesetzt = true;
             _einstellungen.Speichern();
         }
@@ -396,7 +397,7 @@ public sealed partial class HauptViewModel : ObservableObject
     {
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = Pfade.KatalogDatei, UseShellExecute = true });
+            using var _ = Process.Start(new ProcessStartInfo { FileName = Pfade.KatalogDatei, UseShellExecute = true });
         }
         catch (Exception ex)
         {

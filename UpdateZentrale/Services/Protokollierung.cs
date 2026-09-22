@@ -123,7 +123,7 @@ public static class Protokollierung
         try
         {
             Directory.CreateDirectory(Ordner);
-            Process.Start(new ProcessStartInfo { FileName = Ordner, UseShellExecute = true });
+            using var _ = Process.Start(new ProcessStartInfo { FileName = Ordner, UseShellExecute = true });
         }
         catch
         {
@@ -136,7 +136,7 @@ public static class Protokollierung
         try
         {
             if (!File.Exists(ziel)) { OrdnerOeffnen(); return; }
-            Process.Start(new ProcessStartInfo { FileName = ziel, UseShellExecute = true });
+            using var _ = Process.Start(new ProcessStartInfo { FileName = ziel, UseShellExecute = true });
         }
         catch
         {

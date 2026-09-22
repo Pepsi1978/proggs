@@ -9,7 +9,8 @@ public partial class App : Application
     {
         // Only one window: two instances would write the same settings and log files, and two
         // update runs could meet on the same installer.
-        if (!Einzelstart.Beanspruchen())
+        // e.Args carries the handoff PID when this is the elevated successor of a running instance.
+        if (!Einzelstart.Beanspruchen(e.Args))
         {
             Einzelstart.VorhandenesFensterZeigen();
             Shutdown();
