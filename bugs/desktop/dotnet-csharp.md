@@ -5,7 +5,7 @@
 > String, Doku, Versions-Bump) ausgenommen. Loesungen sind **funktionserhaltend** — nie
 > "Feature weglassen".
 >
-> **Stand:** recherchiert am **2026-06-02**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax)
+> **Stand:** recherchiert am **2026-06-02**, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax); **2026-09-22** eigener Fund §17.7 (UpdateZentrale, Update-Skript-Orchestrierung)
 > — **LIVE jetzt .NET 10** (Sprung von .NET 8): `dotnet --version` = **10.0.301**, alle 4 Projekte auf
 > **net10.0-windows**, **C# 14**.
 > **Anker:** dotnet=10.0  <!-- maschinenlesbar fuer check-version-anchor.py -->
@@ -1127,6 +1127,31 @@ Nuetzlich fuer kleine Tools/Skripte (ersetzt teils Python-Helfer auf Windows).
   **Async Forms final** (WFO5002 entfaellt). Neue Obsolete-Analyzer: **WFDEV004** (`Form.OnClosing`/`OnClosed`),
   **WFDEV005** (`GetData` → **`TryGetData<T>`**), **WFDEV006** (einzelne Legacy-Controls). Neue API `Form.ScreenCaptureMode`
   (`Allow`/`HideContent`/`HideWindow`).
+
+### 17.7 Update-Orchestrierung ueber Skripte: Pipe, Statuszeile, "neu" (eigener Fund, UpdateZentrale 2026-09-22)
+- **Geerbte Pipe:** Ein per `RedirectStandardOutput` gestartetes Skript, das selbst ein Programm mit
+  `UseShellExecute=false` startet, vererbt diesem die Ausgabe-Pipe. `ReadToEnd` wartet dann auf ein EOF,
+  das erst beim Beenden dieses Programms kommt: der Lauf haengt stundenlang. **FIX:** inkrementell lesen,
+  auf `WaitForExitAsync` warten, danach nur kurz auslaufen lassen und das Ergebnis als "Pipe gehalten"
+  kennzeichnen. Test: Skript startet `ping -n 60` und endet; der Lauf muss sofort zurueckkommen.
+- **Zwei Definitionen von "veraltet":** Pruefung zaehlte `git rev-list HEAD..origin/main -- <ordner>`
+  (auch Laufzeit-JSON und Profile), das Skript baut nur bei neuerem `.cs/.xaml/.csproj`. Folge: Karte meldet
+  immer wieder ein Update, das Skript lehnt ab. **FIX:** Pathspec auf Baudateien (`":(glob)<ordner>/**/*.cs"` …)
+  begrenzen, also dieselbe Definition wie das Skript.
+- **"started" ist kein Updatebeleg:** Ein Skript kann "started" melden, obwohl es nur den vorhandenen Build
+  gestartet hat. Build-Fingerabdruck vor/nach dem Lauf vergleichen, unveraendert = "war aktuell", nicht Fehler.
+- **Exitcodes von git/Dry-Run pruefen:** Ein gescheitertes `rev-list` oder ein abgebrochener Dry-Run ohne
+  Ausgabe liest sich sonst als "0 offen" = aktuell. Auch ein gescheitertes `git fetch` zaehlt: gegen das alte
+  `origin/main` liefert `rev-list` 0, obwohl der echte Remote weiter ist. Jeder dieser Fehlschlaege ergibt
+  "unbekannt", nie "aktuell" (getestet mit einem Klon, dessen Remote-URL ins Leere zeigt).
+- **Kein blinder Skriptstart bei unbekanntem Remote:** Das Skript baut nur den vorhandenen Checkout. Starten
+  nur, wenn lokal nachweislich neuerer Quellcode liegt (Quellversion > Build oder Quelldatei juenger als die exe),
+  sonst ehrlicher Abbruch. Andernfalls entsteht wieder die "gleiches Update nochmal"-Schleife.
+- **Fingerabdruck beidseitig:** Erfolg nur, wenn der Stand vorher UND nachher lesbar ist und sich unterscheidet.
+  Eine leere Seite ist ein Lesefehler, kein Wechsel. Eine gescheiterte Versionsabfrage darf nicht auf einen
+  anderen Fingerabdruck-Typ (z. B. Dry-Run "nichts offen") ausweichen, weil zwei verschiedenartige Werte
+  immer verschieden sind.
+- **Versionen numerisch vergleichen:** `"1.24.50.0".StartsWith("1.24.5")` ist true, also Praefixtest verboten.
 
 ## Pflicht-Checkliste vor C#/.NET-Arbeit
 

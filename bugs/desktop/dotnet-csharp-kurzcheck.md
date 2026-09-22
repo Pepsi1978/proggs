@@ -28,3 +28,4 @@
 | 14 | Memory-Leak bei Events/Timern | Im `Dispose`/`Unloaded` immer `-=` und `Stop()` | §9.1 |
 | 15 | `Process.Start(url)` wirft | `new ProcessStartInfo(url){ UseShellExecute = true }` | §13.8 |
 | 16 | One-Shot-Hotkey haengt nach mehrfacher Nutzung | KeyUp-Debounce-Flag durch zeitbasierten Cooldown ersetzen | §5.8 |
+| 17 | Update-Skript per Pipe: Lauf haengt / meldet ewig "Update" | Inkrementell lesen, nach Exit nicht auf EOF warten; "veraltet" identisch zum Skript definieren; fetch/rev-list-Fehler = unbekannt; Erfolg nur mit beiden Fingerabdruecken | §17.7 |
