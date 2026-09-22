@@ -27,9 +27,14 @@ Mit gesetztem Häkchen sind beide über denselben Socket `openlauncher` und dens
 Helfer les- und beschreibbar. Der Wrapper startet die CLI-PowerShell mit einem aus WSL
 geprüft startbaren Pfad. Die Store-PowerShell im geschützten Paketordner
 `Program Files\WindowsApps` ist aus WSL gesperrt; stattdessen dient die
-App-Ausführungsverknüpfung. Der Wrapper legt die Sitzung erst getrennt an, prüft sie und
-hängt dann an. Stirbt die CLI sofort, erscheint ein klarer Fehler statt eines stillen
-`[exited]`. Beim normalen Start bestätigt das OpenLauncher-Log den Erfolg erst mit
+App-Ausführungsverknüpfung. Der Wrapper legt die Sitzung erst mit einem reinen
+Linux-Fenster `openlauncher-bootstrap` an, das ein versteckter `wsl.exe`-Halteprozess
+während des Starts hält. Die CLI läuft im Fenster `openlauncher-cli` über den
+instanzweiten Interop-Socket `/run/WSL/1_interop`. Erst wenn CIM den exakten inneren
+Skriptnamen bestätigt, verschwindet das Bootstrap-Fenster und der Wrapper hängt an.
+Sonst beendet er die Zielsitzung und startet nach Backoff neu, höchstens 3 Versuche.
+Danach folgt ein klarer Fehler statt eines stillen `[exited]`. Beim normalen Start
+bestätigt das OpenLauncher-Log den Erfolg erst mit
 `tmux: CLI-PowerShell in der Sitzung bestaetigt`. Computer Use, Tray-Helfer oder ein neuer Dienst sind nicht
 nötig. Ohne Häkchen gestartete Sitzungen lassen sich nachträglich nicht über die Brücke
 übernehmen.

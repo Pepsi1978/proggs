@@ -197,3 +197,60 @@ damit die Prozessprüfung `InnerMatch` von `start-wt-common.ps1`. Derselbe Pfad 
   Paketpfad, sofort sterbende CLI und realer Attach-Fehlerpfad.
 - `OpenLauncher/tests/check-tmux-attach-exit.py`: Exitcodes mit echtem pty.
 - `verify-tmux.ps1`: repariert, Claude, Codex CLI und OpenCode grün.
+
+## Interop-Wettlauf beim Pane-Start: `[exited]` trotz richtiger PowerShell (22.09.2026)
+
+**Symptom:** Zwei normale Starts um 02:10/02:11 endeten mit `PowerShell 7.6.6`, `[exited]`.
+Der tmux-Socket war danach weg. Das Launcher-Log meldete 30 s nach dem äußeren ERFOLG
+`FEHLER tmux: CLI-PowerShell nicht gestartet`. Derselbe Wrapper lief um 02:17 korrekt.
+
+**Belege:** Im WSL-Journal steht genau beim Pane-Start (`tmux child pane 446`) die Zeile
+`WSL (442 - Relay(443)) ERROR: InitCreateProcessUtilityVm:1942: read failed -1 9`.
+Beim erfolgreichen Start fehlt sie. Die Distro fuhr jeweils 15–25 s später herunter
+(„The system will power off now!“), weil kein `wsl.exe` mehr lief. Nur dadurch verschwand
+der Socket; das ist Folge, nicht Ursache.
+
+**Ursache:** Ein aus einem tmux-Pane gestartetes Windows-Programm nutzt den Interop-Socket
+aus `WSL_INTEROP`. Dieser gehört zu dem `wsl.exe`, das den tmux-Server bzw. die Sitzung
+angelegt hat. `wsl.exe … new-session -d` endet sofort. Verliert der Pane-Start den Wettlauf
+gegen dieses Ende, scheitert die Windows-Prozesserzeugung: keine CLI, Pane stirbt, `[exited]`.
+Gegenprobe: Hält das erzeugende `wsl.exe` länger (Halteprozess), stirbt die schon gestartete
+CLI beim Ende des Halteprozesses mit. Ein laufender Launcher-Server mit noch gültigem altem
+Socket verdeckt den Fehler in Tests.
+
+**Fix (`TmuxLauncher.BuildStartScript`, ohne `sh -c`, nur getrennte Argumente):**
+1. Pro Versuch legt ein versteckter `wsl.exe`-Halteprozess (`Start-Process`, nur einfache,
+   in C# geprüfte Tokens) die Sitzung mit dem Linux-Fenster `openlauncher-bootstrap`
+   (`sleep infinity`) an und wartet auf `tmux wait-for <sitzung>-frei-<n>`. So bleiben
+   WSL-Instanz und tmux-Server während Start und Prüfung bestehen.
+2. Die CLI startet per `new-window -n openlauncher-cli -e WSL_INTEROP=/run/WSL/1_interop`.
+   Der instanzweite Socket von WSL-init hängt an keinem einzelnen `wsl.exe` und keiner
+   Konsole. Ein-/Ausgabe, Fenstergröße und Beenden per `kill-session` funktionieren unverändert.
+3. Vor `attach-session` bestätigt CIM einen pwsh-/powershell-Prozess mit exakt dem inneren
+   Skriptnamen als letztem Pfadglied, der 1,5 s später noch lebt. Erst dann verschwindet das
+   Bootstrap-Fenster. Sonst: Zielsitzung beenden, Halteprozess freigeben, Backoff 2 s/4 s,
+   neu starten; nach 3 Versuchen klarer Fehler. Der Launcher-Nachweis wartet dafür 90 s.
+4. Wiederaufruf desselben Wrappers hängt eine laufende Sitzung ohne Neustart an; eine
+   hängengebliebene Sitzung mit Bootstrap-Fenster wird neu aufgebaut.
+
+**Tests:** `OpenLauncher/tests/check-tmux-start-retry.ps1` auf eigenem frischem Socket:
+exaktes Skriptmuster, keine Shell-Zusammensetzung, erster Start stirbt und zweiter wird
+bestätigt, Bootstrap entfernt, kein Halteprozess übrig, CLI überlebt dessen Ende; dauerhaft
+sterbende CLI mit genau 3 Versuchen, Backoff und ohne Restsitzung; Wiederanhängen ohne
+Neustart. Mutationsprobe: ohne `WSL_INTEROP=/run/WSL/1_interop` schlägt der Verhaltensteil
+fehl. `check-tmux-powershell.ps1`, `verify-tmux.ps1` (claude/codex/opencode),
+`check-tmux-attach-exit.py`, `check-tmux-mouse.py` grün.
+
+**Detach-Nachweis:** Eine reine Linux-tmux-Sitzung blieb ohne angehängten Client länger als
+54 s aktiv und Ubuntu blieb `Running`. Der tmux-Server beziehungsweise ein lebendes Pane
+hält WSL selbst aktiv; der Start-Halteprozess darf deshalb nach bestätigtem CLI-Start enden.
+
+## 🔗 Bezug ↔ Best Practices
+
+Wie man es von vornherein richtig macht: [`best-practices/desktop/openlauncher-windows-tmux.md`](../../best-practices/desktop/openlauncher-windows-tmux.md).
+
+| Bug-Abschnitt (hier) | Best Practice (→ best-practices/desktop/openlauncher-windows-tmux.md) |
+|----------------------|------------------------------------------------------------------------|
+| Windows-Pfade bei WSL-Aufrufen | §1 Argumente getrennt übergeben |
+| Store-PowerShell aus WSL gesperrt | §4 Erfolg am echten Zielprozess messen |
+| Interop-Wettlauf beim Pane-Start | §2 Instanz-Interop, §3 Halteprozess, §5 kontrolliert wiederholen, §6 frischer Test-Socket |

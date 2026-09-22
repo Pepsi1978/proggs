@@ -28,13 +28,13 @@ if ($realStore) {
         $wrapper = $T::BuildStartScript($script, $dir, $realStore)
         $content = Get-Content -LiteralPath $wrapper -Raw
         if ($content -match 'Program Files/WindowsApps') { throw 'Wrapper nutzt weiterhin den gesperrten Paketpfad.' }
-        if ($content -notmatch "'new-session' '-d'" -or $content -notmatch "'attach-session'") { throw 'Wrapper prüft die Sitzung nicht vor dem Anhängen.' }
+        if ($content -notmatch "'openlauncher-bootstrap'" -or $content -notmatch "WSL_INTEROP=/run/WSL/1_interop" -or $content -notmatch "'attach-session'") { throw 'Wrapper prüft die Sitzung nicht vor dem Anhängen.' }
         Remove-Item -LiteralPath $wrapper
-        # Sofort endende CLI: klarer Fehler statt stilles "[exited]"; die kurzlebige Sitzung existiert danach nicht mehr.
+        # Sofort endende CLI: klarer Fehler nach allen Startversuchen statt stilles "[exited]".
         Set-Content -LiteralPath $script -Value 'exit 1' -Encoding utf8
         $wrapper = $T::BuildStartScript($script, $dir, $realStore)
         $failed = $false
-        try { & $wrapper } catch { $failed = $_.Exception.Message -match 'sofort beendet' }
+        try { & $wrapper } catch { $failed = $_.Exception.Message -match 'nach 3 tmux-Startversuchen' }
         Remove-Item -LiteralPath $wrapper
         if (-not $failed) { throw 'Sofort sterbende CLI wurde nicht als Fehler gemeldet.' }
         # Anhängefehler: ohne Terminal scheitert attach-session real (Exit != 0) und muss klar gemeldet werden.

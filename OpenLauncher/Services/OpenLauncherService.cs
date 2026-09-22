@@ -763,7 +763,7 @@ try {
         var inner = name[..^suffix.Length] + ".ps1";
         return $$"""
 $innerPattern = [regex]::Escape({{PowerShellLiteral(inner)}})
-$deadline = (Get-Date).AddSeconds(30)
+$deadline = (Get-Date).AddSeconds(90)
 $innerPid = 0
 while (-not $innerPid -and (Get-Date) -lt $deadline) {
     $innerPid = @(Get-CimInstance Win32_Process -Filter "Name='pwsh.exe' OR Name='powershell.exe'" -ErrorAction SilentlyContinue |

@@ -30,7 +30,7 @@ try {
         $session = $Matches[1]; $distro = $Matches[2]
         $sessions += @{ session = $session; distro = $distro }
         # Nur der Client-Modus wird für den Test geändert; produktive Argumente bleiben erhalten.
-        if ($content -notmatch "'new-session' '-d'" -or $content -notmatch "'attach-session'") { throw 'Wrapper legt die Sitzung nicht geprüft an.' }
+        if ($content -notmatch "'openlauncher-bootstrap'" -or $content -notmatch "'attach-session'") { throw 'Wrapper legt die Sitzung nicht geprüft an.' }
         $detached = $content -replace "(?m)^.*'attach-session'.*$", ''
         & ([scriptblock]::Create($detached))
         $mouse = wsl -d $distro --exec tmux -L openlauncher show-options -gv mouse

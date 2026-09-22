@@ -108,3 +108,7 @@ best-practices/
 ## PCIe-Grafikkarten und BIOS-Diagnose (20.09.2026)
 
 [PCIe-Grafikkarten: Volltext](desktop/pcie-grafikkarten.md) · [Kurzcheck](desktop/pcie-grafikkarten-kurzcheck.md). Maximalfähigkeit und aktive Verbindung, Lastvergleich, exakte MSI-DDR4-BIOS-Zuordnung.
+
+## Windows-CLIs über WSL/tmux (22.09.2026)
+
+[WSL/tmux: Volltext](desktop/openlauncher-windows-tmux.md) · [Kurzcheck](desktop/openlauncher-windows-tmux-kurzcheck.md). Getrennte Argumente, Instanz-Interop für Panes, Halteprozess, CIM-Bestätigung, kontrollierte Wiederholung.

@@ -81,7 +81,7 @@ public static class TmuxLauncher
             + "). Die Store-PowerShell im Paketordner ist aus WSL gesperrt; bitte die App-Ausführungsverknüpfung für pwsh aktivieren oder Standard-Terminal wählen.");
     }
 
-    public static string BuildStartScript(string script, string workDir, string powerShell)
+    public static string BuildStartScript(string script, string workDir, string powerShell, string socket = "openlauncher")
     {
         if (!File.Exists(script) || !File.Exists(powerShell) || !Directory.Exists(workDir))
             throw new IOException("tmux benötigt ein vorhandenes Startskript, PowerShell und Arbeitsverzeichnis.");
@@ -91,17 +91,18 @@ public static class TmuxLauncher
         var distro = Query("--exec", "printenv", "WSL_DISTRO_NAME");
         if (string.IsNullOrWhiteSpace(distro) || distro.StartsWith("docker-", StringComparison.OrdinalIgnoreCase))
             throw new IOException("Bitte Ubuntu oder eine andere Benutzer-Distribution als WSL-Standard festlegen.");
-        var tmux = Query("-d", distro, "--exec", "sh", "-c", "command -v tmux");
-        if (string.IsNullOrWhiteSpace(tmux)) throw new IOException("tmux fehlt in " + distro + ". Bitte tmux installieren oder Standard-Terminal wählen.");
+        var tmux = LinuxProgram(distro, "tmux");
+        var sleep = LinuxProgram(distro, "sleep");
+        // Instanzweiter Interop-Socket von WSL-init: unabhängig von jedem einzelnen wsl.exe-Aufruf.
+        try { Query("-d", distro, "--exec", "test", "-e", InstanceInterop); }
+        catch (IOException) { throw new IOException("WSL-Interop " + InstanceInterop + " fehlt in " + distro + ". Bitte WSL aktualisieren oder Standard-Terminal wählen."); }
         var linuxDir = Query("-d", distro, "--exec", "wslpath", "-u", workDir);
         var linuxShell = ResolveWslPowerShell(distro, powerShell);
         var session = "openlauncher-" + Guid.NewGuid().ToString("N");
+        foreach (var token in new[] { distro, tmux, sleep, socket })
+            if (!IsPlainToken(token)) throw new IOException("Unerwartetes Zeichen in WSL-Angabe: " + token);
         var wrapper = Path.Combine(Path.GetTempPath(), Path.GetFileNameWithoutExtension(script) + "-tmux.ps1");
-        var baseArgs = new[] { "-d", distro, "--exec", tmux, "-L", "openlauncher" };
-        // --exec and separate tmux command arguments avoid shell interpretation of paths, quotes and metacharacters.
-        var args = new[] { "new-session", "-d", "-s", session, "-x", "__W__", "-y", "__H__",
-            "-c", linuxDir, linuxShell, "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script,
-            ";", "set-option", "-g", "mouse", "on",
+        var mouse = new[] { "set-option", "-g", "mouse", "on",
             ";", "bind-key", "-T", "root", "WheelUpPane", "if-shell", "-F", "#{pane_in_mode}",
             "send-keys -M", "copy-mode -e; send-keys -M",
             ";", "bind-key", "-T", "root", "WheelDownPane", "if-shell", "-F", "#{pane_in_mode}",
@@ -110,27 +111,106 @@ public static class TmuxLauncher
             "send-keys -X -N 5 scroll-up", "copy-mode -e; send-keys -X -N 5 scroll-up",
             ";", "bind-key", "-T", "root", "WheelDownStatus", "if-shell", "-F", "#{pane_in_mode}",
             "send-keys -X -N 5 scroll-down", "" };
-        var tmuxCall = "& " + Literal(Wsl) + " " + string.Join(" ", baseArgs.Select(Literal));
-        var target = Literal("=" + session);
-        // Erst getrennt anlegen und prüfen, dann anhängen: ein sofort sterbender Pane darf nicht als
-        // stilles "[exited]" enden. Derselbe Wrapper hängt eine noch laufende Sitzung wieder an.
-        var content = "# tmux-Sitzung: " + session + " | WSL: " + distro + "\n"
-            + "$ErrorActionPreference = 'Stop'\n"
-            + "$env:TERM = 'xterm-256color'\n"
-            + tmuxCall + " 'has-session' '-t' " + target + " 2>$null\n"
-            + "if ($LASTEXITCODE -ne 0) {\n"
-            + "    try { $w = [Math]::Max(80, [Console]::WindowWidth); $h = [Math]::Max(24, [Console]::WindowHeight) } catch { $w = 160; $h = 48 }\n"
-            + "    " + tmuxCall + " " + string.Join(" ", args.Select(Literal)).Replace("'__W__'", "$w").Replace("'__H__'", "$h") + "\n"
-            + "    if ($LASTEXITCODE -ne 0) { throw 'tmux-Start fehlgeschlagen. Bitte WSL, tmux und Windows-Interop prüfen.' }\n"
-            + "    Start-Sleep -Milliseconds 1500\n"
-            + "    " + tmuxCall + " 'has-session' '-t' " + target + " 2>$null\n"
-            + "    if ($LASTEXITCODE -ne 0) { throw 'Die CLI hat die tmux-Sitzung sofort beendet. Bitte PowerShell-Start aus WSL und das Startskript prüfen.' }\n"
-            + "}\n"
-            + tmuxCall + " 'attach-session' '-t' " + target + "\n"
-            // tmux meldet bei normalem Sitzungsende und bei Detach 0, bei fehlender Sitzung oder Anhängefehler ungleich 0.
-            + "if ($LASTEXITCODE -ne 0) { throw 'Anhängen an die tmux-Sitzung fehlgeschlagen oder Sitzung bereits beendet. Bitte WSL, tmux und das Startskript prüfen.' }\n";
+        var cli = new[] { "-c", linuxDir, "-e", "WSL_INTEROP=" + InstanceInterop,
+            linuxShell, "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script };
+        File.WriteAllText(wrapper, WrapperScript(session, distro, tmux, socket, sleep, mouse, cli, CliPattern(script)), new UTF8Encoding(false));
         // Keep the wrapper after detach: the same copied command reattaches to the same session.
-        File.WriteAllText(wrapper, content, new UTF8Encoding(false));
         return wrapper;
+    }
+
+    public const string InstanceInterop = "/run/WSL/1_interop";
+    public const string BootstrapWindow = "openlauncher-bootstrap";
+    public const string CliWindow = "openlauncher-cli";
+    public const int MaxStartAttempts = 3;
+
+    private static string LinuxProgram(string distro, string name)
+    {
+        try { return Query("-d", distro, "--exec", "which", name); }
+        catch (IOException) { throw new IOException(name + " fehlt in " + distro + ". Bitte " + name + " installieren oder Standard-Terminal wählen."); }
+    }
+
+    /// <summary>Der Halteprozess wird per Start-Process übergeben; nur Zeichen ohne Quoting-Bedarf sind dort erlaubt.</summary>
+    public static bool IsPlainToken(string token) =>
+        token.Length > 0 && token.All(c => char.IsAsciiLetterOrDigit(c) || "._/+-=".Contains(c));
+
+    /// <summary>Genau der innere Skriptname als letztes Pfadglied, nicht der Wrapper (*-tmux.ps1) oder ein längerer Name.</summary>
+    public static string CliPattern(string script) =>
+        @"[\\/]" + System.Text.RegularExpressions.Regex.Escape(Path.GetFileName(script)) + @"(?=[""'\s]|$)";
+
+    /// <summary>
+    /// Ablauf je Versuch: ein versteckter wsl.exe-Halteprozess legt die Sitzung mit einem reinen Linux-Bootstrap-Fenster an
+    /// und hält WSL bis zur Freigabe aktiv. Die CLI startet in einem eigenen Fenster über den instanzweiten Interop-Socket,
+    /// damit ihr Windows-Prozess weder vom Ende eines wsl.exe noch von dessen Konsole abhängt. Erst wenn CIM die echte
+    /// CLI-PowerShell über den exakten Skriptnamen bestätigt, verschwindet das Bootstrap-Fenster und der Wrapper hängt an;
+    /// sonst wird die Zielsitzung beendet und nach Backoff neu gestartet.
+    /// </summary>
+    private static string WrapperScript(string session, string distro, string tmux, string socket, string sleep, string[] mouse, string[] cli, string pattern)
+    {
+        static string List(System.Collections.Generic.IEnumerable<string> items) => "@(" + string.Join(", ", items.Select(Literal)) + ")";
+        return $$"""
+# tmux-Sitzung: {{session}} | WSL: {{distro}} | Socket: {{socket}}
+$ErrorActionPreference = 'Stop'
+$env:TERM = 'xterm-256color'
+$wsl = {{Literal(Wsl)}}
+$tmux = {{List(new[] { "-d", distro, "--exec", tmux, "-L", socket })}}
+$session = {{Literal(session)}}
+$target = '=' + $session
+$bootstrap = $target + ':=' + {{Literal(BootstrapWindow)}}
+$cliWindow = $target + ':=' + {{Literal(CliWindow)}}
+$mouse = {{List(mouse)}}
+$cli = {{List(cli)}}
+$cliPattern = {{Literal(pattern)}}
+function Invoke-Tmux { & $wsl @tmux @args 2>$null | Out-Null; $LASTEXITCODE }
+function Get-CliPid {
+    @(Get-CimInstance Win32_Process -Filter "Name='pwsh.exe' OR Name='powershell.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match $cliPattern } | Select-Object -First 1).ProcessId
+}
+$windows = @(& $wsl @tmux 'list-windows' '-t' $target '-F' '#{window_name}' 2>$null)
+if ($LASTEXITCODE -ne 0 -or $windows -contains {{Literal(BootstrapWindow)}}) {
+    $confirmed = $false
+    for ($attempt = 1; $attempt -le {{MaxStartAttempts}} -and -not $confirmed; $attempt++) {
+        if ($attempt -gt 1) {
+            Write-Host "tmux: CLI nicht bestätigt, Neustart $attempt/{{MaxStartAttempts}}"
+            Start-Sleep -Seconds (2 * ($attempt - 1))
+        }
+        $null = Invoke-Tmux 'kill-session' '-t' $target
+        try { $w = [Math]::Max(80, [Console]::WindowWidth); $h = [Math]::Max(24, [Console]::WindowHeight) } catch { $w = 160; $h = 48 }
+        $release = "$session-frei-$attempt"
+        $holder = Start-Process -FilePath $wsl -WindowStyle Hidden -PassThru -ArgumentList ($tmux + @('new-session', '-d', '-s', $session, '-x', "$w", '-y', "$h",
+            '-n', {{Literal(BootstrapWindow)}}, {{Literal(sleep)}}, 'infinity', ';', 'wait-for', $release))
+        try {
+            $deadline = (Get-Date).AddSeconds(10)
+            while ((Invoke-Tmux 'has-session' '-t' $target) -ne 0) {
+                if ($holder.HasExited -or (Get-Date) -gt $deadline) { break }
+                Start-Sleep -Milliseconds 200
+            }
+            if ((Invoke-Tmux 'has-session' '-t' $target) -ne 0) { continue }
+            $null = Invoke-Tmux @mouse
+            if ((Invoke-Tmux 'new-window' '-t' $target '-n' {{Literal(CliWindow)}} @cli) -ne 0) { continue }
+            $deadline = (Get-Date).AddSeconds(15)
+            while ((Get-Date) -lt $deadline) {
+                $cliPid = Get-CliPid
+                if ($cliPid) {
+                    # Kurzlebige Treffer (sofort endendes Startskript) zählen nicht als Start.
+                    Start-Sleep -Milliseconds 1500
+                    if (Get-Process -Id $cliPid -ErrorAction SilentlyContinue) { $confirmed = $true }
+                    break
+                }
+                if ((Invoke-Tmux 'list-panes' '-t' $cliWindow) -ne 0) { break }
+                Start-Sleep -Milliseconds 500
+            }
+        } finally {
+            if ($confirmed) { $null = Invoke-Tmux 'kill-window' '-t' $bootstrap }
+            else { $null = Invoke-Tmux 'kill-session' '-t' $target }
+            $null = Invoke-Tmux 'wait-for' '-S' $release
+            if (-not $holder.WaitForExit(5000)) { Stop-Process -Id $holder.Id -Force -ErrorAction SilentlyContinue }
+        }
+    }
+    if (-not $confirmed) { throw 'Die CLI-PowerShell wurde nach {{MaxStartAttempts}} tmux-Startversuchen nicht bestätigt. Bitte WSL-Interop und das Startskript prüfen.' }
+}
+& $wsl @tmux 'attach-session' '-t' $target
+if ($LASTEXITCODE -ne 0) { throw 'Anhängen an die tmux-Sitzung fehlgeschlagen oder Sitzung bereits beendet. Bitte WSL, tmux und das Startskript prüfen.' }
+
+""";
     }
 }
