@@ -146,6 +146,13 @@ let letzterKontakt = 0;
 let browserGesamt = 0;
 let ladephaseLaeuft = false;
 let stand = { geladen: 0, fehler: 0, gesamt: 0, aktuell: '' };
+/**
+ * Archiv-Modus: Block fertig geladen, der Downloader wartet auf den nächsten. Die
+ * Brücke erfährt das über /auftrag (weiter: true), startet sich selbst neu und holt
+ * die nächsten 100. Ein neues /start setzt das zurück.
+ */
+let naechsterBlock = false;
+let letzterStand = { ...stand };
 
 // ---------------------------------------------------------------- Server
 
@@ -194,6 +201,7 @@ const server = createServer(async (req, res) => {
 
   // Der Browser meldet sich an und erfährt, was schon auf der Platte liegt.
   if (pfad === '/start') {
+    naechsterBlock = false;
     const bekannt: string[] = [];
     const fehlt: string[] = [];
     for (const [id, e] of Object.entries(bestand.eintraege)) {
@@ -281,8 +289,11 @@ const server = createServer(async (req, res) => {
   if (pfad === '/auftrag') {
     antwort(res, {
       ids: [...nachschubOffen],
-      stand,
-      fertig: !ladephaseLaeuft && browserFertig && stand.gesamt > 0 && stand.geladen + stand.fehler >= stand.gesamt,
+      stand: naechsterBlock ? letzterStand : stand,
+      fertig:
+        naechsterBlock ||
+        (!ladephaseLaeuft && browserFertig && stand.gesamt > 0 && stand.geladen + stand.fehler >= stand.gesamt),
+      weiter: naechsterBlock,
     });
     return;
   }
@@ -504,7 +515,9 @@ async function main(): Promise<void> {
   } else {
     browserVorbereiten();
   }
-  console.log('  Warte auf den Browser …');
+  // Archiv-Modus: Block für Block (je 100 Songs) — laden, dann den nächsten abwarten.
+  for (let block = 1; ; block++) {
+  console.log(block > 1 ? `  Block ${block}: warte auf die nächsten Songs aus dem Browser …` : '  Warte auf den Browser …');
 
   await warteAufBrowser();
   process.stdout.write('\n');
@@ -520,8 +533,8 @@ async function main(): Promise<void> {
 
   const songs = [...gemeldet.values()];
   if (!songs.length) {
-    console.log('  Nichts zu laden — es sind keine freigeschalteten neuen Songs da.');
-    console.log('  (Auf suno.com die gewünschten Songs von Hand freischalten, dann erneut starten.)');
+    if (ALLE) console.log('  ✅ Archiv vollständig — es fehlt kein Song mehr.');
+    else console.log('  Nichts zu laden — alle Songs mit Daumen hoch sind schon gesichert.');
     server.close();
     return;
   }
@@ -616,6 +629,22 @@ async function main(): Promise<void> {
     console.log('  Einfach nochmal starten — Fertiges wird übersprungen.');
   }
   console.log('');
+
+  // Archiv: weiter mit dem nächsten Block. Hat ein Block gar nichts geschafft, wird
+  // aufgehört — sonst liefe dieselbe Fehlerrunde endlos.
+  if (ALLE && stand.geladen > 0) {
+    letzterStand = { ...stand };
+    gemeldet.clear();
+    nachschubOffen.clear();
+    browserFertig = false;
+    browserGesamt = 0;
+    fehlerliste.length = 0;
+    stand = { geladen: 0, fehler: 0, gesamt: 0, aktuell: '' };
+    naechsterBlock = true;
+    continue;
+  }
+  break;
+  }
 
   // Dem Browser noch einen Moment Zeit, das Ende mitzubekommen.
   await new Promise((r) => setTimeout(r, 3000));

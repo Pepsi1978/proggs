@@ -377,7 +377,7 @@
     const offenGesamt = liste.length;
     liste = liste.slice(0, ARCHIV_JE_LAUF);
     zeig('🗄️ Archiv: ' + offenGesamt + ' Songs fehlen noch — dieser Start holt die ältesten ' + liste.length +
-      (offenGesamt > liste.length ? ', danach bitte erneut starten.' : '.'), '#06c');
+      (offenGesamt > liste.length ? ', danach geht es von selbst mit den nächsten weiter.' : '.'), '#06c');
   }
   else zeig('👍 ' + liste.length + ' Songs mit Daumen hoch fehlen noch (' + (alleFehlenden - liste.length) +
     ' ohne Daumen werden übergangen).', '#06c');
@@ -681,6 +681,15 @@
       // Der Downloader hat den Server geschlossen — er ist fertig.
       zeig('✅ Der Downloader hat sich beendet.', '#0a0');
       herzAktiv = false;
+      break;
+    }
+    if (auftrag.fertig && auftrag.weiter) {
+      // Archiv: Block geladen — das Skript startet sich neu und holt die nächsten 100.
+      zeig('✅ Block fertig: ' + auftrag.stand.geladen + ' geladen. Weiter mit dem nächsten Block …', '#0a0');
+      herzAktiv = false;
+      if (takt) takt.terminate();
+      const text = await fetch(BASIS + '/skript').then((r) => r.text());
+      (0, eval)(text);
       break;
     }
     if (auftrag.fertig) {
