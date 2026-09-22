@@ -154,7 +154,7 @@ public sealed class ProzessdienstTests : IDisposable
     public void Dispose()
     {
         ProzessbaumTests.Aufraeumen(_pids.Select(p => (int?)p).ToArray());
-        try { Directory.Delete(_wurzel, true); } catch { }
+        TestOrdner.Loeschen(_wurzel);
     }
 
     private string PingKopie(string ordner)

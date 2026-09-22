@@ -29,8 +29,9 @@ public static class Rechte
             using var ich = Process.GetCurrentProcess();
             return ich.MainModule?.FileName ?? "";
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "rechte", Schwere.Warnung);
             return "";
         }
     }
@@ -68,8 +69,9 @@ public static class Rechte
                 using var identitaet = WindowsIdentity.GetCurrent();
                 return new WindowsPrincipal(identitaet).IsInRole(WindowsBuiltInRole.Administrator);
             }
-            catch
+            catch (Exception diagAusnahme)
             {
+                Diagnose.Gefangen(diagAusnahme, "rechte", Schwere.Warnung);
                 return false;
             }
         }
@@ -84,8 +86,9 @@ public static class Rechte
                 using var key = Registry.CurrentUser.OpenSubKey(LayersSchluessel);
                 return HatAdminToken(key?.GetValue(EigeneExe) as string);
             }
-            catch
+            catch (Exception diagAusnahme)
             {
+                Diagnose.Gefangen(diagAusnahme, "rechte", Schwere.Warnung);
                 return false;
             }
         }
@@ -114,8 +117,9 @@ public static class Rechte
             }
             return true;
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "rechte", Schwere.Warnung);
             return false;
         }
     }
@@ -141,8 +145,9 @@ public static class Rechte
             });
             return true;
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "rechte", Schwere.Info);
             return false;   // UAC prompt dismissed.
         }
     }

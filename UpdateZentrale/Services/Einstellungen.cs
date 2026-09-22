@@ -58,8 +58,9 @@ public sealed class Einstellungen
                 return JsonSerializer.Deserialize<Einstellungen>(text, Optionen) ?? new Einstellungen();
             }
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "einstellungen", Schwere.Warnung);
             // A corrupt settings file must never block the app; defaults are always usable.
         }
         return new Einstellungen();
@@ -72,8 +73,9 @@ public sealed class Einstellungen
             Directory.CreateDirectory(Pfade.BenutzerOrdner);
             File.WriteAllText(Pfade.EinstellungsDatei, JsonSerializer.Serialize(this, Optionen));
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "einstellungen", Schwere.Warnung);
         }
     }
 

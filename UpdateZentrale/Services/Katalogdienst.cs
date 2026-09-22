@@ -43,6 +43,7 @@ public static class Katalogdienst
         }
         catch (Exception ex)
         {
+            Diagnose.Ausnahme(ex, "katalog", "programs.json lesen");
             return (new ProgrammKatalog(), $"Katalog konnte nicht gelesen werden: {ex.Message}");
         }
     }

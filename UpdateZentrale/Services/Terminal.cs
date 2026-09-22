@@ -80,8 +80,9 @@ public static class Terminal
             }
             return true;
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "terminal", Schwere.Warnung);
             return false;
         }
     }

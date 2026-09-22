@@ -53,6 +53,7 @@ public sealed partial class HauptViewModel : ObservableObject
         _immerAlsAdmin = Rechte.ImmerAlsAdmin;
 
         _koordination.Geaendert += AufKoordinationGeaendert;
+        Diagnose.WarnungAbonnieren(AufDiagnoseWarnung);   // also shows a warning raised before this point
         KatalogLaden();
     }
 
@@ -156,14 +157,18 @@ public sealed partial class HauptViewModel : ObservableObject
         TerminalAusgabe += (TerminalAusgabe.Length == 0 ? "" : "\n\n") + "PS> " + befehl + "\n";
         Befehl = "";
 
+        using var vorgang = Diagnose.VorgangBeginnen("terminal", null, "Terminalbefehl: " + Bereinigung.Sicher(befehl, 300));
         try
         {
             var ausgabe = await Terminal.AusfuehrenAsync(befehl);
             TerminalAusgabe += ausgabe;
+            vorgang.Beenden("abgeschlossen");
         }
         catch (Exception ex)
         {
             TerminalAusgabe += "[Fehler] " + ex.Message;
+            Diagnose.Ausnahme(ex, "terminal", "Terminalbefehl");
+            vorgang.Beenden("Ausnahme", ex.Message, Schwere.Fehler);
         }
         finally
         {
@@ -217,6 +222,14 @@ public sealed partial class HauptViewModel : ObservableObject
 
         var (katalog, fehler) = Katalogdienst.Laden();
         KatalogFehler = fehler;
+        Diagnose.Ereignis(fehler is null ? Schwere.Info : Schwere.Fehler, "katalog", "katalog.geladen",
+            fehler ?? katalog.Programme.Count + " Programme geladen.", null,
+            new Dictionary<string, object?>
+            {
+                ["anzahl"] = katalog.Programme.Count,
+                ["programme"] = string.Join(",", katalog.Programme.Select(p => p.Id + ":" + p.Art)),
+                ["ohneProvider"] = string.Join(",", katalog.Programme.Where(p => !_aktualisierer.ContainsKey(p.Art)).Select(p => p.Id))
+            });
         var berichte = Protokollierung.LetzteBerichte();
 
         foreach (var eintrag in katalog.Programme)
@@ -254,6 +267,10 @@ public sealed partial class HauptViewModel : ObservableObject
     {
         await Task.Delay(400);
 
+        // One operation for the whole startup pass -- also the scheduled-task queries below, so no
+        // external command of the start runs without correlation.
+        using var vorgang = Diagnose.VorgangBeginnen("startpruefung", null, "Anfangsprüfung aller Programme");
+
         // Which programs already start elevated through a scheduled task?
         foreach (var p in Programme) await p.AufgabenZustandLesenAsync();
 
@@ -263,6 +280,8 @@ public sealed partial class HauptViewModel : ObservableObject
         if (besitz is null)
         {
             KopfStatus = ProgrammViewModel.BelegtText;
+            SammelAbgewiesen("startpruefung");
+            vorgang.Beenden("abgewiesen", ProgrammViewModel.BelegtText, Schwere.Warnung);
             return;
         }
 
@@ -273,6 +292,13 @@ public sealed partial class HauptViewModel : ObservableObject
             foreach (var p in Programme.ToList()) await p.AusstehendesPruefenAsync();
 
             await AllePruefenMitBesitzAsync(besitz);
+            vorgang.Beenden("abgeschlossen", KopfStatus);
+        }
+        catch (Exception ex)
+        {
+            Diagnose.Ausnahme(ex, "sammel", "Anfangsprüfung");
+            vorgang.Beenden("Ausnahme", ex.Message, Schwere.Fehler);
+            throw;
         }
         finally
         {
@@ -287,13 +313,16 @@ public sealed partial class HauptViewModel : ObservableObject
         if (besitz is null)
         {
             KopfStatus = "Alle prüfen geht erst, wenn der laufende Vorgang fertig ist.";
+            SammelAbgewiesen("sammelpruefung");
             return;
         }
 
         LaeuftSammelvorgang = true;
+        using var vorgang = Diagnose.VorgangBeginnen("sammelpruefung", null, "Alle prüfen");
         try
         {
             await AllePruefenMitBesitzAsync(besitz);
+            vorgang.Beenden("abgeschlossen", KopfStatus);
         }
         finally
         {
@@ -323,6 +352,7 @@ public sealed partial class HauptViewModel : ObservableObject
         if (_koordination.Belegt)
         {
             KopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist.";
+            SammelAbgewiesen("sammelupdate");
             return;
         }
 
@@ -345,10 +375,12 @@ public sealed partial class HauptViewModel : ObservableObject
         if (besitz is null)
         {
             KopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist.";
+            SammelAbgewiesen("sammelupdate");
             return;
         }
 
         LaeuftSammelvorgang = true;
+        using var vorgang = Diagnose.VorgangBeginnen("sammelupdate", null, "Alle Updates: " + string.Join(", ", offen.Select(p => p.Eintrag.Id)));
         try
         {
             for (var i = 0; i < offen.Count; i++)
@@ -358,6 +390,7 @@ public sealed partial class HauptViewModel : ObservableObject
                 await offen[i].AktualisierenImSammelAsync(besitz);
             }
             KopfStatus = "Alle Updates sind durchgelaufen.";
+            vorgang.Beenden("abgeschlossen", KopfStatus);
         }
         finally
         {
@@ -384,6 +417,7 @@ public sealed partial class HauptViewModel : ObservableObject
         if (_koordination.Belegt || LaeuftSammelvorgang || Programme.Any(p => p.IstBeschaeftigt))
         {
             KopfStatus = "Neu laden geht erst, wenn alle laufenden Prüfungen und Updates fertig sind.";
+            SammelAbgewiesen("katalog-neu-laden");
             return;
         }
 
@@ -401,13 +435,72 @@ public sealed partial class HauptViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            Diagnose.Ausnahme(ex, "ui", "Katalog öffnen");
             Dialoge.Hinweis("Der Katalog ließ sich nicht öffnen: " + ex.Message);
         }
     }
 
-    /// <summary>Opens the log folder; every run is recorded there, day by day.</summary>
+    private static void SammelAbgewiesen(string art)
+        => Diagnose.Ereignis(Schwere.Warnung, "sammel", "start.abgewiesen", art + " abgewiesen: es läuft bereits ein Vorgang.", art);
+
+    /// <summary>A diagnostics problem must be visible, not only in a file nobody reads.</summary>
+    private void AufDiagnoseWarnung(string text)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) KopfStatus = "Diagnose-Warnung: " + text;
+        else dispatcher.BeginInvoke(() => KopfStatus = "Diagnose-Warnung: " + text);
+    }
+
+    /// <summary>Opens the folder with daily logs, structured diagnostics and the update history.</summary>
     [RelayCommand]
-    private void ProtokolleOeffnen() => Protokollierung.OrdnerOeffnen();
+    private void DiagnoseOeffnen()
+    {
+        if (!Protokollierung.OrdnerOeffnen())
+            Dialoge.Hinweis("Der Diagnoseordner ließ sich nicht öffnen:\n" + Protokollierung.Ordner
+                            + "\n\nDer Grund steht im Diagnoseprotokoll.");
+    }
+
+    [ObservableProperty] private bool _exportLaeuft;
+
+    /// <summary>
+    /// Builds the masked diagnostics ZIP off the UI thread, then shows it selected in Explorer.
+    /// A failure is shown and recorded; it never touches a running update.
+    /// </summary>
+    [RelayCommand]
+    private async Task DiagnoseExportierenAsync()
+    {
+        if (ExportLaeuft) return;
+        ExportLaeuft = true;
+        using var vorgang = Diagnose.VorgangBeginnen("diagnose-export", null, "Diagnosepaket erstellen");
+        try
+        {
+            var katalog = Programme.Select(p => p.Eintrag).ToList();
+            var laufzeit = Diagnose.Laufzeitinfo();
+            var pfad = await Task.Run(() => DiagnoseExport.Erstellen(Protokollierung.Ordner, DiagnoseExport.ExportOrdner,
+                DateTime.Now, katalog, laufzeit));
+            vorgang.Beenden("erstellt", pfad);
+            KopfStatus = "Diagnosepaket erstellt: " + pfad;
+            try
+            {
+                using var _ = Process.Start(new ProcessStartInfo("explorer.exe", "/select,\"" + pfad + "\"") { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                Diagnose.Ausnahme(ex, "ui", "Explorer für das Diagnosepaket", Schwere.Warnung);
+                Dialoge.Hinweis("Das Diagnosepaket liegt hier:\n" + pfad);
+            }
+        }
+        catch (Exception ex)
+        {
+            Diagnose.Ausnahme(ex, "ui", "Diagnosepaket erstellen");
+            vorgang.Beenden("Ausnahme", ex.Message, Schwere.Fehler);
+            Dialoge.Hinweis("Das Diagnosepaket ließ sich nicht erstellen:\n" + ex.Message);
+        }
+        finally
+        {
+            ExportLaeuft = false;
+        }
+    }
 
     [RelayCommand]
     private void ZustaendeAuffrischen()

@@ -185,6 +185,8 @@ public sealed class EinzelinstanzTests
     }
 }
 
+/// <summary>Real processes and a process-wide handle count: runs alone (see ProzessendeSammlung).</summary>
+[Collection("Prozessende")]
 public sealed class UebernahmeTests : IDisposable
 {
     private readonly string _wurzel = Path.Combine(Path.GetTempPath(), "uz-inst-" + Guid.NewGuid().ToString("N"));
@@ -193,7 +195,7 @@ public sealed class UebernahmeTests : IDisposable
     public void Dispose()
     {
         ProzessbaumTests.Aufraeumen(_pids.Select(p => (int?)p).ToArray());
-        try { Directory.Delete(_wurzel, true); } catch { }
+        TestOrdner.Loeschen(_wurzel);
     }
 
     private string Kopie(string ordner)

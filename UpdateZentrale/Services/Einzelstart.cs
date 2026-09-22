@@ -55,8 +55,9 @@ public sealed class Einzelinstanz : IDisposable
             SperreSchliessen();
             return false;
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "einzelstart", Schwere.Warnung);
             SperreSchliessen();
             return null;
         }
@@ -214,7 +215,7 @@ public static class Einzelstart
     {
         Process[] alle;
         try { alle = Process.GetProcessesByName(prozessname); }
-        catch { return null; }
+        catch (Exception diagAusnahme) { Diagnose.Gefangen(diagAusnahme, "einzelstart", Schwere.Warnung); return null; }
 
         try
         {
@@ -249,9 +250,10 @@ public static class Einzelstart
             if (IsIconic(fenster)) ShowWindow(fenster, SwRestore);
             SetForegroundWindow(fenster);
         }
-        catch
+        catch (Exception diagAusnahme)
         {
             // Gone meanwhile or window not reachable (UIPI towards an elevated window): nothing to show.
+            Diagnose.Gefangen(diagAusnahme, "einzelstart", Schwere.Debug);
         }
     }
 

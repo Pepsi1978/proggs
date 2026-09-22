@@ -60,6 +60,67 @@ public static class Kommandozeile
         Action<Process>? baumBeenden = null,
         Func<Process, bool>? einzelnBeenden = null)
     {
+        // Every external command of the app passes here, so this is where it is recorded -- with
+        // the ambient operation (see Diagnose), whichever provider or feature started it.
+        var befehlId = Guid.NewGuid().ToString("N")[..12];
+        var uhr = Stopwatch.StartNew();
+        Diagnose.Ereignis(Schwere.Info, "kommando", "befehl.beginn", Path.GetFileName(datei) + " gestartet", "befehl",
+            new Dictionary<string, object?>
+            {
+                ["befehl"] = befehlId,
+                ["datei"] = Path.GetFileName(datei),
+                ["argumente"] = Bereinigung.Sicher(argumente, 1000),
+                ["verzeichnis"] = arbeitsverzeichnis,
+                ["zeitlimitSek"] = (long)zeitlimit.TotalSeconds,
+                ["alsAufrufer"] = alsAufrufer
+            });
+        try
+        {
+            var lauf = await AusfuehrenKernAsync(datei, argumente, zeitlimit, arbeitsverzeichnis, abbruch, alsAufrufer,
+                baumBeenden, einzelnBeenden);
+            BefehlEnde(befehlId, datei, lauf, uhr);
+            return lauf;
+        }
+        catch (Exception ex)
+        {
+            Diagnose.Ausnahme(ex, "kommando", "Befehl " + Path.GetFileName(datei));
+            throw;
+        }
+    }
+
+    /// <summary>End event: every flag the run has, plus a masked, bounded excerpt of the output.</summary>
+    private static void BefehlEnde(string befehlId, string datei, BefehlErgebnis lauf, Stopwatch uhr)
+    {
+        var schwere = lauf.Abgelaufen || lauf.BeendenProblem is not null ? Schwere.Fehler
+            : lauf.Abgebrochen || lauf.ExitCode != 0 ? Schwere.Warnung
+            : Schwere.Info;
+        var ergebnis = lauf.Abgebrochen ? "abgebrochen" : lauf.Abgelaufen ? "zeitlimit" : "exit " + lauf.ExitCode;
+        Diagnose.Schreiben(schwere, "kommando", "befehl.ende", Path.GetFileName(datei) + " beendet (" + ergebnis + ")", "befehl",
+            Diagnose.AktuellerVorgang, (long)uhr.Elapsed.TotalMilliseconds, ergebnis,
+            new Dictionary<string, object?>
+            {
+                ["befehl"] = befehlId,
+                ["datei"] = Path.GetFileName(datei),
+                ["exitCode"] = lauf.ExitCode,
+                ["abgelaufen"] = lauf.Abgelaufen,
+                ["abgebrochen"] = lauf.Abgebrochen,
+                ["pipeGehalten"] = lauf.PipeGehalten,
+                ["beendenProblem"] = lauf.BeendenProblem,
+                ["ausgabeLaenge"] = lauf.Ausgabe.Length,
+                ["ausgabe"] = Bereinigung.Sicher(lauf.Ausgabe, 4000)
+            });
+    }
+
+    private static async Task<BefehlErgebnis> AusfuehrenKernAsync(
+        string datei,
+        string argumente,
+        TimeSpan zeitlimit,
+        string? arbeitsverzeichnis,
+        CancellationToken abbruch,
+        bool alsAufrufer,
+        Action<Process>? baumBeenden,
+        Func<Process, bool>? einzelnBeenden)
+    {
         var start = new ProcessStartInfo
         {
             FileName = datei,
@@ -290,9 +351,10 @@ public static class Kommandozeile
                 lock (ziel) ziel.Append(block, 0, gelesen);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // A broken pipe only ends the reading, never the run.
+            // A broken pipe only ends the reading, never the run -- but it is noted.
+            Diagnose.Ausnahme(ex, "kommando", "Lesen der Prozessausgabe", Schwere.Debug);
         }
         finally
         {

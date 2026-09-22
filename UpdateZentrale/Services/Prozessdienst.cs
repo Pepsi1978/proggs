@@ -37,8 +37,9 @@ public static class Prozessdienst
             {
                 kandidaten = Process.GetProcessesByName(name);
             }
-            catch
+            catch (Exception diagAusnahme)
             {
+                Diagnose.Gefangen(diagAusnahme, "prozess", Schwere.Warnung);
                 continue;
             }
 
@@ -224,8 +225,9 @@ public static class Prozessdienst
             using var _ = Process.Start(start);   // only the start matters; release the handle at once
             return true;
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "prozess", Schwere.Warnung);
             return false;   // User dismissed the UAC prompt, or the exe vanished.
         }
     }
@@ -243,8 +245,9 @@ public static class Prozessdienst
             });
             return true;
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "prozess", Schwere.Warnung);
             return false;
         }
     }

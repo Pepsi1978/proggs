@@ -31,7 +31,7 @@ public sealed class ProzessendeTests : IDisposable
     public void Dispose()
     {
         foreach (var pid in EigeneKinder()) ProzessbaumTests.Aufraeumen(pid);
-        try { Directory.Delete(_ordner, true); } catch { }
+        TestOrdner.Loeschen(_ordner);
     }
 
     /// <summary>Only processes started from this test's private copy.</summary>

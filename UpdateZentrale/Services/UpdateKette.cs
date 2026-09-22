@@ -68,6 +68,8 @@ public sealed class UpdateKette
         var fingerabdruck = await _aktualisierer.FingerabdruckAsync(_eintrag, abbruch);
         var pruefung = await _aktualisierer.PruefenAsync(_eintrag, _protokoll, abbruch);
         _protokoll.Report("Vorprüfung: " + Beschreibe(pruefung) + " | Stand " + Anzeigen(fingerabdruck));
+        Diagnose.Ereignis(Schwere.Info, "kette", "kette.vorpruefung", "Vorprüfung: " + Beschreibe(pruefung), "vorpruefung",
+            new Dictionary<string, object?> { ["stand"] = fingerabdruck, ["zustand"] = pruefung.Zustand.ToString(), ["angebot"] = pruefung.VerfuegbareVersion });
         return (fingerabdruck, pruefung);
     }
 
@@ -105,6 +107,8 @@ public sealed class UpdateKette
             }
 
             aufrufe++;
+            Diagnose.Ereignis(Schwere.Info, "kette", "kette.durchlauf", "Durchlauf " + durchlauf + " von " + MaxDurchlaeufe, "durchlauf",
+                new Dictionary<string, object?> { ["durchlauf"] = durchlauf, ["angebot"] = angebot, ["standVor"] = standVor });
             var ergebnis = await _aktualisierer.AktualisierenAsync(_eintrag, _protokoll, abbruch);
 
             if (ergebnis.Zustand == UpdateZustand.Abgebrochen)
@@ -132,6 +136,9 @@ public sealed class UpdateKette
                 if (versuch > 1) await _warten(Pause, abbruch);
                 standNach = await _aktualisierer.FingerabdruckAsync(_eintrag, abbruch);
                 var bewegt = Fortschritt(standVor, standNach);
+                Diagnose.Ereignis(Schwere.Debug, "kette", "kette.nachpruefung", "Nachprüfung " + versuch + " von " + MaxNachpruefungen
+                    + (bewegt ? ": Stand bewegt" : ": Stand unverändert"), "nachpruefung",
+                    new Dictionary<string, object?> { ["versuch"] = versuch, ["stand"] = standNach, ["bewegt"] = bewegt });
                 var letzterVersuch = versuch == MaxNachpruefungen;
 
                 if (!bewegt && !letzterVersuch && ergebnis.Zustand != UpdateZustand.Aktuell) continue;   // not arrived yet
@@ -148,6 +155,8 @@ public sealed class UpdateKette
                             + " | Prüfung: " + Beschreibe(letztePruefung);
             uebergaenge.Add(uebergang);
             _protokoll.Report(uebergang);
+            Diagnose.Ereignis(Schwere.Info, "kette", "kette.uebergang", uebergang, "uebergang",
+                new Dictionary<string, object?> { ["durchlauf"] = durchlauf, ["zustand"] = letztePruefung.Zustand.ToString(), ["angebot"] = letztePruefung.VerfuegbareVersion });
 
             if (string.IsNullOrWhiteSpace(standNach))
                 return Ende(LaufErgebnis.NichtVerifiziert,
@@ -211,8 +220,14 @@ public sealed class UpdateKette
         return Ende(LaufErgebnis.NichtVerifiziert, "Die Update-Kette endete ohne Urteil.", KarteAus(letztePruefung));
 
         KettenUrteil Ende(LaufErgebnis urteil, string meldung, PruefErgebnis karte, string? ausstehend = null)
-            => new(urteil, meldung, fingerabdruckStart, standNach,
+        {
+            Diagnose.Ereignis(urteil is LaufErgebnis.Fehlgeschlagen or LaufErgebnis.NichtVerifiziert ? Schwere.Fehler
+                    : urteil == LaufErgebnis.Abgebrochen ? Schwere.Warnung : Schwere.Info,
+                "kette", "kette.urteil", meldung, "urteil",
+                new Dictionary<string, object?> { ["ergebnis"] = urteil.ToString(), ["aufrufe"] = aufrufe, ["standVorher"] = fingerabdruckStart, ["standNachher"] = standNach });
+            return new(urteil, meldung, fingerabdruckStart, standNach,
                 karte with { Meldung = meldung }, aufrufe, liefDurch, ausstehend, uebergaenge);
+        }
     }
 
     /// <summary>Card state for a non-success: the provider's truth, shown as an error.</summary>

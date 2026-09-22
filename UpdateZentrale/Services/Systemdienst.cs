@@ -61,8 +61,9 @@ public static class Systemdienst
             }
             return true;
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "system", Schwere.Warnung);
             return false;
         }
     }
@@ -96,8 +97,9 @@ public static class Systemdienst
                     return true;
             }
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "system", Schwere.Warnung);
         }
         return false;
     }
@@ -134,8 +136,9 @@ public static class Systemdienst
                 }
             }
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "system", Schwere.Warnung);
         }
         return null;
     }
@@ -148,8 +151,9 @@ public static class Systemdienst
             key?.DeleteValue(name, throwOnMissingValue: false);
             return true;
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "system", Schwere.Warnung);
             return false;
         }
     }
@@ -162,8 +166,9 @@ public static class Systemdienst
             key?.SetValue(name, wert, RegistryValueKind.String);
             return true;
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "system", Schwere.Warnung);
             return false;
         }
     }

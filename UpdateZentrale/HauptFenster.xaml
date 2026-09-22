@@ -512,17 +512,23 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding KopfStatus}" Style="{StaticResource TextLeise}" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <TextBlock Text="{Binding KopfStatus}" Style="{StaticResource TextLeise}" VerticalAlignment="Center"
+                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"
+                           ToolTip="{Binding KopfStatus}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Immer als Administrator starten" Style="{StaticResource TextLeise}"
                                VerticalAlignment="Center" Margin="0,0,8,0" />
                     <ToggleButton Style="{StaticResource Schiebeschalter}" VerticalAlignment="Center"
                                   Margin="0,0,16,0"
                                   IsChecked="{Binding ImmerAlsAdmin, Mode=TwoWay}"
                                   ToolTip="Windows startet die UpdateZentrale dann immer erhöht (Abfrage der Benutzerkontensteuerung)." />
-                    <Button Content="Protokolle" Style="{StaticResource SchalterLeise}"
-                            Command="{Binding ProtokolleOeffnenCommand}" Margin="0,0,8,0"
-                            ToolTip="Ordner mit den Tagesprotokollen und der Update-Historie öffnen" />
+                    <Button Content="Diagnose öffnen" Style="{StaticResource SchalterLeise}"
+                            Command="{Binding DiagnoseOeffnenCommand}" Margin="0,0,8,0"
+                            ToolTip="Ordner mit Tagesprotokollen, strukturiertem Diagnoseprotokoll (JSONL) und Update-Historie öffnen" />
+                    <Button Content="Diagnose exportieren" Style="{StaticResource SchalterLeise}"
+                            Command="{Binding DiagnoseExportierenCommand}" Margin="0,0,8,0"
+                            IsEnabled="{Binding ExportLaeuft, Converter={StaticResource Nicht}}"
+                            ToolTip="Bereinigtes Diagnosepaket (ZIP) für eine spätere Auswertung erstellen – ohne Kennwörter, Tokens oder Umgebungsvariablen" />
                     <Button Content="Zustände auffrischen" Style="{StaticResource SchalterLeise}"
                             Command="{Binding ZustaendeAuffrischenCommand}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding AnwendungsVersion}" Style="{StaticResource TextLeise}"

@@ -203,8 +203,9 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
             var version = InstallierteVersion(eintrag);
             return Task.FromResult((string.IsNullOrWhiteSpace(version) ? "" : version + " vom ") + zeit);
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "provider", Schwere.Debug);
             return Task.FromResult("");
         }
     }
@@ -282,8 +283,9 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
             var info = System.Diagnostics.FileVersionInfo.GetVersionInfo(exe);
             return info.FileVersion ?? info.ProductVersion ?? "";
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "provider", Schwere.Debug);
             return "";
         }
     }
@@ -299,8 +301,9 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
             var treffer = Regex.Match(File.ReadAllText(datei), @"<Version>\s*([^<\s]+)\s*</Version>");
             return treffer.Success ? treffer.Groups[1].Value : "";
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "provider", Schwere.Debug);
             return "";
         }
     }

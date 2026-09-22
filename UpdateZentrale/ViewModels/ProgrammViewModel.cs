@@ -19,7 +19,9 @@ public sealed partial class ProgrammViewModel : ObservableObject
                              Laufkoordination koordination)
     {
         Eintrag = eintrag;
-        _aktualisierer = aktualisierer;
+        // Every provider -- built in, new, or a test fake -- is wrapped here once, so all of them
+        // report their calls to the diagnostics without any code of their own.
+        _aktualisierer = aktualisierer is null ? null : DiagnoseAktualisierer.Umhuellen(aktualisierer);
         _einstellungen = einstellungen;
         _koordination = koordination;
         _koordination.Geaendert += AufKoordinationGeaendert;
@@ -153,7 +155,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// A batch run passes its ownership down; a click has to acquire its own. Losing that race
     /// means another operation is running -- then nothing starts.
     /// </summary>
-    private bool Erwerben(Laufbesitz? sammel, out Laufbesitz? eigen)
+    private bool Erwerben(Laufbesitz? sammel, out Laufbesitz? eigen, string art)
     {
         eigen = null;
         if (sammel is not null)
@@ -161,15 +163,23 @@ public sealed partial class ProgrammViewModel : ObservableObject
             // A batch token is only honoured while it really owns this coordination -- a
             // foreign, released or stale token must not slip a run past the lock.
             if (_koordination.IstAktiverSammelbesitz(sammel)) return true;
-            StatusText = BelegtText;
+            Abgewiesen(art, "Sammelbesitz ungültig oder nicht mehr aktiv.");
             return false;
         }
 
         eigen = _koordination.EinzelBeginnen();
         if (eigen is not null) return true;
 
-        StatusText = BelegtText;
+        Abgewiesen(art, "Es läuft bereits ein anderer Vorgang.");
         return false;
+    }
+
+    /// <summary>A refused or doubled start is recorded, with the program and what was refused.</summary>
+    private void Abgewiesen(string art, string grund)
+    {
+        StatusText = BelegtText;
+        Diagnose.Ereignis(Schwere.Warnung, "karte", "start.abgewiesen", art + " für " + Name + " abgewiesen: " + grund, art,
+            new Dictionary<string, object?> { ["programm"] = Eintrag.Id, ["art"] = art });
     }
 
     public string AktionsText => UebernahmeOffen
@@ -265,9 +275,17 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
         // Confirmed only with the expected target reached AND a real current check -- any other
         // fingerprint change is not proof when the same or another update is still offered.
+        using var vorgang = Diagnose.VorgangBeginnen("nachpruefung-ausstehend", Eintrag,
+            "Ausstehendes Update vom " + offen.Zeit.ToString("dd.MM.yyyy") + " prüfen");
         var jetzt = await _aktualisierer.FingerabdruckAsync(Eintrag, CancellationToken.None);
         var pruefung = await _aktualisierer.PruefenAsync(Eintrag, new Progress<string>(_ => { }), CancellationToken.None);
-        if (UpdateKette.StagedUrteil(offen, jetzt, pruefung, DateTime.Now) is not { } urteil) return;
+        if (UpdateKette.StagedUrteil(offen, jetzt, pruefung, DateTime.Now) is not { } urteil)
+        {
+            vorgang.Beenden("weiter-ausstehend", "Ziel noch nicht nachweislich übernommen.");
+            return;
+        }
+        vorgang.Beenden(urteil.Ergebnis.ToString(), urteil.Meldung,
+            urteil.Ergebnis == LaufErgebnis.Erfolgreich ? Schwere.Info : Schwere.Warnung);
 
         var nachtrag = new UpdateBericht
         {
@@ -406,6 +424,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
     partial void OnZustandChanged(UpdateZustand value)
     {
+        Diagnose.Ereignis(Schwere.Debug, "karte", "karte.zustand", Name + ": " + value, value.ToString(),
+            new Dictionary<string, object?> { ["programm"] = Eintrag.Id });
         OnPropertyChanged(nameof(HatUpdate));
         OnPropertyChanged(nameof(AktionMoeglich));
         OnPropertyChanged(nameof(AktionsText));
@@ -426,11 +446,12 @@ public sealed partial class ProgrammViewModel : ObservableObject
 
     private async Task PruefenKernAsync(Laufbesitz? sammel)
     {
-        if (_aktualisierer is null || IstBeschaeftigt) return;
-        if (!Erwerben(sammel, out var eigen)) return;
+        if (_aktualisierer is null) return;
+        if (IstBeschaeftigt) { Doppelt("pruefung"); return; }
+        if (!Erwerben(sammel, out var eigen, "pruefung")) return;
         try
         {
-            await LaufAsync(async (fortschritt, abbruch) =>
+            await LaufAsync("pruefung", async (fortschritt, abbruch) =>
             {
                 StatusText = "Wird geprüft …";
                 Zustand = UpdateZustand.Pruefe;
@@ -453,8 +474,9 @@ public sealed partial class ProgrammViewModel : ObservableObject
     {
         // Busy already: LaufAsync would drop this request anyway -- but only after the user had
         // agreed to close the program. Ownership is taken before that question for the same reason.
-        if (_aktualisierer is null || IstBeschaeftigt) return;
-        if (!Erwerben(sammel, out var eigen)) return;
+        if (_aktualisierer is null) return;
+        if (IstBeschaeftigt) { Doppelt("update"); return; }
+        if (!Erwerben(sammel, out var eigen, "update")) return;
         try
         {
             await AktualisierenMitBesitzAsync();
@@ -477,7 +499,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     {
         if (_aktualisierer is null) return;
 
-        await LaufAsync(async (fortschritt, abbruch) =>
+        await LaufAsync("update", async (fortschritt, abbruch) =>
         {
             var kette = new UpdateKette(_aktualisierer, Eintrag, fortschritt, text => StatusText = text, KettenWarten);
 
@@ -613,15 +635,35 @@ public sealed partial class ProgrammViewModel : ObservableObject
         ZustandAktualisieren();
     }
 
-    private async Task LaufAsync(Func<IProgress<string>, CancellationToken, Task<PruefErgebnis>> arbeit)
+    private void Doppelt(string art)
+        => Diagnose.Ereignis(Schwere.Warnung, "karte", "start.doppelt", art + " für " + Name + " ignoriert: die Karte arbeitet bereits.", art,
+            new Dictionary<string, object?> { ["programm"] = Eintrag.Id, ["art"] = art });
+
+    /// <summary>What the card keeps in memory for the detail pane -- bounded, newest text wins.</summary>
+    private const int MaxProtokollZeichen = 200_000;
+
+    private void ProtokollAnhaengen(string text)
     {
-        if (IstBeschaeftigt) return;
+        _protokoll.AppendLine(text);
+        if (_protokoll.Length > MaxProtokollZeichen)
+            _protokoll.Remove(0, _protokoll.Length - MaxProtokollZeichen).Insert(0, "…[ältere Zeilen gekürzt]…" + Environment.NewLine);
+    }
+
+    /// <summary>
+    /// Every check and update of every card runs through here: one diagnostics operation with
+    /// begin, end, duration and verdict, the program as context for everything below it, and a
+    /// recorded exception instead of a message only on screen.
+    /// </summary>
+    private async Task LaufAsync(string art, Func<IProgress<string>, CancellationToken, Task<PruefErgebnis>> arbeit)
+    {
+        if (IstBeschaeftigt) { Doppelt(art); return; }
         IstBeschaeftigt = true;
 
+        using var vorgang = Diagnose.VorgangBeginnen(art, Eintrag, art + " " + Name);
         var fortschritt = new Progress<string>(zeile =>
         {
             if (string.IsNullOrWhiteSpace(zeile)) return;
-            _protokoll.AppendLine(zeile.Trim());
+            ProtokollAnhaengen(zeile.Trim());
             Protokollierung.Schreiben(Eintrag.Id, zeile);
             OnPropertyChanged(nameof(Protokoll));
         });
@@ -633,13 +675,21 @@ public sealed partial class ProgrammViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(ergebnis.InstallierteVersion)) InstallierteVersion = ergebnis.InstallierteVersion;
             VerfuegbareVersion = ergebnis.VerfuegbareVersion;
             StatusText = string.IsNullOrWhiteSpace(ergebnis.Meldung) ? AktionsText : ergebnis.Meldung;
+            vorgang.Beenden(ergebnis.Zustand.ToString(), ergebnis.Meldung, ergebnis.Zustand switch
+            {
+                UpdateZustand.Fehler => Schwere.Fehler,
+                UpdateZustand.Unbekannt or UpdateZustand.Abgebrochen => Schwere.Warnung,
+                _ => Schwere.Info
+            });
         }
         catch (Exception ex)
         {
             Zustand = UpdateZustand.Fehler;
             StatusText = ex.Message;
-            _protokoll.AppendLine(ex.ToString());
+            ProtokollAnhaengen(ex.ToString());
             Protokollierung.Schreiben(Eintrag.Id, "[Ausnahme] " + ex);
+            Diagnose.Ausnahme(ex, "karte", art + " " + Eintrag.Id);
+            vorgang.Beenden("Ausnahme", ex.GetType().Name + ": " + ex.Message, Schwere.Fehler);
         }
         finally
         {

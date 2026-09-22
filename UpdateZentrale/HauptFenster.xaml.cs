@@ -104,8 +104,9 @@ public partial class HauptFenster : Window
             return Rect.Transform(new Rect(a.Links, a.Oben, a.Rechts - a.Links, a.Unten - a.Oben),
                 ziel.TransformFromDevice);
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "fenster", Schwere.Debug);
             return null;   // Fällt auf die Fläche des Hauptbildschirms zurück.
         }
     }
@@ -138,8 +139,9 @@ public partial class HauptFenster : Window
             var dunkel = Darstellung.IstHell ? 0 : 1;
             DwmSetWindowAttribute(griff, DwmwaImmersiveDarkMode, ref dunkel, sizeof(int));
         }
-        catch
+        catch (Exception diagAusnahme)
         {
+            Diagnose.Gefangen(diagAusnahme, "fenster", Schwere.Debug);
             // Older Windows builds simply keep the light caption -- never worth an error.
         }
     }
