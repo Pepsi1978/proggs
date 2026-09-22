@@ -95,8 +95,7 @@ public sealed class StoreAktualisierer : IAktualisierer
             Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
         protokoll.Report(lauf.Ausgabe);
 
-        if (lauf.Abgelaufen)
-            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit überschritten.", Protokoll: lauf.Ausgabe);
+        if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
 
         if (lauf.ExitCode == KeinUpgradeVerfuegbar
             || WingetAktualisierer.IstNichtsZuTun(lauf))

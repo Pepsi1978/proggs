@@ -158,6 +158,10 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
     /// </summary>
     internal static PruefErgebnis Auswerten(BefehlErgebnis lauf, string? statusPraefix, bool buildUnveraendert)
     {
+        // How the process ended outranks what it printed: a "started" written before a timeout,
+        // a cancel or a tree that could not be ended fully is never a finished update.
+        if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
+
         var status = StatusLesen(lauf.Ausgabe, statusPraefix);
         if (status == "cancelled")
             return new PruefErgebnis(UpdateZustand.Abgebrochen,
@@ -172,9 +176,6 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
                 ? new PruefErgebnis(UpdateZustand.Aktuell,
                     Meldung: "Der Build war bereits aktuell – das Skript hat ihn nur gestartet.", Protokoll: lauf.Ausgabe)
                 : new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Neue Version gebaut und gestartet.", Protokoll: lauf.Ausgabe);
-        if (lauf.Abgelaufen)
-            return new PruefErgebnis(UpdateZustand.Fehler,
-                Meldung: "Zeitlimit überschritten – das Skript wurde beendet.", Protokoll: lauf.Ausgabe);
         if (lauf.ExitCode == 0 && string.IsNullOrWhiteSpace(statusPraefix))
             return new PruefErgebnis(UpdateZustand.Fertig, Meldung: "Skript erfolgreich durchgelaufen.", Protokoll: lauf.Ausgabe);
         if (lauf.ExitCode == 0)

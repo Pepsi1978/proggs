@@ -39,13 +39,26 @@ public static class Kommandozeile
     /// Bewusst NICHT der Standard: winget und die Update-Skripte starten Installer weiter, die
     /// ihre Elevation selbst anfordern dürfen müssen.
     /// </param>
-    public static async Task<BefehlErgebnis> AusfuehrenAsync(
+    public static Task<BefehlErgebnis> AusfuehrenAsync(
         string datei,
         string argumente,
         TimeSpan zeitlimit,
         string? arbeitsverzeichnis = null,
         CancellationToken abbruch = default,
         bool alsAufrufer = false)
+        => AusfuehrenInternAsync(datei, argumente, zeitlimit, arbeitsverzeichnis, abbruch, alsAufrufer);
+
+    /// <param name="baumBeenden">Test seam: how the tree is killed (default Kill(entireProcessTree)).</param>
+    /// <param name="einzelnBeenden">Test seam: the follow-up kill of one captured survivor.</param>
+    internal static async Task<BefehlErgebnis> AusfuehrenInternAsync(
+        string datei,
+        string argumente,
+        TimeSpan zeitlimit,
+        string? arbeitsverzeichnis = null,
+        CancellationToken abbruch = default,
+        bool alsAufrufer = false,
+        Action<Process>? baumBeenden = null,
+        Func<Process, bool>? einzelnBeenden = null)
     {
         var start = new ProcessStartInfo
         {
@@ -102,7 +115,9 @@ public static class Kommandozeile
             // The caller wins over the timer when both fired: a cancel is never reported as a
             // time limit.
             var vomAufrufer = abbruch.IsCancellationRequested;
-            var problem = await BaumBeendenAsync(prozess);
+            var problem = await BaumBeendenAsync(prozess,
+                baumBeenden ?? (p => p.Kill(entireProcessTree: true)),
+                einzelnBeenden ?? (p => { p.Kill(); return true; }));
             if (!await AuslaufenLassenAsync(ausgabe, fehler)) lesen.Aus = true;
 
             var text = Zusammenfuegen(puffer, fehlerPuffer)
@@ -138,49 +153,96 @@ public static class Kommandozeile
     }
 
     /// <summary>
-    /// Kills the whole tree and waits, bounded, for the root to be gone.
+    /// Kills the whole tree and verifies it. The descendants are captured first (handles held, so
+    /// no PID reuse can fool the check); then the tree kill; then a bounded wait for the root AND
+    /// exactly those captured children. A survivor is killed once more on its own -- never by
+    /// name -- and whatever is still alive after that is reported, not hidden.
     /// </summary>
-    /// <returns>null when done; otherwise what is known to be left over.</returns>
-    private static async Task<string?> BaumBeendenAsync(Process prozess)
+    /// <returns>null when everything is gone; otherwise what is known to be left over.</returns>
+    private static async Task<string?> BaumBeendenAsync(Process prozess, Action<Process> baumBeenden,
+                                                        Func<Process, bool> einzelnBeenden)
     {
-        string? problem = null;
+        var kinder = Prozessbaum.Erfassen(prozess);
         try
         {
-            prozess.Kill(entireProcessTree: true);
-        }
-        catch (InvalidOperationException)
-        {
-            // Exited between the cancel and the kill -- nothing left to do.
-        }
-        catch (AggregateException ex)
-        {
-            // Not every member of the tree could be terminated (.NET reports it this way).
-            problem = "Nicht alle Kindprozesse ließen sich beenden: "
-                      + string.Join("; ", ex.InnerExceptions.Select(i => i.Message));
-        }
-        catch (Exception ex)
-        {
-            problem = "Beenden fehlgeschlagen: " + ex.Message;
-        }
+            var probleme = new List<string>();
+            try
+            {
+                baumBeenden(prozess);
+            }
+            catch (InvalidOperationException)
+            {
+                // Exited between the cancel and the kill -- its children are checked below anyway.
+            }
+            catch (AggregateException ex)
+            {
+                // Not every member of the tree could be terminated (.NET reports it this way).
+                probleme.Add("Nicht alle Kindprozesse ließen sich beenden: "
+                             + string.Join("; ", ex.InnerExceptions.Select(i => i.Message)));
+            }
+            catch (Exception ex)
+            {
+                probleme.Add("Beenden fehlgeschlagen: " + ex.Message);
+            }
 
+            var frist = DateTime.UtcNow + Beendefrist;
+            if (!await BeendetBisAsync(prozess, frist))
+                probleme.Add("Prozess " + ProzessId(prozess) + " lief " + Beendefrist.TotalSeconds + " s nach dem Beenden noch.");
+
+            var ueberlebende = new List<Process>();
+            foreach (var kind in kinder)
+                if (!await BeendetBisAsync(kind, frist)) ueberlebende.Add(kind);
+
+            foreach (var kind in ueberlebende)
+            {
+                try { einzelnBeenden(kind); }
+                catch (InvalidOperationException) { }   // gone meanwhile
+                catch (Exception ex) { probleme.Add("Kindprozess " + Beschreiben(kind) + ": " + ex.Message); }
+            }
+
+            var nachfrist = DateTime.UtcNow + Nachfrist;
+            var bleiben = new List<string>();
+            foreach (var kind in ueberlebende)
+                if (!await BeendetBisAsync(kind, nachfrist)) bleiben.Add(Beschreiben(kind));
+            if (bleiben.Count > 0)
+                probleme.Add("Kindprozess(e) liefen nach dem Beenden weiter: " + string.Join(", ", bleiben) + ".");
+
+            return probleme.Count == 0 ? null : string.Join(" ", probleme);
+        }
+        finally
+        {
+            foreach (var kind in kinder) kind.Dispose();
+        }
+    }
+
+    private static async Task<bool> BeendetBisAsync(Process prozess, DateTime frist)
+    {
+        var rest = frist - DateTime.UtcNow;
+        if (rest < TimeSpan.Zero) rest = TimeSpan.Zero;
         try
         {
-            using var frist = new CancellationTokenSource(Beendefrist);
-            await prozess.WaitForExitAsync(frist.Token);
+            using var zeit = new CancellationTokenSource(rest);
+            await prozess.WaitForExitAsync(zeit.Token);
+            return true;
         }
         catch (OperationCanceledException)
         {
-            problem = (problem is null ? "" : problem + " ") + "Prozess " + ProzessId(prozess)
-                      + " lief " + Beendefrist.TotalSeconds + " s nach dem Beenden noch.";
+            return prozess.HasExited;
         }
         catch (InvalidOperationException)
         {
-            // No process associated any more: it is gone.
+            return true;   // no process associated any more: gone
         }
-        return problem;
+    }
+
+    private static string Beschreiben(Process prozess)
+    {
+        try { return prozess.ProcessName + " (PID " + prozess.Id + ")"; }
+        catch { return "PID " + ProzessId(prozess); }
     }
 
     private static readonly TimeSpan Beendefrist = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan Nachfrist = TimeSpan.FromSeconds(2);
 
     private static string ProzessId(Process prozess)
     {
@@ -188,9 +250,37 @@ public static class Kommandozeile
         catch { return "?"; }
     }
 
+    private static int _aktiveLeser;
+
+    /// <summary>Readers still attached to some pipe -- for tests: must return to its baseline.</summary>
+    internal static int AktiveLeser => Volatile.Read(ref _aktiveLeser);
+
+    /// <summary>
+    /// A run that did not end cleanly, as a card state -- evaluated BEFORE any status line or
+    /// exit code, so a line printed before a timeout ("started") can never turn it into success.
+    /// </summary>
+    /// <returns>null when the tool ended by itself.</returns>
+    public static Models.PruefErgebnis? UnsauberesEnde(BefehlErgebnis lauf)
+    {
+        if (!lauf.Abgelaufen && !lauf.Abgebrochen && lauf.BeendenProblem is null) return null;
+
+        var was = lauf.Abgebrochen ? "Abgebrochen" : "Zeitlimit überschritten";
+        if (lauf.BeendenProblem is not null)
+            return new Models.PruefErgebnis(Models.UpdateZustand.Fehler,
+                Meldung: was + " – der Prozessbaum ließ sich nicht vollständig beenden: " + lauf.BeendenProblem,
+                Protokoll: lauf.Ausgabe);
+
+        return lauf.Abgebrochen
+            ? new Models.PruefErgebnis(Models.UpdateZustand.Abgebrochen,
+                Meldung: "Abgebrochen – der Prozessbaum wurde beendet.", Protokoll: lauf.Ausgabe)
+            : new Models.PruefErgebnis(Models.UpdateZustand.Fehler,
+                Meldung: "Zeitlimit überschritten – der Prozessbaum wurde beendet.", Protokoll: lauf.Ausgabe);
+    }
+
     private static async Task MitlesenAsync(StreamReader leser, StringBuilder ziel, Lesezustand zustand)
     {
         var block = new char[4096];
+        Interlocked.Increment(ref _aktiveLeser);
         try
         {
             int gelesen;
@@ -203,6 +293,10 @@ public static class Kommandozeile
         catch
         {
             // A broken pipe only ends the reading, never the run.
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _aktiveLeser);
         }
     }
 

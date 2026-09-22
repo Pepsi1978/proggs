@@ -84,8 +84,7 @@ public sealed class WingetAktualisierer : IAktualisierer
             Pfade.Winget, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch);
         protokoll.Report(lauf.Ausgabe);
 
-        if (lauf.Abgelaufen)
-            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit überschritten.", Protokoll: lauf.Ausgabe);
+        if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
 
         // Nothing to do is not a failure: the card must say "current", not show a red band.
         if (IstNichtsZuTun(lauf))
@@ -147,7 +146,7 @@ public sealed class WingetAktualisierer : IAktualisierer
 
     /// <summary>winget's "installed, nothing newer" answer to an upgrade, in code or in words.</summary>
     internal static bool IstNichtsZuTun(BefehlErgebnis lauf)
-        => !lauf.Abgelaufen
+        => !lauf.Abgelaufen && !lauf.Abgebrochen && lauf.BeendenProblem is null
            && (lauf.ExitCode == KeinAnwendbaresUpgrade
                || lauf.Ausgabe.Contains("No applicable upgrade", StringComparison.OrdinalIgnoreCase)
                || lauf.Ausgabe.Contains("No available upgrade", StringComparison.OrdinalIgnoreCase)

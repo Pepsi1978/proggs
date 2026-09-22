@@ -108,8 +108,7 @@ public sealed class CliAktualisierer : IAktualisierer
             exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch, alsAufrufer: true);
         protokoll.Report(lauf.Ausgabe);
 
-        if (lauf.Abgelaufen)
-            return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit überschritten.", Protokoll: lauf.Ausgabe);
+        if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
         if (lauf.ExitCode != 0)
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: $"Endete mit Code {lauf.ExitCode}.", Protokoll: lauf.Ausgabe);
 
