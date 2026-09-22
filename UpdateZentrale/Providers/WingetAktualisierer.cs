@@ -22,20 +22,46 @@ public sealed class WingetAktualisierer : IAktualisierer
         var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(3), abbruch: abbruch);
         protokoll.Report(lauf.Ausgabe);
 
-        var zeile = TabellenZeile(lauf.Ausgabe, eintrag.WingetId ?? "");
+        return ListeAuswerten(lauf, eintrag.WingetId ?? "");
+    }
+
+    /// <summary>winget's exit code for "no installed package matches" (measured with v1.29).</summary>
+    internal const int KeinPaketGefunden = unchecked((int)0x8A150014);
+
+    /// <summary>winget's exit code for "installed, no applicable upgrade".</summary>
+    internal const int KeinAnwendbaresUpgrade = unchecked((int)0x8A15002B);
+
+    /// <summary>
+    /// Process failures first: a timed-out or failed run has no package row either, and used to
+    /// read as "not installed". Only winget's own "no package found" answer means that.
+    /// </summary>
+    internal static PruefErgebnis ListeAuswerten(BefehlErgebnis lauf, string id)
+    {
+        if (lauf.Abgelaufen)
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: "winget hat das Zeitlimit überschritten – der Stand ist unbekannt.", Protokoll: lauf.Ausgabe);
+
+        if (lauf.ExitCode == KeinPaketGefunden
+            || (lauf.ExitCode == 0 && MeldetKeinPaket(lauf.Ausgabe)))
+            return new PruefErgebnis(UpdateZustand.NichtInstalliert,
+                Meldung: "Nicht über winget installiert.", Protokoll: lauf.Ausgabe);
+
+        if (lauf.ExitCode != 0)
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: "winget endete mit Code " + Code(lauf.ExitCode) + " – der Stand ist unbekannt.", Protokoll: lauf.Ausgabe);
+
+        var zeile = TabellenZeile(lauf.Ausgabe, id);
         if (zeile is null)
-        {
-            // The id appearing without a parsable table means the output shape changed, not that
-            // the program is missing -- saying "not installed" there would be a lie.
-            var kenntPaket = lauf.Ausgabe.Contains(eintrag.WingetId ?? "\u0000", StringComparison.OrdinalIgnoreCase);
-            return kenntPaket
-                ? new PruefErgebnis(UpdateZustand.Unbekannt,
-                    Meldung: "winget-Ausgabe war nicht lesbar – siehe Protokoll.", Protokoll: lauf.Ausgabe)
-                : new PruefErgebnis(UpdateZustand.NichtInstalliert,
-                    Meldung: "Nicht über winget installiert.", Protokoll: lauf.Ausgabe);
-        }
+            // A clean run without the package row means the output shape changed, not that the
+            // program is missing -- saying "not installed" there would be a lie.
+            return new PruefErgebnis(UpdateZustand.Unbekannt,
+                Meldung: "winget-Ausgabe war nicht lesbar – siehe Protokoll.", Protokoll: lauf.Ausgabe);
 
         var (installiert, verfuegbar) = zeile.Value;
+        if (string.IsNullOrWhiteSpace(installiert))
+            return new PruefErgebnis(UpdateZustand.Unbekannt,
+                Meldung: "winget nannte keine installierte Version – siehe Protokoll.", Protokoll: lauf.Ausgabe);
+
         var zustand = string.IsNullOrWhiteSpace(verfuegbar) || verfuegbar == installiert
             ? UpdateZustand.Aktuell
             : UpdateZustand.UpdateVerfuegbar;
@@ -61,13 +87,15 @@ public sealed class WingetAktualisierer : IAktualisierer
         if (lauf.Abgelaufen)
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "Zeitlimit überschritten.", Protokoll: lauf.Ausgabe);
 
+        // Nothing to do is not a failure: the card must say "current", not show a red band.
+        if (IstNichtsZuTun(lauf))
+            return new PruefErgebnis(UpdateZustand.Aktuell, Meldung: "War bereits aktuell – kein Upgrade nötig.", Protokoll: lauf.Ausgabe);
+
         if (lauf.ExitCode != 0)
         {
-            var grund = lauf.Ausgabe.Contains("No applicable upgrade", StringComparison.OrdinalIgnoreCase)
-                ? "Kein Upgrade verfügbar."
-                : StoreAktualisierer.BrauchtRechte(lauf.Ausgabe)
-                    ? "Dafür fehlen Administratorrechte – oben auf „Als Administrator neu starten“ klicken."
-                    : $"winget endete mit Code {lauf.ExitCode}.";
+            var grund = StoreAktualisierer.BrauchtRechte(lauf.Ausgabe)
+                ? "Dafür fehlen Administratorrechte – oben auf „Als Administrator neu starten“ klicken."
+                : "winget endete mit Code " + Code(lauf.ExitCode) + ".";
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: grund, Protokoll: lauf.Ausgabe);
         }
 
@@ -91,18 +119,46 @@ public sealed class WingetAktualisierer : IAktualisierer
     {
         if (!string.IsNullOrWhiteSpace(eintrag.AppxName))
         {
-            var befehl = "-NoProfile -NonInteractive -Command \"(Get-AppxPackage -Name '" + eintrag.AppxName
-                       + "' | Sort-Object Version | Select-Object -Last 1).Version\"";
-            var appx = await Kommandozeile.AusfuehrenAsync("powershell.exe", befehl, TimeSpan.FromMinutes(2), abbruch: abbruch);
-            return appx.Ausgabe.Trim();
+            var appx = StoreAktualisierer.AppxAuswerten(
+                await Kommandozeile.AusfuehrenAsync("powershell.exe", StoreAktualisierer.AppxBefehl(eintrag.AppxName),
+                    TimeSpan.FromMinutes(2), abbruch: abbruch));
+            if (!appx.Erfolg) Protokollierung.Schreiben(eintrag.Id, "Fingerabdruck unbekannt: " + appx.Problem);
+            return appx.Version;
         }
 
         if (!File.Exists(Pfade.Winget)) return "";
 
         var args = $"list --id {eintrag.WingetId} --exact --disable-interactivity --accept-source-agreements";
         var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(3), abbruch: abbruch);
-        return TabellenZeile(lauf.Ausgabe, eintrag.WingetId ?? "")?.Installiert ?? "";
+        var (wert, problem) = ListenFingerabdruck(lauf, eintrag.WingetId ?? "");
+        if (problem is not null) Protokollierung.Schreiben(eintrag.Id, "Fingerabdruck unbekannt: " + problem);
+        return wert;
     }
+
+    /// <summary>The installed version from a list run -- only from a clean run, never a guess.</summary>
+    internal static (string Fingerabdruck, string? Problem) ListenFingerabdruck(BefehlErgebnis lauf, string id)
+    {
+        if (lauf.Abgelaufen) return ("", "winget list hat das Zeitlimit überschritten.");
+        if (lauf.ExitCode == KeinPaketGefunden) return ("", "winget findet das Paket nicht.");
+        if (lauf.ExitCode != 0) return ("", "winget list endete mit Code " + Code(lauf.ExitCode) + ".");
+        var installiert = TabellenZeile(lauf.Ausgabe, id)?.Installiert ?? "";
+        return string.IsNullOrWhiteSpace(installiert) ? ("", "winget list lieferte keine lesbare Version.") : (installiert, null);
+    }
+
+    /// <summary>winget's "installed, nothing newer" answer to an upgrade, in code or in words.</summary>
+    internal static bool IstNichtsZuTun(BefehlErgebnis lauf)
+        => !lauf.Abgelaufen
+           && (lauf.ExitCode == KeinAnwendbaresUpgrade
+               || lauf.Ausgabe.Contains("No applicable upgrade", StringComparison.OrdinalIgnoreCase)
+               || lauf.Ausgabe.Contains("No available upgrade", StringComparison.OrdinalIgnoreCase)
+               || lauf.Ausgabe.Contains("Kein anwendbares Upgrade", StringComparison.OrdinalIgnoreCase));
+
+    private static bool MeldetKeinPaket(string ausgabe)
+        => ausgabe.Contains("No installed package found", StringComparison.OrdinalIgnoreCase)
+           || ausgabe.Contains("Es wurde kein installiertes Paket", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>winget codes are HRESULTs; hex is what its documentation and issues use.</summary>
+    internal static string Code(int exitCode) => exitCode < 0 ? "0x" + exitCode.ToString("X8") : exitCode.ToString();
 
     /// <summary>
     /// Finds the package row and returns (installed, available).

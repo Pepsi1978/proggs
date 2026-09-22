@@ -15,6 +15,9 @@ public sealed partial class HauptViewModel : ObservableObject
 {
     private readonly Einstellungen _einstellungen = Einstellungen.Laden();
 
+    /// <summary>App-wide: at most one external operation (check, update, batch) at a time.</summary>
+    private readonly Laufkoordination _koordination = new();
+
     /// <summary>
     /// All known mechanisms, keyed by the catalog field "art". A new program is a JSON entry;
     /// only a genuinely new mechanism needs a new entry here.
@@ -48,6 +51,7 @@ public sealed partial class HauptViewModel : ObservableObject
         }
         _immerAlsAdmin = Rechte.ImmerAlsAdmin;
 
+        _koordination.Geaendert += AufKoordinationGeaendert;
         KatalogLaden();
     }
 
@@ -203,7 +207,11 @@ public sealed partial class HauptViewModel : ObservableObject
 
     private void KatalogLaden()
     {
-        foreach (var alt in Programme) alt.PropertyChanged -= AufProgrammGeaendert;
+        foreach (var alt in Programme)
+        {
+            alt.PropertyChanged -= AufProgrammGeaendert;
+            alt.Abmelden();
+        }
         Programme.Clear();
 
         var (katalog, fehler) = Katalogdienst.Laden();
@@ -213,7 +221,7 @@ public sealed partial class HauptViewModel : ObservableObject
         foreach (var eintrag in katalog.Programme)
         {
             _aktualisierer.TryGetValue(eintrag.Art, out var dienst);
-            var vm = new ProgrammViewModel(eintrag, dienst, _einstellungen);
+            var vm = new ProgrammViewModel(eintrag, dienst, _einstellungen, _koordination);
             vm.PropertyChanged += AufProgrammGeaendert;
             vm.Meldung += (_, text) => Dialoge.Hinweis(text);
 
@@ -248,32 +256,22 @@ public sealed partial class HauptViewModel : ObservableObject
         // Which programs already start elevated through a scheduled task?
         foreach (var p in Programme) await p.AufgabenZustandLesenAsync();
 
-        // Did a previously staged update arrive in the meantime -- or is it still hanging?
-        foreach (var p in Programme) await p.AusstehendesPruefenAsync();
+        // The startup pass queries winget, git and the Appx registry just like a batch run, so it
+        // holds the same exclusive ownership -- a click during it waits instead of running beside it.
+        using var besitz = _koordination.SammelBeginnen();
+        if (besitz is null)
+        {
+            KopfStatus = ProgrammViewModel.BelegtText;
+            return;
+        }
 
-        await AllePruefenAsync();
-    }
-
-    [RelayCommand]
-    private async Task AllePruefenAsync()
-    {
-        if (LaeuftSammelvorgang) return;
         LaeuftSammelvorgang = true;
         try
         {
-            // Sequential on purpose: winget serialises its source access anyway, and a parallel
-            // burst makes the log unreadable.
-            // A snapshot: the list must not shift under the loop (reload is blocked meanwhile,
-            // this is the second layer).
-            var liste = Programme.ToList();
-            var gesamt = liste.Count;
-            for (var i = 0; i < gesamt; i++)
-            {
-                var p = liste[i];
-                KopfStatus = "Prüft " + p.Name + " (" + (i + 1) + " von " + gesamt + ") …";
-                await p.PruefenCommand.ExecuteAsync(null);
-            }
-            KopfStatus = "Prüfung abgeschlossen – " + UpdateZusammenfassung + ".";
+            // Did a previously staged update arrive in the meantime -- or is it still hanging?
+            foreach (var p in Programme.ToList()) await p.AusstehendesPruefenAsync();
+
+            await AllePruefenMitBesitzAsync(besitz);
         }
         finally
         {
@@ -282,9 +280,50 @@ public sealed partial class HauptViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task AllePruefenAsync()
+    {
+        using var besitz = _koordination.SammelBeginnen();
+        if (besitz is null)
+        {
+            KopfStatus = "Alle prüfen geht erst, wenn der laufende Vorgang fertig ist.";
+            return;
+        }
+
+        LaeuftSammelvorgang = true;
+        try
+        {
+            await AllePruefenMitBesitzAsync(besitz);
+        }
+        finally
+        {
+            LaeuftSammelvorgang = false;
+        }
+    }
+
+    private async Task AllePruefenMitBesitzAsync(Laufbesitz besitz)
+    {
+        // Sequential on purpose: winget serialises its source access anyway, and a parallel
+        // burst makes the log unreadable. A snapshot: the list must not shift under the loop
+        // (reload is blocked meanwhile, this is the second layer).
+        var liste = Programme.ToList();
+        var gesamt = liste.Count;
+        for (var i = 0; i < gesamt; i++)
+        {
+            var p = liste[i];
+            KopfStatus = "Prüft " + p.Name + " (" + (i + 1) + " von " + gesamt + ") …";
+            await p.PruefenImSammelAsync(besitz);
+        }
+        KopfStatus = "Prüfung abgeschlossen – " + UpdateZusammenfassung + ".";
+    }
+
+    [RelayCommand]
     private async Task AlleAktualisierenAsync()
     {
-        if (LaeuftSammelvorgang) return;
+        if (_koordination.Belegt)
+        {
+            KopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist.";
+            return;
+        }
 
         var offen = Programme.Where(p => p.HatUpdate).ToList();
         if (offen.Count == 0)
@@ -300,6 +339,14 @@ public sealed partial class HauptViewModel : ObservableObject
             return;
         }
 
+        // Acquired only now: the question above is modal, and whatever started meanwhile wins.
+        using var besitz = _koordination.SammelBeginnen();
+        if (besitz is null)
+        {
+            KopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist.";
+            return;
+        }
+
         LaeuftSammelvorgang = true;
         try
         {
@@ -307,7 +354,7 @@ public sealed partial class HauptViewModel : ObservableObject
             {
                 KopfStatus = "Aktualisiert " + offen[i].Name + " (" + (i + 1) + " von " + offen.Count + ") …";
                 AusgewaehltesProgramm = offen[i];
-                await offen[i].AktualisierenCommand.ExecuteAsync(null);
+                await offen[i].AktualisierenImSammelAsync(besitz);
             }
             KopfStatus = "Alle Updates sind durchgelaufen.";
         }
@@ -317,13 +364,23 @@ public sealed partial class HauptViewModel : ObservableObject
         }
     }
 
+    /// <summary>Batch buttons and "reload" are only usable while nothing at all is running.</summary>
+    public bool SammelMoeglich => !_koordination.Belegt;
+
+    private void AufKoordinationGeaendert(object? sender, EventArgs e)
+    {
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) OnPropertyChanged(nameof(SammelMoeglich));
+        else dispatcher.BeginInvoke(() => OnPropertyChanged(nameof(SammelMoeglich)));
+    }
+
     [RelayCommand]
     private void KatalogNeuLaden()
     {
         // Reloading throws the cards away. A card whose update is still running would vanish
         // mid-run -- its result never shown, and a second run of the same installer possible
         // from the fresh card.
-        if (LaeuftSammelvorgang || Programme.Any(p => p.IstBeschaeftigt))
+        if (_koordination.Belegt || LaeuftSammelvorgang || Programme.Any(p => p.IstBeschaeftigt))
         {
             KopfStatus = "Neu laden geht erst, wenn alle laufenden Prüfungen und Updates fertig sind.";
             return;

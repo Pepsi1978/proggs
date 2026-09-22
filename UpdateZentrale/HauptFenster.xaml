@@ -89,13 +89,14 @@
                         ToolTip="programs.json öffnen – dort werden neue Programme eingetragen." />
                 <Button Content="Neu laden" Style="{StaticResource SchalterLeise}"
                         Command="{Binding KatalogNeuLadenCommand}" Margin="0,0,8,0"
+                        IsEnabled="{Binding SammelMoeglich}"
                         ToolTip="Katalog neu einlesen, ohne die App neu zu starten." />
                 <Button Content="Alle prüfen" Style="{StaticResource SchalterZweit}"
                         Command="{Binding AllePruefenCommand}" Margin="0,0,8,0"
-                        IsEnabled="{Binding LaeuftSammelvorgang, Converter={StaticResource Nicht}}" />
+                        IsEnabled="{Binding SammelMoeglich}" />
                 <Button Content="Alle Updates installieren" Style="{StaticResource SchalterHaupt}"
                         Command="{Binding AlleAktualisierenCommand}"
-                        IsEnabled="{Binding LaeuftSammelvorgang, Converter={StaticResource Nicht}}" />
+                        IsEnabled="{Binding SammelMoeglich}" />
             </StackPanel>
         </Grid>
 

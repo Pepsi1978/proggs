@@ -27,8 +27,18 @@ public sealed class CliAktualisierer : IAktualisierer
         if (!string.IsNullOrWhiteSpace(eintrag.VersionsArgumente))
         {
             var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente, TimeSpan.FromMinutes(2), abbruch: abbruch, alsAufrufer: true);
-            installiert = VersionsMuster.Match(lauf.Ausgabe).Value;
             protokoll.Report($"{Path.GetFileName(exe)} {eintrag.VersionsArgumente} -> {lauf.Ausgabe}");
+
+            // Without a readable installed version any comparison is meaningless: "" against the
+            // registry version used to announce an update that nobody could verify.
+            var (version, problem) = FingerabdruckAus(lauf, null);
+            if (problem is not null)
+            {
+                protokoll.Report("Versionsabfrage fehlgeschlagen: " + problem);
+                return new PruefErgebnis(UpdateZustand.Fehler, "", "",
+                    "Die installierte Version ließ sich nicht ermitteln – " + problem, lauf.Ausgabe);
+            }
+            installiert = version;
         }
 
         // Path 1: the tool can tell us itself what it would update.
@@ -67,14 +77,17 @@ public sealed class CliAktualisierer : IAktualisierer
         // Path 2: compare against the npm registry, which carries the same version line.
         if (!string.IsNullOrWhiteSpace(eintrag.NpmPaket))
         {
-            var verfuegbar = await NpmVersionAsync(eintrag.NpmPaket, protokoll, abbruch);
-            if (!string.IsNullOrWhiteSpace(verfuegbar))
-            {
-                var neuer = Vergleiche(verfuegbar, installiert) > 0;
-                return new PruefErgebnis(neuer ? UpdateZustand.UpdateVerfuegbar : UpdateZustand.Aktuell,
-                    installiert, verfuegbar,
-                    neuer ? $"Neue Version {verfuegbar} verfügbar." : "Auf dem neuesten Stand.");
-            }
+            var npm = await NpmVersionAsync(eintrag.NpmPaket, protokoll, abbruch);
+            if (!npm.Erfolg)
+                // The source exists -- it failed. "No source configured" would send the user
+                // looking in the wrong place.
+                return new PruefErgebnis(UpdateZustand.Fehler, installiert, "", npm.Problem ?? "Registry-Abfrage fehlgeschlagen.");
+
+            var verfuegbar = npm.Version;
+            var neuer = Vergleiche(verfuegbar, installiert) > 0;
+            return new PruefErgebnis(neuer ? UpdateZustand.UpdateVerfuegbar : UpdateZustand.Aktuell,
+                installiert, verfuegbar,
+                neuer ? $"Neue Version {verfuegbar} verfügbar." : "Auf dem neuesten Stand.");
         }
 
         return new PruefErgebnis(UpdateZustand.Unbekannt, installiert, "",
@@ -169,23 +182,64 @@ public sealed class CliAktualisierer : IAktualisierer
     /// sucht er dort ein node_modules und bricht mit MODULE_NOT_FOUND ab. Die Registry-Abfrage
     /// braucht weder node noch ein bestimmtes Arbeitsverzeichnis.
     /// </summary>
-    private static async Task<string> NpmVersionAsync(string paket, IProgress<string> protokoll, CancellationToken abbruch)
+    /// <summary>Success, version and reason kept apart: "" alone could not say why.</summary>
+    internal readonly record struct NpmAbfrage(bool Erfolg, string Version, string? Problem);
+
+    internal static Task<NpmAbfrage> NpmVersionAsync(string paket, IProgress<string> protokoll, CancellationToken abbruch)
+        => NpmVersionAsync(Netz, paket, protokoll, abbruch);
+
+    /// <param name="netz">Injectable so the HTTP path is testable with a fake handler.</param>
+    internal static async Task<NpmAbfrage> NpmVersionAsync(HttpClient netz, string paket, IProgress<string> protokoll,
+                                                           CancellationToken abbruch)
     {
         var adresse = $"https://registry.npmjs.org/{paket}/latest";
+        NpmAbfrage ergebnis;
         try
         {
-            using var antwort = await Netz.GetAsync(adresse, abbruch);
-            antwort.EnsureSuccessStatusCode();
-            using var strom = await antwort.Content.ReadAsStreamAsync(abbruch);
-            using var json = await System.Text.Json.JsonDocument.ParseAsync(strom, cancellationToken: abbruch);
-            var version = json.RootElement.TryGetProperty("version", out var feld) ? feld.GetString() ?? "" : "";
-            protokoll.Report($"registry.npmjs.org {paket} -> {version}");
-            return VersionsMuster.Match(version).Value;
+            using var antwort = await netz.GetAsync(adresse, abbruch);
+            if (!antwort.IsSuccessStatusCode)
+            {
+                ergebnis = new NpmAbfrage(false, "",
+                    "Registry-Abfrage fehlgeschlagen: HTTP " + (int)antwort.StatusCode + " " + antwort.ReasonPhrase + ".");
+            }
+            else
+            {
+                ergebnis = NpmAuswerten(await antwort.Content.ReadAsStringAsync(abbruch));
+            }
+        }
+        catch (OperationCanceledException) when (abbruch.IsCancellationRequested)
+        {
+            throw;   // a requested cancel is not a registry failure
         }
         catch (Exception ex)
         {
-            protokoll.Report($"registry.npmjs.org {paket} -> Abfrage fehlgeschlagen: {ex.Message}");
-            return "";
+            // Includes the HttpClient timeout, which also surfaces as a cancellation.
+            ergebnis = new NpmAbfrage(false, "", "Registry-Abfrage fehlgeschlagen: " + ex.Message);
+        }
+
+        protokoll.Report($"registry.npmjs.org {paket} -> " + (ergebnis.Erfolg ? ergebnis.Version : ergebnis.Problem));
+        return ergebnis;
+    }
+
+    /// <summary>Pure evaluation of the registry body: only a readable version number counts.</summary>
+    internal static NpmAbfrage NpmAuswerten(string json)
+    {
+        try
+        {
+            using var dokument = System.Text.Json.JsonDocument.Parse(json);
+            var roh = dokument.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                      && dokument.RootElement.TryGetProperty("version", out var feld)
+                      && feld.ValueKind == System.Text.Json.JsonValueKind.String
+                ? feld.GetString() ?? ""
+                : "";
+            var version = VersionsMuster.Match(roh).Value;
+            return string.IsNullOrWhiteSpace(version)
+                ? new NpmAbfrage(false, "", "Registry lieferte keine Versionsnummer.")
+                : new NpmAbfrage(true, version, null);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return new NpmAbfrage(false, "", "Registry-Antwort war kein gültiges JSON: " + ex.Message);
         }
     }
 

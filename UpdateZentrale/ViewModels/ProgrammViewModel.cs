@@ -13,12 +13,16 @@ public sealed partial class ProgrammViewModel : ObservableObject
     private readonly IAktualisierer? _aktualisierer;
     private readonly Einstellungen _einstellungen;
     private readonly StringBuilder _protokoll = new();
+    private readonly Laufkoordination _koordination;
 
-    public ProgrammViewModel(ProgrammEintrag eintrag, IAktualisierer? aktualisierer, Einstellungen einstellungen)
+    public ProgrammViewModel(ProgrammEintrag eintrag, IAktualisierer? aktualisierer, Einstellungen einstellungen,
+                             Laufkoordination koordination)
     {
         Eintrag = eintrag;
         _aktualisierer = aktualisierer;
         _einstellungen = einstellungen;
+        _koordination = koordination;
+        _koordination.Geaendert += AufKoordinationGeaendert;
 
         var gespeichert = einstellungen.Fuer(eintrag.Id);
         // The registry is the truth for "runs as admin"; settings.json only keeps the wish for
@@ -122,8 +126,51 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// </summary>
     public bool AktionMoeglich => _aktualisierer is not null
                                   && !IstBeschaeftigt
+                                  && !_koordination.Belegt
                                   && Zustand != UpdateZustand.Aktuell
                                   && !UebernahmeOffen;
+
+    public const string BelegtText = "Es läuft bereits ein anderer Vorgang – erst danach ist das möglich.";
+
+    /// <summary>The buttons follow the app-wide lock at once, from whichever thread released it.</summary>
+    private void AufKoordinationGeaendert(object? sender, EventArgs e)
+    {
+        void Melden()
+        {
+            OnPropertyChanged(nameof(AktionMoeglich));
+            OnPropertyChanged(nameof(KannPruefen));
+        }
+
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) Melden();
+        else dispatcher.BeginInvoke(Melden);
+    }
+
+    /// <summary>Called when the card is thrown away (catalog reload), so it stops listening.</summary>
+    public void Abmelden() => _koordination.Geaendert -= AufKoordinationGeaendert;
+
+    /// <summary>
+    /// A batch run passes its ownership down; a click has to acquire its own. Losing that race
+    /// means another operation is running -- then nothing starts.
+    /// </summary>
+    private bool Erwerben(Laufbesitz? sammel, out Laufbesitz? eigen)
+    {
+        eigen = null;
+        if (sammel is not null)
+        {
+            // A batch token is only honoured while it really owns this coordination -- a
+            // foreign, released or stale token must not slip a run past the lock.
+            if (_koordination.IstAktiverSammelbesitz(sammel)) return true;
+            StatusText = BelegtText;
+            return false;
+        }
+
+        eigen = _koordination.EinzelBeginnen();
+        if (eigen is not null) return true;
+
+        StatusText = BelegtText;
+        return false;
+    }
 
     public string AktionsText => UebernahmeOffen
         ? "Neustart nötig"
@@ -139,7 +186,7 @@ public sealed partial class ProgrammViewModel : ObservableObject
     /// <summary>Only a real update gets the accent button; everything else stays calm.</summary>
     public bool AktionBetont => Zustand == UpdateZustand.UpdateVerfuegbar && !UebernahmeOffen;
 
-    public bool KannPruefen => _aktualisierer is not null && !IstBeschaeftigt;
+    public bool KannPruefen => _aktualisierer is not null && !IstBeschaeftigt && !_koordination.Belegt;
 
     public string VersionsText => string.IsNullOrWhiteSpace(InstallierteVersion)
         ? "–"
@@ -392,23 +439,55 @@ public sealed partial class ProgrammViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task PruefenAsync()
+    private Task PruefenAsync() => PruefenKernAsync(null);
+
+    /// <summary>A check driven by the batch run, inside the batch's exclusive ownership.</summary>
+    internal Task PruefenImSammelAsync(Laufbesitz sammel) => PruefenKernAsync(sammel);
+
+    private async Task PruefenKernAsync(Laufbesitz? sammel)
     {
-        if (_aktualisierer is null) return;
-        await LaufAsync(async (fortschritt, abbruch) =>
+        if (_aktualisierer is null || IstBeschaeftigt) return;
+        if (!Erwerben(sammel, out var eigen)) return;
+        try
         {
-            StatusText = "Wird geprüft …";
-            Zustand = UpdateZustand.Pruefe;
-            return await _aktualisierer.PruefenAsync(Eintrag, fortschritt, abbruch);
-        });
+            await LaufAsync(async (fortschritt, abbruch) =>
+            {
+                StatusText = "Wird geprüft …";
+                Zustand = UpdateZustand.Pruefe;
+                return await _aktualisierer.PruefenAsync(Eintrag, fortschritt, abbruch);
+            });
+        }
+        finally
+        {
+            eigen?.Dispose();
+        }
     }
 
     [RelayCommand]
-    private async Task AktualisierenAsync()
+    private Task AktualisierenAsync() => AktualisierenKernAsync(null);
+
+    /// <summary>An update driven by "install all", inside the batch's exclusive ownership.</summary>
+    internal Task AktualisierenImSammelAsync(Laufbesitz sammel) => AktualisierenKernAsync(sammel);
+
+    private async Task AktualisierenKernAsync(Laufbesitz? sammel)
     {
-        // Busy already (a check of the batch run, or a run started elsewhere): LaufAsync would
-        // drop this request anyway -- but only after the user had agreed to close the program.
+        // Busy already: LaufAsync would drop this request anyway -- but only after the user had
+        // agreed to close the program. Ownership is taken before that question for the same reason.
         if (_aktualisierer is null || IstBeschaeftigt) return;
+        if (!Erwerben(sammel, out var eigen)) return;
+        try
+        {
+            await AktualisierenMitBesitzAsync();
+        }
+        finally
+        {
+            eigen?.Dispose();
+        }
+    }
+
+    private async Task AktualisierenMitBesitzAsync()
+    {
+        if (_aktualisierer is null) return;
 
         // Electron/NSIS installers hang silently while the app is running, so the helper processes
         // go down too -- but only after the user agreed.
