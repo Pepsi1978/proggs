@@ -39,8 +39,16 @@ public partial class HauptFenster : Window
     /// </summary>
     private void AnBildschirmAnpassen()
     {
-        var flaeche = SystemParameters.WorkArea;
+        // Der Bildschirm, auf dem das Fenster tatsächlich erscheint -- SystemParameters.WorkArea
+        // kennt nur den Hauptbildschirm und hätte auf einem zweiten Monitor falsch gedeckelt.
+        var flaeche = ArbeitsflaecheDesMonitors() ?? SystemParameters.WorkArea;
         if (flaeche.Width <= 0 || flaeche.Height <= 0) return;
+
+        // Schicht gegen den schwarzen Rand: Ein gesetztes MaxWidth/MaxHeight gibt WPF als größte
+        // Fenstergröße an Windows weiter, maximiert bleibt dann ein schwarzer Streifen rechts und
+        // unten. Hier ausdrücklich aufgehoben, damit auch ein späterer Style es nicht einschleppt.
+        MaxWidth = double.PositiveInfinity;
+        MaxHeight = double.PositiveInfinity;
 
         // Etwas Luft zum Rand: ein randloses Fenster wirkt wie ein halb misslungenes Maximieren.
         var hoechstBreite = flaeche.Width * 0.96;
@@ -60,6 +68,61 @@ public partial class HauptFenster : Window
         Left = flaeche.Left + (flaeche.Width - Width) / 2;
         Top = flaeche.Top + (flaeche.Height - Height) / 2;
     }
+
+    /// <summary>
+    /// Zweite Schicht: Wer auch immer später eine Obergrenze setzt (Style, Code, Bindung) --
+    /// beim Maximieren wird sie aufgehoben, bevor Windows die Größe übernimmt.
+    /// </summary>
+    protected override void OnStateChanged(EventArgs e)
+    {
+        if (WindowState == WindowState.Maximized
+            && (!double.IsPositiveInfinity(MaxWidth) || !double.IsPositiveInfinity(MaxHeight)))
+        {
+            MaxWidth = double.PositiveInfinity;
+            MaxHeight = double.PositiveInfinity;
+        }
+        base.OnStateChanged(e);
+    }
+
+    /// <summary>Arbeitsfläche des Monitors unter dem Fenster, in geräteunabhängigen Einheiten.</summary>
+    private Rect? ArbeitsflaecheDesMonitors()
+    {
+        try
+        {
+            var griff = new WindowInteropHelper(this).Handle;
+            if (griff == IntPtr.Zero) return null;
+
+            var monitor = MonitorFromWindow(griff, MonitorDefaultToNearest);
+            var info = new MonitorInfo { Groesse = Marshal.SizeOf<MonitorInfo>() };
+            if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref info)) return null;
+
+            // Physische Pixel -> DIPs mit genau der Transformation, mit der WPF Left/Top/Width/
+            // Height dieses Fensters auslegt. Eine pauschale Division durch die Fenster-DPI
+            // verschiebt bei gemischten DPI-Werten die absoluten Koordinaten.
+            if (HwndSource.FromHwnd(griff)?.CompositionTarget is not { } ziel) return null;
+            var a = info.Arbeit;
+            return Rect.Transform(new Rect(a.Links, a.Oben, a.Rechts - a.Links, a.Unten - a.Oben),
+                ziel.TransformFromDevice);
+        }
+        catch
+        {
+            return null;   // Fällt auf die Fläche des Hauptbildschirms zurück.
+        }
+    }
+
+    private const uint MonitorDefaultToNearest = 2;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rechteck { public int Links, Oben, Rechts, Unten; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo { public int Groesse; public Rechteck Monitor; public Rechteck Arbeit; public int Flags; }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr fenster, uint flags);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
 
     /// <summary>
     /// Without this the window keeps the light Windows caption bar above a dark surface -- and

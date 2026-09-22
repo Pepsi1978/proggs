@@ -406,7 +406,9 @@ public sealed partial class ProgrammViewModel : ObservableObject
     [RelayCommand]
     private async Task AktualisierenAsync()
     {
-        if (_aktualisierer is null) return;
+        // Busy already (a check of the batch run, or a run started elsewhere): LaufAsync would
+        // drop this request anyway -- but only after the user had agreed to close the program.
+        if (_aktualisierer is null || IstBeschaeftigt) return;
 
         // Electron/NSIS installers hang silently while the app is running, so the helper processes
         // go down too -- but only after the user agreed.
@@ -528,25 +530,36 @@ public sealed partial class ProgrammViewModel : ObservableObject
             bericht.AusstehendeVersion = string.IsNullOrWhiteSpace(VerfuegbareVersion) ? null : VerfuegbareVersion;
             bericht.Meldung = ergebnis.Meldung;
         }
-        else if (string.IsNullOrWhiteSpace(vorher) && string.IsNullOrWhiteSpace(nachher))
-        {
-            bericht.Ergebnis = LaufErgebnis.NichtVerifiziert;
-            bericht.Meldung = "Das Update meldete Erfolg, der Stand ließ sich aber weder vorher noch "
-                            + "nachher ermitteln – es ist nicht überprüfbar.";
-        }
-        else if (vorher == nachher)
-        {
-            bericht.Ergebnis = LaufErgebnis.NichtVerifiziert;
-            bericht.Meldung = "Das Update meldete Erfolg, der Stand ist aber unverändert ("
-                            + Beschreibe(nachher) + "). Einzelheiten stehen im Protokoll.";
-        }
         else
         {
-            bericht.Ergebnis = LaufErgebnis.Erfolgreich;
-            bericht.Meldung = "Verifiziert: " + Beschreibe(vorher) + " → " + Beschreibe(nachher);
+            (bericht.Ergebnis, bericht.Meldung) = FingerabdruckUrteil(vorher, nachher);
         }
 
         return bericht;
+    }
+
+    /// <summary>
+    /// A change is only proven when BOTH readings exist and differ. One empty side is not a
+    /// change but a failed reading -- "1.2.3" -> "" used to count as success.
+    /// </summary>
+    internal static (LaufErgebnis Ergebnis, string Meldung) FingerabdruckUrteil(string vorher, string nachher)
+    {
+        var ohneVorher = string.IsNullOrWhiteSpace(vorher);
+        var ohneNachher = string.IsNullOrWhiteSpace(nachher);
+
+        if (ohneVorher && ohneNachher)
+            return (LaufErgebnis.NichtVerifiziert, "Das Update meldete Erfolg, der Stand ließ sich aber weder vorher noch "
+                                                   + "nachher ermitteln – es ist nicht überprüfbar.");
+        if (ohneVorher || ohneNachher)
+            return (LaufErgebnis.NichtVerifiziert, "Das Update meldete Erfolg, der Stand ließ sich aber "
+                                                   + (ohneVorher ? "vorher" : "nachher") + " nicht ermitteln ("
+                                                   + Beschreibe(vorher) + " → " + Beschreibe(nachher)
+                                                   + ") – es ist nicht überprüfbar.");
+        if (vorher == nachher)
+            return (LaufErgebnis.NichtVerifiziert, "Das Update meldete Erfolg, der Stand ist aber unverändert ("
+                                                   + Beschreibe(nachher) + "). Einzelheiten stehen im Protokoll.");
+
+        return (LaufErgebnis.Erfolgreich, "Verifiziert: " + Beschreibe(vorher) + " → " + Beschreibe(nachher));
     }
 
     private static string Beschreibe(string fingerabdruck)

@@ -263,10 +263,13 @@ public sealed partial class HauptViewModel : ObservableObject
         {
             // Sequential on purpose: winget serialises its source access anyway, and a parallel
             // burst makes the log unreadable.
-            var gesamt = Programme.Count;
+            // A snapshot: the list must not shift under the loop (reload is blocked meanwhile,
+            // this is the second layer).
+            var liste = Programme.ToList();
+            var gesamt = liste.Count;
             for (var i = 0; i < gesamt; i++)
             {
-                var p = Programme[i];
+                var p = liste[i];
                 KopfStatus = "Prüft " + p.Name + " (" + (i + 1) + " von " + gesamt + ") …";
                 await p.PruefenCommand.ExecuteAsync(null);
             }
@@ -317,6 +320,15 @@ public sealed partial class HauptViewModel : ObservableObject
     [RelayCommand]
     private void KatalogNeuLaden()
     {
+        // Reloading throws the cards away. A card whose update is still running would vanish
+        // mid-run -- its result never shown, and a second run of the same installer possible
+        // from the fresh card.
+        if (LaeuftSammelvorgang || Programme.Any(p => p.IstBeschaeftigt))
+        {
+            KopfStatus = "Neu laden geht erst, wenn alle laufenden Prüfungen und Updates fertig sind.";
+            return;
+        }
+
         KatalogLaden();
         KopfStatus = "Katalog neu geladen – " + Programme.Count + " Programme.";
     }

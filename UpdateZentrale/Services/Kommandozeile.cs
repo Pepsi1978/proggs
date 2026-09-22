@@ -5,7 +5,12 @@ using System.Text.RegularExpressions;
 
 namespace UpdateZentrale.Services;
 
-public sealed record BefehlErgebnis(int ExitCode, string Ausgabe, bool Abgelaufen);
+/// <param name="PipeGehalten">
+/// The tool exited, but a program it started still holds the inherited output pipe (the repo
+/// scripts launch the freshly built app that way). The run is complete; this only says why the
+/// last lines may be missing.
+/// </param>
+public sealed record BefehlErgebnis(int ExitCode, string Ausgabe, bool Abgelaufen, bool PipeGehalten = false);
 
 /// <summary>
 /// Runs console tools and returns their whole output. winget and the PowerShell update scripts
@@ -90,7 +95,8 @@ public static class Kommandozeile
         }
 
         // The tool itself has exited; give the pipes a moment to drain, then stop waiting.
-        if (!await AuslaufenLassenAsync(ausgabe, fehler))
+        var gehalten = !await AuslaufenLassenAsync(ausgabe, fehler);
+        if (gehalten)
         {
             lock (puffer)
             {
@@ -99,7 +105,7 @@ public static class Kommandozeile
             }
         }
 
-        return new BefehlErgebnis(prozess.ExitCode, Saeubern(Zusammenfuegen(puffer, fehlerPuffer)), false);
+        return new BefehlErgebnis(prozess.ExitCode, Saeubern(Zusammenfuegen(puffer, fehlerPuffer)), false, gehalten);
     }
 
     private static readonly TimeSpan Auslaufzeit = TimeSpan.FromSeconds(2);

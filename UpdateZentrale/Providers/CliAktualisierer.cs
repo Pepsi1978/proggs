@@ -39,6 +39,15 @@ public sealed class CliAktualisierer : IAktualisierer
                 exe, eintrag.PruefArgumente, TimeSpan.FromMinutes(6), abbruch: abbruch, alsAufrufer: true);
             protokoll.Report(lauf.Ausgabe);
 
+            // A dry run that failed or timed out lists nothing -- which would read as "nothing
+            // pending". Only a clean run is allowed to say "up to date".
+            if (lauf.Abgelaufen || lauf.ExitCode != 0)
+                return new PruefErgebnis(UpdateZustand.Fehler, installiert, "",
+                    lauf.Abgelaufen
+                        ? "Die Prüfung hat das Zeitlimit überschritten – der Stand ist unbekannt."
+                        : "Die Prüfung endete mit Code " + lauf.ExitCode + " – der Stand ist unbekannt.",
+                    lauf.Ausgabe);
+
             var geplant = lauf.Ausgabe
                 .Split('\n')
                 .Where(z => z.Contains('→') || z.Contains("->"))
@@ -103,28 +112,53 @@ public sealed class CliAktualisierer : IAktualisierer
         var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
         if (!File.Exists(exe)) return "";
 
+        BefehlErgebnis? versionsLauf = null, planLauf = null;
         if (!string.IsNullOrWhiteSpace(eintrag.VersionsArgumente))
-        {
-            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente,
+            versionsLauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.VersionsArgumente,
                 TimeSpan.FromMinutes(2), abbruch: abbruch, alsAufrufer: true);
-            var version = VersionsMuster.Match(lauf.Ausgabe).Value;
-            if (!string.IsNullOrWhiteSpace(version)) return version;
+
+        // The dry run only when there is no version reading at all -- see FingerabdruckAus.
+        if (versionsLauf is null && !string.IsNullOrWhiteSpace(eintrag.PruefArgumente))
+            planLauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.PruefArgumente,
+                TimeSpan.FromMinutes(8), abbruch: abbruch, alsAufrufer: true);
+
+        var (fingerabdruck, problem) = FingerabdruckAus(versionsLauf, planLauf);
+        if (problem is not null) Protokollierung.Schreiben(eintrag.Id, "Fingerabdruck unbekannt: " + problem);
+        return fingerabdruck;
+    }
+
+    /// <summary>
+    /// Pure evaluation of the fingerprint queries. A failed or timed-out query yields "" (unknown),
+    /// never a plausible value: an aborted dry run lists nothing and used to read as "nichts offen"
+    /// -- a fake "after" state that proved an update which never happened. Likewise a failed
+    /// version query must not fall back to the dry run: the two readings would be of different
+    /// kinds and always differ.
+    /// </summary>
+    internal static (string Fingerabdruck, string? Problem) FingerabdruckAus(BefehlErgebnis? versionsLauf, BefehlErgebnis? planLauf)
+    {
+        if (versionsLauf is not null)
+        {
+            if (versionsLauf.Abgelaufen) return ("", "Versionsabfrage hat das Zeitlimit überschritten.");
+            if (versionsLauf.ExitCode != 0) return ("", "Versionsabfrage endete mit Code " + versionsLauf.ExitCode + ".");
+            var version = VersionsMuster.Match(versionsLauf.Ausgabe).Value;
+            return string.IsNullOrWhiteSpace(version)
+                ? ("", "Versionsabfrage lieferte keine Versionsnummer.")
+                : (version, null);
         }
 
-        if (!string.IsNullOrWhiteSpace(eintrag.PruefArgumente))
+        if (planLauf is not null)
         {
-            var lauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.PruefArgumente,
-                TimeSpan.FromMinutes(8), abbruch: abbruch, alsAufrufer: true);
-            var geplant = lauf.Ausgabe
+            if (planLauf.Abgelaufen) return ("", "Dry-Run hat das Zeitlimit überschritten.");
+            if (planLauf.ExitCode != 0) return ("", "Dry-Run endete mit Code " + planLauf.ExitCode + ".");
+            var geplant = planLauf.Ausgabe
                 .Split('\n')
                 .Where(z => z.Contains('→') || z.Contains("->"))
                 .Select(z => z.Trim())
                 .ToList();
-
-            return geplant.Count == 0 ? "nichts offen" : string.Join(" | ", geplant);
+            return (geplant.Count == 0 ? "nichts offen" : string.Join(" | ", geplant), null);
         }
 
-        return "";
+        return ("", null);
     }
 
     private static readonly HttpClient Netz = new() { Timeout = TimeSpan.FromSeconds(30) };
@@ -155,8 +189,11 @@ public sealed class CliAktualisierer : IAktualisierer
         }
     }
 
-    /// <summary>Numeric component compare; returns &gt;0 when a is newer than b.</summary>
-    private static int Vergleiche(string a, string b)
+    /// <summary>
+    /// Numeric component compare; returns &gt;0 when a is newer than b. Part by part: "1.24.5" is
+    /// older than "1.24.50" -- a prefix test says otherwise.
+    /// </summary>
+    internal static int Vergleiche(string a, string b)
     {
         if (string.IsNullOrWhiteSpace(a)) return -1;
         if (string.IsNullOrWhiteSpace(b)) return 1;
