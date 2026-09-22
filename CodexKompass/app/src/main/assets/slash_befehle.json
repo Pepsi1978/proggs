@@ -1,6 +1,6 @@
 {
  "bereich": "slash",
- "standVersion": "0.154.0",
+ "standVersion": "0.155.1",
  "eintraege": [
   {
    "name": "/agent",
@@ -824,6 +824,20 @@
    "seit": "",
    "seitBeleg": "",
    "sortierName": "vim",
+   "entfernt": false,
+   "entferntIn": "",
+   "ersatz": ""
+  },
+  {
+   "name": "/voice",
+   "kategorie": "Spracheingabe",
+   "art": "Eingebaut (Release-Notes)",
+   "kurz": "Startet experimentelle Gespräche per Mikrofon mit laufender Textabschrift.",
+   "englisch": "Added experimental `/voice` conversations with live transcripts and microphone controls on supported builds, enabled through `/experimental`.",
+   "erklaerung": "Der Befehl /voice fügt Codex CLI Gespräche per Stimme hinzu. Du kannst dabei dein Mikrofon verwenden.\n\nWährend du sprichst, zeigt Codex CLI eine laufende Textabschrift an. Das heißt: Deine gesprochenen Worte erscheinen als Text.\n\nEs gibt auch Mikrofon-Steuerungen. Welche Steuerungen genau verfügbar sind, sagt die Beschreibung nicht.\n\n/voice ist experimentell. Die Funktion kann sich also noch ändern oder nicht überall gleich funktionieren.\n\nDu musst die experimentellen Funktionen zuerst über /experimental aktivieren. Außerdem läuft /voice nur in unterstützten Builds.\n\nDer Befehl kam mit Version 0.155.0 dazu.",
+   "seit": "0.155.0",
+   "seitBeleg": "",
+   "sortierName": "voice",
    "entfernt": false,
    "entferntIn": "",
    "ersatz": ""

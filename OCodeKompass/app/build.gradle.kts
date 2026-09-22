@@ -13,13 +13,13 @@ android {
         applicationId = "de.frank.opencodekompass"
         minSdk = 26
         targetSdk = 36
-        versionCode = 15
-        versionName = "0.6.10"
+        versionCode = 16
+        versionName = "0.6.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"14.09.2026, 13:12 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"22.09.2026, 13:42 Uhr\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
-        buildConfigField("String", "SEEDED_CLI_VERSION", "\"1.18.30\"")
+        buildConfigField("String", "SEEDED_CLI_VERSION", "\"1.18.32\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 
