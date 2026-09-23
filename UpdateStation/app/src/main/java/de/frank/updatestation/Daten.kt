@@ -75,6 +75,17 @@ data class UpdateManifest(
 /** Ein gefundenes Update in der Quelle. [apkRef] ist Drive-Datei-ID oder Dokument-URI, null = APK (noch) nicht da. */
 data class Fund(val manifest: UpdateManifest, val apkRef: String?)
 
+/**
+ * Ergebnis einer Suche. [zwischenstaende] = Projektordner → Kennung der Lage (Grund und Nummern),
+ * deren Inhalt gerade nicht stimmig ist (neuere APK als update.json, update.json unlesbar, APK
+ * ohne update.json, Lesefehler) – meist läuft dort noch die Drive-Synchronisierung.
+ */
+data class Suchergebnis(val funde: List<Fund>, val zwischenstaende: Map<String, String>)
+
+/** Höchste Build-Nummer aus Dateinamen der Form "<Projekt>-<Version>-vc<Nummer>.apk". */
+fun hoechsteApkNummer(namen: List<String>): Long =
+    namen.mapNotNull { Regex("""-vc(\d+)\.apk$""").find(it)?.groupValues?.get(1)?.toLongOrNull() }.maxOrNull() ?: 0
+
 enum class Status { UPDATE, AKTUELL, INSTALLIERT_NEUER, NICHT_INSTALLIERT, SIGNATUR_ANDERS, APK_FEHLT }
 
 data class AppEintrag(
@@ -140,6 +151,25 @@ class Einstellungen(context: Context) {
     var intervallMinuten: Int
         get() = normalisiereIntervall(prefs.getInt("intervallMinuten", STANDARD_INTERVALL))
         set(v) = prefs.edit().putInt("intervallMinuten", normalisiereIntervall(v)).apply()
+
+    /**
+     * Zählt gezielte Nachprüfungen pro Projekt im Sync-Zwischenstand und liefert die Projekte, die
+     * ihr Fenster von [max] Versuchen noch nicht ausgeschöpft haben. Ändert sich die Lage eines
+     * Projekts (andere Kennung), beginnt sein Fenster neu; stimmige Projekte fallen heraus.
+     */
+    fun zaehleNachpruefungen(zwischenstaende: Map<String, String>, max: Int): Set<String> {
+        val alt = runCatching { JSONObject(prefs.getString("nachpruefungen", "{}")) }.getOrDefault(JSONObject())
+        val neu = JSONObject()
+        val offen = mutableSetOf<String>()
+        zwischenstaende.forEach { (projekt, kennung) ->
+            val vorher = alt.optJSONObject(projekt)
+            val n = if (vorher?.optString("kennung") == kennung) vorher.optInt("n") + 1 else 1
+            neu.put(projekt, JSONObject().put("kennung", kennung).put("n", n))
+            if (n <= max) offen += projekt
+        }
+        prefs.edit().putString("nachpruefungen", neu.toString()).apply()
+        return offen
+    }
 
     fun gemeldet(paket: String): Long = prefs.getLong("gemeldet_$paket", 0)
     fun setzeGemeldet(paket: String, code: Long) = prefs.edit().putLong("gemeldet_$paket", code).apply()

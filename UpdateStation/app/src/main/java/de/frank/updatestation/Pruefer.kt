@@ -15,12 +15,21 @@ object Pruefer {
         val einst = Einstellungen(context)
         ZustandsSpeicher.zustand.update { it.copy(prueftGerade = true, fehler = null) }
         try {
-            val funde = quelle.suche()
+            val ergebnis = quelle.suche()
+            // Ordner im Sync-Zwischenstand ohne lesbares Manifest: gespeicherten Fund behalten statt ihn still zu verlieren.
+            val gelesen = ergebnis.funde.map { it.manifest.projekt }.toSet()
+            val behalten = einst.funde.filter { it.manifest.projekt in ergebnis.zwischenstaende && it.manifest.projekt !in gelesen }
+            val funde = ergebnis.funde + behalten
             einst.funde = funde
             einst.letztePruefung = System.currentTimeMillis()
             val liste = bewerte(context, funde)
             Log.i(TAG, "Prüfung: ${funde.size} Updates gelesen, " + liste.groupingBy { it.status }.eachCount())
-            if (liste.any { it.status == Status.APK_FEHLT }) PruefWorker.planeNachpruefung(context)
+            // Pro Projekt begrenzt: ein dauerhaft hängender Ordner blockiert keine anderen.
+            val offen = einst.zaehleNachpruefungen(ergebnis.zwischenstaende, PruefWorker.MAX_NACHPRUEFUNGEN)
+            if (ergebnis.zwischenstaende.isNotEmpty()) {
+                Log.i(TAG, "Zwischenstand in ${ergebnis.zwischenstaende.keys.sorted()}, ${behalten.size} gespeicherte Funde behalten, Nachprüfung für ${offen.sorted()}")
+            }
+            if (offen.isNotEmpty()) PruefWorker.planeNachpruefung(context, offen)
             ZustandsSpeicher.zustand.update {
                 it.copy(eintraege = liste, letztePruefung = einst.letztePruefung, anmeldungNoetig = false)
             }

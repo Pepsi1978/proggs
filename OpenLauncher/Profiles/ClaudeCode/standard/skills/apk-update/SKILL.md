@@ -38,30 +38,58 @@ gefunden" und installiert nur, wenn der `versionCode` wirklich höher ist als de
    - liest `projekte.json` (Gradle-Task, APK-Ordner, erwartetes Paket),
    - liest den **Versionslog** `<Projekt>/app/src/main/assets/versionslog.json` (siehe unten) —
      sein letzter Eintrag ist die Version, die gebaut wird,
+   - prüft den Projektnamen (nur Buchstaben, Ziffern, `_ . -`, Ordner direkt unter `~/proggs`)
+     und übernimmt die Schreibweise vom Datenträger,
    - vergleicht dessen `versionCode` mit dem zuletzt veröffentlichten (`update.json` im
-     Zielordner) und — falls das Handy per adb erreichbar ist — mit dem am Handy installierten.
-     Ist er nicht höher, **hängt das Skript selbst einen Eintrag an** (versionCode + 1,
-     versionName + 1 in der letzten Stelle, Stand = jetzt, Notiz = Commit-Betreffe am Projekt seit
-     der letzten Änderung am Versionslog). Das Handy ist bei Fernwartung normalerweise NICHT
-     verbunden: Beim ersten Update eines Projekts (noch keine `update.json`) hebt das Skript
-     deshalb immer um 1 an, danach zählt die `update.json`,
+     Zielordner, abgesichert durch die höchste `-vcN.apk` daneben — eine kaputte `update.json`
+     zählt nie als „noch nichts veröffentlicht“) und — falls das Handy per adb erreichbar ist —
+     mit dem am Handy installierten. Ist er nicht höher, **hängt das Skript selbst einen Eintrag
+     an** (versionCode + 1, versionName + 1 in der letzten Stelle, Stand = jetzt, Notiz =
+     Commit-Betreffe am Projekt seit der letzten Änderung am Versionslog). Die erste
+     Veröffentlichung eines Projekts braucht **keinen** Extra-Bump,
+   - **veröffentlicht nie, was es selbst geändert hat:** Hat es den Versionslog eingerichtet oder
+     ergänzt, stoppt es mit `APK_UPDATE_STATUS=vorbereitet` (Exit 2), ohne zu bauen,
+   - veröffentlicht nur einen sauberen Stand: keine offenen Änderungen unter `<Projekt>` (Index
+     und Arbeitsbaum), HEAD nicht hinter origin, keine ungepushten Commits am Projekt,
+   - läuft pro Projekt exklusiv (Sperrdatei, eindeutige Temp-Dateien pro Lauf); ein zweiter Lauf
+     für dasselbe Projekt bricht mit Fehler ab,
    - baut, signiert unsignierte APKs mit `~/SK/Android/debug-shared.keystore`,
    - liest Paket, versionCode, versionName und Signatur **aus der fertigen APK** (aapt2, apksigner)
      und bricht ab, wenn Paket oder Version nicht passen,
-   - kopiert die APK als `<Projekt>-<versionName>-vc<versionCode>.apk`, **behält die 5 neuesten
-     APKs** (nach versionCode) im Ordner, löscht ältere und schreibt zuletzt `update.json`
+   - legt die APK als `<Projekt>-<versionName>-vc<versionCode>.apk` ab, danach `update.json`
      (inkl. der letzten 15 Versionslog-Einträge für „Neu in dieser Version" in UpdateStation).
+     Beide entstehen außerhalb des Drive-Ordners und kommen per Umbenennen hinein: Lokal ist so
+     nie eine halbe Datei sichtbar. Wann und in welcher Reihenfolge Google Drive für Desktop
+     hochlädt, sichert das **nicht** — Zwischenstände fängt UpdateStation ab (Nachprüfung).
+     Hash und Manifest werden zurückgelesen, erst dann meldet es `ok` und räumt auf: **die 5
+     neuesten APKs** bleiben, dazu immer die bisher referenzierte.
 4. **Ausgabe auswerten** (Zeilen mit `APK_UPDATE_`):
-   - `APK_UPDATE_STATUS=ok` → fertig.
-   - `APK_UPDATE_VERSIONSLOG_ERGAENZT=a->b (<pfad>)` → der Versionslog wurde ergänzt. Sofort
-     committen und pushen (nur mit Pfad, siehe Regel 10):
-     `git -C ~/proggs commit -m "<Projekt>: Version für APK-Update anheben" -- <Projekt>/app/src/main/assets/versionslog.json`,
-     dann `git -C ~/proggs pull --rebase --autostash` und `git -C ~/proggs push`.
+   - `APK_UPDATE_STATUS=ok` → **lokal bereit** (`APK_UPDATE_BEREIT=lokal`): Die Dateien liegen im
+     Drive-Ordner, den Upload übernimmt Google Drive für Desktop. Nicht als „in der Cloud“ melden.
+   - `APK_UPDATE_STATUS=vorbereitet` (Exit 2) → **nichts veröffentlicht.** Das Skript hat
+     Projektdateien vorbereitet, `APK_UPDATE_COMMIT_NOETIG` nennt sie:
+     - `APK_UPDATE_VERSIONSLOG_EINGERICHTET=vcN (<log>, <gradle>)`: neues Projekt auf den
+       Versionslog umgestellt (bestehende Nummer, kein Bump),
+     - `APK_UPDATE_VERSIONSLOG_ERGAENZT=a->b (<pfad>)`: Versionslog um einen Eintrag ergänzt.
+
+     Diese Pfade zusammen mit der eigentlichen App-Änderung committen (genau ein Versionsbump,
+     **nur mit Pfaden** — im Monorepo liegen fremde Änderungen, nie pauschal stagen), dann
+     `git -C ~/proggs pull --rebase --autostash`, `git -C ~/proggs push` und das Skript erneut
+     starten. Z. B.:
+     `git -C ~/proggs commit -m "<Projekt>: Version für APK-Update anheben" -- <Pfade aus APK_UPDATE_COMMIT_NOETIG>`.
+   - `APK_UPDATE_NEUES_PROJEKT=…` → Projekt fehlt in `projekte.json`, läuft mit den Standards.
    - `APK_UPDATE_STATUS=fehler` → `APK_UPDATE_FEHLER` lesen, Ursache beheben (z. B. falsche
-     Variante in `projekte.json`, roter Build), erneut starten. Nie eine APK von Hand in den
-     Ordner kopieren — ohne passende `update.json` sieht die Handy-App sie nicht.
-5. **Neues Projekt?** Fehlt es in `projekte.json`, dort mit `paket` (applicationId der
-   ausgelieferten Variante) nachtragen, den Skill committen und pushen.
+     Variante in `projekte.json`, roter Build, offene Änderungen, nicht gepusht, anderer Lauf
+     aktiv), erneut starten. Nie eine APK von Hand in den Ordner kopieren — ohne passende
+     `update.json` sieht die Handy-App sie nicht.
+5. **Neues Projekt?** Das Skript veröffentlicht es auch ohne Eintrag in `projekte.json`
+   (Standard `assembleRelease`, Paket = die eine `applicationId`) in einen eigenen Unterordner.
+   Fehlt der Versionslog, stellt es nur das eindeutige Standardmuster um (genau eine Zeile
+   `versionCode = <Zahl>` und `versionName = "x.y.z"`, genau ein `android {`); alles andere bricht
+   mit Anleitung ab — dann den Block `versionslogAktuell` aus `UpdateStation/app/build.gradle.kts`
+   von Hand übernehmen. Ein Eintrag in `projekte.json` ist nur nötig, wenn Gradle-Task,
+   APK-Ordner oder Paket vom Standard abweichen (z. B. Variante `debug`, mehrere
+   `applicationId`); dann nachtragen, den Skill committen und pushen.
 
 ## Format von update.json (Vertrag mit der Handy-App — nur erweitern, nie umbenennen)
 
@@ -128,5 +156,6 @@ und dass die Signatur der APK zur installierten App passt.
 ## Abschluss melden
 
 Projekt, Version alt → neu (versionCode), Pfad der APK, ob `build.gradle.kts` angehoben und
-committet wurde. Die Handy-App findet das Update bei der nächsten Prüfung (alle 30 Minuten oder
-über „Jetzt prüfen").
+committet wurde. Die Handy-App findet das Update bei der nächsten Prüfung (Standard alle 30 Minuten oder
+über „Jetzt prüfen"); das Prüfintervall stellt man in UpdateStation per Regler ein. Installiert wird
+am Handy nur nach eigenem Tippen und Android-Bestätigung.

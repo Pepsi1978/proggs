@@ -50,15 +50,22 @@ class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             Log.i(TAG, "Automatische Prüfung geplant: alle $minuten Minuten")
         }
 
-        /** Hängt eine APK noch in der Synchronisierung, in 5 Minuten erneut prüfen statt 30 Minuten warten. */
-        fun planeNachpruefung(context: Context) {
+        /**
+         * Hängt ein Projektordner noch in der Synchronisierung, in 5 Minuten erneut prüfen statt auf
+         * den regulären Takt zu warten. Die Begrenzung auf [MAX_NACHPRUEFUNGEN] Versuche pro
+         * Projekt und Lage übernimmt [Einstellungen.zaehleNachpruefungen]; danach prüft wieder
+         * nur der reguläre Takt (z. B. bei dauerhaft liegengebliebener APK).
+         */
+        fun planeNachpruefung(context: Context, projekte: Set<String>) {
             val anfrage = OneTimeWorkRequestBuilder<PruefWorker>()
                 .setInitialDelay(5, TimeUnit.MINUTES)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .build()
             WorkManager.getInstance(context)
                 .enqueueUniqueWork("update-nachpruefung", ExistingWorkPolicy.REPLACE, anfrage)
-            Log.i(TAG, "Nachprüfung in 5 Minuten geplant (APK noch nicht synchronisiert)")
+            Log.i(TAG, "Nachprüfung in 5 Minuten geplant (Synchronisations-Zwischenstand: ${projekte.sorted()})")
         }
+
+        const val MAX_NACHPRUEFUNGEN = 6
     }
 }

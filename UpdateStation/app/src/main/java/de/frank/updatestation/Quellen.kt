@@ -34,7 +34,7 @@ class AnmeldungNoetig : Exception("Google-Drive-Anmeldung nötig")
 
 /** Woher die Updates kommen: Google Drive per Anmeldung oder ein per Ordnerauswahl freigegebener Ordner. */
 interface UpdateQuelle {
-    suspend fun suche(): List<Fund>
+    suspend fun suche(): Suchergebnis
     suspend fun oeffne(fund: Fund): InputStream
 }
 
@@ -131,7 +131,7 @@ class DriveQuelle(private val context: Context, private val einst: Einstellungen
         return eltern
     }
 
-    override suspend fun suche(): List<Fund> = withContext(Dispatchers.IO) {
+    override suspend fun suche(): Suchergebnis = withContext(Dispatchers.IO) {
         val updatesId = einst.driveOrdnerId ?: findeOrdner().also { einst.driveOrdnerId = it }
         val unterordner = try {
             dateien("'$updatesId' in parents and mimeType = '$ORDNER' and trashed = false")
@@ -140,18 +140,33 @@ class DriveQuelle(private val context: Context, private val einst: Einstellungen
             val neu = findeOrdner().also { einst.driveOrdnerId = it }
             dateien("'$neu' in parents and mimeType = '$ORDNER' and trashed = false")
         }
-        coroutineScope {
+        val ergebnisse = coroutineScope {
             unterordner.map { ordner ->
                 async {
-                    val inhalt = dateien("'${ordner.getString("id")}' in parents and trashed = false")
-                    val manifestDatei = inhalt.firstOrNull { it.getString("name") == "update.json" } ?: return@async null
-                    val text = medien(manifestDatei.getString("id")).use { it.bufferedReader().readText() }
-                    val m = runCatching { UpdateManifest.ausJson(text) }.getOrNull() ?: return@async null
-                    val apk = inhalt.firstOrNull { it.getString("name") == m.apk }
-                    Fund(m, apk?.getString("id"))
+                    val name = ordner.getString("name")
+                    try {
+                        leseProjekt(ordner.getString("id"), name)
+                    } catch (e: AnmeldungNoetig) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Projekt '$name' fehlgeschlagen", e)
+                        ProjektErgebnis(name, null, zwischenstand = "Lesefehler: ${e.javaClass.simpleName}")
+                    }
                 }
-            }.awaitAll().filterNotNull()
+            }.awaitAll()
         }
+        ProjektErgebnis.zusammen(ergebnisse)
+    }
+
+    private suspend fun leseProjekt(ordnerId: String, name: String): ProjektErgebnis {
+        val inhalt = dateien("'$ordnerId' in parents and trashed = false")
+        val manifestDatei = inhalt.firstOrNull { it.getString("name") == "update.json" }
+        val m = manifestDatei?.let { d ->
+            val text = medien(d.getString("id")).use { it.bufferedReader().readText() }
+            runCatching { UpdateManifest.ausJson(text) }.onFailure { Log.w(TAG, "Projekt '$name': update.json unlesbar", it) }.getOrNull()
+        }
+        val apk = m?.let { mm -> inhalt.firstOrNull { it.getString("name") == mm.apk } }
+        return ProjektErgebnis.bewerte(name, m, apk?.getString("id"), inhalt.map { it.getString("name") })
     }
 
     private suspend fun medien(id: String): InputStream =
@@ -248,10 +263,7 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
             .getOrNull()
     }
 
-    private fun hoechsteApkNummer(dateien: List<Kind>): Long =
-        dateien.mapNotNull { Regex("""-vc(\d+)\.apk$""").find(it.name)?.groupValues?.get(1)?.toLongOrNull() }.maxOrNull() ?: 0
-
-    private suspend fun leseProjekt(ordner: Kind): Fund? {
+    private suspend fun leseProjekt(ordner: Kind): ProjektErgebnis {
         var dateien = kinder(ordner.id, ordner.name)
         var manifestDatei = dateien.firstOrNull { it.name == "update.json" }
         var runde = 0
@@ -262,35 +274,69 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
             val gelesen = m
             val apkDa = gelesen != null && dateien.any { it.name == gelesen.apk }
             // Stimmig: update.json vorhanden, ihre APK liegt da und keine neuere APK im Ordner.
-            if (gelesen != null && apkDa && hoechsteApkNummer(dateien) <= gelesen.versionCode) break
+            if (gelesen != null && apkDa && hoechsteApkNummer(dateien.map { it.name }) <= gelesen.versionCode) break
             if (manifestDatei == null && dateien.none { it.name.endsWith(".apk") }) break
             Log.i(TAG, "Projekt '${ordner.name}': Stand noch nicht stimmig (Runde $runde), lade erneut")
             dateien = kinder(ordner.id, ordner.name)
             manifestDatei = dateien.firstOrNull { it.name == "update.json" }
         }
         val manifest = m
+        val apk = manifest?.let { mm -> dateien.firstOrNull { it.name == mm.apk } }
         if (manifest == null) {
-            Log.i(TAG, "Projekt '${ordner.name}': keine update.json")
-            return null
+            Log.i(TAG, "Projekt '${ordner.name}': keine lesbare update.json")
+        } else {
+            Log.i(TAG, "Projekt '${ordner.name}': ${manifest.versionName} (${manifest.versionCode}), APK ${if (apk != null) "gefunden" else "fehlt"}")
         }
-        val apk = dateien.firstOrNull { it.name == manifest.apk }
-        Log.i(TAG, "Projekt '${ordner.name}': ${manifest.versionName} (${manifest.versionCode}), APK ${if (apk != null) "gefunden" else "fehlt"}")
-        return Fund(manifest, apk?.let { DocumentsContract.buildDocumentUriUsingTree(baum, it.id).toString() })
+        return ProjektErgebnis.bewerte(
+            ordner.name, manifest,
+            apk?.let { DocumentsContract.buildDocumentUriUsingTree(baum, it.id).toString() },
+            dateien.map { it.name },
+        )
     }
 
-    override suspend fun suche(): List<Fund> = withContext(Dispatchers.IO) {
+    override suspend fun suche(): Suchergebnis = withContext(Dispatchers.IO) {
         val wurzel = DocumentsContract.getTreeDocumentId(baum)
         val ordner = kinder(wurzel, "Updates").filter { it.ordner }
         Log.i(TAG, "Updates: ${ordner.size} Projektordner")
-        coroutineScope {
-            ordner.map { o -> async { runCatching { leseProjekt(o) }.onFailure { Log.w(TAG, "Projekt '${o.name}' fehlgeschlagen", it) }.getOrNull() } }
-                .awaitAll().filterNotNull()
+        val ergebnisse = coroutineScope {
+            ordner.map { o ->
+                async {
+                    runCatching { leseProjekt(o) }
+                        .onFailure { Log.w(TAG, "Projekt '${o.name}' fehlgeschlagen", it) }
+                        .getOrElse { ProjektErgebnis(o.name, null, zwischenstand = "Lesefehler: ${it.javaClass.simpleName}") }
+                }
+            }.awaitAll()
         }
+        ProjektErgebnis.zusammen(ergebnisse)
     }
 
     override suspend fun oeffne(fund: Fund): InputStream = withContext(Dispatchers.IO) {
         val ref = fund.apkRef ?: throw IOException("APK ist noch nicht im Ordner angekommen.")
         context.contentResolver.openInputStream(Uri.parse(ref)) ?: throw IOException("APK nicht lesbar.")
+    }
+}
+
+/** Was ein Projektordner geliefert hat; [zwischenstand] = Kennung der Lage, null = stimmig. */
+internal data class ProjektErgebnis(val ordner: String, val fund: Fund?, val zwischenstand: String?) {
+    companion object {
+        fun bewerte(ordner: String, m: UpdateManifest?, apkRef: String?, dateinamen: List<String>): ProjektErgebnis {
+            val hoechste = hoechsteApkNummer(dateinamen)
+            val grund = when {
+                m == null && "update.json" in dateinamen -> "update.json unlesbar"
+                m == null && dateinamen.any { it.endsWith(".apk") } -> "APK ohne update.json"
+                m != null && hoechste > m.versionCode -> "neuere APK als update.json ($hoechste > ${m.versionCode})"
+                m != null && apkRef == null -> "APK zu update.json fehlt"
+                else -> null
+            }
+            if (grund != null) Log.i(TAG, "Projekt '$ordner': Synchronisations-Zwischenstand – $grund")
+            val kennung = grund?.let { "$it|m=${m?.versionCode ?: 0}|apk=$hoechste" }
+            return ProjektErgebnis(ordner, m?.let { Fund(it, apkRef) }, kennung)
+        }
+
+        fun zusammen(liste: List<ProjektErgebnis>) = Suchergebnis(
+            funde = liste.mapNotNull { it.fund },
+            zwischenstaende = liste.mapNotNull { e -> e.zwischenstand?.let { e.ordner to it } }.toMap(),
+        )
     }
 }
 
