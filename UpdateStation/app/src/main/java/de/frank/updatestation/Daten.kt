@@ -6,6 +6,31 @@ import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** Ein Eintrag aus app/src/main/assets/versionslog.json bzw. aus update.json. */
+data class VersionsEintrag(val versionCode: Long, val versionName: String, val stand: String, val notiz: String) {
+    fun alsJson(): JSONObject = JSONObject()
+        .put("versionCode", versionCode).put("versionName", versionName).put("stand", stand).put("notiz", notiz)
+
+    companion object {
+        fun liste(arr: JSONArray?): List<VersionsEintrag> {
+            if (arr == null) return emptyList()
+            return (0 until arr.length()).mapNotNull { i ->
+                val o = arr.optJSONObject(i) ?: return@mapNotNull null
+                VersionsEintrag(o.optLong("versionCode"), o.optString("versionName"), o.optString("stand"), o.optString("notiz"))
+            }
+        }
+    }
+}
+
+/** Liest den Versionslog, den jede App als Asset mitbringt, direkt aus der installierten App. */
+object Versionslog {
+    fun installiert(context: Context, paket: String): List<VersionsEintrag> = runCatching {
+        context.createPackageContext(paket, 0).assets.open("versionslog.json").use {
+            VersionsEintrag.liste(JSONObject(it.bufferedReader().readText()).optJSONArray("eintraege"))
+        }
+    }.getOrDefault(emptyList())
+}
+
 /** Inhalt einer update.json, geschrieben vom Skill "apk-update" (Format 1). */
 data class UpdateManifest(
     val projekt: String,
@@ -18,6 +43,7 @@ data class UpdateManifest(
     val sha256: String,
     val signaturSha256: String,
     val erstelltAm: String,
+    val versionslog: List<VersionsEintrag> = emptyList(),
 ) {
     companion object {
         fun ausJson(text: String): UpdateManifest {
@@ -33,6 +59,7 @@ data class UpdateManifest(
                 sha256 = o.getString("sha256").lowercase(),
                 signaturSha256 = o.optString("signaturSha256").lowercase(),
                 erstelltAm = o.optString("erstelltAm"),
+                versionslog = VersionsEintrag.liste(o.optJSONArray("versionslog")),
             )
         }
     }
@@ -42,6 +69,7 @@ data class UpdateManifest(
         .put("versionName", versionName).put("versionStand", versionStand ?: "")
         .put("apk", apk).put("groesse", groesse).put("sha256", sha256)
         .put("signaturSha256", signaturSha256).put("erstelltAm", erstelltAm)
+        .put("versionslog", JSONArray().apply { versionslog.forEach { put(it.alsJson()) } })
 }
 
 /** Ein gefundenes Update in der Quelle. [apkRef] ist Drive-Datei-ID oder Dokument-URI, null = APK (noch) nicht da. */

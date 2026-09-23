@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
+// Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
+@Suppress("UNCHECKED_CAST")
+val versionslogAktuell = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
+
 android {
     namespace = "de.frank.qwenttsbench"
     compileSdk = 36
@@ -11,9 +16,9 @@ android {
         applicationId = "de.frank.qwenttsbench"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.04.0"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"27.07.2026, 14:16 Uhr\"")
+        versionCode = (versionslogAktuell["versionCode"] as Number).toInt()
+        versionName = versionslogAktuell["versionName"] as String
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
     }
 
     buildTypes {

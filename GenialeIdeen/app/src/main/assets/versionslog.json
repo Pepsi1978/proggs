@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "GenialeIdeen",
+  "eintraege": [
+    { "versionCode": 42, "versionName": "1.7.11", "stand": "13.09.2026, 11:44 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 43, "versionName": "1.7.12", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

@@ -5,6 +5,11 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
+// Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
+@Suppress("UNCHECKED_CAST")
+val versionslogAktuell = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
+
 android {
     namespace = "de.frank.codexkompass"
     compileSdk = 36
@@ -13,10 +18,10 @@ android {
         applicationId = "de.frank.codexkompass"
         minSdk = 26
         targetSdk = 36
-        versionCode = 31
-        versionName = "0.6.12"
+        versionCode = (versionslogAktuell["versionCode"] as Number).toInt()
+        versionName = versionslogAktuell["versionName"] as String
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"23.09.2026, 14:51 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
         buildConfigField("String", "SEEDED_CLI_VERSION", "\"0.155.1\"")

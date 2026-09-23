@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "Experimente",
+  "eintraege": [
+    { "versionCode": 40, "versionName": "0.17.11", "stand": "12.09.2026, 00:10 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 41, "versionName": "0.17.12", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

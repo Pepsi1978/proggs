@@ -5,6 +5,11 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
+// Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
+@Suppress("UNCHECKED_CAST")
+val versionslogAktuell = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
+
 android {
     namespace = "de.frank.genialeideen"
     compileSdk = 36
@@ -13,10 +18,10 @@ android {
         applicationId = "de.frank.genialeideen"
         minSdk = 26
         targetSdk = 36
-        versionCode = 42
-        versionName = "1.7.11"
+        versionCode = (versionslogAktuell["versionCode"] as Number).toInt()
+        versionName = versionslogAktuell["versionName"] as String
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"13.09.2026, 11:44 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 

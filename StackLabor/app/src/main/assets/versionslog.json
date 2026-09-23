@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "StackLabor",
+  "eintraege": [
+    { "versionCode": 56, "versionName": "0.3.38", "stand": "11.09.2026, 22:57 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 57, "versionName": "0.3.39", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

@@ -5,6 +5,11 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
+// Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
+@Suppress("UNCHECKED_CAST")
+val versionslogAktuell = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
+
 android {
     namespace = "de.frank.gedankenspeicher"
     compileSdk = 36
@@ -13,11 +18,11 @@ android {
         applicationId = "de.frank.gedankenspeicher"
         minSdk = 26
         targetSdk = 36
-        versionCode = 56
-        versionName = "0.6.15"
+        versionCode = (versionslogAktuell["versionCode"] as Number).toInt()
+        versionName = versionslogAktuell["versionName"] as String
 
         // Sichtbar in den Einstellungen (B-04, Abschnitt "Über"). Zeit aus der echten Systemuhr.
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"12.09.2026, 21:48 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
     }
 
     // **Dieselbe Debug-Signatur auf allen Rechnern** — wie bei den anderen Apps, siehe

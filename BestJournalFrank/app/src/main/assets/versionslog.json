@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "BestJournalFrank",
+  "eintraege": [
+    { "versionCode": 157, "versionName": "0.23.4", "stand": "10.09.2026, 13:49 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 158, "versionName": "0.23.5", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

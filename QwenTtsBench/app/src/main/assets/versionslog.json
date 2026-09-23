@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "QwenTtsBench",
+  "eintraege": [
+    { "versionCode": 6, "versionName": "1.04.0", "stand": "27.07.2026, 14:16 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 7, "versionName": "1.04.1", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

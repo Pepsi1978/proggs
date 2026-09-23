@@ -49,6 +49,11 @@ val syncSecretsFromSk = tasks.register("syncSecretsFromSk") {
 
 tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(syncSecretsFromSk) }
 
+// Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
+// Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
+@Suppress("UNCHECKED_CAST")
+val versionslogAktuell = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
+
 android {
     namespace = "de.frank.entropyreducer"
     compileSdk = 36
@@ -66,12 +71,12 @@ android {
         applicationId = "de.frank.entropyreducer"
         minSdk = 28
         targetSdk = 36
-        versionCode = 341
-        versionName = "0.29.6"
+        versionCode = (versionslogAktuell["versionCode"] as Number).toInt()
+        versionName = versionslogAktuell["versionName"] as String
         // Nur dieses eine Feld anzeigen, nie ein Alias darauf: ein Feld `= VERSION_BUMPED_AT` hat eine
         // unveraenderte Deklaration, Kotlins inkrementeller Build uebersetzt die Anzeige dann nicht neu
         // und die App zeigt den alten Stempel (Almanach bugs/android-build/gradle.md N2).
-        buildConfigField("String", "VERSION_BUMPED_AT", "\"10.09.2026, 14:02 Uhr\"")
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

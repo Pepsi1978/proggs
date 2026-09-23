@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "EntropieReductor",
+  "eintraege": [
+    { "versionCode": 341, "versionName": "0.29.6", "stand": "10.09.2026, 14:02 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 342, "versionName": "0.29.7", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "VoiceKey",
+  "eintraege": [
+    { "versionCode": 13, "versionName": "0.7.3", "stand": "10.09.2026, 13:49 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 14, "versionName": "0.7.4", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

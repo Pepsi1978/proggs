@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "OCodeKompass",
+  "eintraege": [
+    { "versionCode": 16, "versionName": "0.6.11", "stand": "22.09.2026, 13:42 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 17, "versionName": "0.6.12", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

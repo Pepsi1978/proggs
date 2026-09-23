@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "GenialerWecker",
+  "eintraege": [
+    { "versionCode": 90, "versionName": "1.1.95", "stand": "21.09.2026, 14:49 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 91, "versionName": "1.1.96", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

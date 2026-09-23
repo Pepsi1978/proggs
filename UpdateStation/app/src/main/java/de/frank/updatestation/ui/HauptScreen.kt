@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -89,6 +90,7 @@ import de.frank.updatestation.BuildConfig
 import de.frank.updatestation.Einstellungen
 import de.frank.updatestation.InstallStatus
 import de.frank.updatestation.Status
+import de.frank.updatestation.Versionslog
 import de.frank.updatestation.Zustand
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -118,6 +120,7 @@ fun HauptScreen(
     aktionen: Aktionen,
 ) {
     var einstellungenOffen by remember { mutableStateOf(false) }
+    var verlaufFuer by remember { mutableStateOf<AppEintrag?>(null) }
     val updates = zustand.eintraege.filter { it.status == Status.UPDATE }
     val warnungen = zustand.eintraege.filter { it.status == Status.SIGNATUR_ANDERS || it.status == Status.APK_FEHLT }
     val aktuell = zustand.eintraege.filter { it.status == Status.AKTUELL || it.status == Status.INSTALLIERT_NEUER }
@@ -183,7 +186,7 @@ fun HauptScreen(
                 }
                 updates.forEach { e ->
                     item(key = "u_" + e.paket) {
-                        UpdateKarte(e, zustand.installationen[e.paket], darfInstallieren) { aktionen.installiere(e) }
+                        UpdateKarte(e, zustand.installationen[e.paket], darfInstallieren, { verlaufFuer = e }) { aktionen.installiere(e) }
                     }
                 }
             }
@@ -194,7 +197,7 @@ fun HauptScreen(
 
             if (aktuell.isNotEmpty()) {
                 item { Abschnitt("Auf dem neuesten Stand") }
-                item { AktuellGruppe(aktuell) }
+                item { AktuellGruppe(aktuell) { verlaufFuer = it } }
             }
 
             if (fehlend.isNotEmpty()) {
@@ -212,6 +215,97 @@ fun HauptScreen(
     if (einstellungenOffen) {
         ModalBottomSheet(onDismissRequest = { einstellungenOffen = false }) {
             EinstellungenInhalt(quelle, drivePfad, aktionen) { einstellungenOffen = false }
+        }
+    }
+    verlaufFuer?.let { e ->
+        ModalBottomSheet(onDismissRequest = { verlaufFuer = null }) { Verlauf(e) }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+
+/** Neuerungen zwischen installierter und angebotener Version, aus dem Versionslog in update.json. */
+@Composable
+private fun Neuerungen(e: AppEintrag) {
+    val neu = e.fund.manifest.versionslog
+        .filter { it.versionCode > (e.installiertCode ?: 0L) }
+        .sortedByDescending { it.versionCode }
+        .take(4)
+    if (neu.isEmpty()) return
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("Neu in dieser Version", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
+        neu.forEach { v ->
+            Row {
+                Text(v.versionName, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.width(62.dp))
+                Text(v.notiz, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
+    }
+}
+
+/** Versionsverlauf: Log aus der installierten App (Asset) plus neuere Einträge aus dem Update. */
+@Composable
+private fun Verlauf(e: AppEintrag) {
+    val context = LocalContext.current
+    val installiert = remember(e.paket, e.installiertCode) { Versionslog.installiert(context, e.paket) }
+    val alle = (installiert + e.fund.manifest.versionslog).distinctBy { it.versionCode }.sortedByDescending { it.versionCode }
+    Column(Modifier.padding(horizontal = 22.dp).padding(bottom = 24.dp).navigationBarsPadding()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AppIcon(e.paket, e.label, 48.dp)
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text(e.label, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    if (e.installiertCode != null) "Installiert: ${e.installiertName} · Build ${e.installiertCode}" else "Nicht auf diesem Handy",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Text("Versionsverlauf", style = MaterialTheme.typography.titleMedium)
+        if (installiert.isEmpty() && e.installiertCode != null) {
+            Text(
+                "Die installierte Version bringt noch keinen Versionslog mit – der Verlauf stammt aus dem Update-Ordner.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        LazyColumn(Modifier.heightIn(max = 480.dp)) {
+            items(alle.size) { i ->
+                val v = alle[i]
+                val markierung = when {
+                    e.installiertCode == null -> null
+                    v.versionCode == e.installiertCode -> "Installiert"
+                    v.versionCode > e.installiertCode -> "Neu"
+                    else -> null
+                }
+                Row(Modifier.padding(vertical = 8.dp)) {
+                    Box(
+                        Modifier.padding(top = 5.dp).size(10.dp).clip(CircleShape)
+                            .background(if (markierung == "Neu") MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline),
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(v.versionName, style = MaterialTheme.typography.titleSmall.fett)
+                            Text("  Build ${v.versionCode}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.weight(1f))
+                            if (markierung != null) VersionChip(markierung, hervorgehoben = markierung == "Neu")
+                        }
+                        if (v.stand.isNotBlank()) {
+                            Text(v.stand, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (v.notiz.isNotBlank()) Text(v.notiz, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
         }
     }
 }
@@ -321,11 +415,11 @@ private fun Karte(modifier: Modifier = Modifier, rand: Brush? = null, content: @
 }
 
 @Composable
-private fun UpdateKarte(e: AppEintrag, install: InstallStatus?, darfInstallieren: Boolean, onInstallieren: () -> Unit) {
+private fun UpdateKarte(e: AppEintrag, install: InstallStatus?, darfInstallieren: Boolean, onVerlauf: () -> Unit, onInstallieren: () -> Unit) {
     val m = e.fund.manifest
     Karte(Modifier.animateContentSize(), rand = Farben.randVerlauf) {
         Column(Modifier.padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.clickable(onClick = onVerlauf), verticalAlignment = Alignment.CenterVertically) {
                 AppIcon(e.paket, e.label, 54.dp)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
@@ -344,6 +438,8 @@ private fun UpdateKarte(e: AppEintrag, install: InstallStatus?, darfInstallieren
                     (if (m.erstelltAm.isNotBlank()) " · bereitgestellt ${m.erstelltAm}" else ""),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.height(12.dp))
+            Neuerungen(e)
             Spacer(Modifier.height(14.dp))
             InstallBereich(install, darfInstallieren, "Aktualisieren", onInstallieren)
         }
@@ -436,12 +532,15 @@ private fun WarnKarte(e: AppEintrag) {
 }
 
 @Composable
-private fun AktuellGruppe(liste: List<AppEintrag>) {
+private fun AktuellGruppe(liste: List<AppEintrag>, onVerlauf: (AppEintrag) -> Unit) {
     Karte {
         Column(Modifier.padding(vertical = 6.dp)) {
             liste.forEachIndexed { i, e ->
                 if (i > 0) HorizontalDivider(Modifier.padding(start = 74.dp, end = 18.dp), color = MaterialTheme.colorScheme.outlineVariant)
-                Row(Modifier.padding(horizontal = 18.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth().clickable { onVerlauf(e) }.padding(horizontal = 18.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     AppIcon(e.paket, e.label, 42.dp)
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {

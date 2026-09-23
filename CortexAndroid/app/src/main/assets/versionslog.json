@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "app": "CortexAndroid",
+  "eintraege": [
+    { "versionCode": 119, "versionName": "0.10.14", "stand": "10.09.2026, 13:49 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
+    { "versionCode": 120, "versionName": "0.10.15", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+  ]
+}

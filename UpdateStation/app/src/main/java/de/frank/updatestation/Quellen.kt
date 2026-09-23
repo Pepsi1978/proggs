@@ -3,7 +3,7 @@ package de.frank.updatestation
 import android.app.Activity
 import android.content.Context
 import android.net.Uri
-import androidx.documentfile.provider.DocumentFile
+import android.provider.DocumentsContract
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -25,7 +26,7 @@ import java.net.URLEncoder
 
 class AnmeldungNoetig : Exception("Google-Drive-Anmeldung nötig")
 
-/** Woher die Updates kommen: Google Drive direkt oder ein lokal synchronisierter Ordner. */
+/** Woher die Updates kommen: Google Drive per Anmeldung oder ein per Ordnerauswahl freigegebener Ordner. */
 interface UpdateQuelle {
     suspend fun suche(): List<Fund>
     suspend fun oeffne(fund: Fund): InputStream
@@ -159,18 +160,51 @@ class DriveQuelle(private val context: Context, private val einst: Einstellungen
     }
 }
 
-/** Ordner, den eine Sync-App (z. B. Autosync) aus Google Drive aufs Handy spiegelt. */
+/**
+ * Ein per Ordnerauswahl freigegebener Ordner – direkt aus Google Drive (Drive-Dokumentanbieter)
+ * oder von einer Sync-App gespiegelt. Die Freigabe gilt für alle Unterordner.
+ */
 class OrdnerQuelle(private val context: Context, private val baum: Uri) : UpdateQuelle {
+    private data class Kind(val id: String, val name: String, val ordner: Boolean)
+
+    /**
+     * Der Drive-Anbieter liefert Ordnerinhalte oft erst aus dem Zwischenspeicher und lädt im
+     * Hintergrund nach (EXTRA_LOADING). Deshalb so lange neu abfragen, bis er fertig ist.
+     */
+    private suspend fun kinder(docId: String): List<Kind> {
+        val uri = DocumentsContract.buildChildDocumentsUriUsingTree(baum, docId)
+        val spalten = arrayOf(
+            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE,
+        )
+        var ergebnis = emptyList<Kind>()
+        for (versuch in 0 until 20) {
+            val laedt = context.contentResolver.query(uri, spalten, null, null, null)?.use { c ->
+                val liste = mutableListOf<Kind>()
+                while (c.moveToNext()) {
+                    liste += Kind(c.getString(0), c.getString(1) ?: "", c.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR)
+                }
+                ergebnis = liste
+                c.extras?.getBoolean(DocumentsContract.EXTRA_LOADING) == true
+            } ?: throw IOException("Kein Zugriff mehr auf den Ordner. Bitte neu auswählen.")
+            if (!laedt) break
+            delay(750)
+        }
+        return ergebnis
+    }
+
     override suspend fun suche(): List<Fund> = withContext(Dispatchers.IO) {
-        val wurzel = DocumentFile.fromTreeUri(context, baum) ?: throw IOException("Ordner nicht lesbar.")
-        if (!wurzel.canRead()) throw IOException("Kein Zugriff mehr auf den Ordner. Bitte neu auswählen.")
-        wurzel.listFiles().filter { it.isDirectory }.mapNotNull { ordner ->
-            val dateien = ordner.listFiles()
+        val wurzel = DocumentsContract.getTreeDocumentId(baum)
+        kinder(wurzel).filter { it.ordner }.mapNotNull { ordner ->
+            val dateien = kinder(ordner.id)
             val manifestDatei = dateien.firstOrNull { it.name == "update.json" } ?: return@mapNotNull null
-            val text = context.contentResolver.openInputStream(manifestDatei.uri)?.use { it.bufferedReader().readText() }
-                ?: return@mapNotNull null
+            val text = context.contentResolver
+                .openInputStream(DocumentsContract.buildDocumentUriUsingTree(baum, manifestDatei.id))
+                ?.use { it.bufferedReader().readText() } ?: return@mapNotNull null
             val m = runCatching { UpdateManifest.ausJson(text) }.getOrNull() ?: return@mapNotNull null
-            Fund(m, dateien.firstOrNull { it.name == m.apk }?.uri?.toString())
+            val apk = dateien.firstOrNull { it.name == m.apk }
+            Fund(m, apk?.let { DocumentsContract.buildDocumentUriUsingTree(baum, it.id).toString() })
         }
     }
 
