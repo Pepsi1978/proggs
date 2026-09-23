@@ -1,0 +1,50 @@
+{
+  "_hinweis": "Pro Projekt nur Abweichungen vom Standard eintragen. Standard: gradleTask assembleRelease, apkOrdner release, APK wird mit dem gemeinsamen Debug-Key signiert, falls sie unsigniert ist. 'paket' ist das erwartete Paket in der APK (applicationId inkl. Suffix) - weicht es ab, bricht das Skript ab.",
+  "standard": {
+    "gradleTask": "assembleRelease",
+    "apkOrdner": "release"
+  },
+  "projekte": {
+    "BestJournalAndroid": {
+      "paket": "com.bestjournal.app",
+      "notiz": "Release ist mit dem Play-Store-Key (release.keystore) signiert und wird NICHT umsigniert. Passt nur, wenn am Handy die Play-/Release-Version installiert ist; die Debug-Variante heißt com.bestjournal.app.debug."
+    },
+    "BestJournalFrank": {
+      "paket": "com.entropyjournal",
+      "notiz": "Debug-Variante hat das Suffix .debug. Am Handy unbestätigt, welche Variante installiert ist."
+    },
+    "ClaudeKompass": { "paket": "de.frank.claudekompass" },
+    "CodexKompass": { "paket": "de.frank.codexkompass" },
+    "CortexAndroid": {
+      "paket": "de.frank.cortex",
+      "notiz": "Release ist bereits mit dem gemeinsamen Debug-Key signiert."
+    },
+    "EntropieReductor": {
+      "gradleTask": "assembleBenchmark",
+      "apkOrdner": "benchmark",
+      "paket": "de.frank.entropyreducer.debug",
+      "notiz": "Laut build.gradle.kts gibt es am Handy nur EINE App mit Suffix .debug; die Performance-Variante (benchmark) ersetzt die Debug-Variante ohne Datenverlust."
+    },
+    "Experimente": { "paket": "de.frank.experimente" },
+    "FisetinBegleiter": { "paket": "de.frank.fisetinbegleiter" },
+    "Gedankenspeicher": { "paket": "de.frank.gedankenspeicher" },
+    "GenialeIdeen": {
+      "gradleTask": "assembleSchnell",
+      "apkOrdner": "schnell",
+      "paket": "de.frank.genialeideen",
+      "notiz": "Variante 'schnell' = Release, mit Debug-Key signiert (der Debug-Build ruckelt)."
+    },
+    "GenialerWecker": { "paket": "de.frank.genialerwecker" },
+    "KarteikartenLernen": { "paket": "de.frank.karteikartenlernen" },
+    "NovaDrehen": { "paket": "de.frank.novadrehen" },
+    "OCodeKompass": { "paket": "de.frank.opencodekompass" },
+    "PerfectMoment": { "paket": "de.frank.perfectmoment" },
+    "QwenTtsBench": { "paket": "de.frank.qwenttsbench" },
+    "StackLabor": { "paket": "de.frank.stacklabor.werftstudio" },
+    "UpdateStation": { "paket": "de.frank.updatestation" },
+    "VoiceKey": {
+      "paket": "de.frank.voicekey",
+      "notiz": "Debug-Variante hat das Suffix .debug. Am Handy unbestätigt, welche Variante installiert ist."
+    }
+  }
+}

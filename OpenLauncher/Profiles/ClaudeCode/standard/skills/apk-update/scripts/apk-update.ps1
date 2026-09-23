@@ -1,0 +1,153 @@
+# apk-update.ps1 - baut die Update-APK eines Android-Projekts und legt sie mit update.json
+# in den Google-Drive-Ordner "Meine Ablage\Dokumente\Updates\<Projekt>".
+# Die Handy-App UpdateStation liest update.json und vergleicht versionCode + Signatur.
+#
+# Aufruf: pwsh -File apk-update.ps1 -Projekt FisetinBegleiter [-OhneBuild]
+# Ausgabe-Zeilen mit Präfix APK_UPDATE_ sind für den Skill maschinenlesbar.
+
+param(
+    [Parameter(Mandatory = $true)][string]$Projekt,
+    [switch]$OhneBuild
+)
+
+$ErrorActionPreference = 'Stop'
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+
+function Fehler([string]$text) {
+    Write-Host "APK_UPDATE_STATUS=fehler"
+    Write-Host "APK_UPDATE_FEHLER=$text"
+    exit 1
+}
+
+$skillDir   = Split-Path -Parent $PSScriptRoot
+$proggs     = Join-Path $env:USERPROFILE 'proggs'
+$updatesDir = Join-Path $env:USERPROFILE 'Meine Ablage\Dokumente\Updates'
+$keystore   = Join-Path $env:USERPROFILE 'SK\Android\debug-shared.keystore'
+
+# --- Konfiguration --------------------------------------------------------------------------
+$cfg = Get-Content (Join-Path $skillDir 'projekte.json') -Raw -Encoding utf8 | ConvertFrom-Json
+$eintrag = $cfg.projekte.$Projekt
+$gradleTask = if ($eintrag.gradleTask) { $eintrag.gradleTask } else { $cfg.standard.gradleTask }
+$apkOrdner  = if ($eintrag.apkOrdner)  { $eintrag.apkOrdner }  else { $cfg.standard.apkOrdner }
+
+$projektDir = Join-Path $proggs $Projekt
+$gradleFile = Join-Path $projektDir 'app\build.gradle.kts'
+if (-not (Test-Path $gradleFile)) { Fehler "Kein Android-Projekt: $gradleFile fehlt." }
+
+$gradleText = [IO.File]::ReadAllText($gradleFile)
+$erwartetesPaket = $eintrag.paket
+if (-not $erwartetesPaket) {
+    $m = [regex]::Match($gradleText, 'applicationId\s*=\s*"([^"]+)"')
+    if (-not $m.Success) { Fehler "applicationId in build.gradle.kts nicht gefunden." }
+    $erwartetesPaket = $m.Groups[1].Value
+}
+
+# --- Build-Tools ----------------------------------------------------------------------------
+$sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
+$bt = Get-ChildItem (Join-Path $sdk 'build-tools') -Directory |
+    Where-Object { Test-Path (Join-Path $_.FullName 'apksigner.bat') } |
+    Sort-Object { [version]($_.Name -replace '[^\d\.].*$', '') } | Select-Object -Last 1
+if (-not $bt) { Fehler "Keine Android build-tools mit apksigner gefunden unter $sdk." }
+$apksigner = Join-Path $bt.FullName 'apksigner.bat'
+$aapt2     = Join-Path $bt.FullName 'aapt2.exe'
+
+# --- Zuletzt veröffentlichte Version --------------------------------------------------------
+$zielDir = Join-Path $updatesDir $Projekt
+New-Item -ItemType Directory -Force -Path $zielDir | Out-Null
+$manifestPfad = Join-Path $zielDir 'update.json'
+$letzterCode = 0
+if (Test-Path $manifestPfad) {
+    try { $letzterCode = [int]((Get-Content $manifestPfad -Raw -Encoding utf8 | ConvertFrom-Json).versionCode) } catch { $letzterCode = 0 }
+}
+
+# --- versionCode muss über der zuletzt veröffentlichten liegen ------------------------------
+$vcMatch = [regex]::Match($gradleText, 'versionCode\s*=\s*(\d+)')
+if (-not $vcMatch.Success) { Fehler "versionCode in build.gradle.kts nicht gefunden." }
+$versionCode = [int]$vcMatch.Groups[1].Value
+if ($versionCode -le $letzterCode) {
+    $neu = $letzterCode + 1
+    $gradleText = $gradleText.Substring(0, $vcMatch.Groups[1].Index) + $neu + $gradleText.Substring($vcMatch.Groups[1].Index + $vcMatch.Groups[1].Length)
+    [IO.File]::WriteAllText($gradleFile, $gradleText, $utf8)
+    Write-Host "APK_UPDATE_VERSIONCODE_ANGEHOBEN=$versionCode->$neu"
+    $versionCode = $neu
+}
+
+# --- Bauen ----------------------------------------------------------------------------------
+if (-not $OhneBuild) {
+    Write-Host "Baue $Projekt mit :app:$gradleTask ..."
+    Push-Location $projektDir
+    try {
+        & .\gradlew.bat ":app:$gradleTask" --console=plain
+        $exit = $LASTEXITCODE
+    } finally { Pop-Location }
+    if ($exit -ne 0) { Fehler "Gradle-Build :app:$gradleTask ist fehlgeschlagen (Exit $exit)." }
+}
+
+$apkQuelle = Get-ChildItem (Join-Path $projektDir "app\build\outputs\apk\$apkOrdner") -Filter *.apk -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime | Select-Object -Last 1
+if (-not $apkQuelle) { Fehler "Keine APK unter app\build\outputs\apk\$apkOrdner gefunden." }
+
+# --- Signieren (nur unsignierte APKs, mit dem gemeinsamen Debug-Key) ------------------------
+$temp = Join-Path ([IO.Path]::GetTempPath()) "apk-update-$Projekt.apk"
+if ($apkQuelle.Name -match 'unsigned') {
+    if (-not (Test-Path $keystore)) { Fehler "Gemeinsamer Debug-Key fehlt: $keystore" }
+    & $apksigner sign --ks $keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out $temp $apkQuelle.FullName
+    if ($LASTEXITCODE -ne 0) { Fehler "apksigner sign ist fehlgeschlagen." }
+    Remove-Item "$temp.idsig" -ErrorAction SilentlyContinue
+    $signiert = 'gemeinsamer Debug-Key (vom Skill signiert)'
+} else {
+    Copy-Item $apkQuelle.FullName $temp -Force
+    $signiert = 'vom Build signiert'
+}
+
+# --- Fakten aus der fertigen APK, nicht aus Gradle ------------------------------------------
+$badging = (& $aapt2 dump badging $temp 2>$null | Select-Object -First 1)
+$pm = [regex]::Match($badging, "name='([^']+)' versionCode='(\d+)' versionName='([^']*)'")
+if (-not $pm.Success) { Fehler "aapt2 konnte Paket und Version nicht aus der APK lesen." }
+$paket = $pm.Groups[1].Value
+$apkCode = [int]$pm.Groups[2].Value
+$apkName = $pm.Groups[3].Value
+
+$certs = & $apksigner verify --print-certs $temp 2>&1
+if ($LASTEXITCODE -ne 0) { Fehler "apksigner verify: APK ist nicht gültig signiert." }
+$cm = [regex]::Match(($certs -join "`n"), 'certificate SHA-256 digest:\s*([0-9a-fA-F]+)')
+if (-not $cm.Success) { Fehler "Signatur-Fingerabdruck nicht lesbar." }
+$signatur = $cm.Groups[1].Value.ToLower()
+
+if ($paket -ne $erwartetesPaket) { Fehler "Paket in der APK ist '$paket', erwartet '$erwartetesPaket'. Variante prüfen (projekte.json)." }
+if ($apkCode -ne $versionCode) { Fehler "versionCode der APK ($apkCode) passt nicht zu build.gradle.kts ($versionCode). Build veraltet?" }
+if ($apkCode -le $letzterCode) { Fehler "versionCode $apkCode ist nicht höher als der zuletzt veröffentlichte ($letzterCode)." }
+
+# --- Ablegen: erst APK, dann update.json (die Handy-App liest nur, was im Manifest steht) ---
+$sicherName = ($apkName -replace '[^\w\.\-]', '_')
+$apkDatei = "$Projekt-$sicherName-vc$apkCode.apk"
+$zielApk = Join-Path $zielDir $apkDatei
+Copy-Item $temp $zielApk -Force
+Remove-Item $temp -ErrorAction SilentlyContinue
+Get-ChildItem $zielDir -Filter *.apk | Where-Object { $_.Name -ne $apkDatei } | Remove-Item -Force
+
+$sha256 = (Get-FileHash $zielApk -Algorithm SHA256).Hash.ToLower()
+$bumpedAt = [regex]::Match($gradleText, 'VERSION_BUMPED_AT",\s*(?:"\\"|quoted\(")([^"\\]+)')
+$jetzt = Get-Date
+$manifest = [ordered]@{
+    format         = 1
+    projekt        = $Projekt
+    paket          = $paket
+    versionCode    = $apkCode
+    versionName    = $apkName
+    versionStand   = $(if ($bumpedAt.Success) { $bumpedAt.Groups[1].Value } else { $null })
+    apk            = $apkDatei
+    groesse        = (Get-Item $zielApk).Length
+    sha256         = $sha256
+    signaturSha256 = $signatur
+    variante       = $apkOrdner
+    erstelltAm     = $jetzt.ToString('dd.MM.yyyy HH:mm')
+    erstelltAmIso  = $jetzt.ToString('yyyy-MM-ddTHH:mm:sszzz')
+}
+[IO.File]::WriteAllText($manifestPfad, ($manifest | ConvertTo-Json), $utf8)
+
+Write-Host "APK_UPDATE_STATUS=ok"
+Write-Host "APK_UPDATE_PAKET=$paket"
+Write-Host "APK_UPDATE_VERSION=$apkName (versionCode $apkCode, vorher veröffentlicht: $letzterCode)"
+Write-Host "APK_UPDATE_SIGNATUR=$signiert, SHA-256 $($signatur.Substring(0,16))..."
+Write-Host "APK_UPDATE_DATEI=$zielApk"
