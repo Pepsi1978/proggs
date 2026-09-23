@@ -13,6 +13,7 @@ import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -147,6 +148,8 @@ class DriveQuelle(private val context: Context, private val einst: Einstellungen
                     try {
                         leseProjekt(ordner.getString("id"), name)
                     } catch (e: AnmeldungNoetig) {
+                        throw e
+                    } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         Log.w(TAG, "Projekt '$name' fehlgeschlagen", e)
@@ -302,7 +305,7 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
             ordner.map { o ->
                 async {
                     runCatching { leseProjekt(o) }
-                        .onFailure { Log.w(TAG, "Projekt '${o.name}' fehlgeschlagen", it) }
+                        .onFailure { if (it is CancellationException) throw it; Log.w(TAG, "Projekt '${o.name}' fehlgeschlagen", it) }
                         .getOrElse { ProjektErgebnis(o.name, null, zwischenstand = "Lesefehler: ${it.javaClass.simpleName}") }
                 }
             }.awaitAll()

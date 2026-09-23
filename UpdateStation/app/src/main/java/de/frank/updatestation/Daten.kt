@@ -48,9 +48,12 @@ data class UpdateManifest(
     companion object {
         fun ausJson(text: String): UpdateManifest {
             val o = JSONObject(text)
+            val paket = o.getString("paket")
+            // Der Paketname wird Teil von Dateinamen und Schlüsseln: nur gültige Android-Paketnamen.
+            require(PAKET_MUSTER.matches(paket)) { "Ungültiger Paketname in update.json" }
             return UpdateManifest(
                 projekt = o.getString("projekt"),
-                paket = o.getString("paket"),
+                paket = paket,
                 versionCode = o.getLong("versionCode"),
                 versionName = o.optString("versionName"),
                 versionStand = o.optString("versionStand").takeIf { it.isNotBlank() && it != "null" },
@@ -71,6 +74,12 @@ data class UpdateManifest(
         .put("signaturSha256", signaturSha256).put("erstelltAm", erstelltAm)
         .put("versionslog", JSONArray().apply { versionslog.forEach { put(it.alsJson()) } })
 }
+
+/** Gültiger Android-Paketname: Segmente aus Buchstaben, Ziffern und _, mindestens zwei, durch Punkte getrennt. */
+val PAKET_MUSTER = Regex("""^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$""")
+
+/** SHA-256-Fingerabdruck in Kleinbuchstaben ohne Trennzeichen. */
+val SHA256_MUSTER = Regex("""^[0-9a-f]{64}$""")
 
 /** Ein gefundenes Update in der Quelle. [apkRef] ist Drive-Datei-ID oder Dokument-URI, null = APK (noch) nicht da. */
 data class Fund(val manifest: UpdateManifest, val apkRef: String?)
@@ -170,6 +179,20 @@ class Einstellungen(context: Context) {
         prefs.edit().putString("nachpruefungen", neu.toString()).apply()
         return offen
     }
+
+    /**
+     * Die an Android übergebene, noch nicht abgeschlossene Installations-Session je Paket (ID und
+     * Zeitpunkt). Überlebt einen Prozessneustart, damit kein zweiter Bestätigungsdialog entsteht.
+     */
+    fun offeneSession(paket: String): Pair<Int, Long>? {
+        val teile = prefs.getString("session_$paket", null)?.split(':') ?: return null
+        val id = teile.getOrNull(0)?.toIntOrNull() ?: return null
+        return id to (teile.getOrNull(1)?.toLongOrNull() ?: 0L)
+    }
+    /** Synchron gespeichert (commit), weil der Receiver Ergebnisse nur für diese ID annimmt; false = nicht gespeichert. */
+    fun setzeOffeneSession(paket: String, id: Int): Boolean =
+        prefs.edit().putString("session_$paket", "$id:${System.currentTimeMillis()}").commit()
+    fun loescheOffeneSession(paket: String) = prefs.edit().remove("session_$paket").apply()
 
     fun gemeldet(paket: String): Long = prefs.getLong("gemeldet_$paket", 0)
     fun setzeGemeldet(paket: String, code: Long) = prefs.edit().putLong("gemeldet_$paket", code).apply()

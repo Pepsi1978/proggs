@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
 import java.security.MessageDigest
 
@@ -36,6 +37,8 @@ object Pruefer {
             return liste
         } catch (e: AnmeldungNoetig) {
             ZustandsSpeicher.zustand.update { it.copy(anmeldungNoetig = true) }
+            throw e
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Prüfung fehlgeschlagen", e)

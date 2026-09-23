@@ -12,6 +12,14 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
         val paket = intent.getStringExtra(EXTRA_PAKET) ?: return
         val label = intent.getStringExtra(EXTRA_LABEL) ?: paket
         val version = intent.getStringExtra(EXTRA_VERSION).orEmpty()
+        val sitzung = intent.getIntExtra(EXTRA_SITZUNG, -1)
+        if (!Installierer.gehoertZurAktuellen(context, paket, sitzung)) {
+            // Ergebnis einer ersetzten oder älteren Session (auch aus Versionen vor dieser): darf Sperre
+            // und Status des aktuellen Versuchs nicht ändern. Android installiert ggf. trotzdem weiter;
+            // den installierten Stand bewertet UpdateStation beim nächsten Öffnen bzw. Scan neu.
+            Log.i(TAG, "$paket: Ergebnis der Session $sitzung gehört nicht zur aktuellen – ignoriert")
+            return
+        }
         when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 val bestaetigen = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -23,6 +31,7 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                     // Ohne Bestätigungs-Intent kann niemand die Installation freigeben – sichtbar melden statt hängen.
                     val text = "Android hat keinen Bestätigungsdialog geliefert. Bitte erneut installieren."
                     Log.w(TAG, "$paket: STATUS_PENDING_USER_ACTION ohne EXTRA_INTENT")
+                    Installierer.abschliessen(context, paket)
                     ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(text))
                     Benachrichtigungen.fehler(context, paket, label, text)
                     return
@@ -37,6 +46,8 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                     .isSuccess
                 Log.i(TAG, "$paket: Bestätigung nötig (Dialog geöffnet=$geoeffnet, Benachrichtigung=$gemeldet)")
                 if (!geoeffnet && !gemeldet) {
+                    // Niemand kann bestätigen: Sperre lösen, der nächste Versuch verwirft die alte Session.
+                    Installierer.abschliessen(context, paket)
                     ZustandsSpeicher.setzeInstallation(
                         paket,
                         InstallStatus.Fehler("Bestätigung nicht anzeigbar: Benachrichtigungen erlauben und erneut installieren."),
@@ -44,6 +55,7 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                 }
             }
             PackageInstaller.STATUS_SUCCESS -> {
+                Installierer.abschliessen(context, paket)
                 ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fertig)
                 Benachrichtigungen.entferneUpdate(context, paket)
                 Benachrichtigungen.entferneBestaetigung(context, paket)
@@ -59,6 +71,7 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                     else -> intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "Installation fehlgeschlagen."
                 }
                 Log.w(TAG, "$paket: Installation fehlgeschlagen (Status $status): $text")
+                Installierer.abschliessen(context, paket)
                 ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(text))
                 Benachrichtigungen.entferneBestaetigung(context, paket)
                 if (status != PackageInstaller.STATUS_FAILURE_ABORTED) Benachrichtigungen.fehler(context, paket, label, text)
@@ -70,5 +83,6 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
         const val EXTRA_PAKET = "paket"
         const val EXTRA_LABEL = "label"
         const val EXTRA_VERSION = "version"
+        const val EXTRA_SITZUNG = "sitzung"
     }
 }

@@ -11,6 +11,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.CancellationException
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -26,6 +27,8 @@ class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             Log.w(TAG, "Hintergrundprüfung: Anmeldung nötig")
             Benachrichtigungen.anmeldung(applicationContext)
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: IOException) {
             Log.w(TAG, "Hintergrundprüfung: Netzwerk/Ordner-Fehler, neuer Versuch folgt", e)
             Result.retry()

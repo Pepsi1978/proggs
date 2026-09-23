@@ -89,7 +89,8 @@ class MainActivity : ComponentActivity() {
                         installiere = ::installiere,
                         installiereAlle = {
                             lifecycleScope.launch {
-                                ZustandsSpeicher.zustand.value.eintraege.filter { it.status == Status.UPDATE }
+                                ZustandsSpeicher.zustand.value.eintraege
+                                    .filter { it.status == Status.UPDATE && !Installierer.laeuft(it.paket) }
                                     .forEach { Installierer.installiere(this@MainActivity, it) }
                             }
                         },
@@ -150,7 +151,19 @@ class MainActivity : ComponentActivity() {
             melde("Bitte zuerst „Unbekannte Apps installieren“ erlauben.")
             return
         }
-        lifecycleScope.launch { Installierer.installiere(this@MainActivity, eintrag) }
+        if (Installierer.laeuft(eintrag.paket)) {
+            melde("${eintrag.label}: Installation läuft bereits – bitte den Android-Dialog bestätigen oder abbrechen.")
+            return
+        }
+        lifecycleScope.launch {
+            when (Installierer.installiere(this@MainActivity, eintrag)) {
+                Start.LAEUFT_BEREITS -> melde("${eintrag.label}: Installation läuft bereits.")
+                Start.WARTET_AUF_BESTAETIGUNG ->
+                    melde("${eintrag.label}: Ein früherer Versuch wartet noch auf deine Bestätigung – Benachrichtigung antippen oder abbrechen.")
+                Start.ERSETZT -> melde("${eintrag.label}: Ein vorheriger, liegengebliebener Installationsversuch wurde ersetzt.")
+                Start.GESTARTET -> Unit
+            }
+        }
     }
 
     private fun pruefe() {
