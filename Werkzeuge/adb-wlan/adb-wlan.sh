@@ -70,6 +70,21 @@ verbinde() {
 
 merke_ip() { [ -n "$1" ] && echo "$1" > "$STATE"; }
 
+# Handy-Seite dauerhaft vorbereiten (über Kabel ODER WLAN, höchstens stündlich; $2=sofort erzwingt):
+# Berechtigung für UpdateStation + Ausnahme von der Doze-Drosselung. Idempotent.
+PFLEGE_DATEI="$HOME/.adb-wlan-letzte-pflege"
+pflege() {
+  if [ "${2:-}" != "sofort" ] && [ -n "$(find "$PFLEGE_DATEI" -mmin -60 2>/dev/null)" ]; then return 0; fi
+  local pk=de.frank.updatestation
+  adbzeit 8 -s "$1" shell pm path "$pk" | grep -q "package:" || return 0
+  adbzeit 8 -s "$1" shell pm grant "$pk" android.permission.WRITE_SECURE_SETTINGS >/dev/null
+  if ! adbzeit 8 -s "$1" shell cmd deviceidle whitelist | grep -q "$pk"; then
+    adbzeit 8 -s "$1" shell cmd deviceidle whitelist "+$pk" >/dev/null
+    melde "UpdateStation von Doze-Drosselung ausgenommen"
+  fi
+  touch "$PFLEGE_DATEI"
+}
+
 stabilisiere() { # $1 TLS-Serial, $2 IP
   melde "Nur WLAN-Debugging (TLS) erreichbar – stelle Port $PORT wieder her"
   adbzeit 8 -s "$1" tcpip "$PORT" >/dev/null
@@ -102,7 +117,7 @@ USB=$(usb_geraet)
 if [ -n "$USB" ]; then
   ID=$(adbzeit 8 -s "$USB" shell getprop ro.serialno | tr -d '[:space:]')
   [ -n "$ID" ] && echo "$ID" > "$SERIAL_DATEI"
-  adbzeit 8 -s "$USB" shell pm grant de.frank.updatestation android.permission.WRITE_SECURE_SETTINGS >/dev/null
+  pflege "$USB" sofort
   [ "$(adbzeit 8 -s "$USB" shell settings get global adb_wifi_enabled | tr -d '[:space:]')" = "1" ] || \
     adbzeit 8 -s "$USB" shell settings put global adb_wifi_enabled 1 >/dev/null
 fi
@@ -164,7 +179,9 @@ for RUNDE in 1 2; do
   fi
 done
 
-if [ -n "$(netz_verbunden)" ]; then
+FERTIG=$(netz_verbunden | head -1)
+if [ -n "$FERTIG" ]; then
+  pflege "$FERTIG"
   [ $LEISE -eq 0 ] && adb devices -l
   exit 0
 fi

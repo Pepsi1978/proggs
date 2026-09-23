@@ -79,6 +79,22 @@ function Verbinde($ziel) {
     return $false
 }
 
+# Handy-Seite dauerhaft vorbereiten (über Kabel ODER WLAN, höchstens stündlich):
+# Berechtigung für UpdateStation (schaltet WLAN-Debugging nach Neustart ein) und Ausnahme von der
+# Doze-Drosselung, damit ihre Aufgabe nach dem Boot nicht verzögert wird. Idempotent.
+$PflegeDatei = Join-Path $LogDir "letzte-pflege"
+function Pflege($serial, [switch]$Sofort) {
+    if (-not $Sofort -and (Test-Path $PflegeDatei) -and ((Get-Date) - (Get-Item $PflegeDatei).LastWriteTime).TotalMinutes -lt 60) { return }
+    $pk = "de.frank.updatestation"
+    if (-not ((AdbZeit "-s $serial shell pm path $pk") -match "package:")) { return }
+    AdbZeit "-s $serial shell pm grant $pk android.permission.WRITE_SECURE_SETTINGS" | Out-Null
+    if (-not ((AdbZeit "-s $serial shell cmd deviceidle whitelist") -match $pk)) {
+        AdbZeit "-s $serial shell cmd deviceidle whitelist +$pk" | Out-Null
+        Melde "UpdateStation von Doze-Drosselung ausgenommen"
+    }
+    Set-Content -Path $PflegeDatei -Value (Get-Date -Format o) -Encoding ascii
+}
+
 function Merke-Ip($ip) { if ($ip) { Set-Content -Path $State -Value $ip -Encoding ascii } }
 
 function Stabilisiere($tlsSerial, $ip) {
@@ -118,7 +134,7 @@ try {
         $s = $usb.Serial
         $id = AdbZeit "-s $s shell getprop ro.serialno"
         if ($id) { Set-Content -Path $SerialDatei -Value $id -Encoding ascii }
-        AdbZeit "-s $s shell pm grant de.frank.updatestation android.permission.WRITE_SECURE_SETTINGS" | Out-Null
+        Pflege $s -Sofort
         if ((AdbZeit "-s $s shell settings get global adb_wifi_enabled") -ne "1") {
             AdbZeit "-s $s shell settings put global adb_wifi_enabled 1" | Out-Null
         }
@@ -188,7 +204,9 @@ try {
         } else { break }
     }
 
-    if (@(Netz-Verbunden)) {
+    $fertig = @(Netz-Verbunden)
+    if ($fertig) {
+        Pflege $fertig[0].Serial
         if (-not $Leise) { & $Adb devices -l }
         exit 0
     }

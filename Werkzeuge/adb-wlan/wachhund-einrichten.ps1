@@ -1,5 +1,5 @@
 ﻿# Richtet den adb-WLAN-Wachhund in der Windows-Aufgabenplanung ein (idempotent, ohne Adminrechte).
-# Läuft bei jeder Anmeldung, nach jedem Netzbeitritt und alle 5 Minuten unsichtbar: adb-wlan.ps1 -Leise.
+# Läuft bei jeder Anmeldung, nach jedem Netzbeitritt und alle 2 Minuten unsichtbar: adb-wlan.ps1 -Leise.
 # Damit ist das Handy nach PC-Neustart, Netzwechsel oder abgerissener Verbindung von selbst wieder da.
 # Log: %LOCALAPPDATA%\adb-wlan\adb-wlan.log
 $Name = "adb-wlan-wachhund"
@@ -12,7 +12,7 @@ $Aktion = New-ScheduledTaskAction -Execute "conhost.exe" `
 $Anmeldung = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
 $Anmeldung.Delay = "PT1M"   # WLAN ist direkt nach der Anmeldung oft noch nicht da
 $Wiederholung = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
-    -RepetitionInterval (New-TimeSpan -Minutes 5)
+    -RepetitionInterval (New-TimeSpan -Minutes 2)   # tote Verbindungen fallen oft binnen Sekunden an
 
 # Sofort nach jedem Netzbeitritt (Aufwachen, Heim-/Firmen-WLAN) statt bis zu 5 Minuten zu warten
 $Klasse = Get-CimClass -Namespace ROOT\Microsoft\Windows\TaskScheduler -ClassName MSFT_TaskEventTrigger
