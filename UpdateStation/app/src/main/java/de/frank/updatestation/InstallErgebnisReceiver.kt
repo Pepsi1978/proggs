@@ -1,0 +1,51 @@
+package de.frank.updatestation
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageInstaller
+import android.os.Build
+
+class InstallErgebnisReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val paket = intent.getStringExtra(EXTRA_PAKET) ?: return
+        val label = intent.getStringExtra(EXTRA_LABEL) ?: paket
+        val version = intent.getStringExtra(EXTRA_VERSION).orEmpty()
+        when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
+            PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+                val bestaetigen = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+                } else {
+                    @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_INTENT)
+                }
+                ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufBestaetigung)
+                bestaetigen?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)?.let {
+                    runCatching { context.startActivity(it) }
+                        .onFailure { Benachrichtigungen.bestaetigen(context, paket, label, bestaetigen) }
+                }
+            }
+            PackageInstaller.STATUS_SUCCESS -> {
+                ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fertig)
+                Benachrichtigungen.entferneUpdate(context, paket)
+                Benachrichtigungen.installiert(context, paket, label, version)
+                Pruefer.bewerteGespeichert(context)
+            }
+            else -> {
+                val text = when (status) {
+                    PackageInstaller.STATUS_FAILURE_ABORTED -> "Installation abgebrochen."
+                    PackageInstaller.STATUS_FAILURE_CONFLICT -> "Konflikt mit der installierten App (Signatur oder Paket)."
+                    PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> "APK passt nicht zu diesem Gerät."
+                    PackageInstaller.STATUS_FAILURE_STORAGE -> "Zu wenig Speicherplatz."
+                    else -> intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "Installation fehlgeschlagen."
+                }
+                ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(text))
+            }
+        }
+    }
+
+    companion object {
+        const val EXTRA_PAKET = "paket"
+        const val EXTRA_LABEL = "label"
+        const val EXTRA_VERSION = "version"
+    }
+}

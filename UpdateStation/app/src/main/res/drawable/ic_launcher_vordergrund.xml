@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pfeil nach unten in eine Ablage: "Update kommt an". Motiv in der 66dp-Sicherheitszone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,30h8v24l8.5,-8.5l5.6,5.6L54,69.2L35.9,51.1l5.6,-5.6L50,54z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,64h8v8h28v-8h8v12a4,4 0,0 1,-4 4H36a4,4 0,0 1,-4 -4z" />
+</vector>
