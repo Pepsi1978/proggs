@@ -3,6 +3,7 @@
   "app": "ClaudeKompass",
   "eintraege": [
     { "versionCode": 27, "versionName": "0.6.11", "stand": "22.09.2026, 13:42 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
-    { "versionCode": 28, "versionName": "0.6.12", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+    { "versionCode": 28, "versionName": "0.6.12", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
+    { "versionCode": 29, "versionName": "0.6.13", "stand": "23.09.2026, 15:22 Uhr", "notiz": "Update bereitgestellt" }
   ]
 }
