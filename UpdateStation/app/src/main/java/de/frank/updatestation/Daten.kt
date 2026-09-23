@@ -215,6 +215,11 @@ class Einstellungen(context: Context) {
     private fun nachpruefungsStand(): JSONObject =
         runCatching { JSONObject(prefs.getString("nachpruefungen", "{}") ?: "{}") }.getOrDefault(JSONObject())
 
+    /** Intervall, mit dem die periodische Prüfung zuletzt geplant wurde (0 = noch nie). */
+    var geplantesIntervall: Int
+        get() = prefs.getInt("geplantesIntervall", 0)
+        set(v) = prefs.edit().putInt("geplantesIntervall", v).apply()
+
     /** Hintergrundprüfung ist wiederholt gescheitert (Hinweis in der App) bzw. wurde schon gemeldet. */
     var pruefFehler: Boolean
         get() = prefs.getBoolean("pruefFehler", false)

@@ -11,13 +11,20 @@ import java.security.MessageDigest
 object Pruefer {
 
     /** Holt alle update.json aus der Quelle und bewertet sie gegen die installierten Apps. */
-    suspend fun pruefe(context: Context): List<AppEintrag> {
+    /** [ausNachpruefung]: Aufruf aus der gezielten Nachprüfung (steuert, wie die nächste eingeplant wird). */
+    suspend fun pruefe(context: Context, ausNachpruefung: Boolean = false): List<AppEintrag> {
         val quelle = Quellen.aktuelle(context) ?: return emptyList()
         val einst = Einstellungen(context)
         ZustandsSpeicher.zustand.update { it.copy(prueftGerade = true, fehler = null) }
         try {
             val ergebnis = quelle.suche()
             val gespeichert = einst.funde
+            // Handy-seitiger Beleg, wann ein neuer Stand angekommen ist: nur bei echter Versionsänderung je Projekt.
+            val alteVersion = gespeichert.associate { it.manifest.projekt to it.manifest.versionCode }
+            ergebnis.funde.filter { alteVersion[it.manifest.projekt] != it.manifest.versionCode }.forEach { f ->
+                Diagnose.ereignis(context, Phase.SYNC, "STAND_NEU", "projekt" to f.manifest.projekt,
+                    "vc" to f.manifest.versionCode, "apk" to if (f.apkRef != null) "ja" else "nein")
+            }
             // Quelle liefert gar nichts, obwohl Funde bekannt sind (z. B. Drive-Anbieter kurz leer):
             // wie einen Zwischenstand behandeln, nicht sofort alles verwerfen.
             val leer = ergebnis.funde.isEmpty() && ergebnis.zwischenstaende.isEmpty() && gespeichert.isNotEmpty()
@@ -65,7 +72,7 @@ object Pruefer {
             if (zwischen.isNotEmpty()) {
                 Log.i(TAG, "Zwischenstand in ${zwischen.keys.sorted()}, ${behalten.size} gespeicherte Funde behalten, Nachprüfung für ${np.offen.sorted()}")
             }
-            if (np.offen.isNotEmpty()) PruefWorker.planeNachpruefung(context, np.offen)
+            if (np.offen.isNotEmpty()) PruefWorker.planeNachpruefung(context, np.offen, ausNachpruefung)
             ZustandsSpeicher.zustand.update {
                 it.copy(eintraege = liste, letztePruefung = einst.letztePruefung, anmeldungNoetig = false)
             }
