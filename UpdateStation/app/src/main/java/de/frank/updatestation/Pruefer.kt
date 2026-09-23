@@ -3,6 +3,7 @@ package de.frank.updatestation
 import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.util.Log
 import kotlinx.coroutines.flow.update
 import java.security.MessageDigest
 
@@ -18,6 +19,8 @@ object Pruefer {
             einst.funde = funde
             einst.letztePruefung = System.currentTimeMillis()
             val liste = bewerte(context, funde)
+            Log.i(TAG, "Prüfung: ${funde.size} Updates gelesen, " + liste.groupingBy { it.status }.eachCount())
+            if (liste.any { it.status == Status.APK_FEHLT }) PruefWorker.planeNachpruefung(context)
             ZustandsSpeicher.zustand.update {
                 it.copy(eintraege = liste, letztePruefung = einst.letztePruefung, anmeldungNoetig = false)
             }
@@ -26,6 +29,7 @@ object Pruefer {
             ZustandsSpeicher.zustand.update { it.copy(anmeldungNoetig = true) }
             throw e
         } catch (e: Exception) {
+            Log.e(TAG, "Prüfung fehlgeschlagen", e)
             ZustandsSpeicher.zustand.update { it.copy(fehler = e.message ?: e.javaClass.simpleName) }
             throw e
         } finally {

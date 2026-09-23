@@ -356,7 +356,9 @@ private fun Kopf(zustand: Zustand, anzahlUpdates: Int, eingerichtet: Boolean, on
                         style = MaterialTheme.typography.titleLarge, color = Color.White,
                     )
                     Text(
-                        text = if (zustand.letztePruefung > 0) "Geprüft ${zeit(zustand.letztePruefung)} · automatisch alle 30 Min." else "Automatische Prüfung alle 30 Minuten",
+                        text = if (zustand.letztePruefung > 0) {
+                            "Geprüft ${zeit(zustand.letztePruefung)} · ${zustand.eintraege.size} Apps im Update-Ordner · automatisch alle 30 Min."
+                        } else "Automatische Prüfung alle 30 Minuten",
                         style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f),
                     )
                 }

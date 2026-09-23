@@ -3,12 +3,17 @@ package de.frank.updatestation
 import android.app.Activity
 import android.content.Context
 import android.net.Uri
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.DocumentsContract
+import android.util.Log
 import com.google.android.gms.auth.GoogleAuthUtil
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -16,6 +21,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -163,48 +169,122 @@ class DriveQuelle(private val context: Context, private val einst: Einstellungen
 /**
  * Ein per Ordnerauswahl freigegebener Ordner – direkt aus Google Drive (Drive-Dokumentanbieter)
  * oder von einer Sync-App gespiegelt. Die Freigabe gilt für alle Unterordner.
+ *
+ * Der Drive-Anbieter liefert Ordnerinhalte aus seinem Zwischenspeicher. Damit "Jetzt prüfen"
+ * wirklich den aktuellen Stand sieht, wird jeder Ordner vor dem Lesen aktiv neu angefordert
+ * (ContentResolver.refresh) und auf das Ende des Nachladens (EXTRA_LOADING) gewartet.
  */
 class OrdnerQuelle(private val context: Context, private val baum: Uri) : UpdateQuelle {
     private data class Kind(val id: String, val name: String, val ordner: Boolean)
 
-    /**
-     * Der Drive-Anbieter liefert Ordnerinhalte oft erst aus dem Zwischenspeicher und lädt im
-     * Hintergrund nach (EXTRA_LOADING). Deshalb so lange neu abfragen, bis er fertig ist.
-     */
-    private suspend fun kinder(docId: String): List<Kind> {
-        val uri = DocumentsContract.buildChildDocumentsUriUsingTree(baum, docId)
-        val spalten = arrayOf(
-            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_MIME_TYPE,
-        )
-        var ergebnis = emptyList<Kind>()
-        for (versuch in 0 until 20) {
-            val laedt = context.contentResolver.query(uri, spalten, null, null, null)?.use { c ->
-                val liste = mutableListOf<Kind>()
-                while (c.moveToNext()) {
-                    liste += Kind(c.getString(0), c.getString(1) ?: "", c.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR)
+    private val spalten = arrayOf(
+        DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+        DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+        DocumentsContract.Document.COLUMN_MIME_TYPE,
+    )
+
+    private fun neuAnfordern(docId: String, name: String) {
+        val kinderUri = DocumentsContract.buildChildDocumentsUriUsingTree(baum, docId)
+        val dokUri = DocumentsContract.buildDocumentUriUsingTree(baum, docId)
+        val a = runCatching { context.contentResolver.refresh(kinderUri, null, null) }.getOrDefault(false)
+        val b = runCatching { context.contentResolver.refresh(dokUri, null, null) }.getOrDefault(false)
+        Log.i(TAG, "Ordner '$name': Neuladen angefordert (Liste=$a, Ordner=$b)")
+    }
+
+    /** Eine Abfrage der Kinder; wartet kurz, falls der Anbieter selbst "lädt noch" meldet. */
+    private suspend fun abfrage(uri: Uri, name: String, versuch: Int): List<Kind> {
+        val c = context.contentResolver.query(uri, spalten, null, null, null)
+            ?: throw IOException("Kein Zugriff mehr auf den Ordner. Bitte neu auswählen.")
+        try {
+            val liste = mutableListOf<Kind>()
+            while (c.moveToNext()) {
+                liste += Kind(c.getString(0), c.getString(1) ?: "", c.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR)
+            }
+            val laedt = c.extras?.getBoolean(DocumentsContract.EXTRA_LOADING) == true
+            Log.i(TAG, "Ordner '$name' Abfrage $versuch: ${liste.size} Einträge, lädt=$laedt: ${liste.joinToString { it.name }.take(300)}")
+            if (laedt) {
+                val geaendert = CompletableDeferred<Unit>()
+                val beobachter = object : ContentObserver(Handler(Looper.getMainLooper())) {
+                    override fun onChange(selfChange: Boolean) { geaendert.complete(Unit) }
                 }
-                ergebnis = liste
-                c.extras?.getBoolean(DocumentsContract.EXTRA_LOADING) == true
-            } ?: throw IOException("Kein Zugriff mehr auf den Ordner. Bitte neu auswählen.")
-            if (!laedt) break
-            delay(750)
+                c.registerContentObserver(beobachter)
+                withTimeoutOrNull(5_000) { geaendert.await() }
+                c.unregisterContentObserver(beobachter)
+            }
+            return liste
+        } finally {
+            c.close()
         }
-        return ergebnis
+    }
+
+    /**
+     * Liest die Kinder eines Ordners frisch aus Google Drive: Neuladen anfordern, dann so lange
+     * nachfragen, bis sich die Liste nicht mehr ändert. Der Drive-Anbieter lädt im Hintergrund
+     * und meldet das meist nicht über EXTRA_LOADING – sofortiges Lesen liefert den alten Stand.
+     */
+    private suspend fun kinder(docId: String, name: String): List<Kind> {
+        neuAnfordern(docId, name)
+        val uri = DocumentsContract.buildChildDocumentsUriUsingTree(baum, docId)
+        delay(ERSTE_WARTEZEIT)
+        var vorher: List<String>? = null
+        var liste = emptyList<Kind>()
+        for (versuch in 1..8) {
+            liste = abfrage(uri, name, versuch)
+            val namen = liste.map { it.name }.sorted()
+            if (namen == vorher) return liste
+            vorher = namen
+            delay(NACHFRAGE_ABSTAND)
+        }
+        return liste
+    }
+
+    private suspend fun leseManifest(datei: Kind, projekt: String): UpdateManifest? {
+        val dokUri = DocumentsContract.buildDocumentUriUsingTree(baum, datei.id)
+        runCatching { context.contentResolver.refresh(dokUri, null, null) }
+        delay(NACHFRAGE_ABSTAND)
+        val text = context.contentResolver.openInputStream(dokUri)?.use { it.bufferedReader().readText() } ?: return null
+        return runCatching { UpdateManifest.ausJson(text) }
+            .onFailure { Log.w(TAG, "Projekt '$projekt': update.json unlesbar", it) }
+            .getOrNull()
+    }
+
+    private fun hoechsteApkNummer(dateien: List<Kind>): Long =
+        dateien.mapNotNull { Regex("""-vc(\d+)\.apk$""").find(it.name)?.groupValues?.get(1)?.toLongOrNull() }.maxOrNull() ?: 0
+
+    private suspend fun leseProjekt(ordner: Kind): Fund? {
+        var dateien = kinder(ordner.id, ordner.name)
+        var manifestDatei = dateien.firstOrNull { it.name == "update.json" }
+        var runde = 0
+        var m: UpdateManifest? = null
+        while (runde < 3) {
+            runde++
+            if (manifestDatei != null) m = leseManifest(manifestDatei, ordner.name)
+            val gelesen = m
+            val apkDa = gelesen != null && dateien.any { it.name == gelesen.apk }
+            // Stimmig: update.json vorhanden, ihre APK liegt da und keine neuere APK im Ordner.
+            if (gelesen != null && apkDa && hoechsteApkNummer(dateien) <= gelesen.versionCode) break
+            if (manifestDatei == null && dateien.none { it.name.endsWith(".apk") }) break
+            Log.i(TAG, "Projekt '${ordner.name}': Stand noch nicht stimmig (Runde $runde), lade erneut")
+            dateien = kinder(ordner.id, ordner.name)
+            manifestDatei = dateien.firstOrNull { it.name == "update.json" }
+        }
+        val manifest = m
+        if (manifest == null) {
+            Log.i(TAG, "Projekt '${ordner.name}': keine update.json")
+            return null
+        }
+        val apk = dateien.firstOrNull { it.name == manifest.apk }
+        Log.i(TAG, "Projekt '${ordner.name}': ${manifest.versionName} (${manifest.versionCode}), APK ${if (apk != null) "gefunden" else "fehlt"}")
+        return Fund(manifest, apk?.let { DocumentsContract.buildDocumentUriUsingTree(baum, it.id).toString() })
     }
 
     override suspend fun suche(): List<Fund> = withContext(Dispatchers.IO) {
         val wurzel = DocumentsContract.getTreeDocumentId(baum)
-        kinder(wurzel).filter { it.ordner }.mapNotNull { ordner ->
-            val dateien = kinder(ordner.id)
-            val manifestDatei = dateien.firstOrNull { it.name == "update.json" } ?: return@mapNotNull null
-            val text = context.contentResolver
-                .openInputStream(DocumentsContract.buildDocumentUriUsingTree(baum, manifestDatei.id))
-                ?.use { it.bufferedReader().readText() } ?: return@mapNotNull null
-            val m = runCatching { UpdateManifest.ausJson(text) }.getOrNull() ?: return@mapNotNull null
-            val apk = dateien.firstOrNull { it.name == m.apk }
-            Fund(m, apk?.let { DocumentsContract.buildDocumentUriUsingTree(baum, it.id).toString() })
+        val ordner = kinder(wurzel, "Updates").filter { it.ordner }
+        Log.i(TAG, "Updates: ${ordner.size} Projektordner")
+        coroutineScope {
+            ordner.map { o -> async { runCatching { leseProjekt(o) }.onFailure { Log.w(TAG, "Projekt '${o.name}' fehlgeschlagen", it) }.getOrNull() } }
+                .awaitAll().filterNotNull()
         }
     }
 
@@ -213,3 +293,7 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
         context.contentResolver.openInputStream(Uri.parse(ref)) ?: throw IOException("APK nicht lesbar.")
     }
 }
+
+const val TAG = "UpdateStation"
+private const val ERSTE_WARTEZEIT = 2_500L
+private const val NACHFRAGE_ABSTAND = 1_500L
