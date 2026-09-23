@@ -17,6 +17,15 @@ Ergebnis ist stets die Serial `IP:5555`.
 3. **Handy-Seite (UpdateStation ≥ 1.0.5)**: `WlanDebugReceiver` setzt `Settings.Global adb_wifi_enabled=1` bei Boot, App-Update und jedem Prozessstart (PruefWorker). Braucht `WRITE_SECURE_SETTINGS` – vergibt das Skript bei jeder Kabelverbindung per `pm grant` (übersteht App-Updates, nicht Deinstallation).
 4. **Wachhund**: Aufgabe `adb-wlan-wachhund` (bei Anmeldung + alle 5 Min, `conhost --headless`, `-Leise`). Einrichten mit `wachhund-einrichten.ps1`. Log: `%LOCALAPPDATA%\adb-wlan\adb-wlan.log`. Im Wachhund nie `kill-server` (würde andere Sitzungen/Emulatoren trennen).
 
+## Logikfallen (Review 23.09.2026, alle behoben)
+- **Boot vor WLAN:** `BOOT_COMPLETED` kommt meist vor der WLAN-Verbindung; Android setzt `adb_wifi_enabled` ohne WLAN sofort auf 0. → Empfänger meldet sich per `registerNetworkCallback(request, PendingIntent)` für "WLAN verbunden" an (vor dem Anmelden alte Anmeldung lösen, Limit 100 Anfragen pro App).
+- **Nachfrage-Spam:** Pro WLAN-Verbindung (`Network.networkHandle`) höchstens ein Einschaltversuch – sonst wiederholt Android in fremden Netzen die Nachfrage, und ein manuelles Ausschalten wird überstimmt.
+- **Tote Verbindung sieht aus wie `device`:** Lebenszeichen mit Zeitlimit prüfen (`shell getprop ro.serialno`, 8 s), sonst repariert der Wachhund nie.
+- **Fremde Geräte:** An `ro.serialno` binden (`~/.adb-wlan-serial`, gesetzt bei Kabelverbindung). mDNS-Dienste heißen `adb-<serial>-<zufall>` → danach filtern.
+- **`connected to` ≠ freigegeben:** danach auf Zustand `device` warten; bei `unauthorized` Hinweis ausgeben.
+- **tcpip über TLS:** danach bis 12 s auf Port 5555 warten, nicht fest 4 s.
+- **Mehrere adb-Versionen:** Gradle nutzt SDK-adb. PATH-Reihenfolge: SDK-platform-tools zuerst, Benutzervariable `ADB` → SDK-adb (scrcpy nutzt sie), Skripte wählen fest `$env:ADB` → SDK → PATH. Sonst killt nach einem Update eine adb die andere und alle WLAN-Verbindungen sind weg.
+
 ## Getestet
 - WLAN am Handy aus/an: TLS und 5555 bleiben.
 - `adb usb` (= Port 5555 weg wie nach Handy-Neustart): Skript holt 5555 ohne Kabel über TLS zurück.
@@ -26,4 +35,4 @@ Ergebnis ist stets die Serial `IP:5555`.
 ## Grenzen
 - Fremdes WLAN (Arbeit): Android fragt einmal "Debugging über WLAN in diesem Netzwerk zulassen?" → **"Immer zulassen"** ankreuzen. Gäste-WLAN mit Client-Isolation oder PC/Handy in verschiedenen Netzen: kein WLAN-adb möglich.
 - Unbenutzte adb-Schlüssel verfallen nach 7 Tagen → Entwickleroption **"ADB-Autorisierungstimeout deaktivieren"** einschalten.
-- Mehrere adb.exe (WinGet, SDK, scrcpy) müssen dieselbe Version haben, sonst beenden sie sich gegenseitig den Server. Prüfen: `Get-Command adb -All` und je `adb version`.
+- Android Studio startet seinen adb-Server selbst mit der SDK-adb – passt, solange PATH und `ADB` auf dieselbe zeigen. Prüfen: `(Get-Process adb).Path`.
