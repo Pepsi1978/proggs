@@ -60,12 +60,31 @@ if (Test-Path $manifestPfad) {
     try { $letzterCode = [int]((Get-Content $manifestPfad -Raw -Encoding utf8 | ConvertFrom-Json).versionCode) } catch { $letzterCode = 0 }
 }
 
-# --- versionCode muss über der zuletzt veröffentlichten liegen ------------------------------
+# --- Am Handy installierte Version (falls per adb erreichbar, WLAN-Gerät bevorzugt) ---------
+$installiertCode = 0
+$adb = Join-Path $sdk 'platform-tools\adb.exe'
+if (-not (Test-Path $adb)) { $adb = 'adb' }
+try {
+    $geraete = @(& $adb devices 2>$null | Select-String '^(\S+)\s+device$' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+    $geraet = ($geraete | Where-Object { $_ -match ':' } | Select-Object -First 1)
+    if (-not $geraet) { $geraet = $geraete | Select-Object -First 1 }
+    if ($geraet) {
+        $d = & $adb -s $geraet shell dumpsys package $erwartetesPaket 2>$null | Select-String 'versionCode=(\d+)' | Select-Object -First 1
+        if ($d) { $installiertCode = [int]$d.Matches[0].Groups[1].Value }
+        Write-Host "Am Handy ($geraet) installiert: versionCode $installiertCode"
+    }
+} catch { }
+$mindest = [Math]::Max($letzterCode, $installiertCode)
+
+# --- versionCode muss über der zuletzt veröffentlichten UND der installierten liegen --------
 $vcMatch = [regex]::Match($gradleText, 'versionCode\s*=\s*(\d+)')
 if (-not $vcMatch.Success) { Fehler "versionCode in build.gradle.kts nicht gefunden." }
 $versionCode = [int]$vcMatch.Groups[1].Value
-if ($versionCode -le $letzterCode) {
-    $neu = $letzterCode + 1
+# Erstes Update eines Projekts ohne Handy-Verbindung: Die aktuelle Nummer ist vermutlich schon
+# per Kabel installiert (Entwicklungsstand), also immer eine höhere ausliefern.
+if ($letzterCode -eq 0 -and $installiertCode -eq 0) { $mindest = $versionCode }
+if ($versionCode -le $mindest) {
+    $neu = $mindest + 1
     $gradleText = $gradleText.Substring(0, $vcMatch.Groups[1].Index) + $neu + $gradleText.Substring($vcMatch.Groups[1].Index + $vcMatch.Groups[1].Length)
     [IO.File]::WriteAllText($gradleFile, $gradleText, $utf8)
     Write-Host "APK_UPDATE_VERSIONCODE_ANGEHOBEN=$versionCode->$neu"
@@ -116,7 +135,7 @@ $signatur = $cm.Groups[1].Value.ToLower()
 
 if ($paket -ne $erwartetesPaket) { Fehler "Paket in der APK ist '$paket', erwartet '$erwartetesPaket'. Variante prüfen (projekte.json)." }
 if ($apkCode -ne $versionCode) { Fehler "versionCode der APK ($apkCode) passt nicht zu build.gradle.kts ($versionCode). Build veraltet?" }
-if ($apkCode -le $letzterCode) { Fehler "versionCode $apkCode ist nicht höher als der zuletzt veröffentlichte ($letzterCode)." }
+if ($apkCode -le $mindest) { Fehler "versionCode $apkCode ist nicht höher als veröffentlicht ($letzterCode) bzw. installiert ($installiertCode)." }
 
 # --- Ablegen: erst APK, dann update.json (die Handy-App liest nur, was im Manifest steht) ---
 $sicherName = ($apkName -replace '[^\w\.\-]', '_')
@@ -148,6 +167,6 @@ $manifest = [ordered]@{
 
 Write-Host "APK_UPDATE_STATUS=ok"
 Write-Host "APK_UPDATE_PAKET=$paket"
-Write-Host "APK_UPDATE_VERSION=$apkName (versionCode $apkCode, vorher veröffentlicht: $letzterCode)"
+Write-Host "APK_UPDATE_VERSION=$apkName (versionCode $apkCode, vorher veröffentlicht: $letzterCode, am Handy: $installiertCode)"
 Write-Host "APK_UPDATE_SIGNATUR=$signiert, SHA-256 $($signatur.Substring(0,16))..."
 Write-Host "APK_UPDATE_DATEI=$zielApk"

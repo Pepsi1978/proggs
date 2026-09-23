@@ -37,7 +37,10 @@ gefunden" und installiert nur, wenn der `versionCode` wirklich höher ist als de
    Das Skript
    - liest `projekte.json` (Gradle-Task, APK-Ordner, erwartetes Paket),
    - vergleicht den `versionCode` aus `app/build.gradle.kts` mit dem zuletzt veröffentlichten
-     (`update.json` im Zielordner) und **hebt ihn an, falls er nicht höher ist**,
+     (`update.json` im Zielordner) und — falls das Handy per adb erreichbar ist — mit dem am Handy
+     installierten, und **hebt ihn an, falls er nicht höher ist**. Das Handy ist bei Fernwartung
+     normalerweise NICHT verbunden: Beim ersten Update eines Projekts (noch keine `update.json`)
+     hebt das Skript den `versionCode` deshalb immer um 1 an, danach zählt die `update.json`,
    - baut, signiert unsignierte APKs mit `~/SK/Android/debug-shared.keystore`,
    - liest Paket, versionCode, versionName und Signatur **aus der fertigen APK** (aapt2, apksigner)
      und bricht ab, wenn Paket oder Version nicht passen,
