@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInstaller
 import android.os.Build
+import android.util.Log
 
 class InstallErgebnisReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -18,15 +19,34 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                 } else {
                     @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_INTENT)
                 }
+                if (bestaetigen == null) {
+                    // Ohne Bestätigungs-Intent kann niemand die Installation freigeben – sichtbar melden statt hängen.
+                    val text = "Android hat keinen Bestätigungsdialog geliefert. Bitte erneut installieren."
+                    Log.w(TAG, "$paket: STATUS_PENDING_USER_ACTION ohne EXTRA_INTENT")
+                    ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(text))
+                    Benachrichtigungen.fehler(context, paket, label, text)
+                    return
+                }
+                bestaetigen.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufBestaetigung)
-                bestaetigen?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)?.let {
-                    runCatching { context.startActivity(it) }
-                        .onFailure { Benachrichtigungen.bestaetigen(context, paket, label, bestaetigen) }
+                // Immer zusätzlich eine Benachrichtigung: Aus dem Hintergrund verwirft Android den
+                // startActivity-Aufruf oft still, dann bliebe die Installation ohne Hinweis liegen.
+                val gemeldet = Benachrichtigungen.bestaetigen(context, paket, label, bestaetigen)
+                val geoeffnet = runCatching { context.startActivity(bestaetigen) }
+                    .onFailure { Log.w(TAG, "$paket: Bestätigungsdialog ließ sich nicht öffnen", it) }
+                    .isSuccess
+                Log.i(TAG, "$paket: Bestätigung nötig (Dialog geöffnet=$geoeffnet, Benachrichtigung=$gemeldet)")
+                if (!geoeffnet && !gemeldet) {
+                    ZustandsSpeicher.setzeInstallation(
+                        paket,
+                        InstallStatus.Fehler("Bestätigung nicht anzeigbar: Benachrichtigungen erlauben und erneut installieren."),
+                    )
                 }
             }
             PackageInstaller.STATUS_SUCCESS -> {
                 ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fertig)
                 Benachrichtigungen.entferneUpdate(context, paket)
+                Benachrichtigungen.entferneBestaetigung(context, paket)
                 Benachrichtigungen.installiert(context, paket, label, version)
                 Pruefer.bewerteGespeichert(context)
             }
@@ -38,7 +58,10 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                     PackageInstaller.STATUS_FAILURE_STORAGE -> "Zu wenig Speicherplatz."
                     else -> intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "Installation fehlgeschlagen."
                 }
+                Log.w(TAG, "$paket: Installation fehlgeschlagen (Status $status): $text")
                 ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(text))
+                Benachrichtigungen.entferneBestaetigung(context, paket)
+                if (status != PackageInstaller.STATUS_FAILURE_ABORTED) Benachrichtigungen.fehler(context, paket, label, text)
             }
         }
     }

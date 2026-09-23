@@ -136,6 +136,11 @@ class Einstellungen(context: Context) {
         get() = prefs.getLong("letztePruefung", 0)
         set(v) = prefs.edit().putLong("letztePruefung", v).apply()
 
+    /** Takt der automatischen Prüfung in Minuten, immer eine der [INTERVALL_STUFEN]. */
+    var intervallMinuten: Int
+        get() = normalisiereIntervall(prefs.getInt("intervallMinuten", STANDARD_INTERVALL))
+        set(v) = prefs.edit().putInt("intervallMinuten", normalisiereIntervall(v)).apply()
+
     fun gemeldet(paket: String): Long = prefs.getLong("gemeldet_$paket", 0)
     fun setzeGemeldet(paket: String, code: Long) = prefs.edit().putLong("gemeldet_$paket", code).apply()
 
@@ -155,5 +160,19 @@ class Einstellungen(context: Context) {
 
     companion object {
         const val STANDARD_PFAD = "Dokumente/Updates"
+        const val STANDARD_INTERVALL = 30
+
+        /** WorkManager erlaubt periodische Arbeit frühestens alle 15 Minuten. */
+        val INTERVALL_STUFEN = listOf(15, 20, 30, 45, 60, 90, 120)
+
+        fun normalisiereIntervall(minuten: Int): Int =
+            INTERVALL_STUFEN.minByOrNull { kotlin.math.abs(it - minuten) } ?: STANDARD_INTERVALL
+
+        fun intervallText(minuten: Int): String = when {
+            minuten == 60 -> "jede Stunde"
+            minuten == 120 -> "alle 2 Stunden"
+            minuten > 60 && minuten % 60 != 0 -> "alle ${minuten / 60} h ${minuten % 60} Min."
+            else -> "alle $minuten Min."
+        }
     }
 }

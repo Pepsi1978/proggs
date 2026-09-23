@@ -39,33 +39,60 @@ object Benachrichtigungen {
         return PendingIntent.getActivity(context, code, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
-    /** Meldet jedes Update genau einmal pro versionCode: "Update für App X gefunden". */
+    /**
+     * Meldet jedes Update und jede neue App genau einmal pro versionCode. Installiert wird nie
+     * automatisch – erst nach Tippen des Nutzers und Android-Bestätigung.
+     */
     fun meldeNeue(context: Context, eintraege: List<AppEintrag>) {
         if (!darf(context)) return
         val einst = Einstellungen(context)
         val nm = NotificationManagerCompat.from(context)
-        eintraege.filter { it.status == Status.UPDATE && einst.gemeldet(it.paket) < it.fund.manifest.versionCode }.forEach { e ->
-            val m = e.fund.manifest
-            val id = e.paket.hashCode()
-            val n = NotificationCompat.Builder(context, KANAL_UPDATES)
-                .setSmallIcon(R.drawable.ic_launcher_vordergrund)
-                .setColor(0xFF5B4BFF.toInt())
-                .setContentTitle("Update für ${e.label} gefunden")
-                .setContentText("${e.installiertName} → ${m.versionName} · Tippen zum Ansehen")
-                .setStyle(
-                    NotificationCompat.BigTextStyle().bigText(
-                        "Installiert: ${e.installiertName} (Build ${e.installiertCode})\n" +
-                            "Neu: ${m.versionName} (Build ${m.versionCode})",
-                    ),
-                )
-                .setContentIntent(oeffneApp(context, id))
-                .addAction(0, "Jetzt installieren", oeffneApp(context, id + 1, e.paket))
-                .setGroup(GRUPPE)
-                .setAutoCancel(true)
-                .build()
-            @Suppress("MissingPermission") nm.notify(id, n)
-            einst.setzeGemeldet(e.paket, m.versionCode)
+        eintraege.filter { einst.gemeldet(it.paket) < it.fund.manifest.versionCode }.forEach { e ->
+            when {
+                e.status == Status.UPDATE -> meldeUpdate(context, nm, e)
+                // Neue App: erst melden, wenn ihre APK da ist; ohne Installieren-Aktion, Tippen öffnet die App.
+                e.status == Status.NICHT_INSTALLIERT && e.fund.apkRef != null -> meldeNeueApp(context, nm, e)
+                else -> return@forEach
+            }
+            einst.setzeGemeldet(e.paket, e.fund.manifest.versionCode)
         }
+    }
+
+    private fun meldeNeueApp(context: Context, nm: NotificationManagerCompat, e: AppEintrag) {
+        val m = e.fund.manifest
+        val id = e.paket.hashCode()
+        val n = NotificationCompat.Builder(context, KANAL_UPDATES)
+            .setSmallIcon(R.drawable.ic_launcher_vordergrund)
+            .setColor(0xFF5B4BFF.toInt())
+            .setContentTitle("Neue App verfügbar: ${e.label}")
+            .setContentText("Version ${m.versionName} · Tippen zum Ansehen und Installieren")
+            .setContentIntent(oeffneApp(context, id))
+            .setGroup(GRUPPE)
+            .setAutoCancel(true)
+            .build()
+        @Suppress("MissingPermission") nm.notify(id, n)
+    }
+
+    private fun meldeUpdate(context: Context, nm: NotificationManagerCompat, e: AppEintrag) {
+        val m = e.fund.manifest
+        val id = e.paket.hashCode()
+        val n = NotificationCompat.Builder(context, KANAL_UPDATES)
+            .setSmallIcon(R.drawable.ic_launcher_vordergrund)
+            .setColor(0xFF5B4BFF.toInt())
+            .setContentTitle("Update für ${e.label} gefunden")
+            .setContentText("${e.installiertName} → ${m.versionName} · Tippen zum Ansehen")
+            .setStyle(
+                NotificationCompat.BigTextStyle().bigText(
+                    "Installiert: ${e.installiertName} (Build ${e.installiertCode})\n" +
+                        "Neu: ${m.versionName} (Build ${m.versionCode})",
+                ),
+            )
+            .setContentIntent(oeffneApp(context, id))
+            .addAction(0, "Jetzt installieren", oeffneApp(context, id + 1, e.paket))
+            .setGroup(GRUPPE)
+            .setAutoCancel(true)
+            .build()
+        @Suppress("MissingPermission") nm.notify(id, n)
     }
 
     fun entferneUpdate(context: Context, paket: String) =
@@ -82,8 +109,9 @@ object Benachrichtigungen {
         @Suppress("MissingPermission") NotificationManagerCompat.from(context).notify(paket.hashCode() + 7, n)
     }
 
-    fun bestaetigen(context: Context, paket: String, label: String, intent: Intent) {
-        if (!darf(context)) return
+    /** Liefert false, wenn die Benachrichtigung nicht gezeigt werden darf. */
+    fun bestaetigen(context: Context, paket: String, label: String, intent: Intent): Boolean {
+        if (!darf(context)) return false
         val pi = PendingIntent.getActivity(context, paket.hashCode() + 3, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val n = NotificationCompat.Builder(context, KANAL_STATUS)
             .setSmallIcon(R.drawable.ic_launcher_vordergrund)
@@ -93,6 +121,24 @@ object Benachrichtigungen {
             .setAutoCancel(true)
             .build()
         @Suppress("MissingPermission") NotificationManagerCompat.from(context).notify(paket.hashCode() + 5, n)
+        return true
+    }
+
+    fun entferneBestaetigung(context: Context, paket: String) =
+        NotificationManagerCompat.from(context).cancel(paket.hashCode() + 5)
+
+    fun fehler(context: Context, paket: String, label: String, text: String) {
+        if (!darf(context)) return
+        val id = paket.hashCode() + 9
+        val n = NotificationCompat.Builder(context, KANAL_STATUS)
+            .setSmallIcon(R.drawable.ic_launcher_vordergrund)
+            .setContentTitle("$label: Update nicht installiert")
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(oeffneApp(context, id))
+            .setAutoCancel(true)
+            .build()
+        @Suppress("MissingPermission") NotificationManagerCompat.from(context).notify(id, n)
     }
 
     fun anmeldung(context: Context) {

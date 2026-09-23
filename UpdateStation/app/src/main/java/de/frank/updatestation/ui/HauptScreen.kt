@@ -61,6 +61,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -68,6 +69,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -106,6 +108,7 @@ data class Aktionen(
     val erlaubeInstallation: () -> Unit,
     val erlaubeBenachrichtigungen: () -> Unit,
     val speicherePfad: (String) -> Unit,
+    val speichereIntervall: (Int) -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,6 +117,7 @@ fun HauptScreen(
     zustand: Zustand,
     quelle: String?,
     drivePfad: String,
+    intervall: Int,
     darfInstallieren: Boolean,
     darfBenachrichtigen: Boolean,
     snackbar: SnackbarHostState,
@@ -141,6 +145,7 @@ fun HauptScreen(
                     zustand = zustand,
                     anzahlUpdates = updates.size,
                     eingerichtet = quelle != null,
+                    intervall = intervall,
                     onPruefen = aktionen.pruefen,
                     onEinstellungen = { einstellungenOffen = true },
                 )
@@ -214,7 +219,7 @@ fun HauptScreen(
 
     if (einstellungenOffen) {
         ModalBottomSheet(onDismissRequest = { einstellungenOffen = false }) {
-            EinstellungenInhalt(quelle, drivePfad, aktionen) { einstellungenOffen = false }
+            EinstellungenInhalt(quelle, drivePfad, intervall, aktionen) { einstellungenOffen = false }
         }
     }
     verlaufFuer?.let { e ->
@@ -313,7 +318,7 @@ private fun Verlauf(e: AppEintrag) {
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-private fun Kopf(zustand: Zustand, anzahlUpdates: Int, eingerichtet: Boolean, onPruefen: () -> Unit, onEinstellungen: () -> Unit) {
+private fun Kopf(zustand: Zustand, anzahlUpdates: Int, eingerichtet: Boolean, intervall: Int, onPruefen: () -> Unit, onEinstellungen: () -> Unit) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -357,8 +362,8 @@ private fun Kopf(zustand: Zustand, anzahlUpdates: Int, eingerichtet: Boolean, on
                     )
                     Text(
                         text = if (zustand.letztePruefung > 0) {
-                            "Geprüft ${zeit(zustand.letztePruefung)} · ${zustand.eintraege.size} Apps im Update-Ordner · automatisch alle 30 Min."
-                        } else "Automatische Prüfung alle 30 Minuten",
+                            "Geprüft ${zeit(zustand.letztePruefung)} · ${zustand.eintraege.size} Apps im Update-Ordner · automatisch ${Einstellungen.intervallText(intervall)}"
+                        } else "Automatische Prüfung ${Einstellungen.intervallText(intervall)}",
                         style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f),
                     )
                 }
@@ -692,8 +697,11 @@ private fun Fuss() {
 }
 
 @Composable
-private fun EinstellungenInhalt(quelle: String?, drivePfad: String, aktionen: Aktionen, schliessen: () -> Unit) {
+private fun EinstellungenInhalt(quelle: String?, drivePfad: String, intervall: Int, aktionen: Aktionen, schliessen: () -> Unit) {
     var pfad by rememberSaveable { mutableStateOf(drivePfad) }
+    val stufen = Einstellungen.INTERVALL_STUFEN
+    var stufe by remember(intervall) { mutableFloatStateOf(stufen.indexOf(Einstellungen.normalisiereIntervall(intervall)).toFloat()) }
+    val gewaehlt = stufen[stufe.toInt().coerceIn(0, stufen.lastIndex)]
     Column(Modifier.padding(horizontal = 22.dp).padding(bottom = 28.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("Einstellungen", style = MaterialTheme.typography.titleLarge)
         Text(
@@ -715,9 +723,24 @@ private fun EinstellungenInhalt(quelle: String?, drivePfad: String, aktionen: Ak
         Button(onClick = { aktionen.speicherePfad(pfad.trim().trim('/')); schliessen() }, modifier = Modifier.fillMaxWidth()) {
             Text("Pfad speichern und prüfen")
         }
+        Text("Automatische Prüfung: ${Einstellungen.intervallText(gewaehlt)}", style = MaterialTheme.typography.titleSmall)
+        Slider(
+            value = stufe,
+            onValueChange = { stufe = Math.round(it).toFloat() },
+            onValueChangeFinished = { if (gewaehlt != intervall) aktionen.speichereIntervall(gewaehlt) },
+            valueRange = 0f..stufen.lastIndex.toFloat(),
+            steps = stufen.size - 2,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Text(
-            "UpdateStation prüft automatisch alle 30 Minuten, sobald Internet da ist, und meldet jedes neue Update einmal. " +
-                "Installiert wird nur, wenn die Build-Nummer höher ist als die installierte und die Signatur passt.",
+            "Android führt die Prüfung nur ungefähr in diesem Takt aus: Energiesparen und fehlendes Internet können sie verschieben. " +
+                "Schneller als alle 15 Minuten erlaubt Android nicht. Für sofort: „Jetzt prüfen“.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            "UpdateStation prüft automatisch ${Einstellungen.intervallText(intervall)}, sobald Internet da ist, und meldet jedes neue Update und jede neue App einmal. " +
+                "Installiert wird nie automatisch: erst nach deinem Tippen und der Bestätigung durch Android – " +
+                "und nur, wenn die Build-Nummer höher ist als die installierte und die Signatur passt.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · Stand ${BuildConfig.VERSION_BUMPED_AT}",

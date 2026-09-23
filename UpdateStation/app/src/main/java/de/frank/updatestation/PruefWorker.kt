@@ -14,7 +14,7 @@ import androidx.work.WorkerParameters
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-/** Prüft alle 30 Minuten, ob in einem Update-Ordner eine neuere Version liegt. */
+/** Prüft im eingestellten Takt (Standard 30 Minuten), ob in einem Update-Ordner eine neuere Version liegt. */
 class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         if (Quellen.aktuelle(applicationContext) == null) return Result.success()
@@ -36,12 +36,18 @@ class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
     }
 
     companion object {
+        /**
+         * Plant die periodische Prüfung mit dem eingestellten Intervall. UPDATE statt KEEP: ein
+         * geändertes Intervall greift sofort, ohne den laufenden Auftrag abzubrechen.
+         */
         fun plane(context: Context) {
-            val anfrage = PeriodicWorkRequestBuilder<PruefWorker>(30, TimeUnit.MINUTES)
+            val minuten = Einstellungen(context).intervallMinuten.toLong()
+            val anfrage = PeriodicWorkRequestBuilder<PruefWorker>(minuten, TimeUnit.MINUTES)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .build()
             WorkManager.getInstance(context)
-                .enqueueUniquePeriodicWork("update-pruefung", ExistingPeriodicWorkPolicy.KEEP, anfrage)
+                .enqueueUniquePeriodicWork("update-pruefung", ExistingPeriodicWorkPolicy.UPDATE, anfrage)
+            Log.i(TAG, "Automatische Prüfung geplant: alle $minuten Minuten")
         }
 
         /** Hängt eine APK noch in der Synchronisierung, in 5 Minuten erneut prüfen statt 30 Minuten warten. */

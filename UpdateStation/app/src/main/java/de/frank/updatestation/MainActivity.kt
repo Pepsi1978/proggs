@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
     private val snackbar = SnackbarHostState()
     private var quelle by mutableStateOf<String?>(null)
     private var drivePfad by mutableStateOf(Einstellungen.STANDARD_PFAD)
+    private var intervall by mutableStateOf(Einstellungen.STANDARD_INTERVALL)
     private var darfInstallieren by mutableStateOf(true)
     private var darfBenachrichtigen by mutableStateOf(true)
 
@@ -66,6 +67,7 @@ class MainActivity : ComponentActivity() {
         einst = Einstellungen(this)
         quelle = einst.quelle
         drivePfad = einst.drivePfad
+        intervall = einst.intervallMinuten
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hatBenachrichtigungsRecht()) {
             benachrichtigungsRecht.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -78,6 +80,7 @@ class MainActivity : ComponentActivity() {
                     zustand = zustand,
                     quelle = quelle,
                     drivePfad = drivePfad,
+                    intervall = intervall,
                     darfInstallieren = darfInstallieren,
                     darfBenachrichtigen = darfBenachrichtigen,
                     snackbar = remember { snackbar },
@@ -106,6 +109,12 @@ class MainActivity : ComponentActivity() {
                             einst.drivePfad = neu.ifBlank { Einstellungen.STANDARD_PFAD }
                             drivePfad = einst.drivePfad
                             pruefe()
+                        },
+                        speichereIntervall = { minuten ->
+                            einst.intervallMinuten = minuten
+                            intervall = einst.intervallMinuten
+                            PruefWorker.plane(this@MainActivity)
+                            melde("Automatische Prüfung ${Einstellungen.intervallText(intervall)} (ungefährer Takt)")
                         },
                     ),
                 )

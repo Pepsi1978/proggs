@@ -5,6 +5,7 @@
     { "versionCode": 1, "versionName": "1.0.0", "stand": "23.09.2026, 14:24 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
     { "versionCode": 2, "versionName": "1.0.1", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt; zeigt Versionsverlauf und Neuerungen aus dem Versionslog jeder App; liest per Ordnerauswahl freigegebene Drive-Ordner zuverlässiger" },
     { "versionCode": 3, "versionName": "1.0.2", "stand": "23.09.2026, 15:39 Uhr", "notiz": "Jetzt prüfen lädt jeden Drive-Ordner neu statt den Zwischenspeicher zu lesen; fehlende APKs werden nachgefragt und nach 5 Minuten automatisch erneut geprüft" },
-    { "versionCode": 4, "versionName": "1.0.3", "stand": "23.09.2026, 15:43 Uhr", "notiz": "Jetzt prüfen wartet nach dem Neuladen, bis Google Drive den aktuellen Ordnerstand liefert; update.json wird ebenfalls frisch gelesen" }
+    { "versionCode": 4, "versionName": "1.0.3", "stand": "23.09.2026, 15:43 Uhr", "notiz": "Jetzt prüfen wartet nach dem Neuladen, bis Google Drive den aktuellen Ordnerstand liefert; update.json wird ebenfalls frisch gelesen" },
+    { "versionCode": 5, "versionName": "1.0.4", "stand": "23.09.2026, 18:33 Uhr", "notiz": "Prüfintervall per Regler wählbar (15 Minuten bis 2 Stunden); neue Apps werden einmal gemeldet; Installation nur nach eigenem Tippen mit Android-Bestätigung, die Bestätigung kommt immer auch als Benachrichtigung, Fehler werden gemeldet" }
   ]
 }

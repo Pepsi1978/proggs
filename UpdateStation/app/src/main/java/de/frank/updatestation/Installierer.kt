@@ -94,8 +94,9 @@ object Installierer {
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
             setAppPackageName(m.paket)
             setSize(datei.length())
+            // Nie still installieren: Android soll jede Installation ausdrücklich bestätigen lassen.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+                setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_REQUIRED)
             }
         }
         val id = installer.createSession(params)
