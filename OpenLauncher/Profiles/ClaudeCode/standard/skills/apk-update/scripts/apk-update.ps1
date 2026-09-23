@@ -76,18 +76,46 @@ try {
 } catch { }
 $mindest = [Math]::Max($letzterCode, $installiertCode)
 
-# --- versionCode muss über der zuletzt veröffentlichten UND der installierten liegen --------
-$vcMatch = [regex]::Match($gradleText, 'versionCode\s*=\s*(\d+)')
-if (-not $vcMatch.Success) { Fehler "versionCode in build.gradle.kts nicht gefunden." }
-$versionCode = [int]$vcMatch.Groups[1].Value
-# Erstes Update eines Projekts ohne Handy-Verbindung: Die aktuelle Nummer ist vermutlich schon
-# per Kabel installiert (Entwicklungsstand), also immer eine höhere ausliefern.
+# --- Versionslog: einzige Quelle für versionCode, versionName und Stand ----------------------
+$logRel = "$Projekt/app/src/main/assets/versionslog.json"
+$logPfad = Join-Path $projektDir 'app\src\main\assets\versionslog.json'
+if (-not (Test-Path $logPfad)) { Fehler "Kein Versionslog: $logPfad fehlt. Projekt zuerst auf den Versionslog umstellen (SKILL.md, Abschnitt Versionslog)." }
+$versionslog = Get-Content $logPfad -Raw -Encoding utf8 | ConvertFrom-Json
+$eintraege = [System.Collections.Generic.List[object]]::new()
+foreach ($e in @($versionslog.eintraege)) { $eintraege.Add($e) }
+if ($eintraege.Count -eq 0) { Fehler "Versionslog $logPfad hat keine Einträge." }
+$versionCode = [int]$eintraege[-1].versionCode
+
+function J([string]$s) { '"' + ($s -replace '\\', '\\' -replace '"', '\"' -replace "`r?`n", ' ') + '"' }
+function Schreibe-Versionslog {
+    $nl = "`n"
+    $zeilen = $eintraege | ForEach-Object {
+        "    { `"versionCode`": $([int]$_.versionCode), `"versionName`": $(J $_.versionName), `"stand`": $(J $_.stand), `"notiz`": $(J $_.notiz) }"
+    }
+    $text = "{$nl  `"format`": 1,$nl  `"app`": $(J $Projekt),$nl  `"eintraege`": [$nl" + ($zeilen -join ",$nl") + "$nl  ]$nl}$nl"
+    [IO.File]::WriteAllText($logPfad, $text, $utf8)
+}
+
+# versionCode muss über der zuletzt veröffentlichten UND der installierten liegen. Erstes Update
+# ohne Handy-Verbindung: die aktuelle Nummer ist vermutlich schon per Kabel installiert.
 if ($letzterCode -eq 0 -and $installiertCode -eq 0) { $mindest = $versionCode }
 if ($versionCode -le $mindest) {
     $neu = $mindest + 1
-    $gradleText = $gradleText.Substring(0, $vcMatch.Groups[1].Index) + $neu + $gradleText.Substring($vcMatch.Groups[1].Index + $vcMatch.Groups[1].Length)
-    [IO.File]::WriteAllText($gradleFile, $gradleText, $utf8)
-    Write-Host "APK_UPDATE_VERSIONCODE_ANGEHOBEN=$versionCode->$neu"
+    $teile = "$($eintraege[-1].versionName)".Split('.')
+    $teile[-1] = [string]([int]($teile[-1] -replace '\D.*$', '') + 1)
+    # Notiz = Commits am Projekt seit der letzten Änderung am Versionslog.
+    $seit = git -C $proggs log -1 --format=%H -- $logRel 2>$null
+    $betreffe = if ($seit) { @(git -C $proggs log --format=%s "$seit..HEAD" -- $Projekt 2>$null) } else { @() }
+    $notiz = ($betreffe | ForEach-Object { $_ -replace "^$([regex]::Escape($Projekt)):\s*", '' } | Select-Object -First 8) -join '; '
+    if (-not $notiz) { $notiz = 'Update bereitgestellt' }
+    $eintraege.Add([pscustomobject]@{
+        versionCode = $neu
+        versionName = $teile -join '.'
+        stand       = (Get-Date -Format 'dd.MM.yyyy, HH:mm') + ' Uhr'
+        notiz       = $notiz
+    })
+    Schreibe-Versionslog
+    Write-Host "APK_UPDATE_VERSIONSLOG_ERGAENZT=$versionCode->$neu ($logRel)"
     $versionCode = $neu
 }
 
@@ -134,7 +162,7 @@ if (-not $cm.Success) { Fehler "Signatur-Fingerabdruck nicht lesbar." }
 $signatur = $cm.Groups[1].Value.ToLower()
 
 if ($paket -ne $erwartetesPaket) { Fehler "Paket in der APK ist '$paket', erwartet '$erwartetesPaket'. Variante prüfen (projekte.json)." }
-if ($apkCode -ne $versionCode) { Fehler "versionCode der APK ($apkCode) passt nicht zu build.gradle.kts ($versionCode). Build veraltet?" }
+if ($apkCode -ne $versionCode) { Fehler "versionCode der APK ($apkCode) passt nicht zum Versionslog ($versionCode). Liest build.gradle.kts den Versionslog? Build veraltet?" }
 if ($apkCode -le $mindest) { Fehler "versionCode $apkCode ist nicht höher als veröffentlicht ($letzterCode) bzw. installiert ($installiertCode)." }
 
 # --- Ablegen: erst APK, dann update.json (die Handy-App liest nur, was im Manifest steht) ---
@@ -143,18 +171,26 @@ $apkDatei = "$Projekt-$sicherName-vc$apkCode.apk"
 $zielApk = Join-Path $zielDir $apkDatei
 Copy-Item $temp $zielApk -Force
 Remove-Item $temp -ErrorAction SilentlyContinue
-Get-ChildItem $zielDir -Filter *.apk | Where-Object { $_.Name -ne $apkDatei } | Remove-Item -Force
+# Die 5 neuesten APKs (nach versionCode) bleiben liegen, ältere werden gelöscht.
+$behalten = 5
+Get-ChildItem $zielDir -Filter *.apk |
+    Sort-Object { $m = [regex]::Match($_.Name, '-vc(\d+)\.apk$'); if ($m.Success) { [int]$m.Groups[1].Value } else { 0 } } -Descending |
+    Select-Object -Skip $behalten | Remove-Item -Force
 
 $sha256 = (Get-FileHash $zielApk -Algorithm SHA256).Hash.ToLower()
-$bumpedAt = [regex]::Match($gradleText, 'VERSION_BUMPED_AT",\s*(?:"\\"|quoted\(")([^"\\]+)')
 $jetzt = Get-Date
+$commit = (git -C $proggs rev-parse --short HEAD 2>$null)
+# Die letzten 15 Einträge des Versionslogs gehen mit, damit UpdateStation "Neu in dieser Version" zeigt.
+$verlauf = @($eintraege | Select-Object -Last 15 | ForEach-Object {
+    [ordered]@{ versionCode = [int]$_.versionCode; versionName = "$($_.versionName)"; stand = "$($_.stand)"; notiz = "$($_.notiz)" }
+})
 $manifest = [ordered]@{
     format         = 1
     projekt        = $Projekt
     paket          = $paket
     versionCode    = $apkCode
     versionName    = $apkName
-    versionStand   = $(if ($bumpedAt.Success) { $bumpedAt.Groups[1].Value } else { $null })
+    versionStand   = "$($eintraege[-1].stand)"
     apk            = $apkDatei
     groesse        = (Get-Item $zielApk).Length
     sha256         = $sha256
@@ -162,8 +198,10 @@ $manifest = [ordered]@{
     variante       = $apkOrdner
     erstelltAm     = $jetzt.ToString('dd.MM.yyyy HH:mm')
     erstelltAmIso  = $jetzt.ToString('yyyy-MM-ddTHH:mm:sszzz')
+    commit         = "$commit"
+    versionslog    = $verlauf
 }
-[IO.File]::WriteAllText($manifestPfad, ($manifest | ConvertTo-Json), $utf8)
+[IO.File]::WriteAllText($manifestPfad, ($manifest | ConvertTo-Json -Depth 5), $utf8)
 
 Write-Host "APK_UPDATE_STATUS=ok"
 Write-Host "APK_UPDATE_PAKET=$paket"
