@@ -3,7 +3,7 @@
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
-  "model": "claude-fable-5-1[1m]",
+  "model": "opus[1m]",
   "hooks": {
     "PreToolUse": [
       {
@@ -55,6 +55,25 @@
     "command": "bash ~/proggs/claude-code-setup/hooks/statusline.sh",
     "refreshInterval": 10
   },
+  "enabledPlugins": {
+    "bio-research@synced": false,
+    "sales@synced": false,
+    "small-business@synced": false,
+    "marketing@synced": false,
+    "legal@synced": false,
+    "finance@synced": false,
+    "human-resources@synced": false,
+    "zapier@synced": false,
+    "customer-support@synced": false,
+    "operations@synced": false,
+    "product-management@synced": false,
+    "design@synced": false,
+    "data@synced": false,
+    "enterprise-search@synced": false,
+    "engineering@synced": false,
+    "desktop-commander@synced": false,
+    "cowork-plugin-management@synced": false
+  },
   "language": "german",
   "effortLevel": "xhigh",
   "modelSettings": {
@@ -77,24 +96,5 @@
   "preferredNotifChannel": "auto",
   "remoteControlAtStartup": true,
   "inputNeededNotifEnabled": true,
-  "agentPushNotifEnabled": true,
-  "enabledPlugins": {
-    "bio-research@synced": false,
-    "sales@synced": false,
-    "small-business@synced": false,
-    "marketing@synced": false,
-    "legal@synced": false,
-    "finance@synced": false,
-    "human-resources@synced": false,
-    "zapier@synced": false,
-    "customer-support@synced": false,
-    "operations@synced": false,
-    "product-management@synced": false,
-    "design@synced": false,
-    "data@synced": false,
-    "enterprise-search@synced": false,
-    "engineering@synced": false,
-    "desktop-commander@synced": false,
-    "cowork-plugin-management@synced": false
-  }
+  "agentPushNotifEnabled": true
 }

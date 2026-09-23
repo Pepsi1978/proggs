@@ -61,6 +61,17 @@ public sealed class ModelRegistry
     ];
 
     /// <summary>
+    /// GPT-6-Modelle, die einmalig nachgetragen werden. Sie stehen (noch) nicht nativ im
+    /// OpenCode-Katalog und laufen deshalb wie GPT-6 Astra als Direktmodell (IsUserDefined),
+    /// damit ConfigureProvider den provider.openai.models-Eintrag schreibt.
+    /// </summary>
+    private static readonly (string Slug, string DisplayName)[] Gpt6Models =
+    [
+        ("gpt-6-sol", "GPT-6 Sol"),
+        ("gpt-6-luna", "GPT-6 Luna"),
+    ];
+
+    /// <summary>
     /// Die Modell-Liste liegt im Repo (~/proggs/OpenLauncher/models.json), nicht im
     /// Anwendungsdatenordner. Sie enthaelt keine Geheimnisse — nur Modell-IDs, Anzeigenamen und
     /// die Sortierung — und gehoert damit wie die Profiltexte unter Profiles/ (siehe
@@ -492,6 +503,18 @@ public sealed class ModelRegistry
 
                     var model = group.Models.FirstOrDefault(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase));
                     if (model != null && !model.HasCustomDisplayName) model.DisplayName = definition.DisplayName;
+                }
+
+                foreach (var definition in Gpt6Models)
+                {
+                    if (group.KnownSyncedModelSlugs.Contains(definition.Slug, StringComparer.OrdinalIgnoreCase)) continue;
+                    if (!group.Models.Any(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var entry = Model(definition.Slug, definition.DisplayName, "openai", "OpenAI");
+                        entry.IsUserDefined = true;
+                        group.Models.Add(entry);
+                    }
+                    AddUnique(group.KnownSyncedModelSlugs, definition.Slug);
                 }
             }
 
