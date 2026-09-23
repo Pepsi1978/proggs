@@ -86,8 +86,10 @@ und dass die Signatur der APK zur installierten App passt.
 - **EntropieReductor**: Variante `benchmark` (Paket mit `.debug`), ersetzt die Debug-App ohne
   Datenverlust.
 - **GenialeIdeen**: Variante `schnell`.
-- **BestJournalFrank, VoiceKey**: Debug-Variante hat `.debug`. Ist am Handy nur die Debug-Variante
-  installiert, zeigt die Handy-App die Release-APK als „nicht installiert".
+- **BestJournalFrank, VoiceKey**: Am Handy ist nur die Debug-Variante (`.debug`) installiert, daher
+  liefert der Skill hier `assembleDebug` aus.
+- Welche Variante am Handy liegt, zeigt `adb shell pm list packages`. Passt das Paket nicht, zeigt
+  die Handy-App die APK als „nicht auf diesem Handy".
 - Meldet die Handy-App „Signatur weicht ab": nie deinstallieren (Regel 15), sondern Variante in
   `projekte.json` korrigieren.
 

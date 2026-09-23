@@ -7,11 +7,13 @@
   "projekte": {
     "BestJournalAndroid": {
       "paket": "com.bestjournal.app",
-      "notiz": "Release ist mit dem Play-Store-Key (release.keystore) signiert und wird NICHT umsigniert. Passt nur, wenn am Handy die Play-/Release-Version installiert ist; die Debug-Variante heißt com.bestjournal.app.debug."
+      "notiz": "Release ist mit dem Play-Store-Key (release.keystore) signiert und wird NICHT umsigniert. Am Handy sind com.bestjournal.app UND com.bestjournal.app.debug installiert (geprüft 23.09.2026); dieses Update zielt auf com.bestjournal.app."
     },
     "BestJournalFrank": {
-      "paket": "com.entropyjournal",
-      "notiz": "Debug-Variante hat das Suffix .debug. Am Handy unbestätigt, welche Variante installiert ist."
+      "gradleTask": "assembleDebug",
+      "apkOrdner": "debug",
+      "paket": "com.entropyjournal.debug",
+      "notiz": "Am Handy ist nur die Debug-Variante installiert (geprüft 23.09.2026)."
     },
     "ClaudeKompass": { "paket": "de.frank.claudekompass" },
     "CodexKompass": { "paket": "de.frank.codexkompass" },
@@ -43,8 +45,10 @@
     "StackLabor": { "paket": "de.frank.stacklabor.werftstudio" },
     "UpdateStation": { "paket": "de.frank.updatestation" },
     "VoiceKey": {
-      "paket": "de.frank.voicekey",
-      "notiz": "Debug-Variante hat das Suffix .debug. Am Handy unbestätigt, welche Variante installiert ist."
+      "gradleTask": "assembleDebug",
+      "apkOrdner": "debug",
+      "paket": "de.frank.voicekey.debug",
+      "notiz": "Am Handy ist nur die Debug-Variante installiert (geprüft 23.09.2026)."
     }
   }
 }
