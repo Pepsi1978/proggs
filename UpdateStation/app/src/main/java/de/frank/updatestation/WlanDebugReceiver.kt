@@ -38,8 +38,9 @@ class WlanDebugReceiver : BroadcastReceiver() {
     /** Läuft, sobald ein WLAN (nicht getaktetes Netz) verbunden ist. */
     class Aufgabe(context: Context, params: WorkerParameters) : Worker(context, params) {
         override fun doWork(): Result {
-            einschalten(applicationContext)
-            return Result.success()
+            if (einschalten(applicationContext)) return Result.success()
+            // Android hat den Wert wieder zurückgesetzt (WLAN noch ohne IP): später erneut, begrenzt
+            return if (runAttemptCount < MAX_VERSUCHE) Result.retry() else Result.success()
         }
     }
 
@@ -48,6 +49,7 @@ class WlanDebugReceiver : BroadcastReceiver() {
         private const val ARBEIT = "wlan-debug-einschalten"
         private const val PREFS = "wlan_debug"
         private const val LETZTES_NETZ = "letztes_netz"
+        private const val MAX_VERSUCHE = 5
 
         /** Idempotent: eine bereits wartende Aufgabe bleibt bestehen (KEEP), nichts stapelt sich. */
         fun planen(context: Context) {
@@ -62,39 +64,54 @@ class WlanDebugReceiver : BroadcastReceiver() {
             }
         }
 
-        fun einschalten(context: Context) {
+        /**
+         * Läuft im Worker-Thread (blockiert kurz). Liefert false, wenn ein späterer Versuch sinnvoll ist.
+         * Android setzt adb_wifi_enabled binnen ~1 s zurück, wenn das WLAN noch keine IP hat – deshalb
+         * nach dem Setzen nachprüfen und die Verbindung erst dann als erledigt merken.
+         * Eine offene Android-Nachfrage (fremdes Netz) lässt den Wert auf 1 – dann kein Wiederholen.
+         */
+        fun einschalten(context: Context): Boolean {
             val app = context.applicationContext
             val erlaubt = app.checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) ==
                 PackageManager.PERMISSION_GRANTED
             if (!erlaubt) {
-                Log.w(TAG, "WRITE_SECURE_SETTINGS fehlt – einmal per Kabel adb-wlan.ps1 ausführen")
-                return
+                Log.w(TAG, "WRITE_SECURE_SETTINGS fehlt – einmal adb-wlan.ps1 ausführen")
+                return true
             }
-            val cm = app.getSystemService(ConnectivityManager::class.java) ?: return
+            val cm = app.getSystemService(ConnectivityManager::class.java) ?: return true
             val wlan = wlanNetz(cm)
             if (wlan == null) {
-                // Nicht selbst neu planen (Schleifengefahr); nächster Prozessstart plant wieder.
-                Log.i(TAG, "Kein WLAN verbunden – nächster Versuch beim nächsten App-Start")
-                return
+                // Nicht selbst neu planen (Schleifengefahr): WorkManager wiederholt begrenzt.
+                Log.i(TAG, "Kein WLAN mit IP verbunden – später erneut")
+                return false
             }
             val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             val kennung = wlan.networkHandle
-            if (prefs.getLong(LETZTES_NETZ, 0L) == kennung) return
-            try {
+            if (prefs.getLong(LETZTES_NETZ, 0L) == kennung) return true
+            return try {
                 val cr = app.contentResolver
-                if (Settings.Global.getInt(cr, Settings.Global.ADB_ENABLED, 0) != 1) return
+                if (Settings.Global.getInt(cr, Settings.Global.ADB_ENABLED, 0) != 1) return true
                 if (Settings.Global.getInt(cr, "adb_wifi_enabled", 0) != 1) {
                     Settings.Global.putInt(cr, "adb_wifi_enabled", 1)
+                    Thread.sleep(3000)
+                    if (Settings.Global.getInt(cr, "adb_wifi_enabled", 0) != 1) {
+                        Log.w(TAG, "Android hat Debugging über WLAN wieder abgeschaltet – später erneut")
+                        return false
+                    }
                     Log.i(TAG, "Debugging über WLAN wieder eingeschaltet")
                 }
                 prefs.edit().putLong(LETZTES_NETZ, kennung).apply()
+                true
             } catch (e: Exception) {
                 Log.e(TAG, "Einschalten fehlgeschlagen", e)
+                true
             }
         }
 
+        /** WLAN mit zugewiesener IPv4-Adresse – vorher hält Android WLAN-Debugging nicht an. */
         private fun istWlan(cm: ConnectivityManager, n: Network): Boolean =
-            cm.getNetworkCapabilities(n)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+            cm.getNetworkCapabilities(n)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true &&
+                cm.getLinkProperties(n)?.linkAddresses?.any { it.address is java.net.Inet4Address } == true
 
         @Suppress("DEPRECATION")
         private fun wlanNetz(cm: ConnectivityManager): Network? =
