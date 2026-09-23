@@ -6,13 +6,29 @@ import android.content.pm.PackageManager
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.security.MessageDigest
 
 object Pruefer {
 
-    /** Holt alle update.json aus der Quelle und bewertet sie gegen die installierten Apps. */
-    /** [ausNachpruefung]: Aufruf aus der gezielten Nachprüfung (steuert, wie die nächste eingeplant wird). */
-    suspend fun pruefe(context: Context, ausNachpruefung: Boolean = false): List<AppEintrag> {
+    /**
+     * Eine Prüfung zur Zeit im Prozess: Worker (periodisch/Nachprüfung) und App (Jetzt prüfen, beim
+     * Öffnen) laufen sonst gleichzeitig und schreiben dieselben Einstellungen (Funde, Nachprüfungs-
+     * zähler, Flags) und Diagnose-Einträge doppelt. WorkManager läuft im App-Prozess, daher genügt
+     * ein Mutex. withLock gibt die Sperre auch bei Abbruch (CancellationException) wieder frei.
+     */
+    private val sperre = Mutex()
+
+    /**
+     * Holt alle update.json aus der Quelle und bewertet sie gegen die installierten Apps.
+     * [ausNachpruefung]: Aufruf aus der gezielten Nachprüfung (steuert, wie die nächste eingeplant wird).
+     * Läuft schon eine Prüfung, wartet dieser Aufruf und prüft danach auf dem dann gespeicherten Stand.
+     */
+    suspend fun pruefe(context: Context, ausNachpruefung: Boolean = false): List<AppEintrag> =
+        sperre.withLock { pruefeExklusiv(context, ausNachpruefung) }
+
+    private suspend fun pruefeExklusiv(context: Context, ausNachpruefung: Boolean): List<AppEintrag> {
         val quelle = Quellen.aktuelle(context) ?: return emptyList()
         val einst = Einstellungen(context)
         ZustandsSpeicher.zustand.update { it.copy(prueftGerade = true, fehler = null) }

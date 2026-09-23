@@ -166,7 +166,9 @@ $eintraege = [System.Collections.Generic.List[object]]::new()
 # Vom Skript geänderte Projektdateien: dann wird NICHT veröffentlicht, erst committen und pushen.
 $vorbereitet = [System.Collections.Generic.List[string]]::new()
 
-function J([string]$s) { '"' + ($s -replace '\\', '\\' -replace '"', '\"' -replace "`r?`n", ' ') + '"' }
+# JSON-Stringliteral über den JSON-Serialisierer: maskiert Anführungszeichen, Backslash und alle
+# Steuerzeichen (z. B. Tab aus Commit-Betreffen); Umlaute bleiben lesbar (pwsh 7).
+function J([string]$s) { ConvertTo-Json -InputObject ($s -replace "`r?`n", ' ') -Compress }
 function Schreibe-Versionslog {
     $nl = "`n"
     $zeilen = $eintraege | ForEach-Object {
@@ -174,7 +176,17 @@ function Schreibe-Versionslog {
     }
     $text = "{$nl  `"format`": 1,$nl  `"app`": $(J $Projekt),$nl  `"eintraege`": [$nl" + ($zeilen -join ",$nl") + "$nl  ]$nl}$nl"
     New-Item -ItemType Directory -Force -Path (Split-Path $logPfad -Parent) | Out-Null
-    [IO.File]::WriteAllText($logPfad, $text, $utf8)
+    # Erst als Temp-Datei schreiben und prüfen, dann ersetzen: nie einen kaputten Versionslog hinterlassen.
+    $logTemp = "$logPfad.$lauf.tmp"
+    $script:aufraeumen.Add($logTemp)
+    [IO.File]::WriteAllText($logTemp, $text, $utf8)
+    $pruef = $null
+    try { $pruef = Get-Content $logTemp -Raw -Encoding utf8 | ConvertFrom-Json } catch { }
+    $letzter = @($pruef.eintraege)[-1]
+    if (-not $pruef -or @($pruef.eintraege).Count -ne $eintraege.Count -or [int]$letzter.versionCode -ne [int]$eintraege[-1].versionCode -or "$($letzter.notiz)" -ne ("$($eintraege[-1].notiz)" -replace "`r?`n", ' ')) {
+        Fehler "Versionslog ließ sich nicht gültig schreiben; $logRel bleibt unverändert."
+    }
+    [IO.File]::Move($logTemp, $logPfad, $true)
 }
 function Stopp-Vorbereitet {
     Aufraeumen

@@ -14,6 +14,7 @@
     { "versionCode": 10, "versionName": "1.0.9", "stand": "23.09.2026, 19:43 Uhr", "notiz": "Nachprüfungen während der Drive-Synchronisierung werden nicht mehr verschoben oder abgebrochen; die Diagnose zeigt, wann ein neuer Stand eines Projekts auf dem Handy angekommen ist" },
     { "versionCode": 11, "versionName": "1.0.10", "stand": "23.09.2026, 19:48 Uhr", "notiz": "Debugging über WLAN wird nach einem Neustart erst eingeschaltet, sobald das WLAN verbunden ist, und höchstens einmal pro WLAN-Verbindung, damit fremde Netze nicht ständig nachfragen" },
     { "versionCode": 12, "versionName": "1.0.11", "stand": "23.09.2026, 20:03 Uhr", "notiz": "Debugging über WLAN wird nach dem Einschalten nachgeprüft und bei Bedarf erneut eingeschaltet, falls Android es direkt nach dem Neustart wieder abschaltet" },
-    { "versionCode": 13, "versionName": "1.0.12", "stand": "23.09.2026, 20:07 Uhr", "notiz": "Update-Ordner werden stimmig gelesen: update.json und Dateiliste stammen immer aus derselben Abfrage, auch wenn Google Drive gerade synchronisiert" }
+    { "versionCode": 13, "versionName": "1.0.12", "stand": "23.09.2026, 20:07 Uhr", "notiz": "Update-Ordner werden stimmig gelesen: update.json und Dateiliste stammen immer aus derselben Abfrage, auch wenn Google Drive gerade synchronisiert" },
+    { "versionCode": 14, "versionName": "1.0.13", "stand": "23.09.2026, 20:21 Uhr", "notiz": "Automatische und manuelle Prüfung laufen nicht mehr gleichzeitig, damit Zählung, Warnungen und Diagnose-Einträge stimmen" }
   ]
 }
