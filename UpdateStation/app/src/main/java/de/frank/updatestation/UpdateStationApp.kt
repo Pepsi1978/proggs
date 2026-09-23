@@ -8,8 +8,8 @@ class UpdateStationApp : Application() {
         Benachrichtigungen.kanaeleAnlegen(this)
         PruefWorker.plane(this)
         Pruefer.bewerteGespeichert(this)
-        // Läuft bei jedem Prozessstart (auch durch den PruefWorker) und holt ein
-        // abgeschaltetes Debugging über WLAN zurück, z. B. nach einem Netzwechsel.
-        WlanDebugReceiver.einschalten(this)
+        // Plant das Wiedereinschalten von Debugging über WLAN, sobald WLAN verbunden ist
+        // (höchstens einmal pro WLAN-Verbindung; KEEP verhindert Stapeln).
+        WlanDebugReceiver.planen(this)
     }
 }
