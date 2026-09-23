@@ -40,20 +40,31 @@ gefunden" und installiert nur, wenn der `versionCode` wirklich höher ist als de
      sein letzter Eintrag ist die Version, die gebaut wird,
    - prüft den Projektnamen (nur Buchstaben, Ziffern, `_ . -`, Ordner direkt unter `~/proggs`)
      und übernimmt die Schreibweise vom Datenträger,
-   - vergleicht dessen `versionCode` mit dem zuletzt veröffentlichten (`update.json` im
-     Zielordner, abgesichert durch die höchste `-vcN.apk` daneben — eine kaputte `update.json`
-     zählt nie als „noch nichts veröffentlicht“) und — falls das Handy per adb erreichbar ist —
-     mit dem am Handy installierten. Ist er nicht höher, **hängt das Skript selbst einen Eintrag
-     an** (versionCode + 1, versionName + 1 in der letzten Stelle, Stand = jetzt, Notiz =
-     Commit-Betreffe am Projekt seit der letzten Änderung am Versionslog). Die erste
-     Veröffentlichung eines Projekts braucht **keinen** Extra-Bump,
+   - prüft **vor jeder Versionsentscheidung** den Git-Stand: keine offenen Änderungen unter
+     `<Projekt>` (Index und Arbeitsbaum), `fetch` erfolgreich, HEAD nicht hinter origin, keine
+     ungepushten Commits am Projekt — sonst `fehler`,
+   - entscheidet mit N = Versionslog, I = am Handy installiert (0 ohne adb), P = zuletzt
+     veröffentlicht:
+     - P kommt aus `update.json`. **Unlesbares** Manifest: P = höchste `-vcX.apk` im Ordner
+       (konservativ, nie dieselbe Nummer erneut). **Fehlendes** Manifest oder älteres Manifest:
+       eine APK mit genau vcN ist ein abgebrochener eigener Lauf und wird ersetzt
+       (`APK_UPDATE_WARNUNG=verwaiste … wird ersetzt`), sofern Name, Paket und vc passen —
+       sonst `fehler` („fremde Datei“); alle anderen verwaisten APKs zählen weiter.
+     - **Veröffentlicht, wenn N > P und N ≥ I** (N = I ist erlaubt, z. B. nach adb-Installation).
+     - Nennt `update.json` schon N und ist alles unverändert (APK-Hash, Manifest-Commit auflösbar,
+       kein Projekt-Diff seit diesem Commit, I ≤ N) → `already-current`, ohne Build.
+     - Sonst **hängt das Skript selbst einen Eintrag an** (versionCode = max(P, I) + 1,
+       versionName + 1 in der letzten Stelle, Stand = jetzt, Notiz = Commit-Betreffe seit der
+       letzten Änderung am Versionslog). Die erste Veröffentlichung braucht keinen Extra-Bump,
    - **veröffentlicht nie, was es selbst geändert hat:** Hat es den Versionslog eingerichtet oder
      ergänzt, stoppt es mit `APK_UPDATE_STATUS=vorbereitet` (Exit 2), ohne zu bauen,
-   - veröffentlicht nur einen sauberen Stand: keine offenen Änderungen unter `<Projekt>` (Index
-     und Arbeitsbaum), HEAD nicht hinter origin, keine ungepushten Commits am Projekt,
    - läuft pro Projekt exklusiv (Sperrdatei, eindeutige Temp-Dateien pro Lauf); ein zweiter Lauf
      für dasselbe Projekt bricht mit Fehler ab,
-   - baut, signiert unsignierte APKs mit `~/SK/Android/debug-shared.keystore`,
+   - baut, nimmt die APK **eindeutig aus `output-metadata.json`** des Ausgabeordners (genau ein
+     Element, Paket und versionCode müssen passen; APK-Splits werden nicht unterstützt) und
+     signiert unsignierte APKs mit `~/SK/Android/debug-shared.keystore`,
+   - fragt das Handy nur lesend über dieselbe adb wie das WLAN-Werkzeug ab (`$env:ADB`, sonst
+     SDK-adb); `-OhneGeraet` (nur für Tests) überspringt das,
    - liest Paket, versionCode, versionName und Signatur **aus der fertigen APK** (aapt2, apksigner)
      und bricht ab, wenn Paket oder Version nicht passen,
    - legt die APK als `<Projekt>-<versionName>-vc<versionCode>.apk` ab, danach `update.json`
@@ -64,6 +75,8 @@ gefunden" und installiert nur, wenn der `versionCode` wirklich höher ist als de
      Hash und Manifest werden zurückgelesen, erst dann meldet es `ok` und räumt auf: **die 5
      neuesten APKs** bleiben, dazu immer die bisher referenzierte.
 4. **Ausgabe auswerten** (Zeilen mit `APK_UPDATE_`):
+   - `APK_UPDATE_STATUS=already-current` (Exit 0) → schon veröffentlicht und unverändert;
+     nichts zu tun, **kein Commit** (typisch bei einer Wiederholung per Fernwartung).
    - `APK_UPDATE_STATUS=ok` → **lokal bereit** (`APK_UPDATE_BEREIT=lokal`): Die Dateien liegen im
      Drive-Ordner, den Upload übernimmt Google Drive für Desktop. Nicht als „in der Cloud“ melden.
    - `APK_UPDATE_STATUS=vorbereitet` (Exit 2) → **nichts veröffentlicht.** Das Skript hat

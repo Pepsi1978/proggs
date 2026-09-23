@@ -268,20 +268,23 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
 
     private suspend fun leseProjekt(ordner: Kind): ProjektErgebnis {
         var dateien = kinder(ordner.id, ordner.name)
-        var manifestDatei = dateien.firstOrNull { it.name == "update.json" }
         var runde = 0
-        var m: UpdateManifest? = null
-        while (runde < 3) {
+        var m: UpdateManifest?
+        while (true) {
             runde++
-            if (manifestDatei != null) m = leseManifest(manifestDatei, ordner.name)
+            // Manifest und Dateiliste stammen in jeder Runde aus derselben Abfrage – nie ein altes
+            // Manifest mit einer neueren (oder inzwischen manifestlosen) Liste kombinieren.
+            val manifestDatei = dateien.firstOrNull { it.name == "update.json" }
+            m = manifestDatei?.let { leseManifest(it, ordner.name) }
             val gelesen = m
             val apkDa = gelesen != null && dateien.any { it.name == gelesen.apk }
             // Stimmig: update.json vorhanden, ihre APK liegt da und keine neuere APK im Ordner.
             if (gelesen != null && apkDa && hoechsteApkNummer(dateien.map { it.name }) <= gelesen.versionCode) break
             if (manifestDatei == null && dateien.none { it.name.endsWith(".apk") }) break
+            // Nach der letzten Runde nicht mehr neu laden, sonst passten Liste und Manifest nicht zusammen.
+            if (runde >= 3) break
             Log.i(TAG, "Projekt '${ordner.name}': Stand noch nicht stimmig (Runde $runde), lade erneut")
             dateien = kinder(ordner.id, ordner.name)
-            manifestDatei = dateien.firstOrNull { it.name == "update.json" }
         }
         val manifest = m
         val apk = manifest?.let { mm -> dateien.firstOrNull { it.name == mm.apk } }
