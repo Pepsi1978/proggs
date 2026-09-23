@@ -153,7 +153,7 @@ class DriveQuelle(private val context: Context, private val einst: Einstellungen
                         throw e
                     } catch (e: Exception) {
                         Log.w(TAG, "Projekt '$name' fehlgeschlagen", e)
-                        ProjektErgebnis(name, null, zwischenstand = "Lesefehler: ${e.javaClass.simpleName}")
+                        ProjektErgebnis(name, null, zwischenstand = "LESEFEHLER|${e.javaClass.simpleName}")
                     }
                 }
             }.awaitAll()
@@ -306,7 +306,7 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
                 async {
                     runCatching { leseProjekt(o) }
                         .onFailure { if (it is CancellationException) throw it; Log.w(TAG, "Projekt '${o.name}' fehlgeschlagen", it) }
-                        .getOrElse { ProjektErgebnis(o.name, null, zwischenstand = "Lesefehler: ${it.javaClass.simpleName}") }
+                        .getOrElse { ProjektErgebnis(o.name, null, zwischenstand = "LESEFEHLER|${it.javaClass.simpleName}") }
                 }
             }.awaitAll()
         }
@@ -325,10 +325,10 @@ internal data class ProjektErgebnis(val ordner: String, val fund: Fund?, val zwi
         fun bewerte(ordner: String, m: UpdateManifest?, apkRef: String?, dateinamen: List<String>): ProjektErgebnis {
             val hoechste = hoechsteApkNummer(dateinamen)
             val grund = when {
-                m == null && "update.json" in dateinamen -> "update.json unlesbar"
-                m == null && dateinamen.any { it.endsWith(".apk") } -> "APK ohne update.json"
-                m != null && hoechste > m.versionCode -> "neuere APK als update.json ($hoechste > ${m.versionCode})"
-                m != null && apkRef == null -> "APK zu update.json fehlt"
+                m == null && "update.json" in dateinamen -> "MANIFEST_UNLESBAR"
+                m == null && dateinamen.any { it.endsWith(".apk") } -> "APK_OHNE_MANIFEST"
+                m != null && hoechste > m.versionCode -> "NEUERE_APK"
+                m != null && apkRef == null -> "APK_FEHLT"
                 else -> null
             }
             if (grund != null) Log.i(TAG, "Projekt '$ordner': Synchronisations-Zwischenstand – $grund")

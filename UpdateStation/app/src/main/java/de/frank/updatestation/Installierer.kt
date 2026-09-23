@@ -13,6 +13,11 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
 
+/** Eigener, erwarteter Fehler mit festem [code] fürs Diagnoseprotokoll; die Meldung ist für die Oberfläche. */
+class InstallFehler(val code: String, text: String) : IllegalStateException(text)
+
+private fun fehler(code: String, text: String): Nothing = throw InstallFehler(code, text)
+
 /** Was ein Installationswunsch ausgelöst hat – für die Rückmeldung an den Nutzer. */
 enum class Start { GESTARTET, ERSETZT, LAEUFT_BEREITS, WARTET_AUF_BESTAETIGUNG }
 
@@ -75,11 +80,13 @@ object Installierer {
                 beende(paket)
                 ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufBestaetigung)
                 Log.i(TAG, "$paket: frühere Session $id wartet noch auf Bestätigung")
+                Diagnose.ereignis(context, Phase.INSTALLATION, "WARTET_AUF_BESTAETIGUNG", "paket" to paket)
                 return Start.WARTET_AUF_BESTAETIGUNG
             }
         }
         var datei: File? = null
         var ersetzt = false
+        Diagnose.ereignis(context, Phase.INSTALLATION, "START", "paket" to paket, "vc" to m.versionCode)
         try {
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Laedt(0))
             datei = lade(context, eintrag)
@@ -89,13 +96,21 @@ object Installierer {
 
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufBestaetigung)
             ersetzt = uebergebe(context, datei, m, eintrag.label)
+            Diagnose.ereignis(context, Phase.INSTALLATION, if (ersetzt) "UEBERGEBEN_ERSETZT" else "UEBERGEBEN", "paket" to paket, "vc" to m.versionCode)
             // Sperre bleibt bis zum Ergebnis im InstallErgebnisReceiver.
         } catch (e: CancellationException) {
             beende(paket)
             ZustandsSpeicher.setzeInstallation(paket, null)
+            Diagnose.ereignis(context, Phase.INSTALLATION, "ABGEBROCHEN", "paket" to paket)
             throw e
         } catch (e: Exception) {
             beende(paket)
+            if (e is InstallFehler) {
+                val phase = if (e.code == "HASH" || e.code == "ABLAGE") Phase.DOWNLOAD else Phase.PRUEFUNG
+                Diagnose.ereignis(context, phase, e.code, "paket" to paket, "vc" to m.versionCode)
+            } else {
+                Diagnose.ereignis(context, Phase.DOWNLOAD, "FEHLER", "paket" to paket, "klasse" to Diagnose.klasse(e))
+            }
             Log.w(TAG, "$paket: Vorbereitung der Installation fehlgeschlagen", e)
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(e.message ?: "Unbekannter Fehler"))
         } finally {
@@ -108,15 +123,15 @@ object Installierer {
     private suspend fun lade(context: Context, eintrag: AppEintrag): File = withContext(Dispatchers.IO) {
         val m = eintrag.fund.manifest
         // Der Paketname kommt aus update.json: vor jeder Pfadbildung streng prüfen.
-        if (!PAKET_MUSTER.matches(m.paket)) error("Ungültiger Paketname in update.json.")
-        val quelle = Quellen.aktuelle(context) ?: error("Keine Update-Quelle eingerichtet.")
+        if (!PAKET_MUSTER.matches(m.paket)) fehler("PAKETNAME", "Ungültiger Paketname in update.json.")
+        val quelle = Quellen.aktuelle(context) ?: fehler("KEINE_QUELLE", "Keine Update-Quelle eingerichtet.")
         val ordner = File(context.cacheDir, "updates").apply { mkdirs() }
         // Nur liegengebliebene Reste aufräumen – laufende Downloads anderer Pakete bleiben unberührt.
         val grenze = System.currentTimeMillis() - 24 * 60 * 60_000L
         ordner.listFiles()?.filter { it.lastModified() < grenze }?.forEach { it.delete() }
         val teil = File(ordner, "${m.paket}-vc${m.versionCode}.apk.part")
         val datei = File(ordner, "${m.paket}-vc${m.versionCode}.apk")
-        if (teil.parentFile != ordner || datei.parentFile != ordner) error("Ungültiger Dateiname für den Download.")
+        if (teil.parentFile != ordner || datei.parentFile != ordner) fehler("DATEINAME", "Ungültiger Dateiname für den Download.")
         val digest = MessageDigest.getInstance("SHA-256")
         var gelesen = 0L
         var letzteProzent = -1
@@ -142,10 +157,10 @@ object Installierer {
             }
             val hash = digest.digest().joinToString("") { "%02x".format(it) }
             if (hash != m.sha256) {
-                error("Prüfsumme passt nicht – die Datei ist wohl noch nicht fertig synchronisiert. Später erneut versuchen.")
+                fehler("HASH", "Prüfsumme passt nicht – die Datei ist wohl noch nicht fertig synchronisiert. Später erneut versuchen.")
             }
             datei.delete()
-            if (!teil.renameTo(datei)) error("Heruntergeladene APK ließ sich nicht ablegen.")
+            if (!teil.renameTo(datei)) fehler("ABLAGE", "Heruntergeladene APK ließ sich nicht ablegen.")
         } finally {
             teil.delete()
         }
@@ -157,25 +172,27 @@ object Installierer {
         val pm = context.packageManager
         @Suppress("DEPRECATION")
         val archiv = pm.getPackageArchiveInfo(datei.path, PackageManager.GET_SIGNING_CERTIFICATES)
-            ?: error("APK ist beschädigt und lässt sich nicht lesen.")
-        if (archiv.packageName != m.paket) error("APK gehört zu ${archiv.packageName}, nicht zu ${m.paket}.")
-        if (archiv.longVersionCode != m.versionCode) error("Version in der APK (${archiv.longVersionCode}) passt nicht zu update.json (${m.versionCode}).")
+            ?: fehler("APK_UNLESBAR", "APK ist beschädigt und lässt sich nicht lesen.")
+        if (archiv.packageName != m.paket) fehler("PAKET", "APK gehört zu ${archiv.packageName}, nicht zu ${m.paket}.")
+        if (archiv.longVersionCode != m.versionCode) fehler("VERSION", "Version in der APK (${archiv.longVersionCode}) passt nicht zu update.json (${m.versionCode}).")
 
         val neu = Pruefer.signaturen(archiv)
-        if (neu.isEmpty()) error("Signatur der APK ist nicht lesbar.")
+        if (neu.isEmpty()) fehler("SIGNATUR_UNLESBAR", "Signatur der APK ist nicht lesbar.")
         // Vertrag: jede update.json nennt den SHA-256 des Signaturzertifikats, und die APK trägt genau diese Signatur.
-        if (!SHA256_MUSTER.matches(m.signaturSha256)) error("update.json nennt keine gültige Signatur – aus Sicherheitsgründen wird nicht installiert.")
-        if (m.signaturSha256 !in neu) error("Signatur der APK passt nicht zu update.json. Aus Sicherheitsgründen wird nicht installiert.")
+        if (!SHA256_MUSTER.matches(m.signaturSha256)) fehler("SIGNATUR_MANIFEST_FEHLT", "update.json nennt keine gültige Signatur – aus Sicherheitsgründen wird nicht installiert.")
+        if (m.signaturSha256 !in neu) fehler("SIGNATUR_MANIFEST", "Signatur der APK passt nicht zu update.json. Aus Sicherheitsgründen wird nicht installiert.")
         val installiert = Pruefer.installiert(pm, m.paket)
         if (installiert != null) {
             if (archiv.longVersionCode <= installiert.longVersionCode) {
-                error("Installiert ist bereits Version ${installiert.versionName} (${installiert.longVersionCode}) – kein Update nötig.")
+                fehler("SCHON_AKTUELL", "Installiert ist bereits Version ${installiert.versionName} (${installiert.longVersionCode}) – kein Update nötig.")
             }
             if (neu.intersect(Pruefer.signaturen(installiert)).isEmpty()) {
-                error("Signatur passt nicht zur installierten App. Aus Sicherheitsgründen wird nicht installiert.")
+                fehler("SIGNATUR_INSTALLIERT", "Signatur passt nicht zur installierten App. Aus Sicherheitsgründen wird nicht installiert.")
             }
         }
         Log.i(TAG, "${m.paket}: APK geprüft (vc ${archiv.longVersionCode}, Signatur passt, ${if (installiert == null) "neue App" else "Update"})")
+        Diagnose.ereignis(context, Phase.PRUEFUNG, "OK", "paket" to m.paket, "vc" to archiv.longVersionCode,
+            "art" to if (installiert == null) "NEUE_APP" else "UPDATE")
     }
 
     /** Übergibt die geprüfte APK an Android. Liefert true, wenn dabei ein vorheriger Versuch ersetzt wurde. */
@@ -203,7 +220,7 @@ object Installierer {
         val id = installer.createSession(params)
         try {
             // Vor dem Commit dauerhaft speichern: der Receiver nimmt nur Ergebnisse dieser ID an.
-            if (!einst.setzeOffeneSession(m.paket, id)) error("Installationsvorgang ließ sich nicht speichern.")
+            if (!einst.setzeOffeneSession(m.paket, id)) fehler("SPEICHERN", "Installationsvorgang ließ sich nicht speichern.")
             installer.openSession(id).use { session ->
                 session.openWrite("update.apk", 0, datei.length()).use { aus ->
                     datei.inputStream().use { it.copyTo(aus) }

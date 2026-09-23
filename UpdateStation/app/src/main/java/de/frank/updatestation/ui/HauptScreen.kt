@@ -83,12 +83,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import de.frank.updatestation.AppEintrag
 import de.frank.updatestation.BuildConfig
+import de.frank.updatestation.Diagnose
+import de.frank.updatestation.Hinweise
 import de.frank.updatestation.Einstellungen
 import de.frank.updatestation.InstallStatus
 import de.frank.updatestation.Status
@@ -109,6 +112,7 @@ data class Aktionen(
     val erlaubeBenachrichtigungen: () -> Unit,
     val speicherePfad: (String) -> Unit,
     val speichereIntervall: (Int) -> Unit,
+    val teileDiagnose: () -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,6 +128,10 @@ fun HauptScreen(
     aktionen: Aktionen,
 ) {
     var einstellungenOffen by remember { mutableStateOf(false) }
+    var diagnoseOffen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    // Aus gespeichertem Zustand abgeleitet: sichtbar, auch wenn keine Benachrichtigung gezeigt werden durfte.
+    val hinweise = remember(zustand) { Hinweise.aktuell(context) }
     var verlaufFuer by remember { mutableStateOf<AppEintrag?>(null) }
     val updates = zustand.eintraege.filter { it.status == Status.UPDATE }
     val warnungen = zustand.eintraege.filter { it.status == Status.SIGNATUR_ANDERS || it.status == Status.APK_FEHLT }
@@ -180,6 +188,11 @@ fun HauptScreen(
                     Hinweis(Icons.Rounded.ErrorOutline, "Prüfung fehlgeschlagen", text, "Erneut", MaterialTheme.colorScheme.error, aktionen.pruefen)
                 }
             }
+            hinweise.forEach { (titel, text) ->
+                item {
+                    Hinweis(Icons.Rounded.Warning, titel, text, "Diagnose", Farben.Bernstein) { diagnoseOffen = true }
+                }
+            }
 
             if (updates.isNotEmpty()) {
                 item {
@@ -219,7 +232,12 @@ fun HauptScreen(
 
     if (einstellungenOffen) {
         ModalBottomSheet(onDismissRequest = { einstellungenOffen = false }) {
-            EinstellungenInhalt(quelle, drivePfad, intervall, aktionen) { einstellungenOffen = false }
+            EinstellungenInhalt(quelle, drivePfad, intervall, aktionen, { einstellungenOffen = false; diagnoseOffen = true }) { einstellungenOffen = false }
+        }
+    }
+    if (diagnoseOffen) {
+        ModalBottomSheet(onDismissRequest = { diagnoseOffen = false }) {
+            DiagnoseInhalt(remember { Diagnose.lesen(context, 100) }, aktionen.teileDiagnose)
         }
     }
     verlaufFuer?.let { e ->
@@ -697,7 +715,7 @@ private fun Fuss() {
 }
 
 @Composable
-private fun EinstellungenInhalt(quelle: String?, drivePfad: String, intervall: Int, aktionen: Aktionen, schliessen: () -> Unit) {
+private fun EinstellungenInhalt(quelle: String?, drivePfad: String, intervall: Int, aktionen: Aktionen, onDiagnose: () -> Unit, schliessen: () -> Unit) {
     var pfad by rememberSaveable { mutableStateOf(drivePfad) }
     val stufen = Einstellungen.INTERVALL_STUFEN
     var stufe by remember(intervall) { mutableFloatStateOf(stufen.indexOf(Einstellungen.normalisiereIntervall(intervall)).toFloat()) }
@@ -743,8 +761,31 @@ private fun EinstellungenInhalt(quelle: String?, drivePfad: String, intervall: I
                 "und nur, wenn die Build-Nummer höher ist als die installierte und die Signatur passt.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        OutlinedButton(onClick = onDiagnose, modifier = Modifier.fillMaxWidth()) { Text("Diagnose anzeigen") }
         Text("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · Stand ${BuildConfig.VERSION_BUMPED_AT}",
             style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun DiagnoseInhalt(eintraege: List<String>, onTeilen: () -> Unit) {
+    Column(Modifier.padding(horizontal = 22.dp).padding(bottom = 28.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Diagnose", style = MaterialTheme.typography.titleLarge)
+        Text(
+            "Letzte Ereignisse, neueste oben. Enthält nur Zeit, Phase, Projekt/Paket, Nummern und Fehlerklassen.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(onClick = onTeilen, modifier = Modifier.fillMaxWidth()) { Text("Teilen") }
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
+            if (eintraege.isEmpty()) item { Text("Noch keine Einträge.", style = MaterialTheme.typography.bodySmall) }
+            items(eintraege.size) { i ->
+                Text(
+                    eintraege[i],
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    modifier = Modifier.padding(vertical = 2.dp),
+                )
+            }
+        }
     }
 }
 

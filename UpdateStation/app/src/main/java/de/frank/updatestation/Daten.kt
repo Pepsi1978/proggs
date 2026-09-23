@@ -162,23 +162,74 @@ class Einstellungen(context: Context) {
         set(v) = prefs.edit().putInt("intervallMinuten", normalisiereIntervall(v)).apply()
 
     /**
-     * Zählt gezielte Nachprüfungen pro Projekt im Sync-Zwischenstand und liefert die Projekte, die
-     * ihr Fenster von [max] Versuchen noch nicht ausgeschöpft haben. Ändert sich die Lage eines
-     * Projekts (andere Kennung), beginnt sein Fenster neu; stimmige Projekte fallen heraus.
+     * Ergebnis der Zählung: [offen] = Fenster von max Versuchen noch nicht ausgeschöpft,
+     * [erschoepft] = ausgeschöpft und noch nicht gewarnt, [neu] = Episode beginnt gerade.
      */
-    fun zaehleNachpruefungen(zwischenstaende: Map<String, String>, max: Int): Set<String> {
-        val alt = runCatching { JSONObject(prefs.getString("nachpruefungen", "{}")) }.getOrDefault(JSONObject())
+    data class Nachpruefung(val offen: Set<String>, val erschoepft: Set<String>, val neu: Set<String>)
+
+    /**
+     * Zählt gezielte Nachprüfungen pro Projekt im Sync-Zwischenstand. Ändert sich die Lage eines
+     * Projekts (andere Kennung), beginnt seine Episode neu; stimmige Projekte fallen heraus.
+     * Als hängend gilt eine Episode erst, wenn sowohl [max] Versuche als auch [HAENGT_NACH_MS]
+     * echte Zeit vergangen sind – schnelle manuelle Prüfungen allein reichen nie. Bis dahin bleibt
+     * das Projekt in [Nachpruefung.offen] und wird gezielt weiter nachgeprüft.
+     */
+    fun zaehleNachpruefungen(zwischenstaende: Map<String, String>, max: Int): Nachpruefung {
+        val alt = nachpruefungsStand()
         val neu = JSONObject()
         val offen = mutableSetOf<String>()
+        val erschoepft = mutableSetOf<String>()
+        val beginnt = mutableSetOf<String>()
+        val jetzt = System.currentTimeMillis()
         zwischenstaende.forEach { (projekt, kennung) ->
-            val vorher = alt.optJSONObject(projekt)
-            val n = if (vorher?.optString("kennung") == kennung) vorher.optInt("n") + 1 else 1
-            neu.put(projekt, JSONObject().put("kennung", kennung).put("n", n))
-            if (n <= max) offen += projekt
+            val vorher = alt.optJSONObject(projekt)?.takeIf { it.optString("kennung") == kennung }
+            val n = (vorher?.optInt("n") ?: 0) + 1
+            val seit = vorher?.optLong("seit")?.takeIf { it > 0 } ?: jetzt
+            val gewarnt = vorher?.optBoolean("gewarnt") ?: false
+            val eintrag = JSONObject().put("kennung", kennung).put("n", n).put("seit", seit).put("gewarnt", gewarnt)
+            neu.put(projekt, eintrag)
+            if (n == 1) beginnt += projekt
+            if (!haengt(eintrag, max, jetzt)) offen += projekt else if (!gewarnt) erschoepft += projekt
         }
         prefs.edit().putString("nachpruefungen", neu.toString()).apply()
-        return offen
+        return Nachpruefung(offen, erschoepft, beginnt)
     }
+
+    private fun haengt(eintrag: JSONObject, max: Int, jetzt: Long): Boolean =
+        eintrag.optInt("n") > max && jetzt - eintrag.optLong("seit", jetzt) >= HAENGT_NACH_MS
+
+    /** Nur setzen, wenn die Warnung tatsächlich als Benachrichtigung gezeigt wurde. */
+    fun markiereGewarnt(projekt: String) {
+        val stand = nachpruefungsStand()
+        stand.optJSONObject(projekt)?.put("gewarnt", true) ?: return
+        prefs.edit().putString("nachpruefungen", stand.toString()).apply()
+    }
+
+    /** Hängende Projekte (für den Hinweis in der App) – dieselbe Bedingung wie in [zaehleNachpruefungen]. */
+    fun haengendeProjekte(max: Int): List<String> {
+        val stand = nachpruefungsStand()
+        val jetzt = System.currentTimeMillis()
+        return stand.keys().asSequence().filter { k -> stand.optJSONObject(k)?.let { haengt(it, max, jetzt) } == true }.sorted().toList()
+    }
+
+    private fun nachpruefungsStand(): JSONObject =
+        runCatching { JSONObject(prefs.getString("nachpruefungen", "{}") ?: "{}") }.getOrDefault(JSONObject())
+
+    /** Hintergrundprüfung ist wiederholt gescheitert (Hinweis in der App) bzw. wurde schon gemeldet. */
+    var pruefFehler: Boolean
+        get() = prefs.getBoolean("pruefFehler", false)
+        set(v) = prefs.edit().putBoolean("pruefFehler", v).apply()
+    var pruefFehlerGemeldet: Boolean
+        get() = prefs.getBoolean("pruefFehlerGemeldet", false)
+        set(v) = prefs.edit().putBoolean("pruefFehlerGemeldet", v).apply()
+
+    /** Quelle liefert dauerhaft keine Projekte mehr (Hinweis in der App) bzw. wurde schon gemeldet. */
+    var quelleLeer: Boolean
+        get() = prefs.getBoolean("quelleLeer", false)
+        set(v) = prefs.edit().putBoolean("quelleLeer", v).apply()
+    var quelleLeerGemeldet: Boolean
+        get() = prefs.getBoolean("quelleLeerGemeldet", false)
+        set(v) = prefs.edit().putBoolean("quelleLeerGemeldet", v).apply()
 
     /**
      * Die an Android übergebene, noch nicht abgeschlossene Installations-Session je Paket (ID und
@@ -214,6 +265,12 @@ class Einstellungen(context: Context) {
     companion object {
         const val STANDARD_PFAD = "Dokumente/Updates"
         const val STANDARD_INTERVALL = 30
+
+        /** Schlüssel für "Quelle liefert gerade gar nichts" im Nachprüfungszähler. */
+        const val LEER = "*"
+
+        /** Frühestens nach dieser echten Zeit gilt ein Zwischenstand als hängend. */
+        const val HAENGT_NACH_MS = 30 * 60_000L
 
         /** WorkManager erlaubt periodische Arbeit frühestens alle 15 Minuten. */
         val INTERVALL_STUFEN = listOf(15, 20, 30, 45, 60, 90, 120)

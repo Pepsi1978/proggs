@@ -12,7 +12,6 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.CancellationException
-import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 /** Prüft im eingestellten Takt (Standard 30 Minuten), ob in einem Update-Ordner eine neuere Version liegt. */
@@ -29,11 +28,22 @@ class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             Result.success()
         } catch (e: CancellationException) {
             throw e
-        } catch (e: IOException) {
-            Log.w(TAG, "Hintergrundprüfung: Netzwerk/Ordner-Fehler, neuer Versuch folgt", e)
-            Result.retry()
         } catch (e: Exception) {
-            Log.e(TAG, "Hintergrundprüfung fehlgeschlagen", e)
+            // Netzwerk-, Ordner- und sonstige Fehler: höchstens MAX_VERSUCHE je Auftrag, dann einmal melden.
+            val versuch = runAttemptCount + 1
+            Log.w(TAG, "Hintergrundprüfung fehlgeschlagen (Versuch $versuch/$MAX_VERSUCHE)", e)
+            Diagnose.ereignis(applicationContext, Phase.WORKER, "FEHLER", "klasse" to Diagnose.klasse(e), "versuch" to versuch)
+            if (versuch < MAX_VERSUCHE) return Result.retry()
+            val einst = Einstellungen(applicationContext)
+            einst.pruefFehler = true
+            if (!einst.pruefFehlerGemeldet && Benachrichtigungen.warnung(
+                    applicationContext, 44, "Update-Prüfung scheitert wiederholt",
+                    "Die automatische Prüfung ist mehrmals fehlgeschlagen. Details unter Einstellungen → Diagnose.",
+                )
+            ) {
+                einst.pruefFehlerGemeldet = true
+            }
+            Diagnose.ereignis(applicationContext, Phase.WORKER, "AUFGEGEBEN", "versuche" to versuch)
             Result.success()
         }
     }
@@ -70,5 +80,6 @@ class PruefWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
         }
 
         const val MAX_NACHPRUEFUNGEN = 6
+        private const val MAX_VERSUCHE = 3
     }
 }

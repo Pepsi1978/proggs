@@ -100,7 +100,10 @@ class MainActivity : ComponentActivity() {
                             startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
                         },
                         erlaubeBenachrichtigungen = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) && !hatBenachrichtigungsRecht()) {
+                            if (hatBenachrichtigungsRecht() ||
+                                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS))
+                            ) {
+                                // Recht da, aber App-Benachrichtigungen oder Kanal aus – bzw. Recht dauerhaft verweigert: Systemeinstellung öffnen.
                                 startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
                             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 benachrichtigungsRecht.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -110,6 +113,13 @@ class MainActivity : ComponentActivity() {
                             einst.drivePfad = neu.ifBlank { Einstellungen.STANDARD_PFAD }
                             drivePfad = einst.drivePfad
                             pruefe()
+                        },
+                        teileDiagnose = {
+                            val senden = Intent(Intent.ACTION_SEND).setType("text/plain")
+                                .putExtra(Intent.EXTRA_SUBJECT, "UpdateStation Diagnose")
+                                .putExtra(Intent.EXTRA_TEXT, Diagnose.text(this))
+                            runCatching { startActivity(Intent.createChooser(senden, "Diagnose teilen")) }
+                                .onFailure { melde("Teilen nicht möglich.") }
                         },
                         speichereIntervall = { minuten ->
                             einst.intervallMinuten = minuten
@@ -205,7 +215,7 @@ class MainActivity : ComponentActivity() {
 
     private fun aktualisiereRechte() {
         darfInstallieren = packageManager.canRequestPackageInstalls()
-        darfBenachrichtigen = hatBenachrichtigungsRecht()
+        darfBenachrichtigen = Benachrichtigungen.zustellbar(this)
     }
 
     private fun melde(text: String) {

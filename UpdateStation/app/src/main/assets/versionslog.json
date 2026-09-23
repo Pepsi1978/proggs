@@ -9,6 +9,7 @@
     { "versionCode": 5, "versionName": "1.0.4", "stand": "23.09.2026, 18:33 Uhr", "notiz": "Prüfintervall per Regler wählbar (15 Minuten bis 2 Stunden); neue Apps werden einmal gemeldet; Installation nur nach eigenem Tippen mit Android-Bestätigung, die Bestätigung kommt immer auch als Benachrichtigung, Fehler werden gemeldet" },
     { "versionCode": 6, "versionName": "1.0.5", "stand": "23.09.2026, 18:44 Uhr", "notiz": "Schaltet Debugging über WLAN nach einem Handy-Neustart oder Netzwechsel selbst wieder ein, damit Apps ohne Kabel installiert werden können" },
     { "versionCode": 7, "versionName": "1.0.6", "stand": "23.09.2026, 18:52 Uhr", "notiz": "Erkennt, wenn Google Drive einen Update-Ordner noch synchronisiert, behält dann den letzten bekannten Stand und prüft gezielt nach" },
-    { "versionCode": 8, "versionName": "1.0.7", "stand": "23.09.2026, 19:08 Uhr", "notiz": "Installationen laufen sicherer: jede App lädt in eine eigene Datei, eine App kann nicht doppelt gestartet werden, und die Signatur wird auch bei neuen Apps gegen update.json geprüft" }
+    { "versionCode": 8, "versionName": "1.0.7", "stand": "23.09.2026, 19:08 Uhr", "notiz": "Installationen laufen sicherer: jede App lädt in eine eigene Datei, eine App kann nicht doppelt gestartet werden, und die Signatur wird auch bei neuen Apps gegen update.json geprüft" },
+    { "versionCode": 9, "versionName": "1.0.8", "stand": "23.09.2026, 19:28 Uhr", "notiz": "Diagnose in den Einstellungen zum Ansehen und Teilen; wiederholt scheiternde Prüfungen, hängende Update-Ordner und ein leerer Update-Ordner werden einmal gemeldet und bleiben in der App sichtbar" }
   ]
 }

@@ -17,31 +17,68 @@ object Pruefer {
         ZustandsSpeicher.zustand.update { it.copy(prueftGerade = true, fehler = null) }
         try {
             val ergebnis = quelle.suche()
+            val gespeichert = einst.funde
+            // Quelle liefert gar nichts, obwohl Funde bekannt sind (z. B. Drive-Anbieter kurz leer):
+            // wie einen Zwischenstand behandeln, nicht sofort alles verwerfen.
+            val leer = ergebnis.funde.isEmpty() && ergebnis.zwischenstaende.isEmpty() && gespeichert.isNotEmpty()
+            val zwischen = if (leer) mapOf(Einstellungen.LEER to "LEER") else ergebnis.zwischenstaende
             // Ordner im Sync-Zwischenstand ohne lesbares Manifest: gespeicherten Fund behalten statt ihn still zu verlieren.
             val gelesen = ergebnis.funde.map { it.manifest.projekt }.toSet()
-            val behalten = einst.funde.filter { it.manifest.projekt in ergebnis.zwischenstaende && it.manifest.projekt !in gelesen }
-            val funde = ergebnis.funde + behalten
+            val behalten = if (leer) gespeichert
+                else gespeichert.filter { it.manifest.projekt in zwischen && it.manifest.projekt !in gelesen }
+            // Pro Projekt begrenzt: ein dauerhaft hängender Ordner blockiert keine anderen.
+            val np = einst.zaehleNachpruefungen(zwischen, PruefWorker.MAX_NACHPRUEFUNGEN)
+            var funde = ergebnis.funde + behalten
+            if (leer && Einstellungen.LEER !in np.offen) {
+                // Nach dem Nachprüfungsfenster alte Funde nicht länger als installierbar anbieten.
+                funde = emptyList()
+                einst.quelleLeer = true
+                Diagnose.ereignis(context, Phase.SYNC, "QUELLE_LEER", "verworfen" to gespeichert.size)
+            }
+            if (ergebnis.funde.isNotEmpty()) {
+                einst.quelleLeer = false
+                einst.quelleLeerGemeldet = false
+            } else if (einst.quelleLeer && !einst.quelleLeerGemeldet &&
+                Benachrichtigungen.warnung(context, 43, "Keine Update-Projekte mehr gefunden",
+                    "Der Update-Ordner ist seit längerer Zeit leer. UpdateStation sucht bei jeder Prüfung weiter.")
+            ) {
+                einst.quelleLeerGemeldet = true
+            }
             einst.funde = funde
             einst.letztePruefung = System.currentTimeMillis()
+            einst.pruefFehler = false
+            einst.pruefFehlerGemeldet = false
             val liste = bewerte(context, funde)
             Log.i(TAG, "Prüfung: ${funde.size} Updates gelesen, " + liste.groupingBy { it.status }.eachCount())
-            // Pro Projekt begrenzt: ein dauerhaft hängender Ordner blockiert keine anderen.
-            val offen = einst.zaehleNachpruefungen(ergebnis.zwischenstaende, PruefWorker.MAX_NACHPRUEFUNGEN)
-            if (ergebnis.zwischenstaende.isNotEmpty()) {
-                Log.i(TAG, "Zwischenstand in ${ergebnis.zwischenstaende.keys.sorted()}, ${behalten.size} gespeicherte Funde behalten, Nachprüfung für ${offen.sorted()}")
+            Diagnose.ereignis(context, Phase.SCAN, "ERGEBNIS", "projekte" to funde.size,
+                "updates" to liste.count { it.status == Status.UPDATE }, "neu" to liste.count { it.status == Status.NICHT_INSTALLIERT },
+                "zwischenstand" to zwischen.size, "behalten" to behalten.size)
+            np.neu.forEach { p ->
+                Diagnose.ereignis(context, Phase.SYNC, "ZWISCHENSTAND", "projekt" to p, "grund" to zwischen[p]?.substringBefore('|'))
             }
-            if (offen.isNotEmpty()) PruefWorker.planeNachpruefung(context, offen)
+            np.erschoepft.filter { it != Einstellungen.LEER }.forEach { p ->
+                Diagnose.ereignis(context, Phase.SYNC, "HAENGT", "projekt" to p, "grund" to zwischen[p]?.substringBefore('|'))
+                val gezeigt = Benachrichtigungen.warnung(context, p.hashCode() + 11, "Update-Ordner „$p“ nicht stimmig",
+                    "Seit etwa 30 Minuten passen APK und update.json nicht zusammen. Veröffentlichung am PC prüfen.")
+                if (gezeigt) einst.markiereGewarnt(p)
+            }
+            if (zwischen.isNotEmpty()) {
+                Log.i(TAG, "Zwischenstand in ${zwischen.keys.sorted()}, ${behalten.size} gespeicherte Funde behalten, Nachprüfung für ${np.offen.sorted()}")
+            }
+            if (np.offen.isNotEmpty()) PruefWorker.planeNachpruefung(context, np.offen)
             ZustandsSpeicher.zustand.update {
                 it.copy(eintraege = liste, letztePruefung = einst.letztePruefung, anmeldungNoetig = false)
             }
             return liste
         } catch (e: AnmeldungNoetig) {
+            Diagnose.ereignis(context, Phase.SCAN, "ANMELDUNG_NOETIG")
             ZustandsSpeicher.zustand.update { it.copy(anmeldungNoetig = true) }
             throw e
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Prüfung fehlgeschlagen", e)
+            Diagnose.ereignis(context, Phase.SCAN, "FEHLER", "klasse" to Diagnose.klasse(e))
             ZustandsSpeicher.zustand.update { it.copy(fehler = e.message ?: e.javaClass.simpleName) }
             throw e
         } finally {

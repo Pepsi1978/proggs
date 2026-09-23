@@ -1,12 +1,14 @@
 package de.frank.updatestation
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -32,6 +34,26 @@ object Benachrichtigungen {
     private fun darf(context: Context) =
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
+    /**
+     * Kann eine Benachrichtigung in [kanal] wirklich erscheinen? Recht erteilt, App-Benachrichtigungen
+     * an und der Kanal nicht auf "keine" gestellt.
+     */
+    fun zustellbar(context: Context, kanal: String = KANAL_UPDATES): Boolean {
+        if (!darf(context)) return false
+        val nm = NotificationManagerCompat.from(context)
+        if (!nm.areNotificationsEnabled()) return false
+        val k = nm.getNotificationChannel(kanal) ?: return false
+        return k.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
+    /** Zeigt [n] nur, wenn zustellbar; true nur nach erfolgreichem notify (Grundlage für jedes Gemeldet-Flag). */
+    private fun zeige(context: Context, id: Int, n: Notification): Boolean {
+        if (!zustellbar(context, n.channelId)) return false
+        return runCatching {
+            @Suppress("MissingPermission") NotificationManagerCompat.from(context).notify(id, n)
+        }.onFailure { Log.w(TAG, "Benachrichtigung nicht zustellbar: ${it.javaClass.simpleName}") }.isSuccess
+    }
+
     private fun oeffneApp(context: Context, code: Int, installiere: String? = null): PendingIntent {
         val intent = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -48,17 +70,35 @@ object Benachrichtigungen {
         val einst = Einstellungen(context)
         val nm = NotificationManagerCompat.from(context)
         eintraege.filter { einst.gemeldet(it.paket) < it.fund.manifest.versionCode }.forEach { e ->
-            when {
+            val gezeigt = when {
                 e.status == Status.UPDATE -> meldeUpdate(context, nm, e)
                 // Neue App: erst melden, wenn ihre APK da ist; ohne Installieren-Aktion, Tippen öffnet die App.
                 e.status == Status.NICHT_INSTALLIERT && e.fund.apkRef != null -> meldeNeueApp(context, nm, e)
                 else -> return@forEach
             }
+            // Nur als gemeldet merken, was wirklich erschienen ist – sonst später erneut versuchen.
+            if (!gezeigt) return@forEach
             einst.setzeGemeldet(e.paket, e.fund.manifest.versionCode)
+            Diagnose.ereignis(context, Phase.BENACHRICHTIGUNG, if (e.status == Status.UPDATE) "UPDATE" else "NEUE_APP",
+                "paket" to e.paket, "vc" to e.fund.manifest.versionCode)
         }
     }
 
-    private fun meldeNeueApp(context: Context, nm: NotificationManagerCompat, e: AppEintrag) {
+    /** Einmalige Warnung (Status-Kanal); false, wenn sie nicht gezeigt werden durfte. */
+    fun warnung(context: Context, id: Int, titel: String, text: String): Boolean {
+        if (!darf(context)) return false
+        val n = NotificationCompat.Builder(context, KANAL_STATUS)
+            .setSmallIcon(R.drawable.ic_launcher_vordergrund)
+            .setContentTitle(titel)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setContentIntent(oeffneApp(context, id))
+            .setAutoCancel(true)
+            .build()
+        return zeige(context, id, n)
+    }
+
+    private fun meldeNeueApp(context: Context, nm: NotificationManagerCompat, e: AppEintrag): Boolean {
         val m = e.fund.manifest
         val id = e.paket.hashCode()
         val n = NotificationCompat.Builder(context, KANAL_UPDATES)
@@ -70,10 +110,10 @@ object Benachrichtigungen {
             .setGroup(GRUPPE)
             .setAutoCancel(true)
             .build()
-        @Suppress("MissingPermission") nm.notify(id, n)
+        return zeige(context, id, n)
     }
 
-    private fun meldeUpdate(context: Context, nm: NotificationManagerCompat, e: AppEintrag) {
+    private fun meldeUpdate(context: Context, nm: NotificationManagerCompat, e: AppEintrag): Boolean {
         val m = e.fund.manifest
         val id = e.paket.hashCode()
         val n = NotificationCompat.Builder(context, KANAL_UPDATES)
@@ -92,7 +132,7 @@ object Benachrichtigungen {
             .setGroup(GRUPPE)
             .setAutoCancel(true)
             .build()
-        @Suppress("MissingPermission") nm.notify(id, n)
+        return zeige(context, id, n)
     }
 
     fun entferneUpdate(context: Context, paket: String) =
@@ -106,7 +146,7 @@ object Benachrichtigungen {
             .setContentText("Jetzt auf Version $version.")
             .setAutoCancel(true)
             .build()
-        @Suppress("MissingPermission") NotificationManagerCompat.from(context).notify(paket.hashCode() + 7, n)
+        zeige(context, paket.hashCode() + 7, n)
     }
 
     /** Liefert false, wenn die Benachrichtigung nicht gezeigt werden darf. */
@@ -120,8 +160,7 @@ object Benachrichtigungen {
             .setContentIntent(pi)
             .setAutoCancel(true)
             .build()
-        @Suppress("MissingPermission") NotificationManagerCompat.from(context).notify(paket.hashCode() + 5, n)
-        return true
+        return zeige(context, paket.hashCode() + 5, n)
     }
 
     fun entferneBestaetigung(context: Context, paket: String) =
@@ -138,7 +177,7 @@ object Benachrichtigungen {
             .setContentIntent(oeffneApp(context, id))
             .setAutoCancel(true)
             .build()
-        @Suppress("MissingPermission") NotificationManagerCompat.from(context).notify(id, n)
+        zeige(context, id, n)
     }
 
     fun anmeldung(context: Context) {
@@ -150,6 +189,6 @@ object Benachrichtigungen {
             .setContentIntent(oeffneApp(context, 42))
             .setAutoCancel(true)
             .build()
-        @Suppress("MissingPermission") NotificationManagerCompat.from(context).notify(42, n)
+        zeige(context, 42, n)
     }
 }
