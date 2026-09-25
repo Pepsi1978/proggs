@@ -152,7 +152,7 @@ private fun GoalSelectionRow(
     onBreakdown: () -> Unit,
 ) {
     val isExpanded = expanded && goal.reason.isNotEmpty()
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(16.dp)
     Box(
         Modifier.fillMaxWidth().heightIn(min = 64.dp)
             .depthShadow(shape, 14.dp)
@@ -423,7 +423,7 @@ private fun RelationshipRow(item: RelationshipUi) {
     }
     Box(
         Modifier.fillMaxWidth().height(76.dp)
-            .depthShadow(RoundedCornerShape(12.dp), 14.dp)
+            .depthShadow(RoundedCornerShape(16.dp), 14.dp)
             .background(StackLaborTheme.colors.surface),
     ) {
         Row(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -522,7 +522,7 @@ fun QuestionsSheet(
                             } else {
                                 Row(
                                     Modifier.fillMaxWidth().heightIn(min = 60.dp).background(StackLaborTheme.colors.surface)
-                                        .depthShadow(RoundedCornerShape(12.dp), 14.dp)
+                                        .depthShadow(RoundedCornerShape(16.dp), 14.dp)
                                         .drawBehind {
                                             drawLine(borderColor, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
                                         }.clickable {
@@ -548,8 +548,8 @@ fun QuestionsSheet(
                 if (undoVisible) {
                     Row(
                         Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 12.dp, end = 84.dp, bottom = 16.dp).height(56.dp)
-                            .background(StackLaborTheme.colors.elevated, RoundedCornerShape(12.dp))
-                            .border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(12.dp)).padding(start = 12.dp),
+                            .background(StackLaborTheme.colors.elevated, RoundedCornerShape(16.dp))
+                            .border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(16.dp)).padding(start = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text("Entfernt", Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
@@ -598,7 +598,7 @@ private fun InlineQuestionField(value: String, onValueChange: (String) -> Unit, 
             keyboardActions = KeyboardActions(onDone = { onCommit() }),
             decorationBox = { inner ->
                 Box(
-                    Modifier.fillMaxSize().border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
+                    Modifier.fillMaxSize().border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(16.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) { inner() }
             },
@@ -629,7 +629,7 @@ fun StackEditSheet(
             if (deleteWarning) {
                 Column(
                     Modifier.weight(1f).fillMaxWidth().padding(12.dp)
-                        .border(1.dp, StackLaborTheme.colors.red, RoundedCornerShape(12.dp)).padding(20.dp),
+                        .border(1.dp, StackLaborTheme.colors.red, RoundedCornerShape(16.dp)).padding(20.dp),
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text("Stack löschen?", style = androidx.compose.material3.MaterialTheme.typography.titleLarge, color = StackLaborTheme.colors.red)
@@ -696,7 +696,7 @@ fun HistorySheet(
                 items(state.history, key = { it.id }) { run ->
                     Box(
                         Modifier.fillMaxWidth().height(64.dp)
-                            .depthShadow(RoundedCornerShape(12.dp), 14.dp)
+                            .depthShadow(RoundedCornerShape(16.dp), 14.dp)
                             .background(if (run.selectedForComparison) StackLaborTheme.colors.elevated else StackLaborTheme.colors.surface),
                     ) {
                         Row(Modifier.fillMaxSize()) {
@@ -793,8 +793,8 @@ private fun SheetHeader(title: String, height: Dp, showDivider: Boolean = true) 
 @Composable
 private fun SecondaryAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier.height(44.dp).clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
-            .border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(12.dp)).clickable(onClick = onClick),
+        modifier.height(44.dp).clip(RoundedCornerShape(16.dp)).background(StackLaborTheme.colors.surface)
+            .border(1.dp, StackLaborTheme.colors.border, RoundedCornerShape(16.dp)).clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(label, color = StackLaborTheme.colors.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -872,9 +872,9 @@ private fun CompactInput(
         Box(modifier.height(height)) {
             Row(
                 Modifier.fillMaxSize()
-                    .depthShadow(RoundedCornerShape(12.dp), 14.dp)
-                    .clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
-                    .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp))
+                    .depthShadow(RoundedCornerShape(16.dp), 14.dp)
+                    .clip(RoundedCornerShape(16.dp)).background(StackLaborTheme.colors.surface)
+                    .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(16.dp))
                     .clickable { expanded = true }
                     .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -891,7 +891,7 @@ private fun CompactInput(
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 containerColor = StackLaborTheme.colors.surface,
                 tonalElevation = 0.dp,
                 border = BorderStroke(1.dp, StackLaborTheme.colors.border),
@@ -928,9 +928,9 @@ private fun CompactInput(
                     focused = it.isFocused
                     if (!it.isFocused) expanded = false
                 }
-                .depthShadow(RoundedCornerShape(12.dp), 14.dp)
-                .clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
-                .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp)),
+                .depthShadow(RoundedCornerShape(16.dp), 14.dp)
+                .clip(RoundedCornerShape(16.dp)).background(StackLaborTheme.colors.surface)
+                .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(16.dp)),
             singleLine = singleLine,
             textStyle = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(color = StackLaborTheme.colors.textStrong, fontSize = 16.sp),
             cursorBrush = SolidColor(StackLaborTheme.colors.accent),
@@ -961,7 +961,7 @@ private fun CompactInput(
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 containerColor = StackLaborTheme.colors.surface,
                 tonalElevation = 0.dp,
                 border = BorderStroke(1.dp, StackLaborTheme.colors.border),
@@ -1082,8 +1082,8 @@ private fun SignalState.historyLabel(): String = when (this) {
 private fun StackField(label: String, value: String, invalid: Boolean = false, onValueChange: (String) -> Unit) {
     Box(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp, vertical = 8.dp)) {
         Column(
-            Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).background(StackLaborTheme.colors.surface)
-                .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(12.dp))
+            Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).background(StackLaborTheme.colors.surface)
+                .border(1.dp, if (invalid) StackLaborTheme.colors.red else StackLaborTheme.colors.border, RoundedCornerShape(16.dp))
                 .padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
             Text(
@@ -1126,8 +1126,8 @@ private fun androidx.compose.foundation.layout.RowScope.SheetButton(
     onClick: () -> Unit,
 ) {
     Box(
-        Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(12.dp)).background(background)
-            .then(if (borderColor != null) Modifier.border(1.dp, borderColor, RoundedCornerShape(12.dp)) else Modifier)
+        Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(16.dp)).background(background)
+            .then(if (borderColor != null) Modifier.border(1.dp, borderColor, RoundedCornerShape(16.dp)) else Modifier)
             .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {

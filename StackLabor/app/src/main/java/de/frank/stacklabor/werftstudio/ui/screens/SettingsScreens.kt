@@ -215,7 +215,7 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                         },
                     shape = RoundedCornerShape(18.dp),
                     color = StackLaborTheme.colors.surface,
-                    border = BorderStroke(1.5.dp, metalRim(0.85f)),
+                    border = BorderStroke(1.dp, metalRim(0.85f)),
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Der Startbestand überschreibt alle vorhandenen Stacks. Fortfahren?", style = MaterialTheme.typography.bodyMedium)
@@ -243,7 +243,7 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                             .depthShadow(RoundedCornerShape(20.dp), 30.dp, strength = 1.5f),
                         shape = RoundedCornerShape(20.dp),
                         color = StackLaborTheme.colors.surface.copy(alpha = 0.97f),
-                        border = BorderStroke(1.5.dp, metalRim(0.9f)),
+                        border = BorderStroke(1.dp, metalRim(0.9f)),
                     ) {
                         Column(Modifier.fillMaxWidth().padding(20.dp)) {
                             Text(selection.title, style = MaterialTheme.typography.titleLarge)
@@ -265,8 +265,8 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                                 val selected = option == selection.value
                                 Row(
                                     Modifier.fillMaxWidth().height(52.dp)
-                                        .depthShadow(RoundedCornerShape(12.dp), if (selected) 10.dp else 4.dp)
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .depthShadow(RoundedCornerShape(16.dp), if (selected) 10.dp else 4.dp)
+                                        .clip(RoundedCornerShape(16.dp))
                                         .background(
                                             if (selected) {
                                                 Brush.verticalGradient(
@@ -281,7 +281,7 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                                                 )
                                             },
                                         )
-                                        .border(1.dp, if (selected) metalRim(1f) else metalRim(0.4f), RoundedCornerShape(12.dp))
+                                        .border(1.dp, if (selected) metalRim(1f) else metalRim(0.4f), RoundedCornerShape(16.dp))
                                         .clickable {
                                             callbacks.onEvent(StackLaborEvent.SelectSettingValue(selection.id, option))
                                             selectionId = null
@@ -364,7 +364,7 @@ private fun ApiKeyDialog(entry: ApiKeyEntry, onDismiss: () -> Unit, onSave: (Str
             Modifier.fillMaxWidth().depthShadow(RoundedCornerShape(18.dp), 28.dp, strength = 1.5f),
             shape = RoundedCornerShape(18.dp),
             color = StackLaborTheme.colors.surface,
-            border = BorderStroke(1.5.dp, metalRim(0.9f)),
+            border = BorderStroke(1.dp, metalRim(0.9f)),
         ) {
             Column(Modifier.padding(20.dp)) {
                 Text(entry.title, style = MaterialTheme.typography.titleLarge)
@@ -373,9 +373,9 @@ private fun ApiKeyDialog(entry: ApiKeyEntry, onDismiss: () -> Unit, onSave: (Str
                 Spacer(Modifier.height(14.dp))
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 52.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .background(StackLaborTheme.colors.background)
-                        .border(1.dp, metalRim(0.6f), RoundedCornerShape(12.dp))
+                        .border(1.dp, metalRim(0.6f), RoundedCornerShape(16.dp))
                         .padding(horizontal = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -459,7 +459,7 @@ private fun SettingsGroup(title: String, icon: ImageVector, content: @Composable
     val colors = StackLaborTheme.colors
     Column(
         Modifier.fillMaxWidth().depthShadow(shape, 18.dp)
-            .clip(shape).background(StackLaborTheme.colors.surface).border(1.5.dp, metalRim(0.8f), shape),
+            .clip(shape).background(StackLaborTheme.colors.surface).border(1.dp, metalRim(0.8f), shape),
     ) {
         Row(
             Modifier.fillMaxWidth().height(44.dp)
@@ -566,7 +566,7 @@ private fun SettingsToggle(checked: Boolean) {
     )
     Box(
         // Sunken track with a raised knob riding in it.
-        Modifier.width(44.dp).height(24.dp).clip(RoundedCornerShape(12.dp))
+        Modifier.width(44.dp).height(24.dp).clip(RoundedCornerShape(16.dp))
             .background(
                 if (checked) {
                     Brush.verticalGradient(listOf(colors.accent.darkenBy(0.25f), colors.accent))
@@ -574,7 +574,7 @@ private fun SettingsToggle(checked: Boolean) {
                     Brush.verticalGradient(listOf(colors.disabled.darkenBy(0.18f), colors.disabled))
                 },
             )
-            .border(1.dp, Color.Black.copy(alpha = 0.22f), RoundedCornerShape(12.dp)),
+            .border(1.dp, Color.Black.copy(alpha = 0.22f), RoundedCornerShape(16.dp)),
     ) {
         Box(
             Modifier.offset { IntOffset(x.roundToPx(), 2.dp.roundToPx()) }
@@ -611,8 +611,8 @@ fun CodexLoginScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
             ) {
                 Surface(
                     Modifier.widthIn(max = 388.dp).fillMaxWidth().height(96.dp)
-                        .shadow(16.dp, RoundedCornerShape(12.dp), ambientColor = androidx.compose.ui.graphics.Color(0x295A3508), spotColor = androidx.compose.ui.graphics.Color(0x245A3508)),
-                    shape = RoundedCornerShape(12.dp),
+                        .shadow(16.dp, RoundedCornerShape(16.dp), ambientColor = androidx.compose.ui.graphics.Color(0x291E2A4A), spotColor = androidx.compose.ui.graphics.Color(0x241E2A4A)),
+                    shape = RoundedCornerShape(16.dp),
                     color = StackLaborTheme.colors.surface,
                     border = BorderStroke(1.dp, StackLaborTheme.colors.accent.copy(alpha = 0.4f)),
                 ) {

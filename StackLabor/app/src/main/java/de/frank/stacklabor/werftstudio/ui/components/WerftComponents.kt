@@ -46,6 +46,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -88,6 +89,7 @@ import de.frank.stacklabor.werftstudio.ui.model.SignalState
 import de.frank.stacklabor.werftstudio.ui.model.Solubility
 import de.frank.stacklabor.werftstudio.ui.model.StackSummaryUi
 import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
+import de.frank.stacklabor.werftstudio.ui.theme.OnActionColor
 import de.frank.stacklabor.werftstudio.ui.theme.GoldDarkContent
 import de.frank.stacklabor.werftstudio.ui.theme.bevel
 import de.frank.stacklabor.werftstudio.ui.theme.darkenBy
@@ -101,7 +103,7 @@ import de.frank.stacklabor.werftstudio.ui.theme.sheen
 import de.frank.stacklabor.werftstudio.ui.theme.softMetalRim
 import androidx.compose.foundation.interaction.MutableInteractionSource
 
-private val CardShape = RoundedCornerShape(12.dp)
+private val CardShape = RoundedCornerShape(16.dp)
 
 private fun Modifier.goldCardShadow(shape: RoundedCornerShape = CardShape) =
     depthShadow(shape, 14.dp)
@@ -138,21 +140,13 @@ fun GlassHeader(
     Row(
         modifier
             .fillMaxWidth()
-            .depthShadow(RoundedCornerShape(0.dp), 12.dp)
             .background(colors.glass)
             .drawBehind {
-                drawRect(
-                    Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.10f), Color.Transparent, colors.textStrong.copy(alpha = 0.05f)),
-                    ),
-                )
                 drawLine(
-                    Brush.horizontalGradient(
-                        listOf(colors.accent.copy(alpha = 0.25f), colors.accent, colors.accent.copy(alpha = 0.25f)),
-                    ),
+                    colors.border,
                     Offset(0f, size.height),
                     Offset(size.width, size.height),
-                    1.5.dp.toPx(),
+                    1.dp.toPx(),
                 )
             }
             .statusBarsPadding()
@@ -165,12 +159,11 @@ fun GlassHeader(
                 "Zurück",
                 onBack,
                 if (framedBack) {
-                    Modifier.depthShadow(CircleShape, 8.dp)
+                    Modifier
                         .clip(CircleShape)
-                        .background(Brush.verticalGradient(listOf(colors.surface.lightenBy(0.25f), colors.elevated)))
-                        .border(1.dp, metalRim(0.7f), CircleShape)
+                        .background(colors.elevated)
                 } else Modifier,
-            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(22.dp)) }
+            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(22.dp), tint = colors.textStrong) }
             Spacer(Modifier.width(8.dp))
         } else {
             Spacer(Modifier.width(12.dp))
@@ -216,37 +209,32 @@ fun AnimatedGradientHeader(
         )
         value
     } else null
+    val shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+    val dark = StackLaborTheme.dark
     Box(
         Modifier
             .fillMaxWidth()
-            .depthShadow(RoundedCornerShape(0.dp), 18.dp, strength = 1.3f)
+            .depthShadow(shape, 16.dp)
+            .clip(shape)
             .drawBehind {
                 val p = progress?.value ?: 0f
+                val stops = if (dark) {
+                    listOf(Color(0xFF312E81), Color(0xFF4F46E5), Color(0xFF6D28D9), Color(0xFF312E81))
+                } else {
+                    listOf(Color(0xFF4338CA), Color(0xFF6366F1), Color(0xFF8B5CF6), Color(0xFF4338CA))
+                }
+                // Langsam wandernder Farbverlauf; die Spanne hängt an der Kopfbreite, damit er nie abreißt.
+                val w = size.width
                 drawRect(
                     Brush.linearGradient(
-                        listOf(Color(0xFF6F4813), Color(0xFFD8AE55), Color(0xFF8B5E1A)),
-                        start = Offset(p * 600f - 300f, 0f),
-                        end = Offset(p * 600f + 300f, 0f),
+                        stops,
+                        start = Offset(-w + p * w, 0f),
+                        end = Offset(p * w + w, size.height),
                     ),
                 )
-            }
-            // Curved metal look: light collects along the top, the lower third falls away.
-            .drawBehind {
-                drawRect(
-                    Brush.verticalGradient(
-                        0.00f to Color.White.copy(alpha = 0.26f),
-                        0.30f to Color.White.copy(alpha = 0.05f),
-                        0.55f to Color.Transparent,
-                        1.00f to Color.Black.copy(alpha = 0.28f),
-                    ),
-                )
-                drawLine(Color(0xFFFFF1CB).copy(alpha = 0.55f), Offset(0f, 0f), Offset(size.width, 0f), 1.5.dp.toPx())
-                drawLine(
-                    Color(0xFF3A2405).copy(alpha = 0.55f),
-                    Offset(0f, size.height),
-                    Offset(size.width, size.height),
-                    1.5.dp.toPx(),
-                )
+                // Zwei weiche Lichtflecken geben dem Kopf Tiefe.
+                drawCircle(Color.White.copy(alpha = 0.10f), radius = size.height * 1.1f, center = Offset(w * 0.92f, -size.height * 0.2f))
+                drawCircle(Color.White.copy(alpha = 0.06f), radius = size.height * 0.8f, center = Offset(w * 0.15f, size.height * 1.3f))
             }
             .statusBarsPadding()
             .height(96.dp),
@@ -265,7 +253,7 @@ fun PrimaryAction(label: String, onClick: () -> Unit, modifier: Modifier = Modif
             fontSize = 15.sp,
             lineHeight = 20.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF2A1B05),
+            color = OnActionColor,
             maxLines = 1,
         )
     }
@@ -290,7 +278,6 @@ fun GoldSurface(
             .clip(shape)
             .background(goldActionSurface())
             .sheen()
-            .border(1.dp, Color(0xFFF3DFAE).copy(alpha = 0.75f), shape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
         content = content,
@@ -347,13 +334,13 @@ fun SearchField(
         modifier
             .fillMaxWidth()
             .height(fieldHeight)
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.surface)
-            .border(1.dp, colors.border, RoundedCornerShape(12.dp))
-            .padding(horizontal = 12.dp),
+            .clip(RoundedCornerShape(14.dp))
+            .background(colors.elevated)
+            .border(1.dp, colors.border.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Default.Search, null, Modifier.size(24.dp), tint = colors.textMuted)
+        Icon(Icons.Default.Search, null, Modifier.size(20.dp), tint = colors.textMuted)
         Spacer(Modifier.width(10.dp))
         BasicTextField(
             value = value,
@@ -378,15 +365,14 @@ fun SelectPill(label: String, selected: Boolean, modifier: Modifier = Modifier, 
     val interaction = remember { MutableInteractionSource() }
     Box(
         modifier
-            .pressDepth(interaction, CircleShape, if (selected) 10.dp else 3.dp)
-            .height(28.dp)
+            .pressDepth(interaction, CircleShape, if (selected) 8.dp else 0.dp)
+            .height(32.dp)
             .clip(CircleShape)
             .background(
                 if (selected) goldActionSurface()
-                else Brush.verticalGradient(listOf(colors.surface, colors.elevated.copy(alpha = 0.6f))),
+                else Brush.verticalGradient(listOf(colors.surface, colors.surface)),
             )
-            .then(if (selected) Modifier.sheen() else Modifier)
-            .border(1.dp, if (selected) metalRim(1f) else softMetalRim(0.35f), CircleShape)
+            .then(if (selected) Modifier else Modifier.border(1.dp, colors.border, CircleShape))
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center,
@@ -394,7 +380,7 @@ fun SelectPill(label: String, selected: Boolean, modifier: Modifier = Modifier, 
         Text(
             label,
             style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-            color = if (selected) Color(0xFF2A1B05) else colors.textMuted,
+            color = if (selected) OnActionColor else colors.textMuted,
         )
     }
 }
@@ -405,7 +391,7 @@ fun SignalDot(state: SignalState, modifier: Modifier = Modifier, description: St
     val color = state.color()
     Box(
         modifier
-            .size(8.dp)
+            .size(9.dp)
             .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier)
             .clip(CircleShape)
             .background(color),
@@ -456,14 +442,14 @@ fun StackCard(
                 val alpha = aura?.value ?: 0f
                 if (alpha > 0f) drawCircle(colors.red.copy(alpha = alpha), radius = size.maxDimension * 0.65f, center = center)
             },
-        elevation = 16.dp,
-        rimWidth = 1.5.dp,
-        rimAlpha = 1f,
+        elevation = 14.dp,
+        rimWidth = 1.dp,
+        rimAlpha = 0.6f,
         onClick = onOpen,
     ) {
         Row(Modifier.fillMaxSize()) {
             SignalBar(stack.signal.color())
-            Column(Modifier.weight(1f).padding(start = 12.dp, top = 7.dp, bottom = 7.dp)) {
+            Column(Modifier.weight(1f).padding(start = 12.dp, top = 9.dp, bottom = 9.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stack.name, Modifier.weight(1f, fill = false), style = androidx.compose.material3.MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (stack.locked) {
@@ -480,10 +466,16 @@ fun StackCard(
                     .width(88.dp)
                     .fillMaxHeight()
                     .clickable(onClick = onCatalog)
-                    .padding(end = 8.dp, bottom = 7.dp),
+                    .padding(end = 12.dp, bottom = 9.dp),
                 contentAlignment = Alignment.BottomEnd,
             ) {
-                Text("${stack.medicineCount} Mittel", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted)
+                Text(
+                    "${stack.medicineCount} Mittel",
+                    Modifier.clip(CircleShape).background(colors.accent.copy(alpha = 0.10f)).padding(horizontal = 10.dp, vertical = 3.dp),
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    color = colors.accent,
+                    maxLines = 1,
+                )
             }
         }
     }
@@ -497,14 +489,12 @@ fun StackCard(
 fun SignalBar(color: Color, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     Box(
         modifier
-            .width(5.dp)
+            .width(12.dp)
             .fillMaxHeight()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 5.dp)
-            .clip(RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp))
-            .background(
-                Brush.horizontalGradient(listOf(color.darkenBy(0.22f), color, color.lightenBy(0.22f))),
-            ),
+            .padding(start = 7.dp, top = 11.dp, bottom = 11.dp)
+            .clip(CircleShape)
+            .background(color),
     )
 }
 
@@ -520,8 +510,8 @@ fun MedicineCard(
     val opacity = if (medicine.active) 1f else 0.38f
     RaisedPanel(
         modifier = modifier.fillMaxWidth().height(56.dp),
-        elevation = if (medicine.active) 12.dp else 4.dp,
-        rimAlpha = if (medicine.active) 0.7f else 0.3f,
+        elevation = if (medicine.active) 8.dp else 0.dp,
+        rimAlpha = if (medicine.active) 0.6f else 0.3f,
         bevelStrength = if (medicine.active) 1f else 0.35f,
         background = if (medicine.active) null else Brush.verticalGradient(listOf(colors.background, colors.background)),
     ) {
@@ -543,12 +533,12 @@ fun MedicineCard(
             }
             IconTouchButton(if (medicine.active) "${medicine.name} deaktivieren" else "${medicine.name} aktivieren", onToggle) {
                 Box(
-                    Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)).then(
-                        if (medicine.active) Modifier.background(colors.accent) else Modifier.border(1.dp, colors.disabled, RoundedCornerShape(5.dp)),
+                    Modifier.size(24.dp).clip(RoundedCornerShape(8.dp)).then(
+                        if (medicine.active) Modifier.background(goldActionSurface()) else Modifier.border(1.5.dp, colors.disabled, RoundedCornerShape(8.dp)),
                     ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (medicine.active) Icon(Icons.Default.Check, null, Modifier.size(18.dp), tint = colors.onAccent)
+                    if (medicine.active) Icon(Icons.Default.Check, null, Modifier.size(17.dp), tint = OnActionColor)
                 }
             }
         }
@@ -564,7 +554,7 @@ fun CatalogRow(title: String, meta: String, onOpen: () -> Unit, onEdit: (() -> U
                 Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(meta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted, maxLines = 1)
             }
-            if (onEdit != null) IconTouchButton("$title bearbeiten", onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(20.dp)) }
+            if (onEdit != null) IconTouchButton("$title bearbeiten", onEdit) { Icon(Icons.Default.Edit, null, Modifier.size(20.dp), tint = colors.textMuted) }
         }
     }
 }
@@ -573,23 +563,19 @@ fun CatalogRow(title: String, meta: String, onOpen: () -> Unit, onEdit: (() -> U
 @Composable
 fun WerftCheckbox(checked: Boolean, enabledTint: Color = StackLaborTheme.colors.accent) {
     val colors = StackLaborTheme.colors
-    val shape = RoundedCornerShape(6.dp)
+    val shape = RoundedCornerShape(7.dp)
     Box(
         Modifier
-            .then(if (checked) Modifier.depthShadow(shape, 6.dp) else Modifier)
             .size(22.dp)
             .clip(shape)
             .then(
                 if (checked) {
                     Modifier
-                        .background(
-                            Brush.verticalGradient(listOf(enabledTint.lightenBy(0.35f), enabledTint, enabledTint.darkenBy(0.25f))),
-                        )
-                        .border(1.dp, enabledTint.lightenBy(0.45f), shape)
+                        .background(enabledTint)
                 } else {
                     Modifier
-                        .background(Brush.verticalGradient(listOf(colors.background.darkenBy(0.05f), colors.surface)))
-                        .border(1.dp, colors.border, shape)
+                        .background(colors.surface)
+                        .border(1.5.dp, colors.disabled, shape)
                 },
             ),
         contentAlignment = Alignment.Center,
@@ -620,14 +606,12 @@ fun GoalRow(
                 Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
                     Box(
                         Modifier
-                            .depthShadow(CircleShape, 4.dp)
-                            .size(20.dp)
+                            .size(24.dp)
                             .clip(CircleShape)
-                            .background(Brush.verticalGradient(listOf(colors.elevated.lightenBy(0.18f), colors.elevated.darkenBy(0.08f))))
-                            .border(1.dp, colors.border, CircleShape),
+                            .background(colors.accent.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(goal.rank.toString(), style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+                        Text(goal.rank.toString(), style = androidx.compose.material3.MaterialTheme.typography.labelSmall, color = colors.accent)
                     }
                 }
                 Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
@@ -644,8 +628,8 @@ fun GoalRow(
                 Text(
                     goal.reason,
                     Modifier.fillMaxWidth()
-                        .background(Brush.verticalGradient(listOf(colors.elevated.darkenBy(0.05f), colors.elevated)))
-                        .padding(12.dp),
+                        .background(colors.elevated)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                     color = colors.textMuted,
                 )
@@ -657,13 +641,16 @@ fun GoalRow(
 @Composable
 fun SettingsRow(label: String, value: String = "", trailing: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
     val colors = StackLaborTheme.colors
-    RaisedPanel(Modifier.fillMaxWidth().height(64.dp), onClick = onClick) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    RaisedPanel(Modifier.fillMaxWidth().height(60.dp), elevation = 6.dp, onClick = onClick) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
             if (value.isNotEmpty()) Text(value, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = colors.textMuted)
             if (trailing != null) {
                 Spacer(Modifier.width(8.dp))
                 trailing()
+            } else {
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(20.dp), tint = colors.textMuted.copy(alpha = 0.7f))
             }
         }
     }
@@ -672,9 +659,9 @@ fun SettingsRow(label: String, value: String = "", trailing: (@Composable () -> 
 @Composable
 fun SectionTitle(title: String, modifier: Modifier = Modifier) {
     Text(
-        title,
-        modifier.padding(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 8.dp),
-        style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+        title.uppercase(),
+        modifier.padding(start = 16.dp, top = 18.dp, end = 16.dp, bottom = 8.dp),
+        style = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.9.sp),
         color = StackLaborTheme.colors.textMuted,
     )
 }
@@ -687,16 +674,16 @@ fun BreathingFab(description: String, animationsEnabled: Boolean, onClick: () ->
         value
     } else null
     GoldSurface(
-        modifier = modifier.size(56.dp).graphicsLayer {
+        modifier = modifier.size(60.dp).graphicsLayer {
             val value = scale?.value ?: 1f
             scaleX = value
             scaleY = value
         }
             .semantics { contentDescription = description },
-        shape = RoundedCornerShape(28.dp),
-        elevation = 18.dp,
+        shape = RoundedCornerShape(20.dp),
+        elevation = 20.dp,
         onClick = onClick,
-    ) { Icon(Icons.Default.Add, null, tint = Color(0xFF2A1B05)) }
+    ) { Icon(Icons.Default.Add, null, Modifier.size(28.dp), tint = OnActionColor) }
 }
 
 @Composable
@@ -730,7 +717,7 @@ fun BottomSheetFrame(
     Box(Modifier.fillMaxSize()) {
         underlay()
         Box(
-            Modifier.fillMaxSize().drawBehind { drawRect(Color.Black.copy(alpha = 0.32f * progress)) }
+            Modifier.fillMaxSize().drawBehind { drawRect(Color(0xFF0B1020).copy(alpha = 0.45f * progress)) }
                 .clickable(enabled = !dismissRequested) { dismissRequested = true },
         )
         Box(
@@ -740,16 +727,16 @@ fun BottomSheetFrame(
         ) {
             Surface(
                 Modifier.fillMaxWidth().then(if (fixedHeight != null) Modifier.height(fixedHeight) else Modifier.fillMaxHeight(heightFraction))
-                    .depthShadow(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), 26.dp, strength = 1.4f)
+                    .depthShadow(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp), 26.dp, strength = 1.4f)
                     .graphicsLayer { translationY = size.height * (1f - progress) },
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                color = StackLaborTheme.colors.surface.copy(alpha = 0.96f),
-                border = BorderStroke(1.5.dp, metalRim(0.9f)),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                color = StackLaborTheme.colors.surface,
+                border = BorderStroke(1.dp, StackLaborTheme.colors.border.copy(alpha = 0.7f)),
             ) {
                 Column {
                     if (showGrip) {
                         Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
-                            Box(Modifier.width(32.dp).height(4.dp).clip(CircleShape).background(StackLaborTheme.colors.textMuted.copy(alpha = 0.6f)))
+                            Box(Modifier.width(40.dp).height(5.dp).clip(CircleShape).background(StackLaborTheme.colors.textMuted.copy(alpha = 0.35f)))
                         }
                     }
                     content()
@@ -777,9 +764,19 @@ fun AdaptiveSplit(
 
 @Composable
 fun EmptyState(title: String, action: String, modifier: Modifier = Modifier, onAction: () -> Unit) {
-    Column(modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(title, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(12.dp))
+    Column(modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(64.dp).clip(CircleShape).background(StackLaborTheme.colors.accent.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Default.Add, null, Modifier.size(30.dp), tint = StackLaborTheme.colors.accent) }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            title,
+            style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+            color = StackLaborTheme.colors.textMuted,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        Spacer(Modifier.height(20.dp))
         PrimaryAction(action, onAction)
     }
 }

@@ -117,6 +117,7 @@ import de.frank.stacklabor.werftstudio.ui.model.StackLaborUiState
 import de.frank.stacklabor.werftstudio.ui.navigation.Origin
 import de.frank.stacklabor.werftstudio.ui.navigation.StackLaborRoute
 import de.frank.stacklabor.werftstudio.ui.theme.StackLaborTheme
+import de.frank.stacklabor.werftstudio.ui.theme.OnActionColor
 import de.frank.stacklabor.werftstudio.ui.components.GoldSurface
 import de.frank.stacklabor.werftstudio.ui.components.RaisedPanel
 import de.frank.stacklabor.werftstudio.ui.components.SignalBar
@@ -131,14 +132,15 @@ import de.frank.stacklabor.werftstudio.ui.theme.metalRim
 fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: StackLaborCallbacks) {
     var homeMenuOpen by rememberSaveable { mutableStateOf(false) }
     WerftScreen {
-        val headerContentColor = if (StackLaborTheme.dark) Color(0xFF141A24) else Color.White
+        val headerContentColor = Color.White
         Column(Modifier.fillMaxSize()) {
             AnimatedGradientHeader(animationsEnabled) {
                 Text(
                     "StackLabor",
-                    Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 12.dp),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    Modifier.align(Alignment.TopStart).padding(start = 18.dp, top = 12.dp),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-0.4).sp,
                     lineHeight = 28.sp,
                     color = headerContentColor,
                 )
@@ -164,29 +166,29 @@ fun HomeScreen(state: StackLaborUiState, animationsEnabled: Boolean, callbacks: 
                         Icon(Icons.Default.MoreVert, null, Modifier.size(24.dp), tint = headerContentColor)
                     }
                 }
-                DoseVariantSwitch(state.doseVariant, callbacks, Modifier.align(Alignment.BottomStart).padding(start = 16.dp, bottom = 12.dp))
+                DoseVariantSwitch(state.doseVariant, callbacks, Modifier.align(Alignment.BottomStart).padding(start = 18.dp, bottom = 14.dp))
             }
-            val stripBorder = StackLaborTheme.colors.border
+            val stripAccent = StackLaborTheme.colors.accent
             Row(
-                Modifier.fillMaxWidth().height(48.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                StackLaborTheme.colors.elevated.lightenBy(0.10f),
-                                StackLaborTheme.colors.elevated.darkenBy(0.06f),
-                            ),
-                        ),
-                    )
-                    .drawBehind {
-                        drawLine(stripBorder.copy(alpha = 0.6f), Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
-                    }
+                Modifier.fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 14.dp)
+                    .height(52.dp)
+                    .depthShadow(RoundedCornerShape(16.dp), 8.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(StackLaborTheme.colors.surface)
+                    .border(1.dp, StackLaborTheme.colors.border.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
                     .clickable {
                         callbacks.onNavigate(StackLaborRoute.AllStacks)
-                    }.padding(horizontal = 12.dp),
+                    }.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Alle Stacks zusammen prüfen", Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
-                Text(state.evaluationMeta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted)
+                Box(
+                    Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(stripAccent.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Default.AutoAwesome, null, Modifier.size(17.dp), tint = stripAccent) }
+                Spacer(Modifier.width(12.dp))
+                Text("Alle Stacks zusammen prüfen", Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, maxLines = 1)
+                Text(state.evaluationMeta, style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = StackLaborTheme.colors.textMuted, maxLines = 1)
             }
             Box(Modifier.weight(1f)) {
                 AdaptiveSplit(
@@ -241,13 +243,13 @@ private fun DoseVariantSwitch(variant: DoseVariant, callbacks: StackLaborCallbac
     val colors = StackLaborTheme.colors
     Row(
         modifier
-            .width(112.dp)
-            .height(28.dp)
+            .width(128.dp)
+            .height(32.dp)
             .clip(CircleShape)
-            // Sunken track, so the selected half reads as a raised knob inside it.
-            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.22f), colors.elevated)))
-            .border(1.dp, Color.Black.copy(alpha = 0.25f), CircleShape)
-            .padding(2.dp),
+            // Durchscheinende Spur auf dem Farbverlauf, der gewählte Teil ist ein weißer Knopf.
+            .background(Color.White.copy(alpha = 0.16f))
+            .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape)
+            .padding(3.dp),
     ) {
         DoseVariantOption("Frei", variant == DoseVariant.Frei, Modifier.weight(1f)) {
             callbacks.onEvent(StackLaborEvent.ChangeDoseVariant(DoseVariant.Frei))
@@ -266,21 +268,15 @@ private fun DoseVariantOption(label: String, selected: Boolean, modifier: Modifi
             .fillMaxHeight()
             .then(if (selected) Modifier.depthShadow(CircleShape, 6.dp) else Modifier)
             .clip(CircleShape)
-            .then(
-                if (selected) {
-                    Modifier
-                        .background(Brush.verticalGradient(listOf(colors.surface.lightenBy(0.4f), colors.surface)))
-                        .border(1.dp, metalRim(0.55f), CircleShape)
-                } else Modifier,
-            )
+            .then(if (selected) Modifier.background(Color.White) else Modifier)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             label,
             fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = if (selected) colors.accent else colors.textMuted,
+            fontWeight = FontWeight.SemiBold,
+            color = if (selected) Color(0xFF4338CA) else Color.White.copy(alpha = 0.85f),
         )
     }
 }
@@ -297,14 +293,14 @@ private fun StackList(
         source = state.stacks,
         keyOf = { it.id },
         listState = listState,
-        rowHeight = StackLaborTheme.dimens.stackHeight + 8.dp,
+        rowHeight = StackLaborTheme.dimens.stackHeight + 10.dp,
         onDropped = { ids -> callbacks.onEvent(StackLaborEvent.ApplyStackOrder(ids)) },
     )
     LazyColumn(
-        modifier.padding(horizontal = 12.dp).then(reorder.dragModifier()),
+        modifier.padding(horizontal = 16.dp).then(reorder.dragModifier()),
         state = listState,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 16.dp, bottom = 88.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 14.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items(reorder.items, key = { it.id }) { stack ->
             val gezogen = reorder.isDragged(stack)
@@ -391,7 +387,7 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
             )
         }
         if (menuOpen) {
-            val menuShape = RoundedCornerShape(12.dp)
+            val menuShape = RoundedCornerShape(16.dp)
             Column(
                 Modifier
                     .align(Alignment.TopEnd)
@@ -399,9 +395,9 @@ fun StackDetailScreen(stackId: String, state: StackLaborUiState, animationsEnabl
                     .width(232.dp)
                     .depthShadow(menuShape, 28.dp, strength = 1.5f)
                     .clip(menuShape)
-                    .background(Brush.verticalGradient(listOf(StackLaborTheme.colors.surface.lightenBy(0.20f), StackLaborTheme.colors.elevated)))
+                    .background(StackLaborTheme.colors.surface)
                     .bevel()
-                    .border(1.5.dp, metalRim(0.95f), menuShape),
+                    .border(1.dp, metalRim(0.95f), menuShape),
             ) {
                 MenuItem("Stack bearbeiten") {
                     menuOpen = false
@@ -666,7 +662,7 @@ private fun DeleteMedicineDialog(name: String, onConfirm: () -> Unit, onDismiss:
             Modifier.fillMaxWidth().depthShadow(RoundedCornerShape(18.dp), 28.dp, strength = 1.5f),
             shape = RoundedCornerShape(18.dp),
             color = colors.surface,
-            border = BorderStroke(1.5.dp, metalRim(0.9f)),
+            border = BorderStroke(1.dp, metalRim(0.9f)),
         ) {
             Column(Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -709,7 +705,7 @@ private fun SwipeToDeleteRow(
     content: @Composable () -> Unit,
 ) {
     val colors = StackLaborTheme.colors
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(16.dp)
     // Ab hier ist das Wischen weit genug, damit die Rückfrage kommt.
     val ausgeloest = width > 1f && offset < -width * 0.32f
     val anteil = if (width > 1f) (-offset / width).coerceIn(0f, 1f) else 0f
@@ -942,9 +938,9 @@ private fun WorkingBand(stage: String, animationsEnabled: Boolean) {
 private fun EvaluationAction(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     GoldSurface(modifier.fillMaxWidth().height(44.dp), onClick = onClick) {
         Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.AutoAwesome, null, Modifier.size(24.dp), tint = Color(0xFF2A1B05))
+            Icon(Icons.Default.AutoAwesome, null, Modifier.size(24.dp), tint = OnActionColor)
             Spacer(Modifier.width(8.dp))
-            Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2A1B05))
+            Text(label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = OnActionColor)
         }
     }
 }
@@ -970,19 +966,17 @@ private fun MenuTrenner() {
  */
 @Composable
 private fun OverflowMenu(modifier: Modifier = Modifier, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    val menuShape = RoundedCornerShape(12.dp)
+    val menuShape = RoundedCornerShape(16.dp)
     Column(
         modifier
             .width(232.dp)
             .depthShadow(menuShape, 28.dp, strength = 1.5f)
             .clip(menuShape)
             .background(
-                Brush.verticalGradient(
-                    listOf(StackLaborTheme.colors.surface.lightenBy(0.20f), StackLaborTheme.colors.elevated),
-                ),
+                StackLaborTheme.colors.surface,
             )
             .bevel()
-            .border(1.5.dp, metalRim(0.95f), menuShape),
+            .border(1.dp, metalRim(0.95f), menuShape),
         content = content,
     )
 }
@@ -1134,7 +1128,7 @@ private fun AllStacksSetupDialog(state: StackLaborUiState, callbacks: StackLabor
                 .depthShadow(RoundedCornerShape(18.dp), 30.dp, strength = 1.6f),
             shape = RoundedCornerShape(18.dp),
             color = colors.surface,
-            border = BorderStroke(1.5.dp, metalRim(0.95f)),
+            border = BorderStroke(1.dp, metalRim(0.95f)),
         ) {
             Column(Modifier.fillMaxSize()) {
                 Column(Modifier.padding(start = 18.dp, top = 16.dp, end = 18.dp, bottom = 8.dp)) {
@@ -1226,10 +1220,10 @@ private fun AllStacksAdditionalInfoEditor(state: StackLaborUiState, callbacks: S
     Column(
         Modifier.fillMaxWidth()
             .bringIntoViewRequester(bringIntoViewRequester)
-            .depthShadow(RoundedCornerShape(12.dp), 12.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .depthShadow(RoundedCornerShape(16.dp), 12.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(colors.elevated)
-            .border(1.dp, colors.border, RoundedCornerShape(12.dp)),
+            .border(1.dp, colors.border, RoundedCornerShape(16.dp)),
     ) {
         BasicTextField(
             value = state.allStacksAdditionalInfo,

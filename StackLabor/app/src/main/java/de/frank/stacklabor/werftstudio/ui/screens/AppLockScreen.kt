@@ -47,7 +47,7 @@ fun AppLockScreen(callbacks: StackLaborCallbacks) {
                     .size(96.dp)
                     .clip(CircleShape)
                     .background(colors.accent.copy(alpha = 0.12f))
-                    .border(1.5.dp, metalRim(0.9f), CircleShape),
+                    .border(1.dp, metalRim(0.9f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Default.Fingerprint, null, Modifier.size(48.dp), tint = colors.accent)

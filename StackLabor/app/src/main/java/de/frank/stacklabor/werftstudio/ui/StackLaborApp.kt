@@ -8,6 +8,9 @@ import androidx.compose.animation.core.tween
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import de.frank.stacklabor.werftstudio.ui.model.Appearance
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborCallbacks
 import de.frank.stacklabor.werftstudio.ui.model.StackLaborEvent
@@ -53,6 +56,14 @@ fun StackLaborApp(
     }
     LaunchedEffect(navigator.currentRoute) {
         onEvent(StackLaborEvent.RouteChanged(navigator.currentRoute))
+    }
+    // Auf dem farbigen Startkopf und im dunklen Thema brauchen die Statusleisten-Symbole helle Farbe.
+    val view = LocalView.current
+    val helleSymbole = state.appearance == Appearance.Dark || (navigator.currentRoute == StackLaborRoute.Home && !state.appLocked)
+    SideEffect {
+        (view.context as? android.app.Activity)?.window?.let { window ->
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !helleSymbole
+        }
     }
     StackLaborTheme(
         darkTheme = state.appearance == Appearance.Dark,

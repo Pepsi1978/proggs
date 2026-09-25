@@ -218,7 +218,7 @@ private fun GoalCatalogCard(
     onDelete: () -> Unit,
 ) {
     val colors = StackLaborTheme.colors
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(16.dp)
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(editing) {
         if (editing) focusRequester.requestFocus()
@@ -391,7 +391,7 @@ fun MedicineCatalogScreen(stackId: String?, state: StackLaborUiState, animations
             Modifier.align(Alignment.BottomEnd).padding(16.dp),
         )
         if (menuOpen) {
-            val menuShape = RoundedCornerShape(12.dp)
+            val menuShape = RoundedCornerShape(16.dp)
             Column(
                 Modifier
                     .align(Alignment.TopEnd)
@@ -425,10 +425,10 @@ fun MedicineCatalogScreen(stackId: String?, state: StackLaborUiState, animations
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .depthShadow(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp), 26.dp, strength = 1.4f)
-                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .depthShadow(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp), 26.dp, strength = 1.4f)
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .background(StackLaborTheme.colors.elevated)
-                    .border(1.dp, metalRim(0.85f), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .border(1.dp, metalRim(0.85f), RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .padding(12.dp),
             ) {
                 Text(
@@ -457,10 +457,10 @@ fun MedicineCatalogScreen(stackId: String?, state: StackLaborUiState, animations
                     .fillMaxWidth()
                     .padding(end = 68.dp)
                     .height(48.dp)
-                    .depthShadow(RoundedCornerShape(12.dp), 14.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .depthShadow(RoundedCornerShape(16.dp), 14.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(StackLaborTheme.colors.elevated)
-                    .border(1.dp, metalRim(0.7f), RoundedCornerShape(12.dp))
+                    .border(1.dp, metalRim(0.7f), RoundedCornerShape(16.dp))
                     .padding(start = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -514,7 +514,7 @@ private fun MedicineCatalogCard(
     onClick: () -> Unit,
 ) {
     val colors = StackLaborTheme.colors
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(16.dp)
     Row(
         Modifier
             .fillMaxWidth()

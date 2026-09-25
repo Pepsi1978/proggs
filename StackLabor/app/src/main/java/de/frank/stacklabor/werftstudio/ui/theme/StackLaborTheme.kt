@@ -29,26 +29,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.stacklabor.werftstudio.R
 
-private val LightBackground = Color(0xFFF8F0DD)
-private val LightSurface = Color(0xFFFFFBF1)
-private val LightElevated = Color(0xFFEFE0C3)
-private val LightBorder = Color(0xFFD4B979)
-private val LightText = Color(0xFF241B0D)
-private val LightMuted = Color(0xFF756548)
-private val LightAccent = Color(0xFFA8731B)
+private val LightBackground = Color(0xFFF3F5FA)
+private val LightSurface = Color(0xFFFFFFFF)
+private val LightElevated = Color(0xFFEEF1F8)
+private val LightBorder = Color(0xFFE1E5EE)
+private val LightText = Color(0xFF111827)
+private val LightMuted = Color(0xFF64748B)
+private val LightAccent = Color(0xFF4F46E5)
 
-private val DarkBackground = Color(0xFF0B0E14)
-private val DarkSurface = Color(0xFF141A24)
-private val DarkElevated = Color(0xFF1B2330)
-private val DarkBorder = Color(0xFF243040)
-private val DarkText = Color(0xFFE6EAF2)
-private val DarkMuted = Color(0xFF9AA6B8)
-private val DarkAccent = Color(0xFF22D3EE)
+private val DarkBackground = Color(0xFF0B1020)
+private val DarkSurface = Color(0xFF151B2E)
+private val DarkElevated = Color(0xFF1D2540)
+private val DarkBorder = Color(0xFF2A3350)
+private val DarkText = Color(0xFFE8ECF5)
+private val DarkMuted = Color(0xFF98A3BA)
+private val DarkAccent = Color(0xFF8B93FF)
+
+/** Text- und Symbolfarbe auf der Akzent-Fläche der Hauptaktionen (Knöpfe, Kopfbereich). */
+val OnActionColor = Color.White
 
 private val Inter = FontFamily(
     Font(R.font.inter_variable, FontWeight.Normal),
     Font(R.font.inter_variable, FontWeight.Medium),
     Font(R.font.inter_variable, FontWeight.SemiBold),
+    Font(R.font.inter_variable, FontWeight.Bold),
 )
 
 @Immutable
@@ -75,9 +79,9 @@ data class StackLaborColors(
 
 @Immutable
 data class StackLaborDimens(
-    val screenPadding: androidx.compose.ui.unit.Dp = 12.dp,
-    val cardRadius: androidx.compose.ui.unit.Dp = 12.dp,
-    val sheetRadius: androidx.compose.ui.unit.Dp = 20.dp,
+    val screenPadding: androidx.compose.ui.unit.Dp = 16.dp,
+    val cardRadius: androidx.compose.ui.unit.Dp = 16.dp,
+    val sheetRadius: androidx.compose.ui.unit.Dp = 28.dp,
     val minTouch: androidx.compose.ui.unit.Dp = 44.dp,
     val headerHeight: androidx.compose.ui.unit.Dp = 56.dp,
     val medicineHeight: androidx.compose.ui.unit.Dp = 56.dp,
@@ -101,14 +105,14 @@ object StackLaborTheme {
 }
 
 val StackLaborTypography = androidx.compose.material3.Typography(
-    headlineLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp, letterSpacing = (-0.2).sp),
-    titleLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp),
-    titleMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 20.sp),
-    bodyLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 20.sp),
-    bodyMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 18.sp),
+    headlineLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 26.sp, lineHeight = 32.sp, letterSpacing = (-0.5).sp),
+    titleLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 24.sp, letterSpacing = (-0.2).sp),
+    titleMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 21.sp, letterSpacing = (-0.1).sp),
+    bodyLarge = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 21.sp),
+    bodyMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 19.sp),
     bodySmall = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.1.sp),
-    labelMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.1.sp),
-    labelSmall = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 11.sp),
+    labelMedium = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.3.sp),
+    labelSmall = TextStyle(fontFamily = Inter, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = 0.2.sp),
 )
 
 @Composable
@@ -172,32 +176,9 @@ fun StackLaborTheme(
     }
 }
 
+/** Früher ein eigenes Gold-Dunkelthema; heute nutzen alle Bildschirme dieselbe ruhige Palette. */
 @Composable
-fun GoldDarkContent(content: @Composable () -> Unit) {
-    if (!LocalStackLaborDark.current) {
-        content()
-        return
-    }
-    val palette = remember { goldDarkPalette() }
-    val scheme = remember(palette) {
-        darkColorScheme(
-            primary = palette.accent,
-            onPrimary = palette.onAccent,
-            background = palette.background,
-            onBackground = palette.textStrong,
-            surface = palette.surface,
-            onSurface = palette.textStrong,
-            outline = palette.border,
-        )
-    }
-    androidx.compose.runtime.CompositionLocalProvider(LocalStackLaborColors provides palette) {
-        MaterialTheme(
-            colorScheme = scheme,
-            typography = StackLaborTypography,
-            content = content,
-        )
-    }
-}
+fun GoldDarkContent(content: @Composable () -> Unit) = content()
 
 @Composable
 private fun Color.animated(duration: Int): Color = animateColorAsState(
@@ -237,16 +218,16 @@ private fun lightPalette() = StackLaborColors(
     textMuted = LightMuted,
     accent = LightAccent,
     onAccent = Color.White,
-    green = Color(0xFF047857),
-    yellow = Color(0xFFD97706),
+    green = Color(0xFF059669),
+    yellow = Color(0xFFF59E0B),
     yellowText = Color(0xFFB45309),
-    red = Color(0xFFDC2626),
+    red = Color(0xFFE11D48),
     gray = Color(0xFF94A3B8),
-    water = Color(0xFF059669),
+    water = Color(0xFF10B981),
     fat = Color.White,
     fatBorder = LightMuted,
     disabled = Color(0xFFCBD5E1),
-    glass = Color(0xE6EFE3CC),
+    glass = Color(0xF2FFFFFF),
 )
 
 private fun darkPalette() = StackLaborColors(
@@ -261,32 +242,12 @@ private fun darkPalette() = StackLaborColors(
     green = Color(0xFF34D399),
     yellow = Color(0xFFFBBF24),
     yellowText = Color(0xFFFBBF24),
-    red = Color(0xFFF87171),
+    red = Color(0xFFFB7185),
     gray = Color(0xFF64748B),
     water = Color(0xFF34D399),
     fat = Color.White,
     fatBorder = Color.Transparent,
     disabled = Color(0xFF334155),
-    glass = Color(0xE01B2330),
+    glass = Color(0xF2151B2E),
 )
 
-private fun goldDarkPalette() = StackLaborColors(
-    background = Color(0xFF0C0905),
-    surface = Color(0xFF1B140A),
-    elevated = Color(0xFF2A1F0F),
-    border = Color(0xFF654C20),
-    textStrong = Color(0xFFF8EED8),
-    textMuted = Color(0xFFB9A984),
-    accent = Color(0xFFE1B85B),
-    onAccent = Color(0xFF141A24),
-    green = Color(0xFF34D399),
-    yellow = Color(0xFFFBBF24),
-    yellowText = Color(0xFFFBBF24),
-    red = Color(0xFFF87171),
-    gray = Color(0xFF9AA6B8),
-    water = Color(0xFF34D399),
-    fat = Color(0xFF141A24),
-    fatBorder = Color(0xFF9AA6B8),
-    disabled = Color(0xFF334155),
-    glass = Color(0xE6241B10),
-)

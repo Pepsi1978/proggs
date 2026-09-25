@@ -15,126 +15,87 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * The shared visual language of StackLabor: metal rims, bevelled surfaces and the
- * depth shadows every raised element uses.
+ * The shared visual language of StackLabor: calm cards with a fine hairline border,
+ * soft neutral shadows and one indigo accent surface for primary actions.
  *
- * Everything here is derived from the current palette, so the same code produces a
- * gold rim in the light theme and the matching accent metal in the dark themes.
+ * The helper names still come from the former gold/metal look, so every screen picks up
+ * the new style without touching its layout code.
  */
 
-/** Warm brown the drop shadows are tinted with — a neutral grey would look flat next to gold. */
-private val ShadowTint = Color(0xFF3A2405)
+/** Cool blue-grey the drop shadows are tinted with — softer than pure black. */
+private val ShadowTint = Color(0xFF1E2A4A)
 
 fun Color.lightenBy(fraction: Float): Color = lerp(this, Color.White, fraction.coerceIn(0f, 1f))
 
 fun Color.darkenBy(fraction: Float): Color = lerp(this, Color.Black, fraction.coerceIn(0f, 1f))
 
 /**
- * A continuous metal rim.
- *
- * The previous rim used a sweep gradient that faded to fully transparent, which made the
- * border bright on one side and invisible on the other. Every stop here is opaque, so the
- * rim runs all the way around and only changes its brightness like brushed metal does.
+ * The card border: a fine, even hairline in the border tone. A high [alpha] (selected
+ * elements) tints it towards the accent so selection stays visible.
  */
 @Composable
 fun metalRim(alpha: Float = 1f): Brush {
-    val accent = StackLaborTheme.colors.accent
-    return remember(accent, alpha) {
-        Brush.linearGradient(
-            0.00f to accent.lightenBy(0.55f).copy(alpha = alpha),
-            0.22f to accent.lightenBy(0.12f).copy(alpha = alpha),
-            0.46f to accent.darkenBy(0.18f).copy(alpha = alpha),
-            0.62f to accent.lightenBy(0.42f).copy(alpha = alpha),
-            0.84f to accent.darkenBy(0.28f).copy(alpha = alpha),
-            1.00f to accent.lightenBy(0.30f).copy(alpha = alpha),
-        )
+    val colors = StackLaborTheme.colors
+    return remember(colors.border, colors.accent, alpha) {
+        val base = if (alpha >= 0.99f) lerp(colors.border, colors.accent, 0.55f) else colors.border
+        SolidColor(base.copy(alpha = (0.55f + alpha * 0.45f).coerceAtMost(1f)))
     }
 }
 
-/** Slightly quieter rim for rows that should not compete with the stack cards. */
+/** Slightly quieter border for rows that should not compete with the stack cards. */
 @Composable
-fun softMetalRim(alpha: Float = 0.75f): Brush = metalRim(alpha)
+fun softMetalRim(alpha: Float = 0.75f): Brush = metalRim(alpha.coerceAtMost(0.9f))
 
-/** Raised card body: lit from the top, settling into the elevated tone at the bottom. */
+/** Card body: a flat surface — depth comes from the soft shadow, not from gradients. */
 @Composable
 fun raisedSurface(): Brush {
-    val colors = StackLaborTheme.colors
+    val surface = StackLaborTheme.colors.surface
+    return remember(surface) { SolidColor(surface) }
+}
+
+/** Face of every primary action: indigo into violet, read with [OnActionColor]. */
+@Composable
+fun goldActionSurface(): Brush {
     val dark = StackLaborTheme.dark
-    return remember(colors.surface, colors.elevated, dark) {
-        Brush.verticalGradient(
-            listOf(
-                colors.surface.lightenBy(if (dark) 0.06f else 0.35f),
-                colors.surface,
-                colors.elevated.copy(alpha = 0.55f),
-            ),
+    return remember(dark) {
+        Brush.linearGradient(
+            if (dark) listOf(Color(0xFF6366F1), Color(0xFF8B5CF6)) else listOf(Color(0xFF4F46E5), Color(0xFF7C3AED)),
         )
     }
 }
 
-/** Gold face of every primary button, lit from above so it reads as a physical key. */
-@Composable
-fun goldActionSurface(): Brush = remember {
-    Brush.verticalGradient(
-        listOf(
-            Color(0xFFF6E0AA),
-            Color(0xFFD9AC50),
-            Color(0xFFA87523),
-            Color(0xFF6E430F),
-        ),
-    )
-}
-
-/**
- * Bevel drawn on top of the background but underneath the text: a bright lip along the
- * upper edge and a soft shade along the lower one. That pair is what makes a flat
- * rectangle look raised.
- */
+/** Former bevel — kept as a very light top highlight so surfaces do not look dull. */
 fun Modifier.bevel(strength: Float = 1f, glossHeight: Float = 0.42f): Modifier = drawWithCache {
     val brush = Brush.verticalGradient(
-        0.00f to Color.White.copy(alpha = 0.18f * strength),
+        0.00f to Color.White.copy(alpha = 0.04f * strength),
         glossHeight to Color.Transparent,
-        0.86f to Color.Transparent,
-        1.00f to Color.Black.copy(alpha = 0.13f * strength),
-    )
-    val line = 1.dp.toPx()
-    onDrawBehind {
-        drawRect(brush)
-        drawLine(Color.White.copy(alpha = 0.30f * strength), Offset(0f, line / 2f), Offset(size.width, line / 2f), line)
-        drawLine(
-            Color.Black.copy(alpha = 0.16f * strength),
-            Offset(0f, size.height - line / 2f),
-            Offset(size.width, size.height - line / 2f),
-            line,
-        )
-    }
-}
-
-/** Diagonal sheen across the upper half — used on the gold buttons only. */
-fun Modifier.sheen(): Modifier = drawWithCache {
-    val brush = Brush.linearGradient(
-        0.00f to Color.White.copy(alpha = 0.34f),
-        0.34f to Color.White.copy(alpha = 0.06f),
-        0.52f to Color.Transparent,
-        1.00f to Color.Black.copy(alpha = 0.10f),
-        start = Offset(0f, 0f),
-        end = Offset(size.width * 0.7f, size.height),
     )
     onDrawBehind { drawRect(brush) }
 }
 
-/** The one drop shadow recipe: warm, tinted, and stronger the higher the element sits. */
+/** Soft light across the upper half of action surfaces. */
+fun Modifier.sheen(): Modifier = drawWithCache {
+    val brush = Brush.verticalGradient(
+        0.00f to Color.White.copy(alpha = 0.14f),
+        0.55f to Color.Transparent,
+    )
+    onDrawBehind { drawRect(brush) }
+}
+
+/** The one drop shadow recipe: soft, cool, and lower than before so cards float gently. */
 fun Modifier.depthShadow(shape: Shape, elevation: Dp, strength: Float = 1f): Modifier = shadow(
-    elevation = elevation,
+    elevation = elevation * 0.45f,
     shape = shape,
     clip = false,
-    ambientColor = ShadowTint.copy(alpha = 0.34f * strength),
-    spotColor = ShadowTint.copy(alpha = 0.30f * strength),
+    ambientColor = ShadowTint.copy(alpha = 0.16f * strength),
+    spotColor = ShadowTint.copy(alpha = 0.20f * strength),
 )
 
 /**
@@ -152,12 +113,12 @@ fun Modifier.pressDepth(
     val pressed by interactionSource.collectIsPressedAsState()
     val motion = StackLaborTheme.motionEnabled
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.972f else 1f,
+        targetValue = if (pressed) 0.975f else 1f,
         animationSpec = tween(if (motion) 110 else 0),
         label = "pressScale",
     )
     val elevation by animateDpAsState(
-        targetValue = if (pressed) restingElevation * 0.28f else restingElevation,
+        targetValue = if (pressed) restingElevation * 0.12f else restingElevation * 0.45f,
         animationSpec = tween(if (motion) 110 else 0),
         label = "pressElevation",
     )
@@ -167,7 +128,7 @@ fun Modifier.pressDepth(
             shadowElevation = elevation.toPx()
             this.shape = shape
             clip = false
-            ambientShadowColor = ShadowTint.copy(alpha = 0.34f * strength)
-            spotShadowColor = ShadowTint.copy(alpha = 0.30f * strength)
+            ambientShadowColor = ShadowTint.copy(alpha = 0.16f * strength)
+            spotShadowColor = ShadowTint.copy(alpha = 0.20f * strength)
         }
 }
