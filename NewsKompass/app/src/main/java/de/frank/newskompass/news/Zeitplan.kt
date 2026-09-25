@@ -31,6 +31,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 
@@ -45,9 +46,14 @@ object Zeitplan {
 
     val UHRZEITEN: List<LocalTime> = listOf(LocalTime.of(5, 0), LocalTime.of(17, 0))
     const val LAUF = "news-lauf"
+    const val FRAGE = "news-frage"
+
+    /** Etikett am Frage-Auftrag, damit die Oberfläche die Frage schon vor dem Start zeigen kann. */
+    const val FRAGE_ETIKETT = "frage:"
     private const val KANAL_LAUF = "lauf"
     private const val KANAL_FERTIG = "fertig"
     const val HINWEIS_LAUF = 17
+    const val HINWEIS_FRAGE = 19
     private const val HINWEIS_FERTIG = 18
 
     /** Nächster Termin nach [jetzt], frisch aus der Zeitzone gerechnet (Almanach A6). */
@@ -106,6 +112,24 @@ object Zeitplan {
             .setInputData(workDataOf("manuell" to manuell))
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(LAUF, ExistingWorkPolicy.KEEP, auftrag)
+    }
+
+    /**
+     * Recherchiert eine gesprochene Frage im Hintergrund und gibt die Auftragsnummer zurück.
+     *
+     * Kommt eine Frage, während die vorige noch läuft, stellt sie sich hinten an — keine geht
+     * verloren, und Codex bekommt nie mehrere Fragen gleichzeitig.
+     */
+    fun starteFrage(context: Context, frage: String): UUID {
+        val auftrag = OneTimeWorkRequestBuilder<FrageWorker>()
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+            .setInputData(workDataOf("frage" to frage))
+            .addTag(FRAGE_ETIKETT + frage.take(200))
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(FRAGE, ExistingWorkPolicy.APPEND_OR_REPLACE, auftrag)
+        return auftrag.id
     }
 
     fun legeKanaeleAn(context: Context) {
@@ -198,6 +222,51 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
                 Result.failure(workDataOf("fehler" to (fehler.message ?: "Unbekannter Fehler")))
             } else {
                 Result.retry()
+            }
+        }
+    }
+}
+
+/**
+ * Recherchiert eine Frage vom Mikrofon-Knopf.
+ *
+ * Die Fragen hängen in einer Kette hintereinander. Ein gescheiterter Auftrag würde alle
+ * wartenden mit in den Abgrund reißen — deshalb endet jeder Auftrag als Erfolg und trägt einen
+ * Fehler als Ausgabe `fehler` weiter. Nur ein Netzproblem wird noch einmal versucht.
+ */
+class FrageWorker(context: Context, parameter: WorkerParameters) : CoroutineWorker(context, parameter) {
+
+    override suspend fun getForegroundInfo(): ForegroundInfo = vordergrund("Deine Frage wird recherchiert …")
+
+    private fun vordergrund(text: String): ForegroundInfo {
+        val hinweis = Zeitplan.laufHinweis(applicationContext, text)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(Zeitplan.HINWEIS_FRAGE, hinweis, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            ForegroundInfo(Zeitplan.HINWEIS_FRAGE, hinweis)
+        }
+    }
+
+    override suspend fun doWork(): Result {
+        val app = applicationContext as NewsApplication
+        val frage = inputData.getString("frage").orEmpty()
+        runCatching { setForeground(vordergrund("Deine Frage wird recherchiert …")) }
+            .onFailure { KompassLog.warn("FrageWorker", "doWork", "Kein Vordergrund möglich", mapOf("grund" to it.message)) }
+        return try {
+            val (ausgabe, block) = app.recherche.beantworteFrage(frage) { stand ->
+                setProgress(workDataOf("text" to stand.text, "anteil" to stand.anteil))
+            }
+            Zeitplan.meldeFertig(applicationContext, "Deine Antwort ist da: ${block.titel}", block.meldungen.take(6).map { it.titel })
+            Result.success(workDataOf("ausgabeId" to ausgabe.id, "themaId" to block.themaId))
+        } catch (abbruch: CancellationException) {
+            throw abbruch
+        } catch (fehler: Exception) {
+            KompassLog.error("FrageWorker", "doWork", "Frage gescheitert", mapOf("grund" to fehler.message, "versuch" to runAttemptCount))
+            val netz = fehler !is CodexFehler || fehler.art == CodexFehlerArt.NETZ
+            if (netz && fehler !is IllegalStateException && runAttemptCount < 2) {
+                Result.retry()
+            } else {
+                Result.success(workDataOf("fehler" to (fehler.message ?: "Die Frage konnte nicht recherchiert werden.")))
             }
         }
     }

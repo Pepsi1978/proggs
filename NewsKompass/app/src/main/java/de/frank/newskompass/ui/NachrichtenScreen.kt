@@ -1,7 +1,11 @@
 package de.frank.newskompass.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
@@ -36,15 +40,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Newspaper
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -61,10 +68,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,6 +87,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -87,6 +100,7 @@ import de.frank.newskompass.data.model.Ausgabe
 import de.frank.newskompass.data.model.Block
 import de.frank.newskompass.data.model.DesignModus
 import de.frank.newskompass.data.model.Meldung
+import de.frank.newskompass.news.SprachStufe
 import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.tts.VorleseStufe
 import de.frank.newskompass.tts.VorleseZustand
@@ -97,6 +111,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @Composable
 fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
@@ -107,6 +122,27 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     val arbeit by remember { WorkManager.getInstance(kontext).getWorkInfosForUniqueWorkFlow(Zeitplan.LAUF) }
         .collectAsStateWithLifecycle(initialValue = emptyList())
     val lauf = arbeit.firstOrNull()
+    val sprache by app.sprachFrage.zustand.collectAsStateWithLifecycle()
+    val fragen by remember { WorkManager.getInstance(kontext).getWorkInfosForUniqueWorkFlow(Zeitplan.FRAGE) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    val offeneFragen = fragen.filter { !it.state.isFinished }
+    val gescheiterteFragen = fragen.filter { it.id in sprache.vorlesen && it.state.isFinished && it.outputData.getString("fehler") != null }
+    val mikrofonErlaubnis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erteilt ->
+        app.sprachFrage.erlaubnisErhalten(erteilt)
+    }
+
+    // Im Hintergrund schaltet Android das Mikrofon stumm — eine offene Aufnahme wird verworfen.
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lebenszyklus) {
+        val beobachter = LifecycleEventObserver { _, ereignis ->
+            if (ereignis == Lifecycle.Event.ON_STOP) app.sprachFrage.brichAufnahmeAb()
+        }
+        lebenszyklus.addObserver(beobachter)
+        onDispose {
+            lebenszyklus.removeObserver(beobachter)
+            app.sprachFrage.brichAufnahmeAb()
+        }
+    }
 
     var gewaehlteId by rememberSaveable { mutableStateOf<String?>(null) }
     val ausgabe = ausgaben.firstOrNull { it.id == gewaehlteId } ?: ausgaben.firstOrNull()
@@ -120,12 +156,48 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     }
     val dunkel = LocalIstDunkel.current
     val liste = rememberLazyListState()
+    val bildschirm = rememberCoroutineScope()
+
+    // Block, zu dem die Ansicht springen soll, sobald er in der gewählten Ausgabe steht.
+    var springeZu by remember { mutableStateOf<String?>(null) }
+
+    // Eine gesprochene Frage bekommt eine gesprochene Antwort: Ist ihr Block da, springt die
+    // Ansicht hin und er wird vorgelesen.
+    LaunchedEffect(fragen, sprache.vorlesen, ausgaben) {
+        fragen.filter { it.id in sprache.vorlesen && it.state.isFinished }.forEach { info ->
+            if (info.outputData.getString("fehler") != null) return@forEach
+            val ausgabeId = info.outputData.getString("ausgabeId")
+            val themaId = info.outputData.getString("themaId")
+            val antwort = ausgaben.firstOrNull { it.id == ausgabeId }
+            val block = antwort?.bloecke?.firstOrNull { it.themaId == themaId }
+            if (antwort == null || block == null) {
+                // Noch nicht im Speicher angekommen — der nächste Durchlauf findet ihn.
+                if (info.state != WorkInfo.State.SUCCEEDED || ausgabeId == null) app.sprachFrage.erledigt(info.id)
+                return@forEach
+            }
+            app.sprachFrage.erledigt(info.id)
+            gewaehlteId = antwort.id
+            springeZu = block.themaId
+            if (block.meldungen.isNotEmpty()) app.vorleser.lies("block-${block.themaId}", blockText(block))
+        }
+    }
+    LaunchedEffect(springeZu, bloecke, offeneFragen.size, gescheiterteFragen.size) {
+        val ziel = springeZu ?: return@LaunchedEffect
+        val position = bloecke.indexOfFirst { it.themaId == ziel }
+        if (position < 0) return@LaunchedEffect
+        // Muss der Reihenfolge der Einträge in der Liste unten folgen.
+        var index = 1 + (if (ausgaben.size > 1) 1 else 0) + 1 + offeneFragen.size + gescheiterteFragen.size
+        bloecke.take(position).forEach { index += 1 + (if (it.fehler != null) 1 else 0) + it.meldungen.size }
+        springeZu = null
+        // Eigener Bereich: Das Zurücksetzen von springeZu bricht diesen Effekt beim Aussetzen ab.
+        bildschirm.launch { liste.animateScrollToItem(index) }
+    }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         LazyColumn(
             state = liste,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 48.dp),
+            contentPadding = PaddingValues(bottom = 120.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item(key = "kopf") {
@@ -145,6 +217,21 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
             }
             item(key = "status") {
                 Spalte { LaufStatus(lauf, app.codex.istVerbunden, oeffneEinstellungen) }
+            }
+            items(offeneFragen, key = { "frage-${it.id}" }) { info ->
+                Spalte {
+                    FrageLaeuft(
+                        frage = info.tags.firstOrNull { it.startsWith(Zeitplan.FRAGE_ETIKETT) }?.removePrefix(Zeitplan.FRAGE_ETIKETT).orEmpty(),
+                        text = info.progress.getString("text")
+                            ?: if (info.state == WorkInfo.State.RUNNING) "Deine Frage wird recherchiert …" else "Wartet auf die Recherche …",
+                        anteil = info.progress.getFloat("anteil", 0f),
+                        laeuft = info.state == WorkInfo.State.RUNNING,
+                        verwerfen = { WorkManager.getInstance(kontext).cancelWorkById(info.id) },
+                    )
+                }
+            }
+            items(gescheiterteFragen, key = { "frage-fehler-${it.id}" }) { info ->
+                Spalte { Hinweis(info.outputData.getString("fehler").orEmpty(), "OK") { app.sprachFrage.erledigt(info.id) } }
             }
             if (ausgabe == null) {
                 item(key = "leer") {
@@ -166,6 +253,14 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                             block = block,
                             zustand = vorlesen,
                             vorlesen = { app.vorleser.schalteUm("block-${block.themaId}", blockText(block)) },
+                            entfernen = if (block.frage != null && ausgabe != null) {
+                                {
+                                    if (vorlesen.quelleId == "block-${block.themaId}" || block.meldungen.any { it.id == vorlesen.quelleId }) app.vorleser.stoppe()
+                                    app.bereich.launch { app.speicher.entferneBlock(ausgabe.id, block.themaId) }
+                                }
+                            } else {
+                                null
+                            },
                         )
                     }
                 }
@@ -188,7 +283,8 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
 
         AnimatedVisibility(
             visible = vorlesen.fehler.isNotBlank(),
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(16.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                .padding(start = 16.dp, end = 96.dp, top = 16.dp, bottom = 16.dp),
         ) {
             Surface(
                 shape = RoundedCornerShape(18.dp),
@@ -206,8 +302,132 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                 }
             }
         }
+
+        Column(
+            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 18.dp, bottom = 18.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            AnimatedVisibility(visible = sprache.meldung.isNotBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.inverseSurface,
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.padding(bottom = 12.dp).widthIn(max = 360.dp),
+                ) {
+                    Row(Modifier.padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            sprache.meldung,
+                            color = MaterialTheme.colorScheme.inverseOnSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        if (sprache.zuEinstellungen) {
+                            TextButton(onClick = {
+                                app.sprachFrage.loescheMeldung()
+                                oeffneEinstellungen()
+                            }) { Text("Einstellungen") }
+                        } else {
+                            TextButton(onClick = app.sprachFrage::loescheMeldung) { Text("OK") }
+                        }
+                    }
+                }
+            }
+            MikrofonKnopf(
+                stufe = sprache.stufe,
+                tippe = {
+                    val erlaubt = ContextCompat.checkSelfPermission(kontext, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                    app.sprachFrage.tippe(erlaubt) { mikrofonErlaubnis.launch(Manifest.permission.RECORD_AUDIO) }
+                },
+            )
+        }
     }
 }
+
+/**
+ * Der schwebende Mikrofon-Knopf unten rechts: tippen, Frage sprechen, noch einmal tippen.
+ * Während der Aufnahme pulsiert er rot, während Whisper zuhört, dreht sich ein Kreis.
+ */
+@Composable
+private fun MikrofonKnopf(stufe: SprachStufe, tippe: () -> Unit) {
+    val puls = rememberInfiniteTransition(label = "mikrofon")
+    val skala by puls.animateFloat(1f, 1.08f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "mikrofonSkala")
+    val flaeche = when (stufe) {
+        SprachStufe.NIMMT_AUF -> Brush.linearGradient(listOf(Color(0xFFEF4444), Color(0xFFB91C1C)))
+        else -> Brush.linearGradient(listOf(Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFFDB2777)))
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        AnimatedVisibility(visible = stufe != SprachStufe.BEREIT) {
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.inverseSurface,
+                shadowElevation = 6.dp,
+                modifier = Modifier.padding(end = 12.dp),
+            ) {
+                Text(
+                    if (stufe == SprachStufe.NIMMT_AUF) "Ich höre zu … tippen zum Senden" else "Ich verstehe …",
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
+        }
+        Surface(
+            onClick = tippe,
+            enabled = stufe != SprachStufe.VERSTEHT,
+            shape = CircleShape,
+            color = Color.Transparent,
+            shadowElevation = 10.dp,
+            modifier = Modifier.size(64.dp).scale(if (stufe == SprachStufe.NIMMT_AUF) skala else 1f),
+        ) {
+            Box(Modifier.fillMaxSize().background(flaeche), contentAlignment = Alignment.Center) {
+                when (stufe) {
+                    SprachStufe.BEREIT -> Icon(Icons.Rounded.Mic, "Frage einsprechen", tint = Color.White, modifier = Modifier.size(30.dp))
+                    SprachStufe.NIMMT_AUF -> Icon(Icons.Rounded.Stop, "Aufnahme beenden und Frage senden", tint = Color.White, modifier = Modifier.size(30.dp))
+                    SprachStufe.VERSTEHT -> CircularProgressIndicator(Modifier.size(26.dp), color = Color.White, strokeWidth = 3.dp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FrageLaeuft(frage: String, text: String, anteil: Float, laeuft: Boolean, verwerfen: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+    ) {
+        Column(Modifier.padding(start = 18.dp, end = 6.dp, top = 12.dp, bottom = 18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Mic, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Deine Frage", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    if (frage.isNotBlank()) {
+                        Text(
+                            "„$frage“",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                IconButton(onClick = verwerfen) { Icon(Icons.Rounded.Close, "Frage verwerfen", tint = MaterialTheme.colorScheme.onPrimaryContainer) }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(end = 12.dp))
+            Spacer(Modifier.height(10.dp))
+            val balken = Modifier.fillMaxWidth().padding(end = 12.dp).height(6.dp).clip(RoundedCornerShape(3.dp))
+            if (laeuft) {
+                LinearProgressIndicator(progress = { anteil.coerceIn(0.03f, 1f) }, modifier = balken)
+            } else {
+                LinearProgressIndicator(modifier = balken)
+            }
+        }
+    }
+}
+
 
 /** Auf dem aufgeklappten Fold bleibt der Text in angenehmer Zeilenlänge. */
 @Composable
@@ -416,29 +636,52 @@ private fun LeerZustand(angemeldet: Boolean, laeuft: Boolean, laden: () -> Unit,
     }
 }
 
+/**
+ * Kopf eines Blocks. Ein Frage-Block trägt statt der Nummer ein Mikrofon, darunter steht die
+ * Frage so, wie Whisper sie verstanden hat, und er lässt sich wieder entfernen.
+ */
 @Composable
-private fun BlockKopf(index: Int, block: Block, zustand: VorleseZustand, vorlesen: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(top = 30.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(blockVerlauf(index)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("${index + 1}", color = Color.White, style = MaterialTheme.typography.titleMedium)
+private fun BlockKopf(index: Int, block: Block, zustand: VorleseZustand, vorlesen: () -> Unit, entfernen: (() -> Unit)?) {
+    Column(Modifier.fillMaxWidth().padding(top = 30.dp, bottom = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(blockVerlauf(index)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (block.frage != null) {
+                    Icon(Icons.Rounded.Mic, "Deine Frage", tint = Color.White, modifier = Modifier.size(22.dp))
+                } else {
+                    Text("${index + 1}", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(block.titel, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    if (block.frage != null) "Deine Frage · ${block.meldungen.size} Meldungen" else "${block.meldungen.size} Meldungen",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (block.meldungen.isNotEmpty()) {
+                LautsprecherKnopf(zustand, "block-${block.themaId}", blockFarbe(index), vorlesen, rahmen = true)
+            }
         }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(block.titel, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(
-                "${block.meldungen.size} Meldungen",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (block.meldungen.isNotEmpty()) {
-            LautsprecherKnopf(zustand, "block-${block.themaId}", blockFarbe(index), vorlesen, rahmen = true)
+        if (block.frage != null) {
+            Row(Modifier.fillMaxWidth().padding(start = 50.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "„${block.frage}“",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (entfernen != null) {
+                    TextButton(onClick = entfernen) { Text("Entfernen", color = blockFarbe(index)) }
+                }
+            }
         }
     }
 }

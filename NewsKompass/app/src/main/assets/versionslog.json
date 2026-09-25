@@ -2,6 +2,7 @@
   "format": 1,
   "app": "NewsKompass",
   "eintraege": [
-    { "versionCode": 1, "versionName": "1.0.0", "stand": "25.09.2026, 13:22 Uhr", "notiz": "Erste Fassung: KI-News und eigene Themen zweimal täglich per Codex-Websuche, mit Bildern, Vorlesen und Hell-Dunkel-Modus" }
+    { "versionCode": 1, "versionName": "1.0.0", "stand": "25.09.2026, 13:22 Uhr", "notiz": "Erste Fassung: KI-News und eigene Themen zweimal täglich per Codex-Websuche, mit Bildern, Vorlesen und Hell-Dunkel-Modus" },
+    { "versionCode": 2, "versionName": "1.1.0", "stand": "25.09.2026, 18:03 Uhr", "notiz": "Schwebender Mikrofon-Knopf unten rechts: Frage einsprechen, Erkennung über Groq Whisper Large V3 Turbo mit vier Schichten gegen Stille-Halluzinationen, sofortige Codex-Recherche als temporärer Block unten in der aktuellen Ausgabe, Antwort wird vorgelesen" }
   ]
 }

@@ -10,6 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -27,6 +29,9 @@ class AusgabenSpeicher(context: Context) {
 
     private val _ausgaben = MutableStateFlow<List<Ausgabe>>(emptyList())
 
+    /** Zeitplan-Lauf und Frage schreiben aus verschiedenen Aufträgen — nie gleichzeitig. */
+    private val sperre = Mutex()
+
     /** Neueste zuerst. */
     val ausgaben: StateFlow<List<Ausgabe>> = _ausgaben.asStateFlow()
 
@@ -42,7 +47,28 @@ class AusgabenSpeicher(context: Context) {
         }
         .sortedByDescending { it.erstelltUm }
 
-    suspend fun speichere(ausgabe: Ausgabe) = withContext(Dispatchers.IO) {
+    suspend fun speichere(ausgabe: Ausgabe) = sperre.withLock { schreibe(ausgabe) }
+
+    /**
+     * Hängt einen Frage-Block unten an die neueste Ausgabe. Gibt es noch keine, entsteht eine
+     * kleine Ausgabe nur mit dieser Frage. Liefert die Ausgabe, in der der Block jetzt steht.
+     */
+    suspend fun haengeAn(block: Block, jetzt: Long): Ausgabe = sperre.withLock {
+        val ziel = withContext(Dispatchers.IO) { ladeAlle().firstOrNull() }
+        val neu = ziel?.copy(bloecke = ziel.bloecke + block)
+            ?: Ausgabe(id = "a$jetzt", erstelltUm = jetzt, slot = "Deine Fragen", bloecke = listOf(block))
+        schreibe(neu)
+        neu
+    }
+
+    /** Nimmt einen Frage-Block wieder heraus; bleibt die Ausgabe leer, verschwindet sie ganz. */
+    suspend fun entferneBlock(ausgabeId: String, themaId: String) = sperre.withLock {
+        val ausgabe = withContext(Dispatchers.IO) { ladeAlle().firstOrNull { it.id == ausgabeId } } ?: return@withLock
+        val rest = ausgabe.bloecke.filterNot { it.themaId == themaId }
+        if (rest.isEmpty()) loescheOhneSperre(ausgabeId) else schreibe(ausgabe.copy(bloecke = rest))
+    }
+
+    private suspend fun schreibe(ausgabe: Ausgabe) = withContext(Dispatchers.IO) {
         val ziel = File(ordner, "${ausgabe.id}.json")
         val zwischen = File(ordner, "${ausgabe.id}.tmp")
         zwischen.writeText(zuJson(ausgabe).toString())
@@ -54,7 +80,9 @@ class AusgabenSpeicher(context: Context) {
         _ausgaben.value = ladeAlle()
     }
 
-    suspend fun loesche(id: String) = withContext(Dispatchers.IO) {
+    suspend fun loesche(id: String) = sperre.withLock { loescheOhneSperre(id) }
+
+    private suspend fun loescheOhneSperre(id: String) = withContext(Dispatchers.IO) {
         File(ordner, "$id.json").delete()
         raeumeBilderAuf()
         _ausgaben.value = ladeAlle()
@@ -65,16 +93,23 @@ class AusgabenSpeicher(context: Context) {
         raeumeBilderAuf()
     }
 
-    /** Löscht jedes Bild, auf das keine gespeicherte Ausgabe mehr zeigt. */
+    /**
+     * Löscht jedes Bild, auf das keine gespeicherte Ausgabe mehr zeigt.
+     *
+     * Junge Bilder bleiben: Ein Zeitplan-Lauf und eine gesprochene Frage können gleichzeitig
+     * laufen, und die Bilder des einen liegen schon im Ordner, bevor seine Ausgabe gespeichert ist.
+     */
     private fun raeumeBilderAuf() {
         val benutzt = ladeAlle().flatMap { a -> a.bloecke.flatMap { b -> b.meldungen.mapNotNull { it.bildDatei } } }.toSet()
-        bilderOrdner.listFiles()?.forEach { if (it.name !in benutzt) it.delete() }
+        val grenze = System.currentTimeMillis() - BILD_SCHONFRIST_MS
+        bilderOrdner.listFiles()?.forEach { if (it.name !in benutzt && it.lastModified() < grenze) it.delete() }
     }
 
     fun bildDatei(name: String?): File? = name?.let { File(bilderOrdner, it) }?.takeIf(File::exists)
 
     companion object {
         const val BEHALTEN = 20
+        private const val BILD_SCHONFRIST_MS = 2 * 3_600_000L
 
         fun zuJson(a: Ausgabe): JSONObject = JSONObject()
             .put("id", a.id)
@@ -87,6 +122,7 @@ class AusgabenSpeicher(context: Context) {
                             .put("themaId", b.themaId)
                             .put("titel", b.titel)
                             .put("fehler", b.fehler ?: JSONObject.NULL)
+                            .put("frage", b.frage ?: JSONObject.NULL)
                             .put("meldungen", JSONArray().apply {
                                 b.meldungen.forEach { m ->
                                     put(
@@ -117,6 +153,7 @@ class AusgabenSpeicher(context: Context) {
                         themaId = b.optString("themaId"),
                         titel = b.optString("titel"),
                         fehler = b.optString("fehler").takeIf { !b.isNull("fehler") && it.isNotBlank() },
+                        frage = b.optString("frage").takeIf { !b.isNull("frage") && it.isNotBlank() },
                         meldungen = b.getJSONArray("meldungen").let { ml ->
                             (0 until ml.length()).map { k ->
                                 val m = ml.getJSONObject(k)

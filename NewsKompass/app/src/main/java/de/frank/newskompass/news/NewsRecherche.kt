@@ -22,6 +22,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -99,6 +100,49 @@ class NewsRecherche(
         ausgabe
     }
 
+    /**
+     * Beantwortet eine Frage, die über den Mikrofon-Knopf gesprochen wurde.
+     *
+     * Die Frage wirkt wie ein Thema, das nur für diesen Moment gilt: Sie landet in keiner
+     * Themenliste, sondern als eigener Block unten in der aktuellen Ausgabe. Liefert die
+     * Ausgabe und den angehängten Block.
+     */
+    suspend fun beantworteFrage(frage: String, beiFortschritt: suspend (LaufFortschritt) -> Unit): Pair<Ausgabe, Block> = withContext(Dispatchers.IO) {
+        val text = frage.trim()
+        if (text.isEmpty()) throw IllegalStateException("Die Frage ist leer.")
+        if (!codex.istVerbunden) throw CodexFehler(CodexFehlerArt.ANMELDUNG, "Bitte zuerst in den Einstellungen bei Codex anmelden.")
+
+        val stand = einstellungen.stand.value
+        val jetzt = System.currentTimeMillis()
+        val thema = Thema("frage-$jetzt", text)
+        // Was die aktuelle Ausgabe schon erzählt, soll der Frage-Block nicht wiederholen.
+        val schonDa = speicher.ausgaben.value.firstOrNull()?.bloecke.orEmpty().flatMap { b -> b.meldungen.map { it.titel } }
+        beiFortschritt(LaufFortschritt("Recherchiere deine Frage …", 0.05f))
+        val antwort = codex.frage(
+            anweisung = anweisung(jetzt, sprachFrage = true),
+            eingabe = buildString {
+                appendLine("Die gesprochene Frage des Nutzers:")
+                appendLine(text)
+                if (schonDa.isNotEmpty()) {
+                    appendLine()
+                    appendLine("Diese Meldungen stehen bereits in anderen Blöcken der aktuellen Ausgabe. Nimm sie nur auf, wenn sie die Frage direkt beantworten, und dann mit dem, was für die Frage wichtig ist:")
+                    schonDa.forEach { appendLine("- $it") }
+                }
+            },
+            modellId = stand.modellId,
+            denktiefe = stand.denktiefe,
+            werkzeuge = JSONArray().put(JSONObject().put("type", "web_search")),
+        )
+        val block = zerlege(thema, antwort.text, antwort.quellen).copy(frage = text)
+        beiFortschritt(LaufFortschritt("Suche Bilder für „${block.titel}“ …", 0.6f))
+        val kiBudget = intArrayOf(if (stand.bilderUnterstuetzt) stand.maxKiBilder else 0)
+        val fertig = if (stand.bildModus == BildModus.KEINE) block else bebildere(block, stand.bildModus, stand.modellId, kiBudget)
+
+        val ausgabe = speicher.haengeAn(fertig, jetzt)
+        beiFortschritt(LaufFortschritt("Fertig", 1f))
+        ausgabe to fertig
+    }
+
     // --- Recherche ---------------------------------------------------------------------------
 
     private suspend fun recherchiereThema(
@@ -134,14 +178,27 @@ class NewsRecherche(
         return zerlege(thema, antwort.text, antwort.quellen)
     }
 
-    private fun anweisung(jetzt: Long): String {
+    private fun anweisung(jetzt: Long, sprachFrage: Boolean = false): String {
         val datum = SimpleDateFormat("EEEE, d. MMMM yyyy", Locale.GERMANY).format(Date(jetzt))
         val uhr = SimpleDateFormat("HH:mm", Locale.GERMANY).format(Date(jetzt))
+        val auftrag = if (sprachFrage) {
+            "Der Nutzer hat dir gerade per Sprache eine Frage gestellt oder ein Thema genannt, zu dem er jetzt sofort das Aktuelle wissen will. " +
+                "Die Eingabe stammt aus einer Spracherkennung und kann Füllwörter, Versprecher oder falsch erkannte Wörter enthalten; erschließe, was gemeint ist. " +
+                "Recherchiere mit der Websuche gründlich und mehrfach die neuesten Nachrichten dazu, vorrangig aus den letzten 24 bis 48 Stunden. " +
+                "Fragt der Nutzer nach einem Stand, einer Entwicklung oder einem Hintergrund, beantworte genau das mit dem neuesten belegten Stand; ältere Fakten nur, wenn sie zum Verständnis nötig sind, und dann mit der Angabe, von wann sie stammen. " +
+                "Bevorzuge Primärquellen und seriöse Medien. Nimm nur belegte Fakten auf, keine Gerüchte ohne Kennzeichnung, keine Spekulation."
+        } else {
+            "Recherchiere mit der Websuche die wichtigsten Neuigkeiten zum Thema des Nutzers aus den letzten 24 Stunden, höchstens aus den letzten 48 Stunden. " +
+                "Suche gründlich und mehrfach, bevorzuge Primärquellen und seriöse Medien. Nimm nur belegte Fakten auf, keine Gerüchte ohne Kennzeichnung, keine Spekulation. " +
+                "Ältere Meldungen nur, wenn heute etwas Neues dazu passiert ist."
+        }
+        val blockTitel = if (sprachFrage) "kurzer deutscher Titel für die Frage" else "kurzer deutscher Titel für dieses Thema"
+        val briefing = if (sprachFrage) "das dem Leser vorgelesen wird" else "das zweimal am Tag erscheint und dem Leser vorgelesen wird"
         return """
-            Du bist Redakteur eines deutschsprachigen Nachrichtenbriefings, das zweimal am Tag erscheint und dem Leser vorgelesen wird.
+            Du bist Redakteur eines deutschsprachigen Nachrichtenbriefings, $briefing.
             Heute ist $datum, es ist $uhr Uhr deutscher Zeit.
 
-            Recherchiere mit der Websuche die wichtigsten Neuigkeiten zum Thema des Nutzers aus den letzten 24 Stunden, höchstens aus den letzten 48 Stunden. Suche gründlich und mehrfach, bevorzuge Primärquellen und seriöse Medien. Nimm nur belegte Fakten auf, keine Gerüchte ohne Kennzeichnung, keine Spekulation. Ältere Meldungen nur, wenn heute etwas Neues dazu passiert ist.
+            $auftrag
 
             Arbeite wie eine gute Nachrichtenredaktion: Sortiere nach Relevanz und Tragweite, nicht nach der Reihenfolge der Suchtreffer. Das Wichtigste des Tages steht oben. Fasse mehrere Berichte über dasselbe Ereignis zu einer Meldung zusammen. Liefere 4 bis 7 Meldungen; gibt es weniger wirklich Neues, lieber weniger als aufgefüllt. Jede Meldung ist eigenständig und behandelt genau ein Ereignis. Bei widersprüchlichen Angaben nenne, wer was sagt.
 
@@ -154,7 +211,7 @@ class NewsRecherche(
             - Die Überschrift ist kurz, höchstens 70 Zeichen, ohne Punkt am Ende.
 
             Antworte ausschließlich mit einem JSON-Objekt, ohne Text davor oder danach, in genau dieser Form:
-            {"blockTitel": "kurzer deutscher Titel für dieses Thema, höchstens drei Wörter",
+            {"blockTitel": "$blockTitel, höchstens drei Wörter",
              "meldungen": [{"titel": "...", "absaetze": ["...", "..."], "quellen": ["https://..."], "wann": "sprechbare Zeitangabe wie heute früh, gestern Abend oder am Mittwoch", "update": false, "bildIdee": "one English sentence describing a fitting editorial illustration, no text, no logos"}]}
             In "quellen" stehen die Adressen der Artikel, auf die sich die Meldung stützt, die beste zuerst. "update" ist true, wenn die Meldung eine Fortsetzung einer bereits bekannten Meldung ist.
         """.trimIndent()
@@ -195,7 +252,8 @@ class NewsRecherche(
         return Block(thema.id, titel, meldungen, if (meldungen.isEmpty()) "Zu diesem Thema kam heute nichts Neues." else null)
     }
 
-    private val bildIdeen = mutableMapOf<String, String>()
+    // Nebenläufig: Eine gesprochene Frage kann parallel zu einem Lauf aus dem Zeitplan recherchiert werden.
+    private val bildIdeen = ConcurrentHashMap<String, String>()
 
     // --- Bilder ------------------------------------------------------------------------------
 

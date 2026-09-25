@@ -5,6 +5,7 @@ import de.frank.newskompass.ai.CodexClient
 import de.frank.newskompass.data.AusgabenSpeicher
 import de.frank.newskompass.data.EinstellungenStore
 import de.frank.newskompass.news.NewsRecherche
+import de.frank.newskompass.news.SprachFrage
 import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.observability.KompassLog
 import de.frank.newskompass.tts.VorleseManager
@@ -24,6 +25,7 @@ class NewsApplication : Application() {
     val speicher by lazy { AusgabenSpeicher(this) }
     val recherche by lazy { NewsRecherche(codex, einstellungen, speicher) }
     val vorleser by lazy { VorleseManager(this, einstellungen) }
+    val sprachFrage by lazy { SprachFrage(this) }
 
     override fun onCreate() {
         super.onCreate()

@@ -217,6 +217,7 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
             item(key = "codex") { Breite { CodexBereich(app, activity, stand) } }
             item(key = "bilder") { Breite { BilderBereich(app, stand) } }
             item(key = "vorlesen") { Breite { VorleseBereich(app, stand) } }
+            item(key = "sprache") { Breite { SpracheingabeBereich(app, stand) } }
             item(key = "zeitplan") { Breite { ZeitplanBereich(app, stand) } }
             item(key = "design") { Breite { DesignBereich(app, stand) } }
             item(key = "version") {
@@ -617,6 +618,29 @@ private fun VorleseBereich(app: NewsApplication, stand: EinstellungenStand) {
                 value = stand.sprechtempo,
                 onValueChange = { app.einstellungen.setzeTempo((it * 20).toInt() / 20f) },
                 valueRange = 0.6f..1.6f,
+            )
+        }
+    }
+}
+
+// --- Spracheingabe ------------------------------------------------------------------------
+
+@Composable
+private fun SpracheingabeBereich(app: NewsApplication, stand: EinstellungenStand) {
+    Column {
+        Abschnitt(
+            "Spracheingabe",
+            "Der Mikrofon-Knopf unten rechts: tippen, Frage sprechen, noch einmal tippen. Erkannt wird mit Groq Whisper Large V3 Turbo, " +
+                "geschützt durch vier Schichten gegen Wörter, die Whisper in die Stille hineindichtet. Die Frage wirkt wie ein Thema nur für diesen Moment: " +
+                "Die Antwort erscheint als eigener Block unten in der aktuellen Ausgabe und wird vorgelesen. Deine Themenliste bleibt unverändert.",
+        )
+        Kachel {
+            SchluesselFeld("Groq-Schlüssel", stand.hatGroqSchluessel) { app.einstellungen.setzeGroqSchluessel(it) }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Den Schlüssel bekommst du unter console.groq.com.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
