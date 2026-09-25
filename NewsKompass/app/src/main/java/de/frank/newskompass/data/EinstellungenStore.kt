@@ -36,6 +36,7 @@ data class EinstellungenStand(
     val sprechtempo: Float,
     val hatGoogleSchluessel: Boolean,
     val hatAlibabaSchluessel: Boolean,
+    val hatGroqSchluessel: Boolean,
     val zeitplanAktiv: Boolean,
 )
 
@@ -67,6 +68,7 @@ class EinstellungenStore(context: Context) {
     val sprechtempo: Float get() = offen.getFloat(K_TEMPO, 1.0f)
     val googleSchluessel: String get() = geheim.getString(K_GOOGLE_KEY, null).orEmpty()
     val alibabaSchluessel: String get() = geheim.getString(K_ALIBABA_KEY, null).orEmpty()
+    val groqSchluessel: String get() = geheim.getString(K_GROQ_KEY, null).orEmpty()
 
     // --- Lesen -------------------------------------------------------------------------------
 
@@ -89,6 +91,7 @@ class EinstellungenStore(context: Context) {
             sprechtempo = sprechtempo,
             hatGoogleSchluessel = runCatching { googleSchluessel.isNotBlank() }.getOrDefault(false),
             hatAlibabaSchluessel = runCatching { alibabaSchluessel.isNotBlank() }.getOrDefault(false),
+            hatGroqSchluessel = runCatching { groqSchluessel.isNotBlank() }.getOrDefault(false),
             zeitplanAktiv = offen.getBoolean(K_ZEITPLAN, true),
         )
     }
@@ -182,6 +185,11 @@ class EinstellungenStore(context: Context) {
         _stand.value = lies()
     }
 
+    fun setzeGroqSchluessel(wert: String) {
+        geheim.edit().putString(K_GROQ_KEY, wert.trim()).apply()
+        _stand.value = lies()
+    }
+
     companion object {
         const val STANDARD_MODELL = "gpt-6-sol"
 
@@ -207,5 +215,6 @@ class EinstellungenStore(context: Context) {
         private const val K_ZEITPLAN = "zeitplan"
         private const val K_GOOGLE_KEY = "google_key"
         private const val K_ALIBABA_KEY = "alibaba_key"
+        private const val K_GROQ_KEY = "groq_key"
     }
 }

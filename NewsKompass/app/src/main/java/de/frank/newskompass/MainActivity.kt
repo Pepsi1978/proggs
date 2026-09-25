@@ -85,7 +85,8 @@ class MainActivity : ComponentActivity() {
             app.speicher.lade()
             if (!app.codex.istVerbunden) return@launch
             val letzter = Zeitplan.letzterTermin().toInstant().toEpochMilli()
-            val neueste = app.speicher.ausgaben.value.firstOrNull()?.erstelltUm ?: 0L
+            // Eine Ausgabe nur aus gesprochenen Fragen zählt nicht als Lauf aus dem Zeitplan.
+            val neueste = app.speicher.ausgaben.value.firstOrNull { it.istRegulaer }?.erstelltUm ?: 0L
             if (neueste < letzter) Zeitplan.starteLauf(this@MainActivity, manuell = false)
         }
     }

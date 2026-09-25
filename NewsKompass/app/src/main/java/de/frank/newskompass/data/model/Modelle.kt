@@ -70,6 +70,11 @@ data class Block(
     val titel: String,
     val meldungen: List<Meldung>,
     val fehler: String?,
+    /**
+     * Gesprochene Frage vom Mikrofon-Knopf. Solch ein Block ist ein Thema nur für diesen einen
+     * Moment: Er hängt unten an der Ausgabe und steht in keiner Themenliste.
+     */
+    val frage: String? = null,
 )
 
 data class Ausgabe(
@@ -77,7 +82,10 @@ data class Ausgabe(
     val erstelltUm: Long,
     val slot: String,
     val bloecke: List<Block>,
-)
+) {
+    /** Kam aus dem Zeitplan (oder per Hand) — nicht nur ein Behälter für gesprochene Fragen. */
+    val istRegulaer: Boolean get() = bloecke.isEmpty() || bloecke.any { it.frage == null }
+}
 
 object Denkstufen {
     fun label(stufe: String): String = when (stufe) {

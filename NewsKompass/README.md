@@ -10,11 +10,12 @@ Android-App (Kotlin, Jetpack Compose), die zweimal am Tag — um 5 und um 17 Uhr
 - **Vorlesen:** vorlesefreundliches Deutsch mit Umlauten, ohne Zeichen und Adressen. Lautsprecher an jeder Meldung und an jedem Block. Absatz-Pipeline aus KompassKern: Während ein Absatz spricht, werden die nächsten zwei schon synthetisiert. Anbieter Google Chirp 3 HD, Microsoft Edge oder die eigenen Alibaba-Stimmen.
 - **Modelle:** Live-Liste aus dem Codex-Konto (`/backend-api/codex/models`), Startbestand GPT-6 Astra/Sol/Luna, GPT-5.6 Sol/Terra/Luna, GPT-5.5; Denktiefe je Modell.
 - **Zeitplan:** ein exakter AlarmManager-Wecker, der sich selbst neu stellt; die Arbeit läuft als WorkManager-Vordergrundauftrag. Versäumte Läufe werden beim Öffnen nachgeholt.
+- **Mikrofon-Knopf:** schwebt unten rechts. Tippen, Frage sprechen („Was gibt es Neues aus der Weltpolitik?“), noch einmal tippen. Erkannt wird mit Groq Whisper Large V3 Turbo (Deutsch, Temperatur 0) und denselben vier Schichten gegen Stille-Halluzinationen wie in Perfect Moment: Pegelprüfung vor dem Hochladen, Konfidenz je Segment, Abgleich der Segmente mit dem gemessenen Ton, Floskel-Sperrliste. Die Frage wirkt wie ein Thema nur für diesen Moment: Sie landet in keiner Themenliste, sondern als eigener Block (mit Mikrofon statt Nummer) unten in der aktuellen Ausgabe; gibt es noch keine, entsteht eine kleine Ausgabe „Deine Fragen“. Die Antwort wird vorgelesen, sobald sie da ist, und der Block lässt sich per „Entfernen“ wieder herausnehmen. Mehrere Fragen stellen sich hintereinander an. Groq-Schlüssel unter Einstellungen → Spracheingabe.
 - Hell-, Dunkel- und Systemmodus.
 
 ## Herkunft
 
-`ai/CodexClient.kt`, `tts/*`, `network/`, `observability/` sind Kopien aus `KompassKern` (Paket umbenannt). Der Codex-Client ist um Werkzeuge, Quellen- und Bildsammlung sowie den Modellabruf erweitert.
+`ai/CodexClient.kt`, `tts/*`, `network/`, `observability/` sind Kopien aus `KompassKern` (Paket umbenannt). `audio/*` und `network/OkHttpShutdown.kt` sind Kopien aus `PerfectMoment` (Paket umbenannt), ebenso der Test `WhisperHallucinationFilterTest`. Der Codex-Client ist um Werkzeuge, Quellen- und Bildsammlung sowie den Modellabruf erweitert.
 
 ## Bauen
 

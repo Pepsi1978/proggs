@@ -71,4 +71,7 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
+
+    testImplementation(libs.junit)
+    testImplementation("org.json:json:20240303")
 }
