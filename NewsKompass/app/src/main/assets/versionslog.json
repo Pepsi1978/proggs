@@ -1,0 +1,7 @@
+{
+  "format": 1,
+  "app": "NewsKompass",
+  "eintraege": [
+    { "versionCode": 1, "versionName": "1.0.0", "stand": "25.09.2026, 13:22 Uhr", "notiz": "Erste Fassung: KI-News und eigene Themen zweimal täglich per Codex-Websuche, mit Bildern, Vorlesen und Hell-Dunkel-Modus" }
+  ]
+}
