@@ -418,7 +418,7 @@ final class OpenLauncherService {
         # schreibt nur dort, wo gar kein oder ein voellig abgelaufener Login liegt.
         LOGIN_SYNC="$HOME/proggs/OpenLauncher/Profiles/hooks/claude-login-sync.py"
         if [ -f "$LOGIN_SYNC" ]; then
-            python3 "$LOGIN_SYNC" >/dev/null 2>&1 || true
+            python3 "$LOGIN_SYNC" --startup >/dev/null 2>&1 || true
         fi
 
         claudeArgs=(--dangerously-skip-permissions --settings "$SETTINGS" --model \(Shell.singleQuoted(modelId)))

@@ -314,6 +314,15 @@ def identitaet_saeen(config_dir: Path, quelle: dict, dry_run: bool) -> str:
 
 def main() -> int:
     dry_run = "--dry-run" in sys.argv
+    startup = "--startup" in sys.argv and not IS_WINDOWS
+    start_ziel: Path | None = None
+    if startup:
+        aktuell = os.environ.get("CLAUDE_CONFIG_DIR", "").strip()
+        start_ziel = Path(aktuell).resolve() if aktuell else (HOME / ".claude").resolve()
+        # Ein bereits angemeldetes Profil braucht vor dem Claude-Start keinen globalen Abgleich.
+        # Gerade macOS-Schlüsselbund-Schreibzugriffe können sonst die sichtbare Shell blockieren.
+        if ist_brauchbar(token_lesen(start_ziel)) and identitaet_lesen(start_ziel).get("oauthAccount"):
+            return 0
     ziele = config_dirs()
 
     # Bestand einsammeln: je Ordner Login + Identität.
@@ -340,6 +349,8 @@ def main() -> int:
 
     berichte: list[str] = []
     for ordner, token, _ in bestand:
+        if start_ziel is not None and ordner != start_ziel:
+            continue
         if ordner == quell_ordner:
             berichte.append(f"{ordner.name}: Quelle")
             continue
