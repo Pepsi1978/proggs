@@ -43,10 +43,16 @@ GitHub-Secret vor und steht nur Bauvorgängen auf `main` zur Verfügung.
   Namensschema: `<Projekt>-<Version>-vc<Nummer>.apk`.
   Felder: `projekt, paket, versionCode, versionName, versionStand, apk, groesse, sha256, signaturSha256,
   erstelltAm, versionslog`.
-- Der Skill **`apk-update`** auf deinem PC erzeugt genau diese Dateien. **Lies ihn zuerst vollständig** und
-  bilde im Bau-Ablauf dieselbe Logik nach (welcher Gradle-Task, Versionsermittlung, `signaturSha256`,
-  `versionslog`, Upload-Reihenfolge: **erst APK, dann update.json**, damit UpdateStation nie eine update.json
-  ohne APK sieht). Weicht etwas von dieser Anleitung ab, gilt der Skill.
+- Der Skill **`apk-update`** liegt im Projekt unter
+  `OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/` (`SKILL.md`, `projekte.json`,
+  `scripts/apk-update.ps1`). Das Skript erzeugt genau diese Dateien und enthält die ganze Logik: Gradle-Task
+  und Variante pro App, Versionsentscheidung N/I/P, Signieren unsignierter APKs, Prüfung per aapt2/apksigner,
+  Aufräumen (5 neueste APKs bleiben). **Lies Skill und Skript zuerst vollständig.**
+  **Grundsatz: GitHub benutzt dasselbe Skript, statt es nachzubauen.** Es gibt nur eine Quelle der Wahrheit.
+  Das Skript hat dafür schon die Parameter `-ProggsWurzel`, `-UpdatesWurzel` und `-OhneGeraet`.
+- **Ausnahme BestJournalAndroid:** Das Release wird mit dem **Play-Store-Key** (`release.keystore`) signiert,
+  nicht mit dem geteilten Schlüssel. Diese App bleibt beim Cloud-Bau **ausgeschlossen**. Der Play-Store-Key
+  kommt nicht zu GitHub.
 
 ## 3. Voraussetzungen prüfen und Frank berichten
 
@@ -107,7 +113,8 @@ gh variable set ANDROID_SIGNATUR_SHA256 --repo pepsi1978/proggs --body "<fingera
 
 ## 6. Apps mit weiteren SK-Dateien
 
-`google-services-debug.json` für `BestJournalAndroid`, `BestJournalFrank` und `EntropieReductor`:
+`google-services-debug.json` für `BestJournalFrank` und `EntropieReductor` (`BestJournalAndroid` ist ohnehin
+ausgeschlossen, siehe Schritt 2):
 **Frank fragen**, ob diese Dateien ebenfalls als Secrets ins Environment sollen (Name z. B.
 `SK_<PROJEKT>_GOOGLE_SERVICES_DEBUG_JSON`, Base64). Wenn nein, schließt der Bau-Ablauf diese Apps aus und
 meldet das deutlich im Ergebnis. Prüfe mit einer Suche nach `syncSecretsFromSk` und `SK/`, ob weitere Apps
@@ -122,7 +129,14 @@ Anforderungen:
   **Kein** `pull_request`- und **kein** `pull_request_target`-Auslöser für diesen Ablauf.
 - **Welche Apps:** Ermittle geänderte oberste Ordner (`git diff --name-only ${{ github.event.before }} ${{ github.sha }}`),
   die eine `app/build.gradle.kts` enthalten. Baue jede davon in einer eigenen Matrix-Zeile.
-  Ausnahmen: `Designs/**` und die Apps ohne Secrets aus Schritt 6.
+  Ausnahmen: `Designs/**`, `BestJournalAndroid` und die Apps ohne Secrets aus Schritt 6.
+- **Rechner: `runs-on: windows-latest`.** Das Skript `apk-update.ps1` ist auf Windows gebaut (`gradlew.bat`,
+  `apksigner.bat`, `aapt2.exe`, `$env:USERPROFILE`, Backslash-Pfade). Auf dem Windows-Rechner von GitHub
+  läuft es praktisch unverändert. `pwsh` und das Android SDK (`ANDROID_HOME`) sind dort vorinstalliert.
+  Nachteil: Bei privaten Projekten zählen Windows-Minuten bei GitHub nach bisherigem Stand **doppelt** vom
+  Freikontingent. Prüfe die aktuellen Bedingungen und nenne Frank grob, wie viele Bauvorgänge im Monat
+  frei sind. Ein späterer Umbau auf `ubuntu-latest` (Skript plattformneutral machen) ist möglich, aber
+  **nicht** Teil dieses Auftrags.
 - **Job-Einstellungen:** `environment: android-signing`, `permissions: contents: read`,
   `concurrency: android-cloud-build-${{ matrix.projekt }}`.
 - **Bausteine nur von GitHub und Gradle**, jeweils auf den **Commit-SHA eingefroren** (aktuellen SHA
@@ -130,23 +144,42 @@ Anforderungen:
   Projekt verlangt, sonst 21 bzw. 17), `gradle/actions/setup-gradle`. **Keine** fremden Actions für Signieren,
   Drive oder „changed files“. Das erledigen eigene Shell-Schritte.
   (Hintergrund: 2025 wurde `tj-actions/changed-files` manipuliert und hat Secrets in Protokolle geschrieben.)
-- **Keystore-Schritt** (Secret nur hier als `env`, nie in `run:`-Text einsetzen):
-  ```bash
-  mkdir -p "$HOME/SK/Android" "$HOME/.android"
-  printf '%s' "$KEYSTORE_B64" | base64 -d > "$HOME/SK/Android/debug-shared.keystore"
-  cp "$HOME/SK/Android/debug-shared.keystore" "$HOME/.android/debug.keystore"
-  chmod 600 "$HOME/SK/Android/debug-shared.keystore" "$HOME/.android/debug.keystore"
+- **Git-Stand für das Skript vorbereiten:** Das Skript prüft `git status`, `git fetch`, `HEAD..@{u}` und liest
+  die Commit-Historie für die Versionsnotiz. Deshalb `actions/checkout` mit `fetch-depth: 0` und danach
+  `git checkout -B main origin/main` (Tracking auf `origin/main`), sonst schlägt `@{u}` fehl.
+- **Keystore-Schritt** (Secret nur hier als `env`, nie in `run:`-Text einsetzen, pwsh):
+  ```powershell
+  $sk = Join-Path $env:USERPROFILE 'SK\Android'; $ad = Join-Path $env:USERPROFILE '.android'
+  New-Item -ItemType Directory -Force -Path $sk, $ad | Out-Null
+  [IO.File]::WriteAllBytes("$sk\debug-shared.keystore", [Convert]::FromBase64String($env:KEYSTORE_B64))
+  Copy-Item "$sk\debug-shared.keystore" "$ad\debug.keystore" -Force
   ```
-- **Bauen:** im Projektordner `./gradlew <Task wie im apk-update-Skill> --no-daemon`. Das Android SDK ist auf
-  `ubuntu-latest` vorinstalliert. Fehlende Plattformen installiert Gradle selbst, sonst `sdkmanager`.
-- **Signatur prüfen:** `apksigner verify --print-certs` aus `$ANDROID_HOME/build-tools/<neueste>/`. Der
-  SHA-256 muss `vars.ANDROID_SIGNATUR_SHA256` entsprechen, sonst abbrechen und **nichts** hochladen.
-- **update.json erzeugen** wie im Skill `apk-update` (Format 1, alle Felder aus Schritt 2, `versionslog` aus
-  `app/src/main/assets/versionslog.json`, falls vorhanden). Werte mit `aapt2 dump badging` oder aus Gradle lesen.
-- **Upload** mit rclone (aus dem offiziellen Ubuntu-Paket oder offiziellem Release mit Prüfsummencheck):
-  Konfiguration aus `RCLONE_CONFIG` in eine Temp-Datei, dann
-  `rclone copyto <apk> "gdrive:Dokumente/Updates/<Projekt>/<Dateiname>"`, **danach** `update.json`.
-  Alte APKs im Ordner so behandeln, wie es der Skill tut.
+  (`USERPROFILE` und `user.home` zeigen auf dem Windows-Rechner auf denselben Ordner. Gradle und Skript
+  finden den Schlüssel also an den gewohnten Stellen.)
+- **Drive-Ordner des Projekts herunterholen:** rclone installieren (offizielles Release mit
+  Prüfsummencheck, oder `choco install rclone`), Konfiguration aus `RCLONE_CONFIG` in eine Temp-Datei,
+  dann `rclone copy "gdrive:Dokumente/Updates/<Projekt>" "$env:RUNNER_TEMP\Updates\<Projekt>"`.
+  Das Skript braucht die bisherige `update.json` und die APKs, um P zu bestimmen und aufzuräumen.
+- **Skript aufrufen:**
+  ```powershell
+  pwsh -NoProfile -File OpenLauncher\Profiles\ClaudeCode\standard\skills\apk-update\scripts\apk-update.ps1 `
+    -Projekt <Projekt> -ProggsWurzel $env:GITHUB_WORKSPACE -UpdatesWurzel "$env:RUNNER_TEMP\Updates" -OhneGeraet
+  ```
+  Ausgabe nach `APK_UPDATE_STATUS` auswerten:
+  - `ok` → hochladen (siehe unten).
+  - `already-current` → nichts hochladen, im Ergebnis vermerken, grün beenden.
+  - `vorbereitet` (Exit 2) → Die Cloud-Sitzung hat den Versionslog nicht ergänzt. **Nicht** selbst
+    committen. Rot beenden mit dem deutschen Hinweis: „Versionslog-Eintrag fehlt. In der Cloud-Sitzung
+    versionslog.json ergänzen, Pull Request neu mergen.“
+  - `fehler` → rot beenden, `APK_UPDATE_FEHLER` ins Ergebnis schreiben.
+  Falls das Skript für den CI-Lauf eine kleine Anpassung braucht (z. B. Pfad des Drive-Ordners, fehlendes
+  `adb`), dann ändere das **Skript selbst** rückwärtskompatibel und nimm keine Kopie. Die Nutzung am PC muss
+  danach genauso funktionieren wie vorher. Teste das lokal mit `-OhneGeraet` und Test-Wurzeln.
+- **Signatur zusätzlich prüfen:** Das `signaturSha256` in der neuen `update.json` muss
+  `vars.ANDROID_SIGNATUR_SHA256` entsprechen. Sonst abbrechen und **nichts** hochladen.
+- **Hochladen:** zuerst die neue APK mit `rclone copyto`, **danach** `update.json` (sonst sieht UpdateStation
+  kurz eine update.json ohne APK). Zum Schluss APKs, die das Skript lokal aufgeräumt hat, auch in Drive
+  löschen (`rclone delete` gezielt pro Datei, **kein** `rclone sync` auf den ganzen Ordner).
 - **Aufräumen:** letzter Schritt mit `if: always()` löscht Keystore- und rclone-Dateien. Der Rechner ist zwar
   ohnehin ein Wegwerf-Rechner, aber sicher ist sicher.
 - **Ergebnis:** In `$GITHUB_STEP_SUMMARY` auf Deutsch schreiben, welche App mit welcher Version hochgeladen
@@ -155,12 +188,13 @@ Anforderungen:
 
 ## 8. Regel für künftige Cloud-Sitzungen festhalten
 
-Ergänze in `ANDROID-APP-REFERENZ.md` (und, falls vorhanden, im Skill `apk-update`) einen kurzen Abschnitt
-„Bauen aus der Cloud“:
+Ergänze in `ANDROID-APP-REFERENZ.md` und in `apk-update/SKILL.md` einen kurzen Abschnitt
+„Bauen aus der Cloud“ (im Skill: Auslöser „apk update“ in einer Cloud-Sitzung → dieser Weg):
 
-- In einer Cloud-Sitzung gibt es keinen SK-Ordner. **Nicht versuchen, selbst zu signieren**, und **nie** nach
-  dem Keystore fragen.
-- Stattdessen: `versionCode`/`versionName` wie gewohnt erhöhen, `versionslog.json` pflegen, testen, soweit es
+- In einer Cloud-Sitzung gibt es keinen SK-Ordner. **Nicht versuchen, selbst zu signieren**, **nicht** das
+  Skript `apk-update.ps1` starten und **nie** nach dem Keystore fragen.
+- Stattdessen: einen neuen Eintrag unten in `app/src/main/assets/versionslog.json` anhängen
+  (versionCode + 1, wie im Skill beschrieben; `build.gradle.kts` liest die Version daraus), testen, soweit es
   ohne Signatur geht (Unit-Tests, `assembleDebug` mit Wegwerf-Schlüssel nur zur Kompilierprüfung, das
   Ergebnis **nie** hochladen), Pull Request öffnen und Frank sagen: „Zum Installieren den Pull Request mergen,
   danach baut GitHub und legt die APK in Google Drive.“
