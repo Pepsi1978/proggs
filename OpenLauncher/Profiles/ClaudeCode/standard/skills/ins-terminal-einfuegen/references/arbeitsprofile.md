@@ -21,14 +21,34 @@ Autorisierung noch Transport, Zielbindung, Eingabeschutz, Stopp oder die Abschlu
 **Herkunft des Startmodus:** Der Launcher hängt den Modustext bei Claude an die
 Sitzungs-CLAUDE.md im Launcher-Profilordner (`CLAUDE_CONFIG_DIR`), bei Codex CLI an die
 Profil-AGENTS.md im Arbeitsordner (Kopfzeile „# Open-Code-Profil:“, Modusblock ab „AKTIVER
-ARBEITSMODUS:“); OpenCode holt ihn über sein Modus-Plugin. Der Launcher schreibt diese
-Dateien bei jedem Start des Profils neu. **Bestätigt** ist ein Startmodus nur aus dem
+ARBEITSMODUS:“) und friert ihn dort beim Start ein. Der Launcher schreibt diese Dateien bei
+jedem Start des Profils neu. **Bestätigt** ist ein Startmodus nur aus dem
 aktuellen Startkontext der Zielsitzung: Die Datei trägt die Launcher-Kennung ihres Orts,
 ihr Modusblock stimmt nach Trimmen genau mit einer `Profiles/WorkModes/<id>.md` überein,
 und sie ist nicht jünger als der Start der Zielsitzung (etwa tmux `session_created` oder
 Prozessstart). Fehlt ein Blockanhang und passt `frei.md` (leer), ist der Startmodus `frei`.
-Bei OpenCode gilt der Modus nur als bestätigt, wenn die laufende Oberfläche ihn eindeutig
-zeigt. Eine bloße Überschrift „AKTIVER ARBEITSMODUS“ in einer beliebigen AGENTS.md genügt
+**OpenCode** friert nichts ein: Sein Modus-Plugin
+(`opencode-setup/plugins/work-mode.js`) bestimmt den Modus bei **jedem Modellaufruf** neu
+über die Zustandsdatei `~/.local/state/opencode/work-modes/<sessionID>.txt` (schreibt die
+TUI beim Umschalten; im Dateinamen ist jedes Zeichen der Sitzungs-ID außerhalb
+`[a-zA-Z0-9_-]` durch `_` ersetzt). Enthält sie einen gültigen Modus, gilt er; ist sie
+vorhanden, aber ungültig, gilt direkt der Plugin-Standard `schnell`, **nicht** der
+Env-Wert. Nur wenn sie fehlt, gilt `OPENLAUNCHER_WORK_MODE` aus dem Launcher-Startskript,
+bei fehlendem oder ungültigem Wert ebenfalls `schnell`. Der Modustext kommt jeweils frisch
+aus `WorkModes/<id>.md`. Bestätigt ist der OpenCode-Startmodus nur, wenn genau die
+Zielsitzung gebunden ist: ihre Sitzungs-ID, daraus abgebildet genau ihre Zustandsdatei,
+oder, solange diese fehlt, der Wert im Startskript genau dieser Sitzung
+(`%TEMP%\openlauncher-opencode-run-<GUID>.ps1`, vom Wrapper der Zielsitzung aufgerufen).
+Nie die jüngste oder irgendeine Zustandsdatei nehmen. Ohne diese Bindung unbestätigt,
+obwohl das Plugin womöglich den Block `schnell` einspeist: Auftrag und Zwischenstand
+nennen das. Weil der Modus live wechseln kann, bei OpenCode vor jedem Umsetzungsauftrag
+und an jedem sicheren Meilenstein die Zustandsdatei erneut lesen. Ein geänderter Wert ist
+ein Hinweis, noch keine Zieländerung: Nur wenn der Nutzer den Modus erkennbar umgeschaltet
+hat, um die Arbeitsweise zu ändern, ist das neue Steuerung und landet bei aktivem
+Zielvertrag wie jeder Profilwechsel in `profil`, `ziel_rev` und Steuerdatei-`rev`. Ein
+bloßer Dateiwechsel ohne belegte Nutzerabsicht bleibt Befund und wird bei Unklarheit
+kurz geklärt, bevor er das Profil ändert.
+Eine bloße Überschrift „AKTIVER ARBEITSMODUS“ in einer beliebigen AGENTS.md genügt
 nicht: Ohne bestätigte Launcher-Herkunft bleibt deren Text AGENTS.md-Regel auf Rang 1 und
 wird nicht eigenmächtig herabgestuft; bei Widerspruch zum Profil gilt er, und Auftrag und
 Zwischenstand nennen die Abweichung, vor folgenreichen Schritten kurz klären.

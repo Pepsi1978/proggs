@@ -2,8 +2,8 @@
 name: ins-terminal-einfuegen
 description: "Windows: „ins Terminal einfügen“, „bei Claude reinschreiben“, „an OpenCode schicken“ oder „abschicken“ in derselben laufenden CLI-Sitzung; bei Softwarearbeit Profil schnell, normal oder gründlich wählen. Sichere Zielbindung und Textübergabe für Claude, OpenCode und Codex CLI. Unter macOS ins-macos-terminal-einfuegen nutzen."
 metadata:
-  version: "1.3.1"
-  updated_at: "26.09.2026 11:46"
+  version: "1.3.2"
+  updated_at: "26.09.2026 11:55"
 ---
 # Ins Terminal einfügen
 
