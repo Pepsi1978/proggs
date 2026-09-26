@@ -1,6 +1,6 @@
 interface:
   display_name: "Ins Terminal einfügen"
   short_description: "Sprachaufträge mit der CLI zügig übergeben und prüfen"
-  default_prompt: "Nutze $ins-terminal-einfuegen, um meinen angegebenen Text in die geöffnete Terminal-Sitzung einzutragen und wie beauftragt abzusenden."
+  default_prompt: "Nutze $ins-terminal-einfuegen, um meinen angegebenen Text in die geöffnete Terminal-Sitzung einzutragen und wie beauftragt abzusenden. Programmieraufträge laufen im Arbeitsprofil normal, außer ich wähle eindeutig schnell oder gründlich; reiner Wissensaustausch bleibt profilfrei."
 policy:
   allow_implicit_invocation: true
