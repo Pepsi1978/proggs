@@ -176,9 +176,9 @@ jobs:
           pwsh -NoProfile -File $env:SKRIPT -Projekt $env:PROJEKT -ProggsWurzel $env:GITHUB_WORKSPACE `
             -UpdatesWurzel (Join-Path $env:RUNNER_TEMP 'Updates') -OhneGeraet 2>&1 | Tee-Object -FilePath $log
           $code = $LASTEXITCODE
-          $zeilen = Get-Content $log
-          $status = ($zeilen | Select-String '^APK_UPDATE_STATUS=(.+)$' | Select-Object -Last 1).Matches.Groups[1].Value
-          $fehler = ($zeilen | Select-String '^APK_UPDATE_FEHLER=(.+)$' | Select-Object -Last 1).Matches.Groups[1].Value
+          $zeilen = @(Get-Content $log)
+          $status = "$(@($zeilen | Where-Object { $_ -like 'APK_UPDATE_STATUS=*' })[-1])" -replace '^APK_UPDATE_STATUS=', ''
+          $fehler = "$(@($zeilen | Where-Object { $_ -like 'APK_UPDATE_FEHLER=*' })[-1])" -replace '^APK_UPDATE_FEHLER=', ''
           "status=$status" >> $env:GITHUB_OUTPUT
           switch ($status) {
             'ok' { exit 0 }
