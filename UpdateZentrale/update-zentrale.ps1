@@ -31,11 +31,23 @@ $helfer = @"
 Start-Sleep -Seconds 3
 Get-Process UpdateZentrale -ErrorAction SilentlyContinue | ForEach-Object { `$null = `$_.CloseMainWindow() }
 for (`$i = 0; `$i -lt 60 -and (Get-Process UpdateZentrale -ErrorAction SilentlyContinue); `$i++) { Start-Sleep -Milliseconds 500 }
+Get-Process UpdateZentrale -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 1
 robocopy '$zwischen' '$zielDir' /E /NFL /NDL /NJH /NJS | Out-Null
 Start-Process '$exe'
 "@
 $shell = (Get-Process -Id $PID).Path
-Start-Process -FilePath $shell -WindowStyle Hidden -ArgumentList '-NoProfile', '-Command', $helfer
+$helferArgs = @{ FilePath = $shell; WindowStyle = 'Hidden'; ArgumentList = @('-NoProfile', '-Command', $helfer) }
+
+# Laeuft die UpdateZentrale als Administrator, kann ein Helfer ohne Adminrechte ihr Fenster weder
+# schliessen (UIPI) noch den Prozess beenden -- die gesperrte exe bliebe stehen und das Update
+# verpuffte still. Der Pfad eines erhoehten Prozesses ist von hier aus nicht lesbar: daran erkannt.
+$istAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator)
+$laeuftErhoeht = @(Get-Process UpdateZentrale -ErrorAction SilentlyContinue | Where-Object { -not $_.Path }).Count -gt 0
+if ($laeuftErhoeht -and -not $istAdmin) { $helferArgs.Verb = 'RunAs' }
+
+Start-Process @helferArgs
 
 Write-Output 'Die UpdateZentrale startet sich in wenigen Sekunden neu.'
 Write-Output 'UPDATEZENTRALE_UPDATE_STATUS=started'
