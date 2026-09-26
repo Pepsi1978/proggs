@@ -40,6 +40,9 @@ data class EinstellungenStand(
     val hatAlibabaSchluessel: Boolean,
     val hatGroqSchluessel: Boolean,
     val zeitplanAktiv: Boolean,
+    /** Letzte vollständig geprüfte Archivsicherung (0 = noch keine) und ihre Kurzbeschreibung. */
+    val letzteSicherungUm: Long,
+    val letzteSicherungText: String,
 )
 
 class EinstellungenStore(context: Context) {
@@ -96,6 +99,8 @@ class EinstellungenStore(context: Context) {
             hatAlibabaSchluessel = runCatching { alibabaSchluessel.isNotBlank() }.getOrDefault(false),
             hatGroqSchluessel = runCatching { groqSchluessel.isNotBlank() }.getOrDefault(false),
             zeitplanAktiv = offen.getBoolean(K_ZEITPLAN, true),
+            letzteSicherungUm = offen.getLong(K_SICHERUNG_UM, 0L),
+            letzteSicherungText = offen.getString(K_SICHERUNG_TEXT, null).orEmpty(),
         )
     }
 
@@ -186,6 +191,10 @@ class EinstellungenStore(context: Context) {
     fun setzeQwenStimme(id: String) = schreibe { putString(K_QWEN_STIMME, id) }
     fun setzeTempo(tempo: Float) = schreibe { putFloat(K_TEMPO, tempo.coerceIn(0.6f, 1.6f)) }
     fun setzeZeitplan(aktiv: Boolean) = schreibe { putBoolean(K_ZEITPLAN, aktiv) }
+    fun merkeSicherung(zeit: Long, text: String) = schreibe {
+        putLong(K_SICHERUNG_UM, zeit)
+        putString(K_SICHERUNG_TEXT, text)
+    }
 
     /**
      * Zeitpunkt des letzten Laufs, der an Kontingent oder Anmeldung gescheitert ist. Solange er
@@ -238,6 +247,8 @@ class EinstellungenStore(context: Context) {
         private const val K_QWEN_STIMME = "qwen_stimme"
         private const val K_TEMPO = "tempo"
         private const val K_ZEITPLAN = "zeitplan"
+        private const val K_SICHERUNG_UM = "sicherung_um"
+        private const val K_SICHERUNG_TEXT = "sicherung_text"
         private const val K_GOOGLE_KEY = "google_key"
         private const val K_ALIBABA_KEY = "alibaba_key"
         private const val K_GROQ_KEY = "groq_key"

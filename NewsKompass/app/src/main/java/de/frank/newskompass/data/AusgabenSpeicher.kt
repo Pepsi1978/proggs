@@ -280,6 +280,9 @@ class AusgabenSpeicher(context: Context) {
         stand = stand,
     )
 
+    /** Die Originaldatei einer Ausgabe — nur zum Lesen, etwa für die Archivsicherung. */
+    fun ausgabeDatei(id: String): File = File(ordner, "$id.json")
+
     fun bildDatei(name: String?): File? = name?.let { File(bilderOrdner, it) }?.takeIf(File::exists)
 
     companion object {

@@ -3,8 +3,13 @@ package de.frank.newskompass.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.DocumentsContract
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -54,6 +59,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -92,6 +98,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import de.frank.module.draganddrop.ReorderAutoScroll
 import de.frank.module.draganddrop.reorderHandle
 import de.frank.module.draganddrop.reorderItem
@@ -110,6 +118,7 @@ import de.frank.newskompass.data.model.Geschlecht
 import de.frank.newskompass.data.model.Stimme
 import de.frank.newskompass.data.model.Thema
 import de.frank.newskompass.data.model.TtsAnbieter
+import de.frank.newskompass.news.SicherungWorker
 import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.tts.GeklonteStimme
 import de.frank.newskompass.tts.QwenStimmVerwaltung
@@ -234,6 +243,7 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
             item(key = "vorlesen") { Breite { VorleseBereich(app, stand) } }
             item(key = "sprache") { Breite { SpracheingabeBereich(app, stand) } }
             item(key = "zeitplan") { Breite { ZeitplanBereich(app, stand) } }
+            item(key = "sicherung") { Breite { SicherungBereich(app, stand) } }
             item(key = "design") { Breite { DesignBereich(app, stand) } }
             item(key = "version") {
                 Text(
@@ -814,6 +824,120 @@ private fun StimmenWahl(stimmen: List<Stimme>, gewaehlt: String, waehle: (String
 }
 
 // --- Zeitplan und Design -----------------------------------------------------------------
+
+/**
+ * Archivsicherung: ZIP mit allen Ausgaben und Bildern an einen frei gewählten Ort, und die
+ * Prüfung einer vorhandenen Sicherung als Trockenlauf. Erfolg zeigt die App erst nach dem
+ * vollständigen Zurücklesen; das Hochladen in eine Cloud bestätigt sie nicht.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SicherungBereich(app: NewsApplication, stand: EinstellungenStand) {
+    val kontext = LocalContext.current
+    val index by app.speicher.index.collectAsStateWithLifecycle()
+    val auftraege by remember { WorkManager.getInstance(kontext).getWorkInfosForUniqueWorkFlow(Zeitplan.SICHERUNG) }
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+    val auftrag = auftraege.firstOrNull()
+    val laeuft = auftrag != null && !auftrag.state.isFinished
+    var startFehler by remember { mutableStateOf<String?>(null) }
+
+    fun starte(uri: Uri?, art: String, schreiben: Boolean) {
+        if (uri == null) return
+        // Die Freigabe muss den Auftrag überdauern, auch wenn die Oberfläche geschlossen wird.
+        // Gibt der Anbieter sie nicht dauerhaft her, startet kein Auftrag, der später nicht lesen könnte.
+        val rechte = Intent.FLAG_GRANT_READ_URI_PERMISSION or (if (schreiben) Intent.FLAG_GRANT_WRITE_URI_PERMISSION else 0)
+        val erteilt = runCatching { kontext.contentResolver.takePersistableUriPermission(uri, rechte) }.isSuccess
+        if (!erteilt) {
+            if (schreiben) runCatching { DocumentsContract.deleteDocument(kontext.contentResolver, uri) }
+            startFehler = "Der gewählte Speicherort gibt der App keinen dauerhaften Zugriff. Bitte einen anderen Ort wählen, etwa den internen Speicher oder Google Drive."
+            return
+        }
+        startFehler = null
+        SicherungWorker.starte(kontext, uri, art)
+    }
+    val sichern = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        starte(uri, SicherungWorker.ART_EXPORT, schreiben = true)
+    }
+    val pruefen = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        starte(uri, SicherungWorker.ART_PRUEFEN, schreiben = false)
+    }
+
+    Column {
+        Abschnitt(
+            "Archivsicherung",
+            "Sichert alle gespeicherten Ausgaben und ihre Bilder als ZIP-Datei an einen Ort deiner Wahl, auch in Google Drive. " +
+                "Einstellungen, Schlüssel und Anmeldung sind nicht enthalten.",
+        )
+        Kachel {
+            if (stand.letzteSicherungUm > 0) {
+                Text("Letzte geprüfte Sicherung: ${SicherungWorker.datum(stand.letzteSicherungUm)}", style = MaterialTheme.typography.titleMedium)
+                Text(stand.letzteSicherungText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val neu = index.count { it.stand > stand.letzteSicherungUm }
+                if (neu > 0) {
+                    Text(
+                        if (neu == 1) "1 Ausgabe ist seitdem neu oder geändert." else "$neu Ausgaben sind seitdem neu oder geändert.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            } else {
+                Text("Noch keine geprüfte Sicherung.", style = MaterialTheme.typography.titleMedium)
+            }
+            Spacer(Modifier.height(12.dp))
+            if (laeuft) {
+                Text(auftrag?.progress?.getString(SicherungWorker.K_TEXT) ?: "Wird vorbereitet …", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { (auftrag?.progress?.getFloat(SicherungWorker.K_ANTEIL, 0f) ?: 0f).coerceIn(0.02f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(onClick = { WorkManager.getInstance(kontext).cancelUniqueWork(Zeitplan.SICHERUNG) }) { Text("Abbrechen") }
+            } else {
+                val ergebnis = when (auftrag?.state) {
+                    WorkInfo.State.SUCCEEDED -> auftrag.outputData.getString(SicherungWorker.K_TEXT)
+                    WorkInfo.State.FAILED -> auftrag.outputData.getString(SicherungWorker.K_FEHLER) ?: "Die Sicherung ist unerwartet gescheitert; lokal wurde nichts verändert."
+                    WorkInfo.State.CANCELLED -> if (SicherungWorker.ETIKETT + SicherungWorker.ART_PRUEFEN in auftrag.tags) {
+                        "Prüfung abgebrochen. Es wurde nichts verändert."
+                    } else {
+                        "Sicherung abgebrochen. Die unvollständige Datei wurde nach Möglichkeit entfernt; lokal wurde nichts verändert."
+                    }
+                    else -> null
+                }
+                val vollstaendig = auftrag?.state == WorkInfo.State.SUCCEEDED && auftrag.outputData.getBoolean(SicherungWorker.K_VOLLSTAENDIG, false)
+                val meldung = startFehler ?: ergebnis
+                if (meldung != null) {
+                    Text(
+                        meldung,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = when {
+                            startFehler != null -> MaterialTheme.colorScheme.error
+                            vollstaendig -> MaterialTheme.colorScheme.primary
+                            auftrag?.state == WorkInfo.State.SUCCEEDED -> MaterialTheme.colorScheme.secondary
+                            else -> MaterialTheme.colorScheme.error
+                        },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { runCatching { sichern.launch(sicherungsName()) } }, shape = RoundedCornerShape(50)) { Text("Archiv sichern") }
+                    OutlinedButton(
+                        onClick = { runCatching { pruefen.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) } },
+                        shape = RoundedCornerShape(50),
+                    ) { Text("Sicherung prüfen") }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Die App bestätigt nur die geschriebene und vollständig zurückgelesene Datei. Das Hochladen in eine Cloud übernimmt der gewählte Anbieter.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+private fun sicherungsName(): String =
+    "NewsKompass-Archiv-" + java.text.SimpleDateFormat("yyyy-MM-dd-HHmm", java.util.Locale.GERMANY).format(java.util.Date()) + ".zip"
 
 @Composable
 private fun ZeitplanBereich(app: NewsApplication, stand: EinstellungenStand) {

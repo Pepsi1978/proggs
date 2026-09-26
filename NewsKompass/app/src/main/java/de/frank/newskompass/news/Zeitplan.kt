@@ -54,6 +54,8 @@ object Zeitplan {
     private const val KANAL_FERTIG = "fertig"
     const val HINWEIS_LAUF = 17
     const val HINWEIS_FRAGE = 19
+    const val HINWEIS_SICHERUNG = 21
+    const val SICHERUNG = "archiv-sicherung"
     private const val HINWEIS_FERTIG = 18
 
     /** Nächster Termin nach [jetzt], frisch aus der Zeitzone gerechnet (Almanach A6). */
@@ -149,9 +151,9 @@ object Zeitplan {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    fun laufHinweis(context: Context, text: String) = NotificationCompat.Builder(context, KANAL_LAUF)
+    fun laufHinweis(context: Context, text: String, titel: String = "News Kompass recherchiert") = NotificationCompat.Builder(context, KANAL_LAUF)
         .setSmallIcon(android.R.drawable.stat_notify_sync)
-        .setContentTitle("News Kompass recherchiert")
+        .setContentTitle(titel)
         .setContentText(text)
         .setOngoing(true)
         .setOnlyAlertOnce(true)
