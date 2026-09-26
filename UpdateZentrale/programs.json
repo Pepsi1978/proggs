@@ -218,6 +218,28 @@
       "dialogWartezeitSekunden": 360,
       "hinweis": "Prozesse werden NIE von Hand beendet – das erledigt allein das Skript.",
       "akzent": "#22C55E"
+    },
+    {
+      "id": "updatezentrale",
+      "name": "UpdateZentrale",
+      "gruppe": "Eigene Werkzeuge",
+      "beschreibung": "Diese App selbst. Update über update-zentrale.ps1: bauen, schließen, neu starten.",
+      "art": "reposkript",
+      "repoOrdner": "UpdateZentrale",
+      "skript": "UpdateZentrale/update-zentrale.ps1",
+      "skriptArgumente": "",
+      "statusPraefix": "UPDATEZENTRALE_UPDATE_STATUS=",
+      "projektDatei": "UpdateZentrale/UpdateZentrale.csproj",
+      "exePfad": "%USERPROFILE%/proggs/UpdateZentrale/bin/Release/net8.0-windows10.0.19041.0/win-x64/UpdateZentrale.exe",
+      "prozesse": [
+        "UpdateZentrale"
+      ],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "dialogWartezeitSekunden": 360,
+      "hinweis": "Das Skript zeigt zuerst ein Ja/Nein-Fenster. Nach dem Neubau schließt sich die UpdateZentrale selbst und startet nach wenigen Sekunden in der neuen Fassung.",
+      "akzent": "#0EA5E9"
     }
   ]
 }

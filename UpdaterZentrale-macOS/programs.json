@@ -194,6 +194,29 @@
       "zeitlimitMinuten": 25,
       "hinweis": "Prozesse werden NIE von Hand beendet – das erledigt allein das Skript. Die Rückfrage stellt die Updater-Zentrale, weil das Mac-Skript keine eigene hat.",
       "akzent": "#22C55E"
+    },
+    {
+      "id": "updater-zentrale",
+      "name": "Updater-Zentrale macOS",
+      "gruppe": "Eigene Werkzeuge",
+      "beschreibung": "Diese App selbst. Update über update-zentrale.sh: bauen, nach /Applications legen, neu starten.",
+      "art": "reposkript",
+      "repoOrdner": "UpdaterZentrale-macOS",
+      "skript": "UpdaterZentrale-macOS/update-zentrale.sh",
+      "skriptArgumente": "",
+      "statusPraefix": "",
+      "projektDatei": "UpdaterZentrale-macOS/UpdaterZentrale/Info.plist",
+      "appPfad": "/Applications/Updater-Zentrale macOS.app",
+      "bundleId": "de.frank.UpdaterZentrale",
+      "exePfad": "/Applications/Updater-Zentrale macOS.app/Contents/MacOS/UpdaterZentrale",
+      "prozesse": [],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "dialogWartezeitSekunden": 300,
+      "zeitlimitMinuten": 10,
+      "hinweis": "Die App fragt vorher nach. Nach dem Neubau beendet sie sich selbst und startet nach wenigen Sekunden in der neuen Fassung.",
+      "akzent": "#0EA5E9"
     }
   ]
 }
