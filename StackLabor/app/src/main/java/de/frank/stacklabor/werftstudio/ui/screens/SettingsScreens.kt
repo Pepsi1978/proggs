@@ -127,6 +127,8 @@ fun SettingsScreen(state: StackLaborUiState, callbacks: StackLaborCallbacks) {
                     SettingsGroup("API-Schlüssel", Icons.Default.Key) {
                         SettingsItem("Alibaba (eigene Stimme)", state.qwenApiKeyLabel) { keyEntryId = "qwen-api-key" }
                         SettingsDivider()
+                        SettingsItem("Alibaba-Stimmen-ID", state.qwenVoiceIdLabel) { keyEntryId = "qwen-voice-id" }
+                        SettingsDivider()
                         SettingsItem("Google Chirp 3 HD", state.googleApiKeyLabel) { keyEntryId = "google-api-key" }
                         SettingsDivider()
                         SettingsItem("Groq Whisper", state.groqApiKeyLabel) { keyEntryId = "groq-api-key" }
@@ -336,14 +338,21 @@ private fun keyEntry(state: StackLaborUiState, id: String?): ApiKeyEntry? = when
         "Alibaba-Schlüssel",
         state.qwenApiKeyValue,
         "Der DashScope-Schlüssel des Model-Studio-Kontos, in dem deine eigene Stimme liegt. " +
-            "Leer lassen heißt: es gilt wieder der Schlüssel aus dem SK-Ordner.",
+            "Er bleibt nur auf diesem Gerät gespeichert.",
+    )
+    "qwen-voice-id" -> ApiKeyEntry(
+        id,
+        "Alibaba-Stimmen-ID",
+        state.qwenVoiceIdValue,
+        "Die Kennung deiner geklonten Stimme (beginnt mit qwen-tts-vc-). Alternativ unter " +
+            "„Eigene Stimmen aus dem Konto laden“ auswählen.",
     )
     "google-api-key" -> ApiKeyEntry(
         id,
         "Google-Schlüssel",
         state.googleApiKeyValue,
         "Der Google-Cloud-Schlüssel mit freigeschalteter Text-to-Speech-API (Chirp 3 HD). " +
-            "Leer lassen heißt: es gilt wieder der Schlüssel aus dem SK-Ordner.",
+            "Er bleibt nur auf diesem Gerät gespeichert.",
     )
     "groq-api-key" -> ApiKeyEntry(
         id,

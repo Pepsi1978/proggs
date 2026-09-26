@@ -194,9 +194,11 @@ data class StackLaborUiState(
     val clonedVoicesHint: String = "",
     val googleApiKeyValue: String = "",
     val qwenApiKeyValue: String = "",
+    val qwenVoiceIdValue: String = "",
     val groqApiKeyValue: String = "",
     val googleApiKeyLabel: String = "Nicht hinterlegt",
     val qwenApiKeyLabel: String = "Nicht hinterlegt",
+    val qwenVoiceIdLabel: String = "Nicht hinterlegt",
     val groqApiKeyLabel: String = "Nicht hinterlegt",
     val ttsSpeedLabel: String = "1,00×",
     val ttsPauseLabel: String = "Kurz",
@@ -269,7 +271,7 @@ sealed interface StackLaborEvent {
     data class SelectHistoryRun(val stackId: String, val runId: String) : StackLaborEvent
     data class SelectSetting(val settingId: String) : StackLaborEvent
     data class SelectSettingValue(val settingId: String, val value: String) : StackLaborEvent
-    /** Speichert einen selbst hinterlegten Schlüssel; leerer Wert holt den aus dem SK-Ordner zurück. */
+    /** Speichert einen selbst hinterlegten Schlüssel; leerer Wert löscht ihn. */
     data class SaveApiKey(val keyId: String, val value: String) : StackLaborEvent
     /** Holt die geklonten Alibaba-Stimmen frisch aus dem Konto. */
     data object LoadClonedVoices : StackLaborEvent

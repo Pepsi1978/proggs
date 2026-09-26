@@ -392,10 +392,12 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                 ttsVoiceOptions = voiceOptions(settings.ttsAnbieter),
                 googleApiKeyValue = settings.googleApiKey,
                 qwenApiKeyValue = settings.qwenApiKey,
+                qwenVoiceIdValue = settings.qwenStimmenId,
                 groqApiKeyValue = settings.groqApiKey,
-                googleApiKeyLabel = keyLabel(settings.googleApiKey, BuildConfig.GOOGLE_TTS_API_KEY),
-                qwenApiKeyLabel = keyLabel(settings.qwenApiKey, BuildConfig.QWEN_TTS_API_KEY),
-                groqApiKeyLabel = keyLabel(settings.groqApiKey, ""),
+                googleApiKeyLabel = keyLabel(settings.googleApiKey),
+                qwenApiKeyLabel = keyLabel(settings.qwenApiKey),
+                qwenVoiceIdLabel = keyLabel(settings.qwenStimmenId),
+                groqApiKeyLabel = keyLabel(settings.groqApiKey),
                 ttsSpeedLabel = speedLabel(settings.ttsTempo),
                 ttsPauseLabel = settings.absatzpause.name.lowercase().replaceFirstChar(Char::uppercase),
                 ttsTimeoutLabel = "${settings.abschaltzeitMinuten} Min.",
@@ -1457,10 +1459,10 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
                     },
                 )
                 if (provider == TtsAnbieter.GOOGLE_CLOUD && container.googleSchluesselAktiv().isBlank()) {
-                    message("Für Google Chirp 3 HD fehlt noch der API-Schlüssel.")
+                    message("Bitte in den Einstellungen den Google-API-Schlüssel eintragen.")
                 }
                 if (provider == TtsAnbieter.QWEN_CLONE) {
-                    if (container.qwenSchluesselAktiv().isBlank()) message("Für die eigene Stimme fehlt noch der Alibaba-Schlüssel.")
+                    if (container.qwenSchluesselAktiv().isBlank()) message("Bitte in den Einstellungen den Alibaba-Schlüssel (DashScope) eintragen.")
                     else loadClonedVoices()
                 }
             }
@@ -1529,12 +1531,19 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         when (keyId) {
             "google-api-key" -> {
                 container.settings.setzeGoogleApiKey(value)
-                message(if (value.isBlank()) "Google-Schlüssel gelöscht — es gilt wieder der aus dem SK-Ordner." else "Google-Schlüssel gespeichert")
+                message(if (value.isBlank()) "Google-Schlüssel gelöscht" else "Google-Schlüssel gespeichert")
             }
             "qwen-api-key" -> {
                 container.settings.setzeQwenApiKey(value)
-                message(if (value.isBlank()) "Alibaba-Schlüssel gelöscht — es gilt wieder der aus dem SK-Ordner." else "Alibaba-Schlüssel gespeichert")
+                message(if (value.isBlank()) "Alibaba-Schlüssel gelöscht" else "Alibaba-Schlüssel gespeichert")
                 if (value.isNotBlank()) loadClonedVoices()
+            }
+            "qwen-voice-id" -> {
+                container.settings.setzeQwenStimmenId(value)
+                if (settings.ttsAnbieter == TtsAnbieter.QWEN_CLONE && value.isNotBlank()) {
+                    container.settings.setzeTtsStimme(value.filterNot(Char::isWhitespace))
+                }
+                message(if (value.isBlank()) "Stimmen-ID gelöscht" else "Stimmen-ID gespeichert")
             }
             "groq-api-key" -> {
                 container.settings.setzeGroqApiKey(value)
@@ -1552,7 +1561,7 @@ class StackLaborViewModel(private val container: AppContainer) : ViewModel() {
         if (clonedVoicesJob?.isActive == true) return
         val key = container.qwenSchluesselAktiv()
         if (key.isBlank()) {
-            mutableState.update { it.copy(clonedVoicesHint = "Zuerst den Alibaba-Schlüssel hinterlegen.") }
+            mutableState.update { it.copy(clonedVoicesHint = "Bitte in den Einstellungen den Alibaba-Schlüssel (DashScope) eintragen.") }
             return
         }
         clonedVoicesJob = viewModelScope.launch {
@@ -1898,13 +1907,9 @@ private fun nextSpeed(current: Float): Float {
     return SPEED_STEPS[(index + 1).mod(SPEED_STEPS.size)]
 }
 
-/**
- * Was in der Zeile hinter dem Schlüssel steht: der eigene Eintrag gewinnt, sonst zählt der
- * beim Bauen aus dem SK-Ordner eingebackene.
- */
-private fun keyLabel(own: String, baked: String): String = when {
+/** Was in der Zeile hinter dem Schlüssel steht: der eigene Eintrag oder „Nicht hinterlegt“. */
+private fun keyLabel(own: String): String = when {
     own.isNotBlank() -> "Hinterlegt (${own.take(4)}…${own.takeLast(3)})"
-    baked.isNotBlank() -> "Aus dem SK-Ordner"
     else -> "Nicht hinterlegt"
 }
 

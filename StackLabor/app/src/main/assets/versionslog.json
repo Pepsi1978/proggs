@@ -4,6 +4,7 @@
   "eintraege": [
     { "versionCode": 56, "versionName": "0.3.38", "stand": "11.09.2026, 22:57 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
     { "versionCode": 57, "versionName": "0.3.39", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
-    { "versionCode": 58, "versionName": "0.3.40", "stand": "25.09.2026, 19:31 Uhr", "notiz": "Neues, modernes Design: ruhige Farben mit Indigo-Akzent, weiche Karten, klarere Schrift und übersichtlichere Startseite." }
+    { "versionCode": 58, "versionName": "0.3.40", "stand": "25.09.2026, 19:31 Uhr", "notiz": "Neues, modernes Design: ruhige Farben mit Indigo-Akzent, weiche Karten, klarere Schrift und übersichtlichere Startseite." },
+    { "versionCode": 59, "versionName": "0.3.41", "stand": "26.09.2026, 21:17 Uhr", "notiz": "API-Schlüssel für Google und Alibaba sowie die Alibaba-Stimmen-ID werden jetzt nur noch in den Einstellungen eingetragen und nicht mehr beim Bauen eingebaut." }
   ]
 }

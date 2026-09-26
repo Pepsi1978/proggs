@@ -36,8 +36,8 @@ data class AppEinstellungen(
     val abschaltzeitMinuten: Int = 30,
     val ttsVerbrauchZeichen: Long = 0,
     /**
-     * Schlüssel, die der Benutzer selbst in den Einstellungen hinterlegt. Leer heißt: es gilt
-     * der Schlüssel aus dem SK-Ordner, der beim Bauen in die App gelegt wurde.
+     * Schlüssel, die der Benutzer selbst in den Einstellungen hinterlegt. Leer heißt: nicht
+     * eingetragen, der betroffene Anbieter ist dann nicht nutzbar.
      */
     val googleApiKey: String = "",
     val qwenApiKey: String = "",
@@ -84,7 +84,7 @@ class EinstellungenStore(
     }
     suspend fun setzeLoeslichkeitFettZuerst(value: Boolean): Unit = schreibe(LOESLICHKEIT_FETT_ZUERST, value)
 
-    /** Leerer Wert bedeutet: wieder den Schlüssel aus dem SK-Ordner verwenden. */
+    /** Leerer Wert löscht den Schlüssel. */
     suspend fun setzeGoogleApiKey(value: String): Unit = schreibe(GOOGLE_API_KEY, value.trim())
     suspend fun setzeQwenApiKey(value: String): Unit = schreibe(QWEN_API_KEY, value.filterNot(Char::isWhitespace))
     suspend fun setzeQwenStimmenId(value: String): Unit = schreibe(QWEN_STIMMEN_ID, value.filterNot(Char::isWhitespace))

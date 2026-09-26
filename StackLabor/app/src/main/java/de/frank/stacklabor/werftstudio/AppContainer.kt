@@ -75,8 +75,8 @@ class AppContainer(context: Context) {
     val qwenVoiceDirectory = QwenVoiceDirectory()
 
     /**
-     * Was der Benutzer in den Einstellungen hinterlegt hat, gewinnt; ist dort nichts eingetragen,
-     * gilt weiter der Schlüssel aus dem SK-Ordner, der beim Bauen eingebacken wurde.
+     * Die Schlüssel kommen ausschließlich aus den Einstellungen der App. Ist dort nichts
+     * eingetragen, ist der jeweilige Anbieter nicht nutzbar.
      *
      * Die Werte werden hier gespiegelt, weil die TTS-Anbieter sie ohne Coroutine abfragen.
      */
@@ -87,11 +87,11 @@ class AppContainer(context: Context) {
     /** Der zuletzt gelesene Stand — die Einstellungs-Oberfläche zeigt ihn an. */
     fun schluessel(): TtsSchluessel = eigeneSchluessel
 
-    fun googleSchluesselAktiv(): String = eigeneSchluessel.google.ifBlank { BuildConfig.GOOGLE_TTS_API_KEY }
+    fun googleSchluesselAktiv(): String = eigeneSchluessel.google
 
-    fun qwenSchluesselAktiv(): String = eigeneSchluessel.qwen.ifBlank { BuildConfig.QWEN_TTS_API_KEY }
+    fun qwenSchluesselAktiv(): String = eigeneSchluessel.qwen
 
-    fun qwenStimmeAktiv(): String = eigeneSchluessel.qwenStimme.ifBlank { BuildConfig.QWEN_TTS_VOICE_ID }
+    fun qwenStimmeAktiv(): String = eigeneSchluessel.qwenStimme
 
     fun groqSchluesselAktiv(): String = eigeneSchluessel.groq
 

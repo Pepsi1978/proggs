@@ -37,7 +37,7 @@ class GoogleCloudTtsProvider(
         val key = cache.key(id, MODEL, request)
         cache.find(key, "mp3")?.let { return@withContext SynthesizedAudio(it, "audio/mpeg", true, 0) }
         val apiKey = credentials.googleApiKey()?.trim().orEmpty()
-        if (apiKey.isBlank()) throw TtsException("Google Cloud TTS ist nicht konfiguriert.")
+        if (apiKey.isBlank()) throw TtsException("Bitte in den Einstellungen den Google-API-Schlüssel eintragen.")
         val body = JSONObject()
             .put("input", JSONObject().put("text", request.text))
             .put(
@@ -90,7 +90,8 @@ class QwenTtsProvider(
         val key = cache.key(id, MODEL, normalizedRequest)
         cache.find(key, "wav")?.let { return@withContext SynthesizedAudio(it, "audio/wav", true, 0) }
         val apiKey = credentials.qwenApiKey()?.filterNot(Char::isWhitespace).orEmpty()
-        if (apiKey.isBlank() || voice.isBlank()) throw TtsException("Qwen-Stimmklon ist nicht konfiguriert.")
+        if (apiKey.isBlank()) throw TtsException("Bitte in den Einstellungen den Alibaba-Schlüssel (DashScope) eintragen.")
+        if (voice.isBlank()) throw TtsException("Bitte in den Einstellungen die Alibaba-Stimmen-ID eintragen.")
         val body = JSONObject()
             .put("model", MODEL)
             .put(
