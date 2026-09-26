@@ -39,7 +39,11 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.UnfoldMore
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -54,6 +58,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -97,6 +102,7 @@ import de.frank.newskompass.NewsApplication
 import de.frank.newskompass.ai.GeraeteAnmeldung
 import de.frank.newskompass.ai.geraeteCodeGruppen
 import de.frank.newskompass.data.EinstellungenStand
+import de.frank.newskompass.data.model.Ausfuehrlichkeit
 import de.frank.newskompass.data.model.BildModus
 import de.frank.newskompass.data.model.Denkstufen
 import de.frank.newskompass.data.model.DesignModus
@@ -113,6 +119,7 @@ import de.frank.newskompass.ui.theme.blockVerlauf
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -193,6 +200,13 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                         aendere = { text ->
                             app.einstellungen.setzeThemen(app.einstellungen.stand.value.themen.map { if (it.id == thema.id) it.copy(text = text) else it })
                         },
+                        aendereBereich = { min, max ->
+                            app.einstellungen.setzeThemen(
+                                app.einstellungen.stand.value.themen.map {
+                                    if (it.id == thema.id) it.copy(minMeldungen = min, maxMeldungen = max) else it
+                                },
+                            )
+                        },
                         loesche = { app.einstellungen.setzeThemen(app.einstellungen.stand.value.themen.filterNot { it.id == thema.id }) },
                     )
                 }
@@ -214,6 +228,7 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                     }
                 }
             }
+            item(key = "ausfuehrlichkeit") { Breite { AusfuehrlichkeitBereich(app, stand) } }
             item(key = "codex") { Breite { CodexBereich(app, activity, stand) } }
             item(key = "bilder") { Breite { BilderBereich(app, stand) } }
             item(key = "vorlesen") { Breite { VorleseBereich(app, stand) } }
@@ -270,9 +285,11 @@ private fun ThemenKarte(
     fokussieren: Boolean,
     loeschbar: Boolean,
     aendere: (String) -> Unit,
+    aendereBereich: (Int, Int) -> Unit,
     loesche: () -> Unit,
 ) {
     var text by remember(thema.id) { mutableStateOf(thema.text) }
+    var bereichOffen by remember(thema.id) { mutableStateOf(false) }
     val fokus = remember { FocusRequester() }
     LaunchedEffect(fokussieren) { if (fokussieren) runCatching { fokus.requestFocus() } }
     Surface(
@@ -283,42 +300,96 @@ private fun ThemenKarte(
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surface,
     ) {
-        Row(verticalAlignment = Alignment.Top) {
-            Box(
-                griff.padding(top = 10.dp, start = 6.dp).size(width = 40.dp, height = 52.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Rounded.DragIndicator, "Verschieben", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Box(
-                Modifier.padding(top = 22.dp).size(28.dp).clip(RoundedCornerShape(9.dp)).background(blockVerlauf(nummer)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("${nummer + 1}", color = Color.White, style = MaterialTheme.typography.labelLarge)
-            }
-            TextField(
-                value = text,
-                onValueChange = {
-                    text = it
-                    aendere(it)
-                },
-                placeholder = { Text("Worüber willst du informiert werden? Zum Beispiel: Fußball-Bundesliga, oder: Was gibt es Neues in der Raumfahrt?") },
-                modifier = Modifier.weight(1f).focusRequester(fokus),
-                textStyle = MaterialTheme.typography.bodyLarge,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
-            )
-            if (loeschbar) {
-                IconButton(onClick = loesche, modifier = Modifier.padding(top = 8.dp)) {
-                    Icon(Icons.Rounded.DeleteOutline, "Thema löschen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column {
+            Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    griff.padding(top = 10.dp, start = 6.dp).size(width = 40.dp, height = 52.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Rounded.DragIndicator, "Verschieben", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Box(
+                    Modifier.padding(top = 22.dp).size(28.dp).clip(RoundedCornerShape(9.dp)).background(blockVerlauf(nummer)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("${nummer + 1}", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                }
+                TextField(
+                    value = text,
+                    onValueChange = {
+                        text = it
+                        aendere(it)
+                    },
+                    placeholder = { Text("Worüber willst du informiert werden? Zum Beispiel: Fußball-Bundesliga, oder: Was gibt es Neues in der Raumfahrt?") },
+                    modifier = Modifier.weight(1f).focusRequester(fokus),
+                    textStyle = MaterialTheme.typography.bodyLarge,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
+                )
+                if (loeschbar) {
+                    IconButton(onClick = loesche, modifier = Modifier.padding(top = 8.dp)) {
+                        Icon(Icons.Rounded.DeleteOutline, "Thema löschen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
+            AssistChip(
+                onClick = { bereichOffen = true },
+                label = { Text(meldungsBereich(thema.minMeldungen, thema.maxMeldungen)) },
+                leadingIcon = { Icon(Icons.Rounded.Tune, null, Modifier.size(AssistChipDefaults.IconSize)) },
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.padding(start = 90.dp, bottom = 8.dp),
+            )
         }
     }
+    if (bereichOffen) {
+        MeldungsBereichDialog(
+            min = thema.minMeldungen,
+            max = thema.maxMeldungen,
+            schliessen = { bereichOffen = false },
+            uebernehmen = { min, max ->
+                bereichOffen = false
+                aendereBereich(min, max)
+            },
+        )
+    }
+}
+
+private fun meldungsBereich(min: Int, max: Int): String =
+    if (min == max) "Genau $max ${if (max == 1) "Meldung" else "Meldungen"}" else "$min–$max Meldungen"
+
+@Composable
+private fun MeldungsBereichDialog(min: Int, max: Int, schliessen: () -> Unit, uebernehmen: (Int, Int) -> Unit) {
+    var bereich by remember { mutableStateOf(min.toFloat()..max.toFloat()) }
+    val neuMin = bereich.start.roundToInt()
+    val neuMax = bereich.endInclusive.roundToInt()
+    AlertDialog(
+        onDismissRequest = schliessen,
+        title = { Text("Meldungen in diesem Block") },
+        text = {
+            Column {
+                Text(meldungsBereich(neuMin, neuMax), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+                RangeSlider(
+                    value = bereich,
+                    onValueChange = { bereich = it },
+                    valueRange = Thema.GRENZE_MIN.toFloat()..Thema.GRENZE_MAX.toFloat(),
+                    steps = Thema.GRENZE_MAX - Thema.GRENZE_MIN - 1,
+                )
+                Text(
+                    "Der Höchstwert gilt fest. Der Mindestwert ist ein Ziel: Gibt es in 48 Stunden nicht genug Neues, " +
+                        "füllt Codex nur mit belegten Meldungen der letzten sieben Tage auf und sagt, wann sie passiert sind — sonst bleibt der Block kürzer.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { uebernehmen(neuMin, neuMax) }) { Text("Übernehmen") } },
+        dismissButton = { TextButton(onClick = schliessen) { Text("Abbrechen") } },
+    )
 }
 
 // --- Codex -------------------------------------------------------------------------------
@@ -478,6 +549,33 @@ private fun kopiere(kontext: Context, text: String) {
 }
 
 // --- Bilder ------------------------------------------------------------------------------
+
+@Composable
+private fun AusfuehrlichkeitBereich(app: NewsApplication, stand: EinstellungenStand) {
+    Column {
+        Abschnitt("Ausführlichkeit", "Wie lang jede Meldung geschrieben und vorgelesen wird — für alle Themen und deine gesprochenen Fragen.")
+        Kachel {
+            Ausfuehrlichkeit.entries.forEach { stufe ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { app.einstellungen.setzeAusfuehrlichkeit(stufe) }.padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = stand.ausfuehrlichkeit == stufe, onClick = { app.einstellungen.setzeAusfuehrlichkeit(stufe) })
+                    Column {
+                        Text(stufe.label, style = MaterialTheme.typography.titleMedium)
+                        Text(stufe.erklaerung, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            Text(
+                "Gilt ab dem nächsten Lauf; ausführlichere Meldungen brauchen etwas länger.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
 
 @Composable
 private fun BilderBereich(app: NewsApplication, stand: EinstellungenStand) {

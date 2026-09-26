@@ -87,7 +87,10 @@ class MainActivity : ComponentActivity() {
             val letzter = Zeitplan.letzterTermin().toInstant().toEpochMilli()
             // Eine Ausgabe nur aus gesprochenen Fragen zählt nicht als Lauf aus dem Zeitplan.
             val neueste = app.speicher.ausgaben.value.firstOrNull { it.istRegulaer }?.erstelltUm ?: 0L
-            if (neueste < letzter) Zeitplan.starteLauf(this@MainActivity, manuell = false)
+            // Scheiterte seit dem letzten Termin schon ein Lauf an Kontingent oder Anmeldung, nicht
+            // bei jedem Öffnen erneut anstoßen — der nächste Termin oder ein Tipp auf Aktualisieren holt es nach.
+            val gesperrt = app.einstellungen.harterFehlerUm >= letzter
+            if (neueste < letzter && !gesperrt) Zeitplan.starteLauf(this@MainActivity, manuell = false)
         }
     }
 

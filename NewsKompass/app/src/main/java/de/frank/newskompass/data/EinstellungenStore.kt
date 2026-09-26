@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import de.frank.newskompass.ai.CodexModell
+import de.frank.newskompass.data.model.Ausfuehrlichkeit
 import de.frank.newskompass.data.model.BildModus
 import de.frank.newskompass.data.model.Denkstufen
 import de.frank.newskompass.data.model.DesignModus
@@ -26,6 +27,7 @@ data class EinstellungenStand(
     val denktiefe: String,
     val modelle: List<CodexModell>,
     val bildModus: BildModus,
+    val ausfuehrlichkeit: Ausfuehrlichkeit,
     val maxKiBilder: Int,
     val bilderUnterstuetzt: Boolean,
     val design: DesignModus,
@@ -81,6 +83,7 @@ class EinstellungenStore(context: Context) {
             denktiefe = offen.getString(K_DENKTIEFE, null) ?: "medium",
             modelle = modelle,
             bildModus = BildModus.fromId(offen.getString(K_BILDMODUS, null)),
+            ausfuehrlichkeit = Ausfuehrlichkeit.fromId(offen.getString(K_AUSFUEHRLICHKEIT, null)),
             maxKiBilder = offen.getInt(K_MAX_KI, 8),
             bilderUnterstuetzt = offen.getBoolean(K_BILDER_OK, true),
             design = DesignModus.fromId(offen.getString(K_DESIGN, null)),
@@ -102,7 +105,13 @@ class EinstellungenStore(context: Context) {
             val liste = JSONArray(roh)
             (0 until liste.length()).map {
                 val eintrag = liste.getJSONObject(it)
-                Thema(eintrag.getString("id"), eintrag.optString("text"))
+                // Ältere Einträge kennen nur id und text — sie bekommen den bisherigen Rahmen 4 bis 7.
+                Thema(
+                    eintrag.getString("id"),
+                    eintrag.optString("text"),
+                    eintrag.optInt("min", Thema.STANDARD_MIN),
+                    eintrag.optInt("max", Thema.STANDARD_MAX),
+                ).normiert()
             }
         }.getOrElse {
             KompassLog.warn("Einstellungen", "leseThemen", "Themenliste unlesbar", mapOf("grund" to it.message))
@@ -136,7 +145,9 @@ class EinstellungenStore(context: Context) {
 
     fun setzeThemen(themen: List<Thema>) = schreibe {
         val liste = JSONArray()
-        themen.forEach { liste.put(JSONObject().put("id", it.id).put("text", it.text)) }
+        themen.map(Thema::normiert).forEach {
+            liste.put(JSONObject().put("id", it.id).put("text", it.text).put("min", it.minMeldungen).put("max", it.maxMeldungen))
+        }
         putString(K_THEMEN, liste.toString())
     }
 
@@ -165,6 +176,7 @@ class EinstellungenStore(context: Context) {
     }
 
     fun setzeBildModus(modus: BildModus) = schreibe { putString(K_BILDMODUS, modus.id) }
+    fun setzeAusfuehrlichkeit(stufe: Ausfuehrlichkeit) = schreibe { putString(K_AUSFUEHRLICHKEIT, stufe.id) }
     fun setzeMaxKiBilder(anzahl: Int) = schreibe { putInt(K_MAX_KI, anzahl.coerceIn(0, 30)) }
     fun setzeBilderUnterstuetzt(ja: Boolean) = schreibe { putBoolean(K_BILDER_OK, ja) }
     fun setzeDesign(modus: DesignModus) = schreibe { putString(K_DESIGN, modus.id) }
@@ -174,6 +186,17 @@ class EinstellungenStore(context: Context) {
     fun setzeQwenStimme(id: String) = schreibe { putString(K_QWEN_STIMME, id) }
     fun setzeTempo(tempo: Float) = schreibe { putFloat(K_TEMPO, tempo.coerceIn(0.6f, 1.6f)) }
     fun setzeZeitplan(aktiv: Boolean) = schreibe { putBoolean(K_ZEITPLAN, aktiv) }
+
+    /**
+     * Zeitpunkt des letzten Laufs, der an Kontingent oder Anmeldung gescheitert ist. Solange er
+     * nach dem letzten Termin liegt, holt der App-Start keinen Lauf nach — sonst würde jedes
+     * Öffnen einen neuen, genauso scheiternden Lauf anstoßen.
+     */
+    val harterFehlerUm: Long get() = offen.getLong(K_HARTER_FEHLER, 0L)
+
+    fun merkeHartenFehler(zeit: Long) {
+        offen.edit().putLong(K_HARTER_FEHLER, zeit).apply()
+    }
 
     fun setzeGoogleSchluessel(wert: String) {
         geheim.edit().putString(K_GOOGLE_KEY, wert.trim()).apply()
@@ -205,6 +228,8 @@ class EinstellungenStore(context: Context) {
         private const val K_MODELLE = "modelle_cache"
         private const val K_BILDMODUS = "bildmodus"
         private const val K_MAX_KI = "max_ki_bilder"
+        private const val K_AUSFUEHRLICHKEIT = "ausfuehrlichkeit"
+        private const val K_HARTER_FEHLER = "harter_fehler_um"
         private const val K_BILDER_OK = "bilder_unterstuetzt"
         private const val K_DESIGN = "design"
         private const val K_TTS = "tts_anbieter"

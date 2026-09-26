@@ -8,6 +8,7 @@ import de.frank.newskompass.ai.CodexFehler
 import de.frank.newskompass.ai.CodexFehlerArt
 import de.frank.newskompass.data.AusgabenSpeicher
 import de.frank.newskompass.data.EinstellungenStore
+import de.frank.newskompass.data.model.Ausfuehrlichkeit
 import de.frank.newskompass.data.model.Ausgabe
 import de.frank.newskompass.data.model.BildModus
 import de.frank.newskompass.data.model.Block
@@ -45,7 +46,9 @@ data class LaufFortschritt(val text: String, val anteil: Float)
  *
  * Die Themen laufen nacheinander, nie gleichzeitig — sonst läuft das Codex-Kontingent in
  * wenigen Sekunden gegen die Wand. Scheitert ein Thema, bekommt sein Block einen Hinweis;
- * die übrigen Blöcke erscheinen trotzdem.
+ * die übrigen Blöcke erscheinen trotzdem. Ist das Kontingent erschöpft oder die Anmeldung
+ * abgelaufen, bleiben die fertigen Blöcke erhalten und die übrigen Themen bekommen einen
+ * Hinweis, statt den ganzen Lauf zu verwerfen.
  */
 class NewsRecherche(
     private val codex: CodexClient,
@@ -73,20 +76,38 @@ class NewsRecherche(
         val bloecke = mutableListOf<Block>()
         val schritte = themen.size * 2
 
+        // Kontingent erschöpft oder Anmeldung abgelaufen: Weitere Anfragen scheitern genauso.
+        var harterFehler: CodexFehler? = null
+
         themen.forEachIndexed { nummer, thema ->
             val kurz = thema.text.take(40).let { if (thema.text.length > 40) "$it …" else it }
+            harterFehler?.let { fehler ->
+                bloecke += Block(thema.id, kurz, emptyList(), hinweisFuer(fehler))
+                return@forEachIndexed
+            }
             beiFortschritt(LaufFortschritt("Recherchiere Thema ${nummer + 1} von ${themen.size}: $kurz", (nummer * 2f) / schritte))
             val block = try {
-                recherchiereThema(thema, stand.modellId, stand.denktiefe, vorige, bloecke.flatMap { b -> b.meldungen.map { it.titel } }, jetzt)
+                recherchiereThema(thema, stand.modellId, stand.denktiefe, stand.ausfuehrlichkeit, vorige, bloecke.flatMap { b -> b.meldungen.map { it.titel } }, jetzt)
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
                 KompassLog.error("NewsRecherche", "laufe", "Thema gescheitert", mapOf("thema" to kurz, "grund" to fehler.message))
-                if (fehler is CodexFehler && fehler.art != CodexFehlerArt.NETZ) throw fehler
-                Block(thema.id, kurz, emptyList(), fehler.message ?: "Die Recherche ist gescheitert.")
+                if (fehler is CodexFehler && fehler.art != CodexFehlerArt.NETZ) {
+                    einstellungen.merkeHartenFehler(jetzt)
+                    // Noch nichts fertig: nichts speichern, damit keine leere Ausgabe eine alte verdrängt.
+                    if (bloecke.none { it.meldungen.isNotEmpty() }) throw fehler
+                    harterFehler = fehler
+                    Block(thema.id, kurz, emptyList(), hinweisFuer(fehler))
+                } else {
+                    Block(thema.id, kurz, emptyList(), fehler.message ?: "Die Recherche ist gescheitert.")
+                }
             }
-            beiFortschritt(LaufFortschritt("Suche Bilder für „${block.titel}“ …", (nummer * 2f + 1) / schritte))
-            bloecke += if (stand.bildModus == BildModus.KEINE) block else bebildere(block, stand.bildModus, stand.modellId, kiBudget)
+            if (block.meldungen.isEmpty() || stand.bildModus == BildModus.KEINE) {
+                bloecke += block
+            } else {
+                beiFortschritt(LaufFortschritt("Suche Bilder für „${block.titel}“ …", (nummer * 2f + 1) / schritte))
+                bloecke += bebildere(block, stand.bildModus, stand.modellId, kiBudget)
+            }
         }
 
         val ausgabe = Ausgabe(
@@ -119,7 +140,7 @@ class NewsRecherche(
         val schonDa = speicher.ausgaben.value.firstOrNull()?.bloecke.orEmpty().flatMap { b -> b.meldungen.map { it.titel } }
         beiFortschritt(LaufFortschritt("Recherchiere deine Frage …", 0.05f))
         val antwort = codex.frage(
-            anweisung = anweisung(jetzt, sprachFrage = true),
+            anweisung = anweisung(jetzt, Thema.FRAGE_MIN, Thema.FRAGE_MAX, stand.ausfuehrlichkeit, sprachFrage = true),
             eingabe = buildString {
                 appendLine("Die gesprochene Frage des Nutzers:")
                 appendLine(text)
@@ -133,7 +154,7 @@ class NewsRecherche(
             denktiefe = stand.denktiefe,
             werkzeuge = JSONArray().put(JSONObject().put("type", "web_search")),
         )
-        val block = zerlege(thema, antwort.text, antwort.quellen).copy(frage = text)
+        val block = zerlege(thema, antwort.text, antwort.quellen, Thema.FRAGE_MAX).copy(frage = text)
         beiFortschritt(LaufFortschritt("Suche Bilder für „${block.titel}“ …", 0.6f))
         val kiBudget = intArrayOf(if (stand.bilderUnterstuetzt) stand.maxKiBilder else 0)
         val fertig = if (stand.bildModus == BildModus.KEINE) block else bebildere(block, stand.bildModus, stand.modellId, kiBudget)
@@ -149,6 +170,7 @@ class NewsRecherche(
         thema: Thema,
         modellId: String,
         denktiefe: String,
+        ausfuehrlichkeit: Ausfuehrlichkeit,
         vorige: List<Ausgabe>,
         schonInDieserAusgabe: List<String>,
         jetzt: Long,
@@ -169,16 +191,28 @@ class NewsRecherche(
             }
         }
         val antwort = codex.frage(
-            anweisung = anweisung(jetzt),
+            anweisung = anweisung(jetzt, thema.minMeldungen, thema.maxMeldungen, ausfuehrlichkeit),
             eingabe = eingabe,
             modellId = modellId,
             denktiefe = denktiefe,
             werkzeuge = JSONArray().put(JSONObject().put("type", "web_search")),
         )
-        return zerlege(thema, antwort.text, antwort.quellen)
+        return zerlege(thema, antwort.text, antwort.quellen, thema.maxMeldungen)
     }
 
-    private fun anweisung(jetzt: Long, sprachFrage: Boolean = false): String {
+    private fun hinweisFuer(fehler: CodexFehler): String = when (fehler.art) {
+        CodexFehlerArt.KONTINGENT -> "Das Codex-Kontingent ist gerade erschöpft. Dieses Thema kommt mit dem nächsten Lauf."
+        CodexFehlerArt.ANMELDUNG -> "Die Codex-Anmeldung ist abgelaufen. Bitte in den Einstellungen neu anmelden; dieses Thema kommt dann mit dem nächsten Lauf."
+        CodexFehlerArt.NETZ -> fehler.message ?: "Die Recherche ist gescheitert."
+    }
+
+    private fun anweisung(
+        jetzt: Long,
+        minMeldungen: Int,
+        maxMeldungen: Int,
+        ausfuehrlichkeit: Ausfuehrlichkeit,
+        sprachFrage: Boolean = false,
+    ): String {
         val datum = SimpleDateFormat("EEEE, d. MMMM yyyy", Locale.GERMANY).format(Date(jetzt))
         val uhr = SimpleDateFormat("HH:mm", Locale.GERMANY).format(Date(jetzt))
         val auftrag = if (sprachFrage) {
@@ -190,7 +224,16 @@ class NewsRecherche(
         } else {
             "Recherchiere mit der Websuche die wichtigsten Neuigkeiten zum Thema des Nutzers aus den letzten 24 Stunden, höchstens aus den letzten 48 Stunden. " +
                 "Suche gründlich und mehrfach, bevorzuge Primärquellen und seriöse Medien. Nimm nur belegte Fakten auf, keine Gerüchte ohne Kennzeichnung, keine Spekulation. " +
-                "Ältere Meldungen nur, wenn heute etwas Neues dazu passiert ist."
+                "Ältere Meldungen nur, wenn heute etwas Neues dazu passiert ist, oder nach der Regel zum Auffüllen unten."
+        }
+        val anzahl = when {
+            sprachFrage -> "Liefere $minMeldungen bis $maxMeldungen Meldungen, genau so viele, wie die Frage wirklich braucht; niemals mehr als $maxMeldungen."
+            else -> {
+                val spanne = if (minMeldungen == maxMeldungen) "genau $maxMeldungen Meldungen" else "mindestens $minMeldungen und höchstens $maxMeldungen Meldungen"
+                "Liefere $spanne; mehr als $maxMeldungen sind nicht erlaubt. " +
+                    "Gibt es aus den letzten 48 Stunden weniger als $minMeldungen wirklich neue, belegte Meldungen, darfst du mit relevanten, belegten Meldungen aus den letzten sieben Tagen auffüllen und nennst dann in \"wann\" ehrlich, wann es passiert ist, etwa „am Montag“ oder „vor fünf Tagen“. " +
+                    "Fülle niemals mit Erfundenem, mit Gerüchten, mit Wiederholungen oder mit Meldungen, die unten als bereits bekannt stehen; reicht es auch so nicht, liefere lieber weniger als $minMeldungen."
+            }
         }
         val blockTitel = if (sprachFrage) "kurzer deutscher Titel für die Frage" else "kurzer deutscher Titel für dieses Thema"
         val briefing = if (sprachFrage) "das dem Leser vorgelesen wird" else "das zweimal am Tag erscheint und dem Leser vorgelesen wird"
@@ -200,14 +243,14 @@ class NewsRecherche(
 
             $auftrag
 
-            Arbeite wie eine gute Nachrichtenredaktion: Sortiere nach Relevanz und Tragweite, nicht nach der Reihenfolge der Suchtreffer. Das Wichtigste des Tages steht oben. Fasse mehrere Berichte über dasselbe Ereignis zu einer Meldung zusammen. Liefere 4 bis 7 Meldungen; gibt es weniger wirklich Neues, lieber weniger als aufgefüllt. Jede Meldung ist eigenständig und behandelt genau ein Ereignis. Bei widersprüchlichen Angaben nenne, wer was sagt.
+            Arbeite wie eine gute Nachrichtenredaktion: Sortiere nach Relevanz und Tragweite, nicht nach der Reihenfolge der Suchtreffer. Das Wichtigste des Tages steht oben. Fasse mehrere Berichte über dasselbe Ereignis zu einer Meldung zusammen. $anzahl Jede Meldung ist eigenständig und behandelt genau ein Ereignis. Bei widersprüchlichen Angaben nenne, wer was sagt.
 
             So schreibst du, damit es sich gut vorlesen lässt:
             - Deutsch mit echten Umlauten und ß, niemals ae, oe, ue oder ss als Ersatz.
             - Ganze, klare Sätze in natürlicher Sprechsprache. Keine Aufzählungszeichen, kein Markdown, keine Emojis, keine Internetadressen, keine Quellenangaben in Klammern, keine Fußnoten.
             - Zahlen so, wie man sie spricht: „rund zwei Milliarden Dollar“, „fünf Prozent“, „am Dienstag“. Keine Zeichen wie %, €, $, &, / oder ~ im Text.
             - Abkürzungen nur, wenn man sie gesprochen versteht, etwa KI oder EU; sonst ausschreiben.
-            - Jede Meldung hat 2 bis 4 Absätze mit je 2 bis 4 Sätzen, jeder Absatz höchstens 500 Zeichen. Der erste Absatz sagt das Wichtigste, die weiteren erklären Hintergrund und Bedeutung.
+            - ${ausfuehrlichkeit.regel}
             - Die Überschrift ist kurz, höchstens 70 Zeichen, ohne Punkt am Ende.
 
             Antworte ausschließlich mit einem JSON-Objekt, ohne Text davor oder danach, in genau dieser Form:
@@ -217,7 +260,8 @@ class NewsRecherche(
         """.trimIndent()
     }
 
-    private fun zerlege(thema: Thema, text: String, suchQuellen: List<String>): Block {
+    /** [maxMeldungen] ist hart: Liefert Codex mehr, fällt der Rest weg — die wichtigsten stehen oben. */
+    private fun zerlege(thema: Thema, text: String, suchQuellen: List<String>, maxMeldungen: Int): Block {
         val json = runCatching { JSONObject(schneideJson(text)) }.getOrNull()
         if (json == null) {
             KompassLog.warn("NewsRecherche", "zerlege", "Antwort war kein JSON, nehme den Text roh", mapOf("zeichen" to text.length))
@@ -246,7 +290,10 @@ class NewsRecherche(
                 bildIstKi = false,
                 wann = m.optString("wann").trim(),
                 istUpdate = m.optBoolean("update"),
-            ).also { bildIdeen[it.id] = m.optString("bildIdee").ifBlank { it.titel } }
+            ) to m.optString("bildIdee")
+        }.take(maxMeldungen).map { (meldung, idee) ->
+            bildIdeen[meldung.id] = idee.ifBlank { meldung.titel }
+            meldung
         }
         val titel = json.optString("blockTitel").trim().ifBlank { thema.text.take(30) }
         return Block(thema.id, titel, meldungen, if (meldungen.isEmpty()) "Zu diesem Thema kam heute nichts Neues." else null)
