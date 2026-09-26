@@ -46,13 +46,19 @@ data class AusgabenEintrag(
  * Ein kleiner Index (`ausgaben-index.json`) hält die Kopfdaten aller Ausgaben; volle Ausgaben
  * werden erst geladen, wenn jemand sie anschaut, und bleiben in einem kleinen Zwischenspeicher.
  * Passt der Index nicht zu den Dateien oder ist er defekt, entsteht er neu aus den Dateien.
- * Ausgaben werden nie automatisch gelöscht — nur, wenn der Nutzer einen Frage-Block entfernt.
+ *
+ * Nichts wird automatisch gelöscht, weder Ausgaben noch Bilder — nur, wenn der Nutzer einen
+ * Frage-Block entfernt. Jede Datei wird über [SicheresSchreiben] geschrieben und geprüft. Eine
+ * unlesbare Ausgabe bleibt unangetastet liegen und erscheint im Archiv als beschädigt.
  */
 class AusgabenSpeicher(context: Context) {
 
     private val ordner = File(context.filesDir, "ausgaben").apply { mkdirs() }
     val bilderOrdner = File(context.filesDir, "bilder").apply { mkdirs() }
     private val indexDatei = File(context.filesDir, "ausgaben-index.json")
+
+    /** Abgeleitete Rückblicke abgeschlossener Monate — jederzeit aus den Originalen neu baubar. */
+    val rueckblickOrdner = File(context.filesDir, "rueckblicke")
 
     private val _index = MutableStateFlow<List<AusgabenEintrag>>(emptyList())
 
@@ -62,11 +68,19 @@ class AusgabenSpeicher(context: Context) {
     /** Zeitplan-Lauf und Frage schreiben aus verschiedenen Aufträgen — nie gleichzeitig. */
     private val sperre = Mutex()
 
-    /** Erst wenn der Index gegen die Dateien geprüft ist, darf anhand seiner aufgeräumt werden. */
+    /** Erst wenn der Index gegen die Dateien geprüft ist, gilt er als vollständig. */
     @Volatile private var geprueft = false
 
-    /** Dateien, die sich nicht lesen ließen — ihre Bilder sind unbekannt, also wird dann nicht aufgeräumt. */
-    @Volatile private var unlesbar: Set<String> = emptySet()
+    private val _beschaedigt = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Ausgaben, deren Datei sich nicht lesen ließ. Sie bleiben unverändert liegen. */
+    val beschaedigt: StateFlow<Set<String>> = _beschaedigt.asStateFlow()
+
+    private var unlesbar: Set<String>
+        get() = _beschaedigt.value
+        set(wert) {
+            _beschaedigt.value = wert
+        }
 
     private val zwischenspeicher = object : LinkedHashMap<String, Ausgabe>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Ausgabe>?) = size > ZWISCHENSPEICHER
@@ -79,11 +93,28 @@ class AusgabenSpeicher(context: Context) {
         if (!geprueft) sperre.withLock { withContext(Dispatchers.IO) { pruefeIndex(erzwingen = false) } }
     }
 
-    /** Lädt eine ganze Ausgabe; [merken] = false lässt den Zwischenspeicher für die Anzeige frei. */
+    /**
+     * Lädt eine ganze Ausgabe; [merken] = false lässt den Zwischenspeicher für die Anzeige frei.
+     * Ist die Datei da, aber unlesbar, gilt sie ab jetzt als beschädigt — die Datei bleibt, wie sie ist.
+     */
     suspend fun ausgabe(id: String, merken: Boolean = true): Ausgabe? {
         synchronized(zwischenspeicher) { zwischenspeicher[id] }?.let { return it }
-        return withContext(Dispatchers.IO) { leseDatei(id) }?.also { a ->
-            if (merken) synchronized(zwischenspeicher) { zwischenspeicher[id] = a }
+        val gelesen = withContext(Dispatchers.IO) { leseDatei(id) }
+        if (gelesen == null) {
+            if (withContext(Dispatchers.IO) { File(ordner, "$id.json").exists() }) markiereBeschaedigt(id)
+            return null
+        }
+        if (merken) synchronized(zwischenspeicher) { zwischenspeicher[id] = gelesen }
+        return gelesen
+    }
+
+    private suspend fun markiereBeschaedigt(id: String) = sperre.withLock {
+        withContext(Dispatchers.IO) {
+            if (id in unlesbar) return@withContext
+            KompassLog.warn("AusgabenSpeicher", "markiereBeschaedigt", "Ausgabe unlesbar, bleibt unverändert liegen", mapOf("id" to id))
+            unlesbar = unlesbar + id
+            synchronized(zwischenspeicher) { zwischenspeicher.remove(id) }
+            setzeIndex(_index.value.filterNot { it.id == id })
         }
     }
 
@@ -128,15 +159,14 @@ class AusgabenSpeicher(context: Context) {
         // Vor dem ersten Schreiben den Index prüfen, sonst würde ein unvollständiger Index gespeichert.
         pruefeIndex(erzwingen = false)
         val ziel = File(ordner, "${ausgabe.id}.json")
-        val zwischen = File(ordner, "${ausgabe.id}.tmp")
-        zwischen.writeText(zuJson(ausgabe).toString())
-        if (!zwischen.renameTo(ziel)) {
-            ziel.writeText(zwischen.readText())
-            zwischen.delete()
+        // Scheitert das Schreiben oder die Prüfung, bleibt die bisherige Datei unverändert und der Fehler geht nach oben.
+        SicheresSchreiben.schreibe(ziel, zuJson(ausgabe).toString()) { text ->
+            val gelesen = ausJson(JSONObject(text))
+            require(gelesen.id == ausgabe.id && gelesen.bloecke.size == ausgabe.bloecke.size) { "Ausgabe weicht nach dem Schreiben ab" }
         }
+        unlesbar = unlesbar - ausgabe.id
         synchronized(zwischenspeicher) { zwischenspeicher[ausgabe.id] = ausgabe }
         setzeIndex(_index.value.filterNot { it.id == ausgabe.id } + eintragAus(ausgabe, ziel.lastModified()))
-        raeumeBilderAuf()
     }
 
     suspend fun loesche(id: String) = sperre.withLock { loescheOhneSperre(id) }
@@ -146,7 +176,6 @@ class AusgabenSpeicher(context: Context) {
         File(ordner, "$id.json").delete()
         synchronized(zwischenspeicher) { zwischenspeicher.remove(id) }
         setzeIndex(_index.value.filterNot { it.id == id })
-        raeumeBilderAuf()
     }
 
     // --- Index ---------------------------------------------------------------------------------
@@ -201,12 +230,7 @@ class AusgabenSpeicher(context: Context) {
                 }
             })
         runCatching {
-            val zwischen = File(indexDatei.parentFile, "${indexDatei.name}.tmp")
-            zwischen.writeText(json.toString())
-            if (!zwischen.renameTo(indexDatei)) {
-                indexDatei.writeText(zwischen.readText())
-                zwischen.delete()
-            }
+            SicheresSchreiben.schreibe(indexDatei, json.toString()) { text -> JSONObject(text).getJSONArray("eintraege") }
         }.onFailure {
             // Kein Beinbruch: Beim nächsten Start passt der Index nicht und entsteht neu.
             KompassLog.warn("AusgabenSpeicher", "setzeIndex", "Index nicht geschrieben", mapOf("grund" to it.message))
@@ -256,25 +280,10 @@ class AusgabenSpeicher(context: Context) {
         stand = stand,
     )
 
-    /**
-     * Löscht jedes Bild, auf das keine gespeicherte Ausgabe mehr zeigt — nur mit geprüftem Index
-     * und nur, wenn jede Ausgabe lesbar war.
-     *
-     * Junge Bilder bleiben: Ein Zeitplan-Lauf und eine gesprochene Frage können gleichzeitig
-     * laufen, und die Bilder des einen liegen schon im Ordner, bevor seine Ausgabe gespeichert ist.
-     */
-    private fun raeumeBilderAuf() {
-        if (!geprueft || unlesbar.isNotEmpty()) return
-        val benutzt = _index.value.flatMap { it.bilder }.toSet()
-        val grenze = System.currentTimeMillis() - BILD_SCHONFRIST_MS
-        bilderOrdner.listFiles()?.forEach { if (it.name !in benutzt && it.lastModified() < grenze) it.delete() }
-    }
-
     fun bildDatei(name: String?): File? = name?.let { File(bilderOrdner, it) }?.takeIf(File::exists)
 
     companion object {
         private const val ZWISCHENSPEICHER = 8
-        private const val BILD_SCHONFRIST_MS = 2 * 3_600_000L
 
         fun zuJson(a: Ausgabe): JSONObject = JSONObject()
             .put("id", a.id)
@@ -338,6 +347,9 @@ class AusgabenSpeicher(context: Context) {
                 }
             },
         )
+
+        /** Entstehungszeit aus der Ausgabe-Nummer („a<Millisekunden>“) — auch für unlesbare Dateien. */
+        fun zeitAusId(id: String): Long? = id.removePrefix("a").toLongOrNull()
 
         fun tagVon(zeit: Long): LocalDate = Instant.ofEpochMilli(zeit).atZone(ZoneId.systemDefault()).toLocalDate()
     }

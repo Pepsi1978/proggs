@@ -3,6 +3,7 @@ package de.frank.newskompass.data
 import de.frank.newskompass.data.model.Ausgabe
 import de.frank.newskompass.data.model.Block
 import de.frank.newskompass.data.model.Meldung
+import de.frank.newskompass.observability.KompassLog
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -13,12 +14,17 @@ import kotlinx.coroutines.withContext
 /** Ein Kalendertag mit mindestens einer gespeicherten Ausgabe. */
 data class ArchivTag(
     val datum: LocalDate,
-    /** Ausgaben dieses Tages, neueste zuerst. */
+    /** Lesbare Ausgaben dieses Tages, neueste zuerst. */
     val ausgaben: List<AusgabenEintrag>,
+    /** Ausgaben dieses Tages, deren Datei sich nicht lesen ließ — sie liegen unverändert im Speicher. */
+    val beschaedigt: Int = 0,
 ) {
     val meldungen: Int get() = ausgaben.sumOf { it.meldungen }
     val fragen: Int get() = ausgaben.sumOf { it.fragen }
 }
+
+/** Ein Rückblick samt Hinweisen, etwa auf unlesbare Quellausgaben oder einen neu gebauten Cache. */
+data class RueckblickErgebnis(val ausgabe: Ausgabe, val hinweise: List<String>)
 
 /** Ein Monat, in dem tatsächlich etwas aufgezeichnet wurde. */
 data class ArchivMonat(
@@ -45,14 +51,23 @@ object Archiv {
 
     const val RUECKBLICK_PRAEFIX = "rueckblick-"
 
-    /** Tage der letzten [TAGE] Kalendertage, an denen wirklich etwas gespeichert ist, neueste zuerst. */
-    fun tage(index: List<AusgabenEintrag>, heute: LocalDate = LocalDate.now()): List<ArchivTag> {
+    /**
+     * Tage der letzten [TAGE] Kalendertage, an denen wirklich etwas gespeichert ist, neueste zuerst —
+     * auch Tage, deren Ausgaben nur beschädigt vorliegen, damit der Schaden sichtbar bleibt.
+     */
+    fun tage(index: List<AusgabenEintrag>, beschaedigt: Set<String>, heute: LocalDate = LocalDate.now()): List<ArchivTag> {
         val grenze = maxOf(heute.minusDays(TAGE - 1L), BEGINN)
-        return index.groupBy { it.tag }
-            .filterKeys { !it.isBefore(grenze) && !it.isAfter(heute) }
-            .map { (tag, liste) -> ArchivTag(tag, liste.sortedByDescending { it.erstelltUm }) }
+        val lesbar = index.groupBy { it.tag }
+        val kaputt = beschaedigteTage(beschaedigt)
+        return (lesbar.keys + kaputt.keys)
+            .filter { !it.isBefore(grenze) && !it.isAfter(heute) }
+            .map { tag -> ArchivTag(tag, lesbar[tag].orEmpty().sortedByDescending { it.erstelltUm }, kaputt[tag] ?: 0) }
             .sortedByDescending { it.datum }
     }
+
+    /** Anzahl beschädigter Ausgaben je Tag, aus der Zeit in ihrer Nummer. */
+    fun beschaedigteTage(beschaedigt: Set<String>): Map<LocalDate, Int> =
+        beschaedigt.mapNotNull { id -> AusgabenSpeicher.zeitAusId(id)?.let(AusgabenSpeicher::tagVon) }.groupingBy { it }.eachCount()
 
     /**
      * Alle Monate mit gespeicherten regulären Meldungen seit dem [BEGINN], neueste zuerst; der
@@ -88,7 +103,7 @@ object Archiv {
 
     // --- Monatsrückblick -------------------------------------------------------------------------
 
-    private val merker = HashMap<String, Ausgabe>()
+    private val merker = HashMap<String, RueckblickErgebnis>()
 
     /**
      * Baut den Rückblick eines Monats aus den gespeicherten Ausgaben: je Thema die [TOP_JE_THEMA]
@@ -98,13 +113,32 @@ object Archiv {
      * wie weit oben im Block im Mittel (×2, Codex sortiert jeden Block nach Relevanz) und aus wie
      * vielen verschiedenen Quellen (×1, höchstens 3). Gesprochene Fragen zählen nicht mit.
      */
-    suspend fun rueckblick(speicher: AusgabenSpeicher, m: ArchivMonat): Ausgabe = withContext(Dispatchers.Default) {
+    suspend fun rueckblick(speicher: AusgabenSpeicher, m: ArchivMonat): RueckblickErgebnis = withContext(Dispatchers.Default) {
         val schluessel = m.monat.toString() + m.ausgaben.joinToString { "${it.id}:${it.stand}" }
         synchronized(merker) { merker[schluessel] }?.let { return@withContext it }
 
+        // Abgeschlossene Monate kommen aus dem gespeicherten Rückblick, wenn er zu den Quellen passt.
+        val fingerabdruck = RueckblickCache.fingerabdruck(m.ausgaben)
+        val hinweise = mutableListOf<String>()
+        if (!m.laufend) {
+            val (gespeichert, zustand) = withContext(Dispatchers.IO) { RueckblickCache.lies(speicher.rueckblickOrdner, m.monat, fingerabdruck) }
+            if (gespeichert != null) {
+                val ergebnis = RueckblickErgebnis(gespeichert, emptyList())
+                synchronized(merker) { merker[schluessel] = ergebnis }
+                return@withContext ergebnis
+            }
+            if (zustand == RueckblickCache.Zustand.BESCHAEDIGT) {
+                hinweise += "Der gespeicherte Rückblick war beschädigt und wurde aus den Originalmeldungen neu berechnet."
+            }
+        }
+
         val funde = mutableListOf<Fund>()
+        var unlesbar = 0
         m.ausgaben.sortedBy { it.erstelltUm }.forEach { eintrag ->
-            val ausgabe = speicher.ausgabe(eintrag.id, merken = false) ?: return@forEach
+            val ausgabe = speicher.ausgabe(eintrag.id, merken = false) ?: run {
+                unlesbar++
+                return@forEach
+            }
             ausgabe.bloecke.filter { it.frage == null }.forEach { block ->
                 block.meldungen.forEachIndexed { rang, meldung ->
                     funde += Fund(block.themaId, block.titel, meldung, rang, block.meldungen.size, eintrag.tag, eintrag.erstelltUm)
@@ -132,11 +166,27 @@ object Archiv {
             slot = "$name · ${zeitraum(m)}",
             bloecke = bloecke,
         )
+        if (unlesbar > 0) {
+            hinweise += if (unlesbar == 1) {
+                "Eine gespeicherte Ausgabe dieses Monats ließ sich nicht lesen und fehlt im Rückblick; die Datei bleibt unverändert erhalten."
+            } else {
+                "$unlesbar gespeicherte Ausgaben dieses Monats ließen sich nicht lesen und fehlen im Rückblick; die Dateien bleiben unverändert erhalten."
+            }
+        }
+        // Nur vollständig gelesene, abgeschlossene Monate kommen in den Cache — sonst bliebe eine Lücke gespeichert.
+        if (!m.laufend && unlesbar == 0) {
+            withContext(Dispatchers.IO) {
+                runCatching { RueckblickCache.schreibe(speicher.rueckblickOrdner, m.monat, fingerabdruck, ausgabe) }.onFailure {
+                    KompassLog.warn("Archiv", "rueckblick", "Rückblick nicht gespeichert", mapOf("monat" to m.monat.toString(), "grund" to it.javaClass.simpleName))
+                }
+            }
+        }
+        val ergebnis = RueckblickErgebnis(ausgabe, hinweise)
         synchronized(merker) {
             merker.keys.removeAll { it.startsWith(m.monat.toString()) }
-            merker[schluessel] = ausgabe
+            merker[schluessel] = ergebnis
         }
-        ausgabe
+        ergebnis
     }
 
     private class Fund(

@@ -190,5 +190,6 @@ private fun tagInfo(tag: ArchivTag): String {
         add(if (tag.meldungen == 1) "1 Meldung" else "${tag.meldungen} Meldungen")
         if (teile.isNotEmpty()) add(teile.joinToString(", "))
         if (tag.fragen > 0) add(if (tag.fragen == 1) "1 Frage" else "${tag.fragen} Fragen")
+        if (tag.beschaedigt > 0) add("${tag.beschaedigt} beschädigt")
     }.joinToString(" · ")
 }

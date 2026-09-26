@@ -121,6 +121,7 @@ import de.frank.newskompass.ui.theme.LocalIstDunkel
 import de.frank.newskompass.ui.theme.blockFarbe
 import de.frank.newskompass.ui.theme.blockVerlauf
 import java.text.SimpleDateFormat
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
@@ -131,6 +132,7 @@ import kotlinx.coroutines.launch
 fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     val kontext = LocalContext.current
     val index by app.speicher.index.collectAsStateWithLifecycle()
+    val beschaedigt by app.speicher.beschaedigt.collectAsStateWithLifecycle()
     val stand by app.einstellungen.stand.collectAsStateWithLifecycle()
     val vorlesen by app.vorleser.zustand.collectAsStateWithLifecycle()
     val arbeit by remember { WorkManager.getInstance(kontext).getWorkInfosForUniqueWorkFlow(Zeitplan.LAUF) }
@@ -167,7 +169,8 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     }
 
     val heute = rememberHeute()
-    val archivTage = remember(index, heute) { Archiv.tage(index, heute) }
+    val archivTage = remember(index, beschaedigt, heute) { Archiv.tage(index, beschaedigt, heute) }
+    val schadenJeTag = remember(beschaedigt) { Archiv.beschaedigteTage(beschaedigt) }
     val archivMonate = remember(index, heute) { Archiv.monate(index, heute) }
     val gewaehlterEintrag: AusgabenEintrag? = when (auswahl) {
         Ansicht.Aktuell -> index.firstOrNull()
@@ -175,24 +178,34 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
         is Ansicht.Monat -> null
     }
     val monat = (auswahl as? Ansicht.Monat)?.let { a -> archivMonate.firstOrNull { it.monat == a.monat } }
+    // Der gezeigte Kalendertag — auch dann, wenn an ihm nur beschädigte Ausgaben liegen.
+    val angezeigterTag = (auswahl as? Ansicht.Tag)?.datum ?: if (monat == null) gewaehlterEintrag?.tag else null
+    val schadenAmTag = angezeigterTag?.let { schadenJeTag[it] } ?: 0
+    // Im Monatsrückblick fehlen beschädigte Ausgaben — das soll dort sichtbar sein.
+    val schadenImMonat = monat?.let { m -> schadenJeTag.filterKeys { YearMonth.from(it) == m.monat }.values.sum() } ?: 0
     // Gibt es den gewählten Tag oder Monat nicht mehr, zurück zu Aktuell.
-    LaunchedEffect(auswahl, index) {
-        val weg = (auswahl is Ansicht.Tag && gewaehlterEintrag == null) || (auswahl is Ansicht.Monat && monat == null)
+    LaunchedEffect(auswahl, index, schadenJeTag) {
+        val weg = (auswahl is Ansicht.Tag && gewaehlterEintrag == null && schadenAmTag == 0) || (auswahl is Ansicht.Monat && monat == null)
         if (index.isNotEmpty() && weg) zeige(Ansicht.Aktuell)
     }
 
     // Volle Ausgaben kommen erst beim Anschauen aus dem Speicher; der Rückblick wird aus dem Archiv gebaut.
     val ansichtsId = monat?.let { Archiv.RUECKBLICK_PRAEFIX + it.monat } ?: gewaehlterEintrag?.id
-    var geladen by remember { mutableStateOf<Ausgabe?>(null) }
+    var geladen by remember { mutableStateOf<Geladen?>(null) }
     LaunchedEffect(ansichtsId, gewaehlterEintrag?.stand, monat) {
+        val id = ansichtsId ?: return@LaunchedEffect
         geladen = when {
-            monat != null -> Archiv.rueckblick(app.speicher, monat)
-            gewaehlterEintrag != null -> app.speicher.ausgabe(gewaehlterEintrag.id)
+            monat != null -> Archiv.rueckblick(app.speicher, monat).let { Geladen(id, it.ausgabe, it.hinweise) }
+            gewaehlterEintrag != null -> Geladen(id, app.speicher.ausgabe(gewaehlterEintrag.id), emptyList())
             else -> null
         }
     }
-    val ausgabe = geladen?.takeIf { it.id == ansichtsId }
-    val laedt = ansichtsId != null && ausgabe == null
+    val passend = geladen?.takeIf { it.id == ansichtsId }
+    val ausgabe = passend?.ausgabe
+    val archivHinweise = passend?.hinweise.orEmpty()
+    val laedt = ansichtsId != null && passend == null
+    // Geladen, aber leer: Die Datei ließ sich nicht lesen. Sie bleibt, wie sie ist.
+    val ladeFehler = passend != null && passend.ausgabe == null
     val tagesAusgaben = if (monat != null) emptyList() else gewaehlterEintrag?.let { e -> index.filter { it.tag == e.tag } }.orEmpty()
 
     // Reihenfolge der Blöcke folgt immer der aktuellen Themenliste der Einstellungen.
@@ -236,7 +249,8 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
 
     // Muss der Reihenfolge der Einträge in der Liste unten folgen.
     val vorspann = 1 + (if (auswahl != Ansicht.Aktuell) 1 else 0) + (if (tagesAusgaben.size > 1) 1 else 0) + 1 +
-        offeneFragen.size + gescheiterteFragen.size + (if (monat != null) 1 else 0) + (if (laedt) 1 else 0) + (if (index.isEmpty()) 1 else 0)
+        offeneFragen.size + gescheiterteFragen.size + (if (monat != null) 1 else 0) + (if (archivHinweise.isNotEmpty()) 1 else 0) +
+        (if (schadenAmTag > 0 || schadenImMonat > 0) 1 else 0) + (if (ladeFehler) 1 else 0) + (if (laedt) 1 else 0) + (if (index.isEmpty()) 1 else 0)
     LaunchedEffect(springeZu, bloecke, vorspann) {
         val ziel = springeZu ?: return@LaunchedEffect
         val position = bloecke.indexOfFirst { it.themaId == ziel }
@@ -270,8 +284,8 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                 item(key = "kopf") {
                     val (titel, untertitel) = when {
                         monat != null -> "Rückblick" to Archiv.monatsName(monat.monat)
-                        auswahl is Ansicht.Tag && gewaehlterEintrag != null -> {
-                            val datum = gewaehlterEintrag.tag
+                        auswahl is Ansicht.Tag && angezeigterTag != null -> {
+                            val datum = angezeigterTag
                             val gross = when (datum) {
                                 heute, heute.minusDays(1) -> tagName(datum, heute)
                                 else -> datum.format(DateTimeFormatter.ofPattern("EEEE", Locale.GERMANY))
@@ -298,7 +312,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                             ArchivHinweis(
                                 text = when {
                                     monat != null -> "Monatsrückblick · ${Archiv.monatsName(monat.monat)}"
-                                    gewaehlterEintrag != null -> "Archiv · " + gewaehlterEintrag.tag.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.GERMANY))
+                                    angezeigterTag != null -> "Archiv · " + angezeigterTag.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.GERMANY))
                                     else -> "Archiv"
                                 },
                                 zuAktuell = { zeige(Ansicht.Aktuell) },
@@ -339,6 +353,41 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                                     "die an den meisten Tagen, am weitesten oben und mit den meisten Quellen berichtet wurden. Gleiche Geschichten sind zusammengefasst, es wurde nichts neu recherchiert.",
                             )
                         }
+                    }
+                }
+                if (archivHinweise.isNotEmpty()) {
+                    item(key = "archiv-hinweise") {
+                        Spalte { Column { archivHinweise.forEach { Hinweis(it) } } }
+                    }
+                }
+                if (schadenImMonat > 0) {
+                    item(key = "schaden") {
+                        Spalte {
+                            Hinweis(
+                                if (schadenImMonat == 1) {
+                                    "Eine gespeicherte Ausgabe dieses Monats ließ sich nicht lesen und fehlt im Rückblick. Die Datei bleibt unverändert erhalten."
+                                } else {
+                                    "$schadenImMonat gespeicherte Ausgaben dieses Monats ließen sich nicht lesen und fehlen im Rückblick. Die Dateien bleiben unverändert erhalten."
+                                },
+                            )
+                        }
+                    }
+                } else if (schadenAmTag > 0) {
+                    item(key = "schaden") {
+                        Spalte {
+                            Hinweis(
+                                if (schadenAmTag == 1) {
+                                    "Eine Ausgabe dieses Tages ließ sich nicht lesen. Die Datei bleibt unverändert erhalten, es wurde nichts gelöscht."
+                                } else {
+                                    "$schadenAmTag Ausgaben dieses Tages ließen sich nicht lesen. Die Dateien bleiben unverändert erhalten, es wurde nichts gelöscht."
+                                },
+                            )
+                        }
+                    }
+                }
+                if (ladeFehler) {
+                    item(key = "ladefehler") {
+                        Spalte { Hinweis("Diese Ausgabe ließ sich nicht laden. Die Datei bleibt unverändert erhalten.") }
                     }
                 }
                 if (laedt) {
@@ -644,6 +693,9 @@ private fun gruss(): String = when (Calendar.getInstance().get(Calendar.HOUR_OF_
     in 11..17 -> "Guten Tag"
     else -> "Guten Abend"
 }
+
+/** Was für die gewählte Ansicht geladen wurde; [ausgabe] null heißt: ließ sich nicht lesen. */
+private data class Geladen(val id: String, val ausgabe: Ausgabe?, val hinweise: List<String>)
 
 /** Oben im Archiv: was gerade gezeigt wird, und der Weg zurück zu Aktuell. */
 @Composable
