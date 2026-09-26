@@ -6,14 +6,29 @@ Transport, Identität, Stopp oder die Abschlusskette.
 
 ## Geltung und Rangfolge
 
-1. AGENTS.md, Projektregeln und ausdrückliche Nutzerregeln (inklusive Abschlusskette).
+1. Verbindliche Projektpflichten aus AGENTS.md und Projektregeln sowie ausdrückliche
+   Nutzerregeln (inklusive Abschlusskette, Freigaben, Version und Commit-Regeln).
 2. Transport- und Identitätsschutz dieses Skills; dieselbe sichtbare Claude-Sitzung bleibt.
-3. Das aktive Skill-Profil, im Auftrag an Claude genannt.
-4. Der OpenLauncher-Startmodus der Claude-Sitzung (`WorkModes/*.md` in deren CLAUDE.md).
+3. Das aktive Skill-Profil, im Auftrag an Claude genannt, in dieser Reihenfolge: die
+   jüngste ausdrückliche Nutzerwahl, sonst `profil` im Zielvertrag, sonst der Startwert
+   (siehe „Wahl und Wechsel“).
+4. Der Text eines bestätigten OpenLauncher-Startmodus der Claude-Sitzung
+   (`Profiles/WorkModes/<id>.md`, von Windows und macOS geteilt).
+
+**Herkunft des Startmodus:** Der Mac-Launcher hängt den Modustext an die Sitzungs-CLAUDE.md
+im Profilordner `~/proggs/OpenLauncher/Profiles/ClaudeCodeMac/<id>/` (`CLAUDE_CONFIG_DIR`,
+Kopfzeile „# Claude-Code-Profil:“, Modusblock ab „AKTIVER ARBEITSMODUS:“) und schreibt
+diese Datei bei jedem Start des Profils neu. **Bestätigt** ist ein Startmodus nur aus dem
+aktuellen Startkontext der Zielsitzung: Die Datei trägt diese Kopfzeile, ihr Modusblock
+stimmt nach Trimmen genau mit einer `WorkModes/<id>.md` überein, und sie ist nicht jünger
+als der Start der Zielsitzung (tmux `session_created`). Fehlt ein Blockanhang und passt
+`frei.md` (leer), ist der Startmodus `frei`. Sonst gilt er als unbestätigt.
 
 Das Profil wirkt über den Auftragstext, nicht über einen Neustart: Der Launcher-Modus steht
-fest in der laufenden Sitzung und wird nie durch Neustart gewechselt. Ein abweichender
-Startmodus wird für die Runde ausdrücklich übersteuert, soweit Rang 1 nichts anderes verlangt.
+fest in der laufenden Sitzung und wird nie durch Neustart gewechselt. Ein bestätigter
+abweichender Startmodus wird für die Runde ausdrücklich übersteuert, soweit Rang 1 nichts
+anderes verlangt; Auftrag und Zwischenstand nennen die Herkunft, etwa „gründlich (Nutzerwahl
+R4); bestätigter Launcher-Startmodus schnell übersteuert“.
 
 **Effektives Profil ehrlich benennen:** Verlangt eine Regel aus Rang 1 mehr oder weniger als
 das gewählte Profil (etwa Pflichtbuild und Installation trotz schnell, oder ein vom Nutzer
@@ -69,12 +84,22 @@ zurückgestellte getrennt. Mehr Menge rechtfertigt kein Absenken der Kriterien.
 
 ## Wahl und Wechsel
 
-- **Standard:** `normal`, soweit weder der Nutzer noch eine höherrangige Regel oder der
-  Zielvertrag (`profil`) ein anderes Profil festlegt.
+- **Startwert:** Ohne ausdrückliche Nutzerwahl und ohne gespeichertes `profil` bestimmt ein
+  bestätigter Launcher-Startmodus `schnell`, `normal` oder `gruendlich` das anfängliche
+  Profil (`gruendlich` ergibt gründlich). Bei `frei`, unbestätigtem, unbekanntem oder
+  widersprüchlichem Startmodus gilt `normal`; betrifft die Unklarheit einen folgenreichen
+  Schritt, vorher kurz klären. Den abgeleiteten Startwert beim Anlegen von `ziel.json` als
+  `profil` speichern und im ersten Auftrag samt Herkunft nennen. Eine spätere ausdrückliche
+  Nutzerwahl hat Vorrang; ein späterer Launcher-Neustart ändert ein gespeichertes `profil`
+  nicht.
 - **Nur eindeutige Formulierungen** wählen oder wechseln das Profil, etwa „Profil schnell“,
-  „Schnellmodus“, „Standardmodus“, „in den Gründlichkeitsmodus“. Bloße Dringlichkeit
-  („mach schnell“, „zügig bitte“) oder Sorgfaltswünsche zu einem Einzelpunkt sind kein
-  Wechsel. Bei echter Mehrdeutigkeit kurz nachfragen.
+  „Schnellmodus“, „Normalmodus“, „Standardmodus“, „in den Gründlichkeitsmodus“, jeweils
+  bezogen auf die Arbeitsweise. Bloße Dringlichkeit („mach schnell“, „zügig bitte“) oder
+  Sorgfaltswünsche zu einem Einzelpunkt sind kein Wechsel. Bei echter Mehrdeutigkeit kurz
+  nachfragen.
+- **„Launcher-Modus“** meint ausdrücklich den Startmodus im OpenLauncher, kein Profil. Der
+  Skill schaltet ihn nicht um und startet nichts neu; kurz melden, dass er erst beim nächsten
+  Start der Sitzung wirkt und das Arbeitsprofil unverändert bleibt.
 - Ein Wechsel ist eine verbindliche Nutzerkorrektur: `profil` in `ziel.json` setzen,
   `ziel_rev` erhöhen, Steuerdatei atomar ersetzen. Das Profil steht im Zielvertrag,
   nicht in `arbeitsstand.json` (dessen fünf Schlüssel bleiben). `resume` liefert den
@@ -91,8 +116,10 @@ zurückgestellte getrennt. Mehr Menge rechtfertigt kein Absenken der Kriterien.
 
 Jeder Umsetzungsauftrag nennt eine Profilzeile, zum Beispiel:
 
-> Profil: schnell (gilt für diese Runde vor deinem Startmodus; AGENTS.md und Projektregeln
-> haben Vorrang).
+> Profil: schnell (gilt für diese Runde vor einem bestätigten Launcher-Startmodus;
+> verbindliche Projektpflichten aus AGENTS.md und Projektregeln haben Vorrang).
 
-Der Zwischenstand nennt das effektiv angewandte Profil. Der Koordinator prüft, dass Umfang
+Der Zwischenstand nennt das effektiv angewandte Profil samt Herkunft und Abweichung, zum
+Beispiel „Profil: schnell (Startwert aus bestätigtem Launcher-Startmodus); Build nach
+AGENTS.md“ oder „Profil: normal (Standard); Startmodus unbestätigt“. Der Koordinator prüft, dass Umfang
 und Prüfbelege zum Profil passen, und stuft bei Risiko hoch.
