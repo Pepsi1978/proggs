@@ -90,7 +90,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -126,7 +126,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
@@ -208,6 +210,16 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     val ladeFehler = passend != null && passend.ausgabe == null
     val tagesAusgaben = if (monat != null) emptyList() else gewaehlterEintrag?.let { e -> index.filter { it.tag == e.tag } }.orEmpty()
 
+    // Welche Bilder der gezeigten Ausgabe vorhanden sind: einmal im Hintergrund geprüft statt je Karte im
+    // Hauptthread. Neu geprüft, sobald sich Ausgabe oder Archiv ändern — etwa wenn ein Import fehlende
+    // Bilder nachliefert. Nur die gezeigte Ausgabe wird gehalten; dekodierte Bilder hält Coil selbst.
+    var bildDateien by remember { mutableStateOf<Map<String, java.io.File>>(emptyMap()) }
+    LaunchedEffect(ausgabe, index) {
+        val namen = ausgabe?.bloecke.orEmpty().flatMap { b -> b.meldungen.mapNotNull { it.bildDatei } }.toSet()
+        val gefunden = withContext(Dispatchers.IO) { namen.mapNotNull { n -> app.speicher.bildDatei(n)?.let { n to it } }.toMap() }
+        bildDateien = gefunden
+    }
+
     // Reihenfolge der Blöcke folgt immer der aktuellen Themenliste der Einstellungen.
     val bloecke = remember(ausgabe, stand.themen) {
         val rang = stand.themen.mapIndexed { i, t -> t.id to i }.toMap()
@@ -281,7 +293,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                 contentPadding = PaddingValues(bottom = 120.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                item(key = "kopf") {
+                item(key = "kopf", contentType = "kopf") {
                     val (titel, untertitel) = when {
                         monat != null -> "Rückblick" to Archiv.monatsName(monat.monat)
                         auswahl is Ansicht.Tag && angezeigterTag != null -> {
@@ -307,7 +319,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                     )
                 }
                 if (auswahl != Ansicht.Aktuell) {
-                    item(key = "archiv") {
+                    item(key = "archiv", contentType = "archivleiste") {
                         Spalte {
                             ArchivHinweis(
                                 text = when {
@@ -321,16 +333,16 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                     }
                 }
                 if (tagesAusgaben.size > 1) {
-                    item(key = "ausgaben") {
+                    item(key = "ausgaben", contentType = "ausgabenwahl") {
                         AusgabenWahl(tagesAusgaben, gewaehlterEintrag?.id) { id ->
                             gewaehlterEintrag?.let { zeige(Ansicht.Tag(it.tag, id)) }
                         }
                     }
                 }
-                item(key = "status") {
+                item(key = "status", contentType = "status") {
                     Spalte { LaufStatus(lauf, app.codex.istVerbunden, oeffneEinstellungen) }
                 }
-                items(offeneFragen, key = { "frage-${it.id}" }) { info ->
+                items(offeneFragen, key = { "frage-${it.id}" }, contentType = { "frage" }) { info ->
                     Spalte {
                         FrageLaeuft(
                             frage = info.tags.firstOrNull { it.startsWith(Zeitplan.FRAGE_ETIKETT) }?.removePrefix(Zeitplan.FRAGE_ETIKETT).orEmpty(),
@@ -342,11 +354,11 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                         )
                     }
                 }
-                items(gescheiterteFragen, key = { "frage-fehler-${it.id}" }) { info ->
+                items(gescheiterteFragen, key = { "frage-fehler-${it.id}" }, contentType = { "hinweis" }) { info ->
                     Spalte { Hinweis(info.outputData.getString("fehler").orEmpty(), "OK") { app.sprachFrage.erledigt(info.id) } }
                 }
                 if (monat != null) {
-                    item(key = "rueckblick-hinweis") {
+                    item(key = "rueckblick-hinweis", contentType = "hinweis") {
                         Spalte {
                             Hinweis(
                                 "Heuristische Auswahl aus den gespeicherten Meldungen (${Archiv.zeitraum(monat)}): je Thema die ${Archiv.TOP_JE_THEMA} Geschichten, " +
@@ -356,12 +368,12 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                     }
                 }
                 if (archivHinweise.isNotEmpty()) {
-                    item(key = "archiv-hinweise") {
+                    item(key = "archiv-hinweise", contentType = "hinweise") {
                         Spalte { Column { archivHinweise.forEach { Hinweis(it) } } }
                     }
                 }
                 if (schadenImMonat > 0) {
-                    item(key = "schaden") {
+                    item(key = "schaden", contentType = "hinweis") {
                         Spalte {
                             Hinweis(
                                 if (schadenImMonat == 1) {
@@ -373,7 +385,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                         }
                     }
                 } else if (schadenAmTag > 0) {
-                    item(key = "schaden") {
+                    item(key = "schaden", contentType = "hinweis") {
                         Spalte {
                             Hinweis(
                                 if (schadenAmTag == 1) {
@@ -386,17 +398,17 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                     }
                 }
                 if (ladeFehler) {
-                    item(key = "ladefehler") {
+                    item(key = "ladefehler", contentType = "hinweis") {
                         Spalte { Hinweis("Diese Ausgabe ließ sich nicht laden. Die Datei bleibt unverändert erhalten.") }
                     }
                 }
                 if (laedt) {
-                    item(key = "laedt") {
+                    item(key = "laedt", contentType = "laden") {
                         Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     }
                 }
                 if (index.isEmpty()) {
-                    item(key = "leer") {
+                    item(key = "leer", contentType = "leer") {
                         Spalte {
                             LeerZustand(
                                 angemeldet = app.codex.istVerbunden,
@@ -408,7 +420,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                     }
                 }
                 bloecke.forEachIndexed { index, block ->
-                    item(key = "b-${ausgabe?.id}-${block.themaId}") {
+                    item(key = "b-${ausgabe?.id}-${block.themaId}", contentType = "blockkopf") {
                         Spalte {
                             BlockKopf(
                                 index = index,
@@ -427,14 +439,14 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                         }
                     }
                     block.fehler?.let { fehler ->
-                        item(key = "f-${ausgabe?.id}-${block.themaId}") { Spalte { Hinweis(fehler) } }
+                        item(key = "f-${ausgabe?.id}-${block.themaId}", contentType = "hinweis") { Spalte { Hinweis(fehler) } }
                     }
-                    items(block.meldungen, key = { it.id }) { meldung ->
+                    items(block.meldungen, key = { it.id }, contentType = { "meldung" }) { meldung ->
                         Spalte {
                             MeldungsKarte(
                                 meldung = meldung,
                                 blockIndex = index,
-                                bild = app.speicher.bildDatei(meldung.bildDatei),
+                                bild = meldung.bildDatei?.let(bildDateien::get),
                                 zustand = vorlesen,
                                 vorlesen = { app.vorleser.schalteUm(meldung.id, meldung.vorleseText) },
                             )
@@ -512,8 +524,6 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
  */
 @Composable
 private fun MikrofonKnopf(stufe: SprachStufe, tippe: () -> Unit) {
-    val puls = rememberInfiniteTransition(label = "mikrofon")
-    val skala by puls.animateFloat(1f, 1.08f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "mikrofonSkala")
     val flaeche = when (stufe) {
         SprachStufe.NIMMT_AUF -> Brush.linearGradient(listOf(Color(0xFFEF4444), Color(0xFFB91C1C)))
         else -> Brush.linearGradient(listOf(Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFFDB2777)))
@@ -540,7 +550,7 @@ private fun MikrofonKnopf(stufe: SprachStufe, tippe: () -> Unit) {
             shape = CircleShape,
             color = Color.Transparent,
             shadowElevation = 10.dp,
-            modifier = Modifier.size(64.dp).scale(if (stufe == SprachStufe.NIMMT_AUF) skala else 1f),
+            modifier = Modifier.size(64.dp).pulsWenn(stufe == SprachStufe.NIMMT_AUF, bis = 1.08f, dauerMs = 700),
         ) {
             Box(Modifier.fillMaxSize().background(flaeche), contentAlignment = Alignment.Center) {
                 when (stufe) {
@@ -1052,12 +1062,25 @@ private fun TeilenKnopf(meldung: Meldung, bild: java.io.File?) {
 private fun domain(adresse: String): String =
     runCatching { Uri.parse(adresse).host.orEmpty().removePrefix("www.") }.getOrDefault(adresse).ifBlank { adresse }
 
+/**
+ * Pulsierendes Vergrößern, aber nur solange [aktiv] ist — sonst läuft keine Dauer-Animation. Der Wert
+ * wird erst beim Zeichnen gelesen, damit nicht jede Karte in jedem Frame neu zusammengesetzt wird.
+ */
+@Composable
+private fun Modifier.pulsWenn(aktiv: Boolean, bis: Float, dauerMs: Int): Modifier {
+    if (!aktiv) return this
+    val puls = rememberInfiniteTransition(label = "puls")
+    val skala = puls.animateFloat(1f, bis, infiniteRepeatable(tween(dauerMs), RepeatMode.Reverse), label = "skala")
+    return graphicsLayer {
+        scaleX = skala.value
+        scaleY = skala.value
+    }
+}
+
 @Composable
 private fun LautsprecherKnopf(zustand: VorleseZustand, quelle: String, farbe: Color, aktion: () -> Unit, rahmen: Boolean) {
     val meins = zustand.quelleId == quelle
     val stufe = if (meins) zustand.stufe else VorleseStufe.AUS
-    val puls = rememberInfiniteTransition(label = "puls")
-    val skala by puls.animateFloat(1f, 1.12f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "skala")
     val hintergrund = when {
         stufe != VorleseStufe.AUS -> farbe
         rahmen -> farbe.copy(alpha = 0.14f)
@@ -1067,7 +1090,7 @@ private fun LautsprecherKnopf(zustand: VorleseZustand, quelle: String, farbe: Co
         onClick = aktion,
         shape = CircleShape,
         color = hintergrund,
-        modifier = Modifier.size(46.dp).scale(if (stufe == VorleseStufe.SPRICHT) skala else 1f),
+        modifier = Modifier.size(46.dp).pulsWenn(stufe == VorleseStufe.SPRICHT, bis = 1.12f, dauerMs = 650),
     ) {
         Box(contentAlignment = Alignment.Center) {
             when (stufe) {
