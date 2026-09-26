@@ -45,12 +45,15 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Newspaper
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.ShortText
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AssistChip
@@ -59,6 +62,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -696,13 +701,23 @@ private fun MeldungsKarte(
 ) {
     val kontext = LocalContext.current
     var offen by rememberSaveable(meldung.id) { mutableStateOf(false) }
+    var grossesBild by rememberSaveable(meldung.id) { mutableStateOf(false) }
+    if (grossesBild && bild != null) {
+        BildAnsicht(
+            bild = bild,
+            titel = meldung.titel,
+            schliessen = { grossesBild = false },
+            teilen = { Teilen.mitBild(kontext, meldung, bild) },
+        )
+    }
     Card(
         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).animateContentSize(),
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
+        val antippbar = if (bild != null) Modifier.clickable(onClickLabel = "Bild vergrößern") { grossesBild = true } else Modifier
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).then(antippbar)) {
             if (bild != null) {
                 AsyncImage(
                     model = bild,
@@ -733,7 +748,8 @@ private fun MeldungsKarte(
                     }
                 }
             }
-            Box(Modifier.align(Alignment.TopEnd).padding(10.dp)) {
+            Row(Modifier.align(Alignment.TopEnd).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TeilenKnopf(meldung, bild)
                 LautsprecherKnopf(zustand, meldung.id, blockFarbe(blockIndex), vorlesen, rahmen = false)
             }
             Text(
@@ -803,6 +819,44 @@ private fun MeldungsKarte(
                 )
                 Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null, tint = blockFarbe(blockIndex))
             }
+        }
+    }
+}
+
+/**
+ * Teilen oben rechts im Bild. Mit Bild fragt ein kleines Menü, ob Bild samt Kurztext oder der
+ * ganze Beitrag als Text weitergegeben wird; ohne Bild geht es direkt als Text.
+ */
+@Composable
+private fun TeilenKnopf(meldung: Meldung, bild: java.io.File?) {
+    val kontext = LocalContext.current
+    var menue by remember { mutableStateOf(false) }
+    Box {
+        Surface(
+            onClick = { if (bild != null) menue = true else Teilen.alsText(kontext, meldung) },
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.42f),
+            modifier = Modifier.size(46.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Share, "Teilen", tint = Color.White) }
+        }
+        DropdownMenu(expanded = menue, onDismissRequest = { menue = false }) {
+            DropdownMenuItem(
+                text = { Text("Mit Bild teilen") },
+                leadingIcon = { Icon(Icons.Rounded.Image, null) },
+                onClick = {
+                    menue = false
+                    if (bild != null) Teilen.mitBild(kontext, meldung, bild)
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("Text teilen") },
+                leadingIcon = { Icon(Icons.Rounded.ShortText, null) },
+                onClick = {
+                    menue = false
+                    Teilen.alsText(kontext, meldung)
+                },
+            )
         }
     }
 }

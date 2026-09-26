@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nur der Teilen-Zwischenordner im Cache ist freigegeben — nie die gespeicherten Ausgaben oder Bilder. -->
+<paths>
+    <cache-path name="teilen" path="teilen/" />
+</paths>

@@ -108,7 +108,9 @@ class AusgabenSpeicher(context: Context) {
     fun bildDatei(name: String?): File? = name?.let { File(bilderOrdner, it) }?.takeIf(File::exists)
 
     companion object {
-        const val BEHALTEN = 20
+        // Zwischenlösung bis zum Archiv: reicht bei zwei Läufen am Tag samt Fragen für Monate,
+        // damit seit dem 25.09.2026 aufgezeichnete Tage nicht vorzeitig gelöscht werden.
+        const val BEHALTEN = 400
         private const val BILD_SCHONFRIST_MS = 2 * 3_600_000L
 
         fun zuJson(a: Ausgabe): JSONObject = JSONObject()

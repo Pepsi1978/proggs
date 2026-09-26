@@ -9,6 +9,7 @@ import de.frank.newskompass.news.SprachFrage
 import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.observability.KompassLog
 import de.frank.newskompass.tts.VorleseManager
+import de.frank.newskompass.ui.Teilen
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,5 +34,6 @@ class NewsApplication : Application() {
         Zeitplan.legeKanaeleAn(this)
         Zeitplan.plane(this)
         bereich.launch { speicher.lade() }
+        bereich.launch { Teilen.raeumeAuf(this@NewsApplication) }
     }
 }
