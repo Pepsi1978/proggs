@@ -3,6 +3,7 @@
   "app": "NovaDrehen",
   "eintraege": [
     { "versionCode": 2, "versionName": "1.0.1", "stand": "21.09.2026, 20:06 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
-    { "versionCode": 3, "versionName": "1.0.2", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+    { "versionCode": 3, "versionName": "1.0.2", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
+    { "versionCode": 4, "versionName": "1.0.3", "stand": "26.09.2026, 18:17 Uhr", "notiz": "Erster Bau aus der Cloud: GitHub signiert die App und legt das Update in Google Drive" }
   ]
 }
