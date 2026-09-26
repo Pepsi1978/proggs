@@ -69,7 +69,8 @@ object Teilen {
         val ordner = File(context.cacheDir, ORDNER).apply { mkdirs() }
         raeumeAuf(ordner, behalten = HOECHSTENS - 1)
         val name = meldung.titel.replace(Regex("[^\\p{L}\\p{N}]+"), "-").trim('-').take(50).ifBlank { "Meldung" }
-        val ziel = File(ordner, "NewsKompass-$name-${System.currentTimeMillis() % 100_000}.jpg")
+        val art = if (meldung.bildIstKi) "-KI-Illustration" else ""
+        val ziel = File(ordner, "NewsKompass-$name$art-${System.currentTimeMillis() % 100_000}.jpg")
         bild.copyTo(ziel, overwrite = true)
         return ziel
     }
@@ -87,6 +88,8 @@ object Teilen {
         append(m.titel)
         m.absaetze.firstOrNull()?.let { append("\n\n").append(it) }
         m.quellen.firstOrNull()?.let { append("\n\n").append(it) }
+        // Eine Illustration darf beim Empfänger nie wie ein Nachrichtenfoto wirken.
+        if (m.bildIstKi) append("\n\nBild: KI-Illustration, kein Foto")
     }
 
     private fun vollText(m: Meldung): String = buildString {

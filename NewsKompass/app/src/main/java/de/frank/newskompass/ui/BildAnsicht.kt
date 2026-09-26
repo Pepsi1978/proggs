@@ -9,14 +9,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,7 +55,7 @@ private const val DOPPELTIPP_ZOOM = 2.5f
  * Doppeltipp zoomt hinein oder wieder heraus. Schließen über das Kreuz oder die Zurück-Geste.
  */
 @Composable
-fun BildAnsicht(bild: File, titel: String, schliessen: () -> Unit, teilen: () -> Unit) {
+fun BildAnsicht(bild: File, titel: String, istKi: Boolean, schliessen: () -> Unit, teilen: () -> Unit) {
     Dialog(
         onDismissRequest = schliessen,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
@@ -73,7 +79,7 @@ fun BildAnsicht(bild: File, titel: String, schliessen: () -> Unit, teilen: () ->
         ) {
             AsyncImage(
                 model = bild,
-                contentDescription = titel,
+                contentDescription = if (istKi) "$titel (KI-Illustration)" else titel,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxSize()
@@ -126,6 +132,20 @@ fun BildAnsicht(bild: File, titel: String, schliessen: () -> Unit, teilen: () ->
                     modifier = Modifier.weight(1f),
                 )
                 RundKnopf(onClick = teilen) { Icon(Icons.Rounded.Share, "Mit Bild teilen", tint = Color.White) }
+            }
+
+            if (istKi) {
+                Surface(
+                    color = Color.Black.copy(alpha = 0.55f),
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.align(Alignment.BottomStart).safeDrawingPadding().padding(16.dp),
+                ) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("KI-Illustration, kein Foto", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
             }
         }
     }

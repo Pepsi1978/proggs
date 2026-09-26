@@ -841,6 +841,7 @@ private fun MeldungsKarte(
         BildAnsicht(
             bild = bild,
             titel = meldung.titel,
+            istKi = meldung.bildIstKi,
             schliessen = { grossesBild = false },
             teilen = { Teilen.mitBild(kontext, meldung, bild) },
         )

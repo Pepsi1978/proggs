@@ -148,15 +148,12 @@ object Archiv {
         val tag: LocalDate,
         val zeit: Long,
     ) {
-        val woerter: Set<String> = woerterVon(meldung.titel)
-        val ersteQuelle: String? = meldung.quellen.firstOrNull()?.let(::normiereAdresse)
     }
 
-    private fun gleicheGeschichte(a: Fund, b: Fund): Boolean {
-        if (a.ersteQuelle != null && a.ersteQuelle == b.ersteQuelle) return true
-        val aehnlich = jaccard(a.woerter, b.woerter)
-        return aehnlich >= 0.6 || ((a.meldung.istUpdate || b.meldung.istUpdate) && aehnlich >= 0.35)
-    }
+    private fun gleicheGeschichte(a: Fund, b: Fund): Boolean = Geschichten.gleich(
+        a.meldung.titel, a.meldung.quellen.firstOrNull(), a.meldung.istUpdate,
+        b.meldung.titel, b.meldung.quellen.firstOrNull(), b.meldung.istUpdate,
+    )
 
     private fun punkte(g: List<Fund>): Double {
         val tage = g.map { it.tag }.distinct().size
@@ -180,30 +177,5 @@ object Archiv {
             wann = begruendung,
             istUpdate = false,
         )
-    }
-
-    private val STOPPWOERTER = setOf(
-        "der", "die", "das", "und", "mit", "für", "von", "auf", "ist", "den", "dem", "des", "ein", "eine", "einen",
-        "zum", "zur", "bei", "nach", "über", "als", "auch", "sich", "wird", "werden", "hat", "haben", "nicht",
-        "mehr", "neue", "neuer", "neues", "neuen", "gegen", "aus", "vor", "wie", "noch", "jetzt", "soll",
-    )
-
-    private fun woerterVon(titel: String): Set<String> =
-        titel.lowercase(Locale.GERMANY).split(Regex("[^\\p{L}\\p{N}]+"))
-            .filter { it.length >= 3 && it !in STOPPWOERTER }
-            .toSet()
-
-    private fun jaccard(a: Set<String>, b: Set<String>): Double {
-        if (a.isEmpty() || b.isEmpty()) return 0.0
-        return a.intersect(b).size.toDouble() / a.union(b).size
-    }
-
-    /** Nur Artikeladressen zählen; eine bloße Startseite würde fremde Geschichten zusammenwerfen. */
-    private fun normiereAdresse(adresse: String): String? {
-        val ohne = adresse.substringBefore('#').substringBefore('?').lowercase(Locale.ROOT)
-        val rest = ohne.substringAfter("://", ohne).removePrefix("www.")
-        val host = rest.substringBefore('/')
-        val pfad = rest.substringAfter('/', "").trimEnd('/')
-        return if (pfad.length < 2) null else "$host/$pfad"
     }
 }
