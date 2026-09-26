@@ -120,6 +120,7 @@ fun KarteikartenApp(
                                 onLogout = viewModel::logout,
                                 onSpeakTest = { onSpeak("Guten Tag, so klingt diese Stimme beim Vorlesen deiner Karten.") },
                                 onTestSound = viewModel::testSound,
+                                onApiKeys = viewModel::updateApiKeys,
                             )
                             AppTab.LEARN -> Unit
                         }

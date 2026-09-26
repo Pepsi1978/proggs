@@ -19,6 +19,8 @@ import de.frank.karteikartenlernen.data.FlashcardEntity
 import de.frank.karteikartenlernen.data.ResearchEntity
 import de.frank.karteikartenlernen.data.SessionEntity
 import de.frank.karteikartenlernen.data.SettingsStore
+import de.frank.karteikartenlernen.data.ApiKeyStore
+import de.frank.karteikartenlernen.model.ApiKeys
 import de.frank.karteikartenlernen.model.AppSettings
 import de.frank.karteikartenlernen.model.AppTab
 import de.frank.karteikartenlernen.model.AppUiState
@@ -83,10 +85,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val auth = CodexAuthManager(application)
     private val sounds = ProceduralSoundPlayer()
     private val audioRecorder = WavAudioRecorder(application)
-    private val groqTranscriber = GroqTranscriber(BuildConfig.GROQ_API_KEY, BuildConfig.GROQ_TRANSCRIPTION_MODEL)
-    private val textImprover = GeminiTextImprover(BuildConfig.GEMINI_API_KEY, BuildConfig.GEMINI_MODEL)
+    private val apiKeyStore = ApiKeyStore(application)
+    private val groqTranscriber = GroqTranscriber({ apiKeyStore.current.groqApiKey }, BuildConfig.GROQ_TRANSCRIPTION_MODEL)
+    private val textImprover = GeminiTextImprover({ apiKeyStore.current.geminiApiKey }, { apiKeyStore.current.geminiModel })
     private val _uiState = MutableStateFlow(
-        AppUiState(connectedEmail = auth.email),
+        AppUiState(connectedEmail = auth.email, apiKeys = apiKeyStore.current),
     )
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
     private var recordingTimerJob: Job? = null
@@ -142,7 +145,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun startRecording() {
         if (_uiState.value.mic != MicState.IDLE || !groqTranscriber.isConfigured) {
             if (!groqTranscriber.isConfigured) {
-                _uiState.update { it.copy(message = "Groq Whisper Large V3 Turbo ist in diesem Build nicht konfiguriert.") }
+                _uiState.update { it.copy(message = "Bitte in den Einstellungen den Groq-API-Schlüssel eintragen.") }
             }
             return
         }
@@ -577,6 +580,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val value = updated.copy(reasoning = de.frank.karteikartenlernen.model.normalizeReasoningLabel(updated.model, updated.reasoning))
         _uiState.update { it.copy(settings = value, model = value.model, reasoning = value.reasoning) }
         viewModelScope.launch { settingsStore.save(value) }
+    }
+
+    fun updateApiKeys(transform: (ApiKeys) -> ApiKeys) {
+        val value = transform(apiKeyStore.current)
+        apiKeyStore.save(value)
+        _uiState.update { it.copy(apiKeys = value) }
     }
 
     fun testSound(effect: SoundEffect) = sounds.play(effect, _uiState.value.settings)

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -34,6 +35,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,6 +47,8 @@ import de.frank.karteikartenlernen.BuildConfig
 import de.frank.karteikartenlernen.audio.SoundEffect
 import de.frank.karteikartenlernen.audio.TtsVoiceRegistry
 import de.frank.karteikartenlernen.model.AppSettings
+import de.frank.karteikartenlernen.model.ApiKeys
+import de.frank.karteikartenlernen.model.DEFAULT_GEMINI_MODEL
 import de.frank.karteikartenlernen.model.AppUiState
 import de.frank.karteikartenlernen.model.reasoningLevels
 import de.frank.karteikartenlernen.model.StudySession
@@ -122,6 +129,7 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     onSpeakTest: () -> Unit,
     onTestSound: (SoundEffect) -> Unit,
+    onApiKeys: ((ApiKeys) -> ApiKeys) -> Unit,
 ) {
     val c = LocalAppPalette.current
     val s = state.settings
@@ -150,28 +158,20 @@ fun SettingsScreen(
                     SmallPill("Trennen", onLogout)
                 }
             }
-            val groqConfigured = BuildConfig.GROQ_API_KEY.isNotBlank()
+            val keys = state.apiKeys
+            val groqConfigured = keys.groqApiKey.isNotBlank()
             SettingRow(
                 "Groq Whisper",
-                if (groqConfigured) "${BuildConfig.GROQ_TRANSCRIPTION_MODEL} · lokaler Build-Schlüssel" else "Nicht konfiguriert",
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val statusColor = if (groqConfigured) c.accent2 else c.red
-                    Box(Modifier.size(7.dp).background(statusColor, CircleShape))
-                    Text(if (groqConfigured) "Konfiguriert" else "Fehlt", color = statusColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
-                }
-            }
-            val geminiConfigured = BuildConfig.GEMINI_API_KEY.isNotBlank()
+                if (groqConfigured) "${BuildConfig.GROQ_TRANSCRIPTION_MODEL} · eigener API-Schlüssel" else "Bitte Groq-API-Schlüssel eintragen",
+            ) { ConfiguredBadge(groqConfigured) }
+            SettingTextField("Groq-API-Schlüssel", keys.groqApiKey, "gsk_…", secret = true) { value -> onApiKeys { it.copy(groqApiKey = value) } }
+            val geminiConfigured = keys.geminiApiKey.isNotBlank() && keys.geminiModel.isNotBlank()
             SettingRow(
                 "Gemini Textverbesserung",
-                if (geminiConfigured) "${BuildConfig.GEMINI_MODEL} · lokaler Build-Schlüssel" else "Nicht konfiguriert",
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val statusColor = if (geminiConfigured) c.accent2 else c.red
-                    Box(Modifier.size(7.dp).background(statusColor, CircleShape))
-                    Text(if (geminiConfigured) "Konfiguriert" else "Fehlt", color = statusColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
-                }
-            }
+                if (geminiConfigured) "${keys.geminiModel} · eigener API-Schlüssel" else "Bitte Gemini-API-Schlüssel eintragen",
+            ) { ConfiguredBadge(geminiConfigured) }
+            SettingTextField("Gemini-API-Schlüssel", keys.geminiApiKey, "AIza…", secret = true) { value -> onApiKeys { it.copy(geminiApiKey = value) } }
+            SettingTextField("Gemini-Modell", keys.geminiModel, DEFAULT_GEMINI_MODEL, secret = false) { value -> onApiKeys { it.copy(geminiModel = value) } }
         }
         SettingsSection("DARSTELLUNG") {
             SettingRow("Erscheinungsbild") {
@@ -309,6 +309,48 @@ private fun SettingRow(label: String, sub: String? = null, control: @Composable 
         }
         Spacer(Modifier.width(8.dp))
         control()
+    }
+}
+
+@Composable
+private fun ConfiguredBadge(configured: Boolean) {
+    val c = LocalAppPalette.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val statusColor = if (configured) c.accent2 else c.red
+        Box(Modifier.size(7.dp).background(statusColor, CircleShape))
+        Text(if (configured) "Konfiguriert" else "Fehlt", color = statusColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+    }
+}
+
+@Composable
+private fun SettingTextField(label: String, value: String, placeholder: String, secret: Boolean, onChange: (String) -> Unit) {
+    val c = LocalAppPalette.current
+    var visible by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().border(0.5.dp, c.border).padding(horizontal = 16.dp, vertical = 11.dp)) {
+        Text(label, color = c.muted, fontSize = 12.5.sp, fontWeight = FontWeight.Medium)
+        Row(
+            Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(10.dp)).background(c.field).border(1.dp, c.border, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = { onChange(it.trim()) },
+                singleLine = true,
+                textStyle = TextStyle(c.text, 13.5.sp, fontFamily = SchibstedGrotesk),
+                visualTransformation = if (secret && !visible) PasswordVisualTransformation() else VisualTransformation.None,
+                keyboardOptions = KeyboardOptions(keyboardType = if (secret) KeyboardType.Password else KeyboardType.Text, autoCorrectEnabled = false),
+                cursorBrush = SolidColor(c.accent),
+                modifier = Modifier.weight(1f),
+                decorationBox = { inner ->
+                    if (value.isEmpty()) Text(placeholder, color = c.faint, fontSize = 13.5.sp)
+                    inner()
+                },
+            )
+            if (secret && value.isNotEmpty()) {
+                Spacer(Modifier.width(8.dp))
+                SmallPill(if (visible) "Verbergen" else "Zeigen") { visible = !visible }
+            }
+        }
     }
 }
 

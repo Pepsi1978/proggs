@@ -60,9 +60,12 @@ internal fun parseGeminiImprovement(body: String): String {
 }
 
 class GeminiTextImprover(
-    private val apiKey: String,
-    private val model: String,
+    private val apiKeyProvider: () -> String,
+    private val modelProvider: () -> String,
 ) {
+    private val apiKey: String get() = apiKeyProvider().trim()
+    private val model: String get() = modelProvider().trim()
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
@@ -72,7 +75,8 @@ class GeminiTextImprover(
     val isConfigured: Boolean get() = apiKey.isNotBlank() && model.isNotBlank()
 
     suspend fun improve(source: String): String {
-        if (!isConfigured) throw GeminiImprovementException("Gemini ist in diesem Build nicht konfiguriert.")
+        if (apiKey.isBlank()) throw GeminiImprovementException("Bitte in den Einstellungen den Gemini-API-Schlüssel eintragen.")
+        if (model.isBlank()) throw GeminiImprovementException("Bitte in den Einstellungen das Gemini-Modell eintragen.")
         var lastError: GeminiImprovementException? = null
         repeat(MAX_ATTEMPTS) { attempt ->
             try {

@@ -19,9 +19,11 @@ import okhttp3.Response
 import org.json.JSONObject
 
 class GroqTranscriber(
-    private val apiKey: String,
+    private val apiKeyProvider: () -> String,
     private val model: String,
 ) {
+    private val apiKey: String get() = apiKeyProvider().trim()
+
     private val speechAnalyzer = SpeechAnalyzer()
     private val hallucinationFilter = WhisperHallucinationFilter()
     private val client = OkHttpClient.Builder()
@@ -33,7 +35,7 @@ class GroqTranscriber(
     val isConfigured: Boolean get() = apiKey.isNotBlank()
 
     suspend fun transcribe(file: File): String = withContext(Dispatchers.IO) {
-        if (!isConfigured) throw GroqTranscriptionException("Groq ist auf diesem Gerät nicht konfiguriert.")
+        if (!isConfigured) throw GroqTranscriptionException("Bitte in den Einstellungen den Groq-API-Schlüssel eintragen.")
         if (file.length() > MAX_FILE_BYTES) throw GroqTranscriptionException("Die Aufnahme ist für die Groq-Transkription zu groß.")
         val analysis = speechAnalyzer.analyze(file.readBytes())
         if (analysis != null && analysis.voicedMs < SpeechAnalyzer.MIN_SPEECH_MS) return@withContext ""

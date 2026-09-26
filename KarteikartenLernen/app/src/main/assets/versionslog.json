@@ -3,6 +3,7 @@
   "app": "KarteikartenLernen",
   "eintraege": [
     { "versionCode": 42, "versionName": "0.1.41", "stand": "07.09.2026, 14:18 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
-    { "versionCode": 43, "versionName": "0.1.42", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+    { "versionCode": 43, "versionName": "0.1.42", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
+    { "versionCode": 44, "versionName": "0.1.43", "stand": "26.09.2026, 21:18 Uhr", "notiz": "API-Schlüssel für Groq und Gemini sowie das Gemini-Modell werden jetzt in den Einstellungen eingetragen und verschlüsselt gespeichert." }
   ]
 }

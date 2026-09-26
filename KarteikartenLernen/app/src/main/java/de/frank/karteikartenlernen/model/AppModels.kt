@@ -132,6 +132,15 @@ data class AppUiState(
     val detailQuestion: String = "Warum ist die HRV nachts höher und welche Rolle spielt der Vagusnerv?",
     val detailAnswer: String = SAMPLE_ANSWER,
     val crossSuggestions: List<CrossSuggestion> = emptyList(),
+    val apiKeys: ApiKeys = ApiKeys(),
+)
+
+const val DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
+
+data class ApiKeys(
+    val groqApiKey: String = "",
+    val geminiApiKey: String = "",
+    val geminiModel: String = DEFAULT_GEMINI_MODEL,
 )
 
 val sampleCards = listOf(

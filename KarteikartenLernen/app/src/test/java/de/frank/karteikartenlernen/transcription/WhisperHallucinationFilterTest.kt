@@ -79,7 +79,7 @@ class WhisperHallucinationFilterTest {
 
     @Test
     fun verboseJsonParserKeepsMissingConfidenceValuesNull() {
-        val transcriber = GroqTranscriber(apiKey = "", model = "whisper-large-v3-turbo")
+        val transcriber = GroqTranscriber(apiKeyProvider = { "" }, model = "whisper-large-v3-turbo")
         val parsed = transcriber.parseResponse(
             """{"text":"Hallo","segments":[{"start":0.0,"end":0.5,"text":"Hallo"}]}""",
         )

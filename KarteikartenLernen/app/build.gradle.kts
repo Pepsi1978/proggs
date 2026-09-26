@@ -5,24 +5,6 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-fun localSecret(name: String): String {
-    System.getenv(name)?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
-    val secretFile = file("${System.getProperty("user.home")}/SK/VoiceOverlays/.env")
-    if (!secretFile.isFile) return ""
-    return secretFile.useLines { lines ->
-        lines.firstNotNullOfOrNull { line ->
-            val trimmed = line.trim()
-            if (trimmed.startsWith("$name=")) trimmed.substringAfter('=').trim().takeIf { it.isNotEmpty() } else null
-        }.orEmpty()
-    }
-}
-
-fun String.asBuildConfigString(): String = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
-
-val groqApiKey = localSecret("GROQ_API_KEY")
-val geminiApiKey = localSecret("GEMINI_API_KEY")
-val geminiModel = localSecret("GEMINI_MODEL").ifBlank { "gemini-3.1-flash-lite" }
-
 // Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
 // Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
 @Suppress("UNCHECKED_CAST")
@@ -39,10 +21,7 @@ android {
         versionCode = (versionslogAktuell["versionCode"] as Number).toInt()
         versionName = versionslogAktuell["versionName"] as String
         buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
-        buildConfigField("String", "GROQ_API_KEY", groqApiKey.asBuildConfigString())
         buildConfigField("String", "GROQ_TRANSCRIPTION_MODEL", "\"whisper-large-v3-turbo\"")
-        buildConfigField("String", "GEMINI_API_KEY", geminiApiKey.asBuildConfigString())
-        buildConfigField("String", "GEMINI_MODEL", geminiModel.asBuildConfigString())
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
