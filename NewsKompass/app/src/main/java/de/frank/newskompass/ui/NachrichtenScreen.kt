@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -40,11 +41,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Link
@@ -62,6 +65,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -69,9 +73,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -101,6 +107,8 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import coil3.compose.AsyncImage
 import de.frank.newskompass.NewsApplication
+import de.frank.newskompass.data.Archiv
+import de.frank.newskompass.data.AusgabenEintrag
 import de.frank.newskompass.data.model.Ausgabe
 import de.frank.newskompass.data.model.Block
 import de.frank.newskompass.data.model.DesignModus
@@ -113,6 +121,7 @@ import de.frank.newskompass.ui.theme.LocalIstDunkel
 import de.frank.newskompass.ui.theme.blockFarbe
 import de.frank.newskompass.ui.theme.blockVerlauf
 import java.text.SimpleDateFormat
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -121,7 +130,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     val kontext = LocalContext.current
-    val ausgaben by app.speicher.ausgaben.collectAsStateWithLifecycle()
+    val index by app.speicher.index.collectAsStateWithLifecycle()
     val stand by app.einstellungen.stand.collectAsStateWithLifecycle()
     val vorlesen by app.vorleser.zustand.collectAsStateWithLifecycle()
     val arbeit by remember { WorkManager.getInstance(kontext).getWorkInfosForUniqueWorkFlow(Zeitplan.LAUF) }
@@ -149,10 +158,42 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
         }
     }
 
-    var gewaehlteId by rememberSaveable { mutableStateOf<String?>(null) }
-    val ausgabe = ausgaben.firstOrNull { it.id == gewaehlteId } ?: ausgaben.firstOrNull()
-    // Nach einem neuen Lauf springt die Ansicht auf die neueste Ausgabe.
-    LaunchedEffect(ausgaben.firstOrNull()?.id) { gewaehlteId = null }
+    // Aktuell folgt der neuesten Ausgabe; ein bewusst gewählter Tag oder Monat bleibt stehen,
+    // auch wenn im Hintergrund eine neue Ausgabe fertig wird.
+    var auswahlText by rememberSaveable { mutableStateOf(Ansicht.Aktuell.text) }
+    val auswahl = remember(auswahlText) { Ansicht.aus(auswahlText) }
+    fun zeige(ansicht: Ansicht) {
+        auswahlText = ansicht.text
+    }
+
+    val heute = rememberHeute()
+    val archivTage = remember(index, heute) { Archiv.tage(index, heute) }
+    val archivMonate = remember(index, heute) { Archiv.monate(index, heute) }
+    val gewaehlterEintrag: AusgabenEintrag? = when (auswahl) {
+        Ansicht.Aktuell -> index.firstOrNull()
+        is Ansicht.Tag -> index.filter { it.tag == auswahl.datum }.let { tag -> tag.firstOrNull { it.id == auswahl.ausgabeId } ?: tag.firstOrNull() }
+        is Ansicht.Monat -> null
+    }
+    val monat = (auswahl as? Ansicht.Monat)?.let { a -> archivMonate.firstOrNull { it.monat == a.monat } }
+    // Gibt es den gewählten Tag oder Monat nicht mehr, zurück zu Aktuell.
+    LaunchedEffect(auswahl, index) {
+        val weg = (auswahl is Ansicht.Tag && gewaehlterEintrag == null) || (auswahl is Ansicht.Monat && monat == null)
+        if (index.isNotEmpty() && weg) zeige(Ansicht.Aktuell)
+    }
+
+    // Volle Ausgaben kommen erst beim Anschauen aus dem Speicher; der Rückblick wird aus dem Archiv gebaut.
+    val ansichtsId = monat?.let { Archiv.RUECKBLICK_PRAEFIX + it.monat } ?: gewaehlterEintrag?.id
+    var geladen by remember { mutableStateOf<Ausgabe?>(null) }
+    LaunchedEffect(ansichtsId, gewaehlterEintrag?.stand, monat) {
+        geladen = when {
+            monat != null -> Archiv.rueckblick(app.speicher, monat)
+            gewaehlterEintrag != null -> app.speicher.ausgabe(gewaehlterEintrag.id)
+            else -> null
+        }
+    }
+    val ausgabe = geladen?.takeIf { it.id == ansichtsId }
+    val laedt = ansichtsId != null && ausgabe == null
+    val tagesAusgaben = if (monat != null) emptyList() else gewaehlterEintrag?.let { e -> index.filter { it.tag == e.tag } }.orEmpty()
 
     // Reihenfolge der Blöcke folgt immer der aktuellen Themenliste der Einstellungen.
     val bloecke = remember(ausgabe, stand.themen) {
@@ -162,188 +203,256 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     val dunkel = LocalIstDunkel.current
     val liste = rememberLazyListState()
     val bildschirm = rememberCoroutineScope()
+    val schublade = rememberDrawerState(DrawerValue.Closed)
+
+    // Zurück führt aus dem Archiv nach Aktuell; ist die Seitenleiste offen, schließt Zurück zuerst sie.
+    BackHandler(auswahl != Ansicht.Aktuell) { zeige(Ansicht.Aktuell) }
+    BackHandler(schublade.isOpen) { bildschirm.launch { schublade.close() } }
 
     // Block, zu dem die Ansicht springen soll, sobald er in der gewählten Ausgabe steht.
     var springeZu by remember { mutableStateOf<String?>(null) }
 
     // Eine gesprochene Frage bekommt eine gesprochene Antwort: Ist ihr Block da, springt die
     // Ansicht hin und er wird vorgelesen.
-    LaunchedEffect(fragen, sprache.vorlesen, ausgaben) {
+    LaunchedEffect(fragen, sprache.vorlesen, index) {
         fragen.filter { it.id in sprache.vorlesen && it.state.isFinished }.forEach { info ->
             if (info.outputData.getString("fehler") != null) return@forEach
             val ausgabeId = info.outputData.getString("ausgabeId")
             val themaId = info.outputData.getString("themaId")
-            val antwort = ausgaben.firstOrNull { it.id == ausgabeId }
+            val eintrag = index.firstOrNull { it.id == ausgabeId }
+            val antwort = eintrag?.let { app.speicher.ausgabe(it.id) }
             val block = antwort?.bloecke?.firstOrNull { it.themaId == themaId }
-            if (antwort == null || block == null) {
+            if (eintrag == null || block == null) {
                 // Noch nicht im Speicher angekommen — der nächste Durchlauf findet ihn.
                 if (info.state != WorkInfo.State.SUCCEEDED || ausgabeId == null) app.sprachFrage.erledigt(info.id)
                 return@forEach
             }
             app.sprachFrage.erledigt(info.id)
-            gewaehlteId = antwort.id
+            zeige(if (eintrag.id == index.firstOrNull()?.id) Ansicht.Aktuell else Ansicht.Tag(eintrag.tag, eintrag.id))
             springeZu = block.themaId
             if (block.meldungen.isNotEmpty()) app.vorleser.lies("block-${block.themaId}", blockText(block))
         }
     }
-    LaunchedEffect(springeZu, bloecke, offeneFragen.size, gescheiterteFragen.size) {
+
+    // Muss der Reihenfolge der Einträge in der Liste unten folgen.
+    val vorspann = 1 + (if (auswahl != Ansicht.Aktuell) 1 else 0) + (if (tagesAusgaben.size > 1) 1 else 0) + 1 +
+        offeneFragen.size + gescheiterteFragen.size + (if (monat != null) 1 else 0) + (if (laedt) 1 else 0) + (if (index.isEmpty()) 1 else 0)
+    LaunchedEffect(springeZu, bloecke, vorspann) {
         val ziel = springeZu ?: return@LaunchedEffect
         val position = bloecke.indexOfFirst { it.themaId == ziel }
         if (position < 0) return@LaunchedEffect
-        // Muss der Reihenfolge der Einträge in der Liste unten folgen.
-        var index = 1 + (if (ausgaben.size > 1) 1 else 0) + 1 + offeneFragen.size + gescheiterteFragen.size
+        var index = vorspann
         bloecke.take(position).forEach { index += 1 + (if (it.fehler != null) 1 else 0) + it.meldungen.size }
         springeZu = null
         // Eigener Bereich: Das Zurücksetzen von springeZu bricht diesen Effekt beim Aussetzen ab.
         bildschirm.launch { liste.animateScrollToItem(index) }
     }
 
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        LazyColumn(
-            state = liste,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 120.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            item(key = "kopf") {
-                Kopf(
-                    ausgabe = ausgabe,
-                    dunkel = dunkel,
-                    laeuft = lauf?.state == WorkInfo.State.RUNNING,
-                    aktualisiere = { Zeitplan.starteLauf(kontext, manuell = true) },
-                    wechsleDesign = { app.einstellungen.setzeDesign(if (dunkel) DesignModus.HELL else DesignModus.DUNKEL) },
-                    oeffneEinstellungen = oeffneEinstellungen,
-                )
-            }
-            if (ausgaben.size > 1) {
-                item(key = "ausgaben") {
-                    AusgabenWahl(ausgaben, ausgabe?.id) { gewaehlteId = it }
+    ModalNavigationDrawer(
+        drawerState = schublade,
+        drawerContent = {
+            ArchivSeitenleiste(auswahl, heute, archivTage, archivMonate) { ansicht ->
+                zeige(ansicht)
+                bildschirm.launch {
+                    schublade.close()
+                    liste.scrollToItem(0)
                 }
             }
-            item(key = "status") {
-                Spalte { LaufStatus(lauf, app.codex.istVerbunden, oeffneEinstellungen) }
-            }
-            items(offeneFragen, key = { "frage-${it.id}" }) { info ->
-                Spalte {
-                    FrageLaeuft(
-                        frage = info.tags.firstOrNull { it.startsWith(Zeitplan.FRAGE_ETIKETT) }?.removePrefix(Zeitplan.FRAGE_ETIKETT).orEmpty(),
-                        text = info.progress.getString("text")
-                            ?: if (info.state == WorkInfo.State.RUNNING) "Deine Frage wird recherchiert …" else "Wartet auf die Recherche …",
-                        anteil = info.progress.getFloat("anteil", 0f),
-                        laeuft = info.state == WorkInfo.State.RUNNING,
-                        verwerfen = { WorkManager.getInstance(kontext).cancelWorkById(info.id) },
-                    )
-                }
-            }
-            items(gescheiterteFragen, key = { "frage-fehler-${it.id}" }) { info ->
-                Spalte { Hinweis(info.outputData.getString("fehler").orEmpty(), "OK") { app.sprachFrage.erledigt(info.id) } }
-            }
-            if (ausgabe == null) {
-                item(key = "leer") {
-                    Spalte {
-                        LeerZustand(
-                            angemeldet = app.codex.istVerbunden,
-                            laeuft = lauf?.state == WorkInfo.State.RUNNING,
-                            laden = { Zeitplan.starteLauf(kontext, manuell = true) },
-                            oeffneEinstellungen = oeffneEinstellungen,
-                        )
-                    }
-                }
-            }
-            bloecke.forEachIndexed { index, block ->
-                item(key = "b-${ausgabe?.id}-${block.themaId}") {
-                    Spalte {
-                        BlockKopf(
-                            index = index,
-                            block = block,
-                            zustand = vorlesen,
-                            vorlesen = { app.vorleser.schalteUm("block-${block.themaId}", blockText(block)) },
-                            entfernen = if (block.frage != null && ausgabe != null) {
-                                {
-                                    if (vorlesen.quelleId == "block-${block.themaId}" || block.meldungen.any { it.id == vorlesen.quelleId }) app.vorleser.stoppe()
-                                    app.bereich.launch { app.speicher.entferneBlock(ausgabe.id, block.themaId) }
-                                }
-                            } else {
-                                null
-                            },
-                        )
-                    }
-                }
-                block.fehler?.let { fehler ->
-                    item(key = "f-${ausgabe?.id}-${block.themaId}") { Spalte { Hinweis(fehler) } }
-                }
-                items(block.meldungen, key = { it.id }) { meldung ->
-                    Spalte {
-                        MeldungsKarte(
-                            meldung = meldung,
-                            blockIndex = index,
-                            bild = app.speicher.bildDatei(meldung.bildDatei),
-                            zustand = vorlesen,
-                            vorlesen = { app.vorleser.schalteUm(meldung.id, meldung.vorleseText) },
-                        )
-                    }
-                }
-            }
-        }
-
-        AnimatedVisibility(
-            visible = vorlesen.fehler.isNotBlank(),
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
-                .padding(start = 16.dp, end = 96.dp, top = 16.dp, bottom = 16.dp),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.inverseSurface,
-                shadowElevation = 8.dp,
+        },
+    ) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            LazyColumn(
+                state = liste,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 120.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(Modifier.padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        vorlesen.fehler,
-                        color = MaterialTheme.colorScheme.inverseOnSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f, fill = false).widthIn(max = 520.dp),
+                item(key = "kopf") {
+                    val (titel, untertitel) = when {
+                        monat != null -> "Rückblick" to Archiv.monatsName(monat.monat)
+                        auswahl is Ansicht.Tag && gewaehlterEintrag != null -> {
+                            val datum = gewaehlterEintrag.tag
+                            val gross = when (datum) {
+                                heute, heute.minusDays(1) -> tagName(datum, heute)
+                                else -> datum.format(DateTimeFormatter.ofPattern("EEEE", Locale.GERMANY))
+                            }
+                            gross to datum.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.GERMANY))
+                        }
+                        else -> gruss() to heute.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.GERMANY))
+                    }
+                    Kopf(
+                        ausgabe = ausgabe,
+                        titel = titel,
+                        untertitel = untertitel,
+                        dunkel = dunkel,
+                        laeuft = lauf?.state == WorkInfo.State.RUNNING,
+                        oeffneArchiv = { bildschirm.launch { schublade.open() } },
+                        aktualisiere = { Zeitplan.starteLauf(kontext, manuell = true) },
+                        wechsleDesign = { app.einstellungen.setzeDesign(if (dunkel) DesignModus.HELL else DesignModus.DUNKEL) },
+                        oeffneEinstellungen = oeffneEinstellungen,
                     )
-                    TextButton(onClick = app.vorleser::loescheFehler) { Text("OK") }
                 }
-            }
-        }
-
-        Column(
-            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 18.dp, bottom = 18.dp),
-            horizontalAlignment = Alignment.End,
-        ) {
-            AnimatedVisibility(visible = sprache.meldung.isNotBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.inverseSurface,
-                    shadowElevation = 8.dp,
-                    modifier = Modifier.padding(bottom = 12.dp).widthIn(max = 360.dp),
-                ) {
-                    Row(Modifier.padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            sprache.meldung,
-                            color = MaterialTheme.colorScheme.inverseOnSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f, fill = false),
+                if (auswahl != Ansicht.Aktuell) {
+                    item(key = "archiv") {
+                        Spalte {
+                            ArchivHinweis(
+                                text = when {
+                                    monat != null -> "Monatsrückblick · ${Archiv.monatsName(monat.monat)}"
+                                    gewaehlterEintrag != null -> "Archiv · " + gewaehlterEintrag.tag.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.GERMANY))
+                                    else -> "Archiv"
+                                },
+                                zuAktuell = { zeige(Ansicht.Aktuell) },
+                            )
+                        }
+                    }
+                }
+                if (tagesAusgaben.size > 1) {
+                    item(key = "ausgaben") {
+                        AusgabenWahl(tagesAusgaben, gewaehlterEintrag?.id) { id ->
+                            gewaehlterEintrag?.let { zeige(Ansicht.Tag(it.tag, id)) }
+                        }
+                    }
+                }
+                item(key = "status") {
+                    Spalte { LaufStatus(lauf, app.codex.istVerbunden, oeffneEinstellungen) }
+                }
+                items(offeneFragen, key = { "frage-${it.id}" }) { info ->
+                    Spalte {
+                        FrageLaeuft(
+                            frage = info.tags.firstOrNull { it.startsWith(Zeitplan.FRAGE_ETIKETT) }?.removePrefix(Zeitplan.FRAGE_ETIKETT).orEmpty(),
+                            text = info.progress.getString("text")
+                                ?: if (info.state == WorkInfo.State.RUNNING) "Deine Frage wird recherchiert …" else "Wartet auf die Recherche …",
+                            anteil = info.progress.getFloat("anteil", 0f),
+                            laeuft = info.state == WorkInfo.State.RUNNING,
+                            verwerfen = { WorkManager.getInstance(kontext).cancelWorkById(info.id) },
                         )
-                        if (sprache.zuEinstellungen) {
-                            TextButton(onClick = {
-                                app.sprachFrage.loescheMeldung()
-                                oeffneEinstellungen()
-                            }) { Text("Einstellungen") }
-                        } else {
-                            TextButton(onClick = app.sprachFrage::loescheMeldung) { Text("OK") }
+                    }
+                }
+                items(gescheiterteFragen, key = { "frage-fehler-${it.id}" }) { info ->
+                    Spalte { Hinweis(info.outputData.getString("fehler").orEmpty(), "OK") { app.sprachFrage.erledigt(info.id) } }
+                }
+                if (monat != null) {
+                    item(key = "rueckblick-hinweis") {
+                        Spalte {
+                            Hinweis(
+                                "Heuristische Auswahl aus den gespeicherten Meldungen (${Archiv.zeitraum(monat)}): je Thema die ${Archiv.TOP_JE_THEMA} Geschichten, " +
+                                    "die an den meisten Tagen, am weitesten oben und mit den meisten Quellen berichtet wurden. Gleiche Geschichten sind zusammengefasst, es wurde nichts neu recherchiert.",
+                            )
+                        }
+                    }
+                }
+                if (laedt) {
+                    item(key = "laedt") {
+                        Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    }
+                }
+                if (index.isEmpty()) {
+                    item(key = "leer") {
+                        Spalte {
+                            LeerZustand(
+                                angemeldet = app.codex.istVerbunden,
+                                laeuft = lauf?.state == WorkInfo.State.RUNNING,
+                                laden = { Zeitplan.starteLauf(kontext, manuell = true) },
+                                oeffneEinstellungen = oeffneEinstellungen,
+                            )
+                        }
+                    }
+                }
+                bloecke.forEachIndexed { index, block ->
+                    item(key = "b-${ausgabe?.id}-${block.themaId}") {
+                        Spalte {
+                            BlockKopf(
+                                index = index,
+                                block = block,
+                                zustand = vorlesen,
+                                vorlesen = { app.vorleser.schalteUm("block-${block.themaId}", blockText(block)) },
+                                entfernen = if (block.frage != null && ausgabe != null) {
+                                    {
+                                        if (vorlesen.quelleId == "block-${block.themaId}" || block.meldungen.any { it.id == vorlesen.quelleId }) app.vorleser.stoppe()
+                                        app.bereich.launch { app.speicher.entferneBlock(ausgabe.id, block.themaId) }
+                                    }
+                                } else {
+                                    null
+                                },
+                            )
+                        }
+                    }
+                    block.fehler?.let { fehler ->
+                        item(key = "f-${ausgabe?.id}-${block.themaId}") { Spalte { Hinweis(fehler) } }
+                    }
+                    items(block.meldungen, key = { it.id }) { meldung ->
+                        Spalte {
+                            MeldungsKarte(
+                                meldung = meldung,
+                                blockIndex = index,
+                                bild = app.speicher.bildDatei(meldung.bildDatei),
+                                zustand = vorlesen,
+                                vorlesen = { app.vorleser.schalteUm(meldung.id, meldung.vorleseText) },
+                            )
                         }
                     }
                 }
             }
-            MikrofonKnopf(
-                stufe = sprache.stufe,
-                tippe = {
-                    val erlaubt = ContextCompat.checkSelfPermission(kontext, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-                    app.sprachFrage.tippe(erlaubt) { mikrofonErlaubnis.launch(Manifest.permission.RECORD_AUDIO) }
-                },
-            )
+
+            AnimatedVisibility(
+                visible = vorlesen.fehler.isNotBlank(),
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                    .padding(start = 16.dp, end = 96.dp, top = 16.dp, bottom = 16.dp),
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.inverseSurface,
+                    shadowElevation = 8.dp,
+                ) {
+                    Row(Modifier.padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            vorlesen.fehler,
+                            color = MaterialTheme.colorScheme.inverseOnSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f, fill = false).widthIn(max = 520.dp),
+                        )
+                        TextButton(onClick = app.vorleser::loescheFehler) { Text("OK") }
+                    }
+                }
+            }
+
+            Column(
+                Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 18.dp, bottom = 18.dp),
+                horizontalAlignment = Alignment.End,
+            ) {
+                AnimatedVisibility(visible = sprache.meldung.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.inverseSurface,
+                        shadowElevation = 8.dp,
+                        modifier = Modifier.padding(bottom = 12.dp).widthIn(max = 360.dp),
+                    ) {
+                        Row(Modifier.padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                sprache.meldung,
+                                color = MaterialTheme.colorScheme.inverseOnSurface,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            if (sprache.zuEinstellungen) {
+                                TextButton(onClick = {
+                                    app.sprachFrage.loescheMeldung()
+                                    oeffneEinstellungen()
+                                }) { Text("Einstellungen") }
+                            } else {
+                                TextButton(onClick = app.sprachFrage::loescheMeldung) { Text("OK") }
+                            }
+                        }
+                    }
+                }
+                MikrofonKnopf(
+                    stufe = sprache.stufe,
+                    tippe = {
+                        val erlaubt = ContextCompat.checkSelfPermission(kontext, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                        app.sprachFrage.tippe(erlaubt) { mikrofonErlaubnis.launch(Manifest.permission.RECORD_AUDIO) }
+                    },
+                )
+            }
         }
     }
 }
@@ -448,18 +557,16 @@ private fun blockText(block: Block): String =
 @Composable
 private fun Kopf(
     ausgabe: Ausgabe?,
+    /** Große Zeile und Datumszeile — im Archiv der gewählte Tag oder Monat statt Gruß und heute. */
+    titel: String,
+    untertitel: String,
     dunkel: Boolean,
     laeuft: Boolean,
+    oeffneArchiv: () -> Unit,
     aktualisiere: () -> Unit,
     wechsleDesign: () -> Unit,
     oeffneEinstellungen: () -> Unit,
 ) {
-    val stunde = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    val gruss = when (stunde) {
-        in 4..10 -> "Guten Morgen"
-        in 11..17 -> "Guten Tag"
-        else -> "Guten Abend"
-    }
     val verlauf = Brush.linearGradient(
         if (dunkel) listOf(Color(0xFF1E1B4B), Color(0xFF4C1D95), Color(0xFF831843))
         else listOf(Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFFDB2777)),
@@ -474,11 +581,12 @@ private fun Kopf(
             Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(start = 22.dp, end = 10.dp, top = 8.dp, bottom = 26.dp),
+                .padding(start = 8.dp, end = 10.dp, top = 8.dp, bottom = 26.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Newspaper, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
+                IconButton(onClick = oeffneArchiv) {
+                    Icon(Icons.Rounded.CalendarMonth, "Archiv öffnen", tint = Color.White)
+                }
                 Text(
                     "NEWS KOMPASS",
                     style = MaterialTheme.typography.labelMedium,
@@ -499,33 +607,69 @@ private fun Kopf(
                     Icon(Icons.Rounded.Settings, "Einstellungen", tint = Color.White)
                 }
             }
-            Spacer(Modifier.height(18.dp))
-            Text(gruss, style = MaterialTheme.typography.displaySmall, color = Color.White)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                SimpleDateFormat("EEEE, d. MMMM yyyy", Locale.GERMANY).format(Date()),
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.85f),
-            )
-            if (ausgabe != null) {
-                Spacer(Modifier.height(14.dp))
-                val zeit = SimpleDateFormat("EEEE, HH:mm", Locale.GERMANY).format(Date(ausgabe.erstelltUm))
-                val anzahl = ausgabe.bloecke.sumOf { it.meldungen.size }
-                Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(50)) {
-                    Text(
-                        "${ausgabe.slot} · $zeit Uhr · $anzahl Meldungen",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
-                    )
+            Column(Modifier.padding(start = 14.dp)) {
+                Spacer(Modifier.height(18.dp))
+                Text(titel, style = MaterialTheme.typography.displaySmall, color = Color.White)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    untertitel,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White.copy(alpha = 0.85f),
+                )
+                if (ausgabe != null) {
+                    Spacer(Modifier.height(14.dp))
+                    val anzahl = ausgabe.bloecke.sumOf { it.meldungen.size }
+                    val zeile = if (ausgabe.id.startsWith(Archiv.RUECKBLICK_PRAEFIX)) {
+                        "${ausgabe.slot} · $anzahl Meldungen"
+                    } else {
+                        val zeit = SimpleDateFormat("EEEE, HH:mm", Locale.GERMANY).format(Date(ausgabe.erstelltUm))
+                        "${ausgabe.slot} · $zeit Uhr · $anzahl Meldungen"
+                    }
+                    Surface(color = Color.White.copy(alpha = 0.16f), shape = RoundedCornerShape(50)) {
+                        Text(
+                            zeile,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+private fun gruss(): String = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
+    in 4..10 -> "Guten Morgen"
+    in 11..17 -> "Guten Tag"
+    else -> "Guten Abend"
+}
+
+/** Oben im Archiv: was gerade gezeigt wird, und der Weg zurück zu Aktuell. */
 @Composable
-private fun AusgabenWahl(ausgaben: List<Ausgabe>, gewaehlt: String?, waehle: (String) -> Unit) {
+private fun ArchivHinweis(text: String, zuAktuell: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+    ) {
+        Row(Modifier.padding(start = 16.dp, end = 6.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.History, null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = zuAktuell) { Text("Zu Aktuell") }
+        }
+    }
+}
+
+/** Die Ausgaben des gezeigten Tages, etwa Morgen und Abend. */
+@Composable
+private fun AusgabenWahl(ausgaben: List<AusgabenEintrag>, gewaehlt: String?, waehle: (String) -> Unit) {
     LazyRow(
         modifier = Modifier.widthIn(max = 792.dp).fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
@@ -542,18 +686,9 @@ private fun AusgabenWahl(ausgaben: List<Ausgabe>, gewaehlt: String?, waehle: (St
     }
 }
 
-private fun ausgabeName(a: Ausgabe): String {
-    val tag = Calendar.getInstance().apply { timeInMillis = a.erstelltUm }
-    val heute = Calendar.getInstance()
-    val gestern = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
-    fun gleich(x: Calendar, y: Calendar) = x.get(Calendar.YEAR) == y.get(Calendar.YEAR) && x.get(Calendar.DAY_OF_YEAR) == y.get(Calendar.DAY_OF_YEAR)
-    val wann = when {
-        gleich(tag, heute) -> "Heute"
-        gleich(tag, gestern) -> "Gestern"
-        else -> SimpleDateFormat("EE d.M.", Locale.GERMANY).format(Date(a.erstelltUm))
-    }
+private fun ausgabeName(a: AusgabenEintrag): String {
     val teil = a.slot.removeSuffix("ausgabe").ifBlank { "Ausgabe" }
-    return "$wann · $teil · " + SimpleDateFormat("HH:mm", Locale.GERMANY).format(Date(a.erstelltUm))
+    return "$teil · " + SimpleDateFormat("HH:mm", Locale.GERMANY).format(Date(a.erstelltUm))
 }
 
 @Composable

@@ -71,7 +71,7 @@ class NewsRecherche(
 
         val jetzt = System.currentTimeMillis()
         // Was in den letzten 36 Stunden schon lief, soll nicht noch einmal als neu erscheinen.
-        val vorige = speicher.ausgaben.value.filter { jetzt - it.erstelltUm < 36 * 3_600_000L }
+        val vorige = speicher.ausgabenSeit(jetzt - 36 * 3_600_000L)
         val kiBudget = intArrayOf(if (stand.bilderUnterstuetzt) stand.maxKiBilder else 0)
         val bloecke = mutableListOf<Block>()
         val schritte = themen.size * 2
@@ -137,7 +137,7 @@ class NewsRecherche(
         val jetzt = System.currentTimeMillis()
         val thema = Thema("frage-$jetzt", text)
         // Was die aktuelle Ausgabe schon erzählt, soll der Frage-Block nicht wiederholen.
-        val schonDa = speicher.ausgaben.value.firstOrNull()?.bloecke.orEmpty().flatMap { b -> b.meldungen.map { it.titel } }
+        val schonDa = speicher.neueste()?.bloecke.orEmpty().flatMap { b -> b.meldungen.map { it.titel } }
         beiFortschritt(LaufFortschritt("Recherchiere deine Frage …", 0.05f))
         val antwort = codex.frage(
             anweisung = anweisung(jetzt, Thema.FRAGE_MIN, Thema.FRAGE_MAX, stand.ausfuehrlichkeit, sprachFrage = true),

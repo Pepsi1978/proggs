@@ -478,7 +478,7 @@ private fun CodexBereich(app: NewsApplication, activity: ComponentActivity, stan
                                 val ergebnis = app.codex.melde(activity) { anmeldung = it }
                                 email = ergebnis.email
                                 verbunden = true
-                                if (app.speicher.ausgaben.value.isEmpty()) Zeitplan.starteLauf(kontext, manuell = true)
+                                if (app.speicher.index.value.isEmpty()) Zeitplan.starteLauf(kontext, manuell = true)
                             } catch (abbruch: CancellationException) {
                                 meldung = "Anmeldung abgebrochen."
                             } catch (fehler: Exception) {
