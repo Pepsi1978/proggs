@@ -15,7 +15,9 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import de.frank.newskompass.NewsApplication
+import de.frank.newskompass.data.ArchivImport
 import de.frank.newskompass.data.ArchivSicherung
+import de.frank.newskompass.data.ImportErgebnis
 import de.frank.newskompass.data.SicherungsErgebnis
 import de.frank.newskompass.observability.KompassLog
 import java.text.SimpleDateFormat
@@ -50,11 +52,20 @@ class SicherungWorker(context: Context, parameter: WorkerParameters) : Coroutine
         val app = applicationContext as NewsApplication
         val uri = inputData.getString(K_URI)?.let(Uri::parse) ?: return Result.failure(workDataOf(K_FEHLER to "Keine Datei gewählt."))
         val art = inputData.getString(K_ART)
-        runCatching { setForeground(vordergrund(if (art == ART_EXPORT) "Archiv wird gesichert …" else "Sicherung wird geprüft …")) }
+        val start = when (art) {
+            ART_EXPORT -> "Archiv wird gesichert …"
+            ART_IMPORT -> "Archiv wird importiert …"
+            else -> "Sicherung wird geprüft …"
+        }
+        runCatching { setForeground(vordergrund(start)) }
         val resolver = applicationContext.contentResolver
         val name = anzeigeName(uri)
         try {
-            return if (art == ART_EXPORT) exportiere(app, uri, name) else pruefe(uri, name)
+            return when (art) {
+                ART_EXPORT -> exportiere(app, uri, name)
+                ART_IMPORT -> importiere(app, uri, name)
+                else -> pruefe(uri, name)
+            }
         } finally {
             // Die dauerhafte Freigabe war nur für diesen Auftrag nötig.
             runCatching { resolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
@@ -124,6 +135,44 @@ class SicherungWorker(context: Context, parameter: WorkerParameters) : Coroutine
         )
     }
 
+    /** Importiert eine Sicherung, ohne lokal etwas zu überschreiben oder zu löschen. */
+    private suspend fun importiere(app: NewsApplication, uri: Uri, name: String): Result {
+        val e = try {
+            ArchivImport.importiere(app.speicher, applicationContext.contentResolver, uri) { text, anteil -> melde(text, anteil) }
+        } catch (abbruch: CancellationException) {
+            throw abbruch
+        } catch (fehler: Exception) {
+            KompassLog.error("SicherungWorker", "importiere", "Import gescheitert", mapOf("grund" to fehler.javaClass.simpleName))
+            ImportErgebnis(
+                fehler = "Der Import ist gescheitert (${fehler.message ?: fehler.javaClass.simpleName}). Bereits übernommene Ausgaben sind vollständig; " +
+                    "ein erneuter Import setzt fort. Lokal wurde nichts überschrieben oder gelöscht.",
+            )
+        }
+        e.fehler?.let { return Result.failure(workDataOf(K_ART to ART_IMPORT, K_FEHLER to it)) }
+        val teile = mutableListOf("${e.neu} Ausgaben übernommen", "${e.doppelt} schon vorhanden")
+        teile += "Bilder: ${e.bilderNeu} neu, ${e.bilderVorhanden} vorhanden" + if (e.bilderUmbenannt > 0) ", ${e.bilderUmbenannt} unter neuem Namen" else ""
+        if (e.konflikte > 0) teile += "${e.konflikte} Konflikte: lokale Fassung behalten, die importierte liegt unter ${e.quarantaene}"
+        if (e.konflikteLokalBeschaedigt > 0) {
+            teile += "${e.konflikteLokalBeschaedigt} lokal beschädigte Ausgaben: die gute Fassung aus der Sicherung liegt unter ${e.quarantaene}"
+        }
+        if (e.beschaedigtGesichert > 0) teile += "${e.beschaedigtGesichert} beschädigte Rohdateien getrennt gesichert"
+        // Zwei getrennte Sachverhalte: Was im Archiv jetzt fehlt, und ob die gewählte Datei selbst vollständig ist.
+        val kopf = if (e.fehlendeBilder == 0) {
+            "Import fertig aus $name"
+        } else {
+            "Import unvollständig aus $name: ${e.fehlendeBilder} Bilder übernommener Ausgaben fehlen in der Sicherung und lokal"
+        }
+        val hinweis = if (e.sicherungFehlendeBilder > 0) {
+            " Hinweis: Die gewählte Sicherung selbst ist unvollständig — ${e.sicherungFehlendeBilder} Bilder fehlten schon beim Sichern."
+        } else {
+            ""
+        }
+        val vollstaendig = e.fehlendeBilder == 0 && e.sicherungFehlendeBilder == 0
+        return Result.success(
+            workDataOf(K_ART to ART_IMPORT, K_VOLLSTAENDIG to vollstaendig, K_TEXT to "$kopf: " + teile.joinToString(" · ") + "." + hinweis),
+        )
+    }
+
     /** Entfernt die unvollständige, eben selbst angelegte Datei und meldet, ob das geklappt hat. */
     private fun scheitere(uri: Uri, name: String, grund: String): Result {
         val entfernt = entferne(uri)
@@ -161,6 +210,7 @@ class SicherungWorker(context: Context, parameter: WorkerParameters) : Coroutine
         const val K_VOLLSTAENDIG = "vollstaendig"
         const val ART_EXPORT = "export"
         const val ART_PRUEFEN = "pruefen"
+        const val ART_IMPORT = "import"
 
         /** Etikett mit der Art — die Oberfläche braucht sie auch bei abgebrochenen Aufträgen ohne Ausgabe. */
         const val ETIKETT = "sicherung:"

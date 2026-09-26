@@ -861,12 +861,16 @@ private fun SicherungBereich(app: NewsApplication, stand: EinstellungenStand) {
     val pruefen = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         starte(uri, SicherungWorker.ART_PRUEFEN, schreiben = false)
     }
+    val importieren = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        starte(uri, SicherungWorker.ART_IMPORT, schreiben = false)
+    }
+    val zipTypen = arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")
 
     Column {
         Abschnitt(
             "Archivsicherung",
             "Sichert alle gespeicherten Ausgaben und ihre Bilder als ZIP-Datei an einen Ort deiner Wahl, auch in Google Drive. " +
-                "Einstellungen, Schlüssel und Anmeldung sind nicht enthalten.",
+                "Einstellungen, Schlüssel und Anmeldung sind nicht enthalten. Ein Import fügt nur fehlende Ausgaben hinzu und überschreibt oder löscht nichts.",
         )
         Kachel {
             if (stand.letzteSicherungUm > 0) {
@@ -896,10 +900,11 @@ private fun SicherungBereich(app: NewsApplication, stand: EinstellungenStand) {
                 val ergebnis = when (auftrag?.state) {
                     WorkInfo.State.SUCCEEDED -> auftrag.outputData.getString(SicherungWorker.K_TEXT)
                     WorkInfo.State.FAILED -> auftrag.outputData.getString(SicherungWorker.K_FEHLER) ?: "Die Sicherung ist unerwartet gescheitert; lokal wurde nichts verändert."
-                    WorkInfo.State.CANCELLED -> if (SicherungWorker.ETIKETT + SicherungWorker.ART_PRUEFEN in auftrag.tags) {
-                        "Prüfung abgebrochen. Es wurde nichts verändert."
-                    } else {
-                        "Sicherung abgebrochen. Die unvollständige Datei wurde nach Möglichkeit entfernt; lokal wurde nichts verändert."
+                    WorkInfo.State.CANCELLED -> when {
+                        SicherungWorker.ETIKETT + SicherungWorker.ART_PRUEFEN in auftrag.tags -> "Prüfung abgebrochen. Es wurde nichts verändert."
+                        SicherungWorker.ETIKETT + SicherungWorker.ART_IMPORT in auftrag.tags ->
+                            "Import abgebrochen. Bereits übernommene Ausgaben sind vollständig; ein erneuter Import setzt fort. Lokal wurde nichts überschrieben oder gelöscht."
+                        else -> "Sicherung abgebrochen. Die unvollständige Datei wurde nach Möglichkeit entfernt; lokal wurde nichts verändert."
                     }
                     else -> null
                 }
@@ -920,10 +925,8 @@ private fun SicherungBereich(app: NewsApplication, stand: EinstellungenStand) {
                 }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { runCatching { sichern.launch(sicherungsName()) } }, shape = RoundedCornerShape(50)) { Text("Archiv sichern") }
-                    OutlinedButton(
-                        onClick = { runCatching { pruefen.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) } },
-                        shape = RoundedCornerShape(50),
-                    ) { Text("Sicherung prüfen") }
+                    OutlinedButton(onClick = { runCatching { pruefen.launch(zipTypen) } }, shape = RoundedCornerShape(50)) { Text("Sicherung prüfen") }
+                    OutlinedButton(onClick = { runCatching { importieren.launch(zipTypen) } }, shape = RoundedCornerShape(50)) { Text("Archiv importieren") }
                 }
             }
             Spacer(Modifier.height(8.dp))

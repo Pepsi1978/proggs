@@ -43,14 +43,14 @@ object ArchivSicherung {
     const val FORMAT = 1
     const val MANIFEST = "manifest.json"
 
-    private const val MAX_JSON = 5L * 1024 * 1024
-    private const val MAX_BILD = 20L * 1024 * 1024
+    internal const val MAX_JSON = 5L * 1024 * 1024
+    internal const val MAX_BILD = 20L * 1024 * 1024
     private const val MAX_EINTRAEGE = 500_000
     private const val MAX_GESAMT = 64L * 1024 * 1024 * 1024
 
-    private val AUSGABE_PFAD = Regex("ausgaben/(a\\d+)\\.json")
-    private val BESCHAEDIGT_PFAD = Regex("beschaedigt/(a\\d+)\\.json")
-    private val BILD_PFAD = Regex("bilder/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.jpg")
+    internal val AUSGABE_PFAD = Regex("ausgaben/(a\\d+)\\.json")
+    internal val BESCHAEDIGT_PFAD = Regex("beschaedigt/(a\\d+)\\.json")
+    internal val BILD_PFAD = Regex("bilder/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.jpg")
 
     // --- Export ------------------------------------------------------------------------------------
 

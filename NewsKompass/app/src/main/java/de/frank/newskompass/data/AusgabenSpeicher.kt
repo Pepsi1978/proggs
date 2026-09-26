@@ -60,6 +60,10 @@ class AusgabenSpeicher(context: Context) {
     /** Abgeleitete Rückblicke abgeschlossener Monate — jederzeit aus den Originalen neu baubar. */
     val rueckblickOrdner = File(context.filesDir, "rueckblicke")
 
+    /** Ablage des Imports: Bereitstellung, Quarantäne, getrennt gesicherte Rohdateien, Herkunftsbuch. */
+    val importWurzel = File(context.filesDir, "import")
+    private val herkunftDatei get() = File(importWurzel, "herkunft.json")
+
     private val _index = MutableStateFlow<List<AusgabenEintrag>>(emptyList())
 
     /** Kopfdaten aller Ausgaben, neueste zuerst. */
@@ -167,6 +171,38 @@ class AusgabenSpeicher(context: Context) {
         unlesbar = unlesbar - ausgabe.id
         synchronized(zwischenspeicher) { zwischenspeicher[ausgabe.id] = ausgabe }
         setzeIndex(_index.value.filterNot { it.id == ausgabe.id } + eintragAus(ausgabe, ziel.lastModified()))
+    }
+
+    /**
+     * Übernimmt eine importierte Ausgabe — nur, wenn es lokal noch keine Datei mit dieser Nummer
+     * gibt. Liefert false, wenn doch; dann bleibt die lokale Datei, wie sie ist.
+     */
+    suspend fun importiereAusgabe(ausgabe: Ausgabe, text: String): Boolean = sperre.withLock {
+        withContext(Dispatchers.IO) {
+            pruefeIndex(erzwingen = false)
+            val ziel = File(ordner, "${ausgabe.id}.json")
+            if (ziel.exists()) return@withContext false
+            SicheresSchreiben.schreibe(ziel, text) { gelesen ->
+                require(ausJson(JSONObject(gelesen)).id == ausgabe.id) { "Importierte Ausgabe weicht nach dem Schreiben ab" }
+            }
+            setzeIndex(_index.value.filterNot { it.id == ausgabe.id } + eintragAus(ausgabe, ziel.lastModified()))
+            true
+        }
+    }
+
+    /** Herkunftsbuch des Imports: Nummer → SHA-256 der Quelldatei, damit Wiederholungen nichts doppelt melden. */
+    fun leseHerkunft(): Map<String, String> = runCatching {
+        val j = JSONObject(herkunftDatei.readText())
+        j.keys().asSequence().associateWith { j.getString(it) }
+    }.getOrDefault(emptyMap())
+
+    @Synchronized
+    fun merkeHerkunft(id: String, sha: String) {
+        val buch = leseHerkunft().toMutableMap()
+        if (buch[id] == sha) return
+        buch[id] = sha
+        importWurzel.mkdirs()
+        SicheresSchreiben.schreibe(herkunftDatei, JSONObject(buch as Map<*, *>).toString()) { JSONObject(it) }
     }
 
     suspend fun loesche(id: String) = sperre.withLock { loescheOhneSperre(id) }
