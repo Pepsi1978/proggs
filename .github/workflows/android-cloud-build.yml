@@ -1,0 +1,235 @@
+# Android-Cloud-Bau: baut Apps nach dem Merge eines Pull Requests auf main, signiert sie mit dem
+# geteilten Debug-Key und legt APK + update.json in Google Drive "Dokumente/Updates/<Projekt>/".
+# UpdateStation am Handy findet das Update dort. Anleitung: docs/cloud-android-build/EINRICHTUNG-FUER-KI.md
+#
+# Sicherheit:
+# - Secrets liegen im Environment "android-signing", das nur Läufe auf main zulässt.
+# - Kein pull_request- und kein pull_request_target-Auslöser.
+# - Bausteine nur von GitHub und Gradle, auf Commit-SHA eingefroren.
+# - Direkte Pushes vom PC auf main baut dieser Ablauf nicht: dort veröffentlicht der Skill apk-update lokal.
+name: Android-Cloud-Bau
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*/app/**'
+      - '*/build.gradle.kts'
+      - '*/settings.gradle.kts'
+      - '*/gradle.properties'
+      - '*/gradle/**'
+  workflow_dispatch:
+    inputs:
+      projekt:
+        description: 'Projektordner, z. B. NovaDrehen'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  # Play-Store-Key (BestJournalAndroid) bzw. Dateien aus dem SK-Ordner, die in die APK eingebacken werden.
+  AUSGESCHLOSSEN: 'Designs BestJournalAndroid BestJournalFrank EntropieReductor KarteikartenLernen StackLabor'
+
+jobs:
+  auswahl:
+    name: Apps bestimmen
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      projekte: ${{ steps.wahl.outputs.projekte }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - id: wahl
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EREIGNIS: ${{ github.event_name }}
+          EINGABE: ${{ inputs.projekt }}
+          VORHER: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ausgeschlossen() { for a in $AUSGESCHLOSSEN; do [ "$a" = "$1" ] && return 0; done; return 1; }
+          kandidaten=()
+          if [ "$EREIGNIS" = "workflow_dispatch" ]; then
+            if ! [[ "$EINGABE" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] || [[ "$EINGABE" == *..* ]]; then
+              echo "::error::Ungültiger Projektname."; exit 1
+            fi
+            kandidaten=("$EINGABE")
+          else
+            # Nur Merges von Pull Requests (Cloud-Sitzungen). Direkte Pushes vom PC veröffentlicht apk-update lokal.
+            anzahl=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '[.[] | select(.merged_at != null and .base.ref == "main")] | length')
+            if [ "$anzahl" = "0" ]; then
+              echo "Direkter Push ohne Pull Request: kein Cloud-Bau (der PC veröffentlicht über apk-update)." >> "$GITHUB_STEP_SUMMARY"
+              echo "projekte=[]" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            if [[ "$VORHER" =~ ^0+$ ]] || ! git cat-file -e "$VORHER^{commit}" 2>/dev/null; then VORHER="$SHA~1"; fi
+            mapfile -t kandidaten < <(git diff --name-only "$VORHER" "$SHA" | grep '/' | cut -d/ -f1 | sort -u)
+          fi
+          liste=()
+          for p in "${kandidaten[@]}"; do
+            if ausgeschlossen "$p"; then echo "- $p: ausgeschlossen (Play-Store-Key oder SK-Dateien nötig), nicht gebaut." >> "$GITHUB_STEP_SUMMARY"; continue; fi
+            if git cat-file -e "$SHA:$p/app/build.gradle.kts" 2>/dev/null; then liste+=("$p"); fi
+          done
+          if [ "$EREIGNIS" = "workflow_dispatch" ] && [ ${#liste[@]} -eq 0 ]; then
+            echo "::error::$EINGABE ist keine baubare Android-App (fehlt, ausgeschlossen oder ohne app/build.gradle.kts)."; exit 1
+          fi
+          json=$(printf '%s\n' "${liste[@]}" | jq -R . | jq -sc 'map(select(length > 0))')
+          echo "Zu bauen: $json"
+          echo "projekte=$json" >> "$GITHUB_OUTPUT"
+
+  bau:
+    name: ${{ matrix.projekt }}
+    needs: auswahl
+    if: needs.auswahl.outputs.projekte != '[]'
+    runs-on: windows-latest
+    environment: android-signing
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        projekt: ${{ fromJSON(needs.auswahl.outputs.projekte) }}
+    concurrency:
+      group: android-cloud-build-${{ matrix.projekt }}
+      cancel-in-progress: false
+    env:
+      PROJEKT: ${{ matrix.projekt }}
+      SKRIPT: OpenLauncher\Profiles\ClaudeCode\standard\skills\apk-update\scripts\apk-update.ps1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+          sparse-checkout: |
+            OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update
+            ${{ matrix.projekt }}
+
+      - name: Git-Stand für apk-update vorbereiten
+        shell: pwsh
+        run: |
+          git checkout -B main origin/main
+          git branch --set-upstream-to=origin/main main
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Geteilten Keystore ablegen
+        shell: pwsh
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_SHARED_KEYSTORE_B64 }}
+        run: |
+          if (-not $env:KEYSTORE_B64) { Write-Host "::error::Secret ANDROID_SHARED_KEYSTORE_B64 fehlt."; exit 1 }
+          $sk = Join-Path $env:USERPROFILE 'SK\Android'; $ad = Join-Path $env:USERPROFILE '.android'
+          New-Item -ItemType Directory -Force -Path $sk, $ad | Out-Null
+          [IO.File]::WriteAllBytes("$sk\debug-shared.keystore", [Convert]::FromBase64String($env:KEYSTORE_B64))
+          Copy-Item "$sk\debug-shared.keystore" "$ad\debug.keystore" -Force
+
+      - name: rclone einrichten
+        shell: pwsh
+        env:
+          RCLONE_INHALT: ${{ secrets.RCLONE_CONFIG }}
+        run: |
+          if (-not $env:RCLONE_INHALT) { Write-Host "::error::Secret RCLONE_CONFIG fehlt."; exit 1 }
+          choco install rclone -y --no-progress | Out-Null
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::rclone-Installation fehlgeschlagen."; exit 1 }
+          $conf = Join-Path $env:RUNNER_TEMP 'rclone.conf'
+          [IO.File]::WriteAllText($conf, $env:RCLONE_INHALT)
+          "RCLONE_CONFIG=$conf" >> $env:GITHUB_ENV
+
+      - name: Drive-Ordner des Projekts holen
+        shell: pwsh
+        run: |
+          $lokal = Join-Path $env:RUNNER_TEMP "Updates\$env:PROJEKT"
+          New-Item -ItemType Directory -Force -Path $lokal | Out-Null
+          $ordner = @(rclone lsf 'gdrive:Dokumente/Updates' --dirs-only)
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::Google Drive nicht erreichbar (rclone lsf)."; exit 1 }
+          if ($ordner -contains "$env:PROJEKT/") {
+            rclone copy "gdrive:Dokumente/Updates/$env:PROJEKT" $lokal
+            if ($LASTEXITCODE -ne 0) { Write-Host "::error::Download aus Drive fehlgeschlagen."; exit 1 }
+          }
+          $vorher = @(Get-ChildItem $lokal -Filter *.apk | ForEach-Object Name)
+          Set-Content (Join-Path $env:RUNNER_TEMP 'apks-vorher.txt') $vorher
+          Write-Host "Im Drive-Ordner: $($vorher -join ', ')"
+
+      - name: Bauen mit apk-update
+        id: bau
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'apk-update.log'
+          pwsh -NoProfile -File $env:SKRIPT -Projekt $env:PROJEKT -ProggsWurzel $env:GITHUB_WORKSPACE `
+            -UpdatesWurzel (Join-Path $env:RUNNER_TEMP 'Updates') -OhneGeraet 2>&1 | Tee-Object -FilePath $log
+          $code = $LASTEXITCODE
+          $zeilen = Get-Content $log
+          $status = ($zeilen | Select-String '^APK_UPDATE_STATUS=(.+)$' | Select-Object -Last 1).Matches.Groups[1].Value
+          $fehler = ($zeilen | Select-String '^APK_UPDATE_FEHLER=(.+)$' | Select-Object -Last 1).Matches.Groups[1].Value
+          "status=$status" >> $env:GITHUB_OUTPUT
+          switch ($status) {
+            'ok' { exit 0 }
+            'already-current' {
+              "### $env:PROJEKT`nSchon veröffentlicht und unverändert, nichts hochgeladen." >> $env:GITHUB_STEP_SUMMARY
+              exit 0 }
+            'vorbereitet' {
+              "### $env:PROJEKT`n❌ Versionslog-Eintrag fehlt. In der Cloud-Sitzung versionslog.json ergänzen, Pull Request neu mergen." >> $env:GITHUB_STEP_SUMMARY
+              Write-Host "::error::Versionslog-Eintrag fehlt. In der Cloud-Sitzung versionslog.json ergänzen, Pull Request neu mergen."
+              exit 1 }
+            default {
+              "### $env:PROJEKT`n❌ Fehler: $fehler (Exit $code)" >> $env:GITHUB_STEP_SUMMARY
+              Write-Host "::error::apk-update: $fehler"
+              exit 1 }
+          }
+
+      - name: Signatur prüfen und nach Drive hochladen
+        if: steps.bau.outputs.status == 'ok'
+        shell: pwsh
+        env:
+          SIGNATUR_ERWARTET: ${{ vars.ANDROID_SIGNATUR_SHA256 }}
+        run: |
+          $lokal = Join-Path $env:RUNNER_TEMP "Updates\$env:PROJEKT"
+          $m = Get-Content (Join-Path $lokal 'update.json') -Raw -Encoding utf8 | ConvertFrom-Json
+          if (-not $env:SIGNATUR_ERWARTET -or "$($m.signaturSha256)".ToLower() -ne $env:SIGNATUR_ERWARTET.ToLower()) {
+            Write-Host "::error::Signatur $($m.signaturSha256) passt nicht zum geteilten Schlüssel. Nichts hochgeladen."; exit 1
+          }
+          $apk = Join-Path $lokal $m.apk
+          if (-not (Test-Path $apk) -or (Get-FileHash $apk -Algorithm SHA256).Hash.ToLower() -ne "$($m.sha256)".ToLower()) {
+            Write-Host "::error::APK fehlt oder Hash passt nicht zu update.json. Nichts hochgeladen."; exit 1
+          }
+          $ziel = "gdrive:Dokumente/Updates/$env:PROJEKT"
+          # Erst die APK, dann update.json: UpdateStation sieht nie ein Manifest ohne APK.
+          rclone copyto $apk "$ziel/$($m.apk)"
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::Upload der APK fehlgeschlagen."; exit 1 }
+          rclone copyto (Join-Path $lokal 'update.json') "$ziel/update.json"
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::Upload von update.json fehlgeschlagen."; exit 1 }
+          # Nur die APKs löschen, die das Skript lokal aufgeräumt hat (kein rclone sync).
+          $nachher = @(Get-ChildItem $lokal -Filter *.apk | ForEach-Object Name)
+          foreach ($alt in @(Get-Content (Join-Path $env:RUNNER_TEMP 'apks-vorher.txt') -ErrorAction SilentlyContinue)) {
+            if ($alt -and $nachher -notcontains $alt) { rclone deletefile "$ziel/$alt"; Write-Host "Alte APK entfernt: $alt" }
+          }
+          "### $env:PROJEKT`n✅ Version $($m.versionName) (versionCode $($m.versionCode)) liegt in Google Drive unter Dokumente/Updates/$env:PROJEKT. UpdateStation findet sie bei der nächsten Prüfung." >> $env:GITHUB_STEP_SUMMARY
+          exit 0
+
+      - name: Aufräumen
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item -Force -ErrorAction SilentlyContinue `
+            (Join-Path $env:USERPROFILE 'SK\Android\debug-shared.keystore'), `
+            (Join-Path $env:USERPROFILE '.android\debug.keystore'), `
+            (Join-Path $env:RUNNER_TEMP 'rclone.conf')
+          exit 0

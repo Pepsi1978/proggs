@@ -466,6 +466,20 @@ Umschalter **Abo / eigener Schlüssel** mit Anmeldestatus · bei der Anmeldung d
 - Beim App-Start einmal ins Log schreiben.
 - `versionCode` bei jedem Release +1 (sonst lehnt der Play Store ab).
 
+### 8.1 Bauen aus der Cloud (Claude-Code-Cloud-Sitzung am Handy)
+
+- In einer Cloud-Sitzung gibt es keinen SK-Ordner. **Nicht selbst signieren**, `apk-update.ps1`
+  **nicht** starten und **nie** nach dem Keystore fragen.
+- Stattdessen: einen neuen Eintrag unten in `app/src/main/assets/versionslog.json` anhängen
+  (versionCode + 1, `build.gradle.kts` liest die Version daraus), testen, soweit es ohne Signatur geht
+  (Unit-Tests, `assembleDebug` mit Wegwerf-Schlüssel nur zur Kompilierprüfung, das Ergebnis **nie**
+  hochladen), Pull Request öffnen und Frank sagen: „Zum Installieren den Pull Request mergen, danach
+  baut GitHub und legt die APK in Google Drive.“
+- Nach dem Merge baut `.github/workflows/android-cloud-build.yml` die App mit dem geteilten Key und legt
+  APK + `update.json` in `Dokumente/Updates/<Projekt>/`. Ausgeschlossen sind Apps, die Dateien aus SK
+  einbacken: BestJournalAndroid, BestJournalFrank, EntropieReductor, KarteikartenLernen, StackLabor.
+  Einrichtung und Hintergrund: `docs/cloud-android-build/EINRICHTUNG-FUER-KI.md`.
+
 ---
 
 ## 9. Baustein I — Biometrische App-Sperre ⭐ PFLICHT
@@ -1246,6 +1260,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 
 | Datum | Änderung |
 |---|---|
+| 26.09.2026, 18:10 Uhr | Kapitel 8.1 ergänzt: Bauen aus der Cloud — Versionslog-Eintrag + Pull Request, GitHub Actions signiert nach dem Merge und legt die APK nach Google Drive |
 | 29.08.2026, 11:19 Uhr | Erstfassung: Bausteine A–H aus PerfectMoment, CortexAndroid, BestJournalAndroid und TerminalVoiceOverlay zusammengetragen |
 | 29.08.2026, 11:19 Uhr | Bausteine I (App-Sperre), J (Sicherung), K (Volltextsuche) und L (Fehler-, Lade- und Leerzustände) ergänzt — nach Durchsicht aller 14 Android-Apps im Repo |
 | 29.08.2026, 13:28 Uhr | Baustein M ergänzt: nur echte deutsche Umlaute in Oberfläche, Transkript und KI-Text — mit Wörterbuch-Korrektur statt blinder Ersetzung |

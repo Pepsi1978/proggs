@@ -22,6 +22,25 @@ Die fertige APK landet in `Meine Ablage\Dokumente\Updates\<Projekt>\`, Google Dr
 sie, und die Handy-App **UpdateStation** (`~/proggs/UpdateStation`) meldet „Update für App X
 gefunden" und installiert nur, wenn der `versionCode` wirklich höher ist als der installierte.
 
+## Bauen aus der Cloud
+
+Kommt „apk update“ in einer **Cloud-Sitzung** (kein `C:\Users\barwa\SK`, kein Windows-PC), gilt
+dieser Ablauf statt des Skripts:
+
+- **Nicht selbst signieren**, `apk-update.ps1` **nicht** starten und **nie** nach dem Keystore fragen.
+- Einen neuen Eintrag unten in `app/src/main/assets/versionslog.json` anhängen (versionCode + 1,
+  siehe Abschnitt Versionslog), testen, soweit es ohne Signatur geht (Unit-Tests, `assembleDebug` mit
+  Wegwerf-Schlüssel nur zur Kompilierprüfung, das Ergebnis **nie** hochladen), Pull Request öffnen und
+  Frank sagen: „Zum Installieren den Pull Request mergen, danach baut GitHub und legt die APK in
+  Google Drive.“
+- Nach dem Merge ruft `.github/workflows/android-cloud-build.yml` auf einem Windows-Rechner von GitHub
+  genau dieses Skript auf (`-ProggsWurzel`, `-UpdatesWurzel`, `-OhneGeraet`), prüft die Signatur und lädt
+  APK und `update.json` per rclone nach `Dokumente/Updates/<Projekt>/`. Der Keystore liegt nur als
+  Secret im Environment `android-signing` (nur `main`). Direkte Pushes vom PC baut der Ablauf nicht.
+- Ausgeschlossen (backen Dateien aus SK ein bzw. Play-Store-Key): BestJournalAndroid, BestJournalFrank,
+  EntropieReductor, KarteikartenLernen, StackLabor.
+- Hintergrund und Einrichtung: `docs/cloud-android-build/EINRICHTUNG-FUER-KI.md`.
+
 ## Ablauf
 
 1. **Projekt bestimmen.** Das Projekt, das in dieser Sitzung gerade aktualisiert wurde, oder das
