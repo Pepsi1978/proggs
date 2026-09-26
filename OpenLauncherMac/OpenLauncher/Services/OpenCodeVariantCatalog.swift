@@ -90,6 +90,8 @@ enum OpenCodeVariantCatalog {
             return (slug.contains("gpt-5.3") || slug.contains("gpt-5.4") || slug.contains("gpt-5.5"))
                 ? gpt5Codex3Plus : widelySupported
         }
+        // GPT-6 (Astra, Sol, Luna u.a.) kennt dieselben Effort-Stufen wie die GPT-5.2+-Generation.
+        if slug.hasPrefix("gpt-6") { return gpt52Plus }
         if slug.hasPrefix("gpt-5.1") { return ["none", "low", "medium", "high"] }
         if slug.hasPrefix("gpt-5.") { return gpt52Plus }
         if slug.hasPrefix("gpt-5") { return ["minimal", "low", "medium", "high"] }
@@ -107,6 +109,7 @@ enum OpenCodeVariantCatalog {
             return (local.contains("gpt-5.3") || local.contains("gpt-5.4") || local.contains("gpt-5.5"))
                 ? gpt5Codex3Plus : ["low", "medium", "high", "xhigh"]
         }
+        if local.hasPrefix("gpt-6") { return gpt52Plus }
         if local.hasPrefix("gpt-5.1") { return ["none", "low", "medium", "high"] }
         if local.hasPrefix("gpt-5.") { return gpt52Plus }
         return openAiGeneric
@@ -152,6 +155,7 @@ enum OpenCodeVariantCatalog {
 
     private static func knownOpenRouterReasoning(_ id: String) -> Bool {
         isGlm52(id)
+            || id.hasPrefix("openai/gpt-6")
             || id.hasPrefix("openai/gpt-oss")
             || id.hasPrefix("openai/gpt-5")
             || id.hasPrefix("deepseek/deepseek-v4")

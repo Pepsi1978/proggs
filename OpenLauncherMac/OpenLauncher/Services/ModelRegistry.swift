@@ -46,6 +46,14 @@ final class ModelRegistry {
         (gpt56LunaFastSlug, "GPT-5.6 Luna Fast")
     ]
 
+    /// GPT-6-Modelle, die einmalig nachgetragen werden. Sie stehen (noch) nicht nativ im
+    /// OpenCode-Katalog und laufen deshalb wie GPT-6 Astra als Direktmodell (isUserDefined),
+    /// damit configureProvider den provider.openai.models-Eintrag schreibt.
+    private static let gpt6Models: [(slug: String, displayName: String)] = [
+        ("gpt-6-sol", "GPT-6 Sol"),
+        ("gpt-6-luna", "GPT-6 Luna")
+    ]
+
     private static var filePath: String {
         (Paths.repoRoot as NSString).appendingPathComponent("models.json")
     }
@@ -387,6 +395,16 @@ final class ModelRegistry {
                        !model.hasCustomDisplayName {
                         model.displayName = definition.displayName
                     }
+                }
+
+                for definition in ModelRegistry.gpt6Models {
+                    if group.knownSyncedModelSlugs.contains(where: { $0.caseInsensitiveCompare(definition.slug) == .orderedSame }) { continue }
+                    if !group.models.contains(where: { $0.slug.caseInsensitiveCompare(definition.slug) == .orderedSame }) {
+                        let entry = ModelRegistry.model(definition.slug, definition.displayName, "openai", "OpenAI")
+                        entry.isUserDefined = true
+                        group.models.append(entry)
+                    }
+                    ModelRegistry.addUnique(&group.knownSyncedModelSlugs, definition.slug)
                 }
             }
 
