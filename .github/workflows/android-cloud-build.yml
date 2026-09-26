@@ -29,8 +29,8 @@ permissions:
   contents: read
 
 env:
-  # Play-Store-Key (BestJournalAndroid) bzw. Dateien aus dem SK-Ordner, die in die APK eingebacken werden.
-  AUSGESCHLOSSEN: 'Designs BestJournalAndroid BestJournalFrank EntropieReductor KarteikartenLernen StackLabor'
+  # BestJournalAndroid wird mit dem Play-Store-Key signiert, der nicht zu GitHub kommt.
+  AUSGESCHLOSSEN: 'Designs BestJournalAndroid'
 
 jobs:
   auswahl:
@@ -79,7 +79,7 @@ jobs:
           fi
           liste=()
           for p in "${kandidaten[@]}"; do
-            if ausgeschlossen "$p"; then echo "- $p: ausgeschlossen (Play-Store-Key oder SK-Dateien nötig), nicht gebaut." >> "$GITHUB_STEP_SUMMARY"; continue; fi
+            if ausgeschlossen "$p"; then echo "- $p: ausgeschlossen (Play-Store-Key), nicht gebaut." >> "$GITHUB_STEP_SUMMARY"; continue; fi
             if git cat-file -e "$SHA:$p/app/build.gradle.kts" 2>/dev/null; then liste+=("$p"); fi
           done
           if [ "$EREIGNIS" = "workflow_dispatch" ] && [ ${#liste[@]} -eq 0 ]; then
@@ -140,6 +140,17 @@ jobs:
           New-Item -ItemType Directory -Force -Path $sk, $ad | Out-Null
           [IO.File]::WriteAllBytes("$sk\debug-shared.keystore", [Convert]::FromBase64String($env:KEYSTORE_B64))
           Copy-Item "$sk\debug-shared.keystore" "$ad\debug.keystore" -Force
+
+      - name: Weitere SK-Dateien ablegen
+        if: matrix.projekt == 'EntropieReductor'
+        shell: pwsh
+        env:
+          MAPS_API_KEY: ${{ secrets.SK_ENTROPIEREDUCTOR_MAPS_API_KEY }}
+        run: |
+          if (-not $env:MAPS_API_KEY) { Write-Host "::error::Secret SK_ENTROPIEREDUCTOR_MAPS_API_KEY fehlt."; exit 1 }
+          $d = Join-Path $env:USERPROFILE 'SK\EntropieReductor'
+          New-Item -ItemType Directory -Force -Path $d | Out-Null
+          [IO.File]::WriteAllText("$d\maps-api-key.txt", $env:MAPS_API_KEY)
 
       - name: rclone einrichten
         shell: pwsh
@@ -231,5 +242,6 @@ jobs:
           Remove-Item -Force -ErrorAction SilentlyContinue `
             (Join-Path $env:USERPROFILE 'SK\Android\debug-shared.keystore'), `
             (Join-Path $env:USERPROFILE '.android\debug.keystore'), `
+            (Join-Path $env:USERPROFILE 'SK\EntropieReductor\maps-api-key.txt'), `
             (Join-Path $env:RUNNER_TEMP 'rclone.conf')
           exit 0

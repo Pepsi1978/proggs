@@ -37,8 +37,9 @@ dieser Ablauf statt des Skripts:
   genau dieses Skript auf (`-ProggsWurzel`, `-UpdatesWurzel`, `-OhneGeraet`), prüft die Signatur und lädt
   APK und `update.json` per rclone nach `Dokumente/Updates/<Projekt>/`. Der Keystore liegt nur als
   Secret im Environment `android-signing` (nur `main`). Direkte Pushes vom PC baut der Ablauf nicht.
-- Ausgeschlossen (backen Dateien aus SK ein bzw. Play-Store-Key): BestJournalAndroid, BestJournalFrank,
-  EntropieReductor, KarteikartenLernen, StackLabor.
+- Ausgeschlossen ist nur BestJournalAndroid (Play-Store-Key). EntropieReductor bekommt seinen Maps-Schlüssel
+  aus dem Secret `SK_ENTROPIEREDUCTOR_MAPS_API_KEY`. Apps backen sonst keine SK-Dateien ein: API-Schlüssel
+  trägt man in der App in den Einstellungen ein.
 - Hintergrund und Einrichtung: `docs/cloud-android-build/EINRICHTUNG-FUER-KI.md`.
 
 ## Ablauf

@@ -476,8 +476,9 @@ Umschalter **Abo / eigener Schlüssel** mit Anmeldestatus · bei der Anmeldung d
   hochladen), Pull Request öffnen und Frank sagen: „Zum Installieren den Pull Request mergen, danach
   baut GitHub und legt die APK in Google Drive.“
 - Nach dem Merge baut `.github/workflows/android-cloud-build.yml` die App mit dem geteilten Key und legt
-  APK + `update.json` in `Dokumente/Updates/<Projekt>/`. Ausgeschlossen sind Apps, die Dateien aus SK
-  einbacken: BestJournalAndroid, BestJournalFrank, EntropieReductor, KarteikartenLernen, StackLabor.
+  APK + `update.json` in `Dokumente/Updates/<Projekt>/`. Ausgeschlossen ist nur BestJournalAndroid
+  (Play-Store-Key). Deshalb **keine API-Schlüssel aus SK in die APK einbacken** — Schlüssel trägt man in
+  der App in den Einstellungen ein (verschlüsselt gespeichert).
   Einrichtung und Hintergrund: `docs/cloud-android-build/EINRICHTUNG-FUER-KI.md`.
 
 ---
