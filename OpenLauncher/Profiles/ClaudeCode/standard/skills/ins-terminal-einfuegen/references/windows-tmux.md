@@ -127,10 +127,12 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
   Claude diskutiert oder implementiert gemäß Auftrag, standardmäßig auch Codex-Skills.
   Schreibt Codex ausnahmsweise selbst, prüft Claude den vollständigen relevanten Diff.
   Pro Datei ein Schreibender, Git-Mutationen nacheinander.
-- Übergaben kurz: `R2: Ziel; relevante Änderung seit R1; Grenzen; erwarteter Nachweis`.
+- Übergaben kurz: `R2: Ziel; relevante Änderung seit R1; Profil; Grenzen; erwarteter Nachweis`.
+  Umsetzungsaufträge tragen die Profilzeile gemäß [Arbeitsprofile](arbeitsprofile.md).
   Keine eigene Empfangsbestätigungsrunde. Für kleine Fragen direkte Antworten;
   bei Code Fundstellen, Tests, offene Punkte und später Commit/Push nennen lassen.
-  Implementierungsaufträge enden standardmäßig am Review-Checkpoint als `Rn zwischenstand`;
+  Implementierungsaufträge enden standardmäßig am Review-Checkpoint als `Rn zwischenstand`
+  mit effektiv angewandtem Profil;
   Commit, Push und Auslieferung folgen erst auf die gebundene Freigabe
   ([Programmierloop](programmier-loop.md)).
   Längere Implementierungsaufträge nennen den exakten Pfad der Steuerdatei und die
@@ -157,7 +159,8 @@ Automation dafür anlegen. Ohne neuen sinnvollen Befund keine kosmetischen Updat
 - Nach Codex-Kontextkompaktierung einmal `resume --run <Dialogordner>` nutzen. Es
   liest Arbeitsstand, offene Zustellungen, Windows-Git-Kurzstand und eine frische
   Pane-Ansicht in einem Aufruf. Ein Teilfehler ersetzt den betroffenen Beleg nicht;
-  STOP oder geänderte Zielidentität bleiben harte Fehler.
+  STOP oder geänderte Zielidentität bleiben harte Fehler. Den Zielvertrag samt `profil`
+  liefert `resume` nicht: bei laufendem Programmierloop `ziel.json` einmal zusätzlich lesen.
 - Review an Dateimeilensteinen: zuerst Status und betroffene Pfade gegen den Bericht, dann
   risikobasiert gemäß [Kontingent sparsam nutzen](kontingent-sparen.md) Stichprobe oder
   vollständigen Diff sowie neue Dateien. Gegen den zuletzt geprüften Inhalt vergleichen;

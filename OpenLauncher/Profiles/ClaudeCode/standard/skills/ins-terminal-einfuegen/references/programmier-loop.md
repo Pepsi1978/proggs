@@ -1,7 +1,8 @@
 # Zielorientierter Programmierloop
 
 Gemeinsame Referenz für Windows und macOS. Laden, sobald eine Programmierbegleitung mit
-Claude als Implementierer beauftragt ist. Sie ergänzt, ersetzt aber keine Transport-,
+Claude als Implementierer beauftragt ist (unter Windows ebenso mit OpenCode oder Codex CLI;
+„Claude“ steht dann für die beauftragte CLI). Sie ergänzt, ersetzt aber keine Transport-,
 Stopp- und Abschlussregeln der Plattformreferenzen. Kein perfekter Loop: Sie legt fest,
 wann ein Schritt belegt ist und wann nicht.
 
@@ -13,10 +14,14 @@ nutzerprivaten Ordner wie die Steuerdatei und ersetzt ihn atomar. Felder:
 - `ziel_rev`: Revision der Nutzervorgaben
 - `ziel`: angestrebte Nutzerwirkung
 - `nichtziele`: Grenzen
+- `profil`: aktives Arbeitsprofil `schnell|normal|gründlich` gemäß der Referenz
+  „Arbeitsprofile“ der Plattform; beim Anlegen mit dem dort abgeleiteten Startwert
+  gespeichert. Fehlt es in einem älteren Vertrag, den Startwert dieser Referenz verwenden
 - `kriterien`: priorisiert, je `id`, `text`, `status` (`offen|erfuellt|blockiert|zurueckgestellt`), `beleg`
 - `annahmen`
 
-`ziel_rev` steigt nur, wenn der Nutzer Ziel, Grenzen oder Kriterien verbindlich ändert.
+`ziel_rev` steigt nur, wenn der Nutzer Ziel, Grenzen, Kriterien oder das Arbeitsprofil
+verbindlich ändert.
 Rundenkennungen (`R27`), interne Korrekturen und Fragen erhöhen sie nicht.
 `arbeitsstand.json` behält seine fünf Schlüssel. `phase` und `offen` verweisen bei Bedarf
 auf Kriterien-IDs. Die Kriterien selbst stehen nur im Zielvertrag.
@@ -25,7 +30,9 @@ Zielvertrag und Steuerdatei werden einzeln atomar ersetzt, nicht als gemeinsame
 Transaktion. Ist ein Zielvertrag vereinbart, muss seine `ziel_rev` zur aktuellen Steuerung
 passen. Weichen sie ab oder fehlt der Zielvertrag, vor Commit, Push und Deployment klären;
 kein stiller Rückfall auf einen alten Stand. `processed_ziel_rev` belegt Einarbeitung,
-nicht die Erfüllung der Kriterien.
+nicht die Erfüllung der Kriterien. Nach einer Kontextverdichtung `ziel.json` einmal lesen,
+bevor der nächste Umsetzungsauftrag Ziel, Kriterien oder Profil nennt; das Profil kommt
+aus dem Zielvertrag, nicht aus der Erinnerung.
 
 Kriterien nie absenken, damit Tests grün werden. Neue Features sind kein Fortschritt,
 solange sie kein Kriterium erfüllen.
@@ -37,6 +44,8 @@ solange sie kein Kriterium erfüllen.
 - **Unverbindliche Idee** („vielleicht wäre … nett“): als Option mit Folgen kurz
   einordnen und vormerken. Kein Scope, keine `ziel_rev`, keine Steuerdatei.
 - **Auftrag oder Korrektur:** `ziel_rev` erhöhen, Zielvertrag und Steuerdatei atomar ersetzen.
+  Ein eindeutiger Profilwechsel gehört dazu: `profil` setzen, wirksam ab der nächsten
+  sicheren Runde.
 - **Stopp/Pause:** sofort nach den bestehenden Regeln, beim Abschluss zusätzlich `status=stopp`.
 
 Nicht jede Frage mit einer Rückfrage beantworten. Nur wenn Mehrdeutigkeit die nächste
@@ -80,7 +89,9 @@ Garantie beschreiben.
 ## Ablauf einer Runde
 
 1. Zielvertrag, Steuerdatei und aktuellen Stand lesen.
-2. Den kleinsten nutzbaren vertikalen Teil wählen.
+2. Den Umfang nach dem aktiven Profil wählen: gründlich den kleinsten nutzbaren vertikalen
+   Teil, normal einen zusammenhängenden Änderungssatz, schnell möglichst viele sinnvolle,
+   vom Auftrag gedeckte Verbesserungen in einem Update.
 3. Vorschlag mit begründetem Gegenargument oder Abwägung; Konsens oder entscheidender Test.
 4. Claude setzt um und prüft selbst.
 5. Claude meldet `Rn zwischenstand` am Review-Checkpoint.
@@ -94,7 +105,7 @@ Ein Checkpoint pro zusammenhängendem Codeblock, nicht pro Edit, auch bei `compa
 Triviale Textübergaben und reine Fragen brauchen keinen. Er ist ein interner Halt zwischen
 den Agenten, keine neue Nutzerfreigabe.
 
-**Bericht am Checkpoint:** `ziel_rev`, Basis-HEAD, explizite eigene Pfade mit SHA-256
+**Bericht am Checkpoint:** `ziel_rev`, effektiv angewandtes Profil samt Abweichung, Basis-HEAD, explizite eigene Pfade mit SHA-256
 einschließlich neuer Dateien, Tests mit Ergebnis, kriterienbezogene Belege. Gelöschte
 Dateien erhalten einen Löschmarker mit ihrem Blob-Hash im Basis-HEAD statt eines aktuellen
 SHA-256.
@@ -144,7 +155,9 @@ Ohne Nachweis nichts als vollendet melden.
 
 ## Startauftrag (Vorlage)
 
-> Rn: Ziel und Kriterien laut `<ziel.json>` (ziel_rev N). Prüfe `<steuerung.json>` vor Plan,
-> Review-Übergabe, Commit, Push und Deployment. Kleinster nutzbarer Teil: … Grenzen: …
-> Halte am Review-Checkpoint als `Rn zwischenstand` mit Basis-HEAD, Pfaden mit SHA-256, Tests
-> und Kriterienbelegen; Abschluss erst nach gebundener Freigabe.
+> Rn: Ziel und Kriterien laut `<ziel.json>` (ziel_rev N). Profil: [schnell|normal|gründlich] (gilt für diese Runde
+> vor einem bestätigten Launcher-Startmodus; verbindliche Projektpflichten aus AGENTS.md und
+> Projektregeln haben Vorrang). Prüfe `<steuerung.json>`
+> vor Plan, Review-Übergabe, Commit, Push und Deployment. Umfang nach Profil: … Grenzen: …
+> Halte am Review-Checkpoint als `Rn zwischenstand` mit Basis-HEAD, effektiv angewandtem
+> Profil, Pfaden mit SHA-256, Tests und Kriterienbelegen; Abschluss erst nach gebundener Freigabe.

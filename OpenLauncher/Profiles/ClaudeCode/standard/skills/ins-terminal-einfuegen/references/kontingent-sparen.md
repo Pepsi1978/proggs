@@ -42,7 +42,8 @@ Nach Auftragsende die eigenen nicht mehr benötigten Berichtsdateien gezielt ent
 fremde Dateien nicht anfassen. Minimalen Zustellungsledger, Zielbindung und ein gesetztes
 STOP für eine noch fortsetzbare Sitzung erhalten, damit Aufräumen keine Sperre aufhebt.
 
-Ein Codebericht enthält knapp: Auftragskennung, `ziel_rev`, `risk` (low|medium|high),
+Ein Codebericht enthält knapp: Auftragskennung, `ziel_rev`, effektiv angewandtes
+Arbeitsprofil, `risk` (low|medium|high),
 vorgeschlagene `review_depth` (compact|targeted|full), tatsächlich geprüften Worktree und
 Commit bzw. genaue Arbeitsstand-Zuordnung, betroffene Pfade, Testkommandos mit Ergebnis,
 Befunde mit Fundstellen, offene Punkte sowie `advisor_used`, `advisor_reason` und
@@ -128,8 +129,8 @@ Für einen aktiven Dreierloop einen privaten `arbeitsstand.json` im bestehenden
 Dialogordner unter 1 KiB halten: `ziel_rev`, `zugestellt`, `offen`, `phase`
 und `status`. Zulässige Rundenausgänge sind `erreicht`, `zwischenstand`,
 `blockiert`, `saettigung`, `rueckfrage` und `stopp`; `saettigung` ist bei offenen
-Musskriterien kein Zielerfolg. Nur verbindliche Nutzeränderungen an Ziel, Grenzen oder
-Kriterien erhöhen `ziel_rev`, keine Rundenkennung; sie stehen bis zur nächsten
+Musskriterien kein Zielerfolg. Nur verbindliche Nutzeränderungen an Ziel, Grenzen,
+Kriterien oder Arbeitsprofil erhöhen `ziel_rev`, keine Rundenkennung; sie stehen bis zur nächsten
 konsolidierten Zustellung unter `offen`. Kriterien stehen im Zielvertrag, nicht hier.
 Vor Commit oder Auslieferung prüfen, dass `zugestellt` die aktuelle Zielrevision
 abdeckt; ein unbelegter Modellwiderspruch bleibt offen für den Nutzer.
