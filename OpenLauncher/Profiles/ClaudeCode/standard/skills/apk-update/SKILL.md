@@ -31,8 +31,8 @@ dieser Ablauf statt des Skripts:
 - Einen neuen Eintrag unten in `app/src/main/assets/versionslog.json` anhängen (versionCode + 1,
   siehe Abschnitt Versionslog), testen, soweit es ohne Signatur geht (Unit-Tests, `assembleDebug` mit
   Wegwerf-Schlüssel nur zur Kompilierprüfung, das Ergebnis **nie** hochladen), Pull Request öffnen und
-  Frank sagen: „Zum Installieren den Pull Request mergen, danach baut GitHub und legt die APK in
-  Google Drive.“
+  **selbst mergen**, ohne Rückfrage (von Frank am 26.09.2026 dauerhaft freigegeben). Maßgeblich ist der
+  Skill `.claude/skills/apk-update-cloud`, den jede Cloud-Sitzung automatisch lädt.
 - Nach dem Merge ruft `.github/workflows/android-cloud-build.yml` auf einem Windows-Rechner von GitHub
   genau dieses Skript auf (`-ProggsWurzel`, `-UpdatesWurzel`, `-OhneGeraet`), prüft die Signatur und lädt
   APK und `update.json` per rclone nach `Dokumente/Updates/<Projekt>/`. Der Keystore liegt nur als
