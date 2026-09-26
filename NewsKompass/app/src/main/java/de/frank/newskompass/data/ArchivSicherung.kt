@@ -6,6 +6,7 @@ import de.frank.newskompass.AppProfil
 import de.frank.newskompass.observability.KompassLog
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
 import java.util.zip.CRC32
@@ -24,6 +25,12 @@ data class SicherungsErgebnis(
     val beschaedigt: Int = 0,
     val bilder: Int = 0,
     val fehlendeBilder: Int = 0,
+    /** Beiseitegelegtes aus Importen (Format 2): Konfliktfassungen, deren Bilder, beschädigte Rohdateien. */
+    val quarantaeneKonflikte: Int = 0,
+    val quarantaeneBilder: Int = 0,
+    val quarantaeneBeschaedigt: Int = 0,
+    /** Eigene Zwischendateien (*.tmp) unter files/import, die bewusst nicht gesichert wurden. */
+    val uebersprungeneTemp: Int = 0,
     val bytes: Long = 0,
     val erstelltUm: Long = 0,
     /** Pfad → SHA-256 aller geprüften Einträge (ohne Manifest). */
@@ -34,13 +41,16 @@ data class SicherungsErgebnis(
  * Manuelle Archivsicherung als ZIP über die Android-Dateiauswahl.
  *
  * Inhalt: alle lesbaren Ausgaben byte-genau (`ausgaben/`), unlesbare roh (`beschaedigt/`), alle
- * Bilder, auf die eine Ausgabe zeigt (`bilder/`), und zuletzt `manifest.json` mit Format, Pfaden,
- * Größen und SHA-256 der tatsächlich geschriebenen Bytes. Einstellungen, Schlüssel und Anmeldung
- * gehören nicht hinein. Lokale Dateien werden nur gelesen.
+ * Bilder, auf die eine Ausgabe zeigt (`bilder/`), ab Format 2 alles, was Importe beiseitegelegt
+ * haben (`quarantaene/`), und zuletzt `manifest.json` mit Format, Pfaden, Größen und SHA-256 der
+ * tatsächlich geschriebenen Bytes. Einstellungen, Schlüssel und Anmeldung gehören nicht hinein.
+ * Lokale Dateien werden nur gelesen. Sicherungen im Format 1 (Version 1.7/1.8) bleiben lesbar.
  */
 object ArchivSicherung {
 
-    const val FORMAT = 1
+    /** Geschrieben wird Format 2; geprüft und importiert werden 1 und 2. */
+    const val FORMAT = 2
+    val LESBARE_FORMATE = setOf(1, 2)
     const val MANIFEST = "manifest.json"
 
     internal const val MAX_JSON = 5L * 1024 * 1024
@@ -48,9 +58,56 @@ object ArchivSicherung {
     private const val MAX_EINTRAEGE = 500_000
     private const val MAX_GESAMT = 64L * 1024 * 1024 * 1024
 
-    internal val AUSGABE_PFAD = Regex("ausgaben/(a\\d+)\\.json")
-    internal val BESCHAEDIGT_PFAD = Regex("beschaedigt/(a\\d+)\\.json")
+    internal val AUSGABE_PFAD = Regex("ausgaben/(a\\d{1,20})\\.json")
+    internal val BESCHAEDIGT_PFAD = Regex("beschaedigt/(a\\d{1,20})\\.json")
     internal val BILD_PFAD = Regex("bilder/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\.jpg")
+
+    // Format 2: beiseitegelegte Importdaten, in der ZIP unter quarantaene/, lokal unter files/import/.
+    private const val UUID_MUSTER = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    internal const val QUARANTAENE = "quarantaene/"
+    internal val Q_KONFLIKT_PFAD = Regex("quarantaene/konflikte/(\\d{1,20})/(ausgaben|beschaedigt)/(a\\d{1,20})\\.json")
+    internal val Q_BILD_PFAD = Regex("quarantaene/konflikte/(\\d{1,20})/bilder/($UUID_MUSTER)\\.jpg")
+    internal val Q_BESCHAEDIGT_PFAD = Regex("quarantaene/beschaedigt/(a\\d{1,20})\\.json")
+
+    /** Eigene Dateien unter files/import, die bewusst nicht beiseitegelegte Daten sind. */
+    private val IMPORT_AUSGENOMMEN = setOf("herkunft.json")
+    private const val IMPORT_BEREITSTELLUNG = "bereitstellung/"
+
+    /** Beiseitegelegtes aus Importen, für die Anzeige in den Einstellungen. */
+    data class Beiseite(val konflikte: Int, val bilder: Int, val beschaedigt: Int) {
+        val leer: Boolean get() = konflikte + bilder + beschaedigt == 0
+    }
+
+    fun zaehleBeiseite(importWurzel: File): Beiseite {
+        var konflikte = 0
+        var bilder = 0
+        var beschaedigt = 0
+        beiseiteDateien(importWurzel).forEach { (pfad, _) ->
+            when {
+                Q_KONFLIKT_PFAD.matches(pfad) -> konflikte++
+                Q_BILD_PFAD.matches(pfad) -> bilder++
+                Q_BESCHAEDIGT_PFAD.matches(pfad) -> beschaedigt++
+            }
+        }
+        return Beiseite(konflikte, bilder, beschaedigt)
+    }
+
+    /**
+     * Alle Dateien unter files/import als ZIP-Pfad (quarantaene/…) — ohne Bereitstellung und
+     * Herkunftsbuch. Eigene Zwischendateien (*.tmp) bekommen den Pfad null.
+     */
+    private fun beiseiteDateien(importWurzel: File): List<Pair<String, File>> {
+        if (!importWurzel.isDirectory) return emptyList()
+        val basis = importWurzel.canonicalFile
+        return basis.walkTopDown().filter { it.isFile }.mapNotNull { datei ->
+            val relativ = datei.relativeTo(basis).invariantSeparatorsPath
+            when {
+                relativ.startsWith(IMPORT_BEREITSTELLUNG) || relativ in IMPORT_AUSGENOMMEN -> null
+                relativ.endsWith(".tmp") -> "" to datei
+                else -> (QUARANTAENE + relativ) to datei
+            }
+        }.sortedBy { it.first }.toList()
+    }
 
     // --- Export ------------------------------------------------------------------------------------
 
@@ -73,6 +130,8 @@ object ArchivSicherung {
         val bilder = LinkedHashSet<String>()
         val fehlendeBilder = mutableListOf<String>()
         var rohBeschaedigt = 0
+        var uebersprungeneTemp = 0
+        var quarantaene = Triple(0, 0, 0)
 
         val strom = resolver.openOutputStream(ziel, "w") ?: throw IllegalStateException("Die Zieldatei ließ sich nicht öffnen.")
         ZipOutputStream(BufferedOutputStream(strom, 64 * 1024)).use { zip ->
@@ -133,14 +192,44 @@ object ArchivSicherung {
                 if (nr % 5 == 0) fortschritt("Sichere Bilder ${nr + 1} von ${bildListe.size} …", 0.1f + 0.5f * nr / bildListe.size.coerceAtLeast(1))
             }
 
+            // Format 2: alles, was Importe beiseitegelegt haben — nichts davon fällt still weg.
+            var qKonflikte = 0
+            var qBilder = 0
+            var qBeschaedigt = 0
+            beiseiteDateien(speicher.importWurzel).forEach { (pfad, datei) ->
+                coroutineContext.ensureActive()
+                when {
+                    pfad.isEmpty() -> uebersprungeneTemp++
+                    Q_KONFLIKT_PFAD.matches(pfad) -> {
+                        schreibe(pfad, datei.readBytes(), "quarantaene", roh = false)
+                        qKonflikte++
+                    }
+                    Q_BILD_PFAD.matches(pfad) -> {
+                        schreibe(pfad, datei.readBytes(), "quarantaene", roh = true)
+                        qBilder++
+                    }
+                    Q_BESCHAEDIGT_PFAD.matches(pfad) -> {
+                        schreibe(pfad, datei.readBytes(), "quarantaene", roh = false)
+                        qBeschaedigt++
+                    }
+                    else -> throw IllegalStateException(
+                        "Unbekannte Datei im Import-Bereich (${pfad.removePrefix(QUARANTAENE)}); die Sicherung wird abgebrochen, damit nichts still fehlt.",
+                    )
+                }
+            }
+            quarantaene = Triple(qKonflikte, qBilder, qBeschaedigt)
+            fortschritt("Schließe die Sicherung ab …", 0.62f)
+
             val manifest = JSONObject()
                 .put("format", FORMAT)
                 .put("app", "NewsKompass")
                 .put("appVersion", AppProfil.VERSION_NAME)
                 .put("erstelltUm", jetzt)
                 .put("anzahl", JSONObject().put("ausgaben", geschrieben.count { arten[it.key] == "ausgabe" })
-                    .put("beschaedigt", rohBeschaedigt).put("bilder", geschrieben.count { arten[it.key] == "bild" }))
+                    .put("beschaedigt", rohBeschaedigt).put("bilder", geschrieben.count { arten[it.key] == "bild" })
+                    .put("quarantaeneKonflikte", qKonflikte).put("quarantaeneBilder", qBilder).put("quarantaeneBeschaedigt", qBeschaedigt))
                 .put("fehlendeBilder", JSONArray(fehlendeBilder))
+                .put("uebersprungeneTemp", uebersprungeneTemp)
                 .put("eintraege", JSONArray().apply {
                     geschrieben.forEach { (pfad, info) ->
                         put(JSONObject().put("pfad", pfad).put("art", arten[pfad]).put("groesse", info.first).put("sha256", info.second))
@@ -163,6 +252,10 @@ object ArchivSicherung {
             beschaedigt = rohBeschaedigt,
             bilder = geschrieben.count { arten[it.key] == "bild" },
             fehlendeBilder = fehlendeBilder.size,
+            quarantaeneKonflikte = quarantaene.first,
+            quarantaeneBilder = quarantaene.second,
+            quarantaeneBeschaedigt = quarantaene.third,
+            uebersprungeneTemp = uebersprungeneTemp,
             bytes = geschrieben.values.sumOf { it.first },
             erstelltUm = jetzt,
             eintraege = geschrieben.mapValues { it.value.second },
@@ -184,6 +277,9 @@ object ArchivSicherung {
         var ausgaben = 0
         var beschaedigt = 0
         var bilder = 0
+        var qKonflikte = 0
+        var qBilder = 0
+        var qBeschaedigt = 0
 
         val strom = resolver.openInputStream(quelle) ?: return SicherungsErgebnis("Die Datei ließ sich nicht öffnen.")
         try {
@@ -203,6 +299,8 @@ object ArchivSicherung {
                         pfad == MANIFEST -> MAX_JSON
                         AUSGABE_PFAD.matches(pfad) || BESCHAEDIGT_PFAD.matches(pfad) -> MAX_JSON
                         BILD_PFAD.matches(pfad) -> MAX_BILD
+                        Q_KONFLIKT_PFAD.matches(pfad) || Q_BESCHAEDIGT_PFAD.matches(pfad) -> MAX_JSON
+                        Q_BILD_PFAD.matches(pfad) -> MAX_BILD
                         else -> return SicherungsErgebnis("Unerwarteter Eintrag in der Sicherung: $pfad")
                     }
                     val behalten = pfad == MANIFEST || AUSGABE_PFAD.matches(pfad)
@@ -221,7 +319,11 @@ object ArchivSicherung {
                             ausgaben++
                         }
                         BESCHAEDIGT_PFAD.matches(pfad) -> beschaedigt++
-                        else -> bilder++
+                        BILD_PFAD.matches(pfad) -> bilder++
+                        // Beiseitegelegtes wird nur byteweise geprüft, nie geparst oder übernommen.
+                        Q_KONFLIKT_PFAD.matches(pfad) -> qKonflikte++
+                        Q_BILD_PFAD.matches(pfad) -> qBilder++
+                        else -> qBeschaedigt++
                     }
                     if (pfad != MANIFEST) gelesen[pfad] = groesse to pruefsumme
                     if ((ausgaben + bilder) % 10 == 0) fortschritt("Prüfe ${gelesen.size} Einträge …")
@@ -236,7 +338,10 @@ object ArchivSicherung {
         val manifest = manifestText?.let { runCatching { JSONObject(it) }.getOrNull() }
             ?: return SicherungsErgebnis("Das Manifest fehlt oder ist unlesbar — die Sicherung ist unvollständig.")
         val format = manifest.optInt("format", -1)
-        if (format != FORMAT) return SicherungsErgebnis("Unbekanntes Sicherungsformat $format; bitte die App aktualisieren.")
+        if (format !in LESBARE_FORMATE) return SicherungsErgebnis("Unbekanntes Sicherungsformat $format; bitte die App aktualisieren.")
+        if (format == 1 && qKonflikte + qBilder + qBeschaedigt > 0) {
+            return SicherungsErgebnis("Eine Sicherung im Format 1 darf keine beiseitegelegten Importdaten enthalten.")
+        }
         val liste = manifest.optJSONArray("eintraege") ?: return SicherungsErgebnis("Das Manifest nennt keine Einträge.")
         val erwartet = HashMap<String, Pair<Long, String>>()
         for (i in 0 until liste.length()) {
@@ -253,7 +358,12 @@ object ArchivSicherung {
         }
         gelesen.keys.firstOrNull { it !in erwartet }?.let { return SicherungsErgebnis("Eintrag steht nicht im Manifest: $it") }
         val anzahl = manifest.optJSONObject("anzahl") ?: return SicherungsErgebnis("Das Manifest nennt keine Anzahlen.")
-        if (anzahl.optInt("ausgaben", -1) != ausgaben || anzahl.optInt("beschaedigt", -1) != beschaedigt || anzahl.optInt("bilder", -1) != bilder) {
+        val qPasst = format == 1 || (
+            anzahl.optInt("quarantaeneKonflikte", -1) == qKonflikte &&
+                anzahl.optInt("quarantaeneBilder", -1) == qBilder &&
+                anzahl.optInt("quarantaeneBeschaedigt", -1) == qBeschaedigt
+            )
+        if (anzahl.optInt("ausgaben", -1) != ausgaben || anzahl.optInt("beschaedigt", -1) != beschaedigt || anzahl.optInt("bilder", -1) != bilder || !qPasst) {
             return SicherungsErgebnis("Die Anzahlen im Manifest passen nicht zu den gelesenen Einträgen.")
         }
         val fehlend = manifest.optJSONArray("fehlendeBilder")?.let { a -> (0 until a.length()).map(a::getString).toSet() }.orEmpty()
@@ -266,6 +376,10 @@ object ArchivSicherung {
             beschaedigt = beschaedigt,
             bilder = bilder,
             fehlendeBilder = fehlend.size,
+            quarantaeneKonflikte = qKonflikte,
+            quarantaeneBilder = qBilder,
+            quarantaeneBeschaedigt = qBeschaedigt,
+            uebersprungeneTemp = manifest.optInt("uebersprungeneTemp", 0),
             bytes = gesamt,
             erstelltUm = manifest.optLong("erstelltUm"),
             eintraege = gelesen.mapValues { it.value.second },

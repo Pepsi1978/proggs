@@ -114,11 +114,14 @@ object Archiv {
      * vielen verschiedenen Quellen (×1, höchstens 3). Gesprochene Fragen zählen nicht mit.
      */
     suspend fun rueckblick(speicher: AusgabenSpeicher, m: ArchivMonat): RueckblickErgebnis = withContext(Dispatchers.Default) {
-        val schluessel = m.monat.toString() + m.ausgaben.joinToString { "${it.id}:${it.stand}" }
+        // Der Fingerabdruck umfasst Quellausgaben und welche ihrer Bilder gerade vorhanden sind —
+        // wird ein fehlendes Bild nachgeliefert, entsteht der Rückblick neu.
+        val bildDa: (String) -> Boolean = { name -> speicher.bildDatei(name) != null }
+        val fingerabdruck = withContext(Dispatchers.IO) { RueckblickCache.fingerabdruck(m.ausgaben, bildDa) }
+        val schluessel = m.monat.toString() + fingerabdruck
         synchronized(merker) { merker[schluessel] }?.let { return@withContext it }
 
         // Abgeschlossene Monate kommen aus dem gespeicherten Rückblick, wenn er zu den Quellen passt.
-        val fingerabdruck = RueckblickCache.fingerabdruck(m.ausgaben)
         val hinweise = mutableListOf<String>()
         if (!m.laufend) {
             val (gespeichert, zustand) = withContext(Dispatchers.IO) { RueckblickCache.lies(speicher.rueckblickOrdner, m.monat, fingerabdruck) }
@@ -155,7 +158,7 @@ object Archiv {
             val besten = geschichten.map { it to punkte(it) }
                 .sortedWith(compareByDescending<Pair<List<Fund>, Double>> { it.second }.thenByDescending { it.first.maxOf { f -> f.zeit } })
                 .take(TOP_JE_THEMA)
-                .map { vertreter(it.first) }
+                .map { vertreter(it.first, bildDa) }
             Block(themaId, liste.maxBy { it.zeit }.blockTitel, besten, null)
         }
 
@@ -212,10 +215,15 @@ object Archiv {
         return 3.0 * tage + 2.0 * rang + quellen
     }
 
-    /** Der neueste Stand der Geschichte, mit dem neuesten vorhandenen Bild und einer sichtbaren Begründung. */
-    private fun vertreter(g: List<Fund>): Meldung {
+    /**
+     * Der neueste Stand der Geschichte mit einer sichtbaren Begründung. Als Bild zählt nur eine lokal
+     * vorhandene Datei: ein echtes Foto vor einer KI-Illustration, bei gleicher Art das neuere.
+     */
+    private fun vertreter(g: List<Fund>, bildDa: (String) -> Boolean): Meldung {
         val neuester = g.maxBy { it.zeit }
-        val bild = g.sortedByDescending { it.zeit }.firstOrNull { it.meldung.bildDatei != null }?.meldung
+        val bild = g.filter { f -> f.meldung.bildDatei?.let(bildDa) == true }
+            .sortedWith(compareBy<Fund> { it.meldung.bildIstKi }.thenByDescending { it.zeit })
+            .firstOrNull()?.meldung
         val tage = g.map { it.tag }.distinct().size
         val erstmals = g.minOf { it.tag }.format(DateTimeFormatter.ofPattern("d.M.", Locale.GERMANY))
         val begruendung = (if (tage == 1) "an 1 Tag berichtet" else "an $tage Tagen berichtet") + " · erstmals $erstmals"

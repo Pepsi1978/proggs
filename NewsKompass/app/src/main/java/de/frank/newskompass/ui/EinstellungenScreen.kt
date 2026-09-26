@@ -118,6 +118,7 @@ import de.frank.newskompass.data.model.Geschlecht
 import de.frank.newskompass.data.model.Stimme
 import de.frank.newskompass.data.model.Thema
 import de.frank.newskompass.data.model.TtsAnbieter
+import de.frank.newskompass.data.ArchivSicherung
 import de.frank.newskompass.news.SicherungWorker
 import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.tts.GeklonteStimme
@@ -130,7 +131,9 @@ import java.util.Locale
 import java.util.UUID
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Die Themen stehen hinter zwei festen Kopfzeilen; deren Plätze füllt dieser Platzhalter. */
 private const val PLATZHALTER = Long.MIN_VALUE
@@ -840,6 +843,11 @@ private fun SicherungBereich(app: NewsApplication, stand: EinstellungenStand) {
     val auftrag = auftraege.firstOrNull()
     val laeuft = auftrag != null && !auftrag.state.isFinished
     var startFehler by remember { mutableStateOf<String?>(null) }
+    // Beiseitegelegtes aus Importen — neu gezählt, sobald ein Auftrag endet.
+    var beiseite by remember { mutableStateOf<ArchivSicherung.Beiseite?>(null) }
+    LaunchedEffect(auftrag?.state) {
+        beiseite = withContext(Dispatchers.IO) { runCatching { ArchivSicherung.zaehleBeiseite(app.speicher.importWurzel) }.getOrNull() }
+    }
 
     fun starte(uri: Uri?, art: String, schreiben: Boolean) {
         if (uri == null) return
@@ -886,6 +894,15 @@ private fun SicherungBereich(app: NewsApplication, stand: EinstellungenStand) {
                 }
             } else {
                 Text("Noch keine geprüfte Sicherung.", style = MaterialTheme.typography.titleMedium)
+            }
+            beiseite?.takeIf { !it.leer }?.let { b ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Beiseitegelegt aus Importen: ${b.konflikte} Konfliktfassungen (mit ${b.bilder} Bildern) und ${b.beschaedigt} beschädigte Rohdateien. " +
+                        "Sie liegen getrennt vom Archiv im App-Speicher und werden mit jeder Sicherung mitgesichert.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Spacer(Modifier.height(12.dp))
             if (laeuft) {

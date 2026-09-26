@@ -16,7 +16,7 @@ object RueckblickCache {
     const val FORMAT = 1
 
     /** Hochzählen, sobald Auswahl oder Zusammenfassung im Rückblick anders rechnen. */
-    const val VERFAHREN = 1
+    const val VERFAHREN = 2
 
     enum class Zustand { FEHLT, VERALTET, BESCHAEDIGT }
 
@@ -61,9 +61,16 @@ object RueckblickCache {
         }
     }
 
-    /** Fingerabdruck der Quellausgaben: welche Ausgaben mit welchem Dateistand eingeflossen sind. */
-    fun fingerabdruck(quellen: List<AusgabenEintrag>): String =
-        SicheresSchreiben.sha256(quellen.sortedBy { it.id }.joinToString("\n") { "${it.id}:${it.stand}" })
+    /**
+     * Fingerabdruck der Quellausgaben: welche Ausgaben mit welchem Dateistand eingeflossen sind und
+     * welche ihrer Bilder gerade vorhanden sind. Kommt ein fehlendes Bild später dazu, passt er nicht
+     * mehr und der Rückblick entsteht neu aus den Originalen.
+     */
+    fun fingerabdruck(quellen: List<AusgabenEintrag>, bildDa: (String) -> Boolean): String {
+        val ausgaben = quellen.sortedBy { it.id }.joinToString("\n") { "${it.id}:${it.stand}" }
+        val bilder = quellen.flatMap { it.bilder }.toSortedSet().joinToString("\n") { "$it:${if (bildDa(it)) 1 else 0}" }
+        return SicheresSchreiben.sha256(ausgaben + "\n--\n" + bilder)
+    }
 
     private fun datei(ordner: File, monat: YearMonth) = File(ordner, "$monat.json")
 }

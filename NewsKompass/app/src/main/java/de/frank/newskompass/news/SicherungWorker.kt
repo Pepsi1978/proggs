@@ -156,6 +156,10 @@ class SicherungWorker(context: Context, parameter: WorkerParameters) : Coroutine
             teile += "${e.konflikteLokalBeschaedigt} lokal beschädigte Ausgaben: die gute Fassung aus der Sicherung liegt unter ${e.quarantaene}"
         }
         if (e.beschaedigtGesichert > 0) teile += "${e.beschaedigtGesichert} beschädigte Rohdateien getrennt gesichert"
+        if (e.beiseiteNeu + e.beiseiteVorhanden + e.beiseiteUmgelegt > 0) {
+            teile += "Beiseitegelegtes aus der Sicherung: ${e.beiseiteNeu} neu getrennt abgelegt, ${e.beiseiteVorhanden} schon vorhanden" +
+                if (e.beiseiteUmgelegt > 0) ", ${e.beiseiteUmgelegt} wegen gleichen Namens in eigenem Ordner" else ""
+        }
         // Zwei getrennte Sachverhalte: Was im Archiv jetzt fehlt, und ob die gewählte Datei selbst vollständig ist.
         val kopf = if (e.fehlendeBilder == 0) {
             "Import fertig aus $name"
@@ -197,6 +201,11 @@ class SicherungWorker(context: Context, parameter: WorkerParameters) : Coroutine
     private fun beschreibe(name: String, e: SicherungsErgebnis): String {
         val teile = mutableListOf(name, "${e.ausgaben} Ausgaben", "${e.bilder} Bilder")
         if (e.beschaedigt > 0) teile += "${e.beschaedigt} beschädigt (roh gesichert)"
+        val beiseite = e.quarantaeneKonflikte + e.quarantaeneBilder + e.quarantaeneBeschaedigt
+        if (beiseite > 0) {
+            teile += "beiseitegelegt: ${e.quarantaeneKonflikte} Konfliktfassungen, ${e.quarantaeneBilder} Bilder dazu, ${e.quarantaeneBeschaedigt} beschädigte Rohdateien"
+        }
+        if (e.uebersprungeneTemp > 0) teile += "${e.uebersprungeneTemp} eigene Zwischendateien ausgelassen"
         teile += String.format(Locale.GERMANY, "%.1f MB", e.bytes / 1_048_576.0)
         return teile.joinToString(" · ")
     }

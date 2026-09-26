@@ -29,6 +29,10 @@ data class ImportErgebnis(
     val fehlendeBilder: Int = 0,
     /** Bilder, die schon beim Sichern fehlten — die gewählte Datei ist unvollständig, egal was lokal liegt. */
     val sicherungFehlendeBilder: Int = 0,
+    /** Beiseitegelegtes aus einer Sicherung im Format 2: neu abgelegt, schon vorhanden, wegen Namensgleichheit umgelegt. */
+    val beiseiteNeu: Int = 0,
+    val beiseiteVorhanden: Int = 0,
+    val beiseiteUmgelegt: Int = 0,
     val quarantaene: String? = null,
 )
 
@@ -76,7 +80,6 @@ object ArchivImport {
             fortschritt("Gleiche mit dem lokalen Archiv ab …", 0.5f)
             speicher.bereit()
             val lokalBeschaedigt = speicher.beschaedigt.value
-            val quarantaeneOrdner = File(speicher.importWurzel, "konflikte/$lauf")
             val kandidaten = mutableListOf<Kandidat>()
             var doppelt = 0
             var konflikte = 0
@@ -104,7 +107,7 @@ object ArchivImport {
                             beschaedigtGesichert++
                         }
                         else -> {
-                            legeBeiseite(datei, File(quarantaeneOrdner, pfad))
+                            legeGruppeBeiseite(speicher.importWurzel, mapOf(pfad to (datei to pruefung.eintraege.getValue(pfad))), lauf, lauf)
                             konflikte++
                         }
                     }
@@ -126,7 +129,6 @@ object ArchivImport {
             // der Fassung, die dieser Import schreiben würde (nach einem abgebrochenen Lauf mit umbenannten Bildern).
             // Jede andere lokale Fassung bleibt, die importierte kommt samt Bildern in die Quarantäne.
             val neueAusgaben = mutableListOf<Pair<Kandidat, Pair<Ausgabe, String>>>()
-            val konfliktBilder = HashSet<String>()
             kandidaten.forEach { k ->
                 coroutineContext.ensureActive()
                 val fassung = k.fassung(umbenennung)
@@ -139,14 +141,57 @@ object ArchivImport {
                 if (lokalSha == k.quellSha || lokalSha == SicheresSchreiben.sha256(fassung.second)) {
                     doppelt++
                 } else {
-                    legeBeiseite(File(bereitstellung, k.pfad), File(quarantaeneOrdner, k.pfad))
-                    konfliktBilder += k.bilder()
+                    // Konfliktfassung und ihre Bilder bleiben als Gruppe zusammen in einem Laufordner.
+                    // Liegt genau diese Gruppe schon vollständig beiseite, wird nichts noch einmal abgelegt.
+                    val gruppe = LinkedHashMap<String, Pair<File, String>>()
+                    gruppe[k.pfad] = File(bereitstellung, k.pfad) to k.quellSha
+                    k.bilder().forEach { name ->
+                        val quelleBild = File(bereitstellung, "bilder/$name")
+                        if (quelleBild.exists()) gruppe["bilder/$name"] = quelleBild to sha256(quelleBild)
+                    }
+                    legeGruppeBeiseite(speicher.importWurzel, gruppe, lauf, lauf)
                     if (k.id in lokalBeschaedigt) konflikteLokalBeschaedigt++ else konflikte++
                 }
             }
-            konfliktBilder.forEach { name ->
-                val quelleBild = File(bereitstellung, "bilder/$name")
-                if (quelleBild.exists()) legeBeiseite(quelleBild, File(quarantaeneOrdner, "bilder/$name"))
+
+            // Format 2: Beiseitegelegtes aus der Sicherung kommt nur getrennt unter files/import an — nie ins
+            // Archiv, nie über eine vorhandene Datei. Gleicher Inhalt irgendwo beiseite gilt als vorhanden.
+            var beiseiteNeu = 0
+            var beiseiteVorhanden = 0
+            var beiseiteUmgelegt = 0
+            val quellGruppen = LinkedHashMap<String, LinkedHashMap<String, Pair<File, String>>>()
+            pruefung.eintraege.keys.filter { it.startsWith(ArchivSicherung.QUARANTAENE) }.sorted().forEach { pfad ->
+                coroutineContext.ensureActive()
+                val sha = pruefung.eintraege.getValue(pfad)
+                val quelleDatei = File(bereitstellung, pfad)
+                val relativ = pfad.removePrefix(ArchivSicherung.QUARANTAENE)
+                if (relativ.startsWith("konflikte/")) {
+                    // konflikte/<Quelllauf>/<unterpfad> — alles eines Quelllaufs gehört zusammen.
+                    val quellLauf = relativ.removePrefix("konflikte/").substringBefore('/')
+                    val unterpfad = relativ.removePrefix("konflikte/$quellLauf/")
+                    quellGruppen.getOrPut(quellLauf) { LinkedHashMap() }[unterpfad] = quelleDatei to sha
+                    return@forEach
+                }
+                // beschaedigt/a<ms>.json — eine getrennte Rohdatei, für sich behandelt.
+                val ziel = File(speicher.importWurzel, relativ)
+                when {
+                    ziel.isFile && sha256(ziel) == sha -> beiseiteVorhanden++
+                    !ziel.exists() -> {
+                        legeBeiseite(quelleDatei, ziel)
+                        beiseiteNeu++
+                    }
+                    else -> {
+                        val e = legeGruppeBeiseite(speicher.importWurzel, mapOf(relativ to (quelleDatei to sha)), lauf, lauf)
+                        beiseiteVorhanden += e.vorhanden
+                        beiseiteUmgelegt += e.kopiert
+                    }
+                }
+            }
+            quellGruppen.forEach { (quellLauf, gruppe) ->
+                coroutineContext.ensureActive()
+                val e = legeGruppeBeiseite(speicher.importWurzel, gruppe, quellLauf, lauf)
+                beiseiteVorhanden += e.vorhanden
+                if (e.umgelegt) beiseiteUmgelegt += e.kopiert else beiseiteNeu += e.kopiert
             }
 
             // Bilder: nur die, auf die neu übernommene Ausgaben zeigen.
@@ -199,7 +244,11 @@ object ArchivImport {
                 bilderUmbenannt = zuKopieren.count { (quelleBild, name) -> name != quelleBild.name },
                 fehlendeBilder = fehlendeBilder,
                 sicherungFehlendeBilder = pruefung.fehlendeBilder,
-                quarantaene = if (konflikte + konflikteLokalBeschaedigt > 0) quarantaeneOrdner.relativeTo(speicher.importWurzel.parentFile!!).path else null,
+                beiseiteNeu = beiseiteNeu,
+                beiseiteVorhanden = beiseiteVorhanden,
+                beiseiteUmgelegt = beiseiteUmgelegt,
+                // Eine Gruppe kann auch in einem früheren Laufordner liegen — deshalb der Bereich, nicht ein Ordner.
+                quarantaene = if (konflikte + konflikteLokalBeschaedigt > 0) "import/konflikte" else null,
             )
             KompassLog.info(
                 "ArchivImport",
@@ -244,7 +293,7 @@ object ArchivImport {
                 if (pfad == ArchivSicherung.MANIFEST) continue
                 val sha = erwartet[pfad] ?: return "Die Sicherung hat sich seit der Prüfung verändert ($pfad)."
                 if (!abgelegt.add(pfad)) return "Doppelter Eintrag in der Sicherung: $pfad"
-                val grenze = if (ArchivSicherung.BILD_PFAD.matches(pfad)) ArchivSicherung.MAX_BILD else ArchivSicherung.MAX_JSON
+                val grenze = if (pfad.endsWith(".jpg")) ArchivSicherung.MAX_BILD else ArchivSicherung.MAX_JSON
                 val ziel = File(ordner, pfad)
                 // Nur Pfade aus der geprüften Liste, trotzdem sicherheitshalber im Bereitstellungsordner halten.
                 if (!ziel.canonicalPath.startsWith(ordner.canonicalPath + File.separator)) return "Unzulässiger Pfad in der Sicherung: $pfad"
@@ -289,6 +338,55 @@ object ArchivImport {
     private fun legeBeiseite(quelle: File, ziel: File) {
         if (ziel.exists()) return
         kopiereAtomar(quelle, ziel)
+    }
+
+    private class GruppenErgebnis(val kopiert: Int, val vorhanden: Int, val umgelegt: Boolean)
+
+    /**
+     * Legt eine zusammengehörige Gruppe (Unterpfad → Quelldatei und SHA-256) geschlossen in genau einen
+     * Laufordner unter import/konflikte — nie verstreut, nie überschreibend:
+     * 1. Liegt die ganze Gruppe schon byte-gleich in irgendeinem Laufordner, passiert nichts.
+     * 2. Sonst in den vorhandenen Ordner [wunsch], wenn dort keine Datei der Gruppe anders aussieht.
+     * 3. Sonst in einen Ordner, der nur Teile genau dieser Gruppe enthält (abgebrochener Lauf).
+     * 4. Sonst in [wunsch], falls es ihn noch nicht gibt, oder in einen neuen, freien Ordner ab [lauf].
+     */
+    private fun legeGruppeBeiseite(importWurzel: File, gruppe: Map<String, Pair<File, String>>, wunsch: String, lauf: String): GruppenErgebnis {
+        val konflikte = File(importWurzel, "konflikte")
+        val laeufe = konflikte.listFiles()?.filter { it.isDirectory }?.sortedBy { it.name }.orEmpty()
+        fun gleich(datei: File, sha: String) = datei.isFile && sha256(datei) == sha
+        fun vollstaendig(ordner: File) = gruppe.all { (unterpfad, quelle) -> gleich(File(ordner, unterpfad), quelle.second) }
+        fun ohneWiderspruch(ordner: File) = gruppe.all { (unterpfad, quelle) -> File(ordner, unterpfad).let { !it.exists() || gleich(it, quelle.second) } }
+        fun nurDieseGruppe(ordner: File) = ordner.walkTopDown().filter { it.isFile && !it.name.endsWith(".tmp") }.all { datei ->
+            gruppe[datei.relativeTo(ordner).invariantSeparatorsPath]?.let { gleich(datei, it.second) } == true
+        }
+
+        laeufe.firstOrNull(::vollstaendig)?.let { return GruppenErgebnis(0, gruppe.size, false) }
+        val wunschOrdner = File(konflikte, wunsch)
+        val ziel = when {
+            wunschOrdner.isDirectory && ohneWiderspruch(wunschOrdner) -> wunschOrdner
+            else -> laeufe.firstOrNull { it != wunschOrdner && nurDieseGruppe(it) }
+                ?: if (!wunschOrdner.exists()) wunschOrdner else freierOrdner(konflikte, lauf)
+        }
+        var kopiert = 0
+        var vorhanden = 0
+        gruppe.forEach { (unterpfad, quelle) ->
+            val datei = File(ziel, unterpfad)
+            if (datei.exists()) vorhanden++ else {
+                kopiereAtomar(quelle.first, datei)
+                kopiert++
+            }
+        }
+        return GruppenErgebnis(kopiert, vorhanden, ziel != wunschOrdner)
+    }
+
+    /** Ein noch nicht vorhandener Laufordner ab der Nummer dieses Imports aufwärts. */
+    private fun freierOrdner(konflikte: File, lauf: String): File {
+        val start = lauf.toLong()
+        for (versatz in 0L until 10_000L) {
+            val kandidat = File(konflikte, (start + versatz).toString())
+            if (!kandidat.exists()) return kandidat
+        }
+        throw IOException("Kein freier Ablageordner für beiseitegelegte Daten")
     }
 
     /** Neuer Bildname aus dem Inhalt — derselbe Inhalt bekommt beim Wiederholen denselben Namen. */
