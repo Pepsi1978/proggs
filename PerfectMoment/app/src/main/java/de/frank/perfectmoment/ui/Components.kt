@@ -277,7 +277,7 @@ fun Modifier.pmGlassSurface(
     color: Color = colors.surface,
 ): Modifier {
     val shape = RoundedCornerShape(radius.dp)
-    val shadowColor = if (colors.dark) Color.Black.copy(alpha = 0.22f) else Color(0x1F785418)
+    val shadowColor = if (colors.dark) Color.Black.copy(alpha = 0.34f) else Color(0x33785418)
     return shadow(
         elevation = if (colors.dark) 14.dp else 12.dp,
         shape = shape,
@@ -286,7 +286,7 @@ fun Modifier.pmGlassSurface(
     ).clip(shape).drawWithCache {
         val corner = CornerRadius(radius.dp.toPx())
         val highlight = if (colors.dark) colors.goldHi.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.48f)
-        val edge = colors.gold.copy(alpha = if (colors.dark) 0.18f else 0.20f)
+        val edge = colors.gold.copy(alpha = if (colors.dark) 0.34f else 0.42f)
         val sheenLine = gradientLine(size, 145f)
         val sheen = Brush.linearGradient(
             0f to highlight,
