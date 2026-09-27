@@ -32,7 +32,7 @@ data class DiktatZustand(
  *
  * Die Aufnahme läuft über denselben Weg wie die gesprochene Frage: Groq Whisper mit den vier
  * Schichten gegen Stille-Halluzinationen (Pegelprüfung, Konfidenz je Segment, Abgleich mit dem
- * gemessenen Ton, Floskel-Sperrliste). Der erkannte Text ersetzt den bisherigen Thementext; die
+ * gemessenen Ton, Floskel-Sperrliste). Der erkannte Text wird hinten an den Thementext angehängt; die
  * Karte merkt sich den alten, damit „Zurück“ ihn wiederherstellt.
  */
 class ThemenDiktat(private val app: NewsApplication) {
@@ -100,8 +100,10 @@ class ThemenDiktat(private val app: NewsApplication) {
                 }
                 val themen = app.einstellungen.stand.value.themen
                 val vorher = themen.firstOrNull { it.id == themaId }?.text ?: return@launch
-                app.einstellungen.setzeThemen(themen.map { if (it.id == themaId) it.copy(text = text) else it })
-                _zustand.update { it.copy(fertig = Diktat(themaId, vorher, text, ++nummer)) }
+                // Das Eingesprochene kommt hinten an den bisherigen Text; „Zurück“ nimmt es wieder weg.
+                val neu = if (vorher.isBlank()) text else vorher.trimEnd() + " " + text
+                app.einstellungen.setzeThemen(themen.map { if (it.id == themaId) it.copy(text = neu) else it })
+                _zustand.update { it.copy(fertig = Diktat(themaId, vorher, neu, ++nummer)) }
                 KompassLog.info("ThemenDiktat", "stoppeUndUebernimm", "Thema eingesprochen", mapOf("zeichen" to text.length))
             } catch (abbruch: CancellationException) {
                 throw abbruch
