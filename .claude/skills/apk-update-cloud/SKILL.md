@@ -2,7 +2,8 @@
 name: apk-update-cloud
 description: >
   Veröffentlicht in einer Claude-Code-CLOUD-Sitzung eine geänderte Android-App vollautomatisch aufs
-  Handy: Versionslog-Eintrag anhängen, committen, Pull Request öffnen, selbst mergen, GitHub Actions
+  Handy: Versionslog-Eintrag anhängen, committen, Pull Request öffnen, Codex-Review abwarten und
+  Befunde fixen, selbst mergen, GitHub Actions
   baut und signiert mit dem geteilten Key und legt APK + update.json nach Google Drive
   "Dokumente/Updates/<Projekt>/", UpdateStation zeigt das Update. Nutze diesen Skill IMMER in einer
   Cloud-Sitzung (Umgebungsvariable CLAUDE_CODE_REMOTE=true, kein C:\Users\barwa\SK), sobald eine
@@ -37,11 +38,26 @@ tippen müssen außer „Installieren“ in UpdateStation.
    macht GitHub in Schritt 5. **Nie** selbst signieren, **nie** `apk-update.ps1` starten, **nie** nach
    dem Keystore fragen, **nie** eine APK selbst hochladen.
 3. **Committen und pushen** auf den Arbeits-Branch der Sitzung (nur die eigenen Pfade stagen).
-4. **Pull Request öffnen und sofort selbst mergen** (GitHub-Werkzeuge `create_pull_request`, nicht als
-   Entwurf, danach `merge_pull_request` mit `merge_method: merge`). Scheitert der Merge an einem
+4. **Pull Request öffnen, nicht als Entwurf** (GitHub-Werkzeug `create_pull_request`, `draft: false`).
+   Das startet automatisch das Codex-Review (Bot `chatgpt-codex-connector`). Nie erst als Entwurf
+   öffnen und dann auf „bereit“ setzen: Das löst ein zweites, überflüssiges Review aus.
+5. **Codex-Review abwarten (höchstens etwa 8 Minuten):** Nicht mit `sleep` warten, sondern mit
+   `send_later` nach etwa 2 Minuten nachsehen, bei Bedarf noch zweimal im Abstand von 3 Minuten. Lesen
+   mit `pull_request_read` (`get_comments`, `get_reviews`, `get_review_comments`). Codex ist fertig, wenn
+   sein Sammelkommentar „Codex Review Summary“ `Completed` zeigt oder er ein 👍 gesetzt hat.
+   - **Keine Befunde** (👍, keine Zeilenkommentare) → weiter mit Schritt 6.
+   - **Befunde** → Frank in der Sitzung **sofort** kurz melden, damit er weiß, warum es länger dauert:
+     „Codex hat <n> Punkte gefunden (<je ein Halbsatz>), ich fixe sie jetzt, dann wird veröffentlicht.“
+     P1 immer beheben, P2 beheben, wenn der Befund zutrifft; offensichtlich falsche Befunde begründet
+     überspringen. Fix auf denselben Branch committen und pushen, **kein** neuer Versionslog-Eintrag
+     (die Version ist noch nicht veröffentlicht). **Kein** zweites Review anstoßen (kein
+     „@codex review“): genau eine Runde, damit Zeit und Codex-Kontingent im Rahmen bleiben.
+   - **Nach 8 Minuten kein Ergebnis** → ohne Review weiter mit Schritt 6 und das in der Abschlussmeldung
+     erwähnen.
+6. **Selbst mergen** (`merge_pull_request`, `merge_method: merge`). Scheitert der Merge an einem
    Konflikt: `main` in den Branch mergen, Konflikt lösen, pushen, erneut mergen. Der Merge startet den
    Ablauf `.github/workflows/android-cloud-build.yml` (baut nur Merges von Pull Requests).
-5. **Ergebnis abwarten:** Nicht mit `sleep` warten. Mit `send_later` eine Nachkontrolle in etwa
+7. **Bau abwarten:** Nicht mit `sleep` warten. Mit `send_later` eine Nachkontrolle in etwa
    6 Minuten planen. Dann mit `actions_list` (`list_workflow_runs`, `android-cloud-build.yml`) den Lauf
    zum Merge-Commit suchen:
    - grün → Frank kurz melden: „<App> <Version> liegt in Google Drive, UpdateStation zeigt es bei der
@@ -51,7 +67,8 @@ tippen müssen außer „Installieren“ in UpdateStation.
      Schritt 1 wiederholen (neuer Versionslog-Eintrag nur, wenn der vorige schon veröffentlicht war;
      bei „Versionslog-Eintrag fehlt“ genau diesen nachtragen). Erst aufgeben und Frank fragen, wenn
      die Ursache außerhalb der App liegt (z. B. Secret abgelaufen, Google-Drive-Zugang widerrufen).
-6. **Abschlussmeldung** an Frank: App, alte → neue Version, was neu ist, ob der Bau grün war.
+8. **Abschlussmeldung** an Frank: App, alte → neue Version, was neu ist, was Codex gefunden und was davon
+   behoben wurde, ob der Bau grün war.
 
 ## Sicherheitsregeln (unverändert gültig)
 
