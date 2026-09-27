@@ -399,7 +399,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
         val heroDaten = HeroDaten(
             now = now, next = next, nextIsSnooze = nextIsSnooze, nextAlarm = nextAlarm,
             nextName = nextName, bereit = bereitschaft.all { it.second },
-            offen = bereitschaft.count { !it.second }, stufe = stufe, breite = breite,
+            offen = bereitschaft.count { !it.second }, stufe = stufe, breite = breite, anzahl = alarms.size,
         )
         Column(Modifier.fillMaxSize()) {
             // Der feststehende Hero. Er sitzt außerhalb des Rasters, damit die Weckerliste
@@ -486,8 +486,14 @@ data class HeroDaten(
     val offen: Int,
     val stufe: KopfStufe,
     val breite: androidx.compose.ui.unit.Dp,
+    /** Wie viele Wecker es überhaupt gibt – für den Leerzustand „noch keiner“ gegenüber „alle aus“. */
+    val anzahl: Int = 0,
 ) {
     val hatTermin: Boolean get() = next != null
+    /** Leerzustand in derselben Dreizeilen-Form wie ein Termin: kurz, jede Zeile passt in eine Zeile. */
+    val leerTitel: String get() = "Kein Wecker aktiv"
+    val leerGrund: String get() = when (anzahl) { 0 -> "Noch keiner angelegt"; 1 -> "Dein Wecker ist aus"; else -> "Alle $anzahl Wecker sind aus" }
+    val leerHilfe: String get() = if (anzahl == 0) "Tippe auf „Neuer Wecker“" else "Unten einfach einschalten"
     val schmal: Boolean get() = stufe == KopfStufe.SCHMAL
     val weit: Boolean get() = stufe == KopfStufe.WEIT
     /** Die Restzeit als Anteil eines Tages — für lineare Anzeigen. Über 24 Stunden ist voll. */
@@ -622,13 +628,10 @@ private fun TerminGruppe(
         horizontalAlignment = ausrichtung,
     ) {
         if (daten.next == null) {
-            Text("Kein Wecker aktiv", style = MaterialTheme.typography.bodyMedium,
-                color = textFarbe, maxLines = 1)
-            // Umbrechen statt „…“: auf S24-Breite war der Hinweis sonst nicht mehr lesbar.
-            // Zwei feste Zeilen statt Platzhalter: bleibt lesbar und hält die Hero-Höhe in jedem Zustand gleich.
-            Text("Lege einen an oder schalte einen ein", style = MaterialTheme.typography.titleSmall,
-                color = gedaempft, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                textAlign = if (ausrichtung == Alignment.End) TextAlign.End else TextAlign.Start)
+            // Dieselben drei Zeilen wie bei einem Termin (Titel, Name, Restzeit): gleiche Höhe, kein Umbruch.
+            Text(daten.leerTitel, style = MaterialTheme.typography.bodyMedium, color = gedaempft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(daten.leerGrund, style = MaterialTheme.typography.titleSmall, color = textFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(daten.leerHilfe, style = MaterialTheme.typography.bodyMedium, color = fuehrung, maxLines = 1, overflow = TextOverflow.Ellipsis)
         } else {
             TerminZeile(daten.now, daten.next, daten.nextIsSnooze, punkt)
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -855,7 +858,7 @@ private fun SchmalerHero(
                             onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
                 ) {
                     Text(
-                        if (daten.next == null) "Kein Wecker aktiv"
+                        if (daten.next == null) "${daten.leerGrund} · ${daten.leerHilfe}"
                         else "${terminAnzeige(daten.now, daten.next).einzeilig}${daten.nextName?.let { " · $it" } ?: ""}",
                         style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -1824,8 +1827,7 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
                 }
-                // Deutlicher Abschnittstrenner im Glut-Ton des Designs, eingerückt wie der Text.
-                HorizontalDivider(Modifier.padding(horizontal = 14.dp), thickness = 1.dp, color = gold.primaer.copy(alpha = .35f))
+
             }
         }
         // Schlicht: unverändert der bisherige Aufbau aus Kopfzeile und Inhalt in einer Karte.
@@ -1954,14 +1956,15 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                         vm.change(aktuell.copy(text = listOf(aktuell.text.trimEnd(), diktiert.trim()).filter(String::isNotBlank).joinToString("\n")))
                     }
                 }) { AnhoerKnopfText(vm, alarm) }
-                Text("Tippen oder diktieren – der Text bleibt jederzeit bearbeitbar.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                // Stimme und Tempo gehören zum Text: direkt darunter, nicht in einer eigenen Karte weiter unten.
+                StimmeUndTempo(vm, alarm)
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             }
             Text("Reihenfolge beim Wecken (verschieben per Drag-and-drop)", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             if (alarm.steps.isEmpty()) Text("Noch kein Baustein ausgewählt.", style = MaterialTheme.typography.bodySmall)
             else de.frank.module.draganddrop.WeckReihenfolgeListe(alarm, vm::change)
         }
-        if (alarm.needsSpeech) AlarmSpeechEditor(vm, alarm)
+
         Section("Lautstärke & Schlummern", collapsible = true, summary = listOfNotNull(
             if (Step.TONE in alarm.steps) "Klingelzeichen: ${Tones.names[alarm.cue] ?: alarm.cue}" else null,
             if (Step.MUSIC in alarm.steps) "Musik: ${MusikAnzeige.von(alarm).titel}" else null,
@@ -2031,7 +2034,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
 }
 
 @Composable
-private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
+private fun StimmeUndTempo(vm: WeckerViewModel, alarm: Alarm) {
     val revision by vm.settingsRevision.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
     val alle by vm.stimmenJeSprache.collectAsStateWithLifecycle()
@@ -2042,10 +2045,8 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     fun name(id: String) = PremiumKatalog.finde(id)?.name ?: liste.firstOrNull { it.name == id }?.anzeige ?: "Gerätestimme"
     val standard = name(defaults.fuerSprache(code).stimme)
     val eigene = if (alarm.voiceProvider.isBlank()) "" else alarm.voiceId
-    Section("Stimme & Sprechgeschwindigkeit", collapsible = true, summary = listOf(
-        if (eigene.isBlank()) "$standard (Standard)" else name(eigene),
-        "Tempo ${"%.2f".format(effective.ttsSpeechRate)}× ${if (alarm.speechRate == null) "(Standard)" else "(nur dieser Wecker)"}",
-    ).joinToString(" · ")) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Stimme", style = MaterialTheme.typography.labelLarge, color = LocalGold.current.textGedaempft)
         StimmWahlListe(vm, code, eigene, vorgabeZeile = standard) { id ->
             vm.change(alarm.copy(voiceProvider = when {
                 id.isBlank() -> ""
@@ -2053,19 +2054,10 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
                 else -> LokaleStimmen.PROVIDER
             }, voiceId = id))
         }
-        Text("Sprechgeschwindigkeit: ${"%.2f".format(effective.ttsSpeechRate)}×" +
-            if (alarm.speechRate == null) " · Standard aus Einstellungen" else " · nur dieser Wecker")
+        Text("Tempo ${"%.2f".format(effective.ttsSpeechRate)}×" + if (alarm.speechRate == null) " · Standard" else " · nur dieser Wecker",
+            style = MaterialTheme.typography.labelLarge, color = LocalGold.current.textGedaempft)
         Regler3D(effective.ttsSpeechRate, { vm.change(alarm.copy(speechRate = it)) }, bereich = .5f..2f)
-        if (alarm.speechRate != null) StillerKnopf("Standard-Sprechgeschwindigkeit verwenden", {
-            vm.change(alarm.copy(speechRate = null))
-        })
-        // Genau diese Stimme mit genau diesem Tempo, ohne die globalen Einstellungen anzufassen.
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            GoldKnopf("Stimme anhören", { vm.previewVoice(alarm) }, aktiviert = busy.isBlank())
-            // Stoppen bleibt immer möglich, auch während etwas anderes läuft.
-            StillerKnopf("Stoppen", vm::stopPreview)
-        }
-        Text("Ohne eigene Auswahl gelten Stimme und Sprechgeschwindigkeit aus den Einstellungen. Jede Änderung hier gilt nur für diesen Wecker.", style = MaterialTheme.typography.bodySmall)
+        if (alarm.speechRate != null) StillerKnopf("Standard-Tempo verwenden", { vm.change(alarm.copy(speechRate = null)) })
     }
 }
 
@@ -2680,9 +2672,8 @@ private fun TerminVerteilt(
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (daten.next == null) {
-                Text("Kein Wecker aktiv", style = MaterialTheme.typography.bodyMedium, color = textFarbe, maxLines = 1)
-                Text("Lege einen an oder schalte einen ein", style = MaterialTheme.typography.bodySmall,
-                    color = gedaempft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(daten.leerGrund, style = MaterialTheme.typography.titleSmall, color = textFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(daten.leerHilfe, style = MaterialTheme.typography.bodyMedium, color = fuehrung, maxLines = 1, overflow = TextOverflow.Ellipsis)
             } else {
                 TerminZeile(daten.now, daten.next, daten.nextIsSnooze)
                 Text(daten.nextName ?: "Wecker", style = MaterialTheme.typography.titleSmall, color = textFarbe,
@@ -2875,8 +2866,9 @@ private fun TraumTermin(daten: HeroDaten, aufOeffnen: () -> Unit) {
         onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
         verticalArrangement = Arrangement.spacedBy(3.dp)) {
         if (daten.next == null) {
-            Zeile("Kein Wecker aktiv", gold.textPrimaer, MaterialTheme.typography.bodyMedium)
-            Zeile("Lege einen an oder schalte einen ein", gold.textGedaempft, MaterialTheme.typography.bodySmall, zeilen = 2)
+            Zeile(daten.leerTitel, gold.textPrimaer, MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+            Zeile(daten.leerGrund, gold.textPrimaer, MaterialTheme.typography.bodyMedium)
+            Zeile(daten.leerHilfe, akzent, MaterialTheme.typography.bodyMedium)
         } else {
             val termin = terminAnzeige(daten.now, daten.next).einzeilig
             Zeile("${if (daten.nextIsSnooze) "Schlummern bis" else "Nächster Wecker"} $termin", gold.textPrimaer,

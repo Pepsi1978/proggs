@@ -12,6 +12,7 @@
     { "versionCode": 8, "versionName": "1.0.7", "stand": "27.09.2026, 21:51 Uhr", "notiz": "Design Schlicht: Der Wecker im Kopfbereich ist jetzt ein plastischer 3D-Wecker mit Metallgehäuse, glänzenden Glocken und Glaskuppel." },
     { "versionCode": 9, "versionName": "1.0.8", "stand": "27.09.2026, 21:55 Uhr", "notiz": "Neu: Diktieren mit Whisper-Spracherkennung direkt auf dem Handy – sehr genau, ohne Internet; das Sprachmodell wird einmalig geladen, mit Pegelanzeige beim Sprechen." },
     { "versionCode": 10, "versionName": "1.0.9", "stand": "27.09.2026, 22:02 Uhr", "notiz": "Technische Nachlieferung: Die Bibliotheken der Spracherkennung liegen jetzt vollständig bei; kein sichtbarer Unterschied." },
-    { "versionCode": 11, "versionName": "1.0.10", "stand": "27.09.2026, 22:06 Uhr", "notiz": "Spracherkennung fest eingebaut – Diktieren funktioniert sofort, ohne Download. Eine einzige Stimmauswahl als Liste mit Favoriten-Stern, ohne Umschalten oder Freischalten." }
+    { "versionCode": 11, "versionName": "1.0.10", "stand": "27.09.2026, 22:06 Uhr", "notiz": "Spracherkennung fest eingebaut – Diktieren funktioniert sofort, ohne Download. Eine einzige Stimmauswahl als Liste mit Favoriten-Stern, ohne Umschalten oder Freischalten." },
+    { "versionCode": 12, "versionName": "1.0.11", "stand": "27.09.2026, 22:08 Uhr", "notiz": "Kopfbereich ohne Wecker klar und einzeilig (noch keiner angelegt oder alle aus), Stimme und Tempo direkt unter dem Wecktext, Traumraum ohne Trennstriche." }
   ]
 }
