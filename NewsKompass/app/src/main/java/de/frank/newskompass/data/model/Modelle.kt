@@ -85,6 +85,7 @@ enum class Ausfuehrlichkeit(val id: String, val label: String, val erklaerung: S
  * [maxMeldungen] ist eine harte Obergrenze, [minMeldungen] nur ein Ziel: Gibt es nicht genug
  * belegtes Neues, bleibt der Block kürzer.
  */
+@androidx.compose.runtime.Immutable
 data class Thema(
     val id: String,
     val text: String,

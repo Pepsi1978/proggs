@@ -70,6 +70,7 @@ data class CodexAntwort(
 )
 
 /** Ein Modell aus dem Live-Katalog des Kontos. */
+@androidx.compose.runtime.Immutable
 data class CodexModell(
     val id: String,
     val name: String,

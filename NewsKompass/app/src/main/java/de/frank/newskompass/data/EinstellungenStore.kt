@@ -21,6 +21,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** Momentaufnahme aller Einstellungen — die Oberfläche beobachtet genau diese eine Grösse. */
+@androidx.compose.runtime.Immutable
 data class EinstellungenStand(
     val themen: List<Thema>,
     val modellId: String,
@@ -181,7 +182,8 @@ class EinstellungenStore(context: Context) {
     fun setzeDenktiefe(stufe: String) = schreibe { putString(K_DENKTIEFE, stufe) }
 
     fun setzeModelle(modelle: List<CodexModell>) {
-        if (modelle.isEmpty()) return
+        // Unveränderte Liste nicht neu schreiben — sonst zeichnet die ganze Einstellungsseite neu, sobald die Modelle ankommen.
+        if (modelle.isEmpty() || modelle == _stand.value.modelle) return
         schreibe {
             val liste = JSONArray()
             modelle.forEach {

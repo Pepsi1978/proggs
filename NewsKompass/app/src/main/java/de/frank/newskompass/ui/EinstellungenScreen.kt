@@ -25,7 +25,13 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -175,6 +181,7 @@ import kotlinx.coroutines.withContext
 /** Die Themen stehen hinter zwei festen Kopfzeilen; deren Plätze füllt dieser Platzhalter. */
 private const val PLATZHALTER = Long.MIN_VALUE
 private const val KOPFZEILEN = 2
+private val TERMIN_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY)
 
 private fun schluessel(thema: Thema): Long =
     runCatching { UUID.fromString(thema.id).let { it.mostSignificantBits xor it.leastSignificantBits } }
@@ -454,7 +461,7 @@ private fun ThemenKarte(
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surface,
     ) {
-        Column(Modifier.animateContentSize()) {
+        Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     griff.padding(start = 6.dp).size(width = 40.dp, height = 60.dp),
@@ -492,7 +499,12 @@ private fun ThemenKarte(
                     )
                 }
             }
-            if (offen) {
+            AnimatedVisibility(
+                visible = offen,
+                enter = expandVertically(animationSpec = tween(220)) + fadeIn(animationSpec = tween(180)),
+                exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(animationSpec = tween(120)),
+            ) {
+            Column(Modifier.animateContentSize(animationSpec = tween(180))) {
                 Row(verticalAlignment = Alignment.Top, modifier = Modifier.padding(start = 76.dp)) {
                     TextField(
                         value = text,
@@ -599,6 +611,7 @@ private fun ThemenKarte(
                     modifier = Modifier.padding(start = 90.dp, end = 12.dp, bottom = 8.dp),
                 )
             }
+            }
         }
     }
     if (bereichOffen) {
@@ -637,7 +650,7 @@ private fun AktualisierungsBereich(
     var monatstagWaehlen by remember { mutableStateOf(false) }
     var jahrestagWaehlen by remember { mutableStateOf(false) }
     val grau = MaterialTheme.colorScheme.onSurfaceVariant
-    Column(modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
             Icon(Icons.Rounded.Schedule, null, Modifier.size(18.dp), tint = grau)
             Spacer(Modifier.width(6.dp))
@@ -721,8 +734,9 @@ private fun AktualisierungsBereich(
                 shape = RoundedCornerShape(50),
             )
         }
+        val zusammenfassung = remember(thema, zeitplanAktiv) { planZusammenfassung(thema, zeitplanAktiv) }
         Text(
-            planZusammenfassung(thema, zeitplanAktiv),
+            zusammenfassung,
             style = MaterialTheme.typography.bodySmall,
             color = grau,
             modifier = Modifier.padding(top = 2.dp),
@@ -769,7 +783,7 @@ private fun planZusammenfassung(thema: Thema, zeitplanAktiv: Boolean): String {
     if (!zeitplanAktiv) return "$satz Der Zeitplan ist unten ausgeschaltet."
     val naechster = Zeitplan.naechsterTermin(thema)
         ?: return "$satz Es gibt keinen passenden Termin."
-    val wann = naechster.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY))
+    val wann = naechster.format(TERMIN_FORMAT)
     return "$satz Nächstes Mal: $wann."
 }
 

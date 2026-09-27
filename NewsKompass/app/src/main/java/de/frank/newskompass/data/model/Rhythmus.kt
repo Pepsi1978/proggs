@@ -32,6 +32,7 @@ enum class RhythmusArt(val id: String, val label: String) {
  * jeweils gerechnet ab dem Tag [ab]. [wochentage] sind ISO-Nummern (1 = Montag … 7 = Sonntag).
  * Gibt es [tag] in einem Monat nicht (etwa den 31. oder den 29. Februar), gilt dessen letzter Tag.
  */
+@androidx.compose.runtime.Immutable
 data class Rhythmus(
     val art: RhythmusArt = RhythmusArt.TAEGLICH,
     val intervall: Int = 1,
