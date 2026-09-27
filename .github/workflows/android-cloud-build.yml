@@ -18,12 +18,19 @@ on:
       - '*/settings.gradle.kts'
       - '*/gradle.properties'
       - '*/gradle/**'
+      # Gemeinsamer Code der Kompass-Apps: eine Änderung dort baut alle Apps, die ihn nutzen.
+      - 'KompassKern/**'
   workflow_dispatch:
     inputs:
       projekt:
         description: 'Projektordner, z. B. NovaDrehen'
         required: true
         type: string
+      probe:
+        description: 'Probebau: baut und prüft die Signatur, lädt aber nichts nach Google Drive'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,6 +38,8 @@ permissions:
 env:
   # BestJournalAndroid wird mit dem Play-Store-Key signiert, der nicht zu GitHub kommt.
   AUSGESCHLOSSEN: 'Designs BestJournalAndroid'
+  # Apps, die ../KompassKern als Quellordner einbinden (siehe deren app/build.gradle.kts).
+  KERN_NUTZER: 'ClaudeKompass CodexKompass OCodeKompass'
 
 jobs:
   auswahl:
@@ -76,6 +85,10 @@ jobs:
             fi
             if [[ "$VORHER" =~ ^0+$ ]] || ! git cat-file -e "$VORHER^{commit}" 2>/dev/null; then VORHER="$SHA~1"; fi
             mapfile -t kandidaten < <(git diff --name-only "$VORHER" "$SHA" | grep '/' | cut -d/ -f1 | sort -u)
+            for k in "${kandidaten[@]}"; do
+              if [ "$k" = "KompassKern" ]; then for n in $KERN_NUTZER; do kandidaten+=("$n"); done; fi
+            done
+            mapfile -t kandidaten < <(printf '%s\n' "${kandidaten[@]}" | sort -u)
           fi
           liste=()
           for p in "${kandidaten[@]}"; do
@@ -93,7 +106,8 @@ jobs:
     name: ${{ matrix.projekt }}
     needs: auswahl
     if: needs.auswahl.outputs.projekte != '[]'
-    runs-on: windows-latest
+    # Linux: schneller als der Windows-Rechner. apk-update.ps1 läuft hier über pwsh (vorinstalliert).
+    runs-on: ubuntu-latest
     environment: android-signing
     permissions:
       contents: read
@@ -106,7 +120,8 @@ jobs:
       cancel-in-progress: false
     env:
       PROJEKT: ${{ matrix.projekt }}
-      SKRIPT: OpenLauncher\Profiles\ClaudeCode\standard\skills\apk-update\scripts\apk-update.ps1
+      SKRIPT: OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/scripts/apk-update.ps1
+      PROBE: ${{ inputs.probe == true }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -115,6 +130,7 @@ jobs:
           persist-credentials: false
           sparse-checkout: |
             OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update
+            KompassKern
             ${{ matrix.projekt }}
 
       - name: Git-Stand für apk-update vorbereiten
@@ -136,10 +152,15 @@ jobs:
           KEYSTORE_B64: ${{ secrets.ANDROID_SHARED_KEYSTORE_B64 }}
         run: |
           if (-not $env:KEYSTORE_B64) { Write-Host "::error::Secret ANDROID_SHARED_KEYSTORE_B64 fehlt."; exit 1 }
-          $sk = Join-Path $env:USERPROFILE 'SK\Android'; $ad = Join-Path $env:USERPROFILE '.android'
+          # $HOME ist Javas user.home: Gradle-Skripte und apk-update.ps1 suchen SK dort.
+          # Den Debug-Key sucht das Android-Gradle-Plugin in ANDROID_USER_HOME, sonst in ~/.android.
+          $sk = Join-Path $HOME 'SK/Android'
+          $ad = if ($env:ANDROID_USER_HOME) { $env:ANDROID_USER_HOME } else { Join-Path $HOME '.android' }
           New-Item -ItemType Directory -Force -Path $sk, $ad | Out-Null
-          [IO.File]::WriteAllBytes("$sk\debug-shared.keystore", [Convert]::FromBase64String($env:KEYSTORE_B64))
-          Copy-Item "$sk\debug-shared.keystore" "$ad\debug.keystore" -Force
+          $ks = Join-Path $sk 'debug-shared.keystore'
+          [IO.File]::WriteAllBytes($ks, [Convert]::FromBase64String($env:KEYSTORE_B64))
+          Copy-Item $ks (Join-Path $ad 'debug.keystore') -Force
+          "ANDROID_DEBUG_KEY=$(Join-Path $ad 'debug.keystore')" >> $env:GITHUB_ENV
 
       - name: Weitere SK-Dateien ablegen
         if: matrix.projekt == 'EntropieReductor'
@@ -148,9 +169,9 @@ jobs:
           MAPS_API_KEY: ${{ secrets.SK_ENTROPIEREDUCTOR_MAPS_API_KEY }}
         run: |
           if (-not $env:MAPS_API_KEY) { Write-Host "::error::Secret SK_ENTROPIEREDUCTOR_MAPS_API_KEY fehlt."; exit 1 }
-          $d = Join-Path $env:USERPROFILE 'SK\EntropieReductor'
+          $d = Join-Path $HOME 'SK/EntropieReductor'
           New-Item -ItemType Directory -Force -Path $d | Out-Null
-          [IO.File]::WriteAllText("$d\maps-api-key.txt", $env:MAPS_API_KEY)
+          [IO.File]::WriteAllText((Join-Path $d 'maps-api-key.txt'), $env:MAPS_API_KEY)
 
       - name: rclone einrichten
         shell: pwsh
@@ -158,8 +179,11 @@ jobs:
           RCLONE_INHALT: ${{ secrets.RCLONE_CONFIG }}
         run: |
           if (-not $env:RCLONE_INHALT) { Write-Host "::error::Secret RCLONE_CONFIG fehlt."; exit 1 }
-          choco install rclone -y --no-progress | Out-Null
+          # rclone aus dem signierten Ubuntu-Archiv (keine fremden Install-Skripte).
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone | Out-Null
           if ($LASTEXITCODE -ne 0) { Write-Host "::error::rclone-Installation fehlgeschlagen."; exit 1 }
+          rclone version | Select-Object -First 1
           $conf = Join-Path $env:RUNNER_TEMP 'rclone.conf'
           [IO.File]::WriteAllText($conf, $env:RCLONE_INHALT)
           "RCLONE_CONFIG=$conf" >> $env:GITHUB_ENV
@@ -167,10 +191,17 @@ jobs:
       - name: Drive-Ordner des Projekts holen
         shell: pwsh
         run: |
-          $lokal = Join-Path $env:RUNNER_TEMP "Updates\$env:PROJEKT"
+          $lokal = Join-Path $env:RUNNER_TEMP "Updates/$env:PROJEKT"
           New-Item -ItemType Directory -Force -Path $lokal | Out-Null
           $ordner = @(rclone lsf 'gdrive:Dokumente/Updates' --dirs-only)
           if ($LASTEXITCODE -ne 0) { Write-Host "::error::Google Drive nicht erreichbar (rclone lsf)."; exit 1 }
+          if ($env:PROBE -eq 'true') {
+            # Probebau: Drive nur lesend geprüft (oben), Ordner bleibt leer, damit das Skript wirklich
+            # baut statt "schon veröffentlicht" zu melden.
+            Write-Host "Probebau: Drive erreichbar ($($ordner.Count) Ordner), Projektordner wird nicht geladen."
+            Set-Content (Join-Path $env:RUNNER_TEMP 'apks-vorher.txt') @()
+            exit 0
+          }
           if ($ordner -contains "$env:PROJEKT/") {
             rclone copy "gdrive:Dokumente/Updates/$env:PROJEKT" $lokal
             if ($LASTEXITCODE -ne 0) { Write-Host "::error::Download aus Drive fehlgeschlagen."; exit 1 }
@@ -212,7 +243,7 @@ jobs:
         env:
           SIGNATUR_ERWARTET: ${{ vars.ANDROID_SIGNATUR_SHA256 }}
         run: |
-          $lokal = Join-Path $env:RUNNER_TEMP "Updates\$env:PROJEKT"
+          $lokal = Join-Path $env:RUNNER_TEMP "Updates/$env:PROJEKT"
           $m = Get-Content (Join-Path $lokal 'update.json') -Raw -Encoding utf8 | ConvertFrom-Json
           if (-not $env:SIGNATUR_ERWARTET -or "$($m.signaturSha256)".ToLower() -ne $env:SIGNATUR_ERWARTET.ToLower()) {
             Write-Host "::error::Signatur $($m.signaturSha256) passt nicht zum geteilten Schlüssel. Nichts hochgeladen."; exit 1
@@ -220,6 +251,10 @@ jobs:
           $apk = Join-Path $lokal $m.apk
           if (-not (Test-Path $apk) -or (Get-FileHash $apk -Algorithm SHA256).Hash.ToLower() -ne "$($m.sha256)".ToLower()) {
             Write-Host "::error::APK fehlt oder Hash passt nicht zu update.json. Nichts hochgeladen."; exit 1
+          }
+          if ($env:PROBE -eq 'true') {
+            "### $env:PROJEKT`n🧪 Probebau grün: Version $($m.versionName) (versionCode $($m.versionCode)), Signatur passt. Nichts hochgeladen." >> $env:GITHUB_STEP_SUMMARY
+            exit 0
           }
           $ziel = "gdrive:Dokumente/Updates/$env:PROJEKT"
           # Erst die APK, dann update.json: UpdateStation sieht nie ein Manifest ohne APK.
@@ -239,9 +274,11 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          Remove-Item -Force -ErrorAction SilentlyContinue `
-            (Join-Path $env:USERPROFILE 'SK\Android\debug-shared.keystore'), `
-            (Join-Path $env:USERPROFILE '.android\debug.keystore'), `
-            (Join-Path $env:USERPROFILE 'SK\EntropieReductor\maps-api-key.txt'), `
+          $weg = @(
+            (Join-Path $HOME 'SK/Android/debug-shared.keystore'),
+            $env:ANDROID_DEBUG_KEY,
+            (Join-Path $HOME 'SK/EntropieReductor/maps-api-key.txt'),
             (Join-Path $env:RUNNER_TEMP 'rclone.conf')
+          ) | Where-Object { $_ }
+          Remove-Item -Force -ErrorAction SilentlyContinue -LiteralPath $weg
           exit 0

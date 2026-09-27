@@ -40,7 +40,10 @@ trap {
 $skillDir   = Split-Path -Parent $PSScriptRoot
 $proggs     = [IO.Path]::GetFullPath($ProggsWurzel).TrimEnd('\')
 $updatesDir = [IO.Path]::GetFullPath($UpdatesWurzel).TrimEnd('\')
-$keystore   = Join-Path $env:USERPROFILE 'SK\Android\debug-shared.keystore'
+# Linux (GitHub-Rechner des Cloud-Baus) kennt kein USERPROFILE: dort liegt SK unter $HOME (= Javas user.home).
+# Die Bedingung prüft Linux/macOS, damit Windows (auch ohne $IsWindows) genau den bisherigen Weg nimmt.
+$aufUnix    = [bool]($IsLinux -or $IsMacOS)
+$keystore   = if ($aufUnix) { Join-Path $HOME 'SK/Android/debug-shared.keystore' } else { Join-Path $env:USERPROFILE 'SK\Android\debug-shared.keystore' }
 
 # --- Projekt sicher bestimmen ---------------------------------------------------------------
 # Der Name wird Ordnername in Drive: nur einfache Zeichen, kein Pfad, direkt unter ~/proggs.
@@ -91,12 +94,15 @@ if (-not $erwartetesPaket) {
 
 # --- Build-Tools ----------------------------------------------------------------------------
 $sdk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
+# Unter Windows Batch- und exe-Dateien, unter Linux dieselben Werkzeuge ohne Endung.
+$apksignerName = if ($aufUnix) { 'apksigner' } else { 'apksigner.bat' }
+$aapt2Name     = if ($aufUnix) { 'aapt2' } else { 'aapt2.exe' }
 $bt = Get-ChildItem (Join-Path $sdk 'build-tools') -Directory |
-    Where-Object { Test-Path (Join-Path $_.FullName 'apksigner.bat') } |
+    Where-Object { Test-Path (Join-Path $_.FullName $apksignerName) } |
     Sort-Object { [version]($_.Name -replace '[^\d\.].*$', '') } | Select-Object -Last 1
 if (-not $bt) { Fehler "Keine Android build-tools mit apksigner gefunden unter $sdk." }
-$apksigner = Join-Path $bt.FullName 'apksigner.bat'
-$aapt2     = Join-Path $bt.FullName 'aapt2.exe'
+$apksigner = Join-Path $bt.FullName $apksignerName
+$aapt2     = Join-Path $bt.FullName $aapt2Name
 
 function Badging([string]$apk) {
     $zeile = (& $aapt2 dump badging $apk 2>$null | Select-Object -First 1)
@@ -353,7 +359,9 @@ if (-not $OhneBuild) {
     Write-Host "Baue $Projekt mit :app:$gradleTask ..."
     Push-Location $projektDir
     try {
-        & .\gradlew.bat ":app:$gradleTask" --console=plain
+        # Unter Linux über sh: gradlew ist in Git oft nicht als ausführbar markiert, und chmod
+        # würde git status verändern (siehe Prüfung auf offene Änderungen oben).
+        if ($aufUnix) { & sh ./gradlew ":app:$gradleTask" --console=plain } else { & .\gradlew.bat ":app:$gradleTask" --console=plain }
         $exit = $LASTEXITCODE
     } finally { Pop-Location }
     if ($exit -ne 0) { Fehler "Gradle-Build :app:$gradleTask ist fehlgeschlagen (Exit $exit)." }
