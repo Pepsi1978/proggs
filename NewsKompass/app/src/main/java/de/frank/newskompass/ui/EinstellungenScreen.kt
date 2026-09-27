@@ -38,12 +38,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Tune
@@ -55,6 +57,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -81,6 +85,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -121,6 +126,8 @@ import de.frank.newskompass.data.model.Ausfuehrlichkeit
 import de.frank.newskompass.data.model.BildModus
 import de.frank.newskompass.data.model.Denkstufen
 import de.frank.newskompass.data.model.DesignModus
+import de.frank.newskompass.data.model.Rhythmus
+import de.frank.newskompass.data.model.RhythmusArt
 import de.frank.newskompass.data.model.Geschlecht
 import de.frank.newskompass.data.model.Stimme
 import de.frank.newskompass.data.model.Thema
@@ -133,6 +140,9 @@ import de.frank.newskompass.tts.QwenStimmVerwaltung
 import de.frank.newskompass.tts.TtsCatalog
 import de.frank.newskompass.ui.theme.blockFarbe
 import de.frank.newskompass.ui.theme.blockVerlauf
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
@@ -226,9 +236,12 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                                 },
                             )
                         },
-                        aendereUhrzeiten = { zeiten ->
+                        zeitplanAktiv = stand.zeitplanAktiv,
+                        aenderePlan = { zeiten, rhythmus ->
                             app.einstellungen.setzeThemen(
-                                app.einstellungen.stand.value.themen.map { if (it.id == thema.id) it.copy(uhrzeiten = zeiten) else it },
+                                app.einstellungen.stand.value.themen.map {
+                                    if (it.id == thema.id) it.copy(uhrzeiten = zeiten, rhythmus = rhythmus) else it
+                                },
                             )
                         },
                         loesche = { app.einstellungen.setzeThemen(app.einstellungen.stand.value.themen.filterNot { it.id == thema.id }) },
@@ -311,7 +324,8 @@ private fun ThemenKarte(
     loeschbar: Boolean,
     aendere: (String) -> Unit,
     aendereBereich: (Int, Int) -> Unit,
-    aendereUhrzeiten: (List<Int>) -> Unit,
+    zeitplanAktiv: Boolean,
+    aenderePlan: (List<Int>, Rhythmus) -> Unit,
     loesche: () -> Unit,
 ) {
     var text by remember(thema.id) { mutableStateOf(thema.text) }
@@ -369,9 +383,10 @@ private fun ThemenKarte(
                 shape = RoundedCornerShape(50),
                 modifier = Modifier.padding(start = 90.dp),
             )
-            UhrzeitenZeile(
-                uhrzeiten = thema.uhrzeiten,
-                aendere = aendereUhrzeiten,
+            AktualisierungsBereich(
+                thema = thema,
+                zeitplanAktiv = zeitplanAktiv,
+                aendere = aenderePlan,
                 modifier = Modifier.padding(start = 90.dp, end = 12.dp, bottom = 8.dp),
             )
         }
@@ -390,22 +405,86 @@ private fun ThemenKarte(
 }
 
 /**
- * Die Uhrzeiten, zu denen dieses Thema automatisch aktualisiert wird: antippen ändert eine Zeit,
- * Minus streicht sie, Plus fügt eine hinzu. Die Liste ist immer der Reihe nach sortiert.
+ * Wann dieses Thema automatisch aktualisiert wird: erst der Rhythmus (täglich, alle x Tage,
+ * wöchentlich, monatlich, jährlich) mit seinen passenden Feldern, dann die Uhrzeiten — antippen
+ * ändert eine Zeit, Minus streicht sie, Plus fügt eine hinzu. Unten fasst ein Satz alles zusammen.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun UhrzeitenZeile(uhrzeiten: List<Int>, aendere: (List<Int>) -> Unit, modifier: Modifier = Modifier) {
+private fun AktualisierungsBereich(
+    thema: Thema,
+    zeitplanAktiv: Boolean,
+    aendere: (List<Int>, Rhythmus) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val uhrzeiten = thema.uhrzeiten
+    val rhythmus = thema.rhythmus
+    val setzeZeiten = { zeiten: List<Int> -> aendere(zeiten, rhythmus) }
+    val setzeRhythmus = { neu: Rhythmus -> aendere(uhrzeiten, neu) }
     // null = keine Bearbeitung, -1 = neue Uhrzeit, sonst die bearbeitete Uhrzeit.
     var bearbeitet by remember { mutableStateOf<Int?>(null) }
-    Column(modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Schedule, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    var abWaehlen by remember { mutableStateOf(false) }
+    var monatstagWaehlen by remember { mutableStateOf(false) }
+    var jahrestagWaehlen by remember { mutableStateOf(false) }
+    val grau = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Icon(Icons.Rounded.Schedule, null, Modifier.size(18.dp), tint = grau)
             Spacer(Modifier.width(6.dp))
-            Text(
-                if (uhrzeiten.isEmpty()) "Keine automatische Aktualisierung — nur per Hand" else "Automatisch aktualisieren um",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Text("Automatisch aktualisieren", style = MaterialTheme.typography.labelLarge, color = grau)
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            RhythmusArt.entries.forEach { art ->
+                FilterChip(
+                    selected = rhythmus.art == art,
+                    onClick = { if (rhythmus.art != art) setzeRhythmus(Rhythmus.neu(art, LocalDate.now())) },
+                    label = { Text(art.label) },
+                    shape = RoundedCornerShape(50),
+                )
+            }
+        }
+        when (rhythmus.art) {
+            RhythmusArt.TAEGLICH -> Unit
+            RhythmusArt.ALLE_X_TAGE -> FlowRow(verticalArrangement = Arrangement.Center, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ZahlWaehler("Alle", rhythmus.intervall, if (rhythmus.intervall == 1) "Tag" else "Tage") {
+                    setzeRhythmus(rhythmus.copy(intervall = it))
+                }
+                AbChip(rhythmus.ab) { abWaehlen = true }
+            }
+            RhythmusArt.WOECHENTLICH -> {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (1..7).forEach { tag ->
+                        FilterChip(
+                            selected = tag in rhythmus.wochentage,
+                            onClick = {
+                                val tage = if (tag in rhythmus.wochentage) rhythmus.wochentage - tag else rhythmus.wochentage + tag
+                                setzeRhythmus(rhythmus.copy(wochentage = tage))
+                            },
+                            label = { Text(Rhythmus.wochentagKurz(tag)) },
+                            shape = RoundedCornerShape(50),
+                        )
+                    }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ZahlWaehler(
+                        if (rhythmus.intervall == 1) "Jede" else "Alle",
+                        rhythmus.intervall,
+                        if (rhythmus.intervall == 1) "Woche" else "Wochen",
+                    ) { setzeRhythmus(rhythmus.copy(intervall = it)) }
+                    if (rhythmus.intervall > 1) AbChip(rhythmus.ab) { abWaehlen = true }
+                }
+            }
+            RhythmusArt.MONATLICH -> AssistChip(
+                onClick = { monatstagWaehlen = true },
+                label = { Text("Jeden Monat am ${rhythmus.tag}.") },
+                leadingIcon = { Icon(Icons.Rounded.CalendarMonth, null, Modifier.size(AssistChipDefaults.IconSize)) },
+                shape = RoundedCornerShape(50),
+            )
+            RhythmusArt.JAEHRLICH -> AssistChip(
+                onClick = { jahrestagWaehlen = true },
+                label = { Text("Jedes Jahr am ${Rhythmus.jahrestagText(rhythmus.tag, rhythmus.monat)}") },
+                leadingIcon = { Icon(Icons.Rounded.CalendarMonth, null, Modifier.size(AssistChipDefaults.IconSize)) },
+                shape = RoundedCornerShape(50),
             )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -418,7 +497,7 @@ private fun UhrzeitenZeile(uhrzeiten: List<Int>, aendere: (List<Int>) -> Unit, m
                         Icon(
                             Icons.Rounded.RemoveCircleOutline,
                             "Uhrzeit ${Thema.uhrzeitText(minute)} entfernen",
-                            Modifier.size(InputChipDefaults.IconSize).clip(CircleShape).clickable { aendere(uhrzeiten - minute) },
+                            Modifier.size(InputChipDefaults.IconSize).clip(CircleShape).clickable { setzeZeiten(uhrzeiten - minute) },
                         )
                     },
                     shape = RoundedCornerShape(50),
@@ -431,6 +510,12 @@ private fun UhrzeitenZeile(uhrzeiten: List<Int>, aendere: (List<Int>) -> Unit, m
                 shape = RoundedCornerShape(50),
             )
         }
+        Text(
+            planZusammenfassung(thema, zeitplanAktiv),
+            style = MaterialTheme.typography.bodySmall,
+            color = grau,
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
     bearbeitet?.let { alt ->
         UhrzeitDialog(
@@ -439,10 +524,123 @@ private fun UhrzeitenZeile(uhrzeiten: List<Int>, aendere: (List<Int>) -> Unit, m
             schliessen = { bearbeitet = null },
             uebernehmen = { neu ->
                 bearbeitet = null
-                aendere(((if (alt < 0) uhrzeiten else uhrzeiten - alt) + neu).distinct().sorted())
+                setzeZeiten(((if (alt < 0) uhrzeiten else uhrzeiten - alt) + neu).distinct().sorted())
             },
         )
     }
+    if (abWaehlen) {
+        DatumDialog(rhythmus.ab, schliessen = { abWaehlen = false }) {
+            abWaehlen = false
+            setzeRhythmus(rhythmus.copy(ab = it))
+        }
+    }
+    if (jahrestagWaehlen) {
+        val jahr = LocalDate.now().year
+        val start = LocalDate.of(jahr, rhythmus.monat, 1).let { it.withDayOfMonth(minOf(rhythmus.tag, it.lengthOfMonth())) }
+        DatumDialog(start, schliessen = { jahrestagWaehlen = false }) {
+            jahrestagWaehlen = false
+            setzeRhythmus(rhythmus.copy(tag = it.dayOfMonth, monat = it.monthValue))
+        }
+    }
+    if (monatstagWaehlen) {
+        MonatstagDialog(rhythmus.tag, schliessen = { monatstagWaehlen = false }) {
+            monatstagWaehlen = false
+            setzeRhythmus(rhythmus.copy(tag = it))
+        }
+    }
+}
+
+/** Der kleine Satz unter den Feldern: wann dieses Thema aktualisiert wird und wann das nächste Mal. */
+private fun planZusammenfassung(thema: Thema, zeitplanAktiv: Boolean): String {
+    if (thema.uhrzeiten.isEmpty()) return "Keine Uhrzeit — dieses Thema wird nur per Hand aktualisiert."
+    val zeiten = Rhythmus.aufzaehlung(thema.uhrzeiten.map(Thema::uhrzeitText))
+    val satz = "${thema.rhythmus.beschreibung()} um $zeiten Uhr."
+    if (!zeitplanAktiv) return "$satz Der Zeitplan ist unten ausgeschaltet."
+    val naechster = Zeitplan.naechsterTermin(thema)
+        ?: return "$satz Es gibt keinen passenden Termin."
+    val wann = naechster.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMANY))
+    return "$satz Nächstes Mal: $wann."
+}
+
+@Composable
+private fun ZahlWaehler(vorher: String, wert: Int, nachher: String, aendere: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(vorher, style = MaterialTheme.typography.bodyMedium)
+        IconButton(onClick = { aendere((wert - 1).coerceAtLeast(1)) }, enabled = wert > 1) {
+            Icon(Icons.Rounded.Remove, "Weniger")
+        }
+        Text("$wert", style = MaterialTheme.typography.titleMedium)
+        IconButton(onClick = { aendere((wert + 1).coerceAtMost(Rhythmus.MAX_INTERVALL)) }) {
+            Icon(Icons.Rounded.Add, "Mehr")
+        }
+        Text(nachher, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun AbChip(ab: LocalDate, waehle: () -> Unit) {
+    AssistChip(
+        onClick = waehle,
+        label = { Text("ab ${Rhythmus.datumText(ab)}") },
+        leadingIcon = { Icon(Icons.Rounded.CalendarMonth, null, Modifier.size(AssistChipDefaults.IconSize)) },
+        shape = RoundedCornerShape(50),
+        modifier = Modifier.padding(top = 4.dp),
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DatumDialog(start: LocalDate, schliessen: () -> Unit, uebernehmen: (LocalDate) -> Unit) {
+    // Der DatePicker rechnet in UTC-Mitternacht.
+    val zustand = rememberDatePickerState(initialSelectedDateMillis = start.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+    DatePickerDialog(
+        onDismissRequest = schliessen,
+        confirmButton = {
+            TextButton(onClick = {
+                val ms = zustand.selectedDateMillis
+                if (ms == null) schliessen() else uebernehmen(Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate())
+            }) { Text("Übernehmen") }
+        },
+        dismissButton = { TextButton(onClick = schliessen) { Text("Abbrechen") } },
+    ) {
+        DatePicker(state = zustand)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MonatstagDialog(tag: Int, schliessen: () -> Unit, uebernehmen: (Int) -> Unit) {
+    AlertDialog(
+        onDismissRequest = schliessen,
+        title = { Text("Tag im Monat") },
+        text = {
+            Column {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    (1..31).forEach { n ->
+                        val gewaehlt = n == tag
+                        Box(
+                            Modifier.size(38.dp).clip(CircleShape)
+                                .background(if (gewaehlt) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                .clickable { uebernehmen(n) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                "$n",
+                                color = if (gewaehlt) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Hat ein Monat diesen Tag nicht, etwa den 31., wird am letzten Tag des Monats aktualisiert.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = schliessen) { Text("Schließen") } },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1054,20 +1252,15 @@ private fun ZeitplanBereich(app: NewsApplication, stand: EinstellungenStand) {
         Kachel {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    val uhrzeiten = Zeitplan.uhrzeiten(stand.themen)
                     Text("Automatisch aktualisieren", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (uhrzeiten.isEmpty()) {
-                            "Kein Thema hat eine Uhrzeit — stell sie oben bei jedem Thema ein."
-                        } else {
-                            uhrzeiten.joinToString(" · ", postfix = " Uhr", transform = Thema::uhrzeitText) + " — je Thema oben einstellbar"
-                        },
+                        "Rhythmus und Uhrzeiten stellst du oben bei jedem Thema ein.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    val naechster = if (stand.zeitplanAktiv) Zeitplan.naechsterTermin(uhrzeiten) else null
+                    val naechster = if (stand.zeitplanAktiv) Zeitplan.naechsterTermin(stand.themen) else null
                     if (naechster != null) {
-                        val wann = naechster.zeit.format(DateTimeFormatter.ofPattern("EEEE, HH:mm 'Uhr'", Locale.GERMANY))
+                        val wann = naechster.zeit.format(DateTimeFormatter.ofPattern("EEEE, dd.MM., HH:mm 'Uhr'", Locale.GERMANY))
                         Text("Nächste Ausgabe: $wann", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

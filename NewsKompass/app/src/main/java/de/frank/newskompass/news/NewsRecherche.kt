@@ -68,10 +68,10 @@ class NewsRecherche(
         .followRedirects(true)
         .build()
 
-    /** Recherchiert die Themen, die zu einer der [termine] dran sind — ohne [termine] alle. */
-    suspend fun laufe(termine: Collection<Int>? = null, beiFortschritt: suspend (LaufFortschritt) -> Unit): Ausgabe = withContext(Dispatchers.IO) {
+    /** Recherchiert die Themen mit den IDs [nurThemen] — ohne Angabe alle. */
+    suspend fun laufe(nurThemen: Collection<String>? = null, beiFortschritt: suspend (LaufFortschritt) -> Unit): Ausgabe = withContext(Dispatchers.IO) {
         val stand = einstellungen.stand.value
-        val themen = Zeitplan.themenFuer(stand.themen, termine)
+        val themen = Zeitplan.themenFuer(stand.themen, nurThemen)
         if (themen.isEmpty()) throw IllegalStateException("Es ist kein Nachrichtenthema eingetragen.")
         if (!codex.istVerbunden) throw CodexFehler(CodexFehlerArt.ANMELDUNG, "Bitte zuerst in den Einstellungen bei Codex anmelden.")
 

@@ -88,18 +88,17 @@ class MainActivity : ComponentActivity() {
             if (!stand.zeitplanAktiv) return@launch
             // Jüngster Lauf je Thema; gesprochene Fragen zählen nicht als Lauf aus dem Zeitplan.
             val letzterLauf = mutableMapOf<String, Long>()
-            app.speicher.ausgabenSeit(System.currentTimeMillis() - 26 * 3_600_000L).forEach { ausgabe ->
+            app.speicher.ausgabenSeit(System.currentTimeMillis() - 50 * 3_600_000L).forEach { ausgabe ->
                 ausgabe.bloecke.filter { it.frage == null }.forEach { block ->
                     letzterLauf[block.themaId] = maxOf(letzterLauf[block.themaId] ?: 0L, ausgabe.erstelltUm)
                 }
             }
-            // Jeder versäumte Termin der letzten 24 Stunden bringt seine Themen mit.
-            val versaeumt = Zeitplan.versaeumteTermine(stand.themen, letzterLauf)
-            val letzter = versaeumt.lastOrNull()?.zeit?.toInstant()?.toEpochMilli() ?: return@launch
+            // Jedes Thema, dessen Termin versäumt wurde, kommt in einen gemeinsamen Nachhol-Lauf.
+            val (themen, letzter) = Zeitplan.versaeumt(stand.themen, letzterLauf) ?: return@launch
             // Scheiterte seit dem letzten Termin schon ein Lauf an Kontingent oder Anmeldung, nicht
             // bei jedem Öffnen erneut anstoßen — der nächste Termin oder ein Tipp auf Aktualisieren holt es nach.
             val gesperrt = app.einstellungen.harterFehlerUm >= letzter
-            if (!gesperrt) Zeitplan.starteLauf(this@MainActivity, manuell = false, termine = versaeumt.map { it.minute }.distinct())
+            if (!gesperrt) Zeitplan.starteLauf(this@MainActivity, manuell = false, themen = themen)
         }
     }
 

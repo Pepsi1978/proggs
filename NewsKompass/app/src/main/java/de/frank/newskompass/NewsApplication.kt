@@ -34,10 +34,10 @@ class NewsApplication : Application() {
         super.onCreate()
         KompassLog.start(this, UUID.randomUUID().toString().take(8))
         Zeitplan.legeKanaeleAn(this)
-        // Wecker neu stellen, sobald sich Uhrzeiten, Themen oder der Schalter ändern — auch gleich beim Start.
+        // Wecker neu stellen, sobald sich Uhrzeiten, Rhythmus, Themen oder der Schalter ändern — auch gleich beim Start.
         bereich.launch {
             einstellungen.stand
-                .map { it.zeitplanAktiv to Zeitplan.uhrzeiten(it.themen) }
+                .map { stand -> stand.zeitplanAktiv to stand.themen.map { Triple(it.id to it.text.isNotBlank(), it.uhrzeiten, it.rhythmus) } }
                 .distinctUntilChanged()
                 .collect { Zeitplan.plane(this@NewsApplication) }
         }

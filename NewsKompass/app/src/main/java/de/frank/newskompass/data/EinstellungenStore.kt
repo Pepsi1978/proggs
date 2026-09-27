@@ -9,6 +9,7 @@ import de.frank.newskompass.data.model.Ausfuehrlichkeit
 import de.frank.newskompass.data.model.BildModus
 import de.frank.newskompass.data.model.Denkstufen
 import de.frank.newskompass.data.model.DesignModus
+import de.frank.newskompass.data.model.Rhythmus
 import de.frank.newskompass.data.model.Thema
 import de.frank.newskompass.data.model.TtsAnbieter
 import de.frank.newskompass.observability.KompassLog
@@ -119,6 +120,7 @@ class EinstellungenStore(context: Context) {
                     eintrag.optInt("min", Thema.STANDARD_MIN),
                     eintrag.optInt("max", Thema.STANDARD_MAX),
                     zeiten?.let { z -> (0 until z.length()).map(z::getInt) } ?: Thema.STANDARD_UHRZEITEN,
+                    Rhythmus.ausJson(eintrag.optJSONObject("rhythmus")),
                 ).normiert()
             }
         }.getOrElse {
@@ -156,7 +158,7 @@ class EinstellungenStore(context: Context) {
         themen.map(Thema::normiert).forEach {
             liste.put(
                 JSONObject().put("id", it.id).put("text", it.text).put("min", it.minMeldungen).put("max", it.maxMeldungen)
-                    .put("uhrzeiten", JSONArray(it.uhrzeiten)),
+                    .put("uhrzeiten", JSONArray(it.uhrzeiten)).put("rhythmus", it.rhythmus.zuJson()),
             )
         }
         putString(K_THEMEN, liste.toString())
