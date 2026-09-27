@@ -2,6 +2,7 @@
 
 package de.frank.wecker
 
+import androidx.compose.ui.graphics.drawscope.clipPath
 import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
@@ -724,12 +725,9 @@ private fun SchlichtHero(
                     Modifier.size(ring + RINGBETT_RAND),
                     contentAlignment = Alignment.Center,
                 ) {
-                    WeckerSilhouette(Modifier.matchParentSize())
-                    Box(Modifier.size(ring + 6.dp)
-                        .shadow(6.dp, CircleShape, ambientColor = gold.primaer, spotColor = gold.primaer)
-                        .background(Brush.radialGradient(listOf(gold.flaecheErhoeht.heller(0.06f), gold.flaeche.dunkler(0.04f))), CircleShape)
-                        .border(2.dp, gold.primaer.copy(alpha = .75f), CircleShape))
+                    Wecker3D(Modifier.matchParentSize(), gehaeuse = ring + 14.dp)
                     RestzeitRing(daten.now, daten.next, daten.nextIsSnooze, Modifier.size(ring), zifferblatt = true)
+                    GlasKuppel(Modifier.size(ring))
                 }
                 // Rechtsbündig: Datum, Uhr und Termin enden an derselben Kante wie „Weckbereit“.
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -2519,6 +2517,88 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
         }
         if (geometry != null) ringMarker(point(geometry.targetAngle), hollow = false, color = accent, surface = surface)
         ringMarker(point(nowAngle), hollow = true, color = gold.textPrimaer, surface = surface)
+    }
+}
+
+/**
+ * Schlichts Wecker als plastisches Objekt: Bodenschatten, Metallfüße, gewölbte Glocken mit Glanzpunkt,
+ * Hammer, ein Gehäuse mit umlaufendem Metallglanz und Fase, darin das leicht gewölbte Zifferblatt.
+ * Alles statisch gezeichnet (keine Dauerbewegung im feststehenden Hero). [gehaeuse] = Außendurchmesser.
+ */
+@Composable
+private fun Wecker3D(modifier: Modifier, gehaeuse: androidx.compose.ui.unit.Dp) {
+    val gold = LocalGold.current
+    val metall = gold.primaer
+    val dunkel = gold.istDunkel
+    val blatt = gold.flaecheErhoeht
+    androidx.compose.foundation.Canvas(modifier) {
+        val r = size.minDimension / 2f
+        val k = gehaeuse.toPx() / 2f
+        val rund = androidx.compose.ui.graphics.StrokeCap.Round
+        fun punkt(winkel: Float, abstand: Float) = Math.toRadians(winkel.toDouble()).let {
+            center + androidx.compose.ui.geometry.Offset((abstand * Math.cos(it)).toFloat(), (abstand * Math.sin(it)).toFloat())
+        }
+        fun o(x: Float, y: Float) = androidx.compose.ui.geometry.Offset(x, y)
+        val schwarz = androidx.compose.ui.graphics.Color.Black
+        val weiss = androidx.compose.ui.graphics.Color.White
+        // Weicher Bodenschatten unter den Füßen.
+        drawOval(Brush.radialGradient(listOf(schwarz.copy(alpha = if (dunkel) .5f else .22f), schwarz.copy(alpha = 0f)),
+            center = o(center.x, center.y + r * 1.04f), radius = r * .8f),
+            topLeft = o(center.x - r * .8f, center.y + r * .96f), size = androidx.compose.ui.geometry.Size(r * 1.6f, r * .17f))
+        // Füße: vom Gehäuse schräg nach außen, zum Boden hin dunkler.
+        listOf(122f, 58f).forEach { w ->
+            val a = punkt(w, k * .8f); val b = punkt(w, r * 1.06f)
+            drawLine(Brush.linearGradient(listOf(metall.heller(.25f), metall.dunkler(.4f)), a, b), a, b, 7.dp.toPx(), rund)
+            drawCircle(Brush.radialGradient(listOf(metall.heller(.3f), metall.dunkler(.45f)), center = b - o(2f, 2f), radius = 5.dp.toPx()), 4.5f.dp.toPx(), b)
+        }
+        // Hammer mitten zwischen den Glocken.
+        val hammerOben = punkt(-90f, r * 1.02f)
+        drawLine(metall.dunkler(.3f), punkt(-90f, k * .9f), hammerOben, 3.dp.toPx(), rund)
+        drawCircle(Brush.radialGradient(listOf(metall.heller(.5f), metall.dunkler(.3f)), center = hammerOben - o(2f, 2f), radius = 6.dp.toPx()), 5.dp.toPx(), hammerOben)
+        // Glocken: Kugelschattierung mit Licht von oben links, Schlagschatten auf dem Gehäuse, Glanzpunkt.
+        val g = r * .34f
+        listOf(-130f, -50f).forEach { w ->
+            val m = punkt(w, r * .86f)
+            drawCircle(schwarz.copy(alpha = if (dunkel) .35f else .16f), g, m + o(g * .1f, g * .16f))
+            drawCircle(Brush.radialGradient(listOf(metall.heller(.6f), metall.heller(.12f), metall.dunkler(.38f)),
+                center = m - o(g * .35f, g * .42f), radius = g * 1.45f), g, m)
+            drawCircle(metall.dunkler(.45f).copy(alpha = .6f), g, m, style = androidx.compose.ui.graphics.drawscope.Stroke(1.2f.dp.toPx()))
+            val glanz = m - o(g * .36f, g * .44f)
+            drawCircle(Brush.radialGradient(listOf(weiss.copy(alpha = .8f), weiss.copy(alpha = 0f)), center = glanz, radius = g * .42f), g * .42f, glanz)
+        }
+        // Gehäuse: Schlagschatten, umlaufender Metallglanz, Fase nach innen.
+        drawCircle(schwarz.copy(alpha = if (dunkel) .45f else .2f), k, center + o(0f, k * .07f))
+        drawCircle(Brush.sweepGradient(listOf(metall.heller(.5f), metall.heller(.05f), metall.dunkler(.35f), metall.dunkler(.1f),
+            metall.heller(.35f), metall.heller(.55f), metall.heller(.5f)), center), k)
+        drawCircle(Brush.linearGradient(listOf(metall.dunkler(.4f), metall.heller(.45f)), start = center - o(k, k), end = center + o(k, k)), k * .9f)
+        // Zifferblatt, leicht gewölbt, oben mit feiner Innenschattenkante.
+        drawCircle(Brush.radialGradient(listOf(blatt.heller(.08f), blatt, blatt.dunkler(if (dunkel) .12f else .07f)),
+            center = center - o(k * .2f, k * .25f), radius = k * 1.1f), k * .85f)
+        drawCircle(Brush.verticalGradient(listOf(schwarz.copy(alpha = if (dunkel) .35f else .16f), schwarz.copy(alpha = 0f)),
+            startY = center.y - k * .85f, endY = center.y - k * .5f), k * .85f)
+    }
+}
+
+/** Das Deckglas über dem Zifferblatt: ein weicher Lichtfleck oben links und eine feine Lichtkante. */
+@Composable
+private fun GlasKuppel(modifier: Modifier) {
+    val dunkel = LocalGold.current.istDunkel
+    androidx.compose.foundation.Canvas(modifier) {
+        val k = size.minDimension / 2f
+        val weiss = androidx.compose.ui.graphics.Color.White
+        val kreis = androidx.compose.ui.graphics.Path().apply {
+            addOval(androidx.compose.ui.geometry.Rect(center, k))
+        }
+        clipPath(kreis) {
+            drawOval(Brush.verticalGradient(listOf(weiss.copy(alpha = if (dunkel) .12f else .32f), weiss.copy(alpha = 0f)),
+                startY = center.y - k, endY = center.y - k * .2f),
+                topLeft = androidx.compose.ui.geometry.Offset(center.x - k * .78f, center.y - k * .98f),
+                size = androidx.compose.ui.geometry.Size(k * 1.3f, k * .8f))
+        }
+        drawArc(weiss.copy(alpha = if (dunkel) .25f else .6f), 195f, 75f, useCenter = false,
+            topLeft = androidx.compose.ui.geometry.Offset(center.x - k * .96f, center.y - k * .96f),
+            size = androidx.compose.ui.geometry.Size(k * 1.92f, k * 1.92f),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(1.5f.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
     }
 }
 
