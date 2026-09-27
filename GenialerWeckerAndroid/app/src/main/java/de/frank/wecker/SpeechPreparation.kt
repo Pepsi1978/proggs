@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 class SpeechPreparation(private val context: Context, private val settings: SecureSettings,
     private val voiceFactory: () -> SyntheseStimme = { SyntheseStimme(settings) }) {
     private val store = AlarmStore.get(context)
-    private fun voiceKey(voice: SyntheseStimme) = listOf("lokal-v1", voice.ttsProvider, voice.stimme,
+    private fun voiceKey(voice: SyntheseStimme) = listOf("lokal-v2", voice.ttsProvider, voice.stimme,
         voice.ttsSpeechRate.toString()).joinToString("|")
     val playbackSpeed: Float get() = voiceFactory().playbackSpeed
 
@@ -26,7 +26,8 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
             try {
                 val groups = mutableListOf<SpeechGroup>()
                 if (Step.TEXT in alarm.steps) groups += SpeechGroup(Step.TEXT.name, chunks(alarm.text))
-                val voice = alarm.resolveVoice(voiceFactory())
+                // Die wirklich klingende Stimme zählt: war eine inzwischen ausgeblendete Stimme gewählt, wird neu vorbereitet.
+                val voice = alarm.resolveVoice(voiceFactory()).let { v -> LokaleStimmen.wirksameStimme(context, v.stimme)?.let { v.copy(stimme = it) } ?: v }
                 val signature = hash(voiceKey(voice) + JSONArray(groups.map { JSONObject().put("step", it.step).put("paragraphs", JSONArray(it.paragraphs)) }).toString())
                 val latest = store.get(alarm.id) ?: return@withContext
                 if (!latest.sameSpeechAs(alarm)) return@withContext
@@ -44,7 +45,8 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                     ensureActive()
                     render(text, voice.withRate(VoiceVariations.rate(voice.ttsSpeechRate, index)), index)
                 }, progress = { _, _, variation, part, total -> progress("Variante $variation/6 · Absatz $part/$total") })
-                check(voiceKey(voice) == voiceKey(alarm.resolveVoice(voiceFactory()))) { "Die Stimme wurde während der Vorbereitung geändert. Bitte erneut vorbereiten." }
+                check(voice.ttsSpeechRate == alarm.resolveVoice(voiceFactory()).ttsSpeechRate &&
+                    voice.stimme == (LokaleStimmen.wirksameStimme(context, alarm.resolveVoice(voiceFactory()).stimme) ?: voice.stimme)) { "Die Stimme wurde während der Vorbereitung geändert. Bitte erneut vorbereiten." }
                 store.update(alarm.id) { current ->
                     if (!current.sameSpeechAs(alarm)) current
                     else current.copy(voiceVariants = variants,

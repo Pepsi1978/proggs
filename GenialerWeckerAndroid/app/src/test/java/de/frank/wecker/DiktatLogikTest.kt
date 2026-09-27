@@ -10,6 +10,17 @@ class DiktatLogikTest {
         assertEquals(DiktatSprache.DE, DiktatSprache.entries.first())
     }
 
+    @Test fun spracheFolgtGeraetesprachUndRegion() {
+        assertEquals(DiktatSprache.DE to true, DiktatLogik.spracheFuer("de", "AT"))
+        assertEquals(DiktatSprache.FR to true, DiktatLogik.spracheFuer("fr", "CH"))
+        assertEquals(DiktatSprache.ES to true, DiktatLogik.spracheFuer("es", "MX"))
+        assertEquals(DiktatSprache.EN to true, DiktatLogik.spracheFuer("en", "GB"))
+        // Unbekannte Sprache: Region entscheidet, sonst Deutsch mit Hinweis.
+        assertEquals(DiktatSprache.DE to true, DiktatLogik.spracheFuer("gsw", "CH"))
+        assertEquals(DiktatSprache.EN to true, DiktatLogik.spracheFuer("", "US"))
+        assertEquals(DiktatSprache.DE to false, DiktatLogik.spracheFuer("ja", "JP"))
+    }
+
     @Test fun installiertesPaketWirdErkanntAuchInAndererSchreibweise() {
         assertTrue(DiktatLogik.passt(listOf("en-US", "DE-de"), "de-DE"))
         assertTrue(DiktatLogik.passt(listOf("de-AT"), "de-DE"))

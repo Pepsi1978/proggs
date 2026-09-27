@@ -30,6 +30,25 @@ sealed interface DiktatZustand {
 
 /** Reine Entscheidungen, ohne Android-Laufzeit prüfbar. */
 object DiktatLogik {
+    /**
+     * Diktatsprache aus Gerätesprache, sonst Region (keine Standort- oder Kontoabfrage).
+     * @return Sprache und ob sie wirklich zur Gerätesprache passt (false = Rückfall auf Deutsch)
+     */
+    fun spracheFuer(sprache: String, region: String): Pair<DiktatSprache, Boolean> = when (sprache.lowercase()) {
+        "de" -> DiktatSprache.DE to true
+        "fr" -> DiktatSprache.FR to true
+        "es" -> DiktatSprache.ES to true
+        "en" -> DiktatSprache.EN to true
+        else -> when (region.uppercase()) {
+            "DE", "AT", "CH", "LI" -> DiktatSprache.DE to true
+            "FR" -> DiktatSprache.FR to true
+            "ES" -> DiktatSprache.ES to true
+            "US", "GB", "IE", "AU", "CA", "NZ" -> DiktatSprache.EN to true
+            // Die App ist zuerst deutsch: unbekannte Gerätesprachen diktieren auf Deutsch, mit Hinweis.
+            else -> DiktatSprache.DE to false
+        }
+    }
+
     /** Genau passendes Tag zuerst, sonst dieselbe Sprache in anderer Region (z. B. de-AT für de-DE). */
     fun passt(sprachen: List<String>, tag: String): Boolean =
         sprachen.any { it.equals(tag, ignoreCase = true) } ||

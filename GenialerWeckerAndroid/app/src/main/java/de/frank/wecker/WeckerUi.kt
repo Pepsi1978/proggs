@@ -1806,7 +1806,8 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
             val abschnittForm = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
             Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp).then(sanftWachsen),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(kopfModifier, verticalAlignment = Alignment.CenterVertically) {
+                // Innenabstand links wie bei Schlicht: Die Überschriften klebten sonst am Blattrand.
+                Row(kopfModifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) {
                         beschriftung(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), gold.textPrimaer)
                     }
@@ -1821,11 +1822,12 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
                         .background(gold.flaecheErhoeht)
                         .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
                         .border(1.dp, materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha * .8f, material.kanteSchattenAlpha * .6f), abschnittForm)
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
                 }
-                HorizontalDivider(color = gold.rahmen.copy(alpha = .6f))
+                // Deutlicher Abschnittstrenner im Glut-Ton des Designs, eingerückt wie der Text.
+                HorizontalDivider(Modifier.padding(horizontal = 14.dp), thickness = 1.dp, color = gold.primaer.copy(alpha = .35f))
             }
         }
         // Schlicht: unverändert der bisherige Aufbau aus Kopfzeile und Inhalt in einer Karte.
@@ -1904,9 +1906,41 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             initiallyExpanded = Step.TEXT in alarm.steps && alarm.text.isBlank()) {
             Text("Der gesamte Ablauf wiederholt sich bis zum Stoppen; Songs laufen vollständig durch.", style = MaterialTheme.typography.bodySmall)
             Text("Bausteine auswählen", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
-            Step.entries.forEach { step -> Toggle(step.title, step in alarm.steps) { checked ->
-                vm.change(alarm.copy(steps = if (checked) alarm.steps + step else alarm.steps - step))
-            } }
+            Step.entries.forEach { step ->
+                Toggle(step.title, step in alarm.steps) { checked ->
+                    vm.change(alarm.copy(steps = if (checked) alarm.steps + step else alarm.steps - step))
+                    // Beim Einschalten sofort die Datei wählen lassen. Abbrechen lässt den eingebauten Weckton stehen – nie Stille.
+                    if (step == Step.MUSIC && checked) music.launch(arrayOf("audio/*"))
+                }
+                if (step == Step.MUSIC && step in alarm.steps) {
+                    val anzeige = remember(alarm.music, alarm.musicName, alarm.musicQuelle, alarm.tone) { MusikAnzeige.von(alarm) }
+                    Column(Modifier.fillMaxWidth().padding(start = 12.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(anzeige.titel, style = MaterialTheme.typography.bodyLarge, color = LocalGold.current.primaer,
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(anzeige.quelle, style = MaterialTheme.typography.bodySmall,
+                                    color = if (anzeige.ersatz) LocalSemantisch.current.warnung else LocalGold.current.textGedaempft)
+                            }
+                            AnhoerKnopf(vm, "musik:${alarm.id}") {
+                                if (alarm.music.isNotBlank() && !anzeige.ersatz) vm.playMusic(alarm.music, alarm.volume, alarm.fadeSeconds)
+                                else vm.playTone(if (anzeige.ersatz) "classic" else alarm.tone, alarm.volume, alarm.fadeSeconds)
+                            }
+                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StillerKnopf("Datei wählen", { music.launch(arrayOf("audio/*")) })
+                            StillerKnopf("Geräte-Weckton", {
+                                ringtone.launch(Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
+                                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false))
+                            })
+                            if (alarm.music.isNotBlank()) StillerKnopf("Eingebauter Ton", {
+                                vm.change(alarm.copy(music = "", musicName = Tones.names.getValue("classic"), musicQuelle = "", tone = "classic"))
+                            })
+                        }
+                    }
+                }
+            }
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             // Der eigene Text steht genau dort, wo man ihn auswählt — nicht weit unten in einem
             // eigenen Abschnitt, den man erst suchen muss.
@@ -1915,17 +1949,14 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 if (alarm.text.isBlank()) Text("Der Erinnerungstext fehlt.", color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
             Eingabefeld(alarm.text, { vm.change(alarm.copy(text = it)) }, "Text, der vorgelesen werden soll",
                     Modifier.fillMaxWidth().heightIn(min = 160.dp), einzeilig = false)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Test vorlesen: der eigene Text mit der Stimme und dem Tempo dieses Weckers; zweiter Tipp stoppt.
-                    AnhoerKnopfText(vm, alarm)
-                }
-                Text("Der Text bleibt jederzeit von Hand bearbeitbar. Vorgelesen wird er mit einer auf dem Gerät installierten Stimme, ohne Internet.", style = MaterialTheme.typography.bodySmall)
-                // Übernahme immer auf den aktuellen Entwurf, damit ein spätes Ergebnis keine neueren Änderungen überschreibt.
-                DiktatBereich { diktiert ->
+                // Links Diktieren, rechts Vorlesen. Erkanntes wird an den AKTUELLEN Entwurf angehängt,
+                // damit ein spätes Ergebnis keine neueren Handänderungen überschreibt.
+                DiktatUndVorlesen(anfuegen = { diktiert ->
                     vm.draft.value?.takeIf { it.id == alarm.id }?.let { aktuell ->
-                        vm.change(aktuell.copy(text = listOf(aktuell.text.trimEnd(), diktiert).filter(String::isNotBlank).joinToString("\n")))
+                        vm.change(aktuell.copy(text = listOf(aktuell.text.trimEnd(), diktiert.trim()).filter(String::isNotBlank).joinToString("\n")))
                     }
-                }
+                }) { AnhoerKnopfText(vm, alarm) }
+                Text("Der Text bleibt jederzeit von Hand bearbeitbar. Diktat und Vorlesen laufen auf dem Gerät, ohne Internet.", style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             }
             Text("Reihenfolge beim Wecken (verschieben per Drag-and-drop)", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
@@ -1935,7 +1966,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
         if (alarm.needsSpeech) AlarmSpeechEditor(vm, alarm)
         Section("Lautstärke & Schlummern", collapsible = true, summary = listOfNotNull(
             if (Step.TONE in alarm.steps) "Klingelzeichen: ${Tones.names[alarm.cue] ?: alarm.cue}" else null,
-            if (Step.MUSIC in alarm.steps) "Musik: ${alarm.musicName}" else null,
+            if (Step.MUSIC in alarm.steps) "Musik: ${MusikAnzeige.von(alarm).titel}" else null,
             "${alarm.volume} % Lautstärke",
             if (alarm.snoozeLimit == 0) "Schlummern aus" else "Schlummern ${alarm.snoozeMinutes} Min., bis ${alarm.snoozeLimit}×").joinToString(" · ")) {
             // Das Klingelzeichen als offene Liste statt in einem Knopf versteckt — jeder Ton lässt sich wählen und anhören.
@@ -1954,35 +1985,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             }
-            if (Step.MUSIC in alarm.steps) {
-            Text("Musik / Weckton", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
-            // Eigene Musik und Geräte-Wecktöne stehen als Auswahlpunkte in derselben Liste wie die
-            // eingebauten Signale. Der Punkt öffnet die jeweilige Auswahl; „Anhören“ spielt die Datei.
-            @Composable fun Auswahl(titel: String, unter: String?, gewaehlt: Boolean, waehlen: () -> Unit, anhoeren: (() -> Unit)?) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(gewaehlt, interactionSource = null, indication = null,
-                        role = androidx.compose.ui.semantics.Role.RadioButton, onClick = waehlen), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(gewaehlt, null)
-                        Column(Modifier.padding(start = 8.dp)) {
-                            Text(titel)
-                            if (unter != null) Text(unter, style = MaterialTheme.typography.bodySmall,
-                                color = LocalGold.current.textGedaempft, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    if (anhoeren != null) AnhoerKnopf(vm, "musik:$titel", anhoeren)
-                }
-            }
-            val eigene = alarm.music.isNotBlank()
-            val istGeraet = eigene && alarm.musicQuelle == "geraet"
-            val istDatei = eigene && !istGeraet
-            Auswahl("MP3 / Audio-Datei", if (istDatei) alarm.musicName else "Eigene Datei vom Gerät wählen", istDatei,
-                { music.launch(arrayOf("audio/*")) }, if (istDatei) ({ vm.playMusic(alarm.music, alarm.volume, alarm.fadeSeconds) }) else null)
-            Auswahl("Geräte-Weckton", if (istGeraet) alarm.musicName else "Einen der Wecktöne des Handys wählen", istGeraet, {
-                ringtone.launch(Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
-                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_ALARM)
-                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false))
-            }, if (istGeraet) ({ vm.playMusic(alarm.music, alarm.volume, alarm.fadeSeconds) }) else null)
-            }
+            // Die Tonwahl für „MP3 / Weckton“ steht jetzt direkt im Weckablauf.
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             Text("Lautstärke", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             ValueSlider("Wecklautstärke", alarm.volume, 1..100, "%") { vm.change(alarm.copy(volume = it)); vm.vorschauLautstaerke(it) }
@@ -2042,7 +2045,7 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     val selected = if (alarm.voiceProvider.isBlank()) "" else "${alarm.voiceProvider}|${alarm.voiceId}"
     val options = listOf("" to "Standard aus Einstellungen · $defaultLabel") + available +
         if (selected.isNotBlank() && available.none { it.first == selected })
-            listOf(selected to "${alarm.voiceId} · nicht mehr installiert, Standard wird genutzt")
+            listOf(selected to "Nicht mehr angebotene Stimme · Standard wird genutzt")
         else emptyList()
     Section("Stimme & Sprechgeschwindigkeit", collapsible = true, summary = listOf(
         options.find { it.first == selected }?.second ?: "Stimme wählen",
@@ -2825,7 +2828,7 @@ fun AnhoerKnopf(vm: WeckerViewModel, schluessel: String, abspielen: () -> Unit) 
 private fun AnhoerKnopfText(vm: WeckerViewModel, alarm: Alarm) {
     val laeuft by vm.vorschau.collectAsStateWithLifecycle()
     val aktiv = laeuft == "text:${alarm.id}"
-    StillerKnopf(if (aktiv) "■ Test stoppen" else "Test vorlesen", {
+    StillerKnopf(if (aktiv) "■ Stopp" else "Text vorlesen", {
         if (aktiv) vm.stopPreview()
         else if (alarm.text.isBlank()) vm.message.value = "Gib zuerst einen Text ein."
         else { vm.previewVoice(alarm, alarm.text); vm.vorschau.value = "text:${alarm.id}" }

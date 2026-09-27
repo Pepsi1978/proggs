@@ -381,7 +381,7 @@ object OrbitGestalt : WeckerGestalt {
  * Orbits Zeichenregen: senkrechte Spalten fallender Zeichen mit hellem Kopf und verblassendem
  * Schweif, in der Primärfarbe des Designs (Eisblau), vereinzelt ein Limetten-Akzent.
  *
- * Günstig gezeichnet: ein einziger nativer `Paint`, kein Textmesser, rund 20 Bilder pro Sekunde, und
+ * Günstig gezeichnet: ein einziger nativer `Paint`, kein Textmesser, rund 60 Bilder pro Sekunde, und
  * der Zeitwert wird nur im Zeichenblock gelesen — dadurch zeichnet sich allein diese Ebene neu, nie
  * die App darüber. Bei reduzierter Bewegung steht der Regen still.
  */
@@ -396,7 +396,9 @@ private fun ZeichenRegen(modifier: Modifier) {
     if (!reduziert) androidx.compose.runtime.LaunchedEffect(Unit) {
         var letzte = 0L
         while (true) {
-            androidx.compose.runtime.withFrameMillis { t -> if (t - letzte >= 50) { zeit.longValue = t; letzte = t } }
+            // Bei 20 Bildern/s sprangen die Köpfe sichtbar; ~60 Bilder/s laufen gleichmäßig. Auf 120-Hz-Displays
+            // wird jedes zweite Bild ausgelassen, damit der Hintergrund nicht doppelt so viel Akku kostet.
+            androidx.compose.runtime.withFrameMillis { t -> if (t - letzte >= 15) { zeit.longValue = t; letzte = t } }
         }
     }
     val zeichen = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜ0123456789:.=+<>"
@@ -405,11 +407,11 @@ private fun ZeichenRegen(modifier: Modifier) {
     }
     androidx.compose.foundation.Canvas(modifier) {
         val t = zeit.longValue
-        val schrift = 15.dp.toPx()
+        val schrift = 18.dp.toPx()
         stift.textSize = schrift
         val spaltenBreite = schrift * 1.25f
         val spalten = (size.width / spaltenBreite).toInt() + 1
-        val schweif = 16
+        val schweif = 14
         val grundAlpha = if (dunkel) 0.34f else 0.34f
         val leinwand = drawContext.canvas.nativeCanvas
         for (spalte in 0 until spalten) {

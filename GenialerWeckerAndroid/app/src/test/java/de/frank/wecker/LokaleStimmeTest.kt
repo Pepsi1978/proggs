@@ -25,6 +25,23 @@ class LokaleStimmeTest {
         assertEquals("de-de-x-standard", stimme.stimme)
     }
 
+    @Test fun nurDieZweiBevorzugtenGoogleStimmenWerdenAngeboten() {
+        val geraet = listOf("de-DE-language", "de-de-x-dea-local", "de-de-x-deb-local", "de-de-x-deg-local", "de-de-x-nfh-local")
+        assertEquals(listOf("de-de-x-deg-local", "de-de-x-nfh-local"), StimmAuswahl.angeboten(geraet))
+        assertEquals("Deutsch · hohe Qualität · männlich", LokaleStimmeInfo("de-de-x-deg-local", java.util.Locale.GERMANY, 400).anzeige)
+        assertEquals("Deutsch · hohe Qualität · weiblich", LokaleStimmeInfo("de-de-x-nfh-local", java.util.Locale.GERMANY, 400).anzeige)
+        // Eine früher gewählte, jetzt ausgeblendete Roboterstimme wird nie mehr benutzt.
+        assertEquals("de-de-x-deg-local", StimmAuswahl.wirksam("de-de-x-deb-local", StimmAuswahl.angeboten(geraet)))
+        assertEquals("de-de-x-nfh-local", StimmAuswahl.wirksam("de-de-x-nfh-local", StimmAuswahl.angeboten(geraet)))
+    }
+
+    @Test fun andereGeraeteBehaltenAlleOfflineStimmen() {
+        val samsung = listOf("de-DE-SMTf00", "de-DE-SMTm00")
+        assertEquals(samsung, StimmAuswahl.angeboten(samsung))
+        assertEquals("Deutsch · hohe Qualität · Stimme 2", LokaleStimmeInfo("de-DE-SMTm00", java.util.Locale.GERMANY, 400, nummer = 2).anzeige)
+        assertNull(StimmAuswahl.wirksam("x", emptyList()))
+    }
+
     @Test fun nurDerTextSchrittBrauchtSprache() {
         assertTrue(Alarm(steps = listOf(Step.TEXT), text = "x").needsSpeech)
         assertFalse(Alarm(steps = listOf(Step.TONE, Step.MUSIC)).needsSpeech)

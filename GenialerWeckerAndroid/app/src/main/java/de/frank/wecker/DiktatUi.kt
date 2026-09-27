@@ -13,94 +13,81 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import de.frank.genialeideen.ui.*
-import de.frank.genialeideen.ui.theme.*
-import de.frank.wecker.design.LocalGestalt
+import de.frank.genialeideen.ui.GoldKnopf
+import de.frank.genialeideen.ui.StillerKnopf
+import de.frank.genialeideen.ui.theme.LocalGold
+import de.frank.genialeideen.ui.theme.LocalSemantisch
 
 /**
- * Offline-Diktat für den Vorlesetext. Aufgenommen wird nur nach ausdrücklichem Tippen; das Ergebnis
- * wird nie ungefragt in den Text geschrieben, sondern wartet editierbar auf „Anfügen“ oder „Verwerfen“.
- * Verlässt man den Editor oder die App, endet die Aufnahme sofort.
+ * Eine kompakte Zeile direkt unter dem Vorlesetext: links „Diktieren“, rechts [vorlesen].
+ * Aufgenommen wird nur nach Tippen und nur auf dem Gerät. Das fertig Erkannte wird sofort an den
+ * aktuellen Entwurf angehängt ([anfuegen]) – nie überschrieben. Die Sprache folgt der Gerätesprache.
  */
 @Composable
-fun DiktatBereich(anfuegen: (String) -> Unit) {
+fun DiktatUndVorlesen(anfuegen: (String) -> Unit, vorlesen: @Composable () -> Unit) {
     val context = LocalContext.current
     val diktat = remember { OfflineDiktat(context.applicationContext) }
-    var sprache by rememberSaveable { mutableStateOf(DiktatSprache.DE) }
+    val geraet = ConfigurationCompat.getLocales(LocalConfiguration.current)[0] ?: java.util.Locale.getDefault()
+    val (sprache, passend) = remember(geraet) { DiktatLogik.spracheFuer(geraet.language, geraet.country) }
     val zustand = diktat.zustand
+    val aktuellesAnfuegen by rememberUpdatedState(anfuegen)
+
+    // Fertiges Ergebnis sofort übernehmen: angehängt an den aktuellsten Entwurf, ohne Zwischenblase.
+    LaunchedEffect(zustand) {
+        if (zustand is DiktatZustand.Ergebnis) { aktuellesAnfuegen(zustand.text); diktat.zuruecksetzen() }
+    }
     val lebenszyklus = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lebenszyklus) {
         val beobachter = LifecycleEventObserver { _, ereignis -> if (ereignis == Lifecycle.Event.ON_STOP) diktat.abbrechen() }
         lebenszyklus.addObserver(beobachter)
-        onDispose { lebenszyklus.removeObserver(beobachter); diktat.abbrechen(); diktat.allesFreigeben() }
+        onDispose {
+            lebenszyklus.removeObserver(beobachter)
+            diktat.abbrechen()
+            // Beim Schließen des Editors: schon Gehörtes nicht wegwerfen, sondern noch anhängen.
+            (diktat.zustand as? DiktatZustand.Ergebnis)?.let { aktuellesAnfuegen(it.text) }
+            diktat.allesFreigeben()
+        }
     }
     val mikrofon = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt ->
         if (erlaubt) diktat.starten(sprache)
-        else hinweisOhneMikrofon(diktat)
-    }
-    fun start() {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) diktat.starten(sprache)
-        else mikrofon.launch(Manifest.permission.RECORD_AUDIO)
+        else diktat.zeigeHinweis("Ohne Mikrofonfreigabe kein Diktat. Du kannst den Text jederzeit tippen.")
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Diktieren (offline)", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            DiktatSprache.entries.forEach { eintrag ->
-                Chip3D(eintrag == sprache, { if (!diktat.hoertZu) sprache = eintrag }, eintrag.anzeige)
-            }
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (diktat.hoertZu) {
-                GoldKnopf("■ Diktat beenden", { diktat.beenden() }, hauptKnopf = true)
-                StillerKnopf("Abbrechen", { diktat.zuruecksetzen() })
-            } else {
-                GoldKnopf("Diktieren", { start() }, aktiviert = zustand !is DiktatZustand.Ergebnis,
-                    symbol = { Icon(Icons.Default.Mic, null, Modifier.size(18.dp)) })
-            }
-        }
-        when (zustand) {
-            DiktatZustand.Bereit -> Text("Tippe auf „Diktieren“ und sprich. Die Erkennung läuft ausschließlich auf diesem Gerät; der Text wird erst nach deiner Bestätigung übernommen.",
-                style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-            DiktatZustand.Pruefe -> Text("Offline-Sprachpaket ${sprache.anzeige} wird geprüft …", style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            is DiktatZustand.Hoert -> Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
-                Text("● Aufnahme läuft (${sprache.anzeige}) …", style = MaterialTheme.typography.bodyMedium, color = LocalSemantisch.current.fehler)
-                if (zustand.zwischentext.isNotBlank()) Text("„${zustand.zwischentext}“", style = MaterialTheme.typography.bodyMedium)
-            }
-            is DiktatZustand.Ergebnis -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Eingabefeld(zustand.text, diktat::ergebnisAendern, "Erkannter Text – vor dem Übernehmen bearbeitbar",
-                        Modifier.fillMaxWidth().heightIn(min = 96.dp), einzeilig = false)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GoldKnopf("Am Ende anfügen", { val text = zustand.text.trim(); if (text.isNotEmpty()) anfuegen(text); diktat.zuruecksetzen() },
-                            aktiviert = zustand.text.isNotBlank())
-                        StillerKnopf("Verwerfen", { diktat.zuruecksetzen() })
-                    }
-                }
-            }
-            is DiktatZustand.Hinweis -> Column(verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Text(zustand.meldung, style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
-                }
-                if (zustand.sprachpaketLadbar) GoldKnopf("Sprachpaket ${sprache.anzeige} über Android laden", { diktat.sprachpaketLaden() })
-            }
-        }
+    // Kurze Beschriftungen passen auf S24-Breite nebeneinander; bei großer Schrift bricht der rechte Knopf um statt überzulaufen.
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (diktat.hoertZu) GoldKnopf("■ Fertig", { diktat.beenden() }, hauptKnopf = true, beschreibung = "Diktat beenden und Text einfügen")
+        else GoldKnopf("Diktieren", {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) diktat.starten(sprache)
+            else mikrofon.launch(Manifest.permission.RECORD_AUDIO)
+        }, symbol = { Icon(Icons.Default.Mic, null, Modifier.size(18.dp)) })
+        vorlesen()
     }
+    // Knapper Status direkt unter den Knöpfen; kein eigenes Panel.
+    val status: Pair<String, Boolean>? = when (zustand) {
+        DiktatZustand.Pruefe -> "Sprachpaket ${sprache.anzeige} wird geprüft …" to false
+        is DiktatZustand.Hoert -> ("● Hört zu (${sprache.anzeige})" + if (zustand.zwischentext.isNotBlank()) ": „${zustand.zwischentext}“" else " …") to false
+        is DiktatZustand.Hinweis -> zustand.meldung to true
+        else -> if (!passend) "Gerätesprache nicht unterstützt – diktiert wird auf Deutsch." to false else null
+    }
+    status?.let { (text, warnung) ->
+        Text(text, Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+            style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis,
+            color = if (warnung) LocalSemantisch.current.warnung else if (zustand is DiktatZustand.Hoert) LocalSemantisch.current.fehler else LocalGold.current.textGedaempft)
+    }
+    if ((zustand as? DiktatZustand.Hinweis)?.sprachpaketLadbar == true)
+        StillerKnopf("Sprachpaket ${sprache.anzeige} laden", { diktat.sprachpaketLaden() })
 }
-
-private fun hinweisOhneMikrofon(diktat: OfflineDiktat) = diktat.zeigeHinweis(
-    "Ohne Mikrofonfreigabe ist kein Diktat möglich. Du kannst den Text jederzeit tippen; die Freigabe lässt sich in den App-Einstellungen erteilen.")

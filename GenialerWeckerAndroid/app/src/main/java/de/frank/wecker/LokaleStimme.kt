@@ -30,18 +30,36 @@ data class SyntheseStimme(val stimme: String, val ttsSpeechRate: Float) {
     val playbackSpeed: Float get() = 1f
 }
 
-/** Eine installierte, offline nutzbare Stimme. */
-data class LokaleStimmeInfo(val name: String, val sprache: Locale, val qualitaet: Int) {
+/** Eine installierte, offline nutzbare Stimme; [nummer] zählt nur, wenn kein Geschlecht belegt ist. */
+data class LokaleStimmeInfo(val name: String, val sprache: Locale, val qualitaet: Int, val nummer: Int = 1) {
     val anzeige: String get() {
-        val region = sprache.getDisplayCountry(Locale.GERMAN).ifBlank { sprache.getDisplayLanguage(Locale.GERMAN) }
         val stufe = when {
             qualitaet >= Voice.QUALITY_VERY_HIGH -> "sehr hohe Qualität"
             qualitaet >= Voice.QUALITY_HIGH -> "hohe Qualität"
             qualitaet >= Voice.QUALITY_NORMAL -> "normale Qualität"
             else -> "einfache Qualität"
         }
-        return "$region · $stufe · ${name.substringAfterLast('#').substringAfterLast('-').ifBlank { name }}"
+        return "Deutsch · $stufe · ${StimmAuswahl.BEVORZUGT[name] ?: "Stimme $nummer"}"
     }
+}
+
+/**
+ * Welche Offline-Stimmen die App anbietet. Android liefert kein Geschlecht; belegt ist es nur für die zwei
+ * vom Nutzer gewählten Google-TTS-Stimmen, gemessen auf dem SM-F971B am 27.09.2026 (Grundfrequenz eines
+ * Probesatzes: deg 106 Hz, nfh 158 Hz; zum Vergleich deb 96 Hz, dea 164 Hz). Gibt es diese Stimmen auf einem
+ * Gerät nicht, bleiben alle Offline-Stimmen wählbar – hochwertige Stimmen anderer Geräte werden nie ausgeschlossen.
+ */
+object StimmAuswahl {
+    val BEVORZUGT = linkedMapOf("de-de-x-deg-local" to "männlich", "de-de-x-nfh-local" to "weiblich")
+
+    /** Offline-Stimmen in Anzeige-Reihenfolge; nur die bevorzugten, wenn mindestens eine davon vorhanden ist. */
+    fun angeboten(namen: List<String>): List<String> {
+        val bevorzugt = BEVORZUGT.keys.filter { it in namen }
+        return bevorzugt.ifEmpty { namen }
+    }
+
+    /** Die tatsächlich benutzte Stimme: die gewünschte, wenn angeboten, sonst die erste angebotene. */
+    fun wirksam(gewuenscht: String, angeboten: List<String>): String? = gewuenscht.takeIf { it in angeboten } ?: angeboten.firstOrNull()
 }
 
 /**
@@ -63,7 +81,7 @@ object LokaleStimmen {
     /** Alle installierten deutschen Offline-Stimmen, beste zuerst. Leer = Handlung nötig. */
     suspend fun deutscheStimmen(context: Context): List<LokaleStimmeInfo> = mutex.withLock {
         val engine = instanz(context)
-        try { lokaleDeutsche(engine).map { LokaleStimmeInfo(it.name, it.locale, it.quality) } } finally { spaeterFreigeben() }
+        try { lokaleDeutsche(engine).mapIndexed { i, v -> LokaleStimmeInfo(v.name, v.locale, v.quality, i + 1) } } finally { spaeterFreigeben() }
     }
 
     /** Erzeugt [text] als Audiodatei [ziel], ausschließlich mit einer Offline-Stimme. */
@@ -71,8 +89,8 @@ object LokaleStimmen {
         val engine = instanz(context)
         try {
             val stimmen = lokaleDeutsche(engine)
-            val wahl = stimmen.firstOrNull { it.name == stimme.stimme } ?: stimmen.firstOrNull()
-                ?: throw SyntheseAbbruch(KEINE_STIMME)
+            val name = StimmAuswahl.wirksam(stimme.stimme, stimmen.map { it.name }) ?: throw SyntheseAbbruch(KEINE_STIMME)
+            val wahl = stimmen.first { it.name == name }
             withContext(Dispatchers.Main) {
                 check(engine.setVoice(wahl) == TextToSpeech.SUCCESS) { "Die Stimme „${wahl.name}“ ließ sich nicht aktivieren." }
                 engine.setSpeechRate(stimme.ttsSpeechRate.coerceIn(.5f, 2f))
@@ -99,11 +117,22 @@ object LokaleStimmen {
     const val KEINE_STIMME = "Auf diesem Gerät ist keine deutsche Offline-Stimme installiert. " +
         "Lade in den Android-Einstellungen unter „Sprachausgabe“ die deutschen Sprachdaten herunter."
 
-    private fun lokaleDeutsche(engine: TextToSpeech): List<Voice> = runCatching { engine.voices.orEmpty() }.getOrDefault(emptySet())
-        .filter { it.locale.language == Locale.GERMAN.language }
-        .filter { !it.isNetworkConnectionRequired }
-        .filter { TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in it.features.orEmpty() }
-        .sortedWith(compareByDescending<Voice> { it.locale.country == "DE" }.thenByDescending { it.quality }.thenBy { it.name })
+    /** Strikt offline (kein Netz, installiert), danach nur die angebotenen – gilt für Auswahl UND Synthese. */
+    private fun lokaleDeutsche(engine: TextToSpeech): List<Voice> {
+        val offline = runCatching { engine.voices.orEmpty() }.getOrDefault(emptySet())
+            .filter { it.locale.language == Locale.GERMAN.language }
+            .filter { !it.isNetworkConnectionRequired }
+            .filter { TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in it.features.orEmpty() }
+            .sortedWith(compareByDescending<Voice> { it.locale.country == "DE" }.thenByDescending { it.quality }.thenBy { it.name })
+        val angeboten = StimmAuswahl.angeboten(offline.map { it.name })
+        return angeboten.mapNotNull { name -> offline.firstOrNull { it.name == name } }
+    }
+
+    /** Welche Stimme für [gewuenscht] wirklich erklingt (für die Vorbereitungssignatur); null ohne Offline-Stimme. */
+    suspend fun wirksameStimme(context: Context, gewuenscht: String): String? = mutex.withLock {
+        val engine = instanz(context)
+        try { StimmAuswahl.wirksam(gewuenscht, lokaleDeutsche(engine).map { it.name }) } finally { spaeterFreigeben() }
+    }
 
     private suspend fun instanz(context: Context): TextToSpeech {
         freigabe?.cancel(); freigabe = null
