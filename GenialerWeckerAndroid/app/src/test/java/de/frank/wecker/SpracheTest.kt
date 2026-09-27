@@ -63,7 +63,8 @@ class SpracheTest {
         assertTrue(LokaleStimmen.istEigeneEngine(LokaleStimmen.provider(LokaleStimmen.GOOGLE)))
         assertFalse(LokaleStimmen.istEigeneEngine("tts:com.samsung.SMT"))
         val google = Alarm(sprache = "de", voiceProvider = LokaleStimmen.provider(LokaleStimmen.GOOGLE), voiceId = "de-de-x-deg-local")
-        assertEquals("de-de-x-deg-local", google.resolveVoice(einstellungen).stimme)
+        // Seit 1.0.10 zählen je Wecker nur natürliche Stimmen; eine alte Gerätestimmen-Wahl gilt als Standard.
+        assertEquals("de-de-x-nfh-local", google.resolveVoice(einstellungen).stimme)
         // Eine (noch) nicht angebotene Fremd-Engine wird nie still benutzt: Standard der Sprache.
         val fremd = Alarm(sprache = "de", voiceProvider = "tts:com.samsung.SMT", voiceId = "de-DE-SMTm00")
         assertEquals("de-de-x-nfh-local", fremd.resolveVoice(einstellungen).stimme)

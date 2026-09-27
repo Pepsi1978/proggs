@@ -3,7 +3,7 @@ package de.frank.wecker
 import org.junit.Assert.*
 import org.junit.Test
 
-/** Die Verkaufs-App kennt nur lokale Gerätestimmen; Altwerte fremder Anbieter werden nie als Stimme benutzt. */
+/** Je Wecker sind nur natürliche Stimmen wählbar; alte Gerätestimmen-Wahlen fallen auf den Standard zurück. */
 class LokaleStimmeTest {
     private val standard = SyntheseStimme("de-de-x-standard", 1f)
 
@@ -14,14 +14,15 @@ class LokaleStimmeTest {
         assertEquals(1f, stimme.playbackSpeed)
     }
 
-    @Test fun eigeneLokaleStimmeUndTempoGeltenNurFuerDiesenWecker() {
-        val stimme = Alarm(voiceProvider = LokaleStimmen.PROVIDER, voiceId = "de-de-x-eigene", speechRate = 1.4f).resolveVoice(standard)
-        assertEquals("de-de-x-eigene", stimme.stimme)
+    @Test fun eigeneNatuerlicheStimmeUndTempoGeltenNurFuerDiesenWecker() {
+        val stimme = Alarm(voiceProvider = PremiumKatalog.PROVIDER, voiceId = "de-DE-KatjaNeural", speechRate = 1.4f).resolveVoice(standard)
+        assertEquals("de-DE-KatjaNeural", stimme.stimme)
+        assertEquals(PremiumKatalog.PROVIDER, stimme.ttsProvider)
         assertEquals(1.4f, stimme.ttsSpeechRate)
     }
 
-    @Test fun fremderAnbieterFaelltAufDieLokaleStandardstimmeZurueck() {
-        val stimme = Alarm(voiceProvider = "edge_tts", voiceId = "de-DE-KatjaNeural").resolveVoice(standard)
+    @Test fun alteGeraetestimmenWahlFaelltAufDenStandardZurueck() {
+        val stimme = Alarm(voiceProvider = LokaleStimmen.PROVIDER, voiceId = "de-de-x-eigene").resolveVoice(standard)
         assertEquals("de-de-x-standard", stimme.stimme)
     }
 

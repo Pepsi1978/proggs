@@ -2484,8 +2484,23 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
             drawText(layout, topLeft = at - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
         }
         val sweep = geometry?.sweep
-        if (geometry != null && sweep != null) drawArc(accent, geometry.nowAngle, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        if (geometry != null && sweep != null) {
+            if (zifferblatt) {
+                // Im 3D-Wecker hebt sich die Schlafzeit farblich klar vom Metallgehäuse ab: von ruhigem Bernstein
+                // (jetzt) zu kräftigem Orangerot (Wecken), breiter und mit weichem Leuchtsaum.
+                val warm = if (snooze) listOf(accent, accent) else listOf(ZIFFER_BERNSTEIN, ZIFFER_WECKROT)
+                val start = geometry.nowAngle
+                val verlauf = Brush.sweepGradient(
+                    *(0..20).map { i -> ((start + sweep * i / 20f + 360f) % 360f) / 360f to lerpFarbe(warm[0], warm[1], i / 20f) }
+                        .sortedBy { it.first }.toTypedArray(), center = center)
+                val breit = 7.dp.toPx()
+                drawArc(warm[1].copy(alpha = .22f), start, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(breit * 2.2f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                drawArc(verlauf, start, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(breit, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+            } else drawArc(accent, geometry.nowAngle, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        }
         geometry?.centerLabel?.let { label ->
             // Fit inside the space the 12/3/6/9 numbers leave free: shrink, then try two lines, never paint over them.
             val numberRadius = radius - 15.dp.toPx()
@@ -2513,7 +2528,8 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
             drawLine(gold.textPrimaer.copy(alpha = .75f), center, point(minutenWinkel, radius * 0.66f), 2.dp.toPx(), zeiger)
             drawCircle(accent, 3.5f.dp.toPx(), center)
         }
-        if (geometry != null) ringMarker(point(geometry.targetAngle), hollow = false, color = accent, surface = surface)
+        if (geometry != null) ringMarker(point(geometry.targetAngle), hollow = false,
+            color = if (zifferblatt && !snooze) ZIFFER_WECKROT else accent, surface = surface)
         ringMarker(point(nowAngle), hollow = true, color = gold.textPrimaer, surface = surface)
     }
 }
@@ -2599,6 +2615,12 @@ private fun GlasKuppel(modifier: Modifier) {
             style = androidx.compose.ui.graphics.drawscope.Stroke(1.5f.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
     }
 }
+
+/** Schlafbogen im 3D-Wecker: Einschlafen (Bernstein) bis Wecken (Orangerot) – bewusst nicht die Gehäusefarbe. */
+private val ZIFFER_BERNSTEIN = androidx.compose.ui.graphics.Color(0xFFFFB300)
+private val ZIFFER_WECKROT = androidx.compose.ui.graphics.Color(0xFFFF4D1A)
+private fun lerpFarbe(a: androidx.compose.ui.graphics.Color, b: androidx.compose.ui.graphics.Color, t: Float) =
+    androidx.compose.ui.graphics.lerp(a, b, t)
 
 /** Der 3D-Wecker als freistehende Figur mit laufender Uhrzeit – z. B. im Leerzustand. [groesse] = Gesamtbreite. */
 @Composable
