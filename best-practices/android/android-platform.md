@@ -722,3 +722,39 @@ Testprofil arbeiten.
 - [ ] **Permissions:** moderner `RequestPermission`-Flow (frueh registriert)? jede Permission einzeln + permanently-denied erkannt? inkrementell (Background-Location separat)? Photo Picker statt `READ_MEDIA_*`? `<queries>` deklariert? (§6)
 - [ ] **PendingIntent/Alarm:** `FLAG_IMMUTABLE`(+`UPDATE_CURRENT`)? AlarmManager nur fuer echte Uhrzeit, `canScheduleExactAlarms()` geprueft, `USE_EXACT_ALARM` nur Wecker/Kalender? Re-schedule nach Boot? (§6)
 - [ ] **targetSdk 36:** `enableEdgeToEdge()`+Insets? `OnBackPressedCallback`/`BackHandler` (kein `onBackPressed()`)? adaptive Layout (`WindowSizeClass`) ≥600dp? native `.so` 16-KB-aligned? Storage nur Sandbox/MediaStore/SAF/Photo Picker + FileProvider? TLS 1.2+? (§7)
+
+## 9. Wecker-App für den Play Store + große On-Device-Modelle — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)
+- **Genaue Weckzeiten:**
+  - `setAlarmClock()` für den Weckzeitpunkt verwenden, weil es Doze durchbricht.
+  - `USE_EXACT_ALARM` nur, wenn Wecken die Kernfunktion ist, mit Play-Deklaration.
+  - `USE_FULL_SCREEN_INTENT` ab API 34 nur für Wecker und Anrufe; Deklaration seit 31.05.2024 Pflicht, Durchsetzung seit 22.01.2025.
+  - Vorher `canUseFullScreenIntent()` prüfen und sonst auf die Einstellungen verweisen.
+  - `offiziell` https://developer.android.com/develop/background-work/services/alarms
+- **Nach BOOT_COMPLETED** nur die Alarme neu registrieren und keinen `mediaPlayback`-FGS starten (siehe Almanach workmanager-notifications, F).
+- **targetSdk 36** (Pflicht seit 31.08.2026): Der Alarm-Vollbildschirm muss Predictive Back selbst abfangen, mit einem eigenen `OnBackInvokedCallback`, sonst schließt eine Wischgeste den Wecker. Edge-to-Edge ohne Opt-out.
+- **16 KB Page Size:** Jede `.so` einzeln prüfen, auch transitive wie `libonnxruntime4j_jni.so`, mit `zipalign -c -P 16` bzw. `llvm-readelf -l` (LOAD-Align 0x4000). `offiziell` https://developer.android.com/guide/practices/page-sizes
+- **Modelle ausliefern:**
+  - Über Play: Play Asset Delivery, Stand 2026:
+
+    | Grenze | Wert |
+    |---|---|
+    | Base | 500 MB |
+    | Pack | 1,5 GB |
+    | install-time kumuliert | 4 GB |
+    | on-demand / fast-follow | 30 GB |
+
+    Alternativ „Play for On-device AI“ (AI-Packs, Beta).
+  - Solange die App **per Sideload** verteilt wird, funktioniert PAD nicht. Dann einen eigenen Download bauen: WorkManager, HTTP-Range-Resume, SHA-256-Prüfung im Stream, atomares `.part` → rename. Modelle sind Daten, kein Code, und damit mit der Policy vereinbar.
+  - Lokal testen mit `bundletool build-apks --local-testing`.
+  - `offiziell` https://support.google.com/googleplay/android-developer/answer/9859372
+- **Datenübernahme zwischen eigenen Apps mit unterschiedlicher applicationId:**
+  - Primär ein SAF-Export und -Import (JSON/ZIP).
+  - Optional ein signature-geschützter ContentProvider mit `<queries>`.
+  - Auto-Backup ist **nicht** app-übergreifend.
+  - Absolute Pfade (enthalten den Paketnamen) beim Import umschreiben und Termine neu berechnen.
+- **Play-Konto und Recht:**
+  - Neue persönliche Konten brauchen einen geschlossenen Test mit **12 Testern über 14 Tage**.
+  - DSA-Trader-Status (seit 17.02.2025).
+  - Datenschutz-URL und Impressum (§ 5 DDG).
+  - Prominent-Disclosure-Dialog vor der ersten Online-Stimme und vor dem Mikrofon; `RECORD_AUDIO` erst direkt vor dem Diktat anfragen.
+  - `offiziell` https://support.google.com/googleplay/android-developer/answer/14659200

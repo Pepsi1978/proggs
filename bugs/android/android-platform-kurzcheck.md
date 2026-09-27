@@ -28,3 +28,5 @@
 | 14 | Native `.so` (NDK/SDK), targetSdk 35+ | 16-KB-Page-Size: NDK r28+ / `max-page-size=16384` | §8.3 |
 | 15 | Custom-Permission einer ANDEREN App `granted=false` (ContentProvider-`SecurityException`) | Definierende App ZUERST, nutzende App DANACH neu installieren (`pm grant` hilft nicht) | §2.11 |
 | 16 | `EncryptedSharedPreferences` — Crash in `onCreate` nach Geraetewechsel (`AEADBadTagException`, Keystore -30) | `create()` in try/catch + Prefs & Masterkey-Alias loeschen und neu anlegen; Prefs-Datei aus BEIDEN Backup-XMLs ausschliessen | §7.4 |
+| 17 | Alarm-Vollbild schließt per Zurück-Geste (targetSdk 36) | Eigener `OnBackInvokedCallback`/`BackHandler` | §10.1 |
+| 18 | onnxruntime/sherpa-onnx `.so` 16-KB-Warnung | sherpa-onnx ≥ 1.12.36; jede `.so` einzeln prüfen | §10.2 |

@@ -20,3 +20,7 @@
 | 10 | Fehler 429/5xx/Netz | Exponentielles Backoff + Jitter, `Retry-After` lesen; 4xx (INVALID_ARGUMENT) **nicht** retryen | §9 |
 | 11 | API-Key Google | Niemals in URL/Repo; verschlüsselt (EncryptedSharedPreferences), besser OAuth/Service-Account | §10 |
 | 12 | Provider-Wahl im UI | Eine Quelle der Wahrheit (selektierter Provider), klarer Fallback-Pfad, kein stilles Mischen | §11 |
+| 13 | Lokale Stimme in Verkaufs-App | System-TTS + `synthesizeToFile` vorab; sherpa-onnx/Piper zieht espeak-ng (GPL) mit | §12 |
+| 14 | Piper-Stimme wählen | Lizenz je MODEL_CARD: thorsten/kristin/siwis/davefx ok, lessac/amy/tom meiden | §12 |
+| 15 | Lokales Diktat | On-Device-Recognizer prüfen + Fallback; whisper.cpp base/small q5_1 nachladen | §12 |
+| 16 | Edge in Verkaufs-App | Inoffiziell, ToS-Risiko; nur Opt-in „online/inoffiziell“, sonst Azure Paid + Token-Broker | §13 |

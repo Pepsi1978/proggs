@@ -270,3 +270,48 @@
 > **Checkpoint:** Vollständig recherchiert für Edge-TTS + Google Chirp 3 HD (de-DE-Fokus).
 > ElevenLabs bewusst ausgelassen (Kosten). Nächste sinnvolle Erweiterung (nicht jetzt nötig):
 > `vorlese-overlay-v2`-spezifische Web-Audio-/Offscreen-Eigenheiten (Chrome MV3) — separater Lauf.
+
+## 12) Lokales TTS/STT in einer Verkaufs-App (Offline, Lizenzen) — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)
+
+**TTS (DE/EN/FR/ES, gerätelokal):**
+- **Android-System-TTS** (`TextToSpeech`) ist der lizenzsaubere Standardpfad. Je Sprache eine Stimme mit `!isNetworkConnectionRequired()` wählen, die Weckansage **vorab in eine Datei synthetisieren** (`synthesizeToFile`) und beim Wecken nur abspielen. So hängt das Wecken nicht von Init oder Netz ab. Die Qualität hängt vom Gerät ab. `offiziell` https://developer.android.com/reference/android/speech/tts/TextToSpeech
+- **sherpa-onnx** (Apache-2.0, v1.13.8) mit Piper-/Kokoro-Modellen bindet **espeak-ng (GPL-3.0) statisch** ein. Die GPL-Freiheit ist erst für sherpa-onnx 2.0.0 geplant (Issue #3731). Für eine Closed-Source-App gibt es drei Wege:
+  - (a) Piper als **separate TTS-Engine-App** (anderer Prozess, Zugriff über die System-TTS-API)
+  - (b) App unter GPL-3.0 veröffentlichen
+  - (c) auf sherpa-onnx 2.0 warten
+  - Eigenes Lexikon bzw. Vorab-Phonemisierung ist aufwendig.
+
+  `extern` https://github.com/k2-fsa/sherpa-onnx/issues/3731
+- **Piper-Stimmen: die Lizenz jeder Stimme einzeln prüfen** (MODEL_CARD auf huggingface.co/rhasspy/piper-voices).
+
+  | Sprache | Kommerziell brauchbar | Meiden |
+  |---|---|---|
+  | DE | `thorsten` (CC0) | – |
+  | EN | `kristin` (MIT), `libritts_r` (CC-BY 4.0) | `lessac` (Blizzard-Noncommercial), `amy` (Lizenz unklar) |
+  | FR | `siwis` (CC-BY 4.0) | `tom` (AGPLv3) |
+  | ES | `davefx` (CC0), `sharvard` (CC-BY 3.0) | – |
+
+  Das Piper-Projekt liegt jetzt bei OHF-Voice/piper1-gpl unter GPL-3.0; das betrifft den Code, nicht die Modell-Lizenzen. `extern`
+- **Kokoro-82M** kann **kein Deutsch** und hat auf Mittelklasse-Geräten RTF > 1. **MMS-TTS** steht unter CC-BY-NC und scheidet damit aus. `extern`
+
+**STT (Diktat 1–60 s):**
+- Zuerst `SpeechRecognizer.isOnDeviceRecognitionAvailable()` prüfen, dann `createOnDeviceSpeechRecognizer()` (API 31+). Immer einen Fallback bereithalten. `offiziell`
+- **whisper.cpp** (Code MIT, Modelle MIT) als nachladbares Qualitätsmodell. q5_1 ist der beste Kompromiss:
+
+  | Modell | Größe q5_1 |
+  |---|---|
+  | tiny | 32 MB |
+  | base | 60 MB |
+  | small | 190 MB |
+
+  Multilingual, mit Satzzeichen, Batch-Verarbeitung. Es gibt kein offizielles AAR: Der NDK/CMake-Build ist fällig, und **Pfade mit Leerzeichen** sind dabei riskant. `extern` https://github.com/ggml-org/whisper.cpp
+- Vosk (Apache-2.0, ca. 40 MB pro Sprache) ist ungenauer und setzt keine Satzzeichen, daher nur als Notlösung. `extern`
+
+## 13) Microsoft-Edge-Stimmen in einer Verkaufs-App — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)
+- Der Read-Aloud-Endpunkt (`speech.platform.bing.com`, genutzt von edge-tts) ist **inoffiziell** und per Reverse Engineering erschlossen. Microsoft sagt dazu selbst: Kommerzielle Nutzung ohne bezahltes Azure-Abo kann die Nutzungsbedingungen verletzen. Der Sec-MS-GEC-Token bricht wiederholt (Okt. 2024 bis Jan. 2026, 403). `extern` https://github.com/rany2/edge-tts/issues/290
+- **Rechtssichere Alternative:** Azure AI Speech Neural (Paid, ca. 16 USD pro 1 Mio. Zeichen, HD 22 USD).
+  - Kommerzielle Nutzungsrechte an der Audioausgabe gibt es nur im **Paid Tier**, nicht in F0.
+  - Der Key gehört nie in die APK; der Zugriff läuft über einen Token-Broker auf dem eigenen Server.
+
+  `offiziell` https://learn.microsoft.com/en-us/answers/questions/5805156/
+- Wenn Edge überhaupt angeboten wird: nur als Option, sichtbar als **online und inoffiziell** gekennzeichnet, mit Einwilligungsdialog vor dem ersten Versand, nie als Vorgabe. Immer mit lokalem Fallback; die Ansage wird vorab in eine Datei synthetisiert.

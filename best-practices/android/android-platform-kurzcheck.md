@@ -30,3 +30,7 @@
 | 16 | Langen Druck / Drag-and-Drop per adb pruefen | `input swipe` haelt nicht — Geste aus `input motionevent DOWN/MOVE/UP` bauen | §8.1 |
 | 17 | Wischen per adb wird zu "Zurueck" | Nicht am Bildschirmrand starten, Mitte nehmen | §8.2 |
 | 18 | `screencap` liefert kaputtes PNG (Foldable) | Auf dem Geraet ablegen + `pull`, oder `-d <display-id>` | §8.3 |
+| 19 | Wecker für Play Store | `setAlarmClock`; USE_EXACT_ALARM + FSI deklarieren; Predictive Back im Alarmscreen abfangen | §9 |
+| 20 | Große ML-Modelle ausliefern | Play: PAD/AI-Packs; Sideload: eigener Download (Resume + SHA-256) | §9 |
+| 21 | Daten alte→neue App (andere applicationId) | SAF-Export/Import; Pfade umschreiben; Auto-Backup nicht übergreifend | §9 |
+| 22 | Erste Play-Veröffentlichung (Personenkonto) | 12 Tester/14 Tage, DSA-Trader, Datenschutz-URL, Impressum | §9 |

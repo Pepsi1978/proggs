@@ -812,3 +812,44 @@
 | AC1–AC19 (Android-Client) | §5, §8, §9, §11 (Latenz-Pipeline/Caching/Retry/Architektur) |
 | W1–W14 (Chrome MV3) | §3, §5, §10, §11 (Edge im Browser/Latenz/Secrets/Architektur) |
 | C1–C2 (Querschnitt) | §9 (Retry/Fallback-Kette) |
+
+## L) Lizenz- und Lokal-Fallen (Offline-TTS/STT in Verkaufs-Apps) — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)
+
+### L1 — sherpa-onnx Piper/Kokoro: espeak-ng GPL-3.0 statisch eingebunden
+- **Symptom:** Eine Closed-Source-App mit sherpa-onnx-TTS verstößt unbemerkt gegen die GPL.
+- **Ursache:** Piper- und Kokoro-Modelle brauchen espeak-ng zur Phonemisierung; es ist in der nativen Bibliothek gelinkt.
+- **Betroffen:** sherpa-onnx ≤ 1.13.8. Der Fix ist erst für 2.0.0 geplant.
+- **Funktionserhaltender Fix:** Piper in eine separate TTS-Engine-App auslagern, die App unter GPL stellen oder System-TTS nutzen.
+- **Quelle:** https://github.com/k2-fsa/sherpa-onnx/issues/3731
+
+### L2 — Piper-Stimmen mit nichtkommerzieller oder Copyleft-Lizenz
+- **Symptom:** Eine Stimme ist eingebaut, darf aber nicht verkauft werden.
+- **Ursache:** Die Lizenz gilt pro Stimme:
+  - `en_US-lessac`: Blizzard-2013-Noncommercial
+  - `fr_FR-tom`: AGPLv3
+  - `en_US-amy`: unklar ("See URL")
+- **Fix:** thorsten, kristin, libritts_r, siwis, davefx oder sharvard nehmen.
+- **Quelle:** https://huggingface.co/rhasspy/piper-voices
+
+### L3 — Kokoro-82M hat kein Deutsch
+- **Symptom:** Die deutsche Stimme fehlt.
+- **Ursache:** Die Sprachliste enthält nur en, es, fr, hi, it, ja, pt-br und zh.
+- **Fix:** Für Deutsch Piper thorsten oder System-TTS nehmen.
+- **Quelle:** https://huggingface.co/hexgrad/Kokoro-82M
+
+### L4 — `isOnDeviceRecognitionAvailable()` liefert auf Samsung false
+- **Symptom:** Der Offline-Diktatweg fehlt, obwohl der normale Recognizer funktioniert.
+- **Ursache:** Manche OEM-Builds geben den On-Device-Pfad für Drittanbieter-Apps nicht frei.
+- **Betroffen:** Android 15, API 35.
+- **Fix:** Auf den Standard-Recognizer oder whisper.cpp ausweichen.
+- **Quellen:**
+  - https://github.com/openclaw/openclaw/issues/157149
+  - Samsung-Community (Error 13): https://eu.community.samsung.com/t5/apps-servizi-mobile/bixby-text-call-speechrecognizer-error-13/m-p/8845130
+
+### L5 — Edge-Read-Aloud: strukturell instabil und ToS-Risiko
+- **Symptom:** 403- oder 503-Fehler, IP-Sperren.
+- **Ursache:** Inoffizieller Endpunkt; Sec-MS-GEC-Wechsel zwischen Okt. 2024 und Jan. 2026.
+- **Fix:** Nie als einzige Stimme oder als Vorgabe verwenden. Immer einen lokalen Fallback bereithalten und die Ansage vorab in eine Datei synthetisieren.
+- **Quellen:**
+  - https://github.com/rany2/edge-tts/issues/290
+  - https://github.com/rany2/edge-tts/issues/482

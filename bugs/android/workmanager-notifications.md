@@ -904,3 +904,11 @@
 | W1–W25 (WorkManager, inkl. Hilt/Testing/Compose) | §7 (WorkManager für Backups), §1 (Architektur) |
 | F1–F15 (FGS/Backup) | §8 (FGS-Typen & UIDT) |
 | O1–O18 (OEM-Killings) | §9 (OEM-Killings & Workarounds) |
+
+### F-Nachtrag — `mediaPlayback`-FGS aus `BOOT_COMPLETED` → `ForegroundServiceStartNotAllowedException` — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)
+- **Symptom:** Nach dem Neustart stürzt der Wecker-Service ab bzw. der Weckton kommt nicht.
+- **Ursache:** Ab targetSdk 35 (Android 15) dürfen `mediaPlayback`-FGS (und einige weitere Typen) nicht aus einem `BOOT_COMPLETED`-Receiver starten.
+- **Fix:** Im Boot-Receiver nur `rescheduleAll()` per `setAlarmClock` aufrufen. Der FGS startet erst aus dem feuernden Alarm, denn der ist erlaubt.
+- **Quellen:**
+  - https://developer.android.com/about/versions/15/behavior-changes-15
+  - https://github.com/Osasuwu/like-current-song/issues/154

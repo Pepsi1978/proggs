@@ -28,3 +28,6 @@
 | 14 | App Check Enforcement | Erst Client-Rollout, dann erzwingen; Debug-Token in Konsole | Bug 89/90 |
 | 15 | R8/Release aktiv | Keep-Regeln fuer Firebase/Billing/Gemini; Release-Build testen | Bug 113 |
 | 16 | Billing 7.1.1 im Einsatz | Vor 31.08.2026 auf Billing 8 migrieren | Bug 41 |
+| 17 | Billing 8: `NoSuchMethodError enablePendingPurchases` | Mit `PendingPurchasesParams…enableOneTimeProducts()` | Bug 139 |
+| 18 | Billing 8/9 + Kotlin < 2.2 | Metadata-Fehler → Kotlin/AGP zuerst anheben | Bug 140 |
+| 19 | Auto-Reconnect hängt endlos | Timeout + Nutzerhinweis | Bug 141 |

@@ -1198,3 +1198,21 @@ die Live API genutzt wird; normale Calls sind nicht betroffen.
 Zweite Seite der Medaille: Hier steht *was schiefgeht und wie man es loest* — die
 Best-Practices sagen *wie man den Fehler von vornherein vermeidet*. Nach jedem Fix
 hier auch den passenden Praeventions-Abschnitt dort verankern, damit der Fehler nicht wiederkommt.
+
+## 139. Billing 8 (Java): `enablePendingPurchases()` ohne Argument → `NoSuchMethodError`
+- **Symptom:** Der BillingClient verbindet nie, Preise fehlen.
+- **Ursache:** Die parameterlose Methode wurde in v8 entfernt; Altcode oder ein altes SDK ruft sie noch auf.
+- **Betroffen:** Billing ≥ 8.0.
+- **Fix:** `enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())`. Außerdem Dritt-SDKs aktualisieren.
+- **Quelle:** https://docs.purchasely.com/docs/google-play-billing-v8 — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)
+
+## 140. Billing 8/9 mit Kotlin-Metadata 2.2 → Compile-Fehler bei Kotlin 2.0/2.1
+- **Symptom:** Der Build scheitert mit einer Meldung zu inkompatiblen Metadaten.
+- **Betroffen:** Billing ≥ 8 zusammen mit einem Kotlin-Compiler < 2.2 (Beispiel: GenialerWecker nutzt Kotlin 2.1.0).
+- **Fix:** Kotlin/AGP anheben, bevor Billing eingebaut wird.
+- **Quelle:** https://www.revenuecat.com/blog/engineering/play-billing-8-migration — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)
+
+## 141. Auto-Service-Reconnection (v8+) hängt in einer Endlosschleife
+- **Symptom:** Kein Kauf oder Restore möglich, Retry ohne Ende. Reproduzierbar nach einem Sprachwechsel am Gerät.
+- **Fix:** Einen Timeout setzen und in der UI melden; Nutzerhinweis „Play Store neu starten“.
+- **Quelle:** https://developer.android.com/google/play/billing/errors — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)

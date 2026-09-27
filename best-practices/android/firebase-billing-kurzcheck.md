@@ -29,3 +29,6 @@
 | 15 | Remote Config | XML-Defaults, nicht beim Start blockieren, Prod-Intervall ~12h | §6 |
 | 16 | SHA-Keys | Debug+Upload+Play-App-Signing in Firebase, sonst Release still kaputt | §7 |
 | 17 | DSGVO | Consent Mode v2: Default-Consent VOR Init (Manifest), keine PII | §7 |
+| 18 | Einmalkauf lebenslang (v8/9) | `enableOneTimeProducts()` + Auto-Reconnect; `queryPurchasesAsync(INAPP)` bei Start | §G |
+| 19 | 7-Tage-Test bei Einmalkauf | Kein nativer Trial → `firstInstallTime` + gesicherter Zeitstempel, transparent | §G |
+| 20 | Billing testen | Nur über Play-Testspur + License-Tester; Sideload → Stub | §G |

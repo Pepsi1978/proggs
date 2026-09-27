@@ -31,3 +31,8 @@
 | 17 | Stop bricht Synthese nicht ab | `suspendCancellableCoroutine`+`invokeOnCancellation` schließt WS/Player | AC7 |
 | 18 | MV3: Audio stirbt nach ~30s | WS UND Wiedergabe ins **Offscreen-Document**, nicht in den Service-Worker | W1, W8 |
 | 19 | MV3: `Edg/143`-UA-Regel wirkungslos | declarativeNetRequest greift nicht bei WS-aus-SW (crbug 1285664) → WS im Offscreen-Doc | W8 |
+| 20 | sherpa-onnx Piper/Kokoro in Closed-Source-App | espeak-ng GPL-3.0 statisch gelinkt → auslagern/GPL/System-TTS | L1 |
+| 21 | Piper-Stimme lessac/amy/tom verbaut | NC/AGPL/unklar → thorsten/kristin/siwis/davefx | L2 |
+| 22 | Deutsch mit Kokoro | Kein DE → Piper thorsten/System-TTS | L3 |
+| 23 | On-Device-Diktat Samsung `false`/Error 13 | Standard-Recognizer/whisper.cpp als Fallback | L4 |
+| 24 | Edge in Verkaufs-App | Inoffiziell + wiederkehrend 403 → nie Default, lokaler Fallback | L5 |

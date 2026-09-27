@@ -840,3 +840,25 @@ Tracker-Status.
 - [ ] **Intents/Notif:** PendingIntent mit `FLAG_IMMUTABLE/MUTABLE` (6.1)? Notification-Channel erstellt (6.2)? `ContextCompat.registerReceiver` mit Export-Flag (6.7)?
 - [ ] **Storage:** Kein direkter externer Pfad-Zugriff — App-Sandbox/MediaStore/SAF (7.1)? `FileProvider` statt `file://` (7.3)?
 - [ ] **targetSdk 36:** Edge-to-Edge-Insets behandelt (8.1)? Back auf `OnBackPressedCallback` migriert (8.2)? Native `.so` 16-KB-aligned (8.3)? Adaptive Layout auf grossen Screens (8.5)?
+
+## 10. Wecker, targetSdk 36 und native ML-Bibliotheken — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)
+
+### 10.1 Predictive Back schließt den Vollbild-Wecker mit einer Wischgeste
+- **Symptom:** Eine einzige Zurück-Geste beendet den Weckbildschirm. Der Nutzer verschläft womöglich.
+- **Betroffen:** targetSdk 36, Geräte ab API 33.
+- **Fix:** Einen eigenen `OnBackInvokedCallback` bzw. `BackHandler` registrieren. Beenden geht nur über die Knöpfe; die Funktion bleibt erhalten.
+- **Quelle:** https://github.com/1hyok/SlowClock/issues/65
+
+### 10.2 `libonnxruntime4j_jni.so` nicht 16-KB-konform
+- **Symptom:** Play lehnt ab bzw. Warnung „16 KB page size“.
+- **Betroffen:**
+  - onnxruntime 1.20.0 und 1.21.0 (JNI-Wrapper; die Hauptbibliothek ist seit 1.16.0 konform)
+  - sherpa-onnx 1.12.14 (arm64)
+- **Fix:**
+  - onnxruntime: PR #24947
+  - sherpa-onnx ab 1.12.36
+  - Das intern gebündelte onnxruntime (1.17.1, Issue #3291) trotzdem pro `.so` prüfen.
+- **Quellen:**
+  - https://github.com/microsoft/onnxruntime/issues/24902
+  - https://github.com/k2-fsa/sherpa-onnx/issues/2641
+  - https://github.com/k2-fsa/sherpa-onnx/issues/3291

@@ -40,3 +40,4 @@
 | 26 | Periodic-Worker läuft nie wieder | WorkManager ≥ 2.11.2; `doWork` in try/catch | W10 |
 | 27 | Mehrere Notifications kollabieren zu einer | Eindeutige ID/Tag pro Reminder | N10 |
 | 28 | FCM-Push verspätet/fehlt | High-Prio + sichtbare Notification, nicht data-only | O16 |
+| 29 | `mediaPlayback`-FGS nach Boot crasht (Android 15) | Boot-Receiver nur Reschedule, FGS erst aus Alarm | F-Nachtrag |

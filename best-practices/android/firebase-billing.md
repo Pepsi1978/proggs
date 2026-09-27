@@ -1561,3 +1561,21 @@ Quelle durchgehend: developer.android.com/google/play/billing/lifecycle/subscrip
 
 Zweite Seite der Medaille: Hier stehen die *Praeventions-Regeln* — im Bug-Almanach
 *die konkreten Fehler und ihre Fixes*. Beide Seiten zusammen lesen: Praevention hier, Schadensbehebung dort.
+
+## G. Einmalkauf (lebenslang) + App-seitiger Testzeitraum ohne Server — Stand 27.09.2026 19:03 (Recherche Genialer Wecker Android, Engine C Sonnet-Schwarm)
+- **Versionen:** Play Billing Library **9.1.0** ist aktuell (18.06.2026). Pflicht ist **mindestens v8**, ab 31.08.2026 (Verlängerung bis 01.11.2026). `offiziell` https://developer.android.com/google/play/billing/deprecation-faq
+- **Aufbau (v8+):**
+  - `enableAutoServiceReconnection()`
+  - `PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()`
+  - nicht verbrauchbares INAPP-Produkt
+  - `acknowledgePurchase` innerhalb von 3 Tagen, idempotent
+  - `queryPurchasesAsync(INAPP)` bei jedem Start und in `onResume`
+  - `offiziell` https://developer.android.com/google/play/billing/lifecycle/one-time
+- **Keine native Testphase für Einmalkäufe.** Free Trials gibt es nur bei Abos, der 7-Tage-Test muss in der App gebaut werden:
+  - Anker: `PackageManager.firstInstallTime`, dazu ein eigener, per Auto-Backup gesicherter Zeitstempel.
+  - Eine rückwärts gestellte Uhr wird als „Test abgelaufen“ gewertet (monotoner Maximalwert).
+  - Ohne Server bleibt ein Restrisiko; das ist bewusst akzeptiert.
+  - Für die Verkaufs-App daher `allowBackup=true` mit Regeln.
+- **Transparenz:** Store-Text und Paywall sagen gleichlautend „7 Tage alle Funktionen, danach einmalig 3,99 €“. Nach Ablauf nie einen Kauf vortäuschen, nie Funktionen still abschalten.
+- **Offline:** Den Entitlement-Cache lokal halten und bei der nächsten Verbindung mit `queryPurchasesAsync` abgleichen. Der Wecker selbst muss auch nach Ablauf des Tests zuverlässig klingeln oder vorher klar deaktivierbar sein. **Nie einen gestellten Wecker still stummschalten.**
+- **Testen geht nur über Play:** App-Eintrag in der Play Console, interne Testspur, License-Tester. Eine Sideload-APK kann den Kauf nicht testen, deshalb braucht der Kaufweg im Dev-Build einen Stub.
