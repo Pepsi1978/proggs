@@ -2468,6 +2468,9 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
         fun point(angleDeg: Float, r: Float = radius) = Math.toRadians(angleDeg.toDouble()).let {
             center + androidx.compose.ui.geometry.Offset((r * Math.cos(it)).toFloat(), (r * Math.sin(it)).toFloat())
         }
+        // Im 3D-Wecker läuft der Schlafbogen mit Abstand innerhalb der Teilung; die Zahlen rücken dafür nach innen.
+        val bogenRadius = if (zifferblatt) radius - 10.dp.toPx() else radius
+        val zahlenRadius = radius - (if (zifferblatt) 21 else 15).dp.toPx()
         drawCircle(gold.textGedaempft.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
         // Das Zifferblatt bekommt zusätzlich eine feine Minutenteilung.
         if (zifferblatt) repeat(60) { minute ->
@@ -2480,30 +2483,30 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
         }
         listOf(0 to "12", 3 to "3", 6 to "6", 9 to "9").forEach { (hour, label) ->
             val layout = measurer.measure(label, numberStyle)
-            val at = point(hour * 30f - 90f, radius - 15.dp.toPx())
+            val at = point(hour * 30f - 90f, zahlenRadius)
             drawText(layout, topLeft = at - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
         }
         val sweep = geometry?.sweep
         if (geometry != null && sweep != null) {
             if (zifferblatt) {
-                // Im 3D-Wecker hebt sich die Schlafzeit farblich klar vom Metallgehäuse ab: von ruhigem Bernstein
-                // (jetzt) zu kräftigem Orangerot (Wecken), breiter und mit weichem Leuchtsaum.
-                val warm = if (snooze) listOf(accent, accent) else listOf(ZIFFER_BERNSTEIN, ZIFFER_WECKROT)
+                // Im 3D-Wecker hebt sich die Schlafzeit als feiner Nachtblau-Bogen vom Messing ab (Gold und Blau
+                // ergänzen sich), mit Abstand zum Gehäuserand und einer zarten Spur als Führung.
+                val farben = if (snooze) listOf(accent, accent) else if (gold.istDunkel) listOf(NACHT_HELL_A, NACHT_HELL_B) else listOf(NACHT_A, NACHT_B)
                 val start = geometry.nowAngle
                 val verlauf = Brush.sweepGradient(
-                    *(0..20).map { i -> ((start + sweep * i / 20f + 360f) % 360f) / 360f to lerpFarbe(warm[0], warm[1], i / 20f) }
+                    *(0..20).map { i -> ((start + sweep * i / 20f + 360f) % 360f) / 360f to lerpFarbe(farben[0], farben[1], i / 20f) }
                         .sortedBy { it.first }.toTypedArray(), center = center)
-                val breit = 7.dp.toPx()
-                drawArc(warm[1].copy(alpha = .22f), start, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(breit * 2.2f, cap = androidx.compose.ui.graphics.StrokeCap.Round))
-                drawArc(verlauf, start, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(breit, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                val bogenLinks = androidx.compose.ui.geometry.Offset(center.x - bogenRadius, center.y - bogenRadius)
+                val bogenGroesse = androidx.compose.ui.geometry.Size(bogenRadius * 2, bogenRadius * 2)
+                drawCircle(farben[1].copy(alpha = .12f), bogenRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx()))
+                drawArc(verlauf, start, sweep, useCenter = false, topLeft = bogenLinks, size = bogenGroesse,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
             } else drawArc(accent, geometry.nowAngle, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
                 style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
         }
         geometry?.centerLabel?.let { label ->
             // Fit inside the space the 12/3/6/9 numbers leave free: shrink, then try two lines, never paint over them.
-            val numberRadius = radius - 15.dp.toPx()
+            val numberRadius = zahlenRadius
             val maxWidth = 2 * (numberRadius - measurer.measure("3", numberStyle).size.width / 2f - 2.dp.toPx())
             val maxHeight = 2 * (numberRadius - measurer.measure("12", numberStyle).size.height / 2f - 2.dp.toPx())
             val twoLines = when {
@@ -2528,9 +2531,9 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
             drawLine(gold.textPrimaer.copy(alpha = .75f), center, point(minutenWinkel, radius * 0.66f), 2.dp.toPx(), zeiger)
             drawCircle(accent, 3.5f.dp.toPx(), center)
         }
-        if (geometry != null) ringMarker(point(geometry.targetAngle), hollow = false,
-            color = if (zifferblatt && !snooze) ZIFFER_WECKROT else accent, surface = surface)
-        ringMarker(point(nowAngle), hollow = true, color = gold.textPrimaer, surface = surface)
+        if (geometry != null) ringMarker(point(geometry.targetAngle, bogenRadius), hollow = false,
+            color = if (zifferblatt && !snooze) (if (gold.istDunkel) NACHT_HELL_B else NACHT_B) else accent, surface = surface)
+        ringMarker(point(nowAngle, bogenRadius), hollow = true, color = gold.textPrimaer, surface = surface)
     }
 }
 
@@ -2616,9 +2619,11 @@ private fun GlasKuppel(modifier: Modifier) {
     }
 }
 
-/** Schlafbogen im 3D-Wecker: Einschlafen (Bernstein) bis Wecken (Orangerot) – bewusst nicht die Gehäusefarbe. */
-private val ZIFFER_BERNSTEIN = androidx.compose.ui.graphics.Color(0xFFFFB300)
-private val ZIFFER_WECKROT = androidx.compose.ui.graphics.Color(0xFFFF4D1A)
+/** Schlafbogen im 3D-Wecker: Nachtblau bis Violett – bewusst nicht die Messingfarbe des Gehäuses. */
+private val NACHT_A = androidx.compose.ui.graphics.Color(0xFF2F5DA8)
+private val NACHT_B = androidx.compose.ui.graphics.Color(0xFF6A4BC4)
+private val NACHT_HELL_A = androidx.compose.ui.graphics.Color(0xFF8DB4FF)
+private val NACHT_HELL_B = androidx.compose.ui.graphics.Color(0xFFB69BFF)
 private fun lerpFarbe(a: androidx.compose.ui.graphics.Color, b: androidx.compose.ui.graphics.Color, t: Float) =
     androidx.compose.ui.graphics.lerp(a, b, t)
 
