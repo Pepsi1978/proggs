@@ -9,6 +9,9 @@
   "effortLevel": "high",
   "skipDangerousModePermissionPrompt": true,
   "claudeMdExcludes": [
+    "**/proggs/AGENTS.md",
+    "**/proggs/CLAUDE.local.md",
+    "**/proggs/CLAUDE.md",
     "**/.claude/rules/**"
   ],
   "theme": "dark",
