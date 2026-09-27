@@ -17,8 +17,8 @@
 | B1 | Symlink-Skill-Ordner wird nicht gefunden | echter Ordner mit Verweis-SKILL.md | §B1 |
 | B2 | Projekt-Skills fehlen im `/`-Menü der Remote-Sitzung | Skill beim Namen nennen; Auslöser per SessionStart-Hook einblenden | §B2 |
 | B3 | Push 403 / leeres „authorized repository set“ | Repo beim Start als Quelle wählen, neue Sitzung | §B3 |
-| B4 | Bot-Reviews (Codex) erreichen die Sitzung nicht | Kommentare aktiv per `gh api` abfragen | §B4 |
-| B5 | Merge per API vom Auto-Modus-Klassifizierer blockiert | melden, nicht umgehen | §B5 |
+| B4 | Bot-Reviews (Codex) erreichen die Sitzung nicht | Kommentare aktiv abfragen (Warte-Skript, curl oder GitHub-MCP) | §B4 |
+| B5 | Merge und danach das Bau-Warten vom Auto-Modus blockiert | melden, nicht umgehen; Modus „Änderungen akzeptieren“ | §B5 |
 | B6 | PR-Titel vom ältesten Commit / Stop-Hook meldet Phantom-„unpushed commits“ | Titel selbst setzen; `git fetch --prune` | §B6 |
 | B7 | Repo-Hooks ignoriert bei 2+ Repos | genau ein Repo pro Sitzung | §B7 |
 | B8 | Plugins aus Repo-Settings nie registriert | nicht auf Repo-Plugins bauen | §B8 |
@@ -28,6 +28,7 @@
 | B12 | Teleport bringt nur den ersten Turn | vorher pushen, lokal `git pull` | §B12 |
 | B13 | Remote Control 0 Events / Amnesie nach Daemon-Neustart | Zwischenstände committen | §B13 |
 | B14 | Browser/Playwright in der Cloud geht nicht | lokale Sitzung / Remote Control | §B14 |
+| B15 | `gh` fehlt: Warte-Skripte melden still `timeout`/`kein-lauf` | Skripte ab 27.09.2026 nutzen curl + jq; sonst GitHub-MCP | §B15 |
 
 ---
 
@@ -56,7 +57,7 @@
 - **Symptom:** Auto-Fix-/PR-Ereignisse kommen für Menschen-Kommentare und CI an, **nicht** für Bots (Codex-Reviewer,
   Copilot, Vercel).
 - **Ursache (vermutet):** zu breiter Anti-Schleifen-Filter nach Absender-Typ. **Status:** als Duplikat geschlossen (#52474), Feature-Wunsch #50555.
-- **Fix:** Nicht auf Ereignisse warten, sondern pollen:
+- **Fix:** Nicht auf Ereignisse warten, sondern pollen (ohne `gh` siehe §B15):
   `gh api repos/O/R/issues/N/comments` (Codex-Sammelkommentar „Codex Review Summary … Completed“),
   `gh api repos/O/R/pulls/N/comments` (Zeilen-Befunde P1/P2), `gh api repos/O/R/issues/N/reactions` (👍 = keine Befunde).
 - **Quelle:** https://github.com/anthropics/claude-code/issues/62977
@@ -64,6 +65,11 @@
 ## §B5 Merge per API vom Auto-Modus-Klassifizierer blockiert
 - **Symptom:** `PUT /pulls/N/merge` → `[Auto-Mode Bypass]`, später auch PR-Erstellung. Gemeldet mit 2.1.275 + internem Plugin.
 - **Status:** offen seit 23.09.2026. **Umgang:** Blockade nicht umgehen; Frank melden, dass der PR offen ist.
+- **Nachtrag 27.09.2026 (NewsKompass, PR #122):** Der Merge per GitHub-MCP (`merge_pull_request`) ging durch, aber der
+  nächste Befehl danach (`warte-auf-bau.sh`) wurde mit `[Merge Without Review]` abgelehnt. Der Klassifizierer sieht die
+  Freigabe in `cloud.md` nicht als Erlaubnis zum Selbst-Merge. **Gegenmittel:** Berechtigungsmodus der Sitzung auf
+  „Änderungen akzeptieren“ statt Auto-Modus (Frank hat das am 27.09.2026 umgestellt). Den Bau kann man trotz Sperre
+  ohne Umgehung lesen, sobald Frank ausdrücklich danach fragt; nie still als „blockiert“ stehen lassen.
 - **Quelle:** #96257
 
 ## §B6 PR-Titel vom ältesten Commit / Phantom-„unpushed commits“
@@ -103,6 +109,18 @@
 
 ## §B14 Kein Browser in der Cloud
 - Playwright/Puppeteer/Chromium scheitern (Proxy ohne CONNECT, CDN nicht erlaubt). „Not planned“ (#75632). → lokal/Remote Control.
+
+## §B15 `gh` fehlt in der Cloud-Sitzung: Warte-Skripte liefen still ins Leere
+- **Symptom:** `warte-auf-codex.sh` meldet nach 8 min `CODEX=timeout`, obwohl Codex nach 2 min fertig war;
+  `warte-auf-bau.sh` meldet sofort `BAU=kein-lauf (Commit )` und `gh: command not found`.
+- **Ursache:** Die Cloud-VM hat kein `gh` installiert (gesehen 27.09.2026, NewsKompass PR #122/#123). Die alten Skripte
+  fingen den Fehler mit `|| echo 0` ab und zählten ihn als „noch nichts da“ — kein Hinweis, keine Fehlermeldung.
+- **Vorhanden sind:** `curl`, `jq` und `GH_TOKEN`/`GITHUB_TOKEN`; `api.github.com` ist erreichbar.
+- **Fix (27.09.2026):** `apk-update-cloud/github-api.sh` nimmt `gh`, wenn da, sonst `curl` mit Token. Beide Warte-Skripte
+  prüfen den Zugang vorab und brechen sonst sofort mit `ZUGANG=fehlt (…)` ab, statt still zu warten. Dann die
+  GitHub-MCP-Werkzeuge nehmen: `pull_request_read` (`get_review_comments`, `get_comments`), `actions_list`
+  (`list_workflow_runs`, `android-cloud-build.yml`) und `actions_get` (`get_workflow_run`).
+- **Merke:** Ein Warte-Skript, das Fehler als „0“ zählt, sieht aus wie ein langsamer Dienst. Zugang immer zuerst prüfen.
 
 ## Weitere, schwächer belegte Einträge
 - SKILL.md im System-Prompt angekündigt, aber nicht gemountet (#26254, offen).
