@@ -637,7 +637,7 @@ class CodexClient(context: Context) {
                     "Codex ist gerade überlastet oder nicht erreichbar (Fehler $code). Kurz erneut versuchen.",
                     wiederholbar = true,
                 )
-                else -> throw CodexFehler(CodexFehlerArt.NETZ, "Codex-Fehler $code: $meldung")
+                else -> throw CodexFehler(CodexFehlerArt.NETZ, "Codex-Fehler $code: $meldung", abgelehnt = code in 400..499)
             }
         }
     }

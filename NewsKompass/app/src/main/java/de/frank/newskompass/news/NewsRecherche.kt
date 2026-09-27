@@ -130,7 +130,8 @@ class NewsRecherche(
             bloecke = bebildert,
         )
         speicher.speichere(ausgabe)
-        // Gespeichert ist gespeichert: Ein Abbruch in dieser letzten Meldung darf den Lauf nicht als gescheitert ausgeben.
+        // Ein Abbruch in dieser letzten Meldung soll nicht zusätzlich stören; wird der Auftrag genau jetzt gestoppt,
+        // bleiben die Termine vorgemerkt und der nächste Versuch läuft noch einmal.
         withContext(NonCancellable) { runCatching { beiFortschritt(LaufFortschritt("Fertig", 1f)) } }
         ausgabe
     }

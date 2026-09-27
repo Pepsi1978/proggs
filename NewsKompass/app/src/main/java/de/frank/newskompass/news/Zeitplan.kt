@@ -488,7 +488,8 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
             val (alle, termine) = app.einstellungen.offeneLaeufe() ?: break
             if (alle && System.currentTimeMillis() - alleErledigtUm < Zeitplan.SCHON_ERLEDIGT_MS) {
                 KompassLog.info("NewsWorker", "doWork", "Alle Themen liefen gerade erst — kein zweiter Lauf")
-                app.einstellungen.entferneOffeneLaeufe(alle, termine)
+                // Nur die Marke „alle“ löschen; vorgemerkte Termine gehen den normalen Weg durch den erledigt-Filter.
+                app.einstellungen.entferneOffeneLaeufe(true, emptyMap())
                 continue
             }
             val stand = app.einstellungen.stand.value
@@ -549,7 +550,7 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
             } catch (fehler: Exception) {
                 KompassLog.error("NewsWorker", "doWork", "Lauf gescheitert", mapOf("grund" to fehler.message, "versuch" to runAttemptCount))
                 // Kontingent, Anmeldung oder eine dauerhafte Ablehnung (etwa Fehler 400) bessern sich durch Warten nicht.
-                val endgueltig = (fehler is CodexFehler && (fehler.art != CodexFehlerArt.NETZ || !fehler.wiederholbar)) ||
+                val endgueltig = (fehler is CodexFehler && (fehler.art != CodexFehlerArt.NETZ || fehler.abgelehnt)) ||
                     fehler is IllegalStateException || runAttemptCount >= 2
                 if (!endgueltig) return Result.retry()
                 app.einstellungen.entferneOffeneLaeufe(alle, termine)

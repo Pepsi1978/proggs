@@ -18,6 +18,8 @@ class CodexFehler(
     ursache: Throwable? = null,
     /** true bei Störungen, die sich von allein erledigen (5xx, Zeitüberschreitung). */
     val wiederholbar: Boolean = false,
+    /** Der Dienst hat die Anfrage selbst abgelehnt (sonstiger Fehler 4xx) — Warten bessert das nicht. */
+    val abgelehnt: Boolean = false,
 ) : Exception(meldung, ursache)
 
 /** Was die Anmeldung dem Benutzer zeigt, während sie auf die Bestätigung wartet. */
