@@ -668,8 +668,8 @@ private fun Taste(round: Boolean, diameter: androidx.compose.ui.unit.Dp, icon: a
             (androidx.compose.animation.fadeIn(spec) togetherWith androidx.compose.animation.fadeOut(spec)).using(null)
         }, label = "tasteInhalt") { (shownIcon, shownLabel) ->
             if (round) Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Icon(shownIcon, contentDescription = null, tint = onColor, modifier = Modifier.size(diameter * 0.32f))
-                Text(shownLabel, color = onColor, fontSize = if (diameter < 110.dp) 15.sp else 19.sp,
+                Icon(shownIcon, contentDescription = null, tint = onColor, modifier = Modifier.size(diameter * 0.28f))
+                Text(shownLabel, color = onColor, fontSize = if (diameter < 110.dp) 13.sp else if (diameter < 150.dp) 15.sp else 16.sp,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, softWrap = false)
             } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(shownIcon, contentDescription = null, tint = onColor, modifier = Modifier.size(28.dp))
