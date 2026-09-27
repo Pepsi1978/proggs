@@ -1395,7 +1395,7 @@ private fun WeckerKarte(
                     if (alarm.needsSpeech) {
                         val status = when {
                             alarm.preparationError.isNotBlank() -> "Vorbereitung offen: ${alarm.preparationError}"
-                            alarm.preparedAt == 0L -> "Sprachausgabe noch nicht offline bereit"
+                            alarm.preparedAt == 0L -> "Ansage wird vorbereitet …"
                             else -> "Ansage fertig auf dem Handy · ${formatAt(alarm.preparedAt)}"
                         }
                         Text(status, style = MaterialTheme.typography.bodySmall,
@@ -1409,7 +1409,8 @@ private fun WeckerKarte(
                         StillerKnopf("Testwecken", { vm.test(alarm) })
                         // „Nächsten Termin auslassen“ gibt es nicht mehr; ein schon gesetztes Auslassen bleibt rücknehmbar.
                         if (alarm.enabled && alarm.repeats && skipped) StillerKnopf("Auslassen rückgängig", { vm.unskip(alarm) })
-                        if (alarm.needsSpeech) StillerKnopf("Audio vorbereiten", { vm.prepare(alarm) })
+                        // Die Ansage bereitet die App selbst vor; nur ein Fehler bekommt einen Knopf.
+                        if (alarm.needsSpeech && alarm.preparationError.isNotBlank()) StillerKnopf("Ansage erneut erzeugen", { vm.prepare(alarm) })
                         StillerKnopf("Duplizieren", { onEdit(alarm.copy(id = UUID.randomUUID().toString(), name = "${alarm.name} – Kopie", enabled = false, nextAt = 0, snoozeUntil = 0, snoozes = 0, skippedThrough = "")) })
                         StillerKnopf("Löschen", { onDelete(alarm) })
                     }

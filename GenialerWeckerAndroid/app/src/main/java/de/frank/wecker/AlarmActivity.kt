@@ -202,7 +202,8 @@ class AlarmActivity : ComponentActivity() {
             LaunchedEffect(feedback, state.ringId, state.alarm == null, pending) {
                 val done = feedback
                 if (done != null) {
-                    delay(350)
+                    // Die Bestätigung bleibt gut lesbar stehen und blendet dann weich aus (WeckBestaetigung).
+                    delay(BESTAETIGUNG_MS)
                     val now = AlarmService.state.value
                     if (now.alarm == null || now.ringId == done.ringId) finish()
                 } else if (state.alarm == null && seenAlarm && pending == null) finish()
@@ -313,6 +314,7 @@ class AlarmActivity : ComponentActivity() {
                             }
                         }
                     }
+                    WeckBestaetigung(shownFeedback)
                 }
             }
         }
@@ -705,4 +707,39 @@ private fun gruss(now: Long): String = when (java.time.Instant.ofEpochMilli(now)
     in 11..16 -> "Guten Tag"
     in 17..21 -> "Guten Abend"
     else -> "Zeit zum Aufstehen"
+}
+
+/** So lange steht die Bestätigung nach Schlummern/Ausschalten, bevor der Bildschirm schließt. */
+private const val BESTAETIGUNG_MS = 2000L
+
+/**
+ * Ruhige Bestätigung über dem ganzen Bildschirm: großes Häkchen, klarer Satz, ~1,5 s lesbar, dann weiches Ausblenden.
+ * Ersetzt das frühere kurze Aufploppen, das man nicht mitlesen konnte.
+ */
+@Composable
+private fun WeckBestaetigung(result: RingResult?) {
+    val done = result ?: return
+    val gold = LocalGold.current
+    val reduziert = LocalBewegungReduziert.current
+    val sicht = remember(done) { androidx.compose.animation.core.Animatable(if (reduziert) 1f else 0f) }
+    LaunchedEffect(done) {
+        if (!reduziert) sicht.animateTo(1f, tween(350))
+        delay(BESTAETIGUNG_MS - 350 - 450)
+        if (!reduziert) sicht.animateTo(0f, tween(450))
+    }
+    val schlummer = done.action == "SNOOZE"
+    val farbe = if (schlummer) Color(0xFFD64541) else Color(0xFF2E9D5B)
+    Box(Modifier.fillMaxSize().graphicsLayer { alpha = sicht.value }.background(gold.hintergrund.copy(alpha = .94f)),
+        contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.graphicsLayer { val s = .9f + .1f * sicht.value; scaleX = s; scaleY = s }) {
+            Box(Modifier.size(120.dp).background(farbe, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+                Icon(if (schlummer) Icons.Default.Bedtime else Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(64.dp))
+            }
+            Text(if (schlummer) "Schlummert bis ${formatClock(done.snoozeUntil)}" else "Wecker aus",
+                style = MaterialTheme.typography.headlineSmall, color = gold.textPrimaer,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text(if (schlummer) "Bis gleich." else "Einen schönen Tag!", style = MaterialTheme.typography.bodyLarge, color = gold.textGedaempft)
+        }
+    }
 }

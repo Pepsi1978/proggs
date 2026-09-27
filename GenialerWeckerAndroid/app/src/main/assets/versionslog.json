@@ -26,6 +26,7 @@
     { "versionCode": 22, "versionName": "1.0.21", "stand": "27.09.2026, 22:30 Uhr", "notiz": "Ruhigere Texte: Weckbildschirm ohne technische Zählanzeige, Wecker zeigen einfach, dass die Ansage fertig auf dem Handy liegt." },
     { "versionCode": 23, "versionName": "1.0.22", "stand": "27.09.2026, 22:31 Uhr", "notiz": "Beim Klingeln stehen unten nur noch die zwei Tasten, ohne Zusatzzeilen darunter." },
     { "versionCode": 24, "versionName": "1.0.23", "stand": "27.09.2026, 22:34 Uhr", "notiz": "Neu: stiller Hinweis eine Stunde vor dem Wecken mit Diesmal auslassen (abschaltbar unter Benachrichtigungen). Weckbildschirm: Zeit zum Aufstehen, Gruß nicht mehr unter der Kamera." },
-    { "versionCode": 25, "versionName": "1.0.24", "stand": "27.09.2026, 22:36 Uhr", "notiz": "Weck-Tasten: Schrift und Symbol etwas kleiner, damit sie mit Abstand im Kreis stehen." }
+    { "versionCode": 25, "versionName": "1.0.24", "stand": "27.09.2026, 22:36 Uhr", "notiz": "Weck-Tasten: Schrift und Symbol etwas kleiner, damit sie mit Abstand im Kreis stehen." },
+    { "versionCode": 26, "versionName": "1.0.25", "stand": "27.09.2026, 22:38 Uhr", "notiz": "Nach Ausschalten oder Schlummern erscheint eine ruhige, gut lesbare Bestätigung mit großem Symbol, die nach knapp zwei Sekunden weich ausblendet. Weckerkarten ohne Technik-Knopf." }
   ]
 }
