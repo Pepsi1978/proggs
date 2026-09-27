@@ -478,8 +478,8 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
             inputData.getStringArray(Zeitplan.THEMEN)?.let { app.einstellungen.merkeOffenenLauf(Zeitplan.auftragAus(it)) }
         }
         var ergebnis: Result = Result.success()
-        // Themen, die dieser Auftrag schon recherchiert hat, mit dem Beginn ihres Laufs.
-        val erledigt = mutableMapOf<String, Long>()
+        // Themen, die dieser Auftrag schon recherchiert hat, mit Beginn und Ende ihres Laufs.
+        val erledigt = mutableMapOf<String, Pair<Long, Long>>()
         // Ende des letzten Laufs über alle Themen — ein zweiter Tipp auf Aktualisieren währenddessen löst keinen weiteren aus.
         var alleErledigtUm = 0L
         // Solange Termine vorgemerkt sind, weiterarbeiten — auch die, die während des Laufs dazukamen.
@@ -498,7 +498,10 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
                 !stand.zeitplanAktiv -> emptyList()
                 else -> Zeitplan.themenFuer(
                     stand.themen,
-                    termine.filter { (id, um) -> erledigt[id]?.let { um - it > Zeitplan.SCHON_ERLEDIGT_MS } ?: true },
+                    // Abgedeckt ist ein Termin, der während des vorigen Laufs lag oder kurz vor dessen Beginn.
+                    termine.filter { (id, um) ->
+                        erledigt[id]?.let { (beginn, ende) -> um > ende && um - beginn > Zeitplan.SCHON_ERLEDIGT_MS } ?: true
+                    },
                 )
             }
             if (faellig.isEmpty() && !alle) {
@@ -519,19 +522,34 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
                         // Der Hinweis bleibt dann eben beim vorigen Text.
                     }
                 }
-                app.einstellungen.entferneOffeneLaeufe(alle, termine)
-                faellig.forEach { erledigt[it.id] = beginn }
-                if (alle) alleErledigtUm = System.currentTimeMillis()
-                Zeitplan.vergissFehlerHinweis(applicationContext)
-                val zeilen = ausgabe.bloecke.flatMap { b -> b.meldungen.take(2).map { "${b.titel}: ${it.titel}" } }
+                val ende = System.currentTimeMillis()
+                // Einzelne Themen können gescheitert sein (etwa Netz weg), während andere durchkamen.
+                val gescheitert = ausgabe.bloecke.filter { it.frage == null && !NewsRecherche.istGelaufen(it) }
+                val gescheiterteIds = gescheitert.map { it.themaId }.toSet()
+                // Automatische Termine gescheiterter Themen noch einmal versuchen — nicht nach Kontingent- oder Anmeldefehler.
+                val nochmal = !alle && gescheiterteIds.isNotEmpty() && runAttemptCount < 2 &&
+                    app.einstellungen.harterFehlerUm < beginn
+                app.einstellungen.entferneOffeneLaeufe(alle, if (nochmal) termine.filterKeys { it !in gescheiterteIds } else termine)
+                faellig.filter { it.id !in gescheiterteIds }.forEach { erledigt[it.id] = beginn to ende }
+                if (alle) alleErledigtUm = ende
+                if (gescheiterteIds.isEmpty()) {
+                    Zeitplan.vergissFehlerHinweis(applicationContext)
+                } else if (!alle && !nochmal) {
+                    // Endgültig: nicht bei jedem Öffnen der App erneut nachholen.
+                    app.einstellungen.merkeHartenFehler(ende)
+                }
+                val zeilen = gescheitert.map { "Nicht aktualisiert: ${it.titel}" } +
+                    ausgabe.bloecke.flatMap { b -> b.meldungen.take(2).map { "${b.titel}: ${it.titel}" } }
                 Zeitplan.meldeFertig(applicationContext, "Deine ${ausgabe.slot} ist da", zeilen, Zeitplan.hinweisNummer(ausgabe.id))
+                if (nochmal) return Result.retry()
                 ergebnis = Result.success()
             } catch (abbruch: CancellationException) {
                 // Android stoppt den Auftrag (etwa Netz weg) — die Termine bleiben für den nächsten Versuch vorgemerkt.
                 throw abbruch
             } catch (fehler: Exception) {
                 KompassLog.error("NewsWorker", "doWork", "Lauf gescheitert", mapOf("grund" to fehler.message, "versuch" to runAttemptCount))
-                val endgueltig = (fehler is CodexFehler && fehler.art != CodexFehlerArt.NETZ) ||
+                // Kontingent, Anmeldung oder eine dauerhafte Ablehnung (etwa Fehler 400) bessern sich durch Warten nicht.
+                val endgueltig = (fehler is CodexFehler && (fehler.art != CodexFehlerArt.NETZ || !fehler.wiederholbar)) ||
                     fehler is IllegalStateException || runAttemptCount >= 2
                 if (!endgueltig) return Result.retry()
                 app.einstellungen.entferneOffeneLaeufe(alle, termine)

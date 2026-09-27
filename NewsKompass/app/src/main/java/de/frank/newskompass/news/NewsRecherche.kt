@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -127,7 +128,8 @@ class NewsRecherche(
             bloecke = bebildert,
         )
         speicher.speichere(ausgabe)
-        beiFortschritt(LaufFortschritt("Fertig", 1f))
+        // Gespeichert ist gespeichert: Ein Abbruch in dieser letzten Meldung darf den Lauf nicht als gescheitert ausgeben.
+        withContext(NonCancellable) { runCatching { beiFortschritt(LaufFortschritt("Fertig", 1f)) } }
         ausgabe
     }
 
