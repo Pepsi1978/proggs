@@ -45,8 +45,14 @@ tippen müssen außer „Installieren“ in UpdateStation.
    `create_pull_request` mit `draft: false`). Titel und Text selbst setzen (sonst nimmt GitHub den ältesten Commit).
    Das startet automatisch das Codex-Review (Bot `chatgpt-codex-connector`). Nie erst als Entwurf
    öffnen und dann auf „bereit“ setzen: Das löst ein zweites, überflüssiges Review aus.
-5. **Codex-Review abwarten (höchstens etwa 8 Minuten):** Nicht mit `sleep` warten, sondern mit
-   `send_later` nach etwa 2 Minuten nachsehen, bei Bedarf noch zweimal im Abstand von 3 Minuten. Lesen
+5. **Codex-Review abwarten (höchstens 8 Minuten, aber keine Sekunde länger als nötig):** Direkt nach
+   dem Öffnen des PR das Warte-Skript starten, als Bash-Befehl mit dem **höchsten Zeitlimit
+   (600000 ms)**:
+   `bash OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update-cloud/warte-auf-codex.sh <N>`
+   Es fragt alle 15 Sekunden per REST nach und kehrt **sofort** zurück, sobald Codex fertig ist
+   (`CODEX=ok`, `CODEX=befunde (…)` oder nach 8 min `CODEX=timeout`). Keine festen Wartezeiten mit
+   `send_later`, kein nacktes `sleep`: sonst wartet die Sitzung Minuten, obwohl Codex längst fertig ist.
+   Fehlt das Skript (älterer Stand), dieselbe Schleife selbst ausführen. Befunde danach lesen
    mit `gh` (vorinstalliert, Zugang automatisch; bei GraphQL-403 REST nehmen):
    `gh api repos/Pepsi1978/proggs/issues/<N>/comments` (Codex-Sammelkommentar),
    `gh api repos/Pepsi1978/proggs/pulls/<N>/comments` (Zeilen-Befunde P1/P2),
@@ -67,13 +73,17 @@ tippen müssen außer „Installieren“ in UpdateStation.
    Blockiert der Auto-Modus den Merge (Bug #96257), nicht umgehen: Frank melden, dass der PR offen ist. Scheitert der Merge an einem
    Konflikt: `main` in den Branch mergen, Konflikt lösen, pushen, erneut mergen. Der Merge startet den
    Ablauf `.github/workflows/android-cloud-build.yml` (baut nur Merges von Pull Requests).
-7. **Bau abwarten:** Nicht mit `sleep` warten. Mit `send_later` eine Nachkontrolle in etwa
-   6 Minuten planen. Dann mit `actions_list` (`list_workflow_runs`, `android-cloud-build.yml`) den Lauf
-   zum Merge-Commit suchen:
-   - grün → Frank kurz melden: „<App> <Version> liegt in Google Drive, UpdateStation zeigt es bei der
+7. **Bau abwarten, fertig sofort erkennen:** Direkt nach dem Merge, wieder mit Zeitlimit 600000 ms:
+   `bash OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update-cloud/warte-auf-bau.sh <N>`
+   Das Skript sucht den Lauf von `android-cloud-build.yml` zum Merge-Commit, fragt alle 15 Sekunden
+   nach und kehrt **in dem Moment** zurück, in dem der Bau fertig ist. Keine feste Nachkontrolle nach
+   6 Minuten planen. Ersatzweise `gh run watch <run-id> --exit-status`.
+   - `BAU=gruen` → Frank kurz melden: „<App> <Version> liegt in Google Drive, UpdateStation zeigt es bei der
      nächsten Prüfung (oder ‚Jetzt prüfen‘).“
-   - läuft noch → noch einmal ein paar Minuten später prüfen.
-   - rot → Protokoll lesen (`get_job_logs`, `failed_only`), Ursache beheben und denselben Ablauf ab
+   - `BAU=laeuft` (nach 9,5 min noch nicht fertig) → Skript sofort noch einmal starten.
+   - `BAU=kein-lauf` → der Merge hat keine App-Dateien berührt oder der Auslöser greift nicht: prüfen,
+     ob die Änderung unter `<Projekt>/app/**` liegt, sonst Frank melden.
+   - `BAU=rot` → Protokoll lesen (`get_job_logs`, `failed_only`), Ursache beheben und denselben Ablauf ab
      Schritt 1 wiederholen (neuer Versionslog-Eintrag nur, wenn der vorige schon veröffentlicht war;
      bei „Versionslog-Eintrag fehlt“ genau diesen nachtragen). Erst aufgeben und Frank fragen, wenn
      die Ursache außerhalb der App liegt (z. B. Secret abgelaufen, Google-Drive-Zugang widerrufen).
