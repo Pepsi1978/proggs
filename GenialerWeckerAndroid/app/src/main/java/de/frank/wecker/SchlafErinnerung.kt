@@ -414,7 +414,7 @@ object SchlafErinnerung {
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val notification = NotificationCompat.Builder(context, CHANNEL).setSmallIcon(R.drawable.ic_wecker)
-            .setContentTitle("Zeit, dich auf den Schlaf vorzubereiten").setContentText(text)
+            .setContentTitle("Bald Schlafenszeit").setContentText(text).setColor(0xFF4A5BA8.toInt())
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setCategory(NotificationCompat.CATEGORY_REMINDER).setAutoCancel(true).setContentIntent(open)
             .setOnlyAlertOnce(true).setSilent(silent).build()

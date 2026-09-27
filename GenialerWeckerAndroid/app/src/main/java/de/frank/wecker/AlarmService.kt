@@ -287,10 +287,11 @@ class AlarmService : Service() {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setFullScreenIntent(open, true)
         }
         builder.setSmallIcon(R.drawable.ic_wecker)
-            .setContentTitle(alarm?.name ?: "Genialer Wecker").setContentText("Zum Wecker öffnen")
+            .setContentTitle(alarm?.name?.ifBlank { null } ?: "Dein Wecker klingelt").setContentText("${formatClock(System.currentTimeMillis())} · Tippe, um den Wecker zu öffnen")
+            .setColor(0xFFB8860B.toInt()).setShowWhen(false)
             .setOngoing(true).setContentIntent(open).setOnlyAlertOnce(true)
-        if (alarm != null && alarm.snoozeLimit > alarm.snoozes) builder.addAction(0, "Schlummern", action("SNOOZE", 2, alarm))
-        if (alarm != null && !alarm.photoRequired) builder.addAction(0, "Beenden", action("STOP", 3, alarm))
+        if (alarm != null && alarm.snoozeLimit > alarm.snoozes) builder.addAction(0, "Schlummern · ${alarm.snoozeMinutes} Min.", action("SNOOZE", 2, alarm))
+        if (alarm != null && !alarm.photoRequired) builder.addAction(0, "Wecker aus", action("STOP", 3, alarm))
         return builder.build()
     }
     /** The ring id is part of the intent identity (data URI), so an old notification can never be redirected to a newer ring. */

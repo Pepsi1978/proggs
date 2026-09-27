@@ -29,11 +29,12 @@ object SnoozeNotice {
         val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         manager.notify(alarm.id, NOTIFICATION, NotificationCompat.Builder(context, CHANNEL).setSmallIcon(R.drawable.ic_wecker)
-            .setContentTitle("${alarm.name} schlummert")
+            .setContentTitle("Schlummerpause · ${alarm.name.ifBlank { "Wecker" }}")
             .setContentText("Klingelt wieder um ${formatClock(alarm.snoozeUntil)}")
             .setWhen(alarm.snoozeUntil).setShowWhen(true).setUsesChronometer(true).setChronometerCountDown(true)
             .setOngoing(true).setSilent(true).setContentIntent(open)
-            .addAction(0, "Jetzt beenden", end).build())
+            .setColor(0xFFB8860B.toInt())
+            .addAction(0, "Ich bin schon wach", end).build())
     }
 
     fun cancel(context: Context, id: String) {
