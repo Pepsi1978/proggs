@@ -86,11 +86,15 @@ class MainActivity : ComponentActivity() {
             if (!app.codex.istVerbunden) return@launch
             val stand = app.einstellungen.stand.value
             if (!stand.zeitplanAktiv) return@launch
-            // Eine Ausgabe nur aus gesprochenen Fragen zählt nicht als Lauf aus dem Zeitplan.
-            val neueste = app.speicher.index.value.firstOrNull { it.regulaer }?.erstelltUm ?: 0L
-            // Alle Termine der letzten 24 Stunden seit der neuesten Ausgabe — jeder bringt seine Themen mit.
-            val versaeumt = Zeitplan.vergangeneTermine(Zeitplan.uhrzeiten(stand.themen))
-                .filter { it.zeit.toInstant().toEpochMilli() > neueste }
+            // Jüngster Lauf je Thema; gesprochene Fragen zählen nicht als Lauf aus dem Zeitplan.
+            val letzterLauf = mutableMapOf<String, Long>()
+            app.speicher.ausgabenSeit(System.currentTimeMillis() - 26 * 3_600_000L).forEach { ausgabe ->
+                ausgabe.bloecke.filter { it.frage == null }.forEach { block ->
+                    letzterLauf[block.themaId] = maxOf(letzterLauf[block.themaId] ?: 0L, ausgabe.erstelltUm)
+                }
+            }
+            // Jeder versäumte Termin der letzten 24 Stunden bringt seine Themen mit.
+            val versaeumt = Zeitplan.versaeumteTermine(stand.themen, letzterLauf)
             val letzter = versaeumt.lastOrNull()?.zeit?.toInstant()?.toEpochMilli() ?: return@launch
             // Scheiterte seit dem letzten Termin schon ein Lauf an Kontingent oder Anmeldung, nicht
             // bei jedem Öffnen erneut anstoßen — der nächste Termin oder ein Tipp auf Aktualisieren holt es nach.

@@ -91,9 +91,19 @@ object Zeitplan {
     fun naechsterTermin(uhrzeiten: List<Int>, jetzt: ZonedDateTime = ZonedDateTime.now()): Termin? =
         termineUm(uhrzeiten, jetzt).firstOrNull { it.zeit.isAfter(jetzt.plusSeconds(30)) }
 
-    /** Termine der letzten 24 Stunden, die schon vorbei sind — für das Nachholen beim App-Start. */
-    fun vergangeneTermine(uhrzeiten: List<Int>, jetzt: ZonedDateTime = ZonedDateTime.now()): List<Termin> =
-        termineUm(uhrzeiten, jetzt).filter { !it.zeit.isAfter(jetzt) && it.zeit.isAfter(jetzt.minusDays(1)) }
+    /**
+     * Termine der letzten 24 Stunden, bei denen mindestens ein Thema seither nicht gelaufen ist —
+     * für das Nachholen beim App-Start. [letzterLauf] ist je Themen-ID der Zeitpunkt seiner
+     * jüngsten Ausgabe. Jedes Thema zählt für sich: Ein späterer Lauf anderer Themen verdeckt
+     * keinen versäumten Termin.
+     */
+    fun versaeumteTermine(themen: List<Thema>, letzterLauf: Map<String, Long>, jetzt: ZonedDateTime = ZonedDateTime.now()): List<Termin> =
+        termineUm(uhrzeiten(themen), jetzt)
+            .filter { !it.zeit.isAfter(jetzt) && it.zeit.isAfter(jetzt.minusDays(1)) }
+            .filter { termin ->
+                val um = termin.zeit.toInstant().toEpochMilli()
+                themenFuer(themen, listOf(termin.minute)).any { (letzterLauf[it.id] ?: 0L) < um }
+            }
 
     fun plane(context: Context) {
         val app = context.applicationContext as NewsApplication
