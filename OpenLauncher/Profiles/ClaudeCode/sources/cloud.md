@@ -44,7 +44,7 @@ Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „
   Sitzung selbst mergt (Ausnahme: Änderungen an `.github/workflows/**` erst nach Franks OK).
 - **Kein PR bleibt liegen.** Das gilt für JEDE Änderung, nicht nur für Apps: Skills, Hooks, Regeln, Doku,
   Einstellungen. PR nie als Entwurf öffnen, Codex-Review abwarten (Skript `warte-auf-codex.sh` aus
-  `apk-update-cloud` Schritt 5: kehrt sofort zurück, sobald Codex fertig ist, höchstens 8 Minuten), dann selbst mergen (`gh pr merge <N> --merge`). Frank arbeitet nur mit `main`;
+  `apk-update-cloud` Schritt 5: kehrt sofort zurück, sobald Codex fertig ist, höchstens 8 Minuten), dann selbst mergen (GitHub-MCP `merge_pull_request`, `gh` fehlt in der Cloud oft). Frank arbeitet nur mit `main`;
   ein offener Branch gilt für ihn als nicht umgesetzt.
 - Geht der Merge nicht (Workflow-Ausnahme, Auto-Modus blockiert, Konflikt nicht lösbar), steht im Abschlussblock
   statt „PR gemergt: ja“ gut sichtbar: `⚠️ PR #<n> NICHT gemergt: <Grund>`.

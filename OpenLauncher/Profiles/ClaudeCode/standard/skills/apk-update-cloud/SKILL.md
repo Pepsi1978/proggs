@@ -41,8 +41,8 @@ tippen müssen außer „Installieren“ in UpdateStation.
    Push geht nur auf den eigenen `claude/…`-Branch, nie direkt auf `main`. Scheitert er mit 403
    („authorized repository set“ leer, Bug B3): nicht herumprobieren, Frank melden, dass die Sitzung mit
    dem Repo `proggs` als Quelle neu gestartet werden muss.
-4. **Pull Request öffnen, nicht als Entwurf** (`gh pr create --base main --title … --body …` oder
-   `create_pull_request` mit `draft: false`). Titel und Text selbst setzen (sonst nimmt GitHub den ältesten Commit).
+4. **Pull Request öffnen, nicht als Entwurf** (GitHub-MCP `create_pull_request` mit `draft: false`,
+   oder `gh pr create --base main --title … --body …`, falls `gh` da ist). Titel und Text selbst setzen (sonst nimmt GitHub den ältesten Commit).
    Das startet automatisch das Codex-Review (Bot `chatgpt-codex-connector`). Nie erst als Entwurf
    öffnen und dann auf „bereit“ setzen: Das löst ein zweites, überflüssiges Review aus.
 5. **Codex-Review abwarten (höchstens 8 Minuten, aber keine Sekunde länger als nötig):** Direkt nach
@@ -52,12 +52,13 @@ tippen müssen außer „Installieren“ in UpdateStation.
    Es fragt alle 15 Sekunden per REST nach und kehrt **sofort** zurück, sobald Codex fertig ist
    (`CODEX=ok`, `CODEX=befunde (…)` oder nach 8 min `CODEX=timeout`). Keine festen Wartezeiten mit
    `send_later`, kein nacktes `sleep`: sonst wartet die Sitzung Minuten, obwohl Codex längst fertig ist.
-   Fehlt das Skript (älterer Stand), dieselbe Schleife selbst ausführen. Befunde danach lesen
-   mit `gh` (vorinstalliert, Zugang automatisch; bei GraphQL-403 REST nehmen):
-   `gh api repos/Pepsi1978/proggs/issues/<N>/comments` (Codex-Sammelkommentar),
-   `gh api repos/Pepsi1978/proggs/pulls/<N>/comments` (Zeilen-Befunde P1/P2),
-   `gh api repos/Pepsi1978/proggs/issues/<N>/reactions` (👍 von `chatgpt-codex-connector[bot]`).
-   Ersatzweise die GitHub-Werkzeuge `pull_request_read`. **Nicht auf ein Ereignis warten:** Bot-Kommentare
+   **`gh` ist in Cloud-Sitzungen oft nicht installiert (Bug B15).** Die Skripte brauchen es nicht: Über
+   `github-api.sh` nehmen sie `gh`, wenn da, sonst `curl` + `jq` mit `GH_TOKEN`. Meldet ein Skript
+   `ZUGANG=fehlt (…)`, gibt es keinen API-Weg aus der Shell; dann die GitHub-MCP-Werkzeuge nehmen (unten).
+   Befunde danach lesen mit dem GitHub-MCP-Werkzeug `pull_request_read`: `get_review_comments`
+   (Zeilen-Befunde P1/P2) und `get_comments` (Codex-Sammelkommentar). Ohne MCP geht dasselbe per
+   `source …/github-api.sh; api repos/Pepsi1978/proggs/pulls/<N>/comments | jq …`
+   (ebenso `issues/<N>/comments` und `issues/<N>/reactions` für das 👍 von `chatgpt-codex-connector[bot]`). **Nicht auf ein Ereignis warten:** Bot-Kommentare
    werden Cloud-Sitzungen nicht zugestellt (Bug #62977), sie müssen aktiv abgefragt werden. Codex ist fertig, wenn
    sein Sammelkommentar „Codex Review Summary“ `Completed` zeigt oder er ein 👍 gesetzt hat.
    - **Keine Befunde** (👍, keine Zeilenkommentare) → weiter mit Schritt 6.
@@ -69,15 +70,18 @@ tippen müssen außer „Installieren“ in UpdateStation.
      „@codex review“): genau eine Runde, damit Zeit und Codex-Kontingent im Rahmen bleiben.
    - **Nach 8 Minuten kein Ergebnis** → ohne Review weiter mit Schritt 6 und das in der Abschlussmeldung
      erwähnen.
-6. **Selbst mergen** (`gh pr merge <N> --merge`, ersatzweise `merge_pull_request` mit `merge_method: merge`).
-   Blockiert der Auto-Modus den Merge (Bug #96257), nicht umgehen: Frank melden, dass der PR offen ist. Scheitert der Merge an einem
+6. **Selbst mergen** (GitHub-MCP `merge_pull_request` mit `merge_method: merge`, oder `gh pr merge <N> --merge`).
+   Blockiert der Auto-Modus den Merge oder danach das Bau-Warten (`[Merge Without Review]`, Bug B5 / #96257),
+   nicht umgehen: Frank melden und auf den Berechtigungsmodus „Änderungen akzeptieren“ hinweisen. Scheitert der Merge an einem
    Konflikt: `main` in den Branch mergen, Konflikt lösen, pushen, erneut mergen. Der Merge startet den
    Ablauf `.github/workflows/android-cloud-build.yml` (baut nur Merges von Pull Requests).
 7. **Bau abwarten, fertig sofort erkennen:** Direkt nach dem Merge, wieder mit Zeitlimit 600000 ms:
    `bash OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update-cloud/warte-auf-bau.sh <N>`
    Das Skript sucht den Lauf von `android-cloud-build.yml` zum Merge-Commit, fragt alle 15 Sekunden
    nach und kehrt **in dem Moment** zurück, in dem der Bau fertig ist. Keine feste Nachkontrolle nach
-   6 Minuten planen. Ersatzweise `gh run watch <run-id> --exit-status`.
+   6 Minuten planen. Meldet es `ZUGANG=fehlt`: GitHub-MCP `actions_list` (`list_workflow_runs`,
+   `resource_id: android-cloud-build.yml`) und `actions_get` (`get_workflow_run`) nehmen. Ein nacktes
+   `BAU=kein-lauf (Commit )` ohne Commit-Nummer heißt: der Zugang fehlte, nicht der Bau.
    - `BAU=gruen` → Frank kurz melden: „<App> <Version> liegt in Google Drive, UpdateStation zeigt es bei der
      nächsten Prüfung (oder ‚Jetzt prüfen‘).“
    - `BAU=laeuft` (nach 9,5 min noch nicht fertig) → Skript sofort noch einmal starten.
@@ -98,6 +102,9 @@ tippen müssen außer „Installieren“ in UpdateStation.
    ```
 
 ## Bekannte Cloud-Fallen (Stand 27.09.2026)
+
+- **Kein `gh` in der Cloud-VM** (Bug B15): Die alten Skripte meldeten dann still `CODEX=timeout` und
+  `BAU=kein-lauf`. Seit 27.09.2026 laufen sie über `github-api.sh` mit curl + jq und prüfen den Zugang vorab.
 
 - **Genau ein Repo pro Sitzung** (`proggs`). Bei zwei Repos lädt die Cloud weder Hooks noch Permissions.
 - Meldet ein Stop-Hook nach dem Merge noch „unpushed commits“: `git fetch --prune`, notfalls
