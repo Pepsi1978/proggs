@@ -54,6 +54,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.animation.togetherWith
@@ -413,7 +414,7 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
             val form = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp)
             Column(Modifier.fillMaxWidth().clip(form).background(gold.flaecheErhoeht).padding(vertical = 30.dp, horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("GUTEN MORGEN", color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
+                Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
                 // Genau der Stil, mit dem gemessen wurde — dadurch passt die Uhrzeit nachweislich.
                 Text(formatClock(now), maxLines = 1, softWrap = false,
                     style = uhrStil(contentWidth - 40.dp, 88f, zahlSchrift(),
@@ -426,7 +427,7 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
         de.frank.wecker.design.Design.MORGENRUHE -> {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("GUTEN MORGEN", color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
+                Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
                 Text(formatClock(now), maxLines = 1, softWrap = false,
                     style = uhrStil(contentWidth, 76f, zahlSchrift(),
                         androidx.compose.ui.text.font.FontWeight.Light, gold.primaer))
@@ -450,16 +451,26 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
             }
         }
         else -> {
-            Text("GUTEN MORGEN", color = gold.primaer, letterSpacing = 3.sp)
+            Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp)
             // Raw size first: below 140 dp the ring is left out instead of being clamped up.
-            val factor = if (alarm?.photoRequired == true) 0.30f else 0.45f
+            val factor = if (alarm?.photoRequired == true) 0.30f else 0.42f
             val raw = minOf(contentWidth * 0.8f, contentHeight * factor)
             val ring = if (raw < 140.dp) null else raw.coerceAtMost(300.dp)
-            val clockSize = ring?.let { (it.value * 0.24f).coerceIn(44f, 76f) } ?: 56f
+            // Der 3D-Wecker klingelt sichtbar: kurze Wackelstöße, dann Ruhe – bei reduzierter Bewegung steht er still.
+            val wackelt = alarm != null && !verlaesst && !LocalBewegungReduziert.current
+            val wackeln = if (!wackelt) 0f else androidx.compose.animation.core.rememberInfiniteTransition(label = "klingeln").animateFloat(0f, 0f,
+                androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.keyframes {
+                    durationMillis = 1600
+                    0f at 0; 5f at 60; -5f at 120; 5f at 180; -5f at 240; 4f at 300; -4f at 360; 2f at 420; 0f at 480; 0f at 1600
+                }), label = "wackeln").value
             if (ring != null) Box(Modifier.size(ring), contentAlignment = Alignment.Center) {
                 WeckPuls(ringing = alarm != null, leaving = verlaesst, modifier = Modifier.matchParentSize())
-                Text(formatClock(now), fontFamily = zahlSchrift(), fontSize = clockSize.sp, color = gold.primaer)
-            } else Text(formatClock(now), fontFamily = zahlSchrift(), fontSize = clockSize.sp, color = gold.primaer)
+                Wecker3DFigur(now, ring * 0.66f, Modifier.graphicsLayer {
+                    rotationZ = wackeln
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.85f)
+                })
+            }
+            Text(formatClock(now), maxLines = 1, softWrap = false, style = uhrStil(contentWidth, 72f, zahlSchrift(), null, gold.primaer))
             Text(name, style = MaterialTheme.typography.headlineMedium,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
@@ -694,4 +705,12 @@ private fun Taste(round: Boolean, diameter: androidx.compose.ui.unit.Dp, icon: a
         if (info.isNotBlank()) Text(info, color = infoColor, style = if (round) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
+}
+
+/** Gruß passend zur Tageszeit – ein Test um 22 Uhr sagt nicht „Guten Morgen“. */
+private fun gruss(now: Long): String = when (java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).hour) {
+    in 4..10 -> "Guten Morgen"
+    in 11..16 -> "Guten Tag"
+    in 17..21 -> "Guten Abend"
+    else -> "Zeit aufzuwachen"
 }

@@ -17,6 +17,7 @@
     { "versionCode": 13, "versionName": "1.0.12", "stand": "27.09.2026, 22:11 Uhr", "notiz": "Morgenruhe und Orbit mit plastischem Kopfbereich (Tiefe, Glanz, Metallkante); ohne Wecker begrüßt dich ein schwebender 3D-Wecker mit der aktuellen Uhrzeit." },
     { "versionCode": 14, "versionName": "1.0.13", "stand": "27.09.2026, 22:13 Uhr", "notiz": "Schlicht: Die Schlafzeit bis zum Wecken leuchtet im 3D-Wecker jetzt als breiter Bogen von Bernstein nach Orangerot – klar vom Gehäuse abgehoben." },
     { "versionCode": 15, "versionName": "1.0.14", "stand": "27.09.2026, 22:18 Uhr", "notiz": "Behoben: Im Design Orbit konnte die App durch den Zeichenregen gelegentlich abstürzen." },
-    { "versionCode": 16, "versionName": "1.0.15", "stand": "27.09.2026, 22:19 Uhr", "notiz": "Schlicht: Die Schlafzeit im 3D-Wecker ist jetzt ein feiner nachtblauer Bogen mit Abstand zum Gehäuserand statt eines dicken orangen Rings." }
+    { "versionCode": 16, "versionName": "1.0.15", "stand": "27.09.2026, 22:19 Uhr", "notiz": "Schlicht: Die Schlafzeit im 3D-Wecker ist jetzt ein feiner nachtblauer Bogen mit Abstand zum Gehäuserand statt eines dicken orangen Rings." },
+    { "versionCode": 17, "versionName": "1.0.16", "stand": "27.09.2026, 22:22 Uhr", "notiz": "Weckbildschirm Schlicht: ein wackelnder 3D-Wecker beim Klingeln, große Uhrzeit darunter; der Gruß passt jetzt zur Tageszeit. Die App startet schneller." }
   ]
 }

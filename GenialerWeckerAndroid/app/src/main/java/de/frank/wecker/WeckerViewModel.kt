@@ -93,7 +93,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             store.prefs.edit().putBoolean("premium_migration1", true).apply()
         }
         scheduler.restore()
-        ladeLokaleStimmen()
+        // Gerätestimmen werden nicht mehr beim Start abgefragt (spart das Binden der TTS-Engine); die Vorbereitung fragt sie selbst.
         viewModelScope.launch(Dispatchers.IO) { Tones.names.keys.forEach { Tones.file(store.files, it) } }
         PreparationWorker.enqueue(app)
     }

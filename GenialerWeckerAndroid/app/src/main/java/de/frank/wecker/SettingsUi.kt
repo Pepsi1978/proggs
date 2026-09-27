@@ -56,7 +56,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
     // Zurück aus den Android-Einstellungen (Sprachdaten geladen): Stimmen neu prüfen.
     val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lebenszyklus) {
-        val beobachter = androidx.lifecycle.LifecycleEventObserver { _, event -> if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) vm.ladeLokaleStimmen() }
+        val beobachter = androidx.lifecycle.LifecycleEventObserver { _, event -> }
         lebenszyklus.addObserver(beobachter)
         onDispose { lebenszyklus.removeObserver(beobachter) }
     }
