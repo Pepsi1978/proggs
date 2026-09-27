@@ -7,6 +7,7 @@ import de.frank.newskompass.data.AusgabenSpeicher
 import de.frank.newskompass.data.EinstellungenStore
 import de.frank.newskompass.news.NewsRecherche
 import de.frank.newskompass.news.SprachFrage
+import de.frank.newskompass.news.ThemenDiktat
 import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.observability.KompassLog
 import de.frank.newskompass.tts.VorleseManager
@@ -37,6 +38,7 @@ class NewsApplication : Application() {
     val recherche by lazy { NewsRecherche(codex, einstellungen, speicher) }
     val vorleser by lazy { VorleseManager(this, einstellungen) }
     val sprachFrage by lazy { SprachFrage(this) }
+    val themenDiktat by lazy { ThemenDiktat(this) }
     val ueberschriften by lazy { ThemenUeberschriften(this, codex, einstellungen, bereich) }
 
     override fun onCreate() {

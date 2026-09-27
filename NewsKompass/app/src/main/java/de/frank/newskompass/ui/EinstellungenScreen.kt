@@ -4,6 +4,21 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.runtime.DisposableEffect
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import de.frank.newskompass.news.DiktatZustand
+import de.frank.newskompass.news.SprachStufe
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.widget.Toast
@@ -187,6 +202,27 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
     val sortiert = remember(reihenfolge, nachSchluessel) { reihenfolge.mapNotNull(nachSchluessel::get) }
     var neuesThema by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { app.ueberschriften.pruefe() }
+    val kontext = LocalContext.current
+    val diktat by app.themenDiktat.zustand.collectAsStateWithLifecycle()
+    val mikrofonErlaubnis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erteilt ->
+        app.themenDiktat.erlaubnisErhalten(erteilt)
+    }
+    // Im Hintergrund schaltet Android das Mikrofon stumm — eine offene Aufnahme wird verworfen.
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lebenszyklus) {
+        val beobachter = LifecycleEventObserver { _, ereignis ->
+            if (ereignis == Lifecycle.Event.ON_STOP) app.themenDiktat.brichAufnahmeAb()
+        }
+        lebenszyklus.addObserver(beobachter)
+        onDispose {
+            lebenszyklus.removeObserver(beobachter)
+            app.themenDiktat.brichAufnahmeAb()
+        }
+    }
+    val tippeMikrofon = { themaId: String ->
+        val erlaubt = ContextCompat.checkSelfPermission(kontext, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        app.themenDiktat.tippe(themaId, erlaubt) { mikrofonErlaubnis.launch(Manifest.permission.RECORD_AUDIO) }
+    }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Row(
@@ -226,6 +262,8 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                     "Deine Themen",
                     "Ein Stichwort, eine Frage oder ein ganzer Satz — jedes Feld wird ein eigener Nachrichtenblock. " +
                         "Die KI gibt jedem Thema eine kurze Überschrift; tippe darauf, um Text und Einstellungen aufzuklappen. " +
+                        "Mit dem Mikrofon sprichst du ein Thema ein, der Zauberstab lässt die KI den Text sauber formulieren, " +
+                        "und „Zurück“ holt den vorherigen Text wieder. " +
                         "Halte den Griff gedrückt und schieb die Themen in die gewünschte Reihenfolge.",
                 )
             }
@@ -240,6 +278,9 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                         griff = reorderHandle(zustand, schluessel(thema)),
                         fokussieren = neuesThema == thema.id,
                         loeschbar = sortiert.size > 1,
+                        app = app,
+                        diktat = diktat,
+                        tippeMikrofon = { tippeMikrofon(thema.id) },
                         aendere = { text ->
                             app.einstellungen.setzeThemen(app.einstellungen.stand.value.themen.map { if (it.id == thema.id) it.copy(text = text) else it })
                         },
@@ -336,6 +377,9 @@ private fun ThemenKarte(
     griff: Modifier,
     fokussieren: Boolean,
     loeschbar: Boolean,
+    app: NewsApplication,
+    diktat: DiktatZustand,
+    tippeMikrofon: () -> Unit,
     aendere: (String) -> Unit,
     aendereBereich: (Int, Int) -> Unit,
     zeitplanAktiv: Boolean,
@@ -344,6 +388,54 @@ private fun ThemenKarte(
 ) {
     var text by remember(thema.id) { mutableStateOf(thema.text) }
     var bereichOffen by remember(thema.id) { mutableStateOf(false) }
+    // Wie in Perfect Moment: „Zurück“ holt den Text vor dem letzten Einsprechen oder der KI-Fassung zurück;
+    // jeder KI-Druck arbeitet vom eigenen Original aus und liefert eine neue Formulierung.
+    var rueckgaengig by remember(thema.id) { mutableStateOf<String?>(null) }
+    var kiOriginal by remember(thema.id) { mutableStateOf<String?>(null) }
+    var kiFassungen by remember(thema.id) { mutableStateOf(emptyList<String>()) }
+    var verbessert by remember(thema.id) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val fertig = diktat.fertig
+    LaunchedEffect(fertig) {
+        if (fertig != null && fertig.themaId == thema.id) {
+            rueckgaengig = fertig.vorher.takeIf { it.isNotBlank() && it != fertig.text }
+            kiOriginal = null
+            kiFassungen = emptyList()
+            text = fertig.text
+            app.themenDiktat.quittiere(fertig)
+        }
+    }
+    val verbessere = {
+        val quelle = kiOriginal ?: text
+        if (quelle.isBlank()) {
+            app.themenDiktat.melde(thema.id, "Sprich oder schreibe zuerst dein Thema.")
+        } else if (!app.codex.istVerbunden) {
+            app.themenDiktat.melde(thema.id, "Bitte zuerst unten bei Codex anmelden.")
+        } else if (!verbessert) {
+            verbessert = true
+            app.themenDiktat.loescheMeldung()
+            scope.launch {
+                try {
+                    val neu = app.themenDiktat.verbessere(quelle, kiFassungen)
+                    if (neu.isBlank()) {
+                        app.themenDiktat.melde(thema.id, "Die KI hat keine Fassung geliefert.")
+                    } else {
+                        rueckgaengig = quelle
+                        kiOriginal = quelle
+                        kiFassungen = kiFassungen + neu
+                        text = neu
+                        aendere(neu)
+                    }
+                } catch (abbruch: CancellationException) {
+                    throw abbruch
+                } catch (fehler: Exception) {
+                    app.themenDiktat.melde(thema.id, fehler.message ?: "Der Text konnte nicht verbessert werden.")
+                } finally {
+                    verbessert = false
+                }
+            }
+        }
+    }
     // Zugeklappt zeigt die Karte nur die kurze Überschrift; neue und leere Themen stehen gleich offen.
     var offen by rememberSaveable(thema.id) { mutableStateOf(fokussieren || thema.text.isBlank()) }
     val drehung by animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
@@ -406,6 +498,10 @@ private fun ThemenKarte(
                         value = text,
                         onValueChange = {
                             text = it
+                            // Selbst getippt ist ein neuer Ausgangspunkt: Zurück und alte KI-Fassungen gelten nicht mehr.
+                            rueckgaengig = null
+                            kiOriginal = null
+                            kiFassungen = emptyList()
                             aendere(it)
                         },
                         placeholder = { Text("Worüber willst du informiert werden? Zum Beispiel: Fußball-Bundesliga, oder: Was gibt es Neues in der Raumfahrt?") },
@@ -423,6 +519,71 @@ private fun ThemenKarte(
                             Icon(Icons.Rounded.DeleteOutline, "Thema löschen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
+                }
+                val hierAktiv = diktat.themaId == thema.id
+                val nimmtAuf = hierAktiv && diktat.stufe == SprachStufe.NIMMT_AUF
+                val versteht = hierAktiv && diktat.stufe == SprachStufe.VERSTEHT
+                val mikrofonFrei = diktat.stufe == SprachStufe.BEREIT || hierAktiv
+                Row(
+                    Modifier.padding(start = 84.dp, end = 12.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilledTonalIconButton(
+                        onClick = tippeMikrofon,
+                        enabled = mikrofonFrei && !versteht,
+                        colors = if (nimmtAuf) {
+                            IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError,
+                            )
+                        } else {
+                            IconButtonDefaults.filledTonalIconButtonColors()
+                        },
+                    ) {
+                        when {
+                            versteht -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            nimmtAuf -> Icon(Icons.Rounded.Stop, "Aufnahme beenden und übernehmen")
+                            else -> Icon(Icons.Rounded.Mic, "Thema einsprechen")
+                        }
+                    }
+                    FilledTonalIconButton(onClick = verbessere, enabled = !verbessert && !nimmtAuf && !versteht) {
+                        if (verbessert) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Rounded.AutoFixHigh, "Text mit KI verbessern")
+                        }
+                    }
+                    val alt = rueckgaengig
+                    if (alt != null) {
+                        FilledTonalIconButton(
+                            onClick = {
+                                text = alt
+                                rueckgaengig = null
+                                aendere(alt)
+                            },
+                            enabled = !verbessert && !nimmtAuf && !versteht,
+                        ) {
+                            Icon(Icons.AutoMirrored.Rounded.Undo, "Vorherigen Text wiederherstellen")
+                        }
+                    }
+                    Text(
+                        when {
+                            nimmtAuf -> "Ich höre zu … tippen zum Übernehmen"
+                            versteht -> "Ich verstehe …"
+                            verbessert -> "KI formuliert …"
+                            diktat.meldungFuer == thema.id -> diktat.meldung
+                            text.isBlank() -> "Tippe aufs Mikrofon und sprich dein Thema"
+                            else -> ""
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (diktat.meldungFuer == thema.id && !nimmtAuf && !versteht && !verbessert) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
                 AssistChip(
                     onClick = { bereichOffen = true },
