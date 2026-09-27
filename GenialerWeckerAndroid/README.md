@@ -5,7 +5,7 @@ Eigenständige Wecker-App für Google Play. Sie läuft parallel zur privaten App
 
 - Wecken komplett offline: Weckton, eigene Musik, vorgelesener Text, Foto-Aufgabe, Schlummern.
 - Vorlesen ausschließlich mit einer auf dem Gerät installierten Android-Stimme (keine Cloud-Stimmen,
-  keine INTERNET-Berechtigung). Die Ansage wird vor dem Wecken als Datei vorbereitet; fehlt eine
+  kein Netzzugriff im Sprachpfad; INTERNET nutzt nur Google Play Billing für Kauf und Wiederherstellung). Die Ansage wird vor dem Wecken als Datei vorbereitet; fehlt eine
   deutsche Offline-Stimme, zeigt die App das an und bietet den Download der Sprachdaten an.
 - Vier Designs: Schlicht, Morgenruhe, Traumraum, Orbit.
 

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+: nur der Beginn der Testphase wird gesichert und übertragen. Wecker, Texte, Musik,
+     Fotos und Einstellungen bleiben auf dem Gerät (ein include schließt alles andere aus). -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="freischaltung_test.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="freischaltung_test.xml" />
+    </device-transfer>
+</data-extraction-rules>

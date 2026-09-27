@@ -41,6 +41,18 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     private val preparationProgress = mutableMapOf<String, String>()
     val message = MutableStateFlow("")
     val settingsRevision = MutableStateFlow(0)
+    /** Testphase vorbei und nicht gekauft: Hinweis mit Freischaltung zeigen. */
+    val freischaltungNoetig = MutableStateFlow(false)
+    /**
+     * Einzige Sperre der Testphase: Anlegen, Bearbeiten, Duplizieren und Einschalten. Klingeln, Schlummern,
+     * Stopp, Ausschalten, Löschen, Auslassen und die Vorbereitung bestehender Wecker bleiben immer frei.
+     */
+    fun darfBearbeiten(): Boolean {
+        Freischaltung.pruefeTest()
+        if (Freischaltung.zustand.value.darfBearbeiten) return true
+        freischaltungNoetig.value = true
+        return false
+    }
     /** Installierte deutsche Offline-Stimmen; null = noch nicht geprüft, leer = keine vorhanden. */
     val lokaleStimmen = MutableStateFlow<List<LokaleStimmeInfo>?>(null)
     val stimmenFehler = MutableStateFlow("")
@@ -63,7 +75,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch(Dispatchers.IO) { Tones.names.keys.forEach { Tones.file(store.files, it) } }
         PreparationWorker.enqueue(app)
     }
-    fun newAlarm() = edit(Alarm(id = UUID.randomUUID().toString()))
+    fun newAlarm() { if (darfBearbeiten()) edit(Alarm(id = UUID.randomUUID().toString())) }
     fun edit(alarm: Alarm) {
         stopPreview()
         editorGeneration++
@@ -112,6 +124,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun save(notificationsDenied: Boolean = false, done: () -> Unit) {
         val source = _draft.value ?: return
+        if (!darfBearbeiten()) return
         val alarm = source.copy(enabled = true)
         val create = draftIsNew
         runAction("Wecker speichern …") {
@@ -140,7 +153,12 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     /** Clears only the event of this generation; an older confirmation ending never removes a newer one. */
     fun consumeSaved(generation: Long) { if (lastSaved.value?.generation == generation) lastSaved.value = null }
-    fun toggle(alarm: Alarm, enabled: Boolean) = runAction("Weckzeit ändern …", silent = true) {
+    fun toggle(alarm: Alarm, enabled: Boolean) {
+        // Ausschalten ist immer erlaubt; nur das Einschalten fällt unter die Testphase.
+        if (enabled && !darfBearbeiten()) return
+        toggleNow(alarm, enabled)
+    }
+    private fun toggleNow(alarm: Alarm, enabled: Boolean) = runAction("Weckzeit ändern …", silent = true) {
         val planned = withContext(Dispatchers.IO) { scheduler.setEnabled(alarm.id, enabled) }
         // Success stays silent: the next-alarm card already shows date, time and remaining time.
         if (!planned) message.value = "${alarm.name}: ${store.issues.value[alarm.id] ?: "Die Weckzeit konnte nicht geplant werden."}"

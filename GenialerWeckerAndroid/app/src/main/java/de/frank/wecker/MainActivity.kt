@@ -47,6 +47,8 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // Returning from system notification settings or after a long pause: replan the sleep reminders.
         SchlafErinnerung.syncAll(this)
+        // Testphase und Kauf bei jeder Rückkehr prüfen (Kaufwiederherstellung, abgeschlossene Zahlungen).
+        Freischaltung.aktualisieren(this)
         if (AlarmService.state.value.alarm != null) startActivity(Intent(this, AlarmActivity::class.java))
     }
     // Drehen und Auf-/Zuklappen erzeugen keinen Neustart mehr; die Ausrichtung wird hier neu bewertet

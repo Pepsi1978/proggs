@@ -140,7 +140,8 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
     var settingsFrom by rememberSaveable { mutableStateOf("alarms") }
     var pendingOpen by remember { mutableStateOf<(() -> Unit)?>(null) }
     /** Opening another draft while unsaved changes exist asks first instead of overwriting them. */
-    fun openDraft(open: () -> Unit) { if (draft != null && vm.draftChanged()) pendingOpen = open else { open(); page = "edit" } }
+    // Neu, Bearbeiten und Duplizieren laufen alle hier durch; nach der Testphase erscheint stattdessen die Freischaltung.
+    fun openDraft(open: () -> Unit) { if (!vm.darfBearbeiten()) return; if (draft != null && vm.draftChanged()) pendingOpen = open else { open(); page = "edit" } }
     fun back() {
         vm.stopPreview()
         if (page == "edit" && draft != null && vm.draftChanged()) leaveEditor = true
@@ -304,7 +305,9 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
             bestaetigung = { GoldKnopf("Entwurf fortsetzen", { pendingOpen = null; page = "edit" }) },
             abbruch = { StillerKnopf("Verwerfen", { pendingOpen = null; vm.closeEditor(); open(); page = "edit" }) },
         ) }
-        delete?.let { alarm -> Confirm("Wecker löschen?", "„${alarm.name}“ wird entfernt.", "Wecker löschen", {
+        val freischaltungNoetig by vm.freischaltungNoetig.collectAsStateWithLifecycle()
+    if (freischaltungNoetig) FreischaltungsDialog(activity) { vm.freischaltungNoetig.value = false }
+    delete?.let { alarm -> Confirm("Wecker löschen?", "„${alarm.name}“ wird entfernt.", "Wecker löschen", {
             vm.delete(alarm); delete = null
         }, { delete = null }) }
     }

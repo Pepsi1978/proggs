@@ -22,7 +22,7 @@
         <intent><action android:name="android.speech.RecognitionService" /></intent>
     </queries>
     <application android:name="de.frank.wecker.WeckerApplication"
-        android:allowBackup="false" android:dataExtractionRules="@xml/no_backup" android:fullBackupContent="false" android:label="Genialer Wecker"
+        android:allowBackup="true" android:dataExtractionRules="@xml/datensicherung" android:fullBackupContent="@xml/datensicherung_alt" android:label="Genialer Wecker"
         android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.Wecker" android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true">

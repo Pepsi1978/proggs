@@ -1,6 +1,6 @@
 [versions]
 agp = "8.7.3"
-kotlin = "2.1.0"
+kotlin = "2.2.20"
 ksp = "2.1.0-1.0.29"
 composeBom = "2025.01.01"
 coreKtx = "1.15.0"
@@ -17,6 +17,7 @@ junit = "4.13.2"
 playServicesAuth = "21.6.0"
 media = "1.7.0"
 graphicsShapes = "1.0.1"
+playBilling = "9.1.0"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -47,6 +48,8 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 media = { group = "androidx.media", name = "media", version.ref = "media" }
 graphics-shapes = { group = "androidx.graphics", name = "graphics-shapes", version.ref = "graphicsShapes" }
+
+play-billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "playBilling" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

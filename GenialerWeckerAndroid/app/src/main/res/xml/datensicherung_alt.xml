@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 8 bis 11: dieselbe Regel wie datensicherung.xml, nur der Beginn der Testphase. -->
+<full-backup-content>
+    <include domain="sharedpref" path="freischaltung_test.xml" />
+</full-backup-content>

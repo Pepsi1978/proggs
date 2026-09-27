@@ -105,6 +105,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             Text("Erlaube Wecker in allen verwendeten Nicht-stören-Modi und Routinen. Nach „Stopp erzwingen“ die App einmal öffnen. Ein ausgeschaltetes Telefon kann nicht wecken.", style = MaterialTheme.typography.bodySmall)
         }
         }
+        FreischaltungsKarte(activity)
         BenachrichtigungenKarte(vm, activity)
         var ausrichtung by remember(revision) { mutableStateOf(settings.ausrichtung) }
         var design by remember(revision) { mutableStateOf(settings.design) }
