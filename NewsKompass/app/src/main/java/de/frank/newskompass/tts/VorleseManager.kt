@@ -184,6 +184,10 @@ class VorleseManager(
             offen.clear()
         }
 
+        // Scheitern gleich die ersten Absätze (etwa ohne Netz), nicht minutenlang still weiterprobieren.
+        var schonGespielt = false
+        var fehlschlaegeInFolge = 0
+
         // Vorausschau: den ersten plus die nächsten beiden Absätze anstoßen.
         repeat(minOf(VORAUSSCHAU + 1, absaetze.size)) { beauftrage(it) }
 
@@ -201,6 +205,11 @@ class VorleseManager(
                 if (fehler.sitzungsweit) {
                     // Betrifft jeden weiteren Absatz — anhalten und den echten Grund zeigen,
                     // statt den ganzen Text still zu überspringen.
+                    brichOffeneAb()
+                    throw fehler
+                }
+                fehlschlaegeInFolge += 1
+                if (!schonGespielt && fehlschlaegeInFolge >= 2) {
                     brichOffeneAb()
                     throw fehler
                 }
@@ -222,6 +231,8 @@ class VorleseManager(
             if (ergebnis == null) continue
 
             _zustand.value = VorleseZustand(VorleseStufe.SPRICHT, quelleId, index + 1, absaetze.size)
+            schonGespielt = true
+            fehlschlaegeInFolge = 0
             abspieler.spieleUndWarte(ergebnis.audio, ergebnis.endung, tempoBeimAbspielen)
 
             // Hörbarer Atem zwischen zwei Absätzen — beim letzten entfällt er.

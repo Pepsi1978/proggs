@@ -421,8 +421,9 @@ class ZeitplanEmpfaenger : BroadcastReceiver() {
             emptyMap()
         }
         KompassLog.info("Zeitplan", "onReceive", "Wecker ausgelöst", mapOf("themen" to auftrag?.size, "verspaetet" to verspaetet.size))
-        Zeitplan.starteLauf(context, manuell = false, auftrag = auftrag?.let { it + verspaetet })
+        // Erst den nächsten Wecker stellen: Scheitert das Einreihen, klingelt der nächste Termin trotzdem.
         Zeitplan.plane(context)
+        Zeitplan.starteLauf(context, manuell = false, auftrag = auftrag?.let { it + verspaetet })
     }
 }
 
@@ -499,9 +500,10 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
                 !stand.zeitplanAktiv -> emptyList()
                 else -> Zeitplan.themenFuer(
                     stand.themen,
-                    // Abgedeckt ist ein Termin, der während des vorigen Laufs lag oder kurz vor dessen Beginn.
+                    // Abgedeckt ist ein Termin, der höchstens 15 Minuten nach dem Beginn des vorigen Laufs lag — dieselbe
+                    // Regel wie beim Nachholen, sonst holte das Öffnen der App einen hier gestrichenen Termin doch nach.
                     termine.filter { (id, um) ->
-                        erledigt[id]?.let { (beginn, ende) -> um > ende && um - beginn > Zeitplan.SCHON_ERLEDIGT_MS } ?: true
+                        erledigt[id]?.let { (beginn, _) -> um - beginn > Zeitplan.SCHON_ERLEDIGT_MS } ?: true
                     },
                 )
             }
