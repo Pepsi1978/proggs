@@ -44,6 +44,14 @@ dieser Ablauf statt des Skripts:
 
 ## Ablauf
 
+**Git-Ziel am lokalen Windows-PC:** Jede fertige App-Änderung muss vor der Veröffentlichung auf
+`origin/main` liegen. Ein Push nur auf einen Arbeits-Branch reicht nicht, auch wenn dieser Branch
+der lokale Upstream ist. Nach dem Rebase den geprüften Commit per Fast Forward nach `main` pushen
+(`git -C ~/proggs push origin HEAD:main`); bei Ablehnung erst den neuen `main`-Stand abgleichen,
+nie mit Force pushen. Das Skript prüft, dass der gebaute HEAD genau `origin/main` ist. Nur der
+separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Request und Merge nach
+`main`.
+
 1. **Projekt bestimmen.** Das Projekt, das in dieser Sitzung gerade aktualisiert wurde, oder das
    im Aufruf genannte (z. B. „apk update GenialerWecker"). Ist es unklar: Unterordner von
    `Updates` auflisten und fragen.
@@ -61,8 +69,8 @@ dieser Ablauf statt des Skripts:
    - prüft den Projektnamen (nur Buchstaben, Ziffern, `_ . -`, Ordner direkt unter `~/proggs`)
      und übernimmt die Schreibweise vom Datenträger,
    - prüft **vor jeder Versionsentscheidung** den Git-Stand: keine offenen Änderungen unter
-     `<Projekt>` (Index und Arbeitsbaum), `fetch` erfolgreich, HEAD nicht hinter origin, keine
-     ungepushten Commits am Projekt — sonst `fehler`,
+     `<Projekt>` (Index und Arbeitsbaum), `fetch` erfolgreich, HEAD gleich `origin/main` — sonst
+     `fehler`,
    - entscheidet mit N = Versionslog, I = am Handy installiert (0 ohne adb), P = zuletzt
      veröffentlicht:
      - P kommt aus `update.json`. **Unlesbares** Manifest: P = höchste `-vcX.apk` im Ordner
@@ -107,7 +115,7 @@ dieser Ablauf statt des Skripts:
 
      Diese Pfade zusammen mit der eigentlichen App-Änderung committen (genau ein Versionsbump,
      **nur mit Pfaden** — im Monorepo liegen fremde Änderungen, nie pauschal stagen), dann
-     `git -C ~/proggs pull --rebase --autostash`, `git -C ~/proggs push` und das Skript erneut
+     `git -C ~/proggs pull --rebase --autostash`, `git -C ~/proggs push origin HEAD:main` und das Skript erneut
      starten. Z. B.:
      `git -C ~/proggs commit -m "<Projekt>: Version für APK-Update anheben" -- <Pfade aus APK_UPDATE_COMMIT_NOETIG>`.
    - `APK_UPDATE_NEUES_PROJEKT=…` → Projekt fehlt in `projekte.json`, läuft mit den Standards.

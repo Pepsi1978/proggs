@@ -268,12 +268,11 @@ if ($offen.Count -gt 0) { Fehler "Offene Änderungen in $Projekt ($(($offen | Se
 # Ohne erfolgreichen Abgleich ist nicht belegt, dass der Stand gepusht und aktuell ist: abbrechen.
 git -C $proggs fetch --quiet 2>$null
 if ($LASTEXITCODE -ne 0) { Fehler "git fetch fehlgeschlagen – ohne Abgleich mit origin wird nicht veröffentlicht." }
-$hinter = git -C $proggs rev-list --count 'HEAD..@{u}' 2>$null
-if ($LASTEXITCODE -ne 0) { Fehler "Kein Upstream-Branch für den Abgleich mit origin." }
-$vorn = git -C $proggs rev-list --count '@{u}..HEAD' -- @quellen 2>$null
-if ($LASTEXITCODE -ne 0) { Fehler "Abgleich der Projekt-Commits mit origin fehlgeschlagen." }
-if ([int]$hinter -gt 0) { Fehler "Lokaler Stand liegt $hinter Commits hinter origin. Erst git pull --rebase --autostash." }
-if ([int]$vorn -gt 0) { Fehler "$vorn Commits an $Projekt sind noch nicht gepusht. Erst pushen, dann veröffentlichen." }
+$mainStand = git -C $proggs rev-parse --verify 'refs/remotes/origin/main' 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $mainStand) { Fehler "origin/main ist nicht verfügbar. Erst den Hauptbranch von origin abrufen." }
+$lokalStand = git -C $proggs rev-parse HEAD 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $lokalStand) { Fehler "Lokaler HEAD konnte nicht ermittelt werden." }
+if ($lokalStand -ne $mainStand) { Fehler "Der gebaute HEAD ist nicht origin/main. Erst den aktuellen main-Stand abgleichen und per Fast Forward nach main pushen (git push origin HEAD:main)." }
 
 # --- Zuletzt veröffentlichter Stand P (konservativ je Manifest-Zustand) ---------------------
 #   UNLESBAR: höchste APK inklusive N – unklar, ob vcN schon öffentlich war, daher nie gleich
