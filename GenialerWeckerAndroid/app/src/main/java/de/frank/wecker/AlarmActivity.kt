@@ -300,7 +300,7 @@ class AlarmActivity : ComponentActivity() {
                                         onSnooze = { send("SNOOZE", alarm.id, state.ringId) }, onEnd = onEnd)
                                     else StillerKnopf("Zurück zur App", { finish() })
                                     // The only visible difference between a test and a real alarm.
-                                    if (state.test) Text("(Test)", style = MaterialTheme.typography.labelSmall, color = gold.textGedaempft)
+                                    // Unten stehen bewusst nur die zwei Tasten – kein Test-Hinweis, keine Zähler.
                                 }
                             }
                             if (wide) Row(Modifier.fillMaxSize()) {
@@ -693,8 +693,8 @@ private fun Taste(round: Boolean, diameter: androidx.compose.ui.unit.Dp, icon: a
                     androidx.compose.ui.unit.Density(density.density, density.fontScale.coerceAtMost(1.2f))) { content() }
             } else content()
         }
-        if (info.isNotBlank()) Text(info, color = infoColor, style = if (round) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodySmall,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        // Unter den Tasten steht nichts mehr: Dauer und Restanzahl lenken morgens nur ab.
+        @Suppress("UNUSED_VARIABLE") val ungenutzt = info to infoColor
     }
 }
 
