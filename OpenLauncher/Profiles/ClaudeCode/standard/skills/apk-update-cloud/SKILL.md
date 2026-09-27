@@ -38,6 +38,9 @@ tippen müssen außer „Installieren“ in UpdateStation.
    macht GitHub in Schritt 5. **Nie** selbst signieren, **nie** `apk-update.ps1` starten, **nie** nach
    dem Keystore fragen, **nie** eine APK selbst hochladen.
 3. **Committen und pushen** auf den Arbeits-Branch der Sitzung (nur die eigenen Pfade stagen).
+   Push geht nur auf den eigenen `claude/…`-Branch, nie direkt auf `main`. Scheitert er mit 403
+   („authorized repository set“ leer, Bug B3): nicht herumprobieren, Frank melden, dass die Sitzung mit
+   dem Repo `proggs` als Quelle neu gestartet werden muss.
 4. **Pull Request öffnen, nicht als Entwurf** (`gh pr create --base main --title … --body …` oder
    `create_pull_request` mit `draft: false`). Titel und Text selbst setzen (sonst nimmt GitHub den ältesten Commit).
    Das startet automatisch das Codex-Review (Bot `chatgpt-codex-connector`). Nie erst als Entwurf
@@ -76,6 +79,15 @@ tippen müssen außer „Installieren“ in UpdateStation.
      die Ursache außerhalb der App liegt (z. B. Secret abgelaufen, Google-Drive-Zugang widerrufen).
 8. **Abschlussmeldung** an Frank: App, alte → neue Version, was neu ist, was Codex gefunden und was davon
    behoben wurde, ob der Bau grün war.
+
+## Bekannte Cloud-Fallen (Stand 27.09.2026)
+
+- **Genau ein Repo pro Sitzung** (`proggs`). Bei zwei Repos lädt die Cloud weder Hooks noch Permissions.
+- Meldet ein Stop-Hook nach dem Merge noch „unpushed commits“: `git fetch --prune`, notfalls
+  `git checkout -B <branch> origin/main`. Nie veröffentlichte History umschreiben (Bug B6).
+- Kein Android-Bau in der Cloud-VM nötig und meist nicht möglich (`dl.google.com` gesperrt, kein SDK):
+  bauen macht GitHub Actions.
+- Details: `bugs/claude-tooling/claude-code-cloud.md`.
 
 ## Sicherheitsregeln (unverändert gültig)
 
