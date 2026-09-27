@@ -129,6 +129,9 @@ object ArchivImport {
             // der Fassung, die dieser Import schreiben würde (nach einem abgebrochenen Lauf mit umbenannten Bildern).
             // Jede andere lokale Fassung bleibt, die importierte kommt samt Bildern in die Quarantäne.
             val neueAusgaben = mutableListOf<Pair<Kandidat, Pair<Ausgabe, String>>>()
+            // Schon vorhandene Ausgaben, deren Bilder lokal fehlen können — mit dem Merker, ob die lokale Datei der
+            // Quelle gleicht (dann zeigt sie auf die ursprünglichen Bildnamen) oder der umbenannten Fassung.
+            val vorhandeneAusgaben = mutableListOf<Pair<Kandidat, Boolean>>()
             kandidaten.forEach { k ->
                 coroutineContext.ensureActive()
                 val fassung = k.fassung(umbenennung)
@@ -140,6 +143,7 @@ object ArchivImport {
                 val lokalSha = sha256(lokal)
                 if (lokalSha == k.quellSha || lokalSha == SicheresSchreiben.sha256(fassung.second)) {
                     doppelt++
+                    vorhandeneAusgaben += k to (lokalSha == k.quellSha)
                 } else {
                     // Konfliktfassung und ihre Bilder bleiben als Gruppe zusammen in einem Laufordner.
                     // Liegt genau diese Gruppe schon vollständig beiseite, wird nichts noch einmal abgelegt.
@@ -205,6 +209,17 @@ object ArchivImport {
                     !quelleBild.exists() -> if (File(speicher.bilderOrdner, name).exists()) bilderVorhanden++ else fehlendeBilder++
                     File(speicher.bilderOrdner, zielName).exists() -> bilderVorhanden++
                     else -> zuKopieren += quelleBild to zielName
+                }
+            }
+            // Fehlende Bilder schon vorhandener Ausgaben nachliefern — etwa wenn eine frühere Sicherung ohne sie kam.
+            val geplant = zuKopieren.map { it.second }.toMutableSet()
+            vorhandeneAusgaben.forEach { (k, wieQuelle) ->
+                k.bilder().forEach { name ->
+                    val quelleBild = File(bereitstellung, "bilder/$name")
+                    val zielName = if (wieQuelle) name else umbenennung[name] ?: name
+                    if (quelleBild.exists() && !File(speicher.bilderOrdner, zielName).exists() && geplant.add(zielName)) {
+                        zuKopieren += quelleBild to zielName
+                    }
                 }
             }
 

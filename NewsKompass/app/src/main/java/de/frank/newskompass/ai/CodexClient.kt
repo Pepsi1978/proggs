@@ -224,7 +224,14 @@ class CodexClient(context: Context) {
                     .add("client_id", CLIENT_ID)
                     .build(),
             )
-            pruefeHttp(ergebnis.code, ergebnis.rumpf)
+            try {
+                pruefeHttp(ergebnis.code, ergebnis.rumpf)
+            } catch (fehler: CodexFehler) {
+                // Erneuerung endgültig abgelehnt: Zugang verwerfen, damit die App „nicht angemeldet“ zeigt
+                // statt „Angemeldet“, während jeder Lauf scheitert.
+                if (fehler.art == CodexFehlerArt.ANMELDUNG) ablage.edit().remove(SCHL_ZUGANG).apply()
+                throw fehler
+            }
             val json = leseJson(ergebnis.rumpf, "Die Erneuerung lieferte keine gültigen Daten.")
             val neuerZugang = json.optString("access_token").takeIf(String::isNotBlank)
                 ?: throw CodexFehler(CodexFehlerArt.ANMELDUNG, "Es kam kein neuer Zugangstoken zurück.")
@@ -256,22 +263,35 @@ class CodexClient(context: Context) {
         modellId: String,
         denktiefe: String,
         werkzeuge: JSONArray? = null,
-        beiTeilstueck: suspend (String) -> Unit = {},
+        beiTeilstueck: (suspend (String) -> Unit)? = null,
     ): CodexAntwort = withContext(Dispatchers.IO) {
         var versuch = 0
+        var neuAngemeldet = false
         while (true) {
             var etwasGeliefert = false
             try {
                 return@withContext frageEinmal(
                     nutzlast = baueNutzlast(anweisung, eingabe, modellId, denktiefe, werkzeuge, versuch),
                 ) { stueck ->
-                    etwasGeliefert = true
-                    beiTeilstueck(stueck)
+                    // Nur wer Teilstücke anzeigt, darf keinen zweiten Durchlauf bekommen.
+                    if (beiTeilstueck != null) {
+                        etwasGeliefert = true
+                        beiTeilstueck(stueck)
+                    }
                 }
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
                 currentCoroutineContext().ensureActive()
+                // Der Dienst verwirft einen Zugang auch vor seiner gespeicherten Ablaufzeit: dann einmal
+                // erneuern und noch einmal fragen, statt den ganzen Lauf an der Anmeldung scheitern zu lassen.
+                if (fehler is CodexFehler && fehler.art == CodexFehlerArt.ANMELDUNG && !neuAngemeldet &&
+                    !etwasGeliefert && ablage.contains(SCHL_ERNEUERUNG)
+                ) {
+                    neuAngemeldet = true
+                    ablage.edit().putLong(SCHL_LAEUFT_AB, 0L).apply()
+                    continue
+                }
                 // Nach dem ersten gelieferten Stück NICHT wiederholen: Der zweite Durchlauf
                 // würde den bereits angezeigten Anfang doppeln.
                 val wiederholbar = (fehler as? CodexFehler)?.wiederholbar ?: (fehler is IOException)
@@ -386,7 +406,13 @@ class CodexClient(context: Context) {
                 leser.use { lieferStrom(it, sammler, beiTeilstueck) }
             }
         } catch (fehler: IOException) {
-            if (aufruf.isCanceled()) throw CancellationException("Die Anfrage wurde abgebrochen.")
+            // Nur ein echter Abbruch der Coroutine ist ein Abbruch. Gilt der Aufruf sonst als abgebrochen,
+            // hat OkHttp ihn nach der Gesamt-Zeitgrenze selbst beendet — ein Netzfehler, der die fertigen
+            // Themen des Laufs nicht mitreißen darf.
+            currentCoroutineContext().ensureActive()
+            if (aufruf.isCanceled()) {
+                throw CodexFehler(CodexFehlerArt.NETZ, "Codex hat zu lange für die Antwort gebraucht.", fehler)
+            }
             throw fehler
         } finally {
             laufendeAufrufe.remove(aufruf)
@@ -697,7 +723,7 @@ internal class StromSammler {
 
     fun ergebnis(): String {
         if (!fertig) {
-            throw CodexFehler(CodexFehlerArt.NETZ, "Die Verbindung endete, bevor die Antwort fertig war.")
+            throw CodexFehler(CodexFehlerArt.NETZ, "Die Verbindung endete, bevor die Antwort fertig war.", wiederholbar = true)
         }
         return abgeschlossenerText?.takeIf(String::isNotBlank)
             ?: teile.toString().takeIf(String::isNotBlank)

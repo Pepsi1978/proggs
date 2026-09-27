@@ -115,6 +115,7 @@ import de.frank.newskompass.data.model.DesignModus
 import de.frank.newskompass.data.model.Meldung
 import de.frank.newskompass.news.SprachStufe
 import de.frank.newskompass.news.Zeitplan
+import de.frank.newskompass.observability.KompassLog
 import de.frank.newskompass.tts.VorleseStufe
 import de.frank.newskompass.tts.VorleseZustand
 import de.frank.newskompass.ui.theme.LocalIstDunkel
@@ -126,6 +127,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -143,7 +145,9 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     val sprache by app.sprachFrage.zustand.collectAsStateWithLifecycle()
     val fragen by remember { WorkManager.getInstance(kontext).getWorkInfosForUniqueWorkFlow(Zeitplan.FRAGE) }
         .collectAsStateWithLifecycle(initialValue = emptyList())
-    val offeneFragen = fragen.filter { !it.state.isFinished }
+    // Verworfene Fragen bleiben bis zu ihrem Start in der Kette stehen, sollen aber sofort verschwinden.
+    val verworfen by remember { Zeitplan.verworfen(kontext) }.collectAsStateWithLifecycle()
+    val offeneFragen = fragen.filter { !it.state.isFinished && it.id.toString() !in verworfen }
     val gescheiterteFragen = fragen.filter { it.id in sprache.vorlesen && it.state.isFinished && it.outputData.getString("fehler") != null }
     val mikrofonErlaubnis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erteilt ->
         app.sprachFrage.erlaubnisErhalten(erteilt)
@@ -240,8 +244,10 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     // Eine gesprochene Frage bekommt eine gesprochene Antwort: Ist ihr Block da, springt die
     // Ansicht hin und er wird vorgelesen. Immer nur eine Antwort zur Zeit — die nächste erst, wenn
     // das Vorlesen fertig ist, sonst bricht jede neue Antwort die vorige ab.
-    LaunchedEffect(fragen, sprache.vorlesen, index, vorlesen.stufe) {
+    LaunchedEffect(fragen, sprache.vorlesen, index, vorlesen.stufe, sprache.stufe) {
         if (vorlesen.stufe != VorleseStufe.AUS) return@LaunchedEffect
+        // Nicht ins offene Mikrofon vorlesen: Die Antwort wartet, bis Aufnahme und Erkennung fertig sind.
+        if (sprache.stufe != SprachStufe.BEREIT) return@LaunchedEffect
         for (info in fragen.filter { it.id in sprache.vorlesen && it.state.isFinished }) {
             if (info.outputData.getString("fehler") != null) continue
             val ausgabeId = info.outputData.getString("ausgabeId")
@@ -250,15 +256,18 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
             val antwort = eintrag?.let { app.speicher.ausgabe(it.id) }
             val block = antwort?.bloecke?.firstOrNull { it.themaId == themaId }
             if (eintrag == null || block == null) {
-                // Noch nicht im Speicher angekommen — der nächste Durchlauf findet ihn.
-                if (info.state != WorkInfo.State.SUCCEEDED || ausgabeId == null) app.sprachFrage.erledigt(info.id)
+                // Noch nicht im Speicher angekommen — der nächste Durchlauf findet ihn. Steht die Ausgabe schon
+                // da, aber ohne den Block, wurde er entfernt: dann gibt es nichts mehr vorzulesen.
+                if (info.state != WorkInfo.State.SUCCEEDED || ausgabeId == null || (eintrag != null && antwort != null)) {
+                    app.sprachFrage.erledigt(info.id)
+                }
                 continue
             }
             app.sprachFrage.erledigt(info.id)
             zeige(if (eintrag.id == index.firstOrNull()?.id) Ansicht.Aktuell else Ansicht.Tag(eintrag.tag, eintrag.id))
             springeZu = block.themaId
             if (block.meldungen.isNotEmpty()) {
-                app.vorleser.lies("block-${block.themaId}", blockText(block))
+                app.vorleser.lies(blockQuelle(eintrag.id, block.themaId), blockText(block))
                 return@LaunchedEffect
             }
         }
@@ -431,11 +440,20 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                                 index = index,
                                 block = block,
                                 zustand = vorlesen,
-                                vorlesen = { app.vorleser.schalteUm("block-${block.themaId}", blockText(block)) },
+                                quelleId = blockQuelle(ausgabe?.id, block.themaId),
+                                vorlesen = { app.vorleser.schalteUm(blockQuelle(ausgabe?.id, block.themaId), blockText(block)) },
                                 entfernen = if (block.frage != null && ausgabe != null) {
                                     {
-                                        if (vorlesen.quelleId == "block-${block.themaId}" || block.meldungen.any { it.id == vorlesen.quelleId }) app.vorleser.stoppe()
-                                        app.bereich.launch { app.speicher.entferneBlock(ausgabe.id, block.themaId) }
+                                        if (vorlesen.quelleId == blockQuelle(ausgabe.id, block.themaId) || block.meldungen.any { it.id == vorlesen.quelleId }) app.vorleser.stoppe()
+                                        app.bereich.launch {
+                                            try {
+                                                app.speicher.entferneBlock(ausgabe.id, block.themaId)
+                                            } catch (abbruch: CancellationException) {
+                                                throw abbruch
+                                            } catch (fehler: Exception) {
+                                                KompassLog.warn("NachrichtenScreen", "entfernen", "Block nicht entfernt", mapOf("grund" to fehler.message))
+                                            }
+                                        }
                                     }
                                 } else {
                                     null
@@ -848,7 +866,7 @@ private fun LeerZustand(angemeldet: Boolean, laeuft: Boolean, laden: () -> Unit,
  * Frage so, wie Whisper sie verstanden hat, und er lässt sich wieder entfernen.
  */
 @Composable
-private fun BlockKopf(index: Int, block: Block, zustand: VorleseZustand, vorlesen: () -> Unit, entfernen: (() -> Unit)?) {
+private fun BlockKopf(index: Int, block: Block, zustand: VorleseZustand, quelleId: String, vorlesen: () -> Unit, entfernen: (() -> Unit)?) {
     Column(Modifier.fillMaxWidth().padding(top = 30.dp, bottom = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -871,7 +889,7 @@ private fun BlockKopf(index: Int, block: Block, zustand: VorleseZustand, vorlese
                 )
             }
             if (block.meldungen.isNotEmpty()) {
-                LautsprecherKnopf(zustand, "block-${block.themaId}", blockFarbe(index), vorlesen, rahmen = true)
+                LautsprecherKnopf(zustand, quelleId, blockFarbe(index), vorlesen, rahmen = true)
             }
         }
         if (block.frage != null) {
@@ -1118,3 +1136,6 @@ private fun LautsprecherKnopf(zustand: VorleseZustand, quelle: String, farbe: Co
         )
     }
 }
+
+/** Vorlese-Kennung eines ganzen Blocks — an die Ausgabe gebunden, denn dasselbe Thema steht in vielen Ausgaben. */
+private fun blockQuelle(ausgabeId: String?, themaId: String): String = "block-$ausgabeId-$themaId"

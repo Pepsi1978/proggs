@@ -21,8 +21,11 @@ suspend fun Call.awaitAntwort(): Response = suspendCancellableCoroutine { fortse
     fortsetzung.invokeOnCancellation { cancel() }
     enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
+            // Bricht die Coroutine ab, ist die Fortsetzung schon inaktiv. Ein Aufruf, der trotzdem als
+            // abgebrochen gilt, hat seine Gesamt-Zeitgrenze überschritten (OkHttp ruft dann selbst
+            // cancel) — das ist ein Netzfehler, kein Abbruch durch den Benutzer.
             if (!fortsetzung.isActive) return
-            if (call.isCanceled()) fortsetzung.cancel(e) else fortsetzung.resumeWithException(e)
+            fortsetzung.resumeWithException(e)
         }
 
         override fun onResponse(call: Call, response: Response) {

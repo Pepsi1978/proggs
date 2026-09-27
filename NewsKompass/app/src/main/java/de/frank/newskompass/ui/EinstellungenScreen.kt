@@ -208,7 +208,14 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                         reihenfolge = reihenfolge.toMutableList().apply { add(b, removeAt(a)) }
                     }
                 },
-                onDrop = { app.einstellungen.setzeThemen(reihenfolge.mapNotNull(nachSchluessel::get)) },
+                onDrop = {
+                    // Aus dem aktuellen Stand abbilden, nicht aus dem beim Greifen: Sonst gingen Änderungen während
+                    // der Geste verloren, etwa eine inzwischen erzeugte Überschrift.
+                    val aktuell = app.einstellungen.stand.value.themen
+                    val jetzt = aktuell.associateBy(::schluessel)
+                    val geordnet = reihenfolge.mapNotNull(jetzt::get)
+                    app.einstellungen.setzeThemen(geordnet + aktuell.filter { schluessel(it) !in reihenfolge })
+                },
                 reducedMotion = false,
             ),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 60.dp),

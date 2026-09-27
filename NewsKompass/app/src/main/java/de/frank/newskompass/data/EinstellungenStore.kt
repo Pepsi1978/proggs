@@ -14,7 +14,6 @@ import de.frank.newskompass.data.model.Thema
 import de.frank.newskompass.data.model.TtsAnbieter
 import de.frank.newskompass.observability.KompassLog
 import de.frank.newskompass.tts.TtsCatalog
-import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -106,7 +105,9 @@ class EinstellungenStore(context: Context) {
     }
 
     private fun leseThemen(): List<Thema> {
-        val roh = offen.getString(K_THEMEN, null) ?: return listOf(Thema(UUID.randomUUID().toString(), STANDARD_KI_THEMA))
+        // Das Standardthema trägt eine feste ID: Solange die Liste nie gespeichert wurde, entsteht es bei
+        // jedem Lesen neu — mit zufälliger ID fände der Wecker sein Thema im nächsten Prozess nicht mehr.
+        val roh = offen.getString(K_THEMEN, null) ?: return listOf(Thema(STANDARD_THEMA_ID, STANDARD_KI_THEMA))
         return runCatching {
             val liste = JSONArray(roh)
             (0 until liste.length()).map {
@@ -127,7 +128,7 @@ class EinstellungenStore(context: Context) {
             }
         }.getOrElse {
             KompassLog.warn("Einstellungen", "leseThemen", "Themenliste unlesbar", mapOf("grund" to it.message))
-            listOf(Thema(UUID.randomUUID().toString(), STANDARD_KI_THEMA))
+            listOf(Thema(STANDARD_THEMA_ID, STANDARD_KI_THEMA))
         }
     }
 
@@ -150,6 +151,8 @@ class EinstellungenStore(context: Context) {
 
     // --- Schreiben ---------------------------------------------------------------------------
 
+    /** Synchronisiert: Oberfläche und Hintergrundaufträge schreiben — sonst gewinnt womöglich ein veralteter Stand. */
+    @Synchronized
     private fun schreibe(block: SharedPreferences.Editor.() -> Unit) {
         offen.edit().apply(block).apply()
         _stand.value = lies()
@@ -188,6 +191,11 @@ class EinstellungenStore(context: Context) {
                 )
             }
             putString(K_MODELLE, liste.toString())
+            // Kennt das gewählte Modell laut neuer Liste die bisherige Denktiefe nicht mehr, auf dessen Standard wechseln —
+            // sonst lehnt der Dienst jede Anfrage ab.
+            val gewaehlt = modelle.firstOrNull { it.id == (offen.getString(K_MODELL, null) ?: STANDARD_MODELL) }
+            val tiefe = offen.getString(K_DENKTIEFE, null) ?: "medium"
+            if (gewaehlt != null && gewaehlt.stufen.isNotEmpty() && tiefe !in gewaehlt.stufen) putString(K_DENKTIEFE, gewaehlt.standardStufe)
         }
     }
 
@@ -218,16 +226,63 @@ class EinstellungenStore(context: Context) {
         offen.edit().putLong(K_HARTER_FEHLER, zeit).apply()
     }
 
+    // --- Offene Läufe -------------------------------------------------------------------------
+
+    /**
+     * Termine, die noch recherchiert werden müssen: je Themen-ID der Zeitpunkt des Termins, dazu
+     * „alle“ für den Knopf Aktualisieren. Jeder Wecker trägt seine Themen hier ein, bevor er den
+     * Lauf anstößt — so geht kein Termin verloren, auch wenn gerade ein anderer Lauf wartet oder läuft.
+     */
+    @Synchronized
+    fun merkeOffenenLauf(auftrag: Map<String, Long>?) {
+        val (alle, termine) = leseOffeneLaeufe()
+        val neu = termine.toMutableMap()
+        auftrag?.forEach { (id, um) -> neu[id] = maxOf(neu[id] ?: 0L, um) }
+        schreibeOffeneLaeufe(alle || auftrag == null, neu)
+    }
+
+    /** Nimmt alle offenen Termine heraus; `null`, wenn keiner offen ist. Die Themenliste ist leer, wenn „alle“ gilt. */
+    @Synchronized
+    fun nimmOffeneLaeufe(): Pair<Boolean, Map<String, Long>>? {
+        val offenJetzt = leseOffeneLaeufe()
+        if (!offenJetzt.first && offenJetzt.second.isEmpty()) return null
+        schreibeOffeneLaeufe(false, emptyMap())
+        return offenJetzt
+    }
+
+    val hatOffeneLaeufe: Boolean
+        @Synchronized get() = leseOffeneLaeufe().let { it.first || it.second.isNotEmpty() }
+
+    private fun leseOffeneLaeufe(): Pair<Boolean, Map<String, Long>> {
+        val alle = offen.getBoolean(K_OFFEN_ALLE, false)
+        val termine = runCatching {
+            val j = JSONObject(offen.getString(K_OFFENE_TERMINE, null) ?: "{}")
+            j.keys().asSequence().associateWith { j.getLong(it) }
+        }.getOrDefault(emptyMap())
+        return alle to termine
+    }
+
+    private fun schreibeOffeneLaeufe(alle: Boolean, termine: Map<String, Long>) {
+        // commit statt apply: Der Lauf kann gleich danach in einem anderen Thread starten.
+        offen.edit()
+            .putBoolean(K_OFFEN_ALLE, alle)
+            .putString(K_OFFENE_TERMINE, JSONObject(termine as Map<*, *>).toString())
+            .commit()
+    }
+
+    @Synchronized
     fun setzeGoogleSchluessel(wert: String) {
         geheim.edit().putString(K_GOOGLE_KEY, wert.trim()).apply()
         _stand.value = lies()
     }
 
+    @Synchronized
     fun setzeAlibabaSchluessel(wert: String) {
         geheim.edit().putString(K_ALIBABA_KEY, wert.trim()).apply()
         _stand.value = lies()
     }
 
+    @Synchronized
     fun setzeGroqSchluessel(wert: String) {
         geheim.edit().putString(K_GROQ_KEY, wert.trim()).apply()
         _stand.value = lies()
@@ -235,6 +290,9 @@ class EinstellungenStore(context: Context) {
 
     companion object {
         const val STANDARD_MODELL = "gpt-6-sol"
+
+        /** Feste ID des vorbelegten KI-Themas, solange die Themenliste noch nie gespeichert wurde. */
+        const val STANDARD_THEMA_ID = "standard-ki"
 
         /** Der erste Block — frei editierbar, ohne eigene Überschrift. */
         const val STANDARD_KI_THEMA =
@@ -250,6 +308,8 @@ class EinstellungenStore(context: Context) {
         private const val K_MAX_KI = "max_ki_bilder"
         private const val K_AUSFUEHRLICHKEIT = "ausfuehrlichkeit"
         private const val K_HARTER_FEHLER = "harter_fehler_um"
+        private const val K_OFFEN_ALLE = "offen_alle"
+        private const val K_OFFENE_TERMINE = "offene_termine"
         private const val K_BILDER_OK = "bilder_unterstuetzt"
         private const val K_DESIGN = "design"
         private const val K_TTS = "tts_anbieter"

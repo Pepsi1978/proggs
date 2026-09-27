@@ -12,6 +12,7 @@ import de.frank.newskompass.observability.KompassLog
 import de.frank.newskompass.tts.VorleseManager
 import de.frank.newskompass.ui.Teilen
 import java.util.UUID
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,7 +23,13 @@ import kotlinx.coroutines.launch
 /** Hält die langlebigen Bausteine — ein Exemplar für Oberfläche und Hintergrundlauf. */
 class NewsApplication : Application() {
 
-    val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // Ein Fehler in einem Hintergrundauftrag (etwa Speicher voll beim Entfernen eines Blocks) wird
+    // protokolliert, statt die ganze App zu beenden.
+    val bereich = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, fehler ->
+            KompassLog.error("NewsApplication", "bereich", "Unbehandelter Fehler im Hintergrund", mapOf("grund" to fehler.message, "art" to fehler.javaClass.simpleName))
+        },
+    )
 
     val einstellungen by lazy { EinstellungenStore(this) }
     val codex by lazy { CodexClient(this) }
