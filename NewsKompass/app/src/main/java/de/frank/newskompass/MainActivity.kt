@@ -84,13 +84,18 @@ class MainActivity : ComponentActivity() {
         app.bereich.launch {
             app.speicher.lade()
             if (!app.codex.istVerbunden) return@launch
-            val letzter = Zeitplan.letzterTermin().toInstant().toEpochMilli()
+            val stand = app.einstellungen.stand.value
+            if (!stand.zeitplanAktiv) return@launch
             // Eine Ausgabe nur aus gesprochenen Fragen zählt nicht als Lauf aus dem Zeitplan.
             val neueste = app.speicher.index.value.firstOrNull { it.regulaer }?.erstelltUm ?: 0L
+            // Alle Termine der letzten 24 Stunden seit der neuesten Ausgabe — jeder bringt seine Themen mit.
+            val versaeumt = Zeitplan.vergangeneTermine(Zeitplan.uhrzeiten(stand.themen))
+                .filter { it.zeit.toInstant().toEpochMilli() > neueste }
+            val letzter = versaeumt.lastOrNull()?.zeit?.toInstant()?.toEpochMilli() ?: return@launch
             // Scheiterte seit dem letzten Termin schon ein Lauf an Kontingent oder Anmeldung, nicht
             // bei jedem Öffnen erneut anstoßen — der nächste Termin oder ein Tipp auf Aktualisieren holt es nach.
             val gesperrt = app.einstellungen.harterFehlerUm >= letzter
-            if (neueste < letzter && !gesperrt) Zeitplan.starteLauf(this@MainActivity, manuell = false)
+            if (!gesperrt) Zeitplan.starteLauf(this@MainActivity, manuell = false, termine = versaeumt.map { it.minute }.distinct())
         }
     }
 

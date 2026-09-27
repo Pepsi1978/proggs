@@ -44,6 +44,8 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DragIndicator
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.RemoveCircleOutline
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material3.AlertDialog
@@ -55,10 +57,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -75,6 +80,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -219,6 +226,11 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                                 },
                             )
                         },
+                        aendereUhrzeiten = { zeiten ->
+                            app.einstellungen.setzeThemen(
+                                app.einstellungen.stand.value.themen.map { if (it.id == thema.id) it.copy(uhrzeiten = zeiten) else it },
+                            )
+                        },
                         loesche = { app.einstellungen.setzeThemen(app.einstellungen.stand.value.themen.filterNot { it.id == thema.id }) },
                     )
                 }
@@ -299,6 +311,7 @@ private fun ThemenKarte(
     loeschbar: Boolean,
     aendere: (String) -> Unit,
     aendereBereich: (Int, Int) -> Unit,
+    aendereUhrzeiten: (List<Int>) -> Unit,
     loesche: () -> Unit,
 ) {
     var text by remember(thema.id) { mutableStateOf(thema.text) }
@@ -354,7 +367,12 @@ private fun ThemenKarte(
                 label = { Text(meldungsBereich(thema.minMeldungen, thema.maxMeldungen)) },
                 leadingIcon = { Icon(Icons.Rounded.Tune, null, Modifier.size(AssistChipDefaults.IconSize)) },
                 shape = RoundedCornerShape(50),
-                modifier = Modifier.padding(start = 90.dp, bottom = 8.dp),
+                modifier = Modifier.padding(start = 90.dp),
+            )
+            UhrzeitenZeile(
+                uhrzeiten = thema.uhrzeiten,
+                aendere = aendereUhrzeiten,
+                modifier = Modifier.padding(start = 90.dp, end = 12.dp, bottom = 8.dp),
             )
         }
     }
@@ -369,6 +387,75 @@ private fun ThemenKarte(
             },
         )
     }
+}
+
+/**
+ * Die Uhrzeiten, zu denen dieses Thema automatisch aktualisiert wird: antippen ändert eine Zeit,
+ * Minus streicht sie, Plus fügt eine hinzu. Die Liste ist immer der Reihe nach sortiert.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun UhrzeitenZeile(uhrzeiten: List<Int>, aendere: (List<Int>) -> Unit, modifier: Modifier = Modifier) {
+    // null = keine Bearbeitung, -1 = neue Uhrzeit, sonst die bearbeitete Uhrzeit.
+    var bearbeitet by remember { mutableStateOf<Int?>(null) }
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Schedule, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                if (uhrzeiten.isEmpty()) "Keine automatische Aktualisierung — nur per Hand" else "Automatisch aktualisieren um",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            uhrzeiten.forEach { minute ->
+                InputChip(
+                    selected = false,
+                    onClick = { bearbeitet = minute },
+                    label = { Text("${Thema.uhrzeitText(minute)} Uhr") },
+                    trailingIcon = {
+                        Icon(
+                            Icons.Rounded.RemoveCircleOutline,
+                            "Uhrzeit ${Thema.uhrzeitText(minute)} entfernen",
+                            Modifier.size(InputChipDefaults.IconSize).clip(CircleShape).clickable { aendere(uhrzeiten - minute) },
+                        )
+                    },
+                    shape = RoundedCornerShape(50),
+                )
+            }
+            AssistChip(
+                onClick = { bearbeitet = -1 },
+                label = { Text("Uhrzeit") },
+                leadingIcon = { Icon(Icons.Rounded.Add, "Uhrzeit hinzufügen", Modifier.size(AssistChipDefaults.IconSize)) },
+                shape = RoundedCornerShape(50),
+            )
+        }
+    }
+    bearbeitet?.let { alt ->
+        UhrzeitDialog(
+            titel = if (alt < 0) "Neue Uhrzeit" else "Uhrzeit ändern",
+            start = if (alt < 0) 12 * 60 else alt,
+            schliessen = { bearbeitet = null },
+            uebernehmen = { neu ->
+                bearbeitet = null
+                aendere(((if (alt < 0) uhrzeiten else uhrzeiten - alt) + neu).distinct().sorted())
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UhrzeitDialog(titel: String, start: Int, schliessen: () -> Unit, uebernehmen: (Int) -> Unit) {
+    val zeit = rememberTimePickerState(initialHour = start / 60, initialMinute = start % 60, is24Hour = true)
+    AlertDialog(
+        onDismissRequest = schliessen,
+        title = { Text(titel) },
+        text = { TimePicker(state = zeit) },
+        confirmButton = { TextButton(onClick = { uebernehmen(zeit.hour * 60 + zeit.minute) }) { Text("Übernehmen") } },
+        dismissButton = { TextButton(onClick = schliessen) { Text("Abbrechen") } },
+    )
 }
 
 private fun meldungsBereich(min: Int, max: Int): String =
@@ -967,10 +1054,21 @@ private fun ZeitplanBereich(app: NewsApplication, stand: EinstellungenStand) {
         Kachel {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Automatisch um 5 und 17 Uhr", style = MaterialTheme.typography.titleMedium)
-                    if (stand.zeitplanAktiv) {
-                        val naechster = Zeitplan.naechsterTermin().format(DateTimeFormatter.ofPattern("EEEE, HH:mm 'Uhr'", Locale.GERMANY))
-                        Text("Nächste Ausgabe: $naechster", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val uhrzeiten = Zeitplan.uhrzeiten(stand.themen)
+                    Text("Automatisch aktualisieren", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (uhrzeiten.isEmpty()) {
+                            "Kein Thema hat eine Uhrzeit — stell sie oben bei jedem Thema ein."
+                        } else {
+                            uhrzeiten.joinToString(" · ", postfix = " Uhr", transform = Thema::uhrzeitText) + " — je Thema oben einstellbar"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    val naechster = if (stand.zeitplanAktiv) Zeitplan.naechsterTermin(uhrzeiten) else null
+                    if (naechster != null) {
+                        val wann = naechster.zeit.format(DateTimeFormatter.ofPattern("EEEE, HH:mm 'Uhr'", Locale.GERMANY))
+                        Text("Nächste Ausgabe: $wann", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 Switch(checked = stand.zeitplanAktiv, onCheckedChange = {

@@ -90,11 +90,20 @@ data class Thema(
     val text: String,
     val minMeldungen: Int = STANDARD_MIN,
     val maxMeldungen: Int = STANDARD_MAX,
+    /**
+     * Wann dieses Thema automatisch neu recherchiert wird, als Minuten seit Mitternacht,
+     * aufsteigend sortiert. Leer heißt: nur per Hand.
+     */
+    val uhrzeiten: List<Int> = STANDARD_UHRZEITEN,
 ) {
-    /** Bringt beide Werte in die Grenzen und sorgt für min ≤ max. */
+    /** Bringt alle Werte in die Grenzen, sorgt für min ≤ max und sortiert die Uhrzeiten. */
     fun normiert(): Thema {
         val max = maxMeldungen.coerceIn(GRENZE_MIN, GRENZE_MAX)
-        return copy(minMeldungen = minMeldungen.coerceIn(GRENZE_MIN, max), maxMeldungen = max)
+        return copy(
+            minMeldungen = minMeldungen.coerceIn(GRENZE_MIN, max),
+            maxMeldungen = max,
+            uhrzeiten = uhrzeiten.map { it.coerceIn(0, MINUTEN_PRO_TAG - 1) }.distinct().sorted(),
+        )
     }
 
     companion object {
@@ -106,6 +115,14 @@ data class Thema(
         /** Eine gesprochene Frage steht in keiner Themenliste und bekommt einen festen, kleinen Rahmen. */
         const val FRAGE_MIN = 1
         const val FRAGE_MAX = 4
+
+        const val MINUTEN_PRO_TAG = 24 * 60
+
+        /** Bisheriger fester Zeitplan: 5 und 17 Uhr. */
+        val STANDARD_UHRZEITEN: List<Int> = listOf(5 * 60, 17 * 60)
+
+        /** „05:00“ für die Oberfläche. */
+        fun uhrzeitText(minuten: Int): String = "%02d:%02d".format(minuten / 60, minuten % 60)
     }
 }
 

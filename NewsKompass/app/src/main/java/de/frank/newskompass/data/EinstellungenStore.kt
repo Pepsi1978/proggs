@@ -110,12 +110,15 @@ class EinstellungenStore(context: Context) {
             val liste = JSONArray(roh)
             (0 until liste.length()).map {
                 val eintrag = liste.getJSONObject(it)
-                // Ältere Einträge kennen nur id und text — sie bekommen den bisherigen Rahmen 4 bis 7.
+                // Ältere Einträge kennen nur id und text — sie bekommen den bisherigen Rahmen 4 bis 7
+                // und den bisherigen Zeitplan 5 und 17 Uhr.
+                val zeiten = eintrag.optJSONArray("uhrzeiten")
                 Thema(
                     eintrag.getString("id"),
                     eintrag.optString("text"),
                     eintrag.optInt("min", Thema.STANDARD_MIN),
                     eintrag.optInt("max", Thema.STANDARD_MAX),
+                    zeiten?.let { z -> (0 until z.length()).map(z::getInt) } ?: Thema.STANDARD_UHRZEITEN,
                 ).normiert()
             }
         }.getOrElse {
@@ -151,7 +154,10 @@ class EinstellungenStore(context: Context) {
     fun setzeThemen(themen: List<Thema>) = schreibe {
         val liste = JSONArray()
         themen.map(Thema::normiert).forEach {
-            liste.put(JSONObject().put("id", it.id).put("text", it.text).put("min", it.minMeldungen).put("max", it.maxMeldungen))
+            liste.put(
+                JSONObject().put("id", it.id).put("text", it.text).put("min", it.minMeldungen).put("max", it.maxMeldungen)
+                    .put("uhrzeiten", JSONArray(it.uhrzeiten)),
+            )
         }
         putString(K_THEMEN, liste.toString())
     }
