@@ -199,14 +199,16 @@ class AlarmActivity : ComponentActivity() {
                     message = ""
                 }
             }
-            LaunchedEffect(feedback, state.ringId, state.alarm == null, pending) {
-                val done = feedback
-                if (done != null) {
-                    // Die Bestätigung bleibt gut lesbar stehen und blendet dann weich aus (WeckBestaetigung).
-                    delay(BESTAETIGUNG_MS)
-                    val now = AlarmService.state.value
-                    if (now.alarm == null || now.ringId == done.ringId) finish()
-                } else if (state.alarm == null && seenAlarm && pending == null) finish()
+            // Eine einzige Zeitachse ab der Bestätigung: nur an [feedback] gebunden, damit das Ende des Dienstes
+            // (Wecker wird null) die Wartezeit nicht neu startet. Halten, weich ausblenden, dann ohne Systemanimation schließen.
+            LaunchedEffect(feedback) {
+                val done = feedback ?: return@LaunchedEffect
+                delay(BESTAETIGUNG_MS)
+                val now = AlarmService.state.value
+                if (now.alarm == null || now.ringId == done.ringId) { finish(); @Suppress("DEPRECATION") overridePendingTransition(0, 0) }
+            }
+            LaunchedEffect(feedback == null, state.alarm == null, pending) {
+                if (feedback == null && state.alarm == null && seenAlarm && pending == null) finish()
             }
             // Kein Flow, sondern ein ausdrückliches neues Lesen bei jedem ON_RESUME: diese Activity ist
             // singleTask und wird für ein weiteres Klingeln über onNewIntent wiederverwendet, eine einmalige
@@ -259,8 +261,16 @@ class AlarmActivity : ComponentActivity() {
                     LocalGestalt.current.Hintergrund(Modifier.fillMaxSize())
                     // Keyed by ring: animation state (scale, fade, ring exit) can never pass over to a new ring.
                     key(displayRing) {
+                        // Nach der Bestätigung: 2,2 s völlige Ruhe, dann blendet der Inhalt in 0,6 s aus (Hintergrund bleibt).
+                        val inhaltSicht = remember { androidx.compose.animation.core.Animatable(1f) }
+                        val reduziertSchliessen = LocalBewegungReduziert.current
+                        LaunchedEffect(shownFeedback != null) {
+                            if (shownFeedback == null) { inhaltSicht.snapTo(1f); return@LaunchedEffect }
+                            delay(HALTEN_MS)
+                            if (!reduziertSchliessen) inhaltSicht.animateTo(0f, tween((BESTAETIGUNG_MS - HALTEN_MS).toInt(), easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                        }
                         // Die Statusleiste ist ausgeblendet: ohne Aussparungs-Abstand läge der Gruß unter der Kamera.
-                        BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding().displayCutoutPadding().padding(top = 12.dp)) {
+                        BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer { alpha = inhaltSicht.value }.systemBarsPadding().displayCutoutPadding().padding(top = 12.dp)) {
                             // Low landscape keeps the horizontal bottom bar instead of an overfilled side column.
                             val wide = maxWidth >= 600.dp && maxWidth > maxHeight && maxHeight >= 480.dp
                             val screenHeight = maxHeight
@@ -295,7 +305,7 @@ class AlarmActivity : ComponentActivity() {
                                 }.padding(horizontal = 16.dp, vertical = 12.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(10.dp, if (vertical) Alignment.CenterVertically else Alignment.Top)) {
-                                    ErgebnisZeile(shownFeedback)
+
                                     // Identical for test and real alarms; the photo task can never be bypassed here.
                                     if (alarm != null) WeckTasten(alarm, checking, shownFeedback?.action, snoozeWiggle?.takeIf { it.first == displayRing },
                                         endWiggle?.takeIf { it.first == displayRing }, vertical, screenHeight,
@@ -314,7 +324,7 @@ class AlarmActivity : ComponentActivity() {
                             }
                         }
                     }
-                    WeckBestaetigung(shownFeedback)
+
                 }
             }
         }
@@ -498,7 +508,8 @@ private fun WeckPuls(ringing: Boolean, leaving: Boolean, modifier: Modifier = Mo
         val start = withFrameMillis { it }
         while (true) withFrameMillis { elapsed = offset + it - start }
     }
-    val exit by animateFloatAsState(if (leaving) 1f else 0f, weich(300), label = "ringAusblenden")
+    // Beim Beenden bleibt der Ring still stehen (kein Schrumpfen) – er hört nur auf zu atmen.
+    val exit = 0f
     Canvas(modifier) {
         val t = elapsed
         val fade = 1f - exit
@@ -661,10 +672,10 @@ private fun Taste(round: Boolean, diameter: androidx.compose.ui.unit.Dp, icon: a
     infoColor: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val onColor = if (color.luminance() > 0.5f) Color(0xFF1B1B1B) else Color.White
     // Only after the service confirmed: a short pop on the confirmed button, the other one fades out.
-    val pop = einmalFortschritt(confirmed, 250)
-    val fade = einmalFortschritt(faded, 250)
-    val scale = 1f + .08f * kotlin.math.sin(Math.PI * pop).toFloat()
-    val spec = weich<Float>(150)
+    // Kein Aufploppen mehr: das Häkchen blendet ruhig ein, die andere Taste tritt in 300 ms zurück.
+    val fade = einmalFortschritt(faded, 300)
+    val scale = 1f
+    val spec = weich<Float>(300)
     val content = @Composable {
         androidx.compose.animation.AnimatedContent(icon to label, transitionSpec = {
             (androidx.compose.animation.fadeIn(spec) togetherWith androidx.compose.animation.fadeOut(spec)).using(null)
@@ -709,37 +720,6 @@ private fun gruss(now: Long): String = when (java.time.Instant.ofEpochMilli(now)
     else -> "Zeit zum Aufstehen"
 }
 
-/** So lange steht die Bestätigung nach Schlummern/Ausschalten, bevor der Bildschirm schließt. */
-private const val BESTAETIGUNG_MS = 2000L
-
-/**
- * Ruhige Bestätigung über dem ganzen Bildschirm: großes Häkchen, klarer Satz, ~1,5 s lesbar, dann weiches Ausblenden.
- * Ersetzt das frühere kurze Aufploppen, das man nicht mitlesen konnte.
- */
-@Composable
-private fun WeckBestaetigung(result: RingResult?) {
-    val done = result ?: return
-    val gold = LocalGold.current
-    val reduziert = LocalBewegungReduziert.current
-    val sicht = remember(done) { androidx.compose.animation.core.Animatable(if (reduziert) 1f else 0f) }
-    LaunchedEffect(done) {
-        if (!reduziert) sicht.animateTo(1f, tween(350))
-        delay(BESTAETIGUNG_MS - 350 - 450)
-        if (!reduziert) sicht.animateTo(0f, tween(450))
-    }
-    val schlummer = done.action == "SNOOZE"
-    val farbe = if (schlummer) Color(0xFFD64541) else Color(0xFF2E9D5B)
-    Box(Modifier.fillMaxSize().graphicsLayer { alpha = sicht.value }.background(gold.hintergrund.copy(alpha = .94f)),
-        contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp),
-            modifier = Modifier.graphicsLayer { val s = .9f + .1f * sicht.value; scaleX = s; scaleY = s }) {
-            Box(Modifier.size(120.dp).background(farbe, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
-                Icon(if (schlummer) Icons.Default.Bedtime else Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(64.dp))
-            }
-            Text(if (schlummer) "Schlummert bis ${formatClock(done.snoozeUntil)}" else "Wecker aus",
-                style = MaterialTheme.typography.headlineSmall, color = gold.textPrimaer,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Text(if (schlummer) "Bis gleich." else "Einen schönen Tag!", style = MaterialTheme.typography.bodyLarge, color = gold.textGedaempft)
-        }
-    }
-}
+/** Gesamtdauer ab Bestätigung bis zum Schließen, davon [HALTEN_MS] völlig ruhig, der Rest weiches Ausblenden. */
+private const val BESTAETIGUNG_MS = 2800L
+private const val HALTEN_MS = 2200L
