@@ -474,7 +474,7 @@ Umschalter **Abo / eigener Schlüssel** mit Anmeldestatus · bei der Anmeldung d
   (versionCode + 1, `build.gradle.kts` liest die Version daraus), testen, soweit es ohne Signatur geht
   (Unit-Tests, `assembleDebug` mit Wegwerf-Schlüssel nur zur Kompilierprüfung, das Ergebnis **nie**
   hochladen), Pull Request öffnen und **selbst mergen**, ohne Rückfrage (von Frank am 26.09.2026
-  dauerhaft freigegeben). Den ganzen Ablauf beschreibt der Skill `apk-update-cloud` (zentraler Skill-Ordner, in der Cloud über den Link `.claude/skills/apk-update-cloud`),
+  dauerhaft freigegeben). Den ganzen Ablauf beschreibt der Skill `apk-update-cloud` (zentraler Skill-Ordner, in der Cloud über den Verweis-Ordner `.claude/skills/apk-update-cloud`),
   den jede Cloud-Sitzung automatisch lädt und nach jeder fertigen App-Änderung ausführt.
 - Nach dem Merge baut `.github/workflows/android-cloud-build.yml` die App mit dem geteilten Key und legt
   APK + `update.json` in `Dokumente/Updates/<Projekt>/`. Ausgeschlossen ist nur BestJournalAndroid
@@ -1262,7 +1262,7 @@ Ausnahme-Fänger, Logik-Sonden an Vor- und Nachbedingungen. Vorlage:
 
 | Datum | Änderung |
 |---|---|
-| 26.09.2026, 21:50 Uhr | Kapitel 8.1: Cloud-Sitzungen veröffentlichen vollautomatisch (Skill `apk-update-cloud` (zentraler Skill-Ordner, in der Cloud über den Link `.claude/skills/apk-update-cloud`), Start-Hinweis nur in der Cloud), Merge ohne Rückfrage |
+| 26.09.2026, 21:50 Uhr | Kapitel 8.1: Cloud-Sitzungen veröffentlichen vollautomatisch (Skill `apk-update-cloud` (zentraler Skill-Ordner, in der Cloud über den Verweis-Ordner `.claude/skills/apk-update-cloud`), Start-Hinweis nur in der Cloud), Merge ohne Rückfrage |
 | 26.09.2026, 18:10 Uhr | Kapitel 8.1 ergänzt: Bauen aus der Cloud — Versionslog-Eintrag + Pull Request, GitHub Actions signiert nach dem Merge und legt die APK nach Google Drive |
 | 29.08.2026, 11:19 Uhr | Erstfassung: Bausteine A–H aus PerfectMoment, CortexAndroid, BestJournalAndroid und TerminalVoiceOverlay zusammengetragen |
 | 29.08.2026, 11:19 Uhr | Bausteine I (App-Sperre), J (Sicherung), K (Volltextsuche) und L (Fehler-, Lade- und Leerzustände) ergänzt — nach Durchsicht aller 14 Android-Apps im Repo |

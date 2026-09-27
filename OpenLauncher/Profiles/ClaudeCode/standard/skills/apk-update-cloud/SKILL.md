@@ -38,12 +38,18 @@ tippen müssen außer „Installieren“ in UpdateStation.
    macht GitHub in Schritt 5. **Nie** selbst signieren, **nie** `apk-update.ps1` starten, **nie** nach
    dem Keystore fragen, **nie** eine APK selbst hochladen.
 3. **Committen und pushen** auf den Arbeits-Branch der Sitzung (nur die eigenen Pfade stagen).
-4. **Pull Request öffnen, nicht als Entwurf** (GitHub-Werkzeug `create_pull_request`, `draft: false`).
+4. **Pull Request öffnen, nicht als Entwurf** (`gh pr create --base main --title … --body …` oder
+   `create_pull_request` mit `draft: false`). Titel und Text selbst setzen (sonst nimmt GitHub den ältesten Commit).
    Das startet automatisch das Codex-Review (Bot `chatgpt-codex-connector`). Nie erst als Entwurf
    öffnen und dann auf „bereit“ setzen: Das löst ein zweites, überflüssiges Review aus.
 5. **Codex-Review abwarten (höchstens etwa 8 Minuten):** Nicht mit `sleep` warten, sondern mit
    `send_later` nach etwa 2 Minuten nachsehen, bei Bedarf noch zweimal im Abstand von 3 Minuten. Lesen
-   mit `pull_request_read` (`get_comments`, `get_reviews`, `get_review_comments`). Codex ist fertig, wenn
+   mit `gh` (vorinstalliert, Zugang automatisch; bei GraphQL-403 REST nehmen):
+   `gh api repos/Pepsi1978/proggs/issues/<N>/comments` (Codex-Sammelkommentar),
+   `gh api repos/Pepsi1978/proggs/pulls/<N>/comments` (Zeilen-Befunde P1/P2),
+   `gh api repos/Pepsi1978/proggs/issues/<N>/reactions` (👍 von `chatgpt-codex-connector[bot]`).
+   Ersatzweise die GitHub-Werkzeuge `pull_request_read`. **Nicht auf ein Ereignis warten:** Bot-Kommentare
+   werden Cloud-Sitzungen nicht zugestellt (Bug #62977), sie müssen aktiv abgefragt werden. Codex ist fertig, wenn
    sein Sammelkommentar „Codex Review Summary“ `Completed` zeigt oder er ein 👍 gesetzt hat.
    - **Keine Befunde** (👍, keine Zeilenkommentare) → weiter mit Schritt 6.
    - **Befunde** → Frank in der Sitzung **sofort** kurz melden, damit er weiß, warum es länger dauert:
@@ -54,7 +60,8 @@ tippen müssen außer „Installieren“ in UpdateStation.
      „@codex review“): genau eine Runde, damit Zeit und Codex-Kontingent im Rahmen bleiben.
    - **Nach 8 Minuten kein Ergebnis** → ohne Review weiter mit Schritt 6 und das in der Abschlussmeldung
      erwähnen.
-6. **Selbst mergen** (`merge_pull_request`, `merge_method: merge`). Scheitert der Merge an einem
+6. **Selbst mergen** (`gh pr merge <N> --merge`, ersatzweise `merge_pull_request` mit `merge_method: merge`).
+   Blockiert der Auto-Modus den Merge (Bug #96257), nicht umgehen: Frank melden, dass der PR offen ist. Scheitert der Merge an einem
    Konflikt: `main` in den Branch mergen, Konflikt lösen, pushen, erneut mergen. Der Merge startet den
    Ablauf `.github/workflows/android-cloud-build.yml` (baut nur Merges von Pull Requests).
 7. **Bau abwarten:** Nicht mit `sleep` warten. Mit `send_later` eine Nachkontrolle in etwa
@@ -77,3 +84,5 @@ tippen müssen außer „Installieren“ in UpdateStation.
   Pull Request **nicht** selbst mergen.
 - Keine API-Schlüssel aus SK in die APK einbauen. Schlüssel trägt Frank in der App ein.
 - Hintergrund: `docs/cloud-android-build/EINRICHTUNG-FUER-KI.md`, `ANDROID-APP-REFERENZ.md` Kapitel 8.1.
+- Bekannte Cloud-Fallen: `bugs/claude-tooling/claude-code-cloud.md`, Best Practices:
+  `best-practices/claude-tooling/claude-code-cloud.md`.

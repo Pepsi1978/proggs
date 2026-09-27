@@ -32,7 +32,7 @@ dieser Ablauf statt des Skripts:
   siehe Abschnitt Versionslog), testen, soweit es ohne Signatur geht (Unit-Tests, `assembleDebug` mit
   Wegwerf-Schlüssel nur zur Kompilierprüfung, das Ergebnis **nie** hochladen), Pull Request öffnen und
   **selbst mergen**, ohne Rückfrage (von Frank am 26.09.2026 dauerhaft freigegeben). Maßgeblich ist der
-  Skill `apk-update-cloud` (zentraler Skill-Ordner, in der Cloud über den Link `.claude/skills/apk-update-cloud`), den jede Cloud-Sitzung automatisch lädt.
+  Skill `apk-update-cloud` (zentraler Skill-Ordner, in der Cloud über den Verweis-Ordner `.claude/skills/apk-update-cloud`), den jede Cloud-Sitzung automatisch lädt.
 - Nach dem Merge ruft `.github/workflows/android-cloud-build.yml` auf einem Windows-Rechner von GitHub
   genau dieses Skript auf (`-ProggsWurzel`, `-UpdatesWurzel`, `-OhneGeraet`), prüft die Signatur und lädt
   APK und `update.json` per rclone nach `Dokumente/Updates/<Projekt>/`. Der Keystore liegt nur als

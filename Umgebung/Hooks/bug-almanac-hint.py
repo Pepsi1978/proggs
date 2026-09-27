@@ -31,6 +31,7 @@ AREAS = {
     "android/room":                 ("Room-DB",              ["room database", "room dao", "room entity", "@dao", "@entity", "roomdatabase"]),
     "android-build/r8":             ("R8/ProGuard",          ["proguard", "keep rule", "r8 minify", "minifyenabled", "shrinkresources"]),
     "android/firebase-billing":     ("Firebase Billing",     ["firebase billing", "play billing", "in-app purchase", "paywall", "billingclient"]),
+    "claude-tooling/claude-code-cloud": ("Claude Code Cloud", ["cloud-sitzung", "cloud sitzung", "cloud-session", "cloud session", "claude code on the web", "claude.ai/code", "claude_code_remote", "apk-update-cloud", "apk update cloud", "setup-skript", "setup skript", "cloud-umgebung", "cloud umgebung", "remote control", "remote-control", "teleport"]),
     "claude-tooling/claude-hooks":  ("Claude Hooks",         ["posttooluse", "pretooluse", "sessionstart hook", "claude hook", "hookspecificoutput"]),
     "web/typescript":               ("TypeScript",           ["tsconfig", "moduleresolution", "ts-node", "strictnullchecks"]),
     "android/retrofit-okhttp-moshi":("Retrofit/OkHttp",      ["retrofit", "okhttp", "moshi", "interceptor"]),
