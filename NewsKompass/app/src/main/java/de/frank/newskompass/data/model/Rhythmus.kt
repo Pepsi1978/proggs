@@ -41,7 +41,7 @@ data class Rhythmus(
     val ab: LocalDate = LocalDate.of(2026, 1, 1),
 ) {
     fun normiert(): Rhythmus = copy(
-        intervall = intervall.coerceIn(1, MAX_INTERVALL),
+        intervall = intervall.coerceIn(1, maxIntervall(art)),
         wochentage = wochentage.filter { it in 1..7 }.toSortedSet(),
         tag = tag.coerceIn(1, 31),
         monat = monat.coerceIn(1, 12),
@@ -92,7 +92,8 @@ data class Rhythmus(
         .put("ab", ab.toString())
 
     companion object {
-        const val MAX_INTERVALL = 365
+        /** Höchstens ein Jahr Abstand — so liegt der nächste Termin immer im Planungsfenster. */
+        fun maxIntervall(art: RhythmusArt): Int = if (art == RhythmusArt.WOECHENTLICH) 52 else 365
 
         fun ausJson(j: JSONObject?): Rhythmus {
             if (j == null) return Rhythmus()

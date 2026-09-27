@@ -446,7 +446,7 @@ private fun AktualisierungsBereich(
         when (rhythmus.art) {
             RhythmusArt.TAEGLICH -> Unit
             RhythmusArt.ALLE_X_TAGE -> FlowRow(verticalArrangement = Arrangement.Center, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ZahlWaehler("Alle", rhythmus.intervall, if (rhythmus.intervall == 1) "Tag" else "Tage") {
+                ZahlWaehler("Alle", rhythmus.intervall, if (rhythmus.intervall == 1) "Tag" else "Tage", Rhythmus.maxIntervall(rhythmus.art)) {
                     setzeRhythmus(rhythmus.copy(intervall = it))
                 }
                 AbChip(rhythmus.ab) { abWaehlen = true }
@@ -470,6 +470,7 @@ private fun AktualisierungsBereich(
                         if (rhythmus.intervall == 1) "Jede" else "Alle",
                         rhythmus.intervall,
                         if (rhythmus.intervall == 1) "Woche" else "Wochen",
+                        Rhythmus.maxIntervall(rhythmus.art),
                     ) { setzeRhythmus(rhythmus.copy(intervall = it)) }
                     if (rhythmus.intervall > 1) AbChip(rhythmus.ab) { abWaehlen = true }
                 }
@@ -563,14 +564,14 @@ private fun planZusammenfassung(thema: Thema, zeitplanAktiv: Boolean): String {
 }
 
 @Composable
-private fun ZahlWaehler(vorher: String, wert: Int, nachher: String, aendere: (Int) -> Unit) {
+private fun ZahlWaehler(vorher: String, wert: Int, nachher: String, max: Int, aendere: (Int) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(vorher, style = MaterialTheme.typography.bodyMedium)
         IconButton(onClick = { aendere((wert - 1).coerceAtLeast(1)) }, enabled = wert > 1) {
             Icon(Icons.Rounded.Remove, "Weniger")
         }
         Text("$wert", style = MaterialTheme.typography.titleMedium)
-        IconButton(onClick = { aendere((wert + 1).coerceAtMost(Rhythmus.MAX_INTERVALL)) }) {
+        IconButton(onClick = { aendere((wert + 1).coerceAtMost(max)) }, enabled = wert < max) {
             Icon(Icons.Rounded.Add, "Mehr")
         }
         Text(nachher, style = MaterialTheme.typography.bodyMedium)

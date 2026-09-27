@@ -94,11 +94,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
             // Jedes Thema, dessen Termin versäumt wurde, kommt in einen gemeinsamen Nachhol-Lauf.
-            val (themen, letzter) = Zeitplan.versaeumt(stand.themen, letzterLauf) ?: return@launch
+            val auftrag = Zeitplan.versaeumt(stand.themen, letzterLauf)
+            val letzter = auftrag.values.maxOrNull() ?: return@launch
             // Scheiterte seit dem letzten Termin schon ein Lauf an Kontingent oder Anmeldung, nicht
             // bei jedem Öffnen erneut anstoßen — der nächste Termin oder ein Tipp auf Aktualisieren holt es nach.
             val gesperrt = app.einstellungen.harterFehlerUm >= letzter
-            if (!gesperrt) Zeitplan.starteLauf(this@MainActivity, manuell = false, themen = themen)
+            if (!gesperrt) Zeitplan.starteLauf(this@MainActivity, manuell = false, auftrag = auftrag)
         }
     }
 
