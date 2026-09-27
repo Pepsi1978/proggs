@@ -13,7 +13,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -139,7 +140,9 @@ class VorleseManager(
                     )
                 }
             } finally {
-                abspieler.gibFokusFrei()
+                // Nur den eigenen Fokus abgeben: Wurde schon ein neuer Lauf gestartet, gehört die Anfrage ihm
+                // (stoppe() hat den alten Fokus bereits freigegeben).
+                if (meinLauf == laufNummer) abspieler.gibFokusFrei()
                 if (meinLauf == laufNummer && _zustand.value.fehler.isEmpty()) {
                     _zustand.value = VorleseZustand()
                 }
@@ -147,7 +150,9 @@ class VorleseManager(
         }
     }
 
-    private suspend fun spieleReihe(meinLauf: Int, quelleId: String, absaetze: List<String>) = coroutineScope {
+    // supervisorScope: Scheitert ein vorausgeladener Absatz, darf das nicht die ganze Reihe abbrechen —
+    // der Fehler kommt beim await an und wird dort entschieden (überspringen oder sitzungsweit anhalten).
+    private suspend fun spieleReihe(meinLauf: Int, quelleId: String, absaetze: List<String>) = supervisorScope {
         val anbieter = einstellungen.ttsAnbieter
         val synthesizer = waehleSynthesizer(anbieter)
         val stimme = waehleStimme(anbieter)
@@ -179,13 +184,17 @@ class VorleseManager(
             offen.clear()
         }
 
-        // Vorausschau: den laufenden plus die nächsten beiden Absätze anstoßen.
+        // Scheitern gleich die ersten Absätze (etwa ohne Netz), nicht minutenlang still weiterprobieren.
+        var schonGespielt = false
+        var fehlschlaegeInFolge = 0
+
+        // Vorausschau: den ersten plus die nächsten beiden Absätze anstoßen.
         repeat(minOf(VORAUSSCHAU + 1, absaetze.size)) { beauftrage(it) }
 
         for (index in absaetze.indices) {
             if (meinLauf != laufNummer) {
                 brichOffeneAb()
-                return@coroutineScope
+                return@supervisorScope
             }
 
             val ergebnis = try {
@@ -199,6 +208,11 @@ class VorleseManager(
                     brichOffeneAb()
                     throw fehler
                 }
+                fehlschlaegeInFolge += 1
+                if (!schonGespielt && fehlschlaegeInFolge >= 2) {
+                    brichOffeneAb()
+                    throw fehler
+                }
                 KompassLog.warn(
                     "VorleseManager",
                     "spieleReihe",
@@ -208,14 +222,17 @@ class VorleseManager(
                 null
             }
 
-            beauftrage(index + VORAUSSCHAU + 1)
+            // Während dieser Absatz spricht, sind die nächsten beiden bestellt.
+            beauftrage(index + VORAUSSCHAU)
             if (meinLauf != laufNummer) {
                 brichOffeneAb()
-                return@coroutineScope
+                return@supervisorScope
             }
             if (ergebnis == null) continue
 
             _zustand.value = VorleseZustand(VorleseStufe.SPRICHT, quelleId, index + 1, absaetze.size)
+            schonGespielt = true
+            fehlschlaegeInFolge = 0
             abspieler.spieleUndWarte(ergebnis.audio, ergebnis.endung, tempoBeimAbspielen)
 
             // Hörbarer Atem zwischen zwei Absätzen — beim letzten entfällt er.
@@ -246,6 +263,13 @@ class VorleseManager(
                 return withTimeout(SYNTHESE_ZEITGRENZE_MS) {
                     synthesizer.synthetisiere(text, stimme, tempo)
                 }
+            } catch (zeit: TimeoutCancellationException) {
+                // Hängende Verbindung: wie eine Netzstörung erneut versuchen, statt das Vorlesen still zu beenden.
+                if (versuch >= WIEDERHOLUNGEN.size) {
+                    throw TtsFehler(TtsFehlerArt.NETZ, "Der Absatz kam nicht rechtzeitig an.", ursache = zeit)
+                }
+                delay(WIEDERHOLUNGEN[versuch])
+                versuch += 1
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: TtsFehler) {
@@ -291,7 +315,15 @@ class VorleseManager(
             mapOf("index" to index, "teile" to teile.size),
         )
         val stuecke = teile.mapNotNull { teil ->
-            runCatching { synthesizer.synthetisiere(teil, stimme, tempo) }.getOrNull()
+            try {
+                withTimeout(SYNTHESE_ZEITGRENZE_MS) { synthesizer.synthetisiere(teil, stimme, tempo) }
+            } catch (zeit: TimeoutCancellationException) {
+                null
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                null
+            }
         }
         if (stuecke.isEmpty()) return null
         // MP3-Rahmen lassen sich hintereinanderhängen; bei WAV ginge das nicht, deshalb wird
@@ -337,8 +369,10 @@ class VorleseManager(
             } catch (fehler: Exception) {
                 beiFehler(fehler.message ?: "Die Probe hat nicht geklappt.")
             } finally {
-                abspieler.gibFokusFrei()
-                if (meinLauf == laufNummer) _zustand.value = VorleseZustand()
+                if (meinLauf == laufNummer) {
+                    abspieler.gibFokusFrei()
+                    _zustand.value = VorleseZustand()
+                }
             }
         }
     }

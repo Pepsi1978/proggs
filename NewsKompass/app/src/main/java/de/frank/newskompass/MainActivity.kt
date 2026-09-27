@@ -81,25 +81,10 @@ class MainActivity : ComponentActivity() {
      * sofort nachholen — aber nur, wenn die Anmeldung steht.
      */
     private fun holeVersaeumtenLaufNach() {
+        val kontext = applicationContext
         app.bereich.launch {
             app.speicher.lade()
-            if (!app.codex.istVerbunden) return@launch
-            val stand = app.einstellungen.stand.value
-            if (!stand.zeitplanAktiv) return@launch
-            // Jüngster Lauf je Thema; gesprochene Fragen zählen nicht als Lauf aus dem Zeitplan.
-            val letzterLauf = mutableMapOf<String, Long>()
-            app.speicher.ausgabenSeit(System.currentTimeMillis() - 50 * 3_600_000L).forEach { ausgabe ->
-                ausgabe.bloecke.filter { it.frage == null }.forEach { block ->
-                    letzterLauf[block.themaId] = maxOf(letzterLauf[block.themaId] ?: 0L, ausgabe.erstelltUm)
-                }
-            }
-            // Jedes Thema, dessen Termin versäumt wurde, kommt in einen gemeinsamen Nachhol-Lauf.
-            val auftrag = Zeitplan.versaeumt(stand.themen, letzterLauf)
-            val letzter = auftrag.values.maxOrNull() ?: return@launch
-            // Scheiterte seit dem letzten Termin schon ein Lauf an Kontingent oder Anmeldung, nicht
-            // bei jedem Öffnen erneut anstoßen — der nächste Termin oder ein Tipp auf Aktualisieren holt es nach.
-            val gesperrt = app.einstellungen.harterFehlerUm >= letzter
-            if (!gesperrt) Zeitplan.starteLauf(this@MainActivity, manuell = false, auftrag = auftrag)
+            Zeitplan.holeNach(kontext)
         }
     }
 

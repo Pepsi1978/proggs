@@ -38,8 +38,16 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Ein Termin aus dem Zeitplan: der Zeitpunkt und die IDs der Themen, die dann dran sind. */
 data class Termin(val zeit: ZonedDateTime, val themen: List<String>)
@@ -70,16 +78,22 @@ object Zeitplan {
     private const val VORAUS_TAGE = 400L
     /** So weit schaut das Nachholen beim App-Start zurück. */
     private const val NACHHOLEN_STUNDEN = 48L
+    /**
+     * Ein Lauf, der höchstens so lange vor einem Termin begann, deckt ihn mit ab — etwa ein Tipp auf
+     * Aktualisieren um 4:58 den Termin um 5 Uhr. Sonst liefe dasselbe Thema gleich noch einmal.
+     */
+    const val SCHON_ERLEDIGT_MS = 15 * 60_000L
 
     /** Etikett am Frage-Auftrag, damit die Oberfläche die Frage schon vor dem Start zeigen kann. */
     const val FRAGE_ETIKETT = "frage:"
     /** Reihenfolge der Fragen in der Warteschlange (WorkInfo kennt keine Einreihzeit). */
-    private const val NUMMER_ETIKETT = "nr:"
+    const val NUMMER_ETIKETT = "nr:"
     private const val KANAL_LAUF = "lauf"
     private const val KANAL_FERTIG = "fertig"
     const val HINWEIS_LAUF = 17
     const val HINWEIS_FRAGE = 19
     const val HINWEIS_SICHERUNG = 21
+    private const val HINWEIS_GESCHEITERT = 22
     const val SICHERUNG = "archiv-sicherung"
     private const val HINWEIS_FERTIG = 18
 
@@ -115,9 +129,10 @@ object Zeitplan {
     fun naechsterTermin(themen: List<Thema>, jetzt: ZonedDateTime = ZonedDateTime.now()): Termin? {
         val zone = ZoneId.systemDefault()
         val heute = jetzt.withZoneSameInstant(zone).toLocalDate()
-        val ab = jetzt.plusSeconds(30)
+        // Streng nach jetzt: Ein Puffer würde einen gleich anstehenden Termin überspringen, wenn kurz
+        // vorher neu geplant wird (App-Start, geänderte Einstellung). Der Wecker selbst klingelt nie zu früh.
         for (tag in 0..VORAUS_TAGE) {
-            termineAm(themen, heute.plusDays(tag), zone).firstOrNull { it.zeit.isAfter(ab) }?.let { return it }
+            termineAm(themen, heute.plusDays(tag), zone).firstOrNull { it.zeit.isAfter(jetzt) }?.let { return it }
         }
         return null
     }
@@ -132,20 +147,58 @@ object Zeitplan {
      * [letzterLauf] ist je Themen-ID der Zeitpunkt seiner jüngsten Ausgabe. Jedes Thema zählt für
      * sich: Ein späterer Lauf anderer Themen verdeckt keinen versäumten Termin.
      */
-    fun versaeumt(themen: List<Thema>, letzterLauf: Map<String, Long>, jetzt: ZonedDateTime = ZonedDateTime.now()): Map<String, Long> {
+    fun versaeumt(themen: List<Thema>, letzterLauf: Map<String, Long>, jetzt: ZonedDateTime = ZonedDateTime.now()): Map<String, Long> =
+        faelligZwischen(themen, jetzt.minusHours(NACHHOLEN_STUNDEN), jetzt)
+            .filter { (id, um) -> (letzterLauf[id] ?: 0L) + SCHON_ERLEDIGT_MS < um }
+
+    /**
+     * Je Thema sein jüngster Termin nach [von] (ausschließlich) bis [bis] (einschließlich) — etwa
+     * die Termine, die ein verspäteter Wecker übersprungen hat.
+     */
+    fun faelligZwischen(themen: List<Thema>, von: ZonedDateTime, bis: ZonedDateTime): Map<String, Long> {
         val zone = ZoneId.systemDefault()
-        val heute = jetzt.withZoneSameInstant(zone).toLocalDate()
-        val grenze = jetzt.minusHours(NACHHOLEN_STUNDEN)
         val offen = linkedMapOf<String, Long>()
-        for (tag in -(NACHHOLEN_STUNDEN / 24 + 1)..0L) {
-            termineAm(themen, heute.plusDays(tag), zone)
-                .filter { it.zeit.isAfter(grenze) && !it.zeit.isAfter(jetzt) }
-                .forEach { termin ->
-                    val um = termin.zeit.toInstant().toEpochMilli()
-                    termin.themen.filter { (letzterLauf[it] ?: 0L) < um }.forEach { offen[it] = um }
-                }
+        var tag = von.withZoneSameInstant(zone).toLocalDate()
+        val letzterTag = bis.withZoneSameInstant(zone).toLocalDate()
+        while (!tag.isAfter(letzterTag)) {
+            termineAm(themen, tag, zone)
+                .filter { it.zeit.isAfter(von) && !it.zeit.isAfter(bis) }
+                .forEach { termin -> termin.themen.forEach { offen[it] = termin.zeit.toInstant().toEpochMilli() } }
+            tag = tag.plusDays(1)
         }
         return offen
+    }
+
+    /**
+     * Holt beim App-Start und nach einem Neustart des Handys nach, was versäumt wurde: Termine, deren
+     * Thema seither nicht erfolgreich lief, und offene Termine, deren Lauf nie zustande kam.
+     */
+    suspend fun holeNach(context: Context) {
+        val app = context.applicationContext as NewsApplication
+        app.speicher.bereit()
+        if (!app.codex.istVerbunden) return
+        val stand = app.einstellungen.stand.value
+        val auftrag = if (stand.zeitplanAktiv) {
+            // Jüngster erfolgreicher Lauf je Thema; gesprochene Fragen und gescheiterte Blöcke zählen nicht.
+            val letzterLauf = mutableMapOf<String, Long>()
+            app.speicher.ausgabenSeit(System.currentTimeMillis() - (NACHHOLEN_STUNDEN + 2) * 3_600_000L).forEach { ausgabe ->
+                ausgabe.bloecke.filter { NewsRecherche.istGelaufen(it) }.forEach { block ->
+                    letzterLauf[block.themaId] = maxOf(letzterLauf[block.themaId] ?: 0L, ausgabe.erstelltUm)
+                }
+            }
+            versaeumt(stand.themen, letzterLauf)
+        } else {
+            emptyMap()
+        }
+        val letzter = auftrag.values.maxOrNull()
+        // Scheiterte seit dem letzten Termin schon ein Lauf an Kontingent oder Anmeldung, nicht bei
+        // jedem Öffnen erneut anstoßen — der nächste Termin oder ein Tipp auf Aktualisieren holt es nach.
+        if (letzter != null && app.einstellungen.harterFehlerUm < letzter) {
+            KompassLog.info("Zeitplan", "holeNach", "Versäumte Termine werden nachgeholt", mapOf("themen" to auftrag.size))
+            starteLauf(context, manuell = false, auftrag = auftrag)
+        } else if (app.einstellungen.hatOffeneLaeufe) {
+            reiheLaufEin(context)
+        }
     }
 
     fun plane(context: Context) {
@@ -201,24 +254,37 @@ object Zeitplan {
     }?.toMap()
 
     /**
-     * Startet einen Lauf. Läuft schon einer, bleibt es bei dem.
+     * Merkt die Termine vor und startet den Lauf. Läuft oder wartet schon einer, arbeitet er die
+     * vorgemerkten Termine vor seinem Ende mit ab.
      *
      * [auftrag] ordnet jedem Thema den Zeitpunkt seines Termins zu; `null` heißt alle Themen
      * (Knopf „Aktualisieren“).
      */
     fun starteLauf(context: Context, manuell: Boolean, auftrag: Map<String, Long>? = null) {
-        val daten = if (auftrag == null) {
-            workDataOf("manuell" to manuell)
-        } else {
-            workDataOf("manuell" to manuell, THEMEN to auftrag.map { (id, um) -> "$id|$um" }.toTypedArray())
-        }
+        // Erst dauerhaft vormerken, dann anstoßen: Wartet oder läuft schon ein Lauf, verwirft KEEP den
+        // neuen Auftrag — der laufende nimmt die vorgemerkten Termine aber vor seinem Ende noch mit.
+        (context.applicationContext as NewsApplication).einstellungen.merkeOffenenLauf(auftrag)
+        KompassLog.info("Zeitplan", "starteLauf", "Lauf vorgemerkt", mapOf("manuell" to manuell, "themen" to auftrag?.size))
+        reiheLaufEin(context)
+    }
+
+    /**
+     * Gesetzt, sobald der laufende Auftrag keine offenen Termine mehr sieht und gleich endet. Wer jetzt
+     * einen Termin vormerkt, ersetzt ihn (REPLACE) — KEEP würde den neuen Auftrag verwerfen, weil der
+     * alte formal noch läuft, und der Termin bliebe bis zum nächsten Wecker liegen.
+     */
+    @Volatile
+    internal var laufEndet = false
+
+    /** Stößt den Lauf an, der die vorgemerkten Termine abarbeitet. */
+    private fun reiheLaufEin(context: Context) {
         val auftrag = OneTimeWorkRequestBuilder<NewsWorker>()
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 2, TimeUnit.MINUTES)
-            .setInputData(daten)
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(LAUF, ExistingWorkPolicy.KEEP, auftrag)
+        val regel = if (laufEndet) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
+        WorkManager.getInstance(context).enqueueUniqueWork(LAUF, regel, auftrag)
     }
 
     /**
@@ -248,33 +314,45 @@ object Zeitplan {
         return letzteNummer
     }
 
-    private fun nummer(info: WorkInfo): Long =
-        info.tags.firstOrNull { it.startsWith(NUMMER_ETIKETT) }?.removePrefix(NUMMER_ETIKETT)?.toLongOrNull() ?: 0L
+    private const val FRAGEN_ABLAGE = "fragen"
+    private const val VERWORFEN = "verworfen"
+    private val verworfenFluss = MutableStateFlow<Set<String>>(emptySet())
+    private var verworfenGeladen = false
 
     /**
-     * Verwirft eine wartende oder laufende Frage, ohne die dahinter wartenden zu verlieren.
-     *
-     * Die Fragen hängen in WorkManager als Kette aneinander (APPEND_OR_REPLACE). Ein Abbruch reißt
-     * alle dahinter wartenden mit — deshalb werden genau die neu eingereiht, in alter Reihenfolge.
-     * Gibt für jede neu eingereihte Frage alte → neue Auftragsnummer zurück.
+     * Auftragsnummern verworfener Fragen. Sie bleiben in der Kette stehen und enden beim Start sofort —
+     * ein Abbruch per WorkManager würde die dahinter wartenden mitreißen, und das nächste Anhängen
+     * (APPEND_OR_REPLACE) löschte dann die ganze Kette samt der laufenden Frage.
      */
-    suspend fun verwirfFrage(context: Context, id: UUID): Map<UUID, UUID> {
-        val arbeit = WorkManager.getInstance(context)
-        val offen = arbeit.getWorkInfosForUniqueWorkFlow(FRAGE).first().filter { !it.state.isFinished }
-        val ziel = offen.firstOrNull { it.id == id }
-        if (ziel == null) {
-            withContext(Dispatchers.IO) { arbeit.cancelWorkById(id).result.get() }
-            return emptyMap()
+    @Synchronized
+    fun verworfen(context: Context): StateFlow<Set<String>> {
+        if (!verworfenGeladen) {
+            verworfenFluss.value = fragenAblage(context).getStringSet(VERWORFEN, emptySet()).orEmpty().toSet()
+            verworfenGeladen = true
         }
-        val dahinter = offen.filter { it.id != id && nummer(it) > nummer(ziel) }.sortedBy { nummer(it) }
-        withContext(Dispatchers.IO) { arbeit.cancelWorkById(id).result.get() }
-        val neu = dahinter.mapNotNull { info ->
-            val text = info.tags.firstOrNull { it.startsWith(FRAGE_ETIKETT) }?.removePrefix(FRAGE_ETIKETT)
-            if (text.isNullOrBlank()) null else info.id to starteFrage(context, text)
-        }.toMap()
-        KompassLog.info("Zeitplan", "verwirfFrage", "Frage verworfen", mapOf("neuEingereiht" to neu.size))
-        return neu
+        return verworfenFluss
     }
+
+    @Synchronized
+    private fun aendereVerworfen(context: Context, aendern: (Set<String>) -> Set<String>) {
+        verworfen(context)
+        verworfenFluss.value = aendern(verworfenFluss.value)
+        fragenAblage(context).edit().putStringSet(VERWORFEN, verworfenFluss.value).commit()
+    }
+
+    private fun fragenAblage(context: Context) =
+        context.applicationContext.getSharedPreferences(FRAGEN_ABLAGE, Context.MODE_PRIVATE)
+
+    /** Verwirft eine wartende oder laufende Frage, ohne die dahinter wartenden zu berühren. */
+    suspend fun verwirfFrage(context: Context, id: UUID) {
+        val info = withContext(Dispatchers.IO) { WorkManager.getInstance(context).getWorkInfoById(id).get() }
+        if (info == null || info.state.isFinished) return
+        withContext(Dispatchers.IO) { aendereVerworfen(context) { it + id.toString() } }
+        KompassLog.info("Zeitplan", "verwirfFrage", "Frage verworfen", mapOf("laeuft" to (info.state == WorkInfo.State.RUNNING)))
+    }
+
+    /** Die Frage [id] ist beendet — ihre Marke „verworfen“ wird nicht mehr gebraucht. */
+    fun vergissVerworfen(context: Context, id: UUID) = aendereVerworfen(context) { it - id.toString() }
 
     fun legeKanaeleAn(context: Context) {
         val verwaltung = context.getSystemService(NotificationManager::class.java) ?: return
@@ -302,7 +380,8 @@ object Zeitplan {
         .setContentIntent(oeffneApp(context))
         .build()
 
-    fun meldeFertig(context: Context, titel: String, zeilen: List<String>) {
+    /** Jede neue Ausgabe bekommt ihre eigene Benachrichtigung ([nummer] je Ausgabe) — keine überschreibt die vorige. */
+    fun meldeFertig(context: Context, titel: String, zeilen: List<String>, nummer: Int = HINWEIS_FERTIG) {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
         val hinweis = NotificationCompat.Builder(context, KANAL_FERTIG)
             .setSmallIcon(android.R.drawable.ic_menu_agenda)
@@ -312,24 +391,72 @@ object Zeitplan {
             .setAutoCancel(true)
             .setContentIntent(oeffneApp(context))
             .build()
-        runCatching { NotificationManagerCompat.from(context).notify(HINWEIS_FERTIG, hinweis) }
+        runCatching { NotificationManagerCompat.from(context).notify(nummer, hinweis) }
     }
+
+    /** Ein automatischer Lauf ist endgültig gescheitert — sonst bliebe er ganz still aus. */
+    fun meldeGescheitert(context: Context, grund: String) {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+        val hinweis = NotificationCompat.Builder(context, KANAL_FERTIG)
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setContentTitle("Automatisches Update gescheitert")
+            .setContentText(grund)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(grund))
+            .setAutoCancel(true)
+            .setContentIntent(oeffneApp(context))
+            .build()
+        runCatching { NotificationManagerCompat.from(context).notify(HINWEIS_GESCHEITERT, hinweis) }
+    }
+
+    /** Nach einem erfolgreichen Lauf ist ein alter Fehlerhinweis überholt. */
+    fun vergissFehlerHinweis(context: Context) {
+        runCatching { NotificationManagerCompat.from(context).cancel(HINWEIS_GESCHEITERT) }
+    }
+
+    /** Eigene Benachrichtigungsnummer je Ausgabe oder Frage, fern von den festen Nummern oben. */
+    fun hinweisNummer(schluessel: String): Int = (schluessel.hashCode() and 0x3fffffff) or 0x40000000
 }
 
 /** Der Wecker klingelt: Lauf anstoßen, nächsten Termin stellen. */
 class ZeitplanEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val auftrag = Zeitplan.auftragAus(intent)
-        KompassLog.info("Zeitplan", "onReceive", "Wecker ausgelöst", mapOf("themen" to auftrag?.size))
-        Zeitplan.starteLauf(context, manuell = false, auftrag = auftrag)
+        // Klingelte der Wecker verspätet, kämen Termine anderer Themen dazwischen nie dran — sie laufen gleich mit.
+        val stand = (context.applicationContext as NewsApplication).einstellungen.stand.value
+        val um = auftrag?.values?.firstOrNull()
+        val verspaetet = if (um != null && stand.zeitplanAktiv) {
+            Zeitplan.faelligZwischen(stand.themen, Instant.ofEpochMilli(um).atZone(ZoneId.systemDefault()), ZonedDateTime.now())
+        } else {
+            emptyMap()
+        }
+        KompassLog.info("Zeitplan", "onReceive", "Wecker ausgelöst", mapOf("themen" to auftrag?.size, "verspaetet" to verspaetet.size))
+        // Erst den nächsten Wecker stellen: Scheitert das Einreihen, klingelt der nächste Termin trotzdem.
         Zeitplan.plane(context)
+        Zeitplan.starteLauf(context, manuell = false, auftrag = auftrag?.let { it + verspaetet })
     }
 }
 
-/** Nach Neustart, App-Update oder geänderter Wecker-Erlaubnis den Termin neu stellen (Almanach B1). */
+/**
+ * Nach Neustart, App-Update, geänderter Uhrzeit oder Zeitzone und geänderter Wecker-Erlaubnis den
+ * Termin neu stellen (Almanach B1) und Versäumtes nachholen — nicht erst beim nächsten Öffnen der App.
+ */
 class NeustartEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         Zeitplan.plane(context)
+        val app = context.applicationContext as NewsApplication
+        val fertig = goAsync()
+        app.bereich.launch {
+            try {
+                // Ein Empfänger hat nur begrenzt Zeit; was hier nicht fertig wird, holt das Öffnen der App nach.
+                withTimeoutOrNull(8_000L) { Zeitplan.holeNach(context) }
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                KompassLog.warn("Zeitplan", "NeustartEmpfaenger", "Nachholen gescheitert", mapOf("grund" to fehler.message))
+            } finally {
+                fertig.finish()
+            }
+        }
     }
 }
 
@@ -349,33 +476,114 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
     override suspend fun doWork(): Result {
         val app = applicationContext as NewsApplication
         // Eine Recherche dauert Minuten — als Vordergrundarbeit überlebt sie die 10-Minuten-Grenze.
-        runCatching { setForeground(vordergrund("Die Nachrichten werden zusammengestellt …")) }
-            .onFailure { KompassLog.warn("NewsWorker", "doWork", "Kein Vordergrund möglich", mapOf("grund" to it.message)) }
-        val auftrag = Zeitplan.auftragAus(inputData.getStringArray(Zeitplan.THEMEN))
-        val faellig = Zeitplan.themenFuer(app.einstellungen.stand.value.themen, auftrag)
-        if (faellig.isEmpty()) {
-            // Die Termine wurden inzwischen geändert, gestrichen oder die Themen gelöscht — nichts zu tun.
-            KompassLog.info("NewsWorker", "doWork", "Kein Thema mehr für diesen Termin", mapOf("themen" to auftrag?.size))
-            return Result.success()
-        }
-        return try {
-            val ausgabe = app.recherche.laufe(if (auftrag == null) null else faellig.map { it.id }) { stand ->
-                setProgress(workDataOf("text" to stand.text, "anteil" to stand.anteil))
-                runCatching { setForeground(vordergrund(stand.text)) }
-            }
-            val zeilen = ausgabe.bloecke.flatMap { b -> b.meldungen.take(2).map { "${b.titel}: ${it.titel}" } }
-            Zeitplan.meldeFertig(applicationContext, "Deine ${ausgabe.slot} ist da", zeilen)
-            Result.success()
+        try {
+            setForeground(vordergrund("Die Nachrichten werden zusammengestellt …"))
         } catch (abbruch: CancellationException) {
             throw abbruch
         } catch (fehler: Exception) {
-            KompassLog.error("NewsWorker", "doWork", "Lauf gescheitert", mapOf("grund" to fehler.message, "versuch" to runAttemptCount))
-            if ((fehler is CodexFehler && fehler.art != CodexFehlerArt.NETZ) || runAttemptCount >= 2) {
-                Result.failure(workDataOf("fehler" to (fehler.message ?: "Unbekannter Fehler")))
-            } else {
-                Result.retry()
+            KompassLog.warn("NewsWorker", "doWork", "Kein Vordergrund möglich", mapOf("grund" to fehler.message))
+        }
+        // Aufträge aus älteren Versionen tragen ihre Themen noch in der Eingabe — nur beim ersten Versuch übernehmen.
+        if (runAttemptCount == 0) {
+            inputData.getStringArray(Zeitplan.THEMEN)?.let { app.einstellungen.merkeOffenenLauf(Zeitplan.auftragAus(it)) }
+        }
+        var ergebnis: Result = Result.success()
+        // Themen, die dieser Auftrag schon recherchiert hat, mit Beginn und Ende ihres Laufs.
+        val erledigt = mutableMapOf<String, Pair<Long, Long>>()
+        // Ende des letzten Laufs über alle Themen — ein zweiter Tipp auf Aktualisieren währenddessen löst keinen weiteren aus.
+        var alleErledigtUm = 0L
+        // Solange Termine vorgemerkt sind, weiterarbeiten — auch die, die während des Laufs dazukamen.
+        while (true) {
+            // Lesen, nicht herausnehmen: Die Termine bleiben vorgemerkt, bis sie erledigt oder endgültig gescheitert sind.
+            Zeitplan.laufEndet = false
+            val offen = app.einstellungen.offeneLaeufe() ?: run {
+                // Übergabe ohne Lücke: erst „endet“ melden, dann noch einmal nachsehen. Kam dazwischen ein Termin,
+                // arbeitet dieser Auftrag weiter; kommt er danach, ersetzt der neue Auftrag diesen.
+                Zeitplan.laufEndet = true
+                app.einstellungen.offeneLaeufe()
+            } ?: break
+            Zeitplan.laufEndet = false
+            val (alle, termine) = offen
+            if (alle && System.currentTimeMillis() - alleErledigtUm < Zeitplan.SCHON_ERLEDIGT_MS) {
+                KompassLog.info("NewsWorker", "doWork", "Alle Themen liefen gerade erst — kein zweiter Lauf")
+                // Nur die Marke „alle“ löschen; vorgemerkte Termine gehen den normalen Weg durch den erledigt-Filter.
+                app.einstellungen.entferneOffeneLaeufe(true, emptyMap())
+                continue
+            }
+            val stand = app.einstellungen.stand.value
+            val faellig = when {
+                alle -> Zeitplan.themenFuer(stand.themen, null)
+                // Der Zeitplan wurde ausgeschaltet, während der Lauf aufs Netz wartete.
+                !stand.zeitplanAktiv -> emptyList()
+                else -> Zeitplan.themenFuer(
+                    stand.themen,
+                    // Abgedeckt ist ein Termin, der höchstens 15 Minuten nach dem Beginn des vorigen Laufs lag — dieselbe
+                    // Regel wie beim Nachholen, sonst holte das Öffnen der App einen hier gestrichenen Termin doch nach.
+                    termine.filter { (id, um) ->
+                        erledigt[id]?.let { (beginn, _) -> um - beginn > Zeitplan.SCHON_ERLEDIGT_MS } ?: true
+                    },
+                )
+            }
+            if (faellig.isEmpty() && !alle) {
+                // Die Termine wurden inzwischen geändert, gestrichen oder die Themen gelöscht — nichts zu tun.
+                KompassLog.info("NewsWorker", "doWork", "Kein Thema mehr für diese Termine", mapOf("themen" to termine.size))
+                app.einstellungen.entferneOffeneLaeufe(alle, termine)
+                continue
+            }
+            val beginn = System.currentTimeMillis()
+            try {
+                val ausgabe = app.recherche.laufe(if (alle) null else faellig.map { it.id }) { fortschritt ->
+                    setProgress(workDataOf("text" to fortschritt.text, "anteil" to fortschritt.anteil))
+                    try {
+                        setForeground(vordergrund(fortschritt.text))
+                    } catch (abbruch: CancellationException) {
+                        throw abbruch
+                    } catch (fehler: Exception) {
+                        // Der Hinweis bleibt dann eben beim vorigen Text.
+                    }
+                }
+                val ende = System.currentTimeMillis()
+                // Einzelne Themen können gescheitert sein (etwa Netz weg), während andere durchkamen.
+                val gescheitert = ausgabe.bloecke.filter { it.frage == null && !NewsRecherche.istGelaufen(it) }
+                val gescheiterteIds = gescheitert.map { it.themaId }.toSet()
+                // Automatische Termine gescheiterter Themen noch einmal versuchen — nicht nach Kontingent- oder Anmeldefehler.
+                val nochmal = !alle && gescheiterteIds.isNotEmpty() && runAttemptCount < 2 &&
+                    app.einstellungen.harterFehlerUm < beginn
+                app.einstellungen.entferneOffeneLaeufe(alle, if (nochmal) termine.filterKeys { it !in gescheiterteIds } else termine)
+                faellig.filter { it.id !in gescheiterteIds }.forEach { erledigt[it.id] = beginn to ende }
+                if (alle) alleErledigtUm = ende
+                if (gescheiterteIds.isEmpty()) {
+                    Zeitplan.vergissFehlerHinweis(applicationContext)
+                } else if (!alle && !nochmal) {
+                    // Endgültig: nicht bei jedem Öffnen der App erneut nachholen.
+                    app.einstellungen.merkeHartenFehler(ende)
+                }
+                val zeilen = gescheitert.map { "Nicht aktualisiert: ${it.titel}" } +
+                    ausgabe.bloecke.flatMap { b -> b.meldungen.take(2).map { "${b.titel}: ${it.titel}" } }
+                Zeitplan.meldeFertig(applicationContext, "Deine ${ausgabe.slot} ist da", zeilen, Zeitplan.hinweisNummer(ausgabe.id))
+                if (nochmal) return Result.retry()
+                ergebnis = Result.success()
+            } catch (abbruch: CancellationException) {
+                // Android stoppt den Auftrag (etwa Netz weg) — die Termine bleiben für den nächsten Versuch vorgemerkt.
+                throw abbruch
+            } catch (fehler: Exception) {
+                KompassLog.error("NewsWorker", "doWork", "Lauf gescheitert", mapOf("grund" to fehler.message, "versuch" to runAttemptCount))
+                // Kontingent, Anmeldung oder eine dauerhafte Ablehnung (etwa Fehler 400) bessern sich durch Warten nicht.
+                val endgueltig = (fehler is CodexFehler && (fehler.art != CodexFehlerArt.NETZ || fehler.abgelehnt)) ||
+                    fehler is IllegalStateException || runAttemptCount >= 2
+                if (!endgueltig) return Result.retry()
+                app.einstellungen.entferneOffeneLaeufe(alle, termine)
+                val grund = fehler.message ?: "Unbekannter Fehler"
+                if (!alle || termine.isNotEmpty()) {
+                    // Nicht bei jedem Öffnen der App erneut nachholen und genauso scheitern — der nächste Termin
+                    // oder ein Tipp auf Aktualisieren versucht es wieder.
+                    app.einstellungen.merkeHartenFehler(System.currentTimeMillis())
+                    Zeitplan.meldeGescheitert(applicationContext, grund)
+                }
+                ergebnis = Result.failure(workDataOf("fehler" to grund))
             }
         }
+        return ergebnis
     }
 }
 
@@ -402,15 +610,50 @@ class FrageWorker(context: Context, parameter: WorkerParameters) : CoroutineWork
     override suspend fun doWork(): Result {
         val app = applicationContext as NewsApplication
         val frage = inputData.getString("frage").orEmpty()
-        runCatching { setForeground(vordergrund("Deine Frage wird recherchiert …")) }
-            .onFailure { KompassLog.warn("FrageWorker", "doWork", "Kein Vordergrund möglich", mapOf("grund" to it.message)) }
+        val verworfen = Zeitplan.verworfen(applicationContext)
+        if (id.toString() in verworfen.value) {
+            Zeitplan.vergissVerworfen(applicationContext, id)
+            return Result.success(workDataOf("verworfen" to true))
+        }
+        try {
+            setForeground(vordergrund("Deine Frage wird recherchiert …"))
+        } catch (abbruch: CancellationException) {
+            throw abbruch
+        } catch (fehler: Exception) {
+            KompassLog.warn("FrageWorker", "doWork", "Kein Vordergrund möglich", mapOf("grund" to fehler.message))
+        }
         return try {
-            val (ausgabe, block) = app.recherche.beantworteFrage(frage) { stand ->
-                setProgress(workDataOf("text" to stand.text, "anteil" to stand.anteil))
+            // Wird die Frage verworfen, während sie läuft, bricht nur ihre Recherche ab — der Auftrag endet als
+            // Erfolg, damit die Kette der wartenden Fragen weiterläuft.
+            val (ausgabe, block) = coroutineScope {
+                val recherche = async {
+                    app.recherche.beantworteFrage(frage) { stand ->
+                        setProgress(workDataOf("text" to stand.text, "anteil" to stand.anteil))
+                    }
+                }
+                val waechter = launch {
+                    verworfen.first { id.toString() in it }
+                    recherche.cancel()
+                }
+                try {
+                    recherche.await()
+                } finally {
+                    waechter.cancel()
+                }
             }
-            Zeitplan.meldeFertig(applicationContext, "Deine Antwort ist da: ${block.titel}", block.meldungen.take(6).map { it.titel })
+            Zeitplan.meldeFertig(
+                applicationContext,
+                "Deine Antwort ist da: ${block.titel}",
+                block.meldungen.take(6).map { it.titel },
+                Zeitplan.hinweisNummer(block.themaId),
+            )
+            Zeitplan.vergissVerworfen(applicationContext, id)
             Result.success(workDataOf("ausgabeId" to ausgabe.id, "themaId" to block.themaId))
         } catch (abbruch: CancellationException) {
+            if (currentCoroutineContext().isActive && id.toString() in verworfen.value) {
+                Zeitplan.vergissVerworfen(applicationContext, id)
+                return Result.success(workDataOf("verworfen" to true))
+            }
             throw abbruch
         } catch (fehler: Exception) {
             KompassLog.error("FrageWorker", "doWork", "Frage gescheitert", mapOf("grund" to fehler.message, "versuch" to runAttemptCount))
@@ -418,6 +661,7 @@ class FrageWorker(context: Context, parameter: WorkerParameters) : CoroutineWork
             if (netz && fehler !is IllegalStateException && runAttemptCount < 2) {
                 Result.retry()
             } else {
+                Zeitplan.vergissVerworfen(applicationContext, id)
                 Result.success(workDataOf("fehler" to (fehler.message ?: "Die Frage konnte nicht recherchiert werden.")))
             }
         }

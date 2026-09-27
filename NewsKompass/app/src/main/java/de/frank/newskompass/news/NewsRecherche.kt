@@ -31,7 +31,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
@@ -83,6 +86,8 @@ class NewsRecherche(
 
         // Kontingent erschöpft oder Anmeldung abgelaufen: Weitere Anfragen scheitern genauso.
         var harterFehler: CodexFehler? = null
+        // Letzter sonstiger Fehler — scheitern alle Themen, geht er nach oben, damit der Lauf wiederholt wird.
+        var letzterFehler: Exception? = null
 
         themen.forEachIndexed { nummer, thema ->
             val kurz = thema.text.take(40).let { if (thema.text.length > 40) "$it …" else it }
@@ -104,11 +109,15 @@ class NewsRecherche(
                     harterFehler = fehler
                     Block(thema.id, kurz, emptyList(), hinweisFuer(fehler))
                 } else {
+                    letzterFehler = fehler
                     Block(thema.id, kurz, emptyList(), fehler.message ?: "Die Recherche ist gescheitert.")
                 }
             }
             bloecke += block
         }
+        // Kein einziges Thema kam durch (etwa wackeliges Netz): nichts speichern — eine Ausgabe nur aus
+        // Fehlerhinweisen würde die letzte gute verdrängen und den Termin als erledigt ausgeben.
+        if (bloecke.none { istGelaufen(it) }) letzterFehler?.let { throw it }
 
         // Nach Kontingent- oder Anmeldefehler scheitern auch Illustrationen — nur noch Fotos suchen.
         val bildStand = if (harterFehler != null) stand.copy(bilderUnterstuetzt = false) else stand
@@ -121,7 +130,9 @@ class NewsRecherche(
             bloecke = bebildert,
         )
         speicher.speichere(ausgabe)
-        beiFortschritt(LaufFortschritt("Fertig", 1f))
+        // Ein Abbruch in dieser letzten Meldung soll nicht zusätzlich stören; wird der Auftrag genau jetzt gestoppt,
+        // bleiben die Termine vorgemerkt und der nächste Versuch läuft noch einmal.
+        withContext(NonCancellable) { runCatching { beiFortschritt(LaufFortschritt("Fertig", 1f)) } }
         ausgabe
     }
 
@@ -163,6 +174,8 @@ class NewsRecherche(
         val fertig = bebildere(listOf(block), stand, vorige) { text -> beiFortschritt(LaufFortschritt(text, 0.6f)) }.first()
         vergiss(listOf(block))
 
+        // Wurde die Frage inzwischen verworfen, nicht mehr ins Archiv schreiben.
+        currentCoroutineContext().ensureActive()
         val ausgabe = speicher.haengeAn(fertig, jetzt)
         beiFortschritt(LaufFortschritt("Fertig", 1f))
         ausgabe to fertig
@@ -302,7 +315,7 @@ class NewsRecherche(
             meldung
         }
         val titel = json.optString("blockTitel").trim().ifBlank { thema.text.take(30) }
-        return Block(thema.id, titel, meldungen, if (meldungen.isEmpty()) "Zu diesem Thema kam heute nichts Neues." else null)
+        return Block(thema.id, titel, meldungen, if (meldungen.isEmpty()) NICHTS_NEUES else null)
     }
 
     // Nebenläufig: Eine gesprochene Frage kann parallel zu einem Lauf aus dem Zeitplan recherchiert werden.
@@ -403,7 +416,11 @@ class NewsRecherche(
                     "in the section \"$bereich\": $idee. Modern, rich colors, cinematic lighting, clean composition. " +
                     "Absolutely no text, letters, captions, watermarks or logos in the image.",
                 modellId = modellId,
-                denktiefe = "low",
+                // Wenig Nachdenken genügt — aber nur, wenn das Modell diese Stufe kennt, sonst lehnt der Dienst ab.
+                denktiefe = einstellungen.stand.value.let { stand ->
+                    val stufen = stand.modelle.firstOrNull { it.id == modellId }?.stufen.orEmpty()
+                    if (stufen.isEmpty() || "low" in stufen) "low" else stand.denktiefe
+                },
                 werkzeuge = JSONArray().put(JSONObject().put("type", "image_generation").put("output_format", "png")),
             )
             val roh = antwort.bilderBase64.firstOrNull() ?: run {
@@ -421,6 +438,8 @@ class NewsRecherche(
                 einstellungen.setzeBilderUnterstuetzt(false)
                 kiBudget[0] = 0
             }
+            // Kontingent erschöpft oder Anmeldung abgelaufen: Die übrigen Bilder scheitern genauso.
+            if (fehler is CodexFehler && fehler.art != CodexFehlerArt.NETZ) kiBudget[0] = 0
             null
         }
     }
@@ -656,9 +675,18 @@ class NewsRecherche(
         return aus.toByteArray()
     }
 
+    /** Erst in eine Zwischendatei, dann umbenennen — ein halb geschriebenes Bild gilt nie als vorhanden. */
     private fun schreibeBild(jpeg: ByteArray): String {
         val name = "${UUID.randomUUID()}.jpg"
-        File(speicher.bilderOrdner, name).writeBytes(jpeg)
+        val zwischen = File(speicher.bilderOrdner, "$name.tmp")
+        java.io.FileOutputStream(zwischen).use { aus ->
+            aus.write(jpeg)
+            aus.fd.sync()
+        }
+        if (!zwischen.renameTo(File(speicher.bilderOrdner, name))) {
+            zwischen.delete()
+            throw java.io.IOException("Bild ließ sich nicht speichern.")
+        }
         return name
     }
 
@@ -713,6 +741,13 @@ class NewsRecherche(
     }
 
     companion object {
+        /** Hinweis eines Blocks, zu dessen Thema es nichts Neues gab — der Lauf gilt trotzdem als gelaufen. */
+        const val NICHTS_NEUES = "Zu diesem Thema kam heute nichts Neues."
+
+        /** Hat dieser Block sein Thema wirklich recherchiert (auch „nichts Neues“), statt nur zu scheitern? */
+        fun istGelaufen(block: Block): Boolean =
+            block.frage == null && (block.meldungen.isNotEmpty() || block.fehler == NICHTS_NEUES)
+
         private const val MAX_HTML = 400_000
         private const val MAX_BILD_BYTES = 8_000_000
         private const val ZIEL_BREITE = 1440

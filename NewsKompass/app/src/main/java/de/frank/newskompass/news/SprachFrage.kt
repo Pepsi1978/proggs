@@ -145,8 +145,8 @@ class SprachFrage(private val app: NewsApplication) {
     fun verwirf(id: UUID) {
         bereich.launch {
             try {
-                val neu = Zeitplan.verwirfFrage(app, id)
-                setzeVorlesen { alt -> (alt - id).map { neu[it] ?: it }.toSet() }
+                setzeVorlesen { it - id }
+                Zeitplan.verwirfFrage(app, id)
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
