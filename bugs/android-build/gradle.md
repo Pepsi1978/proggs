@@ -966,3 +966,8 @@ Nur Composite/Modem, kein ADB-Interface → Auto Blocker, kein Treiberproblem.
 - **FIX:** Anzeige direkt aus `BuildConfig.VERSION_BUMPED_AT` lesen, Alias-Feld löschen. Einmal
   `gradlew clean assembleDebug`, dann `adb install -r` (keine Deinstallation nötig).
 - **Prüfen:** APK vom Gerät ziehen, in `classes*.dex` nach dem alten Stempel-Text suchen. Darf nicht vorkommen.
+
+### N3. Native `.so` in `jniLibs` still nicht committet — globales `*.so` im `~/.gitignore_global` ⭐ ERLEBT (27.09.2026 22:09, GenialerWeckerAndroid)
+- **Symptom:** Lokal grüner Build, App läuft; im frischen Klon (Cloud-Build, anderer Rechner) fehlt `libsherpa-onnx-jni.so` → `UnsatisfiedLinkError` beim ersten Diktat. `git status` zeigte die Dateien nie an.
+- **Ursache:** `C:\Users\barwa\.gitignore_global` Zeile 40 ignoriert `*.so`; `git add <ordner>` überspringt sie wortlos.
+- **FIX:** `git add -f` für jede `.so` und ein LFS-Attribut in `.gitattributes` (`<Projekt>/app/src/main/jniLibs/**/*.so filter=lfs diff=lfs merge=lfs -text`). Danach `git lfs ls-files` prüfen. `git check-ignore -v <pfad>` zeigt die schuldige Regel.

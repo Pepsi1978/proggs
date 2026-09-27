@@ -315,3 +315,9 @@
 
   `offiziell` https://learn.microsoft.com/en-us/answers/questions/5805156/
 - Wenn Edge überhaupt angeboten wird: nur als Option, sichtbar als **online und inoffiziell** gekennzeichnet, mit Einwilligungsdialog vor dem ersten Versand, nie als Vorgabe. Immer mit lokalem Fallback; die Ansage wird vorab in eine Datei synthetisiert.
+
+## 14) Whisper offline in einer Verkaufs-App (ohne GPL) — Stand 27.09.2026 22:09 (GenialerWeckerAndroid)
+- sherpa-onnx lässt sich für Android **nur Spracherkennung** bauen: `SHERPA_ONNX_ENABLE_TTS=OFF`, `SPEAKER_DIARIZATION=OFF`, `C_API=OFF`, `JNI=ON`; dann ist kein espeak-ng (GPL-3.0) enthalten. Damit ist Weg (c) aus §12 (auf 2.0 warten) für STT nicht nötig. Bauanleitung + Skript: `GenialerWeckerAndroid/docs/sherpa-onnx-asr-only/`. v1.13.8, onnxruntime 1.28.2, NDK r28c → 16-KB-Seiten ok.
+- Das fertige Release-Paket `sherpa-onnx-v1.13.8-android.tar.bz2` enthält espeak/piper → für Closed Source ungeeignet (auch wenn man nur ASR nutzt).
+- Modell fest in der APK statt Download: `whisper-small` int8 (Encoder 112 MB, Decoder 262 MB, Tokens 0,8 MB) als Asset, `androidResources.noCompress += "onnx"`, geladen per `OfflineRecognizer(assets, config)`. Gradle-Task lädt die Dateien beim Bau von Hugging Face (csukuangfj/sherpa-onnx-whisper-small), nicht ins Git. Für Google Play später als **install-time Asset-Pack** (Basismodul max. 200 MB); Zugriff bleibt über den AssetManager gleich.
+- Whisper-Halluzinationen bei Stille ("Untertitel im Auftrag des ZDF …"): vor der Erkennung Sprachanteil messen (< 400 ms → nichts senden), Ränder kürzen, Floskel-Liste auch am Textende verwerfen.
