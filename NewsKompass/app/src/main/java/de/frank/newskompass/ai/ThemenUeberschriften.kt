@@ -63,7 +63,9 @@ class ThemenUeberschriften(
                     "Beispiele: „KI-News“, „Borussia Dortmund“, „Raumfahrt aktuell“.",
                 eingabe = text.trim(),
                 modellId = stand.modellId,
-                denktiefe = "low",
+                // Wenig Nachdenken genügt — aber nur, wenn das gewählte Modell diese Stufe kennt.
+                denktiefe = stand.modelle.firstOrNull { it.id == stand.modellId }?.stufen
+                    ?.let { stufen -> "low".takeIf { it in stufen } ?: stand.denktiefe } ?: stand.denktiefe,
             )
             Thema.saeubereUeberschrift(antwort.text)
         } catch (abbruch: CancellationException) {
