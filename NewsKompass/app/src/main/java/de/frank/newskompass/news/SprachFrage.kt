@@ -1,5 +1,6 @@
 package de.frank.newskompass.news
 
+import android.content.Context
 import de.frank.newskompass.NewsApplication
 import de.frank.newskompass.audio.GroqTranscriber
 import de.frank.newskompass.audio.MicRecorder
@@ -41,7 +42,13 @@ class SprachFrage(private val app: NewsApplication) {
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val mikrofon = MicRecorder(app)
 
-    private val _zustand = MutableStateFlow(SprachZustand())
+    /**
+     * Welche Antworten noch vorgelesen werden sollen, überlebt hier auch einen Neustart des
+     * Prozesses: Android darf die App beenden, während die Frage im Hintergrund weiterläuft.
+     */
+    private val ablage = app.getSharedPreferences("sprachfrage", Context.MODE_PRIVATE)
+
+    private val _zustand = MutableStateFlow(SprachZustand(vorlesen = ladeVorlesen()))
     val zustand: StateFlow<SprachZustand> = _zustand.asStateFlow()
 
     /** Zählt jeden Start und Abbruch — eine veraltete Transkription darf nichts mehr auslösen. */
@@ -105,7 +112,7 @@ class SprachFrage(private val app: NewsApplication) {
                 }
                 KompassLog.info("SprachFrage", "stoppeUndSende", "Frage erkannt", mapOf("zeichen" to frage.length))
                 val id = Zeitplan.starteFrage(app, frage)
-                _zustand.update { it.copy(vorlesen = it.vorlesen + id) }
+                setzeVorlesen { it + id }
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
@@ -132,10 +139,38 @@ class SprachFrage(private val app: NewsApplication) {
     }
 
     /** Die Antwort auf [id] ist vorgelesen oder wird nicht mehr gebraucht. */
-    fun erledigt(id: UUID) = _zustand.update { it.copy(vorlesen = it.vorlesen - id) }
+    fun erledigt(id: UUID) = setzeVorlesen { it - id }
+
+    /** Verwirft die Frage [id]; dahinter wartende Fragen bleiben erhalten und werden weiter vorgelesen. */
+    fun verwirf(id: UUID) {
+        bereich.launch {
+            try {
+                val neu = Zeitplan.verwirfFrage(app, id)
+                setzeVorlesen { alt -> (alt - id).map { neu[it] ?: it }.toSet() }
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                KompassLog.warn("SprachFrage", "verwirf", "Verwerfen gescheitert", mapOf("grund" to fehler.message))
+            }
+        }
+    }
+
+    private fun ladeVorlesen(): Set<UUID> =
+        ablage.getStringSet(VORLESEN, emptySet()).orEmpty()
+            .mapNotNull { runCatching { UUID.fromString(it) }.getOrNull() }
+            .toSet()
+
+    private fun setzeVorlesen(aendern: (Set<UUID>) -> Set<UUID>) {
+        _zustand.update { it.copy(vorlesen = aendern(it.vorlesen)) }
+        ablage.edit().putStringSet(VORLESEN, _zustand.value.vorlesen.map { it.toString() }.toSet()).apply()
+    }
 
     fun loescheMeldung() = _zustand.update { it.copy(meldung = "", zuEinstellungen = false) }
 
     private fun melde(text: String, zuEinstellungen: Boolean = false) =
         _zustand.update { it.copy(meldung = text, zuEinstellungen = zuEinstellungen) }
+
+    private companion object {
+        const val VORLESEN = "vorlesen"
+    }
 }

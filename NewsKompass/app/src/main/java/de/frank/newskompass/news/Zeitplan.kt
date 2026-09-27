@@ -19,6 +19,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
@@ -34,6 +35,9 @@ import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 /**
  * Zweimal am Tag: 5 Uhr und 17 Uhr.
@@ -50,6 +54,8 @@ object Zeitplan {
 
     /** Etikett am Frage-Auftrag, damit die Oberfläche die Frage schon vor dem Start zeigen kann. */
     const val FRAGE_ETIKETT = "frage:"
+    /** Reihenfolge der Fragen in der Warteschlange (WorkInfo kennt keine Einreihzeit). */
+    private const val NUMMER_ETIKETT = "nr:"
     private const val KANAL_LAUF = "lauf"
     private const val KANAL_FERTIG = "fertig"
     const val HINWEIS_LAUF = 17
@@ -128,10 +134,47 @@ object Zeitplan {
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
             .setInputData(workDataOf("frage" to frage))
-            .addTag(FRAGE_ETIKETT + frage.take(200))
+            .addTag(FRAGE_ETIKETT + frage)
+            .addTag(NUMMER_ETIKETT + naechsteNummer())
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(FRAGE, ExistingWorkPolicy.APPEND_OR_REPLACE, auftrag)
         return auftrag.id
+    }
+
+    private var letzteNummer = 0L
+
+    @Synchronized
+    private fun naechsteNummer(): Long {
+        letzteNummer = maxOf(System.currentTimeMillis(), letzteNummer + 1)
+        return letzteNummer
+    }
+
+    private fun nummer(info: WorkInfo): Long =
+        info.tags.firstOrNull { it.startsWith(NUMMER_ETIKETT) }?.removePrefix(NUMMER_ETIKETT)?.toLongOrNull() ?: 0L
+
+    /**
+     * Verwirft eine wartende oder laufende Frage, ohne die dahinter wartenden zu verlieren.
+     *
+     * Die Fragen hängen in WorkManager als Kette aneinander (APPEND_OR_REPLACE). Ein Abbruch reißt
+     * alle dahinter wartenden mit — deshalb werden genau die neu eingereiht, in alter Reihenfolge.
+     * Gibt für jede neu eingereihte Frage alte → neue Auftragsnummer zurück.
+     */
+    suspend fun verwirfFrage(context: Context, id: UUID): Map<UUID, UUID> {
+        val arbeit = WorkManager.getInstance(context)
+        val offen = arbeit.getWorkInfosForUniqueWorkFlow(FRAGE).first().filter { !it.state.isFinished }
+        val ziel = offen.firstOrNull { it.id == id }
+        if (ziel == null) {
+            withContext(Dispatchers.IO) { arbeit.cancelWorkById(id).result.get() }
+            return emptyMap()
+        }
+        val dahinter = offen.filter { it.id != id && nummer(it) > nummer(ziel) }.sortedBy { nummer(it) }
+        withContext(Dispatchers.IO) { arbeit.cancelWorkById(id).result.get() }
+        val neu = dahinter.mapNotNull { info ->
+            val text = info.tags.firstOrNull { it.startsWith(FRAGE_ETIKETT) }?.removePrefix(FRAGE_ETIKETT)
+            if (text.isNullOrBlank()) null else info.id to starteFrage(context, text)
+        }.toMap()
+        KompassLog.info("Zeitplan", "verwirfFrage", "Frage verworfen", mapOf("neuEingereiht" to neu.size))
+        return neu
     }
 
     fun legeKanaeleAn(context: Context) {

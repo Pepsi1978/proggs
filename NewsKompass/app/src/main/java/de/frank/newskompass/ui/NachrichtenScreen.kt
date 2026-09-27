@@ -238,10 +238,12 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     var springeZu by remember { mutableStateOf<String?>(null) }
 
     // Eine gesprochene Frage bekommt eine gesprochene Antwort: Ist ihr Block da, springt die
-    // Ansicht hin und er wird vorgelesen.
-    LaunchedEffect(fragen, sprache.vorlesen, index) {
-        fragen.filter { it.id in sprache.vorlesen && it.state.isFinished }.forEach { info ->
-            if (info.outputData.getString("fehler") != null) return@forEach
+    // Ansicht hin und er wird vorgelesen. Immer nur eine Antwort zur Zeit — die nächste erst, wenn
+    // das Vorlesen fertig ist, sonst bricht jede neue Antwort die vorige ab.
+    LaunchedEffect(fragen, sprache.vorlesen, index, vorlesen.stufe) {
+        if (vorlesen.stufe != VorleseStufe.AUS) return@LaunchedEffect
+        for (info in fragen.filter { it.id in sprache.vorlesen && it.state.isFinished }) {
+            if (info.outputData.getString("fehler") != null) continue
             val ausgabeId = info.outputData.getString("ausgabeId")
             val themaId = info.outputData.getString("themaId")
             val eintrag = index.firstOrNull { it.id == ausgabeId }
@@ -250,12 +252,15 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
             if (eintrag == null || block == null) {
                 // Noch nicht im Speicher angekommen — der nächste Durchlauf findet ihn.
                 if (info.state != WorkInfo.State.SUCCEEDED || ausgabeId == null) app.sprachFrage.erledigt(info.id)
-                return@forEach
+                continue
             }
             app.sprachFrage.erledigt(info.id)
             zeige(if (eintrag.id == index.firstOrNull()?.id) Ansicht.Aktuell else Ansicht.Tag(eintrag.tag, eintrag.id))
             springeZu = block.themaId
-            if (block.meldungen.isNotEmpty()) app.vorleser.lies("block-${block.themaId}", blockText(block))
+            if (block.meldungen.isNotEmpty()) {
+                app.vorleser.lies("block-${block.themaId}", blockText(block))
+                return@LaunchedEffect
+            }
         }
     }
 
@@ -350,7 +355,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                                 ?: if (info.state == WorkInfo.State.RUNNING) "Deine Frage wird recherchiert …" else "Wartet auf die Recherche …",
                             anteil = info.progress.getFloat("anteil", 0f),
                             laeuft = info.state == WorkInfo.State.RUNNING,
-                            verwerfen = { WorkManager.getInstance(kontext).cancelWorkById(info.id) },
+                            verwerfen = { app.sprachFrage.verwirf(info.id) },
                         )
                     }
                 }
