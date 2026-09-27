@@ -117,7 +117,8 @@
   fingen den Fehler mit `|| echo 0` ab und zählten ihn als „noch nichts da“ — kein Hinweis, keine Fehlermeldung.
 - **Vorhanden sind:** `curl`, `jq` und `GH_TOKEN`/`GITHUB_TOKEN`; `api.github.com` ist erreichbar.
 - **Fix (27.09.2026):** `apk-update-cloud/github-api.sh` nimmt `gh`, wenn da, sonst `curl` mit Token. Beide Warte-Skripte
-  prüfen den Zugang vorab und brechen sonst sofort mit `ZUGANG=fehlt (…)` ab, statt still zu warten. Dann die
+  prüfen den Zugang vorab (ohne `gh` ist ein Token Pflicht: anonym nur 60 Anfragen/Stunde) und brechen sonst sofort
+  — oder nach 3 gescheiterten Abfragen in Folge — mit `ZUGANG=fehlt (…)` ab, statt still zu warten. Dann die
   GitHub-MCP-Werkzeuge nehmen: `pull_request_read` (`get_review_comments`, `get_comments`), `actions_list`
   (`list_workflow_runs`, `android-cloud-build.yml`) und `actions_get` (`get_workflow_run`).
 - **Merke:** Ein Warte-Skript, das Fehler als „0“ zählt, sieht aus wie ein langsamer Dienst. Zugang immer zuerst prüfen.

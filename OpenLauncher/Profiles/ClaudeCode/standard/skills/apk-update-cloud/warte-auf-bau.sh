@@ -14,8 +14,12 @@ SHA=$(api "repos/$REPO/pulls/$PR" | jq -r '.merge_commit_sha // empty')
 [ -n "$SHA" ] || { echo "BAU=kein-lauf (PR $PR ohne Merge-Commit — noch nicht gemergt?)"; exit 0; }
 start=$(date +%s)
 while :; do
-  lauf=$(api "repos/$REPO/actions/workflows/android-cloud-build.yml/runs?head_sha=$SHA&per_page=1" 2>/dev/null \
-    | jq -r '.workflow_runs[0]|select(.)|"\(.status) \(.conclusion) \(.html_url)"' 2>/dev/null)
+  if json=$(api "repos/$REPO/actions/workflows/android-cloud-build.yml/runs?head_sha=$SHA&per_page=1" 2>/dev/null); then
+    zaehle_fehler 0
+  else
+    zaehle_fehler 1; sleep 15; continue
+  fi
+  lauf=$(printf '%s' "$json" | jq -r '.workflow_runs[0]|select(.)|"\(.status) \(.conclusion) \(.html_url)"' 2>/dev/null)
   jetzt=$(( $(date +%s) - start ))
   if [ -n "$lauf" ]; then
     set -- $lauf

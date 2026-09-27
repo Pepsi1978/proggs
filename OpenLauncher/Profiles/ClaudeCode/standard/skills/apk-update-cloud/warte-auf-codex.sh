@@ -9,8 +9,11 @@ PR="$1"; MAX="${2:-480}"; REPO="${REPO:-Pepsi1978/proggs}"; BOT='chatgpt-codex-c
 source "$(dirname "$0")/github-api.sh"
 pruefe_zugang "$REPO"
 
-# Zählt die Einträge von <pfad>, auf die der jq-Filter <bedingung> passt; bei Fehler 0.
-zaehle() { api "$1" 2>/dev/null | jq "[.[]|select($2)]|length" 2>/dev/null || echo 0; }
+# Zählt die Einträge von <pfad>, auf die der jq-Filter <bedingung> passt; bei Fehler „x“.
+zaehle() {
+  local json
+  json=$(api "$1" 2>/dev/null) && printf '%s' "$json" | jq "[.[]|select($2)]|length" 2>/dev/null || echo x
+}
 
 start=$(date +%s)
 while :; do
@@ -19,6 +22,7 @@ while :; do
   zeilen=$(zaehle "repos/$REPO/pulls/$PR/comments" ".user.login==\"$BOT\"")
   fertig=$(zaehle "repos/$REPO/issues/$PR/comments" \
     ".user.login==\"$BOT\" and (.body|test(\"Completed|find any major issues|keine.*Befunde\";\"i\"))")
+  case "$daumen$reviews$zeilen$fertig" in *x*) zaehle_fehler 1; sleep 15; continue ;; *) zaehle_fehler 0 ;; esac
   if [ "${zeilen:-0}" -gt 0 ] || [ "${reviews:-0}" -gt 0 ]; then
     echo "CODEX=befunde ($zeilen Zeilenkommentare, $reviews Reviews)"; exit 0
   fi
