@@ -19,4 +19,5 @@
 | B12 | Teleport nur erster Turn (#94836) | pushen + `git pull` |
 | B13 | Remote Control 0 Events / Amnesie | Zwischenstände committen |
 | B14 | Kein Browser in der Cloud | lokal / Remote Control |
+| B16 | Kein „Bypass permissions“ in der Cloud (so gewollt) | „Änderungen akzeptieren“ + Freigabeliste in `.claude/settings.json` |
 | B15 | `gh` fehlt, Warte-Skripte melden still `timeout` | Skripte nutzen curl + jq (`github-api.sh`); sonst GitHub-MCP |
