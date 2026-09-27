@@ -33,6 +33,8 @@ android {
         versionName = versionslogAktuell["versionName"] as String
         buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Whisper (sherpa-onnx) liegt nur für 64-Bit-ARM bei; das deckt alle aktuellen Play-Geräte ab.
+        ndk { abiFilters += "arm64-v8a" }
     }
     signingConfigs {
         create("eigen") {

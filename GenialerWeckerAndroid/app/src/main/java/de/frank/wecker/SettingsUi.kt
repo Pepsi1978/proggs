@@ -147,6 +147,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                 if (settings.premiumEinwilligung == "ja") StillerKnopf("Premium ausschalten", { vm.einwilligung(false) })
             }
         }
+        SpracherkennungKarte(vm)
         FreischaltungsKarte(activity)
         Section("Genialer Wecker") {
             Text("Version ${BuildConfig.VERSION_NAME} · ${BuildConfig.VERSION_BUMPED_AT}")
@@ -322,4 +323,34 @@ private fun oeffneSprachdaten(activity: ComponentActivity, vm: WeckerViewModel, 
     val geoeffnet = LokaleStimmen.sprachdatenIntents().any { runCatching { activity.startActivity(it) }.isSuccess }
     if (!geoeffnet) vm.message.value = "Öffne in den Android-Einstellungen „Sprachausgabe“ und lade dort " +
         (sprache?.let { Sprachen.name(it) } ?: "die gewünschte Sprache") + " herunter."
+}
+
+/** Das Whisper-Modell fürs Diktat: Status, Laden mit Fortschritt, Entfernen. */
+@Composable
+private fun SpracherkennungKarte(vm: WeckerViewModel) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val modell by WhisperModell.zustand.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { WhisperModell.pruefe(context) }
+    val art = remember { WhisperModell.art(context) }
+    val status = when (modell.status) {
+        WhisperModell.Status.BEREIT -> "Offline bereit · ${art.anzeige}"
+        WhisperModell.Status.LAEDT -> "Wird geladen … ${(modell.fortschritt * 100).toInt()} %"
+        WhisperModell.Status.FEHLER -> "Download unterbrochen"
+        WhisperModell.Status.FEHLT -> "Noch nicht geladen"
+    }
+    Section("Spracherkennung (Diktat)", collapsible = true, initiallyExpanded = false, summary = status) {
+        Text("Diktierter Text wird direkt auf dem Handy erkannt – ohne Internet, nichts verlässt das Gerät. Dafür braucht der Wecker einmalig ein Sprachmodell (${art.megabyte} MB).",
+            style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+        when (modell.status) {
+            WhisperModell.Status.BEREIT -> StillerKnopf("Sprachmodell entfernen (${art.megabyte} MB)", { WhisperModell.loeschen(context) })
+            WhisperModell.Status.LAEDT -> {
+                LinearProgressIndicator(progress = { modell.fortschritt }, Modifier.fillMaxWidth())
+                StillerKnopf("Download anhalten", { WhisperModell.abbrechen() })
+            }
+            else -> {
+                if (modell.meldung.isNotBlank()) Text(modell.meldung, style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
+                GoldKnopf("Sprachmodell laden · ${art.megabyte} MB", { WhisperModell.laden(context) }, hauptKnopf = true)
+            }
+        }
+    }
 }

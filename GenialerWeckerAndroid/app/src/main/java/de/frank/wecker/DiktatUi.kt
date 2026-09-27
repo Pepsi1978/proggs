@@ -6,16 +6,20 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -23,36 +27,43 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.genialeideen.ui.GoldKnopf
 import de.frank.genialeideen.ui.StillerKnopf
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.LocalSemantisch
+import de.frank.wecker.design.DesignDialog
 
 /**
  * Eine kompakte Zeile direkt unter dem Vorlesetext: links „Diktieren“, rechts [vorlesen].
- * Aufgenommen wird nur nach Tippen und nur auf dem Gerät. Das fertig Erkannte wird sofort an den
- * aktuellen Entwurf angehängt ([anfuegen]) – nie überschrieben. Die Sprache folgt der Gerätesprache.
+ * Erkannt wird mit dem Whisper-Modell auf dem Gerät; bis es geladen ist, steht das Android-Diktat bereit.
+ * Das fertig Erkannte wird sofort an den aktuellen Entwurf angehängt ([anfuegen]) – nie überschrieben.
  */
 @Composable
 fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorlesen: @Composable () -> Unit) {
     val context = LocalContext.current
     val diktat = remember { OfflineDiktat(context.applicationContext) }
+    val whisper = remember { WhisperDiktat(context.applicationContext) }
+    val modell by WhisperModell.zustand.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { WhisperModell.pruefe(context) }
+    var modellFrage by remember { mutableStateOf(false) }
     // Die Sprache gehört zum Wecker; ein Wechsel beendet eine laufende Aufnahme in der alten Sprache.
-    LaunchedEffect(sprache) { if (diktat.hoertZu) diktat.zuruecksetzen() }
-    val zustand = diktat.zustand
+    LaunchedEffect(sprache) { if (diktat.hoertZu) diktat.zuruecksetzen(); if (whisper.hoertZu) whisper.zuruecksetzen() }
     val aktuellesAnfuegen by rememberUpdatedState(anfuegen)
 
     // Fertiges Ergebnis sofort übernehmen: angehängt an den aktuellsten Entwurf, ohne Zwischenblase.
-    LaunchedEffect(zustand) {
-        if (zustand is DiktatZustand.Ergebnis) { aktuellesAnfuegen(zustand.text); diktat.zuruecksetzen() }
+    LaunchedEffect(diktat.zustand) {
+        (diktat.zustand as? DiktatZustand.Ergebnis)?.let { aktuellesAnfuegen(it.text); diktat.zuruecksetzen() }
+    }
+    LaunchedEffect(whisper.zustand) {
+        (whisper.zustand as? DiktatZustand.Ergebnis)?.let { aktuellesAnfuegen(it.text); whisper.zuruecksetzen() }
     }
     val lebenszyklus = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lebenszyklus) {
-        val beobachter = LifecycleEventObserver { _, ereignis -> if (ereignis == Lifecycle.Event.ON_STOP) diktat.abbrechen() }
+        val beobachter = LifecycleEventObserver { _, ereignis -> if (ereignis == Lifecycle.Event.ON_STOP) { diktat.abbrechen(); whisper.abbrechen() } }
         lebenszyklus.addObserver(beobachter)
         onDispose {
             lebenszyklus.removeObserver(beobachter)
@@ -60,34 +71,104 @@ fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorles
             // Beim Schließen des Editors: schon Gehörtes nicht wegwerfen, sondern noch anhängen.
             (diktat.zustand as? DiktatZustand.Ergebnis)?.let { aktuellesAnfuegen(it.text) }
             diktat.allesFreigeben()
+            whisper.freigeben()
+        }
+    }
+    fun loslegen() {
+        when {
+            WhisperModell.bereit(context) -> whisper.starten(sprache.code)
+            else -> modellFrage = true
         }
     }
     val mikrofon = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt ->
-        if (erlaubt) diktat.starten(sprache)
-        else diktat.zeigeHinweis("Ohne Mikrofonfreigabe kein Diktat. Du kannst den Text jederzeit tippen.")
+        if (erlaubt) loslegen()
+        else whisper.zeigeHinweis("Ohne Mikrofonfreigabe kein Diktat. Du kannst den Text jederzeit tippen.")
+    }
+    fun mitFreigabe(aktion: () -> Unit) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) aktion()
+        else mikrofon.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     // Kurze Beschriftungen passen auf S24-Breite nebeneinander; bei großer Schrift bricht der rechte Knopf um statt überzulaufen.
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (diktat.hoertZu) GoldKnopf("■ Fertig", { diktat.beenden() }, hauptKnopf = true, beschreibung = "Diktat beenden und Text einfügen")
-        else GoldKnopf("Diktieren", {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) diktat.starten(sprache)
-            else mikrofon.launch(Manifest.permission.RECORD_AUDIO)
-        }, symbol = { Icon(Icons.Default.Mic, null, Modifier.size(18.dp)) })
+        when {
+            whisper.hoertZu -> GoldKnopf("■ Fertig", { whisper.beenden() }, hauptKnopf = true, beschreibung = "Diktat beenden und Text einfügen")
+            whisper.erkennt -> GoldKnopf("Erkenne …", {}, aktiviert = false, laedt = true)
+            diktat.hoertZu -> GoldKnopf("■ Fertig", { diktat.beenden() }, hauptKnopf = true, beschreibung = "Diktat beenden und Text einfügen")
+            else -> GoldKnopf("Diktieren", { mitFreigabe(::loslegen) }, symbol = { Icon(Icons.Default.Mic, null, Modifier.size(18.dp)) })
+        }
         vorlesen()
     }
+    if (whisper.hoertZu) Pegel(whisper.pegel, whisper.sekunden)
     // Knapper Status direkt unter den Knöpfen; kein eigenes Panel.
-    val status: Pair<String, Boolean>? = when (zustand) {
-        DiktatZustand.Pruefe -> "Sprachpaket ${sprache.anzeige} wird geprüft …" to false
-        is DiktatZustand.Hoert -> ("● Hört zu (${sprache.anzeige})" + if (zustand.zwischentext.isNotBlank()) ": „${zustand.zwischentext}“" else " …") to false
-        is DiktatZustand.Hinweis -> zustand.meldung to true
-        else -> null
+    val status: Pair<String, Boolean>? = when {
+        whisper.erkennt -> "Wird auf dem Handy erkannt …" to false
+        whisper.zustand is DiktatZustand.Hinweis -> (whisper.zustand as DiktatZustand.Hinweis).meldung to true
+        else -> when (val zustand = diktat.zustand) {
+            DiktatZustand.Pruefe -> "Sprachpaket ${sprache.anzeige} wird geprüft …" to false
+            is DiktatZustand.Hoert -> ("● Hört zu (${sprache.anzeige})" + if (zustand.zwischentext.isNotBlank()) ": „${zustand.zwischentext}“" else " …") to false
+            is DiktatZustand.Hinweis -> zustand.meldung to true
+            else -> null
+        }
     }
     status?.let { (text, warnung) ->
         Text(text, Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
             style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis,
-            color = if (warnung) LocalSemantisch.current.warnung else if (zustand is DiktatZustand.Hoert) LocalSemantisch.current.fehler else LocalGold.current.textGedaempft)
+            color = if (warnung) LocalSemantisch.current.warnung else LocalGold.current.textGedaempft)
     }
-    if ((zustand as? DiktatZustand.Hinweis)?.sprachpaketLadbar == true)
+    if ((diktat.zustand as? DiktatZustand.Hinweis)?.sprachpaketLadbar == true)
         StillerKnopf("Sprachpaket ${sprache.anzeige} laden", { diktat.sprachpaketLaden() })
+    if (modell.status == WhisperModell.Status.LAEDT && !modellFrage)
+        Text("Spracherkennung wird geladen … ${(modell.fortschritt * 100).toInt()} %", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+
+    if (modellFrage) ModellDialog(
+        schliessen = { modellFrage = false },
+        einfach = { modellFrage = false; mitFreigabe { diktat.starten(sprache) } },
+    )
+}
+
+/** Aufnahmepegel als ruhiger Balken mit Laufzeit – man sieht, dass das Handy zuhört. */
+@Composable
+private fun Pegel(pegel: Float, sekunden: Int) {
+    val gold = LocalGold.current
+    val weich by animateFloatAsState(pegel, label = "pegel")
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("● ${sekunden / 60}:${"%02d".format(sekunden % 60)}", style = MaterialTheme.typography.labelLarge, color = LocalSemantisch.current.fehler)
+        Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(50)).background(gold.textGedaempft.copy(alpha = .2f))) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth((.04f + weich * .96f).coerceIn(0f, 1f)).clip(RoundedCornerShape(50))
+                .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(gold.primaer.copy(alpha = .6f), gold.primaer))))
+        }
+    }
+}
+
+/** Erster Diktatversuch ohne Modell: einmal laden (beste Erkennung) oder gleich das einfache Android-Diktat. */
+@Composable
+private fun ModellDialog(schliessen: () -> Unit, einfach: () -> Unit) {
+    val context = LocalContext.current
+    val modell by WhisperModell.zustand.collectAsStateWithLifecycle()
+    val art = remember { WhisperModell.art(context) }
+    LaunchedEffect(modell.status) { if (modell.status == WhisperModell.Status.BEREIT) schliessen() }
+    DesignDialog(
+        titel = "Spracherkennung",
+        aufSchliessen = schliessen,
+        bestaetigung = {
+            if (modell.status == WhisperModell.Status.LAEDT) StillerKnopf("Im Hintergrund weiter", schliessen)
+            else GoldKnopf("Jetzt laden · ${art.megabyte} MB", { WhisperModell.laden(context) }, hauptKnopf = true)
+        },
+        abbruch = { StillerKnopf("Einfaches Diktat", einfach) },
+        inhalt = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Für die beste Spracherkennung lädt der Wecker einmalig ein Sprachmodell (${art.megabyte} MB, am besten im WLAN). Danach erkennt er deine Sprache direkt auf dem Handy – ohne Internet, nichts verlässt das Gerät.",
+                    style = MaterialTheme.typography.bodyMedium)
+                when (modell.status) {
+                    WhisperModell.Status.LAEDT -> {
+                        LinearProgressIndicator(progress = { modell.fortschritt }, Modifier.fillMaxWidth())
+                        Text("${(modell.fortschritt * 100).toInt()} % geladen", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                    }
+                    WhisperModell.Status.FEHLER -> Text(modell.meldung, style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
+                    else -> Text("Bis dahin kannst du das einfache Diktat von Android nutzen.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                }
+            }
+        },
+    )
 }
