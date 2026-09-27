@@ -95,7 +95,9 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
          * vorbereitet werden; andere Sprachen hängen ihren Code an.
          */
         fun schluessel(voice: SyntheseStimme): String = (listOf("lokal-v2", voice.ttsProvider, voice.stimme, voice.ttsSpeechRate.toString()) +
-            listOfNotNull(Sprachen.gueltig(voice.sprache).takeIf { it != "de" })).joinToString("|")
+            listOfNotNull(Sprachen.gueltig(voice.sprache).takeIf { it != "de" },
+                // Nur eine ausdrücklich andere Engine ändert die Signatur; Google und Altbestand bleiben byte-gleich.
+                voice.engine.takeIf { it.isNotBlank() && it != LokaleStimmen.GOOGLE }?.let { "engine=$it" })).joinToString("|")
         fun hash(text: String): String = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
         /** Cortex-Prinzip: vollständige Absätze, nur überlange Absätze an Wort-/Satzgrenzen teilen. */
         fun chunks(text: String): List<String> = text.replace("\r\n", "\n").replace('\r', '\n')

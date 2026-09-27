@@ -51,6 +51,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
     val permissions = rememberReadiness()
     val stimmenJeSprache by vm.stimmenJeSprache.collectAsStateWithLifecycle()
     val stimmenFehler by vm.stimmenFehler.collectAsStateWithLifecycle()
+    val stimmenEngine by vm.stimmenEngine.collectAsStateWithLifecycle()
     var rate by remember(revision) { mutableFloatStateOf(settings.ttsSpeechRate) }
     // Zurück aus den Android-Einstellungen (Sprachdaten geladen): Stimmen neu prüfen.
     val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -138,6 +139,10 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             if (alle == null) Text("Installierte Stimmen werden geprüft …", style = MaterialTheme.typography.bodySmall)
             else {
                 if (stimmenFehler.isNotBlank()) Text(stimmenFehler, color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
+                // Ohne Google-Sprachausgabe fehlen die bevorzugten deutschen Stimmen; ehrlich sagen, woher die Stimmen stammen.
+                if (stimmenEngine != null && stimmenEngine != LokaleStimmen.GOOGLE) Text(
+                    "Die Google-Sprachausgabe ist auf diesem Gerät nicht verfügbar. Es werden die Offline-Stimmen der Standard-Sprachausgabe verwendet.",
+                    color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
                 Sprachen.CODES.forEachIndexed { i, code ->
                     if (i > 0) HorizontalDivider(color = LocalGold.current.rahmen)
                     SpracheStimmen(code, alle[code].orEmpty(), vm, busy, activity)

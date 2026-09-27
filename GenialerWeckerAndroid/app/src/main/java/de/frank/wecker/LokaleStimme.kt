@@ -41,7 +41,9 @@ object Sprachen {
  * [vorgaben] sind die bevorzugten Stimmen je Sprache aus den Einstellungen.
  * Es gibt bewusst keinen Netzweg — die App schickt keinen Text an einen Sprachdienst.
  */
-data class SyntheseStimme(val stimme: String, val ttsSpeechRate: Float, val sprache: String = "de", val vorgaben: Map<String, String> = emptyMap()) {
+data class SyntheseStimme(val stimme: String, val ttsSpeechRate: Float, val sprache: String = "de", val vorgaben: Map<String, String> = emptyMap(),
+    /** Leer = Google-Sprachausgabe, falls vorhanden, sonst Gerätestandard (bisheriges Verhalten). Sonst ein Engine-Paket. */
+    val engine: String = "") {
     constructor(s: SecureSettings) : this(s.lokaleStimme, s.ttsSpeechRate, "de", Sprachen.CODES.associateWith { s.stimmeFuer(it) })
     fun withRate(rate: Float) = copy(ttsSpeechRate = rate)
     /** Standardstimme derselben Einstellungen für eine andere Sprache. */
@@ -96,6 +98,16 @@ object StimmAuswahl {
  */
 object LokaleStimmen {
     const val PROVIDER = "android_tts"
+    /** Die Engine der bevorzugten Stimmen (deg/nfh). Wird explizit gebunden, damit ein anderer Systemstandard nichts verändert. */
+    const val GOOGLE = "com.google.android.tts"
+    /** Künftiges Provider-Format für Stimmen einer bestimmten Engine; heute wird nur Google so akzeptiert. */
+    fun provider(engine: String) = "tts:$engine"
+    /** Gehört [voiceProvider] zu der Engine, die wir tatsächlich benutzen? Altbestand „android_tts“ bedeutet Google/Standard. */
+    fun istEigeneEngine(voiceProvider: String) = voiceProvider == PROVIDER || voiceProvider == provider(GOOGLE)
+
+    /** Tatsächlich benutzte Engine der laufenden Instanz (null = noch keine erzeugt). */
+    @Volatile var aktiveEngine: String? = null
+        private set
     private const val RUHE_MS = 30_000L
     private const val ZEITLIMIT_MS = 90_000L
 
@@ -170,15 +182,14 @@ object LokaleStimmen {
     private suspend fun instanz(context: Context): TextToSpeech {
         freigabe?.cancel(); freigabe = null
         tts?.let { return it }
-        val bereit = CompletableDeferred<Int>()
-        val neu = withContext(Dispatchers.Main) {
-            TextToSpeech(context.applicationContext) { status -> bereit.complete(status) }
-        }
-        val status = withTimeoutOrNull(15_000) { bereit.await() }
-        if (status != TextToSpeech.SUCCESS) {
-            withContext(Dispatchers.Main) { neu.shutdown() }
-            throw SyntheseAbbruch("Die Sprachausgabe des Geräts ist nicht verfügbar. Prüfe in den Android-Einstellungen die „Sprachausgabe“.")
-        }
+        // Google explizit binden, wenn installiert und sichtbar: Der Systemstandard (auf dem SM-F971B Samsung) oder eine
+        // weitere Engine darf deg/nfh nicht still austauschen. Ohne Google bleibt der Gerätestandard – wie bisher.
+        val googleDa = runCatching { context.packageManager.getPackageInfo(GOOGLE, 0); true }.getOrDefault(false)
+        var engine: String? = if (googleDa) GOOGLE else null
+        var neu = starte(context, engine)
+        if (neu == null && engine != null) { engine = null; neu = starte(context, null) }
+        if (neu == null) throw SyntheseAbbruch("Die Sprachausgabe des Geräts ist nicht verfügbar. Prüfe in den Android-Einstellungen die „Sprachausgabe“.")
+        aktiveEngine = engine ?: runCatching { neu.defaultEngine }.getOrNull()
         neu.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {}
             override fun onDone(utteranceId: String?) { offen[utteranceId]?.complete(Unit) }
@@ -192,6 +203,19 @@ object LokaleStimmen {
         })
         tts = neu
         return neu
+    }
+
+    /** Erzeugt eine Instanz für [engine] (null = Gerätestandard); null, wenn sie nicht startet. */
+    private suspend fun starte(context: Context, engine: String?): TextToSpeech? {
+        val bereit = CompletableDeferred<Int>()
+        val neu = withContext(Dispatchers.Main) {
+            if (engine == null) TextToSpeech(context.applicationContext) { status -> bereit.complete(status) }
+            else TextToSpeech(context.applicationContext, { status -> bereit.complete(status) }, engine)
+        }
+        val status = withTimeoutOrNull(15_000) { bereit.await() }
+        if (status == TextToSpeech.SUCCESS) return neu
+        withContext(Dispatchers.Main) { neu.shutdown() }
+        return null
     }
 
     private fun spaeterFreigeben() {

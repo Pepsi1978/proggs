@@ -56,6 +56,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     /** Angebotene Offline-Stimmen je Sprache (de/en/fr/es); null = noch nicht geprüft, leere Liste = nichts installiert. */
     val stimmenJeSprache = MutableStateFlow<Map<String, List<LokaleStimmeInfo>>?>(null)
     val stimmenFehler = MutableStateFlow("")
+    /** Welche Engine die Stimmen liefert; null = noch nicht geprüft. */
+    val stimmenEngine = MutableStateFlow<String?>(null)
     private var actionJob: Job? = null
     /** Owner of the busy banner; a cancelled older action must not clear the banner of a newer one. */
     private var busyOwner: Any? = null
@@ -225,7 +227,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val gefunden = LokaleStimmen.alleSprachen(app)
                 val vorher = stimmenJeSprache.value
-                stimmenJeSprache.value = gefunden; stimmenFehler.value = ""
+                stimmenJeSprache.value = gefunden; stimmenFehler.value = ""; stimmenEngine.value = LokaleStimmen.aktiveEngine
                 // Sprachdaten gerade nachgeladen: gescheiterte Vorbereitungen sofort nachholen, nicht erst im 15-Minuten-Lauf.
                 if (vorher != null && Sprachen.CODES.any { vorher[it].isNullOrEmpty() && !gefunden[it].isNullOrEmpty() }) PreparationWorker.enqueue(app)
             }

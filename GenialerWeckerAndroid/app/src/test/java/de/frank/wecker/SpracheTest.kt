@@ -57,6 +57,23 @@ class SpracheTest {
         assertEquals("lokal-v2|android_tts|en-us-x-iol-local|1.0|en", SpeechPreparation.schluessel(einstellungen.fuerSprache("en")))
     }
 
+    @Test fun googleBindungLaesstAltbestandUndSignaturUnveraendert() {
+        // Altbestand „android_tts“ und das neue „tts:com.google.android.tts“ meinen dieselbe Engine.
+        assertTrue(LokaleStimmen.istEigeneEngine(LokaleStimmen.PROVIDER))
+        assertTrue(LokaleStimmen.istEigeneEngine(LokaleStimmen.provider(LokaleStimmen.GOOGLE)))
+        assertFalse(LokaleStimmen.istEigeneEngine("tts:com.samsung.SMT"))
+        val google = Alarm(sprache = "de", voiceProvider = LokaleStimmen.provider(LokaleStimmen.GOOGLE), voiceId = "de-de-x-deg-local")
+        assertEquals("de-de-x-deg-local", google.resolveVoice(einstellungen).stimme)
+        // Eine (noch) nicht angebotene Fremd-Engine wird nie still benutzt: Standard der Sprache.
+        val fremd = Alarm(sprache = "de", voiceProvider = "tts:com.samsung.SMT", voiceId = "de-DE-SMTm00")
+        assertEquals("de-de-x-nfh-local", fremd.resolveVoice(einstellungen).stimme)
+        // Signatur: Google explizit = leer = byte-gleich zu vc5; nur eine andere Engine hängt sich an.
+        val deg = SyntheseStimme("de-de-x-deg-local", 1f)
+        assertEquals("lokal-v2|android_tts|de-de-x-deg-local|1.0", SpeechPreparation.schluessel(deg.copy(engine = LokaleStimmen.GOOGLE)))
+        assertEquals("lokal-v2|android_tts|en-us-x-iol-local|1.0|en", SpeechPreparation.schluessel(einstellungen.fuerSprache("en").copy(engine = LokaleStimmen.GOOGLE)))
+        assertEquals("lokal-v2|android_tts|de-de-x-deg-local|1.0|engine=com.example.tts", SpeechPreparation.schluessel(deg.copy(engine = "com.example.tts")))
+    }
+
     @Test fun nurDeutschFiltertAufDieZweiBevorzugten() {
         val en = listOf("en-us-x-iob-local", "en-us-x-iol-local")
         assertEquals(en, StimmAuswahl.angeboten(en, "en"))

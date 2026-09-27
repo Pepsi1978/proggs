@@ -543,6 +543,12 @@
 
 ---
 
+### N-Nachtrag — Samsung SMT für Drittanbieter-Apps unsichtbar, auch mit `<queries>` (Gerätebefund, Stand 27.09.2026 21:20)
+- **Symptom:** `getEngines()` liefert nur `com.google.android.tts`, `getDefaultEngine()` meldet Google, obwohl `settings get secure tts_default_synth` = `com.samsung.SMT` ist. Die Samsung-Stimmen erscheinen nicht.
+- **Befund:** Nur auf **Samsung SM-F971B (Android SDK 37)** geprüft, mit einer temporären Sonden-App. Weder `<queries><intent action="android.intent.action.TTS_SERVICE"/>` noch `<package android:name="com.samsung.SMT"/>` machten die Engine sichtbar; `dumpsys package queries` führt für `com.samsung.SMT` keinen Sichtbarkeitseintrag. Die Shell (`cmd package query-services -a android.intent.action.TTS_SERVICE`) sieht beide Engines. Keine allgemeine Android-Regel – andere Samsung-Modelle/Versionen können sich anders verhalten.
+- **Funktionserhaltender Umgang:** Nicht auf die Standard-Engine verlassen (siehe N oben); die gewünschte Engine explizit binden (`TextToSpeech(ctx, listener, "com.google.android.tts")`, wenn installiert), sonst Gerätestandard mit Offline-Filter und klarem Hinweis. Samsung-Stimmen nicht als verfügbar anzeigen, solange `getEngines()` sie nicht liefert.
+- **Quelle:** Eigene Geräteprobe GenialerWeckerAndroid, B5-2 (27.09.2026).
+
 ## AC) Android Client-Integration (MediaPlayer, Coroutinen, Cache, Prefs, OkHttp)
 
 ### AC1. MediaPlayer `IllegalStateException` (State-Machine) ⭐ HAEUFIG

@@ -36,3 +36,4 @@
 | 22 | Deutsch mit Kokoro | Kein DE → Piper thorsten/System-TTS | L3 |
 | 23 | On-Device-Diktat Samsung `false`/Error 13 | Standard-Recognizer/whisper.cpp als Fallback | L4 |
 | 24 | Edge in Verkaufs-App | Inoffiziell + wiederkehrend 403 → nie Default, lokaler Fallback | L5 |
+| 25 | Samsung SMT fehlt in `getEngines()` trotz `<queries>` (SM-F971B) | Engine explizit binden, Samsung nicht anbieten; Gerätebefund, keine allgemeine Regel | N-Nachtrag |
