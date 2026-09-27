@@ -1,14 +1,19 @@
 package de.frank.newskompass.ai
 
+import android.content.Context
+import androidx.work.WorkManager
 import de.frank.newskompass.data.EinstellungenStore
 import de.frank.newskompass.data.model.Thema
+import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.observability.KompassLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -22,8 +27,11 @@ import kotlinx.coroutines.withContext
  * Läuft im Hintergrund: Sobald sich ein Thementext eine Weile nicht mehr ändert, fragt es die KI
  * einmal ohne Websuche. Ohne Anmeldung oder bei einem Fehler bleibt die Ersatzüberschrift aus den
  * ersten Wörtern stehen; ein gescheiterter Text wird in dieser Sitzung nicht erneut versucht.
+ * Solange eine Nachrichtenrecherche oder gesprochene Frage läuft oder wartet, hält es sich zurück,
+ * damit Codex weiterhin nur eine Anfrage zur Zeit bekommt.
  */
 class ThemenUeberschriften(
+    private val context: Context,
     private val codex: CodexClient,
     private val einstellungen: EinstellungenStore,
     private val bereich: CoroutineScope,
@@ -48,9 +56,24 @@ class ThemenUeberschriften(
             sperre.withLock {
                 if (!codex.istVerbunden) return@withLock
                 val offen = einstellungen.stand.value.themen.filter { it.ueberschriftVeraltet && (it.id to it.text) !in gescheitert }
-                offen.forEach { erzeuge(it) }
+                offen.forEach { alt ->
+                    warteAufRuhe()
+                    // Während des Wartens kann sich das Thema geändert haben oder gelöscht worden sein.
+                    val jetzt = einstellungen.stand.value.themen.firstOrNull { it.id == alt.id && it.text == alt.text }
+                    if (jetzt != null && jetzt.ueberschriftVeraltet) erzeuge(jetzt)
+                }
             }
         }
+    }
+
+    /** Kehrt zurück, sobald kein Nachrichtenlauf und keine gesprochene Frage mehr offen ist. */
+    private suspend fun warteAufRuhe() {
+        val arbeit = WorkManager.getInstance(context)
+        combine(
+            arbeit.getWorkInfosForUniqueWorkFlow(Zeitplan.LAUF),
+            arbeit.getWorkInfosForUniqueWorkFlow(Zeitplan.FRAGE),
+        ) { lauf, fragen -> (lauf + fragen).none { !it.state.isFinished } }
+            .first { it }
     }
 
     private suspend fun erzeuge(thema: Thema) {

@@ -30,7 +30,7 @@ class NewsApplication : Application() {
     val recherche by lazy { NewsRecherche(codex, einstellungen, speicher) }
     val vorleser by lazy { VorleseManager(this, einstellungen) }
     val sprachFrage by lazy { SprachFrage(this) }
-    val ueberschriften by lazy { ThemenUeberschriften(codex, einstellungen, bereich) }
+    val ueberschriften by lazy { ThemenUeberschriften(this, codex, einstellungen, bereich) }
 
     override fun onCreate() {
         super.onCreate()
