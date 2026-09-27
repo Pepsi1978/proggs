@@ -39,12 +39,6 @@ android {
         }
     }
 
-    // Gemeinsamer Code aller Kompass-Apps. Nur update/ und AppProfil liegen pro App.
-    sourceSets {
-        getByName("main").java.srcDir(rootProject.file("../KompassKern/src/main/java"))
-        getByName("test").java.srcDir(rootProject.file("../KompassKern/src/test/java"))
-        getByName("androidTest").java.srcDir(rootProject.file("../KompassKern/src/androidTest/java"))
-    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

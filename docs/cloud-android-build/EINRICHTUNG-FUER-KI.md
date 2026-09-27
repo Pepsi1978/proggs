@@ -135,10 +135,10 @@ Anforderungen:
   startet Gradle mit `sh ./gradlew` (so braucht `gradlew` kein Ausführrecht, und `git status` bleibt sauber).
   Der Windows-Weg für den PC ist unverändert. `pwsh` und das Android SDK (`ANDROID_HOME`) sind auf dem
   Linux-Rechner vorinstalliert. Linux ist schneller, und Windows-Minuten zählen bei privaten Projekten nach bisherigem Stand doppelt.
-- **KompassKern:** ClaudeKompass, CodexKompass und OCodeKompass binden `../KompassKern` ein. Der Ordner steht
-  deshalb im `sparse-checkout` und im Pfadfilter; eine Änderung dort baut alle drei (`KERN_NUTZER`).
-  `apk-update.ps1` zählt solche `../<Ordner>/`-Quellen zum Stand der App: Eine Änderung nur am Kern braucht
-  deshalb in **jeder** der drei Apps einen neuen Versionslog-Eintrag, sonst endet der Bau rot mit „Versionslog-Eintrag fehlt“.
+- **Gemeinsame Quellordner:** Seit 27.09.2026 hat jede Kompass-App ihren eigenen Code; `KompassKern` gibt es
+  nicht mehr. `KERN_NUTZER`, der Pfadfilter und der `sparse-checkout`-Eintrag für `KompassKern` im Ablauf sind
+  nur noch Überbleibsel ohne Wirkung. `apk-update.ps1` zählt weiterhin jede `../<Ordner>/`-Quelle aus
+  `app/build.gradle.kts` zum Stand der App, falls künftig wieder ein geteilter Ordner entsteht.
 - **Probebau:** `workflow_dispatch` mit `probe: true` baut und prüft die Signatur, liest Drive nur (rclone lsf)
   und lädt nichts hoch. Damit lässt sich ein Umbau am Bau-Ablauf ohne Risiko für UpdateStation prüfen.
 - **Job-Einstellungen:** `environment: android-signing`, `permissions: contents: read`,

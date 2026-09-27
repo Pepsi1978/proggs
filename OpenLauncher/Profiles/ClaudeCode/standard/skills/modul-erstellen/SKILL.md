@@ -149,7 +149,7 @@ Datenbank-Entitäten mitnehmen — das wäre kein Modul geworden.
 ### Liegt der Bereich in geteiltem Code?
 
 Prüf, ob der Ordner von mehreren Apps über `sourceSets.srcDir` eingebunden wird
-(bei diesem Benutzer: `KompassKern` für die drei Kompass-Apps). Dann gilt:
+(bei diesem Benutzer derzeit kein Fall; bis 27.09.2026 `KompassKern` für die drei Kompass-Apps). Dann gilt:
 
 | | |
 |---|---|

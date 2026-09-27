@@ -5,8 +5,8 @@ import de.frank.opencodekompass.BuildConfig
 /**
  * Alles, worin sich die Kompass-Apps unterscheiden, ausser dem Abgleich (update/).
  *
- * Der gemeinsame Code in KompassKern kennt nur dieses Objekt. Jede App liefert ihre eigene
- * Fassung unter demselben Namen. Datenbank-, Ablage- und Sicherungsnamen muessen byte-gleich
+ * Der übrige Code (seit 27.09.2026 eine eigene Kopie je App, früher der gemeinsame KompassKern)
+ * liest die App-Eigenheiten aus diesem Objekt. Datenbank-, Ablage- und Sicherungsnamen muessen byte-gleich
  * mit den frueheren Fassungen bleiben, sonst sind die eigenen Fragen nach dem Update weg.
  *
  * Genau deshalb heissen Datenbank, Ablagen und die Paketkennung weiterhin "opencodekompass",

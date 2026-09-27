@@ -5,7 +5,7 @@
 `de.frank.module.<kurzname>` — klein geschrieben, z. B. `de.frank.module.dragreorder`.
 
 Belegt durch den Bestand: App-Code liegt unter `de.frank.<appname>`, gemeinsamer
-Code unter `de.frank.kompass` (KompassKern). Der Modul-Namensraum hält sich davon
+Code der Kompass-Apps unter `de.frank.kompass` (früher KompassKern, seit 27.09.2026 je App kopiert). Der Modul-Namensraum hält sich davon
 fern, damit eine Kopie in einer fremden App nie mit deren Paketen kollidiert.
 
 ## Ablage
@@ -30,7 +30,7 @@ leichter, wenn beides zusammenpasst.
 ### Sonderfall: mehrere Apps teilen sich einen Quellordner
 
 Bindet mehr als eine App denselben Ordner über `sourceSets.srcDir` ein — bei
-diesem Benutzer `KompassKern` für ClaudeKompass, CodexKompass und OCodeKompass —
+diesem Benutzer derzeit kein Fall (bis 27.09.2026 `KompassKern` für die drei Kompass-Apps) —
 dann liegen Kopie **und** Anbindung dort, nicht je App:
 
 | | Pfad |
