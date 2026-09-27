@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Ein Termin aus dem Zeitplan: der Zeitpunkt und die IDs der Themen, die dann dran sind. */
 data class Termin(val zeit: ZonedDateTime, val themen: List<String>)
@@ -431,7 +432,8 @@ class NeustartEmpfaenger : BroadcastReceiver() {
         val fertig = goAsync()
         app.bereich.launch {
             try {
-                Zeitplan.holeNach(context)
+                // Ein Empfänger hat nur begrenzt Zeit; was hier nicht fertig wird, holt das Öffnen der App nach.
+                withTimeoutOrNull(40_000L) { Zeitplan.holeNach(context) }
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
@@ -471,9 +473,15 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
         var ergebnis: Result = Result.success()
         // Themen, die dieser Auftrag schon recherchiert hat, mit dem Beginn ihres Laufs.
         val erledigt = mutableMapOf<String, Long>()
+        // Beginn des letzten Laufs über alle Themen — ein zweiter Tipp auf Aktualisieren währenddessen löst keinen weiteren aus.
+        var alleErledigtUm = 0L
         // Solange Termine vorgemerkt sind, weiterarbeiten — auch die, die während des Laufs dazukamen.
         while (true) {
             val (alle, termine) = app.einstellungen.nimmOffeneLaeufe() ?: break
+            if (alle && System.currentTimeMillis() - alleErledigtUm < Zeitplan.SCHON_ERLEDIGT_MS) {
+                KompassLog.info("NewsWorker", "doWork", "Alle Themen liefen gerade erst — kein zweiter Lauf")
+                continue
+            }
             val stand = app.einstellungen.stand.value
             val faellig = when {
                 alle -> Zeitplan.themenFuer(stand.themen, null)
@@ -502,6 +510,7 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
                     }
                 }
                 faellig.forEach { erledigt[it.id] = beginn }
+                if (alle) alleErledigtUm = beginn
                 val zeilen = ausgabe.bloecke.flatMap { b -> b.meldungen.take(2).map { "${b.titel}: ${it.titel}" } }
                 Zeitplan.meldeFertig(applicationContext, "Deine ${ausgabe.slot} ist da", zeilen, Zeitplan.hinweisNummer(ausgabe.id))
                 ergebnis = Result.success()
