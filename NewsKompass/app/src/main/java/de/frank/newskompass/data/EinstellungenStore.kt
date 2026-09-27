@@ -241,13 +241,22 @@ class EinstellungenStore(context: Context) {
         schreibeOffeneLaeufe(alle || auftrag == null, neu)
     }
 
-    /** Nimmt alle offenen Termine heraus; `null`, wenn keiner offen ist. Die Themenliste ist leer, wenn „alle“ gilt. */
+    /**
+     * Die offenen Termine, ohne sie herauszunehmen; `null`, wenn keiner offen ist. Erst wenn sie erledigt
+     * sind, nimmt [entferneOffeneLaeufe] sie heraus — so überleben sie auch das Ende des Prozesses mitten im Lauf.
+     */
     @Synchronized
-    fun nimmOffeneLaeufe(): Pair<Boolean, Map<String, Long>>? {
+    fun offeneLaeufe(): Pair<Boolean, Map<String, Long>>? {
         val offenJetzt = leseOffeneLaeufe()
-        if (!offenJetzt.first && offenJetzt.second.isEmpty()) return null
-        schreibeOffeneLaeufe(false, emptyMap())
-        return offenJetzt
+        return offenJetzt.takeIf { it.first || it.second.isNotEmpty() }
+    }
+
+    /** Nimmt die erledigten Termine heraus; inzwischen neu vorgemerkte (späterer Zeitpunkt) bleiben stehen. */
+    @Synchronized
+    fun entferneOffeneLaeufe(alle: Boolean, termine: Map<String, Long>) {
+        val (jetztAlle, jetzt) = leseOffeneLaeufe()
+        val rest = jetzt.filter { (id, um) -> termine[id]?.let { um > it } ?: true }
+        schreibeOffeneLaeufe(jetztAlle && !alle, rest)
     }
 
     val hatOffeneLaeufe: Boolean

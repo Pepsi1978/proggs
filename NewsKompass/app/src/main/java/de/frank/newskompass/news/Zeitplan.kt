@@ -399,6 +399,11 @@ object Zeitplan {
         runCatching { NotificationManagerCompat.from(context).notify(HINWEIS_GESCHEITERT, hinweis) }
     }
 
+    /** Nach einem erfolgreichen Lauf ist ein alter Fehlerhinweis überholt. */
+    fun vergissFehlerHinweis(context: Context) {
+        runCatching { NotificationManagerCompat.from(context).cancel(HINWEIS_GESCHEITERT) }
+    }
+
     /** Eigene Benachrichtigungsnummer je Ausgabe oder Frage, fern von den festen Nummern oben. */
     fun hinweisNummer(schluessel: String): Int = (schluessel.hashCode() and 0x3fffffff) or 0x40000000
 }
@@ -433,7 +438,7 @@ class NeustartEmpfaenger : BroadcastReceiver() {
         app.bereich.launch {
             try {
                 // Ein Empfänger hat nur begrenzt Zeit; was hier nicht fertig wird, holt das Öffnen der App nach.
-                withTimeoutOrNull(40_000L) { Zeitplan.holeNach(context) }
+                withTimeoutOrNull(8_000L) { Zeitplan.holeNach(context) }
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {
@@ -468,18 +473,22 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
         } catch (fehler: Exception) {
             KompassLog.warn("NewsWorker", "doWork", "Kein Vordergrund möglich", mapOf("grund" to fehler.message))
         }
-        // Aufträge aus älteren Versionen tragen ihre Themen noch in der Eingabe.
-        inputData.getStringArray(Zeitplan.THEMEN)?.let { app.einstellungen.merkeOffenenLauf(Zeitplan.auftragAus(it)) }
+        // Aufträge aus älteren Versionen tragen ihre Themen noch in der Eingabe — nur beim ersten Versuch übernehmen.
+        if (runAttemptCount == 0) {
+            inputData.getStringArray(Zeitplan.THEMEN)?.let { app.einstellungen.merkeOffenenLauf(Zeitplan.auftragAus(it)) }
+        }
         var ergebnis: Result = Result.success()
         // Themen, die dieser Auftrag schon recherchiert hat, mit dem Beginn ihres Laufs.
         val erledigt = mutableMapOf<String, Long>()
-        // Beginn des letzten Laufs über alle Themen — ein zweiter Tipp auf Aktualisieren währenddessen löst keinen weiteren aus.
+        // Ende des letzten Laufs über alle Themen — ein zweiter Tipp auf Aktualisieren währenddessen löst keinen weiteren aus.
         var alleErledigtUm = 0L
         // Solange Termine vorgemerkt sind, weiterarbeiten — auch die, die während des Laufs dazukamen.
         while (true) {
-            val (alle, termine) = app.einstellungen.nimmOffeneLaeufe() ?: break
+            // Lesen, nicht herausnehmen: Die Termine bleiben vorgemerkt, bis sie erledigt oder endgültig gescheitert sind.
+            val (alle, termine) = app.einstellungen.offeneLaeufe() ?: break
             if (alle && System.currentTimeMillis() - alleErledigtUm < Zeitplan.SCHON_ERLEDIGT_MS) {
                 KompassLog.info("NewsWorker", "doWork", "Alle Themen liefen gerade erst — kein zweiter Lauf")
+                app.einstellungen.entferneOffeneLaeufe(alle, termine)
                 continue
             }
             val stand = app.einstellungen.stand.value
@@ -495,6 +504,7 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
             if (faellig.isEmpty() && !alle) {
                 // Die Termine wurden inzwischen geändert, gestrichen oder die Themen gelöscht — nichts zu tun.
                 KompassLog.info("NewsWorker", "doWork", "Kein Thema mehr für diese Termine", mapOf("themen" to termine.size))
+                app.einstellungen.entferneOffeneLaeufe(alle, termine)
                 continue
             }
             val beginn = System.currentTimeMillis()
@@ -509,25 +519,29 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
                         // Der Hinweis bleibt dann eben beim vorigen Text.
                     }
                 }
+                app.einstellungen.entferneOffeneLaeufe(alle, termine)
                 faellig.forEach { erledigt[it.id] = beginn }
-                if (alle) alleErledigtUm = beginn
+                if (alle) alleErledigtUm = System.currentTimeMillis()
+                Zeitplan.vergissFehlerHinweis(applicationContext)
                 val zeilen = ausgabe.bloecke.flatMap { b -> b.meldungen.take(2).map { "${b.titel}: ${it.titel}" } }
                 Zeitplan.meldeFertig(applicationContext, "Deine ${ausgabe.slot} ist da", zeilen, Zeitplan.hinweisNummer(ausgabe.id))
                 ergebnis = Result.success()
             } catch (abbruch: CancellationException) {
                 // Android stoppt den Auftrag (etwa Netz weg) — die Termine bleiben für den nächsten Versuch vorgemerkt.
-                app.einstellungen.merkeOffenenLauf(if (alle) null else termine)
                 throw abbruch
             } catch (fehler: Exception) {
                 KompassLog.error("NewsWorker", "doWork", "Lauf gescheitert", mapOf("grund" to fehler.message, "versuch" to runAttemptCount))
                 val endgueltig = (fehler is CodexFehler && fehler.art != CodexFehlerArt.NETZ) ||
                     fehler is IllegalStateException || runAttemptCount >= 2
-                if (!endgueltig) {
-                    app.einstellungen.merkeOffenenLauf(if (alle) null else termine)
-                    return Result.retry()
-                }
+                if (!endgueltig) return Result.retry()
+                app.einstellungen.entferneOffeneLaeufe(alle, termine)
                 val grund = fehler.message ?: "Unbekannter Fehler"
-                if (!alle) Zeitplan.meldeGescheitert(applicationContext, grund)
+                if (!alle || termine.isNotEmpty()) {
+                    // Nicht bei jedem Öffnen der App erneut nachholen und genauso scheitern — der nächste Termin
+                    // oder ein Tipp auf Aktualisieren versucht es wieder.
+                    app.einstellungen.merkeHartenFehler(System.currentTimeMillis())
+                    Zeitplan.meldeGescheitert(applicationContext, grund)
+                }
                 ergebnis = Result.failure(workDataOf("fehler" to grund))
             }
         }
