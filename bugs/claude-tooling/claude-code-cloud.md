@@ -123,6 +123,17 @@
   (`list_workflow_runs`, `android-cloud-build.yml`) und `actions_get` (`get_workflow_run`).
 - **Merke:** Ein Warte-Skript, das Fehler als „0“ zählt, sieht aus wie ein langsamer Dienst. Zugang immer zuerst prüfen.
 
+## §B16 „Bypass permissions“ gibt es in der Cloud nicht
+- **Symptom:** In der App stehen nur Plan, Auto und „Änderungen akzeptieren“. `defaultMode: "bypassPermissions"`
+  oder `"dontAsk"` aus einer Einstellungsdatei wird still ignoriert.
+- **Status:** so gewollt, dokumentiert: https://code.claude.com/docs/en/permission-modes („Bypass permissions isn't
+  available“). Der Automodus lässt sich nur über `~/.claude/settings.json` oder Organisations-Einstellungen feiner
+  einstellen, nicht über die Repo-Datei.
+- **Umgang (27.09.2026):** Modus „Änderungen akzeptieren“ in der App wählen plus Freigabeliste `permissions.allow` in
+  `.claude/settings.json` (alle Werkzeuge, alle MCP-Server). **Kein `defaultMode` in die Repo-Datei:** Projekt-
+  Einstellungen stehen über den Benutzer-Einstellungen und würden am PC den Modus „alles erlauben“ überschreiben. Ob die Cloud die Repo-Freigabeliste beachtet, ist
+  nicht dokumentiert. Fragt die Sitzung trotzdem nach, hier eintragen.
+
 ## Weitere, schwächer belegte Einträge
 - SKILL.md im System-Prompt angekündigt, aber nicht gemountet (#26254, offen).
 - Vorhandene Skills/Subagents werden vom Modell ignoriert (#90182) → Skill ausdrücklich nennen.
