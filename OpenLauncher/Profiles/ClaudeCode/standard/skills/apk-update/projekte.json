@@ -37,6 +37,10 @@
       "notiz": "Variante 'schnell' = Release, mit Debug-Key signiert (der Debug-Build ruckelt)."
     },
     "GenialerWecker": { "paket": "de.frank.genialerwecker" },
+    "GenialerWeckerAndroid": {
+      "paket": "de.frank.genialerwecker.app",
+      "notiz": "Verkaufs-App mit eigenem Schlüssel (~/SK/GenialerWeckerAndroid, SHA-256 96:9A:C0:94…). Der Build signiert Debug und Release selbst; die APK wird NICHT mit dem gemeinsamen Debug-Key umsigniert. Läuft parallel zur privaten App de.frank.genialerwecker."
+    },
     "KarteikartenLernen": { "paket": "de.frank.karteikartenlernen" },
     "NovaDrehen": { "paket": "de.frank.novadrehen" },
     "OCodeKompass": { "paket": "de.frank.opencodekompass" },

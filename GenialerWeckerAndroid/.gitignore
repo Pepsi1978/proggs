@@ -1,0 +1,9 @@
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.hprof
+# Signierschlüssel liegen nur in ~/SK/GenialerWeckerAndroid
+*.keystore
+*.jks
+keystore.properties
