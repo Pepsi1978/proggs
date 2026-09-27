@@ -77,8 +77,15 @@ tippen müssen außer „Installieren“ in UpdateStation.
      Schritt 1 wiederholen (neuer Versionslog-Eintrag nur, wenn der vorige schon veröffentlicht war;
      bei „Versionslog-Eintrag fehlt“ genau diesen nachtragen). Erst aufgeben und Frank fragen, wenn
      die Ursache außerhalb der App liegt (z. B. Secret abgelaufen, Google-Drive-Zugang widerrufen).
-8. **Abschlussmeldung** an Frank: App, alte → neue Version, was neu ist, was Codex gefunden und was davon
-   behoben wurde, ob der Bau grün war.
+8. **Abschlussmeldung** an Frank, immer genau dieser Block (Details in `OpenLauncher/Profiles/ClaudeCode/sources/cloud.md` §8):
+   ```
+   ☁️ Cloud-Sitzung · Cloud-Regeln (cloud.md) erkannt ✓
+   Geändert: <ein Satz>
+   Version: <App> <alt> → <neu> (versionCode <n>)
+   Codex-Review: <keine Befunde | n Befunde, behoben | kein Ergebnis nach 8 min>
+   Commit + Push: ja · PR #<n> gemergt: ja
+   GitHub-Bau: grün · Google Drive: hochgeladen · UpdateStation: verfügbar
+   ```
 
 ## Bekannte Cloud-Fallen (Stand 27.09.2026)
 

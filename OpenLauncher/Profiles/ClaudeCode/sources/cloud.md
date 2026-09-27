@@ -55,6 +55,15 @@ Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „
 - Web-Recherche: Die Recherche-Skripte brauchen Schlüssel aus SK und laufen hier nicht. Mit den eigenen
   Such-Werkzeugen recherchieren und die Erkenntnisse trotzdem in `best-practices/` und `bugs/` speichern.
 
-8. Abschluss
-- Am Ende kurz melden: was geändert wurde, welche Version, ob Codex etwas gefunden hat, ob gemergt und ob der
-  GitHub-Bau grün war.
+8. Abschluss (Pflicht, jede Antwort mit Änderungen endet so)
+Immer genau dieser kurze Block am Ende. Die erste Zeile zeigt Frank, dass diese Regeln geladen wurden.
+Was nicht zutrifft, mit „entfällt“ füllen, was fehlschlug, mit „nein (Grund)“, nie weglassen:
+```
+☁️ Cloud-Sitzung · Cloud-Regeln (cloud.md) erkannt ✓
+Geändert: <ein Satz>
+Version: <App> <alt> → <neu> (versionCode <n>)
+Codex-Review: <keine Befunde | n Befunde, behoben | kein Ergebnis nach 8 min>
+Commit + Push: ja · PR #<n> gemergt: ja
+GitHub-Bau: grün · Google Drive: hochgeladen · UpdateStation: verfügbar
+```
+Bei Aufgaben ohne App-Änderung: Version, Codex, Bau, Drive und UpdateStation mit „entfällt“.
