@@ -652,13 +652,22 @@ try {
         var pwsh = Path.Combine(programFiles, "PowerShell", "7", "pwsh.exe");
         if (File.Exists(pwsh)) return new PowerShellExecutable(pwsh, true);
 
+        // Alle pwsh-Treffer prüfen und die höchste Version nehmen: im PATH kann eine
+        // mitgebrachte Kopie (z. B. Codex-Runtime mit 7.6.5) vor der Store-PowerShell stehen.
         try
         {
             using var p = Process.Start(new ProcessStartInfo("where.exe", "pwsh.exe") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true });
-            if (p != null && p.WaitForExit(2000))
+            if (p != null)
             {
-                var line = p.StandardOutput.ReadLine();
-                if (!string.IsNullOrWhiteSpace(line) && File.Exists(line.Trim())) return new PowerShellExecutable(line.Trim(), true);
+                var output = p.StandardOutput.ReadToEnd();
+                p.WaitForExit(2000);
+                var best = output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(File.Exists)
+                    .Select(path => (Path: path, Version: ReadFileVersion(path)))
+                    .Where(c => c.Version != null)
+                    .OrderByDescending(c => c.Version)
+                    .FirstOrDefault();
+                if (best.Path != null) return new PowerShellExecutable(best.Path, true);
             }
         }
         catch { /* Fallback unten */ }
@@ -668,6 +677,16 @@ try {
         return File.Exists(windowsPowerShell)
             ? new PowerShellExecutable(windowsPowerShell, false)
             : new PowerShellExecutable("powershell.exe", false);
+    }
+
+    private static Version? ReadFileVersion(string path)
+    {
+        try
+        {
+            var info = FileVersionInfo.GetVersionInfo(path);
+            return new Version(info.FileMajorPart, info.FileMinorPart, info.FileBuildPart, info.FilePrivatePart);
+        }
+        catch { return null; }
     }
 
     private static TerminalTabColor PickTerminalTabColor() =>
