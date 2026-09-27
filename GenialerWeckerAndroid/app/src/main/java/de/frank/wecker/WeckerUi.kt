@@ -308,7 +308,6 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
         ) }
         val freischaltungNoetig by vm.freischaltungNoetig.collectAsStateWithLifecycle()
     if (freischaltungNoetig) FreischaltungsDialog(activity) { vm.freischaltungNoetig.value = false }
-    PremiumEinwilligungDialog(vm)
     delete?.let { alarm -> Confirm("Wecker löschen?", "„${alarm.name}“ wird entfernt.", "Wecker löschen", {
             vm.delete(alarm); delete = null
         }, { delete = null }) }

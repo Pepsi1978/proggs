@@ -7,6 +7,6 @@ package de.frank.wecker
 internal fun Alarm.resolveVoice(defaults: SyntheseStimme): SyntheseStimme {
     val code = Sprachen.gueltig(sprache)
     val basis = defaults.fuerSprache(code)
-    val eigene = voiceId.takeIf { (LokaleStimmen.istEigeneEngine(voiceProvider) || voiceProvider == PremiumKatalog.PROVIDER) && it.isNotBlank() && it.substringBefore('-').equals(code, ignoreCase = true) }
+    val eigene = voiceId.takeIf { voiceProvider == PremiumKatalog.PROVIDER && PremiumKatalog.istPremium(it) && it.substringBefore('-').equals(code, ignoreCase = true) }
     return basis.copy(stimme = eigene ?: basis.stimme, ttsSpeechRate = speechRate ?: defaults.ttsSpeechRate)
 }

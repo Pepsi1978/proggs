@@ -82,8 +82,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         aktion?.invoke()
     }
     private fun mitEinwilligung(voice: SyntheseStimme, aktion: () -> Unit) {
-        if (voice.istPremium && settings.premiumEinwilligung.isBlank()) { nachEinwilligung = aktion; premiumFrage.value = true }
-        else aktion()
+        aktion()
     }
 
     init {

@@ -7,3 +7,5 @@ local.properties
 *.keystore
 *.jks
 keystore.properties
+# Whisper-Sprachmodell: lädt der Build selbst (Aufgabe ladeWhisperModell), zu groß fürs Git
+app/whisper-modell/

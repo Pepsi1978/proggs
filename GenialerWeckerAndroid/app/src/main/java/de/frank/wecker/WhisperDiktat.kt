@@ -1,7 +1,6 @@
 package de.frank.wecker
 
 import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -16,109 +15,22 @@ import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.io.File
-import java.io.RandomAccessFile
-import java.util.concurrent.TimeUnit
 import kotlin.math.sqrt
 
 /**
- * Das Whisper-Sprachmodell für das Offline-Diktat (sherpa-onnx, nur Erkennung, ohne GPL-Anteile).
- * Es wird einmalig geladen und liegt danach im App-Speicher; das Diktat braucht dann kein Internet.
- * „small“ erkennt deutlich besser, „base“ ist die kompakte Fassung für Handys mit wenig Arbeitsspeicher.
+ * Das Whisper-Sprachmodell (small, int8) liegt fest in der APK unter assets/whisper – das Diktat funktioniert
+ * vom ersten Start an ohne Internet. sherpa-onnx liest es direkt aus der APK (unkomprimiert abgelegt).
  */
 object WhisperModell {
-    enum class Art(val id: String, val anzeige: String, val groessen: List<Long>) {
-        SMALL("small", "Genau", listOf(112_442_483L, 262_226_114L, 816_730L)),
-        BASE("base", "Kompakt", listOf(29_120_534L, 130_672_026L, 816_730L));
-        val dateien: List<String> get() = listOf("$id-encoder.int8.onnx", "$id-decoder.int8.onnx", "$id-tokens.txt")
-        val megabyte: Int get() = (groessen.sum() / 1_048_576L).toInt()
-    }
-    enum class Status { FEHLT, LAEDT, BEREIT, FEHLER }
-    data class Zustand(val status: Status, val fortschritt: Float = 0f, val meldung: String = "")
-
-    private val _zustand = MutableStateFlow(Zustand(Status.FEHLT))
-    val zustand = _zustand.asStateFlow()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var ladeJob: Job? = null
-    private val client = OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).build()
-
-    /** Handys unter 6 GB Arbeitsspeicher bekommen das kompakte Modell, alle anderen das genaue. */
-    fun art(context: Context): Art {
-        val info = ActivityManager.MemoryInfo()
-        context.getSystemService(ActivityManager::class.java)?.getMemoryInfo(info)
-        return if (info.totalMem in 1 until 5_500_000_000L) Art.BASE else Art.SMALL
-    }
-    fun ordner(context: Context) = File(context.filesDir, "whisper")
-    fun datei(context: Context, name: String) = File(ordner(context), name)
-    fun bereit(context: Context): Boolean = art(context).let { a -> a.dateien.zip(a.groessen).all { (n, g) -> datei(context, n).length() == g } }
-
-    fun pruefe(context: Context) {
-        if (_zustand.value.status == Status.LAEDT) return
-        _zustand.value = Zustand(if (bereit(context)) Status.BEREIT else Status.FEHLT)
-    }
-
-    /** Lädt fehlende Dateien, setzt abgebrochene Downloads fort (Range) und prüft jede Größe. */
-    fun laden(context: Context) {
-        if (ladeJob?.isActive == true) return
-        val app = context.applicationContext
-        val art = art(app)
-        ladeJob = scope.launch {
-            try {
-                ordner(app).mkdirs()
-                val gesamt = art.groessen.sum().toFloat()
-                var fertig = 0L
-                _zustand.value = Zustand(Status.LAEDT, 0f)
-                art.dateien.zip(art.groessen).forEach { (name, groesse) ->
-                    val ziel = datei(app, name)
-                    if (ziel.length() == groesse) { fertig += groesse; return@forEach }
-                    val teil = File(ziel.path + ".part")
-                    val vorhanden = teil.length().takeIf { it < groesse } ?: 0L.also { teil.delete() }
-                    val anfrage = Request.Builder().url("https://huggingface.co/csukuangfj/sherpa-onnx-whisper-${art.id}/resolve/main/$name")
-                        .apply { if (vorhanden > 0) header("Range", "bytes=$vorhanden-") }.build()
-                    client.newCall(anfrage).execute().use { antwort ->
-                        check(antwort.isSuccessful) { "Der Download ist fehlgeschlagen (${antwort.code})." }
-                        val anhaengen = vorhanden > 0 && antwort.code == 206
-                        RandomAccessFile(teil, "rw").use { raf ->
-                            if (anhaengen) raf.seek(vorhanden) else raf.setLength(0)
-                            var geschrieben = if (anhaengen) vorhanden else 0L
-                            val puffer = ByteArray(256 * 1024)
-                            val eingang = antwort.body!!.byteStream()
-                            while (true) {
-                                ensureActive()
-                                val n = eingang.read(puffer)
-                                if (n < 0) break
-                                raf.write(puffer, 0, n)
-                                geschrieben += n
-                                _zustand.value = Zustand(Status.LAEDT, ((fertig + geschrieben) / gesamt).coerceIn(0f, 1f))
-                            }
-                        }
-                    }
-                    check(teil.length() == groesse) { "Die Datei $name ist unvollständig angekommen. Bitte erneut laden." }
-                    check(teil.renameTo(ziel)) { "Das Sprachmodell konnte nicht gespeichert werden." }
-                    fertig += groesse
-                }
-                _zustand.value = Zustand(Status.BEREIT, 1f)
-            } catch (e: CancellationException) {
-                _zustand.value = Zustand(Status.FEHLT); throw e
-            } catch (e: Exception) {
-                android.util.Log.w("WeckerDiktat", "Modell-Download fehlgeschlagen", e)
-                _zustand.value = Zustand(Status.FEHLER, meldung = if (e is java.io.IOException) "Keine Verbindung. Der Download setzt beim nächsten Versuch dort fort, wo er stand." else e.message ?: "Download fehlgeschlagen.")
-            }
-        }
-    }
-
-    fun abbrechen() { ladeJob?.cancel() }
-
-    fun loeschen(context: Context) {
-        abbrechen()
-        WhisperErkenner.freigeben()
-        ordner(context).listFiles()?.forEach { it.delete() }
-        _zustand.value = Zustand(Status.FEHLT)
-    }
+    private val DATEIEN = listOf("whisper/small-encoder.int8.onnx", "whisper/small-decoder.int8.onnx", "whisper/small-tokens.txt")
+    val encoder get() = DATEIEN[0]
+    val decoder get() = DATEIEN[1]
+    val tokens get() = DATEIEN[2]
+    @Volatile private var vorhanden: Boolean? = null
+    /** Liegt das Modell in dieser APK? (Ein Build ohne Modell fällt auf das Android-Diktat zurück.) */
+    fun bereit(context: Context): Boolean = vorhanden ?: runCatching {
+        context.assets.list("whisper").orEmpty().toSet().containsAll(DATEIEN.map { it.substringAfter('/') })
+    }.getOrDefault(false).also { vorhanden = it }
 }
 
 /** Der geladene Erkenner; teuer im Aufbau, darum eine Instanz, die nach einer Minute Ruhe freigegeben wird. */
@@ -136,11 +48,9 @@ object WhisperErkenner {
         freigabe?.cancel()
         erkenner?.takeIf { sprache == code }?.let { return it }
         erkenner?.release(); erkenner = null
-        val art = WhisperModell.art(context)
-        val (enc, dec, tok) = art.dateien.map { WhisperModell.datei(context, it).absolutePath }
-        val neu = OfflineRecognizer(config = OfflineRecognizerConfig(modelConfig = OfflineModelConfig(
-            whisper = OfflineWhisperModelConfig(encoder = enc, decoder = dec, language = code, task = "transcribe"),
-            tokens = tok, numThreads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4))))
+        val neu = OfflineRecognizer(context.applicationContext.assets, OfflineRecognizerConfig(modelConfig = OfflineModelConfig(
+            whisper = OfflineWhisperModelConfig(encoder = WhisperModell.encoder, decoder = WhisperModell.decoder, language = code, task = "transcribe"),
+            tokens = WhisperModell.tokens, numThreads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4))))
         erkenner = neu; sprache = code
         neu
     }
@@ -166,7 +76,6 @@ object WhisperErkenner {
 
     fun freigeben() = synchronized(lock) { erkenner?.release(); erkenner = null }
 }
-
 /** Reine Audio-Hilfen: Stille erkennen, Ränder kürzen, teilen, typische Whisper-Floskeln verwerfen. */
 object DiktatAudio {
     const val RATE = 16_000

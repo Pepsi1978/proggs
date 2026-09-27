@@ -1,3 +1,4 @@
+import java.net.URI
 import java.util.Properties
 
 plugins {
@@ -55,7 +56,30 @@ android {
         getByName("release") { signingConfig = signingConfigs.getByName("eigen") }
     }
     packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    // Das Whisper-Modell liegt unkomprimiert in der APK, damit es direkt aus der APK gelesen werden kann.
+    androidResources { noCompress += listOf("onnx") }
+    sourceSets["main"].assets.srcDir("whisper-modell")
 }
+// Whisper small (int8, sherpa-onnx-Export, Modell-Lizenz MIT/Apache-2.0) fest in der App: Der Build lädt die Dateien
+// einmal von Hugging Face nach app/whisper-modell/whisper/ (nicht im Git) und prüft die Länge gegen Content-Length.
+val ladeWhisperModell by tasks.registering {
+    val ziel = file("whisper-modell/whisper")
+    outputs.dir(ziel)
+    doLast {
+        ziel.mkdirs()
+        listOf("small-encoder.int8.onnx", "small-decoder.int8.onnx", "small-tokens.txt").forEach { name ->
+            val datei = ziel.resolve(name)
+            if (datei.isFile && datei.length() > 0) return@forEach
+            val verbindung = URI("https://huggingface.co/csukuangfj/sherpa-onnx-whisper-small/resolve/main/$name").toURL().openConnection()
+            val erwartet = verbindung.contentLengthLong
+            val teil = ziel.resolve("$name.part")
+            verbindung.getInputStream().use { ein -> teil.outputStream().use { ein.copyTo(it, 1 shl 20) } }
+            if (erwartet > 0 && teil.length() != erwartet) throw GradleException("Whisper-Modell $name unvollständig (${teil.length()} von $erwartet Bytes).")
+            if (!teil.renameTo(datei)) throw GradleException("Whisper-Modell $name ließ sich nicht speichern.")
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn(ladeWhisperModell) }
 kotlin { compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 }
 dependencies {
     implementation(platform(libs.compose.bom))

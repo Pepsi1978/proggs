@@ -64,7 +64,7 @@ class SecureSettings(context: Context) : Closeable {
      * Bevorzugte Stimme je Sprache: eine Premium-Stimme (Kennung wie „de-DE-KatjaNeural“) oder eine Gerätestimme.
      * Ohne eigene Wahl gilt die Premium-Vorgabe der Sprache, passend zur Region des Geräts.
      */
-    fun stimmeFuer(sprache: String): String = readString("stimme2_$sprache", "").ifBlank {
+    fun stimmeFuer(sprache: String): String = readString("stimme2_$sprache", "").takeIf { de.frank.wecker.PremiumKatalog.istPremium(it) } ?: run {
         de.frank.wecker.PremiumKatalog.vorgabe(sprache, java.util.Locale.getDefault().country).orEmpty()
     }
     fun setzeStimme(sprache: String, name: String) { writeString("stimme2_$sprache", name) }
@@ -73,7 +73,13 @@ class SecureSettings(context: Context) : Closeable {
     var premiumEinwilligung: String
         get() = readString("premium_einwilligung", "")
         set(value) = writeString("premium_einwilligung", value)
-    val premiumErlaubt: Boolean get() = premiumEinwilligung == "ja"
+    /** Die natürlichen Stimmen sind immer an; ohne Netz übernimmt still die Gerätestimme. */
+    val premiumErlaubt: Boolean get() = true
+
+    /** Lieblingsstimmen (Stern); sie stehen in jeder Auswahl ganz oben. */
+    var stimmFavoriten: Set<String>
+        get() = readString("stimm_favoriten", "").split(',').filter(String::isNotBlank).toSet()
+        set(value) = writeString("stimm_favoriten", value.joinToString(","))
 
     var ttsSpeechRate: Float
         get() = preferences?.getFloat(Keys.TTS_SPEECH_RATE, Defaults.TTS_SPEECH_RATE)

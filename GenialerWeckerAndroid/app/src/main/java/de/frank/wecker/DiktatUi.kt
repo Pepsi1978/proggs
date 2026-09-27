@@ -13,7 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -35,11 +34,10 @@ import de.frank.genialeideen.ui.GoldKnopf
 import de.frank.genialeideen.ui.StillerKnopf
 import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.genialeideen.ui.theme.LocalSemantisch
-import de.frank.wecker.design.DesignDialog
 
 /**
  * Eine kompakte Zeile direkt unter dem Vorlesetext: links „Diktieren“, rechts [vorlesen].
- * Erkannt wird mit dem Whisper-Modell auf dem Gerät; bis es geladen ist, steht das Android-Diktat bereit.
+ * Erkannt wird mit dem eingebauten Whisper-Modell direkt auf dem Gerät, ohne Internet.
  * Das fertig Erkannte wird sofort an den aktuellen Entwurf angehängt ([anfuegen]) – nie überschrieben.
  */
 @Composable
@@ -47,9 +45,7 @@ fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorles
     val context = LocalContext.current
     val diktat = remember { OfflineDiktat(context.applicationContext) }
     val whisper = remember { WhisperDiktat(context.applicationContext) }
-    val modell by WhisperModell.zustand.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { WhisperModell.pruefe(context) }
-    var modellFrage by remember { mutableStateOf(false) }
+
     // Die Sprache gehört zum Wecker; ein Wechsel beendet eine laufende Aufnahme in der alten Sprache.
     LaunchedEffect(sprache) { if (diktat.hoertZu) diktat.zuruecksetzen(); if (whisper.hoertZu) whisper.zuruecksetzen() }
     val aktuellesAnfuegen by rememberUpdatedState(anfuegen)
@@ -75,10 +71,8 @@ fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorles
         }
     }
     fun loslegen() {
-        when {
-            WhisperModell.bereit(context) -> whisper.starten(sprache.code)
-            else -> modellFrage = true
-        }
+        // Whisper ist fest eingebaut; nur ein Build ohne Modell nutzt das Android-Diktat.
+        if (WhisperModell.bereit(context)) whisper.starten(sprache.code) else diktat.starten(sprache)
     }
     val mikrofon = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt ->
         if (erlaubt) loslegen()
@@ -118,13 +112,6 @@ fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorles
     }
     if ((diktat.zustand as? DiktatZustand.Hinweis)?.sprachpaketLadbar == true)
         StillerKnopf("Sprachpaket ${sprache.anzeige} laden", { diktat.sprachpaketLaden() })
-    if (modell.status == WhisperModell.Status.LAEDT && !modellFrage)
-        Text("Spracherkennung wird geladen … ${(modell.fortschritt * 100).toInt()} %", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-
-    if (modellFrage) ModellDialog(
-        schliessen = { modellFrage = false },
-        einfach = { modellFrage = false; mitFreigabe { diktat.starten(sprache) } },
-    )
 }
 
 /** Aufnahmepegel als ruhiger Balken mit Laufzeit – man sieht, dass das Handy zuhört. */
@@ -139,36 +126,4 @@ private fun Pegel(pegel: Float, sekunden: Int) {
                 .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(gold.primaer.copy(alpha = .6f), gold.primaer))))
         }
     }
-}
-
-/** Erster Diktatversuch ohne Modell: einmal laden (beste Erkennung) oder gleich das einfache Android-Diktat. */
-@Composable
-private fun ModellDialog(schliessen: () -> Unit, einfach: () -> Unit) {
-    val context = LocalContext.current
-    val modell by WhisperModell.zustand.collectAsStateWithLifecycle()
-    val art = remember { WhisperModell.art(context) }
-    LaunchedEffect(modell.status) { if (modell.status == WhisperModell.Status.BEREIT) schliessen() }
-    DesignDialog(
-        titel = "Spracherkennung",
-        aufSchliessen = schliessen,
-        bestaetigung = {
-            if (modell.status == WhisperModell.Status.LAEDT) StillerKnopf("Im Hintergrund weiter", schliessen)
-            else GoldKnopf("Jetzt laden · ${art.megabyte} MB", { WhisperModell.laden(context) }, hauptKnopf = true)
-        },
-        abbruch = { StillerKnopf("Einfaches Diktat", einfach) },
-        inhalt = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Für die beste Spracherkennung lädt der Wecker einmalig ein Sprachmodell (${art.megabyte} MB, am besten im WLAN). Danach erkennt er deine Sprache direkt auf dem Handy – ohne Internet, nichts verlässt das Gerät.",
-                    style = MaterialTheme.typography.bodyMedium)
-                when (modell.status) {
-                    WhisperModell.Status.LAEDT -> {
-                        LinearProgressIndicator(progress = { modell.fortschritt }, Modifier.fillMaxWidth())
-                        Text("${(modell.fortschritt * 100).toInt()} % geladen", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-                    }
-                    WhisperModell.Status.FEHLER -> Text(modell.meldung, style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
-                    else -> Text("Bis dahin kannst du das einfache Diktat von Android nutzen.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-                }
-            }
-        },
-    )
 }
