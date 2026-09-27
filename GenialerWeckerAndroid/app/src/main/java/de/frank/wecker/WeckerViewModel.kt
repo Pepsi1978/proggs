@@ -53,8 +53,8 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         freischaltungNoetig.value = true
         return false
     }
-    /** Installierte deutsche Offline-Stimmen; null = noch nicht geprüft, leer = keine vorhanden. */
-    val lokaleStimmen = MutableStateFlow<List<LokaleStimmeInfo>?>(null)
+    /** Angebotene Offline-Stimmen je Sprache (de/en/fr/es); null = noch nicht geprüft, leere Liste = nichts installiert. */
+    val stimmenJeSprache = MutableStateFlow<Map<String, List<LokaleStimmeInfo>>?>(null)
     val stimmenFehler = MutableStateFlow("")
     private var actionJob: Job? = null
     /** Owner of the busy banner; a cancelled older action must not clear the banner of a newer one. */
@@ -75,7 +75,12 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch(Dispatchers.IO) { Tones.names.keys.forEach { Tones.file(store.files, it) } }
         PreparationWorker.enqueue(app)
     }
-    fun newAlarm() { if (darfBearbeiten()) edit(Alarm(id = UUID.randomUUID().toString())) }
+    /** Neue Wecker bekommen EINMAL die Gerätesprache als festen Wert; ein späterer Locale-Wechsel ändert ihn nicht. */
+    fun newAlarm() { if (darfBearbeiten()) edit(Alarm(id = UUID.randomUUID().toString(), sprache = geraeteSprache())) }
+    private fun geraeteSprache(): String {
+        val locale = app.resources.configuration.locales[0]
+        return DiktatLogik.spracheFuer(locale.language, locale.country).first.code
+    }
     fun edit(alarm: Alarm) {
         stopPreview()
         editorGeneration++
@@ -214,18 +219,21 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         settingsRevision.value++
         PreparationWorker.enqueue(app)
     }
-    /** Prüft, welche deutschen Offline-Stimmen installiert sind (auch nach Rückkehr aus den Android-Einstellungen). */
+    /** Prüft je Sprache, welche Offline-Stimmen installiert sind (auch nach Rückkehr aus den Android-Einstellungen). */
     fun ladeLokaleStimmen() {
         viewModelScope.launch {
             try {
-                val gefunden = LokaleStimmen.deutscheStimmen(app)
-                val warLeer = lokaleStimmen.value?.isEmpty() == true
-                lokaleStimmen.value = gefunden; stimmenFehler.value = ""
+                val gefunden = LokaleStimmen.alleSprachen(app)
+                val vorher = stimmenJeSprache.value
+                stimmenJeSprache.value = gefunden; stimmenFehler.value = ""
                 // Sprachdaten gerade nachgeladen: gescheiterte Vorbereitungen sofort nachholen, nicht erst im 15-Minuten-Lauf.
-                if (warLeer && gefunden.isNotEmpty()) PreparationWorker.enqueue(app)
+                if (vorher != null && Sprachen.CODES.any { vorher[it].isNullOrEmpty() && !gefunden[it].isNullOrEmpty() }) PreparationWorker.enqueue(app)
             }
             catch (e: CancellationException) { throw e }
-            catch (e: Exception) { lokaleStimmen.value = emptyList(); stimmenFehler.value = e.message ?: "Die Sprachausgabe des Geräts ist nicht verfügbar." }
+            catch (e: Exception) {
+                stimmenJeSprache.value = Sprachen.CODES.associateWith { emptyList() }
+                stimmenFehler.value = e.message ?: "Die Sprachausgabe des Geräts ist nicht verfügbar."
+            }
         }
     }
     fun importMusic(uri: Uri, quelle: String = "datei") = runAction("Song vollständig auf dem Gerät speichern …") {
@@ -267,12 +275,13 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
      * Hört die Stimme ab. Ohne [alarm] gilt der globale Standard, mit [alarm] dessen eigene Auswahl
      * samt eigenem Tempo. Die globalen Einstellungen werden dabei nie verändert.
      */
-    fun previewVoice(alarm: Alarm? = null, text: String? = null) {
+    fun previewVoice(alarm: Alarm? = null, text: String? = null, sprache: String? = null) {
         stopPreview()
         val generation = previewGeneration
         // Ein Schnappschuss für den gesamten Vorgang: Audio und Abspieltempo stammen garantiert aus
         // derselben Stimme, auch wenn die Einstellungen währenddessen geändert werden.
-        val voice = SyntheseStimme(settings).let { defaults -> alarm?.resolveVoice(defaults) ?: defaults }
+        // Dieselbe Auflösung wie beim Wecken: Sprache des Weckers bzw. die gewählte Sprache der Einstellungen.
+        val voice = SyntheseStimme(settings).let { defaults -> alarm?.resolveVoice(defaults) ?: sprache?.let { defaults.fuerSprache(it) } ?: defaults }
         runAction("Stimmprobe vorbereiten …") {
             // The job is captured inside the action, so a refused runAction can never register a foreign job.
             val job = currentCoroutineContext()[Job]
@@ -281,7 +290,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val prep = SpeechPreparation(app, settings) { voice }
                 val file = prep.audio(text?.takeIf { it.isNotBlank() }?.take(1500)
-                    ?: "Guten Morgen! Dein Wecker ist bereit.")
+                    ?: Sprachen.probe(voice.sprache))
                 if (generation != previewGeneration) return@runAction
                 // Hand over without stopPreview(): that would cancel this very job.
                 if (previewJob === job) previewJob = null

@@ -49,10 +49,8 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
     val settings = vm.settings
     val busy by vm.busy.collectAsStateWithLifecycle()
     val permissions = rememberReadiness()
-    val stimmen by vm.lokaleStimmen.collectAsStateWithLifecycle()
+    val stimmenJeSprache by vm.stimmenJeSprache.collectAsStateWithLifecycle()
     val stimmenFehler by vm.stimmenFehler.collectAsStateWithLifecycle()
-    var showVoices by rememberSaveable { mutableStateOf(false) }
-    var selected by remember(revision) { mutableStateOf(settings.lokaleStimme) }
     var rate by remember(revision) { mutableFloatStateOf(settings.ttsSpeechRate) }
     // Zurück aus den Android-Einstellungen (Sprachdaten geladen): Stimmen neu prüfen.
     val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -127,55 +125,32 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             HorizontalDivider(color = LocalGold.current.rahmen)
             Toggle("Statuszeile anzeigen", statuszeile) { statuszeile = it; settings.statuszeileSichtbar = it }
         }
-        val liste = stimmen
-        val gewaehlt = liste?.firstOrNull { it.name == selected } ?: liste?.firstOrNull()
+        val alle = stimmenJeSprache
+        val deutschFehlt = alle?.get("de")?.isEmpty() == true
         // key(): Das Aufklappen richtet sich nach dem Prüfergebnis, das erst nach der ersten Anzeige kommt.
-        key(liste?.isEmpty()) {
-        Section("Vorlesen · Stimme & Tempo", collapsible = true, initiallyExpanded = liste != null && liste.isEmpty(),
-            summary = when {
-                liste == null -> "Offline-Stimmen werden geprüft …"
-                liste.isEmpty() -> "Keine deutsche Offline-Stimme installiert"
-                else -> "${gewaehlt?.anzeige ?: "Gerätestimme"} · Tempo ${"%.2f".format(rate)}×"
-            },
-            error = if (liste != null && liste.isEmpty()) "Keine deutsche Offline-Stimme installiert" else null) {
-            Text("Vorgelesen wird ausschließlich mit einer Stimme, die auf diesem Gerät installiert ist. Der Text verlässt das Handy nicht, und beim Wecken wird kein Internet gebraucht.",
+        key(alle == null, deutschFehlt) {
+        Section("Vorlesen · Stimme & Tempo", collapsible = true, initiallyExpanded = deutschFehlt,
+            summary = if (alle == null) "Offline-Stimmen werden geprüft …"
+                else Sprachen.CODES.joinToString(" · ") { "${Sprachen.kurz(it)} ${if (alle[it].isNullOrEmpty()) "fehlt" else "✓"}" } + " · Tempo ${"%.2f".format(rate)}×",
+            error = if (deutschFehlt) "Keine deutsche Offline-Stimme installiert" else null) {
+            Text("Vorgelesen wird ausschließlich mit Stimmen, die auf diesem Gerät installiert sind; der Text verlässt das Handy nicht. Die Sprache stellst du je Wecker beim Text ein, hier die Stimme je Sprache.",
                 style = MaterialTheme.typography.bodySmall)
-            when {
-                liste == null -> Text("Installierte Stimmen werden geprüft …", style = MaterialTheme.typography.bodySmall)
-                liste.isEmpty() -> {
-                    Text(stimmenFehler.ifBlank { LokaleStimmen.KEINE_STIMME }, color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodyMedium)
-                    Text("Bis dahin klingelt ein Wecker mit Text trotzdem: statt der Ansage kommt der Ersatzweckton.", style = MaterialTheme.typography.bodySmall)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GoldKnopf("Deutsche Sprachdaten laden", {
-                            val geoeffnet = LokaleStimmen.sprachdatenIntents().any { runCatching { activity.startActivity(it) }.isSuccess }
-                            if (!geoeffnet) vm.message.value = "Öffne in den Android-Einstellungen „Sprachausgabe“ und lade dort Deutsch herunter."
-                        })
-                        StillerKnopf("Erneut prüfen", vm::ladeLokaleStimmen)
-                    }
+            if (alle == null) Text("Installierte Stimmen werden geprüft …", style = MaterialTheme.typography.bodySmall)
+            else {
+                if (stimmenFehler.isNotBlank()) Text(stimmenFehler, color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
+                Sprachen.CODES.forEachIndexed { i, code ->
+                    if (i > 0) HorizontalDivider(color = LocalGold.current.rahmen)
+                    SpracheStimmen(code, alle[code].orEmpty(), vm, busy, activity)
                 }
-                else -> {
-                    GoldKnopf(gewaehlt?.anzeige ?: "Stimme auswählen", { showVoices = !showVoices }, Modifier.fillMaxWidth())
-                    if (showVoices) liste.forEach { stimme ->
-                        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(stimme == gewaehlt, interactionSource = null, indication = null,
-                            role = androidx.compose.ui.semantics.Role.RadioButton) {
-                            selected = stimme.name; settings.lokaleStimme = stimme.name; vm.settingsChanged(); showVoices = false
-                        }, verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(stimme == gewaehlt, null)
-                            Text(stimme.anzeige, Modifier.padding(start = 8.dp))
-                        }
-                    }
-                    Text("Sprechtempo: ${"%.2f".format(rate)}×")
-                    Regler3D(rate, { rate = it }, bereich = .5f..2f,
-                        aufAenderungFertig = { settings.ttsSpeechRate = rate; vm.settingsChanged() })
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GoldKnopf("Stimme anhören", { vm.previewVoice() }, aktiviert = busy.isBlank())
-                        StillerKnopf("Stoppen", vm::stopPreview)
-                    }
-                    StillerKnopf("Weitere Stimmen in Android laden", {
-                        LokaleStimmen.sprachdatenIntents().any { runCatching { activity.startActivity(it) }.isSuccess }
-                    })
-                    Text("Beim Speichern werden sechs Varianten mit behutsamen Tempo-Unterschieden offline vorbereitet. Beim Wecken läuft Variante 1 bis 6, dann wieder 1.", style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider(color = LocalGold.current.rahmen)
+                Text("Sprechtempo (alle Sprachen): ${"%.2f".format(rate)}×")
+                Regler3D(rate, { rate = it }, bereich = .5f..2f,
+                    aufAenderungFertig = { settings.ttsSpeechRate = rate; vm.settingsChanged() })
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StillerKnopf("Sprachdaten in Android verwalten", { oeffneSprachdaten(activity, vm) })
+                    StillerKnopf("Erneut prüfen", vm::ladeLokaleStimmen)
                 }
+                Text("Beim Speichern werden sechs Varianten mit behutsamen Tempo-Unterschieden offline vorbereitet. Beim Wecken läuft Variante 1 bis 6, dann wieder 1.", style = MaterialTheme.typography.bodySmall)
             }
         }
         }
@@ -345,5 +320,45 @@ private fun AuswahlPunkte(titel: String, gewaehlt: String, optionen: List<Pair<S
             RadioButton(id == gewaehlt, null)
             Text(name, Modifier.padding(start = 8.dp))
         }
+    }
+}
+
+
+/** Öffnet die Android-Seite zum Laden von Sprachdaten; ohne passende Seite ein klarer Hinweis. */
+private fun oeffneSprachdaten(activity: ComponentActivity, vm: WeckerViewModel, sprache: String? = null) {
+    val geoeffnet = LokaleStimmen.sprachdatenIntents().any { runCatching { activity.startActivity(it) }.isSuccess }
+    if (!geoeffnet) vm.message.value = "Öffne in den Android-Einstellungen „Sprachausgabe“ und lade dort " +
+        (sprache?.let { Sprachen.name(it) } ?: "die gewünschte Sprache") + " herunter."
+}
+
+/** Eine Sprache in den Vorlese-Einstellungen: Status, bevorzugte Stimme, Probe – oder die Ladehandlung. */
+@Composable
+private fun SpracheStimmen(code: String, stimmen: List<LokaleStimmeInfo>, vm: WeckerViewModel, busy: String, activity: ComponentActivity) {
+    val revision by vm.settingsRevision.collectAsStateWithLifecycle()
+    var offen by rememberSaveable(code) { mutableStateOf(false) }
+    val gewuenscht = remember(revision, code) { vm.settings.stimmeFuer(code) }
+    val gewaehlt = stimmen.firstOrNull { it.name == gewuenscht } ?: stimmen.firstOrNull()
+    Text(Sprachen.name(code), style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+    if (stimmen.isEmpty()) {
+        Text("Keine Offline-Stimme installiert. Wecker auf ${Sprachen.name(code)} bekommen bis dahin den Ersatzweckton statt der Ansage.",
+            style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
+        StillerKnopf("Sprachdaten ${Sprachen.name(code)} laden", { oeffneSprachdaten(activity, vm, code) }, hervorgehoben = true)
+        return
+    }
+    Text(if (stimmen.size == 1) "1 Offline-Stimme installiert" else "${stimmen.size} Offline-Stimmen installiert",
+        style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+    GoldKnopf(gewaehlt?.anzeige ?: "Stimme auswählen", { offen = !offen }, Modifier.fillMaxWidth())
+    if (offen) stimmen.forEach { stimme ->
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(stimme == gewaehlt, interactionSource = null, indication = null,
+            role = androidx.compose.ui.semantics.Role.RadioButton) {
+            vm.settings.setzeStimme(code, stimme.name); vm.settingsChanged(); offen = false
+        }, verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(stimme == gewaehlt, null)
+            Text(stimme.anzeige, Modifier.padding(start = 8.dp))
+        }
+    }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        GoldKnopf("Probe anhören", { vm.previewVoice(sprache = code) }, aktiviert = busy.isBlank())
+        StillerKnopf("Stoppen", vm::stopPreview)
     }
 }

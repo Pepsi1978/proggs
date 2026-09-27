@@ -38,11 +38,11 @@ import de.frank.genialeideen.ui.theme.LocalSemantisch
  * aktuellen Entwurf angehängt ([anfuegen]) – nie überschrieben. Die Sprache folgt der Gerätesprache.
  */
 @Composable
-fun DiktatUndVorlesen(anfuegen: (String) -> Unit, vorlesen: @Composable () -> Unit) {
+fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorlesen: @Composable () -> Unit) {
     val context = LocalContext.current
     val diktat = remember { OfflineDiktat(context.applicationContext) }
-    val geraet = ConfigurationCompat.getLocales(LocalConfiguration.current)[0] ?: java.util.Locale.getDefault()
-    val (sprache, passend) = remember(geraet) { DiktatLogik.spracheFuer(geraet.language, geraet.country) }
+    // Die Sprache gehört zum Wecker; ein Wechsel beendet eine laufende Aufnahme in der alten Sprache.
+    LaunchedEffect(sprache) { if (diktat.hoertZu) diktat.zuruecksetzen() }
     val zustand = diktat.zustand
     val aktuellesAnfuegen by rememberUpdatedState(anfuegen)
 
@@ -81,7 +81,7 @@ fun DiktatUndVorlesen(anfuegen: (String) -> Unit, vorlesen: @Composable () -> Un
         DiktatZustand.Pruefe -> "Sprachpaket ${sprache.anzeige} wird geprüft …" to false
         is DiktatZustand.Hoert -> ("● Hört zu (${sprache.anzeige})" + if (zustand.zwischentext.isNotBlank()) ": „${zustand.zwischentext}“" else " …") to false
         is DiktatZustand.Hinweis -> zustand.meldung to true
-        else -> if (!passend) "Gerätesprache nicht unterstützt – diktiert wird auf Deutsch." to false else null
+        else -> null
     }
     status?.let { (text, warnung) ->
         Text(text, Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },

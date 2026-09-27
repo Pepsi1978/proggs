@@ -1,7 +1,12 @@
 package de.frank.wecker
 
-/** Individuelle Auswahl auf einen Snapshot anwenden, ohne globale Einstellungen zu verändern. */
-internal fun Alarm.resolveVoice(defaults: SyntheseStimme): SyntheseStimme = SyntheseStimme(
-    stimme = voiceId.takeIf { voiceProvider == LokaleStimmen.PROVIDER && it.isNotBlank() } ?: defaults.stimme,
-    ttsSpeechRate = speechRate ?: defaults.ttsSpeechRate,
-)
+/**
+ * Die Stimme für diesen Wecker: seine Sprache, dazu die eigene Stimmwahl nur, wenn sie zu dieser Sprache gehört;
+ * sonst die bevorzugte Stimme dieser Sprache aus den Einstellungen. Globale Einstellungen bleiben unverändert.
+ */
+internal fun Alarm.resolveVoice(defaults: SyntheseStimme): SyntheseStimme {
+    val code = Sprachen.gueltig(sprache)
+    val basis = defaults.fuerSprache(code)
+    val eigene = voiceId.takeIf { voiceProvider == LokaleStimmen.PROVIDER && it.isNotBlank() && it.substringBefore('-').equals(code, ignoreCase = true) }
+    return basis.copy(stimme = eigene ?: basis.stimme, ttsSpeechRate = speechRate ?: defaults.ttsSpeechRate)
+}

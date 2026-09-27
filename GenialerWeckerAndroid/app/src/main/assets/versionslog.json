@@ -5,6 +5,7 @@
     { "versionCode": 1, "versionName": "1.0.0", "stand": "27.09.2026, 19:27 Uhr", "notiz": "Erste eigenständige Fassung: Wecken komplett offline mit Gerätestimme, ohne Konten und ohne Schlüssel." },
     { "versionCode": 2, "versionName": "1.0.1", "stand": "27.09.2026, 19:58 Uhr", "notiz": "Neu: Text offline diktieren in Deutsch, Englisch, Französisch oder Spanisch, ohne Internet; Datum und Hinweise auf schmalen Handys vollständig lesbar." },
     { "versionCode": 3, "versionName": "1.0.2", "stand": "27.09.2026, 20:30 Uhr", "notiz": "Neu: 7 Tage alle Funktionen, danach einmalige Freischaltung über Google Play; gestellte Wecker klingeln immer weiter." },
-    { "versionCode": 4, "versionName": "1.0.3", "stand": "27.09.2026, 20:42 Uhr", "notiz": "Diktieren und Vorlesen direkt unter dem Text, Diktat landet sofort im Text; beim Weckton gleich die Datei wählen und den Titel sehen; nur noch die zwei natürlichsten deutschen Stimmen; Traumraum-Einstellungen luftiger, Orbit-Zeichenregen flüssiger." }
+    { "versionCode": 4, "versionName": "1.0.3", "stand": "27.09.2026, 20:42 Uhr", "notiz": "Diktieren und Vorlesen direkt unter dem Text, Diktat landet sofort im Text; beim Weckton gleich die Datei wählen und den Titel sehen; nur noch die zwei natürlichsten deutschen Stimmen; Traumraum-Einstellungen luftiger, Orbit-Zeichenregen flüssiger." },
+    { "versionCode": 5, "versionName": "1.0.4", "stand": "27.09.2026, 21:08 Uhr", "notiz": "Neu: Jeder Wecker hat eine eigene Sprache für Vorlesen und Diktat (Deutsch, Englisch, Französisch, Spanisch), mit den auf dem Gerät installierten Offline-Stimmen." }
   ]
 }

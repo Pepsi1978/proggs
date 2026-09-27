@@ -1946,12 +1946,21 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             // eigenen Abschnitt, den man erst suchen muss.
             if (Step.TEXT in alarm.steps) {
                 Text("Dein eigener Text", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+                // Sprache des Textes: gilt für Vorlesen und Diktat dieses Weckers.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Sprachen.CODES.forEach { code ->
+                        Chip3D(alarm.sprache == code, {
+                            // Eine eigene Stimme der alten Sprache passt nicht mehr: zurück auf den Standard der neuen Sprache.
+                            if (alarm.sprache != code) vm.change(alarm.copy(sprache = code, voiceProvider = "", voiceId = ""))
+                        }, Sprachen.name(code))
+                    }
+                }
                 if (alarm.text.isBlank()) Text("Der Erinnerungstext fehlt.", color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
             Eingabefeld(alarm.text, { vm.change(alarm.copy(text = it)) }, "Text, der vorgelesen werden soll",
                     Modifier.fillMaxWidth().heightIn(min = 160.dp), einzeilig = false)
                 // Links Diktieren, rechts Vorlesen. Erkanntes wird an den AKTUELLEN Entwurf angehängt,
                 // damit ein spätes Ergebnis keine neueren Handänderungen überschreibt.
-                DiktatUndVorlesen(anfuegen = { diktiert ->
+                DiktatUndVorlesen(sprache = Sprachen.diktat(alarm.sprache), anfuegen = { diktiert ->
                     vm.draft.value?.takeIf { it.id == alarm.id }?.let { aktuell ->
                         vm.change(aktuell.copy(text = listOf(aktuell.text.trimEnd(), diktiert.trim()).filter(String::isNotBlank).joinToString("\n")))
                     }
@@ -2036,12 +2045,14 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
 private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     val revision by vm.settingsRevision.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
-    val stimmen by vm.lokaleStimmen.collectAsStateWithLifecycle()
+    val alle by vm.stimmenJeSprache.collectAsStateWithLifecycle()
     val defaults = remember(revision) { SyntheseStimme(vm.settings) }
     val effective = alarm.resolveVoice(defaults)
-    val liste = stimmen.orEmpty()
+    val code = Sprachen.gueltig(alarm.sprache)
+    val liste = alle?.get(code).orEmpty()
     val available = liste.map { "${LokaleStimmen.PROVIDER}|${it.name}" to it.anzeige }
-    val defaultLabel = (liste.firstOrNull { it.name == defaults.stimme } ?: liste.firstOrNull())?.anzeige ?: "Keine Offline-Stimme installiert"
+    val sprachStandard = defaults.fuerSprache(code).stimme
+    val defaultLabel = (liste.firstOrNull { it.name == sprachStandard } ?: liste.firstOrNull())?.anzeige ?: "Keine Offline-Stimme installiert"
     val selected = if (alarm.voiceProvider.isBlank()) "" else "${alarm.voiceProvider}|${alarm.voiceId}"
     val options = listOf("" to "Standard aus Einstellungen · $defaultLabel") + available +
         if (selected.isNotBlank() && available.none { it.first == selected })
@@ -2050,8 +2061,9 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     Section("Stimme & Sprechgeschwindigkeit", collapsible = true, summary = listOf(
         options.find { it.first == selected }?.second ?: "Stimme wählen",
         "Tempo ${"%.2f".format(effective.ttsSpeechRate)}× ${if (alarm.speechRate == null) "(Standard)" else "(nur dieser Wecker)"}",
-    ).joinToString(" · "), error = if (stimmen != null && liste.isEmpty()) "Keine deutsche Offline-Stimme installiert – siehe Einstellungen → Vorlesen" else null) {
-        Choice("Stimme für diesen Wecker", selected, options) { chosen ->
+    ).joinToString(" · "), error = if (alle != null && liste.isEmpty()) "Keine Offline-Stimme für ${Sprachen.name(code)} – beim Wecken kommt der Ersatzweckton. Siehe Einstellungen → Vorlesen." else null) {
+        Text("Sprache: ${Sprachen.name(code)} (oben beim Text änderbar)", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+        Choice("Stimme für diesen Wecker (${Sprachen.name(code)})", selected, options) { chosen ->
             vm.change(alarm.copy(voiceProvider = chosen.substringBefore('|'), voiceId = chosen.substringAfter('|', "")))
         }
         Text("Sprechgeschwindigkeit: ${"%.2f".format(effective.ttsSpeechRate)}×" +

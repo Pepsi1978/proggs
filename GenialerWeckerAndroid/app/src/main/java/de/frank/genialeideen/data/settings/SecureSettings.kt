@@ -60,6 +60,10 @@ class SecureSettings(context: Context) : Closeable {
         get() = readString(Keys.LOKALE_STIMME, "")
         set(value) = writeString(Keys.LOKALE_STIMME, value)
 
+    /** Bevorzugte Stimme je Sprache; Deutsch bleibt das bisherige [lokaleStimme]. */
+    fun stimmeFuer(sprache: String): String = if (sprache == "de") lokaleStimme else readString("stimme_$sprache", "")
+    fun setzeStimme(sprache: String, name: String) { if (sprache == "de") lokaleStimme = name else writeString("stimme_$sprache", name) }
+
     var ttsSpeechRate: Float
         get() = preferences?.getFloat(Keys.TTS_SPEECH_RATE, Defaults.TTS_SPEECH_RATE)
             ?.coerceIn(MIN_TTS_SPEECH_RATE, MAX_TTS_SPEECH_RATE) ?: Defaults.TTS_SPEECH_RATE

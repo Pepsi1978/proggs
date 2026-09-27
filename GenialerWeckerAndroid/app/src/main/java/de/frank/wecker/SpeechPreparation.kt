@@ -16,8 +16,7 @@ import java.util.concurrent.TimeUnit
 class SpeechPreparation(private val context: Context, private val settings: SecureSettings,
     private val voiceFactory: () -> SyntheseStimme = { SyntheseStimme(settings) }) {
     private val store = AlarmStore.get(context)
-    private fun voiceKey(voice: SyntheseStimme) = listOf("lokal-v2", voice.ttsProvider, voice.stimme,
-        voice.ttsSpeechRate.toString()).joinToString("|")
+    private fun voiceKey(voice: SyntheseStimme) = schluessel(voice)
     val playbackSpeed: Float get() = voiceFactory().playbackSpeed
 
     suspend fun prepare(alarm: Alarm, progress: suspend (String) -> Unit = {}) = mutex.withLock {
@@ -27,7 +26,7 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                 val groups = mutableListOf<SpeechGroup>()
                 if (Step.TEXT in alarm.steps) groups += SpeechGroup(Step.TEXT.name, chunks(alarm.text))
                 // Die wirklich klingende Stimme zählt: war eine inzwischen ausgeblendete Stimme gewählt, wird neu vorbereitet.
-                val voice = alarm.resolveVoice(voiceFactory()).let { v -> LokaleStimmen.wirksameStimme(context, v.stimme)?.let { v.copy(stimme = it) } ?: v }
+                val voice = alarm.resolveVoice(voiceFactory()).let { v -> LokaleStimmen.wirksameStimme(context, v.stimme, v.sprache)?.let { v.copy(stimme = it) } ?: v }
                 val signature = hash(voiceKey(voice) + JSONArray(groups.map { JSONObject().put("step", it.step).put("paragraphs", JSONArray(it.paragraphs)) }).toString())
                 val latest = store.get(alarm.id) ?: return@withContext
                 if (!latest.sameSpeechAs(alarm)) return@withContext
@@ -46,7 +45,7 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                     render(text, voice.withRate(VoiceVariations.rate(voice.ttsSpeechRate, index)), index)
                 }, progress = { _, _, variation, part, total -> progress("Variante $variation/6 · Absatz $part/$total") })
                 check(voice.ttsSpeechRate == alarm.resolveVoice(voiceFactory()).ttsSpeechRate &&
-                    voice.stimme == (LokaleStimmen.wirksameStimme(context, alarm.resolveVoice(voiceFactory()).stimme) ?: voice.stimme)) { "Die Stimme wurde während der Vorbereitung geändert. Bitte erneut vorbereiten." }
+                    voice.stimme == alarm.resolveVoice(voiceFactory()).let { v -> LokaleStimmen.wirksameStimme(context, v.stimme, v.sprache) ?: voice.stimme }) { "Die Stimme wurde während der Vorbereitung geändert. Bitte erneut vorbereiten." }
                 store.update(alarm.id) { current ->
                     if (!current.sameSpeechAs(alarm)) current
                     else current.copy(voiceVariants = variants,
@@ -91,6 +90,12 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
 
     companion object {
         private val mutex = Mutex()
+        /**
+         * Signatur der Stimme. Für Deutsch exakt das bisherige Format (lokal-v2), damit alte deutsche Wecker nicht neu
+         * vorbereitet werden; andere Sprachen hängen ihren Code an.
+         */
+        fun schluessel(voice: SyntheseStimme): String = (listOf("lokal-v2", voice.ttsProvider, voice.stimme, voice.ttsSpeechRate.toString()) +
+            listOfNotNull(Sprachen.gueltig(voice.sprache).takeIf { it != "de" })).joinToString("|")
         fun hash(text: String): String = MessageDigest.getInstance("SHA-256").digest(text.toByteArray()).joinToString("") { "%02x".format(it) }
         /** Cortex-Prinzip: vollständige Absätze, nur überlange Absätze an Wort-/Satzgrenzen teilen. */
         fun chunks(text: String): List<String> = text.replace("\r\n", "\n").replace('\r', '\n')

@@ -130,7 +130,7 @@ class AlarmIntegrationTest {
     @Test fun localVoiceProducesPlayableOfflineAudio() = runBlocking {
         val settings = de.frank.genialeideen.data.settings.SecureSettings(context)
         try {
-            org.junit.Assume.assumeTrue("Keine deutsche Offline-Stimme installiert", LokaleStimmen.deutscheStimmen(context).isNotEmpty())
+            org.junit.Assume.assumeTrue("Keine deutsche Offline-Stimme installiert", LokaleStimmen.alleSprachen(context)["de"].orEmpty().isNotEmpty())
             val voice = SyntheseStimme(settings)
             val file = SpeechPreparation(context, settings) { voice }.audio("Guten Morgen. Dies ist der Offline-Test des genialen Weckers.")
             try {
@@ -150,7 +150,7 @@ class AlarmIntegrationTest {
             text = "Guten Morgen. Dies ist Variante meines Weckers.", steps = listOf(Step.TEXT))
         val settings = de.frank.genialeideen.data.settings.SecureSettings(context)
         try {
-            org.junit.Assume.assumeTrue("Keine deutsche Offline-Stimme installiert", LokaleStimmen.deutscheStimmen(context).isNotEmpty())
+            org.junit.Assume.assumeTrue("Keine deutsche Offline-Stimme installiert", LokaleStimmen.alleSprachen(context)["de"].orEmpty().isNotEmpty())
             store.put(alarm)
             val voice = SyntheseStimme(settings)
             SpeechPreparation(context, settings) { voice }.prepare(alarm)

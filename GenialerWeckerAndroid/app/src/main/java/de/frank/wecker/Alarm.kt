@@ -37,6 +37,8 @@ data class Alarm(
     val text: String = "",
     val originalText: String = "",
     /** Leere Stimme bzw. null beim Tempo übernimmt den jeweiligen globalen Standard. */
+    /** Sprache des Vorlesetexts und des Diktats (de/en/fr/es). Alt-Einträge ohne Feld gelten als Deutsch. */
+    val sprache: String = "de",
     val voiceProvider: String = "",
     val voiceId: String = "",
     val speechRate: Float? = null,
@@ -93,7 +95,7 @@ data class Alarm(
     fun isExpiredOnce(now: Instant = Instant.now()): Boolean = startDate.isNotBlank() && intervalDays == 0 && repeatUnit.isBlank() &&
         runCatching { AlarmTime.next(this, now) }.isFailure
     fun sameSpeechAs(other: Alarm): Boolean = text == other.text && steps == other.steps &&
-        voiceProvider == other.voiceProvider && voiceId == other.voiceId && speechRate == other.speechRate
+        voiceProvider == other.voiceProvider && voiceId == other.voiceId && speechRate == other.speechRate && sprache == other.sprache
     fun validate() {
         require(hour in 0..23 && minute in 0..59) { "Ungültige Uhrzeit" }
         require(days.all { it in 1..7 }) { "Ungültiger Wochentag" }
@@ -112,6 +114,7 @@ data class Alarm(
         require(Schlaf.valid(sleepMinutes)) { "Die Schlafdauer muss zwischen 30 Minuten und 24 Stunden liegen." }
         require(volume in 1..100) { "Die Wecklautstärke muss größer als null sein." }
         require(speechRate == null || speechRate in .5f..2f) { "Das Sprechtempo muss zwischen 0,5× und 2× liegen." }
+        require(sprache in Sprachen.CODES) { "Unbekannte Sprache." }
         require(voiceProvider.isBlank() == voiceId.isBlank()) { "Wähle eine Stimme oder den globalen Standard." }
         require(snoozeMinutes in 1..60 && snoozeLimit in 0..20)
         require(steps.isNotEmpty() && steps.distinct().size == steps.size) { "Wähle mindestens einen Weckschritt." }
@@ -126,7 +129,7 @@ data class Alarm(
         put("snoozeUntil", snoozeUntil); put("snoozeMinutes", snoozeMinutes); put("snoozeLimit", snoozeLimit)
         put("snoozes", snoozes); put("volume", volume); put("fadeSeconds", fadeSeconds); put("vibrate", vibrate)
         put("steps", JSONArray(steps.map { it.name })); put("text", text); put("originalText", originalText)
-        put("voiceProvider", voiceProvider); put("voiceId", voiceId); put("speechRate", speechRate ?: JSONObject.NULL)
+        put("sprache", sprache); put("voiceProvider", voiceProvider); put("voiceId", voiceId); put("speechRate", speechRate ?: JSONObject.NULL)
         put("music", music); put("musicName", musicName); put("musicQuelle", musicQuelle); put("tone", tone); put("cue", cue); put("reference", reference)
         put("photoRequired", photoRequired); put("photoTolerance", photoTolerance)
         put("minBrightness", minBrightness); put("color", color); put("colorPercent", colorPercent)
@@ -169,6 +172,8 @@ data class Alarm(
             volume = j.optInt("volume", 70), fadeSeconds = j.optInt("fadeSeconds"), vibrate = j.optBoolean("vibrate", true),
             steps = j.getJSONArray("steps").let { a -> (0 until a.length()).map { Step.valueOf(a.getString(it)) } },
             text = j.optString("text"), originalText = j.optString("originalText"), music = j.optString("music"), musicQuelle = j.optString("musicQuelle"),
+            // Fehlt das Feld (Einträge vor 1.0.4), ist es Deutsch – unabhängig von der heutigen Gerätesprache.
+            sprache = Sprachen.gueltig(j.optString("sprache", "de")),
             voiceProvider = j.optString("voiceProvider"), voiceId = j.optString("voiceId"),
             speechRate = if (j.isNull("speechRate")) null else j.optDouble("speechRate").toFloat().takeIf { it in .5f..2f },
             musicName = j.optString("musicName", "Klassischer Wecker"), tone = j.optString("tone", "classic"), cue = j.optString("cue", "chime"),

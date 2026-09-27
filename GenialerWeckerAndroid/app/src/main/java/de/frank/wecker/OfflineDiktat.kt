@@ -16,7 +16,9 @@ import androidx.compose.runtime.setValue
 
 /** Die vier Diktatsprachen mit festen BCP-47-Tags; Deutsch ist voreingestellt. */
 enum class DiktatSprache(val tag: String, val anzeige: String) {
-    DE("de-DE", "Deutsch"), EN("en-US", "Englisch"), FR("fr-FR", "Französisch"), ES("es-ES", "Spanisch")
+    DE("de-DE", "Deutsch"), EN("en-US", "Englisch"), FR("fr-FR", "Französisch"), ES("es-ES", "Spanisch");
+    /** Kurzer Code wie im Alarm-JSON (de/en/fr/es). */
+    val code: String get() = tag.substringBefore('-')
 }
 
 sealed interface DiktatZustand {
