@@ -1,7 +1,7 @@
 # M1.1 Sicherung — so wird es eingebaut
 
-Aus `KompassKern`, dem ersten Konsumenten. Die Anbindung dort ist die Vorlage:
-`KompassKern/src/main/java/de/frank/module/sicherung/Anbindung.kt`.
+Aus ClaudeKompass (bis 27.09.2026 im gemeinsamen `KompassKern`, dem ersten Konsumenten). Die Anbindung dort ist die Vorlage:
+`ClaudeKompass/app/src/main/java/de/frank/module/sicherung/Anbindung.kt`.
 
 ## 1. Die App erfüllt die Schnittstellen
 
@@ -94,7 +94,7 @@ während sich das Aussehen anpasst.
 
 Die Vorlage dafür ist kein ausgedachtes Muster, sondern laufender Code in drei
 Apps: der Sicherungsanteil von
-`KompassKern/src/main/java/de/frank/kompass/vm/EinstellungenViewModel.kt`
+`ClaudeKompass/app/src/main/java/de/frank/kompass/vm/EinstellungenViewModel.kt`
 (Zeilen ~550–900) und der zugehörige Abschnitt in
 `ui/screens/EinstellungenScreen.kt`. Abschreiben und die Texte anpassen.
 

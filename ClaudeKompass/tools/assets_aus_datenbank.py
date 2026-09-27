@@ -13,7 +13,7 @@ Datenbank und macht ihn zur neuen Auslieferung.
 
 Jede Kompass-App hat seit 27.09.2026 ihre eigene Kopie dieses Werkzeugs (frueher KompassKern/tools).
 
-Benutzung, hier fuer ClaudeKompass (CodexKompass: codexkompass / codex-kompass.db):
+Benutzung fuer ClaudeKompass:
     adb exec-out "run-as de.frank.claudekompass cat databases/claude-kompass.db" > db
     (dazu auch die Dateien db-wal und db-shm ziehen, sonst fehlen die letzten Aenderungen)
     python ClaudeKompass/tools/assets_aus_datenbank.py <db-pfad> ClaudeKompass/app/src/main/assets
