@@ -1,17 +1,19 @@
 # Android-Debug-Signierung: ein Key für alle Apps und Rechner
 
-Stand: 10.09.2026
+Stand: 27.09.2026 19:15 (Ausnahme GenialerWeckerAndroid ergänzt; vorher 10.09.2026)
 
 ## Regel
 
-- Alle eigenen Android-Apps signieren Debug- (und private Release-)Builds mit **einem** Key:
+- Alle eigenen Android-Apps signieren Debug- (und private Release-)Builds mit **einem** Key (genau zwei Ausnahmen, siehe unten):
   `~/SK/Android/debug-shared.keystore`, SHA-256 `F7:82:13:1C:43:62:7B:CA:C4:87:27:97:7D:FF:7E:F7:F1:37:E4:FF:9A:21:C1:7F:84:0B:83:E8:64:B7:FD:B2`,
   Alias `androiddebugkey`, Store- und Key-Passwort `android`, gültig bis 2056.
 - OpenLauncher (Windows `Services/AndroidDebugKeystoreSync.cs`, Mac `AndroidDebugKeystoreSync.swift`) legt ihn
   beim Start nach `~/.android/debug.keystore`. AGP nimmt diese Datei für jeden Debug-Build ohne eigene
   `signingConfig`, also brauchen neue Projekte **nichts** zu konfigurieren.
-- Neue Projekte: keinen eigenen Keystore erzeugen, keine Debug-`signingConfig` erfinden.
-- Ausnahme: BestJournalAndroid-Release (`~/SK/BestJournalAndroid/release.keystore`, Play Store). Nie anfassen.
+- Neue Projekte: keinen eigenen Keystore erzeugen, keine Debug-`signingConfig` erfinden (einzige Ausnahme: GenialerWeckerAndroid, siehe unten).
+- Ausnahme 1: BestJournalAndroid-Release signiert nur seine Release-Builds weiter mit dem bisherigen Play-Keystore (`~/SK/BestJournalAndroid/release.keystore`). Nie anfassen, daran ändert sich nichts.
+- Ausnahme 2: GenialerWeckerAndroid (Verkaufs-App „Genialer Wecker“) signiert lokale Debug- UND Release-Builds mit einem eigenen Key unter `~/SK/GenialerWeckerAndroid`, nie mit dem gemeinsamen Debug-Key. Keystore und Passwörter liegen nur dort, nie im Git.
+- Alle anderen Apps verwenden den gemeinsamen Debug-Key.
 - Sync zwischen Rechnern: `Y:\Keystores\Android\` (Kopie von `~/SK/Android/`).
 
 ## `INSTALL_FAILED_UPDATE_INCOMPATIBLE`: nie deinstallieren
