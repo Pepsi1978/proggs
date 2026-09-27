@@ -97,7 +97,19 @@ data class Thema(
     val uhrzeiten: List<Int> = STANDARD_UHRZEITEN,
     /** An welchen Tagen die [uhrzeiten] gelten — täglich, alle x Tage, wöchentlich, monatlich oder jährlich. */
     val rhythmus: Rhythmus = Rhythmus(),
+    /** Kurze Überschrift aus höchstens drei Wörtern, von der KI aus [text] gebildet. Leer = noch keine. */
+    val ueberschrift: String = "",
+    /** Der [text], zu dem [ueberschrift] gebildet wurde — weicht er ab, ist die Überschrift veraltet. */
+    val ueberschriftFuer: String = "",
 ) {
+    /** Die einzeilige Überschrift für die zugeklappte Karte: die der KI oder ersatzweise die ersten Wörter. */
+    fun kopfzeile(): String =
+        ueberschrift.takeIf { it.isNotBlank() && ueberschriftFuer == text }
+            ?: kurzfassung(text).ifBlank { "Neues Thema" }
+
+    /** Braucht dieses Thema eine neue KI-Überschrift? */
+    val ueberschriftVeraltet: Boolean get() = text.isNotBlank() && (ueberschrift.isBlank() || ueberschriftFuer != text)
+
     /** Bringt alle Werte in die Grenzen, sorgt für min ≤ max und sortiert die Uhrzeiten. */
     fun normiert(): Thema {
         val max = maxMeldungen.coerceIn(GRENZE_MIN, GRENZE_MAX)
@@ -123,6 +135,21 @@ data class Thema(
 
         /** Bisheriger fester Zeitplan: 5 und 17 Uhr. */
         val STANDARD_UHRZEITEN: List<Int> = listOf(5 * 60, 17 * 60)
+
+        const val UEBERSCHRIFT_WOERTER = 3
+
+        /** Die ersten drei Wörter ohne Satzzeichen am Rand — Ersatz, solange die KI keine Überschrift geliefert hat. */
+        fun kurzfassung(text: String): String =
+            text.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.take(UEBERSCHRIFT_WOERTER)
+                .joinToString(" ") { it.trim(',', '.', ';', ':', '!', '?', '„', '“', '"', '(', ')') }.trim()
+
+        /** Säubert die Antwort der KI: eine Zeile, ohne Anführungszeichen und Schlusspunkt, höchstens drei Wörter. */
+        fun saeubereUeberschrift(roh: String): String =
+            roh.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }.orEmpty()
+                .removePrefix("Überschrift:").trim()
+                .trim('"', '„', '“', '\'', '*', '#', ' ', '.')
+                .split(Regex("\\s+")).filter { it.isNotBlank() }.take(UEBERSCHRIFT_WOERTER).joinToString(" ")
+                .take(40).trim()
 
         /** „05:00“ für die Oberfläche. */
         fun uhrzeitText(minuten: Int): String = "%02d:%02d".format(minuten / 60, minuten % 60)

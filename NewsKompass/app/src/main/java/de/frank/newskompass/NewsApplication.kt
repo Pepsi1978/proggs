@@ -2,6 +2,7 @@ package de.frank.newskompass
 
 import android.app.Application
 import de.frank.newskompass.ai.CodexClient
+import de.frank.newskompass.ai.ThemenUeberschriften
 import de.frank.newskompass.data.AusgabenSpeicher
 import de.frank.newskompass.data.EinstellungenStore
 import de.frank.newskompass.news.NewsRecherche
@@ -29,11 +30,13 @@ class NewsApplication : Application() {
     val recherche by lazy { NewsRecherche(codex, einstellungen, speicher) }
     val vorleser by lazy { VorleseManager(this, einstellungen) }
     val sprachFrage by lazy { SprachFrage(this) }
+    val ueberschriften by lazy { ThemenUeberschriften(codex, einstellungen, bereich) }
 
     override fun onCreate() {
         super.onCreate()
         KompassLog.start(this, UUID.randomUUID().toString().take(8))
         Zeitplan.legeKanaeleAn(this)
+        ueberschriften.starte()
         // Wecker neu stellen, sobald sich Uhrzeiten, Rhythmus, Themen oder der Schalter ändern — auch gleich beim Start.
         bereich.launch {
             einstellungen.stand
