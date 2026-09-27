@@ -286,7 +286,7 @@ private fun Verlauf(e: AppEintrag) {
             Column {
                 Text(e.label, style = MaterialTheme.typography.titleLarge)
                 Text(
-                    if (e.installiertCode != null) "Installiert: ${e.installiertName} · Build ${e.installiertCode}" else "Nicht auf diesem Handy",
+                    if (e.installiertCode != null) "Installiert: ${e.installiertName} · Build ${e.installiertCode}" + installiertAmText(e) else "Nicht auf diesem Handy",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -459,7 +459,7 @@ private fun UpdateKarte(e: AppEintrag, install: InstallStatus?, darfInstallieren
             }
             Spacer(Modifier.height(12.dp))
             Text(
-                "Build ${e.installiertCode} → ${m.versionCode} · ${groesse(m.groesse)}" +
+                "Build ${e.installiertCode}" + installiertAmText(e) + " → ${m.versionCode} · ${groesse(m.groesse)}" +
                     (if (m.erstelltAm.isNotBlank()) " · bereitgestellt ${m.erstelltAm}" else ""),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -571,8 +571,8 @@ private fun AktuellGruppe(liste: List<AppEintrag>, onVerlauf: (AppEintrag) -> Un
                     Column(Modifier.weight(1f)) {
                         Text(e.label, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
-                            if (e.status == Status.INSTALLIERT_NEUER) "Version ${e.installiertName} · neuer als das Update (${e.fund.manifest.versionName})"
-                            else "Version ${e.installiertName}",
+                            if (e.status == Status.INSTALLIERT_NEUER) "Version ${e.installiertName}" + installiertAmText(e) + " · neuer als das Update (${e.fund.manifest.versionName})"
+                            else "Version ${e.installiertName}" + installiertAmText(e),
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -819,3 +819,7 @@ private fun zeit(ms: Long): String {
         else -> SimpleDateFormat("dd.MM., HH:mm", Locale.GERMANY).format(Date(ms))
     }
 }
+
+/** " · aktualisiert 27.09.2026, 14:05 Uhr" – wann die installierte Version aufs Handy kam. */
+private fun installiertAmText(e: AppEintrag): String =
+    e.installiertAm?.takeIf { it > 0 }?.let { " · aktualisiert " + SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.GERMANY).format(Date(it)) + " Uhr" } ?: ""

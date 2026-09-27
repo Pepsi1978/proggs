@@ -131,7 +131,7 @@ object Pruefer {
                 fund.apkRef == null -> Status.APK_FEHLT
                 else -> Status.UPDATE
             }
-            AppEintrag(fund, label, code, info?.versionName, status)
+            AppEintrag(fund, label, code, info?.versionName, status, info?.lastUpdateTime)
         }.sortedWith(compareBy({ it.status.ordinal }, { it.label.lowercase() }))
     }
 

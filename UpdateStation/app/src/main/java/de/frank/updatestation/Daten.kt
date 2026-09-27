@@ -103,6 +103,8 @@ data class AppEintrag(
     val installiertCode: Long?,
     val installiertName: String?,
     val status: Status,
+    /** Zeitpunkt (ms), zu dem diese Version auf dem Handy installiert bzw. aktualisiert wurde. */
+    val installiertAm: Long? = null,
 ) {
     val paket get() = fund.manifest.paket
 }
