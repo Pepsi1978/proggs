@@ -130,13 +130,17 @@ Anforderungen:
 - **Welche Apps:** Ermittle geänderte oberste Ordner (`git diff --name-only ${{ github.event.before }} ${{ github.sha }}`),
   die eine `app/build.gradle.kts` enthalten. Baue jede davon in einer eigenen Matrix-Zeile.
   Ausnahmen: `Designs/**`, `BestJournalAndroid` und die Apps ohne Secrets aus Schritt 6.
-- **Rechner: `runs-on: windows-latest`.** Das Skript `apk-update.ps1` ist auf Windows gebaut (`gradlew.bat`,
-  `apksigner.bat`, `aapt2.exe`, `$env:USERPROFILE`, Backslash-Pfade). Auf dem Windows-Rechner von GitHub
-  läuft es praktisch unverändert. `pwsh` und das Android SDK (`ANDROID_HOME`) sind dort vorinstalliert.
-  Nachteil: Bei privaten Projekten zählen Windows-Minuten bei GitHub nach bisherigem Stand **doppelt** vom
-  Freikontingent. Prüfe die aktuellen Bedingungen und nenne Frank grob, wie viele Bauvorgänge im Monat
-  frei sind. Ein späterer Umbau auf `ubuntu-latest` (Skript plattformneutral machen) ist möglich, aber
-  **nicht** Teil dieses Auftrags.
+- **Rechner: `runs-on: ubuntu-latest`** (seit 27.09.2026, vorher `windows-latest`). `apk-update.ps1` ist
+  plattformneutral: Unter Linux nimmt es `$HOME` statt `USERPROFILE`, `apksigner`/`aapt2` ohne Endung und
+  startet Gradle mit `sh ./gradlew` (so braucht `gradlew` kein Ausführrecht, und `git status` bleibt sauber).
+  Der Windows-Weg für den PC ist unverändert. `pwsh` und das Android SDK (`ANDROID_HOME`) sind auf dem
+  Linux-Rechner vorinstalliert. Linux ist schneller, und Windows-Minuten zählen bei privaten Projekten nach bisherigem Stand doppelt.
+- **KompassKern:** ClaudeKompass, CodexKompass und OCodeKompass binden `../KompassKern` ein. Der Ordner steht
+  deshalb im `sparse-checkout` und im Pfadfilter; eine Änderung dort baut alle drei (`KERN_NUTZER`).
+  `apk-update.ps1` zählt solche `../<Ordner>/`-Quellen zum Stand der App: Eine Änderung nur am Kern braucht
+  deshalb in **jeder** der drei Apps einen neuen Versionslog-Eintrag, sonst endet der Bau rot mit „Versionslog-Eintrag fehlt“.
+- **Probebau:** `workflow_dispatch` mit `probe: true` baut und prüft die Signatur, liest Drive nur (rclone lsf)
+  und lädt nichts hoch. Damit lässt sich ein Umbau am Bau-Ablauf ohne Risiko für UpdateStation prüfen.
 - **Job-Einstellungen:** `environment: android-signing`, `permissions: contents: read`,
   `concurrency: android-cloud-build-${{ matrix.projekt }}`.
 - **Bausteine nur von GitHub und Gradle**, jeweils auf den **Commit-SHA eingefroren** (aktuellen SHA
@@ -149,21 +153,24 @@ Anforderungen:
   `git checkout -B main origin/main` (Tracking auf `origin/main`), sonst schlägt `@{u}` fehl.
 - **Keystore-Schritt** (Secret nur hier als `env`, nie in `run:`-Text einsetzen, pwsh):
   ```powershell
-  $sk = Join-Path $env:USERPROFILE 'SK\Android'; $ad = Join-Path $env:USERPROFILE '.android'
+  $sk = Join-Path $HOME 'SK/Android'
+  $ad = if ($env:ANDROID_USER_HOME) { $env:ANDROID_USER_HOME } else { Join-Path $HOME '.android' }
   New-Item -ItemType Directory -Force -Path $sk, $ad | Out-Null
-  [IO.File]::WriteAllBytes("$sk\debug-shared.keystore", [Convert]::FromBase64String($env:KEYSTORE_B64))
-  Copy-Item "$sk\debug-shared.keystore" "$ad\debug.keystore" -Force
+  $ks = Join-Path $sk 'debug-shared.keystore'
+  [IO.File]::WriteAllBytes($ks, [Convert]::FromBase64String($env:KEYSTORE_B64))
+  Copy-Item $ks (Join-Path $ad 'debug.keystore') -Force
   ```
-  (`USERPROFILE` und `user.home` zeigen auf dem Windows-Rechner auf denselben Ordner. Gradle und Skript
-  finden den Schlüssel also an den gewohnten Stellen.)
+  (`$HOME` ist unter Linux Javas `user.home`. Gradle und Skript finden den Schlüssel also an den gewohnten
+  Stellen. Pfade immer mit `Join-Path` oder `/` bauen: Ein `\` in einem String landet unter Linux als Zeichen
+  im Dateinamen.)
 - **Drive-Ordner des Projekts herunterholen:** rclone installieren (offizielles Release mit
-  Prüfsummencheck, oder `choco install rclone`), Konfiguration aus `RCLONE_CONFIG` in eine Temp-Datei,
-  dann `rclone copy "gdrive:Dokumente/Updates/<Projekt>" "$env:RUNNER_TEMP\Updates\<Projekt>"`.
+  Prüfsummencheck, oder unter Linux `sudo apt-get install rclone` aus dem Ubuntu-Archiv), Konfiguration aus `RCLONE_CONFIG` in eine Temp-Datei,
+  dann `rclone copy "gdrive:Dokumente/Updates/<Projekt>" "$env:RUNNER_TEMP/Updates/<Projekt>"`.
   Das Skript braucht die bisherige `update.json` und die APKs, um P zu bestimmen und aufzuräumen.
 - **Skript aufrufen:**
   ```powershell
-  pwsh -NoProfile -File OpenLauncher\Profiles\ClaudeCode\standard\skills\apk-update\scripts\apk-update.ps1 `
-    -Projekt <Projekt> -ProggsWurzel $env:GITHUB_WORKSPACE -UpdatesWurzel "$env:RUNNER_TEMP\Updates" -OhneGeraet
+  pwsh -NoProfile -File OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/scripts/apk-update.ps1 `
+    -Projekt <Projekt> -ProggsWurzel $env:GITHUB_WORKSPACE -UpdatesWurzel "$env:RUNNER_TEMP/Updates" -OhneGeraet
   ```
   Ausgabe nach `APK_UPDATE_STATUS` auswerten:
   - `ok` → hochladen (siehe unten).
