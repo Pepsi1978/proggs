@@ -140,6 +140,8 @@ class AlarmService : Service() {
         showForeground(alarm, quiet)
         _state.value = RingState(ringId, alarm, "Wecken", test = test)
         if (alarm.vibrate) vibrateAsAlarm()
+        // Lautstärke sofort setzen, bevor irgendetwas klingt: ohne Anlaufzeit gleich die eingestellte volle Lautstärke.
+        setVolume(if (alarm.fadeSeconds == 0) alarm.volume else (alarm.volume * .05f).roundToInt().coerceAtLeast(1))
         loop = scope.launch {
             val start = System.currentTimeMillis()
             while (isActive) {
@@ -150,7 +152,10 @@ class AlarmService : Service() {
             }
         }
         val tones = Tones.names.keys.associateWith { Tones.file(store.files, it).absolutePath }
-        play(AlarmPlaylist.build(alarm, tones), token)
+        val liste = AlarmPlaylist.build(alarm, tones)
+        // Stiller Vorlauf weckt den Verstärker, damit schon das erste Wort mit voller Lautstärke kommt.
+        val vorlauf = runCatching { AlarmClip(liste.first().step, PreparedAudio(Tones.stille(store.files).absolutePath, provider = "local"), liste.first().variation) }.getOrNull()
+        play(listOfNotNull(vorlauf) + liste, token)
     }
 
     /** Alarm usage lets the vibration pass silent mode and Do Not Disturb like the sound does. */

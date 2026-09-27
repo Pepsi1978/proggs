@@ -40,4 +40,25 @@ object Tones {
         }
         return file
     }
+
+    /**
+     * Knapp eine Sekunde Stille vor dem ersten Klang: Lautsprecher-Verstärker, die vor dem Wecken aus waren, blenden
+     * beim Einschalten weich ein. Ohne Vorlauf kamen die ersten Wörter der Ansage deshalb leise „aus dem Nichts“.
+     */
+    fun stille(directory: File): File {
+        val file = File(directory, "stille_vorlauf.wav")
+        if (file.exists() && file.length() > 44) return file
+        synchronized(this) {
+            val rate = 22050
+            val samples = rate * 9 / 10
+            val buffer = ByteBuffer.allocate(44 + samples * 2).order(ByteOrder.LITTLE_ENDIAN)
+            buffer.put("RIFF".toByteArray()).putInt(36 + samples * 2).put("WAVEfmt ".toByteArray())
+                .putInt(16).putShort(1).putShort(1).putInt(rate).putInt(rate * 2).putShort(2).putShort(16)
+                .put("data".toByteArray()).putInt(samples * 2)
+            val temporary = File(directory, "stille_vorlauf.tmp")
+            temporary.writeBytes(buffer.array())
+            check(temporary.renameTo(file)) { "Vorlauf konnte nicht gespeichert werden." }
+        }
+        return file
+    }
 }

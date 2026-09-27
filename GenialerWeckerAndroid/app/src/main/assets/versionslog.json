@@ -33,6 +33,7 @@
     { "versionCode": 29, "versionName": "1.0.28", "stand": "27.09.2026, 22:48 Uhr", "notiz": "Orbit weckt jetzt ebenfalls mit dem wackelnden 3D-Wecker – alle Designs klingeln einheitlich." },
     { "versionCode": 30, "versionName": "1.0.29", "stand": "27.09.2026, 22:50 Uhr", "notiz": "Editor: Die Wiederholung steht jetzt direkt unter Uhrzeit und Name, die Schlafdauer danach." },
     { "versionCode": 31, "versionName": "1.0.30", "stand": "27.09.2026, 22:52 Uhr", "notiz": "Orbit: Beim Wecken stehen Uhrzeit, Wecker und Name jetzt mittig wie in den anderen Designs." },
-    { "versionCode": 32, "versionName": "1.0.31", "stand": "27.09.2026, 22:56 Uhr", "notiz": "Dunkelmodus: Der 3D-Wecker hat jetzt gedecktes Messing statt grellem Gold und ein helles Elfenbein-Zifferblatt mit dunklen Ziffern; der Gehäuserand ist schlanker." }
+    { "versionCode": 32, "versionName": "1.0.31", "stand": "27.09.2026, 22:56 Uhr", "notiz": "Dunkelmodus: Der 3D-Wecker hat jetzt gedecktes Messing statt grellem Gold und ein helles Elfenbein-Zifferblatt mit dunklen Ziffern; der Gehäuserand ist schlanker." },
+    { "versionCode": 33, "versionName": "1.0.32", "stand": "27.09.2026, 23:01 Uhr", "notiz": "Beim Wecken kommen die ersten Wörter jetzt sofort in der eingestellten Lautstärke: kurzer stiller Vorlauf weckt den Lautsprecher, leise zu laut nur noch mit Anlaufzeit." }
   ]
 }
