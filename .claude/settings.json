@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] && [ -f \"$CLAUDE_PROJECT_DIR/.claude/hooks/cloud-sitzung-hinweis.md\" ]; then cat \"$CLAUDE_PROJECT_DIR/.claude/hooks/cloud-sitzung-hinweis.md\"; fi; exit 0",
+            "command": "if [ \"$CLAUDE_CODE_REMOTE\" = \"true\" ]; then for f in \"$CLAUDE_PROJECT_DIR/OpenLauncher/Profiles/ClaudeCode/sources/cloud.md\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/cloud-sitzung-hinweis.md\"; do [ -f \"$f\" ] && { cat \"$f\"; echo; }; done; fi; exit 0",
             "timeout": 10
           }
         ]

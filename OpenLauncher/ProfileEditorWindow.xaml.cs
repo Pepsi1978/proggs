@@ -59,6 +59,21 @@ public partial class ProfileEditorWindow : Window
         AttachChromeHooks();
     }
 
+    /// <summary>Dritte Betriebsart: eine einzelne Regeldatei mit eigenem Titel und Text (z. B. Cloud-Regeln).</summary>
+    public ProfileEditorWindow(string title, string cliText, string introText, string sourcePath, string text, string saveLabel)
+    {
+        InitializeComponent();
+        TitleText.Text = title;
+        CliText.Text = cliText;
+        IntroText.Text = introText;
+        GlobalPathText.Text = sourcePath;
+        GlobalEditor.Text = text;
+        ProjectTab.Visibility = Visibility.Collapsed;
+        GlobalTab.Content = Path.GetFileName(sourcePath);
+        SaveButton.Content = saveLabel;
+        AttachChromeHooks();
+    }
+
     private void AttachChromeHooks()
     {
         StateChanged += (_, _) => UpdateMaximizeButton();

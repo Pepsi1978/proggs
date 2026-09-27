@@ -165,6 +165,7 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _hasCliChoice;
     [ObservableProperty] private string _profileContextText = "OpenCode · AGENTS.md";
     [ObservableProperty] private bool _canEditSelectedProfile = true;
+    [ObservableProperty] private bool _canEditCloudRules;
     [ObservableProperty] private bool _hasHiddenModels;
     [ObservableProperty] private string _modelDefaultButtonText = "Standard speichern";
     [ObservableProperty] private string _modelDefaultSummary = string.Empty;
@@ -661,6 +662,8 @@ public sealed partial class MainViewModel : ObservableObject
     {
         CanEditSelectedProfile = SelectedProfile != null &&
             (!IsClaudeCodeModel(SelectedModel) || IsClaudeCodeProfileSupported(SelectedProfile.Id));
+        // Cloud-Sitzungen gibt es nur fuer Claude Code (Anthropic-Modelle).
+        CanEditCloudRules = IsClaudeCodeModel(SelectedModel);
     }
 
     // Claude Code unterstuetzt alle drei Profile, jedes mit eigenem Repo-Config-Ordner
@@ -1181,6 +1184,43 @@ public sealed partial class MainViewModel : ObservableObject
         {
             StatusText = $"Profil konnte nicht gespeichert werden: {ex.Message}";
             Logger.Instance.Error("MainViewModel", "EditProfile", ex, new { WorkDir, model = SelectedModel.ModelString });
+        }
+    }
+
+    /// <summary>
+    /// Bearbeitet die Regeln fuer Claude-Code-Cloud-Sitzungen (Profiles/ClaudeCode/sources/cloud.md) und
+    /// committet + pusht sie beim Speichern: die Cloud liest nur, was auf GitHub liegt.
+    /// </summary>
+    [RelayCommand]
+    private async Task EditCloudRules()
+    {
+        try
+        {
+            var path = InstructionProfileService.ResolveCloudRulesPath();
+            var editor = new ProfileEditorWindow(
+                "Cloud-Regeln bearbeiten",
+                "Claude Code · nur Cloud-Sitzungen",
+                "Diese Regeln gelten nur in Claude-Code-Cloud-Sitzungen (claude.ai/code, Handy-App). Die Cloud kennt "
+                + "keine OpenLauncher-Profile; ein Start-Hook blendet diese Datei dort ein. Beim Speichern wird sie "
+                + "committet und nach GitHub gepusht, denn die Cloud liest nur den Stand auf GitHub.",
+                path, _profiles.LoadCloudRules(), "Speichern und pushen")
+            {
+                Owner = Application.Current.MainWindow
+            };
+            if (editor.ShowDialog() != true) return;
+
+            _profiles.SaveCloudRules(editor.GlobalText);
+            StatusText = "Cloud-Regeln gespeichert, pushe …";
+            var result = await RepoSync.CommitAndPushFileAsync(path, "Cloud-Regeln: in OpenLauncher bearbeitet");
+            StatusText = result.Ok
+                ? $"Cloud-Regeln gespeichert ({result.Message})."
+                : $"Cloud-Regeln lokal gespeichert, aber nicht auf GitHub: {result.Message}";
+            Logger.Instance.Info("MainViewModel", "EditCloudRules", "Cloud-Regeln gespeichert", new { path, result.Ok, result.Message });
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Cloud-Regeln konnten nicht gespeichert werden: {ex.Message}";
+            Logger.Instance.Error("MainViewModel", "EditCloudRules", ex);
         }
     }
 

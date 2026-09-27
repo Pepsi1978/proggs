@@ -55,6 +55,36 @@ public static class RepoSync
         }
     }
 
+    /// <summary>
+    /// Committet genau eine Datei und pusht sie (vorher Rebase auf origin). Andere, noch nicht committete
+    /// Aenderungen paralleler Sitzungen bleiben unangetastet (Commit nur mit Pfad, --autostash beim Rebase).
+    /// </summary>
+    public static async Task<Result> CommitAndPushFileAsync(string filePath, string message)
+    {
+        var log = Logger.Instance;
+        var repo = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "proggs");
+        try
+        {
+            var add = await RunGitAsync(repo, TimeSpan.FromSeconds(10), "add", "--", filePath);
+            if (add.ExitCode != 0) return new Result(false, FirstLine(add.Error));
+            var diff = await RunGitAsync(repo, TimeSpan.FromSeconds(10), "diff", "--cached", "--quiet", "--", filePath);
+            if (diff.ExitCode == 0) return new Result(true, "keine Änderung");
+            var commit = await RunGitAsync(repo, TimeSpan.FromSeconds(20), "commit", "--quiet", "-m", message, "--", filePath);
+            if (commit.ExitCode != 0) return new Result(false, FirstLine(commit.Error));
+            var pull = await RunGitAsync(repo, PullTimeout, "pull", "--rebase", "--autostash", "--quiet");
+            if (pull.ExitCode != 0 || pull.TimedOut) return new Result(false, "committet, aber Abgleich fehlgeschlagen: " + FirstLine(pull.Error));
+            var push = await RunGitAsync(repo, TimeSpan.FromSeconds(30), "push", "--quiet", "origin", "HEAD:main");
+            if (push.ExitCode != 0 || push.TimedOut) return new Result(false, "committet, aber Push fehlgeschlagen: " + FirstLine(push.Error));
+            log.Info("RepoSync", "CommitAndPushFileAsync", "Datei committet und gepusht", new { filePath });
+            return new Result(true, "committet und gepusht");
+        }
+        catch (Exception ex)
+        {
+            log.Error("RepoSync", "CommitAndPushFileAsync", ex, new { filePath });
+            return new Result(false, ex.Message);
+        }
+    }
+
     private static async Task<GitRun> RunGitAsync(string repo, TimeSpan timeout, params string[] args)
     {
         var psi = new ProcessStartInfo("git")

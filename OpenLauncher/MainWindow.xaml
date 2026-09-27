@@ -680,6 +680,10 @@
                                         Command="{Binding EditProfileCommand}"/>
                                 <Button Style="{StaticResource GhostBtn}" Content="Modus bearbeiten" Margin="8,0,0,0" Padding="11,6" FontSize="12"
                                         Command="{Binding EditWorkModeCommand}"/>
+                                <Button Style="{StaticResource GhostBtn}" Content="Cloud-Regeln" Margin="8,0,0,0" Padding="11,6" FontSize="12"
+                                        ToolTip="Regeln nur für Claude-Code-Cloud-Sitzungen (claude.ai/code, Handy-App). Speichern pusht sie nach GitHub."
+                                        Visibility="{Binding CanEditCloudRules, Converter={StaticResource BoolToVisibility}}"
+                                        Command="{Binding EditCloudRulesCommand}"/>
                                 <Button Style="{StaticResource GhostBtn}" Content="{Binding ModelDefaultButtonText}" Margin="8,0,0,0" Padding="11,6" FontSize="12"
                                         ToolTip="Profil, Modus und Effort als Standard dieses Modells merken - er wird bei jedem Wechsel auf das Modell und beim Start vorausgewählt."
                                         IsEnabled="{Binding CanSaveModelDefault}"

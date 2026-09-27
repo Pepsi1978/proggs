@@ -197,6 +197,28 @@ public sealed class InstructionProfileService
         return Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "WorkModes", workModeId + ".md");
     }
 
+    // ===================== Cloud-Regeln (Claude Code in der Cloud) =====================
+
+    /// <summary>
+    /// Regeln nur fuer Claude-Code-Cloud-Sitzungen (claude.ai/code, Handy-App). Die Cloud kennt keine
+    /// OpenLauncher-Profile; der SessionStart-Hook in ~/proggs/.claude/settings.json blendet diese Datei
+    /// ein, wenn CLAUDE_CODE_REMOTE=true ist. Sie wirkt erst, wenn sie auf GitHub liegt.
+    /// </summary>
+    public static string ResolveCloudRulesPath()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(home, "proggs", "OpenLauncher", "Profiles", "ClaudeCode", "sources", "cloud.md");
+    }
+
+    public string LoadCloudRules()
+    {
+        var path = ResolveCloudRulesPath();
+        CreateIfMissing(path, "# Cloud-Regeln\n");
+        return ReadText(path);
+    }
+
+    public void SaveCloudRules(string text) => WriteText(ResolveCloudRulesPath(), text);
+
     /// <summary>Prompt des Modus lesen (legt die Datei beim ersten Mal mit dem Standardtext an).</summary>
     public string LoadWorkMode(string workModeId)
     {
