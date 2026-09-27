@@ -61,8 +61,8 @@ data class PmColors(
 
 val DarkPmColors = PmColors(
     background = Color(0xFF181209),
-    surface = Color(0xFF251C10),
-    surface2 = Color(0xFF332717),
+    surface = Color(0xFF2F2415),
+    surface2 = Color(0xFF40311C),
     gold = Color(0xFFD4A24C),
     goldHi = Color(0xFFF0C97A),
     goldDim = Color(0xFF9A7C40),
@@ -77,14 +77,14 @@ val DarkPmColors = PmColors(
 
 val LightPmColors = PmColors(
     background = Color(0xFFFBF6EC),
-    surface = Color(0xFFF3EAD9),
-    surface2 = Color(0xFFEDE1CA),
+    surface = Color(0xFFEADCC0),
+    surface2 = Color(0xFFE0CDA8),
     gold = Color(0xFFA87A2A),
     goldHi = Color(0xFF7A5518),
     goldDim = Color(0xFFC7AE7E),
     amber = Color(0xFFC4661F),
     text1 = Color(0xFF241D12),
-    text2 = Color(0xFF6B5D48),
+    text2 = Color(0xFF5F523E),
     text3 = Color(0xFFA2947C),
     warning = Color(0xFFA33F28),
     breath = Color(0x12A87A2A),
