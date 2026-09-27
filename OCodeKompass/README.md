@@ -12,8 +12,8 @@ Navigation und App-Einstellungen, mit einer deutschen Referenz für die OpenCode
 - Vorlesen, Rückfragen, Vertiefen und Zurücknehmen, mehrere Chats, Suche, Hell-/Dunkelmodus,
   App-Sperre und Sicherung wie in den Schwester-Apps.
 
-Der gemeinsame Code liegt in `../KompassKern`. Eigen sind nur `update/`, `AppProfil` und die
-Beigaben. Paketkennung: `de.frank.opencodekompass` (unverändert, damit Datenbank und Ablagen erhalten bleiben). Alle drei Apps können nebeneinander
+Seit 27.09.2026 hat die App ihren ganzen Code selbst (früher teilten sich die drei Kompass-Apps `../KompassKern`)
+und kann sich eigenständig weiterentwickeln. Paketkennung: `de.frank.opencodekompass` (unverändert, damit Datenbank und Ablagen erhalten bleiben). Alle drei Apps können nebeneinander
 installiert sein; Datenbank, Ablagen und Sicherungen sind anhand der App-Kennung getrennt.
 
 Die KI-Funktionen (Vertiefen, Rückfragen, Erklärungen nachziehen) laufen wie in den Schwester-Apps

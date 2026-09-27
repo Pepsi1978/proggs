@@ -45,8 +45,8 @@ und lässt offen, wie das bedient und gezeichnet wird. So sind die Funktionen
 überall dieselben, während sich das Aussehen der jeweiligen App anpasst.
 
 Als Vorlage für die Knopflogik dient der Sicherungsanteil von
-`KompassKern/src/main/java/de/frank/kompass/vm/EinstellungenViewModel.kt`
-(Zeilen ~550–900) — er läuft in drei Apps. Siehe `BEISPIEL.md`.
+`ClaudeKompass/app/src/main/java/de/frank/kompass/vm/EinstellungenViewModel.kt`
+(Zeilen ~550–900, gleich in CodexKompass und OCodeKompass; früher KompassKern). Siehe `BEISPIEL.md`.
 
 ## Host muss liefern
 
@@ -89,16 +89,14 @@ anderer Name heißt: Der Benutzer hat seine Einstellung verloren, ohne Meldung.
 
 | App | Stand | Pfad der Kopie |
 |---|---|---|
-| ClaudeKompass | **v7** | `KompassKern/src/main/java/de/frank/module/sicherung/` |
-| CodexKompass | **v7** | `KompassKern/src/main/java/de/frank/module/sicherung/` |
-| OCodeKompass | **v7** | `KompassKern/src/main/java/de/frank/module/sicherung/` |
+| ClaudeKompass | **v7** | `ClaudeKompass/app/src/main/java/de/frank/module/sicherung/` |
+| CodexKompass | **v7** | `CodexKompass/app/src/main/java/de/frank/module/sicherung/` |
+| OCodeKompass | **v7** | `OCodeKompass/app/src/main/java/de/frank/module/sicherung/` |
 | GenialeIdeen | **v7** | `GenialeIdeen/app/src/main/java/de/frank/module/sicherung/` |
 | Gedankenspeicher | **v7** | `Gedankenspeicher/app/src/main/java/de/frank/module/sicherung/` |
 
-> **Sonderfall:** Die drei Apps teilen sich `KompassKern` per `sourceSets.srcDir`.
-> Die Modulkopie und die Anbindung liegen deshalb **einmal** dort, nicht dreimal
-> unter `app/src/`. Beim Nachziehen wird dieser eine Pfad überschrieben und
-> danach werden alle drei Apps gebaut.
+> **Hinweis:** Bis 27.09.2026 teilten sich die drei Kompass-Apps `KompassKern` per
+> `sourceSets.srcDir`. Seitdem hat jede App ihre eigene Kopie; nachgezogen wird je App.
 
 ## Änderungen
 

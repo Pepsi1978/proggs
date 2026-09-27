@@ -497,8 +497,8 @@ Auslöser: „zieh M1.1 nach", „zieh M1.1 nach in GenialeIdeen", „verteile d
 ### Mehrere Zeilen mit demselben Pfad
 
 Stehen in der Konsumententabelle mehrere Apps mit **identischem Pfad**, teilen
-sie sich den Quellordner (`sourceSets.srcDir`; bei diesem Benutzer `KompassKern`
-für die drei Kompass-Apps). Dann gilt Schritt 4 **je Pfad**, nicht je App:
+sie sich den Quellordner (`sourceSets.srcDir`; bei diesem Benutzer derzeit kein Fall,
+bis 27.09.2026 `KompassKern` für die drei Kompass-Apps). Dann gilt Schritt 4 **je Pfad**, nicht je App:
 
 | | |
 |---|---|
