@@ -440,7 +440,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                     }
                 }
                 if (alarms.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                    Leerzustand("☀", "Ein Morgen nach deinen Wünschen", "Musik, Gedanken und Erinnerungen – in deiner Reihenfolge. Lege deinen ersten Wecker an.")
+                    LeererStart(now, onNew)
                 }
                 items(alarms, key = { it.id }) { alarm ->
                     WeckerKarte(
@@ -922,13 +922,17 @@ private fun MorgenruheHero(
     val zeigtMotiv = motiv >= 72.dp
     val textBreite = innen - if (zeigtMotiv) SPALTEN_ABSTAND + motiv else 0.dp
     Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund)
+        Box(Modifier.fillMaxWidth()
+            .tiefenSchatten(gold.akzentWarm, Hoehe.karteErhoeht, form)
+            .clip(form).background(Brush.verticalGradient(listOf(gold.heroGrund.heller(if (gold.istDunkel) 0.06f else 0.03f), gold.heroGrund, gold.heroGrund.dunkler(0.05f))))
+            .glanzBogen(deckung = if (gold.istDunkel) 0.05f else 0.16f)
             // Weiches Morgenlicht hinter dem Bett — ein warmer Schein oben rechts.
             .drawBehind {
                 drawRect(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .20f), androidx.compose.ui.graphics.Color.Transparent),
                     center = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f), radius = size.maxDimension * 0.6f))
             }
-            .border(1.dp, gold.heroKante, form)) {
+            .border(1.dp, gold.heroKante, form)
+            .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.14f else 0.5f), form)) {
             HeroDeko(Modifier.matchParentSize())
             Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
@@ -1121,13 +1125,16 @@ private fun OrbitHero(
         daten.hatTermin -> "AKTIV"
         else -> "KEIN TERMIN"
     }
-    Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund)
+    Box(Modifier.fillMaxWidth()
+        .tiefenSchatten(gold.primaer, Hoehe.karteErhoeht, form)
+        .clip(form).background(Brush.verticalGradient(listOf(gold.heroGrund.heller(0.05f), gold.heroGrund, gold.heroGrund.dunkler(0.08f))))
+        .glanzBogen(deckung = if (gold.istDunkel) 0.07f else 0.14f)
         // Kühles Instrumentenleuchten hinter dem Motiv.
         .drawBehind {
             drawRect(Brush.radialGradient(listOf(gold.primaer.copy(alpha = .14f), androidx.compose.ui.graphics.Color.Transparent),
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.5f), radius = size.maxDimension * 0.5f))
         }
-        .border(1.dp, gold.heroKante, form)) {
+        .border(1.5f.dp, Brush.sweepGradient(listOf(gold.primaer.heller(0.4f), gold.heroKante, gold.primaer.dunkler(0.2f), gold.heroKante, gold.primaer.heller(0.4f))), form)) {
         HeroDeko(Modifier.matchParentSize())
         Column(Modifier.fillMaxWidth()) {
             // Kopfstreifen: links der Signalbalken, rechts die Statusleuchte.
@@ -2590,6 +2597,41 @@ private fun GlasKuppel(modifier: Modifier) {
             topLeft = androidx.compose.ui.geometry.Offset(center.x - k * .96f, center.y - k * .96f),
             size = androidx.compose.ui.geometry.Size(k * 1.92f, k * 1.92f),
             style = androidx.compose.ui.graphics.drawscope.Stroke(1.5f.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+    }
+}
+
+/** Der 3D-Wecker als freistehende Figur mit laufender Uhrzeit – z. B. im Leerzustand. [groesse] = Gesamtbreite. */
+@Composable
+fun Wecker3DFigur(now: Long, groesse: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+    val ring = groesse * 0.8f
+    Box(modifier.size(groesse), contentAlignment = Alignment.Center) {
+        Wecker3D(Modifier.size(ring + 16.dp), gehaeuse = ring + 14.dp)
+        RestzeitRing(now, null, false, Modifier.size(ring), zifferblatt = true)
+        GlasKuppel(Modifier.size(ring))
+    }
+}
+
+/** Erster Start ohne Wecker: ein schwebender 3D-Wecker, eine klare Zeile, ein Knopf. */
+@Composable
+private fun LeererStart(now: Long, aufNeu: () -> Unit) {
+    val gold = LocalGold.current
+    val reduziert = LocalBewegungReduziert.current
+    val schweben = if (reduziert) 0f else {
+        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "schweben")
+        t.animateFloat(-4f, 4f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(2600),
+            androidx.compose.animation.core.RepeatMode.Reverse), label = "hub").value
+    }
+    LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = true) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Wecker3DFigur(now, 150.dp, Modifier.graphicsLayer { translationY = schweben * density })
+            Spacer(Modifier.height(6.dp))
+            Text("Dein Morgen, deine Reihenfolge", style = MaterialTheme.typography.titleLarge, color = gold.textPrimaer,
+                textAlign = TextAlign.Center)
+            Text("Weckton, Musik und ein Text, den dir eine natürliche Stimme vorliest.",
+                style = MaterialTheme.typography.bodyMedium, color = gold.textGedaempft, textAlign = TextAlign.Center)
+            GoldKnopf("Ersten Wecker anlegen", aufNeu, hauptKnopf = true, symbol = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) })
+        }
     }
 }
 
