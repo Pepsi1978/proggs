@@ -121,6 +121,8 @@ class EinstellungenStore(context: Context) {
                     eintrag.optInt("max", Thema.STANDARD_MAX),
                     zeiten?.let { z -> (0 until z.length()).map(z::getInt) } ?: Thema.STANDARD_UHRZEITEN,
                     Rhythmus.ausJson(eintrag.optJSONObject("rhythmus")),
+                    eintrag.optString("ueberschrift"),
+                    eintrag.optString("ueberschriftFuer"),
                 ).normiert()
             }
         }.getOrElse {
@@ -158,7 +160,8 @@ class EinstellungenStore(context: Context) {
         themen.map(Thema::normiert).forEach {
             liste.put(
                 JSONObject().put("id", it.id).put("text", it.text).put("min", it.minMeldungen).put("max", it.maxMeldungen)
-                    .put("uhrzeiten", JSONArray(it.uhrzeiten)).put("rhythmus", it.rhythmus.zuJson()),
+                    .put("uhrzeiten", JSONArray(it.uhrzeiten)).put("rhythmus", it.rhythmus.zuJson())
+                    .put("ueberschrift", it.ueberschrift).put("ueberschriftFuer", it.ueberschriftFuer),
             )
         }
         putString(K_THEMEN, liste.toString())

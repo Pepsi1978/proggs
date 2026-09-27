@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DragIndicator
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
@@ -93,11 +95,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -107,6 +111,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -181,6 +186,7 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
     val nachSchluessel = remember(stand.themen) { stand.themen.associateBy(::schluessel) }
     val sortiert = remember(reihenfolge, nachSchluessel) { reihenfolge.mapNotNull(nachSchluessel::get) }
     var neuesThema by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { app.ueberschriften.pruefe() }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Row(
@@ -212,6 +218,7 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                 Abschnitt(
                     "Deine Themen",
                     "Ein Stichwort, eine Frage oder ein ganzer Satz — jedes Feld wird ein eigener Nachrichtenblock. " +
+                        "Die KI gibt jedem Thema eine kurze Überschrift; tippe darauf, um Text und Einstellungen aufzuklappen. " +
                         "Halte den Griff gedrückt und schieb die Themen in die gewünschte Reihenfolge.",
                 )
             }
@@ -330,8 +337,16 @@ private fun ThemenKarte(
 ) {
     var text by remember(thema.id) { mutableStateOf(thema.text) }
     var bereichOffen by remember(thema.id) { mutableStateOf(false) }
+    // Zugeklappt zeigt die Karte nur die kurze Überschrift; neue und leere Themen stehen gleich offen.
+    var offen by rememberSaveable(thema.id) { mutableStateOf(fokussieren || thema.text.isBlank()) }
+    val drehung by animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
     val fokus = remember { FocusRequester() }
-    LaunchedEffect(fokussieren) { if (fokussieren) runCatching { fokus.requestFocus() } }
+    LaunchedEffect(fokussieren) {
+        if (fokussieren) {
+            offen = true
+            runCatching { fokus.requestFocus() }
+        }
+    }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -340,55 +355,82 @@ private fun ThemenKarte(
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surface,
     ) {
-        Column {
-            Row(verticalAlignment = Alignment.Top) {
+        Column(Modifier.animateContentSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    griff.padding(top = 10.dp, start = 6.dp).size(width = 40.dp, height = 52.dp),
+                    griff.padding(start = 6.dp).size(width = 40.dp, height = 60.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Rounded.DragIndicator, "Verschieben", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Box(
-                    Modifier.padding(top = 22.dp).size(28.dp).clip(RoundedCornerShape(9.dp)).background(blockVerlauf(nummer)),
-                    contentAlignment = Alignment.Center,
+                Row(
+                    Modifier
+                        .weight(1f)
+                        .height(60.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable(onClickLabel = if (offen) "Zuklappen" else "Aufklappen") { offen = !offen },
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("${nummer + 1}", color = Color.White, style = MaterialTheme.typography.labelLarge)
-                }
-                TextField(
-                    value = text,
-                    onValueChange = {
-                        text = it
-                        aendere(it)
-                    },
-                    placeholder = { Text("Worüber willst du informiert werden? Zum Beispiel: Fußball-Bundesliga, oder: Was gibt es Neues in der Raumfahrt?") },
-                    modifier = Modifier.weight(1f).focusRequester(fokus),
-                    textStyle = MaterialTheme.typography.bodyLarge,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                    ),
-                )
-                if (loeschbar) {
-                    IconButton(onClick = loesche, modifier = Modifier.padding(top = 8.dp)) {
-                        Icon(Icons.Rounded.DeleteOutline, "Thema löschen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Box(
+                        Modifier.size(28.dp).clip(RoundedCornerShape(9.dp)).background(blockVerlauf(nummer)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("${nummer + 1}", color = Color.White, style = MaterialTheme.typography.labelLarge)
                     }
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        thema.kopfzeile(),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        Icons.Rounded.ExpandMore,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 12.dp).rotate(drehung),
+                    )
                 }
             }
-            AssistChip(
-                onClick = { bereichOffen = true },
-                label = { Text(meldungsBereich(thema.minMeldungen, thema.maxMeldungen)) },
-                leadingIcon = { Icon(Icons.Rounded.Tune, null, Modifier.size(AssistChipDefaults.IconSize)) },
-                shape = RoundedCornerShape(50),
-                modifier = Modifier.padding(start = 90.dp),
-            )
-            AktualisierungsBereich(
-                thema = thema,
-                zeitplanAktiv = zeitplanAktiv,
-                aendere = aenderePlan,
-                modifier = Modifier.padding(start = 90.dp, end = 12.dp, bottom = 8.dp),
-            )
+            if (offen) {
+                Row(verticalAlignment = Alignment.Top, modifier = Modifier.padding(start = 76.dp)) {
+                    TextField(
+                        value = text,
+                        onValueChange = {
+                            text = it
+                            aendere(it)
+                        },
+                        placeholder = { Text("Worüber willst du informiert werden? Zum Beispiel: Fußball-Bundesliga, oder: Was gibt es Neues in der Raumfahrt?") },
+                        modifier = Modifier.weight(1f).focusRequester(fokus),
+                        textStyle = MaterialTheme.typography.bodyLarge,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                        ),
+                    )
+                    if (loeschbar) {
+                        IconButton(onClick = loesche) {
+                            Icon(Icons.Rounded.DeleteOutline, "Thema löschen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                AssistChip(
+                    onClick = { bereichOffen = true },
+                    label = { Text(meldungsBereich(thema.minMeldungen, thema.maxMeldungen)) },
+                    leadingIcon = { Icon(Icons.Rounded.Tune, null, Modifier.size(AssistChipDefaults.IconSize)) },
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.padding(start = 90.dp),
+                )
+                AktualisierungsBereich(
+                    thema = thema,
+                    zeitplanAktiv = zeitplanAktiv,
+                    aendere = aenderePlan,
+                    modifier = Modifier.padding(start = 90.dp, end = 12.dp, bottom = 8.dp),
+                )
+            }
         }
     }
     if (bereichOffen) {
@@ -777,6 +819,7 @@ private fun CodexBereich(app: NewsApplication, activity: ComponentActivity, stan
                                 val ergebnis = app.codex.melde(activity) { anmeldung = it }
                                 email = ergebnis.email
                                 verbunden = true
+                                app.ueberschriften.pruefe()
                                 if (app.speicher.index.value.isEmpty()) Zeitplan.starteLauf(kontext, manuell = true)
                             } catch (abbruch: CancellationException) {
                                 meldung = "Anmeldung abgebrochen."
