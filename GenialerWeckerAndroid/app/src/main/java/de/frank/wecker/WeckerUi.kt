@@ -2442,13 +2442,17 @@ private fun TerminZeile(now: Long, target: Long, snooze: Boolean, punkt: Boolean
 private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Modifier = Modifier, zifferblatt: Boolean = false) {
     val gold = LocalGold.current
     val accent = if (snooze) LocalSemantisch.current.info else gold.primaer
+    // Das Zifferblatt des 3D-Weckers ist auch im Dunkelmodus hell (Elfenbein) – darauf braucht es dunkle Tinte.
+    val hellesBlatt = zifferblatt && gold.istDunkel
+    val tinteLeicht = if (hellesBlatt) ZIFFER_TINTE_LEICHT else gold.textGedaempft
+    val tinteStark = if (hellesBlatt) ZIFFER_TINTE_STARK else gold.textPrimaer
     val geometry = target?.let { ZeitRing.berechne(now, it) }
     val nowAngle = ZeitRing.angle(now, ZoneId.systemDefault())
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-    val numberStyle = MaterialTheme.typography.labelSmall.copy(color = gold.textGedaempft, fontSize = 10.sp)
+    val numberStyle = MaterialTheme.typography.labelSmall.copy(color = tinteLeicht, fontSize = 10.sp)
     val centerStyle = MaterialTheme.typography.labelMedium.copy(color = accent, fontWeight = FontWeight.SemiBold,
         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-    val surface = gold.flaecheErhoeht
+    val surface = if (hellesBlatt) ZIFFER_ELFENBEIN else gold.flaecheErhoeht
     androidx.compose.foundation.Canvas(modifier) {
         val stroke = 5.dp.toPx()
         val radius = size.minDimension / 2f - stroke
@@ -2460,15 +2464,15 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
         // Im 3D-Wecker läuft der Schlafbogen mit Abstand innerhalb der Teilung; die Zahlen rücken dafür nach innen.
         val bogenRadius = if (zifferblatt) radius - 10.dp.toPx() else radius
         val zahlenRadius = radius - (if (zifferblatt) 21 else 15).dp.toPx()
-        drawCircle(gold.textGedaempft.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+        drawCircle(tinteLeicht.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
         // Das Zifferblatt bekommt zusätzlich eine feine Minutenteilung.
         if (zifferblatt) repeat(60) { minute ->
-            if (minute % 5 != 0) drawLine(gold.textGedaempft.copy(alpha = .35f), point(minute * 6f - 90f, radius - 2.5f.dp.toPx()), point(minute * 6f - 90f, radius), 1.dp.toPx())
+            if (minute % 5 != 0) drawLine(tinteLeicht.copy(alpha = .35f), point(minute * 6f - 90f, radius - 2.5f.dp.toPx()), point(minute * 6f - 90f, radius), 1.dp.toPx())
         }
         repeat(12) { hour ->
             val a = hour * 30f - 90f
             val long = hour % 3 == 0
-            drawLine(gold.textGedaempft.copy(alpha = if (long) .8f else .45f), point(a, radius - (if (long) 7 else 4).dp.toPx()), point(a, radius), 1.5f.dp.toPx())
+            drawLine(tinteLeicht.copy(alpha = if (long) .8f else .45f), point(a, radius - (if (long) 7 else 4).dp.toPx()), point(a, radius), 1.5f.dp.toPx())
         }
         listOf(0 to "12", 3 to "3", 6 to "6", 9 to "9").forEach { (hour, label) ->
             val layout = measurer.measure(label, numberStyle)
@@ -2480,7 +2484,7 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
             if (zifferblatt) {
                 // Im 3D-Wecker hebt sich die Schlafzeit als feiner Nachtblau-Bogen vom Messing ab (Gold und Blau
                 // ergänzen sich), mit Abstand zum Gehäuserand und einer zarten Spur als Führung.
-                val farben = if (snooze) listOf(accent, accent) else if (gold.istDunkel) listOf(NACHT_HELL_A, NACHT_HELL_B) else listOf(NACHT_A, NACHT_B)
+                val farben = if (snooze) listOf(accent, accent) else listOf(NACHT_A, NACHT_B)
                 val start = geometry.nowAngle
                 val verlauf = Brush.sweepGradient(
                     *(0..20).map { i -> ((start + sweep * i / 20f + 360f) % 360f) / 360f to lerpFarbe(farben[0], farben[1], i / 20f) }
@@ -2516,13 +2520,13 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
             val minutenWinkel = zeit.minute * 6f - 90f
             val stundenWinkel = (zeit.hour % 12) * 30f + zeit.minute * 0.5f - 90f
             val zeiger = androidx.compose.ui.graphics.StrokeCap.Round
-            drawLine(gold.textPrimaer.copy(alpha = .85f), center, point(stundenWinkel, radius * 0.45f), 3.5f.dp.toPx(), zeiger)
-            drawLine(gold.textPrimaer.copy(alpha = .75f), center, point(minutenWinkel, radius * 0.66f), 2.dp.toPx(), zeiger)
+            drawLine(tinteStark.copy(alpha = .85f), center, point(stundenWinkel, radius * 0.45f), 3.5f.dp.toPx(), zeiger)
+            drawLine(tinteStark.copy(alpha = .75f), center, point(minutenWinkel, radius * 0.66f), 2.dp.toPx(), zeiger)
             drawCircle(accent, 3.5f.dp.toPx(), center)
         }
         if (geometry != null) ringMarker(point(geometry.targetAngle, bogenRadius), hollow = false,
-            color = if (zifferblatt && !snooze) (if (gold.istDunkel) NACHT_HELL_B else NACHT_B) else accent, surface = surface)
-        ringMarker(point(nowAngle, bogenRadius), hollow = true, color = gold.textPrimaer, surface = surface)
+            color = if (zifferblatt && !snooze) NACHT_B else accent, surface = surface)
+        ringMarker(point(nowAngle, bogenRadius), hollow = true, color = tinteStark, surface = surface)
     }
 }
 
@@ -2534,9 +2538,10 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
 @Composable
 private fun Wecker3D(modifier: Modifier, gehaeuse: androidx.compose.ui.unit.Dp) {
     val gold = LocalGold.current
-    val metall = gold.primaer
     val dunkel = gold.istDunkel
-    val blatt = gold.flaecheErhoeht
+    // Im Dunkeln gedecktes, dunkleres Messing statt grellem Gold; das Blatt bleibt hell wie bei einer echten Uhr.
+    val metall = if (dunkel) androidx.compose.ui.graphics.lerp(gold.primaer, androidx.compose.ui.graphics.Color(0xFF5E4B2A), .5f) else gold.primaer
+    val blatt = if (dunkel) ZIFFER_ELFENBEIN else gold.flaecheErhoeht
     androidx.compose.foundation.Canvas(modifier) {
         val r = size.minDimension / 2f
         val k = gehaeuse.toPx() / 2f
@@ -2576,12 +2581,12 @@ private fun Wecker3D(modifier: Modifier, gehaeuse: androidx.compose.ui.unit.Dp) 
         drawCircle(schwarz.copy(alpha = if (dunkel) .45f else .2f), k, center + o(0f, k * .07f))
         drawCircle(Brush.sweepGradient(listOf(metall.heller(.5f), metall.heller(.05f), metall.dunkler(.35f), metall.dunkler(.1f),
             metall.heller(.35f), metall.heller(.55f), metall.heller(.5f)), center), k)
-        drawCircle(Brush.linearGradient(listOf(metall.dunkler(.4f), metall.heller(.45f)), start = center - o(k, k), end = center + o(k, k)), k * .9f)
+        drawCircle(Brush.linearGradient(listOf(metall.dunkler(.4f), metall.heller(.45f)), start = center - o(k, k), end = center + o(k, k)), k * .925f)
         // Zifferblatt, leicht gewölbt, oben mit feiner Innenschattenkante.
-        drawCircle(Brush.radialGradient(listOf(blatt.heller(.08f), blatt, blatt.dunkler(if (dunkel) .12f else .07f)),
-            center = center - o(k * .2f, k * .25f), radius = k * 1.1f), k * .85f)
-        drawCircle(Brush.verticalGradient(listOf(schwarz.copy(alpha = if (dunkel) .35f else .16f), schwarz.copy(alpha = 0f)),
-            startY = center.y - k * .85f, endY = center.y - k * .5f), k * .85f)
+        drawCircle(Brush.radialGradient(listOf(blatt.heller(.08f), blatt, blatt.dunkler(.08f)),
+            center = center - o(k * .2f, k * .25f), radius = k * 1.1f), k * .885f)
+        drawCircle(Brush.verticalGradient(listOf(schwarz.copy(alpha = if (dunkel) .24f else .16f), schwarz.copy(alpha = 0f)),
+            startY = center.y - k * .885f, endY = center.y - k * .5f), k * .885f)
     }
 }
 
@@ -2611,8 +2616,10 @@ private fun GlasKuppel(modifier: Modifier) {
 /** Schlafbogen im 3D-Wecker: Nachtblau bis Violett – bewusst nicht die Messingfarbe des Gehäuses. */
 private val NACHT_A = androidx.compose.ui.graphics.Color(0xFF2F5DA8)
 private val NACHT_B = androidx.compose.ui.graphics.Color(0xFF6A4BC4)
-private val NACHT_HELL_A = androidx.compose.ui.graphics.Color(0xFF8DB4FF)
-private val NACHT_HELL_B = androidx.compose.ui.graphics.Color(0xFFB69BFF)
+/** Zifferblatt im Dunkelmodus: gedämpftes Elfenbein mit dunkler Tinte – eine Uhr hat nie ein schwarzes Blatt. */
+private val ZIFFER_ELFENBEIN = androidx.compose.ui.graphics.Color(0xFFD9D0BB)
+private val ZIFFER_TINTE_LEICHT = androidx.compose.ui.graphics.Color(0xFF6A604D)
+private val ZIFFER_TINTE_STARK = androidx.compose.ui.graphics.Color(0xFF2A2418)
 private fun lerpFarbe(a: androidx.compose.ui.graphics.Color, b: androidx.compose.ui.graphics.Color, t: Float) =
     androidx.compose.ui.graphics.lerp(a, b, t)
 
