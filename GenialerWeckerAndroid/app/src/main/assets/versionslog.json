@@ -29,6 +29,7 @@
     { "versionCode": 25, "versionName": "1.0.24", "stand": "27.09.2026, 22:36 Uhr", "notiz": "Weck-Tasten: Schrift und Symbol etwas kleiner, damit sie mit Abstand im Kreis stehen." },
     { "versionCode": 26, "versionName": "1.0.25", "stand": "27.09.2026, 22:38 Uhr", "notiz": "Nach Ausschalten oder Schlummern erscheint eine ruhige, gut lesbare Bestätigung mit großem Symbol, die nach knapp zwei Sekunden weich ausblendet. Weckerkarten ohne Technik-Knopf." },
     { "versionCode": 27, "versionName": "1.0.26", "stand": "27.09.2026, 22:44 Uhr", "notiz": "Ausschalten ganz ruhig: Das Häkchen erscheint weich auf der Taste, alles bleibt gut zwei Sekunden still stehen und blendet dann sanft aus – ohne Springen." },
-    { "versionCode": 28, "versionName": "1.0.27", "stand": "27.09.2026, 22:47 Uhr", "notiz": "Nach dem Ausschalten öffnet sich wieder langsam der ruhige Bildschirm Wecker aus, die Tasten selbst bleiben unverändert. Aufgeräumt: Reste der alten Premium-Umschaltung entfernt." }
+    { "versionCode": 28, "versionName": "1.0.27", "stand": "27.09.2026, 22:47 Uhr", "notiz": "Nach dem Ausschalten öffnet sich wieder langsam der ruhige Bildschirm Wecker aus, die Tasten selbst bleiben unverändert. Aufgeräumt: Reste der alten Premium-Umschaltung entfernt." },
+    { "versionCode": 29, "versionName": "1.0.28", "stand": "27.09.2026, 22:48 Uhr", "notiz": "Orbit weckt jetzt ebenfalls mit dem wackelnden 3D-Wecker – alle Designs klingeln einheitlich." }
   ]
 }

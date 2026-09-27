@@ -462,6 +462,7 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
                         style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp)
                 }
                 HorizontalDivider(color = gold.rahmen)
+                if (figur >= 90.dp) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Wecker3DFigur(now, figur, wackelnd) }
                 Text(formatClock(now), maxLines = 1, softWrap = false,
                     style = uhrStil(contentWidth, 80f, zahlSchrift(),
                         androidx.compose.ui.text.font.FontWeight.SemiBold, gold.primaer))
