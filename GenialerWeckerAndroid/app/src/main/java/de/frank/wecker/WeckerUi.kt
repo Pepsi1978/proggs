@@ -1919,6 +1919,14 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                     // Beim Einschalten sofort die Datei wählen lassen. Abbrechen lässt den eingebauten Weckton stehen – nie Stille.
                     if (step == Step.MUSIC && checked) music.launch(arrayOf("audio/*"))
                 }
+                // Das Klingelzeichen steht direkt beim Baustein – nicht weit unten bei der Lautstärke.
+                if (step == Step.TONE && step in alarm.steps) Column(Modifier.fillMaxWidth().padding(start = 12.dp, bottom = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Tones.names.forEach { (id, title) -> Chip3D(alarm.cue == id, { vm.change(alarm.copy(cue = id)); vm.playTone(id, alarm.volume) }, title) }
+                    }
+                    Text("Antippen wählt und spielt den Ton kurz an.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                }
                 if (step == Step.MUSIC && step in alarm.steps) {
                     val anzeige = remember(alarm.music, alarm.musicName, alarm.musicQuelle, alarm.tone) { MusikAnzeige.von(alarm) }
                     Column(Modifier.fillMaxWidth().padding(start = 12.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1973,28 +1981,9 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
         }
 
         Section("Lautstärke & Schlummern", collapsible = true, summary = listOfNotNull(
-            if (Step.TONE in alarm.steps) "Klingelzeichen: ${Tones.names[alarm.cue] ?: alarm.cue}" else null,
-            if (Step.MUSIC in alarm.steps) "Musik: ${MusikAnzeige.von(alarm).titel}" else null,
             "${alarm.volume} % Lautstärke",
             if (alarm.snoozeLimit == 0) "Schlummern aus" else "Schlummern ${alarm.snoozeMinutes} Min., bis ${alarm.snoozeLimit}×").joinToString(" · ")) {
-            // Das Klingelzeichen als offene Liste statt in einem Knopf versteckt — jeder Ton lässt sich wählen und anhören.
-            if (Step.TONE in alarm.steps) {
-                Text("Klingelzeichen vor dem Text", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
-                Tones.names.forEach { (id, title) ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Row(Modifier.weight(1f).heightIn(min = 48.dp).selectable(alarm.cue == id, interactionSource = null, indication = null,
-                            role = androidx.compose.ui.semantics.Role.RadioButton) { vm.change(alarm.copy(cue = id)) },
-                            verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(alarm.cue == id, null)
-                            Text(title, Modifier.padding(start = 8.dp))
-                        }
-                        AnhoerKnopf(vm, "ton:$id") { vm.playTone(id, alarm.volume, alarm.fadeSeconds) }
-                    }
-                }
-                HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
-            }
-            // Die Tonwahl für „MP3 / Weckton“ steht jetzt direkt im Weckablauf.
-            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            // Klingelzeichen und Tonwahl stehen direkt bei ihren Bausteinen im Weckablauf.
             Text("Lautstärke", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
             ValueSlider("Wecklautstärke", alarm.volume, 1..100, "%") { vm.change(alarm.copy(volume = it)); vm.vorschauLautstaerke(it) }
             Text("Diese Lautstärke gilt beim Wecken unabhängig von der bisherigen Lautstärke. Android setzt sie auf die nächste unterstützte Lautstärkestufe. Danach wird der vorherige Wert wiederhergestellt.", style = MaterialTheme.typography.bodySmall)
