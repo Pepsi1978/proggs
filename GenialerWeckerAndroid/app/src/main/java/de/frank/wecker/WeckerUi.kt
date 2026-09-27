@@ -1396,7 +1396,7 @@ private fun WeckerKarte(
                         val status = when {
                             alarm.preparationError.isNotBlank() -> "Vorbereitung offen: ${alarm.preparationError}"
                             alarm.preparedAt == 0L -> "Sprachausgabe noch nicht offline bereit"
-                            else -> "${alarm.voiceVariants.size.takeIf { it > 0 } ?: 1} Stimmvarianten offline bereit · ${formatAt(alarm.preparedAt)}"
+                            else -> "Ansage fertig auf dem Handy · ${formatAt(alarm.preparedAt)}"
                         }
                         Text(status, style = MaterialTheme.typography.bodySmall,
                             color = if (alarm.preparationError.isNotBlank() || alarm.preparedAt == 0L) semantisch.warnung else semantisch.erfolg)
@@ -2022,7 +2022,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 Text("Schlummern bleibt entsprechend deinem Limit möglich. Der normale Stoppknopf wird durch die Foto-Aufgabe ersetzt.", style = MaterialTheme.typography.bodySmall)
             }
         }
-        Text(modifier = Modifier.padding(horizontal = 14.dp), text = "Dein Entwurf wird automatisch gespeichert. Beim Speichern werden sechs Stimmvarianten vorbereitet. Beim Wecken folgen sie offline aufeinander.", style = MaterialTheme.typography.bodySmall)
+        Text(modifier = Modifier.padding(horizontal = 14.dp), text = "Dein Entwurf wird automatisch gesichert. Die Ansage wird beim Speichern fertig erzeugt – geweckt wird offline.", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(16.dp))
        }
       }

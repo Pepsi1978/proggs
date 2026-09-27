@@ -548,15 +548,7 @@ private fun WeckSchritte(alarm: Alarm, step: String, variation: Int) {
     }
     // Steps outside the alarm's own list (start, emergency tone) stay readable as text.
     if (step.isNotBlank() && alarm.steps.none { it.title == step }) Text(step, color = gold.textGedaempft)
-    if (alarm.voiceVariants.isNotEmpty()) {
-        val spec = weich<Float>(200)
-        androidx.compose.animation.AnimatedContent(variation, transitionSpec = {
-            // No SizeTransform: with snap fades there must be no size spring either.
-            (androidx.compose.animation.fadeIn(spec) togetherWith androidx.compose.animation.fadeOut(spec)).using(null)
-        }, label = "stimmvariante") { value ->
-            Text("Stimmvariante $value von ${alarm.voiceVariants.size}", style = MaterialTheme.typography.bodySmall)
-        }
-    }
+    // Die Stimmvarianten wechseln still; eine Zählanzeige hilft beim Aufwachen niemandem.
 }
 
 /**
