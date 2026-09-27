@@ -307,6 +307,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
         ) }
         val freischaltungNoetig by vm.freischaltungNoetig.collectAsStateWithLifecycle()
     if (freischaltungNoetig) FreischaltungsDialog(activity) { vm.freischaltungNoetig.value = false }
+    PremiumEinwilligungDialog(vm)
     delete?.let { alarm -> Confirm("Wecker löschen?", "„${alarm.name}“ wird entfernt.", "Wecker löschen", {
             vm.delete(alarm); delete = null
         }, { delete = null }) }
@@ -1946,15 +1947,6 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             // eigenen Abschnitt, den man erst suchen muss.
             if (Step.TEXT in alarm.steps) {
                 Text("Dein eigener Text", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
-                // Sprache des Textes: gilt für Vorlesen und Diktat dieses Weckers.
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Sprachen.CODES.forEach { code ->
-                        Chip3D(alarm.sprache == code, {
-                            // Eine eigene Stimme der alten Sprache passt nicht mehr: zurück auf den Standard der neuen Sprache.
-                            if (alarm.sprache != code) vm.change(alarm.copy(sprache = code, voiceProvider = "", voiceId = ""))
-                        }, Sprachen.name(code))
-                    }
-                }
                 if (alarm.text.isBlank()) Text("Der Erinnerungstext fehlt.", color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
             Eingabefeld(alarm.text, { vm.change(alarm.copy(text = it)) }, "Text, der vorgelesen werden soll",
                     Modifier.fillMaxWidth().heightIn(min = 160.dp), einzeilig = false)
@@ -1965,7 +1957,7 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                         vm.change(aktuell.copy(text = listOf(aktuell.text.trimEnd(), diktiert.trim()).filter(String::isNotBlank).joinToString("\n")))
                     }
                 }) { AnhoerKnopfText(vm, alarm) }
-                Text("Der Text bleibt jederzeit von Hand bearbeitbar. Diktat und Vorlesen laufen auf dem Gerät, ohne Internet.", style = MaterialTheme.typography.bodySmall)
+                Text("Tippen oder diktieren – der Text bleibt jederzeit bearbeitbar.", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             }
             Text("Reihenfolge beim Wecken (verschieben per Drag-and-drop)", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
@@ -2050,21 +2042,19 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     val effective = alarm.resolveVoice(defaults)
     val code = Sprachen.gueltig(alarm.sprache)
     val liste = alle?.get(code).orEmpty()
-    val available = liste.map { "${LokaleStimmen.PROVIDER}|${it.name}" to it.anzeige }
-    val sprachStandard = defaults.fuerSprache(code).stimme
-    val defaultLabel = (liste.firstOrNull { it.name == sprachStandard } ?: liste.firstOrNull())?.anzeige ?: "Keine Offline-Stimme installiert"
-    val selected = if (alarm.voiceProvider.isBlank()) "" else "${alarm.voiceProvider}|${alarm.voiceId}"
-    val options = listOf("" to "Standard aus Einstellungen · $defaultLabel") + available +
-        if (selected.isNotBlank() && available.none { it.first == selected })
-            listOf(selected to "Nicht mehr angebotene Stimme · Standard wird genutzt")
-        else emptyList()
+    fun name(id: String) = PremiumKatalog.finde(id)?.name ?: liste.firstOrNull { it.name == id }?.anzeige ?: "Gerätestimme"
+    val standard = name(defaults.fuerSprache(code).stimme)
+    val eigene = if (alarm.voiceProvider.isBlank()) "" else alarm.voiceId
     Section("Stimme & Sprechgeschwindigkeit", collapsible = true, summary = listOf(
-        options.find { it.first == selected }?.second ?: "Stimme wählen",
+        if (eigene.isBlank()) "$standard (Standard)" else name(eigene),
         "Tempo ${"%.2f".format(effective.ttsSpeechRate)}× ${if (alarm.speechRate == null) "(Standard)" else "(nur dieser Wecker)"}",
-    ).joinToString(" · "), error = if (alle != null && liste.isEmpty()) "Keine Offline-Stimme für ${Sprachen.name(code)} – beim Wecken kommt der Ersatzweckton. Siehe Einstellungen → Vorlesen." else null) {
-        Text("Sprache: ${Sprachen.name(code)} (oben beim Text änderbar)", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-        Choice("Stimme für diesen Wecker (${Sprachen.name(code)})", selected, options) { chosen ->
-            vm.change(alarm.copy(voiceProvider = chosen.substringBefore('|'), voiceId = chosen.substringAfter('|', "")))
+    ).joinToString(" · ")) {
+        StimmWahlListe(vm, code, eigene, vorgabeZeile = standard) { id ->
+            vm.change(alarm.copy(voiceProvider = when {
+                id.isBlank() -> ""
+                PremiumKatalog.istPremium(id) -> PremiumKatalog.PROVIDER
+                else -> LokaleStimmen.PROVIDER
+            }, voiceId = id))
         }
         Text("Sprechgeschwindigkeit: ${"%.2f".format(effective.ttsSpeechRate)}×" +
             if (alarm.speechRate == null) " · Standard aus Einstellungen" else " · nur dieser Wecker")

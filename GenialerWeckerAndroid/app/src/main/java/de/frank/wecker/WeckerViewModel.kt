@@ -71,7 +71,28 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     /** Changes whenever an editor is opened or closed; the same alarm id reopened is a new editor session. */
     private var editorGeneration = 0L
 
+    /** Einmalige Frage vor dem ersten Einsatz einer Premium-Stimme; danach läuft die gemerkte Aktion weiter. */
+    val premiumFrage = MutableStateFlow(false)
+    private var nachEinwilligung: (() -> Unit)? = null
+    fun einwilligung(ja: Boolean) {
+        settings.premiumEinwilligung = if (ja) "ja" else "nein"
+        premiumFrage.value = false
+        val aktion = nachEinwilligung; nachEinwilligung = null
+        settingsChanged()
+        aktion?.invoke()
+    }
+    private fun mitEinwilligung(voice: SyntheseStimme, aktion: () -> Unit) {
+        if (voice.istPremium && settings.premiumEinwilligung.isBlank()) { nachEinwilligung = aktion; premiumFrage.value = true }
+        else aktion()
+    }
+
     init {
+        // Einmalig (1.0.6): Wecker mit fest gewählter Gerätestimme bekommen wieder die Vorgabe, also die Premium-Stimme.
+        if (!store.prefs.getBoolean("premium_migration1", false)) {
+            store.all().filter { LokaleStimmen.istEigeneEngine(it.voiceProvider) && it.voiceId.isNotBlank() }
+                .forEach { a -> store.update(a.id) { it.copy(voiceProvider = "", voiceId = "") } }
+            store.prefs.edit().putBoolean("premium_migration1", true).apply()
+        }
         scheduler.restore()
         ladeLokaleStimmen()
         viewModelScope.launch(Dispatchers.IO) { Tones.names.keys.forEach { Tones.file(store.files, it) } }
@@ -79,10 +100,12 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     }
     /** Neue Wecker bekommen EINMAL die Gerätesprache als festen Wert; ein späterer Locale-Wechsel ändert ihn nicht. */
     fun newAlarm() { if (darfBearbeiten()) edit(Alarm(id = UUID.randomUUID().toString(), sprache = geraeteSprache())) }
-    private fun geraeteSprache(): String {
+    /** Sprache des Handys (de/en/fr/es) – bestimmt, welche Stimmen überhaupt angeboten werden. */
+    fun geraeteSprache(): String {
         val locale = app.resources.configuration.locales[0]
         return DiktatLogik.spracheFuer(locale.language, locale.country).first.code
     }
+    val geraeteRegion: String get() = app.resources.configuration.locales[0].country
     fun edit(alarm: Alarm) {
         stopPreview()
         editorGeneration++
@@ -132,6 +155,10 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     fun save(notificationsDenied: Boolean = false, done: () -> Unit) {
         val source = _draft.value ?: return
         if (!darfBearbeiten()) return
+        if (source.needsSpeech) mitEinwilligung(source.resolveVoice(SyntheseStimme(settings))) { speichern(source, notificationsDenied, done) }
+        else speichern(source, notificationsDenied, done)
+    }
+    private fun speichern(source: Alarm, notificationsDenied: Boolean, done: () -> Unit) {
         val alarm = source.copy(enabled = true)
         val create = draftIsNew
         runAction("Wecker speichern …") {
@@ -277,13 +304,17 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
      * Hört die Stimme ab. Ohne [alarm] gilt der globale Standard, mit [alarm] dessen eigene Auswahl
      * samt eigenem Tempo. Die globalen Einstellungen werden dabei nie verändert.
      */
-    fun previewVoice(alarm: Alarm? = null, text: String? = null, sprache: String? = null) {
-        stopPreview()
-        val generation = previewGeneration
+    fun previewVoice(alarm: Alarm? = null, text: String? = null, sprache: String? = null, stimme: String? = null) {
         // Ein Schnappschuss für den gesamten Vorgang: Audio und Abspieltempo stammen garantiert aus
         // derselben Stimme, auch wenn die Einstellungen währenddessen geändert werden.
         // Dieselbe Auflösung wie beim Wecken: Sprache des Weckers bzw. die gewählte Sprache der Einstellungen.
         val voice = SyntheseStimme(settings).let { defaults -> alarm?.resolveVoice(defaults) ?: sprache?.let { defaults.fuerSprache(it) } ?: defaults }
+            .let { v -> stimme?.let { v.copy(stimme = it) } ?: v }
+        mitEinwilligung(voice) { vorhoeren(voice, alarm, text) }
+    }
+    private fun vorhoeren(voice: SyntheseStimme, alarm: Alarm?, text: String?) {
+        stopPreview()
+        val generation = previewGeneration
         runAction("Stimmprobe vorbereiten …") {
             // The job is captured inside the action, so a refused runAction can never register a foreign job.
             val job = currentCoroutineContext()[Job]

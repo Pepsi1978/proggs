@@ -7,6 +7,7 @@
     { "versionCode": 3, "versionName": "1.0.2", "stand": "27.09.2026, 20:30 Uhr", "notiz": "Neu: 7 Tage alle Funktionen, danach einmalige Freischaltung über Google Play; gestellte Wecker klingeln immer weiter." },
     { "versionCode": 4, "versionName": "1.0.3", "stand": "27.09.2026, 20:42 Uhr", "notiz": "Diktieren und Vorlesen direkt unter dem Text, Diktat landet sofort im Text; beim Weckton gleich die Datei wählen und den Titel sehen; nur noch die zwei natürlichsten deutschen Stimmen; Traumraum-Einstellungen luftiger, Orbit-Zeichenregen flüssiger." },
     { "versionCode": 5, "versionName": "1.0.4", "stand": "27.09.2026, 21:08 Uhr", "notiz": "Neu: Jeder Wecker hat eine eigene Sprache für Vorlesen und Diktat (Deutsch, Englisch, Französisch, Spanisch), mit den auf dem Gerät installierten Offline-Stimmen." },
-    { "versionCode": 6, "versionName": "1.0.5", "stand": "27.09.2026, 21:20 Uhr", "notiz": "Die bevorzugten Stimmen bleiben fest an die Google-Sprachausgabe gebunden, auch wenn das Handy eine andere Standard-Sprachausgabe nutzt." }
+    { "versionCode": 6, "versionName": "1.0.5", "stand": "27.09.2026, 21:20 Uhr", "notiz": "Die bevorzugten Stimmen bleiben fest an die Google-Sprachausgabe gebunden, auch wenn das Handy eine andere Standard-Sprachausgabe nutzt." },
+    { "versionCode": 7, "versionName": "1.0.6", "stand": "27.09.2026, 21:48 Uhr", "notiz": "Neu: Premium-Stimmen, die wie ein Mensch klingen – automatisch in der Sprache des Handys, mit einer einzigen Stimmauswahl; ohne Internet übernimmt die Gerätestimme." }
   ]
 }

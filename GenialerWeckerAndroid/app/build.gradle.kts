@@ -70,6 +70,7 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.graphics.shapes)
     implementation(libs.play.billing)
+    implementation(libs.okhttp)
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     testImplementation(libs.junit)
     testImplementation("org.json:json:20240303")

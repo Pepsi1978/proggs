@@ -27,10 +27,10 @@ object Sprachen {
     fun kurz(code: String): String = gueltig(code).uppercase()
     fun diktat(code: String): DiktatSprache = DiktatSprache.entries.first { it.code == gueltig(code) }
     fun probe(code: String): String = when (code) {
-        "en" -> "Good morning! Your alarm is ready."
-        "fr" -> "Bonjour ! Ton réveil est prêt."
-        "es" -> "¡Buenos días! Tu despertador está listo."
-        else -> "Guten Morgen! Dein Wecker ist bereit."
+        "en" -> "Good morning! It's seven o'clock. The day is getting brighter – a good moment to get up."
+        "fr" -> "Bonjour ! Il est sept heures. Le jour se lève – c'est le bon moment pour se lever."
+        "es" -> "¡Buenos días! Son las siete. Ya amanece: es un buen momento para levantarse."
+        else -> "Guten Morgen! Es ist sieben Uhr. Draußen wird es hell – ein guter Moment, um aufzustehen."
     }
     fun keineStimme(code: String): String = "Für ${name(code)} ist auf diesem Gerät keine Offline-Stimme installiert. " +
         "Lade in den Android-Einstellungen unter „Sprachausgabe“ die Sprachdaten für ${name(code)} herunter. Bis dahin kommt beim Wecken der Ersatzweckton."
@@ -44,11 +44,15 @@ object Sprachen {
 data class SyntheseStimme(val stimme: String, val ttsSpeechRate: Float, val sprache: String = "de", val vorgaben: Map<String, String> = emptyMap(),
     /** Leer = Google-Sprachausgabe, falls vorhanden, sonst Gerätestandard (bisheriges Verhalten). Sonst ein Engine-Paket. */
     val engine: String = "") {
-    constructor(s: SecureSettings) : this(s.lokaleStimme, s.ttsSpeechRate, "de", Sprachen.CODES.associateWith { s.stimmeFuer(it) })
+    constructor(s: SecureSettings) : this(s.stimmeFuer("de"), s.ttsSpeechRate, "de", Sprachen.CODES.associateWith { s.stimmeFuer(it) })
     fun withRate(rate: Float) = copy(ttsSpeechRate = rate)
     /** Standardstimme derselben Einstellungen für eine andere Sprache. */
     fun fuerSprache(code: String): SyntheseStimme = copy(sprache = code, stimme = if (vorgaben.isEmpty() && code == sprache) stimme else vorgaben[code].orEmpty())
-    val ttsProvider: String get() = LokaleStimmen.PROVIDER
+    /** Premium-Stimme (online erzeugt, offline abgespielt) statt einer Gerätestimme. */
+    val istPremium: Boolean get() = PremiumKatalog.istPremium(stimme)
+    /** Dieselbe Einstellung mit Gerätestimme: eine Premium-Wahl fällt auf die beste Offline-Stimme der Sprache zurück. */
+    fun alsGeraetestimme(): SyntheseStimme = if (istPremium) copy(stimme = "") else this
+    val ttsProvider: String get() = if (istPremium) PremiumKatalog.PROVIDER else LokaleStimmen.PROVIDER
     /** Das Tempo steckt bereits in der erzeugten Datei. */
     val playbackSpeed: Float get() = 1f
 }

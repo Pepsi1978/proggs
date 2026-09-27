@@ -25,27 +25,43 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
             try {
                 val groups = mutableListOf<SpeechGroup>()
                 if (Step.TEXT in alarm.steps) groups += SpeechGroup(Step.TEXT.name, chunks(alarm.text))
-                // Die wirklich klingende Stimme zählt: war eine inzwischen ausgeblendete Stimme gewählt, wird neu vorbereitet.
-                val voice = alarm.resolveVoice(voiceFactory()).let { v -> LokaleStimmen.wirksameStimme(context, v.stimme, v.sprache)?.let { v.copy(stimme = it) } ?: v }
-                val signature = hash(voiceKey(voice) + JSONArray(groups.map { JSONObject().put("step", it.step).put("paragraphs", JSONArray(it.paragraphs)) }).toString())
+                val textJson = JSONArray(groups.map { JSONObject().put("step", it.step).put("paragraphs", JSONArray(it.paragraphs)) }).toString()
+                fun signatur(v: SyntheseStimme) = hash(voiceKey(v) + textJson)
+                val wunsch = alarm.resolveVoice(voiceFactory())
+                // Premium nur mit Einwilligung; sonst (und als Rückfall) die beste Gerätestimme derselben Sprache.
+                val premium = wunsch.istPremium && settings.premiumErlaubt
                 val latest = store.get(alarm.id) ?: return@withContext
                 if (!latest.sameSpeechAs(alarm)) return@withContext
                 val cached = latest.voiceVariants
-                if (latest.preparedSignature == signature && cached.size == VoiceVariations.COUNT &&
-                    cached.flatMap { it.steps.values.flatten() }.all { File(it.path).length() > 44 }) {
-                    store.update(alarm.id) { current -> if (current.sameSpeechAs(alarm)) current.copy(preparationError = "") else current }
-                    return@withContext
+                fun bereit(sig: String) = latest.preparedSignature == sig && cached.size == VoiceVariations.COUNT &&
+                    cached.flatMap { it.steps.values.flatten() }.all { File(it.path).length() > 44 }
+                fun ohneFehler() = store.update(alarm.id) { current -> if (current.sameSpeechAs(alarm)) current.copy(preparationError = "") else current }
+                if (premium && bereit(signatur(wunsch))) { ohneFehler(); return@withContext }
+                val versuchePremium = premium && EdgeStimmen.netzDa(context)
+                // Die wirklich klingende Stimme zählt: war eine inzwischen ausgeblendete Stimme gewählt, wird neu vorbereitet.
+                suspend fun geraet(): SyntheseStimme = wunsch.alsGeraetestimme().let { v -> LokaleStimmen.wirksameStimme(context, v.stimme, v.sprache)?.let { v.copy(stimme = it) } ?: v }
+                if (!versuchePremium) {
+                    val lokal = geraet()
+                    if (bereit(signatur(lokal))) { ohneFehler(); if (premium) PreparationWorker.sobaldNetz(context); return@withContext }
                 }
                 store.update(alarm.id) { current ->
                     if (current.sameSpeechAs(alarm)) current.copy(preparationError = "Audio-Vorbereitung läuft …") else current
                 }
-                // Kein Netz-Rückfall: Fehlt die Offline-Stimme, bleibt der Fehler sichtbar und der Wecker nutzt seinen Ersatzton.
-                val variants = VoiceVariations.buildGroups(groups, render = { text, index ->
+                suspend fun baue(voice: SyntheseStimme) = VoiceVariations.buildGroups(groups, render = { text, index ->
                     ensureActive()
                     render(text, voice.withRate(VoiceVariations.rate(voice.ttsSpeechRate, index)), index)
                 }, progress = { _, _, variation, part, total -> progress("Variante $variation/6 · Absatz $part/$total") })
-                check(voice.ttsSpeechRate == alarm.resolveVoice(voiceFactory()).ttsSpeechRate &&
-                    voice.stimme == alarm.resolveVoice(voiceFactory()).let { v -> LokaleStimmen.wirksameStimme(context, v.stimme, v.sprache) ?: voice.stimme }) { "Die Stimme wurde während der Vorbereitung geändert. Bitte erneut vorbereiten." }
+                var voice = if (versuchePremium) wunsch else geraet()
+                // Premium scheitert (Netz weg, Dienst gestört): sofort mit der Gerätestimme fertig werden, später erneut versuchen.
+                val variants = try { baue(voice) } catch (e: Exception) {
+                    if (e is CancellationException || !versuchePremium) throw e
+                    android.util.Log.w("WeckerTts", "Premium-Stimme nicht verfügbar, Gerätestimme übernimmt", e)
+                    voice = geraet(); baue(voice)
+                }
+                if (premium && !voice.istPremium) PreparationWorker.sobaldNetz(context)
+                val frisch = alarm.resolveVoice(voiceFactory())
+                check(frisch.ttsSpeechRate == wunsch.ttsSpeechRate && frisch.stimme == wunsch.stimme) { "Die Stimme wurde während der Vorbereitung geändert. Bitte erneut vorbereiten." }
+                val signature = signatur(voice)
                 store.update(alarm.id) { current ->
                     if (!current.sameSpeechAs(alarm)) current
                     else current.copy(voiceVariants = variants,
@@ -68,7 +84,14 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
         }
     }
 
-    suspend fun audio(text: String): File = File(render(text, voiceFactory(), 0).path)
+    /** Probe: Premium, wenn gewählt und erlaubt; ohne Netz ehrlich melden statt still eine andere Stimme abzuspielen. */
+    suspend fun audio(text: String): File {
+        val voice = voiceFactory()
+        if (!voice.istPremium || !settings.premiumErlaubt) return File(render(text, voice.alsGeraetestimme(), 0).path)
+        if (!EdgeStimmen.netzDa(context)) throw SyntheseAbbruch("Für die Probe einer Premium-Stimme braucht das Handy kurz Internet. " +
+            "Deine Wecker klingeln trotzdem – ihre Ansagen liegen fertig auf dem Gerät.")
+        return File(render(text, voice, 0).path)
+    }
 
     private suspend fun render(text: String, voice: SyntheseStimme, variation: Int): PreparedAudio = withContext(Dispatchers.IO) {
         // Jede Variante bekommt ihren eigenen Request/Cache-Eintrag, auch bei gleichem Text.
@@ -76,11 +99,14 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
         if (path.length() > 44) return@withContext PreparedAudio(path.absolutePath, voice.playbackSpeed, voice.ttsProvider)
         val temporary = File(store.files, "${path.name}.${java.util.UUID.randomUUID()}.tmp")
         try {
-            LokaleStimmen.synthetisiere(context, text, voice, temporary)
+            if (voice.istPremium) {
+                EdgeStimmen.synthetisiere(text, voice.stimme, voice.ttsSpeechRate, temporary)
+                delay(250) // Almanach E7: Anfragen staffeln statt in schneller Folge
+            } else LokaleStimmen.synthetisiere(context, text, voice, temporary)
             val metadata = MediaMetadataRetriever()
             try {
                 metadata.setDataSource(temporary.absolutePath)
-                check(metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes") { "Die Gerätestimme hat keine gültige Audiodatei geliefert." }
+                check(metadata.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes") { "Die Stimme hat keine gültige Audiodatei geliefert." }
             } finally { metadata.release() }
             ensureActive()
             check(temporary.renameTo(path)) { "Das Offline-Audio konnte nicht gespeichert werden." }
@@ -137,10 +163,17 @@ class PreparationWorker(context: Context, parameters: WorkerParameters) : Corout
         return if (failed && runAttemptCount < 3) Result.retry() else Result.success()
     }
     companion object {
-        // Alles läuft lokal: keine Netzbedingung, die Vorbereitung klappt auch im Flugmodus.
+        // Ohne Netzbedingung: Gerätestimmen klappen auch im Flugmodus; Premium holt sobaldNetz() nach.
         fun enqueue(context: Context) {
             WorkManager.getInstance(context).enqueueUniqueWork("speech-refresh", ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<PreparationWorker>().build())
+        }
+        /** Premium-Ansage nachholen, sobald wieder Netz da ist; bis dahin klingelt die Gerätestimme. */
+        fun sobaldNetz(context: Context) {
+            WorkManager.getInstance(context).enqueueUniqueWork("speech-netz", ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<PreparationWorker>()
+                    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                    .setInitialDelay(1, TimeUnit.MINUTES).build())
         }
         fun periodic(context: Context) {
             WorkManager.getInstance(context).enqueueUniquePeriodicWork("speech-periodic", ExistingPeriodicWorkPolicy.KEEP,
