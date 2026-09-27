@@ -47,6 +47,8 @@ class AlarmScheduler(private val context: Context) {
         cancelRing(id)
         if (weckt) set(id, false, current!!.nextAt)
         if (schlummert) set(id, true, current!!.snoozeUntil)
+        // Getrennt und fehlertolerant: der stille Hinweis eine Stunde vorher.
+        VorabHinweis.planen(context, id, current?.takeIf { weckt })
     }
     /** Plant ohne Exception nach außen; Fehler werden sichtbar am Wecker vermerkt. */
     fun scheduleSafely(alarm: Alarm): Boolean = try {
@@ -252,6 +254,7 @@ class AlarmScheduler(private val context: Context) {
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == VorabHinweis.ACTION_ZEIGEN || intent.action == VorabHinweis.ACTION_AUSLASSEN) { VorabHinweis.empfangen(context, intent); return }
         val id = intent.getStringExtra("id") ?: return
         val scheduler = AlarmScheduler(context)
         if (intent.action == SnoozeNotice.ACTION_END) {
@@ -261,6 +264,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val snooze = intent.getBooleanExtra("snooze", false)
         val claimed = scheduler.claim(id, snooze, intent.getLongExtra("at", 0)) ?: return
         if (snooze) SnoozeNotice.cancel(context, id)
+        VorabHinweis.entfernen(context, id)
         // Ringing is requested before any follow-up planning, so a planning failure can never silence this alarm.
         AlarmRinging.start(context, id)
         if (claimed.persisted) claimed.next?.let(scheduler::scheduleSafely)

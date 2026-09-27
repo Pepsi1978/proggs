@@ -24,6 +24,7 @@
     { "versionCode": 20, "versionName": "1.0.19", "stand": "27.09.2026, 22:27 Uhr", "notiz": "Auch in Traumraum und Morgenruhe klingelt beim Wecken ein wackelnder 3D-Wecker über der Uhrzeit." },
     { "versionCode": 21, "versionName": "1.0.20", "stand": "27.09.2026, 22:28 Uhr", "notiz": "Beim Klingeln in allen Designs zwei große runde Tasten: Schlummern in Rot mit Mond, Ausschalten in Grün mit Ein/Aus-Symbol, größere Schrift." },
     { "versionCode": 22, "versionName": "1.0.21", "stand": "27.09.2026, 22:30 Uhr", "notiz": "Ruhigere Texte: Weckbildschirm ohne technische Zählanzeige, Wecker zeigen einfach, dass die Ansage fertig auf dem Handy liegt." },
-    { "versionCode": 23, "versionName": "1.0.22", "stand": "27.09.2026, 22:31 Uhr", "notiz": "Beim Klingeln stehen unten nur noch die zwei Tasten, ohne Zusatzzeilen darunter." }
+    { "versionCode": 23, "versionName": "1.0.22", "stand": "27.09.2026, 22:31 Uhr", "notiz": "Beim Klingeln stehen unten nur noch die zwei Tasten, ohne Zusatzzeilen darunter." },
+    { "versionCode": 24, "versionName": "1.0.23", "stand": "27.09.2026, 22:34 Uhr", "notiz": "Neu: stiller Hinweis eine Stunde vor dem Wecken mit Diesmal auslassen (abschaltbar unter Benachrichtigungen). Weckbildschirm: Zeit zum Aufstehen, Gruß nicht mehr unter der Kamera." }
   ]
 }

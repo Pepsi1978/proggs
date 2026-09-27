@@ -179,6 +179,11 @@ private fun BenachrichtigungenKarte(vm: WeckerViewModel, activity: ComponentActi
         summary = "Schlafenszeit-Erinnerung ${if (on) SchlafErinnerung.leadMinutes(context).let { if (it == 0) "zur Schlafenszeit" else "$it Min. vorher" } else "aus"}" +
             "${if (on && blocked != null) " · gesperrt" else ""}",
         error = if (on && blocked != null) "Die Erinnerung ist eingeschaltet, wird von Android aber nicht angezeigt." else null) {
+        var vorab by remember(refresh) { mutableStateOf(VorabHinweis.aktiv(context)) }
+        Toggle("Hinweis eine Stunde vor dem Wecken", vorab) { vorab = it; VorabHinweis.setAktiv(context, it) }
+        Text("Still, mit „Diesmal auslassen“ – so überspringst du einen Wecker, ohne die App zu öffnen.",
+            style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+        HorizontalDivider(color = LocalGold.current.rahmen)
         Toggle("Schlafenszeit-Erinnerung", on) { checked ->
             // The switch shows the stored state only; a failed write keeps the old state and says so.
             val stored = SchlafErinnerung.setEnabled(context, checked)

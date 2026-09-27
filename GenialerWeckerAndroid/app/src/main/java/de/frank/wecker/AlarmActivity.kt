@@ -258,7 +258,8 @@ class AlarmActivity : ComponentActivity() {
                     LocalGestalt.current.Hintergrund(Modifier.fillMaxSize())
                     // Keyed by ring: animation state (scale, fade, ring exit) can never pass over to a new ring.
                     key(displayRing) {
-                        BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding()) {
+                        // Die Statusleiste ist ausgeblendet: ohne Aussparungs-Abstand läge der Gruß unter der Kamera.
+                        BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding().displayCutoutPadding().padding(top = 12.dp)) {
                             // Low landscape keeps the horizontal bottom bar instead of an overfilled side column.
                             val wide = maxWidth >= 600.dp && maxWidth > maxHeight && maxHeight >= 480.dp
                             val screenHeight = maxHeight
@@ -703,5 +704,5 @@ private fun gruss(now: Long): String = when (java.time.Instant.ofEpochMilli(now)
     in 4..10 -> "Guten Morgen"
     in 11..16 -> "Guten Tag"
     in 17..21 -> "Guten Abend"
-    else -> "Zeit aufzuwachen"
+    else -> "Zeit zum Aufstehen"
 }
