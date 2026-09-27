@@ -10,6 +10,7 @@
     { "versionCode": 6, "versionName": "1.0.5", "stand": "27.09.2026, 21:20 Uhr", "notiz": "Die bevorzugten Stimmen bleiben fest an die Google-Sprachausgabe gebunden, auch wenn das Handy eine andere Standard-Sprachausgabe nutzt." },
     { "versionCode": 7, "versionName": "1.0.6", "stand": "27.09.2026, 21:48 Uhr", "notiz": "Neu: Premium-Stimmen, die wie ein Mensch klingen – automatisch in der Sprache des Handys, mit einer einzigen Stimmauswahl; ohne Internet übernimmt die Gerätestimme." },
     { "versionCode": 8, "versionName": "1.0.7", "stand": "27.09.2026, 21:51 Uhr", "notiz": "Design Schlicht: Der Wecker im Kopfbereich ist jetzt ein plastischer 3D-Wecker mit Metallgehäuse, glänzenden Glocken und Glaskuppel." },
-    { "versionCode": 9, "versionName": "1.0.8", "stand": "27.09.2026, 21:55 Uhr", "notiz": "Neu: Diktieren mit Whisper-Spracherkennung direkt auf dem Handy – sehr genau, ohne Internet; das Sprachmodell wird einmalig geladen, mit Pegelanzeige beim Sprechen." }
+    { "versionCode": 9, "versionName": "1.0.8", "stand": "27.09.2026, 21:55 Uhr", "notiz": "Neu: Diktieren mit Whisper-Spracherkennung direkt auf dem Handy – sehr genau, ohne Internet; das Sprachmodell wird einmalig geladen, mit Pegelanzeige beim Sprechen." },
+    { "versionCode": 10, "versionName": "1.0.9", "stand": "27.09.2026, 22:02 Uhr", "notiz": "Technische Nachlieferung: Die Bibliotheken der Spracherkennung liegen jetzt vollständig bei; kein sichtbarer Unterschied." }
   ]
 }
