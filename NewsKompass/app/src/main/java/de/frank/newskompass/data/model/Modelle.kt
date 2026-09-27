@@ -95,6 +95,8 @@ data class Thema(
      * aufsteigend sortiert. Leer heißt: nur per Hand.
      */
     val uhrzeiten: List<Int> = STANDARD_UHRZEITEN,
+    /** An welchen Tagen die [uhrzeiten] gelten — täglich, alle x Tage, wöchentlich, monatlich oder jährlich. */
+    val rhythmus: Rhythmus = Rhythmus(),
 ) {
     /** Bringt alle Werte in die Grenzen, sorgt für min ≤ max und sortiert die Uhrzeiten. */
     fun normiert(): Thema {
@@ -103,6 +105,7 @@ data class Thema(
             minMeldungen = minMeldungen.coerceIn(GRENZE_MIN, max),
             maxMeldungen = max,
             uhrzeiten = uhrzeiten.map { it.coerceIn(0, MINUTEN_PRO_TAG - 1) }.distinct().sorted(),
+            rhythmus = rhythmus.normiert(),
         )
     }
 

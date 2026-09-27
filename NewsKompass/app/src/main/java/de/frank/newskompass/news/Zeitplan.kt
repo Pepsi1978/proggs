@@ -29,6 +29,8 @@ import de.frank.newskompass.ai.CodexFehler
 import de.frank.newskompass.ai.CodexFehlerArt
 import de.frank.newskompass.data.model.Thema
 import de.frank.newskompass.observability.KompassLog
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -39,12 +41,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
-/** Ein Termin aus dem Zeitplan: der Zeitpunkt und die eingestellte Uhrzeit in Minuten seit Mitternacht. */
-data class Termin(val zeit: ZonedDateTime, val minute: Int)
+/** Ein Termin aus dem Zeitplan: der Zeitpunkt und die IDs der Themen, die dann dran sind. */
+data class Termin(val zeit: ZonedDateTime, val themen: List<String>)
 
 /**
- * Jedes Thema hat eigene Uhrzeiten (Standard 5 und 17 Uhr). Zu jeder Uhrzeit, die irgendein
- * Thema trägt, klingelt der Wecker und recherchiert genau die Themen mit dieser Uhrzeit.
+ * Jedes Thema hat eigene Uhrzeiten (Standard 5 und 17 Uhr) und einen Rhythmus: täglich, alle
+ * x Tage, wöchentlich, monatlich oder jährlich. Zu jedem Termin klingelt der Wecker und
+ * recherchiert genau die Themen, die dann dran sind.
  *
  * Die Uhrzeit hält ein einziger AlarmManager-Wecker, der sich nach jedem Klingeln neu stellt
  * (Almanach A1/A10: One-shot plus Neuplanung, immer derselbe PendingIntent). Die eigentliche
@@ -54,9 +57,19 @@ object Zeitplan {
 
     const val LAUF = "news-lauf"
     const val FRAGE = "news-frage"
-    /** Eingabe des Laufs: Uhrzeiten (Minuten seit Mitternacht), deren Themen dran sind. Fehlt sie, laufen alle. */
-    const val TERMINE = "termine"
-    private const val EXTRA_MINUTE = "minute"
+    /**
+     * Eingabe des Laufs: je Thema „ID|Zeitpunkt“ des Termins, für den es dran ist. Fehlt sie,
+     * laufen alle. Der Zeitpunkt wird beim Start erneut geprüft — wartete der Lauf aufs Netz und
+     * wurde der Termin inzwischen geändert oder gestrichen, fällt das Thema weg.
+     */
+    const val THEMEN = "themen"
+    private const val EXTRA_THEMEN = "themen"
+    private const val EXTRA_UM = "um"
+
+    /** So weit schaut die Planung voraus — reicht für jährliche Themen, auch über den 29. Februar. */
+    private const val VORAUS_TAGE = 400L
+    /** So weit schaut das Nachholen beim App-Start zurück. */
+    private const val NACHHOLEN_STUNDEN = 48L
 
     /** Etikett am Frage-Auftrag, damit die Oberfläche die Frage schon vor dem Start zeigen kann. */
     const val FRAGE_ETIKETT = "frage:"
@@ -74,48 +87,78 @@ object Zeitplan {
     fun uhrzeiten(themen: List<Thema>): List<Int> =
         themen.filter { it.text.isNotBlank() }.flatMap { it.uhrzeiten }.distinct().sorted()
 
-    /** Die ausgefüllten Themen, die zu einer der [termine] dran sind; `null` heißt alle. */
-    fun themenFuer(themen: List<Thema>, termine: Collection<Int>?): List<Thema> =
-        themen.filter { it.text.isNotBlank() && (termine == null || it.uhrzeiten.any(termine::contains)) }
+    /**
+     * Die ausgefüllten Themen, die laut [auftrag] (Themen-ID → Zeitpunkt des Termins) nach dem
+     * aktuellen Zeitplan wirklich dran sind; `null` heißt alle.
+     */
+    fun themenFuer(themen: List<Thema>, auftrag: Map<String, Long>?): List<Thema> =
+        themen.filter { thema ->
+            thema.text.isNotBlank() && (auftrag == null || auftrag[thema.id]?.let { istDran(thema, it) } == true)
+        }
 
-    /** Alle Termine der Uhrzeiten von gestern bis morgen, frisch aus der Zeitzone gerechnet (Almanach A6). */
-    private fun termineUm(uhrzeiten: List<Int>, jetzt: ZonedDateTime): List<Termin> {
+    /** Hat [thema] nach seinen aktuellen Einstellungen genau um [um] einen Termin? */
+    fun istDran(thema: Thema, um: Long): Boolean {
         val zone = ZoneId.systemDefault()
-        val heute = jetzt.withZoneSameInstant(zone).toLocalDate()
-        return (-1L..1L).flatMap { tag ->
-            uhrzeiten.map { m -> Termin(ZonedDateTime.of(heute.plusDays(tag), LocalTime.of(m / 60, m % 60), zone), m) }
-        }.sortedBy { it.zeit }
+        val datum = Instant.ofEpochMilli(um).atZone(zone).toLocalDate()
+        return termineAm(listOf(thema), datum, zone).any { it.zeit.toInstant().toEpochMilli() == um }
     }
 
-    /** Nächster Termin nach [jetzt] — `null`, wenn kein Thema eine Uhrzeit hat. */
-    fun naechsterTermin(uhrzeiten: List<Int>, jetzt: ZonedDateTime = ZonedDateTime.now()): Termin? =
-        termineUm(uhrzeiten, jetzt).firstOrNull { it.zeit.isAfter(jetzt.plusSeconds(30)) }
+    /** Alle Termine an einem Tag, frisch aus der Zeitzone gerechnet (Almanach A6), der Zeit nach. */
+    private fun termineAm(themen: List<Thema>, datum: LocalDate, zone: ZoneId): List<Termin> =
+        themen.filter { it.text.isNotBlank() && it.rhythmus.trifft(datum) }
+            .flatMap { thema -> thema.uhrzeiten.map { m -> ZonedDateTime.of(datum, LocalTime.of(m / 60, m % 60), zone) to thema.id } }
+            .groupBy({ it.first }, { it.second })
+            .map { (zeit, ids) -> Termin(zeit, ids.distinct()) }
+            .sortedBy { it.zeit }
+
+    /** Nächster Termin nach [jetzt] über alle Themen — `null`, wenn keines je dran ist. */
+    fun naechsterTermin(themen: List<Thema>, jetzt: ZonedDateTime = ZonedDateTime.now()): Termin? {
+        val zone = ZoneId.systemDefault()
+        val heute = jetzt.withZoneSameInstant(zone).toLocalDate()
+        val ab = jetzt.plusSeconds(30)
+        for (tag in 0..VORAUS_TAGE) {
+            termineAm(themen, heute.plusDays(tag), zone).firstOrNull { it.zeit.isAfter(ab) }?.let { return it }
+        }
+        return null
+    }
+
+    /** Nächster Termin eines einzelnen Themas — für die Zusammenfassung in den Einstellungen. */
+    fun naechsterTermin(thema: Thema, jetzt: ZonedDateTime = ZonedDateTime.now()): ZonedDateTime? =
+        naechsterTermin(listOf(thema.copy(text = thema.text.ifBlank { "?" })), jetzt)?.zeit
 
     /**
-     * Termine der letzten 24 Stunden, bei denen mindestens ein Thema seither nicht gelaufen ist —
-     * für das Nachholen beim App-Start. [letzterLauf] ist je Themen-ID der Zeitpunkt seiner
-     * jüngsten Ausgabe. Jedes Thema zählt für sich: Ein späterer Lauf anderer Themen verdeckt
-     * keinen versäumten Termin.
+     * Themen, die in den letzten [NACHHOLEN_STUNDEN] Stunden dran waren und seither nicht gelaufen
+     * sind — je Thema mit seinem jüngsten versäumten Termin, für das Nachholen beim App-Start.
+     * [letzterLauf] ist je Themen-ID der Zeitpunkt seiner jüngsten Ausgabe. Jedes Thema zählt für
+     * sich: Ein späterer Lauf anderer Themen verdeckt keinen versäumten Termin.
      */
-    fun versaeumteTermine(themen: List<Thema>, letzterLauf: Map<String, Long>, jetzt: ZonedDateTime = ZonedDateTime.now()): List<Termin> =
-        termineUm(uhrzeiten(themen), jetzt)
-            .filter { !it.zeit.isAfter(jetzt) && it.zeit.isAfter(jetzt.minusDays(1)) }
-            .filter { termin ->
-                val um = termin.zeit.toInstant().toEpochMilli()
-                themenFuer(themen, listOf(termin.minute)).any { (letzterLauf[it.id] ?: 0L) < um }
-            }
+    fun versaeumt(themen: List<Thema>, letzterLauf: Map<String, Long>, jetzt: ZonedDateTime = ZonedDateTime.now()): Map<String, Long> {
+        val zone = ZoneId.systemDefault()
+        val heute = jetzt.withZoneSameInstant(zone).toLocalDate()
+        val grenze = jetzt.minusHours(NACHHOLEN_STUNDEN)
+        val offen = linkedMapOf<String, Long>()
+        for (tag in -(NACHHOLEN_STUNDEN / 24 + 1)..0L) {
+            termineAm(themen, heute.plusDays(tag), zone)
+                .filter { it.zeit.isAfter(grenze) && !it.zeit.isAfter(jetzt) }
+                .forEach { termin ->
+                    val um = termin.zeit.toInstant().toEpochMilli()
+                    termin.themen.filter { (letzterLauf[it] ?: 0L) < um }.forEach { offen[it] = um }
+                }
+        }
+        return offen
+    }
 
     fun plane(context: Context) {
         val app = context.applicationContext as NewsApplication
         val wecker = context.getSystemService(AlarmManager::class.java) ?: return
         val stand = app.einstellungen.stand.value
-        val termin = if (stand.zeitplanAktiv) naechsterTermin(uhrzeiten(stand.themen)) else null
+        val termin = if (stand.zeitplanAktiv) naechsterTermin(stand.themen) else null
         if (termin == null) {
             wecker.cancel(weckerAbsicht(context, null))
             KompassLog.info("Zeitplan", "plane", "Kein automatischer Lauf geplant")
             return
         }
-        val absicht = weckerAbsicht(context, termin.minute)
+        val absicht = weckerAbsicht(context, termin)
         val zeit = termin.zeit.toInstant().toEpochMilli()
         val genau = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || wecker.canScheduleExactAlarms()
         try {
@@ -127,31 +170,47 @@ object Zeitplan {
         } catch (fehler: SecurityException) {
             wecker.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, zeit, absicht)
         }
-        KompassLog.info("Zeitplan", "plane", "Nächster Lauf geplant", mapOf("um" to termin.zeit.toString(), "genau" to genau))
+        KompassLog.info("Zeitplan", "plane", "Nächster Lauf geplant", mapOf("um" to termin.zeit.toString(), "themen" to termin.themen.size, "genau" to genau))
     }
 
-    /** Immer derselbe PendingIntent (gleicher Code, gleiche Klasse); FLAG_UPDATE_CURRENT tauscht nur die Uhrzeit. */
-    private fun weckerAbsicht(context: Context, minute: Int?): PendingIntent = PendingIntent.getBroadcast(
+    /** Immer derselbe PendingIntent (gleicher Code, gleiche Klasse); FLAG_UPDATE_CURRENT tauscht nur den Termin. */
+    private fun weckerAbsicht(context: Context, termin: Termin?): PendingIntent = PendingIntent.getBroadcast(
         context,
         4711,
-        Intent(context, ZeitplanEmpfaenger::class.java).apply { if (minute != null) putExtra(EXTRA_MINUTE, minute) },
+        Intent(context, ZeitplanEmpfaenger::class.java).apply {
+            if (termin != null) {
+                putExtra(EXTRA_THEMEN, termin.themen.toTypedArray())
+                putExtra(EXTRA_UM, termin.zeit.toInstant().toEpochMilli())
+            }
+        },
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    /** Uhrzeit aus dem klingelnden Wecker; fehlt sie (Wecker aus einer älteren Version), `null` = alle Themen. */
-    fun minuteAus(intent: Intent): Int? = intent.getIntExtra(EXTRA_MINUTE, -1).takeIf { it >= 0 }
+    /** Auftrag aus dem klingelnden Wecker; fehlt er (Wecker aus einer älteren Version), `null` = alle Themen. */
+    fun auftragAus(intent: Intent): Map<String, Long>? {
+        val themen = intent.getStringArrayExtra(EXTRA_THEMEN) ?: return null
+        val um = intent.getLongExtra(EXTRA_UM, -1L).takeIf { it > 0 } ?: return null
+        return themen.associateWith { um }
+    }
+
+    /** Liest die Eingabe [THEMEN] eines Laufs zurück; `null` heißt alle Themen. */
+    fun auftragAus(eingabe: Array<String>?): Map<String, Long>? = eingabe?.mapNotNull { eintrag ->
+        val trenner = eintrag.lastIndexOf('|')
+        val um = eintrag.substring(trenner + 1).toLongOrNull()
+        if (trenner <= 0 || um == null) null else eintrag.substring(0, trenner) to um
+    }?.toMap()
 
     /**
      * Startet einen Lauf. Läuft schon einer, bleibt es bei dem.
      *
-     * [termine] sind die Uhrzeiten, deren Themen recherchiert werden; `null` heißt alle Themen
+     * [auftrag] ordnet jedem Thema den Zeitpunkt seines Termins zu; `null` heißt alle Themen
      * (Knopf „Aktualisieren“).
      */
-    fun starteLauf(context: Context, manuell: Boolean, termine: Collection<Int>? = null) {
-        val daten = if (termine == null) {
+    fun starteLauf(context: Context, manuell: Boolean, auftrag: Map<String, Long>? = null) {
+        val daten = if (auftrag == null) {
             workDataOf("manuell" to manuell)
         } else {
-            workDataOf("manuell" to manuell, TERMINE to termine.toIntArray())
+            workDataOf("manuell" to manuell, THEMEN to auftrag.map { (id, um) -> "$id|$um" }.toTypedArray())
         }
         val auftrag = OneTimeWorkRequestBuilder<NewsWorker>()
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -260,9 +319,9 @@ object Zeitplan {
 /** Der Wecker klingelt: Lauf anstoßen, nächsten Termin stellen. */
 class ZeitplanEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        val minute = Zeitplan.minuteAus(intent)
-        KompassLog.info("Zeitplan", "onReceive", "Wecker ausgelöst", mapOf("uhrzeit" to minute))
-        Zeitplan.starteLauf(context, manuell = false, termine = minute?.let(::listOf))
+        val auftrag = Zeitplan.auftragAus(intent)
+        KompassLog.info("Zeitplan", "onReceive", "Wecker ausgelöst", mapOf("themen" to auftrag?.size))
+        Zeitplan.starteLauf(context, manuell = false, auftrag = auftrag)
         Zeitplan.plane(context)
     }
 }
@@ -292,14 +351,15 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
         // Eine Recherche dauert Minuten — als Vordergrundarbeit überlebt sie die 10-Minuten-Grenze.
         runCatching { setForeground(vordergrund("Die Nachrichten werden zusammengestellt …")) }
             .onFailure { KompassLog.warn("NewsWorker", "doWork", "Kein Vordergrund möglich", mapOf("grund" to it.message)) }
-        val termine = inputData.getIntArray(Zeitplan.TERMINE)?.toList()
-        if (Zeitplan.themenFuer(app.einstellungen.stand.value.themen, termine).isEmpty()) {
-            // Die Uhrzeit wurde inzwischen bei allen Themen gestrichen — nichts zu tun.
-            KompassLog.info("NewsWorker", "doWork", "Kein Thema für diese Uhrzeit", mapOf("termine" to termine.toString()))
+        val auftrag = Zeitplan.auftragAus(inputData.getStringArray(Zeitplan.THEMEN))
+        val faellig = Zeitplan.themenFuer(app.einstellungen.stand.value.themen, auftrag)
+        if (faellig.isEmpty()) {
+            // Die Termine wurden inzwischen geändert, gestrichen oder die Themen gelöscht — nichts zu tun.
+            KompassLog.info("NewsWorker", "doWork", "Kein Thema mehr für diesen Termin", mapOf("themen" to auftrag?.size))
             return Result.success()
         }
         return try {
-            val ausgabe = app.recherche.laufe(termine) { stand ->
+            val ausgabe = app.recherche.laufe(if (auftrag == null) null else faellig.map { it.id }) { stand ->
                 setProgress(workDataOf("text" to stand.text, "anteil" to stand.anteil))
                 runCatching { setForeground(vordergrund(stand.text)) }
             }
