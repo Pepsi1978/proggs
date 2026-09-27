@@ -69,13 +69,6 @@ class SecureSettings(context: Context) : Closeable {
     }
     fun setzeStimme(sprache: String, name: String) { writeString("stimme2_$sprache", name) }
 
-    /** Einwilligung für Premium-Stimmen: "" = noch nicht gefragt, "ja", "nein". */
-    var premiumEinwilligung: String
-        get() = readString("premium_einwilligung", "")
-        set(value) = writeString("premium_einwilligung", value)
-    /** Die natürlichen Stimmen sind immer an; ohne Netz übernimmt still die Gerätestimme. */
-    val premiumErlaubt: Boolean get() = true
-
     /** Lieblingsstimmen (Stern); sie stehen in jeder Auswahl ganz oben. */
     var stimmFavoriten: Set<String>
         get() = readString("stimm_favoriten", "").split(',').filter(String::isNotBlank).toSet()

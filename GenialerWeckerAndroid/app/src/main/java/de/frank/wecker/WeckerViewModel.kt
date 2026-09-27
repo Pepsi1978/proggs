@@ -53,11 +53,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         freischaltungNoetig.value = true
         return false
     }
-    /** Angebotene Offline-Stimmen je Sprache (de/en/fr/es); null = noch nicht geprüft, leere Liste = nichts installiert. */
-    val stimmenJeSprache = MutableStateFlow<Map<String, List<LokaleStimmeInfo>>?>(null)
-    val stimmenFehler = MutableStateFlow("")
-    /** Welche Engine die Stimmen liefert; null = noch nicht geprüft. */
-    val stimmenEngine = MutableStateFlow<String?>(null)
+
     private var actionJob: Job? = null
     /** Owner of the busy banner; a cancelled older action must not clear the banner of a newer one. */
     private var busyOwner: Any? = null
@@ -71,19 +67,6 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     /** Changes whenever an editor is opened or closed; the same alarm id reopened is a new editor session. */
     private var editorGeneration = 0L
 
-    /** Einmalige Frage vor dem ersten Einsatz einer Premium-Stimme; danach läuft die gemerkte Aktion weiter. */
-    val premiumFrage = MutableStateFlow(false)
-    private var nachEinwilligung: (() -> Unit)? = null
-    fun einwilligung(ja: Boolean) {
-        settings.premiumEinwilligung = if (ja) "ja" else "nein"
-        premiumFrage.value = false
-        val aktion = nachEinwilligung; nachEinwilligung = null
-        settingsChanged()
-        aktion?.invoke()
-    }
-    private fun mitEinwilligung(voice: SyntheseStimme, aktion: () -> Unit) {
-        aktion()
-    }
 
     init {
         // Einmalig (1.0.6): Wecker mit fest gewählter Gerätestimme bekommen wieder die Vorgabe, also die Premium-Stimme.
@@ -154,8 +137,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     fun save(notificationsDenied: Boolean = false, done: () -> Unit) {
         val source = _draft.value ?: return
         if (!darfBearbeiten()) return
-        if (source.needsSpeech) mitEinwilligung(source.resolveVoice(SyntheseStimme(settings))) { speichern(source, notificationsDenied, done) }
-        else speichern(source, notificationsDenied, done)
+        speichern(source, notificationsDenied, done)
     }
     private fun speichern(source: Alarm, notificationsDenied: Boolean, done: () -> Unit) {
         val alarm = source.copy(enabled = true)
@@ -247,23 +229,6 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         settingsRevision.value++
         PreparationWorker.enqueue(app)
     }
-    /** Prüft je Sprache, welche Offline-Stimmen installiert sind (auch nach Rückkehr aus den Android-Einstellungen). */
-    fun ladeLokaleStimmen() {
-        viewModelScope.launch {
-            try {
-                val gefunden = LokaleStimmen.alleSprachen(app)
-                val vorher = stimmenJeSprache.value
-                stimmenJeSprache.value = gefunden; stimmenFehler.value = ""; stimmenEngine.value = LokaleStimmen.aktiveEngine
-                // Sprachdaten gerade nachgeladen: gescheiterte Vorbereitungen sofort nachholen, nicht erst im 15-Minuten-Lauf.
-                if (vorher != null && Sprachen.CODES.any { vorher[it].isNullOrEmpty() && !gefunden[it].isNullOrEmpty() }) PreparationWorker.enqueue(app)
-            }
-            catch (e: CancellationException) { throw e }
-            catch (e: Exception) {
-                stimmenJeSprache.value = Sprachen.CODES.associateWith { emptyList() }
-                stimmenFehler.value = e.message ?: "Die Sprachausgabe des Geräts ist nicht verfügbar."
-            }
-        }
-    }
     fun importMusic(uri: Uri, quelle: String = "datei") = runAction("Song vollständig auf dem Gerät speichern …") {
         val alarmId = _draft.value?.id ?: return@runAction
         val result = withContext(Dispatchers.IO) {
@@ -309,7 +274,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         // Dieselbe Auflösung wie beim Wecken: Sprache des Weckers bzw. die gewählte Sprache der Einstellungen.
         val voice = SyntheseStimme(settings).let { defaults -> alarm?.resolveVoice(defaults) ?: sprache?.let { defaults.fuerSprache(it) } ?: defaults }
             .let { v -> stimme?.let { v.copy(stimme = it) } ?: v }
-        mitEinwilligung(voice) { vorhoeren(voice, alarm, text) }
+        vorhoeren(voice, alarm, text)
     }
     private fun vorhoeren(voice: SyntheseStimme, alarm: Alarm?, text: String?) {
         stopPreview()

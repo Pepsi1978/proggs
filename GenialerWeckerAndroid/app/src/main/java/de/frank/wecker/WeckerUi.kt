@@ -2034,12 +2034,11 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
 private fun StimmeUndTempo(vm: WeckerViewModel, alarm: Alarm) {
     val revision by vm.settingsRevision.collectAsStateWithLifecycle()
     val busy by vm.busy.collectAsStateWithLifecycle()
-    val alle by vm.stimmenJeSprache.collectAsStateWithLifecycle()
+
     val defaults = remember(revision) { SyntheseStimme(vm.settings) }
     val effective = alarm.resolveVoice(defaults)
     val code = Sprachen.gueltig(alarm.sprache)
-    val liste = alle?.get(code).orEmpty()
-    fun name(id: String) = PremiumKatalog.finde(id)?.name ?: liste.firstOrNull { it.name == id }?.anzeige ?: "Gerätestimme"
+    fun name(id: String) = PremiumKatalog.finde(id)?.name ?: "Standardstimme"
     val standard = name(defaults.fuerSprache(code).stimme)
     val eigene = if (alarm.voiceProvider.isBlank()) "" else alarm.voiceId
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2648,33 +2647,6 @@ private fun LeererStart(now: Long, aufNeu: () -> Unit) {
             Text("Weckton, Musik und ein Text, den dir eine natürliche Stimme vorliest.",
                 style = MaterialTheme.typography.bodyMedium, color = gold.textGedaempft, textAlign = TextAlign.Center)
             GoldKnopf("Ersten Wecker anlegen", aufNeu, hauptKnopf = true, symbol = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) })
-        }
-    }
-}
-
-/** Glocken, Hammer und Füße eines klassischen Weckers — der Hintergrund hinter Schlichts Zifferblatt. */
-@Composable
-private fun WeckerSilhouette(modifier: Modifier) {
-    val gold = LocalGold.current
-    val farbe = gold.primaer
-    androidx.compose.foundation.Canvas(modifier) {
-        val r = size.minDimension / 2f
-        fun punkt(winkel: Float, abstand: Float) = Math.toRadians(winkel.toDouble()).let {
-            center + androidx.compose.ui.geometry.Offset((abstand * Math.cos(it)).toFloat(), (abstand * Math.sin(it)).toFloat())
-        }
-        val glocke = r * 0.34f
-        listOf(-128f, -52f).forEach { w ->
-            val mitte = punkt(w, r * 0.80f)
-            drawCircle(Brush.radialGradient(listOf(farbe.heller(0.35f), farbe, farbe.dunkler(0.25f)),
-                center = mitte - androidx.compose.ui.geometry.Offset(glocke * .3f, glocke * .3f), radius = glocke * 1.2f), glocke, mitte)
-        }
-        // Der Bügel mit dem Hammer zwischen den Glocken.
-        drawLine(farbe.dunkler(0.15f), punkt(-128f, r * 0.80f), punkt(-52f, r * 0.80f), 3.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
-        drawLine(farbe.dunkler(0.15f), punkt(-90f, r * 0.62f), punkt(-90f, r * 0.98f), 3.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
-        drawCircle(farbe, 4.dp.toPx(), punkt(-90f, r * 0.98f))
-        // Zwei Füße unten.
-        listOf(128f, 52f).forEach { w ->
-            drawLine(farbe.dunkler(0.2f), punkt(w, r * 0.72f), punkt(w, r * 0.99f), 5.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
         }
     }
 }

@@ -28,8 +28,8 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                 val textJson = JSONArray(groups.map { JSONObject().put("step", it.step).put("paragraphs", JSONArray(it.paragraphs)) }).toString()
                 fun signatur(v: SyntheseStimme) = hash(voiceKey(v) + textJson)
                 val wunsch = alarm.resolveVoice(voiceFactory())
-                // Premium nur mit Einwilligung; sonst (und als Rückfall) die beste Gerätestimme derselben Sprache.
-                val premium = wunsch.istPremium && settings.premiumErlaubt
+                // Natürliche Stimme; ohne Netz (und als Rückfall) die beste Gerätestimme derselben Sprache.
+                val premium = wunsch.istPremium
                 val latest = store.get(alarm.id) ?: return@withContext
                 if (!latest.sameSpeechAs(alarm)) return@withContext
                 val cached = latest.voiceVariants
@@ -87,7 +87,7 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
     /** Probe: Premium, wenn gewählt und erlaubt; ohne Netz ehrlich melden statt still eine andere Stimme abzuspielen. */
     suspend fun audio(text: String): File {
         val voice = voiceFactory()
-        if (!voice.istPremium || !settings.premiumErlaubt) return File(render(text, voice.alsGeraetestimme(), 0).path)
+        if (!voice.istPremium) return File(render(text, voice.alsGeraetestimme(), 0).path)
         if (!EdgeStimmen.netzDa(context)) throw SyntheseAbbruch("Für die Probe einer Premium-Stimme braucht das Handy kurz Internet. " +
             "Deine Wecker klingeln trotzdem – ihre Ansagen liegen fertig auf dem Gerät.")
         return File(render(text, voice, 0).path)

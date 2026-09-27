@@ -160,8 +160,7 @@ object LokaleStimmen {
         Intent("com.android.settings.TTS_SETTINGS"),
     ).map { it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
 
-    const val KEINE_STIMME = "Auf diesem Gerät ist keine deutsche Offline-Stimme installiert. " +
-        "Lade in den Android-Einstellungen unter „Sprachausgabe“ die deutschen Sprachdaten herunter."
+
 
     /** Hauptregion je Sprache zuerst (Deutschland, USA, Frankreich, Spanien). */
     private val HAUPTREGION = mapOf("de" to "DE", "en" to "US", "fr" to "FR", "es" to "ES")

@@ -261,16 +261,9 @@ class AlarmActivity : ComponentActivity() {
                     LocalGestalt.current.Hintergrund(Modifier.fillMaxSize())
                     // Keyed by ring: animation state (scale, fade, ring exit) can never pass over to a new ring.
                     key(displayRing) {
-                        // Nach der Bestätigung: 2,2 s völlige Ruhe, dann blendet der Inhalt in 0,6 s aus (Hintergrund bleibt).
-                        val inhaltSicht = remember { androidx.compose.animation.core.Animatable(1f) }
-                        val reduziertSchliessen = LocalBewegungReduziert.current
-                        LaunchedEffect(shownFeedback != null) {
-                            if (shownFeedback == null) { inhaltSicht.snapTo(1f); return@LaunchedEffect }
-                            delay(HALTEN_MS)
-                            if (!reduziertSchliessen) inhaltSicht.animateTo(0f, tween((BESTAETIGUNG_MS - HALTEN_MS).toInt(), easing = androidx.compose.animation.core.FastOutSlowInEasing))
-                        }
+
                         // Die Statusleiste ist ausgeblendet: ohne Aussparungs-Abstand läge der Gruß unter der Kamera.
-                        BoxWithConstraints(Modifier.fillMaxSize().graphicsLayer { alpha = inhaltSicht.value }.systemBarsPadding().displayCutoutPadding().padding(top = 12.dp)) {
+                        BoxWithConstraints(Modifier.fillMaxSize().systemBarsPadding().displayCutoutPadding().padding(top = 12.dp)) {
                             // Low landscape keeps the horizontal bottom bar instead of an overfilled side column.
                             val wide = maxWidth >= 600.dp && maxWidth > maxHeight && maxHeight >= 480.dp
                             val screenHeight = maxHeight
@@ -324,6 +317,7 @@ class AlarmActivity : ComponentActivity() {
                             }
                         }
                     }
+                    WeckBestaetigung(shownFeedback)
 
                 }
             }
@@ -571,9 +565,7 @@ private fun WeckSchritte(alarm: Alarm, step: String, variation: Int) {
  */
 @Composable
 private fun tasteRundForm(): androidx.compose.ui.graphics.Shape {
-    val tokens = de.frank.wecker.design.LocalDesignTokens.current
-    // Schlicht und Traumraum bleiben kreisrund; die kantigen Designs setzen ihren Radius.
-    @Suppress("UNUSED_VARIABLE") val ungenutzt = tokens
+    // In allen Designs kreisrund: große, eindeutige Weck-Tasten.
     return androidx.compose.foundation.shape.CircleShape
 }
 
@@ -605,17 +597,6 @@ private fun einmalFortschritt(active: Boolean, durationMs: Int): Float {
     return progress.value
 }
 
-/** Gleitet erst nach der Bestätigung des Dienstes ein; ohne Animation (reduziert oder nicht RESUMED) steht sie sofort. */
-@Composable
-private fun ErgebnisZeile(result: RingResult?) {
-    val progress = einmalFortschritt(result != null, 250)
-    val done = result ?: return
-    Text(if (done.action == "SNOOZE") "Schlummert bis ${formatClock(done.snoozeUntil)}" else "Wecker beendet",
-        Modifier.graphicsLayer { alpha = progress; translationY = (1f - progress) * 24.dp.toPx() },
-        style = MaterialTheme.typography.titleLarge, color = LocalGold.current.primaer,
-        textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-}
-
 /**
  * Zwei beschriftete Aktionen, ohne Scrollen erreichbar. Runde Tasten ab 96 dp; darunter kompakte rechteckige
  * Tasten mit umbrechender Beschriftung, bei wenig Breite untereinander.
@@ -629,28 +610,27 @@ private fun WeckTasten(alarm: Alarm, checking: Boolean, confirmed: String?, snoo
         val gap = if (screenHeight < 480.dp) 12.dp else 24.dp
         val byHeight = if (vertical) (screenHeight - gap - 160.dp) / 2 else screenHeight * 0.22f
         val byWidth = if (vertical) maxWidth else (maxWidth - gap) / 2
-        val entwurf = de.frank.wecker.design.LocalDesignTokens.current.design
         val diameter = minOf(176.dp, byHeight, byWidth)
         // Jedes Design ordnet anders an, ohne die Mindestmaße zu unterschreiten:
         // Morgenruhe stapelt mit dem Beenden-Knopf oben, Orbit stellt zwei gleich große
         // Module nebeneinander, Traumraum setzt zwei Kreise. Schlicht bleibt beim Platzverhalten.
         // In allen Designs dieselben großen runden Tasten: morgens ohne Brille sicher zu treffen.
         // Nur wenn der Platz dafür fehlt (sehr flaches Querformat), werden sie zu breiten Flächen.
-        @Suppress("UNUSED_VARIABLE") val designIgnoriert = entwurf
+
         val round = diameter >= 96.dp
         val stacked = vertical || (!round && (maxWidth - gap) / 2 < 140.dp)
         val snoozeDone = confirmed == "SNOOZE"
         val endDone = confirmed == "STOP"
         val snooze = @Composable { modifier: Modifier ->
-            Taste(round, diameter, if (snoozeDone) Icons.Default.Check else Icons.Default.Bedtime, if (snoozeDone) "Schlummert" else "Schlummern",
+            Taste(round, diameter, Icons.Default.Bedtime, "Schlummern",
                 TASTE_ROT, enabled = snoozeLeft > 0 || snoozeDone, main = false, confirmed = snoozeDone, faded = confirmed != null && !snoozeDone,
                 info = if (snoozeLeft > 0) "${alarm.snoozeMinutes} Min. · noch $snoozeLeft" else "Keine Schlummerpause mehr",
                 infoColor = if (snoozeLeft > 0) gold.textGedaempft else LocalSemantisch.current.warnung, onClick = onSnooze,
                 modifier = modifier.wackelnBeiFehler(snoozeWiggle))
         }
         val end = @Composable { modifier: Modifier ->
-            Taste(round, diameter, when { endDone -> Icons.Default.Check; alarm.photoRequired -> Icons.Default.PhotoCamera; else -> Icons.Default.PowerSettingsNew },
-                when { endDone -> "Aus"; checking -> "Prüfe …"; else -> "Ausschalten" }, TASTE_GRUEN, enabled = !checking || endDone, main = true,
+            Taste(round, diameter, if (alarm.photoRequired) Icons.Default.PhotoCamera else Icons.Default.PowerSettingsNew,
+                if (checking && !endDone) "Prüfe …" else "Ausschalten", TASTE_GRUEN, enabled = !checking || endDone, main = true,
                 confirmed = endDone, faded = confirmed != null && !endDone,
                 info = if (alarm.photoRequired) "Mit Foto-Aufgabe" else "", infoColor = gold.textGedaempft, onClick = onEnd,
                 modifier = modifier.wackelnBeiFehler(endWiggle))
@@ -708,7 +688,6 @@ private fun Taste(round: Boolean, diameter: androidx.compose.ui.unit.Dp, icon: a
             } else content()
         }
         // Unter den Tasten steht nichts mehr: Dauer und Restanzahl lenken morgens nur ab.
-        @Suppress("UNUSED_VARIABLE") val ungenutzt = info to infoColor
     }
 }
 
@@ -720,6 +699,33 @@ private fun gruss(now: Long): String = when (java.time.Instant.ofEpochMilli(now)
     else -> "Zeit zum Aufstehen"
 }
 
-/** Gesamtdauer ab Bestätigung bis zum Schließen, davon [HALTEN_MS] völlig ruhig, der Rest weiches Ausblenden. */
+/** So lange steht der Bestätigungsbildschirm, bevor der Weckbildschirm ohne weitere Animation schließt. */
 private const val BESTAETIGUNG_MS = 2800L
-private const val HALTEN_MS = 2200L
+
+/**
+ * Nach Ausschalten oder Schlummern öffnet sich langsam ein eigener ruhiger Bildschirm („Wecker aus“ bzw.
+ * „Schlummert bis …“) und bleibt stehen, bis der Weckbildschirm schließt. Die Tasten selbst ändern sich nicht.
+ */
+@Composable
+private fun WeckBestaetigung(result: RingResult?) {
+    val done = result ?: return
+    val gold = LocalGold.current
+    val reduziert = LocalBewegungReduziert.current
+    val sicht = remember(done) { androidx.compose.animation.core.Animatable(if (reduziert) 1f else 0f) }
+    LaunchedEffect(done) { if (!reduziert) sicht.animateTo(1f, tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+    val schlummer = done.action == "SNOOZE"
+    val farbe = if (schlummer) TASTE_ROT else TASTE_GRUEN
+    Box(Modifier.fillMaxSize().graphicsLayer { alpha = sicht.value }.background(gold.hintergrund), contentAlignment = Alignment.Center) {
+        LocalGestalt.current.Hintergrund(Modifier.fillMaxSize())
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.padding(24.dp).graphicsLayer { val s = .94f + .06f * sicht.value; scaleX = s; scaleY = s }) {
+            Box(Modifier.size(120.dp).background(farbe, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+                Icon(if (schlummer) Icons.Default.Bedtime else Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(64.dp))
+            }
+            Text(if (schlummer) "Schlummert bis ${formatClock(done.snoozeUntil)}" else "Wecker aus",
+                style = MaterialTheme.typography.headlineMedium, color = gold.textPrimaer,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text(if (schlummer) "Bis gleich." else "Einen schönen Tag!", style = MaterialTheme.typography.bodyLarge, color = gold.textGedaempft)
+        }
+    }
+}

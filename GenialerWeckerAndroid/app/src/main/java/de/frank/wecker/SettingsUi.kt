@@ -49,9 +49,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
     val settings = vm.settings
     val busy by vm.busy.collectAsStateWithLifecycle()
     val permissions = rememberReadiness()
-    val stimmenJeSprache by vm.stimmenJeSprache.collectAsStateWithLifecycle()
-    val stimmenFehler by vm.stimmenFehler.collectAsStateWithLifecycle()
-    val stimmenEngine by vm.stimmenEngine.collectAsStateWithLifecycle()
+
     var rate by remember(revision) { mutableFloatStateOf(settings.ttsSpeechRate) }
     // Zurück aus den Android-Einstellungen (Sprachdaten geladen): Stimmen neu prüfen.
     val lebenszyklus = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -143,7 +141,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         FreischaltungsKarte(activity)
         Section("Genialer Wecker") {
             Text("Version ${BuildConfig.VERSION_NAME} · ${BuildConfig.VERSION_BUMPED_AT}")
-            Text("Weckt zuverlässig ohne Internet: Weckton, eigene Musik, vorgelesener Text mit Premium- oder Gerätestimme und Foto-Aufgabe.", style = MaterialTheme.typography.bodySmall)
+            Text("Weckt zuverlässig ohne Internet: Weckton, eigene Musik, vorgelesener Text mit natürlicher Stimme und Foto-Aufgabe.", style = MaterialTheme.typography.bodySmall)
         }
         Spacer(Modifier.height(16.dp))
        }
