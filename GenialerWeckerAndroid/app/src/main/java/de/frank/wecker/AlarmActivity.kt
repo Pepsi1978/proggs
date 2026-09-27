@@ -409,11 +409,21 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
     // Show the live clock, not the alarm time, so the user always sees the current time.
     val now = rememberNow()
     val name = alarm?.name ?: "Der Wecker wird geöffnet …"
+    // Der 3D-Wecker klingelt sichtbar: kurze Wackelstöße, dann Ruhe – bei reduzierter Bewegung steht er still.
+    val wackelt = alarm != null && !verlaesst && !LocalBewegungReduziert.current
+    val wackeln = if (!wackelt) 0f else androidx.compose.animation.core.rememberInfiniteTransition(label = "klingeln").animateFloat(0f, 0f,
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.keyframes {
+            durationMillis = 1600
+            0f at 0; 5f at 60; -5f at 120; 5f at 180; -5f at 240; 4f at 300; -4f at 360; 2f at 420; 0f at 480; 0f at 1600
+        }), label = "wackeln").value
+    val wackelnd = Modifier.graphicsLayer { rotationZ = wackeln; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.85f) }
+    val figur = (minOf(contentWidth * 0.4f, contentHeight * 0.22f)).coerceIn(0.dp, 150.dp)
     when (entwurf) {
         de.frank.wecker.design.Design.TRAUMRAUM -> {
             val form = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp)
             Column(Modifier.fillMaxWidth().clip(form).background(gold.flaecheErhoeht).padding(vertical = 30.dp, horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (figur >= 90.dp) Wecker3DFigur(now, figur, wackelnd)
                 Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
                 // Genau der Stil, mit dem gemessen wurde — dadurch passt die Uhrzeit nachweislich.
                 Text(formatClock(now), maxLines = 1, softWrap = false,
@@ -427,6 +437,7 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
         de.frank.wecker.design.Design.MORGENRUHE -> {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (figur >= 90.dp) Wecker3DFigur(now, figur, wackelnd)
                 Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
                 Text(formatClock(now), maxLines = 1, softWrap = false,
                     style = uhrStil(contentWidth, 76f, zahlSchrift(),
@@ -456,19 +467,10 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
             val factor = if (alarm?.photoRequired == true) 0.30f else 0.42f
             val raw = minOf(contentWidth * 0.8f, contentHeight * factor)
             val ring = if (raw < 140.dp) null else raw.coerceAtMost(300.dp)
-            // Der 3D-Wecker klingelt sichtbar: kurze Wackelstöße, dann Ruhe – bei reduzierter Bewegung steht er still.
-            val wackelt = alarm != null && !verlaesst && !LocalBewegungReduziert.current
-            val wackeln = if (!wackelt) 0f else androidx.compose.animation.core.rememberInfiniteTransition(label = "klingeln").animateFloat(0f, 0f,
-                androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.keyframes {
-                    durationMillis = 1600
-                    0f at 0; 5f at 60; -5f at 120; 5f at 180; -5f at 240; 4f at 300; -4f at 360; 2f at 420; 0f at 480; 0f at 1600
-                }), label = "wackeln").value
+
             if (ring != null) Box(Modifier.size(ring), contentAlignment = Alignment.Center) {
                 WeckPuls(ringing = alarm != null, leaving = verlaesst, modifier = Modifier.matchParentSize())
-                Wecker3DFigur(now, ring * 0.66f, Modifier.graphicsLayer {
-                    rotationZ = wackeln
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.85f)
-                })
+                Wecker3DFigur(now, ring * 0.66f, wackelnd)
             }
             Text(formatClock(now), maxLines = 1, softWrap = false, style = uhrStil(contentWidth, 72f, zahlSchrift(), null, gold.primaer))
             Text(name, style = MaterialTheme.typography.headlineMedium,
