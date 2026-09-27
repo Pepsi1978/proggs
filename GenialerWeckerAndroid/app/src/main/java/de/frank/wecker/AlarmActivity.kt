@@ -454,7 +454,8 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
             }
         }
         de.frank.wecker.design.Design.ORBIT -> {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Kopfzeile bleibt über die ganze Breite verteilt; Wecker, Uhrzeit und Name stehen mittig wie in den anderen Designs.
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("WECKER AKTIV", fontFamily = IdeenSchriftFest, color = gold.akzentWarm,
                         style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp)
@@ -466,7 +467,7 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
                 Text(formatClock(now), maxLines = 1, softWrap = false,
                     style = uhrStil(contentWidth, 80f, zahlSchrift(),
                         androidx.compose.ui.text.font.FontWeight.SemiBold, gold.primaer))
-                Text(name, style = MaterialTheme.typography.titleLarge)
+                Text(name, style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
         else -> {
