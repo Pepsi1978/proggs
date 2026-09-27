@@ -14,6 +14,8 @@ import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** Hält die langlebigen Bausteine — ein Exemplar für Oberfläche und Hintergrundlauf. */
@@ -32,7 +34,13 @@ class NewsApplication : Application() {
         super.onCreate()
         KompassLog.start(this, UUID.randomUUID().toString().take(8))
         Zeitplan.legeKanaeleAn(this)
-        Zeitplan.plane(this)
+        // Wecker neu stellen, sobald sich Uhrzeiten, Themen oder der Schalter ändern — auch gleich beim Start.
+        bereich.launch {
+            einstellungen.stand
+                .map { it.zeitplanAktiv to Zeitplan.uhrzeiten(it.themen) }
+                .distinctUntilChanged()
+                .collect { Zeitplan.plane(this@NewsApplication) }
+        }
         bereich.launch { speicher.lade() }
         bereich.launch { Teilen.raeumeAuf(this@NewsApplication) }
     }
