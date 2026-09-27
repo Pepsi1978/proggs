@@ -567,10 +567,13 @@ private fun WeckSchritte(alarm: Alarm, step: String, variation: Int) {
 private fun tasteRundForm(): androidx.compose.ui.graphics.Shape {
     val tokens = de.frank.wecker.design.LocalDesignTokens.current
     // Schlicht und Traumraum bleiben kreisrund; die kantigen Designs setzen ihren Radius.
-    return if (tokens.design == de.frank.wecker.design.Design.SCHLICHT || tokens.tasteRadius >= 100.dp)
-        androidx.compose.foundation.shape.CircleShape
-    else androidx.compose.foundation.shape.RoundedCornerShape(tokens.tasteRadius)
+    @Suppress("UNUSED_VARIABLE") val ungenutzt = tokens
+    return androidx.compose.foundation.shape.CircleShape
 }
+
+/** Einheitliche Signalfarben der Weck-Tasten in allen Designs: Schlummern rot, Ausschalten grün. */
+private val TASTE_ROT = Color(0xFFD64541)
+private val TASTE_GRUEN = Color(0xFF2E9D5B)
 
 /**
  * Fortschritt 0..1 einer einmaligen Bestätigungsanimation. Läuft nur bei RESUMED und aktiven Systemanimationen;
@@ -625,29 +628,23 @@ private fun WeckTasten(alarm: Alarm, checking: Boolean, confirmed: String?, snoo
         // Jedes Design ordnet anders an, ohne die Mindestmaße zu unterschreiten:
         // Morgenruhe stapelt mit dem Beenden-Knopf oben, Orbit stellt zwei gleich große
         // Module nebeneinander, Traumraum setzt zwei Kreise. Schlicht bleibt beim Platzverhalten.
-        val round = when (entwurf) {
-            de.frank.wecker.design.Design.MORGENRUHE -> false
-            de.frank.wecker.design.Design.TRAUMRAUM -> diameter >= 96.dp
-            de.frank.wecker.design.Design.ORBIT -> false
-            else -> diameter >= 96.dp
-        }
-        val stacked = when (entwurf) {
-            de.frank.wecker.design.Design.MORGENRUHE -> true
-            de.frank.wecker.design.Design.ORBIT -> (maxWidth - gap) / 2 < 140.dp
-            else -> vertical || (!round && (maxWidth - gap) / 2 < 140.dp)
-        }
+        // In allen Designs dieselben großen runden Tasten: morgens ohne Brille sicher zu treffen.
+        // Nur wenn der Platz dafür fehlt (sehr flaches Querformat), werden sie zu breiten Flächen.
+        @Suppress("UNUSED_VARIABLE") val designIgnoriert = entwurf
+        val round = diameter >= 96.dp
+        val stacked = vertical || (!round && (maxWidth - gap) / 2 < 140.dp)
         val snoozeDone = confirmed == "SNOOZE"
         val endDone = confirmed == "STOP"
         val snooze = @Composable { modifier: Modifier ->
-            Taste(round, diameter, if (snoozeDone) Icons.Default.Check else Icons.Default.Snooze, if (snoozeDone) "Schlummert" else "Schlummern",
-                LocalSemantisch.current.info, enabled = snoozeLeft > 0 || snoozeDone, main = false, confirmed = snoozeDone, faded = confirmed != null && !snoozeDone,
+            Taste(round, diameter, if (snoozeDone) Icons.Default.Check else Icons.Default.Bedtime, if (snoozeDone) "Schlummert" else "Schlummern",
+                TASTE_ROT, enabled = snoozeLeft > 0 || snoozeDone, main = false, confirmed = snoozeDone, faded = confirmed != null && !snoozeDone,
                 info = if (snoozeLeft > 0) "${alarm.snoozeMinutes} Min. · noch $snoozeLeft" else "Keine Schlummerpause mehr",
                 infoColor = if (snoozeLeft > 0) gold.textGedaempft else LocalSemantisch.current.warnung, onClick = onSnooze,
                 modifier = modifier.wackelnBeiFehler(snoozeWiggle))
         }
         val end = @Composable { modifier: Modifier ->
-            Taste(round, diameter, when { endDone -> Icons.Default.Check; alarm.photoRequired -> Icons.Default.PhotoCamera; else -> Icons.Default.AlarmOff },
-                when { endDone -> "Beendet"; checking -> "Prüfe …"; else -> "Beenden" }, gold.primaer, enabled = !checking || endDone, main = true,
+            Taste(round, diameter, when { endDone -> Icons.Default.Check; alarm.photoRequired -> Icons.Default.PhotoCamera; else -> Icons.Default.PowerSettingsNew },
+                when { endDone -> "Aus"; checking -> "Prüfe …"; else -> "Ausschalten" }, TASTE_GRUEN, enabled = !checking || endDone, main = true,
                 confirmed = endDone, faded = confirmed != null && !endDone,
                 info = if (alarm.photoRequired) "Mit Foto-Aufgabe" else "", infoColor = gold.textGedaempft, onClick = onEnd,
                 modifier = modifier.wackelnBeiFehler(endWiggle))
@@ -678,12 +675,12 @@ private fun Taste(round: Boolean, diameter: androidx.compose.ui.unit.Dp, icon: a
             (androidx.compose.animation.fadeIn(spec) togetherWith androidx.compose.animation.fadeOut(spec)).using(null)
         }, label = "tasteInhalt") { (shownIcon, shownLabel) ->
             if (round) Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Icon(shownIcon, contentDescription = null, tint = onColor, modifier = Modifier.size(diameter * 0.3f))
-                Text(shownLabel, color = onColor, fontSize = if (diameter < 110.dp) 13.sp else 16.sp,
+                Icon(shownIcon, contentDescription = null, tint = onColor, modifier = Modifier.size(diameter * 0.32f))
+                Text(shownLabel, color = onColor, fontSize = if (diameter < 110.dp) 15.sp else 19.sp,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, softWrap = false)
             } else Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(shownIcon, contentDescription = null, tint = onColor, modifier = Modifier.size(24.dp))
-                Text(shownLabel, color = onColor, fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                Icon(shownIcon, contentDescription = null, tint = onColor, modifier = Modifier.size(28.dp))
+                Text(shownLabel, color = onColor, fontSize = 19.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
