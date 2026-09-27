@@ -268,6 +268,14 @@ object Zeitplan {
         reiheLaufEin(context)
     }
 
+    /**
+     * Gesetzt, sobald der laufende Auftrag keine offenen Termine mehr sieht und gleich endet. Wer jetzt
+     * einen Termin vormerkt, ersetzt ihn (REPLACE) — KEEP würde den neuen Auftrag verwerfen, weil der
+     * alte formal noch läuft, und der Termin bliebe bis zum nächsten Wecker liegen.
+     */
+    @Volatile
+    internal var laufEndet = false
+
     /** Stößt den Lauf an, der die vorgemerkten Termine abarbeitet. */
     private fun reiheLaufEin(context: Context) {
         val auftrag = OneTimeWorkRequestBuilder<NewsWorker>()
@@ -275,7 +283,8 @@ object Zeitplan {
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 2, TimeUnit.MINUTES)
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(LAUF, ExistingWorkPolicy.KEEP, auftrag)
+        val regel = if (laufEndet) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
+        WorkManager.getInstance(context).enqueueUniqueWork(LAUF, regel, auftrag)
     }
 
     /**
@@ -486,7 +495,15 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
         // Solange Termine vorgemerkt sind, weiterarbeiten — auch die, die während des Laufs dazukamen.
         while (true) {
             // Lesen, nicht herausnehmen: Die Termine bleiben vorgemerkt, bis sie erledigt oder endgültig gescheitert sind.
-            val (alle, termine) = app.einstellungen.offeneLaeufe() ?: break
+            Zeitplan.laufEndet = false
+            val offen = app.einstellungen.offeneLaeufe() ?: run {
+                // Übergabe ohne Lücke: erst „endet“ melden, dann noch einmal nachsehen. Kam dazwischen ein Termin,
+                // arbeitet dieser Auftrag weiter; kommt er danach, ersetzt der neue Auftrag diesen.
+                Zeitplan.laufEndet = true
+                app.einstellungen.offeneLaeufe()
+            } ?: break
+            Zeitplan.laufEndet = false
+            val (alle, termine) = offen
             if (alle && System.currentTimeMillis() - alleErledigtUm < Zeitplan.SCHON_ERLEDIGT_MS) {
                 KompassLog.info("NewsWorker", "doWork", "Alle Themen liefen gerade erst — kein zweiter Lauf")
                 // Nur die Marke „alle“ löschen; vorgemerkte Termine gehen den normalen Weg durch den erledigt-Filter.
