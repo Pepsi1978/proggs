@@ -1903,10 +1903,10 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 GoldKnopf("Uhrzeit ändern", pickTime)
             }
             Eingabefeld(alarm.name, { vm.change(alarm.copy(name = it)) }, "Name des Weckers", Modifier.fillMaxWidth())
-            SchlafdauerEingabe(alarm, vm::change)
-            // Die Wiederholung gehört zur Weckzeit — hier sieht man sofort, dass der Wecker auch täglich klingeln kann.
-            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            // Die Wiederholung gehört direkt zur Uhrzeit; die Schlafdauer folgt danach.
             RepeatEditor(alarm, activity, gemerktesDatum, { gemerktesDatum = it }, vm::change)
+            HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            SchlafdauerEingabe(alarm, vm::change)
         }
         Section("Dein Weckablauf", collapsible = true, summary = alarm.steps.joinToString(" → ") { it.title }.ifBlank { "Kein Schritt gewählt" },
             error = if (alarm.steps.isEmpty()) "Wähle mindestens einen Weckschritt."
@@ -2238,7 +2238,7 @@ private fun RepeatEditor(alarm: Alarm, activity: ComponentActivity, gemerktesDat
             else -> alarm.copy(days = emptySet(), intervalDays = 0, repeatUnit = "", repeatEvery = 0)
         })
     }
-    Text("Wann soll er wecken?", style = MaterialTheme.typography.labelLarge)
+    Text("Wiederholen", style = MaterialTheme.typography.labelLarge)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         listOf("once" to "Einmalig", "daily" to "Täglich", "weekdays" to "An Wochentagen",
             "interval" to "Alle X Tage", "month" to "Monatlich", "year" to "Jährlich").forEach { (id, label) ->
