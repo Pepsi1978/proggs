@@ -33,6 +33,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
@@ -171,6 +173,8 @@ class NewsRecherche(
         val fertig = bebildere(listOf(block), stand, vorige) { text -> beiFortschritt(LaufFortschritt(text, 0.6f)) }.first()
         vergiss(listOf(block))
 
+        // Wurde die Frage inzwischen verworfen, nicht mehr ins Archiv schreiben.
+        currentCoroutineContext().ensureActive()
         val ausgabe = speicher.haengeAn(fertig, jetzt)
         beiFortschritt(LaufFortschritt("Fertig", 1f))
         ausgabe to fertig

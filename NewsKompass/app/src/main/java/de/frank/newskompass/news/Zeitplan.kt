@@ -338,7 +338,7 @@ object Zeitplan {
     suspend fun verwirfFrage(context: Context, id: UUID) {
         val info = withContext(Dispatchers.IO) { WorkManager.getInstance(context).getWorkInfoById(id).get() }
         if (info == null || info.state.isFinished) return
-        aendereVerworfen(context) { it + id.toString() }
+        withContext(Dispatchers.IO) { aendereVerworfen(context) { it + id.toString() } }
         KompassLog.info("Zeitplan", "verwirfFrage", "Frage verworfen", mapOf("laeuft" to (info.state == WorkInfo.State.RUNNING)))
     }
 
@@ -627,6 +627,7 @@ class FrageWorker(context: Context, parameter: WorkerParameters) : CoroutineWork
                 block.meldungen.take(6).map { it.titel },
                 Zeitplan.hinweisNummer(block.themaId),
             )
+            Zeitplan.vergissVerworfen(applicationContext, id)
             Result.success(workDataOf("ausgabeId" to ausgabe.id, "themaId" to block.themaId))
         } catch (abbruch: CancellationException) {
             if (currentCoroutineContext().isActive && id.toString() in verworfen.value) {
@@ -640,6 +641,7 @@ class FrageWorker(context: Context, parameter: WorkerParameters) : CoroutineWork
             if (netz && fehler !is IllegalStateException && runAttemptCount < 2) {
                 Result.retry()
             } else {
+                Zeitplan.vergissVerworfen(applicationContext, id)
                 Result.success(workDataOf("fehler" to (fehler.message ?: "Die Frage konnte nicht recherchiert werden.")))
             }
         }

@@ -108,9 +108,14 @@ class AusgabenSpeicher(context: Context) {
             if (withContext(Dispatchers.IO) { File(ordner, "$id.json").exists() }) markiereBeschaedigt(id)
             return null
         }
-        if (merken) synchronized(zwischenspeicher) { zwischenspeicher[id] = gelesen }
+        // Nur einsetzen, wenn inzwischen kein Schreiber eine neuere Fassung hinterlegt hat — sonst verdrängte
+        // die eben (vor dem Schreiben) gelesene alte Fassung die neue.
+        if (merken) synchronized(zwischenspeicher) { if (!zwischenspeicher.containsKey(id)) zwischenspeicher[id] = gelesen }
         return gelesen
     }
+
+    /** Liest eine Ausgabe frisch aus ihrer Datei, am Zwischenspeicher vorbei. */
+    suspend fun ausgabeAusDatei(id: String): Ausgabe? = withContext(Dispatchers.IO) { leseDatei(id) }
 
     private suspend fun markiereBeschaedigt(id: String) = sperre.withLock {
         withContext(Dispatchers.IO) {

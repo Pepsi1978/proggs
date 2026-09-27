@@ -229,7 +229,9 @@ class CodexClient(context: Context) {
             } catch (fehler: CodexFehler) {
                 // Erneuerung endgültig abgelehnt: Zugang verwerfen, damit die App „nicht angemeldet“ zeigt
                 // statt „Angemeldet“, während jeder Lauf scheitert.
-                if (fehler.art == CodexFehlerArt.ANMELDUNG) ablage.edit().remove(SCHL_ZUGANG).apply()
+                val endgueltig = ergebnis.code == 401 || ergebnis.rumpf.contains("invalid_grant") ||
+                    ergebnis.rumpf.contains("refresh_token_reused")
+                if (fehler.art == CodexFehlerArt.ANMELDUNG && endgueltig) ablage.edit().remove(SCHL_ZUGANG).apply()
                 throw fehler
             }
             val json = leseJson(ergebnis.rumpf, "Die Erneuerung lieferte keine gültigen Daten.")

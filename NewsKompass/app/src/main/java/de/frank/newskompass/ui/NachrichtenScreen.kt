@@ -258,7 +258,9 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
             if (eintrag == null || block == null) {
                 // Noch nicht im Speicher angekommen — der nächste Durchlauf findet ihn. Steht die Ausgabe schon
                 // da, aber ohne den Block, wurde er entfernt: dann gibt es nichts mehr vorzulesen.
-                if (info.state != WorkInfo.State.SUCCEEDED || ausgabeId == null || (eintrag != null && antwort != null)) {
+                val entfernt = eintrag != null && antwort != null &&
+                    app.speicher.ausgabeAusDatei(eintrag.id)?.let { datei -> datei.bloecke.none { it.themaId == themaId } } == true
+                if (info.state != WorkInfo.State.SUCCEEDED || ausgabeId == null || entfernt) {
                     app.sprachFrage.erledigt(info.id)
                 }
                 continue
