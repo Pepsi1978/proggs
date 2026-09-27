@@ -84,6 +84,10 @@ $gradleTask = if ($eintrag.gradleTask) { $eintrag.gradleTask } else { $cfg.stand
 $apkOrdner  = if ($eintrag.apkOrdner)  { $eintrag.apkOrdner }  else { $cfg.standard.apkOrdner }
 
 $gradleText = [IO.File]::ReadAllText($gradleFile)
+# Gemeinsame Quellordner neben dem Projekt (z. B. rootProject.file("../KompassKern/src/main/java")) gehören
+# zum Stand der App: Ihre Änderungen zählen bei allen Git-Prüfungen und der Entscheidung "schon aktuell" mit.
+$quellen = @($Projekt) + @([regex]::Matches($gradleText, '\.\./([A-Za-z0-9][A-Za-z0-9_.\-]*)/') | ForEach-Object { $_.Groups[1].Value } |
+    Where-Object { $_ -ne $Projekt -and (Test-Path (Join-Path $proggs $_) -PathType Container) } | Sort-Object -Unique)
 $erwartetesPaket = $eintrag.paket
 if (-not $erwartetesPaket) {
     $ids = [regex]::Matches($gradleText, 'applicationId\s*=\s*"([^"]+)"')
@@ -258,7 +262,7 @@ $versionCode = [int]$eintraege[-1].versionCode
 
 # --- Nur committeten, gepushten Stand bewerten (vor jeder Bump- oder Veröffentlichungsentscheidung) ---
 # Sonst nennt update.json einen Commit, aus dem die APK nicht gebaut wurde.
-$offen = @(git -C $proggs status --porcelain -- $Projekt 2>&1)
+$offen = @(git -C $proggs status --porcelain -- @quellen 2>&1)
 if ($LASTEXITCODE -ne 0) { Fehler "git status für $Projekt fehlgeschlagen: $($offen -join ' ')" }
 if ($offen.Count -gt 0) { Fehler "Offene Änderungen in $Projekt ($(($offen | Select-Object -First 5) -join '; ')). Erst committen und pushen, dann veröffentlichen." }
 # Ohne erfolgreichen Abgleich ist nicht belegt, dass der Stand gepusht und aktuell ist: abbrechen.
@@ -266,7 +270,7 @@ git -C $proggs fetch --quiet 2>$null
 if ($LASTEXITCODE -ne 0) { Fehler "git fetch fehlgeschlagen – ohne Abgleich mit origin wird nicht veröffentlicht." }
 $hinter = git -C $proggs rev-list --count 'HEAD..@{u}' 2>$null
 if ($LASTEXITCODE -ne 0) { Fehler "Kein Upstream-Branch für den Abgleich mit origin." }
-$vorn = git -C $proggs rev-list --count '@{u}..HEAD' -- $Projekt 2>$null
+$vorn = git -C $proggs rev-list --count '@{u}..HEAD' -- @quellen 2>$null
 if ($LASTEXITCODE -ne 0) { Fehler "Abgleich der Projekt-Commits mit origin fehlgeschlagen." }
 if ([int]$hinter -gt 0) { Fehler "Lokaler Stand liegt $hinter Commits hinter origin. Erst git pull --rebase --autostash." }
 if ([int]$vorn -gt 0) { Fehler "$vorn Commits an $Projekt sind noch nicht gepusht. Erst pushen, dann veröffentlichen." }
@@ -316,7 +320,7 @@ if ($manifestZustand -eq 'OK' -and $manifestCode -eq $N) {
         $voll = git -C $proggs rev-parse --verify --quiet "$($alt.commit)^{commit}" 2>$null
         if ($LASTEXITCODE -ne 0 -or -not $voll) { $grund = "Commit $($alt.commit) nicht eindeutig auflösbar" }
         else {
-            git -C $proggs diff --quiet $voll HEAD -- $Projekt 2>$null
+            git -C $proggs diff --quiet $voll HEAD -- @quellen 2>$null
             if ($LASTEXITCODE -ne 0) { $grund = "$Projekt seit Commit $($alt.commit) geändert" }
             elseif ($I -gt $N) { $grund = "am Handy ist schon vc$I installiert" }
         }
@@ -339,7 +343,7 @@ if (-not ($N -gt $P -and $N -ge $I)) {
     $teile[-1] = [string]([int]($teile[-1] -replace '\D.*$', '') + 1)
     # Notiz = Commits am Projekt seit der letzten Änderung am Versionslog.
     $seit = git -C $proggs log -1 --format=%H -- $logRel 2>$null
-    $betreffe = if ($seit) { @(git -C $proggs log --format=%s "$seit..HEAD" -- $Projekt 2>$null) } else { @() }
+    $betreffe = if ($seit) { @(git -C $proggs log --format=%s "$seit..HEAD" -- @quellen 2>$null) } else { @() }
     $notiz = ($betreffe | ForEach-Object { $_ -replace "^$([regex]::Escape($Projekt)):\s*", '' } | Select-Object -First 8) -join '; '
     if (-not $notiz) { $notiz = 'Update bereitgestellt' }
     $eintraege.Add([pscustomobject]@{

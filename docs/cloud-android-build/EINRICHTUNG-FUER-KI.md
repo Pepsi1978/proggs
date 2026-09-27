@@ -137,6 +137,8 @@ Anforderungen:
   Linux-Rechner vorinstalliert. Linux ist schneller, und Windows-Minuten zählen bei privaten Projekten nach bisherigem Stand doppelt.
 - **KompassKern:** ClaudeKompass, CodexKompass und OCodeKompass binden `../KompassKern` ein. Der Ordner steht
   deshalb im `sparse-checkout` und im Pfadfilter; eine Änderung dort baut alle drei (`KERN_NUTZER`).
+  `apk-update.ps1` zählt solche `../<Ordner>/`-Quellen zum Stand der App: Eine Änderung nur am Kern braucht
+  deshalb in **jeder** der drei Apps einen neuen Versionslog-Eintrag, sonst endet der Bau rot mit „Versionslog-Eintrag fehlt“.
 - **Probebau:** `workflow_dispatch` mit `probe: true` baut und prüft die Signatur, liest Drive nur (rclone lsf)
   und lädt nichts hoch. Damit lässt sich ein Umbau am Bau-Ablauf ohne Risiko für UpdateStation prüfen.
 - **Job-Einstellungen:** `environment: android-signing`, `permissions: contents: read`,

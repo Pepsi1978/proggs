@@ -31,7 +31,8 @@ tippen müssen außer „Installieren“ in UpdateStation.
 1. **Versionslog:** Unten in `<Projekt>/app/src/main/assets/versionslog.json` genau **einen** Eintrag
    anhängen: `versionCode` = letzter + 1, `versionName` letzte Stelle + 1, `stand` = jetzt in
    deutscher Zeit (`"26.09.2026, 18:05 Uhr"`), `notiz` = kurz auf Deutsch, was neu ist. Pro
-   Veröffentlichung nur ein Eintrag. Fehlt die Datei: siehe Abschnitt Versionslog im Skill
+   Veröffentlichung nur ein Eintrag. Geändert wurde nur `KompassKern`? Dann bekommen ClaudeKompass, CodexKompass und
+   OCodeKompass je einen Eintrag (alle drei binden den Kern ein und werden gebaut). Fehlt die Datei: siehe Abschnitt Versionslog im Skill
    `OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/SKILL.md`.
 2. **Prüfen, soweit es in der Cloud geht:** JSON gültig (`python3 -m json.tool`), Diff noch einmal
    kritisch lesen. Ein Gradle-Bau braucht hier ein Android SDK, das meist fehlt. Die echte Bauprüfung
