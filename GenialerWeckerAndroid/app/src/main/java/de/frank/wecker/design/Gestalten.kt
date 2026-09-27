@@ -427,7 +427,9 @@ private fun ZeichenRegen(modifier: Modifier) {
                 if (y < -schrift || y > size.height + schrift) continue
                 val reihe = ((y / schrift).toInt())
                 // Die Zeichen flackern gelegentlich um, wie im Original.
-                val wahl = (spalte * 31 + reihe * 17 + (t / 180).toInt() * (if ((spalte + reihe) % 5 == 0) 1 else 0)) % zeichen.length
+                // floorMod: Knapp über dem oberen Rand ist die Reihe negativ – ein normales % ergab dort einen
+                // negativen Index und brachte die App zum Absturz (IndexOutOfBounds, 27.09.2026).
+                val wahl = Math.floorMod(spalte * 31L + reihe * 17L + (t / 180) * (if (Math.floorMod(spalte + reihe, 5) == 0) 1 else 0), zeichen.length.toLong()).toInt()
                 val anteil = 1f - i / schweif.toFloat()
                 val istKopf = i == 0
                 val c = when {
