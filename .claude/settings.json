@@ -1,7 +1,6 @@
 {
   "enabledPlugins": {},
   "permissions": {
-    "defaultMode": "acceptEdits",
     "allow": [
       "Bash",
       "Read",

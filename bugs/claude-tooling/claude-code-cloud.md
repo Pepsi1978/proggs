@@ -129,8 +129,9 @@
 - **Status:** so gewollt, dokumentiert: https://code.claude.com/docs/en/permission-modes („Bypass permissions isn't
   available“). Der Automodus lässt sich nur über `~/.claude/settings.json` oder Organisations-Einstellungen feiner
   einstellen, nicht über die Repo-Datei.
-- **Umgang (27.09.2026):** Modus „Änderungen akzeptieren“ plus Freigabeliste `permissions.allow` in
-  `.claude/settings.json` (alle Werkzeuge, alle MCP-Server). Ob die Cloud die Repo-Freigabeliste beachtet, ist
+- **Umgang (27.09.2026):** Modus „Änderungen akzeptieren“ in der App wählen plus Freigabeliste `permissions.allow` in
+  `.claude/settings.json` (alle Werkzeuge, alle MCP-Server). **Kein `defaultMode` in die Repo-Datei:** Projekt-
+  Einstellungen stehen über den Benutzer-Einstellungen und würden am PC den Modus „alles erlauben“ überschreiben. Ob die Cloud die Repo-Freigabeliste beachtet, ist
   nicht dokumentiert. Fragt die Sitzung trotzdem nach, hier eintragen.
 
 ## Weitere, schwächer belegte Einträge
