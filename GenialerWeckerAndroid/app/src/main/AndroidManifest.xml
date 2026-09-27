@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Nur für das Offline-Diktat; angefragt erst beim Tippen auf „Diktieren“. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -13,8 +15,11 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <queries>
         <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
+        <!-- Sichtbarkeit des geräteeigenen Spracherkennungsdienstes (Android 11+). -->
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
     </queries>
     <application android:name="de.frank.wecker.WeckerApplication"
         android:allowBackup="false" android:dataExtractionRules="@xml/no_backup" android:fullBackupContent="false" android:label="Genialer Wecker"

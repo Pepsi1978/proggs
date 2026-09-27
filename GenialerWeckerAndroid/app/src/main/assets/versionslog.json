@@ -2,6 +2,7 @@
   "format": 1,
   "app": "GenialerWeckerAndroid",
   "eintraege": [
-    { "versionCode": 1, "versionName": "1.0.0", "stand": "27.09.2026, 19:27 Uhr", "notiz": "Erste eigenständige Fassung: Wecken komplett offline mit Gerätestimme, ohne Konten und ohne Schlüssel." }
+    { "versionCode": 1, "versionName": "1.0.0", "stand": "27.09.2026, 19:27 Uhr", "notiz": "Erste eigenständige Fassung: Wecken komplett offline mit Gerätestimme, ohne Konten und ohne Schlüssel." },
+    { "versionCode": 2, "versionName": "1.0.1", "stand": "27.09.2026, 19:58 Uhr", "notiz": "Neu: Text offline diktieren in Deutsch, Englisch, Französisch oder Spanisch, ohne Internet; Datum und Hinweise auf schmalen Handys vollständig lesbar." }
   ]
 }

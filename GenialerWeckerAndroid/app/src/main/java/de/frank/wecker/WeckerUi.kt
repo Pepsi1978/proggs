@@ -90,6 +90,7 @@ import de.frank.wecker.design.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.text.style.TextAlign
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -619,11 +620,11 @@ private fun TerminGruppe(
         if (daten.next == null) {
             Text("Kein Wecker aktiv", style = MaterialTheme.typography.bodyMedium,
                 color = textFarbe, maxLines = 1)
+            // Umbrechen statt „…“: auf S24-Breite war der Hinweis sonst nicht mehr lesbar.
+            // Zwei feste Zeilen statt Platzhalter: bleibt lesbar und hält die Hero-Höhe in jedem Zustand gleich.
             Text("Lege einen an oder schalte einen ein", style = MaterialTheme.typography.titleSmall,
-                color = gedaempft, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            // Hält die dritte Zeile frei, damit der Hero in jedem Zustand gleich hoch bleibt.
-            Text(" ", Modifier.clearAndSetSemantics { },
-                style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                color = gedaempft, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                textAlign = if (ausrichtung == Alignment.End) TextAlign.End else TextAlign.Start)
         } else {
             TerminZeile(daten.now, daten.next, daten.nextIsSnooze, punkt)
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -738,9 +739,10 @@ private fun SchlichtHero(
                             fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
                             fontSize = groesse, color = gold.primaer, maxLines = 1, softWrap = false)
                     }
+                    // Auf ~384 dp (S24) passte „Sonntag, 27. September“ nicht in eine Zeile: umbrechen statt kürzen.
                     Text(datumsZeile(daten.now),
                         style = MaterialTheme.typography.bodyMedium, color = gold.textGedaempft,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        textAlign = TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer,
                         ausrichtung = Alignment.End, punkt = false)
                 }
@@ -1915,6 +1917,12 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                     AnhoerKnopfText(vm, alarm)
                 }
                 Text("Der Text bleibt jederzeit von Hand bearbeitbar. Vorgelesen wird er mit einer auf dem Gerät installierten Stimme, ohne Internet.", style = MaterialTheme.typography.bodySmall)
+                // Übernahme immer auf den aktuellen Entwurf, damit ein spätes Ergebnis keine neueren Änderungen überschreibt.
+                DiktatBereich { diktiert ->
+                    vm.draft.value?.takeIf { it.id == alarm.id }?.let { aktuell ->
+                        vm.change(aktuell.copy(text = listOf(aktuell.text.trimEnd(), diktiert).filter(String::isNotBlank).joinToString("\n")))
+                    }
+                }
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             }
             Text("Reihenfolge beim Wecken (verschieben per Drag-and-drop)", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
@@ -2587,7 +2595,7 @@ private fun TerminVerteilt(
             if (daten.next == null) {
                 Text("Kein Wecker aktiv", style = MaterialTheme.typography.bodyMedium, color = textFarbe, maxLines = 1)
                 Text("Lege einen an oder schalte einen ein", style = MaterialTheme.typography.bodySmall,
-                    color = gedaempft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    color = gedaempft, maxLines = 2, overflow = TextOverflow.Ellipsis)
             } else {
                 TerminZeile(daten.now, daten.next, daten.nextIsSnooze)
                 Text(daten.nextName ?: "Wecker", style = MaterialTheme.typography.titleSmall, color = textFarbe,
@@ -2770,10 +2778,10 @@ fun readiness(context: Context): List<Pair<String, Boolean>> {
 private fun TraumTermin(daten: HeroDaten, aufOeffnen: () -> Unit) {
     val gold = LocalGold.current
     val akzent = if (daten.nextIsSnooze) LocalSemantisch.current.info else gold.primaer
-    @Composable fun Zeile(text: String, farbe: androidx.compose.ui.graphics.Color, stil: androidx.compose.ui.text.TextStyle) {
+    @Composable fun Zeile(text: String, farbe: androidx.compose.ui.graphics.Color, stil: androidx.compose.ui.text.TextStyle, zeilen: Int = 1) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(6.dp).clip(CircleShape).background(akzent))
-            Text(text, Modifier.padding(start = 8.dp), style = stil, color = farbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text, Modifier.padding(start = 8.dp), style = stil, color = farbe, minLines = zeilen, maxLines = zeilen, overflow = TextOverflow.Ellipsis)
         }
     }
     Column(Modifier.fillMaxWidth().then(if (daten.nextAlarm != null) Modifier.clickable(
@@ -2781,8 +2789,7 @@ private fun TraumTermin(daten: HeroDaten, aufOeffnen: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(3.dp)) {
         if (daten.next == null) {
             Zeile("Kein Wecker aktiv", gold.textPrimaer, MaterialTheme.typography.bodyMedium)
-            Zeile("Lege einen an oder schalte einen ein", gold.textGedaempft, MaterialTheme.typography.bodySmall)
-            Zeile(" ", gold.textGedaempft, MaterialTheme.typography.bodySmall)
+            Zeile("Lege einen an oder schalte einen ein", gold.textGedaempft, MaterialTheme.typography.bodySmall, zeilen = 2)
         } else {
             val termin = terminAnzeige(daten.now, daten.next).einzeilig
             Zeile("${if (daten.nextIsSnooze) "Schlummern bis" else "Nächster Wecker"} $termin", gold.textPrimaer,
