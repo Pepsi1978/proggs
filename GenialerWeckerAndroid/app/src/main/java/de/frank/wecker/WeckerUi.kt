@@ -2,6 +2,9 @@
 
 package de.frank.wecker
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.graphics.drawscope.clipPath
 import android.Manifest
 import android.app.NotificationManager
@@ -1392,15 +1395,7 @@ private fun WeckerKarte(
                     if (alarm.enabled && alarm.nextAt > 0) StatusZeile(Icons.Default.Alarm, "Nächster Termin: ${terminAnzeige(now, alarm.nextAt).einzeilig}", gold.textPrimaer)
                     if (skipped) StatusZeile(Icons.Default.SkipNext, "Ein Termin wird ausgelassen", gold.primaer)
                     Text("Lautstärke ${alarm.volume} %${if (alarm.photoRequired) " · Foto-Aufgabe" else ""}", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
-                    if (alarm.needsSpeech) {
-                        val status = when {
-                            alarm.preparationError.isNotBlank() -> "Vorbereitung offen: ${alarm.preparationError}"
-                            alarm.preparedAt == 0L -> "Ansage wird vorbereitet …"
-                            else -> "Ansage fertig auf dem Handy · ${formatAt(alarm.preparedAt)}"
-                        }
-                        Text(status, style = MaterialTheme.typography.bodySmall,
-                            color = if (alarm.preparationError.isNotBlank() || alarm.preparedAt == 0L) semantisch.warnung else semantisch.erfolg)
-                    }
+                    if (alarm.needsSpeech) StimmenStatus(alarm)
                     // Alle Aktionen in **einem** Umbruchbereich: Auf breiten Geräten (Fold, S25 Ultra)
                     // stehen drei oder mehr nebeneinander, auf schmalen brechen sie um. Vorher lagen
                     // sie in drei getrennten Reihen, und rechts blieb viel Platz leer.
@@ -2934,21 +2929,71 @@ fun wirksamesTheme(wahl: String): String =
 fun AnhoerKnopf(vm: WeckerViewModel, schluessel: String, abspielen: () -> Unit) {
     val laeuft by vm.vorschau.collectAsStateWithLifecycle()
     val aktiv = laeuft == schluessel
-    StillerKnopf(if (aktiv) "■ Stopp" else "Anhören", {
-        if (aktiv) vm.stopPreview() else { abspielen(); vm.vorschau.value = schluessel }
-    }, hervorgehoben = aktiv)
+    val busy by vm.busy.collectAsStateWithLifecycle()
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        StillerKnopf(if (aktiv) "■ Stopp" else "Anhören", {
+            if (aktiv) vm.stopPreview() else { abspielen(); vm.vorschau.value = schluessel }
+        }, hervorgehoben = aktiv)
+        if (aktiv && busy == WeckerViewModel.PROBE_VORBEREITEN) VorlesenVorbereitung("Wird vorbereitet")
+    }
 }
 
+
+/**
+ * Stand der Weckstimmen auf der Karte: grün „Stimme fertig auf dem Handy“, sonst „Stimmen werden noch gebaut“ mit
+ * Fortschrittsbalken und Prozent (live aus dem Hintergrund-Worker).
+ */
+@Composable
+private fun StimmenStatus(alarm: Alarm) {
+    val gold = LocalGold.current
+    val semantisch = LocalSemantisch.current
+    val stand by Vorbereitung.stand.collectAsStateWithLifecycle()
+    val clip by ModellStimmen.fortschritt.collectAsStateWithLifecycle()
+    val anteil = Vorbereitung.anteil(alarm.id, stand, clip)
+    val fertig = anteil == null && alarm.preparedAt > 0L && alarm.preparationError.isBlank()
+    when {
+        fertig -> Text("✓ Stimme fertig auf dem Handy", style = MaterialTheme.typography.bodySmall, color = semantisch.erfolg)
+        anteil == null && alarm.preparationError.isNotBlank() && !alarm.preparationError.endsWith("läuft …") ->
+            Text("Stimmen offen: ${alarm.preparationError}", style = MaterialTheme.typography.bodySmall, color = semantisch.warnung)
+        else -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val prozent = ((anteil ?: 0f) * 100).toInt()
+            Text("Stimmen werden noch gebaut · $prozent %", style = MaterialTheme.typography.bodySmall, color = semantisch.warnung)
+            val weich by animateFloatAsState(anteil ?: 0f, label = "stimmen")
+            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50)).background(gold.textGedaempft.copy(alpha = .2f))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(weich.coerceIn(0f, 1f)).clip(RoundedCornerShape(50))
+                    .background(Brush.horizontalGradient(listOf(gold.primaer.copy(alpha = .6f), gold.primaer))))
+            }
+        }
+    }
+}
+
+/** „Vorlesen wird vorbereitet“ mit hüpfendem Quadrat und wachsender Prozentzahl, solange die Probe entsteht. */
+@Composable
+fun VorlesenVorbereitung(text: String = "Vorlesen wird vorbereitet") {
+    val gold = LocalGold.current
+    val clip by ModellStimmen.fortschritt.collectAsStateWithLifecycle()
+    val sprung = rememberInfiniteTransition(label = "sprung")
+    val hoehe by sprung.animateFloat(0f, -6f, infiniteRepeatable(tween(320, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "hoehe")
+    val drehung by sprung.animateFloat(0f, 90f, infiniteRepeatable(tween(640, easing = LinearEasing)), label = "drehung")
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.size(10.dp).offset(y = hoehe.dp).graphicsLayer { rotationZ = drehung }.clip(RoundedCornerShape(2.dp)).background(gold.primaer))
+        Text("$text · ${(clip * 100).toInt().coerceIn(0, 99)} %", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+    }
+}
 
 @Composable
 private fun AnhoerKnopfText(vm: WeckerViewModel, alarm: Alarm) {
     val laeuft by vm.vorschau.collectAsStateWithLifecycle()
     val aktiv = laeuft == "text:${alarm.id}"
-    StillerKnopf(if (aktiv) "■ Stopp" else "Text vorlesen", {
-        if (aktiv) vm.stopPreview()
-        else if (alarm.text.isBlank()) vm.message.value = "Gib zuerst einen Text ein."
-        else { vm.previewVoice(alarm, alarm.text); vm.vorschau.value = "text:${alarm.id}" }
-    }, hervorgehoben = aktiv)
+    val busy by vm.busy.collectAsStateWithLifecycle()
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        StillerKnopf(if (aktiv) "■ Stopp" else "Text vorlesen", {
+            if (aktiv) vm.stopPreview()
+            else if (alarm.text.isBlank()) vm.message.value = "Gib zuerst einen Text ein."
+            else { vm.previewVoice(alarm, alarm.text); vm.vorschau.value = "text:${alarm.id}" }
+        }, hervorgehoben = aktiv)
+        if (aktiv && busy == WeckerViewModel.PROBE_VORBEREITEN) VorlesenVorbereitung()
+    }
 }
 
 

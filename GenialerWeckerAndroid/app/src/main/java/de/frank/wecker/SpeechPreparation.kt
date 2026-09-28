@@ -40,11 +40,17 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                 store.update(alarm.id) { current ->
                     if (current.sameSpeechAs(alarm)) current.copy(preparationError = "Audio-Vorbereitung läuft …") else current
                 }
+                val gesamt = groups.sumOf { it.paragraphs.size } * VoiceVariations.COUNT
+                var fertigBisher = 0
+                Vorbereitung.melde(alarm.id, 0, gesamt)
                 suspend fun baue(voice: SyntheseStimme) = VoiceVariations.buildGroups(groups, render = { text, index ->
                     ensureActive()
-                    render(text, voice.withRate(VoiceVariations.rate(voice.ttsSpeechRate, index)), index)
+                    render(text, voice.withRate(VoiceVariations.rate(voice.ttsSpeechRate, index)), index).also {
+                        fertigBisher++; Vorbereitung.melde(alarm.id, fertigBisher, gesamt)
+                    }
                 }, progress = { _, _, variation, part, total -> progress("Variante $variation/6 · Absatz $part/$total") })
                 var voice = wunsch
+                fertigBisher = 0
                 // Modellstimme scheitert (z. B. Speicher knapp): sofort mit der Gerätestimme fertig werden, damit der Wecker spricht.
                 val variants = try { baue(voice) } catch (e: Exception) {
                     if (e is CancellationException || !wunsch.istModell) throw e
@@ -72,7 +78,7 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                     if (current.sameSpeechAs(alarm)) current.copy(preparationError = e.message ?: "Vorbereitung fehlgeschlagen") else current
                 }
                 throw e
-            }
+            } finally { Vorbereitung.fertig(alarm.id) }
         }
     }
 
@@ -135,6 +141,22 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
 
 class PreparationWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
+        // Vordergrund: die Weckstimmen entstehen weiter, auch wenn die App geschlossen oder weggewischt wird.
+        runCatching { setForeground(getForegroundInfo()) }
+        val anzeige = kotlinx.coroutines.CoroutineScope(currentCoroutineContext()).launch {
+            Vorbereitung.stand.collect { runCatching { applicationContext.getSystemService(android.app.NotificationManager::class.java)
+                ?.notify(Vorbereitung.BENACHRICHTIGUNG, Vorbereitung.benachrichtigung(applicationContext)) } }
+        }
+        try { return arbeiten() } finally { anzeige.cancel() }
+    }
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        val n = Vorbereitung.benachrichtigung(applicationContext)
+        return if (android.os.Build.VERSION.SDK_INT >= 29) ForegroundInfo(Vorbereitung.BENACHRICHTIGUNG, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            else ForegroundInfo(Vorbereitung.BENACHRICHTIGUNG, n)
+    }
+
+    private suspend fun arbeiten(): Result {
         var failed = false
         SecureSettings(applicationContext).use { settings ->
             val preparation = SpeechPreparation(applicationContext, settings)
@@ -152,9 +174,47 @@ class PreparationWorker(context: Context, parameters: WorkerParameters) : Corout
             WorkManager.getInstance(context).enqueueUniqueWork("speech-refresh", ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<PreparationWorker>().build())
         }
+        /** Gleich nach dem Speichern: sofort und im Vordergrund; läuft schon eine Vorbereitung, kommt diese danach dran. */
+        fun sofort(context: Context) {
+            WorkManager.getInstance(context).enqueueUniqueWork("speech-now", ExistingWorkPolicy.APPEND_OR_REPLACE,
+                OneTimeWorkRequestBuilder<PreparationWorker>().setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST).build())
+        }
         fun periodic(context: Context) {
             WorkManager.getInstance(context).enqueueUniquePeriodicWork("speech-periodic", ExistingPeriodicWorkPolicy.KEEP,
                 PeriodicWorkRequestBuilder<PreparationWorker>(15, TimeUnit.MINUTES).build())
         }
+    }
+}
+
+/**
+ * Fortschritt der Weckstimmen je Wecker (fertige Clips von allen), gemeinsam für Karte, Benachrichtigung und Worker.
+ * Der Anteil des gerade entstehenden Clips kommt aus [ModellStimmen.fortschritt].
+ */
+object Vorbereitung {
+    const val BENACHRICHTIGUNG = 4712
+    private const val KANAL = "weckstimmen"
+    data class Stand(val fertig: Int, val gesamt: Int)
+    private val _stand = kotlinx.coroutines.flow.MutableStateFlow<Map<String, Stand>>(emptyMap())
+    val stand: kotlinx.coroutines.flow.StateFlow<Map<String, Stand>> = _stand
+    fun melde(id: String, fertig: Int, gesamt: Int) { _stand.value = _stand.value + (id to Stand(fertig, gesamt)) }
+    fun fertig(id: String) { _stand.value = _stand.value - id }
+    /** Anteil 0..1 für [id], inklusive des laufenden Clips; null = gerade keine Vorbereitung. */
+    fun anteil(id: String, stand: Map<String, Stand>, clip: Float): Float? = stand[id]?.let { st ->
+        if (st.gesamt <= 0) 0f else ((st.fertig + clip.coerceIn(0f, .99f)) / st.gesamt).coerceIn(0f, 1f)
+    }
+
+    fun benachrichtigung(context: Context): android.app.Notification {
+        val manager = context.getSystemService(android.app.NotificationManager::class.java)
+        if (manager?.getNotificationChannel(KANAL) == null)
+            manager?.createNotificationChannel(android.app.NotificationChannel(KANAL, "Weckstimmen erzeugen", android.app.NotificationManager.IMPORTANCE_LOW))
+        val laufend = _stand.value.values.firstOrNull()
+        val prozent = laufend?.let { if (it.gesamt > 0) it.fertig * 100 / it.gesamt else 0 } ?: 0
+        return androidx.core.app.NotificationCompat.Builder(context, KANAL)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle("Weckstimmen werden erzeugt")
+            .setContentText(if (laufend != null) "$prozent % · läuft auch bei geschlossener App weiter" else "Wird vorbereitet …")
+            .setProgress(100, prozent, laufend == null)
+            .setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
+            .build()
     }
 }

@@ -96,22 +96,21 @@ fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorles
             whisper.erkennt -> GoldKnopf("Erkenne …", {}, aktiviert = false, laedt = true)
             diktat.hoertZu -> GoldKnopf("■ Fertig", { diktat.beenden() }, hauptKnopf = true, beschreibung = "Diktat beenden und Text einfügen")
             else -> GoldKnopf("Einsprechen", {
-                if (!TurboModell.auswahlGetroffen(context)) { nachAuswahlStarten = true; auswahlOffen = true } else mitFreigabe(::loslegen)
+                if (!Erkennung.auswahlGetroffen(context) || !WhisperModell.bereit(context)) { nachAuswahlStarten = true; auswahlOffen = true } else mitFreigabe(::loslegen)
             }, symbol = { Icon(Icons.Default.Mic, null, Modifier.size(18.dp)) })
         }
         vorlesen()
     }
     if (whisper.hoertZu) Pegel(whisper.pegel, whisper.sekunden)
-    if (!whisper.hoertZu && !whisper.erkennt && WhisperModell.bereit(context)) {
-        val premium = remember(erkennungStand) { TurboModell.aktiv(context) }
-        val wartet = remember(erkennungStand) { TurboModell.gewuenscht(context) && !TurboModell.geladen(context) }
-        Text("Erkennung: ${if (premium) "Premium" else if (wartet) "Standard · Premium wird geladen" else "Standard"} · ändern",
+    if (!whisper.hoertZu && !whisper.erkennt) {
+        val aktiv = remember(erkennungStand) { Erkennung.aktiv(context) }
+        Text("Erkennung: ${aktiv?.titel ?: "noch nicht geladen"} · ${if (aktiv == null) "laden" else "ändern"}",
             Modifier.clip(RoundedCornerShape(8.dp)).clickable { nachAuswahlStarten = false; auswahlOffen = true }.padding(vertical = 4.dp),
             style = MaterialTheme.typography.labelMedium, color = LocalGold.current.primaer)
     }
     if (auswahlOffen) ErkennungDialog { starten ->
         auswahlOffen = false; erkennungStand++
-        if (starten && nachAuswahlStarten) mitFreigabe(::loslegen)
+        if (starten && nachAuswahlStarten && WhisperModell.bereit(context)) mitFreigabe(::loslegen)
         nachAuswahlStarten = false
     }
     // Knapper Status direkt unter den Knöpfen; kein eigenes Panel.
@@ -149,70 +148,71 @@ private fun Pegel(pegel: Float, sekunden: Int) {
 }
 
 /**
- * Auswahl der Spracherkennung: Standard (eingebaut) oder Premium (Whisper Large V3 Turbo, Download).
- * Die Karten zeigen den Wunsch; der Block darunter den Zustand von Premium (Download nötig, lädt, geladen).
- * Gespeichert wird Premium nur, wenn es geladen ist oder gerade lädt – sonst bleibt es ehrlich bei Standard.
- * Der Download läuft im Hintergrund weiter und setzt nach einer Unterbrechung an derselben Stelle fort.
- * [schliessen] meldet, ob danach gleich aufgenommen werden soll.
+ * Auswahl der Spracherkennung: Standard (Whisper Small) oder Premium (Whisper Large V3 Turbo), beide per Download.
+ * Die Karten zeigen den Wunsch; der Block darunter den Stand des gewählten Modells (Download nötig, lädt, geladen).
+ * Gespeichert wird die Wahl, wenn das Modell geladen ist oder gerade lädt. Downloads laufen im Hintergrund weiter
+ * und setzen nach einer Unterbrechung an derselben Stelle fort. [schliessen] meldet, ob danach aufgenommen werden soll.
  */
 @Composable
 internal fun ErkennungDialog(schliessen: (starten: Boolean) -> Unit) {
     val context = LocalContext.current
     val gold = LocalGold.current
-    var turbo by remember { mutableStateOf(TurboModell.gewuenscht(context)) }
-    val arbeiten by remember { TurboModell.laeuftFlow(context) }.collectAsStateWithLifecycle(emptyList())
-    var gestartet by remember { mutableStateOf(false) }
-    val laeuft = gestartet || arbeiten.any { !it.state.isFinished }
-    var bytes by remember { mutableLongStateOf(TurboModell.bytesDa(context)) }
-    var geladen by remember { mutableStateOf(TurboModell.geladen(context)) }
-    LaunchedEffect(laeuft) {
-        while (true) { bytes = TurboModell.bytesDa(context); geladen = TurboModell.geladen(context); if (!laeuft || geladen) break; kotlinx.coroutines.delay(500) }
-    }
-    LaunchedEffect(arbeiten) { if (arbeiten.isNotEmpty()) gestartet = false }
-    fun speichern() = TurboModell.waehlen(context, turbo && (geladen || laeuft))
+    var wahl by remember { mutableStateOf(Erkennung.gewuenscht(context)) }
+    val arbeitenStandard by remember { Erkennung.laeuftFlow(context, ErkennungsModell.STANDARD) }.collectAsStateWithLifecycle(emptyList())
+    val arbeitenPremium by remember { Erkennung.laeuftFlow(context, ErkennungsModell.PREMIUM) }.collectAsStateWithLifecycle(emptyList())
+    var gestartet by remember { mutableStateOf(setOf<ErkennungsModell>()) }
+    fun arbeiten(m: ErkennungsModell) = if (m == ErkennungsModell.STANDARD) arbeitenStandard else arbeitenPremium
+    fun laeuft(m: ErkennungsModell) = m in gestartet || arbeiten(m).any { !it.state.isFinished }
+    // Takt für Fortschritt und Dateistand; liest nur Dateigrößen.
+    var takt by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(500); takt++ } }
+    LaunchedEffect(arbeitenStandard, arbeitenPremium) { gestartet = gestartet.filter { arbeiten(it).isEmpty() }.toSet() }
+    fun bytes(m: ErkennungsModell): Long { takt; return Erkennung.bytesDa(context, m) }
+    fun geladen(m: ErkennungsModell): Boolean { takt; return Erkennung.geladen(context, m) }
+    fun speichern() { if (geladen(wahl) || laeuft(wahl)) Erkennung.waehlen(context, wahl) }
     de.frank.wecker.design.DesignDialog(
         titel = "Spracherkennung wählen",
         aufSchliessen = { speichern(); schliessen(false) },
         bestaetigung = { StillerKnopf("Fertig", { speichern(); schliessen(true) }) },
         inhalt = {
             Text("Tippe auf das Mikrofon und sprich deinen Wecktext einfach ein – das Handy schreibt ihn für dich auf, ganz ohne Internet. " +
-                "Hier wählst du, wie genau die Erkennung arbeitet.", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                "Dafür lädst du einmalig ein Sprachmodell herunter; hier wählst du, wie genau es arbeitet.",
+                style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
             Spacer(Modifier.height(12.dp))
-            ErkennungKarte(!turbo, "Standard", "Eingebaut, sofort bereit") { turbo = false }
+            ErkennungsModell.entries.forEachIndexed { i, m ->
+                if (i > 0) Spacer(Modifier.height(10.dp))
+                val zusatz = when { geladen(m) -> "✓ geladen"; laeuft(m) -> "lädt …"; else -> "Download ${m.mb}" }
+                ErkennungKarte(wahl == m, "${m.titel} · ${m.modellName}", "${m.nutzen} · $zusatz") { wahl = m }
+            }
             Spacer(Modifier.height(10.dp))
-            ErkennungKarte(turbo, "Premium · ${TurboModell.NAME}",
-                "Etwa halb so viele Fehler, versteht Namen und Fachwörter besser") { turbo = true }
-            if (turbo || laeuft || geladen) {
-                Spacer(Modifier.height(10.dp))
-                when {
-                    geladen -> Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("✓ Premium ist geladen · ${TurboModell.groesseText}", Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
-                        StillerKnopf("Löschen", { TurboModell.loeschen(context); geladen = false; turbo = false; bytes = 0 })
+            val m = wahl
+            when {
+                geladen(m) -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("✓ ${m.titel} ist geladen · ${m.mb}", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                    StillerKnopf("Löschen", { Erkennung.loeschen(context, m); takt++ })
+                }
+                laeuft(m) -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val b = bytes(m)
+                    val anteil = (b.toFloat() / m.gesamt).coerceIn(0f, 1f)
+                    Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(50)).background(gold.textGedaempft.copy(alpha = .2f))) {
+                        Box(Modifier.fillMaxHeight().fillMaxWidth(anteil).clip(RoundedCornerShape(50))
+                            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(gold.primaer.copy(alpha = .6f), gold.primaer))))
                     }
-                    laeuft -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        val anteil = (bytes.toFloat() / TurboModell.GESAMT).coerceIn(0f, 1f)
-                        Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(50)).background(gold.textGedaempft.copy(alpha = .2f))) {
-                            Box(Modifier.fillMaxHeight().fillMaxWidth(anteil).clip(RoundedCornerShape(50))
-                                .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(gold.primaer.copy(alpha = .6f), gold.primaer))))
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("${(anteil * 100).toInt()} % · ${bytes / 1_000_000} von ${TurboModell.GESAMT / 1_000_000} MB · lädt im Hintergrund weiter, " +
-                                "auch wenn du die App schließt. Bis dahin erkennt Standard.",
-                                Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
-                            StillerKnopf("Pausieren", { TurboModell.pausieren(context); gestartet = false; bytes = TurboModell.bytesDa(context) })
-                        }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("${(anteil * 100).toInt()} % · ${b / 1_000_000} von ${m.gesamt / 1_000_000} MB · lädt im Hintergrund weiter, " +
+                            "auch wenn du die App schließt.", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                        StillerKnopf("Pausieren", { Erkennung.pausieren(context, m); gestartet = gestartet - m; takt++ })
                     }
-                    !TurboModell.platzReicht(context) -> Text("Premium braucht einen einmaligen Download von ${TurboModell.groesseText}. " +
-                        "Dafür ist auf dem Handy nicht genug Speicher frei – bitte etwa 1,2 GB freimachen.",
-                        style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
-                    else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Premium gibt es nur per Download: einmalig ${TurboModell.groesseText}, am besten im WLAN. " +
-                            "Danach arbeitet es genauso ohne Internet wie Standard.",
-                            style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
-                        GoldKnopf(if (bytes > 0) "Download fortsetzen · noch ${(TurboModell.GESAMT - bytes) / 1_000_000} MB" else "Herunterladen · ${TurboModell.groesseText}",
-                            { TurboModell.starteDownload(context); gestartet = true; turbo = true }, Modifier.fillMaxWidth(), hauptKnopf = true)
-                    }
+                }
+                !Erkennung.platzReicht(context, m) -> Text("${m.titel} braucht einen einmaligen Download von ${m.mb}. " +
+                    "Dafür ist auf dem Handy nicht genug Speicher frei – bitte etwas Platz freimachen.",
+                    style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
+                else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val b = bytes(m)
+                    Text("${m.titel} gibt es nur per Download: einmalig ${m.mb}, am besten im WLAN. Danach arbeitet es ganz ohne Internet.",
+                        style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                    GoldKnopf(if (b > 0) "Download fortsetzen · noch ${(m.gesamt - b + 500_000) / 1_000_000} MB" else "Herunterladen · ${m.mb}",
+                        { Erkennung.starteDownload(context, m); gestartet = gestartet + m }, Modifier.fillMaxWidth(), hauptKnopf = true)
                 }
             }
         },

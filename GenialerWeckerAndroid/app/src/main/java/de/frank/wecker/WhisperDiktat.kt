@@ -17,27 +17,16 @@ import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
 import kotlinx.coroutines.*
 import kotlin.math.sqrt
 
-/**
- * Das Whisper-Sprachmodell (small, int8) liegt fest in der APK unter assets/whisper – das Diktat funktioniert
- * vom ersten Start an ohne Internet. sherpa-onnx liest es direkt aus der APK (unkomprimiert abgelegt).
- */
+/** Whisper fürs Einsprechen: beide Modelle kommen per Download (siehe [Erkennung]); ohne geladenes Modell kein Whisper. */
 object WhisperModell {
-    private val DATEIEN = listOf("whisper/small-encoder.int8.onnx", "whisper/small-decoder.int8.onnx", "whisper/small-tokens.txt")
-    val encoder get() = DATEIEN[0]
-    val decoder get() = DATEIEN[1]
-    val tokens get() = DATEIEN[2]
-    @Volatile private var vorhanden: Boolean? = null
-    /** Liegt das Modell in dieser APK? (Ein Build ohne Modell fällt auf das Android-Diktat zurück.) */
-    fun bereit(context: Context): Boolean = vorhanden ?: runCatching {
-        context.assets.list("whisper").orEmpty().toSet().containsAll(DATEIEN.map { it.substringAfter('/') })
-    }.getOrDefault(false).also { vorhanden = it }
+    fun bereit(context: Context): Boolean = Erkennung.aktiv(context) != null
 }
 
 /** Der geladene Erkenner; teuer im Aufbau, darum eine Instanz, die nach einer Minute Ruhe freigegeben wird. */
 object WhisperErkenner {
     private var erkenner: OfflineRecognizer? = null
     private var sprache = ""
-    /** "small" (eingebaut) oder "turbo" (Premium-Download). */
+    /** Kurzname des geladenen Modells ("small"/"turbo"). */
     private var modell = ""
     private var freigabe: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -48,20 +37,14 @@ object WhisperErkenner {
 
     private fun holen(context: Context, code: String): OfflineRecognizer = synchronized(lock) {
         freigabe?.cancel()
-        val turbo = TurboModell.aktiv(context)
-        val gewollt = if (turbo) "turbo" else "small"
+        val m = Erkennung.aktiv(context) ?: throw IllegalStateException("Kein Erkennungsmodell geladen.")
+        val gewollt = m.kurz
         erkenner?.takeIf { sprache == code && modell == gewollt }?.let { return it }
         erkenner?.release(); erkenner = null
-        val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
-        val neu = if (turbo) {
-            // Premium: Dateien aus noBackupFilesDir, darum ohne AssetManager.
-            fun pfad(name: String) = TurboModell.datei(context, name).absolutePath
-            OfflineRecognizer(null, OfflineRecognizerConfig(modelConfig = OfflineModelConfig(
-                whisper = OfflineWhisperModelConfig(encoder = pfad("turbo-encoder.int8.onnx"), decoder = pfad("turbo-decoder.int8.onnx"), language = code, task = "transcribe"),
-                tokens = pfad("turbo-tokens.txt"), numThreads = threads)))
-        } else OfflineRecognizer(context.applicationContext.assets, OfflineRecognizerConfig(modelConfig = OfflineModelConfig(
-            whisper = OfflineWhisperModelConfig(encoder = WhisperModell.encoder, decoder = WhisperModell.decoder, language = code, task = "transcribe"),
-            tokens = WhisperModell.tokens, numThreads = threads)))
+        fun pfad(name: String) = Erkennung.datei(context, m, name).absolutePath
+        val neu = OfflineRecognizer(null, OfflineRecognizerConfig(modelConfig = OfflineModelConfig(
+            whisper = OfflineWhisperModelConfig(encoder = pfad(m.encoder), decoder = pfad(m.decoder), language = code, task = "transcribe"),
+            tokens = pfad(m.tokens), numThreads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4))))
         erkenner = neu; sprache = code; modell = gewollt
         neu
     }

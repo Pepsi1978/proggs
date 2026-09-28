@@ -8,6 +8,8 @@ import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsPocketModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsSupertonicModelConfig
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -76,12 +78,20 @@ object ModellKatalog {
  * Die Modelle liegen als Assets in der APK. Immer nur ein Modell im Speicher; nach kurzer Ruhe wird es freigegeben.
  */
 object ModellStimmen {
+    /** Rechenschritte von Supertonic: 40 klingt deutlich sauberer als 10/20 (Hörvergleich 28.09.2026), kostet etwa 4× Zeit. */
+    const val SCHRITTE = 40
     private const val RUHE_MS = 60_000L
     private val mutex = Mutex()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var geladen: Pair<String, OfflineTts>? = null
     private var freigabe: Job? = null
     private val referenzen = HashMap<String, Pair<FloatArray, Int>>()
+
+    /** Fortschritt der gerade laufenden Synthese, 0..1; wächst gleichmäßig aus der geschätzten Rechenzeit. */
+    private val _fortschritt = MutableStateFlow(0f)
+    val fortschritt: StateFlow<Float> = _fortschritt
+    /** Gemessene Rechenzeit je Zeichen (s), gleitend nachkalibriert – Startwert für 40 Schritte auf einem Mittelklasse-Handy. */
+    @Volatile private var sekundenJeZeichen = 0.12
 
     /** Erzeugt [text] als WAV-Datei [ziel]. */
     suspend fun synthetisiere(context: Context, text: String, stimme: SyntheseStimme, ziel: File) = mutex.withLock {
@@ -94,13 +104,27 @@ object ModellStimmen {
                 val tts = instanz(context, s.modell)
                 val tempo = stimme.ttsSpeechRate.coerceIn(.5f, 2f)
                 val gen = if (s.modell == "supertonic") {
-                    GenerationConfig(sid = s.sid, speed = tempo, numSteps = 10, extra = mapOf("lang" to sprache))
+                    GenerationConfig(sid = s.sid, speed = tempo, numSteps = SCHRITTE, extra = mapOf("lang" to sprache))
                 } else {
                     val (samples, rate) = referenz(context, s.referenz!!)
                     GenerationConfig(speed = tempo, referenceAudio = samples, referenceSampleRate = rate, numSteps = 5,
                         extra = mapOf("temperature" to "0.7", "chunk_size" to "15"))
                 }
-                val audio = tts.generateWithConfig(text, gen)
+                val zeichen = text.length.coerceAtLeast(1)
+                val erwartet = (sekundenJeZeichen * zeichen).coerceAtLeast(1.0)
+                val start = System.nanoTime()
+                _fortschritt.value = 0f
+                val uhr = scope.launch {
+                    while (isActive) {
+                        val vergangen = (System.nanoTime() - start) / 1e9
+                        _fortschritt.value = (vergangen / erwartet).toFloat().coerceAtMost(.97f)
+                        delay(200)
+                    }
+                }
+                val audio = try { tts.generateWithConfig(text, gen) } finally { uhr.cancel() }
+                val dauer = (System.nanoTime() - start) / 1e9
+                sekundenJeZeichen = sekundenJeZeichen * .6 + dauer / zeichen * .4
+                _fortschritt.value = 1f
                 if (audio.samples.isEmpty()) throw SyntheseAbbruch("Die Stimme hat kein Audio erzeugt.")
                 if (!audio.save(ziel.absolutePath)) throw SyntheseAbbruch("Das Audio ließ sich nicht speichern.")
             }
@@ -159,6 +183,24 @@ object ModellStimmen {
             pos = start + laenge + (laenge and 1)
         }
         throw SyntheseAbbruch("Die Stimmprobe $pfad ist keine lesbare WAV-Datei.")
+    }
+
+    /**
+     * Vorab erzeugte Hörprobe (40 Schritte, Probesatz der Sprache) aus assets/stimmproben, einmal in den Cache kopiert;
+     * null, wenn es für diese Stimme/Sprache keine gibt. Erzeugt von docs/stimmproben/erzeuge_stimmproben.py.
+     */
+    fun probeDatei(context: Context, stimme: SyntheseStimme): File? {
+        val s = ModellKatalog.finde(stimme.stimme)?.takeIf { stimme.istModell } ?: return null
+        val sprache = Sprachen.gueltig(stimme.sprache)
+        val datei = if (s.modell == "supertonic") "supertonic-${s.sid}.ogg" else "pocket-${s.referenz!!.substringAfterLast('/').removeSuffix(".wav")}.ogg"
+        val ziel = File(context.cacheDir, "stimmproben/$sprache/$datei")
+        if (ziel.length() > 0) return ziel
+        return runCatching {
+            ziel.parentFile?.mkdirs()
+            val tmp = File(ziel.path + ".tmp")
+            context.assets.open("stimmproben/$sprache/$datei").use { ein -> tmp.outputStream().use { ein.copyTo(it) } }
+            check(tmp.renameTo(ziel)); ziel
+        }.getOrNull()
     }
 
     private fun spaeterFreigeben() {

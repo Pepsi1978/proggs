@@ -22,6 +22,10 @@ import java.util.UUID
 data class SavedEvent(val id: String, val generation: Long)
 
 class WeckerViewModel(application: Application) : AndroidViewModel(application) {
+    companion object {
+        /** Beschriftung, solange eine Stimmprobe entsteht; die Oberfläche zeigt dann den Fortschritt. */
+        const val PROBE_VORBEREITEN = "Stimmprobe vorbereiten …"
+    }
     private val app = application
     val store = AlarmStore.get(application)
     val settings = SecureSettings(application)
@@ -163,6 +167,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             }
             if (alarm.needsSpeech) {
                 prepare(store.get(alarm.id)!!)
+                if (closed && planned && !notificationsDenied) message.value = "${alarm.name} gespeichert · Die Weckstimmen werden erzeugt …"
             }
         }
     }
@@ -203,27 +208,9 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     fun endSnooze(alarm: Alarm) = runAction("Schlummerpause beenden …", silent = true) {
         withContext(Dispatchers.IO) { scheduler.endSnooze(alarm.id) }
     }
+    /** Weckstimmen erzeugen: im Hintergrund-Worker (Vordergrund-Benachrichtigung), damit es auch bei geschlossener App weiterläuft. */
     fun prepare(alarm: Alarm) {
-        val previous = preparationJobs[alarm.id]
-        preparationJobs[alarm.id] = viewModelScope.launch {
-            fun progress(text: String?) {
-                if (text == null) preparationProgress.remove(alarm.id) else preparationProgress[alarm.id] = text
-                audioBusy.value = preparationProgress.values.firstOrNull().orEmpty()
-            }
-            try {
-                previous?.cancelAndJoin()
-                progress("${alarm.name}: Audio-Vorbereitung …")
-                SpeechPreparation(app, settings).prepare(alarm) { text -> withContext(Dispatchers.Main) { progress("${alarm.name}: $text") } }
-                if (store.get(alarm.id)?.let { it.sameSpeechAs(alarm) && it.voiceVariants.size == VoiceVariations.COUNT } == true)
-                    message.value = "${alarm.name}: Die Sprachvarianten sind offline bereit."
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { message.value = "${alarm.name}: ${e.message ?: "Audio-Vorbereitung fehlgeschlagen"}" }
-            finally {
-                if (preparationJobs[alarm.id] === coroutineContext[Job]) {
-                    progress(null); preparationJobs.remove(alarm.id)
-                }
-            }
-        }
+        if (alarm.needsSpeech) PreparationWorker.sofort(app)
     }
     fun settingsChanged() {
         settingsRevision.value++
@@ -279,12 +266,19 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
     private fun vorhoeren(voice: SyntheseStimme, alarm: Alarm?, text: String?) {
         stopPreview()
         val generation = previewGeneration
-        runAction("Stimmprobe vorbereiten …") {
+        runAction(PROBE_VORBEREITEN) {
             // The job is captured inside the action, so a refused runAction can never register a foreign job.
             val job = currentCoroutineContext()[Job]
             if (generation != previewGeneration) return@runAction
             previewJob = job
             try {
+                // Stimmauswahl: die fertige 40-Schritte-Probe aus der APK sofort abspielen, im eingestellten Tempo.
+                if (text == null) ModellStimmen.probeDatei(app, voice)?.let { probe ->
+                    if (generation != previewGeneration) return@runAction
+                    if (previewJob === job) previewJob = null
+                    startPlayer(probe, voice.ttsSpeechRate.coerceIn(.5f, 2f), generation)
+                    return@runAction
+                }
                 val prep = SpeechPreparation(app, settings) { voice }
                 val file = prep.audio(text?.takeIf { it.isNotBlank() }?.take(1500)
                     ?: Sprachen.probe(voice.sprache))

@@ -56,30 +56,11 @@ android {
         getByName("release") { signingConfig = signingConfigs.getByName("eigen") }
     }
     packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-    // Das Whisper-Modell liegt unkomprimiert in der APK, damit es direkt aus der APK gelesen werden kann.
+    // Die Stimm-Modelle liegen unkomprimiert in der APK, damit sherpa-onnx sie direkt aus der APK lesen kann.
     androidResources { noCompress += listOf("onnx") }
-    sourceSets["main"].assets.srcDir("whisper-modell")
     sourceSets["main"].assets.srcDir("tts-modelle")
 }
-// Whisper small (int8, sherpa-onnx-Export, Modell-Lizenz MIT/Apache-2.0) fest in der App: Der Build lädt die Dateien
-// einmal von Hugging Face nach app/whisper-modell/whisper/ (nicht im Git) und prüft die Länge gegen Content-Length.
-val ladeWhisperModell by tasks.registering {
-    val ziel = file("whisper-modell/whisper")
-    outputs.dir(ziel)
-    doLast {
-        ziel.mkdirs()
-        listOf("small-encoder.int8.onnx", "small-decoder.int8.onnx", "small-tokens.txt").forEach { name ->
-            val datei = ziel.resolve(name)
-            if (datei.isFile && datei.length() > 0) return@forEach
-            val verbindung = URI("https://huggingface.co/csukuangfj/sherpa-onnx-whisper-small/resolve/main/$name").toURL().openConnection()
-            val erwartet = verbindung.contentLengthLong
-            val teil = ziel.resolve("$name.part")
-            verbindung.getInputStream().use { ein -> teil.outputStream().use { ein.copyTo(it, 1 shl 20) } }
-            if (erwartet > 0 && teil.length() != erwartet) throw GradleException("Whisper-Modell $name unvollständig (${teil.length()} von $erwartet Bytes).")
-            if (!teil.renameTo(datei)) throw GradleException("Whisper-Modell $name ließ sich nicht speichern.")
-        }
-    }
-}
+// Whisper (small und Large V3 Turbo) ist nicht mehr in der APK: beide lädt die App bei Bedarf herunter (Erkennung in TurboModell.kt).
 // Test-Stimmen (lokal, ohne espeak): Supertonic 3 (31 Sprachen, OpenRAIL-M) und Pocket TTS Englisch (CC-BY-4.0),
 // beide als sherpa-onnx-Export. Der Build lädt die Archive einmal nach app/tts-modelle/ (nicht im Git) und entpackt sie.
 val ladeTtsModelle by tasks.registering {
@@ -126,7 +107,7 @@ val ladeTtsModelle by tasks.registering {
         }
     }
 }
-tasks.named("preBuild") { dependsOn(ladeWhisperModell, ladeTtsModelle) }
+tasks.named("preBuild") { dependsOn(ladeTtsModelle) }
 kotlin { compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 }
 dependencies {
     implementation(platform(libs.compose.bom))
