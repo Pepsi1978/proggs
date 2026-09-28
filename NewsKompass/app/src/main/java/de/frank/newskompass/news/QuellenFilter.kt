@@ -38,7 +38,8 @@ object QuellenFilter {
     /** Fußnoten wie „[1]“, „[2, 3]“ oder „[4–6]“. */
     private val fussnoteRegex = Regex("[ \\t]*\\[\\d+(?:\\s*[,–-]\\s*\\d+)*]")
 
-    private val nackteAdresseRegex = Regex("[ \\t]*\\b(?:https?://|www\\.)[^\\s<>()]+", RegexOption.IGNORE_CASE)
+    /** Ohne Satzzeichen am Ende — sonst verschwände der Punkt nach „… https://x.de. Danach …“. */
+    private val nackteAdresseRegex = Regex("[ \\t]*\\b(?:https?://|www\\.)[^\\s<>()]*[^\\s<>().,;:!?]", RegexOption.IGNORE_CASE)
 
     /** Eine ganze Zeile „Quellen: …“ am Ende eines Absatzes. */
     private val quellenZeileRegex = Regex("(?im)^[ \\t]*(?:Quellen?|Sources?)\\s*:.*$")

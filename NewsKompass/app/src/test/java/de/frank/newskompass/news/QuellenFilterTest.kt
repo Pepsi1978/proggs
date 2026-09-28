@@ -59,4 +59,9 @@ class QuellenFilterTest {
             TextSaeuberer.teileInAbsaetze("Neues Modell.\n\nEs ist schneller ([heise.de](https://heise.de/n)) [2].")
         )
     }
+
+    @Test
+    fun punktNachAdresseBleibt() {
+        assertEquals("Details dazu. Danach mehr.", QuellenFilter.entferne("Details dazu https://example.com. Danach mehr."))
+    }
 }
