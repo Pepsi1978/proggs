@@ -88,7 +88,8 @@ val ladeTtsModelle by tasks.registering {
     doLast {
         mapOf("supertonic" to "sherpa-onnx-supertonic-3-tts-int8-2026-05-11", "pocket" to "sherpa-onnx-pocket-tts-int8-2026-01-26").forEach { (kurz, name) ->
             val ordner = ziel.resolve(kurz)
-            if (ordner.resolve("fertig").isFile) return@forEach
+            val kennung = if (kurz == "supertonic") "$name+fp32" else name
+            if (ordner.resolve("fertig").let { it.isFile && it.readText() == kennung }) return@forEach
             val archiv = file("tts-modelle/$name.tar.bz2")
             if (!archiv.isFile) {
                 val verbindung = URI("https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$name.tar.bz2").toURL().openConnection()
@@ -106,7 +107,21 @@ val ladeTtsModelle by tasks.registering {
                 eachFile { relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray()) }
                 includeEmptyDirs = false
             }
-            ordner.resolve("fertig").writeText(name)
+            // Supertonic in höchster Qualität: die fp32-Originale von Supertone statt der int8-Varianten (tts.json,
+            // unicode_indexer.bin und voice.bin bleiben aus dem sherpa-Export, sie sind für beide gleich).
+            if (kurz == "supertonic") {
+                listOf("duration_predictor", "text_encoder", "vector_estimator", "vocoder").forEach { teil ->
+                    val datei = ordner.resolve("$teil.onnx")
+                    val verbindung = URI("https://huggingface.co/Supertone/supertonic-3/resolve/main/onnx/$teil.onnx").toURL().openConnection()
+                    val erwartet = verbindung.contentLengthLong
+                    val tmp = ordner.resolve("$teil.part")
+                    verbindung.getInputStream().use { ein -> tmp.outputStream().use { ein.copyTo(it, 1 shl 20) } }
+                    if (erwartet > 0 && tmp.length() != erwartet) throw GradleException("Supertonic $teil unvollständig (${tmp.length()} von $erwartet Bytes).")
+                    if (!tmp.renameTo(datei)) throw GradleException("Supertonic $teil ließ sich nicht speichern.")
+                    ordner.resolve("$teil.int8.onnx").delete()
+                }
+            }
+            ordner.resolve("fertig").writeText(kennung)
             archiv.delete()
         }
     }

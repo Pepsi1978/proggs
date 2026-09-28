@@ -61,12 +61,11 @@ class SecureSettings(context: Context) : Closeable {
         set(value) = writeString(Keys.LOKALE_STIMME, value)
 
     /**
-     * Bevorzugte Stimme je Sprache: eine Premium-Stimme (Kennung wie „de-DE-KatjaNeural“) oder eine Gerätestimme.
-     * Ohne eigene Wahl gilt die Premium-Vorgabe der Sprache, passend zur Region des Geräts.
+     * Bevorzugte Stimme je Sprache: eine lokale Modellstimme (Kennung wie „modell:supertonic:3“), die diese Sprache spricht.
+     * Ohne gültige Wahl (auch frühere Edge-Stimmen) gilt die Vorgabe Supertonic F4.
      */
-    fun stimmeFuer(sprache: String): String = readString("stimme2_$sprache", "").takeIf { de.frank.wecker.PremiumKatalog.istPremium(it) || de.frank.wecker.ModellKatalog.passt(it, sprache) } ?: run {
-        de.frank.wecker.PremiumKatalog.vorgabe(sprache, java.util.Locale.getDefault().country).orEmpty()
-    }
+    fun stimmeFuer(sprache: String): String = readString("stimme2_$sprache", "").takeIf { de.frank.wecker.ModellKatalog.passt(it, sprache) }
+        ?: de.frank.wecker.ModellKatalog.VORGABE
     fun setzeStimme(sprache: String, name: String) { writeString("stimme2_$sprache", name) }
 
     /** Lieblingsstimmen (Stern); sie stehen in jeder Auswahl ganz oben. */

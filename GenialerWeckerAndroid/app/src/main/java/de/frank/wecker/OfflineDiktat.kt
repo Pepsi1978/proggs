@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 
 /** Die vier Diktatsprachen mit festen BCP-47-Tags; Deutsch ist voreingestellt. */
 enum class DiktatSprache(val tag: String, val anzeige: String) {
-    DE("de-DE", "Deutsch"), EN("en-US", "Englisch"), FR("fr-FR", "Französisch"), ES("es-ES", "Spanisch");
+    DE("de-DE", "Deutsch"), EN("en-US", "Englisch"), FR("fr-FR", "Französisch"), ES("es-ES", "Spanisch"), PT("pt-BR", "Portugiesisch");
     /** Kurzer Code wie im Alarm-JSON (de/en/fr/es). */
     val code: String get() = tag.substringBefore('-')
 }
@@ -41,10 +41,12 @@ object DiktatLogik {
         "fr" -> DiktatSprache.FR to true
         "es" -> DiktatSprache.ES to true
         "en" -> DiktatSprache.EN to true
+        "pt" -> DiktatSprache.PT to true
         else -> when (region.uppercase()) {
             "DE", "AT", "CH", "LI" -> DiktatSprache.DE to true
             "FR" -> DiktatSprache.FR to true
             "ES" -> DiktatSprache.ES to true
+            "PT", "BR" -> DiktatSprache.PT to true
             "US", "GB", "IE", "AU", "CA", "NZ" -> DiktatSprache.EN to true
             // Die App ist zuerst deutsch: unbekannte Gerätesprachen diktieren auf Deutsch, mit Hinweis.
             else -> DiktatSprache.DE to false

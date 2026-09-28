@@ -18,18 +18,19 @@ import java.util.concurrent.ConcurrentHashMap
 /** Ein Fehler, den Nutzer selbst beheben können (z. B. fehlende Offline-Stimme). */
 class SyntheseAbbruch(message: String, cause: Throwable? = null) : Exception(message, cause)
 
-/** Die vier Vorlese- und Diktatsprachen als kurze Codes, wie sie im Alarm-JSON stehen. */
+/** Die Vorlese- und Diktatsprachen als kurze Codes, wie sie im Alarm-JSON stehen. */
 object Sprachen {
-    val CODES = listOf("de", "en", "fr", "es")
+    val CODES = listOf("de", "en", "fr", "es", "pt")
     /** Unbekannt oder leer gilt als Deutsch – so bleiben Altbestände deutsch. */
     fun gueltig(code: String?): String = code?.lowercase()?.takeIf { it in CODES } ?: "de"
-    fun name(code: String): String = when (code) { "en" -> "Englisch"; "fr" -> "Französisch"; "es" -> "Spanisch"; else -> "Deutsch" }
+    fun name(code: String): String = when (code) { "en" -> "Englisch"; "fr" -> "Französisch"; "es" -> "Spanisch"; "pt" -> "Portugiesisch"; else -> "Deutsch" }
     fun kurz(code: String): String = gueltig(code).uppercase()
     fun diktat(code: String): DiktatSprache = DiktatSprache.entries.first { it.code == gueltig(code) }
     fun probe(code: String): String = when (code) {
         "en" -> "Good morning! It's seven o'clock. The day is getting brighter – a good moment to get up."
         "fr" -> "Bonjour ! Il est sept heures. Le jour se lève – c'est le bon moment pour se lever."
         "es" -> "¡Buenos días! Son las siete. Ya amanece: es un buen momento para levantarse."
+        "pt" -> "Bom dia! São sete horas. Lá fora já está a clarear – um bom momento para se levantar."
         else -> "Guten Morgen! Es ist sieben Uhr. Draußen wird es hell – ein guter Moment, um aufzustehen."
     }
     fun keineStimme(code: String): String = "Für ${name(code)} ist auf diesem Gerät keine Offline-Stimme installiert. " +
@@ -48,13 +49,11 @@ data class SyntheseStimme(val stimme: String, val ttsSpeechRate: Float, val spra
     fun withRate(rate: Float) = copy(ttsSpeechRate = rate)
     /** Standardstimme derselben Einstellungen für eine andere Sprache. */
     fun fuerSprache(code: String): SyntheseStimme = copy(sprache = code, stimme = if (vorgaben.isEmpty() && code == sprache) stimme else vorgaben[code].orEmpty())
-    /** Premium-Stimme (online erzeugt, offline abgespielt) statt einer Gerätestimme. */
-    val istPremium: Boolean get() = PremiumKatalog.istPremium(stimme)
     /** Lokale Modellstimme (Supertonic/Pocket), die diese Sprache spricht. */
     val istModell: Boolean get() = ModellKatalog.passt(stimme, sprache)
-    /** Dieselbe Einstellung mit Gerätestimme: eine Premium-Wahl fällt auf die beste Offline-Stimme der Sprache zurück. */
-    fun alsGeraetestimme(): SyntheseStimme = if (istPremium) copy(stimme = "") else this
-    val ttsProvider: String get() = if (istPremium) PremiumKatalog.PROVIDER else if (istModell) ModellKatalog.PROVIDER else LokaleStimmen.PROVIDER
+    /** Rückfall, falls die Modellstimme scheitert: dieselbe Einstellung mit der besten Gerätestimme der Sprache. */
+    fun alsGeraetestimme(): SyntheseStimme = if (istModell) copy(stimme = "") else this
+    val ttsProvider: String get() = if (istModell) ModellKatalog.PROVIDER else LokaleStimmen.PROVIDER
     /** Das Tempo steckt bereits in der erzeugten Datei. */
     val playbackSpeed: Float get() = 1f
 }
@@ -165,7 +164,7 @@ object LokaleStimmen {
 
 
     /** Hauptregion je Sprache zuerst (Deutschland, USA, Frankreich, Spanien). */
-    private val HAUPTREGION = mapOf("de" to "DE", "en" to "US", "fr" to "FR", "es" to "ES")
+    private val HAUPTREGION = mapOf("de" to "DE", "en" to "US", "fr" to "FR", "es" to "ES", "pt" to "BR")
 
     /** Strikt offline (kein Netz, installiert), danach nur die angebotenen – gilt für Auswahl UND Synthese. */
     private fun offlineStimmen(engine: TextToSpeech, sprache: String): List<Voice> {

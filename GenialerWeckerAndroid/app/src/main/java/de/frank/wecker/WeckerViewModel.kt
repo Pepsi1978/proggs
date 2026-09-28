@@ -69,7 +69,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
 
 
     init {
-        // Einmalig (1.0.6): Wecker mit fest gewählter Gerätestimme bekommen wieder die Vorgabe, also die Premium-Stimme.
+        // Einmalig (1.0.6): Wecker mit fest gewählter Gerätestimme bekommen wieder die Vorgabe (heute die lokale Modellstimme).
         if (!store.prefs.getBoolean("premium_migration1", false)) {
             store.all().filter { LokaleStimmen.istEigeneEngine(it.voiceProvider) && it.voiceId.isNotBlank() }
                 .forEach { a -> store.update(a.id) { it.copy(voiceProvider = "", voiceId = "") } }

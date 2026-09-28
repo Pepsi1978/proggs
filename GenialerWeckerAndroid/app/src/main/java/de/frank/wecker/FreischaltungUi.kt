@@ -33,7 +33,7 @@ private fun Angebot(zustand: FreischaltungsZustand) {
     if (zustand.preis == null) Text(if (zustand.playBereit) "Der Preis wird von Google Play geladen …"
         else "Der Preis kommt von Google Play und wird angezeigt, sobald Play erreichbar ist.",
         style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
-    Text("Internet brauchst du nur für den Kauf über Google Play und zum Erzeugen der Premium-Ansagen. Geweckt wird immer offline.",
+    Text("Internet brauchst du nur für den Kauf über Google Play. Die Stimmen sprechen und geweckt wird immer offline.",
         style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
     if (zustand.hinweis.isNotBlank()) Text(zustand.hinweis, style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
 }

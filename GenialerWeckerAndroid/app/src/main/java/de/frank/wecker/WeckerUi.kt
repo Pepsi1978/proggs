@@ -2038,15 +2038,14 @@ private fun StimmeUndTempo(vm: WeckerViewModel, alarm: Alarm) {
     val defaults = remember(revision) { SyntheseStimme(vm.settings) }
     val effective = alarm.resolveVoice(defaults)
     val code = Sprachen.gueltig(alarm.sprache)
-    fun name(id: String) = PremiumKatalog.finde(id)?.name ?: ModellKatalog.finde(id)?.name ?: "Standardstimme"
+    fun name(id: String) = ModellKatalog.finde(id)?.let { ModellKatalog.anzeige(it, code, vm.geraeteRegion) } ?: "Standardstimme"
     val standard = name(defaults.fuerSprache(code).stimme)
-    val eigene = if (alarm.voiceProvider.isBlank()) "" else alarm.voiceId
+    val eigene = if (alarm.voiceProvider == ModellKatalog.PROVIDER && ModellKatalog.passt(alarm.voiceId, code)) alarm.voiceId else ""
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Stimme", style = MaterialTheme.typography.labelLarge, color = LocalGold.current.textGedaempft)
         StimmWahlListe(vm, code, eigene, vorgabeZeile = standard) { id ->
             vm.change(alarm.copy(voiceProvider = when {
                 id.isBlank() -> ""
-                PremiumKatalog.istPremium(id) -> PremiumKatalog.PROVIDER
                 ModellKatalog.istModell(id) -> ModellKatalog.PROVIDER
                 else -> LokaleStimmen.PROVIDER
             }, voiceId = id))

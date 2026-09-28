@@ -33,21 +33,23 @@ import de.frank.genialeideen.ui.theme.LocalGold
 import de.frank.wecker.design.DesignDialog
 
 /**
- * Die eine Stimmauswahl der App als aufklappbares Feld: alle natürlichen Stimmen der Handysprache, jede sofort
- * wählbar und anhörbar. Mit Stern (oder langem Drücken) wird eine Stimme Favorit; Favoriten stehen immer oben.
- * [gewaehlt] ist die Stimmkennung; leer = Vorgabe. [vorgabeZeile] zeigt „Standard aus den Einstellungen“ (Wecker-Editor).
+ * Die eine Stimmauswahl der App als aufklappbares Feld: alle lokalen Stimmen der Sprache, jede sofort wählbar und
+ * anhörbar, ganz ohne Internet. Mit Stern (oder langem Drücken) wird eine Stimme Favorit – je Sprache getrennt;
+ * Favoriten stehen immer oben. [gewaehlt] ist die Stimmkennung; leer = Vorgabe. [vorgabeZeile] zeigt
+ * „Standard aus den Einstellungen“ (Wecker-Editor).
  */
 @Composable
 fun StimmWahlListe(vm: WeckerViewModel, sprache: String, gewaehlt: String, vorgabeZeile: String? = null, waehlen: (String) -> Unit) {
     var offen by remember { mutableStateOf(false) }
-    val aktuell = PremiumKatalog.finde(gewaehlt)
-    val beschriftung = aktuell?.let { "${it.name} · ${if (it.weiblich) "weiblich" else "männlich"}" }
-        ?: ModellKatalog.finde(gewaehlt)?.let { "${it.name} · lokal" }
+    val beschriftung = ModellKatalog.finde(gewaehlt)?.let { ModellKatalog.anzeige(it, sprache, vm.geraeteRegion) }
         ?: vorgabeZeile?.let { "Standard · $it" } ?: "Stimme wählen"
     GoldKnopf(beschriftung, { offen = true }, Modifier.fillMaxWidth(), beschreibung = "Stimme auswählen, aktuell $beschriftung",
         symbol = { Icon(Icons.Default.RecordVoiceOver, null, Modifier.size(18.dp)) })
     if (offen) StimmDialog(vm, sprache, gewaehlt, vorgabeZeile, { waehlen(it) }, { vm.stopPreview(); offen = false })
 }
+
+/** Favoriten-Schlüssel je Sprache: dieselbe Supertonic-Stimme kann auf Deutsch Favorit sein und auf Englisch nicht. */
+private fun favoritSchluessel(sprache: String, id: String) = "${Sprachen.gueltig(sprache)}|$id"
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -56,11 +58,12 @@ private fun StimmDialog(vm: WeckerViewModel, sprache: String, gewaehlt: String, 
     val gold = LocalGold.current
     var favoriten by remember { mutableStateOf(vm.settings.stimmFavoriten) }
     fun stern(id: String) {
-        favoriten = if (id in favoriten) favoriten - id else favoriten + id
+        val k = favoritSchluessel(sprache, id)
+        favoriten = if (k in favoriten) favoriten - k else favoriten + k
         vm.settings.stimmFavoriten = favoriten
     }
     // Reihenfolge nur beim Öffnen festlegen: ein neuer Stern lässt die Liste nicht unter dem Finger springen.
-    val reihenfolge = remember { PremiumKatalog.fuer(sprache, vm.geraeteRegion).sortedByDescending { it.id in vm.settings.stimmFavoriten } }
+    val reihenfolge = remember { ModellKatalog.fuer(sprache).sortedByDescending { favoritSchluessel(sprache, it.id) in vm.settings.stimmFavoriten } }
     DesignDialog(
         titel = "Stimme wählen",
         aufSchliessen = schliessen,
@@ -72,19 +75,11 @@ private fun StimmDialog(vm: WeckerViewModel, sprache: String, gewaehlt: String, 
                 if (vorgabeZeile != null) item {
                     StimmZeile(gewaehlt.isBlank(), "Standard aus den Einstellungen", vorgabeZeile, null, null, { waehlen("") }, {})
                 }
-                // Test: lokale Modellstimmen (offline, ohne Internet) vor den Premium-Stimmen.
-                // Stimmen, die diese Sprache nicht sprechen (Pocket: nur Englisch), sind nur zum Anhören da – mit englischer Probe.
-                items(ModellKatalog.STIMMEN, key = { it.id }) { m ->
-                    val passt = m.sprachen == null || sprache in m.sprachen
-                    val probeSprache = if (passt) sprache else m.sprachen!!.first()
-                    StimmZeile(m.id == gewaehlt, "${m.name} · lokal", if (passt) m.art else "${m.art} · nur Probe",
-                        null, anhoeren = { AnhoerKnopf(vm, "stimme:${m.id}") { vm.previewVoice(sprache = probeSprache, stimme = m.id) } },
-                        waehlen = { if (passt) waehlen(m.id) }, sternUmschalten = {})
-                }
-                items(reihenfolge, key = { it.id }) { s ->
-                    StimmZeile(s.id == gewaehlt, "${s.name} · ${if (s.weiblich) "weiblich" else "männlich"}", "${s.art} · ${s.regionName}",
-                        favorit = s.id in favoriten, anhoeren = { AnhoerKnopf(vm, "stimme:${s.id}") { vm.previewVoice(sprache = sprache, stimme = s.id) } },
-                        waehlen = { waehlen(s.id) }, sternUmschalten = { stern(s.id) })
+                items(reihenfolge, key = { it.id }) { m ->
+                    StimmZeile(m.id == gewaehlt, ModellKatalog.anzeige(m, sprache, vm.geraeteRegion), "",
+                        favorit = favoritSchluessel(sprache, m.id) in favoriten,
+                        anhoeren = { AnhoerKnopf(vm, "stimme:${m.id}") { vm.previewVoice(sprache = sprache, stimme = m.id) } },
+                        waehlen = { waehlen(m.id) }, sternUmschalten = { stern(m.id) })
                 }
             }
         },

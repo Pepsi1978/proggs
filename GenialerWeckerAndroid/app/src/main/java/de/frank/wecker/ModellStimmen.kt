@@ -15,28 +15,58 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * Eine lokale Neural-Stimme aus einem mitgelieferten Modell (Test). [sprachen] null = alle App-Sprachen.
+ * Eine lokale Neural-Stimme aus einem mitgelieferten Modell. [sprachen] null = alle App-Sprachen.
  * [referenz] ist bei Pocket die Stimmprobe (Asset-Pfad), aus der das Modell die Stimme übernimmt.
+ * Der angezeigte Name hängt von Sprache und Region ab (siehe [ModellKatalog.anzeige]); die Kennung nie.
  */
-data class ModellStimme(val id: String, val modell: String, val name: String, val art: String,
-    val sid: Int = 0, val referenz: String? = null, val sprachen: Set<String>? = null)
+data class ModellStimme(val id: String, val modell: String, val weiblich: Boolean, val nummer: Int,
+    val sid: Int = 0, val referenz: String? = null, val sprachen: Set<String>? = null, val eigenname: String? = null)
 
 /**
- * Test-Katalog der Modellstimmen: Supertonic 3 (31 Sprachen, OpenRAIL-M) und Pocket TTS (nur Englisch, Januar-Modell;
- * die neueren Sprachmodelle versteht sherpa-onnx 1.13.8 noch nicht, Issue #3755). Beide laufen ohne espeak (GPL).
+ * Die Vorlesestimmen der App, alle lokal: Supertonic 3 (ein Modell für alle Sprachen, fp32, 5 weibliche + 5 männliche
+ * Stimmen: sid 0–4 = F1–F5, sid 5–9 = M1–M5, alphabetisch im voice.bin) und Pocket TTS (nur Englisch, zwei weibliche
+ * Stimmen; die neueren Sprachmodelle versteht sherpa-onnx 1.13.8 noch nicht, Issue #3755). Beide ohne espeak (GPL).
  */
 object ModellKatalog {
     const val PROVIDER = "modell_tts"
+    /** Vorgabe jeder Sprache: Supertonic F4. */
+    const val VORGABE = "modell:supertonic:3"
     val STIMMEN: List<ModellStimme> =
-        (0 until 10).map { ModellStimme("modell:supertonic:$it", "supertonic", "Supertonic ${it + 1}", "Supertonic 3 · offline", sid = it) } +
-        listOf("bria" to "Bria", "loona" to "Loona").map { (datei, name) ->
-            ModellStimme("modell:pocket:$datei", "pocket", "Pocket $name", "Pocket TTS · offline · nur Englisch",
-                referenz = "tts/pocket/test_wavs/$datei.wav", sprachen = setOf("en"))
+        (0 until 10).map { ModellStimme("modell:supertonic:$it", "supertonic", weiblich = it < 5, nummer = it % 5, sid = it) } +
+        listOf("bria" to "Bria", "loona" to "Loona").mapIndexed { i, (datei, name) ->
+            ModellStimme("modell:pocket:$datei", "pocket", weiblich = true, nummer = i,
+                referenz = "tts/pocket/test_wavs/$datei.wav", sprachen = setOf("en"), eigenname = name)
         }
+
+    /** Landestypische Vornamen je Sprache/Region: je fünf weibliche und fünf männliche, in Stimmreihenfolge. */
+    private val NAMEN: Map<String, Pair<List<String>, List<String>>> = mapOf(
+        "de" to (listOf("Lea", "Nina", "Hannah", "Sophie", "Marie") to listOf("Lukas", "Jonas", "Felix", "Paul", "Max")),
+        "en-US" to (listOf("Emma", "Olivia", "Ava", "Mia", "Grace") to listOf("Liam", "Noah", "Ethan", "James", "Mason")),
+        "en-GB" to (listOf("Amelia", "Isla", "Poppy", "Freya", "Charlotte") to listOf("Oliver", "Harry", "George", "Alfie", "Arthur")),
+        "fr" to (listOf("Chloé", "Camille", "Manon", "Inès", "Juliette") to listOf("Louis", "Hugo", "Gabriel", "Jules", "Théo")),
+        "es" to (listOf("Lucía", "Sofía", "Carmen", "Valeria", "Elena") to listOf("Mateo", "Pablo", "Javier", "Diego", "Álvaro")),
+        "pt-PT" to (listOf("Beatriz", "Leonor", "Inês", "Matilde", "Carolina") to listOf("Tiago", "Duarte", "Rodrigo", "Afonso", "Tomás")),
+        "pt-BR" to (listOf("Ana", "Júlia", "Larissa", "Camila", "Fernanda") to listOf("João", "Pedro", "Lucas", "Rafael", "Gabriel")),
+    )
+
+    /** Namensvariante für Sprache + Geräteregion (Englisch GB/US, Portugiesisch PT/BR). */
+    private fun variante(sprache: String, region: String): String = when (Sprachen.gueltig(sprache)) {
+        "en" -> if (region.uppercase() in setOf("GB", "IE", "AU", "NZ")) "en-GB" else "en-US"
+        "pt" -> if (region.uppercase() in setOf("PT", "AO", "MZ", "CV")) "pt-PT" else "pt-BR"
+        else -> Sprachen.gueltig(sprache)
+    }
+
+    fun name(s: ModellStimme, sprache: String, region: String = ""): String {
+        s.eigenname?.let { return it }
+        val (w, m) = NAMEN.getValue(variante(sprache, region))
+        return (if (s.weiblich) w else m)[s.nummer]
+    }
+    /** „Lea · weiblich“ */
+    fun anzeige(s: ModellStimme, sprache: String, region: String = ""): String = "${name(s, sprache, region)} · ${if (s.weiblich) "weiblich" else "männlich"}"
 
     fun istModell(id: String): Boolean = STIMMEN.any { it.id == id }
     fun finde(id: String): ModellStimme? = STIMMEN.firstOrNull { it.id == id }
-    fun fuer(sprache: String): List<ModellStimme> = STIMMEN.filter { it.sprachen == null || sprache in it.sprachen }
+    fun fuer(sprache: String): List<ModellStimme> = STIMMEN.filter { it.sprachen == null || Sprachen.gueltig(sprache) in it.sprachen }
     /** Spricht die Stimme [id] die Sprache [sprache]? */
     fun passt(id: String, sprache: String): Boolean = finde(id)?.let { it.sprachen == null || Sprachen.gueltig(sprache) in it.sprachen } == true
 }
@@ -57,22 +87,22 @@ object ModellStimmen {
     suspend fun synthetisiere(context: Context, text: String, stimme: SyntheseStimme, ziel: File) = mutex.withLock {
         val s = ModellKatalog.finde(stimme.stimme) ?: throw SyntheseAbbruch("Unbekannte Modellstimme „${stimme.stimme}“.")
         val sprache = Sprachen.gueltig(stimme.sprache)
-        if (s.sprachen != null && sprache !in s.sprachen) throw SyntheseAbbruch("${s.name} spricht kein ${Sprachen.name(sprache)}.")
+        if (s.sprachen != null && sprache !in s.sprachen) throw SyntheseAbbruch("${ModellKatalog.name(s, sprache)} spricht kein ${Sprachen.name(sprache)}.")
         freigabe?.cancel(); freigabe = null
         try {
             withContext(Dispatchers.IO) {
                 val tts = instanz(context, s.modell)
                 val tempo = stimme.ttsSpeechRate.coerceIn(.5f, 2f)
                 val gen = if (s.modell == "supertonic") {
-                    GenerationConfig(sid = s.sid, speed = tempo, numSteps = 8, extra = mapOf("lang" to sprache))
+                    GenerationConfig(sid = s.sid, speed = tempo, numSteps = 10, extra = mapOf("lang" to sprache))
                 } else {
                     val (samples, rate) = referenz(context, s.referenz!!)
                     GenerationConfig(speed = tempo, referenceAudio = samples, referenceSampleRate = rate, numSteps = 5,
                         extra = mapOf("temperature" to "0.7", "chunk_size" to "15"))
                 }
                 val audio = tts.generateWithConfig(text, gen)
-                if (audio.samples.isEmpty()) throw SyntheseAbbruch("${s.name} hat kein Audio erzeugt.")
-                if (!audio.save(ziel.absolutePath)) throw SyntheseAbbruch("Das Audio von ${s.name} ließ sich nicht speichern.")
+                if (audio.samples.isEmpty()) throw SyntheseAbbruch("Die Stimme hat kein Audio erzeugt.")
+                if (!audio.save(ziel.absolutePath)) throw SyntheseAbbruch("Das Audio ließ sich nicht speichern.")
             }
         } finally { spaeterFreigeben() }
     }
@@ -80,10 +110,10 @@ object ModellStimmen {
     private fun instanz(context: Context, modell: String): OfflineTts {
         geladen?.let { (name, tts) -> if (name == modell) return tts else { tts.release(); geladen = null } }
         val config = if (modell == "supertonic") OfflineTtsModelConfig(numThreads = 4, supertonic = OfflineTtsSupertonicModelConfig(
-            durationPredictor = "tts/supertonic/duration_predictor.int8.onnx",
-            textEncoder = "tts/supertonic/text_encoder.int8.onnx",
-            vectorEstimator = "tts/supertonic/vector_estimator.int8.onnx",
-            vocoder = "tts/supertonic/vocoder.int8.onnx",
+            durationPredictor = "tts/supertonic/duration_predictor.onnx",
+            textEncoder = "tts/supertonic/text_encoder.onnx",
+            vectorEstimator = "tts/supertonic/vector_estimator.onnx",
+            vocoder = "tts/supertonic/vocoder.onnx",
             ttsJson = "tts/supertonic/tts.json",
             unicodeIndexer = "tts/supertonic/unicode_indexer.bin",
             voiceStyle = "tts/supertonic/voice.bin",
