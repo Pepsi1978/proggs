@@ -147,7 +147,10 @@ private fun BogenLeiste(
     val form = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
     Column(
         Modifier.fillMaxWidth().clip(form)
-            .background(Brush.verticalGradient(listOf(gold.flaecheErhoeht, gold.flaeche)))
+            // Im Dunkeln heller und mit weichem Auslauf in den Kuppelton, statt hart abgesetzt.
+            .background(Brush.verticalGradient(
+                if (gold.istDunkel) listOf(androidx.compose.ui.graphics.Color(0xFF34281F), androidx.compose.ui.graphics.Color(0xFF2B2019))
+                else listOf(gold.flaecheErhoeht, gold.flaeche)))
             .statusBarsPadding(),
     ) {
         Row(

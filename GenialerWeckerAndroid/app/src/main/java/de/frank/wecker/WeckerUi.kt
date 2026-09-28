@@ -928,8 +928,9 @@ private fun MorgenruheHero(
     // der Knopf — der Textspalte blieben bei 360 dp Gerätebreite nur 132 dp. Jetzt trägt die
     // rechte Spalte allein das Motiv, die Aktionen stehen darunter über die volle Breite.
     val innen = daten.breite - HERO_AUSSEN * 2 - KARTE_INNEN * 2
-    val motiv = (innen - SPALTEN_ABSTAND - textMindest())
-        .coerceIn(0.dp, if (daten.weit) 156.dp else 128.dp)
+    // Die Schlafszene darf groß werden: Sie nimmt der Textspalte bis auf 85 Prozent ihres Mindestmaßes Platz.
+    val motiv = (innen - SPALTEN_ABSTAND - textMindest() * 0.85f)
+        .coerceIn(0.dp, if (daten.weit) 180.dp else 150.dp)
     val zeigtMotiv = motiv >= 72.dp
     val textBreite = innen - if (zeigtMotiv) SPALTEN_ABSTAND + motiv else 0.dp
     Column(Modifier.fillMaxWidth()) {
@@ -1021,8 +1022,8 @@ private fun TraumraumHero(
                 .shadow(18.dp, kuppelForm, ambientColor = gold.primaer.copy(alpha = .45f),
                     spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = .6f))
                 .clip(kuppelForm)
-                .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(0.10f), gold.heroGrund, gold.heroGrundUnten.dunkler(0.12f))))
-                .glanzBogen(deckung = if (gold.istDunkel) 0.10f else 0.22f)
+                .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(if (gold.istDunkel) 0.05f else 0.10f), gold.heroGrund, gold.heroGrundUnten.dunkler(0.12f))))
+                .glanzBogen(deckung = if (gold.istDunkel) 0.05f else 0.22f)
                 .border(1.dp, gold.heroKante, kuppelForm)
                 .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.28f else 0.6f), kuppelForm)
                 .padding(top = 14.dp, bottom = versatz + 14.dp, start = 20.dp, end = 20.dp),
@@ -2844,22 +2845,9 @@ private fun Sternenhimmel(modifier: Modifier) {
     val glut = gold.primaer
     val mond = if (gold.istDunkel) androidx.compose.ui.graphics.Color(0xFFFFE9B8) else androidx.compose.ui.graphics.Color(0xFFFFF6DC)
     val himmel = gold.heroGrund
+    // Die Sterne leben: Sie gehen auf, funkeln, verlöschen; Satelliten und Sternschnuppen ziehen vorbei.
+    de.frank.wecker.design.FunkelHimmel(modifier, stern = stern, akzent = glut, dichte = 3.2f, satelliten = true)
     androidx.compose.foundation.Canvas(modifier) {
-        val zufall = java.util.Random(21)
-        repeat(46) { i ->
-            val x = zufall.nextFloat() * size.width
-            val y = zufall.nextFloat() * size.height * 0.85f
-            val gross = zufall.nextFloat()
-            val farbe = if (i % 5 == 0) glut else stern
-            val r = (0.7f + gross * 1.6f).dp.toPx()
-            drawCircle(farbe.copy(alpha = 0.35f + gross * 0.55f), r, androidx.compose.ui.geometry.Offset(x, y))
-            // Die hellsten bekommen einen kleinen Kreuzschein.
-            if (gross > 0.86f) {
-                val l = r * 3.2f
-                drawLine(farbe.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(x - l, y), androidx.compose.ui.geometry.Offset(x + l, y), 0.8f.dp.toPx())
-                drawLine(farbe.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(x, y - l), androidx.compose.ui.geometry.Offset(x, y + l), 0.8f.dp.toPx())
-            }
-        }
         // Mondsichel oben rechts, mit weichem Hof.
         val m = androidx.compose.ui.geometry.Offset(size.width - 34.dp.toPx(), 26.dp.toPx())
         val mr = 13.dp.toPx()

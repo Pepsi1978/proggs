@@ -278,7 +278,17 @@ object TraumraumGestalt : WeckerGestalt {
                 // Die Glutkuppel bleibt oben, die Ecken sinken weg — daher der höchste Wert
                 // der vier Designs (28 Prozent im Dunkeln).
                 .vignette(LocalMaterial.current.vignetteAlpha),
-        )
+        ) {
+            // Überall im Hintergrund leuchten Sterne auf und verlöschen wieder, hell wie dunkel.
+            FunkelHimmel(
+                Modifier.fillMaxSize(),
+                stern = if (gold.istDunkel) Color(0xFFFFF4E0) else gold.primaer,
+                akzent = if (gold.istDunkel) gold.primaer else gold.akzentWarm,
+                dichte = 0.9f,
+                satelliten = true,
+                staerke = if (gold.istDunkel) 0.85f else 0.7f,
+            )
+        }
     }
 
     /**
@@ -371,7 +381,8 @@ object OrbitGestalt : WeckerGestalt {
 private val MATRIX_KOPF = Color(0xFFD6FFE0)
 private val MATRIX_HELL = Color(0xFF00FF41)
 private val MATRIX_MITTEL = Color(0xFF008F11)
-private val MATRIX_DUNKEL = Color(0xFF005A0B)
+/** Im Hellen: so knallig wie möglich, aber dunkel genug, um auf hellem Grund zu tragen. */
+private val MATRIX_KNALL_HELLMODUS = Color(0xFF00C832)
 
 /**
  * Orbits Zeichenregen: senkrechte Spalten fallender Zeichen mit hellem Kopf und verblassendem
@@ -403,12 +414,12 @@ private fun ZeichenRegen(modifier: Modifier) {
     }
     androidx.compose.foundation.Canvas(modifier) {
         val t = zeit.longValue
-        val schrift = 18.dp.toPx()
+        val schrift = 16.dp.toPx()
         stift.textSize = schrift
-        val spaltenBreite = schrift * 1.25f
+        val spaltenBreite = schrift * 0.95f
         val spalten = (size.width / spaltenBreite).toInt() + 1
-        val schweif = 14
-        val grundAlpha = if (dunkel) 0.34f else 0.34f
+        val schweif = 18
+        val grundAlpha = if (dunkel) 0.62f else 0.5f
         val leinwand = drawContext.canvas.nativeCanvas
         for (spalte in 0 until spalten) {
             // Jede Spalte hat ihr eigenes, festes Tempo und ihren eigenen Versatz.
@@ -431,10 +442,10 @@ private fun ZeichenRegen(modifier: Modifier) {
                 // Originalfarben der Matrix: weißgrüner Kopf, leuchtendes #00FF41, zum Schweifende #008F11.
                 // Im Hellen trägt Neongrün auf hellem Grund nicht — dort dunkleres Matrixgrün.
                 val schweifFarbe = androidx.compose.ui.graphics.lerp(
-                    if (dunkel) MATRIX_HELL else MATRIX_MITTEL, if (dunkel) MATRIX_MITTEL else MATRIX_DUNKEL, 1f - anteil)
+                    if (dunkel) MATRIX_HELL else MATRIX_KNALL_HELLMODUS, if (dunkel) MATRIX_MITTEL else MATRIX_MITTEL, (1f - anteil) * (1f - anteil))
                 val c = when {
-                    istKopf -> (if (dunkel) MATRIX_KOPF else MATRIX_MITTEL).copy(alpha = if (dunkel) 0.7f else 0.6f)
-                    else -> schweifFarbe.copy(alpha = grundAlpha * anteil * anteil + 0.03f)
+                    istKopf -> (if (dunkel) MATRIX_KOPF else MATRIX_KNALL_HELLMODUS).copy(alpha = if (dunkel) 0.9f else 0.8f)
+                    else -> schweifFarbe.copy(alpha = grundAlpha * anteil + 0.04f)
                 }
                 stift.color = c.toArgb()
                 leinwand.drawText(zeichen, wahl, wahl + 1, x, y, stift)

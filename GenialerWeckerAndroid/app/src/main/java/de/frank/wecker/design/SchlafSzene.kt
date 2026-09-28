@@ -18,6 +18,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.lerp
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.LocalGold
@@ -60,7 +64,8 @@ internal fun SchlafSzene(modifier: Modifier) {
         val t = if (reduziert) STANDBILD else (zeit.longValue % (ZYKLUS * 1000).toLong()) / 1000f
         // Leicht herangezoomt: Die Szene füllt ihr Feld, der leere Himmel oben wird schmaler.
         val s = size.minDimension
-        scale(1.1f, pivot = Offset(center.x, (size.height - s) / 2f + 0.62f * s)) { zeichneSzene(zustand(t), farben) }
+        // Größer und etwas nach links gerückt; die Tür darf dabei über den linken Rand hinausragen.
+        translate(left = -0.05f * s) { scale(1.22f, pivot = Offset(center.x, (size.height - s) / 2f + 0.62f * s)) { zeichneSzene(zustand(t), farben) } }
     }
 }
 
@@ -82,6 +87,7 @@ private class SzenenFarben(
     val holz: Color, val holzDunkel: Color, val laken: Color, val decke: Color, val kissen: Color,
     val anzug: Color, val streifen: Color, val haut: Color, val haar: Color, val innen: Color,
     val sonne: Color, val mond: Color, val z: Color, val schatten: Color,
+    val teppich: Color, val vorhang: Color, val katze: Color,
 ) {
     companion object {
         fun fuer(dunkel: Boolean, gedaempft: Color) = if (dunkel) SzenenFarben(
@@ -90,12 +96,14 @@ private class SzenenFarben(
             streifen = Color(0xFF5F7CA6), haut = Color(0xFFE2BC98), haar = Color(0xFF4E3B2E),
             innen = Color(0xFF15120F), sonne = Color(0xFFFFC65C), mond = Color(0xFFF3E7C4),
             z = gedaempft, schatten = Color.Black.copy(alpha = .45f),
+            teppich = Color(0xFF7E5E55), vorhang = Color(0xFF8C6F6A), katze = Color(0xFFC98A4E),
         ) else SzenenFarben(
             holz = Color(0xFFB08A62), holzDunkel = Color(0xFF7A5A3D), laken = Color(0xFFF3EEE5),
             decke = Color(0xFF8098BA), kissen = Color(0xFFFFFCF6), anzug = Color(0xFFB9CDE6),
             streifen = Color(0xFF6F8DB8), haut = Color(0xFFEBC6A3), haar = Color(0xFF5B4535),
             innen = Color(0xFF2B2622), sonne = Color(0xFFFFB94A), mond = Color(0xFFE9D9A8),
             z = gedaempft, schatten = Color.Black.copy(alpha = .20f),
+            teppich = Color(0xFFC49A8A), vorhang = Color(0xFFD6B5AE), katze = Color(0xFFE3A263),
         )
     }
 }
@@ -188,45 +196,113 @@ private fun DrawScope.zeichneSzene(z: Zustand, f: SzenenFarben) {
     drawOval(Brush.radialGradient(listOf(f.schatten, Color.Transparent), center = p(0.15f, 0.865f), radius = 0.14f * s),
         topLeft = p(0.02f, 0.85f), size = Size(0.26f * s, 0.03f * s))
 
-    // Nachthimmel: Mond und ein paar Sterne, die mit dem Sonnenaufgang verblassen.
-    val nacht = 1f - z.sonne
-    if (nacht > 0.01f) {
-        val m = p(0.58f, 0.20f)
-        val mr = 0.045f * s
-        val sichel = Path.combine(PathOperation.Difference,
-            Path().apply { addOval(Rect(m, mr)) },
-            Path().apply { addOval(Rect(m + Offset(mr * .45f, -mr * .25f), mr * .86f)) })
-        drawCircle(Brush.radialGradient(listOf(f.mond.copy(alpha = .30f * nacht), Color.Transparent), center = m, radius = mr * 2.4f), mr * 2.4f, m)
-        drawPath(sichel, f.mond.copy(alpha = nacht))
-        listOf(0.44f to 0.14f, 0.70f to 0.10f, 0.78f to 0.26f, 0.36f to 0.28f, 0.66f to 0.33f).forEachIndexed { i, (x, y) ->
-            val funkeln = 0.55f + 0.45f * sin(z.t * 2.2f + i * 1.7f)
-            drawCircle(f.mond.copy(alpha = nacht * funkeln), (0.006f + (i % 2) * 0.003f) * s, p(x, y))
+    // Teppich unter dem Bett mit Rand und Fransen.
+    val teppich = Rect(p(0.33f, 0.852f), p(0.95f, 0.905f))
+    drawOval(f.teppich, teppich.topLeft, teppich.size)
+    drawOval(lerp(f.teppich, Color.White, .35f), teppich.topLeft + Offset(0.02f * s, 0.006f * s),
+        Size(teppich.width - 0.04f * s, teppich.height - 0.012f * s), style = Stroke(0.004f * s))
+    listOf(teppich.left, teppich.right).forEachIndexed { seite, x ->
+        repeat(4) { i ->
+            val y = teppich.center.y + (i - 1.5f) * 0.008f * s
+            val d = if (seite == 0) -1f else 1f
+            drawLine(lerp(f.teppich, Color.White, .3f), Offset(x - d * 0.004f * s, y), Offset(x + d * 0.012f * s, y), 0.003f * s)
         }
     }
+    // Fußmatte vor der Tür.
+    drawRect(lerp(f.teppich, f.holzDunkel, .4f), p(0.07f, 0.858f), Size(0.16f * s, 0.018f * s))
 
-    // Sonne: geht hinter dem Bett auf, mit weichem Morgenlicht und langsam drehenden Strahlen.
+    // Fenster: Himmel von Nacht zu Morgen, Mond und Sterne, Hügel, die Sonne geht darin auf.
+    val fenster = Rect(p(0.50f, 0.16f), p(0.80f, 0.46f))
+    val himmel = Brush.verticalGradient(listOf(lerp(Color(0xFF1B2440), Color(0xFF8EC2EE), z.sonne),
+        lerp(Color(0xFF3B4870), Color(0xFFFFD49A), z.sonne)), startY = fenster.top, endY = fenster.bottom)
+    drawRect(himmel, fenster.topLeft, fenster.size)
+    clipRect(fenster.left, fenster.top, fenster.right, fenster.bottom) {
+        val nacht = 1f - z.sonne
+        if (nacht > 0.01f) {
+            listOf(0.54f to 0.20f, 0.72f to 0.19f, 0.77f to 0.29f, 0.60f to 0.33f, 0.69f to 0.25f, 0.53f to 0.30f).forEachIndexed { i, (x, y) ->
+                val funkeln = 0.5f + 0.5f * sin(z.t * 2.2f + i * 1.7f)
+                drawCircle(f.mond.copy(alpha = nacht * funkeln), (0.004f + (i % 2) * 0.003f) * s, p(x, y))
+            }
+            val m = p(0.585f, 0.235f)
+            val mr = 0.032f * s
+            val sichel = Path.combine(PathOperation.Difference,
+                Path().apply { addOval(Rect(m, mr)) },
+                Path().apply { addOval(Rect(m + Offset(mr * .45f, -mr * .25f), mr * .86f)) })
+            drawCircle(Brush.radialGradient(listOf(f.mond.copy(alpha = .30f * nacht), Color.Transparent), center = m, radius = mr * 2.4f), mr * 2.4f, m)
+            drawPath(sichel, f.mond.copy(alpha = nacht))
+        }
+        if (z.sonne > 0.01f) {
+            val c = p(0.665f, 0.52f - 0.25f * z.sonne)
+            val r = 0.045f * s
+            drawCircle(Brush.radialGradient(listOf(f.sonne.copy(alpha = .45f * z.sonne), Color.Transparent), center = c, radius = r * 3f), r * 3f, c)
+            repeat(10) { i ->
+                val d = richtung(i * 36f + z.t * 12f)
+                drawLine(f.sonne.copy(alpha = .75f * z.sonne), c + d * (r * 1.3f), c + d * (r * 1.75f), 0.009f * s, StrokeCap.Round)
+            }
+            drawCircle(Brush.radialGradient(listOf(Color(0xFFFFE7A8).copy(alpha = z.sonne), f.sonne.copy(alpha = z.sonne)),
+                center = c - Offset(r * .3f, r * .3f), radius = r * 1.3f), r, c)
+        }
+        // Zwei Hügel mit ein paar Bäumen.
+        val huegelFarbe = lerp(Color(0xFF151C2A), Color(0xFF6E9670), z.sonne)
+        drawPath(Path().apply {
+            moveTo(fenster.left, fenster.bottom); lineTo(fenster.left, p(0f, 0.41f).y)
+            quadraticTo(p(0.58f, 0.37f).x, p(0f, 0.37f).y, p(0.65f, 0.415f).x, p(0f, 0.415f).y)
+            quadraticTo(p(0.73f, 0.38f).x, p(0f, 0.38f).y, fenster.right, p(0f, 0.405f).y)
+            lineTo(fenster.right, fenster.bottom); close()
+        }, huegelFarbe)
+        listOf(0.55f to 0.39f, 0.575f to 0.385f, 0.745f to 0.39f).forEach { (x, y) ->
+            drawPath(Path().apply {
+                moveTo(p(x, y - 0.03f).x, p(x, y - 0.03f).y); lineTo(p(x + 0.012f, y).x, p(x + 0.012f, y).y); lineTo(p(x - 0.012f, y).x, p(x - 0.012f, y).y); close()
+            }, lerp(huegelFarbe, Color.Black, .25f))
+        }
+    }
+    // Rahmen mit Sprossen und Fensterbank.
+    val rahmen = lerp(f.laken, f.holzDunkel, .15f)
+    drawRect(rahmen, fenster.topLeft, fenster.size, style = Stroke(0.012f * s))
+    drawLine(rahmen, Offset(fenster.center.x, fenster.top), Offset(fenster.center.x, fenster.bottom), 0.008f * s)
+    drawLine(rahmen, Offset(fenster.left, fenster.center.y), Offset(fenster.right, fenster.center.y), 0.008f * s)
+    drawRect(f.holz, p(0.485f, 0.46f), Size(0.33f * s, 0.016f * s))
+    // Gardinen an einer Stange, mit Falten.
+    drawLine(f.holzDunkel, p(0.45f, 0.135f), p(0.85f, 0.135f), 0.007f * s, StrokeCap.Round)
+    listOf(0.45f, 0.85f).forEach { x -> drawCircle(f.holzDunkel, 0.009f * s, p(x, 0.135f)) }
+    listOf(false, true).forEach { rechts ->
+        fun q(x: Float, y: Float) = if (rechts) p(1.3f - x, y) else p(x, y)
+        val vorhang = Path().apply {
+            moveTo(q(0.462f, 0.135f).x, q(0.462f, 0.135f).y); lineTo(q(0.535f, 0.135f).x, q(0.535f, 0.135f).y)
+            quadraticTo(q(0.505f, 0.30f).x, q(0.505f, 0.30f).y, q(0.525f, 0.50f).x, q(0.525f, 0.50f).y)
+            lineTo(q(0.462f, 0.50f).x, q(0.462f, 0.50f).y); close()
+        }
+        drawPath(vorhang, Brush.horizontalGradient(listOf(f.vorhang, lerp(f.vorhang, Color.White, .2f), f.vorhang),
+            startX = q(0.462f, 0f).x, endX = q(0.535f, 0f).x))
+        listOf(0.478f, 0.495f).forEach { x -> drawLine(lerp(f.vorhang, Color.Black, .2f), q(x, 0.145f), q(x + 0.004f, 0.49f), 0.003f * s) }
+    }
+    // Morgenlicht fällt schräg aus dem Fenster aufs Bett.
     if (z.sonne > 0.01f) {
-        val c = p(0.66f, 0.74f - 0.50f * z.sonne)
-        val r = 0.065f * s
-        drawCircle(Brush.radialGradient(listOf(f.sonne.copy(alpha = .40f * z.sonne), Color.Transparent), center = c, radius = r * 3f), r * 3f, c)
-        repeat(10) { i ->
-            val w = i * 36f + z.t * 12f
-            val d = richtung(w)
-            drawLine(f.sonne.copy(alpha = .75f * z.sonne), c + d * (r * 1.3f), c + d * (r * 1.75f), 0.012f * s, StrokeCap.Round)
-        }
-        drawCircle(Brush.radialGradient(listOf(Color(0xFFFFE7A8).copy(alpha = z.sonne), f.sonne.copy(alpha = z.sonne)),
-            center = c - Offset(r * .3f, r * .3f), radius = r * 1.3f), r, c)
+        drawPath(poly(p(0.51f, 0.46f), p(0.79f, 0.46f), p(0.92f, 0.70f), p(0.60f, 0.70f)),
+            Brush.verticalGradient(listOf(f.sonne.copy(alpha = .16f * z.sonne), Color.Transparent), startY = p(0f, 0.46f).y, endY = p(0f, 0.70f).y))
     }
 
+    // Wanduhr über der Tür; die Zeiger rasen, als liefe die Nacht im Zeitraffer.
+    val uhr = p(0.15f, 0.34f)
+    val ur = 0.036f * s
+    drawCircle(f.holzDunkel, ur * 1.15f, uhr)
+    drawCircle(lerp(f.laken, Color.White, .4f), ur, uhr)
+    repeat(12) { i ->
+        val d = richtung(i * 30f)
+        drawLine(f.holzDunkel, uhr + d * (ur * .78f), uhr + d * (ur * .92f), 0.003f * s)
+    }
+    drawLine(f.holzDunkel, uhr, uhr + richtung(180f - z.t * 12f) * (ur * .5f), 0.006f * s, StrokeCap.Round)
+    drawLine(f.holzDunkel, uhr, uhr + richtung(180f - z.t * 140f) * (ur * .78f), 0.004f * s, StrokeCap.Round)
+    drawCircle(Color(0xFFA8322B), 0.005f * s, uhr)
     // Tür: Zarge, dunkle Öffnung, Türblatt schwenkt an der linken Angel nach vorn auf.
-    drawRect(f.holzDunkel, p(0.04f, 0.30f), Size(0.22f * s, 0.56f * s))
-    drawRect(Brush.verticalGradient(listOf(f.innen, f.innen.copy(alpha = .85f)), startY = p(0f, 0.32f).y, endY = p(0f, BODEN).y),
-        p(0.06f, 0.32f), Size(0.18f * s, (BODEN - 0.32f) * s))
+    drawRect(f.holzDunkel, p(0.04f, 0.42f), Size(0.22f * s, 0.44f * s))
+    drawRect(Brush.verticalGradient(listOf(f.innen, f.innen.copy(alpha = .85f)), startY = p(0f, 0.44f).y, endY = p(0f, BODEN).y),
+        p(0.06f, 0.44f), Size(0.18f * s, (BODEN - 0.44f) * s))
     val winkel = z.tuer * 78f
     val blattBreite = 0.18f * cos(Math.toRadians(winkel.toDouble())).toFloat()
     val vor = 0.03f * sin(Math.toRadians(winkel.toDouble())).toFloat()
-    val a0 = p(0.06f, 0.32f); val a1 = p(0.06f, BODEN)
-    val b0 = p(0.06f + blattBreite, 0.32f - vor); val b1 = p(0.06f + blattBreite, BODEN + vor * .4f)
+    val a0 = p(0.06f, 0.44f); val a1 = p(0.06f, BODEN)
+    val b0 = p(0.06f + blattBreite, 0.44f - vor); val b1 = p(0.06f + blattBreite, BODEN + vor * .4f)
     val licht = 1f - z.tuer * .35f
     drawPath(poly(a0, b0, b1, a1), Brush.horizontalGradient(
         listOf(lerp(f.holzDunkel, f.holz, licht), lerp(f.holzDunkel, f.holz, licht * .85f)), startX = a0.x, endX = b0.x.coerceAtLeast(a0.x + 1f)))
@@ -242,7 +318,7 @@ private fun DrawScope.zeichneSzene(z: Zustand, f: SzenenFarben) {
         }
         drawCircle(Color(0xFFD9B35E), 0.011f * s, auf(.86f, .55f))
     }
-    drawRect(f.holzDunkel.copy(alpha = .6f), p(0.04f, 0.30f), Size(0.22f * s, 0.56f * s), style = Stroke(0.006f * s))
+    drawRect(f.holzDunkel.copy(alpha = .6f), p(0.04f, 0.42f), Size(0.22f * s, 0.44f * s), style = Stroke(0.006f * s))
 
     // Bett: hintere Beine, Fußteil, Rahmen, Matratze, Kissen.
     val hx = TIEFE_X; val hy = TIEFE_Y
@@ -278,6 +354,15 @@ private fun DrawScope.zeichneSzene(z: Zustand, f: SzenenFarben) {
             close()
         }
         drawPath(oben, lerp(f.decke, Color.White, .18f))
+        // Steppnähte als Rautenmuster.
+        fun steppung(form: Path, farbe: Color) = clipPath(form) {
+            for (k in -8..22) {
+                val x = x0 - 0.1f + k * 0.032f
+                drawLine(farbe, p(x, yb + 0.01f), p(x + 0.09f, yf - hy - 0.04f), 0.0035f * s)
+                drawLine(farbe, p(x + 0.09f, yb + 0.01f), p(x, yf - hy - 0.04f), 0.0035f * s)
+            }
+        }
+        steppung(oben, Color.White.copy(alpha = .20f))
         val vorn = Path().apply {
             moveTo(p(x0, yf).x, p(x0, yf).y)
             quadraticTo(p(mitte, yf - wulst).x, p(mitte, yf - wulst).y, p(kante, yf - wulst * .5f).x, p(kante, yf - wulst * .5f).y)
@@ -287,6 +372,9 @@ private fun DrawScope.zeichneSzene(z: Zustand, f: SzenenFarben) {
             close()
         }
         drawPath(vorn, Brush.verticalGradient(listOf(f.decke, lerp(f.decke, Color.Black, .18f)), startY = p(0f, yf - wulst).y, endY = p(0f, yb).y))
+        steppung(vorn, Color.White.copy(alpha = .14f))
+        // Borte am Saum.
+        drawLine(lerp(f.decke, Color.White, .45f), p(x0, yb - 0.008f), p(kante, yb - 0.008f), 0.004f * s)
         // Umgeschlagener Lakenrand an der Deckenkante.
         drawPath(poly(p(kante - 0.022f, yf - wulst * .5f), p(kante, yf - wulst * .5f), p(kante + hx, yf - hy - wulst * .5f),
             p(kante - 0.022f + hx, yf - hy - wulst * .5f)), lerp(f.laken, Color.White, .4f))
@@ -297,6 +385,31 @@ private fun DrawScope.zeichneSzene(z: Zustand, f: SzenenFarben) {
     if (figur != null && z.imBett >= 0.5f) person(figur, z, f, ::p)
     if (z.imBett >= 0.5f) decke()
 
+    // Die Katze schläft zusammengerollt am Fußende und hebt morgens kurz den Kopf.
+    val katzeWach = z.sonne > 0.85f && !z.schlaeft
+    val katzeAtmen = 1f + 0.04f * sin(z.t * 2f * PI.toFloat() / 2.6f)
+    val km = p(0.475f, 0.628f)
+    val kb = 0.042f * s
+    val katzeHell = f.katze; val katzeDunkel = lerp(f.katze, Color.Black, .3f)
+    val schwanz = Path().apply {
+        moveTo(km.x + kb * .8f, km.y + kb * .1f)
+        quadraticTo(km.x + kb * 1.1f, km.y + kb * .55f + sin(z.t * 1.3f) * kb * .1f, km.x - kb * .2f, km.y + kb * .45f)
+    }
+    drawPath(schwanz, katzeDunkel, style = Stroke(0.012f * s, cap = StrokeCap.Round))
+    drawOval(Brush.radialGradient(listOf(lerp(katzeHell, Color.White, .2f), katzeHell, katzeDunkel), center = km - Offset(kb * .2f, kb * .3f), radius = kb * 1.2f),
+        km - Offset(kb, kb * .45f * katzeAtmen), Size(kb * 2f, kb * .9f * katzeAtmen))
+    repeat(3) { i -> drawLine(katzeDunkel.copy(alpha = .6f), km + Offset(kb * (-.1f + i * .3f), -kb * .42f), km + Offset(kb * (.0f + i * .3f), -kb * .1f), 0.003f * s) }
+    val kk = km + Offset(-kb * .95f, if (katzeWach) -kb * .5f else -kb * .2f)
+    val kr = 0.017f * s
+    listOf(-1f, 1f).forEach { seite ->
+        drawPath(Path().apply {
+            moveTo(kk.x + seite * kr * .9f, kk.y - kr * .2f); lineTo(kk.x + seite * kr * .55f, kk.y - kr * 1.35f); lineTo(kk.x + seite * kr * .05f, kk.y - kr * .8f); close()
+        }, katzeDunkel)
+    }
+    drawCircle(katzeHell, kr, kk)
+    if (katzeWach) listOf(-1f, 1f).forEach { seite -> drawCircle(Color(0xFF3C5A2A), kr * .16f, kk + Offset(seite * kr * .4f, -kr * .05f)) }
+    else listOf(-1f, 1f).forEach { seite -> drawLine(katzeDunkel, kk + Offset(seite * kr * .6f, 0f), kk + Offset(seite * kr * .2f, 0f), 0.0025f * s) }
+
     // Kopfteil (rechts) und vordere Beine liegen vor Matratze und Kopf.
     drawPath(poly(p(0.905f, 0.48f), p(0.93f, 0.48f), p(0.93f + hx, 0.48f - hy), p(0.905f + hx, 0.48f - hy)), lerp(f.holz, Color.White, .15f))
     drawPath(poly(p(0.93f, 0.48f), p(0.93f + hx, 0.48f - hy), p(0.93f + hx, 0.81f), p(0.93f, BODEN)),
@@ -306,6 +419,19 @@ private fun DrawScope.zeichneSzene(z: Zustand, f: SzenenFarben) {
     listOf(0.405f, 0.88f).forEach { x ->
         drawRect(Brush.verticalGradient(listOf(f.holz, f.holzDunkel), startY = p(0f, 0.76f).y, endY = p(0f, BODEN).y),
             p(x, 0.76f), Size(0.02f * s, (BODEN - 0.76f) * s))
+    }
+
+    // Verzierungen: Füllungen im Kopfteil, gedrechselte Knäufe an Kopf- und Fußteil.
+    drawPath(poly(p(0.94f, 0.50f), p(0.97f, 0.47f), p(0.97f, 0.62f), p(0.94f, 0.65f)), f.holzDunkel.copy(alpha = .45f), style = Stroke(0.004f * s))
+    drawPath(poly(p(0.94f, 0.68f), p(0.97f, 0.65f), p(0.97f, 0.79f), p(0.94f, 0.82f)), f.holzDunkel.copy(alpha = .45f), style = Stroke(0.004f * s))
+    listOf(p(0.9175f, 0.472f), p(0.3875f, 0.592f)).forEach { k ->
+        drawCircle(Brush.radialGradient(listOf(lerp(f.holz, Color.White, .4f), f.holzDunkel), center = k - Offset(0.004f * s, 0.004f * s), radius = 0.016f * s), 0.012f * s, k)
+    }
+    // Hausschuhe vor dem Bett.
+    listOf(0.58f to 0.884f, 0.625f to 0.889f).forEach { (x, y) ->
+        val m = p(x, y)
+        drawOval(f.decke, m - Offset(0.018f * s, 0.007f * s), Size(0.036f * s, 0.014f * s))
+        drawOval(lerp(f.decke, Color.White, .35f), m - Offset(0.004f * s, 0.006f * s), Size(0.02f * s, 0.009f * s))
     }
 
     if (figur != null && z.imBett < 0.5f) person(figur, z, f, ::p)

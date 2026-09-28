@@ -105,8 +105,10 @@ val TraumraumDunkel = GoldPalette(
     istDunkel = true,
     // Die Kuppel hebt sich jetzt mit 1,33:1 von der Seite ab statt mit 1,16:1. Bewusst kein
     // Verlauf nach unten dunkler: Genau an der unteren Rundung zählt die Abgrenzung.
-    heroFlaeche = Color(0xFF342519),
-    heroRahmen = Color(0xFF4A3524),
+    // Seit 28.09.2026 dunkler (#342519 → #271D17): Die Kuppel ist Nachthimmel und stand zu hell
+    // unter der dunklen Leiste. Die Leiste ist dafür heller, beide treffen sich in der Mitte.
+    heroFlaeche = Color(0xFF271D17),
+    heroRahmen = Color(0xFF3E2D20),
 )
 
 val TraumraumHell = GoldPalette(
