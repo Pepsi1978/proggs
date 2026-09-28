@@ -37,3 +37,15 @@
 | 23 | On-Device-Diktat Samsung `false`/Error 13 | Standard-Recognizer/whisper.cpp als Fallback | L4 |
 | 24 | Edge in Verkaufs-App | Inoffiziell + wiederkehrend 403 → nie Default, lokaler Fallback | L5 |
 | 25 | Samsung SMT fehlt in `getEngines()` trotz `<queries>` (SM-F971B) | Engine explizit binden, Samsung nicht anbieten; Gerätebefund, keine allgemeine Regel | N-Nachtrag |
+| 26 | Lokales Modell crasht hart beim Laden | Korrupte Datei → native Exception; Checksumme vor dem Laden, Java-catch hilft nicht | L6 |
+| 27 | Samsung-Neural-Stimmen fehlen (One UI 7/8) | Für Fremd-Apps gesperrt → Google oder eigene Engine | L7 |
+| 28 | `OrtGetApiBase not found` | onnxruntime exakt auf die Version von sherpa-onnx pinnen | L8 |
+| 29 | Knacken / falsche Tonhöhe | AudioTrack-Rate aus dem Modell lesen, nie hart eintragen | L10 |
+| 30 | Letzte Wörter fehlen | Auf leere Queue warten, Stille anhängen | L11 |
+| 31 | LLM-TTS wiederholt sich | `repetition_penalty ≥ 1.1`, satzweise | L12 |
+| 32 | SIGABRT `key not found` | Zeichen-Whitelist + Normalisierung | L13 |
+| 33 | Deutsche Zahlen/Abkürzungen falsch | Eigene Normalisierung vorschalten | L14 |
+| 34 | „espeak-frei“, aber doch nicht | Misaki, KittenTTS und NeuTTS nutzen espeak; frei sind nur Supertonic, Pocket TTS und das Lexikon-Muster | L15 |
+| 35 | Vorlesen stoppt im Hintergrund | `mediaPlayback`-FGS für die ganze Session | L16 |
+| 36 | CC-BY-Stimme ohne Nennung | NOTICE pro Stimme in der App | L17 |
+| 37 | TTS-Konstruktor `SecurityException` | `try/catch`, beide `onError`-Overloads | L18 |

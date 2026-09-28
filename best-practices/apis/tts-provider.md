@@ -321,3 +321,117 @@
 - Das fertige Release-Paket `sherpa-onnx-v1.13.8-android.tar.bz2` enthält espeak/piper → für Closed Source ungeeignet (auch wenn man nur ASR nutzt).
 - Modell fest in der APK statt Download: `whisper-small` int8 (Encoder 112 MB, Decoder 262 MB, Tokens 0,8 MB) als Asset, `androidResources.noCompress += "onnx"`, geladen per `OfflineRecognizer(assets, config)`. Gradle-Task lädt die Dateien beim Bau von Hugging Face (csukuangfj/sherpa-onnx-whisper-small), nicht ins Git. Für Google Play später als **install-time Asset-Pack** (Basismodul max. 200 MB); Zugriff bleibt über den AssetManager gleich.
 - Whisper-Halluzinationen bei Stille ("Untertitel im Auftrag des ZDF …"): vor der Erkennung Sprachanteil messen (< 400 ms → nichts senden), Ränder kürzen, Floskel-Liste auch am Textende verwerfen.
+
+
+## 15) Edge-Qualität lokal auf Android: Lagebild und Entscheidungsweg — Stand 28.09.2026 09:57 (Recherche „hochwertiges lokales TTS“, Engine C Sonnet-Schwarm, 8 Researcher)
+
+Rohberichte mit allen Quellen: `Recherchen/tts-lokal-android/1-…8-*.md`. Versions-Anker: sherpa-onnx v1.13.8 (10.09.2026, noch keine 2.0), onnxruntime 1.28.2, NDK r28c.
+
+**Kernaussage:** Rein lokal UND Edge-Niveau UND Deutsch UND closed-source-sauber gibt es 2026 als Fertigprodukt nicht. Keine erfolgreiche Play-Store-Vorlese-App schafft das. Die deutschen Arena-Spitzenplätze belegen nur Cloud-Modelle (Cartesia Sonic 3.6 ≈ 1283 Elo, Inworld TTS-2 ≈ 1261). `extern` Recherchen/…/1, 3, 7
+
+**Was Verkaufs-Apps tatsächlich tun (4 Muster):** `extern` Recherchen/…/1-playstore-apps.md
+1. **System-TTS als Gratis-Basis:** ReadEra, Librera, Moon+ Reader, OsmAnd, HERE WeGo.
+2. **Lizenzierte klassische Offline-Stimmen per In-App-Kauf:** @Voice Aloud Reader, Voice Dream Reader (Acapela/Vocalizer/NeoSpeech, 2–5 $ pro Stimme). Offline und ToS-sauber, aber ältere Engine-Generation. https://www.acapela-group.com/about-us/customers/voice-dream-reader/
+3. **„Bring your own API key“:** Der Nutzer trägt Cloud-Key und Kosten selbst (@Voice Aloud Reader).
+4. **Cloud-Rendering + MP3-Download als Bezahlfunktion:** Speechify, ElevenReader, NaturalReader (Azure/Gemini/OpenAI). „Offline“ heißt dort: vorher gerenderte Datei.
+   Sonderfälle: Duolingo und Babbel nutzen eigene Aufnahmen bzw. eigene Modelle. Blinkist hat KI-Sprecher zugunsten menschlicher Sprecher wieder abgeschafft.
+
+**Entscheidungsweg für eine eigene Verkaufs-App (Empfehlung):**
+
+| Stufe | Weg | Qualität DE | Lizenz/Kosten | Wann |
+|---|---|---|---|---|
+| 1 | **Fester Text → beim Bau vorab rendern** (Cloud, lizenziert, Paid Tier) und als Asset ausliefern | Spitze (Cloud) | einmalige Kosten | Ansagen, UI-Texte, feste Sätze |
+| 2 | **Lokales Neural-Modell ohne espeak zur Laufzeit** (siehe §16) | gut, unter Edge | frei, eigener Integrationsaufwand | dynamischer Text, offline |
+| 3 | **Lizenzierte Cloud über eigenen Token-Broker** + Cache (siehe §17) | Spitze | laufende Kosten, Abo-Modell nötig | Premium-Stimme, online |
+| 4 | **System-TTS** mit bester Offline-Stimme (`getVoices()` nach `getQuality()` sortieren, `!isNetworkConnectionRequired()`) | gerätabhängig, schwach | frei | immer als letzter Fallback |
+
+**Kommerzielle On-Device-SDKs (Indie-Realität):** `extern` Recherchen/…/2-kommerzielle-sdks.md
+- **Azure Embedded Speech:** dieselbe Neural-Stimmfamilie wie Edge, auf dem Gerät. de-DE vorhanden, Java-AAR ab API 26. **Nur nach Limited-Access-Antrag**, Preis erst nach Freigabe; für Einzelentwickler ungewiss. Der Antrag kostet nichts außer Zeit. `offiziell` https://learn.microsoft.com/en-us/azure/ai-services/speech-service/embedded-speech
+- **Picovoice Orca:** Self-Service, Android-SDK, deutsche Stimme. Test gratis über die Console, danach Foundation-Plan 6.000 $/Jahr (nur Start-ups) oder Enterprise-Angebot. Vor dem Kauf die deutsche Demo-Stimme anhören. `offiziell` https://picovoice.ai/pricing/
+- **Acapela:** Android-SDK, Lizenz meist als **Prozent vom App-Verkaufspreis**, individueller Vertrag. Einziges B2B-Modell, das zu kleinen Verkaufs-Apps passt. `offiziell` https://www.acapela-group.com/solutions/acapela-tts-for-android/
+- **Nur über den B2B-Vertrieb ohne öffentliche Preise:** ReadSpeaker, Cerence/Vocalizer, CereProc, Sensory.
+- **Noch nicht zugänglich:** Cartesia On-Device (private Beta), ElevenLabs On-Device (Enterprise).
+
+**Systemstimmen 2026:** `extern` Recherchen/…/6-systemstimmen.md
+- Gemini Nano, AICore und ML Kit GenAI bieten **keine** TTS-API für Drittanbieter-Apps (nur STT).
+- Samsung sperrt seit One UI 7/8 seine Neural-Stimmen für fremde Apps (siehe Bug L7).
+- Nutzerführung zu einer besseren Engine ist möglich: `TextToSpeech(ctx, listener, enginePackage)` und `ACTION_INSTALL_TTS_DATA`, aber ohne Erfolgsgarantie. Eine vom Nutzer installierte Fremd-Engine per API zu nutzen, ist unproblematisch.
+
+## 16) Lokales Neural-TTS ohne GPL: Kandidaten und G2P-Hebel — Stand 28.09.2026 09:57
+
+**Prüfraster für jeden Kandidaten (Pflicht, jede Zelle belegt, sonst „unklar“):** Code-Lizenz · Gewichts-Lizenz kommerziell · **G2P-Kette ohne GPL** · Deutsch nativ · RTF < 1 auf Mittelklasse-ARM.
+
+| Modell | Größe | Lizenz Code / Gewichte | G2P ohne espeak? | Deutsch | Handy-Tempo | Einschätzung |
+|---|---|---|---|---|---|---|
+| **Kyutai Pocket TTS** | 100M | MIT / **CC-BY-4.0** (Namensnennung) | **ja**, SentencePiece-Tokenizer | ja, seit 04/2026 (6 Sprachen) | ~1× Echtzeit auf Pixel 8a (Community-LiteRT-Port) | sauberste Lizenz, **Favorit zum Anhören**; knapp an der Echtzeitgrenze. In sherpa-onnx als Modelltyp enthalten, aber Klangabweichung (Bug L9) |
+| **Supertonic 3** (Supertone) | 99M, 31 Sprachen | MIT / **OpenRAIL-M** (Nutzungsauflagen + Namensnennung, Closed Source erlaubt) | **ja**, eigenes Unicode-Frontend | ja | 5× Echtzeit auf 16-Thread-Server-CPU; keine Handy-Messung | schnell; Lizenztext prüfen; **Projekt wird archiviert** (kein Support nach 31.08.2026). F-Droid-Engine `com.brahmadeo.supertonic.tts` als Referenz |
+| **Kokoro-82M-German-Martin** (kikiri-tts) | ~80 MB | Apache-2.0 / Daten CC0 (HUI) | nur mit **Lexikon-Muster** (siehe unten) | ja (Fine-Tune) | Kokoro-Klasse, Mittelklasse grenzwertig | beste deutsche Kokoro-Option. Variante unora-voices „Martin 1“ mit fertigem Lexikon läuft bereits auf Android |
+| **Piper thorsten (high)** | ~60 MB | Apache/MIT / CC0 | nur mit Lexikon-Muster | ja | schnell (VITS) | deutsche Referenzstimme, hörbar unter Edge |
+| NeuTTS Nano German | ~117M aktiv | Lizenz „other“ (unklar) | **nein**, espeak Pflicht | ja | unklar | ausgeschlossen, solange espeak nötig ist |
+| Chatterbox (Multilingual) | groß | MIT / MIT | unklar | ja | nicht für Handys ausgelegt | eher Server |
+| Qwen3-TTS 0.6B | ~2,3 GB RAM | Apache / Apache | ja (LLM-Tokenizer) | ja | zu schwer für die Mittelklasse | Server/Pre-Rendering |
+| OuteTTS 1.0 0.6B | GGUF | MIT / MIT | ja | ja | unklar, LLM-Tempo | Wiederholungsschleifen (Bug L12) |
+| Kitten TTS | 15M | Apache / Apache | nein (espeak) | **nein** (nur EN) | schnell | für Deutsch raus |
+| Fish/OpenAudio S1-mini, F5-TTS-German (aihpi), MMS, pavoque, XTTS | – | **NC** | – | – | – | für Verkaufs-Apps raus |
+
+Quellen: `Recherchen/tts-lokal-android/3-open-source-modelle.md`, `4-deutsch-g2p.md`. Wichtigste Links:
+- https://github.com/kyutai-labs/pocket-tts
+- https://github.com/supertone-inc/supertonic
+- https://huggingface.co/Godelaune/Kokoro-82M-ONNX-German-Martin
+- https://github.com/georgwinter89-cloud/unora-voices
+
+**Der G2P-Hebel: das Lexikon-Muster (unora-voices).** `extern`
+- espeak-ng läuft **nur beim Bauen auf dem Entwickler-PC** und erzeugt für den Wortschatz eine Tabelle Wort → Phoneme im exakten Piper/Kokoro-Phonemsatz.
+- In die APK kommt nur diese Datei, weder espeak-Code noch espeak-Binärdatei.
+- Die Ausgabe eines GPL-Programms ist in der Regel kein abgeleitetes Werk. **Rechtlich plausibel, aber nicht anwaltlich geprüft.** Die espeak-Wörterbuchdaten selbst nie mitliefern.
+- Die Wortliste darf keine CC-BY-SA-Quelle sein (Wiktionary: Share-Alike). unora nutzt Tatoeba und Leipzig-Corpora (CC BY 4.0), dafür ist eine Namensnennung nötig.
+- Unbekannte Wörter (OOV) übernimmt ein MIT-G2P (CharsiuG2P ByT5-small, ~30 MB, oder DeepPhonemizer `latin_ipa_forward`). Dessen IPA muss per ONNX-Export und **Mapping auf den espeak-Phonemsatz** angeglichen werden: Das ist der eigentliche Aufwand.
+- **Kein Ausweg:** Misaki `de.DEG2P` (ruft intern espeak auf, PR #317 nicht gemergt), OpenPhonemizer (nur EN, archiviert 15.03.2026), Sequitur (GPL-2.0).
+- sherpa-onnx 2.0 soll `lexicon.txt` bzw. fertige Tokens (`GenerationConfig.tokens`) offiziell unterstützen (Issue #3731, offen seit 08.07.2026). Bis dahin ist der Weg nicht für alle Modelltypen dokumentiert.
+
+**Deutsche Textnormalisierung (Pflicht vor jeder lokalen Synthese):** Zahlen, Datum, Uhrzeit, Euro, Einheiten, Ordinalzahlen und Abkürzungen (z. B., usw., Nr.) ausschreiben, bevor der Text ins Modell geht.
+- GPL-frei: NVIDIA NeMo-text-processing (Apache-2.0, Deutsch, eher als Vorlage für eigene Kotlin-Regeln).
+- `german_transliterate` als Referenz für Regeln.
+- num2words steht unter LGPL, also vorsichtig.
+
+**Integration Android (sherpa-onnx oder ONNX Runtime direkt):** `extern` Recherchen/…/5-integration-performance.md
+- Satzweise synthetisieren, `generateWithCallback` + `AudioTrack.MODE_STREAM`, Samplerate aus dem Modell lesen.
+- Beim Start 1–3 Warm-up-Inferenzen, alles außerhalb des Main-Threads.
+- **Vorlage für eine eigene System-Engine:** `sherpa-onnx/android/SherpaOnnxTtsEngine/.../TtsEngine.kt` (`TextToSpeechService`).
+- Beschleuniger: XNNPACK überall, NNAPI ab Snapdragon 8 Gen 1, Exynos 2200 und Tensor G2 (nicht unabhängig bestätigt), immer mit CPU-Fallback. **int8 ist bei Kokoro auf CPUs teils langsamer** als fp32 (Dequantisierung), deshalb selbst messen.
+- Belastbare RTF-Werte von echten Handys fehlen: **eigener Benchmark auf dem Zielgerät ist Pflicht**, bevor ein Modell gewählt wird.
+- Auslieferung: Das Basismodul darf höchstens 200 MB haben. Install-time-Asset-Packs dürfen zusammen höchstens 1 GB haben. Play for On-device AI (Beta) nennt offiziell nur LiteRT/MediaPipe, ONNX nur als generischer Asset. Die Alternative ist ein eigener Download **mit Checksumme** (siehe Bug L6).
+- Vor dem Play-Upload die 16-KB-Ausrichtung der konkreten AAR prüfen (`zipalign -c -P 16` bzw. `check_elf_alignment.sh`).
+
+## 17) Lizenzierte Cloud als Hybrid: Preise, Rechte, Pflichten — Stand 28.09.2026 09:57
+
+Die Preise beziehen sich auf 1 Mio Zeichen, Stand 09/2026. Bei Entscheidungen erneut live prüfen. `extern` Recherchen/…/7-cloud-hybrid.md
+
+| Anbieter / Modell | Preis | Anmerkung |
+|---|---|---|
+| Google Standard/WaveNet | ~4 $ | |
+| Google Neural2 | 16 $ | |
+| Google Chirp 3 HD | ~30 $ | 1 Mio Zeichen Free-Tier |
+| Google Studio | ~160 $ | |
+| Azure Neural | 16 $ | 0,5 Mio Free-Tier; F0 ohne kommerzielle Rechte |
+| Azure Neural HD | 22 $ | seit 03/2026, vorher 30 $ |
+| Amazon Polly Neural | 16 $ | |
+| Amazon Polly Generative | 30 $ | |
+| ElevenLabs Flash v2.5 | ~50 $ | kommerziell erst ab Paid-Plan |
+| ElevenLabs Multilingual v2 / v3 | ~100 $ | |
+| Inworld TTS-2 | 25 $ (Growth 12,50 $) | **DE-Arena Platz 2** |
+| Inworld Flash | 15 $ | |
+| Cartesia Sonic 3.6 | creditbasiert | **DE-Arena Platz 1** |
+| Deepgram Aura-2 | 30 $ | Deutsch seit 2026 |
+| Speechmatics | 11 $ | 1 Mio Zeichen Free-Tier |
+| OpenAI gpt-4o-mini-tts | ≈ 15 $ | tokenbasiert |
+
+- **Rechenbeispiel:** 1.000 Nutzer × 10.000 Zeichen im Monat = 10 Mio Zeichen. Das kostet 40 $ (Google Standard) bis 1.600 $ (Studio). Für eine Einmalkauf-App ist Live-Cloud deshalb nur mit Kontingent oder Abo tragbar.
+- **Caching:** Google empfiehlt ausdrücklich „cache audio files by text hash“, und ElevenLabs erlaubt im Paid-Plan das Speichern und Ausliefern. Bei Azure ist die Caching-Klausel unklar; vor der Produktion die Product Terms lesen. Bei OpenAI gehört der API-Output dem Kunden (gilt nicht für ChatGPT Voice).
+- **EU AI Act Art. 50 (seit 02.08.2026):** Täuschend echte KI-Stimmen muss man für Nutzer wahrnehmbar kennzeichnen, zum Beispiel mit einem Hinweis „KI-Stimme“ in der App. Das gilt auch für lokale Neural-Stimmen.
+- **DSGVO:** Der Text geht an den Dienstleister. EU-Region wählen und das in der Datenschutzerklärung nennen.
+- **Architektur:**
+  - Den Key nie in die APK. Ein Cloudflare Worker oder eine Firebase Function dient als Token-Broker/Proxy, mit Rate-Limit pro Nutzer (Durable Objects).
+  - Feste Texte beim Bau vorab rendern und als Asset ausliefern.
+  - Dynamischen Text per Hash-Key cachen, lokal als Fallback.
+- **edge-tts 2026:** keine belegten Abmahnungen oder Play-Store-Entfernungen. Seit 2026 bricht aber eine Header-Restriktion (`Sec-WebSocket-Version`) die Nutzung im Browser; serverseitige Clients laufen noch. Es bleibt eine Grauzone und ist **kein** Weg für eine Verkaufs-App (siehe §13).

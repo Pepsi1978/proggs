@@ -859,3 +859,104 @@
 - **Quellen:**
   - https://github.com/rany2/edge-tts/issues/290
   - https://github.com/rany2/edge-tts/issues/482
+
+
+## L-Nachtrag) Lokales Neural-TTS auf Android: Abstürze, Audio, Lizenz — Stand 28.09.2026 09:57 (Recherche „hochwertiges lokales TTS“, Engine C Sonnet-Schwarm)
+
+Rohberichte: `Recherchen/tts-lokal-android/8-bugs-fallen.md` (22 Einträge), `5-…`, `6-…`. Versions-Anker: sherpa-onnx v1.13.8, onnxruntime 1.28.2.
+
+### L6 — Korruptes Modell: native C++-Exception tötet den Prozess ⭐
+- **Symptom:** `terminating due to uncaught exception of type Ort::Exception`, die App stirbt hart. Ein Java-`try/catch` greift nicht.
+- **Ursache:** Die Exception beim Laden des Modells wird am JNI-Rand nicht in eine Java-Exception umgewandelt.
+- **Betroffen:** sherpa-onnx 1.13.8, arm64, Android 16 (Issue offen seit 25.09.2026).
+- **Fix:** Die Modelldatei nach dem Download per **Checksumme prüfen**, bevor sie an die native Ladefunktion geht. Unvollständige Downloads nie laden (`.part` → rename).
+- **Quelle:** https://github.com/k2-fsa/sherpa-onnx/issues/3987
+
+### L7 — Samsung-Neural-Stimmen für fremde Apps gesperrt (One UI 7/8)
+- **Symptom:** Samsung TTS ist gewählt, die eigene App bekommt über `TextToSpeech` trotzdem keine Samsung-Stimmen.
+- **Ursache:** Seit One UI 7 (Android 15) sind die Samsung-Neural-Stimmen nur für Samsung-eigene Apps freigegeben.
+- **Fix:** Samsung nicht als bevorzugte Engine einplanen. Google Speech Services oder eine eigene bzw. empfohlene Engine als Fallback nehmen. Passt zu N-Nachtrag (SMT fehlt in `getEngines()`).
+- **Quellen:**
+  - https://speechcentral.net/2026/03/22/samsung-tts-missing-on-android-15-one-ui-7-8-whats-really-happening/
+  - https://forum.developer.samsung.com/t/tts-issue-on-oneui-7-0/41235
+
+### L8 — onnxruntime-Version passt nicht zu sherpa-onnx → `dlopen`-Absturz
+- **Symptom:** `UnsatisfiedLinkError` / `symbol 'OrtGetApiBase' not found`.
+- **Ursache:** Das Projekt pinnt eine andere onnxruntime-Version als die, gegen die sherpa-onnx gebaut wurde.
+- **Fix:** onnxruntime **exakt** auf die Version von sherpa-onnx fixieren (v1.13.8 → 1.28.x) und nie eigenständig hochziehen.
+- **Quelle:** https://github.com/Codename-11/hermes-relay/issues/444
+
+### L9 — PocketTTS in sherpa-onnx klingt anders als das Original
+- **Symptom:** Klang oder Qualität weichen vom Kyutai-Original ab.
+- **Ursache:** unklar, Issue offen.
+- **Fix:** Vor der Entscheidung beide Wege anhören (sherpa-onnx vs. Original bzw. LiteRT-Port).
+- **Quelle:** https://github.com/k2-fsa/sherpa-onnx/issues/3180
+
+### L10 — Samplerate von AudioTrack ≠ Modellausgabe → Knacken oder falsche Tonhöhe
+- **Symptom:** Klicks und verzerrte Stimme.
+- **Ursache:** AudioTrack hat eine fest eingetragene Rate (z. B. 24000), das Modell liefert eine andere (22050/16000/44100).
+- **Fix:** Die Rate aus dem Modell lesen. Wechselt sie, AudioTrack neu anlegen statt live umzukonfigurieren.
+- **Quelle:** https://developer.android.com/ndk/guides/audio/sampling-audio
+
+### L11 — Letzte Wörter abgeschnitten (Piper/Streaming)
+- **Symptom:** Das Satzende fehlt.
+- **Ursache:** Der Player bzw. der Transport wird abgebaut, bevor die Audio-Warteschlange leer ist. Bei Piper ist die Ursache nicht endgültig geklärt.
+- **Fix:** Vor dem Stoppen auf „Queue leer“ warten und kurze Stille ans Chunk-Ende anhängen.
+- **Quellen:**
+  - https://github.com/home-assistant/core/issues/150397
+  - https://github.com/pipecat-ai/pipecat/issues/4647
+
+### L12 — LLM-basierte TTS (Orpheus, OuteTTS, NeuTTS) wiederholt Phrasen endlos
+- **Symptom:** Schleifen und Halluzinationen bei langen Texten.
+- **Fix:** `repetition_penalty ≥ 1.1`, korrekte Stop-Tokens, Text satzweise einspeisen.
+- **Quelle:** https://github.com/canopyai/Orpheus-TTS
+
+### L13 — Lexikon-Crash `unordered_map::at: key not found` bei Sonderzeichen
+- **Symptom:** SIGABRT während der Synthese.
+- **Ursache:** Ein Zeichen oder Token fehlt im Lexikon/Tokenizer (VITS).
+- **Betroffen:** sherpa-onnx 1.9.x, Issue weiterhin offen.
+- **Fix:** Den Text vorher normalisieren und per **Whitelist** auf erlaubte Zeichen filtern.
+- **Quelle:** https://github.com/k2-fsa/sherpa-onnx/issues/823
+
+### L14 — Deutsche Zahlen, Daten und Abkürzungen falsch ausgesprochen
+- **Symptom:** „z. B.“ wird buchstabiert, bei „3.“ oder „12,50 €“ entstehen falsche Phoneme.
+- **Ursache:** espeak und Kokoro-Ports bringen keine robuste deutsche Normalisierung mit.
+- **Fix:** Eine eigene Normalisierungsstufe vorschalten (siehe Best Practices §16).
+- **Quellen:**
+  - https://github.com/repodiac/german_transliterate
+  - https://huggingface.co/Godelaune/Kokoro-82M-ONNX-German-Martin
+
+### L15 — Weg ohne espeak, der in Wahrheit espeak nutzt
+- **Symptom:** Man glaubt, GPL-frei zu sein.
+- **Ursache:**
+  - Misaki `de.DEG2P` ruft espeak auf.
+  - KittenTTS in sherpa-onnx braucht `espeak-ng-data`.
+  - NeuTTS braucht espeak.
+- **Fix:** Die G2P-Kette jedes Kandidaten bis zur Laufzeit nachverfolgen. Wirklich espeak-frei sind nur Supertonic, Pocket TTS und das Lexikon-Muster.
+- **Quellen:**
+  - https://github.com/hexgrad/kokoro/pull/317
+  - https://github.com/k2-fsa/sherpa-onnx/pull/2460
+
+### L16 — Hintergrund-Vorlesen bricht an Satzgrenzen ab
+- **Symptom:** Das Vorlesen stoppt, sobald die App im Hintergrund ist.
+- **Ursache:** Background-Audio-Hardening lehnt erneute Audiofocus-Requests ohne `mediaPlayback`-FGS ab.
+- **Fix:** Für die **ganze Session** einen `mediaPlayback`-Foreground-Service mit Notification betreiben und den Audiofocus einmal halten, nicht pro Satz neu anfordern.
+- **Quellen:**
+  - https://developer.android.com/about/versions/17/changes/bg-audio
+  - https://github.com/seazon/FeedMe/issues/225
+
+### L17 — CC-BY-Stimme ohne sichtbare Namensnennung ausgeliefert
+- **Symptom:** Lizenzverstoß trotz „kommerziell erlaubt“.
+- **Ursache:** Die Pflicht gilt pro Stimme bzw. Datensatz (z. B. Piper mls, libritts_r, Pocket TTS CC-BY-4.0, unora-Lexikon CC BY 4.0). Die Repo-Lizenz ersetzt sie nicht.
+- **Fix:** Ein Lizenzbildschirm bzw. NOTICE **in der App**, pro Stimme.
+- **Quelle:** https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/VOICES.md
+
+### L18 — `TextToSpeech`-Konstruktor wirft `SecurityException`, `onError(String,int)` bleibt stumm
+- **Symptom:** Absturz beim Erzeugen (Engine nicht bindbar). Vor API 31 kommen Fehler nur über das veraltete `onError(String)`.
+- **Fix:**
+  - Den Konstruktor in `try/catch` kapseln und auf „nicht verfügbar“ zurückfallen.
+  - Beide `onError`-Overloads implementieren.
+  - Für eine bestimmte Engine den Konstruktor mit `enginePackageName` nehmen und den Erfolg im `OnInitListener` prüfen.
+- **Quellen:**
+  - https://github.com/brenogonzaga/tauri-plugin-tts/issues/14
+  - https://issuetracker.google.com/issues/138321382
