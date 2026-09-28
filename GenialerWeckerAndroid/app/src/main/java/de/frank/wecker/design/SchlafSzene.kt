@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.lerp
 import de.frank.genialeideen.ui.theme.LocalBewegungReduziert
 import de.frank.genialeideen.ui.theme.LocalGold
@@ -57,7 +58,9 @@ internal fun SchlafSzene(modifier: Modifier) {
     val farben = SzenenFarben.fuer(dunkel, gold.textGedaempft)
     Canvas(modifier) {
         val t = if (reduziert) STANDBILD else (zeit.longValue % (ZYKLUS * 1000).toLong()) / 1000f
-        zeichneSzene(zustand(t), farben)
+        // Leicht herangezoomt: Die Szene füllt ihr Feld, der leere Himmel oben wird schmaler.
+        val s = size.minDimension
+        scale(1.1f, pivot = Offset(center.x, (size.height - s) / 2f + 0.62f * s)) { zeichneSzene(zustand(t), farben) }
     }
 }
 

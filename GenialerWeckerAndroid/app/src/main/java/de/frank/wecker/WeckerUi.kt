@@ -928,7 +928,7 @@ private fun MorgenruheHero(
     // rechte Spalte allein das Motiv, die Aktionen stehen darunter über die volle Breite.
     val innen = daten.breite - HERO_AUSSEN * 2 - KARTE_INNEN * 2
     val motiv = (innen - SPALTEN_ABSTAND - textMindest())
-        .coerceIn(0.dp, if (daten.weit) 128.dp else 104.dp)
+        .coerceIn(0.dp, if (daten.weit) 156.dp else 128.dp)
     val zeigtMotiv = motiv >= 72.dp
     val textBreite = innen - if (zeigtMotiv) SPALTEN_ABSTAND + motiv else 0.dp
     Column(Modifier.fillMaxWidth()) {
@@ -3208,18 +3208,7 @@ private fun HeroDeko(modifier: Modifier) {
                 drawPath(pfad, gold.primaer.copy(alpha = a))
                 drawCircle(androidx.compose.ui.graphics.Color.White.copy(alpha = a * 0.8f), r * 0.35f, androidx.compose.ui.geometry.Offset(x, y))
             }
-            Design.MORGENRUHE -> {
-                // Kleine Morgensonne links neben dem Bett.
-                val c = androidx.compose.ui.geometry.Offset(size.width * 0.67f, size.height * 0.16f)
-                val r = 10.dp.toPx()
-                repeat(12) { i ->
-                    val w = Math.toRadians(i * 30.0)
-                    val a = c + androidx.compose.ui.geometry.Offset((r * 1.45f * Math.cos(w)).toFloat(), (r * 1.45f * Math.sin(w)).toFloat())
-                    val b = c + androidx.compose.ui.geometry.Offset((r * 2.1f * Math.cos(w)).toFloat(), (r * 2.1f * Math.sin(w)).toFloat())
-                    drawLine(gold.akzentWarm.copy(alpha = .30f), a, b, 2.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
-                }
-                drawCircle(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .45f), gold.akzentWarm.copy(alpha = .12f)), center = c, radius = r), r, c)
-            }
+            // Morgenruhe: keine feste Sonne mehr, die Sonne geht in der Schlafszene selbst auf.
             Design.ORBIT -> {
                 val c = androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height * 0.55f)
                 listOf(1f, 1.55f, 2.1f).forEachIndexed { i, f ->
