@@ -113,6 +113,8 @@ import de.frank.newskompass.data.model.Ausgabe
 import de.frank.newskompass.data.model.Block
 import de.frank.newskompass.data.model.DesignModus
 import de.frank.newskompass.data.model.Meldung
+import de.frank.newskompass.data.model.Thema
+import java.util.UUID
 import de.frank.newskompass.news.SprachStufe
 import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.observability.KompassLog
@@ -445,7 +447,17 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                                 zustand = vorlesen,
                                 quelleId = blockQuelle(ausgabe?.id, block.themaId),
                                 vorlesen = { app.vorleser.schalteUm(blockQuelle(ausgabe?.id, block.themaId), Moderation.blockText(ausgabe, block)) },
-                                entfernen = if (block.frage != null && ausgabe != null) {
+                                schonThema = block.frage != null && stand.themen.any { it.text.trim().equals(block.frage.trim(), ignoreCase = true) },
+                                alsThema = block.frage?.let { frage ->
+                                    {
+                                        // Die eingesprochene Frage wird ein festes Thema, das ab jetzt mit jeder Ausgabe kommt.
+                                        val aktuell = app.einstellungen.stand.value.themen
+                                        if (aktuell.none { it.text.trim().equals(frage.trim(), ignoreCase = true) }) {
+                                            app.einstellungen.setzeThemen(aktuell + Thema(UUID.randomUUID().toString(), frage.trim()))
+                                        }
+                                    }
+                                },
+                                entfernen =if (block.frage != null && ausgabe != null) {
                                     {
                                         if (vorlesen.quelleId == blockQuelle(ausgabe.id, block.themaId) || block.meldungen.any { it.id == vorlesen.quelleId }) app.vorleser.stoppe()
                                         app.bereich.launch {
@@ -866,7 +878,16 @@ private fun LeerZustand(angemeldet: Boolean, laeuft: Boolean, laden: () -> Unit,
  * Frage so, wie Whisper sie verstanden hat, und er lässt sich wieder entfernen.
  */
 @Composable
-private fun BlockKopf(index: Int, block: Block, zustand: VorleseZustand, quelleId: String, vorlesen: () -> Unit, entfernen: (() -> Unit)?) {
+private fun BlockKopf(
+    index: Int,
+    block: Block,
+    zustand: VorleseZustand,
+    quelleId: String,
+    vorlesen: () -> Unit,
+    schonThema: Boolean,
+    alsThema: (() -> Unit)?,
+    entfernen: (() -> Unit)?,
+) {
     Column(Modifier.fillMaxWidth().padding(top = 30.dp, bottom = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -903,6 +924,11 @@ private fun BlockKopf(index: Int, block: Block, zustand: VorleseZustand, quelleI
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
+                if (alsThema != null && block.meldungen.isNotEmpty()) {
+                    TextButton(onClick = alsThema, enabled = !schonThema) {
+                        Text(if (schonThema) "Ist Thema" else "Als Thema", color = if (schonThema) MaterialTheme.colorScheme.onSurfaceVariant else blockFarbe(index))
+                    }
+                }
                 if (entfernen != null) {
                     TextButton(onClick = entfernen) { Text("Entfernen", color = blockFarbe(index)) }
                 }

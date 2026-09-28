@@ -445,6 +445,7 @@ private fun ThemenKarte(
     }
     // Zugeklappt zeigt die Karte nur die kurze Überschrift; neue und leere Themen stehen gleich offen.
     var offen by rememberSaveable(thema.id) { mutableStateOf(fokussieren || thema.text.isBlank()) }
+    var loeschenFragen by remember { mutableStateOf(false) }
     val drehung by animateFloatAsState(if (offen) 180f else 0f, label = "pfeil")
     val fokus = remember { FocusRequester() }
     LaunchedEffect(fokussieren) {
@@ -526,11 +527,6 @@ private fun ThemenKarte(
                             unfocusedIndicatorColor = Color.Transparent,
                         ),
                     )
-                    if (loeschbar) {
-                        IconButton(onClick = loesche) {
-                            Icon(Icons.Rounded.DeleteOutline, "Thema löschen", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
                 }
                 val hierAktiv = diktat.themaId == thema.id
                 val nimmtAuf = hierAktiv && diktat.stufe == SprachStufe.NIMMT_AUF
@@ -579,6 +575,12 @@ private fun ThemenKarte(
                             Icon(Icons.AutoMirrored.Rounded.Undo, "Vorherigen Text wiederherstellen")
                         }
                     }
+                    if (loeschbar) {
+                        // Steht bewusst unten in der Knopfreihe, weit weg vom Zuklapp-Pfeil, und fragt vorher nach.
+                        FilledTonalIconButton(onClick = { loeschenFragen = true }, enabled = !nimmtAuf && !versteht) {
+                            Icon(Icons.Rounded.DeleteOutline, "Thema löschen")
+                        }
+                    }
                     Text(
                         when {
                             nimmtAuf -> "Ich höre zu … tippen zum Übernehmen"
@@ -613,6 +615,20 @@ private fun ThemenKarte(
             }
             }
         }
+    }
+    if (loeschenFragen) {
+        AlertDialog(
+            onDismissRequest = { loeschenFragen = false },
+            title = { Text("Thema löschen?") },
+            text = { Text("Willst du den Thementext wirklich löschen?\n\n„${thema.kopfzeile()}“") },
+            confirmButton = {
+                TextButton(onClick = {
+                    loeschenFragen = false
+                    loesche()
+                }) { Text("Löschen", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { loeschenFragen = false }) { Text("Abbrechen") } },
+        )
     }
     if (bereichOffen) {
         MeldungsBereichDialog(
