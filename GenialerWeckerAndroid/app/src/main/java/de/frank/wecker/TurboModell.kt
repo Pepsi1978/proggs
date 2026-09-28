@@ -63,13 +63,16 @@ object TurboModell {
                 .build())
     }
 
-    fun abbrechen(context: Context) {
-        WorkManager.getInstance(context).cancelUniqueWork(ARBEIT)
-        DATEIEN.keys.forEach { teil(context, it).delete() }
-    }
+    /** Hält den Download an; das Geladene bleibt, „Fortsetzen“ macht an derselben Stelle weiter. */
+    fun pausieren(context: Context) { WorkManager.getInstance(context).cancelUniqueWork(ARBEIT) }
+
+    /** Genug Platz für den Rest plus Reserve? */
+    fun platzReicht(context: Context): Boolean =
+        context.noBackupFilesDir.usableSpace > (GESAMT - bytesDa(context)) + 200_000_000L
 
     fun loeschen(context: Context) {
-        abbrechen(context)
+        pausieren(context)
+        DATEIEN.keys.forEach { teil(context, it).delete() }
         ordner(context).deleteRecursively()
         prefs(context).edit().putBoolean("turbo", false).apply()
         WhisperErkenner.freigeben()

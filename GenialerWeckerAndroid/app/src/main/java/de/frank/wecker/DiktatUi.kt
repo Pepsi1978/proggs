@@ -104,7 +104,8 @@ fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorles
     if (whisper.hoertZu) Pegel(whisper.pegel, whisper.sekunden)
     if (!whisper.hoertZu && !whisper.erkennt && WhisperModell.bereit(context)) {
         val premium = remember(erkennungStand) { TurboModell.aktiv(context) }
-        Text("Erkennung: ${if (premium) "Premium" else "Standard"} · ändern",
+        val wartet = remember(erkennungStand) { TurboModell.gewuenscht(context) && !TurboModell.geladen(context) }
+        Text("Erkennung: ${if (premium) "Premium" else if (wartet) "Standard · Premium wird geladen" else "Standard"} · ändern",
             Modifier.clip(RoundedCornerShape(8.dp)).clickable { nachAuswahlStarten = false; auswahlOffen = true }.padding(vertical = 4.dp),
             style = MaterialTheme.typography.labelMedium, color = LocalGold.current.primaer)
     }
@@ -149,6 +150,8 @@ private fun Pegel(pegel: Float, sekunden: Int) {
 
 /**
  * Auswahl der Spracherkennung: Standard (eingebaut) oder Premium (Whisper Large V3 Turbo, Download).
+ * Die Karten zeigen den Wunsch; der Block darunter den Zustand von Premium (Download nötig, lädt, geladen).
+ * Gespeichert wird Premium nur, wenn es geladen ist oder gerade lädt – sonst bleibt es ehrlich bei Standard.
  * Der Download läuft im Hintergrund weiter und setzt nach einer Unterbrechung an derselben Stelle fort.
  * [schliessen] meldet, ob danach gleich aufgenommen werden soll.
  */
@@ -158,45 +161,58 @@ internal fun ErkennungDialog(schliessen: (starten: Boolean) -> Unit) {
     val gold = LocalGold.current
     var turbo by remember { mutableStateOf(TurboModell.gewuenscht(context)) }
     val arbeiten by remember { TurboModell.laeuftFlow(context) }.collectAsStateWithLifecycle(emptyList())
-    val laeuft = arbeiten.any { !it.state.isFinished }
+    var gestartet by remember { mutableStateOf(false) }
+    val laeuft = gestartet || arbeiten.any { !it.state.isFinished }
     var bytes by remember { mutableLongStateOf(TurboModell.bytesDa(context)) }
     var geladen by remember { mutableStateOf(TurboModell.geladen(context)) }
     LaunchedEffect(laeuft) {
-        while (true) { bytes = TurboModell.bytesDa(context); geladen = TurboModell.geladen(context); if (!laeuft) break; kotlinx.coroutines.delay(500) }
+        while (true) { bytes = TurboModell.bytesDa(context); geladen = TurboModell.geladen(context); if (!laeuft || geladen) break; kotlinx.coroutines.delay(500) }
     }
-    fun fertig() { TurboModell.waehlen(context, turbo); schliessen(true) }
+    LaunchedEffect(arbeiten) { if (arbeiten.isNotEmpty()) gestartet = false }
+    fun speichern() = TurboModell.waehlen(context, turbo && (geladen || laeuft))
     de.frank.wecker.design.DesignDialog(
-        titel = "Erkennung wählen",
-        aufSchliessen = { TurboModell.waehlen(context, turbo); schliessen(false) },
-        bestaetigung = { StillerKnopf("Fertig", ::fertig) },
+        titel = "Spracherkennung wählen",
+        aufSchliessen = { speichern(); schliessen(false) },
+        bestaetigung = { StillerKnopf("Fertig", { speichern(); schliessen(true) }) },
         inhalt = {
-            ErkennungKarte(!turbo || !geladen, "Standard", "Eingebaut · sofort bereit") { turbo = false }
+            Text("Tippe auf das Mikrofon und sprich deinen Wecktext einfach ein – das Handy schreibt ihn für dich auf, ganz ohne Internet. " +
+                "Hier wählst du, wie genau die Erkennung arbeitet.", style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+            Spacer(Modifier.height(12.dp))
+            ErkennungKarte(!turbo, "Standard", "Eingebaut, sofort bereit") { turbo = false }
             Spacer(Modifier.height(10.dp))
-            ErkennungKarte(turbo && geladen, "Premium · ${TurboModell.NAME}",
-                "Etwa halb so viele Fehler, versteht Namen und Fachwörter besser.") { if (geladen) turbo = true }
-            Spacer(Modifier.height(8.dp))
-            when {
-                geladen -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("✓ Geladen · ${TurboModell.groesseText}", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
-                    StillerKnopf("Löschen", { TurboModell.loeschen(context); geladen = false; turbo = false; bytes = 0 })
-                }
-                laeuft -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val anteil = (bytes.toFloat() / TurboModell.GESAMT).coerceIn(0f, 1f)
-                    Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(50)).background(gold.textGedaempft.copy(alpha = .2f))) {
-                        Box(Modifier.fillMaxHeight().fillMaxWidth(anteil).clip(RoundedCornerShape(50))
-                            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(gold.primaer.copy(alpha = .6f), gold.primaer))))
+            ErkennungKarte(turbo, "Premium · ${TurboModell.NAME}",
+                "Etwa halb so viele Fehler, versteht Namen und Fachwörter besser") { turbo = true }
+            if (turbo || laeuft || geladen) {
+                Spacer(Modifier.height(10.dp))
+                when {
+                    geladen -> Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("✓ Premium ist geladen · ${TurboModell.groesseText}", Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                        StillerKnopf("Löschen", { TurboModell.loeschen(context); geladen = false; turbo = false; bytes = 0 })
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("${(anteil * 100).toInt()} % · ${bytes / 1_000_000} von ${TurboModell.GESAMT / 1_000_000} MB\nLädt im Hintergrund weiter, auch wenn du die App schließt. Danach automatisch aktiv.",
-                            Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
-                        StillerKnopf("Abbrechen", { TurboModell.abbrechen(context); bytes = TurboModell.bytesDa(context) })
+                    laeuft -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val anteil = (bytes.toFloat() / TurboModell.GESAMT).coerceIn(0f, 1f)
+                        Box(Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(50)).background(gold.textGedaempft.copy(alpha = .2f))) {
+                            Box(Modifier.fillMaxHeight().fillMaxWidth(anteil).clip(RoundedCornerShape(50))
+                                .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(gold.primaer.copy(alpha = .6f), gold.primaer))))
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("${(anteil * 100).toInt()} % · ${bytes / 1_000_000} von ${TurboModell.GESAMT / 1_000_000} MB · lädt im Hintergrund weiter, " +
+                                "auch wenn du die App schließt. Bis dahin erkennt Standard.",
+                                Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                            StillerKnopf("Pausieren", { TurboModell.pausieren(context); gestartet = false; bytes = TurboModell.bytesDa(context) })
+                        }
                     }
-                }
-                else -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Nur per Download · ${TurboModell.groesseText}" + if (bytes > 0) " · ${bytes / 1_000_000} MB schon geladen" else "",
-                        style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
-                    GoldKnopf(if (bytes > 0) "Download fortsetzen" else "Herunterladen · ${TurboModell.groesseText}",
-                        { TurboModell.starteDownload(context); turbo = true }, Modifier.fillMaxWidth())
+                    !TurboModell.platzReicht(context) -> Text("Premium braucht einen einmaligen Download von ${TurboModell.groesseText}. " +
+                        "Dafür ist auf dem Handy nicht genug Speicher frei – bitte etwa 1,2 GB freimachen.",
+                        style = MaterialTheme.typography.bodySmall, color = LocalSemantisch.current.warnung)
+                    else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Premium gibt es nur per Download: einmalig ${TurboModell.groesseText}, am besten im WLAN. " +
+                            "Danach arbeitet es genauso ohne Internet wie Standard.",
+                            style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+                        GoldKnopf(if (bytes > 0) "Download fortsetzen · noch ${(TurboModell.GESAMT - bytes) / 1_000_000} MB" else "Herunterladen · ${TurboModell.groesseText}",
+                            { TurboModell.starteDownload(context); gestartet = true; turbo = true }, Modifier.fillMaxWidth(), hauptKnopf = true)
+                    }
                 }
             }
         },

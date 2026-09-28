@@ -41,6 +41,7 @@
     { "versionCode": 37, "versionName": "1.0.36", "stand": "28.09.2026, 12:32 Uhr", "notiz": "Sophie ist ab Werk Standard- und Favoritenstimme auf Deutsch und steht in der Stimmauswahl ganz oben." },
     { "versionCode": 38, "versionName": "1.0.37", "stand": "28.09.2026, 12:54 Uhr", "notiz": "Einsprechen: neue Premium-Erkennung Whisper Large V3 Turbo als Download (1 GB) mit etwa halb so vielen Fehlern; lädt im Hintergrund weiter und setzt nach Unterbrechung fort." },
     { "versionCode": 39, "versionName": "1.0.38", "stand": "28.09.2026, 12:56 Uhr", "notiz": "Weckbereitschaft einfacher: „Wecker bei Nicht stören“ braucht keinen Sonderzugriff mehr, jede fehlende Freigabe sagt vorher in einem Satz, was zu tippen ist, und zweimal abgelehnte Benachrichtigungen führen direkt zur richtigen Einstellungsseite." },
-    { "versionCode": 40, "versionName": "1.0.39", "stand": "28.09.2026, 13:01 Uhr", "notiz": "Die Erkennung fürs Einsprechen (Standard oder Premium mit Download) lässt sich jetzt auch in den Einstellungen wählen." }
+    { "versionCode": 40, "versionName": "1.0.39", "stand": "28.09.2026, 13:01 Uhr", "notiz": "Die Erkennung fürs Einsprechen (Standard oder Premium mit Download) lässt sich jetzt auch in den Einstellungen wählen." },
+    { "versionCode": 41, "versionName": "1.0.40", "stand": "28.09.2026, 13:07 Uhr", "notiz": "Spracherkennung wählen erklärt jetzt, was Einsprechen kann; Premium lässt sich antippen, zeigt dann den Download-Hinweis, prüft den freien Speicher und kann pausiert und fortgesetzt werden." }
   ]
 }
