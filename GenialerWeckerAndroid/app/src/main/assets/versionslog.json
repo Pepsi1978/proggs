@@ -35,6 +35,7 @@
     { "versionCode": 31, "versionName": "1.0.30", "stand": "27.09.2026, 22:52 Uhr", "notiz": "Orbit: Beim Wecken stehen Uhrzeit, Wecker und Name jetzt mittig wie in den anderen Designs." },
     { "versionCode": 32, "versionName": "1.0.31", "stand": "27.09.2026, 22:56 Uhr", "notiz": "Dunkelmodus: Der 3D-Wecker hat jetzt gedecktes Messing statt grellem Gold und ein helles Elfenbein-Zifferblatt mit dunklen Ziffern; der Gehäuserand ist schlanker." },
     { "versionCode": 33, "versionName": "1.0.32", "stand": "27.09.2026, 23:01 Uhr", "notiz": "Beim Wecken kommen die ersten Wörter jetzt sofort in der eingestellten Lautstärke: kurzer stiller Vorlauf weckt den Lautsprecher, leise zu laut nur noch mit Anlaufzeit." },
-    { "versionCode": 34, "versionName": "1.0.33", "stand": "28.09.2026, 12:00 Uhr", "notiz": "Zum Testen: neue lokale KI-Stimmen Supertonic (alle Sprachen) und Pocket (Englisch), die ganz ohne Internet auf dem Handy sprechen; Edge-Stimmen bleiben wählbar." }
+    { "versionCode": 34, "versionName": "1.0.33", "stand": "28.09.2026, 12:00 Uhr", "notiz": "Zum Testen: neue lokale KI-Stimmen Supertonic (alle Sprachen) und Pocket (Englisch), die ganz ohne Internet auf dem Handy sprechen; Edge-Stimmen bleiben wählbar." },
+    { "versionCode": 35, "versionName": "1.0.34", "stand": "28.09.2026, 12:09 Uhr", "notiz": "Die englischen Pocket-Teststimmen lassen sich jetzt in jeder Stimmauswahl anhören, auch auf einem deutschen Handy." }
   ]
 }

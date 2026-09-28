@@ -73,10 +73,13 @@ private fun StimmDialog(vm: WeckerViewModel, sprache: String, gewaehlt: String, 
                     StimmZeile(gewaehlt.isBlank(), "Standard aus den Einstellungen", vorgabeZeile, null, null, { waehlen("") }, {})
                 }
                 // Test: lokale Modellstimmen (offline, ohne Internet) vor den Premium-Stimmen.
-                items(ModellKatalog.fuer(sprache), key = { it.id }) { m ->
-                    StimmZeile(m.id == gewaehlt, "${m.name} · lokal", m.art, null,
-                        anhoeren = { AnhoerKnopf(vm, "stimme:${m.id}") { vm.previewVoice(sprache = sprache, stimme = m.id) } },
-                        waehlen = { waehlen(m.id) }, sternUmschalten = {})
+                // Stimmen, die diese Sprache nicht sprechen (Pocket: nur Englisch), sind nur zum Anhören da – mit englischer Probe.
+                items(ModellKatalog.STIMMEN, key = { it.id }) { m ->
+                    val passt = m.sprachen == null || sprache in m.sprachen
+                    val probeSprache = if (passt) sprache else m.sprachen!!.first()
+                    StimmZeile(m.id == gewaehlt, "${m.name} · lokal", if (passt) m.art else "${m.art} · nur Probe",
+                        null, anhoeren = { AnhoerKnopf(vm, "stimme:${m.id}") { vm.previewVoice(sprache = probeSprache, stimme = m.id) } },
+                        waehlen = { if (passt) waehlen(m.id) }, sternUmschalten = {})
                 }
                 items(reihenfolge, key = { it.id }) { s ->
                     StimmZeile(s.id == gewaehlt, "${s.name} · ${if (s.weiblich) "weiblich" else "männlich"}", "${s.art} · ${s.regionName}",
