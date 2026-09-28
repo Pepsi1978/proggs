@@ -2,6 +2,7 @@
 
 package de.frank.wecker
 
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -1122,9 +1123,9 @@ private fun OrbitHero(
     // Auch hier gibt die echte Innenbreite die Motivgröße vor: Auf sehr schmalen Abdeckbildschirmen
     // ginge sonst der Datenspalte der Platz aus. Orbits Innenabstand ist 12 dp, nicht 16 dp.
     val innen = daten.breite - HERO_AUSSEN * 2 - 24.dp
-    val motiv = (innen - 12.dp - textMindest()).coerceIn(0.dp, if (daten.weit) 108.dp else 92.dp)
-    val zeigtMotiv = motiv >= 64.dp
-    val uhrPlatz = innen - if (zeigtMotiv) motiv + 12.dp else 0.dp
+    // Der Text beginnt nach gut einem Drittel; die Sonne und die inneren Bahnen bleiben frei.
+    val textStart = (innen * 0.36f).coerceAtMost((innen - textMindest()).coerceAtLeast(12.dp))
+    val uhrPlatz = innen + 12.dp - textStart
     val statusFarbe = when {
         daten.nextIsSnooze -> semantisch.info
         daten.hatTermin -> gold.akzentWarm
@@ -1164,13 +1165,11 @@ private fun OrbitHero(
                     style = MaterialTheme.typography.labelSmall, color = statusFarbe, maxLines = 1)
             }
             HorizontalDivider(color = gold.heroKante)
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (zeigtMotiv) LocalGestalt.current.Motiv(Modifier.size(motiv))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            // Links dreht sich groß das Sonnensystem im Hintergrund, rechts steht der Text rechtsbündig darüber.
+            Box(Modifier.fillMaxWidth()) {
+                Sonnensystem(Modifier.matchParentSize().clipToBounds())
+                Column(Modifier.fillMaxWidth().padding(start = textStart, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp), horizontalAlignment = Alignment.End) {
                     GedeckelteSchrift {
                         val groesse = passendeUhrGroesse(uhrPlatz, uhrGroesse(daten.stufe),
                             IdeenSchriftFest, FontWeight.SemiBold)
@@ -1227,11 +1226,13 @@ private fun OrbitZeile(
         Modifier.fillMaxWidth()
             .then(if (klickbar) Modifier.clickable(onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.End,
     ) {
-        Text(name, Modifier.width(60.dp), fontFamily = IdeenSchriftFest,
+        // Rechtsbündig: Beschriftung direkt vor dem Wert, beide an der rechten Kante.
+        Text(name, Modifier.padding(end = 8.dp), fontFamily = IdeenSchriftFest,
             style = MaterialTheme.typography.labelSmall, color = gold.heroSchriftGedaempft, maxLines = 1)
-        Text(wert, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall,
-            color = wertFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(wert, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodySmall,
+            color = wertFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
     }
 }
 
@@ -3210,16 +3211,7 @@ private fun HeroDeko(modifier: Modifier) {
             }
             // Morgenruhe: keine feste Sonne mehr, die Sonne geht in der Schlafszene selbst auf.
             Design.ORBIT -> {
-                val c = androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height * 0.55f)
-                listOf(1f, 1.55f, 2.1f).forEachIndexed { i, f ->
-                    val rx = 48.dp.toPx() * f
-                    val ry = rx * 0.42f
-                    drawOval(gold.primaer.copy(alpha = .16f - i * 0.03f), topLeft = c - androidx.compose.ui.geometry.Offset(rx, ry),
-                        size = androidx.compose.ui.geometry.Size(rx * 2, ry * 2), style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
-                    val w = Math.toRadians(40.0 + i * 95)
-                    val p = c + androidx.compose.ui.geometry.Offset((rx * Math.cos(w)).toFloat(), (ry * Math.sin(w)).toFloat())
-                    drawCircle(if (i == 1) gold.akzentWarm.copy(alpha = .7f) else gold.primaer.copy(alpha = .55f), (2.5f + i).dp.toPx(), p)
-                }
+                // Die Bahnen und Planeten zeichnet jetzt das animierte Sonnensystem; hier bleiben nur Sterne.
                 repeat(18) {
                     drawCircle(gold.heroSchrift.copy(alpha = .10f + zufall.nextFloat() * .2f), (0.6f + zufall.nextFloat()).dp.toPx(),
                         androidx.compose.ui.geometry.Offset(size.width * zufall.nextFloat(), size.height * zufall.nextFloat()))

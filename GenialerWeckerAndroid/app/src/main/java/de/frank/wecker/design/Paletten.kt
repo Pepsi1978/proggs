@@ -133,41 +133,42 @@ val TraumraumHell = GoldPalette(
     heroTextGedaempft = Color(0xFF66544A),
 )
 
-// --- C · Orbit: Fast-Schwarz mit Eisblau, Limette als Signal ---------------------------------
+// --- C · Orbit: Fast-Schwarz mit Matrix-Grün, helles Limettengelb als Signal ------------------
+// Seit 28.09.2026 grün statt eisblau (Wunsch): wie die echte Matrix, im Hellen dunkles Waldgrün auf Weiß.
 
 val OrbitDunkel = GoldPalette(
-    hintergrund = Color(0xFF08090C),
-    flaeche = Color(0xFF101319),
-    flaecheErhoeht = Color(0xFF171B23),
-    primaer = Color(0xFF6FD3E8),
-    primaerGedaempft = Color(0xFF4FA8BC),
-    aufPrimaer = Color(0xFF05171C),
-    akzentWarm = Color(0xFFC6F24A),
-    textPrimaer = Color(0xFFE9EDF4),
-    textGedaempft = Color(0xFF79839A),
-    rahmen = Color(0xFF262C38),
-    eingabefeld = Color(0xFF0C0F14),
+    hintergrund = Color(0xFF040906),
+    flaeche = Color(0xFF0B140E),
+    flaecheErhoeht = Color(0xFF111D15),
+    primaer = Color(0xFF3CF06E),
+    primaerGedaempft = Color(0xFF22A849),
+    aufPrimaer = Color(0xFF02140A),
+    akzentWarm = Color(0xFFD7FF6B),
+    textPrimaer = Color(0xFFE2F5E6),
+    textGedaempft = Color(0xFF6E9477),
+    rahmen = Color(0xFF1C3323),
+    eingabefeld = Color(0xFF07100A),
     istDunkel = true,
-    // Das Hauptinstrument liegt mit 1,22:1 über der Tafel — bei Orbit reicht wenig, weil die
+    // Das Hauptinstrument liegt knapp über der Tafel — bei Orbit reicht wenig, weil die
     // harten Kanten und Trennlinien die Abgrenzung übernehmen.
-    heroFlaeche = Color(0xFF1B2029),
-    heroRahmen = Color(0xFF323A48),
-    heroTextGedaempft = Color(0xFF8B94A8),
+    heroFlaeche = Color(0xFF0F1C13),
+    heroRahmen = Color(0xFF28503A),
+    heroTextGedaempft = Color(0xFF84AA8C),
 )
 
 val OrbitHell = GoldPalette(
-    hintergrund = Color(0xFFECEEF2),
+    hintergrund = Color(0xFFE8F1EA),
     flaeche = Color(0xFFFFFFFF),
-    flaecheErhoeht = Color(0xFFF4F6FA),
-    primaer = Color(0xFF0F6D85),
-    primaerGedaempft = Color(0xFF0B5064),
-    aufPrimaer = Color(0xFFF2FBFF),
-    akzentWarm = Color(0xFF4D7A05),
-    textPrimaer = Color(0xFF11151D),
-    textGedaempft = Color(0xFF5C6578),
-    rahmen = Color(0xFFD2D7E0),
-    eingabefeld = Color(0xFFF8F9FC),
+    flaecheErhoeht = Color(0xFFF3F9F4),
+    primaer = Color(0xFF0A7A2C),
+    primaerGedaempft = Color(0xFF075C21),
+    aufPrimaer = Color(0xFFF0FFF3),
+    akzentWarm = Color(0xFF6B8A00),
+    textPrimaer = Color(0xFF0E1A11),
+    textGedaempft = Color(0xFF52705C),
+    rahmen = Color(0xFFCADBCE),
+    eingabefeld = Color(0xFFF6FAF7),
     istDunkel = false,
     heroFlaeche = Color(0xFFFFFFFF),
-    heroRahmen = Color(0xFFBCC3CF),
+    heroRahmen = Color(0xFFB2CCB8),
 )

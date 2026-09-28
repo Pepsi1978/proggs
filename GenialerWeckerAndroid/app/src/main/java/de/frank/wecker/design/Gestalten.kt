@@ -368,9 +368,14 @@ object OrbitGestalt : WeckerGestalt {
 }
 
 
+private val MATRIX_KOPF = Color(0xFFD6FFE0)
+private val MATRIX_HELL = Color(0xFF00FF41)
+private val MATRIX_MITTEL = Color(0xFF008F11)
+private val MATRIX_DUNKEL = Color(0xFF005A0B)
+
 /**
  * Orbits Zeichenregen: senkrechte Spalten fallender Zeichen mit hellem Kopf und verblassendem
- * Schweif, in der Primärfarbe des Designs (Eisblau), vereinzelt ein Limetten-Akzent.
+ * Schweif, in den Originalfarben der Matrix.
  *
  * Günstig gezeichnet: ein einziger nativer `Paint`, kein Textmesser, rund 60 Bilder pro Sekunde, und
  * der Zeitwert wird nur im Zeichenblock gelesen — dadurch zeichnet sich allein diese Ebene neu, nie
@@ -423,12 +428,13 @@ private fun ZeichenRegen(modifier: Modifier) {
                 val wahl = Math.floorMod(spalte * 31L + reihe * 17L + (t / 180) * (if (Math.floorMod(spalte + reihe, 5) == 0) 1 else 0), zeichen.length.toLong()).toInt()
                 val anteil = 1f - i / schweif.toFloat()
                 val istKopf = i == 0
+                // Originalfarben der Matrix: weißgrüner Kopf, leuchtendes #00FF41, zum Schweifende #008F11.
+                // Im Hellen trägt Neongrün auf hellem Grund nicht — dort dunkleres Matrixgrün.
+                val schweifFarbe = androidx.compose.ui.graphics.lerp(
+                    if (dunkel) MATRIX_HELL else MATRIX_MITTEL, if (dunkel) MATRIX_MITTEL else MATRIX_DUNKEL, 1f - anteil)
                 val c = when {
-                    // Im Hellen trägt Weiß auf hellem Grund nicht — dort leuchtet der Kopf in kräftigem Eisblau.
-                    istKopf -> if (dunkel) androidx.compose.ui.graphics.Color.White.copy(alpha = (grundAlpha * 1.6f).coerceAtMost(0.6f))
-                        else farbe.copy(alpha = 0.6f)
-                    (spalte + reihe) % 23 == 0 -> akzent.copy(alpha = grundAlpha * anteil)
-                    else -> farbe.copy(alpha = grundAlpha * anteil * anteil + 0.02f)
+                    istKopf -> (if (dunkel) MATRIX_KOPF else MATRIX_MITTEL).copy(alpha = if (dunkel) 0.7f else 0.6f)
+                    else -> schweifFarbe.copy(alpha = grundAlpha * anteil * anteil + 0.03f)
                 }
                 stift.color = c.toArgb()
                 leinwand.drawText(zeichen, wahl, wahl + 1, x, y, stift)
