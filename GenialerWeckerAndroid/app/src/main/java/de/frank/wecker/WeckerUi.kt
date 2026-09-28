@@ -6,6 +6,8 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
 import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
@@ -732,6 +734,7 @@ private fun SchlichtHero(
                 ) {
                     Wecker3D(Modifier.matchParentSize(), gehaeuse = ring + 14.dp)
                     RestzeitRing(daten.now, daten.next, daten.nextIsSnooze, Modifier.size(ring), zifferblatt = true)
+                    EdleZeiger(Modifier.size(ring))
                     GlasKuppel(Modifier.size(ring))
                 }
                 // Rechtsbündig: Datum, Uhr und Termin enden an derselben Kante wie „Weckbereit“.
@@ -2459,20 +2462,71 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
         // Im 3D-Wecker läuft der Schlafbogen mit Abstand innerhalb der Teilung; die Zahlen rücken dafür nach innen.
         val bogenRadius = if (zifferblatt) radius - 10.dp.toPx() else radius
         val zahlenRadius = radius - (if (zifferblatt) 21 else 15).dp.toPx()
-        drawCircle(tinteLeicht.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
-        // Das Zifferblatt bekommt zusätzlich eine feine Minutenteilung.
-        if (zifferblatt) repeat(60) { minute ->
-            if (minute % 5 != 0) drawLine(tinteLeicht.copy(alpha = .35f), point(minute * 6f - 90f, radius - 2.5f.dp.toPx()), point(minute * 6f - 90f, radius), 1.dp.toPx())
-        }
-        repeat(12) { hour ->
-            val a = hour * 30f - 90f
-            val long = hour % 3 == 0
-            drawLine(tinteLeicht.copy(alpha = if (long) .8f else .45f), point(a, radius - (if (long) 7 else 4).dp.toPx()), point(a, radius), 1.5f.dp.toPx())
-        }
-        listOf(0 to "12", 3 to "3", 6 to "6", 9 to "9").forEach { (hour, label) ->
-            val layout = measurer.measure(label, numberStyle)
-            val at = point(hour * 30f - 90f, zahlenRadius)
-            drawText(layout, topLeft = at - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
+        if (zifferblatt) {
+            // Edles Zifferblatt: Sonnenschliff, der das Licht fächert, eine Guilloché-Rosette in der
+            // Mitte und eine Minutenschiene aus zwei feinen Kreisen mit Teilung dazwischen.
+            val schliff = (0..24).map { i ->
+                if (i % 2 == 0) androidx.compose.ui.graphics.Color.White.copy(alpha = if (hellesBlatt) .16f else .22f)
+                else tinteStark.copy(alpha = .05f)
+            }
+            drawCircle(Brush.sweepGradient(schliff, center), radius)
+            val rosette = radius * .34f
+            repeat(7) { i ->
+                drawCircle(tinteLeicht.copy(alpha = .10f), rosette * (i + 1) / 7f,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(.6f.dp.toPx()))
+            }
+            val schiene = radius - 3.dp.toPx()
+            drawCircle(tinteLeicht.copy(alpha = .55f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(.8f.dp.toPx()))
+            drawCircle(tinteLeicht.copy(alpha = .40f), schiene, style = androidx.compose.ui.graphics.drawscope.Stroke(.6f.dp.toPx()))
+            repeat(60) { minute ->
+                if (minute % 5 != 0) drawLine(tinteLeicht.copy(alpha = .55f), point(minute * 6f - 90f, schiene),
+                    point(minute * 6f - 90f, radius), .7f.dp.toPx())
+            }
+            // Aufgesetzte Stundenindizes aus poliertem Messing: dunkle Kante, helle Fläche, feiner Glanzstrich.
+            val index = if (gold.istDunkel) androidx.compose.ui.graphics.lerp(gold.primaer, androidx.compose.ui.graphics.Color(0xFF5E4B2A), .35f)
+                else gold.primaer
+            repeat(12) { hour ->
+                if (hour % 3 != 0) {
+                    val a = hour * 30f - 90f
+                    val innenPunkt = point(a, radius - 8.dp.toPx())
+                    val aussenPunkt = point(a, radius - 1.5f.dp.toPx())
+                    drawLine(tinteStark.copy(alpha = .45f), innenPunkt + androidx.compose.ui.geometry.Offset(.5f.dp.toPx(), .8f.dp.toPx()),
+                        aussenPunkt + androidx.compose.ui.geometry.Offset(.5f.dp.toPx(), .8f.dp.toPx()), 2.6f.dp.toPx())
+                    drawLine(Brush.linearGradient(listOf(index.heller(.45f), index.dunkler(.25f)), innenPunkt, aussenPunkt),
+                        innenPunkt, aussenPunkt, 2.2f.dp.toPx())
+                    drawLine(androidx.compose.ui.graphics.Color.White.copy(alpha = .55f), innenPunkt, aussenPunkt, .5f.dp.toPx())
+                }
+            }
+            // Römische Ziffern in Schlichts Serifenschrift; unter der XII ein kleiner Messingstern.
+            val roemisch = numberStyle.copy(color = tinteStark.copy(alpha = .88f), fontFamily = IdeenSchriftBetont,
+                fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = .3.sp)
+            listOf(0 to "XII", 3 to "III", 6 to "VI", 9 to "IX").forEach { (hour, label) ->
+                val layout = measurer.measure(label, roemisch)
+                val at = point(hour * 30f - 90f, zahlenRadius)
+                drawText(layout, topLeft = at - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
+            }
+            val stern = center + androidx.compose.ui.geometry.Offset(0f, -zahlenRadius * .56f)
+            val s = 2.6f.dp.toPx()
+            val sternPfad = androidx.compose.ui.graphics.Path().apply {
+                moveTo(stern.x, stern.y - s); lineTo(stern.x + s * .28f, stern.y - s * .28f)
+                lineTo(stern.x + s, stern.y); lineTo(stern.x + s * .28f, stern.y + s * .28f)
+                lineTo(stern.x, stern.y + s); lineTo(stern.x - s * .28f, stern.y + s * .28f)
+                lineTo(stern.x - s, stern.y); lineTo(stern.x - s * .28f, stern.y - s * .28f); close()
+            }
+            drawPath(sternPfad, Brush.linearGradient(listOf(index.heller(.4f), index.dunkler(.2f)),
+                stern - androidx.compose.ui.geometry.Offset(s, s), stern + androidx.compose.ui.geometry.Offset(s, s)))
+        } else {
+            drawCircle(tinteLeicht.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+            repeat(12) { hour ->
+                val a = hour * 30f - 90f
+                val long = hour % 3 == 0
+                drawLine(tinteLeicht.copy(alpha = if (long) .8f else .45f), point(a, radius - (if (long) 7 else 4).dp.toPx()), point(a, radius), 1.5f.dp.toPx())
+            }
+            listOf(0 to "12", 3 to "3", 6 to "6", 9 to "9").forEach { (hour, label) ->
+                val layout = measurer.measure(label, numberStyle)
+                val at = point(hour * 30f - 90f, zahlenRadius)
+                drawText(layout, topLeft = at - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
+            }
         }
         val sweep = geometry?.sweep
         if (geometry != null && sweep != null) {
@@ -2492,7 +2546,33 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
             } else drawArc(accent, geometry.nowAngle, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
                 style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
         }
-        geometry?.centerLabel?.let { label ->
+        if (zifferblatt) geometry?.centerLabel?.let { label ->
+            // Im Zifferblatt laufen die Zeiger immer. Die Kennzeichnung sitzt deshalb wie ein Datumsfenster
+            // zwischen Mitte und VI, statt die Mitte zu belegen.
+            val sechs = measurer.measure("VI", numberStyle.copy(fontFamily = IdeenSchriftBetont, fontSize = 10.sp))
+            val unten = zahlenRadius - sechs.size.height / 2f - 1.5f.dp.toPx()
+            val oben = 5.dp.toPx()
+            val maxHoehe = (unten - oben).coerceAtLeast(1f)
+            val mitteY = (oben + unten) / 2f
+            val innenRadius = bogenRadius - 3.dp.toPx()
+            val maxBreite = (2f * kotlin.math.sqrt((innenRadius * innenRadius - unten * unten).coerceAtLeast(0f)) - 4.dp.toPx())
+                .coerceAtLeast(zahlenRadius)
+            val fensterStil = centerStyle.copy(fontWeight = FontWeight.Medium, lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified)
+            val layout = listOf(9, 8, 7).asSequence().map { groesse -> measurer.measure(label, fensterStil.copy(fontSize = groesse.sp)) }
+                .firstOrNull { it.size.width + 6.dp.toPx() <= maxBreite && it.size.height <= maxHoehe }
+                ?: measurer.measure(label, fensterStil.copy(fontSize = 7.sp), maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    constraints = androidx.compose.ui.unit.Constraints(maxWidth = (maxBreite - 6.dp.toPx()).toInt().coerceAtLeast(1)))
+            val fensterB = layout.size.width + 6.dp.toPx()
+            val fensterH = layout.size.height + 1.dp.toPx()
+            val fensterLinks = androidx.compose.ui.geometry.Offset(center.x - fensterB / 2f, center.y + mitteY - fensterH / 2f)
+            val fensterGroesse = androidx.compose.ui.geometry.Size(fensterB, fensterH)
+            val ecke = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+            drawRoundRect(surface.dunkler(.06f), fensterLinks, fensterGroesse, ecke)
+            drawRoundRect(tinteLeicht.copy(alpha = .5f), fensterLinks, fensterGroesse, ecke,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(.7f.dp.toPx()))
+            drawText(layout, topLeft = center + androidx.compose.ui.geometry.Offset(-layout.size.width / 2f, mitteY - layout.size.height / 2f))
+        } else geometry?.centerLabel?.let { label ->
             // Fit inside the space the 12/3/6/9 numbers leave free: shrink, then try two lines, never paint over them.
             val numberRadius = zahlenRadius
             val maxWidth = 2 * (numberRadius - measurer.measure("3", numberStyle).size.width / 2f - 2.dp.toPx())
@@ -2509,16 +2589,7 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
                     constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidth.toInt().coerceAtLeast(1)))
             drawText(layout, topLeft = center - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
         }
-        // Zeiger der aktuellen Uhrzeit — nur wenn die Mitte frei ist, sonst stünden sie über der Kennzeichnung.
-        if (zifferblatt && geometry?.centerLabel == null) {
-            val zeit = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
-            val minutenWinkel = zeit.minute * 6f - 90f
-            val stundenWinkel = (zeit.hour % 12) * 30f + zeit.minute * 0.5f - 90f
-            val zeiger = androidx.compose.ui.graphics.StrokeCap.Round
-            drawLine(tinteStark.copy(alpha = .85f), center, point(stundenWinkel, radius * 0.45f), 3.5f.dp.toPx(), zeiger)
-            drawLine(tinteStark.copy(alpha = .75f), center, point(minutenWinkel, radius * 0.66f), 2.dp.toPx(), zeiger)
-            drawCircle(accent, 3.5f.dp.toPx(), center)
-        }
+        // Die Zeiger zeichnet [EdleZeiger] als eigene Ebene darüber, mit sekundengenauem Takt.
         if (geometry != null) ringMarker(point(geometry.targetAngle, bogenRadius), hollow = false,
             color = if (zifferblatt && !snooze) NACHT_B else accent, surface = surface)
         ringMarker(point(nowAngle, bogenRadius), hollow = true, color = tinteStark, surface = surface)
@@ -2608,6 +2679,107 @@ private fun GlasKuppel(modifier: Modifier) {
     }
 }
 
+/**
+ * Die Zeiger des 3D-Weckers: Stunde und Minute als facettierte Dauphine-Zeiger aus poliertem Messing mit
+ * Mittelgrat und Schattenwurf aufs Blatt, dazu ein schlanker karminroter Sekundenzeiger mit Gegengewicht-Ring.
+ * Eigener Sekundentakt (nur solange der Bildschirm vorne ist); Stunde und Minute laufen stufenlos mit.
+ * Der Sekundenzeiger springt wie ein feines Uhrwerk mit kurzem Nachfedern, bei reduzierter Bewegung ohne.
+ * Gleiche Geometrie wie [RestzeitRing]: gleiche Größe übergeben.
+ */
+@Composable
+private fun EdleZeiger(modifier: Modifier) {
+    val gold = LocalGold.current
+    val reduziert = LocalBewegungReduziert.current
+    val jetzt = rememberNow(1000)
+    val zeit = remember(jetzt) { Instant.ofEpochMilli(jetzt).atZone(ZoneId.systemDefault()).toLocalTime() }
+    val sekunde = zeit.second
+    // Fortlaufender Winkel, damit der Sprung von 59 auf 0 vorwärts läuft statt einmal rückwärts herum.
+    val sekundenWinkel = remember { androidx.compose.animation.core.Animatable(sekunde * 6f) }
+    LaunchedEffect(jetzt / 1000) {
+        var schritt = sekunde * 6f - sekundenWinkel.value % 360f
+        if (schritt < 0f) schritt += 360f
+        val ziel = sekundenWinkel.value + schritt
+        // Mehr als ein Schritt (z. B. nach der Rückkehr in die App): direkt hin, ohne Umlauf.
+        if (reduziert || schritt > 12f) sekundenWinkel.snapTo(ziel)
+        else sekundenWinkel.animateTo(ziel, androidx.compose.animation.core.spring(dampingRatio = .5f, stiffness = 1100f))
+    }
+    val minutenWinkel = (zeit.minute + zeit.second / 60f) * 6f
+    val stundenWinkel = ((zeit.hour % 12) + zeit.minute / 60f + zeit.second / 3600f) * 30f
+    val metall = if (gold.istDunkel) androidx.compose.ui.graphics.lerp(gold.primaer, androidx.compose.ui.graphics.Color(0xFF5E4B2A), .35f)
+        else gold.primaer
+    val tinte = if (gold.istDunkel) ZIFFER_TINTE_STARK else gold.textPrimaer
+    androidx.compose.foundation.Canvas(modifier) {
+        val radius = size.minDimension / 2f - 5.dp.toPx()
+        val schatten = androidx.compose.ui.graphics.Color.Black.copy(alpha = if (gold.istDunkel) .30f else .22f)
+        val versatz = androidx.compose.ui.geometry.Offset(.9f.dp.toPx(), 1.7f.dp.toPx())
+
+        // Dauphine-Zeiger nach oben gezeichnet; die linke Facette fängt das Licht, die rechte liegt im Schatten.
+        fun dauphine(winkel: Float, laenge: Float, breite: Float) {
+            val c = center
+            val schulter = c.y - laenge * .16f
+            val spitze = androidx.compose.ui.geometry.Offset(c.x, c.y - laenge)
+            val heck = androidx.compose.ui.geometry.Offset(c.x, c.y + laenge * .14f)
+            val links = androidx.compose.ui.graphics.Path().apply {
+                moveTo(spitze.x, spitze.y); lineTo(c.x - breite, schulter); lineTo(heck.x, heck.y); close()
+            }
+            val rechts = androidx.compose.ui.graphics.Path().apply {
+                moveTo(spitze.x, spitze.y); lineTo(c.x + breite, schulter); lineTo(heck.x, heck.y); close()
+            }
+            val umriss = androidx.compose.ui.graphics.Path().apply {
+                moveTo(spitze.x, spitze.y); lineTo(c.x + breite, schulter); lineTo(heck.x, heck.y)
+                lineTo(c.x - breite, schulter); close()
+            }
+            translate(versatz.x, versatz.y) { rotate(winkel, c) { drawPath(umriss, schatten) } }
+            rotate(winkel, c) {
+                drawPath(links, Brush.linearGradient(listOf(metall.heller(.62f), metall.heller(.18f)),
+                    spitze, androidx.compose.ui.geometry.Offset(c.x - breite, schulter)))
+                drawPath(rechts, Brush.linearGradient(listOf(metall.dunkler(.12f), metall.dunkler(.48f)),
+                    spitze, androidx.compose.ui.geometry.Offset(c.x + breite, schulter)))
+                drawPath(umriss, tinte.copy(alpha = .55f), style = androidx.compose.ui.graphics.drawscope.Stroke(.6f.dp.toPx(),
+                    join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                // Feiner Mittelgrat, der das Licht wie poliertes Metall bricht.
+                drawLine(androidx.compose.ui.graphics.Color.White.copy(alpha = .45f), spitze,
+                    androidx.compose.ui.geometry.Offset(c.x, c.y - laenge * .08f), .45f.dp.toPx())
+            }
+        }
+
+        // Minute endet vor dem Schlafbogen, die Stunde ist deutlich kürzer – auch bei kleinen Uhren.
+        val minutenLaenge = maxOf(radius - 17.dp.toPx(), radius * .7f)
+        dauphine(stundenWinkel, minutenLaenge * .68f, (radius * .075f).coerceAtLeast(2.6f.dp.toPx()))
+        dauphine(minutenWinkel, minutenLaenge, (radius * .058f).coerceAtLeast(2.dp.toPx()))
+
+        // Sekundenzeiger: schlanke Nadel bis in die Minutenschiene, hinten ein Ring als Gegengewicht.
+        val spitze = radius - 2.dp.toPx()
+        val ringMitte = radius * .2f
+        val ringRadius = 2.4f.dp.toPx()
+        fun sekundenNadel(farbe: androidx.compose.ui.graphics.Color) {
+            val c = center
+            val rund = androidx.compose.ui.graphics.StrokeCap.Round
+            drawLine(farbe, androidx.compose.ui.geometry.Offset(c.x, c.y + ringMitte - ringRadius),
+                androidx.compose.ui.geometry.Offset(c.x, c.y - spitze), 1.dp.toPx(), rund)
+            drawCircle(farbe, ringRadius, androidx.compose.ui.geometry.Offset(c.x, c.y + ringMitte),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+            drawLine(farbe, androidx.compose.ui.geometry.Offset(c.x, c.y + ringMitte + ringRadius),
+                androidx.compose.ui.geometry.Offset(c.x, c.y + ringMitte + ringRadius + 2.dp.toPx()), 1.6f.dp.toPx(), rund)
+        }
+        translate(versatz.x * 1.3f, versatz.y * 1.3f) { rotate(sekundenWinkel.value, center) { sekundenNadel(schatten) } }
+        rotate(sekundenWinkel.value, center) { sekundenNadel(SEKUNDE_KARMIN) }
+
+        // Mittelachse: Messingkappe mit Glanz, darauf die karminrote Sekundennabe und ein polierter Stift.
+        val kappe = (radius * .085f).coerceAtLeast(3.5f.dp.toPx())
+        drawCircle(schatten, kappe, center + versatz)
+        drawCircle(Brush.radialGradient(listOf(metall.heller(.6f), metall, metall.dunkler(.4f)),
+            center = center - androidx.compose.ui.geometry.Offset(kappe * .35f, kappe * .35f), radius = kappe * 1.4f), kappe)
+        drawCircle(tinte.copy(alpha = .5f), kappe, style = androidx.compose.ui.graphics.drawscope.Stroke(.5f.dp.toPx()))
+        drawCircle(SEKUNDE_KARMIN, kappe * .55f)
+        drawCircle(Brush.radialGradient(listOf(androidx.compose.ui.graphics.Color.White.copy(alpha = .9f), metall.heller(.3f)),
+            center = center - androidx.compose.ui.geometry.Offset(kappe * .1f, kappe * .1f), radius = kappe * .3f), kappe * .25f)
+    }
+}
+
+/** Sekundenzeiger: tiefes Karminrot – klassisch, hebt sich von Messing und vom nachtblauen Schlafbogen ab. */
+private val SEKUNDE_KARMIN = androidx.compose.ui.graphics.Color(0xFFA8322B)
+
 /** Schlafbogen im 3D-Wecker: Nachtblau bis Violett – bewusst nicht die Messingfarbe des Gehäuses. */
 private val NACHT_A = androidx.compose.ui.graphics.Color(0xFF2F5DA8)
 private val NACHT_B = androidx.compose.ui.graphics.Color(0xFF6A4BC4)
@@ -2625,6 +2797,7 @@ fun Wecker3DFigur(now: Long, groesse: androidx.compose.ui.unit.Dp, modifier: Mod
     Box(modifier.size(groesse), contentAlignment = Alignment.Center) {
         Wecker3D(Modifier.size(ring + 16.dp), gehaeuse = ring + 14.dp)
         RestzeitRing(now, null, false, Modifier.size(ring), zifferblatt = true)
+        EdleZeiger(Modifier.size(ring))
         GlasKuppel(Modifier.size(ring))
     }
 }
