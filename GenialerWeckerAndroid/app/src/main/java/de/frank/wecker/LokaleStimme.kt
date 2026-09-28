@@ -50,9 +50,11 @@ data class SyntheseStimme(val stimme: String, val ttsSpeechRate: Float, val spra
     fun fuerSprache(code: String): SyntheseStimme = copy(sprache = code, stimme = if (vorgaben.isEmpty() && code == sprache) stimme else vorgaben[code].orEmpty())
     /** Premium-Stimme (online erzeugt, offline abgespielt) statt einer Gerätestimme. */
     val istPremium: Boolean get() = PremiumKatalog.istPremium(stimme)
+    /** Lokale Modellstimme (Supertonic/Pocket), die diese Sprache spricht. */
+    val istModell: Boolean get() = ModellKatalog.passt(stimme, sprache)
     /** Dieselbe Einstellung mit Gerätestimme: eine Premium-Wahl fällt auf die beste Offline-Stimme der Sprache zurück. */
     fun alsGeraetestimme(): SyntheseStimme = if (istPremium) copy(stimme = "") else this
-    val ttsProvider: String get() = if (istPremium) PremiumKatalog.PROVIDER else LokaleStimmen.PROVIDER
+    val ttsProvider: String get() = if (istPremium) PremiumKatalog.PROVIDER else if (istModell) ModellKatalog.PROVIDER else LokaleStimmen.PROVIDER
     /** Das Tempo steckt bereits in der erzeugten Datei. */
     val playbackSpeed: Float get() = 1f
 }

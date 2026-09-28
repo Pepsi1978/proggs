@@ -127,7 +127,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         // Eine Stimmauswahl in der Sprache des Handys – keine Sprachliste, keine fremden Stimmen.
         val sprache = remember { vm.geraeteSprache() }
         val gewuenscht = remember(revision) { settings.stimmeFuer(sprache) }
-        val stimmName = PremiumKatalog.finde(gewuenscht)?.name ?: "Stimme wählen"
+        val stimmName = PremiumKatalog.finde(gewuenscht)?.name ?: ModellKatalog.finde(gewuenscht)?.name ?: "Stimme wählen"
         Section("Vorlesestimme", collapsible = true, initiallyExpanded = false,
             summary = "$stimmName · Tempo ${"%.2f".format(rate)}×") {
             Text("Diese Stimme liest deine Wecktexte vor. Die Ansage liegt nach dem Speichern fertig auf dem Handy – geweckt wird immer offline.",

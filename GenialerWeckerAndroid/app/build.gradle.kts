@@ -59,6 +59,7 @@ android {
     // Das Whisper-Modell liegt unkomprimiert in der APK, damit es direkt aus der APK gelesen werden kann.
     androidResources { noCompress += listOf("onnx") }
     sourceSets["main"].assets.srcDir("whisper-modell")
+    sourceSets["main"].assets.srcDir("tts-modelle")
 }
 // Whisper small (int8, sherpa-onnx-Export, Modell-Lizenz MIT/Apache-2.0) fest in der App: Der Build lädt die Dateien
 // einmal von Hugging Face nach app/whisper-modell/whisper/ (nicht im Git) und prüft die Länge gegen Content-Length.
@@ -79,7 +80,38 @@ val ladeWhisperModell by tasks.registering {
         }
     }
 }
-tasks.named("preBuild") { dependsOn(ladeWhisperModell) }
+// Test-Stimmen (lokal, ohne espeak): Supertonic 3 (31 Sprachen, OpenRAIL-M) und Pocket TTS Englisch (CC-BY-4.0),
+// beide als sherpa-onnx-Export. Der Build lädt die Archive einmal nach app/tts-modelle/ (nicht im Git) und entpackt sie.
+val ladeTtsModelle by tasks.registering {
+    val ziel = file("tts-modelle/tts")
+    outputs.dir(ziel)
+    doLast {
+        mapOf("supertonic" to "sherpa-onnx-supertonic-3-tts-int8-2026-05-11", "pocket" to "sherpa-onnx-pocket-tts-int8-2026-01-26").forEach { (kurz, name) ->
+            val ordner = ziel.resolve(kurz)
+            if (ordner.resolve("fertig").isFile) return@forEach
+            val archiv = file("tts-modelle/$name.tar.bz2")
+            if (!archiv.isFile) {
+                val verbindung = URI("https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$name.tar.bz2").toURL().openConnection()
+                val erwartet = verbindung.contentLengthLong
+                val teil = file("tts-modelle/$name.part")
+                teil.parentFile.mkdirs()
+                verbindung.getInputStream().use { ein -> teil.outputStream().use { ein.copyTo(it, 1 shl 20) } }
+                if (erwartet > 0 && teil.length() != erwartet) throw GradleException("TTS-Modell $name unvollständig (${teil.length()} von $erwartet Bytes).")
+                if (!teil.renameTo(archiv)) throw GradleException("TTS-Modell $name ließ sich nicht speichern.")
+            }
+            ordner.deleteRecursively()
+            copy {
+                from(tarTree(resources.bzip2(archiv)))
+                into(ordner)
+                eachFile { relativePath = RelativePath(true, *relativePath.segments.drop(1).toTypedArray()) }
+                includeEmptyDirs = false
+            }
+            ordner.resolve("fertig").writeText(name)
+            archiv.delete()
+        }
+    }
+}
+tasks.named("preBuild") { dependsOn(ladeWhisperModell, ladeTtsModelle) }
 kotlin { compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 }
 dependencies {
     implementation(platform(libs.compose.bom))

@@ -42,6 +42,7 @@ fun StimmWahlListe(vm: WeckerViewModel, sprache: String, gewaehlt: String, vorga
     var offen by remember { mutableStateOf(false) }
     val aktuell = PremiumKatalog.finde(gewaehlt)
     val beschriftung = aktuell?.let { "${it.name} · ${if (it.weiblich) "weiblich" else "männlich"}" }
+        ?: ModellKatalog.finde(gewaehlt)?.let { "${it.name} · lokal" }
         ?: vorgabeZeile?.let { "Standard · $it" } ?: "Stimme wählen"
     GoldKnopf(beschriftung, { offen = true }, Modifier.fillMaxWidth(), beschreibung = "Stimme auswählen, aktuell $beschriftung",
         symbol = { Icon(Icons.Default.RecordVoiceOver, null, Modifier.size(18.dp)) })
@@ -70,6 +71,12 @@ private fun StimmDialog(vm: WeckerViewModel, sprache: String, gewaehlt: String, 
             LazyColumn(Modifier.heightIn(max = 460.dp).weight(1f, fill = false)) {
                 if (vorgabeZeile != null) item {
                     StimmZeile(gewaehlt.isBlank(), "Standard aus den Einstellungen", vorgabeZeile, null, null, { waehlen("") }, {})
+                }
+                // Test: lokale Modellstimmen (offline, ohne Internet) vor den Premium-Stimmen.
+                items(ModellKatalog.fuer(sprache), key = { it.id }) { m ->
+                    StimmZeile(m.id == gewaehlt, "${m.name} · lokal", m.art, null,
+                        anhoeren = { AnhoerKnopf(vm, "stimme:${m.id}") { vm.previewVoice(sprache = sprache, stimme = m.id) } },
+                        waehlen = { waehlen(m.id) }, sternUmschalten = {})
                 }
                 items(reihenfolge, key = { it.id }) { s ->
                     StimmZeile(s.id == gewaehlt, "${s.name} · ${if (s.weiblich) "weiblich" else "männlich"}", "${s.art} · ${s.regionName}",

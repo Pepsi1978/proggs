@@ -9,3 +9,5 @@ local.properties
 keystore.properties
 # Whisper-Sprachmodell: lädt der Build selbst (Aufgabe ladeWhisperModell), zu groß fürs Git
 app/whisper-modell/
+# Test-Stimmen Supertonic/Pocket: lädt der Build selbst (Aufgabe ladeTtsModelle)
+app/tts-modelle/

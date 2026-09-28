@@ -64,7 +64,7 @@ class SecureSettings(context: Context) : Closeable {
      * Bevorzugte Stimme je Sprache: eine Premium-Stimme (Kennung wie „de-DE-KatjaNeural“) oder eine Gerätestimme.
      * Ohne eigene Wahl gilt die Premium-Vorgabe der Sprache, passend zur Region des Geräts.
      */
-    fun stimmeFuer(sprache: String): String = readString("stimme2_$sprache", "").takeIf { de.frank.wecker.PremiumKatalog.istPremium(it) } ?: run {
+    fun stimmeFuer(sprache: String): String = readString("stimme2_$sprache", "").takeIf { de.frank.wecker.PremiumKatalog.istPremium(it) || de.frank.wecker.ModellKatalog.passt(it, sprache) } ?: run {
         de.frank.wecker.PremiumKatalog.vorgabe(sprache, java.util.Locale.getDefault().country).orEmpty()
     }
     fun setzeStimme(sprache: String, name: String) { writeString("stimme2_$sprache", name) }

@@ -2038,7 +2038,7 @@ private fun StimmeUndTempo(vm: WeckerViewModel, alarm: Alarm) {
     val defaults = remember(revision) { SyntheseStimme(vm.settings) }
     val effective = alarm.resolveVoice(defaults)
     val code = Sprachen.gueltig(alarm.sprache)
-    fun name(id: String) = PremiumKatalog.finde(id)?.name ?: "Standardstimme"
+    fun name(id: String) = PremiumKatalog.finde(id)?.name ?: ModellKatalog.finde(id)?.name ?: "Standardstimme"
     val standard = name(defaults.fuerSprache(code).stimme)
     val eigene = if (alarm.voiceProvider.isBlank()) "" else alarm.voiceId
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2047,6 +2047,7 @@ private fun StimmeUndTempo(vm: WeckerViewModel, alarm: Alarm) {
             vm.change(alarm.copy(voiceProvider = when {
                 id.isBlank() -> ""
                 PremiumKatalog.istPremium(id) -> PremiumKatalog.PROVIDER
+                ModellKatalog.istModell(id) -> ModellKatalog.PROVIDER
                 else -> LokaleStimmen.PROVIDER
             }, voiceId = id))
         }

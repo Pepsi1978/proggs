@@ -39,7 +39,7 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                 if (premium && bereit(signatur(wunsch))) { ohneFehler(); return@withContext }
                 val versuchePremium = premium && EdgeStimmen.netzDa(context)
                 // Die wirklich klingende Stimme zählt: war eine inzwischen ausgeblendete Stimme gewählt, wird neu vorbereitet.
-                suspend fun geraet(): SyntheseStimme = wunsch.alsGeraetestimme().let { v -> LokaleStimmen.wirksameStimme(context, v.stimme, v.sprache)?.let { v.copy(stimme = it) } ?: v }
+                suspend fun geraet(): SyntheseStimme = if (wunsch.istModell) wunsch else wunsch.alsGeraetestimme().let { v -> LokaleStimmen.wirksameStimme(context, v.stimme, v.sprache)?.let { v.copy(stimme = it) } ?: v }
                 if (!versuchePremium) {
                     val lokal = geraet()
                     if (bereit(signatur(lokal))) { ohneFehler(); if (premium) PreparationWorker.sobaldNetz(context); return@withContext }
@@ -102,7 +102,8 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
             if (voice.istPremium) {
                 EdgeStimmen.synthetisiere(text, voice.stimme, voice.ttsSpeechRate, temporary)
                 delay(250) // Almanach E7: Anfragen staffeln statt in schneller Folge
-            } else LokaleStimmen.synthetisiere(context, text, voice, temporary)
+            } else if (voice.istModell) ModellStimmen.synthetisiere(context, text, voice, temporary)
+            else LokaleStimmen.synthetisiere(context, text, voice, temporary)
             val metadata = MediaMetadataRetriever()
             try {
                 metadata.setDataSource(temporary.absolutePath)

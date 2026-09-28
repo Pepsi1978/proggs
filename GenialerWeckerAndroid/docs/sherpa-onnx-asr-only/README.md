@@ -11,3 +11,12 @@ Die Bibliotheken unter `app/src/main/jniLibs/arm64-v8a/` (Git-LFS) stammen aus d
 - Achtung: `~/.gitignore_global` ignoriert `*.so` → neue Bibliotheken mit `git add -f` hinzufügen.
 
 Neu bauen: `build-asr-only.sh` in Git-Bash ausführen (Pfad ohne Leerzeichen, `ANDROID_NDK` setzen).
+
+## Seit 1.0.33: Spracherkennung + TTS nur für Supertonic und Pocket (weiterhin ohne GPL)
+
+- `libsherpa-onnx-jni.so` stammt jetzt aus `build-asr-tts-ohne-espeak.sh`: zuerst `git apply tts-ohne-espeak.patch` im sherpa-onnx-v1.13.8-Baum (`/c/Users/barwa/build/sherpa-onnx/src`), dann das Skript.
+- Der Patch führt die CMake-Option `SHERPA_ONNX_TTS_OHNE_ESPEAK` ein. Sie baut nur Supertonic und Pocket, ohne espeak-ng/piper-phonemize. VITS, Matcha, Kokoro, Kitten und ZipVoice werden per `#ifndef` ausgeklammert.
+- Geprüft: 0 Treffer für espeak/piper (die 3 Treffer für „espeak“ sind „wespeaker“). Alle LOAD-Segmente haben Align 0x4000. `libonnxruntime.so` ist unverändert (1.28.2).
+- Kotlin-API: zusätzlich `Tts.kt` (unverändert aus v1.13.8, alle Config-Klassen nötig, weil JNI sie per GetFieldID liest).
+- Modelle lädt der Gradle-Task `ladeTtsModelle` nach `app/tts-modelle/` (nicht im Git).
+- Lizenzen: Supertonic 3 steht unter OpenRAIL-M. Die README des Pocket-Exports sagt „non-commercial“, die LICENSE CC-BY-4.0 (sherpa-Issue #3971). **Vor dem Verkauf klären.**
