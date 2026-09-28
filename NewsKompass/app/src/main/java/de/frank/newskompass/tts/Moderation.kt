@@ -30,7 +30,7 @@ object Moderation {
     }
 
     fun anmoderation(ausgabe: Ausgabe, block: Block, zone: ZoneId = ZoneId.systemDefault()): String =
-        passend(block.anmoderation, ausgabe, block).ifBlank {
+        passend(block.anmoderation, ausgabe, block, datum(ausgabe, zone)).ifBlank {
             val datum = datum(ausgabe, zone)
             when {
                 block.frage != null -> "Hier ist die Antwort auf deine Frage zu ${block.titel}, Stand $datum."
@@ -41,7 +41,7 @@ object Moderation {
         }
 
     fun abmoderation(ausgabe: Ausgabe, block: Block, zone: ZoneId = ZoneId.systemDefault()): String =
-        passend(block.abmoderation, ausgabe, block).ifBlank {
+        passend(block.abmoderation, ausgabe, block, datum(ausgabe, zone).takeIf { block.frage == null }).ifBlank {
             val datum = datum(ausgabe, zone)
             when {
                 block.frage != null -> "Danke fürs Zuhören, das war die Antwort auf deine Frage zu ${block.titel}."
@@ -63,12 +63,14 @@ object Moderation {
     }
 
     /**
-     * Der Satz der KI, wenn er zum Block passt: Er nennt den Blocktitel und bei einer regulären Ausgabe
-     * auch ihren Namen. Sonst leer — lieber die Vorlage als eine falsche Ansage.
+     * Der Satz der KI, wenn er zum Block passt: Er nennt den Blocktitel, bei einer regulären Ausgabe
+     * auch ihren Namen und, wo verlangt, genau das [datum] der Ausgabe. Sonst leer — lieber die
+     * Vorlage als eine falsche Ansage.
      */
-    private fun passend(roh: String, ausgabe: Ausgabe, block: Block): String {
+    private fun passend(roh: String, ausgabe: Ausgabe, block: Block, datum: String?): String {
         val satz = saeubere(roh)
         if (satz.isBlank() || !satz.contains(block.titel, ignoreCase = true)) return ""
+        if (datum != null && !satz.contains(datum)) return ""
         if (block.frage == null && istAusgabe(ausgabe) && !satz.contains(ausgabe.slot, ignoreCase = true)) return ""
         return satz
     }

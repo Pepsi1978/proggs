@@ -34,16 +34,28 @@ class ModerationTest {
         val block = Block(
             "t", "KI-News", listOf(meldung), null,
             anmoderation = "„Guten Morgen und willkommen zur Morgenausgabe von KI-News vom 28. September 2026“",
-            abmoderation = "Das war die Morgenausgabe von KI-News, danke fürs Zuhören!",
+            abmoderation = "Das war die Morgenausgabe von KI-News vom 28. September 2026, danke fürs Zuhören!",
         )
         val a = ausgabe("Morgenausgabe")
         assertEquals("Guten Morgen und willkommen zur Morgenausgabe von KI-News vom 28. September 2026.", Moderation.anmoderation(a, block, zone))
-        assertEquals("Das war die Morgenausgabe von KI-News, danke fürs Zuhören!", Moderation.abmoderation(a, block, zone))
+        assertEquals("Das war die Morgenausgabe von KI-News vom 28. September 2026, danke fürs Zuhören!", Moderation.abmoderation(a, block, zone))
     }
 
     @Test
     fun falscheAusgabeOderFalscherTitelFallenAufVorlage() {
         val block = Block("t", "KI-News", listOf(meldung), null, anmoderation = "Willkommen zur Abendausgabe von KI-News.", abmoderation = "Das war Sport.")
+        val a = ausgabe("Morgenausgabe")
+        assertEquals("Willkommen zur Morgenausgabe von KI-News vom 28. September 2026.", Moderation.anmoderation(a, block, zone))
+        assertEquals("Danke fürs Zuhören, das war die Morgenausgabe von KI-News vom 28. September 2026.", Moderation.abmoderation(a, block, zone))
+    }
+
+    @Test
+    fun fehlendesOderFalschesDatumFaelltAufVorlage() {
+        val block = Block(
+            "t", "KI-News", listOf(meldung), null,
+            anmoderation = "Willkommen zur Morgenausgabe von KI-News vom 27. September 2026.",
+            abmoderation = "Das war die Morgenausgabe von KI-News, danke fürs Zuhören!",
+        )
         val a = ausgabe("Morgenausgabe")
         assertEquals("Willkommen zur Morgenausgabe von KI-News vom 28. September 2026.", Moderation.anmoderation(a, block, zone))
         assertEquals("Danke fürs Zuhören, das war die Morgenausgabe von KI-News vom 28. September 2026.", Moderation.abmoderation(a, block, zone))
