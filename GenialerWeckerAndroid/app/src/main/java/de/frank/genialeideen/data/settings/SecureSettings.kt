@@ -68,10 +68,13 @@ class SecureSettings(context: Context) : Closeable {
         ?: de.frank.wecker.ModellKatalog.VORGABE
     fun setzeStimme(sprache: String, name: String) { writeString("stimme2_$sprache", name) }
 
-    /** Lieblingsstimmen (Stern); sie stehen in jeder Auswahl ganz oben. */
+    /**
+     * Lieblingsstimmen (Stern) als „sprache|kennung“; sie stehen in jeder Auswahl ganz oben. Neuer Schlüssel seit 1.0.36
+     * (die alten Einträge waren Edge-Stimmen). Ab Werk ist Sophie (Supertonic F4) auf Deutsch Favorit.
+     */
     var stimmFavoriten: Set<String>
-        get() = readString("stimm_favoriten", "").split(',').filter(String::isNotBlank).toSet()
-        set(value) = writeString("stimm_favoriten", value.joinToString(","))
+        get() = readString("stimm_favoriten2", "de|${de.frank.wecker.ModellKatalog.VORGABE}").split(',').filter(String::isNotBlank).toSet()
+        set(value) = writeString("stimm_favoriten2", value.joinToString(","))
 
     var ttsSpeechRate: Float
         get() = preferences?.getFloat(Keys.TTS_SPEECH_RATE, Defaults.TTS_SPEECH_RATE)
