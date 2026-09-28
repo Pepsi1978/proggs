@@ -13,6 +13,8 @@
     <!-- Private App ausserhalb von Google Play: 5 und 17 Uhr sollen pünktlich sein. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <!-- Private App: Ohne Akku-Ausnahme darf der Lauf nach dem Wecker oft keinen Vordergrunddienst starten. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".NewsApplication"

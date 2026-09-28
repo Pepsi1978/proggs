@@ -1517,7 +1517,92 @@ private fun ZeitplanBereich(app: NewsApplication, stand: EinstellungenStand) {
                 Spacer(Modifier.width(8.dp))
                 Text("Jetzt eine Ausgabe erstellen")
             }
+            if (stand.zeitplanAktiv) {
+                Spacer(Modifier.height(16.dp))
+                HintergrundStatus()
+            }
         }
+    }
+}
+
+/**
+ * Zeigt, ob der automatische Lauf im Hintergrund durchkommt. Ohne Ausnahme von der Akku-Optimierung
+ * darf der Lauf nach dem Wecker oft keinen Vordergrunddienst mehr starten und stirbt nach 10 Minuten.
+ */
+@Composable
+private fun HintergrundStatus() {
+    val kontext = LocalContext.current
+    fun lies() = Triple(
+        kontext.getSystemService(android.os.PowerManager::class.java)?.isIgnoringBatteryOptimizations(kontext.packageName) == true,
+        android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
+            kontext.getSystemService(android.app.AlarmManager::class.java)?.canScheduleExactAlarms() == true,
+        androidx.core.app.NotificationManagerCompat.from(kontext).areNotificationsEnabled(),
+    )
+    var status by remember { mutableStateOf(lies()) }
+    // Nach der Rückkehr aus dem System-Dialog neu lesen, sonst bliebe die Anzeige veraltet.
+    val lebenszyklus = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lebenszyklus) {
+        val beobachter = LifecycleEventObserver { _, ereignis ->
+            if (ereignis == Lifecycle.Event.ON_RESUME) status = lies()
+        }
+        lebenszyklus.addObserver(beobachter)
+        onDispose { lebenszyklus.removeObserver(beobachter) }
+    }
+    val (akkuFrei, genau, hinweise) = status
+    val oeffne = { absicht: Intent, ersatz: Intent ->
+        try {
+            kontext.startActivity(absicht)
+        } catch (fehler: android.content.ActivityNotFoundException) {
+            runCatching { kontext.startActivity(ersatz) }
+        }
+    }
+    val einstellungenDerApp = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${kontext.packageName}"))
+    Text("Hintergrund", style = MaterialTheme.typography.titleMedium)
+    HintergrundZeile(
+        ok = akkuFrei,
+        text = if (akkuFrei) "Akku-Optimierung ist aus" else "Akku-Optimierung bremst die automatischen Ausgaben",
+        knopf = "Ausnehmen",
+    ) {
+        @android.annotation.SuppressLint("BatteryLife")
+        val bitte = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${kontext.packageName}"))
+        oeffne(bitte, Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    }
+    HintergrundZeile(
+        ok = genau,
+        text = if (genau) "Pünktliche Wecker sind erlaubt" else "Pünktliche Wecker sind nicht erlaubt",
+        knopf = "Erlauben",
+    ) {
+        oeffne(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${kontext.packageName}")), einstellungenDerApp)
+    }
+    HintergrundZeile(
+        ok = hinweise,
+        text = if (hinweise) "Benachrichtigungen sind an" else "Benachrichtigungen sind aus",
+        knopf = "Einschalten",
+    ) {
+        oeffne(
+            Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, kontext.packageName),
+            einstellungenDerApp,
+        )
+    }
+    Text(
+        "Samsung: Zusätzlich unter Einstellungen › Akku › Hintergrundnutzung begrenzen › Nie schlafende Apps News Kompass eintragen.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp),
+    )
+}
+
+@Composable
+private fun HintergrundZeile(ok: Boolean, text: String, knopf: String, aktion: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            if (ok) "✓" else "!",
+            color = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.width(24.dp),
+        )
+        Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        if (!ok) TextButton(onClick = aktion) { Text(knopf) }
     }
 }
 
