@@ -18,6 +18,7 @@ import de.frank.newskompass.data.model.Meldung
 import de.frank.newskompass.data.model.Thema
 import de.frank.newskompass.network.awaitAntwort
 import de.frank.newskompass.observability.KompassLog
+import de.frank.newskompass.tts.Moderation
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.security.MessageDigest
@@ -254,6 +255,17 @@ class NewsRecherche(
         }
         val blockTitel = if (sprachFrage) "kurzer deutscher Titel für die Frage" else "kurzer deutscher Titel für dieses Thema"
         val briefing = if (sprachFrage) "das dem Leser vorgelesen wird" else "das zweimal am Tag erscheint und dem Leser vorgelesen wird"
+        // Ein- und Ausleitung für das Vorlesen des ganzen Blocks. Eine Frage hängt an der neuesten Ausgabe,
+        // ihr Satz nennt deshalb keinen Ausgabennamen.
+        val tag = SimpleDateFormat("d. MMMM yyyy", Locale.GERMANY).format(Date(jetzt))
+        val moderation = if (sprachFrage) {
+            "\"anmoderation\" ist ein einziger kurzer, freundlicher Satz, mit dem das Vorlesen beginnt: Er sagt, dass jetzt die Antwort auf die Frage des Nutzers kommt, nennt den blockTitel wörtlich und das Datum „$tag“, etwa: „Hier ist die Antwort auf deine Frage zu TITEL, Stand $tag.“, wobei TITEL für deinen blockTitel steht. " +
+                "\"abmoderation\" ist ein einziger kurzer Schlusssatz, etwa: „Danke fürs Zuhören, das war die Antwort auf deine Frage zu TITEL.“"
+        } else {
+            val slot = slotName(jetzt)
+            "\"anmoderation\" ist ein einziger kurzer, freundlicher Begrüßungssatz, mit dem das Vorlesen dieses Themenblocks beginnt. Er nennt wörtlich die Ausgabe „$slot“, den blockTitel und das Datum „$tag“, etwa: „Willkommen zur $slot von TITEL vom $tag.“, wobei TITEL für deinen blockTitel steht. Du darfst ihn leicht abwandeln, aber alle drei Angaben müssen darin stehen. " +
+                "\"abmoderation\" ist ein einziger kurzer Schlusssatz mit denselben drei Angaben, etwa: „Danke fürs Zuhören, das war die $slot von TITEL vom $tag.“"
+        }
         return """
             Du bist Redakteur eines deutschsprachigen Nachrichtenbriefings, $briefing.
             Heute ist $datum, es ist $uhr Uhr deutscher Zeit.
@@ -272,8 +284,10 @@ class NewsRecherche(
 
             Antworte ausschließlich mit einem JSON-Objekt, ohne Text davor oder danach, in genau dieser Form:
             {"blockTitel": "$blockTitel, höchstens drei Wörter",
+             "anmoderation": "...", "abmoderation": "...",
              "meldungen": [{"titel": "...", "absaetze": ["...", "..."], "quellen": ["https://..."], "wann": "sprechbare Zeitangabe wie heute früh, gestern Abend oder am Mittwoch", "update": false, "bildIdee": "one English sentence describing a fitting editorial illustration, no text, no logos"}]}
             In "quellen" stehen 2 bis 4 Adressen der Artikel, die du für genau diese Meldung tatsächlich gelesen und genutzt hast, die beste zuerst: konkrete Artikelseiten von Medien oder Primärquellen, keine Startseiten, Übersichts- oder Suchseiten; bei gleichwertigen Quellen zuerst die, die ein Foto zum Ereignis zeigt. "update" ist true, wenn die Meldung eine Fortsetzung einer bereits bekannten Meldung ist.
+            $moderation Beide Sätze ohne Anführungszeichen, ohne Emojis, auf Deutsch mit echten Umlauten.
         """.trimIndent()
     }
 
@@ -315,7 +329,14 @@ class NewsRecherche(
             meldung
         }
         val titel = json.optString("blockTitel").trim().ifBlank { thema.text.take(30) }
-        return Block(thema.id, titel, meldungen, if (meldungen.isEmpty()) NICHTS_NEUES else null)
+        return Block(
+            thema.id,
+            titel,
+            meldungen,
+            if (meldungen.isEmpty()) NICHTS_NEUES else null,
+            anmoderation = Moderation.saeubere(json.optString("anmoderation")),
+            abmoderation = Moderation.saeubere(json.optString("abmoderation")),
+        )
     }
 
     // Nebenläufig: Eine gesprochene Frage kann parallel zu einem Lauf aus dem Zeitplan recherchiert werden.

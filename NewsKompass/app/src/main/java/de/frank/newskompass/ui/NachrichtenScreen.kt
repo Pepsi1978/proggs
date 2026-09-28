@@ -116,6 +116,7 @@ import de.frank.newskompass.data.model.Meldung
 import de.frank.newskompass.news.SprachStufe
 import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.observability.KompassLog
+import de.frank.newskompass.tts.Moderation
 import de.frank.newskompass.tts.VorleseStufe
 import de.frank.newskompass.tts.VorleseZustand
 import de.frank.newskompass.ui.theme.LocalIstDunkel
@@ -269,7 +270,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
             zeige(if (eintrag.id == index.firstOrNull()?.id) Ansicht.Aktuell else Ansicht.Tag(eintrag.tag, eintrag.id))
             springeZu = block.themaId
             if (block.meldungen.isNotEmpty()) {
-                app.vorleser.lies(blockQuelle(eintrag.id, block.themaId), blockText(block))
+                app.vorleser.lies(blockQuelle(eintrag.id, block.themaId), Moderation.blockText(antwort, block))
                 return@LaunchedEffect
             }
         }
@@ -443,7 +444,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                                 block = block,
                                 zustand = vorlesen,
                                 quelleId = blockQuelle(ausgabe?.id, block.themaId),
-                                vorlesen = { app.vorleser.schalteUm(blockQuelle(ausgabe?.id, block.themaId), blockText(block)) },
+                                vorlesen = { app.vorleser.schalteUm(blockQuelle(ausgabe?.id, block.themaId), Moderation.blockText(ausgabe, block)) },
                                 entfernen = if (block.frage != null && ausgabe != null) {
                                     {
                                         if (vorlesen.quelleId == blockQuelle(ausgabe.id, block.themaId) || block.meldungen.any { it.id == vorlesen.quelleId }) app.vorleser.stoppe()
@@ -634,9 +635,6 @@ private fun Spalte(inhalt: @Composable () -> Unit) {
         Box(Modifier.widthIn(max = 760.dp).fillMaxWidth().padding(horizontal = 16.dp)) { inhalt() }
     }
 }
-
-private fun blockText(block: Block): String =
-    (listOf("${block.titel}.") + block.meldungen.map { it.vorleseText }).joinToString("\n\n")
 
 @Composable
 private fun Kopf(

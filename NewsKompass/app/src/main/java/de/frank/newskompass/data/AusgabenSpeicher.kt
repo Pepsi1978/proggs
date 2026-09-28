@@ -341,6 +341,8 @@ class AusgabenSpeicher(context: Context) {
                             .put("titel", b.titel)
                             .put("fehler", b.fehler ?: JSONObject.NULL)
                             .put("frage", b.frage ?: JSONObject.NULL)
+                            .put("anmoderation", b.anmoderation)
+                            .put("abmoderation", b.abmoderation)
                             .put("meldungen", JSONArray().apply {
                                 b.meldungen.forEach { m ->
                                     put(
@@ -372,6 +374,8 @@ class AusgabenSpeicher(context: Context) {
                         titel = b.optString("titel"),
                         fehler = b.optString("fehler").takeIf { !b.isNull("fehler") && it.isNotBlank() },
                         frage = b.optString("frage").takeIf { !b.isNull("frage") && it.isNotBlank() },
+                        anmoderation = b.optString("anmoderation"),
+                        abmoderation = b.optString("abmoderation"),
                         meldungen = b.getJSONArray("meldungen").let { ml ->
                             (0 until ml.length()).map { k ->
                                 val m = ml.getJSONObject(k)
