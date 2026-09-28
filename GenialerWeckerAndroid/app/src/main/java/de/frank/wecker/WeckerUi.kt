@@ -728,8 +728,12 @@ private fun SchlichtHero(
                 // gedrückter Knopf, nur auf ein Instrument angewendet. Statisch, kein Dauerleuchten.
                 // Ein richtiger Wecker: Glocken, Hammer und Füße hinter einem gewölbten
                 // Zifferblatt mit Minutenteilung und Zeigern; der Restzeitbogen liegt darauf.
+                val klingeln = rememberGelegentlichesKlingeln()
                 if (zeigtRing) Box(
-                    Modifier.size(ring + RINGBETT_RAND),
+                    Modifier.size(ring + RINGBETT_RAND).graphicsLayer {
+                        rotationZ = klingeln.value
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.85f)
+                    },
                     contentAlignment = Alignment.Center,
                 ) {
                     Wecker3D(Modifier.matchParentSize(), gehaeuse = ring + 14.dp)
@@ -2777,6 +2781,29 @@ private fun EdleZeiger(modifier: Modifier) {
     }
 }
 
+/**
+ * Stummes Klingeln im Ruhezustand: Alle 10 bis 15 Sekunden wackelt der 3D-Wecker gut eine Sekunde lang
+ * wie beim Wecken (zwei kurze Stöße, dazwischen eine Pause), ganz ohne Ton. Läuft nur, solange der
+ * Bildschirm vorne ist; bei reduzierter Bewegung steht er still. Liefert den Drehwinkel in Grad.
+ */
+@Composable
+private fun rememberGelegentlichesKlingeln(): State<Float> {
+    val winkel = remember { androidx.compose.animation.core.Animatable(0f) }
+    val aktiv = rememberResumed() && !LocalBewegungReduziert.current
+    LaunchedEffect(aktiv) {
+        if (!aktiv) { winkel.snapTo(0f); return@LaunchedEffect }
+        while (true) {
+            kotlinx.coroutines.delay(10_000L + kotlin.random.Random.nextLong(5_001L))
+            winkel.animateTo(0f, androidx.compose.animation.core.keyframes {
+                durationMillis = 1300
+                0f at 0; 5f at 60; -5f at 120; 5f at 180; -5f at 240; 4f at 300; -4f at 360; 2f at 420; 0f at 480
+                0f at 760; 4f at 820; -4f at 880; 3f at 940; -3f at 1000; 1.5f at 1060; 0f at 1120; 0f at 1300
+            })
+        }
+    }
+    return winkel.asState()
+}
+
 /** Sekundenzeiger: tiefes Karminrot – klassisch, hebt sich von Messing und vom nachtblauen Schlafbogen ab. */
 private val SEKUNDE_KARMIN = androidx.compose.ui.graphics.Color(0xFFA8322B)
 
@@ -2815,7 +2842,12 @@ private fun LeererStart(now: Long, aufNeu: () -> Unit) {
     LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = true) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Wecker3DFigur(now, 150.dp, Modifier.graphicsLayer { translationY = schweben * density })
+            val klingeln = rememberGelegentlichesKlingeln()
+            Wecker3DFigur(now, 150.dp, Modifier.graphicsLayer {
+                translationY = schweben * density
+                rotationZ = klingeln.value
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.85f)
+            })
             Spacer(Modifier.height(6.dp))
             Text("Dein Morgen, deine Reihenfolge", style = MaterialTheme.typography.titleLarge, color = gold.textPrimaer,
                 textAlign = TextAlign.Center)
