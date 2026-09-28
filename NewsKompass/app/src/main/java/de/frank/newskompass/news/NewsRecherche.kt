@@ -297,7 +297,7 @@ class NewsRecherche(
         val json = runCatching { JSONObject(schneideJson(text)) }.getOrNull()
         if (json == null) {
             KompassLog.warn("NewsRecherche", "zerlege", "Antwort war kein JSON, nehme den Text roh", mapOf("zeichen" to text.length))
-            val absaetze = text.split(Regex("\n{2,}")).map(String::trim).filter(String::isNotBlank)
+            val absaetze = QuellenFilter.entferne(text.split(Regex("\n{2,}")).map(String::trim))
             return Block(
                 thema.id,
                 thema.text.take(30),
@@ -309,13 +309,13 @@ class NewsRecherche(
         val meldungen = (0 until liste.length()).mapNotNull { index ->
             val m = liste.optJSONObject(index) ?: return@mapNotNull null
             val absaetze = m.optJSONArray("absaetze")?.let { a -> (0 until a.length()).map { a.optString(it).trim() } }
-                ?.filter(String::isNotBlank).orEmpty()
+                ?.let(QuellenFilter::entferne).orEmpty()
             if (absaetze.isEmpty()) return@mapNotNull null
             val quellen = m.optJSONArray("quellen")?.let { a -> (0 until a.length()).map { a.optString(it).trim() } }
                 ?.filter { it.startsWith("http") }.orEmpty()
             Meldung(
                 id = UUID.randomUUID().toString(),
-                titel = m.optString("titel").trim().trimEnd('.'),
+                titel = QuellenFilter.entferne(m.optString("titel")).trimEnd('.'),
                 absaetze = absaetze,
                 quellen = quellen.ifEmpty { suchQuellen.take(3) },
                 bildDatei = null,
