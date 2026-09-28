@@ -183,6 +183,10 @@ data class Block(
      * Moment: Er hängt unten an der Ausgabe und steht in keiner Themenliste.
      */
     val frage: String? = null,
+    /** Begrüßungssatz der KI, mit dem das Vorlesen des Blocks beginnt. Leer = Vorlage aus [de.frank.newskompass.tts.Moderation]. */
+    val anmoderation: String = "",
+    /** Schlusssatz der KI, mit dem das Vorlesen des Blocks endet. Leer = Vorlage. */
+    val abmoderation: String = "",
 )
 
 data class Ausgabe(
