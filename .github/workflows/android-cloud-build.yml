@@ -175,6 +175,21 @@ jobs:
           New-Item -ItemType Directory -Force -Path $d | Out-Null
           [IO.File]::WriteAllText((Join-Path $d 'maps-api-key.txt'), $env:MAPS_API_KEY)
 
+      # GenialerWeckerAndroid (Verkaufs-App) signiert mit eigenem Key statt dem geteilten Debug-Key.
+      # Kommt die App in den Play Store, werden diese beiden Secrets gelöscht (siehe EINRICHTUNG-FUER-KI.md).
+      - name: Wecker-Keystore ablegen
+        if: matrix.projekt == 'GenialerWeckerAndroid'
+        shell: pwsh
+        env:
+          WECKER_KEYSTORE_B64: ${{ secrets.SK_GENIALERWECKER_KEYSTORE_B64 }}
+          WECKER_PROPERTIES: ${{ secrets.SK_GENIALERWECKER_KEYSTORE_PROPERTIES }}
+        run: |
+          if (-not $env:WECKER_KEYSTORE_B64 -or -not $env:WECKER_PROPERTIES) { Write-Host "::error::Secrets SK_GENIALERWECKER_KEYSTORE_B64 / _PROPERTIES fehlen."; exit 1 }
+          $d = Join-Path $HOME 'SK/GenialerWeckerAndroid'
+          New-Item -ItemType Directory -Force -Path $d | Out-Null
+          [IO.File]::WriteAllBytes((Join-Path $d 'release.keystore'), [Convert]::FromBase64String($env:WECKER_KEYSTORE_B64))
+          [IO.File]::WriteAllText((Join-Path $d 'keystore.properties'), $env:WECKER_PROPERTIES)
+
       - name: rclone einrichten
         shell: pwsh
         env:
@@ -243,7 +258,7 @@ jobs:
         if: steps.bau.outputs.status == 'ok'
         shell: pwsh
         env:
-          SIGNATUR_ERWARTET: ${{ vars.ANDROID_SIGNATUR_SHA256 }}
+          SIGNATUR_ERWARTET: ${{ matrix.projekt == 'GenialerWeckerAndroid' && vars.ANDROID_SIGNATUR_SHA256_GENIALERWECKERANDROID || vars.ANDROID_SIGNATUR_SHA256 }}
         run: |
           $lokal = Join-Path $env:RUNNER_TEMP "Updates/$env:PROJEKT"
           $m = Get-Content (Join-Path $lokal 'update.json') -Raw -Encoding utf8 | ConvertFrom-Json
@@ -280,6 +295,8 @@ jobs:
             (Join-Path $HOME 'SK/Android/debug-shared.keystore'),
             $env:ANDROID_DEBUG_KEY,
             (Join-Path $HOME 'SK/EntropieReductor/maps-api-key.txt'),
+            (Join-Path $HOME 'SK/GenialerWeckerAndroid/release.keystore'),
+            (Join-Path $HOME 'SK/GenialerWeckerAndroid/keystore.properties'),
             (Join-Path $env:RUNNER_TEMP 'rclone.conf')
           ) | Where-Object { $_ }
           Remove-Item -Force -ErrorAction SilentlyContinue -LiteralPath $weg

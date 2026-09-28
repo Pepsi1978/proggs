@@ -53,6 +53,13 @@ GitHub-Secret vor und steht nur Bauvorgängen auf `main` zur Verfügung.
 - **Ausnahme BestJournalAndroid:** Das Release wird mit dem **Play-Store-Key** (`release.keystore`) signiert,
   nicht mit dem geteilten Schlüssel. Diese App bleibt beim Cloud-Bau **ausgeschlossen**. Der Play-Store-Key
   kommt nicht zu GitHub.
+- **Ausnahme GenialerWeckerAndroid (Verkaufs-App, eigener Key):** Seit 28.09.2026 auf Franks Wunsch **vorläufig**
+  im Environment `android-signing`: Secrets `SK_GENIALERWECKER_KEYSTORE_B64` (Base64 von
+  `~/SK/GenialerWeckerAndroid/release.keystore`) und `SK_GENIALERWECKER_KEYSTORE_PROPERTIES` (Inhalt von
+  `keystore.properties`), dazu die Variable `ANDROID_SIGNATUR_SHA256_GENIALERWECKERANDROID` für die Signaturprüfung.
+  Der Workflow legt beides nur für diese App nach `$HOME/SK/GenialerWeckerAndroid` und räumt es danach weg.
+  **Sobald die App in den Play Store kommt, beide Secrets löschen** (`gh secret delete <Name> --repo pepsi1978/proggs
+  --env android-signing`) und die App in `AUSGESCHLOSSEN` des Workflows eintragen, wie BestJournalAndroid.
 
 ## 3. Voraussetzungen prüfen und Frank berichten
 
