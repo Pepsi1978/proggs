@@ -45,7 +45,7 @@ object Weckbereitschaft {
                 add(appInfo)
             }
             "Benachrichtigungen" -> {
-                if (Build.VERSION.SDK_INT >= 33 && !laufzeitErteilt(activity)) {
+                if (Build.VERSION.SDK_INT >= 33 && !laufzeitErteilt(activity) && !dialogGesperrt(activity)) {
                     benachrichtigungenAnfragen(); return true
                 }
                 listOf(i(Settings.ACTION_APP_NOTIFICATION_SETTINGS, extraPackage = true), appInfo)
@@ -56,12 +56,9 @@ object Weckbereitschaft {
                 add(appInfo)
             }
             "Wecker bei Nicht stören" -> {
-                val nm = activity.getSystemService(NotificationManager::class.java)
-                if (!nm.isNotificationPolicyAccessGranted) listOf(i(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS), i("android.settings.ZEN_MODE_SETTINGS"), appInfo)
-                else {
-                    if (weckerImNichtStoerenErlauben(activity) && erfuellt(activity, name)) return true
-                    listOf(i("android.settings.ZEN_MODE_SETTINGS"), i(Settings.ACTION_SOUND_SETTINGS), appInfo)
-                }
+                // Mit Zugriff stellt die App es selbst ein; sonst direkt zu den Modi, dort „Wecker“ erlauben.
+                if (weckerImNichtStoerenErlauben(activity) && erfuellt(activity, name)) return true
+                listOf(i("android.settings.ZEN_MODE_SETTINGS"), i(Settings.ACTION_SOUND_SETTINGS), appInfo)
             }
             "Akku uneingeschränkt" -> {
                 val pm = activity.getSystemService(PowerManager::class.java)
@@ -74,6 +71,42 @@ object Weckbereitschaft {
         kette.forEach { intent -> if (runCatching { activity.startActivity(intent) }.isSuccess) return true }
         return runCatching { activity.startActivity(Intent(Settings.ACTION_SETTINGS)) }.isSuccess
     }
+
+    /**
+     * Ein Satz, was der Käufer nach dem Tipp auf „Erlauben“ tun muss. Wo Android ein Fenster zeigt, reicht
+     * „Zulassen“; wo es nur eine Einstellungsseite gibt, steht hier genau der Schalter, den man sucht.
+     */
+    fun anleitung(activity: Activity, name: String): String = when (name) {
+        "Genaue Weckzeiten" -> "Auf der nächsten Seite den Schalter bei „Wecker und Erinnerungen“ einschalten, dann zurück."
+        "Benachrichtigungen" ->
+            if (Build.VERSION.SDK_INT >= 33 && !laufzeitErteilt(activity) && !dialogGesperrt(activity)) "Im Fenster auf „Zulassen“ tippen."
+            else "Auf der nächsten Seite „Benachrichtigungen zulassen“ einschalten, dann zurück."
+        "Vollbild-Wecker" -> "Auf der nächsten Seite „Vollbildbenachrichtigungen erlauben“ einschalten, dann zurück."
+        "Wecker bei Nicht stören" -> "Auf der nächsten Seite den aktiven Nicht-stören-Modus öffnen und dort „Wecker“ bzw. „Alarme“ erlauben, dann zurück."
+        "Akku uneingeschränkt" -> "Im Fenster auf „Zulassen“ tippen."
+        else -> "Auf der nächsten Seite die Freigabe einschalten, dann zurück."
+    }
+
+    /** Zweimal abgelehnt: Android zeigt das Fenster nicht mehr, nur noch die Einstellungsseite hilft. */
+    private fun dialogGesperrt(activity: Activity): Boolean =
+        activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(BENACHRICHTIGUNG_GESPERRT, false) &&
+            !activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
+
+    /**
+     * Ergebnis des Benachrichtigungs-Fensters. Kam „abgelehnt“, ohne dass Android noch fragen darf, geht es
+     * sofort zur Einstellungsseite — sonst passierte beim Tipp auf „Erlauben“ sichtbar nichts.
+     */
+    fun benachrichtigungsAntwort(activity: Activity, erteilt: Boolean) {
+        if (erteilt || Build.VERSION.SDK_INT < 33) return
+        if (activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) return
+        activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(BENACHRICHTIGUNG_GESPERRT, true).apply()
+        android.widget.Toast.makeText(activity, anleitung(activity, "Benachrichtigungen"), android.widget.Toast.LENGTH_LONG).show()
+        runCatching {
+            activity.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName))
+        }
+    }
+
+    private const val BENACHRICHTIGUNG_GESPERRT = "benachrichtigung_gesperrt"
 
     private fun laufzeitErteilt(context: Context) =
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -130,6 +163,8 @@ fun AutomatischeWeckbereitschaft(activity: ComponentActivity) {
             if (AlarmService.state.value.alarm != null) return@LifecycleEventObserver
             val name = Weckbereitschaft.naechsteAutomatisch(activity) ?: return@LifecycleEventObserver
             Weckbereitschaft.alsVersuchtMerken(activity, name)
+            // Vor dem Sprung ein Satz, was dort anzutippen ist — er bleibt über der nächsten Seite stehen.
+            android.widget.Toast.makeText(activity, Weckbereitschaft.anleitung(activity, name), android.widget.Toast.LENGTH_LONG).show()
             Weckbereitschaft.beheben(activity, name) { anfragen.value() }
         }
         lifecycle.lifecycle.addObserver(observer)

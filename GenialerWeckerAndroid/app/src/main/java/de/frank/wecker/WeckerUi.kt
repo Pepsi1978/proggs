@@ -2876,11 +2876,16 @@ fun rememberReadiness(): List<Pair<String, Boolean>> {
 fun readiness(context: Context): List<Pair<String, Boolean>> {
     val manager = context.getSystemService(NotificationManager::class.java)
     val policy = runCatching { if (Build.VERSION.SDK_INT >= 30) manager.consolidatedNotificationPolicy else manager.notificationPolicy }.getOrNull()
-    val allowsAlarms = Build.VERSION.SDK_INT < 28 || (policy != null && (policy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS) != 0)
+    // Wecker kommen in jedem Nicht-stören-Modus ab Werk durch (USAGE_ALARM). Rot wird die Zeile nur, wenn
+    // der gerade aktive Modus sie wirklich stummschaltet — ein Zugriffsrecht braucht dafür niemand.
+    val filter = manager.currentInterruptionFilter
+    val allowsAlarms = Build.VERSION.SDK_INT < 28 || policy == null || (policy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS) != 0
+    val dndLaesstWeckerDurch = filter != NotificationManager.INTERRUPTION_FILTER_NONE &&
+        (filter != NotificationManager.INTERRUPTION_FILTER_PRIORITY || allowsAlarms)
     return listOf("Genaue Weckzeiten" to AlarmScheduler(context).allowed(),
         "Benachrichtigungen" to manager.areNotificationsEnabled(),
         "Vollbild-Wecker" to (Build.VERSION.SDK_INT < 34 || manager.canUseFullScreenIntent()),
-        "Wecker bei Nicht stören" to (manager.isNotificationPolicyAccessGranted && allowsAlarms && manager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_NONE),
+        "Wecker bei Nicht stören" to dndLaesstWeckerDurch,
         // Samsung puts optimized apps to sleep; unrestricted battery keeps restore and preparation alive.
         "Akku uneingeschränkt" to context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName))
 }

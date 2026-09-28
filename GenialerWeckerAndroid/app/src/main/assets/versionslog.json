@@ -39,6 +39,7 @@
     { "versionCode": 35, "versionName": "1.0.34", "stand": "28.09.2026, 12:09 Uhr", "notiz": "Die englischen Pocket-Teststimmen lassen sich jetzt in jeder Stimmauswahl anhören, auch auf einem deutschen Handy." },
     { "versionCode": 36, "versionName": "1.0.35", "stand": "28.09.2026, 12:26 Uhr", "notiz": "Alle Stimmen sprechen jetzt lokal ohne Internet: Edge-Stimmen entfernt, Supertonic in höchster Qualität mit Namen je Sprache, Portugiesisch neu, Favoriten mit Stern je Sprache." },
     { "versionCode": 37, "versionName": "1.0.36", "stand": "28.09.2026, 12:32 Uhr", "notiz": "Sophie ist ab Werk Standard- und Favoritenstimme auf Deutsch und steht in der Stimmauswahl ganz oben." },
-    { "versionCode": 38, "versionName": "1.0.37", "stand": "28.09.2026, 12:54 Uhr", "notiz": "Einsprechen: neue Premium-Erkennung Whisper Large V3 Turbo als Download (1 GB) mit etwa halb so vielen Fehlern; lädt im Hintergrund weiter und setzt nach Unterbrechung fort." }
+    { "versionCode": 38, "versionName": "1.0.37", "stand": "28.09.2026, 12:54 Uhr", "notiz": "Einsprechen: neue Premium-Erkennung Whisper Large V3 Turbo als Download (1 GB) mit etwa halb so vielen Fehlern; lädt im Hintergrund weiter und setzt nach Unterbrechung fort." },
+    { "versionCode": 39, "versionName": "1.0.38", "stand": "28.09.2026, 12:56 Uhr", "notiz": "Weckbereitschaft einfacher: „Wecker bei Nicht stören“ braucht keinen Sonderzugriff mehr, jede fehlende Freigabe sagt vorher in einem Satz, was zu tippen ist, und zweimal abgelehnte Benachrichtigungen führen direkt zur richtigen Einstellungsseite." }
   ]
 }

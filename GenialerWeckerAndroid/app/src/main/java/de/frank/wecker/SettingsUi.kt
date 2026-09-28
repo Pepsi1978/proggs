@@ -58,7 +58,10 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         lebenszyklus.addObserver(beobachter)
         onDispose { lebenszyklus.removeObserver(beobachter) }
     }
-    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.settingsRevision.value++ }
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erteilt ->
+        vm.settingsRevision.value++
+        Weckbereitschaft.benachrichtigungsAntwort(activity, erteilt)
+    }
     fun launch(action: String, packageUri: Boolean = false, extraPackage: Boolean = false) {
         runCatching { activity.startActivity(Intent(action).apply {
             if (packageUri) data = Uri.parse("package:${activity.packageName}")
@@ -72,6 +75,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         val missing = permissions.count { !it.second }
         // Every requirement sits next to the one button that fixes it; nothing to search for.
         fun fix(name: String) {
+            android.widget.Toast.makeText(activity, Weckbereitschaft.anleitung(activity, name), android.widget.Toast.LENGTH_LONG).show()
             if (!Weckbereitschaft.beheben(activity, name) { notifications.launch(Manifest.permission.POST_NOTIFICATIONS) })
                 vm.message.value = "Diese Einstellungsseite ist auf dem Gerät nicht verfügbar. Öffne die Android-App-Einstellungen."
         }
@@ -90,7 +94,11 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             permissions.forEach { (name, ready) ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(if (ready) "✓" else "○", color = if (ready) LocalSemantisch.current.erfolg else LocalSemantisch.current.warnung)
-                    Text(name, Modifier.weight(1f).padding(start = 10.dp), color = if (ready) LocalGold.current.textPrimaer else LocalSemantisch.current.warnung)
+                    Column(Modifier.weight(1f).padding(start = 10.dp)) {
+                        Text(name, color = if (ready) LocalGold.current.textPrimaer else LocalSemantisch.current.warnung)
+                        // Vorher lesen, was gleich zu tun ist — nie suchen müssen.
+                        if (!ready) Text(Weckbereitschaft.anleitung(activity, name), style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                    }
                     if (ready) Text("erteilt", style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
                     else StillerKnopf("Erlauben", { fix(name) }, Modifier.semantics { contentDescription = "$name erlauben" }, hervorgehoben = true)
                 }
