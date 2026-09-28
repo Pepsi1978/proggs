@@ -115,6 +115,7 @@ import de.frank.newskompass.data.model.DesignModus
 import de.frank.newskompass.data.model.Meldung
 import de.frank.newskompass.data.model.Thema
 import java.util.UUID
+import de.frank.newskompass.news.QuellenFilter
 import de.frank.newskompass.news.SprachStufe
 import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.observability.KompassLog
@@ -1045,7 +1046,8 @@ private fun MeldungsKarte(
                     }
                 }
             }
-            val sichtbar = if (offen) meldung.absaetze else meldung.absaetze.take(1)
+            val absaetze = remember(meldung.absaetze) { QuellenFilter.entferne(meldung.absaetze) }
+            val sichtbar = if (offen) absaetze else absaetze.take(1)
             sichtbar.forEachIndexed { i, absatz ->
                 if (i > 0) Spacer(Modifier.height(12.dp))
                 Text(

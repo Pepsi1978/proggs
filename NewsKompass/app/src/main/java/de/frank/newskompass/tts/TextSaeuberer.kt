@@ -1,5 +1,7 @@
 package de.frank.newskompass.tts
 
+import de.frank.newskompass.news.QuellenFilter
+
 /**
  * Macht aus Anzeigetext gesprochenen Text.
  *
@@ -23,7 +25,8 @@ object TextSaeuberer {
     private val leerraumVorSatzzeichenRegex = Regex("[ \\t]+([,.;:!?])")
 
     fun saeubere(text: String): String {
-        var ergebnis = text
+        // Quellen werden nie vorgelesen, auch nicht aus älteren, schon gespeicherten Ausgaben.
+        var ergebnis = QuellenFilter.entferne(text)
             .replace("\r\n", "\n")
             .replace("\r", "\n")
 

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import de.frank.newskompass.data.model.Meldung
+import de.frank.newskompass.news.QuellenFilter
 import de.frank.newskompass.observability.KompassLog
 import java.io.File
 
@@ -86,7 +87,7 @@ object Teilen {
 
     private fun kurzText(m: Meldung): String = buildString {
         append(m.titel)
-        m.absaetze.firstOrNull()?.let { append("\n\n").append(it) }
+        QuellenFilter.entferne(m.absaetze).firstOrNull()?.let { append("\n\n").append(it) }
         m.quellen.firstOrNull()?.let { append("\n\n").append(it) }
         // Eine Illustration darf beim Empfänger nie wie ein Nachrichtenfoto wirken.
         if (m.bildIstKi) append("\n\nBild: KI-Illustration, kein Foto")
@@ -95,7 +96,7 @@ object Teilen {
     private fun vollText(m: Meldung): String = buildString {
         append(m.titel)
         if (m.wann.isNotBlank()) append("\n").append(m.wann.replaceFirstChar { it.uppercase() })
-        m.absaetze.forEach { append("\n\n").append(it) }
+        QuellenFilter.entferne(m.absaetze).forEach { append("\n\n").append(it) }
         val quellen = m.quellen.distinct().take(3)
         if (quellen.isNotEmpty()) {
             append("\n\nQuellen:")
