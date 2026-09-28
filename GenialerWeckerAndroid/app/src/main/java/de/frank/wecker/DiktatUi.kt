@@ -153,7 +153,7 @@ private fun Pegel(pegel: Float, sekunden: Int) {
  * [schliessen] meldet, ob danach gleich aufgenommen werden soll.
  */
 @Composable
-private fun ErkennungDialog(schliessen: (starten: Boolean) -> Unit) {
+internal fun ErkennungDialog(schliessen: (starten: Boolean) -> Unit) {
     val context = LocalContext.current
     val gold = LocalGold.current
     var turbo by remember { mutableStateOf(TurboModell.gewuenscht(context)) }

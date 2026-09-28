@@ -2,6 +2,9 @@
 
 package de.frank.wecker
 
+import de.frank.genialeideen.ui.GoldKnopf
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.Mic
 import android.Manifest
 import android.app.NotificationManager
 import android.content.Intent
@@ -145,6 +148,21 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             Regler3D(rate, { rate = it }, bereich = .5f..2f,
                 aufAenderungFertig = { settings.ttsSpeechRate = rate; vm.settingsChanged() })
             AnhoerKnopf(vm, "stimme:einstellung") { vm.previewVoice(sprache = sprache) }
+        }
+        // Spracherkennung fürs Einsprechen: dieselbe Auswahl wie beim ersten Tippen auf „Einsprechen“.
+        if (WhisperModell.bereit(activity)) {
+            var erkennungOffen by remember { mutableStateOf(false) }
+            var erkennungStand by remember { mutableIntStateOf(0) }
+            val premium = remember(erkennungStand, revision) { TurboModell.aktiv(activity) }
+            val wartet = remember(erkennungStand, revision) { TurboModell.gewuenscht(activity) && !TurboModell.geladen(activity) }
+            Section("Einsprechen", collapsible = true, initiallyExpanded = false,
+                summary = if (premium) "Premium · ${TurboModell.NAME}" else if (wartet) "Standard · Premium wird geladen" else "Standard") {
+                Text("Womit dein eingesprochener Text erkannt wird – immer direkt auf dem Handy.",
+                    style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+                GoldKnopf(if (premium) "Premium · ${TurboModell.NAME}" else "Standard", { erkennungOffen = true }, Modifier.fillMaxWidth(),
+                    beschreibung = "Erkennung wählen", symbol = { Icon(Icons.Default.Mic, null, Modifier.size(18.dp)) })
+            }
+            if (erkennungOffen) ErkennungDialog { erkennungOffen = false; erkennungStand++ }
         }
         FreischaltungsKarte(activity)
         Section("Genialer Wecker") {
