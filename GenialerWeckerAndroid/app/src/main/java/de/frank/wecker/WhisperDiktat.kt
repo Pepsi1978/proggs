@@ -37,6 +37,8 @@ object WhisperModell {
 object WhisperErkenner {
     private var erkenner: OfflineRecognizer? = null
     private var sprache = ""
+    /** "small" (eingebaut) oder "turbo" (Premium-Download). */
+    private var modell = ""
     private var freigabe: Job? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Any()
@@ -46,12 +48,21 @@ object WhisperErkenner {
 
     private fun holen(context: Context, code: String): OfflineRecognizer = synchronized(lock) {
         freigabe?.cancel()
-        erkenner?.takeIf { sprache == code }?.let { return it }
+        val turbo = TurboModell.aktiv(context)
+        val gewollt = if (turbo) "turbo" else "small"
+        erkenner?.takeIf { sprache == code && modell == gewollt }?.let { return it }
         erkenner?.release(); erkenner = null
-        val neu = OfflineRecognizer(context.applicationContext.assets, OfflineRecognizerConfig(modelConfig = OfflineModelConfig(
+        val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+        val neu = if (turbo) {
+            // Premium: Dateien aus noBackupFilesDir, darum ohne AssetManager.
+            fun pfad(name: String) = TurboModell.datei(context, name).absolutePath
+            OfflineRecognizer(null, OfflineRecognizerConfig(modelConfig = OfflineModelConfig(
+                whisper = OfflineWhisperModelConfig(encoder = pfad("turbo-encoder.int8.onnx"), decoder = pfad("turbo-decoder.int8.onnx"), language = code, task = "transcribe"),
+                tokens = pfad("turbo-tokens.txt"), numThreads = threads)))
+        } else OfflineRecognizer(context.applicationContext.assets, OfflineRecognizerConfig(modelConfig = OfflineModelConfig(
             whisper = OfflineWhisperModelConfig(encoder = WhisperModell.encoder, decoder = WhisperModell.decoder, language = code, task = "transcribe"),
-            tokens = WhisperModell.tokens, numThreads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4))))
-        erkenner = neu; sprache = code
+            tokens = WhisperModell.tokens, numThreads = threads)))
+        erkenner = neu; sprache = code; modell = gewollt
         neu
     }
 

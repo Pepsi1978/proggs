@@ -38,6 +38,7 @@
     { "versionCode": 34, "versionName": "1.0.33", "stand": "28.09.2026, 12:00 Uhr", "notiz": "Zum Testen: neue lokale KI-Stimmen Supertonic (alle Sprachen) und Pocket (Englisch), die ganz ohne Internet auf dem Handy sprechen; Edge-Stimmen bleiben wählbar." },
     { "versionCode": 35, "versionName": "1.0.34", "stand": "28.09.2026, 12:09 Uhr", "notiz": "Die englischen Pocket-Teststimmen lassen sich jetzt in jeder Stimmauswahl anhören, auch auf einem deutschen Handy." },
     { "versionCode": 36, "versionName": "1.0.35", "stand": "28.09.2026, 12:26 Uhr", "notiz": "Alle Stimmen sprechen jetzt lokal ohne Internet: Edge-Stimmen entfernt, Supertonic in höchster Qualität mit Namen je Sprache, Portugiesisch neu, Favoriten mit Stern je Sprache." },
-    { "versionCode": 37, "versionName": "1.0.36", "stand": "28.09.2026, 12:32 Uhr", "notiz": "Sophie ist ab Werk Standard- und Favoritenstimme auf Deutsch und steht in der Stimmauswahl ganz oben." }
+    { "versionCode": 37, "versionName": "1.0.36", "stand": "28.09.2026, 12:32 Uhr", "notiz": "Sophie ist ab Werk Standard- und Favoritenstimme auf Deutsch und steht in der Stimmauswahl ganz oben." },
+    { "versionCode": 38, "versionName": "1.0.37", "stand": "28.09.2026, 12:54 Uhr", "notiz": "Einsprechen: neue Premium-Erkennung Whisper Large V3 Turbo als Download (1 GB) mit etwa halb so vielen Fehlern; lädt im Hintergrund weiter und setzt nach Unterbrechung fort." }
   ]
 }
