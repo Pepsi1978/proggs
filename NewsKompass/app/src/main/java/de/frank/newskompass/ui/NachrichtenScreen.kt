@@ -142,6 +142,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     val beschaedigt by app.speicher.beschaedigt.collectAsStateWithLifecycle()
     val stand by app.einstellungen.stand.collectAsStateWithLifecycle()
     val vorlesen by app.vorleser.zustand.collectAsStateWithLifecycle()
+    val freigaben = rememberBereitschaft(kontext)
     val arbeit by remember { WorkManager.getInstance(kontext).getWorkInfosForUniqueWorkFlow(Zeitplan.LAUF) }
         .collectAsStateWithLifecycle(initialValue = emptyList())
     val lauf = arbeit.firstOrNull()
@@ -360,6 +361,18 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                 }
                 item(key = "status", contentType = "status") {
                     Spalte { LaufStatus(lauf, app.codex.istVerbunden, oeffneEinstellungen) }
+                }
+                val fehlt = freigaben.count { !it.second }
+                if (stand.zeitplanAktiv && fehlt > 0) {
+                    item(key = "bereitschaft", contentType = "hinweis") {
+                        Spalte {
+                            Hinweis(
+                                "$fehlt ${if (fehlt == 1) "Freigabe fehlt" else "Freigaben fehlen"} — die automatischen Ausgaben kommen sonst womöglich nicht.",
+                                knopf = "Einrichten",
+                                aktion = oeffneEinstellungen,
+                            )
+                        }
+                    }
                 }
                 items(offeneFragen, key = { "frage-${it.id}" }, contentType = { "frage" }) { info ->
                     Spalte {

@@ -1,8 +1,5 @@
 package de.frank.newskompass
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -19,10 +16,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.newskompass.data.model.DesignModus
 import de.frank.newskompass.news.Zeitplan
+import de.frank.newskompass.ui.AutomatischeBereitschaft
 import de.frank.newskompass.ui.EinstellungenScreen
 import de.frank.newskompass.ui.NachrichtenScreen
 import de.frank.newskompass.ui.theme.NewsTheme
@@ -34,14 +31,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
-        }
         holeVersaeumtenLaufNach()
 
         setContent {
+            // Führt nach der Installation einmal durch alle fehlenden Freigaben, Benachrichtigungen zuerst.
+            AutomatischeBereitschaft(this@MainActivity)
             val stand by app.einstellungen.stand.collectAsStateWithLifecycle()
             val dunkel = when (stand.design) {
                 DesignModus.HELL -> false
