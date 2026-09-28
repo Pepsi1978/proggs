@@ -58,7 +58,7 @@ object Bereitschaft {
         val appInfo = i(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, packageUri = true)
         val kette: List<Intent> = when (name) {
             BENACHRICHTIGUNGEN -> {
-                if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                if (Build.VERSION.SDK_INT >= 33 && !laufzeitErteilt(activity) && !dialogGesperrt(activity)) {
                     benachrichtigungenAnfragen()
                     return true
                 }
@@ -78,6 +78,43 @@ object Bereitschaft {
         kette.forEach { absicht -> if (runCatching { activity.startActivity(absicht) }.isSuccess) return true }
         return runCatching { activity.startActivity(Intent(Settings.ACTION_SETTINGS)) }.isSuccess
     }
+
+    /**
+     * Ein Satz, was nach dem Tipp auf „Erlauben“ zu tun ist. Wo Android ein Fenster zeigt, reicht
+     * „Zulassen“; wo es nur eine Einstellungsseite gibt, steht hier genau der Schalter, den man sucht.
+     */
+    fun anleitung(activity: Activity, name: String): String = when (name) {
+        BENACHRICHTIGUNGEN ->
+            if (Build.VERSION.SDK_INT >= 33 && !laufzeitErteilt(activity) && !dialogGesperrt(activity)) "Im Fenster auf „Zulassen“ tippen."
+            else "Auf der nächsten Seite „Benachrichtigungen zulassen“ einschalten, dann zurück."
+        WECKER -> "Auf der nächsten Seite den Schalter bei „Wecker und Erinnerungen“ einschalten, dann zurück."
+        AKKU -> "Im Fenster auf „Zulassen“ tippen."
+        else -> "Auf der nächsten Seite die Freigabe einschalten, dann zurück."
+    }
+
+    /**
+     * Ergebnis des Benachrichtigungs-Fensters. Kam „abgelehnt“, ohne dass Android noch fragen darf, geht es
+     * sofort zur Einstellungsseite — sonst passierte beim Tipp auf „Erlauben“ sichtbar nichts.
+     */
+    fun benachrichtigungsAntwort(activity: Activity, erteilt: Boolean) {
+        if (erteilt || Build.VERSION.SDK_INT < 33) return
+        if (activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) return
+        activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(BENACHRICHTIGUNG_GESPERRT, true).apply()
+        android.widget.Toast.makeText(activity, anleitung(activity, BENACHRICHTIGUNGEN), android.widget.Toast.LENGTH_LONG).show()
+        runCatching {
+            activity.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName))
+        }
+    }
+
+    /** Zweimal abgelehnt: Android zeigt das Fenster nicht mehr, nur noch die Einstellungsseite hilft. */
+    private fun dialogGesperrt(activity: Activity): Boolean =
+        activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(BENACHRICHTIGUNG_GESPERRT, false) &&
+            !activity.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
+
+    private fun laufzeitErteilt(context: Context) =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+    private const val BENACHRICHTIGUNG_GESPERRT = "benachrichtigung_gesperrt"
 
     fun oeffneAppInfo(activity: Activity) {
         runCatching {
@@ -126,6 +163,8 @@ fun AutomatischeBereitschaft(activity: ComponentActivity) {
             if (ereignis != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
             val name = Bereitschaft.naechsteAutomatisch(activity) ?: return@LifecycleEventObserver
             Bereitschaft.alsVersuchtMerken(activity, name)
+            // Vor dem Sprung ein Satz, was dort anzutippen ist — er bleibt über der nächsten Seite stehen.
+            android.widget.Toast.makeText(activity, Bereitschaft.anleitung(activity, name), android.widget.Toast.LENGTH_LONG).show()
             Bereitschaft.behebe(activity, name) { anfragen() }
         }
         lebenszyklus.addObserver(beobachter)

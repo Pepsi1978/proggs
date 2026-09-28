@@ -1534,7 +1534,9 @@ private fun ZeitplanBereich(app: NewsApplication, activity: ComponentActivity, s
 @Composable
 private fun BereitschaftsKarte(activity: ComponentActivity) {
     val freigaben = rememberBereitschaft(activity)
-    val benachrichtigungen = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val benachrichtigungen = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erteilt ->
+        Bereitschaft.benachrichtigungsAntwort(activity, erteilt)
+    }
     val fehlt = freigaben.count { !it.second }
     Text("Bereitschaft", style = MaterialTheme.typography.titleMedium)
     Text(
@@ -1554,11 +1556,18 @@ private fun BereitschaftsKarte(activity: ComponentActivity) {
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.width(24.dp),
             )
-            Text(name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.bodyMedium)
+                // Vorher lesen, was gleich zu tun ist — nie suchen müssen.
+                if (!bereit) {
+                    Text(Bereitschaft.anleitung(activity, name), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             if (bereit) {
                 Text("erteilt", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 TextButton(onClick = {
+                    Toast.makeText(activity, Bereitschaft.anleitung(activity, name), Toast.LENGTH_LONG).show()
                     if (!Bereitschaft.behebe(activity, name) { benachrichtigungen.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
                         Toast.makeText(activity, "Diese Einstellungsseite gibt es auf dem Gerät nicht. Öffne die App-Info.", Toast.LENGTH_LONG).show()
                     }
