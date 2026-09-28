@@ -256,11 +256,12 @@ class NewsRecherche(
         val blockTitel = if (sprachFrage) "kurzer deutscher Titel für die Frage" else "kurzer deutscher Titel für dieses Thema"
         val briefing = if (sprachFrage) "das dem Leser vorgelesen wird" else "das zweimal am Tag erscheint und dem Leser vorgelesen wird"
         // Ein- und Ausleitung für das Vorlesen des ganzen Blocks. Eine Frage hängt an der neuesten Ausgabe,
-        // ihr Satz nennt deshalb keinen Ausgabennamen.
+        // ihr Satz nennt deshalb statt Morgen- oder Abendausgabe die Sonderausgabe zu ihrem Thema.
         val tag = SimpleDateFormat("d. MMMM yyyy", Locale.GERMANY).format(Date(jetzt))
         val moderation = if (sprachFrage) {
-            "\"anmoderation\" ist ein einziger kurzer, freundlicher Satz, mit dem das Vorlesen beginnt: Er sagt, dass jetzt die Antwort auf die Frage des Nutzers kommt, nennt den blockTitel wörtlich und das Datum „$tag“, etwa: „Hier ist die Antwort auf deine Frage zu TITEL, Stand $tag.“, wobei TITEL für deinen blockTitel steht. " +
-                "\"abmoderation\" ist ein einziger kurzer Schlusssatz, etwa: „Danke fürs Zuhören, das war die Antwort auf deine Frage zu TITEL.“"
+            val sonder = Moderation.SONDERAUSGABE
+            "\"anmoderation\" ist ein einziger kurzer, freundlicher Begrüßungssatz, mit dem das Vorlesen der Antwort beginnt. Die Antwort gilt als „$sonder“ nur zu dem Thema, das der Nutzer eingesprochen hat; der Satz nennt wörtlich „$sonder“, den blockTitel und das Datum „$tag“, etwa: „Willkommen zur $sonder zu TITEL vom $tag.“, wobei TITEL für deinen blockTitel steht. Du darfst ihn leicht abwandeln, aber alle drei Angaben müssen darin stehen. " +
+                "\"abmoderation\" ist ein einziger kurzer Schlusssatz mit denselben drei Angaben, etwa: „Danke fürs Zuhören, das war die $sonder zu TITEL vom $tag.“"
         } else {
             val slot = slotName(jetzt)
             "\"anmoderation\" ist ein einziger kurzer, freundlicher Begrüßungssatz, mit dem das Vorlesen dieses Themenblocks beginnt. Er nennt wörtlich die Ausgabe „$slot“, den blockTitel und das Datum „$tag“, etwa: „Willkommen zur $slot von TITEL vom $tag.“, wobei TITEL für deinen blockTitel steht. Du darfst ihn leicht abwandeln, aber alle drei Angaben müssen darin stehen. " +

@@ -19,6 +19,9 @@ object Moderation {
     /** Obergrenze für einen Satz der KI — länger ist kein kurzer Begrüßungssatz mehr. */
     const val MAX_ZEICHEN = 300
 
+    /** So heißt die Antwort auf eine gesprochene Frage beim Vorlesen: eine Ausgabe nur zu diesem einen Thema. */
+    const val SONDERAUSGABE = "Sonderausgabe"
+
     private val DATUM = DateTimeFormatter.ofPattern("d. MMMM yyyy", Locale.GERMANY)
 
     /** Der ganze Vorlesetext eines Blocks: Einleitung, alle Meldungen, Ausleitung. */
@@ -33,7 +36,7 @@ object Moderation {
         passend(block.anmoderation, ausgabe, block, datum(ausgabe, zone)).ifBlank {
             val datum = datum(ausgabe, zone)
             when {
-                block.frage != null -> "Hier ist die Antwort auf deine Frage zu ${block.titel}, Stand $datum."
+                block.frage != null -> "Willkommen zur $SONDERAUSGABE zu ${block.titel} vom $datum."
                 ausgabe.id.startsWith(Archiv.RUECKBLICK_PRAEFIX) -> "Willkommen zum ${rueckblick(ausgabe)} von ${block.titel}."
                 istAusgabe(ausgabe) -> "Willkommen zur ${ausgabe.slot} von ${block.titel} vom $datum."
                 else -> "Willkommen zu ${block.titel} vom $datum."
@@ -41,10 +44,10 @@ object Moderation {
         }
 
     fun abmoderation(ausgabe: Ausgabe, block: Block, zone: ZoneId = ZoneId.systemDefault()): String =
-        passend(block.abmoderation, ausgabe, block, datum(ausgabe, zone).takeIf { block.frage == null }).ifBlank {
+        passend(block.abmoderation, ausgabe, block, datum(ausgabe, zone)).ifBlank {
             val datum = datum(ausgabe, zone)
             when {
-                block.frage != null -> "Danke fürs Zuhören, das war die Antwort auf deine Frage zu ${block.titel}."
+                block.frage != null -> "Danke fürs Zuhören, das war die $SONDERAUSGABE zu ${block.titel} vom $datum."
                 ausgabe.id.startsWith(Archiv.RUECKBLICK_PRAEFIX) -> "Danke fürs Zuhören, das war der ${rueckblick(ausgabe)} von ${block.titel}."
                 istAusgabe(ausgabe) -> "Danke fürs Zuhören, das war die ${ausgabe.slot} von ${block.titel} vom $datum."
                 else -> "Danke fürs Zuhören, das war ${block.titel} vom $datum."
@@ -63,15 +66,19 @@ object Moderation {
     }
 
     /**
-     * Der Satz der KI, wenn er zum Block passt: Er nennt den Blocktitel, bei einer regulären Ausgabe
-     * auch ihren Namen und, wo verlangt, genau das [datum] der Ausgabe. Sonst leer — lieber die
-     * Vorlage als eine falsche Ansage.
+     * Der Satz der KI, wenn er zum Block passt: Er nennt den Blocktitel, genau das [datum] der Ausgabe
+     * und den Namen der Ausgabe — bei einer gesprochenen Frage die Sonderausgabe. Sonst leer — lieber
+     * die Vorlage als eine falsche Ansage.
      */
-    private fun passend(roh: String, ausgabe: Ausgabe, block: Block, datum: String?): String {
+    private fun passend(roh: String, ausgabe: Ausgabe, block: Block, datum: String): String {
         val satz = saeubere(roh)
-        if (satz.isBlank() || !satz.contains(block.titel, ignoreCase = true)) return ""
-        if (datum != null && !satz.contains(datum)) return ""
-        if (block.frage == null && istAusgabe(ausgabe) && !satz.contains(ausgabe.slot, ignoreCase = true)) return ""
+        if (satz.isBlank() || !satz.contains(block.titel, ignoreCase = true) || !satz.contains(datum)) return ""
+        val name = when {
+            block.frage != null -> SONDERAUSGABE
+            istAusgabe(ausgabe) -> ausgabe.slot
+            else -> null
+        }
+        if (name != null && !satz.contains(name, ignoreCase = true)) return ""
         return satz
     }
 

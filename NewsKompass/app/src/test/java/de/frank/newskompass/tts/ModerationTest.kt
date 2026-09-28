@@ -65,9 +65,20 @@ class ModerationTest {
     fun frageUndRueckblickHabenEigeneSaetze() {
         val frage = Block("f", "Borussia Dortmund", listOf(meldung), null, frage = "Wie hat Dortmund gespielt?")
         assertEquals(
-            "Hier ist die Antwort auf deine Frage zu Borussia Dortmund, Stand 28. September 2026.",
+            "Willkommen zur Sonderausgabe zu Borussia Dortmund vom 28. September 2026.",
             Moderation.anmoderation(ausgabe("Morgenausgabe"), frage, zone),
         )
+        assertEquals(
+            "Danke fürs Zuhören, das war die Sonderausgabe zu Borussia Dortmund vom 28. September 2026.",
+            Moderation.abmoderation(ausgabe("Morgenausgabe"), frage, zone),
+        )
+        // Ein Satz der KI ohne „Sonderausgabe“, etwa mit dem Namen der Ausgabe, an der die Frage hängt, fällt durch.
+        val kiFrage = frage.copy(
+            anmoderation = "Willkommen zur Morgenausgabe von Borussia Dortmund vom 28. September 2026.",
+            abmoderation = "Das war die Sonderausgabe zu Borussia Dortmund vom 28. September 2026, danke fürs Zuhören!",
+        )
+        assertEquals("Willkommen zur Sonderausgabe zu Borussia Dortmund vom 28. September 2026.", Moderation.anmoderation(ausgabe("Morgenausgabe"), kiFrage, zone))
+        assertEquals("Das war die Sonderausgabe zu Borussia Dortmund vom 28. September 2026, danke fürs Zuhören!", Moderation.abmoderation(ausgabe("Morgenausgabe"), kiFrage, zone))
         val rueckblick = ausgabe("Rückblick September 2026 · 1. bis 28. September", id = "rueckblick-2026-09")
         assertEquals("Willkommen zum Rückblick September 2026 von KI-News.", Moderation.anmoderation(rueckblick, Block("t", "KI-News", listOf(meldung), null), zone))
     }
