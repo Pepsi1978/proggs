@@ -2535,48 +2535,24 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
         val sweep = geometry?.sweep
         if (geometry != null && sweep != null) {
             if (zifferblatt) {
-                // Im 3D-Wecker hebt sich die Schlafzeit als feiner Nachtblau-Bogen vom Messing ab (Gold und Blau
-                // ergänzen sich), mit Abstand zum Gehäuserand und einer zarten Spur als Führung.
-                val farben = if (snooze) listOf(accent, accent) else listOf(NACHT_A, NACHT_B)
+                // Im 3D-Wecker erscheint die Schlafzeit erst, wenn ein aktiver Wecker höchstens 12 Stunden entfernt
+                // ist: ein feiner oranger Bogen mit Abstand zum Gehäuserand und einer zarten Spur als Führung.
+                val farben = if (snooze) listOf(accent, accent) else listOf(ORANGE_A, ORANGE_B)
                 val start = geometry.nowAngle
                 val verlauf = Brush.sweepGradient(
                     *(0..20).map { i -> ((start + sweep * i / 20f + 360f) % 360f) / 360f to lerpFarbe(farben[0], farben[1], i / 20f) }
                         .sortedBy { it.first }.toTypedArray(), center = center)
                 val bogenLinks = androidx.compose.ui.geometry.Offset(center.x - bogenRadius, center.y - bogenRadius)
                 val bogenGroesse = androidx.compose.ui.geometry.Size(bogenRadius * 2, bogenRadius * 2)
-                drawCircle(farben[1].copy(alpha = .12f), bogenRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx()))
+                drawCircle(farben[1].copy(alpha = .12f), bogenRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.2f.dp.toPx()))
                 drawArc(verlauf, start, sweep, useCenter = false, topLeft = bogenLinks, size = bogenGroesse,
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(2.2f.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
             } else drawArc(accent, geometry.nowAngle, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
                 style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
         }
-        if (zifferblatt) geometry?.centerLabel?.let { label ->
-            // Im Zifferblatt laufen die Zeiger immer. Die Kennzeichnung sitzt deshalb wie ein Datumsfenster
-            // zwischen Mitte und VI, statt die Mitte zu belegen.
-            val sechs = measurer.measure("VI", numberStyle.copy(fontFamily = IdeenSchriftBetont, fontSize = 10.sp))
-            val unten = zahlenRadius - sechs.size.height / 2f - 1.5f.dp.toPx()
-            val oben = 5.dp.toPx()
-            val maxHoehe = (unten - oben).coerceAtLeast(1f)
-            val mitteY = (oben + unten) / 2f
-            val innenRadius = bogenRadius - 3.dp.toPx()
-            val maxBreite = (2f * kotlin.math.sqrt((innenRadius * innenRadius - unten * unten).coerceAtLeast(0f)) - 4.dp.toPx())
-                .coerceAtLeast(zahlenRadius)
-            val fensterStil = centerStyle.copy(fontWeight = FontWeight.Medium, lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified)
-            val layout = listOf(9, 8, 7).asSequence().map { groesse -> measurer.measure(label, fensterStil.copy(fontSize = groesse.sp)) }
-                .firstOrNull { it.size.width + 6.dp.toPx() <= maxBreite && it.size.height <= maxHoehe }
-                ?: measurer.measure(label, fensterStil.copy(fontSize = 7.sp), maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    constraints = androidx.compose.ui.unit.Constraints(maxWidth = (maxBreite - 6.dp.toPx()).toInt().coerceAtLeast(1)))
-            val fensterB = layout.size.width + 6.dp.toPx()
-            val fensterH = layout.size.height + 1.dp.toPx()
-            val fensterLinks = androidx.compose.ui.geometry.Offset(center.x - fensterB / 2f, center.y + mitteY - fensterH / 2f)
-            val fensterGroesse = androidx.compose.ui.geometry.Size(fensterB, fensterH)
-            val ecke = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
-            drawRoundRect(surface.dunkler(.06f), fensterLinks, fensterGroesse, ecke)
-            drawRoundRect(tinteLeicht.copy(alpha = .5f), fensterLinks, fensterGroesse, ecke,
-                style = androidx.compose.ui.graphics.drawscope.Stroke(.7f.dp.toPx()))
-            drawText(layout, topLeft = center + androidx.compose.ui.geometry.Offset(-layout.size.width / 2f, mitteY - layout.size.height / 2f))
-        } else geometry?.centerLabel?.let { label ->
+        // Im 3D-Wecker bleibt das Blatt ohne Bogen leer: kein Datumsfenster, keine Punkte (Wunsch 28.09.2026).
+        // Im 3D-Wecker bleibt das Blatt ohne Bogen leer: kein Datumsfenster, keine Punkte (Wunsch 28.09.2026).
+        if (!zifferblatt) geometry?.centerLabel?.let { label ->
             // Fit inside the space the 12/3/6/9 numbers leave free: shrink, then try two lines, never paint over them.
             val numberRadius = zahlenRadius
             val maxWidth = 2 * (numberRadius - measurer.measure("3", numberStyle).size.width / 2f - 2.dp.toPx())
@@ -2594,9 +2570,10 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
             drawText(layout, topLeft = center - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
         }
         // Die Zeiger zeichnet [EdleZeiger] als eigene Ebene darüber, mit sekundengenauem Takt.
-        if (geometry != null) ringMarker(point(geometry.targetAngle, bogenRadius), hollow = false,
-            color = if (zifferblatt && !snooze) NACHT_B else accent, surface = surface)
-        ringMarker(point(nowAngle, bogenRadius), hollow = true, color = tinteStark, surface = surface)
+        if (!zifferblatt) {
+            if (geometry != null) ringMarker(point(geometry.targetAngle, bogenRadius), hollow = false, color = accent, surface = surface)
+            ringMarker(point(nowAngle, bogenRadius), hollow = true, color = tinteStark, surface = surface)
+        }
     }
 }
 
@@ -2782,7 +2759,7 @@ private fun EdleZeiger(modifier: Modifier) {
 }
 
 /**
- * Stummes Klingeln im Ruhezustand: Alle 10 bis 15 Sekunden wackelt der 3D-Wecker gut eine Sekunde lang
+ * Stummes Klingeln im Ruhezustand: Nach zufällig 7,5 bis 13 Sekunden wackelt der 3D-Wecker gut eine Sekunde lang
  * wie beim Wecken (zwei kurze Stöße, dazwischen eine Pause), ganz ohne Ton. Läuft nur, solange der
  * Bildschirm vorne ist; bei reduzierter Bewegung steht er still. Liefert den Drehwinkel in Grad.
  */
@@ -2793,7 +2770,7 @@ private fun rememberGelegentlichesKlingeln(): State<Float> {
     LaunchedEffect(aktiv) {
         if (!aktiv) { winkel.snapTo(0f); return@LaunchedEffect }
         while (true) {
-            kotlinx.coroutines.delay(10_000L + kotlin.random.Random.nextLong(5_001L))
+            kotlinx.coroutines.delay(7_500L + kotlin.random.Random.nextLong(5_501L))
             winkel.animateTo(0f, androidx.compose.animation.core.keyframes {
                 durationMillis = 1300
                 0f at 0; 5f at 60; -5f at 120; 5f at 180; -5f at 240; 4f at 300; -4f at 360; 2f at 420; 0f at 480
@@ -2807,9 +2784,9 @@ private fun rememberGelegentlichesKlingeln(): State<Float> {
 /** Sekundenzeiger: tiefes Karminrot – klassisch, hebt sich von Messing und vom nachtblauen Schlafbogen ab. */
 private val SEKUNDE_KARMIN = androidx.compose.ui.graphics.Color(0xFFA8322B)
 
-/** Schlafbogen im 3D-Wecker: Nachtblau bis Violett – bewusst nicht die Messingfarbe des Gehäuses. */
-private val NACHT_A = androidx.compose.ui.graphics.Color(0xFF2F5DA8)
-private val NACHT_B = androidx.compose.ui.graphics.Color(0xFF6A4BC4)
+/** Schlafbogen im 3D-Wecker: warmes Orange, hebt sich vom Messing und vom Elfenbeinblatt ab. */
+private val ORANGE_A = androidx.compose.ui.graphics.Color(0xFFF29A38)
+private val ORANGE_B = androidx.compose.ui.graphics.Color(0xFFE2701C)
 /** Zifferblatt im Dunkelmodus: gedämpftes Elfenbein mit dunkler Tinte – eine Uhr hat nie ein schwarzes Blatt. */
 private val ZIFFER_ELFENBEIN = androidx.compose.ui.graphics.Color(0xFFD9D0BB)
 private val ZIFFER_TINTE_LEICHT = androidx.compose.ui.graphics.Color(0xFF6A604D)

@@ -246,17 +246,8 @@ object MorgenruheGestalt : WeckerGestalt {
      * und nach einem Palettenwechsel hätte sie erst recht nicht mehr gepasst.
      */
     @Composable override fun Motiv(modifier: Modifier) {
-        // Das Bild stammt noch aus der abgelösten Salbei-/Terrakotta-Welt. Bis es in Leinen und
-        // Tinte neu erzeugt ist, nimmt eine Entsättigung ihm die Buntheit: Terrakotta wird
-        // Messingbraun, Salbei ein ruhiges Graugrün. Das ist eine Tonwertkorrektur, keine
-        // flache Einfärbung — Schattierung und Materialwirkung bleiben vollständig erhalten.
-        Image(
-            painter = painterResource(R.drawable.design_bett_frei),
-            contentDescription = null,
-            modifier = if (modifier == Modifier) Modifier.size(120.dp) else modifier,
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.55f) }),
-        )
+        // Seit 28.09.2026 eine gezeichnete Endlosszene statt des Bettbilds: Tür, Person, Schlaf, Sonnenaufgang.
+        SchlafSzene(if (modifier == Modifier) Modifier.size(120.dp) else modifier)
     }
 
     override val zeigtRestzeitRing = false
