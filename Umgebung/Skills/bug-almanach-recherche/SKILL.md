@@ -159,7 +159,7 @@ Bugs gefunden, dann auch alle dokumentieren".) Findet ein Researcher sehr viele 
 er trotzdem vollstaendig: bei Bedarf die Vollliste verlustfrei in eine Datei schreiben
 (File-as-Memory) und dem Hauptagenten eine kompakte Zusammenfassung + Dateipfad zurueckgeben,
 statt zu kappen. **Seit 2026-07-01 PFLICHT: `model:"sonnet"` explizit pro Agent-Tool-Aufruf
-setzen** (loest zu Sonnet 5 auf, natives 1M-Kontext) — die globale Opus-Zwangs-Umgebungsvariable
+setzen** (loest zu Sonnet 5.5 auf, natives 1M-Kontext) — die globale Opus-Zwangs-Umgebungsvariable
 wurde durch explizites Pinning ersetzt, siehe `research-strategy.md` §4a. Effort bleibt "high"
 (Session-Standard, kein Extra-Parameter noetig). Pro Bug zurueckgeben: **Titel · Symptom · Ursache · Loesung
 (funktionserhaltend!) · betroffene Versionen · Quelle (URL)**.

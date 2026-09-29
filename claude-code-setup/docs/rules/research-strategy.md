@@ -50,7 +50,7 @@ Kurze Empfehlung (1 Satz Begruendung), welcher Weg fuer GENAU DIESE Recherche-Ar
 | Grosser Wissensschatz / viele Unterthemen | **A → dann B** (Firecrawl-Tiefe + Breit-Eskalation), oder direkt **B** wenn Firecrawl-Credits knapp |
 | Aktualitaet ueber viele Quellen, Snippets reichen | **B** (or-research, pay-per-use) |
 | Firecrawl-Credits fast leer | **B** statt A |
-| Hoechste Korrektheit / Geld egal | **C** (Host-Modell-Schwarm: Claude Code → Sonnet 5; OpenCode → Session-Modell), ggf. zusaetzlich als Zweitmeinung |
+| Hoechste Korrektheit / Geld egal | **C** (Host-Modell-Schwarm: Claude Code → Sonnet 5.5; OpenCode → Session-Modell), ggf. zusaetzlich als Zweitmeinung |
 | Unklar / erst besprechen | **D** (Freitext) |
 
 ### Frage 1 (IMMER) — "Wie soll ich '<thema>' recherchieren?"
@@ -134,7 +134,7 @@ ganze Welle warten.** Konstant so viele gleichzeitig, wie die Engine erlaubt:
 |--------|----------------------|-----------|
 | A — Firecrawl (mm) → DeepSeek @ Makora | **2** (hartes Firecrawl-Free-Limit) | einer fertig → sofort der naechste |
 | B — `:online` (or), dasselbe DeepSeek-Modell | **7** (last-stabil) | einer fertig → sofort der naechste |
-| C — Host-Modell-Schwarm (Sonnet 5 bzw. Session-Modell) | **7** | einer fertig → sofort der 7. neu (nie auf alle 7 warten) |
+| C — Host-Modell-Schwarm (Sonnet 5.5 bzw. Session-Modell) | **7** | einer fertig → sofort der 7. neu (nie auf alle 7 warten) |
 
 **Durchsetzung statt Disziplin:** Engine A/B laufen IMMER ueber `~/proggs/research-swarm.py`
 (`ThreadPoolExecutor(max_workers=N)`, haelt KONSTANT N parallel, zieht bei jedem fertigen sofort den
@@ -180,7 +180,7 @@ explizites `model:`-Argument PFLICHT — sonst faellt der Researcher auf ein unb
 
 | Parameter | Wert | Warum |
 |-----------|------|-------|
-| `model` | `"sonnet"` | Alias → Sonnet 5 (`claude-sonnet-5`), folgt automatisch dem neuesten Sonnet |
+| `model` | `"sonnet"` | Alias → Sonnet 5.5 (`claude-sonnet-5-5`, per `ANTHROPIC_DEFAULT_SONNET_MODEL` in den Profil-settings.json gepinnt), folgt automatisch dem neuesten Sonnet |
 | Effort | **"high"** (Standard) | erbt den globalen Session-Effort (`effortLevel:"high"`); nichts extra setzen |
 
 #### Ueberall sonst — **kein** `model:`-Override

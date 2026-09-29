@@ -3,6 +3,7 @@
   "_comment": "macOS-Fassung des Strikt-Profils. Alle Einstellungen 1:1 aus Profiles/ClaudeCode/strict/settings.json (Windows); NUR der hooks-Block ist ausgetauscht - dort standen pwsh/.ps1-Aufrufe, hier stehen die bash/.sh-Gegenstuecke aus claude-code-setup/hooks-macos.json.",
   "cleanupPeriodDays": 99999,
   "env": {
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5-5",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "DISABLE_COST_WARNINGS": "1",
     "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",

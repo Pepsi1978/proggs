@@ -1,4 +1,7 @@
 {
+  "env": {
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5-5"
+  },
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "defaultMode": "bypassPermissions"
@@ -82,6 +85,9 @@
     },
     "claude-opus-5": {
       "effortLevel": "xhigh"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "high"
     }
   },
   "advisorModel": "fable",

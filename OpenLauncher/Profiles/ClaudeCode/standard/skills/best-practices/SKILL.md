@@ -263,7 +263,7 @@ Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive
 > greifen, wenn Frank den Sonnet-5-Schwarm ausdruecklich waehlt — oder fuer den Changelog-Verbatim-Download
 > (der NIE ueber einen Researcher laeuft, siehe Changelog-Archiv-Abschnitt).
 
-- **Modell:** Sonnet 5 (`model:"sonnet"`, seit 2026-07-01 statt Opus 4.8 — natives 1M-Kontext, siehe
+- **Modell:** Sonnet 5.5 (`model:"sonnet"`, seit 2026-07-01 statt Opus 4.8 — natives 1M-Kontext, siehe
   `research-strategy.md` §4a). **Effort:** High (Standard-Session-Effort — NICHT X-High, Frank-Korrektur 2026-07-01).
 - **Direkt 7 Researcher GLEICHZEITIG starten, dann CONTINUOUS-SPAWNING (Frank 2026-06-02 + 2026-06-03):**
   Bei genug Themen IMMER mit **7 auf einmal** beginnen — NICHT erst 4 und danach nochmal 3 (Zeitverschwendung).
@@ -277,7 +277,7 @@ Jetzt fuettern sich beide Speicher gegenseitig (Compound Intelligence, Direktive
   ANFRAGE-DICHT (2–3 Tool-Runden/Turn → 100+ RPM bei 5 Stueck). Zu viele gleichzeitig sprengen das
   Anfrage-Raten-Limit (RPM) bzw. den Server-Burst-Schutz ("server is temporarily limiting requests ·
   not your usage limit"). Das ist UNABHAENGIG vom 1M-Kontextfenster — das 1M-Kontext (Opus 4.8[1m]
-  bzw. Sonnet 5, das nativ 1M hat) loest den *Kontext*-Crash (→ kein Findings-Cap mehr, siehe unten),
+  bzw. Sonnet 5.5, das nativ 1M hat) loest den *Kontext*-Crash (→ kein Findings-Cap mehr, siehe unten),
   aber NICHT den *RPM*-Crash. Darum bleibt ~7 die Obergrenze + 429-Backoff. (Anfrage-SPARSE Agenten
   wie Uebersetzer vertragen 15–20, weil sie ueberwiegend lokal arbeiten.)
 - **KEIN Findings-/Ergebnis-Cap (Frank-Korrektur 2026-06-02):** ALLE gefundenen Best-Practices/Bugs

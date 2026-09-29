@@ -41,7 +41,7 @@ Alle Subagents laufen auf Opus 4.8 (1M) — Mechanik: `~/.claude/rules/highest-m
 | Bulk-Reviews | `batch-reviewer` | Opus 4.8 (1M) | Viele Dateien pruefen |
 | Tests | `tester` | Opus | Qualitaet bei Tests wichtig |
 | Recherche | `researcher` | Opus 4.8 (1M) | Web-Lookup |
-| Web-Research-Eskalation C | `research`-Skill Engine C | Sonnet 5 (1M), Effort high | Einzige Ausnahme — `research-strategy.md` §4a |
+| Web-Research-Eskalation C | `research`-Skill Engine C | Sonnet 5.5 (1M), Effort high | Einzige Ausnahme — `research-strategy.md` §4a |
 
 **Faustregel:** 3-5 `coder`-Agents parallel spawnen, dann 1 `code-reviewer` (Opus) fuer die
 Qualitaetskontrolle.

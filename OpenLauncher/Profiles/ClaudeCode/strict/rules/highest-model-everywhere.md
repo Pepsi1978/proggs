@@ -6,7 +6,7 @@ gilt automatisch. NIEMALS Sonnet/Haiku erzwingen (1M verhindert "Prompt is too l
 Aufpreis jenseits 200k); Massstab: Stabilitaet, nicht Kosten.
 
 **Ausnahme (2026-07-01):** Web-Research-Eskalationsstufe C (Sonnet-5-Schwarm, `research-strategy.md`
-Par.4a) laeuft bewusst auf Sonnet 5 (`model:"sonnet"`, natives 1M). NUR Engine-C-Spawns.
+Par.4a) laeuft bewusst auf Sonnet 5.5 (`model:"sonnet"`, natives 1M). NUR Engine-C-Spawns.
 
 ## Mechanismus (2026-07-01)
 `settings.json` -> `env.CLAUDE_CODE_SUBAGENT_MODEL = "inherit"` (keine globale Ueberschreibung). Jeder der

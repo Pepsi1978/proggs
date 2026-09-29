@@ -17,7 +17,7 @@
     "ThinkingValue": "high",
     "CliTargetId": "opencode"
   },
-  "anthropic/claude-sonnet-5[1m]": {
+  "anthropic/claude-sonnet-5-5[1m]": {
     "ProfileId": "minimal",
     "WorkModeId": "frei",
     "ThinkingValue": "high",

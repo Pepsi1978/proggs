@@ -274,7 +274,7 @@ Ergebnis in eine eigene Datei + gibt nur eine Kurz-Summary zurueck (kontextschon
 
 | Fall | Erkennung | Was Engine C bedeutet |
 |------|-----------|------------------------|
-| **Claude Code auf Anthropic-Modell** | `CLAUDECODE=1` **und** `ANTHROPIC_BASE_URL` leer oder auf Anthropic zeigend | **Sonnet-5-Schwarm**: Agent-Tool, `subagent_type:general-purpose` + Prompt + **`model:"sonnet"`** (PFLICHT), Effort "high", 7 parallel |
+| **Claude Code auf Anthropic-Modell** | `CLAUDECODE=1` **und** `ANTHROPIC_BASE_URL` leer oder auf Anthropic zeigend | **Sonnet-5.5-Schwarm**: Agent-Tool, `subagent_type:general-purpose` + Prompt + **`model:"sonnet"`** (PFLICHT), Effort "high", 7 parallel |
 | **Claude Code auf einem Fremdmodell** (OpenLauncher-Start ueber `claude-openrouter/Start-ClaudeCode-OpenRouter.ps1`, z.B. ein OpenAI-Modell) | `CLAUDECODE=1`, aber `ANTHROPIC_BASE_URL=https://openrouter.ai/api` | **Schwarm auf dem Session-Modell**, **KEIN `model:"sonnet"`** — der Alias loest hinter der OpenRouter-Basis-URL nicht auf und wuerde den Lauf zerlegen. Sonst wie OpenCode (siehe naechste Zeile) |
 | **OpenCode / jeder andere Harness** | `CLAUDECODE` NICHT gesetzt; es ist eine `AGENTS.md` geladen (Profil unter `OpenLauncher/Profiles/OpenCode*/`) | **Schwarm auf dem AKTUELLEN Session-Modell**: bis 7 parallele Subagenten, **KEIN `model:`-Override** — sie erben das Modell, mit dem die Session gerade verbunden ist (z.B. GPT 5.6 Sol). Diese Modelle haben eine EIGENE Internet-Anbindung und recherchieren selbststaendig; **kein** `mm-`/`or-research.py` noetig |
 
@@ -283,8 +283,8 @@ mit dem die Session gerade verbunden ist — genau darum geht es bei Stufe C aus
 
 **In Claude Code auf einem Anthropic-Modell:** `CLAUDE_CODE_SUBAGENT_MODEL` steht seit der Sonnet-5-Umstellung auf
 `inherit` (nicht mehr `opus[1m]`) — ohne den expliziten `model`-Parameter wuerden die Researcher auf ein
-unbestimmtes Fallback-Modell laufen statt auf Sonnet 5. **Jeder** Engine-C-Agent-Tool-Aufruf bekommt daher
-`model:"sonnet"` (Alias, loest zu Sonnet 5 auf, natives 1M-Kontext). Effort bleibt "high" (globaler
+unbestimmtes Fallback-Modell laufen statt auf Sonnet 5.5. **Jeder** Engine-C-Agent-Tool-Aufruf bekommt daher
+`model:"sonnet"` (Alias, loest zu **Sonnet 5.5** = `claude-sonnet-5-5` auf: alle Claude-Code-Profile (Windows + Mac) pinnen den Alias per `env.ANTHROPIC_DEFAULT_SONNET_MODEL="claude-sonnet-5-5"` in ihrer settings.json; der OpenRouter-Start ueberschreibt das per `--settings`). Effort bleibt "high" (globaler
 Session-Standard `effortLevel: "high"`).
 
 **Ueberall sonst (OpenCode, Claude Code auf Fremdmodell):** genau UMGEKEHRT — **niemals** ein `model:` mitgeben. Der Sinn ist ja, dass das
@@ -363,7 +363,7 @@ Entfaellt nur, wenn ohnehin schon Stufe B oder C gewaehlt wurde. Stufen:
 ```
 A: Firecrawl-Quellen → DeepSeek V4 Flash @ Makora-Kette (mm)  → Standard, Firecrawl-Free-Credits, 2 parallel
 B: DeepSeek V4 Flash :online @ Makora-Kette (or)              → pay-per-use, bis 7 parallel (last-stabil + Retry)
-C: Schwarm auf dem Host-Modell                             → Claude Code: Sonnet-5-Schwarm (teuer, nur bewusst
+C: Schwarm auf dem Host-Modell                             → Claude Code: Sonnet-5.5-Schwarm (teuer, nur bewusst
                                                               gewaehlt) · OpenCode: aktuelles Session-Modell
 ```
 
@@ -457,7 +457,7 @@ die Hook-Registrierung der verbindliche Abschluss der gesamten Recherche→Persi
   pay-per-use, kein Monatslimit. Modell `deepseek/deepseek-v4-flash-0731:online` — KEINE explizite
   Such-Engine angeben. Eskalation mit mehr Denkkraft: `z-ai/glm-5.2:online`.
 - **C (Schwarm auf dem Host-Modell):** nur wenn Frank es ausdruecklich waehlt; 7 parallel,
-  Continuous-Spawning. **Claude Code** (`CLAUDECODE=1`) → Sonnet-5-Schwarm, `model:"sonnet"` PFLICHT
+  Continuous-Spawning. **Claude Code** (`CLAUDECODE=1`) → Sonnet-5.5-Schwarm, `model:"sonnet"` PFLICHT
   pro Aufruf. **OpenCode** → Schwarm auf dem aktuellen Session-Modell, **kein** `model:`-Override,
   die Modelle recherchieren mit ihrer eigenen Internet-Anbindung (Details §4a in `research-strategy.md`).
 

@@ -28,8 +28,8 @@
         "IsUserDefined": true,
         "ProviderId": "anthropic",
         "ProviderName": "Anthropic",
-        "Slug": "claude-sonnet-5[1m]",
-        "DisplayName": "Claude Sonnet 5",
+        "Slug": "claude-sonnet-5-5[1m]",
+        "DisplayName": "Claude Sonnet 5.5",
         "IsHidden": false
       }
     ],
@@ -310,15 +310,6 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "inclusionai/ling-3.0-flash-fin:free",
-        "DisplayName": "inclusionAI Ling 3.0 Flash Fin Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "minimax/minimax-m2.7:free",
         "DisplayName": "MiniMax MiniMax M2.7 Free",
         "IsHidden": true
@@ -355,44 +346,17 @@
         "IsUserDefined": false,
         "ProviderId": "openrouter",
         "ProviderName": "OpenRouter",
-        "Slug": "nex-agi/nex-n2.5-mini:free",
-        "DisplayName": "Nex AGI Nex-N2.5-Mini Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "nex-agi/nex-n2.5-pro:free",
-        "DisplayName": "Nex AGI Nex-N2.5-Pro Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "inclusionai/ling-3.0-flash-vl:free",
-        "DisplayName": "inclusionAI Ling 3.0 Flash VL Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
-        "Slug": "z-ai/glm-5.2:free",
-        "DisplayName": "Z.ai GLM 5.2 Free",
-        "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "openrouter",
-        "ProviderName": "OpenRouter",
         "Slug": "qwen/qwen3.8-27b:free",
         "DisplayName": "Qwen Qwen3.8 27B Free",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": true,
+        "ProviderId": "openrouter",
+        "ProviderName": "OpenRouter",
+        "Slug": "stealth/space-bunny-alpha",
+        "DisplayName": "Space Bunny Alpha",
         "IsHidden": false
       }
     ],
@@ -419,12 +383,8 @@
       "dots-studio/dots-3-note-preview:free",
       "google/gemma-4-26b-a4b-it:free",
       "google/gemma-4-31b-it:free",
-      "inclusionai/ling-3.0-flash-fin:free",
       "inclusionai/ling-3.0-flash-sante:free",
-      "inclusionai/ling-3.0-flash-vl:free",
       "liquid/lfm-2.5-2.6b:free",
-      "nex-agi/nex-n2.5-mini:free",
-      "nex-agi/nex-n2.5-pro:free",
       "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
       "nvidia/nemotron-3-super-120b-a12b:free",
       "nvidia/nemotron-3-ultra-550b-a55b:free",
@@ -434,8 +394,7 @@
       "poolside/laguna-xs-2.1:free",
       "qwen/qwen3.8-27b:free",
       "thinkingmachines/inkling:free",
-      "thinkingmachines/inkling-small:free",
-      "z-ai/glm-5.2:free"
+      "thinkingmachines/inkling-small:free"
     ],
     "IsExpanded": true
   },
@@ -4779,7 +4738,7 @@
       "~z-ai/glm-flash-latest",
       "~z-ai/glm-latest"
     ],
-    "IsExpanded": false
+    "IsExpanded": true
   },
   {
     "Id": "nvidia",

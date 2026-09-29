@@ -8,7 +8,7 @@
 ## 2. Researcher-Limits (Opus 4.8 / 1M)
 "max 50"-Cap entfaellt — GROSSZUEGIG, ALLE Findings dokumentieren (bei Menge lossless auslagern). Max 10
 Min · ~15 Web-Fetches · Prompt ≤2000 Woerter · gleichzeitig 5-7. **Continuous-Spawning:** einer fertig →
-SOFORT der naechste, nie auf eine Welle warten. Konstant: Engine C (Sonnet-5) 7 · OpenRouter `:online` 7 · Firecrawl 2.
+SOFORT der naechste, nie auf eine Welle warten. Konstant: Engine C (Sonnet-5.5) 7 · OpenRouter `:online` 7 · Firecrawl 2.
 
 ## 3. Batch-Edits: Python statt parallele Coder
 **Gleiche Aenderung an 3+ Dateien → IMMER Python-Batch** (`re.sub`, `encoding='utf-8'`, `newline='\n'`),
