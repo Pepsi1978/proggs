@@ -683,10 +683,15 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             if (generation == previewGeneration) message.value = "Die Vorschau konnte nicht abgespielt werden."
             return
         }
+        val attribute = android.media.AudioAttributes.Builder()
+            .setUsage(if (weckLautstaerke != null) android.media.AudioAttributes.USAGE_ALARM else android.media.AudioAttributes.USAGE_MEDIA)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build()
+        // Stille vorweg weckt den Lautsprecher-Verstärker; der Klang startet erst, wenn er sicher an ist.
+        // Sonst kamen die ersten Wörter leise und hallig, als ob sie aus einem großen Raum näherkämen.
+        vorschauWachhalter = Tones.wachhalter(app, attribute)
+        val wachSeit = android.os.SystemClock.elapsedRealtime()
         try {
-            player.setAudioAttributes(android.media.AudioAttributes.Builder()
-                .setUsage(if (weckLautstaerke != null) android.media.AudioAttributes.USAGE_ALARM else android.media.AudioAttributes.USAGE_MEDIA)
-                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            player.setAudioAttributes(attribute)
             player.setDataSource(file.absolutePath)
             player.setOnPreparedListener { prepared ->
                 if (preview !== prepared || generation != previewGeneration) return@setOnPreparedListener
@@ -694,7 +699,10 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
                 try { prepared.playbackParams = android.media.PlaybackParams().setSpeed(speed) }
                 catch (e: Exception) { android.util.Log.w("WeckerPreview", "Tempo nicht unterstützt", e) }
                 // No second start after a real start failure.
-                try { if (!prepared.isPlaying) prepared.start() } catch (e: Exception) { failPlayer(prepared, generation, e) }
+                val starten: () -> Unit = { try { if (!prepared.isPlaying) prepared.start() } catch (e: Exception) { failPlayer(prepared, generation, e) } }
+                val rest = if (vorschauWachhalter == null) 0L else Tones.VORLAUF_MS - (android.os.SystemClock.elapsedRealtime() - wachSeit)
+                if (rest <= 0L) starten()
+                else viewModelScope.launch { delay(rest); if (preview === prepared && generation == previewGeneration) starten() }
             }
             player.setOnCompletionListener { done -> if (preview === done) releasePlayer() }
             player.setOnErrorListener { failed, what, extra ->
@@ -707,18 +715,22 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         } catch (e: Exception) {
             if (preview === player) preview = null
             player.release()
+            wachhalterFreigeben()
             android.util.Log.w("WeckerPreview", "Vorschau konnte nicht gestartet werden", e)
             if (generation == previewGeneration) message.value = "Die Vorschau konnte nicht abgespielt werden."
         }
     }
     private fun failPlayer(player: MediaPlayer, generation: Long, error: Exception) {
         android.util.Log.w("WeckerPreview", "Vorschau abgebrochen", error)
-        if (preview === player) preview = null
+        if (preview === player) { preview = null; wachhalterFreigeben() }
         player.release()
         if (generation == previewGeneration) message.value = "Die Vorschau konnte nicht abgespielt werden."
     }
+    private var vorschauWachhalter: MediaPlayer? = null
+    private fun wachhalterFreigeben() { runCatching { vorschauWachhalter?.release() }; vorschauWachhalter = null }
     private fun releasePlayer() {
         val player = preview; preview = null; player?.release(); vorschau.value = null
+        wachhalterFreigeben()
         anschwellJob?.cancel(); anschwellJob = null
         // Eine für die Testvorlesung gesetzte Alarmlautstärke wird wiederhergestellt.
         if (vorherAlarmLautstaerke >= 0) {

@@ -1,5 +1,8 @@
 package de.frank.wecker
 
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -8,6 +11,8 @@ import kotlin.math.sin
 
 /** Eigene, lizenzfreie Signale; keine Downloads und keine Netzabhängigkeit beim Wecken. */
 object Tones {
+    /** So lange läuft Stille, bevor der erste Klang startet: Zeit, in der der Verstärker sicher angeht. */
+    const val VORLAUF_MS = 900L
     val names = linkedMapOf("classic" to "Klassischer Wecker", "bells" to "Sanfte Glocken", "pulse" to "Digitaler Puls", "chime" to "Erinnerungszeichen")
     fun file(directory: File, name: String): File {
         val kind = name.takeIf { it in names } ?: "classic"
@@ -39,5 +44,43 @@ object Tones {
             check(temporary.renameTo(file)) { "Weckton konnte nicht gespeichert werden." }
         }
         return file
+    }
+
+    /**
+     * Knapp eine Sekunde Stille vor dem ersten Klang: Lautsprecher-Verstärker, die vor dem Wecken aus waren, blenden
+     * beim Einschalten weich ein. Ohne Vorlauf kamen die ersten Wörter der Ansage deshalb leise „aus dem Nichts“.
+     */
+    fun stille(directory: File): File {
+        val file = File(directory, "stille_vorlauf.wav")
+        if (file.exists() && file.length() > 44) return file
+        synchronized(this) {
+            val rate = 22050
+            val samples = (rate * VORLAUF_MS / 1000).toInt()
+            val buffer = ByteBuffer.allocate(44 + samples * 2).order(ByteOrder.LITTLE_ENDIAN)
+            buffer.put("RIFF".toByteArray()).putInt(36 + samples * 2).put("WAVEfmt ".toByteArray())
+                .putInt(16).putShort(1).putShort(1).putInt(rate).putInt(rate * 2).putShort(2).putShort(16)
+                .put("data".toByteArray()).putInt(samples * 2)
+            val temporary = File(directory, "stille_vorlauf.tmp")
+            temporary.writeBytes(buffer.array())
+            check(temporary.renameTo(file)) { "Vorlauf konnte nicht gespeichert werden." }
+        }
+        return file
+    }
+
+    /**
+     * Stille in Dauerschleife auf demselben Audioweg wie [attributes]. Solange sie läuft, bleibt der
+     * Lautsprecher-Verstärker an, und jeder Satz kommt ab der ersten Silbe in voller Lautstärke statt leise und
+     * hallig eingeblendet. Scheitert sie, gibt es null: Wecken und Vorschau laufen dann trotzdem.
+     */
+    fun wachhalter(context: Context, attributes: AudioAttributes): MediaPlayer? {
+        val player = runCatching { MediaPlayer() }.getOrNull() ?: return null
+        return runCatching {
+            player.setAudioAttributes(attributes)
+            player.setDataSource(stille(AlarmStore.get(context).files).absolutePath)
+            player.isLooping = true
+            player.prepare()
+            player.start()
+            player
+        }.getOrElse { runCatching { player.release() }; null }
     }
 }
