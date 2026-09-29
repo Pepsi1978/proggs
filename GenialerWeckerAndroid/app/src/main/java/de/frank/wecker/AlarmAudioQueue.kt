@@ -20,16 +20,16 @@ class AlarmAudioQueue(
     private var closed = false
     private val handler = Handler(Looper.getMainLooper())
     /**
-     * Spielt während des ganzen Weckens leises Pausenrauschen in Dauerschleife (zweite Schicht neben den gefüllten
+     * Spielt während des ganzen Weckens das Füllsignal in Dauerschleife (zweite Schicht neben den gefüllten
      * Pausen). Ohne es ging der Lautsprecher-Verstärker in den Pausen zwischen Aufgaben und Absätzen aus und
      * blendete den nächsten Satz leise und hallig ein.
      */
     private var wachhalter: MediaPlayer? = null
     /**
-     * Die Clips mit ausgefüllten Pausen: Jede Pause wird ein eigener Clip aus leisem Rauschen ([Tones.stille]), der
+     * Die Clips mit ausgefüllten Pausen: Jede Pause wird ein eigener Clip aus dem Füllsignal ([Tones.stille]) im Format der Sprache davor, der
      * lückenlos per setNextMediaPlayer in den nächsten Satz übergeht. Früher lief in der Pause nichts, der nächste
      * Satz wurde neu gestartet und begann leise und hallig (nur die erste Aufgabe, lückenlos nach dem Vorlauf, klang
-     * gleichmäßig). Lässt sich das Rauschen nicht anlegen, bleibt es bei der alten, stummen Pause.
+     * gleichmäßig). Lässt sich das Füllsignal nicht anlegen, bleibt es bei der alten, stummen Pause.
      */
     private val folge: List<AlarmClip>
     /** Indizes der eingefügten Pausen-Clips in [folge]; sie melden kein [onPlaying]. */
@@ -37,15 +37,19 @@ class AlarmAudioQueue(
 
     init {
         val liste = mutableListOf<AlarmClip>()
+        // Eine Stimme liefert immer dasselbe Format: die Abtastrate einmal je Anbieter lesen, nicht je Datei.
+        val raten = HashMap<String, Int>()
         clips.forEach { clip ->
             val pause = clip.pauseAfterMillis
-            val rauschen = if (pause <= 0L) null else runCatching { Tones.stille(AlarmStore.get(context).files, pause) }
-                .onFailure { android.util.Log.w("WeckerAudio", "Pausenrauschen fehlt; stumme Pause als Ersatz", it) }.getOrNull()
-            if (rauschen == null) liste += clip
+            val fuellung = if (pause <= 0L) null else runCatching {
+                val rate = raten.getOrPut(clip.audio.provider) { Tones.abtastrate(clip.audio.path) }
+                Tones.stille(AlarmStore.get(context).files, pause, rate)
+            }.onFailure { android.util.Log.w("WeckerAudio", "Füllsignal fehlt; stumme Pause als Ersatz", it) }.getOrNull()
+            if (fuellung == null) liste += clip
             else {
                 liste += clip.copy(pauseAfterMillis = 0)
                 pausen += liste.size
-                liste += AlarmClip(clip.step, PreparedAudio(rauschen.absolutePath, provider = "local"), clip.variation)
+                liste += AlarmClip(clip.step, PreparedAudio(fuellung.absolutePath, provider = "local"), clip.variation)
             }
         }
         folge = liste

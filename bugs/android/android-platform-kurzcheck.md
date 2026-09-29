@@ -30,4 +30,4 @@
 | 16 | `EncryptedSharedPreferences` — Crash in `onCreate` nach Geraetewechsel (`AEADBadTagException`, Keystore -30) | `create()` in try/catch + Prefs & Masterkey-Alias loeschen und neu anlegen; Prefs-Datei aus BEIDEN Backup-XMLs ausschliessen | §7.4 |
 | 17 | Alarm-Vollbild schließt per Zurück-Geste (targetSdk 36) | Eigener `OnBackInvokedCallback`/`BackHandler` | §10.1 |
 | 18 | onnxruntime/sherpa-onnx `.so` 16-KB-Warnung | sherpa-onnx ≥ 1.12.36; jede `.so` einzeln prüfen | §10.2 |
-| 19 | Sprachansage setzt nach Pausen leise/hallig ein (Verstärker schaltet bei digitalen Nullen ab) | Pausen als lückenlose Clips aus leisem Rauschen (≈ −70 dBFS), nie Nullen; Cache-Dateiname versionieren | §10.3 |
+| 19 | Sprachansage setzt nach Pausen leise/hallig ein (Verstärker schaltet bei digitalen Nullen ab) | Pausen als lückenlose Clips aus Füllsignal (unhörbarer 30-Hz-Ton −40 dBFS + Rauschen), nie Nullen; gleiche Abtastrate wie die Sprache; Cache-Dateiname versionieren | §10.3 |

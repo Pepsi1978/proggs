@@ -868,15 +868,20 @@ Tracker-Status.
 - **Symptom:** Der erste Satz eines Weckers klingt gleichmäßig. Jeder Satz nach einer Pause (Aufgaben 2 s, Ideen 1,5 s, Block 3 s) setzt leise und hallig ein und wird dann lauter. Das passiert mit jeder Stimme (Google Chirp 3 HD, Edge, Supertonic). Die Audiodateien selbst setzen hart ein (gemessen).
 - **Ursache:** Der Lautsprecher-Verstärker bzw. DSP des Geräts wertet **digitale Nullen** nach etwa 1–2 s als „aus“ und blendet beim nächsten Signal weich ein. Wirkungslos waren: ein Player, der Stille aus reinen Nullen in Schleife spielt, und die Pause als Lücke (`postDelayed`, danach `start()`). Gleichmäßig klingt nur ein Satz, der **lückenlos** (`setNextMediaPlayer`) auf höchstens 0,9 s Nullen folgt.
 - **Fix:**
-  1. Pausen sind eigene Clips aus unhörbarem Rauschen (±12 LSB, ≈ −70 dBFS). Sie gehen lückenlos per `setNextMediaPlayer` in den nächsten Satz über (`AlarmAudioQueue.folge`).
+  1. Pausen sind eigene Clips aus einem Füllsignal. Sie gehen lückenlos per `setNextMediaPlayer` in den nächsten Satz über (`AlarmAudioQueue.folge`).
+     - Erster Versuch: nur Rauschen ±12 LSB (≈ −70 dBFS). Laut Fable-Prüfung vermutlich unter der Gate-Schwelle üblicher Verstärker (−60…−66 dBFS).
+     - Ab v3: 30-Hz-Ton mit −40 dBFS, den ein Handylautsprecher nicht abstrahlt, plus Rauschen ±24 LSB. Ganze Schwingungen, Anfang und Ende liegen im Nulldurchgang.
+     - Die Abtastrate folgt dem Sprachclip (Google/Edge 24 kHz, `Tones.abtastrate`). Sonst baut Android bei `setNextMediaPlayer` einen neuen AudioTrack auf, und der Übergang ist doch nicht lückenlos.
   2. Ein Wachhalter spielt dasselbe Rauschen in Schleife.
   3. Vorlauf vor dem ersten Klang.
   4. Die Stream-Lautstärke wird gesetzt, bevor etwas klingt.
 - **Poka-Yoke:** `PausenRauschenTest` schlägt fehl, sobald die Pausen wieder aus Nullen bestehen.
 - **Muster:**
-  - Stille zum Wachhalten nie aus reinen Nullen erzeugen.
-  - Selbst erzeugte Cache-Audiodateien bekommen bei geänderter Erzeugung einen **neuen Dateinamen** (`_v2`). Sonst bleibt die alte Datei auf installierten Geräten liegen.
+  - Stille zum Wachhalten nie aus reinen Nullen erzeugen. Ein zu leises Rauschen reicht auch nicht; ein unhörbarer Tiefton ist ein kräftiges Signal.
+  - Lückenlose Übergänge brauchen dasselbe Audioformat (Abtastrate, Kanäle) auf beiden Seiten.
+  - Selbst erzeugte Cache-Audiodateien bekommen bei geänderter Erzeugung einen **neuen Dateinamen** (`_v2`, `_v3` …). Sonst bleibt die alte Datei auf installierten Geräten liegen.
   - Klingt nur der erste Satz richtig, zuerst den Übergang vergleichen (lückenlos gegen neu gestartet), nicht die Stimme.
+- **Logikprüfung (Fable 5.1, Ende-zu-Ende):** Keine doppelte Wiedergabe, keine Lautstärke-Rampe bei Clipwechsel, kein Ducking, keine falsche Datei, TEST-Pfad gleich dem echten Wecken.
 - **Verwandte Stellen geprüft:**
   - Vorschau „Anhören“ (ein Clip, Wachhalter und Vorlauf nutzen dasselbe Rauschen)
   - `SchlafTon.kt` (einzelner System-Klingelton ohne Sprechpausen, nicht betroffen)

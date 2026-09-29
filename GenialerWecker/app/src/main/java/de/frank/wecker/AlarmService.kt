@@ -153,8 +153,8 @@ class AlarmService : Service() {
         }
         val tones = Tones.names.keys.associateWith { Tones.file(store.files, it).absolutePath }
         val liste = AlarmPlaylist.build(alarm, tones)
-        // Stiller Vorlauf weckt den Verstärker, damit schon das erste Wort mit voller Lautstärke kommt.
-        val vorlauf = runCatching { AlarmClip(liste.first().step, PreparedAudio(Tones.stille(store.files).absolutePath, provider = "local"), liste.first().variation) }.getOrNull()
+        // Vorlauf (Füllsignal im Format des ersten Clips) weckt den Verstärker, damit schon das erste Wort mit voller Lautstärke kommt.
+        val vorlauf = runCatching { AlarmClip(liste.first().step, PreparedAudio(Tones.stille(store.files, rate = Tones.abtastrate(liste.first().audio.path)).absolutePath, provider = "local"), liste.first().variation) }.getOrNull()
         play(listOfNotNull(vorlauf) + liste, token)
     }
 
