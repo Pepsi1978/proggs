@@ -483,7 +483,7 @@ $env:Path = $pathEntries -join ';'
             Directory.CreateDirectory(workDir);
             var wt = ResolveWt();
             var tabColor = PickCodexTerminalTabColor();
-            var innerScript = BuildKimiStartScript(alias, workDir);
+            var innerScript = BuildKimiStartScript(alias, workDir, log.LogPath);
             var shell = ResolvePowerShellExecutable();
             if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
             var title = string.IsNullOrWhiteSpace(effort) ? $"Kimi-{tabColor.Name}" : $"Kimi-{tabColor.Name}-{effort}";
@@ -567,7 +567,7 @@ $env:Path = $pathEntries -join ';'
     /// Temp-Script fuer den Kimi-Start (-File statt inline -Command, wie beim Codex-Weg).
     /// --auto (Never Ask): Kimi fragt nie nach, alle Aktionen und Entscheidungen laufen automatisch.
     /// </summary>
-    private static string BuildKimiStartScript(string alias, string workDir)
+    private static string BuildKimiStartScript(string alias, string workDir, string logPath)
     {
         var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-kimi-cli-{Guid.NewGuid():N}.ps1");
         var script = $$"""
@@ -605,7 +605,22 @@ try {
         $startedAt = Get-Date
         & $kimiPath --auto -m {{PowerShellLiteral(alias)}}
         $kimiExit = $LASTEXITCODE
-        $quickExit = ((Get-Date) - $startedAt).TotalSeconds -lt 5
+        $kimiSeconds = [Math]::Round(((Get-Date) - $startedAt).TotalSeconds, 1)
+        $quickExit = $kimiSeconds -lt 5
+        # Jedes Kimi-Ende ins Launcher-Log, damit ein Sofort-Beenden spaeter zuzuordnen ist.
+        try {
+            $logEntry = [ordered]@{
+                ts = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fff')
+                level = if ($quickExit -or $kimiExit -ne 0) { 'WARN' } else { 'INFO' }
+                module = 'KimiStartScript'
+                fn = 'KimiExit'
+                msg = if ($quickExit) { 'Kimi Code CLI hat sich sofort beendet' } else { 'Kimi Code CLI beendet' }
+                ctx = [ordered]@{ alias = {{PowerShellLiteral(alias)}}; attempt = $attempt; exitCode = $kimiExit; seconds = $kimiSeconds }
+            }
+            Add-Content -LiteralPath {{PowerShellLiteral(logPath)}} -Value ($logEntry | ConvertTo-Json -Compress -Depth 4) -Encoding utf8
+        } catch {
+            Write-Host ("[OpenLauncher] Kimi-Ende konnte nicht ins Launcher-Log geschrieben werden: {0}" -f $_.Exception.Message) -ForegroundColor DarkGray
+        }
         if ($quickExit -and $attempt -lt 3) {
             Write-Host ("[OpenLauncher] Kimi hat sich sofort beendet (Exit {0}) - neuer Versuch {1}/3 ..." -f $kimiExit, ($attempt + 1)) -ForegroundColor Yellow
             Start-Sleep -Milliseconds 1000
