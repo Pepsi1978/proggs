@@ -47,33 +47,45 @@ object Tones {
     }
 
     /**
-     * Knapp eine Sekunde Stille vor dem ersten Klang: Lautsprecher-Verstärker, die vor dem Wecken aus waren, blenden
-     * beim Einschalten weich ein. Ohne Vorlauf kamen die ersten Wörter der Ansage deshalb leise „aus dem Nichts“.
+     * Unhörbar leises Rauschen (etwa −70 dBFS) von [millis] Länge: für den Vorlauf vor dem ersten Klang, für die
+     * Pausen zwischen Aufgaben und Absätzen und für den Wachhalter.
+     *
+     * Bewusst KEINE reine Stille: Der Lautsprecher-Verstärker (Samsung Fold) erkennt digitale Nullen nach etwa ein bis
+     * zwei Sekunden als „aus“ und blendet den nächsten Satz dann leise und hallig ein. Das Rauschen liegt unter dem
+     * Eigenrauschen des Lautsprechers und hält ihn trotzdem an. Neue Erzeugungsart = neuer Dateiname (_v2), sonst
+     * würde die alte Nullen-Datei aus dem Cache weiterbenutzt.
      */
-    fun stille(directory: File): File {
-        val file = File(directory, "stille_vorlauf.wav")
+    fun stille(directory: File, millis: Long = VORLAUF_MS): File {
+        val file = File(directory, "stille_${millis}_v2.wav")
         if (file.exists() && file.length() > 44) return file
         synchronized(this) {
+            if (file.exists() && file.length() > 44) return file
             val rate = 22050
-            val samples = (rate * VORLAUF_MS / 1000).toInt()
+            val samples = (rate * millis / 1000).toInt().coerceAtLeast(1)
             val buffer = ByteBuffer.allocate(44 + samples * 2).order(ByteOrder.LITTLE_ENDIAN)
             buffer.put("RIFF".toByteArray()).putInt(36 + samples * 2).put("WAVEfmt ".toByteArray())
                 .putInt(16).putShort(1).putShort(1).putInt(rate).putInt(rate * 2).putShort(2).putShort(16)
                 .put("data".toByteArray()).putInt(samples * 2)
-            val temporary = File(directory, "stille_vorlauf.tmp")
+            val zufall = java.util.Random(millis)
+            repeat(samples) { buffer.putShort((zufall.nextInt(2 * RAUSCHEN + 1) - RAUSCHEN).toShort()) }
+            val temporary = File(directory, "stille_${millis}_v2.tmp")
             temporary.writeBytes(buffer.array())
             check(temporary.renameTo(file)) { "Vorlauf konnte nicht gespeichert werden." }
         }
         return file
     }
 
+    /** Spitzenwert des Pausenrauschens in 16-Bit-Stufen: ±12 ≈ −69 dBFS Spitze, −73 dBFS im Mittel. */
+    private const val RAUSCHEN = 12
+
     /**
-     * Stille in Dauerschleife auf demselben Audioweg wie [attributes]. Solange sie läuft, bleibt der
+     * Pausenrauschen ([stille]) in Dauerschleife auf demselben Audioweg wie [attributes]. Solange es läuft, bleibt der
      * Lautsprecher-Verstärker an, und jeder Satz kommt ab der ersten Silbe in voller Lautstärke statt leise und
-     * hallig eingeblendet. Scheitert sie, gibt es null: Wecken und Vorschau laufen dann trotzdem.
+     * hallig eingeblendet. Scheitert es, gibt es null: Wecken und Vorschau laufen dann trotzdem.
      */
     fun wachhalter(context: Context, attributes: AudioAttributes): MediaPlayer? {
-        val player = runCatching { MediaPlayer() }.getOrNull() ?: return null
+        val player = runCatching { MediaPlayer() }
+            .onFailure { android.util.Log.w("WeckerAudio", "Wachhalter: MediaPlayer nicht verfügbar", it) }.getOrNull() ?: return null
         return runCatching {
             player.setAudioAttributes(attributes)
             player.setDataSource(stille(AlarmStore.get(context).files).absolutePath)
@@ -81,6 +93,9 @@ object Tones {
             player.prepare()
             player.start()
             player
-        }.getOrElse { runCatching { player.release() }; null }
+        }.getOrElse {
+            android.util.Log.w("WeckerAudio", "Wachhalter nicht gestartet; Wecken läuft ohne ihn weiter", it)
+            runCatching { player.release() }; null
+        }
     }
 }

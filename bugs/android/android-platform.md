@@ -862,3 +862,22 @@ Tracker-Status.
   - https://github.com/microsoft/onnxruntime/issues/24902
   - https://github.com/k2-fsa/sherpa-onnx/issues/2641
   - https://github.com/k2-fsa/sherpa-onnx/issues/3291
+
+### 10.3 Sprachansage beginnt leise und hallig nach jeder Pause („wie aus einem großen Raum“)
+- **Stand:** 29.09.2026 21:49 (GenialerWecker, GenialerWeckerAndroid; Gerät Galaxy Fold 6; eigener Befund, kein Upstream-Issue)
+- **Symptom:** Der erste Satz eines Weckers klingt gleichmäßig. Jeder Satz nach einer Pause (Aufgaben 2 s, Ideen 1,5 s, Block 3 s) setzt leise und hallig ein und wird dann lauter. Das passiert mit jeder Stimme (Google Chirp 3 HD, Edge, Supertonic). Die Audiodateien selbst setzen hart ein (gemessen).
+- **Ursache:** Der Lautsprecher-Verstärker bzw. DSP des Geräts wertet **digitale Nullen** nach etwa 1–2 s als „aus“ und blendet beim nächsten Signal weich ein. Wirkungslos waren: ein Player, der Stille aus reinen Nullen in Schleife spielt, und die Pause als Lücke (`postDelayed`, danach `start()`). Gleichmäßig klingt nur ein Satz, der **lückenlos** (`setNextMediaPlayer`) auf höchstens 0,9 s Nullen folgt.
+- **Fix:**
+  1. Pausen sind eigene Clips aus unhörbarem Rauschen (±12 LSB, ≈ −70 dBFS). Sie gehen lückenlos per `setNextMediaPlayer` in den nächsten Satz über (`AlarmAudioQueue.folge`).
+  2. Ein Wachhalter spielt dasselbe Rauschen in Schleife.
+  3. Vorlauf vor dem ersten Klang.
+  4. Die Stream-Lautstärke wird gesetzt, bevor etwas klingt.
+- **Poka-Yoke:** `PausenRauschenTest` schlägt fehl, sobald die Pausen wieder aus Nullen bestehen.
+- **Muster:**
+  - Stille zum Wachhalten nie aus reinen Nullen erzeugen.
+  - Selbst erzeugte Cache-Audiodateien bekommen bei geänderter Erzeugung einen **neuen Dateinamen** (`_v2`). Sonst bleibt die alte Datei auf installierten Geräten liegen.
+  - Klingt nur der erste Satz richtig, zuerst den Übergang vergleichen (lückenlos gegen neu gestartet), nicht die Stimme.
+- **Verwandte Stellen geprüft:**
+  - Vorschau „Anhören“ (ein Clip, Wachhalter und Vorlauf nutzen dasselbe Rauschen)
+  - `SchlafTon.kt` (einzelner System-Klingelton ohne Sprechpausen, nicht betroffen)
+  - `SpeechLoudness` (LoudnessEnhancer entfernt, nicht im Weckpfad)
