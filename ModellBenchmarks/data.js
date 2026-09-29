@@ -9,8 +9,8 @@
 // Formen: circle, square, diamond, triangle, tridown, hexagon, star, cross
 // ═══════════════════════════════════════════════════════════════════════════
 window.BENCH = {
-  version: "2.2.0",
-  stand: "29.09.2026 14:09",
+  version: "2.2.1",
+  stand: "29.09.2026 14:30",
 
   models: [
     { id: "s5",    name: "Claude Sonnet 5",   short: "Sonnet 5",   vendor: "Anthropic", released: "30.06.2026", apiId: "claude-sonnet-5",   priceIn: 2,  priceOut: 10, context: "1 Mio.", color: ["#1E88C8", "#1FA0BE"], shape: "circle" },

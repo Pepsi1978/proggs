@@ -227,9 +227,10 @@
   const NONE = `<p class="miss none">Diese Quelle hat keines der gewählten Modelle gemessen. Wähle links eine andere Quelle.</p>`;
 
   function vizBars(s, ms, ax) {
-    const measured = ms.filter(m => val(s, m.id) != null);
+    // Stärkstes Modell oben, dann absteigend (bei "niedriger ist besser" der kleinste Wert oben)
+    const measured = ranking(s, ms.map(m => m.id)).map(r => MBY[r.id]);
     if (!measured.length) return `<div class="bars">${NONE}</div>`;
-    const best = ranking(s, measured.map(m => m.id))[0];
+    const best = { id: measured[0].id };
     const bars = measured.map(m => {
       const v = val(s, m.id), mt = meta(s, m.id);
       const isBest = measured.length > 1 && best && best.id === m.id;
