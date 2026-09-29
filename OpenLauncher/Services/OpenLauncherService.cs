@@ -565,8 +565,7 @@ $env:Path = $pathEntries -join ';'
 
     /// <summary>
     /// Temp-Script fuer den Kimi-Start (-File statt inline -Command, wie beim Codex-Weg).
-    /// --yolo: Routine-Aenderungen und Befehle laufen ohne Nachfrage, riskante Aktionen und
-    /// Rueckfragen stellt das CLI weiter (--auto wuerde auch die unterdruecken).
+    /// --auto (Never Ask): Kimi fragt nie nach, alle Aktionen und Entscheidungen laufen automatisch.
     /// </summary>
     private static string BuildKimiStartScript(string alias, string workDir)
     {
@@ -598,13 +597,13 @@ try {
     }
     $kimi = Get-Command kimi -ErrorAction SilentlyContinue
     $kimiPath = if ($kimi) { $kimi.Source } else { Join-Path $HOME '.kimi-code\bin\kimi.exe' }
-    # --yolo immer. Direkt nach dem Oeffnen eines Terminals beendet sich Kimi gelegentlich sofort
+    # --auto (Never Ask) immer. Direkt nach dem Oeffnen eines Terminals beendet sich Kimi gelegentlich sofort
     # (Terminal noch nicht bereit) -- dann bis zu zwei weitere Versuche statt eines leeren Prompts.
     $attempt = 0
     do {
         $attempt++
         $startedAt = Get-Date
-        & $kimiPath --yolo -m {{PowerShellLiteral(alias)}}
+        & $kimiPath --auto -m {{PowerShellLiteral(alias)}}
         $kimiExit = $LASTEXITCODE
         $quickExit = ((Get-Date) - $startedAt).TotalSeconds -lt 5
         if ($quickExit -and $attempt -lt 3) {
