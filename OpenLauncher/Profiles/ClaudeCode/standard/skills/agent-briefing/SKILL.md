@@ -1,6 +1,7 @@
 ---
 name: agent-briefing
-description: Generiere ein kompaktes Situational-Awareness-Briefing (max 10 Zeilen) das als erster Block fuer jeden Agent-Prompt injiziert werden soll. Nutze DIESEN Skill IMMER wenn du einen Subagent mit projektspezifischer Aufgabe spawnen willst — er liefert dir dynamischen Kontext (Branch, letzte Commits, offene Fehler, Datei-Ownership) den du in den Agent-Prompt kopieren kannst. Inspiriert vom Luftfahrt-Crew-Resource-Management: Gemeinsames mentales Modell fuer alle Beteiligten.
+description: >-
+  Generiere ein kompaktes Situational-Awareness-Briefing (max 10 Zeilen) das als erster Block fuer jeden Agent-Prompt injiziert werden soll. Nutze DIESEN Skill IMMER wenn du einen Subagent mit projektspezifischer Aufgabe spawnen willst — er liefert dir dynamischen Kontext (Branch, letzte Commits, offene Fehler, Datei-Ownership) den du in den Agent-Prompt kopieren kannst. Inspiriert vom Luftfahrt-Crew-Resource-Management: Gemeinsames mentales Modell fuer alle Beteiligten.
 ---
 
 # Agent-Briefing Skill — Luftfahrt-CRM fuer Subagents

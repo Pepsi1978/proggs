@@ -1,6 +1,7 @@
 ---
 name: aufgaben-visualizer
-description: Zeigt den Active-Task-Ledger (`~/proggs/.claude/agent-memory/shared/active-tasks.jsonl`) als farbige Tabelle — was wurde gemacht, was ist offen, was ist gepusht. Nutze diesen Skill IMMER wenn der Benutzer sagt "zeig die offenen Aufgaben", "Aufgaben-Uebersicht", "Ledger zeigen", "Task-Ledger zeigen", "was steht alles offen", "zeig alle Aufgaben", "Aufgaben-Liste", "Aufgaben-Tabelle", "was ist alles in Arbeit", "welche Aufgaben sind committed", "was ist noch nicht gepusht", "Status der Aufgaben", "Uebersicht ueber Aufgaben", "alles was offen ist". Ergaenzt den `aufgaben-bruecke`-Skill: bruecke ist fuer "ich mache jetzt weiter", visualizer ist fuer "ich will mir nur einen Ueberblick verschaffen".
+description: >-
+  Zeigt den Active-Task-Ledger (`~/proggs/.claude/agent-memory/shared/active-tasks.jsonl`) als farbige Tabelle — was wurde gemacht, was ist offen, was ist gepusht. Nutze diesen Skill IMMER wenn der Benutzer sagt "zeig die offenen Aufgaben", "Aufgaben-Uebersicht", "Ledger zeigen", "Task-Ledger zeigen", "was steht alles offen", "zeig alle Aufgaben", "Aufgaben-Liste", "Aufgaben-Tabelle", "was ist alles in Arbeit", "welche Aufgaben sind committed", "was ist noch nicht gepusht", "Status der Aufgaben", "Uebersicht ueber Aufgaben", "alles was offen ist". Ergaenzt den `aufgaben-bruecke`-Skill: bruecke ist fuer "ich mache jetzt weiter", visualizer ist fuer "ich will mir nur einen Ueberblick verschaffen".
 ---
 
 # Aufgaben-Visualizer — Skill
