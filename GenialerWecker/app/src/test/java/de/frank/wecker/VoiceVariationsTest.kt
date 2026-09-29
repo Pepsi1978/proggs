@@ -92,7 +92,8 @@ class VoiceVariationsTest {
         val alarm = Alarm(steps = listOf(Step.IDEAS, Step.MUSIC), music = "song", ideasRepeats = 3, voiceVariants = variants)
         val clips = AlarmPlaylist.build(alarm, mapOf("classic" to "tone")) { true }
         val first = listOf("idee-1", "idee-2", "idee-3", "song", "idee-4", "idee-5", "idee-6", "song")
-        assertEquals(first + first, clips.map { it.audio.path })
+        // Sechs Durchläufe: Varianten 1–3, Song, 4–6, Song, dann wieder von vorn.
+        assertEquals(List(3) { first }.flatten(), clips.map { it.audio.path })
         assertEquals(listOf(3000L, 3000L, 3000L, 0L), clips.take(4).map { it.pauseAfterMillis })
     }
     @Test fun tasksPauseTwoSecondsBetweenTasksAndThreeAfterTheBlock() {
