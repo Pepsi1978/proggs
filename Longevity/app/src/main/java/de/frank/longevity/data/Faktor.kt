@@ -1,0 +1,121 @@
+package de.frank.longevity.data
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import org.json.JSONArray
+import org.json.JSONObject
+
+/** Die Lebensbereiche, in die jeder Faktor fällt. */
+enum class Kategorie(val anzeige: String, val emoji: String) {
+    BEWEGUNG("Bewegung & Fitness", "🏃"),
+    ERNAEHRUNG("Ernährung", "🥗"),
+    SCHLAF("Schlaf & Rhythmus", "😴"),
+    SUPPLEMENTE("Supplements", "💊"),
+    GEIST("Geist & Stress", "🧘"),
+    SOZIAL("Beziehungen", "🤝"),
+    VORSORGE("Vorsorge & Medizin", "🩺"),
+    GIFTE("Genussmittel & Gifte", "🚭"),
+    UMWELT("Umwelt", "🌿"),
+    SINN("Sinn & Lernen", "🎯"),
+    ;
+
+    companion object {
+        fun von(name: String?): Kategorie =
+            entries.firstOrNull { it.name.equals(name?.trim(), true) || it.anzeige.equals(name?.trim(), true) } ?: SINN
+    }
+}
+
+/** Wie gut die Wirkung auf die Lebensdauer belegt ist. */
+enum class Evidenz(val anzeige: String, val kurz: String, val staerke: Int) {
+    BELEGT("Gut belegt", "belegt", 3),
+    WAHRSCHEINLICH("Sehr wahrscheinlich", "wahrscheinlich", 2),
+    LOGISCH("Logisch naheliegend", "logisch", 1),
+    ;
+
+    companion object {
+        fun von(name: String?): Evidenz = entries.firstOrNull { it.name.equals(name?.trim(), true) } ?: WAHRSCHEINLICH
+    }
+}
+
+/** Ein Punkt im Aufgabenplan eines Faktors — bei „Supplements“ z. B. ein einzelnes Mittel. */
+data class Punkt(
+    val titel: String,
+    val text: String = "",
+    val evidenz: String = Evidenz.WAHRSCHEINLICH.name,
+    val erledigt: Boolean = false,
+) {
+    val ev: Evidenz get() = Evidenz.von(evidenz)
+}
+
+/**
+ * Ein Faktor, der die Lebensdauer beeinflusst. [rang] 1 ist der wichtigste. [jahre] ist die grobe
+ * Schätzung zusätzlicher gesunder Lebensjahre, [wirkung] dieselbe Wirkung als 0–100-Punkte für
+ * Balken und Diagramme.
+ */
+@Entity(tableName = "faktoren")
+data class Faktor(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val rang: Int = 0,
+    val titel: String,
+    val kurz: String = "",
+    val kategorie: String = Kategorie.SINN.name,
+    val evidenz: String = Evidenz.WAHRSCHEINLICH.name,
+    val jahre: Float = 0f,
+    val wirkung: Int = 50,
+    val erklaerung: String = "",
+    val begruendung: String = "",
+    val ziel: String = "",
+    val punkteJson: String = "[]",
+    /** Vom Nutzer eingesprochen/eingetippt. */
+    val eigen: Boolean = false,
+    /** Die ursprüngliche Eingabe des Nutzers. */
+    val notiz: String = "",
+    /** Rang vor der letzten Aktualisierung — für die Pfeile ↑↓. */
+    val vorherRang: Int? = null,
+    /** Bei der letzten Aktualisierung/Auswertung neu hinzugekommen. */
+    val neu: Boolean = false,
+    /** Die KI hat Erklärung und Aufgabenplan schon vertieft. */
+    val vertieft: Boolean = false,
+    /** Neuer Faktor, den die KI bei der Aktualisierung vorschlägt — erscheint erst nach Bestätigung in der Liste. */
+    val vorschlag: Boolean = false,
+    val geaendertAm: Long = System.currentTimeMillis(),
+) {
+    val kat: Kategorie get() = Kategorie.von(kategorie)
+    val ev: Evidenz get() = Evidenz.von(evidenz)
+    val punkte: List<Punkt> get() = punkteAusJson(punkteJson)
+
+    companion object {
+        fun punkteAlsJson(liste: List<Punkt>): String = JSONArray().apply {
+            liste.forEach {
+                put(JSONObject().put("titel", it.titel).put("text", it.text).put("evidenz", it.evidenz).put("erledigt", it.erledigt))
+            }
+        }.toString()
+
+        fun punkteAusJson(json: String): List<Punkt> = runCatching {
+            val a = JSONArray(json)
+            List(a.length()) { i ->
+                val o = a.getJSONObject(i)
+                Punkt(o.optString("titel"), o.optString("text"), o.optString("evidenz", Evidenz.WAHRSCHEINLICH.name), o.optBoolean("erledigt"))
+            }
+        }.getOrDefault(emptyList())
+    }
+}
+
+/** Kurzform für die Startinhalte. */
+internal fun faktor(
+    titel: String,
+    kurz: String,
+    kategorie: Kategorie,
+    evidenz: Evidenz,
+    jahre: Float,
+    wirkung: Int,
+    erklaerung: String,
+    begruendung: String,
+    ziel: String,
+    vararg punkte: Punkt,
+) = Faktor(
+    titel = titel, kurz = kurz, kategorie = kategorie.name, evidenz = evidenz.name, jahre = jahre, wirkung = wirkung,
+    erklaerung = erklaerung, begruendung = begruendung, ziel = ziel, punkteJson = Faktor.punkteAlsJson(punkte.toList()),
+)
+
+internal fun punkt(titel: String, text: String, evidenz: Evidenz = Evidenz.WAHRSCHEINLICH) = Punkt(titel, text, evidenz.name)
