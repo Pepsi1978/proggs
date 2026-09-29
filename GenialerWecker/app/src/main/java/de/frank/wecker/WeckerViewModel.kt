@@ -268,6 +268,26 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         message.value = "${ideas.value.size} offene Ideen in Originalreihenfolge übernommen."
         PreparationWorker.enqueue(app)
     }
+    /** Zuletzt gelesene Aufgaben des Klingeltags aus der App „Aufgaben“ und dieser Tag. */
+    val tasks = MutableStateFlow(TasksBridge(application).cached())
+    val tasksDay = MutableStateFlow(TasksBridge(application).cachedDay())
+    /** Liest die Aufgaben des Tages, an dem [alarm] klingelt; Fehler (App fehlt) landen in [message]. */
+    val tasksLoading = MutableStateFlow(false)
+    val tasksError = MutableStateFlow("")
+    fun loadTasks(alarm: Alarm) {
+        // Eigener Ablauf statt runAction: das kleine Fenster darf nie an einem laufenden Vorgang scheitern.
+        viewModelScope.launch {
+            tasksLoading.value = true
+            val tag = TasksBridge.klingeltag(alarm)
+            try {
+                tasks.value = TasksBridge(app).refresh(tag)
+                tasksDay.value = tag
+                tasksError.value = ""
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { tasksError.value = e.message ?: "Die Aufgaben konnten nicht gelesen werden." }
+            finally { tasksLoading.value = false }
+        }
+    }
     val ideasDisabled = MutableStateFlow(IdeasBridge(application).deaktiviert())
     fun setIdeaActive(id: Long, aktiv: Boolean) {
         val bridge = IdeasBridge(app)

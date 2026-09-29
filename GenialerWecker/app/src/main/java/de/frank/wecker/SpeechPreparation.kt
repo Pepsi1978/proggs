@@ -44,6 +44,15 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                     groups += ideas.map { SpeechGroup(Step.IDEAS.name, chunks("${it.title}.\n${it.text}")) }
                         .ifEmpty { listOf(SpeechGroup(Step.IDEAS.name, listOf("Es sind keine offenen Ideen vorhanden."))) }
                 }
+                if (Step.TASKS in alarm.steps) {
+                    progress("Aufgaben werden abgeglichen …")
+                    // Die Aufgaben des Klingeltags; abends gestellt sind das die Aufgaben aus „Morgen“.
+                    val tag = TasksBridge.klingeltag(store.get(alarm.id) ?: alarm)
+                    val tasks = TasksBridge(context).refresh(tag)
+                    // Jede Aufgabe ist eine eigene Gruppe: Uhrzeit und Titel, danach die Pause bis zur nächsten.
+                    groups += tasks.map { SpeechGroup(Step.TASKS.name, chunks(it.gesprochen)) }.filter { it.paragraphs.isNotEmpty() }
+                        .ifEmpty { listOf(SpeechGroup(Step.TASKS.name, listOf("Für diesen Tag sind keine Aufgaben eingetragen."))) }
+                }
                 if (Step.TEXT in alarm.steps) groups += SpeechGroup(Step.TEXT.name, chunks(alarm.text))
                 val voice = alarm.resolveVoice(voiceFactory())
                 val signature = hash(voiceKey(voice) + JSONArray(groups.map { JSONObject().put("step", it.step).put("paragraphs", JSONArray(it.paragraphs)) }).toString())
@@ -52,9 +61,9 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                 val cached = latest.voiceVariants
                 // Alte Varianten besitzen noch keine Ideengrenzen. In diesem Fall die Gruppen
                 // erneut zusammensetzen; render() verwendet vorhandene Audiodateien weiter.
-                val ideaCount = groups.count { it.step == Step.IDEAS.name && it.paragraphs.isNotEmpty() }
+                val itemCounts = VoiceVariations.ITEM_STEPS.associateWith { step -> groups.count { it.step == step && it.paragraphs.isNotEmpty() } }
                 if (latest.preparedSignature == signature && cached.size == VoiceVariations.COUNT &&
-                    cached.all { variant -> variant.steps[Step.IDEAS.name].orEmpty().count { it.endOfIdea } == ideaCount } &&
+                    cached.all { variant -> itemCounts.all { (step, count) -> variant.steps[step].orEmpty().count { it.endOfIdea } == count } } &&
                     cached.flatMap { it.steps.values.flatten() }.all { File(it.path).length() > 44 } &&
                     (cached.none { it.steps.values.flatten().any(PreparedAudio::fallback) } || System.currentTimeMillis() - latest.preparedAt < 15 * 60_000)) {
                     if (cached.none { it.steps.values.flatten().any(PreparedAudio::fallback) }) store.update(alarm.id) { current ->
@@ -81,7 +90,7 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                             render(text, chosen.edgeFallback(), index).copy(fallback = true)
                         }
                     } else render(text, chosen.edgeFallback(), index).copy(fallback = true)
-                }, progress = { group, groupTotal, variation, part, total -> progress("Text/Idee $group/$groupTotal · Variante $variation/6 · Absatz $part/$total") })
+                }, progress = { group, groupTotal, variation, part, total -> progress("Text/Idee/Aufgabe $group/$groupTotal · Variante $variation/6 · Absatz $part/$total") })
                 check(voiceKey(voice) == voiceKey(alarm.resolveVoice(voiceFactory()))) { "Die Stimme wurde während der Vorbereitung geändert. Bitte erneut vorbereiten." }
                 store.update(alarm.id) { current ->
                     if (!current.sameSpeechAs(alarm)) current

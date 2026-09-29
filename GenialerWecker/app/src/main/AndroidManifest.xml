@@ -20,6 +20,8 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <queries>
         <package android:name="de.frank.genialeideen" />
+        <!-- Brücke zur App „Aufgaben“: ohne diesen Eintrag liefert die Abfrage ab Android 11 nichts. -->
+        <provider android:authorities="de.frank.aufgaben.wecker" />
         <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
     </queries>
     <application android:name="de.frank.wecker.WeckerApplication"
@@ -52,6 +54,12 @@
         <receiver android:name="de.frank.wecker.SchlafErinnerungReceiver" android:exported="false" android:directBootAware="true" />
         <receiver android:name="de.frank.wecker.IdeasChangedReceiver" android:exported="true"
             android:permission="de.frank.genialeideen.permission.WECKER" />
+        <!-- Änderungsmeldung der App „Aufgaben“ (ohne Berechtigung gesendet); stößt nur die Audio-Vorbereitung an. -->
+        <receiver android:name="de.frank.wecker.TasksChangedReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="de.frank.aufgaben.AUFGABEN_GEAENDERT" />
+            </intent-filter>
+        </receiver>
         <receiver android:name="de.frank.wecker.RestoreReceiver" android:exported="true" android:directBootAware="true">
             <intent-filter>
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />

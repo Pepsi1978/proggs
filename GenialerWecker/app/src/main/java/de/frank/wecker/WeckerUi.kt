@@ -1910,10 +1910,22 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
             initiallyExpanded = Step.TEXT in alarm.steps && alarm.text.isBlank()) {
             Text("Der gesamte Ablauf wiederholt sich bis zum Stoppen; Songs laufen vollständig durch.", style = MaterialTheme.typography.bodySmall)
             Text("Bausteine auswählen", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+            // Das kleine Aufgabenfenster öffnet sich beim Einschalten von „Aufgaben“ von selbst.
+            var aufgabenOffen by rememberSaveable(alarm.id) { mutableStateOf(false) }
             Step.entries.forEach { step -> Toggle(step.title, step in alarm.steps) { checked ->
                 vm.change(alarm.copy(steps = if (checked) alarm.steps + step else alarm.steps - step))
+                if (checked && step == Step.TASKS) { vm.loadTasks(alarm); aufgabenOffen = true }
             } }
             HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            if (Step.TASKS in alarm.steps) {
+                AufgabenBereich(vm, alarm, aufgabenOffen) { aufgabenOffen = it }
+                HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            }
+            if (Step.IDEAS in alarm.steps) {
+                Text("Offene Ideen", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
+                WiederholenZeile(alarm.ideasRepeats) { vm.change(alarm.copy(ideasRepeats = it)) }
+                HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
+            }
             // Der eigene Text steht genau dort, wo man ihn auswählt — nicht weit unten in einem
             // eigenen Abschnitt, den man erst suchen muss.
             if (Step.TEXT in alarm.steps) {
@@ -2103,6 +2115,75 @@ fun KlappKnopf(expanded: Boolean, onToggle: () -> Unit, beschreibung: String?, m
     StillerKnopf(if (expanded) "⌃" else "⌄", onToggle, modifier.minimumInteractiveComponentSize().size(44.dp).then(
         if (beschreibung == null) Modifier.clearAndSetSemantics {}
         else Modifier.semantics { contentDescription = beschreibung; stateDescription = if (expanded) "Aufgeklappt" else "Zugeklappt" }))
+}
+
+/**
+ * Wiederholen-Schalter für einen Vorlese-Block: Minus/Plus von 0 bis 6. 0 und 1 lesen den Block einmal,
+ * ab 2 wird er so oft am Stück gelesen, jedes Mal mit einer anderen der sechs Sprachvarianten.
+ */
+@Composable
+fun WiederholenZeile(wert: Int, aendern: (Int) -> Unit) {
+    val gold = LocalGold.current
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Wiederholen")
+            Text(if (wert <= 1) "Einmal vorlesen, dann der nächste Schritt" else "$wert× am Stück vorlesen, $wert verschiedene Varianten",
+                style = MaterialTheme.typography.bodySmall, color = gold.textGedaempft)
+        }
+        GoldKnopf("−", { aendern((wert - 1).coerceAtLeast(0)) }, aktiviert = wert > 0, beschreibung = "Weniger Wiederholungen")
+        Text("$wert", Modifier.widthIn(min = 36.dp).padding(horizontal = 8.dp), fontSize = 22.sp, fontWeight = FontWeight.SemiBold,
+            color = gold.primaer, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        GoldKnopf("+", { aendern((wert + 1).coerceAtMost(Alarm.MAX_REPEATS)) }, aktiviert = wert < Alarm.MAX_REPEATS, beschreibung = "Mehr Wiederholungen")
+    }
+}
+
+/** Aufgaben-Baustein im Editor: Tag, Knopf zum Ansehen, Wiederholen-Schalter und das kleine Fenster. */
+@Composable
+private fun AufgabenBereich(vm: WeckerViewModel, alarm: Alarm, offen: Boolean, setzeOffen: (Boolean) -> Unit) {
+    val gold = LocalGold.current
+    val tasks by vm.tasks.collectAsStateWithLifecycle()
+    val tasksDay by vm.tasksDay.collectAsStateWithLifecycle()
+    val loading by vm.tasksLoading.collectAsStateWithLifecycle()
+    val error by vm.tasksError.collectAsStateWithLifecycle()
+    val tag = TasksBridge.klingeltag(alarm)
+    val tagText = remember(tag) { aufgabenTag(tag) }
+    Text("Aufgaben", style = MaterialTheme.typography.titleSmall, color = gold.primaer)
+    Text("Vorgelesen werden die offenen Aufgaben aus der App „Aufgaben“ für $tagText: zuerst die Uhrzeit, dann der Titel, " +
+        "zwischen zwei Aufgaben 2 Sekunden Pause, nach dem ganzen Block 3 Sekunden. Änderungen in der Aufgaben-App werden automatisch neu vorbereitet.",
+        style = MaterialTheme.typography.bodySmall)
+    StillerKnopf("Aufgaben für $tagText ansehen", { vm.loadTasks(alarm); setzeOffen(true) })
+    WiederholenZeile(alarm.tasksRepeats) { vm.change(alarm.copy(tasksRepeats = it)) }
+    if (offen) DesignDialog(
+        titel = "Aufgaben · $tagText",
+        aufSchliessen = { setzeOffen(false) },
+        bestaetigung = { StillerKnopf("Schließen", { setzeOffen(false) }) },
+    ) {
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            when {
+                loading -> Text("Aufgaben werden gelesen …", color = gold.textGedaempft)
+                error.isNotBlank() -> Text(error, color = LocalSemantisch.current.warnung)
+                tasksDay != tag -> Text("Noch nicht gelesen.", color = gold.textGedaempft)
+                tasks.isEmpty() -> Text("Für $tagText sind keine offenen Aufgaben eingetragen.", color = gold.textPrimaer)
+                else -> tasks.forEach { aufgabe ->
+                    Row(verticalAlignment = Alignment.Top) {
+                        Text(aufgabe.zeit.ifBlank { "–" }, Modifier.width(64.dp), fontFamily = zahlSchrift(), fontWeight = FontWeight.SemiBold, color = gold.primaer)
+                        Text(aufgabe.titel, Modifier.weight(1f), color = gold.textPrimaer)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** „morgen, Di 30.09.“ bzw. „heute, …“ oder nur das Datum. */
+private fun aufgabenTag(tag: java.time.LocalDate): String {
+    val heute = java.time.LocalDate.now()
+    val datum = tag.format(DateTimeFormatter.ofPattern("EE dd.MM.", java.util.Locale.GERMAN))
+    return when (tag) {
+        heute -> "heute, $datum"
+        heute.plusDays(1) -> "morgen, $datum"
+        else -> datum
+    }
 }
 
 @Composable

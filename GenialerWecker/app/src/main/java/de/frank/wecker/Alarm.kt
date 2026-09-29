@@ -10,7 +10,8 @@ import java.time.ZonedDateTime
 import java.util.UUID
 
 enum class Step(val title: String) {
-    TONE("Klingelzeichen"), IDEAS("Offene Ideen"), TEXT("Eigener Text"), MUSIC("MP3 / Weckton")
+    // Neue Schritte nur hinten anhängen: die Drag-and-drop-Schlüssel sind die Positionen in Step.entries.
+    TONE("Klingelzeichen"), IDEAS("Offene Ideen"), TEXT("Eigener Text"), MUSIC("MP3 / Weckton"), TASKS("Aufgaben")
 }
 
 data class Alarm(
@@ -74,9 +75,13 @@ data class Alarm(
     val repeatUnit: String = "",
     /** Nur bei "month" (1–12) und "year" (1–5): jeden N-ten Monat bzw. jedes N-te Jahr ab dem Startdatum. */
     val repeatEvery: Int = 0,
+    /** Wie oft der Ideen-Block am Stück vorgelesen wird (0 und 1 = einmal, höchstens 6, je Lesung eine andere Variante). */
+    val ideasRepeats: Int = 0,
+    /** Wie oft der Aufgaben-Block am Stück vorgelesen wird (0 und 1 = einmal, höchstens 6, je Lesung eine andere Variante). */
+    val tasksRepeats: Int = 0,
 ) {
     val timeLabel: String get() = "%02d:%02d".format(hour, minute)
-    val needsSpeech: Boolean get() = steps.any { it == Step.IDEAS || it == Step.TEXT }
+    val needsSpeech: Boolean get() = steps.any { it == Step.IDEAS || it == Step.TEXT || it == Step.TASKS }
     val repeats: Boolean get() = days.isNotEmpty() || intervalDays > 0 || repeatUnit.isNotBlank()
     /** Monate zwischen zwei Terminen bei monatlicher oder jährlicher Wiederholung, sonst 0. */
     val repeatMonths: Int get() = when (repeatUnit) {
@@ -114,6 +119,7 @@ data class Alarm(
         require(speechRate == null || speechRate in .5f..2f) { "Das Sprechtempo muss zwischen 0,5× und 2× liegen." }
         require(voiceProvider.isBlank() == voiceId.isBlank()) { "Wähle eine Stimme oder den globalen Standard." }
         require(snoozeMinutes in 1..60 && snoozeLimit in 0..20)
+        require(ideasRepeats in 0..MAX_REPEATS && tasksRepeats in 0..MAX_REPEATS) { "Höchstens $MAX_REPEATS Wiederholungen." }
         require(steps.isNotEmpty() && steps.distinct().size == steps.size) { "Wähle mindestens einen Weckschritt." }
         require(Step.TEXT !in steps || text.isNotBlank()) { "Der Erinnerungstext fehlt." }
         require(!photoRequired || reference.isNotBlank() || color != "none" || minBrightness > 0) {
@@ -138,10 +144,12 @@ data class Alarm(
         sleepLeadMinutes?.let { put("sleepLeadMinutes", it) }
         put("skippedThrough", skippedThrough)
         put("repeatUnit", repeatUnit); put("repeatEvery", repeatEvery)
+        put("ideasRepeats", ideasRepeats); put("tasksRepeats", tasksRepeats)
     }
     companion object {
         const val MONTHLY = "month"
         const val YEARLY = "year"
+        const val MAX_REPEATS = VoiceVariations.COUNT
         /**
          * Reads an entry. The new monthly/yearly fields are checked strictly: an unknown unit, a missing or unreadable
          * start date, a conflicting combination or an out-of-range interval make this entry invalid. It is then rejected,
@@ -188,6 +196,8 @@ data class Alarm(
             // Taken as stored; from() checks them and rejects an invalid entry instead of reinterpreting it.
             repeatUnit = j.optString("repeatUnit", ""),
             repeatEvery = j.optInt("repeatEvery", 0),
+            ideasRepeats = j.optInt("ideasRepeats", 0).coerceIn(0, MAX_REPEATS),
+            tasksRepeats = j.optInt("tasksRepeats", 0).coerceIn(0, MAX_REPEATS),
         )
     }
 }
