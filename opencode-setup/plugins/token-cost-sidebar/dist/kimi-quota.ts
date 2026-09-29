@@ -76,12 +76,12 @@ export function parseKimiQuota(payload: any, nowMs = Date.now()): KimiQuota | un
 }
 
 export function formatKimiResetCountdown(resetAt: number | undefined, nowMs: number): string {
-  if (resetAt === undefined || !Number.isFinite(resetAt)) return "Reset n/v"
+  if (resetAt === undefined || !Number.isFinite(resetAt)) return "n/v"
   const remainingMs = resetAt * 1_000 - nowMs
-  if (remainingMs <= 0) return "Reset fällig"
+  if (remainingMs <= 0) return "0min"
   const minutes = Math.ceil(remainingMs / 60_000)
   const hours = Math.floor(minutes / 60)
-  return hours > 0 ? `Reset in ${hours}h ${minutes % 60}min` : `Reset in ${minutes}min`
+  return hours > 0 ? `${hours}h ${minutes % 60}min` : `${minutes}min`
 }
 
 export async function loadKimiQuota(

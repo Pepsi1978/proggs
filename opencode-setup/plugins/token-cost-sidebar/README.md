@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.17.1 – 29.09.2026 12:55
+Stand: v1.17.2 – 29.09.2026 13:04
 
 ## Funktionen
 
@@ -17,7 +17,7 @@ Stand: v1.17.1 – 29.09.2026 12:55
 - Anzeige des live ausgewählten Modells direkt oberhalb der Effort-Auswahl.
 - Anzeige des verbleibenden wöchentlichen OpenAI-Kontingents und des Reset-Datums direkt unter OpenAI-Modellen.
 - Kimi Code zeigt den **verbrauchten** gemeinsamen Monatsanteil und das echte Reset-Datum:
-  `Monat 42,5% verbraucht (28. Oktober)`. Quelle ist `usages.limit_month_total` des offiziellen
+  `Monat 42,5% (28. Oktober)`. Quelle ist `usages.limit_month_total` des offiziellen
   `/coding/v1/usages`-Endpunkts, nicht die lokale Session, Wochenquote oder Extra Usage.
   Minütlicher Abruf sowie sofort und nach zwei Sekunden bei abgeschlossenen Kimi-Antworten.
   Fehlende/fehlerhafte Daten erscheinen als `Monat n/v`, fehlendes Datum als `Reset n/v`.
@@ -25,10 +25,10 @@ Stand: v1.17.1 – 29.09.2026 12:55
   verwendet nur dessen eigenen API-Key/OAuth-Access-Token aus OpenCodes `auth.json`, mit festem
   regionalem HTTPS-Endpoint, 10 Sekunden Timeout und ohne Redirects oder fremde Key-Fallbacks.
 - Direkt darunter steht das Kimi-5-Stunden-Limit, beispielsweise
-  `5 Stunden 23% verbraucht (Reset in 2h 14min)`. Verbrauch und Reset stammen separat aus
+  `5 Stunden 23% (2h 14min)`. Verbrauch und Reset stammen separat aus
   `usages.limit_5h` derselben Antwort. Der Countdown aktualisiert sich lokal jede Minute,
   ohne zusätzliche API-Anfragen; unter einer Stunde steht nur die Minutenzahl.
-  Ein abgelaufener Zeitpunkt erscheint bis zum nächsten Anbieterabruf als `Reset fällig`.
+  Ein abgelaufener Zeitpunkt erscheint bis zum nächsten Anbieterabruf als `0min`.
   Fehlende 5h-Daten ergeben `5 Stunden n/v`, ohne den Monatswert zu beeinträchtigen.
 - Kimi kann gleichzeitig eine falsche 5h-Ratio von 0 und korrekte Zähler in `limits[]` liefern.
   Bei explizit fünf Stunden, gültigen Zählern und demselben aktiven Reset (höchstens 5 Sekunden

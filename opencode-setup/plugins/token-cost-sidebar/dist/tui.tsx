@@ -521,7 +521,7 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
     if (kimiQuota() === undefined) return "Monat …"
     const current = kimiQuota()?.monthly
     if (!current) return "Monat n/v"
-    return `Monat ${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(current.usedPercent)}% verbraucht`
+    return `Monat ${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(current.usedPercent)}%`
   }
   const kimiQuotaDate = () => {
     const resetAt = kimiQuota()?.monthly?.resetAt
@@ -532,7 +532,7 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
     if (kimiQuota() === undefined) return "5 Stunden …"
     const current = kimiQuota()?.fiveHour
     if (!current) return "5 Stunden n/v"
-    return `5 Stunden ${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(current.usedPercent)}% verbraucht`
+    return `5 Stunden ${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(current.usedPercent)}%`
   }
 
   const quotaLabel = () => {
