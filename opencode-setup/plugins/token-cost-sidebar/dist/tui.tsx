@@ -899,14 +899,6 @@ function View(props: {
     <Show when={hasAnything()}>
       <box>
         <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>
-        <Show when={isKimiCodeProvider(modelMeta().providerID)}>
-          <text fg={theme().textMuted}>API-Vergleich, kein Abo-Abzug</text>
-        </Show>
-        <Show when={pricedModel()?.cost?.cache_write === 3 && (
-          isKimiCodeProvider(modelMeta().providerID) || modelMeta().providerID === "moonshotai" || modelMeta().providerID === "moonshotai-cn"
-        )}>
-          <text fg={theme().textMuted}>Cache-Write: 5min-Schätzung</text>
-        </Show>
         <Row
           api={props.api}
           label="Inputpreis"

@@ -48,6 +48,7 @@ Pro 1M Tokens, USD:
 - Monatlichen Reset nicht aus Monatsanfang, Abodatum oder Zahlungsdatum schätzen. Neue Tarife ohne Wochenlimit, alte mit 7-Tage-Zyklus; beide mit Monatsgesamtlimit. Jahresabos erhalten Monatsleistungen; ungenutzte Monatsleistungen verfallen.
 - Extra Usage ist separates, nicht verfallendes RMB-Guthaben. Optionales monatliches Ausgabenlimit und Monats-Abo sind verschiedene Größen. API-Dollarpreise garantieren keine identische Extra-Usage-Abbuchung.
 - Polling begrenzen, Anfragen zusammenfassen, Timeout setzen und bei Fehlern `n/v` statt alter Kontodaten anzeigen. API-Key nur an die zur Provider-ID gehörende feste Region senden, ohne Redirects. Die Sidebar aktualisiert minütlich und nach Antworten.
+- **Live-Befund 29.09.2026, 12:55 Uhr (Sidebar 1.17.1):** `limit_5h.used_ratio` kann fälschlich 0 melden, obwohl `limits[]` einen positiven Verbrauch enthält. Nur explizite 5h-Fenster (300 Minuten/5 Stunden/18.000 Sekunden) mit gültigen Zählern und aktivem Reset verwenden. Bei Null-Ratio muss der Reset beider Schemas innerhalb 5 Sekunden übereinstimmen; dann `detail.used / detail.limit ×100`. Positive Ratios bleiben bevorzugt. Monatsfeld nicht als Ausschlusskriterium verwenden. Zähler können gröber gerundet sein als die Webseite. Quelle: reale Antwort von `https://api.kimi.ai/coding/v1/usages`, Fehlerdetails in Almanach #12.
 
 Quellen [offiziell, 29.09.2026]:
 - https://github.com/MoonshotAI/kimi-code/blob/06ebfc821e304bd4ca3f828ae739954166463d65/packages/oauth/src/managed-usage.ts

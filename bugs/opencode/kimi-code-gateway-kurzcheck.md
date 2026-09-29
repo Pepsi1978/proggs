@@ -16,3 +16,4 @@
 | 7 | Monatsanzeige fehlt/falscher Reset | Nur `usages.limit_month_total`, Ratio ×100 verbraucht, Datum aus `reset_time`. | #9 |
 | 8 | Token/Cache doppelt gezählt | Messages-Input exklusiv Cache, Chat/Responses inklusiv; Output inklusiv Reasoning. | #10 |
 | 9 | TUI-SDK beanstandet `path`/`body` | SDK v2 verlangt flache Parameter (`sessionID`, `directory`, …). | #11 |
+| 10 | 5h zeigt 0 %, Webseite positiven Verbrauch | Gleiches aktives 5h-Fenster in `limits[]` mit `used / limit` auswerten, Reset abgleichen. Gilt auch bei vorhandenem Monatsfeld. | #12 |

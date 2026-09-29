@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.17.0 – 29.09.2026 12:48
+Stand: v1.17.1 – 29.09.2026 12:55
 
 ## Funktionen
 
@@ -30,6 +30,10 @@ Stand: v1.17.0 – 29.09.2026 12:48
   ohne zusätzliche API-Anfragen; unter einer Stunde steht nur die Minutenzahl.
   Ein abgelaufener Zeitpunkt erscheint bis zum nächsten Anbieterabruf als `Reset fällig`.
   Fehlende 5h-Daten ergeben `5 Stunden n/v`, ohne den Monatswert zu beeinträchtigen.
+- Kimi kann gleichzeitig eine falsche 5h-Ratio von 0 und korrekte Zähler in `limits[]` liefern.
+  Bei explizit fünf Stunden, gültigen Zählern und demselben aktiven Reset (höchstens 5 Sekunden
+  Unterschied) verwendet die Sidebar dann `used / limit`. Diese API-Zähler können gröber gerundet
+  sein als die Webseite. Positive Ratios bleiben bevorzugt; widersprüchliche Fenster ergeben `n/v`.
 - Das Modell erscheint orange, fett und unterstrichen. Darunter steht das Kontingent in der normalen Theme-Textfarbe, beispielsweise `Woche 62% (23. Juli)`; nur das Klammerdatum ist hellgrau. Kontingent, Effort-Auswahl und Arbeitsmodi folgen ohne Leerzeilen direkt aufeinander.
 - Sofortige Kontingentaktualisierung nach abgeschlossenen OpenAI-Modellaufrufen, zusätzlicher Nachabruf nach zwei Sekunden und minütlicher Abgleich für andere Codex-Sitzungen.
 - Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
@@ -66,8 +70,9 @@ Stand: v1.17.0 – 29.09.2026 12:48
   eine **5min-Schätzung**; 1h kostet 6 USD, die TTL-Aufteilung fehlt im Session-Ledger.
   `kimi-k2.7-code` = 0,95/4/0,19 USD; HighSpeed = 1,90/8/0,38; K2.6 = 0,95/4/0,16.
   Kein separat ausgewiesener K2-Write-Tarif wird als Nullpreis erfunden.
-- Coding-`k3` und `k3-256k` behalten denselben **API-Vergleichstarif**, ausdrücklich als
-  `API-Vergleich, kein Abo-Abzug` markiert. K3-256K benötigt laut Kimi ungefähr halb so viel
+- Coding-`k3` und `k3-256k` behalten denselben **API-Vergleichstarif**. Die zusätzlichen
+  Hinweiszeilen zu API-Vergleich und Cache-Write-Schätzung sind auf Benutzerwunsch aus der TUI entfernt.
+  K3-256K benötigt laut Kimi ungefähr halb so viel
   **Abo-Kontingent** wie K3 (1M); dieser Unterschied steht unter den beiden Kontingentzeilen.
   Das ist keine Halbierung tatsächlicher Tokens oder ein veröffentlichter halber API-Dollarpreis.
   `kimi-for-coding` steht seit 11.09.2026 für **K2.8 Preview**: ohne veröffentlichten USD-Tarif

@@ -1,7 +1,7 @@
 # Kimi Code (Kimi for Coding) in OpenCode — Bug-Almanach
 
 > **Lesen vor Arbeit an Kimi-Code-Abo/Kimi-Provider in OpenCode oder anderen Drittanbieter-Clients.**
-> **Stand:** 29.09.2026, 12:37 Uhr, ergänzt durch Engine C mit sieben Researchern. **Anker:** Kimi Code Docs
+> **Stand:** 29.09.2026, 12:55 Uhr; Engine C mit sieben Researchern plus Live-Diagnose des 5h-Parsers. **Anker:** Kimi Code Docs
 > Stand 29.09.2026 (`kimi-for-coding` = K2.8 Preview, `k3`, `k3-256k`, `kimi-for-coding-highspeed`);
 > ältere opencode-Issues betreffen 1.15.3; neue Befunde Sidebar 1.15.0→1.16.0 / OpenCode 1.18.33.
 > Best-Practices-Gegenseite: `best-practices/opencode/kimi-code-abo.md`. Kurzcheck: `kimi-code-gateway-kurzcheck.md`.
@@ -71,6 +71,15 @@
 - **Ursache:** `TuiPluginApi.client` importiert `@opencode-ai/sdk/v2`; Sidebar übergab `{path, query}` beziehungsweise `{body, query}`.
 - **Fix:** 1.16.0 verwendet `session.messages({sessionID, directory})` und `app.log({service, level, message, extra, directory})`. Loggingfehler dürfen keine unbehandelten TUI-Rejections erzeugen.
 - **Beleg:** lokale installierte `@opencode-ai/plugin/dist/tui.d.ts` und `@opencode-ai/sdk/dist/v2/gen/sdk.gen.d.ts` (Plugin 1.17.15).
+
+### 12. 5h-Ratio meldet 0 trotz positivem Verbrauchszähler
+- **Symptom:** Sidebar 1.17.0 zeigt 0 %, die Kimi-Webseite zeigt knapp die Hälfte verbraucht; Monat stimmt.
+- **Ursache:** `parseKimiQuota` las nur `usages.limit_5h.used_ratio`. Die reale Antwort enthält dort 0, gleichzeitig unter `limits[]` ein Fenster mit `duration=300`, `timeUnit=TIME_UNIT_MINUTE`, gültigem `detail.used`/`detail.limit` und nahezu demselben Reset. Die beiden Schemas sind nicht immer konsistent. Die bekannte Mischschema-Falle wurde beim ersten Einbau nicht berücksichtigt.
+- **Fix in 1.17.1:** Nur eindeutig identifizierte aktive 5h-Zähler verwenden. Bei fehlender Ratio als Ersatz; bei Null-Ratio und positivem Zähler nur mit gleichem Reset (Toleranz 5 Sekunden). Positive Ratios bleiben bevorzugt. Widersprüchliche Reset-Zeiten ergeben `n/v`, alte Fenster und 7-Tage-Limits werden nicht als 5h übernommen. Der Monatsparser bleibt unabhängig.
+- **Genauigkeit:** Zähler können ganze Prozent liefern, während die Webseite Nachkommastellen zeigt; keine Scheingenauigkeit erfinden.
+- **Belege:** eigene authentifizierte Antwort von `https://api.kimi.ai/coding/v1/usages` am 29.09.2026; ergänzende externe Referenz https://github.com/steipete/CodexBar/blob/25bba9b7fd9ce83c33053958f7366e23b2dc8a82/Tests/CodexBarTests/KimiRatioPoolTests.swift . Unsere Live-Antwort hat auch ein Monatsfeld — dessen Vorhandensein darf den 5h-Ersatz nicht ausschließen.
+- **Abnahme:** korrigierter Live-Abruf liefert positiven 5h-Verbrauch mit passendem Countdown; Bun/OpenTUI-Build erfolgreich. Keine Testsuite/visuelle Abnahme im Schnellmodus.
+- **UI-Wunsch:** Die Hinweiszeilen „API-Vergleich, kein Abo-Abzug“ und „Cache-Write: 5min-Schätzung“ ab 1.17.1 auf ausdrücklichen Benutzerwunsch entfernt; Tarifsemantik bleibt in der README dokumentiert.
 
 ## Ursachen- und Absicherungsnotiz
 
