@@ -18,7 +18,29 @@
   const CBY = Object.fromEntries(CATS.map(c => [c.id, c]));
   const SRC = D.sources;
   const VENDORS = [...new Set(MODELS.map(m => m.vendor))];
-  const ORDER = Object.fromEntries(D.series.map((s, i) => [s.id, i]));
+  const SRC_ORDER = Object.keys(SRC);
+
+  // Gleiche Benchmarks aus verschiedenen Quellen bilden eine Gruppe (Feld `group`).
+  // Jede Gruppe ist eine Zeile auf der Seite, die Quelle wählt man per Schalter.
+  const measuredAll = s => MODELS.filter(m => s.values[m.id] != null).length;
+  const GROUPS = [];
+  (function buildGroups() {
+    const map = {};
+    D.series.forEach((s, i) => {
+      const k = s.group || s.id;
+      if (!map[k]) { map[k] = { key: k, vars: [], idx: i }; GROUPS.push(map[k]); }
+      map[k].vars.push(s);
+    });
+    GROUPS.forEach(g => {
+      g.vars.sort((a, b) => SRC_ORDER.indexOf(a.source) - SRC_ORDER.indexOf(b.source));
+      g.stars = Math.max(...g.vars.map(v => v.stars || 0));
+      g.cat = g.vars[0].cat;
+      g.def = g.vars.reduce((best, v) => measuredAll(v) > measuredAll(best) ? v : best, g.vars[0]);
+    });
+  })();
+  const GBY = Object.fromEntries(GROUPS.map(g => [g.key, g]));
+  let srcSel = store.get("src", {});
+  const sel = g => g.vars.find(v => v.id === srcSel[g.key]) || g.def;
 
   // ── Farben als CSS-Variablen (hell + dunkel) ───────────────────────────────
   (function injectColors() {
@@ -86,8 +108,8 @@
   }
   const better = (s, a, b) => s.lower ? a < b : a > b;
   const ranking = (s, ids) => ids.map(id => ({ id, v: val(s, id) })).filter(r => r.v != null).sort((a, b) => s.lower ? a.v - b.v : b.v - a.v);
-  const byImportance = (a, b) => (b.stars || 0) - (a.stars || 0) || ORDER[a.id] - ORDER[b.id];
-  const matchesQuery = s => !query || (s.name + " " + (s.desc || "") + " " + SRC[s.source].short + " " + (CBY[s.cat]?.label || "")).toLowerCase().includes(query);
+  const byImportance = (a, b) => b.stars - a.stars || a.idx - b.idx;
+  const matchesQuery = g => !query || g.vars.some(s => (s.name + " " + (s.desc || "") + " " + SRC[s.source].short + " " + (CBY[s.cat]?.label || "")).toLowerCase().includes(query));
 
   // ── Modellwahl ─────────────────────────────────────────────────────────────
   function renderLegend() {
@@ -131,7 +153,7 @@
   // ── Bereich, Ansicht, Filter ───────────────────────────────────────────────
   function renderTabs() {
     const tabs = [{ id: "alle", label: "Alle" }, ...CATS];
-    const count = id => D.series.filter(s => (id === "alle" || s.cat === id) && (s.stars || 0) >= minStars).length;
+    const count = id => GROUPS.filter(g => (id === "alle" || g.cat === id) && g.stars >= minStars).length;
     $("#tabs").innerHTML = tabs.map(t => `<button type="button" data-c="${t.id}" aria-pressed="${t.id === cat}">${esc(t.label)} <span class="cnt">${count(t.id)}</span></button>`).join("");
     $("#views").innerHTML = VIEWS.map(([k, l, ic]) => `<button type="button" data-v="${k}" aria-pressed="${k === view}" title="Ansicht: ${l}">${ic}<span>${l}</span></button>`).join("");
     $("#minstars").value = String(minStars);
@@ -157,7 +179,7 @@
     if (ids.length < 2) { el.innerHTML = `<p class="empty">Wähle oben mindestens zwei Modelle aus. Dann steht hier, wer in welchem Bereich vorn liegt.</p>`; return; }
     el.innerHTML = D.focus.map(cid => {
       const c = CBY[cid];
-      const ser = D.series.filter(s => s.cat === cid && !s.noRank && (s.stars || 0) >= minStars);
+      const ser = GROUPS.filter(g => g.cat === cid && g.stars >= minStars).map(sel).filter(s => !s.noRank);
       const wins = {}; let base = 0;
       ser.forEach(s => { const r = ranking(s, ids); if (r.length >= 2) { base++; wins[r[0].id] = (wins[r[0].id] || 0) + 1; } });
       const top = Object.entries(wins).sort((a, b) => b[1] - a[1]);
@@ -175,11 +197,10 @@
   $("#leaders").addEventListener("click", e => { const b = e.target.closest(".lead"); if (b) setCat(b.dataset.c, true); });
 
   // ── Zeilen ─────────────────────────────────────────────────────────────────
-  function badges(s, showCat) {
-    const src = SRC[s.source];
+  function badges(g, s, showCat) {
     const b = [];
     if (showCat) b.push(`<span class="bdg cat">${esc(CBY[s.cat].label)}</span>`);
-    b.push(`<span class="bdg src" title="${esc(src.desc || "")}">${esc(src.short)}</span>`);
+    if (g.vars.length === 1) b.push(`<span class="bdg src" title="${esc(SRC[s.source].desc || "")}">${esc(SRC[s.source].short)}</span>`);
     if (s.version) b.push(`<span class="bdg">v${esc(s.version)}</span>`);
     if (s.effort) b.push(`<span class="bdg" title="Denkaufwand, mit dem gemessen wurde">Effort ${esc(s.effort)}</span>`);
     if (s.jur) b.push(`<span class="bdg jur">${esc(s.jur)}</span>`);
@@ -188,13 +209,26 @@
     return b.join("");
   }
 
+  // Quellen-Schalter: je Quelle die Zahl der gewählten Modelle, die dort gemessen wurden
+  function srcSwitch(g, ms) {
+    if (g.vars.length < 2) return "";
+    const cur = sel(g);
+    return `<div class="srcsw" role="group" aria-label="Quelle für ${esc(g.vars[0].name)} wählen"><span class="srcsw-l">Quelle</span>${g.vars.map(v => {
+      const n = ms.filter(m => val(v, m.id) != null).length;
+      return `<button type="button" data-g="${esc(g.key)}" data-s="${esc(v.id)}" aria-pressed="${v.id === cur.id}" title="${esc(SRC[v.source].label)}: ${n} der gewählten Modelle gemessen">${esc(SRC[v.source].short)} <span class="cnt">${n}</span></button>`;
+    }).join("")}</div>`;
+  }
+
   function missLine(s, ms) {
     const miss = ms.filter(m => val(s, m.id) == null);
     return miss.length ? `<p class="miss">Nicht gemessen: ${miss.map(m => `<span>${shapeSvg(m, 10)}${esc(m.short || m.name)}</span>`).join("")}</p>` : "";
   }
 
+  const NONE = `<p class="miss none">Diese Quelle hat keines der gewählten Modelle gemessen. Wähle links eine andere Quelle.</p>`;
+
   function vizBars(s, ms, ax) {
     const measured = ms.filter(m => val(s, m.id) != null);
+    if (!measured.length) return `<div class="bars">${NONE}</div>`;
     const best = ranking(s, measured.map(m => m.id))[0];
     const bars = measured.map(m => {
       const v = val(s, m.id), mt = meta(s, m.id);
@@ -210,13 +244,14 @@
       return `<div class="b${isBest ? " best" : ""}" data-tip="${esc(tip)}">${tag}<div class="trk"><span class="fill" style="width:${pct}%;background:var(--m-${m.id})"></span><span class="val${inside ? " in" : ""}" style="${pos}">${label}</span></div></div>`;
     }).join("");
     const scale = ax.dot || ax.hi !== 100 ? `<span class="scale-note">Skala ${fmt(s, ax.lo)} bis ${fmt(s, ax.hi)}</span>` : "";
-    return `<div class="bars">${bars || `<p class="miss">Keines der gewählten Modelle wurde hier gemessen.</p>`}${scale}${missLine(s, ms)}</div>`;
+    return `<div class="bars">${bars}${scale}${missLine(s, ms)}</div>`;
   }
 
   function vizStrip(s, ms, ax) {
     const W = 600, H = 34, pad = 12;
     const x = v => pad + (Math.max(ax.lo, Math.min(ax.hi, v)) - ax.lo) / (ax.hi - ax.lo) * (W - 2 * pad);
     const rs = ranking(s, ms.map(m => m.id));
+    if (!rs.length) return `<div class="stripw">${NONE}</div>`;
     let g = `<line x1="${pad}" x2="${W - pad}" y1="17" y2="17" stroke="var(--track)" stroke-width="3" stroke-linecap="round"/>`;
     [...rs].reverse().forEach(r => {
       const m = MBY[r.id], mt = meta(s, r.id);
@@ -247,30 +282,33 @@
     return `<div class="side"><span class="win">${shapeSvg(w, 12)}${esc(w.short || w.name)}</span>${cov}</div>`;
   }
 
-  function explHtml(s) {
+  function explHtml(s, open) {
     const e = EXPL[s.info || s.bench];
     if (!e) return "";
-    return `<details class="expl"><summary>Was misst ${esc(s.name)}?</summary><div class="expl-body">${(Array.isArray(e) ? e : [e]).map(p => `<p>${p}</p>`).join("")}</div></details>`;
+    return `<details class="expl"${open ? " open" : ""}><summary>Was misst ${esc(s.name)}?</summary><div class="expl-body">${(Array.isArray(e) ? e : [e]).map(p => `<p>${p}</p>`).join("")}</div></details>`;
   }
 
-  function rowHtml(s, ms, showCat) {
+  function rowHtml(g, ms, showCat, open) {
+    const s = sel(g);
     const ax = axis(s);
     const viz = view === "linie" ? vizStrip(s, ms, ax) : vizBars(s, ms, ax);
-    return `<article class="row" id="r-${s.id}">
-      <div class="name"><button type="button" class="title" data-expl="${s.id}" title="Erklärung auf- oder zuklappen"><strong>${esc(s.name)}</strong>${starsHtml(s.stars)}</button><small>${esc(s.desc || "")}</small><div class="bdgs">${badges(s, showCat)}</div></div>
+    return `<article class="row" id="g-${esc(g.key)}">
+      <div class="name"><button type="button" class="title" data-expl="1" title="Erklärung auf- oder zuklappen"><strong>${esc(s.name)}</strong>${starsHtml(g.stars)}</button><small>${esc(s.desc || "")}</small>${srcSwitch(g, ms)}<div class="bdgs">${badges(g, s, showCat)}</div></div>
       ${viz}
       ${sideHtml(s, ms)}
-      ${s.note ? `<p class="note">${s.note}</p>` : ""}${explHtml(s)}
+      ${s.note ? `<p class="note">${s.note}</p>` : ""}${explHtml(s, open)}
     </article>`;
   }
 
   function heatHtml(list, ms, showCat) {
     const head = `<tr><th class="stick">Benchmark</th>${ms.map(m => `<th class="mh"><span>${shapeSvg(m, 11)}${esc(m.short || m.name)}</span></th>`).join("")}</tr>`;
-    const body = list.map(s => {
+    const body = list.map(g => {
+      const s = sel(g);
       const r = ranking(s, ms.map(m => m.id));
       const n = r.length;
       const pos = Object.fromEntries(r.map((x, i) => [x.id, i]));
-      return `<tr><td class="bn stick"><b>${esc(s.name)} ${starsHtml(s.stars)}</b><span>${showCat ? esc(CBY[s.cat].label) + " · " : ""}${esc(SRC[s.source].short)}${s.version ? " · v" + esc(s.version) : ""}${s.effort ? " · " + esc(s.effort) : ""}${s.lower ? " · ↓ niedriger ist besser" : ""}</span></td>${ms.map(m => {
+      const info = [showCat ? CBY[s.cat].label : "", g.vars.length < 2 ? SRC[s.source].short : "", s.version ? "v" + s.version : "", s.effort || "", s.lower ? "↓ niedriger ist besser" : ""].filter(Boolean).map(esc).join(" · ");
+      return `<tr><td class="bn stick"><b>${esc(s.name)} ${starsHtml(g.stars)}</b><span>${info}</span>${srcSwitch(g, ms)}</td>${ms.map(m => {
         const v = val(s, m.id);
         if (v == null) return `<td class="na">–</td>`;
         const p = n > 1 ? 1 - pos[m.id] / (n - 1) : 1;
@@ -280,28 +318,29 @@
     return `<div class="tbl-wrap"><table class="heat"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
   }
 
-  function filteredSeries(filterCat) {
+  function filteredGroups(filterCat) {
     const ms = activeModels();
-    return D.series.filter(s => (filterCat === "alle" || s.cat === filterCat) && (s.stars || 0) >= minStars && matchesQuery(s) && ms.some(m => val(s, m.id) != null)).sort(byImportance);
+    return GROUPS.filter(g => (filterCat === "alle" || g.cat === filterCat) && g.stars >= minStars && matchesQuery(g) && g.vars.some(s => ms.some(m => val(s, m.id) != null))).sort(byImportance);
   }
 
   function renderBody() {
     const ms = activeModels();
     const body = $("#body");
     if (!ms.length) { body.innerHTML = `<div class="empty big">Kein Modell ausgewählt. <button type="button" class="btn" data-reset="modelle">Alle Modelle einblenden</button></div>`; return; }
-    const list = filteredSeries(cat);
-    const total = D.series.filter(s => cat === "alle" || s.cat === cat).length;
+    const list = filteredGroups(cat);
+    const total = GROUPS.filter(g => cat === "alle" || g.cat === cat).length;
     const showCat = cat === "alle";
     const c = CBY[cat];
     const filters = [];
     if (minStars) filters.push(`ab ${"★".repeat(minStars)}`);
     if (query) filters.push(`Suche „${esc(query)}“`);
-    const head = `<div class="cat-head"><h2>${showCat ? "Alle Benchmarks" : esc(c.label)}</h2><span class="hint">${list.length} von ${total} Benchmarks · wichtigste zuerst${filters.length ? ` · Filter: ${filters.join(", ")} <button type="button" class="lnk" data-reset="filter">zurücksetzen</button>` : ""}</span></div>`;
+    const multi = list.filter(g => g.vars.length > 1).length;
+    const head = `<div class="cat-head"><h2>${showCat ? "Alle Benchmarks" : esc(c.label)}</h2><span class="hint">${list.length} von ${total} Benchmarks · wichtigste zuerst${multi ? ` · ${multi} mit Quellen-Schalter` : ""}${filters.length ? ` · Filter: ${filters.join(", ")} <button type="button" class="lnk" data-reset="filter">zurücksetzen</button>` : ""}</span></div>`;
     const intro = !showCat && c.intro ? `<p class="cat-intro">${c.intro}</p>` : "";
     let inner;
     if (!list.length) inner = `<div class="empty big">Keine Benchmarks passen zu den Filtern. <button type="button" class="btn" data-reset="filter">Filter zurücksetzen</button></div>`;
     else if (view === "tabelle") inner = heatHtml(list, ms, showCat);
-    else inner = list.map(s => rowHtml(s, ms, showCat)).join("");
+    else inner = list.map(g => rowHtml(g, ms, showCat)).join("");
     body.innerHTML = `<section class="cat">${head}${intro}${inner}</section>`;
   }
   $("#body").addEventListener("click", e => {
@@ -309,6 +348,19 @@
     if (r) {
       if (r.dataset.reset === "modelle") setActive(MODELS.map(m => m.id));
       else { minStars = 0; query = ""; store.set("minStars", 0); $("#search").value = ""; renderTabs(); renderLeaders(); renderBody(); }
+      return;
+    }
+    const sw = e.target.closest("[data-g]");
+    if (sw) {
+      srcSel[sw.dataset.g] = sw.dataset.s; store.set("src", srcSel);
+      const row = sw.closest("article.row");
+      if (row) {
+        const open = !!row.querySelector("details.expl[open]");
+        const tmp = document.createElement("div");
+        tmp.innerHTML = rowHtml(GBY[sw.dataset.g], activeModels(), cat === "alle", open);
+        row.replaceWith(tmp.firstElementChild);
+      } else renderBody();
+      renderLeaders();
       return;
     }
     const t = e.target.closest("[data-expl]");

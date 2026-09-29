@@ -178,6 +178,15 @@ section.cat { padding-top: 32px; display: grid; gap: 10px; }
 .side .win { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; background: var(--chip); padding: 5px 8px; border-radius: 6px; }
 .side .win::before { content: "vorn"; font: 500 10px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
 
+.srcsw { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; }
+.srcsw-l { font: 500 10.5px/1 var(--font-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin-right: 2px; }
+.srcsw button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); border-radius: 6px; padding: 5px 8px; font: 500 12px/1 var(--font-body); min-height: 30px; }
+.srcsw button:hover { border-color: var(--ink-3); color: var(--ink); }
+.srcsw button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.srcsw .cnt { font: 600 10.5px/1 var(--font-mono); background: var(--chip); color: var(--ink-2); border-radius: 4px; padding: 2px 4px; }
+.srcsw button[aria-pressed="true"] .cnt { background: color-mix(in srgb, var(--bg) 25%, transparent); color: var(--bg); }
+td.bn .srcsw { margin-top: 4px; }
+.miss.none { padding-left: 0; font-style: italic; }
 details.expl { grid-column: 1 / -1; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
 details.expl summary { cursor: pointer; list-style: none; padding: 8px 12px; font-size: 13px; font-weight: 500; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
 details.expl summary::-webkit-details-marker { display: none; }
@@ -332,7 +341,7 @@ footer ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 <footer>
   <b>Quellen</b>
   <ul id="sources"></ul>
-  <p>Werte verschiedener Quellen sind nie in einer Zeile gemischt. Jede Zeile nennt Quelle, Benchmark-Version und Effort-Stufe. Abweichende Einstellungen einzelner Modelle stehen als kleines Kästchen am Wert.</p>
+  <p>Nur seriöse Primärquellen: System Cards der Hersteller und die etablierten unabhängigen Testlabore Artificial Analysis, Vals.ai und LMArena. Aggregator-Seiten, die Zahlen anderer abschreiben, sind nicht enthalten. Misst mehr als eine Quelle denselben Benchmark, wählst du die Quelle direkt in der Zeile. Werte verschiedener Quellen werden nie gemischt.</p>
   <span id="ver"></span>
 </footer>
 
