@@ -45,3 +45,4 @@ VoiceAgent/**/*.onnx binary
 VoiceAgent/**/*.model binary
 *.wav binary
 GenialerWeckerAndroid/app/src/main/jniLibs/**/*.so filter=lfs diff=lfs merge=lfs -text
+GenialerWecker/app/src/main/jniLibs/**/*.so filter=lfs diff=lfs merge=lfs -text

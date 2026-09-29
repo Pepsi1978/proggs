@@ -5,6 +5,8 @@ enum class TtsProvider(val id: String, val label: String, val kurz: String) {
     QWEN("qwen", "Alibaba", "Alibaba"),
     GOOGLE_CLOUD("google_cloud", "Google Chirp 3 HD", "Google"),
     EDGE("edge_tts", "Microsoft Edge", "Edge"),
+    /** Supertonic 3 direkt auf dem Handy (sherpa-onnx), ohne Internet und ohne Schlüssel. */
+    MODELL("modell_tts", "Supertonic · auf dem Handy", "Supertonic"),
 }
 
 enum class VoiceGender {

@@ -71,6 +71,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
         TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice
         TtsProvider.QWEN.id -> settings.qwenStandardVoice
         TtsProvider.QWEN_CLONE.id -> settings.qwenTtsVoiceId
+        TtsProvider.MODELL.id -> settings.modellStimme
         else -> settings.edgeTtsVoice
     }) }
     var rate by remember(revision) { mutableFloatStateOf(settings.ttsSpeechRate) }
@@ -152,10 +153,11 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             Toggle("Statuszeile anzeigen", statuszeile) { statuszeile = it; settings.statuszeileSichtbar = it }
         }
         Section("Vorlesen · Stimmen & Tempo", collapsible = true, summary = "${when (provider) {
-            TtsProvider.GOOGLE_CLOUD.id -> "Google"; TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"; else -> "Edge"
+            TtsProvider.GOOGLE_CLOUD.id -> "Google"; TtsProvider.QWEN_CLONE.id -> "Meine Stimmen"
+            TtsProvider.MODELL.id -> "Supertonic · ${ModellKatalog.finde(settings.modellStimme)?.let(ModellKatalog::name) ?: "Sophie"}"; else -> "Edge"
         }} · Tempo ${"%.2f".format(rate)}× · gilt für alle Wecker ohne eigene Stimme") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(TtsProvider.QWEN_CLONE, TtsProvider.GOOGLE_CLOUD, TtsProvider.EDGE).forEach { item ->
+                listOf(TtsProvider.QWEN_CLONE, TtsProvider.MODELL, TtsProvider.GOOGLE_CLOUD, TtsProvider.EDGE).forEach { item ->
                     Chip3D(provider == item.id, {
                         settings.ttsProvider = item.id; provider = item.id; vm.settingsChanged()
                     }, if (item == TtsProvider.QWEN_CLONE) "Meine Stimmen" else item.label)
@@ -163,6 +165,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
             when (provider) {
                 TtsProvider.GOOGLE_CLOUD.id -> Text("Google Cloud Text-to-Speech · Chirp 3 HD. Benötigt einen dafür freigeschalteten Google-Schlüssel; ein reiner Gemini-API-Schlüssel reicht nicht automatisch.", style = MaterialTheme.typography.bodySmall)
+                TtsProvider.MODELL.id -> Text("Supertonic 3 rechnet direkt auf dem Handy – ohne Internet, ohne Schlüssel. Fünf Frauen- und fünf Männerstimmen wie in der Android-Verkaufs-App. Die Vorbereitung dauert länger als bei den Online-Stimmen, weil das Handy selbst rechnet.", style = MaterialTheme.typography.bodySmall)
                 TtsProvider.QWEN.id, TtsProvider.QWEN_CLONE.id -> Text("Alibaba Model Studio · DashScope International. Eigene Stimmen verwenden dasselbe Klonmodell wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
                 else -> Text("Microsoft Edge · kein eigener Schlüssel nötig. Für die Audio-Vorbereitung wird Internet benötigt.", style = MaterialTheme.typography.bodySmall)
             }
@@ -173,7 +176,8 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
             val available = if (provider == TtsProvider.QWEN_CLONE.id) voices.map {
                 it.id to (settings.qwenVoiceNames[it.id] ?: it.name)
-            } else catalog.map { it.id to "${it.name} · ${if (it.gender == VoiceGender.FEMALE) "weiblich" else "männlich"}" }
+            } else if (provider == TtsProvider.MODELL.id) ModellKatalog.STIMMEN.map { it.id to ModellKatalog.anzeige(it) }
+            else catalog.map { it.id to "${it.name} · ${if (it.gender == VoiceGender.FEMALE) "weiblich" else "männlich"}" }
             GoldKnopf(available.find { it.first == selected }?.second ?: settings.qwenVoiceNames[selected] ?: "Stimme auswählen", { showVoices = !showVoices }, Modifier.fillMaxWidth())
             if (showVoices) {
             Eingabefeld(search, { search = it }, "Stimmen suchen", Modifier.fillMaxWidth())
@@ -210,6 +214,7 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
                         when (provider) {
                             TtsProvider.GOOGLE_CLOUD.id -> settings.googleTtsVoice = id
                             TtsProvider.QWEN_CLONE.id -> settings.qwenTtsVoiceId = id
+                            TtsProvider.MODELL.id -> settings.modellStimme = id
                             else -> settings.edgeTtsVoice = id
                         }
                         vm.settingsChanged()
@@ -310,16 +315,36 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
             Text("Beim Erstellen wird die Stimmprobe an dein Alibaba-Konto übertragen. Löschen entfernt die Stimme aus diesem Konto und betrifft auch ihre Verwendung in Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
         }
-        Section("Spracheingabe", collapsible = true, summary = "Groq · Whisper Large V3 Turbo") {
-            Text("Groq · Whisper Large V3 Turbo")
-            key(revision) {
-                SettingToggle("Stille vorab herausfiltern", settings.filterStilleVorabAn) { settings.filterStilleVorabAn = it }
-                SettingToggle("Segmentmetriken prüfen", settings.filterSegmentmetrikenAn) { settings.filterSegmentmetrikenAn = it }
-                SettingToggle("Zeitstempel prüfen", settings.filterZeitstempelAn) { settings.filterZeitstempelAn = it }
-                SettingToggle("Erfundene Floskeln herausfiltern", settings.filterFloskelnAn) { settings.filterFloskelnAn = it }
+        var diktatWeg by remember(revision) { mutableStateOf(settings.diktatWeg) }
+        var erkennungOffen by remember { mutableStateOf(false) }
+        var erkennungStand by remember { mutableIntStateOf(0) }
+        val lokalesModell = remember(erkennungStand, erkennungOffen) { Erkennung.aktiv(activity) }
+        Section("Spracheingabe", collapsible = true, summary = if (diktatWeg == "lokal")
+            "Auf dem Handy · ${lokalesModell?.modellName ?: "Modell noch nicht geladen"}" else "Groq · Whisper Large V3 Turbo (API-Schlüssel)") {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip3D(diktatWeg == "groq", { diktatWeg = "groq"; settings.diktatWeg = "groq"; vm.settingsRevision.value++ }, "Groq · API-Schlüssel")
+                Chip3D(diktatWeg == "lokal", { diktatWeg = "lokal"; settings.diktatWeg = "lokal"; vm.settingsRevision.value++ }, "Auf dem Handy · Whisper")
             }
-            Text("Die Spracheingabe benötigt Internet. Der fertige Wecker benötigt es nicht.", style = MaterialTheme.typography.bodySmall)
+            if (diktatWeg == "lokal") {
+                Text("Whisper läuft direkt auf dem Handy, ganz ohne Internet und ohne Schlüssel. Einmalig herunterladen: " +
+                    "Standard (Whisper Small, ${ErkennungsModell.STANDARD.mb}, schnell) oder Premium (Whisper Large V3 Turbo, ${ErkennungsModell.PREMIUM.mb}, etwa halb so viele Fehler).",
+                    style = MaterialTheme.typography.bodySmall)
+                Text(lokalesModell?.let { "✓ Aktiv: ${it.titel} · ${it.modellName}" } ?: "Noch kein Modell geladen – bis dahin nutzt das Diktat die Offline-Erkennung von Android.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (lokalesModell != null) LocalSemantisch.current.erfolg else LocalSemantisch.current.warnung)
+                GoldKnopf("Modell wählen und herunterladen", { erkennungOffen = true }, Modifier.fillMaxWidth())
+            } else {
+                Text("Groq · Whisper Large V3 Turbo")
+                key(revision) {
+                    SettingToggle("Stille vorab herausfiltern", settings.filterStilleVorabAn) { settings.filterStilleVorabAn = it }
+                    SettingToggle("Segmentmetriken prüfen", settings.filterSegmentmetrikenAn) { settings.filterSegmentmetrikenAn = it }
+                    SettingToggle("Zeitstempel prüfen", settings.filterZeitstempelAn) { settings.filterZeitstempelAn = it }
+                    SettingToggle("Erfundene Floskeln herausfiltern", settings.filterFloskelnAn) { settings.filterFloskelnAn = it }
+                }
+                Text("Die Spracheingabe über Groq benötigt Internet und den Groq-Schlüssel (Sprachschlüssel). Der fertige Wecker benötigt es nicht.", style = MaterialTheme.typography.bodySmall)
+            }
         }
+        if (erkennungOffen) ErkennungDialog { erkennungOffen = false; erkennungStand++ }
         Section("KI-Textverbesserung", collapsible = true, summary = if (vm.auth.isConnected) "ChatGPT verbunden" else "ChatGPT-Anmeldung einrichten") {
             Text(if (vm.auth.isConnected) "ChatGPT verbunden: ${vm.auth.email.orEmpty()}" else "ChatGPT noch nicht verbunden")
             if (vm.auth.isConnected) StillerKnopf("Abmelden", { vm.auth.logout(); vm.settingsRevision.value++ })

@@ -28,7 +28,9 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
             TtsProvider.GOOGLE_CLOUD.id -> hash(voice.googleTtsApiKey)
             TtsProvider.QWEN.id, TtsProvider.QWEN_CLONE.id -> hash(voice.qwenTtsApiKey)
             else -> ""
-        }).joinToString("|")
+        }).joinToString("|") +
+        // Nur bei Supertonic angehängt: So bleibt schon vorbereitetes Audio der anderen Stimmen gültig.
+        if (voice.ttsProvider == TtsProvider.MODELL.id) "|${voice.modellStimme}|${ModellStimmen.SCHRITTE}" else ""
     val playbackSpeed: Float get() = voiceFactory().playbackSpeed
 
     suspend fun prepare(alarm: Alarm, progress: suspend (String) -> Unit = {}) = mutex.withLock {
@@ -144,6 +146,9 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                         }
                     } finally { edge.shutdown() }
                 }
+            } else if (voice.ttsProvider == TtsProvider.MODELL.id) {
+                // Supertonic rechnet direkt auf dem Handy; die WAV-Datei landet ohne Umweg im Zwischenstand.
+                ModellStimmen.synthetisiere(context, text, voice.modellStimme, voice.ttsSpeechRate, temporary)
             } else {
                 val source = Synthese(context, voice).synthetisiere(text)
                 try { source.copyTo(temporary, overwrite = true) } finally { source.delete() }

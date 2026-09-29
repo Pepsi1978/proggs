@@ -157,7 +157,17 @@ class SecureSettings(context: Context) : Closeable {
             preferences?.edit()?.putStringSet(Keys.FAVORITE_TTS_VOICES, value.toSet())?.apply()
         }
 
+    /** Lokale Supertonic-Stimme (Kennung aus ModellKatalog), gilt, wenn [ttsProvider] „modell_tts“ ist. */
+    var modellStimme: String
+        get() = readString(Keys.MODELL_STIMME, Defaults.MODELL_STIMME)
+        set(value) = writeString(Keys.MODELL_STIMME, value)
+
     // ---- Spracheingabe (Baustein F) ----
+
+    /** Diktat über „groq“ (API-Schlüssel, Internet) oder „lokal“ (heruntergeladenes Whisper-Modell auf dem Handy). */
+    var diktatWeg: String
+        get() = readString(Keys.DIKTAT_WEG, Defaults.DIKTAT_WEG)
+        set(value) = writeString(Keys.DIKTAT_WEG, value)
 
     var groqApiKey: String
         get() = readString(Keys.GROQ_API_KEY, "")
@@ -300,6 +310,8 @@ class SecureSettings(context: Context) : Closeable {
 
     object Keys {
         const val TTS_PROVIDER = "tts_provider"
+        const val MODELL_STIMME = "modell_stimme"
+        const val DIKTAT_WEG = "diktat_weg"
         const val EDGE_TTS_VOICE = "edge_tts_voice"
         const val GOOGLE_TTS_API_KEY = "google_tts_api_key"
         const val GOOGLE_TTS_VOICE = "google_tts_voice"
@@ -334,6 +346,8 @@ class SecureSettings(context: Context) : Closeable {
 
     object Defaults {
         const val TTS_PROVIDER = "edge_tts"
+        const val MODELL_STIMME = "modell:supertonic:3"
+        const val DIKTAT_WEG = "groq"
         const val EDGE_TTS_VOICE = "de-DE-SeraphinaMultilingualNeural"
         const val GOOGLE_TTS_VOICE = "de-DE-Chirp3-HD-Kore"
         const val QWEN_STANDARD_VOICE = "Cherry"

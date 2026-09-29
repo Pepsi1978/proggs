@@ -246,17 +246,8 @@ object MorgenruheGestalt : WeckerGestalt {
      * und nach einem Palettenwechsel hätte sie erst recht nicht mehr gepasst.
      */
     @Composable override fun Motiv(modifier: Modifier) {
-        // Das Bild stammt noch aus der abgelösten Salbei-/Terrakotta-Welt. Bis es in Leinen und
-        // Tinte neu erzeugt ist, nimmt eine Entsättigung ihm die Buntheit: Terrakotta wird
-        // Messingbraun, Salbei ein ruhiges Graugrün. Das ist eine Tonwertkorrektur, keine
-        // flache Einfärbung — Schattierung und Materialwirkung bleiben vollständig erhalten.
-        Image(
-            painter = painterResource(R.drawable.design_bett_frei),
-            contentDescription = null,
-            modifier = if (modifier == Modifier) Modifier.size(120.dp) else modifier,
-            contentScale = ContentScale.Fit,
-            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.55f) }),
-        )
+        // Seit 28.09.2026 eine gezeichnete Endlosszene statt des Bettbilds: Tür, Person, Schlaf, Sonnenaufgang.
+        SchlafSzene(if (modifier == Modifier) Modifier.size(120.dp) else modifier)
     }
 
     override val zeigtRestzeitRing = false
@@ -287,7 +278,17 @@ object TraumraumGestalt : WeckerGestalt {
                 // Die Glutkuppel bleibt oben, die Ecken sinken weg — daher der höchste Wert
                 // der vier Designs (28 Prozent im Dunkeln).
                 .vignette(LocalMaterial.current.vignetteAlpha),
-        )
+        ) {
+            // Überall im Hintergrund leuchten Sterne auf und verlöschen wieder, hell wie dunkel.
+            FunkelHimmel(
+                Modifier.fillMaxSize(),
+                stern = if (gold.istDunkel) Color(0xFFFFF4E0) else gold.primaer,
+                akzent = if (gold.istDunkel) gold.primaer else gold.akzentWarm,
+                dichte = 0.9f,
+                satelliten = true,
+                staerke = if (gold.istDunkel) 0.85f else 0.7f,
+            )
+        }
     }
 
     /**
@@ -377,11 +378,17 @@ object OrbitGestalt : WeckerGestalt {
 }
 
 
+private val MATRIX_KOPF = Color(0xFFD6FFE0)
+private val MATRIX_HELL = Color(0xFF00FF41)
+private val MATRIX_MITTEL = Color(0xFF008F11)
+/** Im Hellen: so knallig wie möglich, aber dunkel genug, um auf hellem Grund zu tragen. */
+private val MATRIX_KNALL_HELLMODUS = Color(0xFF00C832)
+
 /**
  * Orbits Zeichenregen: senkrechte Spalten fallender Zeichen mit hellem Kopf und verblassendem
- * Schweif, in der Primärfarbe des Designs (Eisblau), vereinzelt ein Limetten-Akzent.
+ * Schweif, in den Originalfarben der Matrix.
  *
- * Günstig gezeichnet: ein einziger nativer `Paint`, kein Textmesser, rund 20 Bilder pro Sekunde, und
+ * Günstig gezeichnet: ein einziger nativer `Paint`, kein Textmesser, rund 60 Bilder pro Sekunde, und
  * der Zeitwert wird nur im Zeichenblock gelesen — dadurch zeichnet sich allein diese Ebene neu, nie
  * die App darüber. Bei reduzierter Bewegung steht der Regen still.
  */
@@ -396,7 +403,9 @@ private fun ZeichenRegen(modifier: Modifier) {
     if (!reduziert) androidx.compose.runtime.LaunchedEffect(Unit) {
         var letzte = 0L
         while (true) {
-            androidx.compose.runtime.withFrameMillis { t -> if (t - letzte >= 50) { zeit.longValue = t; letzte = t } }
+            // Bei 20 Bildern/s sprangen die Köpfe sichtbar; ~60 Bilder/s laufen gleichmäßig. Auf 120-Hz-Displays
+            // wird jedes zweite Bild ausgelassen, damit der Hintergrund nicht doppelt so viel Akku kostet.
+            androidx.compose.runtime.withFrameMillis { t -> if (t - letzte >= 15) { zeit.longValue = t; letzte = t } }
         }
     }
     val zeichen = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜ0123456789:.=+<>"
@@ -405,12 +414,12 @@ private fun ZeichenRegen(modifier: Modifier) {
     }
     androidx.compose.foundation.Canvas(modifier) {
         val t = zeit.longValue
-        val schrift = 15.dp.toPx()
+        val schrift = 16.dp.toPx()
         stift.textSize = schrift
-        val spaltenBreite = schrift * 1.25f
+        val spaltenBreite = schrift * 0.95f
         val spalten = (size.width / spaltenBreite).toInt() + 1
-        val schweif = 16
-        val grundAlpha = if (dunkel) 0.34f else 0.34f
+        val schweif = 18
+        val grundAlpha = if (dunkel) 0.62f else 0.5f
         val leinwand = drawContext.canvas.nativeCanvas
         for (spalte in 0 until spalten) {
             // Jede Spalte hat ihr eigenes, festes Tempo und ihren eigenen Versatz.
@@ -425,15 +434,18 @@ private fun ZeichenRegen(modifier: Modifier) {
                 if (y < -schrift || y > size.height + schrift) continue
                 val reihe = ((y / schrift).toInt())
                 // Die Zeichen flackern gelegentlich um, wie im Original.
-                val wahl = (spalte * 31 + reihe * 17 + (t / 180).toInt() * (if ((spalte + reihe) % 5 == 0) 1 else 0)) % zeichen.length
+                // floorMod: Knapp über dem oberen Rand ist die Reihe negativ – ein normales % ergab dort einen
+                // negativen Index und brachte die App zum Absturz (IndexOutOfBounds, 27.09.2026).
+                val wahl = Math.floorMod(spalte * 31L + reihe * 17L + (t / 180) * (if (Math.floorMod(spalte + reihe, 5) == 0) 1 else 0), zeichen.length.toLong()).toInt()
                 val anteil = 1f - i / schweif.toFloat()
                 val istKopf = i == 0
+                // Originalfarben der Matrix: weißgrüner Kopf, leuchtendes #00FF41, zum Schweifende #008F11.
+                // Im Hellen trägt Neongrün auf hellem Grund nicht — dort dunkleres Matrixgrün.
+                val schweifFarbe = androidx.compose.ui.graphics.lerp(
+                    if (dunkel) MATRIX_HELL else MATRIX_KNALL_HELLMODUS, if (dunkel) MATRIX_MITTEL else MATRIX_MITTEL, (1f - anteil) * (1f - anteil))
                 val c = when {
-                    // Im Hellen trägt Weiß auf hellem Grund nicht — dort leuchtet der Kopf in kräftigem Eisblau.
-                    istKopf -> if (dunkel) androidx.compose.ui.graphics.Color.White.copy(alpha = (grundAlpha * 1.6f).coerceAtMost(0.6f))
-                        else farbe.copy(alpha = 0.6f)
-                    (spalte + reihe) % 23 == 0 -> akzent.copy(alpha = grundAlpha * anteil)
-                    else -> farbe.copy(alpha = grundAlpha * anteil * anteil + 0.02f)
+                    istKopf -> (if (dunkel) MATRIX_KOPF else MATRIX_KNALL_HELLMODUS).copy(alpha = if (dunkel) 0.9f else 0.8f)
+                    else -> schweifFarbe.copy(alpha = grundAlpha * anteil + 0.04f)
                 }
                 stift.color = c.toArgb()
                 leinwand.drawText(zeichen, wahl, wahl + 1, x, y, stift)
