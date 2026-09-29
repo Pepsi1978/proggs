@@ -487,6 +487,16 @@ $env:Path = $pathEntries -join ';'
             var shell = ResolvePowerShellExecutable();
             if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
             var title = string.IsNullOrWhiteSpace(effort) ? $"Kimi-{tabColor.Name}" : $"Kimi-{tabColor.Name}-{effort}";
+            var robustLauncherScript = shell.IsPwsh ? ResolveRobustLauncherScript() : null;
+
+            // Wie Claude und Codex: Reiter im offenen Terminal-Fenster (-w 0), farbiger Reiter und
+            // Pruefung, dass die innere Sitzung wirklich laeuft.
+            if (!string.IsNullOrEmpty(wt) && !string.IsNullOrEmpty(robustLauncherScript))
+            {
+                var process = LaunchCodexCliViaRobustPowerShell(wt, robustLauncherScript, shell.Path, innerScript, workDir, title, alias, effort, tabColor, log, "openlauncher-kimi-cli-");
+                log.Info("OpenLauncherService", "LaunchKimiCli", $"robuster Kimi-CLI-Launcher gestartet (PID {process?.Id})", new { alias, workDir, effort, tabColor = tabColor.Name });
+                return;
+            }
 
             var psi = new ProcessStartInfo
             {
@@ -587,8 +597,24 @@ try {
         Write-Host "[OpenLauncher] Achtung: keine AGENTS.md im Arbeitsverzeichnis - Kimi startet ohne Profil." -ForegroundColor Yellow
     }
     $kimi = Get-Command kimi -ErrorAction SilentlyContinue
-    $kimiPath = if ($kimi) { $kimi.Source } else { Join-Path $HOME '.kimi-codein\kimi.exe' }
-    & $kimiPath --yolo -m {{PowerShellLiteral(alias)}}
+    $kimiPath = if ($kimi) { $kimi.Source } else { Join-Path $HOME '.kimi-code\bin\kimi.exe' }
+    # --yolo immer. Direkt nach dem Oeffnen eines Terminals beendet sich Kimi gelegentlich sofort
+    # (Terminal noch nicht bereit) -- dann bis zu zwei weitere Versuche statt eines leeren Prompts.
+    $attempt = 0
+    do {
+        $attempt++
+        $startedAt = Get-Date
+        & $kimiPath --yolo -m {{PowerShellLiteral(alias)}}
+        $kimiExit = $LASTEXITCODE
+        $quickExit = ((Get-Date) - $startedAt).TotalSeconds -lt 5
+        if ($quickExit -and $attempt -lt 3) {
+            Write-Host ("[OpenLauncher] Kimi hat sich sofort beendet (Exit {0}) - neuer Versuch {1}/3 ..." -f $kimiExit, ($attempt + 1)) -ForegroundColor Yellow
+            Start-Sleep -Milliseconds 1000
+        }
+    } while ($quickExit -and $attempt -lt 3)
+    if ($kimiExit -ne 0) {
+        Write-Host ("[OpenLauncher] Kimi beendet mit Exit-Code {0}." -f $kimiExit) -ForegroundColor Yellow
+    }
 } finally {
     [Console]::Write("`e[?1004l")
     Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
@@ -640,7 +666,8 @@ try {
         string slug,
         string? effort,
         TerminalTabColor tabColor,
-        Logger log)
+        Logger log,
+        string innerMatch = "openlauncher-codex-cli-")
     {
         var tabArgs = new[]
         {
@@ -667,7 +694,7 @@ $ErrorActionPreference = 'Continue'
 $tabArgs = @({{PowerShellArrayLiteral(tabArgs)}})
 $fallbackArgs = @({{PowerShellArrayLiteral(fallbackArgs)}})
 try {
-    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch 'openlauncher-codex-cli-' -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
+    $ok = Start-WtCliRobust -LogFile {{PowerShellLiteral(log.LogPath)}} -WtPath {{PowerShellLiteral(wtPath)}} -TabArgs $tabArgs -InnerMatch {{PowerShellLiteral(innerMatch)}} -FallbackPwshArgs $fallbackArgs -FallbackWorkDir {{PowerShellLiteral(workDir)}}
     if (-not $ok) { exit 2 }
 {{TmuxLaunchVerification(innerScript, log.LogPath)}}
 } finally {
