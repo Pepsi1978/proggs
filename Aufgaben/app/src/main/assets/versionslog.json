@@ -1,0 +1,7 @@
+{
+  "format": 1,
+  "app": "Aufgaben",
+  "eintraege": [
+    { "versionCode": 1, "versionName": "1.0.0", "stand": "29.09.2026, 13:39 Uhr", "notiz": "Erste Version: Aufgaben per Sprache anlegen, KI-Korrektur und KI-Titel, Heute/Morgen mit Zeitleiste per Drag & Drop, Erinnerungen mit eigenem Ton, Heute-Widget, vier Designs mit animierten Szenen und Brücke zum Genialen Wecker" }
+  ]
+}

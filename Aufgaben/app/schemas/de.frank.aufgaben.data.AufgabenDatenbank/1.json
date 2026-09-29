@@ -1,0 +1,138 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "c67df0044ebf03cdff03003180a269ed",
+    "entities": [
+      {
+        "tableName": "aufgaben",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `titel` TEXT NOT NULL, `text` TEXT NOT NULL, `prioritaet` TEXT NOT NULL, `tag` INTEGER, `minuten` INTEGER, `dauer` INTEGER NOT NULL, `erinnerung` INTEGER NOT NULL, `vorlauf` INTEGER NOT NULL, `wiederholung` TEXT NOT NULL, `erledigt` INTEGER NOT NULL, `erledigtAm` INTEGER, `erstellt` INTEGER NOT NULL, `geaendert` INTEGER NOT NULL, `titelVonKi` INTEGER NOT NULL, `schritteJson` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titel",
+            "columnName": "titel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prioritaet",
+            "columnName": "prioritaet",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tag",
+            "columnName": "tag",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "minuten",
+            "columnName": "minuten",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dauer",
+            "columnName": "dauer",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erinnerung",
+            "columnName": "erinnerung",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "vorlauf",
+            "columnName": "vorlauf",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wiederholung",
+            "columnName": "wiederholung",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erledigt",
+            "columnName": "erledigt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erledigtAm",
+            "columnName": "erledigtAm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "erstellt",
+            "columnName": "erstellt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "geaendert",
+            "columnName": "geaendert",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titelVonKi",
+            "columnName": "titelVonKi",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "schritteJson",
+            "columnName": "schritteJson",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_aufgaben_tag",
+            "unique": false,
+            "columnNames": [
+              "tag"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_aufgaben_tag` ON `${TABLE_NAME}` (`tag`)"
+          },
+          {
+            "name": "index_aufgaben_erledigt",
+            "unique": false,
+            "columnNames": [
+              "erledigt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_aufgaben_erledigt` ON `${TABLE_NAME}` (`erledigt`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c67df0044ebf03cdff03003180a269ed')"
+    ]
+  }
+}
