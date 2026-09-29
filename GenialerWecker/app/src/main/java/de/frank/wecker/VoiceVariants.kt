@@ -20,11 +20,13 @@ data class VoiceVariant(val steps: Map<String, List<PreparedAudio>>) {
     }
 }
 
-/** Eine Idee oder ein eigener Erinnerungstext; die Grenze wird beim Erzeugen nie überschritten. */
+/** Eine Idee, eine Aufgabe oder ein eigener Erinnerungstext; die Grenze wird beim Erzeugen nie überschritten. */
 data class SpeechGroup(val step: String, val paragraphs: List<String>)
 
 object VoiceVariations {
     const val COUNT = 6
+    /** Schritte aus einzelnen Einträgen (Ideen, Aufgaben), deren Grenzen in [PreparedAudio.endOfIdea] markiert werden. */
+    val ITEM_STEPS = setOf(Step.IDEAS.name, Step.TASKS.name)
     /** Neue Synthese plus behutsame Variation; Stimme, Text und Grundtempo bleiben erhalten. */
     fun rate(base: Float, variant: Int): Float {
         val factors = when {
@@ -46,7 +48,8 @@ object VoiceVariations {
                 group.paragraphs.forEachIndexed { part, text ->
                     progress(groupIndex + 1, groups.size, variation + 1, part + 1, group.paragraphs.size)
                     variants[variation].getOrPut(group.step) { mutableListOf() }.add(render(text, variation).copy(
-                        endOfIdea = group.step == Step.IDEAS.name && part == group.paragraphs.lastIndex))
+                        // Das Ende einer Idee bzw. einer Aufgabe; dort setzt die Wiedergabe ihre Pause.
+                        endOfIdea = group.step in ITEM_STEPS && part == group.paragraphs.lastIndex))
                 }
             }
         }

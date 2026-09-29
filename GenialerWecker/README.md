@@ -27,7 +27,7 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
 
 - Beliebig viele eigenständige Wecker, Wochentage, einmalige Termine, Tagesintervalle,
   Duplizieren, nächstes Vorkommen auslassen, Schlummerdauer und Schlummerlimit.
-- Frei anordenbare Folge aus Klingelzeichen, offenen Ideen, eigenem Text und Musik.
+- Frei anordenbare Folge aus Klingelzeichen, offenen Ideen, Aufgaben des Klingeltags, eigenem Text und Musik.
   Der Ablauf wiederholt sich bis zum Stoppen. Musikdateien werden vollständig abgespielt.
 - MP3 und andere Android-Audioformate werden aus dem Dateiwähler in den privaten
   Gerätespeicher kopiert. Geräte-Wecktöne und vier eigens erzeugte Signale sind auswählbar.
@@ -242,6 +242,25 @@ In den Einstellungen kann der Benutzer ausdrücklich **Spracheinstellungen über
 wählen. Dies kopiert Stimme, Tempo und die Google-/Alibaba-/Groq-Schlüssel über Binder in
 den verschlüsselten Speicher des Weckers. Schlüssel werden nicht in die Ideenkopie geschrieben.
 Anschließend ist die Stimmenauswahl im Wecker unabhängig von Geniale Ideen.
+
+## Aufgabenbrücke (1.1.97)
+
+Baustein **Aufgaben** im Weckablauf. Gelesen wird nur lesend aus der App „Aufgaben“
+(`de.frank.aufgaben`) über `content://de.frank.aufgaben.wecker/tag/<epochDay>`, und zwar für den
+**Klingeltag** des Weckers. Wer den Wecker abends stellt, bekommt damit genau die Aufgaben aus
+„Morgen“. Jede Aufgabe wird als „Um 06:30 Uhr: Titel.“ gesprochen (Aufgaben ohne Uhrzeit nur mit
+Titel), zwischen zwei Aufgaben 2 Sekunden Pause, nach dem ganzen Block 3 Sekunden.
+
+- Beim Einschalten von „Aufgaben“ und über **Aufgaben ansehen** öffnet sich ein kleines Fenster mit
+  Uhrzeit und Titel jeder Aufgabe.
+- Wie Ideen und Text werden die Aufgaben in **sechs Sprachvarianten** offline vorbereitet und
+  gespeichert. Die Aufgaben-App sendet bei jeder Änderung `de.frank.aufgaben.AUFGABEN_GEAENDERT`;
+  der Wecker bereitet dann neu vor. Nach dem Klingeln rückt der Klingeltag weiter und die nächste
+  Hintergrundvorbereitung liest die Aufgaben des neuen Tages.
+- **Wiederholen** (Ideen und Aufgaben, je eigener Schalter, 0–6): 0 oder 1 liest den Block einmal,
+  danach folgt sofort der nächste Schritt (z. B. der MP3-Song). Bei 3 wird der Block dreimal am Stück
+  gelesen, mit drei verschiedenen Varianten, erst dann kommt der Song; danach beginnt alles von vorn
+  mit den nächsten Varianten.
 
 ## Offline und Android-Freigaben
 

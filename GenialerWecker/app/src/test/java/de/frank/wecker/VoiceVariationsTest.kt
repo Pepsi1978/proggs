@@ -87,4 +87,41 @@ class VoiceVariationsTest {
         val alarm = Alarm(voiceVariants = listOf(VoiceVariant(mapOf("TEXT" to listOf(PreparedAudio("one", .95f, "clone"), PreparedAudio("two", 1f, "edge", true))))))
         assertEquals(alarm, Alarm.from(alarm.json()))
     }
+    @Test fun ideasAreReadThreeTimesWithThreeVariantsBeforeTheSong() {
+        val variants = (1..6).map { VoiceVariant(mapOf("IDEAS" to listOf(PreparedAudio("idee-$it", endOfIdea = true)))) }
+        val alarm = Alarm(steps = listOf(Step.IDEAS, Step.MUSIC), music = "song", ideasRepeats = 3, voiceVariants = variants)
+        val clips = AlarmPlaylist.build(alarm, mapOf("classic" to "tone")) { true }
+        val first = listOf("idee-1", "idee-2", "idee-3", "song", "idee-4", "idee-5", "idee-6", "song")
+        // Sechs Durchläufe: Varianten 1–3, Song, 4–6, Song, dann wieder von vorn.
+        assertEquals(List(3) { first }.flatten(), clips.map { it.audio.path })
+        assertEquals(listOf(3000L, 3000L, 3000L, 0L), clips.take(4).map { it.pauseAfterMillis })
+    }
+    @Test fun tasksPauseTwoSecondsBetweenTasksAndThreeAfterTheBlock() {
+        val variants = (1..6).map { v -> VoiceVariant(mapOf("TASKS" to listOf(
+            PreparedAudio("a-$v", endOfIdea = true), PreparedAudio("b-$v", endOfIdea = true), PreparedAudio("c-$v", endOfIdea = true)))) }
+        val alarm = Alarm(steps = listOf(Step.TASKS, Step.MUSIC), music = "song", tasksRepeats = 2, voiceVariants = variants)
+        val clips = AlarmPlaylist.build(alarm, mapOf("classic" to "tone")) { true }
+        assertEquals(listOf("a-1", "b-1", "c-1", "a-2", "b-2", "c-2", "song", "a-3"), clips.take(8).map { it.audio.path })
+        assertEquals(listOf(2000L, 2000L, 3000L, 2000L, 2000L, 3000L, 0L), clips.take(7).map { it.pauseAfterMillis })
+        assertEquals(listOf(1, 1, 1, 2, 2, 2, 2), clips.take(7).map { it.variation })
+        // Sechs Durchläufe mit je zwei Lesungen: jede Variante kommt genau zweimal, der Rücksprung beginnt wieder bei Variante 1.
+        assertEquals(6 * (2 * 3 + 1), clips.size)
+    }
+    @Test fun zeroRepeatsReadsTheBlockOnceThenTheSong() {
+        val variants = (1..6).map { VoiceVariant(mapOf("TASKS" to listOf(PreparedAudio("t-$it", endOfIdea = true)))) }
+        val alarm = Alarm(steps = listOf(Step.TASKS, Step.MUSIC), music = "song", tasksRepeats = 0, voiceVariants = variants)
+        val clips = AlarmPlaylist.build(alarm, mapOf("classic" to "tone")) { true }
+        assertEquals((1..6).flatMap { listOf("t-$it", "song") }, clips.map { it.audio.path })
+    }
+    @Test fun repeatsAndTasksSurviveSerialization() {
+        val alarm = Alarm(steps = listOf(Step.TASKS, Step.IDEAS), ideasRepeats = 4, tasksRepeats = 6)
+        assertEquals(alarm, Alarm.from(alarm.json()))
+        assertTrue(alarm.needsSpeech)
+        assertEquals(0, Alarm.from(Alarm().json().apply { remove("ideasRepeats"); remove("tasksRepeats") }).tasksRepeats)
+    }
+    @Test fun taskBoundariesAreMarkedLikeIdeas() = runBlocking {
+        val result = VoiceVariations.buildGroups(listOf(SpeechGroup("TASKS", listOf("Um 06:30 Uhr: Duschen.")), SpeechGroup("TASKS", listOf("Einkaufen."))),
+            { text, variant -> PreparedAudio("$text-$variant") })
+        assertEquals(listOf(true, true), result.first().steps.getValue("TASKS").map { it.endOfIdea })
+    }
 }
