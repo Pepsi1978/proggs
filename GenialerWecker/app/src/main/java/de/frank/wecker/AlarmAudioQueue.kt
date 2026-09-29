@@ -19,9 +19,15 @@ class AlarmAudioQueue(
     private var queued: Slot? = null
     private var closed = false
     private val handler = Handler(Looper.getMainLooper())
+    /**
+     * Spielt während des ganzen Weckens Stille in Dauerschleife. Ohne sie ging der Lautsprecher-Verstärker in den
+     * Pausen zwischen Aufgaben und Absätzen aus und blendete den nächsten Satz leise und hallig ein.
+     */
+    private var wachhalter: MediaPlayer? = null
 
     fun start() {
         check(clips.isNotEmpty())
+        wachhalter = Tones.wachhalter(context, AlarmService.attributes)
         current = create(0)
     }
     private fun create(index: Int): Slot {
@@ -83,5 +89,6 @@ class AlarmAudioQueue(
         handler.removeCallbacksAndMessages(null)
         current?.player?.release(); queued?.player?.release()
         current = null; queued = null
+        runCatching { wachhalter?.release() }; wachhalter = null
     }
 }
