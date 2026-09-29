@@ -110,7 +110,8 @@ fun DiktatUndVorlesen(sprache: DiktatSprache, anfuegen: (String) -> Unit, vorles
     }
     if (auswahlOffen) ErkennungDialog { starten ->
         auswahlOffen = false; erkennungStand++
-        if (starten && nachAuswahlStarten && WhisperModell.bereit(context)) mitFreigabe(::loslegen)
+        // Ohne geladenes Modell startet „Fertig“ die Offline-Erkennung von Android (loslegen() wählt selbst).
+        if (starten && nachAuswahlStarten) mitFreigabe(::loslegen)
         nachAuswahlStarten = false
     }
     // Knapper Status direkt unter den Knöpfen; kein eigenes Panel.
