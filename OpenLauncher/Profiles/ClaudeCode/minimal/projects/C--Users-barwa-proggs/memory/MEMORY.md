@@ -10,3 +10,8 @@
 - [MW2 DLSS-Override eingerichtet](mw2-dlss-override-eingerichtet.md) — Treiberprofil + NVPI-Ort, nach Treiber-Clean-Install einrichten.ps1 erneut
 - [Commit nur mit Pfaden](commit-nur-mit-pfaden.md) — parallele Sitzungen haben Dateien im Index vorgemerkt, nacktes git commit nimmt sie mit
 - [DLSS-5-Mod installiert](dlss5-mod-installiert.md) — Grafikfragen: erst Recherchen/dlss5-grafik/README.md; Mod in 5 SP-Spielen, Cyberpunk verifiziert
+- [WLAN-adb selbstheilend](adb-wlan-selbstheilend.md) — bei Ausfall erst Log + Wachhund-Aufgabe prüfen, TLS-Port nie speichern
+- [Android-Cloud-Bau: rclone](android-cloud-bau-rclone.md) — Konfig in SK\rclone, eigener Google-OAuth-Client (Projekt update-upload, In Produktion) seit 27.09.2026
+- [Codex-Mails kommen über Participating](github-codex-mails-participating.md) — Grund author, Unwatch reicht nicht; E-Mail bei Participating seit 27.09.2026 aus
+- [NewsKompass als Release installieren](newskompass-release-installieren.md) — Debug ruckelt, die Release-APK aus dem apk-update installieren
+- [Gestartetes Programm erbt Agenten-Pipe](gestartetes-programm-erbt-agenten-pipe.md) — "started" gemeldet, Tool wartet bis Timeout: Handle-Vererbung beim Start

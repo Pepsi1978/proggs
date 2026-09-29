@@ -31,7 +31,17 @@ $env:UseSharedCompilation = 'false'
 dotnet build … -nodeReuse:false -p:UseSharedCompilation=false -p:UseRazorBuildServer=false
 ```
 
-Den neuen Launcher mit `Start-Process` **ohne** `-NoNewWindow` starten (ShellExecute, keine Handle-Vererbung). Das Skript endet mit `exit 0`.
+Den neuen Launcher darf der Aufrufer nie über eine vererbte Pipe festhalten, siehe Falle 3. Das Skript endet mit `exit 0`.
+
+## Falle 3 – Timeout durch den neu gestarteten Launcher selbst (29.09.2026, 12:35 Uhr)
+
+Gleiches Symptom wie Falle 2, obwohl die Build-Server abgeschaltet sind. Der Aufruf endet erst, wenn der neue Launcher wieder geschlossen wird, also meist beim nächsten Update.
+
+**Ursache:** Ein späterer Fix gegen die geerbte Farbabschaltung (`NO_COLOR`) startet den Launcher über `[Diagnostics.Process]::Start` mit `UseShellExecute=$false`, weil nur so die Umgebung des Kindes bereinigt werden kann. `CreateProcess` läuft dabei mit `bInheritHandles=TRUE`. Das Kind erbt alle vererbbaren Handles, auch stdout/stderr des Skripts, also die Pipe des Agenten. Der Launcher lebt weiter, die Pipe bleibt offen. Die Anweisung aus Falle 2 (ShellExecute) wurde so still aufgehoben: eine Regression durch einen Fix.
+
+**Richtig:** Vor `Process.Start` die eigenen Standard-Handles (-10/-11/-12) mit `SetHandleInformation(h, HANDLE_FLAG_INHERIT, 0)` als nicht vererbbar markieren. Schlägt das fehl, meldet das Skript es als `LAUNCHER_UPDATE_INFO` und bricht nicht ab. Die Umgebungsbereinigung bleibt erhalten.
+
+**Erkennen:** Die Ausgabe zeigt `started` nach wenigen Sekunden, das Werkzeug meldet aber erst nach Minuten „completed“ oder läuft ins Timeout. Dann erbt ein langlebiges Kind die Pipe.
 
 ## Aktualitätsprüfung (bleibt gültig)
 
@@ -42,3 +52,4 @@ Version der gebauten Datei gegen die Projektversion vergleichen. Außerdem darf 
 1. Eine Freigabe-Rückfrage darf nie still zu „Ja“ werden. Fehlt die Antwort, gilt „Nein“.
 2. Ein Dialog, der „hängt“, ist meist unsichtbar und nicht blockiert. Er muss nach vorne geholt und zeitlich begrenzt werden, statt entfernt zu werden.
 3. Wer aus einem Skript heraus `dotnet build` aufruft, das ein Agent startet, schaltet die Build-Server ab. Sonst hängt der Agent an der geerbten Pipe.
+4. Startet ein Skript, das ein Agent aufruft, ein Programm, das weiterlaufen soll, darf dieses die Pipe des Aufrufers nicht erben: ShellExecute nutzen oder die Standard-Handles vorher auf nicht vererbbar setzen. Wer den Startweg ändert (z. B. für die Umgebungsbereinigung), prüft danach, dass der Aufruf sofort endet.

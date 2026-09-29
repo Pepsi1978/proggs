@@ -212,7 +212,10 @@ Add-Type -Namespace OpenLauncherUpdate -Name Native -MemberDefinition @'
 foreach ($stdHandleId in @(-10, -11, -12)) {
     $stdHandle = [OpenLauncherUpdate.Native]::GetStdHandle($stdHandleId)
     if ($stdHandle -ne [IntPtr]::Zero -and $stdHandle -ne [IntPtr]::new(-1)) {
-        [void][OpenLauncherUpdate.Native]::SetHandleInformation($stdHandle, 1, 0)
+        if (-not [OpenLauncherUpdate.Native]::SetHandleInformation($stdHandle, 1, 0)) {
+            # Kein Abbruch: das Update selbst funktioniert, nur der Aufrufer kann haengen bleiben.
+            Write-Output ("LAUNCHER_UPDATE_INFO=Handle-Vererbung ({0}) nicht abschaltbar, Win32-Fehler {1} -- der Aufruf kann erst mit dem Launcher enden." -f $stdHandleId, [Runtime.InteropServices.Marshal]::GetLastWin32Error())
+        }
     }
 }
 
