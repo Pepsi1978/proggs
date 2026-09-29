@@ -122,24 +122,36 @@ fun Modifier.knopf3d(von: Color, bis: Color, radius: Dp, dunkel: Boolean): Modif
     val r = radius.toPx().coerceAtMost(size.minDimension / 2)
     val form = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))) }
     val koerper = Brush.linearGradient(listOf(von, bis), Offset.Zero, Offset(size.width, size.height))
-    val bogen = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.42f), 0.5f to Color.White.copy(alpha = 0.04f), 1f to Color.Transparent)
     val unten = Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.18f))
+    // Weicher ovaler Glanz ohne harte Kante — ein Rechteck mit flacher Oberkante zeichnete in runden
+    // Knöpfen einen hellen Strich quer über den oberen Rand.
+    val glanzMitte = Offset(size.width * 0.5f, size.height * 0.26f)
+    val glanz = Brush.radialGradient(
+        0f to Color.White.copy(alpha = 0.38f),
+        0.6f to Color.White.copy(alpha = 0.12f),
+        1f to Color.Transparent,
+        center = glanzMitte,
+        radius = size.width * 0.42f,
+    )
+    val kante = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.0f), Color.Black.copy(alpha = 0.12f)))
     onDrawBehind {
-        for (i in 1..6) {
-            val g = i * 1.8.dp.toPx()
-            drawRoundRect(
-                color = von.copy(alpha = (if (dunkel) 0.12f else 0.10f) * (1f - i / 7f)),
-                topLeft = Offset(-g * 0.5f, g * 0.9f),
-                size = Size(size.width + g, size.height + g * 0.4f),
-                cornerRadius = CornerRadius(r + g),
-            )
+        clipPath(form, ClipOp.Difference) {
+            for (i in 1..6) {
+                val g = i * 1.8.dp.toPx()
+                drawRoundRect(
+                    color = von.copy(alpha = (if (dunkel) 0.12f else 0.10f) * (1f - i / 7f)),
+                    topLeft = Offset(-g * 0.5f, g * 0.9f),
+                    size = Size(size.width + g, size.height + g * 0.4f),
+                    cornerRadius = CornerRadius(r + g),
+                )
+            }
         }
         drawPath(form, koerper)
         drawPath(form, unten)
         clipPath(form) {
-            drawRoundRect(bogen, topLeft = Offset(size.width * 0.06f, size.height * 0.05f), size = Size(size.width * 0.88f, size.height * 0.5f), cornerRadius = CornerRadius(r * 0.8f))
+            drawOval(glanz, topLeft = Offset(size.width * 0.14f, size.height * 0.06f), size = Size(size.width * 0.72f, size.height * 0.44f))
         }
-        drawPath(form, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.05f))), style = Stroke(1.dp.toPx()))
+        drawPath(form, kante, style = Stroke(1.dp.toPx()))
     }
 }
 

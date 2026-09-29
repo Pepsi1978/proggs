@@ -131,7 +131,7 @@ private fun Konfetti(ausloeser: Int) {
     }
     if (fort.value < 1f) Canvas(Modifier.fillMaxSize()) {
         val t = fort.value
-        val farben = listOf(f.primaer, f.sekundaer, f.tertiaer, f.erfolg, Color(0xFFFFD166))
+        val farben = listOf(f.primaer, f.sekundaer, f.tertiaer, Color.White, f.primaer.copy(alpha = 0.6f))
         for (i in 0 until 70) {
             val wkl = (i * 47f) * PI.toFloat() / 180f
             val v = size.height * (0.5f + (i % 7) * 0.07f)

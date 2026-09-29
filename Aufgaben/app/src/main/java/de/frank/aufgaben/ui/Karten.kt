@@ -185,7 +185,7 @@ fun AufgabeKarte(
 fun Sektion(
     schluessel: String,
     titel: String,
-    emoji: String,
+    icon: ImageVector,
     farbe: Color,
     anzahl: Int,
     zustand: ZiehZustand,
@@ -217,7 +217,7 @@ fun Sektion(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(38.dp).knopf3d(farbe.copy(alpha = 0.95f), farbe.copy(alpha = 0.6f), 13.dp, f.dunkel), contentAlignment = Alignment.Center) {
-                Text(emoji, fontSize = 19.sp)
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(21.dp))
             }
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -241,13 +241,13 @@ fun Sektion(
 }
 
 @Composable
-fun LeerHinweis(emoji: String, text: String) {
+fun LeerHinweis(icon: ImageVector, text: String) {
     val f = LocalFarben.current
     Row(
         Modifier.fillMaxWidth().glas(f, radius = f.radius * 0.6f, erhoeht = 0f, fuellung = f.flaeche.copy(alpha = f.flaeche.alpha * 0.5f)).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(emoji, fontSize = 22.sp)
+        Icon(icon, null, tint = f.textSchwach, modifier = Modifier.size(24.dp))
         Spacer(Modifier.width(12.dp))
         Text(text, color = f.textLeise, fontSize = 13.sp, lineHeight = 18.sp)
     }

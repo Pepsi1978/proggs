@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Aufgaben</string>
     <string name="widget_beschreibung">Deine heutigen Aufgaben auf einen Blick</string>
-    <color name="start_hintergrund">#FFF3F0FF</color>
+    <color name="start_hintergrund">#FFFFF8F1</color>
     <style name="Theme.Aufgaben" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/start_hintergrund</item>
         <item name="android:statusBarColor">@android:color/transparent</item>

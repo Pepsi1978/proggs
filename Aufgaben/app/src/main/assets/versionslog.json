@@ -2,6 +2,7 @@
   "format": 1,
   "app": "Aufgaben",
   "eintraege": [
-    { "versionCode": 1, "versionName": "1.0.0", "stand": "29.09.2026, 13:39 Uhr", "notiz": "Erste Version: Aufgaben per Sprache anlegen, KI-Korrektur und KI-Titel, Heute/Morgen mit Zeitleiste per Drag & Drop, Erinnerungen mit eigenem Ton, Heute-Widget, vier Designs mit animierten Szenen und Brücke zum Genialen Wecker" }
+    { "versionCode": 1, "versionName": "1.0.0", "stand": "29.09.2026, 13:39 Uhr", "notiz": "Erste Version: Aufgaben per Sprache anlegen, KI-Korrektur und KI-Titel, Heute/Morgen mit Zeitleiste per Drag & Drop, Erinnerungen mit eigenem Ton, Heute-Widget, vier Designs mit animierten Szenen und Brücke zum Genialen Wecker" },
+    { "versionCode": 2, "versionName": "1.0.1", "stand": "29.09.2026, 14:29 Uhr", "notiz": "Kopfzeile mit Knöpfen für Hell/Dunkel und Design, ruhigere einfarbige Designs mit neuem Orange-Design, Titel Sinnvolle Aufgaben, runde Knöpfe ohne Strich, Widget mit Zeitstrahl und vier neue detailreiche Szenen mit Katze" }
   ]
 }

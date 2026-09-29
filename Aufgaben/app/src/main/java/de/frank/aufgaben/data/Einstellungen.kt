@@ -72,7 +72,7 @@ class Einstellungen private constructor(context: Context) {
         set(v) = put { putFloat("tts_speech_rate", v.coerceIn(0.7f, 1.3f)) }
 
     // ---- Aussehen ----
-    var design: String get() = s("design", "aurora"); set(v) = put { putString("design", v) }
+    var design: String get() = s("design", "orange"); set(v) = put { putString("design", v) }
     /** system | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
     var szeneZeigen: Boolean get() = prefs.getBoolean("szene", true); set(v) = put { putBoolean("szene", v) }

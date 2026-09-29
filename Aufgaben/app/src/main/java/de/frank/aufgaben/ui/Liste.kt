@@ -34,6 +34,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Schedule
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.aufgaben.data.Aufgabe
 import de.frank.aufgaben.data.Prioritaet
 import de.frank.aufgaben.data.Tage
+import de.frank.aufgaben.ui.theme.Design
 import de.frank.aufgaben.ui.theme.Farben
 import de.frank.aufgaben.ui.theme.LocalFarben
 import de.frank.aufgaben.ui.theme.antippen
@@ -171,49 +173,49 @@ fun ListeBildschirm(vm: AppViewModel) {
 
             // ---- Heute ----
             Sektion(
-                "heute", "Heute", "☀️", f.sekundaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
+                "heute", "Heute", Icons.Rounded.WbSunny, f.primaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
                 Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40,
                 aktionen = { VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
             ) {
-                if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis("🌤️", "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
+                if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
                 b.heuteOffen.forEach { a -> Karte(vm, a, heute, zustand) }
                 b.heuteErledigt.forEach { a -> Karte(vm, a, heute, zustand) }
                 Zeitleiste(heute, b.heuteTermine, true, zustand, { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) })
             }
             // ---- Morgen ----
             Sektion(
-                "morgen", "Morgen", "🌅", f.primaer, b.morgenOffen.size + b.morgenTermine.size, zustand,
+                "morgen", "Morgen", Icons.Rounded.WbTwilight, f.sekundaer, b.morgenOffen.size + b.morgenTermine.size, zustand,
                 Ziel.Tag(heute + 1), untertitel = Tage.langesDatum(heute + 1), verzoegerung = 80,
                 aktionen = { VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
             ) {
-                if (b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty()) LeerHinweis("🗓️", "Plane schon für morgen: Aufgaben hierher ziehen oder auf die Zeitleiste fallen lassen.")
+                if (b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty()) LeerHinweis(Icons.Rounded.EventNote, "Plane schon für morgen: Aufgaben hierher ziehen oder auf die Zeitleiste fallen lassen.")
                 b.morgenOffen.forEach { a -> Karte(vm, a, heute, zustand) }
                 Zeitleiste(heute + 1, b.morgenTermine, false, zustand, { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) })
             }
             // ---- Prioritäten ----
             val info = mapOf(
-                Prioritaet.HOCH to ("🔥" to "Wichtig und dringend"),
-                Prioritaet.MITTEL to ("⭐" to "Bald erledigen"),
-                Prioritaet.GERING to ("🍃" to "Wenn Zeit ist"),
-                Prioritaet.SPAETER to ("📥" to "Eingang – neue Aufgaben landen hier"),
+                Prioritaet.HOCH to (Icons.Rounded.LocalFireDepartment to "Wichtig und dringend"),
+                Prioritaet.MITTEL to (Icons.Rounded.Star to "Bald erledigen"),
+                Prioritaet.GERING to (Icons.Rounded.Spa to "Wenn Zeit ist"),
+                Prioritaet.SPAETER to (Icons.Rounded.Inbox to "Eingang – neue Aufgaben landen hier"),
             )
             Prioritaet.entries.forEachIndexed { i, p ->
                 val liste = b.nachPrio[p].orEmpty()
                 Sektion(
-                    p.name, p.anzeige, info[p]!!.first, f.prio(p), liste.size, zustand, Ziel.Prio(p),
+                    p.name, p.anzeige, info[p]!!.first, if (p == Prioritaet.SPAETER) f.textLeise else f.prio(p), liste.size, zustand, Ziel.Prio(p),
                     untertitel = info[p]!!.second, verzoegerung = 120 + i * 40,
                 ) {
-                    if (liste.isEmpty()) LeerHinweis(if (p == Prioritaet.SPAETER) "✨" else "🫧", if (p == Prioritaet.SPAETER) "Leer. Tipp aufs Plus und sprich deine nächste Aufgabe ein." else "Nichts hier. Zieh Aufgaben aus „Später“ hierher.")
+                    if (liste.isEmpty()) LeerHinweis(if (p == Prioritaet.SPAETER) Icons.Rounded.Mic else Icons.Rounded.SwipeDown, if (p == Prioritaet.SPAETER) "Leer. Tipp aufs Plus und sprich deine nächste Aufgabe ein." else "Nichts hier. Zieh Aufgaben aus „Später“ hierher.")
                     liste.forEach { a -> Karte(vm, a, heute, zustand) }
                 }
             }
             if (b.demnaechst.isNotEmpty()) Sektion(
-                "demnaechst", "Demnächst", "📅", f.tertiaer, b.demnaechst.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
+                "demnaechst", "Demnächst", Icons.Rounded.Event, f.tertiaer, b.demnaechst.size, zustand, Ziel.Prio(Prioritaet.SPAETER),
                 untertitel = "Nach morgen geplant", verzoegerung = 300,
             ) { b.demnaechst.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             if (b.erledigt.isNotEmpty()) Sektion(
-                "erledigt", "Erledigt", "✅", f.erfolg, b.erledigt.size, zustand, Ziel.Erledigt,
-                untertitel = if (b.serie > 1) "🔥 ${b.serie} Tage in Folge etwas geschafft" else "Schon geschafft", startOffen = false, verzoegerung = 340,
+                "erledigt", "Erledigt", Icons.Rounded.TaskAlt, f.erfolg, b.erledigt.size, zustand, Ziel.Erledigt,
+                untertitel = if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else "Schon geschafft", startOffen = false, verzoegerung = 340,
             ) { b.erledigt.forEach { a -> Karte(vm, a, heute, zustand, zeigeDatum = true) } }
             Spacer(Modifier.height(140.dp))
             Spacer(Modifier.navigationBarsPadding())
@@ -279,17 +281,29 @@ private fun VorlesenKnopf(vm: AppViewModel, schluessel: String, aktion: () -> Un
 @Composable
 private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmschalten: () -> Unit) {
     val f = LocalFarben.current
-    val stunde = LocalTime.now().hour
-    val gruss = when (stunde) { in 5..10 -> "Guten Morgen"; in 11..17 -> "Hallo"; in 18..22 -> "Guten Abend"; else -> "Gute Nacht" }
-    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    val e = vm.einstellungen
+    Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp), horizontalArrangement = Arrangement.End) {
+        RundKnopf(if (sucheOffen) Icons.Rounded.Close else Icons.Rounded.Search, "Suchen", sucheUmschalten)
+        RundKnopf(Icons.Rounded.Palette, "Design wechseln") {
+            val alle = Design.entries
+            val neu = alle[(alle.indexOf(Design.von(e.design)) + 1) % alle.size]
+            e.design = neu.id
+            vm.melde("Design: ${neu.anzeige}")
+        }
+        RundKnopf(if (f.dunkel) Icons.Rounded.LightMode else Icons.Rounded.DarkMode, if (f.dunkel) "Hellmodus" else "Dunkelmodus") {
+            e.modus = if (f.dunkel) "hell" else "dunkel"
+        }
+        RundKnopf(Icons.Rounded.Settings, "Einstellungen") { vm.zeige(Bildschirm.Einstellungen) }
+    }
+    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Fortschritt(b.heuteFertig, b.heuteGesamt)
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
-            Text(gruss, color = f.textLeise, fontSize = 14.sp)
-            Text("Aufgaben", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold, style = TextStyle(brush = Brush.linearGradient(listOf(f.text, f.primaer))))
-            if (b.serie > 1) Text("🔥 ${b.serie} Tage in Folge", color = f.sekundaer, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text("Sinnvolle Aufgaben", color = f.text, fontSize = 27.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold, style = TextStyle(brush = Brush.linearGradient(listOf(f.text, f.primaer))))
+            Text(
+                if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else Tage.langesDatum(vm.heute),
+                color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+            )
         }
-        RundKnopf(if (sucheOffen) Icons.Rounded.Close else Icons.Rounded.Search, "Suchen", sucheUmschalten)
-        RundKnopf(Icons.Rounded.Settings, "Einstellungen") { vm.zeige(Bildschirm.Einstellungen) }
     }
 }
 
@@ -364,15 +378,15 @@ private fun AblageOben(zustand: ZiehZustand, heute: Long) {
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AblageChip(zustand, "chip_heute", "☀️", "Heute", f.sekundaer, Ziel.Tag(heute, behalteZeit = true), Modifier.weight(1f))
-            AblageChip(zustand, "chip_morgen", "🌅", "Morgen", f.primaer, Ziel.Tag(heute + 1, behalteZeit = true), Modifier.weight(1f))
-            AblageChip(zustand, "chip_uebermorgen", "📅", "Übermorgen", f.tertiaer, Ziel.Tag(heute + 2, behalteZeit = true), Modifier.weight(1f))
+            AblageChip(zustand, "chip_heute", Icons.Rounded.WbSunny, "Heute", f.primaer, Ziel.Tag(heute, behalteZeit = true), Modifier.weight(1f))
+            AblageChip(zustand, "chip_morgen", Icons.Rounded.WbTwilight, "Morgen", f.primaer, Ziel.Tag(heute + 1, behalteZeit = true), Modifier.weight(1f))
+            AblageChip(zustand, "chip_uebermorgen", Icons.Rounded.Event, "Übermorgen", f.primaer, Ziel.Tag(heute + 2, behalteZeit = true), Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AblageChip(zustand, "chip_hoch", "🔥", "Hoch", f.prio(Prioritaet.HOCH), Ziel.Prio(Prioritaet.HOCH), Modifier.weight(1f))
-            AblageChip(zustand, "chip_mittel", "⭐", "Mittel", f.prio(Prioritaet.MITTEL), Ziel.Prio(Prioritaet.MITTEL), Modifier.weight(1f))
-            AblageChip(zustand, "chip_gering", "🍃", "Gering", f.prio(Prioritaet.GERING), Ziel.Prio(Prioritaet.GERING), Modifier.weight(1f))
-            AblageChip(zustand, "chip_spaeter", "📥", "Später", f.prio(Prioritaet.SPAETER), Ziel.Prio(Prioritaet.SPAETER), Modifier.weight(1f))
+            AblageChip(zustand, "chip_hoch", Icons.Rounded.LocalFireDepartment, "Hoch", f.prio(Prioritaet.HOCH), Ziel.Prio(Prioritaet.HOCH), Modifier.weight(1f))
+            AblageChip(zustand, "chip_mittel", Icons.Rounded.Star, "Mittel", f.prio(Prioritaet.MITTEL), Ziel.Prio(Prioritaet.MITTEL), Modifier.weight(1f))
+            AblageChip(zustand, "chip_gering", Icons.Rounded.Spa, "Gering", f.prio(Prioritaet.GERING), Ziel.Prio(Prioritaet.GERING), Modifier.weight(1f))
+            AblageChip(zustand, "chip_spaeter", Icons.Rounded.Inbox, "Später", f.prio(Prioritaet.SPAETER), Ziel.Prio(Prioritaet.SPAETER), Modifier.weight(1f))
         }
     }
 }
@@ -384,13 +398,13 @@ private fun AblageUnten(zustand: ZiehZustand) {
         Modifier.fillMaxWidth().glas(f, radius = 0.dp, erhoeht = 2f, fuellung = f.flaecheStark).navigationBarsPadding().padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        AblageChip(zustand, "chip_erledigt", "✅", "Erledigt", f.erfolg, Ziel.Erledigt, Modifier.weight(1f), hoch = 50)
-        AblageChip(zustand, "chip_loeschen", "🗑️", "Löschen", f.gefahr, Ziel.Loeschen, Modifier.weight(1f), hoch = 50)
+        AblageChip(zustand, "chip_erledigt", Icons.Rounded.TaskAlt, "Erledigt", f.erfolg, Ziel.Erledigt, Modifier.weight(1f), hoch = 50)
+        AblageChip(zustand, "chip_loeschen", Icons.Rounded.DeleteOutline, "Löschen", f.gefahr, Ziel.Loeschen, Modifier.weight(1f), hoch = 50)
     }
 }
 
 @Composable
-private fun AblageChip(zustand: ZiehZustand, schluessel: String, emoji: String, text: String, farbe: Color, ziel: Ziel, modifier: Modifier, hoch: Int = 46) {
+private fun AblageChip(zustand: ZiehZustand, schluessel: String, icon: ImageVector, text: String, farbe: Color, ziel: Ziel, modifier: Modifier, hoch: Int = 46) {
     val f = LocalFarben.current
     val aktiv = zustand.hoverZiel == schluessel
     val skala by animateFloatAsState(if (aktiv) 1.08f else 1f, spring(dampingRatio = 0.5f, stiffness = 500f), label = "chip")
@@ -401,7 +415,7 @@ private fun AblageChip(zustand: ZiehZustand, schluessel: String, emoji: String, 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Text(emoji, fontSize = 15.sp)
+        Icon(icon, null, tint = if (aktiv) Color.White else farbe, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(4.dp))
         Text(text, color = if (aktiv) Color.White else f.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }

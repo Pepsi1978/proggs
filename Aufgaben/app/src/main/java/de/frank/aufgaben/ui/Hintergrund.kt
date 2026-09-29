@@ -69,7 +69,7 @@ fun Hintergrund(modifier: Modifier = Modifier) {
         drawRect(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))
         val w = size.width
         val h = size.height
-        val a = if (f.dunkel) 0.55f else 0.65f
+        val a = if (f.dunkel) 0.32f else 0.5f
         fun wolke(farbe: Color, cx: Float, cy: Float, r: Float) =
             drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = a), farbe.copy(alpha = 0f)), Offset(cx, cy), r), r, Offset(cx, cy))
         wolke(f.blob1, w * (0.2f + 0.12f * sin(t * 0.13f)), h * (0.12f + 0.06f * cos(t * 0.11f)), w * 0.75f)
@@ -83,11 +83,11 @@ fun Hintergrund(modifier: Modifier = Modifier) {
             Design.GARTEN -> sterne.take(26).forEachIndexed { i, (x, y, s) ->
                 val yy = ((y * h - t * (8f + s * 14f)) % h + h) % h
                 val xx = x * w + sin(t * 0.5f + i) * 14f
-                drawCircle((if (i % 3 == 0) f.sekundaer else f.primaer).copy(alpha = 0.28f), 2f + s * 3f, Offset(xx, yy))
+                drawCircle(f.primaer.copy(alpha = 0.18f), 2f + s * 3f, Offset(xx, yy))
             }
-            Design.GLUT -> sterne.take(18).forEachIndexed { i, (x, y, s) ->
+            Design.ORANGE -> sterne.take(18).forEachIndexed { i, (x, y, s) ->
                 val yy = ((y * h - t * (5f + s * 8f)) % h + h) % h
-                drawCircle(Brush.radialGradient(listOf(f.blob3.copy(alpha = 0.35f), Color.Transparent), Offset(x * w, yy), 18f + s * 30f), 18f + s * 30f, Offset(x * w, yy))
+                drawCircle(Brush.radialGradient(listOf(f.primaer.copy(alpha = if (f.dunkel) 0.16f else 0.12f), Color.Transparent), Offset(x * w, yy), 18f + s * 30f), 18f + s * 30f, Offset(x * w, yy))
             }
         }
     }
