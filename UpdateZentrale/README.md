@@ -2,7 +2,7 @@
 
 Ein Windows-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und aktualisiert:
 LM Studio (inklusive Engines und Runtimes), Claude Desktop, Codex Desktop, Claude Code CLI,
-Codex CLI, Stream Deck sowie die eigenen Werkzeuge OpenLauncher, TVO und CVO.
+Codex CLI, Kimi Code CLI, Stream Deck sowie die eigenen Werkzeuge OpenLauncher, TVO und CVO.
 
 Start über die Verknüpfung **UpdateZentrale** auf dem Desktop oder im Startmenü (`create_shortcut.ps1` legt beide an).
 
@@ -118,7 +118,7 @@ bleibt `prozesse` besser leer – lieber kein Merkmal als ein falsches.
 | `art` | Wofür | Pflichtfelder | Prüfung | Update |
 |---|---|---|---|---|
 | `winget` | Alles, was winget kennt | `wingetId` | `winget list --id …` | `winget upgrade --id … --silent` |
-| `cli` | Werkzeuge, die sich selbst aktualisieren | `exePfad`, `updateArgumente` | `pruefArgumente` (Trockenlauf) **oder** `npmPaket` | `exePfad updateArgumente` |
+| `cli` | Werkzeuge, die sich selbst aktualisieren | `exePfad`, `updateArgumente` | `pruefArgumente` (Trockenlauf) **oder** `npmPaket` **oder** `versionsUrl` | `exePfad updateArgumente` |
 | `store` | Store-signierte MSIX-Pakete | `appxName`, `packageFamilyName`, `storeProduktId` | `Get-AppxPackage` + `winget upgrade`-Liste | `winget upgrade --id <ProduktId> --source msstore --silent` |
 | `reposkript` | Eigene Werkzeuge in `~/proggs` | `skript`, `statusPraefix` | `git rev-list HEAD..origin/main` + csproj-Version gegen gebaute Exe | ruft das vorhandene PowerShell-Skript auf |
 
@@ -131,6 +131,7 @@ Weitere optionale Felder:
 | `versionsArgumente` | Argumente, die die installierte Version ausgeben (z. B. `--version`) |
 | `pruefArgumente` | Trockenlauf-Befehl; Zeilen mit `→` bzw. `->` gelten als geplante Updates |
 | `npmPaket` | Vergleichsquelle für die neueste Version, wenn das Werkzeug auf npm liegt |
+| `versionsUrl` | Vergleichsquelle als Klartext-Adresse, deren Antwort die neueste Version nennt (z. B. Kimi Code: `https://code.kimi.ai/kimi-code/latest`) |
 | `storeProduktId` | Store-Produkt-ID für das stille Update über die msstore-Quelle |
 | `appxAnwendungsId` | Anwendungs-ID im MSIX-Paket (fast immer `App`) |
 | `startArgumente` | Argumente beim Start über die Schaltfläche „Starten" und in der geplanten Aufgabe |

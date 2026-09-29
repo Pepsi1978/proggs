@@ -105,6 +105,8 @@ public sealed class ProgrammEintrag
     public string? UpdateArgumente { get; set; }
     public string? PruefArgumente { get; set; }
     public string? NpmPaket { get; set; }
+    /// <summary>Plain-text URL whose body names the newest version (e.g. Kimi Code's CDN "latest").</summary>
+    public string? VersionsUrl { get; set; }
     public string? StartArgumente { get; set; }
 
     /// <summary>Check output lists updates as "alt -> neu"; counting arrows tells us how many.</summary>

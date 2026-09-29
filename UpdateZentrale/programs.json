@@ -128,6 +128,26 @@
       "akzent": "#8E8EA0"
     },
     {
+      "id": "kimi-cli",
+      "name": "Kimi Code CLI",
+      "gruppe": "Kommandozeile",
+      "beschreibung": "Moonshot AI Kimi Code im Terminal. Nativer Installer unter ~/.kimi-code.",
+      "art": "cli",
+      "exePfad": "%USERPROFILE%/.kimi-code/bin/kimi.exe",
+      "versionsArgumente": "--version",
+      "updateArgumente": "update --yes",
+      "versionsUrl": "https://code.kimi.ai/kimi-code/latest",
+      "zeitlimitMinuten": 15,
+      "prozesse": [
+        "kimi"
+      ],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "hinweis": "Laufende Sessions werden nicht beendet; das Update greift beim nächsten Start.",
+      "akzent": "#1783FF"
+    },
+    {
       "id": "powershell",
       "name": "PowerShell 7",
       "gruppe": "Kommandozeile",

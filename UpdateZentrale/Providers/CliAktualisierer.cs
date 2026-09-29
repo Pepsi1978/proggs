@@ -90,6 +90,20 @@ public sealed class CliAktualisierer : IAktualisierer
                 neuer ? $"Neue Version {verfuegbar} verfügbar." : "Auf dem neuesten Stand.");
         }
 
+        // Path 3: a plain-text URL that names the newest version (Kimi Code's CDN "latest").
+        if (!string.IsNullOrWhiteSpace(eintrag.VersionsUrl))
+        {
+            var url = await UrlVersionAsync(Netz, eintrag.VersionsUrl, protokoll, abbruch);
+            if (!url.Erfolg)
+                return new PruefErgebnis(UpdateZustand.Fehler, installiert, "", url.Problem ?? "Versionsabfrage fehlgeschlagen.");
+
+            var verfuegbar = url.Version;
+            var neuer = Vergleiche(verfuegbar, installiert) > 0;
+            return new PruefErgebnis(neuer ? UpdateZustand.UpdateVerfuegbar : UpdateZustand.Aktuell,
+                installiert, verfuegbar,
+                neuer ? $"Neue Version {verfuegbar} verfügbar." : "Auf dem neuesten Stand.");
+        }
+
         return new PruefErgebnis(UpdateZustand.Unbekannt, installiert, "",
             "Keine Prüfquelle hinterlegt – das Update lässt sich trotzdem auslösen.");
     }
@@ -217,6 +231,40 @@ public sealed class CliAktualisierer : IAktualisierer
         }
 
         protokoll.Report($"registry.npmjs.org {paket} -> " + (ergebnis.Erfolg ? ergebnis.Version : ergebnis.Problem));
+        return ergebnis;
+    }
+
+    /// <summary>Reads the first version number from a plain-text URL; redirects are followed.</summary>
+    internal static async Task<NpmAbfrage> UrlVersionAsync(HttpClient netz, string adresse, IProgress<string> protokoll,
+                                                           CancellationToken abbruch)
+    {
+        NpmAbfrage ergebnis;
+        try
+        {
+            using var antwort = await netz.GetAsync(adresse, abbruch);
+            if (!antwort.IsSuccessStatusCode)
+            {
+                ergebnis = new NpmAbfrage(false, "",
+                    "Versionsabfrage fehlgeschlagen: HTTP " + (int)antwort.StatusCode + " " + antwort.ReasonPhrase + ".");
+            }
+            else
+            {
+                var version = VersionsMuster.Match(await antwort.Content.ReadAsStringAsync(abbruch)).Value;
+                ergebnis = string.IsNullOrWhiteSpace(version)
+                    ? new NpmAbfrage(false, "", "Die Versionsadresse lieferte keine Versionsnummer.")
+                    : new NpmAbfrage(true, version, null);
+            }
+        }
+        catch (OperationCanceledException) when (abbruch.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            ergebnis = new NpmAbfrage(false, "", "Versionsabfrage fehlgeschlagen: " + ex.Message);
+        }
+
+        protokoll.Report($"{adresse} -> " + (ergebnis.Erfolg ? ergebnis.Version : ergebnis.Problem));
         return ergebnis;
     }
 
