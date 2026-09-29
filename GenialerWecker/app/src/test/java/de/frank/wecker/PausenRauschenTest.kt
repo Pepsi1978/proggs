@@ -15,8 +15,8 @@ import java.nio.ByteOrder
 class PausenRauschenTest {
     @get:Rule val ordner = TemporaryFolder()
 
-    private fun samples(millis: Long): ShortArray {
-        val bytes = Tones.stille(ordner.root, millis).readBytes()
+    private fun samples(millis: Long, rate: Int = Tones.STANDARD_RATE): ShortArray {
+        val bytes = Tones.stille(ordner.root, millis, rate).readBytes()
         val daten = ByteBuffer.wrap(bytes, 44, bytes.size - 44).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
         return ShortArray(daten.remaining()).also { daten.get(it) }
     }
@@ -28,8 +28,20 @@ class PausenRauschenTest {
         assertTrue(werte.count { it.toInt() != 0 } > werte.size * 0.9)
     }
 
-    @Test fun pauseBleibtUnhoerbarLeise() {
-        assertTrue(samples(1500).all { kotlin.math.abs(it.toInt()) <= 12 })
+    @Test fun pauseBleibtLeise() {
+        // Tiefton −40 dBFS plus Rauschen: nie lauter als etwa −39 dBFS.
+        assertTrue(samples(1500).all { kotlin.math.abs(it.toInt()) <= 360 })
+    }
+
+    @Test fun pauseHatDieAbtastrateDerSprache() {
+        // Google/Edge liefern 24 kHz: gleiches Format, damit der Übergang wirklich lückenlos ist.
+        assertEquals(24000 * 2, samples(2000, 24000).size)
+    }
+
+    @Test fun pauseEndetImNulldurchgang() {
+        // Ganze Schwingungen: kein Knacken am Übergang und in der Dauerschleife.
+        val werte = samples(Tones.VORLAUF_MS)
+        assertTrue(kotlin.math.abs(werte.first().toInt()) <= 30 && kotlin.math.abs(werte.last().toInt()) <= 40)
     }
 
     @Test fun vorlaufHatDieVorlaufLaenge() {
@@ -38,6 +50,6 @@ class PausenRauschenTest {
 
     @Test fun neueErzeugungNutztNeuenDateinamen() {
         // Eine alte Nullen-Datei aus dem Cache darf nie weiterbenutzt werden.
-        assertTrue(Tones.stille(ordner.root, 3000).name.endsWith("_v2.wav"))
+        assertTrue(Tones.stille(ordner.root, 3000).name.endsWith("_v3.wav"))
     }
 }
