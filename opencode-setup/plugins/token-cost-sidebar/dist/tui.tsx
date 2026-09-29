@@ -10,6 +10,7 @@ import {
   readAvailablePricingPerMillion,
   resolveOpenAIServiceTier,
   selectPricingModel,
+  withKimiPricing,
   withOpenAICacheReadMarkup,
   withOpenAIPriorityPricing,
 } from "./pricing"
@@ -711,11 +712,15 @@ function View(props: {
   const basePricingModel = createMemo(() => selectPricingModel(modelMeta().model, catalogModel()))
 
   const pricedModel = createMemo(() => withOpenAICacheReadMarkup(
-    withOpenAIPriorityPricing(
-      basePricingModel(),
+    withKimiPricing(
+      withOpenAIPriorityPricing(
+        basePricingModel(),
+        modelMeta().providerID ?? "",
+        modelMeta().modelID ?? "",
+        effectiveServiceTier(),
+      ),
       modelMeta().providerID ?? "",
       modelMeta().modelID ?? "",
-      effectiveServiceTier(),
     ),
     modelMeta().providerID ?? "",
   ))
@@ -752,11 +757,15 @@ function View(props: {
         usage: segment.usage,
         recordedCostUsd: segment.recordedCostUsd,
         pricingModel: withOpenAICacheReadMarkup(
-          withOpenAIPriorityPricing(
-            baseModel,
+          withKimiPricing(
+            withOpenAIPriorityPricing(
+              baseModel,
+              record.providerID ?? "",
+              record.modelID ?? "",
+              segment.serviceTier,
+            ),
             record.providerID ?? "",
             record.modelID ?? "",
-            segment.serviceTier,
           ),
           record.providerID ?? "",
         ),

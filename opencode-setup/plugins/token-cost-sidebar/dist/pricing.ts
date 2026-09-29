@@ -33,6 +33,67 @@ const OPENAI_PRIORITY_COST: Record<string, Record<string, number>> = {
 
 const OPENAI_CACHE_READ_MARKUP = 1.2
 
+// Official Kimi/Moonshot tariffs (platform.kimi.ai/docs/pricing/chat), 2026-09-29.
+// models.dev lists the kimi-code-plan providers with zero prices (subscription plan)
+// and lacks cache_write everywhere; the local table keeps plan models billable as
+// API-comparison costs and fills the missing K3 cache-write rate (5min TTL default;
+// the 1h TTL tier would be $6.00). K2 models officially bill no separate cache write.
+const KIMI_LOCAL_COST: Record<string, { input: number; output: number; cache_read: number; cache_write?: number }> = {
+  "kimi-k3": { input: 3, output: 15, cache_read: 0.3, cache_write: 3 },
+  "kimi-k2.7-code": { input: 0.95, output: 4, cache_read: 0.19 },
+  "kimi-k2.7-code-highspeed": { input: 1.9, output: 8, cache_read: 0.38 },
+  "kimi-k2.6": { input: 0.95, output: 4, cache_read: 0.16 },
+}
+
+const KIMI_CODE_PLAN_BASE: Record<string, string> = {
+  "k3": "kimi-k3",
+  "k3-256k": "kimi-k3",
+  "kimi-for-coding": "kimi-k2.7-code",
+  "kimi-for-coding-highspeed": "kimi-k2.7-code-highspeed",
+}
+
+function kimiBaseModel(providerID: string, modelID: string): { baseID: string; multiplier: number } | undefined {
+  if (providerID.startsWith("kimi-code-plan")) {
+    const baseID = KIMI_CODE_PLAN_BASE[modelID]
+    return baseID ? { baseID, multiplier: 1 } : undefined
+  }
+  let candidate = modelID
+  if (providerID === "openrouter") {
+    if (!candidate.startsWith("moonshotai/")) return undefined
+    candidate = candidate.slice("moonshotai/".length)
+  } else if (!providerID.startsWith("moonshotai")) {
+    return undefined
+  }
+  const multiplier = candidate.endsWith(":batch") ? 0.5 : 1
+  if (multiplier !== 1) candidate = candidate.slice(0, -":batch".length)
+  return KIMI_LOCAL_COST[candidate] ? { baseID: candidate, multiplier } : undefined
+}
+
+export function withKimiPricing(model: any, providerID: string, modelID: string): any {
+  const resolved = kimiBaseModel(providerID, modelID)
+  if (!resolved || !model) return model
+  const local = KIMI_LOCAL_COST[resolved.baseID]
+  const scale = (value: number | undefined) => value === undefined ? undefined : value * resolved.multiplier
+  const localCost: Record<string, number> = {
+    input: scale(local.input) as number,
+    output: scale(local.output) as number,
+    cache_read: scale(local.cache_read) as number,
+  }
+  if (local.cache_write !== undefined) localCost.cache_write = scale(local.cache_write) as number
+  const existing = priceSource(model)
+  const existingPositive = existing && (safeNumber(existing.input ?? existing.prompt) > 0 || safeNumber(existing.output ?? existing.completion) > 0)
+  if (!existingPositive) {
+    return { ...model, cost: { ...localCost } }
+  }
+  if (
+    localCost.cache_write !== undefined &&
+    !hasPrice(existing.cache_write ?? existing.cacheWrite ?? existing.cache?.write)
+  ) {
+    return { ...model, cost: { ...existing, cache_write: localCost.cache_write } }
+  }
+  return model
+}
+
 function safeNumber(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) return value
   if (typeof value === "string" && value !== "") {

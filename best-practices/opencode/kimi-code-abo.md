@@ -25,3 +25,16 @@ Quelle: https://www.kimi.com/code/docs/en/kimi-code/models.html
 
 ## Regeln
 - Abo nur für persönliche Entwicklung; gewerblich → Open Platform. User-Agent unverändert lassen. Für stabile Ergebnisse `k3-256k`/`k3` pinnen; Modellwechsel invalidiert den Cache. `k3-256k` spart ≈ 50 % Quota.
+
+## Update 29.09.2026 — offizielle API-Preise (platform.kimi.ai/docs/pricing/chat)
+Pro 1M Tokens, USD:
+| Modell | Input | Output | Cache-Read | Cache-Write |
+|--------|-------|--------|-----------|-------------|
+| `kimi-k3` (1M Kontext) | 3,00 | 15,00 | 0,30 | 3,00 (TTL 5min) / 6,00 (TTL 1h) |
+| `kimi-k2.7-code` | 0,95 | 4,00 | 0,19 | kein separater Write-Preis |
+| `kimi-k2.7-code-highspeed` | 1,90 | 8,00 | 0,38 | kein separater Write-Preis |
+| `kimi-k2.6` | 0,95 | 4,00 | 0,16 | kein separater Write-Preis |
+
+- Cache-Hits verlängern die Lebensdauer automatisch, ohne erneuten Write-Preis. Kein TTL angegeben → 5min-Tarif.
+- Code-Plan-Mapping: `k3`/`k3-256k` = kimi-k3-Tarif, `kimi-for-coding` = k2.7-code, `kimi-for-coding-highspeed` = k2.7-code-highspeed.
+- **models.dev-Lücke:** die Provider `kimi-code-plan-global`/`-cn` führen alle Modelle mit Nullpreisen (Abo), und bei allen Kimi-Modellen fehlt `cache_write`. Die TUI-Sidebar (token-cost-sidebar v1.15.0) hat diese Tarife deshalb lokal eingebaut (`withKimiPricing` in `dist/pricing.ts`): Nullpreise der Code-Plan-Provider werden als API-Vergleichskosten ersetzt, fehlender Cache-Write wird ergänzt, `:batch` halbiert.

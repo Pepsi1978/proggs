@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.14.8 – 04.09.2026 21:19
+Stand: v1.15.0 – 29.09.2026 12:00
 
 ## Funktionen
 
@@ -45,7 +45,18 @@ Stand: v1.14.8 – 04.09.2026 21:19
   Tarif. Bei ChatGPT-OAuth ist das finale Response-Feld laut OpenAI kein verlaesslicher Nachweis des
   serverseitigen Fast-Routings; dort bleibt deshalb die konfigurierte Fast-Auswahl massgeblich und wird
   intern für die Preisberechnung verwendet. Bei API-Key-Auth wird weiterhin der vom Provider
-  bestaetigte Response-Tier verwendet; GPT-5.5-Write-Preise werden nicht erfunden.
+   bestaetigte Response-Tier verwendet; GPT-5.5-Write-Preise werden nicht erfunden.
+- Kimi-/Moonshot-Modelle verwenden lokale offizielle Tarife (Stand 29.09.2026,
+  Quelle: platform.kimi.ai/docs/pricing/chat): kimi-k3 — gilt auch für die
+  Code-Plan-Varianten k3 und k3-256k — je 1M Tokens Input/Output/Cache-Read/Cache-Write
+  = 3/15/0,30/3 USD (Cache-Write im 5min-TTL; der 1h-TTL läge bei 6 USD);
+  kimi-k2.7-code (auch kimi-for-coding) = 0,95/4/0,19 USD; kimi-k2.7-code-highspeed
+  (auch kimi-for-coding-highspeed) = 1,90/8/0,38 USD; kimi-k2.6 = 0,95/4/0,16 USD.
+  K2-Modelle kennen offiziell keinen separaten Cache-Write-Preis; ein `:batch`-Suffix
+  halbiert die Tarife. Die Nullpreise der Code-Plan-Provider (Abo) werden vollständig
+  durch diese API-Vergleichskosten ersetzt; bei vorhandenen models.dev-Preisen wird nur
+  ein fehlender Cache-Write-Preis ergänzt, nichts überschrieben. Reasoning kostet den
+  Outputtarif.
 - Kumulative Session-Summen für Input, Output, Reasoning und Gesamtkosten, die durch Compress,
   ausgeblendete ältere Messages oder Modellwechsel nicht zurückgesetzt oder verkleinert werden.
 - Linksbündige, orange und fette Theme-Auswahl mit direkt folgendem Theme-Namen sowie nebeneinanderliegender Dunkel-/Hell-Umschaltung; der aktive Modus ist fett.
