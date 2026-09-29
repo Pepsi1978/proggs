@@ -34,6 +34,12 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
     suspend fun prepare(alarm: Alarm, progress: suspend (String) -> Unit = {}) = mutex.withLock {
         withContext(Dispatchers.IO) {
             if (!alarm.needsSpeech) return@withContext
+            // Aufgaben gehören zum klingelnden Termin. Während er klingelt oder schlummert, zeigt nextAt schon auf den
+            // nächsten Termin; eine Neuvorbereitung würde dessen Aufgaben vorlesen. Erst nach dem Stoppen wieder vorbereiten.
+            if (Step.TASKS in alarm.steps) {
+                val stored = store.get(alarm.id)
+                if (alarm.id in store.ringing() || (stored?.snoozeUntil ?: 0L) > 0L) return@withContext
+            }
             try {
                 val groups = mutableListOf<SpeechGroup>()
                 if (Step.IDEAS in alarm.steps) {

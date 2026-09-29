@@ -2145,7 +2145,8 @@ private fun AufgabenBereich(vm: WeckerViewModel, alarm: Alarm, offen: Boolean, s
     val tasksDay by vm.tasksDay.collectAsStateWithLifecycle()
     val loading by vm.tasksLoading.collectAsStateWithLifecycle()
     val error by vm.tasksError.collectAsStateWithLifecycle()
-    val tag = remember(alarm.nextAt, alarm.hour, alarm.minute, alarm.days, alarm.startDate, alarm.intervalDays) { TasksBridge.klingeltag(alarm) }
+    // Aus dem Entwurf gerechnet: der gespeicherte nextAt zeigt beim Bearbeiten noch auf den alten Termin.
+    val tag = remember(alarm) { TasksBridge.klingeltag(alarm, ausPlan = true) }
     val tagText = remember(tag) { aufgabenTag(tag) }
     Text("Aufgaben", style = MaterialTheme.typography.titleSmall, color = gold.primaer)
     Text("Vorgelesen werden die offenen Aufgaben aus der App „Aufgaben“ für $tagText: zuerst die Uhrzeit, dann der Titel, " +

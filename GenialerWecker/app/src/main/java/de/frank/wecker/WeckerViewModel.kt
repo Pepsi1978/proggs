@@ -278,7 +278,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
         // Eigener Ablauf statt runAction: das kleine Fenster darf nie an einem laufenden Vorgang scheitern.
         viewModelScope.launch {
             tasksLoading.value = true
-            val tag = TasksBridge.klingeltag(alarm)
+            val tag = TasksBridge.klingeltag(alarm, ausPlan = true)
             try {
                 tasks.value = TasksBridge(app).refresh(tag)
                 tasksDay.value = tag

@@ -62,9 +62,10 @@ class TasksBridge(private val context: Context) {
         /**
          * Der Kalendertag, an dem der Wecker als Nächstes klingelt, in lokaler Zeit. Ohne künftigen
          * geplanten Termin (ausgeschaltet, neu) wird er aus der Weckzeit berechnet; scheitert auch das, gilt morgen.
+         * [ausPlan] rechnet immer aus Uhrzeit und Wiederholung, etwa für den noch nicht gespeicherten Entwurf im Editor.
          */
-        fun klingeltag(alarm: Alarm): LocalDate {
-            val at = alarm.nextAt.takeIf { it > System.currentTimeMillis() } ?: runCatching { AlarmTime.nextRespectingSkip(alarm) }.getOrDefault(0L)
+        fun klingeltag(alarm: Alarm, ausPlan: Boolean = false): LocalDate {
+            val at = alarm.nextAt.takeIf { !ausPlan && it > System.currentTimeMillis() } ?: runCatching { AlarmTime.nextRespectingSkip(alarm) }.getOrDefault(0L)
             return if (at > 0) AlarmTime.localDate(at) else LocalDate.now().plusDays(1)
         }
     }
