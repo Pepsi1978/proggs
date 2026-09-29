@@ -13,7 +13,7 @@ https://claude.ai/artifact/6KDkbDgGsZQNjCttu4ngUm
 1. Werte über den Skill `research` holen (Frage 1 zur Engine stellen). Quellen: System Cards, Artificial Analysis, Vals.ai, arena.ai.
 2. In `data.js` → `models` einen Eintrag ergänzen (id, name, short, vendor, released, apiId, Preise, context, `color: [hell, dunkel]`, `shape`). Neue Farbe mit dem dataviz-Validator gegen beide Oberflächen prüfen.
 3. Werte in die passenden `series` eintragen. **Regel:** eine Zeile = eine Quelle + eine Benchmark-Version + eine Messreihe. Andere Version oder anderer Messaufbau → eigene Zeile. Abweichender Effort als `{ v, variant, note }`.
-4. Neuer Benchmark → neue Zeile plus Erklärung in `erklaerungen.js`.
+4. Neuer Benchmark → neue Zeile mit `stars` (1–5, Wichtigkeit in der Branche: 5 = Leitwert, den Hersteller und unabhängige Tester nutzen, aktuell und nicht ausgereizt; 2 = veraltet/ausgereizt; 1 = Nische) plus Erklärung in `erklaerungen.js`. Die Seite sortiert jeden Bereich automatisch nach Sternen.
 5. `version` und `stand` oben in `data.js` hochzählen (Zeit per `Get-Date -Format "dd.MM.yyyy HH:mm"`).
 
 ## Deploy
