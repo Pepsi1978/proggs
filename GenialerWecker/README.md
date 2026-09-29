@@ -51,6 +51,21 @@ Starttermine wählen. Datums- und Intervallpläne werden in lokaler Kalenderzeit
 - Die Berechtigungskarte erscheint auf der Startseite nur bei fehlenden Freigaben.
   Oben in den Einstellungen steht der vollständige Status mit grünem Schutzsymbol.
 
+### Design, Whisper und Supertonic aus Genialer Wecker Android (1.1.98)
+
+- Die vier Designs sehen aus wie in `GenialerWeckerAndroid`: Schlicht mit plastischem 3D-Wecker (Messinggehäuse,
+  Elfenbein-Zifferblatt, römische Ziffern, Dauphine-Zeiger, karminroter Sekundenzeiger, orangefarbener Schlafbogen,
+  gelegentliches stummes Klingeln), funkelnder Sternenhimmel, Morgenruhe mit gezeichneter Schlafszene,
+  Orbit in Matrix-Grün mit animiertem Sonnensystem im Hero, neuer Weckbildschirm mit Gruß nach Tageszeit,
+  runden roten/grünen Tasten und ruhigem Bestätigungsbildschirm.
+- **Spracheingabe** (Einstellungen): „Groq · API-Schlüssel“ wie bisher oder „Auf dem Handy · Whisper“. Für den
+  Handy-Weg lädt die App einmalig Whisper Small (Standard) oder Whisper Large V3 Turbo (Premium) im Hintergrund
+  herunter; danach wird ohne Internet erkannt.
+- **Supertonic · auf dem Handy**: zehn lokale Stimmen (Lea, Nina, Hannah, Sophie, Marie, Lukas, Jonas, Felix,
+  Paul, Max) in den Einstellungen und pro Wecker wählbar. Das Modell baut der Gradle-Bau in die APK ein
+  (`app/tts-modelle/`, nicht im Git). Die Vorbereitung dauert länger als bei Online-Stimmen, weil das Handy
+  selbst rechnet; scheitert sie, springt wie bisher die Edge-Notfallstimme ein.
+
 ### Bedienkomfort (1.1.45)
 
 - Die Kopfkarte nennt neben Termin und Restzeit auch den **Namen** des nächsten Weckers

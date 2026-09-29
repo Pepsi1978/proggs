@@ -3,3 +3,4 @@
 **/build/
 local.properties
 *.hprof
+app/tts-modelle/

@@ -37,12 +37,14 @@ class SyntheseStimme(
     val ttsProvider: String, val googleTtsApiKey: String, val googleTtsVoice: String,
     val qwenTtsApiKey: String, val qwenTtsVoiceId: String, val qwenStandardVoice: String,
     val ttsSpeechRate: Float, val immerDeutschVorlesen: Boolean, val edgeTtsVoice: String,
+    /** Lokale Supertonic-Stimme für [TtsProvider.MODELL]. */
+    val modellStimme: String = "",
 ) {
     constructor(s: SecureSettings) : this(s.ttsProvider, s.googleTtsApiKey, s.googleTtsVoice, s.qwenTtsApiKey,
-        s.qwenTtsVoiceId, s.qwenStandardVoice, s.ttsSpeechRate, s.immerDeutschVorlesen, s.edgeTtsVoice)
+        s.qwenTtsVoiceId, s.qwenStandardVoice, s.ttsSpeechRate, s.immerDeutschVorlesen, s.edgeTtsVoice, s.modellStimme)
     fun withRate(rate: Float) = SyntheseStimme(ttsProvider, googleTtsApiKey, googleTtsVoice, qwenTtsApiKey,
-        qwenTtsVoiceId, qwenStandardVoice, rate, immerDeutschVorlesen, edgeTtsVoice)
-    fun edgeFallback() = SyntheseStimme(TtsProvider.EDGE.id, "", googleTtsVoice, "", "", "", ttsSpeechRate, immerDeutschVorlesen, edgeTtsVoice)
+        qwenTtsVoiceId, qwenStandardVoice, rate, immerDeutschVorlesen, edgeTtsVoice, modellStimme)
+    fun edgeFallback() = SyntheseStimme(TtsProvider.EDGE.id, "", googleTtsVoice, "", "", "", ttsSpeechRate, immerDeutschVorlesen, edgeTtsVoice, modellStimme)
     val playbackSpeed: Float get() = if (ttsProvider in setOf(TtsProvider.QWEN.id, TtsProvider.QWEN_CLONE.id)) ttsSpeechRate else 1f
 }
 

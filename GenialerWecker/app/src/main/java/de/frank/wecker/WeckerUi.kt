@@ -2,6 +2,13 @@
 
 package de.frank.wecker
 
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
 import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
@@ -94,6 +101,7 @@ import de.frank.wecker.design.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.text.style.TextAlign
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -400,7 +408,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
         val heroDaten = HeroDaten(
             now = now, next = next, nextIsSnooze = nextIsSnooze, nextAlarm = nextAlarm,
             nextName = nextName, bereit = bereitschaft.all { it.second },
-            offen = bereitschaft.count { !it.second }, stufe = stufe, breite = breite,
+            offen = bereitschaft.count { !it.second }, stufe = stufe, breite = breite, anzahl = alarms.size,
         )
         Column(Modifier.fillMaxSize()) {
             // Der feststehende Hero. Er sitzt außerhalb des Rasters, damit die Weckerliste
@@ -441,7 +449,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                     }
                 }
                 if (alarms.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                    Leerzustand("☀", "Ein Morgen nach deinen Wünschen", "Musik, Gedanken und Erinnerungen – in deiner Reihenfolge. Lege deinen ersten Wecker an.")
+                    LeererStart(now, onNew)
                 }
                 items(alarms, key = { it.id }) { alarm ->
                     WeckerKarte(
@@ -487,8 +495,14 @@ data class HeroDaten(
     val offen: Int,
     val stufe: KopfStufe,
     val breite: androidx.compose.ui.unit.Dp,
+    /** Wie viele Wecker es überhaupt gibt – für den Leerzustand „noch keiner“ gegenüber „alle aus“. */
+    val anzahl: Int = 0,
 ) {
     val hatTermin: Boolean get() = next != null
+    /** Leerzustand in derselben Dreizeilen-Form wie ein Termin: kurz, jede Zeile passt in eine Zeile. */
+    val leerTitel: String get() = "Kein Wecker aktiv"
+    val leerGrund: String get() = when (anzahl) { 0 -> "Noch keiner angelegt"; 1 -> "Dein Wecker ist aus"; else -> "Alle $anzahl Wecker sind aus" }
+    val leerHilfe: String get() = if (anzahl == 0) "Tippe auf „Neuer Wecker“" else "Unten einfach einschalten"
     val schmal: Boolean get() = stufe == KopfStufe.SCHMAL
     val weit: Boolean get() = stufe == KopfStufe.WEIT
     /** Die Restzeit als Anteil eines Tages — für lineare Anzeigen. Über 24 Stunden ist voll. */
@@ -623,13 +637,10 @@ private fun TerminGruppe(
         horizontalAlignment = ausrichtung,
     ) {
         if (daten.next == null) {
-            Text("Kein Wecker aktiv", style = MaterialTheme.typography.bodyMedium,
-                color = textFarbe, maxLines = 1)
-            Text("Lege einen an oder schalte einen ein", style = MaterialTheme.typography.titleSmall,
-                color = gedaempft, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            // Hält die dritte Zeile frei, damit der Hero in jedem Zustand gleich hoch bleibt.
-            Text(" ", Modifier.clearAndSetSemantics { },
-                style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+            // Dieselben drei Zeilen wie bei einem Termin (Titel, Name, Restzeit): gleiche Höhe, kein Umbruch.
+            Text(daten.leerTitel, style = MaterialTheme.typography.bodyMedium, color = gedaempft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(daten.leerGrund, style = MaterialTheme.typography.titleSmall, color = textFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(daten.leerHilfe, style = MaterialTheme.typography.bodyMedium, color = fuehrung, maxLines = 1, overflow = TextOverflow.Ellipsis)
         } else {
             TerminZeile(daten.now, daten.next, daten.nextIsSnooze, punkt)
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -721,16 +732,18 @@ private fun SchlichtHero(
                 // gedrückter Knopf, nur auf ein Instrument angewendet. Statisch, kein Dauerleuchten.
                 // Ein richtiger Wecker: Glocken, Hammer und Füße hinter einem gewölbten
                 // Zifferblatt mit Minutenteilung und Zeigern; der Restzeitbogen liegt darauf.
+                val klingeln = rememberGelegentlichesKlingeln()
                 if (zeigtRing) Box(
-                    Modifier.size(ring + RINGBETT_RAND),
+                    Modifier.size(ring + RINGBETT_RAND).graphicsLayer {
+                        rotationZ = klingeln.value
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.85f)
+                    },
                     contentAlignment = Alignment.Center,
                 ) {
-                    WeckerSilhouette(Modifier.matchParentSize())
-                    Box(Modifier.size(ring + 6.dp)
-                        .shadow(6.dp, CircleShape, ambientColor = gold.primaer, spotColor = gold.primaer)
-                        .background(Brush.radialGradient(listOf(gold.flaecheErhoeht.heller(0.06f), gold.flaeche.dunkler(0.04f))), CircleShape)
-                        .border(2.dp, gold.primaer.copy(alpha = .75f), CircleShape))
+                    Wecker3D(Modifier.matchParentSize(), gehaeuse = ring + 14.dp)
                     RestzeitRing(daten.now, daten.next, daten.nextIsSnooze, Modifier.size(ring), zifferblatt = true)
+                    EdleZeiger(Modifier.size(ring))
+                    GlasKuppel(Modifier.size(ring))
                 }
                 // Rechtsbündig: Datum, Uhr und Termin enden an derselben Kante wie „Weckbereit“.
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -744,9 +757,10 @@ private fun SchlichtHero(
                             fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
                             fontSize = groesse, color = gold.primaer, maxLines = 1, softWrap = false)
                     }
+                    // Auf ~384 dp (S24) passte „Sonntag, 27. September“ nicht in eine Zeile: umbrechen statt kürzen.
                     Text(datumsZeile(daten.now),
                         style = MaterialTheme.typography.bodyMedium, color = gold.textGedaempft,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        textAlign = TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     TerminGruppe(daten, oeffnen, gold.textPrimaer, gold.textGedaempft, gold.primaer,
                         ausrichtung = Alignment.End, punkt = false)
                 }
@@ -858,7 +872,7 @@ private fun SchmalerHero(
                             onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
                 ) {
                     Text(
-                        if (daten.next == null) "Kein Wecker aktiv"
+                        if (daten.next == null) "${daten.leerGrund} · ${daten.leerHilfe}"
                         else "${terminAnzeige(daten.now, daten.next).einzeilig}${daten.nextName?.let { " · $it" } ?: ""}",
                         style = MaterialTheme.typography.bodyMedium, color = gold.textPrimaer,
                         maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -917,18 +931,23 @@ private fun MorgenruheHero(
     // der Knopf — der Textspalte blieben bei 360 dp Gerätebreite nur 132 dp. Jetzt trägt die
     // rechte Spalte allein das Motiv, die Aktionen stehen darunter über die volle Breite.
     val innen = daten.breite - HERO_AUSSEN * 2 - KARTE_INNEN * 2
-    val motiv = (innen - SPALTEN_ABSTAND - textMindest())
-        .coerceIn(0.dp, if (daten.weit) 128.dp else 104.dp)
+    // Die Schlafszene darf groß werden: Sie nimmt der Textspalte bis auf 85 Prozent ihres Mindestmaßes Platz.
+    val motiv = (innen - SPALTEN_ABSTAND - textMindest() * 0.85f)
+        .coerceIn(0.dp, if (daten.weit) 180.dp else 150.dp)
     val zeigtMotiv = motiv >= 72.dp
     val textBreite = innen - if (zeigtMotiv) SPALTEN_ABSTAND + motiv else 0.dp
     Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund)
+        Box(Modifier.fillMaxWidth()
+            .tiefenSchatten(gold.akzentWarm, Hoehe.karteErhoeht, form)
+            .clip(form).background(Brush.verticalGradient(listOf(gold.heroGrund.heller(if (gold.istDunkel) 0.06f else 0.03f), gold.heroGrund, gold.heroGrund.dunkler(0.05f))))
+            .glanzBogen(deckung = if (gold.istDunkel) 0.05f else 0.16f)
             // Weiches Morgenlicht hinter dem Bett — ein warmer Schein oben rechts.
             .drawBehind {
                 drawRect(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .20f), androidx.compose.ui.graphics.Color.Transparent),
                     center = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f), radius = size.maxDimension * 0.6f))
             }
-            .border(1.dp, gold.heroKante, form)) {
+            .border(1.dp, gold.heroKante, form)
+            .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.14f else 0.5f), form)) {
             HeroDeko(Modifier.matchParentSize())
             Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
@@ -1006,8 +1025,8 @@ private fun TraumraumHero(
                 .shadow(18.dp, kuppelForm, ambientColor = gold.primaer.copy(alpha = .45f),
                     spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = .6f))
                 .clip(kuppelForm)
-                .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(0.10f), gold.heroGrund, gold.heroGrundUnten.dunkler(0.12f))))
-                .glanzBogen(deckung = if (gold.istDunkel) 0.10f else 0.22f)
+                .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(if (gold.istDunkel) 0.05f else 0.10f), gold.heroGrund, gold.heroGrundUnten.dunkler(0.12f))))
+                .glanzBogen(deckung = if (gold.istDunkel) 0.05f else 0.22f)
                 .border(1.dp, gold.heroKante, kuppelForm)
                 .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.28f else 0.6f), kuppelForm)
                 .padding(top = 14.dp, bottom = versatz + 14.dp, start = 20.dp, end = 20.dp),
@@ -1108,9 +1127,9 @@ private fun OrbitHero(
     // Auch hier gibt die echte Innenbreite die Motivgröße vor: Auf sehr schmalen Abdeckbildschirmen
     // ginge sonst der Datenspalte der Platz aus. Orbits Innenabstand ist 12 dp, nicht 16 dp.
     val innen = daten.breite - HERO_AUSSEN * 2 - 24.dp
-    val motiv = (innen - 12.dp - textMindest()).coerceIn(0.dp, if (daten.weit) 108.dp else 92.dp)
-    val zeigtMotiv = motiv >= 64.dp
-    val uhrPlatz = innen - if (zeigtMotiv) motiv + 12.dp else 0.dp
+    // Der Text beginnt nach gut einem Drittel; die Sonne und die inneren Bahnen bleiben frei.
+    val textStart = (innen * 0.36f).coerceAtMost((innen - textMindest()).coerceAtLeast(12.dp))
+    val uhrPlatz = innen + 12.dp - textStart
     val statusFarbe = when {
         daten.nextIsSnooze -> semantisch.info
         daten.hatTermin -> gold.akzentWarm
@@ -1121,13 +1140,16 @@ private fun OrbitHero(
         daten.hatTermin -> "AKTIV"
         else -> "KEIN TERMIN"
     }
-    Box(Modifier.fillMaxWidth().clip(form).background(gold.heroGrund)
+    Box(Modifier.fillMaxWidth()
+        .tiefenSchatten(gold.primaer, Hoehe.karteErhoeht, form)
+        .clip(form).background(Brush.verticalGradient(listOf(gold.heroGrund.heller(0.05f), gold.heroGrund, gold.heroGrund.dunkler(0.08f))))
+        .glanzBogen(deckung = if (gold.istDunkel) 0.07f else 0.14f)
         // Kühles Instrumentenleuchten hinter dem Motiv.
         .drawBehind {
             drawRect(Brush.radialGradient(listOf(gold.primaer.copy(alpha = .14f), androidx.compose.ui.graphics.Color.Transparent),
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.5f), radius = size.maxDimension * 0.5f))
         }
-        .border(1.dp, gold.heroKante, form)) {
+        .border(1.5f.dp, Brush.sweepGradient(listOf(gold.primaer.heller(0.4f), gold.heroKante, gold.primaer.dunkler(0.2f), gold.heroKante, gold.primaer.heller(0.4f))), form)) {
         HeroDeko(Modifier.matchParentSize())
         Column(Modifier.fillMaxWidth()) {
             // Kopfstreifen: links der Signalbalken, rechts die Statusleuchte.
@@ -1147,13 +1169,11 @@ private fun OrbitHero(
                     style = MaterialTheme.typography.labelSmall, color = statusFarbe, maxLines = 1)
             }
             HorizontalDivider(color = gold.heroKante)
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (zeigtMotiv) LocalGestalt.current.Motiv(Modifier.size(motiv))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            // Links dreht sich groß das Sonnensystem im Hintergrund, rechts steht der Text rechtsbündig darüber.
+            Box(Modifier.fillMaxWidth()) {
+                Sonnensystem(Modifier.matchParentSize().clipToBounds())
+                Column(Modifier.fillMaxWidth().padding(start = textStart, end = 12.dp, top = 12.dp, bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp), horizontalAlignment = Alignment.End) {
                     GedeckelteSchrift {
                         val groesse = passendeUhrGroesse(uhrPlatz, uhrGroesse(daten.stufe),
                             IdeenSchriftFest, FontWeight.SemiBold)
@@ -1210,11 +1230,13 @@ private fun OrbitZeile(
         Modifier.fillMaxWidth()
             .then(if (klickbar) Modifier.clickable(onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.End,
     ) {
-        Text(name, Modifier.width(60.dp), fontFamily = IdeenSchriftFest,
+        // Rechtsbündig: Beschriftung direkt vor dem Wert, beide an der rechten Kante.
+        Text(name, Modifier.padding(end = 8.dp), fontFamily = IdeenSchriftFest,
             style = MaterialTheme.typography.labelSmall, color = gold.heroSchriftGedaempft, maxLines = 1)
-        Text(wert, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall,
-            color = wertFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(wert, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodySmall,
+            color = wertFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
     }
 }
 
@@ -1807,7 +1829,8 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
             val abschnittForm = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
             Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp).then(sanftWachsen),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(kopfModifier, verticalAlignment = Alignment.CenterVertically) {
+                // Innenabstand links wie bei Schlicht: Die Überschriften klebten sonst am Blattrand.
+                Row(kopfModifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) {
                         beschriftung(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), gold.textPrimaer)
                     }
@@ -1822,11 +1845,11 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
                         .background(gold.flaecheErhoeht)
                         .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
                         .border(1.dp, materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha * .8f, material.kanteSchattenAlpha * .6f), abschnittForm)
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
                 }
-                HorizontalDivider(color = gold.rahmen.copy(alpha = .6f))
+
             }
         }
         // Schlicht: unverändert der bisherige Aufbau aus Kopfzeile und Inhalt in einer Karte.
@@ -1933,19 +1956,37 @@ private fun AlarmEditor(vm: WeckerViewModel, alarm: Alarm, activity: ComponentAc
                 if (alarm.text.isBlank()) Text("Der Erinnerungstext fehlt.", color = LocalSemantisch.current.warnung, style = MaterialTheme.typography.bodySmall)
             Eingabefeld(alarm.text, { vm.change(alarm.copy(text = it)) }, "Text, der vorgelesen werden soll",
                     Modifier.fillMaxWidth().heightIn(min = 160.dp), einzeilig = false)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GoldKnopf(if (recording) "■ Diktat abschließen" else "● Diktieren", {
-                        if (recording) vm.stopRecording()
-                        else if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.startRecording()
-                        else microphone.launch(Manifest.permission.RECORD_AUDIO)
-                    // Stop is always possible; start only while nothing else runs.
-                    }, aktiviert = recording || busy.isBlank())
-                    // Test vorlesen: der eigene Text mit der Stimme und dem Tempo dieses Weckers; zweiter Tipp stoppt.
-                    AnhoerKnopfText(vm, alarm)
-                    StillerKnopf("Text verbessern", vm::improve)
-                    if (alarm.originalText.isNotBlank()) StillerKnopf("Original zurückholen", { vm.change(alarm.copy(text = alarm.originalText, originalText = "")) })
+                // Diktat-Weg aus den Einstellungen: Groq (API-Schlüssel) oder Whisper direkt auf dem Handy.
+                val diktatRevision by vm.settingsRevision.collectAsStateWithLifecycle()
+                val lokal = remember(diktatRevision) { vm.settings.diktatWeg == "lokal" }
+                if (lokal) {
+                    // Wie in GenialerWeckerAndroid: links Einsprechen, rechts Vorlesen. Erkanntes wird an den AKTUELLEN
+                    // Entwurf angehängt, damit ein spätes Ergebnis keine neueren Handänderungen überschreibt.
+                    DiktatUndVorlesen(sprache = DiktatSprache.DE, anfuegen = { diktiert ->
+                        vm.draft.value?.takeIf { it.id == alarm.id }?.let { aktuell ->
+                            vm.change(aktuell.copy(text = listOf(aktuell.text.trimEnd(), diktiert.trim()).filter(String::isNotBlank).joinToString("\n")))
+                        }
+                    }) { AnhoerKnopfText(vm, alarm) }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StillerKnopf("Text verbessern", vm::improve)
+                        if (alarm.originalText.isNotBlank()) StillerKnopf("Original zurückholen", { vm.change(alarm.copy(text = alarm.originalText, originalText = "")) })
+                    }
+                    Text("Whisper auf dem Handy – ohne Internet. Die KI-Textverbesserung nutzt dieselbe ChatGPT-Anmeldung und Modellauswahl wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GoldKnopf(if (recording) "■ Diktat abschließen" else "● Diktieren", {
+                            if (recording) vm.stopRecording()
+                            else if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.startRecording()
+                            else microphone.launch(Manifest.permission.RECORD_AUDIO)
+                        // Stop is always possible; start only while nothing else runs.
+                        }, aktiviert = recording || busy.isBlank())
+                        // Test vorlesen: der eigene Text mit der Stimme und dem Tempo dieses Weckers; zweiter Tipp stoppt.
+                        AnhoerKnopfText(vm, alarm)
+                        StillerKnopf("Text verbessern", vm::improve)
+                        if (alarm.originalText.isNotBlank()) StillerKnopf("Original zurückholen", { vm.change(alarm.copy(text = alarm.originalText, originalText = "")) })
+                    }
+                    Text("Groq · Whisper Large V3 Turbo. Die KI-Textverbesserung nutzt dieselbe ChatGPT-Anmeldung und Modellauswahl wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
                 }
-                Text("Groq · Whisper Large V3 Turbo. Die KI-Textverbesserung nutzt dieselbe ChatGPT-Anmeldung und Modellauswahl wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
                 HorizontalDivider(Modifier.padding(vertical = 4.dp), color = LocalGold.current.primaer.copy(alpha = .4f))
             }
             Text("Reihenfolge beim Wecken (verschieben per Drag-and-drop)", style = MaterialTheme.typography.titleSmall, color = LocalGold.current.primaer)
@@ -2062,6 +2103,8 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
     val effective = alarm.resolveVoice(defaults)
     val available = voices.map {
         "${TtsProvider.QWEN_CLONE.id}|${it.id}" to "${vm.settings.qwenVoiceNames[it.id] ?: it.name} · Meine Stimmen"
+    } + ModellKatalog.STIMMEN.map {
+        "${TtsProvider.MODELL.id}|${it.id}" to "${ModellKatalog.anzeige(it)} · Supertonic (Handy)"
     } + TtsCatalog.googleVoices.map {
         "${TtsProvider.GOOGLE_CLOUD.id}|${it.id}" to "${it.name} · Google · ${geschlecht(it)}"
     } + TtsCatalog.edgeVoices.map {
@@ -2071,6 +2114,7 @@ private fun AlarmSpeechEditor(vm: WeckerViewModel, alarm: Alarm) {
         TtsProvider.GOOGLE_CLOUD.id -> defaults.googleTtsVoice
         TtsProvider.QWEN_CLONE.id -> defaults.qwenTtsVoiceId
         TtsProvider.QWEN.id -> defaults.qwenStandardVoice
+        TtsProvider.MODELL.id -> defaults.modellStimme
         else -> defaults.edgeTtsVoice
     }
     val defaultLabel = available.find { it.first == "${defaults.ttsProvider}|$defaultId" }?.second
@@ -2566,13 +2610,17 @@ private fun TerminZeile(now: Long, target: Long, snooze: Boolean, punkt: Boolean
 private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Modifier = Modifier, zifferblatt: Boolean = false) {
     val gold = LocalGold.current
     val accent = if (snooze) LocalSemantisch.current.info else gold.primaer
+    // Das Zifferblatt des 3D-Weckers ist auch im Dunkelmodus hell (Elfenbein) – darauf braucht es dunkle Tinte.
+    val hellesBlatt = zifferblatt && gold.istDunkel
+    val tinteLeicht = if (hellesBlatt) ZIFFER_TINTE_LEICHT else gold.textGedaempft
+    val tinteStark = if (hellesBlatt) ZIFFER_TINTE_STARK else gold.textPrimaer
     val geometry = target?.let { ZeitRing.berechne(now, it) }
     val nowAngle = ZeitRing.angle(now, ZoneId.systemDefault())
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-    val numberStyle = MaterialTheme.typography.labelSmall.copy(color = gold.textGedaempft, fontSize = 10.sp)
+    val numberStyle = MaterialTheme.typography.labelSmall.copy(color = tinteLeicht, fontSize = 10.sp)
     val centerStyle = MaterialTheme.typography.labelMedium.copy(color = accent, fontWeight = FontWeight.SemiBold,
         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-    val surface = gold.flaecheErhoeht
+    val surface = if (hellesBlatt) ZIFFER_ELFENBEIN else gold.flaecheErhoeht
     androidx.compose.foundation.Canvas(modifier) {
         val stroke = 5.dp.toPx()
         val radius = size.minDimension / 2f - stroke
@@ -2581,27 +2629,98 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
         fun point(angleDeg: Float, r: Float = radius) = Math.toRadians(angleDeg.toDouble()).let {
             center + androidx.compose.ui.geometry.Offset((r * Math.cos(it)).toFloat(), (r * Math.sin(it)).toFloat())
         }
-        drawCircle(gold.textGedaempft.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
-        // Das Zifferblatt bekommt zusätzlich eine feine Minutenteilung.
-        if (zifferblatt) repeat(60) { minute ->
-            if (minute % 5 != 0) drawLine(gold.textGedaempft.copy(alpha = .35f), point(minute * 6f - 90f, radius - 2.5f.dp.toPx()), point(minute * 6f - 90f, radius), 1.dp.toPx())
-        }
-        repeat(12) { hour ->
-            val a = hour * 30f - 90f
-            val long = hour % 3 == 0
-            drawLine(gold.textGedaempft.copy(alpha = if (long) .8f else .45f), point(a, radius - (if (long) 7 else 4).dp.toPx()), point(a, radius), 1.5f.dp.toPx())
-        }
-        listOf(0 to "12", 3 to "3", 6 to "6", 9 to "9").forEach { (hour, label) ->
-            val layout = measurer.measure(label, numberStyle)
-            val at = point(hour * 30f - 90f, radius - 15.dp.toPx())
-            drawText(layout, topLeft = at - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
+        // Im 3D-Wecker läuft der Schlafbogen mit Abstand innerhalb der Teilung; die Zahlen rücken dafür nach innen.
+        val bogenRadius = if (zifferblatt) radius - 10.dp.toPx() else radius
+        val zahlenRadius = radius - (if (zifferblatt) 21 else 15).dp.toPx()
+        if (zifferblatt) {
+            // Edles Zifferblatt: Sonnenschliff, der das Licht fächert, eine Guilloché-Rosette in der
+            // Mitte und eine Minutenschiene aus zwei feinen Kreisen mit Teilung dazwischen.
+            val schliff = (0..24).map { i ->
+                if (i % 2 == 0) androidx.compose.ui.graphics.Color.White.copy(alpha = if (hellesBlatt) .16f else .22f)
+                else tinteStark.copy(alpha = .05f)
+            }
+            drawCircle(Brush.sweepGradient(schliff, center), radius)
+            val rosette = radius * .34f
+            repeat(7) { i ->
+                drawCircle(tinteLeicht.copy(alpha = .10f), rosette * (i + 1) / 7f,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(.6f.dp.toPx()))
+            }
+            val schiene = radius - 3.dp.toPx()
+            drawCircle(tinteLeicht.copy(alpha = .55f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(.8f.dp.toPx()))
+            drawCircle(tinteLeicht.copy(alpha = .40f), schiene, style = androidx.compose.ui.graphics.drawscope.Stroke(.6f.dp.toPx()))
+            repeat(60) { minute ->
+                if (minute % 5 != 0) drawLine(tinteLeicht.copy(alpha = .55f), point(minute * 6f - 90f, schiene),
+                    point(minute * 6f - 90f, radius), .7f.dp.toPx())
+            }
+            // Aufgesetzte Stundenindizes aus poliertem Messing: dunkle Kante, helle Fläche, feiner Glanzstrich.
+            val index = if (gold.istDunkel) androidx.compose.ui.graphics.lerp(gold.primaer, androidx.compose.ui.graphics.Color(0xFF5E4B2A), .35f)
+                else gold.primaer
+            repeat(12) { hour ->
+                if (hour % 3 != 0) {
+                    val a = hour * 30f - 90f
+                    val innenPunkt = point(a, radius - 8.dp.toPx())
+                    val aussenPunkt = point(a, radius - 1.5f.dp.toPx())
+                    drawLine(tinteStark.copy(alpha = .45f), innenPunkt + androidx.compose.ui.geometry.Offset(.5f.dp.toPx(), .8f.dp.toPx()),
+                        aussenPunkt + androidx.compose.ui.geometry.Offset(.5f.dp.toPx(), .8f.dp.toPx()), 2.6f.dp.toPx())
+                    drawLine(Brush.linearGradient(listOf(index.heller(.45f), index.dunkler(.25f)), innenPunkt, aussenPunkt),
+                        innenPunkt, aussenPunkt, 2.2f.dp.toPx())
+                    drawLine(androidx.compose.ui.graphics.Color.White.copy(alpha = .55f), innenPunkt, aussenPunkt, .5f.dp.toPx())
+                }
+            }
+            // Römische Ziffern in Schlichts Serifenschrift; unter der XII ein kleiner Messingstern.
+            val roemisch = numberStyle.copy(color = tinteStark.copy(alpha = .88f), fontFamily = IdeenSchriftBetont,
+                fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = .3.sp)
+            listOf(0 to "XII", 3 to "III", 6 to "VI", 9 to "IX").forEach { (hour, label) ->
+                val layout = measurer.measure(label, roemisch)
+                val at = point(hour * 30f - 90f, zahlenRadius)
+                drawText(layout, topLeft = at - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
+            }
+            val stern = center + androidx.compose.ui.geometry.Offset(0f, -zahlenRadius * .56f)
+            val s = 2.6f.dp.toPx()
+            val sternPfad = androidx.compose.ui.graphics.Path().apply {
+                moveTo(stern.x, stern.y - s); lineTo(stern.x + s * .28f, stern.y - s * .28f)
+                lineTo(stern.x + s, stern.y); lineTo(stern.x + s * .28f, stern.y + s * .28f)
+                lineTo(stern.x, stern.y + s); lineTo(stern.x - s * .28f, stern.y + s * .28f)
+                lineTo(stern.x - s, stern.y); lineTo(stern.x - s * .28f, stern.y - s * .28f); close()
+            }
+            drawPath(sternPfad, Brush.linearGradient(listOf(index.heller(.4f), index.dunkler(.2f)),
+                stern - androidx.compose.ui.geometry.Offset(s, s), stern + androidx.compose.ui.geometry.Offset(s, s)))
+        } else {
+            drawCircle(tinteLeicht.copy(alpha = .35f), radius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+            repeat(12) { hour ->
+                val a = hour * 30f - 90f
+                val long = hour % 3 == 0
+                drawLine(tinteLeicht.copy(alpha = if (long) .8f else .45f), point(a, radius - (if (long) 7 else 4).dp.toPx()), point(a, radius), 1.5f.dp.toPx())
+            }
+            listOf(0 to "12", 3 to "3", 6 to "6", 9 to "9").forEach { (hour, label) ->
+                val layout = measurer.measure(label, numberStyle)
+                val at = point(hour * 30f - 90f, zahlenRadius)
+                drawText(layout, topLeft = at - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
+            }
         }
         val sweep = geometry?.sweep
-        if (geometry != null && sweep != null) drawArc(accent, geometry.nowAngle, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
-        geometry?.centerLabel?.let { label ->
+        if (geometry != null && sweep != null) {
+            if (zifferblatt) {
+                // Im 3D-Wecker erscheint die Schlafzeit erst, wenn ein aktiver Wecker höchstens 12 Stunden entfernt
+                // ist: ein feiner oranger Bogen mit Abstand zum Gehäuserand und einer zarten Spur als Führung.
+                val farben = if (snooze) listOf(accent, accent) else listOf(ORANGE_A, ORANGE_B)
+                val start = geometry.nowAngle
+                val verlauf = Brush.sweepGradient(
+                    *(0..20).map { i -> ((start + sweep * i / 20f + 360f) % 360f) / 360f to lerpFarbe(farben[0], farben[1], i / 20f) }
+                        .sortedBy { it.first }.toTypedArray(), center = center)
+                val bogenLinks = androidx.compose.ui.geometry.Offset(center.x - bogenRadius, center.y - bogenRadius)
+                val bogenGroesse = androidx.compose.ui.geometry.Size(bogenRadius * 2, bogenRadius * 2)
+                drawCircle(farben[1].copy(alpha = .12f), bogenRadius, style = androidx.compose.ui.graphics.drawscope.Stroke(2.2f.dp.toPx()))
+                drawArc(verlauf, start, sweep, useCenter = false, topLeft = bogenLinks, size = bogenGroesse,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(2.2f.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+            } else drawArc(accent, geometry.nowAngle, sweep, useCenter = false, topLeft = topLeft, size = arcSize,
+                style = androidx.compose.ui.graphics.drawscope.Stroke(stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        }
+        // Im 3D-Wecker bleibt das Blatt ohne Bogen leer: kein Datumsfenster, keine Punkte (Wunsch 28.09.2026).
+        // Im 3D-Wecker bleibt das Blatt ohne Bogen leer: kein Datumsfenster, keine Punkte (Wunsch 28.09.2026).
+        if (!zifferblatt) geometry?.centerLabel?.let { label ->
             // Fit inside the space the 12/3/6/9 numbers leave free: shrink, then try two lines, never paint over them.
-            val numberRadius = radius - 15.dp.toPx()
+            val numberRadius = zahlenRadius
             val maxWidth = 2 * (numberRadius - measurer.measure("3", numberStyle).size.width / 2f - 2.dp.toPx())
             val maxHeight = 2 * (numberRadius - measurer.measure("12", numberStyle).size.height / 2f - 2.dp.toPx())
             val twoLines = when {
@@ -2616,44 +2735,268 @@ private fun RestzeitRing(now: Long, target: Long?, snooze: Boolean, modifier: Mo
                     constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidth.toInt().coerceAtLeast(1)))
             drawText(layout, topLeft = center - androidx.compose.ui.geometry.Offset(layout.size.width / 2f, layout.size.height / 2f))
         }
-        // Zeiger der aktuellen Uhrzeit — nur wenn die Mitte frei ist, sonst stünden sie über der Kennzeichnung.
-        if (zifferblatt && geometry?.centerLabel == null) {
-            val zeit = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault())
-            val minutenWinkel = zeit.minute * 6f - 90f
-            val stundenWinkel = (zeit.hour % 12) * 30f + zeit.minute * 0.5f - 90f
-            val zeiger = androidx.compose.ui.graphics.StrokeCap.Round
-            drawLine(gold.textPrimaer.copy(alpha = .85f), center, point(stundenWinkel, radius * 0.45f), 3.5f.dp.toPx(), zeiger)
-            drawLine(gold.textPrimaer.copy(alpha = .75f), center, point(minutenWinkel, radius * 0.66f), 2.dp.toPx(), zeiger)
-            drawCircle(accent, 3.5f.dp.toPx(), center)
+        // Die Zeiger zeichnet [EdleZeiger] als eigene Ebene darüber, mit sekundengenauem Takt.
+        if (!zifferblatt) {
+            if (geometry != null) ringMarker(point(geometry.targetAngle, bogenRadius), hollow = false, color = accent, surface = surface)
+            ringMarker(point(nowAngle, bogenRadius), hollow = true, color = tinteStark, surface = surface)
         }
-        if (geometry != null) ringMarker(point(geometry.targetAngle), hollow = false, color = accent, surface = surface)
-        ringMarker(point(nowAngle), hollow = true, color = gold.textPrimaer, surface = surface)
     }
 }
 
-/** Glocken, Hammer und Füße eines klassischen Weckers — der Hintergrund hinter Schlichts Zifferblatt. */
+/**
+ * Schlichts Wecker als plastisches Objekt: Bodenschatten, Metallfüße, gewölbte Glocken mit Glanzpunkt,
+ * Hammer, ein Gehäuse mit umlaufendem Metallglanz und Fase, darin das leicht gewölbte Zifferblatt.
+ * Alles statisch gezeichnet (keine Dauerbewegung im feststehenden Hero). [gehaeuse] = Außendurchmesser.
+ */
 @Composable
-private fun WeckerSilhouette(modifier: Modifier) {
+private fun Wecker3D(modifier: Modifier, gehaeuse: androidx.compose.ui.unit.Dp) {
     val gold = LocalGold.current
-    val farbe = gold.primaer
+    val dunkel = gold.istDunkel
+    // Im Dunkeln gedecktes, dunkleres Messing statt grellem Gold; das Blatt bleibt hell wie bei einer echten Uhr.
+    val metall = if (dunkel) androidx.compose.ui.graphics.lerp(gold.primaer, androidx.compose.ui.graphics.Color(0xFF5E4B2A), .5f) else gold.primaer
+    val blatt = if (dunkel) ZIFFER_ELFENBEIN else gold.flaecheErhoeht
     androidx.compose.foundation.Canvas(modifier) {
         val r = size.minDimension / 2f
+        val k = gehaeuse.toPx() / 2f
+        val rund = androidx.compose.ui.graphics.StrokeCap.Round
         fun punkt(winkel: Float, abstand: Float) = Math.toRadians(winkel.toDouble()).let {
             center + androidx.compose.ui.geometry.Offset((abstand * Math.cos(it)).toFloat(), (abstand * Math.sin(it)).toFloat())
         }
-        val glocke = r * 0.34f
-        listOf(-128f, -52f).forEach { w ->
-            val mitte = punkt(w, r * 0.80f)
-            drawCircle(Brush.radialGradient(listOf(farbe.heller(0.35f), farbe, farbe.dunkler(0.25f)),
-                center = mitte - androidx.compose.ui.geometry.Offset(glocke * .3f, glocke * .3f), radius = glocke * 1.2f), glocke, mitte)
+        fun o(x: Float, y: Float) = androidx.compose.ui.geometry.Offset(x, y)
+        val schwarz = androidx.compose.ui.graphics.Color.Black
+        val weiss = androidx.compose.ui.graphics.Color.White
+        // Weicher Bodenschatten unter den Füßen.
+        drawOval(Brush.radialGradient(listOf(schwarz.copy(alpha = if (dunkel) .5f else .22f), schwarz.copy(alpha = 0f)),
+            center = o(center.x, center.y + r * 1.04f), radius = r * .8f),
+            topLeft = o(center.x - r * .8f, center.y + r * .96f), size = androidx.compose.ui.geometry.Size(r * 1.6f, r * .17f))
+        // Füße: vom Gehäuse schräg nach außen, zum Boden hin dunkler.
+        listOf(122f, 58f).forEach { w ->
+            val a = punkt(w, k * .8f); val b = punkt(w, r * 1.06f)
+            drawLine(Brush.linearGradient(listOf(metall.heller(.25f), metall.dunkler(.4f)), a, b), a, b, 7.dp.toPx(), rund)
+            drawCircle(Brush.radialGradient(listOf(metall.heller(.3f), metall.dunkler(.45f)), center = b - o(2f, 2f), radius = 5.dp.toPx()), 4.5f.dp.toPx(), b)
         }
-        // Der Bügel mit dem Hammer zwischen den Glocken.
-        drawLine(farbe.dunkler(0.15f), punkt(-128f, r * 0.80f), punkt(-52f, r * 0.80f), 3.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
-        drawLine(farbe.dunkler(0.15f), punkt(-90f, r * 0.62f), punkt(-90f, r * 0.98f), 3.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
-        drawCircle(farbe, 4.dp.toPx(), punkt(-90f, r * 0.98f))
-        // Zwei Füße unten.
-        listOf(128f, 52f).forEach { w ->
-            drawLine(farbe.dunkler(0.2f), punkt(w, r * 0.72f), punkt(w, r * 0.99f), 5.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
+        // Hammer mitten zwischen den Glocken.
+        val hammerOben = punkt(-90f, r * 1.02f)
+        drawLine(metall.dunkler(.3f), punkt(-90f, k * .9f), hammerOben, 3.dp.toPx(), rund)
+        drawCircle(Brush.radialGradient(listOf(metall.heller(.5f), metall.dunkler(.3f)), center = hammerOben - o(2f, 2f), radius = 6.dp.toPx()), 5.dp.toPx(), hammerOben)
+        // Glocken: Kugelschattierung mit Licht von oben links, Schlagschatten auf dem Gehäuse, Glanzpunkt.
+        val g = r * .34f
+        listOf(-130f, -50f).forEach { w ->
+            val m = punkt(w, r * .86f)
+            drawCircle(schwarz.copy(alpha = if (dunkel) .35f else .16f), g, m + o(g * .1f, g * .16f))
+            drawCircle(Brush.radialGradient(listOf(metall.heller(.6f), metall.heller(.12f), metall.dunkler(.38f)),
+                center = m - o(g * .35f, g * .42f), radius = g * 1.45f), g, m)
+            drawCircle(metall.dunkler(.45f).copy(alpha = .6f), g, m, style = androidx.compose.ui.graphics.drawscope.Stroke(1.2f.dp.toPx()))
+            val glanz = m - o(g * .36f, g * .44f)
+            drawCircle(Brush.radialGradient(listOf(weiss.copy(alpha = .8f), weiss.copy(alpha = 0f)), center = glanz, radius = g * .42f), g * .42f, glanz)
+        }
+        // Gehäuse: Schlagschatten, umlaufender Metallglanz, Fase nach innen.
+        drawCircle(schwarz.copy(alpha = if (dunkel) .45f else .2f), k, center + o(0f, k * .07f))
+        drawCircle(Brush.sweepGradient(listOf(metall.heller(.5f), metall.heller(.05f), metall.dunkler(.35f), metall.dunkler(.1f),
+            metall.heller(.35f), metall.heller(.55f), metall.heller(.5f)), center), k)
+        drawCircle(Brush.linearGradient(listOf(metall.dunkler(.4f), metall.heller(.45f)), start = center - o(k, k), end = center + o(k, k)), k * .925f)
+        // Zifferblatt, leicht gewölbt, oben mit feiner Innenschattenkante.
+        drawCircle(Brush.radialGradient(listOf(blatt.heller(.08f), blatt, blatt.dunkler(.08f)),
+            center = center - o(k * .2f, k * .25f), radius = k * 1.1f), k * .885f)
+        drawCircle(Brush.verticalGradient(listOf(schwarz.copy(alpha = if (dunkel) .24f else .16f), schwarz.copy(alpha = 0f)),
+            startY = center.y - k * .885f, endY = center.y - k * .5f), k * .885f)
+    }
+}
+
+/** Das Deckglas über dem Zifferblatt: ein weicher Lichtfleck oben links und eine feine Lichtkante. */
+@Composable
+private fun GlasKuppel(modifier: Modifier) {
+    val dunkel = LocalGold.current.istDunkel
+    androidx.compose.foundation.Canvas(modifier) {
+        val k = size.minDimension / 2f
+        val weiss = androidx.compose.ui.graphics.Color.White
+        val kreis = androidx.compose.ui.graphics.Path().apply {
+            addOval(androidx.compose.ui.geometry.Rect(center, k))
+        }
+        clipPath(kreis) {
+            drawOval(Brush.verticalGradient(listOf(weiss.copy(alpha = if (dunkel) .12f else .32f), weiss.copy(alpha = 0f)),
+                startY = center.y - k, endY = center.y - k * .2f),
+                topLeft = androidx.compose.ui.geometry.Offset(center.x - k * .78f, center.y - k * .98f),
+                size = androidx.compose.ui.geometry.Size(k * 1.3f, k * .8f))
+        }
+        drawArc(weiss.copy(alpha = if (dunkel) .25f else .6f), 195f, 75f, useCenter = false,
+            topLeft = androidx.compose.ui.geometry.Offset(center.x - k * .96f, center.y - k * .96f),
+            size = androidx.compose.ui.geometry.Size(k * 1.92f, k * 1.92f),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(1.5f.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+    }
+}
+
+/**
+ * Die Zeiger des 3D-Weckers: Stunde und Minute als facettierte Dauphine-Zeiger aus poliertem Messing mit
+ * Mittelgrat und Schattenwurf aufs Blatt, dazu ein schlanker karminroter Sekundenzeiger mit Gegengewicht-Ring.
+ * Eigener Sekundentakt (nur solange der Bildschirm vorne ist); Stunde und Minute laufen stufenlos mit.
+ * Der Sekundenzeiger springt wie ein feines Uhrwerk mit kurzem Nachfedern, bei reduzierter Bewegung ohne.
+ * Gleiche Geometrie wie [RestzeitRing]: gleiche Größe übergeben.
+ */
+@Composable
+private fun EdleZeiger(modifier: Modifier) {
+    val gold = LocalGold.current
+    val reduziert = LocalBewegungReduziert.current
+    val jetzt = rememberNow(1000)
+    val zeit = remember(jetzt) { Instant.ofEpochMilli(jetzt).atZone(ZoneId.systemDefault()).toLocalTime() }
+    val sekunde = zeit.second
+    // Fortlaufender Winkel, damit der Sprung von 59 auf 0 vorwärts läuft statt einmal rückwärts herum.
+    val sekundenWinkel = remember { androidx.compose.animation.core.Animatable(sekunde * 6f) }
+    LaunchedEffect(jetzt / 1000) {
+        var schritt = sekunde * 6f - sekundenWinkel.value % 360f
+        if (schritt < 0f) schritt += 360f
+        val ziel = sekundenWinkel.value + schritt
+        // Mehr als ein Schritt (z. B. nach der Rückkehr in die App): direkt hin, ohne Umlauf.
+        if (reduziert || schritt > 12f) sekundenWinkel.snapTo(ziel)
+        else sekundenWinkel.animateTo(ziel, androidx.compose.animation.core.spring(dampingRatio = .5f, stiffness = 1100f))
+    }
+    val minutenWinkel = (zeit.minute + zeit.second / 60f) * 6f
+    val stundenWinkel = ((zeit.hour % 12) + zeit.minute / 60f + zeit.second / 3600f) * 30f
+    val metall = if (gold.istDunkel) androidx.compose.ui.graphics.lerp(gold.primaer, androidx.compose.ui.graphics.Color(0xFF5E4B2A), .35f)
+        else gold.primaer
+    val tinte = if (gold.istDunkel) ZIFFER_TINTE_STARK else gold.textPrimaer
+    androidx.compose.foundation.Canvas(modifier) {
+        val radius = size.minDimension / 2f - 5.dp.toPx()
+        val schatten = androidx.compose.ui.graphics.Color.Black.copy(alpha = if (gold.istDunkel) .30f else .22f)
+        val versatz = androidx.compose.ui.geometry.Offset(.9f.dp.toPx(), 1.7f.dp.toPx())
+
+        // Dauphine-Zeiger nach oben gezeichnet; die linke Facette fängt das Licht, die rechte liegt im Schatten.
+        fun dauphine(winkel: Float, laenge: Float, breite: Float) {
+            val c = center
+            val schulter = c.y - laenge * .16f
+            val spitze = androidx.compose.ui.geometry.Offset(c.x, c.y - laenge)
+            val heck = androidx.compose.ui.geometry.Offset(c.x, c.y + laenge * .14f)
+            val links = androidx.compose.ui.graphics.Path().apply {
+                moveTo(spitze.x, spitze.y); lineTo(c.x - breite, schulter); lineTo(heck.x, heck.y); close()
+            }
+            val rechts = androidx.compose.ui.graphics.Path().apply {
+                moveTo(spitze.x, spitze.y); lineTo(c.x + breite, schulter); lineTo(heck.x, heck.y); close()
+            }
+            val umriss = androidx.compose.ui.graphics.Path().apply {
+                moveTo(spitze.x, spitze.y); lineTo(c.x + breite, schulter); lineTo(heck.x, heck.y)
+                lineTo(c.x - breite, schulter); close()
+            }
+            translate(versatz.x, versatz.y) { rotate(winkel, c) { drawPath(umriss, schatten) } }
+            rotate(winkel, c) {
+                drawPath(links, Brush.linearGradient(listOf(metall.heller(.62f), metall.heller(.18f)),
+                    spitze, androidx.compose.ui.geometry.Offset(c.x - breite, schulter)))
+                drawPath(rechts, Brush.linearGradient(listOf(metall.dunkler(.12f), metall.dunkler(.48f)),
+                    spitze, androidx.compose.ui.geometry.Offset(c.x + breite, schulter)))
+                drawPath(umriss, tinte.copy(alpha = .55f), style = androidx.compose.ui.graphics.drawscope.Stroke(.6f.dp.toPx(),
+                    join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                // Feiner Mittelgrat, der das Licht wie poliertes Metall bricht.
+                drawLine(androidx.compose.ui.graphics.Color.White.copy(alpha = .45f), spitze,
+                    androidx.compose.ui.geometry.Offset(c.x, c.y - laenge * .08f), .45f.dp.toPx())
+            }
+        }
+
+        // Minute endet vor dem Schlafbogen, die Stunde ist deutlich kürzer – auch bei kleinen Uhren.
+        val minutenLaenge = maxOf(radius - 17.dp.toPx(), radius * .7f)
+        dauphine(stundenWinkel, minutenLaenge * .68f, (radius * .075f).coerceAtLeast(2.6f.dp.toPx()))
+        dauphine(minutenWinkel, minutenLaenge, (radius * .058f).coerceAtLeast(2.dp.toPx()))
+
+        // Sekundenzeiger: schlanke Nadel bis in die Minutenschiene, hinten ein Ring als Gegengewicht.
+        val spitze = radius - 2.dp.toPx()
+        val ringMitte = radius * .2f
+        val ringRadius = 2.4f.dp.toPx()
+        fun sekundenNadel(farbe: androidx.compose.ui.graphics.Color) {
+            val c = center
+            val rund = androidx.compose.ui.graphics.StrokeCap.Round
+            drawLine(farbe, androidx.compose.ui.geometry.Offset(c.x, c.y + ringMitte - ringRadius),
+                androidx.compose.ui.geometry.Offset(c.x, c.y - spitze), 1.dp.toPx(), rund)
+            drawCircle(farbe, ringRadius, androidx.compose.ui.geometry.Offset(c.x, c.y + ringMitte),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
+            drawLine(farbe, androidx.compose.ui.geometry.Offset(c.x, c.y + ringMitte + ringRadius),
+                androidx.compose.ui.geometry.Offset(c.x, c.y + ringMitte + ringRadius + 2.dp.toPx()), 1.6f.dp.toPx(), rund)
+        }
+        translate(versatz.x * 1.3f, versatz.y * 1.3f) { rotate(sekundenWinkel.value, center) { sekundenNadel(schatten) } }
+        rotate(sekundenWinkel.value, center) { sekundenNadel(SEKUNDE_KARMIN) }
+
+        // Mittelachse: Messingkappe mit Glanz, darauf die karminrote Sekundennabe und ein polierter Stift.
+        val kappe = (radius * .085f).coerceAtLeast(3.5f.dp.toPx())
+        drawCircle(schatten, kappe, center + versatz)
+        drawCircle(Brush.radialGradient(listOf(metall.heller(.6f), metall, metall.dunkler(.4f)),
+            center = center - androidx.compose.ui.geometry.Offset(kappe * .35f, kappe * .35f), radius = kappe * 1.4f), kappe)
+        drawCircle(tinte.copy(alpha = .5f), kappe, style = androidx.compose.ui.graphics.drawscope.Stroke(.5f.dp.toPx()))
+        drawCircle(SEKUNDE_KARMIN, kappe * .55f)
+        drawCircle(Brush.radialGradient(listOf(androidx.compose.ui.graphics.Color.White.copy(alpha = .9f), metall.heller(.3f)),
+            center = center - androidx.compose.ui.geometry.Offset(kappe * .1f, kappe * .1f), radius = kappe * .3f), kappe * .25f)
+    }
+}
+
+/**
+ * Stummes Klingeln im Ruhezustand: Nach zufällig 7,5 bis 13 Sekunden wackelt der 3D-Wecker gut eine Sekunde lang
+ * wie beim Wecken (zwei kurze Stöße, dazwischen eine Pause), ganz ohne Ton. Läuft nur, solange der
+ * Bildschirm vorne ist; bei reduzierter Bewegung steht er still. Liefert den Drehwinkel in Grad.
+ */
+@Composable
+private fun rememberGelegentlichesKlingeln(): State<Float> {
+    val winkel = remember { androidx.compose.animation.core.Animatable(0f) }
+    val aktiv = rememberResumed() && !LocalBewegungReduziert.current
+    LaunchedEffect(aktiv) {
+        if (!aktiv) { winkel.snapTo(0f); return@LaunchedEffect }
+        while (true) {
+            kotlinx.coroutines.delay(7_500L + kotlin.random.Random.nextLong(5_501L))
+            winkel.animateTo(0f, androidx.compose.animation.core.keyframes {
+                durationMillis = 1300
+                0f at 0; 5f at 60; -5f at 120; 5f at 180; -5f at 240; 4f at 300; -4f at 360; 2f at 420; 0f at 480
+                0f at 760; 4f at 820; -4f at 880; 3f at 940; -3f at 1000; 1.5f at 1060; 0f at 1120; 0f at 1300
+            })
+        }
+    }
+    return winkel.asState()
+}
+
+/** Sekundenzeiger: tiefes Karminrot – klassisch, hebt sich von Messing und vom nachtblauen Schlafbogen ab. */
+private val SEKUNDE_KARMIN = androidx.compose.ui.graphics.Color(0xFFA8322B)
+
+/** Schlafbogen im 3D-Wecker: warmes Orange, hebt sich vom Messing und vom Elfenbeinblatt ab. */
+private val ORANGE_A = androidx.compose.ui.graphics.Color(0xFFF29A38)
+private val ORANGE_B = androidx.compose.ui.graphics.Color(0xFFE2701C)
+/** Zifferblatt im Dunkelmodus: gedämpftes Elfenbein mit dunkler Tinte – eine Uhr hat nie ein schwarzes Blatt. */
+private val ZIFFER_ELFENBEIN = androidx.compose.ui.graphics.Color(0xFFD9D0BB)
+private val ZIFFER_TINTE_LEICHT = androidx.compose.ui.graphics.Color(0xFF6A604D)
+private val ZIFFER_TINTE_STARK = androidx.compose.ui.graphics.Color(0xFF2A2418)
+private fun lerpFarbe(a: androidx.compose.ui.graphics.Color, b: androidx.compose.ui.graphics.Color, t: Float) =
+    androidx.compose.ui.graphics.lerp(a, b, t)
+
+/** Der 3D-Wecker als freistehende Figur mit laufender Uhrzeit – z. B. im Leerzustand. [groesse] = Gesamtbreite. */
+@Composable
+fun Wecker3DFigur(now: Long, groesse: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier) {
+    val ring = groesse * 0.8f
+    Box(modifier.size(groesse), contentAlignment = Alignment.Center) {
+        Wecker3D(Modifier.size(ring + 16.dp), gehaeuse = ring + 14.dp)
+        RestzeitRing(now, null, false, Modifier.size(ring), zifferblatt = true)
+        EdleZeiger(Modifier.size(ring))
+        GlasKuppel(Modifier.size(ring))
+    }
+}
+
+/** Erster Start ohne Wecker: ein schwebender 3D-Wecker, eine klare Zeile, ein Knopf. */
+@Composable
+private fun LeererStart(now: Long, aufNeu: () -> Unit) {
+    val gold = LocalGold.current
+    val reduziert = LocalBewegungReduziert.current
+    val schweben = if (reduziert) 0f else {
+        val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "schweben")
+        t.animateFloat(-4f, 4f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(2600),
+            androidx.compose.animation.core.RepeatMode.Reverse), label = "hub").value
+    }
+    LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = true) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            val klingeln = rememberGelegentlichesKlingeln()
+            Wecker3DFigur(now, 150.dp, Modifier.graphicsLayer {
+                translationY = schweben * density
+                rotationZ = klingeln.value
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.85f)
+            })
+            Spacer(Modifier.height(6.dp))
+            Text("Dein Morgen, deine Reihenfolge", style = MaterialTheme.typography.titleLarge, color = gold.textPrimaer,
+                textAlign = TextAlign.Center)
+            Text("Weckton, Musik und ein Text, den dir eine natürliche Stimme vorliest.",
+                style = MaterialTheme.typography.bodyMedium, color = gold.textGedaempft, textAlign = TextAlign.Center)
+            GoldKnopf("Ersten Wecker anlegen", aufNeu, hauptKnopf = true, symbol = { Icon(Icons.Default.Add, null, Modifier.size(18.dp)) })
         }
     }
 }
@@ -2666,22 +3009,9 @@ private fun Sternenhimmel(modifier: Modifier) {
     val glut = gold.primaer
     val mond = if (gold.istDunkel) androidx.compose.ui.graphics.Color(0xFFFFE9B8) else androidx.compose.ui.graphics.Color(0xFFFFF6DC)
     val himmel = gold.heroGrund
+    // Die Sterne leben: Sie gehen auf, funkeln, verlöschen; Satelliten und Sternschnuppen ziehen vorbei.
+    de.frank.wecker.design.FunkelHimmel(modifier, stern = stern, akzent = glut, dichte = 3.2f, satelliten = true)
     androidx.compose.foundation.Canvas(modifier) {
-        val zufall = java.util.Random(21)
-        repeat(46) { i ->
-            val x = zufall.nextFloat() * size.width
-            val y = zufall.nextFloat() * size.height * 0.85f
-            val gross = zufall.nextFloat()
-            val farbe = if (i % 5 == 0) glut else stern
-            val r = (0.7f + gross * 1.6f).dp.toPx()
-            drawCircle(farbe.copy(alpha = 0.35f + gross * 0.55f), r, androidx.compose.ui.geometry.Offset(x, y))
-            // Die hellsten bekommen einen kleinen Kreuzschein.
-            if (gross > 0.86f) {
-                val l = r * 3.2f
-                drawLine(farbe.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(x - l, y), androidx.compose.ui.geometry.Offset(x + l, y), 0.8f.dp.toPx())
-                drawLine(farbe.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(x, y - l), androidx.compose.ui.geometry.Offset(x, y + l), 0.8f.dp.toPx())
-            }
-        }
         // Mondsichel oben rechts, mit weichem Hof.
         val m = androidx.compose.ui.geometry.Offset(size.width - 34.dp.toPx(), 26.dp.toPx())
         val mr = 13.dp.toPx()
@@ -2710,9 +3040,8 @@ private fun TerminVerteilt(
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             if (daten.next == null) {
-                Text("Kein Wecker aktiv", style = MaterialTheme.typography.bodyMedium, color = textFarbe, maxLines = 1)
-                Text("Lege einen an oder schalte einen ein", style = MaterialTheme.typography.bodySmall,
-                    color = gedaempft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(daten.leerGrund, style = MaterialTheme.typography.titleSmall, color = textFarbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(daten.leerHilfe, style = MaterialTheme.typography.bodyMedium, color = fuehrung, maxLines = 1, overflow = TextOverflow.Ellipsis)
             } else {
                 TerminZeile(daten.now, daten.next, daten.nextIsSnooze)
                 Text(daten.nextName ?: "Wecker", style = MaterialTheme.typography.titleSmall, color = textFarbe,
@@ -2953,11 +3282,16 @@ fun rememberReadiness(): List<Pair<String, Boolean>> {
 fun readiness(context: Context): List<Pair<String, Boolean>> {
     val manager = context.getSystemService(NotificationManager::class.java)
     val policy = runCatching { if (Build.VERSION.SDK_INT >= 30) manager.consolidatedNotificationPolicy else manager.notificationPolicy }.getOrNull()
-    val allowsAlarms = Build.VERSION.SDK_INT < 28 || (policy != null && (policy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS) != 0)
+    // Wecker kommen in jedem Nicht-stören-Modus ab Werk durch (USAGE_ALARM). Rot wird die Zeile nur, wenn
+    // der gerade aktive Modus sie wirklich stummschaltet — ein Zugriffsrecht braucht dafür niemand.
+    val filter = manager.currentInterruptionFilter
+    val allowsAlarms = Build.VERSION.SDK_INT < 28 || policy == null || (policy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS) != 0
+    val dndLaesstWeckerDurch = filter != NotificationManager.INTERRUPTION_FILTER_NONE &&
+        (filter != NotificationManager.INTERRUPTION_FILTER_PRIORITY || allowsAlarms)
     return listOf("Genaue Weckzeiten" to AlarmScheduler(context).allowed(),
         "Benachrichtigungen" to manager.areNotificationsEnabled(),
         "Vollbild-Wecker" to (Build.VERSION.SDK_INT < 34 || manager.canUseFullScreenIntent()),
-        "Wecker bei Nicht stören" to (manager.isNotificationPolicyAccessGranted && allowsAlarms && manager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_NONE),
+        "Wecker bei Nicht stören" to dndLaesstWeckerDurch,
         // Samsung puts optimized apps to sleep; unrestricted battery keeps restore and preparation alive.
         "Akku uneingeschränkt" to context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName))
 }
@@ -2971,19 +3305,19 @@ fun readiness(context: Context): List<Pair<String, Boolean>> {
 private fun TraumTermin(daten: HeroDaten, aufOeffnen: () -> Unit) {
     val gold = LocalGold.current
     val akzent = if (daten.nextIsSnooze) LocalSemantisch.current.info else gold.primaer
-    @Composable fun Zeile(text: String, farbe: androidx.compose.ui.graphics.Color, stil: androidx.compose.ui.text.TextStyle) {
+    @Composable fun Zeile(text: String, farbe: androidx.compose.ui.graphics.Color, stil: androidx.compose.ui.text.TextStyle, zeilen: Int = 1) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(6.dp).clip(CircleShape).background(akzent))
-            Text(text, Modifier.padding(start = 8.dp), style = stil, color = farbe, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text, Modifier.padding(start = 8.dp), style = stil, color = farbe, minLines = zeilen, maxLines = zeilen, overflow = TextOverflow.Ellipsis)
         }
     }
     Column(Modifier.fillMaxWidth().then(if (daten.nextAlarm != null) Modifier.clickable(
         onClickLabel = "Nächsten Wecker öffnen", onClick = aufOeffnen) else Modifier),
         verticalArrangement = Arrangement.spacedBy(3.dp)) {
         if (daten.next == null) {
-            Zeile("Kein Wecker aktiv", gold.textPrimaer, MaterialTheme.typography.bodyMedium)
-            Zeile("Lege einen an oder schalte einen ein", gold.textGedaempft, MaterialTheme.typography.bodySmall)
-            Zeile(" ", gold.textGedaempft, MaterialTheme.typography.bodySmall)
+            Zeile(daten.leerTitel, gold.textPrimaer, MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+            Zeile(daten.leerGrund, gold.textPrimaer, MaterialTheme.typography.bodyMedium)
+            Zeile(daten.leerHilfe, akzent, MaterialTheme.typography.bodyMedium)
         } else {
             val termin = terminAnzeige(daten.now, daten.next).einzeilig
             Zeile("${if (daten.nextIsSnooze) "Schlummern bis" else "Nächster Wecker"} $termin", gold.textPrimaer,
@@ -3053,29 +3387,9 @@ private fun HeroDeko(modifier: Modifier) {
                 drawPath(pfad, gold.primaer.copy(alpha = a))
                 drawCircle(androidx.compose.ui.graphics.Color.White.copy(alpha = a * 0.8f), r * 0.35f, androidx.compose.ui.geometry.Offset(x, y))
             }
-            Design.MORGENRUHE -> {
-                // Kleine Morgensonne links neben dem Bett.
-                val c = androidx.compose.ui.geometry.Offset(size.width * 0.67f, size.height * 0.16f)
-                val r = 10.dp.toPx()
-                repeat(12) { i ->
-                    val w = Math.toRadians(i * 30.0)
-                    val a = c + androidx.compose.ui.geometry.Offset((r * 1.45f * Math.cos(w)).toFloat(), (r * 1.45f * Math.sin(w)).toFloat())
-                    val b = c + androidx.compose.ui.geometry.Offset((r * 2.1f * Math.cos(w)).toFloat(), (r * 2.1f * Math.sin(w)).toFloat())
-                    drawLine(gold.akzentWarm.copy(alpha = .30f), a, b, 2.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
-                }
-                drawCircle(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .45f), gold.akzentWarm.copy(alpha = .12f)), center = c, radius = r), r, c)
-            }
+            // Morgenruhe: keine feste Sonne mehr, die Sonne geht in der Schlafszene selbst auf.
             Design.ORBIT -> {
-                val c = androidx.compose.ui.geometry.Offset(size.width * 0.16f, size.height * 0.55f)
-                listOf(1f, 1.55f, 2.1f).forEachIndexed { i, f ->
-                    val rx = 48.dp.toPx() * f
-                    val ry = rx * 0.42f
-                    drawOval(gold.primaer.copy(alpha = .16f - i * 0.03f), topLeft = c - androidx.compose.ui.geometry.Offset(rx, ry),
-                        size = androidx.compose.ui.geometry.Size(rx * 2, ry * 2), style = androidx.compose.ui.graphics.drawscope.Stroke(1.dp.toPx()))
-                    val w = Math.toRadians(40.0 + i * 95)
-                    val p = c + androidx.compose.ui.geometry.Offset((rx * Math.cos(w)).toFloat(), (ry * Math.sin(w)).toFloat())
-                    drawCircle(if (i == 1) gold.akzentWarm.copy(alpha = .7f) else gold.primaer.copy(alpha = .55f), (2.5f + i).dp.toPx(), p)
-                }
+                // Die Bahnen und Planeten zeichnet jetzt das animierte Sonnensystem; hier bleiben nur Sterne.
                 repeat(18) {
                     drawCircle(gold.heroSchrift.copy(alpha = .10f + zufall.nextFloat() * .2f), (0.6f + zufall.nextFloat()).dp.toPx(),
                         androidx.compose.ui.geometry.Offset(size.width * zufall.nextFloat(), size.height * zufall.nextFloat()))

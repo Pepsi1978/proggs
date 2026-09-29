@@ -607,7 +607,10 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             previewJob = job
             try {
                 val prep = SpeechPreparation(app, settings) { voice }
-                val file = prep.audio(text?.takeIf { it.isNotBlank() }?.take(1500)
+                // Supertonic ohne eigenen Text: die fertige Hörprobe aus der APK statt einiger Sekunden Rechenzeit.
+                val probe = if (text.isNullOrBlank() && voice.ttsProvider == TtsProvider.MODELL.id)
+                    withContext(Dispatchers.IO) { ModellStimmen.probeDatei(app, voice.modellStimme) } else null
+                val file = probe ?: prep.audio(text?.takeIf { it.isNotBlank() }?.take(1500)
                     ?: "Guten Morgen! Es ist Zeit für deine genialen Ideen. Dein Wecker ist bereit.")
                 if (generation != previewGeneration) return@runAction
                 // Hand over without stopPreview(): that would cancel this very job.

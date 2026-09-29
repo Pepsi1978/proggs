@@ -16,5 +16,6 @@ internal fun Alarm.resolveVoice(defaults: SyntheseStimme): SyntheseStimme {
         ttsSpeechRate = speechRate ?: defaults.ttsSpeechRate,
         immerDeutschVorlesen = defaults.immerDeutschVorlesen,
         edgeTtsVoice = if (provider == TtsProvider.EDGE.id) voiceId else defaults.edgeTtsVoice,
+        modellStimme = if (provider == TtsProvider.MODELL.id) voiceId else defaults.modellStimme,
     )
 }
