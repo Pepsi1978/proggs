@@ -265,9 +265,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun zielUmschalten(f: Faktor) {
+        viewModelScope.launch {
+            val aktuell = repo.einer(f.id) ?: return@launch
+            val erreicht = !aktuell.zielErreicht
+            repo.speichere(aktuell.copy(zielErreicht = erreicht))
+            if (erreicht) {
+                konfetti++
+                melde("Ziel erreicht – „${aktuell.titel}“ ist abgehakt") { viewModelScope.launch { repo.einer(f.id)?.let { repo.speichere(it.copy(zielErreicht = false)) } } }
+            }
+        }
+    }
+
     /** Die drei wichtigsten offenen nächsten Schritte: je Faktor der erste offene Punkt, nach Rang. */
     fun heute(liste: List<Faktor>): List<Schritt> = liste.asSequence()
-        .filter { !it.vorschlag }
+        .filter { !it.vorschlag && !it.zielErreicht }
         .mapNotNull { f -> f.punkte.withIndex().firstOrNull { !it.value.erledigt }?.let { Schritt(f, it.index, it.value) } }
         .take(3).toList()
 

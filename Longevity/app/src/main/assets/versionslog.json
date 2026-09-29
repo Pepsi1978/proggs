@@ -2,6 +2,7 @@
   "format": 1,
   "app": "Longevity",
   "eintraege": [
-    { "versionCode": 1, "versionName": "1.0.0", "stand": "29.09.2026, 14:17 Uhr", "notiz": "Erste Version: Rangliste der Langlebigkeits-Faktoren nach Wichtigkeit, eigene Ideen per Sprache einsprechen und von der KI einordnen lassen, Aktualisierung mit zwei diskutierenden Agenten und Fortschrittsbalken, Ziele und Aufgabenpläne, Diagramme und vier animierte Designs" }
+    { "versionCode": 1, "versionName": "1.0.0", "stand": "29.09.2026, 14:17 Uhr", "notiz": "Erste Version: Rangliste der Langlebigkeits-Faktoren nach Wichtigkeit, eigene Ideen per Sprache einsprechen und von der KI einordnen lassen, Aktualisierung mit zwei diskutierenden Agenten und Fortschrittsbalken, Ziele und Aufgabenpläne, Diagramme und vier animierte Designs" },
+    { "versionCode": 2, "versionName": "1.0.1", "stand": "29.09.2026, 14:26 Uhr", "notiz": "Ziele lassen sich als erreicht markieren; umgesetzte Faktoren bleiben auf ihrem Platz, werden in der Rangliste ausgegraut und fallen aus „Heute für dich“ heraus" }
   ]
 }

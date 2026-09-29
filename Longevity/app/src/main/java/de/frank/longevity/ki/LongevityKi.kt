@@ -265,7 +265,7 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
     }
 
     private fun listeKompakt(liste: List<Faktor>) = liste.joinToString("\n") {
-        "${it.id} | ${it.rang} | ${it.titel} | ${it.kat.name} | ${it.ev.name} | ${"%.1f".format(Locale.US, it.jahre)}"
+        "${it.id} | ${it.rang} | ${it.titel} | ${it.kat.name} | ${it.ev.name} | ${"%.1f".format(Locale.US, it.jahre)}" + if (it.zielErreicht) " | vom Nutzer bereits umgesetzt" else ""
     }
 
     private suspend fun frage(

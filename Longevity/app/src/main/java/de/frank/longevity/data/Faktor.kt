@@ -1,5 +1,6 @@
 package de.frank.longevity.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import org.json.JSONArray
@@ -78,6 +79,8 @@ data class Faktor(
     val vertieft: Boolean = false,
     /** Neuer Faktor, den die KI bei der Aktualisierung vorschlägt — erscheint erst nach Bestätigung in der Liste. */
     val vorschlag: Boolean = false,
+    /** Der Nutzer hat das Ziel komplett umgesetzt – bleibt auf seinem Platz, wird aber ausgegraut. */
+    @ColumnInfo(defaultValue = "0") val zielErreicht: Boolean = false,
     val geaendertAm: Long = System.currentTimeMillis(),
 ) {
     val kat: Kategorie get() = Kategorie.von(kategorie)

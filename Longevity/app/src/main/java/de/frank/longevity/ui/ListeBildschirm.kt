@@ -285,29 +285,34 @@ fun FaktorKarte(x: Faktor, gesamt: Int, hervor: Boolean, modifier: Modifier = Mo
     val leuchten by animateFloatAsState(if (hervor) 1f else 0f, tween(600), label = "hervor")
     val punkte = x.punkte
     val anteil = if (punkte.isEmpty()) 0f else punkte.count { it.erledigt }.toFloat() / punkte.size
+    val erreicht = x.zielErreicht
     Column(
         modifier.fillMaxWidth().einblenden()
+            .graphicsLayer { if (erreicht && !hervor) alpha = 0.5f }
             .drawBehind {
                 if (leuchten > 0f) drawRoundRect(
                     f.primaer.copy(alpha = 0.35f * leuchten), topLeft = Offset(-8f, -8f), size = Size(size.width + 16f, size.height + 16f),
                     cornerRadius = CornerRadius(f.radius.toPx() + 8f),
                 )
             }
-            .glas(f, erhoeht = 1f + leuchten, toenung = f.evidenzFarbe(x.ev))
+            .glas(f, erhoeht = if (erreicht) 0.3f else 1f + leuchten, toenung = if (erreicht) f.textSchwach else f.evidenzFarbe(x.ev))
             .antippen(aktion = aktion)
             .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            RangAbzeichen(x.rang)
+            if (erreicht) Box(Modifier.size(44.dp).glas(f, 14.dp, 0f, f.erfolg.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                Text("✓", color = f.erfolg, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            } else RangAbzeichen(x.rang)
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(x.titel, color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 21.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (erreicht) Text("Platz ${x.rang} · Ziel erreicht", color = f.erfolg, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(x.titel, color = if (erreicht) f.textLeise else f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 21.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Row(Modifier.padding(top = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("${x.kat.emoji} ${x.kat.anzeige}", color = f.textLeise, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     EvidenzAbzeichen(x.ev)
                 }
             }
             Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
-                RangPfeil(x)
+                if (!erreicht) RangPfeil(x)
                 Text(jahreText(x.jahre), color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 3.dp))
                 if (punkte.isNotEmpty()) MiniRing(anteil, Modifier.padding(top = 4.dp).size(18.dp))
             }

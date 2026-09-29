@@ -10,6 +10,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -45,14 +47,21 @@ interface FaktorDao {
     suspend fun ersetzeAlle(liste: List<Faktor>) { speichere(liste) }
 }
 
-@Database(entities = [Faktor::class], version = 1, exportSchema = true)
+/** v2: Ziel als erreicht markierbar. */
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE faktoren ADD COLUMN zielErreicht INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+@Database(entities = [Faktor::class], version = 2, exportSchema = true)
 abstract class Datenbank : RoomDatabase() {
     abstract fun faktoren(): FaktorDao
 
     companion object {
         @Volatile private var instanz: Datenbank? = null
         fun get(context: Context): Datenbank = instanz ?: synchronized(this) {
-            instanz ?: Room.databaseBuilder(context.applicationContext, Datenbank::class.java, "longevity.db").build().also { instanz = it }
+            instanz ?: Room.databaseBuilder(context.applicationContext, Datenbank::class.java, "longevity.db").addMigrations(MIGRATION_1_2).build().also { instanz = it }
         }
     }
 }

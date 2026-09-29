@@ -49,6 +49,7 @@ import de.frank.longevity.ui.theme.Chip
 import de.frank.longevity.ui.theme.LocalFarben
 import de.frank.longevity.ui.theme.antippen
 import de.frank.longevity.ui.theme.glas
+import de.frank.longevity.ui.theme.knopf3d
 
 @Composable
 fun DetailBildschirm(vm: AppViewModel, id: Long) {
@@ -93,7 +94,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
                     RundKnopf(Icons.Rounded.KeyboardArrowDown, "Einen Platz tiefer") { if (x.rang < gesamt) vm.verschiebe(x, x.rang + 1) }
                 }
             }
-            if (x.ziel.isNotBlank()) ZielKarte(x.ziel)
+            if (x.ziel.isNotBlank() && !x.vorschlag) ZielKarte(x.ziel, x.zielErreicht) { vm.zielUmschalten(x) }
             Aufgabenplan(vm, x)
             if (!x.vorschlag) HauptKnopf(
                 Icons.Rounded.AutoAwesome,
@@ -141,26 +142,40 @@ private fun Held(x: Faktor) {
 }
 
 @Composable
-private fun ZielKarte(ziel: String) {
+private fun ZielKarte(ziel: String, erreicht: Boolean, umschalten: () -> Unit) {
     val f = LocalFarben.current
-    Row(
+    Column(
         Modifier.fillMaxWidth().einblenden(60)
             .drawBehind {
                 drawRoundRect(
-                    Brush.linearGradient(listOf(f.primaer, f.sekundaer, f.tertiaer)),
+                    if (erreicht) Brush.linearGradient(listOf(f.erfolg, f.erfolg)) else Brush.linearGradient(listOf(f.primaer, f.sekundaer, f.tertiaer)),
                     cornerRadius = CornerRadius(f.radius.toPx()), style = Stroke(2.dp.toPx()),
                 )
             }
-            .glas(f, erhoeht = 1.3f, fuellung = f.flaecheStark, toenung = f.sekundaer).padding(18.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .glas(f, erhoeht = 1.3f, fuellung = f.flaecheStark, toenung = if (erreicht) f.erfolg else f.sekundaer).padding(18.dp),
     ) {
-        Text("🎯", fontSize = 30.sp)
-        Column(Modifier.padding(start = 14.dp)) {
-            Text("DEIN ZIEL", color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-            Text(ziel, color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 23.sp, modifier = Modifier.padding(top = 2.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(if (erreicht) "🏆" else "🎯", fontSize = 30.sp)
+            Column(Modifier.padding(start = 14.dp)) {
+                Text(if (erreicht) "ZIEL ERREICHT" else "DEIN ZIEL", color = if (erreicht) f.erfolg else f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                Text(ziel, color = f.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 23.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+        }
+        Row(
+            Modifier.padding(top = 14.dp).fillMaxWidth()
+                .then(if (erreicht) Modifier.glas(f, 14.dp, 0.5f, f.erfolg.copy(alpha = 0.14f)) else Modifier.knopf3d(f.erfolg, f.erfolg.copy(alpha = 0.75f), 14.dp, f.dunkel))
+                .antippen(aktion = umschalten).padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+        ) {
+            Checkkreis(erreicht, if (erreicht) f.erfolg else androidx.compose.ui.graphics.Color.White, 20, umschalten)
+            Text(
+                if (erreicht) "Erreicht – antippen zum Zurücknehmen" else "Ziel als erreicht markieren",
+                color = if (erreicht) f.erfolg else androidx.compose.ui.graphics.Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
+
 
 @Composable
 private fun Aufgabenplan(vm: AppViewModel, x: Faktor) {
