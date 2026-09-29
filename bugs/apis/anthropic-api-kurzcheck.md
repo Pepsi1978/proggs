@@ -21,3 +21,4 @@
 | 7 | Multi-Turn mit thinking | thinking-Blocks unverändert 1:1 in History zurück | §20 |
 | 8 | 429/529 | `anthropic-ratelimit-*`+`retry-after` lesen, 529≠500≠504 | §21, §22 |
 | 9 | Doppelte Retries / Hangs | SDK `max_retries=2`; bei eigener Retry-Logik `max_retries=0` | §26 |
+| 10 | Migration auf Sonnet 5.5: 400 | kein `thinking:disabled` (→ `between_tools`), kein forced `tool_choice`, `computer_toolset_20260801`, Historie append-only | §31–§35 |

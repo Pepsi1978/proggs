@@ -19,3 +19,5 @@
 | 5 | Message-Struktur | Keine `tool`/`function`-Rollen; `system` Top-Level (Array für Caching) | Message-Struktur & Streaming |
 | 6 | Streaming bei hohem max_tokens | SDK `.stream()` + `get_final_message()` (vermeidet Timeouts) | Message-Struktur & Streaming |
 | 7 | Async / Kostenersparnis | Batch API = 50 %; mit 1h-Cache kombinieren | Batch API & Token-Counting |
+| 8 | Modellwahl Sonnet 5.5 vs. Opus 5.5 | Kosten pro Aufgabe vergleichen; Sonnet 5.5 auf high/xhigh, max nur gezielt | Modellwahl & Effort |
+| 9 | Migration Sonnet 5 → 5.5 | kein `thinking:disabled`, kein forced `tool_choice`, neues Computer-Toolset | Modellwahl & Effort |

@@ -1,7 +1,7 @@
 # Bekannte Bugs: Anthropic Claude API (Messages API, Integration)
 
 > PFLICHT-LESEN vor Arbeit an einer Anthropic-Claude-API-Integration (Client-seitig).
-> Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax). Versions-Anker: `anthropic-version: 2023-06-01` (weiterhin
+> Stand: zuletzt recherchiert am 2026-06-08, **re-recherchiert am 2026-07-02** (Engine A: Firecrawl+MiniMax), **ergänzt am 2026-09-29** (Engine C: Sonnet-5.5-/Opus-5.5-Migration, §31–§36). Versions-Anker: `anthropic-version: 2023-06-01` (weiterhin
 > Pflichtwert), aktuelle Modelle Opus 4.8/Sonnet 5. Zweite Seite: `best-practices/apis/anthropic-api.md`.
 
 > **Update 2026-07-02:** Keine belegten neuen Messages-/Prompt-Caching-/Tool-Use-/Batch-API-Bugs seit 2026-06-08 gefunden. Bestehende Migrationsfallen bleiben relevant: Prefill wird bei aktuellen Claude-Modellen nicht unterstuetzt, Adaptive Thinking ersetzt manuelle `budget_tokens` bei neueren Modellen, und Sampling-Parameter koennen bei Opus 4.7+ 400-Fehler ausloesen.
@@ -23,6 +23,7 @@
 | 7 | Multi-Turn mit thinking | thinking-Blocks unverändert 1:1 in History zurück | §20 |
 | 8 | 429/529 | `anthropic-ratelimit-*`+`retry-after` lesen, 529≠500≠504 | §21, §22 |
 | 9 | Doppelte Retries / Hangs | SDK `max_retries=2`; bei eigener Retry-Logik `max_retries=0` | §26 |
+| 10 | Migration auf Sonnet 5.5: 400 | kein `thinking:disabled` (→ `between_tools`), kein forced `tool_choice`, `computer_toolset_20260801`, Historie append-only | §31–§35 |
 
 ---
 
@@ -190,6 +191,39 @@
 - **FIX:** Beta-Header aktuell halten; nach GA entfernen; Gateways müssen ihn durchreichen.
 
 ---
+
+## Modell-Migration Sonnet 5.5 / Opus 5.5 (recherchiert 2026-09-29, Engine C)
+
+> Versions-Anker: `claude-sonnet-5-5` (Release 28.09.2026), `claude-opus-5-5` (22.09.2026), Vorgänger `claude-sonnet-5`.
+> Quelle für §31–§35: https://platform.claude.com/docs/en/models/sonnet-5-5/whats-new-sonnet-5-5 · offiziell
+
+### 31. `thinking: {"type":"disabled"}` → 400 bei Sonnet 5.5 ⭐
+- **Symptom:** Code, der bei Sonnet 5 Thinking abschaltet, bekommt bei `claude-sonnet-5-5` HTTP 400.
+- **Ursache:** Thinking lässt sich nicht mehr abschalten. Stattdessen gibt es `{"type":"between_tools"}`, das nur bei Effort low/medium/high erlaubt ist (bei xhigh/max wieder 400).
+- **Fix:** `thinking` weglassen (Default: adaptive) oder `between_tools` mit Effort ≤ high.
+
+### 32. Forced Tool Use (`tool_choice: any`/`tool`) → 400
+- **Symptom:** „tool_choice: type tool and any are not supported for this model“.
+- **Fix:** `tool_choice` auf `auto` (oder `none`) lassen; Tool-Pflicht per Prompt formulieren, für feste Formate Structured Outputs bzw. `strict:true` nutzen.
+
+### 33. `computer_20251124` wird auf Claude API / Vertex abgelehnt
+- **Symptom:** 400 „does not support tool types: computer_20251124“ (Bedrock akzeptiert es noch).
+- **Fix:** auf `computer_toolset_20260801` umstellen.
+
+### 34. Thinking-Blöcke an Modell + Konversation gebunden → 400 beim Replay
+- **Symptom:** 400, wenn nach Änderung an `system`, Tools oder früheren Messages alte thinking-Blöcke zurückgeschickt werden (Konten ab 31.08.2026 standardmäßig erzwungen).
+- **Fix:** Historie append-only halten; Änderungen per Mid-Conversation-System-Message. Alternativ Beta-Header `thinking-binding-controls-2026-08-01` mit `block_binding.prefix_mismatch_behavior: "drop_block"`.
+
+### 35. Streaming-UI wird still zwischen Tool-Calls
+- **Symptom:** Zwischen Tool-Calls kommt kein sichtbarer Text mehr, die App wirkt eingefroren.
+- **Ursache:** Fortschritts-Texte kommen bei Sonnet 5.5 in thinking-Blöcken; mit `display: "omitted"` sind sie leer.
+- **Fix:** thinking-Anzeige nicht auf `omitted` stellen oder eigenen Fortschrittsindikator zeigen.
+- **Außerdem:** Advisor-Tool mit Sonnet-5.5-Executor lehnt Opus 4.8/4.7 und Sonnet 5 als Advisor ab (400).
+
+### 36. Benchmark-/Evaluationsfalle: Werte zwischen Quellen und System Cards gemischt
+- **Symptom:** Sonnet 5 wirkt je nach Quelle stark unterschiedlich (OSWorld 81,2 vs. 57,0; Terminal-Bench 80,4 vs. 10,3).
+- **Ursache:** Anthropic hat Benchmarks zwischen den Karten auf neue Versionen umgestellt (OSWorld-Verified → 2.1, Terminal-Bench 2.1 → 4.0, GDPval-AA v2 → v2.1). Artificial Analysis misst Opus 5.5 teils nur auf Effort medium; Vals.ai zählt Fallback-Antworten (Opus 5.5 TB4: 30/198 von Opus 5/4.8) mit.
+- **Fix:** Modelle nur innerhalb derselben Tabelle/Benchmark-Version und gleicher Effort-Stufe vergleichen. Quellen: Sonnet 5.5 System Card (https://www.anthropic.com/claude-sonnet-5-5-system-card), https://www.vals.ai/benchmarks/terminal-bench-4 · extern
 
 ## Fix-Status (Stand 2026-06-08)
 
