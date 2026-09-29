@@ -39,6 +39,7 @@ import {
   type WeeklyQuota,
 } from "./openai-quota"
 import { homedir } from "node:os"
+import { isKimiCodeProvider, KIMI_CODE_PROVIDERS, loadKimiMonthlyQuota, type KimiMonthlyQuota } from "./kimi-quota"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -379,14 +380,12 @@ function createOpenAIQuotaStore(api: TuiPluginApi): OpenAIQuotaStore {
 
   const logFailure = (error: unknown) => {
     void api.client.app.log({
-      body: {
-        service: "frank.token-cost-sidebar",
-        level: "warn",
-        message: "Das OpenAI-Wochenkontingent konnte nicht aktualisiert werden.",
-        extra: { error: String(error) },
-      },
-      query: { directory: api.state.path.directory },
-    })
+      service: "frank.token-cost-sidebar",
+      level: "warn",
+      message: "Das OpenAI-Wochenkontingent konnte nicht aktualisiert werden.",
+      extra: { error: String(error) },
+      directory: api.state.path.directory,
+    }).catch(() => { if (!disposed) setQuota(null) })
   }
 
   const refresh = async () => {
@@ -448,9 +447,81 @@ function createOpenAIQuotaStore(api: TuiPluginApi): OpenAIQuotaStore {
   return { quota, authType }
 }
 
-function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: OpenAIQuotaStore }) {
+type KimiQuotaStore = { quota: (providerID: string) => KimiMonthlyQuota | null | undefined }
+
+function createKimiQuotaStore(api: TuiPluginApi): KimiQuotaStore {
+  const [quotas, setQuotas] = createSignal<Record<string, KimiMonthlyQuota | null>>({})
+  let disposed = false
+  let inFlight = false
+  let refreshPending = false
+  let pollTimer: ReturnType<typeof setTimeout> | undefined
+  let delayedRefresh: ReturnType<typeof setTimeout> | undefined
+
+  const refresh = async () => {
+    if (disposed) return
+    if (inFlight) { refreshPending = true; return }
+    inFlight = true
+    try {
+      await Promise.all(KIMI_CODE_PROVIDERS.map(async (providerID) => {
+        try {
+          const quota = await loadKimiMonthlyQuota(api.state.path.state, providerID)
+          if (!disposed) setQuotas((previous) => ({ ...previous, [providerID]: quota ?? null }))
+        } catch {
+          if (disposed) return
+          // Do not leave old account/reset values on screen after a failed refresh.
+          setQuotas((previous) => ({ ...previous, [providerID]: null }))
+          void api.client.app.log({
+            service: "frank.token-cost-sidebar", level: "warn",
+            message: "Das Kimi-Monatskontingent konnte nicht aktualisiert werden.",
+            extra: { providerID },
+            directory: api.state.path.directory,
+          }).catch(() => {
+            if (!disposed) setQuotas((previous) => ({ ...previous, [providerID]: null }))
+          })
+        }
+      }))
+    } finally {
+      inFlight = false
+      if (refreshPending && !disposed) { refreshPending = false; void refresh() }
+    }
+  }
+  const schedulePoll = () => {
+    if (disposed) return
+    pollTimer = setTimeout(() => { void refresh().finally(schedulePoll) }, QUOTA_POLL_MS)
+  }
+  const stopUpdates = api.event.on("message.updated", (event) => {
+    const info = event.properties.info
+    if (info.role !== "assistant" || !isKimiCodeProvider(info.providerID) || !info.time?.completed) return
+    void refresh()
+    if (delayedRefresh) clearTimeout(delayedRefresh)
+    delayedRefresh = setTimeout(() => { void refresh() }, QUOTA_RECHECK_DELAY_MS)
+  })
+  void refresh()
+  schedulePoll()
+  api.lifecycle.onDispose(() => {
+    disposed = true
+    stopUpdates()
+    if (pollTimer) clearTimeout(pollTimer)
+    if (delayedRefresh) clearTimeout(delayedRefresh)
+  })
+  return { quota: (providerID) => quotas()[providerID] }
+}
+
+function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: OpenAIQuotaStore; kimiQuotaStore: KimiQuotaStore }) {
   const theme = () => props.api.theme.current
   const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
+  const kimiQuota = () => props.kimiQuotaStore.quota(modelMeta().providerID ?? "")
+  const kimiQuotaLabel = () => {
+    const current = kimiQuota()
+    if (current === undefined) return "Monat …"
+    if (current === null) return "Monat n/v"
+    return `Monat ${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(current.usedPercent)}% verbraucht`
+  }
+  const kimiQuotaDate = () => {
+    const resetAt = kimiQuota()?.resetAt
+    return resetAt === undefined ? "Reset n/v"
+      : new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long" }).format(new Date(resetAt * 1_000))
+  }
 
   const quotaLabel = () => {
     const current = props.quotaStore.quota()
@@ -480,6 +551,19 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
             <span style={{ fg: theme().textMuted }}>{` (${quotaDate()})`}</span>
           </Show>
         </text>
+      </Show>
+      <Show when={isKimiCodeProvider(modelMeta().providerID)}>
+        <text fg={theme().text}>
+          {kimiQuotaLabel()}
+          <Show when={kimiQuota()}>
+            <span style={{ fg: theme().textMuted }}>{` (${kimiQuotaDate()})`}</span>
+          </Show>
+        </text>
+        <Show when={modelMeta().modelID === "k3-256k" || modelMeta().modelID === "k3"}>
+          <text fg={theme().textMuted}>
+            {modelMeta().modelID === "k3-256k" ? "Abo: ≈½ Verbrauch von K3 (1M)" : "Abo (1M): ≈2× Verbrauch von K3-256K"}
+          </text>
+        </Show>
       </Show>
     </box>
   )
@@ -644,18 +728,16 @@ function createSessionUsageStore(api: TuiPluginApi): SessionUsageStore {
       if (historyRequests.has(sessionID)) return
       historyRequests.add(sessionID)
       void api.client.session.messages({
-        path: { id: sessionID },
-        query: { directory: api.state.path.directory },
+        sessionID,
+        directory: api.state.path.directory,
       }).then((response) => merge(sessionID, response.data ?? [])).catch((error) => {
         void api.client.app.log({
-          body: {
-            service: "frank.token-cost-sidebar",
-            level: "warn",
-            message: "Der vollständige Session-Verlauf konnte nicht für die Kostenanzeige geladen werden.",
-            extra: { sessionID, error: String(error) },
-          },
-          query: { directory: api.state.path.directory },
-        })
+          service: "frank.token-cost-sidebar",
+          level: "warn",
+          message: "Der vollständige Session-Verlauf konnte nicht für die Kostenanzeige geladen werden.",
+          extra: { sessionID, error: String(error) },
+          directory: api.state.path.directory,
+        }).catch(() => { historyRequests.delete(sessionID) })
       })
     },
   }
@@ -799,6 +881,14 @@ function View(props: {
     <Show when={hasAnything()}>
       <box>
         <text fg={theme().accent}><span style={{ bold: true, underline: true }}>Context</span></text>
+        <Show when={isKimiCodeProvider(modelMeta().providerID)}>
+          <text fg={theme().textMuted}>API-Vergleich, kein Abo-Abzug</text>
+        </Show>
+        <Show when={pricedModel()?.cost?.cache_write === 3 && (
+          isKimiCodeProvider(modelMeta().providerID) || modelMeta().providerID === "moonshotai" || modelMeta().providerID === "moonshotai-cn"
+        )}>
+          <text fg={theme().textMuted}>Cache-Write: 5min-Schätzung</text>
+        </Show>
         <Row
           api={props.api}
           label="Inputpreis"
@@ -851,6 +941,7 @@ const tui: TuiPlugin = async (api) => {
   await api.theme.install(fileURLToPath(new URL("../themes/orng.json", import.meta.url)))
   const usageStore = createSessionUsageStore(api)
   const quotaStore = createOpenAIQuotaStore(api)
+  const kimiQuotaStore = createKimiQuotaStore(api)
   api.slots.register({
     order: 90,
     slots: {
@@ -860,7 +951,7 @@ const tui: TuiPlugin = async (api) => {
       sidebar_content(_ctx, props) {
         return (
           <box>
-            <ModelLabel api={api} sessionID={props.session_id} quotaStore={quotaStore} />
+            <ModelLabel api={api} sessionID={props.session_id} quotaStore={quotaStore} kimiQuotaStore={kimiQuotaStore} />
             <EffortSelector api={api} />
             <WorkModeSelector api={api} sessionID={props.session_id} />
           </box>

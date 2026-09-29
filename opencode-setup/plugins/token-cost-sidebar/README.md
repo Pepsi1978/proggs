@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.15.0 – 29.09.2026 12:00
+Stand: v1.16.0 – 29.09.2026 12:37
 
 ## Funktionen
 
@@ -16,6 +16,14 @@ Stand: v1.15.0 – 29.09.2026 12:00
   oder benutzerdefinierte Varianten erscheinen ohne Plugin-Update und bleiben auswählbar.
 - Anzeige des live ausgewählten Modells direkt oberhalb der Effort-Auswahl.
 - Anzeige des verbleibenden wöchentlichen OpenAI-Kontingents und des Reset-Datums direkt unter OpenAI-Modellen.
+- Kimi Code zeigt den **verbrauchten** gemeinsamen Monatsanteil und das echte Reset-Datum:
+  `Monat 42,5% verbraucht (28. Oktober)`. Quelle ist `usages.limit_month_total` des offiziellen
+  `/coding/v1/usages`-Endpunkts, nicht die lokale Session, Wochenquote oder Extra Usage.
+  Minütlicher Abruf sowie sofort und nach zwei Sekunden bei abgeschlossenen Kimi-Antworten.
+  Fehlende/fehlerhafte Daten erscheinen als `Monat n/v`, fehlendes Datum als `Reset n/v`.
+  Unterstützt `kimi-code-plan-global`, `kimi-code-plan-cn` und den alten Provider `kimi-for-coding`;
+  verwendet nur dessen eigenen API-Key/OAuth-Access-Token aus OpenCodes `auth.json`, mit festem
+  regionalem HTTPS-Endpoint, 10 Sekunden Timeout und ohne Redirects oder fremde Key-Fallbacks.
 - Das Modell erscheint orange, fett und unterstrichen. Darunter steht das Kontingent in der normalen Theme-Textfarbe, beispielsweise `Woche 62% (23. Juli)`; nur das Klammerdatum ist hellgrau. Kontingent, Effort-Auswahl und Arbeitsmodi folgen ohne Leerzeilen direkt aufeinander.
 - Sofortige Kontingentaktualisierung nach abgeschlossenen OpenAI-Modellaufrufen, zusätzlicher Nachabruf nach zwei Sekunden und minütlicher Abgleich für andere Codex-Sitzungen.
 - Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
@@ -46,17 +54,24 @@ Stand: v1.15.0 – 29.09.2026 12:00
   serverseitigen Fast-Routings; dort bleibt deshalb die konfigurierte Fast-Auswahl massgeblich und wird
   intern für die Preisberechnung verwendet. Bei API-Key-Auth wird weiterhin der vom Provider
    bestaetigte Response-Tier verwendet; GPT-5.5-Write-Preise werden nicht erfunden.
-- Kimi-/Moonshot-Modelle verwenden lokale offizielle Tarife (Stand 29.09.2026,
-  Quelle: platform.kimi.ai/docs/pricing/chat): kimi-k3 — gilt auch für die
-  Code-Plan-Varianten k3 und k3-256k — je 1M Tokens Input/Output/Cache-Read/Cache-Write
-  = 3/15/0,30/3 USD (Cache-Write im 5min-TTL; der 1h-TTL läge bei 6 USD);
-  kimi-k2.7-code (auch kimi-for-coding) = 0,95/4/0,19 USD; kimi-k2.7-code-highspeed
-  (auch kimi-for-coding-highspeed) = 1,90/8/0,38 USD; kimi-k2.6 = 0,95/4/0,16 USD.
-  K2-Modelle kennen offiziell keinen separaten Cache-Write-Preis; ein `:batch`-Suffix
-  halbiert die Tarife. Die Nullpreise der Code-Plan-Provider (Abo) werden vollständig
-  durch diese API-Vergleichskosten ersetzt; bei vorhandenen models.dev-Preisen wird nur
-  ein fehlender Cache-Write-Preis ergänzt, nichts überschrieben. Reasoning kostet den
-  Outputtarif.
+- Kimi-/Moonshot-Modelle verwenden offizielle Tarife (Stand 29.09.2026,
+  https://platform.kimi.ai/docs/pricing/chat): `kimi-k3` je 1M Tokens
+  Input/Output/Cache-Read/Cache-Write = 3/15/0,30/3 USD. Der Write-Tarif ist ausdrücklich
+  eine **5min-Schätzung**; 1h kostet 6 USD, die TTL-Aufteilung fehlt im Session-Ledger.
+  `kimi-k2.7-code` = 0,95/4/0,19 USD; HighSpeed = 1,90/8/0,38; K2.6 = 0,95/4/0,16.
+  Kein separat ausgewiesener K2-Write-Tarif wird als Nullpreis erfunden.
+- Coding-`k3` und `k3-256k` behalten denselben **API-Vergleichstarif**, ausdrücklich als
+  `API-Vergleich, kein Abo-Abzug` markiert. K3-256K benötigt laut Kimi ungefähr halb so viel
+  **Abo-Kontingent** wie K3 (1M); dieser Unterschied steht direkt unter der Monatsanzeige.
+  Das ist keine Halbierung tatsächlicher Tokens oder ein veröffentlichter halber API-Dollarpreis.
+  `kimi-for-coding` steht seit 11.09.2026 für **K2.8 Preview**: ohne veröffentlichten USD-Tarif
+  erscheint der Vergleichspreis als `nicht verfügbar`, nicht mehr als K2.7 oder kostenlos.
+  Quelle: https://www.kimi.com/code/docs/en/kimi-code/models.html
+- Moonshot-Batch ist nur für K2.6 und K2.7 Code belegt und kostet **60 %**, nicht 50 %:
+  Input/Output = 0,57/2,40; Cache-Read K2.6 = **0,10** (expliziter Tabellenwert), K2.7 = 0,114.
+  https://platform.kimi.ai/docs/pricing/batch . OpenRouter behält seine eigenen Katalogtarife;
+  Moonshot-Preise werden nicht mehr unbesehen in Fremdanbieterpreise eingesetzt.
+- SDK-v2-Aufrufe für Session-Verlauf und Logging verwenden die tatsächliche flache API-Signatur.
 - Kumulative Session-Summen für Input, Output, Reasoning und Gesamtkosten, die durch Compress,
   ausgeblendete ältere Messages oder Modellwechsel nicht zurückgesetzt oder verkleinert werden.
 - Linksbündige, orange und fette Theme-Auswahl mit direkt folgendem Theme-Namen sowie nebeneinanderliegender Dunkel-/Hell-Umschaltung; der aktive Modus ist fett.
@@ -143,7 +158,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
    `AKTIVER ARBEITSMODUS: <gewählter Modus>`; im Freimodus wird keine solche Anweisung ergänzt.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
-8. Bei einem OpenAI-Modell steht neben dem Modell beispielsweise `Woche 66 % · 23.07.`; bei anderen Providern erscheint keine Kontingentanzeige.
+8. OpenAI zeigt verbleibende Wochenquote, Kimi Code den verbrauchten gemeinsamen Monatsanteil mit Reset-Datum. Andere Provider erhalten keine erfundene Kontingentanzeige.
 9. Unter `Context` stehen `Inputpreis`, `Outputpreis`, `Cachepreis` und die vier grauen Tokenzeilen; direkt auf `Reasoning Token` folgen `Cachekosten (<Verhältnis> zu 1)`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und die ganz unten fett und rot dargestellte Zeile `Gesamtkosten`.
 
 Tests im Repo:
