@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.16.0 – 29.09.2026 12:37
+Stand: v1.17.0 – 29.09.2026 12:48
 
 ## Funktionen
 
@@ -24,6 +24,12 @@ Stand: v1.16.0 – 29.09.2026 12:37
   Unterstützt `kimi-code-plan-global`, `kimi-code-plan-cn` und den alten Provider `kimi-for-coding`;
   verwendet nur dessen eigenen API-Key/OAuth-Access-Token aus OpenCodes `auth.json`, mit festem
   regionalem HTTPS-Endpoint, 10 Sekunden Timeout und ohne Redirects oder fremde Key-Fallbacks.
+- Direkt darunter steht das Kimi-5-Stunden-Limit, beispielsweise
+  `5 Stunden 23% verbraucht (Reset in 2h 14min)`. Verbrauch und Reset stammen separat aus
+  `usages.limit_5h` derselben Antwort. Der Countdown aktualisiert sich lokal jede Minute,
+  ohne zusätzliche API-Anfragen; unter einer Stunde steht nur die Minutenzahl.
+  Ein abgelaufener Zeitpunkt erscheint bis zum nächsten Anbieterabruf als `Reset fällig`.
+  Fehlende 5h-Daten ergeben `5 Stunden n/v`, ohne den Monatswert zu beeinträchtigen.
 - Das Modell erscheint orange, fett und unterstrichen. Darunter steht das Kontingent in der normalen Theme-Textfarbe, beispielsweise `Woche 62% (23. Juli)`; nur das Klammerdatum ist hellgrau. Kontingent, Effort-Auswahl und Arbeitsmodi folgen ohne Leerzeilen direkt aufeinander.
 - Sofortige Kontingentaktualisierung nach abgeschlossenen OpenAI-Modellaufrufen, zusätzlicher Nachabruf nach zwei Sekunden und minütlicher Abgleich für andere Codex-Sitzungen.
 - Orange, fette und unterstrichene Sidebar-Überschriften für Session, Modell, Context, Theme, MCP und LSP.
@@ -62,7 +68,7 @@ Stand: v1.16.0 – 29.09.2026 12:37
   Kein separat ausgewiesener K2-Write-Tarif wird als Nullpreis erfunden.
 - Coding-`k3` und `k3-256k` behalten denselben **API-Vergleichstarif**, ausdrücklich als
   `API-Vergleich, kein Abo-Abzug` markiert. K3-256K benötigt laut Kimi ungefähr halb so viel
-  **Abo-Kontingent** wie K3 (1M); dieser Unterschied steht direkt unter der Monatsanzeige.
+  **Abo-Kontingent** wie K3 (1M); dieser Unterschied steht unter den beiden Kontingentzeilen.
   Das ist keine Halbierung tatsächlicher Tokens oder ein veröffentlichter halber API-Dollarpreis.
   `kimi-for-coding` steht seit 11.09.2026 für **K2.8 Preview**: ohne veröffentlichten USD-Tarif
   erscheint der Vergleichspreis als `nicht verfügbar`, nicht mehr als K2.7 oder kostenlos.
@@ -158,7 +164,7 @@ geladen und in einer bereits laufenden Session nicht automatisch aktualisiert.
    `AKTIVER ARBEITSMODUS: <gewählter Modus>`; im Freimodus wird keine solche Anweisung ergänzt.
 6. Die Anweisung bestätigt, dass das aktive `AGENTS.md`-Profil vollständig und unverändert gilt.
 7. Die Plugin-Version in `package.json` entspricht der Version dieser README.
-8. OpenAI zeigt verbleibende Wochenquote, Kimi Code den verbrauchten gemeinsamen Monatsanteil mit Reset-Datum. Andere Provider erhalten keine erfundene Kontingentanzeige.
+8. OpenAI zeigt verbleibende Wochenquote, Kimi Code den verbrauchten gemeinsamen Monatsanteil mit Reset-Datum und direkt darunter das 5-Stunden-Limit mit Reset-Countdown. Andere Provider erhalten keine erfundene Kontingentanzeige.
 9. Unter `Context` stehen `Inputpreis`, `Outputpreis`, `Cachepreis` und die vier grauen Tokenzeilen; direkt auf `Reasoning Token` folgen `Cachekosten (<Verhältnis> zu 1)`, `Inputkosten`, `Outputkosten`, `Reasoningkosten` und die ganz unten fett und rot dargestellte Zeile `Gesamtkosten`.
 
 Tests im Repo:

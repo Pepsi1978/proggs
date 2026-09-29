@@ -14,30 +14,49 @@ export function isKimiCodeProvider(providerID?: string): boolean {
   return !!providerID && Object.hasOwn(USAGE_URLS, providerID)
 }
 
-export type KimiMonthlyQuota = {
+export type KimiQuotaWindow = {
   usedPercent: number
   resetAt?: number
 }
 
-export function parseKimiMonthlyQuota(payload: any): KimiMonthlyQuota | undefined {
-  // Never substitute limit_month_code, a weekly window, or Extra Usage for the shared total.
-  const monthly = payload?.usages?.limit_month_total
-  const raw = monthly?.used_ratio
+export type KimiQuota = {
+  monthly?: KimiQuotaWindow
+  fiveHour?: KimiQuotaWindow
+}
+
+function parseQuotaWindow(window: any): KimiQuotaWindow | undefined {
+  const raw = window?.used_ratio
   if (typeof raw !== "number" && (typeof raw !== "string" || raw.trim() === "")) return undefined
   const ratio = Number(raw)
   if (!Number.isFinite(ratio) || ratio < 0) return undefined
-  const reset = typeof monthly?.reset_time === "string" ? Date.parse(monthly.reset_time) : NaN
+  const reset = typeof window?.reset_time === "string" ? Date.parse(window.reset_time) : NaN
   return {
     usedPercent: Math.min(100, ratio * 100),
     ...(Number.isFinite(reset) ? { resetAt: reset / 1_000 } : {}),
   }
 }
 
-export async function loadKimiMonthlyQuota(
+export function parseKimiQuota(payload: any): KimiQuota | undefined {
+  // Keep the shared monthly total and rolling 5h limit independent, even if one is absent.
+  const monthly = parseQuotaWindow(payload?.usages?.limit_month_total)
+  const fiveHour = parseQuotaWindow(payload?.usages?.limit_5h)
+  return monthly || fiveHour ? { monthly, fiveHour } : undefined
+}
+
+export function formatKimiResetCountdown(resetAt: number | undefined, nowMs: number): string {
+  if (resetAt === undefined || !Number.isFinite(resetAt)) return "Reset n/v"
+  const remainingMs = resetAt * 1_000 - nowMs
+  if (remainingMs <= 0) return "Reset fällig"
+  const minutes = Math.ceil(remainingMs / 60_000)
+  const hours = Math.floor(minutes / 60)
+  return hours > 0 ? `Reset in ${hours}h ${minutes % 60}min` : `Reset in ${minutes}min`
+}
+
+export async function loadKimiQuota(
   stateDirectory: string,
   providerID: string,
   fetcher: typeof fetch = fetch,
-): Promise<KimiMonthlyQuota | undefined> {
+): Promise<KimiQuota | undefined> {
   if (!isKimiCodeProvider(providerID)) return undefined
   let token: string | undefined
   for (const authFile of openAIAuthFileCandidates(stateDirectory)) {
@@ -59,5 +78,5 @@ export async function loadKimiMonthlyQuota(
     redirect: "error",
   })
   if (!response.ok) throw new Error(`Kimi-Kontingent: HTTP ${response.status}`)
-  return parseKimiMonthlyQuota(await response.json())
+  return parseKimiQuota(await response.json())
 }

@@ -39,7 +39,7 @@ import {
   type WeeklyQuota,
 } from "./openai-quota"
 import { homedir } from "node:os"
-import { isKimiCodeProvider, KIMI_CODE_PROVIDERS, loadKimiMonthlyQuota, type KimiMonthlyQuota } from "./kimi-quota"
+import { formatKimiResetCountdown, isKimiCodeProvider, KIMI_CODE_PROVIDERS, loadKimiQuota, type KimiQuota } from "./kimi-quota"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -447,10 +447,15 @@ function createOpenAIQuotaStore(api: TuiPluginApi): OpenAIQuotaStore {
   return { quota, authType }
 }
 
-type KimiQuotaStore = { quota: (providerID: string) => KimiMonthlyQuota | null | undefined }
+type KimiQuotaStore = {
+  quota: (providerID: string) => KimiQuota | null | undefined
+  now: () => number
+}
 
 function createKimiQuotaStore(api: TuiPluginApi): KimiQuotaStore {
-  const [quotas, setQuotas] = createSignal<Record<string, KimiMonthlyQuota | null>>({})
+  const [quotas, setQuotas] = createSignal<Record<string, KimiQuota | null>>({})
+  const [now, setNow] = createSignal(Date.now())
+  const clockTimer = setInterval(() => setNow(Date.now()), 60_000)
   let disposed = false
   let inFlight = false
   let refreshPending = false
@@ -464,7 +469,7 @@ function createKimiQuotaStore(api: TuiPluginApi): KimiQuotaStore {
     try {
       await Promise.all(KIMI_CODE_PROVIDERS.map(async (providerID) => {
         try {
-          const quota = await loadKimiMonthlyQuota(api.state.path.state, providerID)
+          const quota = await loadKimiQuota(api.state.path.state, providerID)
           if (!disposed) setQuotas((previous) => ({ ...previous, [providerID]: quota ?? null }))
         } catch {
           if (disposed) return
@@ -472,7 +477,7 @@ function createKimiQuotaStore(api: TuiPluginApi): KimiQuotaStore {
           setQuotas((previous) => ({ ...previous, [providerID]: null }))
           void api.client.app.log({
             service: "frank.token-cost-sidebar", level: "warn",
-            message: "Das Kimi-Monatskontingent konnte nicht aktualisiert werden.",
+            message: "Die Kimi-Kontingente konnten nicht aktualisiert werden.",
             extra: { providerID },
             directory: api.state.path.directory,
           }).catch(() => {
@@ -501,10 +506,11 @@ function createKimiQuotaStore(api: TuiPluginApi): KimiQuotaStore {
   api.lifecycle.onDispose(() => {
     disposed = true
     stopUpdates()
+    clearInterval(clockTimer)
     if (pollTimer) clearTimeout(pollTimer)
     if (delayedRefresh) clearTimeout(delayedRefresh)
   })
-  return { quota: (providerID) => quotas()[providerID] }
+  return { quota: (providerID) => quotas()[providerID], now }
 }
 
 function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: OpenAIQuotaStore; kimiQuotaStore: KimiQuotaStore }) {
@@ -512,15 +518,21 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
   const modelMeta = createMemo(() => resolveModelMeta(props.api, props.sessionID))
   const kimiQuota = () => props.kimiQuotaStore.quota(modelMeta().providerID ?? "")
   const kimiQuotaLabel = () => {
-    const current = kimiQuota()
-    if (current === undefined) return "Monat …"
-    if (current === null) return "Monat n/v"
+    if (kimiQuota() === undefined) return "Monat …"
+    const current = kimiQuota()?.monthly
+    if (!current) return "Monat n/v"
     return `Monat ${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(current.usedPercent)}% verbraucht`
   }
   const kimiQuotaDate = () => {
-    const resetAt = kimiQuota()?.resetAt
+    const resetAt = kimiQuota()?.monthly?.resetAt
     return resetAt === undefined ? "Reset n/v"
       : new Intl.DateTimeFormat("de-DE", { day: "numeric", month: "long" }).format(new Date(resetAt * 1_000))
+  }
+  const kimiFiveHourLabel = () => {
+    if (kimiQuota() === undefined) return "5 Stunden …"
+    const current = kimiQuota()?.fiveHour
+    if (!current) return "5 Stunden n/v"
+    return `5 Stunden ${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(current.usedPercent)}% verbraucht`
   }
 
   const quotaLabel = () => {
@@ -555,8 +567,14 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
       <Show when={isKimiCodeProvider(modelMeta().providerID)}>
         <text fg={theme().text}>
           {kimiQuotaLabel()}
-          <Show when={kimiQuota()}>
+          <Show when={kimiQuota()?.monthly}>
             <span style={{ fg: theme().textMuted }}>{` (${kimiQuotaDate()})`}</span>
+          </Show>
+        </text>
+        <text fg={theme().text}>
+          {kimiFiveHourLabel()}
+          <Show when={kimiQuota()?.fiveHour}>
+            <span style={{ fg: theme().textMuted }}>{` (${formatKimiResetCountdown(kimiQuota()?.fiveHour?.resetAt, props.kimiQuotaStore.now())})`}</span>
           </Show>
         </text>
         <Show when={modelMeta().modelID === "k3-256k" || modelMeta().modelID === "k3"}>
