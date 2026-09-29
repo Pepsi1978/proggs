@@ -33,10 +33,27 @@ Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „
 - Uhrzeit: Die Cloud-VM läuft in UTC. Zeit immer per Befehl in deutscher Zeit holen:
   `TZ=Europe/Berlin date "+%d.%m.%Y, %H:%M Uhr"`. Nie schätzen.
 
-5. Andere Projekte (keine Android-App)
-- .NET/WPF: `<Version>` in der `.csproj` erhöhen. Node/TypeScript: `version` in der Wurzel-`package.json`.
-- Bauen geht in der Cloud meist nicht (kein Windows, kein SDK). Dann: Code ändern, Version bumpen, PR öffnen, selbst
-  mergen und Frank sagen, dass am PC gebaut/installiert werden muss.
+5. Version und Zeitstempel (alle Projekte)
+- Bump die Version genau einmal pro Commit, sichtbar. Der Bump gehört in denselben Commit wie die Änderung.
+- Datum und Uhrzeit vorher per Befehl holen (die Cloud-VM läuft in UTC, `Get-Date` gibt es hier nicht):
+  `TZ=Europe/Berlin date "+%d.%m.%Y, %H:%M Uhr"`, für Zeitstempel-Suffixe `TZ=Europe/Berlin date "+%Y%m%d.%H%M"`.
+- Die Zeit nie aus dem Kontext, aus einer früheren Nachricht, aus dem Gedächtnis oder aus einer Anzeige in der App
+  übernehmen. Nie schätzen.
+- Wo die Version steht, hängt von der Plattform ab:
+  - Android: `app/src/main/assets/versionslog.json`, pro Commit einen Eintrag unten anhängen:
+    `{ "versionCode": <letzter + 1>, "versionName": "1.0.28", "stand": "19.07.2026, 21:00 Uhr", "notiz": "<was geändert wurde>" }`.
+    versionCode immer um 1 erhöhen, sonst erkennt UpdateStation das Update nicht. Uhrzeit mit Doppelpunkt, nicht
+    mit Punkt. `build.gradle.kts` liest versionCode, versionName und VERSION_BUMPED_AT aus dem Log, dort nie von
+    Hand eintragen. Neue Android-Apps bekommen den Versionslog von Anfang an (Vorlage: UpdateStation).
+  - .NET/WPF: `<Version>` in der `.csproj`, Form `2.1.84`.
+  - Node/TypeScript: `version` in der Wurzel-`package.json`. Bei WerftStudio mit Zeitstempel-Suffix, Form
+    `0.32.2-20260809.1545`.
+- Wird die Version in der App angezeigt (meist im Einstellungs-Bildschirm, sonst auf anderen Seiten suchen), zieh
+  die Anzeige mit.
+- Weicht ein Projekt von diesen Mustern ab, steht die Regel in dessen eigener CLAUDE.md. Findest du dort nichts und
+  passt kein Muster: frag nach, rate nicht.
+- Bauen geht in der Cloud bei Nicht-Android-Projekten meist nicht (kein Windows, kein SDK). Dann: Code ändern,
+  Version bumpen, PR öffnen, selbst mergen und Frank sagen, dass am PC gebaut/installiert werden muss.
 
 6. Commits und Git
 - Commit-Messages: `<Projekt>: <was geändert wurde>`, klein, imperativ, eine Zeile, Deutsch mit Umlauten.
