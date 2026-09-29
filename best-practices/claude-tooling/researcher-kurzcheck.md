@@ -17,3 +17,5 @@
 | 4 | Ergebnisse sichern | Checkpointing (lossless in Datei auslagern) | Checkpointing |
 | 5 | Findings | NICHT kappen — alle dokumentieren (1M-Kontext) | Scope-Begrenzung |
 | 6 | Uebersetzer ≠ Researcher | Uebersetzungs-Agenten NICHT drosseln (kein Web/RPM) | Warum drosseln |
+| 7 | Benchmark-/Modellvergleich | Nur gleiche Quelle + Benchmark-Version + Effort + Harness in eine Zeile; Index-Versionen nie mischen | Benchmark- und Modellvergleiche |
+| 8 | Zahlen aus Leaderboards/System Cards | Primärtext (curl, JSON, pdftotext) statt WebFetch-Zusammenfassung; Bugs: `bugs/claude-tooling/researcher.md` | Benchmark- und Modellvergleiche |

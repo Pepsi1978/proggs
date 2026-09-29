@@ -1,4 +1,4 @@
-# Researcher & Internet-Recherche — Best Practices (Stand 2026-05-25, Claude Code 2.1.150)
+# Researcher & Internet-Recherche — Best Practices (Stand 2026-09-29, Claude Code 2.1.284)
 
 ---
 
@@ -15,6 +15,8 @@
 | 4 | Ergebnisse sichern | Checkpointing (lossless in Datei auslagern) | Checkpointing |
 | 5 | Findings | NICHT kappen — alle dokumentieren (1M-Kontext) | Scope-Begrenzung |
 | 6 | Uebersetzer ≠ Researcher | Uebersetzungs-Agenten NICHT drosseln (kein Web/RPM) | Warum drosseln |
+| 7 | Benchmark-/Modellvergleich | Nur gleiche Quelle + Benchmark-Version + Effort + Harness in eine Zeile; Index-Versionen nie mischen | Benchmark- und Modellvergleiche |
+| 8 | Zahlen aus Leaderboards/System Cards | Primärtext (curl, JSON, pdftotext) statt WebFetch-Zusammenfassung; Bugs: `bugs/claude-tooling/researcher.md` | Benchmark- und Modellvergleiche |
 
 ---
 
@@ -161,6 +163,19 @@
 | Lösung | Staggering + max 5 Agents | Keine Maßnahmen nötig |
 
 **Kernaussage:** Researcher erzeugen durch WebSearch + WebFetch pro Turn viele schnelle API-Calls. Bei 5 parallelen Agents à 20 Turns in 5 Minuten = **100 RPM** — bei Tier-1-Limit von 50 RPM sofort ein Problem. Zusätzlich feuern Anthropics Acceleration Limits bei plötzlichem Nutzungsanstieg selbst unterhalb des Tier-Limits.
+
+---
+
+## Benchmark- und Modellvergleiche (Stand 2026-09-29)
+
+- **Eine Zeile = eine Messreihe.** Benchmark-Werte nur vergleichen, wenn Quelle, Benchmark-Version, Effort-Stufe und Harness gleich sind. Beispiel Terminal-Bench 4.0 für Sonnet 5.5: Anthropic 70,6 % (Claude Code, max), Artificial Analysis 63,6 % (mini-swe-agent), Vals 53,0 % (Terminus 2). Terminal-Bench 2.1 und 4.0 sind verschiedene Benchmarks (Kimi K3: 88,3 % gegen 13 %). Quellen: https://www.tbench.ai/news/terminal-bench-4-0 , https://www.vals.ai/benchmarks/terminal-bench-4 , https://artificialanalysis.ai/methodology/intelligence-benchmarking · extern
+- **Index-Versionen driften.** Artificial Analysis Intelligence Index v4.3.2 skaliert neu: Fable 5.1 66 → 53, Kimi K3 57 → 44. Vals Index: Kimi K3 74,7 % → 57,8 %. Immer Version und Abrufdatum notieren. · extern
+- **System Cards zwischen Modellen nicht mischen.** Anthropic misst ältere Modelle in neuen Karten mit neuen Benchmark-Versionen nach (Sonnet 5: OSWorld 81,2 → 57,0; GDPval-AA v2 → v2.1). Für Vergleiche die Tabelle der NEUESTEN Karte nehmen. Quelle: https://www.anthropic.com/claude-sonnet-5-5-system-card Tab. 8.1.A · offiziell
+- **Metrik prüfen:** All-pass (Harvey LAB, Legal Research Bench) ≠ Teilpunkte; OSWorld partial ≠ strict; Elo (GDPval-AA, LMArena) ist relativ zum Teilnehmerfeld; HealthBench roh ≠ längenkorrigiert (die Rangfolge kippt).
+- **Harness-Differenzen:** Harvey LAB Sonnet 5.5: Vals 2,92 % gegen Artificial Analysis 10,0 %. Vals zählt Fallback- und Refusal-Antworten als Fehler bzw. vermerkt sie (Opus 5.5 Terminal-Bench 4.0: 30 von 198 per Fallback).
+- **Deutsches Recht:** Stand 29.09.2026 gibt es keinen Benchmark mit aktuellen Modellen. Nächste Quellen: BenGER (TUM, https://arxiv.org/abs/2605.28183), LEXam (https://lexam-benchmark.github.io/), SteuerEx (FAU, https://arxiv.org/abs/2602.11081). US-Legal-Benchmarks immer als Näherung kennzeichnen.
+- **Abruf-Technik:** siehe `bugs/claude-tooling/researcher.md` §1–§4 (PDF über 10 MB, openai.com 403, verschobene Zellen, JSON-Scraping von arena.ai/vals.ai/AA).
+- **Umsetzung:** `~/proggs/ModellBenchmarks` (Datenmodell models/series/values in `data.js`, eine Zeile je Messreihe).
 
 ---
 
