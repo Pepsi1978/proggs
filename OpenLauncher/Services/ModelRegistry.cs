@@ -454,7 +454,12 @@ public sealed class ModelRegistry
             var group = Groups.FirstOrDefault(g => string.Equals(g.Id, defaults.Id, StringComparison.OrdinalIgnoreCase));
             if (group == null)
             {
-                Groups.Add(defaults);
+                // Moonshot AI (Kimi) gehoert direkt unter OpenAI, nicht ans Ende hinter LM Studio.
+                var openAiIndex = string.Equals(defaults.Id, MoonshotGroupId, StringComparison.OrdinalIgnoreCase)
+                    ? Groups.ToList().FindIndex(g => string.Equals(g.Id, "openai", StringComparison.OrdinalIgnoreCase))
+                    : -1;
+                if (openAiIndex >= 0) Groups.Insert(openAiIndex + 1, defaults);
+                else Groups.Add(defaults);
                 continue;
             }
             group.ProviderId = defaults.ProviderId;
@@ -622,6 +627,15 @@ public sealed class ModelRegistry
             Model(Gpt56LunaSlug, "GPT-5.6 Luna", "openai", "OpenAI"),
             Model(Gpt56LunaFastSlug, "GPT-5.6 Luna Fast", "openai", "OpenAI"),
         }),
+        // Kimi-Code-Abo (kimi.ai), in OpenCode per /connect -> "Kimi For Coding" mit API-Schluessel
+        // angemeldet. Die vier Modelle stehen nativ im OpenCode-Katalog unter kimi-code-plan-global.
+        CreateGroup(MoonshotGroupId, "Moonshot AI", MoonshotProviderId, "Moonshot AI", new[]
+        {
+            Model("k3", "Kimi K3 (1M)", MoonshotProviderId, "Moonshot AI"),
+            Model("k3-256k", "Kimi K3 256K", MoonshotProviderId, "Moonshot AI"),
+            Model("kimi-for-coding", "Kimi for Coding (K2.8 Preview)", MoonshotProviderId, "Moonshot AI"),
+            Model("kimi-for-coding-highspeed", "Kimi for Coding HighSpeed", MoonshotProviderId, "Moonshot AI"),
+        }),
         CreateGroup("nvidia", "NVIDIA", NvidiaProviderId, NvidiaProviderName, NvidiaFreeModels),
         // Lokale LM-Studio-Modelle. Die Liste kommt beim Start live vom lokalen Server
         // (SyncLmStudioModels); die Vorgabe hier ist nur der Platzhalter, damit der Reiter
@@ -680,6 +694,8 @@ public sealed class ModelRegistry
     ];
 
     private const string NvidiaProviderId = ModelEntry.NvidiaProviderId;
+    public const string MoonshotGroupId = "moonshot";
+    public const string MoonshotProviderId = "kimi-code-plan-global";
     private const string NvidiaProviderName = "NVIDIA";
 
     private static ModelEntry NvidiaModel(string slug, string displayName) =>

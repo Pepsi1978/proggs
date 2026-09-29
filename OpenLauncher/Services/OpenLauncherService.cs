@@ -464,6 +464,141 @@ $env:Path = $pathEntries -join ';'
     }
 
     /// <summary>
+    /// Startet das originale Kimi Code CLI (Moonshot AI, ~/.kimi-code/bin/kimi) mit dem gewaehlten
+    /// Kimi-Code-Modell. Das Profil steht wie bei Codex in der AGENTS.md des Arbeitsverzeichnisses.
+    /// Angemeldet ist das CLI selbst (kimi login ueber kimi.ai). Die Effort-Stufe kennt das CLI
+    /// nicht als Schalter: sie wird in ~/.kimi-code/config.toml gesetzt ([thinking] effort und
+    /// default_effort des Modells), der Rest der Datei bleibt unveraendert.
+    /// </summary>
+    public void LaunchKimiCli(ModelEntry model, string workDir, string? effortLevel, bool useTmux = false)
+    {
+        var log = Logger.Instance;
+        var effort = NormalizeThinkingLevel(effortLevel);
+        if (effort is not ("low" or "high" or "max")) effort = null;
+        var alias = $"kimi-code/{model.Slug}";
+
+        try
+        {
+            if (effort != null) SetKimiEffort(alias, effort);
+            Directory.CreateDirectory(workDir);
+            var wt = ResolveWt();
+            var tabColor = PickCodexTerminalTabColor();
+            var innerScript = BuildKimiStartScript(alias, workDir);
+            var shell = ResolvePowerShellExecutable();
+            if (useTmux) innerScript = TmuxLauncher.BuildStartScript(innerScript, workDir, shell.Path);
+            var title = string.IsNullOrWhiteSpace(effort) ? $"Kimi-{tabColor.Name}" : $"Kimi-{tabColor.Name}-{effort}";
+
+            var psi = new ProcessStartInfo
+            {
+                UseShellExecute = false,
+                CreateNoWindow = false,
+                WorkingDirectory = workDir,
+            };
+            if (!string.IsNullOrEmpty(wt))
+            {
+                psi.FileName = wt;
+                psi.ArgumentList.Add("new-tab");
+                psi.ArgumentList.Add("--tabColor");
+                psi.ArgumentList.Add(tabColor.Hex);
+                psi.ArgumentList.Add("--title");
+                psi.ArgumentList.Add(title);
+                psi.ArgumentList.Add("--startingDirectory");
+                psi.ArgumentList.Add(workDir);
+                psi.ArgumentList.Add(shell.Path);
+            }
+            else
+            {
+                psi.FileName = shell.Path;
+            }
+            psi.ArgumentList.Add("-NoExit");
+            psi.ArgumentList.Add("-ExecutionPolicy");
+            psi.ArgumentList.Add("Bypass");
+            psi.ArgumentList.Add("-File");
+            psi.ArgumentList.Add(innerScript);
+
+            var p = Process.Start(psi);
+            log.Info("OpenLauncherService", "LaunchKimiCli", $"Kimi Code CLI gestartet (PID {p?.Id})", new { alias, workDir, effort, wtUsed = wt != null });
+        }
+        catch (Exception ex)
+        {
+            log.Error("OpenLauncherService", "LaunchKimiCli", ex, new { model.Slug, workDir, effortLevel });
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Setzt in ~/.kimi-code/config.toml nur die Zeilen "effort" unter [thinking] und
+    /// "default_effort" unter [models."&lt;alias&gt;"]. Alles andere (auch die Anmeldedaten-Verweise)
+    /// bleibt Byte fuer Byte stehen; der Dateiinhalt wird nie protokolliert.
+    /// </summary>
+    private static void SetKimiEffort(string alias, string effort)
+    {
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".kimi-code", "config.toml");
+        if (!File.Exists(path)) return;
+        var lines = File.ReadAllLines(path).ToList();
+        var section = string.Empty;
+        var changed = false;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var trimmed = lines[i].Trim();
+            if (trimmed.StartsWith('[')) { section = trimmed; continue; }
+            var key = trimmed.Split('=', 2)[0].Trim();
+            if ((section == "[thinking]" && key == "effort") ||
+                (section == $"[models.\"{alias}\"]" && key == "default_effort"))
+            {
+                var updated = $"{key} = \"{effort}\"";
+                if (lines[i] != updated) { lines[i] = updated; changed = true; }
+            }
+        }
+        if (changed) File.WriteAllLines(path, lines, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    }
+
+    /// <summary>
+    /// Temp-Script fuer den Kimi-Start (-File statt inline -Command, wie beim Codex-Weg).
+    /// --yolo: Routine-Aenderungen und Befehle laufen ohne Nachfrage, riskante Aktionen und
+    /// Rueckfragen stellt das CLI weiter (--auto wuerde auch die unterdruecken).
+    /// </summary>
+    private static string BuildKimiStartScript(string alias, string workDir)
+    {
+        var tempScript = Path.Combine(Path.GetTempPath(), $"openlauncher-kimi-cli-{Guid.NewGuid():N}.ps1");
+        var script = $$"""
+$ErrorActionPreference = 'Continue'
+{{ProgrammerProcessPriorityScript}}
+[Console]::Write("`e[?1004l")
+Set-Location -LiteralPath {{PowerShellLiteral(workDir)}}
+
+# Aktuellen persistenten Windows-PATH laden, damit kimi.exe (~/.kimi-code/bin) erreichbar ist.
+{{PersistentPathRefreshScript}}
+
+# Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
+{{InheritedAgentEnvScrubScript}}
+
+$profilePath = Join-Path $HOME 'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
+if (Test-Path $profilePath) {
+    . $profilePath
+}
+
+try {
+    $agentsFile = Join-Path {{PowerShellLiteral(workDir)}} 'AGENTS.md'
+    if (Test-Path -LiteralPath $agentsFile) {
+        $firstLine = (Get-Content -LiteralPath $agentsFile -TotalCount 1 -ErrorAction SilentlyContinue)
+        Write-Host ("[OpenLauncher] Profil-AGENTS.md aktiv: {0}" -f $firstLine) -ForegroundColor DarkGray
+    } else {
+        Write-Host "[OpenLauncher] Achtung: keine AGENTS.md im Arbeitsverzeichnis - Kimi startet ohne Profil." -ForegroundColor Yellow
+    }
+    $kimi = Get-Command kimi -ErrorAction SilentlyContinue
+    $kimiPath = if ($kimi) { $kimi.Source } else { Join-Path $HOME '.kimi-codein\kimi.exe' }
+    & $kimiPath --yolo -m {{PowerShellLiteral(alias)}}
+} finally {
+    [Console]::Write("`e[?1004l")
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}
+""";
+        File.WriteAllText(tempScript, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        return tempScript;
+    }
+
+    /// <summary>
     /// Uebersetzt einen Launcher-Slug in die Modell-ID, die das Codex CLI kennt. Die "-fast"-
     /// Eintraege sind in OpenCode eigene Modelle, im Codex-Katalog dagegen nur eine Geschwindigkeits-
     /// stufe desselben Modells (service_tier "priority") -- deshalb Suffix abschneiden und den Tarif

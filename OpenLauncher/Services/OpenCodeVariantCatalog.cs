@@ -20,10 +20,15 @@ public static class OpenCodeVariantCatalog
             "opencode" => GetOpenCodeZenLevels(slug),
             "nvidia" => GetNvidiaLevels(slug),
             "anthropic" => GetAnthropicLevels(slug),
+            "kimi-code-plan-global" => GetKimiLevels(slug),
             "openrouter" => GetOpenRouterLevels(slug, KnownOpenRouterReasoning(slug)),
             _ => []
         };
     }
+
+    /// <summary>Kimi-Code-Abo: OpenCode und Kimi CLI kennen low/high/max; HighSpeed hat keine Stufen.</summary>
+    private static IReadOnlyList<string> GetKimiLevels(string slug) =>
+        slug is "k3" or "k3-256k" or "kimi-for-coding" ? ["low", "high", "max"] : [];
 
     private static IReadOnlyList<string> GetAnthropicLevels(string slug)
     {

@@ -69,20 +69,10 @@ public sealed partial class MainViewModel : ObservableObject
             Description = "Mehr Kontrolle und Absicherung",
             IsEnabled = true
         });
-        // Ziel-CLI: nur bei OpenAI-Modellen sichtbar. Beide CLIs lesen dieselbe Profil-AGENTS.md,
-        // deshalb gelten Minimal/Standard/Strikt und der Arbeitsmodus in beiden gleich.
-        CliTargets.Add(new CliTargetEntry
-        {
-            Id = "opencode",
-            DisplayName = "OpenCode",
-            Description = "Wie bisher: OpenCode-TUI mit Provider-Wahl"
-        });
-        CliTargets.Add(new CliTargetEntry
-        {
-            Id = "codex",
-            DisplayName = "Codex CLI",
-            Description = "Eigenes OpenAI-CLI, Profil aus der AGENTS.md"
-        });
+        // Ziel-CLI: nur bei OpenAI- und Moonshot-AI-Modellen sichtbar (FillCliTargets). Alle CLIs
+        // lesen dieselbe Profil-AGENTS.md, deshalb gelten Minimal/Standard/Strikt und der
+        // Arbeitsmodus ueberall gleich.
+        FillCliTargets(null);
         WorkModes.Add(new WorkModeEntry
         {
             Id = "frei",
@@ -199,6 +189,7 @@ public sealed partial class MainViewModel : ObservableObject
             SelectedProfile = Profiles.FirstOrDefault(profile => profile.Id == "minimal");
             // Ohne gespeicherten Standard startet jedes Modell wieder auf OpenCode -- das bisherige
             // Verhalten bleibt damit die Vorauswahl.
+            FillCliTargets(value);
             SelectedCliTarget = CliTargets.FirstOrDefault(target => target.Id == "opencode");
             if (_pendingModelDefault != null)
             {
@@ -206,7 +197,7 @@ public sealed partial class MainViewModel : ObservableObject
                     profile.Id == _pendingModelDefault.ProfileId && profile.IsEnabled) ?? SelectedProfile;
                 SelectedWorkMode = WorkModes.FirstOrDefault(mode => mode.Id == _pendingModelDefault.WorkModeId)
                     ?? SelectedWorkMode;
-                if (IsOpenAiModel(value))
+                if (HasExternalCli(value))
                 {
                     SelectedCliTarget = CliTargets.FirstOrDefault(target => target.Id == _pendingModelDefault.CliTargetId)
                         ?? SelectedCliTarget;
@@ -217,7 +208,7 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _applyingModelDefault = false;
         }
-        HasCliChoice = IsOpenAiModel(value);
+        HasCliChoice = HasExternalCli(value);
         SelectedProvider = null;
         Providers.Clear();
         SelectedThinkingOption = null;
@@ -271,7 +262,9 @@ public sealed partial class MainViewModel : ObservableObject
         ? "Claude Code · Minimal + Standard + Strikt"
         : IsCodexCliSelected
             ? "Codex CLI · Profil + Modus in der AGENTS.md"
-            : "OpenCode · Profil-Snapshots";
+            : IsKimiCliSelected
+                ? "Kimi Code CLI · Profil + Modus in der AGENTS.md"
+                : "OpenCode · Profil-Snapshots";
 
     private async Task LoadThinkingOptionsAsync(ModelEntry model, bool forceRefresh = false)
     {
@@ -959,9 +952,9 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText = "Für Start (Codex) bitte ein Claude-Code-Modell wählen.";
             return;
         }
-        // Das Codex CLI spricht immer direkt mit OpenAI -- dort gibt es keine Provider-Wahl, die
-        // Auswahl darf den Start also nicht blockieren.
-        if (SelectedModel == null || (SelectedProvider == null && !IsCodexCliSelected))
+        // Codex CLI und Kimi Code CLI sprechen immer direkt mit ihrem Anbieter -- dort gibt es keine
+        // Provider-Wahl, die Auswahl darf den Start also nicht blockieren.
+        if (SelectedModel == null || (SelectedProvider == null && !IsCodexCliSelected && !IsKimiCliSelected))
         {
             StatusText = "Bitte Modell und Provider wählen.";
             return;
@@ -1057,6 +1050,22 @@ public sealed partial class MainViewModel : ObservableObject
                     workMode = SelectedWorkMode.Id,
                     agentsPath,
                     codexHome
+                });
+                StatusText = launchStatus;
+                return;
+            }
+
+            if (IsKimiCliSelected)
+            {
+                // Kimi Code CLI liest die AGENTS.md des Arbeitsverzeichnisses wie Codex: Profil UND
+                // Modus-Prompt stehen dort zusammen. Angemeldet ist das CLI selbst (kimi login, kimi.ai).
+                var agentsPath = _profiles.ActivateCodexProjectAgents(SelectedProfile.Id, SelectedWorkMode.Id, WorkDir);
+                _launcher.LaunchKimiCli(SelectedModel, WorkDir, thinkingLevel, UseTmux);
+                Logger.Instance.Info("MainViewModel", "Start", "Kimi-CLI-Kontext geschrieben", new
+                {
+                    profile = SelectedProfile.Id,
+                    workMode = SelectedWorkMode.Id,
+                    agentsPath
                 });
                 StatusText = launchStatus;
                 return;
@@ -1344,6 +1353,40 @@ public sealed partial class MainViewModel : ObservableObject
     /// Codex spricht ausschliesslich mit OpenAI selbst).</summary>
     private static bool IsOpenAiModel(ModelEntry? model) =>
         string.Equals(model?.ProviderId, "openai", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsMoonshotModel(ModelEntry? model) =>
+        string.Equals(model?.ProviderId, ModelRegistry.MoonshotProviderId, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>OpenAI-Modelle laufen wahlweise im Codex CLI, Moonshot-AI-Modelle im Kimi Code CLI.</summary>
+    private static bool HasExternalCli(ModelEntry? model) => IsOpenAiModel(model) || IsMoonshotModel(model);
+
+    /// <summary>Fuellt die CLI-Wahl passend zum Anbieter: OpenCode plus das eigene CLI des Anbieters.</summary>
+    private void FillCliTargets(ModelEntry? model)
+    {
+        CliTargets.Clear();
+        CliTargets.Add(new CliTargetEntry
+        {
+            Id = "opencode",
+            DisplayName = "OpenCode",
+            Description = "Wie bisher: OpenCode-TUI mit Provider-Wahl"
+        });
+        CliTargets.Add(IsMoonshotModel(model)
+            ? new CliTargetEntry
+            {
+                Id = "kimi",
+                DisplayName = "Kimi Code CLI",
+                Description = "Originales Kimi-CLI, Profil aus der AGENTS.md"
+            }
+            : new CliTargetEntry
+            {
+                Id = "codex",
+                DisplayName = "Codex CLI",
+                Description = "Eigenes OpenAI-CLI, Profil aus der AGENTS.md"
+            });
+    }
+
+    private bool IsKimiCliSelected =>
+        HasCliChoice && string.Equals(SelectedCliTarget?.Id, "kimi", StringComparison.Ordinal);
 
     private bool IsCodexCliSelected =>
         HasCliChoice && string.Equals(SelectedCliTarget?.Id, "codex", StringComparison.Ordinal);
