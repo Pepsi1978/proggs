@@ -138,17 +138,6 @@ object Benachrichtigungen {
     fun entferneUpdate(context: Context, paket: String) =
         NotificationManagerCompat.from(context).cancel(paket.hashCode())
 
-    fun installiert(context: Context, paket: String, label: String, version: String) {
-        if (!darf(context)) return
-        val n = NotificationCompat.Builder(context, KANAL_STATUS)
-            .setSmallIcon(R.drawable.ic_launcher_vordergrund)
-            .setContentTitle("$label aktualisiert")
-            .setContentText("Jetzt auf Version $version.")
-            .setAutoCancel(true)
-            .build()
-        zeige(context, paket.hashCode() + 7, n)
-    }
-
     /** Liefert false, wenn die Benachrichtigung nicht gezeigt werden darf. */
     fun bestaetigen(context: Context, paket: String, label: String, intent: Intent): Boolean {
         if (!darf(context)) return false

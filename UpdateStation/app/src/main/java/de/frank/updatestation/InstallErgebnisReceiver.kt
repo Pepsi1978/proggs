@@ -11,7 +11,6 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val paket = intent.getStringExtra(EXTRA_PAKET) ?: return
         val label = intent.getStringExtra(EXTRA_LABEL) ?: paket
-        val version = intent.getStringExtra(EXTRA_VERSION).orEmpty()
         val sitzung = intent.getIntExtra(EXTRA_SITZUNG, -1)
         if (!Installierer.gehoertZurAktuellen(context, paket, sitzung)) {
             // Ergebnis einer ersetzten oder älteren Session (auch aus Versionen vor dieser): darf Sperre
@@ -64,7 +63,6 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                 ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fertig)
                 Benachrichtigungen.entferneUpdate(context, paket)
                 Benachrichtigungen.entferneBestaetigung(context, paket)
-                Benachrichtigungen.installiert(context, paket, label, version)
                 Pruefer.bewerteGespeichert(context)
             }
             else -> {
