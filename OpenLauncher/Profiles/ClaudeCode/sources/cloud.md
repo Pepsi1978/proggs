@@ -63,11 +63,18 @@ Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „
 - Web-Recherche: Die Recherche-Skripte brauchen Schlüssel aus SK und laufen hier nicht. Mit den eigenen
   Such-Werkzeugen recherchieren und die Erkenntnisse trotzdem in `best-practices/` und `bugs/` speichern.
 
-8. Abschluss (Pflicht, jede Antwort mit Änderungen endet so)
+8. Aufgabentrennung und Ablauf
+` ; ` (Leerzeichen, Semikolon, Leerzeichen) trennt eigenständige Aufgaben.
+- Ein leerer Teil am Ende zählt nicht mit. Semikola in Code, SQL oder URLs trennen nicht.
+- Ordne die Aufgaben nach ihren Abhängigkeiten.
+- Widersprechen sich zwei Aufgaben: frag nach, bevor du anfängst.
+- Ab zwei Aufgaben: zeig vorab die nummerierte Liste in der Reihenfolge, in der du sie abarbeitest.
+
+9. Abschluss (Pflicht, jede Antwort mit Änderungen endet so)
 Immer genau dieser kurze Block am Ende. Die erste Zeile zeigt Frank, dass diese Regeln geladen wurden.
 Was nicht zutrifft, mit „entfällt“ füllen, was fehlschlug, mit „nein (Grund)“, nie weglassen:
 ```
-☁️ Cloud-Sitzung · Cloud-Regeln (cloud.md) erkannt ✓
+Cloud-Sitzung · Cloud-Regeln (cloud.md) erkannt ✓
 Geändert: <ein Satz>
 Version: <App> <alt> → <neu> (versionCode <n>)
 Codex-Review: <keine Befunde | n Befunde, behoben | kein Ergebnis nach 8 min>
