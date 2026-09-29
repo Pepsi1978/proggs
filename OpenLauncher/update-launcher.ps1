@@ -201,6 +201,21 @@ if ($layerValue -and $layerValue -match 'RUNASADMIN') {
     Write-Output "Hinweis: OpenLauncher.exe steht auf 'Als Administrator ausfuehren'. Dieses Skript startet sie bewusst ohne erhoehte Rechte, sonst bricht der Start mit Fehler 740 ab."
 }
 
+# Process.Start mit UseShellExecute=$false vererbt alle vererbbaren Handles -- auch die
+# Ausgabe-Pipe des Aufrufers. Der Launcher laeuft danach weiter und haelt sie offen: das Skript
+# ist fertig, der aufrufende Agent wartet aber bis in sein Timeout. Deshalb die eigenen
+# Standard-Handles vorher als nicht vererbbar markieren.
+Add-Type -Namespace OpenLauncherUpdate -Name Native -MemberDefinition @'
+[DllImport("kernel32.dll", SetLastError = true)] public static extern System.IntPtr GetStdHandle(int nStdHandle);
+[DllImport("kernel32.dll", SetLastError = true)] public static extern bool SetHandleInformation(System.IntPtr hObject, uint dwMask, uint dwFlags);
+'@
+foreach ($stdHandleId in @(-10, -11, -12)) {
+    $stdHandle = [OpenLauncherUpdate.Native]::GetStdHandle($stdHandleId)
+    if ($stdHandle -ne [IntPtr]::Zero -and $stdHandle -ne [IntPtr]::new(-1)) {
+        [void][OpenLauncherUpdate.Native]::SetHandleInformation($stdHandle, 1, 0)
+    }
+}
+
 $newLauncher = [System.Diagnostics.Process]::Start($launcherStart)
 Start-Sleep -Seconds 1
 if ($newLauncher.HasExited) {
