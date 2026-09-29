@@ -1,0 +1,254 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Daten der Benchmark-Seite. NEUES MODELL EINBAUEN:
+//   1. In `models` einen Eintrag ergänzen (id, Name, Farbe hell/dunkel, Form).
+//   2. In den `series` beim passenden Benchmark `values: { <id>: Wert }` ergänzen.
+//      Abweichende Einstellung: { v: Wert, variant: "xhigh", note: "…" }.
+//   3. Für das Preis-Leistungs-Diagramm Punkte in `aa` eintragen.
+// Regel: In einer Zeile (series) nur Werte aus DERSELBEN Quelle, Benchmark-Version
+// und Messreihe. Andere Quelle oder Version = eigene Zeile.
+// Formen: circle, square, diamond, triangle, tridown, hexagon, star, cross
+// ═══════════════════════════════════════════════════════════════════════════
+window.BENCH = {
+  version: "2.0.0",
+  stand: "29.09.2026 13:26",
+
+  models: [
+    { id: "s5",    name: "Claude Sonnet 5",   short: "Sonnet 5",   vendor: "Anthropic", released: "30.06.2026", apiId: "claude-sonnet-5",   priceIn: 2,  priceOut: 10, context: "1 Mio.", color: ["#1E88C8", "#1FA0BE"], shape: "circle" },
+    { id: "s55",   name: "Claude Sonnet 5.5", short: "Sonnet 5.5", vendor: "Anthropic", released: "28.09.2026", apiId: "claude-sonnet-5-5", priceIn: 2,  priceOut: 10, context: "1 Mio.", color: ["#E0612F", "#E4672F"], shape: "square" },
+    { id: "o55",   name: "Claude Opus 5.5",   short: "Opus 5.5",   vendor: "Anthropic", released: "22.09.2026", apiId: "claude-opus-5-5",   priceIn: 4,  priceOut: 20, context: "1 Mio.", color: ["#6A4ED6", "#A06AF0"], shape: "diamond" },
+    { id: "f51",   name: "Claude Fable 5.1",  short: "Fable 5.1",  vendor: "Anthropic", released: "01.09.2026", apiId: "claude-fable-5-1",  priceIn: 10, priceOut: 50, context: "1 Mio.", color: ["#C2317A", "#D65AAE"], shape: "star" },
+    { id: "sol",   name: "GPT-6 Sol",         short: "GPT-6 Sol",  vendor: "OpenAI",    released: "22.09.2026", apiId: "gpt-6-sol",         priceIn: 2,  priceOut: 10, context: "1,05 Mio.",      color: ["#1F9D6B", "#3DA35A"], shape: "triangle" },
+    { id: "astra", name: "GPT-6 Astra",       short: "GPT-6 Astra", vendor: "OpenAI",   released: "03.09.2026", apiId: "gpt-6-astra",       priceIn: 10, priceOut: 50, context: "1,05 Mio.", color: ["#A8870F", "#A88A18"], shape: "tridown" },
+    { id: "k3",    name: "Kimi K3",           short: "Kimi K3",    vendor: "Moonshot AI", released: "16.07.2026", apiId: "kimi-k3",         priceIn: 3,  priceOut: 15, context: "1 Mio.", openWeights: true, color: ["#4A6FE3", "#5F80EE"], shape: "hexagon" },
+    { id: "k27c",  name: "Kimi K2.7 Code",    short: "K2.7 Code",  vendor: "Moonshot AI", released: "12.06.2026", apiId: "kimi-k2.7-code",  priceIn: 0.95, priceOut: 4, context: "262.000", openWeights: true, color: ["#D14545", "#E25A5A"], shape: "cross",
+      remark: "Vorgänger von K2.8 Preview, hier als Ersatz für Coding-Werte" },
+    { id: "k28p",  name: "Kimi K2.8 Preview (Coding)", short: "K2.8 Preview", vendor: "Moonshot AI", released: "11.09.2026", apiId: "kimi-for-coding", priceIn: null, priceOut: null, context: "1 Mio.", color: ["#0E8A8A", "#1A9C9C"], shape: "circle", default: false,
+      remark: "Nur im Kimi-Code-Abo. Noch keine veröffentlichten Benchmarks." }
+  ],
+
+  categories: [
+    { id: "coding", label: "Coding" },
+    { id: "intelligenz", label: "Intelligenz" },
+    { id: "agenten", label: "Agenten" },
+    { id: "medizin", label: "Medizin" },
+    { id: "recht", label: "Recht",
+      intro: "<b>Für deutsches Recht gibt es noch keine Werte zu diesen Modellen.</b> Alle Rechts-Benchmarks unten messen <b>US-Recht auf Englisch</b>. Sie zeigen, wie gut ein Modell juristisch recherchiert und argumentiert, aber nicht, ob es BGB, DSGVO oder UWG kennt. Deutsche Benchmarks mit älteren Modellen: <a href=\"https://arxiv.org/abs/2605.28183\" target=\"_blank\" rel=\"noopener\">BenGER</a> (TU München, deutsches Recht im Gutachtenstil, bis Opus 4.7), <a href=\"https://lexam-benchmark.github.io/\" target=\"_blank\" rel=\"noopener\">LEXam</a> (ETH Zürich, Schweizer und EU-Recht) und <a href=\"https://arxiv.org/abs/2602.11081\" target=\"_blank\" rel=\"noopener\">SteuerEx</a> (FAU, deutsches Steuerrecht)." },
+    { id: "sprache", label: "Deutsch & Sprachen" },
+    { id: "finanzen", label: "Finanzen & Steuern" },
+    { id: "cyber", label: "Cybersecurity" },
+    { id: "sicherheit", label: "Sicherheit" },
+    { id: "kosten", label: "Kosten & Tempo" }
+  ],
+
+  // Kategorien für die Übersicht "wer führt wo"
+  focus: ["coding", "intelligenz", "agenten", "medizin", "recht", "sprache"],
+
+  sources: {
+    anthropic: { short: "Anthropic", label: "System Cards Claude Sonnet 5.5 und Opus 5.5 (September 2026)", url: "https://www.anthropic.com/claude-sonnet-5-5-system-card",
+      desc: "Herstellermessung mit adaptivem Denken auf Effort max. Werte anderer Hersteller hat Anthropic dort selbst nachgemessen oder aus deren Veröffentlichungen übernommen" },
+    aa: { short: "Artificial Analysis", label: "Artificial Analysis, Intelligence Index v4.3.2", url: "https://artificialanalysis.ai",
+      desc: "Unabhängige Messung, alle Modelle auf ihrer höchsten Effort-Stufe" },
+    vals: { short: "Vals.ai", label: "Vals.ai Benchmarks", url: "https://www.vals.ai",
+      desc: "Unabhängige Fach-Benchmarks mit einheitlicher Konfiguration für alle Modelle" },
+    arena: { short: "LMArena", label: "LMArena / arena.ai, Stand 25.09.2026", url: "https://arena.ai/leaderboard",
+      desc: "Menschen vergleichen zwei anonyme Antworten und wählen die bessere. Daraus entsteht ein Elo-Wert" }
+  },
+
+  series: [
+    // ── Coding ────────────────────────────────────────────────────────────
+    { id: "a-tb4", cat: "coding", source: "anthropic", name: "Terminal-Bench 4.0", info: "terminal-bench", desc: "Agentisches Arbeiten im Terminal", version: "4.0", effort: "max", unit: "%",
+      values: { s5: 10.3, s55: 70.6, o55: { v: 66.4, variant: "xhigh", note: "bei max: 64,8 %" }, f51: 55.8, astra: 57.9 } },
+    { id: "a-swepro", cat: "coding", source: "anthropic", name: "SWE-bench Pro", info: "swe-bench-pro", desc: "Echte GitHub-Aufgaben, schwere Variante", effort: "max", unit: "%",
+      values: { s5: 63.2, s55: 81.3, o55: 89.9, f51: 81.2 } },
+    { id: "a-swemulti", cat: "coding", source: "anthropic", name: "SWE-bench Multilingual", info: "swe-bench-multilingual", desc: "300 Aufgaben in 9 Programmiersprachen", effort: "max", unit: "%",
+      values: { s5: 78.3, s55: 90.3, o55: 93.9, f51: 89.1 } },
+    { id: "a-swemm", cat: "coding", source: "anthropic", name: "SWE-bench Multimodal", info: "swe-bench-multimodal", desc: "Aufgaben mit Bildern und Oberflächen", effort: "max", unit: "%",
+      values: { s5: 28.1, s55: 54.3, o55: 61.4, f51: 54.7 } },
+    { id: "a-frontiercode", cat: "coding", source: "anthropic", name: "FrontierCode", info: "frontiercode", desc: "Main-Set", version: "1.1", effort: "max", unit: "%",
+      note: "Sonnet 5.5 erreicht auf Effort xhigh 52,1 %. Auf max ist es schwächer, weil der Test Änderungen außerhalb der Aufgabe bestraft.",
+      values: { s5: 42.4, s55: 46.2, o55: 54.4, f51: 50.3, sol: 49.3, astra: 53.3 } },
+    { id: "a-cursor", cat: "coding", source: "anthropic", name: "CursorBench", info: "cursorbench", desc: "Coding im Cursor-Editor", version: "4.0", effort: "max", unit: "%",
+      values: { s5: 34.1, s55: 55.5, o55: 57.8, f51: 51.8 } },
+    { id: "a-programbench", cat: "coding", source: "anthropic", name: "ProgramBench", info: "programbench", desc: "166 lange Programmieraufgaben", effort: "max", unit: "%",
+      values: { s5: 77.3, s55: 79.7, o55: 91.2, f51: 87.6 } },
+    { id: "a-tbs", cat: "coding", source: "anthropic", name: "Terminal-Bench Science", info: "terminal-bench-science", desc: "Wissenschaftliche Aufgaben im Terminal", version: "0.1", effort: "max", unit: "%",
+      values: { s55: 59.9, o55: 58.7, f51: 52.6, astra: 64.6 } },
+    { id: "a-frontierswe", cat: "coding", source: "anthropic", name: "FrontierSWE", info: "frontierswe", desc: "34 sehr lange Software-Projekte", version: "2", effort: "max", unit: "%",
+      values: { s55: 61.9, o55: 62.3, f51: 56.3, astra: 65.5 } },
+    { id: "aa-tb4", cat: "coding", source: "aa", name: "Terminal-Bench 4.0", info: "terminal-bench", desc: "Messung von Artificial Analysis", version: "4.0", effort: "max", unit: "%",
+      values: { s5: 14, s55: 63.6, o55: 59.6, f51: 52.0, sol: 43.9, astra: 59.1, k3: 13 } },
+    { id: "aa-scicode", cat: "coding", source: "aa", name: "SciCode", info: "scicode", desc: "Wissenschaftlicher Programmcode", effort: "max", unit: "%",
+      values: { s55: 61.0, o55: 66.9, f51: 63.1, sol: 57.6, astra: 56.5, k3: 59 } },
+    { id: "v-tb4", cat: "coding", source: "vals", name: "Terminal-Bench 4.0", info: "terminal-bench", desc: "Vals-Lauf, Durchschnitt aus 3", version: "4.0", unit: "%",
+      note: "Bei Opus 5.5 wurden 30 von 198 Versuchen per Fallback von Opus 5 oder 4.8 bearbeitet, bereinigt 53,54 %.",
+      values: { s5: 8.08, s55: 53.03, o55: 61.62, f51: 49.49, sol: 34.34, astra: 57.07, k3: 12.63 } },
+    { id: "v-tb21", cat: "coding", source: "vals", name: "Terminal-Bench 2.1", info: "terminal-bench", desc: "Ältere, leichtere Version", version: "2.1", unit: "%",
+      values: { s55: 83.15, o55: 87.64, f51: 85.02, sol: 83.15, astra: 87.27, k3: 80.90, k27c: 67.04 } },
+    { id: "v-tbs", cat: "coding", source: "vals", name: "Terminal-Bench Science", info: "terminal-bench-science", desc: "Vals-Lauf", unit: "%",
+      values: { s5: 2.86, s55: 38.57, o55: 48.57, f51: 34.29, sol: 31.43, astra: 65.71, k3: 2.86 } },
+    { id: "v-vibe", cat: "coding", source: "vals", name: "Vibe Code Bench", info: "vibe-code-bench", desc: "Komplette Apps nach Beschreibung bauen", version: "1.1", unit: "%",
+      values: { s5: 81.33, s55: 92.39, o55: 90.29, f51: 90.26, sol: 87.82, astra: 89.59, k3: 84.96, k27c: 47.21 } },
+    { id: "v-migration", cat: "coding", source: "vals", name: "Code Migration", info: "code-migration", desc: "Code auf neue Versionen umstellen", unit: "%",
+      values: { s5: 44.39, s55: 69.83, o55: 66.65, f51: 54.61, sol: 57.20, astra: 67.74, k3: 16.10, k27c: 25.39 } },
+    { id: "v-ioi", cat: "coding", source: "vals", name: "IOI", info: "ioi", desc: "Aufgaben der Informatik-Olympiade", unit: "%",
+      values: { s5: 45.00, s55: 83.06, o55: 95.06, f51: 90.78, sol: 82.61, astra: 100, k3: 48.94 } },
+    { id: "v-swe", cat: "coding", source: "vals", name: "SWE-bench Verified", info: "swe-bench-verified", desc: "500 geprüfte GitHub-Aufgaben", unit: "%",
+      values: { s5: 79.60, k3: 93.40, k27c: 78.20 } },
+    { id: "v-lcb", cat: "coding", source: "vals", name: "LiveCodeBench", info: "livecodebench", desc: "Neue Programmieraufgaben aus Wettbewerben", unit: "%",
+      values: { f51: 90.52, k3: 87.19, k27c: 82.05 } },
+    { id: "ar-webdev", cat: "coding", source: "arena", name: "WebDev Arena", info: "lmarena-webdev", desc: "Webseiten und Web-Apps bauen, Menschen bewerten", unit: "elo",
+      values: { s5: { v: 1538.9, variant: "high" }, o55: { v: 1826.7, variant: "max" }, f51: { v: 1751.5, variant: "max" }, sol: { v: 1681.0, variant: "max" }, astra: { v: 1791.7, variant: "max" }, k3: { v: 1659.9, variant: "max" }, k27c: 1472.7 } },
+    { id: "ar-coding", cat: "coding", source: "arena", name: "Text-Arena Coding", info: "lmarena-text", desc: "Programmierfragen im Chat, Menschen bewerten", unit: "elo",
+      values: { s5: 1519.3, o55: 1547.1, f51: 1529.1, sol: 1523.8, astra: 1542.3, k3: 1540.5 } },
+    { id: "ar-agentcode", cat: "coding", source: "arena", name: "Agent Arena Code", info: "lmarena-agent", desc: "Coding-Agenten im Vergleich, eigener Punktwert", unit: "pkt", digits: 3,
+      values: { s5: 0.0559, o55: 0.1513, f51: 0.1670, sol: 0.0872, astra: 0.1405, k3: 0.0461 } },
+
+    // ── Intelligenz ───────────────────────────────────────────────────────
+    { id: "aa-index", cat: "intelligenz", source: "aa", name: "Intelligence Index", info: "aa-index", desc: "Durchschnitt aus 10 schweren Tests", version: "4.3.2", effort: "max", unit: "pkt", scale100: true,
+      values: { s5: 38, s55: 56.0, o55: 57.6, f51: 53.4, sol: 47.5, astra: 52.7, k3: 44, k27c: 26 } },
+    { id: "a-hle", cat: "intelligenz", source: "anthropic", name: "Humanity's Last Exam", info: "hle", desc: "Ohne Werkzeuge", effort: "max", unit: "%",
+      values: { s5: 43.1, s55: 56.9, o55: 64.4, f51: 60.9 } },
+    { id: "a-hle-t", cat: "intelligenz", source: "anthropic", name: "Humanity's Last Exam", info: "hle", desc: "Mit Werkzeugen (Suche, Code)", effort: "max", unit: "%",
+      values: { s5: 54.9, s55: 64.5, o55: 67.7, f51: 65.6, astra: 57.2 } },
+    { id: "aa-hle", cat: "intelligenz", source: "aa", name: "Humanity's Last Exam", info: "hle", desc: "Messung von Artificial Analysis", effort: "max", unit: "%",
+      values: { s55: 55.0, o55: 61.4, f51: 59.1, sol: 47.9, astra: 54.7, k3: 47 } },
+    { id: "a-chart", cat: "intelligenz", source: "anthropic", name: "Chartography", info: "chartography", desc: "Diagramme lesen, ohne Werkzeuge", effort: "max", unit: "%",
+      values: { s5: 15.6, s55: 61.6, o55: 64.4, f51: 44.8, sol: 53.6 } },
+    { id: "a-arxivmath", cat: "intelligenz", source: "anthropic", name: "ArXivMath", info: "arxivmath", desc: "Neue Mathe-Forschungsaufgaben, ohne Werkzeuge", version: "Aug 2026", effort: "max", unit: "%",
+      values: { s55: 86.8, o55: 91.2, f51: 82.9 } },
+    { id: "aa-lcr", cat: "intelligenz", source: "aa", name: "AA-LCR", info: "aa-lcr", desc: "Schlussfolgern über sehr lange Texte", version: "1.1", effort: "max", unit: "%",
+      values: { s55: 82.7, o55: 84.7, f51: 85.3, sol: 83.7, astra: 80.7, k3: 89 } },
+    { id: "v-index", cat: "intelligenz", source: "vals", name: "Vals Index", info: "vals-index", desc: "Durchschnitt aller Vals-Benchmarks", unit: "%",
+      values: { s5: 59.61, s55: 69.22, o55: 69.69, f51: 68.83, sol: 62.57, astra: 66.61, k3: 57.81 } },
+    { id: "v-proof", cat: "intelligenz", source: "vals", name: "ProofBench", info: "proofbench", desc: "Mathematische Beweise", version: "1.1", unit: "%",
+      values: { s5: 77.00, s55: 100, o55: 100, f51: 100, sol: 83.00, astra: 99.00, k3: 87.00 } },
+    { id: "v-gpqa", cat: "intelligenz", source: "vals", name: "GPQA Diamond", info: "gpqa", desc: "Naturwissenschaft auf Doktoranden-Niveau", unit: "%",
+      values: { f51: 93.43, k3: 92.93 } },
+    { id: "v-mmlupro", cat: "intelligenz", source: "vals", name: "MMLU Pro", info: "mmlu-pro", desc: "Wissensfragen aus 14 Fachgebieten", unit: "%",
+      values: { f51: 92.38, k3: 87.97 } },
+    { id: "v-sage", cat: "intelligenz", source: "vals", name: "SAGE", info: "sage", desc: "Mathe-Lösungen von Studierenden benoten", unit: "%",
+      values: { s5: 48.92, s55: 51.77, o55: 45.83, f51: 48.53, sol: 44.79, astra: 46.37, k3: 54.26 } },
+    { id: "v-emb", cat: "finanzen", source: "vals", name: "Excel Modeling (EMB)", info: "emb", desc: "Finanzmodelle in Excel bauen", unit: "%",
+      values: { s5: 66.32, s55: 75.71, o55: 75.94, f51: 76.67, sol: 71.53, astra: 71.70, k3: 66.40 } },
+    { id: "ar-text", cat: "intelligenz", source: "arena", name: "Text-Arena Gesamt", info: "lmarena-text", desc: "Alle Chat-Themen, Menschen bewerten", unit: "elo",
+      values: { s5: { v: 1461.5, variant: "high" }, o55: { v: 1508.6, variant: "high" }, f51: { v: 1501.3, variant: "max" }, sol: { v: 1457.5, variant: "max" }, astra: { v: 1477.7, variant: "max" }, k3: { v: 1488.0, variant: "max" } } },
+    { id: "ar-hard", cat: "intelligenz", source: "arena", name: "Text-Arena Schwere Fragen", info: "lmarena-text", desc: "Kategorie Hard Prompts", unit: "elo",
+      values: { s5: 1489.4, o55: 1541.3, f51: 1520.4, sol: 1485.4, astra: 1502.1, k3: 1516.6 } },
+    { id: "ar-expert", cat: "intelligenz", source: "arena", name: "Text-Arena Expertenfragen", info: "lmarena-text", desc: "Kategorie Expert", unit: "elo",
+      values: { s5: 1512.2, o55: 1556.2, f51: 1515.7, sol: 1506.9, astra: 1510.0, k3: 1532.8 } },
+    { id: "ar-math", cat: "intelligenz", source: "arena", name: "Text-Arena Mathe", info: "lmarena-text", desc: "Kategorie Math", unit: "elo",
+      values: { s5: 1473.4, f51: 1517.5, sol: 1450.3, astra: 1485.6, k3: 1499.2 } },
+    { id: "ar-if", cat: "intelligenz", source: "arena", name: "Text-Arena Anweisungen befolgen", info: "lmarena-text", desc: "Kategorie Instruction Following", unit: "elo",
+      values: { s5: 1466.7, o55: 1516.4, f51: 1497.3, sol: 1446.7, astra: 1473.3, k3: 1486.2 } },
+
+    // ── Agenten ───────────────────────────────────────────────────────────
+    { id: "a-osw-p", cat: "agenten", source: "anthropic", name: "OSWorld 2.1 · partial", info: "osworld", desc: "Computer bedienen, Teilpunkte zählen", version: "2.1", effort: "max", unit: "%",
+      values: { s5: 57.0, s55: 80.1, o55: 81.8, f51: 80.7 } },
+    { id: "a-osw-s", cat: "agenten", source: "anthropic", name: "OSWorld 2.1 · strict", info: "osworld", desc: "Computer bedienen, nur ganz gelöst zählt", version: "2.1", effort: "max", unit: "%",
+      values: { s5: 25.6, s55: 43.5, o55: 48.7, f51: 42.8 } },
+    { id: "a-toolathlon", cat: "agenten", source: "anthropic", name: "Toolathlon-Verified", info: "toolathlon", desc: "Werkzeuge bedienen, Pass@1", effort: "max", unit: "%",
+      values: { s5: 74.7, s55: 77.8, o55: 77.8, f51: 77.8 } },
+    { id: "a-automation", cat: "agenten", source: "anthropic", name: "AutomationBench", info: "automationbench", desc: "Zapier-Workflows automatisieren", effort: "max", unit: "%",
+      values: { s5: 10.7, s55: 44.7, o55: { v: 42.5, note: "nach Wiederholung abgelehnter Aufgaben, sonst 40,0 %" }, f51: 31.4, sol: 32.0, astra: 41.4 } },
+    { id: "a-gdpval", cat: "agenten", source: "anthropic", name: "GDPval-AA", info: "gdpval", desc: "Büro- und Wissensarbeit aus 44 Berufen", version: "2.1", effort: "max", unit: "elo",
+      note: "Gemessen von Artificial Analysis. Sonnet 5.5 lief vor dem Release mit einem inzwischen behobenen Fehler bei Structured Outputs.",
+      values: { s5: 1449, s55: 1844, o55: 1846, f51: 1735, sol: 1487, astra: 1542 } },
+    { id: "a-briefcase", cat: "agenten", source: "anthropic", name: "AA-Briefcase", info: "aa-briefcase", desc: "Mehrstufige Business-Aufgaben", version: "1.1", effort: "max", unit: "elo",
+      values: { s5: 1359, s55: 1811, o55: 1822, f51: 1678, sol: 1483, astra: 1569 } },
+    { id: "a-officeqa", cat: "agenten", source: "anthropic", name: "OfficeQA Pro", info: "officeqa", desc: "Fragen zu Office-Dokumenten", effort: "max", unit: "%",
+      values: { s5: 62.1, s55: 65.6, o55: 67.7, f51: 69.0 } },
+    { id: "aa-automation", cat: "agenten", source: "aa", name: "AutomationBench-AA", info: "automationbench", desc: "Messung von Artificial Analysis", effort: "max", unit: "%",
+      values: { s5: 37, s55: 71.3, o55: 69.5, f51: 59.4, sol: 61.6, astra: 68.5, k3: 58 } },
+    { id: "ar-agent", cat: "agenten", source: "arena", name: "Agent Arena Gesamt", info: "lmarena-agent", desc: "Agenten im direkten Vergleich, eigener Punktwert", unit: "pkt", digits: 3,
+      values: { s5: 0.0480, o55: 0.1184, f51: 0.1406, sol: 0.0880, astra: 0.1036, k3: 0.0403 } },
+    { id: "ar-agentwork", cat: "agenten", source: "arena", name: "Agent Arena Arbeit", info: "lmarena-agent", desc: "Agenten für Büroaufgaben", unit: "pkt", digits: 3,
+      values: { s5: 0.0604, o55: 0.1209, f51: 0.1513, sol: 0.0786, astra: 0.1001, k3: 0.0430 } },
+
+    // ── Medizin ───────────────────────────────────────────────────────────
+    { id: "a-hbpro", cat: "medizin", source: "anthropic", name: "HealthBench Professional", info: "healthbench", desc: "Arzt-Gespräche, längenkorrigiert", effort: "max", unit: "%",
+      note: "GPT-6 Astra von Anthropic nachgemessen. OpenAIs eigene Messung nach Korrektur: 64,7 %.",
+      values: { s5: 57.8, s55: 69.2, o55: 65.6, f51: 62.1, astra: 70.3 } },
+    { id: "a-physician", cat: "medizin", source: "anthropic", name: "PhysicianBench", info: "physicianbench", desc: "100 Arzt-Aufgaben in einer Patientenakte", effort: "max", unit: "%",
+      values: { s5: 37.4, s55: 63.2, o55: 68.4, f51: 61.0 } },
+    { id: "a-protocols", cat: "medizin", source: "anthropic", name: "Protokoll-Fehlersuche", info: "protocols", desc: "Fehler in Laborprotokollen finden", effort: "max", unit: "%",
+      values: { s5: 49.9, s55: 67.3, o55: 73.7, astra: 66.0 } },
+    { id: "a-protein", cat: "medizin", source: "anthropic", name: "Protein-Design", info: "protein-design", desc: "Proteinsequenzen entwerfen", effort: "max", unit: "%",
+      values: { s5: 20.2, s55: 51.0, o55: 60.2 } },
+    { id: "a-bioimage", cat: "medizin", source: "anthropic", name: "Biomedizinische Bildanalyse", info: "bioimage", desc: "91 Aufgaben mit Mikroskop- und Labordaten", effort: "max", unit: "%",
+      values: { s55: 72.2, o55: 71.4, astra: 77.5 } },
+    { id: "v-medscribe", cat: "medizin", source: "vals", name: "MedScribe", info: "medscribe", desc: "Arztbriefe aus Gesprächen schreiben", unit: "%",
+      values: { s5: 76.05, s55: 91.10, o55: 91.43, f51: 91.29, sol: 82.03, astra: 87.91, k3: 87.96 } },
+    { id: "v-medcode", cat: "medizin", source: "vals", name: "MedCode", info: "medcode", desc: "Diagnosen und Leistungen richtig kodieren", unit: "%",
+      values: { s5: 47.54, s55: 52.92, o55: 49.80, f51: 53.51, sol: 47.07, astra: 48.49, k3: 48.88 } },
+    { id: "v-biomystery", cat: "medizin", source: "vals", name: "BioMysteryBench", info: "biomystery", desc: "Rätselhafte Biologie-Fälle lösen", unit: "%",
+      values: { s55: 81.11, o55: 79.26, sol: 74.81, astra: 79.26, k3: 71.48 } },
+
+    // ── Recht ─────────────────────────────────────────────────────────────
+    { id: "v-legal", cat: "recht", source: "vals", name: "Legal Research Bench", info: "legal-research", desc: "Juristische Recherche als Agent", jur: "US-Recht", unit: "%",
+      values: { s5: 41.83, s55: 48.08, o55: 50.48, f51: 55.29, sol: 28.85, astra: 39.42, k3: 44.23 } },
+    { id: "v-harvey", cat: "recht", source: "vals", name: "Harvey Legal Agent", info: "harvey-lab", desc: "Kanzlei-Aufgaben, nur komplett richtig zählt", jur: "US-Recht", unit: "%",
+      note: "Artificial Analysis misst denselben Test mit anderem Aufbau und kommt auf deutlich höhere Werte (Sonnet 5.5: 10,0 %, Kimi K3: 26,7 %).",
+      values: { s5: 5.00, s55: 2.92, o55: 3.75, f51: 6.67, sol: 1.67, astra: 5.42, k3: 10.83 } },
+    { id: "v-legalbench", cat: "recht", source: "vals", name: "LegalBench", info: "legalbench", desc: "162 juristische Denkaufgaben", jur: "US-Recht", unit: "%",
+      values: { s5: 83.92, f51: 88.51, k3: 86.02 } },
+    { id: "v-benefits", cat: "recht", source: "vals", name: "Public Benefits Bench", info: "public-benefits", desc: "Anspruch auf Sozialleistungen prüfen", jur: "US-Recht", version: "1.1", unit: "%",
+      values: { s5: 66.03, s55: 67.19, o55: 70.64, f51: 74.90, sol: 56.63, k3: 68.27 } },
+
+    // ── Deutsch & Sprachen ────────────────────────────────────────────────
+    { id: "ar-german", cat: "sprache", source: "arena", name: "Text-Arena Deutsch", info: "lmarena-text", desc: "Nur deutschsprachige Chats", unit: "elo",
+      note: "Wenige Stimmen, die Schwankungsbreite liegt bei ±24 bis ±43 Punkten. Die Abstände sind statistisch nicht sicher.",
+      values: { s5: 1471.8, f51: 1485.9, k3: 1487.8 } },
+    { id: "ar-nonen", cat: "sprache", source: "arena", name: "Text-Arena Nicht-Englisch", info: "lmarena-text", desc: "Alle Sprachen außer Englisch", unit: "elo",
+      values: { s5: 1448.0, o55: 1501.4, f51: 1496.0, sol: 1448.0, astra: 1462.0, k3: 1477.0 } },
+    { id: "a-gmmlu", cat: "sprache", source: "anthropic", name: "Global MMLU", info: "gmmlu", desc: "Allgemeinwissen in 42 Sprachen, auch Deutsch", effort: "max", unit: "%",
+      values: { s5: 89.2, s55: 92.1, o55: 94.3, f51: 94.0 } },
+    { id: "a-milu", cat: "sprache", source: "anthropic", name: "MILU", info: "milu", desc: "11 Sprachen, davon 10 indische", effort: "max", unit: "%",
+      values: { s5: 89.3, s55: 91.6, o55: 93.1, f51: 93.0 } },
+
+    // ── Finanzen & Steuern ────────────────────────────────────────────────
+    { id: "v-finance", cat: "finanzen", source: "vals", name: "Finance Agent", info: "finance-agent", desc: "Finanzanalyse als Agent", version: "2", unit: "%",
+      values: { s5: 53.91, s55: 58.10, o55: 58.59, f51: 58.88, sol: 49.05, astra: 53.54, k3: 54.36 } },
+    { id: "v-tax", cat: "finanzen", source: "vals", name: "Tax Agent Bench", info: "tax-agent", desc: "Steuerfälle bearbeiten", jur: "US-Steuerrecht", unit: "%",
+      values: { s5: 62.27, s55: 73.39, o55: 70.50, f51: 77.64, sol: 53.05, astra: 63.34, k3: 68.67 } },
+
+    // ── Cybersecurity ─────────────────────────────────────────────────────
+    { id: "a-cyscenario", cat: "cyber", source: "anthropic", name: "CyScenarioBench", info: "cyscenario", desc: "10 Angriffsszenarien, Lösungsrate", effort: "max", unit: "%",
+      note: "Gemessen ohne Cyber-Schutzfilter. Im normalen Betrieb blocken die Claude-Modelle solche Anfragen.",
+      values: { s5: 0.7, s55: 46.1, o55: 67.6 } },
+    { id: "a-binexp", cat: "cyber", source: "anthropic", name: "Binary Exploitation", info: "binexp", desc: "Übernommene Programmabläufe (Anzahl)", effort: "max", unit: "n",
+      values: { s5: 3, s55: 50, o55: 106 } },
+    { id: "v-cyber", cat: "cyber", source: "vals", name: "CyberBench", info: "cyberbench", desc: "Sicherheitsaufgaben", version: "1.1", unit: "%",
+      values: { s5: 61.91, s55: 59.58, o55: 55.36, f51: 70.42, sol: 77.98, astra: 41.07, k3: 75.24 } },
+
+    // ── Sicherheit ────────────────────────────────────────────────────────
+    { id: "a-ipi", cat: "sicherheit", source: "anthropic", name: "Prompt Injection", info: "prompt-injection", desc: "Gray Swan, Angriffserfolg nach 15 Versuchen", effort: "max", unit: "%", lower: true,
+      values: { s5: 6.7, s55: 3.4, o55: 1.0, f51: 1.0 } },
+    { id: "a-shade", cat: "sicherheit", source: "anthropic", name: "Shade Coding", info: "shade", desc: "Angriffsrate beim Coden, ohne Schutzfilter", effort: "max", unit: "%", lower: true,
+      values: { s5: 19.47, s55: 3.01, o55: 54.61, f51: 51.93 } },
+    { id: "a-overrefusal", cat: "sicherheit", source: "anthropic", name: "Unnötige Ablehnungen", info: "over-refusal", desc: "Harmlose Anfragen über die API", unit: "%", lower: true, digits: 2,
+      values: { s5: 0.59, s55: 0.02, o55: 0, f51: 0 } },
+    { id: "a-harmless", cat: "sicherheit", source: "anthropic", name: "Harmlos-Rate", info: "harmless", desc: "Heikle Anfragen über die API, ohne System-Prompt", unit: "%", digits: 2,
+      values: { s5: 96.65, s55: 95.61, o55: 94.70, f51: 95.07 } },
+    { id: "a-bbq", cat: "sicherheit", source: "anthropic", name: "BBQ-Genauigkeit", info: "bbq", desc: "Vorurteils-Test, eindeutige Fragen", unit: "%", digits: 2,
+      values: { s5: 72.36, s55: 80.01, o55: 89.65, f51: 89.92 } },
+
+    // ── Kosten & Tempo ────────────────────────────────────────────────────
+    { id: "aa-cost", cat: "kosten", source: "aa", name: "Kosten pro Index-Aufgabe", info: "aa-cost", desc: "Was eine Aufgabe des Intelligence Index kostet", effort: "max", unit: "usd", lower: true, noRank: true,
+      values: { s5: 5.09, s55: 7.60, o55: 5.98, f51: 7.63, sol: 1.05, astra: 3.26, k3: 2.00 } },
+    { id: "aa-speed", cat: "kosten", source: "aa", name: "Ausgabe-Tempo", info: "aa-speed", desc: "Token pro Sekunde über die Hersteller-API", effort: "max", unit: "tps", noRank: true,
+      values: { s5: 75, s55: 139, o55: 93, f51: 68.5, sol: 79, astra: 59 } },
+    { id: "v-cost", cat: "kosten", source: "vals", name: "Kosten pro Vals-Index-Lauf", info: "vals-cost", desc: "US-Dollar pro Testdurchlauf", unit: "usd", lower: true, noRank: true,
+      values: { s5: 11.74, s55: 20.80, o55: 32.77, f51: 28.92, sol: 7.56, astra: 19.10, k3: 6.47 } }
+  ],
+
+  // Artificial Analysis: Intelligence Index und Kosten je Effort-Stufe (für das Preis-Leistungs-Diagramm)
+  aa: {
+    s5:  [{ effort: "low", idx: 24, usd: 0.51, tps: 55 }, { effort: "medium", idx: 28, usd: 1.00, tps: 56 }, { effort: "high", idx: 32, usd: 1.79, tps: 65 }, { effort: "xhigh", idx: 34, usd: 2.87, tps: 61 }, { effort: "max", idx: 38, usd: 5.09, tps: 75 }],
+    s55: [{ effort: "low", idx: 35.8, usd: 0.41, tps: 85 }, { effort: "medium", idx: 40.7, usd: 0.59, tps: 104 }, { effort: "high", idx: 46.7, usd: 1.08, tps: 93 }, { effort: "xhigh", idx: 51.9, usd: 2.74, tps: 113 }, { effort: "max", idx: 56.0, usd: 7.60, tps: 139 }],
+    o55: [{ effort: "low", idx: 42.3, usd: 0.55, tps: 74 }, { effort: "medium", idx: 51.2, usd: 1.34, tps: 75 }, { effort: "high", idx: 53.6, usd: 1.82, tps: 75 }, { effort: "xhigh", idx: 56.0, usd: 3.46, tps: 80 }, { effort: "max", idx: 57.6, usd: 5.98, tps: 93 }],
+    f51: [{ effort: "low", idx: 46.8, usd: 2.37, tps: 51 }, { effort: "medium", idx: 48.9, usd: 2.98, tps: 52 }, { effort: "high", idx: 51.2, usd: 3.91, tps: 53 }, { effort: "xhigh", idx: 53.2, usd: 5.98, tps: 56 }, { effort: "max", idx: 53.4, usd: 7.63, tps: 69 }],
+    sol: [{ effort: "low", idx: 33.9, usd: 0.13, tps: 77 }, { effort: "medium", idx: 39.8, usd: 0.25 }, { effort: "high", idx: 42.8, usd: 0.38, tps: 73 }, { effort: "xhigh", idx: 44.1, usd: 0.52, tps: 76 }, { effort: "max", idx: 47.5, usd: 1.05, tps: 79 }],
+    astra: [{ effort: "low", idx: 45.8, usd: 0.82, tps: 50 }, { effort: "medium", idx: 49.6, usd: 1.54, tps: 49 }, { effort: "high", idx: 50.9, usd: 1.73, tps: 50 }, { effort: "xhigh", idx: 52.4, usd: 2.31, tps: 51 }, { effort: "max", idx: 52.7, usd: 3.26, tps: 59 }],
+    k3:  [{ effort: "max", idx: 44, usd: 2.00 }]
+  }
+};
