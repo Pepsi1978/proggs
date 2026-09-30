@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -81,6 +82,7 @@ fun Modifier.einblenden(verzoegerung: Int = 0): Modifier = composed {
         translationY = (1f - v) * 60f
         rotationX = (1f - v) * 18f
         cameraDistance = 16f * density
+        compositingStrategy = CompositingStrategy.ModulateAlpha
     }
 }
 
@@ -139,7 +141,7 @@ fun AufgabeKarte(
     val glow by animateFloatAsState(if (hervorheben) 1f else 0f, tween(600), label = "glow")
     var basis = Modifier
         .fillMaxWidth()
-        .graphicsLayer { alpha = if (gezogen) 0.25f else if (a.erledigt) 0.62f else 1f }
+        .graphicsLayer { alpha = if (gezogen) 0.25f else if (a.erledigt) 0.62f else 1f; compositingStrategy = CompositingStrategy.ModulateAlpha }
         .glas(f, radius = f.radius * 0.72f, erhoeht = if (schwebend) 2.6f else 0.9f, fuellung = if (schwebend) f.flaecheStark else f.flaeche, toenung = if (glow > 0f) f.primaer else prio)
     if (zustand != null && !schwebend) basis = basis.ziehbar(a, zustand)
     Row(
@@ -232,7 +234,7 @@ fun Sektion(
             val dreh by animateFloatAsState(if (offen) 0f else -90f, label = "pfeil")
             Icon(Icons.Rounded.ExpandMore, if (offen) "Zuklappen" else "Aufklappen", tint = f.textLeise, modifier = Modifier.graphicsLayer { rotationZ = dreh })
         }
-        AnimatedVisibility(offen, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+        AnimatedVisibility(offen, enter = expandVertically(clip = false) + fadeIn(), exit = shrinkVertically(clip = false) + fadeOut()) {
             Column(Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 inhalt()
             }

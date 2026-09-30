@@ -8,8 +8,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
@@ -63,6 +65,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
@@ -159,7 +162,7 @@ fun ListeBildschirm(vm: AppViewModel) {
         Column(Modifier.fillMaxSize().verticalScroll(scroll, enabled = !zieht)) {
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
             Kopf(vm, b, sucheOffen, { sucheOffen = !sucheOffen; if (!sucheOffen) suche = "" })
-            AnimatedVisibility(sucheOffen) { Suchfeld(suche) { suche = it } }
+            AnimatedVisibility(sucheOffen, enter = expandVertically(clip = false) + fadeIn(), exit = shrinkVertically(clip = false) + fadeOut()) { Suchfeld(suche) { suche = it } }
             if (szeneZeigen && !sucheOffen) {
                 AufgabenSzene(
                     Modifier.padding(horizontal = 14.dp, vertical = 6.dp).einblenden()
@@ -169,6 +172,8 @@ fun ListeBildschirm(vm: AppViewModel) {
                             alpha = (1f - s / 900f).coerceIn(0f, 1f)
                             val k = (1f - s / 3000f).coerceIn(0.9f, 1f)
                             scaleX = k; scaleY = k
+                            // Without an offscreen buffer: otherwise the layer clips the soft shadow at the card edge (square grey borders).
+                            compositingStrategy = CompositingStrategy.ModulateAlpha
                         },
                     erledigtAnteil = if (b.heuteGesamt == 0) 0f else b.heuteFertig / b.heuteGesamt.toFloat(),
                 )
@@ -353,7 +358,7 @@ private fun Plus(modifier: Modifier, sichtbar: Boolean, aktion: () -> Unit) {
     val p by puls.animateFloat(0f, 1f, infiniteRepeatable(tween(2200), RepeatMode.Restart), label = "p")
     val skala by animateFloatAsState(if (sichtbar) 1f else 0f, spring(dampingRatio = 0.6f), label = "plus")
     Box(
-        modifier.size(72.dp).graphicsLayer { scaleX = skala; scaleY = skala; alpha = skala }
+        modifier.size(72.dp).graphicsLayer { scaleX = skala; scaleY = skala; alpha = skala; compositingStrategy = CompositingStrategy.ModulateAlpha }
             .drawBehind {
                 val r = size.minDimension / 2
                 drawCircle(f.primaer.copy(alpha = 0.35f * (1f - p)), r * (1f + 0.45f * p))

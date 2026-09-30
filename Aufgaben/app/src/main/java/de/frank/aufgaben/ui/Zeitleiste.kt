@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -181,7 +182,7 @@ private fun TerminBlock(a: Aufgabe, zustand: ZiehZustand, onTipp: () -> Unit, on
     val ende = (a.minuten ?: 0) + a.dauer
     Row(
         Modifier.fillMaxSize()
-            .graphicsLayer { alpha = if (gezogen) 0.25f else if (a.erledigt) 0.55f else 1f }
+            .graphicsLayer { alpha = if (gezogen) 0.25f else if (a.erledigt) 0.55f else 1f; compositingStrategy = CompositingStrategy.ModulateAlpha }
             .glas(f, radius = 12.dp, erhoeht = 1f, fuellung = f.flaecheStark, toenung = farbe)
             .ziehbar(a, zustand)
             .antippen(haptik = false) { if (zustand.tippErlaubt()) onTipp() },
