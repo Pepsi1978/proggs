@@ -4,6 +4,7 @@
   "eintraege": [
     { "versionCode": 1, "versionName": "1.0.0", "stand": "29.09.2026, 14:17 Uhr", "notiz": "Erste Version: Rangliste der Langlebigkeits-Faktoren nach Wichtigkeit, eigene Ideen per Sprache einsprechen und von der KI einordnen lassen, Aktualisierung mit zwei diskutierenden Agenten und Fortschrittsbalken, Ziele und Aufgabenpläne, Diagramme und vier animierte Designs" },
     { "versionCode": 2, "versionName": "1.0.1", "stand": "29.09.2026, 14:26 Uhr", "notiz": "Ziele lassen sich als erreicht markieren; umgesetzte Faktoren bleiben auf ihrem Platz, werden in der Rangliste ausgegraut und fallen aus „Heute für dich“ heraus" },
-    { "versionCode": 3, "versionName": "1.0.2", "stand": "30.09.2026, 11:04 Uhr", "notiz": "Rangliste mit Null-Linie: oben nur Verhalten, das Lebensjahre schenkt, darunter die Lebenszeit-Räuber wie Rauchen (−10 Jahre) mit dem schädlichsten ganz unten; die KI-Aktualisierung formuliert Verbote automatisch so um" }
+    { "versionCode": 3, "versionName": "1.0.2", "stand": "30.09.2026, 11:04 Uhr", "notiz": "Rangliste mit Null-Linie: oben nur Verhalten, das Lebensjahre schenkt, darunter die Lebenszeit-Räuber wie Rauchen (−10 Jahre) mit dem schädlichsten ganz unten; die KI-Aktualisierung formuliert Verbote automatisch so um" },
+    { "versionCode": 4, "versionName": "1.0.3", "stand": "30.09.2026, 11:54 Uhr", "notiz": "Aktuelle KI-Modelle: GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna und GPT-5.6 Terra ersetzen die alten GPT-5.6-Modelle" }
   ]
 }
