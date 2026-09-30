@@ -1,5 +1,8 @@
 package de.frank.kompass
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ToggleOn
+import androidx.compose.ui.graphics.vector.ImageVector
 import de.frank.codexkompass.BuildConfig
 
 /**
@@ -23,6 +26,17 @@ object AppProfil {
 
     /** Fruehere Dateinamen-Teile — hier keine. */
     val FRUEHERE_DATEI_PRAEFIXE = emptyList<String>()
+
+    /**
+     * Der fünfte Reiter: was man in Codex über die Auswahlmenüs der Slash-Befehle einstellt
+     * (`/model`, `/permissions`, `/experimental` …). Codex hat kein eigenes `/config`-Menü;
+     * der Reiter „Config" daneben zeigt die Schlüssel der config.toml.
+     */
+    const val PANEL_TITEL = "Einstellen"
+    const val PANEL_TITEL_LANG = "Einstell-Menüs"
+    /** Wie ein einzelner Eintrag im Anweisungstext an das Modell heisst. */
+    const val PANEL_ART_NAME = "Punkt aus einem Einstell-Menü"
+    val PANEL_SYMBOL: ImageVector get() = Icons.Default.ToggleOn
 
     const val VERSION_NAME = BuildConfig.VERSION_NAME
     const val VERSION_BUMPED_AT = BuildConfig.VERSION_BUMPED_AT

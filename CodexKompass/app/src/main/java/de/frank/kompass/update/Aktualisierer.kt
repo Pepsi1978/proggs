@@ -184,6 +184,48 @@ class Aktualisierer(
 
             }
 
+            // --- Einstell-Menüs: neue Schalter aus /experimental, nur ergänzen -------------
+            // Die übrigen Menüs (/model, /permissions, /statusline …) haben keine lesbare
+            // Quelle; für /experimental steht die Liste im Quelltext zum Release-Tag. Fehlt
+            // ein Schalter dort, kann er in einen anderen Zweig gewandert sein — deshalb wird
+            // hier nichts als verschwunden geführt.
+            stand = stand.copy(schritt = "Menü /experimental wird gelesen")
+            melde(stand)
+            val experimente = runCatching { abruf.hole(ExperimentParser.adresse("rust-v$version")) }
+                .recoverCatching { abruf.hole(ExperimentParser.adresse("main")) }
+                .map(ExperimentParser::lese)
+                .getOrElse {
+                    KompassLog.warn(
+                        "Aktualisierer",
+                        "fuehreAus",
+                        "Liste der experimentellen Schalter nicht geladen — der Rest läuft weiter",
+                        mapOf("grund" to it.message),
+                    )
+                    emptyList()
+                }
+            val menueBestand = bestand.filter { it.bereich == Bereich.PANEL.id }.map { it.name.lowercase() }.toSet()
+            for (schalter in experimente) {
+                if (schalter.name.lowercase() in menueBestand) continue
+                val englisch = schalter.name +
+                    (if (schalter.beschreibung.isNotBlank()) ": ${schalter.beschreibung}" else "") +
+                    (if (schalter.schluessel.isNotBlank()) " (config.toml: [features] ${schalter.schluessel})" else "")
+                neueRoh += RohEintrag(
+                    bereich = Bereich.PANEL,
+                    name = schalter.name,
+                    kategorie = "/experimental",
+                    art = "/experimental",
+                    kurz = englisch.take(140),
+                    englisch = englisch,
+                    erklaerung = "",
+                    seit = version,
+                    seitBeleg = "",
+                    sortierName = "/experimental " + schalter.name.lowercase(),
+                    entfernt = false,
+                    entferntIn = "",
+                    ersatz = "",
+                )
+            }
+
             stand = stand.copy(
                 schritt = "Abgleich fertig",
                 neuAnzahl = neueRoh.size,

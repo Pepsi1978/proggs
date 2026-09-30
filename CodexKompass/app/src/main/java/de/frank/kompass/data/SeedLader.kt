@@ -57,10 +57,12 @@ object SeedLader {
     private const val DATEI_SLASH = "slash_befehle.json"
     private const val DATEI_CONFIG = "config_einstellungen.json"
     private const val DATEI_PRAXIS = "best_practices.json"
+    private const val DATEI_PANEL = "panel_eintraege.json"
 
     fun ladeAlles(context: Context): List<RohEintrag> =
         lade(context, DATEI_SLASH, Bereich.SLASH) +
             lade(context, DATEI_CONFIG, Bereich.CONFIG) +
+            lade(context, DATEI_PANEL, Bereich.PANEL) +
             lade(context, DATEI_PRAXIS, Bereich.PRAXIS)
 
     /** Die Codex-CLI-Version, für die die Beigaben erzeugt wurden. */

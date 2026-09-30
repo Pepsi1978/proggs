@@ -140,7 +140,11 @@ object Prompts {
 
     /** Einen neu gefundenen Eintrag erklären lassen. */
     fun neuerEintragAnweisung(bereich: String): String = GRUNDTON + "\n\n" +
-        "Du erklärst einen " + (if (bereich == "slash") "Slash-Befehl" else "Einstellungspunkt") +
+        "Du erklärst einen " + (when (bereich) {
+            "slash" -> "Slash-Befehl"
+            "panel" -> AppProfil.PANEL_ART_NAME
+            else -> "Einstellungspunkt"
+        }) +
         ", der neu zu ${AppProfil.WERKZEUG} dazugekommen ist. Du bekommst den Namen und die offizielle " +
         "englische Beschreibung.\n\n" +
         "Liefere ein JSON-Objekt mit genau diesen Feldern:\n" +
@@ -226,6 +230,7 @@ object Prompts {
     private fun bereichsName(bereich: String): String = when (bereich) {
         "slash" -> "Slash-Befehl"
         "config" -> "Einstellung oder Umgebungsvariable"
+        "panel" -> AppProfil.PANEL_ART_NAME
         "praxis" -> "Best Practice"
         else -> bereich
     }
