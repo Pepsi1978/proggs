@@ -14,14 +14,26 @@ an die KI geschickt.
   - die Nachricht aus „Aufbau Nachricht“ (Debatte), „Aufbau Recherche“ (Rechercheure) oder „Aufbau Konsens“
     (Autorin), jeweils mit dem Auftrag der Runde.
 
-**Ablauf „Aktualisieren“** (Recherche-Tiefe in den Einstellungen: Schnell / Gründlich / Maximal)
+**Ablauf „Aktualisieren“** (Regler „sparsam ↔ gründlich“ in den Einstellungen, Stufe 1–5)
+
+| Stufe | Recherche | Einzelprüfung | Denkstufe (Obergrenze = Einstellung) |
+|---|---|---|---|
+| 1 Sehr sparsam | keine, ohne Internet | keine | Debatte mittel, Gutachterin voll |
+| 2 Sparsam | 5 Rechercheure | keine | Hilfsagenten und Debatte mittel, Gutachterin voll |
+| 3 Ausgewogen | 5 Rechercheure | Blöcke zu 8 | Hilfsagenten mittel, Debatte und Gutachterin voll |
+| 4 Gründlich | 5 Rechercheure | Blöcke zu 8 | alle voll |
+| 5 Maximal | 12 Rechercheure | Blöcke zu 4 | alle voll |
+
+Sparsam ohne Qualitätsverlust: Lange Läufe laufen ohne Priority-Verarbeitung, der gemeinsame Anfang aller Anfragen
+kommt aus dem OpenAI-Cache, die Debatte sieht nur kompakte Faktortexte und langes Material wird verdichtet.
+
 
 1. Recherche-Schwarm, parallel und mit Websuche (bis zu 5 gleichzeitig):
-   - Gründlich: 3 Bereichs-Rechercheure (Körper, Geist & Leben, Medizin & Umwelt) + Räuber-Jäger + Neuheiten-Scout
-   - Maximal: 10 Bereichs-Rechercheure (einer je Kategorie) + Räuber-Jäger + Neuheiten-Scout
-   - Schnell: keine Recherche
+   - Stufe 2–4: 3 Bereichs-Rechercheure (Körper, Geist & Leben, Medizin & Umwelt) + Räuber-Jäger + Neuheiten-Scout
+   - Stufe 5: 10 Bereichs-Rechercheure (einer je Kategorie) + Räuber-Jäger + Neuheiten-Scout
+   - Stufe 1: keine Recherche
    Abschnitte: „Rolle Rechercheur“, „Recherche Bereich“, „Recherche Räuber“, „Recherche Neuheiten“.
-2. Einzelprüfung, parallel und mit Websuche (nur Gründlich und Maximal): Die Rangliste wird in Blöcke geteilt
+2. Einzelprüfung, parallel und mit Websuche (ab Stufe 3): Die Rangliste wird in Blöcke geteilt
    (Maximal je 4, Gründlich je 8 Faktoren). Je Block prüft die Forscherin JEDEN Faktor einzeln, der Skeptiker hält
    Punkt für Punkt dagegen. Abschnitte: „Aufbau Einzelprüfung“, „Einzelprüfung Forscherin“, „Einzelprüfung Skeptiker“.
 3. Debatte nacheinander, mit Websuche: Runde 1 Forscherin → Runde 1 Skeptiker → Runde 2 Forscherin → Runde 2 Skeptiker.
@@ -35,7 +47,7 @@ Einwand Skeptiker Schlusswort → Einwand Entscheidung → Text-Konsens für die
 
 **Platzhalter** (werden bei jedem Aufruf ersetzt)
 
-- `{{GRUNDANWEISUNG}}`, `{{ROLLE}}` – nur in „Aufbau Systemanweisung“
+- `{{GRUNDANWEISUNG}}` – in „Aufbau Systemanweisung“; `{{ROLLE}}` – am Ende der „Aufbau …“-Nachrichten, direkt vor dem Auftrag
 - `{{AUFTRAG}}` – der Abschnitt der jeweiligen Runde, nur in den „Aufbau …“-Abschnitten
 - `{{LISTE}}` – Rangliste kompakt, eine Zeile je Faktor: id | Rang | Titel | Kategorie | Evidenz | Jahre
 - `{{DETAILS}}` – alle Faktoren vollständig: Kurztext, Erklärung, Begründung, Ziel, Aufgabenplan, Quellen, Prüfdatum, Hinweis
@@ -50,21 +62,31 @@ Einwand Skeptiker Schlusswort → Einwand Entscheidung → Text-Konsens für die
 - `{{EINWAND}}` – der Beitrag des Nutzers beim Mitdiskutieren
 - `{{PRO}}`, `{{CONTRA}}`, `{{RICHTER}}`, `{{AUTORIN}}` – die Namen der Agenten
 - `{{FAKTOR_SCHEMA}}` – das JSON-Schema eines Faktors (inkl. Quellen)
+- `{{ZIEL_ZEICHEN}}` – nur in „Verdichtung“: wie lang die verdichtete Fassung höchstens sein soll
 - `{{NEU_MAX}}` – wie viele neue Faktoren je Seite (förderlich / Räuber) höchstens übernommen werden
 
 **Pflicht für die Entscheidung:** Die Gutachterin muss ein JSON-Objekt liefern, sonst ändert sich nichts.
 Die App liest daraus: `zusammenfassung`, `reihenfolge` (je Eintrag `id`, `begruendung`, `evidenz`, `jahre`,
 `wirkung`, `kategorie`, `titel`, `kurz`, `ziel`), `neu_schreiben` (je Eintrag `id`, `grund`), `hinweise`
 (je Eintrag `id`, `text`, `zusammenMit`), `neu` (neue Faktoren nach `{{FAKTOR_SCHEMA}}` plus `rang`) und beim
-Mitdiskutieren zusätzlich `einordnung`. Die Trennung an der Null-Linie (positive Jahre oben, negative unten,
+Mitdiskutieren zusätzlich `einordnung`.
+
+**Cache:** Systemanweisung und der vordere Teil jeder Nachricht (Rangliste, Faktoren, Dossiers, Einzelprüfungen) sind
+innerhalb eines Laufs für alle Agenten gleich; Rolle und Auftrag stehen erst am Ende. So liest das Modell den großen
+gemeinsamen Teil aus dem OpenAI-Cache, statt ihn bei jedem Agenten neu zu verarbeiten. Diese Reihenfolge beibehalten.
+
+**Verdichtung:** Keine Anfrage soll über ca. 100.000 Zeichen wachsen. Die Faktoren gehen in Debatte und Entscheidung
+nur kompakt mit (Erklärung gekürzt, Aufgabenplan nur mit Titeln); vollständig sehen sie nur Rechercheure, Einzelprüfung
+und Autorin. Werden Recherche-Dossiers, Einzelprüfungen oder die frühere Diskussion länger als 25.000 Zeichen, fasst
+die KI sie nach dem Abschnitt „Verdichtung“ auf höchstens 15.000 Zeichen zusammen. Die frühere Diskussion wird dabei
+fortlaufend weiterverdichtet: Die gespeicherte Zusammenfassung plus nur die neuen Beiträge ergeben die neue Zusammenfassung –
+das ganze Material wird nie ein zweites Mal gelesen. Die Trennung an der Null-Linie (positive Jahre oben, negative unten,
 der schädlichste ganz unten) setzt die App danach selbst durch. Gelöscht wird nie etwas – Zusammenlegen
 entscheidet der Nutzer über den Hinweis im Detail-Bildschirm.
 
 ## Aufbau Systemanweisung
 
 {{GRUNDANWEISUNG}}
-
-DEINE ROLLE: {{ROLLE}}
 
 ## Aufbau Nachricht
 
@@ -85,6 +107,8 @@ EINZELPRÜFUNGEN JEDES FAKTORS (Forscherin und Skeptiker je Block):
 BISHERIGE DISKUSSION:
 {{DISKUSSION}}
 
+DEINE ROLLE: {{ROLLE}}
+
 {{AUFTRAG}}
 
 ## Aufbau Recherche
@@ -93,6 +117,8 @@ HEUTE: {{DATUM}}
 
 AKTUELLE RANGLISTE (id | Rang | Titel | Kategorie | Evidenz | geschätzte Jahre):
 {{LISTE}}
+
+DEINE ROLLE: {{ROLLE}}
 
 {{AUFTRAG}}
 
@@ -112,6 +138,8 @@ DEIN BLOCK: {{BEREICH}}
 BISHERIGE PRÜFUNG DIESES BLOCKS:
 {{DISKUSSION}}
 
+DEINE ROLLE: {{ROLLE}}
+
 {{AUFTRAG}}
 
 ## Aufbau Konsens
@@ -126,6 +154,8 @@ WAS DIE GUTACHTERIN ENTSCHIEDEN HAT:
 
 RECHERCHE-DOSSIERS DIESES LAUFS:
 {{RECHERCHE}}
+
+DEINE ROLLE: {{ROLLE}}
 
 {{AUFTRAG}}
 
@@ -150,7 +180,7 @@ DIE NULL-LINIE: Oben stehen förderliche Verhaltensweisen mit POSITIVEN Jahren. 
 
 QUELLEN: Nenne nur Quellen, die du wirklich kennst oder in der Websuche gefunden hast (Autor/Studie, Journal, Jahr, Link wenn sicher). Erfinde niemals eine Quelle, Zahl oder Studie. Wenn du die Websuche nutzen kannst, nutze sie für alles, was nach deinem Wissensstand passiert sein könnte.
 
-Denke sehr gründlich, detailliert und durchdacht. Schreibe auf Deutsch, klar und konkret, ohne Heilversprechen.
+Denke sehr gründlich, detailliert und durchdacht – aber SCHREIBE KNAPP: Stichpunkte, keine Einleitung, keine Wiederholung des Materials, das allen vorliegt, keine Wiederholung dessen, was andere schon gesagt haben. Nur neue Befunde, Zahlen, Quellen und Urteile. Schreibe auf Deutsch, klar und konkret, ohne Heilversprechen.
 
 {{PROFIL}}
 
@@ -185,7 +215,7 @@ AUFTRAG: Recherchiere mit der Websuche den aktuellen Forschungsstand für diesen
 1. PRÜFUNG JE FAKTOR (id nennen): Stimmt die Aussage noch? Stimmen Jahre, Evidenzstufe und Effektgrößen? Gibt es neuere oder bessere Studien? Stehen im Text sachliche Fehler oder veraltete Zahlen? Urteil je Faktor: BESTÄTIGT / KORRIGIEREN (was genau) / HÖHER / TIEFER (mit Begründung).
 2. NEUE FAKTOREN: bis zu 3 förderliche und bis zu 2 schädliche Verhaltensweisen dieses Bereichs, die in der Rangliste fehlen und gut begründet sind – je mit geschätzten Jahren, Evidenzstufe und Quelle.
 3. NEUE PUNKTE FÜR AUFGABENPLÄNE: konkrete, belegte Maßnahmen (Dosis, Häufigkeit), die in einem Plan fehlen.
-Jede Aussage mit Quelle (Autor/Studie, Journal, Jahr, Link wenn gefunden). Keine erfundenen Quellen. Stichpunkte, maximal ca. 1200 Wörter.
+Jede Aussage mit Quelle (Autor/Studie, Journal, Jahr, Link wenn gefunden). Keine erfundenen Quellen. Stichpunkte, maximal ca. 600 Wörter.
 
 ## Recherche Räuber
 
@@ -198,13 +228,13 @@ AUFTRAG: Du bist der Räuber-Jäger. Suche mit der Websuche gezielt nach schädl
 1. PRÜFUNG DER BISHERIGEN RÄUBER (id nennen): Stimmen die Minus-Jahre und die Reihenfolge? Fehler im Text?
 2. FEHLENDE RÄUBER: bis zu 5, je mit geschätzten Minus-Jahren, Evidenzstufe, Mechanismus und Quelle. Formuliere als schädliches Verhalten („Viel sitzen“), nie als Verbot.
 3. POLARITÄT: Steht oben in der Liste ein Verbot oder Verzicht, der eigentlich ein Räuber ist? Nenne jeden Fall.
-Stichpunkte, maximal ca. 1200 Wörter.
+Stichpunkte, maximal ca. 600 Wörter.
 
 ## Recherche Neuheiten
 
 AUFTRAG: Du bist der Neuheiten-Scout. Suche mit der Websuche nach Forschung der letzten 24 Monate vor {{DATUM}}, die für diese Rangliste wichtig ist: große neue Metaanalysen, RCTs, Mendel-Randomisierungen, Leitlinien-Änderungen, widerlegte Annahmen, neue Interventionen (z. B. Medikamente, Supplements, Trainingsformen) mit belastbaren Daten.
 Für jeden Fund: Was wurde gezeigt (Effektgröße), wie belastbar, welche Faktoren der Liste betrifft es (id), und was folgt daraus für Rang, Jahre, Evidenz oder Text? Dazu bis zu 3 Kandidaten für neue Faktoren.
-Quelle je Fund (Autor/Studie, Journal, Jahr, Link wenn gefunden). Keine erfundenen Quellen. Stichpunkte, maximal ca. 1200 Wörter.
+Quelle je Fund (Autor/Studie, Journal, Jahr, Link wenn gefunden). Keine erfundenen Quellen. Stichpunkte, maximal ca. 600 Wörter.
 
 ## Einzelprüfung Forscherin
 
@@ -215,11 +245,11 @@ EINZELPRÜFUNG: Nimm dir JEDEN Faktor deines Blocks einzeln vor – keiner wird 
 4. TEXT: Sachliche Fehler, veraltete Zahlen, Lücken, missverständliche Formulierungen in Kurztext, Erklärung, Ziel oder Aufgabenplan? Was genau muss rein, was raus? Fehlen belegte Maßnahmen im Plan?
 5. POLARITÄT UND ÜBERSCHNEIDUNG: Verbot statt Räuber? Doppelung mit einem anderen Faktor?
 6. URTEIL: BESTÄTIGT / KORRIGIEREN / HÖHER / TIEFER / NEU SCHREIBEN – in einem Satz begründet.
-Gründlich statt kurz: Stichpunkte, bis ca. 250 Wörter je Faktor.
+Gründlich statt kurz: Stichpunkte, bis ca. 120 Wörter je Faktor.
 
 ## Einzelprüfung Skeptiker
 
-EINZELPRÜFUNG, GEGENPRÜFUNG: Prüfe die Einschätzung von {{PRO}} zu JEDEM Faktor des Blocks einzeln (id und Titel als Überschrift). Recherchiere mit der Websuche nach, ob die genannten Studien existieren und das sagen, was behauptet wird. Je Faktor: Zustimmung, Ablehnung oder Gegenvorschlag – mit Begründung (Evidenz-Hierarchie, Confounding, Healthy-User-Bias, Effektgröße, Umkehrkausalität, Übertragbarkeit). Ergänze, was {{PRO}} übersehen hat, und schließe je Faktor mit deinem Urteil: BESTÄTIGT / KORRIGIEREN / HÖHER / TIEFER / NEU SCHREIBEN. Bis ca. 200 Wörter je Faktor.
+EINZELPRÜFUNG, GEGENPRÜFUNG: Prüfe die Einschätzung von {{PRO}} zu JEDEM Faktor des Blocks einzeln (id und Titel als Überschrift). Recherchiere mit der Websuche nach, ob die genannten Studien existieren und das sagen, was behauptet wird. Je Faktor: Zustimmung, Ablehnung oder Gegenvorschlag – mit Begründung (Evidenz-Hierarchie, Confounding, Healthy-User-Bias, Effektgröße, Umkehrkausalität, Übertragbarkeit). Ergänze, was {{PRO}} übersehen hat, und schließe je Faktor mit deinem Urteil: BESTÄTIGT / KORRIGIEREN / HÖHER / TIEFER / NEU SCHREIBEN. Bis ca. 90 Wörter je Faktor.
 
 ## Runde 1 Forscherin
 
@@ -229,19 +259,19 @@ RUNDE 1: Werte die Recherche-Dossiers und die Einzelprüfungen aus (wo Forscheri
 3. POLARITÄT: Steht oben ein Verbot oder Verzicht („Nicht rauchen“, „Alkohol meiden“), gehört es als schädliches Verhalten mit negativen Jahren unter die Null-Linie – nenne jeden Fall. Prüfe auch die Minus-Jahre der Räuber.
 4. NEUE FAKTOREN: die wichtigsten fehlenden förderlichen Faktoren UND mindestens 2 fehlende oder unterschätzte Lebenszeit-Räuber (aus den Dossiers oder eigener Recherche).
 5. DOPPELUNGEN: Faktoren, die sich stark überschneiden oder die man zusammenlegen sollte.
-Sei präzise und strukturiert (Stichpunkte), maximal ca. 900 Wörter.
+Sei präzise und strukturiert (Stichpunkte), maximal ca. 600 Wörter.
 
 ## Runde 1 Skeptiker
 
-RUNDE 1: Antworte auf jeden Vorschlag von {{PRO}} (Verschiebungen, Korrekturen, Polarität, neue Faktoren, Doppelungen): Zustimmung, Ablehnung oder Gegenvorschlag – jeweils mit Begründung und, wo möglich, Gegenbeleg. Prüfe, ob die genannten Studien existieren und das sagen, was behauptet wird. Ergänze eigene Korrekturen, die {{PRO}} übersehen hat. Stichpunkte, maximal ca. 900 Wörter.
+RUNDE 1: Antworte auf jeden Vorschlag von {{PRO}} (Verschiebungen, Korrekturen, Polarität, neue Faktoren, Doppelungen): Zustimmung, Ablehnung oder Gegenvorschlag – jeweils mit Begründung und, wo möglich, Gegenbeleg. Prüfe, ob die genannten Studien existieren und das sagen, was behauptet wird. Ergänze eigene Korrekturen, die {{PRO}} übersehen hat. Stichpunkte, maximal ca. 600 Wörter.
 
 ## Runde 2 Forscherin
 
-RUNDE 2: Reagiere auf die Einwände. Gib nach, wo {{CONTRA}} recht hat, und halte begründet dagegen, wo nicht. Fasse am Ende deine endgültigen Vorschläge knapp zusammen: Verschiebungen, Korrekturen (id + was), neue Faktoren, Doppelungen. Maximal ca. 500 Wörter.
+RUNDE 2: Reagiere auf die Einwände. Gib nach, wo {{CONTRA}} recht hat, und halte begründet dagegen, wo nicht. Fasse am Ende deine endgültigen Vorschläge knapp zusammen: Verschiebungen, Korrekturen (id + was), neue Faktoren, Doppelungen. Maximal ca. 350 Wörter.
 
 ## Runde 2 Skeptiker
 
-RUNDE 2 (Schlusswort): Nenne, welche Verschiebungen, Korrekturen und neuen Faktoren du jetzt mitträgst und welche nicht – jeweils in einem Satz begründet. Maximal ca. 400 Wörter.
+RUNDE 2 (Schlusswort): Nenne, welche Verschiebungen, Korrekturen und neuen Faktoren du jetzt mitträgst und welche nicht – jeweils in einem Satz begründet. Maximal ca. 250 Wörter.
 
 ## Entscheidung
 
@@ -250,7 +280,7 @@ Aufbau: oben alle Faktoren mit POSITIVEN Jahren (förderliches Verhalten, das Le
 Sortierung: nach Erwartungswert (Potenzial × Wahrscheinlichkeit). Stabilität: Verschiebe nur, was neue Evidenz, ein Denkfehler oder ein falsch berechneter Erwartungswert trägt.
 Grundlage: Recherche-Dossiers, Einzelprüfungen und Debatte. Jeder Faktor, bei dem die Einzelprüfung auf KORRIGIEREN oder NEU SCHREIBEN kam und die Debatte das nicht widerlegt hat, gehört in "neu_schreiben".
 Verbote und Verzichte gibt es oben nicht: Ist ein Eintrag als Verbot formuliert („Nicht rauchen“, „Alkohol meiden“, „Kein Zucker“), formuliere ihn um als das schädliche Verhalten selbst („Rauchen – auch nur gelegentlich“, „Regelmäßig Alkohol trinken“), setze "jahre" negativ (verlorene Jahre gegenüber dem Unterlassen) und liefere dazu neuen "titel", "kurz" und "ziel" (Ziel = wie man es abstellt). Sonst "titel", "kurz", "ziel" leer lassen, außer der Titel ist sachlich falsch.
-Für jeden Eintrag in "reihenfolge": "begruendung" = 2–3 Sätze, warum er genau auf diesem Rang steht (Vergleich mit den Nachbarn, mit der tragenden Evidenz). "wahrscheinlichkeit" = 0–100 (Prozent, dass der Effekt real ist) für JEDEN Eintrag; "jahre" = Erwartungswert (Potenzial × Wahrscheinlichkeit), nie null oder leer. "evidenz", "wirkung" und "kategorie" nur ändern, wenn die Diskussion es begründet (Vorzeichen-Wechsel bei Verboten immer); sonst die bisherigen Werte eintragen.
+Für jeden Eintrag in "reihenfolge": "begruendung" = 1–2 knappe Sätze, warum er genau auf diesem Rang steht (Vergleich mit den Nachbarn, mit der tragenden Evidenz). "wahrscheinlichkeit" = 0–100 (Prozent, dass der Effekt real ist) für JEDEN Eintrag; "jahre" = Erwartungswert (Potenzial × Wahrscheinlichkeit), nie null oder leer. "evidenz", "wirkung" und "kategorie" nur ändern, wenn die Diskussion es begründet (Vorzeichen-Wechsel bei Verboten immer); sonst die bisherigen Werte eintragen.
 "neu_schreiben": JEDER Faktor, dessen Text (Erklärung, Kurztext, Ziel oder Aufgabenplan) sachliche Fehler, veraltete Zahlen, fehlende wichtige neue Erkenntnisse oder angehängte „Neu (…)“-Absätze hat – mit "grund" = konkret, was korrigiert oder eingearbeitet werden soll (1–3 Sätze, inkl. der neuen Zahlen und Quellen aus der Diskussion). Lieber einen Faktor zu viel neu schreiben lassen als eine bekannte Verbesserung liegen lassen.
 "hinweise": nur für echte Probleme, die der Nutzer entscheiden soll – starke Überschneidung zweier Faktoren ("zusammenMit" = id des Faktors, in den er aufgehen soll) oder ein Faktor, dessen Grundlage inzwischen widerlegt ist ("zusammenMit": null). "text" = 1–2 Sätze an den Nutzer.
 "neu": neue Faktoren, die die Diskussion trägt – höchstens {{NEU_MAX}} förderliche UND höchstens {{NEU_MAX}} Lebenszeit-Räuber (negative Jahre), je mit dem Rang, an dem sie eingefügt werden sollten, vollständig ausgearbeitet nach dem Schema inkl. Aufgabenplan und Quellen. Einzelne starke Elemente einer Sammelkategorie (z. B. ein bestimmtes Supplement mit hohem Erwartungswert) dürfen als eigener Faktor mit eigenem Rang neu angelegt werden.
@@ -273,9 +303,11 @@ WARUM ER NEU GESCHRIEBEN WIRD:
 AUFTRAG: Schreibe Erklärung, Kurztext, Ziel und Aufgabenplan dieses Faktors neu – als EINEN stimmigen Text auf dem aktuellen Wissensstand. Nutze die Dossiers, die Entscheidung und, wenn verfügbar, die Websuche, um Zahlen und Quellen zu prüfen.
 - Was im bisherigen Text stimmt, bleibt sinngemäß erhalten; Fehler und veraltete Zahlen korrigierst du; neue Erkenntnisse arbeitest du an der passenden Stelle ein.
 - Absätze der Form „Neu (Datum): …“ gibt es danach nicht mehr – ihr Inhalt steht im Fließtext.
-- "erklaerung": 5–9 Sätze in Absätzen (Absatz = Leerzeile): welches Verhalten genau gemeint ist, warum es wirkt (Mechanismus), was die Forschung zeigt (mit Zahlen, Studienlage, Grenzen).
+- KURZ UND AUF DEN PUNKT: Der Nutzer liest das in der App. Nur die entscheidenden Erkenntnisse, jede in einem klaren, verständlichen Satz – nicht ausschweifen, nicht jede Studie nacherzählen.
+- "erklaerung": 3–5 kurze Sätze: welches Verhalten gemeint ist, warum es wirkt (Mechanismus in einem Satz), was die Forschung zeigt (die tragende Zahl), und – wo wichtig – die größte Einschränkung.
+- "kurz": 1 Satz. "begruendung": 1–2 Sätze.
 - "ziel": klar und messbar. Bei einem Lebenszeit-Räuber: wie man es abstellt.
-- "punkte": Aufgabenplan mit 5–9 Punkten nach Wichtigkeit (sofort umsetzbares zuerst); bei Sammelkategorien (Supplements, Lebensmittel, Übungen) die einzelnen Elemente, 10–16 Stück. Vom Nutzer erledigte Punkte behalten ihren Titel, wenn sie noch gelten.
+- "punkte": Aufgabenplan mit 5–7 Punkten nach Wichtigkeit (sofort umsetzbares zuerst), je Punkt 1 Satz mit Dosis/Häufigkeit; bei Sammelkategorien (Supplements, Lebensmittel, Übungen) die einzelnen Elemente, 8–12 Stück. Vom Nutzer erledigte Punkte behalten ihren Titel, wenn sie noch gelten.
 - "quellen": 3–8 tragende, echte Quellen.
 - Titel, Rang, Jahre, Evidenz und Wirkung hat die Gutachterin festgelegt – übernimm sie unverändert aus dem Faktor oben, der Text muss dazu passen.
 
@@ -287,25 +319,25 @@ Antworte NUR mit einem JSON-Objekt:
 Der Nutzer bringt folgenden Beitrag in die Diskussion ein:
 „{{EINWAND}}“
 
-EINWAND, RUNDE 1: Nimm den Beitrag des Nutzers ernst und prüfe ihn ehrlich nach aktuellem Forschungsstand (Websuche) und nach Logik. Was stimmt daran, was nicht, wie gut ist es belegt (mit Quelle)? Welche konkreten Änderungen an der Rangliste folgen daraus (Verschiebungen, Jahre, Polarität, Umformulierung, Textkorrekturen, neue Faktoren) – und welche nicht? Stichpunkte, maximal ca. 600 Wörter.
+EINWAND, RUNDE 1: Nimm den Beitrag des Nutzers ernst und prüfe ihn ehrlich nach aktuellem Forschungsstand (Websuche) und nach Logik. Was stimmt daran, was nicht, wie gut ist es belegt (mit Quelle)? Welche konkreten Änderungen an der Rangliste folgen daraus (Verschiebungen, Jahre, Polarität, Umformulierung, Textkorrekturen, neue Faktoren) – und welche nicht? Stichpunkte, maximal ca. 400 Wörter.
 
 ## Einwand Skeptiker
 
-EINWAND, RUNDE 1: Prüfe den Beitrag des Nutzers und die Einschätzung von {{PRO}} kritisch: Evidenz-Hierarchie, Confounding, Effektgrößen, Umkehrkausalität, Übertragbarkeit, gibt es die genannten Studien wirklich. Stimme zu, lehne ab oder mache Gegenvorschläge – jeweils mit Begründung. Stichpunkte, maximal ca. 600 Wörter.
+EINWAND, RUNDE 1: Prüfe den Beitrag des Nutzers und die Einschätzung von {{PRO}} kritisch: Evidenz-Hierarchie, Confounding, Effektgrößen, Umkehrkausalität, Übertragbarkeit, gibt es die genannten Studien wirklich. Stimme zu, lehne ab oder mache Gegenvorschläge – jeweils mit Begründung. Stichpunkte, maximal ca. 400 Wörter.
 
 ## Einwand Forscherin Antwort
 
-EINWAND, RUNDE 2: Reagiere auf {{CONTRA}}. Gib nach, wo er recht hat, und halte begründet dagegen, wo nicht. Fasse am Ende knapp zusammen, was aus dem Beitrag des Nutzers an der Rangliste und an den Texten geändert werden sollte. Maximal ca. 400 Wörter.
+EINWAND, RUNDE 2: Reagiere auf {{CONTRA}}. Gib nach, wo er recht hat, und halte begründet dagegen, wo nicht. Fasse am Ende knapp zusammen, was aus dem Beitrag des Nutzers an der Rangliste und an den Texten geändert werden sollte. Maximal ca. 250 Wörter.
 
 ## Einwand Skeptiker Schlusswort
 
-EINWAND, RUNDE 2 (Schlusswort): Nenne, welche Änderungen aus dem Beitrag des Nutzers du jetzt mitträgst und welche nicht. Maximal ca. 300 Wörter.
+EINWAND, RUNDE 2 (Schlusswort): Nenne, welche Änderungen aus dem Beitrag des Nutzers du jetzt mitträgst und welche nicht. Maximal ca. 200 Wörter.
 
 ## Einwand Entscheidung
 
 ENTSCHEIDUNG ZUM BEITRAG DES NUTZERS: Bilde aus der Diskussion einen Konsens. Ändere nur, was der Beitrag „{{EINWAND}}“ und die Diskussion dazu wirklich tragen; alles andere bleibt, wie es ist. Die Rangliste muss JEDE bisherige id genau einmal enthalten (nichts löschen).
 Aufbau: oben alle Faktoren mit POSITIVEN Jahren nach Wichtigkeit, darunter die Lebenszeit-Räuber mit NEGATIVEN Jahren, der schädlichste ganz unten. Verbote werden als schädliches Verhalten mit negativen Jahren umformuliert (dann neuen "titel", "kurz", "ziel" liefern, sonst leer lassen).
-Für jeden Eintrag: "begruendung" = 2–3 Sätze, warum er genau auf diesem Rang steht; "evidenz", "jahre", "wirkung", "kategorie" = bisherige Werte, außer die Diskussion begründet eine Änderung.
+Für jeden Eintrag: "begruendung" = 1–2 knappe Sätze, warum er genau auf diesem Rang steht; "evidenz", "jahre", "wirkung", "kategorie" = bisherige Werte, außer die Diskussion begründet eine Änderung.
 "neu_schreiben": Faktoren, deren Text wegen des Beitrags korrigiert oder ergänzt werden soll, mit "grund" (was genau).
 "hinweise": nur bei Überschneidung ("zusammenMit" = id) oder widerlegter Grundlage ("zusammenMit": null).
 "neu": neue Faktoren, die der Beitrag begründet (höchstens {{NEU_MAX}} förderliche und {{NEU_MAX}} Räuber).
@@ -318,3 +350,11 @@ Antworte NUR mit einem JSON-Objekt:
  "neu_schreiben": [{"id": 12, "grund": "…"}],
  "hinweise": [],
  "neu": [{ {{FAKTOR_SCHEMA}}, "rang": 7 }]}
+
+## Verdichtung
+
+VERDICHTUNG: Fasse das folgende Arbeitsmaterial für die nächsten KI-Agenten zusammen – höchstens {{ZIEL_ZEICHEN}} Zeichen. Es ist ihre einzige Quelle für das, was bisher erarbeitet wurde, also darf nichts Entscheidendes verloren gehen:
+- ALLE Befunde und Urteile je Faktor mit id (bestätigt / korrigieren / höher / tiefer / neu schreiben), mit den tragenden Zahlen (Effektgröße, Jahre, Wahrscheinlichkeit) und der Quelle (Kurzform mit Jahr, Link wenn vorhanden).
+- Alle vorgeschlagenen neuen Faktoren und Lebenszeit-Räuber mit geschätzten Jahren und Begründung.
+- Bei Diskussionen: jeder Beitrag des Nutzers sinngemäß mit seinem Kernargument, jede Entscheidung der Gutachterin (Rang vorher → nachher), offene Streitpunkte und worin Einigkeit besteht.
+Weglassen: Einleitungen, Wiederholungen, Formulierungen, Begründungen, die schon in einer Entscheidung stehen. Stichpunkte, gruppiert nach Faktor-id. Antworte nur mit der Zusammenfassung.

@@ -145,13 +145,13 @@ class LongevityKi(
             |AUFGABE: Vertiefe diesen Faktor sehr gründlich. ${if (webSuche) "Recherchiere dazu im Internet den aktuellen Forschungsstand (neue Metaanalysen, große Kohorten, RCTs, Mendel-Randomisierung, Leitlinien)." else ""}
             |Verbessere den Bestand, statt ihn zu verwerfen: Was stimmt, bleibt sinngemäß erhalten; korrigiere Fehler und Veraltetes und
             |ergänze neue Erkenntnisse. Absätze der Form „Neu (Datum): …“ arbeitest du in einen einzigen, stimmigen Fließtext ein – danach
-            |gibt es keine „Neu (…)“-Absätze mehr. Erkläre genau, welche Verhaltensweise gemeint ist, warum sie wirkt (Mechanismus) und was
+            |gibt es keine „Neu (…)“-Absätze mehr. Bring es auf den Punkt – 3–5 kurze, verständliche Sätze, je Erkenntnis ein Satz: welche Verhaltensweise gemeint ist, warum sie wirkt (Mechanismus) und was
             |die Forschung zeigt (mit Zahlen). Begründe, warum der Faktor genau auf
             |${if (f.raeuber) "seinem Platz unter der Null-Linie (Lebenszeit-Räuber, ${"%.1f".format(Locale.US, f.jahre)} Jahre)" else "Rang ${f.rang}"} steht.
             |Ist der Faktor ein Lebenszeit-Räuber, beschreibt der Titel das schädliche Verhalten, "jahre" bleibt negativ, und Ziel
-            |und Aufgabenplan zeigen, wie man es abstellt. Leite daraus ein klares, messbares persönliches Ziel ab und einen Aufgabenplan mit 5–9 Punkten,
+            |und Aufgabenplan zeigen, wie man es abstellt. Leite daraus ein klares, messbares persönliches Ziel ab und einen Aufgabenplan mit 5–7 Punkten (je 1 Satz),
             |sortiert nach Wichtigkeit (was man sofort umsetzen sollte, zuerst). Ist der Faktor eine Sammelkategorie (z. B.
-            |Supplements, Lebensmittel, Übungen), sind die Punkte die einzelnen Elemente (z. B. die einzelnen Supplements, 10–16 Stück),
+            |Supplements, Lebensmittel, Übungen), sind die Punkte die einzelnen Elemente (z. B. die einzelnen Supplements, 8–12 Stück),
             |breit gestreut von gut belegt bis logisch plausibel, jeweils ehrlich eingeordnet, das wichtigste zuerst.
             |Nenne in "quellen" 3–8 tragende Quellen (Studie/Metaanalyse/Leitlinie mit Jahr, Link wenn sicher bekannt) – nur echte, nie erfundene.
             |
@@ -202,13 +202,17 @@ class LongevityKi(
                 (if (e.aktualisierungsPrompt.isBlank()) "Standard-Prompt" else "eigener Prompt") + " · ${stand.schritte.size} Schritte schon gesichert",
         )
         mitSpeicher = true
+        laufKennung = "longevity-lauf-${stand.beginn}"
         try {
             val mitRecherche = e.rechercheTiefe != RechercheTiefe.SCHNELL
             // Bänder: Recherche | Einzelprüfung | Debatte | Gutachterin | Text-Konsens
             val b = if (mitRecherche) floatArrayOf(0.22f, 0.42f, 0.64f, 0.76f) else floatArrayOf(0f, 0f, 0.42f, 0.62f)
-            val (dossiers, anzahlRecherchen) = if (mitRecherche) recherchieren(v, liste, fortschritt, 0f, b[0]) else "" to 0
-            // Ein aus einem älteren Protokoll geretteter Lauf hatte noch keine Einzelprüfung – seine Debatte steht schon.
-            val pruefung = if (mitRecherche && !stand.ohnePruefung) einzelpruefung(v, liste, dossiers, fortschritt, b[0], b[1]) else ""
+            val (roheDossiers, anzahlRecherchen) = if (mitRecherche) recherchieren(v, liste, fortschritt, 0f, b[0]) else "" to 0
+            val dossiers = verdichtet(v, "recherche", roheDossiers, fortschritt)
+            // Einzelprüfung ab Regler-Stufe 3. Ein aus einem älteren Protokoll geretteter Lauf hatte noch keine – seine Debatte steht schon.
+            val pruefung = if (mitRecherche && e.aktualisierungsStufe >= 3 && !stand.ohnePruefung) {
+                verdichtet(v, "einzelpruefung", einzelpruefung(v, liste, dossiers, fortschritt, b[0], b[1]), fortschritt)
+            } else ""
             val lauf = Lauf(v, liste, "", StringBuilder(), fortschritt, dossiers, pruefung)
             val d = (b[2] - b[1]) / 4f
             KiLog.info("Phase Debatte")
@@ -225,8 +229,12 @@ class LongevityKi(
             return m.ergebnis.copy(liste = liste2, recherchen = anzahlRecherchen, ueberarbeitet = m.konsens.size)
         } finally {
             mitSpeicher = false
+            laufKennung = null
         }
     }
+
+    /** Cache-Kennung des laufenden großen Laufs bzw. Mitdiskutierens; null = Einzelaufruf mit Priority. */
+    @Volatile private var laufKennung: String? = null
 
     /** Während des großen Laufs: jeder fertige Schritt wird gesichert und bei einem Neustart übernommen. */
     @Volatile private var mitSpeicher = false
@@ -283,11 +291,11 @@ class LongevityKi(
     suspend fun einwand(liste: List<Faktor>, text: String, bisher: List<Beitrag>, fortschritt: Fortschritt): Aktualisierung {
         auth.webSucheZuruecksetzen()
         val v = vorlage()
-        val verlauf = StringBuilder()
+        laufKennung = "longevity-einwand-${System.currentTimeMillis()}"
         // Nur die Debatte, deine Beiträge und die Entscheidungen – Dossiers, Einzelprüfungen und Autorinnen-Meldungen
         // sind in den Texten schon eingearbeitet und würden jede Anfrage nur aufblähen.
-        bisher.filter { b -> !istRecherche(b.name) && b.name != AUTORIN && " · Prüfung " !in b.name }
-            .forEach { b -> verlauf.append("\n### ").append(b.name).append(":\n").append(beitragKurz(b)).append('\n') }
+        val relevant = bisher.filter { b -> !istRecherche(b.name) && b.name != AUTORIN && " · Prüfung " !in b.name }
+        val verlauf = StringBuilder(vergangenheit(v, relevant, fortschritt))
         fortschritt.beitragFertig(NUTZER, text)
         verlauf.append("\n### ").append(NUTZER).append(" (der Nutzer):\n").append(text).append('\n')
         val lauf = Lauf(v, liste, text, verlauf, fortschritt, "", "")
@@ -299,7 +307,25 @@ class LongevityKi(
         val o = jsonAus(richter)
         val m = mischen(liste, o, altlastenEinarbeiten = false)
         val liste2 = konsens(v, m, "", fortschritt, 0.72f, 0.99f)
+        laufKennung = null
         return m.ergebnis.copy(liste = liste2, einordnung = o.optString("einordnung").trim(), ueberarbeitet = m.konsens.size)
+    }
+
+    /**
+     * Die frühere Diskussion für das Mitdiskutieren – fortlaufend verdichtet: Die gespeicherte Zusammenfassung plus nur die
+     * neuen Beiträge; erst wenn das zusammen länger als [VERDICHTEN_AB] ist, wird daraus eine neue Zusammenfassung.
+     * Das komplette alte Material wird dabei nie ein zweites Mal gelesen.
+     */
+    private suspend fun vergangenheit(v: Map<String, String>, beitraege: List<Beitrag>, fortschritt: Fortschritt): String {
+        fun block(b: Beitrag) = "\n### ${b.name}:\n${beitragKurz(b)}\n"
+        val gespeichert = speicher.diskussionsVerdichtung(beitraege)
+        val basis = gespeichert?.second?.let { "\n### Bisherige Diskussion (verdichtet):\n$it\n" } ?: ""
+        val neu = beitraege.drop(gespeichert?.first ?: 0).joinToString("") { block(it) }
+        val text = basis + neu
+        if (text.length <= VERDICHTEN_AB) return text
+        val kurz = verdichtet(v, "diskussion", text, fortschritt)
+        speicher.diskussionsVerdichtungSichern(beitraege, kurz)
+        return "\n### Bisherige Diskussion (verdichtet):\n$kurz\n"
     }
 
     /** Ein Recherche-Auftrag des Schwarms. */
@@ -356,8 +382,8 @@ class LongevityKi(
                         val (text, gespeichert) = try {
                             gesichert("recherche:${a.name}") {
                                 frage(
-                                    system(v, werte, "rolle rechercheur"), nachricht(v, "aufbau recherche", werte, a.abschnitt),
-                                    e.modell, e.denkstufe, fortschritt, webSuche = true, still = true, label = a.name,
+                                    system(v, werte, "rolle rechercheur"), nachricht(v, "aufbau recherche", werte, a.abschnitt, "rolle rechercheur"),
+                                    e.modell, denk("recherche"), fortschritt, webSuche = true, still = true, label = a.name,
                                 ).trim()
                             }
                         } catch (c: CancellationException) {
@@ -407,8 +433,8 @@ class LongevityKi(
                             gesichert("pruefung:$bereich:forscherin") {
                                 frage(
                                     system(v, werte, "rolle forscherin"),
-                                    nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "(noch keine – du beginnst)"), "einzelprüfung forscherin"),
-                                    e.modell, e.denkstufe, fortschritt, webSuche = true, still = true, label = "Einzelprüfung $bereich Forscherin",
+                                    nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "(noch keine – du beginnst)"), "einzelprüfung forscherin", "rolle forscherin"),
+                                    e.modell, denk("pruefung"), fortschritt, webSuche = true, still = true, label = "Einzelprüfung $bereich Forscherin",
                                 ).trim()
                             }
                         } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Prüfung fehlgeschlagen: ${t.message})" to false }
@@ -417,8 +443,8 @@ class LongevityKi(
                             gesichert("pruefung:$bereich:skeptiker") {
                                 frage(
                                     system(v, werte, "rolle skeptiker"),
-                                    nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "### $PRO:\n$pro"), "einzelprüfung skeptiker"),
-                                    e.modell, e.denkstufe, fortschritt, webSuche = true, still = true, label = "Einzelprüfung $bereich Skeptiker",
+                                    nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "### $PRO:\n$pro"), "einzelprüfung skeptiker", "rolle skeptiker"),
+                                    e.modell, denk("pruefung"), fortschritt, webSuche = true, still = true, label = "Einzelprüfung $bereich Skeptiker",
                                 ).trim()
                             }
                         } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Gegenprüfung fehlgeschlagen: ${t.message})" to false }
@@ -457,8 +483,8 @@ class LongevityKi(
                         val ergebnis = try {
                             val (antwort, _) = gesichert("konsens:${f.id}", pruefe = { faktorAus(jsonAus(it)) }) {
                                 frage(
-                                    system(v, werte, "rolle autorin"), nachricht(v, "aufbau konsens", werte, "text konsens"),
-                                    e.modell, e.denkstufe, fortschritt, webSuche = webSuche, still = true, label = "Text-Konsens id ${f.id} „${f.titel}“",
+                                    system(v, werte, "rolle autorin"), nachricht(v, "aufbau konsens", werte, "text konsens", "rolle autorin"),
+                                    e.modell, denk("autorin"), fortschritt, webSuche = webSuche, still = true, label = "Text-Konsens id ${f.id} „${f.titel}“",
                                 )
                             }
                             konsensUebernehmen(f, faktorAus(jsonAus(antwort)))
@@ -514,7 +540,8 @@ class LongevityKi(
             val (text, gespeichert) = gesichert("debatte:$auftrag", pruefe) {
                 fortschritt.beitragBeginnt(name)
                 frage(
-                    system(v, werte, rolle), nachricht(v, AUFBAU_NACHRICHT, werte, auftrag), e.modell, e.denkstufe, fortschritt,
+                    system(v, werte, rolle), nachricht(v, AUFBAU_NACHRICHT, werte, auftrag, rolle), e.modell,
+                    denk(if (name == RICHTER) "gutachterin" else "debatte"), fortschritt,
                     webSuche = suche, label = "$name · $auftrag",
                 ).trim()
             }
@@ -528,7 +555,7 @@ class LongevityKi(
     private fun basisWerte(liste: List<Faktor>, einwand: String, recherche: String): Map<String, String> = mapOf(
         "PRO" to PRO, "CONTRA" to CONTRA, "RICHTER" to RICHTER, "AUTORIN" to AUTORIN, "EINWAND" to einwand,
         "FAKTOR_SCHEMA" to FAKTOR_SCHEMA, "PROFIL" to profilZeile(), "LISTE" to listeKompakt(liste),
-        "DETAILS" to liste.joinToString("\n\n") { detail(it) }, "RECHERCHE" to recherche, "DATUM" to heute(),
+        "DETAILS" to liste.joinToString("\n\n") { detail(it, kompakt = true) }, "RECHERCHE" to recherche, "DATUM" to heute(),
         "NEU_MAX" to NEU_MAX.toString(), "PRUEFUNG" to "",
     )
 
@@ -537,8 +564,49 @@ class LongevityKi(
         werte + mapOf("GRUNDANWEISUNG" to fuelle(v["grundanweisung"].orEmpty(), werte), "ROLLE" to fuelle(v[rolle].orEmpty(), werte)),
     ).trim()
 
-    private fun nachricht(v: Map<String, String>, aufbau: String, werte: Map<String, String>, auftrag: String): String =
-        fuelle(v[aufbau].orEmpty(), werte + ("AUFTRAG" to fuelle(v[auftrag].orEmpty(), werte))).trim()
+    /** Rolle und Auftrag stehen am Ende: Der große Anfang ist für alle Agenten eines Laufs gleich und kommt aus dem Cache. */
+    private fun nachricht(v: Map<String, String>, aufbau: String, werte: Map<String, String>, auftrag: String, rolle: String = ""): String =
+        fuelle(v[aufbau].orEmpty(), werte + mapOf("AUFTRAG" to fuelle(v[auftrag].orEmpty(), werte), "ROLLE" to fuelle(v[rolle].orEmpty(), werte))).trim()
+
+    /**
+     * Denkstufe je Aufgabe nach dem Regler „sparsam ↔ gründlich“. Die Denkstufe aus den Einstellungen ist die Obergrenze;
+     * die Gutachterin nutzt sie immer voll, gespart wird bei Hilfsagenten, Debatte und Verdichtung.
+     */
+    private fun denk(aufgabe: String): ReasoningEffort {
+        val st = e.aktualisierungsStufe
+        val ziel = when (aufgabe) {
+            "gutachterin" -> e.denkstufe
+            "debatte" -> if (st <= 2) ReasoningEffort.MEDIUM else e.denkstufe
+            "recherche", "pruefung", "autorin" -> if (st <= 3) ReasoningEffort.MEDIUM else e.denkstufe
+            else -> ReasoningEffort.LOW
+        }
+        return if (ziel.ordinal < e.denkstufe.ordinal) ziel else e.denkstufe
+    }
+
+    /** Verdichtungen, die in diesem App-Leben schon gerechnet wurden (Schlüssel = Art + Länge + Hash des Materials). */
+    private val verdichtungen = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * Verdichtet langes Arbeitsmaterial auf höchstens [VERDICHTET_ZIEL] Zeichen, sobald es länger als [VERDICHTEN_AB] ist.
+     * Jede Verdichtung wird nur einmal gerechnet: im großen Lauf über den Zwischenstand, sonst über den Speicher im App-Leben.
+     */
+    private suspend fun verdichtet(v: Map<String, String>, art: String, text: String, fortschritt: Fortschritt): String {
+        if (text.length <= VERDICHTEN_AB) return text
+        val schluessel = "verdichtet:$art:${text.length}:${text.hashCode()}"
+        verdichtungen[schluessel]?.let { return it }
+        val (kurz, _) = gesichert(schluessel) {
+            fortschritt.status("Verdichtung", "Verdichte $art (${text.length / 1000} Tsd. Zeichen) …")
+            val werte = mapOf("ZIEL_ZEICHEN" to VERDICHTET_ZIEL.toString(), "PROFIL" to profilZeile())
+            frage(
+                fuelle(v["grundanweisung"].orEmpty(), werte).trim(),
+                fuelle(v["verdichtung"].orEmpty(), werte) + "\n\nMATERIAL (" + art + "):\n" + text,
+                e.modell, denk("verdichtung"), fortschritt, still = true, label = "Verdichtung $art",
+            ).trim()
+        }
+        KiLog.info("Verdichtung $art: ${text.length} → ${kurz.length} Zeichen")
+        verdichtungen[schluessel] = kurz
+        return kurz
+    }
 
     /** Die wirksame Vorlage: eigene Abschnitte aus den Einstellungen, fehlende oder leere aus dem Standard. */
     private fun vorlage(): Map<String, String> {
@@ -611,8 +679,8 @@ class LongevityKi(
             }
         }
         if (altlastenEinarbeiten) {
-            liste.filter { "\n\nNeu (" in it.erklaerung || it.erklaerung.startsWith("Neu (") }.forEach { f ->
-                if (f.id !in konsens) konsens[f.id] = KonsensAuftrag("Die angehängten „Neu (…)“-Absätze in einen einzigen, stimmigen Text einarbeiten.", "")
+            liste.filter { "\n\nNeu (" in it.erklaerung || it.erklaerung.startsWith("Neu (") || it.erklaerung.length > LANGER_TEXT }.forEach { f ->
+                if (f.id !in konsens) konsens[f.id] = KonsensAuftrag("Den Text auf die kurze Form bringen (3–5 Sätze, nur die entscheidenden Erkenntnisse) und angehängte „Neu (…)“-Absätze einarbeiten.", "")
             }
         }
 
@@ -717,6 +785,9 @@ class LongevityKi(
                     model = modell,
                     reasoningEffort = stufe,
                     webSuche = webSuche,
+                    cacheKey = laufKennung,
+                    // Lange Läufe ohne Priority-Verarbeitung: langsamer, verbraucht aber deutlich weniger Kontingent.
+                    prioritaet = laufKennung == null,
                     onDelta = { stueck ->
                         empfangen += stueck.length
                         if (still) fortschritt?.zeichenStill(stueck) else fortschritt?.zeichen(stueck)
@@ -746,27 +817,32 @@ class LongevityKi(
 
     private fun heute(): String = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY).format(Date())
 
-    /** Ein Faktor mit allem, was die Agenten zum Prüfen und Verbessern brauchen. */
-    private fun detail(f: Faktor): String = buildString {
+    /**
+     * Ein Faktor mit allem, was die Agenten zum Prüfen und Verbessern brauchen. [kompakt] (für Debatte und Entscheidung,
+     * die alle Faktoren zugleich sehen): Erklärung gekürzt, Aufgabenplan nur mit Titeln, höchstens drei Quellen.
+     */
+    private fun detail(f: Faktor, kompakt: Boolean = false): String = buildString {
         append("### id ").append(f.id).append(" · Rang ").append(f.rang).append(" · ").append(f.titel).append('\n')
         append("Kategorie: ").append(f.kat.name).append(" · Evidenz: ").append(f.ev.name)
             .append(" · Jahre (Erwartungswert): ").append("%.1f".format(Locale.US, f.jahre)).append(" · Wirkung: ").append(f.wirkung)
             .append(" · Wahrscheinlichkeit: ").append(f.wahrscheinlichkeit?.let { "$it %" } ?: "noch nicht geschätzt")
         if (f.zielErreicht) append(if (f.raeuber) " · beim Nutzer abgestellt" else " · vom Nutzer umgesetzt")
         append("\nKurz: ").append(f.kurz)
-        append("\nErklärung: ").append(f.erklaerung.replace("\n\n", " ¶ "))
+        val erklaerung = f.erklaerung.replace("\n\n", " ¶ ")
+        append("\nErklärung: ").append(if (kompakt && erklaerung.length > 700) erklaerung.take(700) + " …" else erklaerung)
         append("\nBegründung des Rangs: ").append(f.begruendung)
         append("\nZiel: ").append(f.ziel)
         val p = f.punkte
         if (p.isNotEmpty()) {
             append("\nAufgabenplan:")
             p.forEach {
-                append("\n- ").append(it.titel).append(" (").append(it.ev.name).append("): ").append(it.text)
+                append("\n- ").append(it.titel).append(" (").append(it.ev.name).append(")")
+                if (!kompakt) append(": ").append(it.text)
                 if (it.erledigt) append(" [vom Nutzer erledigt]")
             }
         }
         val q = f.quellen
-        if (q.isNotEmpty()) append("\nQuellen: ").append(q.joinToString("; ") { listOf(it.titel, it.jahr, it.link).filter(String::isNotBlank).joinToString(", ") })
+        if (q.isNotEmpty()) append("\nQuellen: ").append((if (kompakt) q.take(3) else q).joinToString("; ") { listOf(it.titel, it.jahr, it.link).filter(String::isNotBlank).joinToString(", ") })
         append("\nInhalt zuletzt geprüft: ").append(f.standVom?.let { SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY).format(Date(it)) } ?: "noch nie (Altbestand)")
         f.hinweis?.takeIf { it.isNotBlank() }?.let { append("\nOffener Hinweis: ").append(it) }
     }
@@ -786,6 +862,13 @@ class LongevityKi(
         const val PARALLEL = 5
         /** Höchstens so viele neue förderliche Faktoren und ebenso viele neue Räuber pro Lauf. */
         const val NEU_MAX = 5
+        /** Ab dieser Länge wird Arbeitsmaterial verdichtet … */
+        const val VERDICHTEN_AB = 25_000
+        /** Erklärungen, die länger sind, werden im großen Lauf auf die kurze Form (3–5 Sätze) gebracht. */
+        const val LANGER_TEXT = 1_200
+        /** … auf höchstens so viele Zeichen – so bleibt jede Anfrage unter ca. 100.000 Zeichen. */
+        const val VERDICHTET_ZIEL = 15_000
+
         /** Wartezeiten, bevor ein abgerissener Aufruf komplett wiederholt wird. */
         private val WIEDERHOLUNGEN_MS = longArrayOf(10_000L, 30_000L)
         /** Stand des Standard-Prompts; ein eigener Prompt älteren Stands wird einmalig gesichert und ersetzt. */
@@ -825,8 +908,8 @@ class LongevityKi(
         val FAKTOR_SCHEMA = """"titel": "max. 60 Zeichen, beschreibt das Verhalten komplett", "kurz": "1 Satz Kernaussage",
             | "kategorie": "$KATEGORIEN", "evidenz": "BELEGT|WAHRSCHEINLICH|LOGISCH",
             | "wahrscheinlichkeit": 0-100 (Prozent, dass der Effekt beim Menschen real ist),
-            | "jahre": "Zahl, Erwartungswert = Potenzial × Wahrscheinlichkeit: positiv (z. B. 2.5) bei förderlichem Verhalten, negativ (z. B. -10) bei schädlichem", "wirkung": 0-100 (Stärke, auch bei schädlichem Verhalten positiv), "erklaerung": "4–7 Sätze", "begruendung": "2–3 Sätze, warum genau dieser Rang",
-            | "ziel": "konkretes, messbares Ziel", "punkte": [{"titel": "max. 50 Zeichen", "text": "1–2 Sätze, konkret mit Dosis/Häufigkeit", "evidenz": "BELEGT|WAHRSCHEINLICH|LOGISCH"}],
+            | "jahre": "Zahl, Erwartungswert = Potenzial × Wahrscheinlichkeit: positiv (z. B. 2.5) bei förderlichem Verhalten, negativ (z. B. -10) bei schädlichem", "wirkung": 0-100 (Stärke, auch bei schädlichem Verhalten positiv), "erklaerung": "3–5 kurze Sätze: nur die entscheidenden Erkenntnisse, je Erkenntnis ein klarer Satz mit Zahl", "begruendung": "1–2 Sätze, warum genau dieser Rang",
+            | "ziel": "konkretes, messbares Ziel", "punkte": [{"titel": "max. 50 Zeichen", "text": "1 Satz, konkret mit Dosis/Häufigkeit", "evidenz": "BELEGT|WAHRSCHEINLICH|LOGISCH"}],
             | "quellen": [{"titel": "Autor et al., Studie/Metaanalyse, Journal", "jahr": "2025", "link": "https://… (nur wenn sicher bekannt, sonst leer)"}]""".trimMargin()
 
         fun faktorAus(o: JSONObject): Faktor {

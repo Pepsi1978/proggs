@@ -95,6 +95,29 @@ class LaufSpeicher(private val datei: File) {
         return "Ein abgebrochener Lauf vom $zeit ist gesichert (${s.schritte.size} fertige Schritte). Er wird dort fortgesetzt, wo er stehen geblieben ist."
     }
 
+    // ---- Fortlaufende Verdichtung der Diskussion (fürs Mitdiskutieren, unabhängig vom großen Lauf) ----
+
+    private val verdichtungDatei get() = File(datei.parentFile, "diskussion-verdichtet.json")
+
+    private fun pruefsumme(beitraege: List<Beitrag>): Int = beitraege.joinToString("|") { "${it.name}:${it.text.length}:${it.text.hashCode()}" }.hashCode()
+
+    /** Gespeicherte Zusammenfassung der ersten n Beiträge, falls diese Beiträge unverändert am Anfang von [beitraege] stehen. */
+    @Synchronized
+    fun diskussionsVerdichtung(beitraege: List<Beitrag>): Pair<Int, String>? = runCatching {
+        val o = JSONObject(verdichtungDatei.readText())
+        val n = o.getInt("anzahl")
+        if (n > beitraege.size || pruefsumme(beitraege.take(n)) != o.getInt("pruef")) return null
+        n to o.getString("text")
+    }.getOrNull()
+
+    @Synchronized
+    fun diskussionsVerdichtungSichern(beitraege: List<Beitrag>, text: String) {
+        runCatching {
+            verdichtungDatei.writeText(JSONObject().put("anzahl", beitraege.size).put("pruef", pruefsumme(beitraege)).put("text", text).toString())
+        }.onFailure { KiLog.fehler("Verdichtung der Diskussion konnte nicht gesichert werden", it) }
+        KiLog.info("Diskussion verdichtet gesichert: ${beitraege.size} Beiträge → ${text.length} Zeichen")
+    }
+
     private fun sichern() {
         val s = stand ?: return
         val o = JSONObject()

@@ -57,7 +57,10 @@ import de.frank.longevity.BuildConfig
 import de.frank.longevity.auth.CodexModel
 import de.frank.longevity.auth.ReasoningEffort
 import de.frank.longevity.auth.deviceCodeGroups
-import de.frank.longevity.data.RechercheTiefe
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import de.frank.longevity.data.AKTUALISIERUNGS_STUFEN
+import kotlin.math.roundToInt
 import de.frank.longevity.ui.theme.Chip
 import de.frank.longevity.ui.theme.Design
 import de.frank.longevity.ui.theme.LocalFarben
@@ -172,10 +175,19 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Text("Effort (Denkstufe)", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { e.modell.supportedEfforts.forEach { r -> Chip(r.label, e.denkstufe == r) { e.denkstufe = r } } }
                     Text("Höherer Effort = gründlicher, dauert länger. Empfohlen: GPT-6 Astra · Hoch.", color = f.textSchwach, fontSize = 11.sp)
-                    Text("Recherche-Tiefe beim Aktualisieren", color = f.textLeise, fontSize = 13.sp)
-                    ChipReihe { RechercheTiefe.entries.forEach { t -> Chip(t.anzeige, e.rechercheTiefe == t) { e.rechercheTiefe = t } } }
+                    val stufe = e.aktualisierungsStufe
+                    val (stufenName, stufenText) = AKTUALISIERUNGS_STUFEN[stufe - 1]
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Aktualisierung: sparsam ↔ gründlich", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text(stufenName, color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Slider(
+                        value = stufe.toFloat(), onValueChange = { e.aktualisierungsStufe = it.roundToInt() },
+                        valueRange = 1f..5f, steps = 3,
+                        colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer),
+                    )
                     Text(
-                        e.rechercheTiefe.erklaerung + " Bei Gründlich und Maximal suchen auch Diskussion und Vertiefung im Internet.",
+                        stufenText + " Die Denkstufe oben ist die Obergrenze; die Gutachterin nutzt sie immer voll.",
                         color = f.textSchwach, fontSize = 11.sp,
                     )
                 }

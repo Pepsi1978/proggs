@@ -67,6 +67,10 @@ internal fun codexChatPayload(
     model: CodexModel,
     reasoningEffort: ReasoningEffort,
     webSuche: Boolean = false,
+    /** Gleiche Kennung für alle Aufrufe eines Laufs: OpenAI liest den gemeinsamen Anfang dann aus dem Cache. */
+    cacheKey: String? = null,
+    /** Priority-Verarbeitung ist schneller, verbraucht aber deutlich mehr Kontingent – für lange Läufe aus. */
+    prioritaet: Boolean = true,
 ): JSONObject {
     val input = JSONArray()
     turns.forEach { turn ->
@@ -74,7 +78,8 @@ internal fun codexChatPayload(
     }
     return JSONObject()
         .put("model", model.apiId)
-        .put("service_tier", "priority")
+        .apply { if (prioritaet) put("service_tier", "priority") }
+        .apply { if (cacheKey != null) put("prompt_cache_key", cacheKey) }
         .put("stream", true)
         .put("store", false)
         .put("instructions", instructions.trim() + "\n\n" + UMLAUT_HINWEIS)
@@ -281,6 +286,8 @@ class CodexAuthManager(context: Context) {
         model: CodexModel,
         reasoningEffort: ReasoningEffort,
         webSuche: Boolean = false,
+        cacheKey: String? = null,
+        prioritaet: Boolean = true,
         onDelta: suspend (String) -> Unit = {},
     ): String = withContext(Dispatchers.IO) {
         if (turns.isEmpty()) {
@@ -288,11 +295,11 @@ class CodexAuthManager(context: Context) {
         }
         try {
             if (!webSuche || !webSucheMoeglich) {
-                requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
+                requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort, false, cacheKey, prioritaet), onDelta)
             } else {
                 var geliefert = false
                 try {
-                    requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort, webSuche = true)) { d ->
+                    requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort, true, cacheKey, prioritaet)) { d ->
                         geliefert = true
                         onDelta(d)
                     }
@@ -303,7 +310,7 @@ class CodexAuthManager(context: Context) {
                     if (geliefert || !werkzeugFehler || error.retryable || error.kind == AuthErrorKind.QUOTA || error.kind == AuthErrorKind.REAUTH) throw error
                     webSucheMoeglich = false
                     de.frank.longevity.ki.KiLog.warn("Websuche vom Server abgelehnt – weiter ohne Websuche", error)
-                    requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
+                    requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort, false, cacheKey, prioritaet), onDelta)
                 }
             }
         } catch (error: IOException) {

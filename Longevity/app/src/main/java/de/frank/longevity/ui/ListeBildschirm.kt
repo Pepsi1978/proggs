@@ -228,7 +228,7 @@ private fun AktualisierenDialog(vm: AppViewModel) {
                 color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
             )
             Text(
-                "${e.modell.label} · ${e.denkstufe.label} · ${e.rechercheTiefe.anzeige}" + if (vm.eigenerPrompt) " · eigener Prompt" else " · Standard-Prompt",
+                "${e.modell.label} · ${e.denkstufe.label} · ${de.frank.longevity.data.AKTUALISIERUNGS_STUFEN[e.aktualisierungsStufe - 1].first}" + if (vm.eigenerPrompt) " · eigener Prompt" else " · Standard-Prompt",
                 color = f.textSchwach, fontSize = 12.sp,
             )
             val info = vm.fortsetzInfo

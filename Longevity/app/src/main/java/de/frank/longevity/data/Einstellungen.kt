@@ -10,6 +10,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** Die fünf Stufen des Reglers „Sparsam ↔ Maximal“: Name und was sie bewirken. */
+val AKTUALISIERUNGS_STUFEN = listOf(
+    "Sehr sparsam" to "Nur die Debatte, ohne Internet-Recherche; Debatte mit mittlerer Denkstufe. Verbraucht am wenigsten.",
+    "Sparsam" to "5 Rechercheure mit Websuche, keine Einzelprüfung; Hilfsagenten und Debatte mit mittlerer Denkstufe.",
+    "Ausgewogen" to "5 Rechercheure und Einzelprüfung in Blöcken zu 8 mit mittlerer Denkstufe, Debatte und Gutachterin mit voller Denkstufe. Empfohlen.",
+    "Gründlich" to "Wie Ausgewogen, aber alle Agenten mit voller Denkstufe.",
+    "Maximal" to "12 Rechercheure, Einzelprüfung in Blöcken zu 4, alle mit voller Denkstufe. Verbraucht sehr viel.",
+)
+
 /** Wie viel die Aktualisierung vorab im Internet recherchiert. */
 enum class RechercheTiefe(val anzeige: String, val erklaerung: String) {
     SCHNELL("Schnell", "Nur die Diskussion, ohne Internet-Recherche."),
@@ -91,10 +100,17 @@ class Einstellungen private constructor(context: Context) {
     var promptVersion: Int get() = prefs.getInt("prompt_version", 1); set(v) = put { putInt("prompt_version", v) }
     /** Sicherung eines eigenen Prompts, der bei einem großen Prompt-Umbau ersetzt wurde. */
     var promptSicherung: String get() = s("aktualisierungs_prompt_sicherung", ""); set(v) = put { putString("aktualisierungs_prompt_sicherung", v) }
-    /** Recherche-Tiefe der Aktualisierung: schnell | gruendlich | maximal. */
-    var rechercheTiefe: RechercheTiefe
-        get() = RechercheTiefe.entries.firstOrNull { it.name == s("recherche_tiefe", "") } ?: RechercheTiefe.GRUENDLICH
-        set(v) = put { putString("recherche_tiefe", v.name) }
+    /** Schieberegler der Aktualisierung: 1 = sehr sparsam … 5 = maximal. Steuert Agentenzahl und Denkstufen. */
+    var aktualisierungsStufe: Int
+        get() = prefs.getInt(
+            "aktualisierung_stufe",
+            when (s("recherche_tiefe", "")) { "SCHNELL" -> 1; "MAXIMAL" -> 5; else -> 3 },
+        ).coerceIn(1, 5)
+        set(v) = put { putInt("aktualisierung_stufe", v.coerceIn(1, 5)) }
+
+    /** Recherche-Tiefe, abgeleitet aus dem Regler. */
+    val rechercheTiefe: RechercheTiefe
+        get() = when (aktualisierungsStufe) { 1 -> RechercheTiefe.SCHNELL; 5 -> RechercheTiefe.MAXIMAL; else -> RechercheTiefe.GRUENDLICH }
     var letzteAktualisierung: Long get() = prefs.getLong("letzte_aktualisierung", 0L); set(v) = put { putLong("letzte_aktualisierung", v) }
 
     /** Das Kurzprofil als Text für die KI, leer wenn nichts angegeben ist. */
