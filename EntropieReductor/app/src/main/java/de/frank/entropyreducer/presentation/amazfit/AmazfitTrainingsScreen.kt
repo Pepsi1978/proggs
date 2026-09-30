@@ -63,6 +63,7 @@ fun AmazfitTrainingsScreen(
     vm: AmazfitTrainingsViewModel = hiltViewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val resyncStatus by vm.polarResyncStatus.collectAsStateWithLifecycle()
     val cosmos = LocalCosmos.current
 
     CosmosScaffold(
@@ -127,6 +128,24 @@ fun AmazfitTrainingsScreen(
                         )
                         Text(
                             "${state.filtered.size} von ${state.workouts.size} Trainings (Polar)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = cosmos.textSecondary,
+                        )
+                    }
+                }
+            }
+
+            // Frank-Wunsch 2026-09-30: alle Trainings neu aus Polar laden (Dauer, Distanz, Puls,
+            // Kalorien, Tempo).
+            item {
+                Column {
+                    AssistChip(
+                        onClick = { vm.resyncAllFromPolar() },
+                        label = { Text("Alle Trainings neu aus Polar laden") },
+                    )
+                    resyncStatus?.let {
+                        Text(
+                            it,
                             style = MaterialTheme.typography.labelSmall,
                             color = cosmos.textSecondary,
                         )

@@ -95,6 +95,28 @@ class AmazfitTrainingsViewModel @Inject constructor(
     fun setRange(range: Range) {
         _rangeFilter.value = range
     }
+
+    // Frank-Wunsch 2026-09-30: alle Trainings per Knopf neu mit den Polar-Werten abgleichen.
+    private val _polarResyncStatus = MutableStateFlow<String?>(null)
+    val polarResyncStatus: StateFlow<String?> = _polarResyncStatus
+
+    fun resyncAllFromPolar() {
+        if (_polarResyncStatus.value == RESYNC_RUNNING) return
+        viewModelScope.launch {
+            _polarResyncStatus.value = RESYNC_RUNNING
+            val count = runCatching { repo.mergeFromHealthConnect(days = AmazfitRepository.FULL_HISTORY_DAYS) }
+                .getOrElse {
+                    if (it is kotlinx.coroutines.CancellationException) throw it
+                    -1
+                }
+            _polarResyncStatus.value =
+                if (count < 0) "Abgleich fehlgeschlagen" else "$count Trainings mit Polar-Werten aktualisiert"
+        }
+    }
+
+    private companion object {
+        const val RESYNC_RUNNING = "Lade alle Trainings aus Polar …"
+    }
 }
 
 /**

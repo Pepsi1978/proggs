@@ -159,7 +159,16 @@ constructor(
                 val trainingDeferred =
                     async {
                         // Frank-Wunsch 2026-07-03: Trainings kommen jetzt aus Health Connect (Strava raus).
-                        runCatchingCancellable { amazfit.mergeFromHealthConnect(days = 30) }
+                        // Frank-Wunsch 2026-09-30: einmal ALLE Trainings (gesamter Verlauf) auf die
+                        // Polar-Werte umstellen, danach wieder nur die letzten 30 Tage.
+                        runCatchingCancellable {
+                            if (appSettings.isPolarFullResyncV1Done()) {
+                                amazfit.mergeFromHealthConnect(days = 30)
+                            } else {
+                                amazfit.mergeFromHealthConnect(days = AmazfitRepository.FULL_HISTORY_DAYS)
+                                    .also { appSettings.setPolarFullResyncV1Done(true) }
+                            }
+                        }
                     }
                 val calendarDeferred =
                     async {

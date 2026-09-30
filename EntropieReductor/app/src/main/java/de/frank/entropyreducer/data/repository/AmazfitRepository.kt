@@ -431,6 +431,32 @@ constructor(
                     match.source == "strava" || match.manualOverridesMs != null -> {
                         // bewusst behalten — nicht ueberschreiben
                     }
+                    // Frank-Wunsch 2026-09-30: Polar ist die Wahrheit fuer Dauer, Distanz, Puls,
+                    // Kalorien und Tempo. Bisher gespeicherte Werte stammten teils aus dem
+                    // Health-Connect-Mischwert aller Apps (z.B. 5,85 statt 7,31 km) und werden
+                    // hier korrigiert — auch wenn der alte Eintrag sonst reicher ist.
+                    session.sourceApp?.startsWith(POLAR_SOURCE_PREFIX) == true -> {
+                        val base =
+                            if (newEntity.coversAllFieldsOf(match)) {
+                                newEntity.copy(
+                                    trackId = match.trackId,
+                                    sportName = match.sportName,
+                                    createdAt = match.createdAt,
+                                    weatherTempCelsius = match.weatherTempCelsius,
+                                    weatherCondition = match.weatherCondition,
+                                    weatherFetchedMs = match.weatherFetchedMs,
+                                )
+                            } else {
+                                match
+                            }
+                        val updated = base.withPolarCoreValues(newEntity)
+                        if (updated != match) {
+                            workoutDao.upsert(updated)
+                            known.remove(match)
+                            known.add(updated)
+                            replaced++
+                        }
+                    }
                     // Frank-Bugfix 2026-08-05: Ein DATENAERMERER Treffer darf den bestehenden
                     // Eintrag nicht ueberschreiben. Ohne diese Schranke wuerde der Dedup-Fix oben
                     // die leere "Laufen"-Session den vollstaendigen "Traillauf" ueberschreiben
@@ -850,6 +876,12 @@ constructor(
 
     companion object {
         private const val TAG = "AmazfitRepository"
+
+        /**
+         * Frank-Wunsch 2026-09-30: Fenster fuer den Voll-Abgleich aller Trainings mit Polar —
+         * genau die Aufbewahrungsdauer, also alle gespeicherten Trainings.
+         */
+        const val FULL_HISTORY_DAYS = 365
         /**
          * Frank-Wunsch 2026-05-19, geaendert 2026-05-23: Trainings nur 1 Jahr rueckwirkend halten
          * (vorher 2 Jahre = 730 Tage). Frank will Polar-Historie + Amazfit-Trainings auf das letzte
@@ -1066,3 +1098,29 @@ private val WORKOUT_VALUE_FIELDS: List<(AmazfitWorkoutEntity) -> Any?> =
  */
 internal fun AmazfitWorkoutEntity.coversAllFieldsOf(other: AmazfitWorkoutEntity): Boolean =
     WORKOUT_VALUE_FIELDS.none { field -> field(other) != null && field(this) == null }
+
+/** Praefix der Polar-Apps in Health Connect (`fi.polar.polarflow`, `fi.polar.beat`). */
+internal const val POLAR_SOURCE_PREFIX = "fi.polar"
+
+/**
+ * Frank-Wunsch 2026-09-30: Uebernimmt die Kernwerte aus der Polar-Version eines Trainings —
+ * Dauer, Distanz, Ø/max Puls, Kalorien, Ø-Geschwindigkeit/Pace und maximales Tempo. Polar
+ * gewinnt, wo es einen Wert hat; fehlt ihn Polar, bleibt der bisherige Wert stehen.
+ */
+internal fun AmazfitWorkoutEntity.withPolarCoreValues(polar: AmazfitWorkoutEntity): AmazfitWorkoutEntity =
+    copy(
+        durationSeconds = polar.durationSeconds ?: durationSeconds,
+        endMs = polar.endMs,
+        distanceMeters = polar.distanceMeters ?: distanceMeters,
+        avgHeartRate = polar.avgHeartRate ?: avgHeartRate,
+        maxHeartRate = polar.maxHeartRate ?: maxHeartRate,
+        calories = polar.calories ?: calories,
+        avgSpeedKmh = polar.avgSpeedKmh ?: avgSpeedKmh,
+        avgPaceSecPerKm = polar.avgPaceSecPerKm ?: avgPaceSecPerKm,
+        maxSpeedKmh = polar.maxSpeedKmh ?: maxSpeedKmh,
+        maxPaceSecPerKm = polar.maxPaceSecPerKm ?: maxPaceSecPerKm,
+        heartRateSeriesJson = polar.heartRateSeriesJson ?: heartRateSeriesJson,
+        paceStreamJson = polar.paceStreamJson ?: paceStreamJson,
+        cadence = polar.cadence ?: cadence,
+        strideLengthCm = polar.strideLengthCm ?: strideLengthCm,
+    )

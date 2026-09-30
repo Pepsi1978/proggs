@@ -22,6 +22,7 @@ import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.metadata.DataOrigin
 import java.util.Locale
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -521,6 +522,14 @@ class HealthConnectManager @Inject constructor(
             val sessionEnd = session.endTime
             val durationSeconds = (sessionEnd.epochSecond - sessionStart.epochSecond).coerceAtLeast(0L)
             val range = TimeRangeFilter.between(sessionStart, sessionEnd)
+            // Frank-Wunsch 2026-09-30: ALLE Trainingswerte (Puls, Tempo, Schrittfrequenz, Hoehe)
+            // nur aus der App, die das Training aufgezeichnet hat (Polar Flow). Ungefiltert
+            // mischt Health Connect Samples von Handy, Oura, Zepp … hinein. Nur wenn die
+            // Quell-App fuer einen Typ gar nichts geschrieben hat, wird ungefiltert gelesen.
+            val sessionOrigin = setOf(session.metadata.dataOrigin)
+            suspend fun <T : Record> readFromSessionSource(type: KClass<T>): List<T> =
+                readAllRecords(c, type, range, dataOriginFilter = sessionOrigin)
+                    .ifEmpty { readAllRecords(c, type, range) }
 
             // Distanz + Kalorien + avg/max-Puls via Aggregate (zuverlaessig).
             // Frank-Bugfix 2026-09-30: Aggregate NUR ueber die Quell-App der Session (z.B. Polar
@@ -566,7 +575,7 @@ class HealthConnectManager @Inject constructor(
 
             // Puls: Samples -> Verlauf + avg/max (Aggregate bevorzugt, sonst aus Samples).
             val hrSamples = runCatchingCancellable {
-                readAllRecords(c, HeartRateRecord::class, range).flatMap { it.samples }
+                readFromSessionSource(HeartRateRecord::class).flatMap { it.samples }
             }.getOrDefault(emptyList())
             val hrBpm = hrSamples.map { it.beatsPerMinute }.filter { it in 30L..230L }
             val avgHeartRate = aggregate?.get(HeartRateRecord.BPM_AVG)?.toInt()
@@ -589,10 +598,15 @@ class HealthConnectManager @Inject constructor(
 
             // Tempo/Speed: Samples -> Verlauf + avg/max Pace.
             val speedSamples = runCatchingCancellable {
-                readAllRecords(c, SpeedRecord::class, range).flatMap { it.samples }
+                readFromSessionSource(SpeedRecord::class).flatMap { it.samples }
             }.getOrDefault(emptyList())
             val speedMps = speedSamples.map { it.speed.inMetersPerSecond }.filter { it > 0.1 }
-            val avgSpeedMps = speedMps.takeIf { it.isNotEmpty() }?.average()
+            // Frank-Wunsch 2026-09-30: Ø-Geschwindigkeit wie in der Polar-App = Distanz / Dauer.
+            // Der Mittelwert der Speed-Samples weicht davon ab (Pausen, ungleiche Abstaende).
+            val avgSpeedMps = distanceMeters
+                ?.takeIf { it > 0.0 && durationSeconds > 0L }
+                ?.let { it / durationSeconds.toDouble() }
+                ?: speedMps.takeIf { it.isNotEmpty() }?.average()
             val maxSpeedMps = speedMps.maxOrNull()
             val paceStreamJson = speedSamples
                 .mapNotNull { smp ->
@@ -614,14 +628,14 @@ class HealthConnectManager @Inject constructor(
 
             // Schrittfrequenz: StepsCadenceRecord-Samples (Schritte/Min).
             val cadenceRates = runCatchingCancellable {
-                readAllRecords(c, StepsCadenceRecord::class, range)
+                readFromSessionSource(StepsCadenceRecord::class)
                     .flatMap { it.samples }.map { it.rate }.filter { it > 0.0 }
             }.getOrDefault(emptyList())
             val cadenceAvg = cadenceRates.takeIf { it.isNotEmpty() }?.average()
 
             // Hoehenmeter hoch: Summe aller ElevationGainedRecord im Fenster.
             val elevationGainMeters = runCatchingCancellable {
-                readAllRecords(c, ElevationGainedRecord::class, range)
+                readFromSessionSource(ElevationGainedRecord::class)
                     .sumOf { it.elevation.inMeters }
             }.getOrDefault(0.0).takeIf { it > 0.0 }
 
@@ -856,6 +870,7 @@ class HealthConnectManager @Inject constructor(
         recordType: KClass<T>,
         timeRangeFilter: TimeRangeFilter,
         ascendingOrder: Boolean = true,
+        dataOriginFilter: Set<DataOrigin> = emptySet(),
     ): List<T> {
         val records = mutableListOf<T>()
         var pageToken: String? = null
@@ -864,6 +879,7 @@ class HealthConnectManager @Inject constructor(
                 ReadRecordsRequest(
                     recordType = recordType,
                     timeRangeFilter = timeRangeFilter,
+                    dataOriginFilter = dataOriginFilter,
                     ascendingOrder = ascendingOrder,
                     pageToken = pageToken,
                 )

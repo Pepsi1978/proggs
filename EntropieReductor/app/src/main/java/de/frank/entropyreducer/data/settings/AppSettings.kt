@@ -346,6 +346,10 @@ class AppSettings @Inject constructor(
     suspend fun isTitleShortenV1Done(): Boolean = ds.data.map { it[KEY_TITLE_SHORTEN_V1] ?: false }.first()
     suspend fun setTitleShortenV1Done(value: Boolean) = ds.edit { it[KEY_TITLE_SHORTEN_V1] = value }
 
+    /** Frank-Wunsch 2026-09-30: einmaliger Voll-Abgleich aller Trainings mit den Polar-Werten. */
+    suspend fun isPolarFullResyncV1Done(): Boolean = ds.data.map { it[KEY_POLAR_FULL_RESYNC_V1] ?: false }.first()
+    suspend fun setPolarFullResyncV1Done(value: Boolean) = ds.edit { it[KEY_POLAR_FULL_RESYNC_V1] = value }
+
     /**
      * Prioritaets-Gedaechtnis (Frank-Wunsch 2026-06-19): An/Aus + einstellbares Limit.
      * enabled steuert Lernen UND Anwenden (Default an). limit = wie viele neueste Eintraege die KI
@@ -545,6 +549,7 @@ class AppSettings @Inject constructor(
         private val KEY_SPORT_RENAME_V2 = booleanPreferencesKey("sport_rename_v2_done")
         private val KEY_DISABLE_POLAR_SYNC = booleanPreferencesKey("disable_polar_sync")
         private val KEY_TITLE_SHORTEN_V1 = booleanPreferencesKey("title_shorten_v1_done")
+        private val KEY_POLAR_FULL_RESYNC_V1 = booleanPreferencesKey("polar_full_resync_v1_done")
         private val KEY_LAST_KI_QUESTION = longPreferencesKey("last_ki_question_check_ms")
         private val KEY_CACHED_ANALYSIS = stringPreferencesKey("cached_analysis_markdown")
         private val KEY_CACHED_ANALYSIS_AT = longPreferencesKey("cached_analysis_at_ms")
