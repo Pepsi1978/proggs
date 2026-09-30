@@ -208,7 +208,14 @@ class AlarmActivity : ComponentActivity() {
                 if (now.alarm == null || now.ringId == done.ringId) { finish(); @Suppress("DEPRECATION") overridePendingTransition(0, 0) }
             }
             LaunchedEffect(feedback == null, state.alarm == null, pending) {
-                if (feedback == null && state.alarm == null && seenAlarm && pending == null) finish()
+                if (feedback != null || state.alarm != null || pending != null) return@LaunchedEffect
+                // Auch ein Weckbildschirm, der das Klingeln nie angezeigt hat (im Hintergrund über die Benachrichtigung
+                // gestartet), schließt, sobald der Wecker anderswo aus ist. Kurze Frist für einen gerade startenden Dienst.
+                if (!seenAlarm) {
+                    delay(1500)
+                    if (AlarmService.state.value.alarm != null || AlarmStore.get(this@AlarmActivity).ringing().isNotEmpty()) return@LaunchedEffect
+                }
+                finish()
             }
             // Kein Flow, sondern ein ausdrückliches neues Lesen bei jedem ON_RESUME: diese Activity ist
             // singleTask und wird für ein weiteres Klingeln über onNewIntent wiederverwendet, eine einmalige
