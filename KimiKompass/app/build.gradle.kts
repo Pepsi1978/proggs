@@ -6,18 +6,18 @@ plugins {
 }
 
 // Keine eigene Debug-Signatur: OpenLauncher legt den gemeinsamen Schlüssel aus ~/SK/Android
-// nach ~/.android/debug.keystore, den Gradle ohnehin nimmt — wie bei CodexKompass.
+// nach ~/.android/debug.keystore, den Gradle ohnehin nimmt — wie bei ClaudeKompass.
 // Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
 // Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
 @Suppress("UNCHECKED_CAST")
 val versionslogAktuell = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
 
 android {
-    namespace = "de.frank.claudekompass"
+    namespace = "de.frank.kimikompass"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "de.frank.claudekompass"
+        applicationId = "de.frank.kimikompass"
         minSdk = 26
         targetSdk = 36
         versionCode = (versionslogAktuell["versionCode"] as Number).toInt()
@@ -26,7 +26,7 @@ android {
         buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
         // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
         // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
-        buildConfigField("String", "SEEDED_CLI_VERSION", "\"2.1.278\"")
+        buildConfigField("String", "SEEDED_CLI_VERSION", "\"2.1.1\"")
         ksp { arg("room.schemaLocation", "$projectDir/schemas") }
     }
 

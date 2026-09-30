@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ClaudeKompass"
+rootProject.name = "KimiKompass"
 include(":app")

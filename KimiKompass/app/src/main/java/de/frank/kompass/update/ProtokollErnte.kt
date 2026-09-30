@@ -42,7 +42,7 @@ object ProtokollErnte {
     /** Ein Eintrag aus dem Protokoll samt der Zeile, die ihn belegt. */
     private data class Fund(val version: String, val zeile: String)
 
-    private val versionsZeile = Regex("^##\\s+([0-9]+\\.[0-9]+\\.[0-9]+)\\s*$")
+    private val versionsZeile = DokuParser.versionsKopf
 
     /** `Added `/output-style [name]`` — der Name steht direkt hinter dem Verb. */
     private val einfuehrungSlash =
@@ -148,6 +148,13 @@ object ProtokollErnte {
     /** Ein Menüname steht im Protokoll in geraden Anführungszeichen: „Added a "Show turn duration" toggle". */
     private val panelName = Regex("\"([A-Z][^\"]{2,59})\"")
 
+    /** „the TUI mode setting in `/settings`" — Kimis übliche Form. */
+    private val panelSetting =
+        Regex("\\bthe\\s+([A-Z][A-Za-z0-9 ()-]{2,40}?)\\s+(?:setting|toggle|option)\\s+in\\s+`/(?:settings|config)`")
+
+    /** „under `/settings` → Mermaid diagrams" — Pfad durch das Panel. */
+    private val panelPfeil = Regex("`/(?:settings|config)`\\s*(?:→|->)\\s*([A-Z][A-Za-z0-9 ()-]{2,40})")
+
     /**
      * Liest neue und entfernte Zeilen des `/config`-Menüs aus dem Protokoll.
      *
@@ -171,10 +178,12 @@ object ProtokollErnte {
             val zeile = rohZeile.trim()
             if (!zeile.startsWith("-") || version.isEmpty()) continue
             if (!istNeuer(version, abVersion)) continue
-            if (!zeile.contains("/config") || zeile.startsWith("- Fixed")) continue
-            val entfernt = zeile.startsWith("- Removed")
-            for (treffer in panelName.findAll(zeile)) {
-                val name = treffer.groupValues[1].trim()
+            if (!zeile.contains("`/settings`") && !zeile.contains("`/config`")) continue
+            if (zeile.startsWith("- Fix")) continue
+            val entfernt = zeile.startsWith("- Remove")
+            val namen = (panelName.findAll(zeile) + panelSetting.findAll(zeile) + panelPfeil.findAll(zeile))
+                .map { it.groupValues[1].trim().trimEnd('.', ',') }
+            for (name in namen) {
                 val schluessel = name.lowercase()
                 // Oben steht das Neueste: Die erste Nennung entscheidet.
                 if (schluessel in neu || schluessel in weg) continue

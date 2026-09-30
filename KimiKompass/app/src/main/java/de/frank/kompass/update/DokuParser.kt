@@ -11,143 +11,191 @@ data class GelesenerEintrag(
 )
 
 /**
- * Liest Namen und Beschreibungen aus den Markdown-Tabellen der offiziellen Unterlagen.
+ * Liest Namen und Beschreibungen aus den Markdown-Seiten der Kimi-Code-Doku
+ * (github.com/MoonshotAI/kimi-code, docs/en).
  *
  * Bewusst ohne Beteiligung eines Sprachmodells: Eine Tabelle ist eindeutig auswertbar, und ein
- * Modell könnte einen Namen erfinden oder einen echten weglassen. Beim Aktualisieren einer
- * Nachschlage-App wäre beides schlimm — hier zählt Genauigkeit, nicht Sprachgefühl. Erklärt
- * wird später, gelesen wird jetzt.
+ * Modell könnte einen Namen erfinden oder einen echten weglassen. Erklärt wird später, gelesen
+ * wird jetzt.
  *
- * Drei Dinge werden dabei streng genommen, weil jedes einzelne schon still danebengegangen ist:
- *
- *  1. **Nur die richtige Tabelle.** Die Einstellungsseite enthält dreizehn Tabellen — die
- *     Übersicht und daneben lauter Unterfeld-Tabellen (`Field | Type | What it does`). Wer
- *     alle liest, holt sich Namen wie `Bash` als angebliche Einstellung. Deshalb wird die
- *     Kopfzeile geprüft und nur eine Tabelle mit den erwarteten Spalten ausgewertet.
- *  2. **Die richtige Spalte.** Die Übersicht hat vier Spalten: `Key | Description | Topic |
- *     Scope`. Wer einfach die letzte nimmt, bekommt „Any file" als Beschreibung — und schickt
- *     genau das als Erklärgrundlage an das Modell.
- *  3. **Maskierte Trennstriche.** In `` `/voice [hold\|tap\|off]` `` steht ein `\|`, das keine
- *     Spalte trennt. Wer stumpf an `|` teilt, verschiebt alle Spalten dieser Zeile.
+ * Streng genommen wird dabei:
+ *  1. **Nur die richtige Tabelle** — erkannt an ihrer Kopfzeile.
+ *  2. **Die richtige Spalte** — über ihren Namen, nie über ihre Position.
+ *  3. **Maskierte Trennstriche** — in `` `/plan [on\|off]` `` trennt `\|` keine Spalte.
  */
 object DokuParser {
 
-    /** Findet Zeilen wie `| `/compact` | Built-in | Free up context … |`. */
     private val tabellenZeile = Regex("^\\s*\\|(.+)\\|\\s*$")
     private val trennZeile = Regex("^\\s*\\|?[\\s:|-]{4,}\\|?\\s*$")
 
     /** Teilt an Trennstrichen, die nicht mit `\` maskiert sind. */
     private val spaltenTrenner = Regex("(?<!\\\\)\\|")
 
-    /** Ein Slash-Befehl steht in Rückstrichen, oft mit Argumenten dahinter. */
-    private val slashName = Regex("`/([a-z][a-z0-9-]*)")
-
-    /** Ein Einstellungsname steht in Rückstrichen und kann Punkte enthalten. */
-    private val einstellungsName = Regex("`([a-zA-Z][a-zA-Z0-9_]*(?:\\.[a-zA-Z][a-zA-Z0-9_]*)*)`")
+    /**
+     * Ein Slash-Befehl steht in Rückstrichen, oft mit Argumenten dahinter. Der Name endet am
+     * ersten Leerzeichen oder an `[`/`<` — so wird `/title [<text>]` zu `/title` und
+     * `/plan clear` zu `/plan`. Auch `/?` ist ein gültiger Name.
+     */
+    private val slashName = Regex("`(/[^`\\s\\[<]+)")
 
     /** Eine Umgebungsvariable ist durchgehend gross geschrieben. */
     private val variablenName = Regex("`([A-Z][A-Z0-9_]{2,60})`")
 
+    /** Ein Versionskopf im Änderungsprotokoll: `## 2.1.1 (2026-09-24)`. */
+    val versionsKopf = Regex("^##\\s+([0-9]+\\.[0-9]+\\.[0-9]+)(?:\\s+\\(.*\\))?\\s*$")
+
     /** Eine Tabelle mit ihrer Kopfzeile — erst damit lassen sich Spalten benennen. */
     private data class Tabelle(val kopf: List<String>, val zeilen: List<List<String>>)
 
-    fun leseSlashBefehle(markdown: String): List<GelesenerEintrag> =
-        leseSpalten(
-            markdown = markdown,
-            nameSpalten = listOf("Command", "Befehl"),
-            textSpalten = listOf("Purpose", "Description"),
-            zusatzSpalten = listOf("Type", "Kind"),
-        ) { rohName, beschreibung, zusatz ->
-            val treffer = slashName.find(rohName) ?: return@leseSpalten null
-            GelesenerEintrag(
-                name = "/" + treffer.groupValues[1],
-                beschreibung = beschreibung,
-                // Die Tabelle hat keine Type-Spalte mehr; Skills stehen als „**Skill.**“ vorn.
-                art = (zusatz["Type"] ?: zusatz["Kind"]).orEmpty().ifBlank {
-                    if (beschreibung.trimStart().startsWith("**Skill")) "Mitgelieferter Skill" else "Eingebaut"
-                },
-            )
-        }.also { melde("Slash-Befehle", it.size) }
-
-    fun leseEinstellungen(markdown: String): List<GelesenerEintrag> =
-        leseSpalten(
-            markdown = markdown,
-            nameSpalten = listOf("Key", "Setting"),
-            textSpalten = listOf("Description"),
-            zusatzSpalten = listOf("Topic", "Scope"),
-        ) { rohName, beschreibung, zusatz ->
-            val treffer = einstellungsName.find(rohName) ?: return@leseSpalten null
-            val name = treffer.groupValues[1]
-            // Durchgehend gross geschriebene Namen sind Umgebungsvariablen und gehören in die
-            // andere Liste. Ohne diese Trennung stünden sie doppelt in der App.
-            if (name == name.uppercase()) return@leseSpalten null
-            GelesenerEintrag(
-                name = name,
-                beschreibung = beschreibung,
-                art = artAusGeltungsbereich(zusatz["Scope"].orEmpty()),
-                kategorie = zusatz["Topic"].orEmpty(),
-            )
-        }.also { melde("Einstellungen", it.size) }
-
-    fun leseVariablen(markdown: String): List<GelesenerEintrag> =
-        leseSpalten(
-            markdown = markdown,
-            nameSpalten = listOf("Variable"),
-            textSpalten = listOf("Purpose", "Description"),
-        ) { rohName, beschreibung, _ ->
-            val treffer = variablenName.find(rohName) ?: return@leseSpalten null
-            GelesenerEintrag(
-                name = treffer.groupValues[1],
-                beschreibung = beschreibung,
-                art = "Umgebungsvariable",
-            )
-        }.also { melde("Umgebungsvariablen", it.size) }
-
     /**
-     * Wo eine Einstellung stehen darf, sagt die Spalte `Scope`. Daraus wird die Angabe, die in
-     * der App unter dem Namen steht — sie beantwortet die erste Frage beim Nachschlagen:
-     * „In welche Datei schreibe ich das?"
+     * Liest alle Befehlstabellen (`| Command | Alias | Description | Always available |`).
+     *
+     * Die Alias-Spalte kann mehrere Namen tragen (`/h`, `/?`); jeder wird ein eigener Eintrag.
+     * Die Tabelle der mitgelieferten Skills hat weder Alias- noch Verfügbarkeitsspalte.
      */
-    private fun artAusGeltungsbereich(geltung: String): String = when {
-        geltung.contains("managed", ignoreCase = true) -> "managed-settings.json"
-        geltung.contains("global config", ignoreCase = true) -> "~/.claude.json"
-        else -> "settings.json"
+    fun leseSlashBefehle(markdown: String): List<GelesenerEintrag> {
+        val gefunden = LinkedHashMap<String, GelesenerEintrag>()
+        for (tabelle in leseTabellen(markdown)) {
+            val nameIndex = findeSpalte(tabelle.kopf, listOf("Command"))
+            val textIndex = findeSpalte(tabelle.kopf, listOf("Description"))
+            if (nameIndex < 0 || textIndex < 0) continue
+            val aliasIndex = findeSpalte(tabelle.kopf, listOf("Alias"))
+            val istSkill = aliasIndex < 0 && findeSpalte(tabelle.kopf, listOf("Always available")) < 0
+            for (zeile in tabelle.zeilen) {
+                if (zeile.size <= maxOf(nameIndex, textIndex)) continue
+                val name = slashName.find(zeile[nameIndex])?.groupValues?.get(1) ?: continue
+                val beschreibung = zeile[textIndex]
+                if (beschreibung.isBlank()) continue
+                gefunden.putIfAbsent(
+                    name,
+                    GelesenerEintrag(name, beschreibung, if (istSkill) "Mitgelieferter Skill" else "Eingebaut"),
+                )
+                if (aliasIndex in zeile.indices) {
+                    for (alias in slashName.findAll(zeile[aliasIndex])) {
+                        val aliasName = alias.groupValues[1]
+                        gefunden.putIfAbsent(
+                            aliasName,
+                            GelesenerEintrag(aliasName, "Alias for $name: $beschreibung", "Alias"),
+                        )
+                    }
+                }
+            }
+        }
+        return gefunden.values.toList().also { melde("Slash-Befehle", it.size) }
     }
 
     /**
-     * Wertet alle Tabellen aus, deren Kopfzeile die gesuchten Spalten hat.
+     * Liest die Feld-Tabellen der Konfigurationsseite (`| Field | Type | Default | Description |`).
      *
-     * Findet sich keine solche Tabelle, kommt eine leere Liste zurück — der Aufrufer erkennt
-     * das an der Untergrenze und bricht ab, statt den Bestand zu leeren.
+     * Der Abschnitt steht in der Überschrift darüber (`` ## `loop_control` ``) und wird zum
+     * Präfix: `loop_control.max_steps_per_turn`. Anbieter und Modelle sind benannte Tabellen
+     * und bekommen den Platzhalter wie im Bestand (`providers.<name>.type`). Zeilen vom Typ
+     * `table` sind nur Verweise auf einen Abschnitt und werden übersprungen. Tabellen ohne
+     * Type-Spalte (etwa die der veralteten Felder) ebenso.
      */
-    private fun leseSpalten(
-        markdown: String,
-        nameSpalten: List<String>,
-        textSpalten: List<String>,
-        zusatzSpalten: List<String> = emptyList(),
-        deute: (rohName: String, beschreibung: String, zusatz: Map<String, String>) -> GelesenerEintrag?,
-    ): List<GelesenerEintrag> {
+    fun leseEinstellungen(markdown: String): List<GelesenerEintrag> {
         val gefunden = LinkedHashMap<String, GelesenerEintrag>()
-        for (tabelle in leseTabellen(markdown)) {
-            val nameIndex = findeSpalte(tabelle.kopf, nameSpalten)
-            val textIndex = findeSpalte(tabelle.kopf, textSpalten)
-            if (nameIndex < 0 || textIndex < 0) continue
-
-            val zusatzIndex = zusatzSpalten.associateWith { findeSpalte(tabelle.kopf, listOf(it)) }
-            for (zeile in tabelle.zeilen) {
-                if (zeile.size <= maxOf(nameIndex, textIndex)) continue
-                val beschreibung = zeile[textIndex]
+        val h2 = Regex("^##\\s+(.+)$")
+        val h3 = Regex("^###\\s+`\\[?([a-z_]+)]?`")
+        val abschnittsName = Regex("^`([a-z_.]+)`$")
+        val feldName = Regex("`\\[?([a-z_]+)]?(?:\\.([a-z_]+))?`")
+        var praefix: String? = null
+        var art = "config.toml"
+        val zeilen = markdown.lines()
+        var index = 0
+        while (index < zeilen.size - 1) {
+            val zeile = zeilen[index]
+            val ueber2 = h2.find(zeile)
+            val ueber3 = h3.find(zeile)
+            if (ueber2 != null) {
+                val titel = ueber2.groupValues[1].trim()
+                val abschnitt = abschnittsName.find(titel)?.groupValues?.get(1)
+                praefix = when {
+                    titel.equals("Top-level fields", ignoreCase = true) -> ""
+                    abschnitt == "tui.toml" -> "".also { art = "tui.toml" }
+                    abschnitt == "providers" -> "providers.<name>"
+                    abschnitt == "models" -> "models.<alias>"
+                    abschnitt == "services" -> "services.<name>"
+                    abschnitt == "permission" -> "permission.rules"
+                    // Das Programm selbst liest [task]; die Seite schreibt teils [background].
+                    abschnitt == "background" -> "task"
+                    else -> abschnitt
+                }
+            } else if (ueber3 != null) {
+                praefix = ueber3.groupValues[1]
+                art = "local.toml"
+            }
+            val istKopf = tabellenZeile.matches(zeile) && !trennZeile.matches(zeile) &&
+                trennZeile.matches(zeilen[index + 1])
+            if (!istKopf) {
+                index += 1
+                continue
+            }
+            val kopf = zerlege(zeile)
+            index += 2
+            val nameIndex = findeSpalte(kopf, listOf("Field"))
+            val typIndex = findeSpalte(kopf, listOf("Type"))
+            val textIndex = findeSpalte(kopf, listOf("Description"))
+            while (index < zeilen.size && tabellenZeile.matches(zeilen[index])) {
+                val zellen = zerlege(zeilen[index])
+                index += 1
+                val vorsilbe = praefix ?: continue
+                if (nameIndex < 0 || typIndex < 0 || textIndex < 0) continue
+                if (zellen.size <= maxOf(nameIndex, typIndex, textIndex)) continue
+                if (zellen[typIndex] == "`table`") continue
+                val roh = feldName.find(zellen[nameIndex]) ?: continue
+                val feld = listOf(roh.groupValues[1], roh.groupValues[2])
+                    .filter { it.isNotEmpty() }
+                    .joinToString(".")
+                val name = if (vorsilbe.isEmpty()) feld else "$vorsilbe.$feld"
+                val beschreibung = zellen[textIndex]
                 if (beschreibung.isBlank()) continue
-                val zusatz = zusatzIndex
-                    .filterValues { it >= 0 && it < zeile.size }
-                    .mapValues { (_, index) -> zeile[index] }
-                val eintrag = deute(zeile[nameIndex], beschreibung, zusatz) ?: continue
-                // Der erste Fund gewinnt: Die Übersichtstabelle steht vor den Wiederholungen
-                // weiter unten und trägt die knappere, brauchbarere Beschreibung.
-                gefunden.putIfAbsent(eintrag.name, eintrag)
+                gefunden.putIfAbsent(name, GelesenerEintrag(name, beschreibung, art))
             }
         }
-        return gefunden.values.toList()
+        return gefunden.values.toList().also { melde("Einstellungen", it.size) }
+    }
+
+    /**
+     * Liest die Variablenseite. Sie hat zwei Formen: eigene Überschriften
+     * (`` ### `KIMI_CODE_HOME` ``, Beschreibung im Absatz darunter) und Tabellen mit einer
+     * Spalte `Variable` oder `Key`.
+     */
+    fun leseVariablen(markdown: String): List<GelesenerEintrag> {
+        val gefunden = LinkedHashMap<String, GelesenerEintrag>()
+        val ueberschrift = Regex("^###\\s+`([A-Z][A-Z0-9_]{2,60})`\\s*$")
+        val zeilen = markdown.lines()
+        for ((index, zeile) in zeilen.withIndex()) {
+            val name = ueberschrift.find(zeile)?.groupValues?.get(1) ?: continue
+            val absatz = zeilen.drop(index + 1)
+                .dropWhile { it.isBlank() }
+                .takeWhile { it.isNotBlank() && !it.startsWith("#") && !it.startsWith("```") }
+                .joinToString(" ")
+            if (absatz.isNotBlank()) {
+                gefunden.putIfAbsent(name, GelesenerEintrag(name, saeubere(absatz), "Umgebungsvariable"))
+            }
+        }
+        for (tabelle in leseTabellen(markdown)) {
+            val nameIndex = findeSpalte(tabelle.kopf, listOf("Variable", "Key"))
+            val zweckIndex = findeSpalte(tabelle.kopf, listOf("Purpose", "Description"))
+            val anbieterIndex = findeSpalte(tabelle.kopf, listOf("Applicable provider"))
+            val vorgabeIndex = findeSpalte(tabelle.kopf, listOf("Default"))
+            if (nameIndex < 0 || (zweckIndex < 0 && anbieterIndex < 0)) continue
+            for (zeile in tabelle.zeilen) {
+                if (zeile.size <= nameIndex) continue
+                val name = variablenName.find(zeile[nameIndex])?.groupValues?.get(1) ?: continue
+                val beschreibung = if (zweckIndex in zeile.indices) {
+                    zeile[zweckIndex]
+                } else {
+                    "Credential key name for ${zeile.getOrElse(anbieterIndex) { "" }}; written in " +
+                        "config.toml under [providers.<name>.env], not read from the shell. " +
+                        "Default: ${zeile.getOrElse(vorgabeIndex) { "none" }}"
+                }
+                if (beschreibung.isBlank()) continue
+                gefunden.putIfAbsent(name, GelesenerEintrag(name, beschreibung, "Umgebungsvariable"))
+            }
+        }
+        return gefunden.values.toList().also { melde("Umgebungsvariablen", it.size) }
     }
 
     /** Schneidet das Dokument in Tabellen: Kopfzeile, Trennzeile, Datenzeilen. */
@@ -193,30 +241,22 @@ object DokuParser {
         .trim()
 
     /**
-     * Findet die neueste Version im Änderungsprotokoll.
-     *
-     * Das Protokoll ist absteigend sortiert — die erste Überschrift ist damit die aktuelle
-     * Version.
+     * Findet die neueste Version im Änderungsprotokoll. Es ist absteigend sortiert — die
+     * erste Überschrift ist die aktuelle Version.
      */
     fun leseNeuesteVersion(changelog: String): String =
-        Regex("(?m)^##\\s+([0-9]+\\.[0-9]+\\.[0-9]+)\\s*$")
-            .find(changelog)?.groupValues?.get(1).orEmpty()
+        changelog.lineSequence().firstNotNullOfOrNull { versionsKopf.find(it)?.groupValues?.get(1) }.orEmpty()
 
     /**
-     * Sucht die älteste Version, in der ein Name im Protokoll vorkommt.
-     *
-     * Das ist die belastbarste Auskunft auf die Frage „seit wann gibt es das?", die sich ohne
-     * Raten geben lässt. Zurück kommt zusätzlich die Belegzeile, damit in der App sichtbar
-     * bleibt, worauf sich die Angabe stützt.
+     * Sucht die älteste Version, in der ein Name im Protokoll vorkommt, samt Belegzeile.
      */
     fun findeEinzug(changelog: String, name: String, istSlash: Boolean): Pair<String, String> {
         val muster = if (istSlash) {
-            // Linke Grenze: Pfade wie „docs/en/memory“ oder „~/.claude/skills“ sind keine Befehle.
             Regex("(?<![A-Za-z0-9._~/-])`?/" + Regex.escape(name.removePrefix("/")) + "(?![a-zA-Z0-9-])")
         } else {
             Regex("`" + Regex.escape(name) + "`")
         }
-        val neuMuster = Regex("\\b(Added|New|Introduced|Renamed)\\b")
+        val neuMuster = Regex("\\b(Add|Added|New|Introduce|Introduced|Rename|Renamed)\\b")
 
         var besteVersion = ""
         var besterBeleg = ""
@@ -225,7 +265,7 @@ object DokuParser {
         var laufendeVersion = ""
 
         for (zeile in changelog.lineSequence()) {
-            val ueberschrift = Regex("^##\\s+([0-9]+\\.[0-9]+\\.[0-9]+)\\s*$").find(zeile)
+            val ueberschrift = versionsKopf.find(zeile)
             if (ueberschrift != null) {
                 laufendeVersion = ueberschrift.groupValues[1]
                 continue
@@ -241,11 +281,7 @@ object DokuParser {
             besteOhneNeu = laufendeVersion
             belegOhneNeu = gestutzt.take(220)
         }
-        return if (besteVersion.isNotEmpty()) {
-            besteVersion to besterBeleg
-        } else {
-            besteOhneNeu to belegOhneNeu
-        }
+        return if (besteVersion.isNotEmpty()) besteVersion to besterBeleg else besteOhneNeu to belegOhneNeu
     }
 
     private fun melde(was: String, anzahl: Int) {

@@ -1,11 +1,7 @@
 {
   "format": 1,
-  "app": "ClaudeKompass",
+  "app": "KimiKompass",
   "eintraege": [
-    { "versionCode": 27, "versionName": "0.6.11", "stand": "22.09.2026, 13:42 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
-    { "versionCode": 28, "versionName": "0.6.12", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
-    { "versionCode": 29, "versionName": "0.6.13", "stand": "23.09.2026, 15:22 Uhr", "notiz": "Update bereitgestellt" },
-    { "versionCode": 30, "versionName": "0.6.14", "stand": "27.09.2026, 17:05 Uhr", "notiz": "Eigenständige App: der bisher mit den anderen Kompass-Apps geteilte Kern-Code steckt jetzt in der App selbst, damit sie sich künftig in ihre eigene Richtung entwickeln kann; Funktionen unverändert" },
-    { "versionCode": 31, "versionName": "0.6.15", "stand": "30.09.2026, 12:43 Uhr", "notiz": "Neuer Reiter /config: alle 60 Punkte aus dem Einstellungsmenü von Claude Code erklärt; der Aktualisieren-Knopf ergänzt neue Menüpunkte aus dem Änderungsprotokoll" }
+    { "versionCode": 1, "versionName": "0.1.0", "stand": "30.09.2026, 18:34 Uhr", "notiz": "Erste Fassung: Kimi Code CLI auf Deutsch erklärt, mit Befehlen, Einstellungen, Settings-Panel, Best Practices und Chat." }
   ]
 }

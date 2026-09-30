@@ -2,10 +2,10 @@ package de.frank.kompass.data.local
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -96,7 +96,8 @@ interface EintragDao {
     @Query("SELECT COUNT(*) FROM eintraege WHERE entfernt = 0 AND TRIM(erklaerung) = ''")
     suspend fun anzahlUnerklaerte(): Int
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // Upsert statt REPLACE: REPLACE löscht die Zeile erst und nimmt per CASCADE Fragen und Verlauf mit.
+    @Upsert
     suspend fun setze(eintraege: List<EintragEntity>)
 
     /**

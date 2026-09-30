@@ -118,44 +118,12 @@ class Aktualisierer(
                 )
             }
 
-            // --- Zweite Quelle: das Änderungsprotokoll -----------------------------------
-            // Die Übersichtstabellen sind nicht vollständig. `/output-style` kam in 2.1.269
-            // zurück und steht in keiner Zeile der Befehlstabelle; `bashEditDiffEnabled` und
-            // `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` fehlen ebenso in ihren Listen.
-            // Solange die Tabellen die einzige Quelle waren, konnte kein noch so oft gedrückter
-            // Knopf sie finden. Das Protokoll schliesst diese Lücke.
-            //
-            // Die Doku behält den Vorrang: Steht ein Name in beiden Quellen, gilt ihr Text.
-            // Die Ernte ergänzt nur, was dort fehlt — sie ersetzt nie etwas.
-            val slashAusProtokoll = ProtokollErnte.leseSlashBefehle(changelog)
-            val settingsAusProtokoll = ProtokollErnte.leseEinstellungen(changelog)
-            val variablenAusProtokoll = ProtokollErnte.leseVariablen(changelog)
-
-            // Eine leere Ernte heisst: Das Protokoll hat seine Form geändert. Das darf den Lauf
-            // nicht stoppen — die Doku-Tabellen tragen ihn weiter —, aber es darf auch nicht
-            // still bleiben, sonst fehlt die zweite Quelle unbemerkt wieder.
-            probe(
-                slashAusProtokoll.isNotEmpty() && settingsAusProtokoll.isNotEmpty(),
-                "Aus dem Änderungsprotokoll kam keine Ernte — hat es seine Form geändert?",
-                "Aktualisierer",
-                "fuehreAus",
-                mapOf(
-                    "slash" to slashAusProtokoll.size,
-                    "einstellungen" to settingsAusProtokoll.size,
-                    "variablen" to variablenAusProtokoll.size,
-                ),
-            )
-
-            val slashGelesen = ergaenze(slashAusDoku, slashAusProtokoll)
-            val settingsGelesen = ergaenze(settingsAusDoku, settingsAusProtokoll)
-            // Fällt die Variablenliste aus, bleibt auch die Ernte draussen. Sonst wäre sie für
-            // jede dort dokumentierte Variable die einzige Quelle und würde deren Doku-Text
-            // durch eine Protokollzeile ersetzen — dreihundert „geänderte Beschreibungen", die
-            // der nächste gesunde Lauf wieder zurückdreht. Die Variablen, die nur im Protokoll
-            // stehen, kommen dann eben beim nächsten Lauf; verloren geht dabei nichts, denn der
-            // Bestand ist in diesem Fall ohnehin vor der Verschwunden-Regel geschützt.
-            val variablenGelesen =
-                if (variablenBrauchbar) ergaenze(variablenAusDoku, variablenAusProtokoll) else emptyList()
+            // Das Kimi-Änderungsprotokoll schreibt Prosa ohne feste Signalwörter für Befehle und
+            // Schlüssel — eine Ernte daraus brächte mehr Fehltreffer als Funde. Quelle für
+            // Befehle, Einstellungen und Variablen sind deshalb allein die Doku-Seiten.
+            val slashGelesen = slashAusDoku
+            val settingsGelesen = settingsAusDoku
+            val variablenGelesen = if (variablenBrauchbar) variablenAusDoku else emptyList()
 
             val gelesen = mapOf(
                 Bereich.SLASH to slashGelesen,
@@ -200,7 +168,7 @@ class Aktualisierer(
                             bereich = bereich,
                             name = eintrag.name,
                             kategorie = eintrag.kategorie.ifBlank { "Neu dazugekommen" },
-                            art = eintrag.art.ifBlank { if (bereich == Bereich.SLASH) "Eingebaut" else "settings.json" },
+                            art = eintrag.art.ifBlank { if (bereich == Bereich.SLASH) "Eingebaut" else "config.toml" },
                             kurz = eintrag.beschreibung.take(140),
                             englisch = eintrag.beschreibung,
                             // Bleibt leer: Genau daran erkennt der nächste Schritt, dass hier
@@ -221,7 +189,7 @@ class Aktualisierer(
                             entferntInVersion = "",
                             ersatz = "",
                             art = if (vorhanden.art == "Entfernt") {
-                                eintrag.art.ifBlank { if (bereich == Bereich.SLASH) "Eingebaut" else "settings.json" }
+                                eintrag.art.ifBlank { if (bereich == Bereich.SLASH) "Eingebaut" else "config.toml" }
                             } else {
                                 vorhanden.art
                             },
@@ -240,12 +208,16 @@ class Aktualisierer(
                     }
                 }
 
-                val fehlend = bekannt.values.filter { vorhanden ->
+                // Als verschwunden gilt nur ein eingebauter Befehl oder Alias, den die
+                // Befehlsseite nicht mehr nennt. Die mitgelieferte Wissensbasis stammt aus dem
+                // Programm selbst und kennt mehr als die Doku-Seiten (versteckte Befehle,
+                // Schlüssel unter anderem Abschnittsnamen). Config und Panel werden deshalb nur
+                // ergänzt — sonst stünde beim ersten Lauf die halbe Liste unter „Entfernt".
+                val fehlend = if (bereich != Bereich.SLASH) emptyList() else bekannt.values.filter { vorhanden ->
                     !vorhanden.entfernt &&
                         vorhanden.name !in gelesenNamen &&
-                        // Umgebungsvariablen stehen nicht in der Einstellungsliste. Ohne diese
-                        // Ausnahme gälten sie bei jedem Lauf als verschwunden.
-                        !(!variablenBrauchbar && vorhanden.art == "Umgebungsvariable")
+                        vorhanden.art in setOf("Eingebaut", "Alias") &&
+                        vorhanden.name !in NUR_IM_PROGRAMM
                 }
 
                 // Beim allerersten Lauf nach dem Auswertungsfehler wird aufgeräumt: Ein
@@ -432,7 +404,7 @@ class Aktualisierer(
                 }
             }
             throw abbruch
-        } catch (fehler: Exception) {
+        } catch (fehler: Exception) { // no-cancellation-rethrow (CancellationException wird oben neu geworfen)
             val text = fehler.message ?: "Die Aktualisierung ist fehlgeschlagen."
             KompassLog.error("Aktualisierer", "fuehreAus", "Lauf abgebrochen", mapOf("grund" to text))
             repository.ladeLauf(laufId)?.let {
@@ -778,9 +750,9 @@ class Aktualisierer(
          * ändert — und sie gelten je Quelle, damit eine gesunde Liste eine kaputte nicht
          * überdeckt.
          */
-        const val MINDEST_SLASH = 40
-        const val MINDEST_EINSTELLUNGEN = 40
-        const val MINDEST_VARIABLEN = 20
+        const val MINDEST_SLASH = 25
+        const val MINDEST_EINSTELLUNGEN = 30
+        const val MINDEST_VARIABLEN = 10
 
         /**
          * Ab so vielen offenen Erklärungen wird gefragt, statt losgelegt.
@@ -792,5 +764,13 @@ class Aktualisierer(
 
         /** So viele Fehlschläge hintereinander gelten als „die Verbindung ist weg". */
         const val ABBRUCH_NACH_FEHLERN = 5
+
+        /**
+         * Befehle aus der mitgelieferten Wissensbasis, die das Programm kennt, die Befehlsseite
+         * aber nicht nennt. Sie fehlen dort immer und sind deshalb kein Zeichen für einen Wegfall.
+         */
+        val NUR_IM_PROGRAMM = setOf(
+            "/tower", "/effort", "/remote-control", "/thinking", "/providers", "/disconnect", "/rc", "/write-goal",
+        )
     }
 }

@@ -1,4 +1,4 @@
-package de.frank.claudekompass
+package de.frank.kimikompass
 
 import java.io.File
 import org.json.JSONObject

@@ -1,4 +1,4 @@
-package de.frank.claudekompass
+package de.frank.kimikompass
 
 import de.frank.kompass.tts.TextSaeuberer
 import org.junit.Assert.assertEquals

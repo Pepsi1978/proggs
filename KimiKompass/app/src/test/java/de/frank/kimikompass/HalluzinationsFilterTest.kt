@@ -1,4 +1,4 @@
-package de.frank.claudekompass
+package de.frank.kimikompass
 
 import de.frank.kompass.audio.FilterSchalter
 import de.frank.kompass.audio.GroqAbschnitt

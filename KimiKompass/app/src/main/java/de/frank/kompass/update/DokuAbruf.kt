@@ -27,7 +27,7 @@ class DokuAbruf {
         val anfrage = Request.Builder()
             .url(adresse)
             .header("Accept", "text/plain, text/markdown, */*")
-            .header("User-Agent", "ClaudeKompass/1.0 (Android)")
+            .header("User-Agent", "KimiKompass/1.0 (Android)")
             .build()
         client.newCall(anfrage).awaitAntwort().use { antwort ->
             if (!antwort.isSuccessful) {
@@ -48,9 +48,10 @@ class DokuAbruf {
     fun beende() = client.beendeSanft("DokuAbruf")
 
     companion object {
-        const val URL_BEFEHLE = "https://code.claude.com/docs/en/commands.md"
-        const val URL_EINSTELLUNGEN = "https://code.claude.com/docs/en/settings-reference.md"
-        const val URL_VARIABLEN = "https://code.claude.com/docs/en/env-vars.md"
+        private const val DOKU = "https://raw.githubusercontent.com/MoonshotAI/kimi-code/main/docs/en"
+        const val URL_BEFEHLE = "$DOKU/reference/slash-commands.md"
+        const val URL_EINSTELLUNGEN = "$DOKU/configuration/config-files.md"
+        const val URL_VARIABLEN = "$DOKU/configuration/env-vars.md"
 
         /**
          * Das Änderungsprotokoll kommt aus dem Quellverzeichnis statt von der Doku-Seite.
@@ -59,6 +60,6 @@ class DokuAbruf {
          * „seit wann gibt es das?" die wichtigen.
          */
         const val URL_CHANGELOG =
-            "https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md"
+            "$DOKU/release-notes/changelog.md"
     }
 }

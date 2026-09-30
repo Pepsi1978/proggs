@@ -1,10 +1,12 @@
-# Claude Kompass
+# Kimi Kompass
 
-Android-App, die Claude Code erklärt — auf Deutsch, auf dem Niveau einer zehnten Klasse
-Realschule, mit Vorlesen und Rückfragen per Mikrofon.
+Android-App, die **Kimi Code CLI** (Moonshot AI) erklärt — auf Deutsch, auf dem Niveau einer
+zehnten Klasse Realschule, mit Vorlesen und Rückfragen per Mikrofon. Schwester-App von
+Claude Kompass; Aufbau, Bedienung und Code sind gleich, nur Wissensbasis und Abgleich sind auf
+Kimi zugeschnitten.
 
-**Zielgerät:** Galaxy Z Fold 8 (SM-F971B). Das Cover-Display ist der Normalfall, nach dem
-gestaltet wird; aufgeklappt wird der Gesprächsbereich zweispaltig.
+**Zielgerät:** Galaxy Z Fold 8 (SM-F971B). Das Cover-Display ist der Normalfall; aufgeklappt
+wird der Gesprächsbereich zweispaltig.
 
 ---
 
@@ -12,132 +14,56 @@ gestaltet wird; aufgeklappt wird der Gesprächsbereich zweispaltig.
 
 | Bereich | Was drinsteht |
 |---|---|
-| **Slash-Befehle** | Alle Befehle, alphabetisch, je mit ausführlicher Erklärung und der Version, in der sie dazukamen |
-| **Config** | Einstellungen aus `settings.json` und Umgebungsvariablen |
-| **/config** | Jeder Punkt des Einstellungsmenüs, das `/config` öffnet, in Menü-Reihenfolge |
-| **Best Practices** | 26 Artikel zur Arbeitsweise mit der aktuellen Fassung |
+| **Slash-Befehle** | Alle Befehle, Aliase und mitgelieferten Skills, je mit ausführlicher Erklärung |
+| **Config** | Schlüssel aus `config.toml`, `tui.toml`, `.kimi-code/local.toml` und die Umgebungsvariablen |
+| **/config** | Jeder Punkt des Settings-Panels, das `/settings` (Alias `/config`) öffnet |
+| **Best Practices** | Artikel zur Arbeitsweise mit Kimi Code CLI |
 | **Chat** | Mehrere Gespräche nebeneinander; Antworten beziehen Befehle und Einstellungen mit ein |
 
-Unter jedem Eintrag sitzen dieselben vier Knöpfe:
-
-- **Vorlesen** — Absatz für Absatz, mit vorausschauender Synthese
-- **Fragen** — Frage sprechen, Antwort landet im Klapp-Menü unter dem Eintrag
-- **Mehr** — die Erklärung wird ausführlicher; jede Stufe wird gezählt
-- **Zurück** — holt die vorherige, kürzere Fassung wieder (erscheint erst, wenn es etwas zurückzunehmen gibt)
-
-Ganz unten in den beiden Nachschlage-Bereichen steht ein Klapp-Bereich **Entfernte Einträge**:
-was es einmal gab, in welcher Version es wegfiel und was seine Aufgabe übernommen hat.
-
-## Der Aktualisieren-Knopf
-
-Oben in der Kopfleiste. Er holt die offiziellen Unterlagen und das Änderungsprotokoll, gleicht
-sie mit dem Bestand ab und spielt die Unterschiede ein.
-
-Fünf Dinge, die dabei bewusst so gebaut sind:
-
-- **Zwei Quellen, nicht eine.** Die offiziellen Übersichtsseiten sind nicht vollständig:
-  `/output-style` kam in 2.1.269 zurück und steht bis heute in keiner Zeile der
-  Befehlstabelle, `bashEditDiffEnabled` und `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS`
-  fehlen ebenso in ihren Listen. Solange die Tabellen die einzige Quelle waren, konnte kein
-  noch so oft gedrückter Knopf sie finden. Deshalb wird zusätzlich das Änderungsprotokoll
-  geerntet — streng: ein Befehl gilt nur, wenn er unmittelbar hinter `Added` steht, eine
-  Einstellung nur mit ihrem Signalwort daneben, eine Variable nur mit eigener Vorsilbe.
-  Sonst stünden Pfade aus einer Fehlerbehebung (`/etc`, `/tmp`) als Befehle in der App.
-  Die Doku behält den Vorrang; die Ernte ergänzt nur, was dort fehlt. Gelesen wird immer die
-  ganze Historie — ein Zeitfenster hätte `/output-style` beim nächsten Lauf wieder
-  herausfallen lassen, und er wäre fälschlich als entfernt erschienen.
-- **Namen werden ohne Modell gelesen.** Die Markdown-Tabellen werden direkt ausgewertet. Ein
-  Modell könnte einen Befehl erfinden oder einen echten übersehen — beim Nachschlagen wäre
-  beides schlimm. Erklärt wird erst danach. Gelesen wird dabei nur die Übersichtstabelle, an
-  ihrer Kopfzeile erkannt, und daraus die Spalte, die wirklich `Description` heisst: Die
-  Einstellungsseite trägt dreizehn Tabellen und vier Spalten, und wer blind die letzte nimmt,
-  hält „Any file" für eine Beschreibung.
-- **Untergrenzen schützen den Bestand.** Kommen aus einer Unterlage zu wenige Einträge zurück,
-  bricht der Lauf ab, statt jeden vorhandenen Eintrag als verschwunden zu behandeln. Die
-  Grenzen gelten je Quelle — eine gesunde Variablenliste darf eine kaputte Befehlsliste nicht
-  überdecken.
-- **Erklärt wird nur, was noch keine Erklärung hat.** Ein Eintrag, der auf Deutsch dasteht,
-  geht nie wieder ans Modell — auch dann nicht, wenn sich sein englischer Text geändert hat.
-  Der neue Originaltext wird still nachgeführt.
-- **Jeder Zwischenstand wird sofort gespeichert.** Die neuen Namen sind in der Datenbank,
-  bevor die erste Erklärung geschrieben wird, und jede Erklärung wird einzeln gesichert. Ein
-  Abbruch kostet damit höchstens den einen Eintrag, an dem er passierte — nicht den ganzen
-  Lauf.
-
-Stehen mehr als 40 Erklärungen an, fragt die App vorher. Jede Erklärung ist eine Anfrage an
-das Modell; ein Sprung über mehrere Fassungen bringt schnell dreihundert neue Einträge mit.
-Bis die Erklärung da ist, steht der Eintrag mit seinem englischen Originaltext in der Liste
-und ist durchsuchbar; **Mehr** holt die deutsche Fassung einzeln nach.
-
-Zum Schluss zeigt ein **Bericht**, was der Lauf getan hat: welche Slash-Befehle dazukamen,
-welche Einstellungen und Variablen, was aus Claude Code entfernt wurde und wo sich der
-offizielle Text geändert hat — mit Namen, nicht nur mit Zahlen.
-
-Neu dazugekommene Einträge sind golden umrandet und mit **NEU** markiert — bis zum nächsten
-Lauf. Danach gehören sie zum Bestand.
+Unter jedem Eintrag sitzen dieselben vier Knöpfe: **Vorlesen**, **Fragen**, **Mehr**, **Zurück**.
+Ganz unten steht ein Klapp-Bereich **Entfernte Einträge**.
 
 ## Wissensbasis
 
-Die mitgelieferten Daten stehen in `app/src/main/assets/`. Sie werden aus den Quellen unter
-`tools/` erzeugt; die Angabe „seit Version X" stammt aus dem offiziellen Änderungsprotokoll und
-trägt die Belegzeile mit, auf die sie sich stützt.
+Die mitgelieferten Daten stehen in `app/src/main/assets/` und stammen aus dem Programm selbst
+(Kimi Code CLI **2.1.1**, `kimi.exe`), deutsch erklärt. Generator-Skripte liegen in `tools/`.
 
-Auslieferungsstand: **Claude Code 2.1.268**. Neuere Fassungen holt der Aktualisieren-Knopf.
+- `slash_befehle.json` – 71 Einträge (Eingebaut, Alias, Mitgelieferter Skill, Muster)
+- `config_einstellungen.json` – 129 (config.toml, tui.toml, Umgebungsvariablen)
+- `panel_eintraege.json` – 29 Punkte des Settings-Panels
+- `best_practices.json` – 12 Artikel
 
-## Sprache und Ton
+## Der Aktualisieren-Knopf
 
-- Alles auf Deutsch mit echten Umlauten — auch Bedienhinweise, Fehlermeldungen und Protokoll.
-- Erklärungen auf dem Niveau einer zehnten Klasse Realschule: kurze Hauptsätze, keine
-  Fachbegriffe ohne Erklärung, ein Beispiel statt einer Definition.
-- Kein stiller Fehlschlag: Jede Meldung sagt, was nicht ging, warum, und was man tun kann.
+Oben in der Kopfleiste. Er holt die offizielle Doku aus
+`github.com/MoonshotAI/kimi-code` (`docs/en`) und gleicht sie mit dem Bestand ab:
+
+| Unterlage | Datei |
+|---|---|
+| Befehle | `reference/slash-commands.md` (Tabellen `Command \| Alias \| Description \| Always available`) |
+| Einstellungen | `configuration/config-files.md` (Tabellen `Field \| Type \| Default \| Description` je Abschnitt) |
+| Variablen | `configuration/env-vars.md` (Überschriften `` ### `KIMI_…` `` plus Tabellen) |
+| Fassung | `release-notes/changelog.md` (Köpfe wie `## 2.1.1 (2026-09-24)`) |
+
+Bewusst so gebaut:
+
+- **Namen werden ohne Modell gelesen.** Tabellen werden direkt ausgewertet, Spalten über ihren
+  Namen gefunden. Erklärt wird erst danach, über Codex.
+- **Nur Befehle können „entfernt“ werden.** Die Wissensbasis stammt aus dem Programm und kennt
+  mehr als die Doku-Seiten (etwa `/tower`, `/effort`, `/remote-control`). Config und Panel
+  werden deshalb nur ergänzt; bei Befehlen sind die nur im Programm bekannten Namen von der
+  Entfernt-Regel ausgenommen (`Aktualisierer.NUR_IM_PROGRAMM`).
+- **Untergrenzen schützen den Bestand.** Kommen zu wenige Einträge zurück (Befehle < 25,
+  Einstellungen < 30), bricht der Lauf ab, statt den Bestand zu leeren.
+- **Panel-Neuerungen** kommen aus dem Änderungsprotokoll: Zeilen, die `` `/settings` `` nennen,
+  etwa „the TUI mode setting in `/settings`“ oder „`/settings` → Mermaid diagrams“.
+- **Jeder Zwischenstand wird sofort gespeichert**, jede Erklärung einzeln.
 
 ## Schlüssel
 
-Drei Stück, alle in den Einstellungen, alle verschlüsselt abgelegt
-(`EncryptedSharedPreferences`) und alle mit einem Prüfknopf, der einen echten kleinen Aufruf macht:
-
-| Wofür | Dienst |
-|---|---|
-| Vorlesen (Standard) | Google Cloud Text-to-Speech, Chirp-3-HD-Stimmen |
-| Eigene Stimme | Alibaba Model Studio (DashScope, internationaler Endpunkt) |
-| Spracheingabe | Groq, `whisper-large-v3-turbo` |
-
-Die KI-Antworten laufen über Codex. Die Anmeldung geschieht über einen Gerätecode (vier plus
-fünf Zeichen) im Browser — ein Passwort wird in der App nie eingegeben.
-
-**Lässt sich die verschlüsselte Ablage auf einem Gerät nicht öffnen, werden Schlüssel NICHT
-ersatzweise im Klartext gespeichert.** Die App sagt es stattdessen. Ein stiller Rückfall auf
-Klartext wäre die Art Fehler, die man erst bemerkt, wenn der Schlüssel schon abgeflossen ist.
-
-## Vorlesen
-
-Die Absatz-Pipeline nach dem Vorbild von CortexAndroid:
-
-1. Ein Absatz ist eine Vorlese-Einheit. Absätze werden weder zusammengelegt noch mitten drin
-   geteilt — nur ein Absatz über 1000 Zeichen wird an Satzgrenzen aufgeteilt, weil die Dienste
-   sonst ablehnen.
-2. Während Absatz *n* gesprochen wird, sind *n+1* und *n+2* schon in Arbeit. Der erste Ton kommt
-   dadurch nach Bruchteilen einer Sekunde statt nach dem Synthetisieren des ganzen Textes.
-3. Zwischen zwei Absätzen liegt rund eine Sekunde — hörbarer Atem, kein Loch.
-4. Ein abgelehnter Schlüssel hält die ganze Reihe an und wird im Klartext gemeldet. Ein
-   einzelner abgelehnter Absatz wird übersprungen, damit der Rest weiterläuft.
-
-## Spracheingabe
-
-`whisper-large-v3-turbo` über Groq, mit `response_format=verbose_json` — ohne dieses Format
-fehlen die Kennzahlen, auf denen die Filter stehen.
-
-Vier Schichten gegen erfundene Sätze, alle einzeln abschaltbar:
-
-1. **Stille vorab erkennen** — eine Aufnahme ohne Sprache wird gar nicht erst hochgeladen.
-2. **Kennzahlen prüfen** — Abschnitte mit den typischen Werten einer Erfindung fallen weg.
-3. **Zeitstempel abgleichen** — Abschnitte in stillen Zeitfenstern fallen weg. Würden *alle*
-   fallen, bleibt das Ergebnis von Schicht 2 stehen (dann liegt eher ein Zeitversatz vor).
-4. **Floskeln sperren** — nur wenn die Ausgabe kurz ist UND ringsum Stille war. Ein bewusst
-   gesagtes „Vielen Dank" bleibt.
-
-Aufnahmen über 20 MB werden **vor** dem Senden an einer Sprechpause geteilt. Der Ablehnungsfehler
-413 lässt sich nicht wiederholen — ohne dieses Teilen wäre ein langes Diktat vollständig verloren.
+Alle in den Einstellungen, verschlüsselt abgelegt (`EncryptedSharedPreferences`), mit Prüfknopf:
+Google Cloud TTS (Vorlesen), Alibaba DashScope (eigene Stimme), Groq Whisper (Spracheingabe).
+KI-Antworten laufen über Codex (Anmeldung per Gerätecode).
 
 ## Bauen
 
@@ -147,21 +73,23 @@ Aufnahmen über 20 MB werden **vor** dem Senden an einer Sprechpause geteilt. De
 ./gradlew :app:assembleRelease         # Release inkl. R8
 ```
 
-Die Wissensbasis neu erzeugen (setzt eine lokale Kopie des Änderungsprotokolls voraus):
+Version steht ausschliesslich in `app/src/main/assets/versionslog.json`.
 
-```
-python tools/baue_assets.py app/src/main/assets
-```
+**Stolperfalle:** Schlägt der erste Release-Build nach einer Änderung mit gesperrtem
+`classes.dex` oder „Unresolved reference“ fehl: `./gradlew --stop`,
+`app/build/kotlin/compileReleaseKotlin` und `app/build/tmp/kotlin-classes/release` löschen,
+neu bauen.
 
 ## Aufbau
 
 ```
 observability/   Protokoll (JSON-Zeilen), globaler Fehlerfänger, Logik-Sonden
 data/            Room, Einstellungen, Wissensbasis-Lader, Sicherung
-update/          Doku-Abruf, Tabellen-Auswertung, Abgleich
+update/          Doku-Abruf, Tabellen-Auswertung, Abgleich (Kimi-spezifisch)
 ai/              Codex: Anmeldung, Anfragen, Anweisungstexte
-audio/           Aufnahme, Groq, die vier Filterschichten, WAV-Schnitt
+audio/           Aufnahme, Groq, Filterschichten, WAV-Schnitt
 tts/             Drei Vorlese-Dienste, eigene Stimme, Absatz-Pipeline
-ui/              Theme (Gold, hell und dunkel), Bausteine, vier Bildschirme
+ui/              Theme, Bausteine, Bildschirme
 vm/              Ein Modell je Aufgabe
+AppProfil.kt     Alles, worin sich Kimi Kompass von Claude Kompass unterscheidet
 ```
