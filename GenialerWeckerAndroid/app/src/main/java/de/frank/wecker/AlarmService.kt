@@ -59,6 +59,7 @@ class AlarmService : Service() {
     private var ringId = 0L
     /** Failures are attributed to the ring the request was meant for. */
     private fun Intent.reject(action: String) {
+        trace("reject $action id=${getStringExtra("id")} ring=${getLongExtra("ring", 0)} current=${current?.id}/$ringId")
         val id = getStringExtra("id") ?: return
         report(id, action, false, getLongExtra("ring", 0))
     }
@@ -299,8 +300,9 @@ class AlarmService : Service() {
         if (alarm != null && !alarm.photoRequired) builder.addAction(0, "Wecker aus", action("STOP", 3, alarm))
         return builder.build()
     }
-    /** The ring id is part of the intent identity (data URI), so an old notification can never be redirected to a newer ring. */
-    private fun action(name: String, code: Int, alarm: Alarm) = PendingIntent.getService(this, code, Intent(this, AlarmService::class.java).setAction(name)
+    /** The ring id is part of the intent identity (data URI), so an old notification can never be redirected to a newer ring.
+     *  Broadcast statt getService: die Tasten der kleinen schwebenden Nachricht erreichen den Dienst so zuverlässig. */
+    private fun action(name: String, code: Int, alarm: Alarm) = PendingIntent.getBroadcast(this, code, Intent(this, AlarmActionReceiver::class.java).setAction(name)
         .setData(android.net.Uri.parse("wecker://ring/$ringId/$name")).putExtra("id", alarm.id).putExtra("ring", ringId),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     override fun onBind(intent: Intent?): IBinder? = null
