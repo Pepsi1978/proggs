@@ -41,6 +41,8 @@ android {
 // Supertone – dieselben Stimmen wie in GenialerWeckerAndroid. Der Build lädt sie einmal nach app/tts-modelle/ (nicht im Git).
 // Whisper (Small und Large V3 Turbo) ist nicht in der APK: beide lädt die App bei Bedarf herunter (TurboModell.kt).
 val ladeTtsModelle by tasks.registering {
+    // Der Download greift auf Skript-Objekte zu; mit dem global eingeschalteten Konfigurations-Cache bricht der Build sonst ab.
+    notCompatibleWithConfigurationCache("lädt die TTS-Modelle mit Zugriff auf Skript-Objekte")
     val ziel = file("tts-modelle/tts")
     outputs.dir(ziel)
     doLast {
