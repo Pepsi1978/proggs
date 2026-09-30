@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -75,6 +76,7 @@ import de.frank.aufgaben.ui.theme.antippen
 import de.frank.aufgaben.ui.theme.farbenFuer
 import de.frank.aufgaben.ui.theme.glas
 import de.frank.aufgaben.ui.theme.knopf3d
+import kotlin.math.roundToInt
 
 @Composable
 fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
@@ -232,6 +234,23 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     ChipReihe { listOf(0, 5, 10, 15, 30, 60).forEach { v -> Chip(if (v == 0) "Pünktlich" else "$v Min.", e.vorlaufStandard == v) { e.vorlaufStandard = v } } }
                     Schalter("Vibration", e.vibration) { e.vibration = it }
                     Chip("Ton testen", false, icon = Icons.Rounded.PlayArrow) { vm.tonProbe() }
+                }
+                Block("Zeitleiste") {
+                    fun uhr(m: Int) = "%02d:%02d".format(m / 60, m % 60)
+                    Text("Von ${uhr(e.zeitleisteVon)} bis ${uhr(e.zeitleisteBis)} Uhr", color = f.textLeise, fontSize = 13.sp)
+                    RangeSlider(
+                        e.zeitleisteVon / 30f..e.zeitleisteBis / 30f,
+                        { r ->
+                            val von = r.start.roundToInt().coerceAtMost(46)
+                            val bis = r.endInclusive.roundToInt().coerceAtLeast(von + 2)
+                            if (von * 30 != e.zeitleisteVon) e.zeitleisteVon = von * 30
+                            if (bis * 30 != e.zeitleisteBis) e.zeitleisteBis = bis * 30
+                        },
+                        valueRange = 0f..48f, steps = 47,
+                        colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer),
+                    )
+                    Schalter("Automatisch an die Termine anpassen", e.zeitleisteAuto) { e.zeitleisteAuto = it }
+                    Text("Mit Automatik reicht die Leiste von einer Stunde vor dem ersten bis eine Stunde nach dem letzten Termin. Sobald du eine Aufgabe ziehst, zeigt sie wieder die eingestellte Spanne, damit du sie überall ablegen kannst.", color = f.textLeise, fontSize = 12.sp)
                 }
                 Block("Fokus-Timer") {
                     ChipReihe { listOf(15, 25, 45, 60).forEach { m -> Chip("$m Min.", e.fokusMinuten == m) { e.fokusMinuten = m } } }

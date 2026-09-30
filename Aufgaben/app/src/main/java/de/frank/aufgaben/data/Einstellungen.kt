@@ -85,6 +85,12 @@ class Einstellungen private constructor(context: Context) {
     var vorlaufStandard: Int get() = prefs.getInt("vorlauf", 10); set(v) = put { putInt("vorlauf", v) }
     var vibration: Boolean get() = prefs.getBoolean("vibration", true); set(v) = put { putBoolean("vibration", v) }
 
+    // ---- Zeitleiste (Minuten ab 0 Uhr, 30-Minuten-Schritte) ----
+    var zeitleisteVon: Int get() = prefs.getInt("zeitleiste_von", 5 * 60); set(v) = put { putInt("zeitleiste_von", v.coerceIn(0, 23 * 60)) }
+    var zeitleisteBis: Int get() = prefs.getInt("zeitleiste_bis", 22 * 60); set(v) = put { putInt("zeitleiste_bis", v.coerceIn(60, 24 * 60)) }
+    /** Leiste passt sich an die eingetragenen Termine an; beim Ziehen gilt wieder Von/Bis. */
+    var zeitleisteAuto: Boolean get() = prefs.getBoolean("zeitleiste_auto", false); set(v) = put { putBoolean("zeitleiste_auto", v) }
+
     // ---- Fokus ----
     var fokusMinuten: Int get() = prefs.getInt("fokus", 25); set(v) = put { putInt("fokus", v.coerceIn(5, 90)) }
 

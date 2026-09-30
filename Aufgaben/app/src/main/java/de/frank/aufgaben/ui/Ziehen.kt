@@ -24,7 +24,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** Maße einer Zeitleiste in Fensterkoordinaten. */
-class LeistenMass(val bereich: Rect, val fuenfUhrY: Float, val stundePx: Float)
+class LeistenMass(val bereich: Rect, val startY: Float, val stundePx: Float, val vonMin: Int, val bisMin: Int)
 
 /**
  * Zustand einer Ziehgeste über der ganzen Liste. Die Fingerposition wird nur in Zeichenebenen gelesen
@@ -81,8 +81,8 @@ class ZiehZustand {
         if (leiste != null) {
             val m = leiste.value
             val kartenOben = p.y - griff.y
-            val roh = 300f + (kartenOben - m.fuenfUhrY) / m.stundePx * 60f
-            val min = ((roh / 15f).roundToInt() * 15).coerceIn(5 * 60, 22 * 60)
+            val roh = m.vonMin + (kartenOben - m.startY) / m.stundePx * 60f
+            val min = ((roh / 15f).roundToInt() * 15).coerceIn(m.vonMin, m.bisMin)
             setze(null, leiste.key to min)
             return
         }

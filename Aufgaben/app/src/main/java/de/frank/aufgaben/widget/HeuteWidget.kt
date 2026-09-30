@@ -46,6 +46,7 @@ import androidx.glance.unit.ColorProvider as Farbe
 import de.frank.aufgaben.MainActivity
 import de.frank.aufgaben.R
 import de.frank.aufgaben.data.Aufgabe
+import de.frank.aufgaben.data.Einstellungen
 import de.frank.aufgaben.data.AufgabenRepository
 import de.frank.aufgaben.data.Prioritaet
 import de.frank.aufgaben.data.Tage
@@ -106,8 +107,11 @@ class HeuteWidget : GlanceAppWidget() {
                         items(ganztags, itemId = { it.id }) { a -> Zeile(context, a, text, leise, heute, zeigeZeit = false) }
                         item(itemId = -2L) { Spacer(GlanceModifier.height(6.dp)) }
                     }
-                    items((5..22).toList(), itemId = { -1000L - it }) { stunde ->
-                        val hier = termine.filter { t -> ((t.minuten ?: 0) / 60).coerceIn(5, 22) == stunde }
+                    val e = Einstellungen.get(context)
+                    val vonH = e.zeitleisteVon / 60
+                    val bisH = (e.zeitleisteBis / 60).coerceIn(vonH, 23)
+                    items((vonH..bisH).toList(), itemId = { -1000L - it }) { stunde ->
+                        val hier = termine.filter { t -> ((t.minuten ?: 0) / 60).coerceIn(vonH, bisH) == stunde }
                         Stunde(context, stunde, hier, jetzt / 60 == stunde, text, leise, akzent, heute)
                     }
                 }

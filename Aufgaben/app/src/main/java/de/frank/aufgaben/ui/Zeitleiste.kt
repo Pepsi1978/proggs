@@ -55,24 +55,40 @@ import de.frank.aufgaben.ui.theme.knopf3d
 import java.time.LocalTime
 import kotlinx.coroutines.delay
 
-private const val START = 5
-private const val ENDE = 22
 private val STUNDE = 42.dp
 private val OBEN = 12.dp
 private val SPALTE = 54.dp
 
 /**
- * Senkrechter Zeitpfeil von 5 bis 22 Uhr. Karten, die darüber gezogen werden, zeigen links die
+ * Spanne der Leiste in Minuten. Mit Automatik: eine Stunde vor dem ersten bis eine Stunde nach dem
+ * letzten Termin — aber nur, solange nichts gezogen wird; beim Ziehen gilt die eingestellte Spanne.
+ */
+private fun spanne(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, zieht: Boolean): Pair<Int, Int> {
+    if (!auto || zieht || termine.isEmpty()) return von to bis
+    val erster = termine.minOf { it.minuten ?: von }
+    val letzter = termine.maxOf { (it.minuten ?: von) + maxOf(it.dauer, 30) }
+    val a = ((erster / 60 - 1) * 60).coerceIn(0, 23 * 60)
+    val b = (((letzter + 59) / 60 + 1) * 60).coerceIn(a + 60, 24 * 60)
+    return a to b
+}
+
+/**
+ * Senkrechter Zeitpfeil über die eingestellte Spanne. Karten, die darüber gezogen werden, zeigen links die
  * Uhrzeit, die beim Loslassen gilt (in 15-Minuten-Schritten, sie wandert mit dem Finger mit).
  */
 @Composable
-fun Zeitleiste(tag: Long, termine: List<Aufgabe>, istHeute: Boolean, zustand: ZiehZustand, onTipp: (Aufgabe) -> Unit, onErledigt: (Aufgabe) -> Unit) {
+fun Zeitleiste(
+    tag: Long, termine: List<Aufgabe>, istHeute: Boolean, zustand: ZiehZustand, vonEinst: Int, bisEinst: Int, auto: Boolean,
+    onTipp: (Aufgabe) -> Unit, onErledigt: (Aufgabe) -> Unit,
+) {
     val f = LocalFarben.current
     val dichte = LocalDensity.current
     val messer = rememberTextMeasurer()
     val stundePx = with(dichte) { STUNDE.toPx() }
     val obenPx = with(dichte) { OBEN.toPx() }
-    val hoehe = OBEN + STUNDE * (ENDE - START) + 30.dp
+    val (vonMin, bisMin) = spanne(termine, vonEinst, bisEinst, auto, zustand.aufgabe != null)
+    val stunden = (bisMin - vonMin) / 60f
+    val hoehe = OBEN + STUNDE * stunden + 30.dp
     var jetzt by remember { mutableIntStateOf(LocalTime.now().let { it.hour * 60 + it.minute }) }
     if (istHeute) LaunchedEffect(Unit) {
         while (true) { delay(30_000); jetzt = LocalTime.now().let { it.hour * 60 + it.minute } }
@@ -83,22 +99,22 @@ fun Zeitleiste(tag: Long, termine: List<Aufgabe>, istHeute: Boolean, zustand: Zi
         Modifier.fillMaxWidth().height(hoehe)
             .onGloballyPositioned { c ->
                 val b = c.boundsInRoot()
-                zustand.registriereLeiste(tag, LeistenMass(Rect(b.left, b.top, b.right, b.bottom), b.top + obenPx, stundePx))
+                zustand.registriereLeiste(tag, LeistenMass(Rect(b.left, b.top, b.right, b.bottom), b.top + obenPx, stundePx, vonMin, bisMin))
             },
     ) {
         val breite = maxWidth
         Canvas(Modifier.fillMaxSize()) {
             val x = SPALTE.toPx() - 8.dp.toPx()
             val y0 = obenPx
-            val y1 = obenPx + stundePx * (ENDE - START)
+            val y1 = obenPx + stundePx * stunden
             // Stundenraster
-            for (s in START..ENDE) {
-                val y = y0 + (s - START) * stundePx
+            for (s in (vonMin + 59) / 60..bisMin / 60) {
+                val y = y0 + (s * 60 - vonMin) / 60f * stundePx
                 drawLine(f.textSchwach.copy(alpha = 0.18f), Offset(x + 8.dp.toPx(), y), Offset(size.width, y), 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 8f)))
                 drawLine(f.textLeise.copy(alpha = 0.6f), Offset(x - 6.dp.toPx(), y), Offset(x + 4.dp.toPx(), y), 2f, StrokeCap.Round)
                 val text = messer.measure("%02d:00".format(s), TextStyle(color = f.textLeise, fontSize = 11.sp, fontWeight = FontWeight.Medium))
                 drawText(text, topLeft = Offset(x - 10.dp.toPx() - text.size.width, y - text.size.height / 2f))
-                if (s < ENDE) drawLine(f.textSchwach.copy(alpha = 0.5f), Offset(x - 3.dp.toPx(), y + stundePx / 2), Offset(x + 2.dp.toPx(), y + stundePx / 2), 1.5f)
+                if (s * 60 + 30 <= bisMin) drawLine(f.textSchwach.copy(alpha = 0.5f), Offset(x - 3.dp.toPx(), y + stundePx / 2), Offset(x + 2.dp.toPx(), y + stundePx / 2), 1.5f)
             }
             // Der Zeitpfeil
             drawLine(Brush.verticalGradient(listOf(f.primaer, f.sekundaer), y0, y1), Offset(x, y0 - 6.dp.toPx()), Offset(x, y1 + 12.dp.toPx()), 3.5.dp.toPx(), StrokeCap.Round)
@@ -107,8 +123,9 @@ fun Zeitleiste(tag: Long, termine: List<Aufgabe>, istHeute: Boolean, zustand: Zi
             }
             drawPath(spitze, f.sekundaer)
             // Jetzt-Linie
-            if (istHeute && jetzt in START * 60..ENDE * 60) {
-                val y = y0 + (jetzt - START * 60) / 60f * stundePx
+            if (vonMin % 60 != 0) drawLine(f.textSchwach.copy(alpha = 0.5f), Offset(x - 3.dp.toPx(), y0), Offset(x + 2.dp.toPx(), y0), 1.5f)
+            if (istHeute && jetzt in vonMin..bisMin) {
+                val y = y0 + (jetzt - vonMin) / 60f * stundePx
                 drawLine(f.gefahr, Offset(x, y), Offset(size.width, y), 2.dp.toPx(), StrokeCap.Round)
                 drawCircle(f.gefahr, 6.dp.toPx(), Offset(x, y))
                 drawCircle(Color.White, 2.5.dp.toPx(), Offset(x, y))
@@ -127,8 +144,8 @@ fun Zeitleiste(tag: Long, termine: List<Aufgabe>, istHeute: Boolean, zustand: Zi
         val nSpalten = spalten.size.coerceAtLeast(1)
         val flaeche = breite - SPALTE - 6.dp
         sortiert.forEach { a ->
-            val min = (a.minuten ?: START * 60).coerceIn(START * 60, ENDE * 60)
-            val oben = OBEN + STUNDE * ((min - START * 60) / 60f)
+            val min = (a.minuten ?: vonMin).coerceIn(vonMin, bisMin)
+            val oben = OBEN + STUNDE * ((min - vonMin) / 60f)
             val h = (STUNDE * (maxOf(a.dauer, 30) / 60f) - 3.dp).coerceAtLeast(34.dp)
             val sp = spalteVon[a.id] ?: 0
             Box(
@@ -139,7 +156,7 @@ fun Zeitleiste(tag: Long, termine: List<Aufgabe>, istHeute: Boolean, zustand: Zi
         // Vorschau beim Ziehen: Geisterblock plus Uhrzeit links
         if (schweben != null) {
             val ziel by animateFloatAsState(
-                with(dichte) { (OBEN + STUNDE * ((schweben - START * 60) / 60f)).toPx() },
+                with(dichte) { (OBEN + STUNDE * ((schweben - vonMin) / 60f)).toPx() },
                 spring(dampingRatio = 0.9f, stiffness = 900f), label = "zeit",
             )
             val dauer = zustand.aufgabe?.dauer ?: 30

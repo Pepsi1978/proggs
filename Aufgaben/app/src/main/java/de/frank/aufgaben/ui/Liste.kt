@@ -128,6 +128,9 @@ fun ListeBildschirm(vm: AppViewModel) {
     val dichte = LocalDensity.current
     val einstellungenStand by vm.einstellungen.stand.collectAsState()
     val szeneZeigen = remember(einstellungenStand) { vm.einstellungen.szeneZeigen }
+    val leisteVon = remember(einstellungenStand) { vm.einstellungen.zeitleisteVon }
+    val leisteBis = remember(einstellungenStand) { vm.einstellungen.zeitleisteBis.coerceAtLeast(leisteVon + 60) }
+    val leisteAuto = remember(einstellungenStand) { vm.einstellungen.zeitleisteAuto }
 
     // Randscrollen während des Ziehens, auch bei stillstehendem Finger.
     val zieht = zustand.aufgabe != null
@@ -180,7 +183,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
                 b.heuteOffen.forEach { a -> Karte(vm, a, heute, zustand) }
                 b.heuteErledigt.forEach { a -> Karte(vm, a, heute, zustand) }
-                Zeitleiste(heute, b.heuteTermine, true, zustand, { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) })
+                Zeitleiste(heute, b.heuteTermine, true, zustand, leisteVon, leisteBis, leisteAuto, { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) })
             }
             // ---- Morgen ----
             Sektion(
@@ -190,7 +193,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             ) {
                 if (b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty()) LeerHinweis(Icons.Rounded.EventNote, "Plane schon für morgen: Aufgaben hierher ziehen oder auf die Zeitleiste fallen lassen.")
                 b.morgenOffen.forEach { a -> Karte(vm, a, heute, zustand) }
-                Zeitleiste(heute + 1, b.morgenTermine, false, zustand, { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) })
+                Zeitleiste(heute + 1, b.morgenTermine, false, zustand, leisteVon, leisteBis, leisteAuto, { vm.oeffne(it.id) }, { vm.erledigen(it, !it.erledigt) })
             }
             // ---- Prioritäten ----
             val info = mapOf(
