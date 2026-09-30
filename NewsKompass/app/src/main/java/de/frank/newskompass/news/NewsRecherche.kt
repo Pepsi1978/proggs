@@ -98,7 +98,7 @@ class NewsRecherche(
             }
             beiFortschritt(LaufFortschritt("Recherchiere Thema ${nummer + 1} von ${themen.size}: $kurz", nummer.toFloat() / schritte))
             val block = try {
-                recherchiereThema(thema, stand.modellId, stand.denktiefe, stand.ausfuehrlichkeit, vorige, bloecke.flatMap { b -> b.meldungen.map { it.titel } }, jetzt)
+                recherchiereThema(thema, stand.modellId, stand.denktiefe, thema.ausfuehrlichkeit, vorige, bloecke.flatMap { b -> b.meldungen.map { it.titel } }, jetzt)
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: Exception) {

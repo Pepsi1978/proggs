@@ -129,6 +129,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -299,6 +302,13 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                                 },
                             )
                         },
+                        aendereAusfuehrlichkeit = { stufe ->
+                            app.einstellungen.setzeThemen(
+                                app.einstellungen.stand.value.themen.map {
+                                    if (it.id == thema.id) it.copy(ausfuehrlichkeit = stufe) else it
+                                },
+                            )
+                        },
                         zeitplanAktiv = stand.zeitplanAktiv,
                         aenderePlan = { zeiten, rhythmus ->
                             app.einstellungen.setzeThemen(
@@ -390,6 +400,7 @@ private fun ThemenKarte(
     tippeMikrofon: () -> Unit,
     aendere: (String) -> Unit,
     aendereBereich: (Int, Int) -> Unit,
+    aendereAusfuehrlichkeit: (Ausfuehrlichkeit) -> Unit,
     zeitplanAktiv: Boolean,
     aenderePlan: (List<Int>, Rhythmus) -> Unit,
     loesche: () -> Unit,
@@ -606,6 +617,12 @@ private fun ThemenKarte(
                     leadingIcon = { Icon(Icons.Rounded.Tune, null, Modifier.size(AssistChipDefaults.IconSize)) },
                     shape = RoundedCornerShape(50),
                     modifier = Modifier.padding(start = 90.dp),
+                )
+                AusfuehrlichkeitRegler(
+                    stufe = thema.ausfuehrlichkeit,
+                    aendere = aendereAusfuehrlichkeit,
+                    hinweis = "Gilt für dieses Thema ab der nächsten Aktualisierung – automatisch und per Hand.",
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
                 )
                 AktualisierungsBereich(
                     thema = thema,
@@ -1094,26 +1111,74 @@ private fun kopiere(kontext: Context, text: String) {
 @Composable
 private fun AusfuehrlichkeitBereich(app: NewsApplication, stand: EinstellungenStand) {
     Column {
-        Abschnitt("Ausführlichkeit", "Wie lang jede Meldung geschrieben und vorgelesen wird — für alle Themen und deine gesprochenen Fragen.")
+        Abschnitt(
+            "Ausführlichkeit für freie Themen",
+            "Für Fragen und Themen, die du über den Mikrofonbutton unten rechts auf dem Startbildschirm einsprichst.",
+        )
         Kachel {
-            Ausfuehrlichkeit.entries.forEach { stufe ->
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { app.einstellungen.setzeAusfuehrlichkeit(stufe) }.padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = stand.ausfuehrlichkeit == stufe, onClick = { app.einstellungen.setzeAusfuehrlichkeit(stufe) })
-                    Column {
-                        Text(stufe.label, style = MaterialTheme.typography.titleMedium)
-                        Text(stufe.erklaerung, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            Text(
-                "Gilt ab dem nächsten Lauf; ausführlichere Meldungen brauchen etwas länger.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp),
+            AusfuehrlichkeitRegler(
+                stufe = stand.ausfuehrlichkeit,
+                aendere = app.einstellungen::setzeAusfuehrlichkeit,
+                hinweis = "Gilt ab der nächsten Mikrofon-Frage. Gespeicherte Themen haben ihren eigenen Regler.",
             )
+        }
+    }
+}
+
+@Composable
+private fun AusfuehrlichkeitRegler(
+    stufe: Ausfuehrlichkeit,
+    aendere: (Ausfuehrlichkeit) -> Unit,
+    hinweis: String,
+    modifier: Modifier = Modifier,
+) {
+    // Während der Geste nur diesen Regler aktualisieren, nicht die gesamte Themenliste speichern.
+    var wert by remember(stufe) { mutableStateOf(stufe.maxAbsaetze.toFloat()) }
+    val gewaehlt = Ausfuehrlichkeit.fromAbsaetze(wert.roundToInt())
+    val farben = MaterialTheme.colorScheme
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = farben.surfaceContainerHigh,
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(shape = RoundedCornerShape(12.dp), color = farben.primaryContainer, contentColor = farben.onPrimaryContainer) {
+                    Icon(Icons.Rounded.Tune, null, Modifier.padding(10.dp).size(20.dp))
+                }
+                Text("Ausführlichkeit", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            }
+            Slider(
+                value = wert,
+                onValueChange = { wert = it },
+                onValueChangeFinished = { if (gewaehlt != stufe) aendere(gewaehlt) },
+                valueRange = 2f..10f,
+                steps = 7,
+                modifier = Modifier.fillMaxWidth().semantics {
+                    contentDescription = "Ausführlichkeit pro Meldung"
+                    stateDescription = gewaehlt.umfang
+                },
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Kurz", style = MaterialTheme.typography.labelMedium, color = farben.onSurfaceVariant)
+                Text("10 Absätze", style = MaterialTheme.typography.labelMedium, color = farben.onSurfaceVariant)
+            }
+            Spacer(Modifier.height(12.dp))
+            Surface(shape = RoundedCornerShape(10.dp), color = farben.primaryContainer, contentColor = farben.onPrimaryContainer) {
+                Text(
+                    gewaehlt.umfang,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                )
+            }
+            Text(gewaehlt.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 10.dp))
+            Text(
+                gewaehlt.erklaerung,
+                style = MaterialTheme.typography.bodyMedium,
+                color = farben.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Text(hinweis, style = MaterialTheme.typography.bodySmall, color = farben.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
         }
     }
 }

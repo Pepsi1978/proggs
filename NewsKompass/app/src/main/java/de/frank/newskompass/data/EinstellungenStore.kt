@@ -65,6 +65,17 @@ class EinstellungenStore(context: Context) {
     private val _stand = MutableStateFlow(lies())
     val stand: StateFlow<EinstellungenStand> = _stand.asStateFlow()
 
+    init {
+        // Die bisher globale Auswahl einmal in bestehende Themen übernehmen und fest speichern.
+        // Danach darf der Regler für freie Sprachfragen die Themen nicht mehr verändern.
+        val roh = offen.getString(K_THEMEN, null)
+        val brauchtMigration = roh == null || runCatching {
+            val liste = JSONArray(roh)
+            (0 until liste.length()).any { !liste.getJSONObject(it).has("ausfuehrlichkeit") }
+        }.getOrDefault(false)
+        if (brauchtMigration) setzeThemen(_stand.value.themen)
+    }
+
     // --- Werte, die der Vorlese-Manager direkt liest ----------------------------------------
 
     val ttsAnbieter: TtsAnbieter get() = TtsAnbieter.fromId(offen.getString(K_TTS, null).orEmpty())
@@ -108,7 +119,9 @@ class EinstellungenStore(context: Context) {
     private fun leseThemen(): List<Thema> {
         // Das Standardthema trägt eine feste ID: Solange die Liste nie gespeichert wurde, entsteht es bei
         // jedem Lesen neu — mit zufälliger ID fände der Wecker sein Thema im nächsten Prozess nicht mehr.
-        val roh = offen.getString(K_THEMEN, null) ?: return listOf(Thema(STANDARD_THEMA_ID, STANDARD_KI_THEMA))
+        val bisherigeAusfuehrlichkeit = Ausfuehrlichkeit.fromId(offen.getString(K_AUSFUEHRLICHKEIT, null))
+        val roh = offen.getString(K_THEMEN, null)
+            ?: return listOf(Thema(STANDARD_THEMA_ID, STANDARD_KI_THEMA, ausfuehrlichkeit = bisherigeAusfuehrlichkeit))
         return runCatching {
             val liste = JSONArray(roh)
             (0 until liste.length()).map {
@@ -125,6 +138,7 @@ class EinstellungenStore(context: Context) {
                     Rhythmus.ausJson(eintrag.optJSONObject("rhythmus")),
                     eintrag.optString("ueberschrift"),
                     eintrag.optString("ueberschriftFuer"),
+                    Ausfuehrlichkeit.fromId(eintrag.optString("ausfuehrlichkeit", bisherigeAusfuehrlichkeit.id)),
                 ).normiert()
             }
         }.getOrElse {
@@ -165,7 +179,8 @@ class EinstellungenStore(context: Context) {
             liste.put(
                 JSONObject().put("id", it.id).put("text", it.text).put("min", it.minMeldungen).put("max", it.maxMeldungen)
                     .put("uhrzeiten", JSONArray(it.uhrzeiten)).put("rhythmus", it.rhythmus.zuJson())
-                    .put("ueberschrift", it.ueberschrift).put("ueberschriftFuer", it.ueberschriftFuer),
+                    .put("ueberschrift", it.ueberschrift).put("ueberschriftFuer", it.ueberschriftFuer)
+                    .put("ausfuehrlichkeit", it.ausfuehrlichkeit.id),
             )
         }
         putString(K_THEMEN, liste.toString())

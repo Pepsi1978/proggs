@@ -47,35 +47,47 @@ enum class BildModus(val id: String, val label: String, val erklaerung: String) 
 }
 
 /**
- * Wie ausführlich jede Meldung geschrieben wird. Gilt für alle Themen und für gesprochene Fragen.
+ * Wie ausführlich jede Meldung geschrieben wird, unabhängig je Thema oder für freie Sprachfragen.
  * [regel] ist der Absatz-Auftrag im Redaktions-Prompt.
  */
-enum class Ausfuehrlichkeit(val id: String, val label: String, val erklaerung: String, val regel: String) {
-    KOMPAKT(
-        "kompakt",
-        "Kompakt",
-        "Ein bis zwei kurze Absätze — das Wichtigste in Kürze.",
-        "Jede Meldung hat 1 bis 2 Absätze mit je 2 bis 3 Sätzen, jeder Absatz höchstens 350 Zeichen. Der erste Absatz sagt das Wichtigste; einen zweiten nur, wenn er Wesentliches ergänzt.",
-    ),
-    STANDARD(
-        "standard",
-        "Standard",
-        "Zwei bis vier Absätze mit Hintergrund und Bedeutung.",
-        "Jede Meldung hat 2 bis 4 Absätze mit je 2 bis 4 Sätzen, jeder Absatz höchstens 500 Zeichen. Der erste Absatz sagt das Wichtigste, die weiteren erklären Hintergrund und Bedeutung.",
-    ),
-    AUSFUEHRLICH(
-        "ausfuehrlich",
-        "Ausführlich",
-        "Vier bis sechs Absätze: Hintergrund, konkrete Zahlen, wer was sagt, Einordnung und Ausblick.",
-        "Jede Meldung hat 4 bis 6 Absätze mit je 3 bis 5 Sätzen, jeder Absatz höchstens 800 Zeichen. Der erste Absatz sagt das Wichtigste. " +
+enum class Ausfuehrlichkeit(val id: String, val label: String, val maxAbsaetze: Int) {
+    KOMPAKT("kompakt", "Das Wichtigste in Kürze", 2),
+    KURZ("absaetze_3", "Kurz erklärt", 3),
+    STANDARD("standard", "Mit Hintergrund", 4),
+    VERTIEFT("absaetze_5", "Vertieft", 5),
+    AUSFUEHRLICH("ausfuehrlich", "Ausführlich", 6),
+    SEHR_AUSFUEHRLICH("absaetze_7", "Sehr ausführlich", 7),
+    UMFASSEND("absaetze_8", "Umfassend", 8),
+    DETAILLIERT("absaetze_9", "Im Detail", 9),
+    MAXIMAL("absaetze_10", "Maximale Tiefe", 10),
+    ;
+
+    val umfang: String get() = if (this == KOMPAKT) "1–2 kurze Absätze" else "$maxAbsaetze Absätze"
+
+    val erklaerung: String get() = if (this == KOMPAKT) {
+        "1–2 kurze Absätze pro Meldung — das Wichtigste in Kürze."
+    } else {
+        "$maxAbsaetze Absätze pro Meldung: Hintergrund, konkrete Zahlen, wer was sagt, Einordnung und Ausblick. " +
+            if (maxAbsaetze >= 7) "Mit mehr Vorgeschichte, Details und unterschiedlichen Perspektiven, soweit belegt."
+            else "Die Tiefe wächst mit der Absatzanzahl."
+    }
+
+    val regel: String get() = if (this == KOMPAKT) {
+        "Jede Meldung hat 1 bis 2 kurze Absätze mit je 2 bis 3 Sätzen, jeder Absatz höchstens 350 Zeichen. " +
+            "Der erste Absatz sagt das Wichtigste; einen zweiten nur, wenn er Wesentliches ergänzt."
+    } else {
+        "Schreibe pro Meldung $maxAbsaetze Absätze mit je ${if (maxAbsaetze <= 4) "2 bis 4" else "3 bis 5"} Sätzen, " +
+            "jeder Absatz höchstens ${if (maxAbsaetze <= 4) 500 else 800} Zeichen. Der erste Absatz sagt das Wichtigste. " +
             "Die weiteren Absätze liefern, soweit belegt: den Hintergrund und die Vorgeschichte; konkrete Zahlen, Beträge und Daten, sprechbar ausgeschrieben; " +
             "die Positionen der beteiligten Seiten, also wer was sagt und wer widerspricht; die Einordnung, was das bedeutet und für wen; " +
-            "und was als Nächstes zu erwarten ist. Jeder Absatz ist ein abgeschlossener Gedanke, der sich einzeln gut vorlesen lässt.",
-    ),
-    ;
+            "und was als Nächstes zu erwarten ist. Bei vielen Absätzen vertiefe diese Aspekte mit zusätzlichen belegten Details und Perspektiven. " +
+            "Erfinde nichts und wiederhole nichts, nur um die Absatzanzahl zu erreichen; fehlen belegte Inhalte, liefere weniger Absätze. " +
+            "Niemals mehr als $maxAbsaetze Absätze. Jeder Absatz ist ein abgeschlossener Gedanke, der sich einzeln gut vorlesen lässt."
+    }
 
     companion object {
         fun fromId(value: String?): Ausfuehrlichkeit = entries.firstOrNull { it.id == value } ?: STANDARD
+        fun fromAbsaetze(anzahl: Int): Ausfuehrlichkeit = entries.first { it.maxAbsaetze == anzahl.coerceIn(2, 10) }
     }
 }
 
@@ -102,6 +114,8 @@ data class Thema(
     val ueberschrift: String = "",
     /** Der [text], zu dem [ueberschrift] gebildet wurde — weicht er ab, ist die Überschrift veraltet. */
     val ueberschriftFuer: String = "",
+    /** Eigene Länge für manuelle und automatische Recherchen dieses Themas. */
+    val ausfuehrlichkeit: Ausfuehrlichkeit = Ausfuehrlichkeit.STANDARD,
 ) {
     /** Die einzeilige Überschrift für die zugeklappte Karte: die der KI oder ersatzweise die ersten Wörter. */
     fun kopfzeile(): String =
