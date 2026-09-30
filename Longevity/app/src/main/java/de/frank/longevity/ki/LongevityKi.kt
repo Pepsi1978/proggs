@@ -20,13 +20,25 @@ import org.json.JSONObject
 data class Auswertung(val faktor: Faktor, val rang: Int, val bewertung: String, val duplikatVon: Long?)
 
 /** Ergebnis einer Aktualisierung: neue Reihenfolge (mit Altbestand gemischt) und Vorschläge. */
-data class Aktualisierung(val liste: List<Faktor>, val vorschlaege: List<Faktor>, val zusammenfassung: String, val veraendert: Int)
+data class Aktualisierung(
+    val liste: List<Faktor>,
+    val vorschlaege: List<Faktor>,
+    val zusammenfassung: String,
+    val veraendert: Int,
+    /** Beim Mitdiskutieren: die Einordnung des Nutzer-Beitrags durch die Gutachterin. */
+    val einordnung: String = "",
+)
 
 /**
  * Alle KI-Arbeiten der App. Die Hauptarbeit läuft mit dem Modell aus den Einstellungen
  * (Standard GPT-6 Astra, Hoch), die Textkorrektur mit einem eigenen, meist schnelleren Modell.
  */
-class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellungen) {
+class LongevityKi(
+    private val auth: CodexAuthManager,
+    private val e: Einstellungen,
+    /** Der Standard-Prompt der Aktualisierung (assets/aktualisierung.md). */
+    private val standardVorlage: () -> String,
+) {
 
     // ================= Textkorrektur =================
 
@@ -141,90 +153,82 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
 
     // ================= Aktualisierung mit zwei diskutierenden Agenten =================
 
+    /** Der große Lauf: Forscherin und Skeptiker diskutieren zwei Runden, die Gutachterin entscheidet. */
     suspend fun aktualisieren(liste: List<Faktor>, fortschritt: Fortschritt): Aktualisierung {
-        val kompakt = listeKompakt(liste)
-        val verlauf = StringBuilder()
-        val grund = grundanweisung()
+        val v = vorlage()
+        val lauf = Lauf(v, listeKompakt(liste), "", StringBuilder(), fortschritt)
+        lauf.sprich(PRO, "runde 1 forscherin", 0.00f, 0.22f, 4200, 70f)
+        lauf.sprich(CONTRA, "runde 1 skeptiker", 0.22f, 0.44f, 4200, 70f)
+        lauf.sprich(PRO, "runde 2 forscherin", 0.44f, 0.58f, 2800, 50f)
+        lauf.sprich(CONTRA, "runde 2 skeptiker", 0.58f, 0.70f, 2200, 45f)
+        val richter = lauf.sprich(RICHTER, "entscheidung", 0.70f, 0.99f, 900 + liste.size * 330, 60f + liste.size * 2f)
+        return mischen(liste, jsonAus(richter))
+    }
 
-        suspend fun agent(name: String, rolle: String, auftrag: String, von: Float, bis: Float, zeichen: Int, sekunden: Float): String {
+    /**
+     * Der Nutzer redet mit: Sein Beitrag läuft durch alle Agenten (Forscherin, Skeptiker, Forscherin, Skeptiker),
+     * die Gutachterin bildet daraus einen Konsens, ordnet den Beitrag ein und passt die Rangliste an.
+     */
+    suspend fun einwand(liste: List<Faktor>, text: String, bisher: List<Beitrag>, fortschritt: Fortschritt): Aktualisierung {
+        val v = vorlage()
+        val verlauf = StringBuilder()
+        bisher.forEach { b -> verlauf.append("\n### ").append(b.name).append(":\n").append(beitragKurz(b)).append('\n') }
+        fortschritt.beitragFertig(NUTZER, text)
+        verlauf.append("\n### ").append(NUTZER).append(" (der Nutzer):\n").append(text).append('\n')
+        val lauf = Lauf(v, listeKompakt(liste), text, verlauf, fortschritt)
+        lauf.sprich(PRO, "einwand forscherin", 0.00f, 0.22f, 3000, 60f)
+        lauf.sprich(CONTRA, "einwand skeptiker", 0.22f, 0.44f, 3000, 60f)
+        lauf.sprich(PRO, "einwand forscherin antwort", 0.44f, 0.58f, 2200, 45f)
+        lauf.sprich(CONTRA, "einwand skeptiker schlusswort", 0.58f, 0.70f, 1900, 40f)
+        val richter = lauf.sprich(RICHTER, "einwand entscheidung", 0.70f, 0.99f, 1200 + liste.size * 330, 60f + liste.size * 2f)
+        val o = jsonAus(richter)
+        return mischen(liste, o).copy(einordnung = o.optString("einordnung").trim())
+    }
+
+    /** Ein Diskussionslauf: baut je Agent Systemanweisung und Nachricht aus der Vorlage und sammelt den Verlauf. */
+    private inner class Lauf(
+        val v: Map<String, String>,
+        val liste: String,
+        val einwand: String,
+        val verlauf: StringBuilder,
+        val fortschritt: Fortschritt,
+    ) {
+        suspend fun sprich(name: String, auftrag: String, von: Float, bis: Float, zeichen: Int, sekunden: Float): String {
+            val werte = mapOf(
+                "PRO" to PRO, "CONTRA" to CONTRA, "RICHTER" to RICHTER, "EINWAND" to einwand,
+                "FAKTOR_SCHEMA" to FAKTOR_SCHEMA, "PROFIL" to profilZeile(), "LISTE" to liste,
+                "DISKUSSION" to verlauf.toString().trim().ifBlank { "(noch keine – du beginnst)" },
+            )
+            fun teil(k: String) = fuelle(v[k].orEmpty(), werte)
+            val rolle = when (name) { PRO -> "rolle forscherin"; CONTRA -> "rolle skeptiker"; else -> "rolle gutachterin" }
+            val system = fuelle(v[AUFBAU_SYSTEM].orEmpty(), werte + mapOf("GRUNDANWEISUNG" to teil("grundanweisung"), "ROLLE" to teil(rolle)))
+            val nachricht = fuelle(v[AUFBAU_NACHRICHT].orEmpty(), werte + ("AUFTRAG" to teil(auftrag)))
             fortschritt.band(von, bis, zeichen, sekunden, "$name ${if (name == RICHTER) "wägt ab" else "argumentiert"} …")
             fortschritt.beitragBeginnt(name)
-            val text = frage(
-                grund + "\n\nDEINE ROLLE: " + rolle,
-                """
-                |AKTUELLE RANGLISTE (id | Rang | Titel | Kategorie | Evidenz | geschätzte Jahre; negative Jahre = Lebenszeit-Räuber unter der Null-Linie):
-                |$kompakt
-                |${if (verlauf.isNotEmpty()) "\nBISHERIGE DISKUSSION:\n$verlauf" else ""}
-                |
-                |$auftrag
-                """.trimMargin(),
-                e.modell, e.denkstufe, fortschritt,
-            ).trim()
+            val text = frage(system.trim(), nachricht.trim(), e.modell, e.denkstufe, fortschritt).trim()
             fortschritt.beitragFertig(name, text)
             verlauf.append("\n### ").append(name).append(":\n").append(text).append('\n')
             return text
         }
-
-        val proRolle = "Du bist $PRO, eine Langlebigkeitsforscherin, die die Rangliste auf den neuesten Stand bringen will. " +
-            "Du prüfst jede Position gegen die aktuelle Forschung und logische Überlegungen und schlägst begründete Verschiebungen vor."
-        val contraRolle = "Du bist $CONTRA, ein kritischer Epidemiologe und Advocatus Diaboli. Du prüfst jede vorgeschlagene " +
-            "Verschiebung hart: Confounding, Effektgrößen, Umkehrkausalität, Übertragbarkeit, Publikationsbias. Du verteidigst die " +
-            "bisherige Position, wo sie gut begründet ist, und schlägst Alternativen vor, wo beide falsch liegen."
-
-        agent(
-            PRO, proRolle,
-            "RUNDE 1: Gehe die Rangliste von oben nach unten durch. Nenne konkret, welche Faktoren höher oder tiefer gehören " +
-                "(\"Punkt X vor Punkt Y, weil …\"), mit Effektgrößen und Studienlage. Prüfe die Polarität: Steht oben ein Verbot " +
-                "oder Verzicht (\"Nicht rauchen\", \"Alkohol meiden\"), gehört es als schädliches Verhalten mit negativen Jahren " +
-                "unter die Null-Linie (\"Rauchen\" −10) – nenne jeden solchen Fall. Prüfe auch die Minus-Jahre der Lebenszeit-Räuber. " +
-                "Nenne außerdem bis zu 3 wichtige Faktoren, die ganz fehlen (förderlich oder schädlich). " +
-                "Sei präzise und strukturiert (Stichpunkte), maximal ca. 700 Wörter.",
-            0.00f, 0.22f, 4200, 70f,
-        )
-        agent(
-            CONTRA, contraRolle,
-            "RUNDE 1: Antworte auf jeden Vorschlag von $PRO: Zustimmung, Ablehnung oder Gegenvorschlag – jeweils mit Begründung. " +
-                "Prüfe auch die vorgeschlagenen neuen Faktoren. Stichpunkte, maximal ca. 700 Wörter.",
-            0.22f, 0.44f, 4200, 70f,
-        )
-        agent(
-            PRO, proRolle,
-            "RUNDE 2: Reagiere auf die Einwände. Gib nach, wo $CONTRA recht hat, und halte begründet dagegen, wo nicht. " +
-                "Fasse am Ende deine endgültigen Vorschläge knapp zusammen. Maximal ca. 450 Wörter.",
-            0.44f, 0.58f, 2800, 50f,
-        )
-        agent(
-            CONTRA, contraRolle,
-            "RUNDE 2 (Schlusswort): Nenne, welche Verschiebungen du jetzt mitträgst und welche nicht. Maximal ca. 350 Wörter.",
-            0.58f, 0.70f, 2200, 45f,
-        )
-        val richter = agent(
-            RICHTER,
-            "Du bist $RICHTER, ein unabhängiger Gutachter. Du entscheidest nach der Stärke der Argumente – nicht nach Mehrheit. " +
-                "Der Altbestand hat Vorrang: Verschiebe nur, was die Diskussion wirklich trägt, und verwirf keine Inhalte.",
-            """
-            |ENTSCHEIDUNG: Lege die endgültige Rangliste fest. Sie muss JEDE bisherige id genau einmal enthalten (nichts löschen).
-            |Aufbau: oben alle Faktoren mit POSITIVEN Jahren (förderliches Verhalten, das Lebensjahre schenkt), nach Wichtigkeit;
-            |darunter die Lebenszeit-Räuber mit NEGATIVEN Jahren (schädliches Verhalten), der schädlichste ganz unten.
-            |Verbote und Verzichte gibt es oben nicht: Ist ein Eintrag als Verbot formuliert („Nicht rauchen“, „Alkohol meiden“,
-            |„Kein Zucker“), formuliere ihn um als das schädliche Verhalten selbst („Rauchen – auch nur gelegentlich“,
-            |„Regelmäßig Alkohol trinken“), setze "jahre" negativ (verlorene Jahre gegenüber dem Unterlassen) und liefere dazu
-            |neuen "titel", "kurz" und "ziel" (Ziel = wie man es abstellt). Sonst "titel", "kurz", "ziel" leer lassen.
-            |Für jeden Eintrag: "begruendung" = 2–3 Sätze, warum er genau auf diesem Rang steht (Vergleich mit den Nachbarn);
-            |"ergaenzung" = nur falls es wirklich neue Erkenntnisse gibt, 1–3 Sätze, sonst "". "evidenz", "jahre" und "wirkung"
-            |nur anpassen, wenn die Diskussion es begründet (Vorzeichen-Wechsel bei Verboten immer). Neue Faktoren, die beide
-            |Seiten für wichtig halten, kommen in "neu" (höchstens 3) mit dem Rang, an dem sie eingefügt werden sollten – auch
-            |schädliche Verhaltensweisen mit negativen Jahren sind erlaubt.
-            |
-            |Antworte NUR mit einem JSON-Objekt:
-            |{"zusammenfassung": "3–5 Sätze: Was hat sich geändert und warum?",
-            | "reihenfolge": [{"id": 12, "begruendung": "…", "ergaenzung": "", "evidenz": "BELEGT", "jahre": 4.5, "wirkung": 90, "titel": "", "kurz": "", "ziel": ""}, …],
-            | "neu": [{ $FAKTOR_SCHEMA, "rang": 7 }]}
-            """.trimMargin(),
-            0.70f, 0.99f, 900 + liste.size * 330, 60f + liste.size * 2f,
-        )
-        return mischen(liste, jsonAus(richter))
     }
+
+    /** Die wirksame Vorlage: eigene Abschnitte aus den Einstellungen, fehlende oder leere aus dem Standard. */
+    private fun vorlage(): Map<String, String> {
+        val standard = abschnitte(standardVorlage())
+        val eigen = abschnitte(e.aktualisierungsPrompt)
+        return standard.keys.associateWith { k -> eigen[k]?.takeIf { it.isNotBlank() } ?: standard.getValue(k) }
+    }
+
+    private fun profilZeile(): String {
+        val p = e.profilText()
+        return if (p.isBlank()) "" else "PROFIL DES NUTZERS (berücksichtige es bei Rang, Ziel und Aufgaben): $p"
+    }
+
+    /** Für den Verlauf: Die Entscheidungen der Gutachterin nur als Zusammenfassung, nicht als ganzes JSON. */
+    private fun beitragKurz(b: Beitrag): String = if (b.name != RICHTER) b.text else runCatching {
+        val o = jsonAus(b.text)
+        listOf(o.optString("einordnung"), o.optString("zusammenfassung")).filter { it.isNotBlank() }.joinToString("\n")
+    }.getOrNull()?.takeIf { it.isNotBlank() }?.let { "Entscheidung: $it" } ?: "Entscheidung gefällt."
 
     /** Übernimmt die Entscheidung des Richters, ohne je etwas aus dem Altbestand zu verlieren. */
     private fun mischen(liste: List<Faktor>, o: JSONObject): Aktualisierung {
@@ -310,6 +314,33 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
         const val PRO = "Forscherin Vita"
         const val CONTRA = "Skeptiker Kron"
         const val RICHTER = "Gutachterin Aeon"
+        const val NUTZER = "Du"
+
+        const val AUFBAU_SYSTEM = "aufbau systemanweisung"
+        const val AUFBAU_NACHRICHT = "aufbau nachricht"
+
+        /** Zerlegt die Vorlage an den Überschriften „## Name“; alles vor der ersten ist Erklärung. */
+        fun abschnitte(text: String): Map<String, String> {
+            val ergebnis = linkedMapOf<String, String>()
+            var name: String? = null
+            val puffer = StringBuilder()
+            fun ablegen() { name?.let { ergebnis[it] = puffer.toString().trim() } }
+            text.lineSequence().forEach { zeile ->
+                if (zeile.startsWith("## ")) {
+                    ablegen()
+                    name = zeile.removePrefix("## ").trim().lowercase()
+                    puffer.clear()
+                } else if (name != null) {
+                    puffer.append(zeile).append('\n')
+                }
+            }
+            ablegen()
+            return ergebnis
+        }
+
+        /** Ersetzt {{NAME}} in einem Durchgang; unbekannte Platzhalter bleiben stehen. */
+        fun fuelle(text: String, werte: Map<String, String>): String =
+            Regex("\\{\\{([A-Z_]+)\\}\\}").replace(text) { m -> werte[m.groupValues[1]] ?: m.value }
 
         private val KATEGORIEN = Kategorie.entries.joinToString("|") { it.name }
 

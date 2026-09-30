@@ -89,9 +89,9 @@ class Repository private constructor(context: Context) {
     }
 
     /** Übernimmt eine komplette neue Reihenfolge (bereits gemischt mit dem Altbestand). */
-    suspend fun uebernimm(liste: List<Faktor>, vorschlaege: List<Faktor>) = sperre.withLock {
+    suspend fun uebernimm(liste: List<Faktor>, vorschlaege: List<Faktor>, alteVorschlaegeBehalten: Boolean = false) = sperre.withLock {
         dao.ersetzeAlle(ordnen(liste))
-        dao.alleJetzt().filter { it.vorschlag }.forEach { dao.loesche(it) }
+        if (!alteVorschlaegeBehalten) dao.alleJetzt().filter { it.vorschlag }.forEach { dao.loesche(it) }
         if (vorschlaege.isNotEmpty()) dao.neu(vorschlaege.map { it.copy(id = 0, vorschlag = true) })
     }
 

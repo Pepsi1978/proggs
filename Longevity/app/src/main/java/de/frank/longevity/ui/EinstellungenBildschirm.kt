@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -170,6 +171,17 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Text("Effort (Denkstufe)", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { e.modell.supportedEfforts.forEach { r -> Chip(r.label, e.denkstufe == r) { e.denkstufe = r } } }
                     Text("Höherer Effort = gründlicher, dauert länger. Empfohlen: GPT-6 Astra · Hoch.", color = f.textSchwach, fontSize = 11.sp)
+                }
+                Block("Aktualisierungs-Prompt") {
+                    Text(
+                        "Der komplette Arbeitsauftrag für den großen Aktualisierungslauf und das Mitdiskutieren – frei bearbeitbar, " +
+                            "exportierbar als Markdown-Datei (z. B. in den Update-Ordner auf Google Drive) und wieder importierbar.",
+                        color = f.textLeise, fontSize = 13.sp,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (vm.eigenerPrompt) "✏️ Eigener Prompt aktiv" else "Standard-Prompt aktiv", color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Chip("Bearbeiten", true, icon = Icons.Rounded.Edit) { vm.zeige(Bildschirm.Prompt) }
+                    }
                 }
                 Block("Textkorrektur (Sprache und Tippen)") {
                     Text("Modell", color = f.textLeise, fontSize = 13.sp)

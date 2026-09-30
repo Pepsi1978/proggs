@@ -38,6 +38,7 @@ sealed interface Bildschirm {
     data object Neu : Bildschirm
     data object Einstellungen : Bildschirm
     data object Protokoll : Bildschirm
+    data object Prompt : Bildschirm
 }
 
 enum class Aufnahme { AUS, LAEUFT, VERARBEITET }
@@ -49,7 +50,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = Repository.get(app)
     val einstellungen = Einstellungen.get(app)
     val auth = CodexAuthManager(app)
-    private val ki = LongevityKi(auth, einstellungen)
+    private val ki = LongevityKi(auth, einstellungen) { standardPrompt() }
     private val mikro = MicRecorder(app)
 
     val alle: StateFlow<List<Faktor>> = repo.alle.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -74,7 +75,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var aufnahmeStart by mutableLongStateOf(0L); private set
     var mikrofonAnfragen: () -> Unit = {}
     var hinweiseAnfragen: () -> Unit = {}
-    private var nachAufnahmeAuswerten = false
+    /** Was nach dem Transkribieren passieren soll (Auswerten bzw. Beitrag in die Diskussion senden). */
+    private var nachAufnahme: (() -> Unit)? = null
     private var aufnahmeJob: Job? = null
 
     // ---- KI-Verbindung ----
@@ -83,7 +85,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var kiFehler by mutableStateOf<String?>(null); private set
     var kiVerbindet by mutableStateOf(false); private set
 
+    // ---- Aktualisierung ----
+    /** Sicherheitsabfrage vor dem großen Lauf ist offen. */
+    var aktualisierenFrage by mutableStateOf(false); private set
+    /** Wird erhöht, wenn der Prompt von außen ersetzt wurde (Import, Standard) – der Editor lädt dann neu. */
+    var promptStand by mutableIntStateOf(0); private set
+
     init {
+        KiArbeit.protokollLaden(app.filesDir)
         viewModelScope.launch {
             repo.startinhalteAnlegen()
             if (!einstellungen.verboteUmgestellt) {
@@ -105,7 +114,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun zurueck(): Boolean {
         if (bildschirm == Bildschirm.Liste) return false
-        if (bildschirm == Bildschirm.Neu) abbrechenAufnahme()
+        if (bildschirm == Bildschirm.Neu || bildschirm == Bildschirm.Protokoll) abbrechenAufnahme()
+        if (bildschirm == Bildschirm.Neu) { eText = ""; textVorKorrektur = null; korrekturFassungen = emptyList() }
         bildschirm = verlauf.removeLastOrNull()?.takeIf { it != bildschirm } ?: Bildschirm.Liste
         return true
     }
@@ -164,11 +174,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Wertet die Idee mit der KI aus und ordnet sie in die Liste ein. Ohne KI wird sie unten angehängt. */
     fun auswerten() {
-        when (aufnahme) {
-            Aufnahme.LAEUFT -> { nachAufnahmeAuswerten = true; aufnahmeBeenden(); return }
-            Aufnahme.VERARBEITET -> { nachAufnahmeAuswerten = true; return }
-            Aufnahme.AUS -> Unit
-        }
+        if (erstNachAufnahme(::auswerten)) return
         val idee = eText.trim()
         if (idee.isBlank()) { melde("Sprich oder schreibe zuerst deine Idee."); return }
         if (!kiVerbunden) {
@@ -216,7 +222,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ================= KI-Arbeiten in der Liste =================
 
+    /** Knopf „Aktualisieren“: läuft schon etwas, zur Diskussion; sonst erst nachfragen – der Lauf ist groß. */
+    fun aktualisierenAnfragen() {
+        if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
+        if (KiArbeit.laeuft) { zeige(Bildschirm.Protokoll); return }
+        aktualisierenFrage = true
+    }
+
+    fun aktualisierenAbbrechen() { aktualisierenFrage = false }
+
     fun aktualisieren() {
+        aktualisierenFrage = false
         if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
         if (KiArbeit.laeuft) { zeige(Bildschirm.Protokoll); return }
         hinweiseAnfragen()
@@ -228,6 +244,85 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 append(if (a.veraendert == 0) "Die Reihenfolge ist aktuell." else "${a.veraendert} Faktoren haben den Platz gewechselt.")
                 if (a.vorschlaege.isNotEmpty()) append(" ${a.vorschlaege.size} neue Vorschläge.")
                 if (a.zusammenfassung.isNotBlank()) append("\n\n").append(a.zusammenfassung)
+            }
+        }
+    }
+
+    /** Der eigene Beitrag in der Diskussion: läuft durch alle Agenten, die Gutachterin bildet den Konsens. */
+    fun einwandSenden() {
+        if (erstNachAufnahme(::einwandSenden)) return
+        val text = eText.trim()
+        if (text.isBlank()) { melde("Sprich oder schreibe zuerst deinen Beitrag."); return }
+        if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); return }
+        if (KiArbeit.laeuft) { melde("Die KI arbeitet gerade noch – bitte kurz warten."); return }
+        hinweiseAnfragen()
+        val bisher = KiArbeit.protokoll.toList()
+        val gestartet = KiArbeit.starte(getApplication(), Art.EINWAND, text.take(80)) { fortschritt ->
+            val a = ki.einwand(repo.liste(), text, bisher, fortschritt)
+            repo.uebernimm(a.liste, a.vorschlaege, alteVorschlaegeBehalten = true)
+            KiArbeit.ergebnis = buildString {
+                append(a.einordnung.ifBlank { a.zusammenfassung })
+                append("\n\n")
+                append(if (a.veraendert == 0) "Die Reihenfolge bleibt gleich." else "${a.veraendert} Faktoren haben den Platz gewechselt.")
+                if (a.vorschlaege.isNotEmpty()) append(" ${a.vorschlaege.size} neue Vorschläge.")
+            }.trim()
+        }
+        if (gestartet) { eText = ""; textVorKorrektur = null; korrekturFassungen = emptyList() }
+    }
+
+    /** Läuft noch eine Aufnahme, erst transkribieren und danach [weiter] ausführen. */
+    private fun erstNachAufnahme(weiter: () -> Unit): Boolean = when (aufnahme) {
+        Aufnahme.LAEUFT -> { nachAufnahme = weiter; aufnahmeBeenden(); true }
+        Aufnahme.VERARBEITET -> { nachAufnahme = weiter; true }
+        Aufnahme.AUS -> false
+    }
+
+    // ================= Aktualisierungs-Prompt =================
+
+    fun standardPrompt(): String =
+        getApplication<Application>().assets.open("aktualisierung.md").bufferedReader().use { it.readText() }
+
+    /** Der Prompt, mit dem der nächste Lauf arbeitet. */
+    fun wirksamerPrompt(): String = einstellungen.aktualisierungsPrompt.ifBlank { standardPrompt() }
+
+    val eigenerPrompt: Boolean get() = einstellungen.aktualisierungsPrompt.isNotBlank()
+
+    fun promptSpeichern(text: String) {
+        einstellungen.aktualisierungsPrompt = if (text.trim() == standardPrompt().trim()) "" else text
+        melde("Aktualisierungs-Prompt gespeichert")
+    }
+
+    fun promptStandard() {
+        val alt = einstellungen.aktualisierungsPrompt
+        einstellungen.aktualisierungsPrompt = ""
+        promptStand++
+        melde("Standard-Prompt wiederhergestellt") { einstellungen.aktualisierungsPrompt = alt; promptStand++ }
+    }
+
+    fun promptExportieren(uri: android.net.Uri, text: String) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val ok = runCatching {
+                // "wt": Drive & Co. kürzen sonst nicht – ein kürzerer Prompt behielte das Ende des alten.
+                getApplication<Application>().contentResolver.openOutputStream(uri, "wt")!!.use { it.write(text.toByteArray(Charsets.UTF_8)) }
+            }.isSuccess
+            melde(if (ok) "Prompt exportiert" else "Export fehlgeschlagen")
+        }
+    }
+
+    fun promptImportieren(uri: android.net.Uri) {
+        viewModelScope.launch {
+            val text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { getApplication<Application>().contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() } }.getOrNull()
+            }
+            when {
+                text == null -> melde("Die Datei konnte nicht gelesen werden.")
+                !text.lineSequence().any { it.startsWith("## ") } -> melde("Das ist kein Aktualisierungs-Prompt – es fehlen die „## “-Abschnitte.")
+                else -> {
+                    val alt = einstellungen.aktualisierungsPrompt
+                    einstellungen.aktualisierungsPrompt = text.removePrefix("\uFEFF")
+                    promptStand++
+                    melde("Prompt importiert und gespeichert") { einstellungen.aktualisierungsPrompt = alt; promptStand++ }
+                }
             }
         }
     }
@@ -308,7 +403,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun mikrofonErlaubnisErgebnis(ok: Boolean) {
         if (!ok) { melde("Ohne Mikrofon-Erlaubnis geht die Spracheingabe nicht."); return }
-        if (bildschirm != Bildschirm.Neu || aufnahme != Aufnahme.AUS) return
+        if ((bildschirm != Bildschirm.Neu && bildschirm != Bildschirm.Protokoll) || aufnahme != Aufnahme.AUS) return
         if (mikro.start(viewModelScope)) {
             aufnahme = Aufnahme.LAEUFT
             aufnahmeStart = System.currentTimeMillis()
@@ -319,7 +414,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun abbrechenAufnahme() {
         if (aufnahme == Aufnahme.AUS) return
-        nachAufnahmeAuswerten = false
+        nachAufnahme = null
         mikro.release()
         aufnahmeJob?.cancel()
         aufnahme = Aufnahme.AUS
@@ -337,11 +432,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             )
             try {
                 val wav = mikro.stop()
-                if (wav == null) { melde("Es wurde nichts aufgenommen."); nachAufnahmeAuswerten = false; return@launch }
+                if (wav == null) { melde("Es wurde nichts aufgenommen."); nachAufnahme = null; return@launch }
                 val text = Diktat(transcriber).transkribiere(wav).text.trim()
                 if (text.isBlank()) {
                     melde("Keine Sprache erkannt.")
-                    nachAufnahmeAuswerten = false
+                    nachAufnahme = null
                 } else {
                     eText = if (eText.isBlank()) text else eText.trimEnd() + " " + text
                     textVorKorrektur = null
@@ -351,11 +446,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 throw c
             } catch (e: Throwable) {
                 melde(e.message ?: "Die Spracherkennung ist fehlgeschlagen.")
-                nachAufnahmeAuswerten = false
+                nachAufnahme = null
             } finally {
                 transcriber.shutdown()
                 aufnahme = Aufnahme.AUS
-                if (nachAufnahmeAuswerten) { nachAufnahmeAuswerten = false; auswerten() }
+                nachAufnahme?.let { weiter -> nachAufnahme = null; weiter() }
             }
         }
     }

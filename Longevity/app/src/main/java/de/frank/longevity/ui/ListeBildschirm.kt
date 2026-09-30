@@ -66,6 +66,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,6 +76,8 @@ import de.frank.longevity.data.Faktor
 import de.frank.longevity.data.platz
 import de.frank.longevity.ki.Art
 import de.frank.longevity.ki.KiArbeit
+import de.frank.longevity.ki.diskutiert
+import androidx.compose.ui.window.Dialog
 import de.frank.longevity.ui.theme.Chip
 import de.frank.longevity.ui.theme.Design
 import de.frank.longevity.ui.theme.LocalFarben
@@ -126,6 +129,8 @@ fun ListeBildschirm(vm: AppViewModel) {
                         alpha = (1f - o / 520f).coerceIn(0f, 1f)
                         val s = 1f - (o / 3000f).coerceIn(0f, 0.08f)
                         scaleX = s; scaleY = s
+                        // Ohne Zwischenpuffer: sonst schneidet die Ebene den weichen Schatten an der Kartenkante ab (eckige graue Ränder).
+                        compositingStrategy = CompositingStrategy.ModulateAlpha
                     },
                     fortschritt = liste.flatMap { it.punkte }.let { p -> if (p.isEmpty()) 0f else p.count { it.erledigt }.toFloat() / p.size },
                 )
@@ -139,11 +144,15 @@ fun ListeBildschirm(vm: AppViewModel) {
                         Text("Deine Rangliste", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text("Oben, was dir Lebenszeit schenkt – unter der Null-Linie, was sie dir raubt.", color = f.textLeise, fontSize = 12.sp)
                     }
-                    val stand = vm.einstellungen.letzteAktualisierung
-                    Text(
-                        if (stand == 0L) "Startstand" else "Geprüft " + SimpleDateFormat("dd.MM.yy", Locale.GERMANY).format(Date(stand)),
-                        color = f.textSchwach, fontSize = 11.sp,
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        val stand = vm.einstellungen.letzteAktualisierung
+                        Text(
+                            if (stand == 0L) "Startstand" else "Geprüft " + SimpleDateFormat("dd.MM.yy", Locale.GERMANY).format(Date(stand)),
+                            color = f.textSchwach, fontSize = 11.sp,
+                        )
+                        // Die letzte Diskussion bleibt erreichbar – auch nach einem Neustart, zum Mitreden.
+                        if (KiArbeit.protokoll.isNotEmpty() && !KiArbeit.art.diskutiert) Chip("Diskussion", false, icon = Icons.Rounded.Forum, modifier = Modifier.padding(top = 6.dp)) { vm.zeige(Bildschirm.Protokoll) }
+                    }
                 }
             }
             items(plus, key = { it.id }) { x ->
@@ -186,7 +195,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 }
                 RundKnopf(Icons.Rounded.Settings, "Einstellungen") { vm.zeige(Bildschirm.Einstellungen) }
             }
-            AnimatedVisibility(designOffen, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            AnimatedVisibility(designOffen, enter = expandVertically(clip = false) + fadeIn(), exit = shrinkVertically(clip = false) + fadeOut()) {
                 DesignWahl(vm.einstellungen.design) { vm.einstellungen.design = it; designOffen = false }
             }
         }
@@ -194,18 +203,50 @@ fun ListeBildschirm(vm: AppViewModel) {
         // Schwebender Plus-Knopf unten rechts.
         PlusKnopf(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 20.dp, bottom = 22.dp)) { vm.neueIdee() }
     }
+    if (vm.aktualisierenFrage) AktualisierenDialog(vm)
+}
+
+/** Sicherheitsabfrage vor dem großen Lauf – ein versehentlicher Tipper soll nichts starten. */
+@Composable
+private fun AktualisierenDialog(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val e = vm.einstellungen
+    Dialog(onDismissRequest = { vm.aktualisierenAbbrechen() }) {
+        Column(
+            Modifier.fillMaxWidth().glas(f, erhoeht = 2f, fuellung = f.flaecheStark, toenung = f.primaer).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Refresh, null, tint = f.primaer, modifier = Modifier.size(26.dp))
+                Text("Großen Aktualisierungslauf starten?", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp))
+            }
+            Text(
+                "Forscherin, Skeptiker und Gutachterin prüfen in fünf KI-Runden die komplette Rangliste neu. " +
+                    "Das dauert mehrere Minuten und verbraucht spürbar Kontingent.",
+                color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
+            )
+            Text(
+                "${e.modell.label} · ${e.denkstufe.label}" + if (vm.eigenerPrompt) " · eigener Prompt" else " · Standard-Prompt",
+                color = f.textSchwach, fontSize = 12.sp,
+            )
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Chip("Abbrechen", false, modifier = Modifier.weight(1f)) { vm.aktualisierenAbbrechen() }
+                Chip("Starten", true, icon = Icons.Rounded.Refresh, modifier = Modifier.weight(1f)) { vm.aktualisieren() }
+            }
+        }
+    }
 }
 
 @Composable
 private fun AktualisierenKnopf(vm: AppViewModel) {
     val f = LocalFarben.current
-    val laeuft = KiArbeit.laeuft && KiArbeit.art == Art.AKTUALISIEREN
+    val laeuft = KiArbeit.laeuft && KiArbeit.art.diskutiert
     val drehen = rememberInfiniteTransition(label = "drehen")
     val w by drehen.animateFloat(0f, 360f, infiniteRepeatable(tween(1400, easing = LinearEasing)), label = "w")
     Box(
         Modifier.padding(3.dp).size(42.dp)
             .then(if (laeuft) Modifier.knopf3d(f.primaer, f.sekundaer, 99.dp, f.dunkel) else Modifier.glas(f, 99.dp, 0.8f))
-            .antippen { vm.aktualisieren() },
+            .antippen { vm.aktualisierenAnfragen() },
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -319,7 +360,7 @@ fun FaktorKarte(x: Faktor, platz: String, hervor: Boolean, modifier: Modifier = 
     val erreicht = x.zielErreicht
     Column(
         modifier.fillMaxWidth().einblenden()
-            .graphicsLayer { if (erreicht && !hervor) alpha = 0.5f }
+            .graphicsLayer { if (erreicht && !hervor) { alpha = 0.5f; compositingStrategy = CompositingStrategy.ModulateAlpha } }
             .drawBehind {
                 if (leuchten > 0f) drawRoundRect(
                     f.primaer.copy(alpha = 0.35f * leuchten), topLeft = Offset(-8f, -8f), size = Size(size.width + 16f, size.height + 16f),
@@ -416,9 +457,10 @@ fun KiKarte(vm: AppViewModel, nurFuer: Long?) {
     val art = KiArbeit.art
     val sichtbar = art != null && (nurFuer == null || KiArbeit.bezugId == nurFuer) &&
         (KiArbeit.laeuft || KiArbeit.ergebnis != null || KiArbeit.fehler != null)
-    AnimatedVisibility(sichtbar, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+    AnimatedVisibility(sichtbar, enter = expandVertically(clip = false) + fadeIn(), exit = shrinkVertically(clip = false) + fadeOut()) {
         Column(
-            Modifier.fillMaxWidth().animateContentSize().glas(f, erhoeht = 1.6f, fuellung = f.flaecheStark, toenung = f.primaer).padding(16.dp),
+            // Erst das Glas, dann die Größenanimation: animateContentSize schneidet alles hinter sich ab – sonst auch den Schatten.
+            Modifier.fillMaxWidth().glas(f, erhoeht = 1.6f, fuellung = f.flaecheStark, toenung = f.primaer).animateContentSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             val laeuft = KiArbeit.laeuft
@@ -443,7 +485,7 @@ fun KiKarte(vm: AppViewModel, nurFuer: Long?) {
                 Text(KiArbeit.fehler ?: KiArbeit.ergebnis.orEmpty(), color = if (KiArbeit.fehler != null) f.gefahr else f.text, fontSize = 13.sp, lineHeight = 18.sp)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (art == Art.AKTUALISIEREN && (laeuft || KiArbeit.protokoll.isNotEmpty())) {
+                if (art.diskutiert && (laeuft || KiArbeit.protokoll.isNotEmpty())) {
                     Chip("Diskussion", false, icon = Icons.Rounded.Forum) { vm.zeige(Bildschirm.Protokoll) }
                 }
                 if (laeuft) {

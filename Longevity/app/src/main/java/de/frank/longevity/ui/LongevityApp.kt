@@ -49,7 +49,7 @@ import kotlinx.coroutines.delay
 private fun Bildschirm.tiefe(): Int = when (this) {
     Bildschirm.Liste -> 0
     is Bildschirm.Detail, Bildschirm.Neu, Bildschirm.Einstellungen -> 1
-    Bildschirm.Protokoll -> 2
+    Bildschirm.Protokoll, Bildschirm.Prompt -> 2
 }
 
 @Composable
@@ -75,6 +75,7 @@ fun LongevityApp(vm: AppViewModel, activity: ComponentActivity) {
                     Bildschirm.Neu -> NeuBildschirm(vm)
                     Bildschirm.Einstellungen -> EinstellungenBildschirm(vm, activity)
                     Bildschirm.Protokoll -> ProtokollBildschirm(vm)
+                    Bildschirm.Prompt -> PromptBildschirm(vm)
                 }
             }
             Konfetti(vm.konfetti)

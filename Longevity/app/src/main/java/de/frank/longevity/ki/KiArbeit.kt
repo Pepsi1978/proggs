@@ -8,11 +8,17 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import java.io.File
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
 
-enum class Art(val anzeige: String) { AUSWERTEN("Auswertung"), VERTIEFEN("Vertiefung"), AKTUALISIEREN("Aktualisierung") }
+enum class Art(val anzeige: String) { AUSWERTEN("Auswertung"), VERTIEFEN("Vertiefung"), AKTUALISIEREN("Aktualisierung"), EINWAND("Mitdiskutieren") }
+
+/** Arbeiten, die im Diskussions-Protokoll mitlaufen. */
+val Art?.diskutiert: Boolean get() = this == Art.AKTUALISIEREN || this == Art.EINWAND
 
 /** Ein Diskussionsbeitrag eines Agenten. */
 data class Beitrag(val name: String, val text: String)
@@ -36,6 +42,28 @@ object KiArbeit {
     var bezugId by mutableStateOf<Long?>(null); internal set
     var startZeit by mutableStateOf(0L); private set
 
+    /** Die letzte Diskussion liegt als Datei vor, damit man auch nach einem Neustart noch mitreden kann. */
+    private var datei: File? = null
+
+    fun protokollLaden(ordner: File) {
+        if (datei != null) return
+        datei = File(ordner, "diskussion.json")
+        if (protokoll.isNotEmpty()) return
+        runCatching {
+            val a = JSONArray(datei!!.readText())
+            protokoll.addAll(List(a.length()) { i -> a.getJSONObject(i).let { Beitrag(it.optString("name"), it.optString("text")) } })
+        }
+    }
+
+    internal fun protokollSichern() {
+        val d = datei ?: return
+        runCatching {
+            val a = JSONArray()
+            protokoll.forEach { a.put(JSONObject().put("name", it.name).put("text", it.text)) }
+            d.writeText(a.toString())
+        }
+    }
+
     internal var auftrag: (suspend (Fortschritt) -> Unit)? = null
     internal var abbruch: (() -> Unit)? = null
 
@@ -46,7 +74,8 @@ object KiArbeit {
         this.bezugId = bezugId
         prozent = 0f
         schritt = "Starte …"
-        protokoll.clear()
+        // Nur ein neuer großer Lauf beginnt eine neue Diskussion; Mitreden baut auf ihr auf.
+        if (art == Art.AKTUALISIEREN) { protokoll.clear(); protokollSichern() }
         live = null
         fehler = null
         ergebnis = null
@@ -107,6 +136,7 @@ class Fortschritt internal constructor() {
     fun beitragFertig(name: String, text: String) {
         KiArbeit.protokoll.add(Beitrag(name, text))
         KiArbeit.live = null
+        KiArbeit.protokollSichern()
     }
 
     fun fertig() = setze(1f)

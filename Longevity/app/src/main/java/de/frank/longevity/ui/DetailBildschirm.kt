@@ -196,7 +196,7 @@ private fun Aufgabenplan(vm: AppViewModel, x: Faktor) {
         punkte.forEachIndexed { i, p ->
             var offen by remember(p.titel) { mutableStateOf(i < 3) }
             Row(
-                Modifier.fillMaxWidth().animateContentSize().glas(f, 16.dp, 0.3f, if (p.erledigt) f.erfolg.copy(alpha = 0.10f) else f.flaeche)
+                Modifier.fillMaxWidth().glas(f, 16.dp, 0.3f, if (p.erledigt) f.erfolg.copy(alpha = 0.10f) else f.flaeche).animateContentSize()
                     .antippen(haptik = false) { offen = !offen }.padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.Top,
             ) {

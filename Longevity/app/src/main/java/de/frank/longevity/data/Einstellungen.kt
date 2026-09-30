@@ -78,6 +78,8 @@ class Einstellungen private constructor(context: Context) {
     // ---- Stand ----
     /** Die alten Verbots-Faktoren sind in Lebenszeit-Räuber mit Minus-Jahren umgestellt. */
     var verboteUmgestellt: Boolean get() = prefs.getBoolean("verbote_umgestellt", false); set(v) = put { putBoolean("verbote_umgestellt", v) }
+    /** Eigener Aktualisierungs-Prompt (Markdown mit „## “-Abschnitten); leer = Standard aus assets/aktualisierung.md. */
+    var aktualisierungsPrompt: String get() = s("aktualisierungs_prompt", ""); set(v) = put { putString("aktualisierungs_prompt", v) }
     var letzteAktualisierung: Long get() = prefs.getLong("letzte_aktualisierung", 0L); set(v) = put { putLong("letzte_aktualisierung", v) }
 
     /** Das Kurzprofil als Text für die KI, leer wenn nichts angegeben ist. */
