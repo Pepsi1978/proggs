@@ -1,6 +1,8 @@
 package de.frank.longevity.ki
 
+import de.frank.longevity.auth.AuthErrorKind
 import de.frank.longevity.auth.ChatTurn
+import de.frank.longevity.auth.CodexAuthException
 import de.frank.longevity.auth.CodexAuthManager
 import de.frank.longevity.auth.CodexModel
 import de.frank.longevity.auth.ReasoningEffort
@@ -12,12 +14,14 @@ import de.frank.longevity.data.Punkt
 import de.frank.longevity.data.Quelle
 import de.frank.longevity.data.RechercheTiefe
 import de.frank.longevity.data.ordnen
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
@@ -53,6 +57,8 @@ class LongevityKi(
     private val e: Einstellungen,
     /** Der Standard-Prompt der Aktualisierung (assets/aktualisierung.md). */
     private val standardVorlage: () -> String,
+    /** Zwischenstand des großen Laufs, damit ein Abbruch nicht alles verwirft. */
+    val speicher: LaufSpeicher,
 ) {
 
     // ================= Textkorrektur =================
@@ -103,7 +109,7 @@ class LongevityKi(
             | ${FAKTOR_SCHEMA},
             | "rang": 5}
             """.trimMargin(),
-            e.modell, e.denkstufe, fortschritt, webSuche = webSuche,
+            e.modell, e.denkstufe, fortschritt, webSuche = webSuche, label = "Auswertung eigene Idee",
         )
         val o = jsonAus(antwort)
         val f = faktorAus(o).copy(eigen = true, notiz = idee.trim(), neu = true, vertieft = true)
@@ -150,7 +156,7 @@ class LongevityKi(
             |Antworte NUR mit einem JSON-Objekt:
             |{ ${FAKTOR_SCHEMA} }
             """.trimMargin(),
-            e.modell, e.denkstufe, fortschritt, webSuche = webSuche,
+            e.modell, e.denkstufe, fortschritt, webSuche = webSuche, label = "Vertiefung id ${f.id}",
         )
         val neu = faktorAus(jsonAus(antwort))
         return f.copy(
@@ -187,21 +193,83 @@ class LongevityKi(
     suspend fun aktualisieren(liste: List<Faktor>, fortschritt: Fortschritt): Aktualisierung {
         auth.webSucheZuruecksetzen()
         val v = vorlage()
-        val mitRecherche = e.rechercheTiefe != RechercheTiefe.SCHNELL
-        // Bänder: Recherche | Einzelprüfung | Debatte | Gutachterin | Text-Konsens
-        val b = if (mitRecherche) floatArrayOf(0.22f, 0.42f, 0.64f, 0.76f) else floatArrayOf(0f, 0f, 0.42f, 0.62f)
-        val (dossiers, anzahlRecherchen) = if (mitRecherche) recherchieren(v, liste, fortschritt, 0f, b[0]) else "" to 0
-        val pruefung = if (mitRecherche) einzelpruefung(v, liste, dossiers, fortschritt, b[0], b[1]) else ""
-        val lauf = Lauf(v, liste, "", StringBuilder(), fortschritt, dossiers, pruefung)
-        val d = (b[2] - b[1]) / 4f
-        lauf.sprich(PRO, "runde 1 forscherin", b[1], b[1] + d * 1.2f, 5000, 90f)
-        lauf.sprich(CONTRA, "runde 1 skeptiker", b[1] + d * 1.2f, b[1] + d * 2.4f, 5000, 90f)
-        lauf.sprich(PRO, "runde 2 forscherin", b[1] + d * 2.4f, b[1] + d * 3.3f, 3200, 60f)
-        lauf.sprich(CONTRA, "runde 2 skeptiker", b[1] + d * 3.3f, b[2], 2600, 50f)
-        val richter = lauf.sprich(RICHTER, "entscheidung", b[2], b[3], 1400 + liste.size * 420, 80f + liste.size * 2f)
-        val m = mischen(liste, jsonAus(richter), altlastenEinarbeiten = true)
-        val liste2 = konsens(v, m, dossiers, fortschritt, b[3], 0.99f)
-        return m.ergebnis.copy(liste = liste2, recherchen = anzahlRecherchen, ueberarbeitet = m.konsens.size)
+        val stand = speicher.beginnen(e.rechercheTiefe.name, liste.map { it.id })
+        KiLog.info(
+            "═══ Aktualisierung startet: ${liste.size} Faktoren · Tiefe ${e.rechercheTiefe.name} · ${e.modell.apiId}/${e.denkstufe.name} · " +
+                (if (e.aktualisierungsPrompt.isBlank()) "Standard-Prompt" else "eigener Prompt") + " · ${stand.schritte.size} Schritte schon gesichert",
+        )
+        mitSpeicher = true
+        try {
+            val mitRecherche = e.rechercheTiefe != RechercheTiefe.SCHNELL
+            // Bänder: Recherche | Einzelprüfung | Debatte | Gutachterin | Text-Konsens
+            val b = if (mitRecherche) floatArrayOf(0.22f, 0.42f, 0.64f, 0.76f) else floatArrayOf(0f, 0f, 0.42f, 0.62f)
+            val (dossiers, anzahlRecherchen) = if (mitRecherche) recherchieren(v, liste, fortschritt, 0f, b[0]) else "" to 0
+            // Ein aus einem älteren Protokoll geretteter Lauf hatte noch keine Einzelprüfung – seine Debatte steht schon.
+            val pruefung = if (mitRecherche && !stand.ohnePruefung) einzelpruefung(v, liste, dossiers, fortschritt, b[0], b[1]) else ""
+            val lauf = Lauf(v, liste, "", StringBuilder(), fortschritt, dossiers, pruefung)
+            val d = (b[2] - b[1]) / 4f
+            KiLog.info("Phase Debatte")
+            lauf.sprich(PRO, "runde 1 forscherin", b[1], b[1] + d * 1.2f, 5000, 90f)
+            lauf.sprich(CONTRA, "runde 1 skeptiker", b[1] + d * 1.2f, b[1] + d * 2.4f, 5000, 90f)
+            lauf.sprich(PRO, "runde 2 forscherin", b[1] + d * 2.4f, b[1] + d * 3.3f, 3200, 60f)
+            lauf.sprich(CONTRA, "runde 2 skeptiker", b[1] + d * 3.3f, b[2], 2600, 50f)
+            KiLog.info("Phase Entscheidung")
+            val richter = lauf.sprich(RICHTER, "entscheidung", b[2], b[3], 1400 + liste.size * 420, 80f + liste.size * 2f)
+            val m = mischen(liste, jsonAus(richter), altlastenEinarbeiten = true)
+            KiLog.info("Phase Text-Konsens: ${m.konsens.size} Texte")
+            val liste2 = konsens(v, m, dossiers, fortschritt, b[3], 0.99f)
+            KiLog.info("═══ Aktualisierung fertig: ${m.ergebnis.veraendert} Plätze geändert, ${m.konsens.size} Texte, ${m.ergebnis.vorschlaege.size} Vorschläge")
+            return m.ergebnis.copy(liste = liste2, recherchen = anzahlRecherchen, ueberarbeitet = m.konsens.size)
+        } finally {
+            mitSpeicher = false
+        }
+    }
+
+    /** Während des großen Laufs: jeder fertige Schritt wird gesichert und bei einem Neustart übernommen. */
+    @Volatile private var mitSpeicher = false
+
+    /**
+     * Ein Schritt des großen Laufs: kommt aus dem Zwischenstand, falls er schon erledigt ist, sonst wird er erarbeitet,
+     * mit [pruefe] geprüft (wirft bei unbrauchbarer Antwort) und sofort gesichert. Das zweite Feld ist true bei „aus dem Speicher“.
+     */
+    private suspend fun gesichert(schluessel: String, pruefe: (String) -> Unit = {}, block: suspend () -> String): Pair<String, Boolean> {
+        if (mitSpeicher) speicher.hole(schluessel)?.let { alt ->
+            if (runCatching { pruefe(alt) }.isSuccess) {
+                KiLog.info("↺ $schluessel aus dem Zwischenstand übernommen (${alt.length} Zeichen)")
+                return alt to true
+            }
+            speicher.entferne(schluessel)
+        }
+        val text = block()
+        try {
+            pruefe(text)
+        } catch (t: Throwable) {
+            KiLog.fehler("Antwort für $schluessel unbrauchbar (${text.length} Zeichen), Anfang: ${text.take(300)} … Ende: ${text.takeLast(300)}", t)
+            throw t
+        }
+        if (mitSpeicher) speicher.lege(schluessel, text)
+        return text to false
+    }
+
+    /**
+     * Rettet einen Lauf aus dem Diskussionsprotokoll (für Läufe vor dem Zwischenspeicher): Dossiers, Debattenrunden
+     * und Entscheidung werden als erledigte Schritte übernommen.
+     */
+    fun rettungAusProtokoll(beitraege: List<Beitrag>): Map<String, String> {
+        val schritte = linkedMapOf<String, String>()
+        val runden = ArrayDeque(listOf("runde 1 forscherin", "runde 1 skeptiker", "runde 2 forscherin", "runde 2 skeptiker"))
+        for (b in beitraege) {
+            when {
+                istRecherche(b.name) && b.name != SCHWARM && b.name != PRUEFSTAND && !b.text.startsWith("(Recherche fehlgeschlagen") && b.text.isNotBlank() ->
+                    schritte["recherche:${b.name}"] = b.text
+                (b.name == PRO || b.name == CONTRA) && runden.isNotEmpty() -> {
+                    val soll = runden.first()
+                    if ((b.name == PRO) == soll.endsWith("forscherin")) schritte["debatte:${runden.removeFirst()}"] = b.text
+                }
+                b.name == RICHTER && runCatching { jsonAus(b.text) }.isSuccess -> schritte["debatte:entscheidung"] = b.text
+            }
+        }
+        return schritte
     }
 
     /**
@@ -279,19 +347,21 @@ class LongevityKi(
                             "BEREICH_DETAILS" to a.faktoren.joinToString("\n\n") { detail(it) }
                                 .ifBlank { "(in diesem Bereich steht noch kein Faktor in der Rangliste)" },
                         )
-                        val text = try {
-                            frage(
-                                system(v, werte, "rolle rechercheur"), nachricht(v, "aufbau recherche", werte, a.abschnitt),
-                                e.modell, e.denkstufe, fortschritt, webSuche = true, still = true,
-                            ).trim()
+                        val (text, gespeichert) = try {
+                            gesichert("recherche:${a.name}") {
+                                frage(
+                                    system(v, werte, "rolle rechercheur"), nachricht(v, "aufbau recherche", werte, a.abschnitt),
+                                    e.modell, e.denkstufe, fortschritt, webSuche = true, still = true, label = a.name,
+                                ).trim()
+                            }
                         } catch (c: CancellationException) {
                             throw c
                         } catch (t: Throwable) {
                             fehler.incrementAndGet()
                             if (ersterFehler == null) ersterFehler = t
-                            "(Recherche fehlgeschlagen: ${t.message})"
+                            "(Recherche fehlgeschlagen: ${t.message})" to false
                         }
-                        fortschritt.beitragFertig(a.name, text, liveLeeren = false)
+                        if (!gespeichert) fortschritt.beitragFertig(a.name, text, liveLeeren = false)
                         val n = fertig.incrementAndGet()
                         fortschritt.status(SCHWARM, "$n von ${auftraege.size} Dossiers fertig …")
                         "## DOSSIER ${a.name.uppercase(Locale.GERMANY)}\n$text"
@@ -327,22 +397,26 @@ class LongevityKi(
                             "BEREICH" to bereich,
                             "BEREICH_DETAILS" to block.joinToString("\n\n") { detail(it) },
                         )
-                        val pro = try {
-                            frage(
-                                system(v, werte, "rolle forscherin"),
-                                nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "(noch keine – du beginnst)"), "einzelprüfung forscherin"),
-                                e.modell, e.denkstufe, fortschritt, webSuche = true, still = true,
-                            ).trim()
-                        } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Prüfung fehlgeschlagen: ${t.message})" }
-                        fortschritt.beitragFertig("$PRO · Prüfung $bereich", pro, liveLeeren = false)
-                        val contra = try {
-                            frage(
-                                system(v, werte, "rolle skeptiker"),
-                                nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "### $PRO:\n$pro"),"einzelprüfung skeptiker"),
-                                e.modell, e.denkstufe, fortschritt, webSuche = true, still = true,
-                            ).trim()
-                        } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Gegenprüfung fehlgeschlagen: ${t.message})" }
-                        fortschritt.beitragFertig("$CONTRA · Prüfung $bereich", contra, liveLeeren = false)
+                        val (pro, proGespeichert) = try {
+                            gesichert("pruefung:$bereich:forscherin") {
+                                frage(
+                                    system(v, werte, "rolle forscherin"),
+                                    nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "(noch keine – du beginnst)"), "einzelprüfung forscherin"),
+                                    e.modell, e.denkstufe, fortschritt, webSuche = true, still = true, label = "Einzelprüfung $bereich Forscherin",
+                                ).trim()
+                            }
+                        } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Prüfung fehlgeschlagen: ${t.message})" to false }
+                        if (!proGespeichert) fortschritt.beitragFertig("$PRO · Prüfung $bereich", pro, liveLeeren = false)
+                        val (contra, contraGespeichert) = try {
+                            gesichert("pruefung:$bereich:skeptiker") {
+                                frage(
+                                    system(v, werte, "rolle skeptiker"),
+                                    nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "### $PRO:\n$pro"), "einzelprüfung skeptiker"),
+                                    e.modell, e.denkstufe, fortschritt, webSuche = true, still = true, label = "Einzelprüfung $bereich Skeptiker",
+                                ).trim()
+                            }
+                        } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Gegenprüfung fehlgeschlagen: ${t.message})" to false }
+                        if (!contraGespeichert) fortschritt.beitragFertig("$CONTRA · Prüfung $bereich", contra, liveLeeren = false)
                         val n = fertig.incrementAndGet()
                         fortschritt.status(PRUEFSTAND, "$n von ${bloecke.size} Blöcken geprüft …")
                         "## EINZELPRÜFUNG $bereich\n### $PRO:\n$pro\n### $CONTRA:\n$contra"
@@ -375,14 +449,17 @@ class LongevityKi(
                             "ZUSAMMENFASSUNG" to m.ergebnis.zusammenfassung,
                         )
                         val ergebnis = try {
-                            val antwort = frage(
-                                system(v, werte, "rolle autorin"), nachricht(v, "aufbau konsens", werte, "text konsens"),
-                                e.modell, e.denkstufe, fortschritt, webSuche = webSuche, still = true,
-                            )
+                            val (antwort, _) = gesichert("konsens:${f.id}", pruefe = { faktorAus(jsonAus(it)) }) {
+                                frage(
+                                    system(v, werte, "rolle autorin"), nachricht(v, "aufbau konsens", werte, "text konsens"),
+                                    e.modell, e.denkstufe, fortschritt, webSuche = webSuche, still = true, label = "Text-Konsens id ${f.id} „${f.titel}“",
+                                )
+                            }
                             konsensUebernehmen(f, faktorAus(jsonAus(antwort)))
                         } catch (c: CancellationException) {
                             throw c
-                        } catch (_: Throwable) {
+                        } catch (t: Throwable) {
+                            KiLog.fehler("Text-Konsens für id ${f.id} „${f.titel}“ gescheitert – alter Text bleibt", t)
                             // Scheitert der neue Text, geht die Erkenntnis trotzdem nicht verloren.
                             if (auftrag.ergaenzung.isBlank()) f else f.copy(erklaerung = f.erklaerung.trimEnd() + "\n\nNeu ($datum): " + auftrag.ergaenzung)
                         }
@@ -425,9 +502,16 @@ class LongevityKi(
             val rolle = when (name) { PRO -> "rolle forscherin"; CONTRA -> "rolle skeptiker"; else -> "rolle gutachterin" }
             val suche = webSuche && name != RICHTER
             fortschritt.band(von, bis, zeichen, if (suche) sekunden * 1.6f else sekunden, "$name ${if (name == RICHTER) "wägt ab" else "argumentiert"} …")
-            fortschritt.beitragBeginnt(name)
-            val text = frage(system(v, werte, rolle), nachricht(v, AUFBAU_NACHRICHT, werte, auftrag), e.modell, e.denkstufe, fortschritt, webSuche = suche).trim()
-            fortschritt.beitragFertig(name, text)
+            // Die Entscheidung zählt nur als fertig, wenn sie ein lesbares JSON ist.
+            val pruefe: (String) -> Unit = if (name == RICHTER) { t -> jsonAus(t) } else { _ -> }
+            val (text, gespeichert) = gesichert("debatte:$auftrag", pruefe) {
+                fortschritt.beitragBeginnt(name)
+                frage(
+                    system(v, werte, rolle), nachricht(v, AUFBAU_NACHRICHT, werte, auftrag), e.modell, e.denkstufe, fortschritt,
+                    webSuche = suche, label = "$name · $auftrag",
+                ).trim()
+            }
+            if (!gespeichert) fortschritt.beitragFertig(name, text) else fortschritt.status(name, "Aus dem Zwischenstand übernommen.")
             verlauf.append("\n### ").append(name).append(":\n").append(text).append('\n')
             return text
         }
@@ -554,6 +638,11 @@ class LongevityKi(
         }
         // Förderliche Faktoren und Lebenszeit-Räuber haben getrennte Kontingente.
         val vorschlaege = alle.filter { !it.raeuber }.take(NEU_MAX) + alle.filter { it.raeuber }.take(NEU_MAX)
+        KiLog.info(
+            "Entscheidung gelesen: ${reihenfolge.length()} Einträge in der Reihenfolge (von ${liste.size}), ${liste.size - gesehen.size} fehlten, " +
+                "$veraendert Plätze geändert, ${konsens.size} Texte zum Neuschreiben, ${hinweise.size} Hinweise, " +
+                "${alle.size} neue Faktoren geliefert, ${vorschlaege.size} übernommen",
+        )
         return Mischung(
             Aktualisierung(ergebnis, vorschlaege, o.optString("zusammenfassung").trim(), veraendert, hinweise = hinweise.size),
             konsens,
@@ -594,14 +683,51 @@ class LongevityKi(
         webSuche: Boolean = false,
         /** Parallele Aufrufe zählen nur für den Balken und schreiben nicht in den Live-Beitrag. */
         still: Boolean = false,
-    ): String = auth.streamChat(
-        instructions = anweisung,
-        turns = listOf(ChatTurn("user", text.trim())),
-        model = modell,
-        reasoningEffort = stufe,
-        webSuche = webSuche,
-        onDelta = { stueck -> if (still) fortschritt?.zeichenStill(stueck) else fortschritt?.zeichen(stueck) },
-    )
+        /** Name des Schritts fürs Diagnose-Log. */
+        label: String = "KI-Aufruf",
+    ): String {
+        var versuch = 0
+        while (true) {
+            val start = System.currentTimeMillis()
+            var empfangen = 0
+            KiLog.info(
+                "▶ $label" + (if (versuch > 0) " (Wiederholung $versuch)" else "") +
+                    " · ${modell.apiId}/${stufe.name} · Websuche ${if (webSuche && auth.webSucheMoeglich) "an" else "aus"}" +
+                    " · System ${anweisung.length} + Nachricht ${text.length} Zeichen",
+            )
+            try {
+                val antwort = auth.streamChat(
+                    instructions = anweisung,
+                    turns = listOf(ChatTurn("user", text.trim())),
+                    model = modell,
+                    reasoningEffort = stufe,
+                    webSuche = webSuche,
+                    onDelta = { stueck ->
+                        empfangen += stueck.length
+                        if (still) fortschritt?.zeichenStill(stueck) else fortschritt?.zeichen(stueck)
+                    },
+                )
+                KiLog.info("✔ $label nach ${(System.currentTimeMillis() - start) / 1000}s · ${antwort.length} Zeichen")
+                return antwort
+            } catch (c: CancellationException) {
+                KiLog.warn("■ $label abgebrochen nach ${(System.currentTimeMillis() - start) / 1000}s · $empfangen Zeichen empfangen")
+                throw c
+            } catch (t: Throwable) {
+                // Abgerissene Verbindungen (z. B. Zeitlimit, WLAN-Wechsel) werden komplett wiederholt – auch mitten im Text.
+                val abriss = t is IOException || (t is CodexAuthException && t.kind == AuthErrorKind.NETWORK && (t.retryable || t.cause is IOException || "vor dem Abschluss" in t.message.orEmpty()))
+                val nochmal = abriss && versuch < WIEDERHOLUNGEN_MS.size
+                KiLog.fehler(
+                    "✖ $label nach ${(System.currentTimeMillis() - start) / 1000}s · $empfangen Zeichen empfangen · " +
+                        if (nochmal) "neuer Versuch in ${WIEDERHOLUNGEN_MS[versuch] / 1000}s" else "gebe auf",
+                    t,
+                )
+                if (!nochmal) throw t
+                if (!still) fortschritt?.liveLeeren()
+                delay(WIEDERHOLUNGEN_MS[versuch])
+                versuch++
+            }
+        }
+    }
 
     private fun heute(): String = SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY).format(Date())
 
@@ -644,6 +770,8 @@ class LongevityKi(
         const val PARALLEL = 5
         /** Höchstens so viele neue förderliche Faktoren und ebenso viele neue Räuber pro Lauf. */
         const val NEU_MAX = 5
+        /** Wartezeiten, bevor ein abgerissener Aufruf komplett wiederholt wird. */
+        private val WIEDERHOLUNGEN_MS = longArrayOf(10_000L, 30_000L)
         /** Stand des Standard-Prompts; ein eigener Prompt älteren Stands wird einmalig gesichert und ersetzt. */
         const val PROMPT_VERSION = 2
 

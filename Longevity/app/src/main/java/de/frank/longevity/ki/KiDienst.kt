@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -44,18 +45,29 @@ class KiDienst : Service() {
         laeuft = true
         val sperre = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "longevity:ki").apply { acquire(120 * 60_000L) }
+        // Hält das WLAN auch bei ausgeschaltetem Bildschirm voll wach – sonst reißen lange Antworten ab.
+        val wlan = runCatching {
+            @Suppress("DEPRECATION")
+            val modus = if (Build.VERSION.SDK_INT >= 29) WifiManager.WIFI_MODE_FULL_LOW_LATENCY else WifiManager.WIFI_MODE_FULL_HIGH_PERF
+            applicationContext.getSystemService(WifiManager::class.java).createWifiLock(modus, "longevity:ki").apply { setReferenceCounted(false); acquire() }
+        }.onFailure { KiLog.warn("WLAN-Sperre nicht möglich", it) }.getOrNull()
         val fortschritt = Fortschritt()
+        val beginn = System.currentTimeMillis()
         val job = scope.launch {
             try {
                 auftrag(fortschritt)
                 fortschritt.fertig()
+                KiLog.info("KI-Arbeit fertig nach ${(System.currentTimeMillis() - beginn) / 1000}s: ${KiArbeit.ergebnis?.take(300)}")
             } catch (c: CancellationException) {
                 KiArbeit.fehler = "Abgebrochen."
+                KiLog.warn("KI-Arbeit abgebrochen nach ${(System.currentTimeMillis() - beginn) / 1000}s bei „${KiArbeit.schritt}“")
             } catch (e: Throwable) {
                 KiArbeit.fehler = e.message ?: "Die KI-Arbeit ist fehlgeschlagen."
+                KiLog.fehler("KI-Arbeit fehlgeschlagen nach ${(System.currentTimeMillis() - beginn) / 1000}s bei „${KiArbeit.schritt}“ (${(KiArbeit.prozent * 100).toInt()} %)", e)
             } finally {
                 KiArbeit.beendet()
                 if (sperre.isHeld) sperre.release()
+                runCatching { if (wlan?.isHeld == true) wlan.release() }
                 getSystemService(NotificationManager::class.java).notify(ID_FERTIG, meldung(laufend = false))
                 ServiceCompat.stopForeground(this@KiDienst, ServiceCompat.STOP_FOREGROUND_REMOVE)
                 stopSelf()

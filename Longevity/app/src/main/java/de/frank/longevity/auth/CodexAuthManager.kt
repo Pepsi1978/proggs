@@ -138,13 +138,20 @@ internal class CodexSseAccumulator {
 
     val isCompleted: Boolean get() = completed
 
+    /** Zählt die Ereignistypen (Diagnose: z. B. ob die Websuche lief). */
+    private val typen = linkedMapOf<String, Int>()
+
+    fun typenText(): String = typen.entries.joinToString(", ") { "${it.key}×${it.value}" }.ifBlank { "keine Ereignisse" }
+
     /** Gibt das neue Textstück zurück, oder null, wenn das Ereignis keinen Text trug. */
     fun accept(data: String): String? {
         if (data.isBlank() || data == "[DONE]") return null
         val event = runCatching { JSONObject(data) }.getOrElse {
             throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat ein ungültiges Streaming-Ereignis geliefert.", it)
         }
-        return when (event.optString("type")) {
+        val typ = event.optString("type")
+        typen[typ] = (typen[typ] ?: 0) + 1
+        return when (typ) {
             "response.output_text.delta" -> event.optString("delta").takeIf(String::isNotEmpty)?.also(deltas::append)
             "response.completed" -> {
                 completed = true
@@ -295,6 +302,7 @@ class CodexAuthManager(context: Context) {
                     val werkzeugFehler = "tool" in text || "web_search" in text || "web search" in text
                     if (geliefert || !werkzeugFehler || error.retryable || error.kind == AuthErrorKind.QUOTA || error.kind == AuthErrorKind.REAUTH) throw error
                     webSucheMoeglich = false
+                    de.frank.longevity.ki.KiLog.warn("Websuche vom Server abgelehnt – weiter ohne Websuche", error)
                     requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
                 }
             }
@@ -524,6 +532,7 @@ class CodexAuthManager(context: Context) {
                 if (deliveredText || attempt >= TRANSIENT_RETRY_DELAYS_MS.size || !error.isTransient()) {
                     throw error
                 }
+                de.frank.longevity.ki.KiLog.warn("Codex-Anfrage gestört (Versuch ${attempt + 1}) – wiederhole in ${TRANSIENT_RETRY_DELAYS_MS[attempt]} ms", error)
                 delay(TRANSIENT_RETRY_DELAYS_MS[attempt])
                 attempt++
             }
@@ -578,10 +587,12 @@ class CodexAuthManager(context: Context) {
             if (trackedResponse.call.isCanceled()) {
                 throw CancellationException("Die OpenAI-Anfrage wurde abgebrochen.")
             }
+            de.frank.longevity.ki.KiLog.warn("SSE-Stream abgerissen nach ${accumulator.typenText()}", error)
             throw error
         } finally {
             activeQuestionCall.clear(trackedResponse.call)
         }
+        de.frank.longevity.ki.KiLog.info("SSE: ${accumulator.typenText()}")
         return accumulator.result()
     }
 
@@ -699,7 +710,9 @@ class CodexAuthManager(context: Context) {
         private val RESPONSES_HTTP_CLIENT = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(5, TimeUnit.MINUTES)
-            .callTimeout(8, TimeUnit.MINUTES)
+            // Kein festes Gesamtlimit mehr: Websuche plus hohe Denkstufe kann länger als 8 Minuten dauern. Hängt der
+            // Stream, greift das Lese-Zeitlimit (5 Minuten ohne ein einziges Ereignis).
+            .callTimeout(40, TimeUnit.MINUTES)
             .build()
         private const val REFRESH_SKEW_MS = 120_000L
         private const val FOREGROUND_NETWORK_TIMEOUT_MS = 5 * 60_000L

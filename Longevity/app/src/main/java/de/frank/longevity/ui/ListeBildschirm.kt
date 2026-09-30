@@ -222,15 +222,23 @@ private fun AktualisierenDialog(vm: AppViewModel) {
                 Text("Großen Aktualisierungslauf starten?", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp))
             }
             Text(
-                "Forscherin, Skeptiker und Gutachterin prüfen in fünf KI-Runden die komplette Rangliste neu. " +
-                    "Das dauert mehrere Minuten und verbraucht spürbar Kontingent.",
+                "Rechercheure mit Websuche, Einzelprüfung jedes Faktors, Debatte von Forscherin und Skeptiker, Entscheidung der " +
+                    "Gutachterin und neue Texte der Autorin. Das dauert lange und verbraucht spürbar Kontingent. Jeder fertige " +
+                    "Schritt wird gesichert – bricht der Lauf ab, geht es beim nächsten Mal dort weiter.",
                 color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
             )
             Text(
-                "${e.modell.label} · ${e.denkstufe.label}" + if (vm.eigenerPrompt) " · eigener Prompt" else " · Standard-Prompt",
+                "${e.modell.label} · ${e.denkstufe.label} · ${e.rechercheTiefe.anzeige}" + if (vm.eigenerPrompt) " · eigener Prompt" else " · Standard-Prompt",
                 color = f.textSchwach, fontSize = 12.sp,
             )
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            val info = vm.fortsetzInfo
+            if (info != null) {
+                Text(info, color = f.primaer, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Chip("Neu beginnen", false, modifier = Modifier.weight(1f)) { vm.aktualisieren(neuBeginnen = true) }
+                    Chip("Fortsetzen", true, icon = Icons.Rounded.Refresh, modifier = Modifier.weight(1f)) { vm.aktualisieren() }
+                }
+            } else Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Chip("Abbrechen", false, modifier = Modifier.weight(1f)) { vm.aktualisierenAbbrechen() }
                 Chip("Starten", true, icon = Icons.Rounded.Refresh, modifier = Modifier.weight(1f)) { vm.aktualisieren() }
             }

@@ -24,7 +24,10 @@ import de.frank.longevity.data.Repository
 import de.frank.longevity.data.platz
 import de.frank.longevity.ki.Art
 import de.frank.longevity.ki.KiArbeit
+import de.frank.longevity.ki.KiLog
+import de.frank.longevity.ki.LaufSpeicher
 import de.frank.longevity.ki.LongevityKi
+import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.SharingStarted
@@ -50,7 +53,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = Repository.get(app)
     val einstellungen = Einstellungen.get(app)
     val auth = CodexAuthManager(app)
-    private val ki = LongevityKi(auth, einstellungen) { standardPrompt() }
+    private val ki = LongevityKi(auth, einstellungen, { standardPrompt() }, LaufSpeicher(File(app.filesDir, "lauf-stand.json")))
     private val mikro = MicRecorder(app)
 
     val alle: StateFlow<List<Faktor>> = repo.alle.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -93,6 +96,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         KiArbeit.protokollLaden(app.filesDir)
+        // Diagnose: die letzte Diskussion auch dort ablegen, wo man sie per adb lesen kann.
+        runCatching { File(app.filesDir, "diskussion.json").takeIf { it.exists() }?.let { KiLog.kopie("diskussion.json", it.readText()) } }
         viewModelScope.launch {
             repo.startinhalteAnlegen()
             if (!einstellungen.verboteUmgestellt) {
@@ -235,19 +240,47 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun aktualisierenAnfragen() {
         if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
         if (KiArbeit.laeuft) { zeige(Bildschirm.Protokoll); return }
+        fortsetzInfo = ki.speicher.beschreibung(aktuelleIds()) ?: protokollRettung()?.let {
+            "Der letzte Lauf wurde nicht fertig. ${it.size} fertige Schritte (Recherchen, Debatte" +
+                (if ("debatte:entscheidung" in it) ", Entscheidung" else "") + ") werden aus der Diskussion übernommen und der Lauf dort fortgesetzt."
+        }
         aktualisierenFrage = true
     }
 
+    private fun aktuelleIds(): List<Long> = alle.value.filter { !it.vorschlag }.map { it.id }
+
+    /** Beschreibung eines abgebrochenen Laufs, der fortgesetzt werden kann – null, wenn es keinen gibt. */
+    var fortsetzInfo by mutableStateOf<String?>(null); private set
+
     fun aktualisierenAbbrechen() { aktualisierenFrage = false }
 
-    fun aktualisieren() {
+    /**
+     * Ein Lauf aus der Zeit vor dem Zwischenspeicher, der nicht fertig wurde: Seine fertigen Schritte stehen noch im
+     * Diskussionsprotokoll (nach dem letzten erfolgreichen Lauf geschrieben, ohne eigenen Beitrag des Nutzers).
+     */
+    private fun protokollRettung(): Map<String, String>? {
+        if (ki.speicher.laden() != null) return null
+        val datei = File(getApplication<Application>().filesDir, "diskussion.json")
+        if (!datei.exists() || datei.lastModified() <= einstellungen.letzteAktualisierung + 60_000) return null
+        val beitraege = KiArbeit.protokoll.toList()
+        if (beitraege.any { it.name == LongevityKi.NUTZER }) return null
+        return ki.rettungAusProtokoll(beitraege).takeIf { it.isNotEmpty() }
+    }
+
+    fun aktualisieren(neuBeginnen: Boolean = false) {
         aktualisierenFrage = false
         if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
         if (KiArbeit.laeuft) { zeige(Bildschirm.Protokoll); return }
         hinweiseAnfragen()
-        KiArbeit.starte(getApplication(), Art.AKTUALISIEREN, "Rangfolge prüfen") { fortschritt ->
-            val a = ki.aktualisieren(repo.liste(), fortschritt)
+        if (neuBeginnen) ki.speicher.loeschen()
+        val rettung = if (!neuBeginnen && ki.speicher.beschreibung(aktuelleIds()) == null) protokollRettung() else null
+        val fortsetzen = !neuBeginnen && (ki.speicher.beschreibung(aktuelleIds()) != null || rettung != null)
+        KiArbeit.starte(getApplication(), Art.AKTUALISIEREN, "Rangfolge prüfen", protokollBehalten = fortsetzen) { fortschritt ->
+            val liste = repo.liste()
+            if (rettung != null) ki.speicher.retten(einstellungen.rechercheTiefe.name, liste.map { it.id }, rettung)
+            val a = ki.aktualisieren(liste, fortschritt)
             repo.uebernimm(a.liste, a.vorschlaege)
+            ki.speicher.loeschen()
             einstellungen.letzteAktualisierung = System.currentTimeMillis()
             KiArbeit.ergebnis = buildString {
                 if (ki.webSucheAbgelehnt) append("⚠ Die Websuche wurde vom Server abgelehnt – diesmal ohne Internet-Recherche gearbeitet.\n\n")

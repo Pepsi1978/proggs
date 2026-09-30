@@ -61,13 +61,22 @@ object KiArbeit {
             val a = JSONArray()
             protokoll.forEach { a.put(JSONObject().put("name", it.name).put("text", it.text)) }
             d.writeText(a.toString())
+            KiLog.kopie("diskussion.json", a.toString())
         }
     }
 
     internal var auftrag: (suspend (Fortschritt) -> Unit)? = null
     internal var abbruch: (() -> Unit)? = null
 
-    fun starte(context: Context, art: Art, titel: String, bezugId: Long? = null, auftrag: suspend (Fortschritt) -> Unit): Boolean {
+    fun starte(
+        context: Context,
+        art: Art,
+        titel: String,
+        bezugId: Long? = null,
+        /** Ein fortgesetzter Lauf behält die bisherige Diskussion. */
+        protokollBehalten: Boolean = false,
+        auftrag: suspend (Fortschritt) -> Unit,
+    ): Boolean {
         if (laeuft) return false
         this.art = art
         this.titel = titel
@@ -75,7 +84,8 @@ object KiArbeit {
         prozent = 0f
         schritt = "Starte …"
         // Nur ein neuer großer Lauf beginnt eine neue Diskussion; Mitreden baut auf ihr auf.
-        if (art == Art.AKTUALISIEREN) { protokoll.clear(); protokollSichern() }
+        if (art == Art.AKTUALISIEREN && !protokollBehalten) { protokoll.clear(); protokollSichern() }
+        KiLog.info("KI-Arbeit gestartet: ${art.anzeige} „$titel“" + if (protokollBehalten) " (Fortsetzung, ${protokoll.size} Beiträge behalten)" else "")
         live = null
         fehler = null
         ergebnis = null
@@ -147,6 +157,9 @@ class Fortschritt internal constructor() {
 
     /** Statuszeile im Live-Bereich, während mehrere Agenten gleichzeitig arbeiten. */
     fun status(name: String, text: String) { KiArbeit.live = Beitrag(name, text) }
+
+    /** Vor einer Wiederholung: den halb geschriebenen Live-Text verwerfen. */
+    fun liveLeeren() { KiArbeit.live?.let { KiArbeit.live = it.copy(text = "") } }
 
     fun schritt(text: String) { KiArbeit.schritt = text }
 
