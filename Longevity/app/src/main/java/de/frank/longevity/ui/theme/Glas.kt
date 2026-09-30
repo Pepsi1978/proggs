@@ -19,7 +19,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -52,12 +51,24 @@ fun Modifier.glas(
     fuellung: Color = farben.flaeche,
     rand: Boolean = true,
     toenung: Color? = null,
+): Modifier = glas(farben, radius, { erhoeht }, fuellung, rand, toenung)
+
+/** Animierte Tiefe wird erst beim Zeichnen gelesen; Pfade und Verläufe bleiben im Cache. */
+fun Modifier.glas(
+    farben: Farben,
+    radius: Dp = farben.radius,
+    erhoeht: () -> Float,
+    fuellung: Color = farben.flaeche,
+    rand: Boolean = true,
+    toenung: Color? = null,
 ): Modifier = drawWithCache {
     val r = radius.toPx().coerceAtMost(size.minDimension / 2)
     val form = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(r))) }
     val schattenFarbe = if (farben.dunkel) Color.Black else farben.schatten
     val stufen = 7
-    val tiefe = 3.dp.toPx() * erhoeht
+    val tiefeBasis = 3.dp.toPx()
+    val schattenSchritt = 1.6.dp.toPx()
+    val randStil = Stroke(1.dp.toPx())
     val verlauf = Brush.verticalGradient(
         listOf(
             fuellung.copy(alpha = (fuellung.alpha * 1.15f).coerceAtMost(1f)),
@@ -76,10 +87,12 @@ fun Modifier.glas(
         endY = size.height,
     )
     onDrawBehind {
-        if (erhoeht > 0f) clipPath(form, ClipOp.Difference) {
+        val hoehe = erhoeht()
+        val tiefe = tiefeBasis * hoehe
+        if (hoehe > 0f) clipPath(form, ClipOp.Difference) {
             for (i in 1..stufen) {
-                val a = (if (farben.dunkel) 0.16f else 0.07f) * (1f - i / (stufen + 1f)) * erhoeht
-                val g = i * 1.6.dp.toPx() * erhoeht
+                val a = (if (farben.dunkel) 0.16f else 0.07f) * (1f - i / (stufen + 1f)) * hoehe
+                val g = i * schattenSchritt * hoehe
                 drawRoundRect(
                     color = schattenFarbe.copy(alpha = a),
                     topLeft = Offset(-g * 0.6f, -g * 0.3f + tiefe * i / stufen * 2f),
@@ -91,15 +104,16 @@ fun Modifier.glas(
         drawPath(form, verlauf)
         tonVerlauf?.let { drawPath(form, it) }
         drawPath(form, glanz)
-        if (rand) drawPath(form, kante, style = Stroke(1.dp.toPx()))
+        if (rand) drawPath(form, kante, style = randStil)
     }
 }
 
 /** Drückeffekt in 3D: kippt leicht nach hinten und sinkt ein. */
-fun Modifier.druck3d(quelle: MutableInteractionSource, staerke: Float = 1f): Modifier = composed {
+@Composable
+fun Modifier.druck3d(quelle: MutableInteractionSource, staerke: Float = 1f): Modifier {
     val gedrueckt by quelle.collectIsPressedAsState()
     val f by animateFloatAsState(if (gedrueckt) 1f else 0f, spring(dampingRatio = 0.55f, stiffness = 600f), label = "druck")
-    graphicsLayer {
+    return graphicsLayer {
         val s = 1f - 0.035f * f * staerke
         scaleX = s; scaleY = s
         rotationX = 5f * f * staerke
@@ -124,9 +138,12 @@ fun Modifier.knopf3d(von: Color, bis: Color, radius: Dp, dunkel: Boolean): Modif
     val koerper = Brush.linearGradient(listOf(von, bis), Offset.Zero, Offset(size.width, size.height))
     val bogen = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.42f), 0.5f to Color.White.copy(alpha = 0.04f), 1f to Color.Transparent)
     val unten = Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.18f))
+    val kante = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.05f)))
+    val randStil = Stroke(1.dp.toPx())
+    val schattenSchritt = 1.8.dp.toPx()
     onDrawBehind {
         for (i in 1..6) {
-            val g = i * 1.8.dp.toPx()
+            val g = i * schattenSchritt
             drawRoundRect(
                 color = von.copy(alpha = (if (dunkel) 0.12f else 0.10f) * (1f - i / 7f)),
                 topLeft = Offset(-g * 0.5f, g * 0.9f),
@@ -139,7 +156,7 @@ fun Modifier.knopf3d(von: Color, bis: Color, radius: Dp, dunkel: Boolean): Modif
         clipPath(form) {
             drawRoundRect(bogen, topLeft = Offset(size.width * 0.06f, size.height * 0.05f), size = Size(size.width * 0.88f, size.height * 0.5f), cornerRadius = CornerRadius(r * 0.8f))
         }
-        drawPath(form, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.05f))), style = Stroke(1.dp.toPx()))
+        drawPath(form, kante, style = randStil)
     }
 }
 

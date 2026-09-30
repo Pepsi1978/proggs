@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -48,13 +47,14 @@ import de.frank.longevity.ui.theme.glas
 import de.frank.longevity.ui.theme.knopf3d
 
 /** Einblenden beim ersten Erscheinen: steigt auf und kippt leicht in 3D nach vorn. */
-fun Modifier.einblenden(verzoegerung: Int = 0): Modifier = composed {
+@Composable
+fun Modifier.einblenden(verzoegerung: Int = 0): Modifier {
     val bewegung = LocalBewegung.current
     val a = remember { Animatable(if (bewegung) 0f else 1f) }
     LaunchedEffect(Unit) {
         if (bewegung) { kotlinx.coroutines.delay(verzoegerung.toLong()); a.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = 180f)) }
     }
-    graphicsLayer {
+    return graphicsLayer {
         val v = a.value
         alpha = v.coerceIn(0f, 1f)
         translationY = (1f - v) * 60f

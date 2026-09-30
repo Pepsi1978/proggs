@@ -61,6 +61,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -89,6 +90,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private data class AufgabenStand(val anzahl: Int, val erledigt: Int) {
+    val anteil: Float get() = if (anzahl == 0) 0f else erledigt.toFloat() / anzahl
+}
+
 @Composable
 fun ListeBildschirm(vm: AppViewModel) {
     val f = LocalFarben.current
@@ -97,6 +102,18 @@ fun ListeBildschirm(vm: AppViewModel) {
     val plus = remember(liste) { liste.filter { !it.raeuber } }
     val raeuber = remember(liste) { liste.filter { it.raeuber } }
     val vorschlaege = remember(alle) { alle.filter { it.vorschlag } }
+    // Auch beim Zurückscrollen kein JSON auf dem UI-Thread: nur bei geänderten Daten auswerten.
+    val aufgaben = remember(liste) {
+        liste.associate { x ->
+            val punkte = x.punkte
+            x.id to AufgabenStand(punkte.size, punkte.count { it.erledigt })
+        }
+    }
+    val fortschritt = remember(aufgaben) {
+        val anzahl = aufgaben.values.sumOf { it.anzahl }
+        if (anzahl == 0) 0f else aufgaben.values.sumOf { it.erledigt }.toFloat() / anzahl
+    }
+    val plaetze = remember(liste) { liste.associate { it.id to it.platz(liste) } }
     val zustand = rememberLazyListState()
     var designOffen by rememberSaveable { mutableStateOf(false) }
     val oben = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -132,7 +149,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                         // Ohne Zwischenpuffer: sonst schneidet die Ebene den weichen Schatten an der Kartenkante ab (eckige graue Ränder).
                         compositingStrategy = CompositingStrategy.ModulateAlpha
                     },
-                    fortschritt = liste.flatMap { it.punkte }.let { p -> if (p.isEmpty()) 0f else p.count { it.erledigt }.toFloat() / p.size },
+                    fortschritt = fortschritt,
                 )
             }
             item(key = "ki") { KiKarte(vm, nurFuer = null) }
@@ -157,11 +174,11 @@ fun ListeBildschirm(vm: AppViewModel) {
             }
             // Gleicher contentType: beim Scrollen übernimmt eine neue Karte die Komposition einer verschwundenen Karte.
             items(plus, key = { it.id }, contentType = { "faktor" }) { x ->
-                FaktorKarte(x, x.platz(liste), hervor = vm.hervorgehoben == x.id, modifier = Modifier.animateItem()) { vm.oeffne(x.id) }
+                FaktorKarte(x, plaetze.getValue(x.id), aufgaben.getValue(x.id), hervor = vm.hervorgehoben == x.id, modifier = Modifier.animateItem()) { vm.oeffne(x.id) }
             }
             item(key = "nulllinie") { NullLinie(raeuber.size, Modifier.animateItem()) }
             items(raeuber, key = { it.id }, contentType = { "faktor" }) { x ->
-                FaktorKarte(x, x.platz(liste), hervor = vm.hervorgehoben == x.id, modifier = Modifier.animateItem()) { vm.oeffne(x.id) }
+                FaktorKarte(x, plaetze.getValue(x.id), aufgaben.getValue(x.id), hervor = vm.hervorgehoben == x.id, modifier = Modifier.animateItem()) { vm.oeffne(x.id) }
             }
             item(key = "ueberblick") { Ueberblick(liste) { vm.oeffne(it) } }
             item(key = "hinweis") {
@@ -363,22 +380,22 @@ fun RangPfeil(x: Faktor) {
 }
 
 @Composable
-fun FaktorKarte(x: Faktor, platz: String, hervor: Boolean, modifier: Modifier = Modifier, aktion: () -> Unit) {
+private fun FaktorKarte(x: Faktor, platz: String, aufgaben: AufgabenStand, hervor: Boolean, modifier: Modifier = Modifier, aktion: () -> Unit) {
     val f = LocalFarben.current
-    val leuchten by animateFloatAsState(if (hervor) 1f else 0f, tween(600), label = "hervor")
-    val punkte = x.punkte
-    val anteil = if (punkte.isEmpty()) 0f else punkte.count { it.erledigt }.toFloat() / punkte.size
+    val leuchten = animateFloatAsState(if (hervor) 1f else 0f, tween(600), label = "hervor")
+    val jahre = remember(x.jahre) { jahreText(x.jahre) }
     val erreicht = x.zielErreicht
     Column(
         modifier.fillMaxWidth().einblenden()
             .graphicsLayer { if (erreicht && !hervor) { alpha = 0.5f; compositingStrategy = CompositingStrategy.ModulateAlpha } }
             .drawBehind {
-                if (leuchten > 0f) drawRoundRect(
-                    f.primaer.copy(alpha = 0.35f * leuchten), topLeft = Offset(-8f, -8f), size = Size(size.width + 16f, size.height + 16f),
+                val licht = leuchten.value
+                if (licht > 0f) drawRoundRect(
+                    f.primaer.copy(alpha = 0.35f * licht), topLeft = Offset(-8f, -8f), size = Size(size.width + 16f, size.height + 16f),
                     cornerRadius = CornerRadius(f.radius.toPx() + 8f),
                 )
             }
-            .glas(f, erhoeht = if (erreicht) 0.3f else 1f + leuchten, toenung = if (erreicht) f.textSchwach else f.evidenzFarbe(x.ev))
+            .glas(f, erhoeht = { if (erreicht) 0.3f else 1f + leuchten.value }, toenung = if (erreicht) f.textSchwach else f.evidenzFarbe(x.ev))
             .antippen(aktion = aktion)
             .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 10.dp),
     ) {
@@ -396,18 +413,24 @@ fun FaktorKarte(x: Faktor, platz: String, hervor: Boolean, modifier: Modifier = 
             }
             Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
                 if (!erreicht) RangPfeil(x)
-                Text(jahreText(x.jahre), color = if (x.raeuber) f.gefahr else f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 3.dp))
-                if (punkte.isNotEmpty()) MiniRing(anteil, Modifier.padding(top = 4.dp).size(18.dp))
+                Text(jahre, color = if (x.raeuber) f.gefahr else f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 3.dp))
+                if (aufgaben.anzahl > 0) MiniRing(aufgaben.anteil, Modifier.padding(top = 4.dp).size(18.dp))
             }
         }
-        Canvas(Modifier.fillMaxWidth().height(4.dp).padding(top = 0.dp).graphicsLayer {
-            // Offscreen = dauerhaft zwischengespeicherte Ebene: gleiches Bild wie vorher, aber kein neuer Zwischenpuffer pro Frame.
+        Box(Modifier.fillMaxWidth().height(4.dp).graphicsLayer {
+            // Überlappende Balken gemeinsam abdunkeln, damit ihre Farben gleich bleiben.
             alpha = 0.9f; compositingStrategy = CompositingStrategy.Offscreen
-        }) {
-            drawRoundRect(f.textSchwach.copy(alpha = 0.12f), cornerRadius = CornerRadius(4f))
+        }.drawWithCache {
+            val grund = f.textSchwach.copy(alpha = 0.12f)
             val balken = if (x.raeuber) listOf(f.gefahr.copy(alpha = 0.6f), f.gefahr) else listOf(f.primaer, f.sekundaer)
-            drawRoundRect(Brush.horizontalGradient(balken), size = Size(size.width * x.wirkung / 100f, size.height), cornerRadius = CornerRadius(4f))
-        }
+            val verlauf = Brush.horizontalGradient(balken)
+            val breite = Size(size.width * x.wirkung / 100f, size.height)
+            val radius = CornerRadius(4f)
+            onDrawBehind {
+                drawRoundRect(grund, cornerRadius = radius)
+                drawRoundRect(verlauf, size = breite, cornerRadius = radius)
+            }
+        })
     }
 }
 
