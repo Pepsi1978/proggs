@@ -15,7 +15,9 @@ Stand: 01.10.2026 · Anlass: Longevity (`de.frank.longevity`, Version 1.0.12) am
 
 ## Befund Longevity (01.10.2026)
 
-Ausgeschlossen, weil in anderen, nicht markierten Apps genauso vorhanden:
+Weniger wahrscheinlich, weil in anderen, nicht markierten Apps genauso vorhanden. **Nicht ausgeschlossen:**
+Die Erkennung kann diese Merkmale zusammen mit Neuheit, Build-Art und Verhalten werten. Nur Google oder
+ein Test-Build ohne das Merkmal kann einen Punkt wirklich ausschließen.
 - Codex-Anmeldung (Geräte-Code bei `auth.openai.com`, Aufrufe an `chatgpt.com/backend-api/codex` mit
   `originator: codex_cli_rs`): steckt in 15+ Apps.
 - Websuche der KI-Agenten: läuft auf dem OpenAI-Server (`"tools":[{"type":"web_search"}]`), die APK
@@ -25,7 +27,7 @@ Ausgeschlossen, weil in anderen, nicht markierten Apps genauso vorhanden:
   Release-APKs mit `SK/Android/debug-shared.keystore`), kein Schlüsselwechsel.
 - Keine harten Auslöser aus der Google-Liste (kein SMS, kein Accessibility, kein Nachladen von Code).
 
-Was nur Longevity hat (wahrscheinlichste Gründe, zusammen):
+Was nur Longevity hat (wahrscheinlichste Gründe, vermutlich in Kombination mit den Punkten oben):
 1. **Ganz neues Paket ohne Ruf**: erste Version 29.09.2026, 13 Versionen in rund 30 Stunden.
 2. **Debug-Build** (`debuggable=true`) seit 1.0.9, selbst signiert, außerhalb des Play Store installiert.
 3. **Einzige App mit `WifiLock`** (`KiDienst.kt`, seit 1.0.8) plus WakeLock bis 2 Stunden im

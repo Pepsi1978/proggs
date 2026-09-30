@@ -40,6 +40,9 @@ INTENTIONALLY_UNMAPPED = {
     # android-build/ — Release-PROZESS (Play Console, kein Datei-Edit; AndroidManifest.xml/build.gradle
     # teilen sich android-platform/gradle — ein eigener Datei-Trigger wuerde diese kapern)
     "play-store-release",
+    # android/play-protect-fehlalarm: Geräte-Meldung nach der Installation, kein Datei-Edit
+    # (AndroidManifest.xml/build.gradle gehören android-platform/gradle). Querschnitt (2026-10-01).
+    "play-protect-fehlalarm",
     # agents/ — Konzept/Orchestrierung/Loop-Design (kein sauberes Datei-Pattern)
     "orchestrator-agent", "loop-engineering",
     # claude-tooling/ — Konzept (Desktop-App-Tabs / Harness-Selbstverbesserung, kein Datei-Pattern)
