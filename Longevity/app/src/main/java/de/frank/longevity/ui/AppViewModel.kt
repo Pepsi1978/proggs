@@ -289,6 +289,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (a.ueberarbeitet > 0) append(" ${a.ueberarbeitet} Texte neu geschrieben.")
                 if (a.vorschlaege.isNotEmpty()) append(" ${a.vorschlaege.size} neue Vorschläge.")
                 if (a.hinweise > 0) append(" ${a.hinweise} Hinweise zum Prüfen.")
+                if (a.wechsel.isNotEmpty()) append("\n\n").append(a.wechsel.take(10).joinToString("\n"))
                 if (a.zusammenfassung.isNotBlank()) append("\n\n").append(a.zusammenfassung)
             }
         }
@@ -314,6 +315,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (a.ueberarbeitet > 0) append(" ${a.ueberarbeitet} Texte neu geschrieben.")
                 if (a.vorschlaege.isNotEmpty()) append(" ${a.vorschlaege.size} neue Vorschläge.")
                 if (a.hinweise > 0) append(" ${a.hinweise} Hinweise zum Prüfen.")
+                if (a.wechsel.isNotEmpty()) append("\n\n").append(a.wechsel.take(10).joinToString("\n"))
             }.trim()
         }
         if (gestartet) { eText = ""; textVorKorrektur = null; korrekturFassungen = emptyList() }

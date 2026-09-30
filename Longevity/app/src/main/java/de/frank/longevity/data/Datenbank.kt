@@ -64,14 +64,21 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
-@Database(entities = [Faktor::class], version = 3, exportSchema = true)
+/** v4: Wahrscheinlichkeit der Wirkung (Rangfolge nach Erwartungswert). */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE faktoren ADD COLUMN wahrscheinlichkeit INTEGER")
+    }
+}
+
+@Database(entities = [Faktor::class], version = 4, exportSchema = true)
 abstract class Datenbank : RoomDatabase() {
     abstract fun faktoren(): FaktorDao
 
     companion object {
         @Volatile private var instanz: Datenbank? = null
         fun get(context: Context): Datenbank = instanz ?: synchronized(this) {
-            instanz ?: Room.databaseBuilder(context.applicationContext, Datenbank::class.java, "longevity.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instanz = it }
+            instanz ?: Room.databaseBuilder(context.applicationContext, Datenbank::class.java, "longevity.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { instanz = it }
         }
     }
 }

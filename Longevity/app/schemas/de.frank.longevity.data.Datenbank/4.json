@@ -1,0 +1,170 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 4,
+    "identityHash": "dd44a8d34a34efb70d55372436b33f8d",
+    "entities": [
+      {
+        "tableName": "faktoren",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `rang` INTEGER NOT NULL, `titel` TEXT NOT NULL, `kurz` TEXT NOT NULL, `kategorie` TEXT NOT NULL, `evidenz` TEXT NOT NULL, `jahre` REAL NOT NULL, `wirkung` INTEGER NOT NULL, `erklaerung` TEXT NOT NULL, `begruendung` TEXT NOT NULL, `ziel` TEXT NOT NULL, `punkteJson` TEXT NOT NULL, `eigen` INTEGER NOT NULL, `notiz` TEXT NOT NULL, `vorherRang` INTEGER, `neu` INTEGER NOT NULL, `vertieft` INTEGER NOT NULL, `vorschlag` INTEGER NOT NULL, `zielErreicht` INTEGER NOT NULL DEFAULT 0, `geaendertAm` INTEGER NOT NULL, `quellenJson` TEXT, `standVom` INTEGER, `hinweis` TEXT, `zusammenMit` INTEGER, `wahrscheinlichkeit` INTEGER)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rang",
+            "columnName": "rang",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titel",
+            "columnName": "titel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kurz",
+            "columnName": "kurz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kategorie",
+            "columnName": "kategorie",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "evidenz",
+            "columnName": "evidenz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "jahre",
+            "columnName": "jahre",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wirkung",
+            "columnName": "wirkung",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erklaerung",
+            "columnName": "erklaerung",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "begruendung",
+            "columnName": "begruendung",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ziel",
+            "columnName": "ziel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "punkteJson",
+            "columnName": "punkteJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eigen",
+            "columnName": "eigen",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notiz",
+            "columnName": "notiz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "vorherRang",
+            "columnName": "vorherRang",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "neu",
+            "columnName": "neu",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "vertieft",
+            "columnName": "vertieft",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "vorschlag",
+            "columnName": "vorschlag",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "zielErreicht",
+            "columnName": "zielErreicht",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "geaendertAm",
+            "columnName": "geaendertAm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quellenJson",
+            "columnName": "quellenJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "standVom",
+            "columnName": "standVom",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "hinweis",
+            "columnName": "hinweis",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "zusammenMit",
+            "columnName": "zusammenMit",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "wahrscheinlichkeit",
+            "columnName": "wahrscheinlichkeit",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'dd44a8d34a34efb70d55372436b33f8d')"
+    ]
+  }
+}

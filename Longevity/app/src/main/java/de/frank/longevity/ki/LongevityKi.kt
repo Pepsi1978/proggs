@@ -46,6 +46,8 @@ data class Aktualisierung(
     val ueberarbeitet: Int = 0,
     /** Anzahl neuer Hinweise der Gutachterin (Überschneidungen, Veraltetes). */
     val hinweise: Int = 0,
+    /** Platzwechsel als lesbare Zeilen („„Titel“: Platz 27 → 9“), größte Sprünge zuerst. */
+    val wechsel: List<String> = emptyList(),
 )
 
 /**
@@ -166,6 +168,7 @@ class LongevityKi(
             evidenz = neu.evidenz,
             jahre = if (neu.jahre != 0f) neu.jahre else f.jahre,
             wirkung = neu.wirkung,
+            wahrscheinlichkeit = neu.wahrscheinlichkeit ?: f.wahrscheinlichkeit,
             erklaerung = neu.erklaerung.ifBlank { f.erklaerung },
             begruendung = neu.begruendung.ifBlank { f.begruendung },
             ziel = neu.ziel.ifBlank { f.ziel },
@@ -281,7 +284,10 @@ class LongevityKi(
         auth.webSucheZuruecksetzen()
         val v = vorlage()
         val verlauf = StringBuilder()
-        bisher.forEach { b -> verlauf.append("\n### ").append(b.name).append(":\n").append(beitragKurz(b)).append('\n') }
+        // Nur die Debatte, deine Beiträge und die Entscheidungen – Dossiers, Einzelprüfungen und Autorinnen-Meldungen
+        // sind in den Texten schon eingearbeitet und würden jede Anfrage nur aufblähen.
+        bisher.filter { b -> !istRecherche(b.name) && b.name != AUTORIN && " · Prüfung " !in b.name }
+            .forEach { b -> verlauf.append("\n### ").append(b.name).append(":\n").append(beitragKurz(b)).append('\n') }
         fortschritt.beitragFertig(NUTZER, text)
         verlauf.append("\n### ").append(NUTZER).append(" (der Nutzer):\n").append(text).append('\n')
         val lauf = Lauf(v, liste, text, verlauf, fortschritt, "", "")
@@ -500,7 +506,8 @@ class LongevityKi(
                 ("DISKUSSION" to verlauf.toString().trim().ifBlank { "(noch keine – du beginnst)" }) +
                 ("PRUEFUNG" to pruefung.ifBlank { "(in diesem Lauf keine Einzelprüfungen)" })
             val rolle = when (name) { PRO -> "rolle forscherin"; CONTRA -> "rolle skeptiker"; else -> "rolle gutachterin" }
-            val suche = webSuche && name != RICHTER
+            // Auch die Gutachterin sucht: Sie soll strittige Quellen selbst prüfen können, statt sie mangels Zugriff zu verwerfen.
+            val suche = webSuche
             fortschritt.band(von, bis, zeichen, if (suche) sekunden * 1.6f else sekunden, "$name ${if (name == RICHTER) "wägt ab" else "argumentiert"} …")
             // Die Entscheidung zählt nur als fertig, wenn sie ein lesbares JSON ist.
             val pruefe: (String) -> Unit = if (name == RICHTER) { t -> jsonAus(t) } else { _ -> }
@@ -585,6 +592,7 @@ class LongevityKi(
                 evidenz = r.optString("evidenz").takeIf { s -> Evidenz.entries.any { it.name == s } } ?: alt.evidenz,
                 jahre = if (!jahre.isNaN() && jahre != 0.0) jahre.toFloat().coerceIn(-20f, 20f) else alt.jahre,
                 wirkung = if (wirkung in 0..100) wirkung else alt.wirkung,
+                wahrscheinlichkeit = r.optInt("wahrscheinlichkeit", -1).takeIf { it in 0..100 } ?: alt.wahrscheinlichkeit,
                 kategorie = kategorie ?: alt.kategorie,
             )
         }
@@ -617,7 +625,9 @@ class LongevityKi(
                 val text = h.optString("text").trim()
                 if (id !in nachId || text.isBlank()) continue
                 val mit = h.optLong("zusammenMit", -1).takeIf { it in nachId && it != id }
-                hinweise[id] = text to mit
+                // Mehrere Hinweise zum selben Faktor bleiben alle erhalten; zusammengelegt wird mit dem ersten genannten Partner.
+                val bisher = hinweise[id]
+                hinweise[id] = if (bisher == null) text to mit else (bisher.first + "\n\n" + text) to (bisher.second ?: mit)
             }
         }
 
@@ -644,7 +654,12 @@ class LongevityKi(
                 "${alle.size} neue Faktoren geliefert, ${vorschlaege.size} übernommen",
         )
         return Mischung(
-            Aktualisierung(ergebnis, vorschlaege, o.optString("zusammenfassung").trim(), veraendert, hinweise = hinweise.size),
+            Aktualisierung(
+                ergebnis, vorschlaege, o.optString("zusammenfassung").trim(), veraendert, hinweise = hinweise.size,
+                wechsel = ergebnis.filter { it.vorherRang != null && it.rang != it.vorherRang }
+                    .sortedByDescending { kotlin.math.abs(it.rang - (it.vorherRang ?: it.rang)) }
+                    .map { "„${it.titel}“: Platz ${it.vorherRang} → ${it.rang}" },
+            ),
             konsens,
         )
     }
@@ -735,7 +750,8 @@ class LongevityKi(
     private fun detail(f: Faktor): String = buildString {
         append("### id ").append(f.id).append(" · Rang ").append(f.rang).append(" · ").append(f.titel).append('\n')
         append("Kategorie: ").append(f.kat.name).append(" · Evidenz: ").append(f.ev.name)
-            .append(" · Jahre: ").append("%.1f".format(Locale.US, f.jahre)).append(" · Wirkung: ").append(f.wirkung)
+            .append(" · Jahre (Erwartungswert): ").append("%.1f".format(Locale.US, f.jahre)).append(" · Wirkung: ").append(f.wirkung)
+            .append(" · Wahrscheinlichkeit: ").append(f.wahrscheinlichkeit?.let { "$it %" } ?: "noch nicht geschätzt")
         if (f.zielErreicht) append(if (f.raeuber) " · beim Nutzer abgestellt" else " · vom Nutzer umgesetzt")
         append("\nKurz: ").append(f.kurz)
         append("\nErklärung: ").append(f.erklaerung.replace("\n\n", " ¶ "))
@@ -808,7 +824,8 @@ class LongevityKi(
 
         val FAKTOR_SCHEMA = """"titel": "max. 60 Zeichen, beschreibt das Verhalten komplett", "kurz": "1 Satz Kernaussage",
             | "kategorie": "$KATEGORIEN", "evidenz": "BELEGT|WAHRSCHEINLICH|LOGISCH",
-            | "jahre": "Zahl: positiv (z. B. 2.5) bei förderlichem Verhalten, negativ (z. B. -10) bei schädlichem", "wirkung": 0-100 (Stärke, auch bei schädlichem Verhalten positiv), "erklaerung": "4–7 Sätze", "begruendung": "2–3 Sätze, warum genau dieser Rang",
+            | "wahrscheinlichkeit": 0-100 (Prozent, dass der Effekt beim Menschen real ist),
+            | "jahre": "Zahl, Erwartungswert = Potenzial × Wahrscheinlichkeit: positiv (z. B. 2.5) bei förderlichem Verhalten, negativ (z. B. -10) bei schädlichem", "wirkung": 0-100 (Stärke, auch bei schädlichem Verhalten positiv), "erklaerung": "4–7 Sätze", "begruendung": "2–3 Sätze, warum genau dieser Rang",
             | "ziel": "konkretes, messbares Ziel", "punkte": [{"titel": "max. 50 Zeichen", "text": "1–2 Sätze, konkret mit Dosis/Häufigkeit", "evidenz": "BELEGT|WAHRSCHEINLICH|LOGISCH"}],
             | "quellen": [{"titel": "Autor et al., Studie/Metaanalyse, Journal", "jahr": "2025", "link": "https://… (nur wenn sicher bekannt, sonst leer)"}]""".trimMargin()
 
@@ -825,6 +842,7 @@ class LongevityKi(
                 evidenz = Evidenz.von(o.optString("evidenz")).name,
                 jahre = o.optDouble("jahre", 0.0).toFloat().coerceIn(-20f, 20f),
                 wirkung = o.optInt("wirkung", 50).coerceIn(0, 100),
+                wahrscheinlichkeit = o.optInt("wahrscheinlichkeit", -1).takeIf { it in 0..100 },
                 erklaerung = o.optString("erklaerung").trim(),
                 begruendung = o.optString("begruendung").trim(),
                 ziel = o.optString("ziel").trim(),

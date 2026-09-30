@@ -160,7 +160,14 @@ private fun Held(x: Faktor, platz: String) {
                     MiniRing(p.count { it.erledigt }.toFloat() / p.size, Modifier.size(22.dp), 3.5f)
                     Text("${p.count { it.erledigt }} von ${p.size} umgesetzt", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp))
                 }
-                Text(if (x.raeuber) "Geschätzter Verlust an gesunder Lebenszeit" else "Geschätzter Gewinn an gesunder Lebenszeit", color = f.textSchwach, fontSize = 11.sp)
+                x.wahrscheinlichkeit?.let { w ->
+                    Text("Wahrscheinlichkeit der Wirkung: $w %", color = f.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+                Text(
+                    (if (x.raeuber) "Erwarteter Verlust an gesunder Lebenszeit" else "Erwarteter Gewinn an gesunder Lebenszeit") +
+                        if (x.wahrscheinlichkeit != null) " (Potenzial × Wahrscheinlichkeit)" else "",
+                    color = f.textSchwach, fontSize = 11.sp,
+                )
             }
         }
     }

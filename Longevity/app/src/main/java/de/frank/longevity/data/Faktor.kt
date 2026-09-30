@@ -95,6 +95,8 @@ data class Faktor(
     val hinweis: String? = null,
     /** Vorschlag der Gutachterin: diesen Faktor mit dem Faktor dieser id zusammenlegen. */
     val zusammenMit: Long? = null,
+    /** Geschätzte Wahrscheinlichkeit (0–100 %), dass der Effekt real ist; [jahre] ist der Erwartungswert daraus. */
+    val wahrscheinlichkeit: Int? = null,
 ) {
     val kat: Kategorie get() = Kategorie.von(kategorie)
     /** Schädliches Verhalten, das Lebensjahre kostet – steht unter der Null-Linie. */
