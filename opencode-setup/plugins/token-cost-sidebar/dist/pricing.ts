@@ -341,7 +341,8 @@ export function withOpenAIPriorityPricing(model: any, providerID: string, modelI
       },
       pricingServiceTier: serviceTier ?? "default",
       pricingUnsupportedAbove: undefined,
-      pricingCacheReadMarkup: undefined,
+      // Sol uses the published tariff without the legacy local surcharge.
+      pricingCacheReadMarkup: 1,
     }
   }
   // Official OpenAI tariffs, 2026-09-04: keep Astra usable before models.dev catches up.
@@ -380,7 +381,7 @@ export function withOpenAIPriorityPricing(model: any, providerID: string, modelI
 }
 
 export function withOpenAICacheReadMarkup(model: any, providerID: string): any {
-  if (providerID !== "openai" || !model || model.pricingCacheReadMarkup === OPENAI_CACHE_READ_MARKUP) return model
+  if (providerID !== "openai" || !model || model.pricingCacheReadMarkup === 1 || model.pricingCacheReadMarkup === OPENAI_CACHE_READ_MARKUP) return model
   const source = priceSource(model)
   const markedUp = markUpCacheRead(source)
   if (markedUp === source) return model

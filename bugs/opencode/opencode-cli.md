@@ -870,7 +870,7 @@ https://github.com/anomalyco/opencode/pull/19596
 ## 11. Token-Effizienz & Kosten
 
 ### 80b. GPT-6.1 Sol: fehlender lokaler Tarif und übernommene Cachepreise
-**Stand:** 30.09.2026. **Versionen:** Token-Cost-Sidebar bis 1.17.2; upstream
+**Stand:** 30.09.2026. **Versionen:** Token-Cost-Sidebar bis 1.17.3; upstream
 OpenCode-Quellcode `2fa3363c924c5c3e367b84a87ae478296a0ed59b`.
 **Symptom:** Neue Sol-Version kann bei Katalogausfall OAuth-Nullpreise zeigen; Fast-Tarife werden
 nicht lokal ergänzt. Ein übernommener GPT-6-Sol-Tarif verdoppelt fälschlich den Cache-Read-Grundpreis.
@@ -878,7 +878,12 @@ nicht lokal ergänzt. Ein übernommener GPT-6-Sol-Tarif verdoppelt fälschlich d
 keinen für die exakte ID `gpt-6.1-sol`; der externe Katalog war deshalb die einzige Preisquelle.
 **FIX:** Modellbezogen 2/10/0,10/2,50 USD je Million Input/Output/Read/Write hinterlegen;
 bei mehr als 272.000 Eingabetokens 4/15/0,20/5 für den gesamten Request. Fast/Priority ×2,
-Batch/Flex ×0,5. Der separate bestehende Cache-Read-Aufschlag ×1,2 ergibt 0,12 bzw. 0,24 USD.
+Batch/Flex ×0,5. Für GPT-6.1 Sol keinen zusätzlichen lokalen Cache-Read-Aufschlag anwenden.
+**Korrektur 1.17.4:** In 1.17.3 wurde der alte Aufschlag nach dem neuen offiziellen Tarif angewendet;
+dadurch blieb die Anzeige trotz Neustart bei 0,12 statt 0,10 USD. `pricingCacheReadMarkup: 1`
+markiert Sols offiziellen Tarif als aufschlagsfrei, und `withOpenAICacheReadMarkup` respektiert dies.
+Der gemeinsame Preisweg korrigiert Anzeige und sämtliche Sol-Kostenposten einschließlich Langkontext
+und Fast. Neustart allein kann einen noch aktiv programmierten Aufschlag nicht entfernen.
 **Verwandte Prüfung:** Aktuelle Preiszeilen und historische Modellschritte nutzen dieselbe Funktion;
 Fast-Aliase lösen bereits aufs Basismodell auf. Modell-Overrides können upstream Kontextstaffeln
 verlieren; deshalb hier explizites `tiers` mit echter 272.000er Grenze statt `context_over_200k`.

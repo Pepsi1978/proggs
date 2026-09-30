@@ -361,7 +361,9 @@ GitHub-Issues #8235, #6669, #1235 (Windows-Pfad-Verhalten).
   im geprüften OpenCode-Stand können Modell-Overrides zudem Katalogstaffeln verlieren.
 - **Lokale Umsetzung:** Die Sidebar verwendet einen exakten modellbezogenen Tarif einschließlich
   `tiers` mit `size: 272000`; Kosten je Modellschritt berechnen, nicht nach kumulierten Sessiontokens.
-  Der vorhandene lokale 20-%-Aufschlag ist kein OpenAI-Tarif: sichtbar 0,12 bzw. 0,24 USD Cache-Read.
+  GPT-6.1 Sol ist vom alten lokalen 20-%-Aufschlag ausgenommen: sichtbar und berechnet werden
+  die offiziellen 0,10 bzw. 0,20 USD Cache-Read. Der Tarif setzt `pricingCacheReadMarkup: 1`,
+  damit der nachgelagerte Aufschlag ihn auch bei erneuter Verarbeitung unverändert lässt.
 - **Offiziell/Primärquelle:** ChatGPT-OAuth setzt native OpenCode-Kosten bewusst auf null.
   Eine lokale API-Vergleichsrechnung ist weder die Abo-Rechnung noch ein Maß des Abo-Kontingents.
 

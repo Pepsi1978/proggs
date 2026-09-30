@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.17.3 – 30.09.2026 10:50
+Stand: v1.17.4 – 30.09.2026 11:04
 
 ## Funktionen
 
@@ -56,7 +56,7 @@ Stand: v1.17.3 – 30.09.2026 10:50
   veraltetem Katalog: Standard je 1M Tokens Input/Output/Cache-Read/Cache-Write = 2/10/0,10/2,50 USD;
   oberhalb von 272.000 Input-Tokens = 4/15/0,20/5 USD für den gesamten Modellschritt.
   Fast/Priority verdoppelt diese Tarife; Batch/Flex halbiert sie. Reasoning kostet den Outputtarif.
-  Der lokale Cache-Read-Aufschlag von 20 % ergibt sichtbar 0,12 USD (Langkontext: 0,24 USD).
+  Für GPT-6.1 Sol gilt kein lokaler Cache-Read-Aufschlag: sichtbar 0,10 USD (Langkontext: 0,20 USD).
   GPT-6 Sol hatte 0,20 USD Cache-Read; dieser ältere Tarif wird nicht auf GPT-6.1 Sol übertragen.
   Quellen: https://developers.openai.com/api/docs/models/gpt-6.1-sol und
   https://developers.openai.com/api/docs/pricing . Die Sidebar zeigt API-Vergleichskosten.
@@ -125,8 +125,9 @@ Gesamtkosten     = Input-Kosten + Output-Kosten + Reasoning-Kosten + Cache-Koste
 Cache-Verhältnis = Cache-Kosten / Input-Kosten zu 1
 ```
 
-Für OpenAI-Modelle wird der Cache-Read-Preis vor der Berechnung um 20 % erhöht. Andere Provider
-verwenden unverändert ihre eigenen Cache-Read- und Cache-Write-Preise.
+GPT-6.1 Sol verwendet die offiziellen Cache-Read-Preise ohne Aufschlag, für Anzeige und Kostenrechnung.
+Für andere OpenAI-Modelle gilt weiterhin der bestehende lokale Aufschlag von 20 %.
+Andere Provider verwenden unverändert ihre eigenen Cache-Read- und Cache-Write-Preise.
 
 Der sichtbare Wert `Input` enthält nur regulär bepreisten Input. Cache-Read und Cache-Write werden
 separat im Format `Read | Write` angezeigt. `Cachepreis` verwendet die R/W-Reihenfolge; fehlende
