@@ -4,6 +4,7 @@
   "eintraege": [
     { "versionCode": 1, "versionName": "1.0.0", "stand": "29.09.2026, 13:39 Uhr", "notiz": "Erste Version: Aufgaben per Sprache anlegen, KI-Korrektur und KI-Titel, Heute/Morgen mit Zeitleiste per Drag & Drop, Erinnerungen mit eigenem Ton, Heute-Widget, vier Designs mit animierten Szenen und Brücke zum Genialen Wecker" },
     { "versionCode": 2, "versionName": "1.0.1", "stand": "29.09.2026, 14:29 Uhr", "notiz": "Kopfzeile mit Knöpfen für Hell/Dunkel und Design, ruhigere einfarbige Designs mit neuem Orange-Design, Titel Sinnvolle Aufgaben, runde Knöpfe ohne Strich, Widget mit Zeitstrahl und vier neue detailreiche Szenen mit Katze" },
-    { "versionCode": 3, "versionName": "1.0.2", "stand": "30.09.2026, 18:16 Uhr", "notiz": "Zeitleiste in den Einstellungen von/bis einstellbar (auch halbe Stunden), dazu eine Automatik, die sie an die Termine anpasst und beim Ziehen die volle Spanne zeigt" }
+    { "versionCode": 3, "versionName": "1.0.2", "stand": "30.09.2026, 18:16 Uhr", "notiz": "Zeitleiste in den Einstellungen von/bis einstellbar (auch halbe Stunden), dazu eine Automatik, die sie an die Termine anpasst und beim Ziehen die volle Spanne zeigt" },
+    {"versionCode": 4, "versionName": "1.0.3", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"}
   ]
 }

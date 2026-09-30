@@ -1,56 +1,75 @@
 {
-  "_hinweis": "Pro Projekt nur Abweichungen vom Standard eintragen. Standard: gradleTask assembleRelease, apkOrdner release, APK wird mit dem gemeinsamen Debug-Key signiert, falls sie unsigniert ist. 'paket' ist das erwartete Paket in der APK (applicationId inkl. Suffix) - weicht es ab, bricht das Skript ab.",
+  "_hinweis": "Pro Projekt nur Abweichungen vom Standard eintragen. Standard seit 30.09.2026: gradleTask assembleDebug, apkOrdner debug (Franks Vorgabe: auf dem Handy immer Debug-Builds, damit Logs und App-Daten lesbar sind und Ruckeln sichtbar wird). Die APK wird mit dem gemeinsamen Debug-Key signiert, falls sie unsigniert ist. 'paket' ist das erwartete Paket in der APK (applicationId inkl. Suffix) - weicht es ab, bricht das Skript ab.",
   "standard": {
-    "gradleTask": "assembleRelease",
-    "apkOrdner": "release"
+    "gradleTask": "assembleDebug",
+    "apkOrdner": "debug"
   },
   "projekte": {
     "BestJournalAndroid": {
+      "gradleTask": "assembleRelease",
+      "apkOrdner": "release",
       "paket": "com.bestjournal.app",
-      "notiz": "Release ist mit dem Play-Store-Key (release.keystore) signiert und wird NICHT umsigniert. Am Handy sind com.bestjournal.app UND com.bestjournal.app.debug installiert (geprüft 23.09.2026); dieses Update zielt auf com.bestjournal.app."
+      "notiz": "Bleibt Release: Play-Store-Fassung mit Play-Key (release.keystore), wird NICHT umsigniert. Daneben ist com.bestjournal.app.debug installiert. Umstellung auf Debug nur nach Franks Entscheidung (offen seit 30.09.2026)."
     },
     "BestJournalFrank": {
-      "gradleTask": "assembleDebug",
-      "apkOrdner": "debug",
       "paket": "com.entropyjournal.debug",
       "notiz": "Am Handy ist nur die Debug-Variante installiert (geprüft 23.09.2026)."
     },
-    "ClaudeKompass": { "paket": "de.frank.claudekompass" },
-    "CodexKompass": { "paket": "de.frank.codexkompass" },
+    "ClaudeKompass": {
+      "paket": "de.frank.claudekompass"
+    },
+    "CodexKompass": {
+      "paket": "de.frank.codexkompass"
+    },
     "CortexAndroid": {
-      "paket": "de.frank.cortex",
-      "notiz": "Release ist bereits mit dem gemeinsamen Debug-Key signiert."
+      "paket": "de.frank.cortex"
     },
     "EntropieReductor": {
-      "gradleTask": "assembleBenchmark",
-      "apkOrdner": "benchmark",
       "paket": "de.frank.entropyreducer.debug",
-      "notiz": "Laut build.gradle.kts gibt es am Handy nur EINE App mit Suffix .debug; die Performance-Variante (benchmark) ersetzt die Debug-Variante ohne Datenverlust."
+      "notiz": "Debug-Variante hat das Suffix .debug; am Handy ist genau diese installiert. Früher Variante benchmark (nicht debuggable), seit 30.09.2026 Debug."
     },
-    "Experimente": { "paket": "de.frank.experimente" },
-    "FisetinBegleiter": { "paket": "de.frank.fisetinbegleiter" },
-    "Gedankenspeicher": { "paket": "de.frank.gedankenspeicher" },
+    "Experimente": {
+      "paket": "de.frank.experimente"
+    },
+    "FisetinBegleiter": {
+      "paket": "de.frank.fisetinbegleiter"
+    },
+    "Gedankenspeicher": {
+      "paket": "de.frank.gedankenspeicher"
+    },
     "GenialeIdeen": {
-      "gradleTask": "assembleSchnell",
-      "apkOrdner": "schnell",
       "paket": "de.frank.genialeideen",
-      "notiz": "Variante 'schnell' = Release, mit Debug-Key signiert (der Debug-Build ruckelt)."
+      "notiz": "Früher Variante 'schnell' (Release), seit 30.09.2026 Debug."
     },
-    "GenialerWecker": { "paket": "de.frank.genialerwecker" },
+    "GenialerWecker": {
+      "paket": "de.frank.genialerwecker"
+    },
     "GenialerWeckerAndroid": {
       "paket": "de.frank.genialerwecker.app",
-      "notiz": "Verkaufs-App mit eigenem Schlüssel (~/SK/GenialerWeckerAndroid, SHA-256 96:9A:C0:94…). Der Build signiert Debug und Release selbst; die APK wird NICHT mit dem gemeinsamen Debug-Key umsigniert. Läuft parallel zur privaten App de.frank.genialerwecker."
+      "notiz": "Verkaufs-App mit eigenem Schlüssel (~/SK/GenialerWeckerAndroid, SHA-256 96:9A:C0:94…). Der Build signiert Debug und Release selbst; die APK wird NICHT mit dem gemeinsamen Debug-Key umsigniert. Läuft parallel zur privaten App de.frank.genialerwecker. Am Handy seit 30.09.2026 Debug."
     },
-    "KarteikartenLernen": { "paket": "de.frank.karteikartenlernen" },
-    "NovaDrehen": { "paket": "de.frank.novadrehen" },
-    "OCodeKompass": { "paket": "de.frank.opencodekompass" },
-    "PerfectMoment": { "paket": "de.frank.perfectmoment" },
-    "QwenTtsBench": { "paket": "de.frank.qwenttsbench" },
-    "StackLabor": { "paket": "de.frank.stacklabor.werftstudio" },
-    "UpdateStation": { "paket": "de.frank.updatestation" },
+    "KarteikartenLernen": {
+      "paket": "de.frank.karteikartenlernen"
+    },
+    "NovaDrehen": {
+      "paket": "de.frank.novadrehen"
+    },
+    "OCodeKompass": {
+      "paket": "de.frank.opencodekompass"
+    },
+    "PerfectMoment": {
+      "paket": "de.frank.perfectmoment"
+    },
+    "QwenTtsBench": {
+      "paket": "de.frank.qwenttsbench"
+    },
+    "StackLabor": {
+      "paket": "de.frank.stacklabor.werftstudio"
+    },
+    "UpdateStation": {
+      "paket": "de.frank.updatestation"
+    },
     "VoiceKey": {
-      "gradleTask": "assembleDebug",
-      "apkOrdner": "debug",
       "paket": "de.frank.voicekey.debug",
       "notiz": "Am Handy ist nur die Debug-Variante installiert (geprüft 23.09.2026)."
     }

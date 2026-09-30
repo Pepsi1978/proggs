@@ -1,8 +1,8 @@
 ---
 name: apk-update
 description: >
-  Baut nach einem Update einer bestehenden Android-App die Update-APK (Release-Build, signiert mit
-  dem gemeinsamen Debug-Key bzw. der passenden Variante), prüft Paket, versionCode und Signatur an
+  Baut nach einem Update einer bestehenden Android-App die Update-APK (Debug-Build als Standard, signiert
+  mit dem gemeinsamen Debug-Key bzw. der passenden Variante), prüft Paket, versionCode und Signatur an
   der fertigen APK und legt sie zusammen mit einer update.json in den Google-Drive-Ordner
   "C:\Users\barwa\Meine Ablage\Dokumente\Updates\<Projekt>". Von dort holt die Handy-App
   UpdateStation die APK, vergleicht die Version mit der installierten und installiert nur Neueres.
@@ -124,7 +124,7 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
      aktiv), erneut starten. Nie eine APK von Hand in den Ordner kopieren — ohne passende
      `update.json` sieht die Handy-App sie nicht.
 5. **Neues Projekt?** Das Skript veröffentlicht es auch ohne Eintrag in `projekte.json`
-   (Standard `assembleRelease`, Paket = die eine `applicationId`) in einen eigenen Unterordner.
+   (Standard `assembleDebug`, Paket = die eine `applicationId`) in einen eigenen Unterordner.
    Fehlt der Versionslog, stellt es nur das eindeutige Standardmuster um (genau eine Zeile
    `versionCode = <Zahl>` und `versionName = "x.y.z"`, genau ein `android {`); alles andere bricht
    mit Anleitung ab — dann den Block `versionslogAktuell` aus `UpdateStation/app/build.gradle.kts`
@@ -182,13 +182,14 @@ und dass die Signatur der APK zur installierten App passt.
 
 ## Sonderfälle
 
-- **BestJournalAndroid**: Release ist mit dem Play-Store-Key signiert. Passt nur, wenn am Handy die
+- **Standard ist Debug** (Franks Vorgabe vom 30.09.2026): Auf dem Handy laufen Debug-Builds, damit
+  App-Daten und Logs per adb lesbar sind und Ruckeln sichtbar wird. Release nur, wenn Frank es für
+  eine App ausdrücklich will (dann `gradleTask`/`apkOrdner` in `projekte.json` eintragen).
+- **BestJournalAndroid**: bleibt Release – mit dem Play-Store-Key signiert. Passt nur, wenn am Handy die
   Release-Variante installiert ist; sonst meldet die Handy-App „Signatur weicht ab".
-- **EntropieReductor**: Variante `benchmark` (Paket mit `.debug`), ersetzt die Debug-App ohne
-  Datenverlust.
-- **GenialeIdeen**: Variante `schnell`.
-- **BestJournalFrank, VoiceKey**: Am Handy ist nur die Debug-Variante (`.debug`) installiert, daher
-  liefert der Skill hier `assembleDebug` aus.
+- **EntropieReductor, BestJournalFrank, VoiceKey**: Die Debug-Variante hat das Suffix `.debug`; am
+  Handy ist genau diese installiert.
+- **GenialerWeckerAndroid**: signiert Debug mit dem eigenen Schlüssel der Verkaufs-App.
 - Welche Variante am Handy liegt, zeigt `adb shell pm list packages`. Passt das Paket nicht, zeigt
   die Handy-App die APK als „nicht auf diesem Handy".
 - Meldet die Handy-App „Signatur weicht ab": nie deinstallieren (Regel 15), sondern Variante in

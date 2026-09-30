@@ -51,8 +51,7 @@ android {
     }
     buildFeatures { compose = true; buildConfig = true }
     buildTypes {
-        // Als „debuggable“ läuft Compose auf dem Gerät deutlich langsamer; darum auch der Debug-Build ohne.
-        getByName("debug") { isDebuggable = false; signingConfig = signingConfigs.getByName("eigen") }
+        getByName("debug") { signingConfig = signingConfigs.getByName("eigen") }
         getByName("release") { signingConfig = signingConfigs.getByName("eigen") }
     }
     packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"

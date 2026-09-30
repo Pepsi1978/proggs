@@ -2,6 +2,7 @@
   "format": 1,
   "app": "KimiKompass",
   "eintraege": [
-    { "versionCode": 1, "versionName": "0.1.0", "stand": "30.09.2026, 18:34 Uhr", "notiz": "Erste Fassung: Kimi Code CLI auf Deutsch erklärt, mit Befehlen, Einstellungen, Settings-Panel, Best Practices und Chat." }
+    { "versionCode": 1, "versionName": "0.1.0", "stand": "30.09.2026, 18:34 Uhr", "notiz": "Erste Fassung: Kimi Code CLI auf Deutsch erklärt, mit Befehlen, Einstellungen, Settings-Panel, Best Practices und Chat." },
+    {"versionCode": 2, "versionName": "0.1.1", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"}
   ]
 }

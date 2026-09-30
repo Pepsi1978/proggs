@@ -31,10 +31,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true; buildConfig = true }
-    // Die installierte Fassung ist der Debug-Build. Als „debuggable“ läuft Compose auf dem Gerät
-    // deutlich langsamer (ohne vorkompilierte Profile) — spürbar als Ruckeln beim Tippen und als
-    // träge öffnende Fenster. Signiert wird weiterhin mit dem gemeinsamen Debug-Schlüssel.
-    buildTypes { getByName("debug") { isDebuggable = false } }
     packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     // Die Stimm-Modelle liegen unkomprimiert in der APK, damit sherpa-onnx sie direkt aus der APK lesen kann.
     androidResources { noCompress += listOf("onnx") }
