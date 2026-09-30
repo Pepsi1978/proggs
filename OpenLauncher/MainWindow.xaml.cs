@@ -20,6 +20,12 @@ public partial class MainWindow : Window
     private const int SIZE_MINIMIZED = 1;
     private const int WM_SYSCOMMAND = 0x0112;
     private const int SC_RESTORE = 0xF120;
+    private const int SC_MINIMIZE = 0xF020;
+    private const int WM_ACTIVATE = 0x0006;
+    private const int WM_ACTIVATEAPP = 0x001C;
+    private const int WM_NCACTIVATE = 0x0086;
+    private const int WM_SHOWWINDOW = 0x0018;
+    private const int WA_INACTIVE = 0;
     private const int MONITOR_DEFAULTTONEAREST = 2;
     private const int SW_RESTORE = 9;
     private const uint FLASHW_ALL = 0x00000003;
@@ -388,7 +394,8 @@ public partial class MainWindow : Window
                         windowState = WindowState.ToString(),
                         msSinceRequest = (int)(DateTime.UtcNow - _restoreRequestedUtc).TotalMilliseconds,
                         minimizeAfterRequest = _lastNativeMinimizeUtc >= _restoreRequestedUtc,
-                        hwnd = FormatHandle(hwnd)
+                        hwnd = FormatHandle(hwnd),
+                        trace = ActivationTraceSnapshot()
                     });
             }
         }
@@ -418,7 +425,8 @@ public partial class MainWindow : Window
                 healed = _shellRestoreHealed,
                 softActivated = _shellRestoreSoftActivated,
                 foreground = FormatHandle(GetForegroundWindow()),
-                hwnd = FormatHandle(hwnd)
+                hwnd = FormatHandle(hwnd),
+                trace = ActivationTraceSnapshot()
             });
     }
 
@@ -685,6 +693,7 @@ public partial class MainWindow : Window
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        TraceActivationMessage(hwnd, msg, wParam);
         if (msg == WM_GETMINMAXINFO)
         {
             AdjustMaximizedSize(hwnd, lParam);
@@ -722,8 +731,95 @@ public partial class MainWindow : Window
             // damit DefWindowProc den Restore wie gewohnt ausfuehrt; wir sehen nur nach, ob er wirkt.
             BeginShellRestoreWatch();
         }
+        else if (IsIconic(hwnd) && IsShowRequestWhileMinimized(msg, wParam) && !RecentlyMinimizedByUser())
+        {
+            // Befund 30.09.2026: Klick auf den Taskleisten-Button eines minimierten Launchers, waehrend
+            // systemweit KEIN Fenster aktiv war. Explorer nahm Chrome den Vordergrund, aber beim Fenster
+            // kam nie ein SC_RESTORE an — es blieb minimiert, ohne jede Logzeile. Ein direkt gesendetes
+            // SC_RESTORE stellte es sofort her; das Fenster selbst war also gesund. Eine Aktivierung bzw.
+            // ein Minimieren-Toggle an ein bereits minimiertes Fenster ist deshalb dieselbe Anforderung
+            // "zeig mich" wie SC_RESTORE und startet dieselbe vorsichtige Beobachtung. Handled bleibt
+            // false; geheilt wird weiterhin nur ueber ShouldHealMissingRestore.
+            Logger.Instance.Warn("MainWindow", "WndProc",
+                "Anzeige-Anforderung an minimiertes Fenster ohne SC_RESTORE; starte Restore-Beobachtung", new
+                {
+                    message = DescribeMessage(msg, wParam),
+                    foreground = FormatHandle(GetForegroundWindow()),
+                    hwnd = FormatHandle(hwnd)
+                });
+            BeginShellRestoreWatch();
+        }
         return IntPtr.Zero;
     }
+
+    /// <summary>
+    /// Signale, die bei einem minimierten Fenster nur "zeig mich" bedeuten koennen: eine Aktivierung
+    /// (Fenster oder Anwendung wird aktiv) oder ein Minimieren-Befehl an ein bereits minimiertes Fenster
+    /// (der Taskleisten-Klick als Toggle, wenn die Shell das Fenster noch fuer aktiv haelt).
+    /// </summary>
+    private static bool IsShowRequestWhileMinimized(int msg, IntPtr wParam) => msg switch
+    {
+        WM_ACTIVATE => ((int)wParam & 0xFFFF) != WA_INACTIVE,
+        WM_ACTIVATEAPP => wParam != IntPtr.Zero,
+        WM_SYSCOMMAND => ((int)wParam & 0xFFF0) == SC_MINIMIZE,
+        _ => false
+    };
+
+    /// <summary>
+    /// Direkt nach einem echten Minimieren schickt Windows selbst noch Aktivierungsnachrichten. Diese
+    /// duerfen das bewusst minimierte Fenster nicht wieder hochholen (Lehre vom 24.07.2026).
+    /// </summary>
+    private bool RecentlyMinimizedByUser() => (DateTime.UtcNow - _lastNativeMinimizeUtc).TotalMilliseconds < ForegroundGuardMs;
+
+    // ---- Diagnose: Aktivierungsnachrichten ----
+    // Bis 30.09.2026 protokollierte der WndProc nur SC_RESTORE. Aktivierung, Minimieren-Toggles und
+    // WM_SHOWWINDOW waren unsichtbar, deshalb liess sich der Taskleisten-Defekt fuenfmal nicht am Log
+    // unterscheiden. Jetzt: Ringpuffer der letzten Nachrichten (wird bei jedem Fehlschlag mitgeloggt)
+    // und direkte Logzeilen fuer alles, was an ein minimiertes Fenster geht — begrenzt, damit ein
+    // normaler Tag das Log nicht flutet.
+    private const int TraceRingSize = 40;
+    private const int TraceMaxLinesPerWindow = 30;
+    private const int TraceWindowMs = 10_000;
+    private readonly Queue<string> _activationTrace = new();
+    private DateTime _traceWindowStartUtc = DateTime.MinValue;
+    private int _traceLinesInWindow;
+
+    private void TraceActivationMessage(IntPtr hwnd, int msg, IntPtr wParam)
+    {
+        if (msg != WM_SYSCOMMAND && msg != WM_ACTIVATE && msg != WM_ACTIVATEAPP && msg != WM_NCACTIVATE &&
+            msg != WM_SHOWWINDOW && msg != WM_SIZE) return;
+        var iconic = IsIconic(hwnd);
+        var line = $"{DateTime.Now:HH:mm:ss.fff} {DescribeMessage(msg, wParam)} iconic={iconic} fg={FormatHandle(GetForegroundWindow())}";
+        _activationTrace.Enqueue(line);
+        while (_activationTrace.Count > TraceRingSize) _activationTrace.Dequeue();
+        if (!iconic && msg != WM_SYSCOMMAND) return;
+
+        var now = DateTime.UtcNow;
+        if ((now - _traceWindowStartUtc).TotalMilliseconds > TraceWindowMs)
+        {
+            _traceWindowStartUtc = now;
+            _traceLinesInWindow = 0;
+        }
+        if (++_traceLinesInWindow > TraceMaxLinesPerWindow) return;
+        Logger.Instance.Info("MainWindow", "TraceActivationMessage", "Fensternachricht", new { line, hwnd = FormatHandle(hwnd) });
+    }
+
+    private static string DescribeMessage(int msg, IntPtr wParam)
+    {
+        var w = (long)wParam;
+        return msg switch
+        {
+            WM_SYSCOMMAND => $"WM_SYSCOMMAND 0x{w & 0xFFF0:X4}",
+            WM_ACTIVATE => $"WM_ACTIVATE state={w & 0xFFFF} minimized={(w >> 16) & 0xFFFF}",
+            WM_ACTIVATEAPP => $"WM_ACTIVATEAPP active={w != 0}",
+            WM_NCACTIVATE => $"WM_NCACTIVATE active={w != 0}",
+            WM_SHOWWINDOW => $"WM_SHOWWINDOW show={w != 0}",
+            WM_SIZE => $"WM_SIZE type={w}",
+            _ => $"0x{msg:X4} w=0x{w:X}"
+        };
+    }
+
+    private string ActivationTraceSnapshot() => string.Join(" | ", _activationTrace);
 
     private static void AdjustMaximizedSize(IntPtr hwnd, IntPtr lParam)
     {

@@ -354,6 +354,15 @@ richtig macht*. Wechselseitig gepflegt:
 
 ---
 
+
+### 5.9 Taskleisten-Klick holt minimiertes Fenster nicht zurück, kein SC_RESTORE  ⭐ EIGENER FUND (30.09.2026, OpenLauncher)
+**Symptom:** Fenster (WPF, `WindowStyle=None`, `ShowInTaskbar=true`) ist minimiert; Klick auf seinen Taskleisten-Knopf tut nichts, auch wiederholt. Im App-Log: nichts.
+**Messung:** `IsIconic=true`, Rect -32000/-32000 (bzw. -16000 ohne DPI-Awareness des Messskripts – beides heißt „minimiert“), systemweit **kein** Vordergrundfenster (`GetForegroundWindow()=0`, `GetGUIThreadInfo(0)` ohne aktives Fenster). Klick auf einen anderen Knopf (Chrome) aktivierte Chrome; der folgende Klick auf den Launcher nahm Chrome den Vordergrund (→ 0), das Launcher-Fenster bekam aber **kein** `WM_SYSCOMMAND/SC_RESTORE`. Ein direkt gesendetes `PostMessage(SC_RESTORE)` stellte es sofort her, das Fenster selbst war also gesund.
+**Ursache (eingegrenzt, noch nicht bewiesen):** Die Shell versucht die Aktivierung des minimierten Fensters, die Restore-Nachricht erreicht den WndProc aber nicht. Ob stattdessen `WM_ACTIVATE`/`WM_ACTIVATEAPP` oder ein `SC_MINIMIZE`-Toggle ankommt, war mangels Protokoll nicht sichtbar.
+**FIX (funktionserhaltend):** (1) Ringpuffer der Aktivierungsnachrichten (`WM_SYSCOMMAND`, `WM_ACTIVATE`, `WM_ACTIVATEAPP`, `WM_NCACTIVATE`, `WM_SHOWWINDOW`, `WM_SIZE`) plus begrenzte Logzeilen für alles, was an ein minimiertes Fenster geht; der Puffer wird bei jedem Fehlschlag mitgeloggt. (2) Aktivierung oder `SC_MINIMIZE` an ein **bereits minimiertes** Fenster startet dieselbe vorsichtige Restore-Beobachtung wie `SC_RESTORE` – aber nie innerhalb von 1,5 s nach einem echten Minimieren. Bei leerem Vordergrund darf `SetForegroundWindow` laut Windows-Regeln ohnehin greifen.
+**Absicherung:** `OpenLauncher/tests/window-activation-source-guard.ps1` Regel 10. **Sofort-Hilfe im Zustand:** OpenLauncher ein zweites Mal starten (Weg „externe Aktivierung“) oder `PostMessage(hwnd, WM_SYSCOMMAND, SC_RESTORE, 0)`.
+**Muster:** „Klick tut nichts, Log leer“ → erst live messen (IsIconic, Foreground, GUIThreadInfo), dann `SC_RESTORE` direkt senden: geht es auf, liegt der Fehler zwischen Shell und Fenster, nicht im Fenster.
+
 ## 6. Tray / Shell / Fenster-Aktivierung / Single-Instance
 
 ### 6.1 Tray-Icon verschwindet nach Explorer-Neustart  ⭐

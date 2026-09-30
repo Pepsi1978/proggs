@@ -153,6 +153,19 @@ if ($code -match 'ShouldHealMissingRestore') {
     $failures.Add('ShouldHealMissingRestore fehlt. Ohne diese Bedingung heilt die Selbstheilung ungeprueft.')
 }
 
+# 10. Anzeige-Anforderungen an ein minimiertes Fenster ohne SC_RESTORE (Befund 30.09.2026: Taskleisten-
+#     Klick, systemweit kein aktives Fenster, beim Fenster kam nie SC_RESTORE an, keine einzige Logzeile).
+#     Der WndProc muss (a) die Aktivierungsnachrichten mitschreiben, sonst ist der naechste Fall wieder
+#     blind, und (b) Aktivierung/Minimieren-Toggle an ein minimiertes Fenster in die Restore-Beobachtung
+#     leiten — aber nie direkt nach einem echten Minimieren (RecentlyMinimizedByUser).
+$wndProcBlock10 = Get-BlockAfter -Text $code -Anchor 'IntPtr\s+WndProc\s*\('
+if ($wndProcBlock10 -notmatch 'TraceActivationMessage\s*\(') {
+    $failures.Add('WndProc schreibt die Aktivierungsnachrichten nicht mehr mit (TraceActivationMessage fehlt). Der Taskleisten-Defekt waere im Log wieder unsichtbar.')
+}
+if ($wndProcBlock10 -notmatch 'IsShowRequestWhileMinimized' -or $wndProcBlock10 -notmatch 'RecentlyMinimizedByUser') {
+    $failures.Add('WndProc leitet Anzeige-Anforderungen an ein minimiertes Fenster nicht mit Minimier-Zeitsperre in die Restore-Beobachtung (IsShowRequestWhileMinimized/RecentlyMinimizedByUser fehlt).')
+}
+
 if ($failures.Count -gt 0) {
     Write-Host "Quellcode-Guard FEHLGESCHLAGEN ($SourcePath):" -ForegroundColor Red
     foreach ($f in $failures) { Write-Host "  - $f" -ForegroundColor Red }
@@ -161,6 +174,6 @@ if ($failures.Count -gt 0) {
 
 [pscustomobject]@{
     Source = $SourcePath
-    Checks = 9
+    Checks = 10
     Result = 'passed'
 } | Format-List
