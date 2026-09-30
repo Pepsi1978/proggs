@@ -52,7 +52,9 @@ tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(syncSecretsFr
 // Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
 // Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
 @Suppress("UNCHECKED_CAST")
-val versionslogAktuell = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
+// Read via providers.fileContents so the configuration cache tracks the file; a plain File read
+// is invisible to it and the build kept the old versionCode after a new log entry.
+val versionslogAktuell = ((groovy.json.JsonSlurper().parseText(providers.fileContents(layout.projectDirectory.file("src/main/assets/versionslog.json")).asText.get()) as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
 
 android {
     namespace = "de.frank.entropyreducer"
