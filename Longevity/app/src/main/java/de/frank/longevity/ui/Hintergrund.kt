@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -67,7 +68,8 @@ fun Hintergrund(modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     val zeit = rememberSzenenZeit()
     val sterne = remember { List(70) { Triple(Math.random().toFloat(), Math.random().toFloat(), Math.random().toFloat()) } }
-    Canvas(modifier) {
+    // Eigene Ebene: das 30-Bilder/s-Neuzeichnen bleibt auf den Hintergrund beschränkt.
+    Canvas(modifier.graphicsLayer()) {
         val t = zeit.value / 1000f
         drawRect(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))
         val w = size.width

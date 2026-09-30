@@ -155,11 +155,12 @@ fun ListeBildschirm(vm: AppViewModel) {
                     }
                 }
             }
-            items(plus, key = { it.id }) { x ->
+            // Gleicher contentType: beim Scrollen übernimmt eine neue Karte die Komposition einer verschwundenen Karte.
+            items(plus, key = { it.id }, contentType = { "faktor" }) { x ->
                 FaktorKarte(x, x.platz(liste), hervor = vm.hervorgehoben == x.id, modifier = Modifier.animateItem()) { vm.oeffne(x.id) }
             }
             item(key = "nulllinie") { NullLinie(raeuber.size, Modifier.animateItem()) }
-            items(raeuber, key = { it.id }) { x ->
+            items(raeuber, key = { it.id }, contentType = { "faktor" }) { x ->
                 FaktorKarte(x, x.platz(liste), hervor = vm.hervorgehoben == x.id, modifier = Modifier.animateItem()) { vm.oeffne(x.id) }
             }
             item(key = "ueberblick") { Ueberblick(liste) { vm.oeffne(it) } }
@@ -241,8 +242,9 @@ private fun AktualisierenDialog(vm: AppViewModel) {
 private fun AktualisierenKnopf(vm: AppViewModel) {
     val f = LocalFarben.current
     val laeuft = KiArbeit.laeuft && KiArbeit.art.diskutiert
-    val drehen = rememberInfiniteTransition(label = "drehen")
-    val w by drehen.animateFloat(0f, 360f, infiniteRepeatable(tween(1400, easing = LinearEasing)), label = "w")
+    // Die Drehung tickt nur, solange der Lauf aktiv ist – sonst hielte sie die App dauerhaft im Bildtakt.
+    val w = if (laeuft) rememberInfiniteTransition(label = "drehen")
+        .animateFloat(0f, 360f, infiniteRepeatable(tween(1400, easing = LinearEasing)), label = "w") else null
     Box(
         Modifier.padding(3.dp).size(42.dp)
             .then(if (laeuft) Modifier.knopf3d(f.primaer, f.sekundaer, 99.dp, f.dunkel) else Modifier.glas(f, 99.dp, 0.8f))
@@ -252,7 +254,7 @@ private fun AktualisierenKnopf(vm: AppViewModel) {
         Icon(
             Icons.Rounded.Refresh, "Rangfolge von der KI prüfen lassen",
             tint = if (laeuft) Color.White else f.text,
-            modifier = Modifier.size(22.dp).graphicsLayer { if (laeuft) rotationZ = w },
+            modifier = Modifier.size(22.dp).graphicsLayer { if (w != null) rotationZ = w.value },
         )
     }
 }
@@ -284,7 +286,8 @@ private fun PlusKnopf(modifier: Modifier, aktion: () -> Unit) {
     val puls = rememberInfiniteTransition(label = "plus")
     val p by puls.animateFloat(0f, 1f, infiniteRepeatable(tween(2600), RepeatMode.Restart), label = "p")
     Box(
-        modifier.size(84.dp).drawBehind {
+        // Eigene Ebene: der Puls zeichnet jeden Frame nur sich selbst neu, nicht den ganzen Bildschirm.
+        modifier.size(84.dp).graphicsLayer().drawBehind {
             drawCircle(f.primaer.copy(alpha = 0.25f * (1f - p)), size.minDimension / 2 * (0.75f + 0.35f * p))
         },
         contentAlignment = Alignment.Center,
@@ -389,7 +392,10 @@ fun FaktorKarte(x: Faktor, platz: String, hervor: Boolean, modifier: Modifier = 
                 if (punkte.isNotEmpty()) MiniRing(anteil, Modifier.padding(top = 4.dp).size(18.dp))
             }
         }
-        Canvas(Modifier.fillMaxWidth().height(4.dp).padding(top = 0.dp).graphicsLayer { alpha = 0.9f }) {
+        Canvas(Modifier.fillMaxWidth().height(4.dp).padding(top = 0.dp).graphicsLayer {
+            // Offscreen = dauerhaft zwischengespeicherte Ebene: gleiches Bild wie vorher, aber kein neuer Zwischenpuffer pro Frame.
+            alpha = 0.9f; compositingStrategy = CompositingStrategy.Offscreen
+        }) {
             drawRoundRect(f.textSchwach.copy(alpha = 0.12f), cornerRadius = CornerRadius(4f))
             val balken = if (x.raeuber) listOf(f.gefahr.copy(alpha = 0.6f), f.gefahr) else listOf(f.primaer, f.sekundaer)
             drawRoundRect(Brush.horizontalGradient(balken), size = Size(size.width * x.wirkung / 100f, size.height), cornerRadius = CornerRadius(4f))
