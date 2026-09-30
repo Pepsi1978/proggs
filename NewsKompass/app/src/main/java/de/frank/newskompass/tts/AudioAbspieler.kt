@@ -35,6 +35,9 @@ class AudioAbspieler(context: Context) {
     @Volatile private var laeuft = false
     @Volatile private var fokusAnfrage: AudioFocusRequest? = null
 
+    /** Pausiert vom Nutzer: ein gerade vorbereiteter Absatz startet dann nicht von selbst. */
+    @Volatile private var angehalten = false
+
     /** Wird gerufen, wenn ein anderer Ton den Fokus übernimmt (Anruf, Wecker). */
     @Volatile var beiFokusVerlust: (() -> Unit)? = null
 
@@ -146,8 +149,8 @@ class AudioAbspieler(context: Context) {
                 synchronized(sperre) {
                     spieler = neuerSpieler
                     laeuft = true
+                    if (!angehalten) neuerSpieler.start()
                 }
-                neuerSpieler.start()
             } catch (fehler: Exception) {
                 KompassLog.error("AudioAbspieler", "spieleDatei", "Start fehlgeschlagen", mapOf("grund" to fehler.message))
                 beende()
@@ -155,17 +158,20 @@ class AudioAbspieler(context: Context) {
         }
 
     fun pausiere(): Boolean = synchronized(sperre) {
+        angehalten = true
         val aktiv = spieler ?: return@synchronized false
         runCatching { if (aktiv.isPlaying) aktiv.pause() }.isSuccess
     }
 
     fun fortsetzen(): Boolean = synchronized(sperre) {
+        angehalten = false
         val aktiv = spieler ?: return@synchronized false
-        runCatching { aktiv.start() }.isSuccess
+        runCatching { if (!aktiv.isPlaying) aktiv.start() }.isSuccess
     }
 
     fun stoppe() {
         val aktiv = synchronized(sperre) {
+            angehalten = false
             val alt = spieler
             spieler = null
             laeuft = false

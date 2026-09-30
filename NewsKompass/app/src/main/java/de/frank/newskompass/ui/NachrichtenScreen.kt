@@ -53,6 +53,8 @@ import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Newspaper
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Share
@@ -461,6 +463,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                                 zustand = vorlesen,
                                 quelleId = blockQuelle(ausgabe?.id, block.themaId),
                                 vorlesen = { app.vorleser.schalteUm(blockQuelle(ausgabe?.id, block.themaId), Moderation.blockText(ausgabe, block)) },
+                                beenden = { app.vorleser.stoppe() },
                                 schonThema = block.frage != null && stand.themen.any { it.text.trim().equals(block.frage.trim(), ignoreCase = true) },
                                 alsThema = block.frage?.let { frage ->
                                     {
@@ -501,6 +504,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                                 bild = meldung.bildDatei?.let(bildDateien::get),
                                 zustand = vorlesen,
                                 vorlesen = { app.vorleser.schalteUm(meldung.id, meldung.vorleseText) },
+                                beenden = { app.vorleser.stoppe() },
                             )
                         }
                     }
@@ -898,6 +902,7 @@ private fun BlockKopf(
     zustand: VorleseZustand,
     quelleId: String,
     vorlesen: () -> Unit,
+    beenden: () -> Unit,
     schonThema: Boolean,
     alsThema: (() -> Unit)?,
     entfernen: (() -> Unit)?,
@@ -924,7 +929,7 @@ private fun BlockKopf(
                 )
             }
             if (block.meldungen.isNotEmpty()) {
-                LautsprecherKnopf(zustand, quelleId, blockFarbe(index), vorlesen, rahmen = true)
+                LautsprecherKnopf(zustand, quelleId, blockFarbe(index), vorlesen, beenden, rahmen = true)
             }
         }
         if (block.frage != null) {
@@ -958,6 +963,7 @@ private fun MeldungsKarte(
     bild: java.io.File?,
     zustand: VorleseZustand,
     vorlesen: () -> Unit,
+    beenden: () -> Unit,
 ) {
     val kontext = LocalContext.current
     var offen by rememberSaveable(meldung.id) { mutableStateOf(false) }
@@ -1011,7 +1017,7 @@ private fun MeldungsKarte(
             }
             Row(Modifier.align(Alignment.TopEnd).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TeilenKnopf(meldung, bild)
-                LautsprecherKnopf(zustand, meldung.id, blockFarbe(blockIndex), vorlesen, rahmen = false)
+                LautsprecherKnopf(zustand, meldung.id, blockFarbe(blockIndex), vorlesen, beenden, rahmen = false)
             }
             Text(
                 meldung.titel,
@@ -1141,14 +1147,38 @@ private fun Modifier.pulsWenn(aktiv: Boolean, bis: Float, dauerMs: Int): Modifie
     }
 }
 
+/**
+ * Lautsprecher, der beim Vorlesen zum Pause-Knopf und beim Pausieren zum Play-Knopf wird. Daneben
+ * erscheint, solange diese Quelle aktiv ist, ein eigener Knopf zum ganz Beenden.
+ */
 @Composable
-private fun LautsprecherKnopf(zustand: VorleseZustand, quelle: String, farbe: Color, aktion: () -> Unit, rahmen: Boolean) {
+private fun LautsprecherKnopf(
+    zustand: VorleseZustand,
+    quelle: String,
+    farbe: Color,
+    aktion: () -> Unit,
+    beenden: () -> Unit,
+    rahmen: Boolean,
+) {
     val meins = zustand.quelleId == quelle
     val stufe = if (meins) zustand.stufe else VorleseStufe.AUS
     val hintergrund = when {
         stufe != VorleseStufe.AUS -> farbe
         rahmen -> farbe.copy(alpha = 0.14f)
         else -> Color.Black.copy(alpha = 0.42f)
+    }
+    if (stufe != VorleseStufe.AUS) {
+        Surface(
+            onClick = beenden,
+            shape = CircleShape,
+            color = if (rahmen) farbe.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.42f),
+            modifier = Modifier.size(46.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Stop, "Vorlesen beenden", tint = if (rahmen) farbe else Color.White)
+            }
+        }
+        if (rahmen) Spacer(Modifier.width(8.dp))
     }
     Surface(
         onClick = aktion,
@@ -1159,7 +1189,8 @@ private fun LautsprecherKnopf(zustand: VorleseZustand, quelle: String, farbe: Co
         Box(contentAlignment = Alignment.Center) {
             when (stufe) {
                 VorleseStufe.LAEDT -> CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
-                VorleseStufe.SPRICHT -> Icon(Icons.Rounded.GraphicEq, "Vorlesen anhalten", tint = Color.White)
+                VorleseStufe.SPRICHT -> Icon(Icons.Rounded.Pause, "Vorlesen pausieren", tint = Color.White)
+                VorleseStufe.PAUSIERT -> Icon(Icons.Rounded.PlayArrow, "Vorlesen fortsetzen", tint = Color.White)
                 VorleseStufe.AUS -> Icon(
                     Icons.AutoMirrored.Rounded.VolumeUp,
                     "Vorlesen",
@@ -1168,7 +1199,7 @@ private fun LautsprecherKnopf(zustand: VorleseZustand, quelle: String, farbe: Co
             }
         }
     }
-    if (meins && stufe == VorleseStufe.SPRICHT && zustand.absatzAnzahl > 1 && rahmen) {
+    if (meins && (stufe == VorleseStufe.SPRICHT || stufe == VorleseStufe.PAUSIERT) && zustand.absatzAnzahl > 1 && rahmen) {
         Text(
             " ${zustand.absatzNummer}/${zustand.absatzAnzahl}",
             style = MaterialTheme.typography.labelMedium,

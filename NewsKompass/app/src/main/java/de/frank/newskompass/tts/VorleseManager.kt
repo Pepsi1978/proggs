@@ -23,9 +23,10 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 
 /** Was der Lautsprecher-Knopf gerade anzeigt. */
-enum class VorleseStufe { AUS, LAEDT, SPRICHT }
+enum class VorleseStufe { AUS, LAEDT, SPRICHT, PAUSIERT }
 
 /**
  * Sichtbarer Zustand des Vorlesens.
@@ -77,23 +78,48 @@ class VorleseManager(
     private var laufNummer = 0
     private var laufJob: Job? = null
 
+    /** Solange true, wartet die Reihe vor dem nächsten Absatz, und der laufende Absatz steht. */
+    private val pausiert = MutableStateFlow(false)
+
     init {
         abspieler.beiFokusVerlust = {
-            KompassLog.info("VorleseManager", "fokus", "Vorlesen wegen Audiofokus angehalten")
-            stoppe()
+            KompassLog.info("VorleseManager", "fokus", "Vorlesen wegen Audiofokus pausiert")
+            pausiere()
         }
     }
 
     /**
-     * Liest [text] vor. Ein erneuter Aufruf mit derselben [quelleId] hält an — genau das
-     * erwartet man von einem Lautsprecher-Knopf.
+     * Liest [text] vor. Ein erneuter Aufruf mit derselben [quelleId] pausiert genau an der
+     * Stelle, der nächste setzt dort fort. Ganz beenden geht über [stoppe].
      */
     fun schalteUm(quelleId: String, text: String) {
-        if (_zustand.value.quelleId == quelleId && _zustand.value.stufe != VorleseStufe.AUS) {
-            stoppe()
+        val jetzt = _zustand.value
+        if (jetzt.quelleId == quelleId && jetzt.stufe != VorleseStufe.AUS) {
+            if (jetzt.stufe == VorleseStufe.PAUSIERT) fortsetzen() else pausiere()
             return
         }
         lies(quelleId, text)
+    }
+
+    /** Hält mitten im Satz an; [fortsetzen] spielt ab genau dieser Stelle weiter. */
+    fun pausiere() {
+        val jetzt = _zustand.value
+        if (jetzt.stufe == VorleseStufe.AUS || jetzt.stufe == VorleseStufe.PAUSIERT) return
+        pausiert.value = true
+        abspieler.pausiere()
+        abspieler.gibFokusFrei()
+        _zustand.value = jetzt.copy(stufe = VorleseStufe.PAUSIERT)
+        KompassLog.info("VorleseManager", "pausiere", "Vorlesen pausiert", mapOf("quelle" to jetzt.quelleId, "absatz" to jetzt.absatzNummer))
+    }
+
+    fun fortsetzen() {
+        val jetzt = _zustand.value
+        if (jetzt.stufe != VorleseStufe.PAUSIERT) return
+        abspieler.fordereFokusAn()
+        pausiert.value = false
+        abspieler.fortsetzen()
+        _zustand.value = jetzt.copy(stufe = if (jetzt.absatzNummer > 0) VorleseStufe.SPRICHT else VorleseStufe.LAEDT)
+        KompassLog.info("VorleseManager", "fortsetzen", "Vorlesen fortgesetzt", mapOf("quelle" to jetzt.quelleId, "absatz" to jetzt.absatzNummer))
     }
 
     fun lies(quelleId: String, text: String) {
@@ -230,6 +256,12 @@ class VorleseManager(
             }
             if (ergebnis == null) continue
 
+            // Pausiert zwischen zwei Absätzen: erst weiter, wenn fortgesetzt wird.
+            pausiert.first { !it }
+            if (meinLauf != laufNummer) {
+                brichOffeneAb()
+                return@supervisorScope
+            }
             _zustand.value = VorleseZustand(VorleseStufe.SPRICHT, quelleId, index + 1, absaetze.size)
             schonGespielt = true
             fehlschlaegeInFolge = 0
@@ -378,6 +410,7 @@ class VorleseManager(
     }
 
     fun stoppe() {
+        pausiert.value = false
         laufNummer += 1
         laufJob?.cancel()
         laufJob = null
