@@ -250,6 +250,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             repo.uebernimm(a.liste, a.vorschlaege)
             einstellungen.letzteAktualisierung = System.currentTimeMillis()
             KiArbeit.ergebnis = buildString {
+                if (ki.webSucheAbgelehnt) append("⚠ Die Websuche wurde vom Server abgelehnt – diesmal ohne Internet-Recherche gearbeitet.\n\n")
                 if (a.recherchen > 0) append("${a.recherchen} Recherche-Dossiers ausgewertet. ")
                 append(if (a.veraendert == 0) "Die Reihenfolge ist aktuell." else "${a.veraendert} Faktoren haben den Platz gewechselt.")
                 if (a.ueberarbeitet > 0) append(" ${a.ueberarbeitet} Texte neu geschrieben.")
@@ -273,6 +274,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val a = ki.einwand(repo.liste(), text, bisher, fortschritt)
             repo.uebernimm(a.liste, a.vorschlaege, alteVorschlaegeBehalten = true)
             KiArbeit.ergebnis = buildString {
+                if (ki.webSucheAbgelehnt) append("⚠ Die Websuche wurde vom Server abgelehnt – diesmal ohne Internet-Recherche gearbeitet.\n\n")
                 append(a.einordnung.ifBlank { a.zusammenfassung })
                 append("\n\n")
                 append(if (a.veraendert == 0) "Die Reihenfolge bleibt gleich." else "${a.veraendert} Faktoren haben den Platz gewechselt.")
@@ -348,7 +350,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         KiArbeit.starte(getApplication(), Art.VERTIEFEN, f.titel, f.id) { fortschritt ->
             val aktuell = repo.einer(f.id) ?: return@starte
             repo.speichere(ki.vertiefen(aktuell, repo.liste(), fortschritt))
-            KiArbeit.ergebnis = "„${aktuell.titel}“ ist jetzt vertieft."
+            KiArbeit.ergebnis = (if (ki.webSucheAbgelehnt) "⚠ Ohne Websuche (vom Server abgelehnt). " else "") + "„${aktuell.titel}“ ist jetzt vertieft."
         }
     }
 

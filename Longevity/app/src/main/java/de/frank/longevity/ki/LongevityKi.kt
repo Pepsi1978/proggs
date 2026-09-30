@@ -121,6 +121,7 @@ class LongevityKi(
     // ================= Einen Faktor vertiefen =================
 
     suspend fun vertiefen(f: Faktor, liste: List<Faktor>, fortschritt: Fortschritt): Faktor {
+        auth.webSucheZuruecksetzen()
         fortschritt.band(0f, 1f, erwarteteZeichen = 5500, erwarteteSekunden = if (webSuche) 120f else 60f, schritt = "Die KI recherchiert „${f.titel}“ …")
         val antwort = frage(
             grundanweisung(),
@@ -173,6 +174,9 @@ class LongevityKi(
 
     private val webSuche: Boolean get() = e.rechercheTiefe != RechercheTiefe.SCHNELL
 
+    /** Die Websuche war eingeschaltet, wurde vom Server aber abgelehnt – der Lauf arbeitete ohne Internet. */
+    val webSucheAbgelehnt: Boolean get() = webSuche && !auth.webSucheMoeglich
+
     /**
      * Der große Lauf:
      * 1. Recherche-Schwarm (parallel, mit Websuche) – je Lebensbereich ein Rechercheur, dazu Räuber-Jäger und Neuheiten-Scout.
@@ -181,11 +185,14 @@ class LongevityKi(
      * 4. Text-Konsens (parallel): Diese Faktoren bekommen einen neuen Text aus altem Stand und neuen Erkenntnissen.
      */
     suspend fun aktualisieren(liste: List<Faktor>, fortschritt: Fortschritt): Aktualisierung {
+        auth.webSucheZuruecksetzen()
         val v = vorlage()
         val mitRecherche = e.rechercheTiefe != RechercheTiefe.SCHNELL
-        val b = if (mitRecherche) floatArrayOf(0f, 0.34f, 0.64f, 0.76f) else floatArrayOf(0f, 0f, 0.42f, 0.62f)
-        val (dossiers, anzahlRecherchen) = if (mitRecherche) recherchieren(v, liste, fortschritt, b[0], b[1]) else "" to 0
-        val lauf = Lauf(v, liste, "", StringBuilder(), fortschritt, dossiers)
+        // Bänder: Recherche | Einzelprüfung | Debatte | Gutachterin | Text-Konsens
+        val b = if (mitRecherche) floatArrayOf(0.22f, 0.42f, 0.64f, 0.76f) else floatArrayOf(0f, 0f, 0.42f, 0.62f)
+        val (dossiers, anzahlRecherchen) = if (mitRecherche) recherchieren(v, liste, fortschritt, 0f, b[0]) else "" to 0
+        val pruefung = if (mitRecherche) einzelpruefung(v, liste, dossiers, fortschritt, b[0], b[1]) else ""
+        val lauf = Lauf(v, liste, "", StringBuilder(), fortschritt, dossiers, pruefung)
         val d = (b[2] - b[1]) / 4f
         lauf.sprich(PRO, "runde 1 forscherin", b[1], b[1] + d * 1.2f, 5000, 90f)
         lauf.sprich(CONTRA, "runde 1 skeptiker", b[1] + d * 1.2f, b[1] + d * 2.4f, 5000, 90f)
@@ -203,12 +210,13 @@ class LongevityKi(
      * Texte werden danach neu geschrieben.
      */
     suspend fun einwand(liste: List<Faktor>, text: String, bisher: List<Beitrag>, fortschritt: Fortschritt): Aktualisierung {
+        auth.webSucheZuruecksetzen()
         val v = vorlage()
         val verlauf = StringBuilder()
         bisher.forEach { b -> verlauf.append("\n### ").append(b.name).append(":\n").append(beitragKurz(b)).append('\n') }
         fortschritt.beitragFertig(NUTZER, text)
         verlauf.append("\n### ").append(NUTZER).append(" (der Nutzer):\n").append(text).append('\n')
-        val lauf = Lauf(v, liste, text, verlauf, fortschritt, "")
+        val lauf = Lauf(v, liste, text, verlauf, fortschritt, "", "")
         lauf.sprich(PRO, "einwand forscherin", 0.00f, 0.16f, 3500, 80f)
         lauf.sprich(CONTRA, "einwand skeptiker", 0.16f, 0.32f, 3500, 80f)
         lauf.sprich(PRO, "einwand forscherin antwort", 0.32f, 0.44f, 2400, 50f)
@@ -297,6 +305,54 @@ class LongevityKi(
         return dossiers.joinToString("\n\n") to (auftraege.size - fehler.get())
     }
 
+    /**
+     * Phase 2: Jeder Faktor wird einzeln hinterfragt. Die Rangliste wird in Blöcke geteilt (Maximal 4, Gründlich 8 Faktoren);
+     * je Block prüft die Forscherin jeden Faktor mit Websuche, der Skeptiker hält Punkt für Punkt dagegen. Blöcke laufen parallel.
+     */
+    private suspend fun einzelpruefung(v: Map<String, String>, liste: List<Faktor>, dossiers: String, fortschritt: Fortschritt, von: Float, bis: Float): String {
+        val groesse = if (e.rechercheTiefe == RechercheTiefe.MAXIMAL) 4 else 8
+        val bloecke = liste.chunked(groesse)
+        if (bloecke.isEmpty()) return ""
+        val wellen = (bloecke.size + PARALLEL - 1) / PARALLEL
+        fortschritt.band(von, bis, bloecke.size * 7000, 220f * wellen, "Einzelprüfung: ${liste.size} Faktoren in ${bloecke.size} Blöcken …")
+        fortschritt.status(PRUEFSTAND, "Jeder Faktor wird einzeln geprüft – ${bloecke.size} Blöcke, bis zu $PARALLEL gleichzeitig …")
+        val grenze = Semaphore(PARALLEL)
+        val fertig = AtomicInteger(0)
+        val ergebnisse = coroutineScope {
+            bloecke.map { block ->
+                async {
+                    grenze.withPermit {
+                        val bereich = "Rang ${block.first().rang}–${block.last().rang}"
+                        val werte = basisWerte(liste, "", dossiers) + mapOf(
+                            "BEREICH" to bereich,
+                            "BEREICH_DETAILS" to block.joinToString("\n\n") { detail(it) },
+                        )
+                        val pro = try {
+                            frage(
+                                system(v, werte, "rolle forscherin"),
+                                nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "(noch keine – du beginnst)"), "einzelprüfung forscherin"),
+                                e.modell, e.denkstufe, fortschritt, webSuche = true, still = true,
+                            ).trim()
+                        } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Prüfung fehlgeschlagen: ${t.message})" }
+                        fortschritt.beitragFertig("$PRO · Prüfung $bereich", pro, liveLeeren = false)
+                        val contra = try {
+                            frage(
+                                system(v, werte, "rolle skeptiker"),
+                                nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "### $PRO:\n$pro"),"einzelprüfung skeptiker"),
+                                e.modell, e.denkstufe, fortschritt, webSuche = true, still = true,
+                            ).trim()
+                        } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Gegenprüfung fehlgeschlagen: ${t.message})" }
+                        fortschritt.beitragFertig("$CONTRA · Prüfung $bereich", contra, liveLeeren = false)
+                        val n = fertig.incrementAndGet()
+                        fortschritt.status(PRUEFSTAND, "$n von ${bloecke.size} Blöcken geprüft …")
+                        "## EINZELPRÜFUNG $bereich\n### $PRO:\n$pro\n### $CONTRA:\n$contra"
+                    }
+                }
+            }.awaitAll()
+        }
+        return ergebnisse.joinToString("\n\n")
+    }
+
     /** Phase 4: Die von der Gutachterin markierten Faktoren bekommen parallel einen neuen Konsens-Text. */
     private suspend fun konsens(v: Map<String, String>, m: Mischung, dossiers: String, fortschritt: Fortschritt, von: Float, bis: Float): List<Faktor> {
         if (m.konsens.isEmpty()) return m.ergebnis.liste
@@ -360,10 +416,12 @@ class LongevityKi(
         val verlauf: StringBuilder,
         val fortschritt: Fortschritt,
         val recherche: String,
+        val pruefung: String,
     ) {
         suspend fun sprich(name: String, auftrag: String, von: Float, bis: Float, zeichen: Int, sekunden: Float): String {
             val werte = basisWerte(liste, einwand, recherche.ifBlank { "(in diesem Lauf keine Recherche-Dossiers)" }) +
-                ("DISKUSSION" to verlauf.toString().trim().ifBlank { "(noch keine – du beginnst)" })
+                ("DISKUSSION" to verlauf.toString().trim().ifBlank { "(noch keine – du beginnst)" }) +
+                ("PRUEFUNG" to pruefung.ifBlank { "(in diesem Lauf keine Einzelprüfungen)" })
             val rolle = when (name) { PRO -> "rolle forscherin"; CONTRA -> "rolle skeptiker"; else -> "rolle gutachterin" }
             val suche = webSuche && name != RICHTER
             fortschritt.band(von, bis, zeichen, if (suche) sekunden * 1.6f else sekunden, "$name ${if (name == RICHTER) "wägt ab" else "argumentiert"} …")
@@ -380,7 +438,7 @@ class LongevityKi(
         "PRO" to PRO, "CONTRA" to CONTRA, "RICHTER" to RICHTER, "AUTORIN" to AUTORIN, "EINWAND" to einwand,
         "FAKTOR_SCHEMA" to FAKTOR_SCHEMA, "PROFIL" to profilZeile(), "LISTE" to listeKompakt(liste),
         "DETAILS" to liste.joinToString("\n\n") { detail(it) }, "RECHERCHE" to recherche, "DATUM" to heute(),
-        "NEU_MAX" to NEU_MAX.toString(),
+        "NEU_MAX" to NEU_MAX.toString(), "PRUEFUNG" to "",
     )
 
     private fun system(v: Map<String, String>, werte: Map<String, String>, rolle: String): String = fuelle(
@@ -580,6 +638,7 @@ class LongevityKi(
         const val SCHWARM = "Recherche-Schwarm"
         const val RAEUBER_JAEGER = "Räuber-Jäger"
         const val SCOUT = "Neuheiten-Scout"
+        const val PRUEFSTAND = "Einzelprüfung"
 
         /** Höchstens so viele KI-Aufrufe gleichzeitig – mehr bremst das Codex-Kontingent. */
         const val PARALLEL = 5
@@ -589,7 +648,7 @@ class LongevityKi(
         const val PROMPT_VERSION = 2
 
         /** Gehört ein Protokoll-Beitrag zum Recherche-Schwarm? */
-        fun istRecherche(name: String) = name.startsWith("Rechercheur") || name == RAEUBER_JAEGER || name == SCOUT || name == SCHWARM
+        fun istRecherche(name: String) = name.startsWith("Rechercheur") || name == RAEUBER_JAEGER || name == SCOUT || name == SCHWARM || name == PRUEFSTAND
 
         const val AUFBAU_SYSTEM = "aufbau systemanweisung"
         const val AUFBAU_NACHRICHT = "aufbau nachricht"

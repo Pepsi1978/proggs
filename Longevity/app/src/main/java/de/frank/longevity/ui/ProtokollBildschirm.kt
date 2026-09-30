@@ -167,14 +167,15 @@ private fun MikroKnopf(vm: AppViewModel) {
 @Composable
 private fun Blase(b: Beitrag, live: Boolean) {
     val f = LocalFarben.current
-    val (emoji, farbe, rechts) = when (b.name) {
-        LongevityKi.PRO -> Triple("🔬", f.primaer, false)
-        LongevityKi.CONTRA -> Triple("🧐", f.sekundaer, true)
-        LongevityKi.NUTZER -> Triple("🙋", f.erfolg, true)
-        LongevityKi.AUTORIN -> Triple("✍️", f.tertiaer, false)
-        LongevityKi.RAEUBER_JAEGER -> Triple("🕵️", f.gefahr, false)
-        LongevityKi.SCOUT -> Triple("🛰️", f.sekundaer, false)
-        else -> if (LongevityKi.istRecherche(b.name)) Triple("🌐", f.primaer, false) else Triple("⚖️", f.tertiaer, false)
+    val (emoji, farbe, rechts) = when {
+        b.name.startsWith(LongevityKi.PRO) -> Triple("🔬", f.primaer, false)
+        b.name.startsWith(LongevityKi.CONTRA) -> Triple("🧐", f.sekundaer, true)
+        b.name == LongevityKi.NUTZER -> Triple("🙋", f.erfolg, true)
+        b.name == LongevityKi.AUTORIN -> Triple("✍️", f.tertiaer, false)
+        b.name == LongevityKi.RAEUBER_JAEGER -> Triple("🕵️", f.gefahr, false)
+        b.name == LongevityKi.SCOUT -> Triple("🛰️", f.sekundaer, false)
+        LongevityKi.istRecherche(b.name) -> Triple("🌐", f.primaer, false)
+        else -> Triple("⚖️", f.tertiaer, false)
     }
     val richter = b.name == LongevityKi.RICHTER
     val text = when {

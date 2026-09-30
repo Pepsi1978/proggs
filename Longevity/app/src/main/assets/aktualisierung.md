@@ -21,9 +21,12 @@ an die KI geschickt.
    - Maximal: 10 Bereichs-Rechercheure (einer je Kategorie) + Räuber-Jäger + Neuheiten-Scout
    - Schnell: keine Recherche
    Abschnitte: „Rolle Rechercheur“, „Recherche Bereich“, „Recherche Räuber“, „Recherche Neuheiten“.
-2. Debatte nacheinander, mit Websuche: Runde 1 Forscherin → Runde 1 Skeptiker → Runde 2 Forscherin → Runde 2 Skeptiker.
-3. Entscheidung der Gutachterin (JSON): Rangliste, Korrekturen, neue Faktoren, Hinweise, Texte zum Neuschreiben.
-4. Text-Konsens, parallel: Die Autorin schreibt jeden markierten Faktor neu – alter Stand + neue Erkenntnisse zu
+2. Einzelprüfung, parallel und mit Websuche (nur Gründlich und Maximal): Die Rangliste wird in Blöcke geteilt
+   (Maximal je 4, Gründlich je 8 Faktoren). Je Block prüft die Forscherin JEDEN Faktor einzeln, der Skeptiker hält
+   Punkt für Punkt dagegen. Abschnitte: „Aufbau Einzelprüfung“, „Einzelprüfung Forscherin“, „Einzelprüfung Skeptiker“.
+3. Debatte nacheinander, mit Websuche: Runde 1 Forscherin → Runde 1 Skeptiker → Runde 2 Forscherin → Runde 2 Skeptiker.
+4. Entscheidung der Gutachterin (JSON): Rangliste, Korrekturen, neue Faktoren, Hinweise, Texte zum Neuschreiben.
+5. Text-Konsens, parallel: Die Autorin schreibt jeden markierten Faktor neu – alter Stand + neue Erkenntnisse zu
    EINEM Text (keine angehängten „Neu (Datum)“-Absätze mehr). Abschnitte: „Rolle Autorin“, „Text Konsens“.
    Faktoren mit alten „Neu (…)“-Absätzen werden automatisch mit eingearbeitet.
 
@@ -37,9 +40,10 @@ Einwand Skeptiker Schlusswort → Einwand Entscheidung → Text-Konsens für die
 - `{{LISTE}}` – Rangliste kompakt, eine Zeile je Faktor: id | Rang | Titel | Kategorie | Evidenz | Jahre
 - `{{DETAILS}}` – alle Faktoren vollständig: Kurztext, Erklärung, Begründung, Ziel, Aufgabenplan, Quellen, Prüfdatum, Hinweis
 - `{{RECHERCHE}}` – alle Dossiers des Recherche-Schwarms dieses Laufs
-- `{{DISKUSSION}}` – alle bisherigen Beiträge der Debatte
+- `{{DISKUSSION}}` – alle bisherigen Beiträge der Debatte (in der Einzelprüfung: der Beitrag der Forscherin zum Block)
+- `{{PRUEFUNG}}` – alle Einzelprüfungen dieses Laufs (Forscherin und Skeptiker je Block)
 - `{{DATUM}}` – das heutige Datum
-- `{{BEREICH}}`, `{{BEREICH_DETAILS}}` – nur für Rechercheure: ihr Bereich und dessen Faktoren vollständig
+- `{{BEREICH}}`, `{{BEREICH_DETAILS}}` – für Rechercheure und Einzelprüfung: ihr Bereich bzw. Block und dessen Faktoren vollständig
 - `{{FAKTOR}}`, `{{GRUND}}`, `{{ZUSAMMENFASSUNG}}` – nur im Text-Konsens: der Faktor vollständig, warum er neu
   geschrieben wird, und die Zusammenfassung der Gutachterin
 - `{{PROFIL}}` – das Kurzprofil aus den Einstellungen (leer, wenn keins eingetragen ist)
@@ -75,6 +79,9 @@ ALLE FAKTOREN IM DETAIL (der Status quo, den dieser Lauf verbessern soll):
 RECHERCHE-DOSSIERS DIESES LAUFS:
 {{RECHERCHE}}
 
+EINZELPRÜFUNGEN JEDES FAKTORS (Forscherin und Skeptiker je Block):
+{{PRUEFUNG}}
+
 BISHERIGE DISKUSSION:
 {{DISKUSSION}}
 
@@ -86,6 +93,24 @@ HEUTE: {{DATUM}}
 
 AKTUELLE RANGLISTE (id | Rang | Titel | Kategorie | Evidenz | geschätzte Jahre):
 {{LISTE}}
+
+{{AUFTRAG}}
+
+## Aufbau Einzelprüfung
+
+HEUTE: {{DATUM}}
+
+AKTUELLE RANGLISTE (id | Rang | Titel | Kategorie | Evidenz | geschätzte Jahre):
+{{LISTE}}
+
+RECHERCHE-DOSSIERS DIESES LAUFS:
+{{RECHERCHE}}
+
+DEIN BLOCK: {{BEREICH}}
+{{BEREICH_DETAILS}}
+
+BISHERIGE PRÜFUNG DIESES BLOCKS:
+{{DISKUSSION}}
 
 {{AUFTRAG}}
 
@@ -174,9 +199,24 @@ AUFTRAG: Du bist der Neuheiten-Scout. Suche mit der Websuche nach Forschung der 
 Für jeden Fund: Was wurde gezeigt (Effektgröße), wie belastbar, welche Faktoren der Liste betrifft es (id), und was folgt daraus für Rang, Jahre, Evidenz oder Text? Dazu bis zu 3 Kandidaten für neue Faktoren.
 Quelle je Fund (Autor/Studie, Journal, Jahr, Link wenn gefunden). Keine erfundenen Quellen. Stichpunkte, maximal ca. 1200 Wörter.
 
+## Einzelprüfung Forscherin
+
+EINZELPRÜFUNG: Nimm dir JEDEN Faktor deines Blocks einzeln vor – keiner wird übersprungen, keiner pauschal abgenickt. Nutze die Dossiers und recherchiere mit der Websuche nach, wo die Dossiers dünn sind. Je Faktor (id und Titel als Überschrift):
+1. KERNAUSSAGE: Stimmt sie nach heutigem Stand? Was ist die beste Evidenz dafür (Studientyp, Größe, Effektgröße, Jahr, Quelle)?
+2. ZAHLEN: Sind Jahre, Wirkung und Evidenzstufe richtig und im Vergleich zu den anderen Faktoren stimmig? Konkreter Gegenvorschlag, falls nicht.
+3. RANG: Gehört er höher oder tiefer – im direkten Vergleich mit den Nachbarn („vor X, hinter Y, weil …“)?
+4. TEXT: Sachliche Fehler, veraltete Zahlen, Lücken, missverständliche Formulierungen in Kurztext, Erklärung, Ziel oder Aufgabenplan? Was genau muss rein, was raus? Fehlen belegte Maßnahmen im Plan?
+5. POLARITÄT UND ÜBERSCHNEIDUNG: Verbot statt Räuber? Doppelung mit einem anderen Faktor?
+6. URTEIL: BESTÄTIGT / KORRIGIEREN / HÖHER / TIEFER / NEU SCHREIBEN – in einem Satz begründet.
+Gründlich statt kurz: Stichpunkte, bis ca. 250 Wörter je Faktor.
+
+## Einzelprüfung Skeptiker
+
+EINZELPRÜFUNG, GEGENPRÜFUNG: Prüfe die Einschätzung von {{PRO}} zu JEDEM Faktor des Blocks einzeln (id und Titel als Überschrift). Recherchiere mit der Websuche nach, ob die genannten Studien existieren und das sagen, was behauptet wird. Je Faktor: Zustimmung, Ablehnung oder Gegenvorschlag – mit Begründung (Evidenz-Hierarchie, Confounding, Healthy-User-Bias, Effektgröße, Umkehrkausalität, Übertragbarkeit). Ergänze, was {{PRO}} übersehen hat, und schließe je Faktor mit deinem Urteil: BESTÄTIGT / KORRIGIEREN / HÖHER / TIEFER / NEU SCHREIBEN. Bis ca. 200 Wörter je Faktor.
+
 ## Runde 1 Forscherin
 
-RUNDE 1: Werte die Recherche-Dossiers aus und gehe die Rangliste von oben nach unten durch. Nenne konkret:
+RUNDE 1: Werte die Recherche-Dossiers und die Einzelprüfungen aus (wo Forscherin und Skeptiker sich dort schon einig sind, übernimm das Ergebnis; wo sie uneins sind, entscheide mit Argumenten) und gehe die Rangliste von oben nach unten durch – jetzt mit Blick auf das Gesamtbild: Stimmt die Reihenfolge ÜBER die Blöcke hinweg? Nenne konkret:
 1. VERSCHIEBUNGEN: welche Faktoren höher oder tiefer gehören („Punkt X vor Punkt Y, weil …“), mit Effektgrößen und Studienlage.
 2. KORREKTUREN: sachliche Fehler, veraltete Zahlen, falsche Evidenzstufe oder falsche Jahre in den Texten (id nennen, was genau falsch ist, was richtig ist).
 3. POLARITÄT: Steht oben ein Verbot oder Verzicht („Nicht rauchen“, „Alkohol meiden“), gehört es als schädliches Verhalten mit negativen Jahren unter die Null-Linie – nenne jeden Fall. Prüfe auch die Minus-Jahre der Räuber.
@@ -201,6 +241,7 @@ RUNDE 2 (Schlusswort): Nenne, welche Verschiebungen, Korrekturen und neuen Fakto
 ENTSCHEIDUNG: Lege die endgültige Rangliste fest. Sie muss JEDE bisherige id genau einmal enthalten (nichts löschen).
 Aufbau: oben alle Faktoren mit POSITIVEN Jahren (förderliches Verhalten, das Lebensjahre schenkt), nach Wichtigkeit; darunter die Lebenszeit-Räuber mit NEGATIVEN Jahren (schädliches Verhalten), der schädlichste ganz unten.
 Stabilität: Verschiebe nur, was neue Evidenz oder ein klarer Denkfehler trägt.
+Grundlage: Recherche-Dossiers, Einzelprüfungen und Debatte. Jeder Faktor, bei dem die Einzelprüfung auf KORRIGIEREN oder NEU SCHREIBEN kam und die Debatte das nicht widerlegt hat, gehört in "neu_schreiben".
 Verbote und Verzichte gibt es oben nicht: Ist ein Eintrag als Verbot formuliert („Nicht rauchen“, „Alkohol meiden“, „Kein Zucker“), formuliere ihn um als das schädliche Verhalten selbst („Rauchen – auch nur gelegentlich“, „Regelmäßig Alkohol trinken“), setze "jahre" negativ (verlorene Jahre gegenüber dem Unterlassen) und liefere dazu neuen "titel", "kurz" und "ziel" (Ziel = wie man es abstellt). Sonst "titel", "kurz", "ziel" leer lassen, außer der Titel ist sachlich falsch.
 Für jeden Eintrag in "reihenfolge": "begruendung" = 2–3 Sätze, warum er genau auf diesem Rang steht (Vergleich mit den Nachbarn, mit der tragenden Evidenz). "evidenz", "jahre", "wirkung" und "kategorie" nur ändern, wenn die Diskussion es begründet (Vorzeichen-Wechsel bei Verboten immer); sonst die bisherigen Werte eintragen.
 "neu_schreiben": JEDER Faktor, dessen Text (Erklärung, Kurztext, Ziel oder Aufgabenplan) sachliche Fehler, veraltete Zahlen, fehlende wichtige neue Erkenntnisse oder angehängte „Neu (…)“-Absätze hat – mit "grund" = konkret, was korrigiert oder eingearbeitet werden soll (1–3 Sätze, inkl. der neuen Zahlen und Quellen aus der Diskussion). Lieber einen Faktor zu viel neu schreiben lassen als eine bekannte Verbesserung liegen lassen.

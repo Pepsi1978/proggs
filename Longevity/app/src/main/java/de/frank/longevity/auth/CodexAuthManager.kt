@@ -291,7 +291,9 @@ class CodexAuthManager(context: Context) {
                     }
                 } catch (error: CodexAuthException) {
                     // Lehnt das Backend das Werkzeug ab, ohne Websuche weiterarbeiten statt den ganzen Lauf zu verlieren.
-                    if (geliefert || error.retryable || error.kind == AuthErrorKind.QUOTA || error.kind == AuthErrorKind.REAUTH) throw error
+                    val text = error.message.orEmpty().lowercase()
+                    val werkzeugFehler = "tool" in text || "web_search" in text || "web search" in text
+                    if (geliefert || !werkzeugFehler || error.retryable || error.kind == AuthErrorKind.QUOTA || error.kind == AuthErrorKind.REAUTH) throw error
                     webSucheMoeglich = false
                     requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
                 }
@@ -305,6 +307,9 @@ class CodexAuthManager(context: Context) {
     /** Fällt auf false, sobald das Backend die Websuche einmal abgelehnt hat (gilt bis zum App-Neustart). */
     @Volatile var webSucheMoeglich = true
         private set
+
+    /** Vor jedem neuen Lauf: die Websuche erneut versuchen. */
+    fun webSucheZuruecksetzen() { webSucheMoeglich = true }
 
     fun logout() {
         store.edit().clear().apply()
