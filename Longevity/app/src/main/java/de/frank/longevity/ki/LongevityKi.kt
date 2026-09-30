@@ -230,7 +230,7 @@ class LongevityKi(
             fortschritt.status(SCOUT, "Sucht neue Studien, Schenker und Räuber …")
             var scoutGespeichert = false
             val neuheiten = try {
-                val (text, gespeichert) = gesichert("scout", pruefe = { jsonAus(it) }) {
+                val (text, gespeichert) = gesichert("scout:${if (webSuche) "web" else "ohne"}", pruefe = { jsonAus(it) }) {
                     frage(rolle(v), nachricht(liste, fuelle(v["neuheiten"].orEmpty(), werte())), e.modell, denk("scout"), fortschritt, webSuche = webSuche, still = true, label = "Neuheiten")
                 }
                 scoutGespeichert = gespeichert
@@ -267,7 +267,11 @@ class LongevityKi(
                             )
                             var ausSpeicher = false
                             val zeilen = try {
-                                val (text, gespeichert) = gesichert(schluessel, pruefe = { require(urteileAus(jsonAus(it), nachId).isNotEmpty()) { "keine Bewertung" } }) {
+                                val (text, gespeichert) = gesichert(schluessel, pruefe = { t ->
+                                    // Mindestens die Hälfte des eigenen Blocks muss bewertet sein, sonst gilt die Antwort als gescheitert.
+                                    val treffer = urteileAus(jsonAus(t), nachId).keys.count { id -> block.any { it.id == id } }
+                                    require(treffer * 2 >= block.size) { "nur $treffer von ${block.size} Faktoren bewertet" }
+                                }) {
                                     frage(rolle(v), nachricht(liste, auftrag), e.modell, denk("bewertung"), fortschritt, webSuche = webBewertung, still = true, label = "Bewertung $bereich")
                                 }
                                 ausSpeicher = gespeichert
@@ -572,7 +576,7 @@ class LongevityKi(
                     grenze.withPermit {
                         val auftrag = fuelle(v["text"].orEmpty(), werte() + mapOf("FAKTOR" to detail(f), "GRUND" to grund))
                         val ergebnis = try {
-                            val (antwort, _) = gesichert("text:${f.id}", pruefe = { faktorAus(jsonAus(it)) }) {
+                            val (antwort, _) = gesichert("text:${f.id}", pruefe = { pruefeText(it) }) {
                                 frage(rolle(v), nachricht(liste, auftrag), e.modell, denk("text"), fortschritt, still = true, label = "Text id ${f.id} „${f.titel}“")
                             }
                             textUebernehmen(f, faktorAus(jsonAus(antwort))).also { zeilen += "• „${f.titel}“ – ${grund.lineSequence().first().take(160)}" }
@@ -591,6 +595,12 @@ class LongevityKi(
         }.associateBy { it.id }
         fortschritt.beitragFertig("$MEDIZINER · Texte", "Neu geschrieben:\n" + zeilen.joinToString("\n"), liveLeeren = false)
         return liste.map { neu[it.id] ?: it }
+    }
+
+    /** Eine Text-Antwort zählt nur mit Erklärung, Kurztext und Aufgabenplan – sonst wird sie nicht gesichert. */
+    private fun pruefeText(antwort: String) {
+        val f = faktorAus(jsonAus(antwort))
+        require(f.erklaerung.isNotBlank() && f.kurz.isNotBlank() && f.punkte.isNotEmpty()) { "Text unvollständig" }
     }
 
     /** Der neue Text ersetzt Erklärung, Kurztext, Ziel und Plan; Titel, Jahre, Wahrscheinlichkeit und Evidenz kommen aus der Bewertung. */
@@ -624,7 +634,7 @@ class LongevityKi(
                         }
                         val auftrag = fuelle(v["text"].orEmpty(), werte() + mapOf("FAKTOR" to faktor, "GRUND" to "Neuer Faktor – vollständig ausarbeiten (Text, Ziel, Plan, Quellen)."))
                         val f = try {
-                            val (antwort, _) = gesichert("neu:${k.titel.hashCode()}", pruefe = { faktorAus(jsonAus(it)) }) {
+                            val (antwort, _) = gesichert("neu:${k.titel.hashCode()}", pruefe = { pruefeText(it) }) {
                                 frage(rolle(v), nachricht(liste, auftrag), e.modell, denk("text"), fortschritt, still = true, label = "Neuer Faktor „${k.titel}“")
                             }
                             faktorAus(jsonAus(antwort))
