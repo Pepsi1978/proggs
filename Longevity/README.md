@@ -29,5 +29,6 @@ gesunde Lebenszeit beeinflussen – streng nach Wichtigkeit sortiert: Rang 1 bri
 ## Bauen
 
 Version nur über `app/src/main/assets/versionslog.json` (neuester Eintrag unten).
-Signatur: gemeinsamer Debug-Key (keine eigene signingConfig). Aufs Handy den Release-Build aus dem
-Skill `apk-update` installieren (Debug-Compose ruckelt).
+Standard bleibt **Debug**: `./gradlew :app:assembleDebug`. Die Scroll-Optimierungen benötigen keinen
+Release-Build; Animationen, Glasflächen und Schatten bleiben erhalten. Signiert wird mit dem gemeinsamen
+Debug-Key aus `~/SK/Android/debug-shared.keystore`, sofern vorhanden, sonst mit dem lokalen Debug-Key.
