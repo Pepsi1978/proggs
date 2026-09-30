@@ -184,6 +184,49 @@ class Aktualisierer(
                 erfundene += nieEinSchluessel
             }
 
+            // --- Befehlspalette (Strg+P): nur ergänzen ------------------------------------
+            // Die Palette steht nur im Quelltext der TUI. Gelesen wird der Stand zur neuesten
+            // Fassung (Tag v<Version>), ersatzweise der Entwicklungszweig. Viele Befehle sind an
+            // Bedingungen geknüpft; ein Fehlen im Quelltext-Schnitt beweist deshalb nicht, dass
+            // es sie nicht mehr gibt — der Bereich wird nur ergänzt, nie als verschwunden geführt.
+            stand = stand.copy(schritt = "Befehlspalette wird gelesen")
+            melde(stand)
+            val palette = PalettenParser.DATEIEN.flatMap { datei ->
+                val text = runCatching { abruf.hole(PalettenParser.adresse("v$version", datei)) }
+                    .recoverCatching { abruf.hole(PalettenParser.adresse("dev", datei)) }
+                    .getOrElse {
+                        KompassLog.warn(
+                            "Aktualisierer",
+                            "fuehreAus",
+                            "Palettendatei nicht geladen — der Rest läuft weiter",
+                            mapOf("datei" to datei, "grund" to it.message),
+                        )
+                        ""
+                    }
+                if (text.isBlank()) emptyList() else PalettenParser.lese(datei, text)
+            }.distinctBy { it.titel.lowercase() }
+            val paletteBestand = bestand.filter { it.bereich == Bereich.PANEL.id }.map { it.name }
+            for (befehl in palette) {
+                if (PalettenParser.istBekannt(befehl.titel, paletteBestand)) continue
+                val englisch = "${befehl.titel} (${befehl.kategorie}" +
+                    (if (befehl.kennung.isNotBlank()) ", ${befehl.kennung}" else "") + ")"
+                neueRoh += RohEintrag(
+                    bereich = Bereich.PANEL,
+                    name = befehl.titel,
+                    kategorie = befehl.kategorie,
+                    art = "Strg+P",
+                    kurz = englisch.take(140),
+                    englisch = englisch,
+                    erklaerung = "",
+                    seit = version,
+                    seitBeleg = "",
+                    sortierName = befehl.kategorie.lowercase() + " " + befehl.titel.lowercase(),
+                    entfernt = false,
+                    entferntIn = "",
+                    ersatz = "",
+                )
+            }
+
             stand = stand.copy(
                 schritt = "Abgleich fertig",
                 neuAnzahl = neueRoh.size,

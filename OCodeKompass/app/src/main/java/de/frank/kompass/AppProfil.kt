@@ -1,5 +1,8 @@
 package de.frank.kompass
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.ui.graphics.vector.ImageVector
 import de.frank.opencodekompass.BuildConfig
 
 /**
@@ -39,6 +42,16 @@ object AppProfil {
 
     /** Fruehere Dateinamen-Teile, damit bereits geschriebene Sicherungen gefunden werden. */
     val FRUEHERE_DATEI_PRAEFIXE = listOf("opencode-kompass")
+
+    /**
+     * Der fünfte Reiter: die Befehlspalette, die in OpenCode mit Strg+P aufgeht
+     * (Switch session, Toggle MCPs, Connect provider …).
+     */
+    const val PANEL_TITEL = "Strg+P"
+    const val PANEL_TITEL_LANG = "Befehle (Strg+P)"
+    /** Wie ein einzelner Eintrag im Anweisungstext an das Modell heisst. */
+    const val PANEL_ART_NAME = "Befehl aus der Befehlspalette (Strg+P)"
+    val PANEL_SYMBOL: ImageVector get() = Icons.Default.Keyboard
 
     const val VERSION_NAME = BuildConfig.VERSION_NAME
     const val VERSION_BUMPED_AT = BuildConfig.VERSION_BUMPED_AT
