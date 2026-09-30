@@ -21,6 +21,8 @@
 !skills/**
 # skills/ ist die EINZIGE Skill-Quelle aller Werkzeuge/Profile/Plattformen. Laufzeitmuell raus:
 skills/.system/
+# claude.ai-Konto-Skills (Cache, pro Konto automatisch geladen):
+skills/synced/
 **/__pycache__/
 !rules/
 !rules/**

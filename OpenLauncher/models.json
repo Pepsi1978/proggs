@@ -5102,12 +5102,22 @@
         "Slug": "qwen3.8-27b@iq3_xxs",
         "DisplayName": "Qwen3.8 27b@iq3_xxs (lokal)",
         "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "lmstudio",
+        "ProviderName": "LM Studio",
+        "Slug": "qwen/qwen3.8-27b",
+        "DisplayName": "Qwen3.8 27b (lokal)",
+        "IsHidden": false
       }
     ],
     "HiddenModelSlugs": [],
     "KnownSyncedModelSlugs": [
       "qwen3.8-27b@iq2_xxs",
-      "qwen3.8-27b@iq3_xxs"
+      "qwen3.8-27b@iq3_xxs",
+      "qwen/qwen3.8-27b"
     ],
     "IsExpanded": false
   }

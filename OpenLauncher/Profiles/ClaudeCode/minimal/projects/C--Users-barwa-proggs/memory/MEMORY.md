@@ -14,4 +14,5 @@
 - [Android-Cloud-Bau: rclone](android-cloud-bau-rclone.md) — Konfig in SK\rclone, eigener Google-OAuth-Client (Projekt update-upload, In Produktion) seit 27.09.2026
 - [Codex-Mails kommen über Participating](github-codex-mails-participating.md) — Grund author, Unwatch reicht nicht; E-Mail bei Participating seit 27.09.2026 aus
 - [NewsKompass als Release installieren](newskompass-release-installieren.md) — Debug ruckelt, die Release-APK aus dem apk-update installieren
+- [ChatGPT-Abo 100 €](chatgpt-abo-100-euro.md) — kein Pro 500, daher kein Ultrafast per OAuth
 - [Gestartetes Programm erbt Agenten-Pipe](gestartetes-programm-erbt-agenten-pipe.md) — "started" gemeldet, Tool wartet bis Timeout: Handle-Vererbung beim Start
