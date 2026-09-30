@@ -8,12 +8,13 @@ gestaltet wird; aufgeklappt wird der Gesprächsbereich zweispaltig.
 
 ---
 
-## Die vier Bereiche
+## Die fünf Bereiche
 
 | Bereich | Was drinsteht |
 |---|---|
 | **Slash-Befehle** | Alle Befehle, alphabetisch, je mit ausführlicher Erklärung und der Version, in der sie dazukamen |
 | **Config** | Einstellungen aus `settings.json` und Umgebungsvariablen |
+| **/config** | Jeder Punkt des Einstellungsmenüs, das `/config` öffnet, in Menü-Reihenfolge |
 | **Best Practices** | 26 Artikel zur Arbeitsweise mit der aktuellen Fassung |
 | **Chat** | Mehrere Gespräche nebeneinander; Antworten beziehen Befehle und Einstellungen mit ein |
 

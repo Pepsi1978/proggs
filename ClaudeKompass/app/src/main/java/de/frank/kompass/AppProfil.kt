@@ -1,5 +1,8 @@
 package de.frank.kompass
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ToggleOn
+import androidx.compose.ui.graphics.vector.ImageVector
 import de.frank.claudekompass.BuildConfig
 
 /**
@@ -23,6 +26,18 @@ object AppProfil {
 
     /** Fruehere Dateinamen-Teile — hier keine. */
     val FRUEHERE_DATEI_PRAEFIXE = emptyList<String>()
+
+    /**
+     * Der fünfte Reiter: das interaktive Einstellungs-Menü, das `/config` in Claude Code öffnet.
+     * Der Reiter „Config" daneben zeigt dagegen die Schlüssel der settings.json.
+     */
+    const val PANEL_TITEL = "/config"
+    const val PANEL_TITEL_LANG = "/config-Menü"
+    /** Wie ein einzelner Eintrag im Anweisungstext an das Modell heisst. */
+    const val PANEL_ART_NAME = "Punkt aus dem /config-Menü"
+    /** Fassung, aus der die mitgelieferte Menüliste stammt; die Ernte liest nur Neueres. */
+    const val PANEL_STAND = "2.1.285"
+    val PANEL_SYMBOL: ImageVector get() = Icons.Default.ToggleOn
 
     const val VERSION_NAME = BuildConfig.VERSION_NAME
     const val VERSION_BUMPED_AT = BuildConfig.VERSION_BUMPED_AT

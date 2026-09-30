@@ -257,7 +257,7 @@ private fun UnterseiteKopf(
 }
 
 /**
- * Die Leiste mit den vier Bereichen.
+ * Die Leiste mit den fünf Bereichen.
  *
  * Sie sitzt unten, im Daumenbereich — auf dem hohen Cover-Display des Fold ist das der einzige
  * Ort, den man einhändig erreicht.
@@ -274,6 +274,7 @@ private fun BereichsLeiste(aktiv: String, beiWahl: (String) -> Unit) {
     ) {
         BereichsKnopf(Bereich.SLASH, Icons.Default.Terminal, aktiv, beiWahl)
         BereichsKnopf(Bereich.CONFIG, Icons.Default.Tune, aktiv, beiWahl)
+        BereichsKnopf(Bereich.PANEL, AppProfil.PANEL_SYMBOL, aktiv, beiWahl)
         BereichsKnopf(Bereich.PRAXIS, Icons.Default.Lightbulb, aktiv, beiWahl)
         BereichsKnopf(Bereich.CHAT, Icons.AutoMirrored.Filled.Chat, aktiv, beiWahl)
     }
@@ -295,7 +296,7 @@ private fun BereichsKnopf(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
             )
-            .padding(horizontal = 6.dp, vertical = 6.dp),
+            .padding(horizontal = 2.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -308,7 +309,7 @@ private fun BereichsKnopf(
                     },
                     shape = RoundedCornerShape(10.dp),
                 )
-                .padding(horizontal = 13.dp, vertical = 5.dp),
+                .padding(horizontal = 11.dp, vertical = 5.dp),
         ) {
             Icon(
                 imageVector = symbol,

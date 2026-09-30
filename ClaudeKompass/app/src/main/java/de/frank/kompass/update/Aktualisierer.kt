@@ -1,5 +1,6 @@
 package de.frank.kompass.update
 
+import de.frank.kompass.AppProfil
 import de.frank.kompass.ai.CodexClient
 import de.frank.kompass.ai.Prompts
 import de.frank.kompass.data.EinstellungenStore
@@ -263,6 +264,35 @@ class Aktualisierer(
                 } else {
                     verschwundene += fehlend
                 }
+            }
+
+            // --- Das /config-Menü: nur ergänzen, nie als verschwunden führen ---------------
+            // Für das Menü gibt es keine Liste des ganzen Bestands, nur Protokollzeilen, die
+            // Neuerungen und Streichungen nennen. Deshalb läuft es NICHT durch die
+            // Verschwunden-Regel oben — sonst gälte beim ersten Lauf fast jede Zeile als entfernt.
+            val menue = ProtokollErnte.leseConfigMenue(changelog, AppProfil.PANEL_STAND)
+            val menueBestand = bestand.filter { it.bereich == Bereich.PANEL.id }
+                .associateBy { it.name.lowercase() }
+            for (fund in menue.neu) {
+                if (fund.name.lowercase() in menueBestand) continue
+                neueRoh += RohEintrag(
+                    bereich = Bereich.PANEL,
+                    name = fund.name,
+                    kategorie = "Neu dazugekommen",
+                    art = "/config",
+                    kurz = fund.zeile.take(140),
+                    englisch = fund.zeile,
+                    erklaerung = "",
+                    seit = fund.version,
+                    seitBeleg = "- " + fund.zeile,
+                    sortierName = "99 " + fund.name.lowercase(),
+                    entfernt = false,
+                    entferntIn = "",
+                    ersatz = "",
+                )
+            }
+            for (fund in menue.weg) {
+                menueBestand[fund.name.lowercase()]?.takeIf { !it.entfernt }?.let { verschwundene += it }
             }
 
             stand = stand.copy(

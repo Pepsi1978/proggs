@@ -137,6 +137,66 @@ object ProtokollErnte {
             )
         }.also { melde("Umgebungsvariablen", it.size) }
 
+    /** Ergebnis der Ernte für das `/config`-Menü: dazugekommene und entfernte Zeilen. */
+    data class PanelErnte(
+        val neu: List<PanelFund>,
+        val weg: List<PanelFund>,
+    )
+
+    data class PanelFund(val name: String, val version: String, val zeile: String)
+
+    /** Ein Menüname steht im Protokoll in geraden Anführungszeichen: „Added a "Show turn duration" toggle". */
+    private val panelName = Regex("\"([A-Z][^\"]{2,59})\"")
+
+    /**
+     * Liest neue und entfernte Zeilen des `/config`-Menüs aus dem Protokoll.
+     *
+     * Anders als bei Befehlen gibt es für das Menü keine Übersichtstabelle, die den ganzen
+     * Bestand nennt. Die Ernte kann also nur Neuerungen melden — nie, dass etwas fehlt.
+     * Deshalb liest sie nur Fassungen NACH [abVersion] (dem Auslieferungsstand der
+     * Menüliste): Ältere Zeilen nennen oft Namen, die das Menü längst umbenannt hat, und
+     * kämen sonst als Doppel herein. Fehlerbehebungen zählen nicht — sie nennen bestehende
+     * Zeilen, keine neuen.
+     */
+    fun leseConfigMenue(changelog: String, abVersion: String): PanelErnte {
+        val neu = LinkedHashMap<String, PanelFund>()
+        val weg = LinkedHashMap<String, PanelFund>()
+        var version = ""
+        for (rohZeile in changelog.lineSequence()) {
+            val kopf = versionsZeile.find(rohZeile)
+            if (kopf != null) {
+                version = kopf.groupValues[1]
+                continue
+            }
+            val zeile = rohZeile.trim()
+            if (!zeile.startsWith("-") || version.isEmpty()) continue
+            if (!istNeuer(version, abVersion)) continue
+            if (!zeile.contains("/config") || zeile.startsWith("- Fixed")) continue
+            val entfernt = zeile.startsWith("- Removed")
+            for (treffer in panelName.findAll(zeile)) {
+                val name = treffer.groupValues[1].trim()
+                val schluessel = name.lowercase()
+                // Oben steht das Neueste: Die erste Nennung entscheidet.
+                if (schluessel in neu || schluessel in weg) continue
+                val fund = PanelFund(name, version, saeubere(zeile))
+                if (entfernt) weg[schluessel] = fund else neu[schluessel] = fund
+            }
+        }
+        melde("/config-Menü", neu.size)
+        return PanelErnte(neu.values.toList(), weg.values.toList())
+    }
+
+    /** true, wenn [a] eine neuere Fassung ist als [b] (Zahlen je Stelle verglichen). */
+    fun istNeuer(a: String, b: String): Boolean {
+        val x = a.split('.').map { it.toIntOrNull() ?: 0 }
+        val y = b.split('.').map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(x.size, y.size)) {
+            val d = x.getOrElse(i) { 0 } - y.getOrElse(i) { 0 }
+            if (d != 0) return d > 0
+        }
+        return false
+    }
+
     private fun einstellungsNamen(zeile: String): List<String> = buildList {
         einstellungLinks.findAll(zeile).forEach { add(it.groupValues[1]) }
         einstellungRechts.findAll(zeile).forEach { add(it.groupValues[1]) }

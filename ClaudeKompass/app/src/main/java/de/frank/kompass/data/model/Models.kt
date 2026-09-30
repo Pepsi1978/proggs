@@ -1,9 +1,12 @@
 package de.frank.kompass.data.model
 
-/** Die vier Bereiche, die unten in der Leiste stehen. */
+import de.frank.kompass.AppProfil
+
+/** Die fünf Bereiche, die unten in der Leiste stehen. Der Titel des Panel-Bereichs kommt aus [AppProfil]. */
 enum class Bereich(val id: String, val titel: String) {
     SLASH("slash", "Slash-Befehle"),
     CONFIG("config", "Config"),
+    PANEL("panel", AppProfil.PANEL_TITEL),
     PRAXIS("praxis", "Best Practices"),
     CHAT("chat", "Chat"),
     ;
@@ -28,6 +31,7 @@ enum class SicherungsTeil(
 ) : de.frank.module.sicherung.SicherungsTeil {
     SLASH("slash", "Slash-Befehle", "Der ganze Befehlskatalog mit allen Erklärungen."),
     CONFIG("config", "Config-Einstellungen", "Alle Einträge des Config-Bereichs."),
+    PANEL("panel", AppProfil.PANEL_TITEL_LANG, "Alle Einträge des Bereichs „${AppProfil.PANEL_TITEL}“."),
     PRAXIS("praxis", "Best Practices", "Alle Praxisartikel."),
     FRAGEN("fragen", "Eigene Fragen", "Die selbst gestellten Fragen samt Antworten."),
     GESPRAECHE("gespraeche", "Gespräche", "Die Chats mit ihren Nachrichten."),
@@ -37,6 +41,7 @@ enum class SicherungsTeil(
     val bereich: Bereich? get() = when (this) {
         SLASH -> Bereich.SLASH
         CONFIG -> Bereich.CONFIG
+        PANEL -> Bereich.PANEL
         PRAXIS -> Bereich.PRAXIS
         FRAGEN, GESPRAECHE -> null
     }
