@@ -436,19 +436,14 @@ constructor(
                     // Health-Connect-Mischwert aller Apps (z.B. 5,85 statt 7,31 km) und werden
                     // hier korrigiert — auch wenn der alte Eintrag sonst reicher ist.
                     session.sourceApp?.startsWith(POLAR_SOURCE_PREFIX) == true -> {
+                        // Bestehender Eintrag bleibt die Grundlage; leere Felder werden ergaenzt,
+                        // vorhandene Werte nur durch gueltige Polar-Werte ersetzt.
                         val base =
-                            if (newEntity.coversAllFieldsOf(match)) {
-                                newEntity.copy(
-                                    trackId = match.trackId,
-                                    sportName = match.sportName,
-                                    createdAt = match.createdAt,
-                                    weatherTempCelsius = match.weatherTempCelsius,
-                                    weatherCondition = match.weatherCondition,
-                                    weatherFetchedMs = match.weatherFetchedMs,
-                                )
-                            } else {
-                                match
-                            }
+                            match.copy(
+                                gpsTrackJson = match.gpsTrackJson ?: newEntity.gpsTrackJson,
+                                altitudeGainMeters = match.altitudeGainMeters ?: newEntity.altitudeGainMeters,
+                                altitudeLossMeters = match.altitudeLossMeters ?: newEntity.altitudeLossMeters,
+                            )
                         val updated = base.withPolarCoreValues(newEntity)
                         if (updated != match) {
                             workoutDao.upsert(updated)
@@ -1107,20 +1102,27 @@ internal const val POLAR_SOURCE_PREFIX = "fi.polar"
  * Dauer, Distanz, Ø/max Puls, Kalorien, Ø-Geschwindigkeit/Pace und maximales Tempo. Polar
  * gewinnt, wo es einen Wert hat; fehlt ihn Polar, bleibt der bisherige Wert stehen.
  */
-internal fun AmazfitWorkoutEntity.withPolarCoreValues(polar: AmazfitWorkoutEntity): AmazfitWorkoutEntity =
-    copy(
-        durationSeconds = polar.durationSeconds ?: durationSeconds,
-        endMs = polar.endMs,
-        distanceMeters = polar.distanceMeters ?: distanceMeters,
-        avgHeartRate = polar.avgHeartRate ?: avgHeartRate,
-        maxHeartRate = polar.maxHeartRate ?: maxHeartRate,
-        calories = polar.calories ?: calories,
-        avgSpeedKmh = polar.avgSpeedKmh ?: avgSpeedKmh,
-        avgPaceSecPerKm = polar.avgPaceSecPerKm ?: avgPaceSecPerKm,
-        maxSpeedKmh = polar.maxSpeedKmh ?: maxSpeedKmh,
-        maxPaceSecPerKm = polar.maxPaceSecPerKm ?: maxPaceSecPerKm,
-        heartRateSeriesJson = polar.heartRateSeriesJson ?: heartRateSeriesJson,
-        paceStreamJson = polar.paceStreamJson ?: paceStreamJson,
-        cadence = polar.cadence ?: cadence,
-        strideLengthCm = polar.strideLengthCm ?: strideLengthCm,
+internal fun AmazfitWorkoutEntity.withPolarCoreValues(polar: AmazfitWorkoutEntity): AmazfitWorkoutEntity {
+    // Frank-Wunsch 2026-09-30: nur ueberschreiben, wo Polar wirklich einen brauchbaren Wert hat.
+    // 0 oder negativ gilt als "kein Wert" — sonst wuerde ein guter alter Wert kaputtgeschrieben.
+    fun Double?.valid() = this?.takeIf { it > 0.0 && it.isFinite() }
+    fun Int?.valid() = this?.takeIf { it > 0 }
+    fun Long?.valid() = this?.takeIf { it > 0L }
+    val polarDuration = polar.durationSeconds.valid()
+    return copy(
+        durationSeconds = polarDuration ?: durationSeconds,
+        endMs = if (polarDuration != null) startMs + polarDuration * 1000L else endMs,
+        distanceMeters = polar.distanceMeters.valid() ?: distanceMeters,
+        avgHeartRate = polar.avgHeartRate.valid() ?: avgHeartRate,
+        maxHeartRate = polar.maxHeartRate.valid() ?: maxHeartRate,
+        calories = polar.calories.valid() ?: calories,
+        avgSpeedKmh = polar.avgSpeedKmh.valid() ?: avgSpeedKmh,
+        avgPaceSecPerKm = polar.avgPaceSecPerKm.valid() ?: avgPaceSecPerKm,
+        maxSpeedKmh = polar.maxSpeedKmh.valid() ?: maxSpeedKmh,
+        maxPaceSecPerKm = polar.maxPaceSecPerKm.valid() ?: maxPaceSecPerKm,
+        heartRateSeriesJson = polar.heartRateSeriesJson?.takeIf { it.length > 2 } ?: heartRateSeriesJson,
+        paceStreamJson = polar.paceStreamJson?.takeIf { it.length > 2 } ?: paceStreamJson,
+        cadence = polar.cadence.valid() ?: cadence,
+        strideLengthCm = polar.strideLengthCm.valid() ?: strideLengthCm,
     )
+}

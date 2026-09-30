@@ -6,6 +6,7 @@
     { "versionCode": 342, "versionName": "0.29.7", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
     { "versionCode": 343, "versionName": "0.29.8", "stand": "30.09.2026, 18:42 Uhr", "notiz": "Trainings-Distanz kommt jetzt direkt aus der Polar-Aufzeichnung statt aus einem Mischwert aller Apps in Health Connect." },
     { "versionCode": 344, "versionName": "0.29.9", "stand": "30.09.2026, 19:00 Uhr", "notiz": "Alle Trainings holen Dauer, Distanz, Puls, Kalorien, Ø-Geschwindigkeit und maximales Tempo jetzt nur aus Polar; neuer Knopf „Alle Trainings neu aus Polar laden“." },
-    { "versionCode": 345, "versionName": "0.29.10", "stand": "30.09.2026, 19:06 Uhr", "notiz": "Die App zeigt nach einem Update wieder zuverlässig die neue Versionsnummer an." }
+    { "versionCode": 345, "versionName": "0.29.10", "stand": "30.09.2026, 19:06 Uhr", "notiz": "Die App zeigt nach einem Update wieder zuverlässig die neue Versionsnummer an." },
+    { "versionCode": 346, "versionName": "0.29.11", "stand": "30.09.2026, 19:09 Uhr", "notiz": "Polar-Abgleich überschreibt gespeicherte Trainingswerte nur noch, wenn Polar einen gültigen Wert hat; nichts wird geleert oder auf 0 gesetzt." }
   ]
 }
