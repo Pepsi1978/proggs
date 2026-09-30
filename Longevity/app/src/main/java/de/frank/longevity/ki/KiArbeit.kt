@@ -133,13 +133,26 @@ class Fortschritt internal constructor() {
 
     fun beitragBeginnt(name: String) { KiArbeit.live = Beitrag(name, "") }
 
-    fun beitragFertig(name: String, text: String) {
+    fun beitragFertig(name: String, text: String, liveLeeren: Boolean = true) = synchronized(sperre) {
         KiArbeit.protokoll.add(Beitrag(name, text))
-        KiArbeit.live = null
+        if (liveLeeren) KiArbeit.live = null
         KiArbeit.protokollSichern()
     }
 
+    /** Für parallele Aufrufe: zählt die Zeichen für den Balken, ohne sie in den Live-Beitrag zu mischen. */
+    fun zeichenStill(stueck: String) {
+        synchronized(sperre) { zeichen += stueck.length }
+        tick()
+    }
+
+    /** Statuszeile im Live-Bereich, während mehrere Agenten gleichzeitig arbeiten. */
+    fun status(name: String, text: String) { KiArbeit.live = Beitrag(name, text) }
+
+    fun schritt(text: String) { KiArbeit.schritt = text }
+
+    private val sperre = Any()
+
     fun fertig() = setze(1f)
 
-    private fun setze(p: Float) { if (p > KiArbeit.prozent) KiArbeit.prozent = p.coerceIn(0f, 1f) }
+    private fun setze(p: Float) = synchronized(sperre) { if (p > KiArbeit.prozent) KiArbeit.prozent = p.coerceIn(0f, 1f) }
 }

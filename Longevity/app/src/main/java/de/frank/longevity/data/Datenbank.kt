@@ -54,14 +54,24 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-@Database(entities = [Faktor::class], version = 2, exportSchema = true)
+/** v3: Quellen, Stand-Datum und Hinweise der Gutachterin (alle nullable, damit der Altbestand unverändert bleibt). */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE faktoren ADD COLUMN quellenJson TEXT")
+        db.execSQL("ALTER TABLE faktoren ADD COLUMN standVom INTEGER")
+        db.execSQL("ALTER TABLE faktoren ADD COLUMN hinweis TEXT")
+        db.execSQL("ALTER TABLE faktoren ADD COLUMN zusammenMit INTEGER")
+    }
+}
+
+@Database(entities = [Faktor::class], version = 3, exportSchema = true)
 abstract class Datenbank : RoomDatabase() {
     abstract fun faktoren(): FaktorDao
 
     companion object {
         @Volatile private var instanz: Datenbank? = null
         fun get(context: Context): Datenbank = instanz ?: synchronized(this) {
-            instanz ?: Room.databaseBuilder(context.applicationContext, Datenbank::class.java, "longevity.db").addMigrations(MIGRATION_1_2).build().also { instanz = it }
+            instanz ?: Room.databaseBuilder(context.applicationContext, Datenbank::class.java, "longevity.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instanz = it }
         }
     }
 }

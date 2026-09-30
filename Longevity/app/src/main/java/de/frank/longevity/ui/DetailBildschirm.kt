@@ -26,6 +26,11 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.MergeType
+import androidx.compose.ui.platform.LocalUriHandler
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -83,6 +88,16 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
         ) {
             Held(x, x.platz(liste))
             KiKarte(vm, nurFuer = x.id)
+            x.hinweis?.takeIf { it.isNotBlank() && !x.vorschlag }?.let { h ->
+                val mit = x.zusammenMit?.let { id -> liste.firstOrNull { it.id == id } }
+                Block("Hinweis der Gutachterin") {
+                    Text(h, color = f.text, fontSize = 15.sp, lineHeight = 22.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (mit != null) Chip("In „${mit.titel.take(28)}“ zusammenlegen", true, icon = Icons.Rounded.MergeType) { vm.zusammenlegen(x) }
+                        Chip("Ausblenden", false, icon = Icons.Rounded.Close) { vm.hinweisVerwerfen(x) }
+                    }
+                }
+            }
             if (x.vorschlag) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip("In die Liste aufnehmen", true, icon = Icons.Rounded.Add) { vm.vorschlagAnnehmen(x); vm.zurueck() }
                 Chip("Verwerfen", false, icon = Icons.Rounded.Close) { vm.vorschlagVerwerfen(x); vm.zurueck() }
@@ -105,6 +120,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
             }
             if (x.ziel.isNotBlank() && !x.vorschlag) ZielKarte(x.ziel, x.zielErreicht) { vm.zielUmschalten(x) }
             Aufgabenplan(vm, x)
+            Quellen(x)
             if (!x.vorschlag) HauptKnopf(
                 Icons.Rounded.AutoAwesome,
                 if (x.vertieft) "Erneut mit KI vertiefen" else "Mit KI vertiefen",
@@ -218,6 +234,27 @@ private fun Aufgabenplan(vm: AppViewModel, x: Faktor) {
             Text("Tippen klappt auf · Kreis hakt ab", color = f.textSchwach, fontSize = 11.sp)
             Spacer(Modifier.width(1.dp))
         }
+    }
+}
+
+/** Die Quellen der KI und wann der Inhalt zuletzt geprüft wurde; Links lassen sich antippen. */
+@Composable
+private fun Quellen(x: Faktor) {
+    val f = LocalFarben.current
+    val quellen = x.quellen
+    val stand = x.standVom?.let { SimpleDateFormat("dd.MM.yyyy", Locale.GERMANY).format(Date(it)) }
+    if (quellen.isEmpty() && stand == null) return
+    val uri = LocalUriHandler.current
+    Block("Quellen") {
+        quellen.forEach { q ->
+            val zeile = listOf(q.titel, q.jahr).filter { it.isNotBlank() }.joinToString(" · ")
+            Text(
+                "• $zeile" + if (q.link.isNotBlank()) " ↗" else "",
+                color = if (q.link.isNotBlank()) f.primaer else f.text, fontSize = 13.sp, lineHeight = 19.sp,
+                modifier = if (q.link.isNotBlank()) Modifier.antippen(haptik = false) { runCatching { uri.openUri(q.link) } } else Modifier,
+            )
+        }
+        if (stand != null) Text("Inhalt zuletzt von der KI geprüft: $stand", color = f.textSchwach, fontSize = 11.sp)
     }
 }
 

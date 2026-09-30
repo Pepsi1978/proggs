@@ -171,7 +171,10 @@ private fun Blase(b: Beitrag, live: Boolean) {
         LongevityKi.PRO -> Triple("🔬", f.primaer, false)
         LongevityKi.CONTRA -> Triple("🧐", f.sekundaer, true)
         LongevityKi.NUTZER -> Triple("🙋", f.erfolg, true)
-        else -> Triple("⚖️", f.tertiaer, false)
+        LongevityKi.AUTORIN -> Triple("✍️", f.tertiaer, false)
+        LongevityKi.RAEUBER_JAEGER -> Triple("🕵️", f.gefahr, false)
+        LongevityKi.SCOUT -> Triple("🛰️", f.sekundaer, false)
+        else -> if (LongevityKi.istRecherche(b.name)) Triple("🌐", f.primaer, false) else Triple("⚖️", f.tertiaer, false)
     }
     val richter = b.name == LongevityKi.RICHTER
     val text = when {

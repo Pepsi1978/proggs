@@ -66,6 +66,7 @@ internal fun codexChatPayload(
     turns: List<ChatTurn>,
     model: CodexModel,
     reasoningEffort: ReasoningEffort,
+    webSuche: Boolean = false,
 ): JSONObject {
     val input = JSONArray()
     turns.forEach { turn ->
@@ -79,6 +80,10 @@ internal fun codexChatPayload(
         .put("instructions", instructions.trim() + "\n\n" + UMLAUT_HINWEIS)
         .put("input", input)
         .put("reasoning", JSONObject().put("effort", model.normalizeEffort(reasoningEffort).apiValue))
+        .apply {
+            // Websuche wie in der Codex-CLI: das Modell sucht selbst, so oft es für die Antwort nötig ist.
+            if (webSuche) put("tools", JSONArray().put(JSONObject().put("type", "web_search"))).put("tool_choice", "auto")
+        }
 }
 
 /**
@@ -268,18 +273,38 @@ class CodexAuthManager(context: Context) {
         turns: List<ChatTurn>,
         model: CodexModel,
         reasoningEffort: ReasoningEffort,
+        webSuche: Boolean = false,
         onDelta: suspend (String) -> Unit = {},
     ): String = withContext(Dispatchers.IO) {
         if (turns.isEmpty()) {
             throw CodexAuthException(AuthErrorKind.NETWORK, "Für die Anfrage fehlt der Text.")
         }
         try {
-            requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
+            if (!webSuche || !webSucheMoeglich) {
+                requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
+            } else {
+                var geliefert = false
+                try {
+                    requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort, webSuche = true)) { d ->
+                        geliefert = true
+                        onDelta(d)
+                    }
+                } catch (error: CodexAuthException) {
+                    // Lehnt das Backend das Werkzeug ab, ohne Websuche weiterarbeiten statt den ganzen Lauf zu verlieren.
+                    if (geliefert || error.retryable || error.kind == AuthErrorKind.QUOTA || error.kind == AuthErrorKind.REAUTH) throw error
+                    webSucheMoeglich = false
+                    requestCodexResponse(codexChatPayload(instructions, turns, model, reasoningEffort), onDelta)
+                }
+            }
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Die Antwort konnte nicht vollständig empfangen werden.", error)
         }
     }
+
+    /** Fällt auf false, sobald das Backend die Websuche einmal abgelehnt hat (gilt bis zum App-Neustart). */
+    @Volatile var webSucheMoeglich = true
+        private set
 
     fun logout() {
         store.edit().clear().apply()

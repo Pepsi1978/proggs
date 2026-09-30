@@ -100,6 +100,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 einstellungen.verboteUmgestellt = true
             }
         }
+        // Neuer Standard-Prompt mit Recherche-Schwarm und Text-Konsens: ein alter eigener Prompt würde ihn aushebeln.
+        // Er wird einmalig gesichert (in den Einstellungen wiederherstellbar) und durch den neuen Standard ersetzt.
+        if (einstellungen.promptVersion < LongevityKi.PROMPT_VERSION) {
+            if (einstellungen.aktualisierungsPrompt.isNotBlank()) {
+                einstellungen.promptSicherung = einstellungen.aktualisierungsPrompt
+                einstellungen.aktualisierungsPrompt = ""
+            }
+            einstellungen.promptVersion = LongevityKi.PROMPT_VERSION
+        }
     }
 
     fun pruefen() { kiVerbunden = auth.isConnected }
@@ -241,8 +250,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             repo.uebernimm(a.liste, a.vorschlaege)
             einstellungen.letzteAktualisierung = System.currentTimeMillis()
             KiArbeit.ergebnis = buildString {
+                if (a.recherchen > 0) append("${a.recherchen} Recherche-Dossiers ausgewertet. ")
                 append(if (a.veraendert == 0) "Die Reihenfolge ist aktuell." else "${a.veraendert} Faktoren haben den Platz gewechselt.")
+                if (a.ueberarbeitet > 0) append(" ${a.ueberarbeitet} Texte neu geschrieben.")
                 if (a.vorschlaege.isNotEmpty()) append(" ${a.vorschlaege.size} neue Vorschläge.")
+                if (a.hinweise > 0) append(" ${a.hinweise} Hinweise zum Prüfen.")
                 if (a.zusammenfassung.isNotBlank()) append("\n\n").append(a.zusammenfassung)
             }
         }
@@ -264,7 +276,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 append(a.einordnung.ifBlank { a.zusammenfassung })
                 append("\n\n")
                 append(if (a.veraendert == 0) "Die Reihenfolge bleibt gleich." else "${a.veraendert} Faktoren haben den Platz gewechselt.")
+                if (a.ueberarbeitet > 0) append(" ${a.ueberarbeitet} Texte neu geschrieben.")
                 if (a.vorschlaege.isNotEmpty()) append(" ${a.vorschlaege.size} neue Vorschläge.")
+                if (a.hinweise > 0) append(" ${a.hinweise} Hinweise zum Prüfen.")
             }.trim()
         }
         if (gestartet) { eText = ""; textVorKorrektur = null; korrekturFassungen = emptyList() }
@@ -352,6 +366,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (bildschirm == Bildschirm.Detail(f.id)) zurueck()
             melde("„${f.titel}“ gelöscht") { viewModelScope.launch { repo.wiederherstellen(f) } }
         }
+    }
+
+    /** Hinweis der Gutachterin umsetzen: [f] geht in den vorgeschlagenen Faktor auf (Plan-Punkte und Quellen wandern mit). */
+    fun zusammenlegen(f: Faktor) {
+        val zielId = f.zusammenMit ?: return
+        viewModelScope.launch {
+            val ziel = repo.einer(zielId) ?: run { melde("Der Ziel-Faktor existiert nicht mehr."); return@launch }
+            repo.zusammenlegen(f, ziel)
+            if (bildschirm == Bildschirm.Detail(f.id)) zurueck()
+            melde("„${f.titel}“ ist in „${ziel.titel}“ aufgegangen") { viewModelScope.launch { repo.wiederherstellen(f); repo.speichere(ziel) } }
+        }
+    }
+
+    fun hinweisVerwerfen(f: Faktor) {
+        viewModelScope.launch { repo.einer(f.id)?.let { repo.speichere(it.copy(hinweis = null, zusammenMit = null)) } }
+    }
+
+    val promptSicherungVorhanden: Boolean get() = einstellungen.promptSicherung.isNotBlank()
+
+    /** Den beim Prompt-Umbau gesicherten eigenen Prompt wieder aktivieren. */
+    fun promptSicherungLaden() {
+        val s = einstellungen.promptSicherung.takeIf { it.isNotBlank() } ?: return
+        val alt = einstellungen.aktualisierungsPrompt
+        einstellungen.aktualisierungsPrompt = s
+        promptStand++
+        melde("Alter eigener Prompt wieder aktiv – fehlende Abschnitte kommen aus dem Standard") { einstellungen.aktualisierungsPrompt = alt; promptStand++ }
     }
 
     fun verschiebe(f: Faktor, neuerRang: Int) {

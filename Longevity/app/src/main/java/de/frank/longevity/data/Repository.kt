@@ -78,6 +78,22 @@ class Repository private constructor(context: Context) {
         if (f.vorschlag) dao.neu(f.copy(id = 0)) else einfuegen(f.copy(id = 0), f.rang)
     }
 
+    /** Legt [quelle] in [ziel] zusammen: Plan-Punkte und Quellen wandern mit, erledigte Häkchen bleiben, [quelle] verschwindet. */
+    suspend fun zusammenlegen(quelle: Faktor, ziel: Faktor) = sperre.withLock {
+        fun schluessel(p: Punkt) = p.titel.lowercase().filter { it.isLetterOrDigit() }.take(18)
+        val punkte = ziel.punkte + quelle.punkte.filter { q -> ziel.punkte.none { schluessel(it) == schluessel(q) } }
+        dao.speichere(
+            ziel.copy(
+                punkteJson = Faktor.punkteAlsJson(punkte),
+                quellenJson = Faktor.quellenAlsJson(Faktor.quellenMischen(ziel.quellen, quelle.quellen)),
+                notiz = listOf(ziel.notiz, quelle.notiz).filter { it.isNotBlank() }.joinToString("\n"),
+                geaendertAm = System.currentTimeMillis(),
+            ),
+        )
+        dao.loesche(quelle)
+        dao.speichere(ordnen(dao.alleJetzt().filter { !it.vorschlag }))
+    }
+
     /** Verschiebt einen Faktor von Hand an einen neuen Rang – nie über die Null-Linie (Räuber ordnen sich nach Jahren). */
     suspend fun verschiebe(f: Faktor, neuerRang: Int) = sperre.withLock {
         val liste = dao.alleJetzt().filter { !it.vorschlag }.toMutableList()

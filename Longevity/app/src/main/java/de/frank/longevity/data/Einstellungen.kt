@@ -10,6 +10,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** Wie viel die Aktualisierung vorab im Internet recherchiert. */
+enum class RechercheTiefe(val anzeige: String, val erklaerung: String) {
+    SCHNELL("Schnell", "Nur die Diskussion, ohne Internet-Recherche."),
+    GRUENDLICH("Gründlich", "5 Rechercheure mit Websuche, dann Diskussion und Text-Konsens."),
+    MAXIMAL("Maximal", "12 Rechercheure (je Lebensbereich einer) mit Websuche – dauert deutlich länger."),
+}
+
 /** Alle Einstellungen und Schlüssel, verschlüsselt gespeichert. */
 class Einstellungen private constructor(context: Context) {
     private val roh: SharedPreferences = try {
@@ -80,6 +87,14 @@ class Einstellungen private constructor(context: Context) {
     var verboteUmgestellt: Boolean get() = prefs.getBoolean("verbote_umgestellt", false); set(v) = put { putBoolean("verbote_umgestellt", v) }
     /** Eigener Aktualisierungs-Prompt (Markdown mit „## “-Abschnitten); leer = Standard aus assets/aktualisierung.md. */
     var aktualisierungsPrompt: String get() = s("aktualisierungs_prompt", ""); set(v) = put { putString("aktualisierungs_prompt", v) }
+    /** Stand des Standard-Prompts, mit dem der eigene Prompt zuletzt abgeglichen wurde. */
+    var promptVersion: Int get() = prefs.getInt("prompt_version", 1); set(v) = put { putInt("prompt_version", v) }
+    /** Sicherung eines eigenen Prompts, der bei einem großen Prompt-Umbau ersetzt wurde. */
+    var promptSicherung: String get() = s("aktualisierungs_prompt_sicherung", ""); set(v) = put { putString("aktualisierungs_prompt_sicherung", v) }
+    /** Recherche-Tiefe der Aktualisierung: schnell | gruendlich | maximal. */
+    var rechercheTiefe: RechercheTiefe
+        get() = RechercheTiefe.entries.firstOrNull { it.name == s("recherche_tiefe", "") } ?: RechercheTiefe.GRUENDLICH
+        set(v) = put { putString("recherche_tiefe", v.name) }
     var letzteAktualisierung: Long get() = prefs.getLong("letzte_aktualisierung", 0L); set(v) = put { putLong("letzte_aktualisierung", v) }
 
     /** Das Kurzprofil als Text für die KI, leer wenn nichts angegeben ist. */

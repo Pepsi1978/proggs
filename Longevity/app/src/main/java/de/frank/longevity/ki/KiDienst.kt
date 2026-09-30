@@ -43,7 +43,7 @@ class KiDienst : Service() {
         }
         laeuft = true
         val sperre = getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "longevity:ki").apply { acquire(30 * 60_000L) }
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "longevity:ki").apply { acquire(120 * 60_000L) }
         val fortschritt = Fortschritt()
         val job = scope.launch {
             try {

@@ -57,6 +57,7 @@ import de.frank.longevity.BuildConfig
 import de.frank.longevity.auth.CodexModel
 import de.frank.longevity.auth.ReasoningEffort
 import de.frank.longevity.auth.deviceCodeGroups
+import de.frank.longevity.data.RechercheTiefe
 import de.frank.longevity.ui.theme.Chip
 import de.frank.longevity.ui.theme.Design
 import de.frank.longevity.ui.theme.LocalFarben
@@ -171,6 +172,12 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Text("Effort (Denkstufe)", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { e.modell.supportedEfforts.forEach { r -> Chip(r.label, e.denkstufe == r) { e.denkstufe = r } } }
                     Text("Höherer Effort = gründlicher, dauert länger. Empfohlen: GPT-6 Astra · Hoch.", color = f.textSchwach, fontSize = 11.sp)
+                    Text("Recherche-Tiefe beim Aktualisieren", color = f.textLeise, fontSize = 13.sp)
+                    ChipReihe { RechercheTiefe.entries.forEach { t -> Chip(t.anzeige, e.rechercheTiefe == t) { e.rechercheTiefe = t } } }
+                    Text(
+                        e.rechercheTiefe.erklaerung + " Bei Gründlich und Maximal suchen auch Diskussion und Vertiefung im Internet.",
+                        color = f.textSchwach, fontSize = 11.sp,
+                    )
                 }
                 Block("Aktualisierungs-Prompt") {
                     Text(
@@ -181,6 +188,13 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(if (vm.eigenerPrompt) "✏️ Eigener Prompt aktiv" else "Standard-Prompt aktiv", color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                         Chip("Bearbeiten", true, icon = Icons.Rounded.Edit) { vm.zeige(Bildschirm.Prompt) }
+                    }
+                    if (vm.promptSicherungVorhanden && !vm.eigenerPrompt) Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Dein früherer eigener Prompt wurde beim Umbau auf den Recherche-Schwarm gesichert.",
+                            color = f.textSchwach, fontSize = 11.sp, modifier = Modifier.weight(1f),
+                        )
+                        Chip("Wiederherstellen", false) { vm.promptSicherungLaden() }
                     }
                 }
                 Block("Textkorrektur (Sprache und Tippen)") {

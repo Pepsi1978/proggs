@@ -48,6 +48,9 @@ data class Punkt(
     val ev: Evidenz get() = Evidenz.von(evidenz)
 }
 
+/** Eine Quelle zu einem Faktor (Studie, Metaanalyse, Leitlinie). */
+data class Quelle(val titel: String, val jahr: String = "", val link: String = "")
+
 /**
  * Ein Verhalten, das die Lebensdauer beeinflusst. [jahre] ist die grobe Schätzung gesunder Lebensjahre
  * gegenüber dem Unterlassen: positiv bei förderlichem Verhalten (Ausdauer +6), negativ bei schädlichem
@@ -84,14 +87,39 @@ data class Faktor(
     /** Der Nutzer hat das Ziel komplett umgesetzt – bleibt auf seinem Platz, wird aber ausgegraut. */
     @ColumnInfo(defaultValue = "0") val zielErreicht: Boolean = false,
     val geaendertAm: Long = System.currentTimeMillis(),
+    /** Quellen der KI (JSON-Liste aus Titel, Jahr, Link); null bei Altbestand. */
+    val quellenJson: String? = null,
+    /** Wann der Inhalt zuletzt von der KI geprüft bzw. neu geschrieben wurde. */
+    val standVom: Long? = null,
+    /** Hinweis der Gutachterin (z. B. Überschneidung, veraltete Aussage) – der Nutzer entscheidet. */
+    val hinweis: String? = null,
+    /** Vorschlag der Gutachterin: diesen Faktor mit dem Faktor dieser id zusammenlegen. */
+    val zusammenMit: Long? = null,
 ) {
     val kat: Kategorie get() = Kategorie.von(kategorie)
     /** Schädliches Verhalten, das Lebensjahre kostet – steht unter der Null-Linie. */
     val raeuber: Boolean get() = jahre < 0f
     val ev: Evidenz get() = Evidenz.von(evidenz)
     val punkte: List<Punkt> get() = punkteAusJson(punkteJson)
+    val quellen: List<Quelle> get() = quellenAusJson(quellenJson)
 
     companion object {
+        fun quellenAlsJson(liste: List<Quelle>): String = JSONArray().apply {
+            liste.forEach { put(JSONObject().put("titel", it.titel).put("jahr", it.jahr).put("link", it.link)) }
+        }.toString()
+
+        fun quellenAusJson(json: String?): List<Quelle> = if (json.isNullOrBlank()) emptyList() else runCatching {
+            val a = JSONArray(json)
+            List(a.length()) { i -> a.getJSONObject(i).let { Quelle(it.optString("titel"), it.optString("jahr"), it.optString("link")) } }
+                .filter { it.titel.isNotBlank() }
+        }.getOrDefault(emptyList())
+
+        /** Alte und neue Quellen vereinen, doppelte (gleicher Titel oder Link) nur einmal. */
+        fun quellenMischen(alt: List<Quelle>, neu: List<Quelle>): List<Quelle> {
+            fun schluessel(q: Quelle) = (q.link.ifBlank { q.titel }).lowercase().filter { it.isLetterOrDigit() }.take(60)
+            return (neu + alt).distinctBy(::schluessel).take(24)
+        }
+
         fun punkteAlsJson(liste: List<Punkt>): String = JSONArray().apply {
             liste.forEach {
                 put(JSONObject().put("titel", it.titel).put("text", it.text).put("evidenz", it.evidenz).put("erledigt", it.erledigt))
