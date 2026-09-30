@@ -3,6 +3,7 @@
   "app": "EntropieReductor",
   "eintraege": [
     { "versionCode": 341, "versionName": "0.29.6", "stand": "10.09.2026, 14:02 Uhr", "notiz": "Stand vor Einführung des Versionslogs" },
-    { "versionCode": 342, "versionName": "0.29.7", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" }
+    { "versionCode": 342, "versionName": "0.29.7", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
+    { "versionCode": 343, "versionName": "0.29.8", "stand": "30.09.2026, 18:42 Uhr", "notiz": "Trainings-Distanz kommt jetzt direkt aus der Polar-Aufzeichnung statt aus einem Mischwert aller Apps in Health Connect." }
   ]
 }

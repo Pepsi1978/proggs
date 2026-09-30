@@ -523,21 +523,40 @@ class HealthConnectManager @Inject constructor(
             val range = TimeRangeFilter.between(sessionStart, sessionEnd)
 
             // Distanz + Kalorien + avg/max-Puls via Aggregate (zuverlaessig).
+            // Frank-Bugfix 2026-09-30: Aggregate NUR ueber die Quell-App der Session (z.B. Polar
+            // Flow). Ohne dataOriginFilter waehlt Health Connect die Distanz nach App-Prioritaet
+            // aus ALLEN Quellen (Handy-Schrittzaehler, Oura, Zepp …) — Franks Laeufe zeigten
+            // 5,85/8,15/8,26 km statt Polars 7,31/8,03/8,48 km. Ungefiltert nur noch als Rueckfall,
+            // wenn die Quell-App selbst keinen Wert geschrieben hat.
+            val metrics = setOf(
+                DistanceRecord.DISTANCE_TOTAL,
+                TotalCaloriesBurnedRecord.ENERGY_TOTAL,
+                HeartRateRecord.BPM_AVG,
+                HeartRateRecord.BPM_MAX,
+            )
             val aggregate = runCatchingCancellable {
                 c.aggregate(
                     AggregateRequest(
-                        metrics = setOf(
-                            DistanceRecord.DISTANCE_TOTAL,
-                            TotalCaloriesBurnedRecord.ENERGY_TOTAL,
-                            HeartRateRecord.BPM_AVG,
-                            HeartRateRecord.BPM_MAX,
-                        ),
+                        metrics = metrics,
                         timeRangeFilter = range,
+                        dataOriginFilter = setOf(session.metadata.dataOrigin),
                     ),
                 )
             }.getOrNull()
+            val needsFallback = aggregate?.get(DistanceRecord.DISTANCE_TOTAL) == null ||
+                aggregate.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL) == null ||
+                aggregate.get(HeartRateRecord.BPM_AVG) == null
+            val fallbackAggregate = if (needsFallback) {
+                runCatchingCancellable {
+                    c.aggregate(AggregateRequest(metrics = metrics, timeRangeFilter = range))
+                }.getOrNull()
+            } else {
+                null
+            }
             val distanceMeters = aggregate?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters
+                ?: fallbackAggregate?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters
             val calorieKcal = aggregate?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories
+                ?: fallbackAggregate?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories
 
             // Frank-Bugfix 2026-07-03: avg/max + Verlaeufe werden aus den ROH-SAMPLES berechnet,
             // NICHT aus einem kombinierten Speed/Elevation/Cadence-Aggregate. Letzteres lieferte fuer
@@ -551,8 +570,10 @@ class HealthConnectManager @Inject constructor(
             }.getOrDefault(emptyList())
             val hrBpm = hrSamples.map { it.beatsPerMinute }.filter { it in 30L..230L }
             val avgHeartRate = aggregate?.get(HeartRateRecord.BPM_AVG)?.toInt()
+                ?: fallbackAggregate?.get(HeartRateRecord.BPM_AVG)?.toInt()
                 ?: hrBpm.takeIf { it.isNotEmpty() }?.average()?.toInt()
             val maxHeartRate = aggregate?.get(HeartRateRecord.BPM_MAX)?.toInt()
+                ?: fallbackAggregate?.get(HeartRateRecord.BPM_MAX)?.toInt()
                 ?: hrBpm.maxOrNull()?.toInt()
             val heartRateSeriesJson = hrSamples
                 .mapNotNull { smp ->
