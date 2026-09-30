@@ -1,0 +1,106 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+}
+
+// Keine eigene Debug-Signatur: OpenLauncher legt den gemeinsamen Schlüssel aus ~/SK/Android
+// nach ~/.android/debug.keystore, den Gradle ohnehin nimmt — wie bei CodexKompass.
+// Version kommt aus dem Versionslog (app/src/main/assets/versionslog.json, neuester Eintrag unten).
+// Die Datei liegt als Asset in der APK, damit UpdateStation Verlauf und Neuerungen anzeigen kann.
+@Suppress("UNCHECKED_CAST")
+val versionslogAktuell = ((groovy.json.JsonSlurper().parse(file("src/main/assets/versionslog.json"), "UTF-8") as Map<String, Any>)["eintraege"] as List<Map<String, Any>>).last()
+
+android {
+    namespace = "de.frank.claudekompass"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "de.frank.claudekompass"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = (versionslogAktuell["versionCode"] as Number).toInt()
+        versionName = versionslogAktuell["versionName"] as String
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
+        // Stand der mitgelieferten Wissensbasis. Der Aktualisieren-Knopf hebt den in der
+        // Datenbank gespeicherten Stand an; dieser Wert bleibt der Auslieferungsstand.
+        buildConfigField("String", "SEEDED_CLI_VERSION", "\"2.1.278\"")
+        ksp { arg("room.schemaLocation", "$projectDir/schemas") }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+        }
+    }
+
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+
+    testOptions {
+        unitTests {
+            // Die Logik-Klassen protokollieren ueber android.util.Log. Im reinen JVM-Test gibt
+            // es die Klasse nur als Huelle; ohne diesen Schalter wirft jeder Aufruf. Getestet
+            // wird die Logik, nicht das Protokollieren.
+            isReturnDefaultValues = true
+        }
+    }
+}
+
+kotlin {
+    compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+}
+
+dependencies {
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.animation)
+    implementation(libs.compose.icons)
+    debugImplementation(libs.compose.ui.tooling)
+
+    implementation(libs.core.ktx)
+    implementation(libs.activity.compose)
+    implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.navigation.compose)
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    implementation(libs.compose.material3.window.size)
+    implementation(libs.lifecycle.process)
+
+    implementation(libs.okhttp)
+    implementation(libs.security.crypto)
+    implementation(libs.biometric)
+    implementation(libs.fragment)
+    implementation(libs.coroutines.core)
+    implementation(libs.coroutines.android)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
+    testImplementation("org.json:json:20240303")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+}

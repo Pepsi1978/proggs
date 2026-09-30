@@ -1,0 +1,546 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "f92bb5b433eb2737a578d331a5fae3c6",
+    "entities": [
+      {
+        "tableName": "eintraege",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `bereich` TEXT NOT NULL, `name` TEXT NOT NULL, `kurz` TEXT NOT NULL, `erklaerung` TEXT NOT NULL, `stufe` INTEGER NOT NULL, `seitVersion` TEXT NOT NULL, `kategorie` TEXT NOT NULL, `art` TEXT NOT NULL, `entfernt` INTEGER NOT NULL, `entferntInVersion` TEXT NOT NULL, `ersatz` TEXT NOT NULL, `neuImLauf` INTEGER NOT NULL, `quelleEnglisch` TEXT NOT NULL, `sortierName` TEXT NOT NULL, `zuletztGeaendert` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bereich",
+            "columnName": "bereich",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kurz",
+            "columnName": "kurz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erklaerung",
+            "columnName": "erklaerung",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stufe",
+            "columnName": "stufe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seitVersion",
+            "columnName": "seitVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kategorie",
+            "columnName": "kategorie",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "art",
+            "columnName": "art",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entfernt",
+            "columnName": "entfernt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entferntInVersion",
+            "columnName": "entferntInVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ersatz",
+            "columnName": "ersatz",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "neuImLauf",
+            "columnName": "neuImLauf",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quelleEnglisch",
+            "columnName": "quelleEnglisch",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortierName",
+            "columnName": "sortierName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "zuletztGeaendert",
+            "columnName": "zuletztGeaendert",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_eintraege_bereich",
+            "unique": false,
+            "columnNames": [
+              "bereich"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_eintraege_bereich` ON `${TABLE_NAME}` (`bereich`)"
+          },
+          {
+            "name": "index_eintraege_sortierName",
+            "unique": false,
+            "columnNames": [
+              "sortierName"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_eintraege_sortierName` ON `${TABLE_NAME}` (`sortierName`)"
+          },
+          {
+            "name": "index_eintraege_entfernt",
+            "unique": false,
+            "columnNames": [
+              "entfernt"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_eintraege_entfernt` ON `${TABLE_NAME}` (`entfernt`)"
+          }
+        ]
+      },
+      {
+        "tableName": "erklaerung_historie",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `eintragId` TEXT NOT NULL, `stufe` INTEGER NOT NULL, `text` TEXT NOT NULL, `erstelltAm` INTEGER NOT NULL, FOREIGN KEY(`eintragId`) REFERENCES `eintraege`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eintragId",
+            "columnName": "eintragId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stufe",
+            "columnName": "stufe",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erstelltAm",
+            "columnName": "erstelltAm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_erklaerung_historie_eintragId",
+            "unique": false,
+            "columnNames": [
+              "eintragId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_erklaerung_historie_eintragId` ON `${TABLE_NAME}` (`eintragId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "eintraege",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "eintragId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "fragen",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `eintragId` TEXT NOT NULL, `frage` TEXT NOT NULL, `antwort` TEXT NOT NULL, `laeuft` INTEGER NOT NULL, `fehler` TEXT NOT NULL, `erstelltAm` INTEGER NOT NULL, FOREIGN KEY(`eintragId`) REFERENCES `eintraege`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "eintragId",
+            "columnName": "eintragId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "frage",
+            "columnName": "frage",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "antwort",
+            "columnName": "antwort",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "laeuft",
+            "columnName": "laeuft",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fehler",
+            "columnName": "fehler",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erstelltAm",
+            "columnName": "erstelltAm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_fragen_eintragId",
+            "unique": false,
+            "columnNames": [
+              "eintragId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_fragen_eintragId` ON `${TABLE_NAME}` (`eintragId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "eintraege",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "eintragId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "chat_sitzungen",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `titel` TEXT NOT NULL, `erstelltAm` INTEGER NOT NULL, `zuletztAm` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titel",
+            "columnName": "titel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erstelltAm",
+            "columnName": "erstelltAm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "zuletztAm",
+            "columnName": "zuletztAm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "chat_nachrichten",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sitzungId` INTEGER NOT NULL, `rolle` TEXT NOT NULL, `text` TEXT NOT NULL, `fehler` TEXT NOT NULL, `erstelltAm` INTEGER NOT NULL, FOREIGN KEY(`sitzungId`) REFERENCES `chat_sitzungen`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sitzungId",
+            "columnName": "sitzungId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rolle",
+            "columnName": "rolle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fehler",
+            "columnName": "fehler",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erstelltAm",
+            "columnName": "erstelltAm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_chat_nachrichten_sitzungId",
+            "unique": false,
+            "columnNames": [
+              "sitzungId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_nachrichten_sitzungId` ON `${TABLE_NAME}` (`sitzungId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "chat_sitzungen",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "sitzungId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "aktualisierungen",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `gestartetAm` INTEGER NOT NULL, `beendetAm` INTEGER NOT NULL, `cliVersion` TEXT NOT NULL, `neuAnzahl` INTEGER NOT NULL, `entferntAnzahl` INTEGER NOT NULL, `geaendertAnzahl` INTEGER NOT NULL, `status` TEXT NOT NULL, `meldung` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gestartetAm",
+            "columnName": "gestartetAm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "beendetAm",
+            "columnName": "beendetAm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cliVersion",
+            "columnName": "cliVersion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "neuAnzahl",
+            "columnName": "neuAnzahl",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entferntAnzahl",
+            "columnName": "entferntAnzahl",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "geaendertAnzahl",
+            "columnName": "geaendertAnzahl",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "meldung",
+            "columnName": "meldung",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "suche_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`quelleId` TEXT NOT NULL, `quelleArt` TEXT NOT NULL, `bereich` TEXT NOT NULL, `titel` TEXT NOT NULL, `suchtext` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "quelleId",
+            "columnName": "quelleId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quelleArt",
+            "columnName": "quelleArt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bereich",
+            "columnName": "bereich",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titel",
+            "columnName": "titel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "suchtext",
+            "columnName": "suchtext",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "rowid"
+          ]
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": []
+      },
+      {
+        "tableName": "such_verlauf",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`anfrage` TEXT NOT NULL, `zuletztAm` INTEGER NOT NULL, PRIMARY KEY(`anfrage`))",
+        "fields": [
+          {
+            "fieldPath": "anfrage",
+            "columnName": "anfrage",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "zuletztAm",
+            "columnName": "zuletztAm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "anfrage"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f92bb5b433eb2737a578d331a5fae3c6')"
+    ]
+  }
+}
