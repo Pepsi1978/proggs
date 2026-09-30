@@ -222,9 +222,9 @@ private fun AktualisierenDialog(vm: AppViewModel) {
                 Text("Großen Aktualisierungslauf starten?", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp))
             }
             Text(
-                "Rechercheure mit Websuche, Einzelprüfung jedes Faktors, Debatte von Forscherin und Skeptiker, Entscheidung der " +
-                    "Gutachterin und neue Texte der Autorin. Das dauert lange und verbraucht spürbar Kontingent. Jeder fertige " +
-                    "Schritt wird gesichert – bricht der Lauf ab, geht es beim nächsten Mal dort weiter.",
+                "Ein Kreislauf: Der Mediziner sucht neue Forschung, bewertet jeden Faktor in kleinen Blöcken neu, die App " +
+                    "berechnet die Rangfolge, und nur Faktoren mit neuen Erkenntnissen bekommen einen neuen, kurzen Text. " +
+                    "Neue Kandidaten erscheinen als Vorschläge. Jeder fertige Schritt wird gesichert.",
                 color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp,
             )
             Text(

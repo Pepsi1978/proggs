@@ -76,7 +76,7 @@ fun ProtokollBildschirm(vm: AppViewModel) {
             RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück") { vm.zurueck() }
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 Text("Diskussion der Agenten", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("Pro und Contra, dann entscheidet die Gutachterin – du kannst mitreden", color = f.textLeise, fontSize = 12.sp)
+                Text("Der Mediziner bewertet, die App ordnet – du kannst mitreden", color = f.textLeise, fontSize = 12.sp)
             }
         }
         LazyColumn(
@@ -168,6 +168,8 @@ private fun MikroKnopf(vm: AppViewModel) {
 private fun Blase(b: Beitrag, live: Boolean) {
     val f = LocalFarben.current
     val (emoji, farbe, rechts) = when {
+        b.name.startsWith(LongevityKi.MEDIZINER) -> Triple("🩺", f.primaer, false)
+        b.name == LongevityKi.ORCHESTRATOR -> Triple("🧭", f.tertiaer, false)
         b.name.startsWith(LongevityKi.PRO) -> Triple("🔬", f.primaer, false)
         b.name.startsWith(LongevityKi.CONTRA) -> Triple("🧐", f.sekundaer, true)
         b.name == LongevityKi.NUTZER -> Triple("🙋", f.erfolg, true)

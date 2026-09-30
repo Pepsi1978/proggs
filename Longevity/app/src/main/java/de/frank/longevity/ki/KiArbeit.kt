@@ -105,9 +105,10 @@ object KiArbeit {
 }
 
 /**
- * Schätzt den Fortschritt: Jeder Schritt hat ein festes Prozentband. Innerhalb des Bands zählt zuerst
- * die Denkzeit (das Modell denkt, bevor es schreibt), dann die gestreamten Zeichen im Verhältnis zur
- * erwarteten Länge. Der Balken läuft nie rückwärts und erreicht 100 % erst am Ende.
+ * Schätzt den Fortschritt. Einzelaufrufe ([band]): Innerhalb des Prozentbands zählt zuerst die Denkzeit, dann
+ * die gestreamten Zeichen. Phasen des großen Laufs ([phase]): Der Balken zählt fertige Aufrufe
+ * („3 von 5 Blöcken“) und kriecht zwischen zwei fertigen Aufrufen nach der Zeit weiter – er steht also nie still,
+ * nur weil ein Aufruf gerade stumm denkt oder im Internet sucht. Der Balken läuft nie rückwärts.
  */
 class Fortschritt internal constructor() {
     private var von = 0f
@@ -116,6 +117,35 @@ class Fortschritt internal constructor() {
     private var erwSekunden = 30f
     private var bandStart = System.currentTimeMillis()
     private var zeichen = 0
+    private var phasenModus = false
+    private var gesamt = 1
+    private var erledigt = 0
+
+    /** Eine Phase mit [gesamt] gleich großen Aufrufen; [sekundenJeSchritt] = erwartete Zeit bis zum nächsten fertigen Aufruf. */
+    fun phase(von: Float, bis: Float, gesamt: Int, sekundenJeSchritt: Float, schritt: String) {
+        synchronized(sperre) {
+            this.von = von
+            this.bis = bis
+            this.gesamt = gesamt.coerceAtLeast(1)
+            erledigt = 0
+            erwSekunden = sekundenJeSchritt.coerceAtLeast(5f)
+            bandStart = System.currentTimeMillis()
+            zeichen = 0
+            phasenModus = true
+        }
+        KiArbeit.schritt = schritt
+        setze(von)
+    }
+
+    /** Ein Aufruf der Phase ist fertig (auch wenn er gescheitert ist). */
+    fun schrittFertig(schritt: String? = null) {
+        synchronized(sperre) {
+            erledigt = min(gesamt, erledigt + 1)
+            bandStart = System.currentTimeMillis()
+        }
+        if (schritt != null) KiArbeit.schritt = schritt
+        tick()
+    }
 
     fun band(von: Float, bis: Float, erwarteteZeichen: Int, erwarteteSekunden: Float, schritt: String) {
         this.von = von
@@ -124,6 +154,7 @@ class Fortschritt internal constructor() {
         erwSekunden = erwarteteSekunden.coerceAtLeast(5f)
         bandStart = System.currentTimeMillis()
         zeichen = 0
+        phasenModus = false
         KiArbeit.schritt = schritt
         setze(von)
     }
@@ -136,6 +167,12 @@ class Fortschritt internal constructor() {
 
     fun tick() {
         val sekunden = (System.currentTimeMillis() - bandStart) / 1000f
+        if (phasenModus) {
+            val anteil = (bis - von) / gesamt
+            val weiter = if (erledigt >= gesamt) 0f else anteil * 0.9f * (1f - exp(-sekunden / erwSekunden))
+            setze(von + anteil * erledigt + weiter)
+            return
+        }
         val denken = 0.35f * (1f - exp(-sekunden / erwSekunden))
         val schreiben = if (zeichen > 0) 0.3f + 0.7f * min(1f, zeichen.toFloat() / erwZeichen) else 0f
         setze(von + (bis - von) * min(0.97f, max(denken, schreiben)))

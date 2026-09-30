@@ -12,7 +12,6 @@ import de.frank.longevity.data.Faktor
 import de.frank.longevity.data.Kategorie
 import de.frank.longevity.data.Punkt
 import de.frank.longevity.data.Quelle
-import de.frank.longevity.data.RechercheTiefe
 import de.frank.longevity.data.ordnen
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -24,10 +23,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** Ergebnis der Auswertung einer eigenen Idee. */
 data class Auswertung(val faktor: Faktor, val rang: Int, val bewertung: String, val duplikatVon: Long?)
@@ -40,11 +42,11 @@ data class Aktualisierung(
     val veraendert: Int,
     /** Beim Mitdiskutieren: die Einordnung des Nutzer-Beitrags durch die Gutachterin. */
     val einordnung: String = "",
-    /** Anzahl erfolgreicher Recherche-Dossiers. */
-    val recherchen: Int = 0,
+    /** Anzahl der in diesem Lauf neu bewerteten Faktoren. */
+    val bewertet: Int = 0,
     /** Anzahl neu geschriebener Texte. */
     val ueberarbeitet: Int = 0,
-    /** Anzahl neuer Hinweise der Gutachterin (Überschneidungen, Veraltetes). */
+    /** Anzahl neuer Hinweise des Mediziners (Überschneidungen, Widerlegtes). */
     val hinweise: Int = 0,
     /** Platzwechsel als lesbare Zeilen („„Titel“: Platz 27 → 9“), größte Sprünge zuerst. */
     val wechsel: List<String> = emptyList(),
@@ -90,7 +92,7 @@ class LongevityKi(
         val antwort = frage(
             grundanweisung(),
             """
-            |AKTUELLE LISTE (id | Rang | Titel | Kategorie | Evidenz | Jahre; oben Plus-Faktoren, unter der Null-Linie die
+            |AKTUELLE LISTE (id | Rang | Titel | Kategorie | Evidenz | Wahrscheinlichkeit | Jahre; oben Plus-Faktoren, unter der Null-Linie die
             |Lebenszeit-Räuber mit negativen Jahren, der schädlichste ganz unten):
             |${listeKompakt(liste)}
             |
@@ -179,61 +181,196 @@ class LongevityKi(
         )
     }
 
-    // ================= Aktualisierung: Recherche-Schwarm, Debatte, Gutachterin, Text-Konsens =================
+    // ================= Aktualisierung: ein Mediziner, die App orchestriert =================
 
-    private val webSuche: Boolean get() = e.rechercheTiefe != RechercheTiefe.SCHNELL
+    /** Stufe des Reglers „sparsam ↔ maximal“ (1–5). */
+    private val stufe: Int get() = e.aktualisierungsStufe
+
+    /** Websuche für Auswertung, Vertiefung, Neuheiten und Mitreden – nur Stufe 1 arbeitet ganz ohne Internet. */
+    private val webSuche: Boolean get() = stufe >= 2
+
+    /** Websuche auch in der Bewertung der Blöcke (ab Stufe 3). */
+    private val webBewertung: Boolean get() = stufe >= 3
+
+    /** Faktoren je Bewertungs-Block: je gründlicher, desto kleiner. */
+    private val blockGroesse: Int get() = intArrayOf(12, 10, 8, 6, 4)[stufe - 1]
 
     /** Die Websuche war eingeschaltet, wurde vom Server aber abgelehnt – der Lauf arbeitete ohne Internet. */
     val webSucheAbgelehnt: Boolean get() = webSuche && !auth.webSucheMoeglich
 
     /**
-     * Der große Lauf:
-     * 1. Recherche-Schwarm (parallel, mit Websuche) – je Lebensbereich ein Rechercheur, dazu Räuber-Jäger und Neuheiten-Scout.
-     * 2. Debatte (nacheinander) auf Basis der Dossiers und der vollständigen Texte.
-     * 3. Gutachterin: Rangliste, Korrekturen, neue Faktoren, Hinweise und die Liste der Texte, die neu geschrieben werden.
-     * 4. Text-Konsens (parallel): Diese Faktoren bekommen einen neuen Text aus altem Stand und neuen Erkenntnissen.
+     * Ein Kreislauf der Aktualisierung. Die App ist der Orchestrator, der Mediziner der einzige Agent:
+     * 1. Neuheiten (1 Aufruf, Websuche): Befunde zu vorhandenen Faktoren und neue Kandidaten (Schenker und Räuber).
+     * 2. Bewertung (parallel in kleinen Blöcken): Potenzial, Wahrscheinlichkeit, Jahre und Urteil je Faktor.
+     * 3. Rangfolge: rechnet der Code aus den Jahren – kein Aufruf muss mehr die ganze Liste schreiben.
+     * 4. Texte (parallel): nur Faktoren mit neuen Erkenntnissen, alter Text + Neues = ein kurzer Text.
+     * 5. Neue Faktoren (parallel): die Kandidaten werden ausgearbeitet und als Vorschläge eingeordnet.
+     * Scheitert ein einzelner Aufruf, bleibt der alte Stand dieses Teils erhalten und der Lauf geht weiter.
      */
     suspend fun aktualisieren(liste: List<Faktor>, fortschritt: Fortschritt): Aktualisierung {
         auth.webSucheZuruecksetzen()
         val v = vorlage()
-        val stand = speicher.beginnen(e.rechercheTiefe.name, liste.map { it.id })
+        val stand = speicher.beginnen("stufe$stufe", liste.map { it.id })
+        val bloecke = liste.chunked(blockGroesse)
         KiLog.info(
-            "═══ Aktualisierung startet: ${liste.size} Faktoren · Tiefe ${e.rechercheTiefe.name} · ${e.modell.apiId}/${e.denkstufe.name} · " +
+            "═══ Aktualisierung startet: ${liste.size} Faktoren in ${bloecke.size} Blöcken · Stufe $stufe · ${e.modell.apiId}/${e.denkstufe.name} · " +
                 (if (e.aktualisierungsPrompt.isBlank()) "Standard-Prompt" else "eigener Prompt") + " · ${stand.schritte.size} Schritte schon gesichert",
+        )
+        fortschritt.beitragFertig(
+            ORCHESTRATOR,
+            if (stand.schritte.isNotEmpty()) "Fortsetzung: ${stand.schritte.size} fertige Schritte werden übernommen."
+            else "Neuer Kreislauf: ${liste.size} Faktoren in ${bloecke.size} Blöcken zu höchstens $blockGroesse, " +
+                "Websuche ${if (webBewertung) "in Neuheiten und Bewertung" else if (webSuche) "nur für die Neuheiten" else "aus"}.",
         )
         mitSpeicher = true
         laufKennung = "longevity-lauf-${stand.beginn}"
         try {
-            val mitRecherche = e.rechercheTiefe != RechercheTiefe.SCHNELL
-            // Bänder: Recherche | Einzelprüfung | Debatte | Gutachterin | Text-Konsens
-            val b = if (mitRecherche) floatArrayOf(0.22f, 0.42f, 0.64f, 0.76f) else floatArrayOf(0f, 0f, 0.42f, 0.62f)
-            val (roheDossiers, anzahlRecherchen) = if (mitRecherche) recherchieren(v, liste, fortschritt, 0f, b[0]) else "" to 0
-            val dossiers = verdichtet(v, "recherche", roheDossiers, fortschritt)
-            // Einzelprüfung ab Regler-Stufe 3. Ein aus einem älteren Protokoll geretteter Lauf hatte noch keine – seine Debatte steht schon.
-            val pruefung = if (mitRecherche && e.aktualisierungsStufe >= 3 && !stand.ohnePruefung) {
-                verdichtet(v, "einzelpruefung", einzelpruefung(v, liste, dossiers, fortschritt, b[0], b[1]), fortschritt)
-            } else ""
-            val lauf = Lauf(v, liste, "", StringBuilder(), fortschritt, dossiers, pruefung)
-            val d = (b[2] - b[1]) / 4f
-            KiLog.info("Phase Debatte")
-            lauf.sprich(PRO, "runde 1 forscherin", b[1], b[1] + d * 1.2f, 5000, 90f)
-            lauf.sprich(CONTRA, "runde 1 skeptiker", b[1] + d * 1.2f, b[1] + d * 2.4f, 5000, 90f)
-            lauf.sprich(PRO, "runde 2 forscherin", b[1] + d * 2.4f, b[1] + d * 3.3f, 3200, 60f)
-            lauf.sprich(CONTRA, "runde 2 skeptiker", b[1] + d * 3.3f, b[2], 2600, 50f)
-            KiLog.info("Phase Entscheidung")
-            val richter = lauf.sprich(RICHTER, "entscheidung", b[2], b[3], 1400 + liste.size * 420, 80f + liste.size * 2f)
-            val m = mischen(liste, jsonAus(richter), altlastenEinarbeiten = true)
-            KiLog.info("Phase Text-Konsens: ${m.konsens.size} Texte")
-            val liste2 = konsens(v, m, dossiers, fortschritt, b[3], 0.99f)
-            KiLog.info("═══ Aktualisierung fertig: ${m.ergebnis.veraendert} Plätze geändert, ${m.konsens.size} Texte, ${m.ergebnis.vorschlaege.size} Vorschläge")
-            return m.ergebnis.copy(liste = liste2, recherchen = anzahlRecherchen, ueberarbeitet = m.konsens.size)
+            // 1. Neuheiten
+            fortschritt.phase(0f, 0.12f, 1, 90f, "Der Mediziner sucht neue Forschung …")
+            fortschritt.status(SCOUT, "Sucht neue Studien, Schenker und Räuber …")
+            var scoutGespeichert = false
+            val neuheiten = try {
+                val (text, gespeichert) = gesichert("scout:${if (webSuche) "web" else "ohne"}", pruefe = { jsonAus(it) }) {
+                    frage(rolle(v), nachricht(liste, fuelle(v["neuheiten"].orEmpty(), werte())), e.modell, denk("scout"), fortschritt, webSuche = webSuche, still = true, label = "Neuheiten")
+                }
+                scoutGespeichert = gespeichert
+                jsonAus(text)
+            } catch (c: CancellationException) {
+                throw c
+            } catch (t: Throwable) {
+                KiLog.fehler("Neuheiten gescheitert – der Lauf bewertet ohne sie weiter", t)
+                null
+            }
+            val befunde = befundeAus(neuheiten, liste)
+            val kandidaten = kandidatenAus(neuheiten?.optJSONArray("neu"), liste)
+            if (!scoutGespeichert) fortschritt.beitragFertig(SCOUT, neuheitenText(befunde, kandidaten, liste, neuheiten == null), liveLeeren = false)
+            fortschritt.schrittFertig()
+
+            // 2. Bewertung in Blöcken
+            val nachId = liste.associateBy { it.id }
+            val urteile = java.util.concurrent.ConcurrentHashMap<Long, Urteil>()
+            val gescheitert = AtomicInteger(0)
+            fortschritt.phase(0.12f, 0.62f, bloecke.size, 30f, "Bewertung: ${liste.size} Faktoren in ${bloecke.size} Blöcken …")
+            fortschritt.status(ORCHESTRATOR, "Bewertet ${bloecke.size} Blöcke, bis zu $PARALLEL gleichzeitig …")
+            val grenze = Semaphore(PARALLEL)
+            val fertig = AtomicInteger(0)
+            coroutineScope {
+                bloecke.map { block ->
+                    async {
+                        grenze.withPermit {
+                            val bereich = "Rang ${block.first().rang}–${block.last().rang}"
+                            val schluessel = "block:${block.first().id}-${block.last().id}-${block.size}"
+                            val befundText = block.flatMap { f -> befunde[f.id].orEmpty().map { "- id ${f.id}: $it" } }.joinToString("\n").ifBlank { "(keine)" }
+                            val auftrag = fuelle(
+                                v["bewertung"].orEmpty(),
+                                werte() + mapOf("BLOCK" to block.joinToString("\n\n") { detail(it, kompakt = true) }, "BEFUNDE" to befundText),
+                            )
+                            var ausSpeicher = false
+                            val zeilen = try {
+                                val (text, gespeichert) = gesichert(schluessel, pruefe = { t ->
+                                    // Mindestens die Hälfte des eigenen Blocks muss bewertet sein, sonst gilt die Antwort als gescheitert.
+                                    val treffer = urteileAus(jsonAus(t), nachId).keys.count { id -> block.any { it.id == id } }
+                                    require(treffer * 2 >= block.size) { "nur $treffer von ${block.size} Faktoren bewertet" }
+                                }) {
+                                    frage(rolle(v), nachricht(liste, auftrag), e.modell, denk("bewertung"), fortschritt, webSuche = webBewertung, still = true, label = "Bewertung $bereich")
+                                }
+                                ausSpeicher = gespeichert
+                                val gelesen = urteileAus(jsonAus(text), nachId).filterKeys { id -> block.any { it.id == id } }
+                                urteile.putAll(gelesen)
+                                block.map { f -> gelesen[f.id]?.let { u -> urteilZeile(f, anwenden(f, u), u) } ?: "• „${f.titel}“: nicht bewertet – alter Stand bleibt" }
+                            } catch (c: CancellationException) {
+                                throw c
+                            } catch (t: Throwable) {
+                                gescheitert.incrementAndGet()
+                                KiLog.fehler("Bewertung $bereich gescheitert – alter Stand bleibt", t)
+                                listOf("Dieser Block kam nicht zustande (${t.message?.take(120)}). Die Faktoren behalten ihren bisherigen Stand.")
+                            }
+                            if (!ausSpeicher) fortschritt.beitragFertig("$MEDIZINER · $bereich", zeilen.joinToString("\n"), liveLeeren = false)
+                            fortschritt.schrittFertig("Bewertung: ${fertig.incrementAndGet()} von ${bloecke.size} Blöcken fertig …")
+                        }
+                    }
+                }.awaitAll()
+            }
+            if (urteile.isEmpty() && liste.isNotEmpty()) throw IllegalStateException("Kein Block wurde bewertet – bitte Verbindung und Kontingent prüfen und erneut starten.")
+
+            // 3. Rangfolge
+            val jetzt = System.currentTimeMillis()
+            val bewertet = liste.map { f -> urteile[f.id]?.let { anwenden(f, it) } ?: f }
+            val neueListe = rangfolge(bewertet).map { f -> f.copy(vorherRang = nachId[f.id]?.rang, neu = false, geaendertAm = jetzt) }
+            val wechsel = neueListe.filter { it.vorherRang != null && it.rang != it.vorherRang }
+                .sortedByDescending { abs(it.rang - (it.vorherRang ?: it.rang)) }
+                .map { "„${it.titel}“: Platz ${it.vorherRang} → ${it.rang}" }
+            fortschritt.beitragFertig(
+                ORCHESTRATOR,
+                "Rangfolge nach Erwartungswert berechnet: " + if (wechsel.isEmpty()) "keine Platzwechsel." else "${wechsel.size} Platzwechsel.\n" + wechsel.take(12).joinToString("\n"),
+                liveLeeren = false,
+            )
+
+            // 4. Texte
+            val auftraege = textAuftraege(liste, neueListe, urteile, befunde)
+            val liste2 = texte(v, neueListe, auftraege, fortschritt, 0.62f, 0.9f)
+
+            // 5. Neue Faktoren
+            val vorschlaege = neueFaktoren(v, liste2, kandidaten, fortschritt, 0.9f, 0.99f)
+
+            val korrigiert = urteile.values.count { it.korrigiert }
+            val hinweise = urteile.values.count { it.hinweis.isNotBlank() }
+            val zusammenfassung = "${urteile.size} von ${liste.size} Faktoren neu bewertet ($korrigiert korrigiert, ${urteile.size - korrigiert} bestätigt)" +
+                (if (gescheitert.get() > 0) ", ${gescheitert.get()} Blöcke ohne Antwort – sie behalten ihren alten Stand" else "") + "."
+            KiLog.info("═══ Aktualisierung fertig: $zusammenfassung ${wechsel.size} Platzwechsel, ${auftraege.size} Texte, ${vorschlaege.size} Vorschläge")
+            return Aktualisierung(
+                liste = liste2, vorschlaege = vorschlaege, zusammenfassung = zusammenfassung, veraendert = wechsel.size,
+                bewertet = urteile.size, ueberarbeitet = auftraege.size, hinweise = hinweise, wechsel = wechsel,
+            )
         } finally {
             mitSpeicher = false
             laufKennung = null
         }
     }
 
-    /** Cache-Kennung des laufenden großen Laufs bzw. Mitdiskutierens; null = Einzelaufruf mit Priority. */
+    /**
+     * Der Nutzer redet mit: EIN Aufruf des Mediziners prüft den Beitrag und ändert nur die betroffenen Faktoren;
+     * deren Texte werden danach neu geschrieben, neue Faktoren erscheinen als Vorschläge.
+     */
+    suspend fun einwand(liste: List<Faktor>, text: String, bisher: List<Beitrag>, fortschritt: Fortschritt): Aktualisierung {
+        auth.webSucheZuruecksetzen()
+        val v = vorlage()
+        laufKennung = "longevity-einwand-${System.currentTimeMillis()}"
+        try {
+            fortschritt.beitragFertig(NUTZER, text)
+            fortschritt.phase(0f, 0.5f, 1, 90f, "Der Mediziner prüft deinen Beitrag …")
+            fortschritt.status(ANTWORT, "Prüft deinen Beitrag …")
+            // Nur die letzten Wortwechsel mit dem Nutzer, gekürzt – nicht der ganze Lauf.
+            val gespraech = bisher.filter { it.name == NUTZER || it.name == ANTWORT }.takeLast(4)
+                .joinToString("\n") { "- ${it.name}: ${it.text.take(500)}" }
+            val auftrag = (if (gespraech.isNotBlank()) "BISHERIGES GESPRÄCH (gekürzt):\n$gespraech\n\n" else "") +
+                fuelle(v["mitreden"].orEmpty(), werte() + ("EINWAND" to text))
+            val antwort = frage(rolle(v), nachricht(liste, auftrag), e.modell, e.denkstufe, fortschritt, webSuche = webSuche, still = true, label = "Mitreden")
+            val o = jsonAus(antwort)
+            val nachId = liste.associateBy { it.id }
+            val urteile = urteileAus(o, nachId, feld = "aenderungen")
+            val einordnung = o.optString("einordnung").trim()
+            fortschritt.beitragFertig(ANTWORT, einordnung.ifBlank { "Geprüft – an der Rangliste ändert sich nichts." })
+            fortschritt.schrittFertig()
+            val jetzt = System.currentTimeMillis()
+            val neueListe = rangfolge(liste.map { f -> urteile[f.id]?.let { anwenden(f, it) } ?: f })
+                .map { f -> f.copy(vorherRang = nachId[f.id]?.rang, neu = false, geaendertAm = if (f.id in urteile) jetzt else f.geaendertAm) }
+            val wechsel = neueListe.filter { it.vorherRang != null && it.rang != it.vorherRang }
+                .sortedByDescending { abs(it.rang - (it.vorherRang ?: it.rang)) }
+                .map { "„${it.titel}“: Platz ${it.vorherRang} → ${it.rang}" }
+            val auftraege = textAuftraege(liste, neueListe, urteile, emptyMap(), mitAltlasten = false)
+            val liste2 = texte(v, neueListe, auftraege, fortschritt, 0.5f, 0.85f)
+            val vorschlaege = neueFaktoren(v, liste2, kandidatenAus(o.optJSONArray("neu"), liste), fortschritt, 0.85f, 0.99f)
+            return Aktualisierung(
+                liste = liste2, vorschlaege = vorschlaege, zusammenfassung = einordnung, veraendert = wechsel.size, einordnung = einordnung,
+                bewertet = urteile.size, ueberarbeitet = auftraege.size, hinweise = urteile.values.count { it.hinweis.isNotBlank() }, wechsel = wechsel,
+            )
+        } finally {
+            laufKennung = null
+        }
+    }
+
+    /** Cache-Kennung des laufenden großen Laufs bzw. Mitredens; null = Einzelaufruf mit Priority. */
     @Volatile private var laufKennung: String? = null
 
     /** Während des großen Laufs: jeder fertige Schritt wird gesichert und bei einem Neustart übernommen. */
@@ -262,252 +399,212 @@ class LongevityKi(
         return text to false
     }
 
-    /**
-     * Rettet einen Lauf aus dem Diskussionsprotokoll (für Läufe vor dem Zwischenspeicher): Dossiers, Debattenrunden
-     * und Entscheidung werden als erledigte Schritte übernommen.
-     */
-    fun rettungAusProtokoll(beitraege: List<Beitrag>): Map<String, String> {
-        val schritte = linkedMapOf<String, String>()
-        val runden = ArrayDeque(listOf("runde 1 forscherin", "runde 1 skeptiker", "runde 2 forscherin", "runde 2 skeptiker"))
-        for (b in beitraege) {
-            when {
-                istRecherche(b.name) && b.name != SCHWARM && b.name != PRUEFSTAND && !b.text.startsWith("(Recherche fehlgeschlagen") && b.text.isNotBlank() ->
-                    schritte["recherche:${b.name}"] = b.text
-                (b.name == PRO || b.name == CONTRA) && runden.isNotEmpty() -> {
-                    val soll = runden.first()
-                    if ((b.name == PRO) == soll.endsWith("forscherin")) schritte["debatte:${runden.removeFirst()}"] = b.text
-                }
-                b.name == RICHTER && runCatching { jsonAus(b.text) }.isSuccess -> schritte["debatte:entscheidung"] = b.text
-            }
-        }
-        return schritte
-    }
+    /** Das Urteil des Mediziners zu einem Faktor. */
+    private class Urteil(
+        val korrigiert: Boolean,
+        val jahre: Float?,
+        val wahrscheinlichkeit: Int?,
+        val evidenz: String?,
+        val grund: String,
+        val neuSchreiben: Boolean,
+        val textgrund: String,
+        val titel: String,
+        val hinweis: String,
+        val zusammenMit: Long?,
+    )
 
-    /**
-     * Der Nutzer redet mit: Sein Beitrag läuft durch alle Agenten (Forscherin, Skeptiker, Forscherin, Skeptiker),
-     * die Gutachterin bildet daraus einen Konsens, ordnet den Beitrag ein und passt die Rangliste an. Betroffene
-     * Texte werden danach neu geschrieben.
-     */
-    suspend fun einwand(liste: List<Faktor>, text: String, bisher: List<Beitrag>, fortschritt: Fortschritt): Aktualisierung {
-        auth.webSucheZuruecksetzen()
-        val v = vorlage()
-        laufKennung = "longevity-einwand-${System.currentTimeMillis()}"
-        // Nur die Debatte, deine Beiträge und die Entscheidungen – Dossiers, Einzelprüfungen und Autorinnen-Meldungen
-        // sind in den Texten schon eingearbeitet und würden jede Anfrage nur aufblähen.
-        val relevant = bisher.filter { b -> !istRecherche(b.name) && b.name != AUTORIN && " · Prüfung " !in b.name }
-        val verlauf = StringBuilder(vergangenheit(v, relevant, fortschritt))
-        fortschritt.beitragFertig(NUTZER, text)
-        verlauf.append("\n### ").append(NUTZER).append(" (der Nutzer):\n").append(text).append('\n')
-        val lauf = Lauf(v, liste, text, verlauf, fortschritt, "", "")
-        lauf.sprich(PRO, "einwand forscherin", 0.00f, 0.16f, 3500, 80f)
-        lauf.sprich(CONTRA, "einwand skeptiker", 0.16f, 0.32f, 3500, 80f)
-        lauf.sprich(PRO, "einwand forscherin antwort", 0.32f, 0.44f, 2400, 50f)
-        lauf.sprich(CONTRA, "einwand skeptiker schlusswort", 0.44f, 0.54f, 2000, 45f)
-        val richter = lauf.sprich(RICHTER, "einwand entscheidung", 0.54f, 0.72f, 1400 + liste.size * 420, 80f + liste.size * 2f)
-        val o = jsonAus(richter)
-        val m = mischen(liste, o, altlastenEinarbeiten = false)
-        val liste2 = konsens(v, m, "", fortschritt, 0.72f, 0.99f)
-        laufKennung = null
-        return m.ergebnis.copy(liste = liste2, einordnung = o.optString("einordnung").trim(), ueberarbeitet = m.konsens.size)
-    }
-
-    /**
-     * Die frühere Diskussion für das Mitdiskutieren – fortlaufend verdichtet: Die gespeicherte Zusammenfassung plus nur die
-     * neuen Beiträge; erst wenn das zusammen länger als [VERDICHTEN_AB] ist, wird daraus eine neue Zusammenfassung.
-     * Das komplette alte Material wird dabei nie ein zweites Mal gelesen.
-     */
-    private suspend fun vergangenheit(v: Map<String, String>, beitraege: List<Beitrag>, fortschritt: Fortschritt): String {
-        fun block(b: Beitrag) = "\n### ${b.name}:\n${beitragKurz(b)}\n"
-        val gespeichert = speicher.diskussionsVerdichtung(beitraege)
-        val basis = gespeichert?.second?.let { "\n### Bisherige Diskussion (verdichtet):\n$it\n" } ?: ""
-        val neu = beitraege.drop(gespeichert?.first ?: 0).joinToString("") { block(it) }
-        val text = basis + neu
-        if (text.length <= VERDICHTEN_AB) return text
-        val kurz = verdichtet(v, "diskussion", text, fortschritt)
-        speicher.diskussionsVerdichtungSichern(beitraege, kurz)
-        return "\n### Bisherige Diskussion (verdichtet):\n$kurz\n"
-    }
-
-    /** Ein Recherche-Auftrag des Schwarms. */
-    private class RechercheAuftrag(val name: String, val abschnitt: String, val bereich: String, val faktoren: List<Faktor>)
-
-    private fun rechercheAuftraege(liste: List<Faktor>): List<RechercheAuftrag> {
-        val gruppen: List<Triple<String, String, List<Kategorie>>> = when (e.rechercheTiefe) {
-            RechercheTiefe.SCHNELL -> emptyList()
-            RechercheTiefe.MAXIMAL -> Kategorie.entries.map { Triple("Rechercheur ${it.anzeige}", it.anzeige, listOf(it)) }
-            RechercheTiefe.GRUENDLICH -> listOf(
-                Triple(
-                    "Rechercheur Körper", "Körper: Bewegung & Fitness, Ernährung, Schlaf & Rhythmus, Supplements",
-                    listOf(Kategorie.BEWEGUNG, Kategorie.ERNAEHRUNG, Kategorie.SCHLAF, Kategorie.SUPPLEMENTE),
-                ),
-                Triple(
-                    "Rechercheur Geist & Leben", "Geist & Leben: Geist & Stress, Beziehungen, Sinn & Lernen",
-                    listOf(Kategorie.GEIST, Kategorie.SOZIAL, Kategorie.SINN),
-                ),
-                Triple(
-                    "Rechercheur Medizin & Umwelt", "Medizin & Umwelt: Vorsorge & Medizin, Genussmittel & Gifte, Umwelt",
-                    listOf(Kategorie.VORSORGE, Kategorie.GIFTE, Kategorie.UMWELT),
-                ),
+    private fun urteileAus(o: JSONObject, nachId: Map<Long, Faktor>, feld: String = "bewertungen"): Map<Long, Urteil> {
+        val a = o.optJSONArray(feld) ?: return emptyMap()
+        val ergebnis = linkedMapOf<Long, Urteil>()
+        for (i in 0 until a.length()) {
+            val x = a.optJSONObject(i) ?: continue
+            val id = x.optLong("id", -1)
+            if (id !in nachId) continue
+            val jahre = x.optDouble("jahre", Double.NaN).takeIf { !it.isNaN() && it != 0.0 }?.toFloat()?.coerceIn(-20f, 20f)
+            ergebnis[id] = Urteil(
+                korrigiert = x.optString("urteil").trim().uppercase(Locale.GERMANY).startsWith("KORR"),
+                jahre = jahre,
+                wahrscheinlichkeit = x.optInt("wahrscheinlichkeit", -1).takeIf { it in 0..100 },
+                evidenz = x.optString("evidenz").trim().takeIf { s -> Evidenz.entries.any { it.name == s } },
+                grund = x.optString("grund").trim(),
+                neuSchreiben = x.optBoolean("neu_schreiben", false),
+                textgrund = x.optString("textgrund").trim(),
+                titel = x.optString("titel").trim().trim('.').take(72),
+                hinweis = x.optString("hinweis").trim(),
+                zusammenMit = x.optLong("zusammenMit", -1).takeIf { it in nachId && it != id },
             )
         }
-        if (gruppen.isEmpty()) return emptyList()
-        val bereiche = gruppen.map { (name, bereich, kats) ->
-            RechercheAuftrag(name, "recherche bereich", "$bereich (Kategorien: ${kats.joinToString { it.name }})", liste.filter { it.kat in kats })
-        }
-        return bereiche +
-            RechercheAuftrag(RAEUBER_JAEGER, "recherche räuber", "Lebenszeit-Räuber (schädliches Verhalten, alle Lebensbereiche)", liste.filter { it.raeuber }) +
-            RechercheAuftrag(SCOUT, "recherche neuheiten", "Neue Forschung der letzten 24 Monate (alle Lebensbereiche)", emptyList())
-    }
-
-    /** Phase 1: alle Rechercheure parallel (höchstens [PARALLEL] gleichzeitig). Liefert die Dossiers und ihre Anzahl. */
-    private suspend fun recherchieren(v: Map<String, String>, liste: List<Faktor>, fortschritt: Fortschritt, von: Float, bis: Float): Pair<String, Int> {
-        val auftraege = rechercheAuftraege(liste)
-        if (auftraege.isEmpty()) return "" to 0
-        val wellen = (auftraege.size + PARALLEL - 1) / PARALLEL
-        fortschritt.band(von, bis, auftraege.size * 6000, 150f * wellen, "${auftraege.size} Rechercheure suchen im Internet …")
-        fortschritt.status(SCHWARM, "${auftraege.size} Rechercheure starten, bis zu $PARALLEL gleichzeitig …")
-        val grenze = Semaphore(PARALLEL)
-        val fertig = AtomicInteger(0)
-        val fehler = AtomicInteger(0)
-        var ersterFehler: Throwable? = null
-        val dossiers = coroutineScope {
-            auftraege.map { a ->
-                async {
-                    grenze.withPermit {
-                        val werte = basisWerte(liste, "", "") + mapOf(
-                            "BEREICH" to a.bereich,
-                            "BEREICH_DETAILS" to a.faktoren.joinToString("\n\n") { detail(it) }
-                                .ifBlank { "(in diesem Bereich steht noch kein Faktor in der Rangliste)" },
-                        )
-                        val (text, gespeichert) = try {
-                            gesichert("recherche:${a.name}") {
-                                frage(
-                                    system(v, werte, "rolle rechercheur"), nachricht(v, "aufbau recherche", werte, a.abschnitt, "rolle rechercheur"),
-                                    e.modell, denk("recherche"), fortschritt, webSuche = true, still = true, label = a.name,
-                                ).trim()
-                            }
-                        } catch (c: CancellationException) {
-                            throw c
-                        } catch (t: Throwable) {
-                            fehler.incrementAndGet()
-                            if (ersterFehler == null) ersterFehler = t
-                            "(Recherche fehlgeschlagen: ${t.message})" to false
-                        }
-                        if (!gespeichert) fortschritt.beitragFertig(a.name, text, liveLeeren = false)
-                        val n = fertig.incrementAndGet()
-                        fortschritt.status(SCHWARM, "$n von ${auftraege.size} Dossiers fertig …")
-                        "## DOSSIER ${a.name.uppercase(Locale.GERMANY)}\n$text"
-                    }
-                }
-            }.awaitAll()
-        }
-        // Ist die ganze Recherche gescheitert (z. B. Kontingent aus), hat der Rest des Laufs keine Grundlage.
-        if (fehler.get() == auftraege.size) throw ersterFehler ?: IllegalStateException("Die Recherche ist fehlgeschlagen.")
-        fortschritt.status(SCHWARM, "Recherche fertig – die Diskussion beginnt.")
-        return dossiers.joinToString("\n\n") to (auftraege.size - fehler.get())
+        return ergebnis
     }
 
     /**
-     * Phase 2: Jeder Faktor wird einzeln hinterfragt. Die Rangliste wird in Blöcke geteilt (Maximal 4, Gründlich 8 Faktoren);
-     * je Block prüft die Forscherin jeden Faktor mit Websuche, der Skeptiker hält Punkt für Punkt dagegen. Blöcke laufen parallel.
+     * Übernimmt ein Urteil. BESTÄTIGT hält die bisherigen Zahlen fest (keine Zufallsschwankungen zwischen Läufen) –
+     * außer der Faktor hatte noch nie eine Wahrscheinlichkeit, dann gelten die neuen Werte.
      */
-    private suspend fun einzelpruefung(v: Map<String, String>, liste: List<Faktor>, dossiers: String, fortschritt: Fortschritt, von: Float, bis: Float): String {
-        val groesse = if (e.rechercheTiefe == RechercheTiefe.MAXIMAL) 4 else 8
-        val bloecke = liste.chunked(groesse)
-        if (bloecke.isEmpty()) return ""
-        val wellen = (bloecke.size + PARALLEL - 1) / PARALLEL
-        fortschritt.band(von, bis, bloecke.size * 7000, 220f * wellen, "Einzelprüfung: ${liste.size} Faktoren in ${bloecke.size} Blöcken …")
-        fortschritt.status(PRUEFSTAND, "Jeder Faktor wird einzeln geprüft – ${bloecke.size} Blöcke, bis zu $PARALLEL gleichzeitig …")
-        val grenze = Semaphore(PARALLEL)
-        val fertig = AtomicInteger(0)
-        val ergebnisse = coroutineScope {
-            bloecke.map { block ->
-                async {
-                    grenze.withPermit {
-                        val bereich = "Rang ${block.first().rang}–${block.last().rang}"
-                        val werte = basisWerte(liste, "", dossiers) + mapOf(
-                            "BEREICH" to bereich,
-                            "BEREICH_DETAILS" to block.joinToString("\n\n") { detail(it) },
-                        )
-                        val (pro, proGespeichert) = try {
-                            gesichert("pruefung:$bereich:forscherin") {
-                                frage(
-                                    system(v, werte, "rolle forscherin"),
-                                    nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "(noch keine – du beginnst)"), "einzelprüfung forscherin", "rolle forscherin"),
-                                    e.modell, denk("pruefung"), fortschritt, webSuche = true, still = true, label = "Einzelprüfung $bereich Forscherin",
-                                ).trim()
-                            }
-                        } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Prüfung fehlgeschlagen: ${t.message})" to false }
-                        if (!proGespeichert) fortschritt.beitragFertig("$PRO · Prüfung $bereich", pro, liveLeeren = false)
-                        val (contra, contraGespeichert) = try {
-                            gesichert("pruefung:$bereich:skeptiker") {
-                                frage(
-                                    system(v, werte, "rolle skeptiker"),
-                                    nachricht(v, "aufbau einzelprüfung", werte + ("DISKUSSION" to "### $PRO:\n$pro"), "einzelprüfung skeptiker", "rolle skeptiker"),
-                                    e.modell, denk("pruefung"), fortschritt, webSuche = true, still = true, label = "Einzelprüfung $bereich Skeptiker",
-                                ).trim()
-                            }
-                        } catch (c: CancellationException) { throw c } catch (t: Throwable) { "(Gegenprüfung fehlgeschlagen: ${t.message})" to false }
-                        if (!contraGespeichert) fortschritt.beitragFertig("$CONTRA · Prüfung $bereich", contra, liveLeeren = false)
-                        val n = fertig.incrementAndGet()
-                        fortschritt.status(PRUEFSTAND, "$n von ${bloecke.size} Blöcken geprüft …")
-                        "## EINZELPRÜFUNG $bereich\n### $PRO:\n$pro\n### $CONTRA:\n$contra"
-                    }
-                }
-            }.awaitAll()
-        }
-        return ergebnisse.joinToString("\n\n")
+    private fun anwenden(f: Faktor, u: Urteil): Faktor {
+        val zahlenNeu = u.korrigiert || f.wahrscheinlichkeit == null
+        val jahre = if (zahlenNeu) u.jahre ?: f.jahre else f.jahre
+        val wirkung = if (f.jahre != 0f && jahre != f.jahre) (f.wirkung * abs(jahre / f.jahre)).roundToInt().coerceIn(1, 100) else f.wirkung
+        return f.copy(
+            titel = u.titel.ifBlank { f.titel },
+            jahre = jahre,
+            wirkung = wirkung,
+            wahrscheinlichkeit = if (zahlenNeu) u.wahrscheinlichkeit ?: f.wahrscheinlichkeit else f.wahrscheinlichkeit,
+            evidenz = if (zahlenNeu) u.evidenz ?: f.evidenz else f.evidenz,
+            begruendung = u.grund.ifBlank { f.begruendung },
+            hinweis = u.hinweis.ifBlank { null } ?: f.hinweis,
+            zusammenMit = if (u.hinweis.isNotBlank()) u.zusammenMit else f.zusammenMit,
+        )
     }
 
-    /** Phase 4: Die von der Gutachterin markierten Faktoren bekommen parallel einen neuen Konsens-Text. */
-    private suspend fun konsens(v: Map<String, String>, m: Mischung, dossiers: String, fortschritt: Fortschritt, von: Float, bis: Float): List<Faktor> {
-        if (m.konsens.isEmpty()) return m.ergebnis.liste
-        val wellen = (m.konsens.size + PARALLEL - 1) / PARALLEL
-        fortschritt.band(von, bis, m.konsens.size * 4500, (if (webSuche) 110f else 60f) * wellen, "${m.konsens.size} Texte werden neu geschrieben …")
-        fortschritt.status(AUTORIN, "Überarbeitet ${m.konsens.size} Texte, bis zu $PARALLEL gleichzeitig …")
-        val nachId = m.ergebnis.liste.associateBy { it.id }
+    /** Eine Zeile fürs Protokoll: „Titel“: +6,0 → +5,5 J · 85 % · korrigiert – Grund. */
+    private fun urteilZeile(alt: Faktor, neu: Faktor, u: Urteil): String {
+        val zahlen = if (neu.jahre != alt.jahre) "${jahreText(alt.jahre)} → ${jahreText(neu.jahre)} J" else "${jahreText(neu.jahre)} J"
+        val w = neu.wahrscheinlichkeit?.let { " · $it %" }.orEmpty()
+        val urteil = if (u.korrigiert) "korrigiert" else "bestätigt"
+        return "• „${neu.titel}“: $zahlen$w · $urteil" + (if (u.grund.isNotBlank()) " – ${u.grund}" else "") +
+            (if (u.neuSchreiben) " ✍️" else "") + (if (u.hinweis.isNotBlank()) " ⚠️ ${u.hinweis}" else "")
+    }
+
+    private fun jahreText(j: Float) = "%+.1f".format(Locale.GERMANY, j)
+
+    /** Die Befunde der Neuheiten je Faktor-id. */
+    private fun befundeAus(o: JSONObject?, liste: List<Faktor>): Map<Long, List<String>> {
+        val a = o?.optJSONArray("befunde") ?: return emptyMap()
+        val ids = liste.map { it.id }.toSet()
+        val ergebnis = linkedMapOf<Long, MutableList<String>>()
+        for (i in 0 until a.length()) {
+            val x = a.optJSONObject(i) ?: continue
+            val id = x.optLong("id", -1)
+            val notiz = x.optString("notiz").trim()
+            if (id in ids && notiz.isNotBlank()) ergebnis.getOrPut(id) { mutableListOf() } += notiz.take(400)
+        }
+        return ergebnis
+    }
+
+    /** Ein neuer Kandidat aus den Neuheiten oder dem Mitreden. */
+    private class Kandidat(val titel: String, val kategorie: String, val evidenz: String, val wahrscheinlichkeit: Int?, val jahre: Float, val grund: String, val quelle: String)
+
+    /** Neue Kandidaten: ohne Doppelungen mit der Liste, höchstens [NEU_MAX] Schenker und [NEU_MAX] Räuber. */
+    private fun kandidatenAus(a: JSONArray?, liste: List<Faktor>): List<Kandidat> {
+        if (a == null) return emptyList()
+        fun schluessel(t: String) = t.lowercase(Locale.GERMANY).filter { it.isLetterOrDigit() }.take(24)
+        val vorhanden = liste.map { schluessel(it.titel) }.toMutableSet()
+        val alle = (0 until a.length()).mapNotNull { i ->
+            val x = a.optJSONObject(i) ?: return@mapNotNull null
+            val titel = x.optString("titel").trim().trim('.').take(72)
+            val jahre = x.optDouble("jahre", 0.0).toFloat().coerceIn(-20f, 20f)
+            if (titel.isBlank() || jahre == 0f || !vorhanden.add(schluessel(titel))) return@mapNotNull null
+            Kandidat(
+                titel, Kategorie.von(x.optString("kategorie")).name, Evidenz.von(x.optString("evidenz")).name,
+                x.optInt("wahrscheinlichkeit", -1).takeIf { it in 0..100 }, jahre, x.optString("grund").trim(), x.optString("quelle").trim(),
+            )
+        }
+        return alle.filter { it.jahre > 0f }.take(NEU_MAX) + alle.filter { it.jahre < 0f }.take(NEU_MAX)
+    }
+
+    private fun neuheitenText(befunde: Map<Long, List<String>>, kandidaten: List<Kandidat>, liste: List<Faktor>, gescheitert: Boolean): String {
+        if (gescheitert) return "Die Suche nach Neuheiten kam nicht zustande – die Bewertung läuft trotzdem."
+        val titel = liste.associate { it.id to it.titel }
+        return buildString {
+            if (befunde.isEmpty()) append("Keine neuen Befunde zu vorhandenen Faktoren.")
+            else {
+                append("Neue Befunde:")
+                befunde.forEach { (id, n) -> n.forEach { append("\n• „").append(titel[id]).append("“: ").append(it) } }
+            }
+            append("\n\n")
+            if (kandidaten.isEmpty()) append("Keine neuen Kandidaten.")
+            else {
+                append("Neue Kandidaten:")
+                kandidaten.forEach { k ->
+                    append("\n• ").append(if (k.jahre < 0) "Räuber " else "").append("„").append(k.titel).append("“ (")
+                        .append(jahreText(k.jahre)).append(" J").append(k.wahrscheinlichkeit?.let { " · $it %" }.orEmpty()).append(") – ").append(k.grund)
+                }
+            }
+        }
+    }
+
+    /** Die Plus-Faktoren nach Jahren (Erwartungswert), darunter die Räuber – [ordnen] setzt die Null-Linie durch. */
+    private fun rangfolge(liste: List<Faktor>): List<Faktor> {
+        val (plus, minus) = liste.partition { !it.raeuber }
+        return ordnen(plus.sortedByDescending { it.jahre } + minus)
+    }
+
+    /**
+     * Welche Texte neu geschrieben werden, mit Grund: Urteile mit „neu schreiben“, Vorzeichenwechsel (Verbot → Räuber)
+     * und im großen Lauf alte lange Texte mit „Neu (…)“-Anhängseln. Höchstens [TEXTE_MAX] je Lauf, Korrekturen zuerst;
+     * der Rest kommt beim nächsten Lauf dran.
+     */
+    private fun textAuftraege(
+        alt: List<Faktor>,
+        neu: List<Faktor>,
+        urteile: Map<Long, Urteil>,
+        befunde: Map<Long, List<String>>,
+        mitAltlasten: Boolean = true,
+    ): Map<Long, String> {
+        val altNachId = alt.associateBy { it.id }
+        val auftraege = linkedMapOf<Long, String>()
+        neu.filter { f -> urteile[f.id]?.let { it.neuSchreiben && it.korrigiert } == true }.forEach { f -> auftraege[f.id] = grundFuer(f, urteile[f.id], befunde) }
+        neu.filter { f -> urteile[f.id]?.neuSchreiben == true }.forEach { f -> auftraege.getOrPut(f.id) { grundFuer(f, urteile[f.id], befunde) } }
+        neu.filter { f -> altNachId[f.id]?.let { (it.jahre < 0) != (f.jahre < 0) } == true }.forEach { f ->
+            auftraege.getOrPut(f.id) { "Der Faktor steht jetzt ${if (f.raeuber) "als Lebenszeit-Räuber unter" else "als förderliches Verhalten über"} der Null-Linie – Text, Ziel und Plan passend umschreiben." }
+        }
+        if (mitAltlasten) neu.filter { "\n\nNeu (" in it.erklaerung || it.erklaerung.startsWith("Neu (") || it.erklaerung.length > LANGER_TEXT }.forEach { f ->
+            auftraege.getOrPut(f.id) { "Den Text auf die kurze Form bringen (3–5 Sätze) und angehängte „Neu (…)“-Absätze einarbeiten." + befunde[f.id].orEmpty().joinToString("") { " Neu: $it" } }
+        }
+        return auftraege.entries.take(TEXTE_MAX).associate { it.key to it.value }
+    }
+
+    private fun grundFuer(f: Faktor, u: Urteil?, befunde: Map<Long, List<String>>): String = buildList {
+        u?.textgrund?.takeIf { it.isNotBlank() }?.let { add(it) }
+        u?.grund?.takeIf { it.isNotBlank() }?.let { add("Bewertung: $it") }
+        befunde[f.id]?.forEach { add("Neuer Befund: $it") }
+    }.joinToString("\n").ifBlank { "Den Text auf den aktuellen Stand bringen." }
+
+    /** Schreibt die Texte der [auftraege] parallel neu – ohne Websuche, die Erkenntnisse stehen im Grund. */
+    private suspend fun texte(v: Map<String, String>, liste: List<Faktor>, auftraege: Map<Long, String>, fortschritt: Fortschritt, von: Float, bis: Float): List<Faktor> {
+        if (auftraege.isEmpty()) return liste
+        val nachId = liste.associateBy { it.id }
+        fortschritt.phase(von, bis, auftraege.size, 25f, "${auftraege.size} Texte werden neu geschrieben …")
+        fortschritt.status(ORCHESTRATOR, "Schreibt ${auftraege.size} Texte neu, bis zu $PARALLEL gleichzeitig …")
         val grenze = Semaphore(PARALLEL)
         val fertig = AtomicInteger(0)
-        val datum = heute()
-        val recherche = dossiers.ifBlank { "(in diesem Lauf keine Recherche-Dossiers – nutze die Websuche, falls verfügbar)" }
+        val zeilen = java.util.Collections.synchronizedList(mutableListOf<String>())
         val neu = coroutineScope {
-            m.konsens.mapNotNull { (id, auftrag) -> nachId[id]?.let { it to auftrag } }.map { (f, auftrag) ->
+            auftraege.mapNotNull { (id, grund) -> nachId[id]?.let { it to grund } }.map { (f, grund) ->
                 async {
                     grenze.withPermit {
-                        val grund = auftrag.grund.ifBlank { "Den Text auf den aktuellen Stand bringen und zu einem stimmigen Ganzen zusammenführen." }
-                        val werte = basisWerte(m.ergebnis.liste, "", recherche) + mapOf(
-                            "FAKTOR" to detail(f),
-                            "GRUND" to grund + if (auftrag.ergaenzung.isNotBlank()) "\nNeue Erkenntnis aus der Diskussion: ${auftrag.ergaenzung}" else "",
-                            "ZUSAMMENFASSUNG" to m.ergebnis.zusammenfassung,
-                        )
+                        val auftrag = fuelle(v["text"].orEmpty(), werte() + mapOf("FAKTOR" to detail(f), "GRUND" to grund))
                         val ergebnis = try {
-                            val (antwort, _) = gesichert("konsens:${f.id}", pruefe = { faktorAus(jsonAus(it)) }) {
-                                frage(
-                                    system(v, werte, "rolle autorin"), nachricht(v, "aufbau konsens", werte, "text konsens", "rolle autorin"),
-                                    e.modell, denk("autorin"), fortschritt, webSuche = webSuche, still = true, label = "Text-Konsens id ${f.id} „${f.titel}“",
-                                )
+                            val (antwort, _) = gesichert("text:${f.id}", pruefe = { pruefeText(it) }) {
+                                frage(rolle(v), nachricht(liste, auftrag), e.modell, denk("text"), fortschritt, still = true, label = "Text id ${f.id} „${f.titel}“")
                             }
-                            konsensUebernehmen(f, faktorAus(jsonAus(antwort)))
+                            textUebernehmen(f, faktorAus(jsonAus(antwort))).also { zeilen += "• „${f.titel}“ – ${grund.lineSequence().first().take(160)}" }
                         } catch (c: CancellationException) {
                             throw c
                         } catch (t: Throwable) {
-                            KiLog.fehler("Text-Konsens für id ${f.id} „${f.titel}“ gescheitert – alter Text bleibt", t)
-                            // Scheitert der neue Text, geht die Erkenntnis trotzdem nicht verloren.
-                            if (auftrag.ergaenzung.isBlank()) f else f.copy(erklaerung = f.erklaerung.trimEnd() + "\n\nNeu ($datum): " + auftrag.ergaenzung)
+                            KiLog.fehler("Text für id ${f.id} „${f.titel}“ gescheitert – alter Text bleibt", t)
+                            zeilen += "• „${f.titel}“: nicht geschafft – alter Text bleibt, kommt beim nächsten Lauf dran"
+                            f
                         }
-                        val n = fertig.incrementAndGet()
-                        fortschritt.status(AUTORIN, "$n von ${m.konsens.size} Texten überarbeitet …")
-                        if (ergebnis.standVom != f.standVom) fortschritt.beitragFertig(AUTORIN, "„${ergebnis.titel}“ neu geschrieben – $grund", liveLeeren = false)
+                        fortschritt.schrittFertig("Texte: ${fertig.incrementAndGet()} von ${auftraege.size} neu geschrieben …")
                         ergebnis
                     }
                 }
             }.awaitAll()
         }.associateBy { it.id }
-        return m.ergebnis.liste.map { neu[it.id] ?: it }
+        fortschritt.beitragFertig("$MEDIZINER · Texte", "Neu geschrieben:\n" + zeilen.joinToString("\n"), liveLeeren = false)
+        return liste.map { neu[it.id] ?: it }
     }
 
-    /** Der Konsens-Text ersetzt Erklärung, Kurztext, Ziel und Plan; Rang, Jahre, Evidenz und Titel hat die Gutachterin festgelegt. */
-    private fun konsensUebernehmen(f: Faktor, neu: Faktor) = f.copy(
+    /** Eine Text-Antwort zählt nur mit Erklärung, Kurztext und Aufgabenplan – sonst wird sie nicht gesichert. */
+    private fun pruefeText(antwort: String) {
+        val f = faktorAus(jsonAus(antwort))
+        require(f.erklaerung.isNotBlank() && f.kurz.isNotBlank() && f.punkte.isNotEmpty()) { "Text unvollständig" }
+    }
+
+    /** Der neue Text ersetzt Erklärung, Kurztext, Ziel und Plan; Titel, Jahre, Wahrscheinlichkeit und Evidenz kommen aus der Bewertung. */
+    private fun textUebernehmen(f: Faktor, neu: Faktor) = f.copy(
         kurz = neu.kurz.ifBlank { f.kurz },
         erklaerung = neu.erklaerung.ifBlank { f.erklaerung },
         ziel = neu.ziel.ifBlank { f.ziel },
@@ -517,95 +614,79 @@ class LongevityKi(
         vertieft = true,
     )
 
-    /** Ein Diskussionslauf: baut je Agent Systemanweisung und Nachricht aus der Vorlage und sammelt den Verlauf. */
-    private inner class Lauf(
-        val v: Map<String, String>,
-        val liste: List<Faktor>,
-        val einwand: String,
-        val verlauf: StringBuilder,
-        val fortschritt: Fortschritt,
-        val recherche: String,
-        val pruefung: String,
-    ) {
-        suspend fun sprich(name: String, auftrag: String, von: Float, bis: Float, zeichen: Int, sekunden: Float): String {
-            val werte = basisWerte(liste, einwand, recherche.ifBlank { "(in diesem Lauf keine Recherche-Dossiers)" }) +
-                ("DISKUSSION" to verlauf.toString().trim().ifBlank { "(noch keine – du beginnst)" }) +
-                ("PRUEFUNG" to pruefung.ifBlank { "(in diesem Lauf keine Einzelprüfungen)" })
-            val rolle = when (name) { PRO -> "rolle forscherin"; CONTRA -> "rolle skeptiker"; else -> "rolle gutachterin" }
-            // Auch die Gutachterin sucht: Sie soll strittige Quellen selbst prüfen können, statt sie mangels Zugriff zu verwerfen.
-            val suche = webSuche
-            fortschritt.band(von, bis, zeichen, if (suche) sekunden * 1.6f else sekunden, "$name ${if (name == RICHTER) "wägt ab" else "argumentiert"} …")
-            // Die Entscheidung zählt nur als fertig, wenn sie ein lesbares JSON ist.
-            val pruefe: (String) -> Unit = if (name == RICHTER) { t -> jsonAus(t) } else { _ -> }
-            val (text, gespeichert) = gesichert("debatte:$auftrag", pruefe) {
-                fortschritt.beitragBeginnt(name)
-                frage(
-                    system(v, werte, rolle), nachricht(v, AUFBAU_NACHRICHT, werte, auftrag, rolle), e.modell,
-                    denk(if (name == RICHTER) "gutachterin" else "debatte"), fortschritt,
-                    webSuche = suche, label = "$name · $auftrag",
-                ).trim()
-            }
-            if (!gespeichert) fortschritt.beitragFertig(name, text) else fortschritt.status(name, "Aus dem Zwischenstand übernommen.")
-            verlauf.append("\n### ").append(name).append(":\n").append(text).append('\n')
-            return text
+    /** Arbeitet die Kandidaten parallel zu vollständigen Faktoren aus und ordnet sie nach ihren Jahren ein (als Vorschläge). */
+    private suspend fun neueFaktoren(v: Map<String, String>, liste: List<Faktor>, kandidaten: List<Kandidat>, fortschritt: Fortschritt, von: Float, bis: Float): List<Faktor> {
+        if (kandidaten.isEmpty()) return emptyList()
+        fortschritt.phase(von, bis, kandidaten.size, 25f, "${kandidaten.size} neue Faktoren werden ausgearbeitet …")
+        val grenze = Semaphore(PARALLEL)
+        val plusAnzahl = liste.count { !it.raeuber }
+        val neu = coroutineScope {
+            kandidaten.map { k ->
+                async {
+                    grenze.withPermit {
+                        val faktor = buildString {
+                            append("### NEUER FAKTOR (noch nicht in der Liste)\n")
+                            append("Titel: ").append(k.titel).append("\nKategorie: ").append(k.kategorie).append(" · Evidenz: ").append(k.evidenz)
+                                .append(" · Jahre (Erwartungswert): ").append("%.1f".format(Locale.US, k.jahre))
+                                .append(" · Wahrscheinlichkeit: ").append(k.wahrscheinlichkeit?.let { "$it %" } ?: "bitte schätzen")
+                            append("\nWarum: ").append(k.grund)
+                            if (k.quelle.isNotBlank()) append("\nQuelle: ").append(k.quelle)
+                        }
+                        val auftrag = fuelle(v["text"].orEmpty(), werte() + mapOf("FAKTOR" to faktor, "GRUND" to "Neuer Faktor – vollständig ausarbeiten (Text, Ziel, Plan, Quellen)."))
+                        val f = try {
+                            val (antwort, _) = gesichert("neu:${k.titel.hashCode()}", pruefe = { pruefeText(it) }) {
+                                frage(rolle(v), nachricht(liste, auftrag), e.modell, denk("text"), fortschritt, still = true, label = "Neuer Faktor „${k.titel}“")
+                            }
+                            faktorAus(jsonAus(antwort))
+                        } catch (c: CancellationException) {
+                            throw c
+                        } catch (t: Throwable) {
+                            KiLog.fehler("Neuer Faktor „${k.titel}“ nicht ausgearbeitet – kommt als Kurzfassung", t)
+                            Faktor(titel = k.titel, kurz = k.grund, erklaerung = k.grund, quellenJson = Faktor.quellenAlsJson(listOfNotNull(k.quelle.takeIf { it.isNotBlank() }?.let { Quelle(it) })))
+                        }
+                        // Die Rang-Position ergibt sich aus den Jahren – wie in der Rangliste selbst.
+                        val rang = if (k.jahre > 0) liste.count { !it.raeuber && it.jahre >= k.jahre } + 1
+                        else plusAnzahl + liste.count { it.raeuber && it.jahre >= k.jahre } + 1
+                        fortschritt.schrittFertig()
+                        f.copy(
+                            titel = k.titel, kategorie = k.kategorie, evidenz = k.evidenz, jahre = k.jahre,
+                            wahrscheinlichkeit = k.wahrscheinlichkeit ?: f.wahrscheinlichkeit, rang = rang, vertieft = true, neu = true,
+                        )
+                    }
+                }
+            }.awaitAll()
         }
+        fortschritt.beitragFertig(
+            "$MEDIZINER · Neue Faktoren",
+            "Als Vorschläge eingeordnet (du entscheidest):\n" + neu.joinToString("\n") { "• „${it.titel}“ auf Platz ${it.rang} (${jahreText(it.jahre)} J)" },
+            liveLeeren = false,
+        )
+        return neu
     }
 
-    /** Die Platzhalter, die in jedem Aufruf gelten. */
-    private fun basisWerte(liste: List<Faktor>, einwand: String, recherche: String): Map<String, String> = mapOf(
-        "PRO" to PRO, "CONTRA" to CONTRA, "RICHTER" to RICHTER, "AUTORIN" to AUTORIN, "EINWAND" to einwand,
-        "FAKTOR_SCHEMA" to FAKTOR_SCHEMA, "PROFIL" to profilZeile(), "LISTE" to listeKompakt(liste),
-        "DETAILS" to liste.joinToString("\n\n") { detail(it, kompakt = true) }, "RECHERCHE" to recherche, "DATUM" to heute(),
-        "NEU_MAX" to NEU_MAX.toString(), "PRUEFUNG" to "",
+    /** Die Systemanweisung: die Rolle des Mediziners – für alle Aufrufe gleich (kommt aus dem Cache). */
+    private fun rolle(v: Map<String, String>): String = fuelle(v["rolle"].orEmpty(), werte()).trim()
+
+    /** Die Nachricht: gleicher Anfang für alle Aufrufe eines Laufs (Datum, Rangliste), danach der Auftrag. */
+    private fun nachricht(liste: List<Faktor>, auftrag: String): String =
+        "HEUTE: ${heute()}\n\nRANGLISTE (id | Rang | Titel | Kategorie | Evidenz | Wahrscheinlichkeit | Jahre; negative Jahre = Lebenszeit-Räuber unter der Null-Linie):\n" +
+            listeKompakt(liste) + "\n\n" + auftrag.trim()
+
+    /** Die Platzhalter, die überall gelten. */
+    private fun werte(): Map<String, String> = mapOf(
+        "DATUM" to heute(), "PROFIL" to profilZeile(), "NEU_MAX" to NEU_MAX.toString(), "FAKTOR_SCHEMA" to FAKTOR_SCHEMA,
     )
 
-    private fun system(v: Map<String, String>, werte: Map<String, String>, rolle: String): String = fuelle(
-        v[AUFBAU_SYSTEM].orEmpty(),
-        werte + mapOf("GRUNDANWEISUNG" to fuelle(v["grundanweisung"].orEmpty(), werte), "ROLLE" to fuelle(v[rolle].orEmpty(), werte)),
-    ).trim()
-
-    /** Rolle und Auftrag stehen am Ende: Der große Anfang ist für alle Agenten eines Laufs gleich und kommt aus dem Cache. */
-    private fun nachricht(v: Map<String, String>, aufbau: String, werte: Map<String, String>, auftrag: String, rolle: String = ""): String =
-        fuelle(v[aufbau].orEmpty(), werte + mapOf("AUFTRAG" to fuelle(v[auftrag].orEmpty(), werte), "ROLLE" to fuelle(v[rolle].orEmpty(), werte))).trim()
-
     /**
-     * Denkstufe je Aufgabe nach dem Regler „sparsam ↔ gründlich“. Die Denkstufe aus den Einstellungen ist die Obergrenze;
-     * die Gutachterin nutzt sie immer voll, gespart wird bei Hilfsagenten, Debatte und Verdichtung.
+     * Denkstufe je Aufgabe nach dem Regler. Die Denkstufe aus den Einstellungen ist die Obergrenze; bis Stufe 3
+     * arbeiten Bewertung und Texte mit mittlerer Stufe, Neuheiten immer mit der vollen.
      */
     private fun denk(aufgabe: String): ReasoningEffort {
-        val st = e.aktualisierungsStufe
         val ziel = when (aufgabe) {
-            "gutachterin" -> e.denkstufe
-            "debatte" -> if (st <= 2) ReasoningEffort.MEDIUM else e.denkstufe
-            "recherche", "pruefung", "autorin" -> if (st <= 3) ReasoningEffort.MEDIUM else e.denkstufe
-            else -> ReasoningEffort.LOW
+            "scout" -> e.denkstufe
+            else -> if (stufe <= 3) ReasoningEffort.MEDIUM else e.denkstufe
         }
         return if (ziel.ordinal < e.denkstufe.ordinal) ziel else e.denkstufe
-    }
-
-    /** Verdichtungen, die in diesem App-Leben schon gerechnet wurden (Schlüssel = Art + Länge + Hash des Materials). */
-    private val verdichtungen = java.util.concurrent.ConcurrentHashMap<String, String>()
-
-    /**
-     * Verdichtet langes Arbeitsmaterial auf höchstens [VERDICHTET_ZIEL] Zeichen, sobald es länger als [VERDICHTEN_AB] ist.
-     * Jede Verdichtung wird nur einmal gerechnet: im großen Lauf über den Zwischenstand, sonst über den Speicher im App-Leben.
-     */
-    private suspend fun verdichtet(v: Map<String, String>, art: String, text: String, fortschritt: Fortschritt): String {
-        if (text.length <= VERDICHTEN_AB) return text
-        val schluessel = "verdichtet:$art:${text.length}:${text.hashCode()}"
-        verdichtungen[schluessel]?.let { return it }
-        val (kurz, _) = gesichert(schluessel) {
-            fortschritt.status("Verdichtung", "Verdichte $art (${text.length / 1000} Tsd. Zeichen) …")
-            val werte = mapOf("ZIEL_ZEICHEN" to VERDICHTET_ZIEL.toString(), "PROFIL" to profilZeile())
-            frage(
-                fuelle(v["grundanweisung"].orEmpty(), werte).trim(),
-                fuelle(v["verdichtung"].orEmpty(), werte) + "\n\nMATERIAL (" + art + "):\n" + text,
-                e.modell, denk("verdichtung"), fortschritt, still = true, label = "Verdichtung $art",
-            ).trim()
-        }
-        KiLog.info("Verdichtung $art: ${text.length} → ${kurz.length} Zeichen")
-        verdichtungen[schluessel] = kurz
-        return kurz
     }
 
     /** Die wirksame Vorlage: eigene Abschnitte aus den Einstellungen, fehlende oder leere aus dem Standard. */
@@ -620,141 +701,13 @@ class LongevityKi(
         return if (p.isBlank()) "" else "PROFIL DES NUTZERS (berücksichtige es bei Rang, Ziel und Aufgaben): $p"
     }
 
-    /** Für den Verlauf: Die Entscheidungen der Gutachterin nur als Zusammenfassung, nicht als ganzes JSON. */
-    private fun beitragKurz(b: Beitrag): String = if (b.name != RICHTER) b.text else runCatching {
-        val o = jsonAus(b.text)
-        listOf(o.optString("einordnung"), o.optString("zusammenfassung")).filter { it.isNotBlank() }.joinToString("\n")
-    }.getOrNull()?.takeIf { it.isNotBlank() }?.let { "Entscheidung: $it" } ?: "Entscheidung gefällt."
-
-    /** Warum ein Text neu geschrieben wird, und eine eventuelle Ergänzung aus der Diskussion. */
-    private class KonsensAuftrag(val grund: String, val ergaenzung: String)
-
-    private class Mischung(val ergebnis: Aktualisierung, val konsens: Map<Long, KonsensAuftrag>)
-
-    /**
-     * Übernimmt die Entscheidung der Gutachterin, ohne je etwas aus dem Altbestand zu verlieren. Texte werden nicht mehr
-     * angehängt: Was neu geschrieben werden soll, landet im Konsens-Auftrag. Mit [altlastenEinarbeiten] kommen zusätzlich
-     * alle Faktoren mit alten „Neu (…)“-Absätzen dazu, damit sie einmal zu einem stimmigen Text zusammengeführt werden.
-     */
-    private fun mischen(liste: List<Faktor>, o: JSONObject, altlastenEinarbeiten: Boolean): Mischung {
-        val nachId = liste.associateBy { it.id }
-        val konsens = linkedMapOf<Long, KonsensAuftrag>()
-        val reihenfolge = o.optJSONArray("reihenfolge") ?: JSONArray()
-        val gesehen = mutableSetOf<Long>()
-        val neueListe = mutableListOf<Faktor>()
-        for (i in 0 until reihenfolge.length()) {
-            val r = reihenfolge.optJSONObject(i) ?: continue
-            val alt = nachId[r.optLong("id", -1)] ?: continue
-            if (!gesehen.add(alt.id)) continue
-            // Ältere eigene Prompts liefern noch "ergaenzung": wird jetzt eingearbeitet statt angehängt.
-            val ergaenzung = r.optString("ergaenzung").trim()
-            if (ergaenzung.isNotBlank()) konsens[alt.id] = KonsensAuftrag("Neue Erkenntnis einarbeiten.", ergaenzung)
-            val jahre = r.optDouble("jahre", Double.NaN)
-            val wirkung = r.optInt("wirkung", -1)
-            val kategorie = r.optString("kategorie").trim().takeIf { k -> Kategorie.entries.any { it.name == k } }
-            neueListe += alt.copy(
-                titel = r.optString("titel").trim().trim('.').take(72).ifBlank { alt.titel },
-                kurz = r.optString("kurz").trim().ifBlank { alt.kurz },
-                ziel = r.optString("ziel").trim().ifBlank { alt.ziel },
-                begruendung = r.optString("begruendung").trim().ifBlank { alt.begruendung },
-                evidenz = r.optString("evidenz").takeIf { s -> Evidenz.entries.any { it.name == s } } ?: alt.evidenz,
-                jahre = if (!jahre.isNaN() && jahre != 0.0) jahre.toFloat().coerceIn(-20f, 20f) else alt.jahre,
-                wirkung = if (wirkung in 0..100) wirkung else alt.wirkung,
-                wahrscheinlichkeit = r.optInt("wahrscheinlichkeit", -1).takeIf { it in 0..100 } ?: alt.wahrscheinlichkeit,
-                kategorie = kategorie ?: alt.kategorie,
-            )
-        }
-        // Was der Richter vergessen hat, bleibt erhalten – in seiner bisherigen Reihenfolge dahinter.
-        liste.filter { it.id !in gesehen }.forEach { neueListe += it }
-
-        // Texte, die neu geschrieben werden sollen (Fehler, veraltete Zahlen, neue Studienlage).
-        o.optJSONArray("neu_schreiben")?.let { a ->
-            for (i in 0 until a.length()) {
-                val x = a.optJSONObject(i)
-                val id = x?.optLong("id", -1) ?: a.optLong(i, -1)
-                if (id !in nachId) continue
-                val grund = x?.optString("grund")?.trim().orEmpty()
-                val bisher = konsens[id]
-                konsens[id] = KonsensAuftrag(grund.ifBlank { bisher?.grund.orEmpty() }, bisher?.ergaenzung.orEmpty())
-            }
-        }
-        if (altlastenEinarbeiten) {
-            liste.filter { "\n\nNeu (" in it.erklaerung || it.erklaerung.startsWith("Neu (") || it.erklaerung.length > LANGER_TEXT }.forEach { f ->
-                if (f.id !in konsens) konsens[f.id] = KonsensAuftrag("Den Text auf die kurze Form bringen (3–5 Sätze, nur die entscheidenden Erkenntnisse) und angehängte „Neu (…)“-Absätze einarbeiten.", "")
-            }
-        }
-
-        // Hinweise der Gutachterin: Überschneidungen, veraltete Faktoren – der Nutzer entscheidet.
-        val hinweise = mutableMapOf<Long, Pair<String, Long?>>()
-        o.optJSONArray("hinweise")?.let { a ->
-            for (i in 0 until a.length()) {
-                val h = a.optJSONObject(i) ?: continue
-                val id = h.optLong("id", -1)
-                val text = h.optString("text").trim()
-                if (id !in nachId || text.isBlank()) continue
-                val mit = h.optLong("zusammenMit", -1).takeIf { it in nachId && it != id }
-                // Mehrere Hinweise zum selben Faktor bleiben alle erhalten; zusammengelegt wird mit dem ersten genannten Partner.
-                val bisher = hinweise[id]
-                hinweise[id] = if (bisher == null) text to mit else (bisher.first + "\n\n" + text) to (bisher.second ?: mit)
-            }
-        }
-
-        val jetzt = System.currentTimeMillis()
-        // Die Null-Linie setzt der Code durch: Plus-Faktoren in der Reihenfolge des Richters, Räuber nach verlorenen Jahren.
-        val ergebnis = ordnen(neueListe).map { f ->
-            val h = hinweise[f.id]
-            f.copy(
-                vorherRang = nachId[f.id]?.rang, neu = false, geaendertAm = jetzt,
-                hinweis = h?.first ?: f.hinweis, zusammenMit = if (h != null) h.second else f.zusammenMit,
-            )
-        }
-        val veraendert = ergebnis.count { it.rang != it.vorherRang }
-        val neu = o.optJSONArray("neu") ?: JSONArray()
-        val alle = (0 until neu.length()).mapNotNull { i ->
-            val n = neu.optJSONObject(i) ?: return@mapNotNull null
-            faktorAus(n).takeIf { it.titel.isNotBlank() }?.copy(rang = n.optInt("rang", ergebnis.size + 1), vertieft = true, neu = true)
-        }
-        // Förderliche Faktoren und Lebenszeit-Räuber haben getrennte Kontingente.
-        val vorschlaege = alle.filter { !it.raeuber }.take(NEU_MAX) + alle.filter { it.raeuber }.take(NEU_MAX)
-        KiLog.info(
-            "Entscheidung gelesen: ${reihenfolge.length()} Einträge in der Reihenfolge (von ${liste.size}), ${liste.size - gesehen.size} fehlten, " +
-                "$veraendert Plätze geändert, ${konsens.size} Texte zum Neuschreiben, ${hinweise.size} Hinweise, " +
-                "${alle.size} neue Faktoren geliefert, ${vorschlaege.size} übernommen",
-        )
-        return Mischung(
-            Aktualisierung(
-                ergebnis, vorschlaege, o.optString("zusammenfassung").trim(), veraendert, hinweise = hinweise.size,
-                wechsel = ergebnis.filter { it.vorherRang != null && it.rang != it.vorherRang }
-                    .sortedByDescending { kotlin.math.abs(it.rang - (it.vorherRang ?: it.rang)) }
-                    .map { "„${it.titel}“: Platz ${it.vorherRang} → ${it.rang}" },
-            ),
-            konsens,
-        )
-    }
-
     // ================= Gemeinsames =================
 
-    private fun grundanweisung(): String = buildString {
-        append(
-            "Du bist ein weltweit führender Experte für Langlebigkeitsforschung (Geroscience, Epidemiologie, Sportmedizin, " +
-                "Ernährungswissenschaft, Schlafforschung, Psychologie, Präventivmedizin). Du betrachtest den Menschen ganzheitlich " +
-                "in allen Lebensbereichen: Bewegung, Fitness, Kraft, Ernährung, Schlaf, Supplements, Stress, Geist, Beziehungen, " +
-                "Sinn, Vorsorge, Umwelt, Genussmittel. Du berücksichtigst nicht nur gesicherte Evidenz (RCTs, Metaanalysen, " +
-                "Mendel-Randomisierung, große Kohorten), sondern auch sehr wahrscheinliche und logisch gut begründete Faktoren – " +
-                "und ordnest ehrlich ein: BELEGT, WAHRSCHEINLICH oder LOGISCH. Die Rangliste hat eine Null-Linie: Oben stehen " +
-                "förderliche Verhaltensweisen mit POSITIVEN Jahren – der Gewinn an gesunder Lebenszeit durch konsequente Umsetzung " +
-                "gegenüber dem Unterlassen. Unten stehen schädliche Verhaltensweisen (Lebenszeit-Räuber) mit NEGATIVEN Jahren – " +
-                "die verlorene Lebenszeit gegenüber dem Unterlassen, der schädlichste ganz unten. Ein Verbot ist nie ein Plus-Faktor: " +
-                "Man wird als Nichtraucher geboren, Nichtrauchen schenkt keine Jahre, Rauchen kostet sie. Der Titel nennt deshalb " +
-                "das schädliche Verhalten selbst („Rauchen“, nicht „Nicht rauchen“) mit negativen Jahren. Denke sehr " +
-                "gründlich, detailliert und durchdacht. Schreibe auf Deutsch, klar und konkret, ohne Heilversprechen.",
-        )
-        val p = e.profilText()
-        if (p.isNotBlank()) append("\n\nPROFIL DES NUTZERS (berücksichtige es bei Rang, Ziel und Aufgaben): ").append(p)
-    }
+    /** Dieselbe Rolle wie im Aktualisierungslauf: der erfahrene Langlebigkeitsmediziner aus dem Arbeitsauftrag. */
+    private fun grundanweisung(): String = rolle(vorlage())
 
     private fun listeKompakt(liste: List<Faktor>) = liste.joinToString("\n") {
-        "${it.id} | ${it.rang} | ${it.titel} | ${it.kat.name} | ${it.ev.name} | ${"%.1f".format(Locale.US, it.jahre)}" + if (it.zielErreicht) (if (it.raeuber) " | trifft beim Nutzer nicht zu bzw. abgestellt" else " | vom Nutzer bereits umgesetzt") else ""
+        "${it.id} | ${it.rang} | ${it.titel} | ${it.kat.name} | ${it.ev.name} | ${it.wahrscheinlichkeit?.let { w -> "$w %" } ?: "?"} | ${"%.1f".format(Locale.US, it.jahre)}" + if (it.zielErreicht) (if (it.raeuber) " | trifft beim Nutzer nicht zu bzw. abgestellt" else " | vom Nutzer bereits umgesetzt") else ""
     }
 
     private suspend fun frage(
@@ -779,7 +732,8 @@ class LongevityKi(
                     " · System ${anweisung.length} + Nachricht ${text.length} Zeichen",
             )
             try {
-                val antwort = auth.streamChat(
+                // Hartes Zeitlimit je Aufruf: Bleibt eine Antwort stumm, wird sie einmal wiederholt statt ewig zu warten.
+                val antwort = withTimeoutOrNull(ZEITLIMIT_MS) { auth.streamChat(
                     instructions = anweisung,
                     turns = listOf(ChatTurn("user", text.trim())),
                     model = modell,
@@ -792,7 +746,7 @@ class LongevityKi(
                         empfangen += stueck.length
                         if (still) fortschritt?.zeichenStill(stueck) else fortschritt?.zeichen(stueck)
                     },
-                )
+                ) } ?: throw IOException("Keine vollständige Antwort nach ${ZEITLIMIT_MS / 60_000} Minuten")
                 KiLog.info("✔ $label nach ${(System.currentTimeMillis() - start) / 1000}s · ${antwort.length} Zeichen")
                 return antwort
             } catch (c: CancellationException) {
@@ -848,37 +802,41 @@ class LongevityKi(
     }
 
     companion object {
+        /** Der eine Agent des Laufs. */
+        const val MEDIZINER = "Mediziner"
+        /** Seine Antwort beim Mitreden. */
+        const val ANTWORT = "Mediziner · Einordnung"
+        /** Statuszeilen der App, die den Lauf steuert. */
+        const val ORCHESTRATOR = "Orchestrator"
+        const val SCOUT = "Neuheiten"
+        const val NUTZER = "Du"
+
+        // Namen aus älteren Läufen – nur noch für die Anzeige alter Diskussionen.
         const val PRO = "Forscherin Vita"
         const val CONTRA = "Skeptiker Kron"
         const val RICHTER = "Gutachterin Aeon"
-        const val NUTZER = "Du"
         const val AUTORIN = "Autorin Lexa"
-        const val SCHWARM = "Recherche-Schwarm"
         const val RAEUBER_JAEGER = "Räuber-Jäger"
-        const val SCOUT = "Neuheiten-Scout"
-        const val PRUEFSTAND = "Einzelprüfung"
+        private const val SCOUT_ALT = "Neuheiten-Scout"
 
         /** Höchstens so viele KI-Aufrufe gleichzeitig – mehr bremst das Codex-Kontingent. */
         const val PARALLEL = 5
         /** Höchstens so viele neue förderliche Faktoren und ebenso viele neue Räuber pro Lauf. */
-        const val NEU_MAX = 5
-        /** Ab dieser Länge wird Arbeitsmaterial verdichtet … */
-        const val VERDICHTEN_AB = 25_000
+        const val NEU_MAX = 3
+        /** Höchstens so viele neue Texte pro Lauf – der Rest kommt beim nächsten Lauf dran. */
+        const val TEXTE_MAX = 12
         /** Erklärungen, die länger sind, werden im großen Lauf auf die kurze Form (3–5 Sätze) gebracht. */
         const val LANGER_TEXT = 1_200
-        /** … auf höchstens so viele Zeichen – so bleibt jede Anfrage unter ca. 100.000 Zeichen. */
-        const val VERDICHTET_ZIEL = 15_000
+        /** Hartes Zeitlimit je KI-Aufruf. */
+        private const val ZEITLIMIT_MS = 8 * 60_000L
 
-        /** Wartezeiten, bevor ein abgerissener Aufruf komplett wiederholt wird. */
-        private val WIEDERHOLUNGEN_MS = longArrayOf(10_000L, 30_000L)
+        /** Wartezeit, bevor ein abgerissener oder stummer Aufruf einmal wiederholt wird. */
+        private val WIEDERHOLUNGEN_MS = longArrayOf(10_000L)
         /** Stand des Standard-Prompts; ein eigener Prompt älteren Stands wird einmalig gesichert und ersetzt. */
-        const val PROMPT_VERSION = 2
+        const val PROMPT_VERSION = 3
 
-        /** Gehört ein Protokoll-Beitrag zum Recherche-Schwarm? */
-        fun istRecherche(name: String) = name.startsWith("Rechercheur") || name == RAEUBER_JAEGER || name == SCOUT || name == SCHWARM || name == PRUEFSTAND
-
-        const val AUFBAU_SYSTEM = "aufbau systemanweisung"
-        const val AUFBAU_NACHRICHT = "aufbau nachricht"
+        /** Gehört ein Protokoll-Beitrag zur Recherche eines älteren Laufs? */
+        fun istRecherche(name: String) = name.startsWith("Rechercheur") || name == RAEUBER_JAEGER || name == SCOUT_ALT || name == "Recherche-Schwarm" || name == "Einzelprüfung"
 
         /** Zerlegt die Vorlage an den Überschriften „## Name“; alles vor der ersten ist Erklärung. */
         fun abschnitte(text: String): Map<String, String> {

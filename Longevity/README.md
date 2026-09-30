@@ -12,10 +12,13 @@ gesunde Lebenszeit beeinflussen – streng nach Wichtigkeit sortiert: Rang 1 bri
   gegen stille Halluzinationen) oder tippen, **KI-Korrektur** (Zurück / Neue Fassung), dann
   **Auswerten & einordnen** – die KI prüft die Idee und setzt sie an die passende Stelle.
 - **Oben rechts:** Aktualisieren · Design · Hell/Dunkel · Einstellungen.
-- **Aktualisieren:** Forscherin Vita (Pro) und Skeptiker Kron (Contra) diskutieren die Rangliste in zwei
-  Runden, Gutachterin Aeon entscheidet. Nichts wird gelöscht; neue Faktoren erscheinen als Vorschläge.
-  Fortschrittsbalken 0–100 % (feste Bänder je Schritt, Denkzeit + gestreamte Zeichen), läuft als
-  Vordergrund-Dienst weiter, Diskussion live im Protokoll.
+- **Aktualisieren:** ein Kreislauf mit einem einzigen Agenten, dem Langlebigkeitsmediziner; die App ist der
+  Orchestrator. 1. Neuheiten (Websuche): Befunde und je bis zu 3 neue Schenker und Räuber. 2. Bewertung in
+  kleinen Blöcken, parallel: Potenzial × Wahrscheinlichkeit = Jahre, Urteil in einem Satz. 3. Rangfolge rechnet
+  der Code aus den Jahren. 4. Nur Faktoren mit neuen Erkenntnissen bekommen einen neuen, kurzen Text (höchstens
+  12 je Lauf). 5. Neue Kandidaten werden ausgearbeitet und als Vorschläge eingeordnet. Scheitert ein Block,
+  behält er seinen alten Stand. Jeder Aufruf hat ein Zeitlimit von 8 Minuten, der Balken zählt fertige Aufrufe.
+  Arbeitsauftrag: `app/src/main/assets/aktualisierung.md` (in den Einstellungen bearbeitbar).
 - **Heute für dich:** die drei wirksamsten offenen Schritte. **Überblick:** Wirkungsbalken,
   Lebensbereiche-Ring, Evidenz-Ring (native Diagramme).
 - **KI:** ChatGPT über die Codex-Anmeldung (Gerätecode 4 + 5 Zeichen, kopierbar). Modell und Effort für

@@ -90,7 +90,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
             KiKarte(vm, nurFuer = x.id)
             x.hinweis?.takeIf { it.isNotBlank() && !x.vorschlag }?.let { h ->
                 val mit = x.zusammenMit?.let { id -> liste.firstOrNull { it.id == id } }
-                Block("Hinweis der Gutachterin") {
+                Block("Hinweis des Mediziners") {
                     Text(h, color = f.text, fontSize = 15.sp, lineHeight = 22.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (mit != null) Chip("In „${mit.titel.take(28)}“ zusammenlegen", true, icon = Icons.Rounded.MergeType) { vm.zusammenlegen(x) }
