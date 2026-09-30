@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
@@ -112,6 +113,8 @@ fun LongevitySzene(modifier: Modifier = Modifier, fortschritt: Float) {
             Modifier
                 .fillMaxWidth()
                 .height(150.dp)
+                // Eigene Ebene: pro Bild wird nur die Szene neu gezeichnet, nicht Karte und Glasschatten drumherum.
+                .graphicsLayer()
                 .drawWithCache {
                     val eck = f.radius.toPx() * 0.7f
                     val rahmen = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(eck))) }
