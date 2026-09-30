@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.17.2 – 29.09.2026 13:04
+Stand: v1.17.3 – 30.09.2026 10:50
 
 ## Funktionen
 
@@ -52,6 +52,14 @@ Stand: v1.17.2 – 29.09.2026 13:04
   EUR-Umrechnung findet nicht statt.
 - Die Preise werden live aus `models.dev` geladen. Alle vom Launcher verwendeten OpenAI-Fast-Aliase
   werden auf ihr Basismodell aufgelöst; fehlende Cachepreise werden nicht als Nullpreis erfunden.
+- GPT-6.1 Sol verwendet lokale offizielle Tarife (Stand 30.09.2026), auch bei fehlendem oder
+  veraltetem Katalog: Standard je 1M Tokens Input/Output/Cache-Read/Cache-Write = 2/10/0,10/2,50 USD;
+  oberhalb von 272.000 Input-Tokens = 4/15/0,20/5 USD für den gesamten Modellschritt.
+  Fast/Priority verdoppelt diese Tarife; Batch/Flex halbiert sie. Reasoning kostet den Outputtarif.
+  Der lokale Cache-Read-Aufschlag von 20 % ergibt sichtbar 0,12 USD (Langkontext: 0,24 USD).
+  GPT-6 Sol hatte 0,20 USD Cache-Read; dieser ältere Tarif wird nicht auf GPT-6.1 Sol übertragen.
+  Quellen: https://developers.openai.com/api/docs/models/gpt-6.1-sol und
+  https://developers.openai.com/api/docs/pricing . Die Sidebar zeigt API-Vergleichskosten.
 - GPT-6 Astra verwendet lokale offizielle Tarife (Stand 04.09.2026), auch ohne Katalogeintrag:
   Standard je 1M Tokens Input/Output/Cache-Read/Cache-Write = 10/50/1/12,50 USD;
   oberhalb von 272.000 Input-Tokens = 20/75/2/25 USD für den gesamten Modellschritt.

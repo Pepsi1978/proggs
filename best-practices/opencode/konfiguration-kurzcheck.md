@@ -19,3 +19,4 @@
 | 9 | Secrets NIE im Klartext | API-Keys via `{env:VAR}` / `{file:~/.secrets/...}` oder `/connect` (außerhalb des Repos); Projekt-`opencode.json` + `AGENTS.md` ins Git committen | §13 |
 | 10 | Deprecated meiden | `mode`→`agent`, `autoshare`→`share`, `tools`(an/aus)→`permission`, `maxSteps`→`steps`, Top-Level `theme`/`keybinds`→`tui.json` | §Deprecated |
 | 11 | Große Repos / MCP | `snapshot:false` spart Disk (Preis: kein UI-Undo); MCP sparsam (per Agent statt global — frisst Tokens in jeder Anfrage) | §13 |
+| 12 | GPT-6.1 Sol: Preise / Cache / lange Requests | Standard 2/10/0,10/2,50 USD je 1M Input/Output/Read/Write; oberhalb 272.000 Inputtokens 4/15/0,20/5 für den ganzen Request. Lokaler Cache-Read-Aufschlag und Abo-Vergleich separat beachten. | §14 |

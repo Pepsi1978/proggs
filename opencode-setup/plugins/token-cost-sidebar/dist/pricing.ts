@@ -319,6 +319,31 @@ export function findCatalogModel(catalog: any, providerID?: string, modelID?: st
 export function withOpenAIPriorityPricing(model: any, providerID: string, modelID: string, serviceTier?: string): any {
   if (providerID !== "openai") return model
   const baseID = modelID.endsWith("-fast") ? modelID.slice(0, -"-fast".length) : modelID
+  // Official GPT-6.1 Sol tariffs, 2026-09-30: do not inherit GPT-6 Sol's cache-read price.
+  // Keep OAuth comparison prices and context tiers available even without models.dev.
+  if (baseID === "gpt-6.1-sol") {
+    const multiplier = serviceTier === "priority" || serviceTier === "fast" ? 2
+      : serviceTier === "batch" || serviceTier === "flex" ? 0.5 : 1
+    return {
+      ...model,
+      cost: {
+        input: 2 * multiplier,
+        output: 10 * multiplier,
+        cache_read: 0.1 * multiplier,
+        cache_write: 2.5 * multiplier,
+        tiers: [{
+          tier: { type: "context", size: 272_000 },
+          input: 4 * multiplier,
+          output: 15 * multiplier,
+          cache_read: 0.2 * multiplier,
+          cache_write: 5 * multiplier,
+        }],
+      },
+      pricingServiceTier: serviceTier ?? "default",
+      pricingUnsupportedAbove: undefined,
+      pricingCacheReadMarkup: undefined,
+    }
+  }
   // Official OpenAI tariffs, 2026-09-04: keep Astra usable before models.dev catches up.
   if (baseID === "gpt-6-astra") {
     const multiplier = serviceTier === "priority" || serviceTier === "fast" ? 2

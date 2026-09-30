@@ -341,3 +341,35 @@ GitHub-Issues #8235, #6669, #1235 (Windows-Pfad-Verhalten).
 > Das offizielle JSON-Schema enthält mehr Schlüssel als die Doku-Seite (`logLevel`, `tool_output`, `skills`,
 > `references`, `enterprise`, `compaction.tail_turns`, `experimental.batch_tool` …) — hier alle aus der
 > autoritativen Quelle dokumentiert.
+
+## 14. GPT-6.1 Sol: Preise und Kontextstaffel (30.09.2026)
+
+**Versionsanker:** `gpt-6.1-sol`, lokale Token-Cost-Sidebar; OpenCode-Quellcode
+`2fa3363c924c5c3e367b84a87ae478296a0ed59b`. Quellenabruf: 30.09.2026.
+
+| Standard-API, USD je 1 Million Token | Input | Output/Reasoning | Cache-Read | Cache-Write |
+|---|---:|---:|---:|---:|
+| Bis einschließlich 272.000 Eingabetokens | 2 | 10 | 0,10 | 2,50 |
+| Mehr als 272.000 Eingabetokens | 4 | 15 | 0,20 | 5 |
+
+- **Offiziell:** Der höhere Tarif gilt für den gesamten Request. Fast kostet das Doppelte,
+  Batch/Flex die Hälfte. GPT-6 Sols Cache-Read-Preis (0,20 USD) nicht auf 6.1 Sol übertragen.
+- **Offiziell:** Cache-Write-Tokens werden bei Sol separat bepreist und sind im gesamten Input
+  enthalten. Für die Kostenaufteilung Reads und Writes vom Input abziehen, um Doppelzählung zu vermeiden.
+- **Offiziell/Primärquelle:** Config-Felder sind `cost.input`, `output`, `cache_read`, `cache_write`.
+  Interne Laufzeitfelder können anders heißen. `context_over_200k` bildet Sols echte Grenze nicht ab;
+  im geprüften OpenCode-Stand können Modell-Overrides zudem Katalogstaffeln verlieren.
+- **Lokale Umsetzung:** Die Sidebar verwendet einen exakten modellbezogenen Tarif einschließlich
+  `tiers` mit `size: 272000`; Kosten je Modellschritt berechnen, nicht nach kumulierten Sessiontokens.
+  Der vorhandene lokale 20-%-Aufschlag ist kein OpenAI-Tarif: sichtbar 0,12 bzw. 0,24 USD Cache-Read.
+- **Offiziell/Primärquelle:** ChatGPT-OAuth setzt native OpenCode-Kosten bewusst auf null.
+  Eine lokale API-Vergleichsrechnung ist weder die Abo-Rechnung noch ein Maß des Abo-Kontingents.
+
+**Quellen:** [OpenAI-Modellseite](https://developers.openai.com/api/docs/models/gpt-6.1-sol),
+[OpenAI-Preise](https://developers.openai.com/api/docs/pricing),
+[Prompt Caching](https://developers.openai.com/api/docs/guides/prompt-caching),
+[Config-Schema](https://opencode.ai/config.json),
+[models.dev-Katalog](https://models.dev/api.json) (extern),
+[OpenCode-Provideraufbau](https://github.com/anomalyco/opencode/blob/2fa3363c924c5c3e367b84a87ae478296a0ed59b/packages/opencode/src/provider/provider.ts),
+[Codex-OAuth](https://github.com/anomalyco/opencode/blob/2fa3363c924c5c3e367b84a87ae478296a0ed59b/packages/opencode/src/plugin/openai/codex.ts).
+**Bug-Bezug:** `bugs/opencode/opencode-cli.md` §11 #80b.
