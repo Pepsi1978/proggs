@@ -169,5 +169,6 @@ fun EvidenzAbzeichen(e: Evidenz, lang: Boolean = false) {
     }
 }
 
-/** Jahre hübsch: „+4,5 J.“ */
-fun jahreText(j: Float): String = if (j <= 0f) "–" else "+" + (if (j >= 10f) "%.0f" else "%.1f").format(java.util.Locale.GERMANY, j) + " J."
+/** Jahre hübsch: „+4,5 J.“ bzw. „−10 J.“ für Lebenszeit-Räuber. */
+fun jahreText(j: Float): String = if (j == 0f) "–" else
+    (if (j > 0f) "+" else "−") + (if (kotlin.math.abs(j) >= 10f) "%.0f" else "%.1f").format(java.util.Locale.GERMANY, kotlin.math.abs(j)) + " J."

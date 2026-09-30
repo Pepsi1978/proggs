@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.longevity.data.Evidenz
 import de.frank.longevity.data.Faktor
+import de.frank.longevity.data.platz
 import de.frank.longevity.data.Kategorie
 import de.frank.longevity.ui.theme.Chip
 import de.frank.longevity.ui.theme.LocalBewegung
@@ -73,7 +74,7 @@ fun Ueberblick(liste: List<Faktor>, oeffnen: (Long) -> Unit) {
         }
         AnimatedContent(tab, transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(150)) }, label = "tab") { t ->
             when (t) {
-                0 -> WirkungsBalken(liste.take(10), oeffnen)
+                0 -> WirkungsBalken(liste.filter { !it.raeuber }.take(7) + liste.filter { it.raeuber }.sortedBy { it.jahre }.take(3).reversed(), liste, oeffnen)
                 1 -> Ring(liste.groupBy { it.kat }.map { (k, l) -> Triple("${k.emoji} ${k.anzeige}", l.sumOf { it.wirkung }.toFloat(), kategorieFarbe(k)) }.sortedByDescending { it.second }, "Wirkung je Lebensbereich")
                 else -> Ring(Evidenz.entries.map { e -> Triple(e.anzeige, liste.count { it.ev == e }.toFloat(), f.evidenzFarbe(e)) }.filter { it.second > 0 }, "Faktoren je Evidenzstufe")
             }
@@ -88,32 +89,32 @@ private fun kategorieFarbe(k: Kategorie): Color {
     return basis[k.ordinal % basis.size]
 }
 
-/** Die zehn wichtigsten Faktoren als wachsende Balken (geschätzte Jahre). */
+/** Die sieben wichtigsten Plus-Faktoren und die drei schlimmsten Lebenszeit-Räuber als wachsende Balken (geschätzte Jahre). */
 @Composable
-fun WirkungsBalken(liste: List<Faktor>, oeffnen: (Long) -> Unit) {
+fun WirkungsBalken(liste: List<Faktor>, alle: List<Faktor>, oeffnen: (Long) -> Unit) {
     val f = LocalFarben.current
-    val max = (liste.maxOfOrNull { it.jahre } ?: 1f).coerceAtLeast(0.5f)
+    val max = (liste.maxOfOrNull { kotlin.math.abs(it.jahre) } ?: 1f).coerceAtLeast(0.5f)
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         liste.forEachIndexed { i, x ->
             val w = wachsen(x.id to x.jahre, i * 60)
             Row(Modifier.fillMaxWidth().antippen(haptik = false) { oeffnen(x.id) }, verticalAlignment = Alignment.CenterVertically) {
-                Text("${x.rang}", color = f.textLeise, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(22.dp))
+                Text(x.platz(alle), color = if (x.raeuber) f.gefahr else f.textLeise, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(26.dp))
                 Column(Modifier.weight(1f)) {
                     Text(x.titel, color = f.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val c = f.evidenzFarbe(x.ev)
                     Canvas(Modifier.fillMaxWidth().height(9.dp).padding(top = 2.dp)) {
                         drawRoundRect(f.textSchwach.copy(alpha = 0.15f), cornerRadius = CornerRadius(size.height / 2))
                         drawRoundRect(
-                            Brush.horizontalGradient(listOf(f.primaer, c)),
-                            size = Size(size.width * (x.jahre / max) * w, size.height),
+                            Brush.horizontalGradient(if (x.raeuber) listOf(f.gefahr.copy(alpha = 0.6f), f.gefahr) else listOf(f.primaer, c)),
+                            size = Size(size.width * (kotlin.math.abs(x.jahre) / max) * w, size.height),
                             cornerRadius = CornerRadius(size.height / 2),
                         )
                     }
                 }
-                Text(jahreText(x.jahre), color = f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp).width(52.dp))
+                Text(jahreText(x.jahre), color = if (x.raeuber) f.gefahr else f.primaer, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp).width(52.dp))
             }
         }
-        Text("Geschätzte zusätzliche gesunde Lebensjahre bei konsequenter Umsetzung. Farbe = Evidenz.", color = f.textSchwach, fontSize = 11.sp)
+        Text("Geschätzte gesunde Lebensjahre: Plus bei konsequenter Umsetzung, Minus (rot) durch schädliches Verhalten. Farbe = Evidenz.", color = f.textSchwach, fontSize = 11.sp)
     }
 }
 

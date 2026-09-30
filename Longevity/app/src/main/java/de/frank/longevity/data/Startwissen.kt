@@ -1,18 +1,18 @@
 package de.frank.longevity.data
 
-/** Die Startliste, nach Wichtigkeit sortiert (Index 0 = Rang 1). */
+/** Die Startliste. Plus-Faktoren nach Wichtigkeit, Lebenszeit-Räuber (negative Jahre) sortiert [ordnen] beim Anlegen unter die Null-Linie. */
 val START_FAKTOREN: List<Faktor> = listOf(
 
     // 1
     faktor(
-        titel = "Nicht rauchen – auch nicht gelegentlich",
+        titel = "Rauchen – auch nur gelegentlich",
         kurz = "Rauchen ist der größte einzelne vermeidbare Lebenszeit-Räuber: Lebenslange Raucher verlieren im Schnitt rund zehn Jahre.",
         kategorie = Kategorie.GIFTE,
         evidenz = Evidenz.BELEGT,
-        jahre = 10f,
+        jahre = -10f,
         wirkung = 100,
-        erklaerung = "Verzichte vollständig auf Zigaretten, Zigarren, Shisha und Tabakerhitzer – auch das gelegentliche Rauchen auf Partys zählt. Tabakrauch enthält über 70 krebserregende Stoffe, schädigt die Gefäßwände, fördert Entzündungen und beschleunigt messbar die biologische Alterung. Große Kohortenstudien (u. a. die britische Ärztestudie über 50 Jahre) zeigen rund zehn verlorene Lebensjahre bei lebenslangen Rauchern. Schon 1–4 Zigaretten pro Tag erhöhen das Sterberisiko um etwa 50 %. Die gute Nachricht: Wer vor dem 40. Lebensjahr aufhört, vermeidet rund 90 % des Zusatzrisikos, und auch ein Rauchstopp mit 60 bringt noch mehrere Jahre zurück.",
-        begruendung = "Kein anderer einzelner Faktor ist so gut belegt und kostet so viele Lebensjahre – die Wirkung übertrifft sogar schlechte Fitness deutlich. Deshalb steht Nichtrauchen unangefochten auf Rang 1, vor der Fitness auf Rang 2.",
+        erklaerung = "Gemeint ist jedes Rauchen von Zigaretten, Zigarren, Shisha und Tabakerhitzern – auch das gelegentliche Rauchen auf Partys zählt. Tabakrauch enthält über 70 krebserregende Stoffe, schädigt die Gefäßwände, fördert Entzündungen und beschleunigt messbar die biologische Alterung. Große Kohortenstudien (u. a. die britische Ärztestudie über 50 Jahre) zeigen rund zehn verlorene Lebensjahre bei lebenslangen Rauchern. Schon 1–4 Zigaretten pro Tag erhöhen das Sterberisiko um etwa 50 %. Die gute Nachricht: Wer vor dem 40. Lebensjahr aufhört, vermeidet rund 90 % des Zusatzrisikos, und auch ein Rauchstopp mit 60 bringt noch mehrere Jahre zurück.",
+        begruendung = "Kein anderes einzelnes Verhalten ist so gut belegt und kostet so viele Lebensjahre – der Schaden übertrifft sogar schlechte Fitness deutlich. Deshalb steht Rauchen ganz unten als stärkster Lebenszeit-Räuber, noch unter dem Alkohol. Wer nicht raucht, markiert den Punkt einfach als abgestellt.",
         ziel = "Dauerhaft rauchfrei: 0 Zigaretten, 0 Tabakerhitzer, auch nicht in Gesellschaft.",
         punkt("Rauchstopp-Datum festlegen", "Wähle ein festes Datum in den nächsten 14 Tagen und hör an diesem Tag komplett auf – Schlusspunkt-Methode statt langsamem Reduzieren.", Evidenz.BELEGT),
         punkt("Nikotinersatz oder Medikament nutzen", "Nikotinpflaster plus Kaugummi kombiniert oder ärztlich verordnetes Vareniclin bzw. Cytisin verdoppeln etwa die Erfolgschance.", Evidenz.BELEGT),
@@ -174,14 +174,14 @@ val START_FAKTOREN: List<Faktor> = listOf(
 
     // 10
     faktor(
-        titel = "Alkohol stark begrenzen oder ganz weglassen",
+        titel = "Regelmäßig Alkohol trinken",
         kurz = "Es gibt keine gesunde Alkoholmenge – jedes Glas erhöht das Krebsrisiko, größere Mengen kosten Jahre.",
         kategorie = Kategorie.GIFTE,
         evidenz = Evidenz.BELEGT,
-        jahre = 3f,
+        jahre = -3f,
         wirkung = 67,
-        erklaerung = "Trinke am besten gar keinen Alkohol, sonst höchstens wenige Gläser pro Woche mit alkoholfreien Tagen. Alkohol ist ein Zellgift und nachweislich krebserregend (u. a. Brust, Darm, Speiseröhre, Leber), schädigt Leber, Herz und Gehirn und verschlechtert den Schlaf. Eine Lancet-Auswertung von fast 600.000 Menschen (Wood 2018) zeigte: Ab etwa 100 g Alkohol pro Woche (rund 5 Gläser Wein) steigt die Sterblichkeit; wer mit 40 mehr als 350 g pro Woche trinkt, verliert etwa 4–5 Lebensjahre. Der früher angenommene Schutz durch moderates Trinken hält neueren Analysen und Mendel-Randomisierungsstudien nicht stand.",
-        begruendung = "Bei starkem Konsum wäre der Effekt weit größer, doch die meisten trinken moderat – daher steht Alkohol hinter Blutzucker. Vor dem Schlaf liegt er, weil der Schaden direkter und besser belegt ist.",
+        erklaerung = "Gemeint ist regelmäßiger Alkoholkonsum – schon wenige Gläser pro Woche zählen; am besten trinkst du gar nicht, sonst höchstens wenige Gläser mit alkoholfreien Tagen. Alkohol ist ein Zellgift und nachweislich krebserregend (u. a. Brust, Darm, Speiseröhre, Leber), schädigt Leber, Herz und Gehirn und verschlechtert den Schlaf. Eine Lancet-Auswertung von fast 600.000 Menschen (Wood 2018) zeigte: Ab etwa 100 g Alkohol pro Woche (rund 5 Gläser Wein) steigt die Sterblichkeit; wer mit 40 mehr als 350 g pro Woche trinkt, verliert etwa 4–5 Lebensjahre. Der früher angenommene Schutz durch moderates Trinken hält neueren Analysen und Mendel-Randomisierungsstudien nicht stand.",
+        begruendung = "Bei starkem Konsum wäre der Schaden weit größer, doch die meisten trinken moderat – daher steht Alkohol über dem Rauchen, aber deutlich unter der Feinstaub-Belastung im Minusbereich.",
         ziel = "Höchstens 3 Standardgläser pro Woche, mindestens 5 alkoholfreie Tage.",
         punkt("Trinkmenge ehrlich notieren", "Zwei Wochen lang jedes Getränk aufschreiben, um den tatsächlichen Konsum zu kennen.", Evidenz.WAHRSCHEINLICH),
         punkt("Alkoholfreie Tage festlegen", "Mindestens 5 Tage pro Woche ohne Alkohol, z. B. unter der Woche komplett verzichten.", Evidenz.WAHRSCHEINLICH),
@@ -323,14 +323,14 @@ val START_FAKTOREN: List<Faktor> = listOf(
 
     // 18
     faktor(
-        titel = "Saubere Luft atmen und Umweltgifte meiden",
+        titel = "Feinstaub und Umweltgiften ausgesetzt sein",
         kurz = "Feinstaub verkürzt die Lebenserwartung weltweit um fast zwei Jahre – auch Innenraumluft und Chemikalien zählen.",
         kategorie = Kategorie.UMWELT,
         evidenz = Evidenz.BELEGT,
-        jahre = 1.8f,
+        jahre = -1.8f,
         wirkung = 42,
-        erklaerung = "Verringere deine Belastung durch Feinstaub, Verkehrsabgase, Holzrauch, Gasherd-Abgase und Schadstoffe in Kunststoffen. Feinstaub (PM2,5) dringt bis in die Blutbahn vor, fördert Entzündung, Arteriosklerose, Lungenkrebs und möglicherweise Demenz. Nach dem Air Quality Life Index verkürzt Feinstaub die weltweite Lebenserwartung im Schnitt um rund 1,9 Jahre, in Deutschland um einige Monate. Pro 10 µg/m³ mehr PM2,5 steigt die Sterblichkeit um etwa 6–8 %. Hormonähnliche Stoffe (z. B. Bisphenole, Phthalate) und Mikroplastik stehen im Verdacht, Gesundheit zu schädigen; die Datenlage ist hier noch unsicher.",
-        begruendung = "Der Effekt ist gut belegt, in Deutschland aber kleiner als in stark belasteten Ländern und nur teilweise selbst beeinflussbar – deshalb steht er in der Mitte. Vor dem Optimismus liegt er, weil die Belege auf gemessenen Schadstoffwerten statt auf Fragebögen beruhen.",
+        erklaerung = "Gemeint ist die Dauerbelastung durch Feinstaub, Verkehrsabgase, Holzrauch, Gasherd-Abgase und Schadstoffe in Kunststoffen – sie lässt sich deutlich verringern. Feinstaub (PM2,5) dringt bis in die Blutbahn vor, fördert Entzündung, Arteriosklerose, Lungenkrebs und möglicherweise Demenz. Nach dem Air Quality Life Index verkürzt Feinstaub die weltweite Lebenserwartung im Schnitt um rund 1,9 Jahre, in Deutschland um einige Monate. Pro 10 µg/m³ mehr PM2,5 steigt die Sterblichkeit um etwa 6–8 %. Hormonähnliche Stoffe (z. B. Bisphenole, Phthalate) und Mikroplastik stehen im Verdacht, Gesundheit zu schädigen; die Datenlage ist hier noch unsicher.",
+        begruendung = "Der Schaden ist gut belegt, in Deutschland aber kleiner als in stark belasteten Ländern und nur teilweise selbst beeinflussbar – deshalb steht er im Minusbereich direkt unter der Null-Linie, über Alkohol und Rauchen.",
         ziel = "Innenraum-Feinstaub (PM2,5) unter 5 µg/m³ und Schlafzimmer an stark befahrener Straße vermeiden.",
         punkt("Richtig lüften", "3–4× täglich 5–10 Minuten Stoßlüften, bevorzugt zu verkehrsarmen Zeiten.", Evidenz.WAHRSCHEINLICH),
         punkt("Luftreiniger mit HEPA-Filter", "Im Schlafzimmer einen HEPA-Luftreiniger nutzen, besonders in Städten oder bei Kaminöfen in der Nachbarschaft.", Evidenz.WAHRSCHEINLICH),

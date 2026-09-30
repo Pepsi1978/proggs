@@ -9,6 +9,7 @@ import de.frank.longevity.data.Evidenz
 import de.frank.longevity.data.Faktor
 import de.frank.longevity.data.Kategorie
 import de.frank.longevity.data.Punkt
+import de.frank.longevity.data.ordnen
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -54,7 +55,8 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
         val antwort = frage(
             grundanweisung(),
             """
-            |AKTUELLE LISTE (nach Wichtigkeit, Rang 1 = wichtigster):
+            |AKTUELLE LISTE (id | Rang | Titel | Kategorie | Evidenz | Jahre; oben Plus-Faktoren, unter der Null-Linie die
+            |Lebenszeit-Räuber mit negativen Jahren, der schädlichste ganz unten):
             |${listeKompakt(liste)}
             |
             |NEUE IDEE DES NUTZERS:
@@ -63,7 +65,9 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
             |AUFGABE: Prüfe die Idee kritisch und ehrlich nach aktuellem Forschungsstand und nach Logik. Formuliere daraus
             |einen Faktor für die Liste und ordne ihn nach seiner Wichtigkeit (Gewinn an gesunder Lebenszeit) in die Liste ein:
             |"rang" ist die Position, an der er eingefügt wird (1 bis ${liste.size + 1}). Vergleiche dazu direkt mit den
-            |Nachbarn darüber und darunter. Ist die Idee im Kern schon als Faktor vorhanden, setze "duplikatVon" auf dessen id
+            |Nachbarn darüber und darunter. Beschreibt die Idee ein schädliches Verhalten oder ein Verbot („nicht rauchen“,
+            |„weniger Zucker“), formuliere den Faktor als das schädliche Verhalten selbst („Rauchen“, „Viel Zucker essen“) mit
+            |NEGATIVEN Jahren – er wird dann automatisch unter der Null-Linie nach verlorenen Jahren einsortiert. Ist die Idee im Kern schon als Faktor vorhanden, setze "duplikatVon" auf dessen id
             |und liefere in "ergaenzung" nur das, was die Idee Neues beiträgt.
             |
             |Antworte NUR mit einem JSON-Objekt, ohne Text davor oder danach:
@@ -107,7 +111,9 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
             |AUFGABE: Vertiefe diesen Faktor sehr gründlich. Verbessere den Bestand, statt ihn zu verwerfen: Was stimmt, bleibt
             |sinngemäß erhalten; ergänze neue Erkenntnisse und korrigiere Veraltetes. Erkläre genau, welche Verhaltensweise gemeint
             |ist, warum sie wirkt (Mechanismus) und was die Forschung zeigt (mit Zahlen). Begründe, warum der Faktor genau auf
-            |Rang ${f.rang} steht. Leite daraus ein klares, messbares persönliches Ziel ab und einen Aufgabenplan mit 5–9 Punkten,
+            |${if (f.raeuber) "seinem Platz unter der Null-Linie (Lebenszeit-Räuber, ${"%.1f".format(Locale.US, f.jahre)} Jahre)" else "Rang ${f.rang}"} steht.
+            |Ist der Faktor ein Lebenszeit-Räuber, beschreibt der Titel das schädliche Verhalten, "jahre" bleibt negativ, und Ziel
+            |und Aufgabenplan zeigen, wie man es abstellt. Leite daraus ein klares, messbares persönliches Ziel ab und einen Aufgabenplan mit 5–9 Punkten,
             |sortiert nach Wichtigkeit (was man sofort umsetzen sollte, zuerst). Ist der Faktor eine Sammelkategorie (z. B.
             |Supplements, Lebensmittel, Übungen), sind die Punkte die einzelnen Elemente (z. B. die einzelnen Supplements, 10–16 Stück),
             |breit gestreut von gut belegt bis logisch plausibel, jeweils ehrlich eingeordnet, das wichtigste zuerst.
@@ -123,7 +129,7 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
             kurz = neu.kurz.ifBlank { f.kurz },
             kategorie = neu.kategorie,
             evidenz = neu.evidenz,
-            jahre = if (neu.jahre > 0f) neu.jahre else f.jahre,
+            jahre = if (neu.jahre != 0f) neu.jahre else f.jahre,
             wirkung = neu.wirkung,
             erklaerung = neu.erklaerung.ifBlank { f.erklaerung },
             begruendung = neu.begruendung.ifBlank { f.begruendung },
@@ -146,7 +152,7 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
             val text = frage(
                 grund + "\n\nDEINE ROLLE: " + rolle,
                 """
-                |AKTUELLE RANGLISTE (id | Rang | Titel | Kategorie | Evidenz | geschätzte Jahre):
+                |AKTUELLE RANGLISTE (id | Rang | Titel | Kategorie | Evidenz | geschätzte Jahre; negative Jahre = Lebenszeit-Räuber unter der Null-Linie):
                 |$kompakt
                 |${if (verlauf.isNotEmpty()) "\nBISHERIGE DISKUSSION:\n$verlauf" else ""}
                 |
@@ -168,8 +174,11 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
         agent(
             PRO, proRolle,
             "RUNDE 1: Gehe die Rangliste von oben nach unten durch. Nenne konkret, welche Faktoren höher oder tiefer gehören " +
-                "(\"Punkt X vor Punkt Y, weil …\"), mit Effektgrößen und Studienlage. Nenne außerdem bis zu 3 wichtige Faktoren, " +
-                "die ganz fehlen. Sei präzise und strukturiert (Stichpunkte), maximal ca. 700 Wörter.",
+                "(\"Punkt X vor Punkt Y, weil …\"), mit Effektgrößen und Studienlage. Prüfe die Polarität: Steht oben ein Verbot " +
+                "oder Verzicht (\"Nicht rauchen\", \"Alkohol meiden\"), gehört es als schädliches Verhalten mit negativen Jahren " +
+                "unter die Null-Linie (\"Rauchen\" −10) – nenne jeden solchen Fall. Prüfe auch die Minus-Jahre der Lebenszeit-Räuber. " +
+                "Nenne außerdem bis zu 3 wichtige Faktoren, die ganz fehlen (förderlich oder schädlich). " +
+                "Sei präzise und strukturiert (Stichpunkte), maximal ca. 700 Wörter.",
             0.00f, 0.22f, 4200, 70f,
         )
         agent(
@@ -195,14 +204,21 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
                 "Der Altbestand hat Vorrang: Verschiebe nur, was die Diskussion wirklich trägt, und verwirf keine Inhalte.",
             """
             |ENTSCHEIDUNG: Lege die endgültige Rangliste fest. Sie muss JEDE bisherige id genau einmal enthalten (nichts löschen).
+            |Aufbau: oben alle Faktoren mit POSITIVEN Jahren (förderliches Verhalten, das Lebensjahre schenkt), nach Wichtigkeit;
+            |darunter die Lebenszeit-Räuber mit NEGATIVEN Jahren (schädliches Verhalten), der schädlichste ganz unten.
+            |Verbote und Verzichte gibt es oben nicht: Ist ein Eintrag als Verbot formuliert („Nicht rauchen“, „Alkohol meiden“,
+            |„Kein Zucker“), formuliere ihn um als das schädliche Verhalten selbst („Rauchen – auch nur gelegentlich“,
+            |„Regelmäßig Alkohol trinken“), setze "jahre" negativ (verlorene Jahre gegenüber dem Unterlassen) und liefere dazu
+            |neuen "titel", "kurz" und "ziel" (Ziel = wie man es abstellt). Sonst "titel", "kurz", "ziel" leer lassen.
             |Für jeden Eintrag: "begruendung" = 2–3 Sätze, warum er genau auf diesem Rang steht (Vergleich mit den Nachbarn);
             |"ergaenzung" = nur falls es wirklich neue Erkenntnisse gibt, 1–3 Sätze, sonst "". "evidenz", "jahre" und "wirkung"
-            |nur anpassen, wenn die Diskussion es begründet. Neue Faktoren, die beide Seiten für wichtig halten, kommen in "neu"
-            |(höchstens 3) mit dem Rang, an dem sie eingefügt werden sollten.
+            |nur anpassen, wenn die Diskussion es begründet (Vorzeichen-Wechsel bei Verboten immer). Neue Faktoren, die beide
+            |Seiten für wichtig halten, kommen in "neu" (höchstens 3) mit dem Rang, an dem sie eingefügt werden sollten – auch
+            |schädliche Verhaltensweisen mit negativen Jahren sind erlaubt.
             |
             |Antworte NUR mit einem JSON-Objekt:
             |{"zusammenfassung": "3–5 Sätze: Was hat sich geändert und warum?",
-            | "reihenfolge": [{"id": 12, "begruendung": "…", "ergaenzung": "", "evidenz": "BELEGT", "jahre": 4.5, "wirkung": 90}, …],
+            | "reihenfolge": [{"id": 12, "begruendung": "…", "ergaenzung": "", "evidenz": "BELEGT", "jahre": 4.5, "wirkung": 90, "titel": "", "kurz": "", "ziel": ""}, …],
             | "neu": [{ $FAKTOR_SCHEMA, "rang": 7 }]}
             """.trimMargin(),
             0.70f, 0.99f, 900 + liste.size * 330, 60f + liste.size * 2f,
@@ -225,18 +241,22 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
             val jahre = r.optDouble("jahre", Double.NaN)
             val wirkung = r.optInt("wirkung", -1)
             neueListe += alt.copy(
+                titel = r.optString("titel").trim().trim('.').take(72).ifBlank { alt.titel },
+                kurz = r.optString("kurz").trim().ifBlank { alt.kurz },
+                ziel = r.optString("ziel").trim().ifBlank { alt.ziel },
                 begruendung = r.optString("begruendung").trim().ifBlank { alt.begruendung },
                 erklaerung = if (ergaenzung.isBlank()) alt.erklaerung else alt.erklaerung.trimEnd() + "\n\nNeu ($datum): " + ergaenzung,
                 evidenz = r.optString("evidenz").takeIf { s -> Evidenz.entries.any { it.name == s } } ?: alt.evidenz,
-                jahre = if (!jahre.isNaN() && jahre > 0) jahre.toFloat() else alt.jahre,
+                jahre = if (!jahre.isNaN() && jahre != 0.0) jahre.toFloat().coerceIn(-20f, 20f) else alt.jahre,
                 wirkung = if (wirkung in 0..100) wirkung else alt.wirkung,
             )
         }
         // Was der Richter vergessen hat, bleibt erhalten – in seiner bisherigen Reihenfolge dahinter.
         liste.filter { it.id !in gesehen }.forEach { neueListe += it }
         val jetzt = System.currentTimeMillis()
-        val ergebnis = neueListe.mapIndexed { i, f ->
-            f.copy(rang = i + 1, vorherRang = f.rang, neu = false, geaendertAm = jetzt)
+        // Die Null-Linie setzt der Code durch: Plus-Faktoren in der Reihenfolge des Richters, Räuber nach verlorenen Jahren.
+        val ergebnis = ordnen(neueListe).map { f ->
+            f.copy(vorherRang = nachId[f.id]?.rang, neu = false, geaendertAm = jetzt)
         }
         val veraendert = ergebnis.count { it.rang != it.vorherRang }
         val neu = o.optJSONArray("neu") ?: JSONArray()
@@ -256,8 +276,12 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
                 "in allen Lebensbereichen: Bewegung, Fitness, Kraft, Ernährung, Schlaf, Supplements, Stress, Geist, Beziehungen, " +
                 "Sinn, Vorsorge, Umwelt, Genussmittel. Du berücksichtigst nicht nur gesicherte Evidenz (RCTs, Metaanalysen, " +
                 "Mendel-Randomisierung, große Kohorten), sondern auch sehr wahrscheinliche und logisch gut begründete Faktoren – " +
-                "und ordnest ehrlich ein: BELEGT, WAHRSCHEINLICH oder LOGISCH. Maßstab für die Wichtigkeit ist der Gewinn an " +
-                "gesunder Lebenszeit, den ein Mensch durch konsequente Umsetzung gegenüber dem Unterlassen erzielt. Denke sehr " +
+                "und ordnest ehrlich ein: BELEGT, WAHRSCHEINLICH oder LOGISCH. Die Rangliste hat eine Null-Linie: Oben stehen " +
+                "förderliche Verhaltensweisen mit POSITIVEN Jahren – der Gewinn an gesunder Lebenszeit durch konsequente Umsetzung " +
+                "gegenüber dem Unterlassen. Unten stehen schädliche Verhaltensweisen (Lebenszeit-Räuber) mit NEGATIVEN Jahren – " +
+                "die verlorene Lebenszeit gegenüber dem Unterlassen, der schädlichste ganz unten. Ein Verbot ist nie ein Plus-Faktor: " +
+                "Man wird als Nichtraucher geboren, Nichtrauchen schenkt keine Jahre, Rauchen kostet sie. Der Titel nennt deshalb " +
+                "das schädliche Verhalten selbst („Rauchen“, nicht „Nicht rauchen“) mit negativen Jahren. Denke sehr " +
                 "gründlich, detailliert und durchdacht. Schreibe auf Deutsch, klar und konkret, ohne Heilversprechen.",
         )
         val p = e.profilText()
@@ -265,7 +289,7 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
     }
 
     private fun listeKompakt(liste: List<Faktor>) = liste.joinToString("\n") {
-        "${it.id} | ${it.rang} | ${it.titel} | ${it.kat.name} | ${it.ev.name} | ${"%.1f".format(Locale.US, it.jahre)}" + if (it.zielErreicht) " | vom Nutzer bereits umgesetzt" else ""
+        "${it.id} | ${it.rang} | ${it.titel} | ${it.kat.name} | ${it.ev.name} | ${"%.1f".format(Locale.US, it.jahre)}" + if (it.zielErreicht) (if (it.raeuber) " | trifft beim Nutzer nicht zu bzw. abgestellt" else " | vom Nutzer bereits umgesetzt") else ""
     }
 
     private suspend fun frage(
@@ -291,7 +315,7 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
 
         val FAKTOR_SCHEMA = """"titel": "max. 60 Zeichen, beschreibt das Verhalten komplett", "kurz": "1 Satz Kernaussage",
             | "kategorie": "$KATEGORIEN", "evidenz": "BELEGT|WAHRSCHEINLICH|LOGISCH",
-            | "jahre": 2.5, "wirkung": 0-100, "erklaerung": "4–7 Sätze", "begruendung": "2–3 Sätze, warum genau dieser Rang",
+            | "jahre": "Zahl: positiv (z. B. 2.5) bei förderlichem Verhalten, negativ (z. B. -10) bei schädlichem", "wirkung": 0-100 (Stärke, auch bei schädlichem Verhalten positiv), "erklaerung": "4–7 Sätze", "begruendung": "2–3 Sätze, warum genau dieser Rang",
             | "ziel": "konkretes, messbares Ziel", "punkte": [{"titel": "max. 50 Zeichen", "text": "1–2 Sätze, konkret mit Dosis/Häufigkeit", "evidenz": "BELEGT|WAHRSCHEINLICH|LOGISCH"}]""".trimMargin()
 
         fun faktorAus(o: JSONObject): Faktor {
@@ -305,7 +329,7 @@ class LongevityKi(private val auth: CodexAuthManager, private val e: Einstellung
                 kurz = o.optString("kurz").trim(),
                 kategorie = Kategorie.von(o.optString("kategorie")).name,
                 evidenz = Evidenz.von(o.optString("evidenz")).name,
-                jahre = o.optDouble("jahre", 0.0).toFloat().coerceIn(0f, 20f),
+                jahre = o.optDouble("jahre", 0.0).toFloat().coerceIn(-20f, 20f),
                 wirkung = o.optInt("wirkung", 50).coerceIn(0, 100),
                 erklaerung = o.optString("erklaerung").trim(),
                 begruendung = o.optString("begruendung").trim(),

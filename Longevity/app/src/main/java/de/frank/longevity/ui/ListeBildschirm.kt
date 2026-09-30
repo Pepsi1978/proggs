@@ -72,6 +72,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.longevity.data.Faktor
+import de.frank.longevity.data.platz
 import de.frank.longevity.ki.Art
 import de.frank.longevity.ki.KiArbeit
 import de.frank.longevity.ui.theme.Chip
@@ -90,6 +91,8 @@ fun ListeBildschirm(vm: AppViewModel) {
     val f = LocalFarben.current
     val alle by vm.alle.collectAsState()
     val liste = remember(alle) { alle.filter { !it.vorschlag } }
+    val plus = remember(liste) { liste.filter { !it.raeuber } }
+    val raeuber = remember(liste) { liste.filter { it.raeuber } }
     val vorschlaege = remember(alle) { alle.filter { it.vorschlag } }
     val zustand = rememberLazyListState()
     var designOffen by rememberSaveable { mutableStateOf(false) }
@@ -134,7 +137,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp, start = 4.dp), verticalAlignment = Alignment.Bottom) {
                     Column(Modifier.weight(1f)) {
                         Text("Deine Rangliste", color = f.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Text("Oben steht, was dir am meisten Lebenszeit schenkt.", color = f.textLeise, fontSize = 12.sp)
+                        Text("Oben, was dir Lebenszeit schenkt – unter der Null-Linie, was sie dir raubt.", color = f.textLeise, fontSize = 12.sp)
                     }
                     val stand = vm.einstellungen.letzteAktualisierung
                     Text(
@@ -143,8 +146,12 @@ fun ListeBildschirm(vm: AppViewModel) {
                     )
                 }
             }
-            items(liste, key = { it.id }) { x ->
-                FaktorKarte(x, liste.size, hervor = vm.hervorgehoben == x.id, modifier = Modifier.animateItem()) { vm.oeffne(x.id) }
+            items(plus, key = { it.id }) { x ->
+                FaktorKarte(x, x.platz(liste), hervor = vm.hervorgehoben == x.id, modifier = Modifier.animateItem()) { vm.oeffne(x.id) }
+            }
+            item(key = "nulllinie") { NullLinie(raeuber.size, Modifier.animateItem()) }
+            items(raeuber, key = { it.id }) { x ->
+                FaktorKarte(x, x.platz(liste), hervor = vm.hervorgehoben == x.id, modifier = Modifier.animateItem()) { vm.oeffne(x.id) }
             }
             item(key = "ueberblick") { Ueberblick(liste) { vm.oeffne(it) } }
             item(key = "hinweis") {
@@ -168,7 +175,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             ) {
                 Column(Modifier.weight(1f)) {
                     Text("Longevity", color = f.text, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = (-0.5).sp)
-                    Text("${liste.size} Faktoren · nach Wichtigkeit", color = f.textLeise, fontSize = 11.sp)
+                    Text("${plus.size} schenken Jahre · ${raeuber.size} rauben Jahre", color = f.textLeise, fontSize = 11.sp)
                 }
                 AktualisierenKnopf(vm)
                 RundKnopf(Icons.Rounded.Palette, "Design wechseln", aktiv = designOffen) { designOffen = !designOffen }
@@ -247,18 +254,42 @@ private fun PlusKnopf(modifier: Modifier, aktion: () -> Unit) {
     }
 }
 
-/** Rangnummer als plastische Plakette; die ersten drei glänzen golden, silbern, bronzen. */
+/**
+ * Platz als plastische Plakette; die ersten drei glänzen golden, silbern, bronzen. Lebenszeit-Räuber ([raeuber])
+ * tragen ihren Minus-Platz (−1, −2 …) auf roter Plakette.
+ */
 @Composable
-fun RangAbzeichen(rang: Int, groesse: Int = 44) {
+fun RangAbzeichen(rang: Int, groesse: Int = 44, raeuber: Boolean = false, text: String = "$rang") {
     val f = LocalFarben.current
-    val (a, b) = when (rang) {
-        1 -> Color(0xFFFFD35C) to Color(0xFFE59A12)
-        2 -> Color(0xFFE3E8F0) to Color(0xFF9AA6B8)
-        3 -> Color(0xFFF2B48A) to Color(0xFFB8683A)
+    val medaille = !raeuber && rang in 1..3
+    val (a, b) = when {
+        raeuber -> f.gefahr to f.gefahr.copy(red = f.gefahr.red * 0.7f, green = f.gefahr.green * 0.7f, blue = f.gefahr.blue * 0.7f)
+        rang == 1 -> Color(0xFFFFD35C) to Color(0xFFE59A12)
+        rang == 2 -> Color(0xFFE3E8F0) to Color(0xFF9AA6B8)
+        rang == 3 -> Color(0xFFF2B48A) to Color(0xFFB8683A)
         else -> f.primaer to f.sekundaer
     }
     Box(Modifier.size(groesse.dp).knopf3d(a, b, 14.dp, f.dunkel), contentAlignment = Alignment.Center) {
-        Text("$rang", color = if (rang in 1..3) Color(0xFF3A2400).copy(alpha = if (rang == 2) 0.75f else 0.85f) else Color.White, fontSize = (groesse * 0.42f).sp, fontWeight = FontWeight.Black)
+        Text(text, color = if (medaille) Color(0xFF3A2400).copy(alpha = if (rang == 2) 0.75f else 0.85f) else Color.White, fontSize = (groesse * (if (text.length > 2) 0.34f else 0.42f)).sp, fontWeight = FontWeight.Black)
+    }
+}
+
+/** Die Null-Linie zwischen den Plus-Faktoren und den Lebenszeit-Räubern. */
+@Composable
+private fun NullLinie(anzahl: Int, modifier: Modifier = Modifier) {
+    val f = LocalFarben.current
+    Column(modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp, start = 4.dp, end = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Canvas(Modifier.weight(1f).height(2.dp)) { drawRect(f.textSchwach.copy(alpha = 0.5f)) }
+            Text("0 Jahre", color = f.text, fontSize = 13.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(horizontal = 10.dp))
+            Canvas(Modifier.weight(1f).height(2.dp)) { drawRect(f.textSchwach.copy(alpha = 0.5f)) }
+        }
+        Text("Lebenszeit-Räuber", color = f.gefahr, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 10.dp))
+        Text(
+            if (anzahl == 0) "Noch keine – schädliche Gewohnheiten, die Jahre kosten, landen hier."
+            else "Schädliche Gewohnheiten, die Jahre kosten – ganz unten die schlimmste. Abstellen holt sie zurück; trifft etwas nicht auf dich zu, hake es ab.",
+            color = f.textLeise, fontSize = 12.sp,
+        )
     }
 }
 
@@ -280,7 +311,7 @@ fun RangPfeil(x: Faktor) {
 }
 
 @Composable
-fun FaktorKarte(x: Faktor, gesamt: Int, hervor: Boolean, modifier: Modifier = Modifier, aktion: () -> Unit) {
+fun FaktorKarte(x: Faktor, platz: String, hervor: Boolean, modifier: Modifier = Modifier, aktion: () -> Unit) {
     val f = LocalFarben.current
     val leuchten by animateFloatAsState(if (hervor) 1f else 0f, tween(600), label = "hervor")
     val punkte = x.punkte
@@ -302,9 +333,9 @@ fun FaktorKarte(x: Faktor, gesamt: Int, hervor: Boolean, modifier: Modifier = Mo
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (erreicht) Box(Modifier.size(44.dp).glas(f, 14.dp, 0f, f.erfolg.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
                 Text("✓", color = f.erfolg, fontSize = 22.sp, fontWeight = FontWeight.Black)
-            } else RangAbzeichen(x.rang)
+            } else RangAbzeichen(x.rang, raeuber = x.raeuber, text = platz)
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                if (erreicht) Text("Platz ${x.rang} · Ziel erreicht", color = f.erfolg, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                if (erreicht) Text("Platz $platz · " + if (x.raeuber) "abgestellt" else "Ziel erreicht", color = f.erfolg, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text(x.titel, color = if (erreicht) f.textLeise else f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 21.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Row(Modifier.padding(top = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("${x.kat.emoji} ${x.kat.anzeige}", color = f.textLeise, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
@@ -313,13 +344,14 @@ fun FaktorKarte(x: Faktor, gesamt: Int, hervor: Boolean, modifier: Modifier = Mo
             }
             Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
                 if (!erreicht) RangPfeil(x)
-                Text(jahreText(x.jahre), color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 3.dp))
+                Text(jahreText(x.jahre), color = if (x.raeuber) f.gefahr else f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 3.dp))
                 if (punkte.isNotEmpty()) MiniRing(anteil, Modifier.padding(top = 4.dp).size(18.dp))
             }
         }
         Canvas(Modifier.fillMaxWidth().height(4.dp).padding(top = 0.dp).graphicsLayer { alpha = 0.9f }) {
             drawRoundRect(f.textSchwach.copy(alpha = 0.12f), cornerRadius = CornerRadius(4f))
-            drawRoundRect(Brush.horizontalGradient(listOf(f.primaer, f.sekundaer)), size = Size(size.width * x.wirkung / 100f, size.height), cornerRadius = CornerRadius(4f))
+            val balken = if (x.raeuber) listOf(f.gefahr.copy(alpha = 0.6f), f.gefahr) else listOf(f.primaer, f.sekundaer)
+            drawRoundRect(Brush.horizontalGradient(balken), size = Size(size.width * x.wirkung / 100f, size.height), cornerRadius = CornerRadius(4f))
         }
     }
 }
@@ -345,7 +377,7 @@ private fun HeuteKarte(vm: AppViewModel, liste: List<Faktor>) {
                 Checkkreis(false, f.erfolg, 22) { vm.punktUmschalten(s.faktor, s.index) }
                 Column(Modifier.weight(1f).padding(start = 4.dp)) {
                     Text(s.punkt.titel, color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text("Platz ${s.faktor.rang} · ${s.faktor.titel}", color = f.textLeise, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("Platz ${s.faktor.platz(liste)} · ${s.faktor.titel}", color = f.textLeise, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -363,7 +395,7 @@ private fun VorschlaegeKarte(vm: AppViewModel, vorschlaege: List<Faktor>) {
         vorschlaege.forEach { v ->
             Column(Modifier.fillMaxWidth().glas(f, 16.dp, 0.4f, f.flaecheStark).antippen(haptik = false) { vm.oeffne(v.id) }.padding(12.dp)) {
                 Text(v.titel, color = f.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text("Vorgeschlagen für Platz ${v.rang} · ${jahreText(v.jahre)} · ${v.ev.anzeige}", color = f.textLeise, fontSize = 11.sp)
+                Text((if (v.raeuber) "Lebenszeit-Räuber" else "Vorgeschlagen für Platz ${v.rang}") + " · ${jahreText(v.jahre)} · ${v.ev.anzeige}", color = f.textLeise, fontSize = 11.sp)
                 if (v.kurz.isNotBlank()) Text(v.kurz, color = f.textLeise, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip("Aufnehmen", true, icon = Icons.Rounded.Add) { vm.vorschlagAnnehmen(v) }

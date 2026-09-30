@@ -21,6 +21,7 @@ import de.frank.longevity.data.Faktor
 import de.frank.longevity.data.Kategorie
 import de.frank.longevity.data.Punkt
 import de.frank.longevity.data.Repository
+import de.frank.longevity.data.platz
 import de.frank.longevity.ki.Art
 import de.frank.longevity.ki.KiArbeit
 import de.frank.longevity.ki.LongevityKi
@@ -83,7 +84,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var kiVerbindet by mutableStateOf(false); private set
 
     init {
-        viewModelScope.launch { repo.startinhalteAnlegen() }
+        viewModelScope.launch {
+            repo.startinhalteAnlegen()
+            if (!einstellungen.verboteUmgestellt) {
+                repo.verboteUmstellen()
+                einstellungen.verboteUmgestellt = true
+            }
+        }
     }
 
     fun pruefen() { kiVerbunden = auth.isConnected }
@@ -192,13 +199,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 repo.speichere(ergaenzt)
                 KiArbeit.bezugId = dup.id
                 bewertungen[dup.id] = a.bewertung
-                KiArbeit.ergebnis = "Schon vorhanden: Platz ${dup.rang} „${dup.titel}“ – deine Idee wurde ergänzt."
+                KiArbeit.ergebnis = "Schon vorhanden: Platz ${dup.platz(repo.liste())} „${dup.titel}“ – deine Idee wurde ergänzt."
                 hervorgehoben = dup.id
             } else {
                 val id = repo.einfuegen(a.faktor, a.rang)
                 KiArbeit.bezugId = id
                 bewertungen[id] = a.bewertung
-                KiArbeit.ergebnis = "Eingeordnet auf Platz ${a.rang}: „${a.faktor.titel}“"
+                val platz = repo.einer(id)?.platz(repo.liste()) ?: "${a.rang}"
+                KiArbeit.ergebnis = if (a.faktor.raeuber) "Als Lebenszeit-Räuber eingeordnet auf Platz $platz: „${a.faktor.titel}“"
+                else "Eingeordnet auf Platz $platz: „${a.faktor.titel}“"
                 hervorgehoben = id
             }
         }
@@ -272,14 +281,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             repo.speichere(aktuell.copy(zielErreicht = erreicht))
             if (erreicht) {
                 konfetti++
-                melde("Ziel erreicht – „${aktuell.titel}“ ist abgehakt") { viewModelScope.launch { repo.einer(f.id)?.let { repo.speichere(it.copy(zielErreicht = false)) } } }
+                melde(if (aktuell.raeuber) "Abgestellt – „${aktuell.titel}“ ist abgehakt" else "Ziel erreicht – „${aktuell.titel}“ ist abgehakt") { viewModelScope.launch { repo.einer(f.id)?.let { repo.speichere(it.copy(zielErreicht = false)) } } }
             }
         }
     }
 
-    /** Die drei wichtigsten offenen nächsten Schritte: je Faktor der erste offene Punkt, nach Rang. */
+    /** Die drei wirksamsten offenen nächsten Schritte: je Faktor der erste offene Punkt, nach Jahren (Plus wie Minus). */
     fun heute(liste: List<Faktor>): List<Schritt> = liste.asSequence()
         .filter { !it.vorschlag && !it.zielErreicht }
+        .sortedByDescending { kotlin.math.abs(it.jahre) }
         .mapNotNull { f -> f.punkte.withIndex().firstOrNull { !it.value.erledigt }?.let { Schritt(f, it.index, it.value) } }
         .take(3).toList()
 

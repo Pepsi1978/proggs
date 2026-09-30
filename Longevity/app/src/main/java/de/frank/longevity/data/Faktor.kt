@@ -49,9 +49,11 @@ data class Punkt(
 }
 
 /**
- * Ein Faktor, der die Lebensdauer beeinflusst. [rang] 1 ist der wichtigste. [jahre] ist die grobe
- * Schätzung zusätzlicher gesunder Lebensjahre, [wirkung] dieselbe Wirkung als 0–100-Punkte für
- * Balken und Diagramme.
+ * Ein Verhalten, das die Lebensdauer beeinflusst. [jahre] ist die grobe Schätzung gesunder Lebensjahre
+ * gegenüber dem Unterlassen: positiv bei förderlichem Verhalten (Ausdauer +6), negativ bei schädlichem
+ * (Rauchen −10). [rang] läuft lückenlos über die ganze Liste: oben die Plus-Faktoren nach Wichtigkeit,
+ * darunter die Lebenszeit-Räuber, der schädlichste ganz unten (siehe [ordnen]). [wirkung] ist die Stärke
+ * als 0–100-Punkte für Balken und Diagramme.
  */
 @Entity(tableName = "faktoren")
 data class Faktor(
@@ -84,6 +86,8 @@ data class Faktor(
     val geaendertAm: Long = System.currentTimeMillis(),
 ) {
     val kat: Kategorie get() = Kategorie.von(kategorie)
+    /** Schädliches Verhalten, das Lebensjahre kostet – steht unter der Null-Linie. */
+    val raeuber: Boolean get() = jahre < 0f
     val ev: Evidenz get() = Evidenz.von(evidenz)
     val punkte: List<Punkt> get() = punkteAusJson(punkteJson)
 
@@ -103,6 +107,19 @@ data class Faktor(
         }.getOrDefault(emptyList())
     }
 }
+
+/**
+ * Die eine Ordnung der Rangliste: oben alles, was Lebensjahre schenkt (in der bisherigen Reihenfolge),
+ * darunter die Lebenszeit-Räuber nach verlorenen Jahren – knapp unter null zuerst, der schädlichste ganz unten.
+ */
+fun ordnen(liste: List<Faktor>): List<Faktor> {
+    val (plus, minus) = liste.partition { !it.raeuber }
+    return (plus + minus.sortedByDescending { it.jahre }).mapIndexed { i, x -> x.copy(rang = i + 1) }
+}
+
+/** Angezeigter Platz: oben 1, 2, 3 …; unter der Null-Linie −1 (knapp unter null) bis −n (ganz unten). */
+fun Faktor.platz(liste: List<Faktor>): String =
+    if (raeuber) "−" + (rang - liste.count { !it.vorschlag && !it.raeuber }).coerceAtLeast(1) else "$rang"
 
 /** Kurzform für die Startinhalte. */
 internal fun faktor(

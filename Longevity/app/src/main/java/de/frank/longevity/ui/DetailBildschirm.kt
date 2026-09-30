@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.longevity.data.Faktor
+import de.frank.longevity.data.platz
 import de.frank.longevity.ki.KiArbeit
 import de.frank.longevity.ui.theme.Chip
 import de.frank.longevity.ui.theme.LocalFarben
@@ -56,13 +57,20 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
     val f = LocalFarben.current
     val alle by vm.alle.collectAsState()
     val x = alle.firstOrNull { it.id == id }
-    val gesamt = alle.count { !it.vorschlag }
+    val liste = alle.filter { !it.vorschlag }
+    val gesamt = liste.size
+    val plusAnzahl = liste.count { !it.raeuber }
     Column(Modifier.fillMaxSize()) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             RundKnopf(Icons.AutoMirrored.Rounded.ArrowBack, "Zurück") { vm.zurueck() }
             Text(
-                if (x?.vorschlag == true) "Vorschlag der KI" else x?.let { "Platz ${it.rang} von $gesamt" } ?: "",
+                when {
+                    x == null -> ""
+                    x.vorschlag -> "Vorschlag der KI"
+                    x.raeuber -> "Lebenszeit-Räuber · Platz ${x.platz(liste)}"
+                    else -> "Platz ${x.rang} von $plusAnzahl"
+                },
                 color = f.textLeise, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 8.dp),
             )
             if (x != null && !x.vorschlag) RundKnopf(Icons.Rounded.AutoAwesome, "Mit KI vertiefen") { vm.vertiefen(x) }
@@ -73,7 +81,7 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Held(x)
+            Held(x, x.platz(liste))
             KiKarte(vm, nurFuer = x.id)
             if (x.vorschlag) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip("In die Liste aufnehmen", true, icon = Icons.Rounded.Add) { vm.vorschlagAnnehmen(x); vm.zurueck() }
@@ -86,12 +94,13 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
                 Text("„${x.notiz}“", color = f.textLeise, fontSize = 14.sp, lineHeight = 20.sp)
             }
             if (x.erklaerung.isNotBlank()) Block("Worum es geht") { Absaetze(x.erklaerung) }
-            Block(if (x.vorschlag) "Warum an dieser Stelle" else "Warum Platz ${x.rang}") {
+            Block(if (x.vorschlag) "Warum an dieser Stelle" else "Warum Platz ${x.platz(liste)}") {
                 if (x.begruendung.isNotBlank()) Absaetze(x.begruendung)
-                if (!x.vorschlag) Row(verticalAlignment = Alignment.CenterVertically) {
+                // Lebenszeit-Räuber ordnen sich selbst nach verlorenen Jahren; Plus-Faktoren bleiben über der Null-Linie.
+                if (!x.vorschlag && !x.raeuber) Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Selbst verschieben", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.weight(1f))
                     RundKnopf(Icons.Rounded.KeyboardArrowUp, "Einen Platz höher") { if (x.rang > 1) vm.verschiebe(x, x.rang - 1) }
-                    RundKnopf(Icons.Rounded.KeyboardArrowDown, "Einen Platz tiefer") { if (x.rang < gesamt) vm.verschiebe(x, x.rang + 1) }
+                    RundKnopf(Icons.Rounded.KeyboardArrowDown, "Einen Platz tiefer") { if (x.rang < plusAnzahl) vm.verschiebe(x, x.rang + 1) }
                 }
             }
             if (x.ziel.isNotBlank() && !x.vorschlag) ZielKarte(x.ziel, x.zielErreicht) { vm.zielUmschalten(x) }
@@ -112,11 +121,11 @@ fun DetailBildschirm(vm: AppViewModel, id: Long) {
 
 /** Kopf der Detailseite als Infografik: Rang, Titel, Wirkung als Tacho, Kennzahlen. */
 @Composable
-private fun Held(x: Faktor) {
+private fun Held(x: Faktor, platz: String) {
     val f = LocalFarben.current
     Column(Modifier.fillMaxWidth().einblenden().glas(f, erhoeht = 1.6f, toenung = f.evidenzFarbe(x.ev)).padding(18.dp)) {
         Row(verticalAlignment = Alignment.Top) {
-            RangAbzeichen(x.rang, 54)
+            RangAbzeichen(x.rang, 54, raeuber = x.raeuber, text = platz)
             Column(Modifier.weight(1f).padding(start = 14.dp)) {
                 Text(x.titel, color = f.text, fontSize = 21.sp, fontWeight = FontWeight.Bold, lineHeight = 26.sp)
                 Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -135,7 +144,7 @@ private fun Held(x: Faktor) {
                     MiniRing(p.count { it.erledigt }.toFloat() / p.size, Modifier.size(22.dp), 3.5f)
                     Text("${p.count { it.erledigt }} von ${p.size} umgesetzt", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp))
                 }
-                Text("Geschätzter Gewinn an gesunder Lebenszeit", color = f.textSchwach, fontSize = 11.sp)
+                Text(if (x.raeuber) "Geschätzter Verlust an gesunder Lebenszeit" else "Geschätzter Gewinn an gesunder Lebenszeit", color = f.textSchwach, fontSize = 11.sp)
             }
         }
     }

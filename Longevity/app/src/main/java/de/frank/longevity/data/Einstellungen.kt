@@ -76,6 +76,8 @@ class Einstellungen private constructor(context: Context) {
     var szeneZeigen: Boolean get() = prefs.getBoolean("szene", true); set(v) = put { putBoolean("szene", v) }
 
     // ---- Stand ----
+    /** Die alten Verbots-Faktoren sind in Lebenszeit-Räuber mit Minus-Jahren umgestellt. */
+    var verboteUmgestellt: Boolean get() = prefs.getBoolean("verbote_umgestellt", false); set(v) = put { putBoolean("verbote_umgestellt", v) }
     var letzteAktualisierung: Long get() = prefs.getLong("letzte_aktualisierung", 0L); set(v) = put { putLong("letzte_aktualisierung", v) }
 
     /** Das Kurzprofil als Text für die KI, leer wenn nichts angegeben ist. */
