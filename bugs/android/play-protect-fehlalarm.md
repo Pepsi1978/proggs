@@ -44,3 +44,9 @@ Was nur Longevity hat (wahrscheinlichste Gründe, vermutlich in Kombination mit 
 3. Einspruch (nur Frank, nicht aus der Cloud): <https://support.google.com/googleplay/android-developer/contact/protectappeals>,
    auf Englisch, mit Paketname und aktueller APK (Google Drive `Dokumente/Updates/<Projekt>/`).
 4. Bleibt die Warnung: als Test eine Version ohne `WifiLock` bauen und neu scannen lassen.
+
+## Ergebnis Longevity (01.10.2026, 00:48 Uhr)
+
+Frank hat in Play Protect den Aktualisieren-Knopf gedrückt. Danach meldete Play Protect: keine schädliche
+Software gefunden. **Es war ein Fehlalarm, der Neu-Scan hat ihn sofort aufgehoben.** Kein Einspruch und
+keine Code-Änderung nötig. Deshalb bei so einer Meldung immer zuerst Schritt 2 (Neu-Scan) machen.
