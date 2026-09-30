@@ -22,3 +22,4 @@
 | 8 | 429 Rate-Limit | `retry-after-ms`/`x-ratelimit-*` lesen, Backoff mit Jitter, RPM≠TPM | F17, F18 |
 | 8a | **503 mitten im Mehrschritt-Lauf** ⭐ | Selbst erzeugte Überlast (viele parallele Streams/1 Konto). 3 Fixes zusammen: ≥6 Versuche exponentiell+Jitter · Drossel bei 429/503 auf ~2 · JEDEN teuren Teilschritt persistieren + fortsetzen statt neu | F18a |
 | 9 | `strict:true`-Schema | `additionalProperties:false` + alle Keys `required`, `refusal` prüfen | G19, G21 |
+| 9a | HTTP 400 "'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account" (30.09.2026) | Veraltete Codex-Client-Version im OAuth-Request; Client/Plugin aktualisieren (Codex CLI >= 0.159) | K1 |

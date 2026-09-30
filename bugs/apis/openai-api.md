@@ -269,3 +269,11 @@ Diese Bereiche ueberschneiden sich mit diesem Almanach — bei Arbeit hier oft e
 - [openrouter-api](openrouter-api.md)
 - [other-llm-apis](other-llm-apis.md)
 - [xai-grok-api](xai-grok-api.md)
+
+## K1. GPT-6.1 Sol per ChatGPT-OAuth: HTTP 400 "not supported" (Stand 30.09.2026)
+
+- **Symptom:** `The 'gpt-6.1-sol' model is not supported when using Codex with a ChatGPT account.` (HTTP 400), obwohl das Abo (Plus/Pro/Business/Enterprise/Edu) GPT-6.1 Sol enthält.
+- **Ursache:** Der Client meldet sich mit einer zu alten Codex-CLI-Version (z. B. 0.156.1) beim Codex-Backend an; neue Modelle werden erst ab neuerer Client-Kennung freigeschaltet.
+- **Betroffen:** Codex CLI < 0.159, Router/Plugins mit fest eingetragener alter Codex-Kennung (9router, OpenCode-OAuth-Plugins). Stand: Codex-Issue offen.
+- **Fix:** Codex CLI bzw. das OAuth-Plugin/OpenCode aktualisieren; in 9router hat das Anheben der Kennung auf 0.159.0 den Fehler behoben. Modell bleibt erhalten, nichts deinstallieren.
+- **Quellen:** https://github.com/openai/codex/issues/49396 · https://github.com/decolua/9router/issues/4471

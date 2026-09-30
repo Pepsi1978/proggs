@@ -19,3 +19,4 @@
 | 5 | Token-Effizienz | Caching ab 1024 Tok (Statisches nach vorne); Batch API = 50 % | §5 |
 | 6 | Streaming | `stream_options.include_usage:true` für Usage im Finalchunk | §6 |
 | 7 | SDK-Konfiguration | Default `max_retries=2` nicht eigene Retry-Schleife darüber stapeln | §7 |
+| 8 | Ultrafast-Tempo (30.09.2026) | Kein eigenes Modell, sondern `service_tier: "ultrafast"` (API ~6x, Codex bis 8x schneller, 6x Preis). GPT-6 Astra ja, GPT-6.1 Sol erst angekündigt; per ChatGPT-OAuth nur mit Pro 500 | §8 |

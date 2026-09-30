@@ -51,3 +51,13 @@
 | 5 Caching/Batch | (Token-Effizienz) |
 | 6 Streaming | C8–C11 |
 | 7 SDK | I23–I24 |
+
+## 8. Ultrafast-Servicestufe (Stand 30.09.2026, Kurz-Recherche per WebSearch)
+
+- **Kein eigenes Modell:** Ultrafast ist eine Servicestufe, die per Request-Parameter `service_tier: "ultrafast"` gewählt wird (Umsetzung in coder/xum PR #5241). Die Modell-ID bleibt gleich, z. B. `gpt-6-astra`. [extern]
+- **Tempo/Preis:** bis 8x schneller in Codex (~300 Token/s), bis 6x in der API; kostet 6x den Standardpreis. [offiziell, OpenAI-Ankündigung DevDay 29.09.2026]
+- **Modelle:** GPT-6 Astra sofort (Codex, ChatGPT Work, API). **GPT-6.1 Sol Ultrafast nur angekündigt** ("in the coming days"); die API liefert es noch nicht. [offiziell]
+- **Abo/OAuth:** In Codex und ChatGPT Work gibt es Ultrafast nur mit dem neuen **Pro-500-Plan** (500 $, 25x Plus-Limits). Plus/Pro per ChatGPT-OAuth bekommt es nicht. [offiziell]
+- **Abgrenzung:** "GPT-x Fast"-Varianten (z. B. `gpt-5.6-sol-fast`, bei Vercel `openai/gpt-6.1-sol-fast`) sind etwas anderes als Ultrafast.
+- **OpenCode:** Unterstützung für `service_tier: ultrafast` über den Codex-OAuth-Weg ist nur in Community-Forks/Issues diskutiert (z. B. opencodex #3429), nicht belegt im Standard-OpenCode.
+- Quellen: https://openai.com/index/introducing-gpt-6-1-sol/ · https://venturebeat.com/technology/openais-gpt-6-1-sol-offers-astra-like-performance-at-1-5th-price-a-new-ultrafast-tier-clocks-at-300-tokens-per-second · https://github.com/coder/xum/pull/5241 · https://the-decoder.com/openai-expands-codex-and-its-api-at-devday-with-security-scans-a-decisions-api-and-ultrafast/ · https://github.com/lidge-jun/opencodex/issues/3429
