@@ -187,7 +187,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                         colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer),
                     )
                     Text(
-                        stufenText + " Die Denkstufe oben ist die Obergrenze; die Gutachterin nutzt sie immer voll.",
+                        stufenText + " Die Denkstufe oben ist die Obergrenze; die Suche nach Neuheiten nutzt sie immer voll.",
                         color = f.textSchwach, fontSize = 11.sp,
                     )
                 }

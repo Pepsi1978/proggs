@@ -23,6 +23,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -552,6 +553,7 @@ class CodexAuthManager(context: Context) {
         else -> false
     }
 
+    @OptIn(InternalCoroutinesApi::class)
     private suspend fun requestCodexResponseOnce(
         payload: JSONObject,
         onDelta: suspend (String) -> Unit,
@@ -576,6 +578,11 @@ class CodexAuthManager(context: Context) {
             .build()
         val accumulator = CodexSseAccumulator()
         val trackedResponse = executeQuestionRequest(httpRequest)
+        // Das Lesen des Streams blockiert: Wird die Coroutine abgebrochen (Abbrechen-Knopf, Zeitlimit je Aufruf),
+        // schließt das sofort die Verbindung – sonst liefe ein tröpfelnder Stream bis zum OkHttp-Gesamtlimit weiter.
+        val abbruch = currentCoroutineContext()[Job]?.invokeOnCompletion(onCancelling = true, invokeImmediately = true) { grund ->
+            if (grund != null) trackedResponse.call.cancel()
+        }
         try {
             trackedResponse.response.use { response ->
                 val responseBody = response.body
@@ -597,6 +604,7 @@ class CodexAuthManager(context: Context) {
             de.frank.longevity.ki.KiLog.warn("SSE-Stream abgerissen nach ${accumulator.typenText()}", error)
             throw error
         } finally {
+            abbruch?.dispose()
             activeQuestionCall.clear(trackedResponse.call)
         }
         de.frank.longevity.ki.KiLog.info("SSE: ${accumulator.typenText()}")

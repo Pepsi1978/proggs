@@ -53,7 +53,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = Repository.get(app)
     val einstellungen = Einstellungen.get(app)
     val auth = CodexAuthManager(app)
-    private val ki = LongevityKi(auth, einstellungen, { standardPrompt() }, LaufSpeicher(File(app.filesDir, "lauf-stand.json")))
+    private val ki = LongevityKi(auth, einstellungen, { standardPrompt() }, LaufSpeicher(File(app.filesDir, "lauf-stand-v3.json")))
     private val mikro = MicRecorder(app)
 
     val alle: StateFlow<List<Faktor>> = repo.alle.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -240,10 +240,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun aktualisierenAnfragen() {
         if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
         if (KiArbeit.laeuft) { zeige(Bildschirm.Protokoll); return }
-        fortsetzInfo = ki.speicher.beschreibung(aktuelleIds()) ?: protokollRettung()?.let {
-            "Der letzte Lauf wurde nicht fertig. ${it.size} fertige Schritte (Recherchen, Debatte" +
-                (if ("debatte:entscheidung" in it) ", Entscheidung" else "") + ") werden aus der Diskussion übernommen und der Lauf dort fortgesetzt."
-        }
+        fortsetzInfo = ki.speicher.beschreibung(aktuelleIds())
         aktualisierenFrage = true
     }
 
@@ -254,48 +251,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun aktualisierenAbbrechen() { aktualisierenFrage = false }
 
-    /**
-     * Ein Lauf aus der Zeit vor dem Zwischenspeicher, der nicht fertig wurde: Seine fertigen Schritte stehen noch im
-     * Diskussionsprotokoll (nach dem letzten erfolgreichen Lauf geschrieben, ohne eigenen Beitrag des Nutzers).
-     */
-    private fun protokollRettung(): Map<String, String>? {
-        if (ki.speicher.laden() != null) return null
-        val datei = File(getApplication<Application>().filesDir, "diskussion.json")
-        if (!datei.exists() || datei.lastModified() <= einstellungen.letzteAktualisierung + 60_000) return null
-        val beitraege = KiArbeit.protokoll.toList()
-        if (beitraege.any { it.name == LongevityKi.NUTZER }) return null
-        return ki.rettungAusProtokoll(beitraege).takeIf { it.isNotEmpty() }
-    }
-
     fun aktualisieren(neuBeginnen: Boolean = false) {
         aktualisierenFrage = false
         if (!kiVerbunden) { melde("Bitte zuerst in den Einstellungen mit ChatGPT verbinden."); zeige(Bildschirm.Einstellungen); return }
         if (KiArbeit.laeuft) { zeige(Bildschirm.Protokoll); return }
         hinweiseAnfragen()
         if (neuBeginnen) ki.speicher.loeschen()
-        val rettung = if (!neuBeginnen && ki.speicher.beschreibung(aktuelleIds()) == null) protokollRettung() else null
-        val fortsetzen = !neuBeginnen && (ki.speicher.beschreibung(aktuelleIds()) != null || rettung != null)
+        val fortsetzen = !neuBeginnen && ki.speicher.beschreibung(aktuelleIds()) != null
         KiArbeit.starte(getApplication(), Art.AKTUALISIEREN, "Rangfolge prüfen", protokollBehalten = fortsetzen) { fortschritt ->
             val liste = repo.liste()
-            if (rettung != null) ki.speicher.retten(einstellungen.rechercheTiefe.name, liste.map { it.id }, rettung)
             val a = ki.aktualisieren(liste, fortschritt)
             repo.uebernimm(a.liste, a.vorschlaege)
             ki.speicher.loeschen()
             einstellungen.letzteAktualisierung = System.currentTimeMillis()
             KiArbeit.ergebnis = buildString {
                 if (ki.webSucheAbgelehnt) append("⚠ Die Websuche wurde vom Server abgelehnt – diesmal ohne Internet-Recherche gearbeitet.\n\n")
-                if (a.recherchen > 0) append("${a.recherchen} Recherche-Dossiers ausgewertet. ")
+                if (a.zusammenfassung.isNotBlank()) append(a.zusammenfassung).append(' ')
                 append(if (a.veraendert == 0) "Die Reihenfolge ist aktuell." else "${a.veraendert} Faktoren haben den Platz gewechselt.")
                 if (a.ueberarbeitet > 0) append(" ${a.ueberarbeitet} Texte neu geschrieben.")
                 if (a.vorschlaege.isNotEmpty()) append(" ${a.vorschlaege.size} neue Vorschläge.")
                 if (a.hinweise > 0) append(" ${a.hinweise} Hinweise zum Prüfen.")
                 if (a.wechsel.isNotEmpty()) append("\n\n").append(a.wechsel.take(10).joinToString("\n"))
-                if (a.zusammenfassung.isNotBlank()) append("\n\n").append(a.zusammenfassung)
             }
         }
     }
 
-    /** Der eigene Beitrag in der Diskussion: läuft durch alle Agenten, die Gutachterin bildet den Konsens. */
+    /** Der eigene Beitrag in der Diskussion: Der Mediziner prüft ihn und ändert nur die betroffenen Faktoren. */
     fun einwandSenden() {
         if (erstNachAufnahme(::einwandSenden)) return
         val text = eText.trim()
