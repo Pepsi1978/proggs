@@ -40,7 +40,8 @@
       "claude-fable-5[1m]",
       "claude-sonnet-5[1m]",
       "claude-opus-4-8[1m]",
-      "claude-fable-5-1[1m]"
+      "claude-fable-5-1[1m]",
+      "claude-sonnet-5-5[1m]"
     ],
     "IsExpanded": true
   },
@@ -73,8 +74,8 @@
         "IsUserDefined": true,
         "ProviderId": "openai",
         "ProviderName": "OpenAI",
-        "Slug": "gpt-6-sol",
-        "DisplayName": "GPT-6 Sol",
+        "Slug": "gpt-6.1-sol",
+        "DisplayName": "GPT-6.1 Sol",
         "IsHidden": false
       },
       {
@@ -93,7 +94,7 @@
         "ProviderName": "OpenAI",
         "Slug": "gpt-5.6-sol",
         "DisplayName": "GPT-5.6 Sol",
-        "IsHidden": false
+        "IsHidden": true
       },
       {
         "HasCustomDisplayName": false,
@@ -111,7 +112,7 @@
         "ProviderName": "OpenAI",
         "Slug": "gpt-5.6-luna",
         "DisplayName": "GPT-5.6 Luna",
-        "IsHidden": false
+        "IsHidden": true
       },
       {
         "HasCustomDisplayName": false,
@@ -141,8 +142,56 @@
       "gpt-5.6-luna",
       "gpt-5.6-luna-fast",
       "gpt-6-sol",
+      "gpt-6.1-sol",
       "gpt-6-luna"
     ],
+    "IsExpanded": true
+  },
+  {
+    "Id": "moonshot",
+    "Title": "Moonshot AI",
+    "ProviderId": "kimi-code-plan-global",
+    "ProviderName": "Moonshot AI",
+    "Models": [
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "kimi-code-plan-global",
+        "ProviderName": "Moonshot AI",
+        "Slug": "k3-256k",
+        "DisplayName": "Kimi K3 256K",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "kimi-code-plan-global",
+        "ProviderName": "Moonshot AI",
+        "Slug": "k3",
+        "DisplayName": "Kimi K3 (1M)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "kimi-code-plan-global",
+        "ProviderName": "Moonshot AI",
+        "Slug": "kimi-for-coding",
+        "DisplayName": "Kimi for Coding (K2.8 Preview)",
+        "IsHidden": false
+      },
+      {
+        "HasCustomDisplayName": false,
+        "IsUserDefined": false,
+        "ProviderId": "kimi-code-plan-global",
+        "ProviderName": "Moonshot AI",
+        "Slug": "kimi-for-coding-highspeed",
+        "DisplayName": "Kimi for Coding HighSpeed",
+        "IsHidden": true
+      }
+    ],
+    "HiddenModelSlugs": [],
+    "KnownSyncedModelSlugs": [],
     "IsExpanded": true
   },
   {
@@ -4738,7 +4787,7 @@
       "~z-ai/glm-flash-latest",
       "~z-ai/glm-latest"
     ],
-    "IsExpanded": true
+    "IsExpanded": false
   },
   {
     "Id": "nvidia",
@@ -5053,22 +5102,12 @@
         "Slug": "qwen3.8-27b@iq3_xxs",
         "DisplayName": "Qwen3.8 27b@iq3_xxs (lokal)",
         "IsHidden": false
-      },
-      {
-        "HasCustomDisplayName": false,
-        "IsUserDefined": false,
-        "ProviderId": "lmstudio",
-        "ProviderName": "LM Studio",
-        "Slug": "qwen/qwen3.8-27b",
-        "DisplayName": "Qwen3.8 27b (lokal)",
-        "IsHidden": false
       }
     ],
     "HiddenModelSlugs": [],
     "KnownSyncedModelSlugs": [
       "qwen3.8-27b@iq2_xxs",
-      "qwen3.8-27b@iq3_xxs",
-      "qwen/qwen3.8-27b"
+      "qwen3.8-27b@iq3_xxs"
     ],
     "IsExpanded": false
   }

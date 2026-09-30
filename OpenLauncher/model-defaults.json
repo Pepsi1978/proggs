@@ -7,7 +7,7 @@
   },
   "anthropic/claude-fable-5-1[1m]": {
     "ProfileId": "minimal",
-    "WorkModeId": "frei",
+    "WorkModeId": "schnell",
     "ThinkingValue": "high",
     "CliTargetId": ""
   },
@@ -19,7 +19,7 @@
   },
   "anthropic/claude-sonnet-5-5[1m]": {
     "ProfileId": "minimal",
-    "WorkModeId": "frei",
+    "WorkModeId": "schnell",
     "ThinkingValue": "high",
     "CliTargetId": ""
   },
@@ -37,20 +37,44 @@
   },
   "openai/gpt-6-astra": {
     "ProfileId": "minimal",
-    "WorkModeId": "frei",
+    "WorkModeId": "schnell",
     "ThinkingValue": "high",
     "CliTargetId": "opencode"
   },
-  "openai/gpt-6-sol": {
+  "openai/gpt-6.1-sol": {
     "ProfileId": "minimal",
-    "WorkModeId": "frei",
+    "WorkModeId": "schnell",
     "ThinkingValue": "high",
     "CliTargetId": "opencode"
   },
   "openai/gpt-6-luna": {
     "ProfileId": "minimal",
-    "WorkModeId": "frei",
+    "WorkModeId": "schnell",
     "ThinkingValue": "high",
     "CliTargetId": "opencode"
+  },
+  "kimi-code-plan-global/k3-256k": {
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
+    "ThinkingValue": "high",
+    "CliTargetId": "opencode"
+  },
+  "kimi-code-plan-global/k3": {
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
+    "ThinkingValue": "high",
+    "CliTargetId": "opencode"
+  },
+  "kimi-code-plan-global/kimi-for-coding": {
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
+    "ThinkingValue": "high",
+    "CliTargetId": "opencode"
+  },
+  "anthropic/claude-opus-5-5[1m]": {
+    "ProfileId": "minimal",
+    "WorkModeId": "schnell",
+    "ThinkingValue": "high",
+    "CliTargetId": ""
   }
 }

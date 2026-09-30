@@ -69,8 +69,17 @@ public sealed class ModelRegistry
     /// </summary>
     private static readonly (string Slug, string DisplayName)[] Gpt6Models =
     [
-        ("gpt-6-sol", "GPT-6 Sol"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
         ("gpt-6-luna", "GPT-6 Luna"),
+    ];
+
+    /// <summary>
+    /// GPT-6.1 Sol loest GPT-6 Sol ab: der bisherige Eintrag wird einmalig umgestellt
+    /// (Merker: neuer Slug in KnownSyncedModelSlugs), damit er nicht doppelt erscheint.
+    /// </summary>
+    private static readonly (string OldSlug, string NewSlug, string DisplayName)[] Gpt6Migrations =
+    [
+        ("gpt-6-sol", "gpt-6.1-sol", "GPT-6.1 Sol"),
     ];
 
     /// <summary>
@@ -510,6 +519,21 @@ public sealed class ModelRegistry
 
                     var model = group.Models.FirstOrDefault(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase));
                     if (model != null && !model.HasCustomDisplayName) model.DisplayName = definition.DisplayName;
+                }
+
+                foreach (var migration in Gpt6Migrations)
+                {
+                    if (group.KnownSyncedModelSlugs.Contains(migration.NewSlug, StringComparer.OrdinalIgnoreCase)) continue;
+
+                    var outdated = group.Models.FirstOrDefault(model => string.Equals(model.Slug, migration.OldSlug, StringComparison.OrdinalIgnoreCase));
+                    var alreadyPresent = group.Models.Any(model => string.Equals(model.Slug, migration.NewSlug, StringComparison.OrdinalIgnoreCase));
+                    if (outdated != null && !alreadyPresent)
+                    {
+                        outdated.Slug = migration.NewSlug;
+                        if (!outdated.HasCustomDisplayName) outdated.DisplayName = migration.DisplayName;
+                        Logger.Instance.Info("ModelRegistry", "RepairAndNormalize", $"GPT-6-Nachfolger gesetzt: {migration.OldSlug} -> {migration.NewSlug}");
+                    }
+                    AddUnique(group.KnownSyncedModelSlugs, migration.NewSlug);
                 }
 
                 foreach (var definition in Gpt6Models)
