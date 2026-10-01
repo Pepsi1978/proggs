@@ -13,6 +13,7 @@ private final class ResearchRedirectPolicy: NSObject, URLSessionTaskDelegate {
 struct CodexResearchModel {
     let id: String
     let efforts: [String]
+    var retiring = false
 }
 
 enum ResearchFailure: Error, LocalizedError {
@@ -179,12 +180,14 @@ final class CodexResearchService {
         guard let items = json["models"] as? [[String: Any]] else {
             throw ResearchFailure.message("Kontokatalog wird nicht unterstützt.")
         }
-        return items.compactMap { item in
+        // Backend priority orders the catalog newest-first, as in the Codex picker.
+        let sorted = items.sorted { ($0["priority"] as? Int ?? Int.max) < ($1["priority"] as? Int ?? Int.max) }
+        return sorted.compactMap { item in
             guard item["supported_in_api"] as? Bool != false, item["visibility"] as? String != "hide", let id = item["slug"] as? String, !id.isEmpty else { return nil }
             let values = (item["supported_reasoning_levels"] as? [Any] ?? []).compactMap {
                 ($0 as? String) ?? (($0 as? [String: Any])?["effort"] as? String)
             }
-            return CodexResearchModel(id: id, efforts: values.filter { EffortStore.allowed.contains($0) })
+            return CodexResearchModel(id: id, efforts: values.filter { EffortStore.allowed.contains($0) }, retiring: item["upgrade"] is [String: Any])
         }
     }
 

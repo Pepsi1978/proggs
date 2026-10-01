@@ -11,7 +11,7 @@ using OpenLauncher.Models;
 namespace OpenLauncher.Services;
 
 public sealed record EffortResearchResult(List<string> Levels, string Source, bool ExplicitRemoval, DateTimeOffset CheckedAt);
-public sealed record CodexResearchModel(string Id, List<string> Efforts);
+public sealed record CodexResearchModel(string Id, List<string> Efforts, bool Retiring = false, int Priority = int.MaxValue);
 public sealed record ResearchReport(string Model, string Status, DateTimeOffset CheckedAt);
 
 /// <summary>
@@ -139,9 +139,12 @@ public sealed class CodexResearchService
                     var value = level.ValueKind == JsonValueKind.String ? level.GetString() : level.GetProperty("effort").GetString();
                     if (value != null && AllowedLevels.Contains(value)) efforts.Add(value);
                 }
-            result.Add(new(id, efforts.Distinct().ToList()));
+            var priority = model.TryGetProperty("priority", out var p) && p.ValueKind == JsonValueKind.Number ? p.GetInt32() : int.MaxValue;
+            var retiring = model.TryGetProperty("upgrade", out var upgrade) && upgrade.ValueKind == JsonValueKind.Object;
+            result.Add(new(id, efforts.Distinct().ToList(), retiring, priority));
         }
-        return result;
+        // Backend priority orders the catalog newest-first, as in the Codex picker.
+        return result.OrderBy(x => x.Priority).ToList();
     }
 
     public async Task<EffortResearchResult?> ResearchAsync(ModelEntry model, string cliTarget, CancellationToken ct, bool manual = false)

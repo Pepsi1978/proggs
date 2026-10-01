@@ -48,7 +48,11 @@ public partial class SettingsWindow : Window
     {
         var connected = await _service.IsConnectedAsync(ct);
         ConnectionText.Text = connected ? "Anmeldung gespeichert; Kontozugriff wird geprüft …" : "Nicht verbunden";
-        var models = await _service.GetModelsAsync(ct);
+        var available = await _service.GetModelsAsync(ct);
+        // Only the newest GPT generation and models without a retirement upgrade are offered for research.
+        static int? Generation(string id) => id.StartsWith("gpt-") && int.TryParse(new string(id[4..].TakeWhile(char.IsDigit).ToArray()), out var g) ? g : null;
+        var newest = available.Select(x => Generation(x.Id)).Max();
+        var models = available.Where(x => !x.Retiring && (newest == null || Generation(x.Id) == null || Generation(x.Id) == newest)).ToList();
         ModelBox.ItemsSource = models;
         ModelBox.SelectedItem = models.FirstOrDefault(x => x.Id == _settings.Model) ?? models.FirstOrDefault();
         if (EffortBox.Items.Contains(_settings.Effort)) EffortBox.SelectedItem = _settings.Effort;

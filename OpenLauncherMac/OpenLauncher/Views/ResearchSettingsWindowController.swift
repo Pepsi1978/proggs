@@ -154,12 +154,22 @@ final class ResearchSettingsWindowController: NSWindowController, NSWindowDelega
         connection.stringValue = connected ? "Anmeldung gespeichert; Kontozugriff wird geprüft …" : "Nicht verbunden · keine KI-Aufrufe"
         let available = try await service.models()
         try Task.checkCancellation()
-        models = available
+        // Only the newest GPT generation and models without a retirement upgrade are offered for research.
+        func generation(_ id: String) -> Int? { id.hasPrefix("gpt-") ? Int(id.dropFirst(4).prefix { $0.isNumber }) : nil }
+        let newest = available.compactMap { generation($0.id) }.max()
+        models = available.filter { !$0.retiring && (newest == nil || generation($0.id) == nil || generation($0.id) == newest) }
         viewModel.setOpenAiLoginRequired(!connected)
         model.removeAllItems()
         model.addItems(withTitles: models.map { $0.id })
-        if let index = models.firstIndex(where: { $0.id == settings.model }) { model.selectItem(at: index) }
-        modelChanged()
+        if let index = models.firstIndex(where: { $0.id == settings.model }) {
+            model.selectItem(at: index)
+            modelChanged()
+        } else if !models.isEmpty {
+            // Saved research model is outdated: switch to the newest one and persist it.
+            model.selectItem(at: 0)
+            modelChanged()
+            try saveSettings()
+        }
         connection.stringValue = connected ? "Verbunden · \(models.count) verfügbare Modelle" : "Nicht verbunden · keine KI-Aufrufe"
     }
 
