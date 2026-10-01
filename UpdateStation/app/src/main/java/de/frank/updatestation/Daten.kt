@@ -111,6 +111,8 @@ data class AppEintrag(
 
 sealed interface InstallStatus {
     data class Laedt(val prozent: Int) : InstallStatus
+    /** Die Quelle stellt die Datei erst bereit (Google-Drive-Ordner lädt große APKs komplett vor). */
+    data class WirdBereitgestellt(val megabyte: Long) : InstallStatus
     data object Prueft : InstallStatus
     data object WartetAufBestaetigung : InstallStatus
     data object Fertig : InstallStatus

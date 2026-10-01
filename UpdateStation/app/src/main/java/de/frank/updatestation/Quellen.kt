@@ -318,7 +318,18 @@ class OrdnerQuelle(private val context: Context, private val baum: Uri) : Update
 
     override suspend fun oeffne(fund: Fund): InputStream = withContext(Dispatchers.IO) {
         val ref = fund.apkRef ?: throw IOException("APK ist noch nicht im Ordner angekommen.")
-        context.contentResolver.openInputStream(Uri.parse(ref)) ?: throw IOException("APK nicht lesbar.")
+        // Der Drive-Anbieter lädt große Dateien erst komplett herunter und bricht dabei teils nach
+        // einigen Minuten mit FileNotFoundException ab; der nächste Versuch setzt auf dem Teil-Download auf.
+        var letzter: IOException? = null
+        repeat(3) {
+            try {
+                return@withContext context.contentResolver.openInputStream(Uri.parse(ref)) ?: throw IOException("APK nicht lesbar.")
+            } catch (e: FileNotFoundException) {
+                Log.w(TAG, "APK öffnen fehlgeschlagen (Versuch ${it + 1}), versuche erneut", e)
+                letzter = e
+            }
+        }
+        throw IOException("Google Drive konnte die APK nicht bereitstellen. Später erneut versuchen.", letzter)
     }
 }
 

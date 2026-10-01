@@ -135,6 +135,7 @@ object Installierer {
         val digest = MessageDigest.getInstance("SHA-256")
         var gelesen = 0L
         var letzteProzent = -1
+        ZustandsSpeicher.setzeInstallation(m.paket, InstallStatus.WirdBereitgestellt(m.groesse / 1_000_000))
         try {
             quelle.oeffne(eintrag.fund).use { ein ->
                 teil.outputStream().use { aus ->

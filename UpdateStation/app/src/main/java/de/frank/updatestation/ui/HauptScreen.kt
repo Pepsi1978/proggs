@@ -474,6 +474,11 @@ private fun UpdateKarte(e: AppEintrag, install: InstallStatus?, darfInstallieren
 @Composable
 private fun InstallBereich(install: InstallStatus?, darfInstallieren: Boolean, knopf: String, onInstallieren: () -> Unit) {
     when (install) {
+        is InstallStatus.WirdBereitgestellt -> Fortschritt(
+            if (install.megabyte >= 50) "Google Drive stellt die Datei bereit (${install.megabyte} MB) … das kann einige Minuten dauern."
+            else "Google Drive stellt die Datei bereit …",
+            null,
+        )
         is InstallStatus.Laedt -> Fortschritt("Wird geladen … ${install.prozent} %", install.prozent / 100f)
         InstallStatus.Prueft -> Fortschritt("Prüfe Prüfsumme, Version und Signatur …", null)
         InstallStatus.WartetAufBestaetigung -> Zeile(Icons.Rounded.TouchApp, "Bitte die Installation im Systemdialog bestätigen.", MaterialTheme.colorScheme.primary)
