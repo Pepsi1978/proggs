@@ -266,6 +266,12 @@ Baustein **Aufgaben** im Weckablauf. Gelesen wird nur lesend aus der App „Aufg
 „Morgen“. Jede Aufgabe wird als „Um 06:30 Uhr: Titel.“ gesprochen (Aufgaben ohne Uhrzeit nur mit
 Titel), zwischen zwei Aufgaben 2 Sekunden Pause, nach dem ganzen Block 3 Sekunden.
 
+- **Ab der Weckzeit (1.1.105):** Aufgaben des Klingeltags mit einer Uhrzeit vor der Weckzeit fallen
+  weg (Wecker 9:00 → die 8-Uhr-Aufgabe wird nicht mehr vorgelesen, 9:00 selbst schon). Aufgaben ohne
+  Uhrzeit bleiben, ebenso überfällige Aufgaben aus früheren Tagen. Die liefert die Aufgaben-App
+  allerdings nur, wenn am Klingeltag selbst abgefragt wird (der 15-Minuten-Lauf nach Mitternacht).
+  Gilt für die Ansage und das Fenster „Aufgaben ansehen“ (`TasksBridge.nachWeckzeit`).
+
 - Beim Einschalten von „Aufgaben“ und über **Aufgaben ansehen** öffnet sich ein kleines Fenster mit
   Uhrzeit und Titel jeder Aufgabe.
 - Wie Ideen und Text werden die Aufgaben in **sechs Sprachvarianten** offline vorbereitet und

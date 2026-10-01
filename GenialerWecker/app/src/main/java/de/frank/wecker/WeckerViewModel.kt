@@ -280,7 +280,7 @@ class WeckerViewModel(application: Application) : AndroidViewModel(application) 
             tasksLoading.value = true
             val tag = TasksBridge.klingeltag(alarm, ausPlan = true)
             try {
-                tasks.value = TasksBridge(app).refresh(tag)
+                tasks.value = TasksBridge(app).refresh(tag, TasksBridge.weckMinute(alarm))
                 tasksDay.value = tag
                 tasksError.value = ""
             } catch (e: CancellationException) { throw e }

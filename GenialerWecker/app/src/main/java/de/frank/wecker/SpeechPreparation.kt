@@ -55,11 +55,13 @@ class SpeechPreparation(private val context: Context, private val settings: Secu
                 if (Step.TASKS in alarm.steps) {
                     progress("Aufgaben werden abgeglichen …")
                     // Die Aufgaben des Klingeltags; abends gestellt sind das die Aufgaben aus „Morgen“.
-                    val tag = TasksBridge.klingeltag(store.get(alarm.id) ?: alarm)
-                    val tasks = TasksBridge(context).refresh(tag)
+                    // Nur was ab der Weckzeit noch ansteht: Wer um 9 Uhr geweckt wird, hört die 8-Uhr-Aufgabe nicht mehr.
+                    val aktuell = store.get(alarm.id) ?: alarm
+                    val tag = TasksBridge.klingeltag(aktuell)
+                    val tasks = TasksBridge(context).refresh(tag, TasksBridge.weckMinute(aktuell))
                     // Jede Aufgabe ist eine eigene Gruppe: Uhrzeit und Titel, danach die Pause bis zur nächsten.
                     groups += tasks.map { SpeechGroup(Step.TASKS.name, chunks(it.gesprochen)) }.filter { it.paragraphs.isNotEmpty() }
-                        .ifEmpty { listOf(SpeechGroup(Step.TASKS.name, listOf("Für diesen Tag sind keine Aufgaben eingetragen."))) }
+                        .ifEmpty { listOf(SpeechGroup(Step.TASKS.name, listOf("Für heute stehen keine Aufgaben mehr an."))) }
                 }
                 if (Step.TEXT in alarm.steps) groups += SpeechGroup(Step.TEXT.name, chunks(alarm.text))
                 val voice = alarm.resolveVoice(voiceFactory())

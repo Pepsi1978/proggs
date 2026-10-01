@@ -11,6 +11,7 @@
     { "versionCode": 96, "versionName": "1.1.101", "stand": "29.09.2026, 22:09 Uhr", "notiz": "Pausen zwischen Aufgaben jetzt mit einem kräftigeren, aber unhörbaren Füllsignal (tiefer Ton, den der Handylautsprecher nicht wiedergibt) im gleichen Format wie die Google-Stimme: Der Lautsprecher bleibt sicher an, jede Aufgabe beginnt gleich laut." },
     { "versionCode": 97, "versionName": "1.1.102", "stand": "30.09.2026, 11:06 Uhr", "notiz": "Ausschalten und Schlummern in der kleinen schwebenden Wecker-Nachricht wirken jetzt zuverlässig, und der Vollbild-Weckbildschirm im Hintergrund schließt sich mit, sobald der Wecker irgendwo aus ist." },
     {"versionCode": 98, "versionName": "1.1.103", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    {"versionCode": 99, "versionName": "1.1.104", "stand": "30.09.2026, 19:59 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, der Build klappt wieder mit dem Gradle-Konfigurations-Cache"}
+    {"versionCode": 99, "versionName": "1.1.104", "stand": "30.09.2026, 19:59 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, der Build klappt wieder mit dem Gradle-Konfigurations-Cache"},
+    {"versionCode": 100, "versionName": "1.1.105", "stand": "01.10.2026, 16:55 Uhr", "notiz": "Aufgaben werden erst ab der Weckzeit vorgelesen: Termine vor dem Aufstehen fallen weg, Aufgaben ohne Uhrzeit bleiben"}
   ]
 }

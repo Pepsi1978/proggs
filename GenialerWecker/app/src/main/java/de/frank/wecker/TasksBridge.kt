@@ -24,16 +24,26 @@ data class OpenTask(val id: Long, val zeit: String, val titel: String, val vorle
 class TasksBridge(private val context: Context) {
     private val store = AlarmStore.get(context)
 
-    suspend fun refresh(tag: LocalDate): List<OpenTask> = withContext(Dispatchers.IO) {
+    /**
+     * Liest die offenen Aufgaben von [tag]. Mit [abMinute] (Weckzeit in Minuten ab Mitternacht) fallen Aufgaben dieses
+     * Tages weg, deren Uhrzeit vor der Weckzeit liegt; Aufgaben ohne Uhrzeit und überfällige aus früheren Tagen bleiben.
+     * Überfällige liefert die Aufgaben-App nur, wenn [tag] beim Abfragen heute ist (Lauf nach Mitternacht).
+     */
+    suspend fun refresh(tag: LocalDate, abMinute: Int? = null): List<OpenTask> = withContext(Dispatchers.IO) {
         val rows: List<OpenTask> = context.contentResolver.query(uriFuer(tag), null, null, null, null)?.use { cursor ->
             val id = cursor.getColumnIndex("_id")
             val zeit = cursor.getColumnIndex("zeit")
             val titel = cursor.getColumnIndex("titel")
             val vorlesen = cursor.getColumnIndex("vorlesetext")
+            val uhrzeit = cursor.getColumnIndex("uhrzeit")
+            val aufgabenTag = cursor.getColumnIndex("tag")
             buildList {
                 while (cursor.moveToNext()) {
                     val t = if (titel >= 0) cursor.getString(titel).orEmpty().trim() else ""
                     if (t.isBlank()) continue
+                    val minuten = if (uhrzeit >= 0 && !cursor.isNull(uhrzeit)) cursor.getInt(uhrzeit) else -1
+                    val vonTag = if (aufgabenTag >= 0 && !cursor.isNull(aufgabenTag)) cursor.getLong(aufgabenTag) else tag.toEpochDay()
+                    if (!nachWeckzeit(minuten, vonTag, tag.toEpochDay(), abMinute)) continue
                     add(OpenTask(if (id >= 0) cursor.getLong(id) else 0L, if (zeit >= 0) cursor.getString(zeit).orEmpty() else "", t,
                         if (vorlesen >= 0) cursor.getString(vorlesen).orEmpty().trim() else ""))
                 }
@@ -68,6 +78,16 @@ class TasksBridge(private val context: Context) {
             val at = alarm.nextAt.takeIf { !ausPlan && it > System.currentTimeMillis() } ?: runCatching { AlarmTime.nextRespectingSkip(alarm) }.getOrDefault(0L)
             return if (at > 0) AlarmTime.localDate(at) else LocalDate.now().plusDays(1)
         }
+
+        /** Weckzeit des Weckers in Minuten ab Mitternacht, die Grenze für [nachWeckzeit]. */
+        fun weckMinute(alarm: Alarm): Int = alarm.hour * 60 + alarm.minute
+
+        /**
+         * Ob eine Aufgabe noch vorgelesen wird: ohne Grenze, ohne Uhrzeit ([minuten] < 0) oder überfällig aus einem früheren
+         * Tag immer; sonst nur, wenn ihre Uhrzeit gleich der Weckzeit [abMinute] ist oder danach liegt.
+         */
+        fun nachWeckzeit(minuten: Int, aufgabenTag: Long, klingeltag: Long, abMinute: Int?): Boolean =
+            abMinute == null || minuten < 0 || aufgabenTag != klingeltag || minuten >= abMinute
     }
 }
 
