@@ -61,5 +61,5 @@ Der Wecker braucht dafür in seinem Manifest `<queries><provider android:authori
 ## Bauen
 
 Version nur über `app/src/main/assets/versionslog.json` (neuester Eintrag unten).
-Signatur: gemeinsamer Debug-Key (keine eigene signingConfig). Installation aufs Handy über den
+Signatur: gemeinsamer Debug-Key `~/SK/Android/debug-shared.keystore` (debug-signingConfig in `app/build.gradle.kts`, wie bei Longevity). Installation aufs Handy über den
 Release-Build aus dem Skill `apk-update` (Debug-Compose ruckelt).
