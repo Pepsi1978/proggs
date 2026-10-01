@@ -268,8 +268,9 @@ Titel), zwischen zwei Aufgaben 2 Sekunden Pause, nach dem ganzen Block 3 Sekunde
 
 - **Ab der Weckzeit (1.1.105):** Aufgaben des Klingeltags mit einer Uhrzeit vor der Weckzeit fallen
   weg (Wecker 9:00 → die 8-Uhr-Aufgabe wird nicht mehr vorgelesen, 9:00 selbst schon). Aufgaben ohne
-  Uhrzeit und überfällige Aufgaben aus früheren Tagen bleiben. Gilt für die Ansage und das Fenster
-  „Aufgaben ansehen“ (`TasksBridge.nachWeckzeit`).
+  Uhrzeit bleiben, ebenso überfällige Aufgaben aus früheren Tagen. Die liefert die Aufgaben-App
+  allerdings nur, wenn am Klingeltag selbst abgefragt wird (der 15-Minuten-Lauf nach Mitternacht).
+  Gilt für die Ansage und das Fenster „Aufgaben ansehen“ (`TasksBridge.nachWeckzeit`).
 
 - Beim Einschalten von „Aufgaben“ und über **Aufgaben ansehen** öffnet sich ein kleines Fenster mit
   Uhrzeit und Titel jeder Aufgabe.

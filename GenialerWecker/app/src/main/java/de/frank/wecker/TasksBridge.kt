@@ -27,6 +27,7 @@ class TasksBridge(private val context: Context) {
     /**
      * Liest die offenen Aufgaben von [tag]. Mit [abMinute] (Weckzeit in Minuten ab Mitternacht) fallen Aufgaben dieses
      * Tages weg, deren Uhrzeit vor der Weckzeit liegt; Aufgaben ohne Uhrzeit und überfällige aus früheren Tagen bleiben.
+     * Überfällige liefert die Aufgaben-App nur, wenn [tag] beim Abfragen heute ist (Lauf nach Mitternacht).
      */
     suspend fun refresh(tag: LocalDate, abMinute: Int? = null): List<OpenTask> = withContext(Dispatchers.IO) {
         val rows: List<OpenTask> = context.contentResolver.query(uriFuer(tag), null, null, null, null)?.use { cursor ->
