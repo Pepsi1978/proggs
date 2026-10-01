@@ -29,7 +29,9 @@ Eigene Aufgaben-App für Android (Kotlin, Jetpack Compose, Room, Glance). Paket 
   eigene Qwen-Stimme) sechs Fassungen des Aufgabentextes als Dateien in der App
   (`filesDir/ansagen`). Die Erinnerung spielt Ton und Fassungen offline nacheinander ab, 3 s Pause
   dazwischen. Schalter **Als Wecker**: läuft in Schleife (höchstens 60 Min.), bis man in der
-  Benachrichtigung „Ausschalten“ tippt, sie wegwischt, öffnet, „Erledigt“ oder „In 10 Min.“ wählt.
+  Benachrichtigung „Ausschalten“ tippt, sie öffnet, „Erledigt“ oder „In 10 Min.“ wählt. Die
+  Wecker-Benachrichtigung ist bewusst nicht wegwischbar (ab Android 14 lässt das System es zu; dann
+  stoppt Wegwischen ebenfalls).
   Abspielen im Vordergrund-Dienst `ErinnerungsDienst`, Wecker per `setAlarmClock`. Ohne fertige
   Dateien spricht die Android-Stimme des Geräts.
 - **Bereiche ohne Aufgaben** sind zugeklappt; Löschen im Editor fragt vorher nach.

@@ -48,7 +48,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  *
  * - Benachrichtigung: Ton, dann die sechs vorbereiteten Fassungen nacheinander, je 3 s Pause, Ende.
  * - Wecker: Ton und Fassungen laufen in Schleife weiter, bis man in der Benachrichtigung „Ausschalten“
- *   tippt (oder sie wegwischt, öffnet, „Erledigt“ / „In 10 Min.“ wählt). Kein eigener Bildschirm.
+ *   tippt (oder sie öffnet, „Erledigt“ / „In 10 Min.“ wählt). Kein eigener Bildschirm. Die Benachrichtigung
+ *   ist bewusst „ongoing“; wo Android 14+ sie trotzdem wegwischen lässt, stoppt der deleteIntent den Wecker.
  * Fehlen die Dateien (z. B. offline erstellt), spricht die Android-Stimme des Geräts.
  * Kommt während einer Erinnerung die nächste, wartet sie, bis die laufende vorbei ist.
  */
