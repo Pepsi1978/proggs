@@ -22,6 +22,22 @@ android {
         buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
     }
 
+    // Gemeinsamer Debug-Key aller Apps (liegt nicht im Git, sondern unter ~/SK/Android/, in der Cloud legt ihn der
+    // Bau-Ablauf dort ab). Ohne diese Angabe signiert Gradle mit dem zufälligen Debug-Key des Bau-Rechners, und
+    // UpdateStation bzw. der Cloud-Bau lehnen die APK ab. Fehlt die Datei, bleibt ~/.android/debug.keystore.
+    val geteilterDebugKey = File(System.getProperty("user.home"), "SK/Android/debug-shared.keystore").takeIf { it.exists() }
+
+    signingConfigs {
+        getByName("debug") {
+            geteilterDebugKey?.let { datei ->
+                storeFile = datei
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
