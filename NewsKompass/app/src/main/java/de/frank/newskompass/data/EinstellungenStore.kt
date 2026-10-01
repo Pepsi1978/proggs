@@ -228,7 +228,14 @@ class EinstellungenStore(context: Context) {
     /** Entfernt einen KI-Fund wieder; war er gewählt, gilt danach das Standardmodell. */
     fun vergissKiModell(id: String) = schreibe {
         putString(K_KI_MODELLE, modellJson(leseKiModelle().filter { it.id != id }))
-        if (offen.getString(K_MODELL, null) == id) remove(K_MODELL)
+        if (offen.getString(K_MODELL, null) == id) {
+            remove(K_MODELL)
+            // Die Denktiefe muss zum Standardmodell passen, sonst lehnt der Dienst jede Anfrage ab.
+            val ersatz = _stand.value.modelle.firstOrNull { it.id == STANDARD_MODELL }
+            val tiefe = offen.getString(K_DENKTIEFE, null) ?: "medium"
+            if (ersatz != null && ersatz.stufen.isNotEmpty() && tiefe !in ersatz.stufen) putString(K_DENKTIEFE, ersatz.standardStufe)
+            else if (ersatz == null && tiefe !in listOf("low", "medium", "high")) putString(K_DENKTIEFE, "medium")
+        }
     }
 
     fun setzeDenktiefe(stufe: String) = schreibe { putString(K_DENKTIEFE, stufe) }

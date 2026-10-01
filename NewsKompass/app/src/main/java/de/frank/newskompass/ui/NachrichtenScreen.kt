@@ -297,7 +297,8 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
             return@LaunchedEffect
         }
         app.oeffneAusgabe.compareAndSet(gesucht, null)
-        zeige(if (eintrag.id == index.firstOrNull()?.id) Ansicht.Aktuell else Ansicht.Tag(eintrag.tag, eintrag.id))
+        // Immer fest auf diese Ausgabe — „Aktuell“ spränge zur nächsten, sobald eine neuere fertig wird.
+        zeige(Ansicht.Tag(eintrag.tag, eintrag.id))
         springeZu = gesucht.themaId
         if (gesucht.themaId == null) bildschirm.launch { schublade.close(); liste.scrollToItem(0) }
     }
