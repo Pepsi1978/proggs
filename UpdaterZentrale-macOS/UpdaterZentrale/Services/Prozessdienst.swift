@@ -60,7 +60,7 @@ enum Prozessdienst {
     private static func laufendeWerkzeuge(_ eintrag: ProgrammEintrag) -> [Treffer] {
         guard !eintrag.alleProzesse.isEmpty else { return [] }
 
-        let exe = Pfade.aufloesen(eintrag.exePfad)
+        let exe = Pfade.aufloesen(eintrag.exePfadWirksam)
         let erwarteterOrdner = exe.isEmpty ? nil : (exe as NSString).deletingLastPathComponent
 
         var treffer: [Treffer] = []
@@ -109,7 +109,9 @@ enum Prozessdienst {
     /// Schliesst freundlich, erzwingt nur, was sich innerhalb der Gnadenfrist nicht beenden laesst.
     @MainActor
     @discardableResult
-    static func beenden(_ eintrag: ProgrammEintrag) async -> Int {
+    /// - Returns: ob danach wirklich nichts mehr laeuft -- ein Installer neben einem noch laufenden
+    ///   Ziel haengt oder installiert nur halb.
+    static func beenden(_ eintrag: ProgrammEintrag) async -> (erfolgreich: Bool, problem: String?) {
         let prozesse = laufende(eintrag)
 
         for treffer in prozesse {
@@ -131,7 +133,12 @@ enum Prozessdienst {
         }
 
         try? await Task.sleep(nanoseconds: 800_000_000)
-        return prozesse.count
+        let uebrig = laufende(eintrag)
+        if uebrig.isEmpty { return (true, nil) }
+        let liste = uebrig.map { String($0.pid) }.joined(separator: ", ")
+        Diagnose.ereignis(.fehler, "prozess", "beenden.unvollstaendig", "\(eintrag.name): Prozesse laufen weiter (PID \(liste)).",
+                          ["programm": eintrag.id])
+        return (false, "Noch laufende Prozesse: PID \(liste).")
     }
 
     /// Startet das Programm. Ein App-Buendel geht ueber NSWorkspace (so wie ein Doppelklick im
@@ -154,7 +161,7 @@ enum Prozessdienst {
             return true
         }
 
-        let exe = Pfade.aufloesen(eintrag.exePfad)
+        let exe = Pfade.aufloesen(eintrag.exePfadWirksam)
         guard FileManager.default.isExecutableFile(atPath: exe) else { return false }
         let argumente = eintrag.startArgumente.map(Kommandozeile.zerlegen) ?? []
         return Kommandozeile.starten(exe, argumente,

@@ -216,3 +216,31 @@ Nicht automatisch prüfbar, weil ein echter Installationslauf Programme beendet 
 10. **Beim ersten Start** fragt macOS nach der Erlaubnis, „Systemereignisse" zu steuern (für das
     Auslesen der Anmeldeobjekte). Bei „Nicht erlauben" fehlt nur das Autostart-Kennzeichen aus den
     Anmeldeobjekten – die LaunchAgents werden weiterhin erkannt, alles andere bleibt unberührt.
+
+---
+
+## F) Windows-Gleichstand 01.10.2026 (Mac 1.0.4, Windows bis 1.3.16)
+
+Übernommen aus den Windows-Commits seit dem 20.09.2026:
+
+| Windows | macOS |
+|---|---|
+| `exePfadAlternativen`, `ausblendenWennFehlt` (Rechner-Fallbacks, Stream Deck ausblendbar) | gleiche Felder; Claude/Codex CLI mit Ausweichpfaden unter `/opt/homebrew/bin` und `/usr/local/bin`, Stream Deck ausgeblendet, wenn nicht installiert |
+| npm-Prüfung direkt über `registry.npmjs.org` statt `npm view` | identisch (URLSession), kein node nötig |
+| `versionsUrl` + Kimi Code CLI | identisch; Kimi unter `~/.kimi-code/bin/kimi`, Prüfung über `https://code.kimi.ai/kimi-code/latest` |
+| Fehlerband wegklicken (`FehlerQuittiertBis`) | Schalter „Ausblenden“ im roten Band, gemerkt in `settings.json` |
+| `git pull --ff-only` vor dem Repo-Skript, Hinterstand nur für Build-Quellen | identisch (Build-Quellen: `*.swift`, `*.plist`, `*.sh`, `*.entitlements`, `*.icns`); gescheiterte Git-Abfrage = „unbekannt“, nie „aktuell“ |
+| „started“ bei unverändertem Build = bereits aktuell | identisch |
+| Pipe-Vererbung: Lauf hängt nicht mehr am Kindprozess | nach Prozessende nur noch 2 s Nachlesen statt Warten aufs Pipe-Ende |
+| Prozessbaum bei Zeitlimit beenden | Nachfahren über `pgrep -P`, erst SIGTERM, dann SIGKILL |
+| Beenden vor Update prüft Erfolg | identisch; läuft danach noch etwas, startet kein Installer |
+| `Laufkoordination` (ein Vorgang app-weit) | identisch; Karten- und Sammelschalter sowie „Neu laden“ sperren sich |
+| `UpdateKette` (mehrstufig, verifiziert, nie derselbe Befehl doppelt) | identisch; neues Ergebnis „Bereits aktuell“ |
+| Nachprüfung ausstehender Updates mit Ziel + echter Prüfung | identisch (`UpdateKette.stagedUrteil`) |
+| Zentrales Diagnoseprotokoll + Export | `logs/diagnose-JJJJ-MM-TT.jsonl`, Schalter „Diagnose exportieren“ → maskiertes ZIP der letzten 14 Tage nach `~/Downloads` |
+| Protokoll der Karte begrenzt (200 000 Zeichen) | identisch |
+
+Bewusst nicht übernommen (nur Windows): Startmenü-Verknüpfung, PowerShell 7 als winget-Eintrag,
+Selbst-Update einer Administrator-Instanz, Einzelstart-/Admin-Übergabe (`Einzelstart.cs`,
+`Rechte.cs`), Fenster-Deckelung und schwarzer Rand beim Maximieren (WPF-spezifisch), das
+xUnit-Testprojekt.

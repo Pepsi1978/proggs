@@ -18,10 +18,13 @@ enum Katalogdienst {
         }
 
         do {
-            let katalog = try JSONDecoder().decode(ProgrammKatalog.self, from: daten)
+            var katalog = try JSONDecoder().decode(ProgrammKatalog.self, from: daten)
             if katalog.programme.isEmpty {
                 return (ProgrammKatalog(), "Katalog ist leer: \(datei)")
             }
+            // Eintraege, die es nur auf manchen Rechnern gibt, verschwinden hier still: derselbe
+            // Katalog gilt fuer alle Geraete, zeigt aber nur, was hier wirklich installiert ist.
+            katalog.programme.removeAll { $0.ausblendenWennFehlt && !$0.aufDiesemRechnerVorhanden }
             return (katalog, nil)
         } catch {
             return (ProgrammKatalog(), "Katalog konnte nicht gelesen werden: \(error.localizedDescription)")

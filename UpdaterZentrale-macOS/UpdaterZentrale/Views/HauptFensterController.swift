@@ -15,6 +15,8 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     private let zusammenfassungPlakette: PlakettenView
     private let designSchalter = Schiebeschalter()
     private let allePruefenSchalter = Schalter(.zweit, "Alle prüfen")
+    private let neuLadenSchalter = Schalter(.leise, "Neu laden")
+    private let diagnoseSchalter = Schalter(.leise, "Diagnose exportieren")
     private let alleUpdatesSchalter = Schalter(.haupt, "Alle installieren")
     private let katalogFehlerBand = FlaechenView(ton: .fehler, eckenRadius: 9)
     private let katalogFehlerText: ThemedLabel
@@ -204,7 +206,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         katalogOeffnen.target = self
         katalogOeffnen.action = #selector(katalogOeffnenGeklickt)
 
-        let neuLaden = Schalter(.leise, "Neu laden")
+        let neuLaden = neuLadenSchalter
         neuLaden.target = self
         neuLaden.action = #selector(neuLadenGeklickt)
 
@@ -374,11 +376,15 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         protokolle.target = self
         protokolle.action = #selector(protokolleGeklickt)
 
+        diagnoseSchalter.target = self
+        diagnoseSchalter.action = #selector(diagnoseGeklickt)
+        diagnoseSchalter.toolTip = "Protokolle, Diagnose und Verlauf der letzten 14 Tage maskiert als ZIP nach ~/Downloads."
+
         let auffrischen = Schalter(.leise, "Auffrischen")
         auffrischen.target = self
         auffrischen.action = #selector(auffrischenGeklickt)
 
-        let reihe = NSStackView(views: [fussStatus, UI.platzhalter(), protokolle, auffrischen, versionsAnzeige])
+        let reihe = NSStackView(views: [fussStatus, UI.platzhalter(), protokolle, diagnoseSchalter, auffrischen, versionsAnzeige])
         reihe.orientation = .horizontal
         reihe.alignment = .centerY
         reihe.spacing = 10
@@ -438,8 +444,10 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
         fussStatus.stringValue = modell.kopfStatus
         versionsAnzeige.stringValue = modell.anwendungsVersion
 
-        allePruefenSchalter.isEnabled = !modell.laeuftSammelvorgang
-        alleUpdatesSchalter.isEnabled = !modell.laeuftSammelvorgang
+        allePruefenSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
+        alleUpdatesSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
+        neuLadenSchalter.isEnabled = modell.sammelMoeglich
+        diagnoseSchalter.isEnabled = !modell.exportLaeuft
 
         if let fehler = modell.katalogFehler, !fehler.istLeer {
             katalogFehlerBand.isHidden = false
@@ -493,6 +501,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     @objc private func neuLadenGeklickt() { modell.katalogNeuLaden() }
     @objc private func katalogOeffnenGeklickt() { modell.katalogOeffnen() }
     @objc private func protokolleGeklickt() { modell.protokolleOeffnen() }
+    @objc private func diagnoseGeklickt() { Task { await modell.diagnoseExportieren() } }
     @objc private func auffrischenGeklickt() { modell.zustaendeAuffrischen() }
     @objc private func terminalLeerenGeklickt() { modell.terminalLeeren() }
     @objc private func terminalFensterGeklickt() { modell.terminalFensterOeffnen() }

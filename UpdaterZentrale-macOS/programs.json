@@ -79,6 +79,10 @@
       "beschreibung": "Claude Code im Terminal. Nativer Installer unter ~/.local/bin.",
       "art": "cli",
       "exePfad": "~/.local/bin/claude",
+      "exePfadAlternativen": [
+        "/opt/homebrew/bin/claude",
+        "/usr/local/bin/claude"
+      ],
       "versionsArgumente": "--version",
       "updateArgumente": "update",
       "npmPaket": "@anthropic-ai/claude-code",
@@ -99,6 +103,10 @@
       "beschreibung": "OpenAI Codex im Terminal. Eigener Standalone-Install unter ~/.local/bin.",
       "art": "cli",
       "exePfad": "~/.local/bin/codex",
+      "exePfadAlternativen": [
+        "/opt/homebrew/bin/codex",
+        "/usr/local/bin/codex"
+      ],
       "versionsArgumente": "--version",
       "updateArgumente": "update",
       "npmPaket": "@openai/codex",
@@ -113,6 +121,26 @@
       "akzent": "#8E8EA0"
     },
     {
+      "id": "kimi-cli",
+      "name": "Kimi Code CLI",
+      "gruppe": "Kommandozeile",
+      "beschreibung": "Moonshot AI Kimi Code im Terminal. Nativer Installer unter ~/.kimi-code.",
+      "art": "cli",
+      "exePfad": "~/.kimi-code/bin/kimi",
+      "versionsArgumente": "--version",
+      "updateArgumente": "update --yes",
+      "versionsUrl": "https://code.kimi.ai/kimi-code/latest",
+      "zeitlimitMinuten": 15,
+      "prozesse": [
+        "kimi"
+      ],
+      "helferProzesse": [],
+      "beendenVorUpdate": false,
+      "neuStartenNachUpdate": false,
+      "hinweis": "Laufende Sessions werden nicht beendet; das Update greift beim nächsten Start.",
+      "akzent": "#1783FF"
+    },
+    {
       "id": "streamdeck",
       "name": "Stream Deck",
       "gruppe": "Hardware",
@@ -122,11 +150,12 @@
       "appPfad": "/Applications/Elgato Stream Deck.app",
       "bundleId": "com.elgato.StreamDeck",
       "exePfad": "",
+      "ausblendenWennFehlt": true,
       "prozesse": [],
       "helferProzesse": [],
       "beendenVorUpdate": true,
       "neuStartenNachUpdate": true,
-      "hinweis": "Auf diesem Mac nicht installiert – der Eintrag bleibt stehen, damit die Karte es sagt statt zu schweigen.",
+      "hinweis": "Wird auf Rechnern ohne Stream Deck ausgeblendet (ausblendenWennFehlt), wie unter Windows.",
       "akzent": "#3FA9F5"
     },
     {

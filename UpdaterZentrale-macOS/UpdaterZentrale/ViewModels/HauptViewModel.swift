@@ -10,6 +10,9 @@ final class HauptViewModel {
 
     private let einstellungen = Einstellungen.laden()
 
+    /// App-weit: hoechstens ein externer Vorgang (Pruefung, Update, Sammellauf) zur Zeit.
+    private let koordination = Laufkoordination()
+
     /// Alle bekannten Mechanismen, ueber das Katalogfeld "art" erreichbar. Ein neues Programm ist
     /// ein JSON-Eintrag; nur ein wirklich neuer Mechanismus braucht hier einen Eintrag.
     private let aktualisierer: [String: Aktualisierer] = [
@@ -36,6 +39,11 @@ final class HauptViewModel {
     init() {
         hellModusIntern = einstellungen.hellModus
         Darstellung.anwenden(hellModusIntern)
+        koordination.beiAenderung.append { [weak self] in
+            guard let self else { return }
+            for programm in self.programme { programm.sperreGeaendert() }
+            self.beiAenderung?()
+        }
         katalogLaden()
     }
 
@@ -93,7 +101,9 @@ final class HauptViewModel {
         terminalLaeuft = true
         terminalAusgabe += (terminalAusgabe.isEmpty ? "" : "\n\n") + "$ " + befehl + "\n"
 
+        let vorgang = Diagnose.vorgangBeginnen("terminal", nil, "Terminalbefehl: " + String(befehl.prefix(300)))
         let ausgabe = await Terminal.ausfuehren(befehl, arbeitsverzeichnis: Terminal.arbeitsverzeichnis)
+        vorgang.beenden("abgeschlossen")
         terminalAusgabe += ausgabe
         terminalLaeuft = false
     }
@@ -133,11 +143,15 @@ final class HauptViewModel {
 
         let (katalog, fehler) = Katalogdienst.laden()
         katalogFehler = fehler
+        Diagnose.ereignis(fehler == nil ? .info : .fehler, "katalog", "katalog.geladen",
+                          fehler ?? "\(katalog.programme.count) Programme geladen.",
+                          ["programme": katalog.programme.map { $0.id + ":" + $0.art }.joined(separator: ",")])
         let berichte = Protokollierung.letzteBerichte()
 
         for eintrag in katalog.programme {
             let dienst = aktualisierer[eintrag.art.lowercased()]
-            let karte = ProgrammViewModel(eintrag: eintrag, aktualisierer: dienst, einstellungen: einstellungen)
+            let karte = ProgrammViewModel(eintrag: eintrag, aktualisierer: dienst, einstellungen: einstellungen,
+                                          koordination: koordination)
             karte.beiAenderung = { [weak self] in self?.beiAenderung?() }
             karte.beiMeldung = { text in Dialoge.hinweis(text) }
 
@@ -152,7 +166,17 @@ final class HauptViewModel {
         beiAenderung?()
     }
 
+    /// Sammelschalter und "Neu laden" gehen nur, solange gar nichts laeuft.
+    var sammelMoeglich: Bool { !koordination.belegt }
+
     func katalogNeuLaden() {
+        // Neu laden wirft die Karten weg. Eine Karte mitten im Update verschwaende samt Ergebnis,
+        // und von der frischen Karte waere ein zweiter Lauf desselben Installers moeglich.
+        if koordination.belegt || laeuftSammelvorgang || programme.contains(where: \.istBeschaeftigt) {
+            kopfStatus = "Neu laden geht erst, wenn alle laufenden Prüfungen und Updates fertig sind."
+            sammelAbgewiesen("katalog-neu-laden")
+            return
+        }
         katalogLaden()
         kopfStatus = "Katalog neu geladen – \(programme.count) Programme."
     }
@@ -167,8 +191,33 @@ final class HauptViewModel {
         NSWorkspace.shared.open(URL(fileURLWithPath: datei))
     }
 
-    /// Oeffnet den Protokollordner; dort steht jeder Lauf, Tag fuer Tag.
+    /// Oeffnet den Protokollordner; dort stehen Tagesprotokolle, Diagnose und Verlauf.
     func protokolleOeffnen() { Protokollierung.ordnerOeffnen() }
+
+    private(set) var exportLaeuft = false { didSet { beiAenderung?() } }
+
+    /// Baut das maskierte Diagnose-ZIP abseits der Oberflaeche und zeigt es im Finder.
+    func diagnoseExportieren() async {
+        guard !exportLaeuft else { return }
+        exportLaeuft = true
+        defer { exportLaeuft = false }
+        let vorgang = Diagnose.vorgangBeginnen("diagnose-export", nil, "Diagnosepaket erstellen")
+        let katalog = programme.map(\.eintrag)
+        let ergebnis: Result<String, Error> = await Task.detached { Result { try Diagnose.exportieren(katalog: katalog) } }.value
+        switch ergebnis {
+        case .success(let pfad):
+            vorgang.beenden("erstellt", pfad)
+            kopfStatus = "Diagnosepaket erstellt: " + pfad
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: pfad)])
+        case .failure(let fehler):
+            vorgang.beenden("Ausnahme", fehler.localizedDescription, .fehler)
+            Dialoge.hinweis("Das Diagnosepaket ließ sich nicht erstellen:\n" + fehler.localizedDescription)
+        }
+    }
+
+    private func sammelAbgewiesen(_ art: String) {
+        Diagnose.ereignis(.warnung, "sammel", "start.abgewiesen", "\(art) abgewiesen: es läuft bereits ein Vorgang.")
+    }
 
     func zustaendeAuffrischen() {
         Systemdienst.zwischenspeicherLeeren()
@@ -183,16 +232,40 @@ final class HauptViewModel {
     func erstePruefung() async {
         try? await Task.sleep(nanoseconds: 400_000_000)
 
+        // Die Anfangspruefung fragt brew, git und die Werkzeuge ab wie ein Sammellauf und haelt
+        // denselben exklusiven Besitz -- ein Klick waehrenddessen wartet, statt daneben zu laufen.
+        guard let besitz = koordination.sammelBeginnen() else {
+            kopfStatus = ProgrammViewModel.belegtText
+            sammelAbgewiesen("startpruefung")
+            return
+        }
+        defer { besitz.freigeben() }
+        let vorgang = Diagnose.vorgangBeginnen("startpruefung", nil, "Anfangsprüfung aller Programme")
+        laeuftSammelvorgang = true
+        defer { laeuftSammelvorgang = false }
+
         // Ist ein zuvor abgelegtes Update inzwischen angekommen -- oder haengt es noch?
         for programm in programme { await programm.ausstehendesPruefen() }
 
-        await allePruefen()
+        await allePruefenMitBesitz(besitz)
+        vorgang.beenden("abgeschlossen", kopfStatus)
     }
 
     func allePruefen() async {
-        guard !laeuftSammelvorgang else { return }
+        guard let besitz = koordination.sammelBeginnen() else {
+            kopfStatus = "Alle prüfen geht erst, wenn der laufende Vorgang fertig ist."
+            sammelAbgewiesen("sammelpruefung")
+            return
+        }
+        defer { besitz.freigeben() }
         laeuftSammelvorgang = true
         defer { laeuftSammelvorgang = false }
+        let vorgang = Diagnose.vorgangBeginnen("sammelpruefung", nil, "Alle prüfen")
+        await allePruefenMitBesitz(besitz)
+        vorgang.beenden("abgeschlossen", kopfStatus)
+    }
+
+    private func allePruefenMitBesitz(_ besitz: Laufbesitz) async {
 
         // Erst den Homebrew-Katalog auffrischen, DANN pruefen. Ohne das liest `brew info` den
         // lokalen Tap, und der kann Tage alt sein -- die Pruefung meldete dann "Aktuell", obwohl
@@ -204,17 +277,23 @@ final class HauptViewModel {
         }
 
         // Bewusst nacheinander: brew greift ohnehin seriell auf seinen Katalog zu, und ein
-        // paralleler Schwung macht das Protokoll unlesbar.
-        let gesamt = programme.count
-        for (i, programm) in programme.enumerated() {
+        // paralleler Schwung macht das Protokoll unlesbar. Eine Momentaufnahme: die Liste darf
+        // sich unter der Schleife nicht verschieben.
+        let liste = programme
+        let gesamt = liste.count
+        for (i, programm) in liste.enumerated() {
             kopfStatus = "Prüft \(programm.name) (\(i + 1) von \(gesamt)) …"
-            await programm.pruefen()
+            await programm.pruefen(sammel: besitz)
         }
         kopfStatus = "Prüfung abgeschlossen – " + updateZusammenfassung + "."
     }
 
     func alleAktualisieren() async {
-        guard !laeuftSammelvorgang else { return }
+        if koordination.belegt {
+            kopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist."
+            sammelAbgewiesen("sammelupdate")
+            return
+        }
 
         let offen = programme.filter(\.hatUpdate)
         guard !offen.isEmpty else {
@@ -227,14 +306,23 @@ final class HauptViewModel {
                              + "\n\nBei laufenden Programmen wird vorher nachgefragt.",
                              "Alle Updates installieren?") else { return }
 
+        // Erst jetzt erworben: die Frage oben ist modal, und was inzwischen startete, gewinnt.
+        guard let besitz = koordination.sammelBeginnen() else {
+            kopfStatus = "Alle Updates gehen erst, wenn der laufende Vorgang fertig ist."
+            sammelAbgewiesen("sammelupdate")
+            return
+        }
+        defer { besitz.freigeben() }
         laeuftSammelvorgang = true
         defer { laeuftSammelvorgang = false }
+        let vorgang = Diagnose.vorgangBeginnen("sammelupdate", nil, "Alle Updates: " + offen.map(\.eintrag.id).joined(separator: ", "))
 
         for (i, programm) in offen.enumerated() {
             kopfStatus = "Aktualisiert \(programm.name) (\(i + 1) von \(offen.count)) …"
             ausgewaehltesProgramm = programm
-            await programm.aktualisieren()
+            await programm.aktualisieren(sammel: besitz)
         }
         kopfStatus = "Alle Updates sind durchgelaufen."
+        vorgang.beenden("abgeschlossen", kopfStatus)
     }
 }

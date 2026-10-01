@@ -25,22 +25,14 @@ struct RepoSkriptAktualisierer: Aktualisierer {
         let installiert = installierteVersion(eintrag)
         let quelle = quellVersion(eintrag)
 
-        // Merkmal 1: liegen auf der Gegenstelle Commits fuer diesen Ordner, die hier fehlen?
-        var hinterstand = 0
-        if let repoOrdner = eintrag.repoOrdner, !repoOrdner.istLeer {
-            _ = await Kommandozeile.ausfuehren("/usr/bin/git", ["fetch", "--quiet"],
-                                               zeitlimit: 180, arbeitsverzeichnis: Pfade.repoWurzel)
-            let zaehl = await Kommandozeile.ausfuehren(
-                "/usr/bin/git",
-                ["rev-list", "--count", "HEAD..origin/main", "--", repoOrdner],
-                zeitlimit: 120, arbeitsverzeichnis: Pfade.repoWurzel)
-            hinterstand = Int(zaehl.ausgabe.trimmed) ?? 0
-            protokoll.berichte("git rev-list HEAD..origin/main -- \(repoOrdner) -> \(hinterstand)")
-        }
+        // Merkmal 1: liegen auf der Gegenstelle Commits mit Quellcode fuer diesen Ordner, die hier fehlen?
+        let hinterstand = await Self.hinterstand(eintrag.repoOrdner, protokoll)
+        let hatRepoOrdner = !(eintrag.repoOrdner?.istLeer ?? true)
 
-        // Merkmal 2: ist der Quellstand neuer als die gebaute Fassung?
+        // Merkmal 2: ist der Quellstand neuer als die gebaute Fassung? Numerisch verglichen -- ein
+        // Praefixvergleich hielte "1.24.5" fuer aktuell, wenn aus "1.24.50" gebaut wurde.
         let quellstandNeuer = !quelle.istLeer && !installiert.istLeer
-                              && !installiert.hasPrefix(quelle)
+                              && Versionen.istNeuer(quelle, als: installiert)
 
         protokoll.berichte("gebaut: \(installiert) | Quelle: \(quelle)")
 
@@ -49,16 +41,50 @@ struct RepoSkriptAktualisierer: Aktualisierer {
                                  meldung: "Noch nicht gebaut.")
         }
 
-        if hinterstand > 0 || quellstandNeuer {
-            let grund = hinterstand > 0
-                ? "\(hinterstand) neue Commit(s) auf origin/main"
+        if (hinterstand ?? 0) > 0 || quellstandNeuer {
+            let grund = (hinterstand ?? 0) > 0
+                ? "\(hinterstand!) neue Commit(s) mit Quellcode auf origin/main"
                 : "Quellstand \(quelle) neuer als der gebaute Stand"
             return PruefErgebnis(zustand: .updateVerfuegbar, installierteVersion: installiert,
                                  verfuegbareVersion: quelle, meldung: grund + ".")
         }
 
+        // Eine gescheiterte Git-Abfrage ist "unbekannt", nie "aktuell": die Karte behaelt dann ihre
+        // Update-Schaltflaeche, statt einen offenen Build hinter einer gruenen Plakette zu verstecken.
+        if hatRepoOrdner && hinterstand == nil {
+            return PruefErgebnis(zustand: .unbekannt, installierteVersion: installiert, verfuegbareVersion: quelle,
+                                 meldung: "Der Git-Stand ließ sich nicht abfragen – ob neue Commits vorliegen, ist unbekannt.")
+        }
+
         return PruefErgebnis(zustand: .aktuell, installierteVersion: installiert,
                              verfuegbareVersion: quelle, meldung: "Gebauter Stand ist aktuell.")
+    }
+
+    /// Nur Dateien, die im Build landen, zaehlen. Die Ordner tragen auch Laufzeit- und Profildaten,
+    /// die andere Rechner laufend committen; als "neue Commits" gezaehlt kuendigten sie ein Update
+    /// an, das das Skript zu Recht nicht baute -- und die Karte bot dasselbe Update immer wieder an.
+    static let bauQuellen = ["*.swift", "*.plist", "*.sh", "*.entitlements", "*.icns"]
+
+    /// Commits auf origin/main, die Build-Quellen des Ordners beruehren; 0 ohne Ordner; nil, wenn
+    /// git nicht antworten konnte -- nie eine stille 0, die als "aktuell" gelesen wuerde.
+    static func hinterstand(_ ordner: String?, _ protokoll: Fortschritt) async -> Int? {
+        guard let ordner, !ordner.istLeer else { return 0 }
+        let holen = await Kommandozeile.ausfuehren("/usr/bin/git", ["fetch", "--quiet"],
+                                                   zeitlimit: 180, arbeitsverzeichnis: Pfade.repoWurzel)
+        if holen.abgelaufen || holen.exitCode != 0 {
+            protokoll.berichte("git fetch fehlgeschlagen (\(holen.abgelaufen ? "Zeitlimit" : "Code \(holen.exitCode)")) "
+                               + "– Remote-Stand unbekannt: \(holen.ausgabe)")
+            return nil
+        }
+        let sauber = ordner.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let muster = bauQuellen.map { ":(glob)\(sauber)/**/\($0)" }
+        let zaehl = await Kommandozeile.ausfuehren("/usr/bin/git",
+                                                   ["rev-list", "--count", "HEAD..origin/main", "--"] + muster,
+                                                   zeitlimit: 120, arbeitsverzeichnis: Pfade.repoWurzel)
+        let anzahl = !zaehl.abgelaufen && zaehl.exitCode == 0 ? Int(zaehl.ausgabe.trimmed) : nil
+        protokoll.berichte("git rev-list HEAD..origin/main -- \(ordner) (Quellcode) -> "
+                           + (anzahl.map(String.init) ?? "FEHLER Code \(zaehl.exitCode): \(zaehl.ausgabe)"))
+        return anzahl
     }
 
     // MARK: - Aktualisieren
@@ -85,6 +111,25 @@ struct RepoSkriptAktualisierer: Aktualisierer {
             protokoll.berichte("Update per Klick freigegeben.")
         }
 
+        // Die Pruefung meldet ein Update, sobald origin/main Commits fuer diesen Ordner traegt -- die
+        // Skripte bauen aber nur, was auf der Platte liegt. Ohne vorheriges Ziehen antworteten sie
+        // "bereits aktuell", die naechste Pruefung faende dieselben Commits wieder, und die Karte
+        // boete dasselbe Update endlos an. Nur Fast-Forward, wie der Launcher selbst.
+        if let ordner = eintrag.repoOrdner, !ordner.istLeer,
+           let neu = await Self.hinterstand(ordner, protokoll), neu > 0 {
+            protokoll.berichte("git pull --ff-only (\(neu) neue Commit(s) für \(ordner))")
+            let zug = await Kommandozeile.ausfuehren("/usr/bin/git", ["pull", "--ff-only", "--quiet"],
+                                                     zeitlimit: 180, arbeitsverzeichnis: Pfade.repoWurzel)
+            protokoll.berichte(zug.ausgabe)
+            if zug.abgelaufen || zug.exitCode != 0 {
+                return PruefErgebnis(zustand: .fehler,
+                                     meldung: "git pull --ff-only ist fehlgeschlagen (lokale Änderungen oder abweichender Verlauf) – "
+                                            + "das Repo muss erst von Hand abgeglichen werden. Das Update-Skript wurde nicht gestartet.",
+                                     protokoll: zug.ausgabe)
+            }
+        }
+
+        let exeVorher = await fingerabdruck(eintrag)
         var argumente = [skript]
         if let skriptArgumente = eintrag.skriptArgumente, !skriptArgumente.istLeer {
             argumente.append(contentsOf: Kommandozeile.zerlegen(skriptArgumente))
@@ -103,6 +148,14 @@ struct RepoSkriptAktualisierer: Aktualisierer {
                                                   arbeitsverzeichnis: Pfade.repoWurzel)
         protokoll.berichte(lauf.ausgabe)
 
+        // Wie der Prozess endete, wiegt schwerer als das, was er ausgab: ein "started" vor einem
+        // Zeitlimit ist nie ein fertiges Update.
+        if lauf.abgelaufen {
+            return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit überschritten.", protokoll: lauf.ausgabe)
+        }
+        let exeNachher = await fingerabdruck(eintrag)
+        let buildUnveraendert = !exeVorher.istLeer && exeVorher == exeNachher
+
         // Weg A: das Skript meldet seinen Status selbst (update-launcher.sh).
         if hatEigeneRueckfrage {
             let status = statusLesen(lauf.ausgabe, eintrag.statusPraefix)
@@ -119,15 +172,16 @@ struct RepoSkriptAktualisierer: Aktualisierer {
                 return PruefErgebnis(zustand: .aktuell, meldung: "War bereits aktuell.",
                                      protokoll: lauf.ausgabe)
             case "started":
-                return PruefErgebnis(zustand: .fertig, meldung: "Neue Version gebaut und gestartet.",
-                                     protokoll: lauf.ausgabe)
+                // "started" allein beweist kein Update: das Skript sagt es auch, wenn der Build schon
+                // aktuell war und es nur die vorhandene Fassung gestartet hat.
+                return buildUnveraendert
+                    ? PruefErgebnis(zustand: .aktuell, meldung: "Der Build war bereits aktuell – das Skript hat ihn nur gestartet.",
+                                    protokoll: lauf.ausgabe)
+                    : PruefErgebnis(zustand: .fertig, meldung: "Neue Version gebaut und gestartet.",
+                                    protokoll: lauf.ausgabe)
             default:
                 break
             }
-        }
-
-        if lauf.abgelaufen {
-            return PruefErgebnis(zustand: .fehler, meldung: "Zeitlimit überschritten.", protokoll: lauf.ausgabe)
         }
 
         // Weg B: kein Statusband -- Exit-Code und Schlusszeile entscheiden (rebuild-overlay.sh).
@@ -155,7 +209,7 @@ struct RepoSkriptAktualisierer: Aktualisierer {
     /// einem Neubau faelschlich einen Fehlschlag melden. Was sich hier wirklich aendert, ist die
     /// Schreibzeit der gebauten Programmdatei.
     func fingerabdruck(_ eintrag: ProgrammEintrag) async -> String {
-        let exe = Pfade.aufloesen(eintrag.exePfad)
+        let exe = Pfade.aufloesen(eintrag.exePfadWirksam)
         guard !exe.isEmpty, FileManager.default.fileExists(atPath: exe) else { return "" }
 
         let zeit = Pfade.schreibZeit(exe)
@@ -187,7 +241,7 @@ struct RepoSkriptAktualisierer: Aktualisierer {
             if FileManager.default.fileExists(atPath: pfad) { return Pfade.appVersion(pfad) }
         }
 
-        let exe = Pfade.aufloesen(eintrag.exePfad)
+        let exe = Pfade.aufloesen(eintrag.exePfadWirksam)
         guard !exe.isEmpty, FileManager.default.fileExists(atPath: exe) else { return "" }
 
         let macOsOrdner = (exe as NSString).deletingLastPathComponent          // …/Contents/MacOS

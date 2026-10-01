@@ -13,7 +13,7 @@ struct CliAktualisierer: Aktualisierer {
     let art = "cli"
 
     func pruefen(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis {
-        let exe = Pfade.aufloesen(eintrag.exePfad)
+        let exe = Pfade.aufloesen(eintrag.exePfadWirksam)
         guard FileManager.default.isExecutableFile(atPath: exe) else {
             return PruefErgebnis(zustand: .nichtInstalliert, meldung: "Nicht gefunden: \(exe)")
         }
@@ -44,15 +44,28 @@ struct CliAktualisierer: Aktualisierer {
         }
 
         // Weg 2: gegen die npm-Registry vergleichen, die dieselbe Versionszeile fuehrt.
+        // Weg 3: eine Klartext-Adresse, die die neueste Version nennt (Kimi-CDN "latest").
+        let quelle: (adresse: String, json: Bool)?
         if let paket = eintrag.npmPaket, !paket.istLeer {
-            let verfuegbar = await npmVersion(paket, protokoll)
-            if !verfuegbar.istLeer {
-                let neuer = Versionen.istNeuer(verfuegbar, als: installiert)
-                return PruefErgebnis(zustand: neuer ? .updateVerfuegbar : .aktuell,
-                                     installierteVersion: installiert,
-                                     verfuegbareVersion: verfuegbar,
-                                     meldung: neuer ? "Neue Version \(verfuegbar) verfügbar." : "Auf dem neuesten Stand.")
+            quelle = ("https://registry.npmjs.org/\(paket)/latest", true)
+        } else if let url = eintrag.versionsUrl, !url.istLeer {
+            quelle = (url, false)
+        } else {
+            quelle = nil
+        }
+        if let quelle {
+            let abfrage = await Self.netzVersion(quelle.adresse, json: quelle.json, protokoll)
+            guard let verfuegbar = abfrage.version else {
+                // Eine fehlgeschlagene Abfrage ist nie "aktuell" -- sonst verschwindet ein offenes
+                // Update hinter einer gruenen Plakette.
+                return PruefErgebnis(zustand: .fehler, installierteVersion: installiert,
+                                     meldung: abfrage.problem ?? "Versionsabfrage fehlgeschlagen.")
             }
+            let neuer = Versionen.istNeuer(verfuegbar, als: installiert)
+            return PruefErgebnis(zustand: neuer ? .updateVerfuegbar : .aktuell,
+                                 installierteVersion: installiert,
+                                 verfuegbareVersion: verfuegbar,
+                                 meldung: neuer ? "Neue Version \(verfuegbar) verfügbar." : "Auf dem neuesten Stand.")
         }
 
         return PruefErgebnis(zustand: .unbekannt, installierteVersion: installiert,
@@ -60,7 +73,7 @@ struct CliAktualisierer: Aktualisierer {
     }
 
     func aktualisieren(_ eintrag: ProgrammEintrag, _ protokoll: Fortschritt) async -> PruefErgebnis {
-        let exe = Pfade.aufloesen(eintrag.exePfad)
+        let exe = Pfade.aufloesen(eintrag.exePfadWirksam)
         guard FileManager.default.isExecutableFile(atPath: exe) else {
             return PruefErgebnis(zustand: .nichtInstalliert, meldung: "Nicht gefunden: \(exe)")
         }
@@ -86,7 +99,7 @@ struct CliAktualisierer: Aktualisierer {
     /// Fingerabdruck ist stattdessen der Trockenlauf-Plan: nach einem erfolgreichen Update muss
     /// er leer sein.
     func fingerabdruck(_ eintrag: ProgrammEintrag) async -> String {
-        let exe = Pfade.aufloesen(eintrag.exePfad)
+        let exe = Pfade.aufloesen(eintrag.exePfadWirksam)
         guard FileManager.default.isExecutableFile(atPath: exe) else { return "" }
 
         if let argumente = eintrag.versionsArgumente, !argumente.istLeer {
@@ -116,13 +129,35 @@ struct CliAktualisierer: Aktualisierer {
             .filter { !$0.isEmpty }
     }
 
-    private func npmVersion(_ paket: String, _ protokoll: Fortschritt) async -> String {
-        guard FileManager.default.isExecutableFile(atPath: Pfade.npm) else {
-            protokoll.berichte("npm wurde nicht gefunden (\(Pfade.npm)) – npm-Prüfung übersprungen.")
-            return ""
+    /// Fragt die Version direkt per HTTPS ab statt ueber "npm view": das braucht weder node noch
+    /// ein bestimmtes Arbeitsverzeichnis (der npm-Shim sucht seine Module relativ zum
+    /// Arbeitsverzeichnis und bricht sonst mit MODULE_NOT_FOUND ab). `json` liest das Feld "version"
+    /// der npm-Registry, sonst zaehlt die erste Versionsnummer im Klartext.
+    static func netzVersion(_ adresse: String, json: Bool, _ protokoll: Fortschritt) async -> (version: String?, problem: String?) {
+        guard let url = URL(string: adresse) else {
+            return (nil, "Ungültige Versionsadresse: \(adresse)")
         }
-        let lauf = await Kommandozeile.ausfuehren(Pfade.npm, ["view", paket, "version"], zeitlimit: 120)
-        protokoll.berichte("npm view \(paket) version -> \(lauf.ausgabe)")
-        return Versionen.ausText(lauf.ausgabe)
+        var anfrage = URLRequest(url: url)
+        anfrage.timeoutInterval = 30
+        let ergebnis: (version: String?, problem: String?)
+        do {
+            let (daten, antwort) = try await URLSession.shared.data(for: anfrage)
+            let code = (antwort as? HTTPURLResponse)?.statusCode ?? 0
+            if !(200...299).contains(code) {
+                ergebnis = (nil, "Versionsabfrage fehlgeschlagen: HTTP \(code).")
+            } else {
+                var text = String(decoding: daten, as: UTF8.self)
+                if json {
+                    let objekt = (try? JSONSerialization.jsonObject(with: daten)) as? [String: Any]
+                    text = objekt?["version"] as? String ?? ""
+                }
+                let version = Versionen.ausText(text)
+                ergebnis = version.istLeer ? (nil, "Die Versionsadresse lieferte keine Versionsnummer.") : (version, nil)
+            }
+        } catch {
+            ergebnis = (nil, "Versionsabfrage fehlgeschlagen: \(error.localizedDescription)")
+        }
+        protokoll.berichte("\(adresse) -> \(ergebnis.version ?? ergebnis.problem ?? "")")
+        return ergebnis
     }
 }

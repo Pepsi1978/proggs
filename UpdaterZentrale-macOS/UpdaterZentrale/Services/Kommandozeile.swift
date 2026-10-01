@@ -112,14 +112,16 @@ enum Kommandozeile {
         // Kindprozess sonst blockieren und den Aufruf haengen lassen.
         var ausgabeDaten = Data()
         var fehlerDaten = Data()
+        var ausgabeZu = false
+        var fehlerZu = false
         let schleuse = DispatchQueue(label: "updaterzentrale.kommandozeile.io")
         ausgabeRohr.fileHandleForReading.readabilityHandler = { griff in
             let stueck = griff.availableData
-            if !stueck.isEmpty { schleuse.sync { ausgabeDaten.append(stueck) } }
+            schleuse.sync { if stueck.isEmpty { ausgabeZu = true } else { ausgabeDaten.append(stueck) } }
         }
         fehlerRohr.fileHandleForReading.readabilityHandler = { griff in
             let stueck = griff.availableData
-            if !stueck.isEmpty { schleuse.sync { fehlerDaten.append(stueck) } }
+            schleuse.sync { if stueck.isEmpty { fehlerZu = true } else { fehlerDaten.append(stueck) } }
         }
 
         do {
@@ -140,23 +142,30 @@ enum Kommandozeile {
             }
             if prozess.isRunning {
                 // Erst freundlich, dann hart -- ein haengender Installer soll die App nicht binden.
+                // Der ganze Prozessbaum geht mit: ein Installer-Kind, das weiterlaeuft, hielte
+                // sonst das Programm (und die Ausgabe-Pipe) fest.
+                let nachfahren = prozessbaum(prozess.processIdentifier)
                 prozess.terminate()
+                for pid in nachfahren { kill(pid, SIGTERM) }
                 let gnadenfrist = Date().addingTimeInterval(5)
                 while prozess.isRunning && Date() < gnadenfrist { Thread.sleep(forTimeInterval: 0.05) }
                 if prozess.isRunning { kill(prozess.processIdentifier, SIGKILL) }
+                for pid in nachfahren where kill(pid, 0) == 0 { kill(pid, SIGKILL) }
                 abgelaufen = true
             }
         }
         prozess.waitUntilExit()
 
+        // Nicht auf das Ende der Pipe warten: ein vom Skript gestartetes Programm (etwa der neu
+        // gebaute Launcher) erbt sie und haelt sie offen, solange es laeuft -- der Lauf hinge dann,
+        // obwohl das Skript laengst fertig ist. Nach dem Prozessende gibt es eine kurze Frist zum
+        // Nachlesen, danach zaehlt, was da ist.
+        let nachlesen = Date().addingTimeInterval(2)
+        while Date() < nachlesen && !schleuse.sync(execute: { ausgabeZu && fehlerZu }) {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
         ausgabeRohr.fileHandleForReading.readabilityHandler = nil
         fehlerRohr.fileHandleForReading.readabilityHandler = nil
-        if let rest = try? ausgabeRohr.fileHandleForReading.readToEnd(), !rest.isEmpty {
-            schleuse.sync { ausgabeDaten.append(rest) }
-        }
-        if let rest = try? fehlerRohr.fileHandleForReading.readToEnd(), !rest.isEmpty {
-            schleuse.sync { fehlerDaten.append(rest) }
-        }
 
         let ausgabe = schleuse.sync { String(data: ausgabeDaten, encoding: .utf8) ?? "" }
         let fehler = schleuse.sync { String(data: fehlerDaten, encoding: .utf8) ?? "" }
@@ -167,6 +176,30 @@ enum Kommandozeile {
         return BefehlErgebnis(exitCode: Int(prozess.terminationStatus),
                               ausgabe: saeubern(text),
                               abgelaufen: abgelaufen)
+    }
+
+    /// Alle Nachfahren eines Prozesses (Kinder, Enkel …), ermittelt ueber `pgrep -P`.
+    static func prozessbaum(_ wurzel: pid_t) -> [pid_t] {
+        var gefunden: [pid_t] = []
+        var offen = [wurzel]
+        while let pid = offen.popLast(), gefunden.count < 500 {
+            let suche = Process()
+            suche.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+            suche.arguments = ["-P", String(pid)]
+            let rohr = Pipe()
+            suche.standardOutput = rohr
+            suche.standardError = FileHandle.nullDevice
+            guard (try? suche.run()) != nil else { continue }
+            let daten = rohr.fileHandleForReading.readDataToEndOfFile()
+            suche.waitUntilExit()
+            let kinder = String(decoding: daten, as: UTF8.self)
+                .split(separator: "\n").compactMap { pid_t($0.trimmingCharacters(in: .whitespaces)) }
+            for kind in kinder where !gefunden.contains(kind) {
+                gefunden.append(kind)
+                offen.append(kind)
+            }
+        }
+        return gefunden
     }
 
     /// Startet ein Programm und wartet NICHT.

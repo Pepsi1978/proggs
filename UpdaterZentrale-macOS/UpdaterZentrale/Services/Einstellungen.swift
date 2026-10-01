@@ -8,13 +8,22 @@ import Foundation
 final class ProgrammEinstellung: Codable {
     var ausgeblendet: Bool = false
 
+    /// Bis hierher wurden Fehlermeldungen weggeklickt. Das rote Band einer Karte bleibt so lange
+    /// stehen, bis es quittiert wird -- und ein spaeterer Fehler taucht wieder auf, weil sein
+    /// Zeitstempel jenseits dieser Marke liegt. Das Protokoll bleibt davon unberuehrt.
+    var fehlerQuittiertBis: Date?
+
     init() {}
 
-    enum CodingKeys: String, CodingKey { case ausgeblendet = "Ausgeblendet" }
+    enum CodingKeys: String, CodingKey {
+        case ausgeblendet = "Ausgeblendet"
+        case fehlerQuittiertBis = "FehlerQuittiertBis"
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         ausgeblendet = (try? c.decode(Bool.self, forKey: .ausgeblendet)) ?? false
+        fehlerQuittiertBis = try? c.decode(Date.self, forKey: .fehlerQuittiertBis)
     }
 }
 

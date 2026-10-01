@@ -34,10 +34,22 @@ struct ProgrammEintrag: Codable {
     // ---- cli ----
 
     var exePfad: String = ""
+
+    /// Weitere Orte, an denen dasselbe Programm liegen kann. Dieselbe programs.json laeuft auf
+    /// mehreren Rechnern, und dort unterscheiden sich die Installationswege (nativer Installer oder
+    /// npm, /opt/homebrew oder /usr/local). Statt den Katalog je Rechner zu gabeln, gewinnt der erste
+    /// Pfad, den es wirklich gibt.
+    var exePfadAlternativen: [String] = []
+
+    /// Blendet den Eintrag aus, wenn auf diesem Rechner keiner der Pfadkandidaten existiert.
+    var ausblendenWennFehlt: Bool = false
+
     var versionsArgumente: String?
     var updateArgumente: String?
     var pruefArgumente: String?
     var npmPaket: String?
+    /// Klartext-Adresse, deren Inhalt die neueste Version nennt (z. B. das Kimi-CDN "latest").
+    var versionsUrl: String?
     var startArgumente: String?
 
     /// Die Pruefausgabe listet ihre Updates als "alt → neu"; die Pfeile zu zaehlen sagt, wie viele.
@@ -83,13 +95,32 @@ struct ProgrammEintrag: Codable {
     /// Auf Nachfrage aufgeloester Pfad des App-Buendels bzw. der Programmdatei.
     var zielPfad: String {
         if let appPfad, !appPfad.isEmpty { return Pfade.aufloesen(appPfad) }
-        return Pfade.aufloesen(exePfad)
+        return Pfade.aufloesen(exePfadWirksam)
+    }
+
+    private var pfadKandidaten: [String] {
+        ([exePfad] + exePfadAlternativen).filter { !$0.istLeer }
+    }
+
+    /// Der Katalog-Pfad, der auf diesem Rechner existiert -- unaufgeloest, damit die Aufrufer
+    /// weiterhin selbst `Pfade.aufloesen` anwenden. Gibt es keinen, bleibt es bei `exePfad`, damit
+    /// die Fehlermeldung den erwarteten Ort nennt.
+    var exePfadWirksam: String {
+        guard !exePfadAlternativen.isEmpty else { return exePfad }
+        return pfadKandidaten.first { FileManager.default.fileExists(atPath: Pfade.aufloesen($0)) } ?? exePfad
+    }
+
+    /// Gibt es auf diesem Rechner das App-Buendel oder einen der Programmpfade?
+    var aufDiesemRechnerVorhanden: Bool {
+        if let appPfad, !appPfad.isEmpty, FileManager.default.fileExists(atPath: Pfade.aufloesen(appPfad)) { return true }
+        return pfadKandidaten.contains { FileManager.default.fileExists(atPath: Pfade.aufloesen($0)) }
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, gruppe, beschreibung, art
         case cask, appPfad, bundleId
-        case exePfad, versionsArgumente, updateArgumente, pruefArgumente, npmPaket, startArgumente
+        case exePfad, exePfadAlternativen, ausblendenWennFehlt
+        case versionsArgumente, updateArgumente, pruefArgumente, npmPaket, versionsUrl, startArgumente
         case pfeilZaehlen, zeitlimitMinuten
         case repoOrdner, skript, skriptArgumente, statusPraefix, projektDatei, dialogWartezeitSekunden
         case prozesse, helferProzesse, beendenVorUpdate, neuStartenNachUpdate
@@ -110,6 +141,9 @@ struct ProgrammEintrag: Codable {
         appPfad = try? c.decode(String.self, forKey: .appPfad)
         bundleId = try? c.decode(String.self, forKey: .bundleId)
         exePfad = (try? c.decode(String.self, forKey: .exePfad)) ?? ""
+        exePfadAlternativen = (try? c.decode([String].self, forKey: .exePfadAlternativen)) ?? []
+        ausblendenWennFehlt = (try? c.decode(Bool.self, forKey: .ausblendenWennFehlt)) ?? false
+        versionsUrl = try? c.decode(String.self, forKey: .versionsUrl)
         versionsArgumente = try? c.decode(String.self, forKey: .versionsArgumente)
         updateArgumente = try? c.decode(String.self, forKey: .updateArgumente)
         pruefArgumente = try? c.decode(String.self, forKey: .pruefArgumente)
@@ -189,6 +223,9 @@ enum LaufErgebnis: String, Codable {
     /// Der schlimmste Fall und der Grund, warum es diesen Typ gibt: Erfolg gemeldet, aber nichts
     /// hat sich geaendert. Dem Exit-Code blind zu glauben wuerde genau das verstecken.
     case nichtVerifiziert = "NichtVerifiziert"
+    /// Nichts war zu installieren: die echte Pruefung (vor oder direkt nach dem Aufruf) hat den
+    /// aktuellen Stand bestaetigt.
+    case bereitsAktuell = "BereitsAktuell"
 }
 
 /// Ein Update-Lauf, geschrieben nach verlauf.jsonl -- damit ein Fehlschlag auch Tage spaeter noch
@@ -224,6 +261,7 @@ struct UpdateBericht: Codable {
         case .abgebrochen: return "Abgebrochen"
         case .fehlgeschlagen: return "Fehlgeschlagen"
         case .nichtVerifiziert: return "Nicht verifiziert"
+        case .bereitsAktuell: return "Bereits aktuell"
         }
     }
 

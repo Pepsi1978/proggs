@@ -13,7 +13,13 @@ final class ProgrammViewModel {
 
     private let aktualisierer: Aktualisierer?
     private let einstellungen: Einstellungen
+    private let koordination: Laufkoordination
     private var protokollPuffer = ""
+
+    static let belegtText = "Es läuft bereits ein anderer Vorgang – erst danach ist das möglich."
+
+    /// Was die Karte fuer den Detailbereich im Speicher haelt -- begrenzt, der neueste Text gewinnt.
+    private static let maxProtokollZeichen = 200_000
 
     /// Wird nach jeder sichtbaren Aenderung aufgerufen.
     var beiAenderung: (() -> Void)?
@@ -22,10 +28,12 @@ final class ProgrammViewModel {
 
     let eintrag: ProgrammEintrag
 
-    init(eintrag: ProgrammEintrag, aktualisierer: Aktualisierer?, einstellungen: Einstellungen) {
+    init(eintrag: ProgrammEintrag, aktualisierer: Aktualisierer?, einstellungen: Einstellungen,
+         koordination: Laufkoordination) {
         self.eintrag = eintrag
         self.aktualisierer = aktualisierer
         self.einstellungen = einstellungen
+        self.koordination = koordination
 
         if aktualisierer == nil {
             zustand = .fehler
@@ -62,7 +70,7 @@ final class ProgrammViewModel {
     }
 
     /// Ein App-Buendel laeuft ueber den Finder-Weg, ein Werkzeug ueber seinen Pfad.
-    var kannStarten: Bool { eintrag.istAppBuendel || !eintrag.exePfad.istLeer }
+    var kannStarten: Bool { eintrag.istAppBuendel || !eintrag.exePfadWirksam.istLeer }
 
     // MARK: - Veraenderlicher Zustand
 
@@ -86,7 +94,7 @@ final class ProgrammViewModel {
     /// vorliegt. Hat eine Pruefung nichts gefunden, steht dort "Aktuell" und sie ist abgeschaltet,
     /// statt Arbeit vorzutaeuschen.
     var aktionMoeglich: Bool {
-        aktualisierer != nil && !istBeschaeftigt && zustand != .aktuell && !uebernahmeOffen
+        aktualisierer != nil && !istBeschaeftigt && !koordination.belegt && zustand != .aktuell && !uebernahmeOffen
     }
 
     var aktionsText: String {
@@ -103,7 +111,7 @@ final class ProgrammViewModel {
     /// Nur ein echtes Update bekommt die Akzentfarbe; alles andere bleibt ruhig.
     var aktionBetont: Bool { zustand == .updateVerfuegbar && !uebernahmeOffen }
 
-    var kannPruefen: Bool { aktualisierer != nil && !istBeschaeftigt }
+    var kannPruefen: Bool { aktualisierer != nil && !istBeschaeftigt && !koordination.belegt }
 
     var versionsText: String {
         if installierteVersion.istLeer { return "–" }
@@ -114,7 +122,13 @@ final class ProgrammViewModel {
     }
 
     var hatBericht: Bool { letzterBericht != nil }
-    var berichtIstFehler: Bool { letzterBericht?.istFehler == true }
+    /// Das rote Band. Es verschwindet erst, wenn es weggeklickt wurde -- und nur fuer genau diesen
+    /// Lauf: ein spaeterer Fehler hat einen spaeteren Zeitstempel und wird wieder gezeigt.
+    var berichtIstFehler: Bool {
+        guard let bericht = letzterBericht, bericht.istFehler else { return false }
+        if let marke = einstellungen.fuer(eintrag.id).fehlerQuittiertBis, marke >= bericht.zeit { return false }
+        return true
+    }
     var berichtKurz: String { letzterBericht?.kurzfassung ?? "" }
     var berichtGrund: String { letzterBericht?.meldung ?? "" }
 
@@ -127,6 +141,9 @@ final class ProgrammViewModel {
         "Das Update ist bereits heruntergeladen und installiert. Es wird aktiv, sobald \(name) "
         + "einmal neu gestartet wurde – bis dahin meldet die Prüfung weiterhin die alte Version."
     }
+
+    /// Wird von der Fensterlogik gerufen, wenn sich die app-weite Sperre aendert.
+    func sperreGeaendert() { melden() }
 
     private func melden() { beiAenderung?() }
 
@@ -149,41 +166,35 @@ final class ProgrammViewModel {
         guard let aktualisierer,
               let offen = letzterBericht, offen.ergebnis == .ausstehend else { return }
 
+        // Bestaetigt nur mit erreichtem Ziel UND echter "aktuell"-Pruefung -- eine andere
+        // Aenderung des Fingerabdrucks ist kein Beweis, solange ein Update angeboten wird.
         let jetzt = await aktualisierer.fingerabdruck(eintrag)
+        let pruefung = await aktualisierer.pruefen(eintrag, Fortschritt { _ in })
+        guard let urteil = UpdateKette.stagedUrteil(offen, jetzt: jetzt, pruefung: pruefung, zeitpunkt: Date()) else { return }
 
-        if jetzt.istLeer || jetzt == offen.versionNachher {
-            // Nach sieben Tagen ist "wird beim naechsten Start aktiv" keine Erklaerung mehr.
-            if Date().timeIntervalSince(offen.zeit) >= 7 * 24 * 60 * 60 {
-                var haengt = UpdateBericht()
-                haengt.zeit = Date()
-                haengt.programmId = eintrag.id
-                haengt.name = name
-                haengt.art = eintrag.art
-                haengt.ergebnis = .nichtVerifiziert
-                haengt.versionVorher = offen.versionNachher
-                haengt.versionNachher = jetzt
-                haengt.befehl = offen.befehl
-                haengt.meldung = "Das Update vom \(Formate.datum(offen.zeit)) wurde bis heute nicht "
-                               + "übernommen – das Programm wurde offenbar nie neu gestartet."
-                Protokollierung.laufBeenden(&haengt)
-                letzterBericht = haengt
-            }
-            return
-        }
+        var nachtrag = UpdateBericht()
+        nachtrag.zeit = Date()
+        nachtrag.programmId = eintrag.id
+        nachtrag.name = name
+        nachtrag.art = eintrag.art
+        nachtrag.ergebnis = urteil.ergebnis
+        nachtrag.versionVorher = offen.versionNachher
+        nachtrag.versionNachher = jetzt
+        nachtrag.befehl = offen.befehl
+        nachtrag.meldung = urteil.meldung
+        Protokollierung.laufBeenden(&nachtrag)
+        letzterBericht = nachtrag
+        Diagnose.ereignis(urteil.ergebnis == .erfolgreich ? .info : .warnung, "karte", "ausstehend.urteil",
+                          urteil.meldung, ["programm": eintrag.id])
+    }
 
-        var bestaetigt = UpdateBericht()
-        bestaetigt.zeit = Date()
-        bestaetigt.programmId = eintrag.id
-        bestaetigt.name = name
-        bestaetigt.art = eintrag.art
-        bestaetigt.ergebnis = .erfolgreich
-        bestaetigt.versionVorher = offen.versionNachher
-        bestaetigt.versionNachher = jetzt
-        bestaetigt.befehl = offen.befehl
-        bestaetigt.meldung = "Nachträglich bestätigt: das Update vom \(Formate.datum(offen.zeit)) "
-                           + "ist inzwischen aktiv (\(jetzt))."
-        Protokollierung.laufBeenden(&bestaetigt)
-        letzterBericht = bestaetigt
+    /// Nimmt das rote Band von der Karte. Gemeldet bleibt der Lauf trotzdem: im Tagesprotokoll und
+    /// in verlauf.jsonl steht er unveraendert, und die graue "Zuletzt:"-Zeile nennt ihn weiter.
+    func fehlerQuittieren() {
+        guard let bericht = letzterBericht, bericht.istFehler else { return }
+        einstellungen.fuer(eintrag.id).fehlerQuittiertBis = bericht.zeit
+        einstellungen.speichern()
+        melden()
     }
 
     // MARK: - Befehle
@@ -199,139 +210,134 @@ final class ProgrammViewModel {
         zustandAktualisieren()
     }
 
-    func pruefen() async {
+    func pruefen(sammel: Laufbesitz? = nil) async {
         guard let aktualisierer else { return }
-        await lauf { fortschritt in
+        if istBeschaeftigt { doppelt("pruefung"); return }
+        guard let eigen = erwerben(sammel, "pruefung") else { return }
+        defer { eigen.freigeben() }
+        await lauf("pruefung") { fortschritt in
             self.statusText = "Wird geprüft …"
             self.zustand = .pruefe
             return await aktualisierer.pruefen(self.eintrag, fortschritt)
         }
     }
 
-    func aktualisieren() async {
+    /// Ein Klick = eine begrenzte Update-Kette (siehe UpdateKette), innerhalb des Besitzes.
+    /// Genau ein Protokollkopf und ein -fuss; der Bericht entsteht erst aus dem ENDURTEIL.
+    func aktualisieren(sammel: Laufbesitz? = nil) async {
         guard let aktualisierer else { return }
+        // Schon beschaeftigt: der Lauf wuerde verworfen -- aber erst, nachdem der Benutzer dem
+        // Beenden zugestimmt hat. Deshalb wird der Besitz VOR dieser Frage genommen.
+        if istBeschaeftigt { doppelt("update"); return }
+        guard let eigen = erwerben(sammel, "update") else { return }
+        defer { eigen.freigeben() }
 
-        // Installer haengen still, solange das Programm laeuft -- deshalb gehen die Helfer mit
-        // herunter, aber erst nachdem der Benutzer zugestimmt hat.
-        if eintrag.beendenVorUpdate && Prozessdienst.laeuft(eintrag) {
-            let laufende = Prozessdienst.laufende(eintrag).count
-            let frage = "\(name) läuft gerade (\(laufende) Prozess(e) einschließlich Helferprogramme).\n\n"
-                      + "Zum Aktualisieren muss das Programm beendet werden."
-                      + (eintrag.neuStartenNachUpdate ? " Danach wird es automatisch neu gestartet." : "")
-                      + "\n\nJetzt beenden und aktualisieren?"
-
-            if !Dialoge.fragen(frage, "Programm beenden?") {
-                statusText = "Abgebrochen – das Programm läuft weiter."
-                zustand = .abgebrochen
-                return
-            }
-        }
-
-        await lauf { fortschritt in
-            // Beweis vor dem Lauf: was sich aendern MUSS, wenn das Update wirklich ankommt.
-            self.statusText = "Ermittelt den Stand …"
-            let vorher = await aktualisierer.fingerabdruck(self.eintrag)
-
+        await lauf("update") { fortschritt in
+            let kette = UpdateKette(aktualisierer, self.eintrag, fortschritt) { self.statusText = $0 }
+            let (vorher, vorPruefung) = await kette.vorpruefen()
             Protokollierung.laufBeginnen(self.eintrag, befehl: self.befehlsBeschreibung(),
                                          fingerabdruckVorher: vorher)
-            let liefVorher = Prozessdienst.laeuft(self.eintrag)
 
-            if self.eintrag.beendenVorUpdate && liefVorher {
-                self.statusText = "Beendet das Programm …"
-                fortschritt.berichte("Beende " + self.eintrag.alleProzesse.joined(separator: ", ")
-                                     + (self.eintrag.alleProzesse.isEmpty ? self.name : ""))
-                await Prozessdienst.beenden(self.eintrag)
+            var urteil = UpdateKette.bereitsAktuell(vorher, vorPruefung)
+            var liefVorher = false
+
+            if urteil == nil {
+                liefVorher = Prozessdienst.laeuft(self.eintrag)
+
+                // Installer haengen still, solange das Programm laeuft -- deshalb gehen die Helfer
+                // mit herunter, aber erst nach Zustimmung und nur einmal je Kette.
+                if self.eintrag.beendenVorUpdate && liefVorher {
+                    let laufende = Prozessdienst.laufende(self.eintrag).count
+                    let frage = "\(self.name) läuft gerade (\(laufende) Prozess(e) einschließlich Helferprogramme).\n\n"
+                              + "Zum Aktualisieren muss das Programm beendet werden."
+                              + (self.eintrag.neuStartenNachUpdate ? " Danach wird es automatisch neu gestartet." : "")
+                              + "\n\nJetzt beenden und aktualisieren?"
+
+                    var karte = vorPruefung
+                    if !Dialoge.fragen(frage, "Programm beenden?") {
+                        karte.zustand = .abgebrochen
+                        urteil = KettenUrteil(ergebnis: .abgebrochen, meldung: "Abgebrochen – das Programm läuft weiter.",
+                                              fingerabdruckVorher: vorher, fingerabdruckNachher: vorher,
+                                              fuerKarte: karte, updateAufrufe: 0, updateLiefDurch: false)
+                    } else {
+                        self.statusText = "Beendet das Programm …"
+                        fortschritt.berichte("Beende " + self.eintrag.alleProzesse.joined(separator: ", ")
+                                             + (self.eintrag.alleProzesse.isEmpty ? self.name : ""))
+                        let beendet = await Prozessdienst.beenden(self.eintrag)
+                        if let problem = beendet.problem { fortschritt.berichte(problem) }
+                        if !beendet.erfolgreich {
+                            karte.zustand = .fehler
+                            urteil = KettenUrteil(ergebnis: .fehlgeschlagen,
+                                                  meldung: "\(self.name) ließ sich nicht vollständig beenden – das Update wurde nicht gestartet. "
+                                                         + (beendet.problem ?? ""),
+                                                  fingerabdruckVorher: vorher, fingerabdruckNachher: vorher,
+                                                  fuerKarte: karte, updateAufrufe: 0, updateLiefDurch: false)
+                        }
+                    }
+                }
+
+                if urteil == nil { urteil = await kette.ausfuehren(vorher, vorPruefung) }
             }
+            let ende = urteil!
 
-            self.statusText = "Aktualisiert …"
-            let ergebnis = await aktualisierer.aktualisieren(self.eintrag, fortschritt)
-
-            if self.eintrag.neuStartenNachUpdate && liefVorher && ergebnis.zustand == .fertig {
+            // Einmal neu starten, nach der ganzen Kette -- nie zwischen Durchlaeufen, wo ein
+            // laufendes Ziel den naechsten Installer blockieren wuerde.
+            if self.eintrag.neuStartenNachUpdate && liefVorher && ende.updateLiefDurch {
                 fortschritt.berichte("Startet \(self.name) neu.")
                 Prozessdienst.starten(self.eintrag)
             }
 
-            // Beweis nach dem Lauf, und das Urteil aus dem Vergleich beider.
-            self.statusText = "Prüft das Ergebnis …"
-            let nachher = await aktualisierer.fingerabdruck(self.eintrag)
-            var bericht = self.bewerten(ergebnis, vorher: vorher, nachher: nachher)
+            var bericht = UpdateBericht()
+            bericht.programmId = self.eintrag.id
+            bericht.name = self.name
+            bericht.art = self.eintrag.art
+            bericht.ergebnis = ende.ergebnis
+            bericht.meldung = ende.meldung
+            bericht.versionVorher = ende.fingerabdruckVorher
+            bericht.versionNachher = ende.fingerabdruckNachher
+            bericht.ausstehendeVersion = ende.ausstehendeVersion
+            bericht.befehl = self.befehlsBeschreibung()
+            bericht.exitCode = ende.ergebnis == .fehlgeschlagen || ende.ergebnis == .nichtVerifiziert ? 1 : 0
 
             fortschritt.berichte(Self.abschlussZeile(bericht))
             Protokollierung.laufBeenden(&bericht)
             self.letzterBericht = bericht
-
-            // Die angezeigten Versionen nachziehen -- aber nicht, wenn der Installer das Update
-            // nur abgelegt hat: dort ist die alte Version weiter die Wahrheit, und eine neue
-            // Pruefung wuerde faelschlich wieder "Update verfügbar" zeigen.
-            if bericht.ergebnis == .erfolgreich {
-                let frisch = await aktualisierer.pruefen(self.eintrag, fortschritt)
-                var angepasst = ergebnis
-                angepasst.zustand = frisch.zustand == .aktuell ? .aktuell : ergebnis.zustand
-                angepasst.installierteVersion = frisch.installierteVersion
-                angepasst.verfuegbareVersion = frisch.verfuegbareVersion
-                angepasst.meldung = bericht.meldung
-                return angepasst
-            }
-
-            var angepasst = ergebnis
-            switch bericht.ergebnis {
-            case .abgebrochen: angepasst.zustand = .abgebrochen
-            case .fehlgeschlagen, .nichtVerifiziert: angepasst.zustand = .fehler
-            default: break
-            }
-            angepasst.meldung = bericht.meldung
-            return angepasst
+            return ende.fuerKarte
         }
     }
 
-    // MARK: - Bewertung
+    // MARK: - Sperre
 
-    /// Macht aus "das Werkzeug endete mit 0" eine Aussage ueber die Wirklichkeit: hat sich der
-    /// Fingerabdruck, der sich aendern musste, wirklich geaendert? Alles andere wird als Problem
-    /// ausgewiesen, mit Grund.
-    private func bewerten(_ ergebnis: PruefErgebnis, vorher: String, nachher: String) -> UpdateBericht {
-        var bericht = UpdateBericht()
-        bericht.programmId = eintrag.id
-        bericht.name = name
-        bericht.art = eintrag.art
-        bericht.versionVorher = vorher
-        bericht.versionNachher = nachher
-        bericht.befehl = befehlsBeschreibung()
-        bericht.exitCode = ergebnis.zustand == .fehler ? 1 : 0
-
-        switch ergebnis.zustand {
-        case .abgebrochen:
-            bericht.ergebnis = .abgebrochen
-            bericht.meldung = ergebnis.meldung
-
-        case .fehler:
-            bericht.ergebnis = .fehlgeschlagen
-            bericht.meldung = ergebnis.meldung
-
-        case .aktuell:
-            bericht.ergebnis = .abgebrochen
-            bericht.meldung = ergebnis.meldung.istLeer ? "Es war nichts offen." : ergebnis.meldung
-
-        default:
-            if ergebnis.erstNachNeustart {
-                bericht.ergebnis = .ausstehend
-                bericht.ausstehendeVersion = verfuegbareVersion.istLeer ? nil : verfuegbareVersion
-                bericht.meldung = ergebnis.meldung
-            } else if vorher.istLeer && nachher.istLeer {
-                bericht.ergebnis = .nichtVerifiziert
-                bericht.meldung = "Das Update meldete Erfolg, der Stand ließ sich aber weder vorher "
-                                + "noch nachher ermitteln – es ist nicht überprüfbar."
-            } else if vorher == nachher {
-                bericht.ergebnis = .nichtVerifiziert
-                bericht.meldung = "Das Update meldete Erfolg, der Stand ist aber unverändert ("
-                                + Self.beschreibe(nachher) + "). Einzelheiten stehen im Protokoll."
-            } else {
-                bericht.ergebnis = .erfolgreich
-                bericht.meldung = "Verifiziert: " + Self.beschreibe(vorher) + " → " + Self.beschreibe(nachher)
-            }
+    /// Ein Sammellauf reicht seinen Besitz herunter; ein Klick muss seinen eigenen erwerben.
+    /// Wer dieses Rennen verliert, startet nichts.
+    /// - Returns: ein Objekt zum Freigeben (beim Sammelbesitz ein leerer Platzhalter), oder nil.
+    private func erwerben(_ sammel: Laufbesitz?, _ art: String) -> Freigabe? {
+        if let sammel {
+            if koordination.istAktiverSammelbesitz(sammel) { return Freigabe(nil) }
+            abgewiesen(art, "Sammelbesitz ungültig oder nicht mehr aktiv.")
+            return nil
         }
+        if let eigen = koordination.einzelBeginnen() { return Freigabe(eigen) }
+        abgewiesen(art, "Es läuft bereits ein anderer Vorgang.")
+        return nil
+    }
 
-        return bericht
+    /// Kapselt "nur freigeben, was man selbst erworben hat".
+    @MainActor final class Freigabe {
+        private let besitz: Laufbesitz?
+        init(_ besitz: Laufbesitz?) { self.besitz = besitz }
+        func freigeben() { besitz?.freigeben() }
+    }
+
+    private func abgewiesen(_ art: String, _ grund: String) {
+        statusText = Self.belegtText
+        Diagnose.ereignis(.warnung, "karte", "start.abgewiesen", "\(art) für \(name) abgewiesen: \(grund)",
+                          ["programm": eintrag.id, "art": art])
+    }
+
+    private func doppelt(_ art: String) {
+        Diagnose.ereignis(.warnung, "karte", "start.doppelt", "\(art) für \(name) ignoriert: die Karte arbeitet bereits.",
+                          ["programm": eintrag.id, "art": art])
     }
 
     private static func beschreibe(_ fingerabdruck: String) -> String {
@@ -340,7 +346,7 @@ final class ProgrammViewModel {
 
     private static func abschlussZeile(_ bericht: UpdateBericht) -> String {
         switch bericht.ergebnis {
-        case .erfolgreich: return "✔ " + bericht.meldung
+        case .erfolgreich, .bereitsAktuell: return "✔ " + bericht.meldung
         case .ausstehend: return "⏳ " + bericht.meldung
         case .abgebrochen: return "– " + bericht.meldung
         default: return "✘ " + bericht.meldung
@@ -354,7 +360,7 @@ final class ProgrammViewModel {
         case "brew":
             return "brew install --cask --force " + (eintrag.cask ?? "?")
         case "cli":
-            return Pfade.aufloesen(eintrag.exePfad) + " " + (eintrag.updateArgumente ?? "update")
+            return Pfade.aufloesen(eintrag.exePfadWirksam) + " " + (eintrag.updateArgumente ?? "update")
         case "reposkript":
             return "bash " + (eintrag.skript ?? "") + " " + (eintrag.skriptArgumente ?? "")
         default:
@@ -364,16 +370,19 @@ final class ProgrammViewModel {
 
     // MARK: - Lauf-Rahmen
 
-    private func lauf(_ arbeit: @escaping (Fortschritt) async -> PruefErgebnis) async {
-        guard !istBeschaeftigt else { return }
+    /// Jede Pruefung und jedes Update jeder Karte laeuft hier durch: ein Diagnose-Vorgang mit
+    /// Beginn, Ende, Dauer und Urteil.
+    private func lauf(_ art: String, _ arbeit: @escaping (Fortschritt) async -> PruefErgebnis) async {
+        if istBeschaeftigt { doppelt(art); return }
         istBeschaeftigt = true
+        let vorgang = Diagnose.vorgangBeginnen(art, eintrag.id, "\(art) \(name)")
 
         let id = eintrag.id
         let fortschritt = Fortschritt { [weak self] zeile in
             Protokollierung.schreiben(id, zeile)
             Task { @MainActor in
                 guard let self else { return }
-                self.protokollPuffer += zeile.trimmed + "\n"
+                self.protokollAnhaengen(zeile.trimmed)
                 self.melden()
             }
         }
@@ -384,9 +393,23 @@ final class ProgrammViewModel {
         if !ergebnis.installierteVersion.istLeer { installierteVersion = ergebnis.installierteVersion }
         verfuegbareVersion = ergebnis.verfuegbareVersion
         statusText = ergebnis.meldung.istLeer ? aktionsText : ergebnis.meldung
+        let schwere: Schwere
+        switch ergebnis.zustand {
+        case .fehler: schwere = .fehler
+        case .unbekannt, .abgebrochen: schwere = .warnung
+        default: schwere = .info
+        }
+        vorgang.beenden("\(ergebnis.zustand)", ergebnis.meldung, schwere)
 
         istBeschaeftigt = false
         zustandAktualisieren()
         melden()
+    }
+
+    private func protokollAnhaengen(_ text: String) {
+        protokollPuffer += text + "\n"
+        if protokollPuffer.count > Self.maxProtokollZeichen {
+            protokollPuffer = "…[ältere Zeilen gekürzt]…\n" + String(protokollPuffer.suffix(Self.maxProtokollZeichen))
+        }
     }
 }

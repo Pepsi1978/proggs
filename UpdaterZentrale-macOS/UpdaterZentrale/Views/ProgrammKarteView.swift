@@ -106,7 +106,8 @@ final class ProgrammKarteView: KartenView {
             ("Protokoll öffnen", #selector(protokollGeklickt))
         ])
         bandAufbauen(fehlerBand, text: fehlerText, schalter: [
-            ("Protokoll öffnen", #selector(protokollGeklickt))
+            ("Protokoll öffnen", #selector(protokollGeklickt)),
+            ("Ausblenden", #selector(fehlerQuittierenGeklickt))
         ])
 
         let mitte = NSStackView(views: [
@@ -275,5 +276,10 @@ final class ProgrammKarteView: KartenView {
 
     @objc private func protokollGeklickt() {
         modell.protokollOeffnen()
+    }
+
+    /// Nimmt nur den Alarm von der Karte; Tagesprotokoll und Verlauf bleiben unveraendert.
+    @objc private func fehlerQuittierenGeklickt() {
+        modell.fehlerQuittieren()
     }
 }
