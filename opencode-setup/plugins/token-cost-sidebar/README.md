@@ -4,7 +4,7 @@
 > vollständig lesen. Nicht nur diesen Ordner kopieren, weil Arbeitsmodus-Auswahl und
 > Prompt-Injektion aus mehreren gemeinsam benötigten Bestandteilen bestehen.
 
-Stand: v1.17.4 – 30.09.2026 11:04
+Stand: v1.17.5 – 01.10.2026 20:14
 
 ## Funktionen
 
@@ -81,7 +81,8 @@ Stand: v1.17.4 – 30.09.2026 11:04
 - Coding-`k3` und `k3-256k` behalten denselben **API-Vergleichstarif**. Die zusätzlichen
   Hinweiszeilen zu API-Vergleich und Cache-Write-Schätzung sind auf Benutzerwunsch aus der TUI entfernt.
   K3-256K benötigt laut Kimi ungefähr halb so viel
-  **Abo-Kontingent** wie K3 (1M); dieser Unterschied steht unter den beiden Kontingentzeilen.
+  **Abo-Kontingent** wie K3 (1M); der Hinweis für K3-256K ist auf Benutzerwunsch aus der TUI entfernt.
+  Bei K3 (1M) steht der entsprechende Hinweis weiterhin unter den beiden Kontingentzeilen.
   Das ist keine Halbierung tatsächlicher Tokens oder ein veröffentlichter halber API-Dollarpreis.
   `kimi-for-coding` steht seit 11.09.2026 für **K2.8 Preview**: ohne veröffentlichten USD-Tarif
   erscheint der Vergleichspreis als `nicht verfügbar`, nicht mehr als K2.7 oder kostenlos.

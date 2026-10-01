@@ -577,9 +577,9 @@ function ModelLabel(props: { api: TuiPluginApi; sessionID: string; quotaStore: O
             <span style={{ fg: theme().textMuted }}>{` (${formatKimiResetCountdown(kimiQuota()?.fiveHour?.resetAt, props.kimiQuotaStore.now())})`}</span>
           </Show>
         </text>
-        <Show when={modelMeta().modelID === "k3-256k" || modelMeta().modelID === "k3"}>
+        <Show when={modelMeta().modelID === "k3"}>
           <text fg={theme().textMuted}>
-            {modelMeta().modelID === "k3-256k" ? "Abo: ≈½ Verbrauch von K3 (1M)" : "Abo (1M): ≈2× Verbrauch von K3-256K"}
+            Abo (1M): ≈2× Verbrauch von K3-256K
           </text>
         </Show>
       </Show>
