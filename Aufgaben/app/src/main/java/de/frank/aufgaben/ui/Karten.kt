@@ -195,6 +195,8 @@ fun Sektion(
     startOffen: Boolean = true,
     /** Ohne Aufgaben bleibt der Bereich zugeklappt, bis man ihn selbst aufklappt. */
     leer: Boolean = false,
+    /** Aus während der Suche: Ein leeres Suchergebnis soll die eigene Auf-/Zuklapp-Wahl nicht verwerfen. */
+    automatik: Boolean = true,
     verzoegerung: Int = 0,
     aktionen: @Composable RowScope.() -> Unit = {},
     inhalt: @Composable ColumnScope.() -> Unit,
@@ -203,7 +205,7 @@ fun Sektion(
     // 0 = automatisch (offen, sobald etwas drin ist), 1 = selbst aufgeklappt, 2 = selbst zugeklappt.
     var wahl by rememberSaveable(schluessel) { mutableIntStateOf(0) }
     // Wird der Bereich leer, gilt wieder die Automatik: leer heißt zugeklappt.
-    LaunchedEffect(leer) { if (leer) wahl = 0 }
+    LaunchedEffect(leer, automatik) { if (leer && automatik) wahl = 0 }
     val offen = when (wahl) { 1 -> true; 2 -> false; else -> startOffen && !leer }
     val schwebt = zustand.hoverZiel == "sek_$schluessel"
     val rand by animateColorAsState(if (schwebt) farbe else Color.Transparent, label = "rand")
