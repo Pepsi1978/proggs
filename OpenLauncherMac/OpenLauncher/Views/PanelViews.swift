@@ -11,6 +11,7 @@ final class ProfileSectionView: NSView {
     private let defaultSummaryLabel = UI.label("", size: 11, weight: .semibold, role: .accent)
     private let editProfileButton = StyledButton(style: .ghost, title: "Profil bearbeiten")
     private let editWorkModeButton = StyledButton(style: .ghost, title: "Modus bearbeiten")
+    private let editCloudRulesButton = StyledButton(style: .ghost, title: "Cloud-Regeln")
     private let defaultButton = StyledButton(style: .ghost, title: "☆ Standard speichern")
     private let profileRow = NSStackView()
     private let workModeRow = NSStackView()
@@ -31,7 +32,7 @@ final class ProfileSectionView: NSView {
 
         let title = UI.label("PROFIL", size: 12, weight: .bold, role: .muted)
 
-        for button in [editProfileButton, editWorkModeButton, defaultButton] {
+        for button in [editProfileButton, editWorkModeButton, editCloudRulesButton, defaultButton] {
             button.fontSize = 12
             button.horizontalPadding = 11
             button.verticalPadding = 6
@@ -41,6 +42,9 @@ final class ProfileSectionView: NSView {
         editProfileButton.action = #selector(editProfileClicked)
         editWorkModeButton.target = self
         editWorkModeButton.action = #selector(editWorkModeClicked)
+        editCloudRulesButton.toolTip = "Regeln nur für Claude-Code-Cloud-Sitzungen (claude.ai/code, Handy-App). Speichern pusht sie nach GitHub."
+        editCloudRulesButton.target = self
+        editCloudRulesButton.action = #selector(editCloudRulesClicked)
         defaultButton.target = self
         defaultButton.action = #selector(toggleDefaultClicked)
 
@@ -53,7 +57,7 @@ final class ProfileSectionView: NSView {
         // liefern die flacheren Kacheln weiter unten.
         title.translatesAutoresizingMaskIntoConstraints = false
 
-        let headerRight = NSStackView(views: [editProfileButton, editWorkModeButton, defaultButton])
+        let headerRight = NSStackView(views: [editProfileButton, editWorkModeButton, editCloudRulesButton, defaultButton])
         headerRight.orientation = .horizontal
         headerRight.spacing = 8
         headerRight.translatesAutoresizingMaskIntoConstraints = false
@@ -196,6 +200,15 @@ final class ProfileSectionView: NSView {
             workModeTiles.append((entry, tile))
         }
 
+        buildCliTiles()
+    }
+
+    /// Die CLI-Wahl haengt vom Anbieter ab (Codex CLI bei OpenAI, Kimi Code CLI bei Moonshot AI),
+    /// deshalb werden die Kacheln neu aufgebaut, sobald sich die Liste im ViewModel aendert.
+    private func buildCliTiles() {
+        guard let viewModel else { return }
+        for (_, view) in cliTiles { view.removeFromSuperview() }
+        cliTiles.removeAll()
         for entry in viewModel.cliTargets {
             let tile = SelectableRowView()
             tile.translatesAutoresizingMaskIntoConstraints = false
@@ -228,6 +241,7 @@ final class ProfileSectionView: NSView {
         for (entry, view) in workModeTiles {
             view.isSelected = entry === viewModel.selectedWorkMode
         }
+        if cliTiles.map({ $0.entry.id }) != viewModel.cliTargets.map(\.id) { buildCliTiles() }
         for (entry, view) in cliTiles {
             view.isSelected = entry === viewModel.selectedCliTarget
         }
@@ -248,10 +262,12 @@ final class ProfileSectionView: NSView {
         defaultButton.title = viewModel.modelDefaultButtonText
         defaultButton.isEnabled = viewModel.canSaveModelDefault
         editProfileButton.isEnabled = viewModel.canEditSelectedProfile
+        editCloudRulesButton.isHidden = !viewModel.canEditCloudRules
     }
 
     @objc private func editProfileClicked() { viewModel?.editProfile() }
     @objc private func editWorkModeClicked() { viewModel?.editWorkMode() }
+    @objc private func editCloudRulesClicked() { viewModel?.editCloudRules() }
     @objc private func toggleDefaultClicked() { viewModel?.toggleModelDefault() }
 }
 

@@ -728,6 +728,20 @@ final class MainWindowController: NSWindowController, MainViewModelDelegate, NSW
                                 saveButtonTitle: "Modus speichern")
     }
 
+    func editCloudRulesText(sourcePath: String, text: String) -> String? {
+        let intro = "Diese Regeln gelten nur in Claude-Code-Cloud-Sitzungen (claude.ai/code, Handy-App). Die Cloud kennt "
+                  + "keine OpenLauncher-Profile; ein Start-Hook blendet diese Datei dort ein. Beim Speichern wird sie "
+                  + "committet und nach GitHub gepusht, denn die Cloud liest nur den Stand auf GitHub."
+        return Dialogs.editText(parent: window,
+                                windowTitle: "Cloud-Regeln bearbeiten",
+                                headline: "Cloud-Regeln bearbeiten",
+                                cliText: "Claude Code · nur Cloud-Sitzungen",
+                                introText: intro,
+                                filePath: sourcePath,
+                                text: text,
+                                saveButtonTitle: "Speichern und pushen")
+    }
+
     func browseWorkDirectory(current: String) -> String? {
         let panel = NSOpenPanel()
         panel.title = "Arbeitsverzeichnis für OpenCode wählen"

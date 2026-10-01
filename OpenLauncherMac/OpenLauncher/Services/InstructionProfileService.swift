@@ -126,6 +126,26 @@ final class InstructionProfileService {
         return (Paths.macProfilesRoot as NSString).appendingPathComponent("WorkModes/\(workModeId).md")
     }
 
+    // ===================== Cloud-Regeln (Claude Code in der Cloud) =====================
+
+    /// Regeln nur fuer Claude-Code-Cloud-Sitzungen (claude.ai/code, Handy-App). Die Cloud kennt keine
+    /// OpenLauncher-Profile; der SessionStart-Hook in ~/proggs/.claude/settings.json blendet diese Datei
+    /// ein, wenn CLAUDE_CODE_REMOTE=true ist. Sie wirkt erst, wenn sie auf GitHub liegt. Dieselbe Datei
+    /// wie unter Windows (Profiles/ClaudeCode/sources/cloud.md), denn die Cloud ist plattformunabhaengig.
+    static func resolveCloudRulesPath() -> String {
+        (Paths.home as NSString).appendingPathComponent("proggs/OpenLauncher/Profiles/ClaudeCode/sources/cloud.md")
+    }
+
+    func loadCloudRules() -> String {
+        let path = Self.resolveCloudRulesPath()
+        Self.createIfMissing(path, text: "# Cloud-Regeln\n")
+        return Paths.readText(path)
+    }
+
+    func saveCloudRules(_ text: String) {
+        Self.writeText(text, to: Self.resolveCloudRulesPath())
+    }
+
     /// Prompt des Modus lesen (legt die Datei beim ersten Mal mit dem Standardtext an).
     func loadWorkMode(_ workModeId: String) throws -> String {
         let path = try Self.resolveWorkModeSourcePath(workModeId)

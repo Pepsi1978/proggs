@@ -294,6 +294,122 @@ final class OpenLauncherService {
         }
     }
 
+    /// Startet das originale Kimi Code CLI (Moonshot AI, ~/.kimi-code/bin/kimi) mit dem gewaehlten
+    /// Kimi-Code-Modell. Das Profil steht wie bei Codex in der AGENTS.md des Arbeitsverzeichnisses.
+    /// Angemeldet ist das CLI selbst (kimi login ueber kimi.ai). Die Effort-Stufe kennt das CLI
+    /// nicht als Schalter: sie wird in ~/.kimi-code/config.toml gesetzt ([thinking] effort und
+    /// default_effort des Modells), der Rest der Datei bleibt unveraendert.
+    func launchKimiCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, useTmux: Bool = false) throws {
+        var effort = rawEffort?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if let e = effort, !["low", "high", "max"].contains(e) { effort = nil }
+        let alias = "kimi-code/\(model.slug)"
+        do {
+            if let effort { Self.setKimiEffort(alias: alias, effort: effort) }
+            Paths.ensureDirectory(workDir)
+            let tabColor = TerminalLauncher.pickCodexColor()
+            let title = effort == nil ? "Kimi-\(tabColor.name)" : "Kimi-\(tabColor.name)-\(effort!)"
+            let script = try Self.buildKimiStartScript(alias: alias, workDir: workDir, tabColor: tabColor, title: title)
+            let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
+            Logger.shared.info("OpenLauncherService", "launchKimiCli", "Kimi Code CLI gestartet (\(terminal))",
+                               ["alias": alias, "workDir": workDir, "effort": effort ?? "", "tabColor": tabColor.name])
+        } catch {
+            Logger.shared.error("OpenLauncherService", "launchKimiCli", error.localizedDescription,
+                                ["slug": model.slug, "workDir": workDir])
+            throw error
+        }
+    }
+
+    /// Setzt in ~/.kimi-code/config.toml nur die Zeilen "effort" unter [thinking] und
+    /// "default_effort" unter [models."<alias>"]. Alles andere (auch die Anmeldedaten-Verweise)
+    /// bleibt Byte fuer Byte stehen; der Dateiinhalt wird nie protokolliert.
+    private static func setKimiEffort(alias: String, effort: String) {
+        let path = (Paths.home as NSString).appendingPathComponent(".kimi-code/config.toml")
+        guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return }
+        var lines = text.components(separatedBy: "\n")
+        var section = ""
+        var changed = false
+        for i in lines.indices {
+            let trimmed = lines[i].trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("[") { section = trimmed; continue }
+            let key = trimmed.split(separator: "=", maxSplits: 1).first.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
+            if (section == "[thinking]" && key == "effort") || (section == "[models.\"\(alias)\"]" && key == "default_effort") {
+                let updated = "\(key) = \"\(effort)\""
+                if lines[i] != updated { lines[i] = updated; changed = true }
+            }
+        }
+        if changed { _ = Paths.writeAtomic(lines.joined(separator: "\n"), to: path) }
+    }
+
+    /// Temp-Script fuer den Kimi-Start. --auto (Never Ask): Kimi fragt nie nach, alle Aktionen und
+    /// Entscheidungen laufen automatisch. Beendet sich Kimi direkt nach dem Oeffnen sofort (Terminal noch
+    /// nicht bereit), folgen bis zu zwei weitere Versuche; jedes Ende landet im Launcher-Log.
+    private static func buildKimiStartScript(alias: String, workDir: String, tabColor: TerminalTabColor, title: String) throws -> String {
+        let tempScript = (Paths.tempDir as NSString)
+            .appendingPathComponent("openlauncher-kimi-cli-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()).sh")
+        let script = """
+        #!/bin/zsh
+        # Von OpenLauncher (macOS) erzeugtes Startskript. Loescht sich am Ende selbst.
+        SELF=\(Shell.singleQuoted(tempScript))
+        cleanup() { rm -f "$SELF" 2>/dev/null || true; }
+        trap cleanup EXIT INT TERM
+
+        \(processPriorityScript)
+        \(tabColor.tabColorScript)
+        printf '\\033]0;\(title)\\a'
+
+        cd \(Shell.singleQuoted(workDir)) || exit 1
+
+        # Login-Umgebung laden, damit kimi (~/.kimi-code/bin) erreichbar ist.
+        \(persistentPathRefreshScript)
+        export PATH="$HOME/.kimi-code/bin:$PATH"
+        # Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
+        \(inheritedAgentEnvScrubScript)
+
+        AGENTSFILE=\(Shell.singleQuoted((workDir as NSString).appendingPathComponent("AGENTS.md")))
+        if [ -f "$AGENTSFILE" ]; then
+            printf '\\033[90m[OpenLauncher] Profil-AGENTS.md aktiv: %s\\033[0m\\n' "$(head -1 "$AGENTSFILE")"
+        else
+            printf '\\033[33m[OpenLauncher] Achtung: keine AGENTS.md im Arbeitsverzeichnis - Kimi startet ohne Profil.\\033[0m\\n'
+        fi
+
+        KIMI="$(command -v kimi || echo "$HOME/.kimi-code/bin/kimi")"
+        LOGFILE=\(Shell.singleQuoted(Logger.shared.logPath))
+        ALIAS=\(Shell.singleQuoted(alias))
+        attempt=0
+        while true; do
+            attempt=$((attempt + 1))
+            started=$(date +%s)
+            "$KIMI" --auto -m "$ALIAS"
+            kimiExit=$?
+            seconds=$(( $(date +%s) - started ))
+            quick=0; [ "$seconds" -lt 5 ] && quick=1
+            level=INFO; [ "$quick" = 1 -o "$kimiExit" != 0 ] && level=WARN
+            msg='Kimi Code CLI beendet'; [ "$quick" = 1 ] && msg='Kimi Code CLI hat sich sofort beendet'
+            # Jedes Kimi-Ende ins Launcher-Log, damit ein Sofort-Beenden spaeter zuzuordnen ist.
+            printf '{"ts":"%s","level":"%s","module":"KimiStartScript","fn":"KimiExit","msg":"%s","ctx":{"alias":"%s","attempt":%d,"exitCode":%d,"seconds":%d}}\\n' \\
+                "$(date '+%Y-%m-%dT%H:%M:%S')" "$level" "$msg" "$ALIAS" "$attempt" "$kimiExit" "$seconds" >> "$LOGFILE" 2>/dev/null
+            if [ "$quick" = 1 ] && [ "$attempt" -lt 3 ]; then
+                printf '\\033[33m[OpenLauncher] Kimi hat sich sofort beendet (Exit %d) - neuer Versuch %d/3 ...\\033[0m\\n' "$kimiExit" $((attempt + 1))
+                sleep 1
+                continue
+            fi
+            break
+        done
+        if [ "$kimiExit" != 0 ]; then
+            printf '\\033[33m[OpenLauncher] Kimi beendet mit Exit-Code %d.\\033[0m\\n' "$kimiExit"
+        fi
+
+        # Tab offen lassen (Gegenstueck zu -NoExit unter Windows).
+        cleanup
+        trap - EXIT INT TERM
+        exec /bin/zsh -l
+        """
+        guard Paths.writeAtomic(script, to: tempScript) else {
+            throw LauncherError.message("Startskript konnte nicht geschrieben werden: \(tempScript)")
+        }
+        return tempScript
+    }
+
     /// Die "-fast"-Eintraege sind in OpenCode eigene Modelle, im Codex-Katalog dagegen nur eine
     /// Geschwindigkeitsstufe desselben Modells (service_tier "priority").
     private static func resolveCodexModelSlug(_ slug: String) -> (String, String?) {

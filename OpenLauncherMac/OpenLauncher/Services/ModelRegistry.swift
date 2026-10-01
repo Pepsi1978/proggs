@@ -30,7 +30,9 @@ final class ModelRegistry {
         ("claude-opus-5", claudeOpus5Slug, "Claude Opus 5 (1M)"),
         ("claude-fable-5", "claude-fable-5-1[1m]", "Claude Fable 5.1 (1M)"),
         ("claude-sonnet-5", "claude-sonnet-5[1m]", "Claude Sonnet 5 (1M)"),
-        ("claude-opus-4-8", "claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)")
+        ("claude-opus-4-8", "claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)"),
+        // Sonnet 5.5 loest Sonnet 5 ab: der bisherige Eintrag wird einmalig umgestellt.
+        ("claude-sonnet-5[1m]", "claude-sonnet-5-5[1m]", "Claude Sonnet 5.5 (1M)")
     ]
 
     private static var anthropicManagedSlugs: [String] {
@@ -50,9 +52,18 @@ final class ModelRegistry {
     /// OpenCode-Katalog und laufen deshalb wie GPT-6 Astra als Direktmodell (isUserDefined),
     /// damit configureProvider den provider.openai.models-Eintrag schreibt.
     private static let gpt6Models: [(slug: String, displayName: String)] = [
-        ("gpt-6-sol", "GPT-6 Sol"),
+        ("gpt-6.1-sol", "GPT-6.1 Sol"),
         ("gpt-6-luna", "GPT-6 Luna")
     ]
+
+    /// GPT-6.1 Sol loest GPT-6 Sol ab: der bisherige Eintrag wird einmalig umgestellt
+    /// (Merker: neuer Slug in knownSyncedModelSlugs), damit er nicht doppelt erscheint.
+    private static let gpt6Migrations: [(oldSlug: String, newSlug: String, displayName: String)] = [
+        ("gpt-6-sol", "gpt-6.1-sol", "GPT-6.1 Sol")
+    ]
+
+    static let moonshotGroupId = "moonshot"
+    static let moonshotProviderId = "kimi-code-plan-global"
 
     private static var filePath: String {
         (Paths.repoRoot as NSString).appendingPathComponent("models.json")
@@ -345,7 +356,13 @@ final class ModelRegistry {
     private func repairAndNormalize() {
         for defaults in ModelRegistry.createDefaults() {
             guard let group = groups.first(where: { $0.id.caseInsensitiveCompare(defaults.id) == .orderedSame }) else {
-                groups.append(defaults)
+                // Moonshot AI (Kimi) gehoert direkt unter OpenAI, nicht ans Ende hinter LM Studio.
+                if defaults.id.caseInsensitiveCompare(ModelRegistry.moonshotGroupId) == .orderedSame,
+                   let openAiIndex = groups.firstIndex(where: { $0.id.caseInsensitiveCompare("openai") == .orderedSame }) {
+                    groups.insert(defaults, at: openAiIndex + 1)
+                } else {
+                    groups.append(defaults)
+                }
                 continue
             }
             group.providerId = defaults.providerId
@@ -397,6 +414,20 @@ final class ModelRegistry {
                     }
                 }
 
+                for migration in ModelRegistry.gpt6Migrations {
+                    if group.knownSyncedModelSlugs.contains(where: { $0.caseInsensitiveCompare(migration.newSlug) == .orderedSame }) { continue }
+
+                    let outdated = group.models.first { $0.slug.caseInsensitiveCompare(migration.oldSlug) == .orderedSame }
+                    let alreadyPresent = group.models.contains { $0.slug.caseInsensitiveCompare(migration.newSlug) == .orderedSame }
+                    if let outdated, !alreadyPresent {
+                        outdated.slug = migration.newSlug
+                        if !outdated.hasCustomDisplayName { outdated.displayName = migration.displayName }
+                        Logger.shared.info("ModelRegistry", "repairAndNormalize",
+                                           "GPT-6-Nachfolger gesetzt: \(migration.oldSlug) -> \(migration.newSlug)")
+                    }
+                    ModelRegistry.addUnique(&group.knownSyncedModelSlugs, migration.newSlug)
+                }
+
                 for definition in ModelRegistry.gpt6Models {
                     if group.knownSyncedModelSlugs.contains(where: { $0.caseInsensitiveCompare(definition.slug) == .orderedSame }) { continue }
                     if !group.models.contains(where: { $0.slug.caseInsensitiveCompare(definition.slug) == .orderedSame }) {
@@ -419,7 +450,7 @@ final class ModelRegistry {
                     let alreadyPresent = group.models.contains { $0.slug.caseInsensitiveCompare(migration.newSlug) == .orderedSame }
                     if let outdated, !alreadyPresent {
                         outdated.slug = migration.newSlug
-                        if !outdated.hasCustomDisplayName { outdated.displayName = migration.displayName }
+                        if !outdated.hasCustomDisplayName || outdated.displayName == "Claude Sonnet 5" { outdated.displayName = migration.displayName }
                         Logger.shared.info("ModelRegistry", "repairAndNormalize",
                                            "1M-Variante gesetzt: \(migration.oldSlug) -> \(migration.newSlug)")
                     }
@@ -451,7 +482,7 @@ final class ModelRegistry {
                 model(claudeOpus5Slug, "Claude Opus 5 (1M)", "anthropic", "Anthropic"),
                 model("claude-fable-5-1[1m]", "Claude Fable 5.1 (1M)", "anthropic", "Anthropic"),
                 model("claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)", "anthropic", "Anthropic"),
-                model("claude-sonnet-5[1m]", "Claude Sonnet 5 (1M)", "anthropic", "Anthropic"),
+                model("claude-sonnet-5-5[1m]", "Claude Sonnet 5.5 (1M)", "anthropic", "Anthropic"),
                 model("claude-haiku-4-5", "Claude Haiku 4.5", "anthropic", "Anthropic"),
                 model("claude-opus-4-7", "Claude Opus 4.7", "anthropic", "Anthropic"),
                 model("claude-opus-4-6", "Claude Opus 4.6", "anthropic", "Anthropic"),
@@ -505,6 +536,14 @@ final class ModelRegistry {
                 model(gpt56TerraFastSlug, "GPT-5.6 Terra Fast", "openai", "OpenAI"),
                 model(gpt56LunaSlug, "GPT-5.6 Luna", "openai", "OpenAI"),
                 model(gpt56LunaFastSlug, "GPT-5.6 Luna Fast", "openai", "OpenAI")
+            ]),
+            // Kimi-Code-Abo (kimi.ai), in OpenCode per /connect -> "Kimi For Coding" mit API-Schluessel
+            // angemeldet. Die vier Modelle stehen nativ im OpenCode-Katalog unter kimi-code-plan-global.
+            createGroup(moonshotGroupId, "Moonshot AI", moonshotProviderId, "Moonshot AI", [
+                model("k3", "Kimi K3 (1M)", moonshotProviderId, "Moonshot AI"),
+                model("k3-256k", "Kimi K3 256K", moonshotProviderId, "Moonshot AI"),
+                model("kimi-for-coding", "Kimi for Coding (K2.8 Preview)", moonshotProviderId, "Moonshot AI"),
+                model("kimi-for-coding-highspeed", "Kimi for Coding HighSpeed", moonshotProviderId, "Moonshot AI")
             ]),
             createGroup("nvidia", "NVIDIA", nvidiaProviderId, nvidiaProviderName, nvidiaFreeModels),
             // Lokale LM-Studio-Modelle. Die Liste kommt beim Start live vom lokalen Server

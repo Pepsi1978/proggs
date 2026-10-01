@@ -44,9 +44,15 @@ enum OpenCodeVariantCatalog {
         case "opencode": return openCodeZenLevels(slug)
         case "nvidia": return nvidiaLevels(slug)
         case "anthropic": return anthropicLevels(slug)
+        case "kimi-code-plan-global": return kimiLevels(slug)
         case "openrouter": return openRouterLevels(slug, supportsReasoning: knownOpenRouterReasoning(slug))
         default: return []
         }
+    }
+
+    /// Kimi-Code-Abo: OpenCode und Kimi CLI kennen low/high/max; HighSpeed hat keine Stufen.
+    private static func kimiLevels(_ slug: String) -> [String] {
+        ["k3", "k3-256k", "kimi-for-coding"].contains(slug) ? ["low", "high", "max"] : []
     }
 
     private static func anthropicLevels(_ rawSlug: String) -> [String] {
@@ -56,7 +62,7 @@ enum OpenCodeVariantCatalog {
         if slug.hasSuffix("[1m]") { slug = String(slug.dropLast("[1m]".count)) }
 
         if ["claude-opus-5", "claude-fable-5-1", "claude-fable-5", "claude-opus-4-8", "claude-opus-4-7",
-            "claude-sonnet-5", "claude-haiku-4-5"].contains(slug) {
+            "claude-sonnet-5-5", "claude-sonnet-5", "claude-haiku-4-5"].contains(slug) {
             return ["low", "medium", "high", "xhigh", "max"]
         }
         if ["claude-opus-4-6", "claude-sonnet-4-6"].contains(slug) { return ["low", "medium", "high", "max"] }

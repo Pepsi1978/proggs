@@ -40,4 +40,34 @@ enum RepoSync {
         log.info("RepoSync", "pull", message)
         return Result(ok: true, message: message)
     }
+
+    /// Committet genau eine Datei und pusht sie (vorher Rebase auf origin). Andere, noch nicht committete
+    /// Aenderungen paralleler Sitzungen bleiben unangetastet (Commit nur mit Pfad, --autostash beim Rebase).
+    static func commitAndPushFile(_ filePath: String, message commitMessage: String) -> Result {
+        let log = Logger.shared
+        let repo = (Paths.home as NSString).appendingPathComponent("proggs")
+        let git = Shell.which("git") ?? "/usr/bin/git"
+        var env = ProcessInfo.processInfo.environment
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        func firstLine(_ text: String) -> String {
+            text.split(separator: "\n").first.map { String($0).trimmingCharacters(in: .whitespaces) } ?? "unbekannter Fehler"
+        }
+        let add = Shell.run(git, ["-C", repo, "add", "--", filePath], environment: env, timeout: 10)
+        guard add.exitCode == 0 else { return Result(ok: false, message: firstLine(add.stderr)) }
+        let diff = Shell.run(git, ["-C", repo, "diff", "--cached", "--quiet", "--", filePath], environment: env, timeout: 10)
+        if diff.exitCode == 0 { return Result(ok: true, message: "keine Änderung") }
+        let commit = Shell.run(git, ["-C", repo, "commit", "--quiet", "-m", commitMessage, "--", filePath],
+                               environment: env, timeout: 20)
+        guard commit.exitCode == 0 else { return Result(ok: false, message: firstLine(commit.stderr)) }
+        let pull = Shell.run(git, ["-C", repo, "pull", "--rebase", "--autostash", "--quiet"], environment: env, timeout: 20)
+        guard pull.finished, pull.exitCode == 0 else {
+            return Result(ok: false, message: "committet, aber Abgleich fehlgeschlagen: " + firstLine(pull.stderr))
+        }
+        let push = Shell.run(git, ["-C", repo, "push", "--quiet", "origin", "HEAD:main"], environment: env, timeout: 30)
+        guard push.finished, push.exitCode == 0 else {
+            return Result(ok: false, message: "committet, aber Push fehlgeschlagen: " + firstLine(push.stderr))
+        }
+        log.info("RepoSync", "commitAndPushFile", "Datei committet und gepusht", ["filePath": filePath])
+        return Result(ok: true, message: "committet und gepusht")
+    }
 }

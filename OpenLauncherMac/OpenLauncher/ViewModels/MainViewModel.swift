@@ -25,6 +25,7 @@ protocol MainViewModelDelegate: AnyObject {
     func editProfileDocument(documents: InstructionProfileDocuments, isClaudeCode: Bool,
                              profileName: String) -> String?
     func editWorkModePrompt(workModeName: String, sourcePath: String, promptText: String) -> String?
+    func editCloudRulesText(sourcePath: String, text: String) -> String?
     func browseWorkDirectory(current: String) -> String?
 }
 
@@ -154,6 +155,7 @@ final class MainViewModel {
 
     private(set) var profileContextText = "OpenCode · AGENTS.md"
     private(set) var canEditSelectedProfile = true
+    private(set) var canEditCloudRules = false
     private(set) var hasHiddenModels = false
     private(set) var modelDefaultButtonText = "Standard speichern"
     private(set) var modelDefaultSummary = ""
@@ -192,10 +194,10 @@ final class MainViewModel {
             WorkModeEntry(id: "gruendlich", displayName: "Gründlichkeitsmodus", descriptionText: "Randfälle und Härtung mitprüfen")
         ]
 
-        cliTargets = [
-            CliTargetEntry(id: "opencode", displayName: "OpenCode", descriptionText: "Wie bisher: OpenCode-TUI mit Provider-Wahl"),
-            CliTargetEntry(id: "codex", displayName: "Codex CLI", descriptionText: "Eigenes OpenAI-CLI, Profil aus der AGENTS.md")
-        ]
+        // Ziel-CLI: nur bei OpenAI- und Moonshot-AI-Modellen sichtbar (fillCliTargets). Alle CLIs
+        // lesen dieselbe Profil-AGENTS.md, deshalb gelten Minimal/Standard/Strikt und der
+        // Arbeitsmodus ueberall gleich.
+        fillCliTargets(nil)
 
         selectedProfile = profileList.first { $0.id == "minimal" }
         selectedCliTarget = cliTargets.first { $0.id == "opencode" }
@@ -263,18 +265,19 @@ final class MainViewModel {
         // sobald die Stufen geladen sind) den Effort. Ohne Standard bleibt es beim Minimalprofil.
         pendingModelDefault = value == nil ? nil : modelDefaults.find(value!.modelString)
         applyingModelDefault = true
+        fillCliTargets(value)
         selectedProfile = profileList.first { $0.id == "minimal" }
         // Ohne gespeicherten Standard startet jedes Modell wieder auf OpenCode.
         selectedCliTarget = cliTargets.first { $0.id == "opencode" }
         if let stored = pendingModelDefault {
             selectedProfile = profileList.first { $0.id == stored.profileId && $0.isEnabled } ?? selectedProfile
             selectedWorkMode = workModes.first { $0.id == stored.workModeId } ?? selectedWorkMode
-            if Self.isOpenAiModel(value) {
+            if Self.hasExternalCli(value) {
                 selectedCliTarget = cliTargets.first { $0.id == stored.cliTargetId } ?? selectedCliTarget
             }
         }
         applyingModelDefault = false
-        hasCliChoice = Self.isOpenAiModel(value)
+        hasCliChoice = Self.hasExternalCli(value)
 
         selectedProvider = nil
         providers.removeAll()
@@ -342,11 +345,37 @@ final class MainViewModel {
     private func updateProfileContextText() {
         profileContextText = Self.isClaudeCodeModel(selectedModel)
             ? "Claude Code · Minimal + Standard + Strikt"
-            : isCodexCliSelected ? "Codex CLI · Profil + Modus in der AGENTS.md" : "OpenCode · Profil-Snapshots"
+            : isCodexCliSelected ? "Codex CLI · Profil + Modus in der AGENTS.md"
+            : isKimiCliSelected ? "Kimi Code CLI · Profil + Modus in der AGENTS.md" : "OpenCode · Profil-Snapshots"
     }
 
     private var isCodexCliSelected: Bool {
         hasCliChoice && selectedCliTarget?.id == "codex"
+    }
+
+    private var isKimiCliSelected: Bool {
+        hasCliChoice && selectedCliTarget?.id == "kimi"
+    }
+
+    static func isMoonshotModel(_ model: ModelEntry?) -> Bool {
+        model?.providerId.caseInsensitiveCompare(ModelRegistry.moonshotProviderId) == .orderedSame
+    }
+
+    /// OpenAI-Modelle laufen wahlweise im Codex CLI, Moonshot-AI-Modelle im Kimi Code CLI.
+    static func hasExternalCli(_ model: ModelEntry?) -> Bool {
+        isOpenAiModel(model) || isMoonshotModel(model)
+    }
+
+    /// Fuellt die CLI-Wahl passend zum Anbieter: OpenCode plus das eigene CLI des Anbieters.
+    private func fillCliTargets(_ model: ModelEntry?) {
+        let own = Self.isMoonshotModel(model)
+            ? CliTargetEntry(id: "kimi", displayName: "Kimi Code CLI", descriptionText: "Originales Kimi-CLI, Profil aus der AGENTS.md")
+            : CliTargetEntry(id: "codex", displayName: "Codex CLI", descriptionText: "Eigenes OpenAI-CLI, Profil aus der AGENTS.md")
+        if cliTargets.count == 2, cliTargets[1].id == own.id { return }
+        cliTargets = [
+            CliTargetEntry(id: "opencode", displayName: "OpenCode", descriptionText: "Wie bisher: OpenCode-TUI mit Provider-Wahl"),
+            own
+        ]
     }
 
     /// Nur direkte OpenAI-Modelle koennen im Codex CLI laufen (OpenRouter-GPTs nicht: Codex spricht
@@ -639,6 +668,8 @@ final class MainViewModel {
     private func updateProfileAvailability() {
         canEditSelectedProfile = selectedProfile != nil
             && (!Self.isClaudeCodeModel(selectedModel) || Self.isClaudeCodeProfileSupported(selectedProfile!.id))
+        // Cloud-Sitzungen gibt es nur fuer Claude Code (Anthropic-Modelle).
+        canEditCloudRules = Self.isClaudeCodeModel(selectedModel)
     }
 
     // Claude Code unterstuetzt alle drei Profile, jedes mit eigenem Repo-Config-Ordner
@@ -952,9 +983,9 @@ final class MainViewModel {
             statusText = "Für Start (Codex) bitte ein Claude-Code-Modell wählen."
             return
         }
-        // Das Codex CLI spricht immer direkt mit OpenAI - dort gibt es keine Provider-Wahl, die
-        // Auswahl darf den Start also nicht blockieren.
-        guard let model = selectedModel, selectedProvider != nil || isCodexCliSelected else {
+        // Codex CLI und Kimi Code CLI sprechen immer direkt mit ihrem Anbieter - dort gibt es keine
+        // Provider-Wahl, die Auswahl darf den Start also nicht blockieren.
+        guard let model = selectedModel, selectedProvider != nil || isCodexCliSelected || isKimiCliSelected else {
             statusText = "Bitte Modell und Provider wählen."
             return
         }
@@ -1036,6 +1067,18 @@ final class MainViewModel {
                 Logger.shared.info("MainViewModel", "start", "Codex-CLI-Kontext geschrieben",
                                    ["profile": profile.id, "workMode": workMode.id, "agentsPath": agentsPath,
                                     "codexHome": codexHome])
+                statusText = launchStatus
+                return
+            }
+
+            if isKimiCliSelected {
+                // Kimi Code CLI liest die AGENTS.md des Arbeitsverzeichnisses wie Codex: Profil UND
+                // Modus-Prompt stehen dort zusammen. Angemeldet ist das CLI selbst (kimi login, kimi.ai).
+                let agentsPath = try profiles.activateCodexProjectAgents(profileId: profile.id, workModeId: workMode.id,
+                                                                         workDir: workDir)
+                try launcher.launchKimiCli(model: model, workDir: workDir, effortLevel: thinkingLevel, useTmux: useTmux)
+                Logger.shared.info("MainViewModel", "start", "Kimi-CLI-Kontext geschrieben",
+                                   ["profile": profile.id, "workMode": workMode.id, "agentsPath": agentsPath])
                 statusText = launchStatus
                 return
             }
@@ -1125,6 +1168,25 @@ final class MainViewModel {
         } catch {
             statusText = "Modus konnte nicht gespeichert werden: \(error.localizedDescription)"
             Logger.shared.error("MainViewModel", "editWorkMode", error.localizedDescription, ["mode": workMode.id])
+        }
+    }
+
+    /// Bearbeitet die Regeln fuer Claude-Code-Cloud-Sitzungen (Profiles/ClaudeCode/sources/cloud.md) und
+    /// committet + pusht sie beim Speichern: die Cloud liest nur, was auf GitHub liegt.
+    func editCloudRules() {
+        let path = InstructionProfileService.resolveCloudRulesPath()
+        guard let text = delegate?.editCloudRulesText(sourcePath: path, text: profiles.loadCloudRules()) else { return }
+        profiles.saveCloudRules(text)
+        statusText = "Cloud-Regeln gespeichert, pushe …"
+        Task.detached {
+            let result = RepoSync.commitAndPushFile(path, message: "Cloud-Regeln: in OpenLauncher bearbeitet")
+            await MainActor.run {
+                self.statusText = result.ok
+                    ? "Cloud-Regeln gespeichert (\(result.message))."
+                    : "Cloud-Regeln lokal gespeichert, aber nicht auf GitHub: \(result.message)"
+                Logger.shared.info("MainViewModel", "editCloudRules", "Cloud-Regeln gespeichert",
+                                   ["path": path, "ok": result.ok ? "true" : "false", "message": result.message])
+            }
         }
     }
 
