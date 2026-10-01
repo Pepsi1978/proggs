@@ -2,9 +2,9 @@ package de.frank.aufgaben.auth
 
 enum class CodexModel(val label: String, val apiId: String) {
     ASTRA("GPT-6 Astra", "gpt-6-astra"),
-    SOL("GPT 5.6 Sol", "gpt-5.6-sol"),
-    TERRA("GPT 5.6 Terra", "gpt-5.6-terra"),
-    LUNA("GPT 5.6 Luna", "gpt-5.6-luna"),
+    SOL("GPT-6.1 Sol", "gpt-6.1-sol"),
+    LUNA("GPT-6 Luna", "gpt-6-luna"),
+    TERRA("GPT-5.6 Terra", "gpt-5.6-terra"),
     ;
 
     val supportedEfforts: List<ReasoningEffort>

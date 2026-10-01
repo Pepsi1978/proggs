@@ -30,12 +30,14 @@ import de.frank.aufgaben.tts.TtsManager
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed interface Bildschirm {
     data object Liste : Bildschirm
@@ -472,6 +474,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun fokusBeenden() { fokusJob?.cancel(); fokusLaeuft = false; bildschirm = Bildschirm.Liste }
 
     fun tonProbe() { Toene.spiele(getApplication(), einstellungen.ton, einstellungen.lautstaerke) }
+
+    /** Übernimmt eine selbst gewählte MP3 (z. B. aus Suno) als Erinnerungston. */
+    fun eigenenTonWaehlen(uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val (wert, name) = withContext(Dispatchers.IO) { Toene.eigenenUebernehmen(getApplication(), uri) }
+                einstellungen.ton = wert
+                einstellungen.tonName = name
+                melde("Eigener Ton: $name")
+                tonProbe()
+            } catch (c: CancellationException) {
+                throw c
+            } catch (e: Throwable) {
+                melde(e.message ?: "Der Ton konnte nicht übernommen werden.")
+            }
+        }
+    }
 
     override fun onCleared() {
         mikro.release()

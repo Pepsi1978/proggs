@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.CacheDrawScope
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
 
 /**
  * Glasfläche mit echter Tiefe: selbst gezeichneter weicher Schatten (die Fläche ist ausgestanzt, damit
@@ -75,7 +78,17 @@ fun Modifier.glas(
         0.45f to Color.Transparent,
         endY = size.height,
     )
+    // Kreisrunde Knöpfe bekommen keine Licht-/Schattenrichtung: Ein nach unten versetzter Schatten
+    // und eine helle Oberkante ließen den Kreis oben wie abgeschnitten wirken.
+    val kreis = istKreis(r)
     onDrawBehind {
+        if (kreis) {
+            if (erhoeht > 0f) clipPath(form, ClipOp.Difference) { kreisSchatten(schattenFarbe, (if (farben.dunkel) 0.16f else 0.07f) * erhoeht, erhoeht) }
+            drawPath(form, fuellung)
+            tonVerlauf?.let { drawPath(form, it) }
+            if (rand) drawPath(form, Color.White.copy(alpha = if (farben.dunkel) 0.16f else 0.55f), style = Stroke(1.dp.toPx()))
+            return@onDrawBehind
+        }
         if (erhoeht > 0f) clipPath(form, ClipOp.Difference) {
             for (i in 1..stufen) {
                 val a = (if (farben.dunkel) 0.16f else 0.07f) * (1f - i / (stufen + 1f)) * erhoeht
@@ -92,6 +105,18 @@ fun Modifier.glas(
         tonVerlauf?.let { drawPath(form, it) }
         drawPath(form, glanz)
         if (rand) drawPath(form, kante, style = Stroke(1.dp.toPx()))
+    }
+}
+
+/** Quadratische Fläche mit voller Rundung, also ein Kreis. Längliche Pillen behalten ihren 3D-Effekt. */
+private fun CacheDrawScope.istKreis(r: Float): Boolean =
+    abs(size.width - size.height) < 1f && r >= size.minDimension / 2 - 0.5f
+
+/** Weicher Schatten, der den Kreis rundum gleichmäßig umgibt (ohne Versatz nach unten). */
+private fun DrawScope.kreisSchatten(farbe: Color, staerke: Float, erhoeht: Float) {
+    val radius = size.minDimension / 2
+    for (i in 1..6) {
+        drawCircle(farbe.copy(alpha = staerke * (1f - i / 7f)), radius + i * 1.5.dp.toPx() * erhoeht)
     }
 }
 
@@ -134,7 +159,15 @@ fun Modifier.knopf3d(von: Color, bis: Color, radius: Dp, dunkel: Boolean): Modif
         radius = size.width * 0.42f,
     )
     val kante = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.0f), Color.Black.copy(alpha = 0.12f)))
+    val kreis = istKreis(r)
     onDrawBehind {
+        if (kreis) {
+            // Kreisrund (Aufnahme, Plus, Fokus): gleichmäßiger Schein rundum, kein Glanz oben, kein Dunkel unten.
+            clipPath(form, ClipOp.Difference) { kreisSchatten(von, if (dunkel) 0.14f else 0.12f, 1f) }
+            drawPath(form, koerper)
+            drawPath(form, Color.White.copy(alpha = 0.16f), style = Stroke(1.dp.toPx()))
+            return@onDrawBehind
+        }
         clipPath(form, ClipOp.Difference) {
             for (i in 1..6) {
                 val g = i * 1.8.dp.toPx()

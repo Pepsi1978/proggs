@@ -47,6 +47,7 @@ import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
@@ -56,6 +57,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -89,6 +91,36 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
     val f = LocalFarben.current
     val context = LocalContext.current
     val neu = vm.eId == null
+    var loeschenFragen by remember { mutableStateOf(false) }
+    if (loeschenFragen) AlertDialog(
+        onDismissRequest = { loeschenFragen = false },
+        icon = { Icon(Icons.Rounded.DeleteOutline, null, tint = f.gefahr) },
+        title = { Text("Aufgabe löschen?", color = f.text, fontWeight = FontWeight.Bold) },
+        text = {
+            Text(
+                "Möchtest du „${vm.eTitel.ifBlank { vm.eText.take(60) }.ifBlank { "diese Aufgabe" }}“ wirklich löschen?",
+                color = f.textLeise, fontSize = 15.sp,
+            )
+        },
+        confirmButton = {
+            Text(
+                "Löschen", color = f.gefahr, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.antippen {
+                    loeschenFragen = false
+                    val id = vm.eId
+                    vm.verwerfen()
+                    vm.aufgaben.value.firstOrNull { it.id == id }?.let { vm.loeschen(it) }
+                }.padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+        },
+        dismissButton = {
+            Text(
+                "Abbrechen", color = f.primaer, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.antippen { loeschenFragen = false }.padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+        },
+        containerColor = f.hgOben,
+    )
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().imePadding()) {
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
@@ -97,11 +129,9 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                 Text(if (neu) "Neue Aufgabe" else "Aufgabe", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f).padding(start = 8.dp))
                 if (!neu) RundKnopf(Icons.Rounded.SelfImprovement, "Fokus starten") { vm.eId?.let { vm.speichern(); vm.fokusStarten(it) } }
                 RundKnopf(if (neu) Icons.Rounded.Close else Icons.Rounded.DeleteOutline, if (neu) "Verwerfen" else "Löschen") {
-                    if (neu) vm.verwerfen() else {
-                        val id = vm.eId
-                        vm.verwerfen()
-                        vm.aufgaben.value.firstOrNull { it.id == id }?.let { vm.loeschen(it) }
-                    }
+                    // Neue Aufgaben verwirft der Knopf sofort, gespeicherte erst nach Rückfrage.
+                    loeschenFragen = !neu
+                    if (neu) vm.verwerfen()
                 }
             }
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {

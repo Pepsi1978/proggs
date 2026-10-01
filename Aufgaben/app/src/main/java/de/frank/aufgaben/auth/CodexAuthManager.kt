@@ -523,7 +523,9 @@ class CodexAuthManager(context: Context) {
             .header("Accept", "text/event-stream")
             .header("Authorization", "Bearer $token")
             .header("originator", "codex_cli_rs")
-            .header("User-Agent", "codex_cli_rs/0.0.0 (Aufgaben)")
+            // Neue Modelle (z. B. GPT-6.1 Sol) schaltet das Codex-Backend erst ab Client-Kennung 0.159 frei, sonst HTTP 400.
+            .header("version", CODEX_CLIENT_VERSION)
+            .header("User-Agent", "codex_cli_rs/$CODEX_CLIENT_VERSION (Aufgaben)")
             .header("ChatGPT-Account-ID", requestAccountId)
             .build()
         val accumulator = CodexSseAccumulator()
@@ -657,6 +659,7 @@ class CodexAuthManager(context: Context) {
         private const val RESPONSES_URL = "https://chatgpt.com/backend-api/codex/responses"
         private const val STORE_NAME = "codex_oauth"
         private const val TAG = "CodexAuth"
+        private const val CODEX_CLIENT_VERSION = "0.159.0"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         private val AUTH_HTTP_CLIENT = OkHttpClient.Builder()
             .connectTimeout(20, TimeUnit.SECONDS)

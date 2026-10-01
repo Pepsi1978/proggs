@@ -30,6 +30,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
@@ -93,6 +94,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             }
         }
     }
+    val dateiWahl = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.eigenenTonWaehlen(uri)
+    }
     Column(Modifier.fillMaxSize().imePadding()) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -122,7 +126,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 }
                 Block("Hell / Dunkel") {
                     ChipReihe {
-                        Chip("Wie System", e.modus == "system") { e.modus = "system" }
+                        Chip("🅰️ Automatisch", e.modus == "system") { e.modus = "system" }
                         Chip("☀️ Hell", e.modus == "hell") { e.modus = "hell" }
                         Chip("🌙 Dunkel", e.modus == "dunkel") { e.modus = "dunkel" }
                     }
@@ -228,6 +232,10 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                                 .putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Erinnerungston"),
                         )
                     }
+                    Chip(if (e.ton.startsWith("datei:")) "Eigene MP3: ${e.tonName}" else "Eigene MP3 wählen …", e.ton.startsWith("datei:"), icon = Icons.Rounded.AudioFile) {
+                        dateiWahl.launch(arrayOf("audio/*"))
+                    }
+                    Text("Eigene Töne (z. B. aus Suno) werden in die App kopiert und klingen so auch offline.", color = f.textLeise, fontSize = 12.sp)
                     Text("Lautstärke ${(e.lautstaerke * 100).toInt()} %", color = f.textLeise, fontSize = 13.sp)
                     Slider(e.lautstaerke, { e.lautstaerke = it }, onValueChangeFinished = { vm.tonProbe() }, colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer))
                     Text("Standard-Vorlauf", color = f.textLeise, fontSize = 13.sp)

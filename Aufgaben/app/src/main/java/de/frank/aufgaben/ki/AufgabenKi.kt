@@ -8,17 +8,23 @@ import de.frank.aufgaben.data.Einstellungen
 class AufgabenKi(private val auth: CodexAuthManager, private val einstellungen: Einstellungen) {
 
     /**
-     * Bringt diktierten Text in gutes Deutsch, ohne den Inhalt zu ändern. [bisher] sind die schon
+     * Formt diktierten Text zu einer Aufgabe in der Befehlsform („Verkaufe die Grafikkarte …“), ohne den Inhalt zu ändern. [bisher] sind die schon
      * gezeigten Fassungen — jeder weitere Tipp liefert eine neue Formulierung.
      */
     suspend fun verbessere(text: String, bisher: List<String>): String {
         val anweisung = buildString {
             append(
                 "Der Text ist eine diktierte Aufgabe aus einer Spracherkennung und deshalb unsauber. " +
-                    "Erkenne die Absicht und gib genau diese Aufgabe in klarem, sehr gutem Deutsch wieder. " +
-                    "Korrigiere Grammatik, Rechtschreibung, Satzbau und Wortwahl, entferne Versprecher, Füllwörter und " +
-                    "Wiederholungen. Füge NICHTS hinzu, lass nichts Inhaltliches weg. Behalte Zeitangaben, Namen und Zahlen " +
-                    "exakt bei. Antworte nur mit dem verbesserten Text, ohne Vorrede und ohne Anführungszeichen.",
+                    "Erkenne die Absicht dahinter und formuliere sie als klare Aufgabe in der Befehlsform, die den " +
+                    "Sprecher direkt mit „du“ anspricht (Imperativ, zweite Person Singular), in sehr gutem Deutsch. " +
+                    "Beispiele: „Ich möchte noch eine CD brennen für Papa mit den Solo-Liedern“ wird zu " +
+                    "„Brenne die Solo-CD für Papa.“ – „Ich möchte die Grafikkarte bei Kleinanzeigen verkaufen“ wird zu " +
+                    "„Verkaufe die Grafikkarte bei Kleinanzeigen.“ " +
+                    "Beginne mit dem Verb im Imperativ. Kurz und direkt, meist ein Satz; nur wenn der Text mehrere " +
+                    "Schritte oder wichtige Details enthält, folgen weitere kurze Sätze, ebenfalls in Befehlsform. " +
+                    "Entferne Versprecher, Füllwörter, Wiederholungen und Formulierungen wie „ich möchte“, „ich muss“ " +
+                    "oder „ich sollte“. Füge nichts hinzu und lass nichts Inhaltliches weg. Behalte Zeitangaben, Namen " +
+                    "und Zahlen exakt bei. Antworte nur mit der Aufgabe, ohne Vorrede und ohne Anführungszeichen.",
             )
             if (bisher.isNotEmpty()) {
                 append("\n\nDiese Fassungen gab es schon. Liefere eine deutlich andere Formulierung bei gleichem Inhalt:\n")
