@@ -168,19 +168,19 @@ final class CodexResearchService {
         request.setValue("Bearer " + tokens.access, forHTTPHeaderField: "Authorization")
         request.setValue(account, forHTTPHeaderField: "ChatGPT-Account-ID")
         request.setValue("codex_cli_rs", forHTTPHeaderField: "originator")
-        request.setValue("codex_cli_rs/0.153.3 (OpenLauncherMac)", forHTTPHeaderField: "User-Agent")
+        request.setValue("codex_cli_rs/0.159.3 (OpenLauncherMac)", forHTTPHeaderField: "User-Agent")
         return request
     }
 
     func models() async throws -> [CodexResearchModel] {
         guard try isConnected() else { return [] }
-        let request = try await authorized("models?client_version=0.153.3")
+        let request = try await authorized("models?client_version=0.159.3")
         let json = try await object(request)
         guard let items = json["models"] as? [[String: Any]] else {
             throw ResearchFailure.message("Kontokatalog wird nicht unterstützt.")
         }
         return items.compactMap { item in
-            guard item["supported_in_api"] as? Bool != false, let id = item["slug"] as? String, !id.isEmpty else { return nil }
+            guard item["supported_in_api"] as? Bool != false, item["visibility"] as? String != "hide", let id = item["slug"] as? String, !id.isEmpty else { return nil }
             let values = (item["supported_reasoning_levels"] as? [Any] ?? []).compactMap {
                 ($0 as? String) ?? (($0 as? [String: Any])?["effort"] as? String)
             }
