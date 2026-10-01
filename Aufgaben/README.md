@@ -25,6 +25,13 @@ Eigene Aufgaben-App für Android (Kotlin, Jetpack Compose, Room, Glance). Paket 
 - **Erinnerungen** für Termine in Heute/Morgen, pünktlich oder mit Vorlauf; eingebauter Ton,
   Systemton oder eigene MP3 (wird in die App kopiert), eigene Lautstärke, Vibration, Aktionen
   „Erledigt“ und „In 10 Min.“.
+- **Vorgelesene Erinnerungen:** Beim Speichern entstehen mit der gewählten Stimme (Edge, Google,
+  eigene Qwen-Stimme) sechs Fassungen des Aufgabentextes als Dateien in der App
+  (`filesDir/ansagen`). Die Erinnerung spielt Ton und Fassungen offline nacheinander ab, 3 s Pause
+  dazwischen. Schalter **Als Wecker**: läuft in Schleife (höchstens 60 Min.), bis man in der
+  Benachrichtigung „Ausschalten“ tippt, sie wegwischt, öffnet, „Erledigt“ oder „In 10 Min.“ wählt.
+  Abspielen im Vordergrund-Dienst `ErinnerungsDienst`, Wecker per `setAlarmClock`. Ohne fertige
+  Dateien spricht die Android-Stimme des Geräts.
 - **Bereiche ohne Aufgaben** sind zugeklappt; Löschen im Editor fragt vorher nach.
 - **Vorlesen** (Edge, Google Chirp 3 HD, eigene Qwen-Stimme) für einzelne Aufgaben und den ganzen Tag.
 - **Widget „Aufgaben · Heute“**: um 0 Uhr werden die Morgen-Aufgaben automatisch zu Heute.

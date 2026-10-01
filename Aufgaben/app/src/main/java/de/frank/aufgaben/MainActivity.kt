@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
+import de.frank.aufgaben.erinnerung.ErinnerungsDienst
 import de.frank.aufgaben.ui.AppViewModel
 import de.frank.aufgaben.ui.AufgabenApp
 
@@ -60,7 +61,11 @@ class MainActivity : ComponentActivity() {
         val id = intent.getLongExtra(EXTRA_AUFGABE, -1)
         when {
             intent.getBooleanExtra(EXTRA_NEU, false) -> vm.neueAufgabe(mitMikro = true)
-            id >= 0 -> vm.oeffne(id)
+            id >= 0 -> {
+                // Antippen der Erinnerung beendet ein laufendes Vorlesen bzw. den Wecker.
+                ErinnerungsDienst.stoppe(this, id)
+                vm.oeffne(id)
+            }
         }
     }
 

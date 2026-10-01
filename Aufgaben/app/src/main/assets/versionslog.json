@@ -7,6 +7,7 @@
     { "versionCode": 3, "versionName": "1.0.2", "stand": "30.09.2026, 18:16 Uhr", "notiz": "Zeitleiste in den Einstellungen von/bis einstellbar (auch halbe Stunden), dazu eine Automatik, die sie an die Termine anpasst und beim Ziehen die volle Spanne zeigt" },
     {"versionCode": 4, "versionName": "1.0.3", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
     {"versionCode": 5, "versionName": "1.0.4", "stand": "30.09.2026, 20:24 Uhr", "notiz": "Schatten bleiben beim Scrollen und Verkleinern weich und rund statt eckiger grauer Rahmen"},
-    {"versionCode": 6, "versionName": "1.0.5", "stand": "01.10.2026, 11:48 Uhr", "notiz": "Leere Bereiche sind zugeklappt, Löschen fragt nach, runde Knöpfe ohne abgeschnittenen 3D-Rand, Knopf Hell/Automatisch/Dunkel, KI-Korrektur formuliert Aufgaben in Befehlsform, eigene MP3 als Erinnerungston, neue Modelle GPT-6.1 Sol und GPT-6 Luna"}
+    {"versionCode": 6, "versionName": "1.0.5", "stand": "01.10.2026, 11:48 Uhr", "notiz": "Leere Bereiche sind zugeklappt, Löschen fragt nach, runde Knöpfe ohne abgeschnittenen 3D-Rand, Knopf Hell/Automatisch/Dunkel, KI-Korrektur formuliert Aufgaben in Befehlsform, eigene MP3 als Erinnerungston, neue Modelle GPT-6.1 Sol und GPT-6 Luna"},
+    {"versionCode": 7, "versionName": "1.0.6", "stand": "01.10.2026, 11:55 Uhr", "notiz": "Erinnerungen lesen die Aufgabe mit deiner Stimme vor: beim Speichern entstehen sechs Fassungen, die offline nacheinander mit drei Sekunden Pause laufen; als Wecker wiederholt sich das, bis du in der Benachrichtigung Ausschalten tippst"}
   ]
 }

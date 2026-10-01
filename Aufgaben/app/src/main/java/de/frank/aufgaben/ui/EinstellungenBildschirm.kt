@@ -241,6 +241,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Text("Standard-Vorlauf", color = f.textLeise, fontSize = 13.sp)
                     ChipReihe { listOf(0, 5, 10, 15, 30, 60).forEach { v -> Chip(if (v == 0) "Pünktlich" else "$v Min.", e.vorlaufStandard == v) { e.vorlaufStandard = v } } }
                     Schalter("Vibration", e.vibration) { e.vibration = it }
+                    Schalter("Neue Erinnerungen vorlesen", e.vorlesenStandard) { e.vorlesenStandard = it }
+                    Text("Beim Speichern entstehen mit deiner Stimme (Abschnitt Vorlesen) sechs Fassungen des Aufgabentextes. Die Erinnerung spielt sie offline nacheinander ab, mit drei Sekunden Pause; als Wecker so lange, bis du ausschaltest. Ohne vorbereitete Fassung spricht die Android-Stimme des Handys.", color = f.textLeise, fontSize = 12.sp)
                     Chip("Ton testen", false, icon = Icons.Rounded.PlayArrow) { vm.tonProbe() }
                 }
                 Block("Zeitleiste") {

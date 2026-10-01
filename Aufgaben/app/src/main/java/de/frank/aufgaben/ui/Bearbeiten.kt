@@ -246,8 +246,29 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                             Text(if (vm.eErinnerung) "Benachrichtigung ist an" else "Keine Benachrichtigung", color = f.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
                             Switch(vm.eErinnerung, { vm.eErinnerung = it; if (it) vm.hinweiseAnfragen() }, colors = SwitchDefaults.colors(checkedTrackColor = f.primaer))
                         }
-                        if (vm.eErinnerung) ChipReihe {
-                            listOf(0, 5, 10, 15, 30, 60).forEach { v -> Chip(if (v == 0) "Pünktlich" else "$v Min. vorher", vm.eVorlauf == v) { vm.eVorlauf = v } }
+                        if (vm.eErinnerung) {
+                            ChipReihe {
+                                listOf(0, 5, 10, 15, 30, 60).forEach { v -> Chip(if (v == 0) "Pünktlich" else "$v Min. vorher", vm.eVorlauf == v) { vm.eVorlauf = v } }
+                            }
+                            Schalter("Aufgabe vorlesen (6 Fassungen, auch offline)", vm.eVorlesen) { vm.eVorlesen = it }
+                            if (vm.eVorlesen) {
+                                val vorlesetext = vm.eText.trim().ifBlank { vm.eTitel.trim() }
+                                Text(
+                                    if (vorlesetext.isBlank()) "Vorgelesen wird der Aufgabentext – sprich oder schreibe ihn oben ein."
+                                    else "Vorgelesen wird: „${vorlesetext.take(160)}${if (vorlesetext.length > 160) " …" else ""}“",
+                                    color = f.textLeise, fontSize = 12.sp,
+                                )
+                                if (vm.textVorKorrektur == null && vm.kiVerbunden && vorlesetext.isNotBlank()) Text(
+                                    "Tipp: Die KI-Korrektur macht daraus eine kurze Anweisung wie „Brenne die Solo-CD für Papa.“",
+                                    color = f.textSchwach, fontSize = 12.sp,
+                                )
+                            }
+                            Schalter("Als Wecker – läuft, bis du ausschaltest", vm.eAlsWecker) { vm.eAlsWecker = it; if (it) vm.hinweiseAnfragen() }
+                            if (vm.eAlsWecker) Text(
+                                if (vm.eVorlesen) "Ton und Vorlesen wiederholen sich, bis du oben in der Benachrichtigung „Ausschalten“ tippst."
+                                else "Der Ton wiederholt sich, bis du oben in der Benachrichtigung „Ausschalten“ tippst.",
+                                color = f.textLeise, fontSize = 12.sp,
+                            )
                         }
                     }
                 }

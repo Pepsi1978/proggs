@@ -112,6 +112,19 @@ object Toene {
         return file
     }
 
+    /** Eingebauter Ton, Systemton ("uri:") oder eigene Datei ("datei:") als Quelle des Players. */
+    fun setzeQuelle(context: Context, player: MediaPlayer, ton: String) {
+        when {
+            ton.startsWith("uri:") -> player.setDataSource(context, Uri.parse(ton.removePrefix("uri:")))
+            ton.startsWith("datei:") -> {
+                val eigen = File(eigenerOrdner(context), ton.removePrefix("datei:"))
+                // Fehlt die eigene Datei (z. B. nach einer Wiederherstellung), klingt der Standardton.
+                player.setDataSource(if (eigen.isFile) eigen.absolutePath else datei(context, "chime").absolutePath)
+            }
+            else -> player.setDataSource(datei(context, ton).absolutePath)
+        }
+    }
+
     /** Spielt den Ton einmal. [fertig] kommt nach dem Ende oder spätestens nach [maxMs]. */
     fun spiele(context: Context, ton: String, lautstaerke: Float, maxMs: Long = 9_000, fertig: () -> Unit = {}): MediaPlayer? {
         return try {
@@ -122,15 +135,7 @@ object Toene {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build(),
             )
-            when {
-                ton.startsWith("uri:") -> player.setDataSource(context, Uri.parse(ton.removePrefix("uri:")))
-                ton.startsWith("datei:") -> {
-                    val eigen = File(eigenerOrdner(context), ton.removePrefix("datei:"))
-                    // Fehlt die eigene Datei (z. B. nach einer Wiederherstellung), klingt der Standardton.
-                    player.setDataSource(if (eigen.isFile) eigen.absolutePath else datei(context, "chime").absolutePath)
-                }
-                else -> player.setDataSource(datei(context, ton).absolutePath)
-            }
+            setzeQuelle(context, player, ton)
             player.setVolume(lautstaerke, lautstaerke)
             var beendet = false
             val ende = {

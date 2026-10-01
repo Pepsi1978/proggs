@@ -84,6 +84,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var eDauer by mutableIntStateOf(30)
     var eErinnerung by mutableStateOf(false)
     var eVorlauf by mutableIntStateOf(10)
+    var eVorlesen by mutableStateOf(true)
+    var eAlsWecker by mutableStateOf(false)
     var eWdh by mutableStateOf(Wiederholung.KEINE)
     val eSchritte = mutableStateListOf<Schritt>()
     var eVorschlag by mutableStateOf<Erkennung.Vorschlag?>(null)
@@ -136,6 +138,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun zurueck(): Boolean = when (bildschirm) {
         is Bildschirm.Bearbeiten -> { editorVerlassen(); true }
         Bildschirm.Liste -> false
+        Bildschirm.Einstellungen -> {
+            // Stimme oder Tempo könnten sich geändert haben: fehlende Sprachfassungen nachholen.
+            de.frank.aufgaben.erinnerung.Ansage.anstossen(getApplication())
+            bildschirm = Bildschirm.Liste
+            true
+        }
         else -> { bildschirm = Bildschirm.Liste; true }
     }
 
@@ -152,6 +160,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         editorQuelle = null
         eId = null; eTitel = ""; eText = ""; ePrio = Prioritaet.SPAETER; eTag = tag; eMinuten = null
         eDauer = 30; eErinnerung = false; eVorlauf = einstellungen.vorlaufStandard; eWdh = Wiederholung.KEINE
+        eVorlesen = einstellungen.vorlesenStandard; eAlsWecker = false
         eSchritte.clear(); eVorschlag = null; textVorKorrektur = null; korrekturFassungen = emptyList()
         bildschirm = Bildschirm.Bearbeiten(null)
         if (mitMikro && einstellungen.autoMikro && einstellungen.groqKey.isNotBlank()) mikroTippen()
@@ -163,6 +172,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             editorQuelle = a
             eId = a.id; eTitel = a.titel; eText = a.text; ePrio = a.prio; eTag = a.tag; eMinuten = a.minuten
             eDauer = a.dauer; eErinnerung = a.erinnerung; eVorlauf = a.vorlauf; eWdh = a.wdh
+            eVorlesen = a.vorlesen; eAlsWecker = a.alsWecker
             eSchritte.clear(); eSchritte.addAll(a.schritte)
             eVorschlag = null; textVorKorrektur = null; korrekturFassungen = emptyList()
             bildschirm = Bildschirm.Bearbeiten(id)
@@ -257,6 +267,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val neu = basis.copy(
             titel = titel, text = text, prioritaet = prio.name, tag = eTag, minuten = if (eTag == null) null else eMinuten,
             dauer = eDauer, erinnerung = eErinnerung && eMinuten != null, vorlauf = eVorlauf, wiederholung = eWdh.name,
+            vorlesen = eVorlesen, alsWecker = eAlsWecker,
             titelVonKi = if (kiTitel) false else basis.titelVonKi && titelEingabe == basis.titel,
             schritteJson = Aufgabe.schritteAlsJson(eSchritte.filter { it.text.isNotBlank() }),
         )
@@ -347,7 +358,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val minuten = if (ziel.behalteZeit) a.minuten else ziel.minuten
                     val erinnerung = if (minuten != null && a.minuten == null) true else a.erinnerung
                     val vorlauf = if (minuten != null && a.minuten == null) einstellungen.vorlaufStandard else a.vorlauf
-                    repo.speichere(a.copy(tag = ziel.tag, minuten = minuten, prioritaet = prio.name, erinnerung = erinnerung && minuten != null, vorlauf = vorlauf))
+                    val vorlesen = if (minuten != null && a.minuten == null) einstellungen.vorlesenStandard else a.vorlesen
+                    repo.speichere(a.copy(tag = ziel.tag, minuten = minuten, prioritaet = prio.name, erinnerung = erinnerung && minuten != null, vorlauf = vorlauf, vorlesen = vorlesen))
                     if (minuten != null) hinweiseAnfragen()
                 }
                 is Ziel.Prio -> repo.speichere(a.copy(prioritaet = ziel.prioritaet.name, tag = null, minuten = null))
