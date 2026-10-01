@@ -46,7 +46,7 @@ GitHub-Secret vor und steht nur Bauvorgängen auf `main` zur Verfügung.
 - Der Skill **`apk-update`** liegt im Projekt unter
   `OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update/` (`SKILL.md`, `projekte.json`,
   `scripts/apk-update.ps1`). Das Skript erzeugt genau diese Dateien und enthält die ganze Logik: Gradle-Task
-  und Variante pro App, Versionsentscheidung N/I/P, Signieren unsignierter APKs, Prüfung per aapt2/apksigner,
+  und Variante pro App, Versionsentscheidung N/I/P, Signieren jeder APK mit dem gemeinsamen Schlüssel (außer BestJournalAndroid und GenialerWeckerAndroid mit eigenem Schlüssel, egal ob Debug oder Release), Prüfung per aapt2/apksigner,
   Aufräumen (5 neueste APKs bleiben). **Lies Skill und Skript zuerst vollständig.**
   **Grundsatz: GitHub benutzt dasselbe Skript, statt es nachzubauen.** Es gibt nur eine Quelle der Wahrheit.
   Das Skript hat dafür schon die Parameter `-ProggsWurzel`, `-UpdatesWurzel` und `-OhneGeraet`.

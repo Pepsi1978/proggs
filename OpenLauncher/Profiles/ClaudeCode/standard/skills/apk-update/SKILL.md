@@ -90,7 +90,10 @@ separate Skill `apk-update-cloud` nutzt einen `claude/…`-Branch mit Pull Reque
      für dasselbe Projekt bricht mit Fehler ab,
    - baut, nimmt die APK **eindeutig aus `output-metadata.json`** des Ausgabeordners (genau ein
      Element, Paket und versionCode müssen passen; APK-Splits werden nicht unterstützt) und
-     signiert unsignierte APKs mit `~/SK/Android/debug-shared.keystore`,
+     signiert **jede** APK mit `~/SK/Android/debug-shared.keystore`, egal ob Debug oder Release und
+     auch wenn Gradle sie schon selbst signiert hat (Franks Regel vom 01.10.2026). Ausnahme sind nur
+     `GenialerWeckerAndroid` und `BestJournalAndroid`: Ihr Build signiert mit dem eigenen Schlüssel,
+     das Skript lässt diese Signatur stehen und bricht bei einer unsignierten APK ab,
    - fragt das Handy nur lesend über dieselbe adb wie das WLAN-Werkzeug ab (`$env:ADB`, sonst
      SDK-adb); `-OhneGeraet` (nur für Tests) überspringt das,
    - liest Paket, versionCode, versionName und Signatur **aus der fertigen APK** (aapt2, apksigner)
@@ -189,7 +192,9 @@ und dass die Signatur der APK zur installierten App passt.
   Release-Variante installiert ist; sonst meldet die Handy-App „Signatur weicht ab".
 - **EntropieReductor, BestJournalFrank, VoiceKey**: Die Debug-Variante hat das Suffix `.debug`; am
   Handy ist genau diese installiert.
-- **GenialerWeckerAndroid**: signiert Debug mit dem eigenen Schlüssel der Verkaufs-App.
+- **GenialerWeckerAndroid**: signiert Debug und Release mit dem eigenen Schlüssel der Verkaufs-App.
+- **Schlüssel-Regel (Frank, 01.10.2026):** Jede App bekommt den gemeinsamen Schlüssel, nur
+  BestJournalAndroid und GenialerWeckerAndroid ihren eigenen – unabhängig von Debug oder Release.
 - Welche Variante am Handy liegt, zeigt `adb shell pm list packages`. Passt das Paket nicht, zeigt
   die Handy-App die APK als „nicht auf diesem Handy".
 - Meldet die Handy-App „Signatur weicht ab": nie deinstallieren (Regel 15), sondern Variante in
