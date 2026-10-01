@@ -41,6 +41,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
@@ -53,6 +54,7 @@ import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Newspaper
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
@@ -100,6 +102,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -124,7 +127,7 @@ import de.frank.newskompass.observability.KompassLog
 import de.frank.newskompass.tts.Moderation
 import de.frank.newskompass.tts.VorleseStufe
 import de.frank.newskompass.tts.VorleseZustand
-import de.frank.newskompass.ui.theme.LocalIstDunkel
+import de.frank.newskompass.ui.theme.LocalKompassFarben
 import de.frank.newskompass.ui.theme.blockFarbe
 import de.frank.newskompass.ui.theme.blockVerlauf
 import java.text.SimpleDateFormat
@@ -236,7 +239,6 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
         val rang = stand.themen.mapIndexed { i, t -> t.id to i }.toMap()
         ausgabe?.bloecke.orEmpty().sortedBy { rang[it.themaId] ?: Int.MAX_VALUE }
     }
-    val dunkel = LocalIstDunkel.current
     val liste = rememberLazyListState()
     val bildschirm = rememberCoroutineScope()
     val schublade = rememberDrawerState(DrawerValue.Closed)
@@ -282,8 +284,31 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
         }
     }
 
+    // Tipp auf eine Benachrichtigung: genau die Ausgabe zeigen, die sie beschreibt — nicht die neueste.
+    // Erst umschalten, wenn der Index sie kennt; sonst setzt die Prüfung oben die Ansicht gleich auf Aktuell zurück.
+    val ziel by app.oeffneAusgabe.collectAsStateWithLifecycle()
+    LaunchedEffect(ziel, index) {
+        val gesucht = ziel ?: return@LaunchedEffect
+        val eintrag = index.firstOrNull { it.id == gesucht.ausgabeId }
+        if (eintrag == null) {
+            // Der Index wird gerade erst geladen — der nächste Durchlauf findet sie. Fehlt sie danach, bleibt Aktuell.
+            app.speicher.bereit()
+            if (app.speicher.index.value.none { it.id == gesucht.ausgabeId }) app.oeffneAusgabe.compareAndSet(gesucht, null)
+            return@LaunchedEffect
+        }
+        app.oeffneAusgabe.compareAndSet(gesucht, null)
+        // Immer fest auf diese Ausgabe — „Aktuell“ spränge zur nächsten, sobald eine neuere fertig wird.
+        zeige(Ansicht.Tag(eintrag.tag, eintrag.id))
+        springeZu = gesucht.themaId
+        if (gesucht.themaId == null) bildschirm.launch { schublade.close(); liste.scrollToItem(0) }
+    }
+
+    val fehlendeFreigaben = freigaben.count { !it.second }
+    val zeigeBereitschaft = stand.zeitplanAktiv && fehlendeFreigaben > 0
+
     // Muss der Reihenfolge der Einträge in der Liste unten folgen.
     val vorspann = 1 + (if (auswahl != Ansicht.Aktuell) 1 else 0) + (if (tagesAusgaben.size > 1) 1 else 0) + 1 +
+        (if (zeigeBereitschaft) 1 else 0) +
         offeneFragen.size + gescheiterteFragen.size + (if (monat != null) 1 else 0) + (if (archivHinweise.isNotEmpty()) 1 else 0) +
         (if (schadenAmTag > 0 || schadenImMonat > 0) 1 else 0) + (if (ladeFehler) 1 else 0) + (if (laedt) 1 else 0) + (if (index.isEmpty()) 1 else 0)
     LaunchedEffect(springeZu, bloecke, vorspann) {
@@ -333,11 +358,25 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                         ausgabe = ausgabe,
                         titel = titel,
                         untertitel = untertitel,
-                        dunkel = dunkel,
                         laeuft = lauf?.state == WorkInfo.State.RUNNING,
                         oeffneArchiv = { bildschirm.launch { schublade.open() } },
                         aktualisiere = { Zeitplan.starteLauf(kontext, manuell = true) },
-                        wechsleDesign = { app.einstellungen.setzeDesign(if (dunkel) DesignModus.HELL else DesignModus.DUNKEL) },
+                        modus = stand.design,
+                        wechsleDesign = {
+                            val neu = stand.farbDesign.naechstes
+                            app.einstellungen.setzeFarbDesign(neu)
+                            Toast.makeText(kontext, "Design: ${neu.label}", Toast.LENGTH_SHORT).show()
+                        },
+                        // Hell → Automatisch (wie das System) → Dunkel → Hell, wie in der Aufgaben-App.
+                        wechsleModus = {
+                            val neu = when (stand.design) {
+                                DesignModus.HELL -> DesignModus.SYSTEM
+                                DesignModus.SYSTEM -> DesignModus.DUNKEL
+                                DesignModus.DUNKEL -> DesignModus.HELL
+                            }
+                            app.einstellungen.setzeDesign(neu)
+                            Toast.makeText(kontext, if (neu == DesignModus.SYSTEM) "Automatisch wie das System" else neu.label, Toast.LENGTH_SHORT).show()
+                        },
                         oeffneEinstellungen = oeffneEinstellungen,
                     )
                 }
@@ -365,8 +404,8 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                 item(key = "status", contentType = "status") {
                     Spalte { LaufStatus(lauf, app.codex.istVerbunden, oeffneEinstellungen) }
                 }
-                val fehlt = freigaben.count { !it.second }
-                if (stand.zeitplanAktiv && fehlt > 0) {
+                val fehlt = fehlendeFreigaben
+                if (zeigeBereitschaft) {
                     item(key = "bereitschaft", contentType = "hinweis") {
                         Spalte {
                             Hinweis(
@@ -582,7 +621,7 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
 private fun MikrofonKnopf(stufe: SprachStufe, tippe: () -> Unit) {
     val flaeche = when (stufe) {
         SprachStufe.NIMMT_AUF -> Brush.linearGradient(listOf(Color(0xFFEF4444), Color(0xFFB91C1C)))
-        else -> Brush.linearGradient(listOf(Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFFDB2777)))
+        else -> Brush.linearGradient(LocalKompassFarben.current.knopfVerlauf)
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
         AnimatedVisibility(visible = stufe != SprachStufe.BEREIT) {
@@ -672,17 +711,15 @@ private fun Kopf(
     /** Große Zeile und Datumszeile — im Archiv der gewählte Tag oder Monat statt Gruß und heute. */
     titel: String,
     untertitel: String,
-    dunkel: Boolean,
     laeuft: Boolean,
+    modus: DesignModus,
     oeffneArchiv: () -> Unit,
     aktualisiere: () -> Unit,
     wechsleDesign: () -> Unit,
+    wechsleModus: () -> Unit,
     oeffneEinstellungen: () -> Unit,
 ) {
-    val verlauf = Brush.linearGradient(
-        if (dunkel) listOf(Color(0xFF1E1B4B), Color(0xFF4C1D95), Color(0xFF831843))
-        else listOf(Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFFDB2777)),
-    )
+    val verlauf = Brush.linearGradient(LocalKompassFarben.current.kopfVerlauf)
     Box(
         Modifier
             .fillMaxWidth()
@@ -713,7 +750,23 @@ private fun Kopf(
                     }
                 }
                 IconButton(onClick = wechsleDesign) {
-                    Icon(if (dunkel) Icons.Rounded.LightMode else Icons.Rounded.DarkMode, "Hell oder dunkel", tint = Color.White)
+                    Icon(Icons.Rounded.Palette, "Design wechseln", tint = Color.White)
+                }
+                // Das Symbol zeigt den aktuellen Modus; ein Tipp schaltet zum nächsten.
+                IconButton(onClick = wechsleModus) {
+                    Icon(
+                        when (modus) {
+                            DesignModus.HELL -> Icons.Rounded.LightMode
+                            DesignModus.DUNKEL -> Icons.Rounded.DarkMode
+                            DesignModus.SYSTEM -> Icons.Rounded.BrightnessAuto
+                        },
+                        when (modus) {
+                            DesignModus.HELL -> "Hell (weiter zu Automatisch)"
+                            DesignModus.DUNKEL -> "Dunkel (weiter zu Hell)"
+                            DesignModus.SYSTEM -> "Automatisch (weiter zu Dunkel)"
+                        },
+                        tint = Color.White,
+                    )
                 }
                 IconButton(onClick = oeffneEinstellungen) {
                     Icon(Icons.Rounded.Settings, "Einstellungen", tint = Color.White)
@@ -873,7 +926,7 @@ private fun LeerZustand(angemeldet: Boolean, laeuft: Boolean, laden: () -> Unit,
         Text("Noch keine Ausgabe", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Jeden Tag um 5 und um 17 Uhr stellt News Kompass die Neuigkeiten zu deinen Themen zusammen — mit Bildern und zum Vorlesen.",
+            "Zu den Uhrzeiten deiner Themen (anfangs 5 und 17 Uhr) stellt News Kompass die Neuigkeiten zusammen — mit Bildern und zum Vorlesen.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.widthIn(max = 420.dp),

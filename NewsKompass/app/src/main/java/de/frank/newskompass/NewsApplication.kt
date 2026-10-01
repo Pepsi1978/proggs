@@ -2,6 +2,7 @@ package de.frank.newskompass
 
 import android.app.Application
 import de.frank.newskompass.ai.CodexClient
+import de.frank.newskompass.ai.ModellSuche
 import de.frank.newskompass.ai.ThemenUeberschriften
 import de.frank.newskompass.data.AusgabenSpeicher
 import de.frank.newskompass.data.EinstellungenStore
@@ -17,6 +18,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -39,7 +41,11 @@ class NewsApplication : Application() {
     val vorleser by lazy { VorleseManager(this, einstellungen) }
     val sprachFrage by lazy { SprachFrage(this) }
     val themenDiktat by lazy { ThemenDiktat(this) }
+    val modellSuche by lazy { ModellSuche(codex, einstellungen) }
     val ueberschriften by lazy { ThemenUeberschriften(this, codex, einstellungen, bereich) }
+
+    /** Ausgabe, die ein Tipp auf eine Benachrichtigung öffnen will; der Startbildschirm setzt sie zurück. */
+    val oeffneAusgabe = MutableStateFlow<AusgabeOeffnen?>(null)
 
     override fun onCreate() {
         super.onCreate()
@@ -57,3 +63,6 @@ class NewsApplication : Application() {
         bereich.launch { Teilen.raeumeAuf(this@NewsApplication) }
     }
 }
+
+/** Ziel eines Benachrichtigungs-Tipps: genau diese Ausgabe, optional mit dem Block [themaId]. */
+data class AusgabeOeffnen(val ausgabeId: String, val themaId: String?)

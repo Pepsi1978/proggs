@@ -153,7 +153,10 @@ class NewsRecherche(
         val jetzt = System.currentTimeMillis()
         val thema = Thema("frage-$jetzt", text)
         // Was die aktuelle Ausgabe schon erzählt, soll der Frage-Block nicht wiederholen.
-        val schonDa = speicher.neueste()?.bloecke.orEmpty().flatMap { b -> b.meldungen.map { it.titel } }
+        // Nur eine Ausgabe von heute zählt: Die Antwort landet sonst in einer neuen Ausgabe, in der davon nichts steht.
+        val schonDa = speicher.neueste()
+            ?.takeIf { AusgabenSpeicher.tagVon(it.erstelltUm) == AusgabenSpeicher.tagVon(jetzt) }
+            ?.bloecke.orEmpty().flatMap { b -> b.meldungen.map { it.titel } }
         beiFortschritt(LaufFortschritt("Recherchiere deine Frage …", 0.05f))
         val antwort = codex.frage(
             anweisung = anweisung(jetzt, Thema.FRAGE_MIN, Thema.FRAGE_MAX, stand.ausfuehrlichkeit, sprachFrage = true),

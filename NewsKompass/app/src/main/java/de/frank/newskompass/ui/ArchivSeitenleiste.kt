@@ -33,7 +33,8 @@ import de.frank.newskompass.data.ArchivMonat
 import de.frank.newskompass.data.ArchivTag
 import java.time.Duration
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -167,7 +168,8 @@ internal fun rememberHeute(): LocalDate {
         lebenszyklus.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
                 heute = LocalDate.now()
-                val bisMitternacht = Duration.between(LocalDateTime.now(), heute.plusDays(1).atStartOfDay()).toMillis()
+                // Echte Zeit bis Mitternacht — in der Nacht der Zeitumstellung ist der Tag 23 oder 25 Stunden lang.
+                val bisMitternacht = Duration.between(ZonedDateTime.now(), heute.plusDays(1).atStartOfDay(ZoneId.systemDefault())).toMillis()
                 delay(bisMitternacht.coerceAtLeast(0L) + 1_000L)
             }
         }

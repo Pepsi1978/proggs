@@ -1,5 +1,6 @@
 package de.frank.newskompass
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -12,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -31,6 +33,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Nur beim echten Start auswerten — nach einer Drehung o. Ä. trägt die Absicht noch den alten Tipp.
+        if (savedInstanceState == null) merkeZiel(intent)
         holeVersaeumtenLaufNach()
 
         setContent {
@@ -53,8 +57,11 @@ class MainActivity : ComponentActivity() {
             }
             var einstellungenOffen by rememberSaveable { mutableStateOf(false) }
             BackHandler(einstellungenOffen) { einstellungenOffen = false }
+            // Ein Tipp auf eine Benachrichtigung führt immer zum Startbildschirm mit genau dieser Ausgabe.
+            val ziel by app.oeffneAusgabe.collectAsStateWithLifecycle()
+            LaunchedEffect(ziel) { if (ziel != null) einstellungenOffen = false }
 
-            NewsTheme(dunkel) {
+            NewsTheme(dunkel, stand.farbDesign) {
                 AnimatedContent(
                     targetState = einstellungenOffen,
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
@@ -68,6 +75,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** Die App lief schon: Der Tipp auf eine Benachrichtigung kommt hier an statt in onCreate. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        merkeZiel(intent)
+    }
+
+    private fun merkeZiel(absicht: Intent?) {
+        val ausgabeId = absicht?.getStringExtra(Zeitplan.EXTRA_AUSGABE) ?: return
+        app.oeffneAusgabe.value = AusgabeOeffnen(ausgabeId, absicht.getStringExtra(Zeitplan.EXTRA_THEMA))
+        // Verbraucht: Ein späteres Neuerzeugen der Activity springt nicht noch einmal dorthin.
+        absicht.removeExtra(Zeitplan.EXTRA_AUSGABE)
+        absicht.removeExtra(Zeitplan.EXTRA_THEMA)
     }
 
     /**

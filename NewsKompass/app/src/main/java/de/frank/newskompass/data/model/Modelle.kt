@@ -23,13 +23,27 @@ data class Stimme(
 )
 
 enum class DesignModus(val id: String, val label: String) {
-    SYSTEM("system", "System"),
+    SYSTEM("system", "Automatisch"),
     HELL("hell", "Hell"),
     DUNKEL("dunkel", "Dunkel"),
     ;
 
     companion object {
         fun fromId(value: String?): DesignModus = entries.firstOrNull { it.id == value } ?: SYSTEM
+    }
+}
+
+/** Farbwelt der App, unabhängig von Hell und Dunkel. */
+enum class FarbDesign(val id: String, val label: String) {
+    KOMPASS("kompass", "Kompass"),
+    ORANGE("orange", "Orange-Schwarz"),
+    ;
+
+    /** Das nächste Design für den Knopf „Design wechseln“. */
+    val naechstes: FarbDesign get() = entries[(ordinal + 1) % entries.size]
+
+    companion object {
+        fun fromId(value: String?): FarbDesign = entries.firstOrNull { it.id == value } ?: KOMPASS
     }
 }
 
@@ -225,6 +239,9 @@ object Denkstufen {
         "ultra" -> "Ultra"
         else -> stufe
     }
+
+    /** Alle Denkstufen, die der Dienst kennt — andere Angaben (etwa aus der KI-Suche) fallen weg. */
+    val alle = listOf("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 
     private val bisUltra = listOf("low", "medium", "high", "xhigh", "max", "ultra")
     private val bisMax = bisUltra.dropLast(1)
