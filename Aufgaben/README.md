@@ -8,8 +8,10 @@ Eigene Aufgaben-App für Android (Kotlin, Jetpack Compose, Room, Glance). Paket 
   Spracherkennung: Groq **whisper-large-v3-turbo** mit den vier Filtern gegen stille
   Halluzinationen (Stille vorab, Segment-Metriken, Zeitstempel-Abgleich, Floskeln) — alle vier
   in den Einstellungen schaltbar.
-- **KI-Korrektur** (ChatGPT per Codex-Anmeldung): formuliert das Diktat sauber; jeder weitere
-  Tipp liefert eine neue Fassung, **Zurück** stellt das Original wieder her.
+- **KI-Korrektur** (ChatGPT per Codex-Anmeldung): macht aus dem Diktat eine Aufgabe in der
+  Befehlsform („Verkaufe die Grafikkarte bei Kleinanzeigen.“); jeder weitere Tipp liefert eine neue
+  Fassung, **Zurück** stellt das Original wieder her. Modelle: GPT-6 Astra, GPT-6.1 Sol, GPT-6 Luna,
+  GPT-5.6 Terra.
 - **Überschrift** tippt man selbst; bleibt sie leer, erzeugt die KI einen Titel.
 - Tag, Uhrzeit, Dauer, Priorität, Erinnerung mit Vorlauf, Wiederholung und Checkliste direkt
   beim Anlegen. Sprache wie „morgen um 10 Uhr, dringend“ wird erkannt und mit einem Tipp übernommen.
@@ -20,11 +22,14 @@ Eigene Aufgaben-App für Android (Kotlin, Jetpack Compose, Room, Glance). Paket 
   Übermorgen, Hoch, Mittel, Gering, Später), unten Erledigt und Löschen. Über der **Zeitleiste
   (5–22 Uhr)** zeigt links eine Uhrzeit mit, die dem Finger folgt (15-Minuten-Schritte);
   Loslassen macht die Aufgabe zum Termin. Zurück in den oberen Teil von Heute/Morgen = ohne Uhrzeit.
-- **Erinnerungen** für Termine in Heute/Morgen, pünktlich oder mit Vorlauf; eigener Ton oder
-  Systemton, eigene Lautstärke, Vibration, Aktionen „Erledigt“ und „In 10 Min.“.
+- **Erinnerungen** für Termine in Heute/Morgen, pünktlich oder mit Vorlauf; eingebauter Ton,
+  Systemton oder eigene MP3 (wird in die App kopiert), eigene Lautstärke, Vibration, Aktionen
+  „Erledigt“ und „In 10 Min.“.
+- **Bereiche ohne Aufgaben** sind zugeklappt; Löschen im Editor fragt vorher nach.
 - **Vorlesen** (Edge, Google Chirp 3 HD, eigene Qwen-Stimme) für einzelne Aufgaben und den ganzen Tag.
 - **Widget „Aufgaben · Heute“**: um 0 Uhr werden die Morgen-Aufgaben automatisch zu Heute.
 - Fokus-Timer, Serie („x Tage in Folge“), Suche, Konfetti, Rückgängig.
+- **Hell / Automatisch / Dunkel** per Knopf oben (Symbol zeigt den aktuellen Modus).
 - **Vier Designs** (Aurora, Garten, Abendglut, Kosmos) in Hell und Dunkel, jeweils mit animierter
   Szene: nachdenken → planen → umsetzen → freuen.
 

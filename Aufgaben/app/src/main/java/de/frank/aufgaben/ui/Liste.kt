@@ -183,6 +183,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             Sektion(
                 "heute", "Heute", Icons.Rounded.WbSunny, f.primaer, b.heuteOffen.size + b.heuteTermine.count { !it.erledigt }, zustand,
                 Ziel.Tag(heute), untertitel = Tage.langesDatum(heute), verzoegerung = 40,
+                leer = b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty() && b.heuteErledigt.isEmpty(),
                 aktionen = { VorlesenKnopf(vm, "tag_$heute") { vm.tagVorlesen(heute, b.heuteOffen + b.heuteTermine) } },
             ) {
                 if (b.heuteOffen.isEmpty() && b.heuteTermine.isEmpty()) LeerHinweis(Icons.Rounded.WbSunny, "Noch nichts für heute. Halte eine Aufgabe gedrückt und zieh sie hierher – oder direkt auf eine Uhrzeit.")
@@ -194,6 +195,7 @@ fun ListeBildschirm(vm: AppViewModel) {
             Sektion(
                 "morgen", "Morgen", Icons.Rounded.WbTwilight, f.sekundaer, b.morgenOffen.size + b.morgenTermine.size, zustand,
                 Ziel.Tag(heute + 1), untertitel = Tage.langesDatum(heute + 1), verzoegerung = 80,
+                leer = b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty(),
                 aktionen = { VorlesenKnopf(vm, "tag_${heute + 1}") { vm.tagVorlesen(heute + 1, b.morgenOffen + b.morgenTermine) } },
             ) {
                 if (b.morgenOffen.isEmpty() && b.morgenTermine.isEmpty()) LeerHinweis(Icons.Rounded.EventNote, "Plane schon für morgen: Aufgaben hierher ziehen oder auf die Zeitleiste fallen lassen.")
@@ -211,7 +213,7 @@ fun ListeBildschirm(vm: AppViewModel) {
                 val liste = b.nachPrio[p].orEmpty()
                 Sektion(
                     p.name, p.anzeige, info[p]!!.first, if (p == Prioritaet.SPAETER) f.textLeise else f.prio(p), liste.size, zustand, Ziel.Prio(p),
-                    untertitel = info[p]!!.second, verzoegerung = 120 + i * 40,
+                    untertitel = info[p]!!.second, verzoegerung = 120 + i * 40, leer = liste.isEmpty(),
                 ) {
                     if (liste.isEmpty()) LeerHinweis(if (p == Prioritaet.SPAETER) Icons.Rounded.Mic else Icons.Rounded.SwipeDown, if (p == Prioritaet.SPAETER) "Leer. Tipp aufs Plus und sprich deine nächste Aufgabe ein." else "Nichts hier. Zieh Aufgaben aus „Später“ hierher.")
                     liste.forEach { a -> Karte(vm, a, heute, zustand) }
@@ -298,8 +300,15 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
             e.design = neu.id
             vm.melde("Design: ${neu.anzeige}")
         }
-        RundKnopf(if (f.dunkel) Icons.Rounded.LightMode else Icons.Rounded.DarkMode, if (f.dunkel) "Hellmodus" else "Dunkelmodus") {
-            e.modus = if (f.dunkel) "hell" else "dunkel"
+        // Hell → Automatisch (wie das System) → Dunkel → Hell. Das Symbol zeigt den aktuellen Modus.
+        val modus = e.modus
+        RundKnopf(
+            when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
+            when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" },
+        ) {
+            val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
+            e.modus = neu
+            vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" })
         }
         RundKnopf(Icons.Rounded.Settings, "Einstellungen") { vm.zeige(Bildschirm.Einstellungen) }
     }

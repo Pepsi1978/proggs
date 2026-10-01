@@ -6,6 +6,7 @@
     { "versionCode": 2, "versionName": "1.0.1", "stand": "29.09.2026, 14:29 Uhr", "notiz": "Kopfzeile mit Knöpfen für Hell/Dunkel und Design, ruhigere einfarbige Designs mit neuem Orange-Design, Titel Sinnvolle Aufgaben, runde Knöpfe ohne Strich, Widget mit Zeitstrahl und vier neue detailreiche Szenen mit Katze" },
     { "versionCode": 3, "versionName": "1.0.2", "stand": "30.09.2026, 18:16 Uhr", "notiz": "Zeitleiste in den Einstellungen von/bis einstellbar (auch halbe Stunden), dazu eine Automatik, die sie an die Termine anpasst und beim Ziehen die volle Spanne zeigt" },
     {"versionCode": 4, "versionName": "1.0.3", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    {"versionCode": 5, "versionName": "1.0.4", "stand": "30.09.2026, 20:24 Uhr", "notiz": "Schatten bleiben beim Scrollen und Verkleinern weich und rund statt eckiger grauer Rahmen"}
+    {"versionCode": 5, "versionName": "1.0.4", "stand": "30.09.2026, 20:24 Uhr", "notiz": "Schatten bleiben beim Scrollen und Verkleinern weich und rund statt eckiger grauer Rahmen"},
+    {"versionCode": 6, "versionName": "1.0.5", "stand": "01.10.2026, 11:48 Uhr", "notiz": "Leere Bereiche sind zugeklappt, Löschen fragt nach, runde Knöpfe ohne abgeschnittenen 3D-Rand, Knopf Hell/Automatisch/Dunkel, KI-Korrektur formuliert Aufgaben in Befehlsform, eigene MP3 als Erinnerungston, neue Modelle GPT-6.1 Sol und GPT-6 Luna"}
   ]
 }

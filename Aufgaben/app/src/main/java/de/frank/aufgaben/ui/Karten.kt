@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,7 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -101,7 +101,6 @@ fun Checkkreis(erledigt: Boolean, farbe: Color, groesse: Int = 26, aktion: () ->
         Canvas(Modifier.size(groesse.dp).graphicsLayer { scaleX = 1f + 0.15f * fort * (1f - fort) * 4f; scaleY = scaleX }) {
             val r = size.minDimension / 2
             drawCircle(farbe.copy(alpha = 0.12f + 0.88f * fort), r)
-            drawCircle(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.5f * fort), Color.Transparent)), r * 0.9f)
             drawCircle(farbe, r - 1.5.dp.toPx(), style = Stroke(2.dp.toPx()))
             if (fort > 0f) {
                 val p = Path().apply {
@@ -194,12 +193,18 @@ fun Sektion(
     ziel: Ziel,
     untertitel: String? = null,
     startOffen: Boolean = true,
+    /** Ohne Aufgaben bleibt der Bereich zugeklappt, bis man ihn selbst aufklappt. */
+    leer: Boolean = false,
     verzoegerung: Int = 0,
     aktionen: @Composable RowScope.() -> Unit = {},
     inhalt: @Composable ColumnScope.() -> Unit,
 ) {
     val f = LocalFarben.current
-    var offen by rememberSaveable(schluessel) { mutableStateOf(startOffen) }
+    // 0 = automatisch (offen, sobald etwas drin ist), 1 = selbst aufgeklappt, 2 = selbst zugeklappt.
+    var wahl by rememberSaveable(schluessel) { mutableIntStateOf(0) }
+    // Wird der Bereich leer, gilt wieder die Automatik: leer heißt zugeklappt.
+    LaunchedEffect(leer) { if (leer) wahl = 0 }
+    val offen = when (wahl) { 1 -> true; 2 -> false; else -> startOffen && !leer }
     val schwebt = zustand.hoverZiel == "sek_$schluessel"
     val rand by animateColorAsState(if (schwebt) farbe else Color.Transparent, label = "rand")
     val hub by animateFloatAsState(if (schwebt) 1.015f else 1f, spring(dampingRatio = 0.6f), label = "hub")
@@ -215,7 +220,7 @@ fun Sektion(
             .animateContentSize(spring(dampingRatio = 0.85f, stiffness = 380f)),
     ) {
         Row(
-            Modifier.fillMaxWidth().antippen(haptik = false) { offen = !offen }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(38.dp).knopf3d(farbe.copy(alpha = 0.95f), farbe.copy(alpha = 0.6f), 13.dp, f.dunkel), contentAlignment = Alignment.Center) {

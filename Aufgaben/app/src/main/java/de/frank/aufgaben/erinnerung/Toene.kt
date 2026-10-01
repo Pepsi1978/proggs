@@ -2,8 +2,10 @@ package de.frank.aufgaben.erinnerung
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.net.Uri
+import android.provider.OpenableColumns
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -24,6 +26,57 @@ object Toene {
         "kristall" to "Kristall",
         "tropfen" to "Wassertropfen",
     )
+
+    /** Ordner für eigene Töne (MP3s), die der Nutzer auswählt; sie werden hierher kopiert. */
+    fun eigenerOrdner(context: Context): File = File(context.filesDir, "toene").apply { mkdirs() }
+
+    /**
+     * Kopiert eine gewählte Audiodatei in die App, damit sie auch nach Verschieben/Löschen des
+     * Originals, ohne Netz und im Ruhezustand verfügbar bleibt. Liefert den Einstellungswert "datei:<name>".
+     */
+    fun eigenenUebernehmen(context: Context, uri: Uri): Pair<String, String> {
+        val cr = context.contentResolver
+        val anzeige = cr.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        } ?: "Eigener Ton"
+        val endung = anzeige.substringAfterLast('.', "mp3").lowercase().filter { it.isLetterOrDigit() }.take(5).ifEmpty { "mp3" }
+        val ordner = eigenerOrdner(context)
+        val tmp = File(ordner, "neu_${System.nanoTime()}.tmp")
+        try {
+            val geschrieben = (cr.openInputStream(uri) ?: error("Die Datei lässt sich nicht öffnen.")).use { ein ->
+                tmp.outputStream().use { aus ->
+                    val puffer = ByteArray(64 * 1024)
+                    var summe = 0L
+                    while (true) {
+                        val n = ein.read(puffer)
+                        if (n < 0) break
+                        summe += n
+                        check(summe <= MAX_BYTES) { "Die Datei ist größer als 20 MB." }
+                        aus.write(puffer, 0, n)
+                    }
+                    summe
+                }
+            }
+            check(geschrieben > 0) { "Die Datei ist leer." }
+            val mmr = MediaMetadataRetriever()
+            try {
+                mmr.setDataSource(tmp.absolutePath)
+                check(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes") { "Das ist keine abspielbare Audiodatei." }
+            } finally {
+                runCatching { mmr.release() }
+            }
+            val ziel = File(ordner, "eigen_${tmp.length()}_${anzeige.hashCode().toUInt()}.$endung")
+            if (ziel.exists()) ziel.delete()
+            check(tmp.renameTo(ziel)) { "Der Ton konnte nicht gespeichert werden." }
+            // Ältere eigene Töne aufräumen, damit nicht jede Auswahl liegen bleibt.
+            ordner.listFiles()?.filter { it.name.startsWith("eigen_") && it != ziel }?.forEach { it.delete() }
+            return "datei:${ziel.name}" to anzeige.substringBeforeLast('.')
+        } finally {
+            tmp.delete()
+        }
+    }
+
+    private const val MAX_BYTES = 20L * 1024 * 1024
 
     private fun datei(context: Context, name: String): File {
         val art = name.takeIf { it in eigene } ?: "chime"
@@ -69,8 +122,15 @@ object Toene {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build(),
             )
-            if (ton.startsWith("uri:")) player.setDataSource(context, Uri.parse(ton.removePrefix("uri:")))
-            else player.setDataSource(datei(context, ton).absolutePath)
+            when {
+                ton.startsWith("uri:") -> player.setDataSource(context, Uri.parse(ton.removePrefix("uri:")))
+                ton.startsWith("datei:") -> {
+                    val eigen = File(eigenerOrdner(context), ton.removePrefix("datei:"))
+                    // Fehlt die eigene Datei (z. B. nach einer Wiederherstellung), klingt der Standardton.
+                    player.setDataSource(if (eigen.isFile) eigen.absolutePath else datei(context, "chime").absolutePath)
+                }
+                else -> player.setDataSource(datei(context, ton).absolutePath)
+            }
             player.setVolume(lautstaerke, lautstaerke)
             var beendet = false
             val ende = {
