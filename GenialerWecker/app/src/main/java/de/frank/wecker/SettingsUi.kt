@@ -165,7 +165,8 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             }
             when (provider) {
                 TtsProvider.GOOGLE_CLOUD.id -> Text("Google Cloud Text-to-Speech · Chirp 3 HD. Benötigt einen dafür freigeschalteten Google-Schlüssel; ein reiner Gemini-API-Schlüssel reicht nicht automatisch.", style = MaterialTheme.typography.bodySmall)
-                TtsProvider.MODELL.id -> Text("Supertonic 3 rechnet direkt auf dem Handy – ohne Internet, ohne Schlüssel. Fünf Frauen- und fünf Männerstimmen wie in der Android-Verkaufs-App. Die Vorbereitung dauert länger als bei den Online-Stimmen, weil das Handy selbst rechnet.", style = MaterialTheme.typography.bodySmall)
+                TtsProvider.MODELL.id -> { Text("Supertonic 3 rechnet direkt auf dem Handy – ohne Internet, ohne Schlüssel. Fünf Frauen- und fünf Männerstimmen wie in der Android-Verkaufs-App. Die Vorbereitung dauert länger als bei den Online-Stimmen, weil das Handy selbst rechnet.", style = MaterialTheme.typography.bodySmall)
+                    SupertonicDownloadBereich() }
                 TtsProvider.QWEN.id, TtsProvider.QWEN_CLONE.id -> Text("Alibaba Model Studio · DashScope International. Eigene Stimmen verwenden dasselbe Klonmodell wie Geniale Ideen.", style = MaterialTheme.typography.bodySmall)
                 else -> Text("Microsoft Edge · kein eigener Schlüssel nötig. Für die Audio-Vorbereitung wird Internet benötigt.", style = MaterialTheme.typography.bodySmall)
             }

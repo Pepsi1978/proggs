@@ -38,7 +38,7 @@ object ModellKatalog {
 
 /**
  * Synthese mit den Modellstimmen über sherpa-onnx (eigener Bau ohne espeak, siehe GenialerWeckerAndroid/docs/sherpa-onnx-asr-only).
- * Die Modelle liegen als Assets in der APK. Immer nur ein Modell im Speicher; nach kurzer Ruhe wird es freigegeben.
+ * Die Modelle lädt die App einmal herunter (SupertonicModell). Immer nur ein Modell im Speicher; nach kurzer Ruhe wird es freigegeben.
  */
 object ModellStimmen {
     /** Rechenschritte von Supertonic: 40 klingt deutlich sauberer als 10/20 (Hörvergleich 28.09.2026), kostet etwa 4× Zeit. */
@@ -87,16 +87,20 @@ object ModellStimmen {
 
     private fun instanz(context: Context, modell: String): OfflineTts {
         geladen?.let { (name, tts) -> if (name == modell) return tts else { tts.release(); geladen = null } }
+        if (!SupertonicModell.geladen(context))
+            throw SyntheseAbbruch("Die Supertonic-Stimmen sind noch nicht geladen. Einstellungen → Vorlesen → „Stimmen laden“ (${SupertonicModell.mb}).")
+        SupertonicModell.steuerdateienBereitstellen(context)
+        fun pfad(name: String) = SupertonicModell.datei(context, name).absolutePath
         val config = OfflineTtsModelConfig(numThreads = 4, supertonic = OfflineTtsSupertonicModelConfig(
-            durationPredictor = "tts/supertonic/duration_predictor.onnx",
-            textEncoder = "tts/supertonic/text_encoder.onnx",
-            vectorEstimator = "tts/supertonic/vector_estimator.onnx",
-            vocoder = "tts/supertonic/vocoder.onnx",
-            ttsJson = "tts/supertonic/tts.json",
-            unicodeIndexer = "tts/supertonic/unicode_indexer.bin",
-            voiceStyle = "tts/supertonic/voice.bin",
+            durationPredictor = pfad("duration_predictor.onnx"),
+            textEncoder = pfad("text_encoder.onnx"),
+            vectorEstimator = pfad("vector_estimator.onnx"),
+            vocoder = pfad("vocoder.onnx"),
+            ttsJson = pfad("tts.json"),
+            unicodeIndexer = pfad("unicode_indexer.bin"),
+            voiceStyle = pfad("voice.bin"),
         ))
-        val tts = OfflineTts(context.assets, OfflineTtsConfig(model = config))
+        val tts = OfflineTts(null, OfflineTtsConfig(model = config))
         geladen = modell to tts
         return tts
     }
