@@ -1282,3 +1282,11 @@ gegen einen gerade gebauten CLI-Build aus; dafür ist ein Prozessneustart nötig
 
 Quelle: https://github.com/openai/codex/blob/rust-v0.153.2/codex-rs/tui/src/chatwidget/thread_usage.rs
 Tarife: https://developers.openai.com/api/docs/pricing
+
+## macOS: gepatchter OpenCode-Build startet nicht – SIGKILL wegen ungültiger Signatur (01.10.2026)
+
+**Symptom:** Aus dem OpenLauncher (Terminal.app und tmux) startet OpenCode bei jedem Modell nicht: Das Fenster zeigt kurz nichts und landet wieder am Prompt. Es gibt kein stderr-Protokoll. Direkt aufgerufen endet `~/.local/share/opencode-mousefix/versions/<v>/opencode --version` mit **Exit 137** (SIGKILL).
+
+**Ursache:** `bun build --compile` hängt das Programm an das fertig gelinkte Binary an. Die Ad-hoc-Signatur des Linkers ist danach ungültig (`codesign --verify` → „code or signature have been modified“). Neuere macOS-Versionen (hier Darwin 27) beenden so ein arm64-Binary sofort. Die normale Installation unter `~/.opencode/bin` ist korrekt signiert und läuft deshalb weiter.
+
+**Fix:** `codesign --force --sign - <binary>`. `opencode-setup/build-install-macos-tuifix.sh` signiert seit 01.10.2026 nach dem Kopieren immer neu. Der OpenLauncher (macOS, ab 1.24.34) prüft vor dem Start die Signatur, signiert bei Bedarf neu und fällt sonst auf `~/.opencode/bin/opencode` zurück.

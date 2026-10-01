@@ -1121,13 +1121,34 @@ final class OpenLauncherService {
                 let fullRoot = (root as NSString).standardizingPath + "/"
                 let fullPath = ((root as NSString).appendingPathComponent(relative) as NSString).standardizingPath
                 guard fullPath.hasPrefix(fullRoot) else { continue }
-                if FileManager.default.isExecutableFile(atPath: fullPath) { return fullPath }
+                if FileManager.default.isExecutableFile(atPath: fullPath), ensureValidSignature(fullPath) { return fullPath }
             }
         }
 
         let userInstall = (Paths.home as NSString).appendingPathComponent(".opencode/bin/opencode")
         if FileManager.default.isExecutableFile(atPath: userInstall) { return userInstall }
         return Shell.which("opencode") ?? "opencode"
+    }
+
+    /// Bun haengt das Programm an das fertig gelinkte Binary an; die Linker-Signatur ist danach
+    /// ungueltig, und neuere macOS-Versionen beenden so ein Binary sofort mit SIGKILL. OpenCode
+    /// startete dann im Terminal und in tmux kommentarlos gar nicht. Ein ungueltig signierter
+    /// Patch-Build wird deshalb ad hoc neu signiert; gelingt das nicht, faellt der Start auf die
+    /// normale Installation zurueck, statt ein Binary zu starten, das nie laufen wird.
+    private static func ensureValidSignature(_ path: String) -> Bool {
+        let codesign = "/usr/bin/codesign"
+        guard FileManager.default.isExecutableFile(atPath: codesign) else { return true }
+        if Shell.run(codesign, ["--verify", path], timeout: 20).exitCode == 0 { return true }
+        Logger.shared.warn("OpenLauncherService", "ensureValidSignature", "OpenCode-Patch-Build ungültig signiert, signiere neu",
+                           ["path": path])
+        let sign = Shell.run(codesign, ["--force", "--sign", "-", path], timeout: 60)
+        let ok = sign.exitCode == 0 && Shell.run(codesign, ["--verify", path], timeout: 20).exitCode == 0
+        if !ok {
+            Logger.shared.error("OpenLauncherService", "ensureValidSignature",
+                                "Neu-Signieren fehlgeschlagen, nutze die normale OpenCode-Installation",
+                                ["path": path, "stderr": sign.stderr])
+        }
+        return ok
     }
 
     private static func normalizeThinkingLevel(_ thinkingLevel: String?) -> String? {

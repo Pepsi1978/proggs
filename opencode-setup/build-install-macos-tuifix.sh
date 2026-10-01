@@ -207,6 +207,11 @@ PYEOF
   mkdir -p "$staging"
   cp "$built" "$staging/opencode"
   chmod +x "$staging/opencode"
+  # Bun haengt das Programm an das fertig gelinkte Binary an; die Ad-hoc-Signatur des Linkers ist
+  # danach ungueltig. Neuere macOS-Versionen beenden so ein Binary sofort (SIGKILL, Exit 137) --
+  # OpenCode startete dann aus dem Launcher heraus gar nicht. Deshalb immer neu signieren.
+  codesign --force --sign - "$staging/opencode" >/dev/null 2>&1 \
+    || { red "Ad-hoc-Signatur fehlgeschlagen: $staging/opencode"; rm -rf "$staging"; exit 1; }
   staged_version="$("$staging/opencode" --version | tr -d '[:space:]')"
   [ "$staged_version" = "$CUSTOM_VERSION" ] \
     || { red "Versionspruefung fehlgeschlagen: erwartet $CUSTOM_VERSION, erhalten $staged_version"; rm -rf "$staging"; exit 1; }
@@ -218,6 +223,12 @@ PYEOF
 else
   SOURCE_COMMIT="unveraendert"
   green "OK  bereits gebaut: $FINAL_EXE"
+fi
+
+# Auch ein frueher gebautes Binary kann noch die kaputte Linker-Signatur tragen.
+if ! codesign --verify "$FINAL_EXE" >/dev/null 2>&1; then
+  codesign --force --sign - "$FINAL_EXE" >/dev/null 2>&1 || { red "Ad-hoc-Signatur fehlgeschlagen: $FINAL_EXE"; exit 1; }
+  green "OK  neu signiert: $FINAL_EXE"
 fi
 
 actual="$("$FINAL_EXE" --version | tr -d '[:space:]')"
