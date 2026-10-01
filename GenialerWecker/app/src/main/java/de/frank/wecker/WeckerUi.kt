@@ -2193,7 +2193,8 @@ private fun AufgabenBereich(vm: WeckerViewModel, alarm: Alarm, offen: Boolean, s
     val tag = remember(alarm) { TasksBridge.klingeltag(alarm, ausPlan = true) }
     val tagText = remember(tag) { aufgabenTag(tag) }
     Text("Aufgaben", style = MaterialTheme.typography.titleSmall, color = gold.primaer)
-    Text("Vorgelesen werden die offenen Aufgaben aus der App „Aufgaben“ für $tagText: zuerst die Uhrzeit, dann der Titel, " +
+    Text("Vorgelesen werden die offenen Aufgaben aus der App „Aufgaben“ für $tagText ab der Weckzeit " +
+        "(frühere Termine fallen weg, Aufgaben ohne Uhrzeit bleiben): zuerst die Uhrzeit, dann der Titel, " +
         "zwischen zwei Aufgaben 2 Sekunden Pause, nach dem ganzen Block 3 Sekunden. Änderungen in der Aufgaben-App werden automatisch neu vorbereitet.",
         style = MaterialTheme.typography.bodySmall)
     StillerKnopf("Aufgaben für $tagText ansehen", { vm.loadTasks(alarm); setzeOffen(true) })
@@ -2208,7 +2209,7 @@ private fun AufgabenBereich(vm: WeckerViewModel, alarm: Alarm, offen: Boolean, s
                 loading -> Text("Aufgaben werden gelesen …", color = gold.textGedaempft)
                 error.isNotBlank() -> Text(error, color = LocalSemantisch.current.warnung)
                 tasksDay != tag -> Text("Noch nicht gelesen.", color = gold.textGedaempft)
-                tasks.isEmpty() -> Text("Für $tagText sind keine offenen Aufgaben eingetragen.", color = gold.textPrimaer)
+                tasks.isEmpty() -> Text("Für $tagText sind ab der Weckzeit keine offenen Aufgaben eingetragen.", color = gold.textPrimaer)
                 else -> tasks.forEach { aufgabe ->
                     Row(verticalAlignment = Alignment.Top) {
                         Text(aufgabe.zeit.ifBlank { "–" }, Modifier.width(64.dp), fontFamily = zahlSchrift(), fontWeight = FontWeight.SemiBold, color = gold.primaer)
