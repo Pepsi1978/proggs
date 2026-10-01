@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".AufgabenApplication"
@@ -31,6 +34,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Spielt Erinnerungen mit Vorlesen bzw. als Wecker ab, bis man ausschaltet. -->
+        <service
+            android:name=".erinnerung.ErinnerungsDienst"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".erinnerung.ErinnerungsEmpfaenger" android:exported="false" />
         <receiver android:name=".erinnerung.AktionsEmpfaenger" android:exported="false" />
         <receiver android:name=".erinnerung.SystemEmpfaenger" android:exported="true">

@@ -51,6 +51,8 @@ class GoogleCloudTtsPlayer(context: Context) {
         onPlaybackStart: () -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
+        /** Erinnerungen: fertiges Audio abholen, ohne es jetzt abzuspielen. */
+        onAudioReady: ((File) -> Unit)? = null,
     ) {
         stop()
         val requestGeneration = generation.incrementAndGet()
@@ -146,7 +148,17 @@ class GoogleCloudTtsPlayer(context: Context) {
                     activeCall = null
                     activeFile = file
                 }
-                scope.launch { playFile(file, requestGeneration, callbacks) }
+                if (onAudioReady != null) {
+                    // Nur erzeugen: Der Aufrufer kopiert die Datei, danach räumt finish() sie weg.
+                    try {
+                        onAudioReady(file)
+                        finishComplete(requestGeneration, callbacks)
+                    } catch (error: Exception) {
+                        finishError(requestGeneration, callbacks, error)
+                    }
+                } else {
+                    scope.launch { playFile(file, requestGeneration, callbacks) }
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {

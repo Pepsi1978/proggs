@@ -1,5 +1,6 @@
 package de.frank.aufgaben.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -55,6 +56,10 @@ data class Aufgabe(
     val titelVonKi: Boolean = false,
     /** Checkliste als JSON-Liste [{"t": Text, "e": erledigt}]. */
     val schritteJson: String = "",
+    /** Erinnerung liest den Aufgabentext vor (sechs vorab erzeugte Stimmfassungen). */
+    @ColumnInfo(defaultValue = "0") val vorlesen: Boolean = false,
+    /** Erinnerung als Wecker: läuft weiter, bis man sie in der Benachrichtigung ausschaltet. */
+    @ColumnInfo(defaultValue = "0") val alsWecker: Boolean = false,
 ) {
     val prio: Prioritaet get() = Prioritaet.von(prioritaet)
     val wdh: Wiederholung get() = Wiederholung.von(wiederholung)

@@ -2,6 +2,7 @@ package de.frank.aufgaben.data
 
 import android.content.Context
 import android.content.Intent
+import de.frank.aufgaben.erinnerung.ErinnerungsDienst
 import de.frank.aufgaben.erinnerung.Planer
 import de.frank.aufgaben.widget.HeuteWidget
 import kotlinx.coroutines.CoroutineScope
@@ -38,12 +39,14 @@ class AufgabenRepository private constructor(context: Context) {
 
     suspend fun loesche(aufgabe: Aufgabe) {
         Planer.storniere(app, aufgabe.id)
+        ErinnerungsDienst.stoppe(app, aufgabe.id)
         dao.loesche(aufgabe)
         geaendert()
     }
 
     /** Erledigt oder wieder offen. Bei Wiederholungen entsteht beim Erledigen der nächste Termin. */
     suspend fun setzeErledigt(aufgabe: Aufgabe, erledigt: Boolean): Aufgabe? {
+        if (erledigt) ErinnerungsDienst.stoppe(app, aufgabe.id)
         dao.aendere(aufgabe.copy(erledigt = erledigt, erledigtAm = if (erledigt) System.currentTimeMillis() else null, geaendert = System.currentTimeMillis()))
         var folge: Aufgabe? = null
         if (erledigt && aufgabe.wdh != Wiederholung.KEINE) {

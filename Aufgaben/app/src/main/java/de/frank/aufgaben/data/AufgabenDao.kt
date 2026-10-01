@@ -1,6 +1,7 @@
 package de.frank.aufgaben.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Delete
@@ -36,7 +37,13 @@ interface AufgabenDao {
     suspend fun loesche(aufgabe: Aufgabe)
 }
 
-@Database(entities = [Aufgabe::class], version = 1, exportSchema = true)
+@Database(
+    entities = [Aufgabe::class],
+    version = 2,
+    exportSchema = true,
+    // 1 → 2: Spalten vorlesen und alsWecker (beide mit Standard 0), von Room erzeugt.
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 abstract class AufgabenDatenbank : RoomDatabase() {
     abstract fun dao(): AufgabenDao
 

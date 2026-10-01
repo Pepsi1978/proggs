@@ -67,6 +67,8 @@ class Einstellungen private constructor(context: Context) {
     var googleStimme: String get() = s("google_tts_voice", "de-DE-Chirp3-HD-Kore"); set(v) = put { putString("google_tts_voice", v) }
     var qwenKey: String get() = s("qwen_tts_api_key", ""); set(v) = put { putString("qwen_tts_api_key", v.trim()) }
     var qwenStimme: String get() = s("qwen_tts_voice_id", ""); set(v) = put { putString("qwen_tts_voice_id", v.trim()) }
+    /** Mehrsprachige Stimmen an Deutsch binden (gleicher Schlüssel wie im TtsManager). */
+    val immerDeutsch: Boolean get() = prefs.getBoolean("immer_deutsch_vorlesen", true)
     var sprechtempo: Float
         get() = prefs.getFloat("tts_speech_rate", 1f)
         set(v) = put { putFloat("tts_speech_rate", v.coerceIn(0.7f, 1.3f)) }
@@ -84,6 +86,8 @@ class Einstellungen private constructor(context: Context) {
     var lautstaerke: Float get() = prefs.getFloat("lautstaerke", 0.8f); set(v) = put { putFloat("lautstaerke", v.coerceIn(0f, 1f)) }
     var vorlaufStandard: Int get() = prefs.getInt("vorlauf", 10); set(v) = put { putInt("vorlauf", v) }
     var vibration: Boolean get() = prefs.getBoolean("vibration", true); set(v) = put { putBoolean("vibration", v) }
+    /** Neue Erinnerungen lesen den Aufgabentext standardmäßig vor. */
+    var vorlesenStandard: Boolean get() = prefs.getBoolean("vorlesen_standard", true); set(v) = put { putBoolean("vorlesen_standard", v) }
 
     // ---- Zeitleiste (Minuten ab 0 Uhr, 30-Minuten-Schritte) ----
     var zeitleisteVon: Int get() = prefs.getInt("zeitleiste_von", 5 * 60); set(v) = put { putInt("zeitleiste_von", v.coerceIn(0, 23 * 60)) }
