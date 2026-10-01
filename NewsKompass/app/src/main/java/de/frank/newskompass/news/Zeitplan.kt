@@ -364,10 +364,27 @@ object Zeitplan {
         )
     }
 
-    private fun oeffneApp(context: Context): PendingIntent = PendingIntent.getActivity(
+    /** Kennung der Ausgabe, die eine Benachrichtigung öffnen soll, und optional der Block darin. */
+    const val EXTRA_AUSGABE = "ausgabe_id"
+    const val EXTRA_THEMA = "thema_id"
+
+    /**
+     * Öffnet die App. Mit [ausgabeId] springt sie genau zu dieser Ausgabe (und zum Block [themaId]).
+     *
+     * Jede Ausgabe braucht einen eigenen Anfragecode: PendingIntents mit gleichem Code und gleicher
+     * Absicht gelten als derselbe — FLAG_UPDATE_CURRENT hätte dann die Morgen- mit der Abendausgabe
+     * überschrieben, und beide Benachrichtigungen öffneten dasselbe. SINGLE_TOP liefert den Tipp an die
+     * laufende App (onNewIntent), statt sie neu zu erzeugen und dabei das Vorlesen abzubrechen.
+     */
+    private fun oeffneApp(context: Context, ausgabeId: String? = null, themaId: String? = null): PendingIntent = PendingIntent.getActivity(
         context,
-        1,
-        Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+        ausgabeId?.let { hinweisNummer(it + "|" + themaId.orEmpty()) } ?: 1,
+        Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .apply {
+                if (ausgabeId != null) putExtra(EXTRA_AUSGABE, ausgabeId)
+                if (themaId != null) putExtra(EXTRA_THEMA, themaId)
+            },
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
@@ -381,7 +398,14 @@ object Zeitplan {
         .build()
 
     /** Jede neue Ausgabe bekommt ihre eigene Benachrichtigung ([nummer] je Ausgabe) — keine überschreibt die vorige. */
-    fun meldeFertig(context: Context, titel: String, zeilen: List<String>, nummer: Int = HINWEIS_FERTIG) {
+    fun meldeFertig(
+        context: Context,
+        titel: String,
+        zeilen: List<String>,
+        nummer: Int = HINWEIS_FERTIG,
+        ausgabeId: String? = null,
+        themaId: String? = null,
+    ) {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
         val hinweis = NotificationCompat.Builder(context, KANAL_FERTIG)
             .setSmallIcon(android.R.drawable.ic_menu_agenda)
@@ -389,7 +413,7 @@ object Zeitplan {
             .setContentText(zeilen.firstOrNull().orEmpty())
             .setStyle(NotificationCompat.InboxStyle().also { stil -> zeilen.take(6).forEach(stil::addLine) })
             .setAutoCancel(true)
-            .setContentIntent(oeffneApp(context))
+            .setContentIntent(oeffneApp(context, ausgabeId, themaId))
             .build()
         runCatching { NotificationManagerCompat.from(context).notify(nummer, hinweis) }
     }
@@ -560,7 +584,7 @@ class NewsWorker(context: Context, parameter: WorkerParameters) : CoroutineWorke
                 }
                 val zeilen = gescheitert.map { "Nicht aktualisiert: ${it.titel}" } +
                     ausgabe.bloecke.flatMap { b -> b.meldungen.take(2).map { "${b.titel}: ${it.titel}" } }
-                Zeitplan.meldeFertig(applicationContext, "Deine ${ausgabe.slot} ist da", zeilen, Zeitplan.hinweisNummer(ausgabe.id))
+                Zeitplan.meldeFertig(applicationContext, "Deine ${ausgabe.slot} ist da", zeilen, Zeitplan.hinweisNummer(ausgabe.id), ausgabe.id)
                 if (nochmal) return Result.retry()
                 ergebnis = Result.success()
             } catch (abbruch: CancellationException) {
@@ -645,7 +669,10 @@ class FrageWorker(context: Context, parameter: WorkerParameters) : CoroutineWork
                 applicationContext,
                 "Deine Antwort ist da: ${block.titel}",
                 block.meldungen.take(6).map { it.titel },
-                Zeitplan.hinweisNummer(block.themaId),
+                // Je Ausgabe und Frage eine eigene Nummer — dieselbe Frage an zwei Tagen überschreibt sich nicht.
+                Zeitplan.hinweisNummer(ausgabe.id + "|" + block.themaId),
+                ausgabeId = ausgabe.id,
+                themaId = block.themaId,
             )
             Zeitplan.vergissVerworfen(applicationContext, id)
             Result.success(workDataOf("ausgabeId" to ausgabe.id, "themaId" to block.themaId))

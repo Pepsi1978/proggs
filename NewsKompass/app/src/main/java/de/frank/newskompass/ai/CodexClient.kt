@@ -309,13 +309,16 @@ class CodexClient(context: Context) {
     /**
      * Die Modelle, die dieses Konto gerade benutzen darf, samt ihrer Denkstufen — live vom
      * Dienst, damit neue Modelle ohne App-Update auftauchen.
+     *
+     * Der Dienst blendet Modelle aus, die eine neuere Codex-Version verlangen als [clientVersion].
+     * Die KI-Suche fragt deshalb zusätzlich mit einer sehr hohen Version und prüft jeden Fund selbst.
      */
-    suspend fun ladeModelle(): List<CodexModell> = withContext(Dispatchers.IO) {
+    suspend fun ladeModelle(clientVersion: String = CLIENT_VERSION): List<CodexModell> = withContext(Dispatchers.IO) {
         val zugang = gueltigerZugang()
         val konto = jwtKontoId(zugang) ?: kontoId
             ?: throw CodexFehler(CodexFehlerArt.ANMELDUNG, "Im Zugang fehlt die Konto-Kennung.")
         val anfrage = Request.Builder()
-            .url("$MODELLE_URL?client_version=$CLIENT_VERSION")
+            .url("$MODELLE_URL?client_version=$clientVersion")
             .get()
             .header("Accept", "application/json")
             .header("Authorization", "Bearer $zugang")
@@ -570,7 +573,7 @@ class CodexClient(context: Context) {
         private const val WEITERLEITUNG_URL = "https://auth.openai.com/deviceauth/callback"
         private const val ANTWORT_URL = "https://chatgpt.com/backend-api/codex/responses"
         private const val MODELLE_URL = "https://chatgpt.com/backend-api/codex/models"
-        private const val CLIENT_VERSION = "0.155.0"
+        private const val CLIENT_VERSION = "0.159.0"
         private const val ABLAGE_NAME = "codex_oauth"
 
         private const val SCHL_ZUGANG = "access_token"

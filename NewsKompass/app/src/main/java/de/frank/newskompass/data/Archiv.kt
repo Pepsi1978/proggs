@@ -118,7 +118,9 @@ object Archiv {
         // wird ein fehlendes Bild nachgeliefert, entsteht der Rückblick neu.
         val bildDa: (String) -> Boolean = { name -> speicher.bildDatei(name) != null }
         val fingerabdruck = withContext(Dispatchers.IO) { RueckblickCache.fingerabdruck(m.ausgaben, bildDa) }
-        val schluessel = m.monat.toString() + fingerabdruck
+        // „laufend“ gehört in den Schlüssel: Nach Monatsende ändert sich die Überschrift („bisher“ fällt weg),
+        // und erst dann wird der Rückblick dauerhaft gespeichert — der alte Eintrag darf das nicht verdecken.
+        val schluessel = "${m.monat}|${m.laufend}|$fingerabdruck"
         synchronized(merker) { merker[schluessel] }?.let { return@withContext it }
 
         // Abgeschlossene Monate kommen aus dem gespeicherten Rückblick, wenn er zu den Quellen passt.

@@ -272,6 +272,10 @@ class VorleseManager(
                 delay(ABSATZ_PAUSE_MS)
             }
         }
+        // Kam kein einziger Absatz durch (etwa ein Text aus nur einem Absatz), nicht still enden — den Grund zeigen.
+        if (!schonGespielt && meinLauf == laufNummer && absaetze.isNotEmpty()) {
+            throw TtsFehler(TtsFehlerArt.INHALT, "Der Text ließ sich nicht vorlesen. Bitte gleich noch einmal versuchen.")
+        }
         KompassLog.info("VorleseManager", "spieleReihe", "Vorlesen beendet", mapOf("absaetze" to absaetze.size))
     }
 

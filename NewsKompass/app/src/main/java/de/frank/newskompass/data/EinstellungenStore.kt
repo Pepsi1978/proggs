@@ -9,6 +9,7 @@ import de.frank.newskompass.data.model.Ausfuehrlichkeit
 import de.frank.newskompass.data.model.BildModus
 import de.frank.newskompass.data.model.Denkstufen
 import de.frank.newskompass.data.model.DesignModus
+import de.frank.newskompass.data.model.FarbDesign
 import de.frank.newskompass.data.model.Rhythmus
 import de.frank.newskompass.data.model.Thema
 import de.frank.newskompass.data.model.TtsAnbieter
@@ -26,12 +27,16 @@ data class EinstellungenStand(
     val themen: List<Thema>,
     val modellId: String,
     val denktiefe: String,
+    /** Live-Katalog plus die per KI gefundenen und geprüften Modelle. */
     val modelle: List<CodexModell>,
+    /** Per KI-Suche gefunden und mit einer Probeanfrage bestätigt — fehlen (noch) im Live-Katalog. */
+    val kiModelle: List<CodexModell>,
     val bildModus: BildModus,
     val ausfuehrlichkeit: Ausfuehrlichkeit,
     val maxKiBilder: Int,
     val bilderUnterstuetzt: Boolean,
     val design: DesignModus,
+    val farbDesign: FarbDesign,
     val ttsAnbieter: TtsAnbieter,
     val googleStimme: String,
     val edgeStimme: String,
@@ -90,18 +95,22 @@ class EinstellungenStore(context: Context) {
     // --- Lesen -------------------------------------------------------------------------------
 
     private fun lies(): EinstellungenStand {
-        val modelle = leseModelle()
+        val katalog = leseModelle()
+        val kiModelle = leseKiModelle().filter { ki -> katalog.none { it.id == ki.id } }
+        val modelle = katalog + kiModelle
         val modellId = offen.getString(K_MODELL, null) ?: STANDARD_MODELL
         return EinstellungenStand(
             themen = leseThemen(),
             modellId = modellId,
             denktiefe = offen.getString(K_DENKTIEFE, null) ?: "medium",
             modelle = modelle,
+            kiModelle = kiModelle,
             bildModus = BildModus.fromId(offen.getString(K_BILDMODUS, null)),
             ausfuehrlichkeit = Ausfuehrlichkeit.fromId(offen.getString(K_AUSFUEHRLICHKEIT, null)),
             maxKiBilder = offen.getInt(K_MAX_KI, 8),
             bilderUnterstuetzt = offen.getBoolean(K_BILDER_OK, true),
             design = DesignModus.fromId(offen.getString(K_DESIGN, null)),
+            farbDesign = FarbDesign.fromId(offen.getString(K_FARBDESIGN, null)),
             ttsAnbieter = ttsAnbieter,
             googleStimme = googleStimme,
             edgeStimme = edgeStimme,
@@ -147,8 +156,13 @@ class EinstellungenStore(context: Context) {
         }
     }
 
-    private fun leseModelle(): List<CodexModell> {
-        val roh = offen.getString(K_MODELLE, null) ?: return Denkstufen.bekannteModelle
+    private fun leseModelle(): List<CodexModell> =
+        leseModellListe(offen.getString(K_MODELLE, null))?.takeIf { it.isNotEmpty() } ?: Denkstufen.bekannteModelle
+
+    private fun leseKiModelle(): List<CodexModell> = leseModellListe(offen.getString(K_KI_MODELLE, null)).orEmpty()
+
+    private fun leseModellListe(roh: String?): List<CodexModell>? {
+        if (roh == null) return null
         return runCatching {
             val liste = JSONArray(roh)
             (0 until liste.length()).map {
@@ -161,7 +175,18 @@ class EinstellungenStore(context: Context) {
                     m.optString("standard", "medium"),
                 )
             }
-        }.getOrNull()?.takeIf { it.isNotEmpty() } ?: Denkstufen.bekannteModelle
+        }.getOrNull()
+    }
+
+    private fun modellJson(modelle: List<CodexModell>): String {
+        val liste = JSONArray()
+        modelle.forEach {
+            liste.put(
+                JSONObject().put("id", it.id).put("name", it.name)
+                    .put("stufen", JSONArray(it.stufen)).put("standard", it.standardStufe),
+            )
+        }
+        return liste.toString()
     }
 
     // --- Schreiben ---------------------------------------------------------------------------
@@ -194,20 +219,29 @@ class EinstellungenStore(context: Context) {
         if (modell != null && tiefe !in modell.stufen) putString(K_DENKTIEFE, modell.standardStufe)
     }
 
+    /** Hängt geprüfte KI-Funde an; ein schon gespeicherter Fund mit gleicher Kennung wird ersetzt. */
+    fun merkeKiModelle(neu: List<CodexModell>) = schreibe {
+        val alt = leseKiModelle().filter { a -> neu.none { it.id == a.id } }
+        putString(K_KI_MODELLE, modellJson(alt + neu))
+    }
+
+    /** Entfernt einen KI-Fund wieder; war er gewählt, gilt danach das Standardmodell. */
+    fun vergissKiModell(id: String) = schreibe {
+        putString(K_KI_MODELLE, modellJson(leseKiModelle().filter { it.id != id }))
+        if (offen.getString(K_MODELL, null) == id) remove(K_MODELL)
+    }
+
     fun setzeDenktiefe(stufe: String) = schreibe { putString(K_DENKTIEFE, stufe) }
 
     fun setzeModelle(modelle: List<CodexModell>) {
         // Unveränderte Liste nicht neu schreiben — sonst zeichnet die ganze Einstellungsseite neu, sobald die Modelle ankommen.
-        if (modelle.isEmpty() || modelle == _stand.value.modelle) return
+        // Verglichen wird mit dem gespeicherten Katalog — der Stand enthält zusätzlich die KI-Funde.
+        if (modelle.isEmpty() || modelle == leseModellListe(offen.getString(K_MODELLE, null))) return
         schreibe {
-            val liste = JSONArray()
-            modelle.forEach {
-                liste.put(
-                    JSONObject().put("id", it.id).put("name", it.name)
-                        .put("stufen", JSONArray(it.stufen)).put("standard", it.standardStufe),
-                )
-            }
-            putString(K_MODELLE, liste.toString())
+            putString(K_MODELLE, modellJson(modelle))
+            // Steht ein KI-Fund inzwischen im Katalog, gilt der Katalog — der Fund wird nicht mehr gebraucht.
+            val ki = leseKiModelle()
+            if (ki.any { k -> modelle.any { it.id == k.id } }) putString(K_KI_MODELLE, modellJson(ki.filter { k -> modelle.none { it.id == k.id } }))
             // Kennt das gewählte Modell laut neuer Liste die bisherige Denktiefe nicht mehr, auf dessen Standard wechseln —
             // sonst lehnt der Dienst jede Anfrage ab.
             val gewaehlt = modelle.firstOrNull { it.id == (offen.getString(K_MODELL, null) ?: STANDARD_MODELL) }
@@ -221,6 +255,7 @@ class EinstellungenStore(context: Context) {
     fun setzeMaxKiBilder(anzahl: Int) = schreibe { putInt(K_MAX_KI, anzahl.coerceIn(0, 30)) }
     fun setzeBilderUnterstuetzt(ja: Boolean) = schreibe { putBoolean(K_BILDER_OK, ja) }
     fun setzeDesign(modus: DesignModus) = schreibe { putString(K_DESIGN, modus.id) }
+    fun setzeFarbDesign(design: FarbDesign) = schreibe { putString(K_FARBDESIGN, design.id) }
     fun setzeTtsAnbieter(anbieter: TtsAnbieter) = schreibe { putString(K_TTS, anbieter.id) }
     fun setzeGoogleStimme(id: String) = schreibe { putString(K_GOOGLE_STIMME, id) }
     fun setzeEdgeStimme(id: String) = schreibe { putString(K_EDGE_STIMME, id) }
@@ -330,6 +365,7 @@ class EinstellungenStore(context: Context) {
         private const val K_MODELL = "modell"
         private const val K_DENKTIEFE = "denktiefe"
         private const val K_MODELLE = "modelle_cache"
+        private const val K_KI_MODELLE = "modelle_ki"
         private const val K_BILDMODUS = "bildmodus"
         private const val K_MAX_KI = "max_ki_bilder"
         private const val K_AUSFUEHRLICHKEIT = "ausfuehrlichkeit"
@@ -338,6 +374,7 @@ class EinstellungenStore(context: Context) {
         private const val K_OFFENE_TERMINE = "offene_termine"
         private const val K_BILDER_OK = "bilder_unterstuetzt"
         private const val K_DESIGN = "design"
+        private const val K_FARBDESIGN = "farbdesign"
         private const val K_TTS = "tts_anbieter"
         private const val K_GOOGLE_STIMME = "google_stimme"
         private const val K_EDGE_STIMME = "edge_stimme"

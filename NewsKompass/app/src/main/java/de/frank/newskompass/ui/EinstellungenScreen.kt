@@ -34,6 +34,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +62,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -127,6 +130,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -156,6 +160,7 @@ import de.frank.newskompass.data.model.Ausfuehrlichkeit
 import de.frank.newskompass.data.model.BildModus
 import de.frank.newskompass.data.model.Denkstufen
 import de.frank.newskompass.data.model.DesignModus
+import de.frank.newskompass.data.model.FarbDesign
 import de.frank.newskompass.data.model.Rhythmus
 import de.frank.newskompass.data.model.RhythmusArt
 import de.frank.newskompass.data.model.Geschlecht
@@ -168,7 +173,9 @@ import de.frank.newskompass.news.Zeitplan
 import de.frank.newskompass.tts.GeklonteStimme
 import de.frank.newskompass.tts.QwenStimmVerwaltung
 import de.frank.newskompass.tts.TtsCatalog
+import de.frank.newskompass.ui.theme.LocalIstDunkel
 import de.frank.newskompass.ui.theme.blockFarbe
+import de.frank.newskompass.ui.theme.kompassFarben
 import de.frank.newskompass.ui.theme.blockVerlauf
 import java.time.Instant
 import java.time.LocalDate
@@ -974,6 +981,33 @@ private fun CodexBereich(app: NewsApplication, activity: ComponentActivity, stan
     }
     LaunchedEffect(verbunden) { if (verbunden) holeModelle() }
 
+    // Fortschritt der KI-Modellsuche; null = läuft nicht.
+    var suchText by remember { mutableStateOf<String?>(null) }
+    fun sucheModelle() {
+        suchText = "Starte die Suche …"
+        meldung = null
+        bereich.launch {
+            try {
+                val ergebnis = app.modellSuche.suche { text -> suchText = text }
+                meldung = buildString {
+                    append("${ergebnis.katalog} Modelle im Katalog. ")
+                    append(
+                        if (ergebnis.neu.isEmpty()) "Keine neuen Modelle gefunden — die Liste ist aktuell."
+                        else "Neu und geprüft: ${ergebnis.neu.joinToString { it.name }}.",
+                    )
+                    if (ergebnis.abgelehnt.isNotEmpty()) append(" Nicht verfügbar für dein Konto: ${ergebnis.abgelehnt.joinToString()}.")
+                    ergebnis.kiFehler?.let { append(" KI-Suche gescheitert: $it") }
+                }
+            } catch (abbruch: CancellationException) {
+                throw abbruch
+            } catch (fehler: Exception) {
+                meldung = "Modelle nicht aktualisiert: ${fehler.message}"
+            } finally {
+                suchText = null
+            }
+        }
+    }
+
     Column {
         Abschnitt("Codex", "Recherchiert mit Websuche und malt die Illustrationen.")
         Kachel {
@@ -1057,18 +1091,11 @@ private fun CodexBereich(app: NewsApplication, activity: ComponentActivity, stan
             Spacer(Modifier.height(18.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(Modifier.height(14.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Modell", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                if (verbunden) {
-                    IconButton(onClick = ::holeModelle, enabled = !ladeModelle) {
-                        if (ladeModelle) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        else Icon(Icons.Rounded.Refresh, "Modelle neu laden")
-                    }
-                }
-            }
+            Text("Modell", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(6.dp))
             val modelle = stand.modelle
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                modelle.forEach { m ->
+                modelle.filter { m -> stand.kiModelle.none { it.id == m.id } }.forEach { m ->
                     FilterChip(
                         selected = m.id == stand.modellId,
                         onClick = { app.einstellungen.setzeModell(m.id) },
@@ -1076,6 +1103,32 @@ private fun CodexBereich(app: NewsApplication, activity: ComponentActivity, stan
                         shape = RoundedCornerShape(50),
                     )
                 }
+            }
+            if (stand.kiModelle.isNotEmpty()) {
+                KiModelleBaustein(app, stand)
+            }
+            if (verbunden) {
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = ::sucheModelle,
+                    enabled = !ladeModelle && suchText == null,
+                    shape = RoundedCornerShape(50),
+                ) {
+                    if (suchText != null || ladeModelle) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text("Modelle aktualisieren")
+                }
+                Text(
+                    suchText ?: "Lädt den Katalog deines Kontos und lässt die KI im Netz nach neuen OpenAI-Modellen suchen. " +
+                        "Jeder Fund wird mit einer kurzen Probeanfrage geprüft, bevor er in die Liste kommt.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
             }
             val gewaehlt = modelle.firstOrNull { it.id == stand.modellId }
             Spacer(Modifier.height(14.dp))
@@ -1097,6 +1150,48 @@ private fun CodexBereich(app: NewsApplication, activity: ComponentActivity, stan
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** Kleiner Baustein unter den Modellen: was die KI-Suche gefunden und geprüft hat. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun KiModelleBaustein(app: NewsApplication, stand: EinstellungenStand) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+    ) {
+        Column(Modifier.padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Per KI gefunden · geprüft",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                stand.kiModelle.forEach { m ->
+                    InputChip(
+                        selected = m.id == stand.modellId,
+                        onClick = { app.einstellungen.setzeModell(m.id) },
+                        label = { Text(m.name) },
+                        leadingIcon = { Icon(Icons.Rounded.CheckCircle, null, Modifier.size(InputChipDefaults.IconSize)) },
+                        trailingIcon = {
+                            Icon(
+                                Icons.Rounded.Close,
+                                "${m.name} entfernen",
+                                Modifier.size(InputChipDefaults.IconSize).clickable { app.einstellungen.vergissKiModell(m.id) },
+                            )
+                        },
+                        shape = RoundedCornerShape(50),
+                    )
+                }
+            }
         }
     }
 }
@@ -1652,8 +1747,24 @@ private fun BereitschaftsKarte(activity: ComponentActivity) {
 @Composable
 private fun DesignBereich(app: NewsApplication, stand: EinstellungenStand) {
     Column {
-        Abschnitt("Darstellung")
+        Abschnitt("Darstellung", "Design und Hell-, Dunkel- oder Automatikmodus. Beides geht auch oben auf der Startseite.")
         Kachel {
+            Text("Design", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FarbDesign.entries.forEach { d ->
+                    DesignKarte(
+                        design = d,
+                        gewaehlt = stand.farbDesign == d,
+                        dunkel = LocalIstDunkel.current,
+                        waehle = { app.einstellungen.setzeFarbDesign(d) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Text("Modus", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 DesignModus.entries.forEachIndexed { i, m ->
                     SegmentedButton(
@@ -1666,6 +1777,28 @@ private fun DesignBereich(app: NewsApplication, stand: EinstellungenStand) {
             Spacer(Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 repeat(6) { i -> Box(Modifier.size(22.dp).clip(CircleShape).background(blockFarbe(i))) }
+            }
+        }
+    }
+}
+
+/** Kleine Vorschau eines Designs: sein Kopfverlauf mit Name, antippbar. */
+@Composable
+private fun DesignKarte(design: FarbDesign, gewaehlt: Boolean, dunkel: Boolean, waehle: () -> Unit, modifier: Modifier = Modifier) {
+    val farben = kompassFarben(design, dunkel)
+    Surface(
+        onClick = waehle,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(if (gewaehlt) 3.dp else 1.dp, if (gewaehlt) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier,
+    ) {
+        Box(Modifier.fillMaxWidth().height(72.dp).background(Brush.linearGradient(farben.kopfVerlauf)), contentAlignment = Alignment.BottomStart) {
+            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (gewaehlt) {
+                    Icon(Icons.Rounded.CheckCircle, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text(design.label, color = Color.White, style = MaterialTheme.typography.labelLarge)
             }
         }
     }
