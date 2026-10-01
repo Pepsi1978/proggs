@@ -385,26 +385,25 @@ if (-not $ausgabeName -or $ausgabeName -match '[\\/]' -or $ausgabeName.Contains(
 $apkQuelle = Get-Item -LiteralPath (Join-Path $ausgabeDir $ausgabeName) -ErrorAction SilentlyContinue
 if (-not $apkQuelle) { Fehler "APK $ausgabeName aus output-metadata.json fehlt unter app\build\outputs\apk\$apkOrdner." }
 
-# --- Signieren (mit dem gemeinsamen Debug-Key) -----------------------------------------------
-# Unsignierte APKs bekommen den gemeinsamen Key. Ein Debug-Build signiert sich dagegen selbst, und zwar mit dem
-# Debug-Key, den Gradle auf dem Bau-Rechner findet oder sich zufällig neu anlegt (in der Cloud geschehen:
-# NewsKompass, Aufgaben, Longevity). Deshalb wird jede APK mit einem Android-Debug-Zertifikat noch einmal mit dem
-# gemeinsamen Key signiert. Apps mit eigenem Schlüssel (GenialerWeckerAndroid, BestJournalAndroid) tragen kein
-# „CN=Android Debug“ und bleiben unberührt.
+# --- Signieren: immer der festgelegte Schlüssel, egal ob Debug- oder Release-Build ---------------
+# Jede App bekommt den gemeinsamen Schlüssel – auch wenn Gradle sie schon selbst signiert hat (ein Debug-Build
+# nimmt sonst den Debug-Key, den er auf dem Bau-Rechner findet oder zufällig neu anlegt; in der Cloud geschehen bei
+# NewsKompass, Aufgaben und Longevity). Nur Apps mit eigenem Schlüssel signiert ihr Gradle-Build selbst mit diesem
+# Schlüssel; sie werden nie umsigniert, und eine unsignierte APK ist bei ihnen ein Fehler.
 $temp = Join-Path ([IO.Path]::GetTempPath()) "apk-update-$Projekt-$lauf.apk"
 $script:aufraeumen.Add($temp); $script:aufraeumen.Add("$temp.idsig")
-$buildZert = if ($apkQuelle.Name -match 'unsigned') { '' } else { (& $apksigner verify --print-certs $apkQuelle.FullName 2>&1) -join "`n" }
 $eigenerKey = @('GenialerWeckerAndroid', 'BestJournalAndroid') -contains $Projekt
-$debugZert = -not $eigenerKey -and $buildZert -match 'CN=Android Debug'
-if ($apkQuelle.Name -match 'unsigned' -or $debugZert) {
+if ($eigenerKey) {
+    if ($apkQuelle.Name -match 'unsigned') { Fehler "$Projekt muss mit seinem eigenen Schlüssel signiert sein, die APK ist aber unsigniert (signingConfig im Build prüfen)." }
+    Copy-Item $apkQuelle.FullName $temp -Force
+    $signiert = 'eigener Schlüssel der App (vom Build signiert)'
+} else {
     if (-not (Test-Path $keystore)) { Fehler "Gemeinsamer Debug-Key fehlt: $keystore" }
+    # apksigner ersetzt eine vorhandene Signatur vollständig.
     & $apksigner sign --ks $keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out $temp $apkQuelle.FullName
     if ($LASTEXITCODE -ne 0) { Fehler "apksigner sign ist fehlgeschlagen." }
     Remove-Item "$temp.idsig" -ErrorAction SilentlyContinue
-    $signiert = if ($debugZert) { 'gemeinsamer Debug-Key (Build-Debug-Key ersetzt)' } else { 'gemeinsamer Debug-Key (vom Skill signiert)' }
-} else {
-    Copy-Item $apkQuelle.FullName $temp -Force
-    $signiert = 'vom Build signiert'
+    $signiert = 'gemeinsamer Schlüssel (vom Skill signiert)'
 }
 
 # --- Fakten aus der fertigen APK, nicht aus Gradle ------------------------------------------
