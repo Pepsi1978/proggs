@@ -37,6 +37,15 @@ function AdbZeit([string]$argumente, [int]$ms = 8000) {
     return ($out.Result + " " + $err.Result).Trim()
 }
 
+# adb-Server ohne geerbte Handles starten: sonst hält der Server die Ausgabe-Pipe des Aufrufers
+# offen und der Aufruf kehrt nie zurück (gemessen 02.10.2026). Start-Process ohne -NoNewWindow nutzt
+# ShellExecute und vererbt nichts; kein -Wait, das wartet in PS 5.1 auch auf den Server.
+function Server-Start {
+    $p = Start-Process -FilePath $Adb -ArgumentList "start-server" -WindowStyle Hidden -PassThru
+    $p.WaitForExit(20000) | Out-Null
+}
+function Server-Neustart { & $Adb kill-server 2>&1 | Out-Null; Server-Start }
+
 function Geraete {
     # Liefert Objekte { Serial; Zustand } aus "adb devices"
     & $Adb devices 2>$null | Select-Object -Skip 1 | Where-Object { $_ -match "^\S+\s+\S+" } | ForEach-Object {
@@ -139,6 +148,16 @@ function Hotspot-Manager {
     } catch { Melde "Direktverbindung nicht verfügbar: $($_.Exception.Message)"; return $null }
 }
 
+# Alle Profile als Hotspot-Quelle: ohne WLAN hält Windows z. B. einen VPN-Tunnel für die
+# Internetverbindung; gestartet hat der Hotspot dann über ein anderes Profil (getestet 02.10.2026).
+function Hotspot-Quellen {
+    $liste = @([Windows.Networking.Connectivity.NetworkInformation]::GetInternetConnectionProfile()) +
+        @([Windows.Networking.Connectivity.NetworkInformation]::GetConnectionProfiles())
+    $liste | Where-Object { $_ } | ForEach-Object {
+        try { [Windows.Networking.NetworkOperators.NetworkOperatorTetheringManager]::CreateFromConnectionProfile($_) } catch { }
+    }
+}
+
 function Warte-WinRT($op) {
     $m = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
         $_.Name -eq "AsTask" -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' } | Select-Object -First 1
@@ -150,11 +169,15 @@ function Warte-WinRT($op) {
 function Hotspot-An {
     $tm = Hotspot-Manager; if (-not $tm) { return $false }
     if ("$($tm.TetheringOperationalState)" -eq "On") { return $true }
-    try { $r = Warte-WinRT $tm.StartTetheringAsync() } catch { $r = $null }
-    if ($r -and "$($r.Status)" -eq "Success") {
-        Set-Content -Path $HotspotMarke -Value (Get-Date -Format o) -Encoding ascii
-        Melde "Direktverbindung: PC-Hotspot '$($tm.GetCurrentAccessPointConfiguration().Ssid)' eingeschaltet"
-        return $true
+    $r = $null
+    foreach ($q in Hotspot-Quellen) {
+        try { $r = Warte-WinRT $q.StartTetheringAsync() } catch { $r = $null }
+        if ("$($q.TetheringOperationalState)" -eq "On") {
+            $script:Tm = $q
+            Set-Content -Path $HotspotMarke -Value (Get-Date -Format o) -Encoding ascii
+            Melde "Direktverbindung: PC-Hotspot '$($q.GetCurrentAccessPointConfiguration().Ssid)' eingeschaltet"
+            return $true
+        }
     }
     Melde "Direktverbindung: Hotspot ließ sich nicht einschalten ($($r.Status) $($r.AdditionalErrorMessage))"
     return $false
@@ -209,8 +232,9 @@ function Direktverbindung {
     $c = $script:Tm.GetCurrentAccessPointConfiguration()
 
     # Kabel dran: Handy jetzt in den Hotspot holen. Hängt es in einem offenen WLAN, das Geräte
-    # abschottet (öffentliches WLAN), dort Auto-Verbinden ausschalten – sonst landet es beim
-    # nächsten Mal wieder dort statt im PC-Hotspot.
+    # abschottet (öffentliches WLAN), dieses Netz vergessen – sonst landet es beim nächsten Mal
+    # wieder dort statt im PC-Hotspot. "add-network … open -d" (Auto-Verbinden aus) greift nicht:
+    # das Handy trat trotzdem wieder bei (getestet 02.10.2026, Android 17, Eintrag open + owe).
     $usb = Usb-Geraet
     if ($usb) {
         $s = $usb.Serial
@@ -219,9 +243,9 @@ function Direktverbindung {
         if ($status -match 'connected to "([^"]+)"' -and $Matches[1] -ne $c.Ssid) {
             $alt = $Matches[1]
             $netze = AdbZeit "-s $s shell cmd wifi list-networks"
-            if ($netze -match "(?m)^\d+\s+$([regex]::Escape($alt))\s+open\s*$") {
-                AdbZeit "-s $s shell ""cmd wifi add-network '$alt' open -d""" | Out-Null
-                Melde "Direktverbindung: Im WLAN '$alt' ist das Handy nicht erreichbar – Auto-Verbinden dort ausgeschaltet"
+            if ($netze -match "(?m)^(\d+)\s+$([regex]::Escape($alt))\s+open\s*$") {
+                AdbZeit "-s $s shell cmd wifi forget-network $($Matches[1])" | Out-Null
+                Melde "Direktverbindung: Im offenen WLAN '$alt' ist das Handy nicht erreichbar – Netz auf dem Handy vergessen"
             }
         }
         $out = AdbZeit "-s $s shell ""cmd wifi connect-network '$($c.Ssid)' wpa2 '$($c.Passphrase)'""" 20000
@@ -241,7 +265,7 @@ function Direktverbindung {
         # den Hotspot also erst nach einem Neustart. Nur neu starten, wenn kein Gerät verbunden ist.
         if ($clients -and -not $neuGestartet -and -not @(Geraete)) {
             Melde "Direktverbindung: starte adb-Server neu, damit mDNS den Hotspot sieht"
-            & $Adb kill-server 2>&1 | Out-Null; & $Adb start-server 2>&1 | Out-Null
+            Server-Neustart
             $neuGestartet = $true; Start-Sleep 5; continue
         }
         Start-Sleep 5
@@ -272,7 +296,7 @@ try { if (-not $mutex.WaitOne(90000)) { Melde "Anderer adb-wlan-Lauf aktiv – �
 catch [System.Threading.AbandonedMutexException] { }
 
 try {
-    & $Adb start-server 2>&1 | Out-Null
+    Server-Start
 
     # Neuer Rechner: Wachhund beim ersten Aufruf selbst einrichten (Skript liegt im Repo, gilt für jeden PC)
     if (-not $Leise -and -not (Get-ScheduledTask -TaskName "adb-wlan-wachhund" -ErrorAction SilentlyContinue)) {
@@ -341,7 +365,7 @@ try {
         #    Nie im Wachhund: ein Neustart würde andere Sitzungen und Emulatoren trennen.
         if ($runde -eq 1 -and -not $Leise) {
             Melde "Keine Verbindung – starte adb-Server neu und versuche es erneut"
-            & $Adb kill-server 2>&1 | Out-Null; & $Adb start-server 2>&1 | Out-Null; Start-Sleep 3
+            Server-Neustart; Start-Sleep 3
         } else { break }
     }
 
