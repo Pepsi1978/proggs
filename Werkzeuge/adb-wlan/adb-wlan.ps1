@@ -120,10 +120,9 @@ function Mdns-Verbinden {
 }
 
 # --- Direktverbindung: Windows-Hotspot des PCs, das Handy verbindet sich als Client ---
-# Braucht kein externes WLAN. Das Handy kennt den Hotspot (in Pflege gespeichert) und tritt ihm
-# von selbst bei, wenn es in keinem anderen WLAN ist. Nur Windows PowerShell 5.1 (WinRT).
+# Braucht kein externes WLAN. Das Handy kennt den Hotspot (in Pflege gespeichert, je PC ein eigener)
+# und tritt ihm von selbst bei, wenn es in keinem anderen WLAN ist. Nur Windows PowerShell 5.1 (WinRT).
 $HotspotMarke = Join-Path $LogDir "hotspot-von-uns"          # nur einen selbst gestarteten Hotspot abschalten
-$HotspotVersuch = Join-Path $LogDir "hotspot-letzter-versuch" # Wachhund: höchstens alle 10 Min versuchen
 $HotspotEingerichtet = Join-Path $LogDir "hotspot-auf-handy"  # Prüfsumme von SSID+Passwort auf dem Handy
 $script:Tm = $null
 function Hotspot-Manager {
@@ -204,8 +203,8 @@ function Hotspot-Einrichten($serial) {
 }
 
 function Direktverbindung {
-    if ($Leise -and (Test-Path $HotspotVersuch) -and ((Get-Date) - (Get-Item $HotspotVersuch).LastWriteTime).TotalMinutes -lt 10) { return $false }
-    Set-Content -Path $HotspotVersuch -Value (Get-Date -Format o) -Encoding ascii
+    # Nur auf Zuruf (Installieren, Logcat …), nie aus dem Wachhund: der PC soll nicht unnötig funken
+    if ($Leise) { return $false }
     if (-not (Hotspot-An)) { return $false }
     $c = $script:Tm.GetCurrentAccessPointConfiguration()
 
@@ -274,6 +273,11 @@ catch [System.Threading.AbandonedMutexException] { }
 
 try {
     & $Adb start-server 2>&1 | Out-Null
+
+    # Neuer Rechner: Wachhund beim ersten Aufruf selbst einrichten (Skript liegt im Repo, gilt für jeden PC)
+    if (-not $Leise -and -not (Get-ScheduledTask -TaskName "adb-wlan-wachhund" -ErrorAction SilentlyContinue)) {
+        & (Join-Path $PSScriptRoot "wachhund-einrichten.ps1")
+    }
 
     # Tote oder hängende Netz-Einträge räumen (offline/unauthorized oder "device", das nicht antwortet).
     # Antwortende fremde Geräte bleiben unberührt.
