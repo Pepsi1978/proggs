@@ -144,8 +144,44 @@ function Hotspot-Manager {
         if (-not $p) { $p = [Windows.Networking.Connectivity.NetworkInformation]::GetConnectionProfiles() | Select-Object -First 1 }
         if (-not $p) { Melde "Direktverbindung: kein Netzwerkprofil zum Teilen"; return $null }
         $script:Tm = [Windows.Networking.NetworkOperators.NetworkOperatorTetheringManager]::CreateFromConnectionProfile($p)
+        Hotspot-Benennen $script:Tm
         return $script:Tm
     } catch { Melde "Direktverbindung nicht verfügbar: $($_.Exception.Message)"; return $null }
+}
+
+# Hotspot-Name je PC: "Direct Superpower <n>!" – auf dem Handy direkt erkennbar und auswählbar.
+# Die Nummern stehen in hotspot-namen.json im Repo; ein neuer PC nimmt sich die nächste freie
+# und pusht die Liste, damit kein anderer PC dieselbe Nummer bekommt.
+$NamenDatei = Join-Path $PSScriptRoot "hotspot-namen.json"
+function Hotspot-Name {
+    $pc = $env:COMPUTERNAME
+    $namen = if (Test-Path $NamenDatei) { Get-Content $NamenDatei -Raw -Encoding utf8 | ConvertFrom-Json } else { [pscustomobject]@{} }
+    $nr = $namen.$pc
+    if (-not $nr) {
+        if ($Leise) { return $null }   # Nummer nur im direkten Aufruf vergeben (Commit + Push)
+        $repo = Split-Path (Split-Path $PSScriptRoot)
+        git -C $repo pull --rebase --autostash -q 2>&1 | Out-Null
+        $namen = Get-Content $NamenDatei -Raw -Encoding utf8 | ConvertFrom-Json
+        $nr = 1 + (@($namen.PSObject.Properties | ForEach-Object { [int]$_.Value }) + 0 | Measure-Object -Maximum).Maximum
+        $namen | Add-Member -NotePropertyName $pc -NotePropertyValue $nr
+        [IO.File]::WriteAllText($NamenDatei, ($namen | ConvertTo-Json) + "`n", (New-Object Text.UTF8Encoding $false))
+        git -C $repo add -- "Werkzeuge/adb-wlan/hotspot-namen.json" 2>&1 | Out-Null
+        git -C $repo commit -q -m "adb-wlan: Hotspot-Nummer $nr für $pc" -- "Werkzeuge/adb-wlan/hotspot-namen.json" 2>&1 | Out-Null
+        git -C $repo push -q 2>&1 | Out-Null
+        Melde "Direktverbindung: $pc bekommt Hotspot-Nummer $nr"
+    }
+    return "Direct Superpower $nr!"
+}
+
+function Hotspot-Benennen($tm) {
+    $soll = Hotspot-Name; if (-not $soll) { return }
+    $c = $tm.GetCurrentAccessPointConfiguration()
+    if ($c.Ssid -eq $soll) { return }
+    $c.Ssid = $soll   # Passwort bleibt
+    $m = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
+        $_.Name -eq "AsTask" -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq "IAsyncAction" } | Select-Object -First 1
+    $m.Invoke($null, @($tm.ConfigureAccessPointAsync($c))).Wait(30000) | Out-Null
+    Melde "Direktverbindung: PC-Hotspot heißt jetzt '$soll'"
 }
 
 # Alle Profile als Hotspot-Quelle: ohne WLAN hält Windows z. B. einen VPN-Tunnel für die
