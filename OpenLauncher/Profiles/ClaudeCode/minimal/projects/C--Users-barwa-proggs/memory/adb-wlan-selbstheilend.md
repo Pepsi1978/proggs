@@ -14,3 +14,5 @@ Fix: adb-wlan.ps1/.sh (mDNS, Serial-Bindung, Lebenszeichen, TLS→5555, Pflege �
 
 **Why:** Nutzer will über Wochen ohne Kabel installieren, auch nach Neustarts beider Geräte.
 **How to apply:** WLAN-adb weg → erst `%LOCALAPPDATA%\adb-wlan\adb-wlan.log` und `Get-ScheduledTask adb-wlan-wachhund` prüfen. Nie TLS-Port speichern, im Wachhund nie kill-server. Auf dem Handy nie `registerNetworkCallback(…, PendingIntent)` als Trigger (Android 17 räumt ihn nach ~5 s ab; Neu-Anmelden im Empfänger = Endlosschleife 760/s) — nach jeder Hintergrund-Logik CPU per `adb shell top -b -n 1` prüfen.
+
+Seit 02.10.2026 Schritt 6 "Direktverbindung": Windows-Hotspot (192.168.137.x), wenn das Handy in keinem oder einem abgeschotteten WLAN ist (öffentliches WLAN). Der Hotspot ist auf dem Handy gespeichert und vertraut. "Public WiFi SMB" hat Auto-Verbinden aus. Falle: adb-mDNS sieht nur Netze vom Serverstart.

@@ -42,6 +42,19 @@ Ergebnis ist stets die Serial `IP:5555`.
 - **Firmennetz mit Client-Isolation:** nur Mesh-VPN (Tailscale/ZeroTier) mit fester IP hilft.
 - Vergleichsprojekte: https://github.com/m00sfett/KeepADB (Foreground-Service + BSSID-Liste), https://github.com/mouldybread/adb-auto-enable (wartet nach Boot auf WLAN + 30 s).
 
+## Direktverbindung über den PC-Hotspot (seit 02.10.2026)
+Fall: Handy in keinem WLAN, in einem anderen Netz oder in einem WLAN, das Geräte voneinander abschottet (öffentliches WLAN wie "Public WiFi SMB"). Dann schaltet `adb-wlan.ps1` als Schritt 6 den **Windows-Hotspot** ein (WinRT `NetworkOperatorTetheringManager`, nur Windows PowerShell 5.1). Das Handy tritt als Client bei, der PC ist `192.168.137.1`, das Handy z. B. `192.168.137.206`. Für adb ist das wie Kabel: install, logcat, shell, pull (Bilder: `adb pull /sdcard/DCIM/Camera`).
+- **Handy einrichten:** `Pflege` speichert den Hotspot per `cmd wifi add-network '<SSID>' wpa2 '<Passwort>'` (Android 11+, ohne Root). Der Befehl gibt nichts aus, deshalb wird mit `cmd wifi list-networks` geprüft. SSID und Passwort kommen aus der Windows-Hotspot-Konfiguration und landen nicht im Log. Eine Prüfsumme in `%LOCALAPPDATA%db-wlan\hotspot-auf-handy` sorgt dafür, dass bei einer Änderung neu gespeichert wird.
+- **Mit Kabel:** Das Skript schickt das Handy per `cmd wifi connect-network` in den Hotspot. Für das offene WLAN, in dem das Handy nicht erreichbar war, schaltet es per `cmd wifi add-network '<SSID>' open -d` das Auto-Verbinden aus. Sonst landet das Handy beim nächsten Mal wieder dort.
+- **Ohne Kabel:** Android wechselt **nicht** von einem funktionierenden WLAN zum Hotspot. Er wird nur angenommen, wenn das Handy in keinem anderen bekannten WLAN ist.
+- **Port 5555** überlebt den Netzwechsel. Nach einem Handy-Neustart läuft es über TLS. Der Hotspot (BSSID) ist seit 02.10.2026 als vertrautes Netz eingetragen (`dumpsys adb` → `is_trusted_network=true`), also ohne Nachfrage.
+- **Falle mDNS:** Der adb-Server sucht per mDNS nur in Netzen, die **beim Serverstart** schon da waren. Gemessen: Hotspot nach dem Serverstart → `mdns services` leer; nach dem Neustart → `_adb` und `_adb-tls-connect` sichtbar. Deshalb startet die Direktverbindung den Server einmal neu, aber nur, wenn kein Gerät verbunden ist.
+- **Wachhund:** höchstens alle 10 Minuten ein Versuch. Tritt in 90 s niemand bei, schaltet er einen selbst gestarteten Hotspot wieder aus (Marke `hotspot-von-uns`). Einen Hotspot, den der Nutzer selbst eingeschaltet hat, fasst er nie an.
+- **Grenzen:**
+  - Der WLAN-Adapter muss den Mobilen Hotspot unterstützen. Die Intel BE201 kann das, obwohl `netsh` „Gehostete Netzwerke: Nein“ meldet. Das ist der alte Hosted-Network-Weg und hier egal.
+  - Ohne irgendein Netzwerkprofil am PC lässt Windows den Hotspot eventuell nicht zu. Das ist ungetestet.
+  - Nur Windows. `adb-wlan.sh` (macOS) hat diesen Schritt nicht.
+
 ## Grenzen
 - Fremdes WLAN (Arbeit): Android fragt einmal "Debugging über WLAN in diesem Netzwerk zulassen?" → **"Immer zulassen"** ankreuzen. Gäste-WLAN mit Client-Isolation oder PC/Handy in verschiedenen Netzen: kein WLAN-adb möglich.
 - Unbenutzte adb-Schlüssel verfallen nach 7 Tagen → Entwickleroption **"ADB-Autorisierungstimeout deaktivieren"** einschalten.

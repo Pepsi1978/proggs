@@ -92,7 +92,164 @@ function Pflege($serial, [switch]$Sofort) {
         AdbZeit "-s $serial shell cmd deviceidle whitelist +$pk" | Out-Null
         Melde "UpdateStation von Doze-Drosselung ausgenommen"
     }
+    Hotspot-Einrichten $serial
     Set-Content -Path $PflegeDatei -Value (Get-Date -Format o) -Encoding ascii
+}
+
+# Sucht unser Handy per mDNS (5555 zuerst, sonst TLS und dann 5555 nachziehen)
+function Mdns-Verbinden {
+    $soll = Bekannte-Serial
+    $dienste = @()
+    for ($i = 0; $i -lt 3 -and -not $dienste; $i++) {
+        $dienste = @(& $Adb mdns services 2>$null | Where-Object {
+            $_ -match "\t_adb(-tls-connect)?\._tcp\.?\t" -and (-not $soll -or $_ -match "^adb-$([regex]::Escape($soll))-")
+        })
+        if (-not $dienste) { Start-Sleep 2 }
+    }
+    $legacy = $dienste | Where-Object { $_ -match "\t_adb\._tcp\.?\t(\S+)" } | ForEach-Object { $Matches[1] }
+    $tlsZiele = $dienste | Where-Object { $_ -match "\t_adb-tls-connect\._tcp\.?\t(\S+)" } | ForEach-Object { $Matches[1] }
+    foreach ($z in $legacy) { if (Verbinde $z) { Merke-Ip ($z -split ":")[0]; return $true } }
+    foreach ($z in $tlsZiele) {
+        if (Verbinde $z) {
+            $ip = ($z -split ":")[0]; Merke-Ip $ip
+            Stabilisiere $z $ip | Out-Null
+            return $true
+        }
+    }
+    return $false
+}
+
+# --- Direktverbindung: Windows-Hotspot des PCs, das Handy verbindet sich als Client ---
+# Braucht kein externes WLAN. Das Handy kennt den Hotspot (in Pflege gespeichert) und tritt ihm
+# von selbst bei, wenn es in keinem anderen WLAN ist. Nur Windows PowerShell 5.1 (WinRT).
+$HotspotMarke = Join-Path $LogDir "hotspot-von-uns"          # nur einen selbst gestarteten Hotspot abschalten
+$HotspotVersuch = Join-Path $LogDir "hotspot-letzter-versuch" # Wachhund: höchstens alle 10 Min versuchen
+$HotspotEingerichtet = Join-Path $LogDir "hotspot-auf-handy"  # Prüfsumme von SSID+Passwort auf dem Handy
+$script:Tm = $null
+function Hotspot-Manager {
+    if ($script:Tm) { return $script:Tm }
+    try {
+        Add-Type -AssemblyName System.Runtime.WindowsRuntime
+        $null = [Windows.Networking.Connectivity.NetworkInformation, Windows.Networking.Connectivity, ContentType = WindowsRuntime]
+        $null = [Windows.Networking.NetworkOperators.NetworkOperatorTetheringManager, Windows.Networking.NetworkOperators, ContentType = WindowsRuntime]
+        $p = [Windows.Networking.Connectivity.NetworkInformation]::GetInternetConnectionProfile()
+        if (-not $p) { $p = [Windows.Networking.Connectivity.NetworkInformation]::GetConnectionProfiles() | Select-Object -First 1 }
+        if (-not $p) { Melde "Direktverbindung: kein Netzwerkprofil zum Teilen"; return $null }
+        $script:Tm = [Windows.Networking.NetworkOperators.NetworkOperatorTetheringManager]::CreateFromConnectionProfile($p)
+        return $script:Tm
+    } catch { Melde "Direktverbindung nicht verfügbar: $($_.Exception.Message)"; return $null }
+}
+
+function Warte-WinRT($op) {
+    $m = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
+        $_.Name -eq "AsTask" -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' } | Select-Object -First 1
+    $t = $m.MakeGenericMethod([Windows.Networking.NetworkOperators.NetworkOperatorTetheringOperationResult]).Invoke($null, @($op))
+    if (-not $t.Wait(30000)) { return $null }
+    return $t.Result
+}
+
+function Hotspot-An {
+    $tm = Hotspot-Manager; if (-not $tm) { return $false }
+    if ("$($tm.TetheringOperationalState)" -eq "On") { return $true }
+    try { $r = Warte-WinRT $tm.StartTetheringAsync() } catch { $r = $null }
+    if ($r -and "$($r.Status)" -eq "Success") {
+        Set-Content -Path $HotspotMarke -Value (Get-Date -Format o) -Encoding ascii
+        Melde "Direktverbindung: PC-Hotspot '$($tm.GetCurrentAccessPointConfiguration().Ssid)' eingeschaltet"
+        return $true
+    }
+    Melde "Direktverbindung: Hotspot ließ sich nicht einschalten ($($r.Status) $($r.AdditionalErrorMessage))"
+    return $false
+}
+
+function Hotspot-Aus {
+    if (-not (Test-Path $HotspotMarke)) { return }
+    $tm = Hotspot-Manager
+    if ($tm -and "$($tm.TetheringOperationalState)" -eq "On") {
+        try { Warte-WinRT $tm.StopTetheringAsync() | Out-Null } catch { }
+        Melde "Direktverbindung: PC-Hotspot wieder ausgeschaltet"
+    }
+    Remove-Item $HotspotMarke -ErrorAction SilentlyContinue
+}
+
+# IPv4-Adressen der Geräte im PC-Hotspot
+function Hotspot-Clients {
+    $ips = @()
+    $tm = Hotspot-Manager
+    if ($tm) {
+        try { $ips = @($tm.GetTetheringClients() | ForEach-Object { $_.HostNames } |
+            Where-Object { "$($_.Type)" -eq "Ipv4" } | ForEach-Object { $_.CanonicalName }) } catch { }
+    }
+    if (-not $ips) {
+        $ips = @(Get-NetNeighbor -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object {
+            $_.IPAddress -like "192.168.137.*" -and $_.IPAddress -notmatch "\.(1|255)$" -and "$($_.State)" -notin "Unreachable", "Permanent" } |
+            ForEach-Object { $_.IPAddress })
+    }
+    return $ips | Select-Object -Unique
+}
+
+# Speichert den PC-Hotspot auf dem Handy (erneut, sobald SSID oder Passwort sich ändern)
+function Hotspot-Einrichten($serial) {
+    $tm = Hotspot-Manager; if (-not $tm) { return }
+    $c = $tm.GetCurrentAccessPointConfiguration()
+    if (-not $c.Ssid -or -not $c.Passphrase) { return }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    $summe = [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes("$serial|$($c.Ssid)|$($c.Passphrase)")))
+    if ((Test-Path $HotspotEingerichtet) -and (Get-Content $HotspotEingerichtet -Raw).Trim() -eq $summe) { return }
+    $out = AdbZeit "-s $serial shell ""cmd wifi add-network '$($c.Ssid)' wpa2 '$($c.Passphrase)'"""
+    # add-network meldet nichts zurück: in der Liste der gespeicherten Netze nachsehen
+    if ((AdbZeit "-s $serial shell cmd wifi list-networks") -match "\s$([regex]::Escape($c.Ssid))\s+wpa2") {
+        Set-Content -Path $HotspotEingerichtet -Value $summe -Encoding ascii
+        Melde "Direktverbindung: PC-Hotspot '$($c.Ssid)' auf dem Handy gespeichert"
+    } else { Melde "Direktverbindung: Hotspot auf dem Handy speichern fehlgeschlagen: $out" }
+}
+
+function Direktverbindung {
+    if ($Leise -and (Test-Path $HotspotVersuch) -and ((Get-Date) - (Get-Item $HotspotVersuch).LastWriteTime).TotalMinutes -lt 10) { return $false }
+    Set-Content -Path $HotspotVersuch -Value (Get-Date -Format o) -Encoding ascii
+    if (-not (Hotspot-An)) { return $false }
+    $c = $script:Tm.GetCurrentAccessPointConfiguration()
+
+    # Kabel dran: Handy jetzt in den Hotspot holen. Hängt es in einem offenen WLAN, das Geräte
+    # abschottet (öffentliches WLAN), dort Auto-Verbinden ausschalten – sonst landet es beim
+    # nächsten Mal wieder dort statt im PC-Hotspot.
+    $usb = Usb-Geraet
+    if ($usb) {
+        $s = $usb.Serial
+        Hotspot-Einrichten $s
+        $status = AdbZeit "-s $s shell cmd wifi status"
+        if ($status -match 'connected to "([^"]+)"' -and $Matches[1] -ne $c.Ssid) {
+            $alt = $Matches[1]
+            $netze = AdbZeit "-s $s shell cmd wifi list-networks"
+            if ($netze -match "(?m)^\d+\s+$([regex]::Escape($alt))\s+open\s*$") {
+                AdbZeit "-s $s shell ""cmd wifi add-network '$alt' open -d""" | Out-Null
+                Melde "Direktverbindung: Im WLAN '$alt' ist das Handy nicht erreichbar – Auto-Verbinden dort ausgeschaltet"
+            }
+        }
+        $out = AdbZeit "-s $s shell ""cmd wifi connect-network '$($c.Ssid)' wpa2 '$($c.Passphrase)'""" 20000
+        Melde "Direktverbindung: Handy per Kabel in den PC-Hotspot geschickt: $out"
+    }
+
+    $bis = (Get-Date).AddSeconds(90)
+    $neuGestartet = $false
+    while ((Get-Date) -lt $bis) {
+        $clients = @(Hotspot-Clients)
+        foreach ($ip in $clients) {
+            if (Verbinde "${ip}:$Port") { Merke-Ip $ip; Melde "Direktverbindung steht: ${ip}:$Port"; return $true }
+        }
+        # Nach einem Handy-Neustart ist nur "Debugging über WLAN" (TLS) da: per mDNS suchen
+        if ($clients -and (Mdns-Verbinden)) { Melde "Direktverbindung steht (über WLAN-Debugging)"; return $true }
+        # mDNS des adb-Servers sieht nur Netze, die beim Serverstart schon da waren (getestet) –
+        # den Hotspot also erst nach einem Neustart. Nur neu starten, wenn kein Gerät verbunden ist.
+        if ($clients -and -not $neuGestartet -and -not @(Geraete)) {
+            Melde "Direktverbindung: starte adb-Server neu, damit mDNS den Hotspot sieht"
+            & $Adb kill-server 2>&1 | Out-Null; & $Adb start-server 2>&1 | Out-Null
+            $neuGestartet = $true; Start-Sleep 5; continue
+        }
+        Start-Sleep 5
+    }
+    Melde "Direktverbindung: Handy ist dem PC-Hotspot nicht beigetreten"
+    Hotspot-Aus
+    return $false
 }
 
 function Merke-Ip($ip) { if ($ip) { Set-Content -Path $State -Value $ip -Encoding ascii } }
@@ -153,27 +310,7 @@ try {
         }
 
         # 2. mDNS: findet das Handy mit aktueller IP in jedem Netz (nur Dienste unseres Handys)
-        $dienste = @()
-        for ($i = 0; $i -lt 3 -and -not $dienste; $i++) {
-            $dienste = @(& $Adb mdns services 2>$null | Where-Object {
-                $_ -match "\t_adb(-tls-connect)?\._tcp\.?\t" -and (-not $soll -or $_ -match "^adb-$([regex]::Escape($soll))-")
-            })
-            if (-not $dienste) { Start-Sleep 2 }
-        }
-        $legacy = $dienste | Where-Object { $_ -match "\t_adb\._tcp\.?\t(\S+)" } | ForEach-Object { $Matches[1] }
-        $tlsZiele = $dienste | Where-Object { $_ -match "\t_adb-tls-connect\._tcp\.?\t(\S+)" } | ForEach-Object { $Matches[1] }
-        $ok = $false
-        foreach ($z in $legacy) { if (Verbinde $z) { Merke-Ip ($z -split ":")[0]; $ok = $true; break } }
-        if (-not $ok) {
-            foreach ($z in $tlsZiele) {
-                if (Verbinde $z) {
-                    $ip = ($z -split ":")[0]; Merke-Ip $ip
-                    Stabilisiere $z $ip | Out-Null
-                    $ok = $true; break
-                }
-            }
-        }
-        if ($ok) { break }
+        if (Mdns-Verbinden) { break }
 
         # 3. Zuletzt bekannte IP
         $letzte = if (Test-Path $State) { (Get-Content $State -Raw).Trim() }
@@ -203,6 +340,10 @@ try {
             & $Adb kill-server 2>&1 | Out-Null; & $Adb start-server 2>&1 | Out-Null; Start-Sleep 3
         } else { break }
     }
+
+    # 6. Direktverbindung über den PC-Hotspot: Handy in keinem WLAN, in einem anderen Netz
+    #    oder in einem Netz, das Geräte voneinander abschottet (öffentliches WLAN).
+    if (-not @(Netz-Verbunden)) { Direktverbindung | Out-Null }
 
     $fertig = @(Netz-Verbunden)
     if ($fertig) {
