@@ -208,7 +208,9 @@ function Hotspot-An {
     $r = $null
     foreach ($q in Hotspot-Quellen) {
         try { $r = Warte-WinRT $q.StartTetheringAsync() } catch { $r = $null }
-        if ("$($q.TetheringOperationalState)" -eq "On") {
+        # "Success" kommt teils, während der Zustand noch "InTransition" ist
+        for ($i = 0; $i -lt 10 -and $r -and "$($r.Status)" -eq "Success" -and "$($q.TetheringOperationalState)" -ne "On"; $i++) { Start-Sleep 1 }
+        if ("$($q.TetheringOperationalState)" -eq "On" -or ($r -and "$($r.Status)" -eq "Success")) {
             $script:Tm = $q
             Set-Content -Path $HotspotMarke -Value (Get-Date -Format o) -Encoding ascii
             Melde "Direktverbindung: PC-Hotspot '$($q.GetCurrentAccessPointConfiguration().Ssid)' eingeschaltet"
