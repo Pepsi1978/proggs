@@ -133,7 +133,9 @@ fun ChatAnsicht(
     BackHandler(onBack = schliessen)
     // Beim Schließen: keine offene Aufnahme und kein Vorlesen aus dem Chat zurücklassen.
     DisposableEffect(meldung.id) {
+        app.chat.sichtbar(meldung.id)
         onDispose {
+            app.chat.sichtbar(null)
             app.chat.brichAufnahmeAb()
             app.chat.loescheMeldung()
             if (app.vorleser.zustand.value.quelleId.startsWith("chat-")) app.vorleser.stoppe()

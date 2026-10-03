@@ -75,6 +75,10 @@ class NachrichtenChat(private val app: NewsApplication) {
     private var generation = 0
     private var naechsteId = 0L
     private var antwortJob: Job? = null
+    /** Eine Antwort, deren Gespräch geleert wurde — ihr Teiltext darf nicht wieder auftauchen. */
+    private var verworfenerJob: Job? = null
+    /** Die Meldung, deren Chat gerade offen ist. Nur dorthin wird eine fertige Antwort vorgelesen. */
+    private var offenFuer: String? = null
     private var mikrofonMeldung: Meldung? = null
 
     // --- Schreiben ------------------------------------------------------------------------------
@@ -109,11 +113,11 @@ class NachrichtenChat(private val app: NewsApplication) {
                 val sauber = QuellenFilter.entferne(antwort.text).ifBlank { "Dazu habe ich gerade keine Antwort bekommen. Frag gern noch einmal." }
                 val nachricht = ChatNachricht(++naechsteId, ChatRolle.KI, sauber, quellen = antwort.quellen.distinct().take(MAX_QUELLEN))
                 haengeAn(meldung.id, nachricht)
-                if (vorlesen) app.vorleser.lies(vorleseId(meldung.id, nachricht.id), sauber)
+                if (vorlesen && offenFuer == meldung.id) app.vorleser.lies(vorleseId(meldung.id, nachricht.id), sauber)
             } catch (abbruch: CancellationException) {
                 // Gestoppt: Was schon da war, bleibt als abgebrochene Antwort stehen.
                 val teil = QuellenFilter.entferne(_zustand.value.teilText)
-                if (teil.isNotBlank()) haengeAn(meldung.id, ChatNachricht(++naechsteId, ChatRolle.KI, teil, abgebrochen = true))
+                if (teil.isNotBlank() && verworfenerJob !== job) haengeAn(meldung.id, ChatNachricht(++naechsteId, ChatRolle.KI, teil, abgebrochen = true))
                 throw abbruch
             } catch (fehler: Exception) {
                 KompassLog.warn("NachrichtenChat", "sende", "Antwort gescheitert", mapOf("grund" to fehler.message))
@@ -148,9 +152,17 @@ class NachrichtenChat(private val app: NewsApplication) {
 
     /** Fängt das Gespräch zu [meldungId] von vorn an. */
     fun leere(meldungId: String) {
-        if (_zustand.value.antwortetFuer == meldungId) stoppeAntwort()
+        if (_zustand.value.antwortetFuer == meldungId) {
+            verworfenerJob = antwortJob
+            stoppeAntwort()
+        }
         if (app.vorleser.zustand.value.quelleId.startsWith("chat-$meldungId-")) app.vorleser.stoppe()
         _zustand.update { it.copy(gespraeche = it.gespraeche - meldungId) }
+    }
+
+    /** Der Chat zu [meldungId] ist zu sehen; null, sobald er geschlossen ist. */
+    fun sichtbar(meldungId: String?) {
+        offenFuer = meldungId
     }
 
     fun setzeAutoVorlesen(an: Boolean) {
