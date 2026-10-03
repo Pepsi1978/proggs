@@ -6,6 +6,7 @@ import de.frank.newskompass.ai.ModellSuche
 import de.frank.newskompass.ai.ThemenUeberschriften
 import de.frank.newskompass.data.AusgabenSpeicher
 import de.frank.newskompass.data.EinstellungenStore
+import de.frank.newskompass.news.NachrichtenChat
 import de.frank.newskompass.news.NewsRecherche
 import de.frank.newskompass.news.SprachFrage
 import de.frank.newskompass.news.ThemenDiktat
@@ -41,6 +42,7 @@ class NewsApplication : Application() {
     val vorleser by lazy { VorleseManager(this, einstellungen) }
     val sprachFrage by lazy { SprachFrage(this) }
     val themenDiktat by lazy { ThemenDiktat(this) }
+    val chat by lazy { NachrichtenChat(this) }
     val modellSuche by lazy { ModellSuche(codex, einstellungen) }
     val ueberschriften by lazy { ThemenUeberschriften(this, codex, einstellungen, bereich) }
 
