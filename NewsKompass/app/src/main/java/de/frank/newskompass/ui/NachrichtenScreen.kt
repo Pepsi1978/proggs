@@ -9,6 +9,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -47,6 +51,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Image
@@ -137,6 +142,8 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -162,17 +169,28 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
     val mikrofonErlaubnis = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { erteilt ->
         app.sprachFrage.erlaubnisErhalten(erteilt)
     }
+    // Nur die Anzahl der Chat-Nachrichten je Meldung — sonst zeichnete jedes Wort einer Antwort den ganzen Schirm neu.
+    val chatAnzahl by remember { app.chat.zustand.map { z -> z.gespraeche.mapValues { it.value.size } }.distinctUntilChanged() }
+        .collectAsStateWithLifecycle(initialValue = emptyMap())
+    // Die Meldung, über die gerade diskutiert wird, samt Blocknummer für die Farbe. Sie bleibt offen, auch wenn
+    // währenddessen eine neue Ausgabe kommt; die Kennung überlebt das Auf- und Zuklappen des Fold.
+    var chatId by rememberSaveable { mutableStateOf<String?>(null) }
+    var chatOffen by remember { mutableStateOf<Pair<Meldung, Int>?>(null) }
 
     // Im Hintergrund schaltet Android das Mikrofon stumm — eine offene Aufnahme wird verworfen.
     val lebenszyklus = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lebenszyklus) {
         val beobachter = LifecycleEventObserver { _, ereignis ->
-            if (ereignis == Lifecycle.Event.ON_STOP) app.sprachFrage.brichAufnahmeAb()
+            if (ereignis == Lifecycle.Event.ON_STOP) {
+                app.sprachFrage.brichAufnahmeAb()
+                app.chat.brichAufnahmeAb()
+            }
         }
         lebenszyklus.addObserver(beobachter)
         onDispose {
             lebenszyklus.removeObserver(beobachter)
             app.sprachFrage.brichAufnahmeAb()
+            app.chat.brichAufnahmeAb()
         }
     }
 
@@ -322,8 +340,21 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
         bildschirm.launch { liste.animateScrollToItem(index) }
     }
 
+    // Nach dem Neuaufbau des Bildschirms ist nur die Kennung übrig: dann die Meldung in der gezeigten Ausgabe suchen.
+    val chatZiel = chatOffen?.takeIf { it.first.id == chatId } ?: chatId?.let { id ->
+        bloecke.withIndex().firstNotNullOfOrNull { (i, b) -> b.meldungen.firstOrNull { it.id == id }?.let { it to i } }
+    }
+    LaunchedEffect(chatId, chatZiel == null, laedt) {
+        if (chatId != null && chatZiel == null && !laedt && ausgabe != null) chatId = null
+    }
+    fun schliesseChat() {
+        chatId = null
+        chatOffen = null
+    }
+
     ModalNavigationDrawer(
         drawerState = schublade,
+        gesturesEnabled = chatZiel == null,
         drawerContent = {
             ArchivSeitenleiste(auswahl, heute, archivTage, archivMonate) { ansicht ->
                 zeige(ansicht)
@@ -544,6 +575,12 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                                 zustand = vorlesen,
                                 vorlesen = { app.vorleser.schalteUm(meldung.id, meldung.vorleseText) },
                                 beenden = { app.vorleser.stoppe() },
+                                chatNachrichten = chatAnzahl[meldung.id] ?: 0,
+                                diskutieren = {
+                                    app.sprachFrage.brichAufnahmeAb()
+                                    chatOffen = meldung to index
+                                    chatId = meldung.id
+                                },
                             )
                         }
                     }
@@ -608,6 +645,26 @@ fun NachrichtenScreen(app: NewsApplication, oeffneEinstellungen: () -> Unit) {
                         app.sprachFrage.tippe(erlaubt) { mikrofonErlaubnis.launch(Manifest.permission.RECORD_AUDIO) }
                     },
                 )
+            }
+
+            // Der Chat zu einer Meldung legt sich über alles, mit eigenem Mikrofon und eigener Tastatur-Anpassung.
+            AnimatedVisibility(
+                visible = chatZiel != null,
+                enter = slideInVertically(initialOffsetY = { it / 3 }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it / 3 }) + fadeOut(),
+            ) {
+                // Während des Ausblendens ist chatZiel schon weg — die zuletzt gezeigte Meldung bleibt so lange stehen.
+                var zuletzt by remember { mutableStateOf(chatZiel) }
+                if (chatZiel != null) zuletzt = chatZiel
+                zuletzt?.let { (meldung, blockIndex) ->
+                    ChatAnsicht(
+                        app = app,
+                        meldung = meldung,
+                        farbe = blockFarbe(blockIndex),
+                        schliessen = { schliesseChat() },
+                        oeffneEinstellungen = oeffneEinstellungen,
+                    )
+                }
             }
         }
     }
@@ -1017,6 +1074,8 @@ private fun MeldungsKarte(
     zustand: VorleseZustand,
     vorlesen: () -> Unit,
     beenden: () -> Unit,
+    chatNachrichten: Int,
+    diskutieren: () -> Unit,
 ) {
     val kontext = LocalContext.current
     var offen by rememberSaveable(meldung.id) { mutableStateOf(false) }
@@ -1132,7 +1191,9 @@ private fun MeldungsKarte(
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                DiskutierenKnopf(blockFarbe(blockIndex), chatNachrichten, diskutieren)
+                Spacer(Modifier.weight(1f))
                 Text(
                     if (offen) "Weniger" else "Weiterlesen",
                     style = MaterialTheme.typography.labelLarge,
@@ -1140,6 +1201,23 @@ private fun MeldungsKarte(
                 )
                 Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null, tint = blockFarbe(blockIndex))
             }
+        }
+    }
+}
+
+/** Öffnet das Gespräch mit der KI über diese Meldung; läuft schon eins, zeigt er dessen Länge. */
+@Composable
+private fun DiskutierenKnopf(farbe: Color, nachrichten: Int, diskutieren: () -> Unit) {
+    Surface(onClick = diskutieren, shape = RoundedCornerShape(50), color = farbe.copy(alpha = 0.13f)) {
+        Row(Modifier.padding(start = 12.dp, end = 14.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Forum, null, tint = farbe, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(7.dp))
+            Text(
+                if (nachrichten > 0) "Gespräch fortsetzen · $nachrichten" else "Mit KI diskutieren",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = farbe,
+            )
         }
     }
 }
@@ -1190,7 +1268,7 @@ private fun domain(adresse: String): String =
  * wird erst beim Zeichnen gelesen, damit nicht jede Karte in jedem Frame neu zusammengesetzt wird.
  */
 @Composable
-private fun Modifier.pulsWenn(aktiv: Boolean, bis: Float, dauerMs: Int): Modifier {
+internal fun Modifier.pulsWenn(aktiv: Boolean, bis: Float, dauerMs: Int): Modifier {
     if (!aktiv) return this
     val puls = rememberInfiniteTransition(label = "puls")
     val skala = puls.animateFloat(1f, bis, infiniteRepeatable(tween(dauerMs), RepeatMode.Reverse), label = "skala")
@@ -1205,7 +1283,7 @@ private fun Modifier.pulsWenn(aktiv: Boolean, bis: Float, dauerMs: Int): Modifie
  * erscheint, solange diese Quelle aktiv ist, ein eigener Knopf zum ganz Beenden.
  */
 @Composable
-private fun LautsprecherKnopf(
+internal fun LautsprecherKnopf(
     zustand: VorleseZustand,
     quelle: String,
     farbe: Color,
