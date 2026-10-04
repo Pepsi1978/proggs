@@ -87,6 +87,7 @@
 	function hostFromUrl(url) {
 		try {
 			const u = new URL(url || "");
+			if (u.protocol === "file:") return "lokale-dateien";
 			if (u.protocol !== "http:" && u.protocol !== "https:") return "";
 			return u.hostname.toLowerCase();
 		} catch (_) {
@@ -121,7 +122,8 @@
 		if (!currentPageHost) {
 			cb.checked = false;
 			cb.disabled = true;
-			help.textContent = "Für diese aktive Seite kann kein Webseiten-Schalter gesetzt werden.";
+			help.textContent =
+				"Das Overlay läuft auf dieser Seite nicht. Bei lokalen Dateien: unter chrome://extensions → Vorlese-Overlay → Details „Zugriff auf Datei-URLs zulassen“ einschalten und die Seite neu laden.";
 			return;
 		}
 		cb.disabled = false;

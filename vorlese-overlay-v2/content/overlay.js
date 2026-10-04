@@ -38,7 +38,12 @@
 
 	const SAMPLE_TEXT =
 		"Dies ist ein Beispielsatz, mit dem du die gewählte Stimme und das Tempo prüfen kannst.";
-	const PAGE_HOST = (location.hostname || "").toLowerCase();
+	// Lokale Dateien haben keinen Hostnamen — sie teilen sich einen festen Namen,
+	// damit der Webseiten-Schalter in der Seitenleiste auch dort funktioniert.
+	const PAGE_HOST =
+		location.protocol === "file:"
+			? "lokale-dateien"
+			: (location.hostname || "").toLowerCase();
 
 	let lastSelection = "";
 	let isPlaying = false;
