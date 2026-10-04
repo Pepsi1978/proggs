@@ -20,3 +20,4 @@
 | 6 | Mehrere Credentials gesetzt | Praezedenz beachten — sonst stiller 401 | §6 |
 | 7 | 401/403 behandeln | 401 = Refresh; 403-Client-Block = umstellen | §7 |
 | 8 | Abo-Limits respektieren | Cachen statt hammern; API-Key-Fallback einbauen | §8 |
+| 10 | Eigenes Programm mit ChatGPT-Abo (neu 29.09.2026) | Offizieller Weg „Sign in with ChatGPT“: PKCE + Loopback, Responses API mit Bearer-Token, `store:false` + `stream:true` | §10 |

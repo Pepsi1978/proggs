@@ -1,0 +1,109 @@
+/* Gemeinsames Stylesheet für alle Lektionen und Nachschlageseiten des Kurses "KI-Agenten bauen".
+   Aufbau: eine Lesespalte mit Randspalte für Quellen (auf schmalen Bildschirmen im Fließtext). */
+:root{
+  --bg:#fbfaf7; --fg:#1d1f24; --muted:#5d6370; --line:#dcd9d0; --surface:#f1efe9;
+  --accent:#1f5fa8; --ok:#1c7c4a; --bad:#b3372f; --code-bg:#f1efe9; --mark:#fff2b8;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:"Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"Cascadia Code",Consolas,"SF Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#15171c; --fg:#e7e5df; --muted:#a2a7b3; --line:#343841; --surface:#1e2128;
+    --accent:#7fb2f0; --ok:#5cc48a; --bad:#f08a80; --code-bg:#1e2128; --mark:#4d4420; color-scheme:dark}
+}
+*{box-sizing:border-box}
+html{font-size:18px}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--serif);line-height:1.6;
+  padding:48px 24px 96px}
+main{max-width:68ch;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+main > *{margin:0}
+h1,h2,h3{font-weight:600;line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:2.1rem;letter-spacing:-.01em}
+h2{font-size:1.35rem;margin-top:16px;padding-top:20px;border-top:1px solid var(--line)}
+h3{font-size:1.05rem;font-family:var(--sans)}
+p,ul,ol{margin:0}
+ul,ol{padding-left:1.3em;display:flex;flex-direction:column;gap:6px}
+a{color:var(--accent);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+strong{font-weight:600}
+mark{background:var(--mark);color:inherit;padding:0 .15em}
+section{display:flex;flex-direction:column;gap:16px}
+
+/* Kopf */
+.kopf{display:flex;flex-direction:column;gap:10px}
+.kennung{font-family:var(--sans);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.ziel{font-size:1.1rem;color:var(--muted)}
+.dauer{font-family:var(--sans);font-size:.8rem;color:var(--muted)}
+
+/* Quellenverweise */
+sup.q a{font-family:var(--sans);font-size:.7rem;text-decoration:none;padding:0 .15em}
+.quellen{font-family:var(--sans);font-size:.82rem;color:var(--muted);display:flex;flex-direction:column;gap:8px;padding-left:1.6em}
+.quellen li::marker{color:var(--accent)}
+
+/* Kästen */
+.merk,.beispiel,.primaer,.fragen{border-left:3px solid var(--accent);background:var(--surface);
+  padding:16px 20px;display:flex;flex-direction:column;gap:10px}
+.beispiel{border-left-color:var(--line)}
+.kasten-titel{font-family:var(--sans);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* Code */
+code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);padding:.1em .3em;border-radius:3px}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);padding:14px 16px;overflow-x:auto;
+  font-size:.78rem;line-height:1.5;border-radius:3px}
+pre code{background:none;padding:0;font-size:inherit}
+.k{color:var(--muted);font-style:italic}
+
+/* Sprachumschalter TypeScript / Kotlin (kurs.js) */
+.sprachen{display:flex;flex-direction:column;gap:0}
+.sprachen-leiste{display:flex;gap:4px}
+.sprachen-leiste button{font:600 .75rem var(--sans);padding:6px 12px;border:1px solid var(--line);border-bottom:none;
+  background:transparent;color:var(--muted);cursor:pointer;border-radius:3px 3px 0 0}
+.sprachen-leiste button[aria-pressed="true"]{background:var(--code-bg);color:var(--fg)}
+.sprachen pre{border-top-left-radius:0}
+
+/* Schaubild */
+.schaubild{overflow-x:auto}
+.schaubild svg{max-width:100%;height:auto;display:block;margin:0 auto}
+figure{margin:0;display:flex;flex-direction:column;gap:8px}
+figcaption{font-family:var(--sans);font-size:.8rem;color:var(--muted)}
+
+/* Quiz (kurs.js) */
+.quiz{display:flex;flex-direction:column;gap:10px;font-family:var(--sans);font-size:.9rem;
+  border:1px solid var(--line);padding:16px 18px;border-radius:3px}
+.quiz .frage{font-weight:600}
+.quiz .antworten{display:flex;flex-direction:column;gap:6px}
+.quiz button{font:inherit;text-align:left;padding:9px 12px;border:1px solid var(--line);background:var(--bg);
+  color:var(--fg);cursor:pointer;border-radius:3px}
+.quiz button:hover:not(:disabled){border-color:var(--accent)}
+.quiz button.richtig{border-color:var(--ok);color:var(--ok);font-weight:600}
+.quiz button.falsch{border-color:var(--bad);color:var(--bad)}
+.quiz button:disabled{cursor:default}
+.quiz .erklaerung{color:var(--muted)}
+.quiz-stand{font-family:var(--sans);font-size:.9rem;font-weight:600}
+
+/* Abruf-Aufgabe: erst selbst schreiben, dann vergleichen (kurs.js) */
+.abruf{display:flex;flex-direction:column;gap:10px;font-family:var(--sans);font-size:.9rem;
+  border:1px solid var(--line);padding:16px 18px;border-radius:3px}
+.abruf textarea{font:inherit;min-height:90px;padding:10px;border:1px solid var(--line);background:var(--bg);
+  color:var(--fg);border-radius:3px;resize:vertical;width:100%}
+.abruf > button{align-self:flex-start;font:600 .85rem var(--sans);padding:8px 14px;border:1px solid var(--accent);
+  background:transparent;color:var(--accent);cursor:pointer;border-radius:3px}
+.abruf .loesung{border-left:3px solid var(--ok);padding-left:12px;font-family:var(--serif);font-size:1rem}
+
+/* Fußnavigation */
+.nav{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;font-family:var(--sans);font-size:.85rem;
+  border-top:1px solid var(--line);padding-top:20px}
+
+/* Tabellen (Nachschlageseiten) */
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:.85rem}
+th,td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tabelle{overflow-x:auto}
+
+@media (max-width:600px){html{font-size:16px} body{padding:28px 16px 64px}}
+@media print{
+  body{padding:0;background:#fff;color:#000} main{max-width:none}
+  .quiz button,.abruf textarea,.abruf > button,.sprachen-leiste,.nav{display:none}
+  .sprachen pre[hidden],.abruf .loesung[hidden],.quiz .erklaerung[hidden]{display:block!important}
+  a{color:inherit} pre{white-space:pre-wrap}
+}

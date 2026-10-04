@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lektion 1: Was ein Agent ist</title>
+<link rel="stylesheet" href="../assets/kurs.css">
+</head>
+<body>
+<main>
+
+<header class="kopf">
+  <span class="kennung">KI-Agenten bauen · Lektion 1</span>
+  <h1>Was ein Agent ist, und was nicht</h1>
+  <p class="ziel">Danach erkennst du bei jedem KI-Programm in Sekunden, ob es ein einzelner Aufruf, ein Workflow oder ein Agent ist, und du kannst die Agenten-Schleife aus dem Kopf aufschreiben.</p>
+  <span class="dauer">Etwa 10 Minuten · noch kein Code</span>
+</header>
+
+<section>
+  <h2>Die eine Frage, die alles trennt</h2>
+  <p>Du benutzt jeden Tag Agenten: Claude Code, Codex, OpenCode. Bevor du selbst einen baust, brauchst du eine scharfe Grenze. Sie hängt an einer einzigen Frage:</p>
+  <div class="merk">
+    <span class="kasten-titel">Prüffrage</span>
+    <p><strong>Wer entscheidet, was als Nächstes passiert: dein Code oder das Modell?</strong></p>
+  </div>
+  <p>Anthropic zieht die Grenze genau dort. Workflows sind Systeme, in denen Modelle und Werkzeuge <em>über vorgegebene Code-Pfade</em> gesteuert werden. Agenten sind Systeme, in denen das Modell <em>seinen Ablauf und seine Werkzeugnutzung selbst lenkt</em>.<sup class="q"><a href="#q1">1</a></sup></p>
+</section>
+
+<section>
+  <h2>Stufe 1: der einzelne Aufruf</h2>
+  <p>Du schickst Text hin, du bekommst Text zurück. Kein Werkzeug, keine Wiederholung. Das Modell steuert nichts.</p>
+  <div class="beispiel">
+    <span class="kasten-titel">Drei Beispiele</span>
+    <ul>
+      <li>NewsKompass schickt eine Meldung ans Modell und bekommt eine Zusammenfassung in drei Sätzen.</li>
+      <li>Eine App lässt den Text „Speichern“ in zwölf Sprachen übersetzen.</li>
+      <li>Ein Programm fragt: „Ist diese Play-Store-Bewertung positiv, neutral oder negativ?“</li>
+    </ul>
+  </div>
+  <p>OpenAI nennt solche Programme ausdrücklich <em>keine</em> Agenten: einfache Chatbots, einzelne Aufrufe, Stimmungs-Klassifizierer.<sup class="q"><a href="#q2">2</a></sup></p>
+</section>
+
+<section>
+  <h2>Stufe 2: der Workflow</h2>
+  <p>Mehrere Aufrufe hintereinander oder nebeneinander. Die Reihenfolge steht fest in <strong>deinem Code</strong>. Das Modell füllt nur die einzelnen Schritte.</p>
+  <div class="beispiel">
+    <span class="kasten-titel">Drei Beispiele</span>
+    <ul>
+      <li><strong>Kette:</strong> Text übersetzen, dann die Übersetzung von einem zweiten Aufruf prüfen lassen, dann formatieren. Immer diese drei Schritte.</li>
+      <li><strong>Weiche:</strong> Ein erster Aufruf sortiert eine Frage in „leicht“ oder „schwer“. Leichte gehen an ein kleines Modell, schwere an ein großes.</li>
+      <li><strong>Parallel:</strong> Dein Recherche-Schwarm. Das Skript startet sieben Researcher gleichzeitig, jeder bekommt ein festes Unterthema, am Ende wird zusammengeführt.</li>
+    </ul>
+  </div>
+  <p>Anthropic beschreibt fünf solcher Bauformen: Kette, Weiche, Parallelisierung, Orchestrator mit Arbeitern, Erzeuger mit Prüfer.<sup class="q"><a href="#q1">1</a></sup> Die bekommen später eigene Lektionen.</p>
+</section>
+
+<section>
+  <h2>Stufe 3: der Agent</h2>
+  <p>Das Modell bekommt ein Ziel und eine Liste von Werkzeugen. Es entscheidet selbst, welches Werkzeug es wann benutzt, schaut sich das Ergebnis an und entscheidet dann den nächsten Schritt. Wie viele Schritte es werden, weiß vorher niemand.</p>
+  <div class="beispiel">
+    <span class="kasten-titel">Drei Beispiele</span>
+    <ul>
+      <li>Claude Code soll einen Absturz beheben. Es liest Dateien, sucht im Code, ändert etwas, baut, liest den Fehler, ändert erneut.</li>
+      <li>Ein Helfer soll deinen Download-Ordner aufräumen. Er listet die Dateien auf, schaut in unklare hinein, verschiebt sie und prüft am Ende das Ergebnis.</li>
+      <li>Ein Agent in einer App soll „den günstigsten Zug nach Hamburg am Freitag“ finden. Er fragt Verbindungen ab, vergleicht, fragt bei Bedarf einen zweiten Tag ab.</li>
+    </ul>
+  </div>
+  <p>Anthropic fasst es so zusammen: Agenten sind in der Regel nur Modelle, die Werkzeuge in einer Schleife benutzen, gestützt auf Rückmeldungen aus der Umgebung.<sup class="q"><a href="#q1">1</a></sup> Thorsten Ball, der einen Coding-Agenten in rund 300 Zeilen gebaut hat, sagt es noch kürzer: „It's an LLM, a loop, and enough tokens.“<sup class="q"><a href="#q3">3</a></sup></p>
+</section>
+
+<section>
+  <h2>Die Schleife</h2>
+  <figure class="schaubild">
+    <svg viewBox="0 0 640 290" width="640" role="img" aria-label="Die Agenten-Schleife in vier Schritten" font-family="Segoe UI, system-ui, sans-serif" font-size="13">
+      <defs><marker id="pf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" style="fill:var(--muted)"/></marker></defs>
+      <g style="fill:var(--surface);stroke:var(--line)" stroke-width="1.5">
+        <rect x="10" y="30" width="190" height="64" rx="4"/>
+        <rect x="230" y="30" width="190" height="64" rx="4"/>
+        <rect x="230" y="200" width="190" height="64" rx="4"/>
+        <rect x="10" y="200" width="190" height="64" rx="4"/>
+      </g>
+      <rect x="470" y="30" width="160" height="64" rx="4" style="fill:var(--bg);stroke:var(--ok)" stroke-width="1.5"/>
+      <g style="fill:var(--fg)" text-anchor="middle">
+        <text x="105" y="57" font-weight="600">① Anfrage senden</text>
+        <text x="105" y="76" style="fill:var(--muted)">Verlauf + Werkzeugliste</text>
+        <text x="325" y="57" font-weight="600">② Modell antwortet</text>
+        <text x="325" y="76" style="fill:var(--muted)">Text oder Werkzeugwunsch</text>
+        <text x="325" y="227" font-weight="600">③ Dein Code führt aus</text>
+        <text x="325" y="246" style="fill:var(--muted)">das gewünschte Werkzeug</text>
+        <text x="105" y="227" font-weight="600">④ Ergebnis anhängen</text>
+        <text x="105" y="246" style="fill:var(--muted)">an den Verlauf</text>
+        <text x="550" y="57" font-weight="600">Fertig</text>
+        <text x="550" y="76" style="fill:var(--muted)">Antwort an dich</text>
+      </g>
+      <g style="stroke:var(--muted);fill:none" stroke-width="1.5" marker-end="url(#pf)">
+        <path d="M200 62 H228"/>
+        <path d="M420 62 H468"/>
+        <path d="M325 94 V198"/>
+        <path d="M230 232 H202"/>
+        <path d="M105 200 V96"/>
+      </g>
+      <g style="fill:var(--muted)" font-size="12">
+        <text x="335" y="150">Werkzeugwunsch</text>
+        <text x="424" y="22">kein Wunsch</text>
+        <text x="115" y="150">nächste Runde</text>
+      </g>
+    </svg>
+    <figcaption>Die Runden ①–④ wiederholen sich, bis das Modell kein Werkzeug mehr verlangt oder dein Code abbricht.</figcaption>
+  </figure>
+  <div class="merk">
+    <span class="kasten-titel">Der wichtigste Satz dieser Lektion</span>
+    <p><strong>Das Modell führt nie selbst etwas aus.</strong> Es schreibt nur einen Wunsch auf („rufe <code>liste_dateien</code> mit diesem Ordner auf“). Dein Code führt ihn aus und schickt das Ergebnis zurück.<sup class="q"><a href="#q4">4</a></sup></p>
+  </div>
+
+  <h3>Beispiel A: zwei Runden, alles klappt</h3>
+  <p>Ziel: „Wie viele Kotlin-Dateien hat NewsKompass?“</p>
+  <div class="tabelle"><table>
+    <tr><th>Runde</th><th>Wer</th><th>Was passiert</th></tr>
+    <tr><td>1</td><td>Modell</td><td>Wunsch: <code>liste_dateien("NewsKompass", "*.kt")</code></td></tr>
+    <tr><td>1</td><td>Dein Code</td><td>führt aus, hängt an: „212 Dateien“</td></tr>
+    <tr><td>2</td><td>Modell</td><td>kein Wunsch mehr, Antwort: „NewsKompass hat 212 Kotlin-Dateien.“ → fertig</td></tr>
+  </table></div>
+
+  <h3>Beispiel B: ein Werkzeug schlägt fehl</h3>
+  <p>Ziel dasselbe, aber das Modell rät den falschen Ordner.</p>
+  <div class="tabelle"><table>
+    <tr><th>Runde</th><th>Wer</th><th>Was passiert</th></tr>
+    <tr><td>1</td><td>Modell</td><td>Wunsch: <code>liste_dateien("Newskompas", "*.kt")</code></td></tr>
+    <tr><td>1</td><td>Dein Code</td><td>hängt den Fehler als Ergebnis an: „Ordner nicht gefunden. Vorhanden: NewsKompass, UpdateStation“</td></tr>
+    <tr><td>2</td><td>Modell</td><td>liest den Fehler, neuer Wunsch mit richtigem Ordner</td></tr>
+    <tr><td>2</td><td>Dein Code</td><td>„212 Dateien“</td></tr>
+    <tr><td>3</td><td>Modell</td><td>Antwort → fertig</td></tr>
+  </table></div>
+  <p>Der Fehler wird nicht als Absturz behandelt. Er geht als Ergebnis zurück in die Schleife, und das Modell korrigiert sich. Je lehrreicher die Fehlermeldung, desto besser die Korrektur.<sup class="q"><a href="#q5">5</a></sup></p>
+
+  <h3>Beispiel C: dein Code zieht die Notbremse</h3>
+  <p>Das Modell verlangt Runde um Runde dasselbe Werkzeug mit denselben Angaben. Dieses Fehlbild ist schon in der Forschungsarbeit beschrieben, aus der das Schleifen-Prinzip stammt.<sup class="q"><a href="#q6">6</a></sup> Deshalb gehört in jede Schleife eine <strong>harte Obergrenze</strong>, zum Beispiel höchstens 20 Runden. Anthropic nennt ein Rundenlimit als übliche Abbruchbedingung.<sup class="q"><a href="#q1">1</a></sup> Von selbst ist sie oft nicht da: Im Claude Agent SDK gibt es standardmäßig kein Limit für Runden und Kosten.<sup class="q"><a href="#q7">7</a></sup></p>
+</section>
+
+<section>
+  <h2>Wann du keinen Agenten baust</h2>
+  <p>Ein Agent kostet mehr Zeit und Geld als ein einzelner Aufruf, und Fehler können sich über die Runden aufschaukeln. Anthropics Rat: die einfachste Lösung suchen und Komplexität nur dann erhöhen, wenn es nötig ist. Das kann heißen, gar kein agentisches System zu bauen.<sup class="q"><a href="#q1">1</a></sup></p>
+  <div class="beispiel">
+    <span class="kasten-titel">Drei Beispiele</span>
+    <ul>
+      <li>Meldung zusammenfassen: ein Aufruf reicht. Ein Agent wäre langsamer und teurer, ohne besser zu sein.</li>
+      <li>Jede neue App-Bewertung übersetzen und einsortieren: immer dieselben zwei Schritte, also ein Workflow.</li>
+      <li>„Finde heraus, warum der Build seit gestern rot ist“: die Schritte sind nicht vorhersagbar. Hier lohnt der Agent.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>Übung 1: einordnen</h2>
+  <p>Stell dir bei jedem Fall die Prüffrage. Die Antworten stehen jedes Mal in anderer Reihenfolge.</p>
+
+  <div class="quiz" data-richtig="2">
+    <p class="frage">Ein Skript holt jede Nacht die zehn neuesten Meldungen, lässt jede zusammenfassen und danach alle zehn zu einem Tagesüberblick verdichten.</p>
+    <div class="antworten"><button>Einzelner Aufruf</button><button>Fester Workflow</button><button>Echter Agent</button></div>
+    <p class="erklaerung" hidden>Workflow. Die Reihenfolge (zehnmal zusammenfassen, dann verdichten) steht fest im Skript. Das Modell entscheidet nichts über den Ablauf.</p>
+  </div>
+
+  <div class="quiz" data-richtig="3">
+    <p class="frage">Du sagst: „Finde in meinem Projekt alle Stellen, an denen noch der alte Keystore benutzt wird, und stell sie um.“ Das Programm sucht, liest, ändert und baut, so oft es nötig ist.</p>
+    <div class="antworten"><button>Einzelner Aufruf</button><button>Fester Workflow</button><button>Echter Agent</button></div>
+    <p class="erklaerung" hidden>Agent. Welche Dateien es öffnet und wie viele Runden es braucht, entscheidet das Modell anhand der Ergebnisse.</p>
+  </div>
+
+  <div class="quiz" data-richtig="1">
+    <p class="frage">Eine App schickt den Text einer Sprachnotiz ans Modell und zeigt die zurückgegebene Überschrift an.</p>
+    <div class="antworten"><button>Einzelner Aufruf</button><button>Fester Workflow</button><button>Echter Agent</button></div>
+    <p class="erklaerung" hidden>Einzelner Aufruf. Text hin, Text zurück, kein Werkzeug, keine Wiederholung.</p>
+  </div>
+
+  <div class="quiz" data-richtig="2">
+    <p class="frage">Ein Programm lässt ein Modell einen Text schreiben, ein zweites Modell bewertet ihn, und dein Code wiederholt das genau dreimal.</p>
+    <div class="antworten"><button>Einzelner Aufruf</button><button>Fester Workflow</button><button>Echter Agent</button></div>
+    <p class="erklaerung" hidden>Workflow, obwohl es eine Schleife gibt. Entscheidend ist, wer über die Wiederholung bestimmt: hier dein Code, mit festen drei Durchgängen.</p>
+  </div>
+
+  <div class="quiz" data-richtig="3">
+    <p class="frage">Ein Chat-Helfer hat die Werkzeuge „Kalender lesen“ und „Termin anlegen“. Auf „Schieb mein Treffen auf einen freien Platz am Donnerstag“ liest er erst den Kalender und legt dann den Termin an.</p>
+    <div class="antworten"><button>Einzelner Aufruf</button><button>Fester Workflow</button><button>Echter Agent</button></div>
+    <p class="erklaerung" hidden>Agent. Niemand hat die Reihenfolge der Werkzeuge vorgegeben. Das Modell wählt sie anhand des Ziels und des Kalender-Ergebnisses.</p>
+  </div>
+
+  <p class="quiz-stand"></p>
+</section>
+
+<section>
+  <h2>Übung 2: aus dem Kopf</h2>
+  <div class="abruf">
+    <p class="frage">Schreib die vier Schritte der Schleife auf, ohne nach oben zu scrollen. Ergänze: Wann endet sie, und wer führt die Werkzeuge aus?</p>
+    <textarea id="abruf-schleife" aria-label="Deine Antwort"></textarea>
+    <button>Mit Lösung vergleichen</button>
+    <div class="loesung" hidden>
+      <ol>
+        <li>Dein Code sendet den bisherigen Verlauf und die Werkzeugliste ans Modell.</li>
+        <li>Das Modell antwortet mit Text oder mit einem Werkzeugwunsch.</li>
+        <li>Dein Code führt das gewünschte Werkzeug aus.</li>
+        <li>Dein Code hängt das Ergebnis an den Verlauf und beginnt wieder bei 1.</li>
+      </ol>
+      <p>Ende: wenn das Modell kein Werkzeug mehr verlangt, oder wenn dein Code abbricht (Rundenlimit, Fehler). Die Werkzeuge führt immer dein Code aus, nie das Modell.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="primaer">
+    <span class="kasten-titel">Die eine Quelle zum Selbstlesen</span>
+    <p><a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective agents</a> von Erik Schluntz und Barry Zhang (Anthropic, Dezember 2024). Etwa 15 Minuten Lesezeit, englisch. Aus diesem Artikel stammen die Trennung Workflow gegen Agent und die fünf Bauformen. Die genannten Modellnamen sind veraltet, die Muster gelten weiter.</p>
+  </div>
+  <div class="fragen">
+    <span class="kasten-titel">Fragen?</span>
+    <p>Wenn etwas unklar ist oder du ein eigenes Beispiel einordnen willst: frag mich einfach im Terminal. Sag mir auch, wie das Quiz lief, dann passe ich die nächste Lektion an.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Quellen</h2>
+  <ol class="quellen">
+    <li id="q1">Schluntz, Zhang: <a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective agents</a>, Anthropic Engineering, 19.12.2024.</li>
+    <li id="q2">OpenAI: <a href="https://cdn.openai.com/business-guides-and-resources/a-practical-guide-to-building-agents.pdf">A practical guide to building agents</a> (PDF), Seiten 4 und 5.</li>
+    <li id="q3">Thorsten Ball: <a href="https://ampcode.com/how-to-build-an-agent">How to Build an Agent</a>, 15.04.2025.</li>
+    <li id="q4">Claude-Dokumentation: <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works">How tool use works</a>, abgerufen am 04.10.2026.</li>
+    <li id="q5">Claude-Dokumentation: <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls">Handle tool calls</a>, abgerufen am 04.10.2026.</li>
+    <li id="q6">Yao u. a.: <a href="https://arxiv.org/pdf/2210.03629">ReAct: Synergizing Reasoning and Acting in Language Models</a>, ICLR 2023, Abschnitt 3.3.</li>
+    <li id="q7">Claude Agent SDK: <a href="https://code.claude.com/docs/en/agent-sdk/agent-loop">How the agent loop works</a>, abgerufen am 04.10.2026.</li>
+  </ol>
+</section>
+
+<nav class="nav">
+  <a href="../reference/agenten-schleife.html">Spickzettel: Stufen und Schleife</a>
+  <a href="../reference/kursplan.html">Kursplan: alle 20 Lektionen</a>
+  <span>Nächste Lektion: dein erster eigener Modellaufruf</span>
+</nav>
+
+</main>
+<script src="../assets/kurs.js"></script>
+</body>
+</html>

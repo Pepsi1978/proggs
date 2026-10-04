@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kursplan: KI-Agenten bauen</title>
+<link rel="stylesheet" href="../assets/kurs.css">
+</head>
+<body>
+<main>
+
+<header class="kopf">
+  <span class="kennung">KI-Agenten bauen · Kursplan</span>
+  <h1>Von Anfang bis Ende</h1>
+  <p class="ziel">Der Weg vom ersten Modellaufruf bis zum Agenten in deiner Android-App und deinem eigenen Arbeits-Agenten am PC. Jede Lektion dauert etwa 10 bis 15 Minuten und bringt mehrere Beispiele in TypeScript und Kotlin.</p>
+  <span class="dauer">Stand 04.10.2026 · der Plan passt sich an, je nachdem wie die Lektionen laufen</span>
+</header>
+
+<section>
+  <h2>A · Grundlagen</h2>
+  <div class="tabelle"><table>
+    <tr><th>Nr.</th><th>Lektion</th><th>Danach kannst du</th></tr>
+    <tr><td>1</td><td><a href="../lessons/0001-was-ist-ein-agent.html">Was ein Agent ist</a></td><td>Aufruf, Workflow und Agent unterscheiden; die Schleife aufschreiben</td></tr>
+    <tr><td>2</td><td>Dein erster Modellaufruf</td><td>dich per ChatGPT-Anmeldung einloggen und aus TypeScript eine Antwort holen</td></tr>
+    <tr><td>3</td><td>Derselbe Aufruf in Kotlin</td><td>dasselbe aus Kotlin, ohne fertiges SDK</td></tr>
+    <tr><td>4</td><td>Ein Gespräch führen</td><td>den Verlauf selbst verwalten, weil das Modell sich nichts merkt</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>B · Werkzeuge und Schleife</h2>
+  <div class="tabelle"><table>
+    <tr><th>Nr.</th><th>Lektion</th><th>Danach kannst du</th></tr>
+    <tr><td>5</td><td>Das erste Werkzeug</td><td>einen Werkzeugwunsch empfangen, ausführen und beantworten</td></tr>
+    <tr><td>6</td><td>Die Schleife selbst schreiben</td><td>einen vollständigen Agenten in rund 100 Zeilen bauen, mit Rundenlimit</td></tr>
+    <tr><td>7</td><td>Werkzeuge gut entwerfen</td><td>Namen, Beschreibung und Schema so schreiben, dass das Modell sie richtig benutzt</td></tr>
+    <tr><td>8</td><td>Wenn etwas schiefgeht</td><td>Fehler als Ergebnis zurückgeben, abgeschnittene Antworten und Wiederholungen abfangen</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>C · Workflows</h2>
+  <div class="tabelle"><table>
+    <tr><th>Nr.</th><th>Lektion</th><th>Danach kannst du</th></tr>
+    <tr><td>9</td><td>Kette und Weiche</td><td>feste Abläufe bauen, wo kein Agent nötig ist</td></tr>
+    <tr><td>10</td><td>Parallel und Prüfer</td><td>Aufgaben verteilen und Ergebnisse von einem zweiten Aufruf prüfen lassen</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>D · Kontext und Gedächtnis</h2>
+  <div class="tabelle"><table>
+    <tr><th>Nr.</th><th>Lektion</th><th>Danach kannst du</th></tr>
+    <tr><td>11</td><td>Der System-Prompt eines Agenten</td><td>Rolle, Ziel und Grenzen so vorgeben, dass der Agent sich daran hält</td></tr>
+    <tr><td>12</td><td>Kontext klein halten</td><td>Werkzeugausgaben kürzen, den Verlauf zusammenfassen, Kosten senken</td></tr>
+    <tr><td>13</td><td>Gedächtnis in Dateien</td><td>einem Agenten Wissen über Sitzungen hinweg mitgeben</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>E · Größer bauen</h2>
+  <div class="tabelle"><table>
+    <tr><th>Nr.</th><th>Lektion</th><th>Danach kannst du</th></tr>
+    <tr><td>14</td><td>MCP</td><td>fertige Werkzeug-Server anbinden und einen eigenen schreiben</td></tr>
+    <tr><td>15</td><td>Subagenten</td><td>entscheiden, wann mehrere Agenten lohnen, und Aufgaben sauber übergeben</td></tr>
+    <tr><td>16</td><td>Fertige Baukästen</td><td>Eigenbau mit Codex SDK, Claude Agent SDK und Koog vergleichen</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>F · Prüfen, absichern, einbauen</h2>
+  <div class="tabelle"><table>
+    <tr><th>Nr.</th><th>Lektion</th><th>Danach kannst du</th></tr>
+    <tr><td>17</td><td>Evals</td><td>mit 20 Testfällen messen, ob eine Änderung den Agenten besser oder schlechter macht</td></tr>
+    <tr><td>18</td><td>Sicherheit</td><td>Rechte begrenzen und die gefährliche Dreier-Kombination erkennen</td></tr>
+    <tr><td>19</td><td>Agent in der Android-App</td><td>einen Agenten in eine deiner Apps einbauen, angemeldet ohne API-Schlüssel</td></tr>
+    <tr><td>20</td><td>Dein Arbeits-Agent am PC</td><td>eine wiederkehrende eigene Aufgabe von einem Agenten erledigen lassen</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <div class="merk">
+    <span class="kasten-titel">Was noch ungeklärt ist</span>
+    <p>Die Anmeldung „Sign in with ChatGPT“ ist erst seit 29.09.2026 offiziell und hat kein Kotlin-Paket. Ob der Ablauf auf Android so funktioniert wie am PC, steht nicht in der Doku. Lektion 2 probiert den Weg am PC aus; davon hängt ab, wie Lektion 3 und 19 aussehen.</p>
+  </div>
+</section>
+
+<nav class="nav">
+  <a href="../lessons/0001-was-ist-ein-agent.html">Zu Lektion 1</a>
+  <a href="agenten-schleife.html">Spickzettel: Stufen und Schleife</a>
+</nav>
+
+</main>
+</body>
+</html>

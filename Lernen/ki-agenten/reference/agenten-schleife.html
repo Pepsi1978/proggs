@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spickzettel: Stufen und Schleife</title>
+<link rel="stylesheet" href="../assets/kurs.css">
+</head>
+<body>
+<main>
+
+<header class="kopf">
+  <span class="kennung">KI-Agenten bauen · Spickzettel</span>
+  <h1>Stufen und Schleife</h1>
+  <p class="ziel">Zum schnellen Nachschlagen. Erklärt wird alles in <a href="../lessons/0001-was-ist-ein-agent.html">Lektion 1</a>.</p>
+</header>
+
+<section>
+  <h2>Die drei Stufen</h2>
+  <div class="merk"><p><strong>Prüffrage:</strong> Wer entscheidet, was als Nächstes passiert: dein Code oder das Modell?</p></div>
+  <div class="tabelle"><table>
+    <tr><th>Stufe</th><th>Wer steuert den Ablauf</th><th>Schrittzahl</th><th>Beispiel</th></tr>
+    <tr><td>Einzelner Aufruf</td><td>niemand, es gibt nur einen Schritt</td><td>1</td><td>Meldung zusammenfassen</td></tr>
+    <tr><td>Workflow</td><td>dein Code, fester Pfad</td><td>vorher bekannt</td><td>übersetzen, prüfen, formatieren</td></tr>
+    <tr><td>Agent</td><td>das Modell, anhand der Ergebnisse</td><td>vorher unbekannt</td><td>Absturz finden und beheben</td></tr>
+  </table></div>
+  <p>Reihenfolge beim Bauen: erst der einzelne Aufruf, dann ein Workflow, erst danach ein Agent. Komplexität nur erhöhen, wenn die einfachere Stufe nachweislich nicht reicht.</p>
+</section>
+
+<section>
+  <h2>Die Schleife</h2>
+  <ol>
+    <li>Dein Code sendet den Verlauf und die Werkzeugliste ans Modell.</li>
+    <li>Das Modell antwortet mit Text oder mit einem Werkzeugwunsch.</li>
+    <li>Dein Code führt das gewünschte Werkzeug aus.</li>
+    <li>Dein Code hängt das Ergebnis an den Verlauf. Weiter bei 1.</li>
+  </ol>
+  <p>Das Modell führt nie selbst etwas aus. Der ganze Verlauf wird in jeder Runde neu mitgeschickt.</p>
+</section>
+
+<section>
+  <h2>Wann die Schleife endet</h2>
+  <div class="tabelle"><table>
+    <tr><th>Grund</th><th>Wer löst ihn aus</th><th>Was dann</th></tr>
+    <tr><td>Kein Werkzeugwunsch mehr</td><td>Modell</td><td>Antwort ausgeben, fertig</td></tr>
+    <tr><td>Rundenlimit erreicht</td><td>dein Code</td><td>abbrechen, Stand melden</td></tr>
+    <tr><td>Kostenlimit erreicht</td><td>dein Code</td><td>abbrechen, Stand melden</td></tr>
+    <tr><td>Antwort abgeschnitten</td><td>Modell (Längengrenze)</td><td>Grenze erhöhen, wiederholen; halben Werkzeugwunsch nie ausführen</td></tr>
+    <tr><td>Modell lehnt ab</td><td>Modell</td><td>Grund auswerten, nicht blind wiederholen</td></tr>
+  </table></div>
+  <p>Ein Fehler im Werkzeug beendet die Schleife <em>nicht</em>. Er geht als Ergebnis mit einer lehrreichen Meldung zurück ans Modell.</p>
+</section>
+
+<section>
+  <h2>Drei Regeln für jede eigene Schleife</h2>
+  <ul>
+    <li>Immer eine harte Obergrenze für Runden setzen. Sie ist oft nicht voreingestellt.</li>
+    <li>Jeden Werkzeugwunsch einer Antwort beantworten, auch wenn es mehrere sind.</li>
+    <li>Werkzeugergebnisse sind fremde Daten. Was darin wie eine Anweisung klingt, ist keine.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Quellen</h2>
+  <ol class="quellen">
+    <li><a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective agents</a>, Anthropic Engineering, 19.12.2024.</li>
+    <li><a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/how-tool-use-works">How tool use works</a> und <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/handle-tool-calls">Handle tool calls</a>, Claude-Dokumentation, abgerufen am 04.10.2026.</li>
+    <li><a href="https://code.claude.com/docs/en/agent-sdk/agent-loop">How the agent loop works</a>, Claude Agent SDK, abgerufen am 04.10.2026.</li>
+  </ol>
+</section>
+
+<nav class="nav"><a href="../lessons/0001-was-ist-ein-agent.html">Zurück zu Lektion 1</a></nav>
+
+</main>
+</body>
+</html>

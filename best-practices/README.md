@@ -57,7 +57,7 @@ best-practices/
 | `peripherie/` | 1 | Elgato Stream-Deck | `bugs/peripherie/` |
 | `gaming/` | 2 | NVIDIA DLSS Override (App/Profile Inspector, Anti-Cheat), DLSS-5-Mod inoffiziell (OptiScaler-DLSSNR) | `bugs/gaming/` |
 | `assets/` | 2 | Icon-Building, 3D-Optik | `bugs/assets/` |
-| `agents/` | 3 | Orchestrator-Agent, Loop Engineering, Anti-Halluzinations-Regeln (konzeptionell, ungepaart) | `bugs/agents/` |
+| `agents/` | 4 | Orchestrator-Agent, Loop Engineering, Anti-Halluzinations-Regeln (konzeptionell, ungepaart), KI-Agenten selbst bauen (`agenten-bauen.md`, Stand 04.10.2026) | `bugs/agents/` |
 | `second-brain/` | 9 | Selbstgehostetes persönliches Memory („zweites Gehirn") — Architektur/Best-Practices (konzeptionell) | — (ungepaart) |
 | `claude-tooling/` | 22 | Harness — Bug-gepaart **und** generisches Harness-Wissen | `bugs/claude-tooling/` (teilweise) |
 | `design/` | 2 | Design-zu-Code-Treue: Handoff-Formate, Responsivität, Verifikation · KI-Designstudio: Spec→Design-Konsistenz, Effekt-Rendering, parallele Aufträge, Geschwindigkeit | `bugs/design/` |

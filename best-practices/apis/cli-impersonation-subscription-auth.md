@@ -21,6 +21,7 @@
 | 7 | 401/403 behandeln | 401 = Refresh; 403-Client-Block = umstellen | §7 |
 | 8 | Abo-Limits respektieren | Cachen statt hammern; API-Key-Fallback einbauen | §8 |
 | 9 | Hermes→Codex konkret nachbauen | Voller Code-Weg: Client-ID `app_EMoam…`, Endpoint `chatgpt.com/backend-api/codex`, Header `originator: codex_cli_rs` + `ChatGPT-Account-ID` aus JWT | §9 |
+| 10 | Eigenes Programm mit ChatGPT-Abo (neu 29.09.2026) | Offizieller Weg „Sign in with ChatGPT“: PKCE + Loopback, Responses API mit Bearer-Token, `store:false` + `stream:true` | §10 |
 
 ## 1. Rechtlicher Rahmen ZUERST klaeren (defensiv)
 - Offizielle CLI mit eigenem Abo-OAuth ist erlaubt. Abo-OAuth-Tokens (Free/Pro/Max) in Drittsoftware sind bei Anthropic ein ToS-Verstoss und werden server-seitig geblockt — fuer eigene Apps/Agents stattdessen API-Key oder die offizielle CLI nutzen. Quelle: https://platform.claude.com/docs/en/manage-claude/authentication · offiziell
@@ -170,6 +171,21 @@ Lektion: ein fest verdrahtetes Modell bricht still, sobald OpenAI die Liste vers
 - Abo-Quota (429) ist kein Auth-Fehler; nicht in Relogin-Schleifen laufen.
 - ToS: Drittsoftware, die sich als offizieller Client maskiert, ist Grauzone bis Verstoss; Ban-/Revocation-Risiko real.
   Stabiler, legaler Weg bleibt: API-Key ODER die echte CLI nutzen (auch per SSH/`--device-auth`).
+
+## 10. Offizieller Abo-Weg bei OpenAI: „Sign in with ChatGPT“ (SIWC, Stand 04.10.2026) `offiziell`
+
+Seit dem DevDay am 29.09.2026 dürfen Apps Anfragen auf dem ChatGPT-Abo (Plus/Pro) des Nutzers laufen lassen, ohne API-Schlüssel. Open-Source-Apps und lokal laufende Eigenprojekte registrieren sich selbst; bezahlte oder entfernt gehostete Apps brauchen einen Antrag. Damit gibt es neben dem Nachbau aus §9 einen erlaubten Weg.
+
+- **Anmeldung:** Authorization Code + PKCE (S256) mit OIDC. Authorize `https://auth.openai.com/api/accounts/authorize`, Token `https://auth.openai.com/api/accounts/oauth/token`, Redirect `http://127.0.0.1:<Port>/auth/callback` (nur der Port darf wechseln). Erste Registrierung mit `client_id=dynamic_agent_client`, `agent_name_hint` und Pflichtfeld `ext_agent_host_id` (einmal pro Host erzeugen und speichern). Scopes `openid profile email offline_access resource.invoke chatgpt.tokens.use.direct`, `resource=https://api.openai.com/v1`. Kein Client-Secret.
+- **Token:** Access-Token 1 Stunde, Refresh-Token 30 Tage und rotierend (bei jeder Erneuerung austauschen, atomar speichern, siehe §3).
+- **Aufrufe:** `POST https://api.openai.com/v1/responses` mit `Authorization: Bearer <access_token>`. Nicht auf `chatgpt.com/backend-api` zeigen. Pflicht: `store:false`, `stream:true`. Nicht erlaubt: `temperature`, `max_output_tokens`, `previous_response_id`, `metadata`, `truncation`, System-Rolle als Nachricht. Nicht unterstützt: Bildgenerierung, File Search, Code Interpreter, Computer Use, gehostetes MCP, `tool_search`. Eigene Funktionswerkzeuge gehen. Der Verlauf liegt beim Client und wird in `input` mitgeschickt.
+- **Bausteine:** `openai/sign-in-with-chatgpt-devkit` (`@siwc/local` für Node, `@siwc/react`), Lizenz „Noncommercial“. Kein Kotlin-/Android-Paket; auf Android müsste der Ablauf selbst gebaut werden, und ob der Loopback-Redirect dort vertragsgemäß funktioniert, steht nicht in der Doku.
+- **Mit Codex:** `codex app-server` lässt sich mit einem eigenen `model_provider` auf `https://api.openai.com/v1` und dem Token in einer Umgebungsvariable starten; nach der Token-Erneuerung Neustart und `thread/resume`.
+- **Claude zum Vergleich:** Produkte sollen API-Schlüssel nutzen; erlaubt bleibt die Anmeldung mit eigenem Abo im unveränderten Claude-Code-Binary. `claude setup-token` liefert ein einjähriges Token für `CLAUDE_CODE_OAUTH_TOKEN` (nur Modellanfragen, wird im `--bare`-Modus nicht gelesen). Eigenbau mit Agent SDK und eigenem Abo ist nicht ausdrücklich geregelt.
+
+Noch offen: ob ein privates, nicht quelloffenes Programm ohne Antrag unter „personal projects“ fällt (laut Cookbook ja); die OpenAI-Nutzungsbedingungen waren nicht abrufbar. Nicht selbst getestet.
+
+Quellen: https://developers.openai.com/cookbook/articles/sign-in-with-chatgpt · https://developers.openai.com/siwc/quickstart.md · https://developers.openai.com/siwc/token-sharing-open-source/sign-in.md · https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference.md · https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations.md · https://github.com/openai/sign-in-with-chatgpt-devkit · https://code.claude.com/docs/en/legal-and-compliance · https://code.claude.com/docs/en/authentication. Volle Recherche: `~/proggs/Lernen/ki-agenten/research/06-baukaesten-oauth.md`.
 
 ## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/cli-impersonation-subscription-auth.md`) |
