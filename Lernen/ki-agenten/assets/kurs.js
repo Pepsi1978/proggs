@@ -35,8 +35,7 @@
     document.querySelectorAll('.abruf textarea').forEach(function (f, i) {
       z.push('Abruf ' + (i + 1) + ': ' + (f.value.trim() || '(leer)'));
     });
-    berichtFeld.value = z.join('
-');
+    berichtFeld.value = z.join(String.fromCharCode(10));
   }
 
   // ---- Quiz ----
