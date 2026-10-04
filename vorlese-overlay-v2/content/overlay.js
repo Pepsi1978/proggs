@@ -795,19 +795,33 @@
 		} catch (e) {
 			return;
 		}
-		const startBlock = closestReadableBlock(range.startContainer);
-		const paras = collectParagraphsFrom(startBlock);
+		const startBlock = readBlockOf(range.startContainer);
+		if (!startBlock) return;
+		// Erster Teil: exakt ab dem ersten markierten Wort bis zum Ende des
+		// angeklickten Blocks — direkt aus dem DOM geschnitten (keine Textsuche,
+		// die bei mehrfach vorkommenden Woertern an der falschen Stelle landet,
+		// und kein Wegfiltern des Start-Blocks, z.B. in einem <header>).
+		let headParas = [];
+		try {
+			const head = document.createRange();
+			head.setStart(range.startContainer, range.startOffset);
+			head.setEnd(startBlock, startBlock.childNodes.length);
+			headParas = paragraphsInRange(head);
+		} catch (e) {
+			headParas = [];
+		}
+		// Rest: alle lesbaren Absaetze NACH dem Start-Block.
+		const rest = collectParagraphsFrom(startBlock).filter((p) => {
+			if (!p.el || p.el === startBlock || startBlock.contains(p.el)) return false;
+			return !!(
+				startBlock.compareDocumentPosition(p.el) &
+				Node.DOCUMENT_POSITION_FOLLOWING
+			);
+		});
+		const paras = headParas.concat(rest);
 		if (!paras.length) {
 			showHint("Hier wurde kein lesbarer Absatz gefunden.");
 			return;
-		}
-		// Nur wenn EIN einzelnes Wort markiert wurde: ersten Absatz ab diesem Wort
-		// beginnen. Bei groesseren Markierungen ab dem Absatzanfang vorlesen.
-		if (!/\s/.test(clickedWord) && paras[0] && paras[0].text) {
-			const idx = paras[0].text
-				.toLowerCase()
-				.indexOf(clickedWord.toLowerCase());
-			if (idx > 0) paras[0].text = paras[0].text.slice(idx);
 		}
 
 		if (window.VODiag)
@@ -818,33 +832,132 @@
 		startParagraphQueue(paras);
 	}
 
-	// Liefert den Schnitt-Text zwischen einem Range und einem Element — also nur
-	// den Teil des Elements, der wirklich markiert ist (bereinigt). So beginnt das
-	// Vorlesen exakt am ersten markierten Wort, nicht am Absatzanfang.
-	function intersectionText(range, el) {
-		try {
-			const sub = range.cloneRange();
-			const elRange = document.createRange();
-			elRange.selectNodeContents(el);
-			if (sub.compareBoundaryPoints(Range.START_TO_START, elRange) < 0) {
-				sub.setStart(elRange.startContainer, elRange.startOffset);
+	// Bloecke, die als eigener Vorlese-Absatz gelten.
+	const READ_BLOCK_SELECTOR =
+		"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption, td, th, pre, summary";
+
+	// Inhalte, die innerhalb einer Markierung NICHT vorgelesen werden (Fussnoten,
+	// Quellen, Diagramme, Tabellen, Code). Liegt die GESAMTE Markierung in so
+	// einem Element, wird es trotzdem gelesen (der Nutzer hat es bewusst markiert).
+	const RANGE_SKIP_SELECTOR =
+		"script, style, noscript, template, " +
+		"sup, sub.reference, .reference, .references, .footnote, " +
+		".footnotes, .footnote-ref, .citation, .citations, .cite, cite, " +
+		".mw-editsection, .reflist, .mw-references-wrap, .bibliography, " +
+		"figure, table, svg, canvas, math, code, pre, " +
+		'[role="doc-noteref"], [role="doc-biblioref"], ' +
+		'[role="doc-footnote"], [role="doc-endnotes"], ' +
+		'a[href*="#cite"], a[href*="#ref"], a[href*="#fn"], a[href*="#note"], ' +
+		'[aria-hidden="true"]';
+
+	// Liefert den Block, zu dem ein (Text-)Knoten gehoert: den naechsten
+	// klassischen Lese-Block, sonst den naechsten Vorfahren, der kein
+	// Inline-Element ist (z.B. ein DIV mit direktem Text).
+	function readBlockOf(node) {
+		let el = node && node.nodeType === 1 ? node : node && node.parentElement;
+		if (!el) return null;
+		const block = el.closest(READ_BLOCK_SELECTOR);
+		if (block) return block;
+		while (el && el !== document.body && el !== document.documentElement) {
+			let display = "";
+			try {
+				display = getComputedStyle(el).display;
+			} catch (e) {
+				/* egal */
 			}
-			if (sub.compareBoundaryPoints(Range.END_TO_END, elRange) > 0) {
-				sub.setEnd(elRange.endContainer, elRange.endOffset);
-			}
-			const frag = sub.cloneContents();
-			stripRefs(frag);
-			return finalizeText(frag.textContent || "");
-		} catch (e) {
-			return "";
+			if (display && display.indexOf("inline") !== 0 && display !== "contents")
+				return el;
+			if (!el.parentElement) break;
+			el = el.parentElement;
 		}
+		return el;
+	}
+
+	// Kurzer Inline-Link/Button innerhalb eines Blocks = Quellen-Chip (siehe
+	// stripRefs): wird nicht vorgelesen.
+	function isRefChip(parent, block) {
+		const a = parent.closest('a, button, [role="button"], [role="link"]');
+		if (!a || a === block || !block.contains(a)) return false;
+		const txt = (a.textContent || "").trim();
+		const words = txt.split(/\s+/).filter(Boolean);
+		return (
+			words.length <= 3 || txt.length <= 25 || /^[\s\d.,;:()\[\]–-]+$/.test(txt)
+		);
+	}
+
+	// Zerlegt einen Range in Vorlese-Absaetze { text, el }. Geht Textknoten fuer
+	// Textknoten in Dokumentreihenfolge durch und schneidet exakt an den
+	// Range-Grenzen: Es geht NICHTS vor dem ersten und nichts nach dem letzten
+	// markierten Zeichen verloren oder hinzu — egal in welchem Element der Text
+	// steht (auch <header>, DIV ohne <p>, Tabellenzelle).
+	function paragraphsInRange(range) {
+		const result = [];
+		if (!range || range.collapsed) return result;
+		const common = range.commonAncestorContainer;
+		const root = common.nodeType === 3 ? common.parentNode : common;
+		if (!root) return result;
+		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+		const visible = new Map();
+		let cur = null;
+		let started = false;
+		const flush = () => {
+			if (!cur) return;
+			const t = finalizeText(cur.raw);
+			if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) {
+				result.push({ text: t, el: cur.el });
+			}
+			cur = null;
+		};
+		let node;
+		while ((node = walker.nextNode())) {
+			let hit = false;
+			try {
+				hit = range.intersectsNode(node);
+			} catch (e) {
+				hit = false;
+			}
+			if (!hit) {
+				if (started) break;
+				continue;
+			}
+			started = true;
+			let from = 0;
+			let to = node.data.length;
+			if (node === range.startContainer) from = range.startOffset;
+			if (node === range.endContainer) to = range.endOffset;
+			const piece = node.data.slice(from, to);
+			if (!piece) continue;
+			const parent = node.parentElement;
+			if (!parent) continue;
+			// Reiner Leerraum: nur als Worttrenner im laufenden Block uebernehmen.
+			if (!/\S/.test(piece)) {
+				if (cur && cur.el.contains(node)) cur.raw += " ";
+				continue;
+			}
+			const skip = parent.closest(RANGE_SKIP_SELECTOR);
+			if (skip && !skip.contains(common)) continue;
+			let vis = visible.get(parent);
+			if (vis === undefined) {
+				vis = isVisible(parent);
+				visible.set(parent, vis);
+			}
+			if (!vis) continue;
+			const block = readBlockOf(node);
+			if (!block) continue;
+			if (isRefChip(parent, block)) continue;
+			if (!cur || cur.el !== block) {
+				flush();
+				cur = { el: block, raw: "" };
+			}
+			cur.raw += piece;
+		}
+		flush();
+		return result;
 	}
 
 	// Liefert NUR die Markierung — als Liste von { text, el }-Objekten. "el" ist
-	// das LIVE-Absatz-Element (zum Hervorheben), "text" der bereinigte, auf die
-	// Markierungsgrenzen beschnittene Vorlese-Text. Bei einer Teil-Markierung wird
-	// nichts VOR dem ersten markierten Wort gelesen; mehrere markierte Absaetze
-	// ergeben je einen Eintrag.
+	// das LIVE-Absatz-Element (zum Hinscrollen), "text" der bereinigte, auf die
+	// Markierungsgrenzen beschnittene Vorlese-Text.
 	function paragraphsFromSelection() {
 		let sel;
 		try {
@@ -860,34 +973,10 @@
 			return [];
 		}
 		if (range.collapsed) return [];
-
-		// Live-Bloecke finden, die die Markierung beruehrt.
-		const candidates = Array.from(
-			document.querySelectorAll(
-				"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption",
-			),
-		);
-		const result = [];
-		for (const el of candidates) {
-			if (el.closest(SKIP_ANCESTOR_SELECTOR)) continue;
-			if (el.querySelector("p, li, blockquote")) continue;
-			let hit = false;
-			try {
-				hit = range.intersectsNode(el);
-			} catch (e) {
-				hit = false;
-			}
-			if (!hit) continue;
-			if (!isVisible(el)) continue;
-			const t = intersectionText(range, el);
-			if (t && t.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(t)) {
-				result.push({ text: t, el });
-			}
-		}
+		const result = paragraphsInRange(range);
 		if (result.length) return result;
 
-		// Fallback: Markierung liegt nicht in einem erkannten Block -> reines
-		// Markierungs-Fragment bereinigt, Absatz-Element = naechster Block.
+		// Fallback: reines Markierungs-Fragment, bereinigt.
 		let frag;
 		try {
 			frag = range.cloneContents();
