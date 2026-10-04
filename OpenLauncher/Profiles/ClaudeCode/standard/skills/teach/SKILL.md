@@ -18,6 +18,20 @@ Treat the current directory as a teaching workspace. The state of their learning
 - `./lessons/*.html`: A directory of lessons. A **lesson** is a single, self-contained HTML output that teaches one tightly-scoped thing tied to the mission. This is the primary unit of teaching in this workspace.
 - `./assets/*`: Reusable **components** shared across lessons. See [Assets](#assets).
 - `NOTES.md`: A scratchpad for you to jot down user preferences, or working notes.
+- `WEITERMACHEN.md`: The resume file. It records where the user stopped, so a later session (possibly on another computer) can continue. See [Resuming](#resuming).
+
+## Resuming
+
+You have no memory between sessions, and the user may continue on another computer. The workspace is the only thing that travels, so the state must live in it.
+
+At the start of every session, read `WEITERMACHEN.md` first (if it exists), then `MISSION.md`, `NOTES.md` and the `learning-records`.
+
+At the end of every session, and whenever the user reports progress, update `WEITERMACHEN.md`, then commit and push the workspace if it is in a git repository. Never end a session with unpushed progress. The file holds:
+
+- The exact sentence the user types to continue (the skill name plus the workspace path).
+- A dated **Stand** list: which lesson was built, which was actually completed, the reported results, and what comes next.
+
+A lesson is an HTML file in the user's browser. It cannot report anything back to you: you never see quiz clicks or typed answers. So every lesson that has exercises must end with a copyable result (score, which questions were wrong, the free-text answers) and ask the user to paste it into the terminal. Build this once as a component in `./assets/` and reuse it. Record a lesson as **completed** only when the user has said so or pasted its result. Otherwise record it as built, and ask at the start of the next session.
 
 ## Philosophy
 
