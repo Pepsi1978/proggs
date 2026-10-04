@@ -687,7 +687,7 @@ function reloadPendingTabsAfterUpdate() {
 		chrome.storage.local.get(RELOAD_TABS_FLAG, (res) => {
 			if (chrome.runtime.lastError || !res || !res[RELOAD_TABS_FLAG]) return;
 			chrome.storage.local.remove(RELOAD_TABS_FLAG);
-			chrome.tabs.query({ url: ["http://*/*", "https://*/*"] }, (tabs) => {
+			chrome.tabs.query({ url: ["http://*/*", "https://*/*", "file:///*"] }, (tabs) => {
 				if (chrome.runtime.lastError) return;
 				for (const t of tabs || []) {
 					if (t.id != null) {
