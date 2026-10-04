@@ -795,8 +795,11 @@
 		} catch (e) {
 			return;
 		}
-		const startBlock = readBlockOf(range.startContainer);
+		let startBlock = readBlockOf(range.startContainer);
 		if (!startBlock) return;
+		// In einer Tabelle: ab dem Wort die restliche Zeile, dann die Folgezeilen.
+		if (startBlock.matches("td, th"))
+			startBlock = startBlock.closest("tr") || startBlock;
 		// Erster Teil: exakt ab dem ersten markierten Wort bis zum Ende des
 		// angeklickten Blocks — direkt aus dem DOM geschnitten (keine Textsuche,
 		// die bei mehrfach vorkommenden Woertern an der falschen Stelle landet,
@@ -844,7 +847,7 @@
 		"sup, sub.reference, .reference, .references, .footnote, " +
 		".footnotes, .footnote-ref, .citation, .citations, .cite, cite, " +
 		".mw-editsection, .reflist, .mw-references-wrap, .bibliography, " +
-		"figure, table, svg, canvas, math, code, pre, " +
+		"figure, table, svg, canvas, math, pre, " +
 		'[role="doc-noteref"], [role="doc-biblioref"], ' +
 		'[role="doc-footnote"], [role="doc-endnotes"], ' +
 		'a[href*="#cite"], a[href*="#ref"], a[href*="#fn"], a[href*="#note"], ' +
@@ -875,14 +878,19 @@
 
 	// Kurzer Inline-Link/Button innerhalb eines Blocks = Quellen-Chip (siehe
 	// stripRefs): wird nicht vorgelesen.
-	function isRefChip(parent, block) {
+	function isRefChip(parent, block, cache) {
 		const a = parent.closest('a, button, [role="button"], [role="link"]');
 		if (!a || a === block || !block.contains(a)) return false;
-		const txt = (a.textContent || "").trim();
-		const words = txt.split(/\s+/).filter(Boolean);
-		return (
-			words.length <= 3 || txt.length <= 25 || /^[\s\d.,;:()\[\]–-]+$/.test(txt)
-		);
+		let chips = cache.get(block);
+		if (!chips) {
+			try {
+				chips = new Set(refChipsIn(block));
+			} catch (e) {
+				chips = new Set();
+			}
+			cache.set(block, chips);
+		}
+		return chips.has(a);
 	}
 
 	// Zerlegt einen Range in Vorlese-Absaetze { text, el }. Geht Textknoten fuer
@@ -898,6 +906,7 @@
 		if (!root) return result;
 		const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 		const visible = new Map();
+		const chipCache = new Map();
 		let cur = null;
 		let started = false;
 		const flush = () => {
@@ -944,7 +953,7 @@
 			if (!vis) continue;
 			const block = readBlockOf(node);
 			if (!block) continue;
-			if (isRefChip(parent, block)) continue;
+			if (isRefChip(parent, block, chipCache)) continue;
 			if (!cur || cur.el !== block) {
 				flush();
 				cur = { el: block, raw: "" };
@@ -1105,14 +1114,64 @@
 
 	// Vorfahren/Elemente, die NICHT vorgelesen werden (Diagramme, Tabellen,
 	// Navigation, Fuss-/Kopfzeilen, Quellen-/Literaturverzeichnisse, Code).
-	const SKIP_ANCESTOR_SELECTOR =
-		"figure, table, nav, aside, header, footer, code, pre, " +
+	// Kopf-/Fusszeilen der SEITE werden ueber inSiteChrome() ausgefiltert (ein
+	// <header> im Artikel selbst ist Inhalt). Kleine Tabellen werden zeilenweise
+	// vorgelesen (siehe collectParagraphsFrom), daher "table" getrennt.
+	const SKIP_BASE_SELECTOR =
+		"nav, aside, pre, " +
 		"svg, canvas, math, .reference, .references, .footnote, .footnotes, " +
 		"#references, #footnotes, .citation, .citations, .reflist, " +
 		".mw-references-wrap, .bibliography, .endnotes, .sources, " +
 		'[role="note"], [role="navigation"], [role="contentinfo"], ' +
 		'[role="doc-bibliography"], [role="doc-endnotes"], [role="doc-footnote"], ' +
 		'[aria-hidden="true"]';
+	const SKIP_ANCESTOR_SELECTOR = "table, " + SKIP_BASE_SELECTOR;
+
+	const PARA_SELECTOR =
+		"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption, summary";
+	// Tabellen bis zu dieser Zeilenzahl werden zeilenweise vorgelesen; groessere
+	// (Daten-)Tabellen bleiben uebersprungen.
+	const MAX_TABLE_ROWS = 15;
+	const ORPHAN_BLOCKY_SELECTOR =
+		PARA_SELECTOR +
+		", div, table, ul, ol, dl, button, input, textarea, select, svg, img, video, iframe";
+	const ORPHAN_SIBLING_SELECTOR = PARA_SELECTOR + ", ul, ol, table";
+
+	// Kopf-/Fusszeile der Seite (nicht des Artikels)?
+	function inSiteChrome(el) {
+		const h = el.closest("header, footer");
+		return !!(h && !h.closest("main, article"));
+	}
+
+	// Textstueck ohne eigenen Absatz-Block (z.B. ein Kasten-Titel als <span>
+	// neben Absaetzen/Listen): gilt als eigener Vorlese-Absatz. Nur wenn es
+	// direkt neben echten Absaetzen steht — sonst wuerde Seiten-Bedienung
+	// (Zaehler, Beschriftungen) mitgelesen.
+	function isOrphanTextBlock(el) {
+		if (el === host) return false;
+		if (el.querySelector(ORPHAN_BLOCKY_SELECTOR)) return false;
+		if (!/[A-Za-zÀ-ÿ0-9]/.test(el.textContent || "")) return false;
+		const parent = el.parentElement;
+		if (!parent) return false;
+		if (
+			parent.closest(
+				PARA_SELECTOR + ', tr, a, button, label, [role="button"]',
+			)
+		)
+			return false;
+		for (const n of parent.childNodes) {
+			if (n.nodeType === 3 && /\S/.test(n.data)) return false;
+		}
+		for (const c of parent.children) {
+			if (c === el) continue;
+			if (
+				c.matches(ORPHAN_SIBLING_SELECTOR) ||
+				c.querySelector(ORPHAN_SIBLING_SELECTOR)
+			)
+				return true;
+		}
+		return false;
+	}
 
 	// Sammelt ab startBlock alle nachfolgenden lesbaren Absaetze (in
 	// Dokumentreihenfolge), gefiltert + bereinigt (ohne Fussnoten/Quellen).
@@ -1120,9 +1179,7 @@
 		const result = [];
 		if (!startBlock) return result;
 		const candidates = Array.from(
-			document.querySelectorAll(
-				"p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt, figcaption",
-			),
+			document.querySelectorAll(PARA_SELECTOR + ", tr, div, span"),
 		);
 		// Startindex bestimmen: das erste Element, das startBlock IST oder ihn
 		// enthaelt bzw. in Dokumentreihenfolge danach kommt.
@@ -1151,14 +1208,31 @@
 			i++
 		) {
 			const el = candidates[i];
-			// Verschachtelte Bloecke vermeiden (z.B. li, das ein p enthaelt):
-			// nur Bloecke nehmen, die selbst keinen Listen-/Absatz-Block enthalten.
-			if (el.querySelector("p, li, blockquote")) continue;
-			// In einem zu ueberspringenden Vorfahren? (Tabelle, Quellen, nav, ...)
-			if (el.closest(SKIP_ANCESTOR_SELECTOR)) continue;
-			// Unsichtbares ueberspringen.
-			if (!isVisible(el)) continue;
-			const text = cleanParagraphText(el);
+			const tag = el.tagName;
+			let text;
+			if (tag === "TR") {
+				// Kleine Tabelle: jede Zeile ein Absatz, Zellen durch Komma getrennt.
+				const table = el.closest("table");
+				if (!table || table.rows.length > MAX_TABLE_ROWS) continue;
+				if (el.querySelector("table")) continue;
+				if (el.closest(SKIP_BASE_SELECTOR) || inSiteChrome(el)) continue;
+				if (!isVisible(el)) continue;
+				text = Array.from(el.cells)
+					.map((c) => cleanParagraphText(c))
+					.filter(Boolean)
+					.join(", ");
+			} else {
+				if ((tag === "DIV" || tag === "SPAN") && !isOrphanTextBlock(el))
+					continue;
+				// Verschachtelte Bloecke vermeiden (z.B. li, das ein p enthaelt):
+				// nur Bloecke nehmen, die selbst keinen Listen-/Absatz-Block enthalten.
+				if (el.querySelector("p, li, blockquote")) continue;
+				// In einem zu ueberspringenden Vorfahren? (Tabelle, Quellen, nav, ...)
+				if (el.closest(SKIP_ANCESTOR_SELECTOR) || inSiteChrome(el)) continue;
+				// Unsichtbares ueberspringen.
+				if (!isVisible(el)) continue;
+				text = cleanParagraphText(el);
+			}
 			if (text && text.length >= 2 && /[A-Za-zÀ-ÿ0-9]/.test(text)) {
 				result.push({ text, el });
 			}
@@ -1188,7 +1262,7 @@
 					"sup, sub.reference, .reference, .references, .footnote, " +
 						".footnotes, .footnote-ref, .citation, .citations, .cite, cite, " +
 						".mw-editsection, .reflist, .mw-references-wrap, .bibliography, " +
-						"figure, table, svg, canvas, math, code, pre, " +
+						"figure, table, svg, canvas, math, pre, " +
 						'[role="doc-noteref"], [role="doc-biblioref"], ' +
 						'[role="doc-footnote"], [role="doc-endnotes"], ' +
 						'a[href*="#cite"], a[href*="#ref"], a[href*="#fn"], a[href*="#note"]',
@@ -1197,27 +1271,59 @@
 		} catch (e) {
 			/* einzelne Selektoren koennen in Fragmenten fehlschlagen — egal */
 		}
-		// 2) Quellen-Chips: kurze Inline-Links/Buttons (wie "oreilly", "Claude",
-		//    "[1]", "(2024)") sind fast immer Verweise, kein Lesetext. Sie haben
-		//    sehr wenig Text -> entfernen. Laengere Link-Texte (Satzteile) bleiben.
+		// 2) Quellen-Chips entfernen (siehe refChipsIn).
 		try {
-			root
-				.querySelectorAll('a, button, [role="button"], [role="link"]')
-				.forEach((n) => {
-					const txt = (n.textContent || "").trim();
-					const words = txt.split(/\s+/).filter(Boolean);
-					// <= 3 Woerter ODER <= 25 Zeichen ODER nur Zahlen/Klammern = Quelle.
-					if (
-						words.length <= 3 ||
-						txt.length <= 25 ||
-						/^[\s\d.,;:()\[\]–-]+$/.test(txt)
-					) {
-						n.remove();
-					}
-				});
+			refChipsIn(root).forEach((n) => n.remove());
 		} catch (e) {
 			/* egal */
 		}
+	}
+
+	// Findet Quellen-Chips in einem Block: kurze Links/Buttons (wie "oreilly",
+	// "[1]", "(2024)"), die HINTER einem Satz haengen. Kurze Links, die mitten im
+	// Satz stehen (davor kein Satzende oder danach geht der Satz klein weiter),
+	// sind Lesetext und bleiben erhalten.
+	function refChipsIn(root) {
+		const chips = [];
+		const range = document.createRange();
+		root
+			.querySelectorAll('a, button, [role="button"], [role="link"]')
+			.forEach((n) => {
+				const txt = (n.textContent || "").trim();
+				const words = txt.split(/\s+/).filter(Boolean);
+				const numeric = /^[\s\d.,;:()\[\]–-]+$/.test(txt);
+				if (!numeric && words.length > 3 && txt.length > 25) return;
+				const isLink =
+					n.tagName === "A" || n.getAttribute("role") === "link";
+				if (numeric || !isLink) {
+					chips.push(n);
+					return;
+				}
+				try {
+					// Direkt hinter einem anderen Chip -> Chip-Kette.
+					const prev = chips[chips.length - 1];
+					if (prev) {
+						range.setStartAfter(prev);
+						range.setEndBefore(n);
+						if (!range.collapsed && !/\S/.test(range.toString())) {
+							chips.push(n);
+							return;
+						}
+					}
+					range.selectNodeContents(root);
+					range.setEndBefore(n);
+					const before = range.toString().replace(/\s+$/, "");
+					range.selectNodeContents(root);
+					range.setStartAfter(n);
+					const after = range.toString().replace(/^\s+/, "");
+					if (before && !/[.!?…:;]["”“’')\]]*$/.test(before)) return;
+					if (/^[a-zäöüß,;:]/.test(after)) return;
+					chips.push(n);
+				} catch (e) {
+					chips.push(n);
+				}
+			});
+		return chips;
 	}
 
 	// Macht aus einem (gefilterten) Roh-Text einen sauberen Vorlese-String.
