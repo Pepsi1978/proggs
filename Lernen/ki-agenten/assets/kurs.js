@@ -21,9 +21,27 @@
   function lesen(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function schreiben(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 
+  // ---- Ergebnis für den Agenten ----
+  // Die Seite kann nichts an den Agenten zurückmelden. Deshalb steht am Ende jeder Lektion ein Text
+  // mit Quiz-Ergebnis und Abruf-Antworten, den der Lerner kopiert und im Terminal einfügt.
+  var berichtFeld = null;
+  function bericht() {
+    if (!berichtFeld) return;
+    var z = ['Ergebnis ' + document.title + ' (' + SEITE + ')'];
+    if (quizze.length) {
+      z.push('Quiz: ' + beantwortet + ' von ' + quizze.length + ' beantwortet, ' + punkte + ' beim ersten Versuch richtig' +
+        (falsche.length ? ', falsch: Frage ' + falsche.sort(function (a, b) { return a - b; }).join(', ') : ''));
+    }
+    document.querySelectorAll('.abruf textarea').forEach(function (f, i) {
+      z.push('Abruf ' + (i + 1) + ': ' + (f.value.trim() || '(leer)'));
+    });
+    berichtFeld.value = z.join('
+');
+  }
+
   // ---- Quiz ----
   var quizze = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
-  var punkte = 0, beantwortet = 0;
+  var punkte = 0, beantwortet = 0, falsche = [];
   function stand() {
     var el = document.querySelector('.quiz-stand');
     if (!el || !quizze.length) return;
@@ -31,6 +49,7 @@
       ? beantwortet + ' von ' + quizze.length + ' Fragen beantwortet'
       : punkte + ' von ' + quizze.length + ' beim ersten Versuch richtig';
     if (beantwortet === quizze.length) schreiben('kurs-quiz-' + SEITE, punkte + '/' + quizze.length);
+    bericht();
   }
   quizze.forEach(function (q) {
     var box = q.querySelector('.antworten');
@@ -42,7 +61,7 @@
       b.addEventListener('click', function () {
         knoepfe.forEach(function (x) { x.disabled = true; });
         richtig.classList.add('richtig');
-        if (b === richtig) punkte++; else b.classList.add('falsch');
+        if (b === richtig) punkte++; else { b.classList.add('falsch'); falsche.push(quizze.indexOf(q) + 1); }
         beantwortet++;
         var e = q.querySelector('.erklaerung');
         if (e) e.hidden = false;
@@ -58,11 +77,32 @@
     var key = 'kurs-abruf-' + SEITE + '-' + i;
     if (feld) {
       feld.value = lesen(key) || '';
-      feld.addEventListener('input', function () { schreiben(key, feld.value); });
+      feld.addEventListener('input', function () { schreiben(key, feld.value); bericht(); });
     }
     knopf.type = 'button';
     knopf.addEventListener('click', function () { loesung.hidden = false; knopf.hidden = true; });
   });
+
+  // Berichtskasten vor der Fußnavigation einfügen, wenn die Seite Übungen hat.
+  if (quizze.length || document.querySelector('.abruf')) {
+    var kasten = document.createElement('section');
+    kasten.className = 'bericht';
+    kasten.innerHTML = '<h2>Ergebnis für den Agenten</h2>' +
+      '<p>Die Seite kann mir nichts zurückmelden. Kopier diesen Text und füg ihn im Terminal ein, dann trage ich deinen Stand ein und passe die nächste Lektion an.</p>' +
+      '<textarea readonly id="bericht-text" aria-label="Ergebnis zum Kopieren"></textarea>' +
+      '<button type="button">Ergebnis kopieren</button>';
+    var nav = document.querySelector('.nav');
+    nav.parentNode.insertBefore(kasten, nav);
+    berichtFeld = kasten.querySelector('textarea');
+    var kopf = kasten.querySelector('button');
+    kopf.addEventListener('click', function () {
+      bericht();
+      function fertig() { kopf.textContent = 'Kopiert'; setTimeout(function () { kopf.textContent = 'Ergebnis kopieren'; }, 1800); }
+      function ersatz() { berichtFeld.focus(); berichtFeld.select(); try { document.execCommand('copy'); fertig(); } catch (e) {} }
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(berichtFeld.value).then(fertig, ersatz); else ersatz();
+    });
+    bericht();
+  }
 
   // ---- Sprachumschalter ----
   var gruppen = Array.prototype.slice.call(document.querySelectorAll('.sprachen'));

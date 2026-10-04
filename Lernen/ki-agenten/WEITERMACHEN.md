@@ -11,7 +11,7 @@ Im CLI eingeben:
 ## Für den Agenten
 
 1. Zuerst lesen: `MISSION.md`, `NOTES.md`, alle `learning-records/`, `reference/kursplan.html`, `RESOURCES.md`.
-2. Der Stand steht unten unter „Stand“. Quiz-Ergebnisse liegen nur im Browser des jeweiligen Rechners, deshalb nach dem Ergebnis der letzten Lektion fragen, falls es hier nicht steht.
+2. Der Stand steht unten unter „Stand“. Die Lektionsseite meldet nichts zurück: Quiz-Ergebnisse und Antworten liegen nur im Browser des jeweiligen Rechners. Jede Lektion hat am Ende den Kasten „Ergebnis für den Agenten“ mit Kopier-Knopf (kommt aus `assets/kurs.js`). Frank fügt den Text im Terminal ein. Fehlt das Ergebnis der letzten Lektion hier, danach fragen.
 3. Bausteine aus `assets/` wiederverwenden, neue Lektion nach `lessons/`, danach in Chrome öffnen.
 4. Nach jeder Sitzung: „Stand“ hier aktualisieren, committen und pushen, damit der nächste Rechner den Stand hat.
 

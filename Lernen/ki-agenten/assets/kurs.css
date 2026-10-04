@@ -90,6 +90,13 @@ figcaption{font-family:var(--sans);font-size:.8rem;color:var(--muted)}
   background:transparent;color:var(--accent);cursor:pointer;border-radius:3px}
 .abruf .loesung{border-left:3px solid var(--ok);padding-left:12px;font-family:var(--serif);font-size:1rem}
 
+/* Ergebnis für den Agenten (kurs.js fügt den Kasten ein) */
+.bericht{font-family:var(--sans);font-size:.9rem}
+.bericht textarea{font:inherit;font-family:var(--mono);font-size:.8rem;min-height:110px;padding:10px;border:1px solid var(--line);
+  background:var(--surface);color:var(--fg);border-radius:3px;resize:vertical;width:100%}
+.bericht button{align-self:flex-start;font:600 .85rem var(--sans);padding:8px 14px;border:1px solid var(--accent);
+  background:var(--accent);color:var(--bg);cursor:pointer;border-radius:3px}
+
 /* Fußnavigation */
 .nav{display:flex;flex-wrap:wrap;gap:12px 24px;justify-content:space-between;font-family:var(--sans);font-size:.85rem;
   border-top:1px solid var(--line);padding-top:20px}
@@ -103,7 +110,7 @@ th{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mu
 @media (max-width:600px){html{font-size:16px} body{padding:28px 16px 64px}}
 @media print{
   body{padding:0;background:#fff;color:#000} main{max-width:none}
-  .quiz button,.abruf textarea,.abruf > button,.sprachen-leiste,.nav{display:none}
+  .quiz button,.abruf textarea,.abruf > button,.sprachen-leiste,.nav,.bericht{display:none}
   .sprachen pre[hidden],.abruf .loesung[hidden],.quiz .erklaerung[hidden]{display:block!important}
   a{color:inherit} pre{white-space:pre-wrap}
 }
