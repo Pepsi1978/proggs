@@ -147,8 +147,26 @@
 	// CSS-Load-Promise: die initiale Layout-Sonde misst erst, wenn dieses
 	// asynchron geladene CSS angewandt ist — sonst meldet sie die ungestylte
 	// Groesse (volle Viewport-Breite) und koennte Fehlalarme erzeugen.
-	const cssReady = fetch(chrome.runtime.getURL("content/overlay.css"))
-		.then((r) => r.text())
+	// Auf file://-Seiten blockiert Chrome den direkten fetch auf chrome-extension://
+	// (opaker Ursprung). Dort — und als Fallback — liefert der Service-Worker das CSS.
+	function cssViaWorker() {
+		return new Promise((resolve, reject) => {
+			chrome.runtime.sendMessage({ type: "VO_GET_CSS" }, (res) => {
+				if (chrome.runtime.lastError || !res || !res.ok) {
+					reject(new Error("css"));
+					return;
+				}
+				resolve(res.css);
+			});
+		});
+	}
+	const cssReady = (
+		location.protocol === "file:"
+			? cssViaWorker()
+			: fetch(chrome.runtime.getURL("content/overlay.css"))
+					.then((r) => r.text())
+					.catch(cssViaWorker)
+	)
 		.then((css) => {
 			styleEl.textContent = css;
 		})

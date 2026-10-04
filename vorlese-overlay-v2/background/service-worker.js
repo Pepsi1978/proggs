@@ -267,6 +267,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 	// vom Datenträger laden). chrome.runtime.reload() BEHAELT chrome.storage.local
 	// — anders als "Entfernen + neu laden", das den Speicher (API-Key, Stimme,
 	// Position) loescht. Der Aktualisieren-Button im Panel ruft das hier auf.
+	// Overlay-CSS fuer Seiten, die es nicht selbst laden duerfen (file://).
+	if (msg.type === "VO_GET_CSS") {
+		fetch(chrome.runtime.getURL("content/overlay.css"))
+			.then((r) => r.text())
+			.then((css) => sendResponse({ ok: true, css }))
+			.catch(() => sendResponse({ ok: false }));
+		return true;
+	}
 	if (msg.type === "RELOAD_EXTENSION") {
 		diag.log("INFO", "NUTZUNG", "sw:reload_extension", {});
 		sendResponse({ ok: true });
