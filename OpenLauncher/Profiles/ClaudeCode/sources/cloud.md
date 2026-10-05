@@ -1,6 +1,8 @@
-# Cloud-Regeln (nur Claude-Code-Cloud-Sitzungen)
+# Cloud-Regeln (Claude Code und Codex)
 
-Diese Regeln gelten nur in Cloud-Sitzungen (claude.ai/code, Claude-App am Handy, `CLAUDE_CODE_REMOTE=true`).
+Diese Regeln gelten in Cloud-Sitzungen von Claude Code (claude.ai/code, Claude-App am Handy,
+`CLAUDE_CODE_REMOTE=true`) und Codex (Codex Cloud oder ChatGPT mit verwalteter Cloud-Umgebung).
+Claude Code lädt sie über den SessionStart-Hook; Codex liest sie über die `AGENTS.override.md` in der Repo-Wurzel.
 Frank programmiert von unterwegs am Handy. Er hat keine Zeit für Rückfragen: Ziel erkennen und auf dem schnellsten
 Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „Cloud-Regeln“.
 
@@ -57,13 +59,15 @@ Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „
 
 6. Commits und Git
 - Commit-Messages: `<Projekt>: <was geändert wurde>`, klein, imperativ, eine Zeile, Deutsch mit Umlauten.
-- Push geht nur auf den eigenen Branch `claude/…`. Nach `main` kommt alles über einen Pull Request, den die
+- Push geht nur auf den eigenen Arbeitsbranch (`claude/…` bei Claude Code, `codex/…` oder der von der Umgebung
+  bereitgestellte Sitzungsbranch bei Codex). Nach `main` kommt alles über einen Pull Request, den die
   Sitzung selbst mergt (Ausnahme: Änderungen an `.github/workflows/**` erst nach Franks OK).
 - **Kein PR bleibt liegen.** Das gilt für JEDE Änderung, nicht nur für Apps: Skills, Hooks, Regeln, Doku,
   Einstellungen. PR nie als Entwurf öffnen, dann selbst mergen (GitHub-MCP `merge_pull_request`, `gh` fehlt in der Cloud oft). Frank arbeitet nur mit `main`;
   ein offener Branch gilt für ihn als nicht umgesetzt.
 - **Codex-Review nur auf Wunsch.** Codex prüft nicht mehr automatisch. Sobald die Programmierung fertig ist
-  (vor Commit und PR), Frank mit `AskUserQuestion` fragen: „Codex-Review drüber laufen lassen?“ Ja / Nein.
+  (vor Commit und PR), Frank mit dem verfügbaren Frage-Werkzeug fragen (`AskUserQuestion` bei Claude Code):
+  „Codex-Review drüber laufen lassen?“ Ja / Nein.
   Nicht fragen, wenn der Auftrag „mit Codex“ oder „ohne Codex“ enthält. Bei **Ja**: nach dem PR
   `@codex review` in den PR kommentieren, mit `warte-auf-codex.sh <N> 480 <Kommentar-ID>` warten (aus
   `apk-update-cloud` Schritt 5, höchstens 8 Minuten), Befunde fixen, dann mergen. Bei **Nein**: kein
