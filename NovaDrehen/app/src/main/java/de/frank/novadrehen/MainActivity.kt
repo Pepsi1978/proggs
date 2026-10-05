@@ -27,7 +27,9 @@ class MainActivity : Activity() {
             addView(TextView(this@MainActivity).apply {
                 text = "Version ${BuildConfig.VERSION_NAME} · ${BuildConfig.VERSION_BUMPED_AT}\n\n" +
                     "Zugeklappt bleibt der Nova-Startbildschirm im Hochformat. " +
-                    "Apps und der aufgeklappte Bildschirm drehen sich weiter frei.\n" +
+                    "Solange der ChatGPT-Sprachmodus (Kugel über die Seitentaste) offen ist, " +
+                    "dreht sich der Bildschirm nicht, damit das Gespräch nicht abbricht. " +
+                    "Alle anderen Apps drehen sich weiter frei.\n" +
                     "„Automatisch drehen“ in den Schnelleinstellungen muss an sein.\n"
                 textSize = 15f
             })
