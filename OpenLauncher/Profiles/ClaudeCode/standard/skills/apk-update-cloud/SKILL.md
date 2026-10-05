@@ -2,8 +2,9 @@
 name: apk-update-cloud
 description: >
   Veröffentlicht in einer Claude-Code-CLOUD-Sitzung eine geänderte Android-App vollautomatisch aufs
-  Handy: Versionslog-Eintrag anhängen, committen, Pull Request öffnen, Codex-Review abwarten und
-  Befunde fixen, selbst mergen, GitHub Actions
+  Handy: Frank fragen, ob ein Codex-Review laufen soll (Ja/Nein), Versionslog-Eintrag anhängen,
+  committen, Pull Request öffnen, bei Ja Codex-Review anstoßen, abwarten und Befunde fixen, selbst
+  mergen, GitHub Actions
   baut und signiert mit dem geteilten Key und legt APK + update.json nach Google Drive
   "Dokumente/Updates/<Projekt>/", UpdateStation zeigt das Update. Nutze diesen Skill IMMER in einer
   Cloud-Sitzung (Umgebungsvariable CLAUDE_CODE_REMOTE=true, kein C:\Users\barwa\SK), sobald eine
@@ -18,6 +19,11 @@ Frank hat am 26.09.2026 dauerhaft freigegeben: In Cloud-Sitzungen wird jede fert
 Android-App **ohne Rückfrage** veröffentlicht, einschließlich des Merges auf `main`. Er soll nichts
 tippen müssen außer „Installieren“ in UpdateStation.
 
+**Einzige Frage (seit 05.10.2026):** ob ein Codex-Review laufen soll. Codex prüft Pull Requests nicht
+mehr automatisch (Frank hat die automatischen Reviews in den Codex-Einstellungen abgeschaltet), sondern
+nur noch, wenn die Sitzung `@codex review` in den PR schreibt. Große Aufgaben bekommen so ein Review,
+kleine Fixes gehen ohne Wartezeit raus.
+
 ## Wann
 
 - Automatisch am Ende jeder Aufgabe, die Dateien unter `<Projekt>/app/**` oder die Gradle-Dateien eines
@@ -28,6 +34,12 @@ tippen müssen außer „Installieren“ in UpdateStation.
 
 ## Ablauf
 
+0. **Codex-Frage, sobald die Programmierung fertig ist** (vor Schritt 1, damit der Rest ohne Unterbrechung
+   durchläuft): Werkzeug `AskUserQuestion` mit genau einer Frage, Kopf „Codex“, zwei Antworten:
+   - „Ja“ – Codex prüft den PR, ich warte und behebe Befunde, dann wird gebaut.
+   - „Nein“ – sofort mergen und bauen, ohne Codex.
+   Keine Empfehlung markieren. Nicht fragen, wenn Frank es schon im Auftrag gesagt hat („mit Codex“ =
+   Ja; „ohne Codex“, „kein Codex“ = Nein). Mehrere Runden in einer Sitzung: pro PR neu fragen.
 1. **Versionslog:** Unten in `<Projekt>/app/src/main/assets/versionslog.json` genau **einen** Eintrag
    anhängen: `versionCode` = letzter + 1, `versionName` letzte Stelle + 1, `stand` = jetzt in
    deutscher Zeit (`"26.09.2026, 18:05 Uhr"`), `notiz` = kurz auf Deutsch, was neu ist. Pro
@@ -43,12 +55,22 @@ tippen müssen außer „Installieren“ in UpdateStation.
    dem Repo `proggs` als Quelle neu gestartet werden muss.
 4. **Pull Request öffnen, nicht als Entwurf** (GitHub-MCP `create_pull_request` mit `draft: false`,
    oder `gh pr create --base main --title … --body …`, falls `gh` da ist). Titel und Text selbst setzen (sonst nimmt GitHub den ältesten Commit).
-   Das startet automatisch das Codex-Review (Bot `chatgpt-codex-connector`). Nie erst als Entwurf
-   öffnen und dann auf „bereit“ setzen: Das löst ein zweites, überflüssiges Review aus.
-5. **Codex-Review abwarten (höchstens 8 Minuten, aber keine Sekunde länger als nötig):** Direkt nach
-   dem Öffnen des PR das Warte-Skript starten, als Bash-Befehl mit dem **höchsten Zeitlimit
-   (600000 ms)**:
-   `bash OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update-cloud/warte-auf-codex.sh <N>`
+   Nie erst als Entwurf öffnen und dann auf „bereit“ setzen (falls Codex doch noch automatisch prüft,
+   löst das ein zweites Review aus).
+5. **Codex-Review, nur bei „Ja“ in Schritt 0.**
+   - **Nein** → Schritt 5 ganz überspringen, direkt Schritt 6. Kommentiert Codex trotzdem (automatische
+     Reviews noch an), Befunde ignorieren und im Abschlussblock „übersprungen (Nein)“ schreiben; Frank
+     einmal darauf hinweisen, dass Codex noch automatisch prüft.
+   - **Ja** → Review anstoßen: Kommentar `@codex review` in den PR schreiben (GitHub-MCP
+     `add_issue_comment`, `issue_number` = PR-Nummer). Die `id` des Kommentars aus der Antwort merken.
+     Prüft Codex schon automatisch (Kommentar oder 👀 von `chatgpt-codex-connector[bot]` vor deinem
+     Kommentar), keinen Kommentar schreiben, sondern nur warten.
+
+   **Abwarten (höchstens 8 Minuten, aber keine Sekunde länger als nötig):** Direkt nach dem Kommentar
+   das Warte-Skript starten, als Bash-Befehl mit dem **höchsten Zeitlimit (600000 ms)**:
+   `bash OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update-cloud/warte-auf-codex.sh <N> 480 <Kommentar-ID>`
+   (die Kommentar-ID braucht das Skript, weil Codex sein 👍 bei Auftrag per Kommentar an den Kommentar
+   hängt, nicht an den PR).
    Es fragt alle 15 Sekunden per REST nach und kehrt **sofort** zurück, sobald Codex fertig ist
    (`CODEX=ok`, `CODEX=befunde (…)` oder nach 8 min `CODEX=timeout`). Keine festen Wartezeiten mit
    `send_later`, kein nacktes `sleep`: sonst wartet die Sitzung Minuten, obwohl Codex längst fertig ist.
@@ -60,13 +82,14 @@ tippen müssen außer „Installieren“ in UpdateStation.
    `source …/github-api.sh; api repos/Pepsi1978/proggs/pulls/<N>/comments | jq …`
    (ebenso `issues/<N>/comments` und `issues/<N>/reactions` für das 👍 von `chatgpt-codex-connector[bot]`). **Nicht auf ein Ereignis warten:** Bot-Kommentare
    werden Cloud-Sitzungen nicht zugestellt (Bug #62977), sie müssen aktiv abgefragt werden. Codex ist fertig, wenn
-   sein Sammelkommentar „Codex Review Summary“ `Completed` zeigt oder er ein 👍 gesetzt hat.
+   sein Sammelkommentar „Codex Review Summary“ `Completed` bzw. „Didn't find any major issues“ zeigt oder
+   er ein 👍 gesetzt hat.
    - **Keine Befunde** (👍, keine Zeilenkommentare) → weiter mit Schritt 6.
    - **Befunde** → Frank in der Sitzung **sofort** kurz melden, damit er weiß, warum es länger dauert:
      „Codex hat <n> Punkte gefunden (<je ein Halbsatz>), ich fixe sie jetzt, dann wird veröffentlicht.“
      P1 immer beheben, P2 beheben, wenn der Befund zutrifft; offensichtlich falsche Befunde begründet
      überspringen. Fix auf denselben Branch committen und pushen, **kein** neuer Versionslog-Eintrag
-     (die Version ist noch nicht veröffentlicht). **Kein** zweites Review anstoßen (kein
+     (die Version ist noch nicht veröffentlicht). **Kein** zweites Review anstoßen (kein weiteres
      „@codex review“): genau eine Runde, damit Zeit und Codex-Kontingent im Rahmen bleiben.
    - **Nach 8 Minuten kein Ergebnis** → ohne Review weiter mit Schritt 6 und das in der Abschlussmeldung
      erwähnen.
@@ -96,7 +119,7 @@ tippen müssen außer „Installieren“ in UpdateStation.
    ☁️ Cloud-Sitzung · Cloud-Regeln (cloud.md) erkannt ✓
    Geändert: <ein Satz>
    Version: <App> <alt> → <neu> (versionCode <n>)
-   Codex-Review: <keine Befunde | n Befunde, behoben | kein Ergebnis nach 8 min>
+   Codex-Review: <übersprungen (Nein) | keine Befunde | n Befunde, behoben | kein Ergebnis nach 8 min>
    Commit + Push: ja · PR #<n> gemergt: ja
    GitHub-Bau: grün · Google Drive: hochgeladen · UpdateStation: verfügbar
    ```
