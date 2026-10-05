@@ -3,6 +3,11 @@
 
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
+    <!-- Paket-Sichtbarkeit: nötig, um ChatGPT-Activities vom Sprachmodus zu unterscheiden. -->
+    <queries>
+        <package android:name="com.openai.chatgpt" />
+    </queries>
+
     <application
         android:label="Nova Drehen"
         android:icon="@android:drawable/ic_menu_rotate"
