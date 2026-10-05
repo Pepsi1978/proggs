@@ -2,7 +2,9 @@
 
 Diese Regeln gelten in Cloud-Sitzungen von Claude Code (claude.ai/code, Claude-App am Handy,
 `CLAUDE_CODE_REMOTE=true`) und Codex (Codex Cloud oder ChatGPT mit verwalteter Cloud-Umgebung).
-Claude Code lädt sie über den SessionStart-Hook; Codex liest sie über die `AGENTS.override.md` in der Repo-Wurzel.
+Claude Code lädt sie über den SessionStart-Hook. Für Codex Cloud muss die Pflichtlektüre im Start skill der
+Cloud-Umgebung eingerichtet und die Umgebung erneut veröffentlicht werden. Der vorbereitete Starttext steht in
+`OpenLauncher/Profiles/ClaudeCode/sources/codex-cloud-start.md`. Eine Repo-Datei allein aktiviert diesen Start skill nicht.
 Frank programmiert von unterwegs am Handy. Er hat keine Zeit für Rückfragen: Ziel erkennen und auf dem schnellsten
 Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „Cloud-Regeln“.
 
