@@ -40,6 +40,8 @@ data class EinstellungenStand(
     val ttsAnbieter: TtsAnbieter,
     val googleStimme: String,
     val edgeStimme: String,
+    /** Mit Stern markierte Stimmen (Google und Edge gemeinsam, die IDs sind eindeutig). */
+    val favoritenStimmen: Set<String>,
     val qwenStimmeId: String,
     val sprechtempo: Float,
     val hatGoogleSchluessel: Boolean,
@@ -114,6 +116,7 @@ class EinstellungenStore(context: Context) {
             ttsAnbieter = ttsAnbieter,
             googleStimme = googleStimme,
             edgeStimme = edgeStimme,
+            favoritenStimmen = offen.getStringSet(K_FAVORITEN_STIMMEN, null)?.toSet().orEmpty(),
             qwenStimmeId = qwenStimmeId,
             sprechtempo = sprechtempo,
             hatGoogleSchluessel = runCatching { googleSchluessel.isNotBlank() }.getOrDefault(false),
@@ -266,6 +269,12 @@ class EinstellungenStore(context: Context) {
     fun setzeTtsAnbieter(anbieter: TtsAnbieter) = schreibe { putString(K_TTS, anbieter.id) }
     fun setzeGoogleStimme(id: String) = schreibe { putString(K_GOOGLE_STIMME, id) }
     fun setzeEdgeStimme(id: String) = schreibe { putString(K_EDGE_STIMME, id) }
+    fun schalteFavoritStimme(id: String) {
+        // Kopie anlegen: Die von getStringSet gelieferte Menge darf nicht verändert werden.
+        val neu = offen.getStringSet(K_FAVORITEN_STIMMEN, null)?.toMutableSet() ?: mutableSetOf()
+        if (!neu.remove(id)) neu.add(id)
+        schreibe { putStringSet(K_FAVORITEN_STIMMEN, neu) }
+    }
     fun setzeQwenStimme(id: String) = schreibe { putString(K_QWEN_STIMME, id) }
     fun setzeTempo(tempo: Float) = schreibe { putFloat(K_TEMPO, tempo.coerceIn(0.6f, 1.6f)) }
     fun setzeZeitplan(aktiv: Boolean) = schreibe { putBoolean(K_ZEITPLAN, aktiv) }
@@ -386,6 +395,7 @@ class EinstellungenStore(context: Context) {
         private const val K_GOOGLE_STIMME = "google_stimme"
         private const val K_EDGE_STIMME = "edge_stimme"
         private const val K_QWEN_STIMME = "qwen_stimme"
+        private const val K_FAVORITEN_STIMMEN = "favoriten_stimmen"
         private const val K_TEMPO = "tempo"
         private const val K_ZEITPLAN = "zeitplan"
         private const val K_SICHERUNG_UM = "sicherung_um"

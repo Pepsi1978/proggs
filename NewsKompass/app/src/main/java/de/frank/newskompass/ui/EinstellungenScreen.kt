@@ -75,6 +75,8 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material3.AlertDialog
@@ -86,8 +88,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -99,6 +99,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.SegmentedButton
@@ -106,6 +107,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -1374,14 +1376,20 @@ private fun VorleseBereich(app: NewsApplication, stand: EinstellungenStand) {
                 TtsAnbieter.GOOGLE -> {
                     SchluesselFeld("Google-Cloud-Schlüssel", stand.hatGoogleSchluessel) { app.einstellungen.setzeGoogleSchluessel(it) }
                     Spacer(Modifier.height(12.dp))
-                    StimmenWahl(TtsCatalog.googleStimmen, stand.googleStimme, { app.einstellungen.setzeGoogleStimme(it) }) {
+                    StimmenWahl(
+                        TtsCatalog.googleStimmen, stand.googleStimme, stand.favoritenStimmen, "Google Chirp 3 HD",
+                        { app.einstellungen.setzeGoogleStimme(it) }, { app.einstellungen.schalteFavoritStimme(it) },
+                    ) {
                         probe(TtsAnbieter.GOOGLE, it)
                     }
                 }
                 TtsAnbieter.EDGE -> {
                     Text("Kostenlos und ohne Schlüssel.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(12.dp))
-                    StimmenWahl(TtsCatalog.edgeStimmen, stand.edgeStimme, { app.einstellungen.setzeEdgeStimme(it) }) {
+                    StimmenWahl(
+                        TtsCatalog.edgeStimmen, stand.edgeStimme, stand.favoritenStimmen, "Microsoft Edge",
+                        { app.einstellungen.setzeEdgeStimme(it) }, { app.einstellungen.schalteFavoritStimme(it) },
+                    ) {
                         probe(TtsAnbieter.EDGE, it)
                     }
                 }
@@ -1469,47 +1477,181 @@ private fun SchluesselFeld(titel: String, vorhanden: Boolean, speichere: (String
     )
 }
 
+/**
+ * Stimmenauswahl: ein Feld mit der aktuellen Stimme, darunter die Favoriten zum schnellen
+ * Umschalten. Ein Tipp aufs Feld öffnet ein Auswahlblatt von unten (statt eines schmalen
+ * Aufklappmenüs) mit Favoriten oben, danach weibliche und männliche Stimmen.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun StimmenWahl(stimmen: List<Stimme>, gewaehlt: String, waehle: (String) -> Unit, probe: (String) -> Unit) {
+private fun StimmenWahl(
+    stimmen: List<Stimme>,
+    gewaehlt: String,
+    favoriten: Set<String>,
+    herkunft: String,
+    waehle: (String) -> Unit,
+    schalteFavorit: (String) -> Unit,
+    probe: (String) -> Unit,
+) {
     var offen by remember { mutableStateOf(false) }
     val aktuell = stimmen.firstOrNull { it.id == gewaehlt } ?: stimmen.first()
-    Box {
+    val favoritenListe = stimmen.filter { it.id in favoriten }
+
+    Column {
         Surface(
             onClick = { offen = true },
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                StimmenAvatar(aktuell)
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Stimme", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        "${aktuell.name} · ${if (aktuell.geschlecht == Geschlecht.WEIBLICH) "weiblich" else "männlich"}",
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    Text("Stimme · $herkunft", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(aktuell.name, style = MaterialTheme.typography.titleMedium)
+                        if (aktuell.id in favoriten) {
+                            Spacer(Modifier.width(6.dp))
+                            Icon(Icons.Rounded.Star, "Favorit", Modifier.size(18.dp), tint = FavoritFarbe)
+                        }
+                    }
+                    Text(geschlechtText(aktuell), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = { probe(aktuell.id) }) { Icon(Icons.Rounded.PlayArrow, "Probe hören") }
-                Icon(Icons.Rounded.UnfoldMore, null)
+                FilledTonalIconButton(onClick = { probe(aktuell.id) }) { Icon(Icons.Rounded.PlayArrow, "Probe hören") }
+                Icon(Icons.Rounded.UnfoldMore, null, Modifier.padding(start = 4.dp))
             }
         }
-        DropdownMenu(expanded = offen, onDismissRequest = { offen = false }) {
-            stimmen.forEach { s ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            "${s.name}  ·  ${if (s.geschlecht == Geschlecht.WEIBLICH) "w" else "m"}",
-                            fontWeight = if (s.id == gewaehlt) FontWeight.Bold else FontWeight.Normal,
-                        )
-                    },
-                    onClick = {
-                        waehle(s.id)
-                        offen = false
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = { probe(s.id) }) { Icon(Icons.Rounded.PlayArrow, "Probe hören") }
-                    },
+
+        if (favoritenListe.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                favoritenListe.forEach { s ->
+                    FilterChip(
+                        selected = s.id == aktuell.id,
+                        onClick = { waehle(s.id) },
+                        label = { Text(s.name) },
+                        leadingIcon = { Icon(Icons.Rounded.Star, null, Modifier.size(16.dp), tint = FavoritFarbe) },
+                    )
+                }
+            }
+        }
+    }
+
+    if (offen) {
+        val blatt = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val bereich = rememberCoroutineScope()
+        val schliessen: () -> Unit = {
+            bereich.launch { blatt.hide() }.invokeOnCompletion { if (!blatt.isVisible) offen = false }
+        }
+        val weiblich = stimmen.filter { it.id !in favoriten && it.geschlecht == Geschlecht.WEIBLICH }
+        val maennlich = stimmen.filter { it.id !in favoriten && it.geschlecht != Geschlecht.WEIBLICH }
+        ModalBottomSheet(onDismissRequest = { offen = false }, sheetState = blatt) {
+            Column(Modifier.padding(horizontal = 20.dp)) {
+                Text("Stimme wählen", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "$herkunft · ${stimmen.size} Stimmen. Mit dem Stern heftest du eine Stimme oben an.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Spacer(Modifier.height(8.dp))
+            LazyColumn(
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                fun gruppe(titel: String, liste: List<Stimme>) {
+                    if (liste.isEmpty()) return
+                    item(key = "kopf-$titel") {
+                        Text(
+                            titel,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 8.dp, top = 14.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(liste, key = { it.id }) { s ->
+                        StimmenZeile(
+                            stimme = s,
+                            gewaehlt = s.id == aktuell.id,
+                            favorit = s.id in favoriten,
+                            waehle = {
+                                waehle(s.id)
+                                schliessen()
+                            },
+                            schalteFavorit = { schalteFavorit(s.id) },
+                            probe = { probe(s.id) },
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+                }
+                gruppe("★ Favoriten", favoritenListe)
+                gruppe("Weibliche Stimmen", weiblich)
+                gruppe("Männliche Stimmen", maennlich)
+            }
+        }
+    }
+}
+
+private val FavoritFarbe = Color(0xFFFFB300)
+
+private fun geschlechtText(s: Stimme) = if (s.geschlecht == Geschlecht.WEIBLICH) "weiblich" else "männlich"
+
+@Composable
+private fun StimmenAvatar(stimme: Stimme) {
+    val weiblich = stimme.geschlecht == Geschlecht.WEIBLICH
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(if (weiblich) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.secondaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            stimme.name.take(1),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = if (weiblich) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+@Composable
+private fun StimmenZeile(
+    stimme: Stimme,
+    gewaehlt: Boolean,
+    favorit: Boolean,
+    waehle: () -> Unit,
+    schalteFavorit: () -> Unit,
+    probe: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = waehle,
+        shape = RoundedCornerShape(18.dp),
+        color = if (gewaehlt) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+        border = if (gewaehlt) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            StimmenAvatar(stimme)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stimme.name, style = MaterialTheme.typography.titleMedium, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Normal)
+                Text(
+                    if (gewaehlt) "${geschlechtText(stimme)} · ausgewählt" else geschlechtText(stimme),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = schalteFavorit) {
+                Icon(
+                    if (favorit) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                    if (favorit) "Aus Favoriten entfernen" else "Zu Favoriten hinzufügen",
+                    tint = if (favorit) FavoritFarbe else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            FilledTonalIconButton(onClick = probe) { Icon(Icons.Rounded.PlayArrow, "Probe hören") }
         }
     }
 }
