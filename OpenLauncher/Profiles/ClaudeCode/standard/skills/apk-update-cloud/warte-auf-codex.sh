@@ -17,7 +17,7 @@ zaehle() {
 }
 
 # Codex-Meldung „keine Befunde“ (kommt bei Auftrag per Kommentar teils als Review statt als 👍).
-OHNE='(.body // "")|test("find any major issues|keine.*Befunde";"i")'
+OHNE='((.body // "")|test("find any major issues|keine.*Befunde";"i"))'
 
 start=$(date +%s)
 while :; do
