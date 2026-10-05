@@ -26,7 +26,7 @@ Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „
 4. Android-Apps veröffentlichen
 - Nach jeder fertigen Änderung an einer Android-App ohne Rückfrage den Skill **`apk-update-cloud`** ausführen
   (Anleitung: `OpenLauncher/Profiles/ClaudeCode/standard/skills/apk-update-cloud/SKILL.md`): Versionslog-Eintrag,
-  Commit, Push, PR (nicht als Entwurf), Codex-Review abwarten und Befunde fixen, selbst mergen, Bau prüfen.
+  Commit, Push, PR (nicht als Entwurf), bei „Ja“ Codex-Review anstoßen und Befunde fixen, selbst mergen, Bau prüfen.
 - Ausnahme: BestJournalAndroid (Play-Store-Key) geht nur am PC.
 - Versionslog: `<App>/app/src/main/assets/versionslog.json`, genau ein Eintrag pro Veröffentlichung, `versionCode` =
   letzter + 1, `versionName` letzte Stelle + 1. `build.gradle.kts` nie von Hand ändern.
@@ -60,9 +60,14 @@ Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „
 - Push geht nur auf den eigenen Branch `claude/…`. Nach `main` kommt alles über einen Pull Request, den die
   Sitzung selbst mergt (Ausnahme: Änderungen an `.github/workflows/**` erst nach Franks OK).
 - **Kein PR bleibt liegen.** Das gilt für JEDE Änderung, nicht nur für Apps: Skills, Hooks, Regeln, Doku,
-  Einstellungen. PR nie als Entwurf öffnen, Codex-Review abwarten (Skript `warte-auf-codex.sh` aus
-  `apk-update-cloud` Schritt 5: kehrt sofort zurück, sobald Codex fertig ist, höchstens 8 Minuten), dann selbst mergen (GitHub-MCP `merge_pull_request`, `gh` fehlt in der Cloud oft). Frank arbeitet nur mit `main`;
+  Einstellungen. PR nie als Entwurf öffnen, dann selbst mergen (GitHub-MCP `merge_pull_request`, `gh` fehlt in der Cloud oft). Frank arbeitet nur mit `main`;
   ein offener Branch gilt für ihn als nicht umgesetzt.
+- **Codex-Review nur auf Wunsch.** Codex prüft nicht mehr automatisch. Sobald die Programmierung fertig ist
+  (vor Commit und PR), Frank mit `AskUserQuestion` fragen: „Codex-Review drüber laufen lassen?“ Ja / Nein.
+  Nicht fragen, wenn der Auftrag „mit Codex“ oder „ohne Codex“ enthält. Bei **Ja**: nach dem PR
+  `@codex review` in den PR kommentieren, mit `warte-auf-codex.sh <N> 480 <Kommentar-ID>` warten (aus
+  `apk-update-cloud` Schritt 5, höchstens 8 Minuten), Befunde fixen, dann mergen. Bei **Nein**: kein
+  Codex, sofort mergen, weiter wie ohne Review.
 - Geht der Merge nicht (Workflow-Ausnahme, Auto-Modus blockiert, Konflikt nicht lösbar), steht im Abschlussblock
   statt „PR gemergt: ja“ gut sichtbar: `⚠️ PR #<n> NICHT gemergt: <Grund>`.
 - Meldet der Start-Hinweis offene Cloud-PRs aus früheren Sitzungen, Frank zu Beginn darauf hinweisen und fragen,
@@ -94,8 +99,8 @@ Was nicht zutrifft, mit „entfällt“ füllen, was fehlschlug, mit „nein (Gr
 Cloud-Sitzung · Cloud-Regeln (cloud.md) erkannt ✓
 Geändert: <ein Satz>
 Version: <App> <alt> → <neu> (versionCode <n>)
-Codex-Review: <keine Befunde | n Befunde, behoben | kein Ergebnis nach 8 min>
+Codex-Review: <übersprungen (Nein) | keine Befunde | n Befunde, behoben | kein Ergebnis nach 8 min>
 Commit + Push: ja · PR #<n> gemergt: ja
 GitHub-Bau: grün · Google Drive: hochgeladen · UpdateStation: verfügbar
 ```
-Bei Aufgaben ohne App-Änderung: Version, Codex, Bau, Drive und UpdateStation mit „entfällt“.
+Bei Aufgaben ohne App-Änderung: Version, Bau, Drive und UpdateStation mit „entfällt“ (Codex je nach Ja/Nein).

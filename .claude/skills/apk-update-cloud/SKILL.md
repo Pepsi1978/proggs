@@ -2,8 +2,9 @@
 name: apk-update-cloud
 description: >
   Veröffentlicht in einer Claude-Code-CLOUD-Sitzung eine geänderte Android-App vollautomatisch aufs
-  Handy: Versionslog-Eintrag anhängen, committen, Pull Request öffnen, Codex-Review abwarten und
-  Befunde fixen, selbst mergen, GitHub Actions
+  Handy: Frank fragen, ob ein Codex-Review laufen soll (Ja/Nein), Versionslog-Eintrag anhängen,
+  committen, Pull Request öffnen, bei Ja Codex-Review anstoßen, abwarten und Befunde fixen, selbst
+  mergen, GitHub Actions
   baut und signiert mit dem geteilten Key und legt APK + update.json nach Google Drive
   "Dokumente/Updates/<Projekt>/", UpdateStation zeigt das Update. Nutze diesen Skill IMMER in einer
   Cloud-Sitzung (Umgebungsvariable CLAUDE_CODE_REMOTE=true, kein C:\Users\barwa\SK), sobald eine
