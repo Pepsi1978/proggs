@@ -426,7 +426,7 @@ fun ListenScreen(
                 val liestAlle = vorlese.quelle == "alle-ideen"
                 Box(Modifier.size(90.dp), contentAlignment = Alignment.Center) {
                     RundKnopf3D(
-                        beschreibung = if (liestAlle) "Alle Ideen: Vorlesen stoppen" else "Alle Ideen endlos vorlesen",
+                        beschreibung = if (liestAlle) "Offene Ideen: Vorlesen stoppen" else "Offene Ideen endlos vorlesen",
                         aufTipp = viewModel::liesAlleIdeen,
                         modifier = Modifier.schwebend(aktiv = !liestAlle),
                         groesse = 68.dp,

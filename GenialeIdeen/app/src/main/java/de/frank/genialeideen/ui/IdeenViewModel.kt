@@ -501,14 +501,16 @@ class IdeenViewModel(
             vorleser.stopp()
             return
         }
-        val ideen = alleIdeen.value
+        // Nur offene Ideen: Umgesetztes und Entwürfe gehören nicht in die Endlosschleife.
+        // Direkt aus alleIdeen gefiltert, weil offeneIdeen ohne Abonnenten leer sein kann.
+        val ideen = alleIdeen.value.filter { it.status == IdeenStatus.OFFEN.name }
         if (ideen.isEmpty()) {
-            zeige(Meldung("Es sind noch keine Ideen zum Vorlesen vorhanden."))
+            zeige(Meldung("Es sind keine offenen Ideen zum Vorlesen vorhanden."))
             return
         }
         vorleser.sprich(
             quelle = "alle-ideen",
-            titel = "Alle Ideen",
+            titel = "Offene Ideen",
             rohText = ideen.joinToString("\n\n") { "${it.titel}.\n\n${it.text}" },
             wiederholen = true,
         )
