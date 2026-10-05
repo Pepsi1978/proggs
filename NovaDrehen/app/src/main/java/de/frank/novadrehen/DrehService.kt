@@ -13,6 +13,7 @@ import android.util.Log
 import android.view.Display
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityWindowInfo
 
 // Sperrt die Drehung, solange Nova vorne ist und das Fold zugeklappt ist, und solange der
 // ChatGPT-Sprachmodus (Kugel nach langem Druck auf die Seitentaste) offen ist, sonst ist sie an.
@@ -43,6 +44,14 @@ class DrehService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            // Kugel verschwunden, ohne dass eine andere App nach vorne kam: Sperre trotzdem lösen.
+            if (chatGptSprache && !chatGptFensterOffen()) {
+                chatGptSprache = false
+                pruefen()
+            }
+            return
+        }
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         if (pkg in IGNORIEREN || pkg == tastaturPaket()) return
@@ -93,12 +102,24 @@ class DrehService : AccessibilityService() {
                 Settings.System.putInt(cr, Settings.System.USER_ROTATION, lage)
                 Settings.System.putInt(cr, Settings.System.ACCELEROMETER_ROTATION, 0)
             }
+            // Grund wechselt bei schon gesperrter Drehung zu Nova (z. B. Sprachmodus aufgeklappt quer
+            // eingefroren, dann zugeklappt): Nova muss trotzdem ins Hochformat.
+            novaSperre && Settings.System.getInt(cr, Settings.System.USER_ROTATION, 0) != 0 ->
+                Settings.System.putInt(cr, Settings.System.USER_ROTATION, 0)
             !sperren && ist != 1 -> Settings.System.putInt(cr, Settings.System.ACCELEROMETER_ROTATION, 1)
         }
     }
 
     private fun aktuelleLage(): Int =
         getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)?.rotation ?: 0
+
+    // Liest nur den Paketnamen der offenen App-Fenster, keine Inhalte. Ist ein Fenster gerade
+    // nicht lesbar, gilt es vorsichtshalber als ChatGPT, damit die Sperre mitten im Gespräch hält.
+    private fun chatGptFensterOffen(): Boolean = windows.any {
+        if (it.type != AccessibilityWindowInfo.TYPE_APPLICATION) return@any false
+        val paket = it.root?.packageName ?: return@any true
+        paket == CHATGPT
+    }
 
     private fun istSprachmodus(klasse: String): Boolean =
         klasse.startsWith("com.openai.voice.") || klasse.startsWith("com.openai.feature.assistant.")
