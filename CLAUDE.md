@@ -11,3 +11,6 @@ z. B. weil mehrere Repos angehängt sind). Am PC gilt dieser Absatz nicht.
 
 Diese Datei ist absichtlich kurz. Sie verhindert, dass Claude Code die `AGENTS.md` im Wurzelordner liest: Die schreibt
 OpenLauncher bei jedem OpenCode- oder Codex-Start mit dem dort gewählten Profil neu.
+
+Codex lädt stattdessen die versionierte `AGENTS.override.md` im Wurzelordner. Sie verweist in Cloud-Sitzungen auf
+dieselbe `OpenLauncher/Profiles/ClaudeCode/sources/cloud.md`, am PC auf die vom OpenLauncher erzeugte `AGENTS.md`.
