@@ -102,13 +102,8 @@
         const x = fx + pt.spalte * (W * 0.012 + (W * 0.16 - W * 0.012) * tiefe);
         schein(x, y, 6 + 10 * tiefe, cfg.signal, cfg.punktAlpha * Math.sin((Math.PI * t) / 0.18));
       });
-      // Der Horizont selbst glimmt.
-      const hg = ctx.createLinearGradient(0, horizont - 40, 0, horizont + 40);
-      hg.addColorStop(0, rgba(cfg.linie, 0));
-      hg.addColorStop(0.5, rgba(cfg.linie, cfg.gitterAlpha * 0.9));
-      hg.addColorStop(1, rgba(cfg.linie, 0));
-      ctx.fillStyle = hg;
-      ctx.fillRect(0, horizont - 40, W, 80);
+      // Kein leuchtendes Horizontband mehr: Es stand als fester waagerechter Strich mitten im
+      // Bild und sah aus wie eine stehengebliebene Abtastlinie. Einzig die Abtastlinie wandert.
     }
 
     function zeichne(p) {
