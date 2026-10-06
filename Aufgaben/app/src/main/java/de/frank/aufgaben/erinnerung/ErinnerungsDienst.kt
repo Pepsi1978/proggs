@@ -52,6 +52,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  *   ist bewusst „ongoing“; wo Android 14+ sie trotzdem wegwischen lässt, stoppt der deleteIntent den Wecker.
  * Fehlen die Dateien (z. B. offline erstellt), spricht die Android-Stimme des Geräts.
  * Kommt während einer Erinnerung die nächste, wartet sie, bis die laufende vorbei ist.
+ * Alles läuft über den Wecker-Kanal und den eingebauten Lautsprecher, auch bei Lautlos und Bluetooth ([Lautsprecher]).
  */
 class ErinnerungsDienst : Service() {
     private data class Auftrag(val aufgabe: Aufgabe, val wann: String) {
@@ -67,6 +68,7 @@ class ErinnerungsDienst : Service() {
     private var geraeteStimme: TextToSpeech? = null
     private var wake: PowerManager.WakeLock? = null
     private var fokus: AudioFocusRequest? = null
+    private var lautstaerkeZurueck: (() -> Unit)? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -142,6 +144,7 @@ class ErinnerungsDienst : Service() {
             ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:erinnerung")
             ?.apply { acquire(grenze + 60_000L) }
         fokusAnfordern(a.wecker)
+        if (lautstaerkeZurueck == null) lautstaerkeZurueck = Lautsprecher.hoerbarMachen(this)
         val laufend = scope.launch {
             try {
                 withTimeoutOrNull(grenze) { ablauf(a, e) }
@@ -159,17 +162,15 @@ class ErinnerungsDienst : Service() {
     }
 
     private suspend fun ablauf(a: Auftrag, e: Einstellungen) {
-        val attribute = AudioAttributes.Builder()
-            .setUsage(if (a.wecker) AudioAttributes.USAGE_ALARM else AudioAttributes.USAGE_NOTIFICATION_EVENT)
-            .setContentType(if (a.aufgabe.vorlesen) AudioAttributes.CONTENT_TYPE_SPEECH else AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
+        val tonAttribute = Lautsprecher.attribute(sprache = false)
+        val attribute = Lautsprecher.attribute(sprache = true)
         if (e.vibration) runCatching {
-            getSystemService(Vibrator::class.java)?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 180, 120, 260), -1), attribute)
+            getSystemService(Vibrator::class.java)?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 180, 120, 260), -1), tonAttribute)
         }
         val dateien = if (a.aufgabe.vorlesen) withContext(Dispatchers.IO) { Ansage.dateien(this@ErinnerungsDienst, a.aufgabe) } else emptyList()
         val text = Ansage.text(a.aufgabe)
         do {
-            spiele(null, e.ton, e.lautstaerke, attribute, TON_MAX_MS, verstaerken = false)
+            spiele(null, e.ton, e.lautstaerke, tonAttribute, TON_MAX_MS, verstaerken = false)
             if (a.aufgabe.vorlesen && text.isNotBlank()) {
                 delay(1_000)
                 for (i in 0 until Ansage.ANZAHL) {
@@ -201,11 +202,13 @@ class ErinnerungsDienst : Service() {
                 k.invokeOnCancellation { Handler(Looper.getMainLooper()).post { ende() } }
                 try {
                     player = p
-                    p.setAudioAttributes(attribute)
+                    // Erst die Quelle, dann die Attribute: Der Rückfall in setzeQuelle setzt den Player zurück.
                     if (datei != null) p.setDataSource(datei.absolutePath) else Toene.setzeQuelle(this@ErinnerungsDienst, p, ton.orEmpty())
+                    p.setAudioAttributes(attribute)
                     p.setOnCompletionListener { ende() }
                     p.setOnErrorListener { _, _, _ -> ende(); true }
                     p.prepare()
+                    Lautsprecher.aufGeraet(this@ErinnerungsDienst, p)
                     if (verstaerken) SpeechLoudness.boost(p)
                     p.setVolume(lautstaerke, lautstaerke)
                     p.start()
@@ -250,12 +253,7 @@ class ErinnerungsDienst : Service() {
         val audio = getSystemService(AudioManager::class.java) ?: return
         fokus?.let { audio.abandonAudioFocusRequest(it) }
         fokus = AudioFocusRequest.Builder(if (wecker) AudioManager.AUDIOFOCUS_GAIN_TRANSIENT else AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(if (wecker) AudioAttributes.USAGE_ALARM else AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build(),
-            )
+            .setAudioAttributes(Lautsprecher.attribute(sprache = true))
             .build()
             .also { runCatching { audio.requestAudioFocus(it) } }
     }
@@ -301,6 +299,8 @@ class ErinnerungsDienst : Service() {
         runCatching { NotificationManagerCompat.from(this).cancel(PLATZHALTER_ID) }
         getSystemService(AudioManager::class.java)?.let { audio -> fokus?.let { audio.abandonAudioFocusRequest(it) } }
         fokus = null
+        lautstaerkeZurueck?.invoke()
+        lautstaerkeZurueck = null
         wake?.let { if (it.isHeld) it.release() }
         wake = null
         stopSelf()
@@ -311,6 +311,8 @@ class ErinnerungsDienst : Service() {
         stille()
         runCatching { geraeteStimme?.shutdown() }
         geraeteStimme = null
+        lautstaerkeZurueck?.invoke()
+        lautstaerkeZurueck = null
         wake?.let { if (it.isHeld) it.release() }
         scope.cancel()
         super.onDestroy()

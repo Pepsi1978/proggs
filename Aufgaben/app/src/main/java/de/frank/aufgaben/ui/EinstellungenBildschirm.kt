@@ -243,6 +243,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     Schalter("Vibration", e.vibration) { e.vibration = it }
                     Schalter("Neue Erinnerungen vorlesen", e.vorlesenStandard) { e.vorlesenStandard = it }
                     Text("Beim Speichern entstehen mit deiner Stimme (Abschnitt Vorlesen) sechs Fassungen des Aufgabentextes. Die Erinnerung spielt sie offline nacheinander ab, mit drei Sekunden Pause; als Wecker so lange, bis du ausschaltest. Ohne vorbereitete Fassung spricht die Android-Stimme des Handys.", color = f.textLeise, fontSize = 12.sp)
+                    Text("Ton und Vorlesen laufen immer über den Lautsprecher des Handys, auch bei Lautlos, „Nicht stören“ und verbundenem Bluetooth (z. B. Autoradio). Es zählt die Wecker-Lautstärke; steht sie auf 0, wird sie für die Erinnerung kurz angehoben.", color = f.textLeise, fontSize = 12.sp)
                     Chip("Ton testen", false, icon = Icons.Rounded.PlayArrow) { vm.tonProbe() }
                 }
                 Block("Zeitleiste") {
