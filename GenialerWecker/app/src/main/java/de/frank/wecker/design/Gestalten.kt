@@ -187,8 +187,10 @@ fun WeckerGestalt.Flaeche(
 private fun ebeneFuer(erhoeht: Boolean): Ebene = if (erhoeht) Ebene.HERO else Ebene.KARTE
 
 /**
- * Schlicht — geschliffenes Glas mit goldener Kante. Der Hintergrund bleibt das gewohnte
- * schwebende Goldlicht ([SichtbarerHintergrund]); die Vignette dazu sitzt in dessen Zeichenebene.
+ * Schlicht — geschliffenes Glas mit goldener Kante. Der Hintergrund ist seit 1.1.107 die bewegte
+ * Goldseide aus HyperFrames ([GoldseideHintergrund]); bis zum ersten Videobild, bei reduzierter
+ * Bewegung oder wenn das Video nicht spielt, bleibt das gewohnte schwebende Goldlicht
+ * ([SichtbarerHintergrund]). Die Vignette steckt in beiden schon drin.
  *
  * Die Fläche geht seit dem Materialumbau denselben Weg wie die anderen drei Designs. Die
  * Goldwerte der Palette bleiben dabei unangetastet: Der frühere Körperverlauf rechnete
@@ -199,7 +201,7 @@ private fun ebeneFuer(erhoeht: Boolean): Ebene = if (erhoeht) Ebene.HERO else Eb
  * frühere Schein aus einem festen 700-Pixel-Radius ist der gerichtete Schliff geworden.
  */
 object SchlichtGestalt : WeckerGestalt {
-    @Composable override fun Hintergrund(modifier: Modifier) = SichtbarerHintergrund()
+    @Composable override fun Hintergrund(modifier: Modifier) = GoldseideHintergrund()
 
     @Composable override fun Flaeche(modifier: Modifier, erhoeht: Boolean, inhalt: @Composable () -> Unit) =
         MaterialFlaeche(modifier = modifier, ebene = ebeneFuer(erhoeht), inhalt = inhalt)

@@ -205,10 +205,13 @@ Unter **Einstellungen → Darstellung → Design** stehen vier dauerhaft wählba
 Die Wahl ist **unabhängig** von Hell/Dunkel und von der Ausrichtung — jedes Design hat beide Modi —
 und gilt für Weckerliste, Editor, Einstellungen und Weckbildschirm.
 
-- **Schlicht** (Vorgabe) — genau das bisherige Gold auf Glas. `paletteFuer(SCHLICHT, …)` gibt die
-  vorhandenen Objekte `DunkleGoldPalette` und `HelleGoldPalette` unverändert zurück, und
-  `SchlichtGestalt` ruft weiterhin `SichtbarerHintergrund` und `GoldKarte` auf. Es wurde nichts
-  nachgebaut; ohne eigene Wahl sieht die App aus wie zuvor.
+- **Schlicht** (Vorgabe) — Gold auf Glas mit den unveränderten Paletten `DunkleGoldPalette` und
+  `HelleGoldPalette`. Seit 1.1.107 mit Motion Graphics (`design/SchlichtBewegung.kt`): Hinter allen
+  Seiten und dem Weckbildschirm läuft die **Goldseide**, eine mit HyperFrames gerenderte, nahtlose
+  16-Sekunden-Schleife (`design/hyperframes/goldseide`, `res/raw/goldseide_*.mp4`, stumm, ohne Tonspur).
+  Dazu ein Lichtlauf über die Kopfkarte, rollende Ziffern mit Goldglanz in Hero- und Weckuhr,
+  aufsteigende Karten beim Öffnen einer Seite und ein Goldglanz im Dialogtitel. Bei „Animationen
+  entfernen“ oder wenn das Video nicht spielt, bleibt der bisherige `SichtbarerHintergrund`.
 - **Morgenruhe** — Salbei und Creme am Tag, Tannengrün in der Nacht, Terrakotta als Akzent. Die
   Weckerliste wird zur **Tagesachse**: jede Karte hängt als Station an einer durchgehenden Linie.
   Flache Flächen ohne Glanz, Pillenknöpfe, gestapelte Alarmtasten. Das **Bettmotiv** steht im Kopf.

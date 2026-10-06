@@ -10,11 +10,11 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Das gewählte Erscheinungsbild. Es ist unabhängig von Hell/Dunkel und von der Ausrichtung:
- * jedes Design hat beide Modi. [SCHLICHT] ist die Vorgabe und bildet die bisherige Gold-/Glasoptik
- * unverändert ab — Bestandsnutzer sehen ohne eigene Wahl genau das, was sie kennen.
+ * jedes Design hat beide Modi. [SCHLICHT] ist die Vorgabe: die bisherige Gold-/Glasoptik mit
+ * unveränderten Farben, seit 1.1.107 mit bewegter Goldseide dahinter (`SchlichtBewegung.kt`).
  */
 enum class Design(val id: String, val anzeige: String, val beschreibung: String) {
-    SCHLICHT("schlicht", "Schlicht", "Das gewohnte Gold auf Glas."),
+    SCHLICHT("schlicht", "Schlicht", "Gold auf Glas, dahinter bewegte Goldseide."),
     MORGENRUHE("morgenruhe", "Morgenruhe", "Ruhiger Tagesablauf an einer Achse, Leinen und Tinte."),
     TRAUMRAUM("traumraum", "Traumraum", "Weiche Kuppel und runde Flächen, warmes Schwarz und Glut-Orange."),
     ORBIT("orbit", "Orbit", "Instrumententafel mit Ring und festen Zahlen, Eisblau und Limette.");

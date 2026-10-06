@@ -338,7 +338,13 @@ private fun DialogTitel(titel: String, design: Design, innen: androidx.compose.u
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = innen, end = innen, top = if (orbit) 12.dp else innen, bottom = if (orbit) 12.dp else 0.dp)
-            .semantics { heading() },
+            .semantics { heading() }
+            // Schlicht: Beim Öffnen zieht einmal ein heller Goldglanz durch den Titel.
+            .then(if (design == Design.SCHLICHT) Modifier.glanzLauf(
+                staerke = if (gold.istDunkel) 0.8f else 0.5f,
+                farbe = if (gold.istDunkel) Color(0xFFFFF3D1) else gold.akzentWarm,
+                nurSchrift = true, einmal = true, versatzMs = -700L,
+            ) else Modifier),
         style = stil,
         color = farbe,
     )
