@@ -165,6 +165,10 @@ class Einstellungen(context: Context) {
         get() = normalisiereIntervall(prefs.getInt("intervallMinuten", STANDARD_INTERVALL))
         set(v) = prefs.edit().putInt("intervallMinuten", normalisiereIntervall(v)).apply()
 
+    var designModus: DesignModus
+        get() = DesignModus.ausGespeichert(prefs.getString("designModus", null))
+        set(v) = prefs.edit().putString("designModus", v.name).apply()
+
     /**
      * Ergebnis der Zählung: [offen] = Fenster von max Versuchen noch nicht ausgeschöpft,
      * [erschoepft] = ausgeschöpft und noch nicht gewarnt, [neu] = Episode beginnt gerade.

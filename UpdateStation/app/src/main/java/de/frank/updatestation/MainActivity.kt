@@ -9,17 +9,20 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.ApiException
@@ -35,6 +38,7 @@ class MainActivity : ComponentActivity() {
     private var quelle by mutableStateOf<String?>(null)
     private var drivePfad by mutableStateOf(Einstellungen.STANDARD_PFAD)
     private var intervall by mutableStateOf(Einstellungen.STANDARD_INTERVALL)
+    private var designModus by mutableStateOf(DesignModus.AUTOMATISCH)
     private var darfInstallieren by mutableStateOf(true)
     private var darfBenachrichtigen by mutableStateOf(true)
 
@@ -68,19 +72,33 @@ class MainActivity : ComponentActivity() {
         quelle = einst.quelle
         drivePfad = einst.drivePfad
         intervall = einst.intervallMinuten
+        designModus = einst.designModus
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hatBenachrichtigungsRecht()) {
             benachrichtigungsRecht.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         setContent {
-            UpdateStationTheme {
-                val zustand by ZustandsSpeicher.zustand.collectAsState()
+            val dunkel = designModus.istDunkel(isSystemInDarkTheme())
+            SideEffect {
+                val transparent = android.graphics.Color.TRANSPARENT
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(transparent, transparent) { dunkel },
+                    navigationBarStyle = SystemBarStyle.auto(transparent, transparent) { dunkel },
+                )
+            }
+            UpdateStationTheme(dunkel = dunkel) {
+                val zustand by ZustandsSpeicher.zustand.collectAsStateWithLifecycle()
                 HauptScreen(
                     zustand = zustand,
                     quelle = quelle,
                     drivePfad = drivePfad,
                     intervall = intervall,
+                    designModus = designModus,
+                    onDesignModus = { neu ->
+                        einst.designModus = neu
+                        designModus = neu
+                    },
                     darfInstallieren = darfInstallieren,
                     darfBenachrichtigen = darfBenachrichtigen,
                     snackbar = remember { snackbar },

@@ -13,59 +13,90 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 object Farben {
-    val Violett = Color(0xFF5B4BFF)
-    val Indigo = Color(0xFF3B2FD9)
-    val Tuerkis = Color(0xFF00C2A8)
-    val Minze = Color(0xFF2EE6C5)
-    val Bernstein = Color(0xFFFFB547)
-    val Koralle = Color(0xFFFF6B6B)
-
-    val kopfVerlauf = Brush.linearGradient(listOf(Color(0xFF6A5BFF), Indigo, Color(0xFF0A9E8E)))
-    val randVerlauf = Brush.linearGradient(listOf(Violett, Tuerkis))
+    val kopfVerlauf: Brush
+        @Composable get() = Brush.linearGradient(
+            listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.surfaceContainerHigh),
+        )
+    val randVerlauf: Brush
+        @Composable get() = Brush.linearGradient(
+            listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary),
+        )
 }
 
 private val Dunkel = darkColorScheme(
-    primary = Color(0xFF8C80FF),
-    onPrimary = Color(0xFF14104A),
-    primaryContainer = Color(0xFF2B2470),
-    onPrimaryContainer = Color(0xFFE3DFFF),
-    secondary = Farben.Minze,
-    onSecondary = Color(0xFF00382F),
-    tertiary = Farben.Bernstein,
-    error = Farben.Koralle,
-    background = Color(0xFF0F1226),
-    onBackground = Color(0xFFE6E7F5),
-    surface = Color(0xFF0F1226),
-    onSurface = Color(0xFFE6E7F5),
-    surfaceVariant = Color(0xFF232849),
-    onSurfaceVariant = Color(0xFFA9ADCB),
-    surfaceContainer = Color(0xFF191D38),
-    surfaceContainerHigh = Color(0xFF20254A),
-    surfaceContainerLow = Color(0xFF151932),
-    outline = Color(0xFF3A406B),
-    outlineVariant = Color(0xFF2A2F55),
+    primary = Color(0xFFFF9A3C),
+    onPrimary = Color(0xFF291300),
+    primaryContainer = Color(0xFF482508),
+    onPrimaryContainer = Color(0xFFFFDFC1),
+    secondary = Color(0xFFFFB877),
+    onSecondary = Color(0xFF301800),
+    secondaryContainer = Color(0xFF3D2816),
+    onSecondaryContainer = Color(0xFFFFDFC1),
+    tertiary = Color(0xFFFFC078),
+    onTertiary = Color(0xFF2D1900),
+    tertiaryContainer = Color(0xFF432B0E),
+    onTertiaryContainer = Color(0xFFFFDFC1),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    background = Color.Black,
+    onBackground = Color(0xFFF5F0EB),
+    surface = Color.Black,
+    onSurface = Color(0xFFF5F0EB),
+    surfaceVariant = Color(0xFF302A25),
+    onSurfaceVariant = Color(0xFFD3C3B6),
+    surfaceDim = Color.Black,
+    surfaceBright = Color(0xFF35302C),
+    surfaceContainerLowest = Color.Black,
+    surfaceContainerLow = Color(0xFF101010),
+    surfaceContainer = Color(0xFF181818),
+    surfaceContainerHigh = Color(0xFF24211E),
+    surfaceContainerHighest = Color(0xFF302A25),
+    outline = Color(0xFF9E8E81),
+    outlineVariant = Color(0xFF51453B),
+    inverseSurface = Color(0xFFF5EDE6),
+    inverseOnSurface = Color(0xFF302A25),
+    inversePrimary = Color(0xFFA84300),
+    surfaceTint = Color(0xFFFF9A3C),
 )
 
 private val Hell = lightColorScheme(
-    primary = Farben.Violett,
+    primary = Color(0xFFA84300),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE6E3FF),
-    onPrimaryContainer = Color(0xFF1B1464),
-    secondary = Color(0xFF00A38D),
+    primaryContainer = Color(0xFFFFE1C4),
+    onPrimaryContainer = Color(0xFF351600),
+    secondary = Color(0xFF91501B),
     onSecondary = Color.White,
-    tertiary = Color(0xFFB77400),
-    error = Color(0xFFD64545),
-    background = Color(0xFFF5F6FC),
-    onBackground = Color(0xFF15182E),
-    surface = Color(0xFFF5F6FC),
-    onSurface = Color(0xFF15182E),
-    surfaceVariant = Color(0xFFE7E9F5),
-    onSurfaceVariant = Color(0xFF5B607E),
+    secondaryContainer = Color(0xFFFFDFC1),
+    onSecondaryContainer = Color(0xFF301800),
+    tertiary = Color(0xFF87520B),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFFDEAE),
+    onTertiaryContainer = Color(0xFF2D1900),
+    error = Color(0xFFBA1A1A),
+    onError = Color.White,
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    background = Color(0xFFFFF9F4),
+    onBackground = Color(0xFF241A12),
+    surface = Color(0xFFFFF9F4),
+    onSurface = Color(0xFF241A12),
+    surfaceVariant = Color(0xFFF1E2D6),
+    onSurfaceVariant = Color(0xFF6C5849),
+    surfaceDim = Color(0xFFE5D8CD),
+    surfaceBright = Color(0xFFFFF9F4),
+    surfaceContainerLowest = Color.White,
+    surfaceContainerLow = Color(0xFFFFF3E9),
     surfaceContainer = Color.White,
-    surfaceContainerHigh = Color(0xFFF0F1FA),
-    surfaceContainerLow = Color(0xFFFAFBFF),
-    outline = Color(0xFFCDD0E3),
-    outlineVariant = Color(0xFFE2E4F0),
+    surfaceContainerHigh = Color(0xFFFFEBDC),
+    surfaceContainerHighest = Color(0xFFF5E3D4),
+    outline = Color(0xFF887363),
+    outlineVariant = Color(0xFFDBC7B6),
+    inverseSurface = Color(0xFF302A25),
+    inverseOnSurface = Color(0xFFF5EDE6),
+    inversePrimary = Color(0xFFFF9A3C),
+    surfaceTint = Color(0xFFA84300),
 )
 
 private val Schrift = Typography().let { t ->
@@ -80,9 +111,9 @@ private val Schrift = Typography().let { t ->
 val TextStyle.fett get() = copy(fontWeight = FontWeight.SemiBold)
 
 @Composable
-fun UpdateStationTheme(content: @Composable () -> Unit) {
+fun UpdateStationTheme(dunkel: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = if (isSystemInDarkTheme()) Dunkel else Hell,
+        colorScheme = if (dunkel) Dunkel else Hell,
         typography = Schrift,
         content = content,
     )

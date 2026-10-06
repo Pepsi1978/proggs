@@ -32,8 +32,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudSync
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -41,6 +43,7 @@ import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.Inbox
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Security
@@ -51,6 +54,8 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -83,6 +88,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,6 +99,7 @@ import androidx.core.graphics.drawable.toBitmap
 import de.frank.updatestation.AppEintrag
 import de.frank.updatestation.BuildConfig
 import de.frank.updatestation.Diagnose
+import de.frank.updatestation.DesignModus
 import de.frank.updatestation.Hinweise
 import de.frank.updatestation.Einstellungen
 import de.frank.updatestation.InstallStatus
@@ -122,6 +131,8 @@ fun HauptScreen(
     quelle: String?,
     drivePfad: String,
     intervall: Int,
+    designModus: DesignModus,
+    onDesignModus: (DesignModus) -> Unit,
     darfInstallieren: Boolean,
     darfBenachrichtigen: Boolean,
     snackbar: SnackbarHostState,
@@ -154,6 +165,8 @@ fun HauptScreen(
                     anzahlUpdates = updates.size,
                     eingerichtet = quelle != null,
                     intervall = intervall,
+                    designModus = designModus,
+                    onDesignModus = onDesignModus,
                     onPruefen = aktionen.pruefen,
                     onEinstellungen = { einstellungenOffen = true },
                 )
@@ -173,14 +186,14 @@ fun HauptScreen(
                 item {
                     Hinweis(Icons.Rounded.Security, "Installationen erlauben",
                         "Damit UpdateStation Updates einspielen kann, braucht sie die Erlaubnis „Unbekannte Apps installieren“.",
-                        "Erlauben", Farben.Bernstein, aktionen.erlaubeInstallation)
+                        "Erlauben", MaterialTheme.colorScheme.tertiary, aktionen.erlaubeInstallation)
                 }
             }
             if (!darfBenachrichtigen) {
                 item {
                     Hinweis(Icons.Rounded.NotificationsOff, "Benachrichtigungen sind aus",
                         "Ohne Benachrichtigung erfährst du nicht, wenn ein Update bereitliegt.",
-                        "Einschalten", Farben.Bernstein, aktionen.erlaubeBenachrichtigungen)
+                        "Einschalten", MaterialTheme.colorScheme.tertiary, aktionen.erlaubeBenachrichtigungen)
                 }
             }
             zustand.fehler?.let { text ->
@@ -190,7 +203,7 @@ fun HauptScreen(
             }
             hinweise.forEach { (titel, text) ->
                 item {
-                    Hinweis(Icons.Rounded.Warning, titel, text, "Diagnose", Farben.Bernstein) { diagnoseOffen = true }
+                    Hinweis(Icons.Rounded.Warning, titel, text, "Diagnose", MaterialTheme.colorScheme.tertiary) { diagnoseOffen = true }
                 }
             }
 
@@ -336,7 +349,17 @@ private fun Verlauf(e: AppEintrag) {
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-private fun Kopf(zustand: Zustand, anzahlUpdates: Int, eingerichtet: Boolean, intervall: Int, onPruefen: () -> Unit, onEinstellungen: () -> Unit) {
+private fun Kopf(
+    zustand: Zustand,
+    anzahlUpdates: Int,
+    eingerichtet: Boolean,
+    intervall: Int,
+    designModus: DesignModus,
+    onDesignModus: (DesignModus) -> Unit,
+    onPruefen: () -> Unit,
+    onEinstellungen: () -> Unit,
+) {
+    val kopfText = MaterialTheme.colorScheme.onPrimaryContainer
     Box(
         Modifier
             .fillMaxWidth()
@@ -347,23 +370,25 @@ private fun Kopf(zustand: Zustand, anzahlUpdates: Int, eingerichtet: Boolean, in
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("UpdateStation", style = MaterialTheme.typography.headlineMedium, color = Color.White)
-                    Text("Deine Apps immer auf dem neuesten Stand", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f))
-                }
+                Text(
+                    "UpdateStation", style = MaterialTheme.typography.titleLarge, color = kopfText,
+                    modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                DesignAuswahl(designModus, onDesignModus)
                 IconButton(onClick = onEinstellungen) {
-                    Icon(Icons.Rounded.Settings, contentDescription = "Einstellungen", tint = Color.White)
+                    Icon(Icons.Rounded.Settings, contentDescription = "Einstellungen", tint = kopfText)
                 }
             }
+            Text("Deine Apps immer auf dem neuesten Stand", style = MaterialTheme.typography.bodyMedium, color = kopfText.copy(alpha = 0.8f))
             Spacer(Modifier.height(22.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 10.dp)) {
                 Box(
-                    Modifier.size(56.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.18f)),
+                    Modifier.size(56.dp).clip(CircleShape).background(kopfText.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         if (anzahlUpdates > 0) Icons.Rounded.SystemUpdate else Icons.Rounded.CheckCircle,
-                        contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp),
+                        contentDescription = null, tint = kopfText, modifier = Modifier.size(30.dp),
                     )
                 }
                 Spacer(Modifier.width(14.dp))
@@ -376,13 +401,13 @@ private fun Kopf(zustand: Zustand, anzahlUpdates: Int, eingerichtet: Boolean, in
                             anzahlUpdates > 1 -> "$anzahlUpdates Updates verfügbar"
                             else -> "Alles aktuell"
                         },
-                        style = MaterialTheme.typography.titleLarge, color = Color.White,
+                        style = MaterialTheme.typography.titleLarge, color = kopfText,
                     )
                     Text(
                         text = if (zustand.letztePruefung > 0) {
                             "Geprüft ${zeit(zustand.letztePruefung)} · ${zustand.eintraege.size} Apps im Update-Ordner · automatisch ${Einstellungen.intervallText(intervall)}"
                         } else "Automatische Prüfung ${Einstellungen.intervallText(intervall)}",
-                        style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodySmall, color = kopfText.copy(alpha = 0.8f),
                     )
                 }
             }
@@ -393,10 +418,6 @@ private fun Kopf(zustand: Zustand, anzahlUpdates: Int, eingerichtet: Boolean, in
                     enabled = !zustand.prueftGerade,
                     modifier = Modifier.fillMaxWidth().padding(end = 10.dp).height(50.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White, contentColor = Farben.Indigo,
-                        disabledContainerColor = Color.White.copy(alpha = 0.7f), disabledContentColor = Farben.Indigo,
-                    ),
                 ) {
                     DrehendesIcon(zustand.prueftGerade)
                     Spacer(Modifier.width(10.dp))
@@ -405,6 +426,46 @@ private fun Kopf(zustand: Zustand, anzahlUpdates: Int, eingerichtet: Boolean, in
             }
         }
     }
+}
+
+@Composable
+private fun DesignAuswahl(modus: DesignModus, onAuswahl: (DesignModus) -> Unit) {
+    var offen by remember { mutableStateOf(false) }
+    Box {
+        TextButton(
+            onClick = { offen = true },
+            modifier = Modifier.semantics { stateDescription = "Design: ${modus.titel}" },
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
+        ) {
+            Icon(designIcon(modus), contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(modus.titel, style = MaterialTheme.typography.labelMedium)
+            Icon(Icons.Rounded.ExpandMore, contentDescription = null, modifier = Modifier.size(18.dp))
+        }
+        DropdownMenu(expanded = offen, onDismissRequest = { offen = false }) {
+            DesignModus.entries.forEach { auswahl ->
+                DropdownMenuItem(
+                    text = { Text(auswahl.titel) },
+                    leadingIcon = { Icon(designIcon(auswahl), contentDescription = null) },
+                    trailingIcon = {
+                        if (auswahl == modus) Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    },
+                    modifier = Modifier.semantics { selected = auswahl == modus },
+                    onClick = {
+                        offen = false
+                        onAuswahl(auswahl)
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun designIcon(modus: DesignModus): ImageVector = when (modus) {
+    DesignModus.HELL -> Icons.Rounded.LightMode
+    DesignModus.AUTOMATISCH -> Icons.Rounded.BrightnessAuto
+    DesignModus.DUNKEL -> Icons.Rounded.DarkMode
 }
 
 @Composable
@@ -541,7 +602,7 @@ private fun VersionChip(text: String, hervorgehoben: Boolean) {
 private fun WarnKarte(e: AppEintrag) {
     val m = e.fund.manifest
     val signatur = e.status == Status.SIGNATUR_ANDERS
-    val farbe = if (signatur) MaterialTheme.colorScheme.error else Farben.Bernstein
+    val farbe = if (signatur) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
     Karte {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.Top) {
             AppIcon(e.paket, e.label, 44.dp)
@@ -683,7 +744,7 @@ private fun QuellenKachel(icon: ImageVector, titel: String, text: String, empfoh
     ) {
         Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(Farben.kopfVerlauf), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = Color.White)
+                Icon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
@@ -807,7 +868,7 @@ private fun AppIcon(paket: String, label: String, groesse: androidx.compose.ui.u
             Modifier.size(groesse).clip(RoundedCornerShape(groesse * 0.28f)).background(Farben.kopfVerlauf),
             contentAlignment = Alignment.Center,
         ) {
-            Text(label.take(1).uppercase(), color = Color.White, style = MaterialTheme.typography.titleLarge)
+            Text(label.take(1).uppercase(), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleLarge)
         }
     }
 }
