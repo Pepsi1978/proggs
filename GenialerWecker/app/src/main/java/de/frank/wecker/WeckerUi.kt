@@ -128,8 +128,9 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
     val theme = wirksamesTheme(themeRoh)
     // Eigene Achse neben Hell/Dunkel und Ausrichtung; lifecycle-bewusst gesammelt.
     val designId by vm.settings.designFlow.collectAsStateWithLifecycle()
-    // Kartendeckkraft in Schlicht; der Regler in den Einstellungen wirkt sofort auf alle Karten.
-    val kartenDeckkraft by vm.settings.kartenDeckkraftFlow.collectAsStateWithLifecycle()
+    // Kartendeckkraft je Design; der Regler in den Einstellungen wirkt sofort, und beim
+    // Umschalten des Designs gilt dessen eigener Wert.
+    val deckkraftJeDesign by vm.settings.kartenDeckkraftFlow.collectAsStateWithLifecycle()
     val design = Design.von(designId)
     val alarms by vm.alarms.collectAsStateWithLifecycle()
     val draft by vm.draft.collectAsStateWithLifecycle()
@@ -176,7 +177,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
             standbild = null
         }
     }
-    WeckerTheme(theme, design, kartenDeckkraftProzent = kartenDeckkraft) {
+    WeckerTheme(theme, design, kartenDeckkraftProzent = deckkraftJeDesign[design.id] ?: 100) {
         val gold = LocalGold.current
         BackHandler(page != "alarms") { back() }
         Box(Modifier.fillMaxSize()) {
