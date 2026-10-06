@@ -3,6 +3,8 @@ package de.frank.aufgaben.ki
 import de.frank.aufgaben.auth.ChatTurn
 import de.frank.aufgaben.auth.CodexAuthManager
 import de.frank.aufgaben.data.Einstellungen
+import de.frank.aufgaben.data.TITEL_MAX
+import de.frank.aufgaben.data.kurzerTitel
 
 /** Die zwei KI-Aufgaben der App: Diktat sauber formulieren und einen kurzen Titel finden. */
 class AufgabenKi(private val auth: CodexAuthManager, private val einstellungen: Einstellungen) {
@@ -34,15 +36,23 @@ class AufgabenKi(private val auth: CodexAuthManager, private val einstellungen: 
         return frage(anweisung, text).trim().trim('„', '“', '"')
     }
 
-    /** Ein kurzer Titel (2–6 Wörter) für eine Aufgabe ohne eigene Überschrift. */
+    /**
+     * Ein kurzer Titel für eine Aufgabe ohne eigene Überschrift, höchstens [TITEL_MAX] Zeichen samt Leerzeichen
+     * (sonst passt er im Widget nicht neben die Uhrzeit). Ist die erste Antwort zu lang, gibt es einen zweiten
+     * Versuch; bleibt sie zu lang, wird an einer Wortgrenze gekürzt.
+     */
     suspend fun titel(text: String): String {
-        val antwort = frage(
-            "Formuliere für die folgende Aufgabe einen sehr kurzen, prägnanten Titel mit 2 bis 6 Wörtern, " +
-                "der sagt, was zu tun ist (z. B. „Arzttermin vereinbaren“). Keine Anführungszeichen, kein Punkt, " +
-                "keine Uhrzeiten. Antworte nur mit dem Titel.",
-            text,
-        )
-        return antwort.lineSequence().firstOrNull().orEmpty().trim().trim('„', '“', '"', '.').take(80)
+        val anweisung = "Formuliere für die folgende Aufgabe einen sehr kurzen, prägnanten Titel, der sagt, was zu tun ist " +
+            "(z. B. „Arzttermin vereinbaren“). Höchstens $TITEL_MAX Zeichen einschließlich Leerzeichen, lieber kürzer; " +
+            "kürze lange Wörter nicht ab, sondern wähle knappere. Keine Anführungszeichen, kein Punkt, keine Uhrzeiten. " +
+            "Antworte nur mit dem Titel."
+        fun bereinigt(antwort: String) = antwort.lineSequence().firstOrNull().orEmpty().trim().trim('„', '“', '"', '.').trim()
+        val erster = bereinigt(frage(anweisung, text))
+        if (erster.length <= TITEL_MAX) return erster
+        val zweiter = runCatching {
+            bereinigt(frage("$anweisung\n\nDein Vorschlag „$erster“ hat ${erster.length} Zeichen und ist zu lang. Finde einen kürzeren.", text))
+        }.getOrDefault("")
+        return kurzerTitel(zweiter.takeIf { it.isNotBlank() && it.length <= TITEL_MAX } ?: erster)
     }
 
     private suspend fun frage(anweisung: String, text: String): String = auth.streamChat(
@@ -53,9 +63,5 @@ class AufgabenKi(private val auth: CodexAuthManager, private val einstellungen: 
     )
 }
 
-/** Titel ohne KI: die ersten Wörter des Textes. */
-fun notTitel(text: String): String {
-    val woerter = text.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-    val kurz = woerter.take(6).joinToString(" ").trimEnd('.', ',', ';', ':')
-    return if (woerter.size > 6) "$kurz …" else kurz
-}
+/** Titel ohne KI: so viele erste Wörter des Textes, wie in [TITEL_MAX] Zeichen passen. */
+fun notTitel(text: String): String = kurzerTitel(text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty())

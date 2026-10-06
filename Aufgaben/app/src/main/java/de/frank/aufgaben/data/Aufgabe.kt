@@ -35,6 +35,21 @@ enum class Wiederholung(val anzeige: String) {
 
 data class Schritt(val text: String, val erledigt: Boolean)
 
+/** Längster Titel in Zeichen (mit Leerzeichen): So passt er im Widget neben die Uhrzeit. */
+const val TITEL_MAX = 26
+
+/**
+ * Kürzt einen Titel auf [TITEL_MAX] Zeichen, möglichst an einer Wortgrenze und ohne Satzzeichen am Ende.
+ * Nur ein einzelnes überlanges Wort wird hart abgeschnitten.
+ */
+fun kurzerTitel(titel: String): String {
+    val sauber = titel.trim().replace(Regex("\\s+"), " ")
+    if (sauber.length <= TITEL_MAX) return sauber
+    val bisWort = sauber.take(TITEL_MAX + 1).substringBeforeLast(' ', "").trim()
+    val kurz = bisWort.ifEmpty { sauber.take(TITEL_MAX) }
+    return kurz.trimEnd('.', ',', ';', ':', '-', '–').trim().ifEmpty { sauber.take(TITEL_MAX) }
+}
+
 @Entity(tableName = "aufgaben", indices = [Index("tag"), Index("erledigt")])
 data class Aufgabe(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
