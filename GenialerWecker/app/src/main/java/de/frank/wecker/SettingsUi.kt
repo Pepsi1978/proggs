@@ -143,11 +143,16 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             AuswahlPunkte("Design", design, Design.entries.map { it.id to it.anzeige }) {
                 design = it; settings.design = it; vm.settingsRevision.value++
             }
-            // In allen Designs: Kopfkarte, Weckerkarten und Einstellungskarten von deckend bis ganz durchsichtig.
+            // Jedes Design hat seinen eigenen Regler: Kopfkarte, Weckerkarten und Einstellungskarten
+            // von deckend bis ganz durchsichtig. Gezeigt wird der Regler des gerade gewählten Designs;
+            // beim Umschalten erscheint dessen eigener Wert.
             HorizontalDivider(color = LocalGold.current.rahmen)
-            val deckkraft by settings.kartenDeckkraftFlow.collectAsStateWithLifecycle()
-            ValueSlider("Deckkraft der Karten", deckkraft, 0..100, "%") { settings.kartenDeckkraft = it }
-            Text("100 % deckend wie bisher, 0 % ganz durchsichtig — dann steht alles direkt auf dem Hintergrund des Designs.",
+            val deckkraftJeDesign by settings.kartenDeckkraftFlow.collectAsStateWithLifecycle()
+            val designName = Design.von(design).anzeige
+            ValueSlider("Deckkraft der Karten · $designName", deckkraftJeDesign[design] ?: 100, 0..100, "%") {
+                settings.setzeKartenDeckkraft(design, it)
+            }
+            Text("Gilt nur für $designName — jedes Design merkt sich seinen eigenen Wert. 100 % deckend, 0 % ganz durchsichtig.",
                 style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
             HorizontalDivider(color = LocalGold.current.rahmen)
             AuswahlPunkte("Modus", modus, modusOptionen) { settings.theme = it }

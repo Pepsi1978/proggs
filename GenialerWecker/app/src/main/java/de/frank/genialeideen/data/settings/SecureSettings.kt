@@ -59,18 +59,27 @@ class SecureSettings(context: Context) : Closeable {
     val designFlow: StateFlow<String> = _designFlow.asStateFlow()
 
     /**
-     * Deckkraft der Karten im Design „Schlicht“ in Prozent: 100 = voll deckend wie bisher,
+     * Deckkraft der Karten in Prozent, **je Design eigens**: 100 = voll deckend wie bisher,
      * 0 = ganz durchsichtig, nur Schrift und Bedienelemente stehen auf dem Hintergrund.
+     *
+     * Gespeichert unter `karten_deckkraft_<design>`. Fehlt der Wert für ein Design, gilt der frühere
+     * gemeinsame Wert (`karten_deckkraft`, bis 1.1.110), sonst 100 — niemand verliert beim Update
+     * seine Einstellung.
      */
-    var kartenDeckkraft: Int
-        get() = (preferences?.getInt(Keys.KARTEN_DECKKRAFT, Defaults.KARTEN_DECKKRAFT) ?: Defaults.KARTEN_DECKKRAFT).coerceIn(0, 100)
-        set(value) {
-            val normalized = value.coerceIn(0, 100)
-            preferences?.edit()?.putInt(Keys.KARTEN_DECKKRAFT, normalized)?.apply()
-            _kartenDeckkraftFlow.value = normalized
-        }
-    private val _kartenDeckkraftFlow = MutableStateFlow(kartenDeckkraft)
-    val kartenDeckkraftFlow: StateFlow<Int> = _kartenDeckkraftFlow.asStateFlow()
+    fun kartenDeckkraft(design: String): Int {
+        val gemeinsam = preferences?.getInt(Keys.KARTEN_DECKKRAFT, Defaults.KARTEN_DECKKRAFT) ?: Defaults.KARTEN_DECKKRAFT
+        return (preferences?.getInt(Keys.KARTEN_DECKKRAFT + "_" + design, gemeinsam) ?: gemeinsam).coerceIn(0, 100)
+    }
+
+    fun setzeKartenDeckkraft(design: String, wert: Int) {
+        val normalized = wert.coerceIn(0, 100)
+        preferences?.edit()?.putInt(Keys.KARTEN_DECKKRAFT + "_" + design, normalized)?.apply()
+        _kartenDeckkraftFlow.value = _kartenDeckkraftFlow.value + (design to normalized)
+    }
+
+    /** Die Deckkraft aller Designs, nach Design-Kennung; ändert sich, sobald ein Regler bewegt wird. */
+    private val _kartenDeckkraftFlow = MutableStateFlow(ALLOWED_DESIGNS.associateWith { kartenDeckkraft(it) })
+    val kartenDeckkraftFlow: StateFlow<Map<String, Int>> = _kartenDeckkraftFlow.asStateFlow()
 
     private val _appLockEnabledFlow = MutableStateFlow(
         preferences?.getBoolean(Keys.APP_LOCK_ENABLED, Defaults.APP_LOCK_ENABLED)
