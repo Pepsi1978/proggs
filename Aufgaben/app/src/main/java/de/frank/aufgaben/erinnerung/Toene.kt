@@ -115,7 +115,14 @@ object Toene {
     /** Eingebauter Ton, Systemton ("uri:") oder eigene Datei ("datei:") als Quelle des Players. */
     fun setzeQuelle(context: Context, player: MediaPlayer, ton: String) {
         when {
-            ton.startsWith("uri:") -> player.setDataSource(context, Uri.parse(ton.removePrefix("uri:")))
+            // Systemtöne aus dem Medienspeicher können ohne Leserecht scheitern: dann klingt der Standardton statt Stille.
+            ton.startsWith("uri:") -> try {
+                player.setDataSource(context, Uri.parse(ton.removePrefix("uri:")))
+            } catch (x: Exception) {
+                android.util.Log.w("Toene", "Systemton nicht lesbar, Standardton: ${x.message}")
+                player.reset()
+                player.setDataSource(datei(context, "chime").absolutePath)
+            }
             ton.startsWith("datei:") -> {
                 val eigen = File(eigenerOrdner(context), ton.removePrefix("datei:"))
                 // Fehlt die eigene Datei (z. B. nach einer Wiederherstellung), klingt der Standardton.
@@ -125,35 +132,44 @@ object Toene {
         }
     }
 
-    /** Spielt den Ton einmal. [fertig] kommt nach dem Ende oder spätestens nach [maxMs]. */
+    /** Der gerade laufende Ton (Probe, einfache Erinnerung); ein neuer Ton beendet ihn. */
+    private var laufend: (() -> Unit)? = null
+
+    /**
+     * Spielt den Ton einmal, über den Wecker-Kanal und den eingebauten Lautsprecher (siehe [Lautsprecher]).
+     * [fertig] kommt nach dem Ende oder spätestens nach [maxMs]. Auf dem Main-Thread aufrufen.
+     */
     fun spiele(context: Context, ton: String, lautstaerke: Float, maxMs: Long = 9_000, fertig: () -> Unit = {}): MediaPlayer? {
-        return try {
-            val player = MediaPlayer()
-            player.setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build(),
-            )
-            setzeQuelle(context, player, ton)
-            player.setVolume(lautstaerke, lautstaerke)
-            var beendet = false
-            val ende = {
-                if (!beendet) {
-                    beendet = true
-                    runCatching { player.stop() }
-                    runCatching { player.release() }
-                    fertig()
-                }
+        laufend.also { laufend = null }?.invoke()
+        val app = context.applicationContext
+        val zurueck = Lautsprecher.hoerbarMachen(app)
+        val player = MediaPlayer()
+        var beendet = false
+        val ende = {
+            if (!beendet) {
+                beendet = true
+                runCatching { player.stop() }
+                runCatching { player.release() }
+                zurueck()
+                fertig()
             }
+        }
+        return try {
+            laufend = ende
+            // Erst die Quelle, dann die Attribute: Der Rückfall in setzeQuelle setzt den Player zurück.
+            setzeQuelle(app, player, ton)
+            player.setAudioAttributes(Lautsprecher.attribute(sprache = false))
+            player.setVolume(lautstaerke, lautstaerke)
             player.setOnCompletionListener { ende() }
             player.setOnErrorListener { _, _, _ -> ende(); true }
             player.prepare()
+            Lautsprecher.aufGeraet(app, player)
             player.start()
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ ende() }, maxMs)
             player
-        } catch (_: Exception) {
-            fertig()
+        } catch (x: Exception) {
+            android.util.Log.w("Toene", "Ton nicht abspielbar: ${x.message}")
+            ende()
             null
         }
     }
