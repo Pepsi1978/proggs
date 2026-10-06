@@ -3,7 +3,7 @@
 Eine 16 Sekunden lange, nahtlose Schleife aus goldenen Seidenbändern, Goldstaub, weichem Bokeh und
 einem Lichtschleier, gebaut mit [HyperFrames](https://hyperframes.heygen.com) (HTML + GSAP → MP4).
 Die App spielt sie im Design „Schlicht“ stumm hinter allen Bildschirmen ab, auch auf dem
-Weckbildschirm (`app/src/main/java/de/frank/wecker/design/SchlichtBewegung.kt`).
+Weckbildschirm (`app/src/main/java/de/frank/wecker/design/Bewegung.kt`).
 
 | Datei | Inhalt |
 |---|---|

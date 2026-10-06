@@ -206,12 +206,15 @@ Die Wahl ist **unabhängig** von Hell/Dunkel und von der Ausrichtung — jedes D
 und gilt für Weckerliste, Editor, Einstellungen und Weckbildschirm.
 
 - **Schlicht** (Vorgabe) — Gold auf Glas mit den unveränderten Paletten `DunkleGoldPalette` und
-  `HelleGoldPalette`. Seit 1.1.107 mit Motion Graphics (`design/SchlichtBewegung.kt`): Hinter allen
+  `HelleGoldPalette`. Seit 1.1.107 mit Motion Graphics (`design/Bewegung.kt`): Hinter allen
   Seiten und dem Weckbildschirm läuft die **Goldseide**, eine mit HyperFrames gerenderte, nahtlose
   16-Sekunden-Schleife (`design/hyperframes/goldseide`, `res/raw/goldseide_*.mp4`, stumm, ohne Tonspur).
   Dazu ein Lichtlauf über die Kopfkarte, rollende Ziffern mit Goldglanz in Hero- und Weckuhr,
   aufsteigende Karten beim Öffnen einer Seite und ein Goldglanz im Dialogtitel. Bei „Animationen
   entfernen“ oder wenn das Video nicht spielt, bleibt der bisherige `SichtbarerHintergrund`.
+- Seit 1.1.110 haben auch **Morgenruhe** (Morgenlicht), **Traumraum** (Glutnebel) und **Orbit**
+  (Orbitalgitter) je einen eigenen HyperFrames-Hintergrund (`design/hyperframes/README.md`), dazu rollende
+  Ziffern mit Glanz, Lichtläufe über die Kopfkarten, aufsteigende Karten und Glanz im Dialogtitel.
 - **Morgenruhe** — Salbei und Creme am Tag, Tannengrün in der Nacht, Terrakotta als Akzent. Die
   Weckerliste wird zur **Tagesachse**: jede Karte hängt als Station an einer durchgehenden Linie.
   Flache Flächen ohne Glanz, Pillenknöpfe, gestapelte Alarmtasten. Das **Bettmotiv** steht im Kopf.

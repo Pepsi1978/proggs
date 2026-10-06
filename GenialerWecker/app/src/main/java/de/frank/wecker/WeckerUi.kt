@@ -888,8 +888,9 @@ private fun SchmalerHero(
                         daten.breite - HERO_AUSSEN * 2 - 28.dp - textMindest(),
                         uhrGroesse(daten.stufe), zahlSchrift(), zahlGewicht(),
                     )
-                    Text(formatClock(daten.now), fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                        fontSize = groesse, color = gold.primaer, maxLines = 1, softWrap = false)
+                    RollendeUhr(formatClock(daten.now),
+                        androidx.compose.ui.text.TextStyle(fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                            fontSize = groesse, color = gold.primaer))
                 }
                 Column(
                     Modifier.weight(1f).then(
@@ -974,7 +975,9 @@ private fun MorgenruheHero(
                     center = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f), radius = size.maxDimension * 0.6f))
             }
             .then(if (deckkraft > 0f) Modifier.border(1.dp, gold.heroKante.deck(deckkraft), form)
-                .border(1.dp, lichtKanteDeck(if (gold.istDunkel) 0.14f else 0.5f, deckkraft), form) else Modifier)) {
+                .border(1.dp, lichtKanteDeck(if (gold.istDunkel) 0.14f else 0.5f, deckkraft), form) else Modifier)
+            // Morgenlicht, das alle paar Sekunden über die Karte streicht.
+            .glanzLauf(staerke = (if (gold.istDunkel) 0.10f else 0.45f) * deckkraft)) {
             HeroDeko(Modifier.matchParentSize().graphicsLayer { alpha = deckkraft })
             Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
@@ -987,10 +990,14 @@ private fun MorgenruheHero(
                         GedeckelteSchrift {
                             val groesse = passendeUhrGroesse(textBreite, uhrGroesse(daten.stufe),
                                 zahlSchrift(), zahlGewicht())
-                            Text(formatClock(daten.now), Modifier.semantics { heading() },
-                                fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                                fontSize = groesse, color = gold.heroSchrift,
-                                maxLines = 1, softWrap = false)
+                            // Rollende Ziffern, durch die alle paar Sekunden ein Glanz zieht.
+                            RollendeUhr(
+                                formatClock(daten.now),
+                                androidx.compose.ui.text.TextStyle(fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                                    fontSize = groesse, color = gold.heroSchrift),
+                                Modifier.glanzLauf(staerke = 0.6f, farbe = schriftGlanzFarbe(), nurSchrift = true, versatzMs = 350L),
+                                ueberschrift = true,
+                            )
                         }
                     }
                     // Nur das Motiv steht rechts — und nur, wenn dafür wirklich Platz ist.
@@ -1060,6 +1067,9 @@ private fun TraumraumHero(
                 .glanzBogen(deckung = (if (gold.istDunkel) 0.05f else 0.22f) * kuppelDeckkraft)
                 .then(if (kuppelDeckkraft > 0f) Modifier.border(1.dp, gold.heroKante.deck(kuppelDeckkraft), kuppelForm)
                     .border(1.dp, lichtKanteDeck(if (gold.istDunkel) 0.28f else 0.6f, kuppelDeckkraft), kuppelForm) else Modifier)
+                // Ein warmes Streiflicht zieht alle paar Sekunden durch die Kuppel.
+                .glanzLauf(staerke = (if (gold.istDunkel) 0.12f else 0.4f) * kuppelDeckkraft,
+                    farbe = if (gold.istDunkel) gold.akzentWarm else androidx.compose.ui.graphics.Color.White)
                 .padding(top = 14.dp, bottom = versatz + 14.dp, start = 20.dp, end = 20.dp),
         ) {
             // Nachthimmel in der Kuppel: Sterne in zwei Tönen und ein heller Mond — dadurch hat
@@ -1079,10 +1089,14 @@ private fun TraumraumHero(
                     GedeckelteSchrift {
                         val groesse = passendeUhrGroesse(uhrPlatz, uhrGroesse(daten.stufe),
                             zahlSchrift(), zahlGewicht())
-                        Text(formatClock(daten.now), Modifier.semantics { heading() },
-                            fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                            fontSize = groesse, color = gold.heroFuehrung,
-                            maxLines = 1, softWrap = false)
+                        // Rollende Ziffern, durch die alle paar Sekunden ein Glutglanz zieht.
+                        RollendeUhr(
+                            formatClock(daten.now),
+                            androidx.compose.ui.text.TextStyle(fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                                fontSize = groesse, color = gold.heroFuehrung),
+                            Modifier.glanzLauf(staerke = 0.65f, farbe = schriftGlanzFarbe(), nurSchrift = true, versatzMs = 350L),
+                            ueberschrift = true,
+                        )
                     }
                 }
             }
@@ -1183,7 +1197,9 @@ private fun OrbitHero(
             drawRect(Brush.radialGradient(listOf(gold.primaer.copy(alpha = .14f * deckkraft), androidx.compose.ui.graphics.Color.Transparent),
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.5f), radius = size.maxDimension * 0.5f))
         }
-        .then(if (deckkraft > 0f) Modifier.border(1.5f.dp, Brush.sweepGradient(listOf(gold.primaer.heller(0.4f), gold.heroKante, gold.primaer.dunkler(0.2f), gold.heroKante, gold.primaer.heller(0.4f)).map { it.deck(deckkraft) }), form) else Modifier)) {
+        .then(if (deckkraft > 0f) Modifier.border(1.5f.dp, Brush.sweepGradient(listOf(gold.primaer.heller(0.4f), gold.heroKante, gold.primaer.dunkler(0.2f), gold.heroKante, gold.primaer.heller(0.4f)).map { it.deck(deckkraft) }), form) else Modifier)
+        // Ein Abtaststrahl im Signalgrün zieht alle paar Sekunden über das Modul.
+        .glanzLauf(staerke = (if (gold.istDunkel) 0.12f else 0.3f) * deckkraft, farbe = gold.primaer)) {
         HeroDeko(Modifier.matchParentSize().graphicsLayer { alpha = deckkraft })
         Column(Modifier.fillMaxWidth()) {
             // Kopfstreifen: links der Signalbalken, rechts die Statusleuchte.
@@ -1211,10 +1227,14 @@ private fun OrbitHero(
                     GedeckelteSchrift {
                         val groesse = passendeUhrGroesse(uhrPlatz, uhrGroesse(daten.stufe),
                             IdeenSchriftFest, FontWeight.SemiBold)
-                        Text(formatClock(daten.now), Modifier.semantics { heading() },
-                            fontFamily = IdeenSchriftFest, fontWeight = FontWeight.SemiBold,
-                            fontSize = groesse, color = gold.heroFuehrung,
-                            maxLines = 1, softWrap = false)
+                        // Rollende Ziffern wie auf einer Anzeigetafel, dazu ein Signalglanz.
+                        RollendeUhr(
+                            formatClock(daten.now),
+                            androidx.compose.ui.text.TextStyle(fontFamily = IdeenSchriftFest, fontWeight = FontWeight.SemiBold,
+                                fontSize = groesse, color = gold.heroFuehrung),
+                            Modifier.glanzLauf(staerke = 0.7f, farbe = schriftGlanzFarbe(), nurSchrift = true, versatzMs = 350L),
+                            ueberschrift = true,
+                        )
                     }
                     RestzeitSkala(daten, gold.heroFuehrung, if (daten.nextIsSnooze) semantisch.info else gold.akzentWarm,
                         gold.heroKante)
@@ -1817,7 +1837,7 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
         // Fläche; der Titel bleibt darüber.
         // Morgenruhe: Titel, Zusammenfassung und Klapppfeil liegen jetzt **in** der Blase statt
         // darüber. Die Blase ist dafür höher und hat rundum gleichmäßige Abstände.
-        Design.MORGENRUHE -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
+        Design.MORGENRUHE -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth().auftritt(), erhoeht = false) {
             Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp).then(sanftWachsen),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(kopfModifier.heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1832,7 +1852,7 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
             }
         }
         // Orbit: technische Modulkopfzeile mit fester Schrift und Trennlinie im kantigen Modul.
-        Design.ORBIT -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
+        Design.ORBIT -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth().auftritt(), erhoeht = false) {
             Column(Modifier.then(sanftWachsen)) {
                 // Der Klapppfeil ist ein bündiges Segment der Modulkopfzeile: von der oberen bis zur
                 // unteren Kante, durch eine Trennlinie abgesetzt, ohne eigenen Rahmen. So fügt er
@@ -1866,7 +1886,7 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
         Design.TRAUMRAUM -> {
             val material = LocalMaterial.current
             val abschnittForm = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
-            Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp).then(sanftWachsen),
+            Column(Modifier.fillMaxWidth().auftritt().padding(horizontal = 8.dp).then(sanftWachsen),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Innenabstand links wie bei Schlicht: Die Überschriften klebten sonst am Blattrand.
                 Row(kopfModifier.padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -16,7 +16,7 @@ import de.frank.genialeideen.ui.theme.tiefenSchatten
 /**
  * Das gewählte Erscheinungsbild. Es ist unabhängig von Hell/Dunkel und von der Ausrichtung:
  * jedes Design hat beide Modi. [SCHLICHT] ist die Vorgabe: die bisherige Gold-/Glasoptik mit
- * unveränderten Farben, seit 1.1.107 mit bewegter Goldseide dahinter (`SchlichtBewegung.kt`).
+ * unveränderten Farben, seit 1.1.107 mit bewegter Goldseide dahinter (`Bewegung.kt`).
  */
 enum class Design(val id: String, val anzeige: String, val beschreibung: String) {
     SCHLICHT("schlicht", "Schlicht", "Gold auf Glas, dahinter bewegte Goldseide."),

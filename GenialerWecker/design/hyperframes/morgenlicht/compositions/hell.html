@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=720, height=1440" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="morgenlicht.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 720px; height: 1440px; overflow: hidden; background: #F4F1EC; }
+      #leinwand { display: block; width: 720px; height: 1440px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="hell" data-start="0" data-duration="16" data-width="720" data-height="1440">
+      <canvas id="leinwand" class="clip" width="720" height="1440" data-start="0" data-duration="16" data-track-index="0"></canvas>
+    </div>
+    <script>
+      // Morgenruhe hell: Leinen #F4F1EC, Tinte #1F4E63, Messing #8A6A3C — die Palette der App.
+      const tl = morgenlicht({
+        leinwandId: "leinwand", dauer: 16,
+        grund: "#F4F1EC", himmelOben: "#EEF0EE", himmelUnten: "#F7EBDA",
+        mischung: "source-over", glut: "#F2C98A", messing: "#E8B877", licht: "#FFF6E2",
+        horizontAlpha: 0.55, strahlAnzahl: 11, strahlAlpha: 0.35,
+        nebelFarbe: "#FFFFFF",
+        nebel: [
+          { x: 0.0, y: 0.34, lauf: 1, breite: 0.75, hoehe: 0.05, alpha: 0.45, phase: 0.4 },
+          { x: 0.45, y: 0.58, lauf: -1, breite: 0.9, hoehe: 0.06, alpha: 0.5, phase: 2.0 },
+          { x: 0.2, y: 0.8, lauf: 1, breite: 1.0, hoehe: 0.07, alpha: 0.55, phase: 4.1 },
+        ],
+        staubAnzahl: 50, staubAlpha: 0.55, staubFarbe: "#8A6A3C", staubMischung: "source-over",
+        vignette: 0.04,
+      });
+      window.__timelines = window.__timelines || {};
+      window.__timelines["hell"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
