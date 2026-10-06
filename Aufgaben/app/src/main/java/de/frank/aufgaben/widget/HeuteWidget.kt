@@ -235,10 +235,11 @@ class HeuteWidget : GlanceAppWidget() {
     companion object {
         private const val SPRUNG_CODE = 4711
 
-        /** Weckt das Widget, wenn die Jetzt-Linie das nächste Mal weiterspringt (ungenau, ohne Aufwecken). */
+        /** Weckt das Widget, wenn die Jetzt-Linie das nächste Mal weiterspringt (ungenau, ohne Aufwecken). Die Minute
+         *  wird als Uhrzeit gerechnet, nicht als vergangene Zeit ab Mitternacht (Sommerzeit-Umstellung). */
         private fun planeSprung(context: Context, minute: Int) {
             val app = context.applicationContext
-            val zeit = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).plusMinutes(minute.toLong()).toInstant().toEpochMilli() + 1_000
+            val zeit = LocalDate.now().atStartOfDay().plusMinutes(minute.toLong()).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() + 1_000
             app.getSystemService(AlarmManager::class.java).setWindow(AlarmManager.RTC, zeit, 60_000, sprung(app))
         }
 
