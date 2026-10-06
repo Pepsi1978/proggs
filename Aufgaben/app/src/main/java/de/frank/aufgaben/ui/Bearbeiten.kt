@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.sp
 import de.frank.aufgaben.data.Prioritaet
 import de.frank.aufgaben.data.Schritt
 import de.frank.aufgaben.data.Tage
+import de.frank.aufgaben.data.TITEL_MAX
 import de.frank.aufgaben.data.Wiederholung
 import de.frank.aufgaben.ui.theme.Chip
 import de.frank.aufgaben.ui.theme.LocalFarben
@@ -140,13 +141,19 @@ fun BearbeitenBildschirm(vm: AppViewModel) {
                     Box {
                         if (vm.eTitel.isEmpty()) Text("Überschrift (optional)", color = f.textSchwach, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         BasicTextField(
-                            vm.eTitel, { vm.eTitel = it },
+                            // Höchstens TITEL_MAX Zeichen, damit der Titel im Widget ganz zu sehen ist. Ältere, längere
+                            // Titel lassen sich weiter kürzen, aber nicht verlängern.
+                            vm.eTitel, { neu -> vm.eTitel = if (neu.length <= TITEL_MAX || neu.length < vm.eTitel.length) neu else neu.take(maxOf(TITEL_MAX, vm.eTitel.length)) },
                             textStyle = TextStyle(color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold),
                             cursorBrush = SolidColor(f.primaer), singleLine = false, maxLines = 3,
                             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
+                    if (vm.eTitel.isNotBlank()) Text(
+                        "${vm.eTitel.length}/$TITEL_MAX Zeichen",
+                        color = if (vm.eTitel.length > TITEL_MAX) f.primaer else f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp),
+                    )
                     if (vm.eTitel.isBlank()) Text(
                         if (vm.kiVerbunden) "✨ Ohne Überschrift erzeugt die KI einen passenden Titel." else "Ohne Überschrift werden die ersten Wörter zum Titel.",
                         color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp),

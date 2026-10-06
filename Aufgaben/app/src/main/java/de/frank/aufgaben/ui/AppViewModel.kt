@@ -23,6 +23,7 @@ import de.frank.aufgaben.data.Prioritaet
 import de.frank.aufgaben.data.Schritt
 import de.frank.aufgaben.data.Tage
 import de.frank.aufgaben.data.Wiederholung
+import de.frank.aufgaben.data.kurzerTitel
 import de.frank.aufgaben.erinnerung.Toene
 import de.frank.aufgaben.ki.AufgabenKi
 import de.frank.aufgaben.ki.notTitel
@@ -261,7 +262,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val kiTitel = titelEingabe.isEmpty() && text.isNotEmpty()
-        val titel = titelEingabe.ifEmpty { if (text.isNotEmpty()) notTitel(text) else eSchritte.first().text }
+        val titel = titelEingabe.ifEmpty { if (text.isNotEmpty()) notTitel(text) else kurzerTitel(eSchritte.first().text) }
         val prio = if (eTag != null && ePrio == Prioritaet.SPAETER) Prioritaet.MITTEL else ePrio
         val basis = editorQuelle ?: Aufgabe(titel = titel)
         val neu = basis.copy(
@@ -283,7 +284,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun titelErzeugen(id: Long, text: String) {
         viewModelScope.launch {
             runCatching { ki.titel(text) }.onSuccess { t ->
-                if (t.isNotBlank()) repo.eine(id)?.let { repo.speichere(it.copy(titel = t, titelVonKi = true)) }
+                if (t.isNotBlank()) repo.eine(id)?.let { repo.speichere(it.copy(titel = kurzerTitel(t), titelVonKi = true)) }
             }
         }
     }
