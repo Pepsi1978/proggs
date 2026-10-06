@@ -144,7 +144,8 @@ internal fun MaterialFlaeche(
             // Deckung 0 aus. Orbit führt bewusst keine Körnung und darf sie nicht bezahlen.
             .then(if (koernt && deckkraft > 0f) Modifier.koernung(material.koernungAlpha * deckkraft) else Modifier)
             .then(if (vertieft) Modifier.innenSchatten(koerperForm, material.innenSchattenAlpha) else Modifier)
-            .then(if (material.nut) Modifier.nut(koerperForm) else Modifier)
+            // Orbits Nut gehört zur Fläche und wird mit der Kartendeckkraft schwächer.
+            .then(if (material.nut && deckkraft > 0f) Modifier.nut(koerperForm, alpha = 0.25f * deckkraft) else Modifier)
             .then(
                 // Der Seitenhintergrund bekommt keine Kante; ein 1-dp-Strich rings um den
                 // ganzen Bildschirm wäre ein Rahmen, kein Material.
