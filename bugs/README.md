@@ -232,3 +232,7 @@ unbemerkt ohne Erzwingung bleibt. Details in [`SYSTEM.md`](SYSTEM.md).
 ## PCIe-Grafikkarten und BIOS-Diagnose (20.09.2026)
 
 [PCIe-Grafikkarten: Volltext](desktop/pcie-grafikkarten.md) · [Kurzcheck](desktop/pcie-grafikkarten-kurzcheck.md). Maximalfähigkeit und aktive Verbindung, Lastvergleich, exakte MSI-DDR4-BIOS-Zuordnung.
+
+## Einmalige Recherchebelege
+
+- [Halo: Campaign Evolved / Arc 140V: Auswertungsfallen](gaming/recherchen/halo-campaign-evolved-arc-140v.md) — kein bestätigter neuer Spielbug, Grenzen der einmaligen Recherche.

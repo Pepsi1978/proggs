@@ -112,3 +112,7 @@ best-practices/
 ## Windows-CLIs über WSL/tmux (22.09.2026)
 
 [WSL/tmux: Volltext](desktop/openlauncher-windows-tmux.md) · [Kurzcheck](desktop/openlauncher-windows-tmux-kurzcheck.md). Getrennte Argumente, Instanz-Interop für Panes, Halteprozess, CIM-Bestätigung, kontrollierte Wiederholung.
+
+## Einmalige Recherchebelege
+
+- [Halo: Campaign Evolved auf Intel Arc 140V](gaming/recherchen/halo-campaign-evolved-arc-140v.md) — Spiel-/Hardware-Abgleich, keine neue allgemeine Hook-Regel.
