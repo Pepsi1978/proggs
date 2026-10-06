@@ -36,7 +36,7 @@ enum class Wiederholung(val anzeige: String) {
 data class Schritt(val text: String, val erledigt: Boolean)
 
 /** Längster Titel in Zeichen (mit Leerzeichen): So passt er im Widget neben die Uhrzeit. */
-const val TITEL_MAX = 26
+const val TITEL_MAX = 35
 
 /**
  * Kürzt einen Titel auf [TITEL_MAX] Zeichen, möglichst an einer Wortgrenze und ohne Satzzeichen am Ende.
