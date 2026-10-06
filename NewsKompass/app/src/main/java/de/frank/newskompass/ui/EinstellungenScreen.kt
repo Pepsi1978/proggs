@@ -423,7 +423,6 @@ private fun ThemenKarte(
     loesche: () -> Unit,
 ) {
     var text by remember(thema.id) { mutableStateOf(thema.text) }
-    var bereichOffen by remember(thema.id) { mutableStateOf(false) }
     // Wie in Perfect Moment: „Zurück“ holt den Text vor dem letzten Einsprechen oder der KI-Fassung zurück;
     // jeder KI-Druck arbeitet vom eigenen Original aus und liefert eine neue Formulierung.
     var rueckgaengig by remember(thema.id) { mutableStateOf<String?>(null) }
@@ -628,12 +627,11 @@ private fun ThemenKarte(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                AssistChip(
-                    onClick = { bereichOffen = true },
-                    label = { Text(meldungsBereich(thema.minMeldungen, thema.maxMeldungen)) },
-                    leadingIcon = { Icon(Icons.Rounded.Tune, null, Modifier.size(AssistChipDefaults.IconSize)) },
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.padding(start = 90.dp),
+                MeldungsBereichRegler(
+                    min = thema.minMeldungen,
+                    max = thema.maxMeldungen,
+                    aendere = aendereBereich,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
                 )
                 NachrichtenAlterRegler(
                     tage = thema.maxAlterTage,
@@ -668,17 +666,6 @@ private fun ThemenKarte(
                 }) { Text("Löschen", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { loeschenFragen = false }) { Text("Abbrechen") } },
-        )
-    }
-    if (bereichOffen) {
-        MeldungsBereichDialog(
-            min = thema.minMeldungen,
-            max = thema.maxMeldungen,
-            schliessen = { bereichOffen = false },
-            uebernehmen = { min, max ->
-                bereichOffen = false
-                aendereBereich(min, max)
-            },
         )
     }
 }
@@ -941,34 +928,56 @@ private fun meldungsBereich(min: Int, max: Int): String =
     if (min == max) "Genau $max ${if (max == 1) "Meldung" else "Meldungen"}" else "$min–$max Meldungen"
 
 @Composable
-private fun MeldungsBereichDialog(min: Int, max: Int, schliessen: () -> Unit, uebernehmen: (Int, Int) -> Unit) {
-    var bereich by remember { mutableStateOf(min.toFloat()..max.toFloat()) }
+private fun MeldungsBereichRegler(
+    min: Int,
+    max: Int,
+    aendere: (Int, Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Wie beim Nachrichtenalter: während des Schiebens lokal anzeigen, beim Loslassen speichern.
+    var bereich by remember(min, max) { mutableStateOf(min.toFloat()..max.toFloat()) }
     val neuMin = bereich.start.roundToInt()
     val neuMax = bereich.endInclusive.roundToInt()
-    AlertDialog(
-        onDismissRequest = schliessen,
-        title = { Text("Meldungen in diesem Block") },
-        text = {
-            Column {
-                Text(meldungsBereich(neuMin, neuMax), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                RangeSlider(
-                    value = bereich,
-                    onValueChange = { bereich = it },
-                    valueRange = Thema.GRENZE_MIN.toFloat()..Thema.GRENZE_MAX.toFloat(),
-                    steps = Thema.GRENZE_MAX - Thema.GRENZE_MIN - 1,
-                )
-                Text(
-                    "Der Höchstwert gilt fest. Der Mindestwert ist ein Ziel: Gibt es in 48 Stunden nicht genug Neues, " +
-                        "füllt Codex nur mit belegten Meldungen der letzten sieben Tage auf und sagt, wann sie passiert sind — sonst bleibt der Block kürzer.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+    val farben = MaterialTheme.colorScheme
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = farben.surfaceContainerHigh,
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Meldungen in diesem Block", style = MaterialTheme.typography.titleMedium)
+            Text(
+                meldungsBereich(neuMin, neuMax),
+                style = MaterialTheme.typography.titleSmall,
+                color = farben.primary,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            RangeSlider(
+                value = bereich,
+                onValueChange = { bereich = it },
+                onValueChangeFinished = { if (neuMin != min || neuMax != max) aendere(neuMin, neuMax) },
+                valueRange = Thema.GRENZE_MIN.toFloat()..Thema.GRENZE_MAX.toFloat(),
+                steps = Thema.GRENZE_MAX - Thema.GRENZE_MIN - 1,
+                modifier = Modifier.fillMaxWidth().semantics {
+                    contentDescription = "Mindest- und Höchstzahl der Meldungen für dieses Thema"
+                    stateDescription = meldungsBereich(neuMin, neuMax)
+                },
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("1 Meldung", style = MaterialTheme.typography.labelMedium, color = farben.onSurfaceVariant)
+                Text("15 Meldungen", style = MaterialTheme.typography.labelMedium, color = farben.onSurfaceVariant)
             }
-        },
-        confirmButton = { TextButton(onClick = { uebernehmen(neuMin, neuMax) }) { Text("Übernehmen") } },
-        dismissButton = { TextButton(onClick = schliessen) { Text("Abbrechen") } },
-    )
+            Text(
+                "Linker Griff: Mindestzahl. Rechter Griff: Höchstzahl. " +
+                    "Der Höchstwert gilt fest, der Mindestwert ist ein Ziel. " +
+                    "Gibt es innerhalb des gewählten Nachrichtenalters nicht genug Neues, bleibt der Block kürzer. " +
+                    "Gilt ab der nächsten Aktualisierung – automatisch und per Hand.",
+                style = MaterialTheme.typography.bodySmall,
+                color = farben.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
+    }
 }
 
 // --- Codex -------------------------------------------------------------------------------
