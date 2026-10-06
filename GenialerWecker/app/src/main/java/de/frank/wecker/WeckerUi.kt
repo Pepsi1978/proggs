@@ -856,12 +856,19 @@ private fun HeroKarte(inhalt: @Composable () -> Unit) {
                 ),
             )
             .glanzBogen(deckung = (if (gold.istDunkel) 0.06f else 0.14f) * deckkraft)
-            // Bei 0 Prozent entfällt die Kante ganz, auch ihr dunkler Unterrand.
-            .then(if (deckkraft > 0f) Modifier.border(1.dp,
-                lichtKante(staerke = (if (gold.istDunkel) 0.16f else 0.55f) * deckkraft), form) else Modifier)
+            // Dieselbe Lichtkante wie `lichtKante`, nur werden heller Ober- und dunkler Unterrand
+            // gemeinsam mit der Deckkraft schwächer; bei 0 Prozent entfällt die Kante ganz.
+            .then(if (deckkraft >= 1f) Modifier.border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.16f else 0.55f), form)
+                else if (deckkraft > 0f) Modifier.border(1.dp, Brush.verticalGradient(listOf(
+                    androidx.compose.ui.graphics.Color.White.copy(alpha = (if (gold.istDunkel) 0.16f else 0.55f) * deckkraft),
+                    androidx.compose.ui.graphics.Color.Transparent,
+                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.28f * deckkraft),
+                )), form)
+                else Modifier)
             .glanzLauf(staerke = (if (gold.istDunkel) 0.10f else 0.42f) * deckkraft),
     ) {
-        HeroDeko(Modifier.matchParentSize())
+        // Die Funkelsterne gehören zur Karte, nicht zum Inhalt: Sie verblassen mit ihr.
+        HeroDeko(Modifier.matchParentSize().graphicsLayer { alpha = deckkraft })
         inhalt()
     }
 }
