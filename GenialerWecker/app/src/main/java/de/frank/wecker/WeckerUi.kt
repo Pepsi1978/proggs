@@ -116,6 +116,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -1225,6 +1226,9 @@ private fun OrbitHero(
                 Sonnensystem(Modifier.matchParentSize().clipToBounds())
                 Column(Modifier.fillMaxWidth().padding(start = textStart, end = 12.dp, top = 12.dp, bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(5.dp), horizontalAlignment = Alignment.End) {
+                    // Die Skala ist genau so breit wie die Uhrzeit darüber. Vorher lief sie über die
+                    // ganze Textspalte und ragte links ins Sonnensystem; jetzt bleibt es frei sichtbar.
+                    var uhrBreite by remember { mutableIntStateOf(0) }
                     GedeckelteSchrift {
                         val groesse = passendeUhrGroesse(uhrPlatz, uhrGroesse(daten.stufe),
                             IdeenSchriftFest, FontWeight.SemiBold)
@@ -1233,12 +1237,14 @@ private fun OrbitHero(
                             formatClock(daten.now),
                             androidx.compose.ui.text.TextStyle(fontFamily = IdeenSchriftFest, fontWeight = FontWeight.SemiBold,
                                 fontSize = groesse, color = gold.heroFuehrung),
-                            Modifier.glanzLauf(staerke = 0.7f, farbe = schriftGlanzFarbe(), nurSchrift = true, versatzMs = 350L),
+                            Modifier.onSizeChanged { uhrBreite = it.width }
+                                .glanzLauf(staerke = 0.7f, farbe = schriftGlanzFarbe(), nurSchrift = true, versatzMs = 350L),
                             ueberschrift = true,
                         )
                     }
                     RestzeitSkala(daten, gold.heroFuehrung, if (daten.nextIsSnooze) semantisch.info else gold.akzentWarm,
-                        gold.heroKante)
+                        gold.heroKante,
+                        Modifier.width(with(LocalDensity.current) { uhrBreite.toDp() }))
                     OrbitZeile("TERMIN", if (daten.next == null) "—"
                         else terminAnzeige(daten.now, daten.next).einzeilig, gold, oeffnen, daten.nextAlarm != null)
                     OrbitZeile("NAME", daten.nextName ?: "—", gold, oeffnen, daten.nextAlarm != null)
@@ -1304,9 +1310,11 @@ private fun OrbitZeile(
 private fun RestzeitSkala(
     daten: HeroDaten, spurFarbe: androidx.compose.ui.graphics.Color,
     fuellFarbe: androidx.compose.ui.graphics.Color, kante: androidx.compose.ui.graphics.Color,
+    /** Die Breite gibt der Aufrufer vor; im Orbit-Hero ist das die Breite der Uhrzeit. */
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     val anteil = daten.tagesAnteil()
-    Canvas(Modifier.fillMaxWidth().height(4.dp).clearAndSetSemantics { }) {
+    Canvas(modifier.height(4.dp).clearAndSetSemantics { }) {
         drawRect(kante, size = size)
         if (anteil > 0f) drawRect(fuellFarbe, size = androidx.compose.ui.geometry.Size(size.width * anteil, size.height))
         // Teilstriche alle sechs Stunden — sie geben der Skala erst ihren Maßstab.
