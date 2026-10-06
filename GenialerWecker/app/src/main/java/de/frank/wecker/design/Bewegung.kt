@@ -54,7 +54,8 @@ import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.sin
 
-// Die Bewegungssprache von „Schlicht“: ein bewegtes Bild aus HyperFrames als Hintergrund, dazu
+// Die Bewegungssprache aller vier Designs: je ein bewegtes Bild aus HyperFrames als Hintergrund
+// (Schlicht: Goldseide, Morgenruhe: Morgenlicht, Traumraum: Glutnebel, Orbit: Orbitalgitter), dazu
 // wenige, ruhige Bewegungen in der Oberfläche — Licht, das über Glas läuft, Ziffern, die rollen,
 // und Karten, die beim Öffnen einer Seite nacheinander aufsteigen. Alles steht still, sobald das
 // System „Animationen entfernen“ meldet oder der Bildschirm nicht im Vordergrund ist.
@@ -68,29 +69,63 @@ import kotlin.math.sin
  * Bei reduzierter Bewegung oder einem Fehler beim Abspielen bleibt es beim bisherigen Hintergrund.
  */
 @Composable
-fun GoldseideHintergrund() {
+fun GoldseideHintergrund() = BewegtbildHintergrund(
+    dunkel = R.raw.goldseide_dunkel, hell = R.raw.goldseide_hell,
+    ersatz = { SichtbarerHintergrund() },
+)
+
+/**
+ * Ein bewegtes HyperFrames-Bild als Seitenhintergrund, für jedes Design dasselbe Gerüst.
+ *
+ * @param ersatz der bisherige Hintergrund des Designs. Er liegt bis zum ersten Videobild darunter,
+ *   bleibt bei reduzierter Bewegung, im Hintergrund oder bei einem Abspielfehler stehen und wird
+ *   abgelöst, sobald das Video eingeblendet ist — es laufen nie zwei volle Hintergründe zugleich.
+ * @param darueber was das Design selbst über das Video zeichnet (Traumraums Funkelsterne, Orbits
+ *   Zeichenregen). Es liegt immer obenauf, mit oder ohne Video.
+ */
+@Composable
+fun BewegtbildHintergrund(
+    dunkel: Int,
+    hell: Int,
+    ersatz: @Composable () -> Unit,
+    darueber: @Composable () -> Unit = {},
+) {
     val gold = LocalGold.current
     val reduziert = LocalBewegungReduziert.current
     val sichtbar = rememberResumed()
     var fehler by remember { mutableStateOf(false) }
     if (reduziert || fehler || !sichtbar) {
-        SichtbarerHintergrund()
+        Box(Modifier.fillMaxSize()) {
+            ersatz()
+            darueber()
+        }
         return
     }
-    val quelle = if (gold.istDunkel) R.raw.goldseide_dunkel else R.raw.goldseide_hell
+    val quelle = if (gold.istDunkel) dunkel else hell
     // Je Modus ein eigener Spieler; beim Wechsel Hell/Dunkel beginnt die Einblendung von vorn.
     key(quelle) {
         var laeuft by remember { mutableStateOf(false) }
         Box(Modifier.fillMaxSize()) {
-            if (!laeuft) SichtbarerHintergrund()
+            if (!laeuft) ersatz()
             GoldseideVideo(
                 quelle = quelle,
                 aufEingeblendet = { laeuft = true },
                 aufFehler = { fehler = true },
                 modifier = Modifier.fillMaxSize(),
             )
+            darueber()
         }
     }
+}
+
+/**
+ * Die Farbe des Glanzes, der durch Goldschrift und Uhrziffern zieht: im Dunkeln ein fast weißer
+ * Ton des Designs, im Hellen dessen warmer Akzent — so bleibt der Lauf auf jedem Grund sichtbar.
+ */
+@Composable
+fun schriftGlanzFarbe(): Color {
+    val gold = LocalGold.current
+    return if (gold.istDunkel) androidx.compose.ui.graphics.lerp(gold.primaer, Color.White, 0.7f) else gold.akzentWarm
 }
 
 /**
@@ -309,14 +344,13 @@ val LocalAuftrittsFolge = staticCompositionLocalOf<AuftrittsFolge?> { null }
 
 /**
  * Eine Karte steigt beim ersten Aufbau der Seite weich auf: Sie blendet ein, gleitet 18 dp hoch und
- * wächst von 97 auf 100 Prozent. Nur in Schlicht, nur einmal je Karte.
+ * wächst von 97 auf 100 Prozent. In allen Designs, nur einmal je Karte.
  */
 fun Modifier.auftritt(): Modifier = composed {
-    val schlicht = LocalDesignTokens.current.design == Design.SCHLICHT
     val reduziert = LocalBewegungReduziert.current
     val folge = LocalAuftrittsFolge.current
     // Einmal beim ersten Zusammensetzen der Karte entschieden, nie wieder.
-    val platz = remember { if (schlicht && !reduziert) folge?.platz() else null }
+    val platz = remember { if (!reduziert) folge?.platz() else null }
     if (platz == null) return@composed Modifier
     val wert = remember { Animatable(0f) }
     LaunchedEffect(Unit) {

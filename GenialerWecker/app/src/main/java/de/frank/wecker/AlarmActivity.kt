@@ -46,6 +46,7 @@ import de.frank.wecker.design.Design
 import de.frank.wecker.design.LocalGestalt
 import de.frank.wecker.design.RollendeUhr
 import de.frank.wecker.design.glanzLauf
+import de.frank.wecker.design.schriftGlanzFarbe
 import de.frank.wecker.design.WeckerTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -442,9 +443,10 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
                 if (figur >= 90.dp) Wecker3DFigur(now, figur, wackelnd)
                 Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
                 // Genau der Stil, mit dem gemessen wurde — dadurch passt die Uhrzeit nachweislich.
-                Text(formatClock(now), maxLines = 1, softWrap = false,
-                    style = uhrStil(contentWidth - 40.dp, 88f, zahlSchrift(),
-                        androidx.compose.ui.text.font.FontWeight.Bold, gold.primaer))
+                // Rollende Ziffern mit Glutglanz, wie im Kopf der Weckerliste.
+                RollendeUhr(formatClock(now), uhrStil(contentWidth - 40.dp, 88f, zahlSchrift(),
+                        androidx.compose.ui.text.font.FontWeight.Bold, gold.primaer),
+                    Modifier.glanzLauf(staerke = 0.7f, farbe = schriftGlanzFarbe(), nurSchrift = true))
                 Text(name, style = MaterialTheme.typography.headlineSmall,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
@@ -455,9 +457,10 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (figur >= 90.dp) Wecker3DFigur(now, figur, wackelnd)
                 Text(gruss(now).uppercase(java.util.Locale.GERMAN), color = gold.primaer, letterSpacing = 3.sp, style = MaterialTheme.typography.labelMedium)
-                Text(formatClock(now), maxLines = 1, softWrap = false,
-                    style = uhrStil(contentWidth, 76f, zahlSchrift(),
-                        androidx.compose.ui.text.font.FontWeight.Light, gold.primaer))
+                // Rollende Ziffern mit Morgenglanz.
+                RollendeUhr(formatClock(now), uhrStil(contentWidth, 76f, zahlSchrift(),
+                        androidx.compose.ui.text.font.FontWeight.Light, gold.primaer),
+                    Modifier.glanzLauf(staerke = 0.6f, farbe = schriftGlanzFarbe(), nurSchrift = true))
                 Text(name, style = MaterialTheme.typography.headlineSmall,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
@@ -473,9 +476,10 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
                 }
                 HorizontalDivider(color = gold.rahmen)
                 if (figur >= 90.dp) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Wecker3DFigur(now, figur, wackelnd) }
-                Text(formatClock(now), maxLines = 1, softWrap = false,
-                    style = uhrStil(contentWidth, 80f, zahlSchrift(),
-                        androidx.compose.ui.text.font.FontWeight.SemiBold, gold.primaer))
+                // Rollende Ziffern wie auf einer Anzeigetafel, dazu ein Signalglanz.
+                RollendeUhr(formatClock(now), uhrStil(contentWidth, 80f, zahlSchrift(),
+                        androidx.compose.ui.text.font.FontWeight.SemiBold, gold.primaer),
+                    Modifier.glanzLauf(staerke = 0.7f, farbe = schriftGlanzFarbe(), nurSchrift = true))
                 Text(name, style = MaterialTheme.typography.titleLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }

@@ -231,18 +231,29 @@ object SchlichtGestalt : WeckerGestalt {
  * schwebenden Goldlichts, dazu eine sehr zurückhaltende Vignette. Das Bettmotiv gehört sichtbar dazu.
  */
 object MorgenruheGestalt : WeckerGestalt {
+    /**
+     * Seit 1.1.110 das bewegte Morgenlicht aus HyperFrames (`design/hyperframes/morgenlicht`):
+     * dämmernder Horizont, Sonnenstrahlen, ziehende Nebelbänder, Blütenstaub. Der sanfte Verlauf
+     * bleibt als Ersatz, bis das erste Videobild steht oder wenn Bewegung reduziert ist.
+     */
     @Composable override fun Hintergrund(modifier: Modifier) {
         val gold = LocalGold.current
-        Box(
-            Modifier.fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(gold.hintergrund, gold.flaecheErhoeht.copy(alpha = .55f), gold.hintergrund),
-                    ),
+        val vignette = LocalMaterial.current.vignetteAlpha
+        BewegtbildHintergrund(
+            dunkel = R.raw.morgenlicht_dunkel, hell = R.raw.morgenlicht_hell,
+            ersatz = {
+                Box(
+                    Modifier.fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(gold.hintergrund, gold.flaecheErhoeht.copy(alpha = .55f), gold.hintergrund),
+                            ),
+                        )
+                        // Die Wölbung, auf der die Flächen erst aufliegen. Zuletzt, damit sie über dem
+                        // Verlauf liegt und nicht unter ihm verschwindet.
+                        .vignette(vignette),
                 )
-                // Die Wölbung, auf der die Flächen erst aufliegen. Zuletzt, damit sie über dem
-                // Verlauf liegt und nicht unter ihm verschwindet.
-                .vignette(LocalMaterial.current.vignetteAlpha),
+            },
         )
     }
 
@@ -275,8 +286,33 @@ object MorgenruheGestalt : WeckerGestalt {
  * Schein von oben, die tiefste Vignette der vier Designs. Das Kissenmotiv sitzt im Kopfbereich.
  */
 object TraumraumGestalt : WeckerGestalt {
+    /**
+     * Seit 1.1.110 der bewegte Glutnebel aus HyperFrames (`design/hyperframes/glutnebel`): kreisende
+     * Glutwolken, aufsteigende Funken, Sternschnuppen. Die funkelnden Sterne zeichnet die App weiter
+     * selbst darüber; der bisherige ruhige Grund bleibt als Ersatz.
+     */
     @Composable override fun Hintergrund(modifier: Modifier) {
         val gold = LocalGold.current
+        val vignette = LocalMaterial.current.vignetteAlpha
+        BewegtbildHintergrund(
+            dunkel = R.raw.glutnebel_dunkel, hell = R.raw.glutnebel_hell,
+            ersatz = { TraumraumGrund(gold, vignette) },
+            darueber = {
+                // Überall im Hintergrund leuchten Sterne auf und verlöschen wieder, hell wie dunkel.
+                FunkelHimmel(
+                    Modifier.fillMaxSize(),
+                    stern = if (gold.istDunkel) Color(0xFFFFF4E0) else gold.primaer,
+                    akzent = if (gold.istDunkel) gold.primaer else gold.akzentWarm,
+                    dichte = 0.9f,
+                    satelliten = true,
+                    staerke = if (gold.istDunkel) 0.85f else 0.7f,
+                )
+            },
+        )
+    }
+
+    /** Der ruhige Grund ohne Video: warme Fläche, Glutkuppel oben, tiefe Vignette. */
+    @Composable private fun TraumraumGrund(gold: de.frank.genialeideen.ui.theme.GoldPalette, vignette: Float) {
         Box(
             Modifier.fillMaxSize()
                 .background(gold.hintergrund)
@@ -292,18 +328,8 @@ object TraumraumGestalt : WeckerGestalt {
                 )
                 // Die Glutkuppel bleibt oben, die Ecken sinken weg — daher der höchste Wert
                 // der vier Designs (28 Prozent im Dunkeln).
-                .vignette(LocalMaterial.current.vignetteAlpha),
-        ) {
-            // Überall im Hintergrund leuchten Sterne auf und verlöschen wieder, hell wie dunkel.
-            FunkelHimmel(
-                Modifier.fillMaxSize(),
-                stern = if (gold.istDunkel) Color(0xFFFFF4E0) else gold.primaer,
-                akzent = if (gold.istDunkel) gold.primaer else gold.akzentWarm,
-                dichte = 0.9f,
-                satelliten = true,
-                staerke = if (gold.istDunkel) 0.85f else 0.7f,
-            )
-        }
+                .vignette(vignette),
+        )
     }
 
     /**
@@ -355,15 +381,20 @@ object TraumraumGestalt : WeckerGestalt {
  * Metall reflektiert, es streut nicht.
  */
 object OrbitGestalt : WeckerGestalt {
+    /**
+     * Seit 1.1.110 das bewegte Orbitalgitter aus HyperFrames (`design/hyperframes/orbitalgitter`):
+     * Satelliten auf geneigten Bahnen, Radarstrahl, perspektivisches Gitter, Abtastlinie. Der
+     * Zeichenregen der App liegt weiter obenauf; die ruhige Tafel bleibt als Ersatz.
+     */
     @Composable override fun Hintergrund(modifier: Modifier) {
-        Box(
-            Modifier.fillMaxSize()
-                .background(LocalGold.current.hintergrund)
-                .vignette(LocalMaterial.current.vignetteAlpha),
-        ) {
-            // Fließende Zeichen wie in „Matrix“, aber in Orbits Eisblau statt Knallgrün.
-            ZeichenRegen(Modifier.fillMaxSize())
-        }
+        val grund = LocalGold.current.hintergrund
+        val vignette = LocalMaterial.current.vignetteAlpha
+        BewegtbildHintergrund(
+            dunkel = R.raw.orbitalgitter_dunkel, hell = R.raw.orbitalgitter_hell,
+            ersatz = { Box(Modifier.fillMaxSize().background(grund).vignette(vignette)) },
+            // Fließende Zeichen wie in „Matrix“ in Orbits Grün.
+            darueber = { ZeichenRegen(Modifier.fillMaxSize()) },
+        )
     }
 
     /**
