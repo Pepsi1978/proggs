@@ -58,6 +58,20 @@ class SecureSettings(context: Context) : Closeable {
     private val _designFlow = MutableStateFlow(design)
     val designFlow: StateFlow<String> = _designFlow.asStateFlow()
 
+    /**
+     * Deckkraft der Karten im Design „Schlicht“ in Prozent: 100 = voll deckend wie bisher,
+     * 0 = ganz durchsichtig, nur Schrift und Bedienelemente stehen auf dem Hintergrund.
+     */
+    var kartenDeckkraft: Int
+        get() = (preferences?.getInt(Keys.KARTEN_DECKKRAFT, Defaults.KARTEN_DECKKRAFT) ?: Defaults.KARTEN_DECKKRAFT).coerceIn(0, 100)
+        set(value) {
+            val normalized = value.coerceIn(0, 100)
+            preferences?.edit()?.putInt(Keys.KARTEN_DECKKRAFT, normalized)?.apply()
+            _kartenDeckkraftFlow.value = normalized
+        }
+    private val _kartenDeckkraftFlow = MutableStateFlow(kartenDeckkraft)
+    val kartenDeckkraftFlow: StateFlow<Int> = _kartenDeckkraftFlow.asStateFlow()
+
     private val _appLockEnabledFlow = MutableStateFlow(
         preferences?.getBoolean(Keys.APP_LOCK_ENABLED, Defaults.APP_LOCK_ENABLED)
             ?: Defaults.APP_LOCK_ENABLED,
@@ -336,6 +350,7 @@ class SecureSettings(context: Context) : Closeable {
         const val THEME = "theme"
         const val AUSRICHTUNG = "ausrichtung"
         const val DESIGN = "design"
+        const val KARTEN_DECKKRAFT = "karten_deckkraft"
         const val SCHRIFTGROESSE = "schriftgroesse"
         const val APP_LOCK_ENABLED = "app_lock_enabled"
         const val APP_LOCK_DELAY = "app_lock_delay_minutes"
@@ -358,6 +373,7 @@ class SecureSettings(context: Context) : Closeable {
         const val THEME = "light"
         const val AUSRICHTUNG = "automatisch"
         const val DESIGN = "schlicht"
+        const val KARTEN_DECKKRAFT = 100
         const val APP_LOCK_ENABLED = false
         const val APP_LOCK_DELAY = 1
     }

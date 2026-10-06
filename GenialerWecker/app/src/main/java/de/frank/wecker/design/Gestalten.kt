@@ -72,6 +72,12 @@ internal fun MaterialFlaeche(
     val gold = LocalGold.current
     val material = LocalMaterial.current
     val tokens = LocalDesignTokens.current
+    // Nur die Kartenebenen werden durchsichtig; Knöpfe, Eingabefelder und Dialoge bleiben deckend,
+    // sonst wären Bedienelemente und Fragen auf dem bewegten Hintergrund schlecht zu lesen.
+    val deckkraft = when (ebene) {
+        Ebene.ABSCHNITT, Ebene.KARTE, Ebene.HERO -> LocalKartenDeckkraft.current
+        else -> 1f
+    }
 
     val koerperForm = form ?: RoundedCornerShape(
         when (ebene) {
@@ -88,7 +94,9 @@ internal fun MaterialFlaeche(
         Ebene.ABSCHNITT, Ebene.KARTE -> gold.flaeche
         Ebene.HERO, Ebene.DIALOG, Ebene.KNOPF -> gold.flaecheErhoeht
     }
-    val hoehe = if (!material.schatten) 0.dp else when (ebene) {
+    // Unter einer halb durchsichtigen Karte schiene der Schatten als dunkler Fleck durch. Er wird
+    // deshalb mit der Deckkraft schwächer und verschwindet bei 0 ganz.
+    val hoehe = if (!material.schatten || deckkraft <= 0f) 0.dp else when (ebene) {
         Ebene.HINTERGRUND, Ebene.VERTIEFT -> 0.dp
         Ebene.ABSCHNITT -> Hoehe.kontakt
         Ebene.KARTE, Ebene.KNOPF -> Hoehe.karte
@@ -100,8 +108,11 @@ internal fun MaterialFlaeche(
     val grossflaeche = ebene == Ebene.HERO || ebene == Ebene.DIALOG
     // Der doppelte Schatten (Kontakt- plus Umgebungsschatten) kostet eine zweite Schattenebene
     // und bleibt deshalb den wenigen großen Flächen vorbehalten, die nie in einer Liste stehen.
-    val doppelterSchatten = grossflaeche && !inListe
-    val schattenFarbe = material.schattenFarbe ?: Color.Black
+    // Der doppelte Schatten setzt seine Deckung fest; bei durchsichtigen Karten nimmt deshalb der
+    // einfache Schatten seinen Platz ein, dessen Farbe mit der Deckkraft schwächer wird.
+    val doppelterSchatten = grossflaeche && !inListe && deckkraft >= 1f
+    val schattenGrund = material.schattenFarbe ?: Color.Black
+    val schattenFarbe = schattenGrund.copy(alpha = schattenGrund.alpha * deckkraft * deckkraft)
     val koernt = grossflaeche && !inListe && material.koernungAlpha > 0f
 
     Box(
@@ -115,23 +126,23 @@ internal fun MaterialFlaeche(
                     else -> Modifier.shadow(
                         elevation = hoehe,
                         shape = koerperForm,
-                        ambientColor = schattenFarbe.copy(alpha = Hoehe.UMGEBUNG_ALPHA),
-                        spotColor = schattenFarbe.copy(alpha = 0.55f),
+                        ambientColor = schattenFarbe.copy(alpha = Hoehe.UMGEBUNG_ALPHA * schattenFarbe.alpha),
+                        spotColor = schattenFarbe.copy(alpha = 0.55f * schattenFarbe.alpha),
                     )
                 },
             )
             .clip(koerperForm)
-            .background(grund)
-            .tiefenVerlauf(material.tiefenOben, material.tiefenUnten, gedrueckt = vertieft)
+            .background(grund.copy(alpha = grund.alpha * deckkraft))
+            .tiefenVerlauf(material.tiefenOben * deckkraft, material.tiefenUnten * deckkraft, gedrueckt = vertieft)
             .gerichteterReflex(
                 farbe = material.reflexFarbe,
-                alpha = material.reflexAlpha,
+                alpha = material.reflexAlpha * deckkraft,
                 winkelGrad = material.reflexWinkelGrad,
                 laenge = material.reflexLaenge,
             )
             // Abgefragt statt mit 0 aufgerufen: `koernung` rechnet seine Punktwolke auch bei
             // Deckung 0 aus. Orbit führt bewusst keine Körnung und darf sie nicht bezahlen.
-            .then(if (koernt) Modifier.koernung(material.koernungAlpha) else Modifier)
+            .then(if (koernt && deckkraft > 0f) Modifier.koernung(material.koernungAlpha * deckkraft) else Modifier)
             .then(if (vertieft) Modifier.innenSchatten(koerperForm, material.innenSchattenAlpha) else Modifier)
             .then(if (material.nut) Modifier.nut(koerperForm) else Modifier)
             .then(
@@ -145,14 +156,15 @@ internal fun MaterialFlaeche(
                     // Weiß- und Schwarz-Alpha auf, und Weiß auf Weiß ergibt rechnerisch null
                     // Unterschied — unabhängig davon, wie hoch das Alpha steht. Genau dafür ist
                     // `kanteGrund` gedacht; es war gesetzt, wurde aber nie gezeichnet.
+                    // Die Kante wird mit der Fläche durchsichtig: Bei 0 Prozent bleibt nur der Inhalt.
                     (material.kanteGrund?.let { grundfarbe ->
-                        Modifier.border(1.dp, grundfarbe, koerperForm)
+                        Modifier.border(1.dp, grundfarbe.copy(alpha = grundfarbe.alpha * deckkraft), koerperForm)
                     } ?: Modifier).border(
                         width = 1.dp,
                         brush = materialKante(
                             lichtFarbe = material.kanteLichtFarbe,
-                            lichtAlpha = material.kanteLichtAlpha,
-                            schattenAlpha = material.kanteSchattenAlpha,
+                            lichtAlpha = material.kanteLichtAlpha * deckkraft,
+                            schattenAlpha = material.kanteSchattenAlpha * deckkraft,
                             gedrueckt = vertieft,
                         ),
                         shape = koerperForm,

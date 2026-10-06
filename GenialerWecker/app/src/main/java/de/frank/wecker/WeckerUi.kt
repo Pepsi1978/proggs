@@ -128,6 +128,8 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
     val theme = wirksamesTheme(themeRoh)
     // Eigene Achse neben Hell/Dunkel und Ausrichtung; lifecycle-bewusst gesammelt.
     val designId by vm.settings.designFlow.collectAsStateWithLifecycle()
+    // Kartendeckkraft in Schlicht; der Regler in den Einstellungen wirkt sofort auf alle Karten.
+    val kartenDeckkraft by vm.settings.kartenDeckkraftFlow.collectAsStateWithLifecycle()
     val design = Design.von(designId)
     val alarms by vm.alarms.collectAsStateWithLifecycle()
     val draft by vm.draft.collectAsStateWithLifecycle()
@@ -174,7 +176,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
             standbild = null
         }
     }
-    WeckerTheme(theme, design) {
+    WeckerTheme(theme, design, kartenDeckkraftProzent = kartenDeckkraft) {
         val gold = LocalGold.current
         BackHandler(page != "alarms") { back() }
         Box(Modifier.fillMaxSize()) {
@@ -826,9 +828,23 @@ private fun HeroKarte(inhalt: @Composable () -> Unit) {
     val gold = LocalGold.current
     val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
     val flaeche = gold.heroGrund
+    // Einstellbare Deckkraft (Einstellungen → Darstellung): Fläche, Glanz, Kante und Schatten werden
+    // gemeinsam durchsichtig; Uhr, Wecker, Schrift und Knöpfe bleiben voll sichtbar.
+    val deckkraft = LocalKartenDeckkraft.current
     Box(
         Modifier.fillMaxWidth()
-            .tiefenSchatten(gold.primaer, Hoehe.schwebendeLeiste, form)
+            .then(
+                when {
+                    deckkraft >= 1f -> Modifier.tiefenSchatten(gold.primaer, Hoehe.schwebendeLeiste, form)
+                    deckkraft <= 0f -> Modifier
+                    // Ein Schatten unter Glas schiene durch; er wird mit der Deckkraft schwächer.
+                    else -> Modifier.shadow(
+                        elevation = Hoehe.schwebendeLeiste, shape = form,
+                        ambientColor = gold.primaer.copy(alpha = Hoehe.UMGEBUNG_ALPHA * deckkraft * deckkraft),
+                        spotColor = gold.primaer.copy(alpha = 0.55f * deckkraft * deckkraft),
+                    )
+                },
+            )
             .clip(form)
             .background(
                 Brush.verticalGradient(
@@ -836,12 +852,14 @@ private fun HeroKarte(inhalt: @Composable () -> Unit) {
                         flaeche.heller(if (gold.istDunkel) 0.08f else 0.03f),
                         flaeche,
                         flaeche.dunkler(if (gold.istDunkel) 0.12f else 0.05f),
-                    ),
+                    ).map { it.copy(alpha = it.alpha * deckkraft) },
                 ),
             )
-            .glanzBogen(deckung = if (gold.istDunkel) 0.06f else 0.14f)
-            .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.16f else 0.55f), form)
-            .glanzLauf(staerke = if (gold.istDunkel) 0.10f else 0.42f),
+            .glanzBogen(deckung = (if (gold.istDunkel) 0.06f else 0.14f) * deckkraft)
+            // Bei 0 Prozent entfällt die Kante ganz, auch ihr dunkler Unterrand.
+            .then(if (deckkraft > 0f) Modifier.border(1.dp,
+                lichtKante(staerke = (if (gold.istDunkel) 0.16f else 0.55f) * deckkraft), form) else Modifier)
+            .glanzLauf(staerke = (if (gold.istDunkel) 0.10f else 0.42f) * deckkraft),
     ) {
         HeroDeko(Modifier.matchParentSize())
         inhalt()

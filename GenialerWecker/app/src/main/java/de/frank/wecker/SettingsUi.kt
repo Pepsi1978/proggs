@@ -143,6 +143,13 @@ fun SettingsPage(vm: WeckerViewModel, activity: ComponentActivity) {
             AuswahlPunkte("Design", design, Design.entries.map { it.id to it.anzeige }) {
                 design = it; settings.design = it; vm.settingsRevision.value++
             }
+            // Nur Schlicht: Hero, Weckerkarten und Einstellungskarten von deckend bis ganz durchsichtig.
+            if (design == Design.SCHLICHT.id) {
+                val deckkraft by settings.kartenDeckkraftFlow.collectAsStateWithLifecycle()
+                ValueSlider("Deckkraft der Karten", deckkraft, 0..100, "%") { settings.kartenDeckkraft = it }
+                Text("100 % deckend wie bisher, 0 % ganz durchsichtig — dann steht alles direkt auf der Goldseide.",
+                    style = MaterialTheme.typography.bodySmall, color = LocalGold.current.textGedaempft)
+            }
             HorizontalDivider(color = LocalGold.current.rahmen)
             AuswahlPunkte("Modus", modus, modusOptionen) { settings.theme = it }
             HorizontalDivider(color = LocalGold.current.rahmen)
