@@ -19,6 +19,7 @@
     { "versionCode": 15, "versionName": "1.0.14", "stand": "27.09.2026, 10:43 Uhr", "notiz": "Neben der Version steht jetzt, wann die App auf diesem Handy zuletzt aktualisiert wurde" },
     { "versionCode": 16, "versionName": "1.0.15", "stand": "29.09.2026, 21:24 Uhr", "notiz": "Benachrichtigungen nur noch für verfügbare Updates; nach einer erfolgreichen Installation kommt keine zusätzliche „aktualisiert“-Meldung mehr" },
     {"versionCode": 17, "versionName": "1.0.16", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    {"versionCode": 18, "versionName": "1.0.17", "stand": "01.10.2026, 19:23 Uhr", "notiz": "Große Updates aus dem Drive-Ordner hängen nicht mehr scheinbar bei 0 %: Die App zeigt, dass Google Drive die Datei bereitstellt, und versucht es bei einem Abbruch automatisch erneut"}
+    {"versionCode": 18, "versionName": "1.0.17", "stand": "01.10.2026, 19:23 Uhr", "notiz": "Große Updates aus dem Drive-Ordner hängen nicht mehr scheinbar bei 0 %: Die App zeigt, dass Google Drive die Datei bereitstellt, und versucht es bei einem Abbruch automatisch erneut"},
+    {"versionCode": 19, "versionName": "1.0.18", "stand": "06.10.2026, 14:01 Uhr", "notiz": "Designauswahl Hell, Automatisch und Dunkel auf der Startseite neben den Einstellungen; schwarze und helle Oberflächen mit Orange, Auswahl bleibt gespeichert"}
   ]
 }
