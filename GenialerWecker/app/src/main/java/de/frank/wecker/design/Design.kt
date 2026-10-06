@@ -8,6 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.shadow
+import de.frank.genialeideen.ui.theme.Hoehe
+import de.frank.genialeideen.ui.theme.lichtKante
+import de.frank.genialeideen.ui.theme.tiefenSchatten
 
 /**
  * Das gewählte Erscheinungsbild. Es ist unabhängig von Hell/Dunkel und von der Ausrichtung:
@@ -198,7 +202,7 @@ val LocalDesignTokens = staticCompositionLocalOf { tokensFuer(Design.SCHLICHT) }
 
 /**
  * Deckkraft der Karten (0 bis 1) — Hero, Weckerkarten und Abschnitte in Editor und Einstellungen.
- * Einstellbar nur für „Schlicht“ (Einstellungen → Darstellung); alle anderen Designs bekommen 1.
+ * Einstellbar in allen vier Designs (Einstellungen → Darstellung).
  * Schrift, Knöpfe, Eingabefelder und Dialoge bleiben immer deckend.
  */
 val LocalKartenDeckkraft = compositionLocalOf { 1f }
@@ -243,3 +247,30 @@ fun tokensFuer(design: Design): DesignTokens = when (design) {
     Design.TRAUMRAUM -> DesignTokens(design, 32.dp, 999.dp, 999.dp, knopfRadius = 999.dp, plastisch = false)
     Design.ORBIT -> DesignTokens(design, 6.dp, 4.dp, 5.dp, knopfRadius = 5.dp, plastisch = false)
 }
+
+/**
+ * Der Schatten einer Kopfkarte bei einstellbarer Deckkraft: voll deckend der gewohnte doppelte
+ * [tiefenSchatten], darunter ein einfacher Schatten, der quadratisch schwächer wird — unter Glas
+ * schiene er sonst als dunkler Fleck durch —, bei 0 gar keiner.
+ */
+fun androidx.compose.ui.Modifier.deckSchatten(
+    farbe: Color, hoehe: Dp, form: androidx.compose.ui.graphics.Shape, deckkraft: Float,
+): androidx.compose.ui.Modifier = when {
+    deckkraft >= 1f -> this.tiefenSchatten(farbe, hoehe, form)
+    deckkraft <= 0f -> this
+    else -> this.shadow(
+        elevation = hoehe, shape = form,
+        ambientColor = farbe.copy(alpha = Hoehe.UMGEBUNG_ALPHA * deckkraft * deckkraft),
+        spotColor = farbe.copy(alpha = 0.55f * deckkraft * deckkraft),
+    )
+}
+
+/** Dieselbe Lichtkante wie `lichtKante`, nur werden heller Oberrand und dunkler Unterrand gemeinsam schwächer. */
+fun lichtKanteDeck(staerke: Float, deckkraft: Float): androidx.compose.ui.graphics.Brush =
+    if (deckkraft >= 1f) lichtKante(staerke = staerke)
+    else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(
+        Color.White.copy(alpha = staerke * deckkraft), Color.Transparent, Color.Black.copy(alpha = 0.28f * deckkraft),
+    ))
+
+/** Eine Farbe mit der Kartendeckkraft multipliziert. */
+fun Color.deck(deckkraft: Float): Color = copy(alpha = alpha * deckkraft)

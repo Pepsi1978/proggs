@@ -18,7 +18,7 @@ import de.frank.genialeideen.ui.theme.IdeenSchriftFest
 @Composable
 fun WeckerTheme(
     themeWahl: String, design: Design, ausrichtung: String? = null,
-    /** Kartendeckkraft 0–100 aus den Einstellungen; wirkt nur in Schlicht. */
+    /** Kartendeckkraft 0–100 aus den Einstellungen; wirkt in allen vier Designs. */
     kartenDeckkraftProzent: Int = 100,
     content: @Composable () -> Unit,
 ) {
@@ -27,8 +27,7 @@ fun WeckerTheme(
     CompositionLocalProvider(
         LocalDesignTokens provides tokensFuer(design),
         LocalGestalt provides gestaltFuer(design),
-        LocalKartenDeckkraft provides
-            if (design == Design.SCHLICHT) kartenDeckkraftProzent.coerceIn(0, 100) / 100f else 1f,
+        LocalKartenDeckkraft provides kartenDeckkraftProzent.coerceIn(0, 100) / 100f,
         // Die Materialwerte hängen an Design und Modus und werden einmal hier gesetzt, damit
         // jede Fläche und jedes Bedienelement dieselbe Tiefensprache liest.
         LocalMaterial provides materialFuer(

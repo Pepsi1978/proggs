@@ -833,18 +833,7 @@ private fun HeroKarte(inhalt: @Composable () -> Unit) {
     val deckkraft = LocalKartenDeckkraft.current
     Box(
         Modifier.fillMaxWidth()
-            .then(
-                when {
-                    deckkraft >= 1f -> Modifier.tiefenSchatten(gold.primaer, Hoehe.schwebendeLeiste, form)
-                    deckkraft <= 0f -> Modifier
-                    // Ein Schatten unter Glas schiene durch; er wird mit der Deckkraft schwächer.
-                    else -> Modifier.shadow(
-                        elevation = Hoehe.schwebendeLeiste, shape = form,
-                        ambientColor = gold.primaer.copy(alpha = Hoehe.UMGEBUNG_ALPHA * deckkraft * deckkraft),
-                        spotColor = gold.primaer.copy(alpha = 0.55f * deckkraft * deckkraft),
-                    )
-                },
-            )
+            .deckSchatten(gold.primaer, Hoehe.schwebendeLeiste, form, deckkraft)
             .clip(form)
             .background(
                 Brush.verticalGradient(
@@ -858,13 +847,8 @@ private fun HeroKarte(inhalt: @Composable () -> Unit) {
             .glanzBogen(deckung = (if (gold.istDunkel) 0.06f else 0.14f) * deckkraft)
             // Dieselbe Lichtkante wie `lichtKante`, nur werden heller Ober- und dunkler Unterrand
             // gemeinsam mit der Deckkraft schwächer; bei 0 Prozent entfällt die Kante ganz.
-            .then(if (deckkraft >= 1f) Modifier.border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.16f else 0.55f), form)
-                else if (deckkraft > 0f) Modifier.border(1.dp, Brush.verticalGradient(listOf(
-                    androidx.compose.ui.graphics.Color.White.copy(alpha = (if (gold.istDunkel) 0.16f else 0.55f) * deckkraft),
-                    androidx.compose.ui.graphics.Color.Transparent,
-                    androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.28f * deckkraft),
-                )), form)
-                else Modifier)
+            .then(if (deckkraft > 0f) Modifier.border(1.dp,
+                lichtKanteDeck(if (gold.istDunkel) 0.16f else 0.55f, deckkraft), form) else Modifier)
             .glanzLauf(staerke = (if (gold.istDunkel) 0.10f else 0.42f) * deckkraft),
     ) {
         // Die Funkelsterne gehören zur Karte, nicht zum Inhalt: Sie verblassen mit ihr.
@@ -977,19 +961,21 @@ private fun MorgenruheHero(
         .coerceIn(0.dp, if (daten.weit) 180.dp else 150.dp)
     val zeigtMotiv = motiv >= 72.dp
     val textBreite = innen - if (zeigtMotiv) SPALTEN_ABSTAND + motiv else 0.dp
+    // Einstellbare Kartendeckkraft: Fläche, Licht, Kante und Schatten werden gemeinsam durchsichtig.
+    val deckkraft = LocalKartenDeckkraft.current
     Column(Modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth()
-            .tiefenSchatten(gold.akzentWarm, Hoehe.karteErhoeht, form)
-            .clip(form).background(Brush.verticalGradient(listOf(gold.heroGrund.heller(if (gold.istDunkel) 0.06f else 0.03f), gold.heroGrund, gold.heroGrund.dunkler(0.05f))))
-            .glanzBogen(deckung = if (gold.istDunkel) 0.05f else 0.16f)
+            .deckSchatten(gold.akzentWarm, Hoehe.karteErhoeht, form, deckkraft)
+            .clip(form).background(Brush.verticalGradient(listOf(gold.heroGrund.heller(if (gold.istDunkel) 0.06f else 0.03f), gold.heroGrund, gold.heroGrund.dunkler(0.05f)).map { it.deck(deckkraft) }))
+            .glanzBogen(deckung = (if (gold.istDunkel) 0.05f else 0.16f) * deckkraft)
             // Weiches Morgenlicht hinter dem Bett — ein warmer Schein oben rechts.
             .drawBehind {
-                drawRect(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .20f), androidx.compose.ui.graphics.Color.Transparent),
+                drawRect(Brush.radialGradient(listOf(gold.akzentWarm.copy(alpha = .20f * deckkraft), androidx.compose.ui.graphics.Color.Transparent),
                     center = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.15f), radius = size.maxDimension * 0.6f))
             }
-            .border(1.dp, gold.heroKante, form)
-            .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.14f else 0.5f), form)) {
-            HeroDeko(Modifier.matchParentSize())
+            .then(if (deckkraft > 0f) Modifier.border(1.dp, gold.heroKante.deck(deckkraft), form)
+                .border(1.dp, lichtKanteDeck(if (gold.istDunkel) 0.14f else 0.5f, deckkraft), form) else Modifier)) {
+            HeroDeko(Modifier.matchParentSize().graphicsLayer { alpha = deckkraft })
             Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -1052,6 +1038,8 @@ private fun TraumraumHero(
     if (daten.schmal) { SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden); return }
     val radius = LocalDesignTokens.current.karteRadius
     val kuppelForm = RoundedCornerShape(bottomStart = radius, bottomEnd = radius)
+    // Einstellbare Kartendeckkraft (Einstellungen → Darstellung) für die Kuppel.
+    val kuppelDeckkraft = LocalKartenDeckkraft.current
     val motiv = if (daten.weit) 84.dp else 64.dp
     val versatz = 26.dp
     // Auch hier gegen die echte Restbreite gemessen: innen abzüglich der beidseitigen Motivfreiräume.
@@ -1063,18 +1051,21 @@ private fun TraumraumHero(
                 // Schein von oben, kein plastischer Körper — das ist Traumraums Sprache.
                 // Dreidimensional: kräftiger Schatten nach unten, Licht von oben, Glanzbogen und
                 // eine Lichtkante — die Kuppel steht jetzt als Körper über der Seite.
-                .shadow(18.dp, kuppelForm, ambientColor = gold.primaer.copy(alpha = .45f),
-                    spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = .6f))
+                // Kartendeckkraft: Schatten quadratisch schwächer, damit er nicht durch die Kuppel scheint.
+                .then(if (kuppelDeckkraft > 0f) Modifier.shadow(18.dp, kuppelForm,
+                    ambientColor = gold.primaer.copy(alpha = .45f * kuppelDeckkraft * kuppelDeckkraft),
+                    spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = .6f * kuppelDeckkraft * kuppelDeckkraft)) else Modifier)
                 .clip(kuppelForm)
-                .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(if (gold.istDunkel) 0.05f else 0.10f), gold.heroGrund, gold.heroGrundUnten.dunkler(0.12f))))
-                .glanzBogen(deckung = if (gold.istDunkel) 0.05f else 0.22f)
-                .border(1.dp, gold.heroKante, kuppelForm)
-                .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.28f else 0.6f), kuppelForm)
+                .background(Brush.verticalGradient(listOf(gold.heroGrund.heller(if (gold.istDunkel) 0.05f else 0.10f), gold.heroGrund, gold.heroGrundUnten.dunkler(0.12f)).map { it.deck(kuppelDeckkraft) }))
+                .glanzBogen(deckung = (if (gold.istDunkel) 0.05f else 0.22f) * kuppelDeckkraft)
+                .then(if (kuppelDeckkraft > 0f) Modifier.border(1.dp, gold.heroKante.deck(kuppelDeckkraft), kuppelForm)
+                    .border(1.dp, lichtKanteDeck(if (gold.istDunkel) 0.28f else 0.6f, kuppelDeckkraft), kuppelForm) else Modifier)
                 .padding(top = 14.dp, bottom = versatz + 14.dp, start = 20.dp, end = 20.dp),
         ) {
             // Nachthimmel in der Kuppel: Sterne in zwei Tönen und ein heller Mond — dadurch hat
             // das Motiv endlich Kontrast statt einer einzigen Farbfläche.
-            Sternenhimmel(Modifier.matchParentSize())
+            // Der Himmel gehört zur Kuppel und verblasst mit der Kartendeckkraft.
+            Sternenhimmel(Modifier.matchParentSize().graphicsLayer { alpha = kuppelDeckkraft })
             // Datum und Uhr stehen exakt mittig; das Kissen sitzt als ruhiges Motiv links daneben
             // und schiebt die Uhr nicht mehr aus der Mitte.
             Box(Modifier.fillMaxWidth()) {
@@ -1181,17 +1172,19 @@ private fun OrbitHero(
         daten.hatTermin -> "AKTIV"
         else -> "KEIN TERMIN"
     }
+    // Einstellbare Kartendeckkraft: Fläche, Leuchten, Ring und Schatten werden gemeinsam durchsichtig.
+    val deckkraft = LocalKartenDeckkraft.current
     Box(Modifier.fillMaxWidth()
-        .tiefenSchatten(gold.primaer, Hoehe.karteErhoeht, form)
-        .clip(form).background(Brush.verticalGradient(listOf(gold.heroGrund.heller(0.05f), gold.heroGrund, gold.heroGrund.dunkler(0.08f))))
-        .glanzBogen(deckung = if (gold.istDunkel) 0.07f else 0.14f)
+        .deckSchatten(gold.primaer, Hoehe.karteErhoeht, form, deckkraft)
+        .clip(form).background(Brush.verticalGradient(listOf(gold.heroGrund.heller(0.05f), gold.heroGrund, gold.heroGrund.dunkler(0.08f)).map { it.deck(deckkraft) }))
+        .glanzBogen(deckung = (if (gold.istDunkel) 0.07f else 0.14f) * deckkraft)
         // Kühles Instrumentenleuchten hinter dem Motiv.
         .drawBehind {
-            drawRect(Brush.radialGradient(listOf(gold.primaer.copy(alpha = .14f), androidx.compose.ui.graphics.Color.Transparent),
+            drawRect(Brush.radialGradient(listOf(gold.primaer.copy(alpha = .14f * deckkraft), androidx.compose.ui.graphics.Color.Transparent),
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.5f), radius = size.maxDimension * 0.5f))
         }
-        .border(1.5f.dp, Brush.sweepGradient(listOf(gold.primaer.heller(0.4f), gold.heroKante, gold.primaer.dunkler(0.2f), gold.heroKante, gold.primaer.heller(0.4f))), form)) {
-        HeroDeko(Modifier.matchParentSize())
+        .then(if (deckkraft > 0f) Modifier.border(1.5f.dp, Brush.sweepGradient(listOf(gold.primaer.heller(0.4f), gold.heroKante, gold.primaer.dunkler(0.2f), gold.heroKante, gold.primaer.heller(0.4f)).map { it.deck(deckkraft) }), form) else Modifier)) {
+        HeroDeko(Modifier.matchParentSize().graphicsLayer { alpha = deckkraft })
         Column(Modifier.fillMaxWidth()) {
             // Kopfstreifen: links der Signalbalken, rechts die Statusleuchte.
             Row(
@@ -1560,6 +1553,8 @@ fun DesignBlatt(inhalt: @Composable ColumnScope.() -> Unit) {
     // man sich am längsten aufhält. Jetzt bekommt es dieselbe Schichtung wie jede andere Fläche:
     // deckende Grundfarbe, Tiefenverlauf, gerichteter Reflex, Kante zuletzt.
     val material = LocalMaterial.current
+    // Das Blatt ist die große Karte unter Editor und Einstellungen und folgt deshalb der Kartendeckkraft.
+    val deckkraft = LocalKartenDeckkraft.current
     Column(
         Modifier.fillMaxWidth().then(
             if (traum) Modifier
@@ -1572,12 +1567,12 @@ fun DesignBlatt(inhalt: @Composable ColumnScope.() -> Unit) {
                 }
                 .padding(bottom = 12.dp)
                 .clip(form)
-                .background(gold.flaeche)
-                .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
-                .gerichteterReflex(material.reflexFarbe, material.reflexAlpha,
+                .background(gold.flaeche.deck(deckkraft))
+                .tiefenVerlauf(material.tiefenOben * deckkraft, material.tiefenUnten * deckkraft)
+                .gerichteterReflex(material.reflexFarbe, material.reflexAlpha * deckkraft,
                     material.reflexWinkelGrad, material.reflexLaenge)
-                .border(1.dp, materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha,
-                    material.kanteSchattenAlpha), form)
+                .border(1.dp, materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha * deckkraft,
+                    material.kanteSchattenAlpha * deckkraft), form)
                 .padding(start = 0.dp, end = 0.dp, top = 10.dp, bottom = 22.dp)
             else Modifier,
         ),
@@ -1706,13 +1701,16 @@ private fun Perle(inhalt: @Composable ColumnScope.() -> Unit) {
     val gold = LocalGold.current
     val form = RoundedCornerShape(28.dp)
     // Die Perle schwebt erhaben über der Kuppel: Schatten, Licht von oben, Lichtkante.
+    // Sie ist die untere Hälfte der Traumraum-Kopfkarte und folgt deshalb derselben Kartendeckkraft.
+    val deckkraft = LocalKartenDeckkraft.current
     Box(Modifier.fillMaxWidth()
-        .tiefenSchatten(gold.primaer, Hoehe.karteErhoeht, form)
+        .deckSchatten(gold.primaer, Hoehe.karteErhoeht, form, deckkraft)
         .clip(form)
-        .background(Brush.verticalGradient(listOf(gold.flaecheErhoeht.heller(0.06f), gold.flaecheErhoeht, gold.flaecheErhoeht.dunkler(0.08f))))
-        .glanzBogen(deckung = if (gold.istDunkel) 0.06f else 0.18f)
-        .border(1.dp, gold.rahmen, form)
-        .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.22f else 0.5f), form).padding(16.dp)) {
+        .background(Brush.verticalGradient(listOf(gold.flaecheErhoeht.heller(0.06f), gold.flaecheErhoeht, gold.flaecheErhoeht.dunkler(0.08f)).map { it.deck(deckkraft) }))
+        .glanzBogen(deckung = (if (gold.istDunkel) 0.06f else 0.18f) * deckkraft)
+        .then(if (deckkraft > 0f) Modifier.border(1.dp, gold.rahmen.deck(deckkraft), form)
+            .border(1.dp, lichtKanteDeck(if (gold.istDunkel) 0.22f else 0.5f, deckkraft), form) else Modifier)
+        .padding(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp), content = inhalt)
     }
 }
@@ -1877,15 +1875,17 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
                     }
                     if (collapsible) KlappKnopf(expanded, { expanded = !expanded }, beschreibung = null, modifier = Modifier.padding(start = 8.dp))
                 }
+                // Kartendeckkraft aus den Einstellungen, wie bei jeder anderen Karte.
+                val d = LocalKartenDeckkraft.current
+                val schatten = (material.schattenFarbe ?: androidx.compose.ui.graphics.Color.Black).deck(d * d)
                 if (expanded) Box(
                     Modifier.fillMaxWidth()
                         // Nach außen statt eingedrückt: hell oben, dunkel unten, feine Kante.
-                        .shadow(3.dp, abschnittForm, ambientColor = material.schattenFarbe ?: androidx.compose.ui.graphics.Color.Black,
-                            spotColor = material.schattenFarbe ?: androidx.compose.ui.graphics.Color.Black)
+                        .then(if (d > 0f) Modifier.shadow(3.dp, abschnittForm, ambientColor = schatten, spotColor = schatten) else Modifier)
                         .clip(abschnittForm)
-                        .background(gold.flaecheErhoeht)
-                        .tiefenVerlauf(material.tiefenOben, material.tiefenUnten)
-                        .border(1.dp, materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha * .8f, material.kanteSchattenAlpha * .6f), abschnittForm)
+                        .background(gold.flaecheErhoeht.deck(d))
+                        .tiefenVerlauf(material.tiefenOben * d, material.tiefenUnten * d)
+                        .border(1.dp, materialKante(material.kanteLichtFarbe, material.kanteLichtAlpha * .8f * d, material.kanteSchattenAlpha * .6f * d), abschnittForm)
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
