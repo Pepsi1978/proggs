@@ -112,7 +112,7 @@ object Installierer {
                 Diagnose.ereignis(context, Phase.DOWNLOAD, "FEHLER", "paket" to paket, "klasse" to Diagnose.klasse(e))
             }
             Log.w(TAG, "$paket: Vorbereitung der Installation fehlgeschlagen", e)
-            ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(e.message ?: "Unbekannter Fehler"))
+            ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(e.message ?: "Unbekannter Fehler", m.versionCode))
         } finally {
             // Die Session hat die Daten kopiert (oder es gab einen Fehler): nur die eigene Datei löschen.
             datei?.delete()
@@ -231,6 +231,7 @@ object Installierer {
                     .putExtra(InstallErgebnisReceiver.EXTRA_PAKET, m.paket)
                     .putExtra(InstallErgebnisReceiver.EXTRA_LABEL, label)
                     .putExtra(InstallErgebnisReceiver.EXTRA_VERSION, m.versionName)
+                    .putExtra(InstallErgebnisReceiver.EXTRA_VERSION_CODE, m.versionCode)
                     .putExtra(InstallErgebnisReceiver.EXTRA_SITZUNG, id)
                 val pi = PendingIntent.getBroadcast(
                     context, id, intent,

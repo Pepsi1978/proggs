@@ -116,7 +116,8 @@ sealed interface InstallStatus {
     data object Prueft : InstallStatus
     data object WartetAufBestaetigung : InstallStatus
     data object Fertig : InstallStatus
-    data class Fehler(val text: String) : InstallStatus
+    /** [versionCode] = Version, deren Installation scheiterte; null bei Ergebnissen aus älteren Sessions ohne diese Angabe. */
+    data class Fehler(val text: String, val versionCode: Long? = null) : InstallStatus
 }
 
 data class Zustand(
@@ -134,6 +135,29 @@ object ZustandsSpeicher {
 
     fun setzeInstallation(paket: String, status: InstallStatus?) = zustand.update {
         it.copy(installationen = if (status == null) it.installationen - paket else it.installationen + (paket to status))
+    }
+
+    /**
+     * Übernimmt neue Einträge und räumt abgeschlossene Installationen mit auf, die nicht mehr zum Angebot passen.
+     * [InstallStatus.Fertig] bleibt nur, solange die App laut Liste aktuell ist: Kommt danach ein neues Update
+     * derselben App, stünde unter „alt → neu“ sonst noch „Installiert“ statt des Knopfs „Aktualisieren“.
+     * [InstallStatus.Fehler] gehört zur Version, bei der er auftrat, und verschwindet, sobald eine andere angeboten wird
+     * (ohne gespeicherte Version: sobald sich das Angebot gegenüber der vorigen Liste ändert).
+     * Laufende Installationen (Laden, Prüfen, Bestätigung) bleiben unberührt.
+     */
+    fun mitEintraegen(z: Zustand, liste: List<AppEintrag>): Zustand {
+        val vorher = z.eintraege.associate { it.paket to it.fund.manifest.versionCode }
+        val neu = liste.associateBy { it.paket }
+        val installationen = z.installationen.filter { (paket, status) ->
+            val e = neu[paket]
+            when (status) {
+                InstallStatus.Fertig -> e == null || e.status == Status.AKTUELL || e.status == Status.INSTALLIERT_NEUER
+                is InstallStatus.Fehler -> e == null ||
+                    (status.versionCode ?: vorher[paket]) == e.fund.manifest.versionCode
+                else -> true
+            }
+        }
+        return z.copy(eintraege = liste, installationen = installationen)
     }
 }
 

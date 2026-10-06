@@ -12,6 +12,8 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
         val paket = intent.getStringExtra(EXTRA_PAKET) ?: return
         val label = intent.getStringExtra(EXTRA_LABEL) ?: paket
         val sitzung = intent.getIntExtra(EXTRA_SITZUNG, -1)
+        // Version dieses Versuchs: ein Fehler soll nicht unter einem späteren Update stehen bleiben.
+        val versionCode = intent.getLongExtra(EXTRA_VERSION_CODE, -1L).takeIf { it >= 0 }
         if (!Installierer.gehoertZurAktuellen(context, paket, sitzung)) {
             // Ergebnis einer ersetzten oder älteren Session (auch aus Versionen vor dieser): darf Sperre
             // und Status des aktuellen Versuchs nicht ändern. Android installiert ggf. trotzdem weiter;
@@ -33,7 +35,7 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                     Log.w(TAG, "$paket: STATUS_PENDING_USER_ACTION ohne EXTRA_INTENT")
                     Diagnose.ereignis(context, Phase.INSTALLATION, "KEIN_BESTAETIGUNGSDIALOG", "paket" to paket)
                     Installierer.abschliessen(context, paket)
-                    ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(text))
+                    ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(text, versionCode))
                     Benachrichtigungen.fehler(context, paket, label, text)
                     return
                 }
@@ -53,7 +55,7 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                     Installierer.abschliessen(context, paket)
                     ZustandsSpeicher.setzeInstallation(
                         paket,
-                        InstallStatus.Fehler("Bestätigung nicht anzeigbar: Benachrichtigungen erlauben und erneut installieren."),
+                        InstallStatus.Fehler("Bestätigung nicht anzeigbar: Benachrichtigungen erlauben und erneut installieren.", versionCode),
                     )
                 }
             }
@@ -76,7 +78,7 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
                 Log.w(TAG, "$paket: Installation fehlgeschlagen (Status $status): $text")
                 Diagnose.ereignis(context, Phase.INSTALLATION, "ENDSTATUS", "paket" to paket, "status" to status)
                 Installierer.abschliessen(context, paket)
-                ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(text))
+                ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Fehler(text, versionCode))
                 Benachrichtigungen.entferneBestaetigung(context, paket)
                 if (status != PackageInstaller.STATUS_FAILURE_ABORTED) Benachrichtigungen.fehler(context, paket, label, text)
             }
@@ -87,6 +89,7 @@ class InstallErgebnisReceiver : BroadcastReceiver() {
         const val EXTRA_PAKET = "paket"
         const val EXTRA_LABEL = "label"
         const val EXTRA_VERSION = "version"
+        const val EXTRA_VERSION_CODE = "versionCode"
         const val EXTRA_SITZUNG = "sitzung"
     }
 }

@@ -90,7 +90,7 @@ object Pruefer {
             }
             if (np.offen.isNotEmpty()) PruefWorker.planeNachpruefung(context, np.offen, ausNachpruefung)
             ZustandsSpeicher.zustand.update {
-                it.copy(eintraege = liste, letztePruefung = einst.letztePruefung, anmeldungNoetig = false)
+                ZustandsSpeicher.mitEintraegen(it, liste).copy(letztePruefung = einst.letztePruefung, anmeldungNoetig = false)
             }
             return liste
         } catch (e: AnmeldungNoetig) {
@@ -113,7 +113,7 @@ object Pruefer {
     fun bewerteGespeichert(context: Context) {
         val einst = Einstellungen(context)
         val liste = bewerte(context, einst.funde)
-        ZustandsSpeicher.zustand.update { it.copy(eintraege = liste, letztePruefung = einst.letztePruefung) }
+        ZustandsSpeicher.zustand.update { ZustandsSpeicher.mitEintraegen(it, liste).copy(letztePruefung = einst.letztePruefung) }
     }
 
     fun bewerte(context: Context, funde: List<Fund>): List<AppEintrag> {
