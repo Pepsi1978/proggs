@@ -232,6 +232,9 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                                 .togetherWith(androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(200, easing = weich)))
                         }
                     }) { current ->
+                    // Je Seitenaufbau eine neue Folge: Karten und Abschnitte steigen nacheinander auf.
+                    val auftritte = remember(current) { AuftrittsFolge() }
+                    CompositionLocalProvider(LocalAuftrittsFolge provides auftritte) {
                     when (current) {
                         "edit" -> draft?.let { alarm -> Column(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(1f)) { key(alarm.id) { AlarmEditor(vm, alarm, activity) } }
@@ -251,6 +254,7 @@ fun WeckerApp(vm: WeckerViewModel, activity: ComponentActivity) {
                             onEdit = { alarm -> if (draft?.id == alarm.id) page = "edit" else openDraft { vm.edit(alarm) } }, onDelete = { delete = it },
                             onSettings = { settingsFrom = "alarms"; page = "settings" },
                             openDraft = draft?.takeIf { vm.draftChanged() }, onResumeDraft = { page = "edit" })
+                    }
                     }
                 }
                 Column(Modifier.fillMaxWidth().align(Alignment.TopCenter).zIndex(2f)) {
@@ -459,7 +463,7 @@ private fun AlarmList(alarms: List<Alarm>, vm: WeckerViewModel, onNew: () -> Uni
                         onEdit = onEdit, onDelete = onDelete,
                         glowAlpha = if (glowFor?.id == alarm.id) glow.value else 0f,
                         resumed = resumed, reducedMotion = reducedMotion,
-                        modifier = Modifier.animateItem(),
+                        modifier = Modifier.animateItem().auftritt(),
                     )
                 }
             }
@@ -753,9 +757,17 @@ private fun SchlichtHero(
                         // Die Größe wird gegen die tatsächlich verbleibende Spaltenbreite gemessen.
                         val groesse = passendeUhrGroesse(textBreite, uhrGroesse(daten.stufe),
                             zahlSchrift(), zahlGewicht())
-                        Text(formatClock(daten.now), Modifier.semantics { heading() },
-                            fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
-                            fontSize = groesse, color = gold.primaer, maxLines = 1, softWrap = false)
+                        // Die Ziffern rollen beim Minutenwechsel, und kurz nach dem Lichtlauf über
+                        // das Glas zieht ein heller Goldglanz durch die Zahlen selbst.
+                        RollendeUhr(
+                            formatClock(daten.now),
+                            androidx.compose.ui.text.TextStyle(fontFamily = zahlSchrift(), fontWeight = zahlGewicht(),
+                                fontSize = groesse, color = gold.primaer),
+                            Modifier.glanzLauf(staerke = if (gold.istDunkel) 0.75f else 0.55f,
+                                farbe = if (gold.istDunkel) androidx.compose.ui.graphics.Color(0xFFFFF3D1) else gold.akzentWarm,
+                                nurSchrift = true, versatzMs = 350L),
+                            ueberschrift = true,
+                        )
                     }
                     // Auf ~384 dp (S24) passte „Sonntag, 27. September“ nicht in eine Zeile: umbrechen statt kürzen.
                     Text(datumsZeile(daten.now),
@@ -803,8 +815,11 @@ private fun textMindest(): androidx.compose.ui.unit.Dp =
 
 /**
  * Schlichts Heroträger: der gewohnte Goldkörper, aber deutlich erhoben und mit einem statischen
- * Glanzbogen im oberen Drittel — die Glassignatur, die dem alten Kopf fehlte. Bewusst ohne jede
- * Endlosbewegung: Der Hero scrollt nie weg und würde sonst dauerhaft Bilder kosten.
+ * Glanzbogen im oberen Drittel — die Glassignatur, die dem alten Kopf fehlte.
+ *
+ * Weiterhin ohne Endlosbewegung: Der Lichtlauf ([glanzLauf]) zieht alle paar Sekunden einmal über
+ * das Glas und steht dazwischen völlig still. Der Hero scrollt nie weg, ein Dauerticker würde ihn
+ * ständig neu zeichnen — die Pausen kosten dagegen kein einziges Bild.
  */
 @Composable
 private fun HeroKarte(inhalt: @Composable () -> Unit) {
@@ -825,7 +840,8 @@ private fun HeroKarte(inhalt: @Composable () -> Unit) {
                 ),
             )
             .glanzBogen(deckung = if (gold.istDunkel) 0.06f else 0.14f)
-            .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.16f else 0.55f), form),
+            .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.16f else 0.55f), form)
+            .glanzLauf(staerke = if (gold.istDunkel) 0.10f else 0.42f),
     ) {
         HeroDeko(Modifier.matchParentSize())
         inhalt()
@@ -1852,8 +1868,9 @@ fun Section(title: String, collapsible: Boolean = false, summary: String = "", e
 
             }
         }
-        // Schlicht: unverändert der bisherige Aufbau aus Kopfzeile und Inhalt in einer Karte.
-        else -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth(), erhoeht = false) {
+        // Schlicht: der bisherige Aufbau aus Kopfzeile und Inhalt in einer Karte. Beim Öffnen von
+        // Editor und Einstellungen steigen die Karten nacheinander auf.
+        else -> LocalGestalt.current.Flaeche(Modifier.fillMaxWidth().auftritt(), erhoeht = false) {
             Column(Modifier.padding(18.dp).then(sanftWachsen), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(kopfModifier, verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) { beschriftung(MaterialTheme.typography.titleMedium, gold.primaer) }

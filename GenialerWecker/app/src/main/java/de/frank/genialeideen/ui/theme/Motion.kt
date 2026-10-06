@@ -49,6 +49,30 @@ object Motion {
     /** Schimmer über den Platzhalter-Gerüsten (Baustein L). */
     const val SCHIMMER_MS = 1400
 
+    /** Ein einzelner Lichtlauf über Glas oder Goldschrift in Schlicht. */
+    const val GLANZ_LAUF_MS = 1500
+
+    /** Ruhe zwischen zwei Lichtläufen — in dieser Zeit zeichnet die Fläche kein einziges Bild neu. */
+    const val GLANZ_PAUSE_MS = 9000L
+
+    /** Wartezeit bis zum ersten Lichtlauf, damit er nicht mit dem Seitenwechsel zusammenfällt. */
+    const val GLANZ_ERSTER_MS = 1100L
+
+    /** Eine Ziffer der Uhr rollt beim Minutenwechsel heraus und die neue herein. */
+    const val ZIFFER_MS = 460
+
+    /** Auftritt einer Karte beim ersten Aufbau einer Seite. */
+    const val AUFTRITT_MS = 560
+
+    /** Versatz zwischen zwei Karten beim Auftritt. */
+    const val AUFTRITT_STAFFEL_MS = 70
+
+    /** Nach dieser Zeit erscheinen neue Karten ohne Auftritt (zum Beispiel beim Scrollen). */
+    const val AUFTRITT_FENSTER_MS = 900L
+
+    /** Einblenden des bewegten Goldseide-Hintergrunds über dem ruhenden. */
+    const val BEWEGTBILD_EIN_MS = 900L
+
     fun <T> mikro(reduziert: Boolean = false): AnimationSpec<T> = if (reduziert) {
         tween(0)
     } else {

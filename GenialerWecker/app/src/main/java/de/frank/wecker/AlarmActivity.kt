@@ -44,6 +44,8 @@ import de.frank.genialeideen.ui.*
 import de.frank.genialeideen.ui.theme.*
 import de.frank.wecker.design.Design
 import de.frank.wecker.design.LocalGestalt
+import de.frank.wecker.design.RollendeUhr
+import de.frank.wecker.design.glanzLauf
 import de.frank.wecker.design.WeckerTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -488,7 +490,12 @@ private fun WeckKopf(alarm: Alarm?, contentWidth: androidx.compose.ui.unit.Dp,
                 WeckPuls(ringing = alarm != null, leaving = verlaesst, modifier = Modifier.matchParentSize())
                 Wecker3DFigur(now, ring * 0.66f, wackelnd)
             }
-            Text(formatClock(now), maxLines = 1, softWrap = false, style = uhrStil(contentWidth, 72f, zahlSchrift(), null, gold.primaer))
+            // Schlicht: rollende Ziffern, durch die alle paar Sekunden ein heller Goldglanz zieht.
+            RollendeUhr(
+                formatClock(now), uhrStil(contentWidth, 72f, zahlSchrift(), null, gold.primaer),
+                Modifier.glanzLauf(staerke = if (gold.istDunkel) 0.8f else 0.55f,
+                    farbe = if (gold.istDunkel) Color(0xFFFFF3D1) else gold.akzentWarm, nurSchrift = true),
+            )
             Text(name, style = MaterialTheme.typography.headlineMedium,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
