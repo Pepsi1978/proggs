@@ -2,6 +2,7 @@ package de.frank.wecker.design
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -194,6 +195,13 @@ val LocalMaterial = staticCompositionLocalOf {
 }
 
 val LocalDesignTokens = staticCompositionLocalOf { tokensFuer(Design.SCHLICHT) }
+
+/**
+ * Deckkraft der Karten (0 bis 1) — Hero, Weckerkarten und Abschnitte in Editor und Einstellungen.
+ * Einstellbar nur für „Schlicht“ (Einstellungen → Darstellung); alle anderen Designs bekommen 1.
+ * Schrift, Knöpfe, Eingabefelder und Dialoge bleiben immer deckend.
+ */
+val LocalKartenDeckkraft = compositionLocalOf { 1f }
 
 /**
  * Die zeichnenden Teile eines Designs. Der geteilte Code berechnet Zustand und Rückrufe genau

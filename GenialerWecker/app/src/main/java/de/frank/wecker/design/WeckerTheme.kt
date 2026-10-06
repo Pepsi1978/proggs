@@ -16,12 +16,19 @@ import de.frank.genialeideen.ui.theme.IdeenSchriftFest
  * [paletteFuer] die bestehenden Paletten unverändert zurück — dieselbe Optik wie bisher.
  */
 @Composable
-fun WeckerTheme(themeWahl: String, design: Design, ausrichtung: String? = null, content: @Composable () -> Unit) {
+fun WeckerTheme(
+    themeWahl: String, design: Design, ausrichtung: String? = null,
+    /** Kartendeckkraft 0–100 aus den Einstellungen; wirkt nur in Schlicht. */
+    kartenDeckkraftProzent: Int = 100,
+    content: @Composable () -> Unit,
+) {
     val dunkel = themeWahl == "dark"
     val palette = paletteFuer(design, dunkel)
     CompositionLocalProvider(
         LocalDesignTokens provides tokensFuer(design),
         LocalGestalt provides gestaltFuer(design),
+        LocalKartenDeckkraft provides
+            if (design == Design.SCHLICHT) kartenDeckkraftProzent.coerceIn(0, 100) / 100f else 1f,
         // Die Materialwerte hängen an Design und Modus und werden einmal hier gesetzt, damit
         // jede Fläche und jedes Bedienelement dieselbe Tiefensprache liest.
         LocalMaterial provides materialFuer(
