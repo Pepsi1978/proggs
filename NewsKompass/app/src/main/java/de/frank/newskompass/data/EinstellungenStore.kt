@@ -151,6 +151,7 @@ class EinstellungenStore(context: Context) {
                     eintrag.optString("ueberschrift"),
                     eintrag.optString("ueberschriftFuer"),
                     Ausfuehrlichkeit.fromId(eintrag.optString("ausfuehrlichkeit", bisherigeAusfuehrlichkeit.id)),
+                    maxAlterTage = eintrag.optInt("maxAlterTage", Thema.STANDARD_ALTER_TAGE),
                 ).normiert()
             }
         }.getOrElse {
@@ -208,7 +209,8 @@ class EinstellungenStore(context: Context) {
                 JSONObject().put("id", it.id).put("text", it.text).put("min", it.minMeldungen).put("max", it.maxMeldungen)
                     .put("uhrzeiten", JSONArray(it.uhrzeiten)).put("rhythmus", it.rhythmus.zuJson())
                     .put("ueberschrift", it.ueberschrift).put("ueberschriftFuer", it.ueberschriftFuer)
-                    .put("ausfuehrlichkeit", it.ausfuehrlichkeit.id),
+                    .put("ausfuehrlichkeit", it.ausfuehrlichkeit.id)
+                    .put("maxAlterTage", it.maxAlterTage),
             )
         }
         putString(K_THEMEN, liste.toString())

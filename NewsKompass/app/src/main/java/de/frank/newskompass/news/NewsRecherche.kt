@@ -80,8 +80,8 @@ class NewsRecherche(
         if (!codex.istVerbunden) throw CodexFehler(CodexFehlerArt.ANMELDUNG, "Bitte zuerst in den Einstellungen bei Codex anmelden.")
 
         val jetzt = System.currentTimeMillis()
-        // Was in den letzten 36 Stunden schon lief, soll nicht noch einmal als neu erscheinen.
-        val vorige = speicher.ausgabenSeit(jetzt - 36 * 3_600_000L)
+        // Bereits berichtete Ereignisse über den gesamten wählbaren Zeitraum berücksichtigen.
+        val vorige = speicher.ausgabenSeit(NachrichtenAlter.fruehestens(jetzt, Thema.ALTER_MAX_TAGE))
         val bloecke = mutableListOf<Block>()
         val schritte = themen.size + 1
 
@@ -202,7 +202,7 @@ class NewsRecherche(
             appendLine(thema.text.trim())
             if (bekannt.isNotEmpty()) {
                 appendLine()
-                appendLine("Diese Meldungen standen schon in der letzten Ausgabe. Nimm sie nur wieder auf, wenn es wirklich Neues dazu gibt, und sag dann im Text, was neu ist:")
+                appendLine("Diese Meldungen standen schon in früheren Ausgaben. Nimm sie nur wieder auf, wenn es ein konkretes neues Ereignis innerhalb der Altersgrenze gibt, und sag dann im Text, was neu ist:")
                 bekannt.forEach { appendLine("- $it") }
             }
             if (schonInDieserAusgabe.isNotEmpty()) {
@@ -212,13 +212,13 @@ class NewsRecherche(
             }
         }
         val antwort = codex.frage(
-            anweisung = anweisung(jetzt, thema.minMeldungen, thema.maxMeldungen, ausfuehrlichkeit),
+            anweisung = anweisung(jetzt, thema.minMeldungen, thema.maxMeldungen, ausfuehrlichkeit, maxAlterTage = thema.maxAlterTage),
             eingabe = eingabe,
             modellId = modellId,
             denktiefe = denktiefe,
             werkzeuge = JSONArray().put(JSONObject().put("type", "web_search")),
         )
-        return zerlege(thema, antwort.text, antwort.quellen, thema.maxMeldungen)
+        return zerlege(thema, antwort.text, antwort.quellen, thema.maxMeldungen, jetzt)
     }
 
     private fun hinweisFuer(fehler: CodexFehler): String = when (fehler.art) {
@@ -233,9 +233,16 @@ class NewsRecherche(
         maxMeldungen: Int,
         ausfuehrlichkeit: Ausfuehrlichkeit,
         sprachFrage: Boolean = false,
+        maxAlterTage: Int = Thema.STANDARD_ALTER_TAGE,
     ): String {
-        val datum = SimpleDateFormat("EEEE, d. MMMM yyyy", Locale.GERMANY).format(Date(jetzt))
-        val uhr = SimpleDateFormat("HH:mm", Locale.GERMANY).format(Date(jetzt))
+        val deutscheZeit = java.util.TimeZone.getTimeZone("Europe/Berlin")
+        val datum = SimpleDateFormat("EEEE, d. MMMM yyyy", Locale.GERMANY).apply { timeZone = deutscheZeit }.format(Date(jetzt))
+        val uhr = SimpleDateFormat("HH:mm", Locale.GERMANY).apply { timeZone = deutscheZeit }.format(Date(jetzt))
+        val zeitFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.GERMANY).apply {
+            timeZone = deutscheZeit
+        }
+        val fruehestens = zeitFormat.format(Date(NachrichtenAlter.fruehestens(jetzt, maxAlterTage)))
+        val aktuell = zeitFormat.format(Date(jetzt))
         val auftrag = if (sprachFrage) {
             "Der Nutzer hat dir gerade per Sprache eine Frage gestellt oder ein Thema genannt, zu dem er jetzt sofort das Aktuelle wissen will. " +
                 "Die Eingabe stammt aus einer Spracherkennung und kann Füllwörter, Versprecher oder falsch erkannte Wörter enthalten; erschließe, was gemeint ist. " +
@@ -243,24 +250,28 @@ class NewsRecherche(
                 "Fragt der Nutzer nach einem Stand, einer Entwicklung oder einem Hintergrund, beantworte genau das mit dem neuesten belegten Stand; ältere Fakten nur, wenn sie zum Verständnis nötig sind, und dann mit der Angabe, von wann sie stammen. " +
                 "Bevorzuge Primärquellen und seriöse Medien. Nimm nur belegte Fakten auf, keine Gerüchte ohne Kennzeichnung, keine Spekulation."
         } else {
-            "Recherchiere mit der Websuche die wichtigsten Neuigkeiten zum Thema des Nutzers aus den letzten 24 Stunden, höchstens aus den letzten 48 Stunden. " +
+            "Recherchiere mit der Websuche die wichtigsten Neuigkeiten zum Thema des Nutzers aus den letzten $maxAlterTage Tagen. " +
                 "Suche gründlich und mehrfach, bevorzuge Primärquellen und seriöse Medien. Nimm nur belegte Fakten auf, keine Gerüchte ohne Kennzeichnung, keine Spekulation. " +
-                "Ältere Meldungen nur, wenn heute etwas Neues dazu passiert ist, oder nach der Regel zum Auffüllen unten."
+                "Die Altersgrenze ist hart: Das berichtete Ereignis muss zwischen $fruehestens und $aktuell liegen. " +
+                "Prüfe das tatsächliche Ereignisdatum anhand der Quellen, nicht das Abrufdatum oder das Datum eines späteren Wiederholungsartikels. " +
+                "Ein älteres Ereignis wird durch einen neuen Artikel nicht zu einer neuen Nachricht. " +
+                "Nur eine belegte neue Entwicklung innerhalb dieses Zeitfensters darf als Update erscheinen; datiere genau diese Entwicklung. " +
+                "Lass Meldungen mit unklarem Ereignisdatum weg; erfinde weder Datum noch Uhrzeit."
         }
         val anzahl = when {
             sprachFrage -> "Liefere $minMeldungen bis $maxMeldungen Meldungen, genau so viele, wie die Frage wirklich braucht; niemals mehr als $maxMeldungen."
             else -> {
                 val spanne = if (minMeldungen == maxMeldungen) "genau $maxMeldungen Meldungen" else "mindestens $minMeldungen und höchstens $maxMeldungen Meldungen"
                 "Liefere $spanne; mehr als $maxMeldungen sind nicht erlaubt. " +
-                    "Gibt es aus den letzten 48 Stunden weniger als $minMeldungen wirklich neue, belegte Meldungen, darfst du mit relevanten, belegten Meldungen aus den letzten sieben Tagen auffüllen und nennst dann in \"wann\" ehrlich, wann es passiert ist, etwa „am Montag“ oder „vor fünf Tagen“. " +
-                    "Fülle niemals mit Erfundenem, mit Gerüchten, mit Wiederholungen oder mit Meldungen, die unten als bereits bekannt stehen; reicht es auch so nicht, liefere lieber weniger als $minMeldungen."
+                    "Gibt es innerhalb der gewählten Altersgrenze weniger als $minMeldungen wirklich neue, belegte Meldungen, liefere weniger oder eine leere Meldungsliste. " +
+                    "Fülle niemals mit älteren Ereignissen, Erfundenem, Gerüchten, Wiederholungen oder Meldungen auf, die unten als bereits bekannt stehen."
             }
         }
         val blockTitel = if (sprachFrage) "kurzer deutscher Titel für die Frage" else "kurzer deutscher Titel für dieses Thema"
         val briefing = if (sprachFrage) "das dem Leser vorgelesen wird" else "das zweimal am Tag erscheint und dem Leser vorgelesen wird"
         // Ein- und Ausleitung für das Vorlesen des ganzen Blocks. Eine Frage hängt an der neuesten Ausgabe,
         // ihr Satz nennt deshalb statt Morgen- oder Abendausgabe die Sonderausgabe zu ihrem Thema.
-        val tag = SimpleDateFormat("d. MMMM yyyy", Locale.GERMANY).format(Date(jetzt))
+        val tag = SimpleDateFormat("d. MMMM yyyy", Locale.GERMANY).apply { timeZone = deutscheZeit }.format(Date(jetzt))
         val moderation = if (sprachFrage) {
             val sonder = Moderation.SONDERAUSGABE
             "\"anmoderation\" ist ein einziger kurzer, freundlicher Begrüßungssatz, mit dem das Vorlesen der Antwort beginnt. Die Antwort gilt als „$sonder“ nur zu dem Thema, das der Nutzer eingesprochen hat; der Satz nennt wörtlich „$sonder“, den blockTitel und das Datum „$tag“, etwa: „Willkommen zur $sonder zu TITEL vom $tag.“, wobei TITEL für deinen blockTitel steht. Du darfst ihn leicht abwandeln, aber alle drei Angaben müssen darin stehen. " +
@@ -289,16 +300,19 @@ class NewsRecherche(
             Antworte ausschließlich mit einem JSON-Objekt, ohne Text davor oder danach, in genau dieser Form:
             {"blockTitel": "$blockTitel, höchstens drei Wörter",
              "anmoderation": "...", "abmoderation": "...",
-             "meldungen": [{"titel": "...", "absaetze": ["...", "..."], "quellen": ["https://..."], "wann": "sprechbare Zeitangabe wie heute früh, gestern Abend oder am Mittwoch", "update": false, "bildIdee": "one English sentence describing a fitting editorial illustration, no text, no logos"}]}
+             "meldungen": [{"titel": "...", "absaetze": ["...", "..."], "quellen": ["https://..."], "wann": "sprechbare Zeitangabe wie heute früh, gestern Abend oder am Mittwoch", "ereignisUm": "ISO-8601-Zeitpunkt mit Zeitzone oder YYYY-MM-DD", "update": false, "bildIdee": "one English sentence describing a fitting editorial illustration, no text, no logos"}]}
+            "ereignisUm" nennt das belegte Datum des berichteten Ereignisses oder der konkreten neuen Entwicklung, niemals den Recherchezeitpunkt. Falls die Quelle nur den Tag nennt, nutze YYYY-MM-DD ohne erfundene Uhrzeit; dann zählt der Tagesbeginn in deutscher Zeit. ${if (!sprachFrage) "Liegt dieser vor der Altersgrenze, lass die Meldung weg." else "Für Hintergrundantworten darf das Datum fehlen."}
             In "quellen" stehen 2 bis 4 Adressen der Artikel, die du für genau diese Meldung tatsächlich gelesen und genutzt hast, die beste zuerst: konkrete Artikelseiten von Medien oder Primärquellen, keine Startseiten, Übersichts- oder Suchseiten; bei gleichwertigen Quellen zuerst die, die ein Foto zum Ereignis zeigt. "update" ist true, wenn die Meldung eine Fortsetzung einer bereits bekannten Meldung ist.
             $moderation Beide Sätze ohne Anführungszeichen, ohne Emojis, auf Deutsch mit echten Umlauten.
         """.trimIndent()
     }
 
     /** [maxMeldungen] ist hart: Liefert Codex mehr, fällt der Rest weg — die wichtigsten stehen oben. */
-    private fun zerlege(thema: Thema, text: String, suchQuellen: List<String>, maxMeldungen: Int): Block {
+    private fun zerlege(thema: Thema, text: String, suchQuellen: List<String>, maxMeldungen: Int, jetzt: Long? = null): Block {
         val json = runCatching { JSONObject(schneideJson(text)) }.getOrNull()
         if (json == null) {
+            // Ohne strukturiertes Ereignisdatum ist die Altersgrenze nicht überprüfbar.
+            if (jetzt != null) throw IllegalStateException("Die Recherche lieferte keine überprüfbaren Ereignisdaten. Bitte erneut aktualisieren.")
             KompassLog.warn("NewsRecherche", "zerlege", "Antwort war kein JSON, nehme den Text roh", mapOf("zeichen" to text.length))
             val absaetze = QuellenFilter.entferne(text.split(Regex("\n{2,}")).map(String::trim))
             return Block(
@@ -311,6 +325,8 @@ class NewsRecherche(
         val liste = json.optJSONArray("meldungen") ?: JSONArray()
         val meldungen = (0 until liste.length()).mapNotNull { index ->
             val m = liste.optJSONObject(index) ?: return@mapNotNull null
+            val ereignisUm = NachrichtenAlter.ereignisZeit(m.optString("ereignisUm"))
+            if (jetzt != null && !NachrichtenAlter.istAktuell(ereignisUm, jetzt, thema.maxAlterTage)) return@mapNotNull null
             val absaetze = m.optJSONArray("absaetze")?.let { a -> (0 until a.length()).map { a.optString(it).trim() } }
                 ?.let(QuellenFilter::entferne).orEmpty()
             if (absaetze.isEmpty()) return@mapNotNull null

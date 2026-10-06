@@ -318,6 +318,13 @@ fun EinstellungenScreen(app: NewsApplication, activity: ComponentActivity, zurue
                                 },
                             )
                         },
+                        aendereMaxAlter = { tage ->
+                            app.einstellungen.setzeThemen(
+                                app.einstellungen.stand.value.themen.map {
+                                    if (it.id == thema.id) it.copy(maxAlterTage = tage) else it
+                                },
+                            )
+                        },
                         zeitplanAktiv = stand.zeitplanAktiv,
                         aenderePlan = { zeiten, rhythmus ->
                             app.einstellungen.setzeThemen(
@@ -410,6 +417,7 @@ private fun ThemenKarte(
     aendere: (String) -> Unit,
     aendereBereich: (Int, Int) -> Unit,
     aendereAusfuehrlichkeit: (Ausfuehrlichkeit) -> Unit,
+    aendereMaxAlter: (Int) -> Unit,
     zeitplanAktiv: Boolean,
     aenderePlan: (List<Int>, Rhythmus) -> Unit,
     loesche: () -> Unit,
@@ -626,6 +634,11 @@ private fun ThemenKarte(
                     leadingIcon = { Icon(Icons.Rounded.Tune, null, Modifier.size(AssistChipDefaults.IconSize)) },
                     shape = RoundedCornerShape(50),
                     modifier = Modifier.padding(start = 90.dp),
+                )
+                NachrichtenAlterRegler(
+                    tage = thema.maxAlterTage,
+                    aendere = aendereMaxAlter,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
                 )
                 AusfuehrlichkeitRegler(
                     stufe = thema.ausfuehrlichkeit,
@@ -1217,6 +1230,55 @@ private fun AusfuehrlichkeitBereich(app: NewsApplication, stand: EinstellungenSt
                 stufe = stand.ausfuehrlichkeit,
                 aendere = app.einstellungen::setzeAusfuehrlichkeit,
                 hinweis = "Gilt ab der nächsten Mikrofon-Frage. Gespeicherte Themen haben ihren eigenen Regler.",
+            )
+        }
+    }
+}
+
+@Composable
+private fun NachrichtenAlterRegler(
+    tage: Int,
+    aendere: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var wert by remember(tage) { mutableStateOf(tage.toFloat()) }
+    val gewaehlt = wert.roundToInt().coerceIn(Thema.ALTER_MIN_TAGE, Thema.ALTER_MAX_TAGE)
+    val dauer = if (gewaehlt == 1) "1 Tag" else "$gewaehlt Tage"
+    val farben = MaterialTheme.colorScheme
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = farben.surfaceContainerHigh,
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Maximales Nachrichtenalter", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Höchstens $dauer alt",
+                style = MaterialTheme.typography.titleSmall,
+                color = farben.primary,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Slider(
+                value = wert,
+                onValueChange = { wert = it },
+                onValueChangeFinished = { if (gewaehlt != tage) aendere(gewaehlt) },
+                valueRange = Thema.ALTER_MIN_TAGE.toFloat()..Thema.ALTER_MAX_TAGE.toFloat(),
+                steps = Thema.ALTER_MAX_TAGE - Thema.ALTER_MIN_TAGE - 1,
+                modifier = Modifier.fillMaxWidth().semantics {
+                    contentDescription = "Maximales Nachrichtenalter für dieses Thema"
+                    stateDescription = dauer
+                },
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("1 Tag", style = MaterialTheme.typography.labelMedium, color = farben.onSurfaceVariant)
+                Text("10 Tage", style = MaterialTheme.typography.labelMedium, color = farben.onSurfaceVariant)
+            }
+            Text(
+                "Ältere Ereignisse werden nicht als neue Nachrichten aufgenommen. " +
+                    "Gilt ab der nächsten Aktualisierung – automatisch und per Hand.",
+                style = MaterialTheme.typography.bodySmall,
+                color = farben.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp),
             )
         }
     }

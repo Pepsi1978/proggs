@@ -130,6 +130,8 @@ data class Thema(
     val ueberschriftFuer: String = "",
     /** Eigene Länge für manuelle und automatische Recherchen dieses Themas. */
     val ausfuehrlichkeit: Ausfuehrlichkeit = Ausfuehrlichkeit.STANDARD,
+    /** Harte Altersgrenze für das berichtete Ereignis, in Tagen. */
+    val maxAlterTage: Int = STANDARD_ALTER_TAGE,
 ) {
     /** Die einzeilige Überschrift für die zugeklappte Karte: die der KI oder ersatzweise die ersten Wörter. */
     fun kopfzeile(): String =
@@ -145,6 +147,7 @@ data class Thema(
         return copy(
             minMeldungen = minMeldungen.coerceIn(GRENZE_MIN, max),
             maxMeldungen = max,
+            maxAlterTage = maxAlterTage.coerceIn(ALTER_MIN_TAGE, ALTER_MAX_TAGE),
             uhrzeiten = uhrzeiten.map { it.coerceIn(0, MINUTEN_PRO_TAG - 1) }.distinct().sorted(),
             rhythmus = rhythmus.normiert(),
         )
@@ -155,6 +158,9 @@ data class Thema(
         const val GRENZE_MAX = 15
         const val STANDARD_MIN = 4
         const val STANDARD_MAX = 7
+        const val ALTER_MIN_TAGE = 1
+        const val ALTER_MAX_TAGE = 10
+        const val STANDARD_ALTER_TAGE = 2
 
         /** Eine gesprochene Frage steht in keiner Themenliste und bekommt einen festen, kleinen Rahmen. */
         const val FRAGE_MIN = 1
