@@ -1701,13 +1701,16 @@ private fun Perle(inhalt: @Composable ColumnScope.() -> Unit) {
     val gold = LocalGold.current
     val form = RoundedCornerShape(28.dp)
     // Die Perle schwebt erhaben über der Kuppel: Schatten, Licht von oben, Lichtkante.
+    // Sie ist die untere Hälfte der Traumraum-Kopfkarte und folgt deshalb derselben Kartendeckkraft.
+    val deckkraft = LocalKartenDeckkraft.current
     Box(Modifier.fillMaxWidth()
-        .tiefenSchatten(gold.primaer, Hoehe.karteErhoeht, form)
+        .deckSchatten(gold.primaer, Hoehe.karteErhoeht, form, deckkraft)
         .clip(form)
-        .background(Brush.verticalGradient(listOf(gold.flaecheErhoeht.heller(0.06f), gold.flaecheErhoeht, gold.flaecheErhoeht.dunkler(0.08f))))
-        .glanzBogen(deckung = if (gold.istDunkel) 0.06f else 0.18f)
-        .border(1.dp, gold.rahmen, form)
-        .border(1.dp, lichtKante(staerke = if (gold.istDunkel) 0.22f else 0.5f), form).padding(16.dp)) {
+        .background(Brush.verticalGradient(listOf(gold.flaecheErhoeht.heller(0.06f), gold.flaecheErhoeht, gold.flaecheErhoeht.dunkler(0.08f)).map { it.deck(deckkraft) }))
+        .glanzBogen(deckung = (if (gold.istDunkel) 0.06f else 0.18f) * deckkraft)
+        .then(if (deckkraft > 0f) Modifier.border(1.dp, gold.rahmen.deck(deckkraft), form)
+            .border(1.dp, lichtKanteDeck(if (gold.istDunkel) 0.22f else 0.5f, deckkraft), form) else Modifier)
+        .padding(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp), content = inhalt)
     }
 }
