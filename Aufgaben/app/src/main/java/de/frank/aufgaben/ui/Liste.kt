@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -294,6 +295,7 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
     val e = vm.einstellungen
     Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp), horizontalArrangement = Arrangement.End) {
         RundKnopf(if (sucheOffen) Icons.Rounded.Close else Icons.Rounded.Search, "Suchen", sucheUmschalten)
+        RundKnopf(Icons.Rounded.SelfImprovement, "Fokus-Timer") { vm.fokusStarten(null) }
         RundKnopf(Icons.Rounded.Palette, "Design wechseln") {
             val alle = Design.entries
             val neu = alle[(alle.indexOf(Design.von(e.design)) + 1) % alle.size]
