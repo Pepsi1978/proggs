@@ -77,10 +77,28 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
                     if (letzte != null && start <= letzte[1]) letzte[1] = maxOf(letzte[1], ende)
                     else belegt.add(intArrayOf(start, ende))
                 }
+            // Ränder auf volle Stunden innerhalb der Spanne: Steht von/bis auf halb (z. B. 5:30) und liegt ein Termin davor,
+            // begänne die Lücke sonst um 5:30, verschluckte die 6:00 und die Leiste hätte oben keine Stundenzahl.
+            val ersteStunde = (a + 59) / 60 * 60
+            val letzteStunde = b / 60 * 60
             val liste = belegt.zipWithNext { vorher, danach ->
-                Luecke(((vorher[1] + 59) / 60 * 60).coerceAtLeast(a), (danach[0] / 60 * 60).coerceAtMost(b))
+                Luecke(((vorher[1] + 59) / 60 * 60).coerceAtLeast(ersteStunde), (danach[0] / 60 * 60).coerceAtMost(letzteStunde))
             }.filter { it.minuten >= MIN_LUECKE }
             return Zeitband(a, b, liste)
+        }
+
+        /**
+         * „Ganzer Tag“: die eingestellte Spanne, erweitert auf volle Stunden bis zu Terminen davor oder danach (z. B. ein
+         * Nachtdienst um 23 Uhr bei einer Spanne bis 22 Uhr), damit kein Termin am Rand klebt.
+         */
+        fun ganzerTag(termine: List<Aufgabe>, von: Int, bis: Int): Zeitband {
+            val starts = termine.mapNotNull { it.minuten }
+            if (starts.isEmpty()) return Zeitband(von, bis)
+            val erster = starts.min()
+            val letzter = termine.maxOf { (it.minuten ?: erster) + maxOf(it.dauer, 30) }
+            val a = minOf(von, erster / 60 * 60).coerceAtLeast(0)
+            val b = maxOf(bis, (letzter + 59) / 60 * 60).coerceAtMost(24 * 60)
+            return Zeitband(a, b)
         }
 
         private fun spanne(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean): Pair<Int, Int> {
