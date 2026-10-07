@@ -960,7 +960,14 @@ private fun MorgenruheHero(
     // Quadrat an den rechten Rand gedrückt zu sein. Ihre Höhe folgt der Breite (rund 2,5 : 1) und ist
     // gedeckelt, damit der feststehende Kopf nicht zu viel Höhe frisst; Datum und Uhr teilen sich
     // dafür darunter eine Zeile.
-    val buehne = ((innen + KARTE_INNEN) * 0.40f).coerceIn(0.dp, if (daten.weit) 170.dp else 136.dp)
+    // Zusätzlich an der Fensterhöhe gedeckelt (höchstens 17 Prozent, bei großer Schrift weniger):
+    // In niedrigen Fenstern — quer oder geteilter Bildschirm knapp über der SCHMAL-Grenze — fällt die
+    // Bühne unter ihre Mindesthöhe weg, statt der Weckerliste den Platz zu nehmen.
+    val fensterHoehe = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp /
+        LocalDensity.current.fontScale.coerceAtLeast(1f)
+    val buehne = ((innen + KARTE_INNEN) * 0.40f)
+        .coerceIn(0.dp, if (daten.weit) 170.dp else 136.dp)
+        .coerceAtMost(fensterHoehe * 0.17f)
     val zeigtMotiv = buehne >= 96.dp
     // Die Uhr steht rechts neben dem Datum; dem Datum bleiben mindestens 110 dp (notfalls zweizeilig).
     val textBreite = innen - SPALTEN_ABSTAND - 110.dp
