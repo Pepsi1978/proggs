@@ -44,7 +44,8 @@ sealed interface Bildschirm {
     data object Liste : Bildschirm
     data class Bearbeiten(val id: Long?) : Bildschirm
     data object Einstellungen : Bildschirm
-    data class Fokus(val id: Long) : Bildschirm
+    /** [id] = null: freier Fokus vom Hauptbildschirm, ohne Aufgabe. */
+    data class Fokus(val id: Long?) : Bildschirm
 }
 
 enum class Aufnahme { AUS, LAEUFT, VERARBEITET }
@@ -116,6 +117,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var fokusEnde by mutableLongStateOf(0L); private set
     var fokusRest by mutableLongStateOf(0L); private set
     var fokusLaeuft by mutableStateOf(false); private set
+    var fokusGesamt by mutableLongStateOf(0L); private set
     private var fokusJob: Job? = null
 
     init {
@@ -145,7 +147,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             bildschirm = Bildschirm.Liste
             true
         }
-        else -> { bildschirm = Bildschirm.Liste; true }
+        is Bildschirm.Fokus -> { fokusBeenden(); true }
     }
 
     fun melde(text: String, undo: (() -> Unit)? = null) {
@@ -460,13 +462,33 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ================= Fokus =================
 
-    fun fokusStarten(id: Long) {
-        fokusRest = einstellungen.fokusMinuten * 60_000L
+    /** Mit Aufgabe läuft der Timer sofort; ohne (Fokus-Knopf oben) wartet er auf die Zeitwahl. */
+    fun fokusStarten(id: Long?) {
+        fokusJob?.cancel(); fokusLaeuft = false
+        fokusGesamt = einstellungen.fokusMinuten * 60_000L
+        fokusRest = fokusGesamt
         bildschirm = Bildschirm.Fokus(id)
-        fokusFortsetzen()
+        if (id != null) fokusFortsetzen()
+    }
+
+    /** Neue Länge aus Schnellwahl oder Schieberegler; ein laufender Timer beginnt mit ihr von vorn. */
+    fun fokusDauer(minuten: Int, starten: Boolean = false) {
+        val lief = fokusLaeuft
+        fokusJob?.cancel(); fokusLaeuft = false
+        fokusGesamt = minuten.coerceIn(0, 120) * 60_000L
+        fokusRest = fokusGesamt
+        if (lief || starten) fokusFortsetzen()
+    }
+
+    /** Merkt sich die gewählte Länge erst beim Loslassen, sonst schreibt jeder Ziehschritt die Einstellungen. */
+    fun fokusMerken() {
+        val minuten = (fokusGesamt / 60_000L).toInt()
+        if (minuten > 0 && minuten != einstellungen.fokusMinuten) einstellungen.fokusMinuten = minuten
     }
 
     fun fokusFortsetzen() {
+        if (fokusRest <= 0L) fokusRest = fokusGesamt
+        if (fokusRest <= 0L) return
         fokusJob?.cancel()
         fokusEnde = System.currentTimeMillis() + fokusRest
         fokusLaeuft = true

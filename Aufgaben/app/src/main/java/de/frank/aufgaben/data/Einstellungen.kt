@@ -96,7 +96,7 @@ class Einstellungen private constructor(context: Context) {
     var zeitleisteAuto: Boolean get() = prefs.getBoolean("zeitleiste_auto", false); set(v) = put { putBoolean("zeitleiste_auto", v) }
 
     // ---- Fokus ----
-    var fokusMinuten: Int get() = prefs.getInt("fokus", 25); set(v) = put { putInt("fokus", v.coerceIn(5, 90)) }
+    var fokusMinuten: Int get() = prefs.getInt("fokus", 25); set(v) = put { putInt("fokus", v.coerceIn(1, 120)) }
 
     companion object {
         const val NAME = "aufgaben_secure_prefs"
