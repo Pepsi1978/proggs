@@ -1,0 +1,95 @@
+package de.frank.aufgaben.ui
+
+import de.frank.aufgaben.data.Aufgabe
+
+/** Freie Stunden zwischen zwei Terminen, die zusammengerückt werden. Minuten ab 0 Uhr, immer volle Stunden. */
+data class Luecke(val von: Int, val bis: Int) {
+    val minuten: Int get() = bis - von
+}
+
+/**
+ * Was eine Zeitleiste zeigt: von–bis in Minuten, freie Lücken auf eine feste Höhe zusammengerückt. Außerhalb der Lücken
+ * ist eine Stunde [stunde] hoch, jede Lücke [luecke]; die Minuten darin verteilen sich gleichmäßig auf diese Höhe.
+ * Raster, Termine, Jetzt-Linie und Ziehen rechnen alle hierüber, darum passen sie immer zusammen.
+ */
+data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> = emptyList()) {
+
+    /** Höhe von [vonMin] bis [min]. */
+    fun y(min: Float, stunde: Float, luecke: Float): Float {
+        var y = 0f
+        var t = vonMin.toFloat()
+        for (l in luecken) {
+            if (min <= l.von) break
+            y += (l.von - t) / 60f * stunde
+            if (min < l.bis) return y + (min - l.von) / l.minuten * luecke
+            y += luecke
+            t = l.bis.toFloat()
+        }
+        return y + (min - t) / 60f * stunde
+    }
+
+    fun y(min: Int, stunde: Float, luecke: Float): Float = y(min.toFloat(), stunde, luecke)
+
+    /** Umkehrung von [y]: Minute an der Höhe [px] unter dem Bandanfang. */
+    fun minute(px: Float, stunde: Float, luecke: Float): Float {
+        var y = 0f
+        var t = vonMin.toFloat()
+        for (l in luecken) {
+            val anfang = y + (l.von - t) / 60f * stunde
+            if (px <= anfang) break
+            if (px < anfang + luecke) return l.von + (px - anfang) / luecke * l.minuten
+            y = anfang + luecke
+            t = l.bis.toFloat()
+        }
+        return t + (px - y) / stunde * 60f
+    }
+
+    fun hoehe(stunde: Float, luecke: Float): Float = y(bisMin, stunde, luecke)
+
+    /** Liegt [min] echt innerhalb einer Lücke? Die Stunden an den Rändern bleiben sichtbar. */
+    fun inLuecke(min: Int): Boolean = luecken.any { min > it.von && min < it.bis }
+
+    /** Minuten, die gegenüber der eingestellten Spanne [von]–[bis] nicht zu sehen sind. */
+    fun ausgeblendet(von: Int, bis: Int): Int =
+        luecken.sumOf { it.minuten } + (vonMin - von).coerceAtLeast(0) + (bis - bisMin).coerceAtLeast(0)
+
+    companion object {
+        /** Kürzeste Lücke, die zusammenrückt: Bei weniger als zwei freien Stunden verschwände keine Stundenzahl. */
+        const val MIN_LUECKE = 120
+
+        /** Ein Terminblock ist mindestens 34 dp hoch, bei 42 dp pro Stunde also gut 48 Minuten. */
+        private const val BLOCK_MIN = 49
+
+        /**
+         * Band ohne Ziehen. Mit [auto]: eine Stunde vor dem ersten bis eine Stunde nach dem letzten Termin. Mit [luecken]:
+         * zwei oder mehr freie volle Stunden zwischen zwei Terminen rücken zusammen (Termin 15 Uhr, nächster 19 Uhr:
+         * 16:00 und 19:00 bleiben als Ränder stehen, 17 und 18 Uhr verschwinden).
+         */
+        fun fuer(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, luecken: Boolean): Zeitband {
+            val (a, b) = spanne(termine, von, bis, auto)
+            if (!luecken || termine.size < 2) return Zeitband(a, b)
+            // Termine zu belegten Strecken verschmelzen, sortiert und überlappungsfrei.
+            val belegt = mutableListOf<IntArray>()
+            termine.mapNotNull { t -> t.minuten?.let { it to it + maxOf(t.dauer, BLOCK_MIN) } }
+                .sortedBy { it.first }
+                .forEach { (start, ende) ->
+                    val letzte = belegt.lastOrNull()
+                    if (letzte != null && start <= letzte[1]) letzte[1] = maxOf(letzte[1], ende)
+                    else belegt.add(intArrayOf(start, ende))
+                }
+            val liste = belegt.zipWithNext { vorher, danach ->
+                Luecke(((vorher[1] + 59) / 60 * 60).coerceAtLeast(a), (danach[0] / 60 * 60).coerceAtMost(b))
+            }.filter { it.minuten >= MIN_LUECKE }
+            return Zeitband(a, b, liste)
+        }
+
+        private fun spanne(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean): Pair<Int, Int> {
+            if (!auto || termine.isEmpty()) return von to bis
+            val erster = termine.minOf { it.minuten ?: von }
+            val letzter = termine.maxOf { (it.minuten ?: von) + maxOf(it.dauer, 30) }
+            val a = ((erster / 60 - 1) * 60).coerceIn(0, 23 * 60)
+            val b = (((letzter + 59) / 60 + 1) * 60).coerceIn(a + 60, 24 * 60)
+            return a to b
+        }
+    }
+}

@@ -31,12 +31,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AudioFile
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.UnfoldLess
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.RangeSlider
@@ -55,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -248,7 +253,10 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 }
                 Block("Zeitleiste") {
                     fun uhr(m: Int) = "%02d:%02d".format(m / 60, m % 60)
-                    Text("Von ${uhr(e.zeitleisteVon)} bis ${uhr(e.zeitleisteBis)} Uhr", color = f.textLeise, fontSize = 13.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Schedule, null, tint = f.primaer, modifier = Modifier.size(18.dp))
+                        Text("Von ${uhr(e.zeitleisteVon)} bis ${uhr(e.zeitleisteBis)} Uhr", color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+                    }
                     RangeSlider(
                         e.zeitleisteVon / 30f..e.zeitleisteBis / 30f,
                         { r ->
@@ -260,8 +268,27 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                         valueRange = 0f..48f, steps = 47,
                         colors = SliderDefaults.colors(thumbColor = f.primaer, activeTrackColor = f.primaer),
                     )
-                    Schalter("Automatisch an die Termine anpassen", e.zeitleisteAuto) { e.zeitleisteAuto = it }
-                    Text("Mit Automatik reicht die Leiste von einer Stunde vor dem ersten bis eine Stunde nach dem letzten Termin. Sobald du eine Aufgabe ziehst, zeigt sie wieder die eingestellte Spanne, damit du sie überall ablegen kannst.", color = f.textLeise, fontSize = 12.sp)
+                    Text("Die ganze Spanne deines Tages. Sie ist immer zu sehen, wenn beide Schalter aus sind – und immer, sobald du eine Aufgabe ziehst.", color = f.textLeise, fontSize = 12.sp)
+                    OptionSchalter(
+                        Icons.Rounded.AutoAwesome, "Rand an die Termine anpassen",
+                        "Die Leiste beginnt eine Stunde vor deinem ersten Termin des Tages und endet eine Stunde nach dem letzten. Leere Stunden am Morgen und am Abend verschwinden. Ohne Termine siehst du die ganze Spanne.",
+                        e.zeitleisteAuto,
+                    ) { e.zeitleisteAuto = it }
+                    OptionSchalter(
+                        Icons.Rounded.UnfoldLess, "Freie Stunden zusammenrücken",
+                        "Liegen zwei oder mehr freie Stunden zwischen zwei Terminen, schrumpfen sie zu einer schmalen Lücke. Beispiel: Termin um 15 Uhr, nächster um 19 Uhr – 17 und 18 Uhr verschwinden. In Heute und Morgen schaltest du oben an der Zeitleiste zwischen „Kompakt“ und „Ganzer Tag“ um; auch ein Tipp auf eine Lücke zeigt den ganzen Tag.",
+                        e.zeitleisteLuecken,
+                    ) { e.zeitleisteLuecken = it }
+                    Row(
+                        Modifier.fillMaxWidth().glas(f, 14.dp, erhoeht = 0f, fuellung = f.primaer.copy(alpha = 0.08f), rand = false).padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Rounded.TouchApp, null, tint = f.primaer, modifier = Modifier.size(18.dp))
+                        Text(
+                            "Ziehst du eine Aufgabe, öffnet sich sofort die ganze Spanne – so legst du sie genau auf die Uhrzeit, die du willst.",
+                            color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(start = 10.dp),
+                        )
+                    }
                 }
                 Block("Fokus-Timer") {
                     ChipReihe { listOf(15, 25, 45, 60).forEach { m -> Chip("$m Min.", e.fokusMinuten == m) { e.fokusMinuten = m } } }
@@ -280,6 +307,30 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     }
 }
 
+
+/** Schalter mit Symbol, Titel und Erklärung; eingeschaltet leuchtet das Symbol in der Designfarbe. */
+@Composable
+private fun OptionSchalter(icon: ImageVector, titel: String, text: String, an: Boolean, aendern: (Boolean) -> Unit) {
+    val f = LocalFarben.current
+    Row(
+        Modifier.fillMaxWidth().glas(f, 16.dp, erhoeht = 0.5f, fuellung = f.flaecheStark, toenung = if (an) f.primaer else null)
+            .antippen(haptik = false) { aendern(!an) }.padding(start = 12.dp, end = 10.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(38.dp).then(
+                if (an) Modifier.knopf3d(f.primaer, f.sekundaer, 12.dp, f.dunkel)
+                else Modifier.glas(f, 12.dp, erhoeht = 0f, fuellung = f.textSchwach.copy(alpha = 0.12f), rand = false),
+            ),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, null, tint = if (an) Color.White else f.textLeise, modifier = Modifier.size(20.dp)) }
+        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text(titel, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(text, color = f.textLeise, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 3.dp))
+        }
+        Switch(an, aendern, colors = SwitchDefaults.colors(checkedTrackColor = f.primaer))
+    }
+}
 
 @Composable
 fun Schalter(text: String, an: Boolean, aendern: (Boolean) -> Unit) {

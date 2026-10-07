@@ -22,6 +22,11 @@ Eigene Aufgaben-App für Android (Kotlin, Jetpack Compose, Room, Glance). Paket 
   Übermorgen, Hoch, Mittel, Gering, Später), unten Erledigt und Löschen. Über der **Zeitleiste
   (5–22 Uhr)** zeigt links eine Uhrzeit mit, die dem Finger folgt (15-Minuten-Schritte);
   Loslassen macht die Aufgabe zum Termin. Zurück in den oberen Teil von Heute/Morgen = ohne Uhrzeit.
+- **Zeitleiste kompakt:** In den Einstellungen passt sich der Rand an die Termine an (eine Stunde davor/danach),
+  und „Freie Stunden zusammenrücken“ schrumpft zwei oder mehr freie Stunden zwischen zwei Terminen zu einer schmalen
+  Lücke („3 Std. frei · 16–19 Uhr“). Dann steht oben an der Zeitleiste von Heute und Morgen der Umschalter
+  **Kompakt / Ganzer Tag**; ein Tipp auf eine Lücke zeigt ebenfalls den ganzen Tag. Beim Ziehen öffnet sich immer die
+  ganze eingestellte Spanne.
 - **Erinnerungen** für Termine in Heute/Morgen, pünktlich oder mit Vorlauf; eingebauter Ton,
   Systemton oder eigene MP3 (wird in die App kopiert), eigene Lautstärke, Vibration, Aktionen
   „Erledigt“ und „In 10 Min.“.
