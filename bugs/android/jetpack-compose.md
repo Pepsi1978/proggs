@@ -380,7 +380,9 @@ Leistenmaße in Inhaltslage (`positionInRoot().y + scroll.value`), Umrechnung mi
 keine doppelte Scrollkompensation. Treffertest auf das Zeitband ± halber Rasterschritt. Spannenwechsel im
 Pointer-Handler des Ziehstarts per `dispatchRawDelta` ausgleichen und die Maße sofort selbst umrechnen (nicht auf
 `onGloballyPositioned` warten: bleibt eine Lage dank Ausgleich gleich, muss der Callback nicht kommen). `ende()`
-ordnet vor dem Ablegen noch einmal zu.
+ordnet vor dem Ablegen noch einmal zu. Liegt die Leiste in einem Container mit `animateContentSize`, diese Animation während des Ziehens
+abschalten (Codex-Befund PR #184): Sonst federt die Höhe nach, und der sofortige Scroll-Ausgleich springt erst und
+driftet dann zurück.
 **Restgrenzen:** Nahe dem Listenende begrenzt `dispatchRawDelta` auf das alte `maxValue` (Teilsprung); das
 Zurückschalten der Spanne nach dem Loslassen wird nicht ausgeglichen.
 **Muster-Erkennung:** Zeichnet etwas „mit dem Finger mit“ in einer anderen Ebene oder aus einer anderen Rechnung

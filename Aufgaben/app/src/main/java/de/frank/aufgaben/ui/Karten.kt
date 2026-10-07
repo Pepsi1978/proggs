@@ -219,7 +219,9 @@ fun Sektion(
             .ablageZiel(zustand, "sek_$schluessel", ziel)
             .glas(f, erhoeht = 1.3f, fuellung = f.flaeche.copy(alpha = f.flaeche.alpha * 0.8f), toenung = farbe)
             .then(if (schwebt) Modifier.glas(f, erhoeht = 0f, fuellung = rand.copy(alpha = 0.12f)) else Modifier)
-            .animateContentSize(spring(dampingRatio = 0.85f, stiffness = 380f)),
+            // Beim Ziehen ohne Größenanimation: ZiehZustand gleicht den Spannenwechsel der Zeitleiste im selben Frame per
+            // Scroll aus; eine nachfedernde Höhe ließe den Inhalt erst springen und dann zurückdriften.
+            .then(if (zustand.aufgabe == null) Modifier.animateContentSize(spring(dampingRatio = 0.85f, stiffness = 380f)) else Modifier),
     ) {
         Row(
             Modifier.fillMaxWidth().antippen(haptik = false) { wahl = if (offen) 2 else 1 }.padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 10.dp),
