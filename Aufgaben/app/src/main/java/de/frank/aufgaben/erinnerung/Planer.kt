@@ -260,6 +260,8 @@ class SystemEmpfaenger : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 Planer.planeAlle(context)
+                // Ein laufender Fokus-Timer überlebt so auch einen Neustart des Handys.
+                Fokus.nachholen(context)
                 HeuteWidget.aktualisiere(context)
             } finally {
                 ergebnis.finish()

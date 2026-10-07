@@ -24,6 +24,7 @@ import de.frank.aufgaben.data.Schritt
 import de.frank.aufgaben.data.Tage
 import de.frank.aufgaben.data.Wiederholung
 import de.frank.aufgaben.data.kurzerTitel
+import de.frank.aufgaben.erinnerung.Fokus
 import de.frank.aufgaben.erinnerung.Toene
 import de.frank.aufgaben.ki.AufgabenKi
 import de.frank.aufgaben.ki.notTitel
@@ -119,8 +120,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var fokusLaeuft by mutableStateOf(false); private set
     var fokusGesamt by mutableLongStateOf(0L); private set
     private var fokusJob: Job? = null
+    private var fokusId: Long? = null
 
     init {
+        // Lief beim letzten Mal ein Fokus und Android hat die App inzwischen beendet: dort weitermachen.
+        Fokus.gespeichert(app)?.let { s ->
+            fokusGesamt = s.gesamt.coerceAtLeast(s.ende - System.currentTimeMillis())
+            fokusRest = s.ende - System.currentTimeMillis()
+            fokusId = s.aufgabe
+            bildschirm = Bildschirm.Fokus(s.aufgabe)
+            fokusFortsetzen()
+        }
         viewModelScope.launch {
             while (true) {
                 val bisMitternacht = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() - System.currentTimeMillis()
@@ -465,9 +475,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Mit Aufgabe läuft der Timer sofort; ohne (Fokus-Knopf oben) wartet er auf die Zeitwahl. */
     fun fokusStarten(id: Long?) {
         fokusJob?.cancel(); fokusLaeuft = false
+        Fokus.abbrechen(getApplication())
         fokusGesamt = einstellungen.fokusMinuten * 60_000L
         fokusRest = fokusGesamt
+        fokusId = id
         bildschirm = Bildschirm.Fokus(id)
+        // Ohne Erlaubnis für Benachrichtigungen fehlt der Countdown in anderen Apps.
+        hinweiseAnfragen()
         if (id != null) fokusFortsetzen()
     }
 
@@ -475,6 +489,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun fokusDauer(minuten: Int, starten: Boolean = false) {
         val lief = fokusLaeuft
         fokusJob?.cancel(); fokusLaeuft = false
+        if (!lief || minuten == 0) Fokus.abbrechen(getApplication())
         fokusGesamt = minuten.coerceIn(0, 120) * 60_000L
         fokusRest = fokusGesamt
         if (lief || starten) fokusFortsetzen()
@@ -492,6 +507,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         fokusJob?.cancel()
         fokusEnde = System.currentTimeMillis() + fokusRest
         fokusLaeuft = true
+        // Ton und Ansage am Ende kommen vom Alarm, damit sie auch in anderen Apps (z. B. Kindle) ankommen.
+        val titel = fokusId?.let { i -> aufgaben.value.firstOrNull { it.id == i }?.titel }
+        Fokus.planen(getApplication(), fokusEnde, fokusId, fokusGesamt, titel)
         fokusJob = viewModelScope.launch {
             while (true) {
                 fokusRest = (fokusEnde - System.currentTimeMillis()).coerceAtLeast(0)
@@ -499,14 +517,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 delay(250)
             }
             fokusLaeuft = false
-            Toene.spiele(getApplication(), einstellungen.ton, einstellungen.lautstaerke)
             melde("Fokuszeit vorbei – gut gemacht!")
         }
     }
 
-    fun fokusPause() { fokusJob?.cancel(); fokusLaeuft = false }
+    /** Erlaubnis kam erst nach dem Start: Countdown jetzt nachreichen (vorher lehnte Android ihn ab). */
+    fun hinweiseErlaubt() {
+        if (!fokusLaeuft) return
+        val titel = fokusId?.let { i -> aufgaben.value.firstOrNull { it.id == i }?.titel }
+        Fokus.planen(getApplication(), fokusEnde, fokusId, fokusGesamt, titel)
+    }
 
-    fun fokusBeenden() { fokusJob?.cancel(); fokusLaeuft = false; bildschirm = Bildschirm.Liste }
+    fun fokusPause() { fokusJob?.cancel(); fokusLaeuft = false; Fokus.abbrechen(getApplication()) }
+
+    fun fokusBeenden() {
+        fokusJob?.cancel(); fokusLaeuft = false; bildschirm = Bildschirm.Liste
+        Fokus.abbrechen(getApplication())
+    }
 
     fun tonProbe() { Toene.spiele(getApplication(), einstellungen.ton, einstellungen.lautstaerke) }
 

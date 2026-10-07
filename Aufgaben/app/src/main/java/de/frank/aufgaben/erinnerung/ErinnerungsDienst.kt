@@ -55,7 +55,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Alles läuft über den Wecker-Kanal und den eingebauten Lautsprecher, auch bei Lautlos und Bluetooth ([Lautsprecher]).
  */
 class ErinnerungsDienst : Service() {
-    private data class Auftrag(val aufgabe: Aufgabe, val wann: String) {
+    /** [anzahl]: wie oft der Text vorgelesen wird (Aufgaben sechsmal, Ende des Fokus-Timers einmal). */
+    private data class Auftrag(val aufgabe: Aufgabe, val wann: String, val anzahl: Int = Ansage.ANZAHL) {
         val id: Long get() = aufgabe.id
         val wecker: Boolean get() = aufgabe.alsWecker
     }
@@ -80,19 +81,25 @@ class ErinnerungsDienst : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val id = intent?.getLongExtra(Planer.ID, -1) ?: -1
+        val istFokus = intent?.action == Fokus.AKTION_ENDE
+        val id = if (istFokus) Fokus.ID else intent?.getLongExtra(Planer.ID, -1) ?: -1
         val wann = intent?.getStringExtra(EXTRA_WANN).orEmpty()
         val laeuft = aktuell
         // Jeder startForegroundService() verlangt sofort startForeground(), sonst beendet Android die App.
         val n = if (laeuft != null) benachrichtigung(laeuft, imDienst = true) else Planer.platzhalter(this)
         if (!vordergrund(laeuft?.id?.toInt() ?: PLATZHALTER_ID, n)) {
             Log.w(TAG, "Vordergrund nicht erlaubt; Erinnerung ohne Vorlesen")
-            if (id >= 0) Planer.einfacheErinnerung(applicationContext, id)
+            if (istFokus) Fokus.einfach(applicationContext)
+            else if (id >= 0) Planer.einfacheErinnerung(applicationContext, id)
             if (aktuell == null) stopSelf()
             return START_NOT_STICKY
         }
         if (id < 0) {
             if (aktuell == null) beenden(null, entfernen = true)
+            return START_NOT_STICKY
+        }
+        if (istFokus) {
+            annehmen(Auftrag(Fokus.aufgabe(), "", anzahl = 1))
             return START_NOT_STICKY
         }
         scope.launch {
@@ -101,28 +108,33 @@ class ErinnerungsDienst : Service() {
                 if (aktuell == null && warteschlange.isEmpty()) beenden(null, entfernen = true)
                 return@launch
             }
-            when {
-                aktuell?.id == id || warteschlange.any { it.id == id } -> Unit
-                aktuell == null -> {
-                    val auftrag = Auftrag(a, wann)
-                    val bn = benachrichtigung(auftrag, imDienst = true)
-                    vordergrund(auftrag.id.toInt(), bn)
-                    // Der Platzhalter verschwindet, sobald die echte Benachrichtigung steht.
-                    NotificationManagerCompat.from(this@ErinnerungsDienst).cancel(PLATZHALTER_ID)
-                    starte(auftrag)
-                }
-                else -> {
-                    val auftrag = Auftrag(a, wann)
-                    zeige(auftrag)
-                    warteschlange.addLast(auftrag)
-                }
-            }
+            annehmen(Auftrag(a, wann))
         }
         return START_NOT_STICKY
     }
 
+    /** Spielt [auftrag] sofort ab oder stellt ihn hinter die laufende Erinnerung. */
+    private fun annehmen(auftrag: Auftrag) {
+        val id = auftrag.id
+        when {
+            aktuell?.id == id || warteschlange.any { it.id == id } -> Unit
+            aktuell == null -> {
+                val bn = benachrichtigung(auftrag, imDienst = true)
+                vordergrund(auftrag.id.toInt(), bn)
+                // Der Platzhalter verschwindet, sobald die echte Benachrichtigung steht.
+                NotificationManagerCompat.from(this).cancel(PLATZHALTER_ID)
+                starte(auftrag)
+            }
+            else -> {
+                zeige(auftrag)
+                warteschlange.addLast(auftrag)
+            }
+        }
+    }
+
     private fun benachrichtigung(a: Auftrag, imDienst: Boolean): Notification =
-        Planer.benachrichtigung(this, a.aufgabe, a.wann, imDienst)
+        if (a.id == Fokus.ID) Fokus.benachrichtigung(this, imDienst)
+        else Planer.benachrichtigung(this, a.aufgabe, a.wann, imDienst)
 
     private fun zeige(a: Auftrag) {
         runCatching { NotificationManagerCompat.from(this).notify(a.id.toInt(), benachrichtigung(a, imDienst = false)) }
@@ -175,11 +187,11 @@ class ErinnerungsDienst : Service() {
             spiele(null, e.ton, e.lautstaerke, tonAttribute, TON_MAX_MS, verstaerken = false)
             if (a.aufgabe.vorlesen && text.isNotBlank()) {
                 delay(1_000)
-                for (i in 0 until Ansage.ANZAHL) {
+                for (i in 0 until a.anzahl) {
                     val datei = dateien.getOrNull(i % dateien.size.coerceAtLeast(1))
                     if (datei != null) spiele(datei, null, e.lautstaerke, attribute, SATZ_MAX_MS, verstaerken = true)
                     else geraetSpricht(text, e.lautstaerke, attribute)
-                    if (i < Ansage.ANZAHL - 1 || a.wecker) delay(Ansage.PAUSE_MS)
+                    if (i < a.anzahl - 1 || a.wecker) delay(Ansage.PAUSE_MS)
                 }
             } else if (a.wecker) {
                 delay(Ansage.PAUSE_MS)
@@ -366,6 +378,11 @@ class ErinnerungsDienst : Service() {
                 context,
                 Intent(context, ErinnerungsDienst::class.java).putExtra(Planer.ID, id).putExtra(EXTRA_WANN, wann),
             )
+        }
+
+        /** Ende des Fokus-Timers: Ton und einmal [Fokus.TEXT]. Wirft, wenn Android den Vordergrund-Dienst nicht erlaubt. */
+        fun starteFokus(context: Context) {
+            ContextCompat.startForegroundService(context, Intent(context, ErinnerungsDienst::class.java).setAction(Fokus.AKTION_ENDE))
         }
 
         /** Beendet Vorlesen/Wecker der Aufgabe [id], falls gerade aktiv oder wartend. */
