@@ -1,6 +1,8 @@
-# JARVIS Projektstand und Gesprächserkenntnisse
+# JARVIS Sprachsteuerung MCP Agentenschleifen und Projektwissen
 
-Stand: 07.10.2026, 21:54 Uhr
+Gesprächsdatum: 07.10.2026
+
+Aktualisiert und in die Datenbank-Struktur überführt: 07.10.2026, 22:09 Uhr
 
 Frank entwickelt JARVIS als persönlichen, erweiterbaren KI-Assistenten. Im Gespräch vom 7. Oktober 2026 wurden die Sprachoberfläche, die Anbindung eigener Android-Apps, Werkzeugaufrufe und Agentenschleifen besprochen. Bevorzugter erster Aufbau: JARVIS auf dem Handy, zunächst mit einer Verbindung zur Aufgaben-App. Die Anbindung an ChatGPT soll zuerst mit wenigen Funktionen getestet werden.
 
@@ -41,3 +43,37 @@ JARVIS soll Ziel, Zwischenergebnisse, nächsten Schritt und bereits ausgeführte
 Zuerst wird geprüft, ob JARVIS auf dem Handy erreichbar ist. Danach werden Aufgaben lesen und eine Aufgabe anlegen angebunden. Anschließend werden Textaufruf und Sprachaufruf aus ChatGPT getrennt getestet. Für die lokale Agentenschleife folgen Tests bei gesperrtem Bildschirm, Netzunterbrechung und Wiederaufnahme. Weitere Apps und komplexe Auswertungen werden erst nach erfolgreichem Grundtest ergänzt.
 
 Diese Datei hält Projektwünsche und technische Grenzen fest. Sie muss bei Bedarf gelesen werden und ist keine automatisch in jedem Gespräch geladene persönliche ChatGPT-Erinnerung.
+
+## Externes Projektwissen im Repository
+
+Frank möchte wichtige Informationen längerer Gespräche dauerhaft im eigenen Repository speichern und später gezielt wieder einlesen lassen. Dieses Repository dient damit als externes, versioniertes Wissensarchiv. Der Inhalt wird beim Abruf in den aktuellen Arbeitskontext geladen; das Modell wird durch die Dateiablage nicht neu trainiert. Der Zugriff auf Pepsi1978/proggs wurde in dieser Sitzung praktisch bestätigt: Die ursprüngliche JARVIS-Notiz wurde erstellt, über einen Pull Request nach main übernommen und anschließend wieder ausgelesen.
+
+Eine zuvor angelegte private ChatGPT-Projektnotiz existiert zusätzlich. Sie ersetzt weder die Repository-Datei noch eine persönliche ChatGPT-Erinnerung. Der Repository-Stand soll die ausdrücklich gewünschte Ablage für das Projektwissen sein. Ein späterer Auftrag kann das Lesen der gespeicherten Projektinformationen anfordern; zuverlässiger Abruf setzt voraus, dass die verwendete Anwendung die nötigen Werkzeuge und Zugriffsrechte besitzt.
+
+## Verbindlich definierter Datenbank Skill
+
+Frank wollte zuerst nur die Machbarkeit eines solchen Skills klären und anschließend dessen Regeln selbst definieren. Die erste Installation erfolgte vor dieser Definition. Anschließend wurden die Anweisungen an seine konkreten Vorgaben angepasst. Es gibt ausschließlich einen Skill mit dem Namen Datenbank. Die zusätzliche Bezeichnung Gedächtnis-Skill wurde verworfen und aus den vorgesehenen Aufrufen entfernt.
+
+Der Skill soll bei einem ausdrücklichen Speicherauftrag möglichst viele wichtige Informationen aus dem gesamten verfügbaren Gespräch ausführlich aufbereiten. Eine knappe oder grobe Zusammenfassung genügt Frank nicht. Der Text soll übersichtlich gegliedert sein, Zusammenhänge und Gründe erhalten und Wiederholungen oder sprachliche Füllwörter entfernen. Zu bewahren sind insbesondere konkrete Wünsche, Entscheidungen, Begründungen, Alternativen, technische Anforderungen, Zahlen, Beispiele, Einschränkungen, offene Fragen und nächste Schritte. Vorschläge der Assistenz dürfen nicht als Entscheidungen des Nutzers dargestellt werden. Fehlende Gesprächsteile dürfen nicht erfunden werden.
+
+Der feste Hauptordner ist Datenbank. Darunter liegen Themen- oder Projektordner wie JARVIS, Philosophie, Zitate oder konkrete Apps. Existiert ein passender Ordner bereits, soll er wiederverwendet werden. Für ein neues Thema darf nach der Freigabe ein neuer Unterordner entstehen. Mehrere Gespräche über JARVIS werden im selben Projektordner gesammelt. Die heutige Migration wurde ausdrücklich nach Datenbank/JARVIS beauftragt.
+
+## Dateinamen und zweistufige Inhaltsverzeichnisse
+
+Dateinamen müssen den konkreten Inhalt erkennbar machen. Frank kritisierte die frühere Bezeichnung Gespraech_2026-10-07.md, weil sie das Thema nicht erkennen lässt. Vereinbart ist eine Benennung mit Thema und Unterthemen sowie dem Datum als Zusatz. Die heutige Datei beschreibt deshalb Sprachsteuerung, MCP, Agentenschleifen und Projektwissen im Namen.
+
+Im Hauptordner Datenbank liegt INHALTSVERZEICHNIS.md als Projektübersicht. Zu jedem Unterordner enthält es dessen Namen, eine kurze Beschreibung des Projekts oder Themengebiets und einen Link zum jeweiligen Inhaltsverzeichnis. Der JARVIS-Eintrag erklärt die Idee eines persönlichen KI-Assistenten mit Sprachsteuerung, App-Anbindungen und Agentenabläufen. Die Hauptübersicht soll die Einordnung ermöglichen, ohne alle Unterordner und Dateien vollständig zu durchsuchen.
+
+Jeder Themenordner besitzt ebenfalls INHALTSVERZEICHNIS.md. Dort werden die einzelnen Wissensdateien mit aussagekräftigem Titel, Datum, Link und kurzer konkreter Inhaltsbeschreibung aufgeführt. Beim späteren Abruf wird zunächst die Übersicht verwendet, dann das Inhaltsverzeichnis des passenden Projekts und schließlich nur die für die Frage relevanten Dateien. Die Inhaltsverzeichnisse ersetzen den ausführlichen Inhalt nicht, sondern helfen bei dessen gezielter Auswahl.
+
+## Gewünschter Speicherablauf und Bestätigung
+
+Der Aufruf kann lauten: „Starte den Datenbank-Skill, speichere die Informationen ab.“ Danach werden Gespräch, Projektzuordnung, ausführliche Zusammenfassung, Dateiname und Inhaltsverzeichniseinträge vorbereitet. Vor dem Schreiben soll die Assistenz den konkreten Ordner vorschlagen und fragen, ob dieser passend ist. Franks Beispiel: „Ich würde die Informationen jetzt in Datenbank im Ordner Philosophie abspeichern. Ist das okay?“
+
+Ein Ja gibt den vorgeschlagenen Speicherort frei. Eine Antwort wie „Nein, speichere das lieber in Zitate“ bestimmt stattdessen den korrigierten Ordner. Ohne eindeutige Freigabe wird nicht gespeichert. Anschließend werden Dateien und Inhaltsverzeichnisse konsistent geschrieben und aus dem tatsächlichen Repository-Ziel erneut geprüft. Eine bloße Frage nach der Machbarkeit ist ausdrücklich kein Auftrag, den Skill anzulegen oder ein Gespräch zu speichern.
+
+Der Skill beschreibt den Arbeitsablauf und verwendet vorhandene Werkzeuge zum Lesen und Schreiben. Er erzeugt selbst weder einen neuen Repository-Zugang noch einen vollständigen automatischen Live-Mitschnitt. Die Verfügbarkeit aller Anweisungen und Werkzeuge in einer zukünftigen Sprachsitzung ist von deren Umgebung abhängig; in der aktuellen Sitzung wurde Repository-Zugriff nachgewiesen.
+
+## Offene Umsetzungspunkte
+
+Die Datenbank-Struktur und der Skill dienen zunächst dem Speichern und Abrufen von Wissen. Sie sind noch keine fertig gebaute JARVIS-App und kein getesteter MCP-Tunnel zum Handy. Für JARVIS bleiben die Erreichbarkeit auf Android, die Schnittstelle zur Aufgaben-App, Lese- und Schreibzugriffe im gewünschten Sprachmodus sowie Hintergrundbetrieb und Wiederaufnahme praktisch zu testen. Die gewünschte vollständige Übergabe aller Live-Gesprächsinformationen bleibt eine gesonderte technische Anforderung.
