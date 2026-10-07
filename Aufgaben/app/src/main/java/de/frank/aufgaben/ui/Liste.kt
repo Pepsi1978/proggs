@@ -165,6 +165,28 @@ fun ListeBildschirm(vm: AppViewModel) {
         }
     }
 
+    // Nach dem Ablegen auf einer Zeitleiste: Der Termin bleibt genau dort auf dem Bildschirm, wo man ihn hat fallen lassen.
+    // Die Leisten rücken danach wieder zusammen und die Datenbank liefert den Termin erst ein paar Frames später an seinem
+    // neuen Platz; solange gleicht die Liste jede Verschiebung aus, bis alles ruht (oder man selbst scrollt).
+    LaunchedEffect(zustand.ablageNr) {
+        val z = zustand.ablage ?: return@LaunchedEffect
+        val start = System.currentTimeMillis()
+        var letzteKorrektur = 0L
+        while (zustand.ablage === z && zustand.aufgabe == null && !scroll.isScrollInProgress) {
+            withFrameNanos { }
+            val nun = System.currentTimeMillis()
+            val y = z.istY
+            if (y != null) {
+                z.istY = null
+                val d = y - z.zielY
+                if (kotlin.math.abs(d) > 0.5f) { scroll.dispatchRawDelta(d); letzteKorrektur = nun }
+                else if (letzteKorrektur == 0L) letzteKorrektur = nun
+            }
+            if (nun - start > 3000 || (letzteKorrektur != 0L && nun - letzteKorrektur > 450)) break
+        }
+        if (zustand.ablage === z) zustand.ablage = null
+    }
+
     Box(Modifier.fillMaxSize().onGloballyPositioned {
         val r = it.boundsInRoot()
         zustand.ursprung = it.positionInRoot()

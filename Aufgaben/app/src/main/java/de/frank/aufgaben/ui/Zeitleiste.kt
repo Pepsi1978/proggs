@@ -125,12 +125,13 @@ private fun Leiste(
     if (istHeute) LaunchedEffect(Unit) {
         while (true) { delay(30_000); jetzt = LocalTime.now().let { it.hour * 60 + it.minute } }
     }
-    // Beim Umschalten (Kompakt ⇄ Ganzer Tag, Termine geändert) blendet die Leiste weich neu ein — nicht beim Ziehen:
-    // Dort muss sie im selben Frame stehen, in dem ZiehZustand nachscrollt.
+    // Beim Umschalten (Kompakt ⇄ Ganzer Tag, Termine geändert) blendet die Leiste weich neu ein — nicht beim Ziehen und
+    // nicht direkt nach dem Loslassen: Dort muss sie ruhig im selben Frame stehen, in dem ZiehZustand nachscrollt.
     val sichtbar = remember { Animatable(1f) }
     val letztesBand = remember { arrayOf(band) }
     LaunchedEffect(band) {
-        if (band != letztesBand[0] && zustand.aufgabe == null) { sichtbar.snapTo(0.25f); sichtbar.animateTo(1f, tween(340)) }
+        val nachAblage = System.currentTimeMillis() - zustand.letztesEnde < 2500
+        if (band != letztesBand[0] && zustand.aufgabe == null && !nachAblage) { sichtbar.snapTo(0.25f); sichtbar.animateTo(1f, tween(340)) }
         letztesBand[0] = band
     }
     DisposableEffect(tag) { onDispose { zustand.entferneLeiste(tag) } }
@@ -215,7 +216,8 @@ private fun Leiste(
             val sp = spalteVon[a.id] ?: 0
             Box(
                 Modifier.offset(x = SPALTE + flaeche / nSpalten * sp, y = oben)
-                    .width(flaeche / nSpalten - 4.dp).height(h),
+                    .width(flaeche / nSpalten - 4.dp).height(h)
+                    .onGloballyPositioned { zustand.meldeTermin(a, it.positionInRoot().y) },
             ) { TerminBlock(a, zustand, onTipp = { onTipp(a) }, onErledigt = { onErledigt(a) }) }
         }
     }
