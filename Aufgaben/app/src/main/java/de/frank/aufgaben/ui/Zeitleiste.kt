@@ -87,11 +87,20 @@ fun Zeitleiste(
     onTipp: (Aufgabe) -> Unit, onErledigt: (Aufgabe) -> Unit,
 ) {
     val kompakt = remember(termine, vonEinst, bisEinst, auto, luecken) { Zeitband.fuer(termine, vonEinst, bisEinst, auto, luecken) }
-    val band = if (zustand.aufgabe != null || (luecken && ganzerTag)) Zeitband(vonEinst, bisEinst) else kompakt
+    // „Ganzer Tag“ zeigt nie weniger als „Kompakt“ (die Automatik reicht eine Stunde über die Termine hinaus).
+    val ganz = remember(termine, vonEinst, bisEinst, kompakt) {
+        Zeitband.ganzerTag(termine, vonEinst, bisEinst).let { Zeitband(minOf(it.vonMin, kompakt.vonMin), maxOf(it.bisMin, kompakt.bisMin)) }
+    }
+    // Beim Ziehen genau die eingestellte Spanne: Darauf rechnet ZiehZustand (ziehSpanne) den Ausgleich beim Ziehstart.
+    val band = when {
+        zustand.aufgabe != null -> Zeitband(vonEinst, bisEinst)
+        luecken && ganzerTag -> ganz
+        else -> kompakt
+    }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // Sichtbar genau dann, wenn die Einstellung an ist — nie abhängig vom Ziehen: Eine Höhenänderung über der Leiste
         // beim Ziehstart kennt der Ausgleich in ZiehZustand nicht, die Leiste spränge unter dem Finger.
-        if (luecken) AnsichtSchalter(ganzerTag, kompakt.ausgeblendet(vonEinst, bisEinst), vonEinst, bisEinst, onGanzerTag)
+        if (luecken) AnsichtSchalter(ganzerTag, kompakt.ausgeblendet(ganz.vonMin, ganz.bisMin), ganz.vonMin, ganz.bisMin, onGanzerTag)
         Leiste(tag, termine, istHeute, zustand, band, if (luecken) { { onGanzerTag(true) } } else null, onTipp, onErledigt)
     }
 }
