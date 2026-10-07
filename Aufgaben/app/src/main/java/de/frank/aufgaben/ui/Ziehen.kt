@@ -27,9 +27,13 @@ import kotlin.math.roundToInt
  * Maße einer Zeitleiste. Senkrecht in Inhaltskoordinaten (Fensterposition + Scrollstand beim Messen), damit sie beim
  * Randscrollen nicht einen Frame hinterherhinken: Die Fensterlage ergibt sich immer frisch aus `wert - scrollWert()`.
  */
-class LeistenMass(val links: Float, val rechts: Float, val startImInhalt: Float, val stundePx: Float, val vonMin: Int, val bisMin: Int) {
-    /** Länge des Zeitbands (vonMin bis bisMin) in px. */
-    val bandPx: Float get() = (bisMin - vonMin) / 60f * stundePx
+class LeistenMass(val links: Float, val rechts: Float, val startImInhalt: Float, val stundePx: Float, val lueckePx: Float, val band: Zeitband) {
+    val vonMin: Int get() = band.vonMin
+    val bisMin: Int get() = band.bisMin
+    /** Länge des Zeitbands (vonMin bis bisMin, Lücken zusammengerückt) in px. */
+    val bandPx: Float = band.hoehe(stundePx, lueckePx)
+    /** Minute an der Höhe [px] unter dem Bandanfang. */
+    fun minute(px: Float): Float = band.minute(px, stundePx, lueckePx)
 }
 
 /**
@@ -82,8 +86,8 @@ class ZiehZustand {
     fun registriere(schluessel: String, bereich: Rect, ziel: Ziel) { ziele[schluessel] = bereich to ziel }
 
     /** Meldet eine Zeitleiste mit ihrer Fensterlage an (aus onGloballyPositioned) und rechnet sie in Inhaltslage um. */
-    fun registriereLeiste(tag: Long, links: Float, rechts: Float, startImFenster: Float, stundePx: Float, vonMin: Int, bisMin: Int) {
-        leisten[tag] = LeistenMass(links, rechts, startImFenster + scrollWert(), stundePx, vonMin, bisMin)
+    fun registriereLeiste(tag: Long, links: Float, rechts: Float, startImFenster: Float, stundePx: Float, lueckePx: Float, band: Zeitband) {
+        leisten[tag] = LeistenMass(links, rechts, startImFenster + scrollWert(), stundePx, lueckePx, band)
         // Ändert sich die Leiste während des Ziehens (z. B. Spanne beim Ziehstart), gilt die neue Uhrzeit sofort.
         if (aufgabe != null) aktualisiere()
     }
@@ -102,25 +106,28 @@ class ZiehZustand {
     }
 
     /**
-     * Mit Automatik zeigt eine Zeitleiste ohne Ziehen nur die Stunden um ihre Termine, beim Ziehen die eingestellte
-     * Spanne. Der Wechsel lässt Inhalt über dem Finger wachsen oder schrumpfen — die Leiste spränge unter dem stillen
-     * Finger auf eine andere Uhrzeit. Darum wird im selben Frame genau um diese Höhe nachgescrollt, und die Maße aller
-     * Leisten werden sofort auf das kommende Layout umgerechnet (nicht erst, wenn Compose sie neu meldet: Bleibt eine
-     * Leiste dank Ausgleich an ihrer Fensterstelle, muss Compose sie gar nicht neu melden).
+     * Mit Automatik oder zusammengerückten Lücken zeigt eine Zeitleiste ohne Ziehen nur einen Teil des Tages, beim Ziehen
+     * die ganze eingestellte Spanne. Der Wechsel lässt Inhalt über dem Finger wachsen oder schrumpfen — die Leiste spränge
+     * unter dem stillen Finger auf eine andere Uhrzeit. Darum wird im selben Frame genau um diese Höhe nachgescrollt, und
+     * die Maße aller Leisten werden sofort auf das kommende Layout umgerechnet (nicht erst, wenn Compose sie neu meldet:
+     * Bleibt eine Leiste dank Ausgleich an ihrer Fensterstelle, muss Compose sie gar nicht neu melden).
      */
     private fun spanneAusgleichen(fingerY: Float) {
         val (von, bis) = ziehSpanne ?: return
+        val voll = Zeitband(von, bis)
         val y = fingerY + scrollWert() // Finger in Inhaltslage (altes Layout)
         var verschiebung = 0f // Höhenänderung aller Leisten darüber
         var d = 0f // Höhenänderung über dem Finger
         for ((tag, m) in leisten.entries.sortedBy { it.value.startImInhalt }) {
-            val neuPx = (bis - von) / 60f * m.stundePx
+            val neuPx = voll.hoehe(m.stundePx, m.lueckePx)
+            val innen = y - m.startImInhalt
             d += when {
-                y < m.startImInhalt -> 0f // Leiste liegt unter dem Finger: verschiebt nichts darüber
-                y < m.startImInhalt + m.bandPx -> (m.vonMin - von) / 60f * m.stundePx // Finger auf der Leiste: nur der Teil darüber
+                innen < 0f -> 0f // Leiste liegt unter dem Finger: verschiebt nichts darüber
+                // Finger auf der Leiste: Die Minute unter dem Finger bleibt dort — nur der Teil darüber ändert seine Höhe.
+                innen < m.bandPx -> (m.minute(innen) - von) / 60f * m.stundePx - innen
                 else -> neuPx - m.bandPx // Leiste ganz darüber: ganze Höhenänderung
             }
-            leisten[tag] = LeistenMass(m.links, m.rechts, m.startImInhalt + verschiebung, m.stundePx, von, bis)
+            leisten[tag] = LeistenMass(m.links, m.rechts, m.startImInhalt + verschiebung, m.stundePx, m.lueckePx, voll)
             verschiebung += neuPx - m.bandPx
         }
         // Nahe dem Listenende kann dispatchRawDelta begrenzen (maxValue noch vom alten Layout): dann bleibt ein Restsprung,
@@ -152,7 +159,7 @@ class ZiehZustand {
         if (leiste != null) {
             val m = leiste.value
             // Die Uhrzeit gilt dort, wo die Linie die Zeitleiste schneidet — dieselbe Höhe, an der Linie und Geisterblock liegen.
-            val roh = m.vonMin + (y - (m.startImInhalt - s)) / m.stundePx * 60f
+            val roh = m.minute(y - (m.startImInhalt - s))
             val min = ((roh / 15f).roundToInt() * 15).coerceIn(m.vonMin, m.bisMin)
             setze(null, leiste.key to min)
             return

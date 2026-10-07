@@ -94,6 +94,8 @@ class Einstellungen private constructor(context: Context) {
     var zeitleisteBis: Int get() = prefs.getInt("zeitleiste_bis", 22 * 60); set(v) = put { putInt("zeitleiste_bis", v.coerceIn(60, 24 * 60)) }
     /** Leiste passt sich an die eingetragenen Termine an; beim Ziehen gilt wieder Von/Bis. */
     var zeitleisteAuto: Boolean get() = prefs.getBoolean("zeitleiste_auto", false); set(v) = put { putBoolean("zeitleiste_auto", v) }
+    /** Zwei oder mehr freie Stunden zwischen zwei Terminen rücken zu einer schmalen Lücke zusammen; beim Ziehen nicht. */
+    var zeitleisteLuecken: Boolean get() = prefs.getBoolean("zeitleiste_luecken", false); set(v) = put { putBoolean("zeitleiste_luecken", v) }
 
     // ---- Fokus ----
     var fokusMinuten: Int get() = prefs.getInt("fokus", 25); set(v) = put { putInt("fokus", v.coerceIn(1, 120)) }
