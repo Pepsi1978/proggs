@@ -1,7 +1,5 @@
 package de.frank.aufgaben.ui
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,7 +26,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -36,7 +33,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -96,15 +92,13 @@ fun Zeitleiste(
         while (true) { delay(30_000); jetzt = LocalTime.now().let { it.hour * 60 + it.minute } }
     }
     DisposableEffect(tag) { onDispose { zustand.entferneLeiste(tag) } }
-    val schweben = zustand.hoverZeit?.takeIf { it.first == tag }?.second
     BoxWithConstraints(
         Modifier.fillMaxWidth().height(hoehe)
             .onGloballyPositioned { c ->
-                // boundsInRoot ist am Scrollrand abgeschnitten: Ist der Leistenanfang aus dem Bild gescrollt, läge
-                // die Nulllinie sonst am Bildrand und die Uhrzeit spränge über die Karte. Darum positionInRoot.
-                val b = c.boundsInRoot()
-                val start = c.positionInRoot().y + obenPx
-                zustand.registriereLeiste(tag, LeistenMass(Rect(b.left, b.top, b.right, b.bottom), start, stundePx, vonMin, bisMin))
+                // Ungeschnittene Lage (positionInRoot + size), nicht boundsInRoot: Das ist am Scrollrand abgeschnitten, die
+                // Nulllinie läge sonst am Bildrand und die Uhrzeit spränge. ZiehZustand rechnet sie in Inhaltslage um.
+                val p = c.positionInRoot()
+                zustand.registriereLeiste(tag, p.x, p.x + c.size.width, p.y + obenPx, stundePx, vonMin, bisMin)
             },
     ) {
         val breite = maxWidth
@@ -158,24 +152,54 @@ fun Zeitleiste(
                     .width(flaeche / nSpalten - 4.dp).height(h),
             ) { TerminBlock(a, zustand, onTipp = { onTipp(a) }, onErledigt = { onErledigt(a) }) }
         }
-        // Vorschau beim Ziehen: Geisterblock plus Uhrzeit links
-        if (schweben != null) {
-            val ziel by animateFloatAsState(
-                with(dichte) { (OBEN + STUNDE * ((schweben - vonMin) / 60f)).toPx() },
-                spring(dampingRatio = 0.9f, stiffness = 900f), label = "zeit",
-            )
-            val dauer = zustand.aufgabe?.dauer ?: 30
-            Box(
-                Modifier.graphicsLayer { translationY = ziel }.offset(x = SPALTE).width(flaeche).height(STUNDE * (maxOf(dauer, 30) / 60f))
-                    .glas(f, radius = 12.dp, erhoeht = 0f, fuellung = f.primaer.copy(alpha = 0.22f)),
-            )
-            Box(
-                Modifier.graphicsLayer { translationY = ziel - with(dichte) { 13.dp.toPx() } }.offset(x = 0.dp)
-                    .width(SPALTE - 4.dp).height(26.dp).knopf3d(f.primaer, f.sekundaer, 13.dp, f.dunkel),
-                contentAlignment = Alignment.Center,
-            ) { Text(Tage.zeit(schweben), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
-        }
     }
+}
+
+/** 1 mm (1 dp = 1/160 Zoll): So weit liegt die Zeitlinie über der gezogenen Karte. */
+val LINIE_UEBER_KARTE = (160f / 25.4f).dp
+
+/**
+ * Vorschau beim Ziehen über eine Zeitleiste: orange Linie vom Zeitpfeil nach rechts plus Geisterblock in der Dauer der
+ * Aufgabe. Liegt in der Ebene der gezogenen Karte (nicht im gescrollten Inhalt) und liest dieselbe Höhe wie die Karte
+ * ([ZiehZustand.linieY]) — darum gleitet sie ohne Raster und Feder exakt mit, auch beim Randscrollen.
+ */
+@Composable
+fun ZeitVorschau(zustand: ZiehZustand) {
+    val (tag, _) = zustand.hoverZeit ?: return
+    val m = zustand.leiste(tag) ?: return
+    val f = LocalFarben.current
+    val dichte = LocalDensity.current
+    val breite = with(dichte) { (m.rechts - m.links).toDp() }
+    val flaeche = breite - SPALTE - 6.dp
+    val dauer = zustand.aufgabe?.dauer ?: 30
+    Box(
+        Modifier.graphicsLayer { translationX = m.links - zustand.ursprung.x; translationY = zustand.linieY() - zustand.ursprung.y }.offset(x = SPALTE)
+            .width(flaeche).height(STUNDE * (maxOf(dauer, 30) / 60f))
+            .glas(f, radius = 12.dp, erhoeht = 0f, fuellung = f.primaer.copy(alpha = 0.22f)),
+    )
+    Canvas(
+        Modifier.graphicsLayer { translationX = m.links - zustand.ursprung.x; translationY = zustand.linieY() - zustand.ursprung.y - 6.dp.toPx() }
+            .width(breite).height(12.dp),
+    ) {
+        val x = SPALTE.toPx() - 8.dp.toPx()
+        val y = size.height / 2f
+        drawLine(Brush.horizontalGradient(listOf(f.primaer, f.sekundaer), x, size.width), Offset(x, y), Offset(size.width - 4.dp.toPx(), y), 2.5.dp.toPx(), StrokeCap.Round)
+        drawCircle(f.primaer, 5.dp.toPx(), Offset(x, y))
+        drawCircle(Color.White, 2.dp.toPx(), Offset(x, y))
+    }
+}
+
+/** Uhrzeit-Marke links an der Zeitlinie; über der gezogenen Karte gezeichnet, damit sie nie verdeckt wird. */
+@Composable
+fun ZeitMarke(zustand: ZiehZustand) {
+    val (tag, minuten) = zustand.hoverZeit ?: return
+    val m = zustand.leiste(tag) ?: return
+    val f = LocalFarben.current
+    Box(
+        Modifier.graphicsLayer { translationX = m.links - zustand.ursprung.x; translationY = zustand.linieY() - zustand.ursprung.y - 13.dp.toPx() }
+            .width(SPALTE - 4.dp).height(26.dp).knopf3d(f.primaer, f.sekundaer, 13.dp, f.dunkel),
+        contentAlignment = Alignment.Center,
+    ) { Text(Tage.zeit(minuten), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
 }
 
 @Composable

@@ -23,12 +23,21 @@ import de.frank.aufgaben.data.Aufgabe
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** Maße einer Zeitleiste in Fensterkoordinaten. */
-class LeistenMass(val bereich: Rect, val startY: Float, val stundePx: Float, val vonMin: Int, val bisMin: Int)
+/**
+ * Maße einer Zeitleiste. Senkrecht in Inhaltskoordinaten (Fensterposition + Scrollstand beim Messen), damit sie beim
+ * Randscrollen nicht einen Frame hinterherhinken: Die Fensterlage ergibt sich immer frisch aus `wert - scrollWert()`.
+ */
+class LeistenMass(val links: Float, val rechts: Float, val startImInhalt: Float, val stundePx: Float, val vonMin: Int, val bisMin: Int) {
+    /** Länge des Zeitbands (vonMin bis bisMin) in px. */
+    val bandPx: Float get() = (bisMin - vonMin) / 60f * stundePx
+}
 
 /**
  * Zustand einer Ziehgeste über der ganzen Liste. Die Fingerposition wird nur in Zeichenebenen gelesen
  * (graphicsLayer), damit das Ziehen nichts neu aufbaut — nur Ziel und Uhrzeit ändern sich stufenweise.
+ *
+ * Karte, Zeitlinie, Uhrzeit-Marke und Geisterblock hängen alle an [linieY] (eine einzige Quelle aus Finger und
+ * Griff). Darum können sie nicht auseinanderlaufen — weder beim Randscrollen noch beim Wechsel der Uhrzeit.
  */
 class ZiehZustand {
     var aufgabe by mutableStateOf<Aufgabe?>(null); private set
@@ -50,8 +59,34 @@ class ZiehZustand {
     var scrollOben = 0f
     var scrollUnten = 0f
 
+    /** Aktueller Scrollstand der Liste in px — live, also schon nach dispatchRawDelta und vor dem nächsten Layout. */
+    var scrollWert: () -> Float = { 0f }
+
+    /** Abstand der Zeitlinie über der Kartenoberkante in px (1 mm). */
+    var linieAbstand = 0f
+
+    /** Fensterlage der Ebene, in der Karte und Zeitlinie gezeichnet werden (Fensterwert − ursprung = Zeichenwert). */
+    var ursprung = Offset.Zero
+
+    /** Spanne (von, bis in Minuten), die während des Ziehens auf allen Zeitleisten gilt; null = keine Angabe. */
+    var ziehSpanne: Pair<Int, Int>? = null
+
+    /** Scrollt die Liste sofort um px (dispatchRawDelta), noch im selben Frame wie der Ziehstart. */
+    var scrolleUm: (Float) -> Unit = {}
+
+    /** Höhe der Zeitlinie im Fenster: immer genau [linieAbstand] über der gezogenen Karte. Nur in Zeichenebenen lesen. */
+    fun linieY(): Float = finger.value.y - griff.y - linieAbstand
+
+    fun leiste(tag: Long): LeistenMass? = leisten[tag]
+
     fun registriere(schluessel: String, bereich: Rect, ziel: Ziel) { ziele[schluessel] = bereich to ziel }
-    fun registriereLeiste(tag: Long, mass: LeistenMass) { leisten[tag] = mass }
+
+    /** Meldet eine Zeitleiste mit ihrer Fensterlage an (aus onGloballyPositioned) und rechnet sie in Inhaltslage um. */
+    fun registriereLeiste(tag: Long, links: Float, rechts: Float, startImFenster: Float, stundePx: Float, vonMin: Int, bisMin: Int) {
+        leisten[tag] = LeistenMass(links, rechts, startImFenster + scrollWert(), stundePx, vonMin, bisMin)
+        // Ändert sich die Leiste während des Ziehens (z. B. Spanne beim Ziehstart), gilt die neue Uhrzeit sofort.
+        if (aufgabe != null) aktualisiere()
+    }
     fun entferne(schluessel: String) { ziele.remove(schluessel) }
     fun entferneLeiste(tag: Long) { leisten.remove(tag) }
 
@@ -62,7 +97,35 @@ class ZiehZustand {
         finger.value = fingerImFenster
         startFinger = fingerImFenster
         bewegt = false
+        spanneAusgleichen(fingerImFenster.y)
         aktualisiere()
+    }
+
+    /**
+     * Mit Automatik zeigt eine Zeitleiste ohne Ziehen nur die Stunden um ihre Termine, beim Ziehen die eingestellte
+     * Spanne. Der Wechsel lässt Inhalt über dem Finger wachsen oder schrumpfen — die Leiste spränge unter dem stillen
+     * Finger auf eine andere Uhrzeit. Darum wird im selben Frame genau um diese Höhe nachgescrollt, und die Maße aller
+     * Leisten werden sofort auf das kommende Layout umgerechnet (nicht erst, wenn Compose sie neu meldet: Bleibt eine
+     * Leiste dank Ausgleich an ihrer Fensterstelle, muss Compose sie gar nicht neu melden).
+     */
+    private fun spanneAusgleichen(fingerY: Float) {
+        val (von, bis) = ziehSpanne ?: return
+        val y = fingerY + scrollWert() // Finger in Inhaltslage (altes Layout)
+        var verschiebung = 0f // Höhenänderung aller Leisten darüber
+        var d = 0f // Höhenänderung über dem Finger
+        for ((tag, m) in leisten.entries.sortedBy { it.value.startImInhalt }) {
+            val neuPx = (bis - von) / 60f * m.stundePx
+            d += when {
+                y < m.startImInhalt -> 0f // Leiste liegt unter dem Finger: verschiebt nichts darüber
+                y < m.startImInhalt + m.bandPx -> (m.vonMin - von) / 60f * m.stundePx // Finger auf der Leiste: nur der Teil darüber
+                else -> neuPx - m.bandPx // Leiste ganz darüber: ganze Höhenänderung
+            }
+            leisten[tag] = LeistenMass(m.links, m.rechts, m.startImInhalt + verschiebung, m.stundePx, von, bis)
+            verschiebung += neuPx - m.bandPx
+        }
+        // Nahe dem Listenende kann dispatchRawDelta begrenzen (maxValue noch vom alten Layout): dann bleibt ein Restsprung,
+        // die Uhrzeit stimmt trotzdem, weil sie aus den umgerechneten Maßen und dem echten Scrollstand entsteht.
+        if (d != 0f) scrolleUm(d)
     }
 
     fun ziehe(delta: Offset) {
@@ -77,11 +140,19 @@ class ZiehZustand {
         // Ablage-Chips haben Vorrang, dann die Zeitleisten, dann die Bereiche.
         val chip = ziele.entries.firstOrNull { it.key.startsWith("chip_") && it.value.first.contains(p) }
         if (chip != null) { setze(chip.key, null); return }
-        val leiste = leisten.entries.firstOrNull { it.value.bereich.contains(p) }
+        // Eine Uhrzeit gilt nur, solange die Linie auf dem Zeitband liegt (nicht im Rand darüber oder darunter): Sonst
+        // liefe die Karte weiter, während die Uhrzeit am Bandende stehen bliebe — Linie, Marke und Landeplatz wichen ab.
+        val s = scrollWert()
+        val y = linieY()
+        val leiste = leisten.entries.firstOrNull { (_, m) ->
+            val start = m.startImInhalt - s
+            val rand = 7.5f / 60f * m.stundePx // halber Rasterschritt: erste und letzte Viertelstunde voll erreichbar
+            p.x >= m.links && p.x < m.rechts && y >= start - rand && y <= start + m.bandPx + rand
+        }
         if (leiste != null) {
             val m = leiste.value
-            val kartenOben = p.y - griff.y
-            val roh = m.vonMin + (kartenOben - m.startY) / m.stundePx * 60f
+            // Die Uhrzeit gilt dort, wo die Linie die Zeitleiste schneidet — dieselbe Höhe, an der Linie und Geisterblock liegen.
+            val roh = m.vonMin + (y - (m.startImInhalt - s)) / m.stundePx * 60f
             val min = ((roh / 15f).roundToInt() * 15).coerceIn(m.vonMin, m.bisMin)
             setze(null, leiste.key to min)
             return
@@ -96,6 +167,7 @@ class ZiehZustand {
     }
 
     fun ende() {
+        aktualisiere() // Ablage aus dem allerletzten Stand von Finger, Scroll und Layout, nie aus einem älteren.
         val a = aufgabe
         val ziel = hoverZeit?.let { Ziel.Tag(it.first, it.second) } ?: hoverZiel?.let { ziele[it]?.second }
         val warBewegt = bewegt
