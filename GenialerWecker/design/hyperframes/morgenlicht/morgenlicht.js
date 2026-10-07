@@ -1,7 +1,8 @@
 // Morgenlicht — der bewegte Hintergrund des Designs „Morgenruhe“ im GenialerWecker.
 //
 // Ein ruhiger Morgen: Am unteren Rand dämmert ein warmer Horizont, aus ihm fächern weiche
-// Sonnenstrahlen auf, Nebelbänder ziehen langsam quer, und feiner Blütenstaub schwebt im Licht.
+// Sonnenstrahlen auf, Nebelbänder ziehen langsam quer, und wenig feiner Blütenstaub schwebt im Licht.
+// Sonne, Mond, Schmetterlinge und Fledermaus zeichnet die App darüber, im Takt der Schlafszene.
 // Alles hängt an einem Fortschritt p ∈ [0, 1); jede Bewegung ist periodisch mit ganzzahliger
 // Frequenz, deshalb läuft die Schleife ohne Sprung. Feste Zufallszahlen statt Math.random().
 
@@ -39,15 +40,18 @@
       hell: 0.5 + rnd() * 0.5,
     }));
 
+    // Blütenstaub schwebt an seinem Platz: einblenden, in einem ganzen Leben nur 20 bis 55 Pixel
+    // steigen (rund 2 bis 3 px pro Sekunde), ausblenden. Früher zog jedes Korn in 16 s einmal durchs
+    // ganze Bild — das wirkte wie Luftblasen eines Handys, das ins Wasser gefallen ist.
     const staub = Array.from({ length: cfg.staubAnzahl }, () => ({
       x: rnd(),
-      y: rnd(),
+      y: 0.05 + rnd() * 0.9,
       r: 0.7 + rnd() * 2.0,
-      umlaeufe: 1,
-      seitwaerts: (rnd() - 0.5) * 0.25,
-      schwanken: 8 + rnd() * 20,
-      freq: 1 + Math.floor(rnd() * 3),
-      phase: rnd() * TAU,
+      leben: 1 + Math.floor(rnd() * 2),
+      steigen: 20 + rnd() * 35,
+      schwanken: 4 + rnd() * 10,
+      freq: 1 + Math.floor(rnd() * 2),
+      phase: rnd(),
       hell: 0.3 + rnd() * 0.7,
     }));
 
@@ -114,13 +118,13 @@
       // 4. Blütenstaub im Licht.
       ctx.globalCompositeOperation = cfg.staubMischung;
       staub.forEach((s) => {
-        const yAnteil = (((s.y - p * s.umlaeufe) % 1) + 1) % 1;
-        const y = -20 + yAnteil * (H + 40);
-        const x = W * s.x + s.schwanken * Math.sin(TAU * p * s.freq + s.phase) + W * s.seitwaerts * Math.sin(TAU * p);
-        const funkeln = 0.5 + 0.5 * Math.sin(TAU * p * s.freq * 2 + s.phase);
+        const lauf = (p * s.leben + s.phase) % 1;
+        const y = H * s.y - s.steigen * lauf;
+        const x = W * s.x + s.schwanken * Math.sin(TAU * (p + s.phase));
+        const funkeln = 0.5 + 0.5 * Math.sin(TAU * (p * s.freq * 2 + s.phase));
         // Näher am Horizont leuchtet der Staub heller.
         const naehe = 0.35 + 0.65 * (y / H);
-        const a = cfg.staubAlpha * s.hell * naehe * (0.3 + 0.7 * funkeln);
+        const a = cfg.staubAlpha * s.hell * naehe * Math.sin(Math.PI * lauf) * (0.4 + 0.6 * funkeln);
         const g = ctx.createRadialGradient(x, y, 0, x, y, s.r * 4);
         g.addColorStop(0, rgba(cfg.staubFarbe, a));
         g.addColorStop(1, rgba(cfg.staubFarbe, 0));

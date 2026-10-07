@@ -954,16 +954,16 @@ private fun MorgenruheHero(
     val oeffnen = { daten.nextAlarm?.let(aufOeffnen); Unit }
     if (daten.schmal) { SchmalerHero(daten, aufNeu, oeffnen, aufSchlummernBeenden); return }
     val form = RoundedCornerShape(LocalDesignTokens.current.karteRadius)
-    // Wie bei Schlicht mit der echten Innenbreite gerechnet. Der Fehler war hier ein anderer:
-    // Motiv und Aktionsknopf standen in derselben rechten Spalte, die damit so breit wurde wie
-    // der Knopf — der Textspalte blieben bei 360 dp Gerätebreite nur 132 dp. Jetzt trägt die
-    // rechte Spalte allein das Motiv, die Aktionen stehen darunter über die volle Breite.
+    // Wie bei Schlicht mit der echten Innenbreite gerechnet; die Aktionen stehen unten über die volle Breite.
     val innen = daten.breite - HERO_AUSSEN * 2 - KARTE_INNEN * 2
-    // Die Schlafszene darf groß werden: Sie nimmt der Textspalte bis auf 85 Prozent ihres Mindestmaßes Platz.
-    val motiv = (innen - SPALTEN_ABSTAND - textMindest() * 0.85f)
-        .coerceIn(0.dp, if (daten.weit) 180.dp else 150.dp)
-    val zeigtMotiv = motiv >= 72.dp
-    val textBreite = innen - if (zeigtMotiv) SPALTEN_ABSTAND + motiv else 0.dp
+    // Seit 1.1.114 steht die Schlafszene als breite Bühne über der ganzen Karte, statt als kleines
+    // Quadrat an den rechten Rand gedrückt zu sein. Ihre Höhe folgt der Breite (rund 2,5 : 1) und ist
+    // gedeckelt, damit der feststehende Kopf nicht zu viel Höhe frisst; Datum und Uhr teilen sich
+    // dafür darunter eine Zeile.
+    val buehne = ((innen + KARTE_INNEN) * 0.40f).coerceIn(0.dp, if (daten.weit) 170.dp else 136.dp)
+    val zeigtMotiv = buehne >= 96.dp
+    // Die Uhr steht rechts neben dem Datum; dem Datum bleiben mindestens 110 dp (notfalls zweizeilig).
+    val textBreite = innen - SPALTEN_ABSTAND - 110.dp
     // Einstellbare Kartendeckkraft: Fläche, Licht, Kante und Schatten werden gemeinsam durchsichtig.
     val deckkraft = LocalKartenDeckkraft.current
     Column(Modifier.fillMaxWidth()) {
@@ -981,14 +981,22 @@ private fun MorgenruheHero(
             // Morgenlicht, das alle paar Sekunden über die Karte streicht.
             .glanzLauf(staerke = (if (gold.istDunkel) 0.10f else 0.45f) * deckkraft)) {
             HeroDeko(Modifier.matchParentSize().graphicsLayer { alpha = deckkraft })
-            Column(Modifier.fillMaxWidth().padding(KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND)) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        // Das einzige Ornament des Designs: ein kurzer Messingstrich als Tagesmarke.
-                        Box(Modifier.width(40.dp).height(2.dp).background(gold.akzentWarm))
-                        Text(datumsZeile(daten.now), style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Medium, color = gold.heroFuehrung,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.fillMaxWidth()) {
+                // Die Bühne: Tür, Zimmer und Bett über die volle Breite, nur knapp vom Kartenrand abgesetzt.
+                if (zeigtMotiv) LocalGestalt.current.Motiv(
+                    Modifier.fillMaxWidth().height(buehne).padding(start = 8.dp, end = 8.dp, top = 8.dp),
+                )
+                Column(Modifier.fillMaxWidth().padding(start = KARTE_INNEN, end = KARTE_INNEN, bottom = KARTE_INNEN,
+                    top = if (zeigtMotiv) 4.dp else KARTE_INNEN), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(SPALTEN_ABSTAND),
+                        verticalAlignment = Alignment.Bottom) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            // Das einzige Ornament des Designs: ein kurzer Messingstrich als Tagesmarke.
+                            Box(Modifier.width(40.dp).height(2.dp).background(gold.akzentWarm))
+                            Text(datumsZeile(daten.now), style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium, color = gold.heroFuehrung,
+                                maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
                         GedeckelteSchrift {
                             val groesse = passendeUhrGroesse(textBreite, uhrGroesse(daten.stufe),
                                 zahlSchrift(), zahlGewicht())
@@ -1002,18 +1010,16 @@ private fun MorgenruheHero(
                             )
                         }
                     }
-                    // Nur das Motiv steht rechts — und nur, wenn dafür wirklich Platz ist.
-                    if (zeigtMotiv) LocalGestalt.current.Motiv(Modifier.size(motiv))
-                }
-                // Der Termin nutzt jetzt die ganze Breite: links Weckzeit und Name, rechts die
-                // Restzeit — statt alles in die linke Spalte neben das Bett zu quetschen.
-                HorizontalDivider(color = gold.heroKante)
-                TerminVerteilt(daten, oeffnen, gold.heroSchrift, gold.heroSchriftGedaempft, gold.heroFuehrung)
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) {
-                        HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden, knopfText = "Wecker anlegen")
+                    // Der Termin nutzt jetzt die ganze Breite: links Weckzeit und Name, rechts die
+                    // Restzeit — statt alles in die linke Spalte neben das Bett zu quetschen.
+                    HorizontalDivider(color = gold.heroKante)
+                    TerminVerteilt(daten, oeffnen, gold.heroSchrift, gold.heroSchriftGedaempft, gold.heroFuehrung)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) {
+                            HeroAktionen(daten, aufNeu, oeffnen, aufSchlummernBeenden, knopfText = "Wecker anlegen")
+                        }
+                        BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
                     }
-                    BereitZeile(daten, aufEinstellungen, semantisch.erfolg, semantisch.warnung)
                 }
             }
         }

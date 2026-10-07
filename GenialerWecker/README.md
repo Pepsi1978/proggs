@@ -210,14 +210,22 @@ und gilt für Weckerliste, Editor, Einstellungen und Weckbildschirm.
   Seiten und dem Weckbildschirm läuft die **Goldseide**, eine mit HyperFrames gerenderte, nahtlose
   16-Sekunden-Schleife (`design/hyperframes/goldseide`, `res/raw/goldseide_*.mp4`, stumm, ohne Tonspur).
   Dazu ein Lichtlauf über die Kopfkarte, rollende Ziffern mit Goldglanz in Hero- und Weckuhr,
-  aufsteigende Karten beim Öffnen einer Seite und ein Goldglanz im Dialogtitel. Bei „Animationen
+  aufsteigende Karten beim Öffnen einer Seite und ein Goldglanz im Dialogtitel. Seit 1.1.114 kräftigere,
+  von innen schimmernde Seidenwellen mit wanderndem Glanzlicht und nur noch wenig, langsam schwebender
+  Goldstaub (statt schnell aufsteigender „Bläschen“). Bei „Animationen
   entfernen“ oder wenn das Video nicht spielt, bleibt der bisherige `SichtbarerHintergrund`.
 - Seit 1.1.110 haben auch **Morgenruhe** (Morgenlicht), **Traumraum** (Glutnebel) und **Orbit**
   (Orbitalgitter) je einen eigenen HyperFrames-Hintergrund (`design/hyperframes/README.md`), dazu rollende
   Ziffern mit Glanz, Lichtläufe über die Kopfkarten, aufsteigende Karten und Glanz im Dialogtitel.
 - **Morgenruhe** — Salbei und Creme am Tag, Tannengrün in der Nacht, Terrakotta als Akzent. Die
   Weckerliste wird zur **Tagesachse**: jede Karte hängt als Station an einer durchgehenden Linie.
-  Flache Flächen ohne Glanz, Pillenknöpfe, gestapelte Alarmtasten. Das **Bettmotiv** steht im Kopf.
+  Flache Flächen ohne Glanz, Pillenknöpfe, gestapelte Alarmtasten. Die **Schlafszene** steht seit
+  1.1.114 als breite Bühne über der ganzen Kopfkarte (Tür, Pflanze, Stehlampe, Fenster, Bett) und läuft
+  im Takt eines Zeitraffer-Tages (`design/Tageslauf.kt`, 46 s): Tagsüber ist die Person unterwegs,
+  abends geht die Sonne langsam unter, die Person kommt heim, setzt sich auf die Bettkante, schwingt die
+  Beine unter die Decke und schläft; morgens geht die Sonne auf. Der Hintergrund folgt derselben Uhr
+  (`design/MorgenHimmel.kt`): große Sonne mit kreisenden Strahlen und Linsenreflexen, Schmetterlinge am
+  Tag, Abendrot, strahlender Mond mit Lichtringen, Sterne und eine Fledermaus in der Nacht.
 - **Traumraum** — Pflaume, Rosé und Perlmutt. **Kuppel** mit zentriertem Kissenmotiv über dem Kopf,
   Termin und Restzeit in einer runden **Perle**, stark gerundete Flächen, runde Alarmtasten.
 - **Orbit** — Fast-Schwarz mit Eisblau und Limette. **Instrumententafel**: kantige Module, eigene
