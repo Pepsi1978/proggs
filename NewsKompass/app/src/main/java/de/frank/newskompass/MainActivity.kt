@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.frank.newskompass.data.model.DesignModus
 import de.frank.newskompass.news.Zeitplan
+import de.frank.newskompass.tts.VorleseManager
 import de.frank.newskompass.ui.AutomatischeBereitschaft
 import de.frank.newskompass.ui.EinstellungenScreen
 import de.frank.newskompass.ui.NachrichtenScreen
@@ -105,5 +106,9 @@ class MainActivity : ComponentActivity() {
     }
 
     // Kein Stopp beim Schließen: Das Vorlesen läuft im VorleseDienst weiter, bis man in der App oder in
-    // der Benachrichtigung auf Pause oder Stopp tippt.
+    // der Benachrichtigung auf Pause oder Stopp tippt. Nur eine Stimmprobe (ohne Dienst) endet mit der App.
+    override fun onDestroy() {
+        if (isFinishing && app.vorleser.zustand.value.quelleId == VorleseManager.PROBE_ID) app.vorleser.stoppe()
+        super.onDestroy()
+    }
 }

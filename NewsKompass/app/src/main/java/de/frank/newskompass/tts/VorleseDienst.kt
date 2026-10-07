@@ -47,7 +47,15 @@ class VorleseDienst : Service() {
         legeKanalAn(this)
         wach = getSystemService(PowerManager::class.java)
             ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:vorlesen")
-            ?.apply { acquire(WACH_MAX_MS) }
+            ?.apply { setReferenceCounted(false) }
+        wachHalten(true)
+    }
+
+    /** Wach nur, solange gelesen oder geladen wird; pausiert darf das Handy schlafen. */
+    private fun wachHalten(an: Boolean) {
+        val sperre = wach ?: return
+        if (an && !sperre.isHeld) sperre.acquire(WACH_MAX_MS)
+        if (!an && sperre.isHeld) sperre.release()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -72,6 +80,7 @@ class VorleseDienst : Service() {
                     if (z.stufe == VorleseStufe.AUS) {
                         beende()
                     } else {
+                        wachHalten(z.stufe != VorleseStufe.PAUSIERT)
                         runCatching { NotificationManagerCompat.from(this@VorleseDienst).notify(NID, benachrichtigung(z)) }
                     }
                 }
