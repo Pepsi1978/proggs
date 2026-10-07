@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Vorlesen läuft im Hintergrund weiter (andere App, Bildschirm aus). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Private App ausserhalb von Google Play: 5 und 17 Uhr sollen pünktlich sein. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
@@ -63,6 +66,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/teilen_pfade" />
         </provider>
+
+        <service
+            android:name=".tts.VorleseDienst"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

@@ -64,6 +64,8 @@ class VorleseManager(
     private val einstellungen: EinstellungenStore,
 ) {
 
+    private val appKontext = context.applicationContext
+
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val abspieler = AudioAbspieler(context)
     private val gleichzeitig = Semaphore(MAX_GLEICHZEITIG)
@@ -140,6 +142,8 @@ class VorleseManager(
         laufNummer += 1
         val meinLauf = laufNummer
         _zustand.value = VorleseZustand(VorleseStufe.LAEDT, quelleId, 0, absaetze.size)
+        // Hält das Vorlesen am Leben, wenn die App in den Hintergrund geht; endet von selbst mit dem Vorlesen.
+        VorleseDienst.starte(appKontext)
         KompassLog.info(
             "VorleseManager",
             "lies",
