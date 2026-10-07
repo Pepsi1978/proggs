@@ -2,7 +2,12 @@ package de.frank.aufgaben.ui
 
 import android.app.Activity
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.unit.Dp
+import de.frank.aufgaben.data.Aufgabe
 import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Slider
@@ -162,7 +167,6 @@ private fun Konfetti(ausloeser: Int) {
 
 @Composable
 private fun FokusBildschirm(vm: AppViewModel, id: Long?) {
-    val f = LocalFarben.current
     val alle by vm.aufgaben.collectAsState()
     val a = id?.let { i -> alle.firstOrNull { it.id == i } }
     // Bildschirm bleibt an, Status- und Navigationsleiste verschwinden (Wischen holt sie kurz zurück).
@@ -178,41 +182,69 @@ private fun FokusBildschirm(vm: AppViewModel, id: Long?) {
             leisten?.show(WindowInsetsCompat.Type.systemBars())
         }
     }
-    Column(Modifier.fillMaxSize().displayCutoutPadding().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(Modifier.fillMaxWidth()) {
-            RundKnopf(Icons.Rounded.Close, "Beenden") { vm.fokusBeenden() }
-        }
-        Spacer(Modifier.weight(0.6f))
-        Text("Fokus", color = f.textLeise, fontSize = 16.sp)
-        Text(
-            a?.titel ?: if (vm.fokusLaeuft) "Ganz bei der Sache" else "Zeit wählen und los",
-            color = f.text, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 6.dp, bottom = 18.dp),
-        )
-        FokusUhr(vm)
-        Spacer(Modifier.height(26.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-            val bereit = vm.fokusGesamt > 0
-            Box(
-                Modifier.size(72.dp).graphicsLayer { alpha = if (bereit) 1f else 0.45f }
-                    .knopf3d(f.primaer, f.sekundaer, 99.dp, f.dunkel)
-                    .antippen { if (vm.fokusLaeuft) vm.fokusPause() else if (bereit) { vm.fokusMerken(); vm.fokusFortsetzen() } },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(if (vm.fokusLaeuft) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (vm.fokusLaeuft) "Pause" else "Start", tint = Color.White, modifier = Modifier.size(36.dp))
+    BoxWithConstraints(Modifier.fillMaxSize().displayCutoutPadding().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
+        if (maxWidth > maxHeight && maxHeight < 560.dp) {
+            // Querformat: Uhr links, Zeitwahl rechts, damit Schnellwahl und Regler immer erreichbar bleiben.
+            Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                FokusMitte(vm, a, Modifier.weight(1f).fillMaxHeight())
+                Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.Center) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        RundKnopf(Icons.Rounded.Close, "Beenden") { vm.fokusBeenden() }
+                    }
+                    FokusZeitwahl(vm)
+                }
             }
-            if (a != null) Box(Modifier.size(72.dp).knopf3d(f.erfolg, f.erfolg.copy(alpha = 0.7f), 99.dp, f.dunkel).antippen { vm.erledigen(a, true); vm.fokusBeenden() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Check, "Erledigt", tint = Color.White, modifier = Modifier.size(36.dp))
+        } else {
+            Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth()) {
+                    RundKnopf(Icons.Rounded.Close, "Beenden") { vm.fokusBeenden() }
+                }
+                FokusMitte(vm, a, Modifier.weight(1f).fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                FokusZeitwahl(vm)
             }
         }
-        Spacer(Modifier.weight(1f))
-        FokusZeitwahl(vm)
+    }
+}
+
+/** Titel, Uhr und Knöpfe; die Uhr richtet ihre Größe nach dem Platz, der übrig ist. */
+@Composable
+private fun FokusMitte(vm: AppViewModel, a: Aufgabe?, modifier: Modifier) {
+    val f = LocalFarben.current
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val kompakt = maxHeight < 420.dp
+        val seite = minOf(maxWidth * 0.86f, 330.dp, maxHeight - if (kompakt) 100.dp else 210.dp).coerceAtLeast(110.dp)
+        val knopf = if (kompakt) 56.dp else 72.dp
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (!kompakt) Text("Fokus", color = f.textLeise, fontSize = 16.sp)
+            Text(
+                a?.titel ?: if (vm.fokusLaeuft) "Ganz bei der Sache" else "Zeit wählen und los",
+                color = f.text, fontSize = if (kompakt) 18.sp else 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 2,
+                modifier = Modifier.padding(top = if (kompakt) 0.dp else 6.dp, bottom = if (kompakt) 8.dp else 18.dp),
+            )
+            FokusUhr(vm, seite)
+            Spacer(Modifier.height(if (kompakt) 10.dp else 22.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                val bereit = vm.fokusGesamt > 0
+                Box(
+                    Modifier.size(knopf).graphicsLayer { alpha = if (bereit) 1f else 0.45f }
+                        .knopf3d(f.primaer, f.sekundaer, 99.dp, f.dunkel)
+                        .antippen { if (vm.fokusLaeuft) vm.fokusPause() else if (bereit) { vm.fokusMerken(); vm.fokusFortsetzen() } },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(if (vm.fokusLaeuft) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (vm.fokusLaeuft) "Pause" else "Start", tint = Color.White, modifier = Modifier.size(knopf / 2))
+                }
+                if (a != null) Box(Modifier.size(knopf).knopf3d(f.erfolg, f.erfolg.copy(alpha = 0.7f), 99.dp, f.dunkel).antippen { vm.erledigen(a, true); vm.fokusBeenden() }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Check, "Erledigt", tint = Color.White, modifier = Modifier.size(knopf / 2))
+                }
+            }
+        }
     }
 }
 
 /** Animierte Fokus-Uhr: atmender Glaskreis, Fortschrittsring mit leuchtender Spitze, kreisende Lichtpunkte und Wellen. */
 @Composable
-private fun FokusUhr(vm: AppViewModel) {
+private fun FokusUhr(vm: AppViewModel, seite: Dp) {
     val f = LocalFarben.current
     val gesamt = vm.fokusGesamt.coerceAtLeast(1L).toFloat()
     val anteil by animateFloatAsState(if (vm.fokusGesamt > 0) 1f - vm.fokusRest / gesamt else 0f, tween(300), label = "fokus")
@@ -222,7 +254,7 @@ private fun FokusUhr(vm: AppViewModel) {
     val dreh by takt.animateFloat(0f, 360f, infiniteRepeatable(tween(36_000, easing = LinearEasing)), label = "dreh")
     val welle by takt.animateFloat(0f, 1f, infiniteRepeatable(tween(4200, easing = LinearEasing)), label = "welle")
     val skala = 1f + (atem - 0.5f) * 0.08f * leben
-    Box(Modifier.fillMaxWidth(0.86f).widthIn(max = 330.dp).aspectRatio(1f), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(seite), contentAlignment = Alignment.Center) {
         // Hintergrund: Leuchten, Wellen, gestrichelter Außenring und kreisende Lichtpunkte.
         Canvas(Modifier.fillMaxSize()) {
             val m = center
@@ -273,7 +305,7 @@ private fun FokusUhr(vm: AppViewModel) {
             val rest = vm.fokusRest / 1000
             Text(
                 if (rest >= 3600) "%d:%02d:%02d".format(rest / 3600, rest / 60 % 60, rest % 60) else "%d:%02d".format(rest / 60, rest % 60),
-                color = f.text, fontSize = 50.sp, fontWeight = FontWeight.Light,
+                color = f.text, fontSize = (seite.value / 6.4f).coerceIn(26f, 52f).sp, fontWeight = FontWeight.Light,
             )
             Text(
                 when {
