@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -99,8 +100,11 @@ fun Zeitleiste(
     BoxWithConstraints(
         Modifier.fillMaxWidth().height(hoehe)
             .onGloballyPositioned { c ->
+                // boundsInRoot ist am Scrollrand abgeschnitten: Ist der Leistenanfang aus dem Bild gescrollt, läge
+                // die Nulllinie sonst am Bildrand und die Uhrzeit spränge über die Karte. Darum positionInRoot.
                 val b = c.boundsInRoot()
-                zustand.registriereLeiste(tag, LeistenMass(Rect(b.left, b.top, b.right, b.bottom), b.top + obenPx, stundePx, vonMin, bisMin))
+                val start = c.positionInRoot().y + obenPx
+                zustand.registriereLeiste(tag, LeistenMass(Rect(b.left, b.top, b.right, b.bottom), start, stundePx, vonMin, bisMin))
             },
     ) {
         val breite = maxWidth
