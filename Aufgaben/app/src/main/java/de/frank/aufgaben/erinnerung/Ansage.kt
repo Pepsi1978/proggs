@@ -121,14 +121,30 @@ object Ansage {
         aufraeumen(app, offen)
     }
 
-    private suspend fun bereite(app: Context, a: Aufgabe) {
+    private suspend fun bereite(app: Context, a: Aufgabe) = bereiteText(app, text(a), ANZAHL)
+
+    /**
+     * Die Ansage am Ende des Fokus-Timers (eine Fassung) mit der gewählten Stimme vorbereiten, solange
+     * die App offen ist und Netz hat; ohne Datei spricht am Ende die Android-Stimme.
+     */
+    fun fokusVorbereiten(context: Context) {
+        val app = context.applicationContext
         val e = Einstellungen.get(app)
-        val t = text(a)
+        if (gueltig(datei(app, gewaehlt(e), 0, Fokus.TEXT)) || gueltig(datei(app, edge(e), 0, Fokus.TEXT))) return
+        scope.launch {
+            mutex.withLock {
+                runCatching { bereiteText(app, Fokus.TEXT, 1) }.onFailure { Log.w(TAG, "Fokus-Ansage: ${it.message}") }
+            }
+        }
+    }
+
+    private suspend fun bereiteText(app: Context, t: String, anzahl: Int) {
+        val e = Einstellungen.get(app)
         if (t.isBlank()) return
         val s = gewaehlt(e)
         val n = edge(e)
         var gewaehlteAus = false
-        for (i in 0 until ANZAHL) {
+        for (i in 0 until anzahl) {
             if (gueltig(datei(app, s, i, t)) || gueltig(datei(app, n, i, t))) continue
             if (!gewaehlteAus) {
                 try {
@@ -226,7 +242,7 @@ object Ansage {
         val behalten = offen.flatMap { a ->
             val t = text(a)
             (0 until ANZAHL).flatMap { i -> listOf(datei(app, s, i, t).name, datei(app, n, i, t).name) }
-        }.toSet()
+        }.toSet() + listOf(datei(app, s, 0, Fokus.TEXT).name, datei(app, n, 0, Fokus.TEXT).name)
         val jetzt = System.currentTimeMillis()
         ordner(app).listFiles()?.forEach { f ->
             val alt = jetzt - f.lastModified()

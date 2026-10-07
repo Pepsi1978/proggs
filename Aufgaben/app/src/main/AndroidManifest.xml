@@ -41,6 +41,8 @@
             android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".erinnerung.ErinnerungsEmpfaenger" android:exported="false" />
         <receiver android:name=".erinnerung.AktionsEmpfaenger" android:exported="false" />
+        <!-- Ende des Fokus-Timers, auch wenn die App im Hintergrund ist oder beendet wurde. -->
+        <receiver android:name=".erinnerung.FokusEmpfaenger" android:exported="false" />
         <receiver android:name=".erinnerung.SystemEmpfaenger" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
