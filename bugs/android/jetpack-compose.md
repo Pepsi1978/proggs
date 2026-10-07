@@ -363,6 +363,33 @@ enthält den verbindlichen Benutzerstandard einschließlich Formeln, Startwerten
 `0a77c0571`; optimierter Build und Installation auf Fold8 SM-F971B, anschließend von Frank am
 10.09.2026 bestätigt. Keine neue Web-Recherche oder instrumentierte Performance-Messung.
 
+### 4.10 Drop-Vorschau (Linie/Uhrzeit/Geisterblock) läuft der gezogenen Karte davon
+
+**Symptom:** Beim Ziehen einer Karte auf eine Zeitleiste trennen sich Karte und orange Zeitlinie mit Uhrzeit;
+beim Randscrollen springt die Uhrzeit, am Leistenanfang/-ende bleibt sie stehen, mit automatischer Spanne
+springt die Leiste beim Anfassen unter dem Finger weg.
+**Ursache (lokal, kein Framework-Bug):** (1) Zwei Positionsquellen: Karte im Overlay am Finger, Vorschau im
+gescrollten Inhalt an der gerasterten Zielzeit plus `spring()` → Rasterversatz + Federverzug + Sägezahn beim
+Scrollen. (2) `dispatchRawDelta()` in `withFrameNanos` läuft vor Layout und `onGloballyPositioned`; direkt danach
+gerechnete Ziele nutzen Root-Werte vom Vor-Frame (bei 620 dp/s ≈ 10 dp ≈ 15 min). (3) Treffertest auf die ganze
+Leistenfläche, Zeit aber auf `vonMin..bisMin` begrenzt → in den Rändern läuft die Karte, die Zeit friert ein.
+(4) Höhenwechsel der Leiste beim Ziehstart (Automatik → eingestellte Spanne) verschiebt Inhalt über dem Finger.
+**FIX (Aufgaben 1.0.14):** Eine Quelle `linieY() = finger.y − griff.y − 1 mm`; Karte, Linie, Uhrzeit-Marke und
+Geisterblock lesen sie in `graphicsLayer {}` derselben Ebene (Poka-Yoke Stufe 3: Auseinanderlaufen unmöglich).
+Leistenmaße in Inhaltslage (`positionInRoot().y + scroll.value`), Umrechnung mit live `scroll.value` →
+keine doppelte Scrollkompensation. Treffertest auf das Zeitband ± halber Rasterschritt. Spannenwechsel im
+Pointer-Handler des Ziehstarts per `dispatchRawDelta` ausgleichen und die Maße sofort selbst umrechnen (nicht auf
+`onGloballyPositioned` warten: bleibt eine Lage dank Ausgleich gleich, muss der Callback nicht kommen). `ende()`
+ordnet vor dem Ablegen noch einmal zu. Liegt die Leiste in einem Container mit `animateContentSize`, diese Animation während des Ziehens
+abschalten (Codex-Befund PR #184): Sonst federt die Höhe nach, und der sofortige Scroll-Ausgleich springt erst und
+driftet dann zurück.
+**Restgrenzen:** Nahe dem Listenende begrenzt `dispatchRawDelta` auf das alte `maxValue` (Teilsprung); das
+Zurückschalten der Spanne nach dem Loslassen wird nicht ausgeglichen.
+**Muster-Erkennung:** Zeichnet etwas „mit dem Finger mit“ in einer anderen Ebene oder aus einer anderen Rechnung
+als das gezogene Element, wird es sich lösen. Vor dem Bau fragen: Lesen beide denselben Wert in derselben Ebene?
+**Quelle:** lokal — Aufgaben `Ziehen.kt`, `Zeitleiste.kt`, `Liste.kt`, Commit nach a18f368 (dessen Fix behob nur
+das Abschneiden von `boundsInRoot`). Kein Gerätetest in der Cloud; Bestätigung durch Frank steht aus.
+
 ### 4.3 Verschachteltes gleichachsiges Scrollen → Crash „infinity constraints"
 **Symptom:** `IllegalStateException: Vertically scrollable component was measured with an infinity maximum height constraints, which is disallowed.` — siehe ausfuehrlich **§6.1** (Crash-Sektion).
 **FIX (Kurz):** Kein zweites Scroll-Element gleicher Richtung verschachteln — alles in EINE LazyColumn (Header als `item {}`), oder dem inneren Container endliche Hoehe geben. Details + Custom-`layout{}`-Workaround in §6.1.

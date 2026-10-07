@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -130,11 +131,15 @@ fun ListeBildschirm(vm: AppViewModel) {
     val zustand = remember { ZiehZustand() }
     zustand.beiAblage = { a, z -> vm.verschiebe(a, z) }
     val dichte = LocalDensity.current
+    zustand.scrollWert = { scroll.value.toFloat() }
+    zustand.linieAbstand = with(dichte) { LINIE_UEBER_KARTE.toPx() }
+    zustand.scrolleUm = { scroll.dispatchRawDelta(it) }
     val einstellungenStand by vm.einstellungen.stand.collectAsState()
     val szeneZeigen = remember(einstellungenStand) { vm.einstellungen.szeneZeigen }
     val leisteVon = remember(einstellungenStand) { vm.einstellungen.zeitleisteVon }
     val leisteBis = remember(einstellungenStand) { vm.einstellungen.zeitleisteBis.coerceAtLeast(leisteVon + 60) }
     val leisteAuto = remember(einstellungenStand) { vm.einstellungen.zeitleisteAuto }
+    zustand.ziehSpanne = leisteVon to leisteBis
 
     // Randscrollen während des Ziehens, auch bei stillstehendem Finger.
     val zieht = zustand.aufgabe != null
@@ -158,6 +163,7 @@ fun ListeBildschirm(vm: AppViewModel) {
 
     Box(Modifier.fillMaxSize().onGloballyPositioned {
         val r = it.boundsInRoot()
+        zustand.ursprung = it.positionInRoot()
         if (!zieht) { zustand.scrollOben = r.top + with(dichte) { 150.dp.toPx() }; zustand.scrollUnten = r.bottom - with(dichte) { 110.dp.toPx() } }
     }) {
         Column(Modifier.fillMaxSize().verticalScroll(scroll, enabled = !zieht)) {
@@ -247,6 +253,9 @@ fun ListeBildschirm(vm: AppViewModel) {
         // Schwebendes Plus
         Plus(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 22.dp, bottom = 24.dp), sichtbar = !zieht) { vm.neueAufgabe(mitMikro = true) }
 
+        // Zeitlinie und Geisterblock: in derselben Ebene und aus derselben Höhe wie die gezogene Karte (siehe unten).
+        if (zieht) ZeitVorschau(zustand)
+
         // Ablageleisten während des Ziehens
         AnimatedVisibility(zieht, Modifier.align(Alignment.TopCenter), enter = fadeIn(tween(120)) + slideInVertically { -it / 2 }, exit = fadeOut(tween(120))) {
             AblageOben(zustand, heute)
@@ -259,12 +268,14 @@ fun ListeBildschirm(vm: AppViewModel) {
             val breite = with(dichte) { zustand.groesse.width.toDp() }
             Box(
                 Modifier.width(breite).graphicsLayer {
-                    translationX = zustand.finger.value.x - zustand.griff.x
-                    translationY = zustand.finger.value.y - zustand.griff.y
+                    translationX = zustand.finger.value.x - zustand.griff.x - zustand.ursprung.x
+                    // Gleiche Quelle wie die Zeitlinie: linieY() + linieAbstand = Kartenoberkante, Linie also genau 1 mm darüber.
+                    translationY = zustand.linieY() + zustand.linieAbstand - zustand.ursprung.y
                 },
             ) {
                 AufgabeKarte(a.copy(minuten = zustand.hoverZeit?.second ?: a.minuten), heute, zustand, schwebend = true, onTipp = {}, onErledigt = {})
             }
+            ZeitMarke(zustand)
         }
     }
 }
