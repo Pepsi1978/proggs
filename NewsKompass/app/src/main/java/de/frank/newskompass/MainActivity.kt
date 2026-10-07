@@ -104,8 +104,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onDestroy() {
-        if (isFinishing) app.vorleser.stoppe()
-        super.onDestroy()
-    }
+    // Kein Stopp beim Schließen: Das Vorlesen läuft im VorleseDienst weiter, bis man in der App oder in
+    // der Benachrichtigung auf Pause oder Stopp tippt.
 }
