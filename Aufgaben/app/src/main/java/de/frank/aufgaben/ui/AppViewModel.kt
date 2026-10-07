@@ -521,6 +521,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Erlaubnis kam erst nach dem Start: Countdown jetzt nachreichen (vorher lehnte Android ihn ab). */
+    fun hinweiseErlaubt() {
+        if (!fokusLaeuft) return
+        val titel = fokusId?.let { i -> aufgaben.value.firstOrNull { it.id == i }?.titel }
+        Fokus.planen(getApplication(), fokusEnde, fokusId, fokusGesamt, titel)
+    }
+
     fun fokusPause() { fokusJob?.cancel(); fokusLaeuft = false; Fokus.abbrechen(getApplication()) }
 
     fun fokusBeenden() {

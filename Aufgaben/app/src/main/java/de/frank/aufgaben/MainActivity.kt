@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
     private val mikroErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         vm.mikrofonErlaubnisErgebnis(ok)
     }
-    private val hinweisErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    private val hinweisErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { erlaubt -> if (erlaubt) vm.hinweiseErlaubt() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(

@@ -86,6 +86,21 @@ object Fokus {
         return Stand(ende, p.getLong("aufgabe", -1L).takeIf { it >= 0 }, p.getLong("gesamt", 0L))
     }
 
+    /**
+     * Nach einem Neustart des Handys: Android hat den Alarm verworfen. Läuft der Fokus noch, neu planen;
+     * ist er während des Ausschaltens abgelaufen (höchstens eine Stunde her), das Ende jetzt nachholen.
+     */
+    fun nachholen(context: Context) {
+        val ende = prefs(context).getLong("ende", 0L)
+        if (ende <= 0L) return
+        val jetzt = System.currentTimeMillis()
+        when {
+            ende > jetzt -> gespeichert(context)?.let { planen(context, it.ende, it.aufgabe, it.gesamt, null) }
+            jetzt - ende < 60 * 60_000L -> enden(context)
+            else -> abbrechen(context)
+        }
+    }
+
     private fun laufAnzeigen(app: Context, ende: Long, titel: String?) {
         val nm = app.getSystemService(NotificationManager::class.java)
         if (nm.getNotificationChannel(KANAL_LAUF) == null) {

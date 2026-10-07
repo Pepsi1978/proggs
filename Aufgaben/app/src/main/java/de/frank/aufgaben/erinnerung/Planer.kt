@@ -261,7 +261,7 @@ class SystemEmpfaenger : BroadcastReceiver() {
             try {
                 Planer.planeAlle(context)
                 // Ein laufender Fokus-Timer überlebt so auch einen Neustart des Handys.
-                Fokus.gespeichert(context)?.let { Fokus.planen(context, it.ende, it.aufgabe, it.gesamt, null) }
+                Fokus.nachholen(context)
                 HeuteWidget.aktualisiere(context)
             } finally {
                 ergebnis.finish()
