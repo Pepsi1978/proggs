@@ -31,16 +31,20 @@
     const H = leinwand.height;
     const rnd = zufall(cfg.saat || 1978);
 
-    // Goldstaub: kleine Funken, die in ganzen Umläufen nach oben steigen und dabei funkeln.
+    // Goldstaub: wenige Funken, die an ihrem Platz schweben. Jeder blendet ein, steigt in seinem
+    // ganzen Leben nur ein paar Dutzend Pixel (rund 3 px pro Sekunde statt früher 90 bis 180) und
+    // blendet wieder aus. Der Neubeginn liegt im unsichtbaren Moment, die Schleife bleibt nahtlos.
+    // Früher stieg jeder Funke in 16 s einmal oder zweimal durchs ganze Bild — das sah aus wie
+    // Luftblasen in einem Handy, das ins Wasser gefallen ist.
     const staub = Array.from({ length: cfg.staubAnzahl }, () => ({
       x: rnd(),
-      y: rnd(),
+      y: 0.04 + rnd() * 0.92,
       r: 0.8 + rnd() * 2.4,
-      umlaeufe: 1 + Math.floor(rnd() * 2),
-      schwanken: 6 + rnd() * 22,
-      schwankFreq: 1 + Math.floor(rnd() * 3),
-      funkelFreq: 1 + Math.floor(rnd() * 4),
-      phase: rnd() * TAU,
+      leben: 1 + Math.floor(rnd() * 2),
+      steigen: 24 + rnd() * 40,
+      schwanken: 4 + rnd() * 10,
+      funkelFreq: 1 + Math.floor(rnd() * 3),
+      phase: rnd(),
       hell: 0.35 + rnd() * 0.65,
     }));
 
@@ -67,22 +71,50 @@
     }
 
     function band(b, p) {
-      const schritte = 64;
-      for (let f = 0; f < b.faeden; f++) {
-        const anteil = f / (b.faeden - 1) - 0.5;
-        ctx.beginPath();
-        for (let i = 0; i <= schritte; i++) {
-          const u = i / schritte;
-          const x = -0.1 * W + u * 1.2 * W;
-          const dicke = b.dicke * (0.55 + 0.45 * Math.sin(TAU * (u * 0.8 + p * b.atmen) + b.phase));
-          const y =
+      const schritte = 72;
+      // Die Mittellinie des Bandes, einmal gerechnet; die Fäden liegen quer dazu verteilt.
+      const mitte = [];
+      for (let i = 0; i <= schritte; i++) {
+        const u = i / schritte;
+        mitte.push({
+          x: -0.1 * W + u * 1.2 * W,
+          y:
             H * (b.y + b.neigung * (u - 0.5)) +
             b.welle * Math.sin(TAU * (u * b.freq + p * b.lauf) + b.phase) +
-            b.welle * 0.45 * Math.sin(TAU * (u * b.freq * 2.1 - p * b.lauf * 2) + b.phase * 1.7) +
-            anteil * dicke;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
+            b.welle * 0.45 * Math.sin(TAU * (u * b.freq * 2.1 - p * b.lauf * 2) + b.phase * 1.7),
+          dicke: b.dicke * (0.55 + 0.45 * Math.sin(TAU * (u * 0.8 + p * b.atmen) + b.phase)),
+        });
+      }
+      function faden(anteil) {
+        ctx.beginPath();
+        mitte.forEach((m, i) => {
+          const y = m.y + anteil * m.dicke;
+          if (i === 0) ctx.moveTo(m.x, y);
+          else ctx.lineTo(m.x, y);
+        });
+      }
+
+      // 1. Ein weicher Schein unter dem Band: Die Seide leuchtet von innen und schimmert durch.
+      if (b.schein) {
+        faden(0);
+        const s = ctx.createLinearGradient(0, 0, W, 0);
+        s.addColorStop(0, rgba(b.licht, 0));
+        s.addColorStop(0.5, rgba(b.licht, b.schein));
+        s.addColorStop(1, rgba(b.licht, 0));
+        ctx.strokeStyle = s;
+        ctx.lineCap = "round";
+        [1.1, 0.7, 0.4].forEach((breite, k) => {
+          ctx.globalAlpha = 0.35 + k * 0.25;
+          ctx.lineWidth = b.dicke * breite;
+          ctx.stroke();
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      // 2. Die Fäden.
+      for (let f = 0; f < b.faeden; f++) {
+        const anteil = f / (b.faeden - 1) - 0.5;
+        faden(anteil);
         const verlauf = ctx.createLinearGradient(0, 0, W, 0);
         const kern = b.alpha * (1 - Math.abs(anteil) * 1.4);
         verlauf.addColorStop(0, rgba(b.farbe, 0));
@@ -93,6 +125,24 @@
         ctx.strokeStyle = verlauf;
         ctx.lineWidth = b.faden;
         ctx.stroke();
+      }
+
+      // 3. Ein Glanzlicht wandert das Band entlang, wie Licht, das über Seide gleitet. Es läuft in
+      //    ganzen Durchgängen und beginnt außerhalb des Bildes neu — kein Sprung an der Nahtstelle.
+      if (b.glanz) {
+        const cx = (-0.3 + 1.6 * ((p * (b.glanzLauf || 1) + b.phase / TAU) % 1)) * W;
+        for (let f = 0; f < b.faeden; f += 2) {
+          const anteil = f / (b.faeden - 1) - 0.5;
+          faden(anteil);
+          const g = ctx.createLinearGradient(cx - W * 0.2, 0, cx + W * 0.2, 0);
+          const a = b.glanz * (1 - Math.abs(anteil) * 1.6);
+          g.addColorStop(0, rgba(b.glanzFarbe || b.licht, 0));
+          g.addColorStop(0.5, rgba(b.glanzFarbe || b.licht, a));
+          g.addColorStop(1, rgba(b.glanzFarbe || b.licht, 0));
+          ctx.strokeStyle = g;
+          ctx.lineWidth = b.faden * 1.6;
+          ctx.stroke();
+        }
       }
     }
 
@@ -141,11 +191,11 @@
 
       // 5. Goldstaub.
       staub.forEach((s) => {
-        const yAnteil = (((s.y - p * s.umlaeufe) % 1) + 1) % 1;
-        const y = -20 + yAnteil * (H + 40);
-        const x = W * s.x + s.schwanken * Math.sin(TAU * (p * s.schwankFreq) + s.phase);
-        const funkeln = 0.5 + 0.5 * Math.sin(TAU * p * s.funkelFreq + s.phase);
-        const a = cfg.staubAlpha * s.hell * (0.25 + 0.75 * funkeln * funkeln);
+        const lauf = (p * s.leben + s.phase) % 1;
+        const y = H * s.y - s.steigen * lauf;
+        const x = W * s.x + s.schwanken * Math.sin(TAU * (p + s.phase));
+        const funkeln = 0.5 + 0.5 * Math.sin(TAU * (p * s.funkelFreq + s.phase));
+        const a = cfg.staubAlpha * s.hell * Math.sin(Math.PI * lauf) * (0.4 + 0.6 * funkeln * funkeln);
         schein(x, y, s.r * 5, cfg.staubFarbe, a * 0.45);
         ctx.fillStyle = rgba(cfg.staubKern, a);
         ctx.beginPath();

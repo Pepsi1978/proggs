@@ -235,6 +235,10 @@ object MorgenruheGestalt : WeckerGestalt {
      * Seit 1.1.110 das bewegte Morgenlicht aus HyperFrames (`design/hyperframes/morgenlicht`):
      * dämmernder Horizont, Sonnenstrahlen, ziehende Nebelbänder, Blütenstaub. Der sanfte Verlauf
      * bleibt als Ersatz, bis das erste Videobild steht oder wenn Bewegung reduziert ist.
+     *
+     * Seit 1.1.114 liegt darüber der [MorgenHimmel] im Takt der Schlafszene: Sonne mit kreisenden
+     * Strahlen und Schmetterlingen am Tag, langsamer Sonnenuntergang, strahlender Mond, Sterne und
+     * eine Fledermaus in der Nacht.
      */
     @Composable override fun Hintergrund(modifier: Modifier) {
         val gold = LocalGold.current
@@ -254,6 +258,7 @@ object MorgenruheGestalt : WeckerGestalt {
                         .vignette(vignette),
                 )
             },
+            darueber = { MorgenHimmel(Modifier.fillMaxSize(), dunkel = gold.istDunkel) },
         )
     }
 

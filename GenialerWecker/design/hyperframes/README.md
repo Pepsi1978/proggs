@@ -8,8 +8,8 @@ ruhige Hintergrund des Designs.
 
 | Ordner | Design | Inhalt | Video in der App |
 |---|---|---|---|
-| `goldseide/` | Schlicht | goldene Seidenbänder, Goldstaub, Bokeh, Lichtschleier | `goldseide_{dunkel,hell}.mp4` |
-| `morgenlicht/` | Morgenruhe | dämmernder Horizont, Sonnenstrahlen, Nebelbänder, Blütenstaub | `morgenlicht_{dunkel,hell}.mp4` |
+| `goldseide/` | Schlicht | kräftige, schimmernde Seidenbänder mit wanderndem Glanzlicht, wenig schwebender Goldstaub, Bokeh, Lichtschleier | `goldseide_{dunkel,hell}.mp4` |
+| `morgenlicht/` | Morgenruhe | dämmernder Horizont, Sonnenstrahlen, Nebelbänder, wenig schwebender Blütenstaub (Sonne, Mond, Schmetterlinge und Fledermaus zeichnet die App darüber, `MorgenHimmel.kt`) | `morgenlicht_{dunkel,hell}.mp4` |
 | `glutnebel/` | Traumraum | kreisende Glutwolken, aufsteigende Funken, Sternschnuppen (Funkelsterne zeichnet die App darüber) | `glutnebel_{dunkel,hell}.mp4` |
 | `orbitalgitter/` | Orbit | Satellitenbahnen, Radarstrahl, perspektivisches Gitter, Abtastlinie (Zeichenregen zeichnet die App darüber) | `orbitalgitter_{dunkel,hell}.mp4` |
 
@@ -25,3 +25,7 @@ bash render.sh                           # einige Minuten, schreibt direkt in re
 
 Videos: 720 × 1440, H.264 Main, **ohne Tonspur** (`-an`) — in einer Wecker-App darf ein Video nie dem
 Weckton in die Quere kommen.
+
+Staub und Funken steigen nicht mehr durchs ganze Bild (das sah aus wie Luftblasen in einem Handy, das ins
+Wasser gefallen ist): Jedes Teilchen blendet ein, schwebt in seinem Leben nur 20 bis 65 Pixel nach oben
+und blendet wieder aus. Der Neubeginn fällt in den unsichtbaren Moment, die Schleife bleibt nahtlos.
