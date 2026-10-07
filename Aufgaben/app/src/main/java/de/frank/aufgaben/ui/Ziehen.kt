@@ -4,6 +4,7 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -34,6 +35,14 @@ class LeistenMass(val links: Float, val rechts: Float, val startImInhalt: Float,
     val bandPx: Float = band.hoehe(stundePx, lueckePx)
     /** Minute an der Höhe [px] unter dem Bandanfang. */
     fun minute(px: Float): Float = band.minute(px, stundePx, lueckePx)
+}
+
+/**
+ * Ein gerade auf eine Zeitleiste abgelegter Termin: [zielY] ist die Fensterhöhe, an der seine Oberkante beim Loslassen
+ * lag (dort stand der Geisterblock). [istY] meldet der Termin selbst, sobald er an seinem neuen Platz liegt.
+ */
+class Ablage(val id: Long, val tag: Long, val minuten: Int, val zielY: Float) {
+    var istY: Float? = null
 }
 
 /**
@@ -78,6 +87,19 @@ class ZiehZustand {
     /** Scrollt die Liste sofort um px (dispatchRawDelta), noch im selben Frame wie der Ziehstart. */
     var scrolleUm: (Float) -> Unit = {}
 
+    /** Maße der Leisten vor dem Ziehstart (kompakte Ansicht), damit das Loslassen genau zurückrechnen kann. */
+    private var vorZiehen: Map<Long, LeistenMass>? = null
+
+    /** Zuletzt auf eine Zeitleiste abgelegter Termin; die Liste hält ihn kurz an seiner Ablagestelle fest. */
+    var ablage: Ablage? = null
+    var ablageNr by mutableIntStateOf(0); private set
+
+    /** Ein Terminblock meldet seine Fensterhöhe; zählt nur für den gerade abgelegten Termin an seinem neuen Platz. */
+    fun meldeTermin(a: Aufgabe, fensterY: Float) {
+        val z = ablage ?: return
+        if (a.id == z.id && a.tag == z.tag && a.minuten == z.minuten) z.istY = fensterY
+    }
+
     /** Höhe der Zeitlinie im Fenster: immer genau [linieAbstand] über der gezogenen Karte. Nur in Zeichenebenen lesen. */
     fun linieY(): Float = finger.value.y - griff.y - linieAbstand
 
@@ -116,6 +138,7 @@ class ZiehZustand {
         val (von, bis) = ziehSpanne ?: return
         val voll = Zeitband(von, bis)
         val y = fingerY + scrollWert() // Finger in Inhaltslage (altes Layout)
+        vorZiehen = HashMap(leisten)
         var verschiebung = 0f // Höhenänderung aller Leisten darüber
         var d = 0f // Höhenänderung über dem Finger
         for ((tag, m) in leisten.entries.sortedBy { it.value.startImInhalt }) {
@@ -178,11 +201,44 @@ class ZiehZustand {
         val a = aufgabe
         val ziel = hoverZeit?.let { Ziel.Tag(it.first, it.second) } ?: hoverZiel?.let { ziele[it]?.second }
         val warBewegt = bewegt
+        // Wo der Geisterblock beim Loslassen stand: Dort soll der Termin danach auch auf dem Bildschirm liegen.
+        val zeit = hoverZeit
+        val m = zeit?.let { leisten[it.first] }
+        ablage = if (a != null && warBewegt && zeit != null && m != null) {
+            Ablage(a.id, zeit.first, zeit.second, m.startImInhalt - scrollWert() + m.band.y(zeit.second, m.stundePx, m.lueckePx))
+        } else null
+        spanneZurueck()
         zuruecksetzen()
+        if (ablage != null) ablageNr++
         if (a != null && warBewegt && ziel != null) beiAblage(a, ziel)
     }
 
-    fun abbruch() = zuruecksetzen()
+    fun abbruch() {
+        spanneZurueck()
+        zuruecksetzen()
+    }
+
+    /**
+     * Gegenstück zu [spanneAusgleichen]: Beim Loslassen kehren die Leisten in ihre kompakte Ansicht zurück, der Inhalt über
+     * dem Finger schrumpft. Ohne Ausgleich bliebe der Scrollstand stehen und der Bildschirm landete ein ganzes Stück
+     * weiter unten, oft ganz am Ende der Liste. Darum wird im selben Frame genau um diese Höhe zurückgescrollt.
+     */
+    private fun spanneZurueck() {
+        val vorher = vorZiehen ?: return
+        vorZiehen = null
+        val y = finger.value.y + scrollWert() // Finger in Inhaltslage (Layout beim Ziehen)
+        var d = 0f
+        for ((tag, m) in leisten) {
+            val alt = vorher[tag] ?: continue
+            val innen = y - m.startImInhalt
+            d += when {
+                innen < 0f -> 0f
+                innen < m.bandPx -> alt.band.y(m.minute(innen), alt.stundePx, alt.lueckePx).coerceIn(0f, alt.bandPx) - innen
+                else -> alt.bandPx - m.bandPx
+            }
+        }
+        if (d != 0f) scrolleUm(d)
+    }
 
     private fun zuruecksetzen() {
         aufgabe = null
