@@ -44,9 +44,48 @@ public class Mpr {
   public static extern int WNetAddConnection2(ref NETRESOURCE r, string password, string username, int flags);
   [DllImport("mpr.dll", CharSet=CharSet.Unicode)]
   public static extern int WNetCancelConnection2(string name, int flags, bool force);
+  [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+  static extern uint QueryDosDevice(string name, System.Text.StringBuilder buf, int max);
+  [DllImport("advapi32.dll", SetLastError=true)]
+  static extern bool GetTokenInformation(IntPtr token, int cls, byte[] buf, int len, out int ret);
+  // Anmeldesitzung (LUID) des eigenen Tokens, 16 Hex-Stellen wie im DOS-Geraetenamen.
+  public static string EigeneLuid() {
+    byte[] b = new byte[56]; int r;   // TOKEN_STATISTICS, AuthenticationId ab Offset 8
+    using (var id = System.Security.Principal.WindowsIdentity.GetCurrent()) {
+      if (!GetTokenInformation(id.Token, 10, b, b.Length, out r)) return null;
+    }
+    return BitConverter.ToUInt32(b, 12).ToString("x8") + BitConverter.ToUInt32(b, 8).ToString("x8");
+  }
+  // Anmeldesitzung, die das Netzlaufwerk angelegt hat: \Device\LanmanRedirector\;Z:<LUID>\server\share
+  public static string LaufwerkLuid(string drive) {
+    var sb = new System.Text.StringBuilder(1024);
+    if (QueryDosDevice(drive, sb, sb.Capacity) == 0) return null;
+    var m = System.Text.RegularExpressions.Regex.Match(sb.ToString(), @";[A-Za-z]:([0-9A-Fa-f]{16})");
+    return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
+  }
 }
 '@
 try { Add-Type -TypeDefinition $mpr -ErrorAction Stop } catch { Log "Add-Type Mpr FEHLER: $($_.Exception.Message)" }
+
+# ERHOEHT NIE MAPPEN (Fix 2026-10-08, bugs/server/samba-wireguard.md SS19): Beide Aufgaben starten in
+# derselben Sekunde. Gewann die erhoehte Instanz, gehoerte Z: der erhoehten Anmeldesitzung, die
+# Benutzer-Instanz bekam alle 5 Min Fehler 85 und der Explorer zeigte Z: mit rotem X oder gar nicht.
+# Die erhoehte Instanz gibt deshalb nur noch Laufwerke frei, die sie selbst angelegt hat (LUID-Vergleich;
+# gespiegelte Laufwerke der Benutzersitzung bleiben unberuehrt), und meldet das per Exit-Code 10.
+$erhoeht = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if ($erhoeht) {
+    $eigen = [Mpr]::EigeneLuid(); $frei = 0
+    foreach ($d in 'Z:', 'Y:') {
+        $besitzer = [Mpr]::LaufwerkLuid($d)
+        if ($eigen -and $besitzer -eq $eigen) {
+            [Mpr]::WNetCancelConnection2($d, 0, $true) | Out-Null
+            Log "$d gehoerte der erhoehten Sitzung -> freigegeben, die Benutzer-Aufgabe mappt neu [elevated]"
+            $frei++
+        }
+    }
+    if ($frei -eq 0) { Log 'erhoehte Instanz: nichts freizugeben, Mapping macht die Benutzer-Aufgabe [elevated]' }
+    if ($frei -gt 0) { exit 10 } else { exit 0 }
+}
 
 # Lesbare Win32-Fehlertexte fuer das Log (Observability - Fehlercode allein sagt wenig).
 function ErrText($code) {

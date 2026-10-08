@@ -3,7 +3,9 @@
 # Dieser Task laeuft ELEVATED (RunLevel Highest) und macht NUR, was Admin-Rechte braucht:
 #   1. EnableLinkedConnections=1 setzen (Sicherheitsnetz, falls doch elevated gemappt wird)
 #   2. den WireGuard-Tunnel-Dienst sicherstellen (Start + Auto-Recovery)
-#   3. wg-drive-mount.ps1 als BACKUP-Mapping aufrufen (zweiter, unabhaengiger Weg)
+#   3. wg-drive-mount.ps1 aufrufen - seit 2026-10-08 mappt es erhoeht NICHT mehr, sondern gibt nur
+#      erhoeht angelegte Alt-Mappings frei (das fruehere Backup-Mapping gewann den Wettlauf gegen die
+#      Benutzer-Aufgabe -> Fehler 85, Z: im Explorer unsichtbar; bugs/server/samba-wireguard.md SS19)
 #
 # Das PRIMAERE, sichtbare Mapping macht der NICHT-erhoehte Task "WG-Drive-Mount" (wg-drive-mount.ps1):
 # er mappt im Benutzer-Token, direkt im Explorer sichtbar, OHNE Abhaengigkeit von EnableLinkedConnections
@@ -55,8 +57,16 @@ try {
 # als OK, laesst es das in Ruhe (kein Doppel-Mapping/Blinken).
 $mount = Join-Path $PSScriptRoot 'wg-drive-mount.ps1'
 if (Test-Path $mount) {
-    Log 'rufe wg-drive-mount.ps1 als Backup-Mapping auf (elevated)'
+    # Seit 2026-10-08 mappt wg-drive-mount.ps1 erhoeht NICHT mehr (Wettlauf mit der Benutzer-Aufgabe ->
+    # Fehler 85, Z: unsichtbar). Erhoeht gibt es nur noch eigene Alt-Mappings frei (Exit-Code 10);
+    # danach wird die Benutzer-Aufgabe angestossen, damit das Laufwerk nicht 5 Min fehlt.
+    Log 'rufe wg-drive-mount.ps1 zum Freigeben erhoehter Alt-Mappings auf (elevated)'
     & $mount
+    if ($LASTEXITCODE -eq 10) {
+        Start-Sleep -Seconds 5
+        Start-ScheduledTask -TaskName 'WG-Drive-Mount' -ErrorAction SilentlyContinue
+        Log 'Benutzer-Aufgabe WG-Drive-Mount nach Freigabe angestossen'
+    }
 } else {
     Log "wg-drive-mount.ps1 nicht gefunden ($mount) - Backup-Mapping uebersprungen"
 }

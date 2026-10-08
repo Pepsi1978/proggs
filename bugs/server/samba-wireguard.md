@@ -676,6 +676,28 @@ danach) sehr wohl. Darum einmalig geradeziehen statt daran zu scheitern:
 ("Weitere Optionen anzeigen" / Umschalt+F10). Das schlanke Menue nimmt nur signierte
 `IExplorerCommand`-Shell-Erweiterungen auf; ein Skript kommt dort grundsaetzlich nicht hinein.
 
+## 19. ⭐⭐ Erhoehtes "Backup-Mapping" gewinnt den Wettlauf — Z: fehlt im Explorer, Fehler 85 alle 5 Min (live 2026-10-08)
+
+**Symptom:** Z: (oder Y:) erscheint im Explorer gar nicht oder mit rotem X. `net use` listet nur EIN
+Laufwerk, `Get-SmbMapping` zeigt trotzdem beide als `OK`. In `wg-drive-mount.log` steht alle 5 Min
+`Z: mount FEHLGESCHLAGEN: Laufwerksbuchstabe belegt (85)`, jede Zeile doppelt (zwei Instanzen).
+
+**Ursache:** `WG-Drive-Mount` (Benutzer-Token) und `WG-Drive-Reconnect` (erhoeht) haben denselben
+Ausloeser (Login + alle 5 Min) und starten in derselben Sekunde. Der erhoehte Task rief dasselbe
+Mount-Skript als "Backup" auf. Gewinnt er bei einem Buchstaben, gehoert das Laufwerk der erhoehten
+Anmeldesitzung; die Benutzer-Instanz bekommt 85 und kommt nie mehr zum Zug. Das "Defense in
+Depth"-Backup hat also den primaeren Weg kaputt gemacht.
+
+**Beweis (eine Zeile):** `QueryDosDevice('Z:')` liefert `\Device\LanmanRedirector\;Z:<LUID>\...`.
+Haben Y: und Z: verschiedene LUIDs, wurden sie in verschiedenen Anmeldesitzungen angelegt.
+
+**Fix:** `wg-drive-mount.ps1` mappt erhoeht NIE. Die erhoehte Instanz vergleicht die LUID des
+Laufwerks mit der eigenen (`GetTokenInformation`, TokenStatistics) und gibt nur selbst angelegte
+Laufwerke frei (Exit-Code 10); `wg-drive-reconnect.ps1` stoesst danach die Benutzer-Aufgabe an.
+
+**Regel:** Zwei Wege zum selben Laufwerksbuchstaben sind kein Backup, sondern ein Wettlauf. Mappen
+darf nur die Sitzung, in der der Explorer laeuft.
+
 ## Pflicht-Checkliste vor Samba-ueber-WireGuard
 - [ ] `smb.conf`: `interfaces = lo eth0 10.8.0.0/24` (mit Maske!) + `bind interfaces only = yes` (oder `= no`)?
 - [ ] `netstat -tulpen | grep smbd` zeigt `smbd` auf `10.8.0.1:445`?
