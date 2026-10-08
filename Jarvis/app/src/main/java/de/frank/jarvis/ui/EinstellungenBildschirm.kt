@@ -178,6 +178,16 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         // ---------------------------------------------------------------- Sprache
         SpracheEinstellungen(vm)
 
+        // ---------------------------------------------------------------- Tagebuch
+        Abschnitt("Tagebuch (Google Drive)")
+        Karte {
+            val stoerung = vm.stoerungen["tagebuch"]
+            Zeile("Lesezugang", if (stoerung == null) "In Ordnung" else "Gestört", if (stoerung == null) f.erfolg else f.gefahr)
+            Text(stoerung ?: "Dein Server liest die Tagebuch-Dateien mit einem Nur-Lese-Zugang aus Google Drive. Sollte Google ihn einmal widerrufen, erteilst du ihn hier neu.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+            Knopf(if (vm.driveErneuertGerade) "Warte auf Google …" else "Berechtigung erneuern", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = stoerung != null) { vm.driveBerechtigungErneuern() }
+            Text("Es öffnet sich die Google-Seite. Konto wählen, „Zulassen“ tippen, zurück zu Jarvis. Angefragt wird nur das Lesen von Drive.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+
         // ---------------------------------------------------------------- E-Mail
         Abschnitt("E-Mail (Gmail)")
         Karte {

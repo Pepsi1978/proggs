@@ -269,6 +269,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun protokollLeeren() = Protokoll.leere()
 
+    // ---- Tagebuch: Drive-Berechtigung ----
+    var driveErneuertGerade by mutableStateOf(false); private set
+
+    /** Öffnet die Zustimmungsseite von Google und gibt den neuen Nur-Lese-Zugang an den Server weiter. */
+    fun driveBerechtigungErneuern() {
+        if (driveErneuertGerade) return
+        driveErneuertGerade = true
+        viewModelScope.launch {
+            val (erfolg, text) = de.frank.jarvis.tunnel.DriveFreigabe.erneuere(getApplication())
+            if (erfolg) withContext(Dispatchers.IO) { Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.TagebuchFaehigkeit>().firstOrNull()?.synchronisiere() }
+            meldung = text
+            driveErneuertGerade = false
+            lagePruefen()
+        }
+    }
+
     // ---- E-Mail ----
 
     fun mailSpeichern(adresse: String, passwort: String, empfaenger: String) {

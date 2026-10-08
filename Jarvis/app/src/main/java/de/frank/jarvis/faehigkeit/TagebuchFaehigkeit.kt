@@ -31,8 +31,15 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
     private val ordner get() = File(context.filesDir, "tagebuch").apply { mkdirs() }
     private val e get() = Einstellungen.get(context)
     private var zuletztGeholt = 0L
+    /** Was der Server zuletzt über den Drive-Zugang gemeldet hat; leer = alles in Ordnung. */
+    @Volatile var driveFehler = ""
+        private set
 
-    override fun stoerung(): String? = if (e.serverHost.isBlank() || e.serverToken.isBlank()) "Der Server ist nicht eingerichtet." else null
+    override fun stoerung(): String? = when {
+        e.serverHost.isBlank() || e.serverToken.isBlank() -> "Der Server ist nicht eingerichtet."
+        driveFehler.isNotEmpty() -> "Der Server kann Google Drive nicht lesen. In Jarvis unter Einstellungen → Tagebuch auf „Berechtigung erneuern“ tippen."
+        else -> null
+    }
 
     /** Datum → Datei, neueste zuerst. Das Datum steht am Anfang des Dateinamens. */
     private fun eintraege(): List<Pair<LocalDate, File>> = ordner.listFiles { f -> f.isFile && f.name.endsWith(".md") }.orEmpty()
@@ -61,7 +68,8 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
             // Was im Drive-Ordner gelöscht wurde, verschwindet auch hier — aber nur, wenn der Server sauber gelesen hat.
             if (antwort.optString("fehler").isEmpty() && tage >= 4000 && namen.isNotEmpty()) ordner.listFiles()?.filter { it.name !in namen }?.forEach { it.delete() }
             zuletztGeholt = System.currentTimeMillis()
-            antwort.optString("fehler").takeIf { it.isNotEmpty() }?.let { Log.w("JarvisTagebuch", it) }
+            driveFehler = antwort.optString("fehler")
+            if (driveFehler.isNotEmpty()) Log.w("JarvisTagebuch", driveFehler)
             eintraege().size
         }.onFailure { Log.w("JarvisTagebuch", "Synchronisierung fehlgeschlagen", it) }.getOrNull()
     }
@@ -94,7 +102,7 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
             stoerung()?.let { return@Werkzeug Ergebnis(it, fehler = true) }
             frisch()
             val alle = eintraege()
-            if (alle.isEmpty()) return@Werkzeug Ergebnis("Es liegen keine Tagebucheinträge vor (Server oder Drive nicht erreichbar?).", fehler = true)
+            if (alle.isEmpty()) return@Werkzeug Ergebnis("Es liegen keine Tagebucheinträge vor. " + (stoerung() ?: "Server oder Drive sind gerade nicht erreichbar."), fehler = true)
             val heute = LocalDate.now()
             val suche = a.optString("suche").trim().lowercase(Locale.GERMAN)
             val einzeln = datum(a.optString("datum"))

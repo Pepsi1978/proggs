@@ -9,6 +9,7 @@ import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.BiomarkerFaehigkeit
 import de.frank.jarvis.faehigkeit.IdeenFaehigkeit
 import de.frank.jarvis.faehigkeit.TagebuchFaehigkeit
+import de.frank.jarvis.faehigkeit.WeckerFaehigkeit
 import de.frank.jarvis.faehigkeit.WissenFaehigkeit
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
@@ -168,6 +169,9 @@ object Tagesauswertung {
             append("== TERMINE HEUTE UND DIE NÄCHSTEN 4 TAGE ==\n")
             append(rufe("kalender_lesen", JSONObject().put("von", heute.toString()).put("bis", heute.plusDays(4).toString()))).append("\n\n")
 
+            append("== GESTELLTE WECKER ==\n")
+            append(runCatching { alle.filterIsInstance<WeckerFaehigkeit>().firstOrNull()?.ueberblick() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+
             append("== BIODATEN: WERTE DES AKTUELLEN TAGES ==\n")
             append(rufe("biomarker_tag", JSONObject().put("datum", heute.toString()))).append("\n\n")
 
@@ -204,6 +208,7 @@ Unten stehen alle Daten, bereits fertig gerechnet. Regeln:
 - Schlaf nach einem Nachtdienst ist Tagschlaf und fällt oft kürzer aus; am Tag nach dem letzten Nachtdienst ist eine kurze Schlafdauer erwartbar und kein schlechtes Zeichen. Vergleiche das vorsichtig mit den Durchschnitten, die überwiegend Nachtschlaf enthalten.
 - Schichtlogik: Nach einem Nachtdienst schläft Frank tagsüber etwa von 6 bis 15 Uhr. Schlafwerte gehören zu dem Tag, an dem der Schlaf endet. Steht für heute noch kein Schlafwert da, obwohl er laut Rahmen noch schläft oder gerade erst aufgestanden ist, ist das normal und kein schlechter Wert. Tagesbelastung, Energieumsatz und Schritte des laufenden Tages sind Zwischenstände.
 - Stelle den heutigen Tag in den Vordergrund und ordne ihn gegen 7 Tage, den letzten Monat und alle bisherigen Tage ein. Nenne nur die Zahlen, die etwas aussagen: zuerst, was auffällig besser oder schlechter ist, dann kurz das Unauffällige in einem Satz. Keine Aufzählung aller Messgrößen.
+- Die GESTELLTEN WECKER gehören in HEUTE oder AUSBLICK nur, wenn sie zum Dienst nicht passen (zum Beispiel kein Wecker vor einem Tagdienst) oder gleich klingeln.
 - Der Abschnitt WISSENS-DATENBANK ist nur ein Verzeichnis und für die Auswertung ohne Belang.
 - Die Liste GENIALE IDEEN ist nur Hintergrundwissen. Zähle die Ideen nicht auf; greife höchstens eine auf, wenn sie heute wirklich passt (freier Tag, gute Erholung).
 - Keine medizinischen Diagnosen. Empfehlungen konkret und alltagsnah (Belastung, Schlaf, Erholung, Training).
@@ -224,7 +229,7 @@ $daten
 
     /** Die Bereiche der Tagesdatenbank: Kurzname → Anfang der Abschnittsüberschrift. */
     val BEREICHE = linkedMapOf(
-        "rahmen" to "RAHMEN", "termine" to "TERMINE", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
+        "rahmen" to "RAHMEN", "termine" to "TERMINE", "wecker" to "GESTELLTE WECKER", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
         "trainings" to "TRAININGS", "tagebuch" to "TAGEBUCH", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
     )
 

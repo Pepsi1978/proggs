@@ -49,7 +49,19 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
 
     override fun stoerung(): String? = if (e.mailPasswort.isBlank() || e.mailAdresse.isBlank()) "Noch nicht eingerichtet: In Jarvis unter Einstellungen → E-Mail das Gmail-App-Passwort eintragen." else null
 
-    override val werkzeuge: List<Werkzeug> = listOf(
+    override val werkzeuge: List<Werkzeug> by lazy {
+        listOf(
+            w("mail_senden"),
+            w("mail_lesen").als(
+                beschreibung = w("mail_lesen").beschreibung + " Mit nr kommt eine einzelne E-Mail vollständig.",
+                schema = w("mail_lesen").schema.mit("nr" to zahl("Nummer einer E-Mail aus der Liste: dann nur diese, vollständig.")),
+            ) { a -> (if (a.gesetzt("nr")) w("mail_details") else w("mail_lesen")).ausfuehren(a) },
+        )
+    }
+
+    private fun w(name: String): Werkzeug = einzeln.first { it.name == name }
+
+    private val einzeln: List<Werkzeug> = listOf(
         Werkzeug(
             name = "mail_senden",
             titel = "E-Mail senden",

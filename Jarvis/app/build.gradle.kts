@@ -20,6 +20,11 @@ val relay = Properties().apply {
 // Suchschlüssel für die Internet-Recherche der Agenten (Tavily), ebenfalls nur aus ~/SK.
 val tavilyKey = File(System.getProperty("user.home"), "SK/Tavily/tavily-api-key.txt").takeIf { it.exists() }?.readText()?.trim().orEmpty()
 
+// Google-Zugangsdaten für „Berechtigung erneuern“ (Nur-Lese-Zugang zum Tagebuch-Ordner), ebenfalls nur aus ~/SK.
+val driveClient = Properties().apply {
+    File(System.getProperty("user.home"), "SK/rclone/google-oauth-client.txt").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 android {
     namespace = "de.frank.jarvis"
     compileSdk = 36
@@ -34,6 +39,8 @@ android {
         buildConfigField("String", "RELAY_HOST", "\"${relay.getProperty("host", "")}\"")
         buildConfigField("String", "RELAY_TOKEN", "\"${relay.getProperty("token", "")}\"")
         buildConfigField("String", "TAVILY_KEY", "\"$tavilyKey\"")
+        buildConfigField("String", "DRIVE_CLIENT_ID", "\"${driveClient.getProperty("client_id", "")}\"")
+        buildConfigField("String", "DRIVE_CLIENT_SECRET", "\"${driveClient.getProperty("client_secret", "")}\"")
     }
 
     // Gemeinsamer Debug-Key aller Apps (liegt nicht im Git, sondern unter ~/SK/Android/, in der Cloud legt ihn der

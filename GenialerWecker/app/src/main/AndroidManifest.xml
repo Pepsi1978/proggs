@@ -29,6 +29,9 @@
         <!-- Sichtbarkeit des geräteeigenen Spracherkennungsdienstes (Android 11+), Rückfall ohne Whisper-Modell. -->
         <intent><action android:name="android.speech.RecognitionService" /></intent>
     </queries>
+    <!-- Nur Apps mit demselben Signierschlüssel (Jarvis) dürfen Wecker lesen und stellen. -->
+    <permission android:name="de.frank.jarvis.permission.BRUECKE" android:protectionLevel="signature" />
+
     <application android:name="de.frank.wecker.WeckerApplication"
         android:allowBackup="false" android:dataExtractionRules="@xml/no_backup" android:fullBackupContent="false" android:label="Genialer Wecker"
         android:icon="@drawable/ic_wecker" android:roundIcon="@drawable/ic_wecker"
@@ -82,5 +85,8 @@
         </provider>
         <service android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync" tools:node="merge" />
+        <!-- Brücke zu Jarvis: Wecker lesen und stellen, durch die Signatur-Erlaubnis geschützt. -->
+        <provider android:name="de.frank.wecker.JarvisBruecke" android:authorities="de.frank.genialerwecker.jarvis"
+            android:permission="de.frank.jarvis.permission.BRUECKE" android:exported="true" />
     </application>
 </manifest>

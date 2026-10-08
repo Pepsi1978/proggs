@@ -29,7 +29,37 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
         antwort.optString("fehler").takeIf { it.isNotEmpty() }?.let { "NICHT VERFÜGBAR: $it" } ?: liste(antwort, 160).take(14_000)
     }
 
-    override val werkzeuge: List<Werkzeug> = listOf(
+    override val werkzeuge: List<Werkzeug> by lazy {
+        listOf(
+            w("ideen_lesen").als(
+                beschreibung = "Jarvis: liest Franks geniale Ideen aus der App Geniale Ideen. Nutze es für „Welche Ideen habe ich?“, „Was war meine Idee zu …?“, " +
+                    "„Welche Ideen sind umgesetzt?“. In der Liste sind lange Texte gekürzt; mit id kommt eine einzelne Idee vollständig, samt dem bisherigen Gespräch dazu.",
+                schema = w("ideen_lesen").schema.mit("id" to zahl("id einer Idee aus der Liste: dann nur diese, im Volltext.")),
+            ) { a -> (if (a.gesetzt("id")) w("idee_lesen") else w("ideen_lesen")).ausfuehren(a) },
+            Werkzeug(
+                name = "idee_speichern",
+                titel = "Idee speichern oder ändern",
+                beschreibung = "Jarvis: speichert eine neue geniale Idee in der App Geniale Ideen oder ändert eine vorhandene. " +
+                    "NEU (ohne id und ohne suche): bei „Jarvis, ich habe eine Idee …“, „speichere als geniale Idee …“. Übergib den Inhalt vollständig in Franks Worten; die App glättet den Text sprachlich und bildet den Titel selbst. " +
+                    "ÄNDERN (mit id oder suche): neuer Text oder Titel, andere Kategorie, oder status umgesetzt bzw. wieder offen.",
+                schema = schema(
+                    "id" to zahl("Nur beim Ändern: id der Idee aus ideen_lesen."),
+                    "suche" to text("Nur beim Ändern, statt id: Wort aus Titel oder Text der Idee."),
+                    "text" to text("Die Idee vollständig, so wie Frank sie gesagt hat, ohne die Anrede an Jarvis. Pflicht bei einer neuen Idee."),
+                    "titel" to text("Nur wenn Frank ausdrücklich einen Titel nennt (höchstens drei Wörter)."),
+                    "kategorie" to text("Nur wenn Frank eine Kategorie nennt. Unbekannte Namen werden neu angelegt; ohne = Kategorie entfernen."),
+                    "status" to text("Nur beim Ändern: umgesetzt oder offen.", listOf("offen", "umgesetzt")),
+                    "verbessern" to schalter("Nur bei einer neuen Idee: Text von der KI glätten lassen (Vorgabe: an)."),
+                ),
+                nurLesen = false,
+            ) { a -> (if (a.gesetzt("id") || a.gesetzt("suche")) w("idee_aendern") else w("idee_anlegen")).ausfuehren(a) },
+            w("idee_loeschen"),
+        )
+    }
+
+    private fun w(name: String): Werkzeug = einzeln.first { it.name == name }
+
+    private val einzeln: List<Werkzeug> = listOf(
         Werkzeug(
             name = "ideen_lesen",
             titel = "Ideen lesen",

@@ -33,7 +33,24 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
     /** Schützt vor doppelt angelegten Aufgaben, wenn ChatGPT einen Aufruf nach einer Zeitüberschreitung wiederholt. */
     private var letzteAnlage: Triple<String, Long, String>? = null
 
-    override val werkzeuge: List<Werkzeug> = listOf(
+    override val werkzeuge: List<Werkzeug> by lazy {
+        listOf(
+            w("aufgaben_lesen"), w("aufgabe_anlegen"),
+            w("aufgabe_aendern").als(
+                beschreibung = "Jarvis: ändert, verschiebt oder hakt eine vorhandene Aufgabe in Geniale Aufgaben ab. Zum Abhaken nur erledigt=true angeben (false öffnet sie wieder). " +
+                    "Sonst die Felder angeben, die sich ändern: Tag, Uhrzeit, Text, Priorität, Erinnerung, Wiederholung, Checkliste. Die Aufgabe wird über id ODER ein Suchwort (suche) bestimmt.",
+                schema = w("aufgabe_aendern").schema.mit("erledigt" to schalter("true = als erledigt abhaken, false = wieder öffnen.")),
+            ) { a ->
+                val nurAbhaken = a.has("erledigt") && a.keys().asSequence().all { it in setOf("id", "suche", "erledigt") }
+                (if (nurAbhaken) w("aufgabe_erledigen") else w("aufgabe_aendern")).ausfuehren(a)
+            },
+            w("aufgabe_loeschen"),
+        )
+    }
+
+    private fun w(name: String): Werkzeug = einzeln.first { it.name == name }
+
+    private val einzeln: List<Werkzeug> = listOf(
         Werkzeug(
             name = "aufgaben_lesen",
             titel = "Aufgaben lesen",

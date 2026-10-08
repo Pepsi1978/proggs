@@ -48,7 +48,20 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
 
     override fun stoerung(): String? = null
 
-    override val werkzeuge: List<Werkzeug> = listOf(
+    override val werkzeuge: List<Werkzeug> by lazy {
+        listOf(
+            w("ablage_lesen").als(
+                beschreibung = "Jarvis: die eigene Ablage von Jarvis (Recherchen, Ausarbeitungen, Notizen). Ohne titel kommt die Liste der Dateien mit Datum – für „Was hast du recherchiert?“, " +
+                    "„Welche Unterlagen liegen vor?“. Mit titel wird diese Datei vollständig gelesen; ein eindeutiger Teil des Titels genügt.",
+                schema = schema("titel" to text("Titel der Datei oder ein eindeutiger Teil davon. Weglassen = Liste aller Dateien."), "suche" to text("Nur für die Liste: Dateien, deren Titel oder Inhalt dieses Wort enthält.")),
+            ) { a -> (if (a.gesetzt("titel")) w("ablage_lesen") else w("ablage_liste")).ausfuehren(a) },
+            w("ablage_schreiben"), w("ablage_loeschen"),
+        )
+    }
+
+    private fun w(name: String): Werkzeug = einzeln.first { it.name == name }
+
+    private val einzeln: List<Werkzeug> = listOf(
         Werkzeug(
             name = "ablage_liste",
             titel = "Ablage ansehen",
@@ -70,7 +83,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             nurLesen = true,
         ) { a ->
             val datei = Ablage.finde(context, a.optString("titel"))
-            if (datei == null) Ergebnis("Keine eindeutige Datei für „${a.optString("titel")}“. Mit ablage_liste nachsehen.", fehler = true)
+            if (datei == null) Ergebnis("Keine eindeutige Datei für „${a.optString("titel")}“. Ohne titel kommt die Liste.", fehler = true)
             else Ergebnis("Datei „${datei.nameWithoutExtension}“ (Stand ${Ablage.datum(datei)}):\n\n" + datei.readText().take(60_000))
         },
         Werkzeug(

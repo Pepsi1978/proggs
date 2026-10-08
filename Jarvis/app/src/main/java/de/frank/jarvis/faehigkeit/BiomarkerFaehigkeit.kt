@@ -42,7 +42,23 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
             "schritte, oura_temperaturabweichung, vo2max, gewicht, koerperfett, muskelmasse, skelettmuskel, magermasse, knochenmasse, viszeralfett, bmi, " +
             "koerperwasser, wasseranteil, eiweiss"
 
-    override val werkzeuge: List<Werkzeug> = listOf(
+    override val werkzeuge: List<Werkzeug> by lazy {
+        listOf(
+            w("biomarker_auswertung"), w("biomarker_tag"),
+            w("biomarker_verlauf").als(
+                beschreibung = w("biomarker_verlauf").beschreibung + " Ohne metriken kommt stattdessen der Katalog: alle Messgrößen mit Einheit, Quelle und dem Zeitraum, für den Daten vorliegen.",
+                schema = w("biomarker_verlauf").schema.mit(pflicht = emptyList()),
+            ) { a -> (if ((a.optJSONArray("metriken")?.length() ?: 0) == 0) w("biomarker_katalog") else w("biomarker_verlauf")).ausfuehren(a) },
+            w("trainings_lesen").als(
+                beschreibung = w("trainings_lesen").beschreibung + " Mit id kommt ein einzelnes Training mit allen Werten und den Kilometer-Abschnitten.",
+                schema = w("trainings_lesen").schema.mit("id" to text("id eines Trainings aus der Liste: dann nur dieses, im Detail.")),
+            ) { a -> (if (a.gesetzt("id")) w("training_details") else w("trainings_lesen")).ausfuehren(a) },
+        )
+    }
+
+    private fun w(name: String): Werkzeug = einzeln.first { it.name == name }
+
+    private val einzeln: List<Werkzeug> = listOf(
         Werkzeug(
             name = "biomarker_auswertung",
             titel = "Biomarker auswerten",
@@ -96,7 +112,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         Werkzeug(
             name = "training_details",
             titel = "Training im Detail",
-            beschreibung = "Jarvis: liest ein einzelnes Training aus Entropie Reductor mit allen Werten und den Kilometer-Abschnitten. Die id stammt aus trainings_lesen.",
+            beschreibung = "Jarvis: liest ein einzelnes Training aus Entropie Reductor mit allen Werten und den Kilometer-Abschnitten. Die id stammt aus der Trainingsliste.",
             schema = schema("id" to text("id des Trainings aus trainings_lesen."), pflicht = listOf("id")),
             nurLesen = true,
         ) { a ->

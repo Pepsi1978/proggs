@@ -24,7 +24,7 @@ class WissenFaehigkeit(private val context: Context) : Faehigkeit {
     override val beschreibung = "Franks gespeichertes Wissen aus langen Gesprächen (Ordner Datenbank im Repository): Ziele, JARVIS und weitere Themen."
     override val hinweise =
         "Die Wissens-Datenbank enthält die ausführlich aufbereiteten Inhalte wichtiger Gespräche, nach Themenordnern sortiert (zum Beispiel Ziele, JARVIS). " +
-            "Sagt Frank „in der Datenbank steht etwas zu …“ oder fragt er nach früher Besprochenem, sieh zuerst mit wissen_inhalt nach, was es gibt, und lies dann die passende Datei mit wissen_lesen. " +
+            "Sagt Frank „in der Datenbank steht etwas zu …“ oder fragt er nach früher Besprochenem, sieh zuerst mit wissen_lesen ohne Angaben nach, was es gibt, und lies dann die passende Datei mit datei. " +
             "Die Datenbank ist nur lesbar; neue Einträge entstehen in ChatGPT über den Datenbank-Skill."
 
     private val ordner get() = File(context.filesDir, "wissen").apply { mkdirs() }
@@ -84,7 +84,27 @@ class WissenFaehigkeit(private val context: Context) : Faehigkeit {
     /** Beim ersten Zugriff ohne Bestand einmal holen. */
     private suspend fun stelleSicher() { if (dateien().isEmpty()) synchronisiere() }
 
-    override val werkzeuge: List<Werkzeug> = listOf(
+    override val werkzeuge: List<Werkzeug> by lazy {
+        listOf(
+            Werkzeug(
+                name = "wissen_lesen",
+                titel = "Wissens-Datenbank",
+                beschreibung = "Jarvis: Franks Wissens-Datenbank mit den aufbereiteten Inhalten wichtiger Gespräche (Themenordner wie Ziele oder JARVIS). " +
+                    "Ohne Angaben kommt das Inhaltsverzeichnis mit allen Dateien; mit ordner das Verzeichnis eines Themas; mit datei eine Datei im Volltext; mit suche die Fundstellen eines Begriffs in allen Dateien. " +
+                    "Nutze es, wenn Frank nach früher Besprochenem fragt („Was steht in der Datenbank zu kognitiver Leistung?“, „Was hatten wir zu meinen Zielen festgehalten?“).",
+                schema = schema(
+                    "ordner" to text("Themenordner, zum Beispiel Ziele oder JARVIS."),
+                    "datei" to text("Pfad oder eindeutiger Teil eines Dateinamens: dann diese Datei im Volltext."),
+                    "suche" to text("Begriff oder Wortgruppe: dann die Fundstellen in allen Dateien."),
+                ),
+                nurLesen = true,
+            ) { a -> (if (a.gesetzt("datei")) w("wissen_lesen") else if (a.gesetzt("suche")) w("wissen_suchen") else w("wissen_inhalt")).ausfuehren(a) },
+        )
+    }
+
+    private fun w(name: String): Werkzeug = einzeln.first { it.name == name }
+
+    private val einzeln: List<Werkzeug> = listOf(
         Werkzeug(
             name = "wissen_inhalt",
             titel = "Wissens-Datenbank ansehen",
@@ -117,7 +137,7 @@ class WissenFaehigkeit(private val context: Context) : Faehigkeit {
             // Die Inhaltsverzeichnisse sind nur dann gemeint, wenn sonst nichts passt.
             val kandidaten = treffer.filterNot { it.name.equals("INHALTSVERZEICHNIS.md", true) }.ifEmpty { treffer }
             when {
-                gesucht.isEmpty() || kandidaten.isEmpty() -> Ergebnis("Keine Datei passt zu „${a.optString("datei")}“. Mit wissen_inhalt nachsehen.", fehler = true)
+                gesucht.isEmpty() || kandidaten.isEmpty() -> Ergebnis("Keine Datei passt zu „${a.optString("datei")}“. Ohne Angaben kommt das Inhaltsverzeichnis.", fehler = true)
                 kandidaten.size > 1 -> Ergebnis("Mehrere Dateien passen:\n" + kandidaten.joinToString("\n") { "- " + pfad(it) } + "\nBitte genauer angeben.", fehler = true)
                 else -> kandidaten.first().let { Ergebnis("Datei ${pfad(it)}:\n\n" + it.readText().take(60_000)) }
             }

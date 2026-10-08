@@ -11,7 +11,8 @@ Version 1 kann zwei Dinge:
    Denkstufe sind wählbar. Es bedient dieselben Werkzeuge selbstständig.
 
 Angebundene Apps: **Geniale Aufgaben** (`de.frank.aufgaben`, lesen und schreiben) und der Biomarker-Bereich von
-**Entropie Reductor** (`de.frank.entropyreducer`, nur lesen) , **Geniale Ideen** (`de.frank.genialeideen`, lesen und schreiben)
+**Entropie Reductor** (`de.frank.entropyreducer`, nur lesen) , **Geniale Ideen** (`de.frank.genialeideen`, lesen und schreiben), **Genialer Wecker**
+(`de.frank.genialerwecker`, lesen und stellen)
 sowie der **Kalender** des Handys (alle synchronisierten
 Kalender, also auch Google; nur lesen, Android-Erlaubnis `READ_CALENDAR`).
 
@@ -50,32 +51,24 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 
 ## Werkzeuge im Plugin
 
+28 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
+welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl für ChatGPT überschaubar.
+
 | Werkzeug | Zweck |
 |---|---|
-| `aufgaben_lesen` | Aufgaben und Termine lesen (heute, morgen, Datum, demnächst, Eingang, offen, erledigt, alle; Suche) |
-| `aufgabe_anlegen` | Neue Aufgabe; `text` und `datum` sind Pflicht, Erinnerung mit Vorlesen ist Vorgabe |
-| `aufgabe_aendern` | Ändern und verschieben, per `id` oder Suchwort |
-| `aufgabe_erledigen` | Abhaken oder wieder öffnen, per `id` oder Suchwort |
-| `aufgabe_loeschen` | Löschen, per `id` oder Suchwort |
-| `biomarker_auswertung` | Aktueller Wert jeder Messgröße gegen den Schnitt der Tage davor, Schnitte 7/30/90 Tage, Einordnung |
-| `biomarker_tag` | Alle Werte eines Tages (Whoop, Oura, Waage) samt Trainings |
-| `biomarker_verlauf` | Zeitreihen einzelner Messgrößen, tageweise oder als Wochen-/Monatsschnitt |
-| `trainings_lesen` | Trainingsliste mit Pace, Puls, Distanz, Kalorien, VO2max und Summen |
-| `training_details` | Ein Training mit Kilometer-Abschnitten |
-| `biomarker_katalog` | Alle Messgrößen mit Einheit, Quelle und Zeitraum |
-| `kalender_lesen` | Termine Tag für Tag mit Dienst-Zeile; mit Suchwort bis ein Jahr voraus |
-| `dienstplan_lesen` | Je Tag Nachtdienst, Tagdienst, frei oder Urlaub mit Abfahrtszeit, nächster Dienst, nächste freie Tage |
-| `ideen_lesen`, `idee_lesen`, `idee_anlegen`, `idee_aendern`, `idee_loeschen` | Geniale Ideen; neue Ideen glättet die Ideen-App selbst mit ihrer KI |
-| `ablage_liste`, `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen` | Eigene Textdateien von Jarvis (Recherchen, Ausarbeitungen, Notizen) |
-| `agenten_liste`, `agent_starten`, `agent_anlegen`, `agent_loeschen` | Agenten, die im Hintergrund arbeiten und ihr Ergebnis in die Ablage legen |
-| `mail_senden`, `mail_lesen`, `mail_details` | Gmail über App-Passwort; senden nur an freigegebene Empfänger |
-| `wissen_inhalt`, `wissen_lesen`, `wissen_suchen` | Wissens-Datenbank: Ordner `Datenbank` des Repositories, bei jeder Synchronisierung aufs Handy geholt |
-| `tagebuch_lesen` | Tagebucheinträge für einen Tag, einen Zeitraum oder ein Suchwort |
+| `tagesauswertung_lesen` | Die fertige Tagesauswertung samt frisch gelesenen Aufgaben; `neu_erstellen` stößt eine neue an |
 | `tagesdaten_lesen` | Die Tagesdatenbank: alle Daten der letzten Synchronisierung, ganz oder je Bereich |
-| `tagesauswertung_lesen` | Die fertige Tagesauswertung samt frisch gelesenen Aufgaben; veraltete Fassungen werden nie als aktuell ausgegeben |
-| `tagesauswertung_erstellen` | Stößt eine neue Auswertung im Hintergrund an (ein bis drei Minuten) |
-| `jarvis_status` | Erreichbarkeit, Datum und Uhrzeit auf dem Handy, angebundene Apps |
-| `jarvis_auftrag` | Freier Auftrag an den Agenten für Mehrschritt-Aufgaben (Zeitfenster 45 s) |
+| `aufgaben_lesen`, `aufgabe_anlegen`, `aufgabe_aendern`, `aufgabe_loeschen` | Geniale Aufgaben; Abhaken über `aufgabe_aendern` mit `erledigt` |
+| `kalender_lesen`, `dienstplan_lesen` | Termine und ausgewerteter Dienstplan |
+| `biomarker_auswertung`, `biomarker_tag`, `biomarker_verlauf`, `trainings_lesen` | Biodaten; `biomarker_verlauf` ohne Messgrößen liefert den Katalog, `trainings_lesen` mit `id` ein Training im Detail |
+| `wecker_lesen`, `wecker_stellen`, `wecker_loeschen` | Genialer Wecker; Ändern, Schalten und Auslassen über `wecker_stellen` |
+| `ideen_lesen`, `idee_speichern`, `idee_loeschen` | Geniale Ideen; `ideen_lesen` mit `id` liefert den Volltext, `idee_speichern` legt an oder ändert |
+| `tagebuch_lesen` | Tagebucheinträge für einen Tag, einen Zeitraum oder ein Suchwort |
+| `wissen_lesen` | Wissens-Datenbank: Inhaltsverzeichnis, Datei im Volltext oder Suche |
+| `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen` | Eigene Textdateien von Jarvis; `ablage_lesen` ohne Titel liefert die Liste |
+| `agenten`, `agent_starten` | Agenten ansehen, anlegen, löschen und beauftragen |
+| `mail_senden`, `mail_lesen` | Gmail; `mail_lesen` mit `nr` liefert eine Mail vollständig |
+| `jarvis_status` | Erreichbarkeit, Datum, Dienst heute, angebundene Apps |
 
 Fehlt beim Anlegen der Tag, obwohl eine Uhrzeit genannt wurde, fragt ChatGPT nach; ruft es trotzdem auf, lehnt die
 Aufgaben-App mit einem Hinweis ab. Mehrere Treffer bei einem Suchwort führen zu einer Rückfrage statt zu einer
@@ -137,7 +130,9 @@ unter `/data/rclone.conf` im Volume des Containers, Kopie in `~/SK/rclone/gdrive
 `filesDir/tagebuch/` (`faehigkeit/TagebuchFaehigkeit.kt`) und liest dann lokal. Die letzten sieben Tage stehen in der
 Tagesdatenbank; die Tagesauswertung fasst sie im Abschnitt RÜCKBLICK in Stichpunkten zusammen.
 
-Zugang erneuern (falls Google ihn widerruft): am PC `rclone config reconnect gdrive-lesen: --config ~/SK/rclone/gdrive-lesen.conf`,
+Zugang erneuern (falls Google ihn widerruft): in Jarvis unter Einstellungen → Tagebuch auf „Berechtigung erneuern“ tippen
+(`tunnel/DriveFreigabe.kt`: Zustimmungsseite von Google im Browser, Rückleitung an 127.0.0.1 auf dem Handy, Weitergabe an
+den Relay unter `/geraet/drive-zugang`). Ersatzweg am PC: `rclone config reconnect gdrive-lesen: --config ~/SK/rclone/gdrive-lesen.conf`,
 dann die Datei per `scp` auf den Server und mit `docker cp` nach `jarvis-relay:/data/rclone.conf` (Besitzer `relay`).
 
 ## Sprache

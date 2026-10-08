@@ -43,7 +43,7 @@ object Register {
     fun alle(context: Context): List<Faehigkeit> = liste ?: synchronized(this) {
         liste ?: listOf(
             AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext),
-            IdeenFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext), WissenFaehigkeit(context.applicationContext), TagebuchFaehigkeit(context.applicationContext),
+            WeckerFaehigkeit(context.applicationContext), IdeenFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext), WissenFaehigkeit(context.applicationContext), TagebuchFaehigkeit(context.applicationContext),
             WebFaehigkeit(context.applicationContext),
         ).also { liste = it }
     }
@@ -53,6 +53,25 @@ object Register {
     /** Nur was ChatGPT sehen soll. */
     fun pluginWerkzeuge(context: Context): List<Werkzeug> = alle(context).filter { it.imPlugin }.flatMap { it.werkzeuge }
 }
+
+// ---- Zusammenfassen ----
+// ChatGPT wählt sicherer, wenn es wenige klar getrennte Werkzeuge sieht. Verwandte Aufgaben einer App teilen
+// sich deshalb ein Werkzeug; welches Einzelwerkzeug arbeitet, entscheidet die Eingabe.
+
+/** Dasselbe Werkzeug mit anderem Namen, Text, Schema oder anderer Ausführung. */
+fun Werkzeug.als(
+    name: String = this.name, titel: String = this.titel, beschreibung: String = this.beschreibung, schema: JSONObject = this.schema,
+    nurLesen: Boolean = this.nurLesen, loeschend: Boolean = this.loeschend, ausfuehren: (suspend (JSONObject) -> Ergebnis)? = null,
+): Werkzeug = Werkzeug(name, titel, beschreibung, schema, nurLesen, loeschend, ausfuehren ?: this.ausfuehren)
+
+/** Kopie eines Schemas mit zusätzlichen Feldern; [pflicht] ersetzt die Pflichtfelder, wenn angegeben. */
+fun JSONObject.mit(vararg felder: Pair<String, JSONObject>, pflicht: List<String>? = null): JSONObject = JSONObject(toString()).also { kopie ->
+    felder.forEach { kopie.getJSONObject("properties").put(it.first, it.second) }
+    pflicht?.let { kopie.put("required", JSONArray(it)) }
+}
+
+/** Hat die Eingabe dieses Feld mit einem echten Wert? */
+fun JSONObject.gesetzt(name: String): Boolean = has(name) && !isNull(name) && optString(name).isNotBlank()
 
 // ---- Kleine Helfer für JSON-Schemas ----
 

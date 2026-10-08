@@ -206,6 +206,26 @@ class Tagebuch:
                 self.fehler = "Drive nicht lesbar: " + str(ausnahme)[:200]
                 log.warning("Tagebuch: %s", self.fehler)
 
+    async def neuer_zugang(self, request: web.Request) -> web.Response:
+        """Nimmt einen frisch erteilten Nur-Lese-Zugang vom Handy an und traegt ihn in die rclone-Konfiguration ein."""
+        if not hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode()):
+            return web.Response(status=404, text="Not found")
+        try:
+            zugang = (await request.json()).get("token")
+            assert isinstance(zugang, dict) and zugang.get("refresh_token") and zugang.get("access_token")
+            konfig = Path(RCLONE_KONFIG)
+            zeilen = konfig.read_text("utf-8").splitlines()
+            assert any(z.startswith("token = ") for z in zeilen), "In der Konfiguration fehlt die Zeile token."
+            zeile = "token = " + json.dumps({k: zugang[k] for k in ("access_token", "token_type", "refresh_token", "expiry") if k in zugang})
+            konfig.write_text("\n".join(zeile if z.startswith("token = ") else z for z in zeilen) + "\n", "utf-8")
+        except Exception as ausnahme:
+            log.warning("Drive-Zugang nicht uebernommen: %s", ausnahme)
+            return web.Response(status=400, text="Zugang nicht uebernommen")
+        self.zuletzt, self.fehler = 0.0, ""
+        await self.hole()
+        log.info("Drive-Zugang erneuert, Fehler danach: %r", self.fehler)
+        return web.json_response({"fehler": self.fehler})
+
     async def antwort(self, request: web.Request) -> web.Response:
         if not hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode()):
             return web.Response(status=404, text="Not found")
@@ -272,7 +292,9 @@ def app() -> web.Application:
     relay = Relay()
     anwendung = web.Application(client_max_size=MAX_RUMPF, middlewares=[mitschrift])
     anwendung.router.add_get("/geraet/ws", relay.geraet)
-    anwendung.router.add_get("/geraet/tagebuch", Tagebuch().antwort)
+    tagebuch = Tagebuch()
+    anwendung.router.add_get("/geraet/tagebuch", tagebuch.antwort)
+    anwendung.router.add_post("/geraet/drive-zugang", tagebuch.neuer_zugang)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)
