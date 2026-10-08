@@ -80,6 +80,12 @@ class Einstellungen private constructor(context: Context) {
         get() = s("such_schluessel", "").ifEmpty { BuildConfig.TAVILY_KEY }
         set(v) = put { putString("such_schluessel", v.trim()) }
 
+    // ---- Wetter ----
+    /** Ort der Wettervorhersage, mit seinen Koordinaten. */
+    var wetterOrt: String get() = s("wetter_ort", "Neuenhagen bei Berlin"); set(v) = put { putString("wetter_ort", v.trim()) }
+    var wetterBreite: Double get() = s("wetter_breite", "52.529").toDoubleOrNull() ?: 52.529; set(v) = put { putString("wetter_breite", v.toString()) }
+    var wetterLaenge: Double get() = s("wetter_laenge", "13.689").toDoubleOrNull() ?: 13.689; set(v) = put { putString("wetter_laenge", v.toString()) }
+
     // ---- Tagesauswertung ----
     var auswertungAn: Boolean get() = prefs.getBoolean("auswertung_an", true); set(v) = put { putBoolean("auswertung_an", v) }
     /** Bis zu drei Uhrzeiten als „HH:MM,HH:MM,HH:MM“. */

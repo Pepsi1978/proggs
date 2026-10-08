@@ -92,7 +92,15 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
         ) { a -> mitWecker(a) { id -> rufe("loeschen", JSONObject().put("id", id)).fehlerOder { "Gelöscht: Wecker „${it.getJSONObject("geloescht").optString("name")}“." } } },
     )
 
-    private fun planung(antwort: JSONObject): String =
+    /** Der Dienst an dem Tag, an dem der Wecker als Nächstes klingelt – damit auffällt, wenn Wecker und Dienst nicht zusammenpassen. */
+    private fun dienstDazu(antwort: JSONObject): String {
+        val wann = antwort.optJSONObject("wecker")?.takeIf { !it.isNull("naechstes_klingeln") }?.optString("naechstes_klingeln") ?: return ""
+        val tag = runCatching { java.time.LocalDate.parse(wann.take(10)) }.getOrNull() ?: return ""
+        val lage = runCatching { Register.alle(context).filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.lage(tag) }.getOrNull() ?: return ""
+        return "\nMITGEDACHT (nur erwähnen, wenn Wecker und Tag nicht zusammenpassen): Am Tag des nächsten Klingelns gilt: ${lage.dienstText}."
+    }
+
+    private fun planung(antwort: JSONObject): String = dienstDazu(antwort) +
         (if (!antwort.optBoolean("geplant", true)) " ACHTUNG: gespeichert, aber nicht geplant – in der Wecker-App nachsehen." else "") +
             antwort.optString("hinweis").takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
 

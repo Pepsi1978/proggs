@@ -2,6 +2,7 @@ package de.frank.jarvis.faehigkeit
 
 import android.Manifest
 import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.CalendarContract
@@ -20,7 +21,8 @@ import org.json.JSONObject
 
 /**
  * Franks Kalender, gelesen über den Kalenderspeicher von Android (alle Kalender, die das Handy
- * synchronisiert, also auch der Google-Kalender). Nur lesend, keine eigene Google-Anmeldung nötig.
+ * synchronisiert, also auch der Google-Kalender). Lesen und Schreiben, keine eigene Google-Anmeldung nötig:
+ * Was Jarvis hier einträgt, lädt die Kalender-Synchronisierung des Handys zu Google hoch.
  *
  * Dazu der Dienstplan, der in Franks Kalender als Ganztagstermine steht:
  *  - „Nacht 1“ bis „Nacht 4“ = Nachtdienst, Abfahrt etwa 16:00 Uhr
@@ -32,14 +34,16 @@ import org.json.JSONObject
 class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "kalender"
     override val name = "Kalender"
-    override val beschreibung = "Termine, Geburtstage, Müllabfuhr, Spiele und den Dienstplan aus dem Google-Kalender lesen."
+    override val beschreibung = "Termine, Geburtstage, Müllabfuhr, Spiele und den Dienstplan im Google-Kalender lesen; Termine eintragen und löschen."
     override val hinweise =
         "Franks Kalender enthält seine Termine und seinen Dienstplan als Ganztagstermine. Die Regeln: „Nacht 1“ bis „Nacht 4“ sind Nachtdienste " +
             "(Nacht 1 ist die erste, Nacht 4 die letzte eines Blocks), Abfahrt etwa 16:00 Uhr, er kommt am nächsten Morgen zurück. „Tag 1“ bis „Tag 4“ sind Tagdienste, " +
             "Abfahrt etwa 4:30 Uhr. Steht am selben Tag zusätzlich „X“ oder „F“, hat er frei, bei „U“ Urlaub: Der Dienst entfällt dann, auch wenn er noch im Kalender steht. " +
             "Tage ohne Diensteintrag sind frei. Die Werkzeuge werten das bereits aus; verlasse dich auf die Zeile „Dienst“. " +
             "Weitere Einträge: „Hausmüll“ und „Gelbe Tonne“ (Abholung), „Geb. <Name>“ (Geburtstag), Spiele von Union und Dortmund. " +
-            "Der Kalender ist nur lesbar. Eigene Erinnerungen legst du in Geniale Aufgaben an, nicht im Kalender."
+            "Mit kalender_eintragen legst du Termine an, auch ganztägige und mit Farbe; ein „X“, „F“ oder „U“ als Ganztagstermin macht den Tag zum freien Tag bzw. Urlaubstag " +
+            "(für X nimmt Frank Blau; ohne Farbangabe übernimmt Jarvis die Farbe seiner bisherigen Einträge gleichen Namens). " +
+            "Termine gehören in den Kalender, Dinge zum Erledigen mit Erinnerung in Geniale Aufgaben."
 
     private val erlaubt: Boolean
         get() = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
@@ -72,12 +76,48 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
             ),
             nurLesen = true,
         ) { a -> mitKalender { dienstplanText(a) } },
+        Werkzeug(
+            name = "kalender_eintragen",
+            titel = "Termin eintragen",
+            beschreibung = "Jarvis: trägt einen Termin in Franks Google-Kalender ein. Ganztägig (ohne uhrzeit) oder mit Uhrzeit, auch über mehrere Tage, auf Wunsch mit Farbe. " +
+                "Beispiele: „Trag am 12. Januar 2027 ganztägig ein X in Blau ein“ → titel X, datum 2027-01-12, farbe blau. „Zahnarzt am Dienstag um 10 Uhr, eine Stunde“ → titel, datum, uhrzeit, dauer. " +
+                "Ein Ganztagstermin „X“ oder „F“ heißt: an dem Tag hat Frank frei; „U“ heißt Urlaub. Ist das Jahr nicht genannt und nicht eindeutig, frage nach.",
+            schema = schema(
+                "titel" to text("Titel des Termins, zum Beispiel X, U, Zahnarzt, Geb. Mietzi."),
+                "datum" to text("Tag: heute, morgen, uebermorgen oder JJJJ-MM-TT."),
+                "uhrzeit" to text("Beginn als HH:MM. Weglassen = ganztägiger Termin."),
+                "dauer" to zahl("Dauer in Minuten bei einem Termin mit Uhrzeit (Vorgabe 60)."),
+                "bis" to text("Nur bei mehrtägigen Ganztagsterminen: letzter Tag JJJJ-MM-TT."),
+                "farbe" to text("Farbe, nur wenn genannt: blau, hellblau, grün, hellgrün, gelb, orange, rot, rosa, lila, lavendel, grau."),
+                "ort" to text("Ort, nur wenn genannt."),
+                "notiz" to text("Beschreibung, nur wenn genannt."),
+                pflicht = listOf("titel", "datum"),
+            ),
+            nurLesen = false,
+        ) { a -> mitKalender(schreiben = true) { trageEin(a) } },
+        Werkzeug(
+            name = "kalender_loeschen",
+            titel = "Termin löschen",
+            beschreibung = "Jarvis: löscht einen einzelnen Termin an einem Tag aus Franks Google-Kalender, zum Beispiel ein versehentlich eingetragenes X. " +
+                "Serientermine (wie die fest eingetragenen Dienste) löscht Jarvis nicht. Nur wenn Frank das Löschen eindeutig verlangt.",
+            schema = schema(
+                "titel" to text("Titel des Termins oder ein eindeutiger Teil davon."),
+                "datum" to text("Tag des Termins: heute, morgen oder JJJJ-MM-TT."),
+                pflicht = listOf("titel", "datum"),
+            ),
+            nurLesen = false,
+            loeschend = true,
+        ) { a -> mitKalender(schreiben = true) { loesche(a) } },
     )
 
-    private suspend fun mitKalender(block: () -> String): Ergebnis {
+    private val schreibErlaubt: Boolean
+        get() = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
+
+    private suspend fun mitKalender(schreiben: Boolean = false, block: () -> String): Ergebnis {
         stoerung()?.let { return Ergebnis(it, fehler = true) }
+        if (schreiben && !schreibErlaubt) return Ergebnis("Jarvis darf noch nicht in den Kalender schreiben. In Jarvis unter Einstellungen → Kalender auf „Schreiben erlauben“ tippen.", fehler = true)
         return withContext(Dispatchers.IO) {
-            runCatching { Ergebnis(block()) }.getOrElse { Ergebnis("Der Kalender ließ sich nicht lesen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
+            runCatching { Ergebnis(block()) }.getOrElse { Ergebnis(if (it is IllegalArgumentException || it is IllegalStateException) it.message ?: "Das ging nicht." else "Der Kalender ließ sich nicht ${if (schreiben) "ändern" else "lesen"}: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
         }
     }
 
@@ -137,6 +177,176 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
             }
         }.trim()
     }.getOrDefault("")
+
+    // ---------------------------------------------------------------- Lage eines Tages (für das Mitdenken)
+
+    /** Eine Zeitspanne (Minuten nach Mitternacht), in der Frank wegen Dienst oder Schlaf nichts einplanen kann. */
+    class Belegt(val von: Int, val bis: Int, val grund: String)
+    /** Ein Termin des Tages; [von] und [bis] in Minuten nach Mitternacht, null bei ganztägigen. */
+    class Eintrag(val titel: String, val von: Int?, val bis: Int?)
+    class Tageslage(val dienstText: String, val arbeitet: Boolean, val belegt: List<Belegt>, val termine: List<Eintrag>)
+
+    /**
+     * Was an einem Tag feststeht. Die belegten Zeiten folgen Franks Regeln: Tagdienst = Aufstehen 4:00, Abfahrt 4:30,
+     * abends zurück; vor einem Tagdienst Schlafengehen gegen 20 Uhr; Nachtdienst = Abfahrt 16:00, danach Schlaf etwa 6 bis 15 Uhr.
+     * null, wenn der Kalender nicht lesbar ist.
+     */
+    fun lage(tag: LocalDate): Tageslage? = if (!erlaubt) null else runCatching {
+        val termine = lies(tag.minusDays(1), tag.plusDays(1))
+        val heuteD = dienst(termine[tag].orEmpty())
+        val gestern = dienst(termine[tag.minusDays(1)].orEmpty())
+        val morgen = dienst(termine[tag.plusDays(1)].orEmpty())
+        val belegt = mutableListOf<Belegt>()
+        if (gestern.arbeitet && gestern.art == Dienst.Art.NACHT) belegt += Belegt(0, 15 * 60, "bis etwa 6 Uhr noch im Nachtdienst, danach Schlaf bis etwa 15 Uhr")
+        if (heuteD.arbeitet && heuteD.art == Dienst.Art.TAG) {
+            belegt += Belegt(0, 4 * 60, "Schlaf vor dem Tagdienst (Aufstehen etwa 4 Uhr)")
+            belegt += Belegt(4 * 60, 18 * 60 + 30, "${name(heuteD)}, Abfahrt etwa $ABFAHRT_TAG Uhr, tagsüber im Dienst")
+        }
+        if (heuteD.arbeitet && heuteD.art == Dienst.Art.NACHT) belegt += Belegt(16 * 60, 24 * 60, "${name(heuteD)}, Abfahrt etwa $ABFAHRT_NACHT Uhr, über Nacht im Dienst")
+        if (morgen.arbeitet && morgen.art == Dienst.Art.TAG) belegt += Belegt(20 * 60, 24 * 60, "Schlafengehen gegen 20 Uhr, weil am nächsten Morgen Tagdienst ist (Aufstehen etwa 4 Uhr)")
+        val eintraege = termine[tag].orEmpty().filterNot(::istDienstzeichen).map { t ->
+            Eintrag(t.titel, t.von?.let { it.hour * 60 + it.minute }, t.bis?.let { b -> (b.hour * 60 + b.minute).let { m -> if (t.von != null && m <= t.von.hour * 60 + t.von.minute) 24 * 60 else m } })
+        }
+        Tageslage(dienstSatz(heuteD, gestern), heuteD.arbeitet, belegt, eintraege)
+    }.getOrNull()
+
+    // ---------------------------------------------------------------- Schreiben
+
+    /** Kalender, in den Jarvis schreibt, samt Konto (für die Farben). */
+    private class Ziel(val id: Long, val name: String, val konto: String, val kontoArt: String)
+
+    /**
+     * Der Kalender, in dem Franks Dienste stehen — dorthin gehören auch X, F und U. Gibt es keinen solchen Eintrag,
+     * der Hauptkalender des Google-Kontos.
+     */
+    private fun ziel(): Ziel {
+        var kalenderId: Long? = null
+        context.contentResolver.query(
+            CalendarContract.Events.CONTENT_URI, arrayOf(CalendarContract.Events.CALENDAR_ID),
+            "${CalendarContract.Events.DELETED} = 0 AND lower(${CalendarContract.Events.TITLE}) IN ('x','u','f','nacht 1','tag 1')", null, "${CalendarContract.Events.DTSTART} DESC",
+        )?.use { c -> if (c.moveToFirst()) kalenderId = c.getLong(0) }
+        val spalten = arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, CalendarContract.Calendars.ACCOUNT_NAME, CalendarContract.Calendars.ACCOUNT_TYPE)
+        val schreibbar = "${CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL} >= ${CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR}"
+        fun suche(auswahl: String, werte: Array<String>?, ordnung: String?): Ziel? =
+            context.contentResolver.query(CalendarContract.Calendars.CONTENT_URI, spalten, auswahl, werte, ordnung)?.use { c ->
+                if (c.moveToFirst()) Ziel(c.getLong(0), c.getString(1).orEmpty(), c.getString(2).orEmpty(), c.getString(3).orEmpty()) else null
+            }
+        return kalenderId?.let { suche("${CalendarContract.Calendars._ID} = ? AND $schreibbar", arrayOf(it.toString()), null) }
+            ?: suche("${CalendarContract.Calendars.ACCOUNT_TYPE} = 'com.google' AND $schreibbar", null, "${CalendarContract.Calendars.IS_PRIMARY} DESC")
+            ?: throw IllegalStateException("Auf dem Handy ist kein Google-Kalender, in den Jarvis schreiben darf.")
+    }
+
+    /** Farbschlüssel des Kontos, der [wunsch] am nächsten kommt. null, wenn das Konto keine Terminfarben kennt. */
+    private fun farbschluessel(z: Ziel, wunsch: Int): String? {
+        var bester: String? = null
+        var abstand = Int.MAX_VALUE
+        context.contentResolver.query(
+            CalendarContract.Colors.CONTENT_URI, arrayOf(CalendarContract.Colors.COLOR_KEY, CalendarContract.Colors.COLOR),
+            "${CalendarContract.Colors.ACCOUNT_NAME} = ? AND ${CalendarContract.Colors.ACCOUNT_TYPE} = ? AND ${CalendarContract.Colors.COLOR_TYPE} = ${CalendarContract.Colors.TYPE_EVENT}",
+            arrayOf(z.konto, z.kontoArt), null,
+        )?.use { c ->
+            while (c.moveToNext()) {
+                val farbe = c.getInt(1)
+                val d = listOf(16, 8, 0).sumOf { verschiebung -> ((farbe shr verschiebung and 0xFF) - (wunsch shr verschiebung and 0xFF)).let { it * it } }
+                if (d < abstand) { abstand = d; bester = c.getString(0) }
+            }
+        }
+        return bester
+    }
+
+    /** Die Farbe, die Frank bisher für Termine dieses Titels nimmt (zum Beispiel Blau für X). */
+    private fun gewohnteFarbe(z: Ziel, titel: String): String? = context.contentResolver.query(
+        CalendarContract.Events.CONTENT_URI, arrayOf(CalendarContract.Events.EVENT_COLOR_KEY),
+        "${CalendarContract.Events.CALENDAR_ID} = ? AND ${CalendarContract.Events.DELETED} = 0 AND lower(${CalendarContract.Events.TITLE}) = ? AND ${CalendarContract.Events.EVENT_COLOR_KEY} IS NOT NULL",
+        arrayOf(z.id.toString(), titel.trim().lowercase(Locale.GERMAN)), "${CalendarContract.Events.DTSTART} DESC",
+    )?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+
+    private fun trageEin(a: JSONObject): String {
+        val titel = a.optString("titel").trim().ifEmpty { throw IllegalArgumentException("Der Termin braucht einen Titel.") }
+        val tag = datum(a.optString("datum")) ?: throw IllegalArgumentException("Datum nicht verstanden: ${a.optString("datum")}. Erlaubt: heute, morgen, uebermorgen, JJJJ-MM-TT.")
+        val heute = LocalDate.now()
+        if (tag.isBefore(heute.minusYears(1)) || tag.isAfter(heute.plusYears(5))) throw IllegalArgumentException("Das Datum ${lang(tag)} liegt zu weit weg. Bitte das Jahr prüfen.")
+        val beginn = a.optString("uhrzeit").takeIf { it.isNotBlank() && it.lowercase(Locale.GERMAN) !in setOf("ohne", "ganztags", "ganztägig") }?.let {
+            Regex("^\\s*([01]?\\d|2[0-3])[:.]([0-5]\\d)").find(it)?.let { m -> LocalTime.of(m.groupValues[1].toInt(), m.groupValues[2].toInt()) } ?: throw IllegalArgumentException("Uhrzeit nicht verstanden: $it. Format HH:MM.")
+        }
+        val z = ziel()
+        val werte = ContentValues().apply {
+            put(CalendarContract.Events.CALENDAR_ID, z.id)
+            put(CalendarContract.Events.TITLE, titel)
+            a.optString("ort").trim().takeIf { it.isNotEmpty() }?.let { put(CalendarContract.Events.EVENT_LOCATION, it) }
+            a.optString("notiz").trim().takeIf { it.isNotEmpty() }?.let { put(CalendarContract.Events.DESCRIPTION, it) }
+        }
+        val zeitText: String
+        if (beginn == null) {
+            // Ganztägig: von Mitternacht bis Mitternacht in UTC, das Ende liegt am Tag nach dem letzten Tag.
+            val letzter = datum(a.optString("bis"))?.takeIf { !it.isBefore(tag) } ?: tag
+            werte.put(CalendarContract.Events.ALL_DAY, 1)
+            werte.put(CalendarContract.Events.EVENT_TIMEZONE, "UTC")
+            werte.put(CalendarContract.Events.DTSTART, tag.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+            werte.put(CalendarContract.Events.DTEND, letzter.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+            zeitText = "ganztägig am ${lang(tag)}" + if (letzter != tag) " bis ${lang(letzter)}" else ""
+        } else {
+            val zone = ZoneId.systemDefault()
+            val dauer = a.optInt("dauer", 60).coerceIn(5, 24 * 60)
+            val start = tag.atTime(beginn).atZone(zone)
+            werte.put(CalendarContract.Events.ALL_DAY, 0)
+            werte.put(CalendarContract.Events.EVENT_TIMEZONE, zone.id)
+            werte.put(CalendarContract.Events.DTSTART, start.toInstant().toEpochMilli())
+            werte.put(CalendarContract.Events.DTEND, start.plusMinutes(dauer.toLong()).toInstant().toEpochMilli())
+            zeitText = "am ${lang(tag)} von ${beginn.toString().take(5)} bis ${start.plusMinutes(dauer.toLong()).toLocalTime().toString().take(5)} Uhr"
+        }
+        val farbwunsch = a.optString("farbe").trim().lowercase(Locale.GERMAN)
+        val farbe = when {
+            farbwunsch.isNotEmpty() -> farbschluessel(z, FARBEN[farbwunsch] ?: throw IllegalArgumentException("Unbekannte Farbe: $farbwunsch. Möglich: ${FARBEN.keys.joinToString()}."))
+            else -> gewohnteFarbe(z, titel)
+        }
+        farbe?.let { werte.put(CalendarContract.Events.EVENT_COLOR_KEY, it) }
+        // Vor dem Eintragen mitdenken, sonst meldet sich der neue Termin selbst als Überschneidung.
+        val mitgedacht = Mitdenken.anhang(context, tag.toString(), beginn?.toString()?.take(5), titel)
+        context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, werte) ?: throw IllegalStateException("Der Kalender hat den Termin nicht angenommen.")
+
+        val folge = when (titel.lowercase(Locale.GERMAN)) {
+            "x", "f" -> if (beginn == null) " Damit gilt der Tag als frei" + lage(tag)?.dienstText?.let { ": $it." }.orEmpty() else ""
+            "u" -> if (beginn == null) " Damit gilt der Tag als Urlaub" + lage(tag)?.dienstText?.let { ": $it." }.orEmpty() else ""
+            else -> mitgedacht
+        }
+        return "Eingetragen: „$titel“ $zeitText im Kalender „${z.name}“" +
+            (if (farbwunsch.isNotEmpty()) ", Farbe $farbwunsch" else if (farbe != null) ", in der gewohnten Farbe" else "") + ". Google übernimmt den Termin mit der nächsten Synchronisierung." + folge
+    }
+
+    private fun loesche(a: JSONObject): String {
+        val gesucht = a.optString("titel").trim().lowercase(Locale.GERMAN).ifEmpty { throw IllegalArgumentException("Es fehlt der Titel des Termins.") }
+        val tag = datum(a.optString("datum")) ?: throw IllegalArgumentException("Datum nicht verstanden: ${a.optString("datum")}.")
+        val zone = ZoneId.systemDefault()
+        val adresse = CalendarContract.Instances.CONTENT_URI.buildUpon().also {
+            ContentUris.appendId(it, tag.minusDays(1).atStartOfDay(zone).toInstant().toEpochMilli())
+            ContentUris.appendId(it, tag.plusDays(2).atStartOfDay(zone).toInstant().toEpochMilli())
+        }.build()
+        // id, Titel, Serie?, ganztägig, Beginn
+        val treffer = mutableListOf<Triple<Long, String, Boolean>>()
+        context.contentResolver.query(
+            adresse,
+            arrayOf(CalendarContract.Instances.EVENT_ID, CalendarContract.Instances.TITLE, CalendarContract.Instances.RRULE, CalendarContract.Instances.ALL_DAY, CalendarContract.Instances.BEGIN),
+            "${CalendarContract.Instances.VISIBLE} = 1", null, null,
+        )?.use { c ->
+            while (c.moveToNext()) {
+                val titel = c.getString(1)?.trim().orEmpty()
+                val amTag = Instant.ofEpochMilli(c.getLong(4)).atZone(if (c.getInt(3) == 1) ZoneOffset.UTC else zone).toLocalDate() == tag
+                if (amTag && (titel.lowercase(Locale.GERMAN) == gesucht || (gesucht.length >= 3 && gesucht in titel.lowercase(Locale.GERMAN)))) treffer += Triple(c.getLong(0), titel, !c.getString(2).isNullOrBlank())
+            }
+        }
+        val eindeutig = treffer.distinctBy { it.first }
+        return when {
+            eindeutig.isEmpty() -> throw IllegalArgumentException("Am ${lang(tag)} gibt es keinen Termin „${a.optString("titel")}“.")
+            eindeutig.size > 1 -> throw IllegalArgumentException("Mehrere Termine passen: " + eindeutig.joinToString(", ") { it.second } + ". Bitte den Titel genauer nennen.")
+            eindeutig.first().third -> throw IllegalArgumentException("„${eindeutig.first().second}“ ist ein Serientermin. Den löscht Jarvis nicht; trage für einen freien Tag stattdessen ein X ein oder ändere die Serie in der Kalender-App.")
+            else -> {
+                val anzahl = context.contentResolver.delete(ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eindeutig.first().first), null, null)
+                if (anzahl == 0) throw IllegalStateException("Der Kalender hat den Termin nicht gelöscht.")
+                "Gelöscht: „${eindeutig.first().second}“ am ${lang(tag)}."
+            }
+        }
+    }
 
     /** Ist heute ein Arbeitstag? null, wenn der Kalender nicht lesbar ist. */
     fun arbeitetHeute(): Boolean? = if (!erlaubt) null else runCatching {
@@ -323,5 +533,11 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         private val DIENST = Regex("(nacht|tag)\\s*([1-4])")
         private const val ABFAHRT_NACHT = "16:00"
         private const val ABFAHRT_TAG = "4:30"
+
+        /** Farbnamen → Farbton; gewählt wird die Terminfarbe des Google-Kontos, die am nächsten liegt. */
+        private val FARBEN = mapOf(
+            "blau" to 0x3F51B5, "hellblau" to 0x039BE5, "türkis" to 0x039BE5, "grün" to 0x0B8043, "gruen" to 0x0B8043, "hellgrün" to 0x33B679, "hellgruen" to 0x33B679,
+            "gelb" to 0xF6BF26, "orange" to 0xF4511E, "rot" to 0xD50000, "rosa" to 0xE67C73, "lila" to 0x8E24AA, "violett" to 0x8E24AA, "lavendel" to 0x7986CB, "grau" to 0x616161,
+        )
     }
 }

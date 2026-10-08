@@ -25,7 +25,7 @@ class MainActivity : FragmentActivity() {
         JarvisDienst.abgleichen(this)
     }
 
-    private val kalenderErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.lagePruefen() }
+    private val kalenderErlaubnis = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.lagePruefen() }
 
     private val mikroErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.mikrofonErlaubt(it) }
 
@@ -77,7 +77,7 @@ class MainActivity : FragmentActivity() {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.mikrofonErlaubt(true)
             else mikroErlaubnis.launch(Manifest.permission.RECORD_AUDIO)
         }
-        vm.kalenderAnfragen = { kalenderErlaubnis.launch(Manifest.permission.READ_CALENDAR) }
+        vm.kalenderAnfragen = { kalenderErlaubnis.launch(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)) }
         if (savedInstanceState == null) vm.hinweiseAnfragen()
         JarvisDienst.abgleichen(this)
         setContent { JarvisApp(vm, this) }

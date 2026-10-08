@@ -178,6 +178,19 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         // ---------------------------------------------------------------- Sprache
         SpracheEinstellungen(vm)
 
+        // ---------------------------------------------------------------- Kalender und Wetter
+        Abschnitt("Kalender und Wetter")
+        Karte {
+            val lesen = vm.stoerungen["kalender"] == null
+            Zeile("Kalender", if (!lesen) "Kein Zugriff" else if (vm.kalenderSchreibenErlaubt) "Lesen und Schreiben" else "Nur Lesen", if (lesen) f.erfolg else f.gefahr)
+            if (!lesen || !vm.kalenderSchreibenErlaubt) Knopf(if (lesen) "Schreiben erlauben" else "Kalender-Zugriff erlauben", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.kalenderAnfragen() }
+            Text("Jarvis trägt Termine in den Kalender ein, in dem deine Dienste stehen. Google übernimmt sie mit der nächsten Synchronisierung.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            Unterzeile("Ort für die Wettervorhersage")
+            var ort by rememberSaveable { mutableStateOf(e.wetterOrt) }
+            Eingabe(ort, { ort = it }, "Ort", Modifier.fillMaxWidth())
+            if (ort.trim() != e.wetterOrt) Knopf(if (vm.wetterSuchtOrt) "Suche …" else "Ort übernehmen", Modifier.padding(top = 10.dp).fillMaxWidth()) { vm.wetterOrtSetzen(ort) }
+        }
+
         // ---------------------------------------------------------------- Tagebuch
         Abschnitt("Tagebuch (Google Drive)")
         Karte {

@@ -51,7 +51,7 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 
 ## Werkzeuge im Plugin
 
-28 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
+31 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
 welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl für ChatGPT überschaubar.
 
 | Werkzeug | Zweck |
@@ -59,7 +59,8 @@ welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl f
 | `tagesauswertung_lesen` | Die fertige Tagesauswertung samt frisch gelesenen Aufgaben; `neu_erstellen` stößt eine neue an |
 | `tagesdaten_lesen` | Die Tagesdatenbank: alle Daten der letzten Synchronisierung, ganz oder je Bereich |
 | `aufgaben_lesen`, `aufgabe_anlegen`, `aufgabe_aendern`, `aufgabe_loeschen` | Geniale Aufgaben; Abhaken über `aufgabe_aendern` mit `erledigt` |
-| `kalender_lesen`, `dienstplan_lesen` | Termine und ausgewerteter Dienstplan |
+| `kalender_lesen`, `dienstplan_lesen`, `kalender_eintragen`, `kalender_loeschen` | Termine und ausgewerteter Dienstplan; eintragen ganztägig oder mit Uhrzeit, auf Wunsch mit Farbe |
+| `wetter_lesen` | Wetter für sieben Tage; mit Datum und Uhrzeit zugleich die Prüfung gegen Dienst, Schlaf und Termine |
 | `biomarker_auswertung`, `biomarker_tag`, `biomarker_verlauf`, `trainings_lesen` | Biodaten; `biomarker_verlauf` ohne Messgrößen liefert den Katalog, `trainings_lesen` mit `id` ein Training im Detail |
 | `wecker_lesen`, `wecker_stellen`, `wecker_loeschen` | Genialer Wecker; Ändern, Schalten und Auslassen über `wecker_stellen` |
 | `ideen_lesen`, `idee_speichern`, `idee_loeschen` | Geniale Ideen; `ideen_lesen` mit `id` liefert den Volltext, `idee_speichern` legt an oder ändert |
@@ -120,6 +121,21 @@ Die einzelnen Werkzeuge der Apps lesen weiterhin live vom Handy; die Tagesdatenb
 `faehigkeit/MailFaehigkeit.kt`: Gmail über SMTP (senden) und IMAP (lesen) mit einem App-Passwort, das Frank in den
 Einstellungen einträgt. Gesendet wird nur an die eigene Adresse und an ausdrücklich freigegebene Empfänger. Der Inhalt
 eingegangener Mails wird den Modellen als fremde Information gekennzeichnet, nie als Anweisung.
+
+## Wetter, Kalender schreiben, Mitdenken
+
+- **Wetter** (`faehigkeit/WetterFaehigkeit.kt`): stündliche Vorhersage für sieben Tage von Open-Meteo (ohne Schlüssel), abgelegt in
+  `filesDir/wetter.json`, aufgefrischt bei jeder Synchronisierung und sonst höchstens stündlich. Ort einstellbar (Vorgabe Neuenhagen
+  bei Berlin). Heute, morgen und übermorgen stehen in Tagesdatenbank und Tagesauswertung.
+- **Kalender schreiben:** `kalender_eintragen` legt Termine über den Kalenderspeicher von Android an (Erlaubnis `WRITE_CALENDAR`),
+  und zwar in dem Kalender, in dem die Dienste stehen. Farbe: der Farbschlüssel des Google-Kontos, der dem genannten Farbton am
+  nächsten liegt; ohne Angabe die Farbe früherer Termine gleichen Titels (so bekommt ein X sein Blau). `kalender_loeschen` entfernt
+  einzelne Termine, keine Serien.
+- **Mitdenken** (`faehigkeit/Mitdenken.kt`): Zu Tag und Uhrzeit einer Aufgabe, eines Termins oder eines Weckers prüft Jarvis nach
+  festen Regeln den Dienst und die Schlafzeiten (`KalenderFaehigkeit.lage`), überschneidende Termine und bei Vorhaben im Freien das
+  Wetter. Das Ergebnis hängt als Abschnitt MITGEDACHT an der Antwort des Werkzeugs; das Sprachmodell sagt Frank, was davon zählt.
+  Angenommen ist: Tagdienst belegt 4:00 bis etwa 18:30 Uhr, davor Schlaf ab 20 Uhr am Vorabend; Nachtdienst ab 16:00 Uhr, danach
+  Schlaf bis etwa 15 Uhr.
 
 ## Tagebuch
 

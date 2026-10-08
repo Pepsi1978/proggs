@@ -269,6 +269,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun protokollLeeren() = Protokoll.leere()
 
+    // ---- Wetter ----
+    var wetterSuchtOrt by mutableStateOf(false); private set
+
+    /** Sucht die Koordinaten zum Ortsnamen (Open-Meteo) und holt die Vorhersage für den neuen Ort. */
+    fun wetterOrtSetzen(name: String) {
+        if (name.isBlank() || wetterSuchtOrt) return
+        wetterSuchtOrt = true
+        viewModelScope.launch {
+            val gefunden = withContext(Dispatchers.IO) {
+                runCatching {
+                    val adresse = "https://geocoding-api.open-meteo.com/v1/search?count=1&language=de&name=" + java.net.URLEncoder.encode(name.trim(), "UTF-8")
+                    okhttp3.OkHttpClient().newCall(okhttp3.Request.Builder().url(adresse).build()).execute().use { a ->
+                        org.json.JSONObject(a.body?.string().orEmpty()).optJSONArray("results")?.optJSONObject(0)
+                    }
+                }.getOrNull()
+            }
+            if (gefunden == null) meldung = "Diesen Ort habe ich nicht gefunden."
+            else {
+                einstellungen.wetterBreite = gefunden.optDouble("latitude")
+                einstellungen.wetterLaenge = gefunden.optDouble("longitude")
+                einstellungen.wetterOrt = listOf(gefunden.optString("name"), gefunden.optString("admin1")).filter { it.isNotBlank() }.distinct().joinToString(", ")
+                withContext(Dispatchers.IO) { Register.alle(getApplication()).filterIsInstance<de.frank.jarvis.faehigkeit.WetterFaehigkeit>().firstOrNull()?.synchronisiere() }
+                meldung = "Wetter-Ort: ${einstellungen.wetterOrt}."
+            }
+            wetterSuchtOrt = false
+        }
+    }
+
+    val kalenderSchreibenErlaubt: Boolean
+        get() = androidx.core.content.ContextCompat.checkSelfPermission(getApplication(), android.Manifest.permission.WRITE_CALENDAR) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
     // ---- Tagebuch: Drive-Berechtigung ----
     var driveErneuertGerade by mutableStateOf(false); private set
 

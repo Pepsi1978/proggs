@@ -102,7 +102,7 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
                 if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000) return@Werkzeug Ergebnis("$antwort (War bereits gespeichert, nicht doppelt angelegt.)")
             }
             val antwort = rufe("anlegen", a)
-            antwort.fehlerOder { "Gespeichert: " + satz(it.getJSONObject("aufgabe")) }.also {
+            antwort.fehlerOder { "Gespeichert: " + satz(it.getJSONObject("aufgabe")) + mitgedacht(it.getJSONObject("aufgabe")) }.also {
                 if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
             }
         },
@@ -132,7 +132,7 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
         ) { a ->
             mitAufgabe(a, nurOffene = true) { id ->
                 rufe("aendern", JSONObject(a.toString()).put("id", id).apply { remove("suche") })
-                    .fehlerOder { "Geändert: " + satz(it.getJSONObject("aufgabe")) }
+                    .fehlerOder { "Geändert: " + satz(it.getJSONObject("aufgabe")) + mitgedacht(it.getJSONObject("aufgabe")) }
             }
         },
         Werkzeug(
@@ -206,6 +206,10 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
 
     private inline fun JSONObject.fehlerOder(gut: (JSONObject) -> String): Ergebnis =
         optString("fehler").takeIf { it.isNotEmpty() }?.let { Ergebnis(it, fehler = true) } ?: Ergebnis(gut(this))
+
+    /** Was Dienstplan, Termine und Wetter zu dieser Aufgabe sagen (leer, wenn sie keinen Tag hat oder nichts dagegen spricht). */
+    private fun mitgedacht(a: JSONObject): String =
+        if (a.isNull("datum")) "" else Mitdenken.anhang(context, a.optString("datum"), if (a.isNull("uhrzeit")) null else a.optString("uhrzeit"), a.optString("titel") + " " + a.optString("text"))
 
     /** Eine Aufgabe als gesprochener Satz. */
     private fun satz(a: JSONObject): String = buildString {

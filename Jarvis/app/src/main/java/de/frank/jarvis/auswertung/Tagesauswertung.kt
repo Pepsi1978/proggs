@@ -10,6 +10,7 @@ import de.frank.jarvis.faehigkeit.BiomarkerFaehigkeit
 import de.frank.jarvis.faehigkeit.IdeenFaehigkeit
 import de.frank.jarvis.faehigkeit.TagebuchFaehigkeit
 import de.frank.jarvis.faehigkeit.WeckerFaehigkeit
+import de.frank.jarvis.faehigkeit.WetterFaehigkeit
 import de.frank.jarvis.faehigkeit.WissenFaehigkeit
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
@@ -103,6 +104,9 @@ object Tagesauswertung {
             val biomarker = Register.alle(app).filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
             val abgeglichen = runCatching { biomarker?.abgleich() }.getOrNull() == true
 
+            schritt("Wetter holen")
+            runCatching { Register.alle(app).filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() }
+
             schritt("Tagebuch holen")
             runCatching { Register.alle(app).filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.synchronisiere() }
 
@@ -169,6 +173,9 @@ object Tagesauswertung {
             append("== TERMINE HEUTE UND DIE NÄCHSTEN 4 TAGE ==\n")
             append(rufe("kalender_lesen", JSONObject().put("von", heute.toString()).put("bis", heute.plusDays(4).toString()))).append("\n\n")
 
+            append("== WETTER HEUTE, MORGEN, ÜBERMORGEN ==\n")
+            append(runCatching { alle.filterIsInstance<WetterFaehigkeit>().firstOrNull()?.vorschau(3) }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+
             append("== GESTELLTE WECKER ==\n")
             append(runCatching { alle.filterIsInstance<WeckerFaehigkeit>().firstOrNull()?.ueberblick() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
 
@@ -215,13 +222,13 @@ Unten stehen alle Daten, bereits fertig gerechnet. Regeln:
 - Du darfst höchstens zwei Werkzeuge zusätzlich aufrufen, und nur wenn ein auffälliger Wert einen Blick in den Verlauf braucht. Meist ist das nicht nötig.
 
 Gliedere genau in diese sieben Abschnitte, jeder beginnt mit seiner Überschrift in Großbuchstaben auf eigener Zeile:
-HEUTE: Was für ein Tag ist heute (Arbeitstag oder frei, welcher Dienst, Abfahrt, Schlaf- und freie Zeitfenster) und welche Termine stehen an. Zwei bis vier Sätze.
+HEUTE: Was für ein Tag ist heute (Arbeitstag oder frei, welcher Dienst, Abfahrt, Schlaf- und freie Zeitfenster), welche Termine stehen an, und das Wetter von heute in einem Satz (Temperatur, trocken oder nass, wann es am besten für draußen passt). Drei bis fünf Sätze.
 ERHOLUNG UND SCHLAF: Der heutige Stand im Vergleich. Vier bis sieben Sätze.
 KÖRPER UND TRAINING: Körperwerte nur, wenn es neue oder auffällige gibt. Trainings der letzten Tage, Belastung im Verhältnis zur Erholung, VO2max. Zwei bis fünf Sätze.
 RÜCKBLICK: Was Frank laut Tagebuch gestern und in den letzten Tagen gemacht und erlebt hat, als drei bis sechs kurze Stichpunkte in je einem Satz (beginne jeden mit dem Wochentag). Nur was im Abschnitt TAGEBUCH steht; gibt es dort keinen Eintrag, sage das in einem Satz. Sachlich, ohne Wertung.
 EINSCHÄTZUNG: Ein klares Gesamtbild des Tages in zwei bis drei Sätzen: Wie belastbar ist Frank heute.
 EMPFEHLUNG FÜR HEUTE: Zwei bis vier konkrete Punkte, passend zu Tagesart, Erholung und freien Zeitfenstern. Du darfst offene Aufgaben einbeziehen, aber nur als Hinweis; die aktuelle Aufgabenliste wird beim Abruf gesondert frisch angehängt.
-AUSBLICK: Die nächsten Tage in drei bis fünf Sätzen: kommende Dienste und freie Tage, woran Frank rechtzeitig denken sollte (zum Beispiel Vorbereitung auf einen Nachtdienst-Block, früh schlafen vor einem Tagdienst, Termine, Abholung der Tonnen, Spiele), und wann abends keine Aufgaben mehr passen.
+AUSBLICK: Die nächsten Tage in vier bis sechs Sätzen, darin die Wettervorschau für morgen und übermorgen in je einem halben Satz; passt ein Lauf oder ein Vorhaben draußen zu Dienst, Erholung und Wetter, nenne das beste Zeitfenster. Außerdem: kommende Dienste und freie Tage, woran Frank rechtzeitig denken sollte (zum Beispiel Vorbereitung auf einen Nachtdienst-Block, früh schlafen vor einem Tagdienst, Termine, Abholung der Tonnen, Spiele), und wann abends keine Aufgaben mehr passen.
 
 DATEN:
 $daten
@@ -229,7 +236,7 @@ $daten
 
     /** Die Bereiche der Tagesdatenbank: Kurzname → Anfang der Abschnittsüberschrift. */
     val BEREICHE = linkedMapOf(
-        "rahmen" to "RAHMEN", "termine" to "TERMINE", "wecker" to "GESTELLTE WECKER", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
+        "rahmen" to "RAHMEN", "termine" to "TERMINE", "wetter" to "WETTER", "wecker" to "GESTELLTE WECKER", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
         "trainings" to "TRAININGS", "tagebuch" to "TAGEBUCH", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
     )
 
