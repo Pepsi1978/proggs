@@ -66,7 +66,7 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
             name = "mail_senden",
             titel = "E-Mail senden",
             beschreibung = "Jarvis: sendet eine E-Mail über Franks Gmail-Konto. Ohne Empfänger geht sie an Frank selbst – das ist der Normalfall („schick mir die Recherche per Mail“). " +
-                "Mit ablage_datei wird eine Datei aus der Ablage von Jarvis in die Mail gesetzt und angehängt. Andere Empfänger gehen nur, wenn Frank sie in Jarvis freigegeben hat.",
+                "Mit ablage_datei wird ein Eintrag aus der Ablage von Jarvis in die Mail gesetzt und angehängt, samt seiner Dateien (Bilder, PDFs …). Andere Empfänger gehen nur, wenn Frank sie in Jarvis freigegeben hat.",
             schema = schema(
                 "betreff" to text("Betreff der E-Mail."),
                 "text" to text("Der Text der E-Mail. Kann leer bleiben, wenn nur eine Ablage-Datei geschickt wird."),
@@ -80,25 +80,38 @@ class MailFaehigkeit(private val context: Context) : Faehigkeit {
                 val an = a.optString("an").trim().ifEmpty { e.mailAdresse }
                 val erlaubt = (e.mailEmpfaenger.split(",", ";", " ", "\n") + e.mailAdresse).map { it.trim().lowercase(Locale.ROOT) }.filter { it.isNotEmpty() }
                 if (an.lowercase(Locale.ROOT) !in erlaubt) return@mitMail Ergebnis("An $an darf Jarvis nicht senden. Frank kann die Adresse in Jarvis unter Einstellungen → E-Mail freigeben.", fehler = true)
-                val datei = a.optString("ablage_datei").trim().takeIf { it.isNotEmpty() }?.let { titel ->
-                    Ablage.finde(context, titel) ?: return@mitMail Ergebnis("Keine eindeutige Ablage-Datei für „$titel“.", fehler = true)
+                val speicher = Ablage.speicher(context)
+                val eintrag = a.optString("ablage_datei").trim().takeIf { it.isNotEmpty() }?.let { titel ->
+                    speicher.finde(titel) ?: return@mitMail Ergebnis("Keine eindeutige Ablage-Datei für „$titel“.", fehler = true)
                 }
+                val datei = eintrag?.let { speicher.textDatei(it) }
+                // Dateien des Eintrags (Bilder, PDFs …) gehen als echte Anhänge mit; Gmail nimmt höchstens 25 MB.
+                val anhaenge = eintrag?.anhaenge.orEmpty()
+                val summe = anhaenge.sumOf { it.groesse } + (datei?.length() ?: 0)
+                if (summe > 20_000_000) return@mitMail Ergebnis("Die Dateien von „${eintrag?.titel}“ sind mit ${de.frank.jarvis.ablage.Dateityp.groesse(summe)} zu groß für eine E-Mail (höchstens etwa 20 MB). Frank kann sie in Jarvis über Teilen verschicken.", fehler = true)
                 val text = buildString {
                     append(a.optString("text").trim())
-                    if (datei != null) { if (isNotEmpty()) append("\n\n"); append("— ").append(datei.nameWithoutExtension).append(" —\n\n").append(datei.readText()) }
+                    if (datei != null) { if (isNotEmpty()) append("\n\n"); append("— ").append(eintrag?.titel).append(" —\n\n").append(datei.readText()) }
+                    else if (eintrag != null) { if (isNotEmpty()) append("\n\n"); append("— ").append(eintrag.titel).append(" —\nIm Anhang: ").append(anhaenge.joinToString { it.originalName }) }
                 }
                 if (text.isBlank()) return@mitMail Ergebnis("Die E-Mail hat keinen Inhalt.", fehler = true)
                 val nachricht = MimeMessage(sitzung(smtp = true)).apply {
                     setFrom(InternetAddress(e.mailAdresse, "Jarvis", "UTF-8"))
                     setRecipients(Message.RecipientType.TO, InternetAddress.parse(an))
                     setSubject(a.optString("betreff").ifBlank { "Nachricht von Jarvis" }, "UTF-8")
-                    if (datei == null) setText(text, "UTF-8") else setContent(MimeMultipart().apply {
+                    if (datei == null && anhaenge.isEmpty()) setText(text, "UTF-8") else setContent(MimeMultipart().apply {
                         addBodyPart(MimeBodyPart().apply { setText(text, "UTF-8") })
-                        addBodyPart(MimeBodyPart().apply { attachFile(datei); fileName = datei.name })
+                        datei?.let { d -> addBodyPart(MimeBodyPart().apply { attachFile(d); fileName = d.name }) }
+                        anhaenge.forEach { an ->
+                            addBodyPart(MimeBodyPart().apply {
+                                attachFile(speicher.datei(an), an.mime, null)
+                                fileName = javax.mail.internet.MimeUtility.encodeText(an.originalName, "UTF-8", null)
+                            })
+                        }
                     })
                 }
                 Transport.send(nachricht)
-                Ergebnis("E-Mail an $an gesendet: „${nachricht.subject}“" + (datei?.let { ", mit der Datei „${it.nameWithoutExtension}“." } ?: "."))
+                Ergebnis("E-Mail an $an gesendet: „${nachricht.subject}“" + (eintrag?.let { ", mit „${it.titel}“" + (if (anhaenge.isNotEmpty()) " und ${anhaenge.size} Datei(en) im Anhang." else ".") } ?: "."))
             }
         },
         Werkzeug(

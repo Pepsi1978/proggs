@@ -130,8 +130,21 @@ internal class CodexSseAccumulator {
     private val deltas = StringBuilder()
     private var completedText: String? = null
     private var completed = false
+    private val seenItems = mutableSetOf<String>()
+
+    /** Base64-Bilder aus dem Bildwerkzeug (`image_generation_call`), in der Reihenfolge ihres Eintreffens. */
+    val images = mutableListOf<String>()
 
     val isCompleted: Boolean get() = completed
+
+    /** Wie im Sammler von News Kompass: jedes fertige Ausgabe-Element nur einmal auswerten. */
+    private fun collect(item: JSONObject) {
+        val key = item.optString("id").ifBlank { item.toString().hashCode().toString() }
+        if (!seenItems.add(key)) return
+        if (item.optString("type") == "image_generation_call") {
+            item.optString("result").takeIf(String::isNotBlank)?.let(images::add)
+        }
+    }
 
     /** Gibt das neue Textstück zurück, oder null, wenn das Ereignis keinen Text trug. */
     fun accept(data: String): String? {
@@ -141,9 +154,17 @@ internal class CodexSseAccumulator {
         }
         return when (event.optString("type")) {
             "response.output_text.delta" -> event.optString("delta").takeIf(String::isNotEmpty)?.also(deltas::append)
+            "response.output_item.done" -> {
+                event.optJSONObject("item")?.let(::collect)
+                null
+            }
             "response.completed" -> {
                 completed = true
-                completedText = event.optJSONObject("response")?.let(::extractOutputText)
+                val response = event.optJSONObject("response")
+                response?.optJSONArray("output")?.let { output ->
+                    for (index in 0 until output.length()) output.optJSONObject(index)?.let(::collect)
+                }
+                completedText = response?.let(::extractOutputText)
                 null
             }
             "response.incomplete" -> throw CodexAuthException(
@@ -165,6 +186,7 @@ internal class CodexSseAccumulator {
         }
         return completedText?.takeIf(String::isNotBlank)
             ?: deltas.toString().takeIf(String::isNotBlank)
+            ?: (if (images.isNotEmpty()) "" else null)
             ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antworttext geliefert.")
     }
 }
@@ -278,6 +300,48 @@ class CodexAuthManager(context: Context) {
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             throw networkException("Die Antwort konnte nicht vollständig empfangen werden.", error)
+        }
+    }
+
+    /**
+     * Erzeugt Bilder über das Bildwerkzeug von Codex (`image_generation`), derselbe Weg wie in News Kompass.
+     * [size] ist optional ("1024x1536" = Hochformat für DIN A4). Lehnt der Dienst die Größenangabe ab,
+     * folgt genau ein zweiter Versuch ohne sie. Rückgabe: die PNG-Daten; leer, wenn kein Bild kam.
+     */
+    suspend fun generateImages(
+        prompt: String,
+        model: CodexModel,
+        size: String? = null,
+        quality: String? = null,
+    ): List<ByteArray> = withContext(Dispatchers.IO) {
+        if (prompt.isBlank()) throw CodexAuthException(AuthErrorKind.NETWORK, "Für das Bild fehlt die Beschreibung.")
+        suspend fun attempt(withOptions: Boolean): List<ByteArray> {
+            val tool = JSONObject().put("type", "image_generation").put("output_format", "png")
+            if (withOptions) {
+                size?.let { tool.put("size", it) }
+                quality?.let { tool.put("quality", it) }
+            }
+            val payload = codexChatPayload(
+                "Du erzeugst Bilder. Rufe das Bildwerkzeug genau einmal auf und antworte danach nur mit OK.",
+                listOf(ChatTurn("user", prompt)),
+                model,
+                ReasoningEffort.LOW,
+            ).put("tools", JSONArray().put(tool)).put("tool_choice", "auto")
+            return try {
+                requestCodexAccumulated(payload).images.map { Base64.getMimeDecoder().decode(it) }
+            } catch (error: IOException) {
+                currentCoroutineContext().ensureActive()
+                throw networkException("Das Bild konnte nicht vollständig empfangen werden.", error)
+            }
+        }
+        try {
+            attempt(withOptions = true)
+        } catch (error: CodexAuthException) {
+            val rejectedOption = (size != null || quality != null) && error.kind == AuthErrorKind.NETWORK && !error.retryable &&
+                (error.message.orEmpty().contains("size", ignoreCase = true) || error.message.orEmpty().contains("quality", ignoreCase = true) ||
+                    error.message.orEmpty().contains("400"))
+            if (!rejectedOption) throw error
+            attempt(withOptions = false)
         }
     }
 
@@ -478,7 +542,12 @@ class CodexAuthManager(context: Context) {
     private suspend fun requestCodexResponse(
         payload: JSONObject,
         onDelta: suspend (String) -> Unit = {},
-    ): String {
+    ): String = requestCodexAccumulated(payload, onDelta).result()
+
+    private suspend fun requestCodexAccumulated(
+        payload: JSONObject,
+        onDelta: suspend (String) -> Unit = {},
+    ): CodexSseAccumulator {
         var attempt = 0
         while (true) {
             var deliveredText = false
@@ -509,7 +578,7 @@ class CodexAuthManager(context: Context) {
     private suspend fun requestCodexResponseOnce(
         payload: JSONObject,
         onDelta: suspend (String) -> Unit,
-    ): String {
+    ): CodexSseAccumulator {
         val token = validAccessToken()
         val tokenAccountId = jwtAccountId(token)
         if (tokenAccountId != null && tokenAccountId != accountId) {
@@ -552,7 +621,9 @@ class CodexAuthManager(context: Context) {
         } finally {
             activeQuestionCall.clear(trackedResponse.call)
         }
-        return accumulator.result()
+        // Prüft, ob die Antwort vollständig ist; das Ergebnis selbst holt der Aufrufer.
+        accumulator.result()
+        return accumulator
     }
 
     private suspend fun <T> withDnsRetry(block: suspend () -> T): T {

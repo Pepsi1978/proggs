@@ -44,6 +44,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var gesperrt by mutableStateOf(false)
     /** Wann die App zuletzt sichtbar war; 0 = seit dem Start noch nie entsperrt. */
     var zuletztSichtbar = 0L
+    /** Bis wann die Sperre nach einem bewusst gestarteten Teilen, Öffnen oder „Speichern unter“ wartet (sonst ginge das Ergebnis verloren). */
+    var sperrAufschubBis = 0L
     var entsperrenAnfragen: () -> Unit = {}
 
     // ---- Sprache ----

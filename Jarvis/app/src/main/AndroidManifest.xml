@@ -85,6 +85,17 @@
 
         <receiver android:name=".auswertung.AuswertungsEmpfaenger" android:exported="false" />
 
+        <!-- Ablage: Dateien zum Teilen und „Mit anderer App öffnen“ als Inhalts-Adresse mit befristeter Leseberechtigung. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="de.frank.jarvis.dateien"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/ablage_pfade" />
+        </provider>
+
         <!-- Hält das Vorlesen am Laufen, auch wenn die App im Hintergrund ist. -->
         <service
             android:name=".speech.VorleseDienst"

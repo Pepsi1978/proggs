@@ -61,6 +61,8 @@ class JarvisDienst : Service() {
         val typ = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
         ServiceCompat.startForeground(this, HINWEIS_ID, hinweis("Jarvis startet …"), typ)
         Protokoll.lade(this)
+        // Ablage: Reste abgebrochener Übertragungen aufräumen, unterbrochene Downloads fortsetzen.
+        de.frank.jarvis.ablage.AblageZentrale.beimStart(this)
         runCatching { getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(netz) }
         bereich.launch {
             Tunnel.zustand.collect { zustand ->
