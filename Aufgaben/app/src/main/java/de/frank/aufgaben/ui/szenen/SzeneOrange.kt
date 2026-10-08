@@ -43,9 +43,11 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     // Wand mit Tapetenstreifen
     drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF241A13), Color(0xFF16100C)) else listOf(Color(0xFFFFF2E4), Color(0xFFFADFC4))))
     for (i in 0..24) drawLine(Color.Black.copy(alpha = if (d) 0.08f else 0.03f), Offset(i * w / 24f, 0f), Offset(i * w / 24f, boden), 2f)
+    // Der Boden reicht in die Tiefe bis hinter die hinteren Tischbeine: Dort stößt er an die Wand.
+    val wandFuss = boden + (flucht.y - boden) * 0.2f
     // Fußleiste mit Oberkante
-    drawRect(if (d) Color(0xFF2E2118) else Color(0xFFE9C9A6), Offset(0f, boden - h * 0.035f), Size(w, h * 0.035f))
-    drawRect(Color.White.copy(alpha = if (d) 0.06f else 0.4f), Offset(0f, boden - h * 0.035f), Size(w, h * 0.006f))
+    drawRect(if (d) Color(0xFF2E2118) else Color(0xFFE9C9A6), Offset(0f, wandFuss - h * 0.03f), Size(w, h * 0.03f))
+    drawRect(Color.White.copy(alpha = if (d) 0.06f else 0.4f), Offset(0f, wandFuss - h * 0.03f), Size(w, h * 0.005f))
 
     // Fenster mit Laibung (Tiefe) und Sonnenuntergang
     val fen = Rect(w * 0.83f, h * 0.08f, w * 0.97f, h * 0.56f)
@@ -135,12 +137,12 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     rotate(runde(t, zyklus, 1) * 360f + 90f, uhr) { drawLine(f.text, uhr, uhr + Offset(0f, -h * 0.035f), 3.5f, StrokeCap.Round) }
 
     // Boden aus Dielen, die zum Fluchtpunkt laufen
-    drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF241911), Color(0xFF33251A)) else listOf(Color(0xFFCFA277), Color(0xFFE2B88D)), boden, h), Offset(0f, boden), Size(w, h - boden))
+    drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF241911), Color(0xFF33251A)) else listOf(Color(0xFFCFA277), Color(0xFFE2B88D)), wandFuss, h), Offset(0f, wandFuss), Size(w, h - wandFuss))
     for (i in -4..18) {
         val x = i * w / 14f
-        drawLine(Color.Black.copy(alpha = 0.12f), Offset(x, boden), Offset(x + (x - flucht.x) * (h - boden) / (boden - flucht.y), h), 1.5f)
+        drawLine(Color.Black.copy(alpha = 0.12f), hinten(Offset(x, boden), 0.2f), Offset(x + (x - flucht.x) * (h - boden) / (boden - flucht.y), h), 1.5f)
     }
-    drawLine(Color.Black.copy(alpha = 0.18f), Offset(0f, boden), Offset(w, boden), 2f)
+    drawLine(Color.Black.copy(alpha = 0.18f), Offset(0f, wandFuss), Offset(w, wandFuss), 2f)
     // Teppich in Aufsicht
     drawOval(f.primaer.copy(alpha = 0.3f), Offset(w * 0.02f, boden - h * 0.015f), Size(w * 0.28f, h * 0.06f))
     drawOval(f.primaer.copy(alpha = 0.3f), Offset(w * 0.04f, boden - h * 0.005f), Size(w * 0.24f, h * 0.04f), style = Stroke(2f))

@@ -190,10 +190,9 @@ class HeuteWidget : GlanceAppWidget() {
                 Image(ImageProvider(R.drawable.widget_linie), null, GlanceModifier.width(3.dp).fillMaxHeight(), contentScale = ContentScale.FillBounds)
                 Image(ImageProvider(R.drawable.widget_jetzt), null, GlanceModifier.size(10.dp))
             }
-            Image(ImageProvider(R.drawable.widget_jetzt_linie), null, GlanceModifier.defaultWeight().height(2.dp), contentScale = ContentScale.FillBounds)
-            // Mittig auf der Linie die aktuelle Uhrzeit, minutengenau: TextClock läuft von selbst weiter.
-            AndroidRemoteViews(RemoteViews(context.packageName, R.layout.widget_uhrzeit))
-            Image(ImageProvider(R.drawable.widget_jetzt_linie), null, GlanceModifier.defaultWeight().height(2.dp), contentScale = ContentScale.FillBounds)
+            // Rote Linie über die ganze Breite, mittig darauf die aktuelle Uhrzeit (wie in der App). Beides liegt in
+            // einem Layout: TextClock läuft minutengenau von selbst weiter.
+            AndroidRemoteViews(RemoteViews(context.packageName, R.layout.widget_uhrzeit), GlanceModifier.defaultWeight())
         }
     }
 

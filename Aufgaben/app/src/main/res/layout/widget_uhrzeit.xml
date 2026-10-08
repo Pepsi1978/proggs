@@ -1,17 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Aktuelle Uhrzeit auf der Jetzt-Linie des Widgets. TextClock zählt jede Minute selbst weiter, ohne Widget-Update. -->
-<TextClock xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_uhrzeit"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:background="@drawable/widget_jetzt_marke"
-    android:format12Hour="HH:mm 'Uhr'"
-    android:format24Hour="HH:mm 'Uhr'"
-    android:includeFontPadding="false"
-    android:paddingStart="7dp"
-    android:paddingTop="2dp"
-    android:paddingEnd="7dp"
-    android:paddingBottom="2dp"
-    android:textColor="#FFFFFFFF"
-    android:textSize="10sp"
-    android:textStyle="bold" />
+<!-- Jetzt-Linie des Widgets: rote Linie über die ganze Breite, mittig darauf die aktuelle Uhrzeit.
+     TextClock zählt jede Minute selbst weiter, ohne Widget-Update. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:layout_gravity="center_vertical"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_jetzt_linie" />
+
+    <TextClock
+        android:id="@+id/widget_uhrzeit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="@drawable/widget_jetzt_marke"
+        android:format12Hour="HH:mm 'Uhr'"
+        android:format24Hour="HH:mm 'Uhr'"
+        android:includeFontPadding="false"
+        android:paddingStart="7dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="7dp"
+        android:paddingBottom="2dp"
+        android:textColor="#FFFFFFFF"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+</FrameLayout>

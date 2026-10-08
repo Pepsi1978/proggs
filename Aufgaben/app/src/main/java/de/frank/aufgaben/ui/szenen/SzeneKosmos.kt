@@ -54,10 +54,9 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     val licht = weich(an(t, 2.5f, 1.5f)) * (1f - weich(an(t, 37.6f, 1.6f)))
     val schirm = weich(an(t, 3.6f, 0.8f)) * (1f - weich(an(t, 36.8f, 0.8f)))
 
-    // Raum: Wand mit Paneelen, Boden mit Fluchtpunkt-Raster
+    // Raum: Wand mit Paneelen in einer Farbe bis hinunter zum Boden, Boden mit Fluchtpunkt-Raster
     drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF0B1224), Color(0xFF060A16)) else listOf(Color(0xFFE6EEFB), Color(0xFFD2DDF3)), 0f, boden))
-    for (i in 1..9) drawLine(Color.Black.copy(alpha = if (d) 0.25f else 0.06f), Offset(i * w / 10f, 0f), Offset(i * w / 10f, h * 0.62f), 2f)
-    drawRect(if (d) Color(0xFF101A33) else Color(0xFFC3D0EA), Offset(0f, h * 0.62f), Size(w, boden - h * 0.62f))
+    for (i in 1..9) drawLine(Color.Black.copy(alpha = if (d) 0.25f else 0.06f), Offset(i * w / 10f, 0f), Offset(i * w / 10f, boden), 2f)
     drawRect(if (d) Color(0xFF0A1122) else Color(0xFFB4C3E2), Offset(0f, boden), Size(w, h - boden))
     for (i in -8..8) drawLine(blau.copy(alpha = 0.22f), Offset(flucht.x + i * w * 0.02f, boden), Offset(flucht.x + i * w * 0.2f, h), 1.5f)
     for (j in 0 until 4) { val y = boden + (h - boden) * (j / 4f) * (j / 4f + 0.3f); drawLine(blau.copy(alpha = 0.2f), Offset(0f, y), Offset(w, y), 1.2f) }
@@ -253,10 +252,10 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     }
     drawLine(Color(0xFF9AA3B8), Offset(stuhlX, boden - h * 0.045f), Offset(stuhlX, boden - h * 0.2f), 4f)
     drawRoundRect(stuhlF.dunkler(0.2f), Offset(stuhlX - h * 0.018f, boden - h * 0.12f), Size(h * 0.036f, h * 0.06f), CornerRadius(4f))
-    // Lehne mit Träger, fest
-    drawLine(stuhlF.dunkler(0.1f), Offset(stuhlX + h * 0.06f, boden - h * 0.23f), Offset(stuhlX + h * 0.095f, boden - h * 0.3f), 5f, StrokeCap.Round)
-    drawRoundRect(stuhlF.dunkler(0.05f), Offset(stuhlX + h * 0.075f, boden - h * 0.46f), Size(h * 0.05f, h * 0.2f), CornerRadius(10f))
-    drawRoundRect(stuhlF.heller(0.12f), Offset(stuhlX + h * 0.082f, boden - h * 0.44f), Size(h * 0.016f, h * 0.15f), CornerRadius(6f))
+    // Lehne mit Träger, fest – links, auf der von der Tastatur abgewandten Seite
+    drawLine(stuhlF.dunkler(0.1f), Offset(stuhlX - h * 0.06f, boden - h * 0.23f), Offset(stuhlX - h * 0.095f, boden - h * 0.3f), 5f, StrokeCap.Round)
+    drawRoundRect(stuhlF.dunkler(0.05f), Offset(stuhlX - h * 0.125f, boden - h * 0.46f), Size(h * 0.05f, h * 0.2f), CornerRadius(10f))
+    drawRoundRect(stuhlF.heller(0.12f), Offset(stuhlX - h * 0.098f, boden - h * 0.44f), Size(h * 0.016f, h * 0.15f), CornerRadius(6f))
     // Sitzfläche mit Polster
     drawRoundRect(stuhlF, Offset(stuhlX - h * 0.1f, boden - h * 0.235f), Size(h * 0.2f, h * 0.035f), CornerRadius(8f))
     drawRoundRect(stuhlF.heller(0.12f), Offset(stuhlX - h * 0.1f, boden - h * 0.25f), Size(h * 0.2f, h * 0.022f), CornerRadius(8f))

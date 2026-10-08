@@ -53,7 +53,7 @@
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".widget.HeuteWidgetEmpfaenger" android:exported="true" android:label="Aufgaben · Heute">
+        <receiver android:name=".widget.HeuteWidgetEmpfaenger" android:exported="true" android:label="Geniale Aufgaben · Heute">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
