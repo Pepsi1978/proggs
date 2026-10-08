@@ -134,8 +134,8 @@ eingegangener Mails wird den Modellen als fremde Information gekennzeichnet, nie
 - **Mitdenken** (`faehigkeit/Mitdenken.kt`): Zu Tag und Uhrzeit einer Aufgabe, eines Termins oder eines Weckers prüft Jarvis nach
   festen Regeln den Dienst und die Schlafzeiten (`KalenderFaehigkeit.lage`), überschneidende Termine und bei Vorhaben im Freien das
   Wetter. Das Ergebnis hängt als Abschnitt MITGEDACHT an der Antwort des Werkzeugs; das Sprachmodell sagt Frank, was davon zählt.
-  Angenommen ist: Tagdienst belegt 4:00 bis etwa 18:30 Uhr, davor Schlaf ab 20 Uhr am Vorabend; Nachtdienst ab 16:00 Uhr, danach
-  Schlaf bis etwa 15 Uhr.
+  Es gilt: Tagdienst belegt 4:00 bis etwa 18:15 Uhr (Rückkehr), davor Schlaf ab 20 Uhr am Vorabend; Nachtdienst ab 16:00 Uhr,
+  Rückkehr gegen 5:50 Uhr, danach Schlaf bis etwa 15 Uhr.
 
 ## Tagebuch
 

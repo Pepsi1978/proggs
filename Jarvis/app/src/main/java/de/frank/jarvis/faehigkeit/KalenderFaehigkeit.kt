@@ -37,8 +37,8 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
     override val beschreibung = "Termine, Geburtstage, Müllabfuhr, Spiele und den Dienstplan im Google-Kalender lesen; Termine eintragen und löschen."
     override val hinweise =
         "Franks Kalender enthält seine Termine und seinen Dienstplan als Ganztagstermine. Die Regeln: „Nacht 1“ bis „Nacht 4“ sind Nachtdienste " +
-            "(Nacht 1 ist die erste, Nacht 4 die letzte eines Blocks), Abfahrt etwa 16:00 Uhr, er kommt am nächsten Morgen zurück. „Tag 1“ bis „Tag 4“ sind Tagdienste, " +
-            "Abfahrt etwa 4:30 Uhr. Steht am selben Tag zusätzlich „X“ oder „F“, hat er frei, bei „U“ Urlaub: Der Dienst entfällt dann, auch wenn er noch im Kalender steht. " +
+            "(Nacht 1 ist die erste, Nacht 4 die letzte eines Blocks), Abfahrt etwa 16:00 Uhr, er ist am nächsten Morgen gegen 5:50 Uhr zu Hause. „Tag 1“ bis „Tag 4“ sind Tagdienste, " +
+            "Abfahrt etwa 4:30 Uhr, zu Hause gegen 18:15 Uhr. Steht am selben Tag zusätzlich „X“ oder „F“, hat er frei, bei „U“ Urlaub: Der Dienst entfällt dann, auch wenn er noch im Kalender steht. " +
             "Tage ohne Diensteintrag sind frei. Die Werkzeuge werten das bereits aus; verlasse dich auf die Zeile „Dienst“. " +
             "Weitere Einträge: „Hausmüll“ und „Gelbe Tonne“ (Abholung), „Geb. <Name>“ (Geburtstag), Spiele von Union und Dortmund. " +
             "Mit kalender_eintragen legst du Termine an, auch ganztägige und mit Farbe; ein „X“, „F“ oder „U“ als Ganztagstermin macht den Tag zum freien Tag bzw. Urlaubstag " +
@@ -157,11 +157,11 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
                 append("- ").append(kurz(tag, heute)).append(": ")
                 append(if (heuteD.arbeitet) "ARBEITSTAG, " + name(heuteD) else "FREIER TAG" + (heuteD.frei?.let { " ($it)" } ?: ""))
                 val fakten = mutableListOf<String>()
-                if (nachNacht) fakten += "am Morgen Rückkehr aus dem Nachtdienst, Schlaf etwa 6 bis 15 Uhr, davor und währenddessen keine Aufgaben"
+                if (nachNacht) fakten += "Rückkehr aus dem Nachtdienst gegen $RUECKKEHR_NACHT Uhr, Schlaf etwa 6 bis 15 Uhr, davor und währenddessen keine Aufgaben"
                 when {
                     heuteD.arbeitet && heuteD.art == Dienst.Art.TAG -> {
-                        fakten += "Aufstehen etwa 4:00 Uhr, Abfahrt etwa $ABFAHRT_TAG Uhr, tagsüber im Dienst"
-                        fakten += if (morgen.arbeitet && morgen.art == Dienst.Art.TAG) "abends nur kurz Zeit: Schlafengehen gegen 20 Uhr, weil morgen wieder Tagdienst ist" else "nach dem Dienst abends frei"
+                        fakten += "Aufstehen etwa 4:00 Uhr, Abfahrt etwa $ABFAHRT_TAG Uhr, im Dienst bis zur Rückkehr gegen $RUECKKEHR_TAG Uhr"
+                        fakten += if (morgen.arbeitet && morgen.art == Dienst.Art.TAG) "abends nur knapp zwei Stunden Zeit: Schlafengehen gegen 20 Uhr, weil morgen wieder Tagdienst ist" else "ab etwa $RUECKKEHR_TAG Uhr abends frei"
                     }
                     heuteD.arbeitet && heuteD.art == Dienst.Art.NACHT -> {
                         fakten += if (nachNacht) "freie Zeit nur etwa 15 bis 16 Uhr" else "erster Nachtdienst des Blocks: vormittags und mittags frei, Vorschlafen am Nachmittag sinnvoll"
@@ -197,10 +197,10 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         val gestern = dienst(termine[tag.minusDays(1)].orEmpty())
         val morgen = dienst(termine[tag.plusDays(1)].orEmpty())
         val belegt = mutableListOf<Belegt>()
-        if (gestern.arbeitet && gestern.art == Dienst.Art.NACHT) belegt += Belegt(0, 15 * 60, "bis etwa 6 Uhr noch im Nachtdienst, danach Schlaf bis etwa 15 Uhr")
+        if (gestern.arbeitet && gestern.art == Dienst.Art.NACHT) belegt += Belegt(0, 15 * 60, "bis etwa $RUECKKEHR_NACHT Uhr noch im Nachtdienst und auf dem Heimweg, danach Schlaf bis etwa 15 Uhr")
         if (heuteD.arbeitet && heuteD.art == Dienst.Art.TAG) {
             belegt += Belegt(0, 4 * 60, "Schlaf vor dem Tagdienst (Aufstehen etwa 4 Uhr)")
-            belegt += Belegt(4 * 60, 18 * 60 + 30, "${name(heuteD)}, Abfahrt etwa $ABFAHRT_TAG Uhr, tagsüber im Dienst")
+            belegt += Belegt(4 * 60, 18 * 60 + 15, "${name(heuteD)}, Abfahrt etwa $ABFAHRT_TAG Uhr, wieder zu Hause gegen $RUECKKEHR_TAG Uhr")
         }
         if (heuteD.arbeitet && heuteD.art == Dienst.Art.NACHT) belegt += Belegt(16 * 60, 24 * 60, "${name(heuteD)}, Abfahrt etwa $ABFAHRT_NACHT Uhr, über Nacht im Dienst")
         if (morgen.arbeitet && morgen.art == Dienst.Art.TAG) belegt += Belegt(20 * 60, 24 * 60, "Schlafengehen gegen 20 Uhr, weil am nächsten Morgen Tagdienst ist (Aufstehen etwa 4 Uhr)")
@@ -427,11 +427,11 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
             d.art == Dienst.Art.KEINER && d.frei != null -> d.frei
             d.art == Dienst.Art.KEINER -> "frei (kein Dienst eingetragen)"
             d.frei != null -> "${d.frei} – der eingetragene ${name(d)} entfällt"
-            d.art == Dienst.Art.NACHT -> "${name(d)}, Abfahrt etwa $ABFAHRT_NACHT Uhr, Rückkehr am nächsten Morgen"
-            else -> "${name(d)}, Abfahrt etwa $ABFAHRT_TAG Uhr"
+            d.art == Dienst.Art.NACHT -> "${name(d)}, Abfahrt etwa $ABFAHRT_NACHT Uhr, Rückkehr am nächsten Morgen gegen $RUECKKEHR_NACHT Uhr"
+            else -> "${name(d)}, Abfahrt etwa $ABFAHRT_TAG Uhr, wieder zu Hause gegen $RUECKKEHR_TAG Uhr"
         }
         val nachNacht = vortag != null && vortag.arbeitet && vortag.art == Dienst.Art.NACHT
-        return if (nachNacht) "$satz; am Morgen Rückkehr aus dem Nachtdienst (Nacht ${vortag!!.nummer})" else satz
+        return if (nachNacht) "$satz; am Morgen gegen $RUECKKEHR_NACHT Uhr Rückkehr aus dem Nachtdienst (Nacht ${vortag!!.nummer})" else satz
     }
 
     private fun name(d: Dienst): String = (if (d.art == Dienst.Art.NACHT) "Nachtdienst (Nacht " else "Tagdienst (Tag ") + d.nummer + ")"
@@ -533,6 +533,9 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         private val DIENST = Regex("(nacht|tag)\\s*([1-4])")
         private const val ABFAHRT_NACHT = "16:00"
         private const val ABFAHRT_TAG = "4:30"
+        /** Wann Frank nach dem Dienst wieder zu Hause ist (seine Angabe vom 08.10.2026). */
+        private const val RUECKKEHR_TAG = "18:15"
+        private const val RUECKKEHR_NACHT = "5:50"
 
         /** Farbnamen → Farbton; gewählt wird die Terminfarbe des Google-Kontos, die am nächsten liegt. */
         private val FARBEN = mapOf(
