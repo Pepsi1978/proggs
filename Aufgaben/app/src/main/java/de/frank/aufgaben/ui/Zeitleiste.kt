@@ -181,10 +181,15 @@ private fun Leiste(
                 moveTo(x - 7.dp.toPx(), y1 + 10.dp.toPx()); lineTo(x, y1 + 22.dp.toPx()); lineTo(x + 7.dp.toPx(), y1 + 10.dp.toPx()); close()
             }
             drawPath(spitze, f.sekundaer)
-            // Jetzt-Linie (liegt sie in einer Lücke, steht sie anteilig darin)
+            // Jetzt-Linie. In einer zusammengerückten Lücke läuft sie nie durch den Text „… frei“: Sie steht in der ersten
+            // Hälfte der Lücke knapp über der Marke, in der zweiten knapp darunter.
             if (vonMin % 60 != 0) drawLine(f.textSchwach.copy(alpha = 0.5f), Offset(x - 3.dp.toPx(), y0), Offset(x + 2.dp.toPx(), y0), 1.5f)
             if (istHeute && jetzt in vonMin..bisMin) {
-                val y = yVon(jetzt)
+                val luecke = band.luecken.firstOrNull { jetzt >= it.von && jetzt <= it.bis }
+                val y = if (luecke == null) yVon(jetzt) else {
+                    val a = yVon(luecke.von)
+                    if (jetzt - luecke.von < luecke.minuten / 2f) a + 1.5.dp.toPx() else a + lueckePx - 1.5.dp.toPx()
+                }
                 drawLine(f.gefahr, Offset(x, y), Offset(size.width, y), 2.dp.toPx(), StrokeCap.Round)
                 drawCircle(f.gefahr, 6.dp.toPx(), Offset(x, y))
                 drawCircle(Color.White, 2.5.dp.toPx(), Offset(x, y))
