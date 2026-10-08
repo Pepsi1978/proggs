@@ -36,7 +36,8 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
         private set
 
     override fun stoerung(): String? = when {
-        e.serverHost.isBlank() || e.serverToken.isBlank() -> "Der Server ist nicht eingerichtet."
+        e.serverHost.isBlank() || e.serverToken.isBlank() -> "Der Server-Schlüssel fehlt in dieser Jarvis-Fassung. In Jarvis unter Einstellungen den Server-Schlüssel eintragen " +
+            "(steht am PC in ~/SK/Jarvis/relay.properties unter token) oder Jarvis einmal am PC bauen; danach bleibt er gespeichert."
         driveFehler.isNotEmpty() -> "Der Server kann Google Drive nicht lesen. In Jarvis unter Einstellungen → Tagebuch auf „Berechtigung erneuern“ tippen."
         else -> null
     }

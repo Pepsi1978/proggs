@@ -44,8 +44,9 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
   zuletzt vom Handy gemeldete gilt. Alles andere beantwortet der Server mit 404. ChatGPT-Konnektoren arbeiten
   ohne Anmeldung, deshalb ist diese Adresse der Schlüssel. Erneuern: Einstellungen → Plugin-Adresse erneuern.
 - **Server-Schlüssel:** Nur ein Handy mit dem Schlüssel aus `~/SK/Jarvis/relay.properties` (`host`, `token`) darf
-  sich am Relay anmelden. Der Bau backt beides in die App; fehlt die Datei (Bau in der Cloud), trägt man Adresse
-  und Schlüssel in der App unter Einstellungen ein.
+  sich am Relay anmelden. Der Bau am PC backt beides in die App, und seit 1.8.3 speichert die App alles, was ein PC-Bau
+  mitbringt (Server, Tavily, Google-Zugang), dauerhaft in den verschlüsselten Einstellungen; spätere Cloud-Bauten (ohne
+  `~/SK`) verlieren es dann nicht mehr. Fehlt es trotzdem, trägt man den Schlüssel in der App unter Einstellungen ein.
 - Am Server ist dafür Port 443 öffentlich (IPv4 und IPv6), aber nur dieser eine Dienst hängt daran. Second Brain,
   Werft und Dashboard bleiben an der WireGuard-Adresse.
 
@@ -115,8 +116,9 @@ Die einzelnen Werkzeuge der Apps lesen weiterhin live vom Handy; die Tagesdatenb
   sofort zurück; der Lauf (höchstens 14 Schritte, 12 Minuten) passiert im Dienst mit dem eigenen Modell, den
   Werkzeugen aller Apps und der Internet-Suche. Das Ergebnis landet in der Ablage, auf Wunsch zusätzlich per Mail,
   und eine Benachrichtigung meldet es.
-- **Internet-Suche** (`faehigkeit/WebFaehigkeit.kt`): Tavily, Schlüssel aus `~/SK/Tavily/tavily-api-key.txt` (beim Bau
-  eingebacken). Nur für Jarvis und seine Agenten, nicht im ChatGPT-Plugin.
+- **Internet-Suche** (`faehigkeit/WebFaehigkeit.kt`): Tavily, wenn ein Schlüssel da ist (`~/SK/Tavily/tavily-api-key.txt`,
+  beim Bau eingebacken); sonst die eingebaute Websuche des ChatGPT-Modells (Codex-Werkzeug `web_search`, wie News Kompass),
+  Seiten liest Jarvis dann selbst. Nur für Jarvis und seine Agenten, nicht im ChatGPT-Plugin.
 
 ## Ablage: Dateien und Medien
 

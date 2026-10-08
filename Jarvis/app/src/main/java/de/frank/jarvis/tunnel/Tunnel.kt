@@ -63,7 +63,7 @@ object Tunnel {
         stoppe()
         aktuell = daten
         if (host.isBlank() || token.isBlank()) {
-            _zustand.value = TunnelZustand(TunnelStufe.NICHT_EINGERICHTET, "Server nicht eingerichtet")
+            _zustand.value = TunnelZustand(TunnelStufe.NICHT_EINGERICHTET, if (host.isBlank()) "Server nicht eingerichtet" else "Server-Schlüssel fehlt (Einstellungen)")
             return
         }
         lauf = bereich.launch {

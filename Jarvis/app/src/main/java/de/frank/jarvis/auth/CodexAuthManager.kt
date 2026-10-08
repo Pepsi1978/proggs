@@ -135,14 +135,26 @@ internal class CodexSseAccumulator {
     /** Base64-Bilder aus dem Bildwerkzeug (`image_generation_call`), in der Reihenfolge ihres Eintreffens. */
     val images = mutableListOf<String>()
 
+    /** Adressen, die die Websuche benutzt oder die Antwort zitiert hat (wie im Sammler von News Kompass). */
+    val sources = linkedSetOf<String>()
+
     val isCompleted: Boolean get() = completed
 
     /** Wie im Sammler von News Kompass: jedes fertige Ausgabe-Element nur einmal auswerten. */
     private fun collect(item: JSONObject) {
         val key = item.optString("id").ifBlank { item.toString().hashCode().toString() }
         if (!seenItems.add(key)) return
-        if (item.optString("type") == "image_generation_call") {
-            item.optString("result").takeIf(String::isNotBlank)?.let(images::add)
+        when (item.optString("type")) {
+            "image_generation_call" -> item.optString("result").takeIf(String::isNotBlank)?.let(images::add)
+            "web_search_call" -> item.optJSONObject("action")?.optJSONArray("sources")?.let { found ->
+                for (i in 0 until found.length()) found.optJSONObject(i)?.optString("url")?.takeIf(String::isNotBlank)?.let(sources::add)
+            }
+            "message" -> item.optJSONArray("content")?.let { content ->
+                for (i in 0 until content.length()) {
+                    val notes = content.optJSONObject(i)?.optJSONArray("annotations") ?: continue
+                    for (j in 0 until notes.length()) notes.optJSONObject(j)?.optString("url")?.takeIf(String::isNotBlank)?.let(sources::add)
+                }
+            }
         }
     }
 
@@ -342,6 +354,30 @@ class CodexAuthManager(context: Context) {
                     error.message.orEmpty().contains("400"))
             if (!rejectedOption) throw error
             attempt(withOptions = false)
+        }
+    }
+
+    /**
+     * Sucht über das eingebaute Websuche-Werkzeug von Codex (`web_search`), derselbe Weg wie in News Kompass.
+     * Rückgabe: die Antwort des Modells und die benutzten Quellen.
+     */
+    suspend fun searchWeb(query: String, model: CodexModel): Pair<String, List<String>> = withContext(Dispatchers.IO) {
+        if (query.isBlank()) throw CodexAuthException(AuthErrorKind.NETWORK, "Die Suchanfrage ist leer.")
+        val payload = codexChatPayload(
+            "Du recherchierst im Internet für einen anderen Assistenten. Suche mit dem Websuche-Werkzeug, gern mehrfach. " +
+                "Antworte sachlich und knapp mit den gefundenen Fakten, je Aussage mit der Quelle (Titel und vollständige Adresse). " +
+                "Trenne Belegtes von Unsicherem. Erfinde nichts.",
+            listOf(ChatTurn("user", query)),
+            model,
+            ReasoningEffort.LOW,
+        ).put("tools", JSONArray().put(JSONObject().put("type", "web_search"))).put("tool_choice", "auto")
+            .put("include", JSONArray().put("web_search_call.action.sources"))
+        try {
+            val result = requestCodexAccumulated(payload)
+            result.result() to result.sources.toList()
+        } catch (error: IOException) {
+            currentCoroutineContext().ensureActive()
+            throw networkException("Die Suchantwort konnte nicht vollständig empfangen werden.", error)
         }
     }
 

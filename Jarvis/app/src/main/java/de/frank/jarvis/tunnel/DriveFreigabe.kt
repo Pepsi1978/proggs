@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Base64
-import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.data.Einstellungen
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -35,11 +34,11 @@ object DriveFreigabe {
     private const val UMFANG = "https://www.googleapis.com/auth/drive.readonly"
     private val client = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).build()
 
-    val eingerichtet: Boolean get() = BuildConfig.DRIVE_CLIENT_ID.isNotBlank() && BuildConfig.DRIVE_CLIENT_SECRET.isNotBlank()
+    fun eingerichtet(context: Context): Boolean = Einstellungen.get(context).let { it.driveClientId.isNotBlank() && it.driveClientSecret.isNotBlank() }
 
     /** Führt die Freigabe durch. Rückgabe: Meldung für den Benutzer; [erfolg] sagt, ob es geklappt hat. */
     suspend fun erneuere(context: Context): Pair<Boolean, String> = withContext(Dispatchers.IO) {
-        if (!eingerichtet) return@withContext false to "Diese Fassung von Jarvis kennt die Google-Zugangsdaten nicht (Bau ohne ~/SK)."
+        if (!eingerichtet(context)) return@withContext false to "Diese Fassung von Jarvis kennt die Google-Zugangsdaten nicht (Bau ohne ~/SK). Einmal am PC bauen, danach bleiben sie gespeichert."
         val e = Einstellungen.get(context)
         runCatching {
             ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { lauscher ->
@@ -50,7 +49,7 @@ object DriveFreigabe {
                 val pruefwort = Base64.encodeToString(ByteArray(48).also(zufall::nextBytes), Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
                 val pruefsumme = Base64.encodeToString(MessageDigest.getInstance("SHA-256").digest(pruefwort.toByteArray(Charsets.US_ASCII)), Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
                 val adresse = "https://accounts.google.com/o/oauth2/v2/auth?response_type=code&access_type=offline&prompt=consent" +
-                    "&client_id=" + kodiert(BuildConfig.DRIVE_CLIENT_ID) + "&redirect_uri=" + kodiert(rueckweg) + "&scope=" + kodiert(UMFANG) +
+                    "&client_id=" + kodiert(e.driveClientId) + "&redirect_uri=" + kodiert(rueckweg) + "&scope=" + kodiert(UMFANG) +
                     "&state=" + kennung + "&code_challenge=" + pruefsumme + "&code_challenge_method=S256"
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(adresse)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
@@ -83,7 +82,7 @@ object DriveFreigabe {
                 val tausch = client.newCall(
                     Request.Builder().url("https://oauth2.googleapis.com/token").post(
                         FormBody.Builder().add("grant_type", "authorization_code").add("code", code!!).add("redirect_uri", rueckweg)
-                            .add("client_id", BuildConfig.DRIVE_CLIENT_ID).add("client_secret", BuildConfig.DRIVE_CLIENT_SECRET).add("code_verifier", pruefwort).build(),
+                            .add("client_id", e.driveClientId).add("client_secret", e.driveClientSecret).add("code_verifier", pruefwort).build(),
                     ).build(),
                 ).execute().use { antwort -> JSONObject(antwort.body?.string().orEmpty()).also { check(antwort.isSuccessful) { it.optString("error_description", "Google antwortet mit ${antwort.code}") } } }
                 val dauerhaft = tausch.optString("refresh_token").takeIf { it.isNotBlank() } ?: return@use false to "Google hat keinen dauerhaften Zugang geliefert. Bitte noch einmal versuchen."
