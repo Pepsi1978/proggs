@@ -52,7 +52,7 @@ class Einstellungen private constructor(context: Context) {
 
     companion object {
         const val NAME = "modellkompass_secure_prefs"
-        const val HARDWARE_STANDARD = "NVIDIA RTX 3090 mit 24 GB VRAM"
+        const val HARDWARE_STANDARD = "NVIDIA RTX 5090 mit 32 GB VRAM"
         @Volatile private var instanz: Einstellungen? = null
         fun get(context: Context): Einstellungen = instanz ?: synchronized(this) {
             instanz ?: Einstellungen(context).also { instanz = it }

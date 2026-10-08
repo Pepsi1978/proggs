@@ -60,8 +60,8 @@ import de.frank.modellkompass.ui.theme.antippen
 import de.frank.modellkompass.ui.theme.glas
 import de.frank.modellkompass.ui.theme.knopf3d
 
-/** Grafikspeicher der RTX 3090 – Maßstab für den Balken. */
-private const val VRAM_GB = 24f
+/** Grafikspeicher der RTX 5090 – Maßstab für den Balken. */
+private const val VRAM_GB = 32f
 
 private fun kopiere(context: Context, vm: AppViewModel, text: String) {
     context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Modell", text))
@@ -182,7 +182,7 @@ private fun ModellKarte(vm: AppViewModel, b: Bereich, m: Modellfund, index: Int)
                 Row {
                     Text("Grafikspeicher", color = f.textLeise, fontSize = 12.sp, modifier = Modifier.weight(1f))
                     Text(
-                        "≈ ${"%.1f".format(gb).replace('.', ',').removeSuffix(",0")} von 24 GB",
+                        "≈ ${"%.1f".format(gb).replace('.', ',').removeSuffix(",0")} von 32 GB",
                         color = if (knapp) f.gefahr else f.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                     )
                 }

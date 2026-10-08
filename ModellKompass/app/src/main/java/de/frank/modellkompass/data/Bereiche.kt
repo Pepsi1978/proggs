@@ -19,19 +19,19 @@ enum class Bereich(
         "bilder", "Bilder erstellen", "🎨",
         "Aus Text werden Bilder: Fotos, Illustrationen, Plakate mit lesbarer Schrift.", COMFY,
         "Text-zu-Bild-Modelle mit der besten Bildqualität und Prompt-Treue, auch bei Schrift im Bild und bei Menschen " +
-            "(Hände, Gesichter). Nenne die konkret passende Variante bzw. Quantisierung für 24 GB VRAM (z. B. FP8, GGUF Q8, " +
+            "(Hände, Gesichter). Nenne die konkret passende Variante bzw. Quantisierung für 32 GB VRAM (z. B. FP8, GGUF Q8, " +
             "Nunchaku) und die Datei, die man herunterlädt.",
     ),
     BILD_BEARBEITEN(
         "bild_bearbeiten", "Bilder bearbeiten", "🖌️",
         "Vorhandene Bilder per Anweisung ändern, Teile ersetzen, hochskalieren, Person und Stil beibehalten.", COMFY,
         "Modelle zum Bearbeiten vorhandener Bilder per Textanweisung (Instruction-Editing, Inpainting, Outpainting, " +
-            "Motiv- und Gesichtstreue) sowie die besten Hochskalierer. Nenne die für 24 GB VRAM passende Variante.",
+            "Motiv- und Gesichtstreue) sowie die besten Hochskalierer. Nenne die für 32 GB VRAM passende Variante.",
     ),
     VIDEO(
         "video", "Videos erstellen", "🎬",
         "Kurze Videos aus Text oder aus einem Startbild, mit flüssiger Bewegung.", COMFY,
-        "Text-zu-Video- und Bild-zu-Video-Modelle mit der besten Bewegungs- und Bildqualität, die auf 24 GB VRAM in " +
+        "Text-zu-Video- und Bild-zu-Video-Modelle mit der besten Bewegungs- und Bildqualität, die auf 32 GB VRAM in " +
             "vertretbarer Zeit (Minuten, nicht Stunden je Clip) laufen. Nenne Auflösung und Cliplänge, die realistisch sind, " +
             "und die passende Quantisierung bzw. beschleunigte Variante (z. B. GGUF, Lightning-/Distill-LoRA).",
     ),
@@ -55,7 +55,7 @@ enum class Bereich(
         "Kotlin-Apps für Android, Windows-Programme, Webseiten, Swift-Apps für iPhone und Mac.", LM,
         "Programmiermodelle mit der besten Codequalität für: Kotlin und Jetpack Compose (Android), C#/.NET/WPF (Windows), " +
             "TypeScript/HTML/CSS/React (Web) und Swift/SwiftUI (iPhone, Mac). Wichtig sind agentisches Arbeiten in einem " +
-            "CLI-Werkzeug (zuverlässige Werkzeugaufrufe, lange Aufgaben) und ein großes Kontextfenster, das in 24 GB noch " +
+            "CLI-Werkzeug (zuverlässige Werkzeugaufrufe, lange Aufgaben) und ein großes Kontextfenster, das in 32 GB noch " +
             "nutzbar ist. Stütze dich auf aktuelle Coding-Benchmarks (z. B. SWE-bench Verified, Aider Polyglot, LiveCodeBench).",
     ),
     TEXT(
@@ -64,7 +64,7 @@ enum class Bereich(
         "Sprachmodelle für Textarbeit in sehr gutem, fehlerfreiem Deutsch: lange Texte überarbeiten, kürzen, " +
             "zusammenfassen, gliedern, Briefe und Berichte schreiben, Werbe- und Lead-Texte; dazu Office-Aufgaben wie " +
             "Excel-Formeln, Tabellen auswerten und Word-Dokumente strukturieren. Entscheidend sind Deutsch-Qualität und " +
-            "ein langes nutzbares Kontextfenster in 24 GB.",
+            "ein langes nutzbares Kontextfenster in 32 GB.",
     ),
     KREATIV(
         "kreativ", "Kreatives Schreiben", "📖",
@@ -77,7 +77,7 @@ enum class Bereich(
         "denken", "Tiefes Denken & Mathe", "🧮",
         "Knifflige Logik, Mathematik, Planung und mehrstufige Analysen.", LM,
         "Reasoning-Modelle (mit Denkphase), die bei Mathematik, Logik, Planung und mehrstufigen Analysen am besten " +
-            "abschneiden. Nenne, wie man die Denkphase einstellt, und wie viel Kontext in 24 GB realistisch bleibt.",
+            "abschneiden. Nenne, wie man die Denkphase einstellt, und wie viel Kontext in 32 GB realistisch bleibt.",
     ),
     SEHEN(
         "sehen", "Bilder & Dokumente verstehen", "👁️",
@@ -116,7 +116,7 @@ enum class Bereich(
         "Modelle, die selbstständig Werkzeuge bedienen, im Netz suchen und Aufgaben in vielen Schritten erledigen.", LM,
         "Sprachmodelle, die Werkzeugaufrufe (Function Calling, MCP) am zuverlässigsten beherrschen und lange " +
             "mehrstufige Aufgaben ohne Abdriften durchhalten. Nenne, ob die Chat-Vorlage in LM Studio Werkzeugaufrufe " +
-            "sauber unterstützt, und das nutzbare Kontextfenster in 24 GB.",
+            "sauber unterstützt, und das nutzbare Kontextfenster in 32 GB.",
     ),
     WISSEN(
         "wissen", "Dokumentensuche (RAG)", "📚",
@@ -127,15 +127,15 @@ enum class Bereich(
     DREI_D(
         "drei_d", "3D-Modelle erstellen", "🧊",
         "Aus einem Bild oder Text ein 3D-Objekt mit Oberfläche erzeugen, etwa für Druck oder Spiele.", "ComfyUI oder ein eigenes Werkzeug",
-        "Bild-zu-3D- und Text-zu-3D-Modelle mit der besten Geometrie- und Texturqualität, die auf 24 GB VRAM laufen. " +
+        "Bild-zu-3D- und Text-zu-3D-Modelle mit der besten Geometrie- und Texturqualität, die auf 32 GB VRAM laufen. " +
             "Nenne das Ausgabeformat und ob Texturen mit erzeugt werden.",
     ),
     TEMPO(
         "tempo", "Schnell & sparsam", "⚡",
         "Kleine Modelle, die sofort antworten und VRAM für anderes frei lassen.", LM,
-        "Kleine Sprachmodelle (grob bis 12 GB VRAM), die bei sehr hoher Geschwindigkeit die beste Qualität liefern – " +
+        "Kleine Sprachmodelle (grob bis 16 GB VRAM), die bei sehr hoher Geschwindigkeit die beste Qualität liefern – " +
             "für schnelle Antworten, Sprachassistenten und Hintergrundaufgaben, während daneben noch ein anderes Modell " +
-            "oder Spiel läuft. Nenne Tokens pro Sekunde auf einer RTX 3090, soweit belegt.",
+            "oder Spiel läuft. Nenne Tokens pro Sekunde auf einer RTX 5090, soweit belegt.",
     ),
     ;
 
