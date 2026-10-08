@@ -12,8 +12,9 @@
 #   1. Sturm erkennen: mindestens $Schwelle Ereignisse 62441 in den letzten 10 Sekunden.
 #   2. Absender aufloesen (bei msedgewebview2.exe das Wirtsprogramm hinter --webview-exe-name=).
 #   3. Wirtsprogramm beenden -> Blinken hoert auf. Geschuetzte Prozesse werden nie beendet.
-#   4. Merken, was beendet wurde, die Standard-Apps-Seite oeffnen und Frank sagen, was zu tun ist.
-#   5. Sobald die Zuordnung repariert ist (UserChoice geaendert), das Wirtsprogramm wieder starten.
+#   4. Store-App: private Registry-Kopie beiseitelegen und die App sofort wieder starten (Selbstheilung).
+#   5. Sonst: merken, was beendet wurde, die Standard-Apps-Seite oeffnen und Frank sagen, was zu tun ist.
+#   6. Sobald die Zuordnung repariert ist (UserChoice geaendert), das Wirtsprogramm wieder starten.
 # Die Datei bleibt bewusst reines ASCII (laeuft so auch unter Windows PowerShell 5.1 ohne BOM).
 param([int]$Schwelle = 6, [switch]$OhneMeldung)
 
@@ -53,14 +54,40 @@ function Zuordnung($ext) {
     "$($u.ProgId)|$($u.Hash)|$($lp.ProgId)|$($l.Hash)"
 }
 
+# Die Meldung laeuft in einem EIGENEN Prozess. Ein Meldungsfenster im Waechter selbst wuerde ihn
+# blockieren, bis Frank auf OK klickt - solange waere der Schutz aus (so passiert am 08.10.2026, 22:19).
 function Melden($titel, $text) {
     if ($OhneMeldung) { return }
     try {
-        Add-Type -AssemblyName System.Windows.Forms
-        $f = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true }
-        [System.Windows.Forms.MessageBox]::Show($f, $text, $titel, 'OK', 'Warning') | Out-Null
-        $f.Dispose()
+        $t = $text -replace "'", "''"; $ti = $titel -replace "'", "''"
+        $cmd = "Add-Type -AssemblyName System.Windows.Forms; `$f = New-Object System.Windows.Forms.Form -Property @{ TopMost = `$true }; [System.Windows.Forms.MessageBox]::Show(`$f, '$t', '$ti', 'OK', 'Warning') | Out-Null"
+        $b64 = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($cmd))
+        Start-Process -FilePath (Get-Process -Id $PID).Path -WindowStyle Hidden -ArgumentList '-NoProfile', '-WindowStyle', 'Hidden', '-EncodedCommand', $b64
     } catch { Log "Meldung FEHLER: $($_.Exception.Message)" }
+}
+
+# Store-Apps (MSIX) haben eine private Kopie von HKCU:
+#   %LOCALAPPDATA%\Packages\<Paket>\SystemAppData\Helium\User.dat
+# Scheitert darin ein Standard-App-Reset auf halbem Weg, bleibt ein LEERER Schluessel
+# FileExts\<ext>\UserChoice zurueck. Er verdeckt fuer alle Prozesse der App die echte, gueltige
+# Zuordnung -> die App versucht endlos zurueckzusetzen. Loeschen laesst sich der Schluessel nicht
+# (UCPD: Zugriff verweigert, auch von innerhalb des Pakets; RegLoadAppKey meldet "Registrierung
+# beschaedigt"). Was hilft: die Datei bei beendeter App beiseitelegen - Windows legt beim naechsten
+# Start eine frische an, die App sieht wieder die echte Zuordnung. In der Datei liegen nur
+# Zwischenstaende von WebView2/Edge, keine Einstellungen der App.
+function Paket-Von($pfad) {
+    if (-not $pfad -or $pfad -notlike '*\WindowsApps\*') { return $null }
+    Get-AppxPackage | Where-Object { $_.InstallLocation -and $pfad.StartsWith($_.InstallLocation, [StringComparison]::OrdinalIgnoreCase) } | Select-Object -First 1
+}
+function Paket-Heilen($pfn) {
+    $hive = Join-Path $env:LOCALAPPDATA "Packages\$pfn\SystemAppData\Helium\User.dat"
+    if (-not (Test-Path $hive)) { Log "Paket $pfn hat keine private Registry-Datei"; return $false }
+    for ($i = 0; $i -lt 5; $i++) {
+        try { Move-Item $hive "$hive.blinkschutz-sicherung" -Force -ErrorAction Stop; Log "private Registry von $pfn beiseitegelegt ($hive.blinkschutz-sicherung)"; return $true }
+        catch { Start-Sleep -Seconds 2 }
+    }
+    Log "private Registry von $pfn ist gesperrt - nicht beiseitegelegt"
+    return $false
 }
 
 try {
@@ -117,12 +144,28 @@ try {
     $app = Get-StartApps | Where-Object { $_.Name -like "*$(($wirt -split '\.')[0])*" } | Select-Object -First 1
     if ($app) { $start = "shell:AppsFolder\$($app.AppID)"; $anzeige = $app.Name }
     elseif ($erster) { $start = "`"$($erster.Path)`"" }
+    $paket = Paket-Von $erster.Path
 
     foreach ($n in $namen) { Stop-Process -Name $n -Force }
     Start-Sleep -Seconds 4
     $rest = (Resets-Seit 3).Count
     if ($rest -eq 0) { Log "Blinken gestoppt: $($namen -join ', ') beendet" }
     else { Log "WARNUNG: nach dem Beenden von $($namen -join ', ') noch $rest Resets in 3 s" }
+
+    # Selbstheilung fuer Store-Apps: private Registry-Kopie beiseitelegen und die App wieder starten.
+    # Hoechstens ein Versuch pro Paket in 30 Minuten - kommt der Sturm danach wieder, liegt die Ursache
+    # woanders (echte Zuordnung ungueltig) und es geht unten mit Stoppen + Meldung weiter.
+    if ($paket -and $start) {
+        $heilStamp = Join-Path $dir "geheilt-$($paket.PackageFamilyName).txt"
+        $frisch = (Test-Path $heilStamp) -and ((Get-Date) - (Get-Item $heilStamp).LastWriteTime).TotalMinutes -lt 30
+        if (-not $frisch -and (Paket-Heilen $paket.PackageFamilyName)) {
+            Set-Content -Path $heilStamp -Value (Get-Date -Format o)
+            Remove-Item $stateFile -Force
+            Start-Process explorer.exe -ArgumentList $start
+            Log "SELBST GEHEILT: $anzeige mit frischer privater Registry neu gestartet"
+            exit 0
+        }
+    }
 
     @{ name = $anzeige; start = $start; ext = $ext; zuordnung = (Zuordnung $ext); zeit = (Get-Date -Format o) } |
         ConvertTo-Json | Set-Content -Path $stateFile -Encoding utf8
