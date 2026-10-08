@@ -169,7 +169,7 @@ class AblageSpeicherTest {
         val bytes = probe("film.mp4").readBytes()
         MockWebServer().use { server ->
             // 1. Versuch: Verbindung bricht nach der Hälfte ab.
-            server.enqueue(MockResponse().setBody(Buffer().write(bytes)).setHeader("Content-Type", "video/mp4").setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY))
+            server.enqueue(MockResponse().setBody(Buffer().write(bytes)).setHeader("Content-Type", "video/mp4").setHeader("ETag", "\"v1\"").setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY))
             server.start()
             val u = Uebertragungen(s, File(wurzel, "auftraege.json"))
             val id = u.anlegen(DownloadAuftrag(server.url("/film.mp4?token=GEHEIM").toString(), "Video", ""))
@@ -188,8 +188,38 @@ class AblageSpeicherTest {
             assertEquals("film.mp4", e.anhang.originalName)
             assertEquals(Art.VIDEO, e.anhang.art)
             server.takeRequest()
-            assertEquals("bytes=$geladen-", server.takeRequest().getHeader("Range"))
+            val zweite = server.takeRequest()
+            assertEquals("bytes=$geladen-", zweite.getHeader("Range"))
+            assertEquals("\"v1\"", zweite.getHeader("If-Range"))
         }
+    }
+
+    @Test fun unpassenderTeilbereichWirdVerworfen() {
+        Uebertragungen.erlaubeLokal = true
+        val bytes = probe("film.mp4").readBytes()
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse().setBody(Buffer().write(bytes)).setHeader("ETag", "\"v1\"").setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY))
+            // Der Server antwortet mit einem Bereich, der nicht an der vorhandenen Länge beginnt.
+            server.enqueue(MockResponse().setResponseCode(206).setBody(Buffer().write(bytes)).setHeader("Content-Range", "bytes 0-${bytes.size - 1}/${bytes.size}"))
+            server.enqueue(MockResponse().setBody(Buffer().write(bytes)).setHeader("ETag", "\"v1\""))
+            server.start()
+            val u = Uebertragungen(s, File(wurzel, "auftraege.json"))
+            val id = u.anlegen(DownloadAuftrag(server.url("/film.mp4").toString(), "Video", "film.mp4"))
+            runCatching { runBlocking { u.ausfuehren(id) } }
+            try { runBlocking { u.ausfuehren(id) }; fail() } catch (e: AblageFehler) { assertTrue(e.message!!.contains("unpassenden Teil")) }
+            assertFalse(File(s.teilOrdner, "$id.teil").exists())
+            assertTrue(s.eintraege().isEmpty())
+            val e = runBlocking { u.ausfuehren(id) }
+            assertArrayEquals(bytes, s.datei(e.anhang).readBytes())
+        }
+    }
+
+    @Test fun namenImEigenenNetzWerdenNichtAufgeloest() {
+        listOf("localhost", "127.0.0.1").forEach {
+            try { Uebertragungen.STANDARD_CLIENT.dns.lookup(it); fail(it) } catch (_: java.net.UnknownHostException) {}
+        }
+        listOf("10.1.2.3", "192.168.0.1", "169.254.1.1", "100.64.0.1", "fd00::1", "::1").forEach { assertTrue(it, Uebertragungen.istLokal(java.net.InetAddress.getByName(it))) }
+        listOf("8.8.8.8", "2001:4860:4860::8888").forEach { assertFalse(it, Uebertragungen.istLokal(java.net.InetAddress.getByName(it))) }
     }
 
     @Test fun abgelaufenerLinkGibtVerstaendlicheMeldungOhneAdresse() {

@@ -4,6 +4,8 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.net.InetAddress
+import java.net.Proxy
+import java.net.UnknownHostException
 import java.net.URLDecoder
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -14,7 +16,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import okhttp3.Dns
 import okhttp3.HttpUrl
+import okhttp3.Interceptor
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -63,6 +67,9 @@ class Uebertragungen(private val speicher: AblageSpeicher, private val auftragsD
     /** id → Auftrag und Teil-Datei; nur im privaten Speicher. */
     private val auftraege = LinkedHashMap<String, Pair<DownloadAuftrag, String>>()
 
+    /** id → ETag oder Last-Modified der ersten Antwort: Fortgesetzt wird nur, wenn der Server dasselbe Objekt bestätigt. */
+    private val pruefwerte = HashMap<String, String>()
+
     init {
         // Nach einem Neustart: was lief, gilt als unterbrochen und kann fortgesetzt werden.
         runCatching {
@@ -73,6 +80,7 @@ class Uebertragungen(private val speicher: AblageSpeicher, private val auftragsD
                     val auftrag = DownloadAuftrag(o.getString("url"), o.getString("eintrag"), o.optString("name"), o.optString("mime"), o.optString("beschreibung"), o.optString("kennung"), o.optString("titel"), o.optString("herkunft", "Download"))
                     val id = o.getString("id")
                     auftraege[id] = auftrag to o.getString("teil")
+                    o.optString("pruefwert").takeIf { it.isNotEmpty() }?.let { pruefwerte[id] = it }
                     val teil = File(speicher.teilOrdner, o.getString("teil"))
                     _liste.value = _liste.value + Uebertragung(id, auftrag.eintragTitel, anzeigeName(auftrag), host(auftrag.url), if (teil.isFile) teil.length() else 0, o.optLong("gesamt").takeIf { it > 0 }, UebertragungsZustand.FEHLER, o.optString("fehler").ifEmpty { "Unterbrochen (App oder Handy wurde neu gestartet)." })
                 }
@@ -116,17 +124,20 @@ class Uebertragungen(private val speicher: AblageSpeicher, private val auftragsD
                 eintragTitel = auftrag.eintragTitel, quelle = teil, name = name, mime = mime, herkunft = auftrag.herkunft + " (" + host(auftrag.url) + ")",
                 beschreibung = auftrag.beschreibung, kennung = auftrag.kennung.ifBlank { null }, titel = auftrag.titel.ifBlank { null },
             )
-            synchronized(sperre) { auftraege.remove(id); _liste.value = _liste.value.filter { it.id != id }; sichern() }
+            synchronized(sperre) { auftraege.remove(id); pruefwerte.remove(id); _liste.value = _liste.value.filter { it.id != id }; sichern() }
             ergebnis
         } catch (e: kotlinx.coroutines.CancellationException) {
             aktualisiere(id) { it.copy(zustand = UebertragungsZustand.FEHLER, fehler = "Abgebrochen.") }
             throw e
         } catch (e: Exception) {
-            val text = when (e) {
-                is AblageFehler -> e.message.orEmpty()
-                is java.net.UnknownHostException -> "Der Server ${host(auftrag.url)} ist nicht erreichbar (kein Netz oder falsche Adresse)."
-                is java.net.SocketTimeoutException -> "Zeitüberschreitung beim Laden von ${host(auftrag.url)}."
-                is IOException -> "Die Verbindung zu ${host(auftrag.url)} brach ab."
+            val m = e.message.orEmpty()
+            val text = when {
+                e is AblageFehler -> m
+                "eigene Netz" in m -> "Nicht geladen: Die Adresse zeigt ins eigene Netz und ist aus Sicherheitsgründen gesperrt."
+                "unverschlüsselt" in m -> "Nicht geladen: Der Server leitete auf eine unverschlüsselte Adresse weiter."
+                e is java.net.UnknownHostException -> "Der Server ${host(auftrag.url)} ist nicht erreichbar (kein Netz oder falsche Adresse)."
+                e is java.net.SocketTimeoutException -> "Zeitüberschreitung beim Laden von ${host(auftrag.url)}."
+                e is IOException -> "Die Verbindung zu ${host(auftrag.url)} brach ab."
                 else -> "Übertragung fehlgeschlagen (${e.javaClass.simpleName})."
             }
             aktualisiere(id) { it.copy(zustand = UebertragungsZustand.FEHLER, fehler = text) }
@@ -138,22 +149,38 @@ class Uebertragungen(private val speicher: AblageSpeicher, private val auftragsD
     /** Verwirft einen fehlgeschlagenen Auftrag samt Teil-Datei. */
     fun verwerfen(id: String) = synchronized(sperre) {
         auftraege.remove(id)?.let { File(speicher.teilOrdner, it.second).delete() }
+        pruefwerte.remove(id)
         _liste.value = _liste.value.filter { it.id != id }
         sichern()
     }
 
     private suspend fun lade(auftrag: DownloadAuftrag, teil: File, id: String): Pair<String, String?> {
         val url = auftrag.url.toHttpUrlOrNull() ?: throw AblageFehler("Die Adresse ist ungültig.")
+        // Fortsetzen nur mit Prüfwert (ETag/Last-Modified): If-Range lässt den Server bei geänderter Datei alles neu senden.
+        val pruefwert = synchronized(sperre) { pruefwerte[id] }
+        if (teil.isFile && teil.length() > 0 && pruefwert == null) teil.delete()
         val vorhanden = if (teil.isFile) teil.length() else 0L
-        val anfrage = Request.Builder().url(url).header("Accept-Encoding", "identity").apply { if (vorhanden > 0) header("Range", "bytes=$vorhanden-") }.build()
+        val anfrage = Request.Builder().url(url).header("Accept-Encoding", "identity")
+            .apply { if (vorhanden > 0 && pruefwert != null) { header("Range", "bytes=$vorhanden-"); header("If-Range", pruefwert) } }.build()
         client.newCall(anfrage).execute().use { antwort ->
             val code = antwort.code
             if (code == 416 && vorhanden > 0) { teil.delete(); throw AblageFehler("Der Server lehnte das Fortsetzen ab. Bitte erneut versuchen, dann lädt Jarvis von vorn.") }
             if (!antwort.isSuccessful) throw AblageFehler(httpText(code, host(auftrag.url)))
-            val fortsetzen = code == 206 && vorhanden > 0
+            // Ein Teilbereich zählt nur, wenn er genau an der vorhandenen Länge beginnt; sonst wäre die Datei ein Mischmasch.
+            val bereich = antwort.header("Content-Range")?.let { Regex("bytes (\\d+)-(\\d+)/(\\d+|\\*)").find(it) }
+            if (code == 206 && (vorhanden == 0L || bereich == null || bereich.groupValues[1].toLongOrNull() != vorhanden)) {
+                teil.delete()
+                synchronized(sperre) { pruefwerte.remove(id) }
+                throw AblageFehler("Der Server lieferte beim Fortsetzen einen unpassenden Teil. Bitte erneut versuchen, dann lädt Jarvis von vorn.")
+            }
+            val fortsetzen = code == 206
+            if (!fortsetzen) {
+                (antwort.header("ETag")?.takeIf { !it.startsWith("W/") } ?: antwort.header("Last-Modified"))
+                    .let { neu -> synchronized(sperre) { if (neu != null) pruefwerte[id] = neu else pruefwerte.remove(id) } }
+            }
             val koerper = antwort.body ?: throw AblageFehler("Der Server lieferte keinen Inhalt.")
             val laenge = koerper.contentLength().takeIf { it >= 0 }
-            val gesamt = laenge?.let { if (fortsetzen) it + vorhanden else it }
+            val gesamt = if (fortsetzen) bereich!!.groupValues[3].toLongOrNull() ?: laenge?.let { it + vorhanden } else laenge
             if (gesamt != null && gesamt > MAX_GROESSE) throw AblageFehler("Die Datei ist mit ${Dateityp.groesse(gesamt)} zu groß (höchstens ${Dateityp.groesse(MAX_GROESSE)}).")
             val name = auftrag.name.ifBlank { nameAus(antwort.header("Content-Disposition"), url) }
             val mime = auftrag.mime.ifBlank { koerper.contentType()?.let { "${it.type}/${it.subtype}" }.orEmpty() }.ifBlank { null }
@@ -194,7 +221,7 @@ class Uebertragungen(private val speicher: AblageSpeicher, private val auftragsD
             val stand = _liste.value.firstOrNull { it.id == id }
             a.put(JSONObject().put("id", id).put("url", auftrag.url).put("eintrag", auftrag.eintragTitel).put("name", auftrag.name).put("mime", auftrag.mime)
                 .put("beschreibung", auftrag.beschreibung).put("kennung", auftrag.kennung).put("titel", auftrag.titel).put("herkunft", auftrag.herkunft)
-                .put("teil", teil).put("gesamt", stand?.gesamt ?: 0).put("fehler", stand?.fehler.orEmpty()))
+                .put("teil", teil).put("gesamt", stand?.gesamt ?: 0).put("fehler", stand?.fehler.orEmpty()).put("pruefwert", pruefwerte[id].orEmpty()))
         }
         runCatching { AblageSpeicher.schreibeAtomar(auftragsDatei, a.toString().toByteArray()) }
     }
@@ -207,7 +234,30 @@ class Uebertragungen(private val speicher: AblageSpeicher, private val auftragsD
             .readTimeout(60, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(false)
+            // Namen, die auf Adressen im eigenen Netz zeigen, gar nicht erst auflösen …
+            .dns(object : Dns {
+                override fun lookup(hostname: String): List<InetAddress> {
+                    val adressen = Dns.SYSTEM.lookup(hostname)
+                    if (!erlaubeLokal && adressen.any(::istLokal)) throw UnknownHostException("$hostname zeigt ins eigene Netz; aus Sicherheitsgründen gesperrt.")
+                    return adressen
+                }
+            })
+            // … und jede tatsächliche Verbindung prüfen, auch nach Weiterleitungen und bei IP-Adressen ohne Namensauflösung.
+            .addNetworkInterceptor(Interceptor { kette ->
+                if (!erlaubeLokal) {
+                    if (kette.request().url.scheme != "https") throw IOException("Weiterleitung auf eine unverschlüsselte Adresse; abgebrochen.")
+                    val route = kette.connection()?.route()
+                    if (route != null && route.proxy.type() == Proxy.Type.DIRECT && route.socketAddress.address?.let(::istLokal) == true) {
+                        throw IOException("Die Adresse zeigt ins eigene Netz; aus Sicherheitsgründen abgebrochen.")
+                    }
+                }
+                kette.proceed(kette.request())
+            })
             .build()
+
+        fun istLokal(a: InetAddress): Boolean = a.isLoopbackAddress || a.isSiteLocalAddress || a.isLinkLocalAddress || a.isAnyLocalAddress ||
+            a.isMulticastAddress || (a.address.size == 16 && (a.address[0].toInt() and 0xFE) == 0xFC) || // IPv6 ULA fc00::/7
+            (a.address.size == 4 && (a.address[0].toInt() and 0xFF) == 100 && (a.address[1].toInt() and 0xC0) == 64) // CGNAT 100.64/10
 
         /** Nur der Server-Name: so darf eine Quelle in Texten, Protokollen und der Oberfläche erscheinen. */
         fun host(url: String): String = url.toHttpUrlOrNull()?.host ?: "unbekannter Server"
@@ -224,7 +274,7 @@ class Uebertragungen(private val speicher: AblageSpeicher, private val auftragsD
             if (url.scheme != "https") throw AblageFehler("Nur https-Adressen werden übernommen.")
             val h = url.host.lowercase(Locale.ROOT)
             val lokal = h == "localhost" || h.endsWith(".local") || h.endsWith(".lan") ||
-                runCatching { if (h.any { it == ':' } || h.all { it.isDigit() || it == '.' }) InetAddress.getByName(h).let { it.isLoopbackAddress || it.isSiteLocalAddress || it.isLinkLocalAddress || it.isAnyLocalAddress } else false }.getOrDefault(true)
+                runCatching { if (h.any { it == ':' } || h.all { it.isDigit() || it == '.' }) istLokal(InetAddress.getByName(h)) else false }.getOrDefault(true)
             if (lokal) throw AblageFehler("Adressen im eigenen Netz werden aus Sicherheitsgründen nicht geladen.")
         }
 

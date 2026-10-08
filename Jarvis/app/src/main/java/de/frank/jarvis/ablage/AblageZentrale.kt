@@ -29,6 +29,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -98,17 +99,17 @@ object AblageZentrale {
         val app = context.applicationContext
         val job = synchronized(laufend) {
             laufend[kennung] ?: bereich.async(start = CoroutineStart.LAZY) {
-                _arbeiten.value = _arbeiten.value.filter { it.kennung != kennung } + Hintergrundarbeit(kennung, art, eintragTitel, System.currentTimeMillis())
+                _arbeiten.update { l -> l.filter { it.kennung != kennung } + Hintergrundarbeit(kennung, art, eintragTitel, System.currentTimeMillis()) }
                 val wach = app.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:ablage")
                 runCatching { wach.acquire(30 * 60_000L) }
                 try {
                     arbeit().also { text ->
-                        _arbeiten.value = _arbeiten.value.filter { it.kennung != kennung }
+                        _arbeiten.update { l -> l.filter { it.kennung != kennung } }
                         Protokoll.melde(Quelle.JARVIS, art, text)
                     }
                 } catch (e: Exception) {
                     val text = fehlerText(e)
-                    _arbeiten.value = _arbeiten.value.map { if (it.kennung == kennung) it.copy(fehler = text) else it }
+                    _arbeiten.update { l -> l.map { if (it.kennung == kennung) it.copy(fehler = text) else it } }
                     Protokoll.melde(Quelle.JARVIS, art, text, ok = false)
                     throw AblageFehler(text)
                 } finally {
@@ -139,7 +140,7 @@ object AblageZentrale {
         }
 
     /** Fehlgeschlagene Bilderzeugung aus der Liste nehmen. */
-    fun verwerfeArbeit(kennung: String) { _arbeiten.value = _arbeiten.value.filter { it.kennung != kennung } }
+    fun verwerfeArbeit(kennung: String) = _arbeiten.update { l -> l.filter { it.kennung != kennung } }
 
     /** Vorschaubild anlegen (Bild, Video, PDF), damit die Liste es sofort zeigt. */
     fun nachDemSpeichern(context: Context, u: Uebernahme) {
