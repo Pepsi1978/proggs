@@ -33,16 +33,25 @@ interface Faehigkeit {
     val werkzeuge: List<Werkzeug>
     /** null = bereit, sonst der Grund in einem Satz. */
     fun stoerung(): String?
+    /** false = nur für Jarvis selbst und seine Agenten, nicht als Werkzeug in ChatGPT. */
+    val imPlugin: Boolean get() = true
 }
 
 object Register {
     @Volatile private var liste: List<Faehigkeit>? = null
 
     fun alle(context: Context): List<Faehigkeit> = liste ?: synchronized(this) {
-        liste ?: listOf(AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext)).also { liste = it }
+        liste ?: listOf(
+            AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext),
+            IdeenFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext),
+            WebFaehigkeit(context.applicationContext),
+        ).also { liste = it }
     }
 
     fun werkzeuge(context: Context): List<Werkzeug> = alle(context).flatMap { it.werkzeuge }
+
+    /** Nur was ChatGPT sehen soll. */
+    fun pluginWerkzeuge(context: Context): List<Werkzeug> = alle(context).filter { it.imPlugin }.flatMap { it.werkzeuge }
 }
 
 // ---- Kleine Helfer für JSON-Schemas ----

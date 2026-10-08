@@ -3,6 +3,8 @@ package de.frank.jarvis.mcp
 import android.content.Context
 import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.agent.JarvisAgent
+import de.frank.jarvis.agent.Agenten
+import de.frank.jarvis.faehigkeit.zahl
 import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.auswertung.Zeitplan
 import de.frank.jarvis.dienst.JarvisDienst
@@ -72,6 +74,85 @@ class McpServer(context: Context) {
             }
         },
         Werkzeug(
+            name = "tagesdaten_lesen",
+            titel = "Tagesdatenbank lesen",
+            beschreibung = "Jarvis: liest die Tagesdatenbank, also die Daten aller angebundenen Apps so, wie Jarvis sie bei der letzten Synchronisierung abgelegt hat: " +
+                "Rahmen der nächsten Tage (Dienst, Schlaf- und freie Zeiten), Termine, Biodaten des Tages, Biodaten im Vergleich, Trainings und alle offenen genialen Ideen. " +
+                "Ein Aufruf statt vieler einzelner. Nutze es, wenn du Rohdaten zum Nachdenken oder für Nachfragen brauchst. Aufgaben sind nicht enthalten, die liest du mit aufgaben_lesen frisch.",
+            schema = schema("bereich" to text("Ein Bereich oder alle (Vorgabe).", listOf("alle") + Tagesauswertung.BEREICHE.keys)),
+            nurLesen = true,
+        ) { a ->
+            val neueste = Tagesauswertung.neueste(app)
+            if (neueste == null) { JarvisDienst.auswerten(app, "erster Abruf"); Ergebnis("Die Tagesdatenbank wird gerade zum ersten Mal gefüllt. In ein bis drei Minuten erneut abrufen.") }
+            else Ergebnis(Tagesauswertung.tagesdaten(neueste, a.optString("bereich", "alle")))
+        },
+        Werkzeug(
+            name = "agenten_liste",
+            titel = "Agenten ansehen",
+            beschreibung = "Jarvis: nennt die Agenten, die Jarvis einsetzen kann (zum Beispiel Recherche, Machbarkeit und selbst angelegte), und welche gerade arbeiten.",
+            schema = schema(),
+            nurLesen = true,
+        ) {
+            val laufend = Agenten.laeufe.value
+            Ergebnis(buildString {
+                append("Agenten von Jarvis:\n")
+                Agenten.alle(app).forEach { append("- ").append(it.name).append(if (it.vorgegeben) " (eingebaut)" else " (selbst angelegt)").append(": ").append(it.rolle.take(220)).append('\n') }
+                if (laufend.isEmpty()) append("Gerade arbeitet kein Agent.")
+                else laufend.forEach { append("Arbeitet gerade: ").append(it.agent).append(" seit ").append((System.currentTimeMillis() - it.seit) / 60_000).append(" Minuten an „").append(it.auftrag.take(100)).append("“").append(if (it.schritt.isEmpty()) "" else ", aktueller Schritt: ${it.schritt}").append('\n') }
+            }.trim())
+        },
+        Werkzeug(
+            name = "agent_starten",
+            titel = "Agenten beauftragen",
+            beschreibung = "Jarvis: beauftragt einen Agenten von Jarvis mit einer längeren Arbeit, zum Beispiel einer Internet-Recherche („Jarvis, recherchiere, wie man … am besten baut“) " +
+                "oder einer Machbarkeitsprüfung einer Idee. Der Agent arbeitet mehrere Minuten selbstständig im Hintergrund auf Franks Handy (eigenes Modell, Internet-Suche, Zugriff auf Ideen, " +
+                "Aufgaben, Kalender, Biomarker), legt den Bericht in die Ablage und meldet sich per Benachrichtigung. Dieser Aufruf kehrt sofort zurück. " +
+                "Das Ergebnis holst du später mit ablage_liste und ablage_lesen. Mit per_mail wird der Bericht zusätzlich an Frank gemailt.",
+            schema = schema(
+                "agent" to text("Name des Agenten, zum Beispiel Recherche oder Machbarkeit (siehe agenten_liste)."),
+                "auftrag" to text("Der vollständige Auftrag mit allem Wissen aus dem Gespräch: Ziel, Rahmen, was Frank wichtig ist, gewünschte Form des Ergebnisses."),
+                "per_mail" to schalter("true = den fertigen Bericht zusätzlich per E-Mail an Frank schicken."),
+                pflicht = listOf("agent", "auftrag"),
+            ),
+            nurLesen = false,
+        ) { a ->
+            val plan = Agenten.finde(app, a.optString("agent"))
+            when {
+                plan == null -> Ergebnis("Diesen Agenten gibt es nicht. Vorhanden: " + Agenten.alle(app).joinToString { it.name } + ". Mit agent_anlegen lässt sich ein neuer bauen.", fehler = true)
+                a.optString("auftrag").isBlank() -> Ergebnis("Der Auftrag ist leer.", fehler = true)
+                !agent.verbunden -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden.", fehler = true)
+                Agenten.laeufe.value.size >= 2 -> Ergebnis("Es arbeiten schon zwei Agenten. Bitte warten, bis einer fertig ist.", fehler = true)
+                else -> {
+                    JarvisDienst.agentStarten(app, plan.name, a.optString("auftrag"), a.optBoolean("per_mail"))
+                    Ergebnis("Der Agent ${plan.name} arbeitet jetzt. Das dauert meist drei bis zehn Minuten. Der Bericht landet in der Ablage" + (if (a.optBoolean("per_mail")) " und kommt per E-Mail" else "") + "; Frank bekommt eine Benachrichtigung.")
+                }
+            }
+        },
+        Werkzeug(
+            name = "agent_anlegen",
+            titel = "Agenten bauen",
+            beschreibung = "Jarvis: baut einen neuen Agenten oder ändert einen vorhandenen. Ein Agent ist ein Name plus eine Rolle: die Anweisung, wie er an Aufträge herangeht, " +
+                "worauf er achtet und wie sein Ergebnis aussieht. Nutze es, wenn Frank sich einen Spezialisten wünscht (zum Beispiel „Trainingsplaner“, „Einkaufsvergleich“, „App-Architekt“). " +
+                "Formuliere die Rolle selbst ausführlich aus Franks Wunsch.",
+            schema = schema(
+                "name" to text("Kurzer Name, ein bis zwei Wörter."),
+                "rolle" to text("Die Rolle in fünf bis zehn Sätzen: Aufgabe, Vorgehen in Schritten, worauf zu achten ist, Form des Ergebnisses."),
+                pflicht = listOf("name", "rolle"),
+            ),
+            nurLesen = false,
+        ) { a ->
+            if (a.optString("name").isBlank() || a.optString("rolle").length < 40) Ergebnis("Name und eine ausführliche Rolle sind nötig.", fehler = true)
+            else Agenten.speichere(app, a.optString("name"), a.optString("rolle")).let { Ergebnis("Agent „${it.name}“ ist angelegt und kann mit agent_starten beauftragt werden.") }
+        },
+        Werkzeug(
+            name = "agent_loeschen",
+            titel = "Agenten löschen",
+            beschreibung = "Jarvis: löscht einen selbst angelegten Agenten. Die eingebauten Agenten bleiben.",
+            schema = schema("name" to text("Name des Agenten."), pflicht = listOf("name")),
+            nurLesen = false,
+            loeschend = true,
+        ) { a -> if (Agenten.loesche(app, a.optString("name"))) Ergebnis("Agent „${a.optString("name")}“ gelöscht.") else Ergebnis("Kein selbst angelegter Agent mit diesem Namen.", fehler = true) },
+        Werkzeug(
             name = "tagesauswertung_erstellen",
             titel = "Tagesauswertung neu erstellen",
             beschreibung = "Jarvis: stößt jetzt eine neue Tagesauswertung an (frische Biodaten holen, alles neu auswerten). Das dauert ein bis drei Minuten und läuft im Hintergrund; " +
@@ -114,7 +195,7 @@ class McpServer(context: Context) {
         },
     )
 
-    private fun alleWerkzeuge(): List<Werkzeug> = Register.werkzeuge(app) + eigene
+    private fun alleWerkzeuge(): List<Werkzeug> = Register.pluginWerkzeuge(app) + eigene
 
     /**
      * Verarbeitet einen HTTP-Rumpf. Rückgabe: Antwort-JSON oder null, wenn nichts zu antworten ist
@@ -177,7 +258,10 @@ class McpServer(context: Context) {
         append("Dies ist Jarvis, Franks persönlicher Assistent auf seinem Handy. Sagt Frank „Jarvis“ oder geht es um seine Aufgaben, Termine ")
         append("oder Erinnerungen, nutze diese Werkzeuge. Antworte danach kurz in einem Satz, was erledigt wurde, ohne ids vorzulesen. ")
         append("Fehlt eine nötige Angabe oder ist sie mehrdeutig, frage kurz nach, statt zu raten.\n")
-        Register.alle(app).forEach { append(it.name).append(": ").append(it.hinweise).append('\n') }
+        Register.alle(app).filter { it.imPlugin }.forEach { append(it.name).append(": ").append(it.hinweise).append('\n') }
+        append("Tagesdatenbank: Jarvis hält die Daten aller Apps mehrmals täglich fertig vor. Für einen Überblick genügt tagesauswertung_lesen oder tagesdaten_lesen; ")
+        append("die einzelnen Apps fragst du nur für Aktuelles (Aufgaben) oder Details ab.\n")
+        append("Agenten: Für Recherchen und längere Ausarbeitungen startest du mit agent_starten einen Agenten von Jarvis. Er arbeitet Minuten im Hintergrund und legt das Ergebnis in die Ablage.\n")
     }
 
     private fun inhalt(text: String, fehler: Boolean) = JSONObject()

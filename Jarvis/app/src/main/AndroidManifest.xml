@@ -32,6 +32,7 @@
         <provider android:authorities="de.frank.aufgaben.jarvis" />
         <provider android:authorities="de.frank.entropyreducer.debug.jarvis" />
         <provider android:authorities="de.frank.entropyreducer.jarvis" />
+        <provider android:authorities="de.frank.genialeideen.jarvis" />
     </queries>
 
     <application

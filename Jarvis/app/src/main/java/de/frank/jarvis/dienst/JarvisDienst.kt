@@ -19,6 +19,9 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import de.frank.jarvis.MainActivity
 import de.frank.jarvis.R
+import de.frank.jarvis.agent.Agenten
+import de.frank.jarvis.faehigkeit.Register
+import org.json.JSONObject
 import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.auswertung.Zeitplan
 import de.frank.jarvis.data.Einstellungen
@@ -72,7 +75,9 @@ class JarvisDienst : Service() {
         Tunnel.starte(e.serverHost, e.serverToken, e.geheimnis) { rumpf -> mcp.verarbeite(rumpf) }
         Tagesauswertung.lade(this)
         val anlass = intent?.getStringExtra(EXTRA_AUSWERTEN)
+        val agent = intent?.getStringExtra(EXTRA_AGENT)
         when {
+            agent != null -> lasseArbeiten(agent, intent.getStringExtra(EXTRA_AUFTRAG).orEmpty(), intent.getBooleanExtra(EXTRA_MAIL, false))
             anlass != null -> werteAus(anlass)
             // Verpasst (Handy war aus, App wurde beendet): nachholen, sobald der Dienst wieder läuft.
             verpasst() -> werteAus("nachgeholt, der geplante Lauf wurde verpasst")
@@ -86,6 +91,34 @@ class JarvisDienst : Service() {
         val letzte = Tagesauswertung.neueste(this)?.zeitpunkt
         // Nur nachholen, wenn der Lauf noch nicht lange her ist; sonst übernimmt der nächste geplante.
         return (letzte == null || letzte.isBefore(faellig)) && faellig.isAfter(LocalDateTime.now().minusHours(6))
+    }
+
+    /** Ein Agent arbeitet im Hintergrund, legt sein Ergebnis in die Ablage und meldet sich mit einer Benachrichtigung. */
+    private fun lasseArbeiten(name: String, auftrag: String, perMail: Boolean) {
+        val plan = Agenten.finde(this, name) ?: return
+        arbeit.launch {
+            val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:agent")
+            runCatching { wach.acquire(15 * 60_000L) }
+            try {
+                val titel = Agenten.fuehreAus(this@JarvisDienst, plan, auftrag)
+                var zusatz = ""
+                if (titel != null && perMail) {
+                    val senden = Register.werkzeuge(this@JarvisDienst).firstOrNull { it.name == "mail_senden" }
+                    val ergebnis = runCatching { senden?.ausfuehren(JSONObject().put("betreff", "Jarvis: $titel").put("ablage_datei", titel)) }.getOrNull()
+                    zusatz = if (ergebnis != null && !ergebnis.fehler) " Per E-Mail verschickt." else " E-Mail nicht möglich: ${ergebnis?.text ?: "nicht eingerichtet"}"
+                }
+                val text = if (titel != null) "„$titel“ liegt in der Ablage.$zusatz" else "Der Agent ${plan.name} ist nicht fertig geworden."
+                getSystemService(NotificationManager::class.java).notify(
+                    (System.currentTimeMillis() % 100_000).toInt() + 10,
+                    NotificationCompat.Builder(this@JarvisDienst, KANAL_ERGEBNIS).setSmallIcon(R.drawable.ic_stat_jarvis).setContentTitle("Jarvis: ${plan.name} fertig")
+                        .setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text)).setAutoCancel(true)
+                        .setContentIntent(PendingIntent.getActivity(this@JarvisDienst, 0, Intent(this@JarvisDienst, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+                        .build(),
+                )
+            } finally {
+                runCatching { if (wach.isHeld) wach.release() }
+            }
+        }
     }
 
     private fun werteAus(anlass: String) {
@@ -126,6 +159,18 @@ class JarvisDienst : Service() {
         private const val KANAL = "jarvis_dienst"
         private const val HINWEIS_ID = 1
         private const val EXTRA_AUSWERTEN = "auswerten"
+        private const val EXTRA_AGENT = "agent"
+        private const val EXTRA_AUFTRAG = "auftrag"
+        private const val EXTRA_MAIL = "mail"
+        private const val KANAL_ERGEBNIS = "jarvis_ergebnisse"
+
+        /** Beauftragt einen Agenten; die Arbeit läuft im Dienst weiter, auch wenn der Aufrufer längst fertig ist. */
+        fun agentStarten(context: Context, name: String, auftrag: String, perMail: Boolean) {
+            val app = context.applicationContext
+            runCatching {
+                ContextCompat.startForegroundService(app, Intent(app, JarvisDienst::class.java).putExtra(EXTRA_AGENT, name).putExtra(EXTRA_AUFTRAG, auftrag).putExtra(EXTRA_MAIL, perMail))
+            }.onFailure { Log.w("JarvisDienst", "Agent ließ sich nicht starten", it) }
+        }
 
         /** Beauftragt den Dienst mit einer Tagesauswertung (vom Wecker, aus der App oder aus dem Plugin). */
         fun auswerten(context: Context, anlass: String) {
@@ -139,6 +184,11 @@ class JarvisDienst : Service() {
                 NotificationChannel(KANAL, "Jarvis-Bereitschaft", NotificationManager.IMPORTANCE_LOW).apply {
                     description = "Zeigt, dass Jarvis für ChatGPT erreichbar ist."
                     setShowBadge(false)
+                },
+            )
+            context.getSystemService(NotificationManager::class.java).createNotificationChannel(
+                NotificationChannel(KANAL_ERGEBNIS, "Jarvis-Ergebnisse", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "Meldet, wenn ein Agent von Jarvis fertig ist."
                 },
             )
         }

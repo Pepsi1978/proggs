@@ -175,8 +175,32 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             Text("Die Deutung schreibt das oben gewählte Modell. Ohne Internet oder Anmeldung speichert Jarvis den reinen Datenbericht.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
         }
 
+        // ---------------------------------------------------------------- E-Mail
+        Abschnitt("E-Mail (Gmail)")
+        Karte {
+            val eingerichtet = e.mailPasswort.isNotBlank()
+            Zeile("Senden und Lesen", if (eingerichtet) "Eingerichtet" else "Nicht eingerichtet", if (eingerichtet) f.erfolg else f.textLeise)
+            Text("Jarvis braucht dafür ein App-Passwort deines Google-Kontos: Google-Konto → Sicherheit → Bestätigung in zwei Schritten → App-Passwörter, dort eines für „Jarvis“ erzeugen und die 16 Zeichen hier einfügen. Dein normales Passwort gehört nicht hierher.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            var adresse by rememberSaveable { mutableStateOf(e.mailAdresse) }
+            var passwort by rememberSaveable { mutableStateOf("") }
+            var empfaenger by rememberSaveable { mutableStateOf(e.mailEmpfaenger) }
+            Unterzeile("Deine Gmail-Adresse")
+            Eingabe(adresse, { adresse = it }, "name@gmail.com", Modifier.fillMaxWidth())
+            Unterzeile(if (eingerichtet) "App-Passwort (gespeichert; nur ausfüllen, um es zu ersetzen)" else "App-Passwort")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Eingabe(passwort, { passwort = it }, "16 Zeichen", Modifier.weight(1f), geheim = true)
+                Spacer(Modifier.width(8.dp))
+                Knopf("Einfügen", icon = Icons.Rounded.ContentPaste, haupt = false) { vm.ausZwischenablage().takeIf { it.isNotEmpty() }?.let { passwort = it } }
+            }
+            Unterzeile("Weitere erlaubte Empfänger (optional, mit Komma getrennt)")
+            Eingabe(empfaenger, { empfaenger = it }, "leer = Jarvis sendet nur an dich", Modifier.fillMaxWidth())
+            Knopf("Speichern", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.mailSpeichern(adresse, passwort, empfaenger); passwort = "" }
+            if (eingerichtet) Knopf("App-Passwort entfernen", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false, farbe = f.gefahr) { vm.mailEntfernen() }
+            Text("Jarvis sendet nur an dich und an die hier freigegebenen Adressen. E-Mails kommen nicht in die Tagesauswertung.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+
         // ---------------------------------------------------------------- Apps
-        Abschnitt("Angebundene Apps")
+        Abschnitt("Angebundene Apps und Fähigkeiten")
         Karte {
             Register.alle(activity).forEachIndexed { i, app ->
                 val stoerung = vm.stoerungen[app.id]
@@ -185,7 +209,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 Text(stoerung ?: app.beschreibung, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
                 if (app.id == "kalender" && stoerung != null) Knopf("Kalender-Zugriff erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.kalenderAnfragen() }
             }
-            Text("Weitere Apps wie Ideen und Journal lassen sich hier später andocken.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+            Text("Weitere Apps wie das Journal lassen sich hier später andocken.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         }
 
         // ---------------------------------------------------------------- System

@@ -195,6 +195,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun protokollLeeren() = Protokoll.leere()
 
+    // ---- E-Mail ----
+
+    fun mailSpeichern(adresse: String, passwort: String, empfaenger: String) {
+        einstellungen.mailAdresse = adresse
+        // Leeres Feld heißt: das gespeicherte Passwort behalten.
+        if (passwort.isNotBlank()) einstellungen.mailPasswort = passwort
+        einstellungen.mailEmpfaenger = empfaenger
+        lagePruefen()
+        meldung = "E-Mail-Einstellungen gespeichert."
+    }
+
+    fun mailEntfernen() {
+        einstellungen.mailPasswort = ""
+        lagePruefen()
+        meldung = "App-Passwort entfernt."
+    }
+
     // ---- Tagesauswertung ----
 
     fun auswertungJetzt() {

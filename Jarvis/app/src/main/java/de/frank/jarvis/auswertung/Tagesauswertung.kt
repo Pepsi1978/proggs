@@ -7,6 +7,7 @@ import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.BiomarkerFaehigkeit
+import de.frank.jarvis.faehigkeit.IdeenFaehigkeit
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
 import java.io.File
@@ -113,7 +114,7 @@ object Tagesauswertung {
             val agent = JarvisAgent(app)
             val einstellungen = Einstellungen.get(app)
             val text = runCatching {
-                agent.versuche(auftrag(daten), zeitlimitMs = 5 * 60_000L, maxSchritte = 3) { schritt("Jarvis prüft nach: $it") }
+                agent.versuche(auftrag(daten), zeitlimitMs = 5 * 60_000L, maxSchritte = 3, beiSchritt = { schritt("Jarvis prüft nach: $it") })
             }.onFailure { Log.w(TAG, "Modell fehlgeschlagen", it) }.getOrNull()?.trim()?.takeIf { it.length > 200 }
 
             val fertig = Auswertung(
@@ -168,6 +169,9 @@ object Tagesauswertung {
             append("== TRAININGS DER LETZTEN 14 TAGE ==\n")
             append(rufe("trainings_lesen", JSONObject().put("von", heute.minusDays(14).toString()).put("limit", 20))).append("\n\n")
 
+            append("== GENIALE IDEEN (offen, gekürzt) ==\n")
+            append(runCatching { alle.filterIsInstance<IdeenFaehigkeit>().firstOrNull()?.ueberblick() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+
             append("== OFFENE AUFGABEN (nur Stand jetzt, ändert sich laufend) ==\n")
             append(rufe("aufgaben_lesen", JSONObject().put("bereich", "heute"))).append('\n')
             append(rufe("aufgaben_lesen", JSONObject().put("bereich", "morgen")))
@@ -186,6 +190,7 @@ Unten stehen alle Daten, bereits fertig gerechnet. Regeln:
 - Schlaf nach einem Nachtdienst ist Tagschlaf und fällt oft kürzer aus; am Tag nach dem letzten Nachtdienst ist eine kurze Schlafdauer erwartbar und kein schlechtes Zeichen. Vergleiche das vorsichtig mit den Durchschnitten, die überwiegend Nachtschlaf enthalten.
 - Schichtlogik: Nach einem Nachtdienst schläft Frank tagsüber etwa von 6 bis 15 Uhr. Schlafwerte gehören zu dem Tag, an dem der Schlaf endet. Steht für heute noch kein Schlafwert da, obwohl er laut Rahmen noch schläft oder gerade erst aufgestanden ist, ist das normal und kein schlechter Wert. Tagesbelastung, Energieumsatz und Schritte des laufenden Tages sind Zwischenstände.
 - Stelle den heutigen Tag in den Vordergrund und ordne ihn gegen 7 Tage, den letzten Monat und alle bisherigen Tage ein. Nenne nur die Zahlen, die etwas aussagen: zuerst, was auffällig besser oder schlechter ist, dann kurz das Unauffällige in einem Satz. Keine Aufzählung aller Messgrößen.
+- Die Liste GENIALE IDEEN ist nur Hintergrundwissen. Zähle die Ideen nicht auf; greife höchstens eine auf, wenn sie heute wirklich passt (freier Tag, gute Erholung).
 - Keine medizinischen Diagnosen. Empfehlungen konkret und alltagsnah (Belastung, Schlaf, Erholung, Training).
 - Du darfst höchstens zwei Werkzeuge zusätzlich aufrufen, und nur wenn ein auffälliger Wert einen Blick in den Verlauf braucht. Meist ist das nicht nötig.
 
@@ -200,6 +205,22 @@ AUSBLICK: Die nächsten Tage in drei bis fünf Sätzen: kommende Dienste und fre
 DATEN:
 $daten
 """.trim()
+
+    /** Die Bereiche der Tagesdatenbank: Kurzname → Anfang der Abschnittsüberschrift. */
+    val BEREICHE = linkedMapOf(
+        "rahmen" to "RAHMEN", "termine" to "TERMINE", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
+        "trainings" to "TRAININGS", "ideen" to "GENIALE IDEEN",
+    )
+
+    /** Ein oder alle Bereiche der zuletzt gespeicherten Tagesdaten. Aufgaben fehlen bewusst: Sie werden immer frisch gelesen. */
+    fun tagesdaten(a: Auswertung, bereich: String): String {
+        val abschnitte = a.daten.substringBefore("== OFFENE AUFGABEN").split(Regex("(?m)^== ")).drop(1).map { "== $it".trim() }
+        val gesucht = BEREICHE[bereich.trim().lowercase(Locale.GERMAN)]
+        val teile = if (gesucht == null) abschnitte else abschnitte.filter { it.startsWith("== $gesucht") }
+        val minuten = java.time.Duration.between(a.zeitpunkt, LocalDateTime.now()).toMinutes()
+        return "TAGESDATENBANK, Stand " + a.zeitpunkt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM, HH:mm 'Uhr'", Locale.GERMAN)) +
+            " (vor " + (if (minuten < 90) "$minuten Minuten" else "${minuten / 60} Stunden") + ").\n\n" + teile.joinToString("\n\n").ifEmpty { "Dieser Bereich ist nicht vorhanden." }
+    }
 
     /** Der Text, den ein Abruf bekommt: Auswertung, Datenanhang und Alter. Aufgaben hängt der Aufrufer frisch an. */
     fun alsText(a: Auswertung, mitDaten: Boolean): String = buildString {

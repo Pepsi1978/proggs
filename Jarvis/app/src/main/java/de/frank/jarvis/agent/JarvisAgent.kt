@@ -54,13 +54,16 @@ class JarvisAgent(context: Context) {
         zeitlimitMs: Long = 120_000,
         maxSchritte: Int = 8,
         beiSchritt: (String) -> Unit = {},
+        rolle: String? = null,
+        mitInternet: Boolean = false,
     ): String? {
         if (!auth.isConnected) return null
-        val werkzeuge = Register.werkzeuge(app)
+        val faehigkeiten = Register.alle(app).filter { mitInternet || it.id != "web" }
+        val werkzeuge = faehigkeiten.flatMap { it.werkzeuge }
         val zuege = (verlauf.takeLast(12) + ChatTurn("user", auftrag)).toMutableList()
         val ergebnis = withTimeoutOrNull<String?>(zeitlimitMs) {
             repeat(maxSchritte) {
-                val roh = auth.streamChat(anweisung(), zuege, einstellungen.modell, einstellungen.denkstufe)
+                val roh = auth.streamChat(anweisung(faehigkeiten, rolle), zuege, einstellungen.modell, einstellungen.denkstufe)
                 val schritt = lies(roh)
                 val name = schritt?.optString("werkzeug").orEmpty()
                 if (schritt == null || name.isEmpty()) {
@@ -85,11 +88,11 @@ class JarvisAgent(context: Context) {
         return ergebnis
     }
 
-    private fun anweisung(): String {
+    private fun anweisung(faehigkeiten: List<de.frank.jarvis.faehigkeit.Faehigkeit>, rolle: String?): String {
         val jetzt = LocalDateTime.now()
         val datum = jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))
-        val faehigkeiten = Register.alle(app)
         return buildString {
+            if (rolle != null) append(rolle).append("\n\n")
             append("Du bist Jarvis, Franks persönlicher Assistent auf seinem Handy. Du sprichst Frank mit „du“ an, antwortest kurz, ")
             append("klar und freundlich in gutem Deutsch, so dass man es gut vorlesen kann (keine Listenzeichen, kein Markdown, keine ids).\n")
             append("Jetzt ist ").append(datum).append(" (ISO-Datum ").append(jetzt.toLocalDate()).append(").\n\n")

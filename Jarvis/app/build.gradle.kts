@@ -17,6 +17,9 @@ val relay = Properties().apply {
     File(System.getProperty("user.home"), "SK/Jarvis/relay.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
+// Suchschlüssel für die Internet-Recherche der Agenten (Tavily), ebenfalls nur aus ~/SK.
+val tavilyKey = File(System.getProperty("user.home"), "SK/Tavily/tavily-api-key.txt").takeIf { it.exists() }?.readText()?.trim().orEmpty()
+
 android {
     namespace = "de.frank.jarvis"
     compileSdk = 36
@@ -30,6 +33,7 @@ android {
         buildConfigField("String", "VERSION_BUMPED_AT", "\"${versionslogAktuell["stand"]}\"")
         buildConfigField("String", "RELAY_HOST", "\"${relay.getProperty("host", "")}\"")
         buildConfigField("String", "RELAY_TOKEN", "\"${relay.getProperty("token", "")}\"")
+        buildConfigField("String", "TAVILY_KEY", "\"$tavilyKey\"")
     }
 
     // Gemeinsamer Debug-Key aller Apps (liegt nicht im Git, sondern unter ~/SK/Android/, in der Cloud legt ihn der
@@ -58,7 +62,7 @@ android {
         buildConfig = true
     }
 
-    packaging.resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    packaging.resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/NOTICE.md", "META-INF/LICENSE.md")
 }
 
 kotlin {
@@ -84,4 +88,8 @@ dependencies {
     implementation(libs.security.crypto)
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+
+    // E-Mail über Gmail (SMTP senden, IMAP lesen).
+    implementation("com.sun.mail:android-mail:1.6.7")
+    implementation("com.sun.mail:android-activation:1.6.7")
 }

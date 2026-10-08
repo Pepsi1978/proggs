@@ -11,7 +11,8 @@ Version 1 kann zwei Dinge:
    Denkstufe sind wählbar. Es bedient dieselben Werkzeuge selbstständig.
 
 Angebundene Apps: **Geniale Aufgaben** (`de.frank.aufgaben`, lesen und schreiben) und der Biomarker-Bereich von
-**Entropie Reductor** (`de.frank.entropyreducer`, nur lesen) sowie der **Kalender** des Handys (alle synchronisierten
+**Entropie Reductor** (`de.frank.entropyreducer`, nur lesen) , **Geniale Ideen** (`de.frank.genialeideen`, lesen und schreiben)
+sowie der **Kalender** des Handys (alle synchronisierten
 Kalender, also auch Google; nur lesen, Android-Erlaubnis `READ_CALENDAR`).
 
 ## Aufbau
@@ -64,6 +65,11 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 | `biomarker_katalog` | Alle Messgrößen mit Einheit, Quelle und Zeitraum |
 | `kalender_lesen` | Termine Tag für Tag mit Dienst-Zeile; mit Suchwort bis ein Jahr voraus |
 | `dienstplan_lesen` | Je Tag Nachtdienst, Tagdienst, frei oder Urlaub mit Abfahrtszeit, nächster Dienst, nächste freie Tage |
+| `ideen_lesen`, `idee_lesen`, `idee_anlegen`, `idee_aendern`, `idee_loeschen` | Geniale Ideen; neue Ideen glättet die Ideen-App selbst mit ihrer KI |
+| `ablage_liste`, `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen` | Eigene Textdateien von Jarvis (Recherchen, Ausarbeitungen, Notizen) |
+| `agenten_liste`, `agent_starten`, `agent_anlegen`, `agent_loeschen` | Agenten, die im Hintergrund arbeiten und ihr Ergebnis in die Ablage legen |
+| `mail_senden`, `mail_lesen`, `mail_details` | Gmail über App-Passwort; senden nur an freigegebene Empfänger |
+| `tagesdaten_lesen` | Die Tagesdatenbank: alle Daten der letzten Synchronisierung, ganz oder je Bereich |
 | `tagesauswertung_lesen` | Die fertige Tagesauswertung samt frisch gelesenen Aufgaben; veraltete Fassungen werden nie als aktuell ausgegeben |
 | `tagesauswertung_erstellen` | Stößt eine neue Auswertung im Hintergrund an (ein bis drei Minuten) |
 | `jarvis_status` | Erreichbarkeit, Datum und Uhrzeit auf dem Handy, angebundene Apps |
@@ -94,6 +100,31 @@ veraltete Fassung vor, liefert der Abruf sofort einen frischen Datenbericht und 
 
 Grenzen: Nach „Stopp erzwingen“ gehen Wecker verloren, bis die App einmal geöffnet wird. Die Vergleiche trennen
 nicht zwischen Nacht- und Tagschlaf; das Modell bekommt dazu nur eine Regel mit.
+
+## Tagesdatenbank
+
+Bei jeder Tagesauswertung (also zu den drei Uhrzeiten) legt Jarvis die gesammelten Daten aller Apps ab: Rahmen der
+nächsten Tage, Termine, Biodaten des Tages und im Vergleich, Trainings und alle offenen Ideen (gekürzt). Das Werkzeug
+`tagesdaten_lesen` gibt sie ganz oder je Bereich zurück. Aufgaben sind nicht enthalten, sie werden immer frisch gelesen.
+Die einzelnen Werkzeuge der Apps lesen weiterhin live vom Handy; die Tagesdatenbank spart die vielen Einzelaufrufe.
+
+## Ablage und Agenten
+
+- **Ablage** (`faehigkeit/AblageFaehigkeit.kt`): Markdown-Dateien unter `filesDir/ablage/`, die Jarvis anlegt, liest
+  und löscht.
+- **Agenten** (`agent/Agenten.kt`): Ein Agent ist ein Name plus eine Rolle. Eingebaut sind „Recherche“ und
+  „Machbarkeit“; mit `agent_anlegen` entstehen weitere (Dateien unter `filesDir/agenten/`). `agent_starten` kehrt
+  sofort zurück; der Lauf (höchstens 14 Schritte, 12 Minuten) passiert im Dienst mit dem eigenen Modell, den
+  Werkzeugen aller Apps und der Internet-Suche. Das Ergebnis landet in der Ablage, auf Wunsch zusätzlich per Mail,
+  und eine Benachrichtigung meldet es.
+- **Internet-Suche** (`faehigkeit/WebFaehigkeit.kt`): Tavily, Schlüssel aus `~/SK/Tavily/tavily-api-key.txt` (beim Bau
+  eingebacken). Nur für Jarvis und seine Agenten, nicht im ChatGPT-Plugin.
+
+## E-Mail
+
+`faehigkeit/MailFaehigkeit.kt`: Gmail über SMTP (senden) und IMAP (lesen) mit einem App-Passwort, das Frank in den
+Einstellungen einträgt. Gesendet wird nur an die eigene Adresse und an ausdrücklich freigegebene Empfänger. Der Inhalt
+eingegangener Mails wird den Modellen als fremde Information gekennzeichnet, nie als Anweisung.
 
 ## Dienstplan
 

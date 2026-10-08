@@ -14,6 +14,11 @@
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <uses-feature android:name="android.hardware.fingerprint" android:required="false" />
 
+    <!-- Nur Apps mit demselben Signierschlüssel (Jarvis) dürfen Ideen lesen und schreiben. -->
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+
     <application
         android:largeHeap="true"
         android:hardwareAccelerated="true"
@@ -71,5 +76,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/dateien" />
         </provider>
+        <!-- Brücke zu Jarvis: Ideen lesen und schreiben, durch die Signatur-Erlaubnis geschützt. -->
+        <provider
+            android:name=".bridge.JarvisBruecke"
+            android:authorities="de.frank.genialeideen.jarvis"
+            android:permission="de.frank.jarvis.permission.BRUECKE"
+            android:exported="true" />
     </application>
 </manifest>

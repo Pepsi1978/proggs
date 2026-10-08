@@ -69,6 +69,17 @@ class Einstellungen private constructor(context: Context) {
         return neu
     }
 
+    // ---- E-Mail (Gmail mit App-Passwort) ----
+    var mailAdresse: String get() = s("mail_adresse", "barwandt@gmail.com"); set(v) = put { putString("mail_adresse", v.trim()) }
+    var mailPasswort: String get() = s("mail_passwort", ""); set(v) = put { putString("mail_passwort", v.trim()) }
+    /** Weitere Adressen, an die Jarvis senden darf (durch Komma getrennt). Die eigene ist immer erlaubt. */
+    var mailEmpfaenger: String get() = s("mail_empfaenger", ""); set(v) = put { putString("mail_empfaenger", v.trim()) }
+
+    // ---- Internet-Recherche der Agenten ----
+    var suchSchluessel: String
+        get() = s("such_schluessel", "").ifEmpty { BuildConfig.TAVILY_KEY }
+        set(v) = put { putString("such_schluessel", v.trim()) }
+
     // ---- Tagesauswertung ----
     var auswertungAn: Boolean get() = prefs.getBoolean("auswertung_an", true); set(v) = put { putBoolean("auswertung_an", v) }
     /** Bis zu drei Uhrzeiten als „HH:MM,HH:MM,HH:MM“. */
