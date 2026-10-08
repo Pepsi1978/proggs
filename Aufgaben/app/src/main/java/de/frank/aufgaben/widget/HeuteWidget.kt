@@ -165,8 +165,9 @@ class HeuteWidget : GlanceAppWidget() {
             Text(
                 beschriftung.orEmpty(),
                 style = TextStyle(
-                    color = if (istJetzt) f.akzent else if (vorbei) f.vorbei else f.leise,
-                    fontSize = 11.sp, fontWeight = if (istJetzt) FontWeight.Bold else FontWeight.Normal,
+                    // Alles vor der Jetzt-Linie ist grau, auch die Stundenzahl der laufenden Stunde.
+                    color = if (vorbei) f.vorbei else if (istJetzt) f.akzent else f.leise,
+                    fontSize = 11.sp, fontWeight = if (istJetzt && !vorbei) FontWeight.Bold else FontWeight.Normal,
                 ),
                 modifier = GlanceModifier.width(40.dp).padding(top = 1.dp),
             )

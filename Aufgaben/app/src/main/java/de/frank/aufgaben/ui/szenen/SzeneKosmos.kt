@@ -250,7 +250,8 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
         drawLine(stuhlF.dunkler(0.15f), Offset(stuhlX, boden - h * 0.045f), Offset(stuhlX + dx * h, boden - h * 0.02f), 4f, StrokeCap.Round)
         drawCircle(Color(0xFF1A1F2E), h * 0.011f, Offset(stuhlX + dx * h, boden - h * 0.01f))
     }
-    drawLine(Color(0xFF9AA3B8), Offset(stuhlX, boden - h * 0.045f), Offset(stuhlX, boden - h * 0.2f), 4f)
+    // Stange zwischen Fußkreuz und Sitz in Stuhlfarbe, kräftig genug, dass man den Stuhl als Stuhl erkennt
+    drawLine(stuhlF.dunkler(0.1f), Offset(stuhlX, boden - h * 0.045f), Offset(stuhlX, boden - h * 0.22f), 8f)
     drawRoundRect(stuhlF.dunkler(0.2f), Offset(stuhlX - h * 0.018f, boden - h * 0.12f), Size(h * 0.036f, h * 0.06f), CornerRadius(4f))
     // Lehne mit Träger, fest – links, auf der von der Tastatur abgewandten Seite
     drawLine(stuhlF.dunkler(0.1f), Offset(stuhlX - h * 0.06f, boden - h * 0.23f), Offset(stuhlX - h * 0.095f, boden - h * 0.3f), 5f, StrokeCap.Round)
@@ -266,6 +267,8 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     val sitzY = boden - h * 0.24f
     val pultY = (oben[0].y + oben[3].y) / 2f
     val pultKatzeX = w * 0.2f
+    val katzeAbX = w * 0.47f
+    val katzeFensterX = fm.x - fr * 0.2f
     val tatzen = maxOf(0f, sin((t - 13.6f) * 6f)) * weich(an(t, 13.6f, 0.4f)) * (1f - weich(an(t, 16f, 0.4f)))
     when {
         t < 2.5f -> Unit
@@ -273,16 +276,20 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
         t < 5.2f -> { val q = an(t, 4.6f, 0.6f); katze(mix(stuhlX - h * 0.1f, stuhlX, weich(q)), mix(boden, sitzY, q), cs, mix(1f, -1f, weich(q)), 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.08f) }
         t < 12.6f -> katze(stuhlX, sitzY, cs, -1f, 1, 0f, t, katzeF)
         t < 13.4f -> { val q = an(t, 12.6f, 0.8f); katze(mix(stuhlX, pultKatzeX, weich(q)), mix(sitzY, pultY, q), cs, -1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.15f) }
-        // Erst zum Pult, dann zur Rakete schauen, zum Gehen wieder nach links drehen
-        t < 33.4f -> katze(pultKatzeX, pultY, cs, if (t < 32.8f) mix(-1f, 1f, weich(an(t, 16.4f, 0.6f))) else mix(1f, -1f, weich(an(t, 32.8f, 0.6f))), 1, 0f, t, katzeF, pfote = tatzen)
-        t < 34f -> { val q = an(t, 33.4f, 0.6f); katze(mix(pultKatzeX, w * 0.12f, weich(q)), mix(pultY, boden, q), cs, -1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.08f) }
-        else -> katze(mix(w * 0.12f, -0.25f * w, an(t, 34.2f, 2.4f)), boden, cs, -1f, 0, t * 10f, t, katzeF)
+        // Erst zum Pult schauen, dann zum Fenster drehen
+        t < 17.6f -> katze(pultKatzeX, pultY, cs, mix(-1f, 1f, weich(an(t, 16.4f, 0.6f))), 1, 0f, t, katzeF, pfote = tatzen)
+        // Zum Start: vom Pult springen, der Person ans Fenster folgen, sich davor setzen und mit hinausschauen
+        t < 18.4f -> { val q = an(t, 17.6f, 0.8f); katze(mix(pultKatzeX, katzeAbX, weich(q)), mix(pultY, boden, q), cs, 1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.1f) }
+        t < 20.6f -> katze(mix(katzeAbX, katzeFensterX, weich(an(t, 18.4f, 2.2f))), boden, cs, 1f, 0, t * 10f, t, katzeF)
+        t < 32.8f -> katze(katzeFensterX, boden, cs, mix(1f, -1f, weich(an(t, 32.2f, 0.6f))), 1, 0f, t, katzeF)
+        else -> katze(mix(katzeFensterX, -0.25f * w, an(t, 32.8f, 4.6f)), boden, cs, -1f, 0, t * 10f, t, katzeF)
     }
 
     // Person: kommt, drückt im Wechsel die Knöpfe, dreht sich zum Fenster, Countdown, Start, Jubel, Winken, geht
     val mf = MenschFarben(Color(0xFFD9B08C), Color(0xFF1E2230), lerp(f.primaer, Color(0xFFDDE3EE), 0.45f), Color(0xFF2A3350), Color(0xFF1A1F2E))
     val blink = blinzelt(t)
     val pultX = w * 0.44f
+    val fensterX = fm.x - fr * 0.72f
     val pose = choreo(t, s, listOf(
         Takt(0f) { gehen(mix(-0.12f * w, pultX, an(it, 2.5f, 2.9f)), boden, 1f, it * 8.5f, blink) },
         Takt(5.6f) {
@@ -293,10 +300,13 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
             Pose(pultX, boden, -1f, lean = 22f, sL = 38f - (if (links) 7f * druck else 0f), eL = 22f - (if (links) 10f * druck else 0f), sR = 42f - (if (!links) 7f * druck else 0f), eR = 20f - (if (!links) 10f * druck else 0f), kopf = 12f, blinzeln = blink)
         },
         Takt(15.6f) { Pose(pultX, boden, 1f, lean = 6f, sR = 20f, eR = 100f, sL = 10f, eL = 20f, kopf = -4f, lachen = 0.2f, blinzeln = blink) },
-        Takt(startZeit + 0.4f) { Pose(pultX, boden - huepfen(it, startZeit + 0.8f, startZeit + 5f, 0.07f * s), 1f, sL = 170f, eL = 6f, sR = 160f, eR = 10f, lachen = 1f, blinzeln = blink) },
-        Takt(startZeit + 5.2f) { Pose(pultX, boden, 1f, sR = 140f + sin(it * 5f) * 18f * (1f - weich(an(it, startZeit + 9f, 1f))), eR = 40f, sL = 8f, eL = 10f, lachen = 0.85f, blinzeln = blink) },
-        Takt(startZeit + 10.5f) { Pose(pultX, boden, 1f, sR = 8f, eR = 12f, sL = 8f, eL = 10f, kopf = -3f, lachen = 0.8f, blinzeln = blink) },
-        Takt(33.6f) { gehen(mix(pultX, -0.15f * w, an(it, 33.6f, 4.6f)), boden, -1f, it * 8.5f, blink) },
+        // Zum Countdown ans Fenster gehen und hinausschauen; Jubel und Winken dort
+        Takt(17.2f) { gehen(mix(pultX, fensterX, an(it, 17.2f, 2.2f)), boden, 1f, it * 8.5f, blink) },
+        Takt(19.4f) { Pose(fensterX, boden, 1f, lean = 4f, sR = 12f, eR = 30f, sL = 8f, eL = 12f, kopf = -8f, lachen = 0.3f, blinzeln = blink) },
+        Takt(startZeit + 0.4f) { Pose(fensterX, boden - huepfen(it, startZeit + 0.8f, startZeit + 5f, 0.07f * s), 1f, sL = 170f, eL = 6f, sR = 160f, eR = 10f, lachen = 1f, blinzeln = blink) },
+        Takt(startZeit + 5.2f) { Pose(fensterX, boden, 1f, sR = 140f + sin(it * 5f) * 18f * (1f - weich(an(it, startZeit + 9f, 1f))), eR = 40f, sL = 8f, eL = 10f, kopf = -8f, lachen = 0.85f, blinzeln = blink) },
+        Takt(startZeit + 10.5f) { Pose(fensterX, boden, 1f, sR = 8f, eR = 12f, sL = 8f, eL = 10f, kopf = -6f, lachen = 0.8f, blinzeln = blink) },
+        Takt(33f) { gehen(mix(fensterX, -0.15f * w, an(it, 33f, 5.2f)), boden, -1f, it * 8.5f, blink) },
     ))
     mensch(pose, s, mf)
 
