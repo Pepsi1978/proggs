@@ -23,6 +23,7 @@
 | 9 | ⭐ vLLM ≥ 0.12 und alte `guided_*`-Parameter | Auf `structured_outputs`-Wrapper migrieren | §21 |
 | 10 | ⭐ llama.cpp Tool-Arguments sind Objekt statt String | Build nach PR #20213 nutzen; clientseitig defensiv stringifizieren | §10 |
 | 11 | Ollama >8k Kontext | v0.30.9 Context Shift kennen; trotzdem `num_ctx` außerhalb `/v1` setzen | §5 |
+| 12 | ⭐ EmbeddingGemma 2 lokal (llama.cpp/Ollama/sentence-transformers) | Nie float16 (NaN/still falsche Vektoren) → bfloat16/float32/Q8_0; llama.cpp-Build ≥ b11454; Präfixe selbst setzen; TEI kann es noch nicht | §22–§26 |
 
 ---
 
@@ -148,6 +149,44 @@
 
 ### 20. textgen-webui: `/v1/models` liefert „wrong models"
 - **FIX:** geladenes Modell explizit per Name ansprechen, Listing nicht als Wahrheit.
+
+---
+
+## J) Embedding-Modelle lokal: EmbeddingGemma 2 (Stand 08.10.2026)
+
+> Versions-Anker: `google/embeddinggemma-2` (veröffentlicht 06.10.2026, 740M Parameter, Text-Kern 270M,
+> 768 Dimensionen, 8.192 Token, Apache 2.0). Recherche 08.10.2026 (Engine C, Sonnet-Schwarm), Modell
+> war zwei Tage alt — Bibliotheks-Unterstützung vor Einsatz neu prüfen.
+
+### 22. float16 liefert NaN oder still verfälschte Vektoren
+- **Symptom:** Embeddings enthalten NaN oder die Suche wird ohne Fehlermeldung schlechter.
+- **Ursache:** Aktivierungsbereich des Modells übersteigt float16; bei langen Eingaben läuft zusätzlich das Mean-Pooling über.
+- **Betroffen:** EmbeddingGemma 2 (und schon EmbeddingGemma 300M); Unsloth bietet trotzdem eine F16-GGUF-Datei an.
+- **FIX:** bfloat16 oder float32 laden, bei GGUF Q8_0 oder BF16 statt F16. Nach dem Einbetten jeden Vektor auf 768 endliche Werte prüfen.
+- **Quelle:** https://huggingface.co/google/embeddinggemma-2 (offiziell); https://github.com/unslothai/unsloth/pull/12865 (extern)
+
+### 23. Alte Bibliotheksstände kennen das Modell nicht oder rechnen falsch
+- **Symptom:** llama.cpp lädt das Modell nicht (Architektur `gemma-embedding2` unbekannt); sentence-transformers ignoriert die Reihenfolge multimodaler Eingaben.
+- **Betroffen:** llama.cpp vor PR #30054 (Build < b11454); sentence-transformers < 6.1.0.
+- **FIX:** llama.cpp-Abbild auf einen Build ≥ b11454 pinnen, sentence-transformers ≥ 6.1.0, Modell-Revision pinnen.
+- **Quelle:** https://github.com/ggml-org/llama.cpp/pull/30054 (offiziell); https://huggingface.co/google/embeddinggemma-2 (offiziell)
+
+### 24. Präfixe fehlen oder Titel geht verloren
+- **Symptom:** Suchqualität deutlich schlechter als erwartet.
+- **Ursache:** Das Modell erwartet Aufgaben-Präfixe im Text; llama-server und Ollama setzen sie nicht belegbar selbst. Der sentence-transformers-Prompt `Document` schreibt immer `title: none`.
+- **FIX:** Präfixe clientseitig setzen: Anfrage `task: search result | query: …`, Dokument `title: <Titel oder none> | text: …`. Bei vorhandenem Titel den Text selbst formatieren statt `prompt_name="Document"`.
+- **Quelle:** https://huggingface.co/google/embeddinggemma-2 (offiziell)
+
+### 25. Überlange Texte und widersprüchliche Kontextangabe
+- **Symptom:** Ollama bzw. llama-server melden bei langen Dokumenten einen Fehler statt zu kürzen; die Ollama-Bibliotheksseite nennt 256K und 8K Kontext zugleich.
+- **FIX:** Texte vor dem Aufruf selbst auf ≤ 8.192 Token stückeln; Kontext mit `ollama show` prüfen, nicht der Webseite glauben.
+- **Quelle:** https://ollama.com/library/embeddinggemma-2 (offiziell, widersprüchlich); https://github.com/nathanwhyte/homelab/pull/189 (extern)
+
+### 26. Bild-Einbettung über llama-server und TEI geht nicht
+- **Symptom:** `/embedding` mit `image_data` ignoriert Bilder still, `/v1/embeddings` mit Bild liefert 400, `/embeddings` mit `multimodal_data` 500. Hugging Face TEI lädt das Modell gar nicht.
+- **Betroffen:** llama.cpp Issue #30082 („Closed as not planned“); TEI-Upstream ohne Gemma-4-Unterstützung (Stand 08.10.2026).
+- **FIX:** Für Bilder/Audio sentence-transformers ≥ 6.1.0 nehmen; llama-server nur für reinen Text. TEI vorerst meiden.
+- **Quelle:** https://github.com/ggml-org/llama.cpp/issues/30082 (offiziell); https://github.com/michaelfeil/candle/pull/9 (extern)
 
 ---
 

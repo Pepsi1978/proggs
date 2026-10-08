@@ -20,3 +20,4 @@
 | 6 | `logprobs`/`n` fehlen | Ueber `/v1` still verworfen → native API | §14, §15 |
 | 7 | "model not found" | Modell pullen/laden; vLLM `--served-model-name`, `/v1/models` | §7, §18 |
 | 8 | json_schema+grammar-Fehler | llama.cpp: nur EINS angeben, nicht beides | §13 |
+| 12 | ⭐ EmbeddingGemma 2 lokal (llama.cpp/Ollama/sentence-transformers) | Nie float16 (NaN/still falsche Vektoren) → bfloat16/float32/Q8_0; llama.cpp-Build ≥ b11454; Präfixe selbst setzen; TEI kann es noch nicht | §22–§26 |

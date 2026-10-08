@@ -21,6 +21,7 @@
 | 7 | Caching/Token | Wiederkehrendes an Prompt-Anfang; `system_instruction` | §7 |
 | 8 | Streaming/Limits | `?alt=sse`; Backoff bei 429; Billing aktiv | §8 |
 | 9 | Embeddings (mehrere Texte) | **Modell-abhängig!** `-001`: `contents=[…]` batchen → N Vektoren. `gemini-embedding-2`: Liste → 1 AGGREGIERTER Vektor → pro Text 1 Call; `task_type` weg → Text-Präfixe | §9 |
+| 15 | Embedding-Modell wechseln (z. B. auf lokales EmbeddingGemma 2) | Erst am eigenen Bestand messen; `gemini-embedding-2` liegt 8,5 MTEB-Punkte vorn und kostet bei kleinem Bestand < 1 $/Monat; Wechsel = neue Collection + alles neu einbetten | §11 |
 
 ## 1. SDK & Client
 - Ausschliesslich das einheitliche SDK `google-genai` (Py) / `@google/genai` (JS) / `google.golang.org/genai` (Go) verwenden; Init ueber `client = genai.Client(api_key=...)` bzw. `genai.Client(vertexai=True, project=..., location=...)`. Altes SDK ist deprecated. Quelle: https://ai.google.dev/gemini-api/docs/libraries · offiziell
@@ -107,6 +108,32 @@ halten, Mikro naeher ans Gesicht, Uebersteuerung vermeiden ("avoid severe clippi
 Lautstaerke-Normalisierung hebt Nutzsignal UND Rauschen und bringt wenig; echte Rauschunterdrueckung
 bzw. AGC vor der Aufnahme ist der eigentliche Hebel.
 
+## 11. Embedding-Modellwahl: gemini-embedding-2 (gehostet) gegen EmbeddingGemma 2 (lokal) (Stand 08.10.2026)
+
+> Recherche 08.10.2026 (Engine C, Sonnet-Schwarm). Alle Benchmark-Werte sind Google-Angaben;
+> unabhängige Messungen lagen zwei Tage nach Erscheinen von EmbeddingGemma 2 nicht vor.
+
+| | `gemini-embedding-2` | `google/embeddinggemma-2` |
+|---|---|---|
+| Art | gehostete API (GA 22.04.2026) | offenes Modell zum Selberbetreiben (06.10.2026), keine gehostete Variante |
+| Größe | nicht veröffentlicht | 740M Parameter, Text-Kern 270M (GGUF Q8_0 310 MB) |
+| Dimensionen | 3072 (128–3072 wählbar) | 768 (kürzbar 512/256/128) |
+| Eingabe | 8.192 Token; Text, Bild, Audio, Video, PDF | 8.192 Token; Text, Code, Bild, Video, Audio, kein PDF belegt |
+| MTEB multilingual | 69,9 (Retrieval 70,0) | 61,36 (Retrieval nicht veröffentlicht) |
+| MTEB Code | 84,0 | 78,68 |
+| Kosten | 0,20 $ / 1 Mio Token Text (Batch 0,10 $) | nur eigener Server |
+| Lizenz/Daten | Paid-Tarif: keine Nutzung zum Training; im EWR gelten nur die Paid-Regeln | Apache 2.0, Texte verlassen den Server nicht |
+
+**Regeln:**
+- Bei kleinen Beständen (wenige tausend Einträge) entscheidet die Qualität, nicht der Preis: die API kostet dort unter 1 $ im Monat. Der Abstand von 8,5 MTEB-Punkten spricht für `gemini-embedding-2`. (offiziell: arXiv 2605.27295, https://huggingface.co/google/embeddinggemma-2)
+- Für Deutsch gibt es zu beiden Modellen keine Retrieval-Zahlen (GermanQuAD, MIRACL-de). Vor einem Wechsel am eigenen Bestand messen: 30–100 echte Fragen, Recall@10, MRR, nDCG@10 (`ranx`), Messlatte vorab festlegen. (extern: https://www.openlayer.com/blog/post/embedding-model-evaluation-own-data)
+- Die Text-Präfixe beider Modelle sind wortgleich (`task: search result | query: …` / `title: … | text: …`), das Eingabelimit auch. Ein Wechsel ändert Stückelung und Präfix-Logik nicht.
+- Vektoren verschiedener Modelle sind nie mischbar: Wechsel = alles neu einbetten in eine NEUE Qdrant-Collection, per Alias umschalten, alte Collection erst nach Beobachtungsphase löschen. Löschungen während des Nachladens gehen sonst verloren. (offiziell: https://qdrant.tech/documentation/tutorials-operations/embedding-model-migration/)
+- Modellname, Revision und Präfix-Version je Collection als Metadaten ablegen und beim Start prüfen.
+- Matryoshka-Kürzung kostet bei EmbeddingGemma 2 wenig (512: −0,19, 256: −0,95, 128: −3,47 Punkte); nach dem Kürzen neu normalisieren, Anfrage und Dokument in gleicher Dimension.
+- Offene Alternative nahe an `gemini-embedding-2`: Qwen3-Embedding-8B (70,58) bzw. -4B; deutlich größer als EmbeddingGemma 2.
+- Fallen beim lokalen Betrieb: `bugs/apis/local-openai-compatible.md` §22–§26.
+
 ## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/google-gemini-api.md`) |
 |---|---|
@@ -119,3 +146,4 @@ bzw. AGC vor der Aufnahme ist der eigentliche Hebel.
 | 7 Context Caching & Token-Effizienz | (praeventiv, kein Bug) |
 | 8 Streaming, Rate-Limits & Resilienz | I21, I22, C7, F15, H19, H20 |
 | 9 Embeddings (modell-abhängig) | J23, J24, J25 |
+| 11 Embedding-Modellwahl | `bugs/apis/local-openai-compatible.md` §22–§26 |
