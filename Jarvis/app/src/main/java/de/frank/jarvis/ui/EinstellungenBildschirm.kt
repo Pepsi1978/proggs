@@ -226,6 +226,18 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             Text("Jarvis sendet nur an dich und an die hier freigegebenen Adressen. E-Mails kommen nicht in die Tagesauswertung.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
         }
 
+        // ---------------------------------------------------------------- GitHub
+        Abschnitt("GitHub-Repo")
+        Karte {
+            val mitSchluessel = e.githubToken.isNotBlank()
+            Zeile("Lesen und Ändern", if (mitSchluessel) "Lesen und Ändern" else "Nur Lesen", if (mitSchluessel) f.erfolg else f.textLeise)
+            Text("Jarvis liest dein Repo auch ohne Schlüssel. Zum Ändern und für die Code-Suche braucht es einen Zugriffsschlüssel: GitHub → Settings → Developer settings → Fine-grained tokens, " +
+                "nur für dieses Repo, mit „Contents“ und „Pull requests“ auf „Read and write“. Jarvis schreibt nur auf Zweige jarvis/… und legt Pull Requests an; zusammenführen tust du.",
+                color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            Schluesselfeld(vm, "Repo", e.repoName, geheim = false) { e.repoName = it }
+            Schluesselfeld(vm, "GitHub-Schlüssel", e.githubToken) { e.githubToken = it }
+        }
+
         // ---------------------------------------------------------------- Apps
         Abschnitt("Angebundene Apps und Fähigkeiten")
         Karte {

@@ -46,7 +46,7 @@ object Register {
         liste ?: listOf(
             AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext), WetterFaehigkeit(context.applicationContext),
             WeckerFaehigkeit(context.applicationContext), IdeenFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext), WissenFaehigkeit(context.applicationContext), TagebuchFaehigkeit(context.applicationContext),
-            WebFaehigkeit(context.applicationContext),
+            WebFaehigkeit(context.applicationContext), RepoFaehigkeit(context.applicationContext),
         ).also { liste = it }
     }
 

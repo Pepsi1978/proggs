@@ -90,6 +90,11 @@ class Einstellungen private constructor(context: Context) {
         get() = s("such_schluessel", "").ifEmpty { BuildConfig.TAVILY_KEY }
         set(v) = put { putString("such_schluessel", v.trim()) }
 
+    // ---- Repo auf GitHub ----
+    var repoName: String get() = s("repo_name", "").ifEmpty { "Pepsi1978/proggs" }; set(v) = put { putString("repo_name", v.trim().removePrefix("https://github.com/").trim('/')) }
+    /** Zugriffsschlüssel für GitHub. Lesen geht beim öffentlichen Repo auch ohne, Ändern und die Code-Suche nur mit. */
+    var githubToken: String get() = s("github_token", ""); set(v) = put { putString("github_token", v.trim()) }
+
     // ---- Google-Zugang für „Berechtigung erneuern“ (Tagebuch) ----
     var driveClientId: String
         get() = s("drive_client_id", "").ifEmpty { BuildConfig.DRIVE_CLIENT_ID }

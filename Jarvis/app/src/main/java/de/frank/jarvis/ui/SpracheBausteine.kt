@@ -141,7 +141,7 @@ fun SpracheEinstellungen(vm: AppViewModel) {
 }
 
 @Composable
-private fun Schluesselfeld(vm: AppViewModel, titel: String, gespeichert: String, geheim: Boolean = true, speichern: (String) -> Unit) {
+fun Schluesselfeld(vm: AppViewModel, titel: String, gespeichert: String, geheim: Boolean = true, speichern: (String) -> Unit) {
     var wert by rememberSaveable(titel) { mutableStateOf(gespeichert) }
     Unterzeile(titel)
     Row(verticalAlignment = Alignment.CenterVertically) {
