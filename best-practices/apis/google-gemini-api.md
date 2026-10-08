@@ -22,6 +22,7 @@
 | 8 | Streaming/Limits | `?alt=sse`; Backoff bei 429; Billing aktiv | §8 |
 | 9 | Embeddings (mehrere Texte) | **Modell-abhängig!** `-001`: `contents=[…]` batchen → N Vektoren. `gemini-embedding-2`: Liste → 1 AGGREGIERTER Vektor → pro Text 1 Call; `task_type` weg → Text-Präfixe | §9 |
 | 15 | Embedding-Modell wechseln (z. B. auf lokales EmbeddingGemma 2) | Erst am eigenen Bestand messen; `gemini-embedding-2` liegt 8,5 MTEB-Punkte vorn und kostet bei kleinem Bestand < 1 $/Monat; Wechsel = neue Collection + alles neu einbetten | §11 |
+| 16 | Bilder, Videos, Code oder Seiten durchsuchbar machen | `gemini-embedding-2` reicht (kein besseres Modell belegt); Code mit Präfix `task: code retrieval`; Video in 20–30-s-Abschnitten plus Transkript; Fotos plus Beschreibung in Worten | §12 |
 
 ## 1. SDK & Client
 - Ausschliesslich das einheitliche SDK `google-genai` (Py) / `@google/genai` (JS) / `google.golang.org/genai` (Go) verwenden; Init ueber `client = genai.Client(api_key=...)` bzw. `genai.Client(vertexai=True, project=..., location=...)`. Altes SDK ist deprecated. Quelle: https://ai.google.dev/gemini-api/docs/libraries · offiziell
@@ -134,6 +135,39 @@ bzw. AGC vor der Aufnahme ist der eigentliche Hebel.
 - Offene Alternative nahe an `gemini-embedding-2`: Qwen3-Embedding-8B (70,58) bzw. -4B; deutlich größer als EmbeddingGemma 2.
 - Fallen beim lokalen Betrieb: `bugs/apis/local-openai-compatible.md` §22–§26.
 
+## 12. Marktstand Embeddings und multimodale Suche mit gemini-embedding-2 (Stand 08.10.2026)
+
+> Recherche 08.10.2026 (Engine C, Sonnet-Schwarm, 6 Researcher). Fast alle Benchmark-Werte sind
+> Herstellerangaben auf unterschiedlichen Metriken; deutsche Suchanfragen hat niemand gemessen.
+> Board-Version immer mitnennen, Zahlen verschiedener Boards nie mischen.
+
+**Marktstand (kein Wechselgrund):**
+- Google hat keinen Nachfolger von `gemini-embedding-2` veröffentlicht. Einzige unabhängige Messung gehosteter Modelle (englisch, 01.10.2026): Voyage 4 Large 0,851, Cohere Embed 5 Pro 0,850, Gemini Embedding 2 0,830 nDCG@10 — statistisch gleichauf. (extern: https://aimultiple.com/embedding-models)
+- Offene Modelle mit höherem MTEB multilingual sind zu groß für einen Server ohne Grafikkarte: Harrier-OSS-v1-27B 74,3, KaLM-Gemma3-12B 72,32, Qwen3-Embedding-8B 70,58. Klein genug und gleichwertig: Harrier-0.6B 69,0, Qwen3-Embedding-4B 69,45. (offiziell: Modellkarten auf Hugging Face)
+- Text-zu-Video laut Google: Vatex 68,8 (Voyage multimodal-3.5 55,2, Nova 60,3), MSR-VTT 68,0, YouCook2 52,5; Fotos Flickr30k 89,1 (Voyage 89,9). Herausforderer nur mit Herstellerzahlen: Mixedbread Wholembed v3 (Video), Cohere Embed 5 (Text-Bild-Dokumente, kein Video), TwelveLabs Marengo 3.0 (Video bis 4 h, nennt Deutsch), Qwen3-VL-Embedding-8B (offen).
+- Bei kleinen Beständen bringt ein Reranker hinter der Mischsuche vermutlich mehr als ein Modellwechsel.
+
+**Code-Schnipsel:**
+- `gemini-embedding-2` ist für Code geeignet (MTEB Code 84,0). Anfrage mit `task: code retrieval | query: …`, Dokument `title: <Titel oder Dateiname> | text: <Code>`; Präfixe bei Index und Anfrage gleich halten. (offiziell: https://ai.google.dev/gemini-api/docs/embeddings)
+- Ein Schnipsel pro Punkt; lange Dateien nach Funktion statt nach Zeichenzahl trennen (cAST: +4,3 Recall@5, https://arxiv.org/abs/2506.15655); Sprache und Dateiname als Payload; kurze deutsche Beschreibung mit einbetten.
+- Mischsuche für Bezeichner: Sparse-Vektor `qdrant/bm25` MIT `modifier: idf` plus RRF; ohne den Modifier verschlechtert sich das Ranking still. (offiziell: https://qdrant.tech/documentation/concepts/hybrid-queries/)
+
+**Fotos:**
+- Kosten: 0,00012 $ je Bild (10.000 Fotos 1,20 $, 50.000 Fotos 6 $, Batch halb). (offiziell: https://ai.google.dev/gemini-api/docs/pricing)
+- Zweite Spur: Beschreibung in Worten von einem Sprachmodell erzeugen und als Text mit durchsuchen (feine Merkmale, Farbe-Objekt-Bindung). Bestimmtes Tier: 10–30 Referenzfotos und Bild-zu-Bild-Suche.
+- Private Fotos nur über die bezahlte Stufe senden; Vektoren sind nicht anonym (Rückrechnung gezeigt, https://arxiv.org/html/2508.00756v3). Lokale Alternative: SigLIP 2 bzw. Immich (`ViT-B-16-SigLIP2__webli`, 84,25 % Recall für deutsche Anfragen, https://docs.immich.app/features/searching).
+
+**Video:**
+- Abgerechnet wird je Bild (0,00079 $, etwa 66 Token): eine Stunde 0,76 $ (120-s-Abschnitte) bis 3,41 $ (30 s mit 5 s Überlappung), Batch halb.
+- Bauweise: Abschnitte von 20–30 s mit 5 s Überlappung visuell einbetten, dazu das Transkript als Text; beides als benannte Vektoren, Abfrage per `prefetch` + RRF, Gruppierung je Video mit `query_points_groups`. Payload: `video_id`, `start_sec`, `end_sec`, Kanal, Modell + Version, `thumb_path` (Vorschaubild als Datei, nie Base64).
+- Vor der Gesamtindexierung ein Probelauf mit eigenen deutschen Fragen (Recall@5) und Score-Schwelle kalibrieren, weil die Suche immer einen nächsten Treffer liefert.
+
+**Weitere Medien und Tempo:**
+- Seiten und Bildschirmfotos: einzeln als Bild bzw. PDF-Seite einbetten (eine Seite je Aufruf), zusätzlich den Volltext. Mehrere Teile in einer `contents`-Liste ergeben EINEN Vektor.
+- Late Interaction (ColPali/ColQwen, in Qdrant nativ per MaxSim) kostet rund 170-mal so viel Speicher je Seite; erst lohnend, wenn eigene Testfragen mit einem Einzelvektor scheitern.
+- Bei wenigen tausend Punkten sucht Qdrant ohnehin erschöpfend; Quantisierung spart dort Speicher, kaum Zeit. Einfacher Hebel ist die Matryoshka-Kürzung auf 1536 oder 768.
+- Fallen: `bugs/apis/google-gemini-api.md` §L35–§L39.
+
 ## 🔗 Bezug zum Bug-Almanach
 | Best-Practice | Bug-Abschnitt (`bugs/apis/google-gemini-api.md`) |
 |---|---|
@@ -147,3 +181,4 @@ bzw. AGC vor der Aufnahme ist der eigentliche Hebel.
 | 8 Streaming, Rate-Limits & Resilienz | I21, I22, C7, F15, H19, H20 |
 | 9 Embeddings (modell-abhängig) | J23, J24, J25 |
 | 11 Embedding-Modellwahl | `bugs/apis/local-openai-compatible.md` §22–§26 |
+| 12 Marktstand und multimodale Suche | L35, L36, L37, L38, L39 |

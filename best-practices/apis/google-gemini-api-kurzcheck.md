@@ -27,3 +27,4 @@
 | 13 | Live-Transkription noetig | VAD abschalten + `activityStart`/`activityEnd`, sonst Abbruch bei jeder Denkpause; `languageCodes` ist ein ARRAY | §10 |
 | 14 | STT-Ausfallsicherheit | Bei 429/Netzfehler auf Zweitanbieter ausweichen — aber NIE bei stiller Aufnahme (eigene Ausnahmeklasse) | §10 |
 | 15 | Embedding-Modell wechseln (z. B. auf lokales EmbeddingGemma 2) | Erst am eigenen Bestand messen; `gemini-embedding-2` liegt 8,5 MTEB-Punkte vorn und kostet bei kleinem Bestand < 1 $/Monat; Wechsel = neue Collection + alles neu einbetten | §11 |
+| 16 | Bilder, Videos, Code oder Seiten durchsuchbar machen | `gemini-embedding-2` reicht (kein besseres Modell belegt); Code mit Präfix `task: code retrieval`; Video in 20–30-s-Abschnitten plus Transkript; Fotos plus Beschreibung in Worten | §12 |

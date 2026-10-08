@@ -36,6 +36,7 @@
 | 7 | Streaming liefert Muell | `?alt=sse` anhaengen, zeilenweise parsen | §I21 |
 | 8 | API-Key uebergeben | Header `x-goog-api-key`, nie `?key=` Query | §C8 |
 | 9 | ⭐ Migration `-001`→`gemini-embedding-2`: Liste liefert 1 statt N Vektoren | `contents=[…]` AGGREGIERT bei Embedding 2 → pro Text 1 Call; `task_type` entfernt → Präfixe; Dim 3072 → neue Collection | §J23-J25 |
+| 16 | ⭐ Bild/Video/PDF/Audio mit `gemini-embedding-2` einbetten | Über dem Limit wird STILL abgeschnitten (8.192 Token gesamt, Video 32 Bilder/120 s, 6 PDF-Seiten); Videoton wird ignoriert → Transkript extra; Vektorlänge nach jedem Aufruf prüfen | §L35-L39 |
 
 ---
 
@@ -296,6 +297,42 @@ Ausnahmeklasse statt einer allgemeinen.
 15 Minuten der Live-Dialogmodelle. Session Resumption/Context Window Compression sind fuer dieses
 Modell nicht dokumentiert. Das Kontextfenster ist nicht der Engpass (25 Tokens/s Audio bei
 131.072 Token Limit ≈ 87 Minuten). Bei laengeren Aufnahmen Session-Neuaufbau einplanen.
+
+## L. Multimodale Embeddings mit gemini-embedding-2 (Stand 08.10.2026)
+
+> Versions-Anker: `gemini-embedding-2` (GA 22.04.2026), Gemini API. Recherche 08.10.2026 (Engine C, Sonnet-Schwarm).
+
+### 35. ⭐ Eingaben über dem Limit werden still abgeschnitten
+- **Symptom:** Kein Fehler, aber der hintere Teil eines langen Textes, Videos oder PDFs ist nicht auffindbar.
+- **Ursache:** 8.192 Token gelten über ALLE Modalitäten zusammen; Video wird ab 32 s auf 32 Bilder ausgedünnt (höchstens 120 s), PDF höchstens 6 Seiten, Audio 180 s, 6 Bilder je Aufruf.
+- **FIX:** Dauer, Seitenzahl und Token vor dem Aufruf selbst prüfen und stückeln; Video in Abschnitte ≤ 32 s für volle Bilddichte.
+- **Quelle:** https://ai.google.dev/gemini-api/docs/embeddings (offiziell)
+
+### 36. ⭐ Der Ton einer Videodatei wird nicht eingebettet
+- **Symptom:** Gesprochenes aus Videos wird von der Suche nicht gefunden.
+- **Ursache:** Die Gemini API verarbeitet die Tonspur von Videos nicht. Vertex extrahiert sie optional, dann nur rund 80 s je Aufruf.
+- **FIX:** Tonspur getrennt transkribieren und als Text einbetten (zweiter Vektor je Abschnitt) oder als Audio in 180-s-Stücken.
+- **Quelle:** https://ai.google.dev/gemini-api/docs/embeddings ; https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/embedding-2 (offiziell)
+
+### 37. Leere Vektoren bei HTTP 200 (Video, Batch)
+- **Symptom:** `batchEmbedContents` mit Video liefert 200, aber `embedding.values` ist leer; unter Last 30–60 % der Antworten.
+- **Betroffen:** gemeldet für `gemini-embedding-2-preview` seit ca. 15.06.2026, ungelöst; ob die stabile ID betroffen ist, ist nicht belegt.
+- **FIX:** Nach jedem Aufruf Vektorlänge gegen die Soll-Dimension prüfen und leere Antworten wiederholen, nie speichern.
+- **Quelle:** https://discuss.ai.google.dev/t/gemini-embedding-2-preview-returns-http-200-with-empty-values-for-video-batchembedcontents/171558 (extern, Forum)
+
+### 38. Gemini API und Vertex verhalten sich unterschiedlich
+- **Symptom:** Gleicher Code liefert je nach Zugang andere Ergebnisse oder 404.
+- **Ursache:** PDF-OCR läuft in der Gemini API immer, bei Vertex für gescannte PDFs standardmäßig nicht (`document_ocr`); Videoton siehe §36; das Modell hängt bei Vertex an multi-regionalen Endpunkten, ein klassischer Regional-Host liefert 404; Quotas hängen dort am Preview-Modell.
+- **FIX:** Zugang festlegen und Limits für genau diesen Zugang prüfen, Doku nicht mischen.
+- **Quelle:** https://docs.cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/embedding-2 (offiziell); https://github.com/GooeyAI/gooey-server/pull/1115 (extern)
+
+### 39. Bild-Embeddings binden Eigenschaft und Objekt unzuverlässig
+- **Symptom:** Suche nach „schwarz-weiße Katze“ liefert auch andere Katzen; feine Klassen (Kiefer gegen Fichte) werden verwechselt.
+- **Ursache:** Bekannte Schwäche der CLIP/SigLIP-Familie und verwandter Bildmodelle; für gemini-embedding-2 nicht eigens gemessen.
+- **FIX:** Zusätzlich eine Beschreibung in Worten von einem Sprachmodell erzeugen und als Text mit durchsuchen; für ein bestimmtes Tier Referenzfotos mit Bild-zu-Bild-Suche.
+- **Quelle:** https://arxiv.org/html/2602.02043v1 ; https://arxiv.org/html/2502.03566v1 (offiziell, Paper)
+
+---
 
 ## Fix-Status (Stand 2026-06-08)
 
