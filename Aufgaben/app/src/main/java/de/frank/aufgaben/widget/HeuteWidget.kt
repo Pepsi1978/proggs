@@ -58,6 +58,8 @@ import de.frank.aufgaben.data.Tage
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import android.widget.RemoteViews
+import androidx.glance.appwidget.AndroidRemoteViews
 
 /**
  * Heute-Widget: ganztägige Aufgaben oben, darunter der Zeitstrahl von 5 bis 22 Uhr mit den Terminen
@@ -147,11 +149,11 @@ class HeuteWidget : GlanceAppWidget() {
         val oben = davor.isEmpty() && (jetzt < stunde * 60 || (danach.firstOrNull()?.minuten ?: Int.MAX_VALUE) <= jetzt)
         Column(GlanceModifier.fillMaxWidth()) {
             if (oben) {
-                JetztStrich(f)
+                JetztStrich(context, f)
                 Abschnitt(context, beschriftung, danach, istJetzt, vorbei = false, leer = 20.dp, f, heute)
             } else {
                 Abschnitt(context, beschriftung, davor, istJetzt, vorbei = true, leer = 12.dp, f, heute)
-                JetztStrich(f)
+                JetztStrich(context, f)
                 Abschnitt(context, null, danach, istJetzt, vorbei = false, leer = 8.dp, f, heute)
             }
         }
@@ -181,13 +183,16 @@ class HeuteWidget : GlanceAppWidget() {
 
     /** Die rote Jetzt-Linie quer über das ganze Widget. */
     @Composable
-    private fun JetztStrich(f: Farben) {
+    private fun JetztStrich(context: Context, f: Farben) {
         Row(GlanceModifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("jetzt", style = TextStyle(color = f.rot, fontSize = 10.sp, fontWeight = FontWeight.Bold), modifier = GlanceModifier.width(40.dp))
             Box(GlanceModifier.width(12.dp).height(12.dp), contentAlignment = Alignment.Center) {
                 Image(ImageProvider(R.drawable.widget_linie), null, GlanceModifier.width(3.dp).fillMaxHeight(), contentScale = ContentScale.FillBounds)
                 Image(ImageProvider(R.drawable.widget_jetzt), null, GlanceModifier.size(10.dp))
             }
+            Image(ImageProvider(R.drawable.widget_jetzt_linie), null, GlanceModifier.defaultWeight().height(2.dp), contentScale = ContentScale.FillBounds)
+            // Mittig auf der Linie die aktuelle Uhrzeit, minutengenau: TextClock läuft von selbst weiter.
+            AndroidRemoteViews(RemoteViews(context.packageName, R.layout.widget_uhrzeit))
             Image(ImageProvider(R.drawable.widget_jetzt_linie), null, GlanceModifier.defaultWeight().height(2.dp), contentScale = ContentScale.FillBounds)
         }
     }

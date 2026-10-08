@@ -341,13 +341,17 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
     // Ganz oben in einer Zeile: links der Titel in zwei Zeilen („Sinnvolle“ / „Aufgaben“), dahinter alle sechs Knöpfe
     // gleich groß, rechtsbündig zur rechten Kante der Szene (14 dp Rand). Auf schmalen Bildschirmen schrumpfen die Knöpfe.
     BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp)) {
-        val titelBreite = 88.dp
+        val titelBreite = 98.dp
         val g = ((maxWidth - titelBreite - 6.dp * 5) / 6).coerceIn(30.dp, 44.dp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Sinnvolle\nAufgaben", color = f.text, fontSize = 17.sp, lineHeight = 19.sp, maxLines = 2, softWrap = false, fontWeight = FontWeight.ExtraBold,
-                style = TextStyle(brush = Brush.linearGradient(listOf(f.text, f.primaer))), modifier = Modifier.weight(1f).padding(start = 2.dp),
-            )
+            // „Sinnvolle“ klein, „Aufgaben“ groß: Das Hauptwort der App trägt den Titel.
+            Column(Modifier.weight(1f).padding(start = 2.dp)) {
+                Text("Sinnvolle", color = f.textLeise, fontSize = 12.sp, lineHeight = 14.sp, maxLines = 1, softWrap = false, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Aufgaben", color = f.text, fontSize = 20.sp, lineHeight = 22.sp, maxLines = 1, softWrap = false, fontWeight = FontWeight.ExtraBold,
+                    style = TextStyle(brush = Brush.linearGradient(listOf(f.text, f.primaer))),
+                )
+            }
             Fortschritt(b.heuteFertig, b.heuteGesamt, g)
             RundKnopf(Icons.Rounded.SelfImprovement, "Fokus-Timer", g) { vm.fokusStarten(null) }
             RundKnopf(if (sucheOffen) Icons.Rounded.Close else Icons.Rounded.Search, "Suchen", g, sucheUmschalten)

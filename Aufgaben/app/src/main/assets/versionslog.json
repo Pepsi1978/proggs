@@ -29,6 +29,7 @@
     {"versionCode": 25, "versionName": "1.0.24", "stand": "08.10.2026, 14:44 Uhr", "notiz": "Zeitleiste kompakt: Die rote Jetzt-Linie läuft nicht mehr durch den Text „… frei“ einer zusammengerückten Lücke, sondern steht knapp darüber oder darunter"},
     {"versionCode": 26, "versionName": "1.0.25", "stand": "08.10.2026, 14:45 Uhr", "notiz": "Orange: Himmel und Häuser füllen jetzt das ganze Fenster bis zum rechten Rand"},
     {"versionCode": 27, "versionName": "1.0.26", "stand": "08.10.2026, 14:48 Uhr", "notiz": "Zeitleiste heute: Die rote Jetzt-Linie ist immer zu sehen, auch in der Kompaktansicht – die Leiste reicht bis zur aktuellen Stunde, viel freie Zeit zwischen jetzt und den Terminen rückt zusammen; mittig auf der Linie steht die aktuelle Uhrzeit; Orange: Fenster hat jetzt auch rechts einen Vorhang"},
-    {"versionCode": 28, "versionName": "1.0.27", "stand": "08.10.2026, 14:48 Uhr", "notiz": "Kopfbereich: „Sinnvolle“ und darunter „Aufgaben“ stehen jetzt links in der Zeile der Knöpfe, die Knöpfe rechts dahinter; darunter linksbündig nur noch die Serie bzw. das Datum"}
+    {"versionCode": 28, "versionName": "1.0.27", "stand": "08.10.2026, 14:48 Uhr", "notiz": "Kopfbereich: „Sinnvolle“ und darunter „Aufgaben“ stehen jetzt links in der Zeile der Knöpfe, die Knöpfe rechts dahinter; darunter linksbündig nur noch die Serie bzw. das Datum"},
+    {"versionCode": 29, "versionName": "1.0.28", "stand": "08.10.2026, 14:52 Uhr", "notiz": "Titel: „Sinnvolle“ klein, „Aufgaben“ groß; Widget: mittig auf der roten Jetzt-Linie steht die aktuelle Uhrzeit und läuft minutengenau mit"}
   ]
 }
