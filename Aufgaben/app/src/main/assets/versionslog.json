@@ -26,6 +26,7 @@
     {"versionCode": 22, "versionName": "1.0.21", "stand": "08.10.2026, 14:31 Uhr", "notiz": "Kopfbereich neu geordnet: oben eine eigene Titelzeile mit „Sinnvolle Aufgaben“ und daneben der Serie bzw. dem Datum; darunter alle sechs Knöpfe (Fortschritt, Fokus, Suche, Design, Hell/Dunkel, Einstellungen) gleich groß in einer Zeile, links und rechts bündig mit der Szene"},
     {"versionCode": 23, "versionName": "1.0.22", "stand": "08.10.2026, 14:32 Uhr", "notiz": "Keine sichtbare Änderung: Datenbank-Schema der Version 2 im Projekt abgelegt"},
     {"versionCode": 24, "versionName": "1.0.23", "stand": "08.10.2026, 14:42 Uhr", "notiz": "Kopfbereich: die sechs Knöpfe wieder klein, ganz oben und rechtsbündig, darunter „Sinnvolle Aufgaben“ mit der Serie; Kosmos: Tastatur liegt quer auf dem Pult, Einstein-Porträt an der Wand, Bullauge ein Stück weiter rechts; Orange: Monitor ohne Gehäusetiefe; in allen Szenen Sichelmond statt Vollmond; Garten: Katze geht ruhig zum Strauß und schnuppert nur kurz, ohne Satz nach vorne"},
-    {"versionCode": 25, "versionName": "1.0.24", "stand": "08.10.2026, 14:44 Uhr", "notiz": "Zeitleiste kompakt: Die rote Jetzt-Linie läuft nicht mehr durch den Text „… frei“ einer zusammengerückten Lücke, sondern steht knapp darüber oder darunter"}
+    {"versionCode": 25, "versionName": "1.0.24", "stand": "08.10.2026, 14:44 Uhr", "notiz": "Zeitleiste kompakt: Die rote Jetzt-Linie läuft nicht mehr durch den Text „… frei“ einer zusammengerückten Lücke, sondern steht knapp darüber oder darunter"},
+    {"versionCode": 26, "versionName": "1.0.25", "stand": "08.10.2026, 14:45 Uhr", "notiz": "Orange: Himmel und Häuser füllen jetzt das ganze Fenster bis zum rechten Rand"}
   ]
 }

@@ -70,11 +70,10 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
         drawRect(dach, Offset(fen.left, fen.bottom - fen.height * 0.22f), Size(fen.width * 0.4f, fen.height * 0.22f))
         drawRect(dach.heller(0.1f), Offset(fen.left + fen.width * 0.45f, fen.bottom - fen.height * 0.32f), Size(fen.width * 0.35f, fen.height * 0.32f))
         for (i in 0..2) drawRect(Color(0xFFFFD27A).copy(alpha = abend), Offset(fen.left + fen.width * (0.52f + i * 0.09f), fen.bottom - fen.height * 0.24f), Size(fen.width * 0.05f, fen.height * 0.05f))
-        // Laibung: Der Blick kommt von links, also sieht man die rechte Innenseite und die Fensterbank von oben.
-        val tief = fen.width * 0.16f
-        val laibung = if (d) Color(0xFF2A1E16) else Color(0xFFEAD6C0)
-        flaeche(listOf(Offset(fen.right, fen.top), Offset(fen.right - tief, fen.top + tief * 0.35f), Offset(fen.right - tief, fen.bottom - tief * 0.25f), Offset(fen.right, fen.bottom)), laibung)
-        flaeche(listOf(Offset(fen.left, fen.top), Offset(fen.right, fen.top), Offset(fen.right - tief, fen.top + tief * 0.35f), Offset(fen.left + tief * 0.2f, fen.top + tief * 0.35f)), laibung.dunkler(0.12f))
+        // Drittes Haus bis an den rechten Rand: Himmel und Dächer füllen das ganze Fenster, keine Laibung davor
+        drawRect(dach, Offset(fen.left + fen.width * 0.8f, fen.bottom - fen.height * 0.26f), Size(fen.width * 0.2f, fen.height * 0.26f))
+        drawRect(Color(0xFFFFD27A).copy(alpha = abend), Offset(fen.left + fen.width * 0.86f, fen.bottom - fen.height * 0.19f), Size(fen.width * 0.05f, fen.height * 0.05f))
+        drawRect(dach, Offset(fen.left + fen.width * 0.4f, fen.bottom - fen.height * 0.16f), Size(fen.width * 0.05f, fen.height * 0.16f))
     }
     val rahmen = if (d) Color(0xFF3A2A1F) else Color.White
     drawRect(rahmen, fen.topLeft, fen.size, style = Stroke(h * 0.02f))
