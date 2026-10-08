@@ -42,6 +42,11 @@ tatsächlichen Fensterzustand.**
 6. **Diagnose:** `Protokoll` (Ringpuffer, 60 Zeilen) in der App sichtbar, inkl. „Auto-Drehen von
    außen gestellt“ (fremder Schreiber, z. B. Routinen/Modi).
 
+## Am Gerät bestätigt
+
+08.10.2026, Version 1.0.6: Zugeklappt bleibt Nova im Hochformat, kein Pendeln mehr. Andere Apps
+(z. B. Videos) drehen sich weiter frei.
+
 ## Verwandte Fehlerquellen geprüft
 
 - Gleiche Klasse: ChatGPT-Sprachmodus wurde von jedem fremden Ereignis beendet → mitgefixt.
