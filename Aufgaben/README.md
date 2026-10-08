@@ -42,13 +42,15 @@ Eigene Aufgaben-App für Android (Kotlin, Jetpack Compose, Room, Glance). Paket 
 - **Bereiche ohne Aufgaben** sind zugeklappt; Löschen im Editor fragt vorher nach.
 - **Vorlesen** (Edge, Google Chirp 3 HD, eigene Qwen-Stimme) für einzelne Aufgaben und den ganzen Tag.
 - **Widget „Aufgaben · Heute“**: um 0 Uhr werden die Morgen-Aufgaben automatisch zu Heute.
-- **Fokus-Timer** über den großen Fokus-Knopf links neben dem Fortschrittskreis (oder aus einer Aufgabe heraus);
+- **Fokus-Timer** über den großen Fokus-Knopf rechts neben dem Fortschrittskreis (oder aus einer Aufgabe heraus);
   Serie („x Tage in Folge“), Suche, Konfetti, Rückgängig.
 - **Hell / Automatisch / Dunkel** und **Design** per Knopf oben (Symbol zeigt den aktuellen Modus); in den
   Einstellungen gibt es dafür keinen eigenen Bereich.
 - **Vier Designs** (Orange, Aurora, Garten, Kosmos) in Hell und Dunkel, jeweils mit animierter, räumlich
-  gezeichneter Szene (36–40 s, blendet am Anfang und Ende sanft ein und aus): nachdenken → planen → umsetzen →
-  freuen. Ein- und ausschalten unter Einstellungen → Design. Gemeinsame Bausteine (weiche Haltungswechsel,
+  gezeichneter Szene als Endlosschleife ohne Schnitt (44–46 s): Person und Katze kommen im Dunkeln links herein, die
+  Sonne geht auf bzw. das Licht an, sie erledigen ihre Aufgaben und gehen abends rechts hinaus; das letzte Bild gleicht
+  dem ersten. Alles, was sich ständig bewegt (Wolken, Uhren, Wind), läuft mit `welle()`/`runde()` in ganzen Runden pro
+  Durchlauf. Ein- und ausschalten unter Einstellungen → Design. Gemeinsame Bausteine (weiche Haltungswechsel,
   Perspektive, Quader) stehen in `ui/szenen/Figuren.kt`.
 
 ## Brücke zum Genialen Wecker (`de.frank.genialerwecker`)

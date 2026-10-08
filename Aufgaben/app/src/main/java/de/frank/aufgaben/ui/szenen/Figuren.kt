@@ -232,6 +232,52 @@ internal fun ik(a: Offset, ziel: Offset, l1: Float, l2: Float, seite: Float): Pa
 }
 
 /**
+ * Wie [ik], aber mit dem Ellbogen, den ein echter Arm nimmt: nach unten (Schwerkraft) und eher nach außen
+ * ([aussen] = −1 linke Körperseite, +1 rechte). Gerechnet wie im Raum: Der Ellbogen liegt auf einem Kreis um die Linie
+ * Schulter–Hand und zeigt etwas zum Betrachter. So wandert er bei jeder Bewegung stetig von einer Seite zur anderen
+ * (dabei kurz perspektivisch verkürzt), statt umzuspringen.
+ */
+internal fun ikNatuerlich(a: Offset, ziel: Offset, l1: Float, l2: Float, aussen: Float): Pair<Offset, Offset> {
+    val d = ziel - a
+    val laenge = d.getDistance().coerceAtLeast(0.001f)
+    val dist = laenge.coerceIn(abs(l1 - l2) + 0.01f, l1 + l2 - 0.01f)
+    val u = d / laenge
+    val hand = a + u * dist
+    val entlang = (l1 * l1 + dist * dist - l2 * l2) / (2f * dist)
+    val radius = kotlin.math.sqrt((l1 * l1 - entlang * entlang).coerceAtLeast(0f))
+    val quer = Offset(-u.y, u.x)
+    // Bevorzugte Ellbogenrichtung: nach außen und unten, dazu ein fester Anteil zum Betrachter hin
+    val wunsch = aussen * 0.8f * quer.x + 1f * quer.y
+    val phi = atan2(0.45f, wunsch)
+    return (a + u * entlang + quer * (radius * cos(phi))) to hand
+}
+
+/** Rechte Hand einer Seitenansicht-Pose, ohne zu zeichnen (gleiche Maße wie [mensch]). */
+internal fun Pose.handR(s: Float): Offset {
+    fun v(w: Float, l: Float) = Offset(sin(rad(w)) * dir * l, cos(rad(w)) * l)
+    val huefte = Offset(x, huefteBei(s))
+    val schulter = huefte + Offset(sin(rad(lean)) * dir * 0.3f * s, -cos(rad(lean)) * 0.3f * s)
+    return schulter + v(sR, 0.15f * s) + v(sR + eR, 0.14f * s)
+}
+
+// ---------- Endlosschleife ----------
+/** Sinus mit genau [n] Schwingungen pro Durchlauf: beim Neustart der Szene springt nichts. */
+internal fun welle(t: Float, zyklus: Float, n: Int, phase: Float = 0f) = sin(2f * PI.toFloat() * n * t / zyklus + phase)
+
+/** Gleichmäßiger Lauf 0..1, genau [n] Runden pro Durchlauf. */
+internal fun runde(t: Float, zyklus: Float, n: Int, versatz: Float = 0f): Float { val x = n * t / zyklus + versatz; return x - kotlin.math.floor(x) }
+
+/** Wollknäuel der Katze. */
+internal fun DrawScope.knaeuel(m: Offset, r: Float, farbe: Color) {
+    drawCircle(farbe, r, m)
+    for (i in 0..2) drawArc(farbe.dunkler(0.25f), 200f + i * 50f, 120f, false, Offset(m.x - r * 0.8f, m.y - r * 0.8f + i * r * 0.15f), Size(r * 1.6f, r * 1.4f), style = Stroke(r * 0.18f))
+}
+
+/** Maul der Katze (für Spielzeug im Maul): modus 0 = stehen/laufen, 1 = sitzen. */
+internal fun katzenMaul(x: Float, boden: Float, s: Float, dir: Float, modus: Int): Offset =
+    if (modus == 1) Offset(x + 0.24f * s * dir, boden - 0.7f * s) else Offset(x + 0.68f * s * dir, boden - 0.55f * s)
+
+/**
  * Mensch von vorne oder von hinten. Die Hände gehen per [ik] zu [zielL]/[zielR] (null = locker hängend).
  */
 internal fun DrawScope.menschFront(
@@ -257,7 +303,7 @@ internal fun DrawScope.menschFront(
     val schulterR = Offset(x + sb, schulterY + 0.03f * s)
     fun arm(schulter: Offset, ziel: Offset?, seite: Float): Offset {
         val z = ziel ?: (schulter + Offset(seite * 0.05f * s, 0.28f * s))
-        val (ell, hand) = ik(schulter, z, 0.15f * s, 0.15f * s, if (seite < 0) 1f else -1f)
+        val (ell, hand) = ikNatuerlich(schulter, z, 0.15f * s, 0.15f * s, seite)
         drawLine(c.oben.dunkler(0.1f), schulter, ell, 0.07f * s, StrokeCap.Round)
         drawLine(c.oben.dunkler(0.1f), ell, hand, 0.06f * s, StrokeCap.Round)
         drawCircle(c.haut, 0.035f * s, hand)
