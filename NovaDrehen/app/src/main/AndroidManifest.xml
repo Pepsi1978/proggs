@@ -3,9 +3,14 @@
 
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
 
-    <!-- Paket-Sichtbarkeit: nötig, um ChatGPT-Activities vom Sprachmodus zu unterscheiden. -->
+    <!-- Paket-Sichtbarkeit: nötig, um echte App-Wechsel (Activities) von Einblendungen zu
+         unterscheiden, bei ChatGPT zusätzlich vom Sprachmodus. Sichtbar sind alle Apps mit
+         Start-Activity; Systemdienste ohne eine solche bleiben unsichtbar und werden ignoriert. -->
     <queries>
         <package android:name="com.openai.chatgpt" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
     </queries>
 
     <application
