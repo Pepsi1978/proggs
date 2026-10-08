@@ -22,6 +22,8 @@ class MainActivity : ComponentActivity() {
         JarvisDienst.abgleichen(this)
     }
 
+    private val kalenderErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.lagePruefen() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
@@ -33,6 +35,7 @@ class MainActivity : ComponentActivity() {
                 hinweisErlaubnis.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+        vm.kalenderAnfragen = { kalenderErlaubnis.launch(Manifest.permission.READ_CALENDAR) }
         if (savedInstanceState == null) vm.hinweiseAnfragen()
         JarvisDienst.abgleichen(this)
         setContent { JarvisApp(vm, this) }

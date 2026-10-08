@@ -11,7 +11,8 @@ Version 1 kann zwei Dinge:
    Denkstufe sind wählbar. Es bedient dieselben Werkzeuge selbstständig.
 
 Angebundene Apps: **Geniale Aufgaben** (`de.frank.aufgaben`, lesen und schreiben) und der Biomarker-Bereich von
-**Entropie Reductor** (`de.frank.entropyreducer`, nur lesen).
+**Entropie Reductor** (`de.frank.entropyreducer`, nur lesen) sowie der **Kalender** des Handys (alle synchronisierten
+Kalender, also auch Google; nur lesen, Android-Erlaubnis `READ_CALENDAR`).
 
 ## Aufbau
 
@@ -61,12 +62,21 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 | `trainings_lesen` | Trainingsliste mit Pace, Puls, Distanz, Kalorien, VO2max und Summen |
 | `training_details` | Ein Training mit Kilometer-Abschnitten |
 | `biomarker_katalog` | Alle Messgrößen mit Einheit, Quelle und Zeitraum |
+| `kalender_lesen` | Termine Tag für Tag mit Dienst-Zeile; mit Suchwort bis ein Jahr voraus |
+| `dienstplan_lesen` | Je Tag Nachtdienst, Tagdienst, frei oder Urlaub mit Abfahrtszeit, nächster Dienst, nächste freie Tage |
 | `jarvis_status` | Erreichbarkeit, Datum und Uhrzeit auf dem Handy, angebundene Apps |
 | `jarvis_auftrag` | Freier Auftrag an den Agenten für Mehrschritt-Aufgaben (Zeitfenster 45 s) |
 
 Fehlt beim Anlegen der Tag, obwohl eine Uhrzeit genannt wurde, fragt ChatGPT nach; ruft es trotzdem auf, lehnt die
 Aufgaben-App mit einem Hinweis ab. Mehrere Treffer bei einem Suchwort führen zu einer Rückfrage statt zu einer
 geratenen Änderung. Ein wiederholter identischer Anlege-Aufruf innerhalb von 90 Sekunden legt nichts doppelt an.
+
+## Dienstplan
+
+Der Dienstplan steht als Ganztagstermine im Kalender und wird in `faehigkeit/KalenderFaehigkeit.kt` ausgewertet:
+„Nacht 1“ bis „Nacht 4“ = Nachtdienst (Abfahrt etwa 16:00 Uhr), „Tag 1“ bis „Tag 4“ = Tagdienst (Abfahrt etwa 4:30 Uhr).
+Steht am selben Tag „X“ oder „F“, ist frei, bei „U“ Urlaub; der Diensteintrag bleibt im Kalender stehen und entfällt.
+Tage ohne Diensteintrag sind frei. Die Abfahrtszeiten stehen als Konstanten in derselben Datei.
 
 ## Auswertungen: wer rechnet
 

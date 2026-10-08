@@ -63,6 +63,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     var meldung by mutableStateOf<String?>(null)
     var hinweiseAnfragen: () -> Unit = {}
+    var kalenderAnfragen: () -> Unit = {}
 
     init { lagePruefen() }
 

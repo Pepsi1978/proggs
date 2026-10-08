@@ -6,6 +6,7 @@ import de.frank.jarvis.agent.JarvisAgent
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.Ergebnis
+import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.faehigkeit.Werkzeug
 import de.frank.jarvis.faehigkeit.schema
@@ -38,7 +39,8 @@ class McpServer(context: Context) {
         ) {
             val jetzt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))
             val apps = Register.alle(app).joinToString("; ") { f -> f.name + ": " + (f.stoerung()?.let { "gestört ($it)" } ?: "bereit") }
-            Ergebnis("Jarvis ist bereit. Auf dem Handy ist es $jetzt. Angebundene Apps: $apps.")
+            val dienst = Register.alle(app).filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.heuteKurz().orEmpty()
+            Ergebnis("Jarvis ist bereit. Auf dem Handy ist es $jetzt. " + (if (dienst.isEmpty()) "" else "Dienst heute: $dienst. ") + "Angebundene Apps: $apps.")
         },
         Werkzeug(
             name = "jarvis_auftrag",

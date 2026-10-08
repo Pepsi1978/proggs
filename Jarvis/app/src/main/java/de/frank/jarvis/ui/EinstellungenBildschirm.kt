@@ -157,6 +157,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 if (i > 0) Spacer(Modifier.height(14.dp))
                 Zeile(app.name, if (stoerung == null) "Bereit · ${app.werkzeuge.size} Werkzeuge" else "Gestört", if (stoerung == null) f.erfolg else f.gefahr)
                 Text(stoerung ?: app.beschreibung, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+                if (app.id == "kalender" && stoerung != null) Knopf("Kalender-Zugriff erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.kalenderAnfragen() }
             }
             Text("Weitere Apps wie Ideen und Journal lassen sich hier später andocken.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         }
