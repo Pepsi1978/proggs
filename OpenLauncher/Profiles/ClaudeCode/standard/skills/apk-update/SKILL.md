@@ -38,7 +38,10 @@ dieser Ablauf statt des Skripts:
   APK und `update.json` per rclone nach `Dokumente/Updates/<Projekt>/`. Der Keystore liegt nur als
   Secret im Environment `android-signing` (nur `main`). Direkte Pushes vom PC baut der Ablauf nicht.
 - Ausgeschlossen ist nur BestJournalAndroid (Play-Store-Key). EntropieReductor bekommt seinen Maps-Schlüssel
-  aus dem Secret `SK_ENTROPIEREDUCTOR_MAPS_API_KEY`. Apps backen sonst keine SK-Dateien ein: API-Schlüssel
+  aus dem Secret `SK_ENTROPIEREDUCTOR_MAPS_API_KEY`. Jarvis bekommt Server-Adresse/-Schlüssel, Tavily-Schlüssel
+  und Google-Zugang aus `SK_JARVIS_RELAY_PROPERTIES`, `SK_TAVILY_API_KEY` und `SK_RCLONE_GOOGLE_OAUTH_CLIENT`
+  (Inhalt der gleichnamigen Dateien unter `~/SK`; ändert sich dort etwas, das Secret neu setzen).
+  Apps backen sonst keine SK-Dateien ein: API-Schlüssel
   trägt man in der App in den Einstellungen ein.
 - Hintergrund und Einrichtung: `docs/cloud-android-build/EINRICHTUNG-FUER-KI.md`.
 

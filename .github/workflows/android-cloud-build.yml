@@ -175,6 +175,21 @@ jobs:
           New-Item -ItemType Directory -Force -Path $d | Out-Null
           [IO.File]::WriteAllText((Join-Path $d 'maps-api-key.txt'), $env:MAPS_API_KEY)
 
+      # Jarvis backt Server-Adresse/-Schlüssel, Tavily-Schlüssel und Google-Zugang (Tagebuch-Lesezugang) ein.
+      - name: Jarvis-SK-Dateien ablegen
+        if: matrix.projekt == 'Jarvis'
+        shell: pwsh
+        env:
+          RELAY_PROPERTIES: ${{ secrets.SK_JARVIS_RELAY_PROPERTIES }}
+          TAVILY_KEY: ${{ secrets.SK_TAVILY_API_KEY }}
+          GOOGLE_OAUTH_CLIENT: ${{ secrets.SK_RCLONE_GOOGLE_OAUTH_CLIENT }}
+        run: |
+          if (-not $env:RELAY_PROPERTIES -or -not $env:TAVILY_KEY -or -not $env:GOOGLE_OAUTH_CLIENT) { Write-Host "::error::Secrets SK_JARVIS_RELAY_PROPERTIES / SK_TAVILY_API_KEY / SK_RCLONE_GOOGLE_OAUTH_CLIENT fehlen."; exit 1 }
+          foreach ($o in 'Jarvis', 'Tavily', 'rclone') { New-Item -ItemType Directory -Force -Path (Join-Path $HOME "SK/$o") | Out-Null }
+          [IO.File]::WriteAllText((Join-Path $HOME 'SK/Jarvis/relay.properties'), $env:RELAY_PROPERTIES)
+          [IO.File]::WriteAllText((Join-Path $HOME 'SK/Tavily/tavily-api-key.txt'), $env:TAVILY_KEY)
+          [IO.File]::WriteAllText((Join-Path $HOME 'SK/rclone/google-oauth-client.txt'), $env:GOOGLE_OAUTH_CLIENT)
+
       # GenialerWeckerAndroid (Verkaufs-App) signiert mit eigenem Key statt dem geteilten Debug-Key.
       # Kommt die App in den Play Store, werden diese beiden Secrets gelöscht (siehe EINRICHTUNG-FUER-KI.md).
       - name: Wecker-Keystore ablegen
