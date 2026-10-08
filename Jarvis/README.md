@@ -70,6 +70,7 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 | `agenten_liste`, `agent_starten`, `agent_anlegen`, `agent_loeschen` | Agenten, die im Hintergrund arbeiten und ihr Ergebnis in die Ablage legen |
 | `mail_senden`, `mail_lesen`, `mail_details` | Gmail über App-Passwort; senden nur an freigegebene Empfänger |
 | `wissen_inhalt`, `wissen_lesen`, `wissen_suchen` | Wissens-Datenbank: Ordner `Datenbank` des Repositories, bei jeder Synchronisierung aufs Handy geholt |
+| `tagebuch_lesen` | Tagebucheinträge für einen Tag, einen Zeitraum oder ein Suchwort |
 | `tagesdaten_lesen` | Die Tagesdatenbank: alle Daten der letzten Synchronisierung, ganz oder je Bereich |
 | `tagesauswertung_lesen` | Die fertige Tagesauswertung samt frisch gelesenen Aufgaben; veraltete Fassungen werden nie als aktuell ausgegeben |
 | `tagesauswertung_erstellen` | Stößt eine neue Auswertung im Hintergrund an (ein bis drei Minuten) |
@@ -126,6 +127,18 @@ Die einzelnen Werkzeuge der Apps lesen weiterhin live vom Handy; die Tagesdatenb
 `faehigkeit/MailFaehigkeit.kt`: Gmail über SMTP (senden) und IMAP (lesen) mit einem App-Passwort, das Frank in den
 Einstellungen einträgt. Gesendet wird nur an die eigene Adresse und an ausdrücklich freigegebene Empfänger. Der Inhalt
 eingegangener Mails wird den Modellen als fremde Information gekennzeichnet, nie als Anweisung.
+
+## Tagebuch
+
+Die Einträge liegen als `JJJJ-MM-TT_Tagebucheintrag.md` in einem Google-Drive-Ordner. Der Relay auf dem Server holt sie
+mit rclone über einen eigenen NUR-LESE-Zugang (`scope = drive.readonly`, als Wurzel genau dieser Ordner; Konfiguration
+unter `/data/rclone.conf` im Volume des Containers, Kopie in `~/SK/rclone/gdrive-lesen.conf`) und gibt sie unter
+`/geraet/tagebuch` nur mit dem Geräte-Token heraus. Jarvis holt sie bei jeder Synchronisierung nach
+`filesDir/tagebuch/` (`faehigkeit/TagebuchFaehigkeit.kt`) und liest dann lokal. Die letzten sieben Tage stehen in der
+Tagesdatenbank; die Tagesauswertung fasst sie im Abschnitt RÜCKBLICK in Stichpunkten zusammen.
+
+Zugang erneuern (falls Google ihn widerruft): am PC `rclone config reconnect gdrive-lesen: --config ~/SK/rclone/gdrive-lesen.conf`,
+dann die Datei per `scp` auf den Server und mit `docker cp` nach `jarvis-relay:/data/rclone.conf` (Besitzer `relay`).
 
 ## Sprache
 

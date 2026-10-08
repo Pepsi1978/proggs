@@ -4,13 +4,20 @@ Der MCP-Server selbst laeuft auf dem Handy. Dieser Dienst ist nur die oeffentlic
   ChatGPT  --POST /j/<Geheimnis>/mcp-->  Relay  --WebSocket-->  Jarvis-App
 Die WebSocket baut das Handy von sich aus auf (/geraet/ws, Geraete-Token im Header) und nennt dabei
 sein Geheimnis. Nur fuer dieses Geheimnis nimmt der Relay danach Aufrufe an; alles andere ist 404.
+
+Zweite Aufgabe: Franks Tagebuch. Die Eintraege liegen als Markdown-Dateien in einem Google-Drive-Ordner.
+Der Relay holt sie mit rclone (Zugang NUR LESEND, auf genau diesen Ordner als Wurzel gestellt) und gibt sie
+dem Handy unter /geraet/tagebuch heraus – ebenfalls nur mit dem Geraete-Token.
 """
 import asyncio
 import hmac
 import json
 import logging
 import os
+import re
+import time
 import uuid
+from datetime import date, timedelta
 from pathlib import Path
 
 from aiohttp import WSMsgType, web
@@ -23,6 +30,10 @@ MAX_RUMPF = 1_000_000
 # Antworten auf diese Methoden sind immer gleich; aus dem Zwischenspeicher kann ChatGPT sich auch
 # dann verbinden, wenn das Handy gerade kurz weg ist.
 MERKBAR = {"initialize", "tools/list"}
+
+RCLONE_KONFIG = os.environ.get("JARVIS_RCLONE_KONFIG", "/data/rclone.conf")
+TAGEBUCH_ORDNER = Path(os.environ.get("JARVIS_TAGEBUCH", "/data/tagebuch"))
+TAGEBUCH_ABSTAND_S = 120   # hoechstens alle zwei Minuten bei Google nachfragen
 
 log = logging.getLogger("jarvis-relay")
 _KEINE = object()
@@ -164,6 +175,59 @@ class Relay:
         return web.Response(text=json.dumps(daten, ensure_ascii=False), status=status, content_type="application/json")
 
 
+class Tagebuch:
+    """Holt die Tagebuch-Dateien aus Drive in einen lokalen Ordner und liest von dort."""
+
+    def __init__(self):
+        self.zuletzt = 0.0
+        self.sperre = asyncio.Lock()
+        self.fehler = ""
+
+    async def hole(self) -> None:
+        async with self.sperre:
+            if time.time() - self.zuletzt < TAGEBUCH_ABSTAND_S:
+                return
+            if not Path(RCLONE_KONFIG).exists():
+                self.fehler = "Der Drive-Zugang ist auf dem Server nicht eingerichtet."
+                return
+            TAGEBUCH_ORDNER.mkdir(parents=True, exist_ok=True)
+            try:
+                prozess = await asyncio.create_subprocess_exec(
+                    "rclone", "sync", "gdrive-lesen:", str(TAGEBUCH_ORDNER), "--include", "*.md", "--max-depth", "1",
+                    "--config", RCLONE_KONFIG, "--contimeout", "15s", "--timeout", "40s", "--retries", "2",
+                    stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
+                _, fehler = await asyncio.wait_for(prozess.communicate(), 90)
+                if prozess.returncode == 0:
+                    self.zuletzt, self.fehler = time.time(), ""
+                else:
+                    self.fehler = "Drive nicht lesbar: " + fehler.decode("utf-8", "replace").strip().splitlines()[-1][:200]
+                    log.warning("Tagebuch: %s", self.fehler)
+            except Exception as ausnahme:
+                self.fehler = "Drive nicht lesbar: " + str(ausnahme)[:200]
+                log.warning("Tagebuch: %s", self.fehler)
+
+    async def antwort(self, request: web.Request) -> web.Response:
+        if not hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode()):
+            return web.Response(status=404, text="Not found")
+        await self.hole()
+        try:
+            tage = max(1, min(int(request.query.get("tage", "60")), 4000))
+        except ValueError:
+            tage = 60
+        ab = (date.today() - timedelta(days=tage)).isoformat()
+        dateien = []
+        if TAGEBUCH_ORDNER.exists():
+            for datei in sorted(TAGEBUCH_ORDNER.glob("*.md")):
+                treffer = re.match(r"(\d{4}-\d{2}-\d{2})", datei.name)
+                # Dateien ohne Datum im Namen kommen immer mit; sie sind selten und sonst unauffindbar.
+                if treffer and treffer.group(1) < ab:
+                    continue
+                dateien.append({"name": datei.name, "datum": treffer.group(1) if treffer else "",
+                                "geaendert": int(datei.stat().st_mtime), "text": datei.read_text("utf-8", "replace")[:200_000]})
+        return web.json_response({"dateien": dateien, "stand": int(self.zuletzt), "fehler": self.fehler},
+                                 dumps=lambda daten: json.dumps(daten, ensure_ascii=False))
+
+
 async def gesund(_: web.Request) -> web.Response:
     return web.Response(text="ok")
 
@@ -208,6 +272,7 @@ def app() -> web.Application:
     relay = Relay()
     anwendung = web.Application(client_max_size=MAX_RUMPF, middlewares=[mitschrift])
     anwendung.router.add_get("/geraet/ws", relay.geraet)
+    anwendung.router.add_get("/geraet/tagebuch", Tagebuch().antwort)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
     anwendung.router.add_route("*", "/{rest:.*}", unbekannt)

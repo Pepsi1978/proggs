@@ -8,6 +8,7 @@ import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.BiomarkerFaehigkeit
 import de.frank.jarvis.faehigkeit.IdeenFaehigkeit
+import de.frank.jarvis.faehigkeit.TagebuchFaehigkeit
 import de.frank.jarvis.faehigkeit.WissenFaehigkeit
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
@@ -101,6 +102,9 @@ object Tagesauswertung {
             val biomarker = Register.alle(app).filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
             val abgeglichen = runCatching { biomarker?.abgleich() }.getOrNull() == true
 
+            schritt("Tagebuch holen")
+            runCatching { Register.alle(app).filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.synchronisiere() }
+
             schritt("Wissens-Datenbank holen")
             runCatching { Register.alle(app).filterIsInstance<WissenFaehigkeit>().firstOrNull()?.synchronisiere() }
 
@@ -173,6 +177,9 @@ object Tagesauswertung {
             append("== TRAININGS DER LETZTEN 14 TAGE ==\n")
             append(rufe("trainings_lesen", JSONObject().put("von", heute.minusDays(14).toString()).put("limit", 20))).append("\n\n")
 
+            append("== TAGEBUCH DER LETZTEN 7 TAGE ==\n")
+            append(runCatching { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.rueckblick(7) }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+
             append("== GENIALE IDEEN (offen, gekürzt) ==\n")
             append(runCatching { alle.filterIsInstance<IdeenFaehigkeit>().firstOrNull()?.ueberblick() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
 
@@ -202,10 +209,11 @@ Unten stehen alle Daten, bereits fertig gerechnet. Regeln:
 - Keine medizinischen Diagnosen. Empfehlungen konkret und alltagsnah (Belastung, Schlaf, Erholung, Training).
 - Du darfst höchstens zwei Werkzeuge zusätzlich aufrufen, und nur wenn ein auffälliger Wert einen Blick in den Verlauf braucht. Meist ist das nicht nötig.
 
-Gliedere genau in diese sechs Abschnitte, jeder beginnt mit seiner Überschrift in Großbuchstaben auf eigener Zeile:
+Gliedere genau in diese sieben Abschnitte, jeder beginnt mit seiner Überschrift in Großbuchstaben auf eigener Zeile:
 HEUTE: Was für ein Tag ist heute (Arbeitstag oder frei, welcher Dienst, Abfahrt, Schlaf- und freie Zeitfenster) und welche Termine stehen an. Zwei bis vier Sätze.
 ERHOLUNG UND SCHLAF: Der heutige Stand im Vergleich. Vier bis sieben Sätze.
 KÖRPER UND TRAINING: Körperwerte nur, wenn es neue oder auffällige gibt. Trainings der letzten Tage, Belastung im Verhältnis zur Erholung, VO2max. Zwei bis fünf Sätze.
+RÜCKBLICK: Was Frank laut Tagebuch gestern und in den letzten Tagen gemacht und erlebt hat, als drei bis sechs kurze Stichpunkte in je einem Satz (beginne jeden mit dem Wochentag). Nur was im Abschnitt TAGEBUCH steht; gibt es dort keinen Eintrag, sage das in einem Satz. Sachlich, ohne Wertung.
 EINSCHÄTZUNG: Ein klares Gesamtbild des Tages in zwei bis drei Sätzen: Wie belastbar ist Frank heute.
 EMPFEHLUNG FÜR HEUTE: Zwei bis vier konkrete Punkte, passend zu Tagesart, Erholung und freien Zeitfenstern. Du darfst offene Aufgaben einbeziehen, aber nur als Hinweis; die aktuelle Aufgabenliste wird beim Abruf gesondert frisch angehängt.
 AUSBLICK: Die nächsten Tage in drei bis fünf Sätzen: kommende Dienste und freie Tage, woran Frank rechtzeitig denken sollte (zum Beispiel Vorbereitung auf einen Nachtdienst-Block, früh schlafen vor einem Tagdienst, Termine, Abholung der Tonnen, Spiele), und wann abends keine Aufgaben mehr passen.
@@ -217,7 +225,7 @@ $daten
     /** Die Bereiche der Tagesdatenbank: Kurzname → Anfang der Abschnittsüberschrift. */
     val BEREICHE = linkedMapOf(
         "rahmen" to "RAHMEN", "termine" to "TERMINE", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
-        "trainings" to "TRAININGS", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
+        "trainings" to "TRAININGS", "tagebuch" to "TAGEBUCH", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
     )
 
     /** Ein oder alle Bereiche der zuletzt gespeicherten Tagesdaten. Aufgaben fehlen bewusst: Sie werden immer frisch gelesen. */
