@@ -886,3 +886,17 @@ Tracker-Status.
   - Vorschau „Anhören“ (ein Clip, Wachhalter und Vorlauf nutzen dasselbe Rauschen)
   - `SchlafTon.kt` (einzelner System-Klingelton ohne Sprechpausen, nicht betroffen)
   - `SpeechLoudness` (LoudnessEnhancer entfernt, nicht im Weckpfad)
+
+## 11. Fremde JNI-Bibliotheken aus JVM-Paketen (ngrok-java) — Stand 08.10.2026 15:37 (Jarvis; Gerät Galaxy Fold; eigener Befund)
+
+### 11.1 Native Bibliothek liegt lose in der JAR und fehlt in der APK
+- **Symptom:** `com.ngrok:ngrok-java-native:1.1.1:linux-android-aarch_64` baut fehlerfrei, in der APK fehlt aber `libngrok_java.so`. Das Paket will die Datei zur Laufzeit per `getResourceAsStream("/libngrok_java.so")` in einen Temp-Ordner entpacken und mit `System.load` laden.
+- **Ursache:** Die `.so` liegt im Wurzelverzeichnis der JAR statt unter `lib/<abi>/`. Der Android-Bau übernimmt `.so`-Dateien nicht als Java-Ressource.
+- **Fix:** Die `.so` beim Bau aus der JAR nach `build/ngrok/jniLibs/arm64-v8a/` kopieren (eigene Gradle-Konfiguration + `Copy`-Task vor `preBuild`, `sourceSets["main"].jniLibs.srcDir(...)`), mit `System.loadLibrary("ngrok_java")` laden und danach selbst `Runtime.init(Runtime.getLogger())` aufrufen. Das geht nur aus einer eigenen Klasse im Paket `com.ngrok`, weil `Runtime` paketintern ist (`Jarvis/app/src/main/java/com/ngrok/NgrokStart.kt`).
+
+### 11.2 `Bad JNI version returned from JNI_OnLoad ... : 65544`
+- **Symptom:** `UnsatisfiedLinkError` beim Laden, obwohl ABI und Seitengröße passen.
+- **Ursache:** `JNI_OnLoad` gibt `JNI_VERSION_1_8` (0x10008 = 65544) zurück. Android (ART) nimmt nur 1.2, 1.4 und 1.6 an. Das trifft JNI-Bibliotheken, die für die Desktop-JVM erzeugt wurden (hier Rust mit `jaffi`).
+- **Fix:** Die eine Anweisung in `JNI_OnLoad` beim Bau umschreiben: `mov w0,#8` (Bytes `00 01 80 52`) → `mov w0,#6` (`c0 00 80 52`), gesucht über das Muster samt folgendem `movk w0,#1,lsl#16; ldr x30,[sp],#0x10; ret`. Der Bau bricht ab, wenn das Muster nicht genau einmal vorkommt (`Jarvis/app/build.gradle.kts`, Task `ngrokBibliothek`).
+- **Diagnose:** `llvm-objdump -d --disassemble-symbols=JNI_OnLoad <lib>.so` aus dem NDK zeigt die zurückgegebene Zahl.
+- **Muster:** Vor dem Einbau einer JVM-Bibliothek mit nativer Komponente in der APK nachsehen, ob die `.so` wirklich unter `lib/arm64-v8a/` liegt, und das Laden früh beim App-Start mit Log-Ausgabe anstoßen, nicht erst im Fehlerpfad.

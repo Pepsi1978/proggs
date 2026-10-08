@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+    <!-- Brücke zu Geniale Aufgaben. Beide Apps erklären dieselbe Signatur-Erlaubnis, damit die
+         Installationsreihenfolge keine Rolle spielt (gleicher Signierschlüssel vorausgesetzt). -->
+    <permission
+        android:name="de.frank.aufgaben.permission.JARVIS"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.aufgaben.permission.JARVIS" />
+
+    <queries>
+        <package android:name="de.frank.aufgaben" />
+        <provider android:authorities="de.frank.aufgaben.jarvis" />
+    </queries>
+
+    <application
+        android:name=".JarvisApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"
+        android:usesCleartextTraffic="true"
+        android:theme="@style/Theme.Jarvis">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Hält MCP-Server und Tunnel am Leben, auch bei gesperrtem Handy. -->
+        <service
+            android:name=".dienst.JarvisDienst"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persönlicher Assistent: nimmt Werkzeugaufrufe des eigenen ChatGPT-Plugins dauerhaft entgegen." />
+        </service>
+
+        <receiver android:name=".dienst.StartEmpfaenger" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

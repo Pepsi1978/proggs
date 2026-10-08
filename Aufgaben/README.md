@@ -77,3 +77,24 @@ Der Wecker braucht dafür in seinem Manifest `<queries><provider android:authori
 Version nur über `app/src/main/assets/versionslog.json` (neuester Eintrag unten).
 Signatur: gemeinsamer Debug-Key `~/SK/Android/debug-shared.keystore` (debug-signingConfig in `app/build.gradle.kts`, wie bei Longevity). Installation aufs Handy über den
 Release-Build aus dem Skill `apk-update` (Debug-Compose ruckelt).
+
+## Brücke zu Jarvis (`de.frank.jarvis`)
+
+Lesender UND schreibender ContentProvider `JarvisBruecke`, Authority `de.frank.aufgaben.jarvis`, geschützt durch die
+Signatur-Erlaubnis `de.frank.aufgaben.permission.JARVIS` (beide Apps müssen mit demselben Schlüssel signiert sein).
+
+Aufruf: `ContentResolver.call(content://de.frank.aufgaben.jarvis, methode, null, Bundle("json" → Anfrage))`, Antwort im
+Bundle unter `json`. Fachliche Fehler kommen als `{"fehler": "…"}` zurück.
+
+| Methode | Anfrage | Antwort |
+|---|---|---|
+| `info` | – | App, heutiges Datum, Vorlauf-Vorgabe, Zahl offener Aufgaben |
+| `lesen` | `bereich` (heute, morgen, tag, demnaechst, ohne_tag, offen, erledigt, alle), `datum`, `suche`, `limit` | `aufgaben`, `anzahl`, `heute` |
+| `anlegen` | `text`, `datum` (heute, morgen, uebermorgen, JJJJ-MM-TT, ohne), `uhrzeit` (HH:MM), `titel`, `prioritaet`, `dauer`, `erinnerung`, `vorlauf`, `vorlesen`, `als_wecker`, `wiederholung`, `schritte` | `aufgabe` |
+| `aendern` | `id` plus nur die Felder, die sich ändern (`ohne` entfernt Tag bzw. Uhrzeit) | `aufgabe` |
+| `erledigen` | `id`, `erledigt` | `aufgabe`, bei Wiederholung `naechste_wiederholung` |
+| `loeschen` | `id` | `geloescht` |
+
+Es gelten dieselben Regeln wie im Editor: Uhrzeit nur mit Tag, Erinnerung nur mit Uhrzeit, ein Tag macht aus „Später“
+„Mittel“. Ohne Titel entsteht sofort ein Not-Titel, den die KI im Hintergrund ersetzt. Erinnerung und Vorlesen sind bei
+neuen Aufgaben von Jarvis standardmäßig an. Alle Änderungen laufen über das `AufgabenRepository`.

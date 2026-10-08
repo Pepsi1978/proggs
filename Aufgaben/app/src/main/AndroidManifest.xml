@@ -13,6 +13,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Nur Apps mit demselben Signierschlüssel (Jarvis) dürfen Aufgaben lesen und schreiben. -->
+    <permission
+        android:name="de.frank.aufgaben.permission.JARVIS"
+        android:protectionLevel="signature" />
+
     <application
         android:name=".AufgabenApplication"
         android:allowBackup="true"
@@ -65,5 +70,12 @@
             android:name=".bruecke.WeckerBruecke"
             android:authorities="de.frank.aufgaben.wecker"
             android:exported="true" />
+
+        <!-- Brücke zu Jarvis: lesen und schreiben, durch die Signatur-Erlaubnis geschützt (siehe README). -->
+        <provider
+            android:name=".bruecke.JarvisBruecke"
+            android:authorities="de.frank.aufgaben.jarvis"
+            android:exported="true"
+            android:permission="de.frank.aufgaben.permission.JARVIS" />
     </application>
 </manifest>

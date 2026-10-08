@@ -1,0 +1,7 @@
+{
+  "format": 1,
+  "app": "Jarvis",
+  "eintraege": [
+    {"versionCode": 1, "versionName": "1.0.0", "stand": "08.10.2026, 15:34 Uhr", "notiz": "Erste Version: Jarvis als ChatGPT-Plugin (MCP) mit direktem Tunnel zum Handy, Anbindung an Geniale Aufgaben (lesen, anlegen, ändern, erledigen, löschen), eigener Jarvis-Chat mit wählbarem Modell und Denkstufe"}
+  ]
+}
