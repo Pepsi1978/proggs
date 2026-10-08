@@ -232,14 +232,24 @@ internal fun ik(a: Offset, ziel: Offset, l1: Float, l2: Float, seite: Float): Pa
 }
 
 /**
- * Wie [ik], wählt aber den Ellbogen, den ein echter Arm nimmt: nach unten (Schwerkraft) und eher nach außen
- * ([aussen] = −1 linke Körperseite, +1 rechte), nie nach oben über die Linie Schulter–Hand geknickt.
+ * Wie [ik], aber mit dem Ellbogen, den ein echter Arm nimmt: nach unten (Schwerkraft) und eher nach außen
+ * ([aussen] = −1 linke Körperseite, +1 rechte). Gerechnet wie im Raum: Der Ellbogen liegt auf einem Kreis um die Linie
+ * Schulter–Hand und zeigt etwas zum Betrachter. So wandert er bei jeder Bewegung stetig von einer Seite zur anderen
+ * (dabei kurz perspektivisch verkürzt), statt umzuspringen.
  */
 internal fun ikNatuerlich(a: Offset, ziel: Offset, l1: Float, l2: Float, aussen: Float): Pair<Offset, Offset> {
-    val eins = ik(a, ziel, l1, l2, 1f)
-    val zwei = ik(a, ziel, l1, l2, -1f)
-    fun wert(e: Offset) = (e.y - a.y) + aussen * (e.x - a.x) * 0.8f
-    return if (wert(eins.first) >= wert(zwei.first)) eins else zwei
+    val d = ziel - a
+    val laenge = d.getDistance().coerceAtLeast(0.001f)
+    val dist = laenge.coerceIn(abs(l1 - l2) + 0.01f, l1 + l2 - 0.01f)
+    val u = d / laenge
+    val hand = a + u * dist
+    val entlang = (l1 * l1 + dist * dist - l2 * l2) / (2f * dist)
+    val radius = kotlin.math.sqrt((l1 * l1 - entlang * entlang).coerceAtLeast(0f))
+    val quer = Offset(-u.y, u.x)
+    // Bevorzugte Ellbogenrichtung: nach außen und unten, dazu ein fester Anteil zum Betrachter hin
+    val wunsch = aussen * 0.8f * quer.x + 1f * quer.y
+    val phi = atan2(0.45f, wunsch)
+    return (a + u * entlang + quer * (radius * cos(phi))) to hand
 }
 
 /** Rechte Hand einer Seitenansicht-Pose, ohne zu zeichnen (gleiche Maße wie [mensch]). */

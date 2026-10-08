@@ -50,8 +50,12 @@ internal fun DrawScope.szeneGarten(t: Float, f: Farben) {
     val bogen = an(t, 2.5f, 38.5f)
     val sonne = Offset(w * (0.06f + 0.88f * bogen), horizont + h * 0.06f - sin(bogen * 3.14f) * h * 0.44f)
     val sonnenFarbe = lerp(Color(0xFFFF9A4D), if (d) Color(0xFFEFE6C8) else Color(0xFFFFD27A), (sin(bogen * 3.14f) * 1.6f).coerceIn(0f, 1f))
-    drawCircle(Brush.radialGradient(listOf(sonnenFarbe.copy(alpha = 0.55f), Color.Transparent), sonne, h * 0.2f), h * 0.2f, sonne)
-    drawCircle(sonnenFarbe, h * 0.05f, sonne)
+    // Am Horizont blendet die Sonne ganz aus, damit beim Neustart kein Schein von rechts nach links springt
+    val sonnenSicht = (sin(bogen * 3.14f) * 3f).coerceIn(0f, 1f)
+    if (sonnenSicht > 0f) {
+        drawCircle(Brush.radialGradient(listOf(sonnenFarbe.copy(alpha = 0.55f * sonnenSicht), Color.Transparent), sonne, h * 0.2f), h * 0.2f, sonne)
+        drawCircle(sonnenFarbe.copy(alpha = sonnenSicht), h * 0.05f, sonne)
+    }
     for (i in 0 until 3) {
         val wx = runde(t, zyklus, 1, i * 0.33f) * w * 1.3f - w * 0.15f
         val wy = h * (0.1f + i * 0.08f)
