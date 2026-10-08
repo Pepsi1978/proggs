@@ -17,6 +17,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -75,6 +76,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.frank.aufgaben.data.Aufgabe
@@ -336,37 +339,50 @@ private fun VorlesenKnopf(vm: AppViewModel, schluessel: String, aktion: () -> Un
 private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmschalten: () -> Unit) {
     val f = LocalFarben.current
     val e = vm.einstellungen
-    Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 8.dp), horizontalArrangement = Arrangement.End) {
-        RundKnopf(if (sucheOffen) Icons.Rounded.Close else Icons.Rounded.Search, "Suchen", sucheUmschalten)
-        RundKnopf(Icons.Rounded.Palette, "Design wechseln") {
-            val alle = Design.entries
-            val neu = alle[(alle.indexOf(Design.von(e.design)) + 1) % alle.size]
-            e.design = neu.id
-            vm.melde("Design: ${neu.anzeige}")
-        }
-        // Hell → Automatisch (wie das System) → Dunkel → Hell. Das Symbol zeigt den aktuellen Modus.
-        val modus = e.modus
-        RundKnopf(
-            when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
-            when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" },
-        ) {
-            val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
-            e.modus = neu
-            vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" })
-        }
-        RundKnopf(Icons.Rounded.Settings, "Einstellungen") { vm.zeige(Bildschirm.Einstellungen) }
+    // Eigene Titelzeile ohne Knöpfe: App-Name, daneben Serie bzw. Datum.
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("Sinnvolle Aufgaben", color = f.text, fontSize = 25.sp, lineHeight = 30.sp, maxLines = 1, fontWeight = FontWeight.ExtraBold, style = TextStyle(brush = Brush.linearGradient(listOf(f.text, f.primaer))))
+        Text(
+            if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else Tage.langesDatum(vm.heute),
+            color = f.textLeise, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End, maxLines = 2,
+            modifier = Modifier.weight(1f).padding(start = 10.dp),
+        )
     }
-    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Fortschritt(b.heuteFertig, b.heuteGesamt)
-        Spacer(Modifier.width(10.dp))
-        FokusKnopf { vm.fokusStarten(null) }
-        Column(Modifier.weight(1f).padding(start = 14.dp)) {
-            Text("Sinnvolle Aufgaben", color = f.text, fontSize = 27.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold, style = TextStyle(brush = Brush.linearGradient(listOf(f.text, f.primaer))))
-            Text(
-                if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else Tage.langesDatum(vm.heute),
-                color = f.textLeise, fontSize = 13.sp, fontWeight = FontWeight.Medium,
-            )
+    // Alle sechs Knöpfe gleich groß in einer Zeile, bündig mit der linken und rechten Kante der Szene (14 dp Rand).
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp)) {
+        val g = ((maxWidth - 8.dp * 5) / 6).coerceAtMost(62.dp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Fortschritt(b.heuteFertig, b.heuteGesamt, g)
+            RundKnopf(Icons.Rounded.SelfImprovement, "Fokus-Timer", g) { vm.fokusStarten(null) }
+            RundKnopf(if (sucheOffen) Icons.Rounded.Close else Icons.Rounded.Search, "Suchen", g, sucheUmschalten)
+            RundKnopf(Icons.Rounded.Palette, "Design wechseln", g) {
+                val alle = Design.entries
+                val neu = alle[(alle.indexOf(Design.von(e.design)) + 1) % alle.size]
+                e.design = neu.id
+                vm.melde("Design: ${neu.anzeige}")
+            }
+            // Hell → Automatisch (wie das System) → Dunkel → Hell. Das Symbol zeigt den aktuellen Modus.
+            val modus = e.modus
+            RundKnopf(
+                when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
+                when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" },
+                g,
+            ) {
+                val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
+                e.modus = neu
+                vm.melde(when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" })
+            }
+            RundKnopf(Icons.Rounded.Settings, "Einstellungen", g) { vm.zeige(Bildschirm.Einstellungen) }
         }
+    }
+}
+
+/** Runder Glas-Knopf der Kopfzeile in frei wählbarer Größe; das Symbol wächst mit. */
+@Composable
+private fun RundKnopf(icon: ImageVector, beschreibung: String, groesse: Dp, aktion: () -> Unit) {
+    val f = LocalFarben.current
+    Box(Modifier.size(groesse).glas(f, 99.dp, 1.2f).antippen(aktion = aktion), contentAlignment = Alignment.Center) {
+        Icon(icon, beschreibung, tint = f.text, modifier = Modifier.size(groesse * 0.46f))
     }
 }
 
@@ -391,30 +407,18 @@ private fun Suchfeld(wert: String, aendern: (String) -> Unit) {
     }
 }
 
-/**
- * Großer Fokus-Knopf rechts neben dem Fortschrittskreis, gleich groß wie dieser, aber im ruhigen Glas-Aussehen der
- * runden Knöpfe oben – farbig leuchtet nur das Plus für neue Aufgaben.
- */
 @Composable
-private fun FokusKnopf(aktion: () -> Unit) {
-    val f = LocalFarben.current
-    Box(Modifier.size(62.dp).glas(f, 99.dp, 1.2f).antippen(aktion = aktion), contentAlignment = Alignment.Center) {
-        Icon(Icons.Rounded.SelfImprovement, "Fokus-Timer", tint = f.text, modifier = Modifier.size(30.dp))
-    }
-}
-
-@Composable
-private fun Fortschritt(fertig: Int, gesamt: Int) {
+private fun Fortschritt(fertig: Int, gesamt: Int, groesse: Dp) {
     val f = LocalFarben.current
     val ziel = if (gesamt == 0) 0f else fertig / gesamt.toFloat()
     val anteil by animateFloatAsState(ziel, spring(dampingRatio = 0.7f, stiffness = 120f), label = "fortschritt")
-    Box(Modifier.size(62.dp).glas(f, 99.dp, 1.2f), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(50.dp)) {
-            val w = 6.dp.toPx()
+    Box(Modifier.size(groesse).glas(f, 99.dp, 1.2f), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(groesse * 0.81f)) {
+            val w = (groesse * 0.095f).toPx()
             drawArc(f.textSchwach.copy(alpha = 0.25f), 0f, 360f, false, Offset(w / 2, w / 2), Size(size.width - w, size.height - w), style = Stroke(w))
             drawArc(Brush.sweepGradient(listOf(f.primaer, f.sekundaer, f.primaer)), -90f, 360f * anteil, false, Offset(w / 2, w / 2), Size(size.width - w, size.height - w), style = Stroke(w, cap = StrokeCap.Round))
         }
-        Text(if (gesamt == 0) "☀️" else "$fertig/$gesamt", color = f.text, fontSize = if (gesamt == 0) 18.sp else 13.sp, fontWeight = FontWeight.Bold)
+        Text(if (gesamt == 0) "☀️" else "$fertig/$gesamt", color = f.text, fontSize = if (gesamt == 0) 18.sp else if (groesse < 56.dp) 11.sp else 13.sp, fontWeight = FontWeight.Bold)
     }
 }
 
