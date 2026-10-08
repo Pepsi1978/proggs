@@ -17,12 +17,56 @@ public sealed class WingetAktualisierer : IAktualisierer
         if (!File.Exists(Pfade.Winget))
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "winget wurde nicht gefunden.");
 
-        var args = $"list --id {eintrag.WingetId} --exact --disable-interactivity --accept-source-agreements";
-        protokoll.Report($"winget {args}");
-        var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(3), abbruch: abbruch);
-        protokoll.Report(lauf.Ausgabe);
-
+        var lauf = await ListeAsync(eintrag, protokoll, abbruch);
         return ListeAuswerten(lauf, eintrag.WingetId ?? "");
+    }
+
+    /// <summary>
+    /// winget keeps one lock on its sources; several runs at once only queue up inside it and
+    /// can time out there. All checks share this one lane, everything else runs beside it.
+    /// </summary>
+    internal static readonly SemaphoreSlim Reihe = new(1, 1);
+
+    private static string QuellArgument(ProgrammEintrag eintrag)
+        => string.IsNullOrWhiteSpace(eintrag.WingetQuelle) ? "" : " --source " + eintrag.WingetQuelle.Trim();
+
+    /// <summary>
+    /// "winget list" for one package, limited to its source. Without a source winget also asks
+    /// the Store for every query (measured: 46 s against 1 s). Should the package not be found
+    /// in the named source after all, the slow query over all sources decides -- the fast path
+    /// must never turn an installed program into "not installed".
+    /// </summary>
+    private static async Task<BefehlErgebnis> ListeAsync(ProgrammEintrag eintrag, IProgress<string>? protokoll, CancellationToken abbruch)
+    {
+        var basis = $"list --id {eintrag.WingetId} --exact --disable-interactivity --accept-source-agreements";
+        var quelle = QuellArgument(eintrag);
+
+        await Reihe.WaitAsync(abbruch);
+        try
+        {
+            protokoll?.Report("winget " + basis + quelle);
+            var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, basis + quelle, TimeSpan.FromMinutes(2), abbruch: abbruch);
+            protokoll?.Report(lauf.Ausgabe);
+
+            var gefunden = !lauf.Abgelaufen && lauf.ExitCode == 0 && !MeldetKeinPaket(lauf.Ausgabe)
+                           && TabellenZeile(lauf.Ausgabe, eintrag.WingetId ?? "") is not null;
+            if (quelle.Length == 0 || gefunden) return lauf;
+
+            // A failed run is a failed run -- asking again more slowly does not repair it. And
+            // "not found" is believed when nothing on this machine says otherwise.
+            var keinPaket = lauf.ExitCode == KeinPaketGefunden || (lauf.ExitCode == 0 && !lauf.Abgelaufen);
+            var hierVorhanden = eintrag.IstPaketApp || File.Exists(Pfade.Aufloesen(eintrag.ExePfadWirksam));
+            if (!keinPaket || !hierVorhanden) return lauf;
+
+            protokoll?.Report("In der Quelle „" + eintrag.WingetQuelle + "“ nicht eindeutig – Abfrage über alle Quellen: winget " + basis);
+            lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, basis, TimeSpan.FromMinutes(3), abbruch: abbruch);
+            protokoll?.Report(lauf.Ausgabe);
+            return lauf;
+        }
+        finally
+        {
+            Reihe.Release();
+        }
     }
 
     /// <summary>winget's exit code for "no installed package matches" (measured with v1.29).</summary>
@@ -77,7 +121,7 @@ public sealed class WingetAktualisierer : IAktualisierer
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "winget wurde nicht gefunden.");
 
         var args = $"upgrade --id {eintrag.WingetId} --exact --silent --disable-interactivity "
-                 + "--accept-source-agreements --accept-package-agreements";
+                 + "--accept-source-agreements --accept-package-agreements" + QuellArgument(eintrag);
         protokoll.Report($"winget {args}");
 
         var lauf = await Kommandozeile.AusfuehrenAsync(
@@ -127,8 +171,7 @@ public sealed class WingetAktualisierer : IAktualisierer
 
         if (!File.Exists(Pfade.Winget)) return "";
 
-        var args = $"list --id {eintrag.WingetId} --exact --disable-interactivity --accept-source-agreements";
-        var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(3), abbruch: abbruch);
+        var lauf = await ListeAsync(eintrag, null, abbruch);
         var (wert, problem) = ListenFingerabdruck(lauf, eintrag.WingetId ?? "");
         if (problem is not null) Protokollierung.Schreiben(eintrag.Id, "Fingerabdruck unbekannt: " + problem);
         return wert;

@@ -242,6 +242,9 @@ public sealed partial class HauptViewModel : ObservableObject
             // The history survives restarts, so each card can show how its last run went.
             if (berichte.TryGetValue(eintrag.Id, out var bericht)) vm.LetzterBericht = bericht;
 
+            // So does the answer of the last check -- the list is meaningful before anything runs.
+            if (Pruefstand.Lesen(eintrag.Id) is { } stand) vm.StandUebernehmen(stand);
+
             Programme.Add(vm);
         }
 
@@ -263,7 +266,11 @@ public sealed partial class HauptViewModel : ObservableObject
     /// Runs once after the window is up, so the list is meaningful without a first click -- and
     /// so the update buttons show "Aktuell" wherever nothing is pending.
     /// </summary>
-    public async Task ErstePruefungAsync()
+    /// <param name="alles">
+    /// The hidden start at Windows logon checks everything. A window opened by hand only checks
+    /// what has no fresh answer -- after the logon check that is nothing, and the list is simply there.
+    /// </param>
+    public async Task ErstePruefungAsync(bool alles = false)
     {
         await Task.Delay(400);
 
@@ -271,8 +278,25 @@ public sealed partial class HauptViewModel : ObservableObject
         // external command of the start runs without correlation.
         using var vorgang = Diagnose.VorgangBeginnen("startpruefung", null, "Anfangsprüfung aller Programme");
 
-        // Which programs already start elevated through a scheduled task?
-        foreach (var p in Programme) await p.AufgabenZustandLesenAsync();
+        // Which programs already start elevated through a scheduled task? Independent queries.
+        await Task.WhenAll(Programme.Select(p => p.AufgabenZustandLesenAsync()));
+
+        var grenze = DateTime.Now - StandGueltig;
+        // The own tools are always asked again: that costs one shared git pull, and it is the
+        // only way a version that just arrived in the repo shows up without a click.
+        var faellig = alles
+            ? Programme.ToList()
+            : Programme.Where(p => p.StandVom is not { } zeit || zeit < grenze
+                                   || p.Eintrag.Art.Equals("reposkript", StringComparison.OrdinalIgnoreCase)).ToList();
+        if (faellig.Count == 0 && !Programme.Any(p => p.UebernahmeOffen))
+        {
+            var aeltester = Programme.Min(p => p.StandVom);
+            KopfStatus = "Stand der letzten Prüfung von " + (aeltester?.ToString("HH:mm") ?? "–") + " Uhr – "
+                         + UpdateZusammenfassung + ". „Alle prüfen“ fragt neu ab.";
+            vorgang.Beenden("uebernommen", KopfStatus);
+            _ = HintergrundSicherstellenAsync();
+            return;
+        }
 
         // The startup pass queries winget, git and the Appx registry just like a batch run, so it
         // holds the same exclusive ownership -- a click during it waits instead of running beside it.
@@ -291,7 +315,7 @@ public sealed partial class HauptViewModel : ObservableObject
             // Did a previously staged update arrive in the meantime -- or is it still hanging?
             foreach (var p in Programme.ToList()) await p.AusstehendesPruefenAsync();
 
-            await AllePruefenMitBesitzAsync(besitz);
+            await AllePruefenMitBesitzAsync(besitz, faellig);
             vorgang.Beenden("abgeschlossen", KopfStatus);
         }
         catch (Exception ex)
@@ -303,6 +327,112 @@ public sealed partial class HauptViewModel : ObservableObject
         finally
         {
             LaeuftSammelvorgang = false;
+            _ = HintergrundSicherstellenAsync();
+        }
+    }
+
+    /// <summary>How long a stored answer spares the check at the next start.</summary>
+    private static readonly TimeSpan StandGueltig = TimeSpan.FromMinutes(60);
+
+    [ObservableProperty] private int _pruefGesamt = 1;
+    [ObservableProperty] private int _pruefFertig;
+
+    // ---------------- Prüfung beim Windows-Start ----------------
+
+    /// <summary>Check hidden at Windows logon, so the window opened later already knows everything.</summary>
+    public bool BeimStartPruefen
+    {
+        get => _einstellungen.HintergrundPruefung;
+        set
+        {
+            if (_einstellungen.HintergrundPruefung == value) return;
+            _einstellungen.HintergrundPruefung = value;
+            _einstellungen.Speichern();
+            OnPropertyChanged();
+            _ = value ? HintergrundSicherstellenAsync(melden: true) : HintergrundEntfernenAsync();
+        }
+    }
+
+    private const string HintergrundRunName = "UpdateZentrale-Hintergrund";
+
+    /// <summary>
+    /// Makes sure the logon start exists and points at this exe -- on every start, so it repairs
+    /// itself after a moved folder or a removed task. Elevated: a scheduled task (the only way
+    /// Windows starts a program marked "as administrator" at logon). Not elevated and not marked:
+    /// the ordinary autostart entry.
+    /// </summary>
+    private async Task HintergrundSicherstellenAsync(bool melden = false)
+    {
+        try
+        {
+            if (!_einstellungen.HintergrundPruefung) return;
+            var exe = Rechte.EigeneExe;
+            if (string.IsNullOrWhiteSpace(exe)) return;
+
+            if (Rechte.IstErhoeht)
+            {
+                if (_einstellungen.HintergrundEingerichtetFuer == "aufgabe:" + exe
+                    && await Aufgabenplanung.ExistiertAsync(Aufgabenplanung.HintergrundId)) return;
+
+                var (erfolg, ausgabe) = await Aufgabenplanung.HintergrundAnlegenAsync(exe);
+                if (!erfolg)
+                {
+                    Diagnose.Ereignis(Schwere.Warnung, "hintergrund", "hintergrund.aufgabe", "Aufgabe nicht angelegt: " + ausgabe);
+                    if (melden) Dialoge.Hinweis("Die Prüfung beim Windows-Start ließ sich nicht einrichten:\n" + ausgabe);
+                    return;
+                }
+                Systemdienst.RunEintragEntfernen(HintergrundRunName);
+                Merken("aufgabe:" + exe);
+            }
+            else if (!Rechte.ImmerAlsAdmin)
+            {
+                if (_einstellungen.HintergrundEingerichtetFuer == "run:" + exe) return;
+                if (Systemdienst.RunEintragSchreiben(HintergrundRunName, "\"" + exe + "\" " + App.HintergrundSchalter))
+                    Merken("run:" + exe);
+            }
+            else if (_einstellungen.HintergrundEingerichtetFuer != "aufgabe:" + exe)
+            {
+                // Marked "always as administrator" but started without: neither way is open now.
+                const string text = "Die Prüfung beim Windows-Start wird eingerichtet, sobald die UpdateZentrale einmal "
+                                    + "mit Administratorrechten läuft (oben: „Als Administrator neu starten“).";
+                if (melden) Dialoge.Hinweis(text);
+                else KopfStatus += "  ·  Hinweis: " + text;
+            }
+        }
+        catch (Exception ex)
+        {
+            Diagnose.Ausnahme(ex, "hintergrund", "Prüfung beim Windows-Start einrichten", Schwere.Warnung);
+        }
+
+        void Merken(string wert)
+        {
+            _einstellungen.HintergrundEingerichtetFuer = wert;
+            _einstellungen.Speichern();
+            Diagnose.Ereignis(Schwere.Info, "hintergrund", "hintergrund.eingerichtet", wert);
+        }
+    }
+
+    private async Task HintergrundEntfernenAsync()
+    {
+        try
+        {
+            Systemdienst.RunEintragEntfernen(HintergrundRunName);
+            if (await Aufgabenplanung.ExistiertAsync(Aufgabenplanung.HintergrundId))
+            {
+                var (weg, ausgabe) = await Aufgabenplanung.EntfernenAsync(Aufgabenplanung.HintergrundId);
+                if (!weg)
+                {
+                    Dialoge.Hinweis("Die geplante Aufgabe ließ sich nicht entfernen – dafür muss die UpdateZentrale "
+                                    + "mit Administratorrechten laufen.\n" + ausgabe);
+                    return;
+                }
+            }
+            _einstellungen.HintergrundEingerichtetFuer = null;
+            _einstellungen.Speichern();
+        }
+        catch (Exception ex)
+        {
+            Diagnose.Ausnahme(ex, "hintergrund", "Prüfung beim Windows-Start entfernen", Schwere.Warnung);
         }
     }
 
@@ -330,20 +460,50 @@ public sealed partial class HauptViewModel : ObservableObject
         }
     }
 
-    private async Task AllePruefenMitBesitzAsync(Laufbesitz besitz)
+    private async Task AllePruefenMitBesitzAsync(Laufbesitz besitz, IReadOnlyList<ProgrammViewModel>? nur = null)
     {
-        // Sequential on purpose: winget serialises its source access anyway, and a parallel
-        // burst makes the log unreadable. A snapshot: the list must not shift under the loop
-        // (reload is blocked meanwhile, this is the second layer).
-        var liste = Programme.ToList();
-        var gesamt = liste.Count;
-        for (var i = 0; i < gesamt; i++)
+        // A snapshot: the list must not shift under the run (reload is blocked meanwhile, this is
+        // the second layer).
+        var liste = (nur ?? Programme).ToList();
+        PruefGesamt = Math.Max(liste.Count, 1);
+        PruefFertig = 0;
+
+        // The own tools are built from ~/proggs, so the checkout is brought up to date first --
+        // once for all of them, and before any card reads a version from it.
+        string? repoHinweis = null;
+        if (liste.Any(p => p.Eintrag.Art.Equals("reposkript", StringComparison.OrdinalIgnoreCase)))
         {
-            var p = liste[i];
-            KopfStatus = "Prüft " + p.Name + " (" + (i + 1) + " von " + gesamt + ") …";
-            await p.PruefenImSammelAsync(besitz);
+            KopfStatus = "Gleicht das Repo mit GitHub ab (git pull) …";
+            var abgleich = await RepoAbgleich.AbgleichenAsync(Pfade.RepoWurzel, erzwingen: true);
+            if (!abgleich.GezogenOk) repoHinweis = abgleich.Meldung;
         }
-        KopfStatus = "Prüfung abgeschlossen – " + UpdateZusammenfassung + ".";
+
+        // All at once: the checks wait on different things (winget, the registries, git, lms).
+        // Only winget itself is queued, inside its provider. One after the other the same pass
+        // took five minutes; the slowest single check now sets the pace.
+        var offen = liste.Select(p => p.Name).ToList();
+        void Anzeigen() => KopfStatus = "Prüft … " + PruefFertig + " von " + liste.Count + " fertig"
+                                        + (offen.Count == 0 ? "" : " – läuft noch: " + string.Join(", ", offen.Take(4))
+                                                                   + (offen.Count > 4 ? " …" : ""));
+        async Task EinerAsync(ProgrammViewModel p)
+        {
+            try
+            {
+                await p.PruefenImSammelAsync(besitz);
+            }
+            finally
+            {
+                offen.Remove(p.Name);
+                PruefFertig++;
+                Anzeigen();
+            }
+        }
+
+        Anzeigen();
+        await Task.WhenAll(liste.Select(EinerAsync));
+
+        KopfStatus = "Prüfung abgeschlossen – " + UpdateZusammenfassung + "."
+                     + (repoHinweis is null ? "" : "  ·  " + repoHinweis);
     }
 
     [RelayCommand]

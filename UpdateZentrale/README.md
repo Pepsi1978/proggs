@@ -12,7 +12,9 @@ Start über die Verknüpfung **UpdateZentrale** auf dem Desktop oder im Startmen
 
 | Bereich | Verhalten |
 |---|---|
-| **Prüfen** | Läuft beim Start automatisch für alle Einträge, danach jederzeit einzeln oder gesammelt. Zeigt installierte Version → verfügbare Version. |
+| **Prüfen** | Alle Einträge werden gleichzeitig geprüft (nur winget läuft in einer eigenen Reihe); die Fußzeile zeigt „x von n fertig". Zeigt installierte Version → verfügbare Version. Das Ergebnis wird gemerkt: Beim nächsten Öffnen steht es sofort da, neu geprüft wird nur, was älter als 60 Minuten ist – die eigenen Werkzeuge immer. |
+| **Repo-Abgleich** | Vor der Prüfung der eigenen Werkzeuge (OpenLauncher, TVO, CVO, UpdateZentrale) wird `~/proggs` einmal mit GitHub abgeglichen: `git fetch` und Vorspulen (`--ff-only`), nie ein Merge. Erst dadurch ist bekannt, welche Version im Repo wartet. Lässt sich das Repo nicht vorspulen (lokale Änderungen im Weg), steht das in der Fußzeile, und die Karten zählen weiter die wartenden Commits. |
+| **Prüfung beim Windows-Start** | Schalter in der Fußzeile, standardmäßig an. 45 Sekunden nach der Anmeldung startet die UpdateZentrale unsichtbar (`--hintergrund`), gleicht das Repo ab, prüft alles und beendet sich wieder. Wird sie währenddessen von Hand geöffnet, erscheint das Fenster mit dem laufenden Fortschritt. Eingerichtet wird das als geplante Aufgabe „UpdateZentrale - Hintergrund" (dafür muss die App einmal mit Administratorrechten laufen), ohne den Schalter „Immer als Administrator" als normaler Autostart-Eintrag. |
 | **Aktualisieren** | Läuft für jedes Programm still durch, ohne dass eine fremde Oberfläche aufgeht. Die Schaltfläche lädt nur dann zum Klick ein, wenn wirklich eine neuere Version vorliegt; ist alles aktuell, steht dort „Aktuell" und sie ist abgeschaltet. |
 | **Laufende Programme** | Wird pfadgenau erkannt (inklusive Helferprogramme). Muss ein Programm für das Update beendet werden, fragt die App vorher und startet es danach wieder, wenn es vorher lief. |
 | **Autostart** | Wird pro Programm angezeigt und lässt sich auf eine geplante Aufgabe mit Administratorrechten umstellen. |
@@ -67,6 +69,11 @@ Abgelegt wird alles in `%LOCALAPPDATA%\UpdateZentrale\logs\`:
 Die Schaltfläche **Protokolle** in der Fußzeile öffnet diesen Ordner.
 
 ### Administratorrechte
+
+Zum **Prüfen** braucht die UpdateZentrale keine Administratorrechte, ebenso wenig für die
+Kommandozeilen-Werkzeuge und die eigenen Werkzeuge. Gebraucht werden sie nur zum **Installieren**
+von Paket-Apps (Claude Desktop, Codex Desktop, PowerShell 7). Schlägt eine Prüfung fehl, liegt es
+also nicht an den Rechten – siehe `bugs/desktop/dotnet-httpclient-ipv6-haenger.md`.
 
 * Die UpdateZentrale markiert sich beim ersten Start selbst mit dem Windows-Kompatibilitätsschalter
   **RUNASADMIN**. Dadurch startet sie erhöht – egal ob über die Desktop-Verknüpfung, das Startmenü
@@ -126,6 +133,7 @@ Weitere optionale Felder:
 
 | Feld | Bedeutung |
 |---|---|
+| `wingetQuelle` | Nur `winget`: die Quelle des Pakets, Standard `winget`. Mit Quelle dauert eine Abfrage 1 s, ohne fragt winget zusätzlich den Store ab (45–95 s). Leer = alle Quellen. |
 | `exePfadAlternativen` | Weitere Orte für dieselbe Programmdatei; der erste Pfad, den es auf diesem Rechner wirklich gibt, gewinnt. So läuft derselbe Katalog auf mehreren Rechnern (LM Studio unter `Program Files` statt `%LOCALAPPDATA%`, CLIs als npm-Shim statt nativem Installer). |
 | `ausblendenWennFehlt` | Blendet die Karte aus, wenn auf diesem Rechner keiner der Pfadkandidaten existiert – für Programme, die nur auf einem Teil der Geräte benutzt werden. |
 | `versionsArgumente` | Argumente, die die installierte Version ausgeben (z. B. `--version`) |

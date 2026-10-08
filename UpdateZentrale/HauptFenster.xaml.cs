@@ -21,12 +21,8 @@ public partial class HauptFenster : Window
         };
         Darstellung.Gewechselt += (_, _) => TitelleisteAnpassen();
 
-        // The list is only useful once every card knows its state, so the first check runs by
-        // itself right after the window is up.
-        Loaded += async (_, _) =>
-        {
-            if (DataContext is HauptViewModel modell) await modell.ErstePruefungAsync();
-        };
+        // The first check is started by App.OnStartup, not by Loaded: at Windows logon it runs
+        // while this window is not shown at all.
     }
 
     /// <summary>

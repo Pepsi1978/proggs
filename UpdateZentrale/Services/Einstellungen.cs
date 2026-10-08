@@ -48,6 +48,15 @@ public sealed class Einstellungen
     /// </summary>
     public bool AdminStartGesetzt { get; set; }
 
+    /// <summary>Check hidden at Windows logon; on unless switched off in the footer.</summary>
+    public bool HintergrundPruefung { get; set; } = true;
+
+    /// <summary>
+    /// How and for which exe the logon start was set up ("aufgabe:&lt;exe&gt;" or "run:&lt;exe&gt;"),
+    /// so a moved program folder is noticed and the start is set up again.
+    /// </summary>
+    public string? HintergrundEingerichtetFuer { get; set; }
+
     public static Einstellungen Laden()
     {
         try

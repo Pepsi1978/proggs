@@ -19,8 +19,17 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
         var installiert = InstallierteVersion(eintrag);
         var quelle = QuellVersion(eintrag);
 
+        // First bring the checkout to origin's state (shared by all cards, see RepoAbgleich): the
+        // versions compared below are then the ones that would really be built. Read the exe
+        // only afterwards -- the pull may have moved the csproj.
+        var abgleich = string.IsNullOrWhiteSpace(eintrag.RepoOrdner) ? null : await RepoAbgleich.AbgleichenAsync(Pfade.RepoWurzel);
+        if (abgleich is not null) protokoll.Report("Repo-Abgleich: " + abgleich.Meldung);
+        quelle = QuellVersion(eintrag);
+
         // Signal 1: does the remote carry commits for this folder's build sources that are not here yet?
-        var hinterstand = await HinterstandAsync(Pfade.RepoWurzel, eintrag.RepoOrdner, protokoll, abbruch);
+        // After a successful pull this is 0; it stays the safety net when the pull was refused.
+        var hinterstand = await HinterstandAsync(Pfade.RepoWurzel, eintrag.RepoOrdner, protokoll, abbruch,
+            bereitsGeholt: abgleich is { GeholtOk: true });
 
         // Signal 2: is the source version newer than the built exe? Compared numerically --
         // a prefix test called "1.24.5" current for an exe built from "1.24.50".
@@ -69,7 +78,8 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
         // "already current", the next check finds the same commits again, and the card asks for
         // the same update over and over. Same fast-forward-only pull the launcher itself does.
         var hinterstand = await HinterstandAsync(Pfade.RepoWurzel, eintrag.RepoOrdner, protokoll, abbruch);
-        var lokalNeuer = LokaleQuelleNeuer(eintrag, protokoll);
+        // Off the UI thread: the folder of the launcher carries thousands of profile files.
+        var lokalNeuer = await Task.Run(() => LokaleQuelleNeuer(eintrag, protokoll), abbruch);
         if (!DarfSkriptStarten(hinterstand, !string.IsNullOrWhiteSpace(eintrag.RepoOrdner), lokalNeuer))
             return new PruefErgebnis(UpdateZustand.Fehler,
                 Meldung: "Der Git-Stand ließ sich nicht abfragen, und lokal liegt kein neuerer Quellcode als im "
@@ -224,12 +234,16 @@ public sealed class RepoSkriptAktualisierer : IAktualisierer
     /// Commits on origin/main that touch build sources of the folder; 0 without a folder; null
     /// when git could not answer -- never a silent 0, which would read as "current".
     /// </returns>
+    /// <param name="bereitsGeholt">A fetch that just succeeded (RepoAbgleich) is not repeated per card.</param>
     internal static async Task<int?> HinterstandAsync(string repoWurzel, string? ordner,
-                                                      IProgress<string>? protokoll, CancellationToken abbruch)
+                                                      IProgress<string>? protokoll, CancellationToken abbruch,
+                                                      bool bereitsGeholt = false)
     {
         if (string.IsNullOrWhiteSpace(ordner)) return 0;
 
-        var holen = await Kommandozeile.AusfuehrenAsync("git", "fetch --quiet", TimeSpan.FromMinutes(3), repoWurzel, abbruch);
+        var holen = bereitsGeholt
+            ? new BefehlErgebnis(0, "", false)
+            : await Kommandozeile.AusfuehrenAsync("git", "fetch --quiet", TimeSpan.FromMinutes(3), repoWurzel, abbruch);
         if (holen.Abgelaufen || holen.ExitCode != 0)
         {
             // A stale origin/main can answer "0 behind" while the real remote is ahead -- that

@@ -207,6 +207,74 @@ public static class Einzelstart
         _instanz = null;
     }
 
+    private const string ZeigenName = @"Local\UpdateZentrale.Zeigen";
+    private static EventWaitHandle? _zeigen;
+
+    /// <summary>
+    /// The holder of the lock listens for "show yourself". A hidden instance (the check at Windows
+    /// logon) has no window handle a second start could find, so the request needs its own channel.
+    /// </summary>
+    public static void ZeigenAbonnieren(Action zeigen)
+    {
+        try
+        {
+            _zeigen = ZeigenEreignisAnlegen();
+            var ereignis = _zeigen;
+            new Thread(() =>
+            {
+                while (true)
+                {
+                    try { ereignis.WaitOne(); }
+                    catch (Exception) { return; }   // closed at exit
+                    try { zeigen(); }
+                    catch (Exception diagAusnahme) { Diagnose.Gefangen(diagAusnahme, "einzelstart", Schwere.Warnung); }
+                }
+            }) { IsBackground = true, Name = "UpdateZentrale.Zeigen" }.Start();
+        }
+        catch (Exception diagAusnahme)
+        {
+            Diagnose.Gefangen(diagAusnahme, "einzelstart", Schwere.Warnung);
+        }
+    }
+
+    /// <summary>
+    /// Open to every caller of this session: the hidden instance usually runs elevated, and a
+    /// start without elevation must still be able to ask for the window.
+    /// </summary>
+    private static EventWaitHandle ZeigenEreignisAnlegen()
+    {
+        try
+        {
+            var rechte = new System.Security.AccessControl.EventWaitHandleSecurity();
+            rechte.AddAccessRule(new System.Security.AccessControl.EventWaitHandleAccessRule(
+                new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.WorldSid, null),
+                System.Security.AccessControl.EventWaitHandleRights.Synchronize
+                | System.Security.AccessControl.EventWaitHandleRights.Modify,
+                System.Security.AccessControl.AccessControlType.Allow));
+            return EventWaitHandleAcl.Create(false, EventResetMode.AutoReset, ZeigenName, out _, rechte);
+        }
+        catch (Exception diagAusnahme)
+        {
+            Diagnose.Gefangen(diagAusnahme, "einzelstart", Schwere.Debug);
+            return new EventWaitHandle(false, EventResetMode.AutoReset, ZeigenName);
+        }
+    }
+
+    /// <returns>true when a running instance was asked to show its window.</returns>
+    public static bool ZeigenSignalisieren()
+    {
+        try
+        {
+            if (!EventWaitHandle.TryOpenExisting(ZeigenName, out var ereignis)) return false;
+            using (ereignis) return ereignis.Set();
+        }
+        catch (Exception diagAusnahme)
+        {
+            Diagnose.Gefangen(diagAusnahme, "einzelstart", Schwere.Debug);
+            return false;
+        }
+    }
+
     /// <summary>
     /// Another running process of exactly this exe -- the name alone is not enough, a foreign
     /// program may carry it too. Every Process object is disposed, also on an early hit.

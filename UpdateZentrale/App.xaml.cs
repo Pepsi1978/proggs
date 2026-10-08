@@ -20,11 +20,18 @@ public partial class App : Application
         // Only one window: two instances would write the same settings and log files, and two
         // update runs could meet on the same installer.
         // e.Args carries the handoff PID when this is the elevated successor of a running instance.
+        var hintergrund = e.Args.Any(a => a.Equals(HintergrundSchalter, StringComparison.OrdinalIgnoreCase));
         if (!Einzelstart.Beanspruchen(e.Args))
         {
             Diagnose.Ereignis(Schwere.Info, "app", "app.zweite_instanz",
                 "Eine UpdateZentrale läuft bereits – dieser Start zeigt nur ihr Fenster.", daten: Diagnose.Laufzeitinfo());
-            Einzelstart.VorhandenesFensterZeigen();
+            if (!hintergrund)
+            {
+                // The running instance may be the hidden logon check: it has no window to bring
+                // forward yet, so it is asked to show itself first.
+                if (Einzelstart.ZeigenSignalisieren()) Thread.Sleep(500);
+                Einzelstart.VorhandenesFensterZeigen();
+            }
             Shutdown();
             return;
         }
@@ -54,5 +61,47 @@ public partial class App : Application
         };
 
         base.OnStartup(e);
+
+        // The window is created here instead of through StartupUri, because the logon start
+        // must not show it: it checks hidden and leaves again. A start by hand meanwhile makes
+        // it visible -- with the check still running and its progress in the footer.
+        var fenster = new HauptFenster();
+        MainWindow = fenster;
+        Einzelstart.ZeigenAbonnieren(() => Dispatcher.BeginInvoke(() => FensterZeigen(fenster)));
+        if (!hintergrund) FensterZeigen(fenster);
+
+        _ = StartpruefungAsync(fenster, hintergrund);
+    }
+
+    public const string HintergrundSchalter = "--hintergrund";
+
+    private bool _gezeigt;
+
+    private void FensterZeigen(Window fenster)
+    {
+        _gezeigt = true;
+        fenster.Show();
+        if (fenster.WindowState == WindowState.Minimized) fenster.WindowState = WindowState.Normal;
+        fenster.Activate();
+        // A window shown from the background does not get the foreground by Activate alone.
+        fenster.Topmost = true;
+        fenster.Topmost = false;
+    }
+
+    private async Task StartpruefungAsync(Window fenster, bool hintergrund)
+    {
+        try
+        {
+            if (fenster.DataContext is ViewModels.HauptViewModel modell) await modell.ErstePruefungAsync(alles: hintergrund);
+        }
+        catch (Exception ex)
+        {
+            Diagnose.Ausnahme(ex, "app", "Anfangsprüfung");
+            if (_gezeigt)
+                MessageBox.Show(ex.Message, "UpdateZentrale - unerwarteter Fehler", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        // Nobody asked for the window during the hidden check: the answers are stored, done.
+        if (hintergrund && !_gezeigt) Shutdown();
     }
 }

@@ -35,7 +35,16 @@ public sealed class StoreAktualisierer : IAktualisierer
         // The upgrade table lists what is pending without touching anything.
         var args = "upgrade --include-unknown --disable-interactivity --accept-source-agreements";
         protokoll.Report("winget " + args);
-        var lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(5), abbruch: abbruch);
+        BefehlErgebnis lauf;
+        await WingetAktualisierer.Reihe.WaitAsync(abbruch);
+        try
+        {
+            lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, args, TimeSpan.FromMinutes(5), abbruch: abbruch);
+        }
+        finally
+        {
+            WingetAktualisierer.Reihe.Release();
+        }
 
         // winget labels store rows inconsistently -- sometimes the product id, sometimes the
         // package name or the MSIX full name. Matching any of them avoids silently reporting

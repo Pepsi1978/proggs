@@ -18,6 +18,12 @@ public sealed class ProgrammEintrag
     public string Art { get; set; } = "winget";
 
     public string? WingetId { get; set; }
+
+    /// <summary>
+    /// The winget source the package comes from. Naming it keeps winget from also asking the
+    /// Store source for every query, which took 45 to 95 seconds per program. Empty = all sources.
+    /// </summary>
+    public string? WingetQuelle { get; set; } = "winget";
     public string? AppxName { get; set; }
     public string? PackageFamilyName { get; set; }
 

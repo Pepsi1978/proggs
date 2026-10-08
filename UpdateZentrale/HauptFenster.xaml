@@ -512,10 +512,24 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding KopfStatus}" Style="{StaticResource TextLeise}" VerticalAlignment="Center"
-                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"
-                           ToolTip="{Binding KopfStatus}" />
+                <DockPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                    <!-- Wie weit die Sammelprüfung ist: x von n Programmen fertig. -->
+                    <ProgressBar DockPanel.Dock="Left" Width="110" Height="5" Margin="0,0,10,0" VerticalAlignment="Center"
+                                 Minimum="0" Maximum="{Binding PruefGesamt}" Value="{Binding PruefFertig}"
+                                 Background="{DynamicResource PinselRand}" BorderThickness="0"
+                                 Foreground="{DynamicResource PinselAkzent}"
+                                 Visibility="{Binding LaeuftSammelvorgang, Converter={StaticResource BoolSichtbar}}" />
+                    <TextBlock Text="{Binding KopfStatus}" Style="{StaticResource TextLeise}" VerticalAlignment="Center"
+                               TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding KopfStatus}" />
+                </DockPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Beim Windows-Start prüfen" Style="{StaticResource TextLeise}"
+                               VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ToggleButton Style="{StaticResource Schiebeschalter}" VerticalAlignment="Center"
+                                  Margin="0,0,16,0"
+                                  IsChecked="{Binding BeimStartPruefen, Mode=TwoWay}"
+                                  ToolTip="Nach der Windows-Anmeldung gleicht die UpdateZentrale unsichtbar das Repo ab (git pull) und prüft alle Programme. Beim Öffnen steht das Ergebnis dann schon da." />
                     <TextBlock Text="Immer als Administrator starten" Style="{StaticResource TextLeise}"
                                VerticalAlignment="Center" Margin="0,0,8,0" />
                     <ToggleButton Style="{StaticResource Schiebeschalter}" VerticalAlignment="Center"

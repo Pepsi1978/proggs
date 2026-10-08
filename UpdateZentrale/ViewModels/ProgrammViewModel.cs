@@ -419,6 +419,24 @@ public sealed partial class ProgrammViewModel : ObservableObject
         ZustandAktualisieren();
     }
 
+    /// <summary>When this card's state was last checked; null = not checked, or void since an update.</summary>
+    public DateTime? StandVom { get; private set; }
+
+    /// <summary>
+    /// Shows the answer of an earlier check (usually the hidden one at Windows logon) right away.
+    /// A pending takeover or an unknown mechanism keeps its own display.
+    /// </summary>
+    public void StandUebernehmen(PruefstandEintrag stand)
+    {
+        if (_aktualisierer is null || IstBeschaeftigt) return;
+        Zustand = stand.Zustand;
+        InstallierteVersion = stand.Installiert;
+        VerfuegbareVersion = stand.Verfuegbar;
+        StatusText = string.IsNullOrWhiteSpace(stand.Meldung) ? AktionsText : stand.Meldung;
+        StandVom = stand.Zeit;
+        OnPropertyChanged(nameof(VersionsText));
+    }
+
     /// <summary>Forces the state converters to run again after a light/dark switch.</summary>
     public void DarstellungAuffrischen() => OnPropertyChanged(nameof(Zustand));
 
@@ -675,6 +693,18 @@ public sealed partial class ProgrammViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(ergebnis.InstallierteVersion)) InstallierteVersion = ergebnis.InstallierteVersion;
             VerfuegbareVersion = ergebnis.VerfuegbareVersion;
             StatusText = string.IsNullOrWhiteSpace(ergebnis.Meldung) ? AktionsText : ergebnis.Meldung;
+
+            // A check's answer is kept for the next start; an update makes the kept answer void.
+            if (art == "pruefung")
+            {
+                Pruefstand.Merken(Eintrag.Id, ergebnis with { InstallierteVersion = InstallierteVersion });
+                StandVom = Pruefstand.Lesen(Eintrag.Id)?.Zeit;
+            }
+            else
+            {
+                Pruefstand.Vergessen(Eintrag.Id);
+                StandVom = null;
+            }
             vorgang.Beenden(ergebnis.Zustand.ToString(), ergebnis.Meldung, ergebnis.Zustand switch
             {
                 UpdateZustand.Fehler => Schwere.Fehler,
@@ -686,6 +716,8 @@ public sealed partial class ProgrammViewModel : ObservableObject
         {
             Zustand = UpdateZustand.Fehler;
             StatusText = ex.Message;
+            Pruefstand.Vergessen(Eintrag.Id);
+            StandVom = null;
             ProtokollAnhaengen(ex.ToString());
             Protokollierung.Schreiben(Eintrag.Id, "[Ausnahme] " + ex);
             Diagnose.Ausnahme(ex, "karte", art + " " + Eintrag.Id);

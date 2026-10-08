@@ -1,8 +1,7 @@
 <Application x:Class="UpdateZentrale.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:dienste="clr-namespace:UpdateZentrale.Services"
-             StartupUri="HauptFenster.xaml">
+             xmlns:dienste="clr-namespace:UpdateZentrale.Services">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

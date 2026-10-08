@@ -122,6 +122,18 @@ public sealed class CliAktualisierer : IAktualisierer
             exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch, alsAufrufer: true);
         protokoll.Report(lauf.Ausgabe);
 
+        // The tools fetch their own release list. When that one request fails ("Unable to fetch
+        // latest version from npm registry") nothing was changed yet, and a second attempt a few
+        // seconds later goes through -- which is exactly what a second click used to do by hand.
+        for (var versuch = 2; versuch <= 3 && IstNetzfehler(lauf); versuch++)
+        {
+            protokoll.Report("Netzfehler beim Abruf – Versuch " + versuch + " von 3 …");
+            await Task.Delay(TimeSpan.FromSeconds(3), abbruch);
+            lauf = await Kommandozeile.AusfuehrenAsync(
+                exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch, alsAufrufer: true);
+            protokoll.Report(lauf.Ausgabe);
+        }
+
         if (Kommandozeile.UnsauberesEnde(lauf) is { } unsauber) return unsauber;
         if (lauf.ExitCode != 0)
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: $"Endete mit Code {lauf.ExitCode}.", Protokoll: lauf.Ausgabe);
@@ -187,7 +199,19 @@ public sealed class CliAktualisierer : IAktualisierer
         return ("", null);
     }
 
-    private static readonly HttpClient Netz = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly string[] NetzHinweise =
+    {
+        "unable to fetch", "failed to check for updates", "network", "etimedout", "econnreset", "enotfound",
+        "eai_again", "timed out", "timeout", "fetch failed", "socket hang up", "connection"
+    };
+
+    /// <summary>A failed run that ended by itself and names the network as the reason.</summary>
+    internal static bool IstNetzfehler(BefehlErgebnis lauf)
+        => !lauf.Abgelaufen && !lauf.Abgebrochen && lauf.BeendenProblem is null && lauf.ExitCode != 0
+           && NetzHinweise.Any(h => lauf.Ausgabe.Contains(h, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>IPv4 first and bounded per address -- see Netzdienst for why that matters here.</summary>
+    private static HttpClient Netz => Netzdienst.Client;
 
     /// <summary>
     /// Fragt die Registry direkt per HTTPS statt über "npm view". Der npm-Shim löst seine eigenen
@@ -209,7 +233,7 @@ public sealed class CliAktualisierer : IAktualisierer
         NpmAbfrage ergebnis;
         try
         {
-            using var antwort = await netz.GetAsync(adresse, abbruch);
+            using var antwort = await Netzdienst.HolenAsync(netz, adresse, abbruch);
             if (!antwort.IsSuccessStatusCode)
             {
                 ergebnis = new NpmAbfrage(false, "",
@@ -241,7 +265,7 @@ public sealed class CliAktualisierer : IAktualisierer
         NpmAbfrage ergebnis;
         try
         {
-            using var antwort = await netz.GetAsync(adresse, abbruch);
+            using var antwort = await Netzdienst.HolenAsync(netz, adresse, abbruch);
             if (!antwort.IsSuccessStatusCode)
             {
                 ergebnis = new NpmAbfrage(false, "",

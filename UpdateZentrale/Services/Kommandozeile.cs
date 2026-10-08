@@ -136,6 +136,17 @@ public static class Kommandozeile
 
         if (alsAufrufer) start.Environment["__COMPAT_LAYER"] = "RunAsInvoker";
 
+        // npm shims (claude.cmd, codex.cmd) run on node, which tries a host's IPv6 addresses
+        // first. On a network whose IPv6 goes nowhere their own "update" then fails to reach the
+        // registry. Appended, never replaced; only for the shims, a native exe ignores it anyway.
+        if (alsAufrufer && datei.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase))
+        {
+            const string zuerstV4 = "--dns-result-order=ipv4first";
+            start.Environment.TryGetValue("NODE_OPTIONS", out var bisher);
+            if (bisher is null || !bisher.Contains(zuerstV4, StringComparison.OrdinalIgnoreCase))
+                start.Environment["NODE_OPTIONS"] = string.IsNullOrWhiteSpace(bisher) ? zuerstV4 : bisher + " " + zuerstV4;
+        }
+
         using var prozess = new Process { StartInfo = start, EnableRaisingEvents = true };
         var puffer = new StringBuilder();
 
