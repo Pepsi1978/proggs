@@ -1,6 +1,6 @@
 # Codex Desktop normal starten (Autostart im Tray + Desktop-Verknüpfung)
 
-Version 2.0.0 — 30.09.2026, 18:00 Uhr
+Version 2.0.1 — 08.10.2026, 14:16 Uhr
 
 Startet **Codex Desktop** (MSIX-Paket `OpenAI.Codex`) **ohne Administratorrechte**:
 beim Anmelden automatisch im System-Tray und per Desktop-Verknüpfung sichtbar.
@@ -26,7 +26,7 @@ und der Updater funktioniert.
 | Datei | Zweck |
 |---|---|
 | `Start-Codex.ps1` | Der Launcher. Ohne Schalter: sichtbares Fenster. Mit `-Background`: im Tray. Mit `-Neustart`: laufende Instanz beenden und neu starten. |
-| `Install-CodexAutostart.ps1` | Richtet Autostart-Aufgabe (normale Rechte) und Desktop-Verknüpfung ein. Einmal ausführen (eine UAC-Abfrage, nur um die alte Admin-Aufgabe zu entfernen). |
+| `Install-CodexAutostart.ps1` | Richtet die Autostart-Verknüpfung `Codex minimiert.lnk` im Autostart-Ordner (normale Rechte, `-Background`) und die Desktop-Verknüpfung ein. Einmal ausführen (eine UAC-Abfrage, nur um die alte Admin-Aufgabe zu entfernen). |
 | `codex.ico` | Symbol für die Desktop-Verknüpfung. |
 
 ## Verhalten des Launchers

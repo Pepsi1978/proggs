@@ -2,7 +2,7 @@
 <#
     Richtet den normalen Start von Codex Desktop ein (OHNE Administratorrechte):
 
-      1. Autostart-Aufgabe "Codex Desktop - Start im System-Tray"
+      1. Autostart-Verknuepfung "Codex minimiert.lnk" im Autostart-Ordner
          -> laeuft bei der Anmeldung mit normalen Rechten, startet Codex im Tray
       2. Desktop-Verknuepfung "Codex.lnk"
          -> startet Codex sichtbar
@@ -10,7 +10,7 @@
     Beide zeigen auf Start-Codex.ps1 in DIESEM Repo-Ordner. Die fruehere Admin-Aufgabe
     wird entfernt; dafuer ist einmalig eine UAC-Abfrage noetig.
 #>
-# Version 2.0.0 - 30.09.2026, 18:00 Uhr
+# Version 2.0.1 - 08.10.2026, 14:16 Uhr
 $ErrorActionPreference = 'Stop'
 
 $identitaet = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -36,18 +36,16 @@ Get-ScheduledTask -ErrorAction SilentlyContinue |
     Where-Object { $_.TaskName -match '^Codex Desktop .+Start im System-Tray$' } |
     ForEach-Object { Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false }
 
-$aktion    = New-ScheduledTaskAction -Execute $ps -Argument ($basisArgs + ' -Background')
-$ausloeser = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-$ausloeser.Delay = 'PT20S'
-# RunLevel Limited: normale Rechte. Nie Highest - sonst laeuft Codex ohne Paket-Identitaet
-# bzw. erhoeht, und der eingebaute Updater funktioniert nicht.
-$prinzipal = New-ScheduledTaskPrincipal -UserId $identitaet.User.Value -LogonType Interactive -RunLevel Limited
-$optionen  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-                                          -ExecutionTimeLimit ([TimeSpan]::Zero) -StartWhenAvailable
-
-Register-ScheduledTask -TaskName $taskName -Action $aktion -Trigger $ausloeser `
-                       -Principal $prinzipal -Settings $optionen `
-                       -Description 'Startet Codex Desktop bei der Anmeldung normal im System-Tray.' | Out-Null
+# Autostart laeuft ueber eine Verknuepfung im Autostart-Ordner (normale Rechte, keine Aufgabe).
+# Der Dateiname bleibt "Codex minimiert.lnk", damit die Freigabe in StartupApproved weiter passt.
+$autostart = Join-Path ([Environment]::GetFolderPath('Startup')) 'Codex minimiert.lnk'
+$startLink = (New-Object -ComObject WScript.Shell).CreateShortcut($autostart)
+$startLink.TargetPath       = $ps
+$startLink.Arguments        = $basisArgs + ' -Background'
+$startLink.WorkingDirectory = $wurzel
+$startLink.WindowStyle      = 7
+$startLink.Description      = 'Codex Desktop bei Windows-Anmeldung starten und ins Tray schicken'
+$startLink.Save()
 
 # --- Desktop-Verknuepfung (ohne "Als Administrator ausfuehren") ---------------
 $ziel = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Codex.lnk'
@@ -63,7 +61,7 @@ $link.Save()
 
 Write-Host ''
 Write-Host 'Fertig.' -ForegroundColor Green
-Write-Host "  Autostart-Aufgabe   : $taskName (normale Rechte)"
+Write-Host "  Autostart           : $autostart (normale Rechte)"
 Write-Host "  Desktop-Verknuepfung: $ziel"
 Write-Host "  Launcher            : $launcher"
 Write-Host ''
