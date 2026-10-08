@@ -1,6 +1,8 @@
 package de.frank.jarvis.faehigkeit
 
 import android.content.Context
+import de.frank.jarvis.ablage.Uebertragungen
+import de.frank.jarvis.auth.CodexAuthManager
 import de.frank.jarvis.data.Einstellungen
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
@@ -13,8 +15,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Internet-Recherche für die Agenten von Jarvis, über die Tavily-Suche. Bewusst NICHT im ChatGPT-Plugin:
- * ChatGPT sucht selbst im Netz. Diese Werkzeuge sind für die Arbeit im Hintergrund auf dem Handy.
+ * Internet-Recherche für die Agenten von Jarvis. Mit Tavily-Schlüssel über die Tavily-Suche, sonst über die
+ * eingebaute Websuche des ChatGPT-Modells (Codex-Werkzeug `web_search`, wie in News Kompass); Seiten liest Jarvis
+ * dann selbst. Bewusst NICHT im ChatGPT-Plugin: ChatGPT sucht selbst im Netz.
  */
 class WebFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "web"
@@ -27,7 +30,10 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
 
     private val schluessel get() = Einstellungen.get(context).suchSchluessel
 
-    override fun stoerung(): String? = if (schluessel.isBlank()) "Kein Suchschlüssel hinterlegt (Tavily)." else null
+    private val codex by lazy { CodexAuthManager(context) }
+
+    override fun stoerung(): String? =
+        if (schluessel.isBlank() && !codex.isConnected) "Keine Suche verfügbar: Jarvis ist nicht mit ChatGPT angemeldet und kein Tavily-Schlüssel hinterlegt." else null
 
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
@@ -41,6 +47,7 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
             ),
             nurLesen = true,
         ) { a ->
+            if (schluessel.isBlank()) return@Werkzeug codexSuche(a.optString("anfrage"))
             frage("https://api.tavily.com/search", JSONObject().put("query", a.optString("anfrage")).put("max_results", a.optInt("treffer", 6).coerceIn(1, 10)).put("include_answer", true)) { antwort ->
                 buildString {
                     antwort.optString("answer").takeIf { it.isNotBlank() }?.let { append("Kurzantwort: ").append(it).append("\n\n") }
@@ -59,6 +66,7 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
             schema = schema("adresse" to text("Vollständige Adresse der Seite (https://…)."), pflicht = listOf("adresse")),
             nurLesen = true,
         ) { a ->
+            if (schluessel.isBlank()) return@Werkzeug seiteDirekt(a.optString("adresse"))
             frage("https://api.tavily.com/extract", JSONObject().put("urls", JSONArray().put(a.optString("adresse")))) { antwort ->
                 val seite = antwort.optJSONArray("results")?.optJSONObject(0)
                 seite?.optString("raw_content")?.takeIf { it.isNotBlank() }?.let { "Inhalt von ${seite.optString("url")}:\n\n" + it.take(14_000) } ?: "Die Seite ließ sich nicht lesen."
@@ -80,7 +88,43 @@ class WebFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
+    private suspend fun codexSuche(anfrage: String): Ergebnis {
+        if (!codex.isConnected) return Ergebnis(stoerung() ?: "Keine Suche verfügbar.", fehler = true)
+        return runCatching {
+            val (antwort, quellen) = codex.searchWeb(anfrage, Einstellungen.get(context).modell)
+            Ergebnis(buildString {
+                append(antwort.trim())
+                if (quellen.isNotEmpty()) append("\n\nQuellen:\n").append(quellen.take(12).joinToString("\n") { "- $it" })
+                append("\n\n(Gesucht über die Websuche des ChatGPT-Modells.)")
+            })
+        }.getOrElse { Ergebnis("Die Websuche des Modells ist fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
+    }
+
+    /** Liest eine Seite selbst (ohne Tavily): nur https, keine Adressen im eigenen Netz, HTML zu reinem Text. */
+    private suspend fun seiteDirekt(adresse: String): Ergebnis = withContext(Dispatchers.IO) {
+        runCatching {
+            Uebertragungen.pruefeAdresse(adresse)
+            val anfrage = Request.Builder().url(adresse.trim()).header("User-Agent", "Mozilla/5.0 (Android) Jarvis").header("Accept", "text/html,text/plain;q=0.9,*/*;q=0.5").build()
+            Uebertragungen.STANDARD_CLIENT.newCall(anfrage).execute().use { antwort ->
+                if (!antwort.isSuccessful) return@use Ergebnis("Die Seite antwortet mit Fehler ${antwort.code}.", fehler = true)
+                val typ = antwort.body?.contentType()?.subtype.orEmpty()
+                val roh = antwort.body?.source()?.let { quelle -> quelle.request(2_000_000); quelle.buffer.clone().readUtf8() }.orEmpty()
+                val text = if (typ.contains("html") || roh.trimStart().startsWith("<")) htmlZuText(roh) else roh
+                if (text.isBlank()) Ergebnis("Die Seite enthält keinen lesbaren Text.", fehler = true)
+                else Ergebnis("Inhalt von ${antwort.request.url}:\n\n" + text.take(14_000))
+            }
+        }.getOrElse { Ergebnis("Die Seite ließ sich nicht lesen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
+    }
+
     companion object {
+        /** Grobe, robuste Umwandlung: Skripte und Stile weg, Absätze als Zeilen, Zeichen-Entitäten aufgelöst. */
+        fun htmlZuText(html: String): String = html
+            .replace(Regex("(?is)<(script|style|noscript|svg|head)[^>]*>.*?</\\1>"), " ")
+            .replace(Regex("(?i)<br\\s*/?>|</(p|div|li|h[1-6]|tr|section|article)>"), "\n")
+            .replace(Regex("<[^>]+>"), " ")
+            .replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&#39;", "'")
+            .lines().map { it.replace(Regex("[ \\t]+"), " ").trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+
         private val CLIENT = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(45, TimeUnit.SECONDS).build()
     }
 }

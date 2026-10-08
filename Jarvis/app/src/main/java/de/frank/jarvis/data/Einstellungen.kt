@@ -34,6 +34,16 @@ class Einstellungen private constructor(context: Context) {
         version.intValue++
     }
 
+    init {
+        // Zugangsdaten, die ein Bau am PC aus ~/SK mitbringt, dauerhaft übernehmen. Ein späteres Update aus dem
+        // Cloud-Bau (ohne ~/SK) verliert sie dann nicht mehr; vorher lebten sie nur in der jeweiligen APK.
+        val eingebaut = mapOf(
+            "server_host" to BuildConfig.RELAY_HOST, "server_token" to BuildConfig.RELAY_TOKEN, "such_schluessel" to BuildConfig.TAVILY_KEY,
+            "drive_client_id" to BuildConfig.DRIVE_CLIENT_ID, "drive_client_secret" to BuildConfig.DRIVE_CLIENT_SECRET,
+        ).filter { (k, v) -> v.isNotBlank() && roh.getString(k, "").isNullOrEmpty() }
+        if (eingebaut.isNotEmpty()) roh.edit().apply { eingebaut.forEach { (k, v) -> putString(k, v) } }.apply()
+    }
+
     // ---- Das eigene Modell von Jarvis ----
     var modell: CodexModel
         get() = CodexModel.entries.firstOrNull { it.name == s("model", "") } ?: CodexModel.TERRA
@@ -45,7 +55,7 @@ class Einstellungen private constructor(context: Context) {
     // ---- Plugin und Server ----
     /** Adresse des eigenen Servers (Jarvis-Relay). Vorgabe aus dem Bau, hier nur zum Überschreiben. */
     var serverHost: String
-        get() = s("server_host", "").ifEmpty { BuildConfig.RELAY_HOST }
+        get() = s("server_host", "").ifEmpty { BuildConfig.RELAY_HOST }.ifEmpty { STANDARD_SERVER }
         set(v) = put { putString("server_host", v.trim().removePrefix("https://").removePrefix("wss://").trimEnd('/')) }
     /** Schlüssel, mit dem sich dieses Handy am Server ausweist. Vorgabe aus dem Bau (~/SK/Jarvis). */
     var serverToken: String
@@ -80,6 +90,14 @@ class Einstellungen private constructor(context: Context) {
         get() = s("such_schluessel", "").ifEmpty { BuildConfig.TAVILY_KEY }
         set(v) = put { putString("such_schluessel", v.trim()) }
 
+    // ---- Google-Zugang für „Berechtigung erneuern“ (Tagebuch) ----
+    var driveClientId: String
+        get() = s("drive_client_id", "").ifEmpty { BuildConfig.DRIVE_CLIENT_ID }
+        set(v) = put { putString("drive_client_id", v.trim()) }
+    var driveClientSecret: String
+        get() = s("drive_client_secret", "").ifEmpty { BuildConfig.DRIVE_CLIENT_SECRET }
+        set(v) = put { putString("drive_client_secret", v.trim()) }
+
     // ---- Wetter ----
     /** Ort der Wettervorhersage, mit seinen Koordinaten. */
     var wetterOrt: String get() = s("wetter_ort", "Neuenhagen bei Berlin"); set(v) = put { putString("wetter_ort", v.trim()) }
@@ -107,6 +125,8 @@ class Einstellungen private constructor(context: Context) {
 
     companion object {
         const val NAME = "jarvis_secure_prefs"
+        /** Der eigene Jarvis-Relay (öffentlich bekannte Adresse, siehe README). Der Schlüssel bleibt geheim. */
+        const val STANDARD_SERVER = "srv1774016.hstgr.cloud"
         @Volatile private var instanz: Einstellungen? = null
         fun get(context: Context): Einstellungen = instanz ?: synchronized(this) {
             instanz ?: Einstellungen(context).also { instanz = it }
