@@ -1,60 +1,94 @@
-# Session Handoff — 23.09.2026 20:25
+# Session Handoff — 08.10.2026, ca. 18:45 Uhr
 
 ## Ziel (1-3 Saetze)
-adb über WLAN zum Handy (Samsung Galaxy Fold SM-F971B, Android 17, Seriennummer R3GL7073MLM, Heim-IP 192.168.0.155) soll dauerhaft ohne Kabel funktionieren: nach PC-Neustart, Handy-Neustart, beidem, in jedem WLAN. Fix nach Direktive 3, danach Logik-Review in Schleife + Recherche (Engine C, Sonnet-Schwarm).
+Jarvis als persoenlichen Assistenten auf Franks Handy bauen: Android-App `Jarvis/` (Paket `de.frank.jarvis`), die als MCP-Server laeuft und in ChatGPT als Plugin „Jarvis" eingetragen ist. Stand jetzt: Jarvis 1.8.1 mit 31 Werkzeugen, alles committet, gepusht, installiert, im Update-Ordner.
 
 ## Laufende/unterbrochene Aufgabe — EXAKTER Wiedereinstiegspunkt
-- **Keine laufende Aufgabe**, alles committet und gepusht.
-- **Offene Frage an den Benutzer (letzte Nachricht):** Angebot, einen ECHTEN Handy-Neustart-Test zu machen: `adb -s 192.168.0.155:5555 reboot`, Benutzer entsperrt das Handy danach einmal, dann prüfen ob die Verbindung ohne Kabel binnen ~2-3 Min von selbst zurückkommt (Wachhund-Log `%LOCALAPPDATA%\adb-wlan\adb-wlan.log`, `adb devices`, `adb logcat -d -s WlanDebug`). Nur nach "ja" ausführen — Handy-Neustart nicht ungefragt.
+Keine laufende Aufgabe, letzter Stand sauber abgeschlossen. Letzte Aenderung: Rueckkehrzeiten nach dem Dienst (Tagdienst zu Hause gegen 18:15 Uhr, Nachtdienst gegen 5:50 Uhr) in `Jarvis/app/src/main/java/de/frank/jarvis/faehigkeit/KalenderFaehigkeit.kt` (Konstanten RUECKKEHR_TAG / RUECKKEHR_NACHT), Commit 5500b567a.
+- Uncommitteter Arbeitsstand: keiner an Jarvis. (Im Repo liegen fremde uncommittete Dateien paralleler Sitzungen, z. B. `.claude/agent-memory/shared/*`, `OpenLauncher/models.json`, `SunoDownload/package-lock.json` — nicht anfassen, immer nur mit Pfaden committen.)
 
 ## Aktueller Status
-- Erledigt (alle gepusht): 5ede9b53a (Grundlösung), ec0b9fc47 (Lebenszeichen, Serial-Bindung, feste SDK-adb), dfac236c5 (UpdateStation WorkManager statt PendingIntent), 646556a0b (Wachhund nach Netzbeitritt), a0b7329eb (UpdateStation 1.0.11 Nachprüfen+Retry), 894e24801 (Pflege über WLAN, Doze-Ausnahme, Wachhund 2 Min, Almanach, Hint-Hook), 3ec9a38bc (Android-Studio-Einstellung dokumentiert).
-- Handy: UpdateStation 1.0.11 per WLAN installiert, WRITE_SECURE_SETTINGS granted, deviceidle-Whitelist gesetzt. (In dem Build steckte eine uncommittete Quellen.kt-Änderung einer parallelen UpdateStation-Sitzung; die Sitzung hat inzwischen weiter committet.)
-- PC: Aufgabe `adb-wlan-wachhund` (Anmeldung +1 Min, Ereignis 10000 NetworkProfile/Operational +20 s, alle 2 Min; conhost --headless powershell adb-wlan.ps1 -Leise). Benutzer-PATH: SDK platform-tools zuerst; Benutzervariable ADB = %LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe. Android Studio: other.xml PropertyService keyToString "AdbOptionsService.use.user.managed.adb": "true", Port 5037 (Backup other.xml.vor-adb-server.bak).
-- In Arbeit: nichts. Blockiert: nichts.
+- Erledigt (alles auf origin/main):
+  - Jarvis-App: MCP-Server auf dem Handy, Vordergrunddienst (specialUse), Verbindung per WebSocket zum eigenen Relay.
+  - Relay auf dem Hostinger-VPS: `/opt/jarvis` (Compose: `jarvis-relay` + `jarvis-caddy`), `https://srv1774016.hstgr.cloud`, Port 443 oeffentlich (IPv4 + IPv6, UFW-Regel fuer IPv6). Quelle im Repo: `Jarvis/server/`. Deploy: scp + `docker compose up -d --build`.
+  - Bruecken (ContentProvider `JarvisBruecke`, Signatur-Erlaubnis) in: `Aufgaben` (lesen/schreiben, Erlaubnis `de.frank.aufgaben.permission.JARVIS`), `EntropieReductor` (Biomarker, nur lesen, plus `abgleich`), `GenialeIdeen` (lesen/schreiben, KI-Glaettung), `GenialerWecker` (lesen/stellen). Erlaubnis fuer die drei letzten: `de.frank.jarvis.permission.BRUECKE`.
+  - Ohne Bruecke: Kalender + Dienstplan (Android CalendarContract, lesen und schreiben), Wetter (Open-Meteo), Tagebuch (Drive-Ordner ueber Nur-Lese-rclone auf dem Relay), Wissens-Datenbank (Ordner `Datenbank` im oeffentlichen Repo), Ablage, Agenten (Recherche, Machbarkeit, selbst angelegte; Tavily-Suche), Gmail (App-Passwort, von Frank eingetragen, funktioniert).
+  - Tagesauswertung: automatisch 4:25, 12:00, 16:25 (exakter Wecker), 7 Abschnitte inkl. RUECKBLICK (Tagebuch) und Wetter; Tagesdatenbank; Mitdenken (`faehigkeit/Mitdenken.kt`).
+  - App: Reiter Jarvis / Ablage / Aktivitaet / Einstellungen, Mikrofon (Groq), absatzweises Vorlesen (Modul aus GenialeIdeen kopiert), Fingerabdruck-Sperre, Aktualisieren-Knopf, „Berechtigung erneuern" fuer Drive.
+- In Arbeit: nichts.
+- Blockiert / wartet auf Frank:
+  - Plugin in ChatGPT aktualisieren (Werkzeugnamen haben sich geaendert, jetzt 31).
+  - Groq-Schluessel in Jarvis eintragen (Einstellungen → Spracheingabe), Stimme waehlen.
+  - Rueckmeldung zur Oberflaeche: Mikrofon, Vorlesen, Ablage-Reiter, Sperre, Auge, Wetter-Ort, „Berechtigung erneuern" hat noch niemand bedient.
+  - Ob der erste automatische Lauf um 4:25 Uhr am 09.10. ausgeloest hat.
+  - Ob ein X im Google-Kalender wirklich in Franks Blau erscheint.
 
 ## Relevante Dateien
-- `Werkzeuge/adb-wlan/adb-wlan.ps1` — Hauptskript (BOM nötig für powershell 5.1): mDNS, Serial-Bindung (~/.adb-wlan-serial), Lebenszeichen mit Zeitlimit (AdbZeit), TLS→tcpip 5555, Pflege (pm grant + deviceidle, stündlich), Mutex, Log.
-- `Werkzeuge/adb-wlan/adb-wlan.sh` — macOS-Spiegel (adbzeit ohne timeout-Befehl).
-- `Werkzeuge/adb-wlan/wachhund-einrichten.ps1` — registriert die Aufgabe (idempotent).
-- `UpdateStation/app/src/main/java/de/frank/updatestation/WlanDebugReceiver.kt` — Boot/Replaced → planen(); WorkManager-Aufgabe `Aufgabe` (UNMETERED, KEEP) setzt adb_wifi_enabled=1 bei WLAN mit IPv4, liest nach 3 s nach, retry max 5, einmal pro networkHandle.
-- `UpdateStation/.../UpdateStationApp.kt` — onCreate ruft WlanDebugReceiver.planen(this).
-- `best-practices/android/adb-wlan-debugging.md` (+ -kurzcheck), `bugs/android/adb-wlan-debugging.md` (+ -kurzcheck, 11 Einträge), `bugs/README.md` Index-Zeile, `claude-code-setup/hooks/bug-almanac-hint.py` + Spiegel `Umgebung/Hooks/` (AREAS-Eintrag android/adb-wlan-debugging).
-- Recherche-Rohdaten: `~/.research-swarm/adb-wlan/r1.md … r6.md`.
-- Memory: `OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/adb-wlan-selbstheilend.md` (gitignored, lokal).
+- `Jarvis/README.md` — vollstaendige Beschreibung von Aufbau, Werkzeugen, Server, Tagesauswertung. ZUERST LESEN.
+- `Jarvis/app/src/main/java/de/frank/jarvis/faehigkeit/` — je App eine `*Faehigkeit.kt`; `Faehigkeit.kt` enthaelt `Register` und die Buendel-Helfer `als` / `mit` / `gesetzt`.
+- `Jarvis/app/src/main/java/de/frank/jarvis/mcp/McpServer.kt` — MCP-Protokoll, eigene Werkzeuge (tagesauswertung_lesen, tagesdaten_lesen, agenten, agent_starten, jarvis_status), Anweisungstext an ChatGPT.
+- `Jarvis/app/src/main/java/de/frank/jarvis/auswertung/Tagesauswertung.kt` + `Zeitplan.kt` — Sammeln, Auftrag ans Modell, Wecker.
+- `Jarvis/app/src/main/java/de/frank/jarvis/dienst/JarvisDienst.kt` — Vordergrunddienst, Agentenlaeufe, Auswertung.
+- `Jarvis/app/src/main/java/de/frank/jarvis/tunnel/Tunnel.kt` (WebSocket zum Relay), `DriveFreigabe.kt` (OAuth-Erneuerung).
+- `Jarvis/server/relay/relay.py`, `Jarvis/server/compose.yaml`, `Jarvis/server/Caddyfile`.
+- Bruecken: `Aufgaben/.../bruecke/JarvisBruecke.kt`, `EntropieReductor/.../data/bruecke/JarvisBruecke.kt`, `GenialeIdeen/.../bridge/JarvisBruecke.kt`, `GenialerWecker/.../wecker/JarvisBruecke.kt`.
+- Geheimnisse (nie ins Repo): `~/SK/Jarvis/relay.properties` (host, token), `~/SK/Jarvis/server.env`, `~/SK/rclone/gdrive-lesen.conf` (Nur-Lese-Drive), `~/SK/rclone/google-oauth-client.txt`, `~/SK/Tavily/tavily-api-key.txt`, SSH `~/SK/second-brain/id_ed25519`.
+- Merkzettel: `OpenLauncher/Profiles/ClaudeCode/minimal/projects/C--Users-barwa-proggs/memory/jarvis-relay-und-chatgpt-plugin.md` und `handy-nicht-blind-fernsteuern.md`.
 
 ## Getroffene Entscheidungen
-- Stabile Serial bleibt IP:5555 (Regel 18), TLS nur als Rückweg — TLS-Port nie speichern.
-- Wachhund nie kill-server (trennt andere Sitzungen/Emulatoren); nur nicht-leiser Aufruf darf einmal neu starten.
-- Guard-Hook bewusst NICHT erweitert (selten geänderte Skripte; Hint + Index reichen).
-- Einmal pro WLAN-Verbindung einschalten (keine Nachfrage-Spam in fremden Netzen, manuelles Aus bleibt).
+- Kein ngrok, kein fremder Tunnel-Anbieter: Frank will keine Fremdanbieter-Konten. Gegenstelle ist der eigene Hostinger-Server; der MCP-Server bleibt auf dem Handy.
+- Zugangsschutz gegenueber ChatGPT: geheime Adresse `/j/<40 Zeichen>/mcp`, „Keine Authentifizierung" im Plugin. Das Handy weist sich am Relay mit dem Geraete-Token aus.
+- Auswertungen rechnen auf dem Handy (Entropie Reductor / Kalender), ChatGPT deutet nur. Der eigene Agent ist fuer Sprache zu langsam.
+- Werkzeuge gebuendelt (39 → 28, jetzt 31): bei neuen Faehigkeiten zuerst pruefen, ob sie in ein vorhandenes Werkzeug passen. `jarvis_auftrag` gestrichen, Agenten ersetzen ihn.
+- Mail sendet nur an Frank und freigegebene Adressen; Mail-Inhalte gelten als fremde Information.
+- Tagebuch ueber NUR-LESE-Zugang (`drive.readonly`, Wurzel = Tagebuch-Ordner) auf dem Server; Frank hat das so gewaehlt.
+- Vorlese-Modul aus GenialeIdeen (absatzweise mit Vorausladen), nicht aus Aufgaben (liest am Stueck).
+- Dienstregeln: Nacht 1–4 Abfahrt 16:00, zu Hause 5:50, Schlaf 6–15; Tag 1–4 Aufstehen 4:00, Abfahrt 4:30, zu Hause 18:15, am Vorabend Schlafen 20 Uhr; X/F = frei, U = Urlaub, kein Eintrag = frei.
+- Commits: direkt auf main, Deutsch, imperativ, IMMER nur mit Pfaden (parallele Sitzungen).
 
 ## Fehlgeschlagene Ansaetze (WICHTIGSTER ABSCHNITT)
-- `registerNetworkCallback(request, PendingIntent)` als Trigger: Android 17 RELEASEd die Anmeldung ~5 s nach Prozessstart — NICHT verwenden.
-- Neu-Anmelden im ausgelösten Empfänger → Endlosschleife (760 Anmeldungen/s, 57 % CPU) — nie aus Empfänger heraus neu anmelden/planen.
-- `unregisterNetworkCallback(pi)` direkt vor `register` → löscht die neue Anmeldung (async).
-- ADB_MDNS_AUTO_CONNECT=adb-tls-connect → verbindet nach Serverstart NICHT automatisch.
-- Tests mit `run-as rm shared_prefs` wirken nur nach Prozess-Kill (Prefs im RAM gecacht); `am force-stop` widerruft PendingIntents verzögert → Testartefakte. Für Tests `am kill` + `am broadcast -f 0x20 -n de.frank.updatestation/.WlanDebugReceiver`.
-- Remove-Item in einem Befehl mit "C:\Program Files\..." wird vom Schutzfilter blockiert → getrennt ausführen.
+- ngrok-SDK (`com.ngrok:ngrok-java`) in der App: liess sich technisch loesen (native Bibliothek nicht in der APK, JNI_OnLoad meldet Version 1.8 → Patch beim Bau; steht in `bugs/android/android-platform.md` Abschnitt 11), wurde aber verworfen, weil Frank kein ngrok-Konto will. NICHT wieder vorschlagen.
+- Handy per `adb shell input` oder `am start` bedienen, waehrend Frank es nutzt: zweimal passiert (Eingaben landeten in seinem Browser; Jarvis ueber ChatGPT geoeffnet). NICHT machen. Testen von aussen ueber den Relay; bei Bedarf Frank bitten, selbst zu tippen. Erlaubt und unkritisch: `adb install -r`, `logcat`, `pm grant`, `dumpsys`.
+- Bash-Heredocs mit einzelnen Apostrophen im Text brechen in diesem Werkzeug ab („unexpected EOF"), auch bei einfach-quotiertem Delimiter. Laengere Dateien mit dem Write-Tool schreiben (auch diese Uebergabe-Notiz: erst ins Scratchpad, dann kopieren), Aenderungen ueber ein Python-Skript im Scratchpad.
+- Python-urllib von diesem PC ohne IPv4-Zwang: haengt 90 s je Aufruf (totes IPv6). Immer `curl -4` bzw. getaddrinfo auf AF_INET filtern.
+- `screencap` ueber `exec-out` liefert auf dem Fold eine unbrauchbare Datei (zwei Displays); wenn noetig `screencap -d <display-id> -p /sdcard/...` und pullen.
+- Tagesauswertung direkt nach `adb install -r` anstossen: der Lauf wird durch die Neuinstallation abgebrochen; nach der Installation ~10 s warten (Handy verbindet sich neu), dann anstossen.
+- Computer Use fuer Desktop-Programme steht in dieser Umgebung nicht zur Verfuegung, nur Claude in Chrome.
 
 ## Wichtige Recherche-Ergebnisse
-- Android 17 "adb Wi-Fi 2.0": vertraute Netze nach SSID+BSSID, System schaltet dort selbst ein — ergänzt unsere App, kollidiert nicht.
-- Auto-Connect des adb-Servers ist ereignisgesteuert → aktiver Wachhund ist Best Practice. adb 37.0.0: mDNS-Backend libadbmdns.
-- Samsung: Telefon-MAC für DHCP-Reservierung; "Zu mobilen Daten wechseln" aus; Auto Blocker sperrt nur USB.
+- ChatGPT: Plugins → Hinzufuegen → „Benutzerdefinierten MCP-Server erstellen" (nicht „Plugin erstellen"), Verbindung „Server-URL", „Keine Authentifizierung". ChatGPT meldet sich als `openai-mcp/1.0.0`, ruft zuerst `server/discover` auf (Jarvis antwortet „unbekannte Methode", danach `initialize`). Aufrufe funktionieren; in der Handy-App erscheint Jarvis nicht unter „Installiert", arbeitet aber.
+- Fable-Rat zur Tagesauswertung (umgesetzt): exakter Wecker statt WorkManager, Nachholen bis 6 h, veraltete Fassung nie als aktuell ausgeben, Nachbesserung +90 min bei fehlendem Schlafwert. Nicht umgesetzt: Zahlenpruefung des Modelltexts, getrennte Statistik fuer Tag- und Nachtschlaf.
+- Repo `Pepsi1978/proggs` ist OEFFENTLICH — der Ordner `Datenbank` (Ziele usw.) ist damit oeffentlich lesbar. Frank wurde darauf hingewiesen, noch keine Entscheidung.
+- Geraet: `192.168.0.155:5555` (WLAN-adb). Installierte Varianten: `de.frank.entropyreducer.debug`, `de.frank.genialeideen` (Build `schnell`: `./gradlew :app:assembleSchnell`), `de.frank.genialerwecker` (Projekt `GenialerWecker`, NICHT GenialerWeckerAndroid = `.app`).
+
+## Testen ohne Handy-Bedienung
+Geheimnis holen und Aufrufe wie ChatGPT schicken (Skripte lagen im Sitzungs-Scratchpad und sind nicht dauerhaft; bei Bedarf neu schreiben):
+- Geheimnis: per ssh (`-i ~/SK/second-brain/id_ed25519 root@168.231.83.205`) im Container `jarvis-relay` aus `/data/zustand.json` das Feld `geheimnis` lesen (`docker exec jarvis-relay python -c ...`).
+- Aufruf: POST `https://srv1774016.hstgr.cloud/j/<geheimnis>/mcp`, JSON-RPC `tools/call` mit `{"name": ..., "arguments": {...}}`, IPv4 erzwingen. Das Geheimnis nie ausgeben.
+- Relay-Log: `docker logs jarvis-relay` (eine Zeile je Anfrage, ohne Geheimnis).
+- Testdaten immer wieder loeschen (Testaufgabe, Testwecker, Testtermin, Testidee, Ablage-Testdatei) — bisher alles bereinigt.
 
 ## Naechste Schritte (priorisiert)
-1. Antwort des Benutzers auf den Handy-Neustart-Test abwarten; bei "ja" Test fahren und Ergebnis melden.
-2. Benutzer erinnern (falls noch nicht erledigt): Entwickleroption "ADB-Autorisierungstimeout deaktivieren" einschalten.
-3. Optional: DHCP-Reservierung im Tenda-Router + Telefon-MAC; Tailscale für Firmennetz.
+1. Franks Rueckmeldung zur Oberflaeche und zum Sprachmodus abwarten und Fehler beheben.
+2. Aus der Vorschlagsliste (von Frank noch nicht alle entschieden): Morgen-/Abfahrts-Ansage (Tagesauswertung von selbst vorlesen), Wecker passend zum Dienstplan schalten, echte Anmeldung fuers Plugin (OAuth) vor weiteren schreibenden Faehigkeiten, Tagebuch per Jarvis schreiben, Wochenrueckblick.
+3. Dienst- und Schlafzeiten in den Einstellungen einstellbar machen (stehen als Konstanten in `KalenderFaehigkeit.kt`).
+4. Getrennte Vergleichswerte fuer Nachtschlaf und Tagschlaf nach Nachtdienst.
+5. Falls der ChatGPT-Sprachmodus das Plugin nicht zuverlaessig nutzt: GPT Live direkt in Jarvis (Werkzeuge und Agent stehen bereit).
 
 ## Offene Fragen
-- Soll der echte Handy-Neustart-Test laufen? (Benutzer muss danach entsperren.)
+- Soll das Repo bzw. der Ordner `Datenbank` oeffentlich bleiben?
+- Funktioniert der ChatGPT-Sprachmodus am Handy mit dem Plugin, auch bei Schreibaktionen ohne stoerende Bestaetigung? (Text-Chat ist bestaetigt: Aufgabe abhaken und Termine abfragen klappten.)
+- Erscheint die Kalenderfarbe richtig?
+
+## Abschluss-Pflichten bei jeder Code-Aenderung (aus dem Profil)
+bauen → Versionslog-Eintrag unten anhaengen (`app/src/main/assets/versionslog.json`, Zeit per Befehl holen) → committen (nur Pfade) → `git pull --rebase --autostash` → `git push origin HEAD:main` → `adb -s 192.168.0.155:5555 install -r` → `apk-update.ps1 -Projekt <Projekt>`. Versionen jetzt: Jarvis 1.8.1 (vc 12), Aufgaben 1.0.31 (vc 32), EntropieReductor 0.29.14 (vc 349), GenialeIdeen 1.7.15 (vc 46), GenialerWecker 1.1.115 (vc 110).
 
 ## Anker
 - Branch: main
 - Letzte Commits:
-da8ecb29c härte APK-Updates: Versionslog-Notizen robust maskieren; UpdateStation prüft nie doppelt gleichzeitig
-9643cb1dc härte APK-Updates: Wiederanlauf und Wiederholung ohne unnötigen Bump, Build-Ausgabe über Metadaten; UpdateStation liest Manifest und Dateiliste stimmig
-3ec9a38bc best-practices: Android Studio nutzt den extern verwalteten adb-Server, dokumentiert
-894e24801 härte WLAN-adb nach Recherche: Pflege über WLAN mit Doze-Ausnahme, Wachhund alle 2 Minuten, Almanach und Best Practices, Hint-Hook registriert
-a0b7329eb UpdateStation: prüfe WLAN-Debugging nach dem Einschalten nach und wiederhole begrenzt
+5500b567a Jarvis: rechne mit den genannten Rückkehrzeiten nach Tag- und Nachtdienst
+81204a1fb Jarvis: ergänze Wettervorhersage, Termine in den Kalender eintragen und das Mitdenken gegen Dienstplan, Termine und Wetter
+8be0c5b66 Jarvis: binde den Genialen Wecker an, fasse die Werkzeuge auf 28 zusammen, ergänze den Knopf zum Erneuern der Drive-Berechtigung; Genialer Wecker: Jarvis-Brücke
+03f4403dd Jarvis: hole das Tagebuch über einen Nur-Lese-Zugang vom Server und fasse die letzten Tage in der Tagesauswertung zusammen
+210a169d9 Jarvis: ergänze Mikrofon mit Groq-Mitschrift, absatzweises Vorlesen, Ablage-Reiter, Aktualisieren-Knopf, Wissens-Datenbank aus dem Repo, Fingerabdruck-Sperre und Passwort-Auge
+a8fbeeb8e Jarvis: binde Geniale Ideen an, ergänze Tagesdatenbank, Ablage, Agenten mit Internet-Recherche und E-Mail über Gmail; Geniale Ideen: Jarvis-Brücke
