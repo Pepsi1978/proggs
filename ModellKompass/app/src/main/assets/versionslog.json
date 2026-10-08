@@ -1,0 +1,7 @@
+{
+  "format": 1,
+  "app": "ModellKompass",
+  "eintraege": [
+    { "versionCode": 1, "versionName": "1.0.0", "stand": "08.10.2026, 15:33 Uhr", "notiz": "Erste Fassung: findet per ChatGPT-Websuche für 18 Bereiche die besten lokalen KI-Modelle für die RTX 3090, mit genauem Namen und Herausgeber für LM Studio." }
+  ]
+}
