@@ -26,9 +26,10 @@ private class Strich(val start: Float, val dauer: Float, val punkt: (Float) -> O
 
 /**
  * Aurora: über die Schulter an die Tafel geschaut, die Tafel steht leicht schräg im Raum. Im Dunkeln kommen Person und
- * Katze (mit ihrem Wollknäuel im Maul) links herein, das Licht geht an. Nachdenken, eine Mindmap skizzieren, eine
- * Liste schreiben und abhaken, mit einem Sprung zum Betrachter drehen und freuen, mit einem Sprung zurück, die Tafel
- * sauber wischen und mit der Katze rechts hinausgehen; das Licht geht aus, nach einer Pause beginnt alles von vorn.
+ * Katze links herein, das Licht geht an. Nachdenken, eine Mindmap skizzieren (dabei fällt ein Stück Kreide herunter,
+ * die Katze springt hin und spielt damit), eine Liste schreiben und abhaken, mit einem Sprung zum Betrachter drehen und
+ * freuen, mit einem Sprung zurück, die Tafel von rechts nach links sauber wischen und mit der Katze links hinausgehen;
+ * das Licht geht aus, nach einer Pause beginnt alles von vorn.
  */
 internal fun DrawScope.szeneAurora(t: Float, f: Farben) {
     val zyklus = AURORA_ZYKLUS
@@ -120,10 +121,10 @@ internal fun DrawScope.szeneAurora(t: Float, f: Farben) {
             haken(Offset(listeX + k / 2, y), k * 1.1f, p, f.primaer, 4f)
         }
     }
-    // Wischen: der Schwamm fährt in Schleifen von links nach rechts über die ganze Tafel
+    // Wischen: der Schwamm fährt in Schleifen von rechts nach links über die ganze Tafel, dorthin, wo es hinausgeht
     val wischStart = 38.6f
     val wischDauer = 3f
-    striche += Strich(wischStart, wischDauer, { p -> Offset(flaecheT.left + flaecheT.width * p, flaecheT.top + flaecheT.height * (0.5f + 0.36f * sin(p * PI.toFloat() * 14f))) }) { }
+    striche += Strich(wischStart, wischDauer, { p -> Offset(flaecheT.left + flaecheT.width * (1f - p), flaecheT.top + flaecheT.height * (0.5f + 0.36f * sin(p * PI.toFloat() * 14f))) }) { }
     striche.sortBy { it.start }
 
     verzerrt(m) {
@@ -132,7 +133,10 @@ internal fun DrawScope.szeneAurora(t: Float, f: Farben) {
         striche.forEach { st -> val p = an(t, st.start, st.dauer); if (p > 0f) st.zeichne(this, p) }
         // Was der Schwamm schon überstrichen hat, ist wieder weiß
         val wisch = an(t, wischStart, wischDauer)
-        if (wisch > 0f) drawRect(tafelWeiss, flaecheT.topLeft, Size((flaecheT.width * wisch + k).coerceAtMost(flaecheT.width), flaecheT.height))
+        if (wisch > 0f) {
+            val links = (flaecheT.left + flaecheT.width * (1f - wisch) - k).coerceAtLeast(flaecheT.left)
+            drawRect(tafelWeiss, Offset(links, flaecheT.top), Size(flaecheT.right - links, flaecheT.height))
+        }
         drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0f), Color(0xFF8E86B8).copy(alpha = 0.08f)), flaecheT.topLeft, flaecheT.bottomRight), flaecheT.topLeft, flaecheT.size, CornerRadius(6f))
         drawLine(Color.White.copy(alpha = 0.6f), Offset(flaecheT.left + flaecheT.width * 0.62f, flaecheT.top + 8f), Offset(flaecheT.left + flaecheT.width * 0.8f, flaecheT.top + 8f), 6f, StrokeCap.Round)
         // Ablage mit Stiften
@@ -161,7 +165,7 @@ internal fun DrawScope.szeneAurora(t: Float, f: Farben) {
     // Person: Grundweg in weichen Schritten, beim Schreiben und Wischen ein Stück dem Stift nach (steht links davon).
     val wege = listOf(
         0f to -0.18f, 2.5f to -0.18f, 6.5f to 0.5f, 10.6f to 0.5f, 11.3f to 0.3f, 17.4f to 0.3f, 18.4f to 0.66f,
-        30.4f to 0.66f, 31.2f to 0.5f, 37.4f to 0.5f, 38.5f to 0.06f, 41.6f to 0.87f, 41.8f to 0.87f, 44.6f to 1.18f,
+        30.4f to 0.66f, 31.2f to 0.5f, 37.4f to 0.5f, 38.5f to 0.8f, 41.6f to 0.02f, 41.8f to 0.02f, 43.8f to -0.2f,
     )
     fun basis(z: Float): Float {
         var x = wege.first().second
@@ -209,52 +213,53 @@ internal fun DrawScope.szeneAurora(t: Float, f: Farben) {
         drawCircle(f.primaer.copy(alpha = blase), h * 0.012f + h * 0.004f * sin(t * 4f), Offset(personX + 0.22f * s, boden - 1.13f * s))
     }
 
-    // Katze mit Wollknäuel: bringt es mit, legt es ab, spielt, nimmt es beim Gehen wieder mit
+    // Ein Stück Kreide bricht am Ende des zweiten Mindmap-Astes ab, fällt links herunter und rollt; die Katze springt
+    // hin, spielt damit und trägt es am Ende im Maul mit hinaus.
     val katzeF = KatzenFarben(Color(0xFF2E2A33), Color(0xFF1C1A20), Color(0xFFF2EFF5), Color(0xFFE8C547))
     val cs = h * 0.18f
-    val kr = h * 0.024f
-    val wolle = f.primaer.heller(0.25f)
-    val platz1 = w * 0.9f
-    val ball1 = Offset(katzenMaul(platz1, boden, cs, -1f, 1).x, boden - kr)
-    val ball2 = Offset(ball1.x - w * 0.14f, boden - kr)
-    val platz2 = ball2.x + 0.24f * cs
+    val kreideFall = 15f
+    val kreideStart = m.abbilden(knoten[1])
+    val kreide1 = Offset(kreideStart.x - w * 0.12f, boden - h * 0.008f)
+    val kreide2 = Offset(kreide1.x + w * 0.1f, kreide1.y)
+    val platz0 = w * 0.14f
+    val platz1 = kreide1.x - 0.24f * cs
+    val platz2 = kreide2.x - 0.24f * cs
+    fun kreide(pos: Offset, winkel: Float) = rotate(winkel, pos) {
+        drawRoundRect(Color(0xFFFDFCF7), pos - Offset(h * 0.028f, h * 0.009f), Size(h * 0.056f, h * 0.018f), CornerRadius(h * 0.009f))
+        drawRoundRect(Color(0xFFD9D5C8), pos - Offset(-h * 0.016f, h * 0.009f), Size(h * 0.012f, h * 0.018f), CornerRadius(h * 0.006f))
+        drawRoundRect(Color(0xFF6E6680).copy(alpha = 0.7f), pos - Offset(h * 0.028f, h * 0.009f), Size(h * 0.056f, h * 0.018f), CornerRadius(h * 0.009f), style = Stroke(1.6f))
+    }
     val tatzen = { start: Float, ende: Float -> maxOf(0f, sin((t - start) * 7f)) * weich(an(t, start, 0.3f)) * (1f - weich(an(t, ende - 0.3f, 0.3f))) }
+    // Kreide auf dem Boden (bevor die Katze sie ins Maul nimmt)
+    if (t >= kreideFall && t < 40.8f) {
+        val fall = an(t, kreideFall, 0.6f)
+        val pos = when {
+            fall < 1f -> Offset(kreideStart.x - w * 0.04f * fall, mix(kreideStart.y, kreide1.y, fall * fall))
+            t < 16.4f -> lerp(Offset(kreideStart.x - w * 0.04f, kreide1.y), kreide1, weich(an(t, kreideFall + 0.6f, 0.8f)))
+            t < 19f -> kreide1
+            else -> lerp(kreide1, kreide2, weich(an(t, 19f, 0.8f)))
+        }
+        kreide(pos, (t - kreideFall).coerceAtMost(1.4f) * 400f + weich(an(t, 19f, 0.8f)) * 360f)
+    }
     when {
         t < 2.5f -> Unit
-        t < 7f -> {
-            val dir = mix(1f, -1f, weich(an(t, 6.4f, 0.6f)))
-            val x = mix(-0.25f * w, platz1, weich(an(t, 2.5f, 4.5f)))
-            katze(x, boden, cs, dir, 0, t * 10f, t, katzeF)
-            knaeuel(katzenMaul(x, boden, cs, dir, 0), kr, wolle)
-        }
-        t < 21.5f -> {
-            katze(platz1, boden, cs, -1f, 1, 0f, t, katzeF, pfote = if (t in 19f..20.8f) tatzen(19f, 20.8f) else 0f)
-            // Knäuel fällt aus dem Maul, liegt, rollt nach dem Tatzen davon
-            val fall = an(t, 7f, 0.35f)
-            val start = katzenMaul(platz1, boden, cs, -1f, 1)
-            val pos = when {
-                fall < 1f -> Offset(start.x, mix(start.y, ball1.y, fall * fall))
-                t < 20.6f -> ball1
-                else -> lerp(ball1, ball2, weich(an(t, 20.6f, 1.2f)))
-            }
-            rotate(if (t > 20.6f) -weich(an(t, 20.6f, 1.2f)) * 540f else 0f, pos) { knaeuel(pos, kr, wolle) }
-        }
-        t < 22.6f -> {
-            katze(mix(platz1, platz2, weich(an(t, 21.5f, 1.1f))), boden, cs, -1f, 0, t * 10f, t, katzeF)
-            rotate(-540f, ball2) { knaeuel(ball2, kr, wolle) }
-        }
-        t < 41.2f -> {
-            katze(platz2, boden, cs, -1f, 1, 0f, t, katzeF, pfote = if (t in 27f..28.6f) tatzen(27f, 28.6f) else 0f)
-            val maul = katzenMaul(platz2, boden, cs, -1f, 1)
-            knaeuel(lerp(ball2, maul, weich(an(t, 40.8f, 0.4f))), kr, wolle)
+        t < 5.5f -> katze(mix(-0.25f * w, platz0, weich(an(t, 2.5f, 3f))), boden, cs, 1f, 0, t * 10f, t, katzeF)
+        t < 16.3f -> katze(platz0, boden, cs, 1f, 1, 0f, t, katzeF)
+        t < 17f -> katze(platz0, boden, cs, 1f, 3, 0f, t, katzeF)
+        t < 17.7f -> { val q = an(t, 17f, 0.7f); katze(mix(platz0, platz1, weich(q)), boden, cs, 1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.14f) }
+        t < 20.2f -> katze(platz1, boden, cs, 1f, 1, 0f, t, katzeF, pfote = if (t in 18f..19.8f) tatzen(18f, 19.8f) else 0f)
+        t < 21.2f -> katze(mix(platz1, platz2, weich(an(t, 20.2f, 1f))), boden, cs, 1f, 0, t * 10f, t, katzeF)
+        t < 41.6f -> {
+            val dir = mix(1f, -1f, weich(an(t, 41f, 0.6f)))
+            katze(platz2, boden, cs, dir, 1, 0f, t, katzeF, pfote = if (t in 27f..28.6f) tatzen(27f, 28.6f) else 0f)
+            // Kreide aufnehmen
+            if (t >= 40.8f) kreide(lerp(kreide2, katzenMaul(platz2, boden, cs, dir, 1), weich(an(t, 40.8f, 0.3f))), 0f)
         }
         else -> {
-            // Umdrehen und mit dem Knäuel im Maul hinter der Person her hinaus
-            val dir = mix(-1f, 1f, weich(an(t, 41.2f, 0.5f)))
-            val modus = if (t < 41.7f) 1 else 0
-            val x = mix(platz2, 1.25f * w, an(t, 41.7f, 3.1f))
-            katze(x, boden, cs, dir, modus, t * 10f, t, katzeF)
-            knaeuel(katzenMaul(x, boden, cs, dir, modus), kr, wolle)
+            // Mit der Kreide im Maul hinter der Person her nach links hinaus
+            val x = mix(platz2, -0.25f * w, an(t, 41.6f, 2.8f))
+            katze(x, boden, cs, -1f, 0, t * 10f, t, katzeF)
+            kreide(katzenMaul(x, boden, cs, -1f, 0), 0f)
         }
     }
 

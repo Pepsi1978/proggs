@@ -18,13 +18,14 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** Länge eines Durchlaufs; Ende und Anfang sind dasselbe Bild (Nacht, leere Beete), die Szene läuft ohne Schnitt. */
-internal const val GARTEN_ZYKLUS = 45f
+internal const val GARTEN_ZYKLUS = 48f
 
 /**
  * Garten: weite Landschaft mit Tiefe (Hügel, Weg zum Horizont, Zaun). Nachts kommen Person und Katze links herein, die
  * Sonne geht auf. Die Person gießt auf dem Gartenweg die drei Hochbeete, stellt die Kanne ab, schaut beim Wachsen zu,
  * erntet Beet für Beet in einen Strauß und hält ihn der Katze vor die Nase; die Katze rückt heran und schnuppert. Dann
- * nimmt die Person die Kanne und geht mit der Katze rechts hinaus, die Sonne geht unter, nach einer Pause beginnt alles neu.
+ * nimmt die Person die Kanne und geht mit der Katze links hinaus, wo sie hereingekommen sind; die Sonne geht unter, Sterne
+ * funkeln, der Mond zieht über den Himmel, und nach einer Pause beginnt alles neu.
  */
 internal fun DrawScope.szeneGarten(t: Float, f: Farben) {
     val zyklus = GARTEN_ZYKLUS
@@ -46,7 +47,21 @@ internal fun DrawScope.szeneGarten(t: Float, f: Farben) {
     val himmelOben = lerp(lerp(Color(0xFF070D1C), obenTag, tag), Color(0xFF6B4A8C), daemmer * 0.35f)
     val himmelUnten = lerp(lerp(Color(0xFF16213A), untenTag, tag), Color(0xFFFF9E5E), daemmer * 0.55f)
     drawRect(Brush.verticalGradient(listOf(himmelOben, himmelUnten), 0f, horizont + h * 0.1f))
-    if (tag < 1f) for (i in 0 until 16) drawCircle(Color.White.copy(alpha = (1f - tag) * (0.4f + 0.4f * welle(t, zyklus, 20, i * 1.7f))), 1.4f, Offset(w * ((i * 0.37f) % 1f), h * 0.4f * ((i * 0.53f) % 1f)))
+    // Viele funkelnde Sterne, jeder in eigenem Takt
+    if (tag < 1f) for (i in 0 until 70) {
+        val funkeln = 0.5f + 0.5f * welle(t, zyklus, 24 + (i % 9) * 5, i * 1.7f)
+        drawCircle(Color.White.copy(alpha = (1f - tag) * (0.25f + 0.7f * funkeln)), 1f + (i % 4) * 0.45f + funkeln * 0.6f, Offset(w * ((i * 0.37f + i * i * 0.013f) % 1f), h * 0.46f * ((i * 0.53f + i * 0.071f) % 1f)))
+    }
+    // Mond: geht nach Sonnenuntergang links auf, wandert über den Himmel und geht vor Sonnenaufgang rechts unter
+    val mondLauf = ((t - 40f + zyklus) % zyklus) / 13f
+    if (mondLauf < 1f) {
+        val mondSicht = (sin(mondLauf * 3.14f) * 3f).coerceIn(0f, 1f) * (1f - tag)
+        val mond = Offset(w * (0.1f + 0.8f * mondLauf), horizont + h * 0.04f - sin(mondLauf * 3.14f) * h * 0.36f)
+        drawCircle(Brush.radialGradient(listOf(Color(0xFFFFF6DC).copy(alpha = 0.4f * mondSicht), Color.Transparent), mond, h * 0.14f), h * 0.14f, mond)
+        drawCircle(Color(0xFFF4EFD9).copy(alpha = mondSicht), h * 0.042f, mond)
+        drawCircle(Color(0xFFDCD5BC).copy(alpha = mondSicht), h * 0.01f, mond + Offset(-h * 0.012f, -h * 0.01f))
+        drawCircle(Color(0xFFDCD5BC).copy(alpha = mondSicht), h * 0.007f, mond + Offset(h * 0.014f, h * 0.012f))
+    }
     val bogen = an(t, 2.5f, 38.5f)
     val sonne = Offset(w * (0.06f + 0.88f * bogen), horizont + h * 0.06f - sin(bogen * 3.14f) * h * 0.44f)
     val sonnenFarbe = lerp(Color(0xFFFF9A4D), if (d) Color(0xFFEFE6C8) else Color(0xFFFFD27A), (sin(bogen * 3.14f) * 1.6f).coerceIn(0f, 1f))
@@ -56,10 +71,11 @@ internal fun DrawScope.szeneGarten(t: Float, f: Farben) {
         drawCircle(Brush.radialGradient(listOf(sonnenFarbe.copy(alpha = 0.55f * sonnenSicht), Color.Transparent), sonne, h * 0.2f), h * 0.2f, sonne)
         drawCircle(sonnenFarbe.copy(alpha = sonnenSicht), h * 0.05f, sonne)
     }
-    for (i in 0 until 3) {
+    // Wolken nur am Tag (nachts wirken ihre Umrisse wie Ufos)
+    if (tag > 0f) for (i in 0 until 3) {
         val wx = runde(t, zyklus, 1, i * 0.33f) * w * 1.3f - w * 0.15f
         val wy = h * (0.1f + i * 0.08f)
-        val wf = Color.White.copy(alpha = (if (d) 0.15f else 0.85f) * (0.25f + 0.75f * tag))
+        val wf = Color.White.copy(alpha = (if (d) 0.15f else 0.85f) * weich(an(tag, 0.55f, 0.45f)))
         drawOval(wf, Offset(wx, wy), Size(h * 0.2f, h * 0.06f))
         drawOval(wf, Offset(wx + h * 0.05f, wy - h * 0.035f), Size(h * 0.12f, h * 0.07f))
     }
@@ -195,10 +211,10 @@ internal fun DrawScope.szeneGarten(t: Float, f: Farben) {
         Takt(ernteStart[2] - 0.2f) { pfluecken(2, it) },
         // Zur Katze umdrehen, in die Hocke, den Strauß vor ihre Nase halten
         Takt(33f) { geben },
-        // Aufstehen, Kanne nehmen, mit der Katze rechts hinaus
+        // Aufstehen, Kanne nehmen, mit der Katze links hinaus, wo sie hereingekommen sind
         Takt(36.4f) { Pose(pflueckX[2], boden, 1f, lachen = 0.8f, blinzeln = blink) },
         Takt(37f) { hocke(pflueckX[2], 1f, 30f) },
-        Takt(38f) { tragen(mix(pflueckX[2], 1.15f * w, an(it, 38f, 4.2f)), it, 1f) },
+        Takt(38f) { tragen(mix(pflueckX[2], -0.15f * w, an(it, 38f, 6.6f)), it, -1f) },
     ))
 
     // Katze: kommt mit, sitzt unter dem Baum, lauert dem Falter auf, springt einmal, kommt zum Strauß, schnuppert, geht mit
@@ -219,8 +235,8 @@ internal fun DrawScope.szeneGarten(t: Float, f: Farben) {
         // Ein kleines Stück näher an den Strauß, dann schnuppern
         t < 34.9f -> katze(mix(wartX, schnupperX, weich(an(t, 34.4f, 0.5f))), boden, cs, 1f, 0, t * 6f, t, katzeF)
         t < 36.4f -> katze(schnupperX + sin(t * 16f) * h * 0.004f * weich(an(t, 34.9f, 0.2f)) * (1f - weich(an(t, 36.1f, 0.3f))), boden, cs, 1f, 1, 0f, t, katzeF)
-        t < 38.2f -> katze(schnupperX, boden, cs, 1f, 1, 0f, t, katzeF)
-        else -> katze(mix(schnupperX, 1.25f * w, an(t, 38.2f, 4.4f)), boden, cs, 1f, 0, t * 10f, t, katzeF)
+        t < 38.6f -> katze(schnupperX, boden, cs, mix(1f, -1f, weich(an(t, 38.1f, 0.5f))), 1, 0f, t, katzeF)
+        else -> katze(mix(schnupperX, -0.25f * w, an(t, 38.6f, 5.2f)), boden, cs, -1f, 0, t * 10f, t, katzeF)
     }
 
     val punkte = mensch(pose, s, mf)
