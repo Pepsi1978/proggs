@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 
 /** Ein Agent: ein Name und eine Rolle, also die Anweisung, wie er an Aufträge herangeht. */
-data class AgentenBauplan(val name: String, val rolle: String, val vorgegeben: Boolean = false)
+data class AgentenBauplan(val name: String, val rolle: String, val vorgegeben: Boolean = false, val schritte: Int = 14, val minuten: Int = 12)
 
 data class AgentenLauf(val agent: String, val auftrag: String, val seit: Long, val schritt: String = "")
 
@@ -45,6 +45,16 @@ object Agenten {
                 "was sie kosten, was schon existiert und wo die Risiken liegen. Schreibe einen Bericht: Kurzfassung, Umsetzungswege im Vergleich, empfohlener Weg mit den ersten drei Schritten, " +
                 "Aufwand grob geschätzt, Risiken, Quellen.",
             vorgegeben = true,
+        ),
+        AgentenBauplan(
+            "Programmierer",
+            "Du bist ein Programmier-Agent wie Codex und arbeitest in Franks Repo auf GitHub. Vorgehen: Finde mit repo_lesen das Projekt (projekte, dateien), lies dessen CLAUDE.md oder AGENTS.md, " +
+                "falls vorhanden, und lies jede Datei vollständig, die du ändern willst, samt der Stellen, die sie benutzen (suche). Plane die kleinste Änderung, die den Auftrag erfüllt, und halte dich " +
+                "an Stil und Benennung des vorhandenen Codes. Schreibe alle Dateien der Änderung zusammen in einem Aufruf von repo_schreiben (dateien). Bei einer Android-App gehört der neue Eintrag in " +
+                "versionslog.json in denselben Commit, und du nimmst einen Zweig jarvis/<kurzer-name> mit pr_titel und zusammenfuehren=true, damit GitHub die App baut. Alles andere schreibst du direkt auf main. " +
+                "Du kannst nicht bauen und nicht testen: Prüfe deshalb jede Änderung selbst gründlich gegen den gelesenen Code (Importe, Namen, Klammern, Typen), bevor du schreibst, und lies die geänderte " +
+                "Datei danach noch einmal. Dein Bericht nennt: was geändert wurde und warum, die Dateien, Commit und Pull Request, was ungeprüft ist und worauf Frank am Handy achten soll.",
+            vorgegeben = true, schritte = 45, minuten = 30,
         ),
     )
 
@@ -88,7 +98,7 @@ object Agenten {
                 "Dein Ablage-Eintrag heißt „$titel“. Dateien (bild_erzeugen, ablage_datei_speichern, ablage_schreiben mit als_pdf) legst du mit genau diesem Titel ab, " +
                 "dann gehören sie zu deinem Bericht. Nenne im Bericht nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat."
             val bericht = JarvisAgent(app).versuche(
-                auftrag = auftrag, zeitlimitMs = 12 * 60_000L, maxSchritte = 14, rolle = rolle, mitInternet = true, ablageTitel = titel,
+                auftrag = auftrag, zeitlimitMs = plan.minuten * 60_000L, maxSchritte = plan.schritte, rolle = rolle, mitInternet = true, ablageTitel = titel,
                 beiSchritt = { schritt -> _laeufe.value = _laeufe.value.map { if (it === lauf || it.seit == lauf.seit) it.copy(schritt = schritt) else it } },
             )
             if (bericht.isNullOrBlank()) {

@@ -128,7 +128,7 @@ class McpServer(context: Context) {
             name = "agent_starten",
             titel = "Agenten beauftragen",
             beschreibung = "Jarvis: beauftragt einen Agenten von Jarvis mit einer längeren Arbeit, zum Beispiel einer Internet-Recherche („Jarvis, recherchiere, wie man … am besten baut“) " +
-                "oder einer Machbarkeitsprüfung einer Idee. Der Agent arbeitet mehrere Minuten selbstständig im Hintergrund auf Franks Handy (eigenes Modell, Internet-Suche, Zugriff auf Ideen, " +
+                "oder einer Machbarkeitsprüfung einer Idee, oder den Agenten Programmierer mit einer Programmieraufgabe in Franks Repo (er liest den Code, ändert ihn und pusht). Der Agent arbeitet mehrere Minuten selbstständig im Hintergrund auf Franks Handy (eigenes Modell, Internet-Suche, Zugriff auf Ideen, " +
                 "Aufgaben, Kalender, Biomarker), legt den Bericht in die Ablage und meldet sich per Benachrichtigung. Dieser Aufruf kehrt sofort zurück. " +
                 "Das Ergebnis holst du später mit ablage_lesen (ohne titel die Liste, mit titel der Bericht). Mit per_mail wird der Bericht zusätzlich an Frank gemailt.",
             schema = schema(
