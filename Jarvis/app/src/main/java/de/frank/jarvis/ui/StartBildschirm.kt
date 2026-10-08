@@ -26,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -93,7 +95,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     }
 
     Column(Modifier.fillMaxSize()) {
-        Kopf(vm, tunnel)
+        Kopf(vm, tunnel, auswertung.laeuft)
         LazyColumn(
             Modifier.weight(1f).fillMaxWidth(), state = liste,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -121,8 +123,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                                 color = if (auswertung.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
                             )
                         }
-                        if (auswertung.laeuft) Kern(34.dp, f.primaer, aktiv = true)
-                        else Knopf("Jetzt", Modifier.height(40.dp), haupt = false) { vm.auswertungJetzt() }
+                        auswertung.neueste?.let { Vorleseknopf(vm, "auswertung", "Tagesauswertung", if (it.mitKi) it.text else it.text + "\n\n" + it.daten) }
                     }
                     auswertung.neueste?.let { neueste ->
                         Text(
@@ -146,7 +147,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                     }
                 }
             }
-            items(vm.gespraech) { n -> Blase(n) }
+            items(vm.gespraech.size) { i -> Blase(vm, i, vm.gespraech[i]) }
             if (vm.denkt) item(key = "denkt") {
                 Row(Modifier.padding(start = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Kern(30.dp, f.primaer, aktiv = true)
@@ -155,21 +156,35 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.Bottom) {
-            Eingabe(eingabe, { eingabe = it }, "Nachricht an Jarvis", Modifier.weight(1f), einzeilig = false, senden = { vm.sende(eingabe); eingabe = "" })
+            Eingabe(eingabe, { eingabe = it }, if (vm.nimmtAuf) "Ich höre zu … tippe zum Senden" else if (vm.schreibtMit) "Schreibe mit …" else "Nachricht an Jarvis", Modifier.weight(1f), einzeilig = false, senden = { vm.sende(eingabe); eingabe = "" })
             Spacer(Modifier.width(10.dp))
+            // Leeres Feld: der Knopf ist das Mikrofon. Mit Text: senden. Während Jarvis arbeitet: abbrechen.
+            val alsMikro = eingabe.isBlank() && !vm.denkt
+            val rot = vm.denkt || vm.nimmtAuf
             Box(
-                Modifier.size(52.dp).knopf3d(if (vm.denkt) f.gefahr else f.primaer, if (vm.denkt) f.gefahr else f.tertiaer, 26.dp, f.dunkel)
-                    .antippen { if (vm.denkt) vm.abbrechen() else { vm.sende(eingabe); eingabe = "" } },
+                Modifier.size(52.dp).knopf3d(if (rot) f.gefahr else f.primaer, if (rot) f.gefahr else f.tertiaer, 26.dp, f.dunkel)
+                    .antippen {
+                        when {
+                            vm.denkt -> vm.abbrechen()
+                            alsMikro -> vm.mikrofonTippen()
+                            else -> { vm.sende(eingabe); eingabe = "" }
+                        }
+                    },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(if (vm.denkt) Icons.Rounded.Stop else Icons.AutoMirrored.Rounded.Send, if (vm.denkt) "Abbrechen" else "Senden", tint = f.aufPrimaer, modifier = Modifier.size(22.dp))
+                when {
+                    vm.schreibtMit -> Kern(34.dp, f.aufPrimaer, aktiv = true)
+                    vm.denkt || vm.nimmtAuf -> Icon(Icons.Rounded.Stop, if (vm.denkt) "Abbrechen" else "Aufnahme beenden und senden", tint = f.aufPrimaer, modifier = Modifier.size(22.dp))
+                    alsMikro -> Icon(Icons.Rounded.Mic, "Sprechen", tint = f.aufPrimaer, modifier = Modifier.size(24.dp))
+                    else -> Icon(Icons.AutoMirrored.Rounded.Send, "Senden", tint = f.aufPrimaer, modifier = Modifier.size(22.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand) {
+private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean) {
     val f = LocalFarben.current
     val (zeile, farbe) = when (tunnel.stufe) {
         TunnelStufe.ONLINE -> "Online · bereit für ChatGPT" to f.erfolg
@@ -185,10 +200,12 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand) {
             Text(zeile, color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         if (vm.gespraech.isNotEmpty()) {
-            Box(Modifier.size(44.dp).glas(f, 22.dp, erhoeht = 0.5f).antippen { vm.gespraechLeeren() }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.DeleteSweep, "Gespräch leeren", tint = f.textLeise, modifier = Modifier.size(20.dp))
-            }
+            Rundknopf(Icons.Rounded.DeleteSweep, "Gespräch leeren") { vm.gespraechLeeren() }
+            Spacer(Modifier.width(8.dp))
         }
+        // Tagesauswertung jetzt neu erstellen: frische Daten aller Apps holen und alles neu auswerten.
+        if (wertetAus) Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { Kern(34.dp, f.primaer, aktiv = true) }
+        else Rundknopf(Icons.Rounded.Refresh, "Tagesauswertung aktualisieren", farbe = f.primaer) { vm.auswertungJetzt() }
     }
 }
 
@@ -212,14 +229,18 @@ private fun SchrittZeile(nummer: Int, s: Schritt) {
 }
 
 @Composable
-private fun Blase(n: Nachricht) {
+private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
     val f = LocalFarben.current
-    Box(Modifier.fillMaxWidth(), contentAlignment = if (n.vonMir) Alignment.CenterEnd else Alignment.CenterStart) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (n.vonMir) Arrangement.End else Arrangement.Start, verticalAlignment = Alignment.Bottom) {
         val grund = if (n.vonMir) Modifier.knopf3d(f.primaer, f.tertiaer, 20.dp, f.dunkel) else Modifier.glas(f, 20.dp, erhoeht = 0.6f, fuellung = f.flaecheStark)
         Text(
             n.text,
-            Modifier.widthIn(max = 460.dp).padding(start = if (n.vonMir) 44.dp else 0.dp, end = if (n.vonMir) 0.dp else 44.dp).then(grund).padding(horizontal = 16.dp, vertical = 11.dp),
+            Modifier.weight(1f, fill = false).widthIn(max = 460.dp).padding(start = if (n.vonMir) 44.dp else 0.dp).then(grund).padding(horizontal = 16.dp, vertical = 11.dp),
             color = if (n.vonMir) f.aufPrimaer else f.text, fontSize = 16.sp, lineHeight = 22.sp,
         )
+        if (!n.vonMir) {
+            Spacer(Modifier.width(6.dp))
+            Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp)
+        }
     }
 }

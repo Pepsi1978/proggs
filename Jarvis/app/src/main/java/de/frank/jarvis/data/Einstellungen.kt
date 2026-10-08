@@ -88,6 +88,14 @@ class Einstellungen private constructor(context: Context) {
     /** Einmaliger Zusatzlauf (Zeitpunkt in Millisekunden), wenn morgens der Schlafwert noch fehlte. 0 = keiner. */
     var nachbesserungUm: Long get() = prefs.getLong("nachbesserung_um", 0L); set(v) = put { putLong("nachbesserung_um", v) }
 
+    // ---- Sperre und Vorlesen ----
+    /** App nur nach Fingerabdruck (oder Gerätesperre) öffnen. Das Plugin arbeitet unabhängig davon. */
+    var appSperre: Boolean get() = prefs.getBoolean("app_sperre", true); set(v) = put { putBoolean("app_sperre", v) }
+    /** Antworten vorlesen, wenn die Frage gesprochen wurde. */
+    var antwortenVorlesen: Boolean get() = prefs.getBoolean("antworten_vorlesen", true); set(v) = put { putBoolean("antworten_vorlesen", v) }
+    /** Fertige Agenten-Ergebnisse von selbst vorlesen. */
+    var ergebnisseVorlesen: Boolean get() = prefs.getBoolean("ergebnisse_vorlesen", false); set(v) = put { putBoolean("ergebnisse_vorlesen", v) }
+
     /** system | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
 

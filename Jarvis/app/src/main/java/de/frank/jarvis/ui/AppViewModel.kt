@@ -28,7 +28,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), AKTIVITAET("Aktivität"), EINSTELLUNGEN("Einstellungen") }
+enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), AKTIVITAET("Aktivität"), EINSTELLUNGEN("Einstellungen") }
 
 data class Nachricht(val vonMir: Boolean, val text: String)
 
@@ -38,6 +38,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val auth get() = agent.auth
 
     var reiter by mutableStateOf(Reiter.JARVIS)
+
+    // ---- Sperre ----
+    /** true, solange die App auf den Fingerabdruck wartet. Der Dienst im Hintergrund läuft davon unberührt. */
+    var gesperrt by mutableStateOf(false)
+    /** Wann die App zuletzt sichtbar war; 0 = seit dem Start noch nie entsperrt. */
+    var zuletztSichtbar = 0L
+    var entsperrenAnfragen: () -> Unit = {}
+
+    // ---- Sprache ----
+    val sprache = de.frank.jarvis.data.settings.SecureSettings(app)
+    val vorleser: de.frank.jarvis.speech.Vorleser = de.frank.jarvis.speech.Vorleser.hole(app, sprache)
+    private val mikro = de.frank.jarvis.audio.MicRecorder(app)
+    val pegel get() = mikro.pegel
+    var nimmtAuf by mutableStateOf(false); private set
+    var schreibtMit by mutableStateOf(false); private set
+    var mikrofonAnfragen: () -> Unit = {}
+    /** Die laufende Frage kam über das Mikrofon: Dann wird die Antwort vorgelesen. */
+    private var gesprochen = false
 
     // ---- Gespräch mit Jarvis ----
     val gespraech = mutableStateListOf<Nachricht>()
@@ -106,7 +124,63 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             gespraech += Nachricht(false, antwort)
             denkt = false
             schritt = ""
+            if (gesprochen && einstellungen.antwortenVorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
+            gesprochen = false
         }
+    }
+
+    // ---- Mikrofon und Vorlesen ----
+
+    /** Tipp auf den Mikrofon-Knopf: Aufnahme starten oder beenden und abschicken. */
+    fun mikrofonTippen() {
+        when {
+            schreibtMit || denkt -> Unit
+            nimmtAuf -> aufnahmeBeenden()
+            sprache.groqApiKey.isBlank() -> { meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel eintragen."; reiter = Reiter.EINSTELLUNGEN }
+            else -> mikrofonAnfragen()
+        }
+    }
+
+    fun mikrofonErlaubt(erlaubt: Boolean) {
+        if (!erlaubt) { meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        vorleser.stopp()
+        if (mikro.start(viewModelScope)) nimmtAuf = true else meldung = "Die Aufnahme ließ sich nicht starten."
+    }
+
+    private fun aufnahmeBeenden() {
+        nimmtAuf = false
+        schreibtMit = true
+        viewModelScope.launch {
+            try {
+                val wav = mikro.stop()
+                if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
+                val groq = de.frank.jarvis.audio.GroqTranscriber(
+                    apiKey = sprache.groqApiKey,
+                    filterStille = sprache.filterStilleVorabAn, filterMetriken = sprache.filterSegmentmetrikenAn,
+                    filterZeitstempel = sprache.filterZeitstempelAn, filterFloskeln = sprache.filterFloskelnAn,
+                )
+                val text = try { withContext(Dispatchers.IO) { de.frank.jarvis.audio.Diktat(groq).transkribiere(wav).text.trim() } } finally { groq.shutdown() }
+                if (text.isBlank()) meldung = "Ich habe nichts verstanden."
+                else { schreibtMit = false; gesprochen = true; sende(text) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                meldung = e.message ?: "Die Aufnahme konnte nicht in Text umgewandelt werden."
+            } finally {
+                schreibtMit = false
+            }
+        }
+    }
+
+    /** Lautsprecher-Knopf: vorlesen, oder anhalten, wenn genau das schon läuft. */
+    fun lies(quelle: String, titel: String, text: String) {
+        val stand = vorleser.stand.value
+        if (stand.quelle == quelle && stand.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) vorleser.stopp() else vorleser.sprich(quelle, titel, text)
+    }
+
+    override fun onCleared() {
+        mikro.release()
+        super.onCleared()
     }
 
     fun abbrechen() {

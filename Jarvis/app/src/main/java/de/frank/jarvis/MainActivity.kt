@@ -3,7 +3,9 @@ package de.frank.jarvis
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,7 +16,8 @@ import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.ui.AppViewModel
 import de.frank.jarvis.ui.JarvisApp
 
-class MainActivity : ComponentActivity() {
+/** FragmentActivity, weil die Abfrage des Fingerabdrucks sie verlangt. */
+class MainActivity : FragmentActivity() {
     private val vm: AppViewModel by viewModels()
 
     private val hinweisErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -23,6 +26,40 @@ class MainActivity : ComponentActivity() {
     }
 
     private val kalenderErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.lagePruefen() }
+
+    private val mikroErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.mikrofonErlaubt(it) }
+
+    /** Fingerabdruck, ersatzweise die Gerätesperre (PIN, Muster). */
+    private val nachweis = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+
+    private fun sperreMoeglich(): Boolean = BiometricManager.from(this).canAuthenticate(nachweis) == BiometricManager.BIOMETRIC_SUCCESS
+
+    private fun entsperren() {
+        BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                vm.gesperrt = false
+                vm.zuletztSichtbar = System.currentTimeMillis()
+            }
+        }).authenticate(BiometricPrompt.PromptInfo.Builder().setTitle("Jarvis entsperren").setSubtitle("Mit Fingerabdruck oder Gerätesperre").setAllowedAuthenticators(nachweis).build())
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Sperren beim Start und nach mehr als 30 Sekunden außerhalb der App. Ohne eingerichteten Fingerabdruck
+        // und ohne Gerätesperre bleibt die App offen, sonst käme niemand mehr hinein.
+        val zuLangeWeg = vm.zuletztSichtbar == 0L || System.currentTimeMillis() - vm.zuletztSichtbar > 30_000
+        if (vm.einstellungen.appSperre && sperreMoeglich() && (vm.gesperrt || zuLangeWeg)) {
+            vm.gesperrt = true
+            entsperren()
+        } else if (!vm.gesperrt) {
+            vm.zuletztSichtbar = System.currentTimeMillis()
+        }
+    }
+
+    override fun onStop() {
+        if (!vm.gesperrt) vm.zuletztSichtbar = System.currentTimeMillis()
+        super.onStop()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -34,6 +71,11 @@ class MainActivity : ComponentActivity() {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 hinweisErlaubnis.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+        }
+        vm.entsperrenAnfragen = { entsperren() }
+        vm.mikrofonAnfragen = {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.mikrofonErlaubt(true)
+            else mikroErlaubnis.launch(Manifest.permission.RECORD_AUDIO)
         }
         vm.kalenderAnfragen = { kalenderErlaubnis.launch(Manifest.permission.READ_CALENDAR) }
         if (savedInstanceState == null) vm.hinweiseAnfragen()

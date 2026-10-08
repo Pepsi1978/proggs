@@ -8,6 +8,7 @@ import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.BiomarkerFaehigkeit
 import de.frank.jarvis.faehigkeit.IdeenFaehigkeit
+import de.frank.jarvis.faehigkeit.WissenFaehigkeit
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
 import java.io.File
@@ -100,6 +101,9 @@ object Tagesauswertung {
             val biomarker = Register.alle(app).filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
             val abgeglichen = runCatching { biomarker?.abgleich() }.getOrNull() == true
 
+            schritt("Wissens-Datenbank holen")
+            runCatching { Register.alle(app).filterIsInstance<WissenFaehigkeit>().firstOrNull()?.synchronisiere() }
+
             schritt("Daten zusammentragen")
             val daten = sammle(app, abgeglichen)
 
@@ -172,6 +176,9 @@ object Tagesauswertung {
             append("== GENIALE IDEEN (offen, gekürzt) ==\n")
             append(runCatching { alle.filterIsInstance<IdeenFaehigkeit>().firstOrNull()?.ueberblick() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
 
+            append("== WISSENS-DATENBANK (Inhaltsverzeichnis; Volltexte über wissen_lesen) ==\n")
+            append(runCatching { alle.filterIsInstance<WissenFaehigkeit>().firstOrNull()?.ueberblick() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+
             append("== OFFENE AUFGABEN (nur Stand jetzt, ändert sich laufend) ==\n")
             append(rufe("aufgaben_lesen", JSONObject().put("bereich", "heute"))).append('\n')
             append(rufe("aufgaben_lesen", JSONObject().put("bereich", "morgen")))
@@ -190,6 +197,7 @@ Unten stehen alle Daten, bereits fertig gerechnet. Regeln:
 - Schlaf nach einem Nachtdienst ist Tagschlaf und fällt oft kürzer aus; am Tag nach dem letzten Nachtdienst ist eine kurze Schlafdauer erwartbar und kein schlechtes Zeichen. Vergleiche das vorsichtig mit den Durchschnitten, die überwiegend Nachtschlaf enthalten.
 - Schichtlogik: Nach einem Nachtdienst schläft Frank tagsüber etwa von 6 bis 15 Uhr. Schlafwerte gehören zu dem Tag, an dem der Schlaf endet. Steht für heute noch kein Schlafwert da, obwohl er laut Rahmen noch schläft oder gerade erst aufgestanden ist, ist das normal und kein schlechter Wert. Tagesbelastung, Energieumsatz und Schritte des laufenden Tages sind Zwischenstände.
 - Stelle den heutigen Tag in den Vordergrund und ordne ihn gegen 7 Tage, den letzten Monat und alle bisherigen Tage ein. Nenne nur die Zahlen, die etwas aussagen: zuerst, was auffällig besser oder schlechter ist, dann kurz das Unauffällige in einem Satz. Keine Aufzählung aller Messgrößen.
+- Der Abschnitt WISSENS-DATENBANK ist nur ein Verzeichnis und für die Auswertung ohne Belang.
 - Die Liste GENIALE IDEEN ist nur Hintergrundwissen. Zähle die Ideen nicht auf; greife höchstens eine auf, wenn sie heute wirklich passt (freier Tag, gute Erholung).
 - Keine medizinischen Diagnosen. Empfehlungen konkret und alltagsnah (Belastung, Schlaf, Erholung, Training).
 - Du darfst höchstens zwei Werkzeuge zusätzlich aufrufen, und nur wenn ein auffälliger Wert einen Blick in den Verlauf braucht. Meist ist das nicht nötig.
@@ -209,7 +217,7 @@ $daten
     /** Die Bereiche der Tagesdatenbank: Kurzname → Anfang der Abschnittsüberschrift. */
     val BEREICHE = linkedMapOf(
         "rahmen" to "RAHMEN", "termine" to "TERMINE", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
-        "trainings" to "TRAININGS", "ideen" to "GENIALE IDEEN",
+        "trainings" to "TRAININGS", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
     )
 
     /** Ein oder alle Bereiche der zuletzt gespeicherten Tagesdaten. Aufgaben fehlen bewusst: Sie werden immer frisch gelesen. */

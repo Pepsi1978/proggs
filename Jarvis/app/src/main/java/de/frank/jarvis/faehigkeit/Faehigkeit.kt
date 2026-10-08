@@ -43,7 +43,7 @@ object Register {
     fun alle(context: Context): List<Faehigkeit> = liste ?: synchronized(this) {
         liste ?: listOf(
             AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext),
-            IdeenFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext),
+            IdeenFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext), WissenFaehigkeit(context.applicationContext),
             WebFaehigkeit(context.applicationContext),
         ).also { liste = it }
     }

@@ -88,6 +88,10 @@ dependencies {
     implementation(libs.security.crypto)
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    implementation(libs.biometric)
+    implementation(libs.fragment)
+    // Bedienknöpfe der Vorlese-Benachrichtigung.
+    implementation(libs.media)
 
     // E-Mail über Gmail (SMTP senden, IMAP lesen).
     implementation("com.sun.mail:android-mail:1.6.7")

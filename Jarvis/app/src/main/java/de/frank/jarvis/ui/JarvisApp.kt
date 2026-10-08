@@ -35,7 +35,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -85,10 +91,20 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                 Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
                     .widthIn(max = 640.dp).align(Alignment.TopCenter),
             ) {
+                if (vm.gesperrt) {
+                    Column(Modifier.weight(1f).fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Kern(120.dp, f.primaer, aktiv = false)
+                        Text("Jarvis ist gesperrt", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 18.dp))
+                        Text("Im Hintergrund arbeitet Jarvis weiter und bleibt für ChatGPT erreichbar.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp, bottom = 22.dp))
+                        Knopf("Entsperren") { vm.entsperrenAnfragen() }
+                    }
+                    return@Column
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     AnimatedContent(vm.reiter, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "reiter") { reiter ->
                         when (reiter) {
                             Reiter.JARVIS -> StartBildschirm(vm, tunnel, activity)
+                            Reiter.ABLAGE -> AblageBildschirm(vm, activity)
                             Reiter.AKTIVITAET -> AktivitaetBildschirm(vm)
                             Reiter.EINSTELLUNGEN -> EinstellungenBildschirm(vm, tunnel, activity)
                         }
@@ -131,18 +147,15 @@ private fun Leiste(vm: AppViewModel) {
     ) {
         Reiter.entries.forEach { r ->
             val aktiv = vm.reiter == r
-            val icon = when (r) { Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune }
+            val icon = when (r) { Reiter.JARVIS -> Icons.Rounded.AutoAwesome; Reiter.ABLAGE -> Icons.Rounded.Folder; Reiter.AKTIVITAET -> Icons.Rounded.History; Reiter.EINSTELLUNGEN -> Icons.Rounded.Tune }
             val grund = if (aktiv) Modifier.knopf3d(f.primaer, f.tertiaer, 25.dp, f.dunkel) else Modifier
             Row(
-                Modifier.weight(1f).height(50.dp).then(grund).antippen { vm.reiter = r },
+                Modifier.weight(if (aktiv) 1.9f else 1f).height(50.dp).then(grund).antippen { vm.reiter = r },
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(icon, null, tint = if (aktiv) f.aufPrimaer else f.textLeise, modifier = Modifier.size(20.dp))
-                Text(
-                    r.anzeige, Modifier.padding(start = 7.dp), color = if (aktiv) f.aufPrimaer else f.textLeise,
-                    fontSize = 14.sp, fontWeight = if (aktiv) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1,
-                )
+                if (aktiv) Text(r.anzeige, Modifier.padding(start = 7.dp), color = f.aufPrimaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -219,6 +232,7 @@ fun Knopf(text: String, modifier: Modifier = Modifier, icon: ImageVector? = null
     }
 }
 
+/** Eingabefeld. Mit [geheim] ist der Inhalt verdeckt; das Auge rechts zeigt ihn. */
 @Composable
 fun Eingabe(
     wert: String,
@@ -230,18 +244,24 @@ fun Eingabe(
     senden: (() -> Unit)? = null,
 ) {
     val f = LocalFarben.current
-    Box(modifier.glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(horizontal = 16.dp, vertical = 14.dp)) {
-        if (wert.isEmpty()) Text(platzhalter, color = f.textSchwach, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        BasicTextField(
-            wert, beiAenderung, Modifier.fillMaxWidth(),
-            textStyle = TextStyle(color = f.text, fontSize = 16.sp),
-            cursorBrush = SolidColor(f.primaer),
-            singleLine = einzeilig,
-            maxLines = if (einzeilig) 1 else 5,
-            visualTransformation = if (geheim && wert.isNotEmpty()) PasswordVisualTransformation() else VisualTransformation.None,
-            keyboardOptions = KeyboardOptions(imeAction = if (senden != null) ImeAction.Send else ImeAction.Default),
-            keyboardActions = KeyboardActions(onSend = { senden?.invoke() }),
-        )
+    var sichtbar by remember { mutableStateOf(false) }
+    Row(modifier.glas(f, 16.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(start = 16.dp, end = if (geheim) 6.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f).padding(vertical = 14.dp)) {
+            if (wert.isEmpty()) Text(platzhalter, color = f.textSchwach, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            BasicTextField(
+                wert, beiAenderung, Modifier.fillMaxWidth(),
+                textStyle = TextStyle(color = f.text, fontSize = 16.sp),
+                cursorBrush = SolidColor(f.primaer),
+                singleLine = einzeilig,
+                maxLines = if (einzeilig) 1 else 5,
+                visualTransformation = if (geheim && !sichtbar && wert.isNotEmpty()) PasswordVisualTransformation() else VisualTransformation.None,
+                keyboardOptions = KeyboardOptions(imeAction = if (senden != null) ImeAction.Send else ImeAction.Default),
+                keyboardActions = KeyboardActions(onSend = { senden?.invoke() }),
+            )
+        }
+        if (geheim) Box(Modifier.size(40.dp).antippen(haptik = false) { sichtbar = !sichtbar }, contentAlignment = Alignment.Center) {
+            Icon(if (sichtbar) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, if (sichtbar) "Verbergen" else "Anzeigen", tint = f.textLeise, modifier = Modifier.size(20.dp))
+        }
     }
 }
 

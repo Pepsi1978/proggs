@@ -69,6 +69,7 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 | `ablage_liste`, `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen` | Eigene Textdateien von Jarvis (Recherchen, Ausarbeitungen, Notizen) |
 | `agenten_liste`, `agent_starten`, `agent_anlegen`, `agent_loeschen` | Agenten, die im Hintergrund arbeiten und ihr Ergebnis in die Ablage legen |
 | `mail_senden`, `mail_lesen`, `mail_details` | Gmail über App-Passwort; senden nur an freigegebene Empfänger |
+| `wissen_inhalt`, `wissen_lesen`, `wissen_suchen` | Wissens-Datenbank: Ordner `Datenbank` des Repositories, bei jeder Synchronisierung aufs Handy geholt |
 | `tagesdaten_lesen` | Die Tagesdatenbank: alle Daten der letzten Synchronisierung, ganz oder je Bereich |
 | `tagesauswertung_lesen` | Die fertige Tagesauswertung samt frisch gelesenen Aufgaben; veraltete Fassungen werden nie als aktuell ausgegeben |
 | `tagesauswertung_erstellen` | Stößt eine neue Auswertung im Hintergrund an (ein bis drei Minuten) |
@@ -125,6 +126,26 @@ Die einzelnen Werkzeuge der Apps lesen weiterhin live vom Handy; die Tagesdatenb
 `faehigkeit/MailFaehigkeit.kt`: Gmail über SMTP (senden) und IMAP (lesen) mit einem App-Passwort, das Frank in den
 Einstellungen einträgt. Gesendet wird nur an die eigene Adresse und an ausdrücklich freigegebene Empfänger. Der Inhalt
 eingegangener Mails wird den Modellen als fremde Information gekennzeichnet, nie als Anweisung.
+
+## Sprache
+
+Übernommen aus Geniale Ideen (Pakete `audio/`, `tts/`, `speech/`, `text/`, `observability/`, `data/settings/SecureSettings.kt`):
+
+- **Mikrofon:** Solange das Eingabefeld leer ist, ist der Knopf daneben das Mikrofon. Aufnahme mit `MicRecorder`, Mitschrift
+  über Groq (`whisper-large-v3-turbo`) mit den vier Filtern gegen erfundene Texte bei Stille; lange Aufnahmen werden geteilt.
+  Der Text geht direkt an Jarvis, die Antwort wird vorgelesen (abschaltbar).
+- **Vorlesen:** `speech/Vorleser.kt` liest absatzweise und lässt die nächsten zwei Absätze schon synthetisieren
+  (Edge ohne Schlüssel, Google Chirp 3 HD, Alibaba, eigene Stimme). `VorleseDienst` hält die Wiedergabe im Hintergrund.
+  Lautsprecher-Knöpfe gibt es an Antworten, an der Tagesauswertung und in der Ablage; Agenten-Ergebnisse werden auf
+  Wunsch von selbst vorgelesen (Schalter in den Einstellungen oder `vorlesen` bei `agent_starten`).
+- Schlüssel (Groq, Google, Alibaba) trägt man in den Einstellungen ein. Sie liegen in `jarvis_sprache_prefs`, getrennt von
+  den übrigen Einstellungen, damit das übernommene Modul unverändert bleibt.
+
+## App-Sperre
+
+Mit eingeschalteter Sperre (Vorgabe) verlangt Jarvis beim Öffnen und nach 30 Sekunden außerhalb der App den Fingerabdruck
+oder die Gerätesperre (`MainActivity`, `androidx.biometric`). Der Hintergrunddienst, das Plugin und die Tagesauswertung
+laufen davon unberührt weiter. Ohne eingerichtete Gerätesperre bleibt die App offen.
 
 ## Dienstplan
 
