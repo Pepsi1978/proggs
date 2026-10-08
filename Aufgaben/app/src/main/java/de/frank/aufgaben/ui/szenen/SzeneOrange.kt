@@ -88,6 +88,14 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
         lineTo(fen.left - h * 0.06f, fen.bottom + h * 0.05f); close()
     }
     drawPath(vorhang, Brush.horizontalGradient(listOf(f.primaer.copy(alpha = if (d) 0.35f else 0.45f), f.primaer.copy(alpha = if (d) 0.55f else 0.65f), f.primaer.copy(alpha = if (d) 0.4f else 0.5f)), fen.left - h * 0.06f, fen.left + h * 0.03f))
+    // Zweiter Vorhang rechts, gespiegelt
+    val vorhangR = Path().apply {
+        moveTo(fen.right + h * 0.05f, fen.top - h * 0.03f)
+        lineTo(fen.right - h * 0.02f, fen.top - h * 0.03f)
+        quadraticTo(fen.right + h * 0.01f - welle(t, zyklus, 6, 1.7f) * 3f, fen.center.y, fen.right - h * 0.03f, fen.bottom + h * 0.05f)
+        lineTo(fen.right + h * 0.06f, fen.bottom + h * 0.05f); close()
+    }
+    drawPath(vorhangR, Brush.horizontalGradient(listOf(f.primaer.copy(alpha = if (d) 0.4f else 0.5f), f.primaer.copy(alpha = if (d) 0.55f else 0.65f), f.primaer.copy(alpha = if (d) 0.35f else 0.45f)), fen.right - h * 0.03f, fen.right + h * 0.06f))
 
     // Regal mit Büchern, Pflanze und Bild
     val regalY = h * 0.34f

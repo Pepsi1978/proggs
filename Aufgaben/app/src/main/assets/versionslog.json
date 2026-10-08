@@ -27,6 +27,7 @@
     {"versionCode": 23, "versionName": "1.0.22", "stand": "08.10.2026, 14:32 Uhr", "notiz": "Keine sichtbare Änderung: Datenbank-Schema der Version 2 im Projekt abgelegt"},
     {"versionCode": 24, "versionName": "1.0.23", "stand": "08.10.2026, 14:42 Uhr", "notiz": "Kopfbereich: die sechs Knöpfe wieder klein, ganz oben und rechtsbündig, darunter „Sinnvolle Aufgaben“ mit der Serie; Kosmos: Tastatur liegt quer auf dem Pult, Einstein-Porträt an der Wand, Bullauge ein Stück weiter rechts; Orange: Monitor ohne Gehäusetiefe; in allen Szenen Sichelmond statt Vollmond; Garten: Katze geht ruhig zum Strauß und schnuppert nur kurz, ohne Satz nach vorne"},
     {"versionCode": 25, "versionName": "1.0.24", "stand": "08.10.2026, 14:44 Uhr", "notiz": "Zeitleiste kompakt: Die rote Jetzt-Linie läuft nicht mehr durch den Text „… frei“ einer zusammengerückten Lücke, sondern steht knapp darüber oder darunter"},
-    {"versionCode": 26, "versionName": "1.0.25", "stand": "08.10.2026, 14:45 Uhr", "notiz": "Orange: Himmel und Häuser füllen jetzt das ganze Fenster bis zum rechten Rand"}
+    {"versionCode": 26, "versionName": "1.0.25", "stand": "08.10.2026, 14:45 Uhr", "notiz": "Orange: Himmel und Häuser füllen jetzt das ganze Fenster bis zum rechten Rand"},
+    {"versionCode": 27, "versionName": "1.0.26", "stand": "08.10.2026, 14:48 Uhr", "notiz": "Zeitleiste heute: Die rote Jetzt-Linie ist immer zu sehen, auch in der Kompaktansicht – die Leiste reicht bis zur aktuellen Stunde, viel freie Zeit zwischen jetzt und den Terminen rückt zusammen; mittig auf der Linie steht die aktuelle Uhrzeit; Orange: Fenster hat jetzt auch rechts einen Vorhang"}
   ]
 }

@@ -65,12 +65,19 @@ data class Zeitband(val vonMin: Int, val bisMin: Int, val luecken: List<Luecke> 
          * zwei oder mehr freie volle Stunden zwischen zwei Terminen rücken zusammen (Termin 15 Uhr, nächster 19 Uhr:
          * 16:00 und 19:00 bleiben als Ränder stehen, 17 und 18 Uhr verschwinden).
          */
-        fun fuer(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, luecken: Boolean): Zeitband {
-            val (a, b) = spanne(termine, von, bis, auto)
-            if (!luecken || termine.size < 2) return Zeitband(a, b)
+        fun fuer(termine: List<Aufgabe>, von: Int, bis: Int, auto: Boolean, luecken: Boolean, jetzt: Int? = null): Zeitband {
+            var (a, b) = spanne(termine, von, bis, auto)
+            // Die aktuelle Uhrzeit [jetzt] (nur heute) ist immer zu sehen: Die Spanne reicht bis zu ihrer vollen Stunde,
+            // und sie zählt wie ein Termin – viel freie Zeit zwischen ihr und den Terminen rückt also zusammen.
+            if (jetzt != null) {
+                a = minOf(a, jetzt / 60 * 60)
+                b = maxOf(b, ((jetzt / 60 + 1) * 60).coerceAtMost(24 * 60))
+            }
+            val strecken = termine.mapNotNull { t -> t.minuten?.let { it to it + maxOf(t.dauer, BLOCK_MIN) } } + listOfNotNull(jetzt?.let { it to it + 1 })
+            if (!luecken || strecken.size < 2) return Zeitband(a, b)
             // Termine zu belegten Strecken verschmelzen, sortiert und überlappungsfrei.
             val belegt = mutableListOf<IntArray>()
-            termine.mapNotNull { t -> t.minuten?.let { it to it + maxOf(t.dauer, BLOCK_MIN) } }
+            strecken
                 .sortedBy { it.first }
                 .forEach { (start, ende) ->
                     val letzte = belegt.lastOrNull()

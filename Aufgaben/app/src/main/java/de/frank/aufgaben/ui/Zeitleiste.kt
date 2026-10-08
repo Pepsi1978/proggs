@@ -30,6 +30,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -86,7 +88,13 @@ fun Zeitleiste(
     luecken: Boolean, ganzerTag: Boolean, onGanzerTag: (Boolean) -> Unit,
     onTipp: (Aufgabe) -> Unit, onErledigt: (Aufgabe) -> Unit,
 ) {
-    val kompakt = remember(termine, vonEinst, bisEinst, auto, luecken) { Zeitband.fuer(termine, vonEinst, bisEinst, auto, luecken) }
+    // Aktuelle Uhrzeit in Minuten; heute bestimmt sie die Spanne mit, damit die rote Jetzt-Linie immer zu sehen ist.
+    var jetzt by remember { mutableIntStateOf(LocalTime.now().let { it.hour * 60 + it.minute }) }
+    if (istHeute) LaunchedEffect(Unit) {
+        while (true) { delay(15_000); jetzt = LocalTime.now().let { it.hour * 60 + it.minute } }
+    }
+    val jetztHeute = if (istHeute) jetzt else null
+    val kompakt = remember(termine, vonEinst, bisEinst, auto, luecken, jetztHeute) { Zeitband.fuer(termine, vonEinst, bisEinst, auto, luecken, jetztHeute) }
     // „Ganzer Tag“ zeigt nie weniger als „Kompakt“ (die Automatik reicht eine Stunde über die Termine hinaus).
     val ganz = remember(termine, vonEinst, bisEinst, kompakt) {
         Zeitband.ganzerTag(termine, vonEinst, bisEinst).let { Zeitband(minOf(it.vonMin, kompakt.vonMin), maxOf(it.bisMin, kompakt.bisMin)) }
@@ -101,13 +109,13 @@ fun Zeitleiste(
         // Sichtbar genau dann, wenn die Einstellung an ist — nie abhängig vom Ziehen: Eine Höhenänderung über der Leiste
         // beim Ziehstart kennt der Ausgleich in ZiehZustand nicht, die Leiste spränge unter dem Finger.
         if (luecken) AnsichtSchalter(ganzerTag, kompakt.ausgeblendet(ganz.vonMin, ganz.bisMin), ganz.vonMin, ganz.bisMin, onGanzerTag)
-        Leiste(tag, termine, istHeute, zustand, band, if (luecken) { { onGanzerTag(true) } } else null, onTipp, onErledigt)
+        Leiste(tag, termine, istHeute, jetzt, zustand, band, if (luecken) { { onGanzerTag(true) } } else null, onTipp, onErledigt)
     }
 }
 
 @Composable
 private fun Leiste(
-    tag: Long, termine: List<Aufgabe>, istHeute: Boolean, zustand: ZiehZustand, band: Zeitband, onLuecke: (() -> Unit)?,
+    tag: Long, termine: List<Aufgabe>, istHeute: Boolean, jetzt: Int, zustand: ZiehZustand, band: Zeitband, onLuecke: (() -> Unit)?,
     onTipp: (Aufgabe) -> Unit, onErledigt: (Aufgabe) -> Unit,
 ) {
     val f = LocalFarben.current
@@ -121,9 +129,13 @@ private fun Leiste(
     // Höhen in dp: dieselbe Rechnung wie in px, nur mit den dp-Werten.
     fun yDp(min: Int) = band.y(min, STUNDE.value, LUECKE.value).dp
     val hoehe = OBEN + band.hoehe(STUNDE.value, LUECKE.value).dp + 30.dp
-    var jetzt by remember { mutableIntStateOf(LocalTime.now().let { it.hour * 60 + it.minute }) }
-    if (istHeute) LaunchedEffect(Unit) {
-        while (true) { delay(30_000); jetzt = LocalTime.now().let { it.hour * 60 + it.minute } }
+    // Höhe der Jetzt-Linie in px ab Oberkante der Leiste. In einer zusammengerückten Lücke läuft sie nie durch den Text
+    // „… frei“: Sie steht in der ersten Hälfte der Lücke knapp über der Marke, in der zweiten knapp darunter.
+    fun jetztY(): Float? {
+        if (!istHeute || jetzt !in vonMin..bisMin) return null
+        val luecke = band.luecken.firstOrNull { jetzt > it.von && jetzt < it.bis } ?: return obenPx + band.y(jetzt, stundePx, lueckePx)
+        val a = obenPx + band.y(luecke.von, stundePx, lueckePx)
+        return if (jetzt - luecke.von < luecke.minuten / 2f) a + with(dichte) { 1.5.dp.toPx() } else a + lueckePx - with(dichte) { 1.5.dp.toPx() }
     }
     // Beim Umschalten (Kompakt ⇄ Ganzer Tag, Termine geändert) blendet die Leiste weich neu ein — nicht beim Ziehen und
     // nicht direkt nach dem Loslassen: Dort muss sie ruhig im selben Frame stehen, in dem ZiehZustand nachscrollt.
@@ -181,15 +193,9 @@ private fun Leiste(
                 moveTo(x - 7.dp.toPx(), y1 + 10.dp.toPx()); lineTo(x, y1 + 22.dp.toPx()); lineTo(x + 7.dp.toPx(), y1 + 10.dp.toPx()); close()
             }
             drawPath(spitze, f.sekundaer)
-            // Jetzt-Linie. In einer zusammengerückten Lücke läuft sie nie durch den Text „… frei“: Sie steht in der ersten
-            // Hälfte der Lücke knapp über der Marke, in der zweiten knapp darunter.
             if (vonMin % 60 != 0) drawLine(f.textSchwach.copy(alpha = 0.5f), Offset(x - 3.dp.toPx(), y0), Offset(x + 2.dp.toPx(), y0), 1.5f)
-            if (istHeute && jetzt in vonMin..bisMin) {
-                val luecke = band.luecken.firstOrNull { jetzt >= it.von && jetzt <= it.bis }
-                val y = if (luecke == null) yVon(jetzt) else {
-                    val a = yVon(luecke.von)
-                    if (jetzt - luecke.von < luecke.minuten / 2f) a + 1.5.dp.toPx() else a + lueckePx - 1.5.dp.toPx()
-                }
+            // Jetzt-Linie
+            jetztY()?.let { y ->
                 drawLine(f.gefahr, Offset(x, y), Offset(size.width, y), 2.dp.toPx(), StrokeCap.Round)
                 drawCircle(f.gefahr, 6.dp.toPx(), Offset(x, y))
                 drawCircle(Color.White, 2.5.dp.toPx(), Offset(x, y))
@@ -224,6 +230,16 @@ private fun Leiste(
                     .width(flaeche / nSpalten - 4.dp).height(h)
                     .onGloballyPositioned { zustand.meldeTermin(a, it.positionInRoot().y) },
             ) { TerminBlock(a, zustand, onTipp = { onTipp(a) }, onErledigt = { onErledigt(a) }) }
+        }
+        // Uhrzeit-Marke mittig auf der Jetzt-Linie, über den Terminen gezeichnet, damit sie nie verdeckt ist
+        Canvas(Modifier.fillMaxSize()) {
+            val y = jetztY() ?: return@Canvas
+            val text = messer.measure("%02d:%02d Uhr".format(jetzt / 60, jetzt % 60), TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold))
+            val bw = text.size.width + 16.dp.toPx()
+            val bh = text.size.height + 5.dp.toPx()
+            val mitte = (SPALTE.toPx() - 8.dp.toPx() + size.width) / 2f
+            drawRoundRect(f.gefahr, Offset(mitte - bw / 2f, y - bh / 2f), Size(bw, bh), CornerRadius(bh / 2f))
+            drawText(text, topLeft = Offset(mitte - text.size.width / 2f, y - text.size.height / 2f))
         }
     }
 }
