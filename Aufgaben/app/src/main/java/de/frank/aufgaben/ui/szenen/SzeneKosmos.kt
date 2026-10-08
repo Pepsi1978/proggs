@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -34,7 +35,7 @@ internal const val KOSMOS_ZYKLUS = 44f
  * Kosmos: Kontrollraum mit Bodenraster in Zentralperspektive, Pult als Block und schräg gestellten Bildschirmen, großes
  * Rundfenster mit tiefer Laibung. Checkliste am Pult abarbeiten, zum Fenster drehen, Countdown, Raketenstart, Jubel,
  * Winken. Im Dunkeln kommen Person und Katze links herein, das Licht geht an; die Katze sitzt auf dem Drehstuhl, springt
- * aufs Pult, tatzt nach Lämpchen und schaut zur Rakete. Am Ende gehen beide rechts hinaus, das Licht geht aus, und die
+ * aufs Pult, tatzt nach Lämpchen und schaut zur Rakete. Am Ende gehen beide links hinaus, das Licht geht aus, und die
  * nächste Rakete fährt auf die Rampe hoch – dann beginnt alles von vorn.
  */
 internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
@@ -47,6 +48,8 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     val blau = f.primaer
     val flucht = Offset(w * 0.5f, h * 0.3f)
     val startZeit = 21f
+    // Tageslicht draußen vor dem Bullauge (1 = Tag, 0 = Nacht)
+    val tag = weich(an(t, 2.5f, 3f)) * (1f - weich(an(t, 35.5f, 3f)))
     // Raumlicht: an beim Hereinkommen, aus beim Hinausgehen
     val licht = weich(an(t, 2.5f, 1.5f)) * (1f - weich(an(t, 37.6f, 1.6f)))
     val schirm = weich(an(t, 3.6f, 0.8f)) * (1f - weich(an(t, 36.8f, 0.8f)))
@@ -72,14 +75,29 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     val laibung = (flucht - fm) * 0.06f
     clipPath(Path().apply { addOval(Rect(fm, fr)) }) {
         translate(wackeln, 0f) {
-            drawRect(Brush.verticalGradient(listOf(Color(0xFF020615), Color(0xFF0B1A4A), Color(0xFF1D2F6E)), fm.y - fr, fm.y + fr), fm - Offset(fr, fr), Size(fr * 2, fr * 2))
-            for (i in 0 until 24) drawCircle(Color.White.copy(alpha = 0.35f + 0.6f * ((welle(t, zyklus, 18, i * 1.9f) + 1) / 2)), 1.4f, Offset(fm.x - fr + fr * 2 * ((i * 0.37f) % 1f), fm.y - fr + fr * 1.4f * ((i * 0.53f) % 1f)))
+            // Himmel über der Startrampe: tagsüber blau, nachts tiefdunkel mit Sternen
+            drawRect(Brush.verticalGradient(listOf(lerp(Color(0xFF020615), Color(0xFF2F63B8), tag), lerp(Color(0xFF0B1A4A), Color(0xFF5D8FD8), tag), lerp(Color(0xFF1D2F6E), Color(0xFFA6C8EE), tag)), fm.y - fr, fm.y + fr), fm - Offset(fr, fr), Size(fr * 2, fr * 2))
+            for (i in 0 until 24) drawCircle(Color.White.copy(alpha = (0.35f + 0.6f * ((welle(t, zyklus, 18, i * 1.9f) + 1) / 2)) * (1f - 0.92f * tag)), 1.4f, Offset(fm.x - fr + fr * 2 * ((i * 0.37f) % 1f), fm.y - fr + fr * 1.4f * ((i * 0.53f) % 1f)))
+            // Sonne am Tag, Mond in der Nacht: beide gehen links auf und rechts unter
+            val sonnenLauf = an(t, 2.5f, 35f)
+            val sonnenSicht = (sin(sonnenLauf * 3.14f) * 3f).coerceIn(0f, 1f)
+            if (sonnenSicht > 0f) {
+                val sonne = Offset(fm.x - fr * 0.85f + fr * 1.7f * sonnenLauf, fm.y + fr * 0.66f - sin(sonnenLauf * 3.14f) * fr * 1.05f)
+                drawCircle(Brush.radialGradient(listOf(Color(0xFFFFE7A8).copy(alpha = 0.7f * sonnenSicht), Color.Transparent), sonne, fr * 0.5f), fr * 0.5f, sonne)
+                drawCircle(Color(0xFFFFD36B).copy(alpha = sonnenSicht), fr * 0.1f, sonne)
+            }
+            val mondLauf = ((t - 36f + zyklus) % zyklus) / 12f
+            if (mondLauf < 1f) {
+                val mondSicht = (sin(mondLauf * 3.14f) * 3f).coerceIn(0f, 1f) * (1f - tag)
+                val mond = Offset(fm.x - fr * 0.85f + fr * 1.7f * mondLauf, fm.y + fr * 0.66f - sin(mondLauf * 3.14f) * fr * 1.0f)
+                drawCircle(Brush.radialGradient(listOf(Color(0xFFEFF3FF).copy(alpha = 0.35f * mondSicht), Color.Transparent), mond, fr * 0.35f), fr * 0.35f, mond)
+                drawCircle(Color(0xFFE6EAF2).copy(alpha = mondSicht), fr * 0.08f, mond)
+                drawCircle(Color(0xFFC9CFDB).copy(alpha = mondSicht), fr * 0.02f, mond + Offset(-fr * 0.025f, -fr * 0.02f))
+            }
             // Planet mit Ring, schattiert
             val planet = fm + Offset(-fr * 0.45f, -fr * 0.45f)
             drawCircle(Brush.linearGradient(listOf(blau.heller(0.3f), blau.dunkler(0.4f)), planet - Offset(fr * 0.15f, fr * 0.15f), planet + Offset(fr * 0.15f, fr * 0.15f)), fr * 0.16f, planet)
             rotate(-18f, planet) { drawOval(blau.heller(0.5f).copy(alpha = 0.7f), planet - Offset(fr * 0.3f, fr * 0.04f), Size(fr * 0.6f, fr * 0.08f), style = Stroke(2.5f)) }
-            // Mond wandert langsam
-            drawCircle(Color(0xFFD9DEE8), fr * 0.06f, fm + Offset(fr * (0.3f + 0.2f * welle(t, zyklus, 1)), -fr * 0.55f))
             // Startrampe
             val erde = fm.y + fr * 0.62f
             drawRect(Color(0xFF26314F), Offset(fm.x - fr, erde), Size(fr * 2, fr))
@@ -128,6 +146,16 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     val pultFarbe = if (d) Color(0xFF1A2440) else Color(0xFF8C9CBF)
     val oben = quader(pult, 0.12f, flucht, pultFarbe)
     drawLine(pultFarbe.heller(0.3f), Offset(pult.left, pult.top), Offset(pult.right, pult.top), 2f)
+    // Tastatur vorne rechts auf dem Pult, darauf tippt die Person
+    fun aufPult(x: Float, tiefe: Float) = Offset(x, pult.top) + (flucht - Offset(x, pult.top)) * tiefe
+    val tastatur = listOf(aufPult(w * 0.29f, 0.075f), aufPult(w * 0.395f, 0.075f), aufPult(w * 0.395f, 0.015f), aufPult(w * 0.29f, 0.015f))
+    flaeche(tastatur.map { it + Offset(0f, h * 0.006f) }, Color.Black.copy(alpha = 0.25f))
+    flaeche(tastatur, Color(0xFF1B2238))
+    for (reihe in 1..3) {
+        val a = lerp(tastatur[3], tastatur[0], reihe / 4f)
+        val b = lerp(tastatur[2], tastatur[1], reihe / 4f)
+        for (taste in 0 until 9) drawLine(blau.heller(0.3f).copy(alpha = 0.55f * (0.3f + 0.7f * licht)), lerp(a, b, (taste + 0.15f) / 9f), lerp(a, b, (taste + 0.8f) / 9f), 1.6f, StrokeCap.Round)
+    }
     // Lämpchen auf der Pultkante
     for (i in 0 until 9) {
         val an = welle(t, zyklus, 14 + i * 5, i.toFloat()) > 0.2f
@@ -185,17 +213,23 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
         if (schirm < 1f) drawRoundRect(Color(0xFF05070F).copy(alpha = 1f - schirm), mon2.topLeft, mon2.size, CornerRadius(6f))
     }
 
-    // Drehstuhl dreht sich gemütlich hin und her
+    // Bürostuhl mit fünf Rollen, Lehne fest zum Raum hin (die Sitzfläche schaut zum Pult)
     val stuhlX = w * 0.3f
-    val drehung = welle(t, zyklus, 6) * 0.6f
     val stuhlF = if (d) Color(0xFF3A4668) else Color(0xFF5A6788)
     drawOval(Color.Black.copy(alpha = 0.15f), Offset(stuhlX - h * 0.12f, boden - h * 0.025f), Size(h * 0.24f, h * 0.04f))
-    drawLine(stuhlF, Offset(stuhlX, boden - h * 0.03f), Offset(stuhlX, boden - h * 0.2f), 5f)
-    drawLine(stuhlF, Offset(stuhlX - h * 0.1f, boden - h * 0.02f), Offset(stuhlX + h * 0.1f, boden - h * 0.02f), 5f, StrokeCap.Round)
-    val sitzBreite = h * 0.2f * (0.7f + 0.3f * cos(drehung))
-    drawRoundRect(stuhlF.heller(0.1f), Offset(stuhlX - sitzBreite / 2f, boden - h * 0.25f), Size(sitzBreite, h * 0.025f), CornerRadius(8f))
-    drawRoundRect(stuhlF, Offset(stuhlX - sitzBreite / 2f, boden - h * 0.235f), Size(sitzBreite, h * 0.03f), CornerRadius(8f))
-    drawRoundRect(stuhlF.dunkler(0.1f), Offset(stuhlX - h * 0.02f - sin(drehung) * h * 0.08f, boden - h * 0.45f), Size(h * 0.04f, h * 0.22f), CornerRadius(8f))
+    for (dx in listOf(-0.1f, -0.045f, 0.045f, 0.1f)) {
+        drawLine(stuhlF.dunkler(0.15f), Offset(stuhlX, boden - h * 0.045f), Offset(stuhlX + dx * h, boden - h * 0.02f), 4f, StrokeCap.Round)
+        drawCircle(Color(0xFF1A1F2E), h * 0.011f, Offset(stuhlX + dx * h, boden - h * 0.01f))
+    }
+    drawLine(Color(0xFF9AA3B8), Offset(stuhlX, boden - h * 0.045f), Offset(stuhlX, boden - h * 0.2f), 4f)
+    drawRoundRect(stuhlF.dunkler(0.2f), Offset(stuhlX - h * 0.018f, boden - h * 0.12f), Size(h * 0.036f, h * 0.06f), CornerRadius(4f))
+    // Lehne mit Träger, fest
+    drawLine(stuhlF.dunkler(0.1f), Offset(stuhlX + h * 0.06f, boden - h * 0.23f), Offset(stuhlX + h * 0.095f, boden - h * 0.3f), 5f, StrokeCap.Round)
+    drawRoundRect(stuhlF.dunkler(0.05f), Offset(stuhlX + h * 0.075f, boden - h * 0.46f), Size(h * 0.05f, h * 0.2f), CornerRadius(10f))
+    drawRoundRect(stuhlF.heller(0.12f), Offset(stuhlX + h * 0.082f, boden - h * 0.44f), Size(h * 0.016f, h * 0.15f), CornerRadius(6f))
+    // Sitzfläche mit Polster
+    drawRoundRect(stuhlF, Offset(stuhlX - h * 0.1f, boden - h * 0.235f), Size(h * 0.2f, h * 0.035f), CornerRadius(8f))
+    drawRoundRect(stuhlF.heller(0.12f), Offset(stuhlX - h * 0.1f, boden - h * 0.25f), Size(h * 0.2f, h * 0.022f), CornerRadius(8f))
 
     // Katze: kommt mit herein, springt auf den Drehstuhl, später aufs Pult, tatzt, schaut zur Rakete, geht mit hinaus
     val katzeF = KatzenFarben(Color(0xFFB9BFCC), Color(0xFF7E8596), Color(0xFFF2F4F8), Color(0xFF7FD3F0))
@@ -208,11 +242,12 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
         t < 2.5f -> Unit
         t < 4.6f -> katze(mix(-0.25f * w, stuhlX - h * 0.1f, weich(an(t, 2.5f, 2.1f))), boden, cs, 1f, 0, t * 10f, t, katzeF)
         t < 5.2f -> { val q = an(t, 4.6f, 0.6f); katze(mix(stuhlX - h * 0.1f, stuhlX, weich(q)), mix(boden, sitzY, q), cs, mix(1f, -1f, weich(q)), 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.08f) }
-        t < 12.6f -> katze(stuhlX + sin(drehung) * h * 0.02f, sitzY, cs, -1f, 1, 0f, t, katzeF)
+        t < 12.6f -> katze(stuhlX, sitzY, cs, -1f, 1, 0f, t, katzeF)
         t < 13.4f -> { val q = an(t, 12.6f, 0.8f); katze(mix(stuhlX, pultKatzeX, weich(q)), mix(sitzY, pultY, q), cs, -1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.15f) }
-        t < 33.4f -> katze(pultKatzeX, pultY, cs, mix(-1f, 1f, weich(an(t, 16.4f, 0.6f))), 1, 0f, t, katzeF, pfote = tatzen)
-        t < 34f -> { val q = an(t, 33.4f, 0.6f); katze(mix(pultKatzeX, w * 0.3f, weich(q)), mix(pultY, boden, q), cs, 1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.08f) }
-        else -> katze(mix(w * 0.3f, 1.25f * w, an(t, 34.2f, 5.4f)), boden, cs, 1f, 0, t * 10f, t, katzeF)
+        // Erst zum Pult, dann zur Rakete schauen, zum Gehen wieder nach links drehen
+        t < 33.4f -> katze(pultKatzeX, pultY, cs, if (t < 32.8f) mix(-1f, 1f, weich(an(t, 16.4f, 0.6f))) else mix(1f, -1f, weich(an(t, 32.8f, 0.6f))), 1, 0f, t, katzeF, pfote = tatzen)
+        t < 34f -> { val q = an(t, 33.4f, 0.6f); katze(mix(pultKatzeX, w * 0.12f, weich(q)), mix(pultY, boden, q), cs, -1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.08f) }
+        else -> katze(mix(w * 0.12f, -0.25f * w, an(t, 34.2f, 2.4f)), boden, cs, -1f, 0, t * 10f, t, katzeF)
     }
 
     // Person: kommt, drückt im Wechsel die Knöpfe, dreht sich zum Fenster, Countdown, Start, Jubel, Winken, geht
@@ -222,17 +257,17 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     val pose = choreo(t, s, listOf(
         Takt(0f) { gehen(mix(-0.12f * w, pultX, an(it, 2.5f, 2.9f)), boden, 1f, it * 8.5f, blink) },
         Takt(5.6f) {
-            // Weich abwechselnd links und rechts drücken: jede Hand senkt sich in einem sanften Bogen
-            val takt = (it - 5.6f) / 1.2f
+            // Über die Tastatur gebeugt, abwechselnd tippt die linke und die rechte Hand mit einem weichen Anschlag
+            val takt = (it - 5.6f) / 0.6f
             val links = floor(takt).toInt() % 2 == 0
             val druck = sin(PI.toFloat() * (takt - floor(takt))).let { x -> x * x }
-            Pose(pultX, boden, -1f, lean = 10f, sL = 50f + (if (links) 38f * druck else 0f), eL = 40f - (if (links) 35f * druck else 0f), sR = 55f + (if (!links) 33f * druck else 0f), eR = 40f - (if (!links) 35f * druck else 0f), kopf = 8f, blinzeln = blink)
+            Pose(pultX, boden, -1f, lean = 22f, sL = 38f - (if (links) 7f * druck else 0f), eL = 22f - (if (links) 10f * druck else 0f), sR = 42f - (if (!links) 7f * druck else 0f), eR = 20f - (if (!links) 10f * druck else 0f), kopf = 12f, blinzeln = blink)
         },
         Takt(15.6f) { Pose(pultX, boden, 1f, lean = 6f, sR = 20f, eR = 100f, sL = 10f, eL = 20f, kopf = -4f, lachen = 0.2f, blinzeln = blink) },
         Takt(startZeit + 0.4f) { Pose(pultX, boden - huepfen(it, startZeit + 0.8f, startZeit + 5f, 0.07f * s), 1f, sL = 170f, eL = 6f, sR = 160f, eR = 10f, lachen = 1f, blinzeln = blink) },
         Takt(startZeit + 5.2f) { Pose(pultX, boden, 1f, sR = 140f + sin(it * 5f) * 18f * (1f - weich(an(it, startZeit + 9f, 1f))), eR = 40f, sL = 8f, eL = 10f, lachen = 0.85f, blinzeln = blink) },
         Takt(startZeit + 10.5f) { Pose(pultX, boden, 1f, sR = 8f, eR = 12f, sL = 8f, eL = 10f, kopf = -3f, lachen = 0.8f, blinzeln = blink) },
-        Takt(33.6f) { gehen(mix(pultX, 1.15f * w, an(it, 33.6f, 5.8f)), boden, 1f, it * 8.5f, blink) },
+        Takt(33.6f) { gehen(mix(pultX, -0.15f * w, an(it, 33.6f, 4.6f)), boden, -1f, it * 8.5f, blink) },
     ))
     mensch(pose, s, mf)
 
