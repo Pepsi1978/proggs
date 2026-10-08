@@ -877,9 +877,15 @@ class IdeenViewModel(
         _theme.value = settings.theme
     }
 
-    /** Ein Tipp schaltet zwischen genau zwei Modi um — hell und dunkel (Baustein C). */
+    /** Ein Tipp schaltet reihum weiter: hell, dunkel, Automatik (Baustein C). */
     fun themeWeiterschalten() {
-        setzeTheme(if (settings.theme == "dark") "light" else "dark")
+        setzeTheme(
+            when (settings.theme) {
+                "light" -> "dark"
+                "dark" -> "auto"
+                else -> "light"
+            },
+        )
     }
 
     fun setzeSchriftgroesse(wert: Float) {

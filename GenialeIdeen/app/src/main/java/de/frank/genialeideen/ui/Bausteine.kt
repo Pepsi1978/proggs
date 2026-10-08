@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
@@ -76,7 +77,7 @@ import kotlin.math.sin
 
 /**
  * Die Kopfleiste aus Baustein C: links der Theme-Knopf, rechts daneben das Zahnrad.
- * Die Reihenfolge ist fest. Der Theme-Knopf kennt genau zwei Zustände — hell und dunkel.
+ * Die Reihenfolge ist fest. Der Theme-Knopf schaltet reihum: hell, dunkel, Automatik.
  * Die Leiste liegt auf Milchglas (N.4).
  */
 @Composable
@@ -122,15 +123,19 @@ fun IdeenKopfleiste(
         }
         if (aufThemeTipp != null) {
             KopfKnopf(
-                beschreibung = if (themeWahl == "dark") {
-                    "Dunkler Modus, tippen für hell"
-                } else {
-                    "Heller Modus, tippen für dunkel"
+                beschreibung = when (themeWahl) {
+                    "dark" -> "Dunkler Modus, tippen für Automatik"
+                    "auto" -> "Automatik nach Handy-Einstellung, tippen für hell"
+                    else -> "Heller Modus, tippen für dunkel"
                 },
                 aufTipp = aufThemeTipp,
             ) {
                 Icon(
-                    imageVector = if (themeWahl == "dark") Icons.Default.DarkMode else Icons.Default.LightMode,
+                    imageVector = when (themeWahl) {
+                        "dark" -> Icons.Default.DarkMode
+                        "auto" -> Icons.Default.BrightnessAuto
+                        else -> Icons.Default.LightMode
+                    },
                     contentDescription = null,
                     tint = gold.primaer,
                     modifier = Modifier.size(20.dp),

@@ -69,8 +69,8 @@ private fun TextStyle.skaliert(faktor: Float, familie: FontFamily): TextStyle =
     copy(fontFamily = familie, fontSize = (fontSize.value * faktor).sp)
 
 /**
- * @param themeWahl `light` oder `dark`. Es gibt bewusst **keinen** Automatik-Modus:
- *   Die App folgt der Systemvorgabe nicht (Baustein A).
+ * @param themeWahl `light`, `dark` oder `auto`. Bei `auto` folgt die App der
+ *   Systemvorgabe des Handys.
  *
  * Der Wechsel läuft weich: Jede Farbe wandert in den neuen Wert, statt hart umzuspringen
  * (Baustein N.5).
@@ -81,7 +81,11 @@ fun GenialeIdeenTheme(
     schriftSkalierung: Float = 1f,
     content: @Composable () -> Unit,
 ) {
-    val dunkel = themeWahl == "dark"
+    val dunkel = when (themeWahl) {
+        "dark" -> true
+        "auto" -> androidx.compose.foundation.isSystemInDarkTheme()
+        else -> false
+    }
     val ziel = if (dunkel) DunkleGoldPalette else HelleGoldPalette
     val context = LocalContext.current
     val reduziert = Motion.bewegungReduziert(context)

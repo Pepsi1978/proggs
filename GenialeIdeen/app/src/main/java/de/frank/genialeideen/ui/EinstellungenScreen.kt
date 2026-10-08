@@ -477,6 +477,7 @@ fun EinstellungenScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Auswahlchip("Hell", theme == "light") { viewModel.setzeTheme("light") }
                     Auswahlchip("Dunkel", theme == "dark") { viewModel.setzeTheme("dark") }
+                    Auswahlchip("Automatisch", theme == "auto") { viewModel.setzeTheme("auto") }
                 }
                 Spacer(Modifier.height(14.dp))
                 Text(
