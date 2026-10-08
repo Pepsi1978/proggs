@@ -103,6 +103,16 @@
      Heredoc mit mehreren `y` statt `yes |`, das ist robuster), unter 5 Minuten halten.
   3. **SessionStart-Hook** (nur Cloud): `ANDROID_HOME`/`PATH` über `$CLAUDE_ENV_FILE` setzen, `local.properties` schreiben.
   4. Optional: Gradle-Aufwärmen im Hintergrund (`nohup ./gradlew help > /tmp/gradle-warmup.log &`).
+- **Stand 08.10.2026: `dl.google.com` war in der Sitzung erreichbar.** SDK ohne Setup-Skript in ~2 Minuten
+  ad hoc installierbar: cmdline-tools nach `/tmp/claude-0/sdk` entpacken, `sdkmanager --sdk_root=…
+  "platforms;android-36" "build-tools;35.0.0"`, `sdk.dir` in `local.properties` (steht in `.gitignore`), dann
+  `bash ./gradlew :app:compileDebugKotlin` (`./gradlew` hat in der Cloud kein Ausführrecht). Vor großen Compose-
+  Änderungen lohnt das: Fehler fallen vor dem Merge auf statt erst im GitHub-Bau. `erfahrung`
+- **Canvas-Zeichnungen (z. B. animierte Szenen) sichtbar prüfen:** lokal, nicht committet, `testImplementation`
+  Robolectric 4.14 + `@GraphicsMode(NATIVE)`, im Test `CanvasDrawScope().draw(…)` auf eine `Bitmap` und als PNG
+  speichern; Einzelbilder per PIL zu einem Übersichtsblatt kleben und mit dem Read-Werkzeug ansehen. Umgebungs-
+  variablen sind keine Gradle-Eingaben: für neue Zeiten `--rerun` anhängen. Danach `build.gradle.kts` zurücksetzen und
+  den Testordner löschen. `erfahrung`
 - Maven-Central-DNS-Fehler kommen vor (#13372) → im Zweifel nicht in der Cloud bauen, CI bauen lassen.
 - **Nie** Keystore oder Secrets in die Cloud-VM holen. Signieren nur in GitHub Actions (Environment `android-signing`,
   nur `main`).

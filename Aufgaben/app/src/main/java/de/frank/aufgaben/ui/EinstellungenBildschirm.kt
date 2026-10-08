@@ -128,13 +128,7 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                             if (aktiv) Text("✓", color = vorschau.primaer, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         }
                     }
-                }
-                Block("Hell / Dunkel") {
-                    ChipReihe {
-                        Chip("🅰️ Automatisch", e.modus == "system") { e.modus = "system" }
-                        Chip("☀️ Hell", e.modus == "hell") { e.modus = "hell" }
-                        Chip("🌙 Dunkel", e.modus == "dunkel") { e.modus = "dunkel" }
-                    }
+                    // Gilt für alle Designs; Hell/Dunkel und Design wechselt man über die Knöpfe oben in der Hauptansicht.
                     Schalter("Animierte Szene oben zeigen", e.szeneZeigen) { e.szeneZeigen = it }
                 }
                 // ---- Sprache ----
@@ -289,9 +283,6 @@ fun EinstellungenBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                             color = f.textLeise, fontSize = 12.sp, modifier = Modifier.padding(start = 10.dp),
                         )
                     }
-                }
-                Block("Fokus-Timer") {
-                    ChipReihe { listOf(15, 25, 45, 60).forEach { m -> Chip("$m Min.", e.fokusMinuten == m) { e.fokusMinuten = m } } }
                 }
                 Block("Widget & Wecker-Brücke") {
                     Text("Widget „Aufgaben · Heute“ auf dem Startbildschirm hinzufügen: lange auf den Startbildschirm drücken → Widgets → Aufgaben. Es zeigt immer die heutigen Aufgaben; um 0 Uhr rücken die Morgen-Aufgaben automatisch nach.", color = f.textLeise, fontSize = 13.sp)
