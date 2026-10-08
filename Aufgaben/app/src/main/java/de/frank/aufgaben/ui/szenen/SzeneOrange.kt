@@ -16,13 +16,18 @@ import androidx.compose.ui.graphics.lerp
 import de.frank.aufgaben.ui.theme.Farben
 import kotlin.math.sin
 
+/** Länge eines Durchlaufs; Ende und Anfang sind dasselbe Bild (dunkler, leerer Raum), die Szene läuft ohne Schnitt. */
+internal const val ORANGE_ZYKLUS = 46f
+
 /**
- * Orange: Feierabend-Werkstatt, Seitenansicht mit räumlicher Tiefe (Fluchtpunkt in Augenhöhe). Ankommen, am schräg
- * gestellten Bildschirm Aufgaben aufschreiben und abhaken, beim Dämmern die Lampe am Tischschalter einschalten, ein
- * Schluck Kaffee, die Katze wacht auf und springt auf den Schoß, Sonnenuntergang, die letzten Aufgaben, aufstehen,
- * freuen, Lampe aus und gehen. Zeiten passen zu `ablauf()` in Szene.kt (40 s).
+ * Orange: Werkstatt, Seitenansicht mit räumlicher Tiefe (Fluchtpunkt in Augenhöhe). Im Dunkeln kommen Person und Katze
+ * links herein, dabei geht die Sonne auf. Die Katze rollt sich auf dem Teppich ein, die Person setzt sich, schaltet den
+ * Bildschirm ein, schreibt und hakt Aufgaben ab, macht beim Dämmern die Lampe am Tischschalter an, trinkt Kaffee. Die
+ * Katze wacht auf und springt auf den Schoß, später aufs Fensterbrett. Abends: letzte Aufgaben, aufstehen, freuen, Lampe
+ * aus, und beide gehen rechts hinaus in die Nacht. Nach einer kurzen Pause beginnt alles wieder von vorn.
  */
 internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
+    val zyklus = ORANGE_ZYKLUS
     val w = size.width
     val h = size.height
     val d = f.dunkel
@@ -31,9 +36,9 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     val cs = h * 0.19f
     val flucht = Offset(w * 0.5f, h * 0.42f)
     fun hinten(p: Offset, k: Float) = p + (flucht - p) * k
-    // Langer Tag, dann ein langsamer Sonnenuntergang, am Ende Nacht.
-    val abend = weich(an(t, 9f, 22f))
-    val lampeAn = an(t, 14f, 0.3f) * (1f - an(t, 35.6f, 0.3f))
+    // Nacht → Sonnenaufgang beim Hereinkommen → langer Tag → langsamer Sonnenuntergang → Nacht (1 = Nacht, 0 = Tag).
+    val abend = maxOf(1f - weich(an(t, 3f, 5f)), weich(an(t, 18f, 14f)))
+    val lampeAn = an(t, 17f, 0.3f) * (1f - an(t, 38.6f, 0.3f))
 
     // Wand mit Tapetenstreifen
     drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF241A13), Color(0xFF16100C)) else listOf(Color(0xFFFFF2E4), Color(0xFFFADFC4))))
@@ -51,7 +56,7 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
         val sonne = Offset(fen.center.x, fen.top + fen.height * (0.2f + 0.85f * abend))
         drawCircle(Brush.radialGradient(listOf(Color(0xFFFFD08A).copy(alpha = 0.8f), Color.Transparent), sonne, fen.width * 0.6f), fen.width * 0.6f, sonne)
         drawCircle(Color(0xFFFFB347), fen.width * 0.13f, sonne)
-        if (abend > 0.8f) for (i in 0 until 9) drawCircle(Color.White.copy(alpha = (abend - 0.8f) * 5f * (0.5f + 0.5f * sin(t * 3 + i))), 1.5f, Offset(fen.left + fen.width * ((i * 0.37f) % 1f), fen.top + fen.height * ((i * 0.21f) % 0.5f)))
+        if (abend > 0.8f) for (i in 0 until 9) drawCircle(Color.White.copy(alpha = (abend - 0.8f) * 5f * (0.5f + 0.5f * welle(t, zyklus, 22, i.toFloat()))), 1.5f, Offset(fen.left + fen.width * ((i * 0.37f) % 1f), fen.top + fen.height * ((i * 0.21f) % 0.5f)))
         // Dächer
         val dach = if (d) Color(0xFF0E0A08) else Color(0xFF6B4A38)
         drawRect(dach, Offset(fen.left, fen.bottom - fen.height * 0.22f), Size(fen.width * 0.4f, fen.height * 0.22f))
@@ -72,7 +77,7 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     val vorhang = Path().apply {
         moveTo(fen.left - h * 0.05f, fen.top - h * 0.03f)
         lineTo(fen.left + h * 0.02f, fen.top - h * 0.03f)
-        quadraticTo(fen.left - h * 0.01f + sin(t * 0.8f) * 3f, fen.center.y, fen.left + h * 0.03f, fen.bottom + h * 0.05f)
+        quadraticTo(fen.left - h * 0.01f + welle(t, zyklus, 6) * 3f, fen.center.y, fen.left + h * 0.03f, fen.bottom + h * 0.05f)
         lineTo(fen.left - h * 0.06f, fen.bottom + h * 0.05f); close()
     }
     drawPath(vorhang, Brush.horizontalGradient(listOf(f.primaer.copy(alpha = if (d) 0.35f else 0.45f), f.primaer.copy(alpha = if (d) 0.55f else 0.65f), f.primaer.copy(alpha = if (d) 0.4f else 0.5f)), fen.left - h * 0.06f, fen.left + h * 0.03f))
@@ -98,7 +103,7 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     drawRect(Color(0xFFC0714F), Offset(topf.x - h * 0.025f, topf.y - h * 0.05f), Size(h * 0.05f, h * 0.05f))
     drawRect(Color(0xFF9A5A3E), Offset(topf.x + h * 0.025f, topf.y - h * 0.05f), Size(h * 0.008f, h * 0.05f))
     for (i in 0 until 5) {
-        val wk = -60f + i * 30f + sin(t * 1.2f + i) * 5f
+        val wk = -60f + i * 30f + welle(t, zyklus, 9, i.toFloat()) * 5f
         rotate(wk, Offset(topf.x, topf.y - h * 0.05f)) { drawOval(Color(0xFF5E9E6B), Offset(topf.x - h * 0.012f, topf.y - h * 0.13f), Size(h * 0.024f, h * 0.08f)) }
     }
     val bild = Rect(w * 0.27f, h * 0.12f, w * 0.37f, h * 0.3f)
@@ -111,8 +116,8 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     drawCircle(Color.Black.copy(alpha = 0.12f), h * 0.07f, uhr + Offset(3f, 4f))
     drawCircle(if (d) Color(0xFF3A2A1F) else Color.White, h * 0.07f, uhr)
     drawCircle(f.primaer.dunkler(0.2f), h * 0.07f, uhr, style = Stroke(h * 0.01f))
-    rotate(t * 30f, uhr) { drawLine(f.text, uhr, uhr + Offset(0f, -h * 0.055f), 2f) }
-    rotate(t * 2.5f + 90f, uhr) { drawLine(f.text, uhr, uhr + Offset(0f, -h * 0.035f), 3.5f, StrokeCap.Round) }
+    rotate(runde(t, zyklus, 4) * 360f, uhr) { drawLine(f.text, uhr, uhr + Offset(0f, -h * 0.055f), 2f) }
+    rotate(runde(t, zyklus, 1) * 360f + 90f, uhr) { drawLine(f.text, uhr, uhr + Offset(0f, -h * 0.035f), 3.5f, StrokeCap.Round) }
 
     // Boden aus Dielen, die zum Fluchtpunkt laufen
     drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF241911), Color(0xFF33251A)) else listOf(Color(0xFFCFA277), Color(0xFFE2B88D)), boden, h), Offset(0f, boden), Size(w, h - boden))
@@ -158,17 +163,17 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     val tiefe = Offset(w * 0.016f, 0f)
     flaeche(listOf(ecken[1], ecken[1] + tiefe + Offset(0f, h * 0.012f), ecken[2] + tiefe - Offset(0f, h * 0.008f), ecken[2]), Color(0xFF15110F))
     val flach = Rect(0f, 0f, monR - monL, h * 0.29f)
-    val schirmAus = an(t, 35.6f, 0.5f)
+    val schirmAus = maxOf(1f - an(t, 8.2f, 0.6f), an(t, 38.6f, 0.5f))
     verzerrt(perspektive(flach, ecken)) {
         drawRoundRect(Color(0xFF1E1A18), flach.topLeft, flach.size, CornerRadius(8f))
         val bild2 = Rect(flach.left + 5f, flach.top + 5f, flach.right - 5f, flach.bottom - 5f)
         drawRoundRect(if (d) Color(0xFF191410) else Color(0xFFFFFAF4), bild2.topLeft, bild2.size, CornerRadius(5f))
         drawRect(f.primaer, bild2.topLeft, Size(bild2.width, h * 0.03f))
         for (i in 0 until 3) drawCircle(Color.White.copy(alpha = 0.8f), h * 0.006f, Offset(bild2.left + h * (0.015f + i * 0.018f), bild2.top + h * 0.015f))
-        val haken = floatArrayOf(12.2f, 13.0f, 28.4f, 29.6f)
+        val haken = floatArrayOf(15.2f, 16.0f, 31.4f, 32.6f)
         for (i in 0 until 4) {
             val y = bild2.top + h * (0.07f + i * 0.047f)
-            val da = an(t, 7.2f + i * 1.4f, 0.9f)
+            val da = an(t, 10.2f + i * 1.4f, 0.9f)
             if (da <= 0f) continue
             val k = h * 0.024f
             drawRoundRect(f.primaer.copy(alpha = weich(an(da, 0f, 0.3f))), Offset(bild2.left + h * 0.015f, y - k / 2), Size(k, k), CornerRadius(3f), style = Stroke(2f))
@@ -177,7 +182,7 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
         }
         // Spiegelung auf dem Glas
         drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.12f), Color.Transparent), bild2.topLeft, Offset(bild2.right, bild2.bottom * 0.6f)), bild2.topLeft, bild2.size, CornerRadius(5f))
-        if (schirmAus > 0f) drawRoundRect(Color(0xFF0E0B0A).copy(alpha = 0.9f * schirmAus), bild2.topLeft, bild2.size, CornerRadius(5f))
+        if (schirmAus > 0f) drawRoundRect(Color(0xFF0E0B0A).copy(alpha = schirmAus), bild2.topLeft, bild2.size, CornerRadius(5f))
     }
     // Schein des Bildschirms auf der Tischplatte
     drawOval(Brush.radialGradient(listOf(f.primaer.copy(alpha = 0.18f * (1f - schirmAus)), Color.Transparent), Offset(monL, tischY - h * 0.01f), h * 0.12f), Offset(monL - h * 0.12f, tischY - h * 0.04f), Size(h * 0.24f, h * 0.06f))
@@ -226,30 +231,31 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     fun tippen(lachen: Float = 0.35f) = sitz.copy(sR = 62f + sin(t * 17f) * 4f, eR = 30f, sL = 58f + sin(t * 17f + 1.5f) * 4f, eL = 32f, kopf = sin(t * 1.3f) * 3f, lachen = lachen)
     val greifen = sitz.copy(sR = 75f, eR = 8f, sL = 58f, eL = 32f, lean = 2f)
     val pose = choreo(t, s, listOf(
-        Takt(0f) { gehen(mix(-0.1f * w, sitzX, an(it, 0f, 4.4f)), boden, 1f, it * 8.5f, blink) },
-        Takt(4.4f) { val k = weich(an(it, 4.4f, 1.2f)); Pose(sitzX, boden, 1f, lean = mix(0f, -4f, k), hL = 84f * k, kL = 84f * k, hR = 88f * k, kR = 88f * k, hueftY = mix(standHuefte, sitzHuefte, k), blinzeln = blink) },
-        Takt(5.8f) { tippen() },
+        // Im Dunkeln draußen links, dann herein zum Stuhl
+        Takt(0f) { gehen(mix(-0.12f * w, sitzX, an(it, 3f, 4.4f)), boden, 1f, it * 8.5f, blink) },
+        Takt(7.4f) { val k = weich(an(it, 7.4f, 1.2f)); Pose(sitzX, boden, 1f, lean = mix(0f, -4f, k), hL = 84f * k, kL = 84f * k, hR = 88f * k, kR = 88f * k, hueftY = mix(standHuefte, sitzHuefte, k), blinzeln = blink) },
+        Takt(8.8f) { tippen() },
         // Es dämmert: Lampe am Tischschalter einschalten
-        Takt(13.5f) { greifen },
-        Takt(14.3f) { tippen() },
+        Takt(16.5f) { greifen },
+        Takt(17.3f) { tippen() },
         // Kaffee: greifen, trinken, zurückstellen
-        Takt(15.3f) { greifen },
-        Takt(15.9f) { sitz.copy(sR = 18f, eR = 150f, sL = 58f, eL = 32f, kopf = -8f, lachen = 0.1f) },
-        Takt(16.8f) { greifen },
-        Takt(17.4f) { tippen() },
+        Takt(18.3f) { greifen },
+        Takt(18.9f) { sitz.copy(sR = 18f, eR = 140f, sL = 58f, eL = 32f, kopf = -8f, lachen = 0.1f) },
+        Takt(19.8f) { greifen },
+        Takt(20.4f) { tippen() },
         // Katze auf dem Schoß: streicheln
-        Takt(20.8f) { sitz.copy(sR = 28f + sin(it * 4f) * 10f, eR = 45f, sL = 58f, eL = 32f, kopf = 12f, lachen = 0.9f) },
-        Takt(27.0f) { tippen(0.6f) },
-        // Feierabend: aufstehen, freuen, Lampe aus, gehen
-        Takt(31.0f) { val k = 1f - weich(an(it, 31f, 1.2f)); Pose(sitzX, boden, 1f, hL = 84f * k, kL = 84f * k, hR = 88f * k, kR = 88f * k, hueftY = mix(standHuefte, sitzHuefte, k), blinzeln = blink) },
-        Takt(32.3f) { Pose(sitzX, boden - huepfen(it, 32.6f, 35f, 0.06f * s), 1f, sL = 168f, eL = 5f, sR = 172f, eR = -5f, lachen = 1f, blinzeln = blink) },
-        Takt(35.0f) { Pose(sitzX, boden, 1f, lean = 30f, sR = 20f, eR = 10f, sL = 10f, eL = 10f, lachen = 0.7f, blinzeln = blink) },
-        Takt(36.1f) { gehen(mix(sitzX, -0.15f * w, an(it, 36.1f, 3.2f)), boden, -1f, it * 8.5f, blink) },
+        Takt(23.8f) { sitz.copy(sR = 28f + sin(it * 4f) * 10f, eR = 45f, sL = 58f, eL = 32f, kopf = 12f, lachen = 0.9f) },
+        Takt(30.0f) { tippen(0.6f) },
+        // Feierabend: aufstehen, freuen, Lampe aus, mit der Katze rechts hinaus
+        Takt(34.0f) { val k = 1f - weich(an(it, 34f, 1.2f)); Pose(sitzX, boden, 1f, hL = 84f * k, kL = 84f * k, hR = 88f * k, kR = 88f * k, hueftY = mix(standHuefte, sitzHuefte, k), blinzeln = blink) },
+        Takt(35.3f) { Pose(sitzX, boden - huepfen(it, 35.6f, 38f, 0.06f * s), 1f, sL = 168f, eL = 6f, sR = 172f, eR = 6f, lachen = 1f, blinzeln = blink) },
+        Takt(38.0f) { Pose(sitzX, boden, 1f, lean = 30f, sR = 20f, eR = 10f, sL = 10f, eL = 10f, lachen = 0.7f, blinzeln = blink) },
+        Takt(39.0f) { gehen(mix(sitzX, 1.15f * w, an(it, 39f, 6.4f)), boden, 1f, it * 8.5f, blink) },
     ))
 
     // Tasse: steht hinten auf der Platte, beim Trinken in der Hand
     val tasseRuhe = Offset(sitzX + 0.165f * h, hinten(Offset(sitzX + 0.165f * h, tischY), 0.1f).y)
-    val tasseInHand = t in 15.75f..17.25f
+    val tasseInHand = t in 18.75f..20.25f
     fun tasse(boden: Offset) {
         val c = Color.White.copy(alpha = if (d) 0.85f else 1f)
         drawRoundRect(c, Offset(boden.x - h * 0.02f, boden.y - h * 0.05f), Size(h * 0.04f, h * 0.05f), CornerRadius(4f))
@@ -259,28 +265,35 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     if (!tasseInHand) {
         tasse(tasseRuhe)
         for (i in 0..1) {
-            val q = (t * 0.4f + i * 0.5f) % 1f
+            val q = runde(t, zyklus, 18, i * 0.5f)
             drawLine(Color.White.copy(alpha = 0.35f * (1f - q)), Offset(tasseRuhe.x + h * (-0.008f + i * 0.015f) + sin(q * 6f) * 3f, tasseRuhe.y - h * 0.06f - q * h * 0.08f), Offset(tasseRuhe.x + h * (-0.008f + i * 0.015f) + sin(q * 6f + 1f) * 3f, tasseRuhe.y - h * 0.08f - q * h * 0.08f), 2f, StrokeCap.Round)
         }
     }
 
-    // ---- Katze: schläft, streckt sich, springt auf den Schoß, später aufs Fensterbrett ----
+    // ---- Katze: kommt mit herein, schläft auf dem Teppich, springt auf den Schoß, sitzt am Fenster, geht mit hinaus ----
     val katzeF = KatzenFarben(Color(0xFFE39A52), Color(0xFFB8672A), Color(0xFFF7E1C4))
-    val katzeAufSchoss = t in 20.95f..27.05f
+    val katzeAufSchoss = t in 23.95f..30.05f
     val schossX = sitzX + 0.14f * s
     val schossBoden = sitzHuefte - 0.04f * s
     val fensterX = fen.center.x - h * 0.05f
+    val brettX = fensterX + h * 0.08f
     fun zeichneKatze() {
         when {
-            t < 17f -> katze(w * 0.14f, boden, cs, 1f, 2, 0f, t, katzeF)
-            t < 18.4f -> katze(w * 0.14f, boden, cs, 1f, 3, 0f, t, katzeF)
-            t < 20.4f -> katze(mix(w * 0.14f, sitzX + 0.36f * s, weich(an(t, 18.4f, 2f))), boden, cs, mix(1f, -1f, weich(an(t, 20.05f, 0.35f))), 0, t * 11f, t, katzeF)
-            t < 21f -> { val k = an(t, 20.4f, 0.6f); katze(mix(sitzX + 0.36f * s, schossX, k), boden, cs, -1f, 3, 0f, t, katzeF, hoehe = sin(k * 3.14f) * h * 0.25f + k * (boden - schossBoden)) }
-            t < 27f -> katze(schossX, schossBoden, cs, mix(-1f, 1f, weich(an(t, 26.6f, 0.4f))), 2, 0f, t, katzeF)
-            t < 27.6f -> { val k = an(t, 27f, 0.6f); katze(mix(schossX, sitzX + 0.45f * s, k), boden, cs, 1f, 3, 0f, t, katzeF, hoehe = (1f - k) * (boden - schossBoden) + sin(k * 3.14f) * h * 0.1f) }
-            t < 29.6f -> katze(mix(sitzX + 0.45f * s, fensterX, weich(an(t, 27.6f, 2f))), boden, cs, 1f, 0, t * 11f, t, katzeF)
-            t < 30.1f -> { val k = an(t, 29.6f, 0.5f); katze(fensterX + k * h * 0.08f, boden, cs, 1f, 3, 0f, t, katzeF, hoehe = k * (boden - fen.bottom) + sin(k * 3.14f) * h * 0.08f) }
-            else -> katze(fensterX + h * 0.08f, fen.bottom, cs, 1f, 1, 0f, t, katzeF)
+            t < 3f -> Unit
+            t < 6.6f -> katze(mix(-0.22f * w, w * 0.14f, weich(an(t, 3f, 3.6f))), boden, cs, 1f, 0, t * 11f, t, katzeF)
+            t < 7.4f -> katze(w * 0.14f, boden, cs, 1f, 1, 0f, t, katzeF)
+            t < 20f -> katze(w * 0.14f, boden, cs, 1f, 2, 0f, t, katzeF)
+            t < 21.4f -> katze(w * 0.14f, boden, cs, 1f, 3, 0f, t, katzeF)
+            t < 23.4f -> katze(mix(w * 0.14f, sitzX + 0.36f * s, weich(an(t, 21.4f, 2f))), boden, cs, mix(1f, -1f, weich(an(t, 23.05f, 0.35f))), 0, t * 11f, t, katzeF)
+            t < 24f -> { val k = an(t, 23.4f, 0.6f); katze(mix(sitzX + 0.36f * s, schossX, k), boden, cs, -1f, 3, 0f, t, katzeF, hoehe = sin(k * 3.14f) * h * 0.25f + k * (boden - schossBoden)) }
+            t < 30f -> katze(schossX, schossBoden, cs, mix(-1f, 1f, weich(an(t, 29.6f, 0.4f))), 2, 0f, t, katzeF)
+            t < 30.6f -> { val k = an(t, 30f, 0.6f); katze(mix(schossX, sitzX + 0.45f * s, k), boden, cs, 1f, 3, 0f, t, katzeF, hoehe = (1f - k) * (boden - schossBoden) + sin(k * 3.14f) * h * 0.1f) }
+            t < 32.6f -> katze(mix(sitzX + 0.45f * s, fensterX, weich(an(t, 30.6f, 2f))), boden, cs, 1f, 0, t * 11f, t, katzeF)
+            t < 33.1f -> { val k = an(t, 32.6f, 0.5f); katze(fensterX + k * h * 0.08f, boden, cs, 1f, 3, 0f, t, katzeF, hoehe = k * (boden - fen.bottom) + sin(k * 3.14f) * h * 0.08f) }
+            // Wartet am Fenster, bis die Person vorbeigeht, springt herunter und läuft hinterher
+            t < 43.4f -> katze(brettX, fen.bottom, cs, 1f, 1, 0f, t, katzeF)
+            t < 43.9f -> { val k = an(t, 43.4f, 0.5f); katze(brettX + k * h * 0.1f, boden, cs, 1f, 3, 0f, t, katzeF, hoehe = (1f - k) * (boden - fen.bottom) + sin(k * 3.14f) * h * 0.05f) }
+            else -> katze(mix(brettX + h * 0.1f, 1.25f * w, an(t, 43.9f, 1.8f)), boden, cs, 1f, 0, t * 11f, t, katzeF)
         }
     }
     if (!katzeAufSchoss) zeichneKatze()
@@ -290,13 +303,13 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
         // Die streichelnde Hand liegt auf der Katze
         rechterArm(pose, s, mf, punkte.schulter)
         for (i in 0..2) {
-            val q = ((t - 21.4f) * 0.6f + i / 3f) % 1f
-            val ein = weich(an(t, 21.4f, 0.8f)) * (1f - weich(an(t, 26.4f, 0.6f)))
-            if (t > 21.4f) herz(Offset(sitzX + 0.2f * s + sin(q * 6f + i) * 8f, sitzHuefte - 0.2f * s - q * h * 0.35f), h * 0.03f * (0.6f + q * 0.5f), f.primaer.copy(alpha = (1f - q) * ein))
+            val q = ((t - 24.4f) * 0.6f + i / 3f) % 1f
+            val ein = weich(an(t, 24.4f, 0.8f)) * (1f - weich(an(t, 29.4f, 0.6f)))
+            if (t > 24.4f) herz(Offset(sitzX + 0.2f * s + sin(q * 6f + i) * 8f, sitzHuefte - 0.2f * s - q * h * 0.35f), h * 0.03f * (0.6f + q * 0.5f), f.primaer.copy(alpha = (1f - q) * ein))
         }
     }
     if (tasseInHand) tasse(punkte.handR + Offset(-h * 0.005f, h * 0.03f))
 
-    // Abendliche Abdunklung, Lampenlicht hebt sie wieder auf
-    drawRect(Color(0xFF1A0C20).copy(alpha = (if (d) 0.25f else 0.18f) * weich(an(abend, 0.55f, 0.45f)) * (1f - 0.6f * lampeAn)))
+    // Nacht und Dämmerung dunkeln den Raum ab, das Lampenlicht hebt es teilweise wieder auf
+    drawRect(Color(0xFF1A0C20).copy(alpha = (if (d) 0.4f else 0.34f) * weich(an(abend, 0.55f, 0.45f)) * (1f - 0.6f * lampeAn)))
 }

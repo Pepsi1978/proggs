@@ -7,10 +7,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.lerp
@@ -25,13 +27,18 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
 
+/** Länge eines Durchlaufs; Ende und Anfang sind dasselbe Bild (dunkler Raum, Rakete auf der Rampe), ohne Schnitt. */
+internal const val KOSMOS_ZYKLUS = 44f
+
 /**
  * Kosmos: Kontrollraum mit Bodenraster in Zentralperspektive, Pult als Block und schräg gestellten Bildschirmen, großes
  * Rundfenster mit tiefer Laibung. Checkliste am Pult abarbeiten, zum Fenster drehen, Countdown, Raketenstart, Jubel,
- * Winken. Die Katze dreht sich gemütlich auf dem Drehstuhl, springt aufs Pult, tatzt nach Lämpchen und schaut dann
- * auch zur Rakete. Zeiten passen zu `ablauf()` in Szene.kt (36 s).
+ * Winken. Im Dunkeln kommen Person und Katze links herein, das Licht geht an; die Katze sitzt auf dem Drehstuhl, springt
+ * aufs Pult, tatzt nach Lämpchen und schaut zur Rakete. Am Ende gehen beide rechts hinaus, das Licht geht aus, und die
+ * nächste Rakete fährt auf die Rampe hoch – dann beginnt alles von vorn.
  */
 internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
+    val zyklus = KOSMOS_ZYKLUS
     val w = size.width
     val h = size.height
     val d = f.dunkel
@@ -39,7 +46,10 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     val s = h * 0.6f
     val blau = f.primaer
     val flucht = Offset(w * 0.5f, h * 0.3f)
-    val startZeit = 18f
+    val startZeit = 21f
+    // Raumlicht: an beim Hereinkommen, aus beim Hinausgehen
+    val licht = weich(an(t, 2.5f, 1.5f)) * (1f - weich(an(t, 37.6f, 1.6f)))
+    val schirm = weich(an(t, 3.6f, 0.8f)) * (1f - weich(an(t, 36.8f, 0.8f)))
 
     // Raum: Wand mit Paneelen, Boden mit Fluchtpunkt-Raster
     drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF0B1224), Color(0xFF060A16)) else listOf(Color(0xFFE6EEFB), Color(0xFFD2DDF3)), 0f, boden))
@@ -63,13 +73,13 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     clipPath(Path().apply { addOval(Rect(fm, fr)) }) {
         translate(wackeln, 0f) {
             drawRect(Brush.verticalGradient(listOf(Color(0xFF020615), Color(0xFF0B1A4A), Color(0xFF1D2F6E)), fm.y - fr, fm.y + fr), fm - Offset(fr, fr), Size(fr * 2, fr * 2))
-            for (i in 0 until 24) drawCircle(Color.White.copy(alpha = 0.35f + 0.6f * ((sin(t * 2.5f + i * 1.9f) + 1) / 2)), 1.4f, Offset(fm.x - fr + fr * 2 * ((i * 0.37f) % 1f), fm.y - fr + fr * 1.4f * ((i * 0.53f) % 1f)))
+            for (i in 0 until 24) drawCircle(Color.White.copy(alpha = 0.35f + 0.6f * ((welle(t, zyklus, 18, i * 1.9f) + 1) / 2)), 1.4f, Offset(fm.x - fr + fr * 2 * ((i * 0.37f) % 1f), fm.y - fr + fr * 1.4f * ((i * 0.53f) % 1f)))
             // Planet mit Ring, schattiert
             val planet = fm + Offset(-fr * 0.45f, -fr * 0.45f)
             drawCircle(Brush.linearGradient(listOf(blau.heller(0.3f), blau.dunkler(0.4f)), planet - Offset(fr * 0.15f, fr * 0.15f), planet + Offset(fr * 0.15f, fr * 0.15f)), fr * 0.16f, planet)
             rotate(-18f, planet) { drawOval(blau.heller(0.5f).copy(alpha = 0.7f), planet - Offset(fr * 0.3f, fr * 0.04f), Size(fr * 0.6f, fr * 0.08f), style = Stroke(2.5f)) }
             // Mond wandert langsam
-            drawCircle(Color(0xFFD9DEE8), fr * 0.06f, fm + Offset(fr * (0.5f - t * 0.014f), -fr * 0.55f))
+            drawCircle(Color(0xFFD9DEE8), fr * 0.06f, fm + Offset(fr * (0.3f + 0.2f * welle(t, zyklus, 1)), -fr * 0.55f))
             // Startrampe
             val erde = fm.y + fr * 0.62f
             drawRect(Color(0xFF26314F), Offset(fm.x - fr, erde), Size(fr * 2, fr))
@@ -79,16 +89,20 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
             // Rakete: hebt langsam ab und wird schneller
             val start = weich(an(t, startZeit, 5.5f))
             val beschleunigt = start * start
-            val rakete = Offset(fm.x + fr * 0.08f, erde - fr * 0.2f - beschleunigt * fr * 2.2f)
+            // Nach dem Start: im Dunkeln fährt die nächste Rakete von unten auf die Rampe
+            val nachschub = 1f - weich(an(t, 37.5f, 5f))
+            val rakete = if (t < 34f) Offset(fm.x + fr * 0.08f, erde - fr * 0.2f - beschleunigt * fr * 2.2f)
+            else Offset(fm.x + fr * 0.08f, erde - fr * 0.2f + nachschub * fr * 0.5f)
             if (t > startZeit - 0.4f) for (i in 0 until 8) {
                 val q = an(t, startZeit - 0.4f + i * 0.15f, 3f)
                 val rw = fr * (0.08f + 0.2f * q)
                 drawCircle(Color(0xFFE6E9F0).copy(alpha = (0.8f - q * 0.6f) * (1f - an(t, startZeit + 7f, 3f))), rw, Offset(fm.x + fr * 0.08f + (i - 4) * fr * 0.08f * (0.3f + q), erde - rw * 0.3f))
             }
-            if (t > startZeit - 0.2f && rakete.y > fm.y - fr * 1.3f) {
+            if (t > startZeit - 0.2f && t < 34f && rakete.y > fm.y - fr * 1.3f) {
                 val flamme = fr * (0.2f + 0.08f * sin(t * 40f)) * weich(an(t, startZeit - 0.2f, 0.4f))
                 drawOval(Brush.verticalGradient(listOf(Color(0xFFFFF1B0), Color(0xFFFF9A3D), Color.Transparent), rakete.y + fr * 0.12f, rakete.y + fr * 0.12f + flamme), Offset(rakete.x - fr * 0.045f, rakete.y + fr * 0.12f), Size(fr * 0.09f, flamme))
             }
+            clipRect(fm.x - fr, fm.y - fr * 3f, fm.x + fr, erde + fr * 0.02f) {
             val koerper = Path().apply {
                 moveTo(rakete.x, rakete.y - fr * 0.2f)
                 cubicTo(rakete.x + fr * 0.07f, rakete.y - fr * 0.12f, rakete.x + fr * 0.06f, rakete.y + fr * 0.05f, rakete.x + fr * 0.05f, rakete.y + fr * 0.13f)
@@ -100,6 +114,7 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
             drawPath(Path().apply { moveTo(rakete.x + fr * 0.05f, rakete.y + fr * 0.02f); lineTo(rakete.x + fr * 0.1f, rakete.y + fr * 0.15f); lineTo(rakete.x + fr * 0.05f, rakete.y + fr * 0.13f); close() }, blau.dunkler(0.2f))
             drawCircle(blau.heller(0.2f), fr * 0.03f, rakete - Offset(0f, fr * 0.06f))
             drawCircle(Color.White, fr * 0.03f, rakete - Offset(0f, fr * 0.06f), style = Stroke(1.5f))
+            }
         }
         // Innenwand der Laibung: dunkler Ring zum Raum hin versetzt, gibt dem Fenster Tiefe
         drawCircle(Color.Black.copy(alpha = 0.35f), fr * 1.04f, fm + laibung, style = Stroke(fr * 0.16f))
@@ -115,7 +130,7 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     drawLine(pultFarbe.heller(0.3f), Offset(pult.left, pult.top), Offset(pult.right, pult.top), 2f)
     // Lämpchen auf der Pultkante
     for (i in 0 until 9) {
-        val an = sin(t * (2f + i * 0.7f) + i) > 0.2f
+        val an = welle(t, zyklus, 14 + i * 5, i.toFloat()) > 0.2f
         val farbe = when (i % 3) { 0 -> blau; 1 -> blau.heller(0.25f); else -> Color(0xFFFFB74D) }
         drawCircle(if (an) farbe else farbe.copy(alpha = 0.25f), h * 0.011f, Offset(pult.left + w * 0.035f + i * w * 0.035f, pult.top + h * 0.045f))
     }
@@ -130,7 +145,7 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
         // Gehäusekante rechts
         flaeche(listOf(e[1], e[1] + Offset(w * 0.008f, h * 0.006f), e[2] + Offset(w * 0.008f, -h * 0.004f), e[2]), Color(0xFF070B18))
     }
-    val punkteZeit = floatArrayOf(4.2f, 6.6f, 9f, 11.4f)
+    val punkteZeit = floatArrayOf(7.2f, 9.6f, 12f, 14.4f)
     verzerrt(perspektive(mon1, ecken1)) {
         drawRoundRect(Color(0xFF0E1428), mon1.topLeft, mon1.size, CornerRadius(6f))
         drawRoundRect(blau.copy(alpha = 0.3f), mon1.topLeft, mon1.size, CornerRadius(6f), style = Stroke(2f))
@@ -140,13 +155,14 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
             drawCircle(lerp(Color(0xFF55607A), blau.heller(0.2f), ok), h * 0.014f, Offset(mon1.left + mon1.width * 0.14f, y))
             drawLine(lerp(Color(0xFF55607A), blau.heller(0.4f), ok), Offset(mon1.left + mon1.width * 0.28f, y), Offset(mon1.left + mon1.width * (0.8f - (i % 2) * 0.15f), y), 3f, StrokeCap.Round)
         }
+        if (schirm < 1f) drawRoundRect(Color(0xFF05070F).copy(alpha = 1f - schirm), mon1.topLeft, mon1.size, CornerRadius(6f))
     }
     verzerrt(perspektive(mon2, ecken2)) {
         drawRoundRect(Color(0xFF0E1428), mon2.topLeft, mon2.size, CornerRadius(6f))
         drawRoundRect(blau.copy(alpha = 0.3f), mon2.topLeft, mon2.size, CornerRadius(6f), style = Stroke(2f))
         // Kurve, dann Countdown, dann Start, dann Haken
         when {
-            t < 13.6f -> {
+            t < 16.6f -> {
                 val p = Path()
                 for (x in 0..40) {
                     val xx = mon2.left + mon2.width * (0.08f + 0.84f * x / 40f)
@@ -166,11 +182,12 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
             }
             else -> haken(mon2.center, mon2.height * 0.35f, an(t, startZeit + 6f, 0.5f), f.sekundaer, 5f)
         }
+        if (schirm < 1f) drawRoundRect(Color(0xFF05070F).copy(alpha = 1f - schirm), mon2.topLeft, mon2.size, CornerRadius(6f))
     }
 
     // Drehstuhl dreht sich gemütlich hin und her
     val stuhlX = w * 0.3f
-    val drehung = sin(t * 0.8f) * 0.6f
+    val drehung = welle(t, zyklus, 6) * 0.6f
     val stuhlF = if (d) Color(0xFF3A4668) else Color(0xFF5A6788)
     drawOval(Color.Black.copy(alpha = 0.15f), Offset(stuhlX - h * 0.12f, boden - h * 0.025f), Size(h * 0.24f, h * 0.04f))
     drawLine(stuhlF, Offset(stuhlX, boden - h * 0.03f), Offset(stuhlX, boden - h * 0.2f), 5f)
@@ -180,36 +197,48 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     drawRoundRect(stuhlF, Offset(stuhlX - sitzBreite / 2f, boden - h * 0.235f), Size(sitzBreite, h * 0.03f), CornerRadius(8f))
     drawRoundRect(stuhlF.dunkler(0.1f), Offset(stuhlX - h * 0.02f - sin(drehung) * h * 0.08f, boden - h * 0.45f), Size(h * 0.04f, h * 0.22f), CornerRadius(8f))
 
-    // Katze: auf dem Stuhl, Sprung aufs Pult, tatzen, dann Blick zum Fenster
+    // Katze: kommt mit herein, springt auf den Drehstuhl, später aufs Pult, tatzt, schaut zur Rakete, geht mit hinaus
     val katzeF = KatzenFarben(Color(0xFFB9BFCC), Color(0xFF7E8596), Color(0xFFF2F4F8), Color(0xFF7FD3F0))
     val cs = h * 0.16f
     val sitzY = boden - h * 0.24f
     val pultY = (oben[0].y + oben[3].y) / 2f
     val pultKatzeX = w * 0.2f
-    val tatzen = maxOf(0f, sin((t - 10.6f) * 6f)) * weich(an(t, 10.6f, 0.4f)) * (1f - weich(an(t, 13f, 0.4f)))
+    val tatzen = maxOf(0f, sin((t - 13.6f) * 6f)) * weich(an(t, 13.6f, 0.4f)) * (1f - weich(an(t, 16f, 0.4f)))
     when {
-        t < 9.6f -> katze(stuhlX + sin(drehung) * h * 0.02f, sitzY, cs, -1f, 1, 0f, t, katzeF)
-        t < 10.4f -> { val q = an(t, 9.6f, 0.8f); katze(mix(stuhlX, pultKatzeX, weich(q)), mix(sitzY, pultY, q), cs, -1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.15f) }
-        else -> katze(pultKatzeX, pultY, cs, mix(-1f, 1f, weich(an(t, 13.4f, 0.6f))), 1, 0f, t, katzeF, pfote = tatzen)
+        t < 2.5f -> Unit
+        t < 4.6f -> katze(mix(-0.25f * w, stuhlX - h * 0.1f, weich(an(t, 2.5f, 2.1f))), boden, cs, 1f, 0, t * 10f, t, katzeF)
+        t < 5.2f -> { val q = an(t, 4.6f, 0.6f); katze(mix(stuhlX - h * 0.1f, stuhlX, weich(q)), mix(boden, sitzY, q), cs, mix(1f, -1f, weich(q)), 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.08f) }
+        t < 12.6f -> katze(stuhlX + sin(drehung) * h * 0.02f, sitzY, cs, -1f, 1, 0f, t, katzeF)
+        t < 13.4f -> { val q = an(t, 12.6f, 0.8f); katze(mix(stuhlX, pultKatzeX, weich(q)), mix(sitzY, pultY, q), cs, -1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.15f) }
+        t < 33.4f -> katze(pultKatzeX, pultY, cs, mix(-1f, 1f, weich(an(t, 16.4f, 0.6f))), 1, 0f, t, katzeF, pfote = tatzen)
+        t < 34f -> { val q = an(t, 33.4f, 0.6f); katze(mix(pultKatzeX, w * 0.3f, weich(q)), mix(pultY, boden, q), cs, 1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.08f) }
+        else -> katze(mix(w * 0.3f, 1.25f * w, an(t, 34.2f, 5.4f)), boden, cs, 1f, 0, t * 10f, t, katzeF)
     }
 
-    // Person: kommt, drückt im Wechsel die Knöpfe, dreht sich zum Fenster, Countdown, Start, Jubel, Winken
+    // Person: kommt, drückt im Wechsel die Knöpfe, dreht sich zum Fenster, Countdown, Start, Jubel, Winken, geht
     val mf = MenschFarben(Color(0xFFD9B08C), Color(0xFF1E2230), lerp(f.primaer, Color(0xFFDDE3EE), 0.45f), Color(0xFF2A3350), Color(0xFF1A1F2E))
     val blink = blinzelt(t)
     val pultX = w * 0.44f
     val pose = choreo(t, s, listOf(
-        Takt(0f) { gehen(mix(w * 1.02f, pultX, an(it, 0f, 2.6f)), boden, -1f, it * 8.5f, blink) },
-        Takt(2.6f) {
+        Takt(0f) { gehen(mix(-0.12f * w, pultX, an(it, 2.5f, 2.9f)), boden, 1f, it * 8.5f, blink) },
+        Takt(5.6f) {
             // Weich abwechselnd links und rechts drücken: jede Hand senkt sich in einem sanften Bogen
-            val takt = (it - 2.6f) / 1.2f
+            val takt = (it - 5.6f) / 1.2f
             val links = floor(takt).toInt() % 2 == 0
             val druck = sin(PI.toFloat() * (takt - floor(takt))).let { x -> x * x }
             Pose(pultX, boden, -1f, lean = 10f, sL = 50f + (if (links) 38f * druck else 0f), eL = 40f - (if (links) 35f * druck else 0f), sR = 55f + (if (!links) 33f * druck else 0f), eR = 40f - (if (!links) 35f * druck else 0f), kopf = 8f, blinzeln = blink)
         },
-        Takt(12.6f) { Pose(pultX, boden, 1f, lean = 6f, sR = 20f, eR = 100f, sL = 10f, eL = 20f, kopf = -4f, lachen = 0.2f, blinzeln = blink) },
-        Takt(startZeit + 0.4f) { Pose(pultX, boden - huepfen(it, startZeit + 0.8f, startZeit + 5f, 0.07f * s), 1f, sL = 170f, eL = 0f, sR = 160f, eR = 10f, lachen = 1f, blinzeln = blink) },
+        Takt(15.6f) { Pose(pultX, boden, 1f, lean = 6f, sR = 20f, eR = 100f, sL = 10f, eL = 20f, kopf = -4f, lachen = 0.2f, blinzeln = blink) },
+        Takt(startZeit + 0.4f) { Pose(pultX, boden - huepfen(it, startZeit + 0.8f, startZeit + 5f, 0.07f * s), 1f, sL = 170f, eL = 6f, sR = 160f, eR = 10f, lachen = 1f, blinzeln = blink) },
         Takt(startZeit + 5.2f) { Pose(pultX, boden, 1f, sR = 140f + sin(it * 5f) * 18f * (1f - weich(an(it, startZeit + 9f, 1f))), eR = 40f, sL = 8f, eL = 10f, lachen = 0.85f, blinzeln = blink) },
         Takt(startZeit + 10.5f) { Pose(pultX, boden, 1f, sR = 8f, eR = 12f, sL = 8f, eL = 10f, kopf = -3f, lachen = 0.8f, blinzeln = blink) },
+        Takt(33.6f) { gehen(mix(pultX, 1.15f * w, an(it, 33.6f, 5.8f)), boden, 1f, it * 8.5f, blink) },
     ))
     mensch(pose, s, mf)
+
+    // Raumlicht aus: Schleier über dem Raum, das Fenster ins All bleibt hell
+    if (licht < 1f) drawPath(
+        Path().apply { fillType = PathFillType.EvenOdd; addRect(Rect(0f, 0f, w, h)); addOval(Rect(fm, fr)) },
+        Color(0xFF02040C).copy(alpha = 0.62f * (1f - licht)),
+    )
 }

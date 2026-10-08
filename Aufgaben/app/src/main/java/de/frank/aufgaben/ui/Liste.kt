@@ -357,9 +357,9 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
         RundKnopf(Icons.Rounded.Settings, "Einstellungen") { vm.zeige(Bildschirm.Einstellungen) }
     }
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        FokusKnopf { vm.fokusStarten(null) }
-        Spacer(Modifier.width(10.dp))
         Fortschritt(b.heuteFertig, b.heuteGesamt)
+        Spacer(Modifier.width(10.dp))
+        FokusKnopf { vm.fokusStarten(null) }
         Column(Modifier.weight(1f).padding(start = 14.dp)) {
             Text("Sinnvolle Aufgaben", color = f.text, fontSize = 27.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold, style = TextStyle(brush = Brush.linearGradient(listOf(f.text, f.primaer))))
             Text(
@@ -391,12 +391,15 @@ private fun Suchfeld(wert: String, aendern: (String) -> Unit) {
     }
 }
 
-/** Großer Fokus-Knopf, gleich groß wie der Fortschrittskreis daneben, in der Designfarbe. */
+/**
+ * Großer Fokus-Knopf rechts neben dem Fortschrittskreis, gleich groß wie dieser, aber im ruhigen Glas-Aussehen der
+ * runden Knöpfe oben – farbig leuchtet nur das Plus für neue Aufgaben.
+ */
 @Composable
 private fun FokusKnopf(aktion: () -> Unit) {
     val f = LocalFarben.current
-    Box(Modifier.size(62.dp).knopf3d(f.primaer, f.sekundaer, 99.dp, f.dunkel).antippen(aktion = aktion), contentAlignment = Alignment.Center) {
-        Icon(Icons.Rounded.SelfImprovement, "Fokus-Timer", tint = Color.White, modifier = Modifier.size(32.dp))
+    Box(Modifier.size(62.dp).glas(f, 99.dp, 1.2f).antippen(aktion = aktion), contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.SelfImprovement, "Fokus-Timer", tint = f.text, modifier = Modifier.size(30.dp))
     }
 }
 
