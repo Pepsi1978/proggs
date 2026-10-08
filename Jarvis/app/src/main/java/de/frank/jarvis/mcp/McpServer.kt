@@ -3,6 +3,10 @@ package de.frank.jarvis.mcp
 import android.content.Context
 import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.agent.JarvisAgent
+import de.frank.jarvis.auswertung.Tagesauswertung
+import de.frank.jarvis.auswertung.Zeitplan
+import de.frank.jarvis.dienst.JarvisDienst
+import de.frank.jarvis.faehigkeit.schalter
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.Ergebnis
@@ -29,6 +33,58 @@ class McpServer(context: Context) {
 
     /** Werkzeuge von Jarvis selbst, zusätzlich zu denen der angebundenen Apps. */
     private val eigene: List<Werkzeug> = listOf(
+        Werkzeug(
+            name = "tagesauswertung_lesen",
+            titel = "Tagesauswertung lesen",
+            beschreibung = "Jarvis: liefert Franks fertige Tagesauswertung. Jarvis erstellt sie mehrmals täglich selbst im Hintergrund: was für ein Tag heute ist " +
+                "(Arbeitstag oder frei, Dienst, Schlaf- und freie Zeitfenster, Termine), die Biodaten des Tages im Vergleich zu 7 Tagen, dem letzten Monat und allen bisherigen Tagen, " +
+                "Trainings, eine Einschätzung, Empfehlungen und einen Ausblick auf die nächsten Tage. Die offenen Aufgaben werden bei jedem Abruf frisch angehängt. " +
+                "DAS ERSTE WERKZEUG für „Wie ist meine Tagesauswertung?“, „Wie sieht mein Tag aus?“, „Guten Morgen Jarvis“, „Was steht an und wie geht es mir?“. " +
+                "Ein Aufruf genügt; rufe danach Kalender, Biomarker oder Aufgaben nur noch für Nachfragen auf, die die Auswertung nicht beantwortet.",
+            schema = schema("mit_daten" to schalter("true = zusätzlich der vollständige Datenanhang mit allen Einzelwerten (Vorgabe: false, die Auswertung genügt meist).")),
+            nurLesen = true,
+        ) { a ->
+            var neueste = Tagesauswertung.neueste(app)
+            var hinweis = ""
+            if (neueste != null && Tagesauswertung.veraltet(app) && !Tagesauswertung.stand.value.laeuft) {
+                // Ein geplanter Lauf fehlt: sofort frische Daten liefern und die volle Auswertung nachziehen.
+                neueste = Tagesauswertung.datenbericht(app, "beim Abruf erstellt, weil der geplante Lauf fehlte")
+                JarvisDienst.auswerten(app, "nachgeholt beim Abruf")
+                hinweis = "HINWEIS: Die letzte gedeutete Auswertung war veraltet. Dies sind frische Daten ohne Deutung; die vollständige Auswertung ist in ein bis drei Minuten abrufbar.\n"
+            }
+            val aufgaben = buildString {
+                append("--- AUFGABEN (frisch gelesen um ").append(java.time.LocalTime.now().toString().take(5)).append(" Uhr) ---\n")
+                val lesen = Register.werkzeuge(app).firstOrNull { it.name == "aufgaben_lesen" }
+                for (bereich in listOf("heute", "morgen")) {
+                    append(if (bereich == "heute") "Heute und überfällig: " else "Morgen: ")
+                    append(runCatching { lesen?.ausfuehren(JSONObject().put("bereich", bereich))?.text }.getOrNull() ?: "nicht lesbar").append("\n")
+                }
+            }
+            val naechster = Zeitplan.naechster(app)?.let { "Nächste automatische Auswertung: ${it.toLocalTime().toString().take(5)} Uhr." } ?: "Die automatische Auswertung ist ausgeschaltet."
+            if (neueste == null) {
+                JarvisDienst.auswerten(app, "erster Abruf")
+                Ergebnis("Es gibt noch keine Tagesauswertung. Jarvis erstellt gerade die erste, das dauert ein bis drei Minuten; bitte danach noch einmal abrufen. $naechster\n\n$aufgaben")
+            } else {
+                val daten = a.optBoolean("mit_daten", false)
+                // Die Aufgaben im Datenanhang sind der alte Stand: weglassen, die frischen stehen darunter.
+                val fassung = neueste.copy(daten = neueste.daten.substringBefore("== OFFENE AUFGABEN").trim())
+                Ergebnis(hinweis + Tagesauswertung.alsText(fassung, daten) + "\n" + aufgaben + naechster)
+            }
+        },
+        Werkzeug(
+            name = "tagesauswertung_erstellen",
+            titel = "Tagesauswertung neu erstellen",
+            beschreibung = "Jarvis: stößt jetzt eine neue Tagesauswertung an (frische Biodaten holen, alles neu auswerten). Das dauert ein bis drei Minuten und läuft im Hintergrund; " +
+                "das Ergebnis holst du danach mit tagesauswertung_lesen. Nur aufrufen, wenn Frank ausdrücklich eine neue oder aktualisierte Auswertung verlangt.",
+            schema = schema(),
+            nurLesen = false,
+        ) {
+            if (Tagesauswertung.stand.value.laeuft) Ergebnis("Eine Tagesauswertung läuft bereits. In ein bis zwei Minuten mit tagesauswertung_lesen abrufen.")
+            else {
+                JarvisDienst.auswerten(app, "auf Wunsch über ChatGPT")
+                Ergebnis("Die neue Tagesauswertung wird jetzt erstellt. In ein bis drei Minuten mit tagesauswertung_lesen abrufen.")
+            }
+        },
         Werkzeug(
             name = "jarvis_status",
             titel = "Jarvis-Status",

@@ -165,6 +165,7 @@ Aufruf: `ContentResolver.call(<Authority>, methode, null, Bundle("json" → Anfr
 | `auswertung` | aktueller Wert gegen den Schnitt der Tage davor (`tage`, `datum`, `metriken`), Schnitte 7/30/90, Einordnung |
 | `trainings` | Trainingsliste mit Summen (`von`, `bis`, `sport`, `limit`) |
 | `training` | ein Training mit Kilometer-Abschnitten (`id`) |
+| `abgleich` | stößt den Abgleich mit Whoop, Oura, Waage und Health Connect an (wie der Biomarker-Reiter), wartet höchstens 90 Sekunden |
 
 Regeln: Pro Tag zählt die letzte Messung. VO2max wird wie auf der Biomarker-Seite berechnet (`computeVo2MaxOrNull`).
 Tagessummen (Belastung, Energie, Schritte, Aktivität) des laufenden Tages bleiben in Verlauf und Auswertung außen vor.

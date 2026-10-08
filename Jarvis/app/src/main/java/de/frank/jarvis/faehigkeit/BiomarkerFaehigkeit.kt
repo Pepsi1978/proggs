@@ -29,6 +29,12 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
 
     override fun stoerung(): String? = rufeDirekt("katalog", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
 
+    /** Holt frische Daten von Whoop, Oura und Waage in Entropie Reductor. true = Abgleich lief durch. */
+    suspend fun abgleich(): Boolean = rufe("abgleich", JSONObject()).optBoolean("fertig", false)
+
+    /** Alle Messgrößen, für die vollständige Tagesauswertung. */
+    val alleMetriken: List<String> get() = metrikListe.split(",").map { it.trim() }
+
     private val metrikListe =
         "erholung, hrv, ruhepuls, schlafperformance, schlafdauer, tiefschlaf_min, rem_min, leichtschlaf_min, wach_min, tiefschlaf_prozent, rem_prozent, " +
             "leichtschlaf_prozent, wach_prozent, erholsamer_schlaf_prozent, schlafeffizienz, schlafkonsistenz, schlafbedarf, schlafdefizit_min, schlafstoerungen, " +
@@ -146,6 +152,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
                     append(" → ").append(m.optString("einordnung"))
                 }
                 append("; Schnitte 7/30/90 Tage: ").append(zahlText(m.opt("schnitt_7"))).append(" / ").append(zahlText(m.opt("schnitt_30"))).append(" / ").append(zahlText(m.opt("schnitt_90")))
+                if (!m.isNull("schnitt_gesamt")) append("; Schnitt über alle ").append(m.optInt("tage_gesamt")).append(" Tage davor: ").append(zahlText(m.opt("schnitt_gesamt")))
                 if (!m.isNull("min_vergleich")) append("; Spanne ").append(zahlText(m.opt("min_vergleich"))).append("–").append(zahlText(m.opt("max_vergleich")))
                 if (!m.isNull("trend_7_tage")) append("; letzte 7 Tage gegen die 7 davor: ").append(vorzeichen(m.optDouble("trend_7_tage")))
                 append(" [höher ist ").append(m.optString("hoeher_ist")).append("]\n")

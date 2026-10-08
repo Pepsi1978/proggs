@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.tunnel.TunnelStufe
@@ -61,6 +62,8 @@ private class Schritt(val titel: String, val text: String, val fertig: Boolean, 
 fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: ComponentActivity) {
     val f = LocalFarben.current
     val protokoll by Protokoll.eintraege.collectAsState()
+    val auswertung by Tagesauswertung.stand.collectAsState()
+    var auswertungOffen by rememberSaveable { mutableStateOf(false) }
     var eingabe by rememberSaveable { mutableStateOf("") }
     val liste = rememberLazyListState()
 
@@ -100,6 +103,35 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                     Text("Einrichtung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text("Noch $offen von ${schritte.size} Schritten, dann hört Jarvis auf dein Wort.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
                     schritte.forEachIndexed { i, s -> SchrittZeile(i + 1, s) }
+                }
+            }
+            if (vm.gespraech.isEmpty()) item(key = "auswertung") {
+                Karte {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Tagesauswertung", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            val neueste = auswertung.neueste
+                            Text(
+                                when {
+                                    auswertung.laeuft -> auswertung.schritt.ifEmpty { "Wird erstellt" } + " …"
+                                    neueste == null -> "Noch keine. Nächste: ${vm.naechsteAuswertung}"
+                                    else -> "Stand " + zeitKurz(neueste.zeit) + " Uhr · nächste ${vm.naechsteAuswertung}"
+                                },
+                                color = if (auswertung.laeuft) f.primaer else f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp),
+                            )
+                        }
+                        if (auswertung.laeuft) Kern(34.dp, f.primaer, aktiv = true)
+                        else Knopf("Jetzt", Modifier.height(40.dp), haupt = false) { vm.auswertungJetzt() }
+                    }
+                    auswertung.neueste?.let { neueste ->
+                        Text(
+                            if (neueste.mitKi) neueste.text else neueste.text + "\n\n" + neueste.daten,
+                            Modifier.padding(top = 12.dp).fillMaxWidth().antippen(haptik = false) { auswertungOffen = !auswertungOffen },
+                            color = f.text, fontSize = 15.sp, lineHeight = 21.sp,
+                            maxLines = if (auswertungOffen) Int.MAX_VALUE else 5, overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(if (auswertungOffen) "Weniger zeigen" else "Ganz lesen", Modifier.padding(top = 6.dp).antippen { auswertungOffen = !auswertungOffen }, color = f.primaer, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
             if (vm.gespraech.isEmpty()) item(key = "vorschlaege") {

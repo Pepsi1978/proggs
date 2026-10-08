@@ -38,9 +38,27 @@ class JarvisAgent(context: Context) {
         beiSchritt: (String) -> Unit = {},
     ): String {
         if (!auth.isConnected) return "Ich bin noch nicht mit ChatGPT verbunden. Bitte in Jarvis unter Einstellungen anmelden."
+        return versuche(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt)
+            ?: "Das hat zu lange gedauert oder ich bin nicht fertig geworden. Bitte versuche es noch einmal oder teile den Auftrag auf."
+    }
+
+    val verbunden: Boolean get() = auth.isConnected
+
+    /**
+     * Wie [frage], liefert aber null statt eines Entschuldigungssatzes, wenn keine Antwort zustande kommt
+     * (nicht verbunden, Zeitlimit, zu viele Schritte). Für Abläufe im Hintergrund, die dann selbst entscheiden.
+     */
+    suspend fun versuche(
+        auftrag: String,
+        verlauf: List<ChatTurn> = emptyList(),
+        zeitlimitMs: Long = 120_000,
+        maxSchritte: Int = 8,
+        beiSchritt: (String) -> Unit = {},
+    ): String? {
+        if (!auth.isConnected) return null
         val werkzeuge = Register.werkzeuge(app)
         val zuege = (verlauf.takeLast(12) + ChatTurn("user", auftrag)).toMutableList()
-        val ergebnis = withTimeoutOrNull(zeitlimitMs) {
+        val ergebnis = withTimeoutOrNull<String?>(zeitlimitMs) {
             repeat(maxSchritte) {
                 val roh = auth.streamChat(anweisung(), zuege, einstellungen.modell, einstellungen.denkstufe)
                 val schritt = lies(roh)
@@ -62,9 +80,9 @@ class JarvisAgent(context: Context) {
                 zuege += ChatTurn("assistant", schritt.toString())
                 zuege += ChatTurn("user", "WERKZEUG-ERGEBNIS ($name):\n$antwort")
             }
-            "Ich habe mehrere Schritte versucht, bin aber nicht fertig geworden. Bitte formuliere den Auftrag genauer."
+            null
         }
-        return ergebnis ?: "Das hat zu lange gedauert. Bitte versuche es noch einmal oder teile den Auftrag auf."
+        return ergebnis
     }
 
     private fun anweisung(): String {

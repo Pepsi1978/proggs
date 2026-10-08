@@ -69,6 +69,14 @@ class Einstellungen private constructor(context: Context) {
         return neu
     }
 
+    // ---- Tagesauswertung ----
+    var auswertungAn: Boolean get() = prefs.getBoolean("auswertung_an", true); set(v) = put { putBoolean("auswertung_an", v) }
+    /** Bis zu drei Uhrzeiten als „HH:MM,HH:MM,HH:MM“. */
+    var auswertungZeiten: String get() = s("auswertung_zeiten", "04:25,12:00,16:25"); set(v) = put { putString("auswertung_zeiten", v) }
+
+    /** Einmaliger Zusatzlauf (Zeitpunkt in Millisekunden), wenn morgens der Schlafwert noch fehlte. 0 = keiner. */
+    var nachbesserungUm: Long get() = prefs.getLong("nachbesserung_um", 0L); set(v) = put { putLong("nachbesserung_um", v) }
+
     /** system | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
 

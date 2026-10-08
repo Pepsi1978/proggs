@@ -64,12 +64,36 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 | `biomarker_katalog` | Alle Messgrößen mit Einheit, Quelle und Zeitraum |
 | `kalender_lesen` | Termine Tag für Tag mit Dienst-Zeile; mit Suchwort bis ein Jahr voraus |
 | `dienstplan_lesen` | Je Tag Nachtdienst, Tagdienst, frei oder Urlaub mit Abfahrtszeit, nächster Dienst, nächste freie Tage |
+| `tagesauswertung_lesen` | Die fertige Tagesauswertung samt frisch gelesenen Aufgaben; veraltete Fassungen werden nie als aktuell ausgegeben |
+| `tagesauswertung_erstellen` | Stößt eine neue Auswertung im Hintergrund an (ein bis drei Minuten) |
 | `jarvis_status` | Erreichbarkeit, Datum und Uhrzeit auf dem Handy, angebundene Apps |
 | `jarvis_auftrag` | Freier Auftrag an den Agenten für Mehrschritt-Aufgaben (Zeitfenster 45 s) |
 
 Fehlt beim Anlegen der Tag, obwohl eine Uhrzeit genannt wurde, fragt ChatGPT nach; ruft es trotzdem auf, lehnt die
 Aufgaben-App mit einem Hinweis ab. Mehrere Treffer bei einem Suchwort führen zu einer Rückfrage statt zu einer
 geratenen Änderung. Ein wiederholter identischer Anlege-Aufruf innerhalb von 90 Sekunden legt nichts doppelt an.
+
+## Tagesauswertung
+
+`auswertung/Tagesauswertung.kt` und `auswertung/Zeitplan.kt`. Jarvis erstellt zu bis zu drei einstellbaren Uhrzeiten
+(Vorgabe 4:25, 12:00, 16:25) im Hintergrund eine Auswertung und legt sie unter `filesDir/tagesauswertung/` ab
+(die letzten 30). Ablauf:
+
+1. Abgleich in Entropie Reductor anstoßen (frische Daten von Whoop, Oura, Waage; höchstens 90 Sekunden).
+2. Daten nach festen Regeln sammeln: Rahmen der nächsten sechs Tage (Arbeitstag oder frei, Schlaf- und freie
+   Zeitfenster, `KalenderFaehigkeit.rahmen`), Termine, Biodaten des Tages, Vergleich gegen 7 Tage, den letzten Monat
+   und alle bisherigen Tage, Trainings der letzten 14 Tage, offene Aufgaben als Planungshinweis.
+3. Das eigene Modell schreibt daraus die Auswertung in sechs Abschnitten (HEUTE, ERHOLUNG UND SCHLAF, KÖRPER UND
+   TRAINING, EINSCHÄTZUNG, EMPFEHLUNG FÜR HEUTE, AUSBLICK). Ist das Modell nicht erreichbar, bleibt der Datenbericht.
+
+Zeitplan: immer genau ein exakter Wecker für den nächsten Lauf (`setExactAndAllowWhileIdle`); neu gestellt nach jedem
+Lauf, beim Start, nach dem Einschalten und nach Zeit- oder Zeitzonenänderung. Ein verpasster Lauf wird beim nächsten
+Dienststart nachgeholt, wenn er höchstens sechs Stunden zurückliegt. Fehlt beim Lauf noch der Schlafwert des Tages,
+folgt einmalig ein Zusatzlauf 90 Minuten später. Beim Abruf werden die Aufgaben immer frisch gelesen; liegt nur eine
+veraltete Fassung vor, liefert der Abruf sofort einen frischen Datenbericht und stößt die volle Auswertung an.
+
+Grenzen: Nach „Stopp erzwingen“ gehen Wecker verloren, bis die App einmal geöffnet wird. Die Vergleiche trennen
+nicht zwischen Nacht- und Tagschlaf; das Modell bekommt dazu nur eine Regel mit.
 
 ## Dienstplan
 

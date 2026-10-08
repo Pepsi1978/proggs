@@ -9,6 +9,7 @@
     { "versionCode": 345, "versionName": "0.29.10", "stand": "30.09.2026, 19:06 Uhr", "notiz": "Die App zeigt nach einem Update wieder zuverlässig die neue Versionsnummer an." },
     { "versionCode": 346, "versionName": "0.29.11", "stand": "30.09.2026, 19:09 Uhr", "notiz": "Polar-Abgleich überschreibt gespeicherte Trainingswerte nur noch, wenn Polar einen gültigen Wert hat; nichts wird geleert oder auf 0 gesetzt." },
     {"versionCode": 347, "versionName": "0.29.12", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    {"versionCode": 348, "versionName": "0.29.13", "stand": "08.10.2026, 16:32 Uhr", "notiz": "Jarvis-Brücke: Die App Jarvis kann jetzt den gesamten Biomarker-Bereich lesen (Whoop, Oura, Körperwerte, Trainings) und Werte mit den letzten Wochen und Monaten vergleichen – etwa per Sprache über ChatGPT"}
+    {"versionCode": 348, "versionName": "0.29.13", "stand": "08.10.2026, 16:32 Uhr", "notiz": "Jarvis-Brücke: Die App Jarvis kann jetzt den gesamten Biomarker-Bereich lesen (Whoop, Oura, Körperwerte, Trainings) und Werte mit den letzten Wochen und Monaten vergleichen – etwa per Sprache über ChatGPT"},
+    {"versionCode": 349, "versionName": "0.29.14", "stand": "08.10.2026, 17:02 Uhr", "notiz": "Jarvis-Brücke: Jarvis kann vor einer Tagesauswertung den Abgleich mit Whoop, Oura und Waage anstoßen und bekommt zu jedem Wert zusätzlich den Durchschnitt über alle bisherigen Tage"}
   ]
 }

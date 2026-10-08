@@ -98,6 +98,52 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         dienstSatz(dienst(tage[heute].orEmpty()), dienst(tage[heute.minusDays(1)].orEmpty()))
     }.getOrDefault("")
 
+    /**
+     * Der Rahmen der nächsten Tage nach festen Regeln: Dienst, Schlafzeiten und die Stunden, in denen Frank
+     * etwas erledigen kann. Bewusst gerechnet und nicht vom Modell gedeutet, damit Zeitkonflikte stimmen.
+     * Leer, wenn der Kalender-Zugriff fehlt.
+     */
+    fun rahmen(tage: Int = 6): String = if (!erlaubt) "" else runCatching {
+        val heute = LocalDate.now()
+        val termine = lies(heute.minusDays(1), heute.plusDays(tage.toLong()))
+        fun d(tag: LocalDate) = dienst(termine[tag].orEmpty())
+        buildString {
+            for (i in 0 until tage) {
+                val tag = heute.plusDays(i.toLong())
+                val heuteD = d(tag)
+                val gestern = d(tag.minusDays(1))
+                val morgen = d(tag.plusDays(1))
+                val nachNacht = gestern.arbeitet && gestern.art == Dienst.Art.NACHT
+                append("- ").append(kurz(tag, heute)).append(": ")
+                append(if (heuteD.arbeitet) "ARBEITSTAG, " + name(heuteD) else "FREIER TAG" + (heuteD.frei?.let { " ($it)" } ?: ""))
+                val fakten = mutableListOf<String>()
+                if (nachNacht) fakten += "am Morgen Rückkehr aus dem Nachtdienst, Schlaf etwa 6 bis 15 Uhr, davor und währenddessen keine Aufgaben"
+                when {
+                    heuteD.arbeitet && heuteD.art == Dienst.Art.TAG -> {
+                        fakten += "Aufstehen etwa 4:00 Uhr, Abfahrt etwa $ABFAHRT_TAG Uhr, tagsüber im Dienst"
+                        fakten += if (morgen.arbeitet && morgen.art == Dienst.Art.TAG) "abends nur kurz Zeit: Schlafengehen gegen 20 Uhr, weil morgen wieder Tagdienst ist" else "nach dem Dienst abends frei"
+                    }
+                    heuteD.arbeitet && heuteD.art == Dienst.Art.NACHT -> {
+                        fakten += if (nachNacht) "freie Zeit nur etwa 15 bis 16 Uhr" else "erster Nachtdienst des Blocks: vormittags und mittags frei, Vorschlafen am Nachmittag sinnvoll"
+                        fakten += "Abfahrt etwa $ABFAHRT_NACHT Uhr, Dienst über Nacht"
+                    }
+                    else -> {
+                        if (!nachNacht) fakten += "tagsüber frei verfügbar" else fakten += "frei verfügbar ab etwa 15 Uhr"
+                        if (morgen.arbeitet && morgen.art == Dienst.Art.TAG) fakten += "Schlafengehen gegen 20 Uhr, weil morgen Tagdienst ist (Aufstehen 4:00 Uhr); nach 20 Uhr nichts mehr einplanen"
+                        if (morgen.arbeitet && morgen.art == Dienst.Art.NACHT) fakten += "morgen beginnt ein Nachtdienst-Block: Vorbereitungen dafür heute erledigen"
+                    }
+                }
+                append(" – ").append(fakten.joinToString("; ")).append('\n')
+            }
+        }.trim()
+    }.getOrDefault("")
+
+    /** Ist heute ein Arbeitstag? null, wenn der Kalender nicht lesbar ist. */
+    fun arbeitetHeute(): Boolean? = if (!erlaubt) null else runCatching {
+        val heute = LocalDate.now()
+        dienst(lies(heute, heute)[heute].orEmpty()).arbeitet
+    }.getOrNull()
+
     /** Alle Termine je Tag. Mehrtägige Ganztagstermine stehen an jedem ihrer Tage. */
     private fun lies(von: LocalDate, bis: LocalDate): Map<LocalDate, List<Termin>> {
         val zone = ZoneId.systemDefault()

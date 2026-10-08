@@ -12,6 +12,7 @@ import dagger.hilt.components.SingletonComponent
 import de.frank.entropyreducer.data.local.AppDatabase
 import de.frank.entropyreducer.data.local.entities.AmazfitWorkoutEntity
 import de.frank.entropyreducer.data.local.entities.BiomarkerSnapshotEntity
+import de.frank.entropyreducer.domain.usecase.ForegroundSyncManager
 import de.frank.entropyreducer.presentation.amazfit.findRestingHrForWorkoutDay
 import de.frank.entropyreducer.presentation.dashboard4.computeVo2MaxOrNull
 import java.time.Instant
@@ -26,6 +27,7 @@ import kotlin.math.sqrt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -44,6 +46,8 @@ import org.json.JSONObject
  *  - `auswertung`  — aktueller Wert gegen die Durchschnitte der letzten 7/30/90 Tage, Abweichung, Trend
  *  - `trainings`   — Trainingsliste (`von`, `bis`, `limit`, `sport`)
  *  - `training`    — ein Training mit Kilometer-Abschnitten (`id`)
+ *  - `abgleich`    — holt vorher frische Daten von Whoop, Oura, Waage und Health Connect (derselbe Abgleich wie
+ *                    beim Öffnen des Biomarker-Reiters); wartet höchstens 90 Sekunden. Ändert keine Nutzerdaten.
  *
  * Die Auswertung rechnet hier und nicht in Jarvis: So gehen nur wenige Kennzahlen über die Leitung statt
  * der ganzen Historie, und eine Antwort im Sprachmodus kommt ohne Wartezeit.
@@ -54,6 +58,8 @@ class JarvisBruecke : ContentProvider() {
     @InstallIn(SingletonComponent::class)
     interface Zugang {
         fun datenbank(): AppDatabase
+
+        fun abgleich(): ForegroundSyncManager
     }
 
     /** Eine Messgröße. [richtung]: +1 = höher ist besser, -1 = niedriger ist besser, 0 = ohne Wertung. */
@@ -141,6 +147,15 @@ class JarvisBruecke : ContentProvider() {
         val db = EntryPointAccessors.fromApplication(ctx, Zugang::class.java).datenbank()
         val heute = LocalDate.now()
         return when (methode) {
+            "abgleich" -> {
+                val start = System.currentTimeMillis()
+                val fertig = withTimeoutOrNull(90_000) {
+                    EntryPointAccessors.fromApplication(ctx, Zugang::class.java).abgleich().syncApisNow("Jarvis")
+                    true
+                } ?: false
+                JSONObject().put("fertig", fertig).put("dauer_ms", System.currentTimeMillis() - start)
+            }
+
             "katalog" -> {
                 val reihen = ladeReihen(db, ohneLaufendenTag = false)
                 JSONObject().put("heute", heute.toString()).put("metriken", JSONArray(metriken.map { m ->
@@ -333,6 +348,7 @@ class JarvisBruecke : ContentProvider() {
         val schnitt = vorher.takeIf { it.isNotEmpty() }?.average()
         val streuung = if (vorher.size >= 5 && schnitt != null) sqrt(vorher.sumOf { (it - schnitt) * (it - schnitt) } / vorher.size) else null
         val abweichung = if (schnitt != null) letzter.value - schnitt else null
+        val alleDavor = reihe.headMap(letzter.key, false).values
         val z = if (abweichung != null && streuung != null && streuung > 0) abweichung / streuung else null
 
         // Trend: die letzten 7 Tage gegen die 7 Tage davor.
@@ -359,6 +375,8 @@ class JarvisBruecke : ContentProvider() {
             .put("schnitt_7", mittel(letzter.key.minusDays(6), letzter.key)?.let { runde(it, m.stellen + 1) } ?: JSONObject.NULL)
             .put("schnitt_30", mittel(letzter.key.minusDays(29), letzter.key)?.let { runde(it, m.stellen + 1) } ?: JSONObject.NULL)
             .put("schnitt_90", mittel(letzter.key.minusDays(89), letzter.key)?.let { runde(it, m.stellen + 1) } ?: JSONObject.NULL)
+            .put("schnitt_gesamt", alleDavor.takeIf { it.isNotEmpty() }?.average()?.let { runde(it, m.stellen + 1) } ?: JSONObject.NULL)
+            .put("tage_gesamt", alleDavor.size)
             .put("min_vergleich", vorher.minOrNull()?.let { runde(it, m.stellen) } ?: JSONObject.NULL)
             .put("max_vergleich", vorher.maxOrNull()?.let { runde(it, m.stellen) } ?: JSONObject.NULL)
             .put("vergleichstage", vorher.size)

@@ -149,6 +149,32 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             }
         }
 
+        // ---------------------------------------------------------------- Tagesauswertung
+        Abschnitt("Tagesauswertung")
+        Karte {
+            Zeile("Automatisch auswerten", if (e.auswertungAn) "Nächste: ${vm.naechsteAuswertung}" else "Aus", if (e.auswertungAn) f.erfolg else f.textLeise)
+            Text("Jarvis holt zu diesen Uhrzeiten frische Biodaten, liest Kalender und Dienstplan und schreibt die Auswertung. In ChatGPT fragst du dann nur: „Wie ist meine Tagesauswertung?“", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("An", aktiv = e.auswertungAn) { vm.auswertungSchalten(true) }
+                Chip("Aus", aktiv = !e.auswertungAn) { vm.auswertungSchalten(false) }
+            }
+            Unterzeile("Uhrzeiten (Stunde:Minute)")
+            val gespeichert = e.auswertungZeiten.split(",").map { it.trim() }
+            var zeit1 by rememberSaveable { mutableStateOf(gespeichert.getOrElse(0) { "" }) }
+            var zeit2 by rememberSaveable { mutableStateOf(gespeichert.getOrElse(1) { "" }) }
+            var zeit3 by rememberSaveable { mutableStateOf(gespeichert.getOrElse(2) { "" }) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Eingabe(zeit1, { zeit1 = it }, "04:25", Modifier.weight(1f))
+                Eingabe(zeit2, { zeit2 = it }, "12:00", Modifier.weight(1f))
+                Eingabe(zeit3, { zeit3 = it }, "16:25", Modifier.weight(1f))
+            }
+            if (listOf(zeit1, zeit2, zeit3).map { it.trim() }.filter { it.isNotEmpty() } != gespeichert.filter { it.isNotEmpty() }) {
+                Knopf("Uhrzeiten speichern", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.auswertungZeitenSpeichern(listOf(zeit1, zeit2, zeit3)) }
+            }
+            Knopf("Jetzt auswerten", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = false) { vm.auswertungJetzt() }
+            Text("Die Deutung schreibt das oben gewählte Modell. Ohne Internet oder Anmeldung speichert Jarvis den reinen Datenbericht.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+
         // ---------------------------------------------------------------- Apps
         Abschnitt("Angebundene Apps")
         Karte {

@@ -19,6 +19,8 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import de.frank.jarvis.MainActivity
 import de.frank.jarvis.R
+import de.frank.jarvis.auswertung.Tagesauswertung
+import de.frank.jarvis.auswertung.Zeitplan
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.mcp.McpServer
@@ -29,6 +31,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import android.os.PowerManager
+import java.time.LocalDateTime
 
 /**
  * Hält Jarvis erreichbar: MCP-Server auf dem Handy plus Verbindung zum eigenen Server, als Vordergrunddienst
@@ -37,6 +41,8 @@ import kotlinx.coroutines.launch
 class JarvisDienst : Service() {
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val mcp by lazy { McpServer(this) }
+    /** Lange Arbeit im Hintergrund (Tagesauswertung) läuft hier, nicht auf dem Hauptfaden. */
+    private val arbeit = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Ist das Netz wieder da (WLAN ↔ Mobilfunk, Funkloch vorbei), sofort neu verbinden statt abzuwarten. */
     private val netz = object : ConnectivityManager.NetworkCallback() {
@@ -64,13 +70,43 @@ class JarvisDienst : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val e = Einstellungen.get(this)
         Tunnel.starte(e.serverHost, e.serverToken, e.geheimnis) { rumpf -> mcp.verarbeite(rumpf) }
+        Tagesauswertung.lade(this)
+        val anlass = intent?.getStringExtra(EXTRA_AUSWERTEN)
+        when {
+            anlass != null -> werteAus(anlass)
+            // Verpasst (Handy war aus, App wurde beendet): nachholen, sobald der Dienst wieder läuft.
+            verpasst() -> werteAus("nachgeholt, der geplante Lauf wurde verpasst")
+        }
+        Zeitplan.stelle(this)
         return START_STICKY
+    }
+
+    private fun verpasst(): Boolean {
+        val faellig = Zeitplan.letzterFaelliger(this) ?: return false
+        val letzte = Tagesauswertung.neueste(this)?.zeitpunkt
+        // Nur nachholen, wenn der Lauf noch nicht lange her ist; sonst übernimmt der nächste geplante.
+        return (letzte == null || letzte.isBefore(faellig)) && faellig.isAfter(LocalDateTime.now().minusHours(6))
+    }
+
+    private fun werteAus(anlass: String) {
+        arbeit.launch {
+            // Das Gerät darf währenddessen nicht einschlafen; nach spätestens 8 Minuten gibt das System die Sperre frei.
+            val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:tagesauswertung")
+            runCatching { wach.acquire(8 * 60_000L) }
+            try {
+                Tagesauswertung.erstelle(this@JarvisDienst, anlass)
+            } finally {
+                runCatching { if (wach.isHeld) wach.release() }
+                Zeitplan.stelle(this@JarvisDienst)
+            }
+        }
     }
 
     override fun onDestroy() {
         runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netz) }
         Tunnel.stoppe()
         bereich.cancel()
+        arbeit.cancel()
         super.onDestroy()
     }
 
@@ -89,6 +125,14 @@ class JarvisDienst : Service() {
     companion object {
         private const val KANAL = "jarvis_dienst"
         private const val HINWEIS_ID = 1
+        private const val EXTRA_AUSWERTEN = "auswerten"
+
+        /** Beauftragt den Dienst mit einer Tagesauswertung (vom Wecker, aus der App oder aus dem Plugin). */
+        fun auswerten(context: Context, anlass: String) {
+            val app = context.applicationContext
+            runCatching { ContextCompat.startForegroundService(app, Intent(app, JarvisDienst::class.java).putExtra(EXTRA_AUSWERTEN, anlass)) }
+                .onFailure { Log.w("JarvisDienst", "Auswertung ließ sich nicht starten", it) }
+        }
 
         fun kanalAnlegen(context: Context) {
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(
@@ -118,6 +162,8 @@ class StartEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> JarvisDienst.abgleichen(context)
+            // Uhr oder Zeitzone verstellt: Der gestellte Wecker passt nicht mehr.
+            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> Zeitplan.stelle(context)
         }
     }
 }
