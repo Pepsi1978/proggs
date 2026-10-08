@@ -35,6 +35,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.automirrored.rounded.RotateRight
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -129,6 +131,7 @@ fun VorschauKopf(
     loeschen: (() -> Unit)?,
     zusatz: @Composable () -> Unit = {},
     info: (() -> Unit)? = null,
+    anpassen: (() -> Unit)? = null,
 ) {
     val f = LocalFarben.current
     var menue by remember { mutableStateOf(false) }
@@ -145,7 +148,8 @@ fun VorschauKopf(
         }
         Box {
             Rundknopf(Icons.Rounded.MoreVert, "Weitere Aktionen") { menue = true }
-            DropdownMenu(menue, { menue = false }) {
+            Menue(menue, { menue = false }) {
+                if (anpassen != null) DropdownMenuItem({ Text("An Bildschirm anpassen") }, { menue = false; anpassen() }, leadingIcon = { Icon(Icons.Rounded.FitScreen, null) })
                 if (freigabe != null) {
                     DropdownMenuItem({ Text("Mit anderer App öffnen") }, { menue = false; aktionen.oeffnen(freigabe) }, leadingIcon = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, null) })
                     DropdownMenuItem({ Text("Speichern unter …") }, { menue = false; aktionen.speichernUnter(freigabe) }, leadingIcon = { Icon(Icons.Rounded.SaveAs, null) })
@@ -166,17 +170,23 @@ fun AnhangVorschau(eintrag: Eintrag, anhang: Anhang, aktionen: AblageAktionen, z
     val freigabe = remember(anhang.id) { aktionen.freigabe(anhang) }
     var nurInfo by rememberSaveable(anhang.id) { mutableStateOf(false) }
     val untertitel = "${anhang.art.anzeige} · ${Dateityp.groesse(anhang.groesse)} · ${Ablage.datum(anhang.erstellt)}"
+    // Aufgeklappt gehört der Platz dem Text: Die Datei rückt aus dem Bild, statt unter dem Text zu liegen.
+    var textOffen by rememberSaveable(anhang.id) { mutableStateOf(false) }
+    // Drehung des Bildes in Grad; -1 = wie in der Datei vermerkt (EXIF).
+    var grad by rememberSaveable(anhang.id) { mutableIntStateOf(-1) }
     Column(Modifier.fillMaxSize()) {
         var anpassen by remember { mutableIntStateOf(0) }
+        var drehen by remember { mutableIntStateOf(0) }
+        val zeigtDatei = !nurInfo && !textOffen && datei.isFile
         val mitAnpassen = anhang.art == Art.BILD || anhang.art == Art.PDF || anhang.art == Art.ANIMATION
         VorschauKopf(anhang.originalName, untertitel, freigabe, aktionen, { if (nurInfo) nurInfo = false else zurueck() }, loeschen,
-            zusatz = { if (mitAnpassen && !nurInfo) Rundknopf(Icons.Rounded.FitScreen, "An Bildschirm anpassen") { anpassen++ } },
-            info = { nurInfo = true })
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+            zusatz = { if (anhang.art == Art.BILD && zeigtDatei) Rundknopf(Icons.AutoMirrored.Rounded.RotateRight, "Im Uhrzeigersinn drehen") { drehen++ } },
+            info = { nurInfo = true }, anpassen = if (mitAnpassen && zeigtDatei) ({ anpassen++ }) else null)
+        if (nurInfo || !textOffen) Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
             if (nurInfo || !datei.isFile) {
                 InfoAnsicht(eintrag, anhang, freigabe, aktionen, if (!datei.isFile) "Die Datei fehlt im Speicher." else null)
             } else when (anhang.art) {
-                Art.BILD -> BildAnsicht(datei, anpassen, anhang, freigabe, aktionen)
+                Art.BILD -> BildAnsicht(datei, anpassen, anhang, freigabe, aktionen, drehen, grad) { grad = it }
                 Art.ANIMATION -> GifAnsicht(datei, anpassen)
                 Art.SVG -> SicheresWeb(svgHtml(datei), datei.length() > 5_000_000, anhang, freigabe, aktionen)
                 Art.PDF -> PdfAnsicht(datei, anpassen, anhang, eintrag, freigabe, aktionen)
@@ -188,23 +198,25 @@ fun AnhangVorschau(eintrag: Eintrag, anhang: Anhang, aktionen: AblageAktionen, z
                 else -> InfoAnsicht(eintrag, anhang, freigabe, aktionen, "Für diesen Dateityp gibt es keine eingebaute Vorschau.")
             }
         }
-        if (!nurInfo) Begleittext(text)
+        if (!nurInfo) Begleittext(text, textOffen, { textOffen = !textOffen }, if (textOffen) Modifier.weight(1f) else Modifier, fuellt = textOffen)
     }
 }
 
-/** Der Text zu einer Datei (etwa der Auftrag zu einem erzeugten Bild): eingeklappt, damit die Datei den Platz bekommt. */
+/**
+ * Der Text zu einer Datei (etwa der Auftrag zu einem erzeugten Bild): eingeklappt, damit die Datei den Platz bekommt.
+ * Mit [fuellt] nimmt der aufgeklappte Text die ganze Höhe, die [modifier] ihm gibt; sonst höchstens 280 dp.
+ */
 @Composable
-fun Begleittext(text: String) {
+fun Begleittext(text: String, offen: Boolean, umschalten: () -> Unit, modifier: Modifier = Modifier, fuellt: Boolean = false) {
     if (text.isBlank()) return
     val f = LocalFarben.current
-    var offen by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, erhoeht = 0.5f)) {
-        Row(Modifier.fillMaxWidth().antippen { offen = !offen }.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, erhoeht = 0.5f)) {
+        Row(Modifier.fillMaxWidth().antippen(aktion = umschalten).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Text zum Eintrag", Modifier.weight(1f), color = f.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Einklappen" else "Ausklappen", tint = f.textLeise)
         }
-        if (offen) SelectionContainer {
-            Text(markdownText(text, f.primaer), Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+        if (offen) SelectionContainer(if (fuellt) Modifier.weight(1f) else Modifier.heightIn(max = 280.dp)) {
+            Text(markdownText(text, f.primaer), Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
                 color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
         }
     }
@@ -218,7 +230,7 @@ fun Begleittext(text: String) {
  * Infografiken auch stark vergrößert scharf.
  */
 @Composable
-private fun BildAnsicht(datei: File, anpassen: Int, anhang: Anhang, freigabe: Freigabe, aktionen: AblageAktionen) {
+private fun BildAnsicht(datei: File, anpassen: Int, anhang: Anhang, freigabe: Freigabe, aktionen: AblageAktionen, drehen: Int, grad: Int, setzeGrad: (Int) -> Unit) {
     var fehler by remember { mutableStateOf(false) }
     if (fehler) {
         // Formate, die der Kachel-Decoder nicht kann (etwa HEIC auf manchen Geräten): verkleinert anzeigen.
@@ -226,26 +238,43 @@ private fun BildAnsicht(datei: File, anpassen: Int, anhang: Anhang, freigabe: Fr
         bild?.let { ZoomBild(it, anpassen, anhang.originalName) } ?: Hinweis("Dieses Bildformat kann die eingebaute Vorschau nicht anzeigen.", freigabe, aktionen)
         return
     }
-    KachelBildMitVollbild(datei, anpassen, anhang.originalName) { fehler = true }
+    KachelBildMitVollbild(datei, anpassen, anhang.originalName, drehen, grad, setzeGrad) { fehler = true }
 }
 
-/** Gekacheltes Bild; Antippen öffnet es bildschirmfüllend auf Schwarz (Zoom wie gewohnt), erneutes Antippen oder „Zurück“ schließt. */
+/**
+ * Gekacheltes Bild; Antippen öffnet es bildschirmfüllend auf Schwarz (Zoom wie gewohnt), erneutes Antippen oder „Zurück“ schließt.
+ * Jede Erhöhung von [drehen] dreht um 90 Grad im Uhrzeigersinn; [grad] hält die Drehung fest, damit das Vollbild sie übernimmt.
+ */
 @Composable
-private fun KachelBildMitVollbild(datei: File, anpassen: Int, beschreibung: String, beiFehler: () -> Unit) {
+private fun KachelBildMitVollbild(datei: File, anpassen: Int, beschreibung: String, drehen: Int = 0, grad: Int = -1, setzeGrad: (Int) -> Unit = {}, beiFehler: () -> Unit) {
     var vollbild by rememberSaveable(datei.path) { mutableStateOf(false) }
     if (vollbild) {
         Dialog({ vollbild = false }, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-            Box(Modifier.fillMaxSize().background(Color.Black)) { KachelBild(datei, 0, beschreibung, beiTipp = { vollbild = false }, schwarz = true) {} }
+            Box(Modifier.fillMaxSize().background(Color.Black)) { KachelBild(datei, 0, beschreibung, beiTipp = { vollbild = false }, schwarz = true, grad = grad) {} }
         }
     }
-    KachelBild(datei, anpassen, beschreibung, beiTipp = { vollbild = true }, beiFehler = beiFehler)
+    KachelBild(datei, anpassen, beschreibung, beiTipp = { vollbild = true }, drehen = drehen, grad = grad, setzeGrad = setzeGrad, beiFehler = beiFehler)
 }
 
 @Composable
-private fun KachelBild(datei: File, anpassen: Int, beschreibung: String, beiTipp: (() -> Unit)? = null, schwarz: Boolean = false, beiFehler: () -> Unit) {
+private fun KachelBild(
+    datei: File, anpassen: Int, beschreibung: String, beiTipp: (() -> Unit)? = null, schwarz: Boolean = false,
+    drehen: Int = 0, grad: Int = -1, setzeGrad: (Int) -> Unit = {}, beiFehler: () -> Unit,
+) {
     val f = LocalFarben.current
     val ansicht = remember { arrayOfNulls<SubsamplingScaleImageView>(1) }
     LaunchedEffect(anpassen) { if (anpassen > 0) ansicht[0]?.resetScaleAndCenter() }
+    var gedreht by remember { mutableIntStateOf(drehen) }
+    LaunchedEffect(drehen) {
+        val v = ansicht[0]
+        if (drehen != gedreht && v != null) {
+            gedreht = drehen
+            // Von der tatsächlich gezeigten Lage aus weiterdrehen (berücksichtigt die Drehung aus der Datei).
+            val neu = (v.appliedOrientation + 90) % 360
+            v.orientation = neu
+            setzeGrad(neu)
+        }
+    }
     AndroidView(
         factory = { ctx ->
             SubsamplingScaleImageView(ctx).apply {
@@ -254,7 +283,7 @@ private fun KachelBild(datei: File, anpassen: Int, beschreibung: String, beiTipp
                 setDoubleTapZoomStyle(SubsamplingScaleImageView.ZOOM_FOCUS_CENTER)
                 setDoubleTapZoomDpi(160)
                 maxScale = 12f
-                orientation = SubsamplingScaleImageView.ORIENTATION_USE_EXIF
+                orientation = if (grad in setOf(0, 90, 180, 270)) grad else SubsamplingScaleImageView.ORIENTATION_USE_EXIF
                 contentDescription = beschreibung
                 setOnImageEventListener(object : SubsamplingScaleImageView.DefaultOnImageEventListener() {
                     override fun onImageLoadError(e: Exception?) = beiFehler()

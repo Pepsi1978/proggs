@@ -50,8 +50,8 @@ class AblageAktionen internal constructor(
 
     fun textFreigabe(e: Eintrag): Freigabe? = speicher.textDatei(e)?.let { Freigabe(it, AblageSpeicher.dateiname(e.titel) + ".md", "text/markdown") }
 
-    /** Alle Dateien eines Eintrags: Text (falls vorhanden) und Anhänge. */
-    fun freigaben(e: Eintrag): List<Freigabe> = listOfNotNull(textFreigabe(e)) + e.anhaenge.map(::freigabe)
+    /** Was ein Eintrag nach außen gibt: seine Dateien. Der Text dazu (etwa der Auftrag zu einem Bild) geht nur mit, wenn es keine Datei gibt. */
+    fun freigaben(e: Eintrag): List<Freigabe> = if (e.anhaenge.isEmpty()) listOfNotNull(textFreigabe(e)) else e.anhaenge.map(::freigabe)
 
     fun herunterladen(dateien: List<Freigabe>) {
         if (dateien.isEmpty()) return

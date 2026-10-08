@@ -25,7 +25,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.BrightnessAuto
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Stop
@@ -205,6 +208,18 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean) {
             Rundknopf(Icons.Rounded.DeleteSweep, "Gespräch leeren") { vm.gespraechLeeren() }
             Spacer(Modifier.width(8.dp))
         }
+        // Hell → Automatisch (wie das System) → Dunkel → Hell, wie in Geniale Aufgaben. Das Symbol zeigt den aktuellen Modus.
+        val modus = vm.einstellungen.modus
+        Rundknopf(
+            when (modus) { "hell" -> Icons.Rounded.LightMode; "dunkel" -> Icons.Rounded.DarkMode; else -> Icons.Rounded.BrightnessAuto },
+            when (modus) { "hell" -> "Hell (weiter zu Automatisch)"; "dunkel" -> "Dunkel (weiter zu Hell)"; else -> "Automatisch (weiter zu Dunkel)" },
+            farbe = f.primaer,
+        ) {
+            val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
+            vm.einstellungen.modus = neu
+            vm.meldung = when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" }
+        }
+        Spacer(Modifier.width(8.dp))
         // Tagesauswertung jetzt neu erstellen: frische Daten aller Apps holen und alles neu auswerten.
         if (wertetAus) Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { Kern(34.dp, f.primaer, aktiv = true) }
         else Rundknopf(Icons.Rounded.Refresh, "Tagesauswertung aktualisieren", farbe = f.primaer) { vm.auswertungJetzt() }

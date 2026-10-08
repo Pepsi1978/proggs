@@ -208,7 +208,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             var sortMenue by remember { mutableStateOf(false) }
             Box {
                 Rundknopf(Icons.AutoMirrored.Rounded.Sort, "Sortieren: " + Sortierung.valueOf(sortierung).anzeige) { sortMenue = true }
-                DropdownMenu(sortMenue, { sortMenue = false }) {
+                Menue(sortMenue, { sortMenue = false }) {
                     Sortierung.entries.forEach { s ->
                         DropdownMenuItem({ Text(s.anzeige, fontWeight = if (s.name == sortierung) FontWeight.Bold else FontWeight.Normal) }, { sortierung = s.name; sortMenue = false })
                     }
@@ -293,7 +293,7 @@ private fun EintragZeile(e: Eintrag, gewaehlt: Boolean, aktionen: AblageAktionen
             Box(Modifier.size(48.dp).antippen { menue = true }.semantics { contentDescription = "Weitere Aktionen für „${e.titel}“" }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.MoreVert, null, tint = f.textLeise)
             }
-            DropdownMenu(menue, { menue = false }) {
+            Menue(menue, { menue = false }) {
                 alleDateien.singleOrNull()?.let { einzige ->
                     DropdownMenuItem({ Text("Mit anderer App öffnen") }, { menue = false; aktionen.oeffnen(einzige) }, leadingIcon = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, null) })
                     DropdownMenuItem({ Text("Speichern unter …") }, { menue = false; aktionen.speichernUnter(einzige) }, leadingIcon = { Icon(Icons.Rounded.SaveAs, null) })
@@ -357,7 +357,7 @@ private fun EintragAnsicht(vm: AppViewModel, e: Eintrag, aktionen: AblageAktione
             }
         }
         if (e.hatText) {
-            if (e.hatDateien) Begleittext(text)
+            if (e.hatDateien) { var offen by rememberSaveable(e.id) { mutableStateOf(false) }; Begleittext(text, offen, { offen = !offen }) }
             else Box(Modifier.weight(1f)) { LeseText(text, "md", markdown = true, gekuerzt = false, gesamt = textDatei?.length() ?: 0) }
         }
     }
@@ -381,7 +381,7 @@ private fun AnhangZeile(e: Eintrag, a: Anhang, aktionen: AblageAktionen, oeffne:
             Box(Modifier.size(48.dp).antippen { menue = true }.semantics { contentDescription = "Weitere Aktionen für „${a.originalName}“" }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.MoreVert, null, tint = f.textLeise)
             }
-            DropdownMenu(menue, { menue = false }) {
+            Menue(menue, { menue = false }) {
                 DropdownMenuItem({ Text("Mit anderer App öffnen") }, { menue = false; aktionen.oeffnen(freigabe) }, leadingIcon = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, null) })
                 DropdownMenuItem({ Text("Speichern unter …") }, { menue = false; aktionen.speichernUnter(freigabe) }, leadingIcon = { Icon(Icons.Rounded.SaveAs, null) })
                 DropdownMenuItem({ Text("Löschen", color = f.gefahr) }, { menue = false; loeschen() }, leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = f.gefahr) })
@@ -455,6 +455,16 @@ private fun kategorieSymbol(k: Kategorie): ImageVector = when (k) {
     Kategorie.AUDIO -> Icons.Rounded.AudioFile
     Kategorie.VIDEO -> Icons.Rounded.VideoFile
     Kategorie.SONSTIGE -> Icons.Rounded.InsertDriveFile
+}
+
+/** Aufklappmenü in den Farben der App (helle bzw. blaue Glasfläche mit Rand) statt der dunklen Standardfläche. */
+@Composable
+fun Menue(offen: Boolean, schliessen: () -> Unit, inhalt: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val f = LocalFarben.current
+    androidx.compose.material3.DropdownMenu(
+        offen, schliessen, shape = RoundedCornerShape(f.radius), containerColor = if (f.dunkel) androidx.compose.ui.graphics.Color(0xFF14294A) else androidx.compose.ui.graphics.Color(0xFFFAFDFF),
+        tonalElevation = 0.dp, shadowElevation = 10.dp, border = androidx.compose.foundation.BorderStroke(1.dp, f.rand), content = inhalt,
+    )
 }
 
 /** Kleiner runder Glasknopf mit Symbol, für die Kopfzeilen (48 dp Tippfläche, Beschriftung für Bildschirmleser). */

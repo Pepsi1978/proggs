@@ -230,9 +230,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         Abschnitt("GitHub-Repo")
         Karte {
             val mitSchluessel = e.githubToken.isNotBlank()
-            Zeile("Lesen und Ändern", if (mitSchluessel) "Lesen und Ändern" else "Nur Lesen", if (mitSchluessel) f.erfolg else f.textLeise)
-            Text("Jarvis liest dein Repo auch ohne Schlüssel. Zum Ändern und für die Code-Suche braucht es einen Zugriffsschlüssel: GitHub → Settings → Developer settings → Fine-grained tokens, " +
-                "nur für dieses Repo, mit „Contents“ und „Pull requests“ auf „Read and write“. Damit kann Jarvis wie Codex committen und pushen, direkt auf main oder über einen Zweig mit Pull Request, den es selbst zusammenführt.",
+            Zeile("Nur lesen", if (mitSchluessel) "Mit Code-Suche" else "Ohne Schlüssel", if (mitSchluessel) f.erfolg else f.textLeise)
+            Text("Jarvis liest dein ganzes Repo und wertet es aus, ändert dort aber nie etwas. Das geht ohne Schlüssel (60 Abfragen je Stunde). Für die Code-Suche und mehr Abfragen: " +
+                "GitHub → Settings → Developer settings → Fine-grained tokens, Zugriff „Public repositories (read-only)“ genügt.",
                 color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
             Schluesselfeld(vm, "Repo", e.repoName, geheim = false) { e.repoName = it }
             Schluesselfeld(vm, "GitHub-Schlüssel", e.githubToken) { e.githubToken = it }

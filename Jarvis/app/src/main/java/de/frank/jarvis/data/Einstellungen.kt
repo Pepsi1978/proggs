@@ -92,7 +92,7 @@ class Einstellungen private constructor(context: Context) {
 
     // ---- Repo auf GitHub ----
     var repoName: String get() = s("repo_name", "").ifEmpty { "Pepsi1978/proggs" }; set(v) = put { putString("repo_name", v.trim().removePrefix("https://github.com/").trim('/')) }
-    /** Zugriffsschlüssel für GitHub. Lesen geht beim öffentlichen Repo auch ohne, Ändern und die Code-Suche nur mit. */
+    /** Zugriffsschlüssel für GitHub. Lesen geht beim öffentlichen Repo auch ohne; er erlaubt die Code-Suche und mehr Abfragen. Jarvis schreibt nie. */
     var githubToken: String get() = s("github_token", ""); set(v) = put { putString("github_token", v.trim()) }
 
     // ---- Google-Zugang für „Berechtigung erneuern“ (Tagebuch) ----
