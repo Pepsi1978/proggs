@@ -170,7 +170,7 @@ eingegangener Mails wird den Modellen als fremde Information gekennzeichnet, nie
 - **Mitdenken** (`faehigkeit/Mitdenken.kt`): Zu Tag und Uhrzeit einer Aufgabe, eines Termins oder eines Weckers prüft Jarvis nach
   festen Regeln den Dienst und die Schlafzeiten (`KalenderFaehigkeit.lage`), überschneidende Termine und bei Vorhaben im Freien das
   Wetter. Das Ergebnis hängt als Abschnitt MITGEDACHT an der Antwort des Werkzeugs; das Sprachmodell sagt Frank, was davon zählt.
-  Es gilt: Tagdienst belegt 4:00 bis etwa 18:15 Uhr (Rückkehr), davor Schlaf ab 20 Uhr am Vorabend; Nachtdienst ab 16:00 Uhr,
+  Es gilt: Tagdienst belegt 4:00 bis etwa 18:15 Uhr (Rückkehr), davor Schlaf ab 20 Uhr am Vorabend; Nachtdienst ab 16:15 Uhr,
   Rückkehr gegen 5:50 Uhr, danach Schlaf bis etwa 15 Uhr.
 
 ## Tagebuch
@@ -210,7 +210,7 @@ laufen davon unberührt weiter. Ohne eingerichtete Gerätesperre bleibt die App 
 ## Dienstplan
 
 Der Dienstplan steht als Ganztagstermine im Kalender und wird in `faehigkeit/KalenderFaehigkeit.kt` ausgewertet:
-„Nacht 1“ bis „Nacht 4“ = Nachtdienst (Abfahrt etwa 16:00 Uhr), „Tag 1“ bis „Tag 4“ = Tagdienst (Abfahrt etwa 4:30 Uhr).
+„Nacht 1“ bis „Nacht 4“ = Nachtdienst (Abfahrt etwa 16:15 Uhr), „Tag 1“ bis „Tag 4“ = Tagdienst (Abfahrt etwa 4:30 Uhr).
 Steht am selben Tag „X“ oder „F“, ist frei, bei „U“ Urlaub; der Diensteintrag bleibt im Kalender stehen und entfällt.
 Tage ohne Diensteintrag sind frei. Die Abfahrtszeiten stehen als Konstanten in derselben Datei.
 
