@@ -96,30 +96,16 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         Abschnitt("ChatGPT-Plugin")
         Karte {
             val (stand, farbe) = when (tunnel.stufe) {
-                TunnelStufe.ONLINE -> ("Online" + if (tunnel.pingMs >= 0) " · ${tunnel.pingMs} ms" else "") to f.erfolg
+                TunnelStufe.ONLINE -> "Online" to f.erfolg
                 TunnelStufe.VERBINDET -> tunnel.meldung to f.primaer
-                TunnelStufe.KEIN_TOKEN -> "Schlüssel fehlt" to f.textLeise
+                TunnelStufe.NICHT_EINGERICHTET -> "Nicht eingerichtet" to f.textLeise
                 TunnelStufe.FEHLER -> tunnel.meldung to f.gefahr
                 TunnelStufe.AUS -> "Aus" to f.textLeise
             }
-            Zeile("Tunnel zum Handy", stand, farbe)
+            Zeile("Verbindung zum Server", stand, farbe)
+            Text("Jarvis hält von sich aus eine Verbindung zu deinem Server. ChatGPT ruft den Server an, der reicht den Aufruf ans Handy weiter.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
 
-            var token by rememberSaveable { mutableStateOf(e.tunnelToken) }
-            var domain by rememberSaveable { mutableStateOf(e.tunnelDomain) }
-            Unterzeile("Tunnel-Schlüssel (ngrok-Authtoken)")
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Eingabe(token, { token = it }, "Authtoken einfügen", Modifier.weight(1f), geheim = true)
-                Spacer(Modifier.width(8.dp))
-                Knopf("Einfügen", icon = Icons.Rounded.ContentPaste, haupt = false) { vm.ausZwischenablage().takeIf { it.isNotEmpty() }?.let { token = it } }
-            }
-            Unterzeile("Feste Adresse (empfohlen)")
-            Eingabe(domain, { domain = it }, "z. B. dein-name.ngrok-free.app", Modifier.fillMaxWidth())
-            Text("Mit fester Adresse bleibt das Plugin in ChatGPT dauerhaft gültig. Du findest sie im ngrok-Konto unter „Domains“.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            if (token.trim() != e.tunnelToken || domain.trim() != e.tunnelDomain) {
-                Knopf("Speichern und verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.tunnelSpeichern(token, domain) }
-            }
-
-            val adresse = vm.pluginAdresse(tunnel.adresse)
+            val adresse = vm.pluginAdresse
             if (adresse.isNotEmpty()) {
                 Unterzeile("Plugin-Adresse für ChatGPT")
                 Text(adresse, Modifier.fillMaxWidth().glas(f, 14.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(14.dp), color = f.text, fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
@@ -131,12 +117,26 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 }
                 Text("Die Adresse ist dein Schlüssel: Wer sie kennt, kann deine Aufgaben lesen und ändern. Gib sie nur in ChatGPT ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             }
+
+            // Nur nötig, wenn die App ohne eingebaute Server-Daten gebaut wurde (z. B. in der Cloud).
+            if (tunnel.stufe == TunnelStufe.NICHT_EINGERICHTET || (tunnel.stufe == TunnelStufe.FEHLER && "Schlüssel" in tunnel.meldung)) {
+                var host by rememberSaveable { mutableStateOf(e.serverHost) }
+                var token by rememberSaveable { mutableStateOf("") }
+                Unterzeile("Server-Adresse")
+                Eingabe(host, { host = it }, "z. B. srv1774016.hstgr.cloud", Modifier.fillMaxWidth())
+                Unterzeile("Server-Schlüssel")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Eingabe(token, { token = it }, "Schlüssel einfügen", Modifier.weight(1f), geheim = true)
+                    Spacer(Modifier.width(8.dp))
+                    Knopf("Einfügen", icon = Icons.Rounded.ContentPaste, haupt = false) { vm.ausZwischenablage().takeIf { it.isNotEmpty() }?.let { token = it } }
+                }
+                Knopf("Speichern und verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.serverSpeichern(host, token) }
+            }
         }
 
         Karte {
             Text("So kommt Jarvis in ChatGPT", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             listOf(
-                "Auf ngrok.com kostenlos anmelden. Unter „Your Authtoken“ den Schlüssel kopieren und oben einfügen. Unter „Domains“ steht deine feste Adresse.",
                 "Warten, bis oben „Online“ steht. Dann die Plugin-Adresse kopieren oder an den PC teilen.",
                 "Am PC chatgpt.com öffnen: Einstellungen → Apps und Konnektoren → Erweitert → Entwicklermodus einschalten.",
                 "Dort „Erstellen“ wählen: Name „Jarvis“, als MCP-Server-URL die Plugin-Adresse, Authentifizierung „Keine“. Bestätigen.",

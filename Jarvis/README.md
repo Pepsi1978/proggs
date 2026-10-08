@@ -15,22 +15,35 @@ Erste angebundene App: **Geniale Aufgaben** (`de.frank.aufgaben`).
 ## Aufbau
 
 ```
-ChatGPT (Cloud) ──HTTPS──> ngrok-Adresse ──Tunnel──> Jarvis-App ──ContentProvider──> Geniale Aufgaben
-                                                     └─ MCP-Server (127.0.0.1:8765)
+ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket──> Jarvis-App ──ContentProvider──> Geniale Aufgaben
+                           srv1774016.hstgr.cloud                       └─ MCP-Server
 ```
 
-- **Tunnel** (`tunnel/Tunnel.kt`): Das ngrok-SDK läuft in der App und baut die Verbindung vom Handy nach außen auf.
-  Kein eigener Server, kein offener Port. Braucht den Authtoken eines (kostenlosen) ngrok-Kontos; mit der festen
-  Adresse des Kontos bleibt die Plugin-Adresse dauerhaft gleich.
-- **MCP-Server** (`mcp/`): Streamable HTTP, zustandslos, nur JSON-Antworten (kein Server-Stream, keine Sitzungen).
-  Erreichbar nur unter `/j/<Geheimnis>/mcp`; alles andere ist 404. Das Geheimnis (40 Zeichen) ist der Zugangsschutz,
-  weil ChatGPT-Konnektoren ohne Anmeldung arbeiten. Es lässt sich in den Einstellungen erneuern.
-- **Dienst** (`dienst/JarvisDienst.kt`): Vordergrunddienst (Typ `specialUse`), hält Server und Tunnel auch bei
-  gesperrtem Handy am Leben, startet nach dem Einschalten und nach Updates von selbst.
+- **Relay** (`server/`): kleiner Dienst auf dem Hostinger-Server, die öffentliche Gegenstelle. Er nimmt
+  `POST /j/<Geheimnis>/mcp` an und reicht den Aufruf über eine WebSocket ans Handy weiter. Der MCP-Server selbst
+  läuft auf dem Handy; der Relay kennt keine Werkzeuge. Ist das Handy kurz weg, wartet er 8 Sekunden, beantwortet
+  `initialize` und `tools/list` aus dem Zwischenspeicher und meldet bei Werkzeugaufrufen „Handy nicht erreichbar“.
+- **Verbindung** (`tunnel/Tunnel.kt`): Die App baut die WebSocket von sich aus auf (`wss://<Server>/geraet/ws`),
+  weist sich mit dem Server-Schlüssel aus und nennt ihr Geheimnis. Bricht sie ab, wird sie neu aufgebaut
+  (2 bis 30 Sekunden Pause, sofort bei zurückkehrendem Netz). Das Handy braucht keinen offenen Port.
+- **MCP-Server** (`mcp/McpServer.kt`): zustandslos, nur JSON-Antworten (kein Server-Stream, keine Sitzungen).
+- **Dienst** (`dienst/JarvisDienst.kt`): Vordergrunddienst (Typ `specialUse`), hält die Verbindung auch bei
+  gesperrtem Handy, startet nach dem Einschalten und nach Updates von selbst.
 - **Werkzeuge** (`faehigkeit/`): Jede angebundene App ist eine `Faehigkeit` mit einer Liste von `Werkzeug`en.
   Plugin, eigener Chat und Oberfläche lesen alle dasselbe `Register`.
 - **Agent** (`agent/JarvisAgent.kt`): Schleife Modell → Werkzeug → Ergebnis, höchstens 8 Schritte. Werkzeugaufrufe
   laufen über ein festes JSON-Format im Antworttext, damit jedes Text-Modell Jarvis antreiben kann.
+
+## Zugangsschutz
+
+- **Plugin-Adresse:** `https://<Server>/j/<Geheimnis>/mcp`. Das Geheimnis (40 Zeichen) erzeugt die App; nur das
+  zuletzt vom Handy gemeldete gilt. Alles andere beantwortet der Server mit 404. ChatGPT-Konnektoren arbeiten
+  ohne Anmeldung, deshalb ist diese Adresse der Schlüssel. Erneuern: Einstellungen → Plugin-Adresse erneuern.
+- **Server-Schlüssel:** Nur ein Handy mit dem Schlüssel aus `~/SK/Jarvis/relay.properties` (`host`, `token`) darf
+  sich am Relay anmelden. Der Bau backt beides in die App; fehlt die Datei (Bau in der Cloud), trägt man Adresse
+  und Schlüssel in der App unter Einstellungen ein.
+- Am Server ist dafür Port 443 öffentlich (IPv4 und IPv6), aber nur dieser eine Dienst hängt daran. Second Brain,
+  Werft und Dashboard bleiben an der WireGuard-Adresse.
 
 ## Werkzeuge im Plugin
 
@@ -50,12 +63,25 @@ geratenen Änderung. Ein wiederholter identischer Anlege-Aufruf innerhalb von 90
 
 ## Einrichten
 
-1. Auf ngrok.com anmelden, Authtoken und feste Adresse (Domains) in Jarvis → Einstellungen eintragen.
-2. In Jarvis mit ChatGPT verbinden (Gerätecode) und Modell wählen.
-3. Plugin-Adresse kopieren. Am PC auf chatgpt.com: Einstellungen → Apps und Konnektoren → Erweitert →
-   Entwicklermodus → Erstellen: Name „Jarvis“, MCP-Server-URL = Plugin-Adresse, Authentifizierung „Keine“.
-4. Akku-Sparen für Jarvis ausschalten (Knopf in der App); bei Samsung Jarvis zusätzlich unter
+1. Jarvis öffnen, mit ChatGPT verbinden (Gerätecode), Modell wählen.
+2. Unter Einstellungen die Plugin-Adresse kopieren. Am PC auf chatgpt.com: Einstellungen → Apps und Konnektoren →
+   Erweitert → Entwicklermodus → Erstellen: Name „Jarvis“, MCP-Server-URL = Plugin-Adresse, Authentifizierung „Keine“.
+3. Akku-Sparen für Jarvis ausschalten (Knopf in der App); bei Samsung Jarvis zusätzlich unter
    „Nie in Standby versetzen“ eintragen.
+
+## Server ausrollen
+
+Wie beim Second Brain liegt auf dem Server kein Git. Dateien hochladen und neu bauen:
+
+```
+scp -i ~/SK/second-brain/id_ed25519 server/compose.yaml server/Caddyfile root@168.231.83.205:/opt/jarvis/
+scp -i ~/SK/second-brain/id_ed25519 server/relay/relay.py server/relay/Dockerfile root@168.231.83.205:/opt/jarvis/relay/
+ssh -i ~/SK/second-brain/id_ed25519 root@168.231.83.205 "cd /opt/jarvis && docker compose up -d --build"
+```
+
+`/opt/jarvis/.env` enthält `JARVIS_GERAET_TOKEN` (Kopie: `~/SK/Jarvis/server.env`). Für IPv6 gibt es die
+UFW-Regel „Jarvis-Relay (IPv6)“; IPv4 läuft über Dockers Portfreigabe an der Firewall vorbei.
+Prüfen von außen: `curl -4 -o /dev/null -w "%{http_code}" https://srv1774016.hstgr.cloud/` muss 404 liefern.
 
 ## Eine weitere App anbinden
 

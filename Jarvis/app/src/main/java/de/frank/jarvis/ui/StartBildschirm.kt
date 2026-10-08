@@ -69,9 +69,9 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         Schritt("Mit ChatGPT verbinden", "Gibt Jarvis sein eigenes Denken. Einmal anmelden, fertig.", vm.kiVerbunden, "Verbinden") { vm.reiter = Reiter.EINSTELLUNGEN; vm.kiVerbinden(activity) },
         Schritt("Geniale Aufgaben", vm.aufgabenStoerung ?: "Angebunden: lesen und schreiben.", vm.aufgabenGeprueft && vm.aufgabenStoerung == null, "Prüfen") { vm.lagePruefen() },
         Schritt(
-            "Tunnel zum Handy",
-            if (tunnel.stufe == TunnelStufe.FEHLER) tunnel.meldung else "Macht Jarvis für ChatGPT erreichbar. Braucht einmalig den Schlüssel aus dem ngrok-Konto.",
-            tunnel.stufe == TunnelStufe.ONLINE, "Einrichten",
+            "Verbindung zum Server",
+            if (tunnel.stufe == TunnelStufe.FEHLER) tunnel.meldung else "Jarvis verbindet sich von selbst mit deinem Server und ist dann für ChatGPT erreichbar.",
+            tunnel.stufe == TunnelStufe.ONLINE, "Ansehen",
         ) { vm.reiter = Reiter.EINSTELLUNGEN },
         Schritt("Plugin in ChatGPT eintragen", "Adresse kopieren und in ChatGPT als eigenen Konnektor „Jarvis“ anlegen.", pluginGenutzt, "Anleitung") { vm.reiter = Reiter.EINSTELLUNGEN },
         Schritt("Im Hintergrund wach bleiben", "Damit Jarvis auch bei gesperrtem Handy antwortet.", vm.akkuFrei, "Erlauben") {
@@ -139,7 +139,7 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand) {
     val (zeile, farbe) = when (tunnel.stufe) {
         TunnelStufe.ONLINE -> "Online · bereit für ChatGPT" to f.erfolg
         TunnelStufe.VERBINDET -> tunnel.meldung to f.primaer
-        TunnelStufe.KEIN_TOKEN -> "Tunnel noch nicht eingerichtet" to f.textLeise
+        TunnelStufe.NICHT_EINGERICHTET -> "Server noch nicht eingerichtet" to f.textLeise
         TunnelStufe.FEHLER -> tunnel.meldung to f.gefahr
         TunnelStufe.AUS -> "Ausgeschaltet" to f.textLeise
     }

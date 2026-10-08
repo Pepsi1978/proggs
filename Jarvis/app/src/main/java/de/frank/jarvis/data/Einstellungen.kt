@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.auth.ReasoningEffort
 import java.security.SecureRandom
@@ -41,13 +42,15 @@ class Einstellungen private constructor(context: Context) {
         get() = ReasoningEffort.entries.firstOrNull { it.name == s("reasoning", "") } ?: ReasoningEffort.LOW
         set(v) = put { putString("reasoning", v.name) }
 
-    // ---- Plugin und Tunnel ----
-    /** Authtoken des ngrok-Kontos; ohne ihn gibt es keinen Tunnel. */
-    var tunnelToken: String get() = s("tunnel_token", ""); set(v) = put { putString("tunnel_token", v.trim()) }
-    /** Feste Adresse des Kontos (z. B. name.ngrok-free.app); leer = ngrok vergibt eine. */
-    var tunnelDomain: String
-        get() = s("tunnel_domain", "")
-        set(v) = put { putString("tunnel_domain", v.trim().removePrefix("https://").removePrefix("http://").trimEnd('/')) }
+    // ---- Plugin und Server ----
+    /** Adresse des eigenen Servers (Jarvis-Relay). Vorgabe aus dem Bau, hier nur zum Überschreiben. */
+    var serverHost: String
+        get() = s("server_host", "").ifEmpty { BuildConfig.RELAY_HOST }
+        set(v) = put { putString("server_host", v.trim().removePrefix("https://").removePrefix("wss://").trimEnd('/')) }
+    /** Schlüssel, mit dem sich dieses Handy am Server ausweist. Vorgabe aus dem Bau (~/SK/Jarvis). */
+    var serverToken: String
+        get() = s("server_token", "").ifEmpty { BuildConfig.RELAY_TOKEN }
+        set(v) = put { putString("server_token", v.trim()) }
     /** Der Dienst läuft, sobald die App einmal geöffnet wurde; hier lässt er sich abschalten. */
     var dienstAn: Boolean get() = prefs.getBoolean("dienst_an", true); set(v) = put { putBoolean("dienst_an", v) }
 
@@ -71,7 +74,6 @@ class Einstellungen private constructor(context: Context) {
 
     companion object {
         const val NAME = "jarvis_secure_prefs"
-        const val PORT = 8765
         @Volatile private var instanz: Einstellungen? = null
         fun get(context: Context): Einstellungen = instanz ?: synchronized(this) {
             instanz ?: Einstellungen(context).also { instanz = it }

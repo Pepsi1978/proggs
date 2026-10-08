@@ -502,3 +502,9 @@ damit diese Bugs gar nicht entstehen (erst Almanach lesen, dann Best Practices).
 | §6 Linux-VPS-Ops (Updates/Swap/Disk/NTP) | §7 Auto-Updates/Logs/NTP/Swap |
 | §7 Ops-Sicherheit (fail2ban/UFW/SSH) | §6 SSH-Hardening/UFW/fail2ban |
 | (praeventiv, kein direkter Bug-Gegenpart) | §8 Monitoring/Uptime-Alarm · §9 Backup 3-2-1 + Restore-Test |
+
+## Nachtrag 08.10.2026 16:02: Hostname mit IPv6-Eintrag, Dienst nur an IPv4 gebunden (Jarvis-Relay, eigener Befund)
+- **Symptom:** Von außen antwortet `https://srv1774016.hstgr.cloud` mit `curl -4` sofort, ohne `-4` erst nach dem vollen Zeitlimit. Das Handy (OkHttp 4.12) brauchte 15 s bis zur ersten Verbindung, ein Python-Client 90 s pro Aufruf.
+- **Ursache:** Der Hostinger-Hostname hat neben dem A- auch einen AAAA-Eintrag. Der Caddy-Container war nur an die IPv4-Adresse veröffentlicht. Clients, die IPv6 zuerst versuchen, warten ihr Verbindungs-Zeitlimit ab, bevor sie auf IPv4 wechseln.
+- **Fix:** Im Compose zusätzlich `"[<IPv6-Adresse>]:443:443"` veröffentlichen UND den Port in UFW für IPv6 freigeben (`ufw allow proto tcp to <IPv6-Adresse> port 443`). Dockers Portfreigabe umgeht UFW nur bei IPv4; bei IPv6 lauscht der Userland-Proxy auf dem Host, und die INPUT-Kette (Policy DROP) verwirft die Pakete.
+- **Prüfen:** `nslookup -type=AAAA <host>` vor dem ersten öffentlichen Dienst; am Server `ss -tlnp | grep :443` und `curl --resolve <host>:443:[<IPv6>] https://<host>/`.

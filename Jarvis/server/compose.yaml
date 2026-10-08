@@ -1,0 +1,50 @@
+# Jarvis-Relay (Hostinger-VPS, /opt/jarvis). Einziger öffentlicher HTTP-Dienst des Servers.
+# Deploy: Dateien per scp nach /opt/jarvis, dann `docker compose up -d --build` (siehe README).
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "3"
+
+services:
+  relay:
+    build: ./relay
+    container_name: jarvis-relay
+    logging: *logging
+    restart: unless-stopped
+    env_file:
+      - .env                      # JARVIS_GERAET_TOKEN (NICHT im Repo, liegt in ~/SK/Jarvis/)
+    volumes:
+      - relay_data:/data          # gemerktes Geheimnis + Werkzeugliste, überlebt Neustarts
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    container_name: jarvis-caddy
+    logging: *logging
+    restart: unless-stopped
+    depends_on:
+      - relay
+    ports:
+      # Bewusst NUR die öffentliche IP und NUR 443. Die WireGuard-Dienste an 10.8.0.1 bleiben unberührt.
+      - "168.231.83.205:443:443"
+      # Der Hostname hat auch einen IPv6-Eintrag. Ohne diese Zeile warten IPv6-Clients erst ihr Zeitlimit ab.
+      - "[2a02:4780:7:1f3b::1]:443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data          # Zertifikat PERSISTENT (sonst Rate-Limit, bugs/server/reverse-proxy-tls.md §1.2)
+      - caddy_config:/config
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+
+volumes:
+  relay_data:
+  caddy_data:
+  caddy_config:

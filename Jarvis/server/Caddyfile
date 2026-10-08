@@ -1,0 +1,21 @@
+# Öffentliche Gegenstelle NUR für Jarvis. Getrennt vom Second-Brain-Caddy (der bleibt an 10.8.0.1).
+# Zertifikat: Let's Encrypt über TLS-ALPN auf Port 443, Port 80 bleibt zu.
+{
+	admin off
+}
+
+srv1774016.hstgr.cloud {
+	@jarvis path /j/*/mcp /geraet/ws
+	handle @jarvis {
+		reverse_proxy relay:8080 {
+			# Werkzeugaufrufe dürfen dauern; Antworten sofort durchreichen.
+			flush_interval -1
+			transport http {
+				response_header_timeout 90s
+			}
+		}
+	}
+	handle {
+		respond 404
+	}
+}

@@ -1,130 +1,135 @@
 package de.frank.jarvis.tunnel
 
 import android.util.Log
-import com.ngrok.Forwarder
-import com.ngrok.Session
-import java.net.URL
-import java.time.Duration
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import org.json.JSONObject
 
-enum class TunnelStufe { AUS, KEIN_TOKEN, VERBINDET, ONLINE, FEHLER }
+enum class TunnelStufe { AUS, NICHT_EINGERICHTET, VERBINDET, ONLINE, FEHLER }
 
 data class TunnelZustand(
     val stufe: TunnelStufe = TunnelStufe.AUS,
-    /** Öffentliche Adresse des Tunnels (https://…), solange er steht. */
-    val adresse: String = "",
     val meldung: String = "",
-    /** Dauer des letzten Lebenszeichens in Millisekunden; -1 = noch keines. */
-    val pingMs: Long = -1,
 )
 
 /**
- * Der Tunnel vom Internet direkt in die App: ngrok vergibt eine öffentliche HTTPS-Adresse und leitet jede
- * Anfrage an den MCP-Server auf diesem Handy weiter. Die Verbindung baut das Handy selbst nach außen auf —
- * es braucht keinen eigenen Server und keinen offenen Port.
+ * Die Verbindung nach draußen: Jarvis baut von sich aus eine WebSocket zum eigenen Server auf
+ * (Jarvis-Relay, siehe `Jarvis/server`). ChatGPT spricht die öffentliche Adresse des Servers an,
+ * der Server reicht jeden Aufruf über diese Verbindung ans Handy weiter und die Antwort zurück.
+ * Das Handy braucht dafür keinen offenen Port; bricht die Verbindung ab, wird sie neu aufgebaut.
  */
 object Tunnel {
     private const val TAG = "JarvisTunnel"
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /** Werkzeugaufrufe laufen nebeneinander, damit ein langer Auftrag kurze Aufrufe nicht aufhält. */
+    private val arbeiter = Executors.newFixedThreadPool(4)
+    private val client = OkHttpClient.Builder()
+        .pingInterval(20, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(0, TimeUnit.SECONDS)
+        .build()
+
     private val _zustand = MutableStateFlow(TunnelZustand())
     val zustand: StateFlow<TunnelZustand> = _zustand.asStateFlow()
 
     private var lauf: Job? = null
-    private var sitzung: Session? = null
-    private var weiterleitung: Forwarder.Endpoint? = null
+    private var socket: WebSocket? = null
+    private var aktuell: Triple<String, String, String>? = null
+    /** Weckt die Warteschleife sofort, z. B. wenn das Netz zurück ist. */
+    private val anstoss = Channel<Unit>(Channel.CONFLATED)
 
+    /** [verarbeite] bekommt den Rumpf eines MCP-Aufrufs und liefert die Antwort (null = nichts zu antworten). */
     @Synchronized
-    fun starte(token: String, festeAdresse: String, port: Int) {
+    fun starte(host: String, token: String, geheimnis: String, verarbeite: (String) -> String?) {
+        // Unveränderte Daten und die Schleife läuft: nichts tun. Sonst risse jedes Öffnen der App die Verbindung kurz ab.
+        val daten = Triple(host, token, geheimnis)
+        if (daten == aktuell && lauf?.isActive == true) return
         stoppe()
-        if (token.isBlank()) {
-            _zustand.value = TunnelZustand(TunnelStufe.KEIN_TOKEN, meldung = "Tunnel-Schlüssel fehlt")
+        aktuell = daten
+        if (host.isBlank() || token.isBlank()) {
+            _zustand.value = TunnelZustand(TunnelStufe.NICHT_EINGERICHTET, "Server nicht eingerichtet")
             return
         }
         lauf = bereich.launch {
-            var pause = 3_000L
+            var pause = 2_000L
             while (isActive) {
-                _zustand.value = TunnelZustand(TunnelStufe.VERBINDET, meldung = "Tunnel wird aufgebaut …")
-                try {
-                    com.ngrok.NgrokStart.lade()
-                    val neu = Session.withAuthtoken(token)
-                        .metadata("Jarvis")
-                        .heartbeatInterval(Duration.ofSeconds(20))
-                        .heartbeatTolerance(Duration.ofSeconds(15))
-                        .heartbeatHandler(object : Session.HeartbeatHandler {
-                            override fun heartbeat(durationMs: Long) {
-                                val z = _zustand.value
-                                if (z.adresse.isNotEmpty()) _zustand.value = z.copy(stufe = TunnelStufe.ONLINE, meldung = "Online", pingMs = durationMs)
-                            }
+                _zustand.value = TunnelZustand(TunnelStufe.VERBINDET, "Verbinde mit dem Server …")
+                val ende = Channel<String>(Channel.CONFLATED)
+                val anfrage = Request.Builder()
+                    .url("wss://$host/geraet/ws")
+                    .header("X-Jarvis-Token", token)
+                    .header("X-Jarvis-Geheimnis", geheimnis)
+                    .build()
+                val ws = client.newWebSocket(anfrage, object : WebSocketListener() {
+                    override fun onOpen(webSocket: WebSocket, response: Response) {
+                        pause = 2_000L
+                        _zustand.value = TunnelZustand(TunnelStufe.ONLINE, "Online")
+                        Log.i(TAG, "Verbunden mit $host")
+                    }
 
-                            override fun timeout() {
-                                // ngrok verbindet von selbst neu; bis dahin ehrlich anzeigen.
-                                _zustand.value = _zustand.value.copy(stufe = TunnelStufe.VERBINDET, meldung = "Verbindung unterbrochen, verbinde neu …")
-                            }
-                        })
-                        .connect()
-                    val bauplan = neu.httpEndpoint().apply { if (festeAdresse.isNotBlank()) domain(festeAdresse) }
-                    val ziel = neu.forwardHttp(bauplan, URL("http://127.0.0.1:$port"))
-                    synchronized(this@Tunnel) { sitzung = neu; weiterleitung = ziel }
-                    _zustand.value = TunnelZustand(TunnelStufe.ONLINE, adresse = ziel.url.trimEnd('/'), meldung = "Online")
-                    Log.i(TAG, "Tunnel steht: ${ziel.url}")
-                    // Blockiert, bis die Weiterleitung endet (Abbruch, Kontoproblem, Sitzung geschlossen).
-                    ziel.join()
-                    pause = 3_000L
-                } catch (e: Throwable) {
-                    if (!isActive) break
-                    Log.w(TAG, "Tunnel fehlgeschlagen", e)
-                    _zustand.value = TunnelZustand(TunnelStufe.FEHLER, meldung = deute(e))
-                }
-                schliesse()
+                    override fun onMessage(webSocket: WebSocket, text: String) {
+                        arbeiter.execute {
+                            val nachricht = runCatching { JSONObject(text) }.getOrNull() ?: return@execute
+                            val antwort = runCatching { verarbeite(nachricht.optString("rumpf")) }
+                                .getOrElse { """{"jsonrpc":"2.0","id":null,"error":{"code":-32603,"message":"Interner Fehler in Jarvis"}}""" }
+                            webSocket.send(JSONObject().put("id", nachricht.optString("id")).put("antwort", antwort ?: JSONObject.NULL).toString())
+                        }
+                    }
+
+                    override fun onClosing(webSocket: WebSocket, code: Int, reason: String) { webSocket.close(1000, null) }
+
+                    override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { ende.trySend("") }
+
+                    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                        Log.w(TAG, "Verbindung verloren: ${t.message}")
+                        ende.trySend(deute(t, response))
+                    }
+                })
+                synchronized(this@Tunnel) { socket = ws }
+                val grund = try { ende.receive() } finally { ws.cancel() }
                 if (!isActive) break
-                delay(pause)
-                pause = (pause * 2).coerceAtMost(60_000L)
+                _zustand.value = if (grund.isEmpty()) TunnelZustand(TunnelStufe.VERBINDET, "Verbinde neu …") else TunnelZustand(TunnelStufe.FEHLER, grund)
+                // Warten — oder sofort weiter, wenn das Netz zurückgemeldet wird.
+                withTimeoutOrNull(pause) { anstoss.receive() }
+                pause = (pause * 2).coerceAtMost(30_000L)
             }
         }
     }
+
+    /** Sofort neu versuchen, statt die Wartezeit abzusitzen (das Netz ist wieder da). */
+    fun jetztVerbinden() { anstoss.trySend(Unit) }
 
     @Synchronized
     fun stoppe() {
         lauf?.cancel()
         lauf = null
-        schliesse()
-        _zustand.value = TunnelZustand(TunnelStufe.AUS, meldung = "Aus")
+        socket?.cancel()
+        socket = null
+        aktuell = null
+        _zustand.value = TunnelZustand(TunnelStufe.AUS, "Aus")
     }
 
-    @Synchronized
-    private fun schliesse() {
-        val w = weiterleitung
-        val s = sitzung
-        weiterleitung = null
-        sitzung = null
-        // Schließen kann kurz blockieren: nicht auf dem aufrufenden Faden.
-        if (w != null || s != null) bereich.launch {
-            runCatching { w?.close() }
-            runCatching { s?.close() }
-        }
-    }
-
-    /** Macht aus den englischen ngrok-Fehlern einen Satz, mit dem man etwas anfangen kann. */
-    private fun deute(e: Throwable): String {
-        val text = generateSequence(e) { it.cause }.mapNotNull { it.message }.joinToString(" | ")
-        val klein = text.lowercase()
-        return when {
-            e is UnsatisfiedLinkError || e is NoClassDefFoundError -> "Die Tunnel-Bibliothek ließ sich auf diesem Gerät nicht laden."
-            "authtoken" in klein || "authentication failed" in klein || "err_ngrok_105" in klein || "err_ngrok_107" in klein ->
-                "Der Tunnel-Schlüssel wird nicht angenommen. Bitte den Authtoken aus dem ngrok-Konto neu einfügen."
-            "err_ngrok_108" in klein || "simultaneous" in klein -> "Mit diesem ngrok-Konto läuft schon ein anderer Tunnel. Bitte den anderen beenden."
-            "domain" in klein || "err_ngrok_3" in klein -> "Die eingetragene feste Adresse gehört nicht zu diesem ngrok-Konto. Bitte prüfen oder leer lassen."
-            "dns" in klein || "resolve" in klein || "network" in klein || "connect" in klein || "timed out" in klein -> "Kein Internet oder ngrok nicht erreichbar. Ich versuche es weiter."
-            else -> "Tunnel-Fehler: ${text.take(180).ifEmpty { e.javaClass.simpleName }}"
-        }
+    private fun deute(fehler: Throwable, antwort: Response?): String = when {
+        antwort?.code == 404 -> "Der Server lehnt dieses Handy ab (Server-Schlüssel passt nicht)."
+        antwort != null -> "Der Server antwortet mit Fehler ${antwort.code}."
+        fehler is java.net.UnknownHostException -> "Kein Internet. Ich versuche es weiter."
+        fehler is javax.net.ssl.SSLException -> "Sichere Verbindung zum Server gescheitert. Ich versuche es weiter."
+        else -> "Server nicht erreichbar. Ich versuche es weiter."
     }
 }

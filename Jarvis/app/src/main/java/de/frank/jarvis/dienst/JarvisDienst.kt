@@ -9,6 +9,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.ConnectivityManager
+import android.net.Network
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -18,24 +21,27 @@ import de.frank.jarvis.MainActivity
 import de.frank.jarvis.R
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
-import de.frank.jarvis.mcp.HttpServer
+import de.frank.jarvis.mcp.McpServer
 import de.frank.jarvis.tunnel.Tunnel
 import de.frank.jarvis.tunnel.TunnelStufe
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
- * Hält Jarvis erreichbar: MCP-Server auf dem Handy plus Tunnel nach außen, als Vordergrunddienst mit
- * sichtbarer Statuszeile. So nimmt Jarvis Aufrufe aus ChatGPT auch bei gesperrtem Bildschirm entgegen.
+ * Hält Jarvis erreichbar: MCP-Server auf dem Handy plus Verbindung zum eigenen Server, als Vordergrunddienst
+ * mit sichtbarer Statuszeile. So nimmt Jarvis Aufrufe aus ChatGPT auch bei gesperrtem Bildschirm entgegen.
  */
 class JarvisDienst : Service() {
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var server: HttpServer? = null
+    private val mcp by lazy { McpServer(this) }
+
+    /** Ist das Netz wieder da (WLAN ↔ Mobilfunk, Funkloch vorbei), sofort neu verbinden statt abzuwarten. */
+    private val netz = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = Tunnel.jetztVerbinden()
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -43,20 +49,13 @@ class JarvisDienst : Service() {
         super.onCreate()
         kanalAnlegen(this)
         // Sofort in den Vordergrund: Android gibt dafür nur wenige Sekunden.
-        ServiceCompat.startForeground(this, HINWEIS_ID, hinweis("Jarvis startet …"), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        val typ = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
+        ServiceCompat.startForeground(this, HINWEIS_ID, hinweis("Jarvis startet …"), typ)
         Protokoll.lade(this)
-        starteServer()
-        // Früh laden: Passt die Tunnel-Bibliothek nicht zum Gerät, steht das sofort im Log und nicht erst beim Verbinden.
-        runCatching { com.ngrok.NgrokStart.lade() }
-            .onSuccess { Log.i("JarvisDienst", "Tunnel-Bibliothek geladen") }
-            .onFailure { Log.e("JarvisDienst", "Tunnel-Bibliothek lädt nicht", it) }
+        runCatching { getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(netz) }
         bereich.launch {
-            Tunnel.zustand.map { it.stufe to it.meldung }.distinctUntilChanged().collect { (stufe, meldung) ->
-                val text = when (stufe) {
-                    TunnelStufe.ONLINE -> "Bereit für ChatGPT"
-                    TunnelStufe.KEIN_TOKEN -> "Tunnel noch nicht eingerichtet"
-                    else -> meldung
-                }
+            Tunnel.zustand.collect { zustand ->
+                val text = if (zustand.stufe == TunnelStufe.ONLINE) "Bereit für ChatGPT" else zustand.meldung
                 getSystemService(NotificationManager::class.java).notify(HINWEIS_ID, hinweis(text))
             }
         }
@@ -64,21 +63,13 @@ class JarvisDienst : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val e = Einstellungen.get(this)
-        if (server == null) starteServer()
-        Tunnel.starte(e.tunnelToken, e.tunnelDomain, Einstellungen.PORT)
+        Tunnel.starte(e.serverHost, e.serverToken, e.geheimnis) { rumpf -> mcp.verarbeite(rumpf) }
         return START_STICKY
     }
 
-    private fun starteServer() {
-        server = runCatching { HttpServer(this, Einstellungen.PORT).apply { start(30_000, false) } }
-            .onFailure { Log.e("JarvisDienst", "MCP-Server startet nicht", it) }
-            .getOrNull()
-    }
-
     override fun onDestroy() {
+        runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(netz) }
         Tunnel.stoppe()
-        runCatching { server?.stop() }
-        server = null
         bereich.cancel()
         super.onDestroy()
     }
@@ -108,7 +99,7 @@ class JarvisDienst : Service() {
             )
         }
 
-        /** Startet den Dienst oder übernimmt geänderte Tunnel-Einstellungen; bei abgeschaltetem Dienst stoppt er. */
+        /** Startet den Dienst oder übernimmt geänderte Einstellungen; bei abgeschaltetem Dienst stoppt er. */
         fun abgleichen(context: Context) {
             val app = context.applicationContext
             val absicht = Intent(app, JarvisDienst::class.java)

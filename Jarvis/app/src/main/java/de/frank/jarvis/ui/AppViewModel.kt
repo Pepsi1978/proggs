@@ -154,11 +154,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Plugin und Tunnel ----
 
-    fun tunnelSpeichern(token: String, domain: String) {
-        einstellungen.tunnelToken = token
-        einstellungen.tunnelDomain = domain
+    fun serverSpeichern(host: String, token: String) {
+        einstellungen.serverHost = host
+        einstellungen.serverToken = token
         JarvisDienst.abgleichen(getApplication())
-        meldung = if (token.isBlank()) "Tunnel-Schlüssel entfernt." else "Gespeichert. Der Tunnel wird aufgebaut."
+        meldung = "Gespeichert. Jarvis verbindet sich neu."
     }
 
     fun dienstSchalten(an: Boolean) {
@@ -168,11 +168,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun adresseErneuern() {
         einstellungen.neuesGeheimnis()
+        // Neu verbinden: Der Server lernt die neue Adresse erst beim Anmelden des Handys.
+        JarvisDienst.abgleichen(getApplication())
         meldung = "Neue Plugin-Adresse erzeugt. Bitte in ChatGPT neu eintragen."
     }
 
-    fun pluginAdresse(tunnelAdresse: String): String =
-        if (tunnelAdresse.isEmpty()) "" else "$tunnelAdresse/j/${einstellungen.geheimnis}/mcp"
+    val pluginAdresse: String
+        get() = einstellungen.serverHost.takeIf { it.isNotEmpty() }?.let { "https://$it/j/${einstellungen.geheimnis}/mcp" }.orEmpty()
 
     fun kopiere(text: String, was: String) {
         val app = getApplication<Application>()
