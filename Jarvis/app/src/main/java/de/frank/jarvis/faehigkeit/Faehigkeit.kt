@@ -39,7 +39,7 @@ object Register {
     @Volatile private var liste: List<Faehigkeit>? = null
 
     fun alle(context: Context): List<Faehigkeit> = liste ?: synchronized(this) {
-        liste ?: listOf<Faehigkeit>(AufgabenFaehigkeit(context.applicationContext)).also { liste = it }
+        liste ?: listOf(AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext)).also { liste = it }
     }
 
     fun werkzeuge(context: Context): List<Werkzeug> = alle(context).flatMap { it.werkzeuge }

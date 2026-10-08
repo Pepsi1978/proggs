@@ -10,7 +10,8 @@ Version 1 kann zwei Dinge:
 2. **Eigener Chat.** Jarvis hat ein eigenes Modell aus der ChatGPT-Anmeldung (Codex-Gerätecode), Modell und
    Denkstufe sind wählbar. Es bedient dieselben Werkzeuge selbstständig.
 
-Erste angebundene App: **Geniale Aufgaben** (`de.frank.aufgaben`).
+Angebundene Apps: **Geniale Aufgaben** (`de.frank.aufgaben`, lesen und schreiben) und der Biomarker-Bereich von
+**Entropie Reductor** (`de.frank.entropyreducer`, nur lesen).
 
 ## Aufbau
 
@@ -54,12 +55,27 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 | `aufgabe_aendern` | Ändern und verschieben, per `id` oder Suchwort |
 | `aufgabe_erledigen` | Abhaken oder wieder öffnen, per `id` oder Suchwort |
 | `aufgabe_loeschen` | Löschen, per `id` oder Suchwort |
+| `biomarker_auswertung` | Aktueller Wert jeder Messgröße gegen den Schnitt der Tage davor, Schnitte 7/30/90 Tage, Einordnung |
+| `biomarker_tag` | Alle Werte eines Tages (Whoop, Oura, Waage) samt Trainings |
+| `biomarker_verlauf` | Zeitreihen einzelner Messgrößen, tageweise oder als Wochen-/Monatsschnitt |
+| `trainings_lesen` | Trainingsliste mit Pace, Puls, Distanz, Kalorien, VO2max und Summen |
+| `training_details` | Ein Training mit Kilometer-Abschnitten |
+| `biomarker_katalog` | Alle Messgrößen mit Einheit, Quelle und Zeitraum |
 | `jarvis_status` | Erreichbarkeit, Datum und Uhrzeit auf dem Handy, angebundene Apps |
 | `jarvis_auftrag` | Freier Auftrag an den Agenten für Mehrschritt-Aufgaben (Zeitfenster 45 s) |
 
 Fehlt beim Anlegen der Tag, obwohl eine Uhrzeit genannt wurde, fragt ChatGPT nach; ruft es trotzdem auf, lehnt die
 Aufgaben-App mit einem Hinweis ab. Mehrere Treffer bei einem Suchwort führen zu einer Rückfrage statt zu einer
 geratenen Änderung. Ein wiederholter identischer Anlege-Aufruf innerhalb von 90 Sekunden legt nichts doppelt an.
+
+## Auswertungen: wer rechnet
+
+Die Biomarker-Auswertung rechnet Entropie Reductor selbst (Durchschnitte, Abweichung, Einordnung) und gibt nur
+Kennzahlen zurück. Das Sprachmodell in ChatGPT deutet und formuliert. So bleibt eine Antwort im Sprachmodus unter
+einer Sekunde Werkzeugzeit, und es geht nie die ganze Historie über die Leitung. Der eigene Agent von Jarvis
+(`jarvis_auftrag`) ist für mehrstufige Aufträge gedacht und für Sprache zu langsam.
+
+Nach neuen Werkzeugen muss ChatGPT die Werkzeugliste neu laden (Plugin öffnen → aktualisieren bzw. neu verbinden).
 
 ## Einrichten
 

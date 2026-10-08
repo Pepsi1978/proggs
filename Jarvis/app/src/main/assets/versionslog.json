@@ -4,6 +4,7 @@
   "eintraege": [
     {"versionCode": 1, "versionName": "1.0.0", "stand": "08.10.2026, 15:34 Uhr", "notiz": "Erste Version: Jarvis als ChatGPT-Plugin (MCP) mit direktem Tunnel zum Handy, Anbindung an Geniale Aufgaben (lesen, anlegen, ändern, erledigen, löschen), eigener Jarvis-Chat mit wählbarem Modell und Denkstufe"},
     {"versionCode": 2, "versionName": "1.0.1", "stand": "08.10.2026, 15:54 Uhr", "notiz": "Jarvis verbindet sich jetzt von selbst mit dem eigenen Server statt über einen fremden Tunnel-Anbieter: keine Anmeldung und kein Schlüssel mehr nötig, die Plugin-Adresse für ChatGPT steht sofort in den Einstellungen"},
-    {"versionCode": 3, "versionName": "1.0.2", "stand": "08.10.2026, 16:20 Uhr", "notiz": "Server: Der Weiterleitungsdienst schreibt jetzt je Anfrage eine Zeile mit (ohne Zugangsschlüssel), damit sich Fehler beim Verbinden mit ChatGPT nachvollziehen lassen; an der App selbst ändert sich nichts"}
+    {"versionCode": 3, "versionName": "1.0.2", "stand": "08.10.2026, 16:20 Uhr", "notiz": "Server: Der Weiterleitungsdienst schreibt jetzt je Anfrage eine Zeile mit (ohne Zugangsschlüssel), damit sich Fehler beim Verbinden mit ChatGPT nachvollziehen lassen; an der App selbst ändert sich nichts"},
+    {"versionCode": 4, "versionName": "1.1.0", "stand": "08.10.2026, 16:36 Uhr", "notiz": "Neu angebunden: der Biomarker-Bereich von Entropie Reductor. Jarvis liest Erholung, Schlaf, HRV, Körperwerte und Trainings, vergleicht den heutigen Stand mit den letzten Wochen und Monaten und nennt, was besser oder schlechter ist als üblich"}
   ]
 }

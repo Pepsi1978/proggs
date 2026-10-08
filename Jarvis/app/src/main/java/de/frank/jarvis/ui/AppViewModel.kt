@@ -56,6 +56,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** null = Geniale Aufgaben ist angebunden, sonst der Grund. */
     var aufgabenStoerung by mutableStateOf<String?>(null); private set
     var aufgabenGeprueft by mutableStateOf(false); private set
+    /** Je angebundener App: null = bereit, sonst der Grund. Fehlt der Eintrag, läuft die Prüfung noch. */
+    var stoerungen by mutableStateOf<Map<String, String?>>(emptyMap()); private set
     var akkuFrei by mutableStateOf(false); private set
     var hinweiseAn by mutableStateOf(true); private set
 
@@ -71,7 +73,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         akkuFrei = app.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(app.packageName)
         hinweiseAn = NotificationManagerCompat.from(app).areNotificationsEnabled()
         viewModelScope.launch {
-            aufgabenStoerung = withContext(Dispatchers.IO) { Register.alle(app).first().stoerung() }
+            val lage = withContext(Dispatchers.IO) { Register.alle(app).associate { it.id to it.stoerung() } }
+            stoerungen = lage
+            aufgabenStoerung = lage["aufgaben"]
             aufgabenGeprueft = true
         }
     }

@@ -102,6 +102,11 @@
         <package android:name="com.google.android.apps.healthdata" />
     </queries>
 
+    <!-- Nur Apps mit demselben Signierschlüssel (Jarvis) dürfen die Biomarker lesen. -->
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+
     <application
         android:name=".EntropyReducerApp"
         android:allowBackup="false"
@@ -270,6 +275,13 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!-- Brücke zu Jarvis: gesamter Biomarker-Bereich, nur lesend, durch die Signatur-Erlaubnis geschützt. -->
+        <provider
+            android:name=".data.bruecke.JarvisBruecke"
+            android:authorities="${applicationId}.jarvis"
+            android:exported="true"
+            android:permission="de.frank.jarvis.permission.BRUECKE" />
 
     </application>
 

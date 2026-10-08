@@ -152,12 +152,13 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         // ---------------------------------------------------------------- Apps
         Abschnitt("Angebundene Apps")
         Karte {
-            Register.alle(activity).forEach { app ->
-                val stoerung = if (app.id == "aufgaben") vm.aufgabenStoerung else null
+            Register.alle(activity).forEachIndexed { i, app ->
+                val stoerung = vm.stoerungen[app.id]
+                if (i > 0) Spacer(Modifier.height(14.dp))
                 Zeile(app.name, if (stoerung == null) "Bereit · ${app.werkzeuge.size} Werkzeuge" else "Gestört", if (stoerung == null) f.erfolg else f.gefahr)
                 Text(stoerung ?: app.beschreibung, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
             }
-            Text("Weitere Apps wie Ideen, Journal und Entropie-Reduktor lassen sich hier später andocken.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+            Text("Weitere Apps wie Ideen und Journal lassen sich hier später andocken.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         }
 
         // ---------------------------------------------------------------- System

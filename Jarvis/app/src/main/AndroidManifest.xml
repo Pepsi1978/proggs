@@ -17,9 +17,17 @@
         android:protectionLevel="signature" />
     <uses-permission android:name="de.frank.aufgaben.permission.JARVIS" />
 
+    <!-- Allgemeine Erlaubnis für alle weiteren angebundenen Apps (zuerst: Entropie Reductor, Biomarker). -->
+    <permission
+        android:name="de.frank.jarvis.permission.BRUECKE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="de.frank.jarvis.permission.BRUECKE" />
+
     <queries>
         <package android:name="de.frank.aufgaben" />
         <provider android:authorities="de.frank.aufgaben.jarvis" />
+        <provider android:authorities="de.frank.entropyreducer.debug.jarvis" />
+        <provider android:authorities="de.frank.entropyreducer.jarvis" />
     </queries>
 
     <application

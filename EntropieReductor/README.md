@@ -147,3 +147,25 @@ de.frank.entropyreducer
 ## Lizenz
 
 Privates Projekt — kein öffentliches Lizenzmodell.
+
+## Brücke zu Jarvis (`de.frank.jarvis`)
+
+Nur lesender ContentProvider `data/bruecke/JarvisBruecke.kt`, Authority `<applicationId>.jarvis` (am Handy
+`de.frank.entropyreducer.debug.jarvis`), geschützt durch die Signatur-Erlaubnis `de.frank.jarvis.permission.BRUECKE`.
+Er gibt den gesamten Biomarker-Bereich frei: Whoop (`biomarker_snapshots`), Oura (`oura_daily_*`), Körperwerte
+(`hc_value_cache`) und Trainings (`amazfit_workouts`).
+
+Aufruf: `ContentResolver.call(<Authority>, methode, null, Bundle("json" → Anfrage))`, Antwort im Bundle unter `json`.
+
+| Methode | Zweck |
+|---|---|
+| `katalog` | alle Messgrößen mit Einheit, Quelle, Zeitraum |
+| `tag` | alle Werte eines Tages samt Trainings (`datum`) |
+| `verlauf` | Zeitreihen (`metriken`, `von`, `bis`, `aufloesung` tag, woche, monat) |
+| `auswertung` | aktueller Wert gegen den Schnitt der Tage davor (`tage`, `datum`, `metriken`), Schnitte 7/30/90, Einordnung |
+| `trainings` | Trainingsliste mit Summen (`von`, `bis`, `sport`, `limit`) |
+| `training` | ein Training mit Kilometer-Abschnitten (`id`) |
+
+Regeln: Pro Tag zählt die letzte Messung. VO2max wird wie auf der Biomarker-Seite berechnet (`computeVo2MaxOrNull`).
+Tagessummen (Belastung, Energie, Schritte, Aktivität) des laufenden Tages bleiben in Verlauf und Auswertung außen vor.
+Neue Messgrößen werden in der Liste `metriken` und in `ladeReihen` ergänzt.
