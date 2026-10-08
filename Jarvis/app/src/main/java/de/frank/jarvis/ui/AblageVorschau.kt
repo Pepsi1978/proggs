@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,6 +40,8 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FitScreen
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
@@ -156,9 +159,10 @@ fun VorschauKopf(
 
 /** Die passende Vorschau für einen Anhang; für Formate ohne eigene Ansicht die Dateiinformationen mit Export. */
 @Composable
-fun AnhangVorschau(eintrag: Eintrag, anhang: Anhang, aktionen: AblageAktionen, zurueck: () -> Unit, loeschen: () -> Unit) {
+fun AnhangVorschau(eintrag: Eintrag, anhang: Anhang, aktionen: AblageAktionen, zurueck: () -> Unit, loeschen: () -> Unit, mitText: Boolean = false) {
     val context = LocalContext.current
     val datei = remember(anhang.id) { AblageZentrale.speicher(context).datei(anhang) }
+    val text by ladeImHintergrund("", eintrag.id, eintrag.geaendert, mitText) { if (mitText) AblageZentrale.speicher(context).text(eintrag) else "" }
     val freigabe = remember(anhang.id) { aktionen.freigabe(anhang) }
     var nurInfo by rememberSaveable(anhang.id) { mutableStateOf(false) }
     val untertitel = "${anhang.art.anzeige} · ${Dateityp.groesse(anhang.groesse)} · ${Ablage.datum(anhang.erstellt)}"
@@ -184,6 +188,25 @@ fun AnhangVorschau(eintrag: Eintrag, anhang: Anhang, aktionen: AblageAktionen, z
                 else -> InfoAnsicht(eintrag, anhang, freigabe, aktionen, "Für diesen Dateityp gibt es keine eingebaute Vorschau.")
             }
         }
+        if (!nurInfo) Begleittext(text)
+    }
+}
+
+/** Der Text zu einer Datei (etwa der Auftrag zu einem erzeugten Bild): eingeklappt, damit die Datei den Platz bekommt. */
+@Composable
+fun Begleittext(text: String) {
+    if (text.isBlank()) return
+    val f = LocalFarben.current
+    var offen by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glas(f, erhoeht = 0.5f)) {
+        Row(Modifier.fillMaxWidth().antippen { offen = !offen }.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Text zum Eintrag", Modifier.weight(1f), color = f.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Icon(if (offen) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (offen) "Einklappen" else "Ausklappen", tint = f.textLeise)
+        }
+        if (offen) SelectionContainer {
+            Text(markdownText(text, f.primaer), Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                color = f.text, fontSize = 14.sp, lineHeight = 20.sp)
+        }
     }
 }
 
@@ -203,11 +226,23 @@ private fun BildAnsicht(datei: File, anpassen: Int, anhang: Anhang, freigabe: Fr
         bild?.let { ZoomBild(it, anpassen, anhang.originalName) } ?: Hinweis("Dieses Bildformat kann die eingebaute Vorschau nicht anzeigen.", freigabe, aktionen)
         return
     }
-    KachelBild(datei, anpassen, anhang.originalName) { fehler = true }
+    KachelBildMitVollbild(datei, anpassen, anhang.originalName) { fehler = true }
+}
+
+/** Gekacheltes Bild; Antippen öffnet es bildschirmfüllend auf Schwarz (Zoom wie gewohnt), erneutes Antippen oder „Zurück“ schließt. */
+@Composable
+private fun KachelBildMitVollbild(datei: File, anpassen: Int, beschreibung: String, beiFehler: () -> Unit) {
+    var vollbild by rememberSaveable(datei.path) { mutableStateOf(false) }
+    if (vollbild) {
+        Dialog({ vollbild = false }, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) { KachelBild(datei, 0, beschreibung, beiTipp = { vollbild = false }, schwarz = true) {} }
+        }
+    }
+    KachelBild(datei, anpassen, beschreibung, beiTipp = { vollbild = true }, beiFehler = beiFehler)
 }
 
 @Composable
-private fun KachelBild(datei: File, anpassen: Int, beschreibung: String, beiFehler: () -> Unit) {
+private fun KachelBild(datei: File, anpassen: Int, beschreibung: String, beiTipp: (() -> Unit)? = null, schwarz: Boolean = false, beiFehler: () -> Unit) {
     val f = LocalFarben.current
     val ansicht = remember { arrayOfNulls<SubsamplingScaleImageView>(1) }
     LaunchedEffect(anpassen) { if (anpassen > 0) ansicht[0]?.resetScaleAndCenter() }
@@ -224,11 +259,12 @@ private fun KachelBild(datei: File, anpassen: Int, beschreibung: String, beiFehl
                 setOnImageEventListener(object : SubsamplingScaleImageView.DefaultOnImageEventListener() {
                     override fun onImageLoadError(e: Exception?) = beiFehler()
                 })
+                beiTipp?.let { tipp -> setOnClickListener { tipp() } }
                 setImage(ImageSource.uri(Uri.fromFile(datei)))
                 ansicht[0] = this
             }
         },
-        modifier = Modifier.fillMaxSize().background(if (f.dunkel) Color.Black else Color(0xFFEFF3F8)),
+        modifier = Modifier.fillMaxSize().background(if (f.dunkel || schwarz) Color.Black else Color(0xFFEFF3F8)),
         onRelease = { it.recycle() },
     )
 }
@@ -315,7 +351,7 @@ private fun PdfAnsicht(datei: File, anpassen: Int, anhang: Anhang, eintrag: Eint
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (val b = bild) {
                 null -> Lade("Seite ${seite + 1} wird gezeichnet …")
-                else -> b.getOrNull()?.let { png -> androidx.compose.runtime.key(png.absolutePath) { KachelBild(png, anpassen, "PDF-Seite ${seite + 1} von $anzahl") {} } }
+                else -> b.getOrNull()?.let { png -> androidx.compose.runtime.key(png.absolutePath) { KachelBildMitVollbild(png, anpassen, "PDF-Seite ${seite + 1} von $anzahl") {} } }
                     ?: Hinweis("Diese Seite lässt sich nicht anzeigen.", freigabe, aktionen)
             }
         }

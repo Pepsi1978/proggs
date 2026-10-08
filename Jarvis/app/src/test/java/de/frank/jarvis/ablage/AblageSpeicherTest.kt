@@ -107,7 +107,7 @@ class AblageSpeicherTest {
         val e = neustart().eintraege().single()
         assertTrue(e.hatText)
         assertEquals(3, e.anhaenge.size)
-        assertEquals(setOf(Kategorie.TEXTE, Kategorie.DOKUMENTE, Kategorie.BILDER), e.kategorien)
+        assertEquals(setOf(Kategorie.DOKUMENTE, Kategorie.BILDER), e.kategorien)
         assertEquals(listOf(Art.PDF, Art.BILD, Art.BILD), e.anhaenge.map { it.art })
         e.anhaenge.forEach { assertTrue(s.datei(it).isFile) }
         assertTrue(s.text(e).contains("Lesbarer Text."))

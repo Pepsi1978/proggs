@@ -2,6 +2,7 @@ package de.frank.jarvis.mcp
 
 import android.content.Context
 import de.frank.jarvis.BuildConfig
+import de.frank.jarvis.ablage.AblageZentrale
 import de.frank.jarvis.agent.JarvisAgent
 import de.frank.jarvis.agent.Agenten
 import de.frank.jarvis.faehigkeit.zahl
@@ -219,7 +220,10 @@ class McpServer(context: Context) {
         val r = runCatching { runBlocking { werkzeug.ausfuehren(argumente) } }
             .getOrElse { Ergebnis("Werkzeug fehlgeschlagen: ${it.message ?: it.javaClass.simpleName}", fehler = true) }
         Protokoll.melde(Quelle.CHATGPT, werkzeug.titel, r.text, !r.fehler)
-        return inhalt(r.text, r.fehler)
+        // Inzwischen fertig Gewordenes reicht Jarvis mit dem nächsten Ergebnis nach (ChatGPT lässt sich nicht von hier aus ansprechen).
+        val fertig = AblageZentrale.fertigFuerPlugin()
+        val nachtrag = if (fertig.isEmpty()) "" else "\n\nINZWISCHEN FERTIG (sag es Frank jetzt von dir aus):\n" + fertig.joinToString("\n") { "- $it" }
+        return inhalt(r.text + nachtrag, r.fehler)
     }
 
     private fun beschreibe(w: Werkzeug): JSONObject = JSONObject()
@@ -246,7 +250,9 @@ class McpServer(context: Context) {
         append("Tagesdatenbank: Jarvis hält die Daten aller Apps mehrmals täglich fertig vor. Für einen Überblick genügt tagesauswertung_lesen oder tagesdaten_lesen; ")
         append("die einzelnen Apps fragst du nur für Aktuelles (Aufgaben) oder Details ab.\n")
         append("Agenten: Für Recherchen und längere Ausarbeitungen startest du mit agent_starten einen Agenten von Jarvis. Er arbeitet Minuten im Hintergrund und legt das Ergebnis in die Ablage.\n")
-        append("Dateien: Melde eine Datei erst als gespeichert, wenn ablage_datei_speichern oder bild_erzeugen „Gespeichert“ zurückgibt. Bei „läuft noch“ ist sie noch nicht da. ")
+        append("Dateien: Melde eine Datei erst als gespeichert, wenn ablage_datei_speichern oder bild_erzeugen „Gespeichert“ zurückgibt. Bei „läuft noch“ ist sie noch nicht da: ")
+        append("Rufe dann dasselbe Werkzeug sofort mit denselben Angaben noch einmal auf (das wartet auf die laufende Arbeit, es entsteht nichts doppelt), wiederhole das bis „Gespeichert“ oder ein Fehler kommt, ")
+        append("und sag Frank von dir aus, dass es in der Ablage liegt. Er soll nicht nachfragen müssen. ")
         append("Dateien aus diesem Gespräch (hochgeladen oder von dir erzeugt) übergibst du in ablage_datei_speichern als chatgpt_dateien; Pfade wie sandbox: oder /mnt/data erreicht das Handy nicht. ")
         append("Geht keine Übergabe, sag ehrlich, dass die Datei nicht übertragen werden kann.\n")
     }

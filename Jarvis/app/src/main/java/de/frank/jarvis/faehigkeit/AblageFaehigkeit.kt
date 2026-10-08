@@ -208,7 +208,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
                 "inhalt_base64" to text("Der Inhalt einer kleinen Binärdatei als Base64."),
                 "mime" to text("Optional: MIME-Typ, zum Beispiel image/png."),
                 "beschreibung" to text("Optional: kurze Beschreibung der Datei."),
-                "text" to text("Optional: lesbarer Text für den Eintrag (zum Beispiel die Zusammenfassung zur Datei)."),
+                "text" to text("Optional: kurzer Begleittext zur Datei (in der Ablage eingeklappt unter der Datei). Nicht den Auftrag wiederholen; keinen zweiten Eintrag mit ablage_schreiben anlegen."),
                 "kennung" to text("Optional: eindeutige Kennung dieses Ergebnisses; wiederholte Zustellung mit derselben Kennung wird erkannt."),
                 "dateien" to JSONObject().put("type", "array").put("description", "Mehrere Dateien auf einmal; je Datei dieselben Felder wie oben.")
                     .put("items", JSONObject().put("type", "object").put("additionalProperties", false).put("properties", JSONObject()
@@ -260,7 +260,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
                 "format" to text("Format; Vorgabe hoch.", listOf("hoch", "quer", "quadrat", "din_a4", "din_a4_quer")),
                 "hohe_qualitaet" to schalter("true = höchste Qualität (dauert länger), empfohlen für Infografiken mit viel Text."),
                 "auch_pdf" to schalter("true = zusätzlich ein DIN-A4-PDF mit dem Bild ablegen."),
-                "text" to text("Optional: lesbarer Text für den Eintrag, zum Beispiel die Inhalte der Infografik als Text."),
+                "text" to text("Nur wenn Frank ausdrücklich einen Begleittext verlangt. Sonst weglassen: Das Bild steht für sich, Auftrag und Bildbeschreibung gehören nicht hierher."),
                 pflicht = listOf("beschreibung", "titel"),
             ),
             nurLesen = false,
@@ -313,7 +313,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
                         if (r == null) {
                             laeuft++
                             val stand = uebertragungen.liste.value.firstOrNull { it.id == id }
-                            zeilen += "„${stand?.name ?: name}“ läuft noch" + (stand?.prozent?.let { " ($it %)" } ?: "") + " – noch NICHT gespeichert; Jarvis meldet sich nach dem Speichern."
+                            zeilen += "„${stand?.name ?: name}“ läuft noch" + (stand?.prozent?.let { " ($it %)" } ?: "") + " – noch NICHT gespeichert. Rufe ablage_datei_speichern sofort mit denselben Angaben noch einmal auf (wartet auf diese Übertragung, legt nichts doppelt an) und sag Frank Bescheid, sobald „Gespeichert“ kommt."
                         } else zeilen += r
                     }
                     d.gesetzt("inhalt_base64") -> {
@@ -359,7 +359,8 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             val r = AblageZentrale.imHintergrund(context, kennung, "Bild erzeugen", titel, AblageZentrale.wartezeit()) {
                 AblageZentrale.erzeugeBild(context, beschreibung, titel, format, a.optBoolean("hohe_qualitaet"), a.optBoolean("auch_pdf"), kennung)
             }
-            Ergebnis(r ?: "Das Bild wird gerade erzeugt und ist noch NICHT gespeichert. Das dauert meist ein bis zwei Minuten; Jarvis meldet sich per Benachrichtigung, sobald es im Eintrag „$titel“ liegt. Prüfen mit ablage_lesen.")
+            Ergebnis(r ?: "Das Bild wird gerade erzeugt und ist noch NICHT gespeichert (meist ein bis zwei Minuten). Rufe bild_erzeugen jetzt sofort mit genau denselben Angaben noch einmal auf: " +
+                "Das wartet auf dieses Bild und erzeugt kein zweites. Wiederhole das, bis „Gespeichert“ kommt, und sag Frank dann von dir aus, dass es im Eintrag „$titel“ liegt.")
         } catch (e: Exception) {
             Ergebnis("Kein Bild gespeichert: " + AblageZentrale.fehlerText(e), fehler = true)
         }

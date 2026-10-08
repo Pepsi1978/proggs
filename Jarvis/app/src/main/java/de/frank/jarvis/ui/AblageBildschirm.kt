@@ -141,29 +141,43 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
         }
     }
 
+    // Löschen in einem Reiter trifft nur die Dateien dieses Reiters; was der Eintrag sonst enthält, bleibt in den anderen Reitern.
+    fun nurReiter(e: Eintrag): List<Anhang>? = kat?.let { k -> e.anhaenge.filter { it.art.kategorie == k }.takeIf { it.isNotEmpty() && it.size < e.anhaenge.size } }
+
     fun loesche(e: Eintrag, a: Anhang?) {
+        val teil = if (a == null) nurReiter(e) else null
         bereich.launch {
-            withContext(Dispatchers.IO) { if (a == null) speicher.loescheEintrag(e.id) else speicher.loescheAnhang(e.id, a.id) }
-            vm.meldung = if (a == null) "„${e.titel}“ gelöscht." else "„${a.originalName}“ gelöscht."
+            withContext(Dispatchers.IO) {
+                when {
+                    a != null -> speicher.loescheAnhang(e.id, a.id)
+                    teil != null -> teil.forEach { speicher.loescheAnhang(e.id, it.id) }
+                    else -> speicher.loescheEintrag(e.id)
+                }
+            }
+            vm.meldung = if (a != null) "„${a.originalName}“ gelöscht." else if (teil != null) "${teil.size} Datei(en) aus „${e.titel}“ gelöscht." else "„${e.titel}“ gelöscht."
             if (a == null) { offenerEintrag = null; offenerAnhang = null } else offenerAnhang = null
         }
     }
 
     loeschFrage?.let { (e, a) ->
-        BestaetigeLoeschen(if (a == null) "„${e.titel}“" + (if (e.hatDateien) " mit ${e.anhaenge.size} Datei(en)" else "") + " endgültig löschen?" else "„${a.originalName}“ endgültig löschen?",
+        val teil = if (a == null) nurReiter(e) else null
+        BestaetigeLoeschen(
+            if (a != null) "„${a.originalName}“ endgültig löschen?"
+            else if (teil != null) "${teil.size} Datei(en) aus „${e.titel}“ unter ${kat?.anzeige} endgültig löschen? Die übrigen Dateien des Eintrags bleiben."
+            else "„${e.titel}“" + (if (e.hatDateien) " mit ${e.anhaenge.size} Datei(en)" else "") + " endgültig löschen?",
             { loesche(e, a); loeschFrage = null }, { loeschFrage = null })
     }
 
     val eintrag = offenerEintrag?.let { id -> alle.firstOrNull { it.id == id } }
     if (offenerEintrag != null && eintrag != null) {
         val anhang = offenerAnhang?.let { id -> eintrag.anhaenge.firstOrNull { it.id == id } }
-        // Ein Eintrag mit genau einer Datei und ohne Text öffnet direkt die Vorschau; „Zurück“ führt dann zur Liste.
-        val direkt = !eintrag.hatText && eintrag.anhaenge.size == 1
+        // Ein Eintrag mit genau einer Datei öffnet direkt die Vorschau, sein Text steht eingeklappt darunter; „Zurück“ führt dann zur Liste.
+        val direkt = eintrag.anhaenge.size == 1
         BackHandler { if (anhang != null && !direkt) offenerAnhang = null else { offenerEintrag = null; offenerAnhang = null } }
         if (anhang != null || direkt) {
             val a = anhang ?: eintrag.anhaenge[0]
             AnhangVorschau(eintrag, a, aktionen, zurueck = { if (anhang != null && !direkt) offenerAnhang = null else { offenerEintrag = null; offenerAnhang = null } },
-                loeschen = { loeschFrage = eintrag to a })
+                loeschen = { loeschFrage = eintrag to (if (direkt) null else a) }, mitText = direkt)
         } else {
             EintragAnsicht(vm, eintrag, aktionen, zurueck = { offenerEintrag = null }, oeffne = { offenerAnhang = it.id }, loeschen = { loeschFrage = eintrag to it })
         }
@@ -253,8 +267,7 @@ private fun EintragZeile(e: Eintrag, gewaehlt: Boolean, aktionen: AblageAktionen
     val speicher = remember { AblageZentrale.speicher(context) }
     var menue by remember { mutableStateOf(false) }
     val haupt = e.anhaenge.firstOrNull { it.art == Art.BILD || it.art == Art.ANIMATION } ?: e.anhaenge.firstOrNull { it.art == Art.VIDEO || it.art == Art.PDF } ?: e.anhaenge.firstOrNull()
-    val art = if (e.hatText && haupt == null) "Text" else if (e.anhaenge.size == 1 && !e.hatText) haupt!!.art.anzeige + " · " + haupt.endung.uppercase() else
-        (if (e.hatText) "Text + " else "") + "${e.anhaenge.size} Datei${if (e.anhaenge.size == 1) "" else "en"}"
+    val art = if (haupt == null) "Text" else if (e.anhaenge.size == 1) haupt.art.anzeige + " · " + haupt.endung.uppercase() else "${e.anhaenge.size} Dateien"
     val meta = "$art · ${Ablage.datum(e.geaendert)} · ${Dateityp.groesse(groesse(speicher, e))}"
     Row(
         Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f, toenung = if (gewaehlt) f.primaer else null)
@@ -344,7 +357,8 @@ private fun EintragAnsicht(vm: AppViewModel, e: Eintrag, aktionen: AblageAktione
             }
         }
         if (e.hatText) {
-            Box(Modifier.weight(1f)) { LeseText(text, "md", markdown = true, gekuerzt = false, gesamt = textDatei?.length() ?: 0) }
+            if (e.hatDateien) Begleittext(text)
+            else Box(Modifier.weight(1f)) { LeseText(text, "md", markdown = true, gekuerzt = false, gesamt = textDatei?.length() ?: 0) }
         }
     }
 }

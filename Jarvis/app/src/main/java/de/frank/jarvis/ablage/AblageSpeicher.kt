@@ -46,8 +46,11 @@ data class Eintrag(
 ) {
     val hatText: Boolean get() = textDatei != null
     val hatDateien: Boolean get() = anhaenge.isNotEmpty()
-    /** Kategorien für die Filter: Text-Einträge zählen als Texte, dazu die Kategorien aller Anhänge. */
-    val kategorien: Set<Kategorie> get() = buildSet { if (hatText) add(Kategorie.TEXTE); anhaenge.forEach { add(it.art.kategorie) } }
+    /**
+     * Kategorien für die Filter: Ein Eintrag mit Dateien steht nur unter den Kategorien seiner Dateien, sein Text ist
+     * dann Begleittext (etwa der Auftrag zu einem erzeugten Bild). Als Texte zählen nur Einträge ohne Dateien.
+     */
+    val kategorien: Set<Kategorie> get() = if (anhaenge.isEmpty()) setOfNotNull(Kategorie.TEXTE.takeIf { hatText }) else anhaenge.mapTo(mutableSetOf()) { it.art.kategorie }
 }
 
 /** Was eine Übernahme ergibt. [neu] = false, wenn genau diese Datei schon da war (wiederholte Zustellung). */

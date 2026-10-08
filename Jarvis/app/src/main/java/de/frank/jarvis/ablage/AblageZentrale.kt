@@ -63,6 +63,8 @@ object AblageZentrale {
     @Volatile private var uebertragungenInstanz: Uebertragungen? = null
     private val laufend = HashMap<String, Deferred<String>>()
     private val nachzumelden: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val fuerPlugin = LinkedHashMap<String, String>()
+    private val direktGeliefert = HashSet<String>()
     private val _arbeiten = MutableStateFlow<List<Hintergrundarbeit>>(emptyList())
     val arbeiten: StateFlow<List<Hintergrundarbeit>> = _arbeiten.asStateFlow()
 
@@ -118,18 +120,32 @@ object AblageZentrale {
                 }
             }.also { neu -> laufend[kennung] = neu; neu.start() }
         }
+        val ausPlugin = currentCoroutineContext()[AgentenKontext] == null
         val ergebnis = withTimeoutOrNull(warteMs) { job.await() }
-        if (ergebnis == null && nachzumelden.add(kennung)) {
+        if (ergebnis != null) {
+            // Der Aufrufer hat das Ergebnis selbst in der Hand: nicht noch einmal nachreichen.
+            synchronized(fuerPlugin) { fuerPlugin.remove(kennung); if (kennung in nachzumelden) direktGeliefert += kennung }
+        } else if (nachzumelden.add(kennung)) {
             // Der Aufrufer bekommt „läuft noch“; das Ergebnis meldet eine Benachrichtigung, sobald es feststeht.
             bereich.launch {
                 val r = runCatching { job.await() }
-                nachzumelden.remove(kennung)
+                val text = r.fold({ it }, { "$art fehlgeschlagen („$eintragTitel“): " + fehlerText(it) })
+                synchronized(fuerPlugin) {
+                    nachzumelden.remove(kennung)
+                    if (!direktGeliefert.remove(kennung) && ausPlugin) fuerPlugin[kennung] = text
+                }
                 r.onSuccess { benachrichtige(app, "Jarvis: in der Ablage", it) }
                     .onFailure { benachrichtige(app, "Jarvis: $art fehlgeschlagen", fehlerText(it)) }
             }
         }
         return ergebnis
     }
+
+    /**
+     * Was fertig wurde, nachdem das Plugin (ChatGPT) nur „läuft noch“ bekam. Das Handy kann ChatGPT nicht von sich aus
+     * ansprechen; die Meldung hängt deshalb am nächsten Werkzeug-Ergebnis. Jede Meldung wird genau einmal geliefert.
+     */
+    fun fertigFuerPlugin(): List<String> = synchronized(fuerPlugin) { fuerPlugin.values.toList().also { fuerPlugin.clear() } }
 
     /** Startet bzw. wiederholt eine Übertragung im Hintergrund. Rückgabe wie [imHintergrund]. */
     suspend fun starteDownload(context: Context, id: String, name: String, eintragTitel: String, warteMs: Long = 0): String? =
