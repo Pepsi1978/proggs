@@ -79,19 +79,22 @@ object Agenten {
         val app = context.applicationContext
         val lauf = AgentenLauf(plan.name, auftrag, System.currentTimeMillis())
         _laeufe.value = _laeufe.value + lauf
+        // Der Titel steht vorab fest: Dateien, die der Agent unterwegs erzeugt (Bilder, PDFs, Downloads), landen im selben Eintrag wie sein Bericht.
+        val titel = "${plan.name} – ${auftrag.replace(Regex("\\s+"), " ").take(50).trim()} – ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M. HH.mm"))}"
         try {
             val rolle = "DEINE ROLLE ALS AGENT „${plan.name}“: ${plan.rolle}\n" +
                 "Arbeite den Auftrag selbstständig ab, ohne Rückfragen. Dein letzter Schritt ist die Antwort mit dem vollständigen Bericht als Text; " +
-                "der Bericht wird als Datei gespeichert und kann länger sein. Schreibe ihn in gutem Deutsch mit Überschriften."
+                "der Bericht wird als Datei gespeichert und kann länger sein. Schreibe ihn in gutem Deutsch mit Überschriften.\n" +
+                "Dein Ablage-Eintrag heißt „$titel“. Dateien (bild_erzeugen, ablage_datei_speichern, ablage_schreiben mit als_pdf) legst du mit genau diesem Titel ab, " +
+                "dann gehören sie zu deinem Bericht. Nenne im Bericht nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat."
             val bericht = JarvisAgent(app).versuche(
-                auftrag = auftrag, zeitlimitMs = 12 * 60_000L, maxSchritte = 14, rolle = rolle, mitInternet = true,
+                auftrag = auftrag, zeitlimitMs = 12 * 60_000L, maxSchritte = 14, rolle = rolle, mitInternet = true, ablageTitel = titel,
                 beiSchritt = { schritt -> _laeufe.value = _laeufe.value.map { if (it === lauf || it.seit == lauf.seit) it.copy(schritt = schritt) else it } },
             )
             if (bericht.isNullOrBlank()) {
                 Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Kein Ergebnis für: ${auftrag.take(120)}", ok = false)
                 return null
             }
-            val titel = "${plan.name} – ${auftrag.replace(Regex("\\s+"), " ").take(50).trim()} – ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M. HH.mm"))}"
             val datei = Ablage.schreibe(app, titel, "# ${plan.name}: ${auftrag.trim()}\n\nErstellt am ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M.yyyy, HH:mm 'Uhr'"))} von Jarvis.\n\n$bericht")
             Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Fertig, abgelegt als „${datei.nameWithoutExtension}“.")
             return datei.nameWithoutExtension

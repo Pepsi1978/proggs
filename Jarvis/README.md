@@ -51,7 +51,7 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 
 ## Werkzeuge im Plugin
 
-31 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
+33 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
 welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl für ChatGPT überschaubar.
 
 | Werkzeug | Zweck |
@@ -66,7 +66,9 @@ welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl f
 | `ideen_lesen`, `idee_speichern`, `idee_loeschen` | Geniale Ideen; `ideen_lesen` mit `id` liefert den Volltext, `idee_speichern` legt an oder ändert |
 | `tagebuch_lesen` | Tagebucheinträge für einen Tag, einen Zeitraum oder ein Suchwort |
 | `wissen_lesen` | Wissens-Datenbank: Inhaltsverzeichnis, Datei im Volltext oder Suche |
-| `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen` | Eigene Textdateien von Jarvis; `ablage_lesen` ohne Titel liefert die Liste |
+| `ablage_lesen`, `ablage_schreiben`, `ablage_loeschen` | Ablage von Jarvis (Texte und Dateien); `ablage_lesen` ohne Titel liefert die Liste mit Dateitypen, laufenden und fehlgeschlagenen Übertragungen |
+| `ablage_datei_speichern` | Dateien in einen Ablage-Eintrag übernehmen: ChatGPT-Dateiverweise (`chatgpt_dateien`, `openai/fileParams`), https-Adresse, Text oder kleines Base64 |
+| `bild_erzeugen` | Bild oder Infografik über das Codex-Bildwerkzeug erzeugen und als PNG (auf Wunsch auch DIN-A4-PDF) ablegen |
 | `agenten`, `agent_starten` | Agenten ansehen, anlegen, löschen und beauftragen |
 | `mail_senden`, `mail_lesen` | Gmail; `mail_lesen` mit `nr` liefert eine Mail vollständig |
 | `jarvis_status` | Erreichbarkeit, Datum, Dienst heute, angebundene Apps |
@@ -106,8 +108,8 @@ Die einzelnen Werkzeuge der Apps lesen weiterhin live vom Handy; die Tagesdatenb
 
 ## Ablage und Agenten
 
-- **Ablage** (`faehigkeit/AblageFaehigkeit.kt`): Markdown-Dateien unter `filesDir/ablage/`, die Jarvis anlegt, liest
-  und löscht.
+- **Ablage** (`ablage/`, Werkzeuge in `faehigkeit/AblageFaehigkeit.kt`, Oberfläche `ui/AblageBildschirm.kt`): Einträge aus
+  einem lesbaren Text und beliebig vielen Dateien, siehe Abschnitt „Ablage: Dateien und Medien“.
 - **Agenten** (`agent/Agenten.kt`): Ein Agent ist ein Name plus eine Rolle. Eingebaut sind „Recherche“ und
   „Machbarkeit“; mit `agent_anlegen` entstehen weitere (Dateien unter `filesDir/agenten/`). `agent_starten` kehrt
   sofort zurück; der Lauf (höchstens 14 Schritte, 12 Minuten) passiert im Dienst mit dem eigenen Modell, den
@@ -115,6 +117,38 @@ Die einzelnen Werkzeuge der Apps lesen weiterhin live vom Handy; die Tagesdatenb
   und eine Benachrichtigung meldet es.
 - **Internet-Suche** (`faehigkeit/WebFaehigkeit.kt`): Tavily, Schlüssel aus `~/SK/Tavily/tavily-api-key.txt` (beim Bau
   eingebacken). Nur für Jarvis und seine Agenten, nicht im ChatGPT-Plugin.
+
+## Ablage: Dateien und Medien
+
+Ein Eintrag hat einen Titel, optional einen Text (Markdown) und beliebig viele Anhänge, etwa Bericht + PDF + Bilder.
+
+- **Speicher** (`ablage/AblageSpeicher.kt`): Texte wie bisher unter `filesDir/ablage/<Titel>.md`, Dateien unter
+  `filesDir/ablage-dateien/<Eintrag>/<Anhang>.<endung>` (Speichername aus der ID, gleichnamige Dateien überschreiben sich nie),
+  Verzeichnis `filesDir/ablage-index.json` (atomar geschrieben, Vorgängerfassung `.bak`). Je Datei: ID, Eintrag, Titel,
+  ursprünglicher Name, Endung, MIME-Typ, Größe, Zeitpunkt, Herkunft, SHA-256, Beschreibung, Vorschaubild, Kennung.
+  Migration: Vorhandene Textdateien werden beim ersten Laden zu Einträgen; nichts wird verschoben oder gelöscht.
+- **Übernahme**: Text, Base64 (bis etwa 700 kB, Grenze des Relays: 1 MB je Aufruf) oder https-Download
+  (`ablage/Uebertragung.kt`). Downloads laufen erst in `ablage-dateien/.teil/`, werden auf Länge geprüft und erst danach
+  übernommen; Abbrüche lassen sich fortsetzen (HTTP Range), offene Aufträge überstehen einen Neustart. Adressen erscheinen
+  nur als Server-Name in Texten, Protokoll und Oberfläche. Doppelschutz über `kennung` (ChatGPT: `file_id`) und gleichen Inhalt.
+- **ChatGPT-Dateien**: `ablage_datei_speichern` erklärt `_meta["openai/fileParams"] = ["chatgpt_dateien"]` mit Dateiobjekten
+  (`download_url`, `file_id` Pflicht; `mime_type`, `file_name`) nach der Plugin-Referenz. Ob ChatGPT darüber auch selbst
+  erzeugte Bilder übergibt, ist am Gerät noch nicht geprüft.
+- **Bilder** (`bild_erzeugen`): derselbe Weg wie in News Kompass, Werkzeug `image_generation` am Codex-Endpunkt
+  (`CodexAuthManager.generateImages`); Größe 1024×1536 für DIN A4 (lehnt der Dienst die Größe ab, ein Versuch ohne).
+- **Dauer**: Ein Plugin-Aufruf wartet höchstens 40 Sekunden (der Relay bricht nach 75 ab). Läuft es länger, meldet das
+  Werkzeug „läuft noch“, die Arbeit geht im Hintergrund weiter und eine Benachrichtigung meldet erst die fertige Speicherung.
+  Agenten warten bis zu 10 Minuten; Dateien eines Agentenlaufs landen im selben Eintrag wie sein Bericht.
+- **Vorschau** (`ui/AblageVorschau.kt`): PNG, JPEG, WebP, BMP (gekachelt mit SubsamplingScaleImageView: Zoom, Doppeltipp,
+  Verschieben, „An Bildschirm anpassen“), GIF (animiert ab Android 9), SVG (WebView ohne Skripte), PDF (PdfRenderer, Seiten,
+  Zoom; Passwort und Beschädigung mit Meldung), TXT, Markdown, Code, JSON, XML, YAML, Logs (Schriftgröße, Kopieren,
+  Hervorhebung), CSV/TSV als Tabelle, HTML gesichert (kein JavaScript, kein Netz, kein Dateizugriff) oder als Quelltext,
+  Audio und Video mit Media3 (Fokus bei Anrufen, Geschwindigkeit, Vollbild). DOCX, XLSX, PPTX, ODT, ODS, ODP: Textauszug
+  ohne Formatierung plus „Mit anderer App öffnen“. Alles andere: Dateiinformationen mit Download, Teilen, Öffnen.
+- **Weitergabe** (`ablage/Weitergabe.kt`): Download nach `Download/Jarvis/` über MediaStore (ab Android 10, ohne
+  Speicherberechtigung), „Speichern unter“ mit Systemdialog, Teilen mit FileProvider (`de.frank.jarvis.dateien`, auch mehrere
+  Dateien), „Mit anderer App öffnen“. Exportiert wird immer die Originaldatei.
+- **E-Mail**: `mail_senden` mit `ablage_datei` hängt auch die Dateien des Eintrags an (zusammen höchstens etwa 20 MB).
 
 ## E-Mail
 

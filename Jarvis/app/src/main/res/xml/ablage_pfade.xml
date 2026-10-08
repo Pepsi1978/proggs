@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nur die Ablage ist über den FileProvider erreichbar, und nur für Adressen, die Jarvis selbst vergibt. -->
+<paths>
+    <files-path name="texte" path="ablage/" />
+    <files-path name="dateien" path="ablage-dateien/" />
+</paths>

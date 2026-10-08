@@ -1,6 +1,7 @@
 package de.frank.jarvis.agent
 
 import android.content.Context
+import de.frank.jarvis.ablage.AgentenKontext
 import de.frank.jarvis.auth.ChatTurn
 import de.frank.jarvis.auth.CodexAuthManager
 import de.frank.jarvis.data.Einstellungen
@@ -10,6 +11,7 @@ import de.frank.jarvis.faehigkeit.Register
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
@@ -56,6 +58,7 @@ class JarvisAgent(context: Context) {
         beiSchritt: (String) -> Unit = {},
         rolle: String? = null,
         mitInternet: Boolean = false,
+        ablageTitel: String? = null,
     ): String? {
         if (!auth.isConnected) return null
         val faehigkeiten = Register.alle(app).filter { mitInternet || it.id != "web" }
@@ -75,7 +78,8 @@ class JarvisAgent(context: Context) {
                 val antwort = if (werkzeug == null) {
                     "FEHLER: Das Werkzeug $name gibt es nicht."
                 } else {
-                    val r = runCatching { werkzeug.ausfuehren(argumente) }
+                    // Werkzeuge dürfen hier auf lange Arbeit warten (Bild, Download); Dateien ohne Titel gehören zum Agenten-Eintrag.
+                    val r = runCatching { withContext(AgentenKontext(ablageTitel, langeWarten = ablageTitel != null)) { werkzeug.ausfuehren(argumente) } }
                         .getOrElse { de.frank.jarvis.faehigkeit.Ergebnis("Werkzeug fehlgeschlagen: ${it.message}", fehler = true) }
                     Protokoll.melde(Quelle.JARVIS, werkzeug.titel, r.text, !r.fehler)
                     (if (r.fehler) "FEHLER: " else "") + r.text
@@ -99,7 +103,9 @@ class JarvisAgent(context: Context) {
             append("Du arbeitest mit Franks Apps über Werkzeuge. Regeln:\n")
             append("- Handle selbstständig: Lies nach, bevor du fragst. Frage nur, wenn eine nötige Angabe wirklich fehlt oder mehrdeutig ist.\n")
             append("- Erfinde nie Daten. Was du über Aufgaben sagst, stammt aus einem Werkzeug-Ergebnis.\n")
-            append("- Nach einer Änderung bestätigst du in einem Satz, was jetzt gilt.\n\n")
+            append("- Nach einer Änderung bestätigst du in einem Satz, was jetzt gilt.\n")
+            append("- Behaupte nie, eine Datei, ein Bild oder ein Dokument erzeugt oder gespeichert zu haben, wenn ein Werkzeug-Ergebnis das nicht mit „Gespeichert“ bestätigt. ")
+            append("Meldet ein Werkzeug „läuft noch“ oder einen Fehler, sag genau das.\n\n")
             faehigkeiten.forEach { append("App ").append(it.name).append(": ").append(it.hinweise).append("\n\n") }
             append("WERKZEUGE:\n")
             faehigkeiten.flatMap { it.werkzeuge }.forEach { w ->

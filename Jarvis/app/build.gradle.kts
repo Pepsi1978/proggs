@@ -100,6 +100,16 @@ dependencies {
     // Bedienknöpfe der Vorlese-Benachrichtigung.
     implementation(libs.media)
 
+    // Ablage: Audio und Video abspielen (Media3), große Bilder und PDF-Seiten gekachelt zoomen.
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.ssiv)
+
+    // Unit-Tests der Ablage ohne Gerät (org.json ersetzt die Android-Attrappe, MockWebServer für Downloads).
+    testImplementation(libs.junit)
+    testImplementation(libs.org.json)
+    testImplementation(libs.okhttp.mockwebserver)
+
     // E-Mail über Gmail (SMTP senden, IMAP lesen).
     implementation("com.sun.mail:android-mail:1.6.7")
     implementation("com.sun.mail:android-activation:1.6.7")

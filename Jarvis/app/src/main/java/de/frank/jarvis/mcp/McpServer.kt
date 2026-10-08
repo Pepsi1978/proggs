@@ -155,14 +155,23 @@ class McpServer(context: Context) {
             name = "jarvis_status",
             titel = "Jarvis-Status",
             beschreibung = "Jarvis: sagt, ob Jarvis auf Franks Handy erreichbar ist, welche Apps angebunden sind und welches Datum und welche Uhrzeit dort gerade gelten. " +
-                "Nutze es bei „Jarvis, bist du da?“ oder wenn du das heutige Datum auf dem Handy brauchst.",
-            schema = schema(),
+                "Nutze es bei „Jarvis, bist du da?“ oder wenn du das heutige Datum auf dem Handy brauchst. Mit funktionen=true kommt zusätzlich die vollständige, tatsächliche " +
+                "Liste aller Werkzeuge von Jarvis (Grundlage zum Beispiel für eine Übersicht oder Infografik über Jarvis' Funktionen).",
+            schema = schema("funktionen" to schalter("true = alle Werkzeuge mit Kurzbeschreibung auflisten.")),
             nurLesen = true,
-        ) {
+        ) { it ->
             val jetzt = LocalDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))
             val apps = Register.alle(app).joinToString("; ") { f -> f.name + ": " + (f.stoerung()?.let { "gestört ($it)" } ?: "bereit") }
             val dienst = Register.alle(app).filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.heuteKurz().orEmpty()
-            Ergebnis("Jarvis ist bereit. Auf dem Handy ist es $jetzt. " + (if (dienst.isEmpty()) "" else "Dienst heute: $dienst. ") + "Angebundene Apps: $apps.")
+            val funktionen = if (!it.optBoolean("funktionen")) "" else buildString {
+                append("\n\nFUNKTIONEN VON JARVIS (Version ").append(BuildConfig.VERSION_NAME).append("):\n")
+                Register.alle(app).forEach { f ->
+                    append(f.name).append(if (f.imPlugin) "" else " (nur in Jarvis selbst und für seine Agenten)").append(": ").append(f.beschreibung).append('\n')
+                    f.werkzeuge.forEach { w -> append("  - ").append(w.titel).append('\n') }
+                }
+                append("Jarvis selbst: ").append(eigene.joinToString(", ") { w -> w.titel }).append('\n')
+            }
+            Ergebnis("Jarvis ist bereit. Auf dem Handy ist es $jetzt. " + (if (dienst.isEmpty()) "" else "Dienst heute: $dienst. ") + "Angebundene Apps: $apps." + funktionen)
         },
     )
 
@@ -224,6 +233,7 @@ class McpServer(context: Context) {
             .put("destructiveHint", w.loeschend)
             .put("idempotentHint", w.nurLesen)
             .put("openWorldHint", false))
+        .apply { w.meta?.let { put("_meta", it) } }
 
     private fun anleitung(): String = buildString {
         append("Dies ist Jarvis, Franks persönlicher Assistent auf seinem Handy. Sagt Frank „Jarvis“ oder geht es um seine Aufgaben, Termine ")
@@ -236,6 +246,9 @@ class McpServer(context: Context) {
         append("Tagesdatenbank: Jarvis hält die Daten aller Apps mehrmals täglich fertig vor. Für einen Überblick genügt tagesauswertung_lesen oder tagesdaten_lesen; ")
         append("die einzelnen Apps fragst du nur für Aktuelles (Aufgaben) oder Details ab.\n")
         append("Agenten: Für Recherchen und längere Ausarbeitungen startest du mit agent_starten einen Agenten von Jarvis. Er arbeitet Minuten im Hintergrund und legt das Ergebnis in die Ablage.\n")
+        append("Dateien: Melde eine Datei erst als gespeichert, wenn ablage_datei_speichern oder bild_erzeugen „Gespeichert“ zurückgibt. Bei „läuft noch“ ist sie noch nicht da. ")
+        append("Dateien aus diesem Gespräch (hochgeladen oder von dir erzeugt) übergibst du in ablage_datei_speichern als chatgpt_dateien; Pfade wie sandbox: oder /mnt/data erreicht das Handy nicht. ")
+        append("Geht keine Übergabe, sag ehrlich, dass die Datei nicht übertragen werden kann.\n")
     }
 
     private fun inhalt(text: String, fehler: Boolean) = JSONObject()
