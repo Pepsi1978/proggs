@@ -30,6 +30,7 @@ public sealed class ModelRegistry
     private static readonly (string Slug, string DisplayName)[] AnthropicModels =
     [
         (ClaudeOpus5Slug, "Claude Opus 5 (1M)"),
+        ("claude-haiku-5-5", "Claude Haiku 5.5"),
     ];
 
     /// <summary>
@@ -594,6 +595,7 @@ public sealed class ModelRegistry
             Model("claude-fable-5-1[1m]", "Claude Fable 5.1 (1M)", "anthropic", "Anthropic"),
             Model("claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)", "anthropic", "Anthropic"),
             Model("claude-sonnet-5-5[1m]", "Claude Sonnet 5.5 (1M)", "anthropic", "Anthropic"),
+            Model("claude-haiku-5-5", "Claude Haiku 5.5", "anthropic", "Anthropic"),
             Model("claude-haiku-4-5", "Claude Haiku 4.5", "anthropic", "Anthropic"),
             Model("claude-opus-4-7", "Claude Opus 4.7", "anthropic", "Anthropic"),
             Model("claude-opus-4-6", "Claude Opus 4.6", "anthropic", "Anthropic"),

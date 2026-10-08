@@ -19,7 +19,8 @@ final class ModelRegistry {
     /// Anthropic-Modelle, die auch in bereits gespeicherte models.json nachgetragen werden
     /// (einmalig, per knownSyncedModelSlugs gemerkt - manuell entfernte Modelle bleiben weg).
     private static let anthropicModels: [(slug: String, displayName: String)] = [
-        (claudeOpus5Slug, "Claude Opus 5 (1M)")
+        (claudeOpus5Slug, "Claude Opus 5 (1M)"),
+        ("claude-haiku-5-5", "Claude Haiku 5.5")
     ]
 
     /// Hebt die grossen Anthropic-Modelle auf ihre 1M-Kontext-Variante. Der Launcher reicht den
@@ -483,6 +484,7 @@ final class ModelRegistry {
                 model("claude-fable-5-1[1m]", "Claude Fable 5.1 (1M)", "anthropic", "Anthropic"),
                 model("claude-opus-4-8[1m]", "Claude Opus 4.8 (1M)", "anthropic", "Anthropic"),
                 model("claude-sonnet-5-5[1m]", "Claude Sonnet 5.5 (1M)", "anthropic", "Anthropic"),
+                model("claude-haiku-5-5", "Claude Haiku 5.5", "anthropic", "Anthropic"),
                 model("claude-haiku-4-5", "Claude Haiku 4.5", "anthropic", "Anthropic"),
                 model("claude-opus-4-7", "Claude Opus 4.7", "anthropic", "Anthropic"),
                 model("claude-opus-4-6", "Claude Opus 4.6", "anthropic", "Anthropic"),
