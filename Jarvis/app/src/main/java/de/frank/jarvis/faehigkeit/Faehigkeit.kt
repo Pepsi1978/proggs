@@ -4,7 +4,11 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class Ergebnis(val text: String, val fehler: Boolean = false)
+/**
+ * Was ein Werkzeug zurückgibt. [struktur] (für Modell und Karte) und [meta] (nur für die Karte, das Modell sieht es
+ * nicht) braucht nur ein Werkzeug, das in ChatGPT etwas anzeigt (siehe [AblageKarte]).
+ */
+data class Ergebnis(val text: String, val fehler: Boolean = false, val struktur: JSONObject? = null, val meta: JSONObject? = null)
 
 /**
  * Ein Werkzeug, das ChatGPT (über das Plugin) und das eigene Modell von Jarvis gleichermaßen aufrufen können.

@@ -12,6 +12,7 @@ import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.faehigkeit.schalter
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
+import de.frank.jarvis.faehigkeit.AblageKarte
 import de.frank.jarvis.faehigkeit.Ergebnis
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
@@ -202,13 +203,16 @@ class McpServer(context: Context) {
         return when (methode) {
             "initialize" -> ergebnis(id, JSONObject()
                 .put("protocolVersion", parameter.optString("protocolVersion").takeIf { it in VERSIONEN } ?: VERSIONEN.first())
-                .put("capabilities", JSONObject().put("tools", JSONObject().put("listChanged", false)))
+                .put("capabilities", JSONObject().put("tools", JSONObject().put("listChanged", false)).put("resources", JSONObject()))
                 .put("serverInfo", JSONObject().put("name", "Jarvis").put("title", "Jarvis").put("version", BuildConfig.VERSION_NAME))
                 .put("instructions", anleitung()))
             "ping" -> ergebnis(id, JSONObject())
             "tools/list" -> ergebnis(id, JSONObject().put("tools", JSONArray(alleWerkzeuge().map(::beschreibe))))
             "tools/call" -> ergebnis(id, rufe(parameter.optString("name"), parameter.optJSONObject("arguments") ?: JSONObject()))
-            "resources/list" -> ergebnis(id, JSONObject().put("resources", JSONArray()))
+            // Einzige Ressource: die Karte, mit der ChatGPT Dateien aus der Ablage anzeigt.
+            "resources/list" -> ergebnis(id, AblageKarte.liste())
+            "resources/read" -> AblageKarte.lies(parameter.optString("uri"))?.let { ergebnis(id, it) } ?: fehler(id, -32002, "Ressource nicht gefunden")
+            "resources/templates/list" -> ergebnis(id, JSONObject().put("resourceTemplates", JSONArray()))
             "prompts/list" -> ergebnis(id, JSONObject().put("prompts", JSONArray()))
             else -> fehler(id, -32601, "Unbekannte Methode: $methode")
         }
@@ -223,7 +227,7 @@ class McpServer(context: Context) {
         // Inzwischen fertig Gewordenes reicht Jarvis mit dem nächsten Ergebnis nach (ChatGPT lässt sich nicht von hier aus ansprechen).
         val fertig = AblageZentrale.fertigFuerPlugin()
         val nachtrag = if (fertig.isEmpty()) "" else "\n\nINZWISCHEN FERTIG (sag es Frank jetzt von dir aus):\n" + fertig.joinToString("\n") { "- $it" }
-        return inhalt(r.text + nachtrag, r.fehler)
+        return inhalt(r.text + nachtrag, r.fehler).apply { r.struktur?.let { put("structuredContent", it) }; r.meta?.let { put("_meta", it) } }
     }
 
     private fun beschreibe(w: Werkzeug): JSONObject = JSONObject()

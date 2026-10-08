@@ -21,7 +21,11 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import android.graphics.Bitmap
+import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -58,6 +62,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             "Bilder und Infografiken erzeugt bild_erzeugen über das Bildwerkzeug von Jarvis' Codex-Anmeldung. Echte Dateien für PDF gibt es nur als Text-PDF oder Bild-PDF; " +
             "DOCX, XLSX, PPTX, Audio und Video kann Jarvis nicht selbst erzeugen, nur übernehmen. " +
             "WICHTIG: Melde etwas erst als gespeichert, wenn das Werkzeug-Ergebnis „Gespeichert“ sagt. Sagt es „läuft noch“, ist die Datei noch NICHT da: sag das so und prüfe später mit ablage_lesen. " +
+            "Will Frank eine Datei im Gespräch sehen („zeig mir die Infografik“), nimm ablage_zeigen: Es zeigt ein Bild, eine PDF-Seite oder einen Text als Karte an. " +
             "Ist ein Vorhaben erledigt und Frank braucht den Eintrag nicht mehr, lösche ihn nach Rückfrage."
 
     override fun stoerung(): String? = null
@@ -77,7 +82,7 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
                     "art" to text("Nur für die Liste: nach Dateiart filtern.", listOf("alle") + Kategorie.entries.map { it.name.lowercase(Locale.ROOT) }),
                 ),
             ) { a -> (if (a.gesetzt("titel")) w("ablage_lesen") else w("ablage_liste")).ausfuehren(a) },
-            w("ablage_schreiben"), w("ablage_datei_speichern"), w("ablage_loeschen"), w("bild_erzeugen"),
+            w("ablage_zeigen"), w("ablage_schreiben"), w("ablage_datei_speichern"), w("ablage_loeschen"), w("bild_erzeugen"),
         )
     }
 
@@ -106,7 +111,62 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
+    /**
+     * Übergibt eine Datei an die Karte in ChatGPT ([AblageKarte]): Bilder und PDF-Seiten verkleinert als JPEG im
+     * Feld `_meta` (ChatGPT verwirft große Ergebnisse stillschweigend), Texte direkt. Anderes lässt sich dort nicht zeigen.
+     */
+    private suspend fun zeige(a: JSONObject): Ergebnis = withContext(Dispatchers.IO) {
+        val e = speicher.finde(a.optString("titel")) ?: return@withContext Ergebnis("Kein eindeutiger Eintrag für „${a.optString("titel")}“. Die Liste der Einträge liefert ablage_lesen ohne titel.", fehler = true)
+        val g = a.optString("datei").trim().lowercase(Locale.GERMAN)
+        val an = if (g.isEmpty()) e.anhaenge.firstOrNull { it.art == Art.BILD } ?: e.anhaenge.firstOrNull { it.art == Art.PDF } ?: e.anhaenge.firstOrNull()
+        else e.anhaenge.firstOrNull { it.originalName.lowercase(Locale.GERMAN) == g } ?: e.anhaenge.filter { g in it.originalName.lowercase(Locale.GERMAN) }.singleOrNull()
+            ?: return@withContext Ergebnis("Keine eindeutige Datei „${a.optString("datei")}“ in „${e.titel}“. Vorhanden: " + e.anhaenge.joinToString { it.originalName }.ifEmpty { "nur Text" } + ".", fehler = true)
+        val struktur = JSONObject().put("titel", e.titel)
+        val unsicher = " Ob die Karte zu sehen ist, hängt von der ChatGPT-Ansicht ab: Frag Frank, ob er sie sieht, statt es zu behaupten. Sonst findet er die Datei in Jarvis unter Ablage."
+        if (an == null || an.art in setOf(Art.TEXT, Art.MARKDOWN, Art.CODE, Art.DATEN, Art.TABELLE_TEXT)) {
+            val text = (if (an == null) speicher.text(e, 40_000) else runCatching { speicher.datei(an).inputStream().use { s -> String(s.readNBytes(40_000), Charsets.UTF_8) } }.getOrDefault("")).trim()
+            if (text.isEmpty()) return@withContext Ergebnis("„${e.titel}“ enthält keinen lesbaren Text.", fehler = true)
+            return@withContext Ergebnis("Der Text von „${an?.originalName ?: e.titel}“ ist als Karte an ChatGPT übergeben.$unsicher\n\n$text",
+                struktur = struktur.put("hinweis", an?.originalName ?: "Text").put("text", text))
+        }
+        val datei = speicher.datei(an)
+        var hinweis = an.originalName
+        val bild = runCatching {
+            when (an.art) {
+                Art.BILD -> Medien.bildVerkleinert(datei, 1600)
+                Art.PDF -> {
+                    val seiten = Medien.pdfSeiten(datei)
+                    val seite = a.optInt("seite", 1).coerceIn(1, maxOf(1, seiten))
+                    hinweis += " · Seite $seite von $seiten"
+                    Medien.pdfSeite(datei, seite - 1, 1600)?.second
+                }
+                else -> return@withContext Ergebnis("„${an.originalName}“ (${an.art.anzeige}) lässt sich in ChatGPT nicht anzeigen. Frank öffnet es in Jarvis unter Ablage; dort kann er es auch teilen oder herunterladen.", fehler = true)
+            }
+        }.getOrElse { return@withContext Ergebnis("„${an.originalName}“ ließ sich nicht lesen: ${AblageZentrale.fehlerText(it)}", fehler = true) }
+            ?: return@withContext Ergebnis("„${an.originalName}“ ließ sich nicht als Bild lesen.", fehler = true)
+        fun jpeg(guete: Int) = ByteArrayOutputStream().also { bild.compress(Bitmap.CompressFormat.JPEG, guete, it) }.toByteArray()
+        val bytes = jpeg(82).let { if (it.size > 450_000) jpeg(60) else it }
+        Ergebnis("„$hinweis“ aus „${e.titel}“ ist als Karte an ChatGPT übergeben (Bild ${bild.width} × ${bild.height}, ${Dateityp.groesse(bytes.size.toLong())}).$unsicher",
+            struktur = struktur.put("hinweis", hinweis),
+            meta = JSONObject().put("bild", "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)))
+    }
+
     private val einzeln: List<Werkzeug> = listOf(
+        Werkzeug(
+            name = "ablage_zeigen",
+            titel = "Datei aus der Ablage anzeigen",
+            beschreibung = "Jarvis: zeigt Frank eine Datei aus der Ablage von Jarvis direkt im ChatGPT-Gespräch an, als Karte: ein Bild oder eine Infografik, eine Seite eines PDFs oder den Text " +
+                "eines Eintrags bzw. einer Textdatei. Nutze es bei „zeig mir die Infografik“, „zeig das Bild hier an“, „zeig mir den Bericht“. Ohne datei nimmt es das erste Bild des Eintrags, " +
+                "sonst das erste PDF, sonst den Text. Audio, Video und Office-Dateien lassen sich hier nicht anzeigen; die öffnet Frank in Jarvis unter Ablage.",
+            schema = schema(
+                "titel" to text("Titel des Ablage-Eintrags oder ein eindeutiger Teil davon."),
+                "datei" to text("Optional: Name der Datei im Eintrag, wenn er mehrere hat."),
+                "seite" to zahl("Bei einem PDF: die Seite, Vorgabe 1."),
+                pflicht = listOf("titel"),
+            ),
+            nurLesen = true,
+            meta = AblageKarte.werkzeugMeta,
+        ) { a -> zeige(a) },
         Werkzeug(
             name = "ablage_liste",
             titel = "Ablage ansehen",
