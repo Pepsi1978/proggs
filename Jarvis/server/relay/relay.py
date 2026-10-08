@@ -168,12 +168,49 @@ async def gesund(_: web.Request) -> web.Response:
     return web.Response(text="ok")
 
 
+async def unbekannt(_: web.Request) -> web.Response:
+    return web.Response(status=404, text="Not found")
+
+
+@web.middleware
+async def mitschrift(request: web.Request, handler):
+    """Eine Zeile je Anfrage, damit sich nachvollziehen laesst, was ChatGPT fragt. Das Geheimnis wird nie geloggt."""
+    teile = request.path.split("/")
+    if len(teile) > 2 and teile[1] == "j":
+        teile[2] = "<geheim>" if len(teile[2]) >= 32 else "<falsch>"
+    pfad = "/".join(teile)[:120]
+    rpc = ""
+    if request.method == "POST" and request.can_read_body:
+        try:
+            daten = json.loads(await request.text())
+            rpc = daten.get("method", "") if isinstance(daten, dict) else "stapel"
+            if rpc == "tools/call":
+                rpc += ":" + str((daten.get("params") or {}).get("name", ""))
+        except Exception:
+            rpc = "?"
+    start = asyncio.get_running_loop().time()
+    status = 500
+    try:
+        antwort = await handler(request)
+        status = antwort.status
+        return antwort
+    except web.HTTPException as fehler:
+        status = fehler.status
+        raise
+    finally:
+        if pfad != "/gesund":
+            dauer = int((asyncio.get_running_loop().time() - start) * 1000)
+            log.info("%s %s %s -> %s (%s ms) ua=%s accept=%s", request.method, pfad, rpc, status, dauer,
+                     request.headers.get("User-Agent", "")[:60], request.headers.get("Accept", "")[:60])
+
+
 def app() -> web.Application:
     relay = Relay()
-    anwendung = web.Application(client_max_size=MAX_RUMPF)
+    anwendung = web.Application(client_max_size=MAX_RUMPF, middlewares=[mitschrift])
     anwendung.router.add_get("/geraet/ws", relay.geraet)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)
     anwendung.router.add_get("/gesund", gesund)
+    anwendung.router.add_route("*", "/{rest:.*}", unbekannt)
     return anwendung
 
 

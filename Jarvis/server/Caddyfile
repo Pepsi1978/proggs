@@ -5,17 +5,12 @@
 }
 
 srv1774016.hstgr.cloud {
-	@jarvis path /j/*/mcp /geraet/ws
-	handle @jarvis {
-		reverse_proxy relay:8080 {
-			# Werkzeugaufrufe dürfen dauern; Antworten sofort durchreichen.
-			flush_interval -1
-			transport http {
-				response_header_timeout 90s
-			}
+	# Alles geht an den Relay; der beantwortet Unbekanntes selbst mit 404 und schreibt eine Zeile ins Log.
+	reverse_proxy relay:8080 {
+		# Werkzeugaufrufe dürfen dauern; Antworten sofort durchreichen.
+		flush_interval -1
+		transport http {
+			response_header_timeout 90s
 		}
-	}
-	handle {
-		respond 404
 	}
 }
