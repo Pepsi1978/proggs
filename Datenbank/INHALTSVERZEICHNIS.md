@@ -4,7 +4,7 @@ Diese Übersicht beschreibt die gespeicherten Projekte und Themen. Zum gezielten
 
 ## [JARVIS](JARVIS/INHALTSVERZEICHNIS.md)
 
-Persönlicher KI-Assistent mit Sprachsteuerung und Anbindungen an eigene Android-Apps. Der Ordner enthält Wissen zum Aufbau der JARVIS-App, MCP-Verbindungen, Werkzeugen, Agentenschleifen und dem externen Projektwissen im Repository.
+Persönlicher KI-Assistent mit Sprachsteuerung und Anbindungen an eigene Android-Apps. Der Ordner enthält Wissen zum Aufbau der JARVIS-App, MCP-Verbindungen, Werkzeugen, Agentenschleifen und dem externen Projektwissen im Repository. Dokumentiert außerdem den verfügbaren Plugin-Funktionsumfang, Tagesauswertungen, Hintergrundagenten und die Grenzen beziehungsweise offenen Einzeltests.
 
 ## [Ziele](Ziele/INHALTSVERZEICHNIS.md)
 
