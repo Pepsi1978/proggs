@@ -6,6 +6,7 @@
     { "versionCode": 3, "versionName": "1.0.2", "stand": "23.09.2026, 15:10 Uhr", "notiz": "Versionslog eingeführt: Version steht jetzt in app/src/main/assets/versionslog.json" },
     { "versionCode": 4, "versionName": "1.0.3", "stand": "26.09.2026, 18:17 Uhr", "notiz": "Erster Bau aus der Cloud: GitHub signiert die App und legt das Update in Google Drive" },
     {"versionCode": 5, "versionName": "1.0.4", "stand": "30.09.2026, 19:32 Uhr", "notiz": "Läuft jetzt als Debug-Build: App-Daten und Logs lassen sich zur Fehlersuche auslesen, Ruckeln wird sichtbar (etwas langsamer als bisher)"},
-    { "versionCode": 6, "versionName": "1.0.5", "stand": "05.10.2026, 18:41 Uhr", "notiz": "Drehsperre im ChatGPT-Sprachmodus: Solange die Kugel nach langem Druck auf die Seitentaste offen ist, dreht sich der Bildschirm nicht mehr, damit das Gespräch nicht abbricht" }
+    { "versionCode": 6, "versionName": "1.0.5", "stand": "05.10.2026, 18:41 Uhr", "notiz": "Drehsperre im ChatGPT-Sprachmodus: Solange die Kugel nach langem Druck auf die Seitentaste offen ist, dreht sich der Bildschirm nicht mehr, damit das Gespräch nicht abbricht" },
+    { "versionCode": 7, "versionName": "1.0.6", "stand": "08.10.2026, 10:36 Uhr", "notiz": "Zugeklappt pendelt Nova nicht mehr zwischen Hoch- und Querformat: Benachrichtigungen und Einblendungen anderer Apps lösen die Drehsperre nicht mehr, welche App vorne ist, kommt jetzt aus der Fensterliste. Neues Protokoll in der App zur Fehlersuche. Enthält auch: Sperre löst sich beim Schließen der ChatGPT-Kugel" }
   ]
 }

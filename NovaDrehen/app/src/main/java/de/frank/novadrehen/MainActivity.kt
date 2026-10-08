@@ -7,16 +7,23 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 
 class MainActivity : Activity() {
 
     private lateinit var status: TextView
+    private lateinit var protokoll: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val pad = (24 * resources.displayMetrics.density).toInt()
         status = TextView(this).apply { textSize = 17f }
+        protokoll = TextView(this).apply {
+            textSize = 12f
+            typeface = android.graphics.Typeface.MONOSPACE
+            setTextIsSelectable(true)
+        }
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, pad * 2, pad, pad)
@@ -44,8 +51,17 @@ class MainActivity : Activity() {
                     startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
                 }
             })
+            addView(TextView(this@MainActivity).apply {
+                text = "\nProtokoll (neueste Zeile oben). Bei Fehlverhalten: App öffnen und Bildschirmfoto machen."
+                textSize = 15f
+            })
+            addView(Button(this@MainActivity).apply {
+                text = "Protokoll aktualisieren"
+                setOnClickListener { protokoll.text = Protokoll.alle() }
+            })
+            addView(protokoll)
         }
-        setContentView(layout)
+        setContentView(ScrollView(this).apply { addView(layout) })
     }
 
     override fun onResume() {
@@ -55,5 +71,6 @@ class MainActivity : Activity() {
         val schreiben = Settings.System.canWrite(this)
         status.text = "Bedienungshilfe: ${if (dienst) "an ✓" else "aus ✗"}\n" +
             "Systemeinstellungen ändern: ${if (schreiben) "erlaubt ✓" else "nicht erlaubt ✗"}\n"
+        protokoll.text = Protokoll.alle()
     }
 }
