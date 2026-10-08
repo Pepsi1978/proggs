@@ -1,14 +1,19 @@
 package de.frank.aufgaben.ui.szenen
 
+import android.graphics.Matrix
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.nativeCanvas
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
@@ -50,6 +55,95 @@ internal fun gehen(x: Float, boden: Float, dir: Float, phase: Float, blinzeln: B
 }
 
 internal fun sitzen(x: Float, hueftY: Float, dir: Float) = Pose(x, hueftY, dir, lean = -4f, hL = 84f, kL = 84f, hR = 88f, kR = 88f, hueftY = hueftY)
+
+/** Hüfthöhe, wie [mensch] sie zeichnet (auch für stehende Posen ohne feste Hüfte). */
+internal fun Pose.huefteBei(s: Float): Float {
+    fun beinHoehe(h: Float, k: Float) = 0.25f * s * cos(rad(h)) + 0.24f * s * cos(rad(h - k))
+    return hueftY ?: (boden - maxOf(beinHoehe(hL, kL), beinHoehe(hR, kR)) - 0.035f * s)
+}
+
+/** Blendet weich zu [b] über. Die Blickrichtung läuft dabei durch 0 – das sieht aus wie ein Umdrehen. */
+internal fun Pose.mischen(b: Pose, k: Float, s: Float): Pose {
+    if (k <= 0f) return this
+    if (k >= 1f) return b
+    fun m(x: Float, y: Float) = x + (y - x) * k
+    val beideStehen = hueftY == null && b.hueftY == null
+    return Pose(
+        m(x, b.x), m(boden, b.boden), m(dir, b.dir), m(lean, b.lean),
+        m(hL, b.hL), m(kL, b.kL), m(hR, b.hR), m(kR, b.kR),
+        m(sL, b.sL), m(eL, b.eL), m(sR, b.sR), m(eR, b.eR),
+        m(kopf, b.kopf), if (beideStehen) null else m(huefteBei(s), b.huefteBei(s)),
+        if (k < 0.5f) blinzeln else b.blinzeln, m(lachen, b.lachen),
+    )
+}
+
+/** Ein Abschnitt der Handlung: ab [start] gilt die Haltung aus [pose]. */
+internal class Takt(val start: Float, val pose: (Float) -> Pose)
+
+/** Haltung zur Zeit [t]; an jeder Grenze gleitet die alte Haltung in [blende] Sekunden in die neue. */
+internal fun choreo(t: Float, s: Float, takte: List<Takt>, blende: Float = 0.55f): Pose {
+    val i = takte.indexOfLast { t >= it.start }.coerceAtLeast(0)
+    val jetzt = takte[i].pose(t)
+    if (i == 0) return jetzt
+    val k = (t - takte[i].start) / blende
+    if (k >= 1f) return jetzt
+    return takte[i - 1].pose(t).mischen(jetzt, weich(k), s)
+}
+
+/** Freudensprünge zwischen [start] und [ende]: kleine Hüpfer, die weich beginnen und weich auslaufen. */
+internal fun huepfen(t: Float, start: Float, ende: Float, hoehe: Float, takt: Float = 6.5f): Float {
+    if (t <= start || t >= ende) return 0f
+    val huelle = weich(an(t, start, 0.5f)) * (1f - weich(an(t, ende - 0.6f, 0.6f)))
+    return maxOf(0f, sin((t - start) * takt)) * hoehe * huelle
+}
+
+// ---------- Perspektive ----------
+/** Matrix, die das flache Rechteck [quelle] auf das Viereck [ziel] abbildet (oben links, oben rechts, unten rechts, unten links). */
+internal fun perspektive(quelle: Rect, ziel: List<Offset>): Matrix = Matrix().apply {
+    setPolyToPoly(
+        floatArrayOf(quelle.left, quelle.top, quelle.right, quelle.top, quelle.right, quelle.bottom, quelle.left, quelle.bottom), 0,
+        floatArrayOf(ziel[0].x, ziel[0].y, ziel[1].x, ziel[1].y, ziel[2].x, ziel[2].y, ziel[3].x, ziel[3].y), 0, 4,
+    )
+}
+
+/** Zeichnet [block] flach, aber durch [m] räumlich verzerrt. */
+internal inline fun DrawScope.verzerrt(m: Matrix, block: DrawScope.() -> Unit) {
+    drawIntoCanvas { it.nativeCanvas.save(); it.nativeCanvas.concat(m) }
+    block()
+    drawIntoCanvas { it.nativeCanvas.restore() }
+}
+
+internal fun Matrix.abbilden(p: Offset): Offset {
+    val a = floatArrayOf(p.x, p.y)
+    mapPoints(a)
+    return Offset(a[0], a[1])
+}
+
+/** Gefülltes Viereck aus vier Ecken. */
+internal fun DrawScope.flaeche(ecken: List<Offset>, farbe: Color) {
+    drawPath(Path().apply { moveTo(ecken[0].x, ecken[0].y); for (i in 1 until ecken.size) lineTo(ecken[i].x, ecken[i].y); close() }, farbe)
+}
+
+internal fun DrawScope.flaeche(ecken: List<Offset>, pinsel: Brush) {
+    drawPath(Path().apply { moveTo(ecken[0].x, ecken[0].y); for (i in 1 until ecken.size) lineTo(ecken[i].x, ecken[i].y); close() }, pinsel)
+}
+
+/**
+ * Quader in leichter Aufsicht: Vorderseite [vorne] (Rechteck), dazu sichtbare Oberseite und Seite, die um
+ * [tiefe] nach hinten zum Fluchtpunkt [flucht] laufen. Gibt die vier Ecken der Oberseite zurück.
+ */
+internal fun DrawScope.quader(vorne: Rect, tiefe: Float, flucht: Offset, farbe: Color): List<Offset> {
+    fun hinten(p: Offset) = p + (flucht - p) * tiefe
+    val ol = Offset(vorne.left, vorne.top); val or = Offset(vorne.right, vorne.top)
+    val ur = Offset(vorne.right, vorne.bottom); val ul = Offset(vorne.left, vorne.bottom)
+    val oben = listOf(hinten(ol), hinten(or), or, ol)
+    // Seite, die zum Betrachter zeigt: links vom Fluchtpunkt die rechte Seite, rechts davon die linke.
+    if (vorne.right < flucht.x) flaeche(listOf(or, hinten(or), hinten(ur), ur), farbe.dunkler(0.28f))
+    else if (vorne.left > flucht.x) flaeche(listOf(ol, hinten(ol), hinten(ul), ul), farbe.dunkler(0.28f))
+    if (vorne.top > flucht.y) flaeche(oben, farbe.heller(0.16f))
+    drawRect(farbe, vorne.topLeft, vorne.size)
+    return oben
+}
 
 internal class Punkte(val handL: Offset, val handR: Offset, val kopf: Offset, val schulter: Offset)
 
@@ -113,6 +207,16 @@ internal fun DrawScope.mensch(p: Pose, s: Float, c: MenschFarben): Punkte {
     }
     val handR = arm(p.sR, p.eR, c.oben)
     return Punkte(handL, handR, kopf, schulter)
+}
+
+/** Zeichnet den rechten Arm von [p] noch einmal, z. B. vor einer Katze auf dem Schoß. */
+internal fun DrawScope.rechterArm(p: Pose, s: Float, c: MenschFarben, schulter: Offset) {
+    fun v(w: Float, l: Float) = Offset(sin(rad(w)) * p.dir * l, cos(rad(w)) * l)
+    val ell = schulter + v(p.sR, 0.15f * s)
+    val hand = ell + v(p.sR + p.eR, 0.14f * s)
+    drawLine(c.oben, schulter, ell, 0.07f * s, StrokeCap.Round)
+    drawLine(c.oben, ell, hand, 0.06f * s, StrokeCap.Round)
+    drawCircle(c.haut, 0.033f * s, hand)
 }
 
 /** Zweigelenk-Arm: berechnet Ellbogen so, dass die Hand genau am Ziel liegt (soweit erreichbar). */
