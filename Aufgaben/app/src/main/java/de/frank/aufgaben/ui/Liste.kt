@@ -339,19 +339,10 @@ private fun VorlesenKnopf(vm: AppViewModel, schluessel: String, aktion: () -> Un
 private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmschalten: () -> Unit) {
     val f = LocalFarben.current
     val e = vm.einstellungen
-    // Eigene Titelzeile ohne Knöpfe: App-Name, daneben Serie bzw. Datum.
-    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Sinnvolle Aufgaben", color = f.text, fontSize = 25.sp, lineHeight = 30.sp, maxLines = 1, fontWeight = FontWeight.ExtraBold, style = TextStyle(brush = Brush.linearGradient(listOf(f.text, f.primaer))))
-        Text(
-            if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else Tage.langesDatum(vm.heute),
-            color = f.textLeise, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End, maxLines = 2,
-            modifier = Modifier.weight(1f).padding(start = 10.dp),
-        )
-    }
-    // Alle sechs Knöpfe gleich groß in einer Zeile, bündig mit der linken und rechten Kante der Szene (14 dp Rand).
-    BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp)) {
-        val g = ((maxWidth - 8.dp * 5) / 6).coerceAtMost(62.dp)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+    // Ganz oben: alle sechs Knöpfe klein und gleich groß, rechtsbündig zur rechten Kante der Szene (14 dp Rand).
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 8.dp)) {
+        val g = ((maxWidth - 8.dp * 5) / 6).coerceAtMost(44.dp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             Fortschritt(b.heuteFertig, b.heuteGesamt, g)
             RundKnopf(Icons.Rounded.SelfImprovement, "Fokus-Timer", g) { vm.fokusStarten(null) }
             RundKnopf(if (sucheOffen) Icons.Rounded.Close else Icons.Rounded.Search, "Suchen", g, sucheUmschalten)
@@ -374,6 +365,15 @@ private fun Kopf(vm: AppViewModel, b: Bereiche, sucheOffen: Boolean, sucheUmscha
             }
             RundKnopf(Icons.Rounded.Settings, "Einstellungen", g) { vm.zeige(Bildschirm.Einstellungen) }
         }
+    }
+    // Darunter eine eigene Titelzeile ohne Knöpfe: App-Name, daneben Serie bzw. Datum.
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("Sinnvolle Aufgaben", color = f.text, fontSize = 25.sp, lineHeight = 30.sp, maxLines = 1, fontWeight = FontWeight.ExtraBold, style = TextStyle(brush = Brush.linearGradient(listOf(f.text, f.primaer))))
+        Text(
+            if (b.serie > 1) "${b.serie} Tage in Folge etwas geschafft" else Tage.langesDatum(vm.heute),
+            color = f.textLeise, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.End, maxLines = 2,
+            modifier = Modifier.weight(1f).padding(start = 10.dp),
+        )
     }
 }
 

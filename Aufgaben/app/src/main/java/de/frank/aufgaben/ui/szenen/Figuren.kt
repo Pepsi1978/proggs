@@ -128,6 +128,13 @@ internal fun DrawScope.flaeche(ecken: List<Offset>, pinsel: Brush) {
     drawPath(Path().apply { moveTo(ecken[0].x, ecken[0].y); for (i in 1 until ecken.size) lineTo(ecken[i].x, ecken[i].y); close() }, pinsel)
 }
 
+/** Sichelmond: helle Scheibe, aus der rechts oben eine zweite Scheibe ausgeschnitten ist. */
+internal fun DrawScope.mondsichel(mitte: Offset, r: Float, farbe: Color) {
+    val scheibe = Path().apply { addOval(Rect(mitte, r)) }
+    val schatten = Path().apply { addOval(Rect(mitte + Offset(r * 0.48f, -r * 0.2f), r * 0.92f)) }
+    drawPath(Path.combine(androidx.compose.ui.graphics.PathOperation.Difference, scheibe, schatten), farbe)
+}
+
 /**
  * Quader in leichter Aufsicht: Vorderseite [vorne] (Rechteck), dazu sichtbare Oberseite und Seite, die um
  * [tiefe] nach hinten zum Fluchtpunkt [flucht] laufen. Gibt die vier Ecken der Oberseite zurück.

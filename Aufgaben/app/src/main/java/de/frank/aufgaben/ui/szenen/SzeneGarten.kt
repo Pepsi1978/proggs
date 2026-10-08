@@ -58,9 +58,7 @@ internal fun DrawScope.szeneGarten(t: Float, f: Farben) {
         val mondSicht = (sin(mondLauf * 3.14f) * 3f).coerceIn(0f, 1f) * (1f - tag)
         val mond = Offset(w * (0.1f + 0.8f * mondLauf), horizont + h * 0.04f - sin(mondLauf * 3.14f) * h * 0.36f)
         drawCircle(Brush.radialGradient(listOf(Color(0xFFFFF6DC).copy(alpha = 0.4f * mondSicht), Color.Transparent), mond, h * 0.14f), h * 0.14f, mond)
-        drawCircle(Color(0xFFF4EFD9).copy(alpha = mondSicht), h * 0.042f, mond)
-        drawCircle(Color(0xFFDCD5BC).copy(alpha = mondSicht), h * 0.01f, mond + Offset(-h * 0.012f, -h * 0.01f))
-        drawCircle(Color(0xFFDCD5BC).copy(alpha = mondSicht), h * 0.007f, mond + Offset(h * 0.014f, h * 0.012f))
+        mondsichel(mond, h * 0.046f, Color(0xFFF4EFD9).copy(alpha = mondSicht))
     }
     val bogen = an(t, 2.5f, 38.5f)
     val sonne = Offset(w * (0.06f + 0.88f * bogen), horizont + h * 0.06f - sin(bogen * 3.14f) * h * 0.44f)
@@ -222,7 +220,6 @@ internal fun DrawScope.szeneGarten(t: Float, f: Farben) {
     val cs = h * 0.17f
     val strauss = geben.handR(s) + Offset(-h * 0.05f, h * 0.005f)
     val schnupperX = strauss.x - h * 0.006f - 0.26f * cs
-    val wartX = schnupperX - h * 0.06f
     when {
         t < 2.5f -> Unit
         t < 5.5f -> katze(mix(-0.25f * w, w * 0.17f, weich(an(t, 2.5f, 3f))), boden, cs, 1f, 0, t * 10f, t, katzeF)
@@ -230,11 +227,10 @@ internal fun DrawScope.szeneGarten(t: Float, f: Farben) {
         t < 15.8f -> katze(w * 0.17f, boden, cs, 1f, 3, 0f, t, katzeF)
         t < 16.5f -> { val q = an(t, 15.8f, 0.7f); katze(mix(w * 0.17f, w * 0.27f, weich(q)), boden, cs, 1f, 3, 0f, t, katzeF, hoehe = sin(q * 3.14f) * h * 0.22f) }
         t < 31f -> katze(w * 0.27f, boden, cs, 1f, 1, 0f, t, katzeF)
-        t < 33.6f -> katze(mix(w * 0.27f, wartX, weich(an(t, 31f, 2.6f))), boden, cs, 1f, 0, t * 10f, t, katzeF)
-        t < 34.4f -> katze(wartX, boden, cs, 1f, 1, 0f, t, katzeF)
-        // Ein kleines Stück näher an den Strauß, dann schnuppern
-        t < 34.9f -> katze(mix(wartX, schnupperX, weich(an(t, 34.4f, 0.5f))), boden, cs, 1f, 0, t * 6f, t, katzeF)
-        t < 36.4f -> katze(schnupperX + sin(t * 16f) * h * 0.004f * weich(an(t, 34.9f, 0.2f)) * (1f - weich(an(t, 36.1f, 0.3f))), boden, cs, 1f, 1, 0f, t, katzeF)
+        // Geht ruhig bis vor den Strauß, setzt sich und schnuppert nur kurz – ohne Satz nach vorne
+        t < 33.6f -> katze(mix(w * 0.27f, schnupperX, weich(an(t, 31f, 2.6f))), boden, cs, 1f, 0, t * 10f, t, katzeF)
+        t < 34.9f -> katze(schnupperX, boden, cs, 1f, 1, 0f, t, katzeF)
+        t < 36.4f -> katze(schnupperX + sin(t * 9f) * h * 0.002f * weich(an(t, 34.9f, 0.3f)) * (1f - weich(an(t, 35.9f, 0.4f))), boden, cs, 1f, 1, 0f, t, katzeF)
         t < 38.6f -> katze(schnupperX, boden, cs, mix(1f, -1f, weich(an(t, 38.1f, 0.5f))), 1, 0f, t, katzeF)
         else -> katze(mix(schnupperX, -0.25f * w, an(t, 38.6f, 5.2f)), boden, cs, -1f, 0, t * 10f, t, katzeF)
     }

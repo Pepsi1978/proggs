@@ -63,9 +63,7 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
             val r = fen.width * 0.11f
             val mond = Offset(fen.left + fen.width * (0.25f + 0.5f * mondLauf), fen.bottom - fen.height * (0.02f + 0.82f * sin(mondLauf * 3.14f)))
             drawCircle(Brush.radialGradient(listOf(Color(0xFFFFF4D6).copy(alpha = 0.35f), Color.Transparent), mond, r * 3f), r * 3f, mond)
-            drawCircle(Color(0xFFF4EFD9), r, mond)
-            drawCircle(Color(0xFFDCD5BC), r * 0.25f, mond + Offset(-r * 0.3f, -r * 0.2f))
-            drawCircle(Color(0xFFDCD5BC), r * 0.16f, mond + Offset(r * 0.35f, r * 0.3f))
+            mondsichel(mond, r, Color(0xFFF4EFD9))
         }
         // Dächer
         val dach = if (d) Color(0xFF0E0A08) else Color(0xFF6B4A38)
@@ -169,9 +167,7 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     val fussMitte = Offset((monL + monR) / 2f, hinten(Offset((monL + monR) / 2f, tischY), 0.08f).y)
     drawOval(Color(0xFF2A2522), Offset(fussMitte.x - h * 0.06f, fussMitte.y - h * 0.012f), Size(h * 0.12f, h * 0.024f))
     drawRect(Color(0xFF2A2522), Offset(fussMitte.x - h * 0.012f, tischY - h * 0.1f), Size(h * 0.024f, fussMitte.y - tischY + h * 0.09f))
-    // Gehäusetiefe an der nahen rechten Kante
-    val tiefe = Offset(w * 0.016f, 0f)
-    flaeche(listOf(ecken[1], ecken[1] + tiefe + Offset(0f, h * 0.012f), ecken[2] + tiefe - Offset(0f, h * 0.008f), ecken[2]), Color(0xFF15110F))
+    // Flaches Display ohne Gehäusetiefe: nur der abgerundete schwarze Rahmen
     val flach = Rect(0f, 0f, monR - monL, h * 0.29f)
     val schirmAus = maxOf(1f - an(t, 8.2f, 0.6f), an(t, 38.6f, 0.5f))
     verzerrt(perspektive(flach, ecken)) {

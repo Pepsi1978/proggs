@@ -69,7 +69,7 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     }
 
     // Rundfenster mit tiefer Laibung und leichtem Blickversatz (Parallaxe) beim Raketenstart
-    val fm = Offset(w * 0.75f, h * 0.4f)
+    val fm = Offset(w * 0.79f, h * 0.4f)
     val fr = h * 0.34f
     val wackeln = if (t in startZeit..startZeit + 3f) sin(t * 60f) * 2f * (1f - an(t, startZeit, 3f)) else 0f
     val laibung = (flucht - fm) * 0.06f
@@ -91,8 +91,7 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
                 val mondSicht = (sin(mondLauf * 3.14f) * 3f).coerceIn(0f, 1f) * (1f - tag)
                 val mond = Offset(fm.x - fr * 0.85f + fr * 1.7f * mondLauf, fm.y + fr * 0.66f - sin(mondLauf * 3.14f) * fr * 1.0f)
                 drawCircle(Brush.radialGradient(listOf(Color(0xFFEFF3FF).copy(alpha = 0.35f * mondSicht), Color.Transparent), mond, fr * 0.35f), fr * 0.35f, mond)
-                drawCircle(Color(0xFFE6EAF2).copy(alpha = mondSicht), fr * 0.08f, mond)
-                drawCircle(Color(0xFFC9CFDB).copy(alpha = mondSicht), fr * 0.02f, mond + Offset(-fr * 0.025f, -fr * 0.02f))
+                mondsichel(mond, fr * 0.09f, Color(0xFFE6EAF2).copy(alpha = mondSicht))
             }
             // Planet mit Ring, schattiert
             val planet = fm + Offset(-fr * 0.45f, -fr * 0.45f)
@@ -141,20 +140,51 @@ internal fun DrawScope.szeneKosmos(t: Float, f: Farben, schrift: TextMeasurer) {
     drawCircle(Color.White.copy(alpha = if (d) 0.08f else 0.35f), fr + h * 0.014f, fm, style = Stroke(h * 0.006f))
     for (i in 0 until 12) { val wk = i * 30f; drawCircle(if (d) Color(0xFF4A5A85) else Color(0xFFE6EEFB), h * 0.006f, fm + Offset(cos(rad(wk)) * fr, sin(rad(wk)) * fr)) }
 
+    // Porträt von Albert Einstein an der Wand zwischen Pult und Bullauge
+    val bild = Rect(w * 0.53f - h * 0.085f, h * 0.06f, w * 0.53f + h * 0.085f, h * 0.29f)
+    drawRect(Color.Black.copy(alpha = 0.2f), bild.topLeft + Offset(3f, 4f), bild.size)
+    drawRect(if (d) Color(0xFF3A4668) else Color(0xFF6E7FA6), bild.topLeft, bild.size)
+    val innen = Rect(bild.left + h * 0.012f, bild.top + h * 0.012f, bild.right - h * 0.012f, bild.bottom - h * 0.012f)
+    clipRect(innen.left, innen.top, innen.right, innen.bottom) {
+        val iw = innen.width; val ih = innen.height
+        val kopf = Offset(innen.center.x, innen.top + ih * 0.47f)
+        val haar = Color(0xFFECECF0)
+        drawRect(Brush.verticalGradient(listOf(Color(0xFFB9AE9C), Color(0xFF8E8474)), innen.top, innen.bottom), innen.topLeft, innen.size)
+        // Jackett und Hemdkragen
+        drawOval(Color(0xFF2B2F3A), Offset(innen.left - iw * 0.05f, innen.top + ih * 0.76f), Size(iw * 1.1f, ih * 0.6f))
+        drawPath(Path().apply { moveTo(kopf.x - iw * 0.12f, innen.top + ih * 0.78f); lineTo(kopf.x, innen.top + ih * 0.95f); lineTo(kopf.x + iw * 0.12f, innen.top + ih * 0.78f); close() }, Color(0xFFE8E4DA))
+        // Wilde weiße Haare rund um den Kopf
+        for (i in 0 until 11) {
+            val wk = rad(170f + i * 20f)
+            drawCircle(if (i % 2 == 0) haar else haar.dunkler(0.1f), iw * (0.13f + (i * 7 % 3) * 0.015f), kopf + Offset(cos(wk) * iw * 0.24f, sin(wk) * ih * 0.2f - ih * 0.04f))
+        }
+        // Gesicht
+        drawOval(Color(0xFFD8B090), Offset(kopf.x - iw * 0.19f, kopf.y - ih * 0.17f), Size(iw * 0.38f, ih * 0.42f))
+        drawOval(haar, Offset(kopf.x - iw * 0.17f, kopf.y - ih * 0.2f), Size(iw * 0.34f, ih * 0.1f))
+        for (seite in listOf(-1f, 1f)) {
+            drawLine(haar.dunkler(0.15f), kopf + Offset(seite * iw * 0.13f, -ih * 0.045f), kopf + Offset(seite * iw * 0.04f, -ih * 0.035f), 2.2f, StrokeCap.Round)
+            drawCircle(Color(0xFF2A2420), iw * 0.022f, kopf + Offset(seite * iw * 0.085f, ih * 0.005f))
+        }
+        drawLine(Color(0xFFB98E6E), kopf + Offset(0f, ih * 0.0f), kopf + Offset(iw * 0.015f, ih * 0.08f), 2f, StrokeCap.Round)
+        // Schnurrbart
+        drawOval(haar.dunkler(0.08f), Offset(kopf.x - iw * 0.12f, kopf.y + ih * 0.095f), Size(iw * 0.24f, ih * 0.06f))
+    }
+    drawRect(Color.White.copy(alpha = if (d) 0.1f else 0.35f), bild.topLeft, bild.size, style = Stroke(1.5f))
+
     // Pult als Block mit sichtbarer Oberseite
     val pult = Rect(w * 0.03f, h * 0.62f, w * 0.4f, boden)
     val pultFarbe = if (d) Color(0xFF1A2440) else Color(0xFF8C9CBF)
-    val oben = quader(pult, 0.12f, flucht, pultFarbe)
+    val oben = quader(pult, 0.2f, flucht, pultFarbe)
     drawLine(pultFarbe.heller(0.3f), Offset(pult.left, pult.top), Offset(pult.right, pult.top), 2f)
-    // Tastatur vorne rechts auf dem Pult, darauf tippt die Person
+    // Tastatur quer auf dem Pult: die lange Seite läuft in die Tiefe und zeigt zur Person, die rechts davor steht
     fun aufPult(x: Float, tiefe: Float) = Offset(x, pult.top) + (flucht - Offset(x, pult.top)) * tiefe
-    val tastatur = listOf(aufPult(w * 0.29f, 0.075f), aufPult(w * 0.395f, 0.075f), aufPult(w * 0.395f, 0.015f), aufPult(w * 0.29f, 0.015f))
+    val tastatur = listOf(aufPult(w * 0.352f, 0.185f), aufPult(w * 0.382f, 0.185f), aufPult(w * 0.382f, 0.02f), aufPult(w * 0.352f, 0.02f))
     flaeche(tastatur.map { it + Offset(0f, h * 0.006f) }, Color.Black.copy(alpha = 0.25f))
     flaeche(tastatur, Color(0xFF1B2238))
     for (reihe in 1..3) {
-        val a = lerp(tastatur[3], tastatur[0], reihe / 4f)
-        val b = lerp(tastatur[2], tastatur[1], reihe / 4f)
-        for (taste in 0 until 9) drawLine(blau.heller(0.3f).copy(alpha = 0.55f * (0.3f + 0.7f * licht)), lerp(a, b, (taste + 0.15f) / 9f), lerp(a, b, (taste + 0.8f) / 9f), 1.6f, StrokeCap.Round)
+        val a = lerp(tastatur[3], tastatur[2], reihe / 4f)
+        val b = lerp(tastatur[0], tastatur[1], reihe / 4f)
+        for (taste in 0 until 7) drawLine(blau.heller(0.3f).copy(alpha = 0.55f * (0.3f + 0.7f * licht)), lerp(a, b, (taste + 0.2f) / 7f), lerp(a, b, (taste + 0.75f) / 7f), 1.6f, StrokeCap.Round)
     }
     // Lämpchen auf der Pultkante
     for (i in 0 until 9) {
