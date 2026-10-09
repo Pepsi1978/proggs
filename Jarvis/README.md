@@ -80,25 +80,30 @@ geratenen Änderung. Ein wiederholter identischer Anlege-Aufruf innerhalb von 90
 
 ## Tagesauswertung
 
-`auswertung/Tagesauswertung.kt` und `auswertung/Zeitplan.kt`. Jarvis erstellt zu bis zu drei einstellbaren Uhrzeiten
-(Vorgabe 4:25, 12:00, 16:25) im Hintergrund eine Auswertung und legt sie unter `filesDir/tagesauswertung/` ab
-(die letzten 30). Ablauf:
+`auswertung/Tagesauswertung.kt` und `auswertung/Zeitplan.kt`. Die Tagesauswertungs-Synchronisation schreibt die
+Auswertung zu jeder vollen Stunde neu (Abstand einstellbar: 1, 2, 3, 4 oder 6 Stunden) und legt sie unter
+`filesDir/tagesauswertung/` ab (die letzten 100). Solange Frank laut Dienstplan schläft, ruht sie
+(`KalenderFaehigkeit.schlafzeiten`: vor einem Tagdienst 20 bis 4 Uhr, nach einem Nachtdienst 6 bis 15 Uhr); die erste
+volle Stunde nach dem Schlaf läuft immer. An freien Tagen läuft sie durch. Ablauf:
 
-1. Abgleich in Entropie Reductor anstoßen (frische Daten von Whoop, Oura, Waage; höchstens 90 Sekunden).
+1. Abgleich in Entropie Reductor anstoßen (frische Daten von Whoop, Oura, Waage; höchstens 90 Sekunden; abschaltbar).
 2. Daten nach festen Regeln sammeln: Rahmen der nächsten sechs Tage (Arbeitstag oder frei, Schlaf- und freie
-   Zeitfenster, `KalenderFaehigkeit.rahmen`), Termine, Biodaten des Tages, Vergleich gegen 7 Tage, den letzten Monat
-   und alle bisherigen Tage, Trainings der letzten 14 Tage, offene Aufgaben als Planungshinweis.
-3. Das eigene Modell schreibt daraus die Auswertung in sechs Abschnitten (HEUTE, ERHOLUNG UND SCHLAF, KÖRPER UND
-   TRAINING, EINSCHÄTZUNG, EMPFEHLUNG FÜR HEUTE, AUSBLICK). Ist das Modell nicht erreichbar, bleibt der Datenbericht.
+   Zeitfenster, `KalenderFaehigkeit.rahmen`), Termine, Wetter, Wecker, Biodaten des Tages, Vergleich gegen 7 Tage, den
+   letzten Monat und alle bisherigen Tage, Verlauf von Schlaf und Erholung der letzten 7 Tage, Dienste und Termine der
+   letzten 4 Tage, Trainings der letzten 14 Tage, Tagebuch, Ideen, offene Aufgaben.
+3. Das eigene Modell schreibt daraus die Auswertung in drei Teilen (RÜCKBLICK, AKTUELL, AUSBLICK) und bezieht die
+   Biodaten auf den Dienst (Tagschlaf nach Nachtdienst). Franks Regeln (`faehigkeit/RegelnFaehigkeit.kt`) liegen bei und
+   gehen vor. Ist das Modell nicht erreichbar oder die Deutung ausgeschaltet, bleibt der Datenbericht.
 
 Zeitplan: immer genau ein exakter Wecker für den nächsten Lauf (`setExactAndAllowWhileIdle`); neu gestellt nach jedem
 Lauf, beim Start, nach dem Einschalten und nach Zeit- oder Zeitzonenänderung. Ein verpasster Lauf wird beim nächsten
-Dienststart nachgeholt, wenn er höchstens sechs Stunden zurückliegt. Fehlt beim Lauf noch der Schlafwert des Tages,
-folgt einmalig ein Zusatzlauf 90 Minuten später. Beim Abruf werden die Aufgaben immer frisch gelesen; liegt nur eine
-veraltete Fassung vor, liefert der Abruf sofort einen frischen Datenbericht und stößt die volle Auswertung an.
+Dienststart nachgeholt, wenn er höchstens sechs Stunden zurückliegt. Beim Abruf werden die Aufgaben zusätzlich frisch
+gelesen; liegt nur eine veraltete Fassung vor, liefert der Abruf sofort einen frischen Datenbericht und stößt die volle
+Auswertung an.
 
 Grenzen: Nach „Stopp erzwingen“ gehen Wecker verloren, bis die App einmal geöffnet wird. Die Vergleiche trennen
-nicht zwischen Nacht- und Tagschlaf; das Modell bekommt dazu nur eine Regel mit.
+nicht zwischen Nacht- und Tagschlaf; das Modell ordnet das über Rahmen und Dienste der letzten Tage ein. E-Mails,
+Ablage und Repo fließen nicht in die Auswertung ein.
 
 ## Tagesdatenbank
 

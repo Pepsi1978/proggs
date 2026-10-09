@@ -111,11 +111,14 @@ class Einstellungen private constructor(context: Context) {
 
     // ---- Tagesauswertung ----
     var auswertungAn: Boolean get() = prefs.getBoolean("auswertung_an", true); set(v) = put { putBoolean("auswertung_an", v) }
-    /** Bis zu drei Uhrzeiten als „HH:MM,HH:MM,HH:MM“. */
-    var auswertungZeiten: String get() = s("auswertung_zeiten", "04:25,12:00,16:25"); set(v) = put { putString("auswertung_zeiten", v) }
-
-    /** Einmaliger Zusatzlauf (Zeitpunkt in Millisekunden), wenn morgens der Schlafwert noch fehlte. 0 = keiner. */
-    var nachbesserungUm: Long get() = prefs.getLong("nachbesserung_um", 0L); set(v) = put { putLong("nachbesserung_um", v) }
+    /** Abstand der Läufe in Stunden (1 = jede volle Stunde). */
+    var auswertungAbstand: Int get() = prefs.getInt("auswertung_abstand", 1).coerceIn(1, 12); set(v) = put { putInt("auswertung_abstand", v) }
+    /** Ruhen, solange Frank laut Dienstplan schläft (vor Tagdienst 20 bis 4 Uhr, nach Nachtdienst 6 bis 15 Uhr). */
+    var auswertungSchlafpause: Boolean get() = prefs.getBoolean("auswertung_schlafpause", true); set(v) = put { putBoolean("auswertung_schlafpause", v) }
+    /** Vor jedem Lauf frische Biodaten von Whoop, Oura und Waage holen. */
+    var auswertungAbgleich: Boolean get() = prefs.getBoolean("auswertung_abgleich", true); set(v) = put { putBoolean("auswertung_abgleich", v) }
+    /** Das Modell schreibt die Deutung. Aus = nur die Daten synchronisieren. */
+    var auswertungDeutung: Boolean get() = prefs.getBoolean("auswertung_deutung", true); set(v) = put { putBoolean("auswertung_deutung", v) }
 
     // ---- Sperre und Vorlesen ----
     /** App nur nach Fingerabdruck (oder Gerätesperre) öffnen. Das Plugin arbeitet unabhängig davon. */

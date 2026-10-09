@@ -348,6 +348,24 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
+    /**
+     * Prüfer für „Frank schläft zu diesem Zeitpunkt sehr wahrscheinlich“, nach dem Dienstplan der Tage um heute:
+     * vor einem Tagdienst 20 bis 4 Uhr, nach einem Nachtdienst 6 bis 15 Uhr. An freien Tagen gibt es keine feste Schlafzeit.
+     * null, wenn der Kalender nicht lesbar ist.
+     */
+    fun schlafzeiten(): ((java.time.LocalDateTime) -> Boolean)? = if (!erlaubt) null else runCatching {
+        val heute = LocalDate.now()
+        val termine = lies(heute.minusDays(2), heute.plusDays(3))
+        fun d(tag: LocalDate) = dienst(termine[tag].orEmpty())
+        val pruefer: (java.time.LocalDateTime) -> Boolean = { t ->
+            val tag = t.toLocalDate()
+            (d(tag.minusDays(1)).let { it.arbeitet && it.art == Dienst.Art.NACHT } && t.hour in 6..14) ||
+                (d(tag).let { it.arbeitet && it.art == Dienst.Art.TAG } && t.hour < 4) ||
+                (d(tag.plusDays(1)).let { it.arbeitet && it.art == Dienst.Art.TAG } && t.hour >= 20)
+        }
+        pruefer
+    }.getOrNull()
+
     /** Ist heute ein Arbeitstag? null, wenn der Kalender nicht lesbar ist. */
     fun arbeitetHeute(): Boolean? = if (!erlaubt) null else runCatching {
         val heute = LocalDate.now()

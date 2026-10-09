@@ -41,9 +41,9 @@ class McpServer(context: Context) {
         Werkzeug(
             name = "tagesauswertung_lesen",
             titel = "Tagesauswertung lesen",
-            beschreibung = "Jarvis: liefert Franks fertige Tagesauswertung. Jarvis erstellt sie mehrmals täglich selbst im Hintergrund: was für ein Tag heute ist " +
-                "(Arbeitstag oder frei, Dienst, Schlaf- und freie Zeitfenster, Termine), die Biodaten des Tages im Vergleich zu 7 Tagen, dem letzten Monat und allen bisherigen Tagen, " +
-                "Trainings, eine Einschätzung, Empfehlungen und einen Ausblick auf die nächsten Tage. Die offenen Aufgaben werden bei jedem Abruf frisch angehängt. " +
+            beschreibung = "Jarvis: liefert Franks fertige Tagesauswertung. Jarvis schreibt sie selbst im Hintergrund neu, in der Regel jede Stunde (außer wenn Frank schläft), aus allen angebundenen Apps: " +
+                "RÜCKBLICK (letzte Tage: Dienste, Schlaf und Erholung, Trainings, Tagebuch), AKTUELL (was für ein Tag heute ist, Termine, Biodaten im Vergleich und bezogen auf den Dienst, " +
+                "Wetter, Aufgaben, Einschätzung, Empfehlungen, passende Ideen) und AUSBLICK (nächste Tage). Die offenen Aufgaben werden bei jedem Abruf zusätzlich frisch angehängt. " +
                 "DAS ERSTE WERKZEUG für „Wie ist meine Tagesauswertung?“, „Wie sieht mein Tag aus?“, „Guten Morgen Jarvis“, „Was steht an und wie geht es mir?“. " +
                 "Ein Aufruf genügt; rufe danach Kalender, Biomarker oder Aufgaben nur noch für Nachfragen auf, die die Auswertung nicht beantwortet.",
             schema = schema(
@@ -72,7 +72,7 @@ class McpServer(context: Context) {
                     append(runCatching { lesen?.ausfuehren(JSONObject().put("bereich", bereich))?.text }.getOrNull() ?: "nicht lesbar").append("\n")
                 }
             }
-            val naechster = Zeitplan.naechster(app)?.let { "Nächste automatische Auswertung: ${it.toLocalTime().toString().take(5)} Uhr." } ?: "Die automatische Auswertung ist ausgeschaltet."
+            val naechster = Zeitplan.naechster(app)?.let { "Nächste automatische Auswertung: ${it.toLocalTime().toString().take(5)} Uhr." } ?: "Die automatische Synchronisation ist ausgeschaltet."
             if (neueste == null) {
                 JarvisDienst.auswerten(app, "erster Abruf")
                 Ergebnis("Es gibt noch keine Tagesauswertung. Jarvis erstellt gerade die erste, das dauert ein bis drei Minuten; bitte danach noch einmal abrufen. $naechster\n\n$aufgaben")

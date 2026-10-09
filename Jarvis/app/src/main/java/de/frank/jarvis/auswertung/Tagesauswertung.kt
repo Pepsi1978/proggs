@@ -47,7 +47,7 @@ data class AuswertungsStand(val laeuft: Boolean = false, val schritt: String = "
  */
 object Tagesauswertung {
     private const val TAG = "JarvisAuswertung"
-    private const val BEHALTEN = 30
+    private const val BEHALTEN = 100  // bei stündlicher Synchronisation gut vier Tage
     private val sperre = Mutex()
     private val _stand = MutableStateFlow(AuswertungsStand())
     val stand: StateFlow<AuswertungsStand> = _stand.asStateFlow()
@@ -88,8 +88,9 @@ object Tagesauswertung {
     /** Ist die neueste Auswertung älter als der letzte Lauf, der laut Plan schon hätte stattfinden sollen? */
     fun veraltet(context: Context): Boolean {
         val neu = neueste(context)?.zeitpunkt ?: return true
-        if (neu.toLocalDate() != LocalDate.now()) return true
-        val faellig = Zeitplan.letzterFaelliger(context) ?: return false
+        // Ohne Synchronisation zählt nur der Tag. Mit ihr zählt der letzte fällige Lauf: Über die Schlafpause hinweg
+        // (auch über Mitternacht) bleibt die Fassung von davor die richtige.
+        val faellig = Zeitplan.letzterFaelliger(context) ?: return neu.toLocalDate() != LocalDate.now()
         // Fünf Minuten Luft: Ein Lauf, der gerade erst gestartet ist, zählt noch nicht als verpasst.
         return neu.isBefore(faellig) && faellig.isBefore(LocalDateTime.now().minusMinutes(5))
     }
@@ -100,9 +101,10 @@ object Tagesauswertung {
         if (!sperre.tryLock()) return null
         try {
             fun schritt(text: String) { _stand.value = _stand.value.copy(laeuft = true, schritt = text) }
+            val einstellungen = Einstellungen.get(app)
             schritt("Frische Biodaten holen")
             val biomarker = Register.alle(app).filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
-            val abgeglichen = runCatching { biomarker?.abgleich() }.getOrNull() == true
+            val abgeglichen = einstellungen.auswertungAbgleich && runCatching { biomarker?.abgleich() }.getOrNull() == true
 
             schritt("Wetter holen")
             runCatching { Register.alle(app).filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() }
@@ -116,31 +118,24 @@ object Tagesauswertung {
             schritt("Daten zusammentragen")
             val daten = sammle(app, abgeglichen)
 
-            // Fehlt der Schlafwert von heute noch (Band hat noch nicht übertragen), einmal in 90 Minuten nachbessern.
-            val einstellungenVorab = Einstellungen.get(app)
-            val heuteTeil = daten.substringAfter("== BIODATEN: WERTE DES AKTUELLEN TAGES ==").substringBefore("== BIODATEN: AKTUELLER STAND")
-            val schlafFehlt = "Schlafzeit:" !in heuteTeil
-            einstellungenVorab.nachbesserungUm =
-                if (schlafFehlt && !anlass.startsWith("nachgebessert") && LocalDateTime.now().hour in 3..18) System.currentTimeMillis() + 90 * 60_000L else 0L
-
-            schritt("Auswertung schreiben")
-            val agent = JarvisAgent(app)
-            val einstellungen = Einstellungen.get(app)
-            val text = runCatching {
-                agent.versuche(auftrag(daten), zeitlimitMs = 5 * 60_000L, maxSchritte = 3, beiSchritt = { schritt("Jarvis prüft nach: $it") })
+            val deuten = einstellungen.auswertungDeutung
+            if (deuten) schritt("Auswertung schreiben")
+            val text = if (!deuten) null else runCatching {
+                JarvisAgent(app).versuche(auftrag(daten), zeitlimitMs = 5 * 60_000L, maxSchritte = 3, beiSchritt = { schritt("Jarvis prüft nach: $it") })
             }.onFailure { Log.w(TAG, "Modell fehlgeschlagen", it) }.getOrNull()?.trim()?.takeIf { it.length > 200 }
 
             val fertig = Auswertung(
                 zeit = System.currentTimeMillis(),
                 anlass = anlass,
-                text = text ?: "Diese Fassung ist der reine Datenbericht: Das Modell von Jarvis war nicht erreichbar oder nicht verbunden.",
+                text = text ?: if (deuten) "Diese Fassung ist der reine Datenbericht: Das Modell von Jarvis war nicht erreichbar oder nicht verbunden."
+                else "Diese Fassung ist der reine Datenbericht: Die Deutung durch das Modell ist in Jarvis unter Einstellungen ausgeschaltet.",
                 daten = daten,
                 mitKi = text != null,
                 modell = if (text != null) einstellungen.modell.label else "",
             )
             speichere(app, fertig)
             _stand.value = AuswertungsStand(laeuft = false, neueste = fertig)
-            Protokoll.melde(Quelle.JARVIS, "Tagesauswertung", "$anlass: " + (if (fertig.mitKi) "erstellt mit ${fertig.modell}" else "nur Datenbericht, Modell nicht erreichbar"), fertig.mitKi)
+            Protokoll.melde(Quelle.JARVIS, "Tagesauswertung", "$anlass: " + (if (fertig.mitKi) "erstellt mit ${fertig.modell}" else if (deuten) "nur Datenbericht, Modell nicht erreichbar" else "nur Datenbericht, Deutung ausgeschaltet"), fertig.mitKi || !deuten)
             return fertig
         } catch (e: Exception) {
             Log.e(TAG, "Auswertung fehlgeschlagen", e)
@@ -185,6 +180,12 @@ object Tagesauswertung {
             append("== BIODATEN: AKTUELLER STAND GEGEN DEN LETZTEN MONAT, 7 TAGE UND ALLE BISHERIGEN TAGE ==\n")
             append(rufe("biomarker_auswertung", JSONObject().put("tage", 30).put("metriken", JSONArray(biomarker?.alleMetriken ?: emptyList<String>())))).append("\n\n")
 
+            append("== BIODATEN: VERLAUF DER LETZTEN 7 TAGE (Schlaf und Erholung, zum Abgleich mit den Diensten) ==\n")
+            append(rufe("biomarker_verlauf", JSONObject().put("von", heute.minusDays(7).toString()).put("aufloesung", "tag").put("metriken", JSONArray(listOf("schlafdauer", "wach_min", "erholung", "hrv", "ruhepuls"))))).append("\n\n")
+
+            append("== DIENSTE UND TERMINE DER LETZTEN 4 TAGE ==\n")
+            append(rufe("kalender_lesen", JSONObject().put("von", heute.minusDays(4).toString()).put("bis", heute.minusDays(1).toString()))).append("\n\n")
+
             append("== TRAININGS DER LETZTEN 14 TAGE ==\n")
             append(rufe("trainings_lesen", JSONObject().put("von", heute.minusDays(14).toString()).put("limit", 20))).append("\n\n")
 
@@ -205,31 +206,30 @@ object Tagesauswertung {
 
     /** Schritt 2: der Auftrag an das Modell. */
     private fun auftrag(daten: String): String = """
-Erstelle Franks Tagesauswertung. Sie wird gespeichert und später von einem Sprachassistenten vorgelesen und besprochen. Schreibe deshalb in ganzen, gut sprechbaren Sätzen, ohne Tabellen und ohne Markdown-Zeichen, mit du-Anrede.
+Schreibe Franks Tagesauswertung. Sie wird gespeichert und ihm später vorgelesen: ganze, gut sprechbare Sätze, du-Anrede, keine Tabellen, kein Markdown.
 
-Unten stehen alle Daten, bereits fertig gerechnet. Regeln:
-- Verwende ausschließlich Zahlen, die unten stehen. Erfinde und schätze keine Werte. Fehlt etwas (NICHT VERFÜGBAR oder eine alte Messung), sage das in einem Satz und deute es nicht.
-- Der Abschnitt RAHMEN ist verbindlich: Arbeitstag oder freier Tag, Schlafzeiten und freie Zeitfenster stehen dort fest. Rechne sie nicht neu.
-- Beginne mit genau einem Satz Fazit, der den Tag zusammenfasst, noch vor dem ersten Abschnitt.
-- Nenne insgesamt höchstens etwa zwölf Zahlen, gerundet, jede mit einem Richtungswort (zum Beispiel „HRV 49, über deinem Monatsschnitt“). Keine Kalenderdaten in Zahlenform, sage Wochentage.
-- Schlaf nach einem Nachtdienst ist Tagschlaf und fällt oft kürzer aus; am Tag nach dem letzten Nachtdienst ist eine kurze Schlafdauer erwartbar und kein schlechtes Zeichen. Vergleiche das vorsichtig mit den Durchschnitten, die überwiegend Nachtschlaf enthalten.
-- Schichtlogik: Nach einem Nachtdienst schläft Frank tagsüber etwa von 6 bis 15 Uhr. Schlafwerte gehören zu dem Tag, an dem der Schlaf endet. Steht für heute noch kein Schlafwert da, obwohl er laut Rahmen noch schläft oder gerade erst aufgestanden ist, ist das normal und kein schlechter Wert. Tagesbelastung, Energieumsatz und Schritte des laufenden Tages sind Zwischenstände.
-- Stelle den heutigen Tag in den Vordergrund und ordne ihn gegen 7 Tage, den letzten Monat und alle bisherigen Tage ein. Nenne nur die Zahlen, die etwas aussagen: zuerst, was auffällig besser oder schlechter ist, dann kurz das Unauffällige in einem Satz. Keine Aufzählung aller Messgrößen.
-- Die GESTELLTEN WECKER gehören in HEUTE oder AUSBLICK nur, wenn sie zum Dienst nicht passen (zum Beispiel kein Wecker vor einem Tagdienst) oder gleich klingeln.
-- Der Abschnitt WISSENS-DATENBANK ist nur ein Verzeichnis und für die Auswertung ohne Belang.
-- Die Liste GENIALE IDEEN ist nur Hintergrundwissen. Zähle die Ideen nicht auf; greife höchstens eine auf, wenn sie heute wirklich passt (freier Tag, gute Erholung).
-- Stehen in deiner Anweisung FRANKS REGELN, halte sie in der Auswertung ein. Wo sie den Vorgaben hier widersprechen (zum Beispiel bei der Zahl der genannten Werte), gehen Franks Regeln vor.
-- Keine medizinischen Diagnosen. Empfehlungen konkret und alltagsnah (Belastung, Schlaf, Erholung, Training).
-- Du darfst höchstens zwei Werkzeuge zusätzlich aufrufen, und nur wenn ein auffälliger Wert einen Blick in den Verlauf braucht. Meist ist das nicht nötig.
+Dein Ziel: Frank weiß danach, wie es ihm geht, was für ein Tag heute ist und was jetzt sinnvoll ist. Schreibe ausführlich und verbinde die Daten miteinander, statt sie nacheinander aufzuzählen.
 
-Gliedere genau in diese sieben Abschnitte, jeder beginnt mit seiner Überschrift in Großbuchstaben auf eigener Zeile:
-HEUTE: Was für ein Tag ist heute (Arbeitstag oder frei, welcher Dienst, Abfahrt, Schlaf- und freie Zeitfenster), welche Termine stehen an, und das Wetter von heute in einem Satz (Temperatur, trocken oder nass, wann es am besten für draußen passt). Drei bis fünf Sätze.
-ERHOLUNG UND SCHLAF: Der heutige Stand im Vergleich. Vier bis sieben Sätze.
-KÖRPER UND TRAINING: Körperwerte nur, wenn es neue oder auffällige gibt. Trainings der letzten Tage, Belastung im Verhältnis zur Erholung, VO2max. Zwei bis fünf Sätze.
-RÜCKBLICK: Was Frank laut Tagebuch gestern und in den letzten Tagen gemacht und erlebt hat, als drei bis sechs kurze Stichpunkte in je einem Satz (beginne jeden mit dem Wochentag). Nur was im Abschnitt TAGEBUCH steht; gibt es dort keinen Eintrag, sage das in einem Satz. Sachlich, ohne Wertung.
-EINSCHÄTZUNG: Ein klares Gesamtbild des Tages in zwei bis drei Sätzen: Wie belastbar ist Frank heute.
-EMPFEHLUNG FÜR HEUTE: Zwei bis vier konkrete Punkte, passend zu Tagesart, Erholung und freien Zeitfenstern. Du darfst offene Aufgaben einbeziehen, aber nur als Hinweis; die aktuelle Aufgabenliste wird beim Abruf gesondert frisch angehängt.
-AUSBLICK: Die nächsten Tage in vier bis sechs Sätzen, darin die Wettervorschau für morgen und übermorgen in je einem halben Satz; passt ein Lauf oder ein Vorhaben draußen zu Dienst, Erholung und Wetter, nenne das beste Zeitfenster. Außerdem: kommende Dienste und freie Tage, woran Frank rechtzeitig denken sollte (zum Beispiel Vorbereitung auf einen Nachtdienst-Block, früh schlafen vor einem Tagdienst, Termine, Abholung der Tonnen, Spiele), und wann abends keine Aufgaben mehr passen.
+So gehst du vor:
+1. Lies zuerst den RAHMEN. Er legt verbindlich fest, ob ein Tag Arbeitstag oder frei ist, welcher Dienst ansteht, wann Frank schläft und wann er Zeit hat. Rechne das nicht neu.
+2. Deute die Biodaten immer vor diesem Hintergrund. Nach einem Nachtdienst schläft Frank am Tag, etwa von 6 bis 15 Uhr. Tagschlaf ist oft kürzer und unruhiger als Nachtschlaf. Sind dann Schlafdauer, Tiefschlaf oder REM niedriger oder die Wachzeit höher als sonst, nenne den Tagschlaf als wahrscheinlichen Grund und rate zu Erholung und Entspannung statt zu Belastung. Ein Schlafwert gehört zu dem Tag, an dem der Schlaf endet. Fehlt der Schlafwert von heute, weil Frank laut Rahmen noch schläft oder gerade aufgestanden ist, ist das normal.
+3. Verbinde alles miteinander: Erholung mit Dienst und Training, Wetter mit den freien Zeitfenstern, Aufgaben und Ideen mit der Zeit und der Kraft, die Frank heute wirklich hat.
+
+Feste Regeln:
+- Verwende nur Zahlen, die unten stehen, und schätze nichts. Steht bei etwas NICHT VERFÜGBAR, sage das in einem Satz und deute es nicht.
+- Nenne die Zahlen, die etwas aussagen, gerundet und mit Einordnung (zum Beispiel „HRV 49, über deinem Monatsschnitt“). Sage Wochentage statt Kalenderdaten.
+- Tagesbelastung, Energieumsatz und Schritte des laufenden Tages sind Zwischenstände.
+- Stehen in deiner Anweisung FRANKS REGELN, halte sie ein. Sie gehen diesen Vorgaben vor.
+- Keine medizinischen Diagnosen.
+- Meist reichen die Daten unten. Du darfst höchstens zwei Werkzeuge zusätzlich aufrufen, wenn ein auffälliger Wert einen Blick in den Verlauf braucht.
+
+Aufbau: Beginne mit einem Satz Fazit. Danach folgen genau diese drei Teile, jeder mit seiner Überschrift in Großbuchstaben auf eigener Zeile.
+
+RÜCKBLICK: Die letzten Tage. Welche Dienste und freien Tage hinter Frank liegen, wie sich Schlaf und Erholung dazu entwickelt haben (Tagschlaf nach Nachtdiensten gesondert betrachten), welche Trainings es gab und was er laut Tagebuch gemacht und erlebt hat.
+
+AKTUELL: Der heutige Tag. Was für ein Tag es ist (Dienst oder frei, Abfahrt, Schlaf- und freie Zeitfenster) und welche Termine anstehen. Wie es Frank heute geht: der letzte Schlaf mit Dauer, Tiefschlaf, REM und Wachzeit, dazu Erholung, HRV und Ruhepuls, eingeordnet gegen 7 Tage, den letzten Monat und alle bisherigen Tage und bezogen auf die Art des Tages. Körperwerte nur, wenn sie neu oder auffällig sind. Das Wetter jetzt und über den Tag. Welche Aufgaben heute anliegen oder überfällig sind und welche in die freien Zeitfenster passen. Dann eine klare Einschätzung, wie belastbar Frank heute ist, und zwei bis vier konkrete Empfehlungen, was als Nächstes sinnvoll ist. Passt eine der genialen Ideen zu Zeit und Kraft von heute, nenne sie; zähle die Ideen nicht auf.
+
+AUSBLICK: Die nächsten Tage. Kommende Dienste und freie Tage, Termine, die Aufgaben von morgen, das Wetter für morgen und übermorgen und das beste Zeitfenster für einen Lauf oder ein Vorhaben draußen. Woran Frank rechtzeitig denken sollte (zum Beispiel Vorschlafen vor einem Nachtdienst-Block, früh schlafen vor einem Tagdienst, ein Wecker, der zum Dienst fehlt, Abholung der Tonnen). Und welche Idee oder größere Aufgabe sich für den nächsten freien Tag anbietet.
 
 DATEN:
 $daten
@@ -238,7 +238,7 @@ $daten
     /** Die Bereiche der Tagesdatenbank: Kurzname → Anfang der Abschnittsüberschrift. */
     val BEREICHE = linkedMapOf(
         "rahmen" to "RAHMEN", "termine" to "TERMINE", "wetter" to "WETTER", "wecker" to "GESTELLTE WECKER", "biodaten_heute" to "BIODATEN: WERTE", "biodaten_vergleich" to "BIODATEN: AKTUELLER",
-        "trainings" to "TRAININGS", "tagebuch" to "TAGEBUCH", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
+        "biodaten_verlauf" to "BIODATEN: VERLAUF", "rueckblick_termine" to "DIENSTE UND TERMINE DER LETZTEN", "trainings" to "TRAININGS", "tagebuch" to "TAGEBUCH", "ideen" to "GENIALE IDEEN", "wissen" to "WISSENS-DATENBANK",
     )
 
     /** Ein oder alle Bereiche der zuletzt gespeicherten Tagesdaten. Aufgaben fehlen bewusst: Sie werden immer frisch gelesen. */

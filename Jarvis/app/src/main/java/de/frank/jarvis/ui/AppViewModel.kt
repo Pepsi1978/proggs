@@ -347,19 +347,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication())
     }
 
-    /** Speichert die drei Uhrzeiten. Liefert false, wenn eine davon nicht lesbar ist. */
-    fun auswertungZeitenSpeichern(eingaben: List<String>): Boolean {
-        val gefuellt = eingaben.map { it.trim() }.filter { it.isNotEmpty() }
-        val zeiten = gefuellt.map { de.frank.jarvis.auswertung.Zeitplan.leseZeit(it) }
-        if (zeiten.isEmpty() || zeiten.any { it == null }) {
-            meldung = "Bitte Uhrzeiten als Stunde:Minute eingeben, zum Beispiel 4:25."
-            return false
-        }
-        einstellungen.auswertungZeiten = zeiten.filterNotNull().sorted().joinToString(",") { "%02d:%02d".format(it.hour, it.minute) }
-        de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication())
-        meldung = "Uhrzeiten gespeichert."
-        return true
-    }
+    fun auswertungAbstand(stunden: Int) { einstellungen.auswertungAbstand = stunden; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
+    fun auswertungSchlafpause(an: Boolean) { einstellungen.auswertungSchlafpause = an; de.frank.jarvis.auswertung.Zeitplan.stelle(getApplication()) }
+    fun auswertungAbgleich(an: Boolean) { einstellungen.auswertungAbgleich = an }
+    fun auswertungDeutung(an: Boolean) { einstellungen.auswertungDeutung = an }
 
     val naechsteAuswertung: String
         get() = de.frank.jarvis.auswertung.Zeitplan.naechster(getApplication())?.let {

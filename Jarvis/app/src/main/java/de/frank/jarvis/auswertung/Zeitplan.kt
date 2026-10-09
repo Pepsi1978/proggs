@@ -9,45 +9,49 @@ import android.os.Build
 import android.util.Log
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.dienst.JarvisDienst
-import java.time.LocalDate
+import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
+import de.frank.jarvis.faehigkeit.Register
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 /**
- * Weckt Jarvis zu den eingestellten Uhrzeiten für die Tagesauswertung. Es ist immer genau ein Wecker gestellt:
- * der nächste. Nach jedem Lauf, beim Start der App, nach dem Einschalten des Handys und nach einer Zeit- oder
- * Zeitzonenänderung wird neu gestellt. Der Wecker ist exakt und geht auch im Stromsparmodus des Geräts.
+ * Die Tagesauswertungs-Synchronisation: Jarvis schreibt die Tagesauswertung zu jeder vollen Stunde neu (oder im
+ * eingestellten Abstand). Solange Frank laut Dienstplan schläft, ruht sie; die erste volle Stunde nach dem Schlaf
+ * läuft immer. Es ist immer genau ein Wecker gestellt: der nächste. Nach jedem Lauf, beim Start der App, nach dem
+ * Einschalten des Handys und nach einer Zeit- oder Zeitzonenänderung wird neu gestellt. Der Wecker ist exakt und
+ * geht auch im Stromsparmodus des Geräts.
  */
 object Zeitplan {
     private const val TAG = "JarvisZeitplan"
     const val AKTION = "de.frank.jarvis.TAGESAUSWERTUNG"
 
-    /** Die eingestellten Uhrzeiten, sortiert. Unlesbare Einträge fallen weg. */
-    fun zeiten(context: Context): List<LocalTime> = Einstellungen.get(context).auswertungZeiten
-        .split(",").mapNotNull { leseZeit(it) }.distinct().sorted()
+    /** Wählbare Abstände in Stunden. */
+    val ABSTAENDE = listOf(1, 2, 3, 4, 6)
 
-    fun leseZeit(text: String): LocalTime? {
-        val treffer = Regex("^\\s*([01]?\\d|2[0-3])[:.]([0-5]\\d)\\s*$").find(text) ?: return null
-        return LocalTime.of(treffer.groupValues[1].toInt(), treffer.groupValues[2].toInt())
+    /** Prüft für eine volle Stunde, ob dann ein Lauf ansteht. */
+    private fun pruefer(context: Context): (LocalDateTime) -> Boolean {
+        val e = Einstellungen.get(context)
+        val abstand = e.auswertungAbstand
+        val schlaeft: (LocalDateTime) -> Boolean = (if (e.auswertungSchlafpause) Register.alle(context).filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.schlafzeiten() else null) ?: { false }
+        // Nach dem Schlaf zählt die erste Stunde auch dann, wenn sie nicht in den Abstand fällt (15 Uhr nach dem Nachtdienst).
+        return { t -> !schlaeft(t) && (t.hour % abstand == 0 || schlaeft(t.minusHours(1))) }
     }
 
-    /** Nächster Lauf ab jetzt, oder null, wenn die Auswertung aus ist oder keine Uhrzeit eingetragen ist. */
+    /** Nächster Lauf ab jetzt, oder null, wenn die Synchronisation aus ist. */
     fun naechster(context: Context, ab: LocalDateTime = LocalDateTime.now()): LocalDateTime? {
         if (!Einstellungen.get(context).auswertungAn) return null
-        val zeiten = zeiten(context).ifEmpty { return null }
-        val heute = ab.toLocalDate()
-        val regulaer = zeiten.map { heute.atTime(it) }.firstOrNull { it.isAfter(ab) } ?: heute.plusDays(1).atTime(zeiten.first())
-        // Ein vorgemerkter Nachbesserungslauf kommt dazwischen, wenn er früher liegt.
-        val nachbesserung = Einstellungen.get(context).nachbesserungUm.takeIf { it > 0 }
-            ?.let { java.time.Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime() }?.takeIf { it.isAfter(ab) }
-        return if (nachbesserung != null && nachbesserung.isBefore(regulaer)) nachbesserung else regulaer
+        val faellig = pruefer(context)
+        val start = ab.truncatedTo(ChronoUnit.HOURS).plusHours(1)
+        return (0L until 48L).map { start.plusHours(it) }.firstOrNull(faellig) ?: start
     }
 
-    /** Der letzte geplante Lauf, der heute schon hätte stattfinden sollen. */
+    /** Der letzte geplante Lauf, der schon hätte stattfinden sollen (höchstens einen Tag zurück). */
     fun letzterFaelliger(context: Context, jetzt: LocalDateTime = LocalDateTime.now()): LocalDateTime? {
         if (!Einstellungen.get(context).auswertungAn) return null
-        return zeiten(context).map { LocalDate.now().atTime(it) }.lastOrNull { !it.isAfter(jetzt) }
+        val faellig = pruefer(context)
+        val start = jetzt.truncatedTo(ChronoUnit.HOURS)
+        return (0L until 24L).map { start.minusHours(it) }.firstOrNull(faellig)
     }
 
     fun stelle(context: Context) {
@@ -73,9 +77,6 @@ object Zeitplan {
 class AuswertungsEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Zeitplan.AKTION) return
-        val e = Einstellungen.get(context)
-        // Ist dieser Wecker der vorgemerkte Zusatzlauf, heißt der Anlass so; damit folgt darauf kein weiterer.
-        val nachbesserung = e.nachbesserungUm > 0 && kotlin.math.abs(System.currentTimeMillis() - e.nachbesserungUm) < 10 * 60_000L
-        JarvisDienst.auswerten(context, if (nachbesserung) "nachgebessert, weil der Schlafwert zuerst fehlte" else "automatisch zur eingestellten Uhrzeit")
+        JarvisDienst.auswerten(context, "automatische Synchronisation")
     }
 }

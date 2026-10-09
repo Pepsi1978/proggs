@@ -150,29 +150,44 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         }
 
         // ---------------------------------------------------------------- Tagesauswertung
-        Abschnitt("Tagesauswertung")
+        Abschnitt("Tagesauswertungs-Synchronisation")
         Karte {
-            Zeile("Automatisch auswerten", if (e.auswertungAn) "Nächste: ${vm.naechsteAuswertung}" else "Aus", if (e.auswertungAn) f.erfolg else f.textLeise)
-            Text("Jarvis holt zu diesen Uhrzeiten frische Biodaten, liest Kalender und Dienstplan und schreibt die Auswertung. In ChatGPT fragst du dann nur: „Wie ist meine Tagesauswertung?“", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            Zeile("Automatisch synchronisieren", if (e.auswertungAn) "Nächste: ${vm.naechsteAuswertung}" else "Aus", if (e.auswertungAn) f.erfolg else f.textLeise)
+            Text("Jarvis liest dabei alle angebundenen Apps und schreibt die Tagesauswertung neu: Rückblick, aktueller Tag und Ausblick. In ChatGPT fragst du dann nur: „Wie ist meine Tagesauswertung?“", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
             Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip("An", aktiv = e.auswertungAn) { vm.auswertungSchalten(true) }
                 Chip("Aus", aktiv = !e.auswertungAn) { vm.auswertungSchalten(false) }
             }
-            Unterzeile("Uhrzeiten (Stunde:Minute)")
-            val gespeichert = e.auswertungZeiten.split(",").map { it.trim() }
-            var zeit1 by rememberSaveable { mutableStateOf(gespeichert.getOrElse(0) { "" }) }
-            var zeit2 by rememberSaveable { mutableStateOf(gespeichert.getOrElse(1) { "" }) }
-            var zeit3 by rememberSaveable { mutableStateOf(gespeichert.getOrElse(2) { "" }) }
+
+            Unterzeile("Abstand")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                de.frank.jarvis.auswertung.Zeitplan.ABSTAENDE.forEach { stunden ->
+                    Chip(if (stunden == 1) "Jede Stunde" else "Alle $stunden Stunden", aktiv = e.auswertungAbstand == stunden) { vm.auswertungAbstand(stunden) }
+                }
+            }
+
+            Unterzeile("Im Schlaf pausieren")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Eingabe(zeit1, { zeit1 = it }, "04:25", Modifier.weight(1f))
-                Eingabe(zeit2, { zeit2 = it }, "12:00", Modifier.weight(1f))
-                Eingabe(zeit3, { zeit3 = it }, "16:25", Modifier.weight(1f))
+                Chip("An", aktiv = e.auswertungSchlafpause) { vm.auswertungSchlafpause(true) }
+                Chip("Aus", aktiv = !e.auswertungSchlafpause) { vm.auswertungSchlafpause(false) }
             }
-            if (listOf(zeit1, zeit2, zeit3).map { it.trim() }.filter { it.isNotEmpty() } != gespeichert.filter { it.isNotEmpty() }) {
-                Knopf("Uhrzeiten speichern", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.auswertungZeitenSpeichern(listOf(zeit1, zeit2, zeit3)) }
+            Text("Nach dem Dienstplan: vor einem Tagdienst ruht die Synchronisation von 20 bis 4 Uhr, nach einem Nachtdienst von 6 bis 15 Uhr. An freien Tagen läuft sie durch.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+
+            Unterzeile("Frische Biodaten holen")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("An", aktiv = e.auswertungAbgleich) { vm.auswertungAbgleich(true) }
+                Chip("Aus", aktiv = !e.auswertungAbgleich) { vm.auswertungAbgleich(false) }
             }
-            Knopf("Jetzt auswerten", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = false) { vm.auswertungJetzt() }
-            Text("Die Deutung schreibt das oben gewählte Modell. Ohne Internet oder Anmeldung speichert Jarvis den reinen Datenbericht.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+            Text("Stößt vor jedem Lauf den Abgleich mit Whoop, Oura und Waage in Entropie Reductor an. Aus = Jarvis nimmt den Stand, der dort schon liegt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+
+            Unterzeile("Auswertung vom Modell schreiben lassen")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("An", aktiv = e.auswertungDeutung) { vm.auswertungDeutung(true) }
+                Chip("Aus", aktiv = !e.auswertungDeutung) { vm.auswertungDeutung(false) }
+            }
+            Text("Aus = Jarvis synchronisiert nur die Daten und speichert den reinen Datenbericht, ohne das oben gewählte Modell zu fragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+
+            Knopf("Jetzt synchronisieren", Modifier.padding(top = 14.dp).fillMaxWidth(), haupt = false) { vm.auswertungJetzt() }
         }
 
         // ---------------------------------------------------------------- Sprache
