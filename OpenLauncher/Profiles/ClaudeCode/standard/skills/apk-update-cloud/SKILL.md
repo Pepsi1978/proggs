@@ -114,7 +114,7 @@ kleine Fixes gehen ohne Wartezeit raus.
      Schritt 1 wiederholen (neuer Versionslog-Eintrag nur, wenn der vorige schon veröffentlicht war;
      bei „Versionslog-Eintrag fehlt“ genau diesen nachtragen). Erst aufgeben und Frank fragen, wenn
      die Ursache außerhalb der App liegt (z. B. Secret abgelaufen, Google-Drive-Zugang widerrufen).
-8. **Abschlussmeldung** an Frank, immer genau dieser Block (Details in `OpenLauncher/Profiles/ClaudeCode/sources/cloud.md` §8):
+8. **Abschlussmeldung** an Frank, immer genau dieser Block (Details in `OpenLauncher/Profiles/ClaudeCode/sources/cloud.md` §10):
    ```
    ☁️ Cloud-Sitzung · Cloud-Regeln (cloud.md) erkannt ✓
    Geändert: <ein Satz>

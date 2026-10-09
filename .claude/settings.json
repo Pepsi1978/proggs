@@ -38,6 +38,11 @@
             "type": "command",
             "command": "if [ \"$CLAUDE_CODE_REMOTE\" = \"true\" ]; then for f in \"$CLAUDE_PROJECT_DIR/OpenLauncher/Profiles/ClaudeCode/sources/cloud.md\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/cloud-sitzung-hinweis.md\"; do [ -f \"$f\" ] && { cat \"$f\"; echo; }; done; fi; if command -v gh >/dev/null 2>&1; then prs=$(timeout 8 gh pr list --repo Pepsi1978/proggs --state open --json number,title,headRefName,isDraft --jq '.[]|select(.headRefName|startswith(\"claude/\"))|\"#\\(.number) \\(if .isDraft then \"(Entwurf) \" else \"\" end)\\(.title)\"' 2>/dev/null); if [ -n \"$prs\" ]; then printf 'HINWEIS OFFENE CLOUD-PRS: Diese PRs aus Cloud-Sitzungen liegen noch NICHT in main:\n%s\nSag das Frank gleich zu Beginn deiner ersten Antwort und frag, ob sie gemergt oder geschlossen werden sollen.\n' \"$prs\"; fi; fi; exit 0",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "if [ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] && [ -f \"$CLAUDE_PROJECT_DIR/.claude/hooks/jarvis.sh\" ]; then bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/jarvis.sh\" start; fi; exit 0",
+            "timeout": 40
           }
         ]
       }

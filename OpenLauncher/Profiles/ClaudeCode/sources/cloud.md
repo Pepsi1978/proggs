@@ -98,7 +98,22 @@ Weg umsetzen. Bearbeitet werden diese Regeln in OpenLauncher über den Knopf „
 - Widersprechen sich zwei Aufgaben: frag nach, bevor du anfängst.
 - Ab zwei Aufgaben: zeig vorab die nummerierte Liste in der Reihenfolge, in der du sie abarbeitest.
 
-9. Abschluss (Pflicht, jede Antwort mit Änderungen endet so)
+9. Jarvis-Tagesauswertung beim Start
+- Jede Cloud-Sitzung beginnt mit der letzten Tagesauswertung von Jarvis (Franks Assistent auf seinem Handy). Sie ist
+  dein Hintergrund zu Franks Tag: Dienst, Schlaf und Erholung, Termine, Aufgaben. Gib sie nicht ungefragt wieder
+  und erwähne sie nur, wenn sie für die Aufgabe zählt.
+- Claude Code: Der Start-Hook blendet sie unter „JARVIS-TAGESAUSWERTUNG“ ein. Steht sie schon im Kontext, nichts tun.
+- Fehlt sie (Codex, oder der Hook lief nicht): vor der ersten Aufgabe einmal `bash .claude/hooks/jarvis.sh` ausführen.
+  Ist ein MCP-Server `jarvis` angebunden, geht stattdessen dessen Werkzeug `tagesauswertung_lesen`.
+- Weitere Jarvis-Werkzeuge bei Bedarf: `bash .claude/hooks/jarvis.sh <werkzeug> '<json>'`, zum Beispiel
+  `bash .claude/hooks/jarvis.sh aufgaben_lesen '{"bereich":"heute"}'`. Den Hinweis „GESAMTBILD FEHLT“ im Ergebnis
+  übergehen: Für die Programmierarbeit genügt die Tagesauswertung.
+- Meldet das Skript „JARVIS NICHT EINGERICHTET“ oder „NICHT ERREICHBAR“: Frank das in einem Satz sagen und normal
+  weiterarbeiten. Nie deswegen warten oder nachfragen.
+- Die Adresse steht in der Umgebungsvariablen `JARVIS_MCP_URL` und ist ein Schlüssel: nie ausgeben, nie in eine Datei
+  oder einen Commit schreiben.
+
+10. Abschluss (Pflicht, jede Antwort mit Änderungen endet so)
 Immer genau dieser kurze Block am Ende. Die erste Zeile zeigt Frank, dass diese Regeln geladen wurden.
 Was nicht zutrifft, mit „entfällt“ füllen, was fehlschlug, mit „nein (Grund)“, nie weglassen:
 ```

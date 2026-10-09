@@ -61,6 +61,22 @@
 - Aller Verkehr läuft über einen Security-Proxy. Bun ist damit offiziell inkompatibel → npm/pnpm nehmen.
   `NODE_EXTRA_CA_CERTS` und Client-Zertifikate werden in Anthropic-Umgebungen ignoriert. `offiziell`
 
+## §4a Jarvis in der Cloud (eingerichtet 09.10.2026)
+
+- Der MCP-Server `jarvis` ist am PC im User-Scope angelegt (`.claude.json` des Profils) und wird in der Cloud deshalb
+  **nicht** geladen (§2). In `.mcp.json` gehört er nicht: Die Adresse enthält das Geheimnis, und ein Eintrag mit
+  `${JARVIS_MCP_URL}` würde am PC den funktionierenden User-Scope-Server gleichen Namens überdecken.
+- Stattdessen: `.claude/hooks/jarvis.sh` ruft den Server per `curl` auf (ein JSON-RPC-`tools/call`, der Server ist
+  zustandslos und braucht kein `initialize`). Der SessionStart-Hook blendet damit in jeder Cloud-Sitzung die letzte
+  Tagesauswertung ein; Codex ruft das Skript nach `cloud.md` §9 selbst auf. Lokal geprüft, in der Cloud noch nicht.
+- Zwei Dinge muss Frank je Cloud-Umgebung einmal eintragen (Claude: Environment-Dialog auf claude.ai/code; Codex:
+  Umgebung in ChatGPT): die Umgebungsvariable `JARVIS_MCP_URL` (Plugin-Adresse aus Jarvis → Einstellungen) und den
+  Host des Relays in der Netzwerk-Freigabe (Custom + Host + „default list“). Bekannte Falle §B11: eigene Domains
+  werden teils ignoriert (`host_not_allowed`), dann einzeln eintragen und eine neue Sitzung starten.
+- Abwägung: Umgebungsvariablen sind für jeden Nutzer der Umgebung lesbar (§3). Die Umgebung nutzt nur Frank; die
+  Adresse lässt sich in Jarvis jederzeit neu erzeugen. „API credentials“ helfen hier nicht, weil das Geheimnis im
+  Pfad der Adresse steckt und nicht in einem Header.
+
 ## §5 Git und GitHub
 
 - GitHub-Zugriff über die Claude-GitHub-App bzw. `/web-setup`. Das echte Token bleibt in einem **Credential-Proxy
