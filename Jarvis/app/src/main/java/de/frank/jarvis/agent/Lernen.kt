@@ -8,6 +8,7 @@ import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.faehigkeit.TagebuchFaehigkeit
 import de.frank.jarvis.faehigkeit.UeberFrank
+import de.frank.jarvis.faehigkeit.Ziele
 import java.time.LocalDate
 
 /**
@@ -39,14 +40,17 @@ object Lernen {
         if (e.lernlaufTag == heute) return
         val eintraege = tagebuch.rueckblick(2, 4000)
         if (!eintraege.startsWith("Kein Tagebucheintrag")) {
-            val bekannt = UeberFrank.alle(app)
+            val bekannt = "ZIELE (art ziel):\n" + Ziele.liste(Ziele.alle(app)).ifEmpty { "(noch nichts)" } + "\n\nINFOS (art info):\n" + UeberFrank.liste(UeberFrank.alle(app)).ifEmpty { "(noch nichts)" }
             // Ohne Antwort bleibt der Tag offen: Der nächste Lauf versucht es noch einmal.
-            val antwort = frage(LERNEN, "SCHON NOTIERT:\n" + UeberFrank.liste(bekannt).ifEmpty { "(noch nichts)" } + "\n\nTAGEBUCH DER LETZTEN TAGE:\n" + eintraege) ?: return
-            val neu = antwort.lines().map { it.trim().trimStart('-', '•', '*').trim() }
-                // Nur Sätze über Frank, wie verlangt: So landet keine Einleitung („Hier sind …“) und kein „Nichts Neues“ als Notiz.
-                .filter { it.length in 12..300 && it.startsWith("Frank") && bekannt.none { b -> b.text.equals(it, ignoreCase = true) } }.take(3)
-            neu.forEach { UeberFrank.speichere(app, it) }
-            if (neu.isNotEmpty()) Protokoll.melde(Quelle.JARVIS, "Aus dem Tagebuch gelernt", neu.joinToString(" "))
+            val antwort = frage(LERNEN, "SCHON GEMERKT:\n$bekannt\n\nTAGEBUCH DER LETZTEN TAGE:\n$eintraege") ?: return
+            // Nur Zeilen im verlangten Muster und nur Sätze über Frank: So landet keine Einleitung und kein „Nichts Neues“ im Gedächtnis.
+            val gelernt = antwort.lines().mapNotNull { ZEILE.find(it.trim()) }.take(3).mapNotNull { treffer ->
+                val datei = if (treffer.groupValues[1].uppercase() == "ZIEL") Ziele else UeberFrank
+                val satz = treffer.groupValues[3].trim()
+                if (satz.length !in 12..300 || !satz.startsWith("Frank") || datei.alle(app).any { it.text.equals(satz, ignoreCase = true) }) null
+                else datei.speichere(app, satz, treffer.groupValues[2].toIntOrNull())?.text
+            }
+            if (gelernt.isNotEmpty()) Protokoll.melde(Quelle.JARVIS, "Aus dem Tagebuch gelernt", gelernt.joinToString(" "))
         }
         e.lernlaufTag = heute
     }
@@ -56,10 +60,15 @@ object Lernen {
             "was in diesem Monat für Frank wichtig war: was er gemacht und erlebt hat, woran er gearbeitet hat, Gesundheit und Training, Menschen, wiederkehrende Themen, Entscheidungen " +
             "und besondere Ereignisse mit Datum. Nur was in den Einträgen steht, sachlich und ohne Wertung. Antworte nur mit diesem Text."
 
+    /** „ZIEL: Satz“, „INFO: Satz“ oder mit id zum Ersetzen „INFO 4: Satz“. */
+    private val ZEILE = Regex("^(ZIEL|INFO)\\s*\\[?(\\d+)?\\]?\\s*:\\s*(.+)$", RegexOption.IGNORE_CASE)
+
     private const val LERNEN =
-        "Du pflegst für Franks Assistenten Jarvis die Notizen darüber, wer Frank ist. Du bekommst, was schon notiert ist, und Franks Tagebuch der letzten Tage. " +
-            "Finde höchstens drei NEUE dauerhafte Tatsachen über Frank, die noch nicht notiert sind: Ziele, Vorlieben und Abneigungen, was ihm wichtig ist, was er besitzt, Gewohnheiten, " +
-            "Menschen in seinem Leben, Gesundheitliches von Dauer. Nicht: was er an einem einzelnen Tag gemacht hat, Stimmungen, einzelne Termine, Vermutungen. Im Zweifel nichts. " +
-            "Schreibe jede Tatsache als einen kurzen, für sich allein verständlichen Satz über Frank in der dritten Person auf eine eigene Zeile, ohne Aufzählungszeichen. " +
-            "Gibt es nichts Neues, antworte nur mit dem Wort KEINE."
+        "Du pflegst für Franks Assistenten Jarvis das Gedächtnis darüber, wer Frank ist. Du bekommst, was schon gemerkt ist (mit id in eckigen Klammern), und Franks Tagebuch der letzten Tage. " +
+            "Finde höchstens drei Dinge, die das Gedächtnis besser machen: ein neues ZIEL (was Frank erreichen will und im Tagebuch eindeutig so sagt), eine neue INFO (dauerhafte Tatsache: " +
+            "Vorlieben und Abneigungen, was ihm wichtig ist, Besitz, Gewohnheiten, Menschen in seinem Leben, Gesundheitliches von Dauer) oder einen vorhandenen Eintrag, den das Tagebuch überholt " +
+            "oder widerlegt hat. Nicht: was er an einem einzelnen Tag gemacht hat, Stimmungen, einzelne Termine, Vermutungen. Im Zweifel nichts. " +
+            "Antworte je Ding mit einer Zeile in genau dieser Form, der Satz in der dritten Person und mit „Frank“ beginnend: " +
+            "„ZIEL: Frank will …“ oder „INFO: Frank …“ für Neues; „ZIEL 3: Frank …“ oder „INFO 7: Frank …“, um den Eintrag mit dieser id durch die neue Fassung zu ersetzen. " +
+            "Gibt es nichts, antworte nur mit dem Wort KEINE."
 }

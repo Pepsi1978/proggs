@@ -132,9 +132,9 @@ class JarvisDienst : Service() {
 
     private fun werteAus(anlass: String) {
         arbeit.launch {
-            // Das Gerät darf währenddessen nicht einschlafen; nach spätestens 8 Minuten gibt das System die Sperre frei.
+            // Das Gerät darf währenddessen nicht einschlafen; nach spätestens 12 Minuten gibt das System die Sperre frei (Auswertung und danach das Lernen aus dem Tagebuch).
             val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:tagesauswertung")
-            runCatching { wach.acquire(8 * 60_000L) }
+            runCatching { wach.acquire(12 * 60_000L) }
             try {
                 val fertig = Tagesauswertung.erstelle(this@JarvisDienst, anlass)
                 // Danach, ohne die Auswertung aufzuhalten: aus dem Tagebuch lernen (höchstens zweieinhalb Minuten).

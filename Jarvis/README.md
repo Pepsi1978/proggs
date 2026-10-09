@@ -105,9 +105,29 @@ Grenzen: Nach „Stopp erzwingen“ gehen Wecker verloren, bis die App einmal ge
 nicht zwischen Nacht- und Tagschlaf; das Modell ordnet das über Rahmen und Dienste der letzten Tage ein. E-Mails,
 Ablage und Repo fließen nicht in die Auswertung ein.
 
+## Gedächtnis und Gesamtbild
+
+`faehigkeit/RegelnFaehigkeit.kt`, `agent/Gehirn.kt`, `agent/Lernen.kt`. Jarvis führt drei Dateien in `filesDir` und
+pflegt sie selbst: `regeln.json` (wie er arbeiten soll), `ziele.json` (was Frank erreichen will) und
+`ueber_frank.json` (dauerhafte Tatsachen über Frank). Drei Werkzeuge für alle drei Arten: `jarvis_merken` (neu, oder
+mit `id` ersetzen), `jarvis_vergessen`, `jarvis_gemerktes_lesen`. Im Code stehen keine einzelnen Regeln oder Angaben
+über Frank. Schreiben darf nur das Gespräch mit Frank (Plugin, eigener Chat) und der Lernlauf aus dem Tagebuch;
+Agenten und die Tagesauswertung lesen nur.
+
+Das Gesamtbild (`Gehirn.kontext`) ist ein Text: die drei Dateien, Rahmen der nächsten Tage, Termine und Aufgaben
+(frisch gelesen), die aktuelle Tagesauswertung und das Tagebuch (letzte 14 Tage bis 1500 Zeichen je Tag, ältere Tage
+gekürzt, frühere Monate verdichtet, zusammen höchstens 30.000 Zeichen). Der eigene Chat und die Agenten bekommen es
+in die Anweisung; das Plugin holt es mit `jarvis_kontext` als erstem Aufruf jedes Gesprächs. Fehlt der Aufruf länger
+als eine Stunde oder hat sich das Gedächtnis seither geändert, reicht Jarvis die drei Dateien mit dem nächsten
+Werkzeug-Ergebnis nach und erinnert an das Gesamtbild.
+
+Der Lernlauf (`Lernen.laufe`, nach jeder Synchronisation, abschaltbar) verdichtet je Lauf einen Monat des Tagebuchs,
+der ganz hinter den letzten 14 Tagen liegt, und notiert einmal am Tag bis zu drei Ziele oder Tatsachen aus den
+neuesten Einträgen oder ersetzt überholte.
+
 ## Tagesdatenbank
 
-Bei jeder Tagesauswertung (also zu den drei Uhrzeiten) legt Jarvis die gesammelten Daten aller Apps ab: Rahmen der
+Bei jeder Tagesauswertung (also bei jeder Synchronisation) legt Jarvis die gesammelten Daten aller Apps ab: Rahmen der
 nächsten Tage, Termine, Biodaten des Tages und im Vergleich, Trainings und alle offenen Ideen (gekürzt). Das Werkzeug
 `tagesdaten_lesen` gibt sie ganz oder je Bereich zurück. Aufgaben sind nicht enthalten, sie werden immer frisch gelesen.
 Die einzelnen Werkzeuge der Apps lesen weiterhin live vom Handy; die Tagesdatenbank spart die vielen Einzelaufrufe.

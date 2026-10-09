@@ -133,7 +133,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Mikrofon und Vorlesen ----
 
-    // ---- Franks Regeln und Wissen über Frank ----
+    // ---- Jarvis' Gedächtnis: Regeln, Ziele, Wissen über Frank ----
 
     /** Eine der beiden Merkdateien samt dem, was ihr Bildschirm braucht. */
     inner class Merkliste(
@@ -178,7 +178,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         fun loeschen(id: Int) {
             aendere { datei.loesche(getApplication(), id) }
             if (letzter == id) letzter = null
-            meldung = "$wort gelöscht. Mit „Rückgängig“ holst du sie zurück."
+            meldung = "$wort gelöscht. „Rückgängig“ holt den Eintrag zurück."
         }
 
         fun rueckgaengig() {
@@ -219,6 +219,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         "Diese Regeln beachtet Jarvis bei jeder Antwort, bei seinen Agenten und in der Tagesauswertung. Er lernt sie auch selbst, wenn du ihm sagst, wie du etwas künftig haben möchtest.",
         "Neue Regel eintippen oder einsprechen", REGEL_KORREKTUR,
     )
+    val zielListe = Merkliste(
+        de.frank.jarvis.faehigkeit.Ziele, "Franks Ziele", "Ziel",
+        "Das willst du erreichen. Jarvis misst seine Deutungen und Vorschläge daran, auch in der Tagesauswertung. Er merkt sich Ziele auch selbst, wenn du sie nennst.",
+        "Neues Ziel eintippen oder einsprechen", ZIEL_KORREKTUR,
+    )
     val infoListe = Merkliste(
         de.frank.jarvis.faehigkeit.UeberFrank, "Über Frank", "Notiz",
         "Das weiß Jarvis über dich und hat es bei jeder Antwort, bei seinen Agenten und in der Tagesauswertung vor Augen. Er notiert es auch selbst, wenn du etwas über dich erzählst.",
@@ -229,7 +234,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Wohin der Text der laufenden Aufnahme geht, wenn nicht ins Gespräch. */
     private var diktatZiel: ((String) -> Unit)? = null
 
-    fun merkLaden() { regelListe.laden(); infoListe.laden() }
+    fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden() }
     fun merkOeffnen(liste: Merkliste) { liste.laden(); merkOffen = liste }
     fun merkSchliessen() { merkOffen = null }
 
@@ -479,6 +484,15 @@ private const val REGEL_KORREKTUR =
         "Behalte jeden inhaltlichen Punkt und jeden genannten Wert, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
         "und berichtige Hörfehler der Spracherkennung (zum Beispiel „Javis“ für Jarvis, „WUPP“ für Whoop). So kurz wie möglich, höchstens 400 Zeichen. " +
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
+
+/** Auftrag an das Modell für die KI-Korrektur eines einzelnen Ziels. */
+private const val ZIEL_KORREKTUR =
+    "Du formulierst ein Ziel, das Frank eingesprochen oder eingetippt hat, zu einem klaren Eintrag für seinen Assistenten Jarvis um. " +
+        "Jarvis misst seine Vorschläge künftig daran und muss das Ziel ohne weiteres Wissen verstehen. " +
+        "Schreibe es in gutem Deutsch als kurzen Satz in der dritten Person, der mit „Frank will“ oder „Frank möchte“ beginnt (bei mehreren Zielen höchstens drei Sätze). " +
+        "Behalte jede genannte Zahl und Frist genau so, füge nichts hinzu und deute nichts um. Lass Füllwörter und Wiederholungen weg " +
+        "und berichtige offensichtliche Hörfehler der Spracherkennung. Höchstens 300 Zeichen. " +
+        "Antworte nur mit dem Ziel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Notiz über Frank. */
 private const val INFO_KORREKTUR =

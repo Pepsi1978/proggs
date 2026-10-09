@@ -16,6 +16,7 @@ import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.AblageKarte
 import de.frank.jarvis.faehigkeit.Ergebnis
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
+import de.frank.jarvis.faehigkeit.Merkdatei
 import de.frank.jarvis.faehigkeit.merkKontext
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.faehigkeit.Werkzeug
@@ -42,9 +43,9 @@ class McpServer(context: Context) {
         Werkzeug(
             name = "jarvis_kontext",
             titel = "Gesamtbild von Frank holen",
-            beschreibung = "Jarvis: liefert in EINEM Aufruf das Gesamtbild, mit dem Jarvis jede Frage von Frank betrachtet: Franks Regeln, was Jarvis über Frank weiß, " +
-                "den Rahmen der nächsten Tage (Dienst, Schlaf- und freie Zeiten), die Termine von heute und morgen, die offenen Aufgaben und die aktuelle Tagesauswertung " +
-                "(Biodaten, Wetter, Trainings, Tagebuch und Ideen schon gedeutet). " +
+            beschreibung = "Jarvis: liefert in EINEM Aufruf das Gesamtbild, mit dem Jarvis jede Frage von Frank betrachtet: Franks Regeln, seine Ziele, was Jarvis über Frank weiß, " +
+                "den Rahmen der nächsten Tage (Dienst, Schlaf- und freie Zeiten), die Termine von heute und morgen, die offenen Aufgaben, die aktuelle Tagesauswertung " +
+                "(Biodaten, Wetter, Trainings und Ideen schon gedeutet) und das Tagebuch (letzte Wochen im Wortlaut, frühere Monate verdichtet). " +
                 "DAS ERSTE WERKZEUG IN JEDEM GESPRÄCH: Rufe es auf, bevor du Franks erste Frage beantwortest, auch wenn sie einfach wirkt, und noch einmal, wenn das Gespräch länger als eine Stunde läuft. " +
                 "Betrachte danach jede Frage vor diesem Hintergrund und beziehe von dir aus ein, was die Antwort besser macht. Die einzelnen Apps fragst du nur noch für Details oder Änderungen ab.",
             schema = schema(),
@@ -240,12 +241,14 @@ class McpServer(context: Context) {
         // Inzwischen fertig Gewordenes reicht Jarvis mit dem nächsten Ergebnis nach (ChatGPT lässt sich nicht von hier aus ansprechen).
         val fertig = AblageZentrale.fertigFuerPlugin()
         val nachtrag = if (fertig.isEmpty()) "" else "\n\nINZWISCHEN FERTIG (sag es Frank jetzt von dir aus):\n" + fertig.joinToString("\n") { "- $it" }
-        // Die Anleitung liest ein Programm nur beim Verbinden. Damit Franks Regeln und das Wissen über ihn immer und sofort gelten, liegen sie jedem Ergebnis bei.
+        // Die Anleitung liest ein Programm nur beim Verbinden. Damit Franks Regeln, Ziele und das Wissen über ihn trotzdem immer und sofort gelten, reicht Jarvis sie mit den Ergebnissen nach.
         // Hat das Programm das Gesamtbild länger nicht geholt (neues Gespräch), erinnert Jarvis daran.
-        val eigenes = r.fehler || name == "jarvis_kontext" || name.startsWith("regel") || name.startsWith("frank_info")
+        val eigenes = r.fehler || name == "jarvis_kontext" || name in GEDAECHTNIS
         val erinnerung = if (eigenes || System.currentTimeMillis() - Gehirn.zuletztGeholt < 60 * 60_000L) "" else
             "\n\nGESAMTBILD FEHLT: Hast du in diesem Gespräch jarvis_kontext noch nicht aufgerufen, hole es jetzt nach, bevor du Frank antwortest (Dienst, Termine, Aufgaben, Tagesauswertung in einem Aufruf)."
-        val regeln = if (eigenes) "" else merkKontext(app).let { if (it.isEmpty()) "" else "\n\n$it" } + erinnerung
+        // Das Gedächtnis liegt nur bei, wenn es das Programm noch nicht frisch hat: Gesamtbild länger nicht geholt oder seither etwas gemerkt.
+        val veraltet = System.currentTimeMillis() - Gehirn.zuletztGeholt >= 60 * 60_000L || Merkdatei.zuletztGeaendert > Gehirn.zuletztGeholt
+        val regeln = if (eigenes) "" else (if (veraltet) merkKontext(app).let { if (it.isEmpty()) "" else "\n\n$it" } else "") + erinnerung
         return inhalt(r.text + nachtrag + regeln, r.fehler).apply { r.struktur?.let { put("structuredContent", it) }; r.meta?.let { put("_meta", it) } }
     }
 
@@ -267,15 +270,16 @@ class McpServer(context: Context) {
         append("oder Erinnerungen, nutze diese Werkzeuge. Antworte danach kurz in einem Satz, was erledigt wurde, ohne ids vorzulesen. ")
         append("Fehlt eine nötige Angabe oder ist sie mehrdeutig, frage kurz nach, statt zu raten.\n")
         append("GESAMTBILD: Rufe in jedem Gespräch zuerst jarvis_kontext auf, bevor du Franks erste Frage beantwortest. Du bekommst in einem Aufruf alles, was Jarvis weiß: ")
-        append("Regeln, Wissen über Frank, Dienst und Schlafzeiten, Termine, Aufgaben und die aktuelle Tagesauswertung. Betrachte jede Frage vor diesem Hintergrund ")
-        append("und beziehe von dir aus ein, was die Antwort besser macht; was nicht dazugehört, lässt du weg.\n")
+        append("Regeln, Ziele, Wissen über Frank, Dienst und Schlafzeiten, Termine, Aufgaben, die aktuelle Tagesauswertung und das Tagebuch. Betrachte jede Frage vor diesem Hintergrund ")
+        append("und beziehe von dir aus ein, was die Antwort besser macht; was nicht dazugehört, lässt du weg. ")
+        append("Das Gesamtbild ist der Stand des Abrufs: Geht es Frank gerade um Aufgaben, Termine oder einen aktuellen Messwert, oder hast du etwas geändert, lies die betreffende App frisch.\n")
         append(merkKontext(app))
         Register.alle(app).filter { it.imPlugin }.forEach { append(it.name).append(": ").append(it.hinweise).append('\n') }
         append("MITDENKEN: Bei jeder Bitte und Frage von Frank prüfst du, ob sein Tag sie berührt – Dienst und Schlafzeiten, Termine, Wetter, Erholung, offene Aufgaben. ")
-        append("Die schreibenden Werkzeuge hängen dazu einen Abschnitt MITGEDACHT an; für Fragen zu einem Zeitpunkt nimm wetter_lesen mit datum und uhrzeit, für den Überblick tagesauswertung_lesen. ")
+        append("Das Gesamtbild sagt dir das meiste davon; die schreibenden Werkzeuge hängen zusätzlich einen Abschnitt MITGEDACHT an, und für Fragen zu einem Zeitpunkt nimmst du wetter_lesen mit datum und uhrzeit. ")
         append("Nenne Frank von dir aus, was sein Vorhaben beeinflusst (zum Beispiel „da schläfst du schon, morgen ist Tagdienst“ oder „um die Zeit soll es stark regnen“), kurz und nur wenn es wirklich zählt.\n")
-        append("Tagesdatenbank: Jarvis hält die Daten aller Apps mehrmals täglich fertig vor. Für einen Überblick genügt tagesauswertung_lesen oder tagesdaten_lesen; ")
-        append("die einzelnen Apps fragst du nur für Aktuelles (Aufgaben) oder Details ab.\n")
+        append("Welches Werkzeug wofür: Überblick und Hintergrund = jarvis_kontext. tagesauswertung_lesen nur, wenn Frank die Auswertung selbst hören oder neu erstellen lassen will. ")
+        append("tagesdaten_lesen für einzelne Rohwerte der letzten Synchronisation. Die einzelnen Apps für Aktuelles, Details und Änderungen.\n")
         append("Agenten: Für Recherchen und längere Ausarbeitungen startest du mit agent_starten einen Agenten von Jarvis. Er arbeitet Minuten im Hintergrund und legt das Ergebnis in die Ablage.\n")
         append("Dateien: Melde eine Datei erst als gespeichert, wenn ablage_datei_speichern oder bild_erzeugen „Gespeichert“ zurückgibt. Bei „läuft noch“ ist sie noch nicht da: ")
         append("Rufe dann dasselbe Werkzeug sofort mit denselben Angaben noch einmal auf (das wartet auf die laufende Arbeit, es entsteht nichts doppelt), wiederhole das bis „Gespeichert“ oder ein Fehler kommt, ")
@@ -293,6 +297,8 @@ class McpServer(context: Context) {
         .put("error", JSONObject().put("code", code).put("message", text))
 
     companion object {
+        /** Die Werkzeuge des Gedächtnisses geben ihre Einträge selbst zurück; ihnen liegt der Kontext nicht noch einmal bei. */
+        private val GEDAECHTNIS = setOf("jarvis_merken", "jarvis_vergessen", "jarvis_gemerktes_lesen")
         /** Unterstützte Protokollstände, neuester zuerst. Wünscht der Client einen davon, bekommt er ihn. */
         val VERSIONEN = listOf("2025-06-18", "2025-11-25", "2025-03-26", "2024-11-05")
     }

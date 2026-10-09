@@ -8,14 +8,14 @@ import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Ein Eintrag einer Merkdatei: eine Regel oder eine Notiz über Frank. */
+/** Ein Eintrag einer Merkdatei: eine Regel, ein Ziel oder eine Notiz über Frank. */
 data class Regel(val id: Int, val text: String, val stand: String)
 
 /**
  * Eine Datei, die Jarvis selbst pflegt und jedem Modell als Kontext beilegt: dem Plugin (Anleitung und
- * Werkzeug-Ergebnisse), dem eigenen Chat, den Agenten und der Tagesauswertung. Es gibt zwei davon:
- * [Regeln] (wie Jarvis arbeiten soll) und [UeberFrank] (was Jarvis über Frank weiß).
- * Im Code stehen deshalb keine einzelnen Regeln oder Angaben über Frank, nur dieser Speicher.
+ * Werkzeug-Ergebnisse), dem eigenen Chat, den Agenten und der Tagesauswertung. Es gibt drei davon:
+ * [Regeln] (wie Jarvis arbeiten soll), [Ziele] (was Frank erreichen will) und [UeberFrank] (was Jarvis über Frank weiß).
+ * Im Code stehen deshalb keine einzelnen Regeln, Ziele oder Angaben über Frank, nur dieser Speicher.
  */
 open class Merkdatei(private val dateiname: String, private val hoechstens: Int, private val kopf: String) {
     private fun datei(context: Context) = File(context.applicationContext.filesDir, dateiname)
@@ -30,6 +30,7 @@ open class Merkdatei(private val dateiname: String, private val hoechstens: Int,
         val inhalt = JSONObject().put("format", 1)
             .put("regeln", JSONArray(eintraege.map { JSONObject().put("id", it.id).put("text", it.text).put("stand", it.stand) })).toString(2)
         // Erst daneben schreiben, dann umbenennen: Eine halbe Datei würde alle Einträge kosten.
+        zuletztGeaendert = System.currentTimeMillis()
         val neu = File(datei(context).path + ".neu")
         neu.writeText(inhalt)
         if (!neu.renameTo(datei(context))) { datei(context).writeText(inhalt); neu.delete() }
@@ -76,120 +77,143 @@ open class Merkdatei(private val dateiname: String, private val hoechstens: Int,
         /** Länge, die die Modelle für einen Eintrag anstreben sollen. */
         const val ZEICHEN = 400
         private const val LAENGSTENS = 1500
+        /** Wann zuletzt eine der Dateien geschrieben wurde; daran erkennt das Plugin, ob ein Programm den neuen Stand schon hat. */
+        @Volatile var zuletztGeaendert = 0L
     }
 }
 
 /** Die Regeldatei: was Frank dauerhaft vorgibt („in Zukunft immer …“). */
 object Regeln : Merkdatei(
     "regeln.json", 40,
-    "FRANKS REGELN (von Frank selbst festgelegt; sie gelten immer und gehen allgemeinen Vorgaben vor, wo sie ihnen widersprechen; nicht vorlesen, nur einhalten):",
+    "FRANKS REGELN (von Frank selbst festgelegt; sie gelten immer und gehen allgemeinen Vorgaben vor, wo sie ihnen widersprechen; nicht ungefragt vorlesen, nur einhalten):",
+)
+
+/** Die Ziele-Datei: was Frank erreichen will. Eigener Bereich, damit Jarvis Vorschläge und Deutungen daran messen kann. */
+object Ziele : Merkdatei(
+    "ziele.json", 40,
+    "FRANKS ZIELE (was er erreichen will; miss Deutungen und Vorschläge daran, wo es passt; nicht ungefragt aufzählen):",
 )
 
 /** Die Datei über Frank: was Jarvis über ihn erfahren hat (Vorlieben, Besitz, Daten, was ihm wichtig ist). */
 object UeberFrank : Merkdatei(
     "ueber_frank.json", 120,
-    "WAS JARVIS ÜBER FRANK WEISS (aus Franks eigenen Angaben; beziehe es von dir aus ein, wo es passt; nicht aufzählen und nicht vorlesen):",
+    "WAS JARVIS ÜBER FRANK WEISS (aus Franks eigenen Angaben; beziehe es von dir aus ein, wo es passt; nicht ungefragt aufzählen):",
 )
 
-/** Beide Dateien als ein Block für den Kontext eines Modells. */
-fun merkKontext(context: Context): String = Regeln.alsKontext(context) + UeberFrank.alsKontext(context)
+/** Die drei Arten von Gemerktem, mit Datei, Wort und dem, was die Modelle dazu wissen müssen. */
+enum class Merkart(val kennung: String, val datei: Merkdatei, val wort: String, val textHinweis: String, val bestaetigung: String) {
+    REGEL(
+        "regel", Regeln, "Regel",
+        "eine vollständige, für sich allein verständliche Anweisung an Jarvis in ein bis zwei Sätzen: wann sie gilt und was dann zu tun ist („Bei Fragen nach dem Schlaf immer auch HRV, Ruhepuls und Schlafdauer nennen.“)",
+        "Sag ihm in ein bis zwei Sätzen, was du dir gemerkt hast und wie du es künftig machst (zum Beispiel „Okay, ich habe mir gemerkt: … In Zukunft mache ich das so.“).",
+    ),
+    ZIEL(
+        "ziel", Ziele, "Ziel",
+        "ein kurzer Satz über das, was Frank erreichen will, mit seinen Zahlen und Fristen, wenn er welche nennt („Frank will seine VO2max steigern.“, „Frank will seinen Ruhepuls senken.“)",
+        "Sag ihm in einem Satz, welches Ziel du dir gemerkt hast, und beantworte dann, worum es ihm eigentlich ging.",
+    ),
+    INFO(
+        "info", UeberFrank, "Notiz",
+        "ein kurzer, für sich allein verständlicher Satz über Frank in der dritten Person, mit den genauen Namen und Zahlen, die er genannt hat („Frank fährt einen Toyota C-HR.“, „Frank geht bei Regen nicht gern im Wald laufen.“)",
+        "Sag ihm in einem kurzen Satz, was du dir über ihn notiert hast, ohne daraus ein Thema zu machen, und beantworte dann, worum es ihm eigentlich ging.",
+    );
 
-/** Die Werkzeuge zu beiden Dateien: lesen, Regel merken oder löschen, Notiz über Frank merken oder löschen. */
+    companion object {
+        fun von(kennung: String): Merkart? = entries.firstOrNull { it.kennung == kennung.trim().lowercase(Locale.GERMAN) }
+    }
+}
+
+/** Alle drei Dateien als ein Block für den Kontext eines Modells. */
+fun merkKontext(context: Context): String = Regeln.alsKontext(context) + Ziele.alsKontext(context) + UeberFrank.alsKontext(context)
+
+/** Das Gedächtnis von Jarvis: drei Dateien, drei Werkzeuge (merken, vergessen, lesen). */
 class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
     override val id = "regeln"
-    override val name = "Franks Regeln und Wissen über Frank"
-    override val beschreibung = "Was Frank für die Zukunft festlegt, als Regel merken und was Jarvis über Frank erfährt, als Notiz. Jarvis hat beides bei allem im Blick."
+    override val name = "Jarvis' Gedächtnis"
+    override val beschreibung = "Franks Regeln, seine Ziele und was Jarvis über ihn weiß: merken, ändern, löschen. Jarvis pflegt das selbst und hat es bei allem im Blick."
     override val hinweise =
-        "Jarvis lernt dazu und führt zwei Dateien. " +
-            "REGEL = wie du arbeiten oder antworten sollst: Sagt Frank, wie er etwas künftig haben möchte („immer“, „nie“, „in Zukunft“, „ab jetzt“, „ich lege Wert darauf“, " +
-            "oder er bemängelt, wie eine Antwort aufgebaut war), rufe regel_speichern auf. " +
-            "INFO ÜBER FRANK = eine dauerhafte Tatsache über ihn selbst: seine Ziele („ich will meine VO2max steigern“), Vorlieben und Abneigungen („bei Regen gehe ich nicht laufen“), was ihm wichtig ist, was er besitzt (Auto, Drohne, Geräte), " +
-            "persönliche Daten (Geburtstag), Gewohnheiten, Familie, Gesundheit. Erwähnt er so etwas, auch nebenbei, rufe frank_info_speichern auf. " +
-            "Beides von dir aus und ohne nachzufragen, auch wenn er nicht „merk dir“ sagt. Sag ihm danach kurz, was du dir gemerkt hast, damit er es berichtigen kann. " +
-            "Nichts Flüchtiges speichern (Stimmung von heute, einmalige Wünsche, einzelne Termine) und nichts, was schon dasteht; hat sich etwas geändert, ändere den vorhandenen Eintrag (id). " +
-            "Was gilt, steht unter FRANKS REGELN und WAS JARVIS ÜBER FRANK WEISS: Halte die Regeln ein und beziehe das Wissen über Frank von dir aus in Antworten und Empfehlungen ein."
+        "Du führst drei Dateien über Frank und pflegst sie selbst mit jarvis_merken und jarvis_vergessen. " +
+            "REGEL = wie du arbeiten oder antworten sollst („immer“, „nie“, „in Zukunft“, „ab jetzt“, oder Frank bemängelt eine Antwort). " +
+            "ZIEL = was Frank erreichen will („ich will meine VO2max steigern“). " +
+            "INFO = eine dauerhafte Tatsache über ihn: Vorlieben, Abneigungen, was ihm wichtig ist, Besitz, persönliche Daten, Gewohnheiten, Familie, Gesundheit. " +
+            "Erkennst du so etwas in dem, was Frank sagt, auch nebenbei, merke es dir von selbst und ohne nachzufragen und sag ihm kurz, was du dir gemerkt hast. " +
+            "Halte die Dateien wahr: Gehört Neues zu einem vorhandenen Eintrag oder widerspricht es ihm (notiert ist „geht bei Regen nicht laufen“, jetzt sagt er „im Regen laufen ist doch gut, das mache ich öfter“), " +
+            "ersetze diesen Eintrag über seine id, statt einen zweiten anzulegen; was gar nicht mehr gilt (Ziel erreicht, Auto verkauft), löschst du. " +
+            "Nichts Flüchtiges merken (Stimmung von heute, einmalige Wünsche, einzelne Termine). " +
+            "Was gilt, steht unter FRANKS REGELN, FRANKS ZIELE und WAS JARVIS ÜBER FRANK WEISS: Regeln hältst du ein, Ziele und Wissen beziehst du von dir aus ein."
 
     override fun stoerung(): String? = null
 
+    private val arten = Merkart.entries.map { it.kennung }
+
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
-            name = "regeln_lesen",
-            titel = "Regeln und Wissen über Frank lesen",
-            beschreibung = "Jarvis: liest beide Dateien, die Jarvis über Frank führt: die Regeln, die Frank für die Zukunft festgelegt hat, und die Notizen darüber, was Jarvis über Frank weiß. " +
-                "Nutze es für „Welche Regeln hast du dir gemerkt?“, „Was weißt du über mich?“ und bevor du einen Eintrag änderst oder löschst.",
+            name = "jarvis_merken",
+            titel = "Merken oder ändern (Regel, Ziel, Info)",
+            beschreibung = "Jarvis: merkt sich dauerhaft etwas über Frank oder ändert einen vorhandenen Eintrag. Drei Arten: " +
+                "regel = wie Jarvis künftig arbeiten oder antworten soll („nenn mir bei Schlafwerten immer auch …“, „mach das nie wieder so“, „ab jetzt …“); " +
+                "ziel = was Frank erreichen will („ich will meine VO2max und HRV steigern und den Ruhepuls senken“); " +
+                "info = eine dauerhafte Tatsache über Frank („ich fahre einen …“, „ich bin am … geboren“, „bei Regen gehe ich nicht laufen“, „die Drohne … habe ich mir gekauft“). " +
+                "Rufe es von dir aus auf, sobald Frank so etwas sagt, auch nebenbei und ohne „merk dir“. Mehrere Dinge in einem Satz = mehrere Aufrufe. " +
+                "PFLEGE: Steht zum selben Thema schon ein Eintrag da oder widerspricht das Neue einem alten, übergib dessen id und den vollständigen neuen Text; der alte wird ersetzt. " +
+                "Nicht für Flüchtiges (Stimmung von heute, einmalige Wünsche, einzelne Termine). Jarvis hat alles Gemerkte danach in jedem Gespräch, bei seinen Agenten und in der Tagesauswertung vor Augen.",
+            schema = schema(
+                "art" to text("regel, ziel oder info.", arten),
+                "text" to text("Der Eintrag, in Franks Sinn formuliert, Hörfehler der Spracherkennung bereinigt, höchstens ${Merkdatei.ZEICHEN} Zeichen. " +
+                    Merkart.entries.joinToString(" ") { "Bei ${it.kennung}: ${it.textHinweis}." }),
+                "id" to zahl("Nur beim Ändern oder Ersetzen: id des vorhandenen Eintrags dieser Art (die Zahl in eckigen Klammern davor)."),
+                pflicht = listOf("art", "text"),
+            ),
+            nurLesen = false,
+        ) { a ->
+            val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: regel, ziel oder info.", fehler = true)
+            val inhalt = a.optString("text").trim()
+            if (inhalt.length < 10) return@Werkzeug Ergebnis("Der Text fehlt oder ist zu kurz, um allein verständlich zu sein.", fehler = true)
+            val nummer = if (a.has("id") && !a.isNull("id")) a.optInt("id") else null
+            val eintrag = art.datei.speichere(context, inhalt, nummer)
+                ?: return@Werkzeug Ergebnis(if (nummer != null) "Einen Eintrag der Art ${art.kennung} mit der id $nummer gibt es nicht. Lies nach mit jarvis_gemerktes_lesen." else "Diese Datei ist voll. Fasse ähnliche Einträge zusammen oder lösche überholte, dann noch einmal.", fehler = true)
+            Ergebnis("${art.wort} ${if (nummer != null) "geändert" else "gemerkt"}: [${eintrag.id}] ${eintrag.text}\n" +
+                "BESTÄTIGE ES FRANK JETZT: ${art.bestaetigung} So kann er sofort berichtigen. Berichtigt er, rufe jarvis_merken mit art ${art.kennung}, id ${eintrag.id} und dem vollständigen neuen Text auf.\n" +
+                "Alle Einträge dieser Art jetzt:\n" + art.datei.liste(art.datei.alle(context)) + "\nSagt ein älterer Eintrag dasselbe oder widerspricht er dem neuen, lösche ihn mit jarvis_vergessen.")
+        },
+        Werkzeug(
+            name = "jarvis_vergessen",
+            titel = "Gemerktes löschen (Regel, Ziel, Info)",
+            beschreibung = "Jarvis: löscht einen Eintrag, der nicht mehr gilt und nicht durch eine neue Fassung ersetzt wird: eine Regel, die Frank nicht mehr will („das gilt nicht mehr“), " +
+                "ein erreichtes oder aufgegebenes Ziel, eine Tatsache, die nicht mehr stimmt („das Auto habe ich verkauft“), oder ein doppelter Eintrag. Über id ODER Suchwort. " +
+                "Hat sich etwas nur geändert, nimm stattdessen jarvis_merken mit der id.",
+            schema = schema(
+                "art" to text("regel, ziel oder info.", arten),
+                "id" to zahl("id des Eintrags (die Zahl in eckigen Klammern davor)."),
+                "suche" to text("Statt id: Wort aus dem Text des Eintrags."),
+                pflicht = listOf("art"),
+            ),
+            nurLesen = false,
+            loeschend = true,
+        ) { a ->
+            val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: regel, ziel oder info.", fehler = true)
+            val nummer = if (a.has("id") && !a.isNull("id")) a.optInt("id") else {
+                val treffer = if (a.gesetzt("suche")) art.datei.suche(context, a.optString("suche")) else return@Werkzeug Ergebnis("Es fehlt die id oder ein Suchwort.", fehler = true)
+                when (treffer.size) {
+                    0 -> return@Werkzeug Ergebnis("Kein Eintrag der Art ${art.kennung} gefunden, der zu „${a.optString("suche")}“ passt.", fehler = true)
+                    1 -> treffer.first().id
+                    else -> return@Werkzeug Ergebnis("Mehrere Einträge passen. Frage Frank, welcher gemeint ist, und rufe das Werkzeug dann mit der id auf:\n" + art.datei.liste(treffer), fehler = true)
+                }
+            }
+            art.datei.loesche(context, nummer)?.let { Ergebnis("${art.wort} gelöscht: „${it.text}“. Sag Frank in einem Satz, was du gestrichen hast.") }
+                ?: Ergebnis("Einen Eintrag der Art ${art.kennung} mit der id $nummer gibt es nicht.", fehler = true)
+        },
+        Werkzeug(
+            name = "jarvis_gemerktes_lesen",
+            titel = "Gemerktes lesen (Regeln, Ziele, Infos)",
+            beschreibung = "Jarvis: liest alles, was Jarvis sich über Frank gemerkt hat: seine Regeln, seine Ziele und die Notizen über ihn, jeweils mit id. " +
+                "Nutze es für „Welche Regeln hast du dir gemerkt?“, „Welche Ziele habe ich?“, „Was weißt du über mich?“ und bevor du etwas änderst oder löschst, wenn du die ids nicht vor dir hast.",
             schema = schema(),
             nurLesen = true,
         ) { _ ->
-            Ergebnis(
-                (Regeln.alle(context).takeIf { it.isNotEmpty() }?.let { "Franks Regeln:\n" + Regeln.liste(it) } ?: "Frank hat noch keine Regeln festgelegt.") + "\n\n" +
-                    (UeberFrank.alle(context).takeIf { it.isNotEmpty() }?.let { "Was Jarvis über Frank weiß:\n" + UeberFrank.liste(it) } ?: "Über Frank ist noch nichts notiert."),
-            )
+            Ergebnis(Merkart.entries.joinToString("\n\n") { art ->
+                art.datei.alle(context).takeIf { it.isNotEmpty() }?.let { "${art.wort} (art ${art.kennung}):\n" + art.datei.liste(it) } ?: "${art.wort} (art ${art.kennung}): noch nichts gemerkt."
+            })
         },
-        speichern(
-            Regeln, "regel_speichern", "Regel merken oder ändern", "Regel",
-            "Jarvis: merkt sich dauerhaft, wie Frank etwas künftig haben möchte. Rufe es von dir aus auf, sobald Frank eine Vorgabe für die Zukunft äußert, auch beiläufig: " +
-                "„in Zukunft möchte ich …“, „nenn mir bei Schlafwerten immer auch …“, „mach das nie wieder so“, „ich lege Wert darauf, dass …“, „ab jetzt …“. " +
-                "Jarvis legt die Regel ab und beachtet sie danach in jedem Gespräch, bei seinen Agenten und in der Tagesauswertung. " +
-                "NEU ohne id; ÄNDERN mit id, wenn es zum selben Thema schon eine Regel gibt (dann den vollständigen neuen Text übergeben). Nicht für einmalige Wünsche und nicht für Tatsachen über Frank (dafür frank_info_speichern).",
-            "Die Regel als vollständige, für sich allein verständliche Anweisung an Jarvis in ein bis zwei Sätzen: wann sie gilt und was dann zu tun ist. " +
-                "In Franks Sinn formuliert, Hörfehler der Spracherkennung bereinigt, höchstens ${Merkdatei.ZEICHEN} Zeichen. " +
-                "Beispiel: „Bei Fragen nach dem Schlaf immer auch HRV, Ruhepuls und Schlafdauer nennen.“",
-            "Sag ihm in ein bis zwei Sätzen, was du dir gemerkt hast und wie du es künftig machst, mit dem Inhalt der Regel, nicht nur „gemerkt“ " +
-                "(zum Beispiel „Okay, ich habe mir gemerkt: … In Zukunft nenne ich dir das immer so.“).",
-        ),
-        loeschen(Regeln, "regel_loeschen", "Regel löschen", "Regel", "Jarvis: löscht eine Regel aus Franks Regeldatei, wenn Frank sie nicht mehr will („vergiss die Regel mit …“, „das gilt nicht mehr“) oder eine neue sie ersetzt hat. Über id ODER Suchwort."),
-        speichern(
-            UeberFrank, "frank_info_speichern", "Notiz über Frank merken oder ändern", "Notiz",
-            "Jarvis: notiert dauerhaft etwas, das Jarvis über Frank erfahren hat. Rufe es von dir aus auf, sobald Frank etwas Bleibendes über sich selbst sagt, auch nebenbei: " +
-                "ein Ziel („ich will meine VO2max und HRV steigern und den Ruhepuls senken“ → „Franks Ziele: VO2max steigern, HRV steigern, Ruhepuls senken.“), " +
-                "eine Vorliebe oder Abneigung („es regnet, heute gehe ich nicht laufen“ → „Frank geht bei Regen nicht gern laufen.“), was ihm wichtig ist („HRV, VO2max und Ruhepuls sind meine wichtigsten Werte“), " +
-                "was er besitzt („ich habe mir die Drohne … gekauft“, „ich sitze in meinem Toyota …“), persönliche Daten („ich bin am … geboren“), Gewohnheiten, Familie, Gesundheit. " +
-                "Jarvis hat die Notizen danach in jedem Gespräch, bei seinen Agenten und in der Tagesauswertung vor Augen. " +
-                "NEU ohne id; ÄNDERN mit id, wenn es dazu schon eine Notiz gibt und sich etwas geändert hat. Nichts Flüchtiges (Stimmung von heute, einzelne Termine) und keine Vorgaben, wie Jarvis arbeiten soll (dafür regel_speichern).",
-            "Die Notiz als ein kurzer, für sich allein verständlicher Satz über Frank in der dritten Person, mit den genauen Namen und Zahlen, die er genannt hat. " +
-                "Beispiele: „Frank fährt einen Toyota C-HR.“, „Frank ist am 3. August 1978 geboren.“, „Frank geht bei Regen nicht gern im Wald laufen.“",
-            "Sag ihm in einem kurzen Satz, was du dir über ihn notiert hast (zum Beispiel „Ich habe mir notiert: …“), ohne daraus ein Thema zu machen, und beantworte dann, worum es ihm eigentlich ging.",
-        ),
-        loeschen(UeberFrank, "frank_info_loeschen", "Notiz über Frank löschen", "Notiz", "Jarvis: löscht eine Notiz über Frank, wenn sie nicht mehr stimmt („das Auto habe ich verkauft“, „vergiss das“) und nicht durch eine neue Fassung ersetzt wird. Über id ODER Suchwort."),
     )
-
-    private fun speichern(datei: Merkdatei, name: String, titel: String, wort: String, beschreibung: String, textHinweis: String, bestaetigung: String) = Werkzeug(
-        name = name,
-        titel = titel,
-        beschreibung = beschreibung,
-        schema = schema(
-            "text" to text(textHinweis),
-            "id" to zahl("Nur beim Ändern: id des vorhandenen Eintrags (steht in eckigen Klammern davor)."),
-            pflicht = listOf("text"),
-        ),
-        nurLesen = false,
-    ) { a ->
-        val inhalt = a.optString("text").trim()
-        if (inhalt.length < 10) return@Werkzeug Ergebnis("Der Text fehlt oder ist zu kurz, um allein verständlich zu sein.", fehler = true)
-        val nummer = if (a.has("id") && !a.isNull("id")) a.optInt("id") else null
-        val eintrag = datei.speichere(context, inhalt, nummer)
-            ?: return@Werkzeug Ergebnis(if (nummer != null) "Einen Eintrag mit der id $nummer gibt es dort nicht. Lies nach mit regeln_lesen." else "Die Datei ist voll. Fasse ähnliche Einträge zusammen oder lösche überholte, dann noch einmal.", fehler = true)
-        Ergebnis("$wort ${if (nummer != null) "geändert" else "gemerkt"}: [${eintrag.id}] ${eintrag.text}\n" +
-            "BESTÄTIGE ES FRANK JETZT: $bestaetigung So kann er sofort berichtigen. Berichtigt er, rufe $name mit id ${eintrag.id} und dem vollständigen neuen Text auf.\n" +
-            "Alle Einträge jetzt:\n" + datei.liste(datei.alle(context)) + "\nSagt ein älterer Eintrag dasselbe oder widerspricht er dem neuen, lösche den älteren.")
-    }
-
-    private fun loeschen(datei: Merkdatei, name: String, titel: String, wort: String, beschreibung: String) = Werkzeug(
-        name = name,
-        titel = titel,
-        beschreibung = beschreibung,
-        schema = schema("id" to zahl("id des Eintrags (steht in eckigen Klammern davor)."), "suche" to text("Statt id: Wort aus dem Text des Eintrags.")),
-        nurLesen = false,
-        loeschend = true,
-    ) { a ->
-        val nummer = if (a.has("id") && !a.isNull("id")) a.optInt("id") else {
-            val treffer = if (a.gesetzt("suche")) datei.suche(context, a.optString("suche")) else return@Werkzeug Ergebnis("Es fehlt die id oder ein Suchwort.", fehler = true)
-            when (treffer.size) {
-                0 -> return@Werkzeug Ergebnis("Kein Eintrag gefunden, der zu „${a.optString("suche")}“ passt.", fehler = true)
-                1 -> treffer.first().id
-                else -> return@Werkzeug Ergebnis("Mehrere Einträge passen. Frage Frank, welcher gemeint ist, und rufe das Werkzeug dann mit der id auf:\n" + datei.liste(treffer), fehler = true)
-            }
-        }
-        datei.loesche(context, nummer)?.let { Ergebnis("$wort gelöscht: „${it.text}“.") } ?: Ergebnis("Einen Eintrag mit der id $nummer gibt es dort nicht.", fehler = true)
-    }
 }

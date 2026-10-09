@@ -38,11 +38,12 @@ object Gehirn {
             append("GESAMTBILD VON FRANK, Stand ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))).append(".\n")
             append("Das ist dein Hintergrundwissen für jede Frage. Betrachte Franks Frage in diesem Zusammenhang und überlege, was davon seine Antwort besser macht ")
             append("(zum Beispiel Dienst und Schlafzeiten, Erholung, Wetter, eine offene Aufgabe, etwas, das du über ihn weißt). Beziehe genau das ein, kurz und von dir aus. ")
-            append("Was nichts mit der Frage zu tun hat, lässt du weg; zähle das Gesamtbild nie auf.\n")
+            append("Was nichts mit der Frage zu tun hat, lässt du weg; zähle das Gesamtbild nicht ungefragt auf.\n")
             append("Fragt Frank, was jetzt am sinnvollsten ist, leite es aus seiner Lage ab: was für ein Tag es ist und wie viel freie Zeit bleibt, Schlaf und Erholung, ")
-            append("seine Ziele gegenüber den aktuellen Werten, Wetter, offene Aufgaben, passende Ideen. Nenne ein bis drei konkrete Vorschläge mit kurzem Grund, den wichtigsten zuerst.\n\n")
+            append("seine Ziele gegenüber den aktuellen Werten, Wetter, offene Aufgaben, passende Ideen. Nenne ein bis drei konkrete Vorschläge mit kurzem Grund, den wichtigsten zuerst.\n")
+            append("Termine und Aufgaben unten sind frisch gelesen, die Tagesauswertung ist bis zu einer Stunde alt: Geht es Frank um einen aktuellen Messwert oder hast du etwas geändert, lies die App frisch.\n\n")
 
-            append(merkKontext(app).ifEmpty { "Frank hat noch keine Regeln festgelegt, und über ihn ist noch nichts notiert.\n" }).append('\n')
+            append(merkKontext(app).ifEmpty { "Du hast dir noch keine Regeln, Ziele oder Notizen über Frank gemerkt.\n" }).append('\n')
 
             append("RAHMEN DER NÄCHSTEN TAGE (fest gerechnet, verbindlich: Dienst, Schlaf- und freie Zeiten):\n")
             append(runCatching { alle.filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.rahmen(4)?.ifEmpty { null } }.getOrNull() ?: "NICHT VERFÜGBAR: Kalender nicht lesbar").append("\n\n")
