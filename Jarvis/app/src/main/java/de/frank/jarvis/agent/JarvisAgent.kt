@@ -7,7 +7,6 @@ import de.frank.jarvis.auth.CodexAuthManager
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
-import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.faehigkeit.merkKontext
 import de.frank.jarvis.faehigkeit.Register
 import java.time.LocalDateTime
@@ -68,9 +67,12 @@ class JarvisAgent(context: Context) {
         val faehigkeiten = Register.alle(app).filter { (mitInternet || it.id != "web") && (lernen || it.id != "regeln") }
         val werkzeuge = faehigkeiten.flatMap { it.werkzeuge }
         val zuege = (verlauf.takeLast(12) + ChatTurn("user", auftrag)).toMutableList()
+        // Im Gespräch und bei Agenten denkt Jarvis mit dem ganzen Gesamtbild. Beim Schreiben der Tagesauswertung selbst
+        // genügen Regeln und Wissen über Frank: Die Daten stehen dort im Auftrag, und die alte Auswertung soll die neue nicht färben.
+        val gesamtbild = if (lernen || rolle != null) runCatching { Gehirn.kontext(app) }.getOrElse { merkKontext(app) } else merkKontext(app)
         val ergebnis = withTimeoutOrNull<String?>(zeitlimitMs) {
             repeat(maxSchritte) {
-                val roh = auth.streamChat(anweisung(faehigkeiten, rolle, mitAuswertung = lernen || rolle != null), zuege, einstellungen.modell, einstellungen.denkstufe)
+                val roh = auth.streamChat(anweisung(faehigkeiten, rolle, gesamtbild), zuege, einstellungen.modell, einstellungen.denkstufe)
                 val schritt = lies(roh)
                 val name = schritt?.optString("werkzeug").orEmpty()
                 if (schritt == null || name.isEmpty()) {
@@ -96,7 +98,7 @@ class JarvisAgent(context: Context) {
         return ergebnis
     }
 
-    private fun anweisung(faehigkeiten: List<de.frank.jarvis.faehigkeit.Faehigkeit>, rolle: String?, mitAuswertung: Boolean): String {
+    private fun anweisung(faehigkeiten: List<de.frank.jarvis.faehigkeit.Faehigkeit>, rolle: String?, gesamtbild: String): String {
         val jetzt = LocalDateTime.now()
         val datum = jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))
         return buildString {
@@ -110,12 +112,7 @@ class JarvisAgent(context: Context) {
             append("- Nach einer Änderung bestätigst du in einem Satz, was jetzt gilt.\n")
             append("- Behaupte nie, eine Datei, ein Bild oder ein Dokument erzeugt oder gespeichert zu haben, wenn ein Werkzeug-Ergebnis das nicht mit „Gespeichert“ bestätigt. ")
             append("Meldet ein Werkzeug „läuft noch“ oder einen Fehler, sag genau das.\n\n")
-            // Der feste Kontext: Franks Regeln, das Wissen über Frank und (außer beim Schreiben der Auswertung selbst) die aktuelle Tagesauswertung.
-            merkKontext(app).takeIf { it.isNotEmpty() }?.let { append(it).append('\n') }
-            if (mitAuswertung) Tagesauswertung.neueste(app)?.takeIf { it.mitKi }?.let { a ->
-                append("AKTUELLE TAGESAUSWERTUNG (von dir geschrieben am ").append(a.zeitpunkt.format(DateTimeFormatter.ofPattern("EEEE, HH:mm 'Uhr'", Locale.GERMAN)))
-                append("; dein Bild von Franks Tag, beziehe es ein, Einzelwerte liest du bei Bedarf frisch):\n").append(a.text).append("\n\n")
-            }
+            if (gesamtbild.isNotEmpty()) append(gesamtbild).append('\n')
             faehigkeiten.forEach { append("App ").append(it.name).append(": ").append(it.hinweise).append("\n\n") }
             append("WERKZEUGE:\n")
             faehigkeiten.flatMap { it.werkzeuge }.forEach { w ->

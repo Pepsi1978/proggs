@@ -3,6 +3,7 @@ package de.frank.jarvis.mcp
 import android.content.Context
 import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.ablage.AblageZentrale
+import de.frank.jarvis.agent.Gehirn
 import de.frank.jarvis.agent.JarvisAgent
 import de.frank.jarvis.agent.Agenten
 import de.frank.jarvis.faehigkeit.zahl
@@ -39,13 +40,24 @@ class McpServer(context: Context) {
     /** Werkzeuge von Jarvis selbst, zusätzlich zu denen der angebundenen Apps. */
     private val eigene: List<Werkzeug> = listOf(
         Werkzeug(
+            name = "jarvis_kontext",
+            titel = "Gesamtbild von Frank holen",
+            beschreibung = "Jarvis: liefert in EINEM Aufruf das Gesamtbild, mit dem Jarvis jede Frage von Frank betrachtet: Franks Regeln, was Jarvis über Frank weiß, " +
+                "den Rahmen der nächsten Tage (Dienst, Schlaf- und freie Zeiten), die Termine von heute und morgen, die offenen Aufgaben und die aktuelle Tagesauswertung " +
+                "(Biodaten, Wetter, Trainings, Tagebuch und Ideen schon gedeutet). " +
+                "DAS ERSTE WERKZEUG IN JEDEM GESPRÄCH: Rufe es auf, bevor du Franks erste Frage beantwortest, auch wenn sie einfach wirkt, und noch einmal, wenn das Gespräch länger als eine Stunde läuft. " +
+                "Betrachte danach jede Frage vor diesem Hintergrund und beziehe von dir aus ein, was die Antwort besser macht. Die einzelnen Apps fragst du nur noch für Details oder Änderungen ab.",
+            schema = schema(),
+            nurLesen = true,
+        ) { _ -> Gehirn.zuletztGeholt = System.currentTimeMillis(); Ergebnis(Gehirn.kontext(app)) },
+        Werkzeug(
             name = "tagesauswertung_lesen",
             titel = "Tagesauswertung lesen",
             beschreibung = "Jarvis: liefert Franks fertige Tagesauswertung. Jarvis schreibt sie selbst im Hintergrund neu, in der Regel jede Stunde (außer wenn Frank schläft), aus allen angebundenen Apps: " +
                 "RÜCKBLICK (letzte Tage: Dienste, Schlaf und Erholung, Trainings, Tagebuch), AKTUELL (was für ein Tag heute ist, Termine, Biodaten im Vergleich und bezogen auf den Dienst, " +
                 "Wetter, Aufgaben, Einschätzung, Empfehlungen, passende Ideen) und AUSBLICK (nächste Tage). Die offenen Aufgaben werden bei jedem Abruf zusätzlich frisch angehängt. " +
-                "DAS ERSTE WERKZEUG für „Wie ist meine Tagesauswertung?“, „Wie sieht mein Tag aus?“, „Guten Morgen Jarvis“, „Was steht an und wie geht es mir?“. " +
-                "Ein Aufruf genügt; rufe danach Kalender, Biomarker oder Aufgaben nur noch für Nachfragen auf, die die Auswertung nicht beantwortet.",
+                "Nutze es, wenn Frank die Auswertung selbst hören will („Wie ist meine Tagesauswertung?“, „Guten Morgen Jarvis“), eine neue anstoßen möchte oder du den Datenanhang brauchst. " +
+                "Als Hintergrund für andere Fragen steckt sie schon in jarvis_kontext.",
             schema = schema(
                 "mit_daten" to schalter("true = zusätzlich der vollständige Datenanhang mit allen Einzelwerten (Vorgabe: false, die Auswertung genügt meist)."),
                 "neu_erstellen" to schalter("true = jetzt eine neue Auswertung anstoßen (frische Daten aller Apps, ein bis drei Minuten im Hintergrund) und danach erneut abrufen. Nur wenn Frank ausdrücklich eine neue oder aktualisierte Auswertung verlangt."),
@@ -229,7 +241,11 @@ class McpServer(context: Context) {
         val fertig = AblageZentrale.fertigFuerPlugin()
         val nachtrag = if (fertig.isEmpty()) "" else "\n\nINZWISCHEN FERTIG (sag es Frank jetzt von dir aus):\n" + fertig.joinToString("\n") { "- $it" }
         // Die Anleitung liest ein Programm nur beim Verbinden. Damit Franks Regeln und das Wissen über ihn immer und sofort gelten, liegen sie jedem Ergebnis bei.
-        val regeln = if (r.fehler || name.startsWith("regel") || name.startsWith("frank_info")) "" else merkKontext(app).let { if (it.isEmpty()) "" else "\n\n$it" }
+        // Hat das Programm das Gesamtbild länger nicht geholt (neues Gespräch), erinnert Jarvis daran.
+        val eigenes = r.fehler || name == "jarvis_kontext" || name.startsWith("regel") || name.startsWith("frank_info")
+        val erinnerung = if (eigenes || System.currentTimeMillis() - Gehirn.zuletztGeholt < 60 * 60_000L) "" else
+            "\n\nGESAMTBILD FEHLT: Hast du in diesem Gespräch jarvis_kontext noch nicht aufgerufen, hole es jetzt nach, bevor du Frank antwortest (Dienst, Termine, Aufgaben, Tagesauswertung in einem Aufruf)."
+        val regeln = if (eigenes) "" else merkKontext(app).let { if (it.isEmpty()) "" else "\n\n$it" } + erinnerung
         return inhalt(r.text + nachtrag + regeln, r.fehler).apply { r.struktur?.let { put("structuredContent", it) }; r.meta?.let { put("_meta", it) } }
     }
 
@@ -250,6 +266,9 @@ class McpServer(context: Context) {
         append("Dies ist Jarvis, Franks persönlicher Assistent auf seinem Handy. Sagt Frank „Jarvis“ oder geht es um seine Aufgaben, Termine ")
         append("oder Erinnerungen, nutze diese Werkzeuge. Antworte danach kurz in einem Satz, was erledigt wurde, ohne ids vorzulesen. ")
         append("Fehlt eine nötige Angabe oder ist sie mehrdeutig, frage kurz nach, statt zu raten.\n")
+        append("GESAMTBILD: Rufe in jedem Gespräch zuerst jarvis_kontext auf, bevor du Franks erste Frage beantwortest. Du bekommst in einem Aufruf alles, was Jarvis weiß: ")
+        append("Regeln, Wissen über Frank, Dienst und Schlafzeiten, Termine, Aufgaben und die aktuelle Tagesauswertung. Betrachte jede Frage vor diesem Hintergrund ")
+        append("und beziehe von dir aus ein, was die Antwort besser macht; was nicht dazugehört, lässt du weg.\n")
         append(merkKontext(app))
         Register.alle(app).filter { it.imPlugin }.forEach { append(it.name).append(": ").append(it.hinweise).append('\n') }
         append("MITDENKEN: Bei jeder Bitte und Frage von Frank prüfst du, ob sein Tag sie berührt – Dienst und Schlafzeiten, Termine, Wetter, Erholung, offene Aufgaben. ")
