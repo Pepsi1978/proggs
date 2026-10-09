@@ -30,7 +30,12 @@ class RepoFaehigkeit(private val context: Context) : Faehigkeit {
             "(Claude Code, Codex). Fragt Frank nach dem Stand einer App, lies den Code wirklich (Einstieg: README.md, CLAUDE.md oder AGENTS.md des Projekts, versionslog.json für die letzten Versionen, dann die " +
             "betroffenen Dateien) und sag, was tatsächlich gebaut ist, nicht was du vermutest. Soll etwas geändert werden, gib Frank einen fertigen Auftrag zum Weitergeben an ein Programmier-Werkzeug: " +
             "Projekt, Ziel, die betroffenen Dateien mit Pfad und der jetzigen Stelle im Code, was genau anders werden soll, woran man erkennt, dass es fertig ist. Der Auftrag steht als eigener Block, " +
-            "den Frank unverändert kopieren kann; lange Auswertungen und Aufträge legst du zusätzlich mit ablage_schreiben ab."
+            "den Frank unverändert kopieren kann; lange Auswertungen und Aufträge legst du zusätzlich mit ablage_schreiben ab. " +
+            "NACHSCHLAGEN: Alle angebundenen Apps liegen als Code im Repo: Geniale Aufgaben im Ordner Aufgaben, Entropie Reductor in EntropieReductor, Geniale Ideen in GenialeIdeen, " +
+            "Genialer Wecker in GenialerWeckerAndroid, du selbst in Jarvis. Nennt Frank einen Begriff aus einer dieser Apps, den dir kein Werkzeug erklärt " +
+            "(zum Beispiel „grüne Erholung“ bei Whoop, eine Farbe, eine Stufe, ein Score, eine Abkürzung), schlag im Code der App nach, was genau dahintersteckt, statt zu raten oder Frank zu fragen: " +
+            "aktion=suche unter dem Projektordner mit dem Begriff auf Deutsch und Englisch (etwa „Recovery“ und „Green“), dann die Fundstelle mit aktion=datei lesen. " +
+            "Geht die Suche nicht, lies dich über aktion=dateien zu der passenden Datei vor. Nenne nur Werte, die du im Code gelesen hast."
 
     private val e get() = Einstellungen.get(context)
     private val repo get() = e.repoName

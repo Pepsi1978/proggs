@@ -140,6 +140,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             "Halte die Dateien wahr: Gehört Neues zu einem vorhandenen Eintrag oder widerspricht es ihm (notiert ist „geht bei Regen nicht laufen“, jetzt sagt er „im Regen laufen ist doch gut, das mache ich öfter“), " +
             "ersetze diesen Eintrag über seine id, statt einen zweiten anzulegen; was gar nicht mehr gilt (Ziel erreicht, Auto verkauft), löschst du. " +
             "Nichts Flüchtiges merken (Stimmung von heute, einmalige Wünsche, einzelne Termine). " +
+            "Hängt ein Eintrag an einem Begriff aus einer von Franks Apps, dessen genauen Wert du nicht kennst (er will „eine grüne Erholung bei Whoop“: ab wie viel Prozent ist sie grün?), " +
+            "schlag den Wert zuerst mit repo_lesen im Code der App nach und trag ihn mit ein („… also mindestens so viel Prozent“). Findest du ihn nicht, merk dir den Eintrag in Franks Worten. " +
             "Was gilt, steht unter FRANKS REGELN, FRANKS ZIELE und WAS JARVIS ÜBER FRANK WEISS: Regeln hältst du ein, Ziele und Wissen beziehst du von dir aus ein."
 
     override fun stoerung(): String? = null
@@ -155,6 +157,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                 "ziel = was Frank erreichen will („ich will meine VO2max und HRV steigern und den Ruhepuls senken“); " +
                 "info = eine dauerhafte Tatsache über Frank („ich fahre einen …“, „ich bin am … geboren“, „bei Regen gehe ich nicht laufen“, „die Drohne … habe ich mir gekauft“). " +
                 "Rufe es von dir aus auf, sobald Frank so etwas sagt, auch nebenbei und ohne „merk dir“. Mehrere Dinge in einem Satz = mehrere Aufrufe. " +
+                "Nennt Frank dabei einen Begriff aus einer seiner Apps, dessen genauen Wert du nicht kennst (zum Beispiel „grüne Erholung“), schlag ihn vorher mit repo_lesen im Code der App nach und nimm den Wert in den Text auf. " +
                 "PFLEGE: Steht zum selben Thema schon ein Eintrag da oder widerspricht das Neue einem alten, übergib dessen id und den vollständigen neuen Text; der alte wird ersetzt. " +
                 "Nicht für Flüchtiges (Stimmung von heute, einmalige Wünsche, einzelne Termine). Jarvis hat alles Gemerkte danach in jedem Gespräch, bei seinen Agenten und in der Tagesauswertung vor Augen.",
             schema = schema(
