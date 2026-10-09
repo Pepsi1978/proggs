@@ -136,8 +136,6 @@ object Tagesauswertung {
             speichere(app, fertig)
             _stand.value = AuswertungsStand(laeuft = false, neueste = fertig)
             Protokoll.melde(Quelle.JARVIS, "Tagesauswertung", "$anlass: " + (if (fertig.mitKi) "erstellt mit ${fertig.modell}" else if (deuten) "nur Datenbericht, Modell nicht erreichbar" else "nur Datenbericht, Deutung ausgeschaltet"), fertig.mitKi || !deuten)
-            // Danach, ohne die Auswertung aufzuhalten: aus dem Tagebuch lernen (höchstens zweieinhalb Minuten).
-            if (deuten) runCatching { kotlinx.coroutines.withTimeoutOrNull(150_000L) { de.frank.jarvis.agent.Lernen.laufe(app) } }.onFailure { Log.w(TAG, "Lernen fehlgeschlagen", it) }
             return fertig
         } catch (e: Exception) {
             Log.e(TAG, "Auswertung fehlgeschlagen", e)

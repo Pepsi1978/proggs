@@ -102,14 +102,15 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
         return buildString {
             if (monate.isNotEmpty()) {
                 append("Frühere Monate, von Jarvis verdichtet:\n")
-                monate.takeLast(36).forEach { append(it.name.take(7)).append(": ").append(it.readText().trim()).append('\n') }
+                monate.takeLast(24).forEach { append(it.name.take(7)).append(": ").append(it.readText().trim().take(700)).append('\n') }
                 append('\n')
             }
-            alle.filter { YearMonth.from(it.first).toString() !in fertig }.sortedBy { it.first }.takeLast(60).forEach { (tag, datei) ->
+            alle.filter { YearMonth.from(it.first).toString() !in fertig }.sortedBy { it.first }.takeLast(45).forEach { (tag, datei) ->
                 val grenze = if (tag.isBefore(heute.minusDays(14))) 400 else 1500
                 append("### ").append(lang(tag)).append('\n').append(datei.readText().trim().let { if (it.length > grenze) it.take(grenze) + " …" else it }).append("\n\n")
             }
-        }.trim()
+        // Fester Deckel, damit das Gesamtbild nicht überläuft: Wird es zu viel, fällt das Älteste weg.
+        }.trim().takeLast(GEDAECHTNIS_ZEICHEN)
     }
 
     /** Der älteste Monat, der ganz vor den letzten 14 Tagen liegt und noch keine Kurzfassung hat: Monat (JJJJ-MM) und seine Einträge. */
@@ -172,6 +173,7 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
     private fun lang(tag: LocalDate): String = tag.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.GERMAN))
 
     companion object {
+        private const val GEDAECHTNIS_ZEICHEN = 30_000
         /** Nur einfache Dateinamen: kein Pfad, keine Sonderzeichen, Endung .md. */
         private val NAME = Regex("[\\w.\\- äöüÄÖÜß]{1,120}\\.md")
         private val CLIENT = OkHttpClient.Builder().connectTimeout(15, TimeUnit.SECONDS).readTimeout(110, TimeUnit.SECONDS).build()

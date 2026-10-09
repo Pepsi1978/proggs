@@ -43,7 +43,8 @@ object Lernen {
             // Ohne Antwort bleibt der Tag offen: Der nächste Lauf versucht es noch einmal.
             val antwort = frage(LERNEN, "SCHON NOTIERT:\n" + UeberFrank.liste(bekannt).ifEmpty { "(noch nichts)" } + "\n\nTAGEBUCH DER LETZTEN TAGE:\n" + eintraege) ?: return
             val neu = antwort.lines().map { it.trim().trimStart('-', '•', '*').trim() }
-                .filter { it.length in 12..300 && !it.startsWith("KEINE", ignoreCase = true) && bekannt.none { b -> b.text.equals(it, ignoreCase = true) } }.take(3)
+                // Nur Sätze über Frank, wie verlangt: So landet keine Einleitung („Hier sind …“) und kein „Nichts Neues“ als Notiz.
+                .filter { it.length in 12..300 && it.startsWith("Frank") && bekannt.none { b -> b.text.equals(it, ignoreCase = true) } }.take(3)
             neu.forEach { UeberFrank.speichere(app, it) }
             if (neu.isNotEmpty()) Protokoll.melde(Quelle.JARVIS, "Aus dem Tagebuch gelernt", neu.joinToString(" "))
         }

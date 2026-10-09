@@ -11,19 +11,22 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
  * Das Gesamtbild, mit dem Jarvis jede Frage betrachtet: Franks Regeln, das Wissen über Frank, der Rahmen der
- * nächsten Tage, Termine, Aufgaben und die aktuelle Tagesauswertung (sie trägt Biodaten, Wetter, Trainings,
- * Tagebuch und Ideen schon gedeutet in sich). Ein Text für alle Wege: Der eigene Chat und die Agenten bekommen
+ * nächsten Tage, Termine, Aufgaben, die aktuelle Tagesauswertung (sie trägt Biodaten, Wetter, Trainings und Ideen
+ * schon gedeutet in sich) und das Tagebuch. Ein Text für alle Wege: Der eigene Chat und die Agenten bekommen
  * ihn in die Anweisung, das Plugin holt ihn mit einem Aufruf (jarvis_kontext).
+ * Das Wichtigste steht vorn, das Tagebuch als größter Teil am Ende: Kürzt ein Programm, fehlt nur Älteres.
  */
 object Gehirn {
     /** Wann das Plugin das Gesamtbild zuletzt geholt hat; danach richtet sich die Erinnerung in den Werkzeug-Ergebnissen. */
     @Volatile var zuletztGeholt = 0L
 
-    suspend fun kontext(context: Context): String {
+    suspend fun kontext(context: Context): String = withContext(Dispatchers.IO) {
         val app = context.applicationContext
         val alle = Register.alle(app)
         val werkzeuge = alle.flatMap { it.werkzeuge }.associateBy { it.name }
@@ -31,7 +34,7 @@ object Gehirn {
             runCatching { werkzeuge[name]?.ausfuehren(argumente)?.let { (if (it.fehler) "NICHT VERFÜGBAR: " else "") + it.text } }.getOrNull() ?: "NICHT VERFÜGBAR"
         val jetzt = LocalDateTime.now()
         val heute = LocalDate.now()
-        return buildString {
+        buildString {
             append("GESAMTBILD VON FRANK, Stand ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))).append(".\n")
             append("Das ist dein Hintergrundwissen für jede Frage. Betrachte Franks Frage in diesem Zusammenhang und überlege, was davon seine Antwort besser macht ")
             append("(zum Beispiel Dienst und Schlafzeiten, Erholung, Wetter, eine offene Aufgabe, etwas, das du über ihn weißt). Beziehe genau das ein, kurz und von dir aus. ")
@@ -51,18 +54,18 @@ object Gehirn {
             append("Heute und überfällig: ").append(rufe("aufgaben_lesen", JSONObject().put("bereich", "heute"))).append('\n')
             append("Morgen: ").append(rufe("aufgaben_lesen", JSONObject().put("bereich", "morgen"))).append("\n\n")
 
-            append("TAGEBUCH (Franks eigene Einträge; daraus kennst du, was ihn beschäftigt):\n")
-            append(runCatching { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.gedaechtnis() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
-
             val auswertung = Tagesauswertung.neueste(app)
             if (auswertung == null) {
-                append("TAGESAUSWERTUNG: Es liegt noch keine vor.\n")
+                append("TAGESAUSWERTUNG: Es liegt noch keine vor.\n\n")
             } else {
                 val minuten = Duration.between(auswertung.zeitpunkt, jetzt).toMinutes()
                 append("AKTUELLE TAGESAUSWERTUNG (von Jarvis geschrieben vor ").append(if (minuten < 90) "$minuten Minuten" else "${minuten / 60} Stunden")
-                append("; Biodaten, Wetter, Trainings, Tagebuch und Ideen sind darin schon gedeutet, einzelne Werte liest du bei Bedarf frisch):\n")
-                append(if (auswertung.mitKi) auswertung.text else auswertung.daten.substringBefore("== GENIALE IDEEN").trim()).append('\n')
+                append("; Biodaten, Wetter, Trainings und Ideen sind darin schon gedeutet, einzelne Werte liest du bei Bedarf frisch):\n")
+                append(if (auswertung.mitKi) auswertung.text else auswertung.daten.substringBefore("== TAGEBUCH").trim()).append("\n\n")
             }
+
+            append("TAGEBUCH (Franks eigene Einträge; daraus kennst du, was ihn beschäftigt):\n")
+            append(runCatching { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.gedaechtnis() }.getOrNull() ?: "NICHT VERFÜGBAR").append('\n')
         }
     }
 }

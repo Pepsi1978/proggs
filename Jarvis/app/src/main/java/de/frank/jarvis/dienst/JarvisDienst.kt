@@ -136,7 +136,9 @@ class JarvisDienst : Service() {
             val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:tagesauswertung")
             runCatching { wach.acquire(8 * 60_000L) }
             try {
-                Tagesauswertung.erstelle(this@JarvisDienst, anlass)
+                val fertig = Tagesauswertung.erstelle(this@JarvisDienst, anlass)
+                // Danach, ohne die Auswertung aufzuhalten: aus dem Tagebuch lernen (höchstens zweieinhalb Minuten).
+                if (fertig?.mitKi == true) runCatching { kotlinx.coroutines.withTimeoutOrNull(150_000L) { de.frank.jarvis.agent.Lernen.laufe(this@JarvisDienst) } }
             } finally {
                 runCatching { if (wach.isHeld) wach.release() }
                 Zeitplan.stelle(this@JarvisDienst)
