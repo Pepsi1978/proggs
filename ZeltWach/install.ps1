@@ -14,8 +14,10 @@ try { $k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE\Policie
 # sonst bliebe ein im Zeltmodus gesetztes Enabled=0 über den Neustart hinweg stehen.
 # Der Auslöser ist ein Ereignis (Kernel-Boot 27 = jeder Start, auch Schnellstart; Power-Troubleshooter 1 = Aufwachen):
 # "Beim Systemstart" feuert bei aktivem Schnellstart nicht.
-$task = Get-ScheduledTask -TaskName 'ZeltWach Fingerabdruck freigeben' -ErrorAction SilentlyContinue
-$taskFehlt = -not $task -or -not ($task.Triggers | Where-Object { $_.CimClass.CimClassName -eq 'MSFT_TaskEventTrigger' })
+# Der Task gehört SYSTEM und ist ohne Administratorrechte nicht lesbar. Deshalb merkt sich der Admin-Teil
+# den eingerichteten Stand in HKLM\SOFTWARE\ZeltWach; nur wenn der fehlt oder älter ist, kommt die UAC-Abfrage.
+$taskStand = 2
+$taskFehlt = (Get-ItemProperty 'HKLM:\SOFTWARE\ZeltWach' -ErrorAction SilentlyContinue).TaskStand -ne $taskStand
 if (-not $schreibbar -or $taskFehlt) {
     $benutzer = "$env:USERDOMAIN\$env:USERNAME"
     $admin = @"
@@ -24,6 +26,7 @@ New-Item -Path '$regPfad' -Force | Out-Null
 `$acl.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule('$benutzer','FullControl','Allow')))
 Set-Acl '$regPfad' `$acl
 schtasks /create /f /tn 'ZeltWach Fingerabdruck freigeben' /ru SYSTEM /rl HIGHEST /sc ONEVENT /ec System /mo "*[System[(Provider[@Name='Microsoft-Windows-Kernel-Boot'] and EventID=27) or (Provider[@Name='Microsoft-Windows-Power-Troubleshooter'] and EventID=1)]]" /tr 'reg.exe delete \"HKLM\SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider\" /v Enabled /f' | Out-Null
+if (`$LASTEXITCODE -eq 0) { New-Item -Path 'HKLM:\SOFTWARE\ZeltWach' -Force | Out-Null; Set-ItemProperty 'HKLM:\SOFTWARE\ZeltWach' -Name TaskStand -Value $taskStand -Type DWord }
 "@
     $b64 = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($admin))
     Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList "-NoProfile -EncodedCommand $b64"
