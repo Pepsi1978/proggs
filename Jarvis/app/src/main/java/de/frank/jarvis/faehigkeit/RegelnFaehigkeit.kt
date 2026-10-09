@@ -20,6 +20,7 @@ data class Regel(val id: Int, val text: String, val stand: String)
 object Regeln {
     private const val HOECHSTENS = 40
     const val ZEICHEN = 400
+    private const val LAENGSTENS = 1500
 
     private fun datei(context: Context) = File(context.applicationContext.filesDir, "regeln.json")
 
@@ -42,7 +43,8 @@ object Regeln {
     @Synchronized
     fun speichere(context: Context, text: String, id: Int? = null): Regel? {
         val bisher = alle(context)
-        val sauber = text.replace(Regex("\\s+"), " ").trim().take(ZEICHEN)
+        // Eingesprochenes darf länger sein als die Vorgabe an die Modelle; die KI-Korrektur strafft es danach.
+        val sauber = text.replace(Regex("\\s+"), " ").trim().take(LAENGSTENS)
         val heute = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
         val regel = if (id != null) {
             if (bisher.none { it.id == id }) return null
@@ -62,6 +64,10 @@ object Regeln {
         schreibe(context, bisher - weg)
         return weg
     }
+
+    /** Stellt einen früheren Stand wieder her (Rückgängig in der App). */
+    @Synchronized
+    fun setze(context: Context, regeln: List<Regel>) = schreibe(context, regeln)
 
     fun suche(context: Context, wort: String): List<Regel> = wort.trim().lowercase(Locale.GERMAN).let { w -> alle(context).filter { w in it.text.lowercase(Locale.GERMAN) } }
 

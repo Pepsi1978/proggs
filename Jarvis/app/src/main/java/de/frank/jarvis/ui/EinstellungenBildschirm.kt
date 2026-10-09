@@ -92,6 +92,15 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             Text("Niedrig antwortet am schnellsten. Höhere Stufen denken gründlicher, brauchen aber länger.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
         }
 
+        // ---------------------------------------------------------------- Regeln
+        Abschnitt("Franks Regeln")
+        Karte {
+            androidx.compose.runtime.LaunchedEffect(Unit) { vm.regelnLaden() }
+            Zeile("Gelernte Regeln", when (val anzahl = vm.regeln.size) { 0 -> "Noch keine"; 1 -> "1 Regel"; else -> "$anzahl Regeln" }, if (vm.regeln.isEmpty()) f.textLeise else f.erfolg)
+            Text("Was du Jarvis für die Zukunft vorgibst („nenn mir bei Schlafwerten immer auch …“), merkt er sich als Regel und beachtet es überall. Hier siehst du die Regeln, änderst sie und sprichst neue ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            Knopf("Regeln ansehen und bearbeiten", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.regelnOeffnen() }
+        }
+
         // ---------------------------------------------------------------- Plugin
         Abschnitt("ChatGPT-Plugin")
         Karte {

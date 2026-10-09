@@ -100,6 +100,11 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                     }
                     return@Column
                 }
+                if (vm.regelnOffen) {
+                    // Vollbild: ohne die Reiter-Leiste, zurück mit dem Pfeil oder der Zurück-Geste.
+                    RegelnBildschirm(vm, Modifier.weight(1f))
+                    return@Column
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     AnimatedContent(vm.reiter, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "reiter") { reiter ->
                         when (reiter) {

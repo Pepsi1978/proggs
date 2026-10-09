@@ -133,6 +133,90 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Mikrofon und Vorlesen ----
 
+    // ---- Franks Regeln ----
+    var regelnOffen by mutableStateOf(false); private set
+    var regeln by mutableStateOf(emptyList<de.frank.jarvis.faehigkeit.Regel>()); private set
+    /** Die in diesem Bildschirm zuletzt hinzugefügte Regel: nur sie bekommt die KI-Korrektur. */
+    var letzteRegel by mutableStateOf<Int?>(null); private set
+    var regelKorrigiert by mutableStateOf(false); private set
+    /** Stände vor den letzten Änderungen, für „Rückgängig“. */
+    private val regelVerlauf = mutableStateListOf<List<de.frank.jarvis.faehigkeit.Regel>>()
+    val regelRueckgaengigMoeglich: Boolean get() = regelVerlauf.isNotEmpty()
+    /** Wohin der Text der laufenden Aufnahme geht, wenn nicht ins Gespräch. */
+    private var diktatZiel: ((String) -> Unit)? = null
+
+    fun regelnLaden() { regeln = de.frank.jarvis.faehigkeit.Regeln.alle(getApplication()).sortedByDescending { it.id } }
+    fun regelnOeffnen() { regelnLaden(); regelnOffen = true }
+    fun regelnSchliessen() { regelnOffen = false }
+
+    private fun regelnAendern(aenderung: () -> Unit) {
+        regelVerlauf += de.frank.jarvis.faehigkeit.Regeln.alle(getApplication())
+        if (regelVerlauf.size > 20) regelVerlauf.removeAt(0)
+        aenderung()
+        regelnLaden()
+    }
+
+    fun regelNeu(text: String) {
+        if (text.isBlank()) return
+        regelnAendern {
+            val regel = de.frank.jarvis.faehigkeit.Regeln.speichere(getApplication(), text)
+            if (regel == null) meldung = "Die Regeldatei ist voll. Lösche zuerst eine überholte Regel." else letzteRegel = regel.id
+        }
+    }
+
+    fun regelAendern(id: Int, text: String) {
+        if (text.isBlank()) { meldung = "Eine leere Regel geht nicht. Zum Entfernen bitte löschen."; return }
+        regelnAendern { de.frank.jarvis.faehigkeit.Regeln.speichere(getApplication(), text, id) }
+    }
+
+    fun regelLoeschen(id: Int) {
+        regelnAendern { de.frank.jarvis.faehigkeit.Regeln.loesche(getApplication(), id) }
+        if (letzteRegel == id) letzteRegel = null
+        meldung = "Regel gelöscht. Mit „Rückgängig“ holst du sie zurück."
+    }
+
+    fun regelRueckgaengig() {
+        val vorher = regelVerlauf.removeLastOrNull() ?: return
+        de.frank.jarvis.faehigkeit.Regeln.setze(getApplication(), vorher)
+        regelnLaden()
+        if (regeln.none { it.id == letzteRegel }) letzteRegel = null
+        meldung = "Letzte Änderung zurückgenommen."
+    }
+
+    /** Formuliert die zuletzt hinzugefügte Regel um, und nur sie. */
+    fun regelKorrektur() {
+        val regel = regeln.firstOrNull { it.id == letzteRegel } ?: return
+        if (regelKorrigiert) return
+        if (!kiVerbunden) { meldung = "Für die KI-Korrektur bitte zuerst mit ChatGPT verbinden."; return }
+        regelKorrigiert = true
+        viewModelScope.launch {
+            try {
+                val neu = auth.streamChat(REGEL_KORREKTUR, listOf(ChatTurn("user", regel.text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
+                when {
+                    neu.length < 10 -> meldung = "Die KI-Korrektur hat nichts Brauchbares geliefert. Die Regel bleibt, wie sie ist."
+                    neu == regel.text -> meldung = "Die Regel ist schon klar formuliert."
+                    else -> { regelnAendern { de.frank.jarvis.faehigkeit.Regeln.speichere(getApplication(), neu, regel.id) }; meldung = "Regel neu formuliert." }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                meldung = e.message ?: "Die KI-Korrektur hat nicht geklappt."
+            } finally {
+                regelKorrigiert = false
+            }
+        }
+    }
+
+    /** Mikrofon im Regel-Bildschirm: Die Aufnahme wird als neue Regel gespeichert, nicht an Jarvis geschickt. */
+    fun regelMikrofonTippen() {
+        when {
+            schreibtMit -> Unit
+            nimmtAuf -> aufnahmeBeenden()
+            sprache.groqApiKey.isBlank() -> meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."
+            else -> { diktatZiel = ::regelNeu; mikrofonAnfragen() }
+        }
+    }
+
     /** Tipp auf den Mikrofon-Knopf: Aufnahme starten oder beenden und abschicken. */
     fun mikrofonTippen() {
         when {
@@ -144,14 +228,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun mikrofonErlaubt(erlaubt: Boolean) {
-        if (!erlaubt) { meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        if (!erlaubt) { diktatZiel = null; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
         vorleser.stopp()
-        if (mikro.start(viewModelScope)) nimmtAuf = true else meldung = "Die Aufnahme ließ sich nicht starten."
+        if (mikro.start(viewModelScope)) nimmtAuf = true else { diktatZiel = null; meldung = "Die Aufnahme ließ sich nicht starten." }
     }
 
     private fun aufnahmeBeenden() {
         nimmtAuf = false
         schreibtMit = true
+        val ziel = diktatZiel
+        diktatZiel = null
         viewModelScope.launch {
             try {
                 val wav = mikro.stop()
@@ -163,6 +249,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 )
                 val text = try { withContext(Dispatchers.IO) { de.frank.jarvis.audio.Diktat(groq).transkribiere(wav).text.trim() } } finally { groq.shutdown() }
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."
+                else if (ziel != null) ziel(text)
                 else { schreibtMit = false; gesprochen = true; sende(text) }
             } catch (e: CancellationException) {
                 throw e
@@ -357,3 +444,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             (if (it.toLocalDate() == java.time.LocalDate.now()) "heute" else "morgen") + " um " + it.toLocalTime().toString().take(5) + " Uhr"
         } ?: "ausgeschaltet"
 }
+
+/** Auftrag an das Modell für die KI-Korrektur einer einzelnen Regel. */
+private const val REGEL_KORREKTUR =
+    "Du formulierst eine Vorgabe von Frank zu einer klaren Regel für seinen Assistenten Jarvis um. Frank hat sie eingesprochen oder eingetippt; " +
+        "Jarvis bekommt die Regel danach bei jeder Antwort als Anweisung beigelegt und muss sie ohne weiteres Wissen verstehen. " +
+        "Schreibe sie in gutem Deutsch als vollständige, für sich allein verständliche Anweisung an Jarvis: wann sie gilt und was dann zu tun ist. " +
+        "Behalte jeden inhaltlichen Punkt und jeden genannten Wert, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
+        "und berichtige Hörfehler der Spracherkennung (zum Beispiel „Javis“ für Jarvis, „WUPP“ für Whoop). So kurz wie möglich, höchstens 400 Zeichen. " +
+        "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
