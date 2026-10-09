@@ -9,7 +9,11 @@ import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.security.MessageDigest
 
@@ -41,8 +45,39 @@ object Installierer {
         if (laeuft(paket)) false else { laufend[paket] = System.currentTimeMillis(); true }
     }
 
+    /**
+     * Mehrere Updates laden und prüfen gleichzeitig, höchstens [GLEICHZEITIG] auf einmal – der
+     * Drive-Anbieter bricht bei zu vielen großen Downloads nebeneinander eher ab.
+     */
+    private const val GLEICHZEITIG = 3
+    private val ladePlaetze = Semaphore(GLEICHZEITIG)
+
+    /**
+     * Die Übergabe an Android läuft dagegen einzeln: Solange der Bestätigungsdialog einer App offen
+     * ist, verwirft Android den Dialog der nächsten oft still. Die Sperre hält bis zum endgültigen
+     * Ergebnis; nach [UEBERGABE_WARTEN_MS] geht es trotzdem weiter, damit ein liegengelassener
+     * Dialog die übrigen Updates nicht aufhält.
+     */
+    private val uebergabe = Mutex()
+    private var uebergabeBei: String? = null
+    private const val UEBERGABE_WARTEN_MS = 2 * 60_000L
+
+    private suspend fun warteAufUebergabe(paket: String) {
+        if (withTimeoutOrNull(UEBERGABE_WARTEN_MS) { uebergabe.lock(); true } == true) {
+            synchronized(laufend) { uebergabeBei = paket }
+        }
+    }
+
+    private fun gibUebergabeFrei(paket: String) {
+        val frei = synchronized(laufend) { if (uebergabeBei == paket) { uebergabeBei = null; true } else false }
+        if (frei) runCatching { uebergabe.unlock() }
+    }
+
     /** Bei eigenen Fehlern vor der Übergabe an Android. */
-    fun beende(paket: String) = synchronized(laufend) { laufend -= paket }
+    fun beende(paket: String) {
+        synchronized(laufend) { laufend -= paket }
+        gibUebergabeFrei(paket)
+    }
 
     /** Vom Receiver bei endgültigem Ergebnis (Erfolg, Fehler, Abbruch): Sperre und gespeicherte Session lösen. */
     fun abschliessen(context: Context, paket: String) {
@@ -89,13 +124,16 @@ object Installierer {
         Diagnose.ereignis(context, Phase.INSTALLATION, "START", "paket" to paket, "vc" to m.versionCode)
         try {
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Laedt(0))
-            datei = lade(context, eintrag)
+            val geladen = ladePlaetze.withPermit {
+                val d = lade(context, eintrag).also { datei = it }
+                ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Prueft)
+                withContext(Dispatchers.IO) { pruefe(context, d, m) }
+                d
+            }
 
-            ZustandsSpeicher.setzeInstallation(paket, InstallStatus.Prueft)
-            pruefe(context, datei, m)
-
+            warteAufUebergabe(paket)
             ZustandsSpeicher.setzeInstallation(paket, InstallStatus.WartetAufBestaetigung)
-            ersetzt = uebergebe(context, datei, m, eintrag.label)
+            ersetzt = withContext(Dispatchers.IO) { uebergebe(context, geladen, m, eintrag.label) }
             Diagnose.ereignis(context, Phase.INSTALLATION, if (ersetzt) "UEBERGEBEN_ERSETZT" else "UEBERGEBEN", "paket" to paket, "vc" to m.versionCode)
             // Sperre bleibt bis zum Ergebnis im InstallErgebnisReceiver.
         } catch (e: CancellationException) {
