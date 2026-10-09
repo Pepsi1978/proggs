@@ -12,7 +12,10 @@ $schreibbar = $false
 try { $k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider', $true); $schreibbar = $null -ne $k; if ($k) { $k.Close() } } catch {}
 # Beim Systemstart gibt ein SYSTEM-Task den Fingerabdruck frei, bevor der Anmeldebildschirm kommt –
 # sonst bliebe ein im Zeltmodus gesetztes Enabled=0 über den Neustart hinweg stehen.
-$taskFehlt = -not (Get-ScheduledTask -TaskName 'ZeltWach Fingerabdruck freigeben' -ErrorAction SilentlyContinue)
+# Der Auslöser ist ein Ereignis (Kernel-Boot 27 = jeder Start, auch Schnellstart; Power-Troubleshooter 1 = Aufwachen):
+# "Beim Systemstart" feuert bei aktivem Schnellstart nicht.
+$task = Get-ScheduledTask -TaskName 'ZeltWach Fingerabdruck freigeben' -ErrorAction SilentlyContinue
+$taskFehlt = -not $task -or -not ($task.Triggers | Where-Object { $_.CimClass.CimClassName -eq 'MSFT_TaskEventTrigger' })
 if (-not $schreibbar -or $taskFehlt) {
     $benutzer = "$env:USERDOMAIN\$env:USERNAME"
     $admin = @"
@@ -20,10 +23,7 @@ New-Item -Path '$regPfad' -Force | Out-Null
 `$acl = Get-Acl '$regPfad'
 `$acl.AddAccessRule((New-Object System.Security.AccessControl.RegistryAccessRule('$benutzer','FullControl','Allow')))
 Set-Acl '$regPfad' `$acl
-`$aktion = New-ScheduledTaskAction -Execute 'reg.exe' -Argument 'delete "HKLM\SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider" /v Enabled /f'
-`$ausloeser = New-ScheduledTaskTrigger -AtStartup
-`$prinzipal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-Register-ScheduledTask -TaskName 'ZeltWach Fingerabdruck freigeben' -Action `$aktion -Trigger `$ausloeser -Principal `$prinzipal -Force | Out-Null
+schtasks /create /f /tn 'ZeltWach Fingerabdruck freigeben' /ru SYSTEM /rl HIGHEST /sc ONEVENT /ec System /mo "*[System[(Provider[@Name='Microsoft-Windows-Kernel-Boot'] and EventID=27) or (Provider[@Name='Microsoft-Windows-Power-Troubleshooter'] and EventID=1)]]" /tr 'reg.exe delete \"HKLM\SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider\" /v Enabled /f' | Out-Null
 "@
     $b64 = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($admin))
     Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList "-NoProfile -EncodedCommand $b64"

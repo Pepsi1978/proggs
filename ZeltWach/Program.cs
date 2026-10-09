@@ -35,9 +35,13 @@ sealed class TrayKontext : ApplicationContext
     readonly System.Windows.Forms.Timer timer;
     readonly string version;
     bool? zelt;
+    bool? freigabe;
+    int restMinuten = -1;
+    DateTime freigabeBis;
 
     public TrayKontext()
     {
+        freigabeBis = DateTime.UtcNow + Schonfrist;
         version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?";
 
         var menu = new ContextMenuStrip();
@@ -59,7 +63,7 @@ sealed class TrayKontext : ApplicationContext
         SystemEvents.PowerModeChanged += (_, e) =>
         {
             if (e.Mode == PowerModes.Suspend) Fingerabdruck(true);
-            if (e.Mode == PowerModes.Resume) { zelt = null; Pruefen(); }
+            if (e.Mode == PowerModes.Resume) { freigabeBis = DateTime.UtcNow + Schonfrist; zelt = null; Pruefen(); }
         };
         Pruefen();
     }
@@ -67,21 +71,30 @@ sealed class TrayKontext : ApplicationContext
     void Pruefen()
     {
         bool jetztZelt = GetSystemMetrics(SM_CONVERTIBLESLATEMODE) == 0;
-        if (jetztZelt == zelt) return;
+        // Nach Start und Aufwachen bleibt der Fingerabdruck auch im Zelt noch kurz erlaubt:
+        // die Anmeldung braucht ihn, die Tastatur (und damit die PIN-Eingabe) ist im Zelt aus.
+        TimeSpan rest = freigabeBis - DateTime.UtcNow;
+        bool jetztFreigabe = !jetztZelt || rest > TimeSpan.Zero;
+        int jetztRest = jetztZelt && rest > TimeSpan.Zero ? (int)Math.Ceiling(rest.TotalMinutes) : -1;
+        if (jetztZelt == zelt && jetztFreigabe == freigabe && jetztRest == restMinuten) return;
+        bool zeltGewechselt = jetztZelt != zelt;
         zelt = jetztZelt;
+        freigabe = jetztFreigabe;
+        restMinuten = jetztRest;
 
-        bool schalterOk = Fingerabdruck(!jetztZelt);
+        bool schalterOk = Fingerabdruck(jetztFreigabe);
         string hinweis = schalterOk ? "" : " (Fingerabdruck-Schalter: keine Berechtigung, install.ps1 ausführen)";
 
         if (jetztZelt)
         {
-            SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED);
+            if (zeltGewechselt) SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED);
             icon.Icon = SystemIcons.Shield;
-            icon.Text = Kurz($"ZeltWach {version}: Zelt – an, PIN{hinweis}");
+            string anmeldung = jetztFreigabe ? $"Fingerabdruck noch {jetztRest} min" : "PIN";
+            icon.Text = Kurz($"ZeltWach {version}: Zelt – an, {anmeldung}{hinweis}");
         }
         else
         {
-            SetThreadExecutionState(ES_CONTINUOUS);
+            if (zeltGewechselt) SetThreadExecutionState(ES_CONTINUOUS);
             icon.Icon = SystemIcons.Application;
             icon.Text = Kurz($"ZeltWach {version}: Laptop – normal{hinweis}");
         }
@@ -105,6 +118,7 @@ sealed class TrayKontext : ApplicationContext
         }
     }
 
+    static readonly TimeSpan Schonfrist = TimeSpan.FromMinutes(5);
     const string BiometrieSchluessel = @"SOFTWARE\Policies\Microsoft\Biometrics\Credential Provider";
 
     // NotifyIcon.Text erlaubt höchstens 127 Zeichen.
