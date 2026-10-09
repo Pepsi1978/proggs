@@ -218,6 +218,7 @@ Unten stehen alle Daten, bereits fertig gerechnet. Regeln:
 - Die GESTELLTEN WECKER gehören in HEUTE oder AUSBLICK nur, wenn sie zum Dienst nicht passen (zum Beispiel kein Wecker vor einem Tagdienst) oder gleich klingeln.
 - Der Abschnitt WISSENS-DATENBANK ist nur ein Verzeichnis und für die Auswertung ohne Belang.
 - Die Liste GENIALE IDEEN ist nur Hintergrundwissen. Zähle die Ideen nicht auf; greife höchstens eine auf, wenn sie heute wirklich passt (freier Tag, gute Erholung).
+- Stehen in deiner Anweisung FRANKS REGELN, halte sie in der Auswertung ein. Wo sie den Vorgaben hier widersprechen (zum Beispiel bei der Zahl der genannten Werte), gehen Franks Regeln vor.
 - Keine medizinischen Diagnosen. Empfehlungen konkret und alltagsnah (Belastung, Schlaf, Erholung, Training).
 - Du darfst höchstens zwei Werkzeuge zusätzlich aufrufen, und nur wenn ein auffälliger Wert einen Blick in den Verlauf braucht. Meist ist das nicht nötig.
 

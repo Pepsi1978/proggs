@@ -25,9 +25,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
             "vom Oura-Ring (Readiness, Schlafscore, Resilienz), von der Waage (Gewicht, Körperfett, Muskelmasse und weitere) und seine Trainings (Läufe mit Pace, Puls, VO2max). " +
             "Für Fragen wie „Wie sind meine Werte heute?“ oder „Vergleiche mit den letzten Wochen“ nimm biomarker_auswertung: Es liefert den aktuellen Wert, " +
             "die Durchschnitte und eine Einordnung fertig gerechnet. Nenne beim Antworten zuerst das Wichtigste (was auffällig besser oder schlechter ist), " +
-            "nicht jede Zahl, und leite eine kurze, konkrete Empfehlung ab. " +
-            "Regel für Schlaffragen: Nenne immer auch Schlafdauer, HRV, Ruhepuls und Whoop-Erholung, und zeige im Verlauf neben Tiefschlaf und REM " +
-            "auch Wachzeit und Erholung (metriken schlafdauer, hrv, ruhepuls, erholung, wach_min). Die Daten sind nur lesbar. Du stellst keine medizinischen Diagnosen."
+            "nicht jede Zahl, und leite eine kurze, konkrete Empfehlung ab. Die Daten sind nur lesbar. Du stellst keine medizinischen Diagnosen."
 
     override fun stoerung(): String? = rufeDirekt("katalog", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
 

@@ -7,6 +7,7 @@ import de.frank.jarvis.auth.CodexAuthManager
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
+import de.frank.jarvis.faehigkeit.Regeln
 import de.frank.jarvis.faehigkeit.Register
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -40,7 +41,7 @@ class JarvisAgent(context: Context) {
         beiSchritt: (String) -> Unit = {},
     ): String {
         if (!auth.isConnected) return "Ich bin noch nicht mit ChatGPT verbunden. Bitte in Jarvis unter Einstellungen anmelden."
-        return versuche(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt)
+        return versuche(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, lernen = true)
             ?: "Das hat zu lange gedauert oder ich bin nicht fertig geworden. Bitte versuche es noch einmal oder teile den Auftrag auf."
     }
 
@@ -59,9 +60,11 @@ class JarvisAgent(context: Context) {
         rolle: String? = null,
         mitInternet: Boolean = false,
         ablageTitel: String? = null,
+        lernen: Boolean = false,
     ): String? {
         if (!auth.isConnected) return null
-        val faehigkeiten = Register.alle(app).filter { mitInternet || it.id != "web" }
+        // Regeln schreibt Jarvis nur im Gespräch mit Frank. Agenten und die Tagesauswertung lesen fremde Texte (Internet, Mails) und halten die Regeln nur ein.
+        val faehigkeiten = Register.alle(app).filter { (mitInternet || it.id != "web") && (lernen || it.id != "regeln") }
         val werkzeuge = faehigkeiten.flatMap { it.werkzeuge }
         val zuege = (verlauf.takeLast(12) + ChatTurn("user", auftrag)).toMutableList()
         val ergebnis = withTimeoutOrNull<String?>(zeitlimitMs) {
@@ -106,6 +109,7 @@ class JarvisAgent(context: Context) {
             append("- Nach einer Änderung bestätigst du in einem Satz, was jetzt gilt.\n")
             append("- Behaupte nie, eine Datei, ein Bild oder ein Dokument erzeugt oder gespeichert zu haben, wenn ein Werkzeug-Ergebnis das nicht mit „Gespeichert“ bestätigt. ")
             append("Meldet ein Werkzeug „läuft noch“ oder einen Fehler, sag genau das.\n\n")
+            Regeln.alsKontext(app).takeIf { it.isNotEmpty() }?.let { append(it).append('\n') }
             faehigkeiten.forEach { append("App ").append(it.name).append(": ").append(it.hinweise).append("\n\n") }
             append("WERKZEUGE:\n")
             faehigkeiten.flatMap { it.werkzeuge }.forEach { w ->
