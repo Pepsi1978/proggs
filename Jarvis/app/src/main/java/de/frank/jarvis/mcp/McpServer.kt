@@ -15,7 +15,7 @@ import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.AblageKarte
 import de.frank.jarvis.faehigkeit.Ergebnis
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
-import de.frank.jarvis.faehigkeit.Regeln
+import de.frank.jarvis.faehigkeit.merkKontext
 import de.frank.jarvis.faehigkeit.Register
 import de.frank.jarvis.faehigkeit.Werkzeug
 import de.frank.jarvis.faehigkeit.schema
@@ -228,8 +228,8 @@ class McpServer(context: Context) {
         // Inzwischen fertig Gewordenes reicht Jarvis mit dem nächsten Ergebnis nach (ChatGPT lässt sich nicht von hier aus ansprechen).
         val fertig = AblageZentrale.fertigFuerPlugin()
         val nachtrag = if (fertig.isEmpty()) "" else "\n\nINZWISCHEN FERTIG (sag es Frank jetzt von dir aus):\n" + fertig.joinToString("\n") { "- $it" }
-        // Die Anleitung liest ein Programm nur beim Verbinden. Damit auch eine eben erst gelernte Regel gilt, liegen sie jedem Ergebnis bei.
-        val regeln = if (r.fehler || name.startsWith("regel")) "" else Regeln.alsKontext(app).let { if (it.isEmpty()) "" else "\n\n$it" }
+        // Die Anleitung liest ein Programm nur beim Verbinden. Damit Franks Regeln und das Wissen über ihn immer und sofort gelten, liegen sie jedem Ergebnis bei.
+        val regeln = if (r.fehler || name.startsWith("regel") || name.startsWith("frank_info")) "" else merkKontext(app).let { if (it.isEmpty()) "" else "\n\n$it" }
         return inhalt(r.text + nachtrag + regeln, r.fehler).apply { r.struktur?.let { put("structuredContent", it) }; r.meta?.let { put("_meta", it) } }
     }
 
@@ -250,7 +250,7 @@ class McpServer(context: Context) {
         append("Dies ist Jarvis, Franks persönlicher Assistent auf seinem Handy. Sagt Frank „Jarvis“ oder geht es um seine Aufgaben, Termine ")
         append("oder Erinnerungen, nutze diese Werkzeuge. Antworte danach kurz in einem Satz, was erledigt wurde, ohne ids vorzulesen. ")
         append("Fehlt eine nötige Angabe oder ist sie mehrdeutig, frage kurz nach, statt zu raten.\n")
-        append(Regeln.alsKontext(app))
+        append(merkKontext(app))
         Register.alle(app).filter { it.imPlugin }.forEach { append(it.name).append(": ").append(it.hinweise).append('\n') }
         append("MITDENKEN: Bei jeder Bitte und Frage von Frank prüfst du, ob sein Tag sie berührt – Dienst und Schlafzeiten, Termine, Wetter, Erholung, offene Aufgaben. ")
         append("Die schreibenden Werkzeuge hängen dazu einen Abschnitt MITGEDACHT an; für Fragen zu einem Zeitpunkt nimm wetter_lesen mit datum und uhrzeit, für den Überblick tagesauswertung_lesen. ")

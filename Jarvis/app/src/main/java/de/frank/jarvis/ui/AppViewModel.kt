@@ -133,87 +133,113 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Mikrofon und Vorlesen ----
 
-    // ---- Franks Regeln ----
-    var regelnOffen by mutableStateOf(false); private set
-    var regeln by mutableStateOf(emptyList<de.frank.jarvis.faehigkeit.Regel>()); private set
-    /** Die in diesem Bildschirm zuletzt hinzugefügte Regel: nur sie bekommt die KI-Korrektur. */
-    var letzteRegel by mutableStateOf<Int?>(null); private set
-    var regelKorrigiert by mutableStateOf(false); private set
-    /** Stände vor den letzten Änderungen, für „Rückgängig“. */
-    private val regelVerlauf = mutableStateListOf<List<de.frank.jarvis.faehigkeit.Regel>>()
-    val regelRueckgaengigMoeglich: Boolean get() = regelVerlauf.isNotEmpty()
-    /** Wohin der Text der laufenden Aufnahme geht, wenn nicht ins Gespräch. */
-    private var diktatZiel: ((String) -> Unit)? = null
+    // ---- Franks Regeln und Wissen über Frank ----
 
-    fun regelnLaden() { regeln = de.frank.jarvis.faehigkeit.Regeln.alle(getApplication()).sortedByDescending { it.id } }
-    fun regelnOeffnen() { regelnLaden(); regelnOffen = true }
-    fun regelnSchliessen() { regelnOffen = false }
+    /** Eine der beiden Merkdateien samt dem, was ihr Bildschirm braucht. */
+    inner class Merkliste(
+        private val datei: de.frank.jarvis.faehigkeit.Merkdatei,
+        val titel: String,
+        /** „Regel“ oder „Notiz“, für Meldungen und Beschriftungen. */
+        val wort: String,
+        val erklaerung: String,
+        val platzhalter: String,
+        private val korrekturAuftrag: String,
+    ) {
+        var eintraege by mutableStateOf(emptyList<de.frank.jarvis.faehigkeit.Regel>()); private set
+        /** Der in diesem Bildschirm zuletzt hinzugefügte Eintrag: nur er bekommt die KI-Korrektur. */
+        var letzter by mutableStateOf<Int?>(null); private set
+        var korrigiert by mutableStateOf(false); private set
+        /** Stände vor den letzten Änderungen, für „Rückgängig“. */
+        private val verlauf = mutableStateListOf<List<de.frank.jarvis.faehigkeit.Regel>>()
+        val rueckgaengigMoeglich: Boolean get() = verlauf.isNotEmpty()
 
-    private fun regelnAendern(aenderung: () -> Unit) {
-        regelVerlauf += de.frank.jarvis.faehigkeit.Regeln.alle(getApplication())
-        if (regelVerlauf.size > 20) regelVerlauf.removeAt(0)
-        aenderung()
-        regelnLaden()
-    }
+        fun laden() { eintraege = datei.alle(getApplication()).sortedByDescending { it.id } }
 
-    fun regelNeu(text: String) {
-        if (text.isBlank()) return
-        regelnAendern {
-            val regel = de.frank.jarvis.faehigkeit.Regeln.speichere(getApplication(), text)
-            if (regel == null) meldung = "Die Regeldatei ist voll. Lösche zuerst eine überholte Regel." else letzteRegel = regel.id
+        private fun aendere(aenderung: () -> Unit) {
+            verlauf += datei.alle(getApplication())
+            if (verlauf.size > 20) verlauf.removeAt(0)
+            aenderung()
+            laden()
         }
-    }
 
-    fun regelAendern(id: Int, text: String) {
-        if (text.isBlank()) { meldung = "Eine leere Regel geht nicht. Zum Entfernen bitte löschen."; return }
-        regelnAendern { de.frank.jarvis.faehigkeit.Regeln.speichere(getApplication(), text, id) }
-    }
+        fun neu(text: String) {
+            if (text.isBlank()) return
+            aendere {
+                val eintrag = datei.speichere(getApplication(), text)
+                if (eintrag == null) meldung = "Die Datei ist voll. Lösche zuerst einen überholten Eintrag." else letzter = eintrag.id
+            }
+        }
 
-    fun regelLoeschen(id: Int) {
-        regelnAendern { de.frank.jarvis.faehigkeit.Regeln.loesche(getApplication(), id) }
-        if (letzteRegel == id) letzteRegel = null
-        meldung = "Regel gelöscht. Mit „Rückgängig“ holst du sie zurück."
-    }
+        fun aendern(id: Int, text: String) {
+            if (text.isBlank()) { meldung = "Ein leerer Eintrag geht nicht. Zum Entfernen bitte löschen."; return }
+            aendere { datei.speichere(getApplication(), text, id) }
+        }
 
-    fun regelRueckgaengig() {
-        val vorher = regelVerlauf.removeLastOrNull() ?: return
-        de.frank.jarvis.faehigkeit.Regeln.setze(getApplication(), vorher)
-        regelnLaden()
-        if (regeln.none { it.id == letzteRegel }) letzteRegel = null
-        meldung = "Letzte Änderung zurückgenommen."
-    }
+        fun loeschen(id: Int) {
+            aendere { datei.loesche(getApplication(), id) }
+            if (letzter == id) letzter = null
+            meldung = "$wort gelöscht. Mit „Rückgängig“ holst du sie zurück."
+        }
 
-    /** Formuliert die zuletzt hinzugefügte Regel um, und nur sie. */
-    fun regelKorrektur() {
-        val regel = regeln.firstOrNull { it.id == letzteRegel } ?: return
-        if (regelKorrigiert) return
-        if (!kiVerbunden) { meldung = "Für die KI-Korrektur bitte zuerst mit ChatGPT verbinden."; return }
-        regelKorrigiert = true
-        viewModelScope.launch {
-            try {
-                val neu = auth.streamChat(REGEL_KORREKTUR, listOf(ChatTurn("user", regel.text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
-                when {
-                    neu.length < 10 -> meldung = "Die KI-Korrektur hat nichts Brauchbares geliefert. Die Regel bleibt, wie sie ist."
-                    neu == regel.text -> meldung = "Die Regel ist schon klar formuliert."
-                    else -> { regelnAendern { de.frank.jarvis.faehigkeit.Regeln.speichere(getApplication(), neu, regel.id) }; meldung = "Regel neu formuliert." }
+        fun rueckgaengig() {
+            val vorher = verlauf.removeLastOrNull() ?: return
+            datei.setze(getApplication(), vorher)
+            laden()
+            if (eintraege.none { it.id == letzter }) letzter = null
+            meldung = "Letzte Änderung zurückgenommen."
+        }
+
+        /** Formuliert den zuletzt hinzugefügten Eintrag um, und nur ihn. */
+        fun korrektur() {
+            val eintrag = eintraege.firstOrNull { it.id == letzter } ?: return
+            if (korrigiert) return
+            if (!kiVerbunden) { meldung = "Für die KI-Korrektur bitte zuerst mit ChatGPT verbinden."; return }
+            korrigiert = true
+            viewModelScope.launch {
+                try {
+                    val neu = auth.streamChat(korrekturAuftrag, listOf(ChatTurn("user", eintrag.text)), einstellungen.modell, einstellungen.denkstufe).trim().trim('"', '„', '“')
+                    when {
+                        neu.length < 10 -> meldung = "Die KI-Korrektur hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist."
+                        neu == eintrag.text -> meldung = "Das ist schon klar formuliert."
+                        else -> { aendere { datei.speichere(getApplication(), neu, eintrag.id) }; meldung = "$wort neu formuliert." }
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    meldung = e.message ?: "Die KI-Korrektur hat nicht geklappt."
+                } finally {
+                    korrigiert = false
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                meldung = e.message ?: "Die KI-Korrektur hat nicht geklappt."
-            } finally {
-                regelKorrigiert = false
             }
         }
     }
 
-    /** Mikrofon im Regel-Bildschirm: Die Aufnahme wird als neue Regel gespeichert, nicht an Jarvis geschickt. */
-    fun regelMikrofonTippen() {
+    val regelListe = Merkliste(
+        de.frank.jarvis.faehigkeit.Regeln, "Franks Regeln", "Regel",
+        "Diese Regeln beachtet Jarvis bei jeder Antwort, bei seinen Agenten und in der Tagesauswertung. Er lernt sie auch selbst, wenn du ihm sagst, wie du etwas künftig haben möchtest.",
+        "Neue Regel eintippen oder einsprechen", REGEL_KORREKTUR,
+    )
+    val infoListe = Merkliste(
+        de.frank.jarvis.faehigkeit.UeberFrank, "Über Frank", "Notiz",
+        "Das weiß Jarvis über dich und hat es bei jeder Antwort, bei seinen Agenten und in der Tagesauswertung vor Augen. Er notiert es auch selbst, wenn du etwas über dich erzählst.",
+        "Neue Notiz über dich eintippen oder einsprechen", INFO_KORREKTUR,
+    )
+    /** Die Merkliste, die gerade im Vollbild offen ist. */
+    var merkOffen by mutableStateOf<Merkliste?>(null); private set
+    /** Wohin der Text der laufenden Aufnahme geht, wenn nicht ins Gespräch. */
+    private var diktatZiel: ((String) -> Unit)? = null
+
+    fun merkLaden() { regelListe.laden(); infoListe.laden() }
+    fun merkOeffnen(liste: Merkliste) { liste.laden(); merkOffen = liste }
+    fun merkSchliessen() { merkOffen = null }
+
+    /** Mikrofon im Vollbild einer Merkliste: Die Aufnahme wird als neuer Eintrag gespeichert, nicht an Jarvis geschickt. */
+    fun merkMikrofonTippen(liste: Merkliste) {
         when {
             schreibtMit -> Unit
             nimmtAuf -> aufnahmeBeenden()
             sprache.groqApiKey.isBlank() -> meldung = "Für das Mikrofon bitte zuerst den Groq-Schlüssel in den Einstellungen eintragen."
-            else -> { diktatZiel = ::regelNeu; mikrofonAnfragen() }
+            else -> { diktatZiel = liste::neu; mikrofonAnfragen() }
         }
     }
 
@@ -453,3 +479,12 @@ private const val REGEL_KORREKTUR =
         "Behalte jeden inhaltlichen Punkt und jeden genannten Wert, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
         "und berichtige Hörfehler der Spracherkennung (zum Beispiel „Javis“ für Jarvis, „WUPP“ für Whoop). So kurz wie möglich, höchstens 400 Zeichen. " +
         "Antworte nur mit der Regel, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
+
+/** Auftrag an das Modell für die KI-Korrektur einer einzelnen Notiz über Frank. */
+private const val INFO_KORREKTUR =
+    "Du formulierst eine Angabe, die Frank über sich selbst eingesprochen oder eingetippt hat, zu einer klaren Notiz für seinen Assistenten Jarvis um. " +
+        "Jarvis hat die Notiz danach bei jeder Antwort vor Augen und muss sie ohne weiteres Wissen verstehen. " +
+        "Schreibe sie in gutem Deutsch als kurzen, für sich allein verständlichen Satz über Frank in der dritten Person (bei mehreren Angaben höchstens drei Sätze). " +
+        "Behalte jede Tatsache, jeden Namen und jede Zahl genau so, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
+        "und berichtige offensichtliche Hörfehler der Spracherkennung. Höchstens 300 Zeichen. " +
+        "Antworte nur mit der Notiz, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."

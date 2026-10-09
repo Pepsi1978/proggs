@@ -95,10 +95,19 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
         // ---------------------------------------------------------------- Regeln
         Abschnitt("Franks Regeln")
         Karte {
-            androidx.compose.runtime.LaunchedEffect(Unit) { vm.regelnLaden() }
-            Zeile("Gelernte Regeln", when (val anzahl = vm.regeln.size) { 0 -> "Noch keine"; 1 -> "1 Regel"; else -> "$anzahl Regeln" }, if (vm.regeln.isEmpty()) f.textLeise else f.erfolg)
+            androidx.compose.runtime.LaunchedEffect(Unit) { vm.merkLaden() }
+            val regeln = vm.regelListe.eintraege.size
+            Zeile("Gelernte Regeln", when (regeln) { 0 -> "Noch keine"; 1 -> "1 Regel"; else -> "$regeln Regeln" }, if (regeln == 0) f.textLeise else f.erfolg)
             Text("Was du Jarvis für die Zukunft vorgibst („nenn mir bei Schlafwerten immer auch …“), merkt er sich als Regel und beachtet es überall. Hier siehst du die Regeln, änderst sie und sprichst neue ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            Knopf("Regeln ansehen und bearbeiten", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.regelnOeffnen() }
+            Knopf("Regeln ansehen und bearbeiten", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.merkOeffnen(vm.regelListe) }
+        }
+
+        Abschnitt("Über Frank")
+        Karte {
+            val notizen = vm.infoListe.eintraege.size
+            Zeile("Was Jarvis über dich weiß", when (notizen) { 0 -> "Noch nichts"; 1 -> "1 Notiz"; else -> "$notizen Notizen" }, if (notizen == 0) f.textLeise else f.erfolg)
+            Text("Erzählst du etwas über dich („ich fahre einen …“, „bei Regen gehe ich nicht laufen“), notiert Jarvis es und bezieht es künftig ein. Hier siehst du die Notizen, änderst sie und sprichst neue ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            Knopf("Notizen ansehen und bearbeiten", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.merkOeffnen(vm.infoListe) }
         }
 
         // ---------------------------------------------------------------- Plugin
