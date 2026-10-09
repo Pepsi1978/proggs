@@ -205,6 +205,13 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             }
             Text("Aus = Jarvis synchronisiert nur die Daten und speichert den reinen Datenbericht, ohne das oben gewählte Modell zu fragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
 
+            Unterzeile("Aus dem Tagebuch lernen")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("An", aktiv = e.auswertungLernen) { e.auswertungLernen = true }
+                Chip("Aus", aktiv = !e.auswertungLernen) { e.auswertungLernen = false }
+            }
+            Text("Jarvis verdichtet ältere Monate des Tagebuchs zu Kurzfassungen und notiert einmal am Tag bis zu drei neue Dinge, die er daraus über dich erfährt. Du findest sie unter „Über Frank“ und kannst sie dort ändern oder löschen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+
             Knopf("Jetzt synchronisieren", Modifier.padding(top = 14.dp).fillMaxWidth(), haupt = false) { vm.auswertungJetzt() }
         }
 

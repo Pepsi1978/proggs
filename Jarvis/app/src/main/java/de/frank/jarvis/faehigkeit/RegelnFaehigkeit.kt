@@ -103,7 +103,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
         "Jarvis lernt dazu und führt zwei Dateien. " +
             "REGEL = wie du arbeiten oder antworten sollst: Sagt Frank, wie er etwas künftig haben möchte („immer“, „nie“, „in Zukunft“, „ab jetzt“, „ich lege Wert darauf“, " +
             "oder er bemängelt, wie eine Antwort aufgebaut war), rufe regel_speichern auf. " +
-            "INFO ÜBER FRANK = eine dauerhafte Tatsache über ihn selbst: Vorlieben und Abneigungen („bei Regen gehe ich nicht laufen“), was ihm wichtig ist, was er besitzt (Auto, Drohne, Geräte), " +
+            "INFO ÜBER FRANK = eine dauerhafte Tatsache über ihn selbst: seine Ziele („ich will meine VO2max steigern“), Vorlieben und Abneigungen („bei Regen gehe ich nicht laufen“), was ihm wichtig ist, was er besitzt (Auto, Drohne, Geräte), " +
             "persönliche Daten (Geburtstag), Gewohnheiten, Familie, Gesundheit. Erwähnt er so etwas, auch nebenbei, rufe frank_info_speichern auf. " +
             "Beides von dir aus und ohne nachzufragen, auch wenn er nicht „merk dir“ sagt. Sag ihm danach kurz, was du dir gemerkt hast, damit er es berichtigen kann. " +
             "Nichts Flüchtiges speichern (Stimmung von heute, einmalige Wünsche, einzelne Termine) und nichts, was schon dasteht; hat sich etwas geändert, ändere den vorhandenen Eintrag (id). " +
@@ -141,6 +141,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
         speichern(
             UeberFrank, "frank_info_speichern", "Notiz über Frank merken oder ändern", "Notiz",
             "Jarvis: notiert dauerhaft etwas, das Jarvis über Frank erfahren hat. Rufe es von dir aus auf, sobald Frank etwas Bleibendes über sich selbst sagt, auch nebenbei: " +
+                "ein Ziel („ich will meine VO2max und HRV steigern und den Ruhepuls senken“ → „Franks Ziele: VO2max steigern, HRV steigern, Ruhepuls senken.“), " +
                 "eine Vorliebe oder Abneigung („es regnet, heute gehe ich nicht laufen“ → „Frank geht bei Regen nicht gern laufen.“), was ihm wichtig ist („HRV, VO2max und Ruhepuls sind meine wichtigsten Werte“), " +
                 "was er besitzt („ich habe mir die Drohne … gekauft“, „ich sitze in meinem Toyota …“), persönliche Daten („ich bin am … geboren“), Gewohnheiten, Familie, Gesundheit. " +
                 "Jarvis hat die Notizen danach in jedem Gespräch, bei seinen Agenten und in der Tagesauswertung vor Augen. " +

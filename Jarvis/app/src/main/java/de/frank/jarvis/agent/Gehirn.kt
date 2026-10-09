@@ -4,6 +4,7 @@ import android.content.Context
 import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
+import de.frank.jarvis.faehigkeit.TagebuchFaehigkeit
 import de.frank.jarvis.faehigkeit.merkKontext
 import java.time.Duration
 import java.time.LocalDate
@@ -34,7 +35,9 @@ object Gehirn {
             append("GESAMTBILD VON FRANK, Stand ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))).append(".\n")
             append("Das ist dein Hintergrundwissen für jede Frage. Betrachte Franks Frage in diesem Zusammenhang und überlege, was davon seine Antwort besser macht ")
             append("(zum Beispiel Dienst und Schlafzeiten, Erholung, Wetter, eine offene Aufgabe, etwas, das du über ihn weißt). Beziehe genau das ein, kurz und von dir aus. ")
-            append("Was nichts mit der Frage zu tun hat, lässt du weg; zähle das Gesamtbild nie auf.\n\n")
+            append("Was nichts mit der Frage zu tun hat, lässt du weg; zähle das Gesamtbild nie auf.\n")
+            append("Fragt Frank, was jetzt am sinnvollsten ist, leite es aus seiner Lage ab: was für ein Tag es ist und wie viel freie Zeit bleibt, Schlaf und Erholung, ")
+            append("seine Ziele gegenüber den aktuellen Werten, Wetter, offene Aufgaben, passende Ideen. Nenne ein bis drei konkrete Vorschläge mit kurzem Grund, den wichtigsten zuerst.\n\n")
 
             append(merkKontext(app).ifEmpty { "Frank hat noch keine Regeln festgelegt, und über ihn ist noch nichts notiert.\n" }).append('\n')
 
@@ -47,6 +50,9 @@ object Gehirn {
             append("AUFGABEN (frisch gelesen):\n")
             append("Heute und überfällig: ").append(rufe("aufgaben_lesen", JSONObject().put("bereich", "heute"))).append('\n')
             append("Morgen: ").append(rufe("aufgaben_lesen", JSONObject().put("bereich", "morgen"))).append("\n\n")
+
+            append("TAGEBUCH (Franks eigene Einträge; daraus kennst du, was ihn beschäftigt):\n")
+            append(runCatching { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.gedaechtnis() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
 
             val auswertung = Tagesauswertung.neueste(app)
             if (auswertung == null) {

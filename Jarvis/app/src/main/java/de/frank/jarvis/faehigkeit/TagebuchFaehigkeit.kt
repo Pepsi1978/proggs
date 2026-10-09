@@ -5,6 +5,7 @@ import android.util.Log
 import de.frank.jarvis.data.Einstellungen
 import java.io.File
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -85,6 +86,43 @@ class TagebuchFaehigkeit(private val context: Context) : Faehigkeit {
         if (liste.isEmpty()) return "Kein Tagebucheintrag in den letzten $tage Tagen."
         return liste.joinToString("\n\n") { (tag, datei) -> "### " + lang(tag) + "\n" + datei.readText().trim().let { if (it.length > zeichenJeTag) it.take(zeichenJeTag) + " …" else it } }
     }
+
+    private val verdichtet get() = File(context.filesDir, "tagebuch_verdichtet").apply { mkdirs() }
+
+    /**
+     * Das Tagebuch als Gedächtnis fürs Gesamtbild: frühere Monate als Kurzfassung (siehe `agent/Lernen.kt`),
+     * die letzten 14 Tage fast im Wortlaut, die Tage dazwischen gekürzt.
+     */
+    fun gedaechtnis(): String {
+        val alle = eintraege()
+        if (alle.isEmpty()) return "Es liegen keine Tagebucheinträge vor."
+        val heute = LocalDate.now()
+        val monate = verdichtet.listFiles { f -> f.name.endsWith(".txt") }.orEmpty().sortedBy { it.name }
+        val fertig = monate.map { it.name.take(7) }.toSet()
+        return buildString {
+            if (monate.isNotEmpty()) {
+                append("Frühere Monate, von Jarvis verdichtet:\n")
+                monate.takeLast(36).forEach { append(it.name.take(7)).append(": ").append(it.readText().trim()).append('\n') }
+                append('\n')
+            }
+            alle.filter { YearMonth.from(it.first).toString() !in fertig }.sortedBy { it.first }.takeLast(60).forEach { (tag, datei) ->
+                val grenze = if (tag.isBefore(heute.minusDays(14))) 400 else 1500
+                append("### ").append(lang(tag)).append('\n').append(datei.readText().trim().let { if (it.length > grenze) it.take(grenze) + " …" else it }).append("\n\n")
+            }
+        }.trim()
+    }
+
+    /** Der älteste Monat, der ganz vor den letzten 14 Tagen liegt und noch keine Kurzfassung hat: Monat (JJJJ-MM) und seine Einträge. */
+    fun unverdichteterMonat(): Pair<String, String>? {
+        val grenze = YearMonth.from(LocalDate.now().minusDays(14))
+        val fertig = verdichtet.list().orEmpty().map { it.take(7) }.toSet()
+        val alle = eintraege()
+        val monat = alle.map { YearMonth.from(it.first) }.distinct().filter { it.isBefore(grenze) && it.toString() !in fertig }.minOrNull() ?: return null
+        return monat.toString() to alle.filter { YearMonth.from(it.first) == monat }.sortedBy { it.first }
+            .joinToString("\n\n") { (tag, datei) -> "### " + lang(tag) + "\n" + datei.readText().trim().take(3000) }
+    }
+
+    fun speichereVerdichtung(monat: String, text: String) { File(verdichtet, "$monat.txt").writeText(text.trim()) }
 
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(

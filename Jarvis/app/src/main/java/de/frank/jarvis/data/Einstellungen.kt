@@ -117,6 +117,10 @@ class Einstellungen private constructor(context: Context) {
     var auswertungSchlafpause: Boolean get() = prefs.getBoolean("auswertung_schlafpause", true); set(v) = put { putBoolean("auswertung_schlafpause", v) }
     /** Vor jedem Lauf frische Biodaten von Whoop, Oura und Waage holen. */
     var auswertungAbgleich: Boolean get() = prefs.getBoolean("auswertung_abgleich", true); set(v) = put { putBoolean("auswertung_abgleich", v) }
+    /** Nach der Auswertung aus dem Tagebuch lernen: alte Monate verdichten, neue Tatsachen über Frank notieren. */
+    var auswertungLernen: Boolean get() = prefs.getBoolean("auswertung_lernen", true); set(v) = put { putBoolean("auswertung_lernen", v) }
+    /** Tag (JJJJ-MM-TT), an dem Jarvis zuletzt Tatsachen aus dem Tagebuch gelernt hat. */
+    var lernlaufTag: String get() = s("lernlauf_tag", ""); set(v) = put { putString("lernlauf_tag", v) }
     /** Das Modell schreibt die Deutung. Aus = nur die Daten synchronisieren. */
     var auswertungDeutung: Boolean get() = prefs.getBoolean("auswertung_deutung", true); set(v) = put { putBoolean("auswertung_deutung", v) }
 
