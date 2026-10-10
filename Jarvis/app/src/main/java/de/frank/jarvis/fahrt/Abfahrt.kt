@@ -30,7 +30,13 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import android.media.AudioManager
+import android.os.PowerManager
+import de.frank.jarvis.speech.VorleseZustand
+import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 /**
@@ -250,6 +256,17 @@ object Abfahrt {
         }
     }
 
+    /** Eine Beispiel-Meldung zum Ausprobieren von Stimme und Lautstärke; an der Planung ändert sie nichts. */
+    fun probe(context: Context) {
+        val jetzt = ZonedDateTime.now()
+        val abfahrt = jetzt.plusMinutes(10)
+        sende(
+            context.applicationContext, "Probe: In 10 Minuten losfahren",
+            "Fahre um ${abfahrt.format(UHR)} Uhr los, damit du pünktlich auf Arbeit bist. So klingt die Losfahr-Meldung.",
+            "Frank, das ist eine Probe. Fahre in 10 Minuten los, um ${gesprochen(abfahrt)}, damit du pünktlich auf Arbeit bist.",
+        )
+    }
+
     /** Uhrzeit so, wie eine Stimme sie natürlich spricht: „16 Uhr 10“, „17 Uhr“. */
     private fun gesprochen(t: ZonedDateTime): String = if (t.minute == 0) "${t.hour} Uhr" else "${t.hour} Uhr ${t.minute}"
 
@@ -271,8 +288,27 @@ object Abfahrt {
         if (e.abfahrtVorlesen) {
             // Eigene Quelle je Meldung: Dieselbe Quelle ein zweites Mal würde das Vorlesen anhalten statt starten.
             CoroutineScope(Dispatchers.Main).launch {
-                runCatching { Vorleser.hole(context, SecureSettings(context)).sprich("abfahrt:" + System.currentTimeMillis(), "Losfahren", sprechtext) }
-                    .onFailure { Log.w(TAG, "Vorlesen nicht möglich", it) }
+                // Bei gesperrtem Handy darf das Gerät nicht einschlafen, bevor die Stimme fertig ist (sie wird erst aus dem Netz geholt).
+                val wach = context.getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:abfahrt-stimme")
+                runCatching { wach.acquire(120_000L) }
+                val ton = context.getSystemService(AudioManager::class.java)
+                val vorher = ton.getStreamVolume(AudioManager.STREAM_MUSIC)
+                val hoechste = ton.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                val laut = (hoechste * e.abfahrtLautstaerke / 100.0).roundToInt().coerceIn(1, hoechste)
+                try {
+                    // Die Meldung hat ihre eigene Lautstärke, unabhängig davon, wie leise das Handy gerade steht.
+                    runCatching { ton.setStreamVolume(AudioManager.STREAM_MUSIC, laut, 0) }.onFailure { Log.w(TAG, "Lautstärke ließ sich nicht setzen", it) }
+                    val quelle = "abfahrt:" + System.currentTimeMillis()
+                    val vorleser = Vorleser.hole(context, SecureSettings(context))
+                    vorleser.sprich(quelle, "Losfahren", sprechtext)
+                    withTimeoutOrNull(110_000L) { vorleser.stand.first { it.quelle != quelle || it.zustand == VorleseZustand.AUS } }
+                } catch (f: Exception) {
+                    Log.w(TAG, "Vorlesen nicht möglich", f)
+                } finally {
+                    // Zurück auf den Stand von vorher, außer Frank hat inzwischen selbst nachgeregelt.
+                    runCatching { if (ton.getStreamVolume(AudioManager.STREAM_MUSIC) == laut) ton.setStreamVolume(AudioManager.STREAM_MUSIC, vorher, 0) }
+                    runCatching { if (wach.isHeld) wach.release() }
+                }
             }
         }
     }

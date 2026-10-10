@@ -75,6 +75,7 @@ class FahrtFaehigkeit(private val context: Context) : Faehigkeit {
                 "ankunft_tag" to text("Gewünschte Ankunft auf Arbeit vor dem Tagdienst, HH:MM."),
                 "vorlauf" to zahl("So viele Minuten vor der nötigen Abfahrt kommt die Meldung (0 bis 60)."),
                 "vorlesen" to schalter("Meldung mit der eingerichteten Stimme vorlesen."),
+                "lautstaerke" to zahl("Lautstärke der vorgelesenen Meldung in Prozent (10 bis 100, Vorgabe 100)."),
                 "zuhause" to text("Neue Zuhause-Adresse, nur wenn Frank sie ändern will."),
                 "arbeit" to text("Neue Arbeits-Adresse, nur wenn Frank sie ändern will."),
             ),
@@ -140,6 +141,7 @@ class FahrtFaehigkeit(private val context: Context) : Faehigkeit {
         uhrzeit("ankunft_tag", "Ankunft vor dem Tagdienst") { e.ankunftTag = it }
         if (a.has("vorlauf") && !a.isNull("vorlauf")) { e.abfahrtVorlauf = a.optInt("vorlauf", 10).coerceIn(0, 60); geaendert += "Meldung ${e.abfahrtVorlauf} Minuten vor der Abfahrt" }
         if (a.has("vorlesen") && !a.isNull("vorlesen")) { e.abfahrtVorlesen = a.optBoolean("vorlesen"); geaendert += if (e.abfahrtVorlesen) "wird vorgelesen" else "wird nicht vorgelesen" }
+        if (a.has("lautstaerke") && !a.isNull("lautstaerke")) { e.abfahrtLautstaerke = a.optInt("lautstaerke", 100); geaendert += "Lautstärke ${e.abfahrtLautstaerke} Prozent" }
         if (a.gesetzt("zuhause")) { e.adresseZuhause = a.optString("zuhause"); geaendert += "Zuhause: ${e.adresseZuhause}" }
         if (a.gesetzt("arbeit")) { e.adresseArbeit = a.optString("arbeit"); geaendert += "Arbeit: ${e.adresseArbeit}" }
         if (geaendert.isNotEmpty()) {

@@ -475,6 +475,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         abfahrtLaden()
     }
 
+    /** Spielt eine Beispiel-Meldung so ab, wie die echte kommt: Benachrichtigung, Stimme, eingestellte Lautstärke. */
+    fun abfahrtProbe() = de.frank.jarvis.fahrt.Abfahrt.probe(getApplication())
+
     /** Fahrzeit vom Standort (ersatzweise von zu Hause) zu „arbeit“, „zuhause“ oder einer Adresse. */
     fun fahrzeitPruefen(ziel: String) {
         if (ziel.isBlank() || fahrzeitLaeuft) return

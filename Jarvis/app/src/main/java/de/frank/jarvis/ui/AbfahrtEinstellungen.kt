@@ -74,7 +74,16 @@ fun AbfahrtEinstellungen(vm: AppViewModel) {
             Chip("An", aktiv = e.abfahrtVorlesen) { e.abfahrtVorlesen = true }
             Chip("Aus", aktiv = !e.abfahrtVorlesen) { e.abfahrtVorlesen = false }
         }
-        Text("Mit der Stimme, die unter Sprache eingerichtet ist.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        Text("Mit der Stimme, die unter Sprache eingerichtet ist. Auch bei gesperrtem Handy.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+
+        if (e.abfahrtVorlesen) {
+            Unterzeile("Lautstärke der Meldung")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(40, 60, 80, 100).forEach { prozent -> Chip(if (prozent == 100) "Maximal" else "$prozent %", aktiv = e.abfahrtLautstaerke == prozent) { e.abfahrtLautstaerke = prozent } }
+            }
+            Knopf("Probe hören", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.abfahrtProbe() }
+            Text("Jarvis stellt die Medienlautstärke nur für diese Meldung so ein und danach wieder zurück. Ist ein Kopfhörer oder das Auto per Bluetooth verbunden, kommt die Stimme dort.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        }
 
         Unterzeile("Start der Fahrt")
         Zeile("Aktueller Standort", if (vm.standortImmer) "Immer erlaubt" else if (vm.standortErlaubt) "Nur bei offener App" else "Nicht erlaubt", if (vm.standortImmer) f.erfolg else f.gefahr)
