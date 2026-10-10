@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,6 +26,7 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Schützt vor doppelt angelegten Ideen, wenn ChatGPT einen Aufruf nach einer Zeitüberschreitung wiederholt. */
     private var letzteAnlage: Triple<String, Long, String>? = null
+    private val anlageSperre = Mutex()
 
     override fun stoerung(): String? = rufeDirekt("kategorien", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
 
@@ -124,11 +127,14 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
             nurLesen = false,
         ) { a ->
             val schluessel = a.optString("text").trim().lowercase()
-            letzteAnlage?.let { (alt, zeit, antwort) ->
-                if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000) return@Werkzeug Ergebnis("$antwort (War bereits gespeichert, nicht doppelt angelegt.)")
-            }
-            rufe("anlegen", a).fehlerOder { "Idee gespeichert: „${it.getJSONObject("idee").optString("titel")}“ (id ${it.getJSONObject("idee").optLong("id")}). ${it.optString("hinweis")}" }.also {
-                if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
+            // Gesperrt, weil der Tunnel Aufrufe parallel abarbeitet: Ein wiederholter Aufruf wartet, bis der erste fertig ist.
+            anlageSperre.withLock {
+                letzteAnlage?.let { (alt, zeit, antwort) ->
+                    if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000) return@Werkzeug Ergebnis("$antwort (War bereits gespeichert, nicht doppelt angelegt.)")
+                }
+                rufe("anlegen", a).fehlerOder { "Idee gespeichert: „${it.getJSONObject("idee").optString("titel")}“ (id ${it.getJSONObject("idee").optLong("id")}). ${it.optString("hinweis")}" }.also {
+                    if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
+                }
             }
         },
         Werkzeug(
