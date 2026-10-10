@@ -93,7 +93,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         kiKonto = auth.email.orEmpty()
         akkuFrei = app.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(app.packageName)
         hinweiseAn = NotificationManagerCompat.from(app).areNotificationsEnabled()
-        abfahrtLaden()
         viewModelScope.launch {
             val lage = withContext(Dispatchers.IO) { Register.alle(app).associate { it.id to it.stoerung() } }
             stoerungen = lage

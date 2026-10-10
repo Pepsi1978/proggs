@@ -99,5 +99,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         vm.lagePruefen()
+        // Nicht in lagePruefen: Das läuft schon im Aufbau des ViewModels, bevor dessen spätere Felder bestehen.
+        vm.abfahrtLaden()
     }
 }
