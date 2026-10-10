@@ -22,6 +22,9 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
             "und behält das Original. Ideen sind etwas anderes als Aufgaben: Eine Idee ist ein Einfall zum Aufheben, eine Aufgabe etwas zu Erledigendes. " +
             "Sagt Frank „geniale Idee“ oder „Idee“, gehört es hierher. Vor dem Löschen kurz bestätigen lassen."
 
+    /** Schützt vor doppelt angelegten Ideen, wenn ChatGPT einen Aufruf nach einer Zeitüberschreitung wiederholt. */
+    private var letzteAnlage: Triple<String, Long, String>? = null
+
     override fun stoerung(): String? = rufeDirekt("kategorien", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
 
     /** Alle offenen Ideen als kompakter Text, für die Tagesdatenbank. */
@@ -52,7 +55,20 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
                     "verbessern" to schalter("Nur bei einer neuen Idee: Text von der KI glätten lassen (Vorgabe: an)."),
                 ),
                 nurLesen = false,
-            ) { a -> (if (a.gesetzt("id") || a.gesetzt("suche")) w("idee_aendern") else w("idee_anlegen")).ausfuehren(a) },
+            ) { a ->
+                // „Markiere die Idee X als umgesetzt“ kommt oft ohne id und suche, nur mit Titel oder Text der Idee.
+                // Das ist eine Änderung, keine neue Idee: sonst entstünde ein Doppel oder der Fehler „braucht einen Text“.
+                val nurAenderung = a.gesetzt("status") || (!a.gesetzt("text") && (a.gesetzt("titel") || a.has("kategorie")))
+                when {
+                    a.gesetzt("id") || a.gesetzt("suche") -> w("idee_aendern").ausfuehren(a)
+                    nurAenderung -> {
+                        val suche = a.optString("titel").trim().ifEmpty { a.optString("text").trim() }
+                        if (suche.isEmpty()) Ergebnis("Zum Ändern fehlt die id oder ein Suchwort (suche) für die Idee. Hole die id mit ideen_lesen.", fehler = true)
+                        else w("idee_aendern").ausfuehren(JSONObject(a.toString()).put("suche", suche).apply { remove("titel"); remove("text") })
+                    }
+                    else -> w("idee_anlegen").ausfuehren(a)
+                }
+            },
             w("idee_loeschen"),
         )
     }
@@ -107,7 +123,13 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
             ),
             nurLesen = false,
         ) { a ->
-            rufe("anlegen", a).fehlerOder { "Idee gespeichert: „${it.getJSONObject("idee").optString("titel")}“ (id ${it.getJSONObject("idee").optLong("id")}). ${it.optString("hinweis")}" }
+            val schluessel = a.optString("text").trim().lowercase()
+            letzteAnlage?.let { (alt, zeit, antwort) ->
+                if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000) return@Werkzeug Ergebnis("$antwort (War bereits gespeichert, nicht doppelt angelegt.)")
+            }
+            rufe("anlegen", a).fehlerOder { "Idee gespeichert: „${it.getJSONObject("idee").optString("titel")}“ (id ${it.getJSONObject("idee").optLong("id")}). ${it.optString("hinweis")}" }.also {
+                if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
+            }
         },
         Werkzeug(
             name = "idee_aendern",
