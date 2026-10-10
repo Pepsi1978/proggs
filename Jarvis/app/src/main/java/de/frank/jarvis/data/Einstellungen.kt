@@ -42,6 +42,11 @@ class Einstellungen private constructor(context: Context) {
             "drive_client_id" to BuildConfig.DRIVE_CLIENT_ID, "drive_client_secret" to BuildConfig.DRIVE_CLIENT_SECRET, "maps_schluessel" to BuildConfig.MAPS_KEY,
         ).filter { (k, v) -> v.isNotBlank() && roh.getString(k, "").isNullOrEmpty() }
         if (eingebaut.isNotEmpty()) roh.edit().apply { eingebaut.forEach { (k, v) -> putString(k, v) } }.apply()
+        // Bringt ein Bau einen anderen Maps-Schlüssel mit als der vorige (eigener Schlüssel für Jarvis statt des geliehenen),
+        // gilt der neue; die Planung der Losfahr-Meldung beginnt damit von vorn.
+        if (BuildConfig.MAPS_KEY.isNotBlank() && roh.getString("maps_schluessel_bau", "") != BuildConfig.MAPS_KEY) {
+            roh.edit().putString("maps_schluessel", BuildConfig.MAPS_KEY).putString("maps_schluessel_bau", BuildConfig.MAPS_KEY).remove("abfahrt_zustand").apply()
+        }
     }
 
     // ---- Das eigene Modell von Jarvis ----
