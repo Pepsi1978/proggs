@@ -52,7 +52,7 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 
 ## Werkzeuge im Plugin
 
-33 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
+35 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
 welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl für ChatGPT überschaubar.
 
 | Werkzeug | Zweck |
@@ -62,6 +62,7 @@ welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl f
 | `aufgaben_lesen`, `aufgabe_anlegen`, `aufgabe_aendern`, `aufgabe_loeschen` | Geniale Aufgaben; Abhaken über `aufgabe_aendern` mit `erledigt` |
 | `kalender_lesen`, `dienstplan_lesen`, `kalender_eintragen`, `kalender_loeschen` | Termine und ausgewerteter Dienstplan; eintragen ganztägig oder mit Uhrzeit, auf Wunsch mit Farbe |
 | `wetter_lesen` | Wetter für sieben Tage; mit Datum und Uhrzeit zugleich die Prüfung gegen Dienst, Schlaf und Termine |
+| `fahrzeit_lesen`, `abfahrt_einstellen` | Fahrzeit mit Verkehr über Google Maps vom Standort; Losfahr-Meldung vor dem Dienst einstellen |
 | `biomarker_auswertung`, `biomarker_tag`, `biomarker_verlauf`, `trainings_lesen` | Biodaten; `biomarker_verlauf` ohne Messgrößen liefert den Katalog, `trainings_lesen` mit `id` ein Training im Detail |
 | `wecker_lesen`, `wecker_stellen`, `wecker_loeschen` | Genialer Wecker; Ändern, Schalten und Auslassen über `wecker_stellen` |
 | `ideen_lesen`, `idee_speichern`, `idee_loeschen` | Geniale Ideen; `ideen_lesen` mit `id` liefert den Volltext, `idee_speichern` legt an oder ändert |
@@ -197,6 +198,28 @@ eingegangener Mails wird den Modellen als fremde Information gekennzeichnet, nie
   Wetter. Das Ergebnis hängt als Abschnitt MITGEDACHT an der Antwort des Werkzeugs; das Sprachmodell sagt Frank, was davon zählt.
   Es gilt: Tagdienst belegt 4:00 bis etwa 18:15 Uhr (Rückkehr), davor Schlaf ab 20 Uhr am Vorabend; Nachtdienst ab 16:15 Uhr,
   Rückkehr gegen 5:50 Uhr, danach Schlaf bis etwa 15 Uhr.
+
+## Pünktlich losfahren
+
+`fahrt/Routen.kt`, `fahrt/Abfahrt.kt`, `faehigkeit/FahrtFaehigkeit.kt`, Oberfläche `ui/AbfahrtEinstellungen.kt`.
+
+- **Fahrzeit:** Google Routes API (`computeRoutes`, Auto, `TRAFFIC_AWARE`; diese Stufe hat 5000 kostenlose Abfragen im Monat).
+  Jarvis zählt die Abfragen je Monat mit und hört bei 4800 auf. `TRAFFIC_AWARE_OPTIMAL` wäre eine teurere Stufe mit
+  kleinerem Freikontingent und wird nicht benutzt. Schlüssel: `~/SK/Jarvis/maps-api-key.txt`, ersatzweise der von
+  Entropie Reductor (gleiches Google-Projekt `entropie-reductor-495614`, dort muss die „Routes API“ aktiviert sein);
+  beim Bau eingebacken, sonst in den Einstellungen einzutragen.
+- **Start:** der Standort des Handys (`LocationManager`, Erlaubnis „Immer zulassen“, weil Jarvis im Hintergrund arbeitet),
+  ersatzweise die Zuhause-Adresse.
+- **Losfahr-Meldung** (`Abfahrt`): Für den nächsten Arbeitstag laut `KalenderFaehigkeit.schichten` (Tag 1–4, Nacht 1–4,
+  ohne X, F, U) gilt die eingestellte Ankunft (Nachtdienst 17:00, Tagdienst 05:00). Prüfungen: 150 Minuten vor der
+  Ankunft (mit dem für die Abfahrt erwarteten Verkehr), dann 30 und 8 Minuten vor der Meldung und zur Meldung selbst;
+  die Meldung kommt 10 Minuten (einstellbar) vor der nötigen Abfahrt als Benachrichtigung (Kanal „Losfahren“, mit
+  „Navigation starten“ und „Heute still“) und wird mit der eingerichteten Stimme vorgelesen. Kurz vor der Abfahrt prüft
+  Jarvis noch einmal; ist die Fahrt mehr als 5 Minuten länger geworden, folgt eine zweite Meldung. Ist das Handy schon
+  näher als 1,5 km an der Arbeit, bleibt Jarvis still. Immer genau ein exakter Wecker (Anfragenummer 8), der Stand liegt
+  in den Einstellungen (`abfahrt_zustand`), damit ein Neustart nichts doppelt meldet. Etwa 5 bis 7 Abfragen je Dienst.
+- **Werkzeuge:** `fahrzeit_lesen` (Ziel „arbeit“, „zuhause“ oder Adresse; mit `ankunft` die nötige Abfahrt) und
+  `abfahrt_einstellen` (Ankunftszeiten, Vorlauf, Adressen, an/aus).
 
 ## Tagebuch
 

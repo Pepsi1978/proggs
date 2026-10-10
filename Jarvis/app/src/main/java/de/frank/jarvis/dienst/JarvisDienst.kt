@@ -26,6 +26,7 @@ import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.auswertung.Zeitplan
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
+import de.frank.jarvis.fahrt.Abfahrt
 import de.frank.jarvis.mcp.McpServer
 import de.frank.jarvis.tunnel.Tunnel
 import de.frank.jarvis.tunnel.TunnelStufe
@@ -78,14 +79,31 @@ class JarvisDienst : Service() {
         Tagesauswertung.lade(this)
         val anlass = intent?.getStringExtra(EXTRA_AUSWERTEN)
         val agent = intent?.getStringExtra(EXTRA_AGENT)
+        val abfahrt = intent?.getBooleanExtra(EXTRA_ABFAHRT, false) == true
         when {
+            abfahrt -> pruefeAbfahrt()
             agent != null -> lasseArbeiten(agent, intent.getStringExtra(EXTRA_AUFTRAG).orEmpty(), intent.getBooleanExtra(EXTRA_MAIL, false), intent.getBooleanExtra(EXTRA_VORLESEN, false))
             anlass != null -> werteAus(anlass)
             // Verpasst (Handy war aus, App wurde beendet): nachholen, sobald der Dienst wieder läuft.
             verpasst() -> werteAus("nachgeholt, der geplante Lauf wurde verpasst")
         }
         Zeitplan.stelle(this)
+        // Die Prüfung stellt ihren nächsten Wecker am Ende selbst.
+        if (!abfahrt) Abfahrt.stelle(this)
         return START_STICKY
+    }
+
+    /** Fahrzeit zur Arbeit prüfen und melden, wenn es Zeit zum Losfahren ist. */
+    private fun pruefeAbfahrt() {
+        arbeit.launch {
+            val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:abfahrt")
+            runCatching { wach.acquire(90_000L) }
+            try {
+                Abfahrt.pruefe(this@JarvisDienst)
+            } finally {
+                runCatching { if (wach.isHeld) wach.release() }
+            }
+        }
     }
 
     private fun verpasst(): Boolean {
@@ -175,6 +193,14 @@ class JarvisDienst : Service() {
         private const val EXTRA_MAIL = "mail"
         private const val EXTRA_VORLESEN = "vorlesen"
         private const val KANAL_ERGEBNIS = "jarvis_ergebnisse"
+        private const val EXTRA_ABFAHRT = "abfahrt"
+
+        /** Beauftragt den Dienst mit der Prüfung der Fahrzeit zur Arbeit (vom Wecker oder aus der App). */
+        fun abfahrtPruefen(context: Context) {
+            val app = context.applicationContext
+            runCatching { ContextCompat.startForegroundService(app, Intent(app, JarvisDienst::class.java).putExtra(EXTRA_ABFAHRT, true)) }
+                .onFailure { Log.w("JarvisDienst", "Abfahrtsprüfung ließ sich nicht starten", it) }
+        }
 
         /** Beauftragt einen Agenten; die Arbeit läuft im Dienst weiter, auch wenn der Aufrufer längst fertig ist. */
         fun agentStarten(context: Context, name: String, auftrag: String, perMail: Boolean, vorlesen: Boolean = false) {
@@ -225,7 +251,7 @@ class StartEmpfaenger : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> JarvisDienst.abgleichen(context)
             // Uhr oder Zeitzone verstellt: Der gestellte Wecker passt nicht mehr.
-            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> Zeitplan.stelle(context)
+            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> { Zeitplan.stelle(context); Abfahrt.stelle(context) }
         }
     }
 }

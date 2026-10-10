@@ -50,7 +50,7 @@ object Register {
         liste ?: listOf(
             // Die Regeln stehen vorn: Manche Programme kürzen die Anleitung des Plugins, der Anfang kommt immer an.
             RegelnFaehigkeit(context.applicationContext),
-            AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext), WetterFaehigkeit(context.applicationContext),
+            AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext), WetterFaehigkeit(context.applicationContext), FahrtFaehigkeit(context.applicationContext),
             WeckerFaehigkeit(context.applicationContext), IdeenFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext), WissenFaehigkeit(context.applicationContext), TagebuchFaehigkeit(context.applicationContext),
             WebFaehigkeit(context.applicationContext), RepoFaehigkeit(context.applicationContext),
         ).also { liste = it }

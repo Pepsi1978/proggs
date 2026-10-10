@@ -9,6 +9,10 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Fahrzeit vom aktuellen Standort (Google Routes API). „Immer“, weil Jarvis im Hintergrund und für ChatGPT arbeitet. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
@@ -84,6 +88,7 @@
         </receiver>
 
         <receiver android:name=".auswertung.AuswertungsEmpfaenger" android:exported="false" />
+        <receiver android:name=".fahrt.AbfahrtEmpfaenger" android:exported="false" />
 
         <!-- Ablage: Dateien zum Teilen und „Mit anderer App öffnen“ als Inhalts-Adresse mit befristeter Leseberechtigung. -->
         <provider

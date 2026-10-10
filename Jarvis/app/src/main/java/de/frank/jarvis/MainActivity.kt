@@ -27,6 +27,13 @@ class MainActivity : FragmentActivity() {
 
     private val kalenderErlaubnis = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.lagePruefen() }
 
+    /** Erst der Standort während der Nutzung, danach in einem zweiten Schritt „Immer zulassen“ (Android verlangt die Trennung). */
+    private val standortErlaubnis = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { ergebnis ->
+        if (ergebnis.values.any { it } && android.os.Build.VERSION.SDK_INT >= 29 && !de.frank.jarvis.fahrt.Standort.immerErlaubt(this)) standortImmerErlaubnis.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        vm.lagePruefen()
+    }
+    private val standortImmerErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.lagePruefen() }
+
     private val mikroErlaubnis = registerForActivityResult(ActivityResultContracts.RequestPermission()) { vm.mikrofonErlaubt(it) }
 
     /** Fingerabdruck, ersatzweise die Gerätesperre (PIN, Muster). */
@@ -79,6 +86,11 @@ class MainActivity : FragmentActivity() {
             else mikroErlaubnis.launch(Manifest.permission.RECORD_AUDIO)
         }
         vm.kalenderAnfragen = { kalenderErlaubnis.launch(arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)) }
+        vm.standortAnfragen = {
+            vm.sperrAufschubBis = System.currentTimeMillis() + 120_000
+            if (!de.frank.jarvis.fahrt.Standort.erlaubt(this)) standortErlaubnis.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+            else if (android.os.Build.VERSION.SDK_INT >= 29) standortImmerErlaubnis.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        }
         if (savedInstanceState == null) vm.hinweiseAnfragen()
         JarvisDienst.abgleichen(this)
         setContent { JarvisApp(vm, this) }

@@ -372,6 +372,17 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         dienst(lies(heute, heute)[heute].orEmpty()).arbeitet
     }.getOrNull()
 
+    /**
+     * Die Arbeitstage ab [von] für [tage] Tage, mit X, F und U verrechnet: je Tag "nacht" oder "tag" samt Dienstname.
+     * Freie Tage fehlen in der Karte. null, wenn der Kalender nicht lesbar ist.
+     */
+    fun schichten(von: LocalDate, tage: Int): Map<LocalDate, Pair<String, String>>? = if (!erlaubt) null else runCatching {
+        val termine = lies(von, von.plusDays(tage.toLong()))
+        (0 until tage).map { von.plusDays(it.toLong()) }.mapNotNull { tag ->
+            dienst(termine[tag].orEmpty()).takeIf { it.arbeitet }?.let { tag to ((if (it.art == Dienst.Art.NACHT) "nacht" else "tag") to name(it)) }
+        }.toMap()
+    }.getOrNull()
+
     /** Alle Termine je Tag. Mehrtägige Ganztagstermine stehen an jedem ihrer Tage. */
     private fun lies(von: LocalDate, bis: LocalDate): Map<LocalDate, List<Termin>> {
         val zone = ZoneId.systemDefault()

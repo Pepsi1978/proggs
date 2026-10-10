@@ -20,6 +20,11 @@ val relay = Properties().apply {
 // Suchschlüssel für die Internet-Recherche der Agenten (Tavily), ebenfalls nur aus ~/SK.
 val tavilyKey = File(System.getProperty("user.home"), "SK/Tavily/tavily-api-key.txt").takeIf { it.exists() }?.readText()?.trim().orEmpty()
 
+// Google-Maps-Schlüssel für die Fahrzeit-Abfrage (Routes API), ebenfalls nur aus ~/SK. Entropie Reductor nutzt
+// dasselbe Google-Projekt; gibt es keinen eigenen Schlüssel für Jarvis, gilt dessen Schlüssel.
+val mapsKey = listOf("SK/Jarvis/maps-api-key.txt", "SK/EntropieReductor/maps-api-key.txt")
+    .map { File(System.getProperty("user.home"), it) }.firstOrNull { it.exists() }?.readText()?.trim().orEmpty()
+
 // Google-Zugangsdaten für „Berechtigung erneuern“ (Nur-Lese-Zugang zum Tagebuch-Ordner), ebenfalls nur aus ~/SK.
 val driveClient = Properties().apply {
     File(System.getProperty("user.home"), "SK/rclone/google-oauth-client.txt").takeIf { it.exists() }?.inputStream()?.use { load(it) }
@@ -39,6 +44,7 @@ android {
         buildConfigField("String", "RELAY_HOST", "\"${relay.getProperty("host", "")}\"")
         buildConfigField("String", "RELAY_TOKEN", "\"${relay.getProperty("token", "")}\"")
         buildConfigField("String", "TAVILY_KEY", "\"$tavilyKey\"")
+        buildConfigField("String", "MAPS_KEY", "\"$mapsKey\"")
         buildConfigField("String", "DRIVE_CLIENT_ID", "\"${driveClient.getProperty("client_id", "")}\"")
         buildConfigField("String", "DRIVE_CLIENT_SECRET", "\"${driveClient.getProperty("client_secret", "")}\"")
     }

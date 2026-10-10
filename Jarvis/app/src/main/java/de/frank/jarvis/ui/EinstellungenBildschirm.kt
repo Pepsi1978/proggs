@@ -214,6 +214,9 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             Knopf("Jetzt synchronisieren", Modifier.padding(top = 14.dp).fillMaxWidth(), haupt = false) { vm.auswertungJetzt() }
         }
 
+        // ---------------------------------------------------------------- Pünktlich losfahren
+        AbfahrtEinstellungen(vm)
+
         // ---------------------------------------------------------------- Sprache
         SpracheEinstellungen(vm)
 

@@ -39,7 +39,7 @@ class Einstellungen private constructor(context: Context) {
         // Cloud-Bau (ohne ~/SK) verliert sie dann nicht mehr; vorher lebten sie nur in der jeweiligen APK.
         val eingebaut = mapOf(
             "server_host" to BuildConfig.RELAY_HOST, "server_token" to BuildConfig.RELAY_TOKEN, "such_schluessel" to BuildConfig.TAVILY_KEY,
-            "drive_client_id" to BuildConfig.DRIVE_CLIENT_ID, "drive_client_secret" to BuildConfig.DRIVE_CLIENT_SECRET,
+            "drive_client_id" to BuildConfig.DRIVE_CLIENT_ID, "drive_client_secret" to BuildConfig.DRIVE_CLIENT_SECRET, "maps_schluessel" to BuildConfig.MAPS_KEY,
         ).filter { (k, v) -> v.isNotBlank() && roh.getString(k, "").isNullOrEmpty() }
         if (eingebaut.isNotEmpty()) roh.edit().apply { eingebaut.forEach { (k, v) -> putString(k, v) } }.apply()
     }
@@ -108,6 +108,26 @@ class Einstellungen private constructor(context: Context) {
     var wetterOrt: String get() = s("wetter_ort", "Neuenhagen bei Berlin"); set(v) = put { putString("wetter_ort", v.trim()) }
     var wetterBreite: Double get() = s("wetter_breite", "52.529").toDoubleOrNull() ?: 52.529; set(v) = put { putString("wetter_breite", v.toString()) }
     var wetterLaenge: Double get() = s("wetter_laenge", "13.689").toDoubleOrNull() ?: 13.689; set(v) = put { putString("wetter_laenge", v.toString()) }
+
+    // ---- Pünktlich losfahren (Google Routes API) ----
+    var mapsSchluessel: String
+        get() = s("maps_schluessel", "").ifEmpty { BuildConfig.MAPS_KEY }
+        set(v) = put { putString("maps_schluessel", v.trim()) }
+    /** An Arbeitstagen rechtzeitig vor der nötigen Abfahrt melden. */
+    var abfahrtAn: Boolean get() = prefs.getBoolean("abfahrt_an", true); set(v) = put { putBoolean("abfahrt_an", v) }
+    var abfahrtVorlesen: Boolean get() = prefs.getBoolean("abfahrt_vorlesen", true); set(v) = put { putBoolean("abfahrt_vorlesen", v) }
+    var adresseZuhause: String get() = s("adresse_zuhause", "Niederheidenstraße 42, 15366 Neuenhagen bei Berlin"); set(v) = put { putString("adresse_zuhause", v.trim()) }
+    var adresseArbeit: String get() = s("adresse_arbeit", "Bodestraße 1-3, 10178 Berlin"); set(v) = put { putString("adresse_arbeit", v.trim()) }
+    /** Gewünschte Ankunft auf Arbeit als HH:MM, je Dienstart. */
+    var ankunftNacht: String get() = s("ankunft_nacht", "17:00"); set(v) = put { putString("ankunft_nacht", v) }
+    var ankunftTag: String get() = s("ankunft_tag", "05:00"); set(v) = put { putString("ankunft_tag", v) }
+    /** So viele Minuten vor der nötigen Abfahrt kommt die Meldung. */
+    var abfahrtVorlauf: Int get() = prefs.getInt("abfahrt_vorlauf", 10).coerceIn(0, 60); set(v) = put { putInt("abfahrt_vorlauf", v) }
+    /** Stand der laufenden Planung (JSON), siehe fahrt/Abfahrt.kt. */
+    var abfahrtZustand: String get() = s("abfahrt_zustand", ""); set(v) = put { putString("abfahrt_zustand", v) }
+    /** Zähler der Routen-Abfragen im laufenden Monat (JJJJ-MM), damit Jarvis im kostenlosen Kontingent bleibt. */
+    var routenMonat: String get() = s("routen_monat", ""); set(v) = put { putString("routen_monat", v) }
+    var routenZaehler: Int get() = prefs.getInt("routen_zaehler", 0); set(v) = put { putInt("routen_zaehler", v) }
 
     // ---- Tagesauswertung ----
     var auswertungAn: Boolean get() = prefs.getBoolean("auswertung_an", true); set(v) = put { putBoolean("auswertung_an", v) }

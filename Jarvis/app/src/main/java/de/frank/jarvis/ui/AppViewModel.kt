@@ -93,6 +93,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         kiKonto = auth.email.orEmpty()
         akkuFrei = app.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(app.packageName)
         hinweiseAn = NotificationManagerCompat.from(app).areNotificationsEnabled()
+        abfahrtLaden()
         viewModelScope.launch {
             val lage = withContext(Dispatchers.IO) { Register.alle(app).associate { it.id to it.stoerung() } }
             stoerungen = lage
@@ -451,6 +452,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         einstellungen.mailPasswort = ""
         lagePruefen()
         meldung = "App-Passwort entfernt."
+    }
+
+    // ---- Pünktlich losfahren ----
+    var standortAnfragen: () -> Unit = {}
+    var standortErlaubt by mutableStateOf(false); private set
+    var standortImmer by mutableStateOf(false); private set
+    var abfahrtStatus by mutableStateOf(""); private set
+    var fahrzeitText by mutableStateOf<String?>(null); private set
+    var fahrzeitLaeuft by mutableStateOf(false); private set
+
+    fun abfahrtLaden() {
+        val app = getApplication<Application>()
+        standortErlaubt = de.frank.jarvis.fahrt.Standort.erlaubt(app)
+        standortImmer = de.frank.jarvis.fahrt.Standort.immerErlaubt(app)
+        viewModelScope.launch { abfahrtStatus = withContext(Dispatchers.IO) { de.frank.jarvis.fahrt.Abfahrt.status(app) } }
+    }
+
+    /** Ankunftszeit, Adresse oder Schalter geändert: Die laufende Planung gilt nicht mehr, neu rechnen lassen. */
+    fun abfahrtGeaendert() {
+        einstellungen.abfahrtZustand = ""
+        de.frank.jarvis.fahrt.Abfahrt.stelle(getApplication())
+        abfahrtLaden()
+    }
+
+    /** Fahrzeit vom Standort (ersatzweise von zu Hause) zu „arbeit“, „zuhause“ oder einer Adresse. */
+    fun fahrzeitPruefen(ziel: String) {
+        if (ziel.isBlank() || fahrzeitLaeuft) return
+        fahrzeitLaeuft = true
+        viewModelScope.launch {
+            val werkzeug = Register.werkzeuge(getApplication()).firstOrNull { it.name == "fahrzeit_lesen" }
+            fahrzeitText = runCatching { werkzeug?.ausfuehren(org.json.JSONObject().put("ziel", ziel.trim()))?.text }.getOrNull()?.substringBefore("\nLosfahr-Meldung:") ?: "Die Fahrzeit ließ sich nicht abrufen."
+            fahrzeitLaeuft = false
+            abfahrtLaden()
+        }
     }
 
     // ---- Tagesauswertung ----
