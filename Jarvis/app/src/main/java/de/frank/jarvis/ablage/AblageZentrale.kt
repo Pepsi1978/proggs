@@ -58,7 +58,8 @@ object AblageZentrale {
 
     private const val WARTEN_PLUGIN_MS = 40_000L
     private const val WARTEN_CHAT_MS = 90_000L
-    private const val WARTEN_AGENT_MS = 10 * 60_000L
+    // Ein Agent wartet höchstens so lange auf ein Bild oder einen Download; danach bekommt er „läuft noch“ und kann weiterarbeiten.
+    private const val WARTEN_AGENT_MS = 4 * 60_000L
 
     @Volatile private var uebertragungenInstanz: Uebertragungen? = null
     private val laufend = HashMap<String, Deferred<String>>()
@@ -193,10 +194,16 @@ object AblageZentrale {
         val bilder = auth.generateImages(prompt, Einstellungen.get(app).modell, format.groesse, if (hohe) "high" else null)
         if (bilder.isEmpty()) throw AblageFehler("Das Bildwerkzeug hat kein Bild geliefert. Es wurde nichts gespeichert.")
         val s = speicher(app)
-        val name = AblageSpeicher.dateiname(eintragTitel).replace(' ', '-').take(60)
+        val basis = AblageSpeicher.dateiname(eintragTitel).replace(' ', '-').take(60)
+        // Jedes Bild eines Eintrags bekommt einen eigenen Namen, damit ein Bericht es mit ![…](name.png) eindeutig einbinden kann.
+        val vergeben = s.findeGenau(eintragTitel)?.anhaenge?.map { it.originalName.lowercase() }.orEmpty().toMutableSet()
         val teile = mutableListOf<String>()
         bilder.forEachIndexed { i, bytes ->
-            val u = s.uebernimmBytes(eintragTitel, bytes, if (bilder.size == 1) "$name.png" else "$name-${i + 1}.png", "image/png", "Bildwerkzeug (Codex)", beschreibung.take(500), "$kennung-$i")
+            var n = 1
+            var name = basis
+            while ("$name.png".lowercase() in vergeben) { n++; name = "$basis-$n" }
+            vergeben += "$name.png".lowercase()
+            val u = s.uebernimmBytes(eintragTitel, bytes, "$name.png", "image/png", "Bildwerkzeug (Codex)", beschreibung.take(500), "$kennung-$i")
             nachDemSpeichern(app, u)
             teile += meldung(u)
             val masse = Medien.bildMasse(s.datei(u.anhang))
@@ -214,6 +221,26 @@ object AblageZentrale {
             }
         }
         return teile.joinToString(" ")
+    }
+
+    /**
+     * Legt [text] als DIN-A4-PDF in den Eintrag [eintragTitel] und bindet dessen Bilder ein (siehe [Medien.textAlsPdf]).
+     * Rückgabe: die Meldung „Gespeichert …“; wirft bei Fehlern.
+     */
+    fun textAlsPdfAblegen(context: Context, eintragTitel: String, text: String): String {
+        val s = speicher(context)
+        val bilder = s.findeGenau(eintragTitel)?.anhaenge.orEmpty().filter { it.art == Art.BILD }
+            .associate { it.originalName.lowercase() to s.datei(it) }.filterValues { it.isFile }
+        val teil = s.neueTeilDatei()
+        try {
+            Medien.textAlsPdf(eintragTitel, text, teil, bilder)
+            val u = s.uebernimm(eintragTitel, teil, AblageSpeicher.dateiname(eintragTitel) + ".pdf", "application/pdf",
+                if (bilder.isEmpty()) "Jarvis (PDF aus Text)" else "Jarvis (PDF aus Text mit ${bilder.size} Bild(ern))")
+            nachDemSpeichern(context, u)
+            return meldung(u) + if (bilder.isEmpty()) "" else " Darin ${bilder.size} Bild(er)."
+        } finally {
+            teil.delete()
+        }
     }
 
     fun fehlerText(e: Throwable): String = when {

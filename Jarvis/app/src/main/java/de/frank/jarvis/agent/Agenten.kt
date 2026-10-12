@@ -2,6 +2,7 @@ package de.frank.jarvis.agent
 
 import android.content.Context
 import android.util.Log
+import de.frank.jarvis.ablage.AblageZentrale
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.Ablage
@@ -15,7 +16,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONObject
 
 /** Ein Agent: ein Name und eine Rolle, also die Anweisung, wie er an Aufträge herangeht. */
-data class AgentenBauplan(val name: String, val rolle: String, val vorgegeben: Boolean = false, val schritte: Int = 14, val minuten: Int = 12)
+// Recherche mit Bildern und PDF braucht viele Schritte: Suchen, Seiten lesen, je Bild ein bis zwei Aufrufe. 14 Schritte und 12 Minuten reichten dafür nicht.
+data class AgentenBauplan(val name: String, val rolle: String, val vorgegeben: Boolean = false, val schritte: Int = 30, val minuten: Int = 25)
+
+/** Ergebnis eines Agentenlaufs: der Titel des Ablage-Eintrags oder null, dazu der Grund, wenn er nicht (ganz) fertig wurde. */
+data class AgentenErgebnis(val titel: String?, val grund: String?)
 
 data class AgentenLauf(val agent: String, val auftrag: String, val seit: Long, val schritt: String = "")
 
@@ -53,7 +58,7 @@ object Agenten {
                 "Dein Bericht: Kurzfassung in drei bis fünf Sätzen; der Stand der App oder des Bereichs (was gebaut ist, wie es zusammenhängt, was fehlt oder auffällt); danach unter der Überschrift " +
                 "„Auftrag für das Programmier-Werkzeug“ ein fertiger, eigenständiger Auftrag, den Frank unverändert an Claude Code oder Codex geben kann: Projekt, Ziel, betroffene Dateien mit Pfad und " +
                 "jetziger Stelle, was genau anders werden soll, Randfälle, woran man erkennt, dass es fertig ist. Den Auftrag nur schreiben, wenn Frank eine Änderung will oder dir etwas Behebenswertes auffällt.",
-            vorgegeben = true, schritte = 30, minuten = 20,
+            vorgegeben = true,
         ),
     )
 
@@ -83,8 +88,10 @@ object Agenten {
     /** Löscht einen selbst angelegten Agenten. Vorgaben bleiben. */
     fun loesche(context: Context, name: String): Boolean = datei(context, name).let { it.exists() && it.delete() }
 
-    /** Führt einen Auftrag aus und legt das Ergebnis in die Ablage. Rückgabe: Titel der Datei oder null. */
-    suspend fun fuehreAus(context: Context, plan: AgentenBauplan, auftrag: String): String? {
+    private val PDF_WUNSCH = Regex("\\bpdf", RegexOption.IGNORE_CASE)
+
+    /** Führt einen Auftrag aus und legt das Ergebnis in die Ablage (auf Wunsch auch als PDF mit den erzeugten Bildern). */
+    suspend fun fuehreAus(context: Context, plan: AgentenBauplan, auftrag: String): AgentenErgebnis {
         val app = context.applicationContext
         val lauf = AgentenLauf(plan.name, auftrag, System.currentTimeMillis())
         _laeufe.value = _laeufe.value + lauf
@@ -94,23 +101,35 @@ object Agenten {
             val rolle = "DEINE ROLLE ALS AGENT „${plan.name}“: ${plan.rolle}\n" +
                 "Arbeite den Auftrag selbstständig ab, ohne Rückfragen. Dein letzter Schritt ist die Antwort mit dem vollständigen Bericht als Text; " +
                 "der Bericht wird als Datei gespeichert und kann länger sein. Schreibe ihn in gutem Deutsch mit Überschriften.\n" +
-                "Dein Ablage-Eintrag heißt „$titel“. Dateien (bild_erzeugen, ablage_datei_speichern, ablage_schreiben mit als_pdf) legst du mit genau diesem Titel ab, " +
-                "dann gehören sie zu deinem Bericht. Nenne im Bericht nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat."
-            val bericht = JarvisAgent(app).versuche(
-                auftrag = auftrag, zeitlimitMs = plan.minuten * 60_000L, maxSchritte = plan.schritte, rolle = rolle, mitInternet = true, ablageTitel = titel,
+                "Dein Ablage-Eintrag heißt „$titel“. Dateien (bild_erzeugen, ablage_datei_speichern) legst du mit genau diesem Titel ab, " +
+                "dann gehören sie zu deinem Bericht. Nenne im Bericht nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat.\n" +
+                "Sollen Bilder oder Illustrationen dazu, erzeuge sie mit bild_erzeugen (je Bild ein Aufruf, Titel wie oben; kommt „läuft noch“, rufe es mit denselben Angaben noch einmal auf). " +
+                "Plane höchstens vier Bilder, damit Zeit für den Bericht bleibt. Ein PDF baut Jarvis nach deinem Bericht selbst, wenn der Auftrag eines verlangt: " +
+                "Rufe dafür NICHT ablage_schreiben auf. Setze jedes gespeicherte Bild an passender Stelle als eigene Zeile ![Bildunterschrift](dateiname.png) in den Bericht, " +
+                "mit genau dem Dateinamen aus dem Werkzeug-Ergebnis; nicht eingebundene Bilder kommen ans Ende des PDFs."
+            val denker = JarvisAgent(app)
+            val bericht = denker.versuche(
+                auftrag = auftrag, zeitlimitMs = plan.minuten * 60_000L, maxSchritte = plan.schritte, rolle = rolle, mitInternet = true, ablageTitel = titel, abschluss = true,
                 beiSchritt = { schritt -> _laeufe.value = _laeufe.value.map { if (it === lauf || it.seit == lauf.seit) it.copy(schritt = schritt) else it } },
             )
+            val grund = denker.abbruchGrund
             if (bericht.isNullOrBlank()) {
-                Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Kein Ergebnis für: ${auftrag.take(120)}", ok = false)
-                return null
+                Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Kein Ergebnis (${grund ?: "leere Antwort"}) für: ${auftrag.take(120)}", ok = false)
+                return AgentenErgebnis(null, grund ?: "Das Modell hat keinen Bericht geliefert")
             }
             val datei = Ablage.schreibe(app, titel, "# ${plan.name}: ${auftrag.trim()}\n\nErstellt am ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M.yyyy, HH:mm 'Uhr'"))} von Jarvis.\n\n$bericht")
-            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Fertig, abgelegt als „${datei.nameWithoutExtension}“.")
-            return datei.nameWithoutExtension
+            var pdf = ""
+            if (PDF_WUNSCH.containsMatchIn(auftrag)) {
+                pdf = runCatching { " " + AblageZentrale.textAlsPdfAblegen(app, titel, bericht) }
+                    .getOrElse { " Das PDF ließ sich nicht erzeugen: ${AblageZentrale.fehlerText(it)}" }
+            }
+            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", (if (grund == null) "Fertig" else "Zwischenstand ($grund)") + ", abgelegt als „${datei.nameWithoutExtension}“.$pdf", ok = grund == null)
+            return AgentenErgebnis(datei.nameWithoutExtension, grund)
         } catch (e: Exception) {
             Log.e(TAG, "Agent fehlgeschlagen", e)
-            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Fehlgeschlagen: ${e.message ?: e.javaClass.simpleName}", ok = false)
-            return null
+            val text = AblageZentrale.fehlerText(e)
+            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Fehlgeschlagen: $text", ok = false)
+            return AgentenErgebnis(null, text)
         } finally {
             _laeufe.value = _laeufe.value.filter { it.seit != lauf.seit }
         }

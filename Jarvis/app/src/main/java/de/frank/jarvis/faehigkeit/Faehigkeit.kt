@@ -52,7 +52,7 @@ object Register {
             RegelnFaehigkeit(context.applicationContext),
             AufgabenFaehigkeit(context.applicationContext), BiomarkerFaehigkeit(context.applicationContext), KalenderFaehigkeit(context.applicationContext), WetterFaehigkeit(context.applicationContext), FahrtFaehigkeit(context.applicationContext),
             WeckerFaehigkeit(context.applicationContext), IdeenFaehigkeit(context.applicationContext), AblageFaehigkeit(context.applicationContext), MailFaehigkeit(context.applicationContext), WissenFaehigkeit(context.applicationContext), TagebuchFaehigkeit(context.applicationContext),
-            WebFaehigkeit(context.applicationContext), RepoFaehigkeit(context.applicationContext),
+            WebFaehigkeit(context.applicationContext), RepoFaehigkeit(context.applicationContext), AgentenFaehigkeit(context.applicationContext),
         ).also { liste = it }
     }
 
