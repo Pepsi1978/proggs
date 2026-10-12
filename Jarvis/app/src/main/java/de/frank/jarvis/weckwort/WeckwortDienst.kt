@@ -139,10 +139,8 @@ class WeckwortDienst : Service() {
                 MediaRecorder.AudioSource.VOICE_RECOGNITION, WeckwortErkenner.ABTASTRATE,
                 AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, maxOf(minimum * 4, WeckwortErkenner.ABTASTRATE * 2),
             )
-            if (aufnahme.state != AudioRecord.STATE_INITIALIZED) {
-                Log.w(TAG, "Mikrofon nicht verfügbar")
-                return
-            }
+            // Wie jeder andere Mikrofon-Fehler: nach einer Pause neu versuchen (catch unten).
+            check(aufnahme.state == AudioRecord.STATE_INITIALIZED) { "Mikrofon nicht verfügbar" }
             aufnahme.startRecording()
             Weckwort.hoertZu(true)
             erk.zuruecksetzen()

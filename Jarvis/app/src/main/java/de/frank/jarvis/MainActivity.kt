@@ -127,13 +127,16 @@ class MainActivity : FragmentActivity() {
         if (getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
             ueberSperre = true
             ueberSperreZeigen(true)
-            if (vm.einstellungen.appSperre && sperreMoeglich()) vm.gesperrt = true
+            // Über dem Sperrbildschirm nie das Gespräch zeigen, auch ohne App-Sperre.
+            vm.gesperrt = true
         }
         vm.weckwortStart {
             // Fertig: Der Sperrbildschirm legt sich wieder darüber.
             if (ueberSperre) {
                 ueberSperre = false
                 ueberSperreZeigen(false)
+                // Ohne App-Sperre gilt die Sperre nur für die Zeit über dem Sperrbildschirm.
+                if (!vm.einstellungen.appSperre || !sperreMoeglich()) vm.gesperrt = false
             }
         }
     }

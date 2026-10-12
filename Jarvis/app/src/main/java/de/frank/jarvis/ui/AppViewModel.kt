@@ -353,9 +353,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 val gestartet = try { aufnahmeStarten() } finally { holtMikro = false }
                 if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return@launch }
                 freihaendig = true
-                piep()
+                // Die Uhr läuft ab Beginn des Pieptons; SprechEnde überspringt genau dessen Dauer.
                 val ende = de.frank.jarvis.weckwort.SprechEnde()
                 val start = System.currentTimeMillis()
+                piep()
                 var lage = de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER
                 while (nimmtAuf && lage == de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER) {
                     kotlinx.coroutines.delay(50)
