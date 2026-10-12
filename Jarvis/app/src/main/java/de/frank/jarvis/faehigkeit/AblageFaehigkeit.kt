@@ -59,7 +59,8 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             "Texte legst du mit ablage_schreiben ab (als_pdf ergänzt ein PDF). Dateien übernimmst du mit ablage_datei_speichern: Dateien aus dem ChatGPT-Gespräch als chatgpt_dateien, sonst als Text-Inhalt (für Markdown, CSV, JSON, SVG, HTML, Code), " +
             "als kleiner Base64-Inhalt (bis etwa 700 kB) oder über eine https-Adresse, die das Handy selbst laden kann. Ein Dateipfad auf einem anderen Rechner oder in deiner eigenen Umgebung " +
             "(zum Beispiel sandbox:/ oder /mnt/data) ist vom Handy aus NICHT erreichbar – nimm dafür chatgpt_dateien, und geht das nicht, sag ehrlich, dass die Datei nicht übertragen werden kann. " +
-            "Bilder und Infografiken erzeugt bild_erzeugen über das Bildwerkzeug von Jarvis' Codex-Anmeldung. Echte Dateien für PDF gibt es nur als Text-PDF oder Bild-PDF; " +
+            "Bilder und Infografiken erzeugt bild_erzeugen über das Bildwerkzeug von Jarvis' Codex-Anmeldung. PDFs entstehen aus einem Text (ablage_schreiben mit als_pdf, " +
+            "die Bilder desselben Eintrags werden eingebunden) oder aus einem Bild (bild_erzeugen mit auch_pdf); " +
             "DOCX, XLSX, PPTX, Audio und Video kann Jarvis nicht selbst erzeugen, nur übernehmen. " +
             "WICHTIG: Melde etwas erst als gespeichert, wenn das Werkzeug-Ergebnis „Gespeichert“ sagt. Sagt es „läuft noch“, ist die Datei noch NICHT da: sag das so und prüfe später mit ablage_lesen. " +
             "Will Frank eine Datei im Gespräch sehen („zeig mir die Infografik“), nimm ablage_zeigen: Es zeigt ein Bild, eine PDF-Seite oder einen Text als Karte an. " +
@@ -226,7 +227,9 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             name = "ablage_schreiben",
             titel = "In die Ablage schreiben",
             beschreibung = "Jarvis: legt einen Text in der Ablage von Jarvis an oder ersetzt ihn (mit anhaengen wird ergänzt). Für Ergebnisse, die Frank später wieder braucht: " +
-                "Recherchen, Ausarbeitungen, Pläne, Zusammenfassungen eines Gesprächs. Mit als_pdf kommt zusätzlich ein DIN-A4-PDF des Textes als Datei in denselben Eintrag.",
+                "Recherchen, Ausarbeitungen, Pläne, Zusammenfassungen eines Gesprächs. Mit als_pdf kommt zusätzlich ein DIN-A4-PDF des Textes als Datei in denselben Eintrag. " +
+                "Bilder desselben Eintrags (zum Beispiel aus bild_erzeugen) kommen mit ins PDF: Eine eigene Zeile ![Bildunterschrift](dateiname.png) setzt ein Bild an diese Stelle, " +
+                "Bilder ohne solche Zeile stehen am Ende unter „Abbildungen“. Für ein PDF mit Illustrationen also erst die Bilder mit demselben Titel erzeugen, dann den Text mit als_pdf ablegen.",
             schema = schema(
                 "titel" to text("Sprechender Titel, zum Beispiel „Recherche Wecker-App Machbarkeit“."),
                 "inhalt" to text("Der vollständige Text (Markdown erlaubt)."),
@@ -240,15 +243,11 @@ class AblageFaehigkeit(private val context: Context) : Faehigkeit {
             val (eintrag, datei) = speicher.schreibeText(a.optString("titel"), a.optString("inhalt"), a.optBoolean("anhaengen"))
             var text = "Abgelegt als „${datei.nameWithoutExtension}“ (${datei.length() / 1000 + 1} kB)."
             if (a.optBoolean("als_pdf")) {
-                val teil = speicher.neueTeilDatei()
                 text += try {
-                    Medien.textAlsPdf(eintrag.titel, datei.readText(), teil)
-                    val u = speicher.uebernimm(eintrag.titel, teil, AblageSpeicher.dateiname(eintrag.titel) + ".pdf", "application/pdf", "Jarvis (PDF aus Text)")
-                    AblageZentrale.nachDemSpeichern(context, u)
-                    " " + AblageZentrale.meldung(u)
+                    " " + AblageZentrale.textAlsPdfAblegen(context, eintrag.titel, datei.readText())
                 } catch (e: Exception) {
                     " Das PDF ließ sich nicht erzeugen (${AblageZentrale.fehlerText(e)}); der Text ist gespeichert."
-                } finally { teil.delete() }
+                }
             }
             Ergebnis(text)
         },

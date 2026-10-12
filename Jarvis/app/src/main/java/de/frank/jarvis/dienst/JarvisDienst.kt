@@ -118,16 +118,21 @@ class JarvisDienst : Service() {
         val plan = Agenten.finde(this, name) ?: return
         arbeit.launch {
             val wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:agent")
-            runCatching { wach.acquire(15 * 60_000L) }
+            runCatching { wach.acquire((plan.minuten + 5) * 60_000L) }
             try {
-                val titel = Agenten.fuehreAus(this@JarvisDienst, plan, auftrag)
+                val lauf = Agenten.fuehreAus(this@JarvisDienst, plan, auftrag)
+                val titel = lauf.titel
                 var zusatz = ""
                 if (titel != null && perMail) {
                     val senden = Register.werkzeuge(this@JarvisDienst).firstOrNull { it.name == "mail_senden" }
                     val ergebnis = runCatching { senden?.ausfuehren(JSONObject().put("betreff", "Jarvis: $titel").put("ablage_datei", titel)) }.getOrNull()
                     zusatz = if (ergebnis != null && !ergebnis.fehler) " Per E-Mail verschickt." else " E-Mail nicht möglich: ${ergebnis?.text ?: "nicht eingerichtet"}"
                 }
-                val text = if (titel != null) "„$titel“ liegt in der Ablage.$zusatz" else "Der Agent ${plan.name} ist nicht fertig geworden."
+                val text = when {
+                    titel != null && lauf.grund != null -> "„$titel“ liegt in der Ablage, aber nicht vollständig: ${lauf.grund}.$zusatz"
+                    titel != null -> "„$titel“ liegt in der Ablage.$zusatz"
+                    else -> "Der Agent ${plan.name} ist nicht fertig geworden: ${lauf.grund ?: "Grund unbekannt"}. Details unter Aktivität."
+                }
                 if (titel != null && (vorlesen || Einstellungen.get(this@JarvisDienst).ergebnisseVorlesen)) {
                     de.frank.jarvis.faehigkeit.Ablage.finde(this@JarvisDienst, titel)?.let { datei ->
                         kotlinx.coroutines.withContext(Dispatchers.Main) {

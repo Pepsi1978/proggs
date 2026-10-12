@@ -4,9 +4,6 @@ import android.content.Context
 import de.frank.jarvis.BuildConfig
 import de.frank.jarvis.ablage.AblageZentrale
 import de.frank.jarvis.agent.Gehirn
-import de.frank.jarvis.agent.JarvisAgent
-import de.frank.jarvis.agent.Agenten
-import de.frank.jarvis.faehigkeit.zahl
 import de.frank.jarvis.auswertung.Tagesauswertung
 import de.frank.jarvis.auswertung.Zeitplan
 import de.frank.jarvis.dienst.JarvisDienst
@@ -36,7 +33,6 @@ import org.json.JSONObject
  */
 class McpServer(context: Context) {
     private val app = context.applicationContext
-    private val agent by lazy { JarvisAgent(app) }  // nur noch für die Prüfung, ob das Modell verbunden ist
 
     /** Werkzeuge von Jarvis selbst, zusätzlich zu denen der angebundenen Apps. */
     private val eigene: List<Werkzeug> = listOf(
@@ -108,64 +104,6 @@ class McpServer(context: Context) {
             val neueste = Tagesauswertung.neueste(app)
             if (neueste == null) { JarvisDienst.auswerten(app, "erster Abruf"); Ergebnis("Die Tagesdatenbank wird gerade zum ersten Mal gefüllt. In ein bis drei Minuten erneut abrufen.") }
             else Ergebnis(Tagesauswertung.tagesdaten(neueste, a.optString("bereich", "alle")))
-        },
-        Werkzeug(
-            name = "agenten",
-            titel = "Agenten ansehen und verwalten",
-            beschreibung = "Jarvis: die Agenten von Jarvis. Ohne aktion (oder aktion=liste) kommt die Liste der vorhandenen Agenten (zum Beispiel Recherche, Machbarkeit und selbst angelegte) und wer gerade arbeitet. " +
-                "Mit aktion=anlegen baust du einen neuen Agenten oder änderst einen: ein Name plus eine Rolle, also die Anweisung, wie er an Aufträge herangeht und wie sein Ergebnis aussieht – " +
-                "wenn Frank sich einen Spezialisten wünscht (zum Beispiel „Trainingsplaner“, „App-Architekt“); formuliere die Rolle selbst ausführlich. Mit aktion=loeschen entfernst du einen selbst angelegten Agenten. " +
-                "Beauftragt wird ein Agent mit agent_starten.",
-            schema = schema(
-                "aktion" to text("liste (Vorgabe), anlegen oder loeschen.", listOf("liste", "anlegen", "loeschen")),
-                "name" to text("Bei anlegen und loeschen: Name des Agenten, ein bis zwei Wörter."),
-                "rolle" to text("Bei anlegen: die Rolle in fünf bis zehn Sätzen: Aufgabe, Vorgehen in Schritten, worauf zu achten ist, Form des Ergebnisses."),
-            ),
-            nurLesen = false,
-        ) { a ->
-            when (a.optString("aktion", "liste").lowercase()) {
-                "anlegen" ->
-                    if (a.optString("name").isBlank() || a.optString("rolle").length < 40) Ergebnis("Name und eine ausführliche Rolle sind nötig.", fehler = true)
-                    else Agenten.speichere(app, a.optString("name"), a.optString("rolle")).let { Ergebnis("Agent „${it.name}“ ist angelegt und kann mit agent_starten beauftragt werden.") }
-                "loeschen" -> if (Agenten.loesche(app, a.optString("name"))) Ergebnis("Agent „${a.optString("name")}“ gelöscht.") else Ergebnis("Kein selbst angelegter Agent mit diesem Namen.", fehler = true)
-                else -> {
-                    val laufend = Agenten.laeufe.value
-                    Ergebnis(buildString {
-                        append("Agenten von Jarvis:\n")
-                        Agenten.alle(app).forEach { append("- ").append(it.name).append(if (it.vorgegeben) " (eingebaut)" else " (selbst angelegt)").append(": ").append(it.rolle.take(220)).append('\n') }
-                        if (laufend.isEmpty()) append("Gerade arbeitet kein Agent.")
-                        else laufend.forEach { append("Arbeitet gerade: ").append(it.agent).append(" seit ").append((System.currentTimeMillis() - it.seit) / 60_000).append(" Minuten an „").append(it.auftrag.take(100)).append("“").append(if (it.schritt.isEmpty()) "" else ", aktueller Schritt: ${it.schritt}").append('\n') }
-                    }.trim())
-                }
-            }
-        },
-        Werkzeug(
-            name = "agent_starten",
-            titel = "Agenten beauftragen",
-            beschreibung = "Jarvis: beauftragt einen Agenten von Jarvis mit einer längeren Arbeit, zum Beispiel einer Internet-Recherche („Jarvis, recherchiere, wie man … am besten baut“) " +
-                "oder einer Machbarkeitsprüfung einer Idee, oder den Agenten Code-Analyse mit der Auswertung einer App in Franks Repo (er liest den Code und liefert den Stand samt fertigem Auftrag für ein Programmier-Werkzeug; er ändert nichts). Der Agent arbeitet mehrere Minuten selbstständig im Hintergrund auf Franks Handy (eigenes Modell, Internet-Suche, Zugriff auf Ideen, " +
-                "Aufgaben, Kalender, Biomarker), legt den Bericht in die Ablage und meldet sich per Benachrichtigung. Dieser Aufruf kehrt sofort zurück. " +
-                "Das Ergebnis holst du später mit ablage_lesen (ohne titel die Liste, mit titel der Bericht). Mit per_mail wird der Bericht zusätzlich an Frank gemailt.",
-            schema = schema(
-                "agent" to text("Name des Agenten, zum Beispiel Recherche oder Machbarkeit (siehe agenten)."),
-                "auftrag" to text("Der vollständige Auftrag mit allem Wissen aus dem Gespräch: Ziel, Rahmen, was Frank wichtig ist, gewünschte Form des Ergebnisses."),
-                "per_mail" to schalter("true = den fertigen Bericht zusätzlich per E-Mail an Frank schicken."),
-                "vorlesen" to schalter("true = Jarvis liest den fertigen Bericht auf dem Handy laut vor, sobald er da ist."),
-                pflicht = listOf("agent", "auftrag"),
-            ),
-            nurLesen = false,
-        ) { a ->
-            val plan = Agenten.finde(app, a.optString("agent"))
-            when {
-                plan == null -> Ergebnis("Diesen Agenten gibt es nicht. Vorhanden: " + Agenten.alle(app).joinToString { it.name } + ". Mit agenten (aktion=anlegen) lässt sich ein neuer bauen.", fehler = true)
-                a.optString("auftrag").isBlank() -> Ergebnis("Der Auftrag ist leer.", fehler = true)
-                !agent.verbunden -> Ergebnis("Jarvis ist nicht mit seinem Modell verbunden. Frank muss sich in Jarvis unter Einstellungen bei ChatGPT anmelden.", fehler = true)
-                Agenten.laeufe.value.size >= 2 -> Ergebnis("Es arbeiten schon zwei Agenten. Bitte warten, bis einer fertig ist.", fehler = true)
-                else -> {
-                    JarvisDienst.agentStarten(app, plan.name, a.optString("auftrag"), a.optBoolean("per_mail"), a.optBoolean("vorlesen"))
-                    Ergebnis("Der Agent ${plan.name} arbeitet jetzt. Das dauert meist drei bis zehn Minuten. Der Bericht landet in der Ablage" + (if (a.optBoolean("per_mail")) " und kommt per E-Mail" else "") + "; Frank bekommt eine Benachrichtigung.")
-                }
-            }
         },
         Werkzeug(
             name = "jarvis_status",
@@ -280,7 +218,6 @@ class McpServer(context: Context) {
         append("Nenne Frank von dir aus, was sein Vorhaben beeinflusst (zum Beispiel „da schläfst du schon, morgen ist Tagdienst“ oder „um die Zeit soll es stark regnen“), kurz und nur wenn es wirklich zählt.\n")
         append("Welches Werkzeug wofür: Überblick und Hintergrund = jarvis_kontext. tagesauswertung_lesen nur, wenn Frank die Auswertung selbst hören oder neu erstellen lassen will. ")
         append("tagesdaten_lesen für einzelne Rohwerte der letzten Synchronisation. Die einzelnen Apps für Aktuelles, Details und Änderungen.\n")
-        append("Agenten: Für Recherchen und längere Ausarbeitungen startest du mit agent_starten einen Agenten von Jarvis. Er arbeitet Minuten im Hintergrund und legt das Ergebnis in die Ablage.\n")
         append("Dateien: Melde eine Datei erst als gespeichert, wenn ablage_datei_speichern oder bild_erzeugen „Gespeichert“ zurückgibt. Bei „läuft noch“ ist sie noch nicht da: ")
         append("Rufe dann dasselbe Werkzeug sofort mit denselben Angaben noch einmal auf (das wartet auf die laufende Arbeit, es entsteht nichts doppelt), wiederhole das bis „Gespeichert“ oder ein Fehler kommt, ")
         append("und sag Frank von dir aus, dass es in der Ablage liegt. Er soll nicht nachfragen müssen. ")
