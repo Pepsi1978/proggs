@@ -246,6 +246,17 @@ dann die Datei per `scp` auf den Server und mit `docker cp` nach `jarvis-relay:/
   (Edge ohne Schlüssel, Google Chirp 3 HD, Alibaba, eigene Stimme). `VorleseDienst` hält die Wiedergabe im Hintergrund.
   Lautsprecher-Knöpfe gibt es an Antworten, an der Tagesauswertung und in der Ablage; Agenten-Ergebnisse werden auf
   Wunsch von selbst vorgelesen (Schalter in den Einstellungen oder `vorlesen` bei `agent_starten`).
+- **Hey Jarvis** (`weckwort/`): Der Dienst `WeckwortDienst` (Vordergrunddienst Typ Mikrofon) lauscht dauerhaft, auch bei
+  gesperrtem Handy. Erkennung offline mit den vortrainierten openWakeWord-Modellen (`assets/weckwort/`, Lizenz dort:
+  das Weckwort-Modell ist nur nicht-kommerziell nutzbar) über ONNX Runtime, nachgebaut in `WeckwortErkenner` und gegen
+  die Python-Vorlage geprüft. Ablauf: Treffer → Mikrofon frei → `MainActivity` mit `EXTRA_WECKWORT` → Aufnahme, Piepton,
+  automatisches Ende nach 1,6 Sekunden Stille (`SprechEnde`), Mitschrift, Antwort wird vorgelesen. Bei gesperrtem Handy
+  erscheint Jarvis über dem Sperrbildschirm, zeigt nur den Status (das Gespräch bleibt hinter der App-Sperre) und gibt
+  den Bildschirm nach der Antwort wieder an die Sperre zurück. Während Jarvis selbst aufnimmt oder vorliest, lauscht
+  der Dienst nicht (`Weckwort.belegt`), so weckt er sich nicht selbst. Nach vorn holen darf sich Jarvis aus dem
+  Hintergrund nur mit „Über anderen Apps einblenden“; ohne kommt eine Benachrichtigung zum Antippen. Starten darf
+  Android den Mikrofon-Dienst nur, während Jarvis sichtbar ist: aus der App, nach Neustart und Update über die
+  unsichtbare `WeckwortDienst.Starter`-Seite. Empfindlichkeit (Schwelle 0,7 / 0,5 / 0,3) unter Einstellungen → Hey Jarvis.
 - Schlüssel (Groq, Google, Alibaba) trägt man in den Einstellungen ein. Sie liegen in `jarvis_sprache_prefs`, getrennt von
   den übrigen Einstellungen, damit das übernommene Modul unverändert bleibt.
 

@@ -47,6 +47,9 @@ android {
         buildConfigField("String", "MAPS_KEY", "\"$mapsKey\"")
         buildConfigField("String", "DRIVE_CLIENT_ID", "\"${driveClient.getProperty("client_id", "")}\"")
         buildConfigField("String", "DRIVE_CLIENT_SECRET", "\"${driveClient.getProperty("client_secret", "")}\"")
+
+        // „Hey Jarvis“ rechnet mit ONNX Runtime (native Bibliotheken); nur die Handy-Architekturen mitnehmen.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
     // Gemeinsamer Debug-Key aller Apps (liegt nicht im Git, sondern unter ~/SK/Android/, in der Cloud legt ihn der
@@ -110,6 +113,9 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
     implementation(libs.ssiv)
+
+    // Weckwort „Hey Jarvis“: Modelle von openWakeWord (assets/weckwort/), gerechnet mit ONNX Runtime.
+    implementation(libs.onnxruntime.android)
 
     // Unit-Tests der Ablage ohne Gerät (org.json ersetzt die Android-Attrappe, MockWebServer für Downloads).
     testImplementation(libs.junit)

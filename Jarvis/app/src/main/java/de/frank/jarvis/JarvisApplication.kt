@@ -8,6 +8,7 @@ class JarvisApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         JarvisDienst.kanalAnlegen(this)
+        de.frank.jarvis.weckwort.WeckwortDienst.kanaeleAnlegen(this)
         Protokoll.lade(this)
     }
 }

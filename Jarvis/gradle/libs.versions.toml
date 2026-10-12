@@ -15,6 +15,7 @@ media3 = "1.5.1"
 ssiv = "3.10.0"
 junit = "4.13.2"
 orgJson = "20240303"
+onnxruntime = "1.20.0"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -41,6 +42,7 @@ media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "medi
 ssiv = { group = "com.davemorrissey.labs", name = "subsampling-scale-image-view-androidx", version.ref = "ssiv" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 org-json = { group = "org.json", name = "json", version.ref = "orgJson" }
+onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
 
 [plugins]

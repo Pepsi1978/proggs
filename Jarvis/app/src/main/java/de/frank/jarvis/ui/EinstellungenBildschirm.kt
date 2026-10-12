@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -106,6 +107,49 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 Unterzeile(name)
                 Zeile(wozu.replaceFirstChar { it.uppercase() }, when (anzahl) { 0 -> "Noch nichts"; 1 -> "1 Eintrag"; else -> "$anzahl Einträge" }, if (anzahl == 0) f.textLeise else f.erfolg)
                 Knopf("$name ansehen und bearbeiten", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.merkOeffnen(liste) }
+            }
+        }
+
+        // ---------------------------------------------------------------- Hey Jarvis
+        Abschnitt("Hey Jarvis")
+        Karte {
+            val hoertZu by de.frank.jarvis.weckwort.Weckwort.hoertZu.collectAsState()
+            val treffer by de.frank.jarvis.weckwort.Weckwort.letzter.collectAsState()
+            val bereit = e.weckwortAn && vm.weckwortMikro
+            Zeile(
+                "Auf „Hey Jarvis“ hören",
+                when { !e.weckwortAn -> "Aus"; !vm.weckwortMikro -> "Mikrofon fehlt"; hoertZu -> "Hört zu"; else -> "Pausiert" },
+                when { !e.weckwortAn -> f.textLeise; !vm.weckwortMikro -> f.gefahr; else -> f.erfolg },
+            )
+            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("An", aktiv = e.weckwortAn) { vm.weckwortSchalten(true, activity) }
+                Chip("Aus", aktiv = !e.weckwortAn) { vm.weckwortSchalten(false, activity) }
+            }
+            Text(
+                "Sag „Hey Jarvis“: Jarvis geht auf, ein Piepton zeigt, dass er zuhört, du sprichst, und er antwortet gleich. " +
+                    "Auch bei gesperrtem Handy, dann bleibt das Gespräch hinter der Sperre und er antwortet nur mit der Stimme. " +
+                    "Während Jarvis selbst aufnimmt oder vorliest, hört er nicht auf das Weckwort.",
+                color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
+            )
+            if (e.weckwortAn && !vm.weckwortMikro) Knopf("Mikrofon erlauben", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
+            if (bereit && !vm.ueberlagernErlaubt) {
+                Text("Damit Jarvis von selbst nach vorn kommt (auch über dem Sperrbildschirm), braucht er „Über anderen Apps einblenden“. Ohne kommt nur eine Benachrichtigung zum Antippen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
+                Knopf("„Über anderen Apps einblenden“ erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
+            }
+            Unterzeile("Empfindlichkeit")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch").forEach { (id, name) ->
+                    Chip(name, aktiv = e.weckwortEmpfindlichkeit == id) { vm.weckwortEmpfindlichkeit(id) }
+                }
+            }
+            Text(
+                "Hoch: springt leichter an, auch bei deutscher Aussprache, aber öfter ohne Grund. Niedrig: nur bei deutlichem „Hey Jarvis“.",
+                color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
+            )
+            treffer?.let { t ->
+                val zeit = java.time.Instant.ofEpochMilli(t.zeitpunkt).atZone(java.time.ZoneId.systemDefault())
+                    .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM., HH:mm 'Uhr'"))
+                Text("Zuletzt erkannt: $zeit, Sicherheit ${(t.sicherheit * 100).toInt()} %", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
             }
         }
 

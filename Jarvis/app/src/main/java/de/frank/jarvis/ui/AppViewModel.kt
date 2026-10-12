@@ -79,6 +79,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Je angebundener App: null = bereit, sonst der Grund. Fehlt der Eintrag, läuft die Prüfung noch. */
     var stoerungen by mutableStateOf<Map<String, String?>>(emptyMap()); private set
     var akkuFrei by mutableStateOf(false); private set
+    /** „Hey Jarvis“: Mikrofon erlaubt und „Über anderen Apps einblenden“ erlaubt. */
+    var weckwortMikro by mutableStateOf(false); private set
+    var ueberlagernErlaubt by mutableStateOf(false); private set
+    var weckwortMikroAnfragen: () -> Unit = {}
     var hinweiseAn by mutableStateOf(true); private set
 
     var meldung by mutableStateOf<String?>(null)
@@ -93,6 +97,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         kiKonto = auth.email.orEmpty()
         akkuFrei = app.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(app.packageName)
         hinweiseAn = NotificationManagerCompat.from(app).areNotificationsEnabled()
+        weckwortMikro = de.frank.jarvis.weckwort.WeckwortDienst.mikrofonErlaubt(app)
+        ueberlagernErlaubt = android.os.Build.VERSION.SDK_INT < 29 || android.provider.Settings.canDrawOverlays(app)
         viewModelScope.launch {
             val lage = withContext(Dispatchers.IO) { Register.alle(app).associate { it.id to it.stoerung() } }
             stoerungen = lage
@@ -260,8 +266,132 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun mikrofonErlaubt(erlaubt: Boolean) {
         if (!erlaubt) { diktatZiel = null; meldung = "Ohne Mikrofon-Erlaubnis kann ich dich nicht hören."; return }
+        if (holtMikro) return
         vorleser.stopp()
-        if (mikro.start(viewModelScope)) nimmtAuf = true else { diktatZiel = null; meldung = "Die Aufnahme ließ sich nicht starten." }
+        holtMikro = true
+        viewModelScope.launch {
+            try {
+                if (!aufnahmeStarten()) { diktatZiel = null; meldung = "Die Aufnahme ließ sich nicht starten." }
+            } finally {
+                holtMikro = false
+            }
+        }
+    }
+
+    /** Wartet, bis „Hey Jarvis“ das Mikrofon losgelassen hat, und startet dann die Aufnahme. */
+    private suspend fun aufnahmeStarten(): Boolean {
+        de.frank.jarvis.weckwort.Weckwort.mikrofonHolen()
+        if (mikro.start(viewModelScope)) { nimmtAuf = true; return true }
+        de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+        return false
+    }
+    private var holtMikro = false
+
+    // ---- Hey Jarvis ----
+
+    /** Fehlende Erlaubnis für „Hey Jarvis“ holen: erst das Mikrofon, dann „Über anderen Apps einblenden“. */
+    fun weckwortEinrichten(activity: ComponentActivity) {
+        when {
+            !weckwortMikro -> weckwortMikroAnfragen()
+            !ueberlagernErlaubt -> runCatching {
+                activity.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${activity.packageName}")))
+            }
+        }
+    }
+
+    fun weckwortSchalten(an: Boolean, activity: ComponentActivity) {
+        einstellungen.weckwortAn = an
+        if (an && !weckwortMikro) weckwortMikroAnfragen()
+        de.frank.jarvis.weckwort.WeckwortDienst.abgleichen(activity)
+    }
+
+    fun weckwortEmpfindlichkeit(stufe: String) {
+        einstellungen.weckwortEmpfindlichkeit = stufe
+        de.frank.jarvis.weckwort.Weckwort.schwelle = einstellungen.weckwortSchwelle
+    }
+
+    /** Die laufende Aufnahme kam über „Hey Jarvis“ und endet von selbst, sobald Frank fertig gesprochen hat. */
+    var freihaendig by mutableStateOf(false); private set
+    private var weckwortLauf: Job? = null
+
+    /** Was gerade passiert, für die Anzeige auch im gesperrten Zustand ([liestVor]: der Vorleser spricht). */
+    fun sprachStatus(liestVor: Boolean): String? = when {
+        nimmtAuf -> if (freihaendig) "Ich höre zu …" else "Ich höre zu … tippe zum Senden"
+        schreibtMit -> "Schreibe mit …"
+        denkt -> "Jarvis denkt nach …"
+        liestVor -> "Jarvis antwortet …"
+        else -> null
+    }
+
+    /**
+     * „Hey Jarvis“ wurde erkannt: aufnehmen, piepen (ab jetzt sprechen), nach der Frage von selbst abschicken und
+     * die Antwort vorlesen. [fertig] läuft, wenn alles vorbei ist (die Antwort ist zu Ende gesprochen).
+     */
+    fun weckwortStart(fertig: () -> Unit) {
+        de.frank.jarvis.weckwort.Weckwort.uebernommen()
+        val grund = when {
+            nimmtAuf || schreibtMit || holtMikro -> ""
+            sprache.groqApiKey.isBlank() -> "Für „Hey Jarvis“ bitte zuerst den Groq-Schlüssel eintragen."
+            !kiVerbunden -> "Für „Hey Jarvis“ bitte zuerst mit ChatGPT verbinden."
+            else -> null
+        }
+        if (grund != null) {
+            if (grund.isNotEmpty()) meldung = grund
+            if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+            fertig()
+            return
+        }
+        if (denkt) abbrechen()
+        reiter = Reiter.JARVIS
+        merkOffen = null
+        diktatZiel = null
+        vorleser.stopp()
+        weckwortLauf?.cancel()
+        weckwortLauf = viewModelScope.launch {
+            try {
+                holtMikro = true
+                val gestartet = try { aufnahmeStarten() } finally { holtMikro = false }
+                if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return@launch }
+                freihaendig = true
+                piep()
+                val ende = de.frank.jarvis.weckwort.SprechEnde()
+                val start = System.currentTimeMillis()
+                var lage = de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER
+                while (nimmtAuf && lage == de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER) {
+                    kotlinx.coroutines.delay(50)
+                    lage = ende.neu(pegel.value, System.currentTimeMillis() - start)
+                }
+                when {
+                    !nimmtAuf -> Unit // Frank hat selbst auf Stopp getippt: Das Abschicken läuft schon.
+                    lage == de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT -> {
+                        nimmtAuf = false
+                        mikro.stop()
+                        de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+                        return@launch
+                    }
+                    else -> aufnahmeBeenden()
+                }
+                freihaendig = false
+                // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist.
+                while (schreibtMit || denkt) kotlinx.coroutines.delay(100)
+                kotlinx.coroutines.delay(500)
+                while (vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) kotlinx.coroutines.delay(200)
+            } finally {
+                freihaendig = false
+                fertig()
+            }
+        }
+    }
+
+    /** Kurzer Piepton: Ab jetzt hört Jarvis zu. Über die Medienlautstärke, wie die vorgelesene Antwort. */
+    private suspend fun piep() {
+        val ton = runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100) }.getOrNull() ?: return
+        try {
+            ton.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 160)
+            kotlinx.coroutines.delay(220)
+        } finally {
+            ton.release()
+        }
     }
 
     private fun aufnahmeBeenden() {
@@ -272,6 +402,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val wav = mikro.stop()
+                de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val groq = de.frank.jarvis.audio.GroqTranscriber(
                     apiKey = sprache.groqApiKey,
@@ -299,6 +430,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        if (nimmtAuf || holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         mikro.release()
         super.onCleared()
     }

@@ -249,7 +249,10 @@ class JarvisDienst : Service() {
 class StartEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> JarvisDienst.abgleichen(context)
+            Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                JarvisDienst.abgleichen(context)
+                de.frank.jarvis.weckwort.WeckwortDienst.nachNeustart(context)
+            }
             // Uhr oder Zeitzone verstellt: Der gestellte Wecker passt nicht mehr.
             Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> { Zeitplan.stelle(context); Abfahrt.stelle(context) }
         }

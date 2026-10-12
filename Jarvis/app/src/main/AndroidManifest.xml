@@ -24,6 +24,11 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- „Hey Jarvis“: dauerhaft lauschen (Mikrofon-Dienst) und Jarvis danach aus dem Hintergrund nach vorn holen,
+         auch über dem Sperrbildschirm. Ohne „Über anderen Apps einblenden“ verbietet Android das. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- Brücke zu Geniale Aufgaben. Beide Apps erklären dieselbe Signatur-Erlaubnis, damit die
          Installationsreihenfolge keine Rolle spielt (gleicher Signierschlüssel vorausgesetzt). -->
@@ -77,6 +82,21 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Persönlicher Assistent: nimmt Werkzeugaufrufe des eigenen ChatGPT-Plugins dauerhaft entgegen." />
         </service>
+
+        <!-- Lauscht auf „Hey Jarvis“, auch bei gesperrtem Handy. -->
+        <service
+            android:name=".weckwort.WeckwortDienst"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Unsichtbar: startet nach Neustart und Update den Weckwort-Dienst (das darf nur eine sichtbare App). -->
+        <activity
+            android:name=".weckwort.WeckwortDienst$Starter"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <receiver android:name=".dienst.StartEmpfaenger" android:exported="true">
             <intent-filter>

@@ -95,6 +95,10 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                     Column(Modifier.weight(1f).fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                         Kern(120.dp, f.primaer, aktiv = false)
                         Text("Jarvis ist gesperrt", color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 18.dp))
+                        // Nach „Hey Jarvis“ über dem Sperrbildschirm: Jarvis hört und antwortet, zeigt aber nichts vom Gespräch.
+                        val vorlesen by vm.vorleser.stand.collectAsState()
+                        val status = vm.sprachStatus(vorlesen.zustand != de.frank.jarvis.speech.VorleseZustand.AUS)
+                        if (status != null) Text(status, color = f.primaer, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
                         Text("Im Hintergrund arbeitet Jarvis weiter und bleibt für ChatGPT erreichbar.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp, bottom = 22.dp))
                         Knopf("Entsperren") { vm.entsperrenAnfragen() }
                     }
