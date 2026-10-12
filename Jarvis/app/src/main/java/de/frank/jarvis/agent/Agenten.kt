@@ -119,12 +119,15 @@ object Agenten {
             }
             val datei = Ablage.schreibe(app, titel, "# ${plan.name}: ${auftrag.trim()}\n\nErstellt am ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M.yyyy, HH:mm 'Uhr'"))} von Jarvis.\n\n$bericht")
             var pdf = ""
+            var pdfFehler: String? = null
             if (PDF_WUNSCH.containsMatchIn(auftrag)) {
                 pdf = runCatching { " " + AblageZentrale.textAlsPdfAblegen(app, titel, bericht) }
-                    .getOrElse { " Das PDF ließ sich nicht erzeugen: ${AblageZentrale.fehlerText(it)}" }
+                    .getOrElse { pdfFehler = "das PDF ließ sich nicht erzeugen: ${AblageZentrale.fehlerText(it)}"; " Das PDF fehlt ($pdfFehler)." }
             }
-            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", (if (grund == null) "Fertig" else "Zwischenstand ($grund)") + ", abgelegt als „${datei.nameWithoutExtension}“.$pdf", ok = grund == null)
-            return AgentenErgebnis(datei.nameWithoutExtension, grund)
+            // Fehlt das gewünschte PDF, gilt der Lauf nicht als fertig: Grund geht in Protokoll und Benachrichtigung.
+            val gesamt = listOfNotNull(grund, pdfFehler).joinToString("; ").ifEmpty { null }
+            Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", (if (gesamt == null) "Fertig" else "Nicht vollständig ($gesamt)") + ", abgelegt als „${datei.nameWithoutExtension}“.$pdf", ok = gesamt == null)
+            return AgentenErgebnis(datei.nameWithoutExtension, gesamt)
         } catch (e: Exception) {
             Log.e(TAG, "Agent fehlgeschlagen", e)
             val text = AblageZentrale.fehlerText(e)

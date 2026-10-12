@@ -129,7 +129,7 @@ class JarvisDienst : Service() {
                     zusatz = if (ergebnis != null && !ergebnis.fehler) " Per E-Mail verschickt." else " E-Mail nicht möglich: ${ergebnis?.text ?: "nicht eingerichtet"}"
                 }
                 val text = when {
-                    titel != null && lauf.grund != null -> "Zwischenstand „$titel“ liegt in der Ablage (${lauf.grund}).$zusatz"
+                    titel != null && lauf.grund != null -> "„$titel“ liegt in der Ablage, aber nicht vollständig: ${lauf.grund}.$zusatz"
                     titel != null -> "„$titel“ liegt in der Ablage.$zusatz"
                     else -> "Der Agent ${plan.name} ist nicht fertig geworden: ${lauf.grund ?: "Grund unbekannt"}. Details unter Aktivität."
                 }
