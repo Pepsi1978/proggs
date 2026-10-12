@@ -87,6 +87,14 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             tunnel.stufe == TunnelStufe.ONLINE, "Ansehen",
         ) { vm.reiter = Reiter.EINSTELLUNGEN },
         Schritt("Plugin in ChatGPT eintragen", "Adresse kopieren und in ChatGPT als eigenen Konnektor „Jarvis“ anlegen.", pluginGenutzt, "Anleitung") { vm.reiter = Reiter.EINSTELLUNGEN },
+        Schritt(
+            "Hey Jarvis",
+            when {
+                !vm.weckwortMikro -> "Damit Jarvis auf „Hey Jarvis“ hört, braucht er das Mikrofon."
+                else -> "Damit Jarvis nach „Hey Jarvis“ von selbst aufgeht, auch bei gesperrtem Handy: „Über anderen Apps einblenden“ erlauben."
+            },
+            !vm.einstellungen.weckwortAn || (vm.weckwortMikro && vm.ueberlagernErlaubt), "Erlauben",
+        ) { vm.weckwortEinrichten(activity) },
         Schritt("Im Hintergrund wach bleiben", "Damit Jarvis auch bei gesperrtem Handy antwortet.", vm.akkuFrei, "Erlauben") {
             runCatching { activity.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${activity.packageName}"))) }
         },
@@ -161,7 +169,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.Bottom) {
-            Eingabe(eingabe, { eingabe = it }, if (vm.nimmtAuf) "Ich höre zu … tippe zum Senden" else if (vm.schreibtMit) "Schreibe mit …" else "Nachricht an Jarvis", Modifier.weight(1f), einzeilig = false, senden = { vm.sende(eingabe); eingabe = "" })
+            Eingabe(eingabe, { eingabe = it }, if (vm.nimmtAuf) (if (vm.freihaendig) "Ich höre zu … sprich einfach" else "Ich höre zu … tippe zum Senden") else if (vm.schreibtMit) "Schreibe mit …" else "Nachricht an Jarvis", Modifier.weight(1f), einzeilig = false, senden = { vm.sende(eingabe); eingabe = "" })
             Spacer(Modifier.width(10.dp))
             // Leeres Feld: der Knopf ist das Mikrofon. Mit Text: senden. Während Jarvis arbeitet: abbrechen.
             val alsMikro = eingabe.isBlank() && !vm.denkt

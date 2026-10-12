@@ -159,6 +159,14 @@ class Einstellungen private constructor(context: Context) {
     /** Fertige Agenten-Ergebnisse von selbst vorlesen. */
     var ergebnisseVorlesen: Boolean get() = prefs.getBoolean("ergebnisse_vorlesen", false); set(v) = put { putBoolean("ergebnisse_vorlesen", v) }
 
+    // ---- Hey Jarvis ----
+    /** Dauerhaft auf „Hey Jarvis“ lauschen, auch bei gesperrtem Handy. */
+    var weckwortAn: Boolean get() = prefs.getBoolean("weckwort_an", true); set(v) = put { putBoolean("weckwort_an", v) }
+    /** niedrig | normal | hoch: wie leicht „Hey Jarvis“ anspringt. */
+    var weckwortEmpfindlichkeit: String get() = s("weckwort_empfindlichkeit", "normal"); set(v) = put { putString("weckwort_empfindlichkeit", v) }
+    /** Ab diesem Wert (0 bis 1) gilt „Hey Jarvis“ als erkannt. */
+    val weckwortSchwelle: Float get() = when (weckwortEmpfindlichkeit) { "niedrig" -> 0.7f; "hoch" -> 0.3f; else -> 0.5f }
+
     /** system | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
 

@@ -114,6 +114,22 @@ Reihenfolge der Robustheit:
 - **Vosk/Snowboy meiden** (schlechte Wake-Genauigkeit / eingestellt).
 - **Immer Silero-VAD vorschalten**: spart Akku und senkt Fehlausloeser (nur bei Sprache aufwecken).
 
+### 2.1a openWakeWord „Hey Jarvis“ in Kotlin (Jarvis, 12.10.2026, gegen die Python-Vorlage geprüft)
+Fuer ein festes englisches Weckwort, fuer das openWakeWord ein fertiges Modell hat (`hey_jarvis`, `alexa`,
+`hey_mycroft` …), ist das der kuerzeste Weg: kein Training, drei ONNX-Dateien (~3,7 MB) ins APK, ONNX Runtime.
+Umsetzung: `Jarvis/app/src/main/java/de/frank/jarvis/weckwort/WeckwortErkenner.kt`.
+- Modelle: Release v0.5.1 (`melspectrogram.onnx`, `embedding_model.onnx`, `hey_jarvis_v0.1.onnx`). Lizenz: Merkmals-
+  modelle Apache-2.0, **Weckwort-Modelle CC BY-NC-SA 4.0** — nie in eine App, die verkauft wird.
+- Pipeline je 80-ms-Block (1280 Werte, 16 kHz): Mel-Modell auf den **letzten 1760 Werten** (Block + 480 Vorlauf),
+  Eingabe `[1, N]` = **rohe int16-Werte als float, NICHT auf ±1 normiert**; Ausgabe `x/10 + 2`, 8 neue Zeilen à 32.
+  Mel-Puffer mit 76 Zeilen aus Einsen starten. Einbettung: letzte 76 Zeilen `[1,76,32,1]` → 96 Werte.
+  Urteil: letzte 16 Einbettungen `[1,16,96]` → Wert 0..1. Eingabenamen nicht hartkodieren (`x.1` beim Weckwort-Modell),
+  `session.inputNames.first()` nehmen; Ausgaben flach ueber `OnnxTensor.floatBuffer` lesen (keine 4D-Casts).
+- Nachbau in Python Wert fuer Wert gleich wie `openwakeword.Model` (0.4.0). Messung mit Piper-Stimmen: Englisch
+  0,996–0,999; deutsche Stimme (Thorsten) je nach Aussprache 0,07–0,998, „Hey Dschärwis“ ~0,42 → **fuer deutsche
+  Aussprache Schwelle 0,3–0,5 einstellbar machen**. Fehlausloeser: „Mein Assistent **heißt Jarvis**“ → 0,99
+  (klingt wie „hey Jarvis“); normale Saetze ohne Jarvis < 0,01.
+
 ### 2.2 Wake-Rate VOR dem Bau verifizieren
 Englische Modelle (z.B. sherpa-onnx EN-Gigaspeech) wecken empirisch teils schwach auf (Almanach #7).
 Daher: Aufweck-Rate fuers konkrete Weckwort LIVE testen, `keywords_threshold` + `keywords_score`
