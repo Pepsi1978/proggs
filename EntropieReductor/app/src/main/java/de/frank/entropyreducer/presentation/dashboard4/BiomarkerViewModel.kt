@@ -298,7 +298,17 @@ constructor(
      * reicht ein einmaliger LaunchedEffect nicht).
      */
     fun onBiomarkerOpened() {
-        viewModelScope.launch { foregroundSync.syncApisNow("Biomarker-Tab") }
+        viewModelScope.launch {
+            val bericht = runCatching { foregroundSync.syncApisNow("Biomarker-Tab") }.getOrElse {
+                if (it is CancellationException) throw it
+                return@launch
+            }
+            // Probleme sofort sichtbar machen (2026-10-13): Frueher blieb ein abgelaufener Whoop-Zugang
+            // unsichtbar, die Werte waren einfach alt.
+            if (bericht.probleme.isNotEmpty() && !_refreshing.value) {
+                _message.value = settings.lastRefreshFooterFlow.first() + "\n" + bericht.probleme.joinToString("\n")
+            }
+        }
     }
 
     /** Manual body refresh; the repository owns loading, errors and the persistent history. */
@@ -639,61 +649,31 @@ constructor(
         _selectedDate.value = _selectedDate.value.plusDays(delta.toLong())
     }
 
+    /**
+     * Aktualisieren-Knopf. Seit 2026-10-13 derselbe Abgleich wie Biomarker-Reiter, Hintergrund und
+     * Jarvis ([ForegroundSyncManager.syncApisNow]) statt einer eigenen Kopie: Nur so stehen danach
+     * der Zustand jeder Quelle und die Fusszeile ueberall gleich da — auch wenn Whoop oder Zepp
+     * scheitert.
+     */
     fun refreshNow() {
         if (_refreshing.value) return
         viewModelScope.launch {
             _refreshing.value = true
             _message.value = "Wird synchronisiert: Whoop · Training · Oura · Zepp …"
             try {
-                val whoopJob = async {
-                    runCatching { repo.syncLastDays(365) }.getOrElse {
-                        if (it is CancellationException) throw it
-                        Result.failure(it)
-                    }
-                }
-                val ouraJob = async {
-                    runCatching { ouraRepo.syncLastDays(365) }.getOrElse {
-                        if (it is CancellationException) throw it
-                        Result.failure(it)
-                    }
-                }
-                // Training remains on Health Connect; only body data switches to Zepp.
-                val trainingJob = async {
-                    runCatching { amazfitRepo.mergeFromHealthConnect(days = 30) }.getOrElse {
-                        if (it is CancellationException) throw it
-                        0
-                    }
-                }
-                val bodyJob = async(Dispatchers.IO) { syncBody() }
-                val whoopRes = whoopJob.await()
-                val ouraRes = ouraJob.await()
-                val trainingCount = trainingJob.await()
-                val bodyRes = bodyJob.await()
-                val ouraCount = ouraRes.getOrNull()?.let { m ->
-                    if (m is Map<*, *>) m.values.filterIsInstance<Int>().sum() else 0
-                } ?: 0
-                val bodySummary = bodyRes.fold(
-                    onSuccess = { "Zepp $it" },
-                    onFailure = { "Zepp öffnen und erneut aktualisieren" },
-                )
-                val now = java.time.ZonedDateTime.now()
-                val ts = "%02d.%02d. %02d:%02d".format(
-                    now.dayOfMonth, now.monthValue, now.hour, now.minute,
-                )
-                val summary = "Whoop ${whoopRes.getOrNull() ?: 0} · " +
-                    "Training ${trainingCount.coerceAtLeast(0)} · Oura $ouraCount · $bodySummary"
-                val finalMessage = "$ts · $summary"
-                _message.value = finalMessage
-                runCatching {
-                    settings.setLastRefreshFooter(finalMessage,
-                        if (bodyRes.isSuccess && whoopRes.isSuccess && ouraRes.isSuccess) {
-                            System.currentTimeMillis()
-                        } else settings.lastRefreshFooterAtMsFlow.first())
-                }
+                val bericht = foregroundSync.syncApisNow("Aktualisieren-Knopf")
+                val footer = settings.lastRefreshFooterFlow.first()
+                _message.value =
+                    if (bericht.probleme.isEmpty()) footer else footer + "\n" + bericht.probleme.joinToString("\n")
                 syncCoordinator.requestSync(
                     "Biomarker: Voll-Refresh aller Quellen (Whoop/Oura/Training/Zepp)",
                     SyncCoordinator.BIOMARKER_DEBOUNCE_MS,
                 )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Diag.w(DiagnosticArea.BIOMARKER, "BiomarkerVM", "Aktualisieren fehlgeschlagen", error)
+                _message.value = "Aktualisieren fehlgeschlagen: ${error.message ?: error.javaClass.simpleName}"
             } finally {
                 _refreshing.value = false
             }

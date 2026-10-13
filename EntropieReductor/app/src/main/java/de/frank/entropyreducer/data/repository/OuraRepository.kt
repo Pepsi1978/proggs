@@ -151,7 +151,10 @@ class OuraRepository @Inject constructor(
         val auth = "Bearer $token"
 
         val today = LocalDate.now()
-        val endDate = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        // Bug-Fix 2026-10-13: Oura behandelt end_date bei mehreren Endpunkten als AUSSCHLIESSLICH
+        // (Schlaf und Aktivität des laufenden Tages fehlten bis zum Folgetag). Deshalb bis morgen
+        // anfragen — Tage ohne Daten liefert Oura einfach nicht, der Upsert bleibt idempotent.
+        val endDate = today.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE)
         // Frank-Wunsch 2026-05-23 (Schritt 4): inkrementeller Sync. Wurde schon einmal
         // erfolgreich synchronisiert, nur ab dem letzten Sync laden — minus 7 Tage
         // Sicherheits-Ueberlapp, weil Oura Werte (z.B. Resilienz) nachtraeglich aktualisiert.

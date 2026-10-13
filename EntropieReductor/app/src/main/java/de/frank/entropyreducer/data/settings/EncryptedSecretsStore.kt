@@ -91,6 +91,15 @@ class EncryptedSecretsStore @Inject constructor(
         get() = prefs.getString(KEY_WHOOP_CLIENT_SECRET, null)
         set(value) { prefs.edit().putString(KEY_WHOOP_CLIENT_SECRET, value).apply() }
 
+    /**
+     * Seit wann Whoop die gespeicherte Anmeldung ablehnt (ms), 0 = alles in Ordnung. Gesetzt, wenn der
+     * Token-Refresh einen endgültigen OAuth-Fehler liefert (Bug 2026-10-09: Refresh-Token nach
+     * Netzabriss verbraucht). Nur eine neue Anmeldung oder ein geglückter Refresh setzt es zurück.
+     */
+    var whoopReauthSinceMs: Long
+        get() = prefs.getLong(KEY_WHOOP_REAUTH_SINCE, 0L)
+        set(value) { prefs.edit().putLong(KEY_WHOOP_REAUTH_SINCE, value).apply() }
+
     var whoopAccessToken: String?
         get() = prefs.getString(KEY_WHOOP_ACCESS, null)
         set(value) { prefs.edit().putString(KEY_WHOOP_ACCESS, value).apply() }
@@ -208,6 +217,7 @@ class EncryptedSecretsStore @Inject constructor(
         private const val KEY_SECOND_BRAIN_WG = "second_brain_wireguard_config"
         private const val KEY_WHOOP_CLIENT_ID = "whoop_client_id"
         private const val KEY_WHOOP_CLIENT_SECRET = "whoop_client_secret"
+        private const val KEY_WHOOP_REAUTH_SINCE = "whoop_reauth_since_ms"
         private const val KEY_WHOOP_ACCESS = "whoop_access_token"
         private const val KEY_WHOOP_REFRESH = "whoop_refresh_token"
         private const val KEY_WHOOP_EXPIRY = "whoop_expiry"

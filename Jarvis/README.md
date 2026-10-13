@@ -63,7 +63,7 @@ welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl f
 | `kalender_lesen`, `dienstplan_lesen`, `kalender_eintragen`, `kalender_loeschen` | Termine und ausgewerteter Dienstplan; eintragen ganztägig oder mit Uhrzeit, auf Wunsch mit Farbe |
 | `wetter_lesen` | Wetter für sieben Tage; mit Datum und Uhrzeit zugleich die Prüfung gegen Dienst, Schlaf und Termine |
 | `fahrzeit_lesen`, `abfahrt_einstellen` | Fahrzeit mit Verkehr über Google Maps vom Standort; Losfahr-Meldung vor dem Dienst einstellen |
-| `biomarker_auswertung`, `biomarker_tag`, `biomarker_verlauf`, `trainings_lesen` | Biodaten; `biomarker_verlauf` ohne Messgrößen liefert den Katalog, `trainings_lesen` mit `id` ein Training im Detail |
+| `biomarker_auswertung`, `biomarker_tag`, `biomarker_verlauf`, `trainings_lesen`, `biomarker_aktualisieren` | Biodaten; vor jedem Lesen holt Jarvis frische Daten (wenn älter als 30 Minuten), Störungen beim Abruf stehen als „ACHTUNG“ vorn; `biomarker_aktualisieren` stößt den Abgleich an und nennt den Zustand jeder Quelle; `biomarker_verlauf` ohne Messgrößen liefert den Katalog, `trainings_lesen` mit `id` ein Training im Detail |
 | `wecker_lesen`, `wecker_stellen`, `wecker_loeschen` | Genialer Wecker; Ändern, Schalten und Auslassen über `wecker_stellen` |
 | `ideen_lesen`, `idee_speichern`, `idee_loeschen` | Geniale Ideen; `ideen_lesen` mit `id` liefert den Volltext, `idee_speichern` legt an oder ändert |
 | `tagebuch_lesen` | Tagebucheinträge für einen Tag, einen Zeitraum oder ein Suchwort |

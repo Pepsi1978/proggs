@@ -257,6 +257,10 @@ class AppSettings @Inject constructor(
      * aufgerufen — beim App-Neustart sieht Frank den letzten Sync-Status
      * weiterhin, statt eines leeren Footers.
      */
+    /** Ergebnis des letzten Biomarker-Abgleichs je Quelle als JSON (siehe ApiSyncBericht). "" = noch keiner. */
+    val biomarkerSyncStatusFlow: Flow<String> = ds.data.map { it[KEY_BIOMARKER_SYNC_STATUS] ?: "" }.distinctUntilChanged()
+    suspend fun setBiomarkerSyncStatus(json: String) = ds.edit { it[KEY_BIOMARKER_SYNC_STATUS] = json }
+
     suspend fun setLastRefreshFooter(text: String, atMs: Long) = ds.edit {
         it[KEY_LAST_REFRESH_FOOTER] = text
         it[KEY_LAST_REFRESH_FOOTER_AT] = atMs
@@ -542,6 +546,7 @@ class AppSettings @Inject constructor(
         private val KEY_HEALTH_BACKUP_SHA256 =
             stringPreferencesKey("health_backup_fingerprint_sha256")
         private val KEY_LAST_REFRESH_FOOTER = stringPreferencesKey("last_refresh_footer_text")
+        private val KEY_BIOMARKER_SYNC_STATUS = stringPreferencesKey("biomarker_sync_status_json")
         private val KEY_LAST_REFRESH_FOOTER_AT = longPreferencesKey("last_refresh_footer_at_ms")
         private val KEY_WORKOUT_CLEANUP_V1 = booleanPreferencesKey("workout_cleanup_v1_done")
         private val KEY_WORKOUT_CLEANUP_V2 = booleanPreferencesKey("workout_cleanup_v2_done")

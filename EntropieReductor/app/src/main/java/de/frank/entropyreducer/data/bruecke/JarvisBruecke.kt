@@ -47,7 +47,12 @@ import org.json.JSONObject
  *  - `trainings`   — Trainingsliste (`von`, `bis`, `limit`, `sport`)
  *  - `training`    — ein Training mit Kilometer-Abschnitten (`id`)
  *  - `abgleich`    — holt vorher frische Daten von Whoop, Oura, Waage und Health Connect (derselbe Abgleich wie
- *                    beim Öffnen des Biomarker-Reiters); wartet höchstens 90 Sekunden. Ändert keine Nutzerdaten.
+ *                    beim Öffnen des Biomarker-Reiters); wartet höchstens `warte_ms` (Vorgabe und Obergrenze
+ *                    90 Sekunden). Mit `max_alter_min` nur, wenn der letzte Abgleich älter ist. Ändert keine Nutzerdaten.
+ *  - `stand`       — nur der Zustand der Quellen, ohne Abgleich.
+ *
+ * Jede Lese-Antwort trägt unter `stand` den Zustand der Quellen (letzter Abgleich, Fehler je Quelle, neueste
+ * Daten je Quelle). Ein gescheiterter Abruf darf nie still bleiben — siehe [stand].
  *
  * Die Auswertung rechnet hier und nicht in Jarvis: So gehen nur wenige Kennzahlen über die Leitung statt
  * der ganzen Historie, und eine Antwort im Sprachmodus kommt ohne Wartezeit.
@@ -149,16 +154,27 @@ class JarvisBruecke : ContentProvider() {
         return when (methode) {
             "abgleich" -> {
                 val start = System.currentTimeMillis()
-                val fertig = withTimeoutOrNull(90_000) {
-                    EntryPointAccessors.fromApplication(ctx, Zugang::class.java).abgleich().syncApisNow("Jarvis")
+                val abgleich = EntryPointAccessors.fromApplication(ctx, Zugang::class.java).abgleich()
+                // max_alter_min: nur abgleichen, wenn der letzte Versuch älter ist — so kann Jarvis vor
+                // JEDEM Lesen anklopfen, ohne jedes Mal alle Quellen neu zu laden.
+                val maxAlterMin = a.optInt("max_alter_min", 0)
+                val alterMs = abgleich.letzterStand()?.let { start - it.versuchMs }
+                val frischGenug = maxAlterMin > 0 && alterMs != null && alterMs in 0 until maxAlterMin * 60_000L
+                val fertig = frischGenug || withTimeoutOrNull(a.optLong("warte_ms", 90_000L).coerceIn(3_000L, 90_000L)) {
+                    // Im app-weiten Scope: Läuft Jarvis' Wartezeit ab, arbeitet der Abgleich zu Ende.
+                    abgleich.starteApiSync("Jarvis").await()
                     true
                 } ?: false
-                JSONObject().put("fertig", fertig).put("dauer_ms", System.currentTimeMillis() - start)
+                JSONObject().put("fertig", fertig).put("abgeglichen", fertig && !frischGenug)
+                    .put("dauer_ms", System.currentTimeMillis() - start)
+                    .put("stand", stand(ctx, ladeReihen(db, ohneLaufendenTag = false)))
             }
+
+            "stand" -> JSONObject().put("heute", heute.toString()).put("stand", stand(ctx, ladeReihen(db, ohneLaufendenTag = false)))
 
             "katalog" -> {
                 val reihen = ladeReihen(db, ohneLaufendenTag = false)
-                JSONObject().put("heute", heute.toString()).put("metriken", JSONArray(metriken.map { m ->
+                JSONObject().put("heute", heute.toString()).put("stand", stand(ctx, reihen)).put("metriken", JSONArray(metriken.map { m ->
                     val r = reihen[m.id]
                     JSONObject().put("id", m.id).put("name", m.name).put("einheit", m.einheit).put("quelle", m.quelle)
                         .put("tage", r?.size ?: 0)
@@ -176,7 +192,7 @@ class JarvisBruecke : ContentProvider() {
                     reihen[m.id]?.get(tag)?.let { wert -> werte.put(wertJson(m, wert)) }
                 }
                 val trainings = db.amazfitWorkoutDao().observeByDateKey(tag.toString()).first()
-                JSONObject().put("heute", heute.toString()).put("datum", tag.toString()).put("werte", werte)
+                JSONObject().put("heute", heute.toString()).put("datum", tag.toString()).put("werte", werte).put("stand", stand(ctx, reihen))
                     .put("trainings", JSONArray(trainings.map { trainingJson(it, false, whoop) }))
                     .apply { if (tag == heute) put("hinweis", "Der Tag läuft noch: Tagesbelastung, Energieumsatz, Schritte und Aktivität sind Zwischenstände.") }
             }
@@ -189,6 +205,7 @@ class JarvisBruecke : ContentProvider() {
                 val von = datum(a.optString("von")) ?: bis.minusDays(29)
                 val aufloesung = a.optString("aufloesung", "tag")
                 JSONObject().put("heute", heute.toString()).put("von", von.toString()).put("bis", bis.toString()).put("aufloesung", aufloesung)
+                    .put("stand", stand(ctx, reihen))
                     .put("reihen", JSONArray(gewuenscht.map { id ->
                         val m = nachId.getValue(id)
                         val teil = reihen[id]?.subMap(von, true, bis, true) ?: TreeMap()
@@ -209,6 +226,7 @@ class JarvisBruecke : ContentProvider() {
                 val bezug = datum(a.optString("datum")) ?: heute
                 val fenster = a.optInt("tage", 30).coerceIn(7, 730)
                 JSONObject().put("heute", heute.toString()).put("bezugstag", bezug.toString()).put("vergleich_tage", fenster)
+                    .put("stand", stand(ctx, reihen))
                     .put("metriken", JSONArray(gewuenscht.mapNotNull { id -> auswertung(nachId.getValue(id), reihen[id], bezug, fenster) }))
             }
 
@@ -238,6 +256,65 @@ class JarvisBruecke : ContentProvider() {
 
             else -> fehler("Unbekannte Methode: $methode")
         }
+    }
+
+    // ---------------------------------------------------------------- Stand der Quellen
+
+    /**
+     * Wie verlässlich die Daten gerade sind (2026-10-13). Hängt an JEDER Lese-Antwort, damit Jarvis nie
+     * stillschweigend alte Werte als aktuell ausgibt: wann zuletzt abgeglichen wurde, welche Quelle
+     * beim Abruf scheiterte und warum, und bis zu welchem Tag jede Quelle überhaupt Daten hat.
+     *
+     * Zwei Arten von Problemen:
+     *  - der Abruf selbst scheiterte (Anmeldung abgelaufen, kein Netz) — aus dem gespeicherten Abgleich;
+     *  - der Abruf klappt, aber die Quelle liefert seit Tagen nichts Neues (Band/Ring nicht mit der
+     *    Hersteller-App abgeglichen) — aus dem Alter der neuesten Daten.
+     */
+    private suspend fun stand(ctx: android.content.Context, reihen: Map<String, TreeMap<LocalDate, Double>>): JSONObject {
+        val bericht = runCatching { EntryPointAccessors.fromApplication(ctx, Zugang::class.java).abgleich().letzterStand() }.getOrNull()
+        val heute = LocalDate.now()
+        val jetzt = System.currentTimeMillis()
+        fun neueste(quelle: String): LocalDate? =
+            metriken.filter { it.quelle == quelle }.mapNotNull { reihen[it.id]?.takeIf { r -> r.isNotEmpty() }?.lastKey() }.maxOrNull()
+        val anzeige = mapOf("whoop" to "Whoop", "oura" to "Oura", "waage" to "Waage", "training" to "Training")
+        val probleme = JSONArray()
+        var eingriff = false
+        val quellen = JSONArray()
+        if (bericht == null) {
+            probleme.put("Es gibt noch kein Ergebnis eines Abgleichs. Wie aktuell die Werte sind, ist unbekannt.")
+        } else {
+            bericht.probleme.forEach { probleme.put(it) }
+            eingriff = bericht.quellen.any { it.verbunden && !it.ok && it.eingriffNoetig }
+        }
+        anzeige.forEach { (id, quelle) ->
+            val q = bericht?.quellen?.firstOrNull { it.id == id }
+            val letzterTag = neueste(quelle)
+            quellen.put(
+                JSONObject().put("id", id).put("name", quelle)
+                    .put("verbunden", q?.verbunden ?: JSONObject.NULL)
+                    .put("abruf_ok", q?.ok ?: JSONObject.NULL)
+                    .put("fehler", q?.fehler ?: JSONObject.NULL)
+                    .put("neueste_daten", letzterTag?.toString() ?: JSONObject.NULL),
+            )
+            // Band und Ring messen täglich: zwei Tage ohne neue Werte trotz geglücktem Abruf heißt,
+            // dass die Quelle selbst nichts hochgeladen hat.
+            if ((id == "whoop" || id == "oura") && q?.verbunden == true && q.ok && letzterTag != null) {
+                val tageAlt = ChronoUnit.DAYS.between(letzterTag, heute)
+                if (tageAlt >= 2) {
+                    probleme.put(
+                        "$quelle: Der Abruf klappt, aber $quelle hat seit dem $letzterTag ($tageAlt Tage) keine neuen Werte geliefert. " +
+                            "Vermutlich wurde ${if (id == "oura") "der Ring" else "das Band"} nicht mit der $quelle-App abgeglichen: $quelle-App öffnen.",
+                    )
+                }
+            }
+        }
+        return JSONObject()
+            .put("letzter_abgleich", bericht?.let { Instant.ofEpochMilli(it.versuchMs).atZone(ZoneId.systemDefault()).toLocalDateTime().toString().take(16) } ?: JSONObject.NULL)
+            .put("alter_min", bericht?.let { ((jetzt - it.versuchMs) / 60_000L).coerceAtLeast(0) } ?: JSONObject.NULL)
+            .put("alles_ok", probleme.length() == 0)
+            .put("eingriff_noetig", eingriff)
+            .put("probleme", probleme)
+            .put("quellen", quellen)
     }
 
     // ---------------------------------------------------------------- Daten laden

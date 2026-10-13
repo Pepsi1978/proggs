@@ -52,6 +52,9 @@ constructor(
     private val diagnostics: DiagnosticLogger,
 ) {
 
+    /** Wann zuletzt ein Luecken-Fenster angefragt wurde (nur im Speicher; nach Prozessstart einmal neu). */
+    @Volatile private var lastGapFillMs = 0L
+
     fun observeLatest(): Flow<BiomarkerSnapshotEntity?> = dao.getLatest()
 
     fun observeRange(from: Long, to: Long): Flow<List<BiomarkerSnapshotEntity>> =
@@ -73,10 +76,12 @@ constructor(
      */
     suspend fun syncLastDays(days: Int = 365): Result<Int> =
         runCatchingCancellable {
+                // freshWhoopAccessToken wirft selbst sprechende Fehler (Anmeldung abgelaufen,
+                // Whoop nicht erreichbar). null heisst nur noch: gar nicht mit Whoop verbunden.
                 val token =
                     oauth.freshWhoopAccessToken()
                         ?: throw IllegalStateException(
-                            "Kein Whoop-Access-Token — bitte erneut anmelden."
+                            "Whoop ist nicht verbunden — bitte unter Einstellungen → API-Schlüssel anmelden."
                         )
 
                 // Frank-Wunsch 2026-05-09: Daten erst ab Geraete-Kaufdatum 25.02.2026 holen.
@@ -105,10 +110,16 @@ constructor(
                 // inkrementelle Sync holte Luecken, die vor dem 7-Tage-Ueberlapp lagen, nie
                 // wieder nach. Jetzt reicht das Fenster bis zum fruehesten Tag ohne HRV-Wert
                 // zurueck — Luecken heilen beim naechsten Sync von selbst.
-                val gapStart = earliestGapStart()
+                // 2026-10-13: Luecken-Nachholen hoechstens alle 12 h. Eine dauerhafte Luecke (Band
+                // nicht getragen) liess sonst JEDEN Sync zwei Monate neu laden — mit dem
+                // Hintergrund-Abgleich alle 30 Minuten waere das unnoetiger API-Verkehr.
+                val nowMs = System.currentTimeMillis()
+                val gapStart =
+                    if (nowMs - lastGapFillMs >= GAP_FILL_INTERVAL_MS) earliestGapStart() else null
                 val requestedStart =
                     if (gapStart != null && gapStart.isBefore(incrementalStart)) {
                         Diag.i(DiagnosticArea.WHOOP, TAG, "Whoop-Luecke ab $gapStart — Fenster erweitert")
+                        lastGapFillMs = nowMs
                         gapStart
                     } else {
                         incrementalStart
@@ -419,6 +430,7 @@ constructor(
          * REPLACE-upsert entstehen durch den Ueberlapp keine Duplikate.
          */
         private const val INCREMENTAL_OVERLAP_MS = 7L * 24L * 60L * 60L * 1000L
+        private const val GAP_FILL_INTERVAL_MS = 12L * 60L * 60L * 1000L
         private val ISO: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
 
         /**

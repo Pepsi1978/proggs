@@ -11,13 +11,22 @@ import de.frank.entropyreducer.data.repository.OuraRepository
 import de.frank.entropyreducer.data.repository.WhoopRepository
 import de.frank.entropyreducer.data.settings.AppSettings
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
+import de.frank.entropyreducer.data.remote.oauth.WhoopReauthRequiredException
+import de.frank.entropyreducer.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.CancellationException
+import org.json.JSONArray
+import org.json.JSONObject
+import retrofit2.HttpException
 
 /**
  * Zentraler Daten-Sync. Trennt bewusst ZWEI Sync-Arten mit unterschiedlichem Takt
@@ -27,10 +36,10 @@ import kotlinx.coroutines.CancellationException
  *    Synchronitaet (Aufgaben, Gewohnheiten, Texte ...). Laeuft bei JEDEM App-Start und
  *    JEDEM Foreground-Wechsel SOFORT (kein Throttle). Siehe [syncDriveNow].
  *
- * 2. **Fitness-APIs (Whoop/Oura/Health Connect/Kalender)** — teuer (Datenverbrauch +
- *    Rate-Limit). Laeuft NUR (a) automatisch nach 8 h ODER (b) wenn Frank den Biomarker-Tab
- *    oeffnet ([syncApisNow]). Jede vollstaendige API-Aktualisierung setzt den 8-h-Timer neu.
- *    So zahlt Frank den teuren API-Verkehr nur, wenn er die Biomarker-Werte wirklich anschaut.
+ * 2. **Fitness-APIs (Whoop/Oura/Health Connect/Kalender)** — seit 2026-10-13 (Frank-Wunsch:
+ *    "Werte sollen immer aktuell sein") laufend: alle 30 Minuten im Hintergrund, beim Oeffnen der
+ *    App (wenn aelter als 15 Minuten), bei jedem Oeffnen des Biomarker-Reiters und auf Anstoss von
+ *    Jarvis ([syncApisNow]). Davor (2026-06-01 bis 2026-10-13) nur alle 8 h oder im Biomarker-Reiter.
  *
  * Vorgeschichte: Frueher lief BEIDES gemeinsam und nur alle 8 h (`syncIfStale`/`syncAllSources`).
  * Dadurch konnte eine Aenderung auf Geraet A nicht "3 Minuten spaeter" auf Geraet B ankommen —
@@ -58,9 +67,12 @@ constructor(
     private val calendar: CalendarRepository,
     private val zeppBodyRepository: ZeppBodyRepository,
     private val appSettings: AppSettings,
+    @ApplicationScope private val applicationScope: CoroutineScope,
 ) {
     private val driveMutex = Mutex()
     private val apiMutex = Mutex()
+
+    @Volatile private var letzterBericht: ApiSyncBericht? = null
 
     /**
      * Vollabgleich beim App-Start / Foreground-Wechsel: Drive IMMER (sofort), Fitness-APIs nur
@@ -105,9 +117,9 @@ constructor(
     }
 
     /**
-     * Fitness-API-Sync nur, wenn seit der letzten API-Aktualisierung mindestens [minIntervalMs]
-     * vergangen sind (Standard 8 h). Wird beim Start/Foreground aufgerufen. Wenn noch nie
-     * gesynced wurde (Timer 0), wird synchronisiert.
+     * Fitness-API-Sync nur, wenn seit dem letzten Abgleich mindestens [minIntervalMs] vergangen
+     * sind (Standard 15 Minuten). Wird beim Start/Foreground aufgerufen. Wenn noch nie gesynced
+     * wurde (Timer 0), wird synchronisiert.
      */
     suspend fun syncApisIfStale(minIntervalMs: Long) {
         val lastMs = appSettings.lastRefreshFooterAtMsFlow.first()
@@ -120,47 +132,66 @@ constructor(
             )
             return
         }
-        syncApisNow("8h-Automatik")
+        syncApisNow("App geöffnet")
     }
 
     /**
-     * Voller Fitness-API-Abgleich (Whoop/Oura/Health Connect/Kalender). Wird (a) von
-     * [syncApisIfStale] nach 8 h ODER (b) beim Klick auf den Biomarker-Tab aufgerufen
-     * ([reason] = "Biomarker-Tab"). Stempelt am Ende den "Zuletzt synchronisiert"-Footer —
-     * dieser Zeitstempel ist gleichzeitig der 8-h-Timer (jede API-Aktualisierung setzt ihn neu).
-     * Bei parallelem Aufruf (Lock belegt) kehrt die Methode sofort zurueck.
+     * Voller Fitness-API-Abgleich (Whoop/Oura/Waage/Health Connect/Kalender). Aufrufer: App-Start und
+     * Foreground (wenn aelter als 15 Minuten), Biomarker-Reiter, Aktualisieren-Knopf, der
+     * Hintergrund-Abgleich alle 30 Minuten ([de.frank.entropyreducer.workers.BiomarkerSyncWorker])
+     * und Jarvis ueber die Bruecke.
+     *
+     * Umbau 2026-10-13 (Direktive 3, Whoop seit 09.10. ohne Daten):
+     * - JEDE Quelle wird einzeln bewertet. Frueher brach der erste Fehler (Whoop-Anmeldung, "Zepp
+     *   antwortet nicht") die Auswertung ab: Fusszeile und Timer blieben tagelang stehen, obwohl
+     *   Oura und Health Connect liefen — und niemand erfuhr, WELCHE Quelle hing.
+     * - Das Ergebnis je Quelle wird gespeichert ([ApiSyncBericht]) und geht an die Fusszeile und an
+     *   Jarvis.
+     * - Laeuft schon ein Abgleich, WARTET der Aufrufer auf dessen Ergebnis, statt mit "uebersprungen"
+     *   so zu tun, als waere abgeglichen worden.
+     * - Jede Quelle hat ein Zeitlimit, damit eine haengende Quelle die Sperre nicht ewig haelt.
      */
-    suspend fun syncApisNow(reason: String = "Biomarker-Tab") {
-        if (!apiMutex.tryLock()) {
-            Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync laeuft bereits ($reason) -> uebersprungen")
-            return
+    suspend fun syncApisNow(reason: String = "Biomarker-Tab"): ApiSyncBericht {
+        val angefragtMs = System.currentTimeMillis()
+        return apiMutex.withLock {
+            val frisch = letzterBericht?.takeIf { it.versuchMs >= angefragtMs }
+            if (frisch != null) {
+                Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync ($reason): Ergebnis des gerade beendeten Laufs übernommen")
+                frisch
+            } else {
+                fuehreApiSyncAus(reason)
+            }
         }
-        try {
-            Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync START ($reason)")
-            val results = coroutineScope {
-                val bodyDeferred =
-                    async { runCatchingCancellable { zeppBodyRepository.syncToCache() } }
-                val whoopDeferred =
-                    async {
-                        if (oauth.loadWhoopAuthState().isAuthorized) {
-                            whoop.syncLastDays(365)
-                        } else {
-                            Result.success(0)
-                        }
-                    }
-                val ouraDeferred =
-                    async {
-                        if (oura.isTokenConfigured()) {
-                            oura.syncLastDays(365).map { it.values.sum() }
-                        } else {
-                            Result.success(0)
-                        }
-                    }
-                val trainingDeferred =
-                    async {
-                        // Frank-Wunsch 2026-07-03: Trainings kommen jetzt aus Health Connect (Strava raus).
-                        // Frank-Wunsch 2026-09-30: einmal ALLE Trainings (gesamter Verlauf) auf die
-                        // Polar-Werte umstellen, danach wieder nur die letzten 30 Tage.
+    }
+
+    /**
+     * Startet den Abgleich im app-weiten Scope. Fuer Aufrufer mit eigenem Zeitlimit (Jarvis-Bruecke):
+     * laeuft das Limit ab, arbeitet der Abgleich trotzdem zu Ende, statt mitten im Schreiben
+     * abgebrochen zu werden.
+     */
+    fun starteApiSync(reason: String): Deferred<ApiSyncBericht> = applicationScope.async { syncApisNow(reason) }
+
+    /** Ergebnis des letzten Abgleichs (auch aus einem frueheren Prozess), null = noch nie gelaufen. */
+    suspend fun letzterStand(): ApiSyncBericht? =
+        letzterBericht ?: ApiSyncBericht.ausJson(appSettings.biomarkerSyncStatusFlow.first())?.also { letzterBericht = it }
+
+    private suspend fun fuehreApiSyncAus(reason: String): ApiSyncBericht {
+        Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync START ($reason)")
+        val vorher = letzterStand()
+        val whoopVerbunden = oauth.loadWhoopAuthState().isAuthorized
+        val ouraVerbunden = oura.isTokenConfigured()
+        val kalenderVerbunden = secrets.calendarAccountEmail != null
+        val ergebnisse = coroutineScope {
+            val bodyDeferred = async { quelle { runCatchingCancellable { zeppBodyRepository.syncToCache() } } }
+            val whoopDeferred = async { if (whoopVerbunden) quelle { whoop.syncLastDays(365) } else null }
+            val ouraDeferred =
+                async { if (ouraVerbunden) quelle { oura.syncLastDays(365).map { it.values.sum() } } else null }
+            val trainingDeferred =
+                async {
+                    // Frank-Wunsch 2026-07-03: Trainings kommen jetzt aus Health Connect (Strava raus).
+                    // Frank-Wunsch 2026-09-30: einmal ALLE Trainings (gesamter Verlauf) auf die
+                    // Polar-Werte umstellen, danach wieder nur die letzten 30 Tage.
+                    quelle {
                         runCatchingCancellable {
                             if (appSettings.isPolarFullResyncV1Done()) {
                                 amazfit.mergeFromHealthConnect(days = 30)
@@ -170,58 +201,107 @@ constructor(
                             }
                         }
                     }
-                val calendarDeferred =
-                    async {
-                        if (secrets.calendarAccountEmail != null) {
-                            calendar.syncDefaultWindow().map { 0 }
-                        } else {
-                            Result.success(0)
-                        }
-                    }
-                listOf(
-                    bodyDeferred.await(),
-                    whoopDeferred.await(),
-                    ouraDeferred.await(),
-                    trainingDeferred.await(),
-                    calendarDeferred.await(),
-                )
-            }
-            val firstFailure = results.firstNotNullOfOrNull { it.exceptionOrNull() }
-            if (firstFailure != null) {
-                if (firstFailure is CancellationException) throw firstFailure
-                Diag.w(DiagnosticArea.APP, "ForegroundSync", "API-Sync unvollständig; 8h-Timer bleibt unverändert", firstFailure)
-                return
-            }
-            val (bodyCount, whoopCount, ouraCount, trainingCount) = results.take(4).map { it.getOrThrow() }
-
-            // "Zuletzt synchronisiert"-Footer setzen (gleiches Format wie der manuelle
-            // Aktualisieren-Knopf). Der Zeitstempel dient gleichzeitig als Grundlage
-            // fuer den 8h-Throttle in syncApisIfStale().
-            val nowZ = java.time.ZonedDateTime.now()
-            val footerTs =
-                "%02d.%02d. %02d:%02d".format(
-                    nowZ.dayOfMonth,
-                    nowZ.monthValue,
-                    nowZ.hour,
-                    nowZ.minute,
-                )
-            val footer =
-                "✓ $footerTs · Whoop $whoopCount · Training $trainingCount · " +
-                    "Oura $ouraCount · Zepp $bodyCount"
-            appSettings.setLastRefreshFooter(footer, System.currentTimeMillis())
-            Diag.i(
-                DiagnosticArea.APP,
-                "ForegroundSync",
-                "API-Sync FERTIG ($reason): Whoop=$whoopCount Training=$trainingCount Oura=$ouraCount Zepp=$bodyCount -> 8h-Timer neu gesetzt",
+                }
+            val calendarDeferred =
+                async { if (kalenderVerbunden) quelle { calendar.syncDefaultWindow().map { 0 } } else null }
+            listOf(
+                whoopDeferred.await(),
+                ouraDeferred.await(),
+                bodyDeferred.await(),
+                trainingDeferred.await(),
+                calendarDeferred.await(),
             )
-        } finally {
-            apiMutex.unlock()
         }
+        val jetzt = System.currentTimeMillis()
+
+        fun stand(id: String, name: String, ergebnis: Result<Int>?, bisherOkMs: Long): QuellenStand {
+            val fehler = ergebnis?.exceptionOrNull()
+            val alt = vorher?.quellen?.firstOrNull { it.id == id }
+            return QuellenStand(
+                id = id,
+                name = name,
+                verbunden = ergebnis != null,
+                ok = ergebnis?.isSuccess == true,
+                anzahl = ergebnis?.getOrNull() ?: 0,
+                fehler = fehler?.let(::fehlerText),
+                zuletztOkMs = if (ergebnis?.isSuccess == true) jetzt else maxOf(alt?.zuletztOkMs ?: 0L, bisherOkMs),
+                eingriffNoetig = fehler is WhoopReauthRequiredException || (fehler as? HttpException)?.code() == 401,
+            )
+        }
+        val quellen =
+            listOf(
+                stand(QUELLE_WHOOP, "Whoop", ergebnisse[0], appSettings.lastWhoopSyncMsFlow.first()),
+                stand(QUELLE_OURA, "Oura", ergebnisse[1], secrets.ouraLastSyncEpochMs),
+                stand(QUELLE_WAAGE, "Waage (Zepp)", ergebnisse[2], 0L),
+                stand(QUELLE_TRAINING, "Trainings (Health Connect)", ergebnisse[3], 0L),
+                stand(QUELLE_KALENDER, "Kalender", ergebnisse[4], 0L),
+            )
+        val bericht = ApiSyncBericht(versuchMs = jetzt, anlass = reason, quellen = quellen)
+        letzterBericht = bericht
+        runCatchingCancellable { appSettings.setBiomarkerSyncStatus(bericht.alsJson().toString()) }
+            .onFailure { Diag.w(DiagnosticArea.APP, "ForegroundSync", "Abgleich-Stand nicht gespeichert", it) }
+
+        // Fusszeile IMMER schreiben, mit dem Zustand jeder Quelle. Der Timer fuer "noch frisch" wird nur
+        // dann NICHT neu gesetzt, wenn eine Quelle voruebergehend scheiterte (kein Netz): dann soll das
+        // naechste Oeffnen sofort neu versuchen. Eine abgelaufene Anmeldung oder eine stumme Waage
+        // heilt kein Sofort-Neuversuch — sie duerfen die anderen Quellen nicht dauernd neu laden lassen.
+        fun teil(id: String, kurz: String): String {
+            val q = quellen.first { it.id == id }
+            return when {
+                !q.verbunden -> "$kurz nicht verbunden"
+                q.ok -> "$kurz ${q.anzahl}"
+                q.eingriffNoetig -> "$kurz ⚠ neu anmelden"
+                id == QUELLE_WAAGE -> "$kurz ⚠ nicht erreichbar"
+                else -> "$kurz ⚠ Fehler"
+            }
+        }
+        val nowZ = java.time.ZonedDateTime.now()
+        val footerTs = "%02d.%02d. %02d:%02d".format(nowZ.dayOfMonth, nowZ.monthValue, nowZ.hour, nowZ.minute)
+        val footer =
+            "${if (bericht.probleme.isEmpty()) "✓" else "⚠"} $footerTs · ${teil(QUELLE_WHOOP, "Whoop")} · " +
+                "${teil(QUELLE_TRAINING, "Training")} · ${teil(QUELLE_OURA, "Oura")} · ${teil(QUELLE_WAAGE, "Zepp")}"
+        val voruebergehend = quellen.any { it.verbunden && !it.ok && !it.eingriffNoetig && it.id != QUELLE_WAAGE }
+        appSettings.setLastRefreshFooter(
+            footer,
+            if (voruebergehend) appSettings.lastRefreshFooterAtMsFlow.first() else jetzt,
+        )
+        if (bericht.probleme.isEmpty()) {
+            Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync FERTIG ($reason): $footer")
+        } else {
+            Diag.w(DiagnosticArea.APP, "ForegroundSync", "API-Sync FERTIG mit Problemen ($reason): ${bericht.probleme.joinToString(" | ")}")
+        }
+        return bericht
     }
 
+    /** Eine Quelle mit Zeitlimit: eine haengende Quelle darf den Abgleich (und die Sperre) nicht festhalten. */
+    private suspend fun quelle(block: suspend () -> Result<Int>): Result<Int> =
+        withTimeoutOrNull(QUELLEN_ZEITLIMIT_MS) { block() }
+            ?: Result.failure(java.io.IOException("Zeitüberschreitung nach ${QUELLEN_ZEITLIMIT_MS / 1000} Sekunden"))
+
+    private fun fehlerText(fehler: Throwable): String =
+        when {
+            fehler is WhoopReauthRequiredException -> "Anmeldung abgelaufen, neue Anmeldung in Entropie Reductor nötig (Einstellungen → API-Schlüssel)"
+            fehler is HttpException && fehler.code() == 401 -> "Zugang abgelehnt (401), Token in Entropie Reductor prüfen"
+            fehler is HttpException && fehler.code() == 429 -> "Abruflimit erreicht (429)"
+            fehler is HttpException -> "Serverfehler ${fehler.code()}"
+            fehler is java.net.UnknownHostException -> "keine Internetverbindung"
+            else -> fehler.message ?: fehler.javaClass.simpleName
+        }
+
     companion object {
-        /** Standard-Throttle fuer den Fitness-API-Sync: 8 Stunden (Frank-Wunsch 2026-06-01). */
-        const val FOREGROUND_SYNC_MIN_INTERVAL_MS = 8L * 60L * 60L * 1000L
+        /**
+         * Mindestabstand fuer den automatischen Abgleich beim Oeffnen der App: 15 Minuten.
+         * Frank-Wunsch 2026-10-13 ("Werte sollen immer aktuell sein") loest den 8-h-Abstand vom
+         * 2026-06-01 ab. Der Biomarker-Reiter gleicht weiterhin bei jedem Oeffnen ab.
+         */
+        const val FOREGROUND_SYNC_MIN_INTERVAL_MS = 15L * 60L * 1000L
+        private const val QUELLEN_ZEITLIMIT_MS = 120_000L
+
+        const val QUELLE_WHOOP = "whoop"
+        const val QUELLE_OURA = "oura"
+        const val QUELLE_WAAGE = "waage"
+        const val QUELLE_TRAINING = "training"
+        const val QUELLE_KALENDER = "kalender"
     }
 
     private suspend inline fun <T> runCatchingCancellable(crossinline block: suspend () -> T): Result<T> =
@@ -232,4 +312,63 @@ constructor(
         } catch (error: Exception) {
             Result.failure(error)
         }
+}
+
+/** Zustand einer Biomarker-Quelle nach dem letzten Abgleich. */
+data class QuellenStand(
+    val id: String,
+    val name: String,
+    /** false = in der App gar nicht eingerichtet (kein Fehler). */
+    val verbunden: Boolean,
+    val ok: Boolean,
+    val anzahl: Int,
+    val fehler: String?,
+    /** Letzter geglückter Abruf dieser Quelle (ms), 0 = unbekannt. */
+    val zuletztOkMs: Long,
+    /** true = heilt nicht von selbst, Frank muss etwas tun (neu anmelden, Token prüfen). */
+    val eingriffNoetig: Boolean,
+)
+
+/** Ergebnis eines Abgleichs über alle Quellen. Wird gespeichert und geht an Fußzeile und Jarvis. */
+data class ApiSyncBericht(val versuchMs: Long, val anlass: String, val quellen: List<QuellenStand>) {
+
+    /** Lesbare Probleme, eine Zeile je betroffener Quelle. Leer = alles in Ordnung. */
+    val probleme: List<String>
+        get() = quellen.filter { it.verbunden && !it.ok }.map { q ->
+            val seit = if (q.zuletztOkMs > 0L) {
+                val tag = java.time.Instant.ofEpochMilli(q.zuletztOkMs).atZone(java.time.ZoneId.systemDefault())
+                ", letzter geglückter Abruf am %02d.%02d. um %02d:%02d Uhr".format(tag.dayOfMonth, tag.monthValue, tag.hour, tag.minute)
+            } else ""
+            "${q.name}: ${q.fehler ?: "Fehler"}$seit"
+        }
+
+    fun alsJson(): JSONObject = JSONObject()
+        .put("versuch_ms", versuchMs)
+        .put("anlass", anlass)
+        .put("quellen", JSONArray(quellen.map { q ->
+            JSONObject().put("id", q.id).put("name", q.name).put("verbunden", q.verbunden).put("ok", q.ok)
+                .put("anzahl", q.anzahl).put("fehler", q.fehler ?: JSONObject.NULL)
+                .put("zuletzt_ok_ms", q.zuletztOkMs).put("eingriff_noetig", q.eingriffNoetig)
+        }))
+
+    companion object {
+        fun ausJson(text: String): ApiSyncBericht? = runCatching {
+            if (text.isBlank()) return null
+            val json = JSONObject(text)
+            val liste = json.getJSONArray("quellen")
+            ApiSyncBericht(
+                versuchMs = json.getLong("versuch_ms"),
+                anlass = json.optString("anlass"),
+                quellen = (0 until liste.length()).map { i ->
+                    val q = liste.getJSONObject(i)
+                    QuellenStand(
+                        id = q.getString("id"), name = q.getString("name"), verbunden = q.optBoolean("verbunden"),
+                        ok = q.optBoolean("ok"), anzahl = q.optInt("anzahl"),
+                        fehler = if (q.isNull("fehler")) null else q.optString("fehler"),
+                        zuletztOkMs = q.optLong("zuletzt_ok_ms"), eingriffNoetig = q.optBoolean("eingriff_noetig"),
+                    )
+                },
+            )
+        }.getOrNull()
+    }
 }

@@ -48,6 +48,33 @@ class BackgroundScheduler @Inject constructor(
         // mit alter App-Version (oder nach diesem Update) weiterlaufen.
         wm.cancelUniqueWork(CalendarSyncWorker.UNIQUE_NAME_PERIODIC)
         wm.cancelUniqueWork(WhoopSyncWorker.UNIQUE_NAME_PERIODIC)
+        // Frank-Wunsch 2026-10-13 hebt den Wunsch vom 2026-05-23 fuer die Biomarker auf: Die Werte
+        // sollen immer aktuell sein, auch wenn die App nicht geoeffnet ist. Die alten Einzel-Jobs
+        // bleiben abbestellt; an ihre Stelle tritt EIN Abgleich ueber alle Quellen.
+        ensureBiomarkerSyncJob()
+    }
+
+    /**
+     * Plant den Hintergrund-Abgleich aller Biomarker-Quellen alle 30 Minuten (nur mit Netz).
+     * UPDATE haelt einen schon geplanten Lauf bei und zieht nur geaenderte Einstellungen nach —
+     * der Aufruf ist beliebig oft wiederholbar und stellt den Job nach Updates, Neustarts oder
+     * einem geloeschten WorkManager-Stand von selbst wieder her.
+     *
+     * Android verschiebt den Lauf im Ruhezustand (Doze) auf Wartungsfenster. Fuer diese Luecken
+     * gleicht die App beim Oeffnen ab, und Jarvis stoesst vor dem Lesen selbst einen Abgleich an.
+     */
+    fun ensureBiomarkerSyncJob() {
+        runCatching {
+            wm.enqueueUniquePeriodicWork(
+                BiomarkerSyncWorker.UNIQUE_NAME_PERIODIC,
+                ExistingPeriodicWorkPolicy.UPDATE,
+                PeriodicWorkRequestBuilder<BiomarkerSyncWorker>(30, TimeUnit.MINUTES)
+                    .setConstraints(
+                        Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build(),
+                    )
+                    .build(),
+            )
+        }.onFailure { Log.w(TAG, "Hintergrund-Abgleich konnte nicht geplant werden", it) }
     }
 
     /** Plant die Genie-Codex-Synthese sonntags 19:00 lokaler Zeit (Spec §16.5). */

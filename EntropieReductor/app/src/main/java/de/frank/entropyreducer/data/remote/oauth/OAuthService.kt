@@ -9,8 +9,12 @@ import de.frank.entropyreducer.data.diagnostics.DiagnosticArea
 import de.frank.entropyreducer.data.settings.EncryptedSecretsStore
 import javax.inject.Inject
 import javax.inject.Singleton
+import de.frank.entropyreducer.workers.SyncProblemNotifier
 import kotlin.coroutines.resume
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import net.openid.appauth.AuthState
 import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
@@ -40,7 +44,14 @@ class OAuthService
 constructor(
     @ApplicationContext private val context: Context,
     private val secrets: EncryptedSecretsStore,
+    private val problemNotifier: SyncProblemNotifier,
 ) {
+
+    /** Nur EIN Whoop-Refresh gleichzeitig: zwei parallele wuerden denselben Einmal-Token verbrauchen. */
+    private val whoopRefreshMutex = Mutex()
+
+    /** Wann zuletzt geprueft wurde, ob Whoop die abgelaufene Anmeldung doch wieder annimmt. */
+    @Volatile private var lastWhoopReauthProbeMs = 0L
 
     /** Konfiguration für Google Calendar. Endpoints von Google's OpenID-Connect-Discovery. */
     val googleConfig =
@@ -197,6 +208,7 @@ constructor(
     }
 
     fun clearWhoopAuthState() {
+        secrets.whoopReauthSinceMs = 0L
         secrets.whoopAuthStateJson = null
         secrets.whoopAccessToken = null
         secrets.whoopRefreshToken = null
@@ -242,6 +254,8 @@ constructor(
                 )
                 state.update(tokenResp, null)
                 saveWhoopAuthState(state)
+                secrets.whoopReauthSinceMs = 0L
+                problemNotifier.whoopWiederOk()
                 secrets.whoopAccessToken = tokenResp.accessToken
                 secrets.whoopRefreshToken = tokenResp.refreshToken
                 secrets.whoopTokenExpiryEpochSec =
@@ -280,11 +294,11 @@ constructor(
      * sagt "anmelden") Schicht 4 (Diagnose) — detaillierte Logs damit naechster Vorfall in 30s
      * diagnostiziert werden kann
      */
-    suspend fun freshWhoopAccessToken(): String? {
+    suspend fun freshWhoopAccessToken(): String? = whoopRefreshMutex.withLock {
         val state = loadWhoopAuthState()
         if (!state.isAuthorized) {
             Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: kein AuthState — kein Token zurückgeben")
-            return null
+            return@withLock null
         }
         val clientSecret = secrets.whoopClientSecret
         if (clientSecret.isNullOrBlank()) {
@@ -293,68 +307,101 @@ constructor(
                 "Whoop-Client-Secret fehlt — bitte in den API-Schlüssel-Settings neu eingeben."
             )
         }
-        // Schicht 4 — DIAGNOSE-SONDEN (erweitert): Vor dem Refresh den AuthState
-        // detailliert loggen damit man bei invalid_client genau sieht was fehlt.
-        val rt = state.refreshToken
-        val at = state.accessToken
-        val expiry = state.accessTokenExpirationTime
         val nowMs = System.currentTimeMillis()
-        val expiryDeltaMs = if (expiry != null) expiry - nowMs else Long.MIN_VALUE
-        val needsRefresh = state.needsTokenRefresh
-        val scope = state.scope
-        val clientId = secrets.whoopClientId
-        // Performance-Audit Loop 1 (2026-05-10): Eager 7-Feld-Interpolation pro
-        // Token-Refresh entfernt. Token-Refresh laeuft 1x/Stunde — pro Aufruf wurde
-        // ein 200-Zeichen-String allokiert nur fuer Logcat. Knappe Form unter Guard.
+        val expiry = state.accessTokenExpirationTime
         if (de.frank.entropyreducer.BuildConfig.DEBUG) {
-            Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: needsRefresh=$needsRefresh expiryDeltaMs=$expiryDeltaMs")
+            Diag.d(DiagnosticArea.OAUTH, TAG, "Whoop-Refresh: needsRefresh=${state.needsTokenRefresh} expiryDeltaMs=${if (expiry != null) expiry - nowMs else Long.MIN_VALUE}")
         }
-        if (rt.isNullOrBlank()) {
-            Diag.e(DiagnosticArea.OAUTH, 
+        if (state.refreshToken.isNullOrBlank()) {
+            Diag.e(DiagnosticArea.OAUTH,
                 TAG,
                 "Whoop-Refresh: KEIN refreshToken im AuthState — Whoop hat beim Login keinen Refresh-Token zurückgegeben (offline-Scope nicht akzeptiert?). Kein Refresh möglich.",
             )
-            // Frank's Wunsch 2026-05-09: alte Daten erhalten lassen wenn Refresh
-            // nicht moeglich. NICHT clearWhoopAuthState() rufen — der State bleibt,
-            // die Settings zeigen weiter "verbunden", die DB-Daten bleiben sichtbar.
-            // UI zeigt im Banner ehrlich an: "Refresh-Token fehlt — neu anmelden".
-            throw IllegalStateException(
-                "Whoop-Refresh-Token fehlt — bitte unter API-Schlüssel neu anmelden."
-            )
+            // Frank-Wunsch 2026-05-09: alte Daten erhalten lassen wenn Refresh nicht moeglich.
+            // NICHT clearWhoopAuthState() rufen — der State bleibt, die DB-Daten bleiben sichtbar.
+            markWhoopReauthNeeded("Refresh-Token fehlt")
+            throw WhoopReauthRequiredException()
         }
-        val clientAuth = ClientSecretPost(clientSecret)
+        // Bug-Fix 2026-10-13 (Whoop seit 09.10. ohne Daten): Whoop gibt bei jedem Refresh einen NEUEN
+        // Refresh-Token aus und entwertet den alten. Reisst die Verbindung genau dabei ab, ist der alte
+        // Token verbraucht und der neue nie angekommen — danach lehnt Whoop jeden Refresh endgueltig ab
+        // (invalid_request). Das heilt nur eine neue Anmeldung. Deshalb:
+        //  - Ist die Anmeldung als abgelaufen markiert, nicht bei jedem Abgleich erneut anklopfen, sondern
+        //    nur alle paar Stunden pruefen (heilt sich selbst, falls Whoop doch wieder annimmt).
+        //  - Netzfehler sofort wiederholen (Schleife unten).
+        //  - Endgueltige OAuth-Fehler merken, Frank benachrichtigen und klar benennen.
+        val reauthSince = secrets.whoopReauthSinceMs
+        if (reauthSince > 0L && nowMs - lastWhoopReauthProbeMs < REAUTH_PROBE_INTERVAL_MS) {
+            throw WhoopReauthRequiredException()
+        }
+        if (reauthSince > 0L) lastWhoopReauthProbeMs = nowMs
+
+        var lastError: AuthorizationException? = null
+        for (attempt in 0..NETWORK_RETRY_DELAYS_MS.size) {
+            if (attempt > 0) delay(NETWORK_RETRY_DELAYS_MS[attempt - 1])
+            val (token, error) = refreshWhoopOnce(state, ClientSecretPost(clientSecret))
+            if (error == null) {
+                if (reauthSince > 0L) {
+                    Diag.i(DiagnosticArea.OAUTH, TAG, "Whoop-Anmeldung funktioniert wieder — Markierung entfernt")
+                    secrets.whoopReauthSinceMs = 0L
+                    problemNotifier.whoopWiederOk()
+                }
+                return@withLock token
+            }
+            lastError = error
+            Diag.e(DiagnosticArea.OAUTH,
+                TAG,
+                "Whoop-Token-Refresh fehlgeschlagen (Versuch ${attempt + 1}) — type=${error.type} code=${error.code} error=${error.error} desc=${error.errorDescription} uri=${error.errorUri}",
+                error,
+            )
+            // Nur Netzfehler lohnen eine Wiederholung; alles andere ist eine Antwort von Whoop.
+            if (error.type != AuthorizationException.TYPE_GENERAL_ERROR) break
+        }
+        if (lastError?.type == AuthorizationException.TYPE_OAUTH_TOKEN_ERROR) {
+            // Frank-Wunsch 2026-05-09 bleibt: AuthState NICHT loeschen, alte Daten bleiben sichtbar.
+            markWhoopReauthNeeded("${lastError.error}: ${lastError.errorDescription}")
+            throw WhoopReauthRequiredException()
+        }
+        throw java.io.IOException("Whoop ist gerade nicht erreichbar (${lastError?.errorDescription ?: "Netzwerkfehler"}).")
+    }
+
+    /** Ein einzelner Refresh-Versuch. Liefert (Token, null) oder (null, Fehler). */
+    private suspend fun refreshWhoopOnce(
+        state: AuthState,
+        clientAuth: net.openid.appauth.ClientAuthentication,
+    ): Pair<String?, AuthorizationException?> {
         val service = newService()
         return suspendCancellableCoroutine { cont ->
-            // Schicht 1 — praeventiv: ClientSecretPost als ClientAuthentication
-            // mitsenden. AppAuth haengt das Client-Secret an den Token-Refresh-
-            // Request, Whoop akzeptiert, neuer Access-Token kommt zurueck.
+            // ClientSecretPost: Whoop ist ein Confidential Client und verlangt das Secret beim Refresh.
             state.performActionWithFreshTokens(service, clientAuth) { accessToken, _, ex ->
-                if (ex != null) {
-                    // Schicht 4 — Diagnose: alles was Whoop geschickt hat in den Log
-                    Diag.e(DiagnosticArea.OAUTH, 
-                        TAG,
-                        "Whoop-Token-Refresh fehlgeschlagen — type=${ex.type} code=${ex.code} error=${ex.error} desc=${ex.errorDescription} uri=${ex.errorUri}",
-                        ex,
-                    )
-                    // Schicht 3 — Frank-Wunsch 2026-05-09: NICHT mehr clearen.
-                    // Wenn der Refresh fehlschlaegt, bleibt der AuthState bestehen.
-                    // Vorteile: alte DB-Daten bleiben sichtbar, Settings zeigen
-                    // weiter "verbunden", Frank kann manuell neu anmelden wenn er
-                    // will. Nachteil (akzeptiert): UI ist etwas widerspruechlich,
-                    // aber besser als Datenverlust.
-                    cont.resume(null)
+                if (ex != null || accessToken == null) {
+                    cont.resume(null to (ex ?: AuthorizationException.GeneralErrors.NETWORK_ERROR))
                 } else {
-                    Diag.d(DiagnosticArea.OAUTH, 
+                    Diag.d(DiagnosticArea.OAUTH,
                         TAG,
-                        "Whoop-Token-Refresh OK — neuer Access-Token erhalten (Länge=${accessToken?.length ?: 0})",
+                        "Whoop-Token-Refresh OK — neuer Access-Token erhalten (Länge=${accessToken.length})",
                     )
                     saveWhoopAuthState(state)
                     secrets.whoopAccessToken = accessToken
-                    cont.resume(accessToken)
+                    cont.resume(accessToken to null)
                 }
                 service.dispose()
             }
         }
+    }
+
+    /** True, solange Whoop die gespeicherte Anmeldung ablehnt und Frank sich neu anmelden muss. */
+    fun whoopNeedsReauth(): Boolean = secrets.whoopReauthSinceMs > 0L
+
+    private fun markWhoopReauthNeeded(grund: String) {
+        if (secrets.whoopReauthSinceMs == 0L) {
+            secrets.whoopReauthSinceMs = System.currentTimeMillis()
+            lastWhoopReauthProbeMs = System.currentTimeMillis()
+            Diag.e(DiagnosticArea.OAUTH, TAG, "Whoop-Anmeldung abgelaufen ($grund) — neue Anmeldung nötig, Frank wird benachrichtigt")
+        }
+        // Bei jeder Pruefung erneut zeigen (alle paar Stunden, ohne Ton): eine weggewischte Meldung
+        // soll nicht dazu fuehren, dass Whoop wieder tagelang unbemerkt stillsteht.
+        problemNotifier.whoopNeuAnmelden()
     }
 
     // Polar V3/V4/Flow-Web OAuth-Logik entfernt 2026-05-17 (Frank-Wunsch).
@@ -418,6 +465,12 @@ constructor(
 
     companion object {
         private const val TAG = "OAuthService"
+
+        /** Wartezeiten vor den Wiederholungen eines Whoop-Refreshs nach einem Netzfehler. */
+        private val NETWORK_RETRY_DELAYS_MS = longArrayOf(1_500L, 4_000L)
+
+        /** So oft wird bei abgelaufener Anmeldung geprueft, ob Whoop wieder annimmt. */
+        private const val REAUTH_PROBE_INTERVAL_MS = 6L * 60L * 60L * 1000L
         // Whoop's Developer-Dashboard-Validator akzeptiert nur Redirect-URIs mit
         // "://" (zwei Slashes nach dem Schema). RFC 8252 erlaubt zwar auch ":/",
         // Whoop's Parser aber nicht — daher beide URIs einheitlich auf "://".
@@ -439,3 +492,7 @@ constructor(
 
     }
 }
+
+/** Whoop lehnt die gespeicherte Anmeldung endgueltig ab — nur eine neue Anmeldung hilft. */
+class WhoopReauthRequiredException :
+    IllegalStateException("Whoop-Anmeldung abgelaufen — bitte unter Einstellungen → API-Schlüssel bei Whoop neu anmelden.")

@@ -359,12 +359,17 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // synchronisieren wenn seit dem letzten Sync >= 8 h vergangen sind. Damit ist der
         // Spam-Fall ausgeschlossen UND der Ueber-Nacht-Fall abgedeckt. Der Mutex im Manager
         // verhindert Doppel-Laeufe falls frischer Start und Foreground-Event zusammenfallen.
+        // 2026-10-13: Hintergrund-Abgleich der Biomarker bei JEDEM Prozessstart sicherstellen — auch
+        // wenn der Prozess nur fuer Jarvis oder einen Worker startet und die Oberflaeche nie aufgeht.
+        scheduler.ensureBiomarkerSyncJob()
+
         ProcessLifecycleOwner.get().lifecycle.addObserver(
             object : DefaultLifecycleObserver {
                 override fun onStart(owner: LifecycleOwner) {
                     applicationScope.launch {
                         runCatching {
-                                // Drive sofort (1:1-Multi-Device-Sync), Fitness-APIs nur nach 8h.
+                                // Drive sofort (1:1-Multi-Device-Sync), Fitness-APIs wenn aelter als 15 Minuten
+                                // (bis 2026-10-13: 8 h).
                                 foregroundSync.syncForeground(
                                     ForegroundSyncManager.FOREGROUND_SYNC_MIN_INTERVAL_MS,
                                 )
