@@ -17,7 +17,7 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
     private let allePruefenSchalter = Schalter(.zweit, "Alle prüfen")
     private let neuLadenSchalter = Schalter(.leise, "Neu laden")
     private let diagnoseSchalter = Schalter(.leise, "Diagnose exportieren")
-    private let alleUpdatesSchalter = Schalter(.haupt, "Alle installieren")
+    private let alleUpdatesSchalter = Schalter(.haupt, "Alle Updates installieren")
     private let katalogFehlerBand = FlaechenView(ton: .fehler, eckenRadius: 9)
     private let katalogFehlerText: ThemedLabel
 
@@ -446,6 +446,9 @@ final class HauptFensterController: NSWindowController, NSWindowDelegate {
 
         allePruefenSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
         alleUpdatesSchalter.isEnabled = !modell.laeuftSammelvorgang && modell.sammelMoeglich
+        alleUpdatesSchalter.titel = modell.sammelText
+        alleUpdatesSchalter.auspraegung = modell.anzahlUpdates > 0 ? .haupt : .zweit
+        alleUpdatesSchalter.erledigt = modell.allesAktuell
         neuLadenSchalter.isEnabled = modell.sammelMoeglich
         diagnoseSchalter.isEnabled = !modell.exportLaeuft
 

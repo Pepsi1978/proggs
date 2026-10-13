@@ -292,7 +292,19 @@ final class Schalter: NSControl {
     /// `AktionBetont` in HauptFenster.xaml).
     var betont = false { didSet { farbenAnwenden() } }
 
-    private(set) var auspraegung: Auspraegung
+    /// Gruen und ohne Klick: der Sammelschalter bei "Alles aktuell" — nichts zu tun, also auch
+    /// keine Aufforderung.
+    var erledigt = false {
+        didSet {
+            guard erledigt != oldValue else { return }
+            if erledigt { unterMaus = false; gedrueckt = false }
+            farbenAnwenden()
+        }
+    }
+
+    var auspraegung: Auspraegung {
+        didSet { if auspraegung != oldValue { farbenAnwenden() } }
+    }
     var waagerechterRand: CGFloat = 16 { didSet { invalidateIntrinsicContentSize() } }
     var senkrechterRand: CGFloat = 9 { didSet { invalidateIntrinsicContentSize() } }
 
@@ -367,9 +379,9 @@ final class Schalter: NSControl {
         beobachtung = bereich
     }
 
-    override func mouseEntered(with event: NSEvent) { if isEnabled { unterMaus = true } }
+    override func mouseEntered(with event: NSEvent) { if isEnabled && !erledigt { unterMaus = true } }
     override func mouseExited(with event: NSEvent) { unterMaus = false; gedrueckt = false }
-    override func mouseDown(with event: NSEvent) { if isEnabled { gedrueckt = true } }
+    override func mouseDown(with event: NSEvent) { if isEnabled && !erledigt { gedrueckt = true } }
 
     override func mouseUp(with event: NSEvent) {
         let warGedrueckt = gedrueckt
@@ -384,13 +396,13 @@ final class Schalter: NSControl {
     }
 
     override func accessibilityPerformPress() -> Bool {
-        guard isEnabled else { return false }
+        guard isEnabled, !erledigt else { return false }
         ausloesen()
         return true
     }
 
     override func resetCursorRects() {
-        addCursorRect(bounds, cursor: isEnabled ? .pointingHand : .arrow)
+        addCursorRect(bounds, cursor: isEnabled && !erledigt ? .pointingHand : .arrow)
     }
 
     @objc func farbenAnwenden() {
@@ -401,6 +413,14 @@ final class Schalter: NSControl {
         // Die Deckung ersetzt die Opacity-Trigger aus dem WPF-ControlTemplate.
         let deckung: CGFloat = !isEnabled ? 0.4 : (gedrueckt ? 0.7 : (unterMaus ? 0.86 : 1.0))
         alphaValue = deckung
+
+        if erledigt {
+            layer?.backgroundColor = satz.laeuftFlaeche.cgColor
+            layer?.borderColor = satz.laeuftRand.cgColor
+            beschriftung.festeFarbe = satz.laeuftText
+            window?.invalidateCursorRects(for: self)
+            return
+        }
 
         if betont {
             layer?.backgroundColor = satz.akzentVerlaufOben.cgColor

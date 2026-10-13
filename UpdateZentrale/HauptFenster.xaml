@@ -94,9 +94,29 @@
                 <Button Content="Alle prüfen" Style="{StaticResource SchalterZweit}"
                         Command="{Binding AllePruefenCommand}" Margin="0,0,8,0"
                         IsEnabled="{Binding SammelMoeglich}" />
-                <Button Content="Alle Updates installieren" Style="{StaticResource SchalterHaupt}"
+                <Button Content="{Binding SammelText}"
                         Command="{Binding AlleAktualisierenCommand}"
-                        IsEnabled="{Binding SammelMoeglich}" />
+                        IsEnabled="{Binding SammelMoeglich}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource SchalterHaupt}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HatUpdates}" Value="False">
+                                    <Setter Property="Background" Value="{DynamicResource PinselFlaecheHoch}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource PinselRand}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource PinselText}" />
+                                </DataTrigger>
+                                <!-- Grün und ohne Klick: nichts zu tun, also auch keine Aufforderung -->
+                                <DataTrigger Binding="{Binding AllesAktuell}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource PinselLaeuftFlaeche}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource PinselLaeuftRand}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource PinselLaeuftText}" />
+                                    <Setter Property="IsHitTestVisible" Value="False" />
+                                    <Setter Property="Focusable" Value="False" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
         </Grid>
 

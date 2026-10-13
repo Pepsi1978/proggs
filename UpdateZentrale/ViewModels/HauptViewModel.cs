@@ -204,6 +204,30 @@ public sealed partial class HauptViewModel : ObservableObject
 
     public int AnzahlUpdates => Programme.Count(p => p.HatUpdate);
 
+    /// <summary>Green only when every card was checked without an open update or a failed check.</summary>
+    public bool AllesAktuell => Programme.Count > 0 && Programme.All(p =>
+        p.Zustand is not (UpdateZustand.Unbekannt or UpdateZustand.Pruefe or UpdateZustand.UpdateVerfuegbar
+            or UpdateZustand.Laeuft or UpdateZustand.Fehler));
+
+    public bool HatUpdates => AnzahlUpdates > 0;
+
+    /// <summary>Label of the batch button: it only invites a click while updates are open.</summary>
+    public string SammelText => AnzahlUpdates switch
+    {
+        0 => AllesAktuell ? "✔ Alles aktuell" : "Keine Updates offen",
+        1 => "1 Update installieren",
+        var n => $"Alle {n} Updates installieren"
+    };
+
+    private void SammelAnzeigeMelden()
+    {
+        OnPropertyChanged(nameof(AnzahlUpdates));
+        OnPropertyChanged(nameof(UpdateZusammenfassung));
+        OnPropertyChanged(nameof(AllesAktuell));
+        OnPropertyChanged(nameof(HatUpdates));
+        OnPropertyChanged(nameof(SammelText));
+    }
+
     public string UpdateZusammenfassung => AnzahlUpdates switch
     {
         0 => "Keine Updates offen",
@@ -249,16 +273,14 @@ public sealed partial class HauptViewModel : ObservableObject
         }
 
         AusgewaehltesProgramm = Programme.FirstOrDefault();
-        OnPropertyChanged(nameof(AnzahlUpdates));
-        OnPropertyChanged(nameof(UpdateZusammenfassung));
+        SammelAnzeigeMelden();
     }
 
     private void AufProgrammGeaendert(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(ProgrammViewModel.Zustand) or nameof(ProgrammViewModel.HatUpdate))
         {
-            OnPropertyChanged(nameof(AnzahlUpdates));
-            OnPropertyChanged(nameof(UpdateZusammenfassung));
+            SammelAnzeigeMelden();
         }
     }
 

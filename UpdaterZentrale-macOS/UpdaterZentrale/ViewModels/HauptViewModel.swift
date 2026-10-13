@@ -128,6 +128,25 @@ final class HauptViewModel {
 
     var anzahlUpdates: Int { programme.filter(\.hatUpdate).count }
 
+    /// Gruen nur, wenn jede Karte geprueft ist und weder ein Update noch ein Fehler offen steht.
+    var allesAktuell: Bool {
+        !programme.isEmpty && programme.allSatisfy {
+            switch $0.zustand {
+            case .unbekannt, .pruefe, .updateVerfuegbar, .fehler: return false
+            default: return true
+            }
+        }
+    }
+
+    /// Beschriftung des Sammelschalters: er laedt nur zum Klick ein, solange Updates offen sind.
+    var sammelText: String {
+        switch anzahlUpdates {
+        case 0: return allesAktuell ? "✔ Alles aktuell" : "Keine Updates offen"
+        case 1: return "1 Update installieren"
+        default: return "Alle \(anzahlUpdates) Updates installieren"
+        }
+    }
+
     var updateZusammenfassung: String {
         switch anzahlUpdates {
         case 0: return "Keine Updates offen"
