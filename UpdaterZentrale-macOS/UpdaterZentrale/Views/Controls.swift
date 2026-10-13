@@ -415,9 +415,10 @@ final class Schalter: NSControl {
         alphaValue = deckung
 
         if erledigt {
-            layer?.backgroundColor = satz.laeuftFlaeche.cgColor
-            layer?.borderColor = satz.laeuftRand.cgColor
-            beschriftung.festeFarbe = satz.laeuftText
+            // Sattes Gruen mit weisser Schrift, in beiden Darstellungen gleich gut sichtbar.
+            layer?.backgroundColor = NSColor.wpf("#16A34A").cgColor
+            layer?.borderColor = NSColor.wpf("#128A3E").cgColor
+            beschriftung.festeFarbe = .white
             window?.invalidateCursorRects(for: self)
             return
         }

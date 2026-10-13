@@ -107,9 +107,9 @@
                                 </DataTrigger>
                                 <!-- Grün und ohne Klick: nichts zu tun, also auch keine Aufforderung -->
                                 <DataTrigger Binding="{Binding AllesAktuell}" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource PinselLaeuftFlaeche}" />
-                                    <Setter Property="BorderBrush" Value="{DynamicResource PinselLaeuftRand}" />
-                                    <Setter Property="Foreground" Value="{DynamicResource PinselLaeuftText}" />
+                                    <Setter Property="Background" Value="#16A34A" />
+                                    <Setter Property="BorderBrush" Value="#128A3E" />
+                                    <Setter Property="Foreground" Value="#FFFFFF" />
                                     <Setter Property="IsHitTestVisible" Value="False" />
                                     <Setter Property="Focusable" Value="False" />
                                 </DataTrigger>
