@@ -694,3 +694,15 @@
 | SEC1 Logging-Secrets | §6.4 sicheres Logging |
 | SEC2–SEC4 Pinning | §6.5/§6.6 Pinning |
 | A9 baseUrl | §1.6 baseUrl/Endpoints |
+
+## OAuth: Refresh-Token nach Netzabriss verbraucht, danach dauerhaft `invalid_request` (13.10.2026, EntropieReductor/Whoop)
+
+- **Symptom:** Eine Quelle liefert tagelang keine neuen Daten. Im Protokoll erst EIN `Network error` beim Token-Refresh (AppAuth type=0 code=3), ab dem nächsten Versuch bei jedem Refresh `invalid_request` bzw. `invalid_grant` (type=2).
+- **Ursache:** Der Anbieter (Whoop) gibt bei jedem Refresh einen neuen Refresh-Token aus und entwertet den alten. Kommt die Anfrage an, die Antwort aber nicht zurück, ist der gespeicherte Token verbraucht. Kein Code holt ihn zurück: nur eine neue Anmeldung.
+- **Erkennen:** Gleicher Code, gleicher gespeicherter Zustand, andere Serverantwort direkt nach einem Netzfehler beim Refresh.
+- **Absicherung:**
+  1. Refresh hinter einen Mutex (nie zwei gleichzeitig mit demselben Einmal-Token).
+  2. Netzfehler beim Refresh sofort ein- bis zweimal wiederholen.
+  3. OAuth-Fehler beim Refresh dauerhaft merken, den Nutzer benachrichtigen und nur alle paar Stunden neu prüfen, statt bei jedem Abgleich anzuklopfen.
+  4. Jede Quelle einzeln bewerten und den Zustand nach außen geben (Fußzeile, Brücke zu anderen Apps). Ein Sammel-Abgleich, der beim ersten Fehler abbricht, versteckt den Fehler und lässt auch die gesunden Quellen alt aussehen.
+- **Verwandt:** Ein „übersprungen, läuft bereits" (`tryLock`) darf einem Aufrufer nie als „abgeglichen" gemeldet werden: auf den laufenden Abgleich warten und dessen Ergebnis zurückgeben.
