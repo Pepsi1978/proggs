@@ -100,6 +100,7 @@ Keiner. Ob die Leiste offen ist, überlebt keinen Neustart.
 | App | Stand | Pfad der Kopie |
 |---|---|---|
 | GenialeIdeen | v1 | `GenialeIdeen/app/src/main/java/de/frank/module/sidebar/` |
+| Gedankenspeicher | v1 | `Gedankenspeicher/app/src/main/java/de/frank/module/sidebar/` — nutzt nur `sidebarWischGeste` am eigenen Drawer (Geste nur im Verlauf, eigener Scrim, Sitzungsliste bleibt lazy) |
 
 ## Abnahme
 

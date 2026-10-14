@@ -41,6 +41,7 @@
 | 7 | Side-Effect waehlen | Richtige API je Fall; Keys = gelesene Werte; kritisch in `viewModelScope` | §4 |
 | 8 | Lazy-Liste / Pager | Stabiler eindeutiger `key`+`contentType`; `fillParentMaxSize()` | §5 |
 | 15 | Drag & Drop / Reihenfolge in Android-/Kotlin-Apps | Franks Standard: gerade, sichtbare Karte; feste Viewport-Geste; reale Layoutplätze; weiche Nachbarn; bidirektionales Randscrollen | §5.1 |
+| 16 | Sidebar / Seitenleiste (Drawer) | Modul M1.3 einbauen: Wisch-Absicht im Initial-Pass erkennen → `open()`/`close()` in einem Zug, nativer Drag nur offen+ruhend, Inhalt ohne `LazyColumn` | §5.2 |
 | 9 | Modifier-Reihenfolge | Layout → `clip`→`background`→`border` → `clickable`; eigene via `Modifier.Node` | §6 |
 | 10 | Theming / Insets | `dynamicColor`+API-Guard; Scaffold-`innerPadding`, keine Doppel-Insets | §7 |
 | 11 | Navigation | type-safe Routes, nur IDs; geteiltes VM am Parent-Entry | §8 |
@@ -417,6 +418,41 @@ und letzten Platz ablegen; unterschiedliche Kartenhöhen; erneut greifen währen
 normales Scrollen danach; Inhaltsupdates während des Ziehens; reduzierte Bewegung. Das beschreibt
 das erforderliche Verhalten und ist keine Behauptung, dass jede Randbedingung der Referenz
 instrumentiert getestet wurde.
+
+### 5.2 Sidebar / Seitenleiste ohne Ruckeln — verbindlicher Standard für Android-/Kotlin-Apps
+
+Stand 14.10.2026, Referenz: GenialeIdeen 1.7.19, fertig als **Modul M1.3 Sidebar**
+([`Module/Android/M1.3-Sidebar/`](../../Module/Android/M1.3-Sidebar/MODUL.md)). Neue Sidebars
+nicht von Hand bauen, sondern das Modul einbauen (`modul-einbauen`, „bau M1.3 ein").
+
+**Ursache des typischen Ruckelns:** Beim nativen `ModalNavigationDrawer`-Drag folgt die Leiste
+dem Finger. Jedes verspätete Bild in dieser Fingerphase ist sichtbar, und beim Loslassen setzt
+die Restanimation an einem krummen Versatz an. Dazu kommt eine `LazyColumn` im Leisteninhalt,
+die ihre Zeilen erst mitten in der Öffnungsanimation aufbaut.
+
+**Die Bausteine — zusammen übernehmen:**
+
+1. **Absicht erkennen, nicht mitziehen.** Eigene Geste per `pointerInput` + `awaitEachGesture`:
+   waagerecht über `viewConfiguration.touchSlop` in die richtige Richtung → `drawerState.open()`
+   bzw. `close()` in einem Zug starten. Der Finger bewegt die Leiste nie direkt.
+2. **Im `PointerEventPass.Initial` übernehmen** (`awaitFirstDown(requireUnconsumed = false,
+   pass = Initial)`), danach jede Bewegung `consume()`. So kommt der native Drag nie zum Zug.
+3. **Nativen Drag fast immer aus:** `gesturesEnabled = isOpen && !isAnimationRunning`
+   (zusätzlich eigene Bildschirmbedingung, z. B. `ziel == VERLAUF`, wenn die Leiste nur auf
+   einem Bildschirm wischbar sein soll).
+4. **Keine Geste während einer Animation** annehmen (`if (isAnimationRunning) return`),
+   sonst fallen sich zwei Animationen ins Wort.
+5. **Senkrecht und Listen nicht stehlen:** senkrechter Weg ≥ waagerechter → abbrechen;
+   im `PointerEventPass.Final` schon verbrauchte Änderung → abbrechen.
+6. **Leisteninhalt vorab aufbauen:** überschaubare Listen als `Column` +
+   `verticalScroll(rememberScrollState())` statt `LazyColumn` (GenialeIdeen, Commit
+   `81ae0e4f5`). Nur wirklich lange Listen (z. B. Sitzungsverlauf im Gedankenspeicher) bleiben lazy.
+7. **Zurück schließt zuerst die Leiste:** `BackHandler(enabled = isOpen)` zuletzt registrieren.
+8. **Scope:** `open()`/`close()` aus `rememberCoroutineScope()` starten (braucht die
+   `MonotonicFrameClock`, siehe §1).
+
+**Abnahme von Hand:** langsam und schnell auf- und zuwischen; senkrecht in der Liste dahinter
+scrollen; während der Animation erneut wischen; Zurück bei offener Leiste.
 
 ---
 

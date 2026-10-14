@@ -28,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import de.frank.module.sidebar.sidebarWischGeste
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.rememberDrawerState
@@ -562,9 +563,12 @@ private fun Oberflaeche(
         // breitere Fassung (320 statt 280 dp).
         val breit = maxWidth >= 400.dp
 
+        // Wischgeste aus Modul M1.3: Der Finger zieht die Leiste nicht mit, die Animation
+        // läuft in einem Zug. Der native Drag bleibt nur bei offener, ruhender Leiste an.
         ModalNavigationDrawer(
             drawerState = schublade,
-            gesturesEnabled = ziel == Ziel.VERLAUF,
+            gesturesEnabled = ziel == Ziel.VERLAUF && schublade.isOpen && !schublade.isAnimationRunning,
+            modifier = if (ziel == Ziel.VERLAUF) Modifier.sidebarWischGeste(schublade, bereich) else Modifier,
             scrimColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.52f),
             drawerContent = {
                 Schublade(

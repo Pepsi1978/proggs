@@ -21,6 +21,7 @@
 | 7 | Side-Effect waehlen | Richtige API je Fall; Keys = gelesene Werte; kritisch in `viewModelScope` | §4 |
 | 8 | Lazy-Liste / Pager | Stabiler eindeutiger `key`+`contentType`; `fillParentMaxSize()` | §5 |
 | 15 | Drag & Drop / Reihenfolge in Android-/Kotlin-Apps | Franks Standard: gerade, sichtbare Karte; feste Viewport-Geste; reale Layoutplätze; weiche Nachbarn; bidirektionales Randscrollen | §5.1 |
+| 16 | Sidebar / Seitenleiste (Drawer) | Modul M1.3 einbauen: Wisch-Absicht im Initial-Pass erkennen → `open()`/`close()` in einem Zug, nativer Drag nur offen+ruhend, Inhalt ohne `LazyColumn` | §5.2 |
 | 9 | Modifier-Reihenfolge | Layout → `clip`→`background`→`border` → `clickable`; eigene via `Modifier.Node` | §6 |
 | 10 | Theming / Insets | `dynamicColor`+API-Guard; Scaffold-`innerPadding`, keine Doppel-Insets | §7 |
 | 11 | Navigation | type-safe Routes, nur IDs; geteiltes VM am Parent-Entry | §8 |
