@@ -40,14 +40,14 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     val abend = maxOf(1f - weich(an(t, 3f, 5f)), weich(an(t, 18f, 14f)))
     val lampeAn = an(t, 17f, 0.3f) * (1f - an(t, 38.6f, 0.3f))
 
-    // Wand mit Tapetenstreifen
-    drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF241A13), Color(0xFF16100C)) else listOf(Color(0xFFFFF2E4), Color(0xFFFADFC4))))
+    // Wand mit Tapetenstreifen; im Dunkelmodus ein warm beleuchtetes Zimmer statt eines fast schwarzen Raums
+    drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF5C4535), Color(0xFF47352A)) else listOf(Color(0xFFFFF2E4), Color(0xFFFADFC4))))
     for (i in 0..24) drawLine(Color.Black.copy(alpha = if (d) 0.08f else 0.03f), Offset(i * w / 24f, 0f), Offset(i * w / 24f, boden), 2f)
     // Der Boden reicht in die Tiefe bis hinter die hinteren Tischbeine: Dort stößt er an die Wand.
     val wandFuss = boden + (flucht.y - boden) * 0.2f
     // Fußleiste mit Oberkante
-    drawRect(if (d) Color(0xFF2E2118) else Color(0xFFE9C9A6), Offset(0f, wandFuss - h * 0.03f), Size(w, h * 0.03f))
-    drawRect(Color.White.copy(alpha = if (d) 0.06f else 0.4f), Offset(0f, wandFuss - h * 0.03f), Size(w, h * 0.005f))
+    drawRect(if (d) Color(0xFF6B513F) else Color(0xFFE9C9A6), Offset(0f, wandFuss - h * 0.03f), Size(w, h * 0.03f))
+    drawRect(Color.White.copy(alpha = if (d) 0.12f else 0.4f), Offset(0f, wandFuss - h * 0.03f), Size(w, h * 0.005f))
 
     // Fenster mit Laibung (Tiefe) und Sonnenuntergang
     val fen = Rect(w * 0.83f, h * 0.08f, w * 0.97f, h * 0.56f)
@@ -77,11 +77,11 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
         drawRect(Color(0xFFFFD27A).copy(alpha = abend), Offset(fen.left + fen.width * 0.86f, fen.bottom - fen.height * 0.19f), Size(fen.width * 0.05f, fen.height * 0.05f))
         drawRect(dach, Offset(fen.left + fen.width * 0.4f, fen.bottom - fen.height * 0.16f), Size(fen.width * 0.05f, fen.height * 0.16f))
     }
-    val rahmen = if (d) Color(0xFF3A2A1F) else Color.White
+    val rahmen = if (d) Color(0xFF7A604D) else Color.White
     drawRect(rahmen, fen.topLeft, fen.size, style = Stroke(h * 0.02f))
     drawLine(rahmen, Offset(fen.center.x, fen.top), Offset(fen.center.x, fen.bottom), h * 0.012f)
     // Fensterbank als flacher Quader
-    quader(Rect(fen.left - h * 0.02f, fen.bottom, fen.right + h * 0.02f, fen.bottom + h * 0.025f), 0.06f, flucht, if (d) Color(0xFF4A3526) else Color(0xFFF3E4D2))
+    quader(Rect(fen.left - h * 0.02f, fen.bottom, fen.right + h * 0.02f, fen.bottom + h * 0.025f), 0.06f, flucht, if (d) Color(0xFF86684F) else Color(0xFFF3E4D2))
     // Vorhang mit Faltenschatten
     val vorhang = Path().apply {
         moveTo(fen.left - h * 0.05f, fen.top - h * 0.03f)
@@ -101,7 +101,7 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
 
     // Regal mit Büchern, Pflanze und Bild
     val regalY = h * 0.34f
-    quader(Rect(w * 0.03f, regalY, w * 0.23f, regalY + h * 0.022f), 0.08f, flucht, if (d) Color(0xFF4A3526) else Color(0xFFB9855A))
+    quader(Rect(w * 0.03f, regalY, w * 0.23f, regalY + h * 0.022f), 0.08f, flucht, if (d) Color(0xFF7E5E44) else Color(0xFFB9855A))
     val buchFarben = listOf(f.primaer, f.primaer.dunkler(0.35f), Color(0xFF8C7B6E), f.tertiaer, Color(0xFFD9C2AE), f.primaer.heller(0.3f))
     var bx = w * 0.04f
     for (i in 0 until 7) {
@@ -125,19 +125,19 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     }
     val bild = Rect(w * 0.27f, h * 0.12f, w * 0.37f, h * 0.3f)
     drawRect(Color.Black.copy(alpha = 0.12f), bild.topLeft + Offset(4f, 5f), bild.size)
-    drawRect(if (d) Color(0xFF4A3526) else Color(0xFFFFFFFF), bild.topLeft, bild.size)
+    drawRect(if (d) Color(0xFF86684F) else Color(0xFFFFFFFF), bild.topLeft, bild.size)
     drawRect(Brush.verticalGradient(listOf(f.primaer.heller(0.4f), f.primaer)), bild.topLeft + Offset(4f, 4f), Size(bild.width - 8f, bild.height - 8f))
     drawPath(Path().apply { moveTo(bild.left + 4f, bild.bottom - 4f); lineTo(bild.left + bild.width * 0.4f, bild.top + bild.height * 0.45f); lineTo(bild.left + bild.width * 0.6f, bild.top + bild.height * 0.65f); lineTo(bild.left + bild.width * 0.75f, bild.top + bild.height * 0.5f); lineTo(bild.right - 4f, bild.bottom - 4f); close() }, f.primaer.dunkler(0.45f))
     // Wanduhr
     val uhr = Offset(w * 0.47f, h * 0.17f)
     drawCircle(Color.Black.copy(alpha = 0.12f), h * 0.07f, uhr + Offset(3f, 4f))
-    drawCircle(if (d) Color(0xFF3A2A1F) else Color.White, h * 0.07f, uhr)
+    drawCircle(if (d) Color(0xFF7A604D) else Color.White, h * 0.07f, uhr)
     drawCircle(f.primaer.dunkler(0.2f), h * 0.07f, uhr, style = Stroke(h * 0.01f))
     rotate(runde(t, zyklus, 4) * 360f, uhr) { drawLine(f.text, uhr, uhr + Offset(0f, -h * 0.055f), 2f) }
     rotate(runde(t, zyklus, 1) * 360f + 90f, uhr) { drawLine(f.text, uhr, uhr + Offset(0f, -h * 0.035f), 3.5f, StrokeCap.Round) }
 
     // Boden aus Dielen, die zum Fluchtpunkt laufen
-    drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF241911), Color(0xFF33251A)) else listOf(Color(0xFFCFA277), Color(0xFFE2B88D)), wandFuss, h), Offset(0f, wandFuss), Size(w, h - wandFuss))
+    drawRect(Brush.verticalGradient(if (d) listOf(Color(0xFF3A2A1F), Color(0xFF503B2B)) else listOf(Color(0xFFCFA277), Color(0xFFE2B88D)), wandFuss, h), Offset(0f, wandFuss), Size(w, h - wandFuss))
     for (i in -4..18) {
         val x = i * w / 14f
         drawLine(Color.Black.copy(alpha = 0.12f), hinten(Offset(x, boden), 0.2f), Offset(x + (x - flucht.x) * (h - boden) / (boden - flucht.y), h), 1.5f)
@@ -152,7 +152,7 @@ internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
     val sitzHuefte = boden - 0.285f * s
     val tischY = sitzHuefte - 0.2f * s
     val tisch = Rect(sitzX + 0.14f * s, tischY, w * 0.8f, tischY + h * 0.035f)
-    val holz = if (d) Color(0xFF5A3E2B) else Color(0xFFB07A4F)
+    val holz = if (d) Color(0xFF7A5539) else Color(0xFFB07A4F)
     // Hintere Beine (kürzer, Richtung Fluchtpunkt), dann vordere
     for (x in listOf(tisch.left + h * 0.02f, tisch.right - h * 0.05f)) {
         val oben = hinten(Offset(x, tisch.bottom), 0.16f)
