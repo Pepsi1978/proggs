@@ -34,6 +34,10 @@ class WeckwortErkenner(context: Context) : AutoCloseable {
     private val melZeilen = ArrayDeque<FloatArray>()
     private val merkmale = ArrayDeque<FloatArray>()
 
+    /** Die 16 Einbettungen (flach, 1536 Werte), über die zuletzt geurteilt wurde: Grundlage für das [Stimmprofil]. */
+    var letzteMerkmale: FloatArray? = null
+        private set
+
     init { zuruecksetzen() }
 
     private fun sitzung(context: Context, datei: String): OrtSession =
@@ -46,6 +50,7 @@ class WeckwortErkenner(context: Context) : AutoCloseable {
         // Wie die Vorlage: 76 Zeilen aus Einsen, dann gibt es ab dem ersten Block Einbettungen.
         repeat(MEL_FENSTER) { melZeilen.addLast(FloatArray(MEL_BREITE) { 1f }) }
         merkmale.clear()
+        letzteMerkmale = null
     }
 
     /** Nimmt genau einen Block von [BLOCK] Werten und liefert den Wert für „Hey Jarvis“ (0 im Anlauf). */
@@ -71,6 +76,7 @@ class WeckwortErkenner(context: Context) : AutoCloseable {
 
         val eingabe = FloatArray(MERKMAL_FENSTER * MERKMALE)
         merkmale.forEachIndexed { i, m -> System.arraycopy(m, 0, eingabe, i * MERKMALE, MERKMALE) }
+        letzteMerkmale = eingabe
         return rechne(urteil, eingabe, longArrayOf(1, MERKMAL_FENSTER.toLong(), MERKMALE.toLong())).firstOrNull() ?: 0f
     }
 

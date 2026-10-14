@@ -33,8 +33,17 @@ object Weckwort {
     @Volatile var gerufenUm = 0L
         internal set
 
+    /** Zuletzt vom Stimmprofil abgewiesen (klang nicht nach Frank), für die Anzeige in den Einstellungen. */
+    private val _abgewiesen = MutableStateFlow<Treffer?>(null)
+    val abgewiesen: StateFlow<Treffer?> = _abgewiesen.asStateFlow()
+
+    /** Die Merkmale des letzten Treffers: Kommt danach nichts, lernt das [Stimmprofil] daraus einen Fehlalarm. */
+    @Volatile var trefferMerkmale: FloatArray? = null
+        internal set
+
     internal fun hoertZu(an: Boolean) { _hoertZu.value = an }
     internal fun erkannt(sicherheit: Float) { _letzter.value = Treffer(System.currentTimeMillis(), sicherheit) }
+    internal fun abgewiesen(sicherheit: Float) { _abgewiesen.value = Treffer(System.currentTimeMillis(), sicherheit) }
     internal fun rufen() { gerufenUm = System.currentTimeMillis(); _belegt.value = true }
 
     /** Die App übernimmt nach „Hey Jarvis“ (das Mikrofon bleibt dabei für sie belegt). */

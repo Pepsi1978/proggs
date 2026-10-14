@@ -14,10 +14,10 @@ class SprechEnde(
     private val anlaufMs: Long = 250,
     /** Kommt bis hierhin keine Sprache, war es ein Fehlalarm oder Frank hat es sich anders überlegt. */
     private val wartenMs: Long = 7_000,
-    /** So lange Stille nach dem letzten Wort beendet die Aufnahme. */
-    private val stilleMs: Long = 1_600,
+    /** So lange Stille nach dem letzten Wort beendet die Aufnahme. Großzügig, damit Frank mitten im Satz nachdenken kann. */
+    private val stilleMs: Long = 4_500,
     /** Höchstdauer einer Frage. */
-    private val hoechstMs: Long = 60_000,
+    private val hoechstMs: Long = 120_000,
 ) {
     enum class Lage { WEITER, FERTIG, NICHTS_GEHOERT }
 

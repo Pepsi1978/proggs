@@ -127,6 +127,8 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
             }
             Text(
                 "Sag „Hey Jarvis“: Jarvis geht auf, ein Piepton zeigt, dass er zuhört, du sprichst, und er antwortet gleich. " +
+                    "Erst nach 4,5 Sekunden Stille schickt er ab, du kannst also zwischendurch nachdenken. " +
+                    "Nach jeder vorgelesenen Antwort piept es wieder und du sprichst einfach weiter; sagst du nach dem Piepton nichts, endet das Gespräch. " +
                     "Auch bei gesperrtem Handy, dann bleibt das Gespräch hinter der Sperre und er antwortet nur mit der Stimme. " +
                     "Während Jarvis selbst aufnimmt oder vorliest, hört er nicht auf das Weckwort.",
                 color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
@@ -150,6 +152,48 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 val zeit = java.time.Instant.ofEpochMilli(t.zeitpunkt).atZone(java.time.ZoneId.systemDefault())
                     .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM., HH:mm 'Uhr'"))
                 Text("Zuletzt erkannt: $zeit, Sicherheit ${(t.sicherheit * 100).toInt()} %", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+            }
+
+            // Stimmprofil: Jarvis springt nur noch auf Franks Stimme an.
+            val stimme by de.frank.jarvis.weckwort.Stimmprofil.stand.collectAsState()
+            val abgewiesen by de.frank.jarvis.weckwort.Weckwort.abgewiesen.collectAsState()
+            Unterzeile("Nur auf meine Stimme hören")
+            val anlernen = stimme.anlernen
+            when {
+                anlernen != null -> {
+                    Zeile("Anlernen läuft", "$anlernen von ${de.frank.jarvis.weckwort.Stimmprofil.ANLERN_ZIEL}", f.primaer)
+                    Text(
+                        if (hoertZu) "Sag jetzt deutlich „Hey Jarvis“, so wie du es sonst auch sagst. Nach jedem erkannten Mal kommt ein kurzer Ton; dann kurz warten und noch einmal."
+                        else "Jarvis hört gerade nicht zu (er liest vor oder nimmt auf). Sobald „Hört zu“ oben steht, kann es losgehen.",
+                        color = f.text, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
+                    )
+                    Knopf("Abbrechen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.stimmeAnlernenAbbrechen() }
+                }
+                stimme.proben > 0 -> {
+                    Zeile("Stimmprofil", "Aktiv", f.erfolg)
+                    Text(
+                        "Angelernt mit ${stimme.proben} Proben" + (if (stimme.fehlalarme > 0) ", ${stimme.fehlalarme} Fehlalarme gelernt" else "") +
+                            ". Klingt ein „Hey Jarvis“ nicht nach dir, bleibt Jarvis still. Kommt nach dem Piepton nichts, merkt er sich das als Fehlalarm.",
+                        color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
+                    )
+                    abgewiesen?.let { t ->
+                        val zeit = java.time.Instant.ofEpochMilli(t.zeitpunkt).atZone(java.time.ZoneId.systemDefault())
+                            .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM., HH:mm 'Uhr'"))
+                        Text("Zuletzt abgewiesen: $zeit", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                    }
+                    Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Knopf("Neu anlernen", Modifier.weight(1f), haupt = false) { vm.stimmeAnlernen() }
+                        Knopf("Löschen", Modifier.weight(1f), haupt = false, farbe = f.gefahr) { vm.stimmeLoeschen() }
+                    }
+                }
+                else -> {
+                    Text(
+                        "Sag sechsmal „Hey Jarvis“, und Jarvis lernt, wie es bei dir klingt. Danach springt er nicht mehr auf ähnlich klingende Wörter, " +
+                            "Fernseher oder andere Leute an. Dauert eine Minute.",
+                        color = f.textSchwach, fontSize = 13.sp,
+                    )
+                    Knopf("Stimme anlernen", Modifier.padding(top = 10.dp).fillMaxWidth()) { vm.stimmeAnlernen() }
+                }
             }
         }
 

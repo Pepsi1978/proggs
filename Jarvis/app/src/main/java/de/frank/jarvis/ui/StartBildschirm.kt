@@ -27,7 +27,8 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.AddComment
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Refresh
@@ -58,6 +59,7 @@ import de.frank.jarvis.ui.theme.LocalFarben
 import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 import de.frank.jarvis.ui.theme.knopf3d
+import kotlinx.coroutines.launch
 
 /** Ein Schritt der Einrichtung: erledigt oder mit einem Knopf, der genau dorthin führt. */
 private class Schritt(val titel: String, val text: String, val fertig: Boolean, val knopf: String, val aktion: () -> Unit)
@@ -107,8 +109,11 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         if (vm.gespraech.isNotEmpty() && letzter >= 0) liste.animateScrollToItem(letzter)
     }
 
+    val schublade = rememberGespraecheSchublade()
+    val raum = androidx.compose.runtime.rememberCoroutineScope()
+    GespraecheSchublade(vm, schublade) {
     Column(Modifier.fillMaxSize()) {
-        Kopf(vm, tunnel, auswertung.laeuft)
+        Kopf(vm, tunnel, auswertung.laeuft) { raum.launch { schublade.open() } }
         LazyColumn(
             Modifier.weight(1f).fillMaxWidth(), state = liste,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -152,7 +157,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             if (vm.gespraech.isEmpty()) item(key = "vorschlaege") {
                 Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
                     Text("Frag mich etwas", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
-                    Text("Hier schreibst du direkt mit Jarvis. In ChatGPT sagst du einfach „Jarvis, …“.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 12.dp))
+                    Text("Hier schreibst du direkt mit Jarvis. Nach rechts wischen zeigt deine gespeicherten Gespräche. In ChatGPT sagst du einfach „Jarvis, …“.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 12.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("Was steht heute an?", "Wie sind meine Biowerte heute?", "Wann habe ich wieder frei?", "Welche Aufgaben sind überfällig?").forEach { frage ->
                             Chip(frage, aktiv = false) { vm.sende(frage) }
@@ -194,10 +199,11 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
             }
         }
     }
+    }
 }
 
 @Composable
-private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean) {
+private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, leisteOeffnen: () -> Unit) {
     val f = LocalFarben.current
     val (zeile, farbe) = when (tunnel.stufe) {
         TunnelStufe.ONLINE -> "Online · bereit für ChatGPT" to f.erfolg
@@ -206,14 +212,17 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean) {
         TunnelStufe.FEHLER -> tunnel.meldung to f.gefahr
         TunnelStufe.AUS -> "Ausgeschaltet" to f.textLeise
     }
-    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Kern(64.dp, if (tunnel.stufe == TunnelStufe.FEHLER) f.gefahr else f.primaer, aktiv = vm.denkt || tunnel.stufe == TunnelStufe.VERBINDET)
+    Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp, top = 10.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Gespräche: dasselbe wie von links nach rechts wischen.
+        Rundknopf(Icons.Rounded.Menu, "Gespräche", farbe = f.primaer) { leisteOeffnen() }
+        Spacer(Modifier.width(6.dp))
+        Kern(56.dp, if (tunnel.stufe == TunnelStufe.FEHLER) f.gefahr else f.primaer, aktiv = vm.denkt || tunnel.stufe == TunnelStufe.VERBINDET)
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text("Jarvis", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
             Text(zeile, color = farbe, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         if (vm.gespraech.isNotEmpty()) {
-            Rundknopf(Icons.Rounded.DeleteSweep, "Gespräch leeren") { vm.gespraechLeeren() }
+            Rundknopf(Icons.Rounded.AddComment, "Neues Gespräch", farbe = f.primaer) { vm.neuesGespraech() }
             Spacer(Modifier.width(8.dp))
         }
         // Hell → Automatisch (wie das System) → Dunkel → Hell, wie in Geniale Aufgaben. Das Symbol zeigt den aktuellen Modus.

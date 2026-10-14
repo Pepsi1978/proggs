@@ -89,6 +89,7 @@ class WeckwortDienst : Service() {
         }
         gestartet = true
         Weckwort.schwelle = e.weckwortSchwelle
+        Stimmprofil.laden(this)
         wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:weckwort")
             .apply { setReferenceCounted(false); runCatching { acquire() } }
         val vorleser = Vorleser.hole(this, SecureSettings(this))
@@ -145,6 +146,9 @@ class WeckwortDienst : Service() {
             Weckwort.hoertZu(true)
             erk.zuruecksetzen()
             val block = ShortArray(WeckwortErkenner.BLOCK)
+            // Ein einzelner Block über der Schwelle reicht nicht: Erst zwei in Folge (160 ms) zählen, wie „patience“
+            // bei openWakeWord. Kurze Ausreißer bei ähnlich klingenden Wörtern fallen so weg.
+            var inFolge = 0
             while (an.get()) {
                 var gelesen = 0
                 while (gelesen < block.size && an.get()) {
@@ -154,13 +158,39 @@ class WeckwortDienst : Service() {
                 }
                 if (!an.get()) break
                 val wert = erk.bewerte(block)
-                if (wert >= Weckwort.schwelle) {
-                    Log.i(TAG, "Hey Jarvis erkannt (${"%.2f".format(wert)})")
-                    Weckwort.erkannt(wert)
-                    an.set(false)
-                    bereich.launch { rufen() }
-                    break
+                val merkmale = erk.letzteMerkmale
+                val anlernen = Stimmprofil.lerntAn
+                // Beim Anlernen etwas großzügiger, damit auch Franks deutsche Aussprache Proben liefert.
+                val schwelle = if (anlernen) minOf(Weckwort.schwelle, 0.35f) else Weckwort.schwelle
+                if (wert < schwelle) {
+                    inFolge = 0
+                    if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
+                    continue
                 }
+                if (++inFolge < BLOCKS_IN_FOLGE) continue
+                inFolge = 0
+                if (anlernen) {
+                    if (merkmale != null) {
+                        Log.i(TAG, "Probe fürs Stimmprofil (${"%.2f".format(wert)})")
+                        Stimmprofil.probe(merkmale)
+                        bereich.launch { piepKurz() }
+                    }
+                    // Neu anfangen: Die nächste Probe soll ein neues „Hey Jarvis“ sein, nicht der Rest von diesem.
+                    erk.zuruecksetzen()
+                    continue
+                }
+                if (!Stimmprofil.passt(merkmale)) {
+                    Log.i(TAG, "Hey Jarvis abgewiesen, klingt nicht nach Frank (${"%.2f".format(wert)})")
+                    Weckwort.abgewiesen(wert)
+                    erk.zuruecksetzen()
+                    continue
+                }
+                Log.i(TAG, "Hey Jarvis erkannt (${"%.2f".format(wert)})")
+                Weckwort.erkannt(wert)
+                Weckwort.trefferMerkmale = merkmale
+                an.set(false)
+                bereich.launch { rufen() }
+                break
             }
         } catch (fehler: Exception) {
             Log.w(TAG, "Lauschen unterbrochen", fehler)
@@ -175,6 +205,17 @@ class WeckwortDienst : Service() {
             // Läuft schon ein neuer Durchgang, gehört die Anzeige ihm.
             val aktuell = lauf
             if (aktuell == null || aktuell === an) Weckwort.hoertZu(false)
+        }
+    }
+
+    /** Bestätigt beim Anlernen jede Probe mit einem kurzen Ton. */
+    private suspend fun piepKurz() {
+        val ton = runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 80) }.getOrNull() ?: return
+        try {
+            ton.startTone(android.media.ToneGenerator.TONE_PROP_ACK, 120)
+            delay(200)
+        } finally {
+            ton.release()
         }
     }
 
@@ -242,6 +283,7 @@ class WeckwortDienst : Service() {
         private const val KANAL_RUF = "jarvis_weckwort_ruf"
         private const val HINWEIS_ID = 4300
         private const val RUF_ID = 4301
+        private const val BLOCKS_IN_FOLGE = 2
 
         /** Zuletzt unsichtbar gestartet (gegen eine Schleife, falls Android den Dienst immer wieder ablehnt). */
         @Volatile private var zuletztUnsichtbar = 0L

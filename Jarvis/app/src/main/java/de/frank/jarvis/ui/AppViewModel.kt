@@ -91,6 +91,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init { lagePruefen() }
 
+    // ---- Stimmprofil für „Hey Jarvis“ ----
+
+    fun stimmeAnlernen() {
+        if (!einstellungen.weckwortAn || !weckwortMikro) { meldung = "Zum Anlernen bitte zuerst „Hey Jarvis“ einschalten und das Mikrofon erlauben."; return }
+        de.frank.jarvis.weckwort.Stimmprofil.anlernenStarten()
+    }
+
+    fun stimmeAnlernenAbbrechen() = de.frank.jarvis.weckwort.Stimmprofil.anlernenAbbrechen()
+
+    fun stimmeLoeschen() {
+        de.frank.jarvis.weckwort.Stimmprofil.loeschen()
+        meldung = "Stimmprofil gelöscht. Jarvis reagiert wieder auf jede Stimme."
+    }
+
     fun lagePruefen() {
         val app = getApplication<Application>()
         kiVerbunden = auth.isConnected
@@ -117,8 +131,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             reiter = Reiter.EINSTELLUNGEN
             return
         }
-        val verlauf = gespraech.map { ChatTurn(if (it.vonMir) "user" else "assistant", it.text) }
+        // Bei langen, wieder aufgenommenen Gesprächen nur die letzten Wechsel mitschicken, sonst wächst jede Anfrage.
+        val verlauf = gespraech.takeLast(MAX_VERLAUF).map { ChatTurn(if (it.vonMir) "user" else "assistant", it.text) }
         gespraech += Nachricht(true, text)
+        sitzungSichern()
         denkt = true
         schritt = ""
         lauf = viewModelScope.launch {
@@ -130,6 +146,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 e.message ?: "Das hat nicht geklappt."
             }
             gespraech += Nachricht(false, antwort)
+            sitzungSichern()
             denkt = false
             schritt = ""
             if (gesprochen && einstellungen.antwortenVorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
@@ -346,42 +363,72 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         merkOffen = null
         diktatZiel = null
         vorleser.stopp()
+        // Lange nichts mehr gesagt: „Hey Jarvis“ beginnt ein neues Gespräch. Sonst geht das offene weiter.
+        if (gespraech.isNotEmpty() && System.currentTimeMillis() - letzteAktivitaet > NEUES_GESPRAECH_NACH_MS) neuesGespraech()
+        val treffer = de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
+        de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
         weckwortLauf?.cancel()
         weckwortLauf = viewModelScope.launch {
             try {
-                holtMikro = true
-                val gestartet = try { aufnahmeStarten() } finally { holtMikro = false }
-                if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return@launch }
-                freihaendig = true
-                // Die Uhr läuft ab Beginn des Pieptons; SprechEnde überspringt genau dessen Dauer.
-                val ende = de.frank.jarvis.weckwort.SprechEnde()
-                val start = System.currentTimeMillis()
-                piep()
-                var lage = de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER
-                while (nimmtAuf && lage == de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER) {
-                    kotlinx.coroutines.delay(50)
-                    lage = ende.neu(pegel.value, System.currentTimeMillis() - start)
-                }
-                when {
-                    !nimmtAuf -> Unit // Frank hat selbst auf Stopp getippt: Das Abschicken läuft schon.
-                    lage == de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT -> {
-                        nimmtAuf = false
-                        mikro.stop()
-                        de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
-                        return@launch
+                // Gesprächsmodus: Nach jeder vorgelesenen Antwort piept es wieder und Jarvis hört weiter zu, bis
+                // nach dem Piepton nichts mehr kommt. Das Mikrofon bleibt dabei für Jarvis reserviert, sonst
+                // schnappt es sich zwischen zwei Runden der Weckwort-Dienst.
+                var runde = 0
+                while (true) {
+                    val antworten = gespraech.count { !it.vonMir }
+                    val ergebnis = runde(erste = runde == 0)
+                    if (ergebnis == de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT) {
+                        // Gleich nach „Hey Jarvis“ nichts gesagt: Das war wohl ein Fehlalarm, das Stimmprofil lernt ihn.
+                        if (runde == 0) de.frank.jarvis.weckwort.Stimmprofil.fehlalarm(treffer)
+                        break
                     }
-                    else -> aufnahmeBeenden()
+                    // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist.
+                    while (schreibtMit || denkt) kotlinx.coroutines.delay(100)
+                    kotlinx.coroutines.delay(500)
+                    while (vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) kotlinx.coroutines.delay(200)
+                    // Keine neue Antwort (abgebrochen, nichts verstanden) oder Frank hat selbst übernommen: Schluss.
+                    if (gespraech.count { !it.vonMir } <= antworten || nimmtAuf || holtMikro) break
+                    kotlinx.coroutines.delay(300)
+                    runde++
                 }
-                freihaendig = false
-                // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist.
-                while (schreibtMit || denkt) kotlinx.coroutines.delay(100)
-                kotlinx.coroutines.delay(500)
-                while (vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) kotlinx.coroutines.delay(200)
             } finally {
                 freihaendig = false
+                if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 fertig()
             }
         }
+    }
+
+    /**
+     * Eine Runde im Gesprächsmodus: Mikrofon holen, piepen (ab jetzt sprechen), aufnehmen, bis Frank 4,5 Sekunden
+     * schweigt, und abschicken. Liefert [SprechEnde.Lage.NICHTS_GEHOERT], wenn nach dem Piepton nichts kam.
+     */
+    private suspend fun runde(erste: Boolean): de.frank.jarvis.weckwort.SprechEnde.Lage {
+        holtMikro = true
+        val gestartet = try { aufnahmeStarten() } finally { holtMikro = false }
+        if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT }
+        freihaendig = true
+        // Nach einer Antwort darf Frank etwas länger überlegen, bevor er anfängt.
+        val ende = de.frank.jarvis.weckwort.SprechEnde(wartenMs = if (erste) 7_000 else 9_000)
+        // Die Uhr läuft ab Beginn des Pieptons; SprechEnde überspringt genau dessen Dauer.
+        val start = System.currentTimeMillis()
+        piep()
+        var lage = de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER
+        while (nimmtAuf && lage == de.frank.jarvis.weckwort.SprechEnde.Lage.WEITER) {
+            kotlinx.coroutines.delay(50)
+            lage = ende.neu(pegel.value, System.currentTimeMillis() - start)
+        }
+        freihaendig = false
+        when {
+            !nimmtAuf -> return de.frank.jarvis.weckwort.SprechEnde.Lage.FERTIG // Frank hat selbst auf Stopp getippt: Das Abschicken läuft schon.
+            lage == de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT -> {
+                nimmtAuf = false
+                mikro.stop()
+                return lage
+            }
+            else -> aufnahmeBeenden(freigeben = false)
+        }
+        return de.frank.jarvis.weckwort.SprechEnde.Lage.FERTIG
     }
 
     /** Kurzer Piepton: Ab jetzt hört Jarvis zu. Über die Medienlautstärke, wie die vorgelesene Antwort. */
@@ -395,7 +442,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun aufnahmeBeenden() {
+    /** [freigeben] = false im Gesprächsmodus: Das Mikrofon bleibt für die nächste Runde reserviert. */
+    private fun aufnahmeBeenden(freigeben: Boolean = true) {
         nimmtAuf = false
         schreibtMit = true
         val ziel = diktatZiel
@@ -403,7 +451,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val wav = mikro.stop()
-                de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
+                if (freigeben && weckwortLauf?.isActive != true) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
                 val groq = de.frank.jarvis.audio.GroqTranscriber(
                     apiKey = sprache.groqApiKey,
@@ -443,9 +491,81 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         schritt = ""
     }
 
-    fun gespraechLeeren() {
+    // ---- Gespeicherte Gespräche (Seitenleiste) ----
+
+    /** Das offene Gespräch; null = noch nicht gespeichert (es entsteht mit der ersten Nachricht). */
+    var sitzungId by mutableStateOf<String?>(null); private set
+    private var sitzungErstellt = 0L
+    /** Wann zuletzt etwas im Gespräch passiert ist, für „Hey Jarvis“: weiterführen oder neu anfangen. */
+    private var letzteAktivitaet = 0L
+    var sitzungen by mutableStateOf<List<de.frank.jarvis.data.Sitzung>>(emptyList()); private set
+
+    init {
+        sitzungenLaden()
+        de.frank.jarvis.weckwort.Stimmprofil.laden(app)
+    }
+
+    fun sitzungenLaden() {
+        viewModelScope.launch { sitzungen = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.alle(getApplication()) } }
+    }
+
+    private fun sitzungSichern() {
+        letzteAktivitaet = System.currentTimeMillis()
+        val id = sitzungId ?: de.frank.jarvis.data.Gespraeche.neueId().also { sitzungId = it; sitzungErstellt = System.currentTimeMillis() }
+        val erstellt = sitzungErstellt
+        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text) }
+        viewModelScope.launch {
+            sitzungen = withContext(Dispatchers.IO) {
+                de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand)
+                de.frank.jarvis.data.Gespraeche.alle(getApplication())
+            }
+        }
+    }
+
+    /** Neues, leeres Gespräch. Das bisherige bleibt gespeichert und steht in der Seitenleiste. */
+    fun neuesGespraech() {
         abbrechen()
         gespraech.clear()
+        sitzungId = null
+        sitzungErstellt = 0L
+    }
+
+    /** Ein altes Gespräch öffnen und dort weitermachen. */
+    fun sitzungOeffnen(id: String) {
+        if (id == sitzungId) return
+        viewModelScope.launch {
+            val geladen = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) }
+            if (geladen == null) { meldung = "Dieses Gespräch ließ sich nicht öffnen."; sitzungenLaden(); return@launch }
+            abbrechen()
+            vorleser.stopp()
+            gespraech.clear()
+            gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text) })
+            sitzungId = id
+            sitzungErstellt = geladen.first.erstellt
+            // Wer ein altes Gespräch öffnet, will dort weitersprechen, auch mit „Hey Jarvis“.
+            letzteAktivitaet = System.currentTimeMillis()
+        }
+    }
+
+    fun sitzungUmbenennen(id: String, titel: String) {
+        if (titel.isBlank()) return
+        viewModelScope.launch {
+            sitzungen = withContext(Dispatchers.IO) {
+                de.frank.jarvis.data.Gespraeche.umbenennen(getApplication(), id, titel)
+                de.frank.jarvis.data.Gespraeche.alle(getApplication())
+            }
+        }
+    }
+
+    fun sitzungLoeschen(id: String) {
+        if (id == sitzungId) neuesGespraech()
+        viewModelScope.launch {
+            sitzungen = withContext(Dispatchers.IO) {
+                de.frank.jarvis.data.Gespraeche.loeschen(getApplication(), id)
+                de.frank.jarvis.data.Gespraeche.alle(getApplication())
+            }
+            meldung = "Gespräch gelöscht."
+        }
     }
 
     // ---- ChatGPT-Anmeldung ----
@@ -645,6 +765,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             (if (it.toLocalDate() == java.time.LocalDate.now()) "heute" else "morgen") + " um " + it.toLocalTime().toString().take(5) + " Uhr"
         } ?: "ausgeschaltet"
 }
+
+/** So lange nach der letzten Nachricht führt „Hey Jarvis“ das offene Gespräch weiter, danach beginnt ein neues. */
+private const val NEUES_GESPRAECH_NACH_MS = 10 * 60_000L
+
+/** Höchstens so viele frühere Nachrichten gehen als Verlauf an das Modell. */
+private const val MAX_VERLAUF = 40
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Regel. */
 private const val REGEL_KORREKTUR =
