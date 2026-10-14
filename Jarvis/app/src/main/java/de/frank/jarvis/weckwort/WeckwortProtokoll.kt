@@ -21,10 +21,12 @@ object WeckwortProtokoll {
 
     fun treffer(
         context: Context, art: String, modellwert: Float?, pruefung: Stimmprofil.Pruefung?, urteil: String,
-        stimme: Stimmprofil.StimmPruefung? = null, mitStimme: Boolean = false,
+        stimme: Stimmprofil.StimmPruefung? = null, mitStimme: Boolean = false, variante: String? = null,
     ) {
         val j = JSONObject().put("ereignis", "treffer").put("art", art).put("urteil", urteil)
         modellwert?.let { j.put("modell", runde(it)) }
+        // Welche Aussprache-Variante der Phrase gegriffen hat (Tokens), zeigt, wie Frank sie wirklich spricht.
+        variante?.takeIf { it.isNotEmpty() }?.let { j.put("variante", it) }
         if (pruefung != null) j.put("aehnlich", runde(pruefung.aehnlich)).put("schwelle", runde(pruefung.schwelle)).put("fehlalarm", runde(pruefung.fremd))
         else j.put("profil", false)
         // Stimmerkennung: Ähnlichkeit des Stimm-Fingerabdrucks zu Franks Mitte und ihre Schwelle (sie entscheidet).

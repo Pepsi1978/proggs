@@ -63,6 +63,7 @@ class WeckwortDienst : Service() {
     /** Tokens der eigenen Phrase aus den Einstellungen; null = „Hey Jarvis“. */
     private var phrasenTokens: String? = null
     private var phrasenSchwelle = 0.25f
+    private var phrasenVarianten: List<String> = emptyList()
     private var sprecherErkenner: SprecherErkenner? = null
     private var vorleser: Vorleser? = null
     @Volatile private var lauf: AtomicBoolean? = null
@@ -129,6 +130,7 @@ class WeckwortDienst : Service() {
         phrasenTokens = if (e.weckwortArt == "phrase") PhrasenTokens.zerlege(this, e.weckwortPhrase).also {
             if (it == null) Log.w(TAG, "Phrase ${e.weckwortPhrase} nicht zerlegbar, nehme Hey Jarvis")
         } else null
+        phrasenVarianten = if (phrasenTokens != null) PhrasenTokens.varianten(this, e.weckwortPhrase) else emptyList()
         phrasenSchwelle = PhrasenErkenner.schwelleFuer(e.weckwortEmpfindlichkeit)
         Stimmprofil.schluesselSetzen(if (phrasenTokens != null) "phrase:" + PhrasenTokens.normiert(e.weckwortPhrase) else "jarvis")
     }
@@ -150,7 +152,7 @@ class WeckwortDienst : Service() {
             .getOrNull()?.also { erkenner = it } ?: return
         // Eigene Phrase: sherpa-onnx dazu. Lässt sich das Modell nicht laden, bleibt „Hey Jarvis“ aktiv.
         val tokens = phrasenTokens
-        val phr = if (tokens == null) null else phrasenErkenner ?: runCatching { PhrasenErkenner(this, tokens, phrasenSchwelle) }
+        val phr = if (tokens == null) null else phrasenErkenner ?: runCatching { PhrasenErkenner(this, tokens, phrasenSchwelle, phrasenVarianten) }
             .onFailure { Log.e(TAG, "Phrasen-Modell nicht ladbar, nehme Hey Jarvis", it) }
             .getOrNull()?.also { phrasenErkenner = it }
         Weckwort.aktivesWort(if (phr != null) PhrasenTokens.normiert(Einstellungen.get(this).weckwortPhrase) else "Hey Jarvis")
@@ -216,10 +218,12 @@ class WeckwortDienst : Service() {
                 // weist danach die Stimmerkennung ab. Beim Anlernen so leicht wie möglich.
                 val mitStimme = Stimmprofil.stimmeAktiv && spr != null
                 if (phr != null) {
-                    phr.schwelle = when {
-                        anlernen -> PhrasenErkenner.SCHWELLE_ANLERNEN
-                        mitStimme -> (phrasenSchwelle - PhrasenErkenner.SPRECHER_BONUS).coerceAtLeast(PhrasenErkenner.SCHWELLE_ANLERNEN)
-                        else -> phrasenSchwelle
+                    // Mit Stimmerkennung auch die Aussprache-Varianten (schnell, verschliffen, mit Akzent): Fremde fallen
+                    // danach an der Stimme durch, Frank soll die Phrase sagen dürfen, wie sie ihm über die Lippen geht.
+                    when {
+                        anlernen -> phr.einstellen(PhrasenErkenner.SCHWELLE_ANLERNEN, breit = false)
+                        mitStimme -> phr.einstellen((phrasenSchwelle - PhrasenErkenner.SPRECHER_BONUS).coerceAtLeast(PhrasenErkenner.SCHWELLE_MIN), breit = true)
+                        else -> phr.einstellen(phrasenSchwelle, breit = false)
                     }
                     if (!phr.erkannt(block)) {
                         if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
@@ -260,14 +264,14 @@ class WeckwortDienst : Service() {
                 val ok = if (mitStimme) stimme?.ok == true else pruefung?.ok != false
                 if (!ok) {
                     Log.i(TAG, "Weckwort ($art) abgewiesen, klingt nicht nach Frank (${"%.2f".format(wert)})")
-                    WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "abgewiesen", stimme, mitStimme)
+                    WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "abgewiesen", stimme, mitStimme, phr?.letzterTreffer)
                     Weckwort.abgewiesen(modellwert ?: 1f)
                     erk.zuruecksetzen()
                     phr?.zuruecksetzen()
                     continue
                 }
                 Log.i(TAG, "Weckwort ($art) erkannt (${"%.2f".format(wert)})")
-                WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "gerufen", stimme, mitStimme)
+                WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "gerufen", stimme, mitStimme, phr?.letzterTreffer)
                 Weckwort.erkannt(modellwert ?: 1f)
                 Weckwort.trefferMerkmale = merkmale
                 an.set(false)
