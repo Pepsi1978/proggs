@@ -3,6 +3,8 @@ package de.frank.jarvis.faehigkeit
 import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -31,6 +33,9 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Schützt vor doppelt angelegten Aufgaben, wenn ChatGPT einen Aufruf nach einer Zeitüberschreitung wiederholt. */
     private var letzteAnlage: Triple<String, Long, String>? = null
+    /** Antwort, wenn ein Anlegen ins Zeitlimit lief und unklar ist, ob die Aufgabe angekommen ist. */
+    private val UNKLAR = "Womöglich trotzdem gespeichert. Vor einem neuen Versuch mit aufgaben_lesen prüfen, nicht noch einmal anlegen."
+    private val anlageSperre = Mutex()
 
     override val werkzeuge: List<Werkzeug> by lazy {
         listOf(
@@ -40,8 +45,24 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
                     "Sonst die Felder angeben, die sich ändern: Tag, Uhrzeit, Text, Priorität, Erinnerung, Wiederholung, Checkliste. Die Aufgabe wird über id ODER ein Suchwort (suche) bestimmt.",
                 schema = w("aufgabe_aendern").schema.mit("erledigt" to schalter("true = als erledigt abhaken, false = wieder öffnen.")),
             ) { a ->
-                val nurAbhaken = a.has("erledigt") && a.keys().asSequence().all { it in setOf("id", "suche", "erledigt") }
-                (if (nurAbhaken) w("aufgabe_erledigen") else w("aufgabe_aendern")).ausfuehren(a)
+                // Felder mit JSON-null zählen nicht: Modelle schicken optionale Felder gern als null mit.
+                val sauber = JSONObject().apply { a.keys().forEach { k -> if (!a.isNull(k)) put(k, a.get(k)) } }
+                val rest = sauber.keys().asSequence().filter { it !in setOf("id", "suche", "erledigt") }.toList()
+                when {
+                    !sauber.has("erledigt") -> w("aufgabe_aendern").ausfuehren(sauber)
+                    rest.isEmpty() -> w("aufgabe_erledigen").ausfuehren(sauber)
+                    // Ändern und abhaken in einem Aufruf: erst ändern, dann abhaken, beides an derselben Aufgabe.
+                    else -> {
+                        val erledigt = sauber.optBoolean("erledigt", true)
+                        mitAufgabe(sauber, nurOffene = erledigt) { id ->
+                            val geaendert = rufe("aendern", JSONObject(sauber.toString()).put("id", id).apply { remove("suche"); remove("erledigt") })
+                                .fehlerOder { "Geändert: " + satz(it.getJSONObject("aufgabe")) + mitgedacht(it.getJSONObject("aufgabe")) }
+                            if (geaendert.fehler) return@mitAufgabe geaendert
+                            val abgehakt = erledige(id, erledigt)
+                            Ergebnis(geaendert.text + "\n" + abgehakt.text, abgehakt.fehler)
+                        }
+                    }
+                }
             },
             w("aufgabe_loeschen"),
         )
@@ -97,12 +118,21 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
             nurLesen = false,
         ) { a ->
             val schluessel = listOf(a.optString("text").trim().lowercase(), a.optString("datum"), a.optString("uhrzeit")).joinToString("|")
-            letzteAnlage?.let { (alt, zeit, antwort) ->
-                if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000) return@Werkzeug Ergebnis("$antwort (War bereits gespeichert, nicht doppelt angelegt.)")
-            }
-            val antwort = rufe("anlegen", a)
-            antwort.fehlerOder { "Gespeichert: " + satz(it.getJSONObject("aufgabe")) + mitgedacht(it.getJSONObject("aufgabe")) }.also {
-                if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
+            // Gesperrt, weil der Tunnel Aufrufe parallel abarbeitet: Ein wiederholter Aufruf wartet, bis der erste fertig ist.
+            anlageSperre.withLock {
+                letzteAnlage?.let { (alt, zeit, antwort) ->
+                    if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000)
+                        return@Werkzeug if (antwort == UNKLAR) Ergebnis(antwort, fehler = true) else Ergebnis("$antwort (War bereits gespeichert, nicht doppelt angelegt.)")
+                }
+                val antwort = rufe("anlegen", a)
+                // Zeitlimit: Die Aufgabe kam womöglich trotzdem an. Schlüssel merken, damit ein Wiederholungsversuch nicht doppelt anlegt.
+                if (antwort.optBoolean(AppBruecke.ZEITLIMIT)) {
+                    letzteAnlage = Triple(schluessel, System.currentTimeMillis(), UNKLAR)
+                    return@Werkzeug Ergebnis(antwort.optString("fehler") + " " + UNKLAR, fehler = true)
+                }
+                antwort.fehlerOder { "Gespeichert: " + satz(it.getJSONObject("aufgabe")) + mitgedacht(it.getJSONObject("aufgabe")) }.also {
+                    if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
+                }
             }
         },
         Werkzeug(
@@ -147,13 +177,7 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
             nurLesen = false,
         ) { a ->
             val erledigt = a.optBoolean("erledigt", true)
-            mitAufgabe(a, nurOffene = erledigt) { id ->
-                rufe("erledigen", JSONObject().put("id", id).put("erledigt", erledigt)).fehlerOder {
-                    val titel = it.getJSONObject("aufgabe").optString("titel")
-                    val folge = it.optJSONObject("naechste_wiederholung")?.let { n -> " Nächster Termin der Wiederholung: ${n.optString("tag_anzeige")}." }.orEmpty()
-                    (if (erledigt) "Erledigt: „$titel“." else "Wieder offen: „$titel“.") + folge
-                }
-            }
+            mitAufgabe(a, nurOffene = erledigt) { id -> erledige(id, erledigt) }
         },
         Werkzeug(
             name = "aufgabe_loeschen",
@@ -173,9 +197,17 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
         },
     )
 
-    /** Bestimmt die gemeinte Aufgabe über id oder Suchwort. Mehrere Treffer → Rückfrage statt Raten. */
+    /** Hakt eine Aufgabe ab oder öffnet sie wieder. */
+    private suspend fun erledige(id: Long, erledigt: Boolean): Ergebnis =
+        rufe("erledigen", JSONObject().put("id", id).put("erledigt", erledigt)).fehlerOder {
+            val titel = it.getJSONObject("aufgabe").optString("titel")
+            val folge = it.optJSONObject("naechste_wiederholung")?.let { n -> " Nächster Termin der Wiederholung: ${n.optString("tag_anzeige")}." }.orEmpty()
+            (if (erledigt) "Erledigt: „$titel“." else "Wieder offen: „$titel“.") + folge
+        }
+
+    /** Bestimmt die gemeinte Aufgabe über id oder Suchwort. Mehrere Treffer → Rückfrage statt Raten. id 0 zählt als nicht angegeben. */
     private suspend fun mitAufgabe(a: JSONObject, nurOffene: Boolean, dann: suspend (Long) -> Ergebnis): Ergebnis {
-        if (a.has("id") && !a.isNull("id")) return dann(a.optLong("id"))
+        if (a.has("id") && !a.isNull("id") && a.optLong("id", 0L) > 0L) return dann(a.optLong("id"))
         val suche = a.optString("suche").trim()
         if (suche.isEmpty()) return Ergebnis("Es fehlt die id oder ein Suchwort für die Aufgabe.", fehler = true)
         val treffer = rufe("lesen", JSONObject().put("bereich", if (nurOffene) "offen" else "alle").put("suche", suche))
@@ -200,7 +232,7 @@ class AufgabenFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Was Dienstplan, Termine und Wetter zu dieser Aufgabe sagen (leer, wenn sie keinen Tag hat oder nichts dagegen spricht). */
     private fun mitgedacht(a: JSONObject): String =
-        if (a.isNull("datum")) "" else Mitdenken.anhang(context, a.optString("datum"), if (a.isNull("uhrzeit")) null else a.optString("uhrzeit"), a.optString("titel") + " " + a.optString("text"))
+        if (a.isNull("datum")) "" else Mitdenken.anhang(context, a.optString("datum"), if (a.isNull("uhrzeit")) null else a.optString("uhrzeit"), a.optString("titel") + " " + a.optString("text"), dauer = a.optInt("dauer", 30))
 
     /** Eine Aufgabe als gesprochener Satz. */
     private fun satz(a: JSONObject): String = buildString {

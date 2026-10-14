@@ -22,17 +22,19 @@ object Mitdenken {
 
     /**
      * Die Hinweise zu einem Zeitpunkt. [minuten] = Uhrzeit in Minuten nach Mitternacht oder null, wenn nur der Tag feststeht.
-     * [vorhaben] ist Franks Text; er entscheidet, ob das Wetter eine Rolle spielt.
+     * [vorhaben] ist Franks Text; er entscheidet, ob das Wetter eine Rolle spielt. [dauer] in Minuten: Geprüft wird,
+     * ob sich das ganze Vorhaben mit Dienst, Schlaf oder Terminen überschneidet, nicht nur sein Beginn.
      */
-    fun hinweise(context: Context, tag: LocalDate, minuten: Int?, vorhaben: String, mitWetter: Boolean = true): List<String> {
+    fun hinweise(context: Context, tag: LocalDate, minuten: Int?, vorhaben: String, mitWetter: Boolean = true, dauer: Int = 60): List<String> {
+        val laenge = dauer.coerceIn(1, 24 * 60)
         val liste = mutableListOf<String>()
         val alle = Register.alle(context)
         val lage = runCatching { alle.filterIsInstance<KalenderFaehigkeit>().firstOrNull()?.lage(tag) }.getOrNull()
         if (lage != null) {
             if (minuten != null) {
-                lage.belegt.firstOrNull { minuten >= it.von && minuten < it.bis }?.let { liste += "Zu dieser Zeit passt es laut Dienstplan nicht: ${it.grund}." }
+                lage.belegt.firstOrNull { minuten < it.bis && minuten + laenge > it.von }?.let { liste += "Zu dieser Zeit passt es laut Dienstplan nicht: ${it.grund}." }
                     ?: run { if (lage.arbeitet) liste += "An dem Tag: ${lage.dienstText}." }
-                lage.termine.filter { it.von != null && minuten < (it.bis ?: (it.von + 60)) && minuten + 60 > it.von }.take(3).forEach { t ->
+                lage.termine.filter { it.von != null && minuten < (it.bis ?: (it.von + 60)) && minuten + laenge > it.von }.take(3).forEach { t ->
                     liste += "Zur selben Zeit steht im Kalender: ${t.titel} (${uhr(t.von!!)}–${uhr(t.bis ?: (t.von + 60))} Uhr)."
                 }
             } else {
@@ -50,15 +52,22 @@ object Mitdenken {
 
     /**
      * Fertiger Anhang für die Antwort eines schreibenden Werkzeugs. [datum] als JJJJ-MM-TT, [uhrzeit] als HH:MM;
-     * beides darf fehlen oder unlesbar sein, dann gibt es nichts mitzudenken.
+     * beides darf fehlen oder unlesbar sein, dann gibt es nichts mitzudenken. [dauer] = Länge des Vorhabens in Minuten.
      */
-    fun anhang(context: Context, datum: String?, uhrzeit: String?, vorhaben: String): String {
+    fun anhang(context: Context, datum: String?, uhrzeit: String?, vorhaben: String, dauer: Int = 60): String {
         val tag = runCatching { LocalDate.parse(datum.orEmpty().take(10)) }.getOrNull() ?: return ""
         val minuten = Regex("^([01]?\\d|2[0-3]):([0-5]\\d)").find(uhrzeit.orEmpty())?.let { it.groupValues[1].toInt() * 60 + it.groupValues[2].toInt() }
-        val liste = runCatching { hinweise(context, tag, minuten, vorhaben) }.getOrDefault(emptyList())
+        val liste = runCatching { hinweise(context, tag, minuten, vorhaben, dauer = dauer) }.getOrDefault(emptyList())
         if (liste.isEmpty()) return ""
         return "\nMITGEDACHT (sage Frank davon, was für sein Vorhaben wichtig ist, in einem Satz; Unwichtiges weglassen):\n" + liste.joinToString("\n") { "- $it" }
     }
+
+    /**
+     * Uhrzeit aus „21:00“, „21.30“, „2130“, „21“ oder „7:05“ in Minuten nach Mitternacht; null, wenn nicht lesbar.
+     * Die zweistellige Stunde 20 bis 23 steht vorn, sonst würde aus „21:00“ zwei Uhr.
+     */
+    fun uhrzeitMinuten(text: String): Int? = if (text.isBlank()) null else
+        Regex("^\\s*(2[0-3]|[01]?\\d)(?:[:.]?([0-5]\\d))?(?!\\d)").find(text)?.let { it.groupValues[1].toInt() * 60 + (it.groupValues[2].toIntOrNull() ?: 0) }
 
     private fun uhr(minuten: Int): String = String.format(Locale.GERMAN, "%d:%02d", minuten / 60 % 24, minuten % 60)
 }

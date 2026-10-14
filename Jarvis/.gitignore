@@ -3,3 +3,6 @@
 **/build/
 local.properties
 *.hprof
+
+# Vom Handy geholte Logbücher (werkzeuge/logbuch-holen.ps1), nur lokal
+logs/

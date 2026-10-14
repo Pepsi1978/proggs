@@ -7,11 +7,14 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
+import android.os.PowerManager
 import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.observability.IdeenLog
+import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.tts.SpeechLoudness
 import de.frank.jarvis.tts.TtsManager
 import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -49,7 +52,8 @@ data class VorleseStand(
  *
  * Ein Absatz ist eine Vorlese-Einheit. Während Absatz *n* läuft, sind *n+1* und *n+2* bereits
  * beim Sprachdienst in Arbeit, sodass der nächste Ton ohne Loch anschliesst. Zwischen zwei
- * Absätzen liegt rund eine Sekunde Atem.
+ * Absätzen liegt bei langen Texten rund eine Sekunde Atem, bei Gesprächsantworten weniger.
+ * Der erste Absatz wird nach seinem ersten Satz geteilt, damit der erste Ton früh kommt.
  */
 class Vorleser(
     context: Context,
@@ -82,6 +86,16 @@ class Vorleser(
     @Volatile private var pausiert = false
     private var zustandVorPause = VorleseZustand.SPRICHT
 
+    /**
+     * Kurze Antworten holen den Tonfokus nur vorübergehend: Musik anderer Apps pausiert und läuft
+     * danach von selbst weiter. Nur lange Ablage-Texte nehmen ihn dauerhaft.
+     */
+    private var fokusArt = AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+
+    /** Für die Messung, wie lange es bis zum ersten Ton dauert. */
+    @Volatile private var laufBeginn = 0L
+    @Volatile private var ersterTonGemessen = true
+
     fun sprich(quelle: String, titel: String, rohText: String, wiederholen: Boolean = false) {
         if (_stand.value.quelle == quelle && _stand.value.zustand != VorleseZustand.AUS) {
             stopp()
@@ -104,29 +118,38 @@ class Vorleser(
             absatzNummer = 0,
             absaetzeGesamt = absaetze.size,
         )
+        // Gesprächsantworten und Ansagen: kurzer Atem und nur vorübergehender Tonfokus.
+        val kurz = quelle.startsWith("gespraech:") || quelle.startsWith("abfahrt:") || quelle == "probe"
+        val pauseMs = if (kurz) KURZE_PAUSE_MS else ABSATZ_PAUSE_MS
+        fokusArt = if (quelle.startsWith("ablage:")) AudioManager.AUDIOFOCUS_GAIN else AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
         VorleseDienst.starten(appContext)
         IdeenLog.info(
             "Vorleser",
             "sprich",
             "Vorlesen beginnt",
-            mapOf("absaetze" to absaetze.size, "chars" to text.length),
+            mapOf("absaetze" to absaetze.size, "chars" to text.length, "quelle" to quelle.substringBefore(':')),
         )
+        laufBeginn = System.currentTimeMillis()
+        ersterTonGemessen = false
         val meinLauf = laufNummer.incrementAndGet()
         laufenderJob = bereich.launch {
             try {
                 do {
-                    if (synthese.kannVorausschauen()) pipelineMitVorausschau(absaetze) else reihum(absaetze)
+                    if (synthese.kannVorausschauen()) pipelineMitVorausschau(absaetze, pauseMs) else reihum(absaetze, pauseMs)
                     // Derselbe abbrechbare Auftrag bleibt samt Dienst über alle Runden aktiv.
                     if (wiederholen) delay(ABSATZ_PAUSE_MS)
                 } while (wiederholen)
                 _stand.value = _stand.value.copy(zustand = VorleseZustand.AUS, quelle = null)
+                Logbuch.dauer("Vorlesen fertig", System.currentTimeMillis() - laufBeginn, "absaetze=${absaetze.size} zeichen=${text.length}")
             } catch (abbruch: CancellationException) {
                 throw abbruch
             } catch (fehler: SyntheseAbbruch) {
                 IdeenLog.error("Vorleser", "sprich", "Pipeline angehalten", mapOf("grund" to fehler.javaClass.simpleName))
+                Logbuch.fehler("Vorlesen angehalten", fehler)
                 _stand.value = VorleseStand(fehler = fehler.message)
             } catch (fehler: Exception) {
                 IdeenLog.error("Vorleser", "sprich", "Vorlesen fehlgeschlagen", mapOf("art" to fehler.javaClass.simpleName))
+                Logbuch.fehler("Vorlesen fehlgeschlagen", fehler)
                 _stand.value = VorleseStand(
                     fehler = fehler.message ?: "Das Vorlesen ist unterwegs abgebrochen.",
                 )
@@ -142,52 +165,135 @@ class Vorleser(
         }
     }
 
-    /** Google und die eigene Stimme können vorab erzeugen — hier greift die Vorausschau. */
-    private suspend fun pipelineMitVorausschau(absaetze: List<String>) = coroutineScope {
-        val inArbeit = HashMap<Int, Deferred<List<File>>>()
+    /** Ein vorausgeschickter Erzeugungsauftrag samt Text — für den Wiederholversuch. */
+    private class Auftrag(val text: String, val ergebnis: Deferred<Result<List<File>>>)
+
+    /** Alle Anbieter erzeugen vorab (Edge inzwischen auch) — hier greift die Vorausschau. */
+    private suspend fun pipelineMitVorausschau(absaetze: List<String>, pauseMs: Long) = coroutineScope {
+        // Je Absatz ein oder (beim ersten) zwei Teile, die ohne Pause hintereinander laufen.
+        val inArbeit = HashMap<Int, List<Auftrag>>()
+
         // Bewusst aus diesem Bereich, nicht aus dem langlebigen: So brechen die vorausgeschickten
         // Auftraege mit ab, sobald auf eine andere Idee gewechselt wird. Aus dem App-Bereich
         // heraus liefen sie weiter und schrieben in einen Ordner, den niemand mehr las.
+        // Das Ergebnis kommt als Result: Ein gescheiterter Vorab-Auftrag darf den Bereich nicht
+        // abbrechen und damit den gerade gesprochenen Absatz mitten im Satz abwürgen.
+        fun erzeuge(teil: String): Auftrag = Auftrag(
+            teil,
+            async(Dispatchers.IO) {
+                try {
+                    Result.success(synthetisiereMitTeilung(teil))
+                } catch (abbruch: CancellationException) {
+                    throw abbruch
+                } catch (fehler: Exception) {
+                    Result.failure(fehler)
+                }
+            },
+        )
+
         fun beauftrage(index: Int) {
-            if (index in absaetze.indices && index !in inArbeit) {
-                inArbeit[index] = async(Dispatchers.IO) { synthetisiereMitTeilung(absaetze[index]) }
+            if (index !in absaetze.indices || index in inArbeit) return
+            val absatz = absaetze[index]
+            // Der erste Satz geht allein voraus, damit der erste Ton nicht auf den ganzen Absatz wartet.
+            val schnitt = if (index == 0) SprechText.ersterSatzSchnitt(absatz) else null
+            inArbeit[index] = if (schnitt != null) {
+                listOf(erzeuge(absatz.substring(0, schnitt).trim()), erzeuge(absatz.substring(schnitt).trim()))
+            } else {
+                listOf(erzeuge(absatz))
             }
         }
         // Absatz 0 sowie die beiden folgenden gehen sofort in Arbeit.
         (0..VORAUSSCHAU).forEach(::beauftrage)
 
+        var fehlgeschlagen = 0
         absaetze.indices.forEach { index ->
-            val dateien = inArbeit.remove(index)?.await()
-                ?: withContext(Dispatchers.IO) { synthetisiereMitTeilung(absaetze[index]) }
-            beauftrage(index + VORAUSSCHAU + 1)
-            warteSolangePausiert()
-            _stand.value = _stand.value.copy(
-                zustand = VorleseZustand.SPRICHT,
-                absatzNummer = index + 1,
-                absatzText = absaetze[index],
-            )
-            VorleseDienst.aktualisiere(
-                appContext,
-                _stand.value.titel,
-                index + 1,
-                absaetze.size,
-                pausiert = false,
-            )
-            dateien.forEach { datei ->
-                warteSolangePausiert()
-                spieleDatei(datei)
-                datei.delete()
+            val teile = inArbeit.remove(index) ?: listOf(erzeuge(absaetze[index]))
+            var angekuendigt = false
+            var gesprochen = false
+            teile.forEach { auftrag ->
+                val dateien = hole(auftrag)
+                if (!angekuendigt) {
+                    angekuendigt = true
+                    beauftrage(index + VORAUSSCHAU + 1)
+                    warteSolangePausiert()
+                    _stand.value = _stand.value.copy(
+                        zustand = VorleseZustand.SPRICHT,
+                        absatzNummer = index + 1,
+                        absatzText = absaetze[index],
+                    )
+                    VorleseDienst.aktualisiere(
+                        appContext,
+                        _stand.value.titel,
+                        index + 1,
+                        absaetze.size,
+                        pausiert = false,
+                    )
+                }
+                dateien.forEach { datei ->
+                    warteSolangePausiert()
+                    spieleDatei(datei)
+                    datei.delete()
+                    gesprochen = true
+                }
             }
-            if (index < absaetze.lastIndex) delay(ABSATZ_PAUSE_MS)
+            if (!gesprochen) fehlgeschlagen++
+            if (index < absaetze.lastIndex) delay(pauseMs)
+        }
+        // Kam kein einziger Absatz durch, darf das nicht als stilles „fertig“ enden.
+        if (fehlgeschlagen == absaetze.size) {
+            error("Das Vorlesen kam nicht durch. Prüf die Internetverbindung.")
+        }
+    }
+
+    /**
+     * Wartet auf einen Vorab-Auftrag. Ist er gescheitert, etwa in einem Funkloch lange vor seiner
+     * Zeit, wird er jetzt einmal direkt neu versucht; scheitert auch das, wird der Teil
+     * übersprungen. Nur ein Abbruch der ganzen Sitzung (Schlüssel fehlt) hält alles an.
+     */
+    private suspend fun hole(auftrag: Auftrag): List<File> {
+        val erstes = auftrag.ergebnis.await()
+        erstes.getOrNull()?.let { return it }
+        val grund = erstes.exceptionOrNull()
+        if (grund is SyntheseAbbruch) throw grund
+        // Ein Zeitlimit hat schon seine volle Frist gewartet: kein zweiter Versuch, sonst stünde das
+        // Vorlesen (und mit ihm das Weckwort) noch einmal so lange still.
+        if (grund is SyntheseZeitlimit) {
+            IdeenLog.warn("Vorleser", "hole", "Absatz übersprungen (Zeitlimit)", mapOf("chars" to auftrag.text.length))
+            Logbuch.fehler("Vorlese-Absatz übersprungen", grund, "zeichen=${auftrag.text.length}")
+            return emptyList()
+        }
+        return try {
+            withContext(Dispatchers.IO) { synthetisiereMitTeilung(auftrag.text) }
+        } catch (abbruch: CancellationException) {
+            throw abbruch
+        } catch (abbruch: SyntheseAbbruch) {
+            throw abbruch
+        } catch (zweiter: Exception) {
+            IdeenLog.warn(
+                "Vorleser",
+                "hole",
+                "Absatz übersprungen",
+                mapOf("art" to zweiter.javaClass.simpleName, "chars" to auftrag.text.length),
+            )
+            Logbuch.fehler("Vorlese-Absatz übersprungen", zweiter, "zeichen=${auftrag.text.length}")
+            emptyList()
         }
     }
 
     /**
      * Fällt ein Absatz beim Dienst durch, wird er halbiert und erneut geschickt
-     * (Retry-Split, Baustein D 4.4). Hier wird nur erzeugt, nie abgespielt — die Vorausschau
+     * (Retry-Split, Baustein D 4.4). Ein reiner Netzfehler (Zeitlimit, Verbindungsabbruch) wird
+     * einmal ungeteilt wiederholt. Hier wird nur erzeugt, nie abgespielt — die Vorausschau
      * läuft nebenher, und ein Abspielen von hier spräche mitten in den laufenden Absatz.
      */
     private suspend fun synthetisiereMitTeilung(absatz: String): List<File> = try {
+        listOf(synthese.synthetisiere(absatz))
+    } catch (zeitlimit: SyntheseZeitlimit) {
+        // Weder halbieren noch wiederholen: Jeder weitere Versuch wartete erneut die volle Frist.
+        throw zeitlimit
+    } catch (netz: IOException) {
+        IdeenLog.warn("Vorleser", "synthetisiereMitTeilung", "Netzfehler, neuer Versuch", mapOf("art" to netz.javaClass.simpleName))
+        delay(NETZ_WIEDERHOLUNG_MS)
         listOf(synthese.synthetisiere(absatz))
     } catch (fehler: SyntheseFehler) {
         val mitte = absatz.length / 2
@@ -209,10 +315,10 @@ class Vorleser(
         while (pausiert) delay(PAUSE_PRUEF_MS)
     }
 
-    /** Rückfall für Microsoft Edge: Absatz für Absatz über den vorhandenen Player. */
-    private suspend fun reihum(absaetze: List<String>) {
-        // Auch hier den Tonfokus holen — sonst liest Edge während eines Anrufs einfach weiter.
-        fordereFokusAn()
+    /** Rückfall für Stimmen ohne Vorab-Erzeugung: Absatz für Absatz über den vorhandenen Player. */
+    private suspend fun reihum(absaetze: List<String>, pauseMs: Long) {
+        // Auch hier den Tonfokus holen — sonst liest die Stimme während eines Anrufs einfach weiter.
+        holeFokus()
         var fehlgeschlagen = 0
         absaetze.forEachIndexed { index, absatz ->
             warteSolangePausiert()
@@ -237,7 +343,7 @@ class Vorleser(
                     },
                 )
             }
-            if (index < absaetze.lastIndex) delay(ABSATZ_PAUSE_MS)
+            if (index < absaetze.lastIndex) delay(pauseMs)
         }
         // Kam kein einziger Absatz durch, darf das nicht als stilles „fertig“ enden.
         if (fehlgeschlagen == absaetze.size) {
@@ -246,7 +352,11 @@ class Vorleser(
     }
 
     private suspend fun spieleDatei(datei: File) {
-        fordereFokusAn()
+        holeFokus()
+        if (!ersterTonGemessen) {
+            ersterTonGemessen = true
+            Logbuch.sprache("Erster Ton", "anbieter=${settings.ttsProvider}", System.currentTimeMillis() - laufBeginn)
+        }
         // Zuerst anlegen und merken — wirft prepare(), wird der Player trotzdem freigegeben.
         val neuerPlayer = MediaPlayer()
         spieler = neuerPlayer
@@ -254,6 +364,8 @@ class Vorleser(
             suspendCancellableCoroutine { fortsetzung ->
                 neuerPlayer.apply {
                     setAudioAttributes(SpeechLoudness.attributes)
+                    // Hält die CPU wach, solange der Ton läuft — sonst stockt es bei dunklem Bildschirm.
+                    setWakeMode(appContext, PowerManager.PARTIAL_WAKE_LOCK)
                     setOnCompletionListener { if (fortsetzung.isActive) fortsetzung.resume(Unit) }
                     setOnErrorListener { _, was, extra ->
                         IdeenLog.warn(
@@ -302,6 +414,8 @@ class Vorleser(
 
     fun weiter() {
         if (!pausiert) return
+        // War der Tonfokus verweigert (Telefonat), jetzt erneut fragen — sonst bleibt es angehalten.
+        if (fokusAnfrage == null && _stand.value.zustand != VorleseZustand.AUS && !fordereFokusAn()) return
         pausiert = false
         spieler?.let { runCatching { it.start() } }
         ttsManager.resume()
@@ -347,8 +461,18 @@ class Vorleser(
         _stand.value = _stand.value.copy(fehler = null)
     }
 
-    private fun fordereFokusAn() {
-        if (fokusAnfrage != null) return
+    /** Holt den Tonfokus; bekommt das Vorlesen ihn nicht sofort, hält es an. */
+    private fun holeFokus() {
+        if (!fordereFokusAn()) pause()
+    }
+
+    /**
+     * @return true, wenn sofort gesprochen werden darf. Bei verzögertem Fokus kommt das
+     *   Weitersprechen später über den Zuhörer; bei verweigertem (Telefonat) bleibt es angehalten,
+     *   bis Frank auf Weiter tippt.
+     */
+    private fun fordereFokusAn(): Boolean {
+        if (fokusAnfrage != null) return true
         val zuhoerer = AudioManager.OnAudioFocusChangeListener { aenderung ->
             when (aenderung) {
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT,
@@ -366,18 +490,33 @@ class Vorleser(
                 AudioManager.AUDIOFOCUS_LOSS -> stopp()
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val anfrage = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                .setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                        .build(),
-                )
-                .setOnAudioFocusChangeListener(zuhoerer)
-                .build()
-            fokusAnfrage = anfrage
-            audioManager?.requestAudioFocus(anfrage)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
+        val anfrage = AudioFocusRequest.Builder(fokusArt)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build(),
+            )
+            .setAcceptsDelayedFocusGain(true)
+            .setOnAudioFocusChangeListener(zuhoerer)
+            .build()
+        // Vor der Anfrage merken, damit gibFokusFrei sie in jedem Fall wieder abmeldet.
+        fokusAnfrage = anfrage
+        return when (audioManager?.requestAudioFocus(anfrage)) {
+            AudioManager.AUDIOFOCUS_REQUEST_DELAYED -> {
+                // Das System meldet AUDIOFOCUS_GAIN später, der Zuhörer setzt dann fort.
+                IdeenLog.info("Vorleser", "fordereFokusAn", "Tonfokus verzögert")
+                pausiertDurchFokus = true
+                false
+            }
+            AudioManager.AUDIOFOCUS_REQUEST_FAILED -> {
+                // Ohne Fokus kommt kein Zuhörer-Ruf — die Anfrage gilt als nicht gestellt.
+                IdeenLog.warn("Vorleser", "fordereFokusAn", "Tonfokus verweigert")
+                fokusAnfrage = null
+                false
+            }
+            else -> true
         }
     }
 
@@ -399,6 +538,12 @@ class Vorleser(
 
         /** Hörbarer Atem zwischen zwei Absätzen, kein Loch. */
         const val ABSATZ_PAUSE_MS = 1000L
+
+        /** Kürzerer Atem bei Gesprächsantworten und Ansagen — sonst wirkt Jarvis träge. */
+        const val KURZE_PAUSE_MS = 400L
+
+        /** Wartezeit vor dem Wiederholversuch nach einem Netzfehler. */
+        private const val NETZ_WIEDERHOLUNG_MS = 500L
 
         /** Wie oft während einer Pause nachgesehen wird, ob es weitergeht. */
         private const val PAUSE_PRUEF_MS = 150L

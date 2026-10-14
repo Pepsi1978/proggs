@@ -52,7 +52,7 @@ ChatGPT (Cloud) ──HTTPS──> Jarvis-Relay (eigener Server) ──WebSocket
 
 ## Werkzeuge im Plugin
 
-35 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
+38 Werkzeuge. Verwandte Aufgaben einer App teilen sich ein Werkzeug (Helfer `als` und `mit` in `faehigkeit/Faehigkeit.kt`);
 welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl für ChatGPT überschaubar.
 
 | Werkzeug | Zweck |
@@ -74,6 +74,9 @@ welche Einzelfunktion arbeitet, entscheidet die Eingabe. So bleibt die Auswahl f
 | `agenten`, `agent_starten` | Agenten ansehen, anlegen, löschen und beauftragen |
 | `mail_senden`, `mail_lesen` | Gmail; `mail_lesen` mit `nr` liefert eine Mail vollständig |
 | `jarvis_status` | Erreichbarkeit, Datum, Dienst heute, angebundene Apps |
+| `jarvis_kontext` | Das Gesamtbild aus dem Live-Gedächtnis (alle Apps, letzte 10 Tage vollständig) |
+| `gedaechtnis_suchen` | Gezielte Suche im ganzen Gedächtnis: Tagebuch, Gespräche, Notizen, Gemerktes, Ideen, Ablage, frühere Auswertungen |
+| `logbuch_lesen` | Logbuch der App: Fehler, Dauer, Aktionen, mit Zusammenfassung |
 
 Fehlt beim Anlegen der Tag, obwohl eine Uhrzeit genannt wurde, fragt ChatGPT nach; ruft es trotzdem auf, lehnt die
 Aufgaben-App mit einem Hinweis ab. Mehrere Treffer bei einem Suchwort führen zu einer Rückfrage statt zu einer
@@ -106,25 +109,81 @@ Grenzen: Nach „Stopp erzwingen“ gehen Wecker verloren, bis die App einmal ge
 nicht zwischen Nacht- und Tagschlaf; das Modell ordnet das über Rahmen und Dienste der letzten Tage ein. E-Mails,
 Ablage und Repo fließen nicht in die Auswertung ein.
 
-## Gedächtnis und Gesamtbild
+## Live-Gedächtnis und Gesamtbild
 
-`faehigkeit/RegelnFaehigkeit.kt`, `agent/Gehirn.kt`, `agent/Lernen.kt`. Jarvis führt drei Dateien in `filesDir` und
-pflegt sie selbst: `regeln.json` (wie er arbeiten soll), `ziele.json` (was Frank erreichen will) und
-`ueber_frank.json` (dauerhafte Tatsachen über Frank). Drei Werkzeuge für alle drei Arten: `jarvis_merken` (neu, oder
-mit `id` ersetzen), `jarvis_vergessen`, `jarvis_gemerktes_lesen`. Im Code stehen keine einzelnen Regeln oder Angaben
-über Frank. Schreiben darf nur das Gespräch mit Frank (Plugin, eigener Chat) und der Lernlauf aus dem Tagebuch;
-Agenten und die Tagesauswertung lesen nur.
+`gedaechtnis/Lagebild.kt`, `gedaechtnis/Waechter.kt`, `gedaechtnis/Gespraechsgedaechtnis.kt`, `agent/Gehirn.kt`,
+`agent/Lernen.kt`, `faehigkeit/RegelnFaehigkeit.kt`, Oberfläche `ui/GedaechtnisBildschirm.kt`.
 
-Das Gesamtbild (`Gehirn.kontext`) ist ein Text: die drei Dateien, Rahmen der nächsten Tage, Termine und Aufgaben
-(frisch gelesen), die aktuelle Tagesauswertung und das Tagebuch (letzte 14 Tage bis 1500 Zeichen je Tag, ältere Tage
-gekürzt, frühere Monate verdichtet, zusammen höchstens 30.000 Zeichen). Der eigene Chat und die Agenten bekommen es
-in die Anweisung; das Plugin holt es mit `jarvis_kontext` als erstem Aufruf jedes Gesprächs. Fehlt der Aufruf länger
-als eine Stunde oder hat sich das Gedächtnis seither geändert, reicht Jarvis die drei Dateien mit dem nächsten
-Werkzeug-Ergebnis nach und erinnert an das Gesamtbild.
+**Ziel:** Bei jeder Frage, egal über welchen Weg (eigener Chat, „Hey Jarvis“, ChatGPT-Plugin, Agenten), liegt der
+aktuelle Stand aus allen angebundenen Apps schon fertig im Kontext. Das Gesamtbild wird nicht erst beim Fragen gebaut.
 
-Der Lernlauf (`Lernen.laufe`, nach jeder Synchronisation, abschaltbar) verdichtet je Lauf einen Monat des Tagebuchs,
-der ganz hinter den letzten 14 Tagen liegt, und notiert einmal am Tag bis zu drei Ziele oder Tatsachen aus den
-neuesten Einträgen oder ersetzt überholte.
+**Lagebild** (`filesDir/lagebild.json`, überlebt Neustarts): 17 Bereiche, je Bereich Text, Lese-Zeitpunkt, Zeitpunkt
+und Anlass der letzten inhaltlichen Änderung: Gemerktes (Regeln, Ziele, Wissen über Frank), Rahmen der nächsten 7 Tage,
+Termine der nächsten 14 Tage, Aufgaben (heute/überfällig und morgen vollständig, demnächst und Eingang knapp), Wecker,
+Gespräche mit Jarvis, Biodaten live (neuester Tag, Kerngrößen gegen den Monat, Verlauf 10 Tage; gelesen ohne neuen
+Abgleich), Tagesauswertung (die neueste gedeutete der letzten 24 Stunden), alle offenen Ideen (25 neueste mit Text,
+ältere mit Titel), Trainings 14 Tage, Wetter, Rückblick der letzten 10 Tage (Dienste/Termine und das Fazit jeder
+Tagesauswertung aus dem Tagesarchiv), Ablage, ungelesene Mails (nur Absender und Betreff), Wissens-Inhaltsverzeichnis,
+Tagebuch. Eine Störung überschreibt nie einen guten Stand (der alte Text bleibt mit Hinweis). Änderungen an Elementen
+(neue Idee, erledigte Aufgabe, neuer Termin, neuer Tagebucheintrag …) landen als Neuigkeit im Abschnitt „NEU IN DEN
+LETZTEN 24 STUNDEN“ (72 Stunden aufbewahrt).
+
+**Wächter** (läuft im Dienst rund um die Uhr):
+- Änderungssignale: Geniale Aufgaben, Geniale Ideen, Genialer Wecker und Entropie Reductor rufen bei jeder
+  Datenänderung `notifyChange("content://<paket>.jarvis")` auf (Room-InvalidationTracker bzw. zentraler Speicher in den
+  Apps, entprellt 0,7 s). Jarvis beobachtet diese Adressen und den Kalender des Handys (`ContentObserver`, entprellt
+  1,5 s) und liest genau den betroffenen Bereich neu. Fehlt eine App, versucht er die Anmeldung alle 10 Minuten neu.
+- Eigene Schreibaktionen (Plugin, Chat, Agenten): `Lagebild.nachAktion` liest den betroffenen Bereich sofort neu.
+- Sicherheitsnetz: jede Minute alle Bereiche, deren Abstand abgelaufen ist (Aufgaben 2 Min., Ideen/Ablage 3, Wecker,
+  Kalender 5, Biodaten 10, Trainings 15, Wetter/Tagebuch/Mail/Rückblick 30, Wissen 6 Std.); nach Mitternacht alles.
+- Beim Fragen werden zusätzlich die schnellen, lokalen Bereiche (älter als 30 s) nachgelesen, höchstens 2,5 Sekunden
+  gewartet; was dann noch läuft, landet für die nächste Frage im Speicher.
+
+**Kontextregel** (damit es über die Jahre nicht anwächst, Obergrenze rund 65.000 Zeichen): die letzten 10 Tage
+vollständig (Tagebuch je Tag bis 2.500 Zeichen, Gespräche, Dienste, Tagesfazits, Biodaten-Verlauf). Davor je
+Tagebuch-Tag eine Kurzfassung in Stichpunkten (vom Lernlauf geschrieben, `filesDir/tagebuch_kurz/`, mit Prüfsumme:
+ändert Frank einen Eintrag, wird sie neu geschrieben), Monate ganz vor den letzten fünf Wochen als Monats-Kurzfassung
+(`filesDir/tagebuch_verdichtet/`, ebenfalls mit Prüfsumme). Monate und letzte Tage haben feste Teilbudgets; es fällt
+immer das Älteste weg, nie mitten im Text.
+
+**Tiefes Gedächtnis:** `gedaechtnis_suchen` sucht gezielt über alles, was Jarvis je gesehen hat: jeden
+Tagebucheintrag, verdichtete Monate, alle Gespräche, Gesprächsnotizen, Gemerktes, Ideen (auch umgesetzte), Ablage und
+das Tagesarchiv der Auswertungen (`filesDir/tagesauswertung_archiv/<Datum>.txt`, die letzte gedeutete Fassung je Tag,
+ohne Löschfrist). Lokal, deshalb schnell.
+
+**Lernen:**
+- Merkdateien `regeln.json`, `ziele.json`, `ueber_frank.json`; Werkzeuge `jarvis_merken`, `jarvis_vergessen`,
+  `jarvis_gemerktes_lesen`. Schreiben dürfen nur das Gespräch mit Frank und die Lernläufe; Agenten und die
+  Tagesauswertung lesen nur.
+- Aus dem Tagebuch (`Lernen.laufe`, nach jeder Auswertung, abschaltbar): einmal am Tag bis zu drei Ziele oder
+  Tatsachen aus den Einträgen seit dem zuletzt verarbeiteten Tag (Ziele werden nur angelegt, nie ersetzt; ersetzte
+  Infos stehen mit alter Fassung in `merk_verlauf.jsonl`), danach Tages-Stichpunkte, danach ein Monat verdichten.
+  Jeder Schritt hat sein eigenes Zeitlimit; ein Monat, der dreimal scheitert, bekommt eine Notfassung.
+- Aus den Gesprächen (`Gespraechsgedaechtnis.lerne`): Ruht ein Gespräch zehn Minuten, liest Jarvis Franks neue
+  Aussagen (Jarvis' Antworten nur als Zusammenhang) und die Aktionen über ChatGPT und übernimmt Ziele, Tatsachen,
+  Regeln (nur wenn Frank ausdrücklich „immer“, „nie“, „ab jetzt“ … sagt) und kurzlebige Gesprächsnotizen mit
+  Ablaufdatum (`gespraechsnotizen.json`, Vorhaben, Zusagen, offene Themen; höchstens 30 Tage). Alles Gelernte steht
+  unter Aktivität.
+
+**Plugin:** `jarvis_kontext` liefert das Lagebild. Weil der Relay Gespräche nicht unterscheiden kann, hängt Jarvis an
+jedes Werkzeug-Ergebnis eine kurze Erinnerung an `jarvis_kontext`, reicht Gedächtnis und Neuigkeiten genau einmal nach
+einer Änderung (sonst höchstens stündlich) nach, und `tagesauswertung_lesen` nennt, was seit der Auswertung neu ist.
+
+**Oberfläche:** Startbildschirm → Karte „Live-Gedächtnis“: alle Bereiche mit Stand und Inhalt, Neuigkeiten,
+Gesprächsnotizen (löschbar), „Jetzt aus den Gesprächen lernen“, Logbuch herunterladen.
+
+## Logbuch
+
+`observability/Logbuch.kt`: Mitschreiber der ganzen App für spätere Verbesserungen. Je Tag
+`filesDir/logbuch/JJJJ-MM-TT.jsonl`, eine JSON-Zeile je Ereignis (`z` Zeit, `k` Art: aktion, fehler, dauer,
+gedaechtnis, netz, sprache, system; `e` Ereignis; `d` Einzelheiten; `ms` Dauer; `v` Version), 14 Tage, höchstens 6 MB
+je Tag, geschrieben auf eigenem Faden. Erfasst: jede Protokoll-Aktion, Fehler und Abstürze (mit Stapel), Dauer jeder
+Antwort (Gesamtbild, Modellschritte, Werkzeuge), Plugin-Aufrufe, Gedächtnis-Auffrischungen und Änderungssignale,
+Verbindungswechsel, Tagesauswertung, Lernläufe, Sprache. Nie: Schlüssel, Passwörter, Token, Mail-Inhalte, Prompts.
+
+Abholen: `pwsh Jarvis/werkzeuge/logbuch-holen.ps1` (adb per WLAN, legt Logbuch, logcat und `zusammenfassung.txt`
+unter `Jarvis/logs/<Zeit>/` ab, nicht im Git). In der App: Live-Gedächtnis → Logbuch speichern (Download/Jarvis).
+Werkzeug `logbuch_lesen` (Zusammenfassung, häufigste Fehler, langsamste Abläufe, Einträge gefiltert).
 
 ## Tagesdatenbank
 

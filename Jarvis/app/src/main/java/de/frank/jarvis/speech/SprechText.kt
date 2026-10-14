@@ -124,9 +124,26 @@ object SprechText {
         "l" to "Liter",
         "ml" to "Milliliter",
         "h" to "Stunden",
+        "min" to "Minuten",
         "kWh" to "Kilowattstunden",
         "°C" to "Grad",
     )
+
+    /** „50 km/h“, „5 min/km“, „3 m/s“ — ein Schrägstrich zwischen Einheiten heisst „pro“, nicht „oder“. */
+    private val PRO_EINHEIT = Regex("""\b(\d+(?:,\d+)?)\s*(km|m|min)/(h|km|s)\b""")
+    private val PRO_WORT = mapOf(
+        "km" to "Kilometer",
+        "m" to "Meter",
+        "min" to "Minuten",
+        "h" to "Stunde",
+        "s" to "Sekunde",
+    )
+
+    /** „10 min.“ hinter einer Zahl sind Minuten, nicht „mindestens“. */
+    private val MINUTEN_MIT_PUNKT = Regex("""(\d)\s*min\.""")
+
+    /** Satzgrenze für den Schnitt hinter dem ersten Satz — nicht hinter „am 3.“ vor einem Monat. */
+    private val SATZGRENZE = Regex("""(?<=[.!?])(?<!\d\.)\s+(?=\p{Lu})""")
 
     private val MONATE = listOf(
         "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -188,7 +205,13 @@ object SprechText {
     }
 
     private fun schreibeAbkuerzungenAus(roh: String): String {
-        var text = roh
+        // Vor der Abkürzungsliste, die „min.“ sonst zu „mindestens“ macht. Endet dort der Satz,
+        // bleibt sein Punkt stehen.
+        var text = MINUTEN_MIT_PUNKT.replace(roh) { treffer ->
+            val danach = roh.substring(treffer.range.last + 1).trimStart(' ', '\t').firstOrNull()
+            val satzende = danach == null || danach == '\n' || danach.isUpperCase()
+            treffer.groupValues[1] + " Minuten" + if (satzende) "." else ""
+        }
         // Nur am Wortanfang — sonst wird aus „Termin.“ ein „Termindestens“.
         ABKUERZUNGEN.forEach { (kurz, lang) ->
             text = Regex("(?<!\\p{L})" + Regex.escape(kurz)).replace(text, Regex.escapeReplacement(lang))
@@ -202,6 +225,13 @@ object SprechText {
      */
     private fun schreibeZahlenAus(roh: String): String {
         var text = roh
+
+        // 50 km/h → 50 Kilometer pro Stunde. Zuerst, sonst nähme die Komma- oder Einheitenregel
+        // das „km“ weg und der Schrägstrich würde zu „oder“.
+        text = PRO_EINHEIT.replace(text) { treffer ->
+            val zahl = treffer.groupValues[1].replace(",", " Komma ")
+            "$zahl ${PRO_WORT[treffer.groupValues[2]]} pro ${PRO_WORT[treffer.groupValues[3]]}"
+        }
 
         // 12.5. oder 12.05.2026 → zwölfter Mai (zweitausendsechsundzwanzig)
         text = Regex("""\b(\d{1,2})\.(\d{1,2})\.(\d{4})?""").replace(text) { treffer ->
@@ -298,6 +328,21 @@ object SprechText {
         }
     }
 
+    /**
+     * Wo der erste Absatz hinter seinem ersten Satz geteilt werden darf, damit der erste Ton nicht
+     * auf die Erzeugung des ganzen Absatzes wartet. Null, wenn sich das nicht lohnt: Der vordere
+     * Teil soll [ERSTER_TEIL_MIN]–[ERSTER_TEIL_MAX] Zeichen haben und der Rest noch spürbar sein.
+     */
+    fun ersterSatzSchnitt(absatz: String): Int? {
+        if (absatz.length < ERSTER_TEIL_MIN + REST_MIN) return null
+        val grenze = SATZGRENZE.findAll(absatz)
+            .map { it.range.first }
+            .firstOrNull { it >= ERSTER_TEIL_MIN }
+            ?: return null
+        if (grenze > ERSTER_TEIL_MAX || absatz.length - grenze < REST_MIN) return null
+        return grenze
+    }
+
     private fun teileAnSatzgrenzen(absatz: String, maxZeichen: Int): List<String> {
         val saetze = Regex("(?<=[.!?])\\s+").split(absatz)
         val teile = mutableListOf<String>()
@@ -330,4 +375,9 @@ object SprechText {
 
     /** Sicherheitsgrenze der Sprachdienste. */
     const val MAX_ZEICHEN = 1000
+
+    /** Grenzen für den vorgezogenen ersten Satz (siehe [ersterSatzSchnitt]). */
+    private const val ERSTER_TEIL_MIN = 40
+    private const val ERSTER_TEIL_MAX = 200
+    private const val REST_MIN = 40
 }

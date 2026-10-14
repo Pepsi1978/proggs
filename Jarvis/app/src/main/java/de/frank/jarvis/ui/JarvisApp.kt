@@ -56,7 +56,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -109,6 +111,10 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                     MerkBildschirm(vm, liste, Modifier.weight(1f))
                     return@Column
                 }
+                if (GedaechtnisAnsicht.offen) {
+                    GedaechtnisBildschirm(Modifier.weight(1f))
+                    return@Column
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     AnimatedContent(vm.reiter, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "reiter") { reiter ->
                         when (reiter) {
@@ -130,21 +136,28 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
 @Composable
 private fun Hintergrund() {
     val f = LocalFarben.current
-    val bewegung = LocalBewegung.current
-    val lauf = rememberInfiniteTransition(label = "hg")
-    val t by lauf.animateFloat(0f, 1f, infiniteRepeatable(tween(46_000, easing = LinearEasing)), label = "t")
-    val phase = if (bewegung) t else 0.2f
-    Canvas(Modifier.fillMaxSize()) {
-        val w = (phase * 2 * PI).toFloat()
-        fun fleck(farbe: Color, x: Float, y: Float, r: Float, alpha: Float) {
-            val mitte = Offset(size.width * x, size.height * y)
-            drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = alpha), Color.Transparent), mitte, size.minDimension * r), size.minDimension * r, mitte)
-        }
-        val staerke = if (f.dunkel) 0.34f else 0.55f
-        fleck(f.blob1, 0.18f + 0.06f * cos(w), 0.12f + 0.04f * sin(w), 0.85f, staerke)
-        fleck(f.blob2, 0.88f + 0.05f * sin(w), 0.42f + 0.06f * cos(w), 0.70f, staerke * 0.7f)
-        fleck(f.blob3, 0.30f + 0.07f * sin(w + 1.3f), 0.92f + 0.03f * cos(w), 0.95f, staerke)
+    if (LocalBewegung.current) {
+        val lauf = rememberInfiniteTransition(label = "hg")
+        val t = lauf.animateFloat(0f, 1f, infiniteRepeatable(tween(46_000, easing = LinearEasing)), label = "t")
+        // Der Wert wird erst beim Zeichnen gelesen: Jedes Bild wird nur neu gezeichnet, nicht neu zusammengesetzt.
+        // Eigene Ebene, damit das Glas darüber nicht in jedem Bild mitgezeichnet wird.
+        Canvas(Modifier.fillMaxSize().graphicsLayer()) { lichtflecken(f, t.value) }
+    } else {
+        // Ohne Bewegung gar keine Endlos-Animation: Sie würde sonst weiter Bilder anfordern.
+        Canvas(Modifier.fillMaxSize().graphicsLayer()) { lichtflecken(f, 0.2f) }
     }
+}
+
+private fun DrawScope.lichtflecken(f: de.frank.jarvis.ui.theme.Farben, phase: Float) {
+    val w = (phase * 2 * PI).toFloat()
+    fun fleck(farbe: Color, x: Float, y: Float, r: Float, alpha: Float) {
+        val mitte = Offset(size.width * x, size.height * y)
+        drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = alpha), Color.Transparent), mitte, size.minDimension * r), size.minDimension * r, mitte)
+    }
+    val staerke = if (f.dunkel) 0.34f else 0.55f
+    fleck(f.blob1, 0.18f + 0.06f * cos(w), 0.12f + 0.04f * sin(w), 0.85f, staerke)
+    fleck(f.blob2, 0.88f + 0.05f * sin(w), 0.42f + 0.06f * cos(w), 0.70f, staerke * 0.7f)
+    fleck(f.blob3, 0.30f + 0.07f * sin(w + 1.3f), 0.92f + 0.03f * cos(w), 0.95f, staerke)
 }
 
 @Composable
@@ -192,27 +205,31 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
 /** Der Leuchtkern: zwei gegenläufige Ringe um einen pulsierenden Mittelpunkt. [aktiv] = schneller und heller. */
 @Composable
 fun Kern(groesse: Dp, farbe: Color, aktiv: Boolean, modifier: Modifier = Modifier) {
-    val bewegung = LocalBewegung.current
-    val lauf = rememberInfiniteTransition(label = "kern")
-    val dreh by lauf.animateFloat(0f, 360f, infiniteRepeatable(tween(if (aktiv) 2_600 else 9_000, easing = LinearEasing)), label = "dreh")
-    val puls by lauf.animateFloat(0.78f, 1f, infiniteRepeatable(tween(if (aktiv) 620 else 1_900), RepeatMode.Reverse), label = "puls")
-    val winkel = if (bewegung) dreh else 30f
-    val p = if (bewegung) puls else 0.9f
-    Canvas(modifier.size(groesse)) {
-        val r = size.minDimension / 2
-        drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = 0.34f * p), Color.Transparent), center, r), r)
-        val strich = r * 0.085f
-        val aussen = r * 0.74f
-        drawCircle(farbe.copy(alpha = 0.22f), aussen, style = Stroke(strich * 0.5f))
-        for (i in 0 until 3) {
-            drawArc(farbe.copy(alpha = 0.95f), winkel + i * 120f, 62f, false, Offset(center.x - aussen, center.y - aussen), androidx.compose.ui.geometry.Size(aussen * 2, aussen * 2), style = Stroke(strich, cap = StrokeCap.Round))
-        }
-        val innen = r * 0.50f
-        for (i in 0 until 6) {
-            drawArc(farbe.copy(alpha = 0.6f), -winkel * 1.6f + i * 60f, 26f, false, Offset(center.x - innen, center.y - innen), androidx.compose.ui.geometry.Size(innen * 2, innen * 2), style = Stroke(strich * 0.8f, cap = StrokeCap.Round))
-        }
-        drawCircle(Brush.radialGradient(listOf(Color.White, farbe, farbe.copy(alpha = 0f)), center, r * 0.34f * p), r * 0.34f * p)
+    if (LocalBewegung.current) {
+        val lauf = rememberInfiniteTransition(label = "kern")
+        val dreh = lauf.animateFloat(0f, 360f, infiniteRepeatable(tween(if (aktiv) 2_600 else 9_000, easing = LinearEasing)), label = "dreh")
+        val puls = lauf.animateFloat(0.78f, 1f, infiniteRepeatable(tween(if (aktiv) 620 else 1_900), RepeatMode.Reverse), label = "puls")
+        // Drehung und Puls erst beim Zeichnen lesen, auf eigener Ebene: kein Neuaufbau der Umgebung in jedem Bild.
+        Canvas(modifier.size(groesse).graphicsLayer()) { kernZeichnen(farbe, dreh.value, puls.value) }
+    } else {
+        Canvas(modifier.size(groesse)) { kernZeichnen(farbe, 30f, 0.9f) }
     }
+}
+
+private fun DrawScope.kernZeichnen(farbe: Color, winkel: Float, p: Float) {
+    val r = size.minDimension / 2
+    drawCircle(Brush.radialGradient(listOf(farbe.copy(alpha = 0.34f * p), Color.Transparent), center, r), r)
+    val strich = r * 0.085f
+    val aussen = r * 0.74f
+    drawCircle(farbe.copy(alpha = 0.22f), aussen, style = Stroke(strich * 0.5f))
+    for (i in 0 until 3) {
+        drawArc(farbe.copy(alpha = 0.95f), winkel + i * 120f, 62f, false, Offset(center.x - aussen, center.y - aussen), androidx.compose.ui.geometry.Size(aussen * 2, aussen * 2), style = Stroke(strich, cap = StrokeCap.Round))
+    }
+    val innen = r * 0.50f
+    for (i in 0 until 6) {
+        drawArc(farbe.copy(alpha = 0.6f), -winkel * 1.6f + i * 60f, 26f, false, Offset(center.x - innen, center.y - innen), androidx.compose.ui.geometry.Size(innen * 2, innen * 2), style = Stroke(strich * 0.8f, cap = StrokeCap.Round))
+    }
+    drawCircle(Brush.radialGradient(listOf(Color.White, farbe, farbe.copy(alpha = 0f)), center, r * 0.34f * p), r * 0.34f * p)
 }
 
 @Composable

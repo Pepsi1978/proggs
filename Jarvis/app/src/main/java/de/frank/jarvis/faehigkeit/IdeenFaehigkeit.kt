@@ -25,13 +25,51 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
 
     /** Schützt vor doppelt angelegten Ideen, wenn ChatGPT einen Aufruf nach einer Zeitüberschreitung wiederholt. */
     private var letzteAnlage: Triple<String, Long, String>? = null
+    /** Antwort, wenn ein Speichern ins Zeitlimit lief und unklar ist, ob die Idee angekommen ist. */
+    private val UNKLAR = "Womöglich trotzdem gespeichert. Vor einem neuen Versuch mit ideen_lesen prüfen, nicht noch einmal speichern."
     private val anlageSperre = Mutex()
 
     override fun stoerung(): String? = rufeDirekt("kategorien", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
 
-    /** Alle offenen Ideen als kompakter Text, für die Tagesdatenbank. */
+    /**
+     * Alle offenen Ideen als kompakter Text, für die Tagesdatenbank. Höchstens 14.000 Zeichen, gekürzt wird zeilenweise:
+     * Zuerst werden die Texte kürzer, reicht das nicht, fallen die hinteren Ideen weg, und der Text sagt, wie viele.
+     */
     suspend fun ueberblick(): String = rufe("lesen", JSONObject().put("status", "offen").put("limit", 200)).let { antwort ->
-        antwort.optString("fehler").takeIf { it.isNotEmpty() }?.let { "NICHT VERFÜGBAR: $it" } ?: liste(antwort, 160).take(14_000)
+        antwort.optString("fehler").takeIf { it.isNotEmpty() }?.let { "NICHT VERFÜGBAR: $it" } ?: run {
+            val voll = liste(antwort, 160)
+            if (voll.length <= UEBERBLICK_ZEICHEN) return@run voll
+            val knapp = liste(antwort, 80)
+            if (knapp.length <= UEBERBLICK_ZEICHEN) return@run knapp
+            val zeilen = knapp.lines()
+            val behalten = StringBuilder()
+            var weggelassen = 0
+            zeilen.forEachIndexed { n, zeile ->
+                // Kopfzeile immer; danach nur, solange Platz für den Hinweis am Ende bleibt.
+                if (n == 0 || (weggelassen == 0 && behalten.length + zeile.length + 1 <= UEBERBLICK_ZEICHEN - 120)) behalten.append(zeile).append('\n') else weggelassen++
+            }
+            behalten.append("… und ").append(weggelassen).append(" weitere offene Idee(n), vollständig über ideen_lesen.").toString()
+        }
+    }
+
+    /**
+     * Die offenen Ideen fürs Live-Gedächtnis: die 25 neuesten mit Text, alle älteren nur mit Titel und Datum.
+     * So kennt Jarvis jede Idee, und der Text wächst mit Hunderten Ideen kaum. Volltext über ideen_lesen mit id.
+     */
+    suspend fun gedaechtnis(): String {
+        val antwort = rufe("lesen", JSONObject().put("status", "offen").put("limit", 500))
+        antwort.optString("fehler").takeIf { it.isNotEmpty() }?.let { return "NICHT VERFÜGBAR: $it" }
+        val ideen = antwort.optJSONArray("ideen") ?: JSONArray()
+        if (ideen.length() == 0) return "Keine offenen Ideen."
+        val liste = (0 until ideen.length()).map { ideen.getJSONObject(it) }.sortedByDescending { it.optLong("id") }
+        return buildString {
+            append(antwort.optInt("anzahl", liste.size)).append(" offene Idee(n), neueste zuerst:\n")
+            liste.forEachIndexed { n, i ->
+                append("- ").append(kopf(i))
+                if (n < 25) append(": ").append(i.optString("text").replace(Regex("\\s+"), " ").let { if (it.length > 260) it.take(260) + " …" else it })
+                append('\n')
+            }
+        }.trim().let { if (it.length > 9_000) it.take(9_000).substringBeforeLast('\n') + "\n… (weitere mit ideen_lesen)" else it }
     }
 
     override val werkzeuge: List<Werkzeug> by lazy {
@@ -129,9 +167,16 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
             // Gesperrt, weil der Tunnel Aufrufe parallel abarbeitet: Ein wiederholter Aufruf wartet, bis der erste fertig ist.
             anlageSperre.withLock {
                 letzteAnlage?.let { (alt, zeit, antwort) ->
-                    if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000) return@Werkzeug Ergebnis("$antwort (War bereits gespeichert, nicht doppelt angelegt.)")
+                    if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000)
+                        return@Werkzeug if (antwort == UNKLAR) Ergebnis(antwort, fehler = true) else Ergebnis("$antwort (War bereits gespeichert, nicht doppelt angelegt.)")
                 }
-                rufe("anlegen", a).fehlerOder { "Idee gespeichert: „${it.getJSONObject("idee").optString("titel")}“ (id ${it.getJSONObject("idee").optLong("id")}). ${it.optString("hinweis")}" }.also {
+                val antwort = rufe("anlegen", a)
+                // Zeitlimit: Die Idee kam womöglich trotzdem an. Schlüssel merken, damit ein Wiederholungsversuch nicht doppelt speichert.
+                if (antwort.optBoolean(AppBruecke.ZEITLIMIT)) {
+                    letzteAnlage = Triple(schluessel, System.currentTimeMillis(), UNKLAR)
+                    return@Werkzeug Ergebnis(antwort.optString("fehler") + " " + UNKLAR, fehler = true)
+                }
+                antwort.fehlerOder { "Idee gespeichert: „${it.getJSONObject("idee").optString("titel")}“ (id ${it.getJSONObject("idee").optLong("id")}). ${it.optString("hinweis")}" }.also {
                     if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
                 }
             }
@@ -210,5 +255,6 @@ class IdeenFaehigkeit(private val context: Context) : Faehigkeit {
     companion object {
         private val BRUECKE: Uri = Uri.parse("content://de.frank.genialeideen.jarvis")
         private val LESEND = setOf("kategorien", "lesen", "idee")
+        private const val UEBERBLICK_ZEICHEN = 14_000
     }
 }

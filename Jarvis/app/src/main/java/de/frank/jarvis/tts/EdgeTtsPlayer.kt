@@ -44,6 +44,12 @@ class EdgeTtsPlayer(context: Context) {
     private var watchdogJob: Job? = null
     private var activeFile: File? = null
 
+    /**
+     * Pause, die schon während der Erzeugung kam: Es gibt noch keinen Player, den man anhalten
+     * könnte. Der Merker hält den Absatz an, sobald er fertig geladen ist.
+     */
+    @Volatile private var angehalten = false
+
     fun speak(
         text: String,
         voice: String = TtsCatalog.DEFAULT_EDGE_VOICE,
@@ -56,6 +62,8 @@ class EdgeTtsPlayer(context: Context) {
         onError: (Exception) -> Unit,
     ) {
         stop()
+        // Der Aufrufer wartet vor jedem Absatz das Ende einer Pause ab.
+        angehalten = false
         val requestGeneration = generation.incrementAndGet()
         val callbacks = PlaybackCallbacks(onPlaybackStart, onComplete, onError)
         if (text.isBlank()) {
@@ -63,26 +71,7 @@ class EdgeTtsPlayer(context: Context) {
             return
         }
 
-        val connectionId = UUID.randomUUID().toString().replace("-", "")
-        val requestId = UUID.randomUUID().toString().replace("-", "")
-        val url = EDGE_TTS_URL +
-            "?TrustedClientToken=$TRUSTED_CLIENT_TOKEN" +
-            "&Sec-MS-GEC=${generateSecMsGec()}" +
-            "&Sec-MS-GEC-Version=1-$CHROMIUM_FULL_VERSION" +
-            "&ConnectionId=$connectionId"
-        val request = Request.Builder()
-            .url(url)
-            .header(
-                "User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                    "(KHTML, like Gecko) Chrome/$CHROMIUM_MAJOR_VERSION.0.0.0 " +
-                    "Safari/537.36 Edg/$CHROMIUM_MAJOR_VERSION.0.0.0",
-            )
-            .header("Origin", "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold")
-            .header("Pragma", "no-cache")
-            .header("Cache-Control", "no-cache")
-            .header("Cookie", "muid=${generateMuid()};")
-            .build()
+        val request = anfrage()
 
         val audioFile = File(
             appContext.cacheDir,
@@ -112,26 +101,8 @@ class EdgeTtsPlayer(context: Context) {
                     return
                 }
                 startWatchdog(webSocket, requestGeneration, callbacks, WATCHDOG_INITIAL_MS, keineAntwort = true)
-                val config = "Content-Type:application/json; charset=utf-8\r\n" +
-                    "Path:speech.config\r\n\r\n" +
-                    """{"context":{"synthesis":{"audio":{"metadataOptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-96kbitrate-mono-mp3"}}}}"""
-                val escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                val ratePercent = ((speechRate.coerceIn(0.7f, 1.3f) - 1f) * 100).roundToInt()
-                val formattedRate = if (ratePercent >= 0) "+$ratePercent%" else "$ratePercent%"
-                val boundedPitch = pitchPercent.coerceIn(-20, 20)
-                val formattedPitch = if (boundedPitch >= 0) "+$boundedPitch%" else "$boundedPitch%"
-                // Der <lang>-Rahmen ist der einzige Weg, eine mehrsprachige Stimme bei Deutsch
-                // zu halten: xml:lang am <speak> allein reicht ihr nicht, sie bestimmt die
-                // Sprache sonst je Wort neu und spricht Fremdwoerter englisch aus.
-                val inhalt = if (erzwingeDeutsch) "<lang xml:lang='de-DE'>" + escaped + "</lang>" else escaped
-                val ssml = "X-RequestId:$requestId\r\n" +
-                    "Content-Type:application/ssml+xml\r\n" +
-                    "Path:ssml\r\n\r\n" +
-                    "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' " +
-                    "xml:lang='de-DE'><voice name='$voice'>" +
-                    "<prosody rate='$formattedRate' pitch='$formattedPitch'>" +
-                    "$inhalt</prosody></voice></speak>"
-                if (!webSocket.send(config) || !webSocket.send(ssml)) {
+                val ssml = ssmlNachricht(text, voice, speechRate, pitchPercent, erzwingeDeutsch)
+                if (!webSocket.send(KONFIG) || !webSocket.send(ssml)) {
                     finishError(
                         requestGeneration,
                         callbacks,
@@ -258,7 +229,7 @@ class EdgeTtsPlayer(context: Context) {
                 }
                 player.prepare()
                 SpeechLoudness.boost(player)
-                player.start()
+                if (!angehalten) player.start()
             }
             signalStart(requestGeneration, callbacks)
         } catch (error: Exception) {
@@ -272,7 +243,9 @@ class EdgeTtsPlayer(context: Context) {
     }
 
     fun pause(): Boolean = synchronized(lock) {
-        val player = mediaPlayer ?: return@synchronized false
+        angehalten = true
+        // Ohne Player läuft noch die Erzeugung — der Merker hält den Absatz danach an.
+        val player = mediaPlayer ?: return@synchronized true
         try {
             if (player.isPlaying) player.pause()
             true
@@ -283,7 +256,8 @@ class EdgeTtsPlayer(context: Context) {
     }
 
     fun resume(): Boolean = synchronized(lock) {
-        val player = mediaPlayer ?: return@synchronized false
+        angehalten = false
+        val player = mediaPlayer ?: return@synchronized true
         try {
             player.start()
             true
@@ -422,7 +396,8 @@ class EdgeTtsPlayer(context: Context) {
         val terminal = AtomicBoolean(false)
     }
 
-    private companion object {
+    /** Auch die Vorab-Erzeugung in [de.frank.jarvis.speech.Synthese] baut ihre Verbindung hiermit. */
+    internal companion object {
         const val TRUSTED_CLIENT_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4"
         const val CHROMIUM_FULL_VERSION = "143.0.3650.75"
         const val CHROMIUM_MAJOR_VERSION = "143"
@@ -445,5 +420,68 @@ class EdgeTtsPlayer(context: Context) {
         }
 
         fun generateMuid(): String = UUID.randomUUID().toString().replace("-", "").uppercase()
+
+        /** Die erste Nachricht jeder Verbindung: Ausgabeformat MP3, keine Wortgrenzen. */
+        const val KONFIG = "Content-Type:application/json; charset=utf-8\r\n" +
+            "Path:speech.config\r\n\r\n" +
+            """{"context":{"synthesis":{"audio":{"metadataOptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-96kbitrate-mono-mp3"}}}}"""
+
+        /** Der Verbindungsaufbau zum Edge-Dienst, für den Player und die Vorab-Erzeugung. */
+        fun anfrage(): Request {
+            val connectionId = UUID.randomUUID().toString().replace("-", "")
+            val url = EDGE_TTS_URL +
+                "?TrustedClientToken=$TRUSTED_CLIENT_TOKEN" +
+                "&Sec-MS-GEC=${generateSecMsGec()}" +
+                "&Sec-MS-GEC-Version=1-$CHROMIUM_FULL_VERSION" +
+                "&ConnectionId=$connectionId"
+            return Request.Builder()
+                .url(url)
+                .header(
+                    "User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                        "(KHTML, like Gecko) Chrome/$CHROMIUM_MAJOR_VERSION.0.0.0 " +
+                        "Safari/537.36 Edg/$CHROMIUM_MAJOR_VERSION.0.0.0",
+                )
+                .header("Origin", "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold")
+                .header("Pragma", "no-cache")
+                .header("Cache-Control", "no-cache")
+                .header("Cookie", "muid=${generateMuid()};")
+                .build()
+        }
+
+        /** Die SSML-Nachricht mit Stimme, Tempo, Tonhöhe und optionaler Deutsch-Bindung. */
+        fun ssmlNachricht(
+            text: String,
+            voice: String,
+            speechRate: Float,
+            pitchPercent: Int,
+            erzwingeDeutsch: Boolean,
+        ): String {
+            val requestId = UUID.randomUUID().toString().replace("-", "")
+            val escaped = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            val ratePercent = ((speechRate.coerceIn(0.7f, 1.3f) - 1f) * 100).roundToInt()
+            val formattedRate = if (ratePercent >= 0) "+$ratePercent%" else "$ratePercent%"
+            val boundedPitch = pitchPercent.coerceIn(-20, 20)
+            val formattedPitch = if (boundedPitch >= 0) "+$boundedPitch%" else "$boundedPitch%"
+            // Der <lang>-Rahmen ist der einzige Weg, eine mehrsprachige Stimme bei Deutsch
+            // zu halten: xml:lang am <speak> allein reicht ihr nicht, sie bestimmt die
+            // Sprache sonst je Wort neu und spricht Fremdwoerter englisch aus.
+            val inhalt = if (erzwingeDeutsch) "<lang xml:lang='de-DE'>" + escaped + "</lang>" else escaped
+            return "X-RequestId:$requestId\r\n" +
+                "Content-Type:application/ssml+xml\r\n" +
+                "Path:ssml\r\n\r\n" +
+                "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' " +
+                "xml:lang='de-DE'><voice name='$voice'>" +
+                "<prosody rate='$formattedRate' pitch='$formattedPitch'>" +
+                "$inhalt</prosody></voice></speak>"
+        }
+
+        /** Der Ton eines Binär-Rahmens beginnt hinter einem Kopf, dessen Länge die ersten zwei Byte nennen. */
+        fun tonBeginn(daten: ByteArray): Int {
+            if (daten.size <= 2) return -1
+            val kopfLaenge = ((daten[0].toInt() and 0xFF) shl 8) or (daten[1].toInt() and 0xFF)
+            val beginn = kopfLaenge + 2
+            return if (beginn >= daten.size) -1 else beginn
+        }
     }
 }

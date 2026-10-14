@@ -51,6 +51,8 @@ fun MerkBildschirm(vm: AppViewModel, liste: AppViewModel.Merkliste, modifier: Mo
     var eingabe by rememberSaveable { mutableStateOf("") }
     var bearbeite by rememberSaveable { mutableStateOf<Int?>(null) }
     var entwurf by rememberSaveable { mutableStateOf("") }
+    /** Der Text, von dem die Bearbeitung ausging: Hat ihn inzwischen jemand anders geändert, wird nichts überschrieben. */
+    var ursprung by rememberSaveable { mutableStateOf("") }
 
     Column(modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 16.dp, top = 10.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -74,14 +76,20 @@ fun MerkBildschirm(vm: AppViewModel, liste: AppViewModel.Merkliste, modifier: Mo
                     if (bearbeite == eintrag.id) {
                         Eingabe(entwurf, { entwurf = it }, liste.wort, Modifier.fillMaxWidth(), einzeilig = false)
                         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Knopf("Speichern", Modifier.weight(1f), Icons.Rounded.Check) { liste.aendern(eintrag.id, entwurf); bearbeite = null }
+                            Knopf("Speichern", Modifier.weight(1f), Icons.Rounded.Check) {
+                                // Nur bei Erfolg schließen. Wurde der Eintrag inzwischen geändert, bleibt der Entwurf offen und ein zweites
+                                // Speichern überschreibt bewusst; wurde er gelöscht, schließt der Editor.
+                                if (liste.aendern(eintrag.id, entwurf, ursprung)) bearbeite = null
+                                else if (entwurf.isNotBlank()) liste.eintraege.firstOrNull { it.id == eintrag.id }?.let { ursprung = it.text } ?: run { bearbeite = null }
+                            }
                             Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { bearbeite = null }
                         }
                     } else {
                         Text(eintrag.text, color = f.text, fontSize = 16.sp, lineHeight = 23.sp)
                         Text((if (letzter) "Zuletzt hinzugefügt · " else "") + "Stand " + eintrag.stand, color = f.textSchwach, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-                        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Knopf("Ändern", Modifier.weight(1f), Icons.Rounded.Edit, haupt = false) { entwurf = eintrag.text; bearbeite = eintrag.id }
+                        // Während die KI-Korrektur diesen Eintrag umformuliert, bleibt er unangetastet.
+                        if (!(letzter && liste.korrigiert)) Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Knopf("Ändern", Modifier.weight(1f), Icons.Rounded.Edit, haupt = false) { entwurf = eintrag.text; ursprung = eintrag.text; bearbeite = eintrag.id }
                             Knopf("Löschen", Modifier.weight(1f), Icons.Rounded.Delete, haupt = false, farbe = f.gefahr) { liste.loeschen(eintrag.id) }
                         }
                         // Nur der zuletzt hinzugefügte Eintrag bekommt die KI-Korrektur; alle anderen bleiben, wie sie sind.

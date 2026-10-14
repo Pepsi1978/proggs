@@ -3,6 +3,8 @@ package de.frank.jarvis.faehigkeit
 import android.content.Context
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,8 +26,14 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
 
     override fun stoerung(): String? = rufeDirekt("optionen", JSONObject()).optString("fehler").takeIf { it.isNotEmpty() }
 
-    /** Alle Wecker als kurzer Text, für die Tagesdatenbank. */
-    suspend fun ueberblick(): String = rufe("lesen", JSONObject()).let { a -> a.optString("fehler").takeIf { it.isNotEmpty() }?.let { "NICHT VERFÜGBAR: $it" } ?: liste(a) }
+    /** Schützt vor doppelt gestellten Weckern, wenn ChatGPT einen Aufruf nach einer Zeitüberschreitung wiederholt. */
+    private var letzteAnlage: Triple<String, Long, String>? = null
+    /** Antwort, wenn ein neuer Wecker ins Zeitlimit lief und unklar ist, ob er angekommen ist. */
+    private val UNKLAR = "Womöglich trotzdem gestellt. Vor einem neuen Versuch mit wecker_lesen prüfen, nicht noch einmal stellen."
+    private val anlageSperre = Mutex()
+
+    /** Alle Wecker als kurzer Text, für Tagesdatenbank und Live-Gedächtnis. [mitJetzt] = false lässt die Uhrzeit weg, damit gleiche Wecker gleich aussehen. */
+    suspend fun ueberblick(mitJetzt: Boolean = true): String = rufe("lesen", JSONObject()).let { a -> a.optString("fehler").takeIf { it.isNotEmpty() }?.let { "NICHT VERFÜGBAR: $it" } ?: liste(a, mitJetzt) }
 
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
@@ -70,7 +78,25 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
             nurLesen = false,
         ) { a ->
             val aendert = (a.has("id") && !a.isNull("id")) || a.optString("suche").isNotBlank()
-            if (!aendert) return@Werkzeug rufe("stellen", a).fehlerOder { "Wecker gestellt: " + satz(it.getJSONObject("wecker")) + planung(it) }
+            if (!aendert) {
+                val schluessel = listOf(a.optString("name").trim().lowercase(), a.optString("uhrzeit"), a.optString("datum"), a.optString("wiederholung"), a.optJSONArray("wochentage")?.toString().orEmpty()).joinToString("|")
+                // Gesperrt, weil der Tunnel Aufrufe parallel abarbeitet: Ein wiederholter Aufruf wartet, bis der erste fertig ist.
+                return@Werkzeug anlageSperre.withLock {
+                    letzteAnlage?.let { (alt, zeit, antwort) ->
+                        if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000)
+                            return@Werkzeug if (antwort == UNKLAR) Ergebnis(antwort, fehler = true) else Ergebnis("$antwort (War bereits gestellt, nicht doppelt angelegt.)")
+                    }
+                    val antwort = rufe("stellen", a)
+                    // Zeitlimit: Der Wecker kam womöglich trotzdem an. Schlüssel merken, damit ein Wiederholungsversuch nicht doppelt stellt.
+                    if (antwort.optBoolean(AppBruecke.ZEITLIMIT)) {
+                        letzteAnlage = Triple(schluessel, System.currentTimeMillis(), UNKLAR)
+                        return@Werkzeug Ergebnis(antwort.optString("fehler") + " " + UNKLAR, fehler = true)
+                    }
+                    antwort.fehlerOder { "Wecker gestellt: " + satz(it.getJSONObject("wecker")) + planung(it) }.also {
+                        if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text)
+                    }
+                }
+            }
             mitWecker(a) { id ->
                 val felder = JSONObject(a.toString()).apply { remove("suche"); remove("naechsten_auslassen"); put("id", id) }
                 when {
@@ -130,10 +156,10 @@ class WeckerFaehigkeit(private val context: Context) : Faehigkeit {
         append(" [id ").append(w.optString("id")).append("]")
     }
 
-    private fun liste(antwort: JSONObject): String {
+    private fun liste(antwort: JSONObject, mitJetzt: Boolean = true): String {
         val wecker = antwort.optJSONArray("wecker") ?: JSONArray()
         if (wecker.length() == 0) return "Es ist kein Wecker angelegt."
-        return "Jetzt ist ${antwort.optString("jetzt").replace('T', ' ')}. ${wecker.length()} Wecker:\n" + (0 until wecker.length()).joinToString("\n") { "- " + satz(wecker.getJSONObject(it)) }
+        return (if (mitJetzt) "Jetzt ist ${antwort.optString("jetzt").replace('T', ' ')}. " else "") + "${wecker.length()} Wecker:\n" + (0 until wecker.length()).joinToString("\n") { "- " + satz(wecker.getJSONObject(it)) }
     }
 
     private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage) }

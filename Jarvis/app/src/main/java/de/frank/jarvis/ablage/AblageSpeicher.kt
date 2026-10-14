@@ -74,8 +74,10 @@ class AblageFehler(meldung: String) : Exception(meldung)
  * umbenannt oder gelöscht; ohne Verzeichnis entsteht es einfach neu aus den Dateien.
  */
 class AblageSpeicher private constructor(private val wurzel: File) {
-    val textOrdner: File get() = File(wurzel, "ablage").apply { mkdirs() }
-    private val dateiOrdner: File get() = File(wurzel, "ablage-dateien").apply { mkdirs() }
+    // Einmal angelegt statt bei jedem Zugriff: textDatei() läuft je Listenzeile, ein mkdirs() dort kostet unnötig.
+    // Die Schreibwege legen fehlende Ordner selbst wieder an (schreibeAtomar, mkdirs vor dem Anhängen).
+    val textOrdner: File = File(wurzel, "ablage").apply { mkdirs() }
+    private val dateiOrdner: File = File(wurzel, "ablage-dateien").apply { mkdirs() }
     val teilOrdner: File get() = File(dateiOrdner, ".teil").apply { mkdirs() }
     private val index = File(wurzel, "ablage-index.json")
     private val sicherung = File(wurzel, "ablage-index.json.bak")
@@ -114,13 +116,16 @@ class AblageSpeicher private constructor(private val wurzel: File) {
     // ---- Schreiben ----
 
     /**
-     * Legt den Text eines Eintrags an oder ersetzt ihn (mit [anhaengen] wird ergänzt). Verhalten wie die bisherige
-     * Textablage: ein vorhandener Eintrag wird über den Titel gefunden, auch über einen eindeutigen Teil davon.
+     * Legt den Text eines Eintrags an oder ersetzt ihn (mit [anhaengen] wird ergänzt). Ersetzt wird nur bei genau
+     * gleichem Titel; ein eindeutiger Teil des Titels genügt nur zum Anhängen. So überschreibt „Bericht“ nie still den
+     * Text von „Bericht Oktober“, sondern legt einen eigenen Eintrag an. Der getroffene Titel steht im Ergebnis.
      */
     fun schreibeText(titel: String, inhalt: String, anhaengen: Boolean = false, herkunft: String = "Jarvis"): Pair<Eintrag, File> {
         synchronized(sperre) {
             val liste = abgeglichen().toMutableList()
-            val vorhanden = finde(titel)
+            val gesucht = schluessel(titel.removeSuffix(".md"))
+            val genau = liste.firstOrNull { schluessel(it.titel) == gesucht }
+            val vorhanden = if (!anhaengen || gesucht.isEmpty()) genau else genau ?: liste.filter { gesucht in schluessel(it.titel) }.singleOrNull()
             val name = vorhanden?.textDatei ?: (vorhanden?.titel ?: titel).let { dateiname(it) + ".md" }
             val datei = File(textOrdner, name)
             if (anhaengen && datei.exists()) datei.appendText("\n\n" + inhalt.trim() + "\n") else schreibeAtomar(datei, (inhalt.trim() + "\n").toByteArray())
@@ -385,12 +390,19 @@ class AblageSpeicher private constructor(private val wurzel: File) {
             return puffer.copyOf(gelesen)
         }
 
-        /** Schreibt über eine Zwischendatei und benennt dann um: Ein Abbruch hinterlässt nie eine halbe Datei. */
+        /**
+         * Schreibt über eine Zwischendatei und benennt dann um: Ein Abbruch hinterlässt nie eine halbe Datei. Die
+         * Zwischendatei hat einen eigenen Namen je Aufruf, damit zwei gleichzeitige Schreiber sich nicht vermischen.
+         */
         fun schreibeAtomar(ziel: File, daten: ByteArray) {
             ziel.parentFile?.mkdirs()
-            val tmp = File(ziel.parentFile, ziel.name + ".tmp")
-            FileOutputStream(tmp).use { it.write(daten); it.fd.sync() }
-            if (!tmp.renameTo(ziel)) { ziel.delete(); if (!tmp.renameTo(ziel)) { tmp.copyTo(ziel, overwrite = true); tmp.delete() } }
+            val tmp = File(ziel.parentFile, ziel.name + "." + UUID.randomUUID().toString().take(8) + ".tmp")
+            try {
+                FileOutputStream(tmp).use { it.write(daten); it.fd.sync() }
+                if (!tmp.renameTo(ziel)) { ziel.delete(); if (!tmp.renameTo(ziel)) tmp.copyTo(ziel, overwrite = true) }
+            } finally {
+                if (tmp.exists()) tmp.delete()
+            }
         }
 
         private fun verschiebe(quelle: File, ziel: File) {

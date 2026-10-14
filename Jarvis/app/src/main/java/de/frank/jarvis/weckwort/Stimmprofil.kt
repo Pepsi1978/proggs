@@ -2,7 +2,9 @@ package de.frank.jarvis.weckwort
 
 import android.content.Context
 import android.util.Log
+import de.frank.jarvis.observability.Logbuch
 import java.io.File
+import java.util.concurrent.Executors
 import kotlin.math.sqrt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +30,8 @@ object Stimmprofil {
     private const val MIN_PROBEN = 3
     private const val MIN_STIMMEN = 5
     private const val MAX_FEHLALARME = 40
+    /** So viel ähnlicher als Franks Proben darf ein gelernter Fehlalarm sein, ohne Frank selbst auszusperren. */
+    private const val FEHLALARM_SPIEL = 0.03f
     private const val TAG = "Stimmprofil"
 
     data class Stand(
@@ -86,7 +90,13 @@ object Stimmprofil {
     private var hintergrundSeitSpeichern = 0
     /** Beim Anlernen gesammelte Proben; null = es wird nicht angelernt. */
     @Volatile private var neu: MutableList<FloatArray>? = null
-    private var datei: File? = null
+    /** Erst gesetzt, wenn das Laden fertig ist: Vorher würde [speichern] ein leeres Profil über die Datei schreiben. */
+    @Volatile private var datei: File? = null
+    @Volatile private var ladeStart = false
+    /** Vor dem Ende des Ladens geändert (Anlernen, Löschen): Dann gilt die Änderung, nicht die alte Datei. */
+    @Volatile private var geaendert = false
+    /** Lesen und Schreiben der Profildatei laufen hier, nie auf dem Hauptfaden oder im Audiofaden. */
+    private val io = Executors.newSingleThreadExecutor { r -> Thread(r, "jarvis-stimmprofil").apply { isDaemon = true } }
 
     /** Für welches Weckwort das Profil gilt („jarvis“ oder „phrase:OKAY COMPUTER JARVIS“): Eine neue Phrase braucht neue Proben. */
     @Volatile private var gespeicherterSchluessel = "jarvis"
@@ -96,21 +106,29 @@ object Stimmprofil {
     val aktiv: Boolean get() = proben.size >= MIN_PROBEN && gespeicherterSchluessel == schluessel
     val lerntAn: Boolean get() = neu != null
 
-    @Synchronized
+    /** Lädt das Profil im Hintergrund (einige hundert Millisekunden bei großem Profil). Bis dahin gilt „kein Profil“. */
     fun laden(context: Context) {
-        if (datei != null) return
+        synchronized(this) { if (ladeStart) return; ladeStart = true }
         val d = File(context.applicationContext.filesDir, "weckwort_stimme.json")
-        datei = d
-        runCatching {
-            if (!d.exists()) return@runCatching
-            val json = JSONObject(d.readText())
-            proben = liste(json.optJSONArray("proben"))
-            fehl = liste(json.optJSONArray("fehlalarme"))
-            hintergrund = json.optJSONArray("hintergrund")?.let { feld(it) }
-            gespeicherterSchluessel = json.optString("schluessel", "jarvis")
-            stimmen = liste(json.optJSONArray("stimmen"))
-        }.onFailure { Log.w(TAG, "Stimmprofil nicht lesbar", it) }
-        melden()
+        io.execute {
+            val beginn = System.currentTimeMillis()
+            synchronized(this) {
+                runCatching {
+                    if (!d.exists() || geaendert) return@runCatching
+                    val json = JSONObject(d.readText())
+                    proben = liste(json.optJSONArray("proben"))
+                    fehl = liste(json.optJSONArray("fehlalarme"))
+                    hintergrund = json.optJSONArray("hintergrund")?.let { feld(it) }
+                    gespeicherterSchluessel = json.optString("schluessel", "jarvis")
+                    stimmen = liste(json.optJSONArray("stimmen"))
+                }.onFailure { Log.w(TAG, "Stimmprofil nicht lesbar", it); Logbuch.fehler("Stimmprofil nicht lesbar", it) }
+                datei = d
+            }
+            // Was vor dem Ende des Ladens geändert wurde, jetzt sichern.
+            if (geaendert) speichern()
+            Logbuch.dauer("Stimmprofil geladen", System.currentTimeMillis() - beginn, "${proben.size} Proben, ${stimmen.size} Stimmen")
+            melden()
+        }
     }
 
     /** Das gerade eingestellte Weckwort; passt das Profil nicht dazu, ruht es, bis neu angelernt ist. */
@@ -138,7 +156,8 @@ object Stimmprofil {
         val fremd = fehl.maxOfOrNull { aehnlichkeit(v, bereinigt(it, bg)) } ?: -1f
         val schwelle = schwelle(bereinigteProben)
         _stand.value = _stand.value.copy(letzteAehnlichkeit = aehnlich, letzteSchwelle = schwelle)
-        val ok = aehnlich >= schwelle && aehnlich >= fremd
+        // Etwas Spielraum zum Fehlalarm: Ein einzelner falsch gelernter Eintrag soll Frank nicht aussperren.
+        val ok = aehnlich >= schwelle && aehnlich >= fremd - FEHLALARM_SPIEL
         Log.i(TAG, "Ähnlichkeit ${"%.3f".format(aehnlich)}, Schwelle ${"%.3f".format(schwelle)}, Fehlalarm ${"%.3f".format(fremd)} → ${if (ok) "Frank" else "abgewiesen"}")
         return Pruefung(ok, aehnlich, schwelle, fremd)
     }
@@ -159,7 +178,7 @@ object Stimmprofil {
         hintergrund = if (bg == null || bg.size != merkmale.size) merkmale.copyOf()
         else FloatArray(bg.size) { bg[it] + (merkmale[it] - bg[it]) * 0.002f }
         // Etwa alle zehn Minuten sichern, damit der Hintergrund einen Neustart übersteht.
-        if (++hintergrundSeitSpeichern >= 7_500) { hintergrundSeitSpeichern = 0; speichern() }
+        if (++hintergrundSeitSpeichern >= 7_500) { hintergrundSeitSpeichern = 0; spaeterSpeichern() }
     }
 
     // ---- Anlernen ----
@@ -193,7 +212,8 @@ object Stimmprofil {
         Log.i(TAG, "Angelernt: ${liste.size} Proben, ${neueStimmen?.size ?: 0} Stimm-Fingerabdrücke")
         neu = null
         neueStimmen = null
-        speichern()
+        geaendert = true
+        spaeterSpeichern()
         melden()
         return true
     }
@@ -202,7 +222,7 @@ object Stimmprofil {
     fun fehlalarm(merkmale: FloatArray?) {
         if (merkmale == null || !aktiv) return
         fehl = (fehl + merkmale.copyOf()).takeLast(MAX_FEHLALARME)
-        speichern()
+        spaeterSpeichern()
         melden()
     }
 
@@ -212,7 +232,8 @@ object Stimmprofil {
         stimmen = emptyList()
         neu = null
         neueStimmen = null
-        speichern()
+        geaendert = true
+        spaeterSpeichern()
         _stand.value = Stand(0, 0, null, null, null)
     }
 
@@ -236,7 +257,12 @@ object Stimmprofil {
             val tmp = File(d.parentFile, d.name + ".tmp")
             tmp.writeText(json.toString())
             tmp.renameTo(d)
-        }.onFailure { Log.w(TAG, "Stimmprofil nicht gespeichert", it) }
+        }.onFailure { Log.w(TAG, "Stimmprofil nicht gespeichert", it); Logbuch.fehler("Stimmprofil nicht gespeichert", it) }
+    }
+
+    /** Speichert auf dem eigenen Faden: Das ganze Profil ist groß, Hauptfaden und Mikrofon sollen nicht warten. */
+    private fun spaeterSpeichern() {
+        runCatching { io.execute { speichern() } }
     }
 
     private fun alsJson(v: FloatArray) = JSONArray().apply { v.forEach { put(it.toDouble()) } }

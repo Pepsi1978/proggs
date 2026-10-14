@@ -116,6 +116,9 @@ class MicRecorder(context: Context) {
         synchronized(bufferLock) { pcmBuffer.reset() }
         recorder = activeRecorder
         startedAtMs = System.currentTimeMillis()
+        // Während gesprochen wird, schon die Verbindung zu Groq öffnen — beim Hochladen steht sie dann.
+        // Nur für Sprachaufnahmen, nicht für die Stimm-Aufnahme in höherer Qualität.
+        if (requestedSampleRate == SAMPLE_RATE) GroqNetz.vorwaermen()
         recordingJob = scope.launch(Dispatchers.IO) {
             val readBuffer = ByteArray(minBufferSize)
             try {

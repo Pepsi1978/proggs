@@ -2,6 +2,7 @@ package de.frank.jarvis.auth
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -15,15 +16,20 @@ import java.io.IOException
 import java.net.UnknownHostException
 import java.util.Base64
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -226,6 +232,8 @@ internal suspend fun readSseData(
 ) {
     val dataLines = mutableListOf<String>()
     suspend fun dispatch() {
+        // Ein abgelaufenes Zeitlimit beendet das Lesen beim nächsten Ereignis.
+        currentCoroutineContext().ensureActive()
         if (dataLines.isNotEmpty()) {
             onData(dataLines.joinToString("\n"))
             dataLines.clear()
@@ -248,22 +256,11 @@ internal suspend fun readSseData(
 class CodexAuthManager(context: Context) {
     private val appContext = context.applicationContext
     private val connectivityManager = appContext.getSystemService(ConnectivityManager::class.java)
-    private val refreshMutex = Mutex()
     private val loginMutex = Mutex()
     private val activeLoginJob = AtomicReference<Job?>()
     private val activeQuestionCall = ActiveCallTracker()
-    private val store by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        val masterKey = MasterKey.Builder(appContext)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            appContext,
-            STORE_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
-    }
+    /** Ein Speicher für alle Instanzen im Prozess: Keystore und Schlüssel werden nur einmal aufgebaut. */
+    private val store: SharedPreferences get() = gemeinsamerStore(appContext)
 
     val email: String? get() = store.getString(KEY_EMAIL, null)
     val accountId: String? get() = store.getString(KEY_ACCOUNT_ID, null)
@@ -496,6 +493,8 @@ class CodexAuthManager(context: Context) {
             ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Bitte zuerst bei OpenAI anmelden.")
         if (!tokenNeedsRefresh()) return currentToken
 
+        // Prozessweit gesperrt: Chat, Agenten, Websuche und Tagesauswertung haben eigene Instanzen, teilen aber einen Refresh-Token.
+        // Zwei gleichzeitige Erneuerungen mit demselben Token beendet OpenAI mit refresh_token_reused und die Anmeldung wäre weg.
         return refreshMutex.withLock {
             val tokenAfterLock = store.getString(KEY_ACCESS_TOKEN, null)
                 ?: throw CodexAuthException(AuthErrorKind.REAUTH, "Bitte zuerst bei OpenAI anmelden.")
@@ -635,27 +634,42 @@ class CodexAuthManager(context: Context) {
             .build()
         val accumulator = CodexSseAccumulator()
         val trackedResponse = executeQuestionRequest(httpRequest)
-        try {
-            trackedResponse.response.use { response ->
-                val responseBody = response.body
-                if (!response.isSuccessful) classifyHttpError(response.code, responseBody?.string().orEmpty())
-                val reader = responseBody?.charStream()?.buffered()
-                    ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antwortstream geliefert.")
-                reader.use {
-                    readSseData(
-                        reader = it,
-                        onData = { data -> accumulator.accept(data)?.let { delta -> onDelta(delta) } },
-                        shouldStop = { accumulator.isCompleted },
-                    )
+        coroutineScope {
+            // Wächter: Läuft ein Zeitlimit ab, schließt er die Verbindung. Das blockierende readLine merkt einen Abbruch
+            // der Koroutine sonst erst, wenn der ganze Modellzug fertig gestreamt ist oder nach Minuten das readTimeout greift.
+            val fertig = AtomicBoolean(false)
+            val waechter = launch(start = CoroutineStart.UNDISPATCHED) {
+                try {
+                    awaitCancellation()
+                } finally {
+                    if (!fertig.get()) trackedResponse.call.cancel()
                 }
             }
-        } catch (error: IOException) {
-            if (trackedResponse.call.isCanceled()) {
-                throw CancellationException("Die OpenAI-Anfrage wurde abgebrochen.")
+            try {
+                trackedResponse.response.use { response ->
+                    val responseBody = response.body
+                    if (!response.isSuccessful) classifyHttpError(response.code, responseBody?.string().orEmpty())
+                    val reader = responseBody?.charStream()?.buffered()
+                        ?: throw CodexAuthException(AuthErrorKind.NETWORK, "OpenAI hat keinen Antwortstream geliefert.")
+                    reader.use {
+                        readSseData(
+                            reader = it,
+                            onData = { data -> accumulator.accept(data)?.let { delta -> onDelta(delta) } },
+                            shouldStop = { accumulator.isCompleted },
+                        )
+                    }
+                }
+                fertig.set(true)
+            } catch (error: IOException) {
+                if (trackedResponse.call.isCanceled()) {
+                    throw CancellationException("Die OpenAI-Anfrage wurde abgebrochen.")
+                }
+                throw error
+            } finally {
+                fertig.set(true)
+                waechter.cancel()
+                activeQuestionCall.clear(trackedResponse.call)
             }
-            throw error
-        } finally {
-            activeQuestionCall.clear(trackedResponse.call)
         }
         // Prüft, ob die Antwort vollständig ist; das Ergebnis selbst holt der Aufrufer.
         accumulator.result()
@@ -669,6 +683,18 @@ class CodexAuthManager(context: Context) {
                 return block()
             } catch (error: UnknownHostException) {
                 lastError = error
+                // Gar kein Netz (Flugmodus, Funkloch): nach kurzer Wartezeit gleich melden statt über eine halbe Minute „denkt“.
+                // Die langen Wartezeiten bleiben für den Fall, dass ein Netz da ist, aber noch nicht geprüft oder DNS hakt.
+                if (!netzVorhanden()) {
+                    val da = withTimeoutOrNull(KEIN_NETZ_WARTEN_MS) {
+                        while (!netzVorhanden()) delay(NETWORK_POLL_MS)
+                        true
+                    }
+                    if (da == null) {
+                        de.frank.jarvis.observability.Logbuch.netz("OpenAI: kein Netz", "Abbruch nach ${KEIN_NETZ_WARTEN_MS / 1000} s ohne Verbindung")
+                        throw networkException("Keine Internetverbindung. Bitte WLAN oder Mobilfunk prüfen.", error)
+                    }
+                }
                 if (attempt < DNS_RETRY_DELAYS_MS.size) {
                     awaitValidatedNetwork()
                     delay(DNS_RETRY_DELAYS_MS[attempt])
@@ -715,6 +741,13 @@ class CodexAuthManager(context: Context) {
         withTimeoutOrNull(DNS_NETWORK_WAIT_MS) {
             while (!hasValidatedNetwork()) delay(NETWORK_POLL_MS)
         }
+    }
+
+    /** Irgendein Netz ist angemeldet (ob es schon geprüft ist, egal). */
+    private fun netzVorhanden(): Boolean = try {
+        connectivityManager.activeNetwork != null
+    } catch (error: SecurityException) {
+        true
     }
 
     private fun hasValidatedNetwork(): Boolean {
@@ -782,6 +815,8 @@ class CodexAuthManager(context: Context) {
         private const val FOREGROUND_NETWORK_TIMEOUT_MS = 5 * 60_000L
         private const val DEVICE_CODE_LIFETIME_MS = 15 * 60_000L
         private const val DNS_NETWORK_WAIT_MS = 10_000L
+        /** So lange wartet eine Anfrage ohne jedes Netz, bevor sie es meldet. */
+        private const val KEIN_NETZ_WARTEN_MS = 3_000L
         private const val NETWORK_POLL_MS = 200L
         private const val NETWORK_POLL_BACKOFF_SECONDS = 2
         private const val SLOW_DOWN_SECONDS = 5
@@ -796,6 +831,26 @@ class CodexAuthManager(context: Context) {
         private const val KEY_EXPIRES_AT = "expires_at"
         private const val KEY_ACCOUNT_ID = "account_id"
         private const val KEY_EMAIL = "email"
+
+        /** Eine Sperre für die Token-Erneuerung im ganzen Prozess, über alle Instanzen. */
+        private val refreshMutex = Mutex()
+        @Volatile private var speicher: SharedPreferences? = null
+
+        private fun gemeinsamerStore(context: Context): SharedPreferences = speicher ?: synchronized(this) {
+            speicher ?: run {
+                val app = context.applicationContext
+                val masterKey = MasterKey.Builder(app)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+                EncryptedSharedPreferences.create(
+                    app,
+                    STORE_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                ).also { speicher = it }
+            }
+        }
     }
 }
 

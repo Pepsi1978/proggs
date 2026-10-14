@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.Executors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,6 +43,10 @@ data class LogZeile(
  *
  * Niemals hinein: Schlüssel, Token, Passwörter, vollständige Diktate oder Ideentexte —
  * statt des Inhalts wird dessen Länge protokolliert.
+ *
+ * Die Datei wird auf einem eigenen Faden geschrieben, nie auf dem des Aufrufers (oft der
+ * Hauptfaden mitten im Vorlesen). Jede Zeile ab INFO landet zusätzlich im [Logbuch] als Art
+ * „sprache“, damit Vorlesen und Diktat dort mit ausgewertet werden.
  */
 object IdeenLog {
     private const val MAX_ZEILEN_IM_SPEICHER = 500
@@ -53,6 +58,11 @@ object IdeenLog {
     val zeilen: StateFlow<List<LogZeile>> = _zeilen.asStateFlow()
 
     @Volatile private var datei: File? = null
+
+    /** Ein Faden für alle Dateizugriffe — so bleibt auch die Reihenfolge von Leeren und Anhängen erhalten. */
+    private val schreiber = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "jarvis-ideenlog").apply { isDaemon = true }
+    }
 
     fun start(context: Context) {
         val verzeichnis = File(context.filesDir, "logs").apply { mkdirs() }
@@ -77,7 +87,8 @@ object IdeenLog {
     fun leeren() {
         puffer.clear()
         _zeilen.value = emptyList()
-        runCatching { datei?.writeText("") }
+        val ziel = datei ?: return
+        runCatching { schreiber.execute { runCatching { ziel.writeText("") } } }
     }
 
     private fun schreibe(
@@ -97,13 +108,27 @@ object IdeenLog {
             LogStufe.WARN -> Log.w(modul, "$fn: $msg")
             LogStufe.ERROR -> Log.e(modul, "$fn: $msg")
         }
+        // DEBUG bleibt draussen: Dort stehen einzelne korrigierte Wörter aus Diktaten.
+        if (stufe != LogStufe.DEBUG) {
+            Logbuch.sprache(
+                "$modul.$fn: $msg",
+                buildString {
+                    append(stufe.name)
+                    if (ctx.isNotEmpty()) append(' ').append(ctx.entries.joinToString(" ") { "${it.key}=${it.value}" })
+                },
+            )
+        }
         val ziel = datei ?: return
         runCatching {
-            if (ziel.length() > MAX_DATEI_BYTES) {
-                val behalten = ziel.readLines().takeLast(1_000)
-                ziel.writeText(behalten.joinToString("\n") + "\n")
+            schreiber.execute {
+                runCatching {
+                    if (ziel.length() > MAX_DATEI_BYTES) {
+                        val behalten = ziel.readLines().takeLast(1_000)
+                        ziel.writeText(behalten.joinToString("\n") + "\n")
+                    }
+                    ziel.appendText(zeile.alsJson() + "\n")
+                }
             }
-            ziel.appendText(zeile.alsJson() + "\n")
         }
     }
 }

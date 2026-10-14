@@ -81,6 +81,8 @@ object AblageZentrale {
         bereich.launch {
             val u = uebertragungen(app)
             runCatching { speicher(app).aufraeumen(u.offeneTeile()) }
+            // Gerenderte PDF-Seiten nicht endlos sammeln (je Seite mehrere MB im Zwischenspeicher).
+            runCatching { Medien.pdfSeitenAufraeumen(File(app.cacheDir, "pdf-seiten")) }
             u.liste.value.filter { it.zustand == UebertragungsZustand.FEHLER && it.fehler?.startsWith("Unterbrochen") == true }.forEach { offen ->
                 runCatching { starteDownload(app, offen.id, offen.name, offen.eintragTitel) }
             }

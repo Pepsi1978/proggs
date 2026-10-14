@@ -3,6 +3,7 @@ package de.frank.jarvis.faehigkeit
 import android.content.Context
 import android.util.Log
 import de.frank.jarvis.data.Einstellungen
+import de.frank.jarvis.observability.Logbuch
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -11,7 +12,12 @@ import java.time.temporal.ChronoUnit
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -43,26 +49,48 @@ class WetterFaehigkeit(private val context: Context) : Faehigkeit {
 
     private fun lade(): JSONObject? = runCatching { JSONObject(datei.readText()) }.getOrNull()
 
+    /** Immer nur ein Abruf zur Zeit; ein zweiter wartet und übernimmt dessen Ergebnis. */
+    private val sperre = Mutex()
+    /** Für das Auffrischen im Hintergrund, während schon mit dem gespeicherten Stand geantwortet wird. */
+    private val hintergrund = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     /** Holt die Vorhersage frisch. true = gelungen. */
     suspend fun synchronisiere(): Boolean = withContext(Dispatchers.IO) {
-        runCatching {
-            val adresse = "https://api.open-meteo.com/v1/forecast?latitude=${e.wetterBreite}&longitude=${e.wetterLaenge}&timezone=auto&forecast_days=7" +
-                "&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m" +
-                "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset"
-            val antwort = CLIENT.newCall(Request.Builder().url(adresse).build()).execute().use { a ->
-                check(a.isSuccessful) { "Open-Meteo antwortet mit ${a.code}" }
-                JSONObject(a.body?.string().orEmpty())
-            }
-            check(antwort.has("hourly")) { "Antwort ohne Vorhersage" }
-            datei.writeText(antwort.put("geholt", System.currentTimeMillis()).put("ort", e.wetterOrt).toString())
-            true
-        }.onFailure { Log.w("JarvisWetter", "Abruf fehlgeschlagen", it) }.getOrDefault(false)
+        val beginn = System.currentTimeMillis()
+        sperre.withLock {
+            // Hat ein gleichzeitiger Aufruf inzwischen frisch geholt, gilt das auch für diesen.
+            if (lade()?.let { it.optString("ort") == e.wetterOrt && it.optLong("geholt") >= beginn } == true) return@withLock true
+            runCatching {
+                val adresse = "https://api.open-meteo.com/v1/forecast?latitude=${e.wetterBreite}&longitude=${e.wetterLaenge}&timezone=auto&forecast_days=7" +
+                    "&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m" +
+                    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset"
+                val antwort = CLIENT.newCall(Request.Builder().url(adresse).build()).execute().use { a ->
+                    check(a.isSuccessful) { "Open-Meteo antwortet mit ${a.code}" }
+                    JSONObject(a.body?.string().orEmpty())
+                }
+                check(antwort.has("hourly")) { "Antwort ohne Vorhersage" }
+                // Erst daneben schreiben, dann umbenennen: Ein gleichzeitiges Lesen sieht nie eine halbe Datei.
+                val inhalt = antwort.put("geholt", System.currentTimeMillis()).put("ort", e.wetterOrt).toString()
+                val neu = File(context.filesDir, "wetter.json.neu")
+                neu.writeText(inhalt)
+                if (!neu.renameTo(datei)) { datei.writeText(inhalt); neu.delete() }
+                Logbuch.dauer("Wetter abgerufen", System.currentTimeMillis() - beginn)
+                true
+            }.onFailure { Log.w("JarvisWetter", "Abruf fehlgeschlagen", it); Logbuch.netz("Wetter-Abruf fehlgeschlagen", it.message ?: it.javaClass.simpleName) }.getOrDefault(false)
+        }
     }
 
-    /** Vor dem Lesen nachholen, wenn nichts da ist, der Ort gewechselt hat oder der Stand älter als eine Stunde ist. */
+    /**
+     * Vor dem Lesen nachholen, wenn nichts da ist, der Ort gewechselt hat oder der Stand älter als sechs Stunden ist.
+     * Ist er eine bis sechs Stunden alt, kommt die Antwort sofort mit diesem Stand, und aufgefrischt wird im Hintergrund.
+     */
     private suspend fun frisch(): JSONObject? {
         val stand = lade()
-        if (stand == null || stand.optString("ort") != e.wetterOrt || System.currentTimeMillis() - stand.optLong("geholt") > 60 * 60_000L) synchronisiere()
+        val alter = System.currentTimeMillis() - (stand?.optLong("geholt") ?: 0L)
+        when {
+            stand == null || stand.optString("ort") != e.wetterOrt || alter >= 6 * 3_600_000L -> synchronisiere()
+            alter > 60 * 60_000L -> if (!sperre.isLocked) hintergrund.launch { synchronisiere() }
+        }
         return lade()
     }
 
@@ -99,6 +127,9 @@ class WetterFaehigkeit(private val context: Context) : Faehigkeit {
             },
         )
     }
+
+    /** Wie [vorschau], frischt aber vorher auf (fürs Live-Gedächtnis): ab einer Stunde im Hintergrund, ab sechs Stunden mit Warten. */
+    suspend fun aktuell(tage: Int = 3): String { frisch(); return vorschau(tage) }
 
     /** Tagesübersicht ab heute, für Tagesdatenbank und Tagesauswertung. */
     fun vorschau(tage: Int = 3): String {
@@ -143,17 +174,19 @@ class WetterFaehigkeit(private val context: Context) : Faehigkeit {
                 "uhrzeit" to text("HH:MM, wenn es um einen bestimmten Zeitpunkt geht."),
                 "tage" to zahl("Wie viele Tage ab datum (Vorgabe 3, höchstens 7), wenn keine uhrzeit angegeben ist."),
                 "vorhaben" to text("Was Frank zu dem Zeitpunkt vorhat, zum Beispiel „Laufen im Wald“."),
+                "dauer" to zahl("Wie lange das Vorhaben dauert, in Minuten, nur wenn bekannt (Vorgabe 60)."),
             ),
             nurLesen = true,
         ) { a ->
             val stand = frisch() ?: return@Werkzeug Ergebnis("Die Wettervorhersage ließ sich nicht abrufen (kein Internet?).", fehler = true)
             val heute = LocalDate.now()
             val tag = datum(a.optString("datum")) ?: heute
-            val minuten = Regex("^\\s*([01]?\\d|2[0-3])[:.]?([0-5]\\d)?").find(a.optString("uhrzeit"))?.takeIf { a.optString("uhrzeit").isNotBlank() }
-                ?.let { it.groupValues[1].toInt() * 60 + (it.groupValues[2].toIntOrNull() ?: 0) }
+            // Gemeinsamer Uhrzeit-Leser: „21:00“ bleibt 21 Uhr (früher wurde daraus 2 Uhr nachts).
+            val minuten = Mitdenken.uhrzeitMinuten(a.optString("uhrzeit"))
+            val dauer = a.optInt("dauer", 60).coerceIn(1, 24 * 60)
             if (ChronoUnit.DAYS.between(heute, tag) !in 0..6) {
                 // Außerhalb der Vorhersage: kein Wetter, aber Dienst und Termine lassen sich trotzdem prüfen.
-                val rest = Mitdenken.hinweise(context, tag, minuten, a.optString("vorhaben"), mitWetter = false)
+                val rest = Mitdenken.hinweise(context, tag, minuten, a.optString("vorhaben"), mitWetter = false, dauer = dauer)
                 return@Werkzeug Ergebnis(
                     "Für ${tagName(tag, heute)} gibt es noch keine Wettervorhersage; sie reicht sieben Tage, bis ${tagName(heute.plusDays(6), heute)}.\n" +
                         if (rest.isEmpty()) "Dienstplan, Schlafzeiten und Termine sprechen nicht dagegen." else rest.joinToString("\n") { "Zu beachten: $it" },
@@ -167,7 +200,7 @@ class WetterFaehigkeit(private val context: Context) : Faehigkeit {
                 append(".\nWetter: ").append(umher.firstOrNull { it.zeit.hour == minuten / 60 }?.let(::einschaetzung) ?: "keine Angabe für diese Stunde").append('\n')
                 append("Stunden drumherum: ").append(umher.joinToString("; ") { "${it.zeit.hour} Uhr ${it.temperatur.roundToInt()}° ${it.lage}, Regenrisiko ${it.regenRisiko} %" }).append('\n')
                 // Dienst, Schlaf und Termine dazu: derselbe Blick, den Jarvis auch beim Anlegen von Aufgaben wirft.
-                Mitdenken.hinweise(context, tag, minuten, a.optString("vorhaben"), mitWetter = false).takeIf { it.isNotEmpty() }?.let { append(it.joinToString("\n") { h -> "Zu beachten: $h" }) }
+                Mitdenken.hinweise(context, tag, minuten, a.optString("vorhaben"), mitWetter = false, dauer = dauer).takeIf { it.isNotEmpty() }?.let { append(it.joinToString("\n") { h -> "Zu beachten: $h" }) }
                     ?: append("Dienstplan, Schlafzeiten und Termine sprechen nicht dagegen.")
             }.trim())
         },

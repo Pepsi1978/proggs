@@ -1,10 +1,17 @@
 package de.frank.jarvis.faehigkeit
 
 import android.content.Context
+import android.util.AtomicFile
+import de.frank.jarvis.observability.Logbuch
 import java.io.File
+import java.io.FileNotFoundException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -16,69 +23,214 @@ data class Regel(val id: Int, val text: String, val stand: String)
  * Werkzeug-Ergebnisse), dem eigenen Chat, den Agenten und der Tagesauswertung. Es gibt drei davon:
  * [Regeln] (wie Jarvis arbeiten soll), [Ziele] (was Frank erreichen will) und [UeberFrank] (was Jarvis über Frank weiß).
  * Im Code stehen deshalb keine einzelnen Regeln, Ziele oder Angaben über Frank, nur dieser Speicher.
+ *
+ * - ids werden nie wiederverwendet (Zähler `naechsteId` in der Datei): Eine veraltete id trifft nie einen fremden Eintrag.
+ * - Geschrieben wird atomar über [AtomicFile] (mit fsync und Sicherung).
+ * - Ist die Datei vorhanden, aber unlesbar, wird sie als `<name>.defekt-<zeit>` gesichert, weggeräumt, und Jarvis beginnt
+ *   leer neu (Hinweis in [alsKontext] und [neuBegonnen]). Nur wenn das Sichern scheitert, bleibt die Datei gesperrt;
+ *   sonst würde das nächste Merken alle Einträge unwiederbringlich überschreiben.
  */
 open class Merkdatei(private val dateiname: String, private val hoechstens: Int, private val kopf: String) {
     private fun datei(context: Context) = File(context.applicationContext.filesDir, dateiname)
 
-    @Synchronized
-    fun alle(context: Context): List<Regel> = runCatching {
-        val liste = JSONObject(datei(context).readText()).getJSONArray("regeln")
-        (0 until liste.length()).map { liste.getJSONObject(it).let { r -> Regel(r.getInt("id"), r.getString("text"), r.optString("stand")) } }
-    }.getOrDefault(emptyList())
+    /** Inhalt der Datei. [defekt] = vorhanden, aber nicht lesbar (Grund), dann wird nichts geschrieben. */
+    private class Stand(val eintraege: List<Regel>, val naechsteId: Int, val defekt: String? = null)
 
-    private fun schreibe(context: Context, eintraege: List<Regel>) {
-        val inhalt = JSONObject().put("format", 1)
-            .put("regeln", JSONArray(eintraege.map { JSONObject().put("id", it.id).put("text", it.text).put("stand", it.stand) })).toString(2)
-        // Erst daneben schreiben, dann umbenennen: Eine halbe Datei würde alle Einträge kosten.
-        zuletztGeaendert = System.currentTimeMillis()
-        val neu = File(datei(context).path + ".neu")
-        neu.writeText(inhalt)
-        if (!neu.renameTo(datei(context))) { datei(context).writeText(inhalt); neu.delete() }
+    /** Zuletzt gelesener oder geschriebener Stand samt Änderungszeit und Größe der Datei. */
+    @Volatile private var zwischen: Triple<Long, Long, Stand>? = null
+    /** Änderungszeit der defekten Datei, die schon gesichert ist (nicht bei jedem Lesen erneut kopieren). */
+    @Volatile private var gesichert = 0L
+
+    /**
+     * Gesetzt, wenn eine beschädigte Datei gesichert und leer neu begonnen wurde (Text für Frank).
+     * Steht im Kontext der Modelle, bis wieder etwas geschrieben wurde; die Oberfläche kann ihn anzeigen.
+     */
+    @Volatile var neuBegonnen: String? = null
+        private set
+
+    @Synchronized
+    private fun lies(context: Context): Stand {
+        val f = datei(context)
+        zwischen?.let { (zeit, laenge, s) -> if (f.lastModified() == zeit && f.length() == laenge) return s }
+        val text = try {
+            String(AtomicFile(f).readFully(), Charsets.UTF_8)
+        } catch (_: FileNotFoundException) {
+            return Stand(emptyList(), 1)
+        } catch (e: Exception) {
+            return defekt(f, e)
+        }
+        val stand = if (text.isBlank()) {
+            // Leer: Es gibt nichts zu retten, also nicht sperren, aber festhalten.
+            Logbuch.gedaechtnis("Merkdatei leer", dateiname)
+            Stand(emptyList(), 1)
+        } else try {
+            val json = JSONObject(text)
+            val liste = json.getJSONArray("regeln")
+            // Ein einzelner kaputter Eintrag kostet nur sich selbst, nicht die ganze Datei.
+            val eintraege = (0 until liste.length()).mapNotNull { i ->
+                liste.optJSONObject(i)?.let { r -> Regel(r.optInt("id", 0), r.optString("text").trim(), r.optString("stand")) }?.takeIf { it.id > 0 && it.text.isNotEmpty() }
+            }
+            Stand(eintraege, maxOf(json.optInt("naechsteId", 0), (eintraege.maxOfOrNull { it.id } ?: 0) + 1))
+        } catch (e: Exception) {
+            return defekt(f, e)
+        }
+        zwischen = Triple(f.lastModified(), f.length(), stand)
+        return stand
     }
 
-    /** Legt einen Eintrag an oder ersetzt mit [id] den Text eines vorhandenen. null = diese id gibt es nicht oder die Datei ist voll. */
+    private fun defekt(f: File, e: Exception): Stand {
+        val kopie = File(f.path + ".defekt-" + f.lastModified())
+        // Gesichert (oder schon da): die kaputte Datei wegräumen und leer neu beginnen; die Daten liegen in der Kopie.
+        val sicher = kopie.exists() || runCatching { f.copyTo(kopie); true }.getOrElse { Logbuch.fehler("Merkdatei sichern", it, dateiname); false }
+        if (sicher && runCatching { AtomicFile(f).delete() }.isSuccess && !f.exists()) {
+            zwischen = null
+            gesichert = 0L
+            neuBegonnen = "$dateiname war beschädigt, gesichert als ${kopie.name}; neu begonnen."
+            Logbuch.fehler("Merkdatei defekt", e, "$dateiname gesichert als ${kopie.name}; neu begonnen")
+            return Stand(emptyList(), 1)
+        }
+        if (gesichert != f.lastModified()) {
+            runCatching { if (!kopie.exists()) f.copyTo(kopie) }.onFailure { Logbuch.fehler("Merkdatei sichern", it, dateiname) }
+            gesichert = f.lastModified()
+            Logbuch.fehler("Merkdatei defekt", e, "$dateiname gesichert als ${kopie.name}")
+        }
+        return Stand(emptyList(), 1, defekt = "Die Datei $dateiname ist beschädigt und wurde als ${kopie.name} gesichert. Jarvis speichert dort nichts Neues, bis sie repariert ist.")
+    }
+
+    @Synchronized
+    fun alle(context: Context): List<Regel> = lies(context).eintraege
+
+    /** null = in Ordnung, sonst der Grund, warum diese Datei gerade nicht beschrieben wird. */
+    fun defekt(context: Context): String? = lies(context).defekt
+
+    /** true = die Datei hat die Höchstzahl an Einträgen erreicht; nur dann ist „voll“ der Grund für ein gescheitertes Anlegen. */
+    fun voll(context: Context): Boolean = lies(context).eintraege.size >= hoechstens
+
+    /** Schreibt atomar. false = nicht geschrieben (Grund im Logbuch). */
+    private fun schreibe(context: Context, vorher: Stand, eintraege: List<Regel>): Boolean {
+        if (vorher.defekt != null) return false
+        val naechste = maxOf(vorher.naechsteId, (eintraege.maxOfOrNull { it.id } ?: 0) + 1)
+        val inhalt = JSONObject().put("format", 1).put("naechsteId", naechste)
+            .put("regeln", JSONArray(eintraege.map { JSONObject().put("id", it.id).put("text", it.text).put("stand", it.stand) })).toString(2)
+        val f = datei(context)
+        val atomar = AtomicFile(f)
+        val aus = try { atomar.startWrite() } catch (e: Exception) { Logbuch.fehler("Merkdatei schreiben", e, dateiname); return false }
+        try {
+            aus.write(inhalt.toByteArray(Charsets.UTF_8))
+            atomar.finishWrite(aus)
+        } catch (e: Exception) {
+            atomar.failWrite(aus)
+            Logbuch.fehler("Merkdatei schreiben", e, dateiname)
+            return false
+        }
+        zwischen = Triple(f.lastModified(), f.length(), Stand(eintraege, naechste))
+        neuBegonnen = null
+        // Erst nach dem gelungenen Schreiben: Daran erkennen Plugin und Oberfläche den neuen Stand.
+        zuletztGeaendert = System.currentTimeMillis()
+        _stand.update { it + 1 }
+        return true
+    }
+
+    private fun heute(): String = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+
+    /** Leerraum glätten; nur über der harten Grenze an der letzten Satzgrenze kürzen (und das festhalten). */
+    private fun saeubere(text: String): String {
+        val sauber = text.replace(Regex("\\s+"), " ").trim()
+        if (sauber.length <= HARTE_GRENZE) return sauber
+        Logbuch.gedaechtnis("Merkeintrag gekürzt", "$dateiname: ${sauber.length} Zeichen")
+        val stueck = sauber.take(HARTE_GRENZE)
+        val satzEnde = stueck.lastIndexOfAny(charArrayOf('.', '!', '?'))
+        return if (satzEnde > HARTE_GRENZE / 2) stueck.take(satzEnde + 1) else "$stueck …"
+    }
+
+    /**
+     * Legt einen Eintrag an oder ersetzt mit [id] den Text eines vorhandenen. id 0 oder kleiner = neu anlegen.
+     * null = diese id gibt es nicht, die Datei ist voll oder defekt (siehe [defekt]).
+     */
     @Synchronized
     fun speichere(context: Context, text: String, id: Int? = null): Regel? {
-        val bisher = alle(context)
+        val vorher = lies(context)
+        if (vorher.defekt != null) return null
+        val bisher = vorher.eintraege
         // Eingesprochenes darf länger sein als die Vorgabe an die Modelle; die KI-Korrektur strafft es danach.
-        val sauber = text.replace(Regex("\\s+"), " ").trim().take(LAENGSTENS)
-        val heute = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-        val eintrag = if (id != null) {
-            if (bisher.none { it.id == id }) return null
-            Regel(id, sauber, heute)
+        val sauber = saeubere(text)
+        val nummer = id?.takeIf { it > 0 }
+        val eintrag = if (nummer != null) {
+            if (bisher.none { it.id == nummer }) return null
+            Regel(nummer, sauber, heute())
         } else {
             if (bisher.size >= hoechstens) return null
-            Regel((bisher.maxOfOrNull { it.id } ?: 0) + 1, sauber, heute)
+            Regel(vorher.naechsteId, sauber, heute())
         }
-        schreibe(context, bisher.filter { it.id != eintrag.id } + eintrag)
-        return eintrag
+        val neu = if (nummer != null) bisher.map { if (it.id == nummer) eintrag else it } else bisher + eintrag
+        return if (schreibe(context, vorher, neu)) eintrag else null
+    }
+
+    /**
+     * Ersetzt den Text von [id] nur, wenn dort noch [erwartet] steht (etwa nach einer KI-Korrektur, die eine Weile lief).
+     * null = Eintrag weg, inzwischen geändert, Datei defekt oder nicht geschrieben.
+     */
+    @Synchronized
+    fun ersetzeWenn(context: Context, id: Int, erwartet: String, neu: String): Regel? {
+        val vorher = lies(context)
+        if (vorher.defekt != null) return null
+        val alt = vorher.eintraege.firstOrNull { it.id == id } ?: return null
+        if (alt.text != saeubere(erwartet)) return null
+        val eintrag = Regel(id, saeubere(neu), heute())
+        return if (schreibe(context, vorher, vorher.eintraege.map { if (it.id == id) eintrag else it })) eintrag else null
+    }
+
+    /**
+     * Stellt einen einzelnen Eintrag mit seiner alten id wieder her (Rückgängig): ersetzt ihn, wenn es ihn noch gibt,
+     * sonst kommt er zurück. Andere Einträge bleiben unberührt. null = Datei voll, defekt oder nicht geschrieben.
+     */
+    @Synchronized
+    fun stelleWiederHer(context: Context, regel: Regel): Regel? {
+        if (regel.id <= 0) return null
+        val vorher = lies(context)
+        if (vorher.defekt != null) return null
+        val da = vorher.eintraege.any { it.id == regel.id }
+        if (!da && vorher.eintraege.size >= hoechstens) return null
+        val neu = if (da) vorher.eintraege.map { if (it.id == regel.id) regel else it } else vorher.eintraege + regel
+        return if (schreibe(context, vorher, neu)) regel else null
     }
 
     @Synchronized
     fun loesche(context: Context, id: Int): Regel? {
-        val bisher = alle(context)
-        val weg = bisher.firstOrNull { it.id == id } ?: return null
-        schreibe(context, bisher - weg)
-        return weg
+        val vorher = lies(context)
+        val weg = vorher.eintraege.firstOrNull { it.id == id } ?: return null
+        return if (schreibe(context, vorher, vorher.eintraege - weg)) weg else null
     }
 
-    /** Stellt einen früheren Stand wieder her (Rückgängig in der App). */
+    /** Stellt einen früheren Stand wieder her (Rückgängig in der App). Der id-Zähler sinkt dabei nie. */
     @Synchronized
-    fun setze(context: Context, eintraege: List<Regel>) = schreibe(context, eintraege)
+    fun setze(context: Context, eintraege: List<Regel>): Boolean = schreibe(context, lies(context), eintraege)
 
     fun suche(context: Context, wort: String): List<Regel> = wort.trim().lowercase(Locale.GERMAN).let { w -> alle(context).filter { w in it.text.lowercase(Locale.GERMAN) } }
 
     fun liste(eintraege: List<Regel>): String = eintraege.sortedBy { it.id }.joinToString("\n") { "[${it.id}] ${it.text}" }
 
-    /** Der Block, der jedem Modell beiliegt. Leer, solange nichts drinsteht. */
-    fun alsKontext(context: Context): String = alle(context).takeIf { it.isNotEmpty() }?.let { kopf + "\n" + liste(it) + "\n" }.orEmpty()
+    /** Der Block, der jedem Modell beiliegt. Leer, solange nichts drinsteht; bei einer defekten Datei die Warnung. */
+    fun alsKontext(context: Context): String {
+        val s = lies(context)
+        s.defekt?.let { return "$kopf\nGEDÄCHTNIS-DATEI DEFEKT: $it Sag Frank das.\n" }
+        val hinweis = neuBegonnen?.let { "GEDÄCHTNIS-DATEI ZURÜCKGESETZT: $it Frühere Einträge stehen nur noch in der Sicherung. Sag Frank das.\n" }.orEmpty()
+        val eintraege = s.eintraege.takeIf { it.isNotEmpty() }?.let { liste(it) + "\n" }.orEmpty()
+        return if (hinweis.isEmpty() && eintraege.isEmpty()) "" else "$kopf\n$hinweis$eintraege"
+    }
 
     companion object {
         /** Länge, die die Modelle für einen Eintrag anstreben sollen. */
         const val ZEICHEN = 400
-        private const val LAENGSTENS = 1500
+        /** Höchstlänge über das Werkzeug; längere Texte meldet jarvis_merken zurück, statt sie still zu kürzen. */
+        const val LAENGSTENS = 1500
+        /** Sicherung gegen ausufernde Diktate; erst darüber wird (an einer Satzgrenze) gekürzt. */
+        private const val HARTE_GRENZE = 4000
         /** Wann zuletzt eine der Dateien geschrieben wurde; daran erkennt das Plugin, ob ein Programm den neuen Stand schon hat. */
         @Volatile var zuletztGeaendert = 0L
+        private val _stand = MutableStateFlow(0L)
+        /** Zählt jedes gelungene Schreiben einer der Dateien; die Oberfläche lädt darauf neu. */
+        val stand: StateFlow<Long> = _stand.asStateFlow()
     }
 }
 
@@ -172,9 +324,20 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: regel, ziel oder info.", fehler = true)
             val inhalt = a.optString("text").trim()
             if (inhalt.length < 10) return@Werkzeug Ergebnis("Der Text fehlt oder ist zu kurz, um allein verständlich zu sein.", fehler = true)
-            val nummer = if (a.has("id") && !a.isNull("id")) a.optInt("id") else null
+            // id 0 heißt bei vielen Modellen „nicht angegeben“: dann neu anlegen.
+            val nummer = if (a.has("id") && !a.isNull("id")) a.optInt("id", 0).takeIf { it > 0 } else null
+            art.datei.defekt(context)?.let { return@Werkzeug Ergebnis("Nicht gemerkt. $it Sag Frank das.", fehler = true) }
+            val laenge = inhalt.replace(Regex("\\s+"), " ").length
+            if (laenge > Merkdatei.LAENGSTENS) return@Werkzeug Ergebnis("Zu lang (${laenge} von höchstens ${Merkdatei.LAENGSTENS} Zeichen), nichts gemerkt. Fasse den Eintrag auf etwa ${Merkdatei.ZEICHEN} Zeichen zusammen und rufe jarvis_merken noch einmal auf; mehrere Dinge = mehrere Einträge.", fehler = true)
             val eintrag = art.datei.speichere(context, inhalt, nummer)
-                ?: return@Werkzeug Ergebnis(if (nummer != null) "Einen Eintrag der Art ${art.kennung} mit der id $nummer gibt es nicht. Lies nach mit jarvis_gemerktes_lesen." else "Diese Datei ist voll. Fasse ähnliche Einträge zusammen oder lösche überholte, dann noch einmal.", fehler = true)
+                ?: return@Werkzeug Ergebnis(
+                    art.datei.defekt(context)?.let { "Nicht gemerkt. $it Sag Frank das." } ?: when {
+                        nummer != null && art.datei.alle(context).none { it.id == nummer } -> "Einen Eintrag der Art ${art.kennung} mit der id $nummer gibt es nicht. Lies nach mit jarvis_gemerktes_lesen."
+                        nummer == null && art.datei.voll(context) -> "Diese Datei ist voll. Fasse ähnliche Einträge zusammen oder lösche überholte, dann noch einmal."
+                        else -> "Nicht gemerkt: Die Datei ließ sich gerade nicht schreiben (Grund im Protokoll). Versuche es noch einmal; klappt es wieder nicht, sag Frank das."
+                    },
+                    fehler = true,
+                )
             Ergebnis("${art.wort} ${if (nummer != null) "geändert" else "gemerkt"}: [${eintrag.id}] ${eintrag.text}\n" +
                 "BESTÄTIGE ES FRANK JETZT: ${art.bestaetigung} So kann er sofort berichtigen. Berichtigt er, rufe jarvis_merken mit art ${art.kennung}, id ${eintrag.id} und dem vollständigen neuen Text auf.\n" +
                 "Alle Einträge dieser Art jetzt:\n" + art.datei.liste(art.datei.alle(context)) + "\nSagt ein älterer Eintrag dasselbe oder widerspricht er dem neuen, lösche ihn mit jarvis_vergessen.")
@@ -195,7 +358,8 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
             loeschend = true,
         ) { a ->
             val art = Merkart.von(a.optString("art")) ?: return@Werkzeug Ergebnis("art fehlt: regel, ziel oder info.", fehler = true)
-            val nummer = if (a.has("id") && !a.isNull("id")) a.optInt("id") else {
+            // id 0 heißt bei vielen Modellen „nicht angegeben“: dann gilt das Suchwort.
+            val nummer = (if (a.has("id") && !a.isNull("id")) a.optInt("id", 0).takeIf { it > 0 } else null) ?: run {
                 val treffer = if (a.gesetzt("suche")) art.datei.suche(context, a.optString("suche")) else return@Werkzeug Ergebnis("Es fehlt die id oder ein Suchwort.", fehler = true)
                 when (treffer.size) {
                     0 -> return@Werkzeug Ergebnis("Kein Eintrag der Art ${art.kennung} gefunden, der zu „${a.optString("suche")}“ passt.", fehler = true)
@@ -203,6 +367,7 @@ class RegelnFaehigkeit(private val context: Context) : Faehigkeit {
                     else -> return@Werkzeug Ergebnis("Mehrere Einträge passen. Frage Frank, welcher gemeint ist, und rufe das Werkzeug dann mit der id auf:\n" + art.datei.liste(treffer), fehler = true)
                 }
             }
+            art.datei.defekt(context)?.let { return@Werkzeug Ergebnis("Nicht gelöscht. $it Sag Frank das.", fehler = true) }
             art.datei.loesche(context, nummer)?.let { Ergebnis("${art.wort} gelöscht: „${it.text}“. Sag Frank in einem Satz, was du gestrichen hast.") }
                 ?: Ergebnis("Einen Eintrag der Art ${art.kennung} mit der id $nummer gibt es nicht.", fehler = true)
         },

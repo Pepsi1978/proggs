@@ -7,7 +7,9 @@ sein Geheimnis. Nur fuer dieses Geheimnis nimmt der Relay danach Aufrufe an; all
 
 Zweite Aufgabe: Franks Tagebuch. Die Eintraege liegen als Markdown-Dateien in einem Google-Drive-Ordner.
 Der Relay holt sie mit rclone (Zugang NUR LESEND, auf genau diesen Ordner als Wurzel gestellt) und gibt sie
-dem Handy unter /geraet/tagebuch heraus – ebenfalls nur mit dem Geraete-Token.
+dem Handy unter /geraet/tagebuch heraus – ebenfalls nur mit dem Geraete-Token. Solange das Handy verbunden ist,
+gleicht der Relay den Ordner alle zwei Minuten selbst ab und schickt bei einem neuen oder geaenderten Eintrag
+sofort {"signal": "tagebuch"} ueber die WebSocket: So steht ein neuer Eintrag nach Sekunden im Gedaechtnis von Jarvis.
 """
 import asyncio
 import hmac
@@ -25,6 +27,7 @@ from aiohttp import WSMsgType, web
 TOKEN = os.environ["JARVIS_GERAET_TOKEN"]
 ZUSTAND = Path(os.environ.get("JARVIS_ZUSTAND", "/data/zustand.json"))
 WARTE_AUF_HANDY_S = 8      # kurze Funkloecher ueberbruecken, statt sofort einen Fehler zu melden
+NACH_TRENNUNG_S = 15       # so lange duerfen offene Aufrufe nach einer Trennung auf die neue Verbindung warten
 ZEITLIMIT_S = 75           # laengster Werkzeugaufruf (der freie Auftrag an Jarvis hat 45 s)
 MAX_RUMPF = 1_000_000
 # Antworten auf diese Methoden sind immer gleich; aus dem Zwischenspeicher kann ChatGPT sich auch
@@ -36,7 +39,17 @@ TAGEBUCH_ORDNER = Path(os.environ.get("JARVIS_TAGEBUCH", "/data/tagebuch"))
 TAGEBUCH_ABSTAND_S = 120   # hoechstens alle zwei Minuten bei Google nachfragen
 
 log = logging.getLogger("jarvis-relay")
-_KEINE = object()
+_KEINE = object()   # der Aufruf hat das Handy nie erreicht: nichts wurde geaendert
+_UNKLAR = object()  # der Aufruf war beim Handy, die Antwort kam aber nicht an: ob er ausgefuehrt wurde, ist offen
+
+# Laufende Hintergrundaufgaben brauchen eine feste Referenz, sonst kann asyncio sie mitten im Lauf einsammeln.
+_aufgaben = set()
+
+
+def _im_hintergrund(koroutine) -> None:
+    aufgabe = asyncio.create_task(koroutine)
+    _aufgaben.add(aufgabe)
+    aufgabe.add_done_callback(_aufgaben.discard)
 
 
 class Relay:
@@ -44,7 +57,7 @@ class Relay:
         self.geheimnis = ""          # zuletzt vom Handy gemeldetes Geheimnis
         self.gemerkt = {}            # Methode -> result-Objekt
         self.ws = None
-        self.offen = {}              # Aufruf-id -> Future
+        self.offen = {}              # Aufruf-id -> (Future, WebSocket, ueber die der Aufruf ging)
         self.da = asyncio.Event()
         self._lade()
 
@@ -78,7 +91,9 @@ class Relay:
         alt = self.ws
         self.ws = ws
         if alt is not None and not alt.closed:
-            await alt.close()
+            # Im Hintergrund: Haengt die alte Verbindung am toten Netz, wartete close() bis zu 10 s auf die Gegenstelle,
+            # und so lange laege die neue (mit den nachgereichten Antworten) ungelesen.
+            _im_hintergrund(alt.close())
         if geheimnis != self.geheimnis:
             self.geheimnis, self.gemerkt = geheimnis, {}
             self._sichere()
@@ -92,15 +107,28 @@ class Relay:
                     daten = json.loads(nachricht.data)
                 except ValueError:
                     continue
-                wartend = self.offen.pop(daten.get("id"), None)
-                if wartend is not None and not wartend.done():
-                    wartend.set_result(daten.get("antwort"))
+                # Die Antwort darf ueber eine neuere Verbindung kommen als der Aufruf: zugeordnet wird ueber die id.
+                eintrag = self.offen.pop(daten.get("id"), None)
+                if eintrag is not None and not eintrag[0].done():
+                    eintrag[0].set_result(daten.get("antwort"))
         finally:
             if self.ws is ws:
                 self.ws = None
                 self.da.clear()
                 log.info("Handy getrennt")
+                _im_hintergrund(self._nach_trennung(ws))
         return ws
+
+    async def _nach_trennung(self, alt) -> None:
+        """Kommt das Handy nicht bald zurueck, warten offene Aufrufe nicht stur bis zum Zeitlimit."""
+        try:
+            await asyncio.wait_for(self.da.wait(), NACH_TRENNUNG_S)
+            return  # wieder da: Die Antworten kommen ueber die neue Verbindung
+        except asyncio.TimeoutError:
+            pass
+        for wartend, ws in list(self.offen.values()):
+            if ws is alt and not wartend.done():
+                wartend.set_result(_UNKLAR)
 
     # ---------------------------------------------------------------- ChatGPT
 
@@ -117,6 +145,15 @@ class Relay:
         einzeln = anfrage if isinstance(anfrage, dict) else None
         methode = einzeln.get("method", "") if einzeln else ""
 
+        # Benachrichtigungen (ohne id, z. B. notifications/initialized) beantwortet das Handy nie: keine Rundreise dafuer.
+        if einzeln is not None and einzeln.get("id") is None:
+            return web.Response(status=202)
+        if isinstance(anfrage, list) and anfrage and all(isinstance(x, dict) and x.get("id") is None for x in anfrage):
+            return web.Response(status=202)
+        # Ping prueft nur, ob der Dienst lebt: bei verbundenem Handy sofort antworten.
+        if methode == "ping" and self.ws is not None and not self.ws.closed:
+            return self._json({"jsonrpc": "2.0", "id": einzeln["id"], "result": {}})
+
         if self.ws is None:
             try:
                 await asyncio.wait_for(self.da.wait(), WARTE_AUF_HANDY_S)
@@ -124,7 +161,15 @@ class Relay:
                 return self._ohne_handy(einzeln, methode)
 
         antwort = await self._frage_handy(rumpf)
-        if antwort is _KEINE:
+        if antwort is _UNKLAR and methode == "tools/call":
+            # Nicht "nichts geaendert" melden: Der Auftrag kam an, ein blindes Wiederholen legte Termine, Ideen oder Mails doppelt an.
+            log.warning("Antwort des Handys blieb aus (%s)", (einzeln.get("params") or {}).get("name", ""))
+            text = ("Jarvis hat den Auftrag erhalten, aber die Antwort kam nicht an. Ob er ausgeführt wurde, ist unklar. "
+                    "Prüfe es zuerst mit dem passenden _lesen-Werkzeug und wiederhole schreibende Aufrufe nicht blind; "
+                    "einen rein lesenden Aufruf kannst du einfach noch einmal stellen.")
+            return self._json({"jsonrpc": "2.0", "id": einzeln["id"],
+                               "result": {"content": [{"type": "text", "text": text}], "isError": True}})
+        if antwort is _KEINE or antwort is _UNKLAR:
             return self._ohne_handy(einzeln, methode)
         if antwort is None:                      # reine Benachrichtigung
             return web.Response(status=202)
@@ -141,15 +186,26 @@ class Relay:
     async def _frage_handy(self, rumpf: str):
         ws = self.ws
         if ws is None or ws.closed:
-            return _KEINE
+            # Die Verbindung schliesst gerade: kurz auf die neue warten (das Handy verbindet sich nach wenigen Sekunden neu).
+            schleife = asyncio.get_running_loop()
+            frist = schleife.time() + WARTE_AUF_HANDY_S
+            while (ws is None or ws.closed) and schleife.time() < frist:
+                await asyncio.sleep(0.25)
+                ws = self.ws
+            if ws is None or ws.closed:
+                return _KEINE
         nummer = uuid.uuid4().hex
         wartend = asyncio.get_running_loop().create_future()
-        self.offen[nummer] = wartend
+        self.offen[nummer] = (wartend, ws)
         try:
-            await ws.send_str(json.dumps({"id": nummer, "rumpf": rumpf}))
-            return await asyncio.wait_for(wartend, ZEITLIMIT_S)
-        except (asyncio.TimeoutError, ConnectionError, RuntimeError):
-            return _KEINE
+            try:
+                await ws.send_str(json.dumps({"id": nummer, "rumpf": rumpf}))
+            except (ConnectionError, RuntimeError):
+                return _KEINE          # nie angekommen: es ist sicher nichts passiert
+            try:
+                return await asyncio.wait_for(wartend, ZEITLIMIT_S)
+            except asyncio.TimeoutError:
+                return _UNKLAR         # angekommen, aber keine Antwort: ob es lief, ist offen
         finally:
             self.offen.pop(nummer, None)
 
@@ -182,6 +238,41 @@ class Tagebuch:
         self.zuletzt = 0.0
         self.sperre = asyncio.Lock()
         self.fehler = ""
+        self.fingerabdruck = None   # Stand des lokalen Ordners beim letzten Blick (Name, Groesse, Aenderungszeit)
+
+    def _fingerabdruck(self) -> str:
+        if not TAGEBUCH_ORDNER.exists():
+            return ""
+        teile = []
+        for datei in sorted(TAGEBUCH_ORDNER.glob("*.md")):
+            stat = datei.stat()
+            teile.append(f"{datei.name}:{stat.st_size}:{int(stat.st_mtime)}")
+        return str(hash("|".join(teile)))
+
+    async def wache(self, relay) -> None:
+        """Gleicht den Drive-Ordner regelmaessig ab, solange das Handy verbunden ist, und meldet jede Aenderung sofort."""
+        while True:
+            try:
+                await asyncio.sleep(TAGEBUCH_ABSTAND_S + 1)
+                ws = relay.ws
+                if ws is None or ws.closed:
+                    continue
+                await self.hole()
+                neu = self._fingerabdruck()
+                if self.fingerabdruck is None or neu == self.fingerabdruck:
+                    self.fingerabdruck = neu
+                    continue
+                # hole() kann bis zu 90 s dauern: Inzwischen kann sich das Handy neu verbunden haben, also neu lesen.
+                ws = relay.ws
+                if ws is None or ws.closed:
+                    continue  # alten Fingerabdruck stehen lassen: Die naechste Runde meldet die Aenderung
+                await ws.send_str(json.dumps({"signal": "tagebuch"}))
+                log.info("Tagebuch geaendert: Signal ans Handy")
+                self.fingerabdruck = neu
+            except asyncio.CancelledError:
+                raise
+            except Exception as ausnahme:
+                log.warning("Tagebuch-Waechter: %s", ausnahme)
 
     async def hole(self) -> None:
         async with self.sperre:
@@ -222,9 +313,14 @@ class Tagebuch:
             log.warning("Drive-Zugang nicht uebernommen: %s", ausnahme)
             return web.Response(status=400, text="Zugang nicht uebernommen")
         self.zuletzt, self.fehler = 0.0, ""
+        # Den Abgleich nicht abwarten: Er kann bis zu 90 s dauern, das Handy gaebe nach 30 s auf und meldete faelschlich einen Fehler.
+        _im_hintergrund(self._abgleich_nach_zugang())
+        log.info("Drive-Zugang erneuert, Abgleich laeuft im Hintergrund")
+        return web.json_response({"fehler": ""})
+
+    async def _abgleich_nach_zugang(self) -> None:
         await self.hole()
-        log.info("Drive-Zugang erneuert, Fehler danach: %r", self.fehler)
-        return web.json_response({"fehler": self.fehler})
+        log.info("Abgleich nach neuem Drive-Zugang fertig, Fehler: %r", self.fehler)
 
     async def antwort(self, request: web.Request) -> web.Response:
         if not hmac.compare_digest(request.headers.get("X-Jarvis-Token", "").encode(), TOKEN.encode()):
@@ -293,6 +389,11 @@ def app() -> web.Application:
     anwendung = web.Application(client_max_size=MAX_RUMPF, middlewares=[mitschrift])
     anwendung.router.add_get("/geraet/ws", relay.geraet)
     tagebuch = Tagebuch()
+
+    async def tagebuch_waechter(_anwendung):
+        _im_hintergrund(tagebuch.wache(relay))
+
+    anwendung.on_startup.append(tagebuch_waechter)
     anwendung.router.add_get("/geraet/tagebuch", tagebuch.antwort)
     anwendung.router.add_post("/geraet/drive-zugang", tagebuch.neuer_zugang)
     anwendung.router.add_route("*", "/j/{geheimnis}/mcp", relay.mcp)

@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.media.app.NotificationCompat.MediaStyle
@@ -28,11 +29,25 @@ class VorleseDienst : Service() {
 
     private var sitzung: MediaSessionCompat? = null
 
+    /**
+     * Hält die CPU wach, solange vorgelesen wird. Zwischen zwei Absätzen läuft kein Ton, aber
+     * Netz und Erzeugung — ohne Wakelock schläft das Gerät bei dunklem Bildschirm dort ein.
+     */
+    private var wach: PowerManager.WakeLock? = null
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
         laeuft = true
+        wach = runCatching {
+            getSystemService(PowerManager::class.java)
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:vorlesen")
+                .apply {
+                    setReferenceCounted(false)
+                    acquire(WACH_MS)
+                }
+        }.getOrNull()
         legeKanalAn()
         sitzung = MediaSessionCompat(this, "JarvisVorlesen").apply {
             setCallback(object : MediaSessionCompat.Callback() {
@@ -64,6 +79,25 @@ class VorleseDienst : Service() {
         val pausiert = intent?.getBooleanExtra(EXTRA_PAUSIERT, false) ?: false
         letzterTitel = titel
         starteImVordergrund(baueMeldung(titel, nummer, gesamt, pausiert))
+        // Jede Aktualisierung verlängert die Frist — auch ein sehr langer Text bleibt wach.
+        // Pausiert läuft weder Netz noch Ton: Dann wird der Wakelock freigegeben und erst beim
+        // Weiterlesen (aktualisiere mit pausiert=false) wieder geholt. Knopf-Intents (PAUSE, WEITER …)
+        // lassen ihn unberührt; die Aktualisierung aus dem Vorleser folgt ihnen ohnehin.
+        if (intent?.action == null) {
+            if (pausiert) {
+                runCatching { if (wach?.isHeld == true) wach?.release() }
+            } else {
+                runCatching { wach?.acquire(WACH_MS) }
+            }
+        }
+
+        // Verwaister Start: Das Vorlesen endete schon, bevor der Dienst lief (etwa ohne Schlüssel),
+        // und sein beenden() kam ins Leere. Ohne diese Prüfung bliebe die Meldung für immer stehen.
+        if (intent?.action == null && Vorleser.aktuell()?.stand?.value?.zustand.let { it == null || it == VorleseZustand.AUS }) {
+            IdeenLog.info("VorleseDienst", "onStartCommand", "Verwaister Start, Dienst endet sofort")
+            halteAn()
+            return START_NOT_STICKY
+        }
 
         when (intent?.action) {
             VorleseAktion.PAUSE -> Vorleser.aktuell()?.pause()
@@ -96,6 +130,8 @@ class VorleseDienst : Service() {
     override fun onDestroy() {
         laeuft = false
         letzterTitel = "Jarvis"
+        runCatching { if (wach?.isHeld == true) wach?.release() }
+        wach = null
         sitzung?.isActive = false
         sitzung?.release()
         sitzung = null
@@ -198,6 +234,9 @@ class VorleseDienst : Service() {
         private const val EXTRA_NUMMER = "nummer"
         private const val EXTRA_GESAMT = "gesamt"
         private const val EXTRA_PAUSIERT = "pausiert"
+
+        /** Höchstdauer je Frist; jede Absatz-Meldung setzt sie neu. */
+        private const val WACH_MS = 30 * 60_000L
 
         fun starten(context: Context) {
             aktualisiere(context, "Jarvis", 0, 0, pausiert = false)

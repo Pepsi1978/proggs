@@ -2,6 +2,7 @@ package de.frank.jarvis.faehigkeit
 
 import android.content.Context
 import android.net.Uri
+import de.frank.jarvis.observability.Logbuch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -38,8 +39,32 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
      * (etwa eine abgelaufene Whoop-Anmeldung) — die Einzelheiten stehen dann als „ACHTUNG“ in jeder Lese-Antwort.
      */
     suspend fun abgleich(): Boolean {
-        val antwort = rufe("abgleich", JSONObject())
+        // Wartezeit ausdrücklich (wie die Vorgabe in Entropie Reductor), damit das Zeitlimit der Brücke dazu passt.
+        val antwort = rufe("abgleich", JSONObject().put("warte_ms", 90_000))
         return antwort.optBoolean("fertig", false) && antwort.optJSONObject("stand")?.optBoolean("alles_ok", true) != false
+    }
+
+    /**
+     * Biodaten fürs Live-Gedächtnis, ohne neuen Abgleich (der läuft mit der Tagesauswertung): der neueste Tag mit allen
+     * Werten, die wichtigen Größen gegen den letzten Monat und der Verlauf der letzten 10 Tage.
+     */
+    suspend fun live(): String {
+        val tag = rufe("tag", JSONObject())
+        tag.optString("fehler").takeIf { it.isNotEmpty() }?.let { return "NICHT VERFÜGBAR: $it" }
+        val vergleich = rufe("auswertung", JSONObject().put("tage", 30).put("metriken", org.json.JSONArray(LIVE_METRIKEN)))
+        val verlauf = rufe("verlauf", JSONObject().put("von", java.time.LocalDate.now().minusDays(10).toString()).put("aufloesung", "tag")
+            .put("metriken", org.json.JSONArray(listOf("schlafdauer", "tiefschlaf_prozent", "erholung", "hrv", "ruhepuls"))))
+        return buildString {
+            append(standText(tag)).append(runCatching { tagText(tag) }.getOrDefault("Tageswerte nicht lesbar."))
+            append("\n\nIM VERGLEICH:\n").append(vergleich.optString("fehler").takeIf { it.isNotEmpty() } ?: runCatching { auswertungText(vergleich) }.getOrDefault("nicht lesbar"))
+            append("\n\nVERLAUF DER LETZTEN 10 TAGE:\n").append(verlauf.optString("fehler").takeIf { it.isNotEmpty() } ?: runCatching { verlaufText(verlauf) }.getOrDefault("nicht lesbar"))
+        }.trim()
+    }
+
+    /** Trainings der letzten [tage] Tage, ohne neuen Abgleich. */
+    suspend fun trainingsLive(tage: Int): String {
+        val a = rufe("trainings", JSONObject().put("von", java.time.LocalDate.now().minusDays(tage.toLong()).toString()).put("limit", 20))
+        return a.optString("fehler").takeIf { it.isNotEmpty() }?.let { "NICHT VERFÜGBAR: $it" } ?: runCatching { trainingsText(a) }.getOrDefault("NICHT VERFÜGBAR: Trainings nicht lesbar")
     }
 
     /** Alle Messgrößen, für die vollständige Tagesauswertung. */
@@ -297,16 +322,20 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
 
     // ---------------------------------------------------------------- Brücke
 
-    private suspend fun rufe(methode: String, anfrage: JSONObject): JSONObject = withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage) }
+    private suspend fun rufe(methode: String, anfrage: JSONObject, lesend: Boolean = methode in LESEND): JSONObject =
+        withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage, lesend) }
 
     /**
      * Lesen mit frischen Daten: Vorher klopft Jarvis in Entropie Reductor an. Dort wird nur abgeglichen, wenn der
      * letzte Versuch älter als 30 Minuten ist (sonst kommt die Antwort sofort). Gewartet wird höchstens 25 Sekunden,
      * damit eine Antwort im Sprachmodus nicht hängt; ein längerer Abgleich läuft im Hintergrund zu Ende.
-     * Scheitert das Anklopfen, wird trotzdem gelesen — der Zustand der Quellen steht in der Antwort selbst.
+     * Das Anklopfen wird nicht wiederholt (sonst bis zu zweimal 25 Sekunden); scheitert es, wird trotzdem gelesen —
+     * der Zustand der Quellen steht in der Antwort selbst.
      */
     private suspend fun lies(methode: String, anfrage: JSONObject): JSONObject {
-        runCatching { rufe("abgleich", JSONObject().put("max_alter_min", 30).put("warte_ms", 25_000)) }
+        val beginn = System.currentTimeMillis()
+        runCatching { rufe("abgleich", JSONObject().put("max_alter_min", 30).put("warte_ms", 25_000), lesend = false) }
+        System.currentTimeMillis().minus(beginn).takeIf { it >= 3_000 }?.let { Logbuch.dauer("Biodaten-Abgleich vor dem Lesen", it, methode) }
         return rufe(methode, anfrage)
     }
 
@@ -327,8 +356,8 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    private fun rufeDirekt(methode: String, anfrage: JSONObject): JSONObject =
-        AppBruecke.rufe(context, "Entropie Reductor", BRUECKEN, methode, anfrage, lesend = methode in LESEND)
+    private fun rufeDirekt(methode: String, anfrage: JSONObject, lesend: Boolean = methode in LESEND): JSONObject =
+        AppBruecke.rufe(context, "Entropie Reductor", BRUECKEN, methode, anfrage, lesend = lesend)
 
     private fun fehler(text: String) = JSONObject().put("fehler", text)
 
@@ -336,7 +365,10 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         optString("fehler").takeIf { it.isNotEmpty() }?.let { Ergebnis(it, fehler = true) } ?: Ergebnis(standText(this) + gut(this))
 
     companion object {
-        private val LESEND = setOf("katalog", "abgleich")
+        /** Reine Lesemethoden: Bei einem vorübergehenden Fehler (Partner-App gerade beendet) wird einmal wiederholt. */
+        private val LESEND = setOf("katalog", "abgleich", "tag", "auswertung", "verlauf", "trainings", "training")
+        /** Was das Live-Gedächtnis im Vergleich zeigt: Franks vier Kerngrößen und was Schlaf und Erholung einordnet. */
+        private val LIVE_METRIKEN = listOf("erholung", "hrv", "ruhepuls", "vo2max", "tiefschlaf_prozent", "tiefschlaf_min", "schlafdauer", "wach_min", "schlafdefizit_min", "spo2", "oura_temperaturabweichung", "gewicht")
         private val BRUECKEN = listOf(
             Uri.parse("content://de.frank.entropyreducer.debug.jarvis"),
             Uri.parse("content://de.frank.entropyreducer.jarvis"),

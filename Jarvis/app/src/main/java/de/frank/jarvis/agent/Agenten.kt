@@ -13,6 +13,7 @@ import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import org.json.JSONObject
 
 /** Ein Agent: ein Name und eine Rolle, also die Anweisung, wie er an Aufträge herangeht. */
@@ -22,7 +23,7 @@ data class AgentenBauplan(val name: String, val rolle: String, val vorgegeben: B
 /** Ergebnis eines Agentenlaufs: der Titel des Ablage-Eintrags oder null, dazu der Grund, wenn er nicht (ganz) fertig wurde. */
 data class AgentenErgebnis(val titel: String?, val grund: String?)
 
-data class AgentenLauf(val agent: String, val auftrag: String, val seit: Long, val schritt: String = "")
+data class AgentenLauf(val agent: String, val auftrag: String, val seit: Long, val schritt: String = "", val id: Long = 0L)
 
 /**
  * Die Agenten von Jarvis. Ein Agent ist das eigene Modell von Jarvis mit einer festen Rolle; er arbeitet einen
@@ -35,6 +36,8 @@ object Agenten {
     private const val TAG = "JarvisAgenten"
     private val _laeufe = MutableStateFlow<List<AgentenLauf>>(emptyList())
     val laeufe: StateFlow<List<AgentenLauf>> = _laeufe.asStateFlow()
+    /** Eindeutige Nummer je Lauf: Zwei Läufe aus derselben Millisekunde dürfen sich nicht gegenseitig austragen. */
+    private val naechsteId = java.util.concurrent.atomic.AtomicLong()
 
     private val VORGABEN = listOf(
         AgentenBauplan(
@@ -93,8 +96,9 @@ object Agenten {
     /** Führt einen Auftrag aus und legt das Ergebnis in die Ablage (auf Wunsch auch als PDF mit den erzeugten Bildern). */
     suspend fun fuehreAus(context: Context, plan: AgentenBauplan, auftrag: String): AgentenErgebnis {
         val app = context.applicationContext
-        val lauf = AgentenLauf(plan.name, auftrag, System.currentTimeMillis())
-        _laeufe.value = _laeufe.value + lauf
+        val lauf = AgentenLauf(plan.name, auftrag, System.currentTimeMillis(), id = naechsteId.incrementAndGet())
+        // Atomar ändern: Zwei Agenten laufen parallel, sonst schreibt einer den alten Stand des anderen zurück.
+        _laeufe.update { it + lauf }
         // Der Titel steht vorab fest: Dateien, die der Agent unterwegs erzeugt (Bilder, PDFs, Downloads), landen im selben Eintrag wie sein Bericht.
         val titel = "${plan.name} – ${auftrag.replace(Regex("\\s+"), " ").take(50).trim()} – ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("d.M. HH.mm"))}"
         try {
@@ -110,7 +114,7 @@ object Agenten {
             val denker = JarvisAgent(app)
             val bericht = denker.versuche(
                 auftrag = auftrag, zeitlimitMs = plan.minuten * 60_000L, maxSchritte = plan.schritte, rolle = rolle, mitInternet = true, ablageTitel = titel, abschluss = true,
-                beiSchritt = { schritt -> _laeufe.value = _laeufe.value.map { if (it === lauf || it.seit == lauf.seit) it.copy(schritt = schritt) else it } },
+                beiSchritt = { schritt -> _laeufe.update { l -> l.map { if (it.id == lauf.id) it.copy(schritt = schritt) else it } } },
             )
             val grund = denker.abbruchGrund
             if (bericht.isNullOrBlank()) {
@@ -134,7 +138,7 @@ object Agenten {
             Protokoll.melde(Quelle.JARVIS, "Agent ${plan.name}", "Fehlgeschlagen: $text", ok = false)
             return AgentenErgebnis(null, text)
         } finally {
-            _laeufe.value = _laeufe.value.filter { it.seit != lauf.seit }
+            _laeufe.update { l -> l.filter { it.id != lauf.id } }
         }
     }
 }

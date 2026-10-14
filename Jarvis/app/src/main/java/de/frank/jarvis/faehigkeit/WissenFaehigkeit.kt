@@ -6,6 +6,7 @@ import java.io.File
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -47,8 +48,13 @@ class WissenFaehigkeit(private val context: Context) : Faehigkeit {
      * bricht der Abruf ab, bleibt der bisherige Bestand lesbar. Rückgabe: Anzahl der Dateien oder null bei Fehler.
      */
     suspend fun synchronisiere(): Int? = withContext(Dispatchers.IO) {
+        val beginn = System.currentTimeMillis()
+        // Laufen zwei Abgleiche zugleich an, holt nur der erste; der zweite nimmt dessen Ergebnis.
+        sperre.withLock {
+        if (zuletztErfolgreich >= beginn) return@withLock letzteAnzahl
+        val neu = File(context.cacheDir, "wissen_neu_" + System.nanoTime())
         runCatching {
-            val neu = File(context.cacheDir, "wissen_neu").apply { deleteRecursively(); mkdirs() }
+            neu.mkdirs()
             var anzahl = 0
             fun lade(repoPfad: String, ziel: File, tiefe: Int) {
                 if (tiefe > 5) return
@@ -70,10 +76,16 @@ class WissenFaehigkeit(private val context: Context) : Faehigkeit {
             check(anzahl > 0) { "Der Ordner ist leer." }
             ordner.deleteRecursively()
             neu.copyRecursively(ordner, overwrite = true)
-            neu.deleteRecursively()
+            zuletztErfolgreich = System.currentTimeMillis()
+            letzteAnzahl = anzahl
             anzahl
-        }.onFailure { Log.w("JarvisWissen", "Synchronisierung fehlgeschlagen", it) }.getOrNull()
+        }.onFailure { Log.w("JarvisWissen", "Synchronisierung fehlgeschlagen", it) }.getOrNull().also { neu.deleteRecursively() }
+        }
     }
+
+    private val sperre = kotlinx.coroutines.sync.Mutex()
+    @Volatile private var zuletztErfolgreich = 0L
+    @Volatile private var letzteAnzahl: Int? = null
 
     private fun hole(adresse: String): String =
         CLIENT.newCall(Request.Builder().url(adresse).header("User-Agent", "Jarvis").header("Accept", "application/vnd.github+json").build()).execute().use { antwort ->

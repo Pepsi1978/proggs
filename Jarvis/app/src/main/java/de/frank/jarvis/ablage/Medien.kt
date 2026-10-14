@@ -17,6 +17,8 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import java.io.File
 import java.io.FileOutputStream
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Bildarbeit auf dem Gerät: Vorschaubilder (Bild, Video-Standbild, erste PDF-Seite), PDF-Seiten für den Betrachter
@@ -24,6 +26,23 @@ import java.io.FileOutputStream
  * in voller Auflösung in den Speicher geladen, sondern beim Dekodieren verkleinert.
  */
 object Medien {
+    /** Eine Sperre je Zieldatei: Liste und Speichern erzeugen dasselbe Vorschaubild sonst gleichzeitig und verschränkt. */
+    private val sperren = ConcurrentHashMap<String, Any>()
+
+    private fun <T> gesperrt(ziel: File, block: () -> T): T = synchronized(sperren.getOrPut(ziel.absolutePath) { Any() }) { block() }
+
+    /** Schreibt ein Bild über eine eigene Zwischendatei und benennt dann um; bleibt sie liegen, wird sie entfernt. */
+    private fun schreibeBild(bmp: Bitmap, format: Bitmap.CompressFormat, qualitaet: Int, ziel: File): File? {
+        ziel.parentFile?.mkdirs()
+        val tmp = File(ziel.parentFile, ziel.name + "." + UUID.randomUUID().toString().take(8) + ".tmp")
+        return try {
+            FileOutputStream(tmp).use { bmp.compress(format, qualitaet, it) }
+            if (tmp.renameTo(ziel) || (ziel.delete() && tmp.renameTo(ziel))) ziel else null
+        } finally {
+            if (tmp.exists()) tmp.delete()
+        }
+    }
+
     /** Liest nur die Maße, ohne das Bild zu laden. */
     fun bildMasse(datei: File): Pair<Int, Int>? {
         val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -43,8 +62,9 @@ object Medien {
      * Erzeugt das Vorschaubild eines Anhangs als JPEG (längste Seite 360 px) und gibt es zurück; null, wenn der Typ
      * keines hat oder die Datei sich nicht lesen lässt. Das Original bleibt unberührt.
      */
-    fun vorschaubild(quelle: File, art: Art, ziel: File): File? {
-        if (ziel.isFile && ziel.length() > 0 && ziel.lastModified() >= quelle.lastModified()) return ziel
+    fun vorschaubild(quelle: File, art: Art, ziel: File): File? = gesperrt(ziel) {
+        // Unter der Sperre erneut prüfen: Hat ein anderer Faden das Bild gerade erzeugt, wird es nur noch übernommen.
+        if (ziel.isFile && ziel.length() > 0 && ziel.lastModified() >= quelle.lastModified()) return@gesperrt ziel
         val bild: Bitmap = runCatching {
             when (art) {
                 Art.BILD, Art.ANIMATION -> bildVerkleinert(quelle, 360)
@@ -58,17 +78,12 @@ object Medien {
                 Art.PDF -> pdfSeite(quelle, 0, 360)?.second
                 else -> null
             }
-        }.getOrNull() ?: return null
+        }.getOrNull() ?: return@gesperrt null
         val klein = if (maxOf(bild.width, bild.height) > 400) {
             val f = 360f / maxOf(bild.width, bild.height)
             Bitmap.createScaledBitmap(bild, (bild.width * f).toInt().coerceAtLeast(1), (bild.height * f).toInt().coerceAtLeast(1), true).also { if (it !== bild) bild.recycle() }
         } else bild
-        return runCatching {
-            val tmp = File(ziel.parentFile, ziel.name + ".tmp")
-            FileOutputStream(tmp).use { klein.compress(Bitmap.CompressFormat.JPEG, 82, it) }
-            tmp.renameTo(ziel)
-            ziel
-        }.getOrNull().also { klein.recycle() }
+        runCatching { schreibeBild(klein, Bitmap.CompressFormat.JPEG, 82, ziel) }.getOrNull().also { klein.recycle() }
     }
 
     class PdfFehler(meldung: String) : Exception(meldung)
@@ -91,17 +106,27 @@ object Medien {
         }
     }
 
-    /** Rendert eine Seite in eine PNG-Datei (für den zoombaren Betrachter, der große Bilder in Kacheln lädt). */
-    fun pdfSeiteAlsDatei(datei: File, index: Int, laengste: Int, ziel: File): File? {
-        if (ziel.isFile && ziel.length() > 0 && ziel.lastModified() >= datei.lastModified()) return ziel
-        val (_, bmp) = pdfSeite(datei, index, laengste) ?: return null
-        return try {
-            ziel.parentFile?.mkdirs()
-            val tmp = File(ziel.parentFile, ziel.name + ".tmp")
-            FileOutputStream(tmp).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
-            tmp.renameTo(ziel)
-            ziel
+    /**
+     * Rendert eine Seite in eine Bilddatei (für den zoombaren Betrachter, der große Bilder in Kacheln lädt). Endet [ziel]
+     * auf .png, wird verlustfrei gespeichert, sonst als JPEG mit Qualität 92: Der Hintergrund ist ohnehin weiß, Text
+     * bleibt scharf, und das Speichern geht um ein Vielfaches schneller als ein PNG in voller Auflösung.
+     */
+    fun pdfSeiteAlsDatei(datei: File, index: Int, laengste: Int, ziel: File): File? = gesperrt(ziel) {
+        if (ziel.isFile && ziel.length() > 0 && ziel.lastModified() >= datei.lastModified()) return@gesperrt ziel
+        val (_, bmp) = pdfSeite(datei, index, laengste) ?: return@gesperrt null
+        try {
+            if (ziel.name.endsWith(".png")) schreibeBild(bmp, Bitmap.CompressFormat.PNG, 100, ziel)
+            else schreibeBild(bmp, Bitmap.CompressFormat.JPEG, 92, ziel)
         } finally { bmp.recycle() }
+    }
+
+    /**
+     * Räumt den Zwischenspeicher der PDF-Seiten auf: Seiten älter als [alterMs] und Seiten im alten PNG-Format.
+     * Sonst wächst er je angesehener Seite um mehrere MB und wird nur vom System geleert.
+     */
+    fun pdfSeitenAufraeumen(ordner: File, alterMs: Long = 7 * 24 * 3_600_000L) {
+        val grenze = System.currentTimeMillis() - alterMs
+        ordner.listFiles()?.forEach { f -> if (f.isFile && (f.lastModified() < grenze || f.name.endsWith(".png") || f.name.endsWith(".tmp"))) f.delete() }
     }
 
     private fun <T> mitPdf(datei: File, block: (PdfRenderer) -> T): T {

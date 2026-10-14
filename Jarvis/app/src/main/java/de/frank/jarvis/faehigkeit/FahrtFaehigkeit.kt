@@ -40,8 +40,8 @@ class FahrtFaehigkeit(private val context: Context) : Faehigkeit {
         }
     }
 
-    private fun zeit(text: String): LocalTime? = Regex("^\\s*([01]?\\d|2[0-3])(?:[:.]([0-5]\\d))?").find(text)?.takeIf { text.isNotBlank() }
-        ?.let { LocalTime.of(it.groupValues[1].toInt(), it.groupValues[2].toIntOrNull() ?: 0) }
+    /** Gemeinsamer Uhrzeit-Leser: „21:00“ bleibt 21 Uhr (früher wurde daraus 2 Uhr nachts). */
+    private fun zeit(text: String): LocalTime? = Mitdenken.uhrzeitMinuten(text)?.let { LocalTime.of(it / 60, it % 60) }
 
     /** Die Zeit heute; ist sie schon vorbei, morgen. */
     private fun naechste(zeit: LocalTime): ZonedDateTime = ZonedDateTime.now().let { jetzt -> jetzt.with(zeit).let { if (it.isAfter(jetzt)) it else it.plusDays(1) } }
@@ -91,7 +91,8 @@ class FahrtFaehigkeit(private val context: Context) : Faehigkeit {
         var startName: String
         val von: Ort
         if (vomStandort) {
-            val ort = Standort.aktuell(context)
+            // Im Antwortpfad kürzer warten; die Losfahr-Prüfung im Hintergrund behält ihre 8 Sekunden.
+            val ort = Standort.aktuell(context, wartenMs = 4000)
             if (ort != null) { von = Ort.Punkt(ort.latitude, ort.longitude); startName = "deinem Standort" }
             else {
                 von = Ort.Adresse(e.adresseZuhause)

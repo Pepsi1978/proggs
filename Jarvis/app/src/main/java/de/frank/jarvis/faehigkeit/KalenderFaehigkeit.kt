@@ -16,6 +16,8 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
@@ -49,6 +51,10 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         get() = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED
 
     override fun stoerung(): String? = if (erlaubt) null else "Der Zugriff auf den Kalender ist noch nicht erlaubt. In Jarvis unter Einrichtung auf „Erlauben“ tippen."
+
+    /** Schützt vor doppelten Terminen, wenn ChatGPT einen Aufruf nach einer Zeitüberschreitung wiederholt. */
+    private var letzteAnlage: Triple<String, Long, String>? = null
+    private val anlageSperre = Mutex()
 
     override val werkzeuge: List<Werkzeug> = listOf(
         Werkzeug(
@@ -94,7 +100,16 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
                 pflicht = listOf("titel", "datum"),
             ),
             nurLesen = false,
-        ) { a -> mitKalender(schreiben = true) { trageEin(a) } },
+        ) { a ->
+            val schluessel = listOf(a.optString("titel").trim().lowercase(Locale.GERMAN), a.optString("datum"), a.optString("uhrzeit"), a.optString("bis")).joinToString("|")
+            // Gesperrt, weil der Tunnel Aufrufe parallel abarbeitet: Ein wiederholter Aufruf wartet, bis der erste fertig ist.
+            anlageSperre.withLock {
+                letzteAnlage?.let { (alt, zeit, antwort) ->
+                    if (alt == schluessel && System.currentTimeMillis() - zeit < 90_000) return@Werkzeug Ergebnis("$antwort (War bereits eingetragen, nicht doppelt angelegt.)")
+                }
+                mitKalender(schreiben = true) { trageEin(a) }.also { if (!it.fehler) letzteAnlage = Triple(schluessel, System.currentTimeMillis(), it.text) }
+            }
+        },
         Werkzeug(
             name = "kalender_loeschen",
             titel = "Termin löschen",
@@ -302,7 +317,7 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
         }
         farbe?.let { werte.put(CalendarContract.Events.EVENT_COLOR_KEY, it) }
         // Vor dem Eintragen mitdenken, sonst meldet sich der neue Termin selbst als Überschneidung.
-        val mitgedacht = Mitdenken.anhang(context, tag.toString(), beginn?.toString()?.take(5), titel)
+        val mitgedacht = Mitdenken.anhang(context, tag.toString(), beginn?.toString()?.take(5), titel, dauer = a.optInt("dauer", 60).coerceIn(5, 24 * 60))
         context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, werte) ?: throw IllegalStateException("Der Kalender hat den Termin nicht angenommen.")
 
         val folge = when (titel.lowercase(Locale.GERMAN)) {
@@ -322,31 +337,43 @@ class KalenderFaehigkeit(private val context: Context) : Faehigkeit {
             ContentUris.appendId(it, tag.minusDays(1).atStartOfDay(zone).toInstant().toEpochMilli())
             ContentUris.appendId(it, tag.plusDays(2).atStartOfDay(zone).toInstant().toEpochMilli())
         }.build()
-        // id, Titel, Serie?, ganztägig, Beginn
-        val treffer = mutableListOf<Triple<Long, String, Boolean>>()
+        val treffer = mutableListOf<Loeschtreffer>()
         context.contentResolver.query(
             adresse,
-            arrayOf(CalendarContract.Instances.EVENT_ID, CalendarContract.Instances.TITLE, CalendarContract.Instances.RRULE, CalendarContract.Instances.ALL_DAY, CalendarContract.Instances.BEGIN),
+            arrayOf(
+                CalendarContract.Instances.EVENT_ID, CalendarContract.Instances.TITLE, CalendarContract.Instances.RRULE, CalendarContract.Instances.ALL_DAY,
+                CalendarContract.Instances.BEGIN, CalendarContract.Instances.CALENDAR_ACCESS_LEVEL,
+            ),
             "${CalendarContract.Instances.VISIBLE} = 1", null, null,
         )?.use { c ->
             while (c.moveToNext()) {
                 val titel = c.getString(1)?.trim().orEmpty()
                 val amTag = Instant.ofEpochMilli(c.getLong(4)).atZone(if (c.getInt(3) == 1) ZoneOffset.UTC else zone).toLocalDate() == tag
-                if (amTag && (titel.lowercase(Locale.GERMAN) == gesucht || (gesucht.length >= 3 && gesucht in titel.lowercase(Locale.GERMAN)))) treffer += Triple(c.getLong(0), titel, !c.getString(2).isNullOrBlank())
+                if (amTag && (titel.lowercase(Locale.GERMAN) == gesucht || (gesucht.length >= 3 && gesucht in titel.lowercase(Locale.GERMAN))))
+                    treffer += Loeschtreffer(c.getLong(0), titel, !c.getString(2).isNullOrBlank(), c.getLong(4), c.getInt(5) >= CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR)
             }
         }
-        val eindeutig = treffer.distinctBy { it.first }
+        val eindeutig = treffer.distinctBy { it.id }
+        // Derselbe Termin als Kopie in mehreren Kalendern (gleicher Titel, gleicher Beginn) zählt als einer; gelöscht werden alle Kopien.
+        val nurKopien = eindeutig.map { it.titel.lowercase(Locale.GERMAN) to it.beginn }.distinct().size == 1
+        val erster = eindeutig.firstOrNull()
         return when {
-            eindeutig.isEmpty() -> throw IllegalArgumentException("Am ${lang(tag)} gibt es keinen Termin „${a.optString("titel")}“.")
-            eindeutig.size > 1 -> throw IllegalArgumentException("Mehrere Termine passen: " + eindeutig.joinToString(", ") { it.second } + ". Bitte den Titel genauer nennen.")
-            eindeutig.first().third -> throw IllegalArgumentException("„${eindeutig.first().second}“ ist ein Serientermin. Den löscht Jarvis nicht; trage für einen freien Tag stattdessen ein X ein oder ändere die Serie in der Kalender-App.")
+            erster == null -> throw IllegalArgumentException("Am ${lang(tag)} gibt es keinen Termin „${a.optString("titel")}“.")
+            eindeutig.size > 1 && !nurKopien -> throw IllegalArgumentException("Mehrere Termine passen: " + eindeutig.joinToString(", ") { it.titel } + ". Bitte den Titel genauer nennen.")
+            eindeutig.any { it.serie } -> throw IllegalArgumentException("„${erster.titel}“ ist ein Serientermin. Den löscht Jarvis nicht; trage für einen freien Tag stattdessen ein X ein oder ändere die Serie in der Kalender-App.")
             else -> {
-                val anzahl = context.contentResolver.delete(ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, eindeutig.first().first), null, null)
+                val schreibbar = eindeutig.filter { it.schreibbar }
+                if (schreibbar.isEmpty()) throw IllegalStateException("„${erster.titel}“ liegt nur in Kalendern, in denen Jarvis nichts löschen darf. Bitte in der Kalender-App löschen.")
+                val anzahl = schreibbar.sumOf { context.contentResolver.delete(ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, it.id), null, null) }
                 if (anzahl == 0) throw IllegalStateException("Der Kalender hat den Termin nicht gelöscht.")
-                "Gelöscht: „${eindeutig.first().second}“ am ${lang(tag)}."
+                "Gelöscht: „${erster.titel}“ am ${lang(tag)}" + (if (anzahl > 1) " (in $anzahl Kalendern)" else "") +
+                    (if (schreibbar.size < eindeutig.size) ". Eine Kopie in einem schreibgeschützten Kalender bleibt stehen." else ".")
             }
         }
     }
+
+    /** Ein Termin, der zum Löschen passt; [schreibbar] = Jarvis darf im Kalender dieses Termins löschen. */
+    private class Loeschtreffer(val id: Long, val titel: String, val serie: Boolean, val beginn: Long, val schreibbar: Boolean)
 
     /**
      * Prüfer für „Frank schläft zu diesem Zeitpunkt sehr wahrscheinlich“, nach dem Dienstplan der Tage um heute:

@@ -7,6 +7,7 @@ import androidx.security.crypto.MasterKeys
 import de.frank.jarvis.auth.CodexModel
 import de.frank.jarvis.auth.ReasoningEffort
 import java.io.Closeable
+import java.util.WeakHashMap
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,24 +17,14 @@ import org.json.JSONObject
 /**
  * Alle Einstellungen und Schlüssel — ausschliesslich in [EncryptedSharedPreferences],
  * nie im Klartext (Baustein G).
+ *
+ * Der verschlüsselte Speicher wird nur einmal je Prozess geöffnet (Keystore und Schlüsselsatz kosten jedes Mal
+ * spürbar Zeit); jede Instanz teilt ihn. Bevorzugt [get] verwenden, das liefert immer dieselbe Instanz.
  */
 class SecureSettings(context: Context) : Closeable {
     private val appContext = context.applicationContext
 
-    private val preferences: SharedPreferences? by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        try {
-            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-            EncryptedSharedPreferences.create(
-                STORE_NAME,
-                masterKeyAlias,
-                appContext,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
-        } catch (_: Exception) {
-            null
-        }
-    }
+    private val preferences: SharedPreferences? by lazy(LazyThreadSafetyMode.SYNCHRONIZED) { speicher(appContext) }
 
     private val _themeFlow = MutableStateFlow(readString(Keys.THEME, Defaults.THEME))
     val themeFlow: StateFlow<String> = _themeFlow.asStateFlow()
@@ -47,7 +38,8 @@ class SecureSettings(context: Context) : Closeable {
     )
     val appLockEnabledFlow: StateFlow<Boolean> = _appLockEnabledFlow.asStateFlow()
 
-    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+    /** Änderungen am geteilten Speicher; ein einziger Hörer im Begleitobjekt verteilt sie an alle lebenden Instanzen. */
+    private fun beiAenderung(prefs: SharedPreferences, key: String?) {
         when (key) {
             Keys.AUSRICHTUNG -> _ausrichtungFlow.value = ausrichtung
             Keys.THEME -> _themeFlow.value = prefs.getString(Keys.THEME, Defaults.THEME) ?: Defaults.THEME
@@ -57,7 +49,8 @@ class SecureSettings(context: Context) : Closeable {
     }
 
     init {
-        preferences?.registerOnSharedPreferenceChangeListener(listener)
+        // Schwach gehalten: Instanzen ohne close() (etwa je Vorlesen) bleiben so nicht ewig am Speicher hängen.
+        if (preferences != null) synchronized(instanzen) { instanzen[this] = true }
     }
 
     // ---- Vorlesen (Baustein D und E) ----
@@ -249,7 +242,8 @@ class SecureSettings(context: Context) : Closeable {
         }
 
     override fun close() {
-        preferences?.unregisterOnSharedPreferenceChangeListener(listener)
+        // Die geteilte Instanz aus get() bleibt angemeldet; sie lebt so lange wie die App.
+        if (this !== instanz) synchronized(instanzen) { instanzen.remove(this) }
     }
 
     private fun readString(key: String, default: String): String =
@@ -316,6 +310,34 @@ class SecureSettings(context: Context) : Closeable {
 
     companion object {
         const val STORE_NAME = "jarvis_sprache_prefs"
+
+        @Volatile private var geteilt: SharedPreferences? = null
+        @Volatile private var instanz: SecureSettings? = null
+        private val instanzen = WeakHashMap<SecureSettings, Boolean>()
+        private val hoerer = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            val alle = synchronized(instanzen) { instanzen.keys.toList() }
+            alle.forEach { it.beiAenderung(prefs, key) }
+        }
+
+        /** Der verschlüsselte Speicher, einmal je Prozess geöffnet. Scheitert es, wird beim nächsten Zugriff neu versucht. */
+        private fun speicher(context: Context): SharedPreferences? = geteilt ?: synchronized(this) {
+            geteilt ?: try {
+                EncryptedSharedPreferences.create(
+                    STORE_NAME,
+                    MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
+                    context.applicationContext,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                ).also { it.registerOnSharedPreferenceChangeListener(hoerer); geteilt = it }
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        /** Die eine geteilte Instanz für die ganze App. Am besten einmal beim Start im Hintergrund aufrufen (vorwärmen). */
+        fun get(context: Context): SecureSettings = instanz ?: synchronized(this) {
+            instanz ?: SecureSettings(context.applicationContext).also { instanz = it }
+        }
         /** Genau zwei Modi — die App folgt der Systemvorgabe bewusst nicht (Baustein A). */
         val ALLOWED_THEMES = setOf("light", "dark")
         val ALLOWED_AUSRICHTUNGEN = setOf("hochformat", "querformat", "automatisch")

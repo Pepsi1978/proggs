@@ -2,6 +2,7 @@ package de.frank.jarvis.auswertung
 
 import android.content.Context
 import android.util.Log
+import de.frank.jarvis.ablage.AblageSpeicher
 import de.frank.jarvis.agent.JarvisAgent
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
@@ -14,6 +15,7 @@ import de.frank.jarvis.faehigkeit.WetterFaehigkeit
 import de.frank.jarvis.faehigkeit.WissenFaehigkeit
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
+import de.frank.jarvis.observability.Logbuch
 import java.io.File
 import java.time.Instant
 import java.time.LocalDate
@@ -21,15 +23,30 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Eine gespeicherte Tagesauswertung. [mitKi] = vom Modell geschrieben; sonst der reine Datenbericht. */
-data class Auswertung(val zeit: Long, val anlass: String, val text: String, val daten: String, val mitKi: Boolean, val modell: String) {
+/**
+ * Eine gespeicherte Tagesauswertung. [mitKi] = vom Modell geschrieben; sonst der reine Datenbericht.
+ * [vorlaeufig] = Sofort-Fassung beim Abruf: Sie zeigt frische Daten, zählt aber nicht als erfüllter Lauf.
+ */
+data class Auswertung(val zeit: Long, val anlass: String, val text: String, val daten: String, val mitKi: Boolean, val modell: String, val vorlaeufig: Boolean = false) {
     val zeitpunkt: LocalDateTime get() = Instant.ofEpochMilli(zeit).atZone(ZoneId.systemDefault()).toLocalDateTime()
 }
 
@@ -52,25 +69,109 @@ object Tagesauswertung {
     private val _stand = MutableStateFlow(AuswertungsStand())
     val stand: StateFlow<AuswertungsStand> = _stand.asStateFlow()
 
+    /** Die neueste endgültige Fassung (kein vorläufiger Datenbericht), damit veraltet() nicht jedes Mal den Ordner liest. */
+    @Volatile private var endgueltig: Auswertung? = null
+    /** Für Arbeit, die einen Abruf überdauern darf (Nachziehen von Wetter und Tagebuch beim Datenbericht). */
+    private val hintergrund = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private fun ordner(context: Context) = File(context.filesDir, "tagesauswertung").apply { mkdirs() }
 
+    /** Alle gespeicherten Fassungen, neueste zuerst. Neue Namen beginnen mit „z“ und sortieren hinter die alten in Ortszeit. */
+    private fun dateien(context: Context): List<File> =
+        ordner(context).listFiles { f -> f.name.endsWith(".json") }.orEmpty().sortedByDescending { it.name }
+
     fun lade(context: Context) {
-        if (_stand.value.neueste == null) _stand.value = _stand.value.copy(neueste = neueste(context))
+        neueste(context)
     }
 
-    fun neueste(context: Context): Auswertung? =
-        ordner(context).listFiles { f -> f.name.endsWith(".json") }?.maxByOrNull { it.name }?.let(::lies)
+    /**
+     * Die neueste Fassung (auch eine vorläufige). Aus dem Speicher, sonst von der Platte: Eine beschädigte oder halb
+     * geschriebene Datei wird übersprungen, dann gilt die nächstältere.
+     */
+    fun neueste(context: Context): Auswertung? = _stand.value.neueste
+        ?: dateien(context).asSequence().mapNotNull(::lies).firstOrNull()?.also { a -> _stand.update { if (it.neueste == null) it.copy(neueste = a) else it } }
+
+    /** Die neueste endgültige Fassung: ohne vorläufige Datenberichte, die beim Abruf entstehen. */
+    fun neuesteEndgueltige(context: Context): Auswertung? {
+        _stand.value.neueste?.takeIf { !it.vorlaeufig }?.let { return it }
+        endgueltig?.let { return it }
+        return dateien(context).asSequence().mapNotNull(::lies).firstOrNull { !it.vorlaeufig }?.also { endgueltig = it }
+    }
 
     private fun lies(datei: File): Auswertung? = runCatching {
-        JSONObject(datei.readText()).let { Auswertung(it.getLong("zeit"), it.optString("anlass"), it.optString("text"), it.optString("daten"), it.optBoolean("ki"), it.optString("modell")) }
+        JSONObject(datei.readText()).let { Auswertung(it.getLong("zeit"), it.optString("anlass"), it.optString("text"), it.optString("daten"), it.optBoolean("ki"), it.optString("modell"), it.optBoolean("vorlaeufig")) }
     }.getOrNull()
 
+    /** Wie runCatching, reicht aber einen Abbruch weiter: Ein beendeter Dienst soll keine halbe Auswertung speichern. */
+    private inline fun <T> ohneAbbruch(block: () -> T): T? = try { block() } catch (e: CancellationException) { throw e } catch (e: Throwable) { null }
+
+    /** Die letzte Deutung von heute als Anhang für einen reinen Datenbericht, damit sie nicht aus dem Gedächtnis fällt. */
+    private fun letzteDeutung(context: Context): String = neuesteGedeutete(context)?.takeIf { it.mitKi && it.zeitpunkt.toLocalDate() == LocalDate.now() }
+        ?.let { "\n\nLetzte Deutung von Jarvis von ${it.zeitpunkt.format(DateTimeFormatter.ofPattern("HH:mm"))} Uhr (Werte können sich seitdem geändert haben):\n" + it.text }
+        .orEmpty()
+
+    private fun archivOrdner(context: Context) = File(context.filesDir, "tagesauswertung_archiv").apply { mkdirs() }
+
+    /**
+     * Die neueste gedeutete Auswertung der letzten 24 Stunden, sonst die neueste überhaupt. Ein reiner Datenbericht
+     * (Modell kurz nicht erreichbar) soll eine gute Deutung von vor einer Stunde nicht aus dem Gedächtnis verdrängen.
+     */
+    fun neuesteGedeutete(context: Context): Auswertung? {
+        val grenze = System.currentTimeMillis() - 24 * 3_600_000L
+        _stand.value.neueste?.takeIf { it.mitKi && it.zeit >= grenze }?.let { return it }
+        // Nur beim ersten Zugriff von der Platte suchen; danach hält speichere() die neueste gedeutete Fassung im Speicher.
+        // Ein fehlender Treffer wird ebenfalls gemerkt, sonst läse jede Gedächtnis-Auffrischung bis zu 30 Dateien.
+        if (!gedeutetGeprueft) {
+            val gefunden = dateien(context).asSequence().take(30).mapNotNull(::lies).firstOrNull { it.mitKi }
+            synchronized(this) {
+                if (!gedeutetGeprueft) {
+                    if (gefunden != null && (gedeutet?.zeit ?: 0L) < gefunden.zeit) gedeutet = gefunden
+                    gedeutetGeprueft = true
+                }
+            }
+        }
+        return gedeutet?.takeIf { it.zeit >= grenze } ?: neueste(context)
+    }
+
+    /** Die neueste gedeutete Fassung im Speicher, siehe neuesteGedeutete(). */
+    @Volatile private var gedeutet: Auswertung? = null
+    @Volatile private var gedeutetGeprueft = false
+
+    /**
+     * Das Fazit (erster Absatz) der letzten gedeuteten Auswertung je Tag, für die letzten [tage] Tage vor heute.
+     * Quelle ist das Tagesarchiv, das anders als die Einzelfassungen nicht nach gut vier Tagen gelöscht wird.
+     */
+    fun fazits(context: Context, tage: Int): List<Pair<LocalDate, String>> {
+        val heute = LocalDate.now()
+        return (tage downTo 1).mapNotNull { n ->
+            val tag = heute.minusDays(n.toLong())
+            File(archivOrdner(context), "$tag.txt").takeIf { it.exists() }?.readText()?.trim()?.substringBefore("\n\n")?.substringBefore("\nRÜCKBLICK")?.trim()
+                ?.let { tag to (if (it.length > 400) it.take(400) + " …" else it) }
+        }
+    }
+
+    /** Das Tagesarchiv für gedaechtnis_suchen: Datum → Text der letzten gedeuteten Auswertung des Tages. */
+    fun archiv(context: Context): List<Pair<LocalDate, File>> = archivOrdner(context).listFiles { f -> f.name.endsWith(".txt") }.orEmpty()
+        .mapNotNull { f -> runCatching { LocalDate.parse(f.name.take(10)) to f }.getOrNull() }.sortedByDescending { it.first }
+
     private fun speichere(context: Context, a: Auswertung) {
-        val name = a.zeitpunkt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")) + ".json"
-        File(ordner(context), name).writeText(
-            JSONObject().put("zeit", a.zeit).put("anlass", a.anlass).put("text", a.text).put("daten", a.daten).put("ki", a.mitKi).put("modell", a.modell).toString(),
+        // Je Tag bleibt die letzte gedeutete Fassung dauerhaft: das Langzeitgedächtnis der Tagesauswertungen.
+        if (a.mitKi) runCatching { AblageSpeicher.schreibeAtomar(File(archivOrdner(context), "${a.zeitpunkt.toLocalDate()}.txt"), a.text.toByteArray()) }
+            .onFailure { Logbuch.fehler("Tagesauswertung: Archiv nicht geschrieben", it) }
+        // Atomar (Zwischendatei, dann umbenennen): Ein Abbruch hinterlässt nie eine halbe neueste Fassung.
+        // Der Name kommt aus der Epoch-Zeit, damit Zeitumstellung und Zeitzonenwechsel die Reihenfolge nicht verdrehen.
+        val name = "z%013d.json".format(Locale.ROOT, a.zeit)
+        AblageSpeicher.schreibeAtomar(
+            File(ordner(context), name),
+            JSONObject().put("zeit", a.zeit).put("anlass", a.anlass).put("text", a.text).put("daten", a.daten).put("ki", a.mitKi).put("modell", a.modell)
+                .put("vorlaeufig", a.vorlaeufig).toString().toByteArray(),
         )
-        ordner(context).listFiles { f -> f.name.endsWith(".json") }?.sortedByDescending { it.name }?.drop(BEHALTEN)?.forEach { it.delete() }
+        if (!a.vorlaeufig) endgueltig = a
+        if (a.mitKi) gedeutet = a
+        dateien(context).drop(BEHALTEN).forEach { it.delete() }
+        // Reste abgebrochener Schreibvorgänge wegräumen.
+        val alt = System.currentTimeMillis() - 3_600_000L
+        ordner(context).listFiles { f -> f.name.endsWith(".tmp") && f.lastModified() < alt }?.forEach { it.delete() }
     }
 
     /**
@@ -79,15 +180,35 @@ object Tagesauswertung {
      */
     suspend fun datenbericht(context: Context, anlass: String): Auswertung {
         val app = context.applicationContext
-        val fertig = Auswertung(System.currentTimeMillis(), anlass, "Diese Fassung ist der reine Datenbericht, ohne die Deutung von Jarvis. Die vollständige Auswertung wird gerade im Hintergrund erstellt.", sammle(app, false), false, "")
+        val beginn = System.currentTimeMillis()
+        // Nur Wetter und die letzten Tagebuchtage kurz nachziehen, höchstens 2,5 Sekunden: Mehr nutzt der Bericht nicht.
+        // Das Wissen und das ganze Tagebuch holt erstelle() gleich danach ohnehin (ein zweiter, gleichzeitiger
+        // Wissens-Abgleich würde dessen Zwischenverzeichnis zerschießen). Was länger braucht, läuft im Hintergrund zu
+        // Ende (ein laufender Netzaufruf lässt sich nicht sauber abbrechen); begrenzt wird nur das Warten.
+        val alle = Register.alle(app)
+        val nachziehen = hintergrund.launch {
+            launch { ohneAbbruch { alle.filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() } }
+            // Mit kleinem Zeitraum: Der Bericht nutzt nur den Rückblick der letzten Woche, und es wird nichts gelöscht.
+            launch { ohneAbbruch { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.synchronisiere(tage = 8) } }
+        }
+        withTimeoutOrNull(2_500L) { nachziehen.join() }
+        val fertig = Auswertung(
+            System.currentTimeMillis(), anlass,
+            "Diese Fassung ist der reine Datenbericht, ohne die Deutung von Jarvis und ohne frischen Abgleich der Biodaten. Die vollständige Auswertung wird gerade im Hintergrund erstellt." + letzteDeutung(app),
+            sammle(app, false), false, "", vorlaeufig = true,
+        )
         speichere(app, fertig)
         _stand.value = _stand.value.copy(neueste = fertig)
+        Logbuch.dauer("Tagesauswertung: Datenbericht", System.currentTimeMillis() - beginn, anlass)
         return fertig
     }
 
-    /** Ist die neueste Auswertung älter als der letzte Lauf, der laut Plan schon hätte stattfinden sollen? */
-    fun veraltet(context: Context): Boolean {
-        val neu = neueste(context)?.zeitpunkt ?: return true
+    /**
+     * Ist die neueste endgültige Auswertung älter als der letzte Lauf, der laut Plan schon hätte stattfinden sollen?
+     * Ein vorläufiger Datenbericht zählt nicht: Bis ein echter Lauf gelingt, bleibt die Auswertung veraltet.
+     */
+    fun veraltet(context: Context, aktuell: Auswertung? = neueste(context)): Boolean {
+        val neu = (if (aktuell == null || aktuell.vorlaeufig) neuesteEndgueltige(context) else aktuell)?.zeitpunkt ?: return true
         // Ohne Synchronisation zählt nur der Tag. Mit ihr zählt der letzte fällige Lauf: Über die Schlafpause hinweg
         // (auch über Mitternacht) bleibt die Fassung von davor die richtige.
         val faellig = Zeitplan.letzterFaelliger(context) ?: return neu.toLocalDate() != LocalDate.now()
@@ -99,46 +220,73 @@ object Tagesauswertung {
     suspend fun erstelle(context: Context, anlass: String): Auswertung? {
         val app = context.applicationContext
         if (!sperre.tryLock()) return null
+        val beginn = System.currentTimeMillis()
         try {
             fun schritt(text: String) { _stand.value = _stand.value.copy(laeuft = true, schritt = text) }
             val einstellungen = Einstellungen.get(app)
-            schritt("Frische Biodaten holen")
-            val biomarker = Register.alle(app).filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
-            val abgeglichen = einstellungen.auswertungAbgleich && runCatching { biomarker?.abgleich() }.getOrNull() == true
-
-            schritt("Wetter holen")
-            runCatching { Register.alle(app).filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() }
-
-            schritt("Tagebuch holen")
-            runCatching { Register.alle(app).filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.synchronisiere() }
-
-            schritt("Wissens-Datenbank holen")
-            runCatching { Register.alle(app).filterIsInstance<WissenFaehigkeit>().firstOrNull()?.synchronisiere() }
+            val alle = Register.alle(app)
+            val biomarker = alle.filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
+            // Biodaten, Wetter, Tagebuch und Wissen hängen nicht voneinander ab: gleichzeitig holen, gewartet wird nur auf die langsamste Quelle.
+            schritt("Biodaten, Wetter, Tagebuch und Wissen holen")
+            val abgeglichen = coroutineScope {
+                val bio = async(Dispatchers.IO) { einstellungen.auswertungAbgleich && ohneAbbruch { biomarker?.abgleich() } == true }
+                listOf(
+                    async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WetterFaehigkeit>().firstOrNull()?.synchronisiere() }; Unit },
+                    async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.synchronisiere() }; Unit },
+                    async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WissenFaehigkeit>().firstOrNull()?.synchronisiere() }; Unit },
+                ).awaitAll()
+                bio.await()
+            }
+            Logbuch.dauer("Tagesauswertung: Quellen geholt", System.currentTimeMillis() - beginn, if (abgeglichen) "Biodaten abgeglichen" else "Biodaten nicht abgeglichen")
 
             schritt("Daten zusammentragen")
             val daten = sammle(app, abgeglichen)
 
             val deuten = einstellungen.auswertungDeutung
             if (deuten) schritt("Auswertung schreiben")
-            val text = if (!deuten) null else runCatching {
+            val antwort: String? = if (!deuten) null else try {
                 JarvisAgent(app).versuche(auftrag(daten), zeitlimitMs = 5 * 60_000L, maxSchritte = 3, beiSchritt = { schritt("Jarvis prüft nach: $it") })
-            }.onFailure { Log.w(TAG, "Modell fehlgeschlagen", it) }.getOrNull()?.trim()?.takeIf { it.length > 200 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.w(TAG, "Modell fehlgeschlagen", e)
+                Logbuch.fehler("Tagesauswertung: Modell fehlgeschlagen", e, anlass)
+                null
+            }
+            val text = antwort?.trim()?.takeIf { it.length > 200 }
 
             val fertig = Auswertung(
                 zeit = System.currentTimeMillis(),
                 anlass = anlass,
-                text = text ?: if (deuten) "Diese Fassung ist der reine Datenbericht: Das Modell von Jarvis war nicht erreichbar oder nicht verbunden."
-                else "Diese Fassung ist der reine Datenbericht: Die Deutung durch das Modell ist in Jarvis unter Einstellungen ausgeschaltet.",
+                // Ohne neue Deutung bleibt die letzte von heute sichtbar, statt vom reinen Datenbericht verdrängt zu werden.
+                text = text ?: ((if (deuten) "Diese Fassung ist der reine Datenbericht: Das Modell von Jarvis war nicht erreichbar oder nicht verbunden."
+                else "Diese Fassung ist der reine Datenbericht: Die Deutung durch das Modell ist in Jarvis unter Einstellungen ausgeschaltet.") + letzteDeutung(app)),
                 daten = daten,
                 mitKi = text != null,
                 modell = if (text != null) einstellungen.modell.label else "",
             )
+            // Wurde der Dienst inzwischen beendet, keine halb gesammelte Fassung als neueste ablegen.
+            currentCoroutineContext().ensureActive()
             speichere(app, fertig)
             _stand.value = AuswertungsStand(laeuft = false, neueste = fertig)
+            // Modell ausgefallen: höchstens zweimal nach 15 Minuten neu versuchen; nach einer gelungenen Deutung ist das erledigt.
+            if (deuten) runCatching { if (text != null) Zeitplan.deutungGelungen(app) else Zeitplan.nachModellausfall(app, anlass) }
+            // Das Live-Gedächtnis übernimmt die neue Deutung und die frisch geholten Daten sofort.
+            de.frank.jarvis.gedaechtnis.Lagebild.anstossen(app, listOf(
+                de.frank.jarvis.gedaechtnis.Bereich.AUSWERTUNG, de.frank.jarvis.gedaechtnis.Bereich.BIODATEN, de.frank.jarvis.gedaechtnis.Bereich.TRAININGS,
+                de.frank.jarvis.gedaechtnis.Bereich.WETTER, de.frank.jarvis.gedaechtnis.Bereich.TAGEBUCH, de.frank.jarvis.gedaechtnis.Bereich.RUECKBLICK, de.frank.jarvis.gedaechtnis.Bereich.WISSEN,
+            ), "neue Tagesauswertung")
             Protokoll.melde(Quelle.JARVIS, "Tagesauswertung", "$anlass: " + (if (fertig.mitKi) "erstellt mit ${fertig.modell}" else if (deuten) "nur Datenbericht, Modell nicht erreichbar" else "nur Datenbericht, Deutung ausgeschaltet"), fertig.mitKi || !deuten)
+            Logbuch.dauer("Tagesauswertung", System.currentTimeMillis() - beginn, "$anlass, " + if (fertig.mitKi) "mit Deutung" else "nur Datenbericht")
             return fertig
+        } catch (e: CancellationException) {
+            // Abbruch (Dienst beendet) ist kein Fehler: Zustand zurücksetzen und den Abbruch weiterreichen.
+            _stand.value = _stand.value.copy(laeuft = false, schritt = "")
+            Logbuch.system("Tagesauswertung abgebrochen", anlass)
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Auswertung fehlgeschlagen", e)
+            Logbuch.fehler("Tagesauswertung fehlgeschlagen", e, anlass)
             Protokoll.melde(Quelle.JARVIS, "Tagesauswertung", "Fehlgeschlagen: ${e.message ?: e.javaClass.simpleName}", ok = false)
             _stand.value = _stand.value.copy(laeuft = false, schritt = "")
             return null
@@ -147,60 +295,79 @@ object Tagesauswertung {
         }
     }
 
-    /** Schritt 1: alle Daten nach festen Regeln, als ein Text mit klaren Abschnitten. */
-    private suspend fun sammle(app: Context, abgeglichen: Boolean): String {
+    /**
+     * Schritt 1: alle Daten nach festen Regeln, als ein Text mit klaren Abschnitten. Alle Quellen werden gleichzeitig
+     * abgefragt und danach in fester Reihenfolge zusammengesetzt: Der Text bleibt gleich, die Wartezeit ist die der
+     * langsamsten Quelle statt der Summe.
+     */
+    private suspend fun sammle(app: Context, abgeglichen: Boolean): String = coroutineScope {
         val alle = Register.alle(app)
         val kalender = alle.filterIsInstance<KalenderFaehigkeit>().firstOrNull()
         val biomarker = alle.filterIsInstance<BiomarkerFaehigkeit>().firstOrNull()
         val werkzeuge = alle.flatMap { it.werkzeuge }.associateBy { it.name }
         suspend fun rufe(name: String, argumente: JSONObject = JSONObject()): String =
-            runCatching { werkzeuge[name]?.ausfuehren(argumente)?.let { (if (it.fehler) "NICHT VERFÜGBAR: " else "") + it.text } }.getOrNull() ?: "NICHT VERFÜGBAR"
+            ohneAbbruch { werkzeuge[name]?.ausfuehren(argumente)?.let { (if (it.fehler) "NICHT VERFÜGBAR: " else "") + it.text } } ?: "NICHT VERFÜGBAR"
 
         val heute = LocalDate.now()
         val jetzt = LocalDateTime.now()
-        return buildString {
+        val rahmen = async(Dispatchers.IO) { ohneAbbruch { kalender?.rahmen(6) }?.ifEmpty { null } ?: "NICHT VERFÜGBAR: Kalender nicht lesbar" }
+        val termine = async(Dispatchers.IO) { rufe("kalender_lesen", JSONObject().put("von", heute.toString()).put("bis", heute.plusDays(4).toString())) }
+        val wetter = async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WetterFaehigkeit>().firstOrNull()?.vorschau(3) } ?: "NICHT VERFÜGBAR" }
+        val wecker = async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WeckerFaehigkeit>().firstOrNull()?.ueberblick() } ?: "NICHT VERFÜGBAR" }
+        val bioTag = async(Dispatchers.IO) { rufe("biomarker_tag", JSONObject().put("datum", heute.toString())) }
+        val bioVergleich = async(Dispatchers.IO) { rufe("biomarker_auswertung", JSONObject().put("tage", 30).put("metriken", JSONArray(biomarker?.alleMetriken ?: emptyList<String>()))) }
+        val bioVerlauf = async(Dispatchers.IO) { rufe("biomarker_verlauf", JSONObject().put("von", heute.minusDays(7).toString()).put("aufloesung", "tag").put("metriken", JSONArray(listOf("schlafdauer", "wach_min", "erholung", "hrv", "ruhepuls")))) }
+        val rueckblickTermine = async(Dispatchers.IO) { rufe("kalender_lesen", JSONObject().put("von", heute.minusDays(4).toString()).put("bis", heute.minusDays(1).toString())) }
+        val trainings = async(Dispatchers.IO) { rufe("trainings_lesen", JSONObject().put("von", heute.minusDays(14).toString()).put("limit", 20)) }
+        val tagebuch = async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.rueckblick(7) } ?: "NICHT VERFÜGBAR" }
+        val ideen = async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<IdeenFaehigkeit>().firstOrNull()?.ueberblick() } ?: "NICHT VERFÜGBAR" }
+        val wissen = async(Dispatchers.IO) { ohneAbbruch { alle.filterIsInstance<WissenFaehigkeit>().firstOrNull()?.ueberblick() } ?: "NICHT VERFÜGBAR" }
+        val aufgabenHeute = async(Dispatchers.IO) { rufe("aufgaben_lesen", JSONObject().put("bereich", "heute")) }
+        val aufgabenMorgen = async(Dispatchers.IO) { rufe("aufgaben_lesen", JSONObject().put("bereich", "morgen")) }
+
+        buildString {
             append("STAND: ").append(jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))).append('\n')
             append("Biodaten vor der Auswertung frisch abgeglichen: ").append(if (abgeglichen) "ja" else "nein oder nur teilweise (steht unten bei den Biomarkern „ACHTUNG“, ist der Abruf einer Quelle gestört: das gehört an den Anfang der Auswertung)").append("\n\n")
 
             append("== RAHMEN DER NÄCHSTEN TAGE (fest gerechnet, verbindlich) ==\n")
-            append(kalender?.rahmen(6)?.ifEmpty { null } ?: "NICHT VERFÜGBAR: Kalender nicht lesbar").append("\n\n")
+            append(rahmen.await()).append("\n\n")
 
             append("== TERMINE HEUTE UND DIE NÄCHSTEN 4 TAGE ==\n")
-            append(rufe("kalender_lesen", JSONObject().put("von", heute.toString()).put("bis", heute.plusDays(4).toString()))).append("\n\n")
+            append(termine.await()).append("\n\n")
 
             append("== WETTER HEUTE, MORGEN, ÜBERMORGEN ==\n")
-            append(runCatching { alle.filterIsInstance<WetterFaehigkeit>().firstOrNull()?.vorschau(3) }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+            append(wetter.await()).append("\n\n")
 
             append("== GESTELLTE WECKER ==\n")
-            append(runCatching { alle.filterIsInstance<WeckerFaehigkeit>().firstOrNull()?.ueberblick() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+            append(wecker.await()).append("\n\n")
 
             append("== BIODATEN: WERTE DES AKTUELLEN TAGES ==\n")
-            append(rufe("biomarker_tag", JSONObject().put("datum", heute.toString()))).append("\n\n")
+            append(bioTag.await()).append("\n\n")
 
             append("== BIODATEN: AKTUELLER STAND GEGEN DEN LETZTEN MONAT, 7 TAGE UND ALLE BISHERIGEN TAGE ==\n")
-            append(rufe("biomarker_auswertung", JSONObject().put("tage", 30).put("metriken", JSONArray(biomarker?.alleMetriken ?: emptyList<String>())))).append("\n\n")
+            append(bioVergleich.await()).append("\n\n")
 
             append("== BIODATEN: VERLAUF DER LETZTEN 7 TAGE (Schlaf und Erholung, zum Abgleich mit den Diensten) ==\n")
-            append(rufe("biomarker_verlauf", JSONObject().put("von", heute.minusDays(7).toString()).put("aufloesung", "tag").put("metriken", JSONArray(listOf("schlafdauer", "wach_min", "erholung", "hrv", "ruhepuls"))))).append("\n\n")
+            append(bioVerlauf.await()).append("\n\n")
 
             append("== DIENSTE UND TERMINE DER LETZTEN 4 TAGE ==\n")
-            append(rufe("kalender_lesen", JSONObject().put("von", heute.minusDays(4).toString()).put("bis", heute.minusDays(1).toString()))).append("\n\n")
+            append(rueckblickTermine.await()).append("\n\n")
 
             append("== TRAININGS DER LETZTEN 14 TAGE ==\n")
-            append(rufe("trainings_lesen", JSONObject().put("von", heute.minusDays(14).toString()).put("limit", 20))).append("\n\n")
+            append(trainings.await()).append("\n\n")
 
             append("== TAGEBUCH DER LETZTEN 7 TAGE ==\n")
-            append(runCatching { alle.filterIsInstance<TagebuchFaehigkeit>().firstOrNull()?.rueckblick(7) }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+            append(tagebuch.await()).append("\n\n")
 
             append("== GENIALE IDEEN (offen, gekürzt) ==\n")
-            append(runCatching { alle.filterIsInstance<IdeenFaehigkeit>().firstOrNull()?.ueberblick() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+            append(ideen.await()).append("\n\n")
 
             append("== WISSENS-DATENBANK (Inhaltsverzeichnis; Volltexte über wissen_lesen) ==\n")
-            append(runCatching { alle.filterIsInstance<WissenFaehigkeit>().firstOrNull()?.ueberblick() }.getOrNull() ?: "NICHT VERFÜGBAR").append("\n\n")
+            append(wissen.await()).append("\n\n")
 
             append("== OFFENE AUFGABEN (nur Stand jetzt, ändert sich laufend) ==\n")
-            append(rufe("aufgaben_lesen", JSONObject().put("bereich", "heute"))).append('\n')
-            append(rufe("aufgaben_lesen", JSONObject().put("bereich", "morgen")))
+            append(aufgabenHeute.await()).append('\n')
+            append(aufgabenMorgen.await())
         }
     }
 
@@ -242,6 +409,10 @@ $daten
     )
 
     /** Ein oder alle Bereiche der zuletzt gespeicherten Tagesdaten. Aufgaben fehlen bewusst: Sie werden immer frisch gelesen. */
+    /** Der Datenanhang ohne die genannten Abschnitte (Anfang der Überschrift ohne „== “), statt ab einer Stelle alles abzuschneiden. */
+    fun abschnitte(daten: String, ohne: Set<String>): String =
+        daten.split(Regex("(?m)^(?=== )")).filterNot { teil -> ohne.any { teil.startsWith("== $it") } }.joinToString("").trim()
+
     fun tagesdaten(a: Auswertung, bereich: String): String {
         val abschnitte = a.daten.substringBefore("== OFFENE AUFGABEN").split(Regex("(?m)^== ")).drop(1).map { "== $it".trim() }
         val gesucht = BEREICHE[bereich.trim().lowercase(Locale.GERMAN)]

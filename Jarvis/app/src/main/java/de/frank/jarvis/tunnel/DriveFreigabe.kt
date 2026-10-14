@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Base64
 import de.frank.jarvis.data.Einstellungen
+import de.frank.jarvis.observability.Logbuch
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.URLDecoder
@@ -41,8 +42,9 @@ object DriveFreigabe {
         if (!eingerichtet(context)) return@withContext false to "Diese Fassung von Jarvis kennt die Google-Zugangsdaten nicht (Bau ohne ~/SK). Einmal am PC bauen, danach bleiben sie gespeichert."
         val e = Einstellungen.get(context)
         runCatching {
-            ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { lauscher ->
-                lauscher.soTimeout = 5 * 60_000
+            ServerSocket(0, 8, InetAddress.getLoopbackAddress()).use { lauscher ->
+                // Eine Gesamtfrist für die Freigabe; die einzelne Verbindung bekommt nur wenige Sekunden.
+                val frist = System.currentTimeMillis() + 5 * 60_000
                 val rueckweg = "http://127.0.0.1:${lauscher.localPort}"
                 val zufall = SecureRandom()
                 val kennung = ByteArray(16).also(zufall::nextBytes).joinToString("") { "%02x".format(it) }
@@ -54,11 +56,15 @@ object DriveFreigabe {
                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(adresse)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 
                 // Auf die Rückleitung warten. Der Browser fragt nebenbei auch nach dem Seitensymbol: solche Anfragen überspringen.
+                // Er öffnet außerdem manchmal vorab eine leere Verbindung: Sie wird verworfen, statt die Freigabe zu beenden.
                 var code: String? = null
                 var abgelehnt: String? = null
                 while (code == null && abgelehnt == null) {
-                    lauscher.accept().use { verbindung ->
-                        verbindung.soTimeout = 10_000
+                    lauscher.soTimeout = (frist - System.currentTimeMillis()).coerceAtLeast(1L).toInt()
+                    // Läuft hier die Zeit ab, ist die Gesamtfrist um: das darf die Freigabe beenden.
+                    val neu = lauscher.accept()
+                    try { neu.use { verbindung ->
+                        verbindung.soTimeout = 3_000
                         val zeile = verbindung.getInputStream().bufferedReader().readLine().orEmpty()
                         val werte = zeile.substringAfter("?", "").substringBefore(" ").split("&").mapNotNull {
                             val teile = it.split("=", limit = 2); if (teile.size == 2) teile[0] to URLDecoder.decode(teile[1], "UTF-8") else null
@@ -75,6 +81,9 @@ object DriveFreigabe {
                             write(("HTTP/1.1 " + (if (text.isEmpty()) "404 Not Found" else "200 OK") + "\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n").toByteArray())
                             write(bytes); flush()
                         }
+                    } } catch (_: java.io.IOException) {
+                        // Leere oder abgebrochene Verbindung: nur sie verwerfen und auf die nächste warten.
+                        continue
                     }
                 }
                 if (code == null) return@use false to "Google hat die Freigabe nicht erteilt ($abgelehnt)."
@@ -97,6 +106,7 @@ object DriveFreigabe {
                 true to "Berechtigung erneuert. Das Tagebuch wird wieder gelesen."
             }
         }.getOrElse { fehler ->
+            Logbuch.fehler("Drive-Freigabe", fehler)
             false to (if (fehler is java.net.SocketTimeoutException) "Die Freigabe wurde nicht abgeschlossen (Zeit abgelaufen)." else "Erneuern fehlgeschlagen: ${fehler.message ?: fehler.javaClass.simpleName}")
         }
     }

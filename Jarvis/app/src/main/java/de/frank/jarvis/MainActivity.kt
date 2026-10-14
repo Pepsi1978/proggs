@@ -47,9 +47,6 @@ class MainActivity : FragmentActivity() {
         WeckwortDienst.abgleichen(this)
     }
 
-    /** Jarvis wurde per „Hey Jarvis“ über dem Sperrbildschirm geöffnet; das Gespräch bleibt dabei verborgen. */
-    private var ueberSperre = false
-
     /** Fingerabdruck, ersatzweise die Gerätesperre (PIN, Muster). */
     private val nachweis = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
@@ -69,7 +66,7 @@ class MainActivity : FragmentActivity() {
         // Sperren beim Start und nach mehr als 30 Sekunden außerhalb der App. Ohne eingerichteten Fingerabdruck
         // und ohne Gerätesperre bleibt die App offen, sonst käme niemand mehr hinein.
         // Über dem Sperrbildschirm nicht nach dem Fingerabdruck fragen: Die Sperre bleibt, Jarvis hört und antwortet nur.
-        if (ueberSperre) return
+        if (vm.ueberSperre) return
         val zuLangeWeg = (vm.zuletztSichtbar == 0L || System.currentTimeMillis() - vm.zuletztSichtbar > 30_000) && System.currentTimeMillis() > vm.sperrAufschubBis
         vm.sperrAufschubBis = 0L
         if (vm.einstellungen.appSperre && sperreMoeglich() && (vm.gesperrt || zuLangeWeg)) {
@@ -108,6 +105,14 @@ class MainActivity : FragmentActivity() {
             else if (android.os.Build.VERSION.SDK_INT >= 29) standortImmerErlaubnis.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         }
         vm.weckwortMikroAnfragen = { weckwortErlaubnis.launch(Manifest.permission.RECORD_AUDIO) }
+        // Immer die gerade lebende Activity: Wird sie neu aufgebaut (Fold auf- oder zugeklappt), beendet die neue das Zeigen über der Sperre.
+        vm.ueberSperreBeenden = {
+            ueberSperreZeigen(false)
+            // Ohne App-Sperre gilt die Sperre nur für die Zeit über dem Sperrbildschirm.
+            if (!vm.einstellungen.appSperre || !sperreMoeglich()) vm.gesperrt = false
+        }
+        // Neu aufgebaut, während „Hey Jarvis“ über dem Sperrbildschirm läuft: dort bleiben.
+        if (vm.ueberSperre) ueberSperreZeigen(true)
         if (savedInstanceState == null) vm.hinweiseAnfragen()
         JarvisDienst.abgleichen(this)
         setContent { JarvisApp(vm, this) }
@@ -123,20 +128,22 @@ class MainActivity : FragmentActivity() {
     /** „Hey Jarvis“ wurde erkannt: aufnehmen, piepen, antworten; bei gesperrtem Handy über dem Sperrbildschirm. */
     private fun weckwortPruefen(intent: Intent?) {
         if (intent?.getBooleanExtra(WeckwortDienst.EXTRA_WECKWORT, false) != true) return
+        // Sofort melden, dass die App übernommen hat: Sonst greift der Wächter des Weckworts während des Starts ein.
+        de.frank.jarvis.weckwort.Weckwort.uebernommen()
         intent.removeExtra(WeckwortDienst.EXTRA_WECKWORT)
         if (getSystemService(KeyguardManager::class.java).isKeyguardLocked) {
-            ueberSperre = true
+            vm.ueberSperre = true
             ueberSperreZeigen(true)
             // Über dem Sperrbildschirm nie das Gespräch zeigen, auch ohne App-Sperre.
             vm.gesperrt = true
         }
-        vm.weckwortStart {
+        // Nur das ViewModel festhalten, nicht diese Activity: Sie kann während des Gesprächs neu entstehen.
+        val modell = vm
+        modell.weckwortStart {
             // Fertig: Der Sperrbildschirm legt sich wieder darüber.
-            if (ueberSperre) {
-                ueberSperre = false
-                ueberSperreZeigen(false)
-                // Ohne App-Sperre gilt die Sperre nur für die Zeit über dem Sperrbildschirm.
-                if (!vm.einstellungen.appSperre || !sperreMoeglich()) vm.gesperrt = false
+            if (modell.ueberSperre) {
+                modell.ueberSperre = false
+                modell.ueberSperreBeenden()
             }
         }
     }
@@ -154,7 +161,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
-        vm.lagePruefen()
+        // Gedrosselt: Die Prüfung weckt die Partner-Apps, das muss nicht bei jedem Zurückkehren sein.
+        vm.lagePruefen(sofort = false)
         // Nicht in lagePruefen: Das läuft schon im Aufbau des ViewModels, bevor dessen spätere Felder bestehen.
         vm.abfahrtLaden()
         // Hier ist Jarvis sichtbar: Nur dann darf Android den Mikrofon-Dienst starten.

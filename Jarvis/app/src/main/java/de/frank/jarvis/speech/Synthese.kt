@@ -3,14 +3,24 @@ package de.frank.jarvis.speech
 import android.content.Context
 import android.util.Base64
 import de.frank.jarvis.data.settings.SecureSettings
+import de.frank.jarvis.observability.Logbuch
+import de.frank.jarvis.tts.EdgeTtsPlayer
+import de.frank.jarvis.tts.TtsCatalog
 import de.frank.jarvis.tts.TtsProvider
 import de.frank.jarvis.tts.deutschesSsml
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import okhttp3.Call
@@ -21,6 +31,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okio.ByteString
 import org.json.JSONObject
 
 /** Ein Fehler, der die ganze Sitzung betrifft — die Pipeline hält dann sofort an. */
@@ -28,6 +41,13 @@ class SyntheseAbbruch(message: String, cause: Throwable? = null) : Exception(mes
 
 /** Ein Fehler an genau diesem Absatz — der Absatz wird halbiert und erneut versucht. */
 class SyntheseFehler(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+/**
+ * Die Stimme hat nicht rechtzeitig geantwortet. Bewusst weder [IOException] noch [SyntheseFehler]:
+ * Ein Zeitlimit wird weder halbiert noch wiederholt, sonst stünde das Vorlesen bei hängender Verbindung
+ * minutenlang auf „lädt“ (und das Weckwort bliebe so lange taub). Der Teil wird übersprungen.
+ */
+class SyntheseZeitlimit(message: String) : Exception(message)
 
 /**
  * Erzeugt Audio, ohne es abzuspielen — die Voraussetzung für die Vorausschau der
@@ -44,9 +64,12 @@ class Synthese(context: Context, private val settings: SecureSettings) {
     /** Begrenzt die Gleichzeitigkeit, sonst laufen die Dienste ins Rate-Limit (Baustein D 4.4). */
     private val gleichzeitig = Semaphore(2)
 
-    /** Ob die gewählte Engine vorab synthetisieren kann. Edge spricht über den WebSocket-Player. */
+    /**
+     * Ob die gewählte Engine vorab synthetisieren kann. Edge schreibt seinen Ton inzwischen ebenfalls
+     * erst in eine Datei — so greift die Vorausschau auch beim Standardanbieter.
+     */
     fun kannVorausschauen(): Boolean = when (settings.ttsProvider) {
-        TtsProvider.GOOGLE_CLOUD.id, TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN.id -> true
+        TtsProvider.GOOGLE_CLOUD.id, TtsProvider.QWEN_CLONE.id, TtsProvider.QWEN.id, TtsProvider.EDGE.id -> true
         else -> false
     }
 
@@ -62,6 +85,7 @@ class Synthese(context: Context, private val settings: SecureSettings) {
             TtsProvider.GOOGLE_CLOUD.id -> google(text)
             TtsProvider.QWEN_CLONE.id -> qwen(text, geklont = true)
             TtsProvider.QWEN.id -> qwen(text, geklont = false)
+            TtsProvider.EDGE.id -> edge(text)
             else -> throw SyntheseAbbruch("Diese Stimme kann nicht vorab erzeugt werden.")
         }
     }
@@ -156,6 +180,145 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         return schreibeDatei(bytes, "wav")
     }
 
+    /**
+     * Microsoft Edge über den WebSocket: Die Tonrahmen landen in einer Datei, abgespielt wird erst
+     * im Vorleser. Fristen: Bis zum ersten Tonrahmen höchstens [EDGE_ERSTE_ANTWORT_MS], danach
+     * höchstens [EDGE_LEERLAUF_MS] zwischen zwei Rahmen und insgesamt [EDGE_ZEITLIMIT_MS]. Reißt eine
+     * davon, wird der Teil übersprungen ([SyntheseZeitlimit]), ohne Halbieren und Wiederholen.
+     * Bewusst ohne withTimeout um die Erzeugung: Ein Zeitlimit-Abbruch wäre sonst eine
+     * CancellationException und beendete das ganze Vorlesen statt nur diesen Absatz.
+     */
+    private suspend fun edge(text: String): File {
+        val datei = neueDatei("mp3")
+        val beginn = System.currentTimeMillis()
+        // Zeitpunkt des letzten Tonrahmens; 0 = noch keiner da.
+        val letzterRahmen = AtomicLong(0L)
+        val fertig: File? = coroutineScope {
+            val erzeugung = async { edgeErzeuge(text, datei, letzterRahmen) }
+            var ergebnis: File? = null
+            var abgelaufen = false
+            while (ergebnis == null && !abgelaufen) {
+                // Ein Fehler der Erzeugung kommt hier über await() heraus, wie zuvor.
+                ergebnis = withTimeoutOrNull(EDGE_PRUEF_MS) { erzeugung.await() }
+                if (ergebnis == null) {
+                    val jetzt = System.currentTimeMillis()
+                    val zuletzt = letzterRahmen.get()
+                    val leerlauf = if (zuletzt == 0L) {
+                        jetzt - beginn > EDGE_ERSTE_ANTWORT_MS
+                    } else {
+                        jetzt - zuletzt > EDGE_LEERLAUF_MS
+                    }
+                    abgelaufen = leerlauf || jetzt - beginn > EDGE_ZEITLIMIT_MS
+                    // Der Abbruch schließt über invokeOnCancellation auch den WebSocket.
+                    if (abgelaufen) erzeugung.cancel()
+                }
+            }
+            ergebnis
+        }
+        if (fertig == null) {
+            datei.delete()
+            Logbuch.netz(
+                "Edge-Stimme ohne rechtzeitige Antwort",
+                "zeichen=${text.length} ton=${letzterRahmen.get() != 0L} ms=${System.currentTimeMillis() - beginn}",
+            )
+            throw SyntheseZeitlimit("Die Edge-Stimme hat nicht rechtzeitig geantwortet.")
+        }
+        Logbuch.sprache("Edge-Absatz erzeugt", "zeichen=${text.length}", System.currentTimeMillis() - beginn)
+        return fertig
+    }
+
+    private suspend fun edgeErzeuge(text: String, datei: File, letzterRahmen: AtomicLong): File = suspendCancellableCoroutine { fortsetzung ->
+        val strom = FileOutputStream(datei)
+        val beendet = AtomicBoolean(false)
+        fun schliesse() {
+            synchronized(strom) { runCatching { strom.close() } }
+        }
+        /** [ws] wird dabei geschlossen; null, wenn er schon zu ist (onFailure, onClosing). */
+        fun scheitere(fehler: Exception, ws: WebSocket?) {
+            if (!beendet.compareAndSet(false, true)) return
+            // Ohne das bliebe die Verbindung offen, bis der Server sie beendet: Hier liest niemand mehr.
+            ws?.cancel()
+            schliesse()
+            datei.delete()
+            if (fortsetzung.isActive) fortsetzung.resumeWithException(fehler)
+        }
+        val zuhoerer = object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                val ssml = EdgeTtsPlayer.ssmlNachricht(
+                    text = text,
+                    voice = settings.edgeTtsVoice.ifBlank { TtsCatalog.DEFAULT_EDGE_VOICE },
+                    speechRate = settings.ttsSpeechRate,
+                    pitchPercent = 0,
+                    erzwingeDeutsch = settings.immerDeutschVorlesen,
+                )
+                if (!webSocket.send(EdgeTtsPlayer.KONFIG) || !webSocket.send(ssml)) {
+                    scheitere(IOException("Die Anfrage an die Edge-Stimme ging nicht hinaus."), webSocket)
+                }
+            }
+
+            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                if (beendet.get()) return
+                val daten = bytes.toByteArray()
+                val tonAb = EdgeTtsPlayer.tonBeginn(daten)
+                if (tonAb < 0) return
+                letzterRahmen.set(System.currentTimeMillis())
+                try {
+                    synchronized(strom) { strom.write(daten, tonAb, daten.size - tonAb) }
+                } catch (fehler: Exception) {
+                    scheitere(IOException("Der Ton der Edge-Stimme ließ sich nicht speichern.", fehler), webSocket)
+                }
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                if (!text.contains("Path:turn.end") || !beendet.compareAndSet(false, true)) return
+                schliesse()
+                webSocket.close(1000, null)
+                if (datei.length() == 0L) {
+                    datei.delete()
+                    if (fortsetzung.isActive) {
+                        fortsetzung.resumeWithException(SyntheseFehler("Die Edge-Stimme hat kein Audio geliefert."))
+                    }
+                } else if (fortsetzung.isActive) {
+                    fortsetzung.resume(datei)
+                }
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                if (beendet.get()) return
+                // Reine Netzfehler wiederholt der Vorleser einmal, eine Absage des Dienstes zählt als Absatzfehler.
+                val code = response?.code
+                Logbuch.netz(
+                    "Edge-Stimme Verbindung gescheitert",
+                    "art=${t.javaClass.simpleName}" + (code?.let { " code=$it" } ?: ""),
+                )
+                scheitere(
+                    if (t is IOException && code == null) {
+                        t
+                    } else {
+                        SyntheseFehler("Die Edge-Stimme ist nicht erreichbar" + (code?.let { " (Fehler $it)" } ?: "") + ".", t)
+                    },
+                    null,
+                )
+            }
+
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                if (beendet.get()) return
+                // Den Schließ-Rahmen beantworten, sonst bleibt die Verbindung halb offen. Bewusst 1000 statt
+                // des Server-Codes: Reservierte Codes (etwa 1005) lehnt close() mit einer Ausnahme ab.
+                runCatching { webSocket.close(1000, null) }
+                scheitere(IOException("Die Edge-Stimme hat die Verbindung vor dem Ende geschlossen."), null)
+            }
+        }
+        val socket = client.newWebSocket(EdgeTtsPlayer.anfrage(), zuhoerer)
+        fortsetzung.invokeOnCancellation {
+            socket.cancel()
+            if (beendet.compareAndSet(false, true)) {
+                schliesse()
+                datei.delete()
+            }
+        }
+    }
+
     private suspend fun fuehreAus(anfrage: Request): String {
         var versuch = 0
         while (true) {
@@ -195,9 +358,12 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         }
     }
 
-    private fun schreibeDatei(bytes: ByteArray, endung: String): File {
+    private fun schreibeDatei(bytes: ByteArray, endung: String): File =
+        neueDatei(endung).apply { writeBytes(bytes) }
+
+    private fun neueDatei(endung: String): File {
         val verzeichnis = File(appContext.cacheDir, "vorlesen").apply { mkdirs() }
-        return File(verzeichnis, "absatz_${UUID.randomUUID()}.$endung").apply { writeBytes(bytes) }
+        return File(verzeichnis, "absatz_${UUID.randomUUID()}.$endung")
     }
 
     /** Räumt alle Zwischendateien weg, die eine beendete Wiedergabe hinterlassen hat. */
@@ -229,5 +395,17 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         const val QWEN_KLON_MODELL = "qwen3-tts-vc-2026-01-22"
         val JSON_TYP = "application/json; charset=utf-8".toMediaType()
         val WARTEZEITEN_MS = longArrayOf(1_000L, 3_000L, 8_000L)
+
+        /** So lange darf Edge für einen Absatz insgesamt brauchen, bevor er als gescheitert gilt. */
+        const val EDGE_ZEITLIMIT_MS = 60_000L
+
+        /** Frist bis zum ersten Tonrahmen. */
+        const val EDGE_ERSTE_ANTWORT_MS = 12_000L
+
+        /** Höchste Pause zwischen zwei Tonrahmen; danach gilt die Verbindung als hängend. */
+        const val EDGE_LEERLAUF_MS = 10_000L
+
+        /** Wie oft die Fristen geprüft werden. */
+        const val EDGE_PRUEF_MS = 500L
     }
 }

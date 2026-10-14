@@ -52,6 +52,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +79,7 @@ import android.graphics.BitmapFactory
 import de.frank.jarvis.ablage.AblageZentrale
 import de.frank.jarvis.ablage.Anhang
 import de.frank.jarvis.ablage.Art
+import de.frank.jarvis.ablage.Auszug
 import de.frank.jarvis.ablage.Dateityp
 import de.frank.jarvis.ablage.Eintrag
 import de.frank.jarvis.ablage.Kategorie
@@ -91,6 +93,7 @@ import de.frank.jarvis.ui.theme.antippen
 import de.frank.jarvis.ui.theme.glas
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -112,7 +115,9 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     val arbeiten by AblageZentrale.arbeiten.collectAsState()
     val bereich = rememberCoroutineScope()
     val aktionen = rememberAblageAktionen(vm)
-    val alle by ladeImHintergrund(emptyList<Eintrag>(), stand, laeufe.size) { speicher.eintraege() }
+    // null = noch nicht geladen (kein Leer-Hinweis); bei Änderungen bleibt die vorige Liste stehen, bis die neue da ist.
+    val geladen by ladeImHintergrund<List<Eintrag>?>(null, stand, laeufe.size, behalten = true) { speicher.eintraege() }
+    val alle = geladen.orEmpty()
 
     var suche by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
@@ -123,20 +128,31 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     var offenerAnhang by rememberSaveable { mutableStateOf<String?>(null) }
     var loeschFrage by remember { mutableStateOf<Pair<Eintrag, Anhang?>?>(null) }
 
-    // Volltextsuche im Text der Einträge: einmal im Hintergrund gelesen (gekürzt), nicht bei jedem Tastendruck.
-    val texte by ladeImHintergrund(emptyMap<String, String>(), alle) { alle.associate { it.id to speicher.text(it, 200_000).lowercase(Locale.GERMAN) } }
+    // Volltextsuche im Text der Einträge: nur gelesen, solange gesucht wird, einmal im Hintergrund (gekürzt), nicht je Tastendruck.
+    val suchAktiv = suche.isNotBlank()
+    val texte by ladeImHintergrund(emptyMap<String, String>(), alle, suchAktiv) {
+        if (!suchAktiv) emptyMap() else alle.associate { it.id to speicher.text(it, 200_000).lowercase(Locale.GERMAN) }
+    }
     val kat = filter?.let { k -> Kategorie.entries.firstOrNull { it.name == k } }
-    val sicht = remember(alle, suche, kat, sortierung, texte) {
+    // Filtern und Sortieren abseits des Hauptfadens, kurz entprellt; bis zum neuen Ergebnis bleibt die vorige Liste stehen.
+    // null = erste Berechnung läuft noch: Erst danach darf „Nichts gefunden“ oder „Noch nichts abgelegt“ erscheinen.
+    var sicht by remember { mutableStateOf<List<Eintrag>?>(null) }
+    LaunchedEffect(geladen, suche, kat, sortierung, texte) {
+        if (geladen == null) return@LaunchedEffect
+        if (suche.isNotBlank()) delay(150)
         val s = suche.trim().lowercase(Locale.GERMAN)
-        alle.filter { e ->
-            (kat == null || kat in e.kategorien) && (s.isEmpty() || s in e.titel.lowercase(Locale.GERMAN) || (texte[e.id]?.contains(s) == true) ||
-                e.anhaenge.any { s in it.originalName.lowercase(Locale.GERMAN) || s in it.beschreibung.lowercase(Locale.GERMAN) })
-        }.let { l ->
-            when (Sortierung.valueOf(sortierung)) {
-                Sortierung.NEUESTE -> l.sortedByDescending { it.geaendert }
-                Sortierung.AELTESTE -> l.sortedBy { it.geaendert }
-                Sortierung.NAME -> l.sortedBy { it.titel.lowercase(Locale.GERMAN) }
-                Sortierung.GROESSE -> l.sortedByDescending { groesse(speicher, it) }
+        sicht = withContext(Dispatchers.Default) {
+            alle.filter { e ->
+                (kat == null || kat in e.kategorien) && (s.isEmpty() || s in e.titel.lowercase(Locale.GERMAN) || (texte[e.id]?.contains(s) == true) ||
+                    e.anhaenge.any { s in it.originalName.lowercase(Locale.GERMAN) || s in it.beschreibung.lowercase(Locale.GERMAN) })
+            }.let { l ->
+                when (Sortierung.valueOf(sortierung)) {
+                    Sortierung.NEUESTE -> l.sortedByDescending { it.geaendert }
+                    Sortierung.AELTESTE -> l.sortedBy { it.geaendert }
+                    Sortierung.NAME -> l.sortedBy { it.titel.lowercase(Locale.GERMAN) }
+                    // Größe je Eintrag einmal ermitteln, nicht bei jedem Vergleich (Dateisystem-Abfrage).
+                    Sortierung.GROESSE -> withContext(Dispatchers.IO) { l.map { it to groesse(speicher, it) } }.sortedByDescending { it.second }.map { it.first }
+                }
             }
         }
     }
@@ -236,7 +252,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     }) { AblageZentrale.uebertragungen(context).verwerfen(u.id) }
                 }
             }
-            if (sicht.isEmpty() && laeufe.isEmpty()) item {
+            if (sicht?.isEmpty() == true && laeufe.isEmpty()) item {
                 Column(Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Kern(96.dp, f.primaer, aktiv = false)
                     Text(if (alle.isEmpty()) "Noch nichts abgelegt" else "Nichts gefunden", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
@@ -244,7 +260,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                         else "Andere Suche oder anderen Filter probieren.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             }
-            items(sicht, key = { it.id }) { e ->
+            items(sicht.orEmpty(), key = { it.id }) { e ->
                 val gewaehlt = e.id in auswahl
                 EintragZeile(
                     e, gewaehlt, aktionen,
@@ -268,7 +284,9 @@ private fun EintragZeile(e: Eintrag, gewaehlt: Boolean, aktionen: AblageAktionen
     var menue by remember { mutableStateOf(false) }
     val haupt = e.anhaenge.firstOrNull { it.art == Art.BILD || it.art == Art.ANIMATION } ?: e.anhaenge.firstOrNull { it.art == Art.VIDEO || it.art == Art.PDF } ?: e.anhaenge.firstOrNull()
     val art = if (haupt == null) "Text" else if (e.anhaenge.size == 1) haupt.art.anzeige + " · " + haupt.endung.uppercase() else "${e.anhaenge.size} Dateien"
-    val meta = "$art · ${Ablage.datum(e.geaendert)} · ${Dateityp.groesse(groesse(speicher, e))}"
+    // Die Textgröße kommt aus dem Dateisystem: im Hintergrund, bis dahin die Summe der Anhänge.
+    val g by ladeImHintergrund(e.anhaenge.sumOf { it.groesse }, e.id, e.geaendert) { groesse(speicher, e) }
+    val meta = "$art · ${Ablage.datum(e.geaendert)} · ${Dateityp.groesse(g)}"
     Row(
         Modifier.fillMaxWidth().glas(f, erhoeht = 0.7f, toenung = if (gewaehlt) f.primaer else null)
             .combinedClickable(onClick = tippen, onLongClick = lange, onClickLabel = "Öffnen", onLongClickLabel = "Auswählen")
@@ -339,7 +357,9 @@ private fun EintragAnsicht(vm: AppViewModel, e: Eintrag, aktionen: AblageAktione
     val context = LocalContext.current
     val speicher = remember { AblageZentrale.speicher(context) }
     val textDatei = remember(e) { speicher.textDatei(e) }
-    val text by ladeImHintergrund("", textDatei, e.geaendert) { textDatei?.let { runCatching { it.readText() }.getOrDefault("") } ?: "" }
+    // Begrenzt gelesen (wie die Dateivorschau): Ein riesiger Bericht friert die Ansicht sonst ein.
+    val gelesen by ladeImHintergrund<Auszug.TextVorschau?>(null, textDatei, e.geaendert) { textDatei?.let { runCatching { Auszug.lies(it) }.getOrNull() } }
+    val text = gelesen?.text.orEmpty()
     val alle = remember(e) { aktionen.freigaben(e) }
     Column(Modifier.fillMaxSize()) {
         VorschauKopf(e.titel, "${Ablage.datum(e.geaendert)} · " + (if (e.hatText) "Text" else "") + (if (e.hatText && e.hatDateien) " + " else "") +
@@ -358,7 +378,7 @@ private fun EintragAnsicht(vm: AppViewModel, e: Eintrag, aktionen: AblageAktione
         }
         if (e.hatText) {
             if (e.hatDateien) { var offen by rememberSaveable(e.id) { mutableStateOf(false) }; Begleittext(text, offen, { offen = !offen }) }
-            else Box(Modifier.weight(1f)) { LeseText(text, "md", markdown = true, gekuerzt = false, gesamt = textDatei?.length() ?: 0) }
+            else Box(Modifier.weight(1f)) { LeseText(text, "md", markdown = true, gekuerzt = gelesen?.gekuerzt == true, gesamt = textDatei?.length() ?: 0) }
         }
     }
 }

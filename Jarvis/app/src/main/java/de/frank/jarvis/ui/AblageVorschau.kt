@@ -19,6 +19,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -188,7 +189,7 @@ fun AnhangVorschau(eintrag: Eintrag, anhang: Anhang, aktionen: AblageAktionen, z
             } else when (anhang.art) {
                 Art.BILD -> BildAnsicht(datei, anpassen, anhang, freigabe, aktionen, drehen, grad) { grad = it }
                 Art.ANIMATION -> GifAnsicht(datei, anpassen)
-                Art.SVG -> SicheresWeb(svgHtml(datei), datei.length() > 5_000_000, anhang, freigabe, aktionen)
+                Art.SVG -> SvgAnsicht(datei, anhang, freigabe, aktionen)
                 Art.PDF -> PdfAnsicht(datei, anpassen, anhang, eintrag, freigabe, aktionen)
                 Art.TEXT, Art.MARKDOWN, Art.CODE, Art.DATEN -> TextDateiAnsicht(datei, anhang)
                 Art.TABELLE_TEXT -> TabellenAnsicht(datei, anhang.endung == "tsv")
@@ -373,8 +374,13 @@ private fun PdfAnsicht(datei: File, anpassen: Int, anhang: Anhang, eintrag: Eint
     val r = seiten ?: run { Lade("PDF wird geöffnet …"); return }
     val anzahl = r.getOrElse { Hinweis(it.message ?: "Die PDF-Datei lässt sich nicht anzeigen.", freigabe, aktionen); return }
     if (anzahl == 0) { Hinweis("Die PDF-Datei enthält keine Seiten.", freigabe, aktionen); return }
+    fun seitenDatei(n: Int) = File(context.cacheDir, "pdf-seiten/${eintrag.id}-${anhang.id}-$n.jpg")
     val bild by ladeImHintergrund<Result<File?>?>(null, datei, seite) {
-        runCatching { Medien.pdfSeiteAlsDatei(datei, seite, 2400, File(context.cacheDir, "pdf-seiten/${eintrag.id}-${anhang.id}-$seite.png")) }
+        runCatching { Medien.pdfSeiteAlsDatei(datei, seite, 2400, seitenDatei(seite)) }
+    }
+    // Ist die Seite da, die nächste schon vorbereiten: Das Blättern wartet dann nicht auf das Zeichnen.
+    LaunchedEffect(seite, anzahl, bild != null) {
+        if (bild != null && seite + 1 < anzahl) withContext(Dispatchers.IO) { runCatching { Medien.pdfSeiteAlsDatei(datei, seite + 1, 2400, seitenDatei(seite + 1)) } }
     }
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -410,12 +416,20 @@ fun LeseText(text: String, endung: String, markdown: Boolean, gekuerzt: Boolean,
     var groesse by rememberSaveable { mutableFloatStateOf(if (markdown || endung == "txt") 16f else 13f) }
     val code = !markdown && endung != "txt"
     val farben = remember(f.dunkel) { CodeFarben.fuer(f.dunkel) }
-    val inhalt: AnnotatedString = remember(text, endung, markdown, f.dunkel) {
-        when {
-            markdown -> markdownText(text, f.primaer)
+    val primaer = f.primaer
+    fun aufbereiten(): List<AnnotatedString> {
+        val ganz = when {
+            markdown -> markdownText(text, primaer)
             code -> hervorgehoben(text, endung, farben)
             else -> AnnotatedString(text)
         }
+        return inBloecke(ganz)
+    }
+    // Kurze Texte sofort (kein Ladekreis), lange im Hintergrund: Die Hervorhebung über bis zu 512 KB fror sonst die App ein.
+    val bloecke: List<AnnotatedString>? = if (text.length <= SOFORT_ZEICHEN) {
+        remember(text, endung, markdown, f.dunkel) { aufbereiten() }
+    } else {
+        ladeImHintergrund<List<AnnotatedString>?>(null, text, endung, markdown, f.dunkel) { withContext(Dispatchers.Default) { aufbereiten() } }.value
     }
     var kopiert by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
@@ -424,20 +438,72 @@ fun LeseText(text: String, endung: String, markdown: Boolean, gekuerzt: Boolean,
             Box(Modifier.weight(1f))
             Rundknopf(Icons.Rounded.TextDecrease, "Schrift kleiner") { groesse = (groesse - 1f).coerceAtLeast(10f) }
             Rundknopf(Icons.Rounded.TextIncrease, "Schrift größer") { groesse = (groesse + 1f).coerceAtMost(28f) }
-            Rundknopf(Icons.Rounded.ContentCopy, if (kopiert) "Kopiert" else "Text kopieren", farbe = if (kopiert) f.erfolg else null) { zwischenablage.setText(AnnotatedString(text)); kopiert = true }
+            // Gekürzt wird nur der Anfang kopiert: Die ganze Datei passt ohnehin nicht verlässlich in die Zwischenablage (Binder-Grenze).
+            Rundknopf(Icons.Rounded.ContentCopy, if (kopiert) "Kopiert" else if (gekuerzt) "Anfang kopieren" else "Text kopieren", farbe = if (kopiert) f.erfolg else null) { zwischenablage.setText(AnnotatedString(text)); kopiert = true }
         }
-        if (gekuerzt) Text("Vorschau zeigt den Anfang (${Dateityp.groesse(Auszug.VORSCHAU_BYTES.toLong())} von ${Dateityp.groesse(gesamt)}). Die Datei selbst ist vollständig; zum Lesen des Rests herunterladen oder mit anderer App öffnen.",
+        if (gekuerzt) Text(
+            if (kopiert) "Nur die ersten ${Dateityp.groesse(Auszug.VORSCHAU_BYTES.toLong())} kopiert – für den ganzen Text herunterladen oder teilen."
+            else "Vorschau zeigt den Anfang (${Dateityp.groesse(Auszug.VORSCHAU_BYTES.toLong())} von ${Dateityp.groesse(gesamt)}). Die Datei selbst ist vollständig; zum Lesen des Rests herunterladen oder mit anderer App öffnen.",
             Modifier.padding(horizontal = 18.dp, vertical = 4.dp), color = f.textLeise, fontSize = 12.sp)
-        SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
-            val v = rememberScrollState()
-            if (code) {
-                Text(inhalt, Modifier.fillMaxSize().verticalScroll(v).horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp),
-                    color = f.text, fontSize = groesse.sp, lineHeight = (groesse * 1.45f).sp, fontFamily = FontFamily.Monospace, softWrap = false)
-            } else {
-                Text(inhalt, Modifier.fillMaxSize().verticalScroll(v).padding(horizontal = 18.dp, vertical = 10.dp), color = f.text, fontSize = groesse.sp, lineHeight = (groesse * 1.45f).sp)
+        val b = bloecke
+        if (b == null) {
+            Box(Modifier.weight(1f).fillMaxWidth()) { Lade("Wird aufbereitet …") }
+        } else if (b.size == 1) {
+            val inhalt = b.first()
+            SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
+                val v = rememberScrollState()
+                if (code) {
+                    Text(inhalt, Modifier.fillMaxSize().verticalScroll(v).horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp),
+                        color = f.text, fontSize = groesse.sp, lineHeight = (groesse * 1.45f).sp, fontFamily = FontFamily.Monospace, softWrap = false)
+                } else {
+                    Text(inhalt, Modifier.fillMaxSize().verticalScroll(v).padding(horizontal = 18.dp, vertical = 10.dp), color = f.text, fontSize = groesse.sp, lineHeight = (groesse * 1.45f).sp)
+                }
+            }
+        } else {
+            // Sehr lange Texte in Blöcken: Nur Sichtbares wird gemessen und gezeichnet. Markieren geht je Block,
+            // „Text kopieren“ oben kopiert den ganzen geladenen Text. Code bricht hier um, statt seitlich zu scrollen.
+            LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(horizontal = if (code) 16.dp else 18.dp, vertical = 10.dp)) {
+                itemsIndexed(b) { _, block ->
+                    SelectionContainer {
+                        Text(block, Modifier.fillMaxWidth(), color = f.text, fontSize = groesse.sp, lineHeight = (groesse * 1.45f).sp,
+                            fontFamily = if (code) FontFamily.Monospace else null)
+                    }
+                }
             }
         }
     }
+}
+
+/** Bis zu dieser Länge wird ein Text sofort aufbereitet, darüber im Hintergrund. */
+private const val SOFORT_ZEICHEN = 20_000
+/** Ab dieser Länge wird in Blöcke geteilt, je etwa [BLOCK_ZEILEN] Zeilen. */
+private const val BLOCK_AB_ZEICHEN = 100_000
+private const val BLOCK_ZEILEN = 200
+private const val BLOCK_ZEICHEN = 30_000
+
+/** Teilt einen langen Text an Zeilenenden in Blöcke; die Hervorhebung bleibt dabei erhalten. */
+private fun inBloecke(ganz: AnnotatedString): List<AnnotatedString> {
+    if (ganz.length <= BLOCK_AB_ZEICHEN) return listOf(ganz)
+    val roh = ganz.text
+    val bloecke = mutableListOf<AnnotatedString>()
+    var anfang = 0
+    var zeilen = 0
+    var i = 0
+    while (i < roh.length) {
+        // Zeilenende nach BLOCK_ZEILEN Zeilen, bei Text ohne Umbrüche (etwa kompaktes JSON) spätestens nach BLOCK_ZEICHEN.
+        if (roh[i] == '\n' && ++zeilen >= BLOCK_ZEILEN) {
+            bloecke += ganz.subSequence(anfang, i)
+            anfang = i + 1
+            zeilen = 0
+        } else if (i - anfang >= BLOCK_ZEICHEN) {
+            bloecke += ganz.subSequence(anfang, i)
+            anfang = i
+            zeilen = 0
+        }
+        i++
+    }
+    if (anfang < roh.length) bloecke += ganz.subSequence(anfang, roh.length)
+    return bloecke.ifEmpty { listOf(ganz) }
 }
 
 private data class CodeFarben(val kommentar: Color, val zeichenkette: Color, val zahl: Color, val wort: Color, val marke: Color) {
@@ -549,6 +615,14 @@ private fun HtmlAnsicht(datei: File, anhang: Anhang, freigabe: Freigabe, aktione
             else SicheresWeb(t.text, false, anhang, freigabe, aktionen)
         }
     }
+}
+
+/** SVG: Datei lesen und kodieren einmal im Hintergrund, nicht bei jeder Neuzeichnung auf dem Hauptfaden. */
+@Composable
+private fun SvgAnsicht(datei: File, anhang: Anhang, freigabe: Freigabe, aktionen: AblageAktionen) {
+    val html by ladeImHintergrund<Pair<String, Boolean>?>(null, datei) { svgHtml(datei) to (datei.length() > 5_000_000) }
+    val h = html ?: run { Lade("Wird geladen …"); return }
+    SicheresWeb(h.first, h.second, anhang, freigabe, aktionen)
 }
 
 private fun svgHtml(datei: File): String {
@@ -744,11 +818,12 @@ private fun Lade(text: String) {
 
 /**
  * Lädt einen Wert auf einem Hintergrund-Faden und liefert ihn als Zustand; bei geänderten [schluessel] beginnt es mit
- * [start] neu. Ersetzt produceState, dessen Lint-Prüfung die Zuweisung aus withContext nicht erkennt.
+ * [start] neu. Mit [behalten] bleibt bis zum neuen Ergebnis der vorige Wert stehen (kein Aufblitzen eines Leerzustands);
+ * [behalten] muss je Aufrufstelle fest sein. Ersetzt produceState, dessen Lint-Prüfung die Zuweisung aus withContext nicht erkennt.
  */
 @Composable
-fun <T> ladeImHintergrund(start: T, vararg schluessel: Any?, laden: suspend () -> T): androidx.compose.runtime.State<T> {
-    val zustand = remember(*schluessel) { mutableStateOf(start) }
+fun <T> ladeImHintergrund(start: T, vararg schluessel: Any?, behalten: Boolean = false, laden: suspend () -> T): androidx.compose.runtime.State<T> {
+    val zustand = if (behalten) remember { mutableStateOf(start) } else remember(*schluessel) { mutableStateOf(start) }
     LaunchedEffect(*schluessel) { zustand.value = withContext(Dispatchers.IO) { laden() } }
     return zustand
 }

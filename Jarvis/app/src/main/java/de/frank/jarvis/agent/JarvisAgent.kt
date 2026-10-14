@@ -9,9 +9,18 @@ import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.data.Quelle
 import de.frank.jarvis.faehigkeit.merkKontext
 import de.frank.jarvis.faehigkeit.Register
+import de.frank.jarvis.gedaechtnis.Lagebild
+import de.frank.jarvis.observability.Logbuch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
@@ -40,11 +49,14 @@ class JarvisAgent(context: Context) {
         maxSchritte: Int = 8,
         beiSchritt: (String) -> Unit = {},
     ): String {
-        if (!auth.isConnected) return "Ich bin noch nicht mit ChatGPT verbunden. Bitte in Jarvis unter Einstellungen anmelden."
-        return versuche(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, lernen = true, abschluss = true)
-            ?: ("Ich bin nicht fertig geworden" + (abbruchGrund?.let { " ($it)" } ?: "") + ". Für große Aufgaben wie Recherchen oder Berichte sag mir, " +
-                "ich soll den Recherche-Agenten starten; der arbeitet im Hintergrund weiter. Was genau passiert ist, steht unter Aktivität.")
+        if (!auth.isConnected) return NICHT_VERBUNDEN
+        return versuche(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, lernen = true, abschluss = true) ?: ersatzText()
     }
+
+    /** Der Satz, den Frank liest, wenn keine Antwort zustande kam (nach [versuche] mit null). */
+    fun ersatzText(): String =
+        "Ich bin nicht fertig geworden" + (abbruchGrund?.let { " ($it)" } ?: "") + ". Für große Aufgaben wie Recherchen oder Berichte sag mir, " +
+            "ich soll den Recherche-Agenten starten; der arbeitet im Hintergrund weiter. Was genau passiert ist, steht unter Aktivität."
 
     val verbunden: Boolean get() = auth.isConnected
 
@@ -68,6 +80,26 @@ class JarvisAgent(context: Context) {
         lernen: Boolean = false,
         /** true = reichen Schritte oder Zeit nicht, schreibt das Modell zum Schluss eine Antwort aus dem bisher Gesammelten, statt alles zu verwerfen. */
         abschluss: Boolean = false,
+        /** Meldet jede gelungene Änderung durch ein schreibendes Werkzeug („Titel: Ergebnis“), damit sie auch bei einem Abbruch nicht verloren geht. */
+        beiAenderung: (String) -> Unit = {},
+    ): String? =
+        // Nie auf dem Hauptfaden: Anweisung bauen, JSON lesen und Werkzeuge ließen sonst die Oberfläche ruckeln.
+        withContext(Dispatchers.Default) {
+            versucheIntern(auftrag, verlauf, zeitlimitMs, maxSchritte, beiSchritt, rolle, mitInternet, ablageTitel, lernen, abschluss, beiAenderung)
+        }
+
+    private suspend fun versucheIntern(
+        auftrag: String,
+        verlauf: List<ChatTurn>,
+        zeitlimitMs: Long,
+        maxSchritte: Int,
+        beiSchritt: (String) -> Unit,
+        rolle: String?,
+        mitInternet: Boolean,
+        ablageTitel: String?,
+        lernen: Boolean,
+        abschluss: Boolean,
+        beiAenderung: (String) -> Unit,
     ): String? {
         abbruchGrund = null
         if (!auth.isConnected) { abbruchGrund = "Jarvis ist nicht mit ChatGPT angemeldet"; return null }
@@ -75,10 +107,15 @@ class JarvisAgent(context: Context) {
         // Agenten beauftragen und das Protokoll lesen nur im Gespräch mit Frank: Agenten starten keine Agenten.
         val faehigkeiten = Register.alle(app).filter { (mitInternet || it.id != "web") && (lernen || (it.id != "regeln" && it.id != "agenten")) }
         val werkzeuge = faehigkeiten.flatMap { it.werkzeuge }
-        val zuege = (verlauf.takeLast(12) + ChatTurn("user", auftrag)).toMutableList()
-        // Im Gespräch und bei Agenten denkt Jarvis mit dem ganzen Gesamtbild. Beim Schreiben der Tagesauswertung selbst
+        val zuege = (gekuerzt(verlauf) + ChatTurn("user", auftrag)).toMutableList()
+        val beginn = System.currentTimeMillis()
+        // Im Gespräch und bei Agenten denkt Jarvis mit dem ganzen Gesamtbild aus dem Live-Gedächtnis (liegt fertig bereit,
+        // nur die schnellen Bereiche werden höchstens 2,5 Sekunden nachgelesen). Beim Schreiben der Tagesauswertung selbst
         // genügen Regeln und Wissen über Frank: Die Daten stehen dort im Auftrag, und die alte Auswertung soll die neue nicht färben.
-        val gesamtbild = if (lernen || rolle != null) runCatching { Gehirn.kontext(app) }.getOrElse { merkKontext(app) } else merkKontext(app)
+        val gesamtbild = if (lernen || rolle != null) gesamtbildMitZeitlimit() else withContext(Dispatchers.IO) { merkKontext(app) }
+        // Die Anweisung einmal bauen statt bei jedem Schritt: Sie ist groß und ändert sich während einer Antwort nicht.
+        val anweisungText = anweisung(faehigkeiten, rolle, gesamtbild)
+        Logbuch.dauer("Antwort: Gesamtbild", System.currentTimeMillis() - beginn, "Anweisung ${anweisungText.length} Zeichen, Verlauf ${zuege.size} Züge")
         // Für den Abschluss bleibt ein Teil der Zeit übrig: Ein langes Werkzeug (Bild, Download) darf nicht das ganze Ergebnis verschlucken.
         val reserve = if (abschluss) (zeitlimitMs / 6).coerceIn(25_000L, 180_000L) else 0L
         var schritte = 0
@@ -87,27 +124,38 @@ class JarvisAgent(context: Context) {
         val ergebnis = withTimeoutOrNull<String?>(zeitlimitMs - reserve) {
             repeat(maxSchritte) {
                 schritte++
-                val roh = auth.streamChat(anweisung(faehigkeiten, rolle, gesamtbild), zuege, einstellungen.modell, einstellungen.denkstufe)
+                val modellBeginn = System.currentTimeMillis()
+                val roh = auth.streamChat(anweisungText, zuege, einstellungen.modell, einstellungen.denkstufe)
+                Logbuch.dauer("Antwort: Modellschritt", System.currentTimeMillis() - modellBeginn, "Schritt $schritte, ${einstellungen.modell.label}, ${roh.length} Zeichen")
                 val schritt = lies(roh)
-                val name = schritt?.optString("werkzeug").orEmpty()
-                if (schritt == null || name.isEmpty()) {
+                val (aufrufe, verworfen) = schritt?.let { aufrufeAus(it) } ?: (emptyList<JSONObject>() to emptyList<JSONObject>())
+                if (schritt == null || aufrufe.isEmpty()) {
+                    Logbuch.dauer("Antwort: gesamt", System.currentTimeMillis() - beginn, "$schritte Schritt(e)" + (rolle?.let { ", Agent" } ?: ""))
                     return@withTimeoutOrNull schritt?.optString("antwort")?.takeIf { it.isNotBlank() } ?: roh.trim()
                 }
-                val werkzeug = werkzeuge.firstOrNull { it.name == name }
-                val argumente = schritt.optJSONObject("argumente") ?: JSONObject()
-                letztesWerkzeug = werkzeug?.titel ?: name
-                beiSchritt(werkzeug?.titel ?: name)
-                val antwort = if (werkzeug == null) {
-                    "FEHLER: Das Werkzeug $name gibt es nicht."
+                // Mehrere voneinander unabhängige lesende Werkzeuge laufen gleichzeitig; sobald eines schreibt, alle der Reihe nach.
+                val nurLesend = aufrufe.size > 1 && aufrufe.all { c -> werkzeuge.firstOrNull { it.name == c.optString("werkzeug") }?.nurLesen == true }
+                // Vor dem Start festhalten: Hängt ein Werkzeug bis zum Zeitlimit, nennt der Abbruchgrund genau dieses.
+                letztesWerkzeug = aufrufe.joinToString(", ") { c -> werkzeuge.firstOrNull { it.name == c.optString("werkzeug") }?.titel ?: c.optString("werkzeug") }
+                val ergebnisse = if (nurLesend) {
+                    coroutineScope { aufrufe.map { c -> async { fuehreAus(c, werkzeuge, ablageTitel, beiSchritt, beiAenderung) } }.awaitAll() }
                 } else {
-                    // Werkzeuge dürfen hier auf lange Arbeit warten (Bild, Download); Dateien ohne Titel gehören zum Agenten-Eintrag.
-                    val r = runCatching { withContext(AgentenKontext(ablageTitel, langeWarten = ablageTitel != null)) { werkzeug.ausfuehren(argumente) } }
-                        .getOrElse { de.frank.jarvis.faehigkeit.Ergebnis("Werkzeug fehlgeschlagen: ${it.message}", fehler = true) }
-                    Protokoll.melde(Quelle.JARVIS, werkzeug.titel, r.text, !r.fehler)
-                    (if (r.fehler) "FEHLER: " else "") + r.text
+                    aufrufe.map { c -> fuehreAus(c, werkzeuge, ablageTitel, beiSchritt, beiAenderung) }
                 }
                 zuege += ChatTurn("assistant", schritt.toString())
-                zuege += ChatTurn("user", "WERKZEUG-ERGEBNIS ($name):\n$antwort")
+                // Nicht ausgeführte Aufrufe (mehr als MAX_AUFRUFE in einem Schritt) ausdrücklich melden, damit das Modell sie nachholt statt sie zu bestätigen.
+                val nichtAusgefuehrt = if (verworfen.isEmpty()) "" else
+                    "\n\nNICHT AUSGEFÜHRT (höchstens $MAX_AUFRUFE Werkzeuge je Schritt): " +
+                        verworfen.joinToString("; ") { c -> c.optString("werkzeug") + " " + (c.optJSONObject("argumente") ?: JSONObject()).toString().take(300) } +
+                        " – rufe sie im nächsten Schritt erneut auf."
+                zuege += if (ergebnisse.size == 1) {
+                    ChatTurn("user", "WERKZEUG-ERGEBNIS (${aufrufe[0].optString("werkzeug")}):\n${ergebnisse[0].second}$nichtAusgefuehrt")
+                } else {
+                    ChatTurn("user", "WERKZEUG-ERGEBNISSE:\n" + aufrufe.indices.joinToString("\n\n") { i ->
+                        val argumente = (aufrufe[i].optJSONObject("argumente") ?: JSONObject()).toString().take(120)
+                        "(${i + 1}. ${aufrufe[i].optString("werkzeug")} $argumente):\n${ergebnisse[i].second}"
+                    } + nichtAusgefuehrt)
+                }
             }
             alleSchritte = true
             null
@@ -123,7 +171,7 @@ class JarvisAgent(context: Context) {
         zuege += ChatTurn("user", "ABSCHLUSS: $grund. Rufe KEIN Werkzeug mehr auf. Antworte jetzt sofort mit {\"antwort\": \"…\"} und schreibe das Ergebnis aus allem, " +
             "was du bisher hast. Sag am Anfang in einem Satz, dass es ein Zwischenstand ist und was noch fehlt. Nenne nur Dateien, deren Speicherung ein Werkzeug-Ergebnis bestätigt hat.")
         val ende = withTimeoutOrNull(reserve) {
-            runCatching { auth.streamChat(anweisung(faehigkeiten, rolle, gesamtbild), zuege, einstellungen.modell, einstellungen.denkstufe) }.getOrNull()
+            runCatching { auth.streamChat(anweisungText, zuege, einstellungen.modell, einstellungen.denkstufe) }.getOrNull()
         }
         val antwort = ende?.let { roh -> lies(roh)?.optString("antwort")?.takeIf { it.isNotBlank() } ?: roh.trim().takeIf { it.isNotEmpty() && !it.trimStart().startsWith("{") } }
         abbruchGrund = if (antwort != null) "$grund; Zwischenstand geschrieben" else "$grund; auch der Zwischenstand kam nicht zustande"
@@ -131,34 +179,144 @@ class JarvisAgent(context: Context) {
         return antwort
     }
 
+    /**
+     * Die Werkzeugaufrufe einer Modellantwort: ein einzelner ({"werkzeug": …}) oder mehrere ({"werkzeuge": [ … ]}).
+     * Liefert die auszuführenden (höchstens [MAX_AUFRUFE]) und die verworfenen; Letztere bekommt das Modell als
+     * „NICHT AUSGEFÜHRT“ zurück und ruft sie im nächsten Schritt erneut auf.
+     */
+    private fun aufrufeAus(schritt: JSONObject): Pair<List<JSONObject>, List<JSONObject>> {
+        schritt.optJSONArray("werkzeuge")?.let { a ->
+            val liste = (0 until a.length()).mapNotNull { a.optJSONObject(it) }.filter { it.optString("werkzeug").isNotEmpty() }
+            if (liste.isNotEmpty()) return liste.take(MAX_AUFRUFE) to liste.drop(MAX_AUFRUFE)
+        }
+        return (if (schritt.optString("werkzeug").isNotEmpty()) listOf(schritt) else emptyList()) to emptyList()
+    }
+
+    /** Führt einen Aufruf aus; liefert den Titel fürs Protokoll und den Text fürs Modell. Ein Fehler bleibt beim einzelnen Werkzeug. */
+    private suspend fun fuehreAus(
+        aufruf: JSONObject,
+        werkzeuge: List<de.frank.jarvis.faehigkeit.Werkzeug>,
+        ablageTitel: String?,
+        beiSchritt: (String) -> Unit,
+        beiAenderung: (String) -> Unit,
+    ): Pair<String, String> {
+        val name = aufruf.optString("werkzeug")
+        val werkzeug = werkzeuge.firstOrNull { it.name == name }
+        val argumente = aufruf.optJSONObject("argumente") ?: JSONObject()
+        val titel = werkzeug?.titel ?: name
+        beiSchritt(titel)
+        if (werkzeug == null) return titel to "FEHLER: Das Werkzeug $name gibt es nicht."
+        // Werkzeuge dürfen hier auf lange Arbeit warten (Bild, Download); Dateien ohne Titel gehören zum Agenten-Eintrag.
+        // Sie lesen Dateien und Kalender: deshalb auf IO, nie auf dem Hauptfaden.
+        val werkzeugBeginn = System.currentTimeMillis()
+        val r = try {
+            withContext(Dispatchers.IO + AgentenKontext(ablageTitel, langeWarten = ablageTitel != null)) { werkzeug.ausfuehren(argumente) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Logbuch.fehler("Werkzeug $name", e)
+            de.frank.jarvis.faehigkeit.Ergebnis("Werkzeug fehlgeschlagen: ${e.message}", fehler = true)
+        } catch (e: Throwable) {
+            // Auch ein Error (etwa OutOfMemoryError beim Dekodieren eines großen Bildes) bleibt beim Werkzeug, statt die App zu beenden.
+            Logbuch.fehler("Werkzeug $name", e)
+            de.frank.jarvis.faehigkeit.Ergebnis("Werkzeug fehlgeschlagen: ${e.javaClass.simpleName} ${e.message.orEmpty()}".trim(), fehler = true)
+        }
+        Logbuch.dauer("Werkzeug: $name", System.currentTimeMillis() - werkzeugBeginn, if (r.fehler) "Fehler: " + r.text.take(160) else "${r.text.length} Zeichen")
+        Protokoll.melde(Quelle.JARVIS, werkzeug.titel, r.text, !r.fehler)
+        if (!werkzeug.nurLesen && !r.fehler) {
+            // Was Jarvis selbst geändert hat, steht sofort im Live-Gedächtnis.
+            Lagebild.nachAktion(app, name, "Jarvis")
+            beiAenderung(werkzeug.titel + ": " + r.text.lineSequence().firstOrNull().orEmpty().take(200))
+        }
+        return titel to ((if (r.fehler) "FEHLER: " else "") + r.text)
+    }
+
+    /**
+     * Das Gesamtbild aus dem Live-Gedächtnis, höchstens [GESAMTBILD_MS] lang abgewartet. Der Aufbau läuft abgekoppelt:
+     * Hängt eine Partner-App in einem blockierenden Aufruf, kommt die Frage trotzdem frei und hat Regeln, Ziele und Wissen.
+     */
+    private suspend fun gesamtbildMitZeitlimit(): String {
+        val beginn = System.currentTimeMillis()
+        val aufbau = HINTERGRUND.async { Gehirn.kontext(app) }
+        val bild = try {
+            withTimeoutOrNull(GESAMTBILD_MS) { aufbau.await() }
+        } catch (e: CancellationException) {
+            aufbau.cancel()
+            throw e
+        } catch (e: Exception) {
+            Logbuch.fehler("Gesamtbild", e)
+            null
+        }
+        if (bild != null) return bild
+        aufbau.cancel()
+        Logbuch.gedaechtnis("Gesamtbild: Zeitlimit oder Fehler, nur Gemerktes", "", System.currentTimeMillis() - beginn)
+        return "GESAMTBILD NICHT VERFÜGBAR (Zeitlimit): nur Regeln, Ziele und Wissen liegen vor; lies Termine und Aufgaben selbst.\n" +
+            withContext(Dispatchers.IO) { merkKontext(app) }
+    }
+
+    /**
+     * Der Gesprächsverlauf nach Zeichenbudget statt nach fester Anzahl: von hinten so viele Wechsel, wie in
+     * [VERLAUF_ZEICHEN] passen (höchstens [VERLAUF_ZUEGE]). Fällt etwas weg, steht ein Hinweis davor.
+     */
+    private fun gekuerzt(verlauf: List<ChatTurn>): List<ChatTurn> {
+        val letzter = verlauf.lastOrNull() ?: return emptyList()
+        // Der jüngste Zug bleibt immer, notfalls auf seinen Schluss gekürzt: Ohne ihn verlöre jede Rückfrage ihren Bezug.
+        val juengster = if (letzter.text.length > VERLAUF_ZEICHEN) letzter.copy(text = "(gekürzt) …" + letzter.text.takeLast(VERLAUF_ZEICHEN)) else letzter
+        var summe = juengster.text.length
+        val davor = verlauf.dropLast(1).asReversed().takeWhile { z -> summe += z.text.length; summe <= VERLAUF_ZEICHEN }.take(VERLAUF_ZUEGE - 1).reversed()
+        val behalten = davor + juengster
+        val ausgelassen = behalten.size < verlauf.size || juengster !== letzter
+        return if (ausgelassen) listOf(ChatTurn("user", "(Ältere Teile dieses Gesprächs sind ausgelassen.)")) + behalten else behalten
+    }
+
     private fun dauer(ms: Long): String = if (ms < 120_000L) "${ms / 1000} Sekunden" else "${ms / 60_000} Minuten"
 
+    /**
+     * Die Anweisung ans Modell. Vorn steht der große gleichbleibende Teil (Grundsätze, App-Hinweise, Werkzeuge,
+     * Antwortformat), hinten das, was sich ändert (Uhrzeit, Gesamtbild, Rolle): So kann der Dienst den Anfang
+     * über Fragen hinweg aus seinem Prompt-Cache nehmen.
+     */
     private fun anweisung(faehigkeiten: List<de.frank.jarvis.faehigkeit.Faehigkeit>, rolle: String?, gesamtbild: String): String {
         val jetzt = LocalDateTime.now()
         val datum = jetzt.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy, HH:mm 'Uhr'", Locale.GERMAN))
         return buildString {
-            if (rolle != null) append(rolle).append("\n\n")
-            append("Du bist Jarvis, Franks persönlicher Assistent auf seinem Handy. Du sprichst Frank mit „du“ an, antwortest so kurz, wie es die Frage erlaubt, ")
-            append("klar und freundlich in gutem Deutsch, so dass man es gut vorlesen kann (keine Listenzeichen, kein Markdown, keine ids).\n")
+            append(festerTeil(faehigkeiten))
+            append("\n\nLAGE JETZT:\n")
             append("Jetzt ist ").append(datum).append(" (ISO-Datum ").append(jetzt.toLocalDate()).append(").\n\n")
-            append("Du arbeitest mit Franks Apps über Werkzeuge. Grundsätze:\n")
-            append("- Handle selbstständig: Lies nach, bevor du fragst. Frage nur, wenn eine nötige Angabe wirklich fehlt oder mehrdeutig ist.\n")
-            append("- Erfinde nie Daten. Was du über Aufgaben sagst, stammt aus einem Werkzeug-Ergebnis.\n")
-            append("- Nach einer Änderung bestätigst du in einem Satz, was jetzt gilt.\n")
-            append("- Behaupte nie, eine Datei, ein Bild oder ein Dokument erzeugt oder gespeichert zu haben, wenn ein Werkzeug-Ergebnis das nicht mit „Gespeichert“ bestätigt. ")
-            append("Meldet ein Werkzeug „läuft noch“ oder einen Fehler, sag genau das.\n\n")
             if (gesamtbild.isNotEmpty()) append(gesamtbild).append('\n')
-            faehigkeiten.forEach { append("App ").append(it.name).append(": ").append(it.hinweise).append("\n\n") }
-            append("WERKZEUGE:\n")
-            faehigkeiten.flatMap { it.werkzeuge }.forEach { w ->
-                append("- ").append(w.name).append(": ").append(w.beschreibung).append("\n  Eingabe (JSON-Schema): ").append(w.schema.toString()).append('\n')
-            }
-            append("\nANTWORTFORMAT — antworte IMMER mit genau einem JSON-Objekt und sonst nichts:\n")
-            append("Werkzeug aufrufen: {\"werkzeug\": \"<name>\", \"argumente\": { … }}\n")
-            append("Frank antworten oder nachfragen: {\"antwort\": \"<Text>\"}\n")
-            append("Pro Antwort genau ein Werkzeug. Das Ergebnis bekommst du als nächste Nachricht, die mit WERKZEUG-ERGEBNIS beginnt.")
+            if (rolle != null) append('\n').append(rolle).append('\n')
+            // Das Antwortformat steht weit oben; am Ende kurz daran erinnern, ohne den gleichbleibenden Anfang zu ändern.
+            append("\nAntworte jetzt wie unter ANTWORTFORMAT beschrieben: genau ein JSON-Objekt und sonst nichts.")
         }
     }
+
+    /** Der gleichbleibende Teil der Anweisung, je Auswahl an Fähigkeiten einmal im Prozess gebaut. */
+    private fun festerTeil(faehigkeiten: List<de.frank.jarvis.faehigkeit.Faehigkeit>): String =
+        FESTE_TEILE.getOrPut(faehigkeiten.joinToString(",") { it.id }) {
+            buildString {
+                append("Du bist Jarvis, Franks persönlicher Assistent auf seinem Handy. Du sprichst Frank mit „du“ an, antwortest so kurz, wie es die Frage erlaubt, ")
+                append("klar und freundlich in gutem Deutsch, so dass man es gut vorlesen kann (keine Listenzeichen, kein Markdown, keine ids).\n")
+                append("Datum, Uhrzeit, das Gesamtbild und gegebenenfalls deine Rolle stehen ganz am Ende unter LAGE JETZT; die Rolle geht allgemeinen Vorgaben vor.\n\n")
+                append("Du arbeitest mit Franks Apps über Werkzeuge. Grundsätze:\n")
+                append("- Handle selbstständig: Lies nach, bevor du fragst. Frage nur, wenn eine nötige Angabe wirklich fehlt oder mehrdeutig ist.\n")
+                append("- Erfinde nie Daten. Was du über Aufgaben sagst, stammt aus einem Werkzeug-Ergebnis.\n")
+                append("- Nach einer Änderung bestätigst du in einem Satz, was jetzt gilt.\n")
+                append("- Behaupte nie, eine Datei, ein Bild oder ein Dokument erzeugt oder gespeichert zu haben, wenn ein Werkzeug-Ergebnis das nicht mit „Gespeichert“ bestätigt. ")
+                append("Meldet ein Werkzeug „läuft noch“ oder einen Fehler, sag genau das.\n\n")
+                faehigkeiten.forEach { append("App ").append(it.name).append(": ").append(it.hinweise).append("\n\n") }
+                append("WERKZEUGE:\n")
+                faehigkeiten.flatMap { it.werkzeuge }.forEach { w ->
+                    append("- ").append(w.name).append(": ").append(w.beschreibung).append("\n  Eingabe (JSON-Schema): ").append(w.schema.toString()).append('\n')
+                }
+                append("\nANTWORTFORMAT — antworte IMMER mit genau einem JSON-Objekt und sonst nichts:\n")
+                append("Ein Werkzeug aufrufen: {\"werkzeug\": \"<name>\", \"argumente\": { … }}\n")
+                append("Mehrere Werkzeuge auf einmal: {\"werkzeuge\": [{\"werkzeug\": \"<name>\", \"argumente\": { … }}, …]}\n")
+                append("Frank antworten oder nachfragen: {\"antwort\": \"<Text>\"}\n")
+                append("Brauchst du mehrere voneinander unabhängige Angaben (etwa Termine, Aufgaben und Wetter), rufe alle lesenden Werkzeuge in EINEM Schritt über werkzeuge auf; ")
+                append("sie laufen dann gleichzeitig. Hängt ein Aufruf vom Ergebnis eines anderen ab oder änderst du etwas, rufe die Werkzeuge nacheinander auf. ")
+                append("Die Ergebnisse bekommst du als nächste Nachricht, die mit WERKZEUG-ERGEBNIS beginnt.")
+            }
+        }
 
     /** Holt das JSON-Objekt aus der Modellantwort, auch wenn es in Text oder Codezäune eingepackt ist. */
     private fun lies(roh: String): JSONObject? {
@@ -166,6 +324,22 @@ class JarvisAgent(context: Context) {
         val ende = roh.lastIndexOf('}')
         if (start < 0 || ende <= start) return null
         return runCatching { JSONObject(roh.substring(start, ende + 1)) }.getOrNull()
-            ?.takeIf { it.has("werkzeug") || it.has("antwort") }
+            ?.takeIf { it.has("werkzeug") || it.has("werkzeuge") || it.has("antwort") }
+    }
+
+    companion object {
+        private const val VERLAUF_ZEICHEN = 24_000
+        private const val VERLAUF_ZUEGE = 40
+        /**
+         * Länger wartet eine Frage nicht auf das Gesamtbild. Liegt über der Erstlade-Wartezeit im Lagebild (12 s, wenn
+         * Bereiche fehlen) plus Puffer, damit die erste Frage nach dem Start das Teilbild bekommt statt nur Gemerktes.
+         */
+        private const val GESAMTBILD_MS = 15_000L
+        /** Höchstens so viele Werkzeugaufrufe laufen in einem Schritt; der Rest geht als „NICHT AUSGEFÜHRT“ ans Modell zurück. */
+        private const val MAX_AUFRUFE = 6
+        const val NICHT_VERBUNDEN = "Ich bin noch nicht mit ChatGPT verbunden. Bitte in Jarvis unter Einstellungen anmelden."
+        /** Abgekoppelter Raum für das Gesamtbild: Ein hängender Aufbau hält die Frage nicht fest. */
+        private val HINTERGRUND = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private val FESTE_TEILE = java.util.concurrent.ConcurrentHashMap<String, String>()
     }
 }

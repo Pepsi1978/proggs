@@ -29,9 +29,11 @@ import de.frank.jarvis.MainActivity
 import de.frank.jarvis.R
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.settings.SecureSettings
+import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.speech.VorleseZustand
 import de.frank.jarvis.speech.Vorleser
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.sqrt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Lauscht dauerhaft auf „Hey Jarvis“, auch bei gesperrtem Handy (Vordergrunddienst vom Typ Mikrofon).
@@ -57,17 +60,27 @@ import kotlinx.coroutines.launch
  */
 class WeckwortDienst : Service() {
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var erkenner: WeckwortErkenner? = null
+    // Die Modelle lädt und nutzt der Weckwort-Faden; geladen wird nur unter [modellSperre].
+    @Volatile private var erkenner: WeckwortErkenner? = null
     /** Eigene Phrase (sherpa-onnx); null = „Hey Jarvis“. */
-    private var phrasenErkenner: PhrasenErkenner? = null
+    @Volatile private var phrasenErkenner: PhrasenErkenner? = null
+    /** Für welchen [phrasenStand] [phrasenErkenner] geladen wurde. */
+    private var phrasenErkennerStand = -1
+    /** Zählt jede Änderung der Einstellungen: Ein Phrasen-Modell gilt nur für den Stand, mit dem es geladen wurde. */
+    @Volatile private var phrasenStand = 0
     /** Tokens der eigenen Phrase aus den Einstellungen; null = „Hey Jarvis“. */
     private var phrasenTokens: String? = null
     private var phrasenSchwelle = 0.25f
     private var phrasenVarianten: List<String> = emptyList()
-    private var sprecherErkenner: SprecherErkenner? = null
+    @Volatile private var sprecherErkenner: SprecherErkenner? = null
+    private val modellSperre = Any()
     private var vorleser: Vorleser? = null
     @Volatile private var lauf: AtomicBoolean? = null
     private var faden: Thread? = null
+    /** Der zuletzt gestartete Durchgang: Der nächste wartet erst auf ihn, so lesen nie zwei Fäden zugleich. */
+    private var letzterFaden: Thread? = null
+    /** Mikrofon-Fehler in Folge, damit ein dauerhaft belegtes Mikrofon das Logbuch nicht flutet. */
+    @Volatile private var lauschFehler = 0
     private var wach: PowerManager.WakeLock? = null
     private var gestartet = false
 
@@ -80,7 +93,7 @@ class WeckwortDienst : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (gestartet) {
-            if (intent?.action == AKTION_NEU_LADEN) neuLaden()
+            if (intent?.action == AKTION_NEU_LADEN) bereich.launch { neuLaden() }
             return START_STICKY
         }
         val e = Einstellungen.get(this)
@@ -109,14 +122,18 @@ class WeckwortDienst : Service() {
                 .distinctUntilChanged()
                 .collect { frei -> if (frei) lauschen() else anhalten() }
         }
-        // Ruft der Dienst die App und sie kommt nicht (keine Erlaubnis, Android blockt), nicht ewig taub bleiben.
+        // Ruft der Dienst die App und sie kommt nicht (Android blockt den Start still), nicht taub bleiben: Der Ruf
+        // kommt als Benachrichtigung zum Antippen, und das Mikrofon geht zurück ans Weckwort.
         bereich.launch {
             while (true) {
-                delay(2_000)
+                delay(1_000)
                 val gerufen = Weckwort.gerufenUm
-                if (gerufen != 0L && System.currentTimeMillis() - gerufen > 8_000) {
+                if (gerufen != 0L && System.currentTimeMillis() - gerufen > WAECHTER_MS) {
                     Log.w(TAG, "Jarvis kam nach „Hey Jarvis“ nicht nach vorn")
-                    Weckwort.mikrofonFreigeben()
+                    Logbuch.system("Weckwort: Jarvis kam nicht nach vorn", "Ruf als Benachrichtigung")
+                    // Ohne Vollbild-Absicht: Startet die App nur langsam (Kaltstart unter Last), darf diese Meldung sie
+                    // kein zweites Mal starten, sonst bricht der zweite Start das laufende Gespräch ab.
+                    zumAntippen(rufAbsicht(), vollbild = false)
                 }
             }
         }
@@ -136,42 +153,78 @@ class WeckwortDienst : Service() {
     }
 
     /** Einstellungen geändert: neu einlesen und mit dem neuen Weckwort weiterlauschen. */
-    private fun neuLaden() {
-        anhalten()
-        // Nicht selbst schließen: Hängt der alte Faden noch im Lesen, würde er sonst auf ein freigegebenes Modell
-        // zugreifen. sherpa-onnx gibt es beim Aufräumen selbst frei (finalize).
-        phrasenErkenner = null
+    private suspend fun neuLaden() {
+        // Neuer Stand: Der nächste Durchgang lädt das Phrasen-Modell neu und gibt das alte frei, sobald der alte
+        // Faden sicher zu Ende ist (vorher würde er auf ein freigegebenes Modell zugreifen).
+        phrasenStand++
         einstellungenUebernehmen()
+        anhalten()
         if (!Weckwort.belegt.value && vorleser?.stand?.value?.zustand == VorleseZustand.AUS) lauschen()
     }
 
+    /** Startet den Weckwort-Faden. Die Modelle lädt er selbst, das dauert bis über eine Sekunde und hielte sonst die App an. */
     private fun lauschen() {
         if (faden?.isAlive == true) return
-        val erk = erkenner ?: runCatching { WeckwortErkenner(this) }
-            .onFailure { Log.e(TAG, "Weckwort-Modelle nicht ladbar", it) }
-            .getOrNull()?.also { erkenner = it } ?: return
-        // Eigene Phrase: sherpa-onnx dazu. Lässt sich das Modell nicht laden, bleibt „Hey Jarvis“ aktiv.
         val tokens = phrasenTokens
-        val phr = if (tokens == null) null else phrasenErkenner ?: runCatching { PhrasenErkenner(this, tokens, phrasenSchwelle, phrasenVarianten) }
-            .onFailure { Log.e(TAG, "Phrasen-Modell nicht ladbar, nehme Hey Jarvis", it) }
-            .getOrNull()?.also { phrasenErkenner = it }
-        Weckwort.aktivesWort(if (phr != null) PhrasenTokens.normiert(Einstellungen.get(this).weckwortPhrase) else "Hey Jarvis")
-        // Stimmerkennung (Stimm-Fingerabdruck). Fehlt sie, bleibt es beim Stimmprofil aus den Lautmerkmalen.
-        val spr = sprecherErkenner ?: runCatching { SprecherErkenner(this) }
-            .onFailure { Log.e(TAG, "Stimmerkennung nicht ladbar", it) }
-            .getOrNull()?.also { sprecherErkenner = it }
+        val schwelle = phrasenSchwelle
+        val varianten = phrasenVarianten
+        val stand = phrasenStand
+        val phrase = Einstellungen.get(this).weckwortPhrase
+        val vorher = letzterFaden
         val an = AtomicBoolean(true)
         lauf = an
-        faden = Thread({ schleife(erk, phr, spr, an) }, "Weckwort").apply { start() }
+        faden = Thread({
+            // Hängt ein alter Durchgang noch (Treffer, Mikrofon), erst ihn auslaufen lassen: nie zwei Leser zugleich.
+            val vorgaengerFertig = vorher == null || runCatching { vorher.join(3_000); !vorher.isAlive }.getOrDefault(false)
+            if (!an.get()) return@Thread
+            val (erk, phr, spr) = modelleHolen(tokens, schwelle, varianten, stand, vorgaengerFertig)
+            if (erk == null || !an.get()) return@Thread
+            Weckwort.aktivesWort(if (phr != null) PhrasenTokens.normiert(phrase) else "Hey Jarvis")
+            schleife(erk, phr, spr, an)
+        }, "Weckwort").also { letzterFaden = it; it.start() }
     }
 
-    /** Hält das Lauschen an und wartet kurz, bis das Mikrofon wirklich frei ist. */
-    private fun anhalten() {
+    /** Lädt fehlende Modelle (im Weckwort-Faden) und hält sie für den nächsten Durchgang bereit. */
+    private fun modelleHolen(
+        tokens: String?, schwelle: Float, varianten: List<String>, stand: Int, vorgaengerFertig: Boolean,
+    ): Triple<WeckwortErkenner?, PhrasenErkenner?, SprecherErkenner?> = synchronized(modellSperre) {
+        val beginn = SystemClock.elapsedRealtime()
+        var geladen = false
+        val erk = erkenner ?: runCatching { WeckwortErkenner(this) }
+            .onFailure { Log.e(TAG, "Weckwort-Modelle nicht ladbar", it); Logbuch.fehler("Weckwort-Modelle nicht ladbar", it) }
+            .getOrNull()?.also { erkenner = it; geladen = true }
+        // Ein altes Phrasen-Modell (andere Phrase oder Empfindlichkeit) nur schließen, wenn kein Faden es mehr nutzt;
+        // sonst gibt sherpa-onnx es beim Aufräumen selbst frei (finalize).
+        val alt = phrasenErkenner
+        if (alt != null && (tokens == null || phrasenErkennerStand != stand)) {
+            phrasenErkenner = null
+            if (vorgaengerFertig) runCatching { alt.close() }
+        }
+        // Eigene Phrase: sherpa-onnx dazu. Lässt sich das Modell nicht laden, bleibt „Hey Jarvis“ aktiv.
+        val phr = if (tokens == null) null else phrasenErkenner ?: runCatching { PhrasenErkenner(this, tokens, schwelle, varianten) }
+            .onFailure { Log.e(TAG, "Phrasen-Modell nicht ladbar, nehme Hey Jarvis", it); Logbuch.fehler("Phrasen-Modell nicht ladbar", it) }
+            .getOrNull()?.also { phrasenErkenner = it; phrasenErkennerStand = stand; geladen = true }
+        // Stimmerkennung (Stimm-Fingerabdruck). Fehlt sie, bleibt es beim Stimmprofil aus den Lautmerkmalen.
+        val spr = sprecherErkenner ?: runCatching { SprecherErkenner(this) }
+            .onFailure { Log.e(TAG, "Stimmerkennung nicht ladbar", it); Logbuch.fehler("Stimmerkennung nicht ladbar", it) }
+            .getOrNull()?.also { sprecherErkenner = it; geladen = true }
+        if (geladen) Logbuch.dauer("Weckwort-Modelle geladen", SystemClock.elapsedRealtime() - beginn, if (phr != null) "mit Phrase" else "Hey Jarvis")
+        Triple(erk, phr, spr)
+    }
+
+    /** Hält das Lauschen an und wartet abseits des Hauptfadens kurz, bis das Mikrofon wirklich frei ist. */
+    private suspend fun anhalten() {
+        val alt = anhaltenSofort() ?: return
+        if (alt.isAlive) withContext(Dispatchers.IO) { runCatching { alt.join(500) } }
+    }
+
+    /** Nur das Zeichen zum Aufhören, ohne Warten; liefert den laufenden Faden. */
+    private fun anhaltenSofort(): Thread? {
         lauf?.set(false)
         lauf = null
         val alt = faden
         faden = null
-        alt?.join(500)
+        return alt
     }
 
     @SuppressLint("MissingPermission") // geprüft in onStartCommand
@@ -187,6 +240,7 @@ class WeckwortDienst : Service() {
             check(aufnahme.state == AudioRecord.STATE_INITIALIZED) { "Mikrofon nicht verfügbar" }
             aufnahme.startRecording()
             Weckwort.hoertZu(true)
+            lauschFehler = 0
             erk.zuruecksetzen()
             phr?.zuruecksetzen()
             val art = if (phr != null) "phrase" else "jarvis"
@@ -201,6 +255,17 @@ class WeckwortDienst : Service() {
                 val n = TON_WERTE
                 return FloatArray(n) { i -> ring[(ringPos - n + i + RING_WERTE) % RING_WERTE] / 32768f }
             }
+            /** Ein früherer Block aus dem Ring: 1 = der Block vor dem gerade gelesenen. */
+            fun frueherBlock(zurueck: Int): ShortArray {
+                val start = ringPos - (zurueck + 1) * WeckwortErkenner.BLOCK
+                return ShortArray(WeckwortErkenner.BLOCK) { i -> ring[((start + i) % RING_WERTE + RING_WERTE) % RING_WERTE] }
+            }
+            // Lief das „Hey Jarvis“-Modell im letzten Block? Springt es wieder an, fängt es frisch an.
+            var lautLief = true
+            // Stille-Filter: Rauschboden (fällt sofort, steigt nur langsam) und Blöcke in Folge, die nicht darüber liegen.
+            var boden = -1f
+            var stilleBloecke = 0
+            var uebersprungen = 0
             while (an.get()) {
                 var gelesen = 0
                 while (gelesen < block.size && an.get()) {
@@ -210,13 +275,38 @@ class WeckwortDienst : Service() {
                 }
                 if (!an.get()) break
                 for (w in block) { ring[ringPos] = w; ringPos = (ringPos + 1) % RING_WERTE }
-                // „Hey Jarvis“-Modell läuft immer mit: Seine Merkmale braucht das Stimmprofil auch bei eigener Phrase.
-                val wert = erk.bewerte(block)
-                val merkmale = erk.letzteMerkmale
                 val anlernen = Stimmprofil.lerntAn
                 // Mit angelernter Stimmerkennung springt das Weckwort leichter an (auch aus fünf Metern); Fremde
                 // weist danach die Stimmerkennung ab. Beim Anlernen so leicht wie möglich.
                 val mitStimme = Stimmprofil.stimmeAktiv && spr != null
+                // „Hey Jarvis“-Modell: Seine Merkmale braucht das Stimmprofil auch bei eigener Phrase. Entscheidet bei
+                // eigener Phrase allein die Stimmerkennung, ruht es (spart rund um die Uhr Akku).
+                val brauchtLaut = phr == null || anlernen || !mitStimme
+                if (brauchtLaut && !lautLief) erk.zuruecksetzen()
+                lautLief = brauchtLaut
+                // In längerer Stille (über 4 s nichts über dem Rauschboden) ruhen die Modelle. Großzügig eingestellt:
+                // Auch leise Sprache aus fünf Metern liegt darüber. Der Ring läuft weiter.
+                val rms = lautstaerke(block)
+                boden = if (boden < 0f || rms < boden) rms else boden + (rms - boden) * BODEN_ANSTIEG
+                if (rms > maxOf(boden * STILLE_FAKTOR, STILLE_MIN)) stilleBloecke = 0 else stilleBloecke++
+                if (!anlernen && stilleBloecke > STILLE_BLOECKE) {
+                    uebersprungen++
+                    inFolge = 0
+                    // Den Hintergrund fürs Stimmprofil trotzdem ab und zu weiter pflegen.
+                    if (brauchtLaut && stilleBloecke % STILLE_BLOECKE == 0) erk.letzteMerkmale?.let { Stimmprofil.hintergrundLernen(it) }
+                    continue
+                }
+                if (uebersprungen > 0) {
+                    // Wortanfang nachholen: die zuletzt übersprungenen Blöcke vor diesem durch die Modelle schicken.
+                    for (k in minOf(uebersprungen, NACHHOLEN) downTo 1) {
+                        val frueher = frueherBlock(k)
+                        if (brauchtLaut) erk.bewerte(frueher)
+                        phr?.erkannt(frueher)
+                    }
+                    uebersprungen = 0
+                }
+                val wert = if (brauchtLaut) erk.bewerte(block) else 0f
+                val merkmale = if (brauchtLaut) erk.letzteMerkmale else null
                 if (phr != null) {
                     // Mit Stimmerkennung auch die Aussprache-Varianten (schnell, verschliffen, mit Akzent): Fremde fallen
                     // danach an der Stimme durch, Frank soll die Phrase sagen dürfen, wie sie ihm über die Lippen geht.
@@ -253,8 +343,15 @@ class WeckwortDienst : Service() {
                         bereich.launch { piepKurz(); if (fertig) { delay(150); piepKurz() } }
                     }
                     // Neu anfangen: Die nächste Probe soll ein neues „Hey Jarvis“ sein, nicht der Rest von diesem.
-                    erk.zuruecksetzen()
+                    // Bei eigener Phrase bleibt „Hey Jarvis“ stehen: Sein Fenster gleitet ohnehin, und ohne Anlauf
+                    // fehlen der nächsten Probe nicht 1,3 s lang die Lautmerkmale.
+                    if (phr == null) erk.zuruecksetzen()
                     phr?.zuruecksetzen()
+                    continue
+                }
+                // Phrase erkannt, aber die Lautmerkmale fehlen noch (Anlauf): Mit Profil nicht ungeprüft durchlassen.
+                if (phr != null && !mitStimme && Stimmprofil.aktiv && merkmale == null) {
+                    phr.zuruecksetzen()
                     continue
                 }
                 val pruefung = Stimmprofil.pruefe(merkmale)
@@ -266,20 +363,23 @@ class WeckwortDienst : Service() {
                     Log.i(TAG, "Weckwort ($art) abgewiesen, klingt nicht nach Frank (${"%.2f".format(wert)})")
                     WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "abgewiesen", stimme, mitStimme, phr?.letzterTreffer)
                     Weckwort.abgewiesen(modellwert ?: 1f)
-                    erk.zuruecksetzen()
+                    if (phr == null) erk.zuruecksetzen()
                     phr?.zuruecksetzen()
                     continue
                 }
                 Log.i(TAG, "Weckwort ($art) erkannt (${"%.2f".format(wert)})")
                 WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "gerufen", stimme, mitStimme, phr?.letzterTreffer)
                 Weckwort.erkannt(modellwert ?: 1f)
-                Weckwort.trefferMerkmale = merkmale
+                // Hat die Stimmerkennung Frank bestätigt, war es kein Fehlalarm, auch wenn danach nichts kommt: Dann
+                // gibt es keine Merkmale zum Lernen, sonst sperrt ein solcher Eintrag später Franks eigene Rufe aus.
+                Weckwort.trefferMerkmale = if (stimme?.ok == true) null else merkmale
                 an.set(false)
                 bereich.launch { rufen() }
                 break
             }
         } catch (fehler: Exception) {
             Log.w(TAG, "Lauschen unterbrochen", fehler)
+            if (lauschFehler++ % 100 == 0) Logbuch.fehler("Weckwort: Lauschen unterbrochen", fehler)
             // Nach einem Fehler (Mikrofon belegt, Lesefehler) nach einer Pause neu versuchen.
             if (an.get()) bereich.launch {
                 delay(3_000)
@@ -294,6 +394,13 @@ class WeckwortDienst : Service() {
         }
     }
 
+    /** Effektivwert eines Blocks in 16-Bit-Werten (für den Stille-Filter). */
+    private fun lautstaerke(block: ShortArray): Float {
+        var summe = 0.0
+        for (w in block) summe += w.toDouble() * w
+        return sqrt(summe / block.size).toFloat()
+    }
+
     /** Bestätigt beim Anlernen jede Probe mit einem Ton, laut genug für fünf Meter; am Ende zweimal. */
     private suspend fun piepKurz() {
         val ton = runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100) }.getOrNull() ?: return
@@ -305,37 +412,53 @@ class WeckwortDienst : Service() {
         }
     }
 
-    /** Nach „Hey Jarvis“: Mikrofon ist frei, kurz warten (das Audiosystem gibt es verzögert frei), dann Jarvis holen. */
+    /**
+     * Nach „Hey Jarvis“: Jarvis sofort holen. Die kurze Schutzpause fürs Audiosystem (es gibt das Mikrofon verzögert
+     * frei) wartet [Weckwort.mikrofonHolen] ab, sie läuft so parallel zum Start der App.
+     */
     private suspend fun rufen() {
         Weckwort.rufen()
         anhalten()
-        delay(300)
-        val absicht = Intent(this, MainActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            .putExtra(EXTRA_WECKWORT, true)
+        val absicht = rufAbsicht()
         val direkt = Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(this)
         if (direkt) {
-            runCatching { startActivity(absicht) }.onFailure { Log.w(TAG, "Jarvis ließ sich nicht öffnen", it) }
+            runCatching { startActivity(absicht) }.onFailure {
+                Log.w(TAG, "Jarvis ließ sich nicht öffnen", it)
+                Logbuch.fehler("Weckwort: Jarvis ließ sich nicht öffnen", it)
+                zumAntippen(absicht)
+            }
+        } else {
+            // Ohne die Erlaubnis bleibt der Ruf als Benachrichtigung; blockt Android still, übernimmt der Wächter.
+            zumAntippen(absicht)
         }
-        // Ohne die Erlaubnis (oder falls Android den Start trotzdem blockt) bleibt der Ruf als Benachrichtigung.
-        if (!direkt) zumAntippen(absicht)
     }
 
-    private fun zumAntippen(absicht: Intent) {
+    private fun rufAbsicht(): Intent = Intent(this, MainActivity::class.java)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        .putExtra(EXTRA_WECKWORT, true)
+
+    /** @param vollbild false für den Wächter: Die Meldung soll die womöglich schon startende App nicht erneut öffnen. */
+    private fun zumAntippen(absicht: Intent, vollbild: Boolean = true) {
         Weckwort.mikrofonFreigeben()
         val tippen = PendingIntent.getActivity(this, 31, absicht, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val darfDirekt = Build.VERSION.SDK_INT < 29 || Settings.canDrawOverlays(this)
+        val text = if (darfDirekt) "Tippen, um mit Jarvis zu sprechen."
+        else "Tippen, um mit Jarvis zu sprechen. Für den direkten Start in Jarvis „Über anderen Apps einblenden“ erlauben."
         val meldung = NotificationCompat.Builder(this, KANAL_RUF)
             .setSmallIcon(R.drawable.ic_stat_jarvis)
             .setContentTitle("Hey Jarvis")
-            .setContentText("Tippen, um mit Jarvis zu sprechen. Für den direkten Start in Jarvis „Über anderen Apps einblenden“ erlauben.")
+            .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setContentIntent(tippen)
-            .setFullScreenIntent(tippen, true)
+            .apply { if (vollbild) setFullScreenIntent(tippen, true) }
             .setAutoCancel(true)
             .setTimeoutAfter(60_000)
             .build()
-        runCatching { getSystemService(NotificationManager::class.java).notify(RUF_ID, meldung) }
+        val nm = getSystemService(NotificationManager::class.java)
+        runCatching { nm.notify(RUF_ID, meldung) }
+        // Übernimmt die App danach doch noch, verschwindet die dann falsche „Tippen“-Meldung.
+        Weckwort.rufMeldungGezeigt { runCatching { nm.cancel(RUF_ID) } }
     }
 
     private fun hinweis(): Notification {
@@ -353,14 +476,22 @@ class WeckwortDienst : Service() {
     }
 
     override fun onDestroy() {
-        anhalten()
+        anhaltenSofort()
         bereich.cancel()
-        runCatching { erkenner?.close() }
-        erkenner = null
-        runCatching { phrasenErkenner?.close() }
-        phrasenErkenner = null
-        runCatching { sprecherErkenner?.close() }
-        sprecherErkenner = null
+        // Modelle erst freigeben, wenn der letzte Durchgang zu Ende ist; darauf nicht auf dem Hauptfaden warten.
+        val alt = letzterFaden
+        letzterFaden = null
+        Thread({
+            runCatching { alt?.join(3_000) }
+            synchronized(modellSperre) {
+                runCatching { erkenner?.close() }
+                erkenner = null
+                runCatching { phrasenErkenner?.close() }
+                phrasenErkenner = null
+                runCatching { sprecherErkenner?.close() }
+                sprecherErkenner = null
+            }
+        }, "Weckwort-Ende").start()
         runCatching { if (wach?.isHeld == true) wach?.release() }
         Weckwort.hoertZu(false)
         Weckwort.aktivesWort(null)
@@ -375,6 +506,25 @@ class WeckwortDienst : Service() {
         private const val HINWEIS_ID = 4300
         private const val RUF_ID = 4301
         private const val BLOCKS_IN_FOLGE = 2
+        /**
+         * Stille-Filter: so viele Blöcke (je 80 ms, also 4 s) ohne Laut, dann ruhen die Modelle; beim Aufwachen so viele
+         * nachholen (rund 1 s). Der Ring hält 2,5 s; so fehlt den Modellen auch ein leiser Anlaut („Hey“) nicht, der
+         * deutlich vor der ersten lauten Silbe liegt.
+         */
+        private const val STILLE_BLOECKE = 50
+        private const val NACHHOLEN = 12
+        /**
+         * Laut ist ein Block etwa 2 dB über dem Rauschboden, mindestens aber über einem sehr niedrigen Pegel (16 Bit,
+         * etwa -65 dBFS): Ohne Verstärkung liegt leise Sprache aus mehreren Metern nur knapp darüber.
+         */
+        private const val STILLE_FAKTOR = 1.25f
+        private const val STILLE_MIN = 18f
+        /**
+         * So lange darf die App nach „Hey Jarvis“ zum Übernehmen brauchen, bevor der Wächter den Ruf als Meldung zeigt.
+         * Großzügig, weil ein Kaltstart bei gesperrtem Handy unter Last mehrere Sekunden dauern kann.
+         */
+        private const val WAECHTER_MS = 8_000L
+        private const val BODEN_ANSTIEG = 0.001f
         /** Ringpuffer 2,5 s; davon gehen die letzten 2,2 s (das Weckwort samt Rand) in den Stimm-Fingerabdruck. */
         private const val RING_WERTE = WeckwortErkenner.ABTASTRATE * 5 / 2
         private const val TON_WERTE = WeckwortErkenner.ABTASTRATE * 22 / 10

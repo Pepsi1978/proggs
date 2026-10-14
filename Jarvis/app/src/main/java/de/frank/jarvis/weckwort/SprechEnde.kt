@@ -25,7 +25,9 @@ class SprechEnde(
     private var boden: Float? = null
     var gesprochen = false
         private set
-    private var letzteSpracheMs = 0L
+    /** Wann (ms seit Start) zuletzt Sprache kam; für eine vorgezogene Mitschrift während der Nachdenkpause. */
+    var letzteSpracheMs = 0L
+        private set
 
     /** Ein neuer Pegelwert, [ms] seit dem Start der Aufnahme. */
     fun neu(pegel: Float, ms: Long): Lage {

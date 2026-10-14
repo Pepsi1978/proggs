@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,16 +22,36 @@ import de.frank.jarvis.auth.ReasoningEffort
 import de.frank.jarvis.data.Einstellungen
 import de.frank.jarvis.data.Protokoll
 import de.frank.jarvis.dienst.JarvisDienst
+import de.frank.jarvis.faehigkeit.Merkdatei
+import de.frank.jarvis.faehigkeit.Regel
 import de.frank.jarvis.faehigkeit.Register
+import de.frank.jarvis.observability.Logbuch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 enum class Reiter(val anzeige: String) { JARVIS("Jarvis"), ABLAGE("Ablage"), AKTIVITAET("Aktivität"), EINSTELLUNGEN("Einstellungen") }
 
-data class Nachricht(val vonMir: Boolean, val text: String)
+/**
+ * Eine Nachricht im Gespräch. [art]: „antwort“, „fehler“ (Fehlermeldung statt Antwort, geht nicht ans Modell) oder
+ * „abgebrochen“ (Franks Frage blieb unbeantwortet). [kontext] sieht nur das Modell, etwa was in der Runde erledigt wurde.
+ */
+data class Nachricht(val vonMir: Boolean, val text: String, val art: String = "antwort", val kontext: String = "")
+
+/** Ein Schritt für „Rückgängig“ in einer Merkliste: wie sich die eigene Änderung umkehren lässt, ohne fremde zu berühren. */
+private sealed class MerkSchritt {
+    class Angelegt(val regel: Regel) : MerkSchritt()
+    class Geaendert(val id: Int, val alterText: String, val neuerText: String) : MerkSchritt()
+    class Geloescht(val regel: Regel) : MerkSchritt()
+}
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     val einstellungen = Einstellungen.get(app)
@@ -47,6 +68,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Bis wann die Sperre nach einem bewusst gestarteten Teilen, Öffnen oder „Speichern unter“ wartet (sonst ginge das Ergebnis verloren). */
     var sperrAufschubBis = 0L
     var entsperrenAnfragen: () -> Unit = {}
+    /** Jarvis läuft per „Hey Jarvis“ über dem Sperrbildschirm; das Gespräch bleibt dabei verborgen. */
+    var ueberSperre = false
+    /** Beendet das Zeigen über der Sperre in der gerade lebenden Activity. */
+    var ueberSperreBeenden: () -> Unit = {}
 
     // ---- Sprache ----
     val sprache = de.frank.jarvis.data.settings.SecureSettings(app)
@@ -89,6 +114,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var hinweiseAnfragen: () -> Unit = {}
     var kalenderAnfragen: () -> Unit = {}
 
+    /** Die laufende Prüfung der angebundenen Apps und wann sie zuletzt lief (für die Drosselung bei onResume). */
+    private var lageJob: Job? = null
+    private var lageZuletzt = 0L
+
     init { lagePruefen() }
 
     // ---- Stimmprofil für „Hey Jarvis“ ----
@@ -105,7 +134,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         meldung = "Stimmprofil gelöscht. Jarvis reagiert wieder auf jede Stimme."
     }
 
-    fun lagePruefen() {
+    /**
+     * Prüft Anmeldung, Erlaubnisse und die angebundenen Apps. [sofort] = false (beim Zurückkehren in die App): Die Apps
+     * werden höchstens alle fünf Minuten gefragt, denn jede Frage weckt die Partner-App. Knöpfe und Erlaubnisse prüfen sofort.
+     */
+    fun lagePruefen(sofort: Boolean = true) {
         val app = getApplication<Application>()
         kiVerbunden = auth.isConnected
         kiKonto = auth.email.orEmpty()
@@ -113,17 +146,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         hinweiseAn = NotificationManagerCompat.from(app).areNotificationsEnabled()
         weckwortMikro = de.frank.jarvis.weckwort.WeckwortDienst.mikrofonErlaubt(app)
         ueberlagernErlaubt = android.os.Build.VERSION.SDK_INT < 29 || android.provider.Settings.canDrawOverlays(app)
-        viewModelScope.launch {
-            val lage = withContext(Dispatchers.IO) { Register.alle(app).associate { it.id to it.stoerung() } }
+        val jetzt = System.currentTimeMillis()
+        if (!sofort && (lageJob?.isActive == true || jetzt - lageZuletzt < LAGE_ABSTAND_MS)) return
+        lageZuletzt = jetzt
+        lageJob?.cancel()
+        lageJob = viewModelScope.launch {
+            // Alle Apps gleichzeitig fragen statt nacheinander: Die Wartezeit ist die der langsamsten, nicht die Summe.
+            val lage = withContext(Dispatchers.IO) {
+                coroutineScope { Register.alle(app).map { f -> async { f.id to f.stoerung() } }.awaitAll().toMap() }
+            }
             stoerungen = lage
             aufgabenStoerung = lage["aufgaben"]
             aufgabenGeprueft = true
+            Logbuch.dauer("Lage geprüft", System.currentTimeMillis() - jetzt, "${lage.count { it.value != null }} Störung(en)")
         }
     }
 
     // ---- Gespräch ----
 
     fun sende(eingabe: String) {
+        // Vorgelesen wird nur die Antwort auf genau diese gesprochene Frage. Endet sie vorzeitig (Abbruch, leer, nicht
+        // verbunden), darf die nächste getippte Antwort nicht laut werden.
+        val vorlesen = gesprochen
+        gesprochen = false
         val text = eingabe.trim()
         if (text.isEmpty() || denkt) return
         if (!kiVerbunden) {
@@ -131,26 +176,65 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             reiter = Reiter.EINSTELLUNGEN
             return
         }
-        // Bei langen, wieder aufgenommenen Gesprächen nur die letzten Wechsel mitschicken, sonst wächst jede Anfrage.
-        val verlauf = gespraech.takeLast(MAX_VERLAUF).map { ChatTurn(if (it.vonMir) "user" else "assistant", it.text) }
+        val verlauf = verlaufFuersModell()
         gespraech += Nachricht(true, text)
+        laufendeFrage = gespraech.size - 1
+        val erledigt = java.util.Collections.synchronizedList(mutableListOf<String>())
+        laufendErledigt = erledigt
         sitzungSichern()
         denkt = true
         schritt = ""
         lauf = viewModelScope.launch {
+            var art = "antwort"
             val antwort = try {
-                agent.frage(text, verlauf) { schritt = it }
+                agent.versuche(text, verlauf, beiSchritt = { schritt = it }, lernen = true, abschluss = true, beiAenderung = { erledigt += it })
+                    ?: (if (!agent.verbunden) JarvisAgent.NICHT_VERBUNDEN else agent.ersatzText()).also { art = "fehler" }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                Logbuch.fehler("Gespräch: Antwort", e)
+                art = "fehler"
                 e.message ?: "Das hat nicht geklappt."
             }
-            gespraech += Nachricht(false, antwort)
+            if (art == "fehler") {
+                // Fehlermeldungen gehen nicht ans Modell: Was in der Runde schon erledigt wurde, hängt deshalb an der Frage
+                // (wie bei einem Abbruch), sonst führte „versuch es nochmal“ alles ein zweites Mal aus. Der Index wird vor dem
+                // Anhängen geprüft, weil abbrechen oder neuesGespraech laufendeFrage schon zurückgesetzt haben können.
+                val i = laufendeFrage
+                val n = gespraech.getOrNull(i)
+                val notiz = erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", erledigt)
+                if (n != null && n.vonMir && i == gespraech.lastIndex && notiz.isNotEmpty()) gespraech[i] = n.copy(kontext = notiz)
+            }
+            gespraech += Nachricht(false, antwort, art, if (art == "fehler") "" else erledigtNotiz("Erledigt in dieser Antwort", erledigt))
+            laufendeFrage = -1
             sitzungSichern()
             denkt = false
             schritt = ""
-            if (gesprochen && einstellungen.antwortenVorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
-            gesprochen = false
+            if (vorlesen && einstellungen.antwortenVorlesen) vorleser.sprich("gespraech:" + (gespraech.size - 1), "Jarvis", antwort)
+        }
+    }
+
+    /** Die Frage, auf die gerade geantwortet wird (Stelle im Gespräch), und was in dieser Runde schon geändert wurde. */
+    private var laufendeFrage = -1
+    private var laufendErledigt: MutableList<String> = mutableListOf()
+
+    private fun erledigtNotiz(kopf: String, erledigt: List<String>): String =
+        synchronized(erledigt) { erledigt.toList() }.takeIf { it.isNotEmpty() }?.let { "($kopf: " + it.joinToString("; ") + ")" }.orEmpty()
+
+    /**
+     * Der Verlauf fürs Modell: Fehlermeldungen fallen weg (sie sind keine Antworten), unbeantwortete Fragen sind als solche
+     * markiert, und der unsichtbare Kontext (was erledigt wurde) geht mit. Gekürzt wird nach Zeichen im Agenten.
+     */
+    private fun verlaufFuersModell(): List<ChatTurn> {
+        val sicht = gespraech.takeLast(MAX_VERLAUF).filter { it.art != "fehler" }
+        return sicht.mapIndexed { i, n ->
+            val text = if (n.kontext.isEmpty()) n.text else n.text + "\n" + n.kontext
+            if (n.vonMir) {
+                val unbeantwortet = n.art == "abgebrochen" || i == sicht.lastIndex || sicht[i + 1].vonMir
+                ChatTurn("user", if (unbeantwortet) "$text\n(Diese Frage blieb unbeantwortet. Geh nur darauf ein, wenn Frank sich darauf bezieht.)" else text)
+            } else {
+                ChatTurn("assistant", text)
+            }
         }
     }
 
@@ -172,44 +256,85 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         /** Der in diesem Bildschirm zuletzt hinzugefügte Eintrag: nur er bekommt die KI-Korrektur. */
         var letzter by mutableStateOf<Int?>(null); private set
         var korrigiert by mutableStateOf(false); private set
-        /** Stände vor den letzten Änderungen, für „Rückgängig“. */
-        private val verlauf = mutableStateListOf<List<de.frank.jarvis.faehigkeit.Regel>>()
+        /** Die letzten eigenen Änderungen als Umkehr-Schritte für „Rückgängig“. Was Plugin oder Lernlauf inzwischen geändert haben, bleibt dabei stehen. */
+        private val verlauf = mutableStateListOf<MerkSchritt>()
         val rueckgaengigMoeglich: Boolean get() = verlauf.isNotEmpty()
+
+        init {
+            // Schreibt irgendwer eine Merkdatei (Plugin, Lernlauf, Jarvis im Gespräch), zeigt die Liste sofort den neuen Stand.
+            viewModelScope.launch {
+                Merkdatei.stand.collect {
+                    val neu = withContext(Dispatchers.IO) { datei.alle(getApplication()) }.sortedByDescending { it.id }
+                    eintraege = neu
+                    if (neu.none { it.id == letzter }) letzter = null
+                }
+            }
+        }
 
         fun laden() { eintraege = datei.alle(getApplication()).sortedByDescending { it.id } }
 
-        private fun aendere(aenderung: () -> Unit) {
-            verlauf += datei.alle(getApplication())
+        private fun merke(schritt: MerkSchritt) {
+            verlauf += schritt
             if (verlauf.size > 20) verlauf.removeAt(0)
-            aenderung()
-            laden()
         }
 
         fun neu(text: String) {
             if (text.isBlank()) return
-            aendere {
-                val eintrag = datei.speichere(getApplication(), text)
-                if (eintrag == null) meldung = "Die Datei ist voll. Lösche zuerst einen überholten Eintrag." else letzter = eintrag.id
+            val eintrag = datei.speichere(getApplication(), text)
+            if (eintrag == null) {
+                meldung = when {
+                    datei.defekt(getApplication()) != null -> "Die Datei ist beschädigt und wird nicht überschrieben (gesichert als .defekt). Details unter Aktivität."
+                    datei.voll(getApplication()) -> "Die Datei ist voll. Lösche zuerst einen überholten Eintrag."
+                    else -> "Der Eintrag wurde nicht gespeichert."
+                }
+                return
             }
+            letzter = eintrag.id
+            merke(MerkSchritt.Angelegt(eintrag))
+            laden()
         }
 
-        fun aendern(id: Int, text: String) {
-            if (text.isBlank()) { meldung = "Ein leerer Eintrag geht nicht. Zum Entfernen bitte löschen."; return }
-            aendere { datei.speichere(getApplication(), text, id) }
+        /**
+         * Speichert eine Bearbeitung nur, wenn der Eintrag noch [ursprung] lautet (der Text beim Öffnen des Editors).
+         * Hat ihn inzwischen jemand anders geändert, gewinnt die neuere Fassung und Frank bekommt Bescheid.
+         */
+        fun aendern(id: Int, text: String, ursprung: String? = null): Boolean {
+            if (text.isBlank()) { meldung = "Ein leerer Eintrag geht nicht. Zum Entfernen bitte löschen."; return false }
+            val alt = ursprung ?: eintraege.firstOrNull { it.id == id }?.text
+            val neu = alt?.let { datei.ersetzeWenn(getApplication(), id, it, text) }
+            if (alt == null || neu == null) {
+                laden()
+                meldung = if (eintraege.any { it.id == id }) "Der Eintrag wurde inzwischen geändert. Dein Entwurf ist noch da; nochmal Speichern überschreibt."
+                    else "Der Eintrag wurde inzwischen gelöscht. Du siehst jetzt den neuen Stand."
+                return false
+            }
+            if (neu.text != alt) merke(MerkSchritt.Geaendert(id, alt, neu.text))
+            laden()
+            return true
         }
 
         fun loeschen(id: Int) {
-            aendere { datei.loesche(getApplication(), id) }
+            val weg = datei.loesche(getApplication(), id)
+            if (weg == null) { laden(); meldung = "Diesen Eintrag gibt es schon nicht mehr."; return }
+            merke(MerkSchritt.Geloescht(weg))
             if (letzter == id) letzter = null
+            laden()
             meldung = "$wort gelöscht. „Rückgängig“ holt den Eintrag zurück."
         }
 
+        /** Nimmt die letzte eigene Änderung zurück, und nur sie: Einträge, die seither dazukamen, bleiben. */
         fun rueckgaengig() {
-            val vorher = verlauf.removeLastOrNull() ?: return
-            datei.setze(getApplication(), vorher)
+            val schritt = verlauf.removeLastOrNull() ?: return
+            val app = getApplication<Application>()
+            val geklappt = when (schritt) {
+                is MerkSchritt.Angelegt ->
+                    datei.alle(app).firstOrNull { it.id == schritt.regel.id }?.takeIf { it.text == schritt.regel.text }?.let { datei.loesche(app, it.id) } != null
+                is MerkSchritt.Geaendert -> datei.ersetzeWenn(app, schritt.id, schritt.neuerText, schritt.alterText) != null
+                is MerkSchritt.Geloescht -> datei.stelleWiederHer(app, schritt.regel) != null
+            }
             laden()
             if (eintraege.none { it.id == letzter }) letzter = null
-            meldung = "Letzte Änderung zurückgenommen."
+            meldung = if (geklappt) "Letzte Änderung zurückgenommen." else "Das ließ sich nicht zurücknehmen: Der Eintrag wurde inzwischen anderweitig geändert."
         }
 
         /** Formuliert den zuletzt hinzugefügten Eintrag um, und nur ihn. */
@@ -224,11 +349,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     when {
                         neu.length < 10 -> meldung = "Die KI-Korrektur hat nichts Brauchbares geliefert. Der Text bleibt, wie er ist."
                         neu == eintrag.text -> meldung = "Das ist schon klar formuliert."
-                        else -> { aendere { datei.speichere(getApplication(), neu, eintrag.id) }; meldung = "$wort neu formuliert." }
+                        else -> {
+                            // Nur schreiben, wenn der Eintrag noch der ist, den die KI gelesen hat: sonst wäre eine neuere Fassung weg.
+                            val ersetzt = datei.ersetzeWenn(getApplication(), eintrag.id, eintrag.text, neu)
+                            if (ersetzt == null) {
+                                meldung = "Der Eintrag wurde inzwischen geändert oder gelöscht. Die Korrektur ist verworfen."
+                            } else {
+                                merke(MerkSchritt.Geaendert(eintrag.id, eintrag.text, ersetzt.text))
+                                meldung = "$wort neu formuliert."
+                            }
+                            laden()
+                        }
                     }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    Logbuch.fehler("KI-Korrektur", e)
                     meldung = e.message ?: "Die KI-Korrektur hat nicht geklappt."
                 } finally {
                     korrigiert = false
@@ -259,7 +395,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun merkLaden() { regelListe.laden(); zielListe.laden(); infoListe.laden() }
     fun merkOeffnen(liste: Merkliste) { liste.laden(); merkOffen = liste }
-    fun merkSchliessen() { merkOffen = null }
+    fun merkSchliessen() {
+        // Läuft noch ein Diktat für diese Liste, geht das Gesprochene wie erwartet hinein und die Aufnahme endet.
+        if (nimmtAuf && diktatZiel != null) aufnahmeBeenden()
+        merkOffen = null
+    }
 
     /** Mikrofon im Vollbild einer Merkliste: Die Aufnahme wird als neuer Eintrag gespeichert, nicht an Jarvis geschickt. */
     fun merkMikrofonTippen(liste: Merkliste) {
@@ -273,6 +413,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Tipp auf den Mikrofon-Knopf: Aufnahme starten oder beenden und abschicken. */
     fun mikrofonTippen() {
+        // Der Knopf im Gespräch schickt immer an Jarvis, nie in eine geschlossene Merkliste.
+        if (merkOffen == null) diktatZiel = null
         when {
             schreibtMit || denkt -> Unit
             nimmtAuf -> aufnahmeBeenden()
@@ -386,14 +528,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (denkt) abbrechen()
         reiter = Reiter.JARVIS
         merkOffen = null
+        // Auch die Gedächtnis-Ansicht schließen: Sie verdeckt sonst Gespräch und Reiter-Leiste.
+        GedaechtnisAnsicht.offen = false
         diktatZiel = null
         vorleser.stopp()
+        // Activity oder ViewModel wurden inzwischen neu aufgebaut: das offene Gespräch der letzten zehn Minuten zurückholen.
+        if (gespraech.isEmpty() && sitzungId == null) offenesGespraechWiederherstellen()
         // Lange nichts mehr gesagt: „Hey Jarvis“ beginnt ein neues Gespräch. Sonst geht das offene weiter.
         if (gespraech.isNotEmpty() && System.currentTimeMillis() - letzteAktivitaet > NEUES_GESPRAECH_NACH_MS) neuesGespraech()
         val treffer = de.frank.jarvis.weckwort.Weckwort.trefferMerkmale
         de.frank.jarvis.weckwort.Weckwort.trefferMerkmale = null
         weckwortLauf?.cancel()
         weckwortLauf = viewModelScope.launch {
+            // Für das ganze Gespräch den Audiofokus halten: Andere Apps bleiben leise, bis Jarvis fertig ist.
+            de.frank.jarvis.speech.GespraechsFokus.halten(getApplication())
             try {
                 // Gesprächsmodus: Nach jeder vorgelesenen Antwort piept es wieder und Jarvis hört weiter zu, bis
                 // nach dem Piepton nichts mehr kommt. Das Mikrofon bleibt dabei für Jarvis reserviert, sonst
@@ -412,16 +560,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                         break
                     }
                     if (runde == 0) de.frank.jarvis.weckwort.WeckwortProtokoll.ausgang(getApplication(), "frage")
-                    // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist.
-                    while (schreibtMit || denkt) kotlinx.coroutines.delay(100)
-                    kotlinx.coroutines.delay(500)
-                    while (vorleser.stand.value.zustand != de.frank.jarvis.speech.VorleseZustand.AUS) kotlinx.coroutines.delay(200)
+                    // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist. Ohne feste Pausen:
+                    // Der Vorleser steht schon auf „lädt“, wenn „denkt“ endet (beides im selben Schritt).
+                    snapshotFlow { schreibtMit || denkt }.first { !it }
+                    vorleser.stand.first { it.zustand == de.frank.jarvis.speech.VorleseZustand.AUS }
                     // Keine neue Antwort (abgebrochen, nichts verstanden) oder Frank hat selbst übernommen: Schluss.
                     if (gespraech.count { !it.vonMir } <= antworten || nimmtAuf || holtMikro) break
                     kotlinx.coroutines.delay(300)
                     runde++
                 }
             } finally {
+                de.frank.jarvis.speech.GespraechsFokus.freigeben()
                 freihaendig = false
                 if (!nimmtAuf && !holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 fertig()
@@ -479,30 +628,46 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun aufnahmeBeenden(freigeben: Boolean = true) {
         nimmtAuf = false
         schreibtMit = true
-        val ziel = diktatZiel
+        // Ein Diktat geht nur in eine Merkliste, solange sie offen ist; sonst ist der Text eine Frage an Jarvis.
+        val ziel = diktatZiel?.takeIf { merkOffen != null }
         diktatZiel = null
         viewModelScope.launch {
             try {
                 val wav = mikro.stop()
                 if (freigeben && weckwortLauf?.isActive != true) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
                 if (wav == null || wav.size < 2000) { meldung = "Die Aufnahme war zu kurz."; return@launch }
-                val groq = de.frank.jarvis.audio.GroqTranscriber(
-                    apiKey = sprache.groqApiKey,
-                    filterStille = sprache.filterStilleVorabAn, filterMetriken = sprache.filterSegmentmetrikenAn,
-                    filterZeitstempel = sprache.filterZeitstempelAn, filterFloskeln = sprache.filterFloskelnAn,
-                )
-                val text = try { withContext(Dispatchers.IO) { de.frank.jarvis.audio.Diktat(groq).transkribiere(wav).text.trim() } } finally { groq.shutdown() }
+                val beginn = System.currentTimeMillis()
+                val groq = transkribierer()
+                val text = withContext(Dispatchers.IO) { de.frank.jarvis.audio.Diktat(groq).transkribiere(wav).text.trim() }
+                Logbuch.sprache("Mitschrift", "${wav.size / 1024} KB Aufnahme, ${text.length} Zeichen", System.currentTimeMillis() - beginn)
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."
                 else if (ziel != null) ziel(text)
                 else { schreibtMit = false; gesprochen = true; sende(text) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                Logbuch.fehler("Mitschrift", e)
                 meldung = e.message ?: "Die Aufnahme konnte nicht in Text umgewandelt werden."
             } finally {
                 schreibtMit = false
             }
         }
+    }
+
+    /** Ein Groq-Client für alle Aufnahmen: Die Verbindung bleibt offen, statt bei jeder Frage neu aufgebaut zu werden. */
+    private var groq: de.frank.jarvis.audio.GroqTranscriber? = null
+    private var groqStand = 0
+
+    /** Der Transkribierer zu den aktuellen Einstellungen; neu gebaut nur, wenn sich Schlüssel oder Filter geändert haben. */
+    private fun transkribierer(): de.frank.jarvis.audio.GroqTranscriber {
+        val stand = listOf(sprache.groqApiKey, sprache.filterStilleVorabAn, sprache.filterSegmentmetrikenAn, sprache.filterZeitstempelAn, sprache.filterFloskelnAn).hashCode()
+        groq?.takeIf { groqStand == stand }?.let { return it }
+        groq?.shutdown()
+        return de.frank.jarvis.audio.GroqTranscriber(
+            apiKey = sprache.groqApiKey,
+            filterStille = sprache.filterStilleVorabAn, filterMetriken = sprache.filterSegmentmetrikenAn,
+            filterZeitstempel = sprache.filterZeitstempelAn, filterFloskeln = sprache.filterFloskelnAn,
+        ).also { groq = it; groqStand = stand }
     }
 
     /** Lautsprecher-Knopf: vorlesen, oder anhalten, wenn genau das schon läuft. */
@@ -514,14 +679,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         if (nimmtAuf || holtMikro) de.frank.jarvis.weckwort.Weckwort.mikrofonFreigeben()
         mikro.release()
+        groq?.shutdown()
         super.onCleared()
     }
 
     fun abbrechen() {
+        // Läuft noch eine Frage, bleibt sie als unbeantwortet im Verlauf, samt dem, was in dieser Runde schon erledigt war.
+        if (denkt) frageAbgebrochen()
         lauf?.cancel()
         auth.cancelChat()
         denkt = false
         schritt = ""
+    }
+
+    /** Markiert die laufende Frage als abgebrochen, sofort und auf dem Hauptfaden (danach kann schon ein neues Gespräch beginnen). */
+    private fun frageAbgebrochen() {
+        val i = laufendeFrage
+        laufendeFrage = -1
+        val n = gespraech.getOrNull(i) ?: return
+        if (!n.vonMir || i != gespraech.lastIndex) return
+        gespraech[i] = n.copy(art = "abgebrochen", kontext = erledigtNotiz("Bereits erledigt, bevor die Runde abbrach", laufendErledigt))
+        sitzungSichern()
     }
 
     // ---- Gespeicherte Gespräche (Seitenleiste) ----
@@ -533,25 +711,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var letzteAktivitaet = 0L
     var sitzungen by mutableStateOf<List<de.frank.jarvis.data.Sitzung>>(emptyList()); private set
 
+    /** Speichern, Umbenennen, Löschen und Neueinlesen der Gespräche der Reihe nach: Kein älterer Stand überholt einen neueren. */
+    private val sicherung = Mutex()
+
     init {
         sitzungenLaden()
-        de.frank.jarvis.weckwort.Stimmprofil.laden(app)
+        // Das Stimmprofil braucht erst „Hey Jarvis“ (und der Weckwort-Dienst lädt es selbst): nicht den ersten Frame aufhalten.
+        viewModelScope.launch(Dispatchers.IO) { de.frank.jarvis.weckwort.Stimmprofil.laden(app) }
     }
 
     fun sitzungenLaden() {
-        viewModelScope.launch { sitzungen = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.alle(getApplication()) } }
+        viewModelScope.launch { sitzungen = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.alle(getApplication()) } } }
     }
 
     private fun sitzungSichern() {
         letzteAktivitaet = System.currentTimeMillis()
         val id = sitzungId ?: de.frank.jarvis.data.Gespraeche.neueId().also { sitzungId = it; sitzungErstellt = System.currentTimeMillis() }
         val erstellt = sitzungErstellt
-        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text) }
+        val stand = gespraech.map { de.frank.jarvis.data.GespeicherteNachricht(it.vonMir, it.text, it.art, it.kontext) }
+        offenesGespraechMerken(id, letzteAktivitaet)
         viewModelScope.launch {
-            sitzungen = withContext(Dispatchers.IO) {
-                de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand)
-                de.frank.jarvis.data.Gespraeche.alle(getApplication())
-            }
+            // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
+            val neu = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand) } }
+            if (neu != null) sitzungen = listOf(neu) + sitzungen.filter { it.id != neu.id }
+            // Das Gespräch gehört sofort ins Kurzzeitgedächtnis (für das nächste Gespräch und für ChatGPT).
+            de.frank.jarvis.gedaechtnis.Lagebild.anstossen(getApplication(), listOf(de.frank.jarvis.gedaechtnis.Bereich.GESPRAECHE), "Gespräch mit Jarvis")
         }
     }
 
@@ -561,6 +745,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         gespraech.clear()
         sitzungId = null
         sitzungErstellt = 0L
+        offenesGespraechVergessen()
+    }
+
+    // Das offene Gespräch überlebt den Neuaufbau von Activity und ViewModel (Wischen aus „Zuletzt verwendet“, Prozessende):
+    // „Hey Jarvis“ führt es zehn Minuten lang weiter, wie im laufenden Betrieb.
+    private fun offenePrefs() = getApplication<Application>().getSharedPreferences("jarvis_offenes_gespraech", Context.MODE_PRIVATE)
+
+    private fun offenesGespraechMerken(id: String, zeit: Long) {
+        offenePrefs().edit().putString("id", id).putLong("zeit", zeit).apply()
+    }
+
+    private fun offenesGespraechVergessen() {
+        offenePrefs().edit().clear().apply()
+    }
+
+    /** Holt das zuletzt geführte Gespräch zurück, wenn es jünger als [NEUES_GESPRAECH_NACH_MS] ist. Klein, deshalb direkt. */
+    private fun offenesGespraechWiederherstellen() {
+        val p = offenePrefs()
+        val id = p.getString("id", null) ?: return
+        val zeit = p.getLong("zeit", 0L)
+        if (System.currentTimeMillis() - zeit > NEUES_GESPRAECH_NACH_MS) return
+        val geladen = de.frank.jarvis.data.Gespraeche.laden(getApplication(), id) ?: return
+        gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
+        sitzungId = id
+        sitzungErstellt = geladen.first.erstellt
+        // Der gespeicherte Zeitpunkt, nicht jetzt: Die Zehn-Minuten-Regel rechnet von der letzten echten Nachricht.
+        letzteAktivitaet = zeit
+        Logbuch.gedaechtnis("Offenes Gespräch fortgesetzt", "${gespraech.size} Nachrichten")
     }
 
     /** Ein altes Gespräch öffnen und dort weitermachen. */
@@ -572,20 +784,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             abbrechen()
             vorleser.stopp()
             gespraech.clear()
-            gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text) })
+            gespraech.addAll(geladen.second.map { Nachricht(it.vonMir, it.text, it.art, it.kontext) })
             sitzungId = id
             sitzungErstellt = geladen.first.erstellt
             // Wer ein altes Gespräch öffnet, will dort weitersprechen, auch mit „Hey Jarvis“.
             letzteAktivitaet = System.currentTimeMillis()
+            offenesGespraechMerken(id, letzteAktivitaet)
         }
     }
 
     fun sitzungUmbenennen(id: String, titel: String) {
         if (titel.isBlank()) return
         viewModelScope.launch {
-            sitzungen = withContext(Dispatchers.IO) {
-                de.frank.jarvis.data.Gespraeche.umbenennen(getApplication(), id, titel)
-                de.frank.jarvis.data.Gespraeche.alle(getApplication())
+            sitzungen = sicherung.withLock {
+                withContext(Dispatchers.IO) {
+                    de.frank.jarvis.data.Gespraeche.umbenennen(getApplication(), id, titel)
+                    de.frank.jarvis.data.Gespraeche.alle(getApplication())
+                }
             }
         }
     }
@@ -593,9 +808,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun sitzungLoeschen(id: String) {
         if (id == sitzungId) neuesGespraech()
         viewModelScope.launch {
-            sitzungen = withContext(Dispatchers.IO) {
-                de.frank.jarvis.data.Gespraeche.loeschen(getApplication(), id)
-                de.frank.jarvis.data.Gespraeche.alle(getApplication())
+            sitzungen = sicherung.withLock {
+                withContext(Dispatchers.IO) {
+                    de.frank.jarvis.data.Gespraeche.loeschen(getApplication(), id)
+                    de.frank.jarvis.data.Gespraeche.alle(getApplication())
+                }
             }
             meldung = "Gespräch gelöscht."
         }
@@ -770,7 +987,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         fahrzeitLaeuft = true
         viewModelScope.launch {
             val werkzeug = Register.werkzeuge(getApplication()).firstOrNull { it.name == "fahrzeit_lesen" }
-            fahrzeitText = runCatching { werkzeug?.ausfuehren(org.json.JSONObject().put("ziel", ziel.trim()))?.text }.getOrNull()?.substringBefore("\nLosfahr-Meldung:") ?: "Die Fahrzeit ließ sich nicht abrufen."
+            fahrzeitText = withContext(Dispatchers.IO) { runCatching { werkzeug?.ausfuehren(org.json.JSONObject().put("ziel", ziel.trim()))?.text }.getOrNull() }
+                ?.substringBefore("\nLosfahr-Meldung:") ?: "Die Fahrzeit ließ sich nicht abrufen."
             fahrzeitLaeuft = false
             abfahrtLaden()
         }
@@ -802,8 +1020,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 /** So lange nach der letzten Nachricht führt „Hey Jarvis“ das offene Gespräch weiter, danach beginnt ein neues. */
 private const val NEUES_GESPRAECH_NACH_MS = 10 * 60_000L
 
-/** Höchstens so viele frühere Nachrichten gehen als Verlauf an das Modell. */
+/** Höchstens so viele frühere Nachrichten gehen als Verlauf an das Modell (der Agent kürzt zusätzlich nach Zeichen). */
 private const val MAX_VERLAUF = 40
+
+/** So oft höchstens fragt das Zurückkehren in die App die angebundenen Apps ab. */
+private const val LAGE_ABSTAND_MS = 5 * 60_000L
 
 /** Auftrag an das Modell für die KI-Korrektur einer einzelnen Regel. */
 private const val REGEL_KORREKTUR =

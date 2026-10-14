@@ -18,6 +18,7 @@ import de.frank.jarvis.data.settings.SecureSettings
 import de.frank.jarvis.dienst.JarvisDienst
 import de.frank.jarvis.faehigkeit.KalenderFaehigkeit
 import de.frank.jarvis.faehigkeit.Register
+import de.frank.jarvis.observability.Logbuch
 import de.frank.jarvis.speech.Vorleser
 import java.time.Duration
 import java.time.Instant
@@ -53,6 +54,8 @@ object Abfahrt {
     private const val TAG = "JarvisAbfahrt"
     const val AKTION = "de.frank.jarvis.ABFAHRT"
     const val AKTION_STILL = "de.frank.jarvis.ABFAHRT_STILL"
+    /** Der Tag des Dienstes, zu dem die Meldung gehört (für „Heute still“). */
+    const val EXTRA_TAG = "tag"
     private const val KANAL = "jarvis_abfahrt"
     private const val HINWEIS_ID = 4200
     /** So lange vor der gewünschten Ankunft beginnt Jarvis zu rechnen (Minuten). */
@@ -173,6 +176,7 @@ object Abfahrt {
             ergebnis.onFailure { fehler ->
                 z.fehler = fehler.message ?: "Fahrzeit nicht abrufbar."
                 Log.w(TAG, "Prüfung fehlgeschlagen: ${z.fehler}")
+                Logbuch.fehler("Abfahrt-Prüfung", fehler, "Dienst ${f.tag}")
                 when {
                     z.gemeldet -> z.erledigt = true
                     // Kein frischer Stand, aber ein früherer: lieber mit dem melden als gar nicht.
@@ -184,7 +188,7 @@ object Abfahrt {
                     }
                     geplant == null && jetzt.isAfter(f.ankunft.minusMinutes(80)) -> {
                         sende(app, "Fahrzeit nicht abrufbar", "Ich konnte die Fahrzeit zur Arbeit nicht abrufen: ${z.fehler} Plane die Abfahrt bitte selbst, Ankunft soll ${f.ankunft.format(UHR)} Uhr sein.",
-                            "Frank, ich konnte die Fahrzeit zur Arbeit nicht abrufen. Plane die Abfahrt bitte selbst.")
+                            "Frank, ich konnte die Fahrzeit zur Arbeit nicht abrufen. Plane die Abfahrt bitte selbst.", tag = f.tag)
                         z.erledigt = true
                     }
                 }
@@ -200,7 +204,7 @@ object Abfahrt {
                         if (route.sekunden - z.gemeldetSekunden > 5 * 60) {
                             val an = jetzt.plusSeconds(route.sekunden.toLong())
                             sende(app, "Fahrzeit länger geworden", "Jetzt ${route.minuten} Minuten (+${(route.sekunden - z.gemeldetSekunden) / 60}). Fahre sofort los, Ankunft etwa ${an.format(UHR)} Uhr.",
-                                "Achtung Frank, die Fahrzeit ist auf ${route.minuten} Minuten gestiegen. Fahre jetzt los, dann bist du um ${gesprochen(an)} da.", navigation = true)
+                                "Achtung Frank, die Fahrzeit ist auf ${route.minuten} Minuten gestiegen. Fahre jetzt los, dann bist du um ${gesprochen(an)} da.", navigation = true, tag = f.tag)
                         }
                         z.erledigt = true
                     }
@@ -224,10 +228,21 @@ object Abfahrt {
         }
     }
 
-    /** „Heute still“ aus der Benachrichtigung: Vorlesen beenden, für diesen Dienst nichts mehr melden. */
-    fun still(context: Context) {
+    /**
+     * „Heute still“ aus der Benachrichtigung: Vorlesen beenden, für genau den Dienst dieser Meldung nichts mehr melden.
+     * [tagText] kommt aus der Meldung; ohne ihn gilt der Tag der laufenden Planung, nie der nächste Dienst
+     * (der heutige ist nach „Jetzt losfahren“ schon erledigt, sonst träfe es den Dienst von morgen).
+     */
+    fun still(context: Context, tagText: String? = null) {
         val app = context.applicationContext
-        naechste(app)?.let { f -> zustand(app, f.tag).also { it.erledigt = true; sichere(app, it) } }
+        val gespeicherterTag = runCatching { JSONObject(Einstellungen.get(app).abfahrtZustand).optString("tag") }.getOrNull()
+            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val tag = tagText?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: gespeicherterTag
+        // Nie einen frischen Zustand über die Planung eines späteren Tages schreiben: Eine alte Meldung von gestern
+        // darf die laufende Planung von heute nicht löschen. Dann nur Meldung schließen und Vorlesen beenden.
+        tag?.takeIf { t -> gespeicherterTag == null || !gespeicherterTag.isAfter(t) }
+            ?.let { t -> zustand(app, t).also { it.erledigt = true; sichere(app, it) } }
+        Logbuch.aktion("Abfahrt heute still", "Dienst ${tag ?: "unbekannt"}")
         app.getSystemService(NotificationManager::class.java).cancel(HINWEIS_ID)
         runCatching { Vorleser.aktuell()?.stopp() }
         stelle(app)
@@ -243,6 +258,7 @@ object Abfahrt {
                 "Fahre um ${abfahrt.format(UHR)} Uhr los, damit du um ${f.ankunft.format(UHR)} Uhr auf Arbeit bist. Fahrzeit ${route.minuten} Minuten$stand. Jetzt ist es ${jetzt.format(UHR)} Uhr.",
                 "Frank, fahre in $wann los, um ${gesprochen(abfahrt)}, damit du um ${gesprochen(f.ankunft)} auf Arbeit bist. Die Fahrt dauert heute ${route.minuten} Minuten. Jetzt ist es ${gesprochen(jetzt)}.",
                 navigation = true,
+                tag = f.tag,
             )
         } else {
             val an = jetzt.plusSeconds(route.sekunden.toLong())
@@ -252,6 +268,7 @@ object Abfahrt {
                 "Die Fahrt dauert ${route.minuten} Minuten$stand. " + (if (spaet > 0) "Ankunft frühestens ${an.format(UHR)} Uhr, das sind $spaet Minuten nach ${f.ankunft.format(UHR)} Uhr." else "Ankunft etwa ${an.format(UHR)} Uhr.") + " Jetzt ist es ${jetzt.format(UHR)} Uhr.",
                 "Frank, fahre jetzt sofort los. Die Fahrt dauert ${route.minuten} Minuten, " + (if (spaet > 0) "Ankunft frühestens ${gesprochen(an)}, das sind $spaet Minuten zu spät." else "du bist um ${gesprochen(an)} da."),
                 navigation = true,
+                tag = f.tag,
             )
         }
     }
@@ -270,7 +287,7 @@ object Abfahrt {
     /** Uhrzeit so, wie eine Stimme sie natürlich spricht: „16 Uhr 10“, „17 Uhr“. */
     private fun gesprochen(t: ZonedDateTime): String = if (t.minute == 0) "${t.hour} Uhr" else "${t.hour} Uhr ${t.minute}"
 
-    private fun sende(context: Context, titel: String, text: String, sprechtext: String, navigation: Boolean = false) {
+    private fun sende(context: Context, titel: String, text: String, sprechtext: String, navigation: Boolean = false, tag: LocalDate? = null) {
         val e = Einstellungen.get(context)
         val meldungen = context.getSystemService(NotificationManager::class.java)
         // Wichtigkeit hoch von Anfang an: Sie lässt sich später nicht mehr anheben.
@@ -282,7 +299,7 @@ object Abfahrt {
         if (navigation) {
             val ziel = Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=" + Uri.encode(e.adresseArbeit) + "&mode=d")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             bauer.addAction(R.drawable.ic_stat_jarvis, "Navigation starten", PendingIntent.getActivity(context, 81, ziel, unveraenderlich))
-            bauer.addAction(R.drawable.ic_stat_jarvis, "Heute still", PendingIntent.getBroadcast(context, 82, Intent(context, AbfahrtEmpfaenger::class.java).setAction(AKTION_STILL), unveraenderlich))
+            bauer.addAction(R.drawable.ic_stat_jarvis, "Heute still", PendingIntent.getBroadcast(context, 82, Intent(context, AbfahrtEmpfaenger::class.java).setAction(AKTION_STILL).apply { tag?.let { putExtra(EXTRA_TAG, it.toString()) } }, unveraenderlich))
         }
         runCatching { meldungen.notify(HINWEIS_ID, bauer.build()) }.onFailure { Log.w(TAG, "Benachrichtigung nicht möglich", it) }
         if (e.abfahrtVorlesen) {
@@ -348,7 +365,7 @@ class AbfahrtEmpfaenger : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Abfahrt.AKTION -> JarvisDienst.abfahrtPruefen(context)
-            Abfahrt.AKTION_STILL -> Abfahrt.still(context)
+            Abfahrt.AKTION_STILL -> Abfahrt.still(context, intent.getStringExtra(Abfahrt.EXTRA_TAG))
         }
     }
 }
