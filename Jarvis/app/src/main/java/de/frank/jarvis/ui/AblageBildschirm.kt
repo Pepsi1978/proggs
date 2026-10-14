@@ -237,20 +237,19 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             }
             var sortMenue by remember { mutableStateOf(false) }
             Box {
-                Rundknopf(Icons.AutoMirrored.Rounded.Sort, "Sortieren: " + Sortierung.valueOf(sortierung).anzeige) { sortMenue = true }
+                Rundknopf(Icons.AutoMirrored.Rounded.Sort, "Sortieren: " + Sortierung.valueOf(sortierung).anzeige, farbe = f.primaer) { sortMenue = true }
                 Menue(sortMenue, { sortMenue = false }) {
                     Sortierung.entries.forEach { s ->
-                        DropdownMenuItem({ Text(s.anzeige, fontWeight = if (s.name == sortierung) FontWeight.Bold else FontWeight.Normal) }, { sortierung = s.name; sortMenue = false })
+                        WahlPunkt(s.anzeige, s.name == sortierung) { sortierung = s.name; sortMenue = false }
                     }
                 }
             }
             var ansichtMenue by remember { mutableStateOf(false) }
             Box {
-                Rundknopf(ansichtSymbol(ansicht), "Ansicht: " + ansicht.anzeige) { ansichtMenue = true }
+                Rundknopf(ansichtSymbol(ansicht), "Ansicht: " + ansicht.anzeige, farbe = f.primaer) { ansichtMenue = true }
                 Menue(ansichtMenue, { ansichtMenue = false }) {
                     Ansicht.entries.forEach { a ->
-                        DropdownMenuItem({ Text(a.anzeige, fontWeight = if (a == ansicht) FontWeight.Bold else FontWeight.Normal) }, { vm.einstellungen.ablageAnsicht = a.name.lowercase(); ansichtMenue = false },
-                            leadingIcon = { Icon(ansichtSymbol(a), null) })
+                        WahlPunkt(a.anzeige, a == ansicht, ansichtSymbol(a)) { vm.einstellungen.ablageAnsicht = a.name.lowercase(); ansichtMenue = false }
                     }
                 }
             }
@@ -555,8 +554,9 @@ private fun BestaetigeLoeschen(frage: String, ja: () -> Unit, nein: () -> Unit) 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = nein,
         confirmButton = { androidx.compose.material3.TextButton(ja) { Text("Endgültig löschen", color = LocalFarben.current.gefahr) } },
-        dismissButton = { androidx.compose.material3.TextButton(nein) { Text("Behalten") } },
-        text = { Text(frage) },
+        dismissButton = { androidx.compose.material3.TextButton(nein) { Text("Behalten", color = LocalFarben.current.primaer) } },
+        text = { Text(frage, color = LocalFarben.current.text) },
+        containerColor = menueFlaeche(LocalFarben.current),
     )
 }
 
@@ -589,13 +589,31 @@ private fun kategorieSymbol(k: Kategorie): ImageVector = when (k) {
     Kategorie.SONSTIGE -> Icons.Rounded.InsertDriveFile
 }
 
-/** Aufklappmenü in den Farben der App (helle bzw. blaue Glasfläche mit Rand) statt der dunklen Standardfläche. */
+/** Fläche für Menüs und Meldungen im aktiven Design: der Hintergrund, leicht in der Hauptfarbe getönt (Blau oder Gold). */
+fun menueFlaeche(f: de.frank.jarvis.ui.theme.Farben): androidx.compose.ui.graphics.Color =
+    if (f.dunkel) androidx.compose.ui.graphics.lerp(f.hgUnten, f.primaer, 0.14f) else androidx.compose.ui.graphics.lerp(androidx.compose.ui.graphics.Color.White, f.primaer, 0.025f)
+
+/** Aufklappmenü in den Farben des aktiven Designs (Fläche, Schrift, Symbole, Rand) statt der Standardfarben. */
 @Composable
 fun Menue(offen: Boolean, schliessen: () -> Unit, inhalt: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     val f = LocalFarben.current
-    androidx.compose.material3.DropdownMenu(
-        offen, schliessen, shape = RoundedCornerShape(f.radius), containerColor = if (f.dunkel) androidx.compose.ui.graphics.Color(0xFF14294A) else androidx.compose.ui.graphics.Color(0xFFFAFDFF),
-        tonalElevation = 0.dp, shadowElevation = 10.dp, border = androidx.compose.foundation.BorderStroke(1.dp, f.rand), content = inhalt,
+    val schema = androidx.compose.material3.MaterialTheme.colorScheme.copy(onSurface = f.text, onSurfaceVariant = f.primaer)
+    androidx.compose.material3.MaterialTheme(colorScheme = schema) {
+        androidx.compose.material3.DropdownMenu(
+            offen, schliessen, shape = RoundedCornerShape(f.radius), containerColor = menueFlaeche(f),
+            tonalElevation = 0.dp, shadowElevation = 10.dp, border = androidx.compose.foundation.BorderStroke(1.dp, f.rand), content = inhalt,
+        )
+    }
+}
+
+/** Menüpunkt einer Auswahl (Ansicht, Sortierung): der gewählte steht fett in der Hauptfarbe des Designs mit Haken. */
+@Composable
+private fun WahlPunkt(text: String, gewaehlt: Boolean, icon: ImageVector? = null, aktion: () -> Unit) {
+    val f = LocalFarben.current
+    DropdownMenuItem(
+        { Text(text, color = if (gewaehlt) f.primaer else f.text, fontWeight = if (gewaehlt) FontWeight.Bold else FontWeight.Normal) }, aktion,
+        leadingIcon = icon?.let { { Icon(it, null, tint = if (gewaehlt) f.primaer else f.textLeise) } },
+        trailingIcon = if (gewaehlt) { { Icon(Icons.Rounded.CheckCircle, null, tint = f.primaer, modifier = Modifier.size(18.dp)) } } else null,
     )
 }
 

@@ -197,7 +197,7 @@ private fun Meldung(vm: AppViewModel, modifier: Modifier) {
     AnimatedVisibility(text != null, modifier, enter = slideInVertically { -it } + fadeIn(), exit = slideOutVertically { -it } + fadeOut()) {
         Text(
             text.orEmpty(),
-            Modifier.padding(top = 10.dp, start = 24.dp, end = 24.dp).glas(f, 18.dp, erhoeht = 1.4f, fuellung = if (f.dunkel) Color(0xF2162538) else Color(0xF7FFFFFF)).padding(horizontal = 18.dp, vertical = 12.dp),
+            Modifier.padding(top = 10.dp, start = 24.dp, end = 24.dp).glas(f, 18.dp, erhoeht = 1.4f, fuellung = menueFlaeche(f).copy(alpha = 0.96f)).padding(horizontal = 18.dp, vertical = 12.dp),
             color = f.text, fontSize = 14.sp, fontWeight = FontWeight.Medium,
         )
     }
