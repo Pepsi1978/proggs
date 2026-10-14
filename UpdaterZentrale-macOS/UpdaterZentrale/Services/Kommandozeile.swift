@@ -62,8 +62,12 @@ enum Kommandozeile {
         // JAVA_HOME wegraeumen -- sdkmanager bricht dann mit "JAVA_HOME is set to an invalid
         // directory" ab, bis die App neu gestartet wird. Ein ungueltiger Wert wird deshalb durch das
         // Homebrew-JDK ersetzt (stabiler opt-Pfad) oder entfernt; ein gueltiger bleibt unangetastet.
-        if let javaHome = umwelt["JAVA_HOME"], !javaHome.istLeer,
-           !FileManager.default.fileExists(atPath: (javaHome as NSString).appendingPathComponent("bin/java")) {
+        // FEHLT JAVA_HOME ganz (App aus dem Finder gestartet, erbt die Shell-Variable nicht), gilt
+        // dasselbe: das Homebrew-JDK ist nicht systemweit registriert, `/usr/libexec/java_home`
+        // findet nichts, und sdkmanager endet mit Code 1 ("Unable to locate a Java Runtime").
+        let javaHome = umwelt["JAVA_HOME"] ?? ""
+        if javaHome.istLeer
+            || !FileManager.default.fileExists(atPath: (javaHome as NSString).appendingPathComponent("bin/java")) {
             let ersatz = "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
             if FileManager.default.fileExists(atPath: (ersatz as NSString).appendingPathComponent("bin/java")) {
                 umwelt["JAVA_HOME"] = ersatz
