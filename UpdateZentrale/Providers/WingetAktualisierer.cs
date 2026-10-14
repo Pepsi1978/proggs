@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using UpdateZentrale.Models;
 using UpdateZentrale.Services;
 
@@ -18,8 +18,22 @@ public sealed class WingetAktualisierer : IAktualisierer
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "winget wurde nicht gefunden.");
 
         var lauf = await ListeAsync(eintrag, protokoll, abbruch);
-        return ListeAuswerten(lauf, eintrag.WingetId ?? "");
+        return ListeAuswerten(lauf, eintrag.WingetId ?? "", HierVorhanden(eintrag));
     }
+
+    /// <summary>
+    /// How winget is told which package: by id, or -- for packages winget only correlates by
+    /// display name -- by name. See <see cref="ProgrammEintrag.WingetName"/>.
+    /// </summary>
+    internal static string Auswahl(ProgrammEintrag eintrag)
+        => string.IsNullOrWhiteSpace(eintrag.WingetName)
+            ? $"--id {eintrag.WingetId} --exact"
+            : $"--name \"{eintrag.WingetName.Trim()}\"";
+
+    /// <summary>Something on this machine says the program is there, whatever winget answers.</summary>
+    private static bool HierVorhanden(ProgrammEintrag eintrag)
+        => eintrag.IstPaketApp || (!string.IsNullOrWhiteSpace(eintrag.ExePfadWirksam)
+                                   && File.Exists(Pfade.Aufloesen(eintrag.ExePfadWirksam)));
 
     /// <summary>
     /// winget keeps one lock on its sources; several runs at once only queue up inside it and
@@ -38,7 +52,7 @@ public sealed class WingetAktualisierer : IAktualisierer
     /// </summary>
     private static async Task<BefehlErgebnis> ListeAsync(ProgrammEintrag eintrag, IProgress<string>? protokoll, CancellationToken abbruch)
     {
-        var basis = $"list --id {eintrag.WingetId} --exact --disable-interactivity --accept-source-agreements";
+        var basis = $"list {Auswahl(eintrag)} --disable-interactivity --accept-source-agreements";
         var quelle = QuellArgument(eintrag);
 
         await Reihe.WaitAsync(abbruch);
@@ -55,8 +69,7 @@ public sealed class WingetAktualisierer : IAktualisierer
             // A failed run is a failed run -- asking again more slowly does not repair it. And
             // "not found" is believed when nothing on this machine says otherwise.
             var keinPaket = lauf.ExitCode == KeinPaketGefunden || (lauf.ExitCode == 0 && !lauf.Abgelaufen);
-            var hierVorhanden = eintrag.IstPaketApp || File.Exists(Pfade.Aufloesen(eintrag.ExePfadWirksam));
-            if (!keinPaket || !hierVorhanden) return lauf;
+            if (!keinPaket || !HierVorhanden(eintrag)) return lauf;
 
             protokoll?.Report("In der Quelle „" + eintrag.WingetQuelle + "“ nicht eindeutig – Abfrage über alle Quellen: winget " + basis);
             lauf = await Kommandozeile.AusfuehrenAsync(Pfade.Winget, basis, TimeSpan.FromMinutes(3), abbruch: abbruch);
@@ -79,14 +92,22 @@ public sealed class WingetAktualisierer : IAktualisierer
     /// Process failures first: a timed-out or failed run has no package row either, and used to
     /// read as "not installed". Only winget's own "no package found" answer means that.
     /// </summary>
-    internal static PruefErgebnis ListeAuswerten(BefehlErgebnis lauf, string id)
+    internal static PruefErgebnis ListeAuswerten(BefehlErgebnis lauf, string id, bool hierVorhanden = false)
     {
         if (lauf.Abgelaufen)
             return new PruefErgebnis(UpdateZustand.Fehler,
                 Meldung: "winget hat das Zeitlimit überschritten – der Stand ist unbekannt.", Protokoll: lauf.Ausgabe);
 
-        if (lauf.ExitCode == KeinPaketGefunden
-            || (lauf.ExitCode == 0 && MeldetKeinPaket(lauf.Ausgabe)))
+        var keinPaket = lauf.ExitCode == KeinPaketGefunden || (lauf.ExitCode == 0 && MeldetKeinPaket(lauf.Ausgabe));
+
+        // The program file is right there: winget merely cannot correlate it. "Not installed"
+        // would be a plain lie on the card -- exactly what the PowerShell card used to say.
+        if (keinPaket && hierVorhanden)
+            return new PruefErgebnis(UpdateZustand.Unbekannt,
+                Meldung: "Installiert, aber winget ordnet es dem Paket nicht zu – im Katalog „wingetName“ setzen.",
+                Protokoll: lauf.Ausgabe);
+
+        if (keinPaket)
             return new PruefErgebnis(UpdateZustand.NichtInstalliert,
                 Meldung: "Nicht über winget installiert.", Protokoll: lauf.Ausgabe);
 
@@ -120,7 +141,7 @@ public sealed class WingetAktualisierer : IAktualisierer
         if (!File.Exists(Pfade.Winget))
             return new PruefErgebnis(UpdateZustand.Fehler, Meldung: "winget wurde nicht gefunden.");
 
-        var args = $"upgrade --id {eintrag.WingetId} --exact --silent --disable-interactivity "
+        var args = $"upgrade {Auswahl(eintrag)} --silent --disable-interactivity "
                  + "--accept-source-agreements --accept-package-agreements" + QuellArgument(eintrag);
         protokoll.Report($"winget {args}");
 
@@ -133,6 +154,20 @@ public sealed class WingetAktualisierer : IAktualisierer
         // Nothing to do is not a failure: the card must say "current", not show a red band.
         if (IstNichtsZuTun(lauf))
             return new PruefErgebnis(UpdateZustand.Aktuell, Meldung: "War bereits aktuell – kein Upgrade nötig.", Protokoll: lauf.Ausgabe);
+
+        // Files in use (pwsh, node): the installer replaced what it could and finishes on reboot.
+        // That is a pending update, not a failure.
+        if (BrauchtNeustart(lauf))
+        {
+            return new PruefErgebnis(UpdateZustand.Fertig,
+                Meldung: "Installiert – wird nach dem nächsten Neustart des PCs vollständig übernommen.",
+                Protokoll: lauf.Ausgabe, ErstNachNeustart: true);
+        }
+
+        if (lauf.ExitCode is InstallationInBenutzung or DateiInBenutzung)
+            return new PruefErgebnis(UpdateZustand.Fehler,
+                Meldung: eintrag.Name + " ist gerade in Benutzung – schließen und erneut aktualisieren.",
+                Protokoll: lauf.Ausgabe);
 
         if (lauf.ExitCode != 0)
         {
@@ -187,6 +222,19 @@ public sealed class WingetAktualisierer : IAktualisierer
         return string.IsNullOrWhiteSpace(installiert) ? ("", "winget list lieferte keine lesbare Version.") : (installiert, null);
     }
 
+    /// <summary>winget: the install finished but needs a reboot to complete (MSI 3010).</summary>
+    internal const int NeustartZumAbschluss = unchecked((int)0x8A150109);
+
+    /// <summary>winget: the package or one of its files is in use.</summary>
+    internal const int InstallationInBenutzung = unchecked((int)0x8A150101);
+    internal const int DateiInBenutzung = unchecked((int)0x8A150103);
+
+    internal static bool BrauchtNeustart(BefehlErgebnis lauf)
+        => !lauf.Abgelaufen && !lauf.Abgebrochen && lauf.BeendenProblem is null
+           && (lauf.ExitCode is NeustartZumAbschluss or 3010
+               || lauf.Ausgabe.Contains("Restart your PC to finish installation", StringComparison.OrdinalIgnoreCase)
+               || lauf.Ausgabe.Contains("um die Installation abzuschließen", StringComparison.OrdinalIgnoreCase));
+
     /// <summary>winget's "installed, nothing newer" answer to an upgrade, in code or in words.</summary>
     internal static bool IstNichtsZuTun(BefehlErgebnis lauf)
         => !lauf.Abgelaufen && !lauf.Abgebrochen && lauf.BeendenProblem is null
@@ -210,19 +258,52 @@ public sealed class WingetAktualisierer : IAktualisierer
     /// Anchoring on the exact package id and reading the fields behind it survives that, and
     /// works regardless of the display language.
     /// </summary>
-    private static (string Installiert, string Verfuegbar)? TabellenZeile(string ausgabe, string id)
+    internal static (string Installiert, string Verfuegbar)? TabellenZeile(string ausgabe, string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return null;
 
+        // Side-by-side installs (.NET SDK 10.0.204 next to 10.0.402) give one row each. The newest
+        // install is the one that matters -- the first row would keep an updated SDK "outdated"
+        // and its unchanged version would fail the before/after verification.
+        (string Installiert, string Verfuegbar)? beste = null;
         foreach (var zeile in ausgabe.Split('\n'))
         {
-            var stelle = zeile.IndexOf(id, StringComparison.OrdinalIgnoreCase);
-            if (stelle < 0) continue;
-            if (zeile.TrimStart().StartsWith("Name", StringComparison.OrdinalIgnoreCase)) continue;
+            var kandidat = ZeileLesen(zeile, id);
+            if (kandidat is null) continue;
+            if (beste is null || CliAktualisierer.Vergleiche(OhneOperator(kandidat.Value.Installiert),
+                                                             OhneOperator(beste.Value.Installiert)) > 0)
+                beste = kandidat;
+        }
+        return beste;
+    }
 
-            var rest = zeile[(stelle + id.Length)..]
+    private static string OhneOperator(string version) => version.TrimStart('<', '>', ' ');
+
+    private static (string Installiert, string Verfuegbar)? ZeileLesen(string zeile, string id)
+    {
+        {
+            var stelle = zeile.IndexOf(id, StringComparison.OrdinalIgnoreCase);
+            if (stelle < 0) return null;
+            if (zeile.TrimStart().StartsWith("Name", StringComparison.OrdinalIgnoreCase)) return null;
+
+            // The id must stand alone: "Microsoft.PowerShell" also occurs in "Microsoft.PowerShell.Preview".
+            var ende = stelle + id.Length;
+            if (ende < zeile.Length && !char.IsWhiteSpace(zeile[ende])) return null;
+
+            var rest = zeile[ende..]
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .ToList();
+
+            // winget writes an unknown exact version as "< 3.14.7" or "> 17.14.41" -- operator and
+            // number are one field, not an installed "<" and an available "3.14.7".
+            for (var i = 0; i < rest.Count - 1; i++)
+            {
+                if (rest[i] is "<" or ">")
+                {
+                    rest[i] = rest[i] + " " + rest[i + 1];
+                    rest.RemoveAt(i + 1);
+                }
+            }
 
             // Trailing source column ("winget", "msstore", "MSIX\..."): not a version.
             while (rest.Count > 0 && !SiehtNachVersionAus(rest[^1])) rest.RemoveAt(rest.Count - 1);
@@ -234,10 +315,9 @@ public sealed class WingetAktualisierer : IAktualisierer
                 _ => (rest[0], rest[1])
             };
         }
-        return null;
     }
 
     /// <summary>A version field always starts with a digit; "winget" and "Unknown" do not.</summary>
     private static bool SiehtNachVersionAus(string feld)
-        => feld.Length > 0 && char.IsDigit(feld[0]);
+        => feld.Length > 0 && (char.IsDigit(feld[0]) || feld.StartsWith("< ") || feld.StartsWith("> "));
 }

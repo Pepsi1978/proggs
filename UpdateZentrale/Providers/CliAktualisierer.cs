@@ -51,18 +51,14 @@ public sealed class CliAktualisierer : IAktualisierer
 
             // A dry run that failed or timed out lists nothing -- which would read as "nothing
             // pending". Only a clean run is allowed to say "up to date".
-            if (lauf.Abgelaufen || lauf.ExitCode != 0)
+            if (lauf.Abgelaufen || !PruefCodeGueltig(eintrag, lauf.ExitCode))
                 return new PruefErgebnis(UpdateZustand.Fehler, installiert, "",
                     lauf.Abgelaufen
                         ? "Die Prüfung hat das Zeitlimit überschritten – der Stand ist unbekannt."
                         : "Die Prüfung endete mit Code " + lauf.ExitCode + " – der Stand ist unbekannt.",
                     lauf.Ausgabe);
 
-            var geplant = lauf.Ausgabe
-                .Split('\n')
-                .Where(z => z.Contains('→') || z.Contains("->"))
-                .Select(z => z.Trim())
-                .ToList();
+            var geplant = GeplanteZeilen(lauf.Ausgabe, eintrag);
 
             if (geplant.Count > 0)
             {
@@ -110,16 +106,23 @@ public sealed class CliAktualisierer : IAktualisierer
 
     public async Task<PruefErgebnis> AktualisierenAsync(ProgrammEintrag eintrag, IProgress<string> protokoll, CancellationToken abbruch)
     {
-        var exe = Pfade.Aufloesen(eintrag.ExePfadWirksam);
+        var exe = Pfade.Aufloesen(string.IsNullOrWhiteSpace(eintrag.UpdateExePfad)
+            ? eintrag.ExePfadWirksam
+            : eintrag.UpdateExePfad);
         if (!File.Exists(exe))
             return new PruefErgebnis(UpdateZustand.NichtInstalliert, Meldung: $"Nicht gefunden: {exe}");
 
         var args = eintrag.UpdateArgumente ?? "update";
         protokoll.Report($"{Path.GetFileName(exe)} {args}");
 
+        // npm.cmd resolves its own modules relative to the working directory; started from the
+        // project folder it looks for node_modules there (MODULE_NOT_FOUND). Its own folder is
+        // always right, and harmless for every other tool.
+        var ordner = Path.GetDirectoryName(exe);
+
         // alsAufrufer: die verwaltete exe kann das Admin-Flag dieser App tragen (siehe Kommandozeile).
         var lauf = await Kommandozeile.AusfuehrenAsync(
-            exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch, alsAufrufer: true);
+            exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), ordner, abbruch: abbruch, alsAufrufer: true);
         protokoll.Report(lauf.Ausgabe);
 
         // The tools fetch their own release list. When that one request fails ("Unable to fetch
@@ -130,7 +133,7 @@ public sealed class CliAktualisierer : IAktualisierer
             protokoll.Report("Netzfehler beim Abruf – Versuch " + versuch + " von 3 …");
             await Task.Delay(TimeSpan.FromSeconds(3), abbruch);
             lauf = await Kommandozeile.AusfuehrenAsync(
-                exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), abbruch: abbruch, alsAufrufer: true);
+                exe, args, TimeSpan.FromMinutes(eintrag.ZeitlimitMinuten), ordner, abbruch: abbruch, alsAufrufer: true);
             protokoll.Report(lauf.Ausgabe);
         }
 
@@ -160,7 +163,7 @@ public sealed class CliAktualisierer : IAktualisierer
             planLauf = await Kommandozeile.AusfuehrenAsync(exe, eintrag.PruefArgumente,
                 TimeSpan.FromMinutes(8), abbruch: abbruch, alsAufrufer: true);
 
-        var (fingerabdruck, problem) = FingerabdruckAus(versionsLauf, planLauf);
+        var (fingerabdruck, problem) = FingerabdruckAus(versionsLauf, planLauf, eintrag);
         if (problem is not null) Protokollierung.Schreiben(eintrag.Id, "Fingerabdruck unbekannt: " + problem);
         return fingerabdruck;
     }
@@ -172,7 +175,8 @@ public sealed class CliAktualisierer : IAktualisierer
     /// version query must not fall back to the dry run: the two readings would be of different
     /// kinds and always differ.
     /// </summary>
-    internal static (string Fingerabdruck, string? Problem) FingerabdruckAus(BefehlErgebnis? versionsLauf, BefehlErgebnis? planLauf)
+    internal static (string Fingerabdruck, string? Problem) FingerabdruckAus(BefehlErgebnis? versionsLauf, BefehlErgebnis? planLauf,
+                                                                           ProgrammEintrag? eintrag = null)
     {
         if (versionsLauf is not null)
         {
@@ -187,16 +191,40 @@ public sealed class CliAktualisierer : IAktualisierer
         if (planLauf is not null)
         {
             if (planLauf.Abgelaufen) return ("", "Dry-Run hat das Zeitlimit überschritten.");
-            if (planLauf.ExitCode != 0) return ("", "Dry-Run endete mit Code " + planLauf.ExitCode + ".");
-            var geplant = planLauf.Ausgabe
-                .Split('\n')
-                .Where(z => z.Contains('→') || z.Contains("->"))
-                .Select(z => z.Trim())
-                .ToList();
+            if (!PruefCodeGueltig(eintrag, planLauf.ExitCode)) return ("", "Dry-Run endete mit Code " + planLauf.ExitCode + ".");
+            var geplant = GeplanteZeilen(planLauf.Ausgabe, eintrag);
             return (geplant.Count == 0 ? "nichts offen" : string.Join(" | ", geplant), null);
         }
 
         return ("", null);
+    }
+
+    /// <summary>Exit codes that still carry a valid answer (rustup check: 100 = updates pending).</summary>
+    internal static bool PruefCodeGueltig(ProgrammEintrag? eintrag, int exitCode)
+        => exitCode == 0 || (eintrag?.PruefExitCodes.Contains(exitCode) ?? false);
+
+    /// <summary>
+    /// The planned updates in a check run: lines with an arrow by default, or -- when the catalog
+    /// names them -- lines after a section marker that match a pattern.
+    /// </summary>
+    internal static List<string> GeplanteZeilen(string ausgabe, ProgrammEintrag? eintrag)
+    {
+        var zeilen = ausgabe.Replace("\r", "").Split('\n').AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(eintrag?.PruefAbschnitt))
+        {
+            var marke = eintrag.PruefAbschnitt;
+            var liste = zeilen.ToList();
+            var start = liste.FindIndex(z => z.Contains(marke, StringComparison.OrdinalIgnoreCase));
+            // No section at all means nothing pending -- sdkmanager omits "Available Updates" then.
+            zeilen = start < 0 ? Enumerable.Empty<string>() : liste.Skip(start + 1);
+        }
+
+        Func<string, bool> geplant = string.IsNullOrWhiteSpace(eintrag?.PruefZeilenMuster)
+            ? z => z.Contains('→') || z.Contains("->")
+            : new Regex(eintrag.PruefZeilenMuster).IsMatch;
+
+        return zeilen.Where(geplant).Select(z => z.Trim()).Where(z => z.Length > 0).ToList();
     }
 
     private static readonly string[] NetzHinweise =

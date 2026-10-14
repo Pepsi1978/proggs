@@ -24,6 +24,14 @@ public sealed class ProgrammEintrag
     /// Store source for every query, which took 45 to 95 seconds per program. Empty = all sources.
     /// </summary>
     public string? WingetQuelle { get; set; } = "winget";
+
+    /// <summary>
+    /// Selects the installed package by display name instead of by id. winget only matches an id
+    /// against packages it can correlate by id; one installed outside winget (PowerShell's MSI)
+    /// answers "no installed package" to --id, yet shows up -- with that same id -- under --name.
+    /// The row is still anchored on <see cref="WingetId"/>, so a loose name cannot pick a stranger.
+    /// </summary>
+    public string? WingetName { get; set; }
     public string? AppxName { get; set; }
     public string? PackageFamilyName { get; set; }
 
@@ -110,6 +118,28 @@ public sealed class ProgrammEintrag
     public string? VersionsArgumente { get; set; }
     public string? UpdateArgumente { get; set; }
     public string? PruefArgumente { get; set; }
+
+    /// <summary>
+    /// Exit codes of the check run that still mean "the answer is valid". rustup check ends with
+    /// 100 exactly when updates are pending; without this, every pending update read as failure.
+    /// </summary>
+    public List<int> PruefExitCodes { get; set; } = new() { 0 };
+
+    /// <summary>Only lines after the first line containing this marker count as planned updates.</summary>
+    public string? PruefAbschnitt { get; set; }
+
+    /// <summary>
+    /// Regex for a planned-update line, replacing the default arrow test -- for tools that list
+    /// updates as a table (sdkmanager: "emulator | 36.4.10 | 37.2.12").
+    /// </summary>
+    public string? PruefZeilenMuster { get; set; }
+
+    /// <summary>
+    /// A different program for the update run than for the version query: the npm packages report
+    /// their version themselves (firebase.cmd --version) but are updated through npm.cmd.
+    /// </summary>
+    public string? UpdateExePfad { get; set; }
+
     public string? NpmPaket { get; set; }
     /// <summary>Plain-text URL whose body names the newest version (e.g. Kimi Code's CDN "latest").</summary>
     public string? VersionsUrl { get; set; }

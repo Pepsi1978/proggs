@@ -2,7 +2,9 @@
 
 Ein Windows-Programm, das alle wichtigen Werkzeuge an einer Stelle prüft und aktualisiert:
 LM Studio (inklusive Engines und Runtimes), Claude Desktop, Codex Desktop, Claude Code CLI,
-Codex CLI, Kimi Code CLI, Stream Deck sowie die eigenen Werkzeuge OpenLauncher, TVO und CVO.
+Codex CLI, Kimi Code CLI, PowerShell 7, Stream Deck, die komplette Programmierumgebung (.NET, Node.js,
+Java, Rust, Go, Python, Visual Studio, VS Code, Android Studio und SDK, Git, npm-Werkzeuge …) sowie
+die eigenen Werkzeuge OpenLauncher, TVO und CVO.
 
 Start über die Verknüpfung **UpdateZentrale** auf dem Desktop oder im Startmenü (`create_shortcut.ps1` legt beide an).
 
@@ -124,7 +126,7 @@ bleibt `prozesse` besser leer – lieber kein Merkmal als ein falsches.
 
 | `art` | Wofür | Pflichtfelder | Prüfung | Update |
 |---|---|---|---|---|
-| `winget` | Alles, was winget kennt | `wingetId` | `winget list --id …` | `winget upgrade --id … --silent` |
+| `winget` | Alles, was winget kennt | `wingetId` | `winget list --id …` (bzw. `--name …`) | `winget upgrade --id … --silent` (bzw. `--name …`) |
 | `cli` | Werkzeuge, die sich selbst aktualisieren | `exePfad`, `updateArgumente` | `pruefArgumente` (Trockenlauf) **oder** `npmPaket` **oder** `versionsUrl` | `exePfad updateArgumente` |
 | `store` | Store-signierte MSIX-Pakete | `appxName`, `packageFamilyName`, `storeProduktId` | `Get-AppxPackage` + `winget upgrade`-Liste | `winget upgrade --id <ProduktId> --source msstore --silent` |
 | `reposkript` | Eigene Werkzeuge in `~/proggs` | `skript`, `statusPraefix` | `git rev-list HEAD..origin/main` + csproj-Version gegen gebaute Exe | ruft das vorhandene PowerShell-Skript auf |
@@ -147,6 +149,26 @@ Weitere optionale Felder:
 | `dialogWartezeitSekunden` | Nur `reposkript`: wie lange auf den Ja/Nein-Klick gewartet wird |
 | `hinweis` | Kursive Zeile auf der Karte |
 | `pfeilZaehlen` | Dokumentiert, dass die Prüfausgabe ihre Updates als `alt → neu` auflistet |
+| `wingetName` | Nur `winget`: Paket per Anzeigename statt per Kennung auswählen (`--name` statt `--id … --exact`), bei Prüfung **und** Update. Nötig für Programme, die nicht über winget installiert wurden: winget ordnet sie nur über den Namen zu (PowerShell als MSI meldet bei `--id` „kein installiertes Paket“). Die Tabellenzeile wird weiter über `wingetId` gefunden, ein loser Name greift also nie ein fremdes Paket. |
+| `pruefExitCodes` | Nur `cli`: Exit-Codes der Prüfung, die eine gültige Antwort sind (Standard `[0]`). `rustup check` endet mit 100, sobald Updates anstehen. |
+| `pruefAbschnitt` | Nur `cli`: erst Zeilen nach der ersten Zeile mit diesem Text zählen (sdkmanager: `Available Updates`). Fehlt der Abschnitt, ist nichts offen. |
+| `pruefZeilenMuster` | Nur `cli`: regulärer Ausdruck für eine geplante Update-Zeile statt des Pfeils – für Werkzeuge mit Tabellenausgabe. |
+| `updateExePfad` | Nur `cli`: anderes Programm für den Update-Lauf als für die Versionsabfrage (npm-Pakete: Version über `firebase.cmd --version`, Update über `npm.cmd install -g …`). Läuft im eigenen Ordner, damit npm seine Module findet. |
+
+Nicht über winget installierte Programme, deren Datei unter `exePfad` existiert, erscheinen nie mehr als
+„Nicht installiert“: Findet winget sie nicht, steht dort „Unbekannt“ mit dem Hinweis auf `wingetName`.
+Bei mehreren installierten Fassungen desselben Pakets (.NET SDK 10.0.2xx neben 10.0.4xx) zählt die
+neueste. winget-Versionen wie `< 3.14.7` oder `> 17.14.41` werden als eine Angabe gelesen. Endet ein
+winget-Update mit „Neustart nötig“ (Dateien in Benutzung, MSI 3010), gilt es als ausstehend, nicht als Fehler.
+
+### Entwicklungswerkzeuge
+
+Die Gruppen „Entwicklung: …“ halten die Programmierumgebung aktuell: .NET SDK, Node.js, JDK 21, Rust
+(rustup), Go, Python, Visual Studio, Build Tools, VS Code, Android Studio, Android SDK (sdkmanager),
+Git, GitHub CLI, CMake, Bun, WSL, Windows-Terminal sowie globale npm-Pakete (Firebase CLI, TypeScript,
+tsx, Biome, npm, Gemini CLI, OpenCode CLI). Hauptversionssprünge (z. B. TypeScript 6 → 7, npm 11 → 12)
+zeigt die Karte an, ausgelöst werden sie nur bewusst per Klick. Das Windows-Terminal-Update schließt
+alle Terminalfenster samt laufender CLI-Sitzungen.
 
 ---
 
