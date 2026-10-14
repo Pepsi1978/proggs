@@ -84,7 +84,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
-    JarvisTheme(vm.einstellungen.modus) {
+    JarvisTheme(vm.einstellungen.modus, vm.einstellungen.design) {
         val f = LocalFarben.current
         val tunnel by Tunnel.zustand.collectAsState()
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))) {

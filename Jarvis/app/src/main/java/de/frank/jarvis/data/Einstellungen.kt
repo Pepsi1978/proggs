@@ -242,6 +242,8 @@ class Einstellungen private constructor(context: Context) {
 
     /** system | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
+    /** Farbdesign: blau (Jarvis) oder gold (wie Geniale Ideen); hell oder dunkel regelt [modus]. */
+    var design: String get() = s("design", "blau"); set(v) = put { putString("design", v) }
 
     companion object {
         const val NAME = "jarvis_secure_prefs"

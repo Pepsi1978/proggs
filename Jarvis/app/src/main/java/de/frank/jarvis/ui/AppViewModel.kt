@@ -613,6 +613,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return de.frank.jarvis.weckwort.SprechEnde.Lage.FERTIG
     }
 
+    /** „Ende“, „Stopp“, „Danke, das war's“ …: beendet den Gesprächsmodus. Nur wenn der ganze Satz ein solcher Befehl ist. */
+    private fun istAusbefehl(text: String): Boolean {
+        val worte = text.lowercase(java.util.Locale.GERMAN).replace("’", "'").replace(Regex("[^a-zäöüß' ]"), " ")
+            .split(' ').filter { it.isNotBlank() && it !in FUELLWORTE }
+        val satz = worte.joinToString(" ").replace("'", "")
+        return satz in AUSBEFEHLE
+    }
+
     /** Kurzer Piepton: Ab jetzt hört Jarvis zu. Über die Medienlautstärke, wie die vorgelesene Antwort. */
     private suspend fun piep() {
         val ton = runCatching { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100) }.getOrNull() ?: return
@@ -642,6 +650,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Logbuch.sprache("Mitschrift", "${wav.size / 1024} KB Aufnahme, ${text.length} Zeichen", System.currentTimeMillis() - beginn)
                 if (text.isBlank()) meldung = "Ich habe nichts verstanden."
                 else if (ziel != null) ziel(text)
+                else if (weckwortLauf?.isActive == true && istAusbefehl(text)) {
+                    // Ausbefehl im Gesprächsmodus: kurz bestätigen, danach kein Piepton und kein offenes Mikrofon mehr.
+                    // Ohne neue Antwort im Gespräch endet die Schleife in weckwortStart von selbst.
+                    Logbuch.sprache("Sprachsitzung beendet", text)
+                    vorleser.sprich("sitzung-ende", "Jarvis", "Okay, Sprachsitzung beendet.")
+                }
                 else { schreibtMit = false; gesprochen = true; sende(text) }
             } catch (e: CancellationException) {
                 throw e
@@ -1019,6 +1033,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
 /** So lange nach der letzten Nachricht führt „Hey Jarvis“ das offene Gespräch weiter, danach beginnt ein neues. */
 private const val NEUES_GESPRAECH_NACH_MS = 10 * 60_000L
+
+/** Wörter, die vor oder nach dem Ausbefehl nicht zählen („Okay Jarvis, Ende bitte“). */
+private val FUELLWORTE = setOf("jarvis", "okay", "ok", "bitte", "hey", "also", "gut", "dann", "ja", "nein", "nee", "so")
+
+/** Ganze Sätze, die den Gesprächsmodus beenden (nach Kleinschreibung, ohne Satzzeichen und Füllwörter). */
+private val AUSBEFEHLE = setOf(
+    "ende", "stopp", "stop", "schluss", "aus", "fertig", "tschüss", "tschüs", "ciao", "danke", "danke schön", "dankeschön", "vielen dank",
+    "das wars", "danke das wars", "das wars danke", "das ist alles", "danke das ist alles", "das reicht", "mehr nicht", "nichts mehr",
+    "sprachsitzung beenden", "sprachsitzung beendet", "sitzung beenden", "gespräch beenden", "beenden", "beende", "aufhören", "hör auf",
+    "ende der sitzung", "schluss für jetzt", "erstmal nicht", "erst mal nicht", "nichts weiter", "sonst nichts", "danke sonst nichts",
+)
 
 /** Höchstens so viele frühere Nachrichten gehen als Verlauf an das Modell (der Agent kürzt zusätzlich nach Zeichen). */
 private const val MAX_VERLAUF = 40

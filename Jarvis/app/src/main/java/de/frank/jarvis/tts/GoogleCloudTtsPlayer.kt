@@ -70,7 +70,7 @@ class GoogleCloudTtsPlayer(context: Context) {
 
         val job = scope.launch(Dispatchers.IO) {
             try {
-                val body = JSONObject().apply {
+                fun body(aussprachen: JSONObject?) = JSONObject().apply {
                     // Chirp 3 HD versteht kein SSML; dort bleibt es beim reinen Text, die
                     // Sprache steuert allein der languageCode.
                     val alsSsml = erzwingeDeutsch && !voiceName.contains("Chirp")
@@ -79,7 +79,7 @@ class GoogleCloudTtsPlayer(context: Context) {
                         if (alsSsml) {
                             JSONObject().put("ssml", deutschesSsml(text))
                         } else {
-                            JSONObject().put("text", text)
+                            JSONObject().put("text", text).apply { aussprachen?.let { put("customPronunciations", it) } }
                         },
                     )
                     put(
@@ -105,9 +105,14 @@ class GoogleCloudTtsPlayer(context: Context) {
                 val url = GOOGLE_TTS_URL.toHttpUrl().newBuilder()
                     .addQueryParameter("key", apiKey)
                     .build()
+                // Chirp: feste deutsche Aussprachen (etwa „Frank“); lehnt Google sie ab (400), ohne sie erneut.
+                val aussprachen = if (voiceName.contains("Chirp")) chirpAussprachen(text) else null
+                var mitAussprachen = aussprachen != null
+                var audioBytes: ByteArray? = null
+                while (audioBytes == null) {
                 val request = Request.Builder()
                     .url(url)
-                    .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
+                    .post(body(if (mitAussprachen) aussprachen else null).toString().toRequestBody(JSON_MEDIA_TYPE))
                     .build()
                 val call = client.newCall(request)
                 synchronized(lock) {
@@ -118,8 +123,12 @@ class GoogleCloudTtsPlayer(context: Context) {
                     activeCall = call
                 }
 
-                val audioBytes = call.execute().use { response ->
+                audioBytes = call.execute().use { response ->
                     val responseBody = response.body?.string().orEmpty()
+                    if (response.code == 400 && mitAussprachen) {
+                        mitAussprachen = false
+                        return@use null
+                    }
                     if (!response.isSuccessful) {
                         throw TtsPlaybackException(
                             "Google TTS error ${response.code}: ${responseBody.take(500)}",
@@ -131,13 +140,14 @@ class GoogleCloudTtsPlayer(context: Context) {
                     }
                     Base64.decode(audioContent, Base64.DEFAULT)
                 }
+                }
                 if (requestGeneration != generation.get()) return@launch
 
                 val file = File(
                     appContext.cacheDir,
                     "google_tts_${requestGeneration}_${UUID.randomUUID()}.mp3",
                 )
-                file.writeBytes(audioBytes)
+                file.writeBytes(audioBytes!!)
                 synchronized(lock) {
                     if (requestGeneration != generation.get()) {
                         file.delete()

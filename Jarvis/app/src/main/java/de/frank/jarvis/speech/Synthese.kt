@@ -8,6 +8,7 @@ import de.frank.jarvis.tts.EdgeTtsPlayer
 import de.frank.jarvis.tts.TtsCatalog
 import de.frank.jarvis.tts.TtsProvider
 import de.frank.jarvis.tts.deutschesSsml
+import de.frank.jarvis.tts.chirpAussprachen
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -102,13 +103,26 @@ class Synthese(context: Context, private val settings: SecureSettings) {
         // Chirp 3 HD versteht kein SSML — dort bleibt es beim reinen Text, die Sprache steuert
         // allein der languageCode. Alle uebrigen Google-Stimmen werden per <lang> festgenagelt.
         val alsSsml = settings.immerDeutschVorlesen && !stimme.contains("Chirp")
+        // Chirp: feste deutsche Aussprachen (etwa „Frank“) mitschicken; lehnt Google sie ab, ohne sie erneut.
+        val aussprachen = if (!alsSsml && stimme.contains("Chirp")) chirpAussprachen(text) else null
+        if (aussprachen != null) {
+            try {
+                return googleAnfrage(text, stimme, schluessel, alsSsml, aussprachen)
+            } catch (fehler: SyntheseFehler) {
+                if (fehler.message?.contains("Fehler 400") != true) throw fehler
+            }
+        }
+        return googleAnfrage(text, stimme, schluessel, alsSsml, null)
+    }
+
+    private suspend fun googleAnfrage(text: String, stimme: String, schluessel: String, alsSsml: Boolean, aussprachen: JSONObject?): File {
         val koerper = JSONObject()
             .put(
                 "input",
                 if (alsSsml) {
                     JSONObject().put("ssml", deutschesSsml(text))
                 } else {
-                    JSONObject().put("text", text)
+                    JSONObject().put("text", text).apply { aussprachen?.let { put("customPronunciations", it) } }
                 },
             )
             .put("voice", JSONObject().put("languageCode", "de-DE").put("name", stimme))

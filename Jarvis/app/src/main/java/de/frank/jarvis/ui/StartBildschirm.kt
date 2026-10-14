@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -235,7 +236,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
 private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, leisteOeffnen: () -> Unit) {
     val f = LocalFarben.current
     val (zeile, farbe) = when (tunnel.stufe) {
-        TunnelStufe.ONLINE -> "Online · bereit für ChatGPT" to f.erfolg
+        TunnelStufe.ONLINE -> "Online" to f.erfolg
         TunnelStufe.VERBINDET -> tunnel.meldung to f.primaer
         TunnelStufe.NICHT_EINGERICHTET -> "Server noch nicht eingerichtet" to f.textLeise
         TunnelStufe.FEHLER -> tunnel.meldung to f.gefahr
@@ -264,6 +265,15 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
             val neu = when (modus) { "hell" -> "system"; "system" -> "dunkel"; else -> "hell" }
             vm.einstellungen.modus = neu
             vm.meldung = when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" }
+        }
+        Spacer(Modifier.width(8.dp))
+        // Design umschalten: Blau ↔ Gold wie Geniale Ideen; hell oder dunkel bleibt beim Knopf daneben.
+        Rundknopf(Icons.Rounded.Palette, "Design wechseln", farbe = f.primaer) {
+            val ids = de.frank.jarvis.ui.theme.DESIGNS
+            val i = ids.indexOfFirst { it.first == vm.einstellungen.design }
+            val neu = ids[(i + 1) % ids.size]
+            vm.einstellungen.design = neu.first
+            vm.meldung = "Design: " + neu.second
         }
         Spacer(Modifier.width(8.dp))
         // Tagesauswertung jetzt neu erstellen: frische Daten aller Apps holen und alles neu auswerten.
