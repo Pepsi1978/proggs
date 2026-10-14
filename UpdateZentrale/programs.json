@@ -131,9 +131,12 @@
       "id": "kimi-cli",
       "name": "Kimi Code CLI",
       "gruppe": "Kommandozeile",
-      "beschreibung": "Moonshot AI Kimi Code im Terminal. Nativer Installer unter ~/.kimi-code.",
+      "beschreibung": "Moonshot AI Kimi Code im Terminal. Nativer Installer unter ~/.kimi-code, sonst npm.",
       "art": "cli",
       "exePfad": "%USERPROFILE%/.kimi-code/bin/kimi.exe",
+      "exePfadAlternativen": [
+        "%APPDATA%/npm/kimi.cmd"
+      ],
       "versionsArgumente": "--version",
       "updateArgumente": "update --yes",
       "versionsUrl": "https://code.kimi.ai/kimi-code/latest",
