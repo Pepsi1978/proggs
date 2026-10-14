@@ -103,6 +103,8 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                         val status = vm.sprachStatus(vorlesen.zustand != de.frank.jarvis.speech.VorleseZustand.AUS)
                         if (status != null) Text(status, color = f.primaer, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
                         Text("Im Hintergrund arbeitet Jarvis weiter und bleibt für ChatGPT erreichbar.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp, bottom = 22.dp))
+                        // Ein klingelnder Timer lässt sich auch ohne Entsperren ausschalten.
+                        KlingelndeTimer(Modifier.padding(bottom = 18.dp))
                         Knopf("Entsperren") { vm.entsperrenAnfragen() }
                     }
                     return@Column

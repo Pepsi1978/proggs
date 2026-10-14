@@ -58,385 +58,425 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
     ) {
         Text("Einstellungen", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 4.dp))
 
-        // ---------------------------------------------------------------- Kopf
-        Bereich("Jarvis' Kopf") {
-            Zeile("ChatGPT-Konto", if (vm.kiVerbunden) vm.kiKonto.ifEmpty { "Verbunden" } else "Nicht verbunden", if (vm.kiVerbunden) f.erfolg else f.textLeise)
-            val code = vm.geraeteCode
-            when {
-                code != null -> {
-                    Text("Gib diesen Code auf der Anmeldeseite ein. Er liegt schon in der Zwischenablage.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
-                    Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        deviceCodeGroups(code.userCode).forEachIndexed { i, gruppe ->
-                            if (i > 0) Text("–", color = f.textSchwach, fontSize = 26.sp, modifier = Modifier.padding(horizontal = 8.dp))
-                            Text(gruppe, Modifier.glas(f, 14.dp, erhoeht = 0.4f, fuellung = f.flaecheStark).padding(horizontal = 14.dp, vertical = 10.dp), color = f.primaer, fontSize = 26.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, letterSpacing = 3.sp)
+        // Reiter: Die vielen Bereiche nach Themen gebündelt, damit nicht alles in einer langen Liste steht.
+        var reiter by rememberSaveable { mutableStateOf("jarvis") }
+        FlowRow(Modifier.padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("jarvis" to "Jarvis", "stimme" to "Stimme", "alltag" to "Alltag und Timer", "konten" to "Konten und Apps", "system" to "System").forEach { (id, name) ->
+                Chip(name, aktiv = reiter == id) { reiter = id }
+            }
+        }
+
+        if (reiter == "jarvis") {
+            // ---------------------------------------------------------------- Kopf
+            Bereich("Jarvis' Kopf") {
+                Zeile("ChatGPT-Konto", if (vm.kiVerbunden) vm.kiKonto.ifEmpty { "Verbunden" } else "Nicht verbunden", if (vm.kiVerbunden) f.erfolg else f.textLeise)
+                val code = vm.geraeteCode
+                when {
+                    code != null -> {
+                        Text("Gib diesen Code auf der Anmeldeseite ein. Er liegt schon in der Zwischenablage.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
+                        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                            deviceCodeGroups(code.userCode).forEachIndexed { i, gruppe ->
+                                if (i > 0) Text("–", color = f.textSchwach, fontSize = 26.sp, modifier = Modifier.padding(horizontal = 8.dp))
+                                Text(gruppe, Modifier.glas(f, 14.dp, erhoeht = 0.4f, fuellung = f.flaecheStark).padding(horizontal = 14.dp, vertical = 10.dp), color = f.primaer, fontSize = 26.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, letterSpacing = 3.sp)
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Knopf("Code kopieren", Modifier.weight(1f), Icons.Rounded.ContentCopy, haupt = false) { vm.kopiere(code.userCode, "Code") }
+                            Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { vm.kiAbbrechen() }
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Knopf("Code kopieren", Modifier.weight(1f), Icons.Rounded.ContentCopy, haupt = false) { vm.kopiere(code.userCode, "Code") }
-                        Knopf("Abbrechen", Modifier.weight(1f), haupt = false) { vm.kiAbbrechen() }
-                    }
+                    vm.kiVerbindet -> Text("Anmeldung wird vorbereitet …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
+                    vm.kiVerbunden -> Knopf("Abmelden", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = false) { vm.kiTrennen() }
+                    else -> Knopf("Mit ChatGPT verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.kiVerbinden(activity) }
                 }
-                vm.kiVerbindet -> Text("Anmeldung wird vorbereitet …", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
-                vm.kiVerbunden -> Knopf("Abmelden", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = false) { vm.kiTrennen() }
-                else -> Knopf("Mit ChatGPT verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.kiVerbinden(activity) }
-            }
 
-            Unterzeile("Modell")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                CodexModel.entries.forEach { m -> Chip(m.label, aktiv = e.modell == m) { vm.setzeModell(m) } }
-            }
-            Unterzeile("Denkstufe")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                e.modell.supportedEfforts.forEach { s -> Chip(s.label, aktiv = e.denkstufe == s) { vm.setzeDenkstufe(s) } }
-            }
-            Text("Niedrig antwortet am schnellsten. Höhere Stufen denken gründlicher, brauchen aber länger.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-        }
-
-        // ---------------------------------------------------------------- Gedächtnis
-        Bereich("Jarvis' Gedächtnis") {
-            androidx.compose.runtime.LaunchedEffect(Unit) { vm.merkLaden() }
-            Text("Drei Dateien, die Jarvis selbst pflegt und bei jeder Antwort vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
-            listOf(
-                Triple(vm.regelListe, "Regeln", "wie Jarvis arbeiten und antworten soll"),
-                Triple(vm.zielListe, "Ziele", "was du erreichen willst"),
-                Triple(vm.infoListe, "Über Frank", "was Jarvis über dich weiß"),
-            ).forEach { (liste, name, wozu) ->
-                val anzahl = liste.eintraege.size
-                Unterzeile(name)
-                Zeile(wozu.replaceFirstChar { it.uppercase() }, when (anzahl) { 0 -> "Noch nichts"; 1 -> "1 Eintrag"; else -> "$anzahl Einträge" }, if (anzahl == 0) f.textLeise else f.erfolg)
-                Knopf("$name ansehen und bearbeiten", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.merkOeffnen(liste) }
+                Unterzeile("Modell")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CodexModel.entries.forEach { m -> Chip(m.label, aktiv = e.modell == m) { vm.setzeModell(m) } }
+                }
+                Unterzeile("Denkstufe")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    e.modell.supportedEfforts.forEach { s -> Chip(s.label, aktiv = e.denkstufe == s) { vm.setzeDenkstufe(s) } }
+                }
+                Text("Niedrig antwortet am schnellsten. Höhere Stufen denken gründlicher, brauchen aber länger.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             }
         }
 
-        // ---------------------------------------------------------------- Hey Jarvis
-        Bereich("Hey Jarvis") {
-            val hoertZu by de.frank.jarvis.weckwort.Weckwort.hoertZu.collectAsState()
-            val treffer by de.frank.jarvis.weckwort.Weckwort.letzter.collectAsState()
-            val bereit = e.weckwortAn && vm.weckwortMikro
-            val aktivesWort by de.frank.jarvis.weckwort.Weckwort.aktivesWort.collectAsState()
-            // Das gewählte Weckwort, in allen Texten dieses Abschnitts.
-            val wort = if (e.weckwortArt == "phrase") e.weckwortPhrase else "Hey Jarvis"
-            Zeile(
-                "Auf „$wort“ hören",
-                when { !e.weckwortAn -> "Aus"; !vm.weckwortMikro -> "Mikrofon fehlt"; hoertZu -> "Hört zu"; else -> "Pausiert" },
-                when { !e.weckwortAn -> f.textLeise; !vm.weckwortMikro -> f.gefahr; else -> f.erfolg },
-            )
-            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("An", aktiv = e.weckwortAn) { vm.weckwortSchalten(true, activity) }
-                Chip("Aus", aktiv = !e.weckwortAn) { vm.weckwortSchalten(false, activity) }
+        if (reiter == "jarvis") {
+            // ---------------------------------------------------------------- Gedächtnis
+            Bereich("Jarvis' Gedächtnis") {
+                androidx.compose.runtime.LaunchedEffect(Unit) { vm.merkLaden() }
+                Text("Drei Dateien, die Jarvis selbst pflegt und bei jeder Antwort vor Augen hat. Er merkt sich Neues, wenn du es sagst, und ersetzt Überholtes. Hier siehst du alles, änderst es und sprichst Neues ein.", color = f.textSchwach, fontSize = 13.sp)
+                listOf(
+                    Triple(vm.regelListe, "Regeln", "wie Jarvis arbeiten und antworten soll"),
+                    Triple(vm.zielListe, "Ziele", "was du erreichen willst"),
+                    Triple(vm.infoListe, "Über Frank", "was Jarvis über dich weiß"),
+                ).forEach { (liste, name, wozu) ->
+                    val anzahl = liste.eintraege.size
+                    Unterzeile(name)
+                    Zeile(wozu.replaceFirstChar { it.uppercase() }, when (anzahl) { 0 -> "Noch nichts"; 1 -> "1 Eintrag"; else -> "$anzahl Einträge" }, if (anzahl == 0) f.textLeise else f.erfolg)
+                    Knopf("$name ansehen und bearbeiten", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.merkOeffnen(liste) }
+                }
             }
-            Text(
-                "Sag „$wort“: Jarvis geht auf, ein Piepton zeigt, dass er zuhört, du sprichst, und er antwortet gleich. " +
-                    "Erst nach 4,5 Sekunden Stille schickt er ab, du kannst also zwischendurch nachdenken. " +
-                    "Nach jeder vorgelesenen Antwort piept es wieder und du sprichst einfach weiter; sagst du nach dem Piepton nichts, endet das Gespräch. " +
-                    "Auch bei gesperrtem Handy, dann bleibt das Gespräch hinter der Sperre und er antwortet nur mit der Stimme. " +
-                    "Während Jarvis selbst aufnimmt oder vorliest, hört er nicht auf das Weckwort.",
-                color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
-            )
-            if (e.weckwortAn && !vm.weckwortMikro) Knopf("Mikrofon erlauben", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
-            if (bereit && !vm.ueberlagernErlaubt) {
-                Text("Damit Jarvis von selbst nach vorn kommt (auch über dem Sperrbildschirm), braucht er „Über anderen Apps einblenden“. Ohne kommt nur eine Benachrichtigung zum Antippen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
-                Knopf("„Über anderen Apps einblenden“ erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
-            }
-            Unterzeile("Weckwort")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("Hey Jarvis", aktiv = e.weckwortArt != "phrase") { vm.weckwortArtSetzen("jarvis") }
-                Chip("Eigene Phrase", aktiv = e.weckwortArt == "phrase") { vm.weckwortArtSetzen("phrase") }
-            }
-            if (e.weckwortArt == "phrase") {
-                var phrase by rememberSaveable { mutableStateOf(e.weckwortPhrase) }
+        }
+
+        if (reiter == "stimme") {
+            // ---------------------------------------------------------------- Hey Jarvis
+            Bereich("Hey Jarvis") {
+                val hoertZu by de.frank.jarvis.weckwort.Weckwort.hoertZu.collectAsState()
+                val treffer by de.frank.jarvis.weckwort.Weckwort.letzter.collectAsState()
+                val bereit = e.weckwortAn && vm.weckwortMikro
+                val aktivesWort by de.frank.jarvis.weckwort.Weckwort.aktivesWort.collectAsState()
+                // Das gewählte Weckwort, in allen Texten dieses Abschnitts.
+                val wort = if (e.weckwortArt == "phrase") e.weckwortPhrase else "Hey Jarvis"
+                Zeile(
+                    "Auf „$wort“ hören",
+                    when { !e.weckwortAn -> "Aus"; !vm.weckwortMikro -> "Mikrofon fehlt"; hoertZu -> "Hört zu"; else -> "Pausiert" },
+                    when { !e.weckwortAn -> f.textLeise; !vm.weckwortMikro -> f.gefahr; else -> f.erfolg },
+                )
+                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("An", aktiv = e.weckwortAn) { vm.weckwortSchalten(true, activity) }
+                    Chip("Aus", aktiv = !e.weckwortAn) { vm.weckwortSchalten(false, activity) }
+                }
                 Text(
-                    (if (e.weckwortAn && aktivesWort == "Hey Jarvis") "Die Phrase ließ sich nicht laden, Jarvis hört solange auf „Hey Jarvis“. " else "Aktiv: „${e.weckwortPhrase}“. ") +
-                        "Das Modell kennt nur englische Laute: Sprich die Phrase englisch aus. " +
-                        "Drei Wörter mit verschiedenen Anfangslauten erkennt es am sichersten. Weckt sie schlecht auf, Empfindlichkeit auf Hoch oder zurück zu „Hey Jarvis“.",
+                    "Sag „$wort“: Jarvis geht auf, ein Piepton zeigt, dass er zuhört, du sprichst, und er antwortet gleich. " +
+                        "Erst nach 4,5 Sekunden Stille schickt er ab, du kannst also zwischendurch nachdenken. " +
+                        "Nach jeder vorgelesenen Antwort piept es wieder und du sprichst einfach weiter; sagst du nach dem Piepton nichts, endet das Gespräch. " +
+                        "Auch bei gesperrtem Handy, dann bleibt das Gespräch hinter der Sperre und er antwortet nur mit der Stimme. " +
+                        "Während Jarvis selbst aufnimmt oder vorliest, hört er nicht auf das Weckwort.",
                     color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
                 )
-                Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Eingabe(phrase, { phrase = it }, "z. B. OKAY COMPUTER JARVIS", Modifier.weight(1f), senden = { vm.weckwortPhraseSetzen(phrase) })
-                    Spacer(Modifier.width(8.dp))
-                    Knopf("Übernehmen", haupt = phrase.trim().uppercase() != e.weckwortPhrase) { vm.weckwortPhraseSetzen(phrase) }
+                if (e.weckwortAn && !vm.weckwortMikro) Knopf("Mikrofon erlauben", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
+                if (bereit && !vm.ueberlagernErlaubt) {
+                    Text("Damit Jarvis von selbst nach vorn kommt (auch über dem Sperrbildschirm), braucht er „Über anderen Apps einblenden“. Ohne kommt nur eine Benachrichtigung zum Antippen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
+                    Knopf("„Über anderen Apps einblenden“ erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
                 }
-                FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("OKAY COMPUTER JARVIS", "HEY JARVIS WAKE UP", "HELLO CAPTAIN JARVIS", "JARVIS TIGER COMPASS").forEach { vorschlag ->
-                        Chip(vorschlag, aktiv = e.weckwortPhrase == vorschlag) { phrase = vorschlag; vm.weckwortPhraseSetzen(vorschlag) }
-                    }
+                Unterzeile("Weckwort")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("Hey Jarvis", aktiv = e.weckwortArt != "phrase") { vm.weckwortArtSetzen("jarvis") }
+                    Chip("Eigene Phrase", aktiv = e.weckwortArt == "phrase") { vm.weckwortArtSetzen("phrase") }
                 }
-            }
-            Unterzeile("Empfindlichkeit")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch").forEach { (id, name) ->
-                    Chip(name, aktiv = e.weckwortEmpfindlichkeit == id) { vm.weckwortEmpfindlichkeit(id) }
-                }
-            }
-            Text(
-                "Hoch: springt leichter an, auch bei deutscher Aussprache, aber öfter ohne Grund. Niedrig: nur bei deutlichem „$wort“.",
-                color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
-            )
-            treffer?.let { t ->
-                val zeit = java.time.Instant.ofEpochMilli(t.zeitpunkt).atZone(java.time.ZoneId.systemDefault())
-                    .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM., HH:mm 'Uhr'"))
-                Text("Zuletzt erkannt: $zeit, Sicherheit ${(t.sicherheit * 100).toInt()} %", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
-            }
-
-            // Stimmprofil: Jarvis springt nur noch auf Franks Stimme an.
-            val stimme by de.frank.jarvis.weckwort.Stimmprofil.stand.collectAsState()
-            val abgewiesen by de.frank.jarvis.weckwort.Weckwort.abgewiesen.collectAsState()
-            Unterzeile("Nur auf meine Stimme hören")
-            val anlernen = stimme.anlernen
-            when {
-                anlernen != null -> {
-                    val ziel = de.frank.jarvis.weckwort.Stimmprofil.ANLERN_ZIEL
-                    Zeile("Anlernen läuft", "Probe ${minOf(anlernen + 1, ziel)} von $ziel", f.primaer)
-                    // Abstand je Probe: So lernt Jarvis deine Stimme nah, im Raum und von weitem (etwa aus der Küche).
-                    val (abstand, anleitung) = when {
-                        anlernen < 4 -> "Nah" to "Halte das Handy wie gewohnt und sag „$wort“ in normaler Lautstärke."
-                        anlernen < 7 -> "Etwa 2 Meter" to "Leg das Handy hin, geh etwa zwei Meter weg und sag „$wort“ so, wie du es im Raum sagen würdest."
-                        else -> "Etwa 5 Meter" to "Geh etwa fünf Meter weg, zum Beispiel in die Küche, und sag „$wort“ so laut, wie du es von dort sagen würdest."
-                    }
+                if (e.weckwortArt == "phrase") {
+                    var phrase by rememberSaveable { mutableStateOf(e.weckwortPhrase) }
                     Text(
-                        if (hoertZu) "$abstand: $anleitung Nach jedem erkannten Mal kommt ein kurzer Ton, dann kurz warten und noch einmal. " +
-                            "Hörst du keinen Ton, etwas lauter oder einen Schritt näher."
-                        else "Jarvis hört gerade nicht zu (er liest vor oder nimmt auf). Sobald „Hört zu“ oben steht, kann es losgehen.",
-                        color = f.text, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
-                    )
-                    Knopf("Abbrechen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.stimmeAnlernenAbbrechen() }
-                }
-                stimme.proben > 0 || stimme.stimmen > 0 -> {
-                    Zeile("Stimmerkennung", if (stimme.stimmen > 0) "Aktiv" else "Nur Klangprofil", if (stimme.stimmen > 0) f.erfolg else f.primaer)
-                    Text(
-                        if (stimme.stimmen > 0) "Jarvis kennt deinen Stimm-Fingerabdruck (${stimme.stimmen} Proben, nah bis fünf Meter). Nach dem Weckwort prüft er, ob wirklich du sprichst; " +
-                            "andere Menschen, Fernseher und Radio weist er ab, auch wenn sie „$wort“ sagen." +
-                            (stimme.letzteStimme?.let { s -> " Zuletzt: Übereinstimmung ${(s * 100).toInt()} %, nötig ${((stimme.stimmSchwelle ?: 0f) * 100).toInt()} %." } ?: "")
-                        else "Angelernt mit ${stimme.proben} Proben für „$wort“ (Klangprofil, unterscheidet Wörter, aber Menschen nur teilweise). " +
-                            "Neu anlernen, dann lernt Jarvis auch deinen Stimm-Fingerabdruck.",
+                        (if (e.weckwortAn && aktivesWort == "Hey Jarvis") "Die Phrase ließ sich nicht laden, Jarvis hört solange auf „Hey Jarvis“. " else "Aktiv: „${e.weckwortPhrase}“. ") +
+                            "Das Modell kennt nur englische Laute: Sprich die Phrase englisch aus. " +
+                            "Drei Wörter mit verschiedenen Anfangslauten erkennt es am sichersten. Weckt sie schlecht auf, Empfindlichkeit auf Hoch oder zurück zu „Hey Jarvis“.",
                         color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
                     )
-                    abgewiesen?.let { t ->
-                        val zeit = java.time.Instant.ofEpochMilli(t.zeitpunkt).atZone(java.time.ZoneId.systemDefault())
-                            .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM., HH:mm 'Uhr'"))
-                        Text("Zuletzt abgewiesen: $zeit", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                    Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Eingabe(phrase, { phrase = it }, "z. B. OKAY COMPUTER JARVIS", Modifier.weight(1f), senden = { vm.weckwortPhraseSetzen(phrase) })
+                        Spacer(Modifier.width(8.dp))
+                        Knopf("Übernehmen", haupt = phrase.trim().uppercase() != e.weckwortPhrase) { vm.weckwortPhraseSetzen(phrase) }
                     }
-                    Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Knopf("Neu anlernen", Modifier.weight(1f), haupt = false) { vm.stimmeAnlernen() }
-                        Knopf("Löschen", Modifier.weight(1f), haupt = false, farbe = f.gefahr) { vm.stimmeLoeschen() }
+                    FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("OKAY COMPUTER JARVIS", "HEY JARVIS WAKE UP", "HELLO CAPTAIN JARVIS", "JARVIS TIGER COMPASS").forEach { vorschlag ->
+                            Chip(vorschlag, aktiv = e.weckwortPhrase == vorschlag) { phrase = vorschlag; vm.weckwortPhraseSetzen(vorschlag) }
+                        }
                     }
                 }
-                else -> {
-                    Text(
-                        "Sag zehnmal „$wort“: viermal nah, dreimal aus etwa zwei Metern, dreimal aus etwa fünf Metern. Jarvis lernt deinen Stimm-Fingerabdruck " +
-                            "und springt danach nur noch auf deine Stimme an, auch von weitem. Dauert zwei Minuten.",
-                        color = f.textSchwach, fontSize = 13.sp,
-                    )
-                    Knopf("Stimme anlernen", Modifier.padding(top = 10.dp).fillMaxWidth()) { vm.stimmeAnlernen() }
+                Unterzeile("Empfindlichkeit")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch").forEach { (id, name) ->
+                        Chip(name, aktiv = e.weckwortEmpfindlichkeit == id) { vm.weckwortEmpfindlichkeit(id) }
+                    }
+                }
+                Text(
+                    "Hoch: springt leichter an, auch bei deutscher Aussprache, aber öfter ohne Grund. Niedrig: nur bei deutlichem „$wort“.",
+                    color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
+                )
+                treffer?.let { t ->
+                    val zeit = java.time.Instant.ofEpochMilli(t.zeitpunkt).atZone(java.time.ZoneId.systemDefault())
+                        .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM., HH:mm 'Uhr'"))
+                    Text("Zuletzt erkannt: $zeit, Sicherheit ${(t.sicherheit * 100).toInt()} %", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+                }
+
+                // Stimmprofil: Jarvis springt nur noch auf Franks Stimme an.
+                val stimme by de.frank.jarvis.weckwort.Stimmprofil.stand.collectAsState()
+                val abgewiesen by de.frank.jarvis.weckwort.Weckwort.abgewiesen.collectAsState()
+                Unterzeile("Nur auf meine Stimme hören")
+                val anlernen = stimme.anlernen
+                when {
+                    anlernen != null -> {
+                        val ziel = de.frank.jarvis.weckwort.Stimmprofil.ANLERN_ZIEL
+                        Zeile("Anlernen läuft", "Probe ${minOf(anlernen + 1, ziel)} von $ziel", f.primaer)
+                        // Abstand je Probe: So lernt Jarvis deine Stimme nah, im Raum und von weitem (etwa aus der Küche).
+                        val (abstand, anleitung) = when {
+                            anlernen < 4 -> "Nah" to "Halte das Handy wie gewohnt und sag „$wort“ in normaler Lautstärke."
+                            anlernen < 7 -> "Etwa 2 Meter" to "Leg das Handy hin, geh etwa zwei Meter weg und sag „$wort“ so, wie du es im Raum sagen würdest."
+                            else -> "Etwa 5 Meter" to "Geh etwa fünf Meter weg, zum Beispiel in die Küche, und sag „$wort“ so laut, wie du es von dort sagen würdest."
+                        }
+                        Text(
+                            if (hoertZu) "$abstand: $anleitung Nach jedem erkannten Mal kommt ein kurzer Ton, dann kurz warten und noch einmal. " +
+                                "Hörst du keinen Ton, etwas lauter oder einen Schritt näher."
+                            else "Jarvis hört gerade nicht zu (er liest vor oder nimmt auf). Sobald „Hört zu“ oben steht, kann es losgehen.",
+                            color = f.text, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 6.dp),
+                        )
+                        Knopf("Abbrechen", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.stimmeAnlernenAbbrechen() }
+                    }
+                    stimme.proben > 0 || stimme.stimmen > 0 -> {
+                        Zeile("Stimmerkennung", if (stimme.stimmen > 0) "Aktiv" else "Nur Klangprofil", if (stimme.stimmen > 0) f.erfolg else f.primaer)
+                        Text(
+                            if (stimme.stimmen > 0) "Jarvis kennt deinen Stimm-Fingerabdruck (${stimme.stimmen} Proben, nah bis fünf Meter). Nach dem Weckwort prüft er, ob wirklich du sprichst; " +
+                                "andere Menschen, Fernseher und Radio weist er ab, auch wenn sie „$wort“ sagen." +
+                                (stimme.letzteStimme?.let { s -> " Zuletzt: Übereinstimmung ${(s * 100).toInt()} %, nötig ${((stimme.stimmSchwelle ?: 0f) * 100).toInt()} %." } ?: "")
+                            else "Angelernt mit ${stimme.proben} Proben für „$wort“ (Klangprofil, unterscheidet Wörter, aber Menschen nur teilweise). " +
+                                "Neu anlernen, dann lernt Jarvis auch deinen Stimm-Fingerabdruck.",
+                            color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
+                        )
+                        abgewiesen?.let { t ->
+                            val zeit = java.time.Instant.ofEpochMilli(t.zeitpunkt).atZone(java.time.ZoneId.systemDefault())
+                                .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM., HH:mm 'Uhr'"))
+                            Text("Zuletzt abgewiesen: $zeit", color = f.textLeise, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                        }
+                        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Knopf("Neu anlernen", Modifier.weight(1f), haupt = false) { vm.stimmeAnlernen() }
+                            Knopf("Löschen", Modifier.weight(1f), haupt = false, farbe = f.gefahr) { vm.stimmeLoeschen() }
+                        }
+                    }
+                    else -> {
+                        Text(
+                            "Sag zehnmal „$wort“: viermal nah, dreimal aus etwa zwei Metern, dreimal aus etwa fünf Metern. Jarvis lernt deinen Stimm-Fingerabdruck " +
+                                "und springt danach nur noch auf deine Stimme an, auch von weitem. Dauert zwei Minuten.",
+                            color = f.textSchwach, fontSize = 13.sp,
+                        )
+                        Knopf("Stimme anlernen", Modifier.padding(top = 10.dp).fillMaxWidth()) { vm.stimmeAnlernen() }
+                    }
                 }
             }
         }
 
-        // ---------------------------------------------------------------- Plugin
-        Bereich("ChatGPT-Plugin") {
-            val (stand, farbe) = when (tunnel.stufe) {
-                TunnelStufe.ONLINE -> "Online" to f.erfolg
-                TunnelStufe.VERBINDET -> tunnel.meldung to f.primaer
-                TunnelStufe.NICHT_EINGERICHTET -> "Nicht eingerichtet" to f.textLeise
-                TunnelStufe.FEHLER -> tunnel.meldung to f.gefahr
-                TunnelStufe.AUS -> "Aus" to f.textLeise
-            }
-            Zeile("Verbindung zum Server", stand, farbe)
-            Text("Jarvis hält von sich aus eine Verbindung zu deinem Server. ChatGPT ruft den Server an, der reicht den Aufruf ans Handy weiter.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        if (reiter == "konten") {
+            // ---------------------------------------------------------------- Plugin
+            Bereich("ChatGPT-Plugin") {
+                val (stand, farbe) = when (tunnel.stufe) {
+                    TunnelStufe.ONLINE -> "Online" to f.erfolg
+                    TunnelStufe.VERBINDET -> tunnel.meldung to f.primaer
+                    TunnelStufe.NICHT_EINGERICHTET -> "Nicht eingerichtet" to f.textLeise
+                    TunnelStufe.FEHLER -> tunnel.meldung to f.gefahr
+                    TunnelStufe.AUS -> "Aus" to f.textLeise
+                }
+                Zeile("Verbindung zum Server", stand, farbe)
+                Text("Jarvis hält von sich aus eine Verbindung zu deinem Server. ChatGPT ruft den Server an, der reicht den Aufruf ans Handy weiter.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
 
-            val adresse = vm.pluginAdresse
-            if (adresse.isNotEmpty()) {
-                Unterzeile("Plugin-Adresse für ChatGPT")
-                Text(adresse, Modifier.fillMaxWidth().glas(f, 14.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(14.dp), color = f.text, fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
-                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Knopf("Kopieren", Modifier.weight(1f), Icons.Rounded.ContentCopy) { vm.kopiere(adresse, "Plugin-Adresse") }
-                    Knopf("Teilen", Modifier.weight(1f), Icons.Rounded.Share, haupt = false) {
-                        runCatching { activity.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, adresse), "Plugin-Adresse teilen")) }
+                val adresse = vm.pluginAdresse
+                if (adresse.isNotEmpty()) {
+                    Unterzeile("Plugin-Adresse für ChatGPT")
+                    Text(adresse, Modifier.fillMaxWidth().glas(f, 14.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(14.dp), color = f.text, fontSize = 13.sp, fontFamily = FontFamily.Monospace, lineHeight = 18.sp)
+                    Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Knopf("Kopieren", Modifier.weight(1f), Icons.Rounded.ContentCopy) { vm.kopiere(adresse, "Plugin-Adresse") }
+                        Knopf("Teilen", Modifier.weight(1f), Icons.Rounded.Share, haupt = false) {
+                            runCatching { activity.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, adresse), "Plugin-Adresse teilen")) }
+                        }
                     }
+                    Text("Die Adresse ist dein Schlüssel: Wer sie kennt, kann deine Aufgaben lesen und ändern. Gib sie nur in ChatGPT ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                 }
-                Text("Die Adresse ist dein Schlüssel: Wer sie kennt, kann deine Aufgaben lesen und ändern. Gib sie nur in ChatGPT ein.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-            }
 
-            // Nur nötig, wenn die App ohne eingebaute Server-Daten gebaut wurde (z. B. in der Cloud).
-            if (tunnel.stufe == TunnelStufe.NICHT_EINGERICHTET || (tunnel.stufe == TunnelStufe.FEHLER && "Schlüssel" in tunnel.meldung)) {
-                var host by rememberSaveable { mutableStateOf(e.serverHost) }
-                var token by rememberSaveable { mutableStateOf("") }
-                Unterzeile("Server-Adresse")
-                Eingabe(host, { host = it }, "z. B. srv1774016.hstgr.cloud", Modifier.fillMaxWidth())
-                Unterzeile("Server-Schlüssel")
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Eingabe(token, { token = it }, "Schlüssel einfügen", Modifier.weight(1f), geheim = true)
-                    Spacer(Modifier.width(8.dp))
-                    Knopf("Einfügen", icon = Icons.Rounded.ContentPaste, haupt = false) { vm.ausZwischenablage().takeIf { it.isNotEmpty() }?.let { token = it } }
+                // Nur nötig, wenn die App ohne eingebaute Server-Daten gebaut wurde (z. B. in der Cloud).
+                if (tunnel.stufe == TunnelStufe.NICHT_EINGERICHTET || (tunnel.stufe == TunnelStufe.FEHLER && "Schlüssel" in tunnel.meldung)) {
+                    var host by rememberSaveable { mutableStateOf(e.serverHost) }
+                    var token by rememberSaveable { mutableStateOf("") }
+                    Unterzeile("Server-Adresse")
+                    Eingabe(host, { host = it }, "z. B. srv1774016.hstgr.cloud", Modifier.fillMaxWidth())
+                    Unterzeile("Server-Schlüssel")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Eingabe(token, { token = it }, "Schlüssel einfügen", Modifier.weight(1f), geheim = true)
+                        Spacer(Modifier.width(8.dp))
+                        Knopf("Einfügen", icon = Icons.Rounded.ContentPaste, haupt = false) { vm.ausZwischenablage().takeIf { it.isNotEmpty() }?.let { token = it } }
+                    }
+                    Knopf("Speichern und verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.serverSpeichern(host, token) }
                 }
-                Knopf("Speichern und verbinden", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.serverSpeichern(host, token) }
-            }
         
-            Text("So kommt Jarvis in ChatGPT", Modifier.padding(top = 18.dp), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            listOf(
-                "Warten, bis oben „Online“ steht. Dann die Plugin-Adresse kopieren oder an den PC teilen.",
-                "Am PC chatgpt.com öffnen: Einstellungen → Apps und Konnektoren → Erweitert → Entwicklermodus einschalten.",
-                "Dort „Erstellen“ wählen: Name „Jarvis“, als MCP-Server-URL die Plugin-Adresse, Authentifizierung „Keine“. Bestätigen.",
-                "Im Chat oder im Sprachmodus sagen: „Jarvis, was steht heute an?“ Der erste Aufruf erscheint hier unter Aktivität.",
-            ).forEachIndexed { i, text ->
-                Row(Modifier.padding(top = 10.dp)) {
-                    Box(Modifier.size(24.dp).glas(f, 12.dp, erhoeht = 0.2f), contentAlignment = Alignment.Center) { Text("${i + 1}", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
-                    Text(text, Modifier.padding(start = 10.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp)
+                Text("So kommt Jarvis in ChatGPT", Modifier.padding(top = 18.dp), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                listOf(
+                    "Warten, bis oben „Online“ steht. Dann die Plugin-Adresse kopieren oder an den PC teilen.",
+                    "Am PC chatgpt.com öffnen: Einstellungen → Apps und Konnektoren → Erweitert → Entwicklermodus einschalten.",
+                    "Dort „Erstellen“ wählen: Name „Jarvis“, als MCP-Server-URL die Plugin-Adresse, Authentifizierung „Keine“. Bestätigen.",
+                    "Im Chat oder im Sprachmodus sagen: „Jarvis, was steht heute an?“ Der erste Aufruf erscheint hier unter Aktivität.",
+                ).forEachIndexed { i, text ->
+                    Row(Modifier.padding(top = 10.dp)) {
+                        Box(Modifier.size(24.dp).glas(f, 12.dp, erhoeht = 0.2f), contentAlignment = Alignment.Center) { Text("${i + 1}", color = f.primaer, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                        Text(text, Modifier.padding(start = 10.dp), color = f.textLeise, fontSize = 14.sp, lineHeight = 19.sp)
+                    }
                 }
             }
         }
 
-        // ---------------------------------------------------------------- Tagesauswertung
-        Bereich("Tagesauswertungs-Synchronisation") {
-            Zeile("Automatisch synchronisieren", if (e.auswertungAn) "Nächste: ${vm.naechsteAuswertung}" else "Aus", if (e.auswertungAn) f.erfolg else f.textLeise)
-            Text("Jarvis liest dabei alle angebundenen Apps und schreibt die Tagesauswertung neu: Rückblick, aktueller Tag und Ausblick. In ChatGPT fragst du dann nur: „Wie ist meine Tagesauswertung?“", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("An", aktiv = e.auswertungAn) { vm.auswertungSchalten(true) }
-                Chip("Aus", aktiv = !e.auswertungAn) { vm.auswertungSchalten(false) }
-            }
+        if (reiter == "alltag") {
+            // ---------------------------------------------------------------- Timer
+            TimerEinstellungen(vm)
+        }
 
-            Unterzeile("Abstand")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                de.frank.jarvis.auswertung.Zeitplan.ABSTAENDE.forEach { stunden ->
-                    Chip(if (stunden == 1) "Jede Stunde" else "Alle $stunden Stunden", aktiv = e.auswertungAbstand == stunden) { vm.auswertungAbstand(stunden) }
+        if (reiter == "alltag") {
+            // ---------------------------------------------------------------- Tagesauswertung
+            Bereich("Tagesauswertungs-Synchronisation") {
+                Zeile("Automatisch synchronisieren", if (e.auswertungAn) "Nächste: ${vm.naechsteAuswertung}" else "Aus", if (e.auswertungAn) f.erfolg else f.textLeise)
+                Text("Jarvis liest dabei alle angebundenen Apps und schreibt die Tagesauswertung neu: Rückblick, aktueller Tag und Ausblick. In ChatGPT fragst du dann nur: „Wie ist meine Tagesauswertung?“", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("An", aktiv = e.auswertungAn) { vm.auswertungSchalten(true) }
+                    Chip("Aus", aktiv = !e.auswertungAn) { vm.auswertungSchalten(false) }
                 }
-            }
 
-            Unterzeile("Im Schlaf pausieren")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("An", aktiv = e.auswertungSchlafpause) { vm.auswertungSchlafpause(true) }
-                Chip("Aus", aktiv = !e.auswertungSchlafpause) { vm.auswertungSchlafpause(false) }
-            }
-            Text("Nach dem Dienstplan: vor einem Tagdienst ruht die Synchronisation von 20 bis 4 Uhr, nach einem Nachtdienst von 6 bis 15 Uhr. An freien Tagen läuft sie durch.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-
-            Unterzeile("Frische Biodaten holen")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("An", aktiv = e.auswertungAbgleich) { vm.auswertungAbgleich(true) }
-                Chip("Aus", aktiv = !e.auswertungAbgleich) { vm.auswertungAbgleich(false) }
-            }
-            Text("Stößt vor jedem Lauf den Abgleich mit Whoop, Oura und Waage in Entropie Reductor an. Aus = Jarvis nimmt den Stand, der dort schon liegt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-
-            Unterzeile("Auswertung vom Modell schreiben lassen")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("An", aktiv = e.auswertungDeutung) { vm.auswertungDeutung(true) }
-                Chip("Aus", aktiv = !e.auswertungDeutung) { vm.auswertungDeutung(false) }
-            }
-            Text("Aus = Jarvis synchronisiert nur die Daten und speichert den reinen Datenbericht, ohne das oben gewählte Modell zu fragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-
-            Unterzeile("Aus dem Tagebuch lernen")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("An", aktiv = e.auswertungLernen) { e.auswertungLernen = true }
-                Chip("Aus", aktiv = !e.auswertungLernen) { e.auswertungLernen = false }
-            }
-            Text("Jarvis verdichtet ältere Monate des Tagebuchs zu Kurzfassungen und notiert einmal am Tag bis zu drei neue Dinge, die er daraus über dich erfährt. Du findest sie unter „Über Frank“ und kannst sie dort ändern oder löschen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-
-            Knopf("Jetzt synchronisieren", Modifier.padding(top = 14.dp).fillMaxWidth(), haupt = false) { vm.auswertungJetzt() }
-        }
-
-        // ---------------------------------------------------------------- Pünktlich losfahren
-        AbfahrtEinstellungen(vm)
-
-        // ---------------------------------------------------------------- Sprache
-        SpracheEinstellungen(vm)
-
-        // ---------------------------------------------------------------- Kalender und Wetter
-        Bereich("Kalender und Wetter") {
-            val lesen = vm.stoerungen["kalender"] == null
-            Zeile("Kalender", if (!lesen) "Kein Zugriff" else if (vm.kalenderSchreibenErlaubt) "Lesen und Schreiben" else "Nur Lesen", if (lesen) f.erfolg else f.gefahr)
-            if (!lesen || !vm.kalenderSchreibenErlaubt) Knopf(if (lesen) "Schreiben erlauben" else "Kalender-Zugriff erlauben", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.kalenderAnfragen() }
-            Text("Jarvis trägt Termine in den Kalender ein, in dem deine Dienste stehen. Google übernimmt sie mit der nächsten Synchronisierung.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            Unterzeile("Ort für die Wettervorhersage")
-            var ort by rememberSaveable { mutableStateOf(e.wetterOrt) }
-            Eingabe(ort, { ort = it }, "Ort", Modifier.fillMaxWidth())
-            if (ort.trim() != e.wetterOrt) Knopf(if (vm.wetterSuchtOrt) "Suche …" else "Ort übernehmen", Modifier.padding(top = 10.dp).fillMaxWidth()) { vm.wetterOrtSetzen(ort) }
-        }
-
-        // ---------------------------------------------------------------- Tagebuch
-        Bereich("Tagebuch (Google Drive)") {
-            val stoerung = vm.stoerungen["tagebuch"]
-            Zeile("Lesezugang", if (stoerung == null) "In Ordnung" else "Gestört", if (stoerung == null) f.erfolg else f.gefahr)
-            Text(stoerung ?: "Dein Server liest die Tagebuch-Dateien mit einem Nur-Lese-Zugang aus Google Drive. Sollte Google ihn einmal widerrufen, erteilst du ihn hier neu.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
-            Knopf(if (vm.driveErneuertGerade) "Warte auf Google …" else "Berechtigung erneuern", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = stoerung != null) { vm.driveBerechtigungErneuern() }
-            Text("Es öffnet sich die Google-Seite. Konto wählen, „Zulassen“ tippen, zurück zu Jarvis. Angefragt wird nur das Lesen von Drive.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-        }
-
-        // ---------------------------------------------------------------- E-Mail
-        Bereich("E-Mail (Gmail)") {
-            val eingerichtet = e.mailPasswort.isNotBlank()
-            Zeile("Senden und Lesen", if (eingerichtet) "Eingerichtet" else "Nicht eingerichtet", if (eingerichtet) f.erfolg else f.textLeise)
-            Text("Jarvis braucht dafür ein App-Passwort deines Google-Kontos: Google-Konto → Sicherheit → Bestätigung in zwei Schritten → App-Passwörter, dort eines für „Jarvis“ erzeugen und die 16 Zeichen hier einfügen. Dein normales Passwort gehört nicht hierher.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            var adresse by rememberSaveable { mutableStateOf(e.mailAdresse) }
-            // Das gespeicherte Passwort steht verdeckt im Feld; das Auge zeigt es.
-            var passwort by rememberSaveable { mutableStateOf(e.mailPasswort) }
-            var empfaenger by rememberSaveable { mutableStateOf(e.mailEmpfaenger) }
-            Unterzeile("Deine Gmail-Adresse")
-            Eingabe(adresse, { adresse = it }, "name@gmail.com", Modifier.fillMaxWidth())
-            Unterzeile("App-Passwort")
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Eingabe(passwort, { passwort = it }, "16 Zeichen", Modifier.weight(1f), geheim = true)
-                Spacer(Modifier.width(8.dp))
-                Knopf("Einfügen", icon = Icons.Rounded.ContentPaste, haupt = false) { vm.ausZwischenablage().takeIf { it.isNotEmpty() }?.let { passwort = it } }
-            }
-            Unterzeile("Weitere erlaubte Empfänger (optional, mit Komma getrennt)")
-            Eingabe(empfaenger, { empfaenger = it }, "leer = Jarvis sendet nur an dich", Modifier.fillMaxWidth())
-            Knopf("Speichern", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.mailSpeichern(adresse, passwort, empfaenger) }
-            if (eingerichtet) Knopf("App-Passwort entfernen", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false, farbe = f.gefahr) { vm.mailEntfernen() }
-            Text("Jarvis sendet nur an dich und an die hier freigegebenen Adressen. E-Mails kommen nicht in die Tagesauswertung.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-        }
-
-        // ---------------------------------------------------------------- GitHub
-        Bereich("GitHub-Repo") {
-            val mitSchluessel = e.githubToken.isNotBlank()
-            Zeile("Nur lesen", if (mitSchluessel) "Mit Code-Suche" else "Ohne Schlüssel", if (mitSchluessel) f.erfolg else f.textLeise)
-            Text("Jarvis liest dein ganzes Repo und wertet es aus, ändert dort aber nie etwas. Das geht ohne Schlüssel (60 Abfragen je Stunde). Für die Code-Suche und mehr Abfragen: " +
-                "GitHub → Settings → Developer settings → Fine-grained tokens, Zugriff „Public repositories (read-only)“ genügt.",
-                color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            Schluesselfeld(vm, "Repo", e.repoName, geheim = false) { e.repoName = it }
-            Schluesselfeld(vm, "GitHub-Schlüssel", e.githubToken) { e.githubToken = it }
-        }
-
-        // ---------------------------------------------------------------- Apps
-        Bereich("Angebundene Apps und Fähigkeiten") {
-            Register.alle(activity).forEachIndexed { i, app ->
-                val stoerung = vm.stoerungen[app.id]
-                if (i > 0) Spacer(Modifier.height(14.dp))
-                Zeile(app.name, if (stoerung == null) "Bereit · ${app.werkzeuge.size} Werkzeuge" else "Gestört", if (stoerung == null) f.erfolg else f.gefahr)
-                Text(stoerung ?: app.beschreibung, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
-                if (app.id == "kalender" && stoerung != null) Knopf("Kalender-Zugriff erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.kalenderAnfragen() }
-            }
-            Text("Weitere Apps wie das Journal lassen sich hier später andocken.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
-        }
-
-        // ---------------------------------------------------------------- System
-        Bereich("System") {
-            Zeile("Bereitschaft", if (e.dienstAn) "Jarvis läuft im Hintergrund" else "Angehalten", if (e.dienstAn) f.erfolg else f.textLeise)
-            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("An", aktiv = e.dienstAn) { vm.dienstSchalten(true) }
-                Chip("Aus", aktiv = !e.dienstAn) { vm.dienstSchalten(false) }
-            }
-            if (!vm.akkuFrei) {
-                Text("Android darf Jarvis bei gesperrtem Handy noch schlafen legen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
-                Knopf("Akku-Sparen für Jarvis ausschalten", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) {
-                    runCatching { activity.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${activity.packageName}"))) }
+                Unterzeile("Abstand")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    de.frank.jarvis.auswertung.Zeitplan.ABSTAENDE.forEach { stunden ->
+                        Chip(if (stunden == 1) "Jede Stunde" else "Alle $stunden Stunden", aktiv = e.auswertungAbstand == stunden) { vm.auswertungAbstand(stunden) }
+                    }
                 }
+
+                Unterzeile("Im Schlaf pausieren")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("An", aktiv = e.auswertungSchlafpause) { vm.auswertungSchlafpause(true) }
+                    Chip("Aus", aktiv = !e.auswertungSchlafpause) { vm.auswertungSchlafpause(false) }
+                }
+                Text("Nach dem Dienstplan: vor einem Tagdienst ruht die Synchronisation von 20 bis 4 Uhr, nach einem Nachtdienst von 6 bis 15 Uhr. An freien Tagen läuft sie durch.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+
+                Unterzeile("Frische Biodaten holen")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("An", aktiv = e.auswertungAbgleich) { vm.auswertungAbgleich(true) }
+                    Chip("Aus", aktiv = !e.auswertungAbgleich) { vm.auswertungAbgleich(false) }
+                }
+                Text("Stößt vor jedem Lauf den Abgleich mit Whoop, Oura und Waage in Entropie Reductor an. Aus = Jarvis nimmt den Stand, der dort schon liegt.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+
+                Unterzeile("Auswertung vom Modell schreiben lassen")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("An", aktiv = e.auswertungDeutung) { vm.auswertungDeutung(true) }
+                    Chip("Aus", aktiv = !e.auswertungDeutung) { vm.auswertungDeutung(false) }
+                }
+                Text("Aus = Jarvis synchronisiert nur die Daten und speichert den reinen Datenbericht, ohne das oben gewählte Modell zu fragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+
+                Unterzeile("Aus dem Tagebuch lernen")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("An", aktiv = e.auswertungLernen) { e.auswertungLernen = true }
+                    Chip("Aus", aktiv = !e.auswertungLernen) { e.auswertungLernen = false }
+                }
+                Text("Jarvis verdichtet ältere Monate des Tagebuchs zu Kurzfassungen und notiert einmal am Tag bis zu drei neue Dinge, die er daraus über dich erfährt. Du findest sie unter „Über Frank“ und kannst sie dort ändern oder löschen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+
+                Knopf("Jetzt synchronisieren", Modifier.padding(top = 14.dp).fillMaxWidth(), haupt = false) { vm.auswertungJetzt() }
             }
-            if (!vm.hinweiseAn) {
-                Text("Ohne Benachrichtigungen fehlt die Statuszeile, die Jarvis wach hält.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
-                Knopf("Benachrichtigungen erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.hinweiseAnfragen() }
+        }
+
+
+        if (reiter == "alltag") {
+            // ---------------------------------------------------------------- Pünktlich losfahren
+            AbfahrtEinstellungen(vm)
+        }
+
+        if (reiter == "stimme") {
+            // ---------------------------------------------------------------- Sprache
+            SpracheEinstellungen(vm)
+        }
+
+        if (reiter == "alltag") {
+            // ---------------------------------------------------------------- Kalender und Wetter
+            Bereich("Kalender und Wetter") {
+                val lesen = vm.stoerungen["kalender"] == null
+                Zeile("Kalender", if (!lesen) "Kein Zugriff" else if (vm.kalenderSchreibenErlaubt) "Lesen und Schreiben" else "Nur Lesen", if (lesen) f.erfolg else f.gefahr)
+                if (!lesen || !vm.kalenderSchreibenErlaubt) Knopf(if (lesen) "Schreiben erlauben" else "Kalender-Zugriff erlauben", Modifier.padding(top = 10.dp).fillMaxWidth(), haupt = false) { vm.kalenderAnfragen() }
+                Text("Jarvis trägt Termine in den Kalender ein, in dem deine Dienste stehen. Google übernimmt sie mit der nächsten Synchronisierung.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Unterzeile("Ort für die Wettervorhersage")
+                var ort by rememberSaveable { mutableStateOf(e.wetterOrt) }
+                Eingabe(ort, { ort = it }, "Ort", Modifier.fillMaxWidth())
+                if (ort.trim() != e.wetterOrt) Knopf(if (vm.wetterSuchtOrt) "Suche …" else "Ort übernehmen", Modifier.padding(top = 10.dp).fillMaxWidth()) { vm.wetterOrtSetzen(ort) }
             }
-            Unterzeile("App-Sperre mit Fingerabdruck")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip("An", aktiv = e.appSperre) { e.appSperre = true }
-                Chip("Aus", aktiv = !e.appSperre) { e.appSperre = false }
+        }
+
+        if (reiter == "konten") {
+            // ---------------------------------------------------------------- Tagebuch
+            Bereich("Tagebuch (Google Drive)") {
+                val stoerung = vm.stoerungen["tagebuch"]
+                Zeile("Lesezugang", if (stoerung == null) "In Ordnung" else "Gestört", if (stoerung == null) f.erfolg else f.gefahr)
+                Text(stoerung ?: "Dein Server liest die Tagebuch-Dateien mit einem Nur-Lese-Zugang aus Google Drive. Sollte Google ihn einmal widerrufen, erteilst du ihn hier neu.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                Knopf(if (vm.driveErneuertGerade) "Warte auf Google …" else "Berechtigung erneuern", Modifier.padding(top = 12.dp).fillMaxWidth(), haupt = stoerung != null) { vm.driveBerechtigungErneuern() }
+                Text("Es öffnet sich die Google-Seite. Konto wählen, „Zulassen“ tippen, zurück zu Jarvis. Angefragt wird nur das Lesen von Drive.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             }
-            Text("Gesperrt wird beim Öffnen und nach 30 Sekunden außerhalb der App. Für ChatGPT bleibt Jarvis trotzdem erreichbar.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
-            Unterzeile("Darstellung")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("system" to "Automatisch", "hell" to "Hell", "dunkel" to "Dunkel").forEach { (id, name) -> Chip(name, aktiv = e.modus == id) { e.modus = id } }
+        }
+
+        if (reiter == "konten") {
+            // ---------------------------------------------------------------- E-Mail
+            Bereich("E-Mail (Gmail)") {
+                val eingerichtet = e.mailPasswort.isNotBlank()
+                Zeile("Senden und Lesen", if (eingerichtet) "Eingerichtet" else "Nicht eingerichtet", if (eingerichtet) f.erfolg else f.textLeise)
+                Text("Jarvis braucht dafür ein App-Passwort deines Google-Kontos: Google-Konto → Sicherheit → Bestätigung in zwei Schritten → App-Passwörter, dort eines für „Jarvis“ erzeugen und die 16 Zeichen hier einfügen. Dein normales Passwort gehört nicht hierher.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                var adresse by rememberSaveable { mutableStateOf(e.mailAdresse) }
+                // Das gespeicherte Passwort steht verdeckt im Feld; das Auge zeigt es.
+                var passwort by rememberSaveable { mutableStateOf(e.mailPasswort) }
+                var empfaenger by rememberSaveable { mutableStateOf(e.mailEmpfaenger) }
+                Unterzeile("Deine Gmail-Adresse")
+                Eingabe(adresse, { adresse = it }, "name@gmail.com", Modifier.fillMaxWidth())
+                Unterzeile("App-Passwort")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Eingabe(passwort, { passwort = it }, "16 Zeichen", Modifier.weight(1f), geheim = true)
+                    Spacer(Modifier.width(8.dp))
+                    Knopf("Einfügen", icon = Icons.Rounded.ContentPaste, haupt = false) { vm.ausZwischenablage().takeIf { it.isNotEmpty() }?.let { passwort = it } }
+                }
+                Unterzeile("Weitere erlaubte Empfänger (optional, mit Komma getrennt)")
+                Eingabe(empfaenger, { empfaenger = it }, "leer = Jarvis sendet nur an dich", Modifier.fillMaxWidth())
+                Knopf("Speichern", Modifier.padding(top = 12.dp).fillMaxWidth()) { vm.mailSpeichern(adresse, passwort, empfaenger) }
+                if (eingerichtet) Knopf("App-Passwort entfernen", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false, farbe = f.gefahr) { vm.mailEntfernen() }
+                Text("Jarvis sendet nur an dich und an die hier freigegebenen Adressen. E-Mails kommen nicht in die Tagesauswertung.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
             }
-            Unterzeile("Sicherheit")
-            Knopf("Plugin-Adresse erneuern", Modifier.fillMaxWidth(), haupt = false, farbe = f.gefahr) { vm.adresseErneuern() }
-            Text("Macht die bisherige Adresse ungültig. Danach in ChatGPT neu eintragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        }
+
+        if (reiter == "konten") {
+            // ---------------------------------------------------------------- GitHub
+            Bereich("GitHub-Repo") {
+                val mitSchluessel = e.githubToken.isNotBlank()
+                Zeile("Nur lesen", if (mitSchluessel) "Mit Code-Suche" else "Ohne Schlüssel", if (mitSchluessel) f.erfolg else f.textLeise)
+                Text("Jarvis liest dein ganzes Repo und wertet es aus, ändert dort aber nie etwas. Das geht ohne Schlüssel (60 Abfragen je Stunde). Für die Code-Suche und mehr Abfragen: " +
+                    "GitHub → Settings → Developer settings → Fine-grained tokens, Zugriff „Public repositories (read-only)“ genügt.",
+                    color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Schluesselfeld(vm, "Repo", e.repoName, geheim = false) { e.repoName = it }
+                Schluesselfeld(vm, "GitHub-Schlüssel", e.githubToken) { e.githubToken = it }
+            }
+        }
+
+        if (reiter == "konten") {
+            // ---------------------------------------------------------------- Apps
+            Bereich("Angebundene Apps und Fähigkeiten") {
+                Register.alle(activity).forEachIndexed { i, app ->
+                    val stoerung = vm.stoerungen[app.id]
+                    if (i > 0) Spacer(Modifier.height(14.dp))
+                    Zeile(app.name, if (stoerung == null) "Bereit · ${app.werkzeuge.size} Werkzeuge" else "Gestört", if (stoerung == null) f.erfolg else f.gefahr)
+                    Text(stoerung ?: app.beschreibung, color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
+                    if (app.id == "kalender" && stoerung != null) Knopf("Kalender-Zugriff erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.kalenderAnfragen() }
+                }
+                Text("Weitere Apps wie das Journal lassen sich hier später andocken.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
+            }
+        }
+
+        if (reiter == "system") {
+            // ---------------------------------------------------------------- System
+            Bereich("System") {
+                Zeile("Bereitschaft", if (e.dienstAn) "Jarvis läuft im Hintergrund" else "Angehalten", if (e.dienstAn) f.erfolg else f.textLeise)
+                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("An", aktiv = e.dienstAn) { vm.dienstSchalten(true) }
+                    Chip("Aus", aktiv = !e.dienstAn) { vm.dienstSchalten(false) }
+                }
+                if (!vm.akkuFrei) {
+                    Text("Android darf Jarvis bei gesperrtem Handy noch schlafen legen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
+                    Knopf("Akku-Sparen für Jarvis ausschalten", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) {
+                        runCatching { activity.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${activity.packageName}"))) }
+                    }
+                }
+                if (!vm.hinweiseAn) {
+                    Text("Ohne Benachrichtigungen fehlt die Statuszeile, die Jarvis wach hält.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
+                    Knopf("Benachrichtigungen erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.hinweiseAnfragen() }
+                }
+                Unterzeile("App-Sperre mit Fingerabdruck")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("An", aktiv = e.appSperre) { e.appSperre = true }
+                    Chip("Aus", aktiv = !e.appSperre) { e.appSperre = false }
+                }
+                Text("Gesperrt wird beim Öffnen und nach 30 Sekunden außerhalb der App. Für ChatGPT bleibt Jarvis trotzdem erreichbar.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Unterzeile("Darstellung")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("system" to "Automatisch", "hell" to "Hell", "dunkel" to "Dunkel").forEach { (id, name) -> Chip(name, aktiv = e.modus == id) { e.modus = id } }
+                }
+                Unterzeile("Sicherheit")
+                Knopf("Plugin-Adresse erneuern", Modifier.fillMaxWidth(), haupt = false, farbe = f.gefahr) { vm.adresseErneuern() }
+                Text("Macht die bisherige Adresse ungültig. Danach in ChatGPT neu eintragen.", color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            }
         }
 
         Text(

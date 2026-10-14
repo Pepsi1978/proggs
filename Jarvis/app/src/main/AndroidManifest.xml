@@ -21,6 +21,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Exakte Wecker für die Tagesauswertung zu den eingestellten Uhrzeiten. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
@@ -111,6 +112,12 @@
         <receiver android:name=".auswertung.AuswertungsEmpfaenger" android:exported="false" />
         <receiver android:name=".fahrt.AbfahrtEmpfaenger" android:exported="false" />
         <receiver android:name=".timer.TimerEmpfaenger" android:exported="false" />
+
+        <!-- Lässt einen abgelaufenen Timer wie einen Wecker klingeln, bis Frank ausschaltet. -->
+        <service
+            android:name=".timer.TimerKlingelDienst"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- Ablage: Dateien zum Teilen und „Mit anderer App öffnen“ als Inhalts-Adresse mit befristeter Leseberechtigung. -->
         <provider

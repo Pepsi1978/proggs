@@ -33,12 +33,20 @@ object Timer {
     private const val SPEICHER = "timer"
     const val AKTION_ABGELAUFEN = "de.frank.jarvis.TIMER_ABGELAUFEN"
     const val AKTION_STOPPEN = "de.frank.jarvis.TIMER_STOPPEN"
+    const val AKTION_SCHLUMMERN = "de.frank.jarvis.TIMER_SCHLUMMERN"
+    const val AKTION_ZEIGEN = "de.frank.jarvis.TIMER_ZEIGEN"
     const val EXTRA_ID = "id"
     private const val KANAL = "jarvis-timer"
+    /** Ohne eigenen Ton: Der Klingel-Dienst spielt den Weckton selbst; auch für stille Meldungen. */
+    internal const val KANAL_STILL = "jarvis-timer-wecker"
 
     private val _laufend = MutableStateFlow<List<LaufenderTimer>>(emptyList())
     val laufend: StateFlow<List<LaufenderTimer>> = _laufend.asStateFlow()
     @Volatile private var geladen = false
+
+    /** Timer, die gerade wie ein Wecker klingeln (bis Frank sie ausschaltet). */
+    private val _klingelt = MutableStateFlow<List<LaufenderTimer>>(emptyList())
+    val klingelt: StateFlow<List<LaufenderTimer>> = _klingelt.asStateFlow()
 
     /** Beim App-Start: Liste laden, Abgelaufenes melden, alle Wecker neu stellen (etwa nach einem Neustart des Handys). */
     fun starte(context: Context) {
@@ -46,7 +54,8 @@ object Timer {
         kanalAnlegen(app)
         lade(app)
         val jetzt = System.currentTimeMillis()
-        _laufend.value.filter { it.ende <= jetzt }.forEach { abgelaufen(app, it.id) }
+        // Beim Start Verpasstes nur still melden: Es ist ohnehin zu spät, und nach einem Neustart darf kein Klingel-Dienst starten.
+        _laufend.value.filter { it.ende <= jetzt }.forEach { abgelaufen(app, it.id, spaet = true) }
         _laufend.value.forEach { stelleWecker(app, it) }
     }
 
@@ -75,27 +84,56 @@ object Timer {
 
     fun alle(context: Context): List<LaufenderTimer> { lade(context.applicationContext); return _laufend.value }
 
-    /** Der Wecker hat ausgelöst: klingeln, bis Frank die Meldung wegwischt oder „Aus“ tippt. */
-    fun abgelaufen(context: Context, id: Int) {
+    /**
+     * Der Wecker hat ausgelöst. Im Wecker-Modus (Einstellung) klingelt der Klingel-Dienst in einer Schleife, bis Frank
+     * in der Meldung oder in der App „Aus“ tippt; sonst eine Meldung, die klingelt, bis sie weggewischt wird.
+     */
+    fun abgelaufen(context: Context, id: Int, spaet: Boolean = false) {
         val app = context.applicationContext
         lade(app)
         val t = _laufend.value.firstOrNull { it.id == id }
         _laufend.value = _laufend.value.filterNot { it.id == id }
         speichere(app)
         kanalAnlegen(app)
+        if (!spaet && t != null && de.frank.jarvis.data.Einstellungen.get(app).timerWecker) {
+            _klingelt.value = (_klingelt.value.filterNot { it.id == id } + t)
+            val gestartet = runCatching { androidx.core.content.ContextCompat.startForegroundService(app, Intent(app, TimerKlingelDienst::class.java)) }
+                .onFailure { Log.w(TAG, "Klingel-Dienst ließ sich nicht starten", it) }.isSuccess
+            if (gestartet) return
+            _klingelt.value = _klingelt.value.filterNot { it.id == id }
+        }
+        meldung(app, id, t, laut = true)
+    }
+
+    /** Einfache Meldung. [laut] = klingelt, bis sie weggewischt wird; sonst still (etwa nach der Höchstdauer). */
+    internal fun meldung(app: Context, id: Int, t: LaufenderTimer?, laut: Boolean) {
         val name = t?.name ?: "Timer"
         val unveraenderlich = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         val aus = PendingIntent.getBroadcast(app, 9_000 + id, Intent(app, TimerEmpfaenger::class.java).setAction(AKTION_STOPPEN).putExtra(EXTRA_ID, id), unveraenderlich)
-        val meldung = NotificationCompat.Builder(app, KANAL).setSmallIcon(R.drawable.ic_stat_jarvis)
+        val meldung = NotificationCompat.Builder(app, if (laut) KANAL else KANAL_STILL).setSmallIcon(R.drawable.ic_stat_jarvis)
             .setContentTitle("$name ist abgelaufen").setContentText(t?.let { "Nach " + dauerText(it.dauerMs) } ?: "Zeit ist um")
-            .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setPriority(if (laut) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_DEFAULT).setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true).setOngoing(false)
             .setContentIntent(PendingIntent.getActivity(app, 0, Intent(app, MainActivity::class.java), unveraenderlich))
             .addAction(R.drawable.ic_stat_jarvis, "Aus", aus)
             .setDeleteIntent(aus)
             .build()
-            .apply { flags = flags or android.app.Notification.FLAG_INSISTENT }
+            .apply { if (laut) flags = flags or android.app.Notification.FLAG_INSISTENT }
         runCatching { app.getSystemService(NotificationManager::class.java).notify(meldungsId(id), meldung) }.onFailure { Log.w(TAG, "Meldung nicht möglich", it) }
+    }
+
+    /** Schaltet das Klingeln aus: [id] = nur diesen Timer, null = alle klingelnden. */
+    fun klingelnAus(context: Context, id: Int? = null) {
+        _klingelt.value = if (id == null) emptyList() else _klingelt.value.filterNot { it.id == id }
+        TimerKlingelDienst.abgleichen()
+    }
+
+    /** Schlummern: Klingeln aus und denselben Timer mit der eingestellten Schlummerzeit neu starten. */
+    fun schlummern(context: Context, id: Int? = null) {
+        val app = context.applicationContext
+        val t = _klingelt.value.firstOrNull { id == null || it.id == id } ?: return
+        klingelnAus(app, t.id)
+        starten(app, de.frank.jarvis.data.Einstellungen.get(app).timerSchlummern * 60_000L, t.name)
     }
 
     fun meldungAus(context: Context, id: Int) {
@@ -138,8 +176,16 @@ object Timer {
         }.onFailure { Log.w(TAG, "Timer-Wecker ließ sich nicht stellen", it) }
     }
 
-    private fun kanalAnlegen(app: Context) {
+    internal fun kanalAnlegen(app: Context) {
         if (Build.VERSION.SDK_INT < 26) return
+        app.getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(KANAL_STILL, "Timer-Wecker", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Zeigt den klingelnden Timer mit „Aus“ und „Schlummern“. Den Ton spielt Jarvis selbst."
+                setSound(null, null)
+                enableVibration(false)
+                setBypassDnd(true)
+            },
+        )
         val ton = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         app.getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(KANAL, "Timer", NotificationManager.IMPORTANCE_HIGH).apply {
@@ -174,7 +220,9 @@ class TimerEmpfaenger : BroadcastReceiver() {
         val id = intent.getIntExtra(Timer.EXTRA_ID, -1)
         when (intent.action) {
             Timer.AKTION_ABGELAUFEN -> Timer.abgelaufen(context, id)
-            Timer.AKTION_STOPPEN -> Timer.meldungAus(context, id)
+            Timer.AKTION_STOPPEN -> if (id < 0) Timer.klingelnAus(context) else { Timer.meldungAus(context, id); Timer.klingelnAus(context, id) }
+            Timer.AKTION_SCHLUMMERN -> Timer.schlummern(context, id.takeIf { it >= 0 })
+            Timer.AKTION_ZEIGEN -> TimerKlingelDienst.abgleichen()
         }
     }
 }

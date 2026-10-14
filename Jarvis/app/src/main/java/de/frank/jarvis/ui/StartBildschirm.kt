@@ -255,6 +255,19 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
             Rundknopf(Icons.Rounded.AddComment, "Neues Gespräch", farbe = f.primaer) { vm.neuesGespraech() }
             Spacer(Modifier.width(8.dp))
         }
+        // Tagesauswertung jetzt neu erstellen: frische Daten aller Apps holen und alles neu auswerten.
+        if (wertetAus) Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { Kern(34.dp, f.primaer, aktiv = true) }
+        else Rundknopf(Icons.Rounded.Refresh, "Tagesauswertung aktualisieren", farbe = f.primaer) { vm.auswertungJetzt() }
+        Spacer(Modifier.width(8.dp))
+        // Design umschalten: Blau ↔ Gold wie Geniale Ideen; hell oder dunkel bleibt beim Knopf daneben.
+        Rundknopf(Icons.Rounded.Palette, "Design wechseln", farbe = f.primaer) {
+            val ids = de.frank.jarvis.ui.theme.DESIGNS
+            val i = ids.indexOfFirst { it.first == vm.einstellungen.design }
+            val neu = ids[(i + 1) % ids.size]
+            vm.einstellungen.design = neu.first
+            vm.meldung = "Design: " + neu.second
+        }
+        Spacer(Modifier.width(8.dp))
         // Hell → Automatisch (wie das System) → Dunkel → Hell, wie in Geniale Aufgaben. Das Symbol zeigt den aktuellen Modus.
         val modus = vm.einstellungen.modus
         Rundknopf(
@@ -266,19 +279,6 @@ private fun Kopf(vm: AppViewModel, tunnel: TunnelZustand, wertetAus: Boolean, le
             vm.einstellungen.modus = neu
             vm.meldung = when (neu) { "hell" -> "Hell"; "dunkel" -> "Dunkel"; else -> "Automatisch wie das System" }
         }
-        Spacer(Modifier.width(8.dp))
-        // Design umschalten: Blau ↔ Gold wie Geniale Ideen; hell oder dunkel bleibt beim Knopf daneben.
-        Rundknopf(Icons.Rounded.Palette, "Design wechseln", farbe = f.primaer) {
-            val ids = de.frank.jarvis.ui.theme.DESIGNS
-            val i = ids.indexOfFirst { it.first == vm.einstellungen.design }
-            val neu = ids[(i + 1) % ids.size]
-            vm.einstellungen.design = neu.first
-            vm.meldung = "Design: " + neu.second
-        }
-        Spacer(Modifier.width(8.dp))
-        // Tagesauswertung jetzt neu erstellen: frische Daten aller Apps holen und alles neu auswerten.
-        if (wertetAus) Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { Kern(34.dp, f.primaer, aktiv = true) }
-        else Rundknopf(Icons.Rounded.Refresh, "Tagesauswertung aktualisieren", farbe = f.primaer) { vm.auswertungJetzt() }
     }
 }
 
@@ -327,6 +327,7 @@ private fun LaeuftGerade(vm: AppViewModel) {
     val f = LocalFarben.current
     val timer by de.frank.jarvis.timer.Timer.laufend.collectAsState()
     val agenten by de.frank.jarvis.agent.Agenten.laeufe.collectAsState()
+    KlingelndeTimer(Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
     if (timer.isEmpty() && agenten.isEmpty()) return
     var jetzt by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(timer.isNotEmpty()) {
@@ -362,6 +363,31 @@ private fun LaeuftGerade(vm: AppViewModel) {
                     Text("Agent " + l.agent, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(l.schritt.ifEmpty { l.auftrag }, color = f.textLeise, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
+            }
+        }
+    }
+}
+
+/** Timer, die gerade wie ein Wecker klingeln: groß, mit „Aus“ und „Schlummern“. Auch auf dem Sperr-Bildschirm von Jarvis. */
+@Composable
+fun KlingelndeTimer(modifier: Modifier = Modifier) {
+    val f = LocalFarben.current
+    val klingelt by de.frank.jarvis.timer.Timer.klingelt.collectAsState()
+    if (klingelt.isEmpty()) return
+    val kontext = androidx.compose.ui.platform.LocalContext.current
+    val schlummern = de.frank.jarvis.data.Einstellungen.get(kontext).timerSchlummern
+    Karte(modifier, toenung = f.gefahr) {
+        klingelt.forEachIndexed { i, t ->
+            Row(Modifier.fillMaxWidth().padding(top = if (i > 0) 14.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Timer, null, tint = f.gefahr, modifier = Modifier.size(26.dp))
+                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                    Text(t.name + " ist abgelaufen", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Nach " + de.frank.jarvis.timer.Timer.dauerText(t.dauerMs), color = f.textLeise, fontSize = 13.sp)
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Knopf("Aus", Modifier.weight(1f), farbe = f.gefahr) { de.frank.jarvis.timer.Timer.klingelnAus(kontext, t.id) }
+                Knopf("Schlummern $schlummern min", Modifier.weight(1f), haupt = false) { de.frank.jarvis.timer.Timer.schlummern(kontext, t.id) }
             }
         }
     }

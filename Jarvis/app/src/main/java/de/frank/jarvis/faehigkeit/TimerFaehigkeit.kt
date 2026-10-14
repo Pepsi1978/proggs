@@ -24,7 +24,7 @@ class TimerFaehigkeit(private val context: Context) : Faehigkeit {
             titel = "Timer",
             beschreibung = "Jarvis: startet einen Timer in der Jarvis-App, liest die laufenden Timer oder stoppt einen. " +
                 "Beispiele: „Starte einen Timer für 33 Minuten“ → aktion starten, minuten 33. „Timer für 2 Stunden“ → stunden 2. " +
-                "„Wie lange läuft der Timer noch?“ → aktion lesen. „Stopp den Timer“ → aktion stoppen (ohne id: der zuerst ablaufende).",
+                "„Wie lange läuft der Timer noch?“ → aktion lesen. „Stopp den Timer“ oder „Aus“, während er klingelt → aktion stoppen (ohne id: erst das Klingeln, sonst der zuerst ablaufende).",
             schema = schema(
                 "aktion" to text("starten, lesen oder stoppen.", listOf("starten", "lesen", "stoppen")),
                 "stunden" to zahl("Stunden der Dauer (beim Starten)."),
@@ -49,9 +49,11 @@ class TimerFaehigkeit(private val context: Context) : Faehigkeit {
                 }
                 "stoppen" -> {
                     val alle = Timer.alle(context)
+                    val klingelnd = Timer.klingelt.value
                     when {
+                        klingelnd.isNotEmpty() && !a.has("id") && (!a.optBoolean("alle") || alle.isEmpty()) -> { Timer.klingelnAus(context); Ergebnis("Klingeln ausgeschaltet (${klingelnd.joinToString { "„${it.name}“" }}).") }
                         alle.isEmpty() -> Ergebnis("Es läuft kein Timer.")
-                        a.optBoolean("alle") -> { alle.forEach { Timer.stoppen(context, it.id) }; Ergebnis("Alle ${alle.size} Timer gestoppt.") }
+                        a.optBoolean("alle") -> { Timer.klingelnAus(context); alle.forEach { Timer.stoppen(context, it.id) }; Ergebnis("Alle ${alle.size} Timer gestoppt.") }
                         else -> {
                             val t = if (a.has("id") && !a.isNull("id")) alle.firstOrNull { it.id == a.optInt("id") } else alle.first()
                             if (t == null) Ergebnis("Keinen Timer mit Nummer ${a.optInt("id")} gefunden. Laufend: " + liste(), fehler = true)

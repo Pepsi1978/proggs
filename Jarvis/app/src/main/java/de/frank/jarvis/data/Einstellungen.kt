@@ -242,6 +242,17 @@ class Einstellungen private constructor(context: Context) {
 
     /** system | hell | dunkel */
     var modus: String get() = s("modus", "system"); set(v) = put { putString("modus", v) }
+    // ---- Timer ----
+    /** true = ein abgelaufener Timer klingelt wie ein Wecker, bis Frank ihn ausschaltet; false = kurze Meldung mit Ton. */
+    var timerWecker: Boolean get() = prefs.getBoolean("timer_wecker", true); set(v) = put { putBoolean("timer_wecker", v) }
+    var timerVibration: Boolean get() = prefs.getBoolean("timer_vibration", true); set(v) = put { putBoolean("timer_vibration", v) }
+    /** Lautstärke des Wecktons in Prozent der Wecker-Lautstärke des Handys. */
+    var timerLautstaerke: Int get() = prefs.getInt("timer_lautstaerke", 100).coerceIn(10, 100); set(v) = put { putInt("timer_lautstaerke", v.coerceIn(10, 100)) }
+    /** Höchstens so viele Minuten klingeln, danach bleibt eine stille Meldung; 0 = bis zum Ausschalten. */
+    var timerKlingelMax: Int get() = prefs.getInt("timer_klingel_max", 0).coerceIn(0, 60); set(v) = put { putInt("timer_klingel_max", v.coerceIn(0, 60)) }
+    /** Minuten für „Schlummern“ in der Meldung. */
+    var timerSchlummern: Int get() = prefs.getInt("timer_schlummern", 5).coerceIn(1, 30); set(v) = put { putInt("timer_schlummern", v.coerceIn(1, 30)) }
+
     /** Farbdesign: blau (Jarvis) oder gold (wie Geniale Ideen); hell oder dunkel regelt [modus]. */
     var design: String get() = s("design", "blau"); set(v) = put { putString("design", v) }
 
