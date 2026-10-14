@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RestartAlt
@@ -40,15 +39,15 @@ import kotlin.math.sin
 
 /**
  * Die Stoppuhr auf der Startseite: Zifferblatt mit umlaufendem Sekundenring, große Zeit mit Hundertsteln,
- * darunter Start/Anhalten/Weiter und Zurücksetzen. Steht da, solange die Stoppuhr läuft oder angehalten ist
- * (bis Frank zurücksetzt), oder wenn er sie über den Knopf oben geöffnet hat.
+ * darunter Anhalten/Weiter und Zurücksetzen. Erscheint nur, wenn Frank sie über Jarvis startet, und steht da,
+ * solange sie läuft oder angehalten ist (bis er zurücksetzt).
  */
 @Composable
-fun StoppuhrKarte(offen: Boolean, schliessen: () -> Unit, modifier: Modifier = Modifier) {
+fun StoppuhrKarte(modifier: Modifier = Modifier) {
     val f = LocalFarben.current
     val kontext = LocalContext.current
     val s by Stoppuhr.stand.collectAsState()
-    if (!s.aktiv && !offen) return
+    if (!s.aktiv) return
     var jetzt by remember { mutableLongStateOf(System.currentTimeMillis()) }
     // Läuft sie, wird jedes Bild neu berechnet (flüssige Hundertstel); angehalten steht alles still.
     LaunchedEffect(s.laeuft) {
@@ -57,10 +56,7 @@ fun StoppuhrKarte(offen: Boolean, schliessen: () -> Unit, modifier: Modifier = M
     }
     val ms = s.gesamt(jetzt)
     Karte(modifier, toenung = f.primaer) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Stoppuhr", Modifier.weight(1f), color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            if (!s.aktiv) Rundknopf(Icons.Rounded.Close, "Stoppuhr schließen") { schliessen() }
-        }
+        Text("Stoppuhr", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
         Box(Modifier.fillMaxWidth().padding(top = 6.dp), contentAlignment = Alignment.Center) {
             val ring = f.primaer
             val spur = f.textSchwach.copy(alpha = 0.25f)
@@ -91,7 +87,6 @@ fun StoppuhrKarte(offen: Boolean, schliessen: () -> Unit, modifier: Modifier = M
         }
         Text(
             when {
-                !s.aktiv -> "Bereit"
                 s.laeuft -> "Läuft seit " + uhr(s.gestartetUm) + " Uhr"
                 else -> "Angehalten · gestartet um " + uhr(s.gestartetUm) + " Uhr"
             },
@@ -99,11 +94,10 @@ fun StoppuhrKarte(offen: Boolean, schliessen: () -> Unit, modifier: Modifier = M
         )
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             when {
-                !s.aktiv -> Knopf("Start", Modifier.weight(1f), Icons.Rounded.PlayArrow) { Stoppuhr.starten(kontext) }
                 s.laeuft -> Knopf("Anhalten", Modifier.weight(1f), Icons.Rounded.Pause) { Stoppuhr.anhalten(kontext) }
                 else -> Knopf("Weiter", Modifier.weight(1f), Icons.Rounded.PlayArrow) { Stoppuhr.fortsetzen(kontext) }
             }
-            if (s.aktiv) Knopf("Zurücksetzen", Modifier.weight(1f), Icons.Rounded.RestartAlt, haupt = false) { Stoppuhr.zuruecksetzen(kontext); schliessen() }
+            Knopf("Zurücksetzen", Modifier.weight(1f), Icons.Rounded.RestartAlt, haupt = false) { Stoppuhr.zuruecksetzen(kontext) }
         }
     }
 }
