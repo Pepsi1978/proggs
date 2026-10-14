@@ -190,9 +190,9 @@ public sealed partial class MainViewModel : ObservableObject
             // Ohne gespeicherten Standard startet jedes Modell wieder auf OpenCode -- das bisherige
             // Verhalten bleibt damit die Vorauswahl.
             FillCliTargets(value);
-            // Google-Modelle laufen ueber das Gemini-Abo (OAuth) nur im Gemini CLI -- OpenCode haette
-            // dafuer keine Anmeldung, deshalb ist dort das Gemini CLI die Vorauswahl.
-            SelectedCliTarget = CliTargets.FirstOrDefault(target => target.Id == (IsGoogleModel(value) ? "gemini" : "opencode"));
+            // Google-Modelle laufen ueber das Google-AI-Abo (OAuth) nur in der Antigravity CLI -- OpenCode haette
+            // dafuer keine Anmeldung, deshalb ist dort die Antigravity CLI die Vorauswahl.
+            SelectedCliTarget = CliTargets.FirstOrDefault(target => target.Id == (IsGoogleModel(value) ? "antigravity" : "opencode"));
             if (_pendingModelDefault != null)
             {
                 SelectedProfile = Profiles.FirstOrDefault(profile =>
@@ -266,8 +266,8 @@ public sealed partial class MainViewModel : ObservableObject
             ? "Codex CLI · Profil + Modus in der AGENTS.md"
             : IsKimiCliSelected
                 ? "Kimi Code CLI · Profil + Modus in der AGENTS.md"
-                : IsGeminiCliSelected
-                    ? "Gemini CLI · Profil + Modus in der AGENTS.md"
+                : IsAntigravityCliSelected
+                    ? "Antigravity CLI · Profil + Modus in der AGENTS.md"
                     : "OpenCode · Profil-Snapshots";
 
     private async Task LoadThinkingOptionsAsync(ModelEntry model, bool forceRefresh = false)
@@ -956,9 +956,9 @@ public sealed partial class MainViewModel : ObservableObject
             StatusText = "Für Start (Codex) bitte ein Claude-Code-Modell wählen.";
             return;
         }
-        // Codex CLI, Kimi Code CLI und Gemini CLI sprechen immer direkt mit ihrem Anbieter -- dort gibt
+        // Codex CLI, Kimi Code CLI und Antigravity CLI sprechen immer direkt mit ihrem Anbieter -- dort gibt
         // es keine Provider-Wahl, die Auswahl darf den Start also nicht blockieren.
-        if (SelectedModel == null || (SelectedProvider == null && !IsCodexCliSelected && !IsKimiCliSelected && !IsGeminiCliSelected))
+        if (SelectedModel == null || (SelectedProvider == null && !IsCodexCliSelected && !IsKimiCliSelected && !IsAntigravityCliSelected))
         {
             StatusText = "Bitte Modell und Provider wählen.";
             return;
@@ -1075,14 +1075,14 @@ public sealed partial class MainViewModel : ObservableObject
                 return;
             }
 
-            if (IsGeminiCliSelected)
+            if (IsAntigravityCliSelected)
             {
-                // Gemini CLI bekommt dieselbe Profil-AGENTS.md wie Codex und Kimi (Profil UND Modus-
-                // Prompt zusammen); der Launcher stellt das CLI per Einstellung auf AGENTS.md um.
-                // Angemeldet ist das CLI selbst ueber das Google-Konto (OAuth, Gemini-Abo).
+                // Antigravity CLI (agy) liest die AGENTS.md des Arbeitsverzeichnisses wie Codex und Kimi:
+                // Profil UND Modus-Prompt stehen dort zusammen.
+                // Angemeldet ist agy selbst ueber das Google-Konto (OAuth, Google-AI-Abo).
                 var agentsPath = _profiles.ActivateCodexProjectAgents(SelectedProfile.Id, SelectedWorkMode.Id, WorkDir);
-                _launcher.LaunchGeminiCli(SelectedModel, WorkDir, thinkingLevel, UseTmux);
-                Logger.Instance.Info("MainViewModel", "Start", "Gemini-CLI-Kontext geschrieben", new
+                _launcher.LaunchAntigravityCli(SelectedModel, WorkDir, thinkingLevel, UseTmux);
+                Logger.Instance.Info("MainViewModel", "Start", "Antigravity-CLI-Kontext geschrieben", new
                 {
                     profile = SelectedProfile.Id,
                     workMode = SelectedWorkMode.Id,
@@ -1383,7 +1383,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// OpenAI-Modelle laufen wahlweise im Codex CLI, Moonshot-AI-Modelle im Kimi Code CLI,
-    /// Google-Modelle im Gemini CLI.
+    /// Google-Modelle in der Antigravity CLI (agy).
     /// </summary>
     private static bool HasExternalCli(ModelEntry? model) => IsOpenAiModel(model) || IsMoonshotModel(model) || IsGoogleModel(model);
 
@@ -1400,9 +1400,9 @@ public sealed partial class MainViewModel : ObservableObject
         CliTargets.Add(IsGoogleModel(model)
             ? new CliTargetEntry
             {
-                Id = "gemini",
-                DisplayName = "Gemini CLI",
-                Description = "Originales Google-CLI mit Gemini-Abo (OAuth), Profil aus der AGENTS.md"
+                Id = "antigravity",
+                DisplayName = "Antigravity CLI",
+                Description = "Google-CLI (agy) mit deinem Google-AI-Abo (OAuth), Profil aus der AGENTS.md"
             }
             : IsMoonshotModel(model)
             ? new CliTargetEntry
@@ -1419,8 +1419,8 @@ public sealed partial class MainViewModel : ObservableObject
             });
     }
 
-    private bool IsGeminiCliSelected =>
-        HasCliChoice && string.Equals(SelectedCliTarget?.Id, "gemini", StringComparison.Ordinal);
+    private bool IsAntigravityCliSelected =>
+        HasCliChoice && string.Equals(SelectedCliTarget?.Id, "antigravity", StringComparison.Ordinal);
 
     private bool IsKimiCliSelected =>
         HasCliChoice && string.Equals(SelectedCliTarget?.Id, "kimi", StringComparison.Ordinal);

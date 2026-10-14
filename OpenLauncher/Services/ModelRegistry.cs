@@ -557,6 +557,22 @@ public sealed class ModelRegistry
                 }
             }
 
+            if (string.Equals(group.Id, GoogleGroupId, StringComparison.OrdinalIgnoreCase))
+            {
+                // Die erste Google-Reihe (1.24.84) zielte auf die Gemini CLI; deren Modelle bedient
+                // die Antigravity CLI mit Privat-Abo nicht -> einmalig entfernen, neue Vorgaben
+                // einmalig nachtragen (danach bleiben Nutzer-Aenderungen unangetastet).
+                group.Models.Where(model => RetiredGeminiCliSlugs.Contains(model.Slug, StringComparer.OrdinalIgnoreCase))
+                    .ToList().ForEach(model => group.Models.Remove(model));
+                foreach (var definition in defaults.Models)
+                {
+                    if (group.KnownSyncedModelSlugs.Contains(definition.Slug, StringComparer.OrdinalIgnoreCase)) continue;
+                    if (!group.Models.Any(model => string.Equals(model.Slug, definition.Slug, StringComparison.OrdinalIgnoreCase)))
+                        group.Models.Insert(Math.Min(defaults.Models.IndexOf(definition), group.Models.Count), definition);
+                    AddUnique(group.KnownSyncedModelSlugs, definition.Slug);
+                }
+            }
+
             if (string.Equals(group.Id, "entropic", StringComparison.OrdinalIgnoreCase))
             {
                 // Zuerst die 1M-Umstellung, danach der Nachtrag: beide teilen sich den Merker
@@ -669,20 +685,14 @@ public sealed class ModelRegistry
             Model("kimi-for-coding", "Kimi for Coding (K2.8 Preview)", MoonshotProviderId, "Moonshot AI"),
             Model("kimi-for-coding-highspeed", "Kimi for Coding HighSpeed", MoonshotProviderId, "Moonshot AI"),
         }),
-        // Google-Gemini-Abo (Google-Konto per OAuth, "Login with Google") im originalen Gemini CLI.
-        // Die IDs stammen aus dem Modellkatalog des installierten Gemini CLI (0.64,
-        // DEFAULT_MODEL_CONFIGS); "auto"/"pro"/"flash" sind dessen eigene Aliasse, die das CLI
-        // selbst auf das passende Modell des Abos lenkt.
+        // Google-AI-Abo (Google-Konto per OAuth) in der Antigravity CLI (agy). Seit 18.06.2026 nimmt
+        // nur noch agy die Privat-Abos an. Modelle laut antigravity.google/docs/models (14.10.2026):
+        // Gemini 4 Argon nur mit AI Ultra, Gemini 3.8 Flash ab Free/Pro. 3.1 Pro, 3.6/3.7 Flash sind
+        // dort nur Enterprise. Seit agy 1.3.4 genuegt der Basisname, die Stufe kommt per --effort.
         CreateGroup(GoogleGroupId, "Google", GoogleProviderId, "Google", new[]
         {
-            Model("auto", "Gemini Auto (CLI wählt)", GoogleProviderId, "Google"),
-            Model("gemini-3.1-pro-preview", "Gemini 3.1 Pro", GoogleProviderId, "Google"),
-            Model("gemini-3-pro-preview", "Gemini 3 Pro", GoogleProviderId, "Google"),
+            Model("gemini-4-argon", "Gemini 4 Argon (Ultra)", GoogleProviderId, "Google"),
             Model("gemini-3.8-flash", "Gemini 3.8 Flash", GoogleProviderId, "Google"),
-            Model("gemini-3.5-flash", "Gemini 3.5 Flash", GoogleProviderId, "Google"),
-            Model("gemini-3-flash-preview", "Gemini 3 Flash", GoogleProviderId, "Google"),
-            Model("gemini-3.5-flash-lite", "Gemini 3.5 Flash-Lite", GoogleProviderId, "Google"),
-            Model("gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite", GoogleProviderId, "Google"),
         }),
         CreateGroup("nvidia", "NVIDIA", NvidiaProviderId, NvidiaProviderName, NvidiaFreeModels),
         // Lokale LM-Studio-Modelle. Die Liste kommt beim Start live vom lokalen Server
@@ -746,6 +756,13 @@ public sealed class ModelRegistry
     public const string MoonshotProviderId = "kimi-code-plan-global";
     public const string GoogleGroupId = "google";
     public const string GoogleProviderId = "google";
+
+    /// <summary>Modelle der ersten Google-Reihe (Gemini CLI), die agy mit Privat-Abo nicht anbietet.</summary>
+    private static readonly string[] RetiredGeminiCliSlugs =
+    [
+        "auto", "gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3.5-flash",
+        "gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"
+    ];
     private const string NvidiaProviderName = "NVIDIA";
 
     private static ModelEntry NvidiaModel(string slug, string displayName) =>

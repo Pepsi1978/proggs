@@ -23,13 +23,13 @@ public sealed class EffortRefreshService
         EffortSnapshot? current = null;
         EffortSnapshot? local = null;
         var conflict = false;
-        // Gemini CLI: die Stufen legt das installierte CLI fest (thinkingLevel LOW/HIGH), nicht
+        // Antigravity CLI: die Stufen legt der Launcher nach der agy-Modelltabelle fest, nicht
         // models.dev -- ein fremder Katalog wuerde sonst die waehlbaren Stufen ueberschreiben.
-        if (access == "gemini")
+        if (access == "antigravity")
         {
-            var gemini = new EffortSnapshot(OpenCodeVariantCatalog.GetLauncherLevels(model).ToList(), "Gemini CLI (thinkingLevel)", DateTimeOffset.UtcNow, true);
-            Record(model, access, gemini, "Aktualisiert");
-            return gemini;
+            var agy = new EffortSnapshot(OpenCodeVariantCatalog.GetLauncherLevels(model).ToList(), "Antigravity CLI (--effort)", DateTimeOffset.UtcNow, true);
+            Record(model, access, agy, "Aktualisiert");
+            return agy;
         }
         if (access == "codex" && model.ProviderId == "openai")
         {

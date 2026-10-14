@@ -32,11 +32,11 @@ public static class OpenCodeVariantCatalog
         slug is "k3" or "k3-256k" or "kimi-for-coding" ? ["low", "high", "max"] : [];
 
     /// <summary>
-    /// Gemini CLI: Gemini-3.x-Modelle denken mit thinkingLevel, das CLI (0.64) kennt LOW und HIGH
-    /// (Vorgabe HIGH). Gemini 2.5 arbeitet mit einem Token-Budget statt Stufen.
+    /// Antigravity CLI (agy --effort): Gemini 3.8 Flash kennt low/medium/high, Gemini 4 Argon bietet
+    /// agy als Medium und High an (antigravity.google/docs/models, Stand 14.10.2026).
     /// </summary>
     private static IReadOnlyList<string> GetGeminiLevels(string slug) =>
-        slug.StartsWith("gemini-2", StringComparison.Ordinal) ? [] : ["low", "high"];
+        slug.StartsWith("gemini-4-argon", StringComparison.Ordinal) ? ["medium", "high"] : ["low", "medium", "high"];
 
     private static IReadOnlyList<string> GetAnthropicLevels(string slug)
     {
