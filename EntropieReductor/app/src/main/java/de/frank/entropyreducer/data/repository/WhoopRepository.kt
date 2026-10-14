@@ -52,9 +52,6 @@ constructor(
     private val diagnostics: DiagnosticLogger,
 ) {
 
-    /** Wann zuletzt ein Luecken-Fenster angefragt wurde (nur im Speicher; nach Prozessstart einmal neu). */
-    @Volatile private var lastGapFillMs = 0L
-
     fun observeLatest(): Flow<BiomarkerSnapshotEntity?> = dao.getLatest()
 
     fun observeRange(from: Long, to: Long): Flow<List<BiomarkerSnapshotEntity>> =
@@ -113,13 +110,16 @@ constructor(
                 // 2026-10-13: Luecken-Nachholen hoechstens alle 12 h. Eine dauerhafte Luecke (Band
                 // nicht getragen) liess sonst JEDEN Sync zwei Monate neu laden — mit dem
                 // Hintergrund-Abgleich alle 30 Minuten waere das unnoetiger API-Verkehr.
+                // 2026-10-14: Zeitpunkt gespeichert statt nur im Speicher. Der Hintergrund-Abgleich
+                // startet oft einen frischen Prozess, dann galt der 12-h-Abstand praktisch nie.
                 val nowMs = System.currentTimeMillis()
+                val lastGapFillMs = settings.lastWhoopGapFillMsFlow.first()
                 val gapStart =
                     if (nowMs - lastGapFillMs >= GAP_FILL_INTERVAL_MS) earliestGapStart() else null
                 val requestedStart =
                     if (gapStart != null && gapStart.isBefore(incrementalStart)) {
                         Diag.i(DiagnosticArea.WHOOP, TAG, "Whoop-Luecke ab $gapStart — Fenster erweitert")
-                        lastGapFillMs = nowMs
+                        settings.setLastWhoopGapFill(nowMs)
                         gapStart
                     } else {
                         incrementalStart

@@ -40,6 +40,8 @@ import retrofit2.HttpException
  *    "Werte sollen immer aktuell sein") laufend: alle 30 Minuten im Hintergrund, beim Oeffnen der
  *    App (wenn aelter als 15 Minuten), bei jedem Oeffnen des Biomarker-Reiters und auf Anstoss von
  *    Jarvis ([syncApisNow]). Davor (2026-06-01 bis 2026-10-13) nur alle 8 h oder im Biomarker-Reiter.
+ *    Seit 2026-10-14 fragt der automatische Abgleich Whoop hoechstens alle 2 Stunden ab
+ *    ([WHOOP_MIN_ABSTAND_MS]); nur der Aktualisieren-Knopf holt Whoop sofort.
  *
  * Vorgeschichte: Frueher lief BEIDES gemeinsam und nur alle 8 h (`syncIfStale`/`syncAllSources`).
  * Dadurch konnte eine Aenderung auf Geraet A nicht "3 Minuten spaeter" auf Geraet B ankommen —
@@ -151,15 +153,15 @@ constructor(
      *   so zu tun, als waere abgeglichen worden.
      * - Jede Quelle hat ein Zeitlimit, damit eine haengende Quelle die Sperre nicht ewig haelt.
      */
-    suspend fun syncApisNow(reason: String = "Biomarker-Tab"): ApiSyncBericht {
+    suspend fun syncApisNow(reason: String = "Biomarker-Tab", whoopErzwingen: Boolean = false): ApiSyncBericht {
         val angefragtMs = System.currentTimeMillis()
         return apiMutex.withLock {
-            val frisch = letzterBericht?.takeIf { it.versuchMs >= angefragtMs }
+            val frisch = letzterBericht?.takeIf { it.versuchMs >= angefragtMs && !whoopErzwingen }
             if (frisch != null) {
                 Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync ($reason): Ergebnis des gerade beendeten Laufs übernommen")
                 frisch
             } else {
-                fuehreApiSyncAus(reason)
+                fuehreApiSyncAus(reason, whoopErzwingen)
             }
         }
     }
@@ -175,15 +177,31 @@ constructor(
     suspend fun letzterStand(): ApiSyncBericht? =
         letzterBericht ?: ApiSyncBericht.ausJson(appSettings.biomarkerSyncStatusFlow.first())?.also { letzterBericht = it }
 
-    private suspend fun fuehreApiSyncAus(reason: String): ApiSyncBericht {
+    private suspend fun fuehreApiSyncAus(reason: String, whoopErzwingen: Boolean): ApiSyncBericht {
         Diag.i(DiagnosticArea.APP, "ForegroundSync", "API-Sync START ($reason)")
         val vorher = letzterStand()
         val whoopVerbunden = oauth.loadWhoopAuthState().isAuthorized
+        // Frank-Wunsch 2026-10-14 (Whoop-Anmeldung lief binnen zwei Tagen wieder ab): Whoop entwertet bei
+        // JEDEM Token-Refresh den alten Refresh-Token, und der Zugangs-Token gilt nur eine Stunde. Mit dem
+        // Abgleich alle 30 Minuten hiess das bis zu 24 Refreshes am Tag — jeder eine Gelegenheit, die
+        // Anmeldung zu verlieren (Netzabriss genau beim Wechsel). Schlaf und Erholung kommen ohnehin nur
+        // einmal nach dem Aufwachen: Whoop deshalb hoechstens alle 2 Stunden, ausser auf Knopfdruck.
+        val letzterWhoopOkMs = appSettings.lastWhoopSyncMsFlow.first()
+        val whoopFaellig =
+            whoopErzwingen || System.currentTimeMillis() - letzterWhoopOkMs !in 0 until WHOOP_MIN_ABSTAND_MS
+        val whoopAbfragen = whoopVerbunden && whoopFaellig
+        if (whoopVerbunden && !whoopFaellig) {
+            Diag.i(
+                DiagnosticArea.WHOOP,
+                "ForegroundSync",
+                "Whoop uebersprungen (letzter Abruf vor ${(System.currentTimeMillis() - letzterWhoopOkMs) / 60000} min, Mindestabstand ${WHOOP_MIN_ABSTAND_MS / 60000} min)",
+            )
+        }
         val ouraVerbunden = oura.isTokenConfigured()
         val kalenderVerbunden = secrets.calendarAccountEmail != null
         val ergebnisse = coroutineScope {
             val bodyDeferred = async { quelle { runCatchingCancellable { zeppBodyRepository.syncToCache() } } }
-            val whoopDeferred = async { if (whoopVerbunden) quelle { whoop.syncLastDays(365) } else null }
+            val whoopDeferred = async { if (whoopAbfragen) quelle { whoop.syncLastDays(365) } else null }
             val ouraDeferred =
                 async { if (ouraVerbunden) quelle { oura.syncLastDays(365).map { it.values.sum() } } else null }
             val trainingDeferred =
@@ -228,9 +246,21 @@ constructor(
                 eingriffNoetig = fehler is WhoopReauthRequiredException || (fehler as? HttpException)?.code() == 401,
             )
         }
+        // Whoop diesmal bewusst nicht abgefragt: den letzten Stand weiterfuehren, sonst stuende in der
+        // Fusszeile und bei Jarvis "nicht verbunden" oder eine Stoerung.
+        val whoopStand =
+            if (whoopVerbunden && !whoopAbfragen) {
+                vorher?.quellen?.firstOrNull { it.id == QUELLE_WHOOP && it.verbunden }
+                    ?: QuellenStand(
+                        id = QUELLE_WHOOP, name = "Whoop", verbunden = true, ok = true, anzahl = 0,
+                        fehler = null, zuletztOkMs = letzterWhoopOkMs, eingriffNoetig = false,
+                    )
+            } else {
+                stand(QUELLE_WHOOP, "Whoop", ergebnisse[0], letzterWhoopOkMs)
+            }
         val quellen =
             listOf(
-                stand(QUELLE_WHOOP, "Whoop", ergebnisse[0], appSettings.lastWhoopSyncMsFlow.first()),
+                whoopStand,
                 stand(QUELLE_OURA, "Oura", ergebnisse[1], secrets.ouraLastSyncEpochMs),
                 stand(QUELLE_WAAGE, "Waage (Zepp)", ergebnisse[2], 0L),
                 stand(QUELLE_TRAINING, "Trainings (Health Connect)", ergebnisse[3], 0L),
@@ -295,6 +325,13 @@ constructor(
          * 2026-06-01 ab. Der Biomarker-Reiter gleicht weiterhin bei jedem Oeffnen ab.
          */
         const val FOREGROUND_SYNC_MIN_INTERVAL_MS = 15L * 60L * 1000L
+
+        /**
+         * Mindestabstand zwischen zwei automatischen Whoop-Abrufen: 2 Stunden (Frank-Wunsch 2026-10-14).
+         * Jeder Abruf nach mehr als einer Stunde kostet einen Token-Refresh, und jeder Refresh tauscht den
+         * Refresh-Token aus. Der Aktualisieren-Knopf im Biomarker-Reiter holt Whoop trotzdem sofort.
+         */
+        const val WHOOP_MIN_ABSTAND_MS = 2L * 60L * 60L * 1000L
         private const val QUELLEN_ZEITLIMIT_MS = 120_000L
 
         const val QUELLE_WHOOP = "whoop"

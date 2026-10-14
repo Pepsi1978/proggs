@@ -43,6 +43,8 @@ class AppSettings @Inject constructor(
 
     /** Letzter erfolgreicher Whoop-Sync (Epoch-Millisekunden). 0L = noch nie gesynct. */
     val lastWhoopSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_WHOOP_SYNC] ?: 0L }
+    /** Letztes Nachholen von Whoop-Luecken (Epoch-Millisekunden), gespeichert statt nur im Speicher. */
+    val lastWhoopGapFillMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_WHOOP_GAP_FILL] ?: 0L }
     /** Letzter erfolgreicher Calendar-Sync (Epoch-Millisekunden). */
     val lastCalendarSyncMsFlow: Flow<Long> = ds.data.map { it[KEY_LAST_CALENDAR_SYNC] ?: 0L }
     /** Frank-Wunsch 2026-05-10: Pro Biomarker-Quelle eigener Sync-Zeitstempel —
@@ -215,6 +217,7 @@ class AppSettings @Inject constructor(
     suspend fun setThemeMode(value: ThemeMode) = ds.edit { it[KEY_THEME_MODE] = value.name }
 
     suspend fun setLastWhoopSync(value: Long) = ds.edit { it[KEY_LAST_WHOOP_SYNC] = value }
+    suspend fun setLastWhoopGapFill(value: Long) = ds.edit { it[KEY_LAST_WHOOP_GAP_FILL] = value }
     suspend fun setLastCalendarSync(value: Long) = ds.edit { it[KEY_LAST_CALENDAR_SYNC] = value }
     suspend fun setLastOuraSync(value: Long) = ds.edit { it[KEY_LAST_OURA_SYNC] = value }
     suspend fun setLastAmazfitSync(value: Long) = ds.edit { it[KEY_LAST_AMAZFIT_SYNC] = value }
@@ -531,6 +534,7 @@ class AppSettings @Inject constructor(
         private val KEY_WIDGET_ONLY_TODAY = booleanPreferencesKey("widget_only_today")
         private val KEY_WIDGET_BG_ALPHA = floatPreferencesKey("widget_bg_alpha")
         private val KEY_LAST_WHOOP_SYNC = longPreferencesKey("last_whoop_sync_ms")
+        private val KEY_LAST_WHOOP_GAP_FILL = longPreferencesKey("last_whoop_gap_fill_ms")
         private val KEY_LAST_CALENDAR_SYNC = longPreferencesKey("last_calendar_sync_ms")
         private val KEY_LAST_OURA_SYNC = longPreferencesKey("last_oura_sync_ms")
         private val KEY_LAST_AMAZFIT_SYNC = longPreferencesKey("last_amazfit_sync_ms")

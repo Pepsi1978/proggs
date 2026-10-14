@@ -661,7 +661,7 @@ constructor(
             _refreshing.value = true
             _message.value = "Wird synchronisiert: Whoop · Training · Oura · Zepp …"
             try {
-                val bericht = foregroundSync.syncApisNow("Aktualisieren-Knopf")
+                val bericht = foregroundSync.syncApisNow("Aktualisieren-Knopf", whoopErzwingen = true)
                 val footer = settings.lastRefreshFooterFlow.first()
                 _message.value =
                     if (bericht.probleme.isEmpty()) footer else footer + "\n" + bericht.probleme.joinToString("\n")
