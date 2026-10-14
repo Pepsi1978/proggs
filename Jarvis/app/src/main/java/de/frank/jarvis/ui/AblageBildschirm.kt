@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,6 +31,11 @@ import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.ViewModule
+import androidx.compose.material.icons.rounded.ViewList
+import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DataObject
 import androidx.compose.material.icons.rounded.Delete
@@ -73,6 +82,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.graphics.BitmapFactory
@@ -97,13 +107,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** Ansichten wie im Windows-Explorer: große, mittlere und kleine Kacheln, Details und eine knappe Liste. */
+private enum class Ansicht(val anzeige: String, val spalten: Int) {
+    GROSS("Große Kacheln", 2), MITTEL("Mittlere Kacheln", 3), KLEIN("Kleine Kacheln", 5), DETAILS("Details", 1), LISTE("Liste", 1);
+    val kacheln get() = spalten > 1
+}
+
 private enum class Sortierung(val anzeige: String) { NEUESTE("Neueste zuerst"), AELTESTE("Älteste zuerst"), NAME("Name A–Z"), GROESSE("Größte zuerst") }
 
 /**
  * Die Ablage von Jarvis: Texte und Dateien suchen, filtern, ansehen, abspielen, herunterladen, teilen und löschen.
  * Antippen öffnet die Vorschau, langes Drücken wählt mehrere Einträge zum gemeinsamen Teilen oder Herunterladen aus.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     val f = LocalFarben.current
@@ -123,6 +139,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var sortierung by rememberSaveable { mutableStateOf(Sortierung.NEUESTE.name) }
     var auswahl by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    val ansicht = Ansicht.entries.firstOrNull { it.name.lowercase() == vm.einstellungen.ablageAnsicht } ?: Ansicht.MITTEL
     // Offene Ansicht: Eintrag-ID, dazu optional die Anhang-ID.
     var offenerEintrag by rememberSaveable { mutableStateOf<String?>(null) }
     var offenerAnhang by rememberSaveable { mutableStateOf<String?>(null) }
@@ -211,10 +228,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                 Rundknopf(Icons.Rounded.Share, "Ausgewählte teilen") { aktionen.teilen(gewaehlt.flatMap(aktionen::freigaben), gewaehlt.singleOrNull()?.titel); auswahl = emptyList() }
             }
         } else {
-            Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 4.dp)) {
-                Text("Ablage", color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                Text("Texte, Bilder, Dokumente und Medien von Jarvis", color = f.textLeise, fontSize = 14.sp)
-            }
+            Text("Ablage", Modifier.padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 4.dp), color = f.text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f)) {
@@ -230,20 +244,37 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     }
                 }
             }
+            var ansichtMenue by remember { mutableStateOf(false) }
+            Box {
+                Rundknopf(ansichtSymbol(ansicht), "Ansicht: " + ansicht.anzeige) { ansichtMenue = true }
+                Menue(ansichtMenue, { ansichtMenue = false }) {
+                    Ansicht.entries.forEach { a ->
+                        DropdownMenuItem({ Text(a.anzeige, fontWeight = if (a == ansicht) FontWeight.Bold else FontWeight.Normal) }, { vm.einstellungen.ablageAnsicht = a.name.lowercase(); ansichtMenue = false },
+                            leadingIcon = { Icon(ansichtSymbol(a), null) })
+                    }
+                }
+            }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Alle Bereiche auf einen Blick, umbrechend statt seitlich zu wischen.
+        FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Chip("Alle", filter == null) { filter = null }
             Kategorie.entries.forEach { k -> Chip(k.anzeige, filter == k.name, icon = kategorieSymbol(k)) { filter = if (filter == k.name) null else k.name } }
         }
-        LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(laeufe, key = { "lauf" + it.seit }) { lauf ->
+        val ganz: (androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.(Any?) -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
+        LazyVerticalGrid(
+            GridCells.Fixed(ansicht.spalten),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(if (ansicht == Ansicht.LISTE) 6.dp else if (ansicht == Ansicht.KLEIN) 6.dp else 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (ansicht == Ansicht.KLEIN) 6.dp else 10.dp),
+        ) {
+            items(laeufe, key = { "lauf" + it.seit }, span = ganz) { lauf ->
                 ArbeitZeile("${lauf.agent} arbeitet", lauf.schritt.ifEmpty { lauf.auftrag }, null)
             }
-            items(arbeiten, key = { "arbeit" + it.kennung }) { a ->
+            items(arbeiten, key = { "arbeit" + it.kennung }, span = ganz) { a ->
                 if (a.fehler == null) ArbeitZeile("${a.art}: „${a.eintragTitel}“", "läuft seit ${(System.currentTimeMillis() - a.seit) / 1000} s – noch nicht gespeichert", null)
                 else FehlerZeile("${a.art} fehlgeschlagen: „${a.eintragTitel}“", a.fehler, null) { AblageZentrale.verwerfeArbeit(a.kennung) }
             }
-            items(uebertragungen, key = { "ueb" + it.id }) { u ->
+            items(uebertragungen, key = { "ueb" + it.id }, span = ganz) { u ->
                 if (u.zustand == UebertragungsZustand.LAEUFT) {
                     ArbeitZeile("Übertragung: ${u.name}", "von ${u.host} · " + (u.prozent?.let { "$it % von ${Dateityp.groesse(u.gesamt ?: 0)}" } ?: "${Dateityp.groesse(u.geladen)} geladen"), u.prozent)
                 } else {
@@ -252,7 +283,7 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
                     }) { AblageZentrale.uebertragungen(context).verwerfen(u.id) }
                 }
             }
-            if (sicht?.isEmpty() == true && laeufe.isEmpty()) item {
+            if (sicht?.isEmpty() == true && laeufe.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Kern(96.dp, f.primaer, aktiv = false)
                     Text(if (alle.isEmpty()) "Noch nichts abgelegt" else "Nichts gefunden", color = f.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
@@ -262,12 +293,13 @@ fun AblageBildschirm(vm: AppViewModel, activity: ComponentActivity) {
             }
             items(sicht.orEmpty(), key = { it.id }) { e ->
                 val gewaehlt = e.id in auswahl
-                EintragZeile(
-                    e, gewaehlt, aktionen,
-                    tippen = { if (auswahl.isNotEmpty()) auswahl = if (gewaehlt) auswahl - e.id else auswahl + e.id else { offenerEintrag = e.id; offenerAnhang = null } },
-                    lange = { auswahl = if (gewaehlt) auswahl - e.id else auswahl + e.id },
-                    loeschen = { loeschFrage = e to null },
-                )
+                val tippen = { if (auswahl.isNotEmpty()) auswahl = if (gewaehlt) auswahl - e.id else auswahl + e.id else { offenerEintrag = e.id; offenerAnhang = null } }
+                val lange = { auswahl = if (gewaehlt) auswahl - e.id else auswahl + e.id }
+                when {
+                    ansicht.kacheln -> EintragKachel(e, gewaehlt, ansicht, aktionen, tippen, lange) { loeschFrage = e to null }
+                    ansicht == Ansicht.LISTE -> EintragListe(e, gewaehlt, aktionen, tippen, lange) { loeschFrage = e to null }
+                    else -> EintragZeile(e, gewaehlt, aktionen, tippen = tippen, lange = lange, loeschen = { loeschFrage = e to null })
+                }
             }
         }
     }
@@ -281,8 +313,7 @@ private fun EintragZeile(e: Eintrag, gewaehlt: Boolean, aktionen: AblageAktionen
     val f = LocalFarben.current
     val context = LocalContext.current
     val speicher = remember { AblageZentrale.speicher(context) }
-    var menue by remember { mutableStateOf(false) }
-    val haupt = e.anhaenge.firstOrNull { it.art == Art.BILD || it.art == Art.ANIMATION } ?: e.anhaenge.firstOrNull { it.art == Art.VIDEO || it.art == Art.PDF } ?: e.anhaenge.firstOrNull()
+    val haupt = hauptAnhang(e)
     val art = if (haupt == null) "Text" else if (e.anhaenge.size == 1) haupt.art.anzeige + " · " + haupt.endung.uppercase() else "${e.anhaenge.size} Dateien"
     // Die Textgröße kommt aus dem Dateisystem: im Hintergrund, bis dahin die Summe der Anhänge.
     val g by ladeImHintergrund(e.anhaenge.sumOf { it.groesse }, e.id, e.geaendert) { groesse(speicher, e) }
@@ -307,45 +338,126 @@ private fun EintragZeile(e: Eintrag, gewaehlt: Boolean, aktionen: AblageAktionen
         val alleDateien = remember(e) { aktionen.freigaben(e) }
         Rundknopf(Icons.Rounded.Download, "„${e.titel}“ herunterladen") { aktionen.herunterladen(alleDateien) }
         Box(Modifier.padding(start = 4.dp)) { Rundknopf(Icons.Rounded.Share, "„${e.titel}“ teilen") { aktionen.teilen(alleDateien, e.titel) } }
-        Box {
-            Box(Modifier.size(48.dp).antippen { menue = true }.semantics { contentDescription = "Weitere Aktionen für „${e.titel}“" }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.MoreVert, null, tint = f.textLeise)
+        EintragMenue(e, aktionen, lange, loeschen)
+    }
+}
+
+/** Die drei Punkte mit allen Aktionen eines Eintrags; in den Kacheln und der Liste stehen dort auch Herunterladen und Teilen. */
+@Composable
+private fun EintragMenue(e: Eintrag, aktionen: AblageAktionen, lange: () -> Unit, loeschen: () -> Unit, mitTeilen: Boolean = false, groesse: Dp = 48.dp, aufBild: Boolean = false) {
+    val f = LocalFarben.current
+    var menue by remember { mutableStateOf(false) }
+    val alleDateien = remember(e) { aktionen.freigaben(e) }
+    Box {
+        Box(
+            Modifier.size(groesse).then(if (aufBild) Modifier.padding(4.dp).glas(f, groesse / 2, erhoeht = 0.4f, fuellung = f.flaecheStark) else Modifier)
+                .antippen { menue = true }.semantics { contentDescription = "Weitere Aktionen für „${e.titel}“" },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Rounded.MoreVert, null, tint = if (aufBild) f.text else f.textLeise, modifier = Modifier.size(if (groesse < 40.dp) 18.dp else 24.dp))
+        }
+        Menue(menue, { menue = false }) {
+            if (mitTeilen) {
+                DropdownMenuItem({ Text("Herunterladen") }, { menue = false; aktionen.herunterladen(alleDateien) }, leadingIcon = { Icon(Icons.Rounded.Download, null) })
+                DropdownMenuItem({ Text("Teilen") }, { menue = false; aktionen.teilen(alleDateien, e.titel) }, leadingIcon = { Icon(Icons.Rounded.Share, null) })
             }
-            Menue(menue, { menue = false }) {
-                alleDateien.singleOrNull()?.let { einzige ->
-                    DropdownMenuItem({ Text("Mit anderer App öffnen") }, { menue = false; aktionen.oeffnen(einzige) }, leadingIcon = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, null) })
-                    DropdownMenuItem({ Text("Speichern unter …") }, { menue = false; aktionen.speichernUnter(einzige) }, leadingIcon = { Icon(Icons.Rounded.SaveAs, null) })
-                }
-                DropdownMenuItem({ Text("Auswählen") }, { menue = false; lange() }, leadingIcon = { Icon(Icons.Rounded.CheckCircle, null) })
-                DropdownMenuItem({ Text("Löschen", color = f.gefahr) }, { menue = false; loeschen() }, leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = f.gefahr) })
+            alleDateien.singleOrNull()?.let { einzige ->
+                DropdownMenuItem({ Text("Mit anderer App öffnen") }, { menue = false; aktionen.oeffnen(einzige) }, leadingIcon = { Icon(Icons.AutoMirrored.Rounded.OpenInNew, null) })
+                DropdownMenuItem({ Text("Speichern unter …") }, { menue = false; aktionen.speichernUnter(einzige) }, leadingIcon = { Icon(Icons.Rounded.SaveAs, null) })
             }
+            DropdownMenuItem({ Text("Auswählen") }, { menue = false; lange() }, leadingIcon = { Icon(Icons.Rounded.CheckCircle, null) })
+            DropdownMenuItem({ Text("Löschen", color = f.gefahr) }, { menue = false; loeschen() }, leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = f.gefahr) })
         }
     }
 }
 
-/** Vorschaubild aus dem Speicher (einmal erzeugt, bleibt erhalten), sonst ein eindeutiges Dateitypsymbol. */
+private fun hauptAnhang(e: Eintrag): Anhang? =
+    e.anhaenge.firstOrNull { it.art == Art.BILD || it.art == Art.ANIMATION } ?: e.anhaenge.firstOrNull { it.art == Art.VIDEO || it.art == Art.PDF } ?: e.anhaenge.firstOrNull()
+
+/** Kachel wie in einer Fotogalerie: das Bild selbst, quadratisch; darunter der Titel (bei kleinen Kacheln ohne). */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Vorschaubild(e: Eintrag, a: Anhang?) {
+private fun EintragKachel(e: Eintrag, gewaehlt: Boolean, ansicht: Ansicht, aktionen: AblageAktionen, tippen: () -> Unit, lange: () -> Unit, loeschen: () -> Unit) {
+    val f = LocalFarben.current
+    val haupt = hauptAnhang(e)
+    val radius = if (ansicht == Ansicht.KLEIN) 10.dp else 16.dp
+    val form = RoundedCornerShape(radius)
+    Column(
+        Modifier.fillMaxWidth().combinedClickable(onClick = tippen, onLongClick = lange, onClickLabel = "Öffnen", onLongClickLabel = "Auswählen")
+            .semantics { contentDescription = e.titel; stateDescription = if (gewaehlt) "ausgewählt" else "" },
+    ) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(form)) {
+            Vorschaubild(e, haupt, Modifier.fillMaxSize(), radius = radius, pixel = if (ansicht == Ansicht.GROSS) 900 else if (ansicht == Ansicht.MITTEL) 500 else 0,
+                symbolGroesse = if (ansicht == Ansicht.KLEIN) 24.dp else 40.dp)
+            if (e.anhaenge.size > 1) Text("${e.anhaenge.size}", Modifier.align(Alignment.BottomStart).padding(6.dp).glas(f, 10.dp, erhoeht = 0.3f, fuellung = f.flaecheStark).padding(horizontal = 7.dp, vertical = 2.dp),
+                color = f.text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            if (gewaehlt) Box(Modifier.matchParentSize().glas(f, 0.dp, erhoeht = 0f, toenung = f.primaer, rand = false))
+            if (gewaehlt) Icon(Icons.Rounded.CheckCircle, null, tint = f.primaer, modifier = Modifier.align(Alignment.TopStart).padding(6.dp).size(22.dp))
+            if (ansicht != Ansicht.KLEIN) Box(Modifier.align(Alignment.TopEnd)) { EintragMenue(e, aktionen, lange, loeschen, mitTeilen = true, groesse = 36.dp, aufBild = true) }
+        }
+        if (ansicht != Ansicht.KLEIN) {
+            Text(e.titel, Modifier.padding(top = 6.dp, start = 2.dp, end = 2.dp), color = f.text, fontSize = if (ansicht == Ansicht.GROSS) 14.sp else 12.sp,
+                fontWeight = FontWeight.Medium, maxLines = if (ansicht == Ansicht.GROSS) 2 else 1, overflow = TextOverflow.Ellipsis)
+            if (ansicht == Ansicht.GROSS) Text(Ablage.datum(e.geaendert), Modifier.padding(horizontal = 2.dp), color = f.textSchwach, fontSize = 11.sp, maxLines = 1)
+        }
+    }
+}
+
+/** Knappe Liste: kleines Symbol, Titel und Datum in einer Zeile. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun EintragListe(e: Eintrag, gewaehlt: Boolean, aktionen: AblageAktionen, tippen: () -> Unit, lange: () -> Unit, loeschen: () -> Unit) {
+    val f = LocalFarben.current
+    val haupt = hauptAnhang(e)
+    Row(
+        Modifier.fillMaxWidth().glas(f, 14.dp, erhoeht = 0.4f, toenung = if (gewaehlt) f.primaer else null)
+            .combinedClickable(onClick = tippen, onLongClick = lange, onClickLabel = "Öffnen", onLongClickLabel = "Auswählen")
+            .semantics { stateDescription = if (gewaehlt) "ausgewählt" else "" }
+            .padding(start = 10.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Vorschaubild(e, haupt, Modifier.size(32.dp), radius = 8.dp, symbolGroesse = 18.dp)
+        Text(e.titel, Modifier.weight(1f).padding(start = 10.dp), color = f.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(Ablage.datum(e.geaendert), Modifier.padding(start = 8.dp), color = f.textSchwach, fontSize = 12.sp, maxLines = 1)
+        EintragMenue(e, aktionen, lange, loeschen, mitTeilen = true, groesse = 40.dp)
+    }
+}
+
+private fun ansichtSymbol(a: Ansicht): ImageVector = when (a) {
+    Ansicht.GROSS -> Icons.Rounded.GridView
+    Ansicht.MITTEL -> Icons.Rounded.ViewModule
+    Ansicht.KLEIN -> Icons.Rounded.Apps
+    Ansicht.DETAILS -> Icons.Rounded.ViewList
+    Ansicht.LISTE -> Icons.AutoMirrored.Rounded.List
+}
+
+/**
+ * Vorschaubild aus dem Speicher (einmal erzeugt, bleibt erhalten), sonst ein eindeutiges Dateitypsymbol.
+ * [pixel] > 0: Bilder für große Kacheln direkt aus der Datei in dieser Größe, damit sie scharf sind.
+ */
+@Composable
+private fun Vorschaubild(e: Eintrag, a: Anhang?, modifier: Modifier = Modifier.size(56.dp), radius: Dp = 14.dp, pixel: Int = 0, symbolGroesse: Dp = 28.dp) {
     val f = LocalFarben.current
     val context = LocalContext.current
-    val bild by ladeImHintergrund<ImageBitmap?>(null, a?.id, a?.vorschau) {
+    val bild by ladeImHintergrund<ImageBitmap?>(null, a?.id, a?.vorschau, pixel) {
         if (a == null) null else runCatching {
             val s = AblageZentrale.speicher(context)
+            if (pixel > 0 && a.art == Art.BILD) Medien.bildVerkleinert(s.datei(a), pixel)?.asImageBitmap()?.let { return@runCatching it }
             val ziel = s.vorschauDatei(a)
             val datei = if (ziel.isFile) ziel else Medien.vorschaubild(s.datei(a), a.art, ziel)?.also { s.setzeVorschau(e.id, a.id, it) }
             datei?.let { BitmapFactory.decodeFile(it.absolutePath)?.asImageBitmap() }
         }.getOrNull()
     }
-    val form = RoundedCornerShape(14.dp)
     val b = bild
+    val form = RoundedCornerShape(radius)
     if (b != null) {
-        Box(Modifier.size(56.dp).clip(form)) {
+        Box(modifier.clip(form)) {
             Image(b, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             if (a?.art == Art.VIDEO) Icon(Icons.Rounded.VideoFile, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.align(Alignment.BottomEnd).padding(3.dp).size(16.dp))
         }
     } else {
-        Box(Modifier.size(56.dp).glas(f, 14.dp, erhoeht = 0.4f, toenung = f.primaer), contentAlignment = Alignment.Center) {
-            Icon(a?.let { dateiSymbol(it.art) } ?: Icons.AutoMirrored.Rounded.Article, null, tint = f.primaer, modifier = Modifier.size(28.dp))
+        Box(modifier.glas(f, radius, erhoeht = 0.4f, toenung = f.primaer), contentAlignment = Alignment.Center) {
+            Icon(a?.let { dateiSymbol(it.art) } ?: Icons.AutoMirrored.Rounded.Article, null, tint = f.primaer, modifier = Modifier.size(symbolGroesse))
         }
     }
 }
@@ -390,7 +502,7 @@ private fun AnhangZeile(e: Eintrag, a: Anhang, aktionen: AblageAktionen, oeffne:
     val freigabe = remember(a.id) { aktionen.freigabe(a) }
     Row(Modifier.fillMaxWidth().glas(f, erhoeht = 0.5f).antippen(aktion = oeffne).semantics { contentDescription = "${a.originalName}, ${a.art.anzeige}, ${Dateityp.groesse(a.groesse)}. Antippen zum Öffnen." }
         .padding(start = 10.dp, top = 8.dp, bottom = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(48.dp)) { Vorschaubild(e, a) }
+        Vorschaubild(e, a, Modifier.size(48.dp))
         Column(Modifier.weight(1f).padding(start = 10.dp)) {
             Text(a.originalName, color = f.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("${a.art.anzeige} · ${Dateityp.groesse(a.groesse)}", color = f.textSchwach, fontSize = 12.sp)

@@ -255,6 +255,8 @@ class Einstellungen private constructor(context: Context) {
 
     /** Farbdesign: blau (Jarvis) oder gold (wie Geniale Ideen); hell oder dunkel regelt [modus]. */
     var design: String get() = s("design", "blau"); set(v) = put { putString("design", v) }
+    /** Ansicht der Ablage wie im Windows-Explorer: gross, mittel, klein (Kacheln), details oder liste. */
+    var ablageAnsicht: String get() = s("ablage_ansicht", "mittel"); set(v) = put { putString("ablage_ansicht", v) }
 
     companion object {
         const val NAME = "jarvis_secure_prefs"
