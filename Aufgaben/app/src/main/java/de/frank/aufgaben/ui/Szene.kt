@@ -33,6 +33,7 @@ import de.frank.aufgaben.ui.szenen.ORANGE_ZYKLUS
 import de.frank.aufgaben.ui.theme.Design
 import de.frank.aufgaben.ui.theme.LocalBewegung
 import de.frank.aufgaben.ui.theme.LocalFarben
+import de.frank.aufgaben.ui.theme.farbenFuer
 import de.frank.aufgaben.ui.theme.glas
 
 /**
@@ -57,6 +58,8 @@ fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") e
     val zeit = rememberSzenenZeit()
     val schrift = rememberTextMeasurer()
     val a = remember(f.design) { ablauf(f.design) }
+    // Die Szene bleibt auch im Dunkelmodus hell wie im Hellmodus, nur unter einem leichten Schleier etwas gedämpft.
+    val szenenFarben = remember(f) { if (f.dunkel) farbenFuer(f.design, false) else f }
     val ms = (a.zyklus * 1000).toLong()
     val aktivePhase by remember(a) {
         derivedStateOf {
@@ -69,11 +72,12 @@ fun AufgabenSzene(modifier: Modifier = Modifier, @Suppress("UNUSED_PARAMETER") e
             val t = if (!bewegung) a.standbild else (zeit.value % ms) / 1000f
             clipPath(Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(f.radius.toPx() * 0.7f))) }) {
                 when (f.design) {
-                    Design.ORANGE -> szeneOrange(t, f)
-                    Design.AURORA -> szeneAurora(t, f)
-                    Design.GARTEN -> szeneGarten(t, f)
-                    Design.KOSMOS -> szeneKosmos(t, f, schrift)
+                    Design.ORANGE -> szeneOrange(t, szenenFarben)
+                    Design.AURORA -> szeneAurora(t, szenenFarben)
+                    Design.GARTEN -> szeneGarten(t, szenenFarben)
+                    Design.KOSMOS -> szeneKosmos(t, szenenFarben, schrift)
                 }
+                if (f.dunkel) drawRect(f.hgOben.copy(alpha = 0.16f))
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp, start = 4.dp, end = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {

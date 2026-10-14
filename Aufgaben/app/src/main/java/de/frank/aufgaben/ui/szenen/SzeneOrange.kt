@@ -13,9 +13,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.lerp
-import de.frank.aufgaben.ui.theme.Design
 import de.frank.aufgaben.ui.theme.Farben
-import de.frank.aufgaben.ui.theme.farbenFuer
 import kotlin.math.sin
 
 /** Länge eines Durchlaufs; Ende und Anfang sind dasselbe Bild (dunkler, leerer Raum), die Szene läuft ohne Schnitt. */
@@ -29,14 +27,6 @@ internal const val ORANGE_ZYKLUS = 46f
  * aus, und beide gehen links wieder hinaus, wo sie hereingekommen sind; im Fenster geht der Mond auf. Nach einer kurzen Pause beginnt alles wieder von vorn.
  */
 internal fun DrawScope.szeneOrange(t: Float, f: Farben) {
-    // Das Zimmer bleibt auch im Dunkelmodus hell wie im Hellmodus, nur unter einem leichten Schleier etwas gedämpft.
-    zeichneOrange(t, if (f.dunkel) ORANGE_HELL else f)
-    if (f.dunkel) drawRect(Color(0xFF140A04).copy(alpha = 0.16f))
-}
-
-private val ORANGE_HELL = farbenFuer(Design.ORANGE, false)
-
-private fun DrawScope.zeichneOrange(t: Float, f: Farben) {
     val zyklus = ORANGE_ZYKLUS
     val w = size.width
     val h = size.height
