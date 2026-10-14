@@ -75,7 +75,7 @@ private class Schritt(val titel: String, val text: String, val fertig: Boolean, 
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: ComponentActivity) {
+fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: ComponentActivity, schublade: androidx.compose.material3.DrawerState) {
     val f = LocalFarben.current
     // Vom Protokoll zählt hier nur, ob das Plugin schon benutzt wurde: Nicht jede neue Zeile soll den Bildschirm neu aufbauen.
     val pluginGenutzt by remember { Protokoll.eintraege.map { l -> l.any { it.quelle == Quelle.CHATGPT } }.distinctUntilChanged() }
@@ -120,9 +120,8 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
         if (vm.gespraech.isNotEmpty() && letzter >= 0) liste.animateScrollToItem(letzter)
     }
 
-    val schublade = rememberGespraecheSchublade()
+    // Die Seitenleiste selbst liegt in JarvisApp: So reicht sie von ganz oben bis ganz unten, über die Reiter-Leiste.
     val raum = androidx.compose.runtime.rememberCoroutineScope()
-    GespraecheSchublade(vm, schublade) {
     Column(Modifier.fillMaxSize()) {
         Kopf(vm, tunnel, auswertung.laeuft) { raum.launch { schublade.open() } }
         LaeuftGerade(vm)
@@ -230,7 +229,6 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
                 }
             }
         }
-    }
     }
 }
 

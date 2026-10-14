@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,7 +64,7 @@ import kotlinx.coroutines.launch
  * zurückwischen oder die Zurück-Geste schließt sie. Tippen öffnet ein Gespräch, lange drücken benennt um oder löscht.
  */
 @Composable
-fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, inhalt: @Composable () -> Unit) {
+fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, wischen: Boolean = true, inhalt: @Composable () -> Unit) {
     val f = LocalFarben.current
     val raum = rememberCoroutineScope()
     BackHandler(enabled = schublade.isOpen) { raum.launch { schublade.close() } }
@@ -71,7 +75,8 @@ fun GespraecheSchublade(vm: AppViewModel, schublade: DrawerState, inhalt: @Compo
         gesturesEnabled = schublade.isOpen && !schublade.isAnimationRunning,
         scrimColor = Color.Black.copy(alpha = if (f.dunkel) 0.55f else 0.32f),
         // Waagerechtes Wischen irgendwo im Gespräch öffnet die Leiste (nicht nur am Rand); senkrechtes Scrollen bleibt der Liste.
-        modifier = Modifier.pointerInput(schublade) {
+        modifier = Modifier.pointerInput(schublade, wischen) {
+            if (!wischen) return@pointerInput
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 if (schublade.isAnimationRunning) return@awaitEachGesture
@@ -123,11 +128,17 @@ private fun Leiste(vm: AppViewModel, aufNeu: () -> Unit, aufWahl: (String) -> Un
     var loeschen by remember { mutableStateOf<Sitzung?>(null) }
     val gruppen = remember(vm.sitzungen) { gruppiert(vm.sitzungen) }
 
+    // Im Stil des gewählten Designs (Blau oder Gold, hell oder dunkel): derselbe Verlauf wie der App-Hintergrund, leicht getönt.
     ModalDrawerSheet(
-        drawerContainerColor = if (f.dunkel) Color(0xFA0A1424) else Color(0xFAF2F7FD),
+        drawerContainerColor = f.hgUnten,
         drawerContentColor = f.text,
+        windowInsets = androidx.compose.foundation.layout.WindowInsets(0),
     ) {
-        Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 14.dp)) {
+        Column(
+            Modifier.fillMaxSize()
+                .background(Brush.verticalGradient(listOf(lerp(f.hgOben, f.primaer, if (f.dunkel) 0.10f else 0.06f), f.hgUnten, lerp(f.hgUnten, f.primaer, if (f.dunkel) 0.06f else 0.04f))))
+                .statusBarsPadding().navigationBarsPadding().padding(horizontal = 14.dp),
+        ) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 16.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Forum, null, tint = f.primaer, modifier = Modifier.size(24.dp))
                 Text("Gespräche", Modifier.padding(start = 10.dp), color = f.text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
@@ -165,12 +176,13 @@ private fun Leiste(vm: AppViewModel, aufNeu: () -> Unit, aufWahl: (String) -> Un
     bearbeiten?.let { s ->
         AlertDialog(
             onDismissRequest = { bearbeiten = null },
+            containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
             title = { Text(s.titel.ifBlank { "Gespräch" }, maxLines = 2, overflow = TextOverflow.Ellipsis) },
             text = {
                 Column {
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = { umbenennen = s; bearbeiten = null }).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Edit, null, tint = f.primaer)
-                        Text("Umbenennen", Modifier.padding(start = 12.dp), fontSize = 16.sp)
+                        Text("Umbenennen", Modifier.padding(start = 12.dp), color = f.text, fontSize = 16.sp)
                     }
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = { loeschen = s; bearbeiten = null }).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Delete, null, tint = f.gefahr)
@@ -186,6 +198,7 @@ private fun Leiste(vm: AppViewModel, aufNeu: () -> Unit, aufWahl: (String) -> Un
         var name by remember(s.id) { mutableStateOf(s.titel) }
         AlertDialog(
             onDismissRequest = { umbenennen = null },
+            containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
             title = { Text("Gespräch umbenennen") },
             text = { Eingabe(name, { name = it }, "Name des Gesprächs", Modifier.fillMaxWidth()) },
             confirmButton = { TextButton(onClick = { vm.sitzungUmbenennen(s.id, name); umbenennen = null }, enabled = name.isNotBlank()) { Text("Speichern") } },
@@ -196,6 +209,7 @@ private fun Leiste(vm: AppViewModel, aufNeu: () -> Unit, aufWahl: (String) -> Un
     loeschen?.let { s ->
         AlertDialog(
             onDismissRequest = { loeschen = null },
+            containerColor = menueFlaeche(f), titleContentColor = f.text, textContentColor = f.text,
             title = { Text("Gespräch löschen?") },
             text = { Text("„${s.titel.ifBlank { "Gespräch" }}“ wird endgültig gelöscht.") },
             confirmButton = { TextButton(onClick = { vm.sitzungLoeschen(s.id); loeschen = null }) { Text("Löschen", color = f.gefahr) } },

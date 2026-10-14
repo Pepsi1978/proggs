@@ -89,6 +89,11 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
         val tunnel by Tunnel.zustand.collectAsState()
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(f.hgOben, f.hgUnten)))) {
             Hintergrund()
+            val schublade = rememberGespraecheSchublade()
+            // Gesprächsleiste über die ganze Höhe wie in Geniale Ideen; wischen öffnet sie nur auf dem Jarvis-Reiter.
+            val wischen = vm.reiter == Reiter.JARVIS && !vm.gesperrt && vm.merkOffen == null && !GedaechtnisAnsicht.offen
+            GespraecheSchublade(vm, schublade, wischen) {
+            Box(Modifier.fillMaxSize()) {
             // Auf dem aufgeklappten Fold bleibt der Inhalt eine gut lesbare Spalte in der Mitte.
             Column(
                 Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
@@ -121,7 +126,7 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     AnimatedContent(vm.reiter, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "reiter") { reiter ->
                         when (reiter) {
-                            Reiter.JARVIS -> StartBildschirm(vm, tunnel, activity)
+                            Reiter.JARVIS -> StartBildschirm(vm, tunnel, activity, schublade)
                             Reiter.ABLAGE -> AblageBildschirm(vm, activity)
                             Reiter.AKTIVITAET -> AktivitaetBildschirm(vm)
                             Reiter.EINSTELLUNGEN -> EinstellungenBildschirm(vm, tunnel, activity)
@@ -129,6 +134,8 @@ fun JarvisApp(vm: AppViewModel, activity: ComponentActivity) {
                     }
                 }
                 Leiste(vm)
+            }
+            }
             }
             Meldung(vm, Modifier.align(Alignment.TopCenter).statusBarsPadding())
         }

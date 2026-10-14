@@ -56,6 +56,7 @@
     {"versionCode": 52, "versionName": "1.8.41", "stand": "14.10.2026, 20:55 Uhr", "notiz": "Ablage: Bilder erscheinen direkt als Galerie, Ansicht wählbar (große, mittlere, kleine Kacheln, Details, Liste), alle Bereiche ohne Wischen sichtbar und eine Zeile mehr Platz oben"},
     {"versionCode": 53, "versionName": "1.8.42", "stand": "14.10.2026, 20:58 Uhr", "notiz": "Ablage: Menüs für Ansicht und Sortierung, Löschfrage und Meldungen passen sich jetzt dem gewählten Design an (Blau oder Gold, hell und dunkel), die gewählte Ansicht steht mit Haken in der Designfarbe"},
     {"versionCode": 54, "versionName": "1.8.43", "stand": "14.10.2026, 21:09 Uhr", "notiz": "Neu: Stoppuhr mit Zifferblatt und Hundertsteln; „Starte eine Stoppuhr“ startet sie sofort, sonst über den Stoppuhr-Knopf oben mit Start, Anhalten, Weiter und Zurücksetzen; sie bleibt auf der Startseite stehen, bis du sie zurücksetzt"},
-    {"versionCode": 55, "versionName": "1.8.44", "stand": "14.10.2026, 21:12 Uhr", "notiz": "Der Stoppuhr-Knopf oben ist wieder weg: Die Stoppuhr erscheint nur, wenn du sie über Jarvis startest"}
+    {"versionCode": 55, "versionName": "1.8.44", "stand": "14.10.2026, 21:12 Uhr", "notiz": "Der Stoppuhr-Knopf oben ist wieder weg: Die Stoppuhr erscheint nur, wenn du sie über Jarvis startest"},
+    {"versionCode": 56, "versionName": "1.8.45", "stand": "14.10.2026, 21:20 Uhr", "notiz": "Gesprächs-Seitenleiste: Überschriften bildet jetzt die KI in höchstens sieben Wörtern und passt sie an, wenn das Gespräch wächst; die Leiste reicht von ganz oben bis ganz unten und trägt die Farben des gewählten Designs"}
   ]
 }

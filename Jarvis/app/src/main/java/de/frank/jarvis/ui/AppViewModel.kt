@@ -735,7 +735,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sitzungenLaden() {
-        viewModelScope.launch { sitzungen = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.alle(getApplication()) } } }
+        viewModelScope.launch {
+            sitzungen = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.alle(getApplication()) } }
+            // Ältere Gespräche ohne KI-Überschrift nachholen: die zehn neuesten, eins nach dem anderen.
+            if (!kiVerbunden) return@launch
+            sitzungen.take(10).forEach { s ->
+                val stand = withContext(Dispatchers.IO) {
+                    if (!de.frank.jarvis.data.Gespraeche.brauchtKiTitel(getApplication(), s.id, s.anzahl)) null
+                    else de.frank.jarvis.data.Gespraeche.laden(getApplication(), s.id)?.second
+                } ?: return@forEach
+                kiTitelBilden(s.id, stand)
+            }
+        }
     }
 
     private fun sitzungSichern() {
@@ -748,8 +759,37 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Nur dieses eine Gespräch schreiben und in der Liste ersetzen, statt alle Dateien neu zu lesen.
             val neu = sicherung.withLock { withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.speichern(getApplication(), id, erstellt, stand) } }
             if (neu != null) sitzungen = listOf(neu) + sitzungen.filter { it.id != neu.id }
+            if (neu != null) kiTitelBilden(id, stand)
             // Das Gespräch gehört sofort ins Kurzzeitgedächtnis (für das nächste Gespräch und für ChatGPT).
             de.frank.jarvis.gedaechtnis.Lagebild.anstossen(getApplication(), listOf(de.frank.jarvis.gedaechtnis.Bereich.GESPRAECHE), "Gespräch mit Jarvis")
+        }
+    }
+
+    /** Gespräche, für die gerade eine Überschrift entsteht: höchstens ein Auftrag je Gespräch gleichzeitig. */
+    private val titelInArbeit = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+    /**
+     * Überschrift für die Seitenleiste vom Modell: höchstens sieben Wörter, aus dem, worum es im Gespräch geht
+     * (meist Franks erste Frage). Läuft still im Hintergrund; ohne Verbindung bleibt die erste Frage als Titel.
+     */
+    private fun kiTitelBilden(id: String, stand: List<de.frank.jarvis.data.GespeicherteNachricht>) {
+        if (!kiVerbunden || stand.size < 2 || !titelInArbeit.add(id)) return
+        viewModelScope.launch {
+            try {
+                val noetig = withContext(Dispatchers.IO) { de.frank.jarvis.data.Gespraeche.brauchtKiTitel(getApplication(), id, stand.size) }
+                if (!noetig) return@launch
+                val auszug = buildString {
+                    stand.take(8).forEach { n -> append(if (n.vonMir) "Frank: " else "Jarvis: ").append(n.text.replace(Regex("\\s+"), " ").take(600)).append('\n') }
+                }.take(4_000)
+                val roh = kotlinx.coroutines.withTimeoutOrNull(45_000) {
+                    runCatching { auth.streamChat(TITEL_AUFTRAG, listOf(ChatTurn("user", auszug)), einstellungen.modell, ReasoningEffort.LOW) }.getOrNull()
+                } ?: return@launch
+                val titel = roh.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }.orEmpty()
+                    .trim('"', '„', '“', '\'', '*', '#', ' ').removeSuffix(".").split(Regex("\\s+")).take(7).joinToString(" ")
+                if (titel.length < 3) return@launch
+                val neu = withContext(Dispatchers.IO) { sicherung.withLock { de.frank.jarvis.data.Gespraeche.setzeKiTitel(getApplication(), id, titel, stand.size) } }
+                if (neu != null) sitzungen = sitzungen.map { if (it.id == id) it.copy(titel = neu.titel) else it }
+            } finally { titelInArbeit.remove(id) }
         }
     }
 
@@ -1077,3 +1117,10 @@ private const val INFO_KORREKTUR =
         "Behalte jede Tatsache, jeden Namen und jede Zahl genau so, füge nichts hinzu und deute nichts um. Lass Füllwörter, Wiederholungen und Selbstkorrekturen weg " +
         "und berichtige offensichtliche Hörfehler der Spracherkennung. Höchstens 300 Zeichen. " +
         "Antworte nur mit der Notiz, ohne Anführungszeichen, ohne Einleitung und ohne Erklärung."
+
+/** Auftrag für die Überschrift eines Gesprächs in der Seitenleiste. */
+private const val TITEL_AUFTRAG =
+    "Du gibst einem Gespräch zwischen Frank und seinem Assistenten Jarvis eine Überschrift für die Gesprächsliste. " +
+        "Fasse in höchstens sieben Wörtern auf Deutsch zusammen, worum es geht; meist trifft es Franks erstes Anliegen, " +
+        "hat sich das Gespräch verlagert, das Hauptthema. Klar und konkret wie ein Betreff, keine Anführungszeichen, " +
+        "kein Punkt am Ende, keine Einleitung. Antworte nur mit der Überschrift."

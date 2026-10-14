@@ -69,12 +69,15 @@ object Gespraeche {
                     return@runCatching null
                 }
                 val eigenerTitel = alt?.optBoolean("eigenerTitel") == true
-                val titel = if (eigenerTitel) alt!!.optString("titel") else titelAus(nachrichten)
+                val kiTitel = alt?.optString("kiTitel").orEmpty()
+                val titel = if (eigenerTitel) alt!!.optString("titel") else kiTitel.ifBlank { titelAus(nachrichten) }
                 val jetzt = System.currentTimeMillis()
                 val json = JSONObject()
                     .put("id", id)
                     .put("titel", titel)
                     .put("eigenerTitel", eigenerTitel)
+                    .put("kiTitel", kiTitel)
+                    .put("kiTitelBei", alt?.optInt("kiTitelBei") ?: 0)
                     .put("erstellt", erstellt)
                     .put("geaendert", jetzt)
                     .put("nachrichten", JSONArray().apply {
@@ -100,6 +103,31 @@ object Gespraeche {
                 schreiben(d, j)
             }.onFailure { Log.w(TAG, "Gespräch nicht umbenannt", it) }
         }
+    }
+
+    /**
+     * Braucht das Gespräch (neu) eine KI-Überschrift? Ja nach der ersten Antwort und danach alle sechs Nachrichten,
+     * damit sie mit dem Gespräch mitwächst, höchstens bis 20 Nachrichten. Ein von Hand vergebener Titel bleibt immer.
+     */
+    fun brauchtKiTitel(context: Context, id: String, anzahl: Int): Boolean = synchronized(sperre) {
+        runCatching {
+            val j = lies(datei(context, id))
+            if (j.optBoolean("eigenerTitel")) return@runCatching false
+            val bei = j.optInt("kiTitelBei")
+            anzahl >= 2 && (bei == 0 || (anzahl >= bei + 6 && bei < 20))
+        }.getOrDefault(false)
+    }
+
+    /** Übernimmt die KI-Überschrift, außer Frank hat inzwischen selbst umbenannt. Liefert den neuen Eintrag. */
+    fun setzeKiTitel(context: Context, id: String, titel: String, bei: Int): Sitzung? = synchronized(sperre) {
+        runCatching {
+            val d = datei(context, id)
+            val j = lies(d)
+            if (j.optBoolean("eigenerTitel")) return@runCatching null
+            j.put("titel", titel).put("kiTitel", titel).put("kiTitelBei", bei)
+            schreiben(d, j)
+            Sitzung(id, titel, j.optLong("erstellt"), j.optLong("geaendert"), j.optJSONArray("nachrichten")?.length() ?: 0)
+        }.onFailure { Log.w(TAG, "KI-Titel nicht gespeichert", it) }.getOrNull()
     }
 
     fun loeschen(context: Context, id: String) {
