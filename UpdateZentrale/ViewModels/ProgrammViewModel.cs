@@ -659,10 +659,20 @@ public sealed partial class ProgrammViewModel : ObservableObject
                                 + " in der neuen Version.\n\nJetzt schließen und übernehmen?", "Update übernehmen"))
                 return;
 
+            // -ForceApplicationShutdown does not close the app for -RegisterByFamilyName (0x80073D02,
+            // "in use"), so its processes -- everything running from its WindowsApps folder -- are
+            // ended here first. If registering the staged package still fails, winget installs it
+            // again now that nothing holds it.
             var lauf = await Kommandozeile.AusfuehrenAsync("powershell.exe",
-                "-NoProfile -NonInteractive -Command \"Add-AppxPackage -RegisterByFamilyName -MainPackage '"
-                + Eintrag.PackageFamilyName + "' -ForceApplicationShutdown\"",
-                TimeSpan.FromMinutes(5));
+                "-NoProfile -NonInteractive -Command \""
+                + "$p = Get-Process | Where-Object { $_.Path -like '*\\WindowsApps\\" + Eintrag.AppxName + "_*' }; "
+                + "$p | Stop-Process -Force -ErrorAction SilentlyContinue; "
+                + "$p | Wait-Process -Timeout 20 -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; "
+                + "try { Add-AppxPackage -RegisterByFamilyName -MainPackage '" + Eintrag.PackageFamilyName + "' -ErrorAction Stop } "
+                + "catch { & '" + Pfade.Winget + "' upgrade --id " + Eintrag.WingetId + " --exact --silent "
+                + "--disable-interactivity --accept-source-agreements --accept-package-agreements; "
+                + "if ($LASTEXITCODE -ne 0) { Write-Output $_; exit 1 } }\"",
+                TimeSpan.FromMinutes(10));
             if (lauf.ExitCode != 0)
                 Melde("Das Update ließ sich nicht übernehmen:\n" + lauf.Ausgabe);
         }
