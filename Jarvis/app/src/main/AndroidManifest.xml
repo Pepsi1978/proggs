@@ -110,6 +110,7 @@
 
         <receiver android:name=".auswertung.AuswertungsEmpfaenger" android:exported="false" />
         <receiver android:name=".fahrt.AbfahrtEmpfaenger" android:exported="false" />
+        <receiver android:name=".timer.TimerEmpfaenger" android:exported="false" />
 
         <!-- Ablage: Dateien zum Teilen und „Mit anderer App öffnen“ als Inhalts-Adresse mit befristeter Leseberechtigung. -->
         <provider

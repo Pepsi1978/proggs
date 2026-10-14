@@ -73,7 +73,7 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
     private val metrikListe =
         "erholung, hrv, ruhepuls, schlafperformance, schlafdauer, tiefschlaf_min, rem_min, leichtschlaf_min, wach_min, tiefschlaf_prozent, rem_prozent, " +
             "leichtschlaf_prozent, wach_prozent, erholsamer_schlaf_prozent, schlafeffizienz, schlafkonsistenz, schlafbedarf, schlafdefizit_min, schlafstoerungen, " +
-            "schlafzyklen, atemfrequenz, spo2, hauttemperatur, tagesbelastung, energie_kcal, oura_readiness, oura_schlafscore, oura_resilienz, oura_aktivitaet, " +
+            "schlafzyklen, atemfrequenz, hauttemperatur, tagesbelastung, energie_kcal, oura_readiness, oura_schlafscore, oura_resilienz, oura_aktivitaet, " +
             "schritte, oura_temperaturabweichung, vo2max, gewicht, koerperfett, muskelmasse, skelettmuskel, magermasse, knochenmasse, viszeralfett, bmi, " +
             "koerperwasser, wasseranteil, eiweiss"
 
@@ -323,7 +323,25 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
     // ---------------------------------------------------------------- Brücke
 
     private suspend fun rufe(methode: String, anfrage: JSONObject, lesend: Boolean = methode in LESEND): JSONObject =
-        withContext(Dispatchers.IO) { rufeDirekt(methode, anfrage, lesend) }
+        withContext(Dispatchers.IO) { ohneAusgelassene(rufeDirekt(methode, ohneAusgelassene(anfrage), lesend)) }
+
+    /**
+     * Frank braucht die Sauerstoffsättigung nicht: Sie wird weder angefragt noch weitergegeben, auch nicht in den Tageswerten,
+     * im Katalog oder in der Tagesauswertung.
+     */
+    private fun ohneAusgelassene(o: JSONObject): JSONObject {
+        listOf("metriken", "werte", "reihen").forEach { feld ->
+            val liste = o.optJSONArray(feld) ?: return@forEach
+            val gefiltert = JSONArray()
+            for (i in 0 until liste.length()) {
+                val e = liste.opt(i)
+                val id = (e as? JSONObject)?.optString("id") ?: e as? String
+                if (id !in AUSGELASSEN) gefiltert.put(e)
+            }
+            o.put(feld, gefiltert)
+        }
+        return o
+    }
 
     /**
      * Lesen mit frischen Daten: Vorher klopft Jarvis in Entropie Reductor an. Dort wird nur abgeglichen, wenn der
@@ -368,7 +386,9 @@ class BiomarkerFaehigkeit(private val context: Context) : Faehigkeit {
         /** Reine Lesemethoden: Bei einem vorübergehenden Fehler (Partner-App gerade beendet) wird einmal wiederholt. */
         private val LESEND = setOf("katalog", "abgleich", "tag", "auswertung", "verlauf", "trainings", "training")
         /** Was das Live-Gedächtnis im Vergleich zeigt: Franks vier Kerngrößen und was Schlaf und Erholung einordnet. */
-        private val LIVE_METRIKEN = listOf("erholung", "hrv", "ruhepuls", "vo2max", "tiefschlaf_prozent", "tiefschlaf_min", "schlafdauer", "wach_min", "schlafdefizit_min", "spo2", "oura_temperaturabweichung", "gewicht")
+        private val LIVE_METRIKEN = listOf("erholung", "hrv", "ruhepuls", "vo2max", "tiefschlaf_prozent", "tiefschlaf_min", "schlafdauer", "wach_min", "schlafdefizit_min", "oura_temperaturabweichung", "gewicht")
+        /** Messgrößen, die Jarvis nie abruft oder auswertet. */
+        private val AUSGELASSEN = setOf("spo2")
         private val BRUECKEN = listOf(
             Uri.parse("content://de.frank.entropyreducer.debug.jarvis"),
             Uri.parse("content://de.frank.entropyreducer.jarvis"),

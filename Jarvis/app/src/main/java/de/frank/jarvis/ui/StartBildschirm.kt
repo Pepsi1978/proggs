@@ -33,6 +33,8 @@ import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -122,6 +124,7 @@ fun StartBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: Component
     GespraecheSchublade(vm, schublade) {
     Column(Modifier.fillMaxSize()) {
         Kopf(vm, tunnel, auswertung.laeuft) { raum.launch { schublade.open() } }
+        LaeuftGerade(vm)
         LazyColumn(
             Modifier.weight(1f).fillMaxWidth(), state = liste,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -301,6 +304,55 @@ private fun Blase(vm: AppViewModel, nummer: Int, n: Nachricht) {
         if (!n.vonMir) {
             Spacer(Modifier.width(6.dp))
             Vorleseknopf(vm, "gespraech:$nummer", "Jarvis", n.text, groesse = 36.dp)
+        }
+    }
+}
+
+/**
+ * Alles, was gerade läuft (Timer mit Restzeit, arbeitende Agenten), steht immer oben auf der Startseite,
+ * auch während eines Gesprächs. Ohne Laufendes bleibt der Platz frei.
+ */
+@Composable
+private fun LaeuftGerade(vm: AppViewModel) {
+    val f = LocalFarben.current
+    val timer by de.frank.jarvis.timer.Timer.laufend.collectAsState()
+    val agenten by de.frank.jarvis.agent.Agenten.laeufe.collectAsState()
+    if (timer.isEmpty() && agenten.isEmpty()) return
+    var jetzt by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(timer.isNotEmpty()) {
+        while (timer.isNotEmpty()) {
+            jetzt = System.currentTimeMillis()
+            kotlinx.coroutines.delay(1_000 - jetzt % 1_000)
+        }
+    }
+    val kontext = androidx.compose.ui.platform.LocalContext.current
+    Karte(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), toenung = f.primaer) {
+        Text("Läuft gerade", color = f.text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        timer.forEach { t ->
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Timer, null, tint = f.primaer, modifier = Modifier.size(22.dp))
+                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                    Text(de.frank.jarvis.timer.Timer.restUhr(t.ende - jetzt), color = f.text, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        t.name + " · " + de.frank.jarvis.timer.Timer.dauerText(t.dauerMs) + " · klingelt " +
+                            java.text.SimpleDateFormat("HH:mm", java.util.Locale.GERMAN).format(java.util.Date(t.ende)) + " Uhr",
+                        color = f.textLeise, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Rundknopf(Icons.Rounded.Close, "Timer stoppen", farbe = f.gefahr) {
+                    de.frank.jarvis.timer.Timer.stoppen(kontext, t.id)
+                    vm.meldung = "Timer gestoppt"
+                }
+            }
+        }
+        agenten.forEach { l ->
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Kern(22.dp, f.primaer, aktiv = true)
+                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                    Text("Agent " + l.agent, color = f.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(l.schritt.ifEmpty { l.auftrag }, color = f.textLeise, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
         }
     }
 }

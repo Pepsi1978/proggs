@@ -12,5 +12,7 @@ class JarvisApplication : Application() {
         JarvisDienst.kanalAnlegen(this)
         de.frank.jarvis.weckwort.WeckwortDienst.kanaeleAnlegen(this)
         Protokoll.lade(this)
+        // Laufende Timer nach einem Neustart wieder scharf stellen.
+        de.frank.jarvis.timer.Timer.starte(this)
     }
 }
