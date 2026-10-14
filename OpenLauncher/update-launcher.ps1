@@ -206,7 +206,34 @@ if ($layerValue -and $layerValue -match 'RUNASADMIN') {
 # ist fertig, der aufrufende Agent wartet aber bis in sein Timeout. Der gemeinsame Starthelfer
 # schaltet die Vererbung vorher ab (Almanach: bugs/werkzeuge/update-skript-modaler-dialog.md).
 $startHelfer = Join-Path $PSScriptRoot '..\Werkzeuge\start-ohne-pipe\Start-OhnePipe.ps1'
-if (Test-Path -LiteralPath $startHelfer) {
+# Laeuft dieses Skript erhoeht (z.B. aus der UpdateZentrale oder einer Admin-Sitzung), erbte der
+# Launcher frueher dessen Admin-Rechte -- und mit ihm jedes Terminal und jede CLI. Die Sprach-
+# Overlays (TVO/CVO) laufen ohne Admin-Rechte; Windows verwirft dann ihr Strg+V still (UIPI),
+# obwohl ihr Log "ok" meldet. Deshalb erhoeht immer ueber eine einmalige geplante Aufgabe mit
+# normalen Rechten starten: saubere Benutzer-Umgebung, keine vererbte Pipe.
+$istErhoeht = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if ($istErhoeht) {
+    $taskName = 'OpenLauncher-Start-OhneAdmin'
+    $vorher = @(Get-Process -Name 'OpenLauncher' -ErrorAction SilentlyContinue | ForEach-Object Id)
+    $action = New-ScheduledTaskAction -Execute $launcherExe -WorkingDirectory $projectRoot
+    $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
+    Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Force | Out-Null
+    try {
+        Start-ScheduledTask -TaskName $taskName
+        $newLauncher = $null
+        for ($i = 0; $i -lt 40 -and -not $newLauncher; $i++) {
+            Start-Sleep -Milliseconds 250
+            $newLauncher = Get-Process -Name 'OpenLauncher' -ErrorAction SilentlyContinue |
+                Where-Object { $vorher -notcontains $_.Id } | Select-Object -First 1
+        }
+    } finally {
+        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+    }
+    if (-not $newLauncher) {
+        throw 'Der aktualisierte Launcher wurde ueber die geplante Aufgabe (ohne Admin-Rechte) nicht gestartet.'
+    }
+    Write-Output 'Hinweis: Skript lief mit Admin-Rechten -- Launcher bewusst ohne Admin-Rechte gestartet (sonst tippen TVO/CVO nicht in die CLI).'
+} elseif (Test-Path -LiteralPath $startHelfer) {
     . $startHelfer
     $newLauncher = Start-ProzessOhnePipe -StartInfo $launcherStart
 } else {
