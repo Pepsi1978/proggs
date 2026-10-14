@@ -194,7 +194,7 @@ final class MainViewModel {
             WorkModeEntry(id: "gruendlich", displayName: "Gründlichkeitsmodus", descriptionText: "Randfälle und Härtung mitprüfen")
         ]
 
-        // Ziel-CLI: nur bei OpenAI- und Moonshot-AI-Modellen sichtbar (fillCliTargets). Alle CLIs
+        // Ziel-CLI: nur bei OpenAI-, Moonshot-AI- und Google-Modellen sichtbar (fillCliTargets). Alle CLIs
         // lesen dieselbe Profil-AGENTS.md, deshalb gelten Minimal/Standard/Strikt und der
         // Arbeitsmodus ueberall gleich.
         fillCliTargets(nil)
@@ -267,8 +267,9 @@ final class MainViewModel {
         applyingModelDefault = true
         fillCliTargets(value)
         selectedProfile = profileList.first { $0.id == "minimal" }
-        // Ohne gespeicherten Standard startet jedes Modell wieder auf OpenCode.
-        selectedCliTarget = cliTargets.first { $0.id == "opencode" }
+        // Ohne gespeicherten Standard startet jedes Modell wieder auf OpenCode. Google-Modelle laufen
+        // ueber das Google-AI-Abo (OAuth) nur in der Antigravity CLI -- dort ist sie die Vorauswahl.
+        selectedCliTarget = cliTargets.first { $0.id == (Self.isGoogleModel(value) ? "antigravity" : "opencode") }
         if let stored = pendingModelDefault {
             selectedProfile = profileList.first { $0.id == stored.profileId && $0.isEnabled } ?? selectedProfile
             selectedWorkMode = workModes.first { $0.id == stored.workModeId } ?? selectedWorkMode
@@ -346,7 +347,8 @@ final class MainViewModel {
         profileContextText = Self.isClaudeCodeModel(selectedModel)
             ? "Claude Code · Minimal + Standard + Strikt"
             : isCodexCliSelected ? "Codex CLI · Profil + Modus in der AGENTS.md"
-            : isKimiCliSelected ? "Kimi Code CLI · Profil + Modus in der AGENTS.md" : "OpenCode · Profil-Snapshots"
+            : isKimiCliSelected ? "Kimi Code CLI · Profil + Modus in der AGENTS.md"
+            : isAntigravityCliSelected ? "Antigravity CLI · Profil + Modus in der AGENTS.md" : "OpenCode · Profil-Snapshots"
     }
 
     private var isCodexCliSelected: Bool {
@@ -357,18 +359,29 @@ final class MainViewModel {
         hasCliChoice && selectedCliTarget?.id == "kimi"
     }
 
+    private var isAntigravityCliSelected: Bool {
+        hasCliChoice && selectedCliTarget?.id == "antigravity"
+    }
+
+    static func isGoogleModel(_ model: ModelEntry?) -> Bool {
+        model?.providerId.caseInsensitiveCompare(ModelRegistry.googleProviderId) == .orderedSame
+    }
+
     static func isMoonshotModel(_ model: ModelEntry?) -> Bool {
         model?.providerId.caseInsensitiveCompare(ModelRegistry.moonshotProviderId) == .orderedSame
     }
 
-    /// OpenAI-Modelle laufen wahlweise im Codex CLI, Moonshot-AI-Modelle im Kimi Code CLI.
+    /// OpenAI-Modelle laufen wahlweise im Codex CLI, Moonshot-AI-Modelle im Kimi Code CLI,
+    /// Google-Modelle in der Antigravity CLI (agy).
     static func hasExternalCli(_ model: ModelEntry?) -> Bool {
-        isOpenAiModel(model) || isMoonshotModel(model)
+        isOpenAiModel(model) || isMoonshotModel(model) || isGoogleModel(model)
     }
 
     /// Fuellt die CLI-Wahl passend zum Anbieter: OpenCode plus das eigene CLI des Anbieters.
     private func fillCliTargets(_ model: ModelEntry?) {
-        let own = Self.isMoonshotModel(model)
+        let own = Self.isGoogleModel(model)
+            ? CliTargetEntry(id: "antigravity", displayName: "Antigravity CLI", descriptionText: "Google-CLI (agy) mit deinem Google-AI-Abo (OAuth), Profil aus der AGENTS.md")
+            : Self.isMoonshotModel(model)
             ? CliTargetEntry(id: "kimi", displayName: "Kimi Code CLI", descriptionText: "Originales Kimi-CLI, Profil aus der AGENTS.md")
             : CliTargetEntry(id: "codex", displayName: "Codex CLI", descriptionText: "Eigenes OpenAI-CLI, Profil aus der AGENTS.md")
         if cliTargets.count == 2, cliTargets[1].id == own.id { return }
@@ -983,9 +996,9 @@ final class MainViewModel {
             statusText = "Für Start (Codex) bitte ein Claude-Code-Modell wählen."
             return
         }
-        // Codex CLI und Kimi Code CLI sprechen immer direkt mit ihrem Anbieter - dort gibt es keine
-        // Provider-Wahl, die Auswahl darf den Start also nicht blockieren.
-        guard let model = selectedModel, selectedProvider != nil || isCodexCliSelected || isKimiCliSelected else {
+        // Codex CLI, Kimi Code CLI und Antigravity CLI sprechen immer direkt mit ihrem Anbieter - dort gibt
+        // es keine Provider-Wahl, die Auswahl darf den Start also nicht blockieren.
+        guard let model = selectedModel, selectedProvider != nil || isCodexCliSelected || isKimiCliSelected || isAntigravityCliSelected else {
             statusText = "Bitte Modell und Provider wählen."
             return
         }
@@ -1078,6 +1091,19 @@ final class MainViewModel {
                                                                          workDir: workDir)
                 try launcher.launchKimiCli(model: model, workDir: workDir, effortLevel: thinkingLevel, useTmux: useTmux)
                 Logger.shared.info("MainViewModel", "start", "Kimi-CLI-Kontext geschrieben",
+                                   ["profile": profile.id, "workMode": workMode.id, "agentsPath": agentsPath])
+                statusText = launchStatus
+                return
+            }
+
+            if isAntigravityCliSelected {
+                // Antigravity CLI (agy) liest die AGENTS.md des Arbeitsverzeichnisses wie Codex und Kimi:
+                // Profil UND Modus-Prompt stehen dort zusammen. Angemeldet ist agy selbst ueber das
+                // Google-Konto (OAuth, Google-AI-Abo).
+                let agentsPath = try profiles.activateCodexProjectAgents(profileId: profile.id, workModeId: workMode.id,
+                                                                         workDir: workDir)
+                try launcher.launchAntigravityCli(model: model, workDir: workDir, effortLevel: thinkingLevel, useTmux: useTmux)
+                Logger.shared.info("MainViewModel", "start", "Antigravity-CLI-Kontext geschrieben",
                                    ["profile": profile.id, "workMode": workMode.id, "agentsPath": agentsPath])
                 statusText = launchStatus
                 return

@@ -8,6 +8,14 @@ final class EffortRefreshService {
         var current: EffortSnapshot?
         var problems: [String] = []
         var conflict = false
+        // Antigravity CLI: die Stufen legt der Launcher nach der agy-Modelltabelle fest, nicht
+        // models.dev -- ein fremder Katalog wuerde sonst die waehlbaren Stufen ueberschreiben.
+        if target.access == "antigravity" {
+            let agy = EffortSnapshot(levels: OpenCodeVariantCatalog.geminiLevels(target.model),
+                                     source: "Antigravity CLI (--effort)", canRemove: true)
+            EffortStore.record(target, snapshot: agy, status: "Aktualisiert")
+            return agy
+        }
         if target.access == "codex", target.provider == "openai" {
             do {
                 let models = try await CodexResearchService.shared.models()

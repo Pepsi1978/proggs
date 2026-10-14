@@ -65,6 +65,14 @@ final class ModelRegistry {
 
     static let moonshotGroupId = "moonshot"
     static let moonshotProviderId = "kimi-code-plan-global"
+    static let googleGroupId = "google"
+    static let googleProviderId = "google"
+
+    /// Modelle der ersten Google-Reihe (Gemini CLI), die agy mit Privat-Abo nicht anbietet.
+    private static let retiredGeminiCliSlugs = [
+        "auto", "gemini-3.1-pro-preview", "gemini-3-pro-preview", "gemini-3.5-flash",
+        "gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"
+    ]
 
     private static var filePath: String {
         (Paths.repoRoot as NSString).appendingPathComponent("models.json")
@@ -357,10 +365,16 @@ final class ModelRegistry {
     private func repairAndNormalize() {
         for defaults in ModelRegistry.createDefaults() {
             guard let group = groups.first(where: { $0.id.caseInsensitiveCompare(defaults.id) == .orderedSame }) else {
-                // Moonshot AI (Kimi) gehoert direkt unter OpenAI, nicht ans Ende hinter LM Studio.
-                if defaults.id.caseInsensitiveCompare(ModelRegistry.moonshotGroupId) == .orderedSame,
-                   let openAiIndex = groups.firstIndex(where: { $0.id.caseInsensitiveCompare("openai") == .orderedSame }) {
-                    groups.insert(defaults, at: openAiIndex + 1)
+                // Moonshot AI (Kimi) gehoert direkt unter OpenAI, Google (Gemini) direkt unter Moonshot AI
+                // -- nicht ans Ende hinter LM Studio.
+                let anchorId: String? = switch defaults.id.lowercased() {
+                case ModelRegistry.moonshotGroupId: "openai"
+                case ModelRegistry.googleGroupId: ModelRegistry.moonshotGroupId
+                default: nil
+                }
+                if let anchorId,
+                   let anchorIndex = groups.firstIndex(where: { $0.id.caseInsensitiveCompare(anchorId) == .orderedSame }) {
+                    groups.insert(defaults, at: anchorIndex + 1)
                 } else {
                     groups.append(defaults)
                 }
@@ -435,6 +449,22 @@ final class ModelRegistry {
                         let entry = ModelRegistry.model(definition.slug, definition.displayName, "openai", "OpenAI")
                         entry.isUserDefined = true
                         group.models.append(entry)
+                    }
+                    ModelRegistry.addUnique(&group.knownSyncedModelSlugs, definition.slug)
+                }
+            }
+
+            if group.id.caseInsensitiveCompare(ModelRegistry.googleGroupId) == .orderedSame {
+                // Die erste Google-Reihe (Windows 1.24.84) zielte auf die Gemini CLI; deren Modelle bedient
+                // die Antigravity CLI mit Privat-Abo nicht -> einmalig entfernen, neue Vorgaben
+                // einmalig nachtragen (danach bleiben Nutzer-Aenderungen unangetastet).
+                group.models.removeAll { model in
+                    ModelRegistry.retiredGeminiCliSlugs.contains { $0.caseInsensitiveCompare(model.slug) == .orderedSame }
+                }
+                for (index, definition) in defaults.models.enumerated() {
+                    if group.knownSyncedModelSlugs.contains(where: { $0.caseInsensitiveCompare(definition.slug) == .orderedSame }) { continue }
+                    if !group.models.contains(where: { $0.slug.caseInsensitiveCompare(definition.slug) == .orderedSame }) {
+                        group.models.insert(definition, at: min(index, group.models.count))
                     }
                     ModelRegistry.addUnique(&group.knownSyncedModelSlugs, definition.slug)
                 }
@@ -546,6 +576,14 @@ final class ModelRegistry {
                 model("k3-256k", "Kimi K3 256K", moonshotProviderId, "Moonshot AI"),
                 model("kimi-for-coding", "Kimi for Coding (K2.8 Preview)", moonshotProviderId, "Moonshot AI"),
                 model("kimi-for-coding-highspeed", "Kimi for Coding HighSpeed", moonshotProviderId, "Moonshot AI")
+            ]),
+            // Google-AI-Abo (Google-Konto per OAuth) in der Antigravity CLI (agy). Seit 18.06.2026 nimmt
+            // nur noch agy die Privat-Abos an. Modelle laut antigravity.google/docs/models (14.10.2026):
+            // Gemini 4 Argon nur mit AI Ultra, Gemini 3.8 Flash ab Free/Pro. Seit agy 1.3.4 genuegt der
+            // Basisname, die Stufe kommt per --effort.
+            createGroup(googleGroupId, "Google", googleProviderId, "Google", [
+                model("gemini-4-argon", "Gemini 4 Argon (Ultra)", googleProviderId, "Google"),
+                model("gemini-3.8-flash", "Gemini 3.8 Flash", googleProviderId, "Google")
             ]),
             createGroup("nvidia", "NVIDIA", nvidiaProviderId, nvidiaProviderName, nvidiaFreeModels),
             // Lokale LM-Studio-Modelle. Die Liste kommt beim Start live vom lokalen Server

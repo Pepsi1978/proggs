@@ -130,7 +130,7 @@ final class ProfileSectionView: NSView {
             cliRow.topAnchor.constraint(equalTo: cliTitle.bottomAnchor, constant: 4),
             cliRow.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
             cliRow.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
-            cliRow.heightAnchor.constraint(equalToConstant: 52)
+            cliRow.heightAnchor.constraint(equalToConstant: 64)
         ])
 
         buildTiles()
@@ -203,7 +203,8 @@ final class ProfileSectionView: NSView {
         buildCliTiles()
     }
 
-    /// Die CLI-Wahl haengt vom Anbieter ab (Codex CLI bei OpenAI, Kimi Code CLI bei Moonshot AI),
+    /// Die CLI-Wahl haengt vom Anbieter ab (Codex CLI bei OpenAI, Kimi Code CLI bei Moonshot AI,
+    /// Antigravity CLI bei Google),
     /// deshalb werden die Kacheln neu aufgebaut, sobald sich die Liste im ViewModel aendert.
     private func buildCliTiles() {
         guard let viewModel else { return }
@@ -217,7 +218,11 @@ final class ProfileSectionView: NSView {
 
             let name = UI.label(entry.displayName, size: 13, weight: .semibold)
             let description = UI.label(entry.descriptionText, size: 10, role: .dim)
-            description.lineBreakMode = .byTruncatingTail
+            // Lange Beschreibungen (Antigravity CLI) umbrechen, die Kachel waechst mit dem Text.
+            description.lineBreakMode = .byWordWrapping
+            description.maximumNumberOfLines = 2
+            description.cell?.wraps = true
+            description.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             tile.addSubview(name)
             tile.addSubview(description)
             NSLayoutConstraint.activate([
@@ -226,7 +231,8 @@ final class ProfileSectionView: NSView {
                 name.trailingAnchor.constraint(lessThanOrEqualTo: tile.trailingAnchor, constant: -10),
                 description.topAnchor.constraint(equalTo: name.bottomAnchor, constant: 3),
                 description.leadingAnchor.constraint(equalTo: tile.leadingAnchor, constant: 10),
-                description.trailingAnchor.constraint(equalTo: tile.trailingAnchor, constant: -10)
+                description.trailingAnchor.constraint(equalTo: tile.trailingAnchor, constant: -10),
+                description.bottomAnchor.constraint(lessThanOrEqualTo: tile.bottomAnchor, constant: -7)
             ])
             cliRow.addArrangedSubview(tile)
             cliTiles.append((entry, tile))

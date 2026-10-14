@@ -410,6 +410,104 @@ final class OpenLauncherService {
         return tempScript
     }
 
+    /// Startet die Antigravity CLI (Google, agy) mit dem gewaehlten Gemini-Modell. Nur sie bedient seit
+    /// 18.06.2026 das private Google-AI-Abo (Pro/Ultra) per Google-Anmeldung; die Gemini CLI lehnt
+    /// "Login with Google" fuer Privatkonten ab. Angemeldet ist agy selbst (Browser-OAuth beim ersten
+    /// Start). agy liest die AGENTS.md des Arbeitsverzeichnisses, dort stehen Profil und Modus wie bei
+    /// Codex/Kimi. Modell und Denkstufe gehen als Schalter mit (--model, --effort), ~/.gemini bleibt
+    /// unberuehrt.
+    func launchAntigravityCli(model: ModelEntry, workDir: String, effortLevel rawEffort: String?, useTmux: Bool = false) throws {
+        var effort = rawEffort?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if let e = effort, !["low", "medium", "high", "xhigh", "max"].contains(e) { effort = nil }
+        let slug = model.slug.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            Paths.ensureDirectory(workDir)
+            let tabColor = TerminalLauncher.pickCodexColor()
+            let title = effort == nil ? "Agy-\(tabColor.name)" : "Agy-\(tabColor.name)-\(effort!)"
+            let script = try Self.buildAntigravityStartScript(slug: slug, effort: effort, workDir: workDir,
+                                                              tabColor: tabColor, title: title)
+            let terminal = try TerminalLauncher.openScript(script, workDir: workDir, useTmux: useTmux)
+            Logger.shared.info("OpenLauncherService", "launchAntigravityCli", "Antigravity CLI gestartet (\(terminal))",
+                               ["slug": slug, "workDir": workDir, "effort": effort ?? "", "tabColor": tabColor.name])
+        } catch {
+            Logger.shared.error("OpenLauncherService", "launchAntigravityCli", error.localizedDescription,
+                                ["slug": model.slug, "workDir": workDir])
+            throw error
+        }
+    }
+
+    /// Temp-Script fuer den agy-Start. --dangerously-skip-permissions: agy fragt nie nach, alle
+    /// Werkzeugaufrufe laufen automatisch (wie Kimi --auto). Fehlt agy, installiert das Skript es mit
+    /// dem offiziellen Installer nach.
+    private static func buildAntigravityStartScript(slug: String, effort: String?, workDir: String,
+                                                    tabColor: TerminalTabColor, title: String) throws -> String {
+        let tempScript = (Paths.tempDir as NSString)
+            .appendingPathComponent("openlauncher-agy-cli-\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()).sh")
+        let effortArgs = effort.map { "--effort \(Shell.singleQuoted($0)) " } ?? ""
+        let script = """
+        #!/bin/zsh
+        # Von OpenLauncher (macOS) erzeugtes Startskript. Loescht sich am Ende selbst.
+        SELF=\(Shell.singleQuoted(tempScript))
+        cleanup() { rm -f "$SELF" 2>/dev/null || true; }
+        trap cleanup EXIT INT TERM
+
+        \(processPriorityScript)
+        \(tabColor.tabColorScript)
+        printf '\\033]0;\(title)\\a'
+
+        cd \(Shell.singleQuoted(workDir)) || exit 1
+
+        # Login-Umgebung laden, damit agy (~/.local/bin, ~/.agy/bin) erreichbar ist.
+        \(persistentPathRefreshScript)
+        export PATH="$HOME/.local/bin:$HOME/.agy/bin:$PATH"
+        # Geerbte Agenten-Umgebung entfernen -- sonst startet die TUI ohne Farben (NO_COLOR).
+        \(inheritedAgentEnvScrubScript)
+        # Ein API-Schluessel in der Umgebung wuerde die Abo-Anmeldung ueberstimmen.
+        unset GEMINI_API_KEY
+
+        AGENTSFILE=\(Shell.singleQuoted((workDir as NSString).appendingPathComponent("AGENTS.md")))
+        if [ -f "$AGENTSFILE" ]; then
+            printf '\\033[90m[OpenLauncher] Profil-AGENTS.md aktiv: %s\\033[0m\\n' "$(head -1 "$AGENTSFILE")"
+        else
+            printf '\\033[33m[OpenLauncher] Achtung: keine AGENTS.md im Arbeitsverzeichnis - agy startet ohne Profil.\\033[0m\\n'
+        fi
+
+        AGY="$(command -v agy)"
+        if [ -z "$AGY" ]; then
+            printf '\\033[33m[OpenLauncher] Antigravity CLI fehlt - wird installiert (antigravity.google/cli/install.sh) ...\\033[0m\\n'
+            curl -fsSL https://antigravity.google/cli/install.sh | bash
+            hash -r
+            AGY="$(command -v agy)"
+        fi
+        if [ -z "$AGY" ]; then
+            printf '\\033[31m[OpenLauncher] Antigravity CLI nicht gefunden. Bitte die Installation von antigravity.google/cli ausfuehren.\\033[0m\\n'
+        else
+            LOGFILE=\(Shell.singleQuoted(Logger.shared.logPath))
+            MODEL=\(Shell.singleQuoted(slug))
+            started=$(date +%s)
+            "$AGY" --model "$MODEL" \(effortArgs)--dangerously-skip-permissions
+            agyExit=$?
+            seconds=$(( $(date +%s) - started ))
+            level=INFO; [ "$agyExit" != 0 ] && level=WARN
+            # Jedes agy-Ende ins Launcher-Log, damit ein Sofort-Beenden spaeter zuzuordnen ist.
+            printf '{"ts":"%s","level":"%s","module":"AntigravityStartScript","fn":"AgyExit","msg":"Antigravity CLI beendet","ctx":{"model":"%s","exitCode":%d,"seconds":%d}}\\n' \\
+                "$(date '+%Y-%m-%dT%H:%M:%S')" "$level" "$MODEL" "$agyExit" "$seconds" >> "$LOGFILE" 2>/dev/null
+            if [ "$agyExit" != 0 ]; then
+                printf '\\033[33m[OpenLauncher] agy beendet mit Exit-Code %d. Verfuegbare Modelle deines Abos: agy models\\033[0m\\n' "$agyExit"
+            fi
+        fi
+
+        # Tab offen lassen (Gegenstueck zu -NoExit unter Windows).
+        cleanup
+        trap - EXIT INT TERM
+        exec /bin/zsh -l
+        """
+        guard Paths.writeAtomic(script, to: tempScript) else {
+            throw LauncherError.message("Startskript konnte nicht geschrieben werden: \(tempScript)")
+        }
+        return tempScript
+    }
+
     /// Die "-fast"-Eintraege sind in OpenCode eigene Modelle, im Codex-Katalog dagegen nur eine
     /// Geschwindigkeitsstufe desselben Modells (service_tier "priority").
     private static func resolveCodexModelSlug(_ slug: String) -> (String, String?) {

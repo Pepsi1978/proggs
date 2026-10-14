@@ -45,6 +45,7 @@ enum OpenCodeVariantCatalog {
         case "nvidia": return nvidiaLevels(slug)
         case "anthropic": return anthropicLevels(slug)
         case "kimi-code-plan-global": return kimiLevels(slug)
+        case "google": return geminiLevels(slug)
         case "openrouter": return openRouterLevels(slug, supportsReasoning: knownOpenRouterReasoning(slug))
         default: return []
         }
@@ -53,6 +54,12 @@ enum OpenCodeVariantCatalog {
     /// Kimi-Code-Abo: OpenCode und Kimi CLI kennen low/high/max; HighSpeed hat keine Stufen.
     private static func kimiLevels(_ slug: String) -> [String] {
         ["k3", "k3-256k", "kimi-for-coding"].contains(slug) ? ["low", "high", "max"] : []
+    }
+
+    /// Antigravity CLI (agy --effort): Gemini 3.8 Flash kennt low/medium/high, Gemini 4 Argon bietet
+    /// agy als Medium und High an (antigravity.google/docs/models, Stand 14.10.2026).
+    static func geminiLevels(_ slug: String) -> [String] {
+        slug.hasPrefix("gemini-4-argon") ? ["medium", "high"] : ["low", "medium", "high"]
     }
 
     private static func anthropicLevels(_ rawSlug: String) -> [String] {
