@@ -722,7 +722,14 @@ try {
     {
         var settings = new Dictionary<string, object>
         {
-            ["context"] = new Dictionary<string, object> { ["fileName"] = new[] { "AGENTS.md", "GEMINI.md" } },
+            // discoveryMaxDirs = 1: nur der Arbeitsordner selbst. Gemini sucht Kontextdateien sonst
+            // auch in bis zu 200 Unterordnern -- in ~/proggs kaemen so die AGENTS.md aller Projekte
+            // und aller Profile dazu. Codex und Kimi lesen ebenfalls nur den Arbeitsordner.
+            ["context"] = new Dictionary<string, object>
+            {
+                ["fileName"] = new[] { "AGENTS.md", "GEMINI.md" },
+                ["discoveryMaxDirs"] = 1
+            },
             ["security"] = new Dictionary<string, object>
             {
                 ["auth"] = new Dictionary<string, object> { ["selectedType"] = "oauth-personal" }
