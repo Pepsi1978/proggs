@@ -398,7 +398,7 @@ private fun IngredientEditorSheet(item: IngredientEntity?, nextSort: Int, onDism
     FbBottomSheet(
         onDismiss = onDismiss,
         footer = {
-            DesignOutlineButton("Abbrechen", onDismiss, Modifier.weight(1f), verticalPadding = 14.dp)
+            SheetCancelButton(Modifier.weight(1f))
             AccentGradientButton(
                 onClick = {
                     onSave(

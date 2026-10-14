@@ -27,6 +27,14 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
@@ -562,7 +570,7 @@ private fun SetupSheet(
     FbBottomSheet(
         onDismiss = onDismiss,
         footer = {
-            DesignOutlineButton("Abbrechen", onDismiss, Modifier.weight(1f), verticalPadding = 14.dp)
+            SheetCancelButton(Modifier.weight(1f))
             AccentGradientButton(
                 onClick = {
                     val selectedDate = startDate
@@ -703,7 +711,7 @@ private fun DrinkSheet(
     FbBottomSheet(
         onDismiss = onDismiss,
         footer = {
-            DesignOutlineButton("Abbrechen", onDismiss, Modifier.weight(1f), verticalPadding = 14.dp)
+            SheetCancelButton(Modifier.weight(1f))
             AccentGradientButton(
                 onClick = onDrinkNow,
                 enabled = complete,
@@ -1040,10 +1048,16 @@ private fun clock(timestamp: Long): String = formatTime(timestamp).removeSuffix(
 
 private val SheetScrim = Color(0x73080614)
 
+/** Schließt das offene Sheet mit Animation (für „Abbrechen“ in der Aktionsleiste). */
+internal val LocalSheetClose = staticCompositionLocalOf<() -> Unit> { {} }
+
 /**
- * Eigenes Bottom-Sheet: randlos im Dialog-Fenster, Inhalt scrollt, die Aktionsleiste
- * bleibt fest über Navigationsleiste und Tastatur sichtbar.
+ * Bottom-Sheet auf Basis von Material3: am Griff oder am Inhalt nach unten wischen schließt es.
+ * Der Inhalt scrollt, die Aktionsleiste bleibt immer sichtbar über Gestenleiste und Tastatur.
+ * Die Navigationsleisten-Höhe kommt zusätzlich aus dem Activity-Fenster, weil Dialog-Fenster
+ * sie auf manchen Geräten (Galaxy Fold) nicht zuverlässig melden.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun FbBottomSheet(
     onDismiss: () -> Unit,
@@ -1051,76 +1065,65 @@ internal fun FbBottomSheet(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible = true }
-    Dialog(
+    val activityNavigationInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
+    val close: () -> Unit = {
+        scope.launch { sheetState.hide() }.invokeOnCompletion { currentOnDismiss() }
+    }
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-    ) {
-        BoxWithConstraints(
-            Modifier
-                .fillMaxSize()
-                .background(SheetScrim)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss,
-                )
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(top = 24.dp),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            val sheetMaxHeight = maxHeight
-            AnimatedVisibility(
-                visible = visible,
-                enter = fadeIn(tween(300, easing = FbMotionEasing)) + slideInVertically(tween(300, easing = FbMotionEasing)) { it / 3 },
+        sheetState = sheetState,
+        sheetMaxWidth = 640.dp,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        containerColor = colors.bg0,
+        contentColor = colors.text,
+        tonalElevation = 0.dp,
+        scrimColor = SheetScrim,
+        dragHandle = {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 8.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(99.dp)).background(colors.sub.copy(alpha = 0.5f)))
+            }
+        },
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+    ) {
+        val sheetNavigationInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val imeInset = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+        val bottomInset = maxOf(activityNavigationInset, sheetNavigationInset, imeInset)
+        CompositionLocalProvider(LocalSheetClose provides close) {
+            Column(Modifier.fillMaxWidth().padding(bottom = bottomInset)) {
                 Column(
                     Modifier
-                        .widthIn(max = 640.dp)
-                        .fillMaxWidth()
-                        .heightIn(max = sheetMaxHeight)
-                        .clip(shape)
-                        .background(colors.card)
-                        .border(BorderStroke(1.dp, colors.cardBorder), shape)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {},
-                        )
-                        .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime)),
-                ) {
-                    Box(
-                        Modifier
-                            .padding(top = 12.dp, bottom = 4.dp)
-                            .align(Alignment.CenterHorizontally)
-                            .width(40.dp)
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(99.dp))
-                            .background(colors.line),
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                        .padding(start = 20.dp, top = 4.dp, end = 20.dp, bottom = if (footer == null) 28.dp else 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    content = content,
+                )
+                if (footer != null) {
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line))
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        content = footer,
                     )
-                    Column(
-                        Modifier
-                            .weight(1f, fill = false)
-                            .verticalScroll(rememberScrollState())
-                            .padding(start = 20.dp, top = 8.dp, end = 20.dp, bottom = if (footer == null) 24.dp else 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                        content = content,
-                    )
-                    if (footer != null) {
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line))
-                        Row(
-                            Modifier.fillMaxWidth().padding(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            content = footer,
-                        )
-                    }
                 }
             }
         }
     }
+}
+
+/** „Abbrechen“ in der Aktionsleiste eines Sheets: schließt es mit derselben Animation wie Wegwischen. */
+@Composable
+internal fun SheetCancelButton(modifier: Modifier = Modifier) {
+    DesignOutlineButton("Abbrechen", LocalSheetClose.current, modifier, verticalPadding = 14.dp)
 }
 
 @Composable
@@ -1129,7 +1132,7 @@ internal fun FbPopDialog(onDismiss: () -> Unit, content: @Composable ColumnScope
     LaunchedEffect(Unit) { visible = true }
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(
             Modifier
@@ -1140,7 +1143,6 @@ internal fun FbPopDialog(onDismiss: () -> Unit, content: @Composable ColumnScope
                     indication = null,
                     onClick = onDismiss,
                 )
-                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(24.dp),
             contentAlignment = Alignment.Center,
         ) {
