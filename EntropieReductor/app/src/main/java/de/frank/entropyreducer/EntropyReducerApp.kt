@@ -74,6 +74,9 @@ class EntropyReducerApp : Application(), Configuration.Provider {
     /** Frank-Wunsch 2026-06-01: zentraler Daten-Sync mit 8h-Throttle fuer Foreground-Wechsel. */
     @Inject lateinit var foregroundSync: ForegroundSyncManager
 
+    /** Live-Gedächtnis: meldet Jarvis jede Änderung an Biomarkern, Trainings und Abgleich-Stand. */
+    @Inject lateinit var jarvisSignal: de.frank.entropyreducer.data.bruecke.JarvisSignal
+
     @Inject
     lateinit var agenticTriggerScheduler:
         de.frank.entropyreducer.domain.agentic.trigger.TriggerScheduler
@@ -127,6 +130,9 @@ class EntropyReducerApp : Application(), Configuration.Provider {
         // durch die drei Diagnose-Schichten (Room-DB, Logcat, JSONL). Vor diesem Punkt
         // (TimeZone-Setup, Pre-Hilt-Datenrettung) faellt Diag verlustfrei auf Logcat zurueck.
         Diag.init(diagnosticLogger)
+
+        // Jarvis-Signal früh starten, damit auch Migrationen, Importe und Worker gemeldet werden.
+        jarvisSignal.start()
 
         // Stufe 2 (Post-Hilt): geretete Daten via DAO in ScientistDatabase schreiben.
         // ScientistDatabase wird beim ersten DAO-Zugriff von Room geoeffnet,
