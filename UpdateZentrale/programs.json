@@ -139,7 +139,7 @@
       ],
       "versionsArgumente": "--version",
       "updateExePfad": "C:/Windows/System32/cmd.exe",
-      "updateArgumente": "/d /c %USERPROFILE%\.kimi-code\bin\kimi.exe update --yes || %APPDATA%\npm\npm.cmd install -g --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest",
+      "updateArgumente": "/d /c %USERPROFILE%\\.kimi-code\\bin\\kimi.exe update --yes || %APPDATA%\\npm\\npm.cmd install -g --allow-scripts=@moonshot-ai/kimi-code,node-pty @moonshot-ai/kimi-code@latest",
       "versionsUrl": "https://code.kimi.ai/kimi-code/latest",
       "zeitlimitMinuten": 15,
       "prozesse": [
