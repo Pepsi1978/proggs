@@ -8,6 +8,7 @@
     { "versionCode": 45, "versionName": "1.7.14", "stand": "05.10.2026, 14:10 Uhr", "notiz": "Endlos-Vorlesen liest nur noch offene Ideen, keine umgesetzten und keine Entwürfe mehr" },
     {"versionCode": 46, "versionName": "1.7.15", "stand": "08.10.2026, 17:11 Uhr", "notiz": "Jarvis-Brücke: Die App Jarvis kann Ideen jetzt lesen, neue anlegen (Text und Titel werden wie beim Einsprechen von der KI geglättet), ändern, als umgesetzt markieren und löschen – etwa per Sprache über ChatGPT"},
     {"versionCode": 47, "versionName": "1.7.16", "stand": "08.10.2026, 22:12 Uhr", "notiz": "Der Hell-Dunkel-Schalter hat einen dritten Zustand Automatik (Sonne mit A): Die App folgt dann der Hell-Dunkel-Einstellung des Handys"},
-    {"versionCode": 48, "versionName": "1.7.17", "stand": "14.10.2026, 07:43 Uhr", "notiz": "Die Brücke zu Jarvis antwortet jetzt auch, wenn Jarvis die App gerade erst startet, statt mit „lateinit property container has not been initialized“ abzubrechen"}
+    {"versionCode": 48, "versionName": "1.7.17", "stand": "14.10.2026, 07:43 Uhr", "notiz": "Die Brücke zu Jarvis antwortet jetzt auch, wenn Jarvis die App gerade erst startet, statt mit „lateinit property container has not been initialized“ abzubrechen"},
+    {"versionCode": 49, "versionName": "1.7.18", "stand": "14.10.2026, 07:58 Uhr", "notiz": "Von Jarvis gespeicherte Ideen werden auch dann noch von der KI geglättet, wenn Android die App zwischendurch beendet: Die Glättung wird beim nächsten Start nachgeholt"}
   ]
 }

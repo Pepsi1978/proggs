@@ -6,25 +6,17 @@ import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
 import de.frank.genialeideen.GenialeIdeenApplication
-import de.frank.genialeideen.auth.ChatTurn
-import de.frank.genialeideen.auth.CodexModel
-import de.frank.genialeideen.auth.ReasoningEffort
 import de.frank.genialeideen.data.local.IdeeEntity
 import de.frank.genialeideen.data.local.IdeenStatus
 import de.frank.genialeideen.data.local.KategorieEntity
 import de.frank.genialeideen.data.local.Kategorieart
 import de.frank.genialeideen.data.local.alleKategorieIds
 import de.frank.genialeideen.di.AppContainer
-import de.frank.genialeideen.text.UmlautKorrektur
-import de.frank.genialeideen.ui.IdeenViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
@@ -43,8 +35,6 @@ import org.json.JSONObject
  * `originalText` erhalten. Ohne KI-Zugang bleibt der gesprochene Text mit einem Titel aus den ersten Worten.
  */
 class JarvisBruecke : ContentProvider() {
-    private val nebenbei = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onCreate(): Boolean = true
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle {
@@ -94,8 +84,8 @@ class JarvisBruecke : ContentProvider() {
                 if (roh.isEmpty()) return fehler("Die Idee braucht einen Text.")
                 val titelEingabe = a.optString("titel").trim()
                 val kategorieId = kategorieFuer(a.optString("kategorie"), kategorien, c)
-                val id = repo.lege(titel = titelEingabe.ifEmpty { ersatzTitel(roh) }, text = roh, kategorieId = kategorieId)
-                if (a.optBoolean("verbessern", true)) verbessere(c, id, roh, titelFehlt = titelEingabe.isEmpty())
+                val id = repo.lege(titel = titelEingabe.ifEmpty { JarvisGlaettung.ersatzTitel(roh) }, text = roh, kategorieId = kategorieId)
+                if (a.optBoolean("verbessern", true)) JarvisGlaettung.starte(c, requireNotNull(context), id, roh, titelFehlt = titelEingabe.isEmpty())
                 JSONObject().put("idee", alsJson(repo.lade(id) ?: return fehler("Speichern fehlgeschlagen."), repo.alleKategorien().first(), Int.MAX_VALUE))
                     .put("hinweis", if (a.optBoolean("verbessern", true) && c.codexAuthManager.isConnected) "Text und Titel werden gerade von der KI geglättet." else "Gespeichert wie gesprochen.")
             }
@@ -130,34 +120,6 @@ class JarvisBruecke : ContentProvider() {
         }
     }
 
-    /** Glättet Text und Titel im Hintergrund, wie „Korrektur“ und der Titelvorschlag im Erfassen-Bildschirm. */
-    private fun verbessere(c: AppContainer, id: Long, roh: String, titelFehlt: Boolean) {
-        if (!c.codexAuthManager.isConnected) return
-        nebenbei.launch {
-            runCatching {
-                val modell = CodexModel.fromLabel(c.settings.model)
-                val stufe = ReasoningEffort.fromLabel(c.settings.reasoning)
-                val sauber = UmlautKorrektur.korrigiere(
-                    c.codexAuthManager.streamChat(IdeenViewModel.KORREKTUR, listOf(ChatTurn("user", roh)), modell, stufe).trim(),
-                )
-                var titel: String? = null
-                if (titelFehlt) {
-                    titel = dreiWoerter(UmlautKorrektur.korrigiere(
-                        c.codexAuthManager.streamChat(IdeenViewModel.TITEL, listOf(ChatTurn("user", roh.take(4000))), modell, stufe),
-                    )).takeIf { it.isNotBlank() }
-                }
-                val repo = c.ideenRepository
-                val idee = repo.lade(id) ?: return@launch
-                // Nur überschreiben, wenn der Text seit dem Anlegen unverändert ist — sonst gewinnt die Bearbeitung von Hand.
-                if (idee.text == roh && sauber.isNotBlank()) {
-                    c.database.ideenDao().aktualisieren(idee.copy(text = sauber, titel = titel ?: idee.titel, originalText = roh, geaendertAm = System.currentTimeMillis()))
-                } else if (titel != null && idee.titel == ersatzTitel(roh)) {
-                    repo.aendere(idee, titel, idee.text)
-                }
-            }
-        }
-    }
-
     /** Bestehende Kategorie nach Name; ein unbekannter Name legt eine neue (mentale) Kategorie an. Leer = keine. */
     private suspend fun kategorieFuer(name: String, vorhandene: List<KategorieEntity>, c: AppContainer): Long? {
         val gesucht = name.trim()
@@ -166,12 +128,6 @@ class JarvisBruecke : ContentProvider() {
         vorhandene.firstOrNull { gesucht.lowercase(Locale.GERMAN) in it.name.lowercase(Locale.GERMAN) }?.let { return it.id }
         return c.ideenRepository.legeKategorieAn(gesucht, Kategorieart.MENTAL)
     }
-
-    private fun dreiWoerter(roh: String): String = roh.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty().trim()
-        .trim('"', '\'', '„', '“', '”', '«', '»').split(Regex("\\s+")).filter(String::isNotBlank).take(3).joinToString(" ")
-        .trimEnd('.', ',', ';', ':', '!').trim()
-
-    private fun ersatzTitel(text: String): String = dreiWoerter(text).ifBlank { "Neue Idee" }
 
     private fun alsJson(i: IdeeEntity, kategorien: List<KategorieEntity>, laenge: Int): JSONObject {
         fun tag(ms: Long) = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDate().toString()

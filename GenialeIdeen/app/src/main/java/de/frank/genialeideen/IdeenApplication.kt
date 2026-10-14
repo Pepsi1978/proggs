@@ -5,6 +5,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.room.InvalidationTracker
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import de.frank.genialeideen.bridge.JarvisGlaettung
 import de.frank.genialeideen.di.AppContainer
 import de.frank.genialeideen.observability.IdeenCrashHandler
 import de.frank.genialeideen.observability.IdeenLog
@@ -31,6 +32,8 @@ class GenialeIdeenApplication : Application() {
         IdeenCrashHandler.installiere(this)
         container = AppContainer(this)
         bereit.countDown()
+        // Von Jarvis angelegte Ideen, deren KI-Glättung ein beendeter Prozess unterbrochen hat.
+        JarvisGlaettung.nachholen(container, this)
         container.appLockManager.start()
         meldeAenderungenAnDieSicherung()
         // Damit beim Verlassen der App sofort gesichert wird, statt die Änderung zu verlieren.
