@@ -114,7 +114,7 @@ private val AuroraLight = AppColors(
     warnBg = Color(0x29F2B200),
     bad = Color(0xFFC22F3E),
     badBg = Color(0x1CE23E50),
-    navBg = Color(0xC7FFFFFF),
+    navBg = Color(0xFFFFFFFF),
     shadow = LightShadow,
 )
 
@@ -138,7 +138,7 @@ private val AuroraDark = AppColors(
     warnBg = Color(0x21FFCB57),
     bad = Color(0xFFFF6E7E),
     badBg = Color(0x24FF6E7E),
-    navBg = Color(0xB8181332),
+    navBg = Color(0xFF181332),
     shadow = DarkShadow,
 )
 
@@ -162,7 +162,7 @@ private val VitalLight = AppColors(
     warnBg = Color(0x29F2B200),
     bad = Color(0xFFC22F3E),
     badBg = Color(0x1CE23E50),
-    navBg = Color(0xC7FFFFFF),
+    navBg = Color(0xFFFFFFFF),
     shadow = LightShadow,
 )
 
@@ -186,7 +186,7 @@ private val VitalDark = AppColors(
     warnBg = Color(0x21FFCB57),
     bad = Color(0xFFFF6E7E),
     badBg = Color(0x24FF6E7E),
-    navBg = Color(0xB80B1D17),
+    navBg = Color(0xFF0B1D17),
     shadow = DarkShadow,
 )
 
@@ -210,7 +210,7 @@ private val EmberLight = AppColors(
     warnBg = Color(0x29F2B200),
     bad = Color(0xFFC22F3E),
     badBg = Color(0x1CE23E50),
-    navBg = Color(0xC7FFFFFF),
+    navBg = Color(0xFFFFFFFF),
     shadow = LightShadow,
 )
 
@@ -234,7 +234,7 @@ private val EmberDark = AppColors(
     warnBg = Color(0x21FFCB57),
     bad = Color(0xFFFF6E7E),
     badBg = Color(0x24FF6E7E),
-    navBg = Color(0xB824170F),
+    navBg = Color(0xFF24170F),
     shadow = DarkShadow,
 )
 

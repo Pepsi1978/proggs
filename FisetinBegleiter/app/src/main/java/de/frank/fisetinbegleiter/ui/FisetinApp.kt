@@ -363,8 +363,26 @@ private fun FloatingBottomNavigation(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
+    // Fester Untergrund ab der Leistenmitte bis zum Bildschirmrand: unter der Leiste scheint kein Listentext durch.
+    Box(modifier.fillMaxWidth()) {
+        Box(
+            Modifier
+                .matchParentSize()
+                .padding(top = 36.dp)
+                .background(colors.bg1),
+        )
+        FloatingBottomNavigationBar(selected, onSelected)
+    }
+}
+
+@Composable
+private fun FloatingBottomNavigationBar(
+    selected: MainScreen,
+    onSelected: (MainScreen) -> Unit,
+) {
+    val colors = LocalAppColors.current
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
