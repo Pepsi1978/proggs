@@ -138,6 +138,29 @@ fun EinstellungenBildschirm(vm: AppViewModel, tunnel: TunnelZustand, activity: C
                 Text("Damit Jarvis von selbst nach vorn kommt (auch über dem Sperrbildschirm), braucht er „Über anderen Apps einblenden“. Ohne kommt nur eine Benachrichtigung zum Antippen.", color = f.textLeise, fontSize = 14.sp, modifier = Modifier.padding(top = 14.dp))
                 Knopf("„Über anderen Apps einblenden“ erlauben", Modifier.padding(top = 8.dp).fillMaxWidth(), haupt = false) { vm.weckwortEinrichten(activity) }
             }
+            Unterzeile("Weckwort")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip("Hey Jarvis", aktiv = e.weckwortArt != "phrase") { vm.weckwortArtSetzen("jarvis") }
+                Chip("Eigene Phrase", aktiv = e.weckwortArt == "phrase") { vm.weckwortArtSetzen("phrase") }
+            }
+            if (e.weckwortArt == "phrase") {
+                var phrase by rememberSaveable { mutableStateOf(e.weckwortPhrase) }
+                Text(
+                    "Aktiv: „${e.weckwortPhrase}“. Das Modell kennt nur englische Laute: Sprich die Phrase englisch aus. " +
+                        "Drei Wörter mit verschiedenen Anfangslauten erkennt es am sichersten. Weckt sie schlecht auf, Empfindlichkeit auf Hoch oder zurück zu „Hey Jarvis“.",
+                    color = f.textSchwach, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp),
+                )
+                Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Eingabe(phrase, { phrase = it }, "z. B. OKAY COMPUTER JARVIS", Modifier.weight(1f), senden = { vm.weckwortPhraseSetzen(phrase) })
+                    Spacer(Modifier.width(8.dp))
+                    Knopf("Übernehmen", haupt = phrase.trim().uppercase() != e.weckwortPhrase) { vm.weckwortPhraseSetzen(phrase) }
+                }
+                FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("OKAY COMPUTER JARVIS", "HEY JARVIS WAKE UP", "HELLO CAPTAIN JARVIS", "JARVIS TIGER COMPASS").forEach { vorschlag ->
+                        Chip(vorschlag, aktiv = e.weckwortPhrase == vorschlag) { phrase = vorschlag; vm.weckwortPhraseSetzen(vorschlag) }
+                    }
+                }
+            }
             Unterzeile("Empfindlichkeit")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("niedrig" to "Niedrig", "normal" to "Normal", "hoch" to "Hoch").forEach { (id, name) ->

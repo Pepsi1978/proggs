@@ -58,6 +58,12 @@ import kotlinx.coroutines.launch
 class WeckwortDienst : Service() {
     private val bereich = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var erkenner: WeckwortErkenner? = null
+    /** Eigene Phrase (sherpa-onnx); null = „Hey Jarvis“. */
+    private var phrasenErkenner: PhrasenErkenner? = null
+    /** Tokens der eigenen Phrase aus den Einstellungen; null = „Hey Jarvis“. */
+    private var phrasenTokens: String? = null
+    private var phrasenSchwelle = 0.25f
+    private var vorleser: Vorleser? = null
     @Volatile private var lauf: AtomicBoolean? = null
     private var faden: Thread? = null
     private var wach: PowerManager.WakeLock? = null
@@ -71,7 +77,10 @@ class WeckwortDienst : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (gestartet) return START_STICKY
+        if (gestartet) {
+            if (intent?.action == AKTION_NEU_LADEN) neuLaden()
+            return START_STICKY
+        }
         val e = Einstellungen.get(this)
         if (!e.weckwortAn || !mikrofonErlaubt(this)) {
             stopSelf()
@@ -88,11 +97,11 @@ class WeckwortDienst : Service() {
             return START_NOT_STICKY
         }
         gestartet = true
-        Weckwort.schwelle = e.weckwortSchwelle
         Stimmprofil.laden(this)
+        einstellungenUebernehmen()
         wach = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "jarvis:weckwort")
             .apply { setReferenceCounted(false); runCatching { acquire() } }
-        val vorleser = Vorleser.hole(this, SecureSettings(this))
+        val vorleser = Vorleser.hole(this, SecureSettings(this)).also { this.vorleser = it }
         bereich.launch {
             combine(Weckwort.belegt, vorleser.stand) { belegt, stand -> !belegt && stand.zustand == VorleseZustand.AUS }
                 .distinctUntilChanged()
@@ -112,14 +121,40 @@ class WeckwortDienst : Service() {
         return START_STICKY
     }
 
+    /** Weckwort, Phrase und Empfindlichkeit aus den Einstellungen lesen. */
+    private fun einstellungenUebernehmen() {
+        val e = Einstellungen.get(this)
+        Weckwort.schwelle = e.weckwortSchwelle
+        phrasenTokens = if (e.weckwortArt == "phrase") PhrasenTokens.zerlege(this, e.weckwortPhrase).also {
+            if (it == null) Log.w(TAG, "Phrase ${e.weckwortPhrase} nicht zerlegbar, nehme Hey Jarvis")
+        } else null
+        phrasenSchwelle = PhrasenErkenner.schwelleFuer(e.weckwortEmpfindlichkeit)
+        Stimmprofil.schluesselSetzen(if (phrasenTokens != null) "phrase:" + PhrasenTokens.normiert(e.weckwortPhrase) else "jarvis")
+    }
+
+    /** Einstellungen geändert: neu einlesen und mit dem neuen Weckwort weiterlauschen. */
+    private fun neuLaden() {
+        anhalten()
+        // Nicht selbst schließen: Hängt der alte Faden noch im Lesen, würde er sonst auf ein freigegebenes Modell
+        // zugreifen. sherpa-onnx gibt es beim Aufräumen selbst frei (finalize).
+        phrasenErkenner = null
+        einstellungenUebernehmen()
+        if (!Weckwort.belegt.value && vorleser?.stand?.value?.zustand == VorleseZustand.AUS) lauschen()
+    }
+
     private fun lauschen() {
         if (faden?.isAlive == true) return
         val erk = erkenner ?: runCatching { WeckwortErkenner(this) }
             .onFailure { Log.e(TAG, "Weckwort-Modelle nicht ladbar", it) }
             .getOrNull()?.also { erkenner = it } ?: return
+        // Eigene Phrase: sherpa-onnx dazu. Lässt sich das Modell nicht laden, bleibt „Hey Jarvis“ aktiv.
+        val tokens = phrasenTokens
+        val phr = if (tokens == null) null else phrasenErkenner ?: runCatching { PhrasenErkenner(this, tokens, phrasenSchwelle) }
+            .onFailure { Log.e(TAG, "Phrasen-Modell nicht ladbar, nehme Hey Jarvis", it) }
+            .getOrNull()?.also { phrasenErkenner = it }
         val an = AtomicBoolean(true)
         lauf = an
-        faden = Thread({ schleife(erk, an) }, "Weckwort").apply { start() }
+        faden = Thread({ schleife(erk, phr, an) }, "Weckwort").apply { start() }
     }
 
     /** Hält das Lauschen an und wartet kurz, bis das Mikrofon wirklich frei ist. */
@@ -132,7 +167,7 @@ class WeckwortDienst : Service() {
     }
 
     @SuppressLint("MissingPermission") // geprüft in onStartCommand
-    private fun schleife(erk: WeckwortErkenner, an: AtomicBoolean) {
+    private fun schleife(erk: WeckwortErkenner, phr: PhrasenErkenner?, an: AtomicBoolean) {
         var aufnahme: AudioRecord? = null
         try {
             val minimum = AudioRecord.getMinBufferSize(WeckwortErkenner.ABTASTRATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
@@ -145,6 +180,8 @@ class WeckwortDienst : Service() {
             aufnahme.startRecording()
             Weckwort.hoertZu(true)
             erk.zuruecksetzen()
+            phr?.zuruecksetzen()
+            val art = if (phr != null) "phrase" else "jarvis"
             val block = ShortArray(WeckwortErkenner.BLOCK)
             // Ein einzelner Block über der Schwelle reicht nicht: Erst zwei in Folge (160 ms) zählen, wie „patience“
             // bei openWakeWord. Kurze Ausreißer bei ähnlich klingenden Wörtern fallen so weg.
@@ -157,18 +194,27 @@ class WeckwortDienst : Service() {
                     gelesen += n
                 }
                 if (!an.get()) break
+                // „Hey Jarvis“-Modell läuft immer mit: Seine Merkmale braucht das Stimmprofil auch bei eigener Phrase.
                 val wert = erk.bewerte(block)
                 val merkmale = erk.letzteMerkmale
                 val anlernen = Stimmprofil.lerntAn
-                // Beim Anlernen etwas großzügiger, damit auch Franks deutsche Aussprache Proben liefert.
-                val schwelle = if (anlernen) minOf(Weckwort.schwelle, 0.35f) else Weckwort.schwelle
-                if (wert < schwelle) {
+                if (phr != null) {
+                    if (!phr.erkannt(block)) {
+                        if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
+                        continue
+                    }
+                } else {
+                    // Beim Anlernen etwas großzügiger, damit auch Franks deutsche Aussprache Proben liefert.
+                    val schwelle = if (anlernen) minOf(Weckwort.schwelle, 0.35f) else Weckwort.schwelle
+                    if (wert < schwelle) {
+                        inFolge = 0
+                        if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
+                        continue
+                    }
+                    if (++inFolge < BLOCKS_IN_FOLGE) continue
                     inFolge = 0
-                    if (merkmale != null && wert < 0.1f) Stimmprofil.hintergrundLernen(merkmale)
-                    continue
                 }
-                if (++inFolge < BLOCKS_IN_FOLGE) continue
-                inFolge = 0
+                val modellwert = if (phr == null) wert else null
                 if (anlernen) {
                     if (merkmale != null) {
                         Log.i(TAG, "Probe fürs Stimmprofil (${"%.2f".format(wert)})")
@@ -177,16 +223,21 @@ class WeckwortDienst : Service() {
                     }
                     // Neu anfangen: Die nächste Probe soll ein neues „Hey Jarvis“ sein, nicht der Rest von diesem.
                     erk.zuruecksetzen()
+                    phr?.zuruecksetzen()
                     continue
                 }
-                if (!Stimmprofil.passt(merkmale)) {
-                    Log.i(TAG, "Hey Jarvis abgewiesen, klingt nicht nach Frank (${"%.2f".format(wert)})")
-                    Weckwort.abgewiesen(wert)
+                val pruefung = Stimmprofil.pruefe(merkmale)
+                if (pruefung?.ok == false) {
+                    Log.i(TAG, "Weckwort ($art) abgewiesen, klingt nicht nach Frank (${"%.2f".format(wert)})")
+                    WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "abgewiesen")
+                    Weckwort.abgewiesen(modellwert ?: 1f)
                     erk.zuruecksetzen()
+                    phr?.zuruecksetzen()
                     continue
                 }
-                Log.i(TAG, "Hey Jarvis erkannt (${"%.2f".format(wert)})")
-                Weckwort.erkannt(wert)
+                Log.i(TAG, "Weckwort ($art) erkannt (${"%.2f".format(wert)})")
+                WeckwortProtokoll.treffer(this, art, modellwert, pruefung, "gerufen")
+                Weckwort.erkannt(modellwert ?: 1f)
                 Weckwort.trefferMerkmale = merkmale
                 an.set(false)
                 bereich.launch { rufen() }
@@ -271,6 +322,8 @@ class WeckwortDienst : Service() {
         bereich.cancel()
         runCatching { erkenner?.close() }
         erkenner = null
+        runCatching { phrasenErkenner?.close() }
+        phrasenErkenner = null
         runCatching { if (wach?.isHeld == true) wach?.release() }
         Weckwort.hoertZu(false)
         super.onDestroy()
@@ -284,6 +337,15 @@ class WeckwortDienst : Service() {
         private const val HINWEIS_ID = 4300
         private const val RUF_ID = 4301
         private const val BLOCKS_IN_FOLGE = 2
+        private const val AKTION_NEU_LADEN = "de.frank.jarvis.weckwort.NEU_LADEN"
+
+        /** Weckwort, Phrase oder Empfindlichkeit geändert: Der laufende Dienst liest sie neu ein. Nur aus der sichtbaren App. */
+        fun neuLaden(context: Context) {
+            val app = context.applicationContext
+            if (!Einstellungen.get(app).weckwortAn || !mikrofonErlaubt(app)) return
+            runCatching { ContextCompat.startForegroundService(app, Intent(app, WeckwortDienst::class.java).setAction(AKTION_NEU_LADEN)) }
+                .onFailure { Log.w(TAG, "Neu laden nicht möglich", it) }
+        }
 
         /** Zuletzt unsichtbar gestartet (gegen eine Schleife, falls Android den Dienst immer wieder ablehnt). */
         @Volatile private var zuletztUnsichtbar = 0L

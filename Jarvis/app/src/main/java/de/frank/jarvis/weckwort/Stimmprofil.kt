@@ -43,7 +43,12 @@ object Stimmprofil {
     @Volatile private var neu: MutableList<FloatArray>? = null
     private var datei: File? = null
 
-    val aktiv: Boolean get() = proben.size >= MIN_PROBEN
+    /** Für welches Weckwort das Profil gilt („jarvis“ oder „phrase:OKAY COMPUTER JARVIS“): Eine neue Phrase braucht neue Proben. */
+    @Volatile private var gespeicherterSchluessel = "jarvis"
+    @Volatile var schluessel = "jarvis"
+        private set
+
+    val aktiv: Boolean get() = proben.size >= MIN_PROBEN && gespeicherterSchluessel == schluessel
     val lerntAn: Boolean get() = neu != null
 
     @Synchronized
@@ -57,14 +62,29 @@ object Stimmprofil {
             proben = liste(json.optJSONArray("proben"))
             fehl = liste(json.optJSONArray("fehlalarme"))
             hintergrund = json.optJSONArray("hintergrund")?.let { feld(it) }
+            gespeicherterSchluessel = json.optString("schluessel", "jarvis")
         }.onFailure { Log.w(TAG, "Stimmprofil nicht lesbar", it) }
         melden()
     }
 
+    /** Das gerade eingestellte Weckwort; passt das Profil nicht dazu, ruht es, bis neu angelernt ist. */
+    fun schluesselSetzen(neuerSchluessel: String) {
+        if (schluessel == neuerSchluessel) return
+        schluessel = neuerSchluessel
+        neu = null
+        melden()
+    }
+
+    /** Ergebnis einer Prüfung, auch fürs Protokoll. */
+    data class Pruefung(val ok: Boolean, val aehnlich: Float, val schwelle: Float, val fremd: Float)
+
     /** Urteil über einen Treffer des Weckwort-Modells. Ohne Profil zählt jeder Treffer. */
-    fun passt(merkmale: FloatArray?): Boolean {
+    fun passt(merkmale: FloatArray?): Boolean = pruefe(merkmale)?.ok ?: true
+
+    /** Wie [passt], mit allen Werten; null = kein Profil für dieses Weckwort, der Treffer zählt. */
+    fun pruefe(merkmale: FloatArray?): Pruefung? {
         val p = proben
-        if (p.size < MIN_PROBEN || merkmale == null) return true
+        if (!aktiv || merkmale == null) return null
         val bg = hintergrund
         val v = bereinigt(merkmale, bg)
         val bereinigteProben = p.map { bereinigt(it, bg) }
@@ -74,7 +94,7 @@ object Stimmprofil {
         _stand.value = _stand.value.copy(letzteAehnlichkeit = aehnlich, letzteSchwelle = schwelle)
         val ok = aehnlich >= schwelle && aehnlich >= fremd
         Log.i(TAG, "Ähnlichkeit ${"%.3f".format(aehnlich)}, Schwelle ${"%.3f".format(schwelle)}, Fehlalarm ${"%.3f".format(fremd)} → ${if (ok) "Frank" else "abgewiesen"}")
-        return ok
+        return Pruefung(ok, aehnlich, schwelle, fremd)
     }
 
     /**
@@ -114,6 +134,7 @@ object Stimmprofil {
         liste += merkmale.copyOf()
         if (liste.size < ANLERN_ZIEL) { melden(); return false }
         proben = liste.toList()
+        gespeicherterSchluessel = schluessel
         // Ein neues Profil fängt auch bei den Fehlalarmen von vorn an.
         fehl = emptyList()
         neu = null
@@ -141,7 +162,8 @@ object Stimmprofil {
     // ---- Hilfen ----
 
     private fun melden() {
-        _stand.value = _stand.value.copy(proben = proben.size, fehlalarme = fehl.size, anlernen = neu?.size)
+        val passend = gespeicherterSchluessel == schluessel
+        _stand.value = _stand.value.copy(proben = if (passend) proben.size else 0, fehlalarme = if (passend) fehl.size else 0, anlernen = neu?.size)
     }
 
     @Synchronized
@@ -151,6 +173,7 @@ object Stimmprofil {
             val json = JSONObject()
                 .put("proben", JSONArray().apply { proben.forEach { put(alsJson(it)) } })
                 .put("fehlalarme", JSONArray().apply { fehl.forEach { put(alsJson(it)) } })
+                .put("schluessel", gespeicherterSchluessel)
             hintergrund?.let { json.put("hintergrund", alsJson(it)) }
             val tmp = File(d.parentFile, d.name + ".tmp")
             tmp.writeText(json.toString())

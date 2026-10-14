@@ -325,6 +325,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun weckwortEmpfindlichkeit(stufe: String) {
         einstellungen.weckwortEmpfindlichkeit = stufe
         de.frank.jarvis.weckwort.Weckwort.schwelle = einstellungen.weckwortSchwelle
+        // Die eigene Phrase bekommt ihre Schwelle beim Anlegen: Dienst neu einlesen lassen.
+        if (einstellungen.weckwortArt == "phrase") de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(getApplication())
+    }
+
+    /** „jarvis“ = „Hey Jarvis“, „phrase“ = eigene Phrase über sherpa-onnx. */
+    fun weckwortArtSetzen(art: String) {
+        if (einstellungen.weckwortArt == art) return
+        einstellungen.weckwortArt = art
+        de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(getApplication())
+    }
+
+    /** Neue eigene Phrase: nur übernehmen, wenn das (englische) Modell sie zerlegen kann. */
+    fun weckwortPhraseSetzen(text: String): Boolean {
+        val app = getApplication<Application>()
+        val normiert = de.frank.jarvis.weckwort.PhrasenTokens.normiert(text)
+        if (normiert.split(' ').size < 2) { meldung = "Bitte mindestens zwei Wörter, besser drei."; return false }
+        if (de.frank.jarvis.weckwort.PhrasenTokens.zerlege(app, normiert) == null) {
+            meldung = "Das Modell kennt nur englische Buchstaben A bis Z, ohne Umlaute und Ziffern."
+            return false
+        }
+        einstellungen.weckwortPhrase = normiert
+        einstellungen.weckwortArt = "phrase"
+        de.frank.jarvis.weckwort.WeckwortDienst.neuLaden(app)
+        meldung = "Weckwort: „$normiert“"
+        return true
     }
 
     /** Die laufende Aufnahme kam über „Hey Jarvis“ und endet von selbst, sobald Frank fertig gesprochen hat. */
@@ -379,9 +404,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val ergebnis = runde(erste = runde == 0)
                     if (ergebnis == de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT) {
                         // Gleich nach „Hey Jarvis“ nichts gesagt: Das war wohl ein Fehlalarm, das Stimmprofil lernt ihn.
-                        if (runde == 0) de.frank.jarvis.weckwort.Stimmprofil.fehlalarm(treffer)
+                        // Nicht, wenn nur das Mikrofon nicht starten wollte: Das sagt nichts über den Klang.
+                        if (runde == 0 && !mikroFehlte) {
+                            de.frank.jarvis.weckwort.Stimmprofil.fehlalarm(treffer)
+                            de.frank.jarvis.weckwort.WeckwortProtokoll.ausgang(getApplication(), "nichts")
+                        }
                         break
                     }
+                    if (runde == 0) de.frank.jarvis.weckwort.WeckwortProtokoll.ausgang(getApplication(), "frage")
                     // Mitschrift und Antwort abwarten, dann bis die Antwort zu Ende vorgelesen ist.
                     while (schreibtMit || denkt) kotlinx.coroutines.delay(100)
                     kotlinx.coroutines.delay(500)
@@ -403,9 +433,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
      * Eine Runde im Gesprächsmodus: Mikrofon holen, piepen (ab jetzt sprechen), aufnehmen, bis Frank 4,5 Sekunden
      * schweigt, und abschicken. Liefert [SprechEnde.Lage.NICHTS_GEHOERT], wenn nach dem Piepton nichts kam.
      */
+    private var mikroFehlte = false
+
     private suspend fun runde(erste: Boolean): de.frank.jarvis.weckwort.SprechEnde.Lage {
         holtMikro = true
         val gestartet = try { aufnahmeStarten() } finally { holtMikro = false }
+        mikroFehlte = !gestartet
         if (!gestartet) { meldung = "Die Aufnahme ließ sich nicht starten."; return de.frank.jarvis.weckwort.SprechEnde.Lage.NICHTS_GEHOERT }
         freihaendig = true
         // Nach einer Antwort darf Frank etwas länger überlegen, bevor er anfängt.
